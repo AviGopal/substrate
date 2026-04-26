@@ -1,0 +1,106 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - heading "Navigation" [level=2] [ref=e26]
+        - navigation [ref=e27]:
+          - link "Templates" [ref=e28] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e29]
+            - generic [ref=e34]: Templates
+          - link "Composition" [ref=e35] [cursor=pointer]:
+            - /url: /composition
+            - img [ref=e36]
+            - generic [ref=e42]: Composition
+          - link "Executions" [ref=e43] [cursor=pointer]:
+            - /url: /executions
+            - img [ref=e44]
+            - generic [ref=e46]: Executions
+          - link "Goals" [active] [ref=e47] [cursor=pointer]:
+            - /url: /goals
+            - img [ref=e48]
+            - generic [ref=e52]: Goals
+          - link "Shapes" [ref=e53] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e54]
+            - generic [ref=e58]: Shapes
+        - generic [ref=e59]:
+          - heading "Recent" [level=2] [ref=e60]
+          - generic [ref=e61]:
+            - generic [ref=e62]: debug-auth:v3
+            - generic [ref=e63]: implement-feat
+            - generic [ref=e64]: refactor-core
+    - main [ref=e65]:
+      - generic [ref=e613]:
+        - generic [ref=e615]:
+          - heading "Goal Resolution" [level=1] [ref=e616]
+          - paragraph [ref=e617]: Describe goals and predict optimal execution paths using Thompson Sampling
+        - generic [ref=e618]:
+          - generic [ref=e619]:
+            - text: "Describe your goal:"
+            - textbox "e.g., Fix the authentication bug in production" [ref=e620]
+            - generic [ref=e622]: 0 characters
+          - generic [ref=e623]:
+            - text: "Available Context Shapes:"
+            - generic [ref=e624]:
+              - generic [ref=e625]:
+                - generic [ref=e626] [cursor=pointer]:
+                  - checkbox "error_log" [ref=e627]
+                  - generic [ref=e628]: error_log
+                  - img [ref=e629]
+                - generic [ref=e633] [cursor=pointer]:
+                  - checkbox "source_code" [ref=e634]
+                  - generic [ref=e635]: source_code
+                  - img [ref=e636]
+                - generic [ref=e640] [cursor=pointer]:
+                  - checkbox "test_results" [ref=e641]
+                  - generic [ref=e642]: test_results
+                  - img [ref=e643]
+                - generic [ref=e647] [cursor=pointer]:
+                  - checkbox "git_diff" [ref=e648]
+                  - generic [ref=e649]: git_diff
+                  - img [ref=e650]
+              - button "Show more shapes (6)" [ref=e655] [cursor=pointer]:
+                - img [ref=e656]
+                - text: Show more shapes (6)
+          - button "Advanced Options" [ref=e659] [cursor=pointer]:
+            - img [ref=e660]
+            - text: Advanced Options
+            - img [ref=e663]
+          - generic [ref=e665]:
+            - button "Predict Paths" [disabled]:
+              - img
+              - text: Predict Paths
+        - generic [ref=e667]:
+          - img [ref=e668]
+          - generic [ref=e672]:
+            - heading "Enter a goal to get started" [level=3] [ref=e673]
+            - paragraph [ref=e674]: Describe what you want to achieve, select available context shapes, and we'll predict the best execution paths using Thompson Sampling.
+  - contentinfo [ref=e215]:
+    - generic [ref=e216]:
+      - generic [ref=e217]:
+        - generic [ref=e218]:
+          - img [ref=e219]
+          - generic [ref=e222]: API Connected
+        - generic [ref=e223]:
+          - img [ref=e224]
+          - generic [ref=e227]: "Last update: 07:44:34 AM"
+      - generic [ref=e228]:
+        - generic [ref=e229]: LOCAL
+        - generic [ref=e230]: v0.1.0

@@ -1,0 +1,102 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - button "Configure API Key" [ref=e12] [cursor=pointer]:
+          - img
+          - text: Configure API Key
+        - generic [ref=e13]:
+          - img [ref=e14]
+          - generic [ref=e19]: Connected
+        - button "Toggle theme" [ref=e20] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e21] [cursor=pointer]:
+          - img
+  - generic [ref=e23]:
+    - complementary [ref=e24]:
+      - button "Collapse sidebar" [ref=e25] [cursor=pointer]:
+        - img
+      - generic [ref=e26]:
+        - heading "Navigation" [level=2] [ref=e28]
+        - navigation [ref=e29]:
+          - link "Templates" [ref=e30] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e31]
+            - generic [ref=e36]: Templates
+          - link "Composition" [ref=e37] [cursor=pointer]:
+            - /url: /composition
+            - img [ref=e38]
+            - generic [ref=e44]: Composition
+          - link "Executions" [ref=e45] [cursor=pointer]:
+            - /url: /executions
+            - img [ref=e46]
+            - generic [ref=e48]: Executions
+          - link "Goals" [ref=e49] [cursor=pointer]:
+            - /url: /goals
+            - img [ref=e50]
+            - generic [ref=e54]: Goals
+          - link "Shapes" [ref=e55] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e56]
+            - generic [ref=e60]: Shapes
+        - generic [ref=e61]:
+          - heading "Recent" [level=2] [ref=e62]
+          - generic [ref=e63]:
+            - generic [ref=e64]: debug-auth:v3
+            - generic [ref=e65]: implement-feat
+            - generic [ref=e66]: refactor-core
+    - main [ref=e67]:
+      - generic [ref=e69]:
+        - generic [ref=e70]:
+          - generic [ref=e71]:
+            - heading "Templates" [level=1] [ref=e72]
+            - paragraph [ref=e73]: Activity template library - Create and manage activity templates
+          - button "New Template" [ref=e74] [cursor=pointer]:
+            - img
+            - text: New Template
+        - generic [ref=e75]:
+          - tablist [ref=e76]:
+            - tab "Templates List" [selected] [ref=e77] [cursor=pointer]:
+              - img [ref=e78]
+              - text: Templates List
+            - tab "Thompson Sampling" [ref=e85] [cursor=pointer]:
+              - img [ref=e86]
+              - text: Thompson Sampling
+          - tabpanel "Templates List" [ref=e91]:
+            - generic [ref=e92]:
+              - generic [ref=e93]:
+                - generic [ref=e94]:
+                  - img [ref=e95]
+                  - searchbox "Search templates..." [ref=e98]
+                - button "Filters" [ref=e99] [cursor=pointer]:
+                  - img
+                  - text: Filters
+              - generic [ref=e100]:
+                - generic [ref=e101]: "Category:"
+                - button "All" [ref=e102] [cursor=pointer]
+                - button "Feature" [ref=e103] [cursor=pointer]
+                - button "Bugfix" [ref=e104] [cursor=pointer]
+                - button "Refactor" [ref=e105] [cursor=pointer]
+                - button "Infrastructure" [ref=e106] [cursor=pointer]
+                - button "Tool" [ref=e107] [cursor=pointer]
+            - generic [ref=e109]:
+              - img [ref=e111]
+              - generic [ref=e118]:
+                - heading "No templates found" [level=3] [ref=e119]
+                - paragraph [ref=e120]: No templates available. Create your first template to get started.
+  - contentinfo [ref=e121]:
+    - generic [ref=e122]:
+      - generic [ref=e123]:
+        - generic [ref=e124]:
+          - img [ref=e125]
+          - generic [ref=e128]: API Connected
+        - generic [ref=e129]:
+          - img [ref=e130]
+          - generic [ref=e133]: "Last update: 08:13:20 PM"
+      - generic [ref=e134]:
+        - generic [ref=e135]: LOCAL
+        - generic [ref=e136]: v0.1.0

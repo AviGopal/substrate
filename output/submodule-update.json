@@ -1,0 +1,18 @@
+{
+  "submoduleUpdated": true,
+  "submodulePath": "vessels/metabob-activity-api",
+  "previousCommit": "21e0046031aca8b4de706b9c3767ed6a40416449",
+  "newSubmoduleCommit": "66a0712432c27524d20e2522940889d926b0f459",
+  "shortCommits": {
+    "previous": "21e0046",
+    "new": "66a0712"
+  },
+  "stagedForCommit": true,
+  "deploymentRepoPath": "./repos/deployment",
+  "updateTimestamp": "2024-04-21T05:57:00Z",
+  "notes": [
+    "Local changes in submodule were stashed before update",
+    "Submodule successfully updated to latest remote commit",
+    "Changes have been staged and are ready for commit"
+  ]
+}

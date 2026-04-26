@@ -1,0 +1,31 @@
+{
+  "deployment_info": {
+    "deployed_at": "2024-04-21T05:57:00Z",
+    "context": "docker-desktop",
+    "namespace": "metabob",
+    "image": "metabobapp/metabob-rpc-api:0.16.18-http-rpc-complete",
+    "status": "updated"
+  },
+  "submodule_update": {
+    "submoduleUpdated": true,
+    "submodulePath": "vessels/metabob-activity-api",
+    "previousCommit": "21e0046031aca8b4de706b9c3767ed6a40416449",
+    "newSubmoduleCommit": "13d818f390be63e0078ca45bb44f6e3d95970585",
+    "shortCommits": {
+      "previous": "21e0046",
+      "new": "13d818f"
+    },
+    "stagedForCommit": true,
+    "deploymentRepoPath": "./repos/deployment"
+  },
+  "newTag": "1.2.11-13d818f",
+  "image": "metabobapp/metabob-activity-api",
+  "version": "1.2.11",
+  "sha7": "13d818f",
+  "update_notes": [
+    "Submodule vessels/metabob-activity-api updated to latest vessel commit",
+    "Local changes in submodule were safely stashed",
+    "Changes are staged and ready for deployment commit",
+    "Update completed successfully"
+  ]
+}

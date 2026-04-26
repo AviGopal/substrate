@@ -1,0 +1,131 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - heading "Navigation" [level=2] [ref=e26]
+        - navigation [ref=e27]:
+          - link "Templates" [ref=e28] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e29]
+            - generic [ref=e34]: Templates
+          - link "Composition" [ref=e35] [cursor=pointer]:
+            - /url: /composition
+            - img [ref=e36]
+            - generic [ref=e42]: Composition
+          - link "Executions" [ref=e43] [cursor=pointer]:
+            - /url: /executions
+            - img [ref=e44]
+            - generic [ref=e46]: Executions
+          - link "Goals" [ref=e47] [cursor=pointer]:
+            - /url: /goals
+            - img [ref=e48]
+            - generic [ref=e52]: Goals
+          - link "Shapes" [ref=e53] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e54]
+            - generic [ref=e58]: Shapes
+        - generic [ref=e59]:
+          - heading "Recent" [level=2] [ref=e60]
+          - generic [ref=e61]:
+            - generic [ref=e62]: debug-auth:v3
+            - generic [ref=e63]: implement-feat
+            - generic [ref=e64]: refactor-core
+    - main [ref=e65]:
+      - generic [ref=e243]:
+        - generic [ref=e245]:
+          - heading "Goal Resolution" [level=1] [ref=e246]
+          - paragraph [ref=e247]: Describe goals and predict optimal execution paths using Thompson Sampling
+        - generic [ref=e248]:
+          - generic [ref=e249]:
+            - text: "Describe your goal:"
+            - textbox "e.g., Fix the authentication bug in production" [ref=e250]: Search online for new OWASP security issues and match them against our codebase dependencies
+            - generic [ref=e252]: 92 characters
+          - generic [ref=e253]:
+            - text: "Available Context Shapes:"
+            - generic [ref=e254]:
+              - generic [ref=e255]:
+                - generic [ref=e334] [cursor=pointer]:
+                  - checkbox "error_log" [ref=e335]
+                  - generic [ref=e336]: error_log
+                  - img [ref=e337]
+                - generic [ref=e341] [cursor=pointer]:
+                  - checkbox "source_code" [ref=e342]
+                  - generic [ref=e343]: source_code
+                  - img [ref=e344]
+                - generic [ref=e348] [cursor=pointer]:
+                  - checkbox "test_results" [ref=e349]
+                  - generic [ref=e350]: test_results
+                  - img [ref=e351]
+                - generic [ref=e355] [cursor=pointer]:
+                  - checkbox "git_diff" [ref=e356]
+                  - generic [ref=e357]: git_diff
+                  - img [ref=e358]
+              - generic [ref=e284]:
+                - button "Hide additional shapes" [active] [ref=e362] [cursor=pointer]:
+                  - img [ref=e363]
+                  - text: Hide additional shapes
+                - generic [ref=e365]:
+                  - generic [ref=e366] [cursor=pointer]:
+                    - checkbox "execution_trace" [ref=e367]
+                    - generic [ref=e368]: execution_trace
+                    - img
+                  - generic [ref=e369] [cursor=pointer]:
+                    - checkbox "activity_metrics" [ref=e370]
+                    - generic [ref=e371]: activity_metrics
+                    - img
+                  - generic [ref=e372] [cursor=pointer]:
+                    - checkbox "composition_graph" [ref=e373]
+                    - generic [ref=e374]: composition_graph
+                    - img
+                  - generic [ref=e375] [cursor=pointer]:
+                    - checkbox "deployment_logs" [ref=e376]
+                    - generic [ref=e377]: deployment_logs
+                    - img
+                  - generic [ref=e378] [cursor=pointer]:
+                    - checkbox "previous_fixes" [ref=e379]
+                    - generic [ref=e380]: previous_fixes
+                    - img
+                  - generic [ref=e381] [cursor=pointer]:
+                    - checkbox "git_history" [ref=e382]
+                    - generic [ref=e383]: git_history
+                    - img [ref=e384]
+          - button "Advanced Options" [ref=e289] [cursor=pointer]:
+            - img [ref=e290]
+            - text: Advanced Options
+            - img [ref=e293]
+          - button "Predict Paths" [ref=e333] [cursor=pointer]:
+            - img
+            - text: Predict Paths
+        - generic [ref=e297]:
+          - img [ref=e298]
+          - generic [ref=e302]:
+            - heading "Enter a goal to get started" [level=3] [ref=e303]
+            - paragraph [ref=e304]: Describe what you want to achieve, select available context shapes, and we'll predict the best execution paths using Thompson Sampling.
+  - contentinfo [ref=e215]:
+    - generic [ref=e216]:
+      - generic [ref=e217]:
+        - generic [ref=e218]:
+          - img [ref=e219]
+          - generic [ref=e222]: API Connected
+        - generic [ref=e223]:
+          - img [ref=e224]
+          - generic [ref=e227]: "Last update: 11:16:13 AM"
+      - generic [ref=e228]:
+        - generic [ref=e229]: LOCAL
+        - generic [ref=e230]: v0.1.0

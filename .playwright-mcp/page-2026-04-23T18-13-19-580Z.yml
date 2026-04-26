@@ -1,0 +1,275 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - heading "Navigation" [level=2] [ref=e26]
+        - navigation [ref=e27]:
+          - link "Templates" [ref=e28] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e29]
+            - generic [ref=e34]: Templates
+          - link "Composition" [ref=e35] [cursor=pointer]:
+            - /url: /composition
+            - img [ref=e36]
+            - generic [ref=e42]: Composition
+          - link "Executions" [ref=e43] [cursor=pointer]:
+            - /url: /executions
+            - img [ref=e44]
+            - generic [ref=e46]: Executions
+          - link "Goals" [ref=e47] [cursor=pointer]:
+            - /url: /goals
+            - img [ref=e48]
+            - generic [ref=e52]: Goals
+          - link "Shapes" [ref=e53] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e54]
+            - generic [ref=e58]: Shapes
+        - generic [ref=e59]:
+          - heading "Recent" [level=2] [ref=e60]
+          - generic [ref=e61]:
+            - generic [ref=e62]: debug-auth:v3
+            - generic [ref=e63]: implement-feat
+            - generic [ref=e64]: refactor-core
+    - main [ref=e65]:
+      - generic [ref=e67]:
+        - generic [ref=e69]:
+          - generic [ref=e70]:
+            - button "Back" [ref=e71] [cursor=pointer]:
+              - img
+              - text: Back
+            - generic [ref=e72]:
+              - heading "Trajectory Editor" [level=1] [ref=e73]
+              - paragraph [ref=e74]: Build activity sequences with horizontal grid layout
+          - generic [ref=e75]:
+            - generic [ref=e942]: Unsaved changes
+            - button "Clear" [ref=e76] [cursor=pointer]:
+              - img
+              - text: Clear
+            - button "Save" [active] [ref=e77] [cursor=pointer]:
+              - img
+              - text: Save
+        - generic [ref=e78]:
+          - generic [ref=e83]:
+            - generic [ref=e85]:
+              - heading "Goal Description" [level=3] [ref=e87]
+              - generic [ref=e88]:
+                - textbox "Describe what you want to accomplish (e.g., 'Fix security vulnerabilities in authentication')" [ref=e89]
+                - generic [ref=e90]:
+                  - paragraph [ref=e91]: Enter a goal to generate path recommendations
+                  - button "Generate Path" [disabled]:
+                    - img
+                    - text: Generate Path
+            - generic [ref=e92]:
+              - generic [ref=e93]:
+                - heading "Activity Palette" [level=3] [ref=e94]
+                - generic [ref=e95]:
+                  - img [ref=e96]
+                  - textbox "Search activities..." [ref=e99]: analysis
+              - generic [ref=e104]:
+                - generic [ref=e1017]:
+                  - img [ref=e1018]
+                  - generic [ref=e1025]:
+                    - generic [ref=e1026]:
+                      - generic [ref=e1027]: Repository Structure Analysis
+                      - generic [ref=e1028]: tool
+                    - paragraph [ref=e1029]: "Auto-generated activity for: Analyze repository structure comprehensively, mapping file tree, collecting statistics on file counts by type, sizes, directory organization, and providing a detailed overview of the codebase structure"
+                    - generic [ref=e1031]: 1 tasks
+                - generic [ref=e1032]:
+                  - img [ref=e1033]
+                  - generic [ref=e1040]:
+                    - generic [ref=e1041]:
+                      - generic [ref=e1042]: Comprehensive Codebase Structure Analysis
+                      - generic [ref=e1043]: tool
+                    - paragraph [ref=e1044]: "Auto-generated activity for: Analyze and document comprehensive codebase structure by combining file mapping, entry points, dependencies, and git context into a single structured metadata impulse"
+                    - generic [ref=e1046]: 1 tasks
+          - generic [ref=e106]:
+            - generic [ref=e944]:
+              - generic [ref=e945]:
+                - button "Insert activity at start" [ref=e947] [cursor=pointer]:
+                  - img
+                - generic [ref=e948]:
+                  - generic [ref=e949]: Step 1
+                  - generic [ref=e951]:
+                    - generic "Valid" [ref=e953]:
+                      - img [ref=e954]
+                    - generic [ref=e959] [cursor=pointer]:
+                      - generic [ref=e961]:
+                        - img [ref=e962]
+                        - generic [ref=e969]:
+                          - generic [ref=e970]:
+                            - heading "Dependency Vulnerability Web Research" [level=3] [ref=e971]
+                            - generic [ref=e972]:
+                              - generic [ref=e973]: tool
+                              - button [ref=e974]:
+                                - img
+                          - paragraph [ref=e975]: "Auto-generated activity for: Perform comprehensive web search for vulnerabilities in project dependencies by researching each dependency for known security issues, CVEs, and vulnerability reports"
+                          - generic [ref=e976]:
+                            - generic [ref=e977]: 1 tasks
+                            - button "Collapse" [expanded] [ref=e1047]:
+                              - text: Collapse
+                              - img
+                      - region "Collapse" [ref=e1048]:
+                        - generic [ref=e1049]:
+                          - generic [ref=e1050]:
+                            - generic [ref=e1051]:
+                              - heading "Tasks" [level=4] [ref=e1052]
+                              - button "Add Task" [ref=e1053]:
+                                - img
+                                - text: Add Task
+                            - generic [ref=e1056]:
+                              - generic [ref=e1057]:
+                                - button "↑" [disabled]
+                                - img [ref=e1058]
+                                - button "↓" [disabled]
+                              - generic [ref=e1065]:
+                                - generic [ref=e1066]:
+                                  - generic [ref=e1067]:
+                                    - generic [ref=e1068]: "Task 1: Description"
+                                    - button [ref=e1069]:
+                                      - img
+                                  - textbox "Describe what this task does..." [ref=e1070]: "Accomplish: Perform comprehensive web search for vulnerabilities in project dependencies by researching each dep"
+                                - generic [ref=e1071]:
+                                  - text: Prompt Template
+                                  - 'textbox "Enter prompt with ${variable} placeholders..." [ref=e1072]': "Perform comprehensive web search for vulnerabilities in project dependencies by researching each dependency for known security issues, CVEs, and vulnerability reports Context: {{#each this}} - {{@key}}: {{this}} {{/each}} Please accomplish this goal step by step."
+                                - generic [ref=e1073]:
+                                  - text: Validation Rules
+                                  - generic [ref=e1074]:
+                                    - generic [ref=e1076]:
+                                      - generic [ref=e1077]: Required Files
+                                      - button "Add" [ref=e1078]:
+                                        - img
+                                        - text: Add
+                                    - generic [ref=e1080]:
+                                      - generic [ref=e1081]: Required Patterns (regex)
+                                      - button "Add" [ref=e1082]:
+                                        - img
+                                        - text: Add
+                                    - generic [ref=e1084]:
+                                      - generic [ref=e1085]: Forbidden Patterns (regex)
+                                      - button "Add" [ref=e1086]:
+                                        - img
+                                        - text: Add
+                                - generic [ref=e1087]:
+                                  - text: Retry Configuration
+                                  - generic [ref=e1088]:
+                                    - generic [ref=e1089]:
+                                      - text: Max Attempts
+                                      - spinbutton [ref=e1090]: "2"
+                                    - generic [ref=e1091]:
+                                      - text: Strategy
+                                      - combobox [ref=e1092]:
+                                        - img [ref=e1093]
+                          - generic [ref=e1095]:
+                            - generic [ref=e1097]:
+                              - generic [ref=e1098]:
+                                - heading "Thompson Sampling Parameters 20% confidence" [level=3] [ref=e1099]:
+                                  - text: Thompson Sampling Parameters
+                                  - generic "Confidence increases with more trials" [ref=e1100]: 20% confidence
+                                - paragraph [ref=e1101]: Adjust learning parameters to influence selection probability
+                              - button "Reset" [ref=e1102]
+                            - generic [ref=e1103]:
+                              - generic [ref=e1104]:
+                                - generic [ref=e1105]:
+                                  - generic [ref=e1106]: Alpha (Successes)Increase to boost selection
+                                  - spinbutton [ref=e1107]: "1"
+                                - slider [ref=e1112]
+                              - generic [ref=e1113]:
+                                - generic [ref=e1114]:
+                                  - generic [ref=e1115]: Beta (Failures)Increase to penalize selection
+                                  - spinbutton [ref=e1116]: "1"
+                                - slider [ref=e1121]
+                              - generic [ref=e1122]:
+                                - generic [ref=e1123]:
+                                  - generic [ref=e1124]: Selection StrengthBalanced
+                                  - generic [ref=e1125]: "0.50"
+                                - slider [ref=e1130]
+                                - generic [ref=e1131]:
+                                  - generic [ref=e1132]: 0.0 - High exploration
+                                  - generic [ref=e1133]: 1.0 - High exploitation
+                              - generic [ref=e1134]:
+                                - generic [ref=e1135]:
+                                  - img [ref=e1136]
+                                  - generic [ref=e1140]: Projected Metrics
+                                - generic [ref=e1141]:
+                                  - generic [ref=e1142]:
+                                    - generic [ref=e1143]: Success Rate
+                                    - generic [ref=e1144]: 50%
+                                  - generic [ref=e1145]:
+                                    - generic [ref=e1146]: Total Trials
+                                    - generic [ref=e1147]: "2"
+                                  - generic [ref=e1148]:
+                                    - generic [ref=e1149]: Est. Selection
+                                    - generic [ref=e1150]: 50%
+                          - button "Save as Variant" [ref=e1152]:
+                            - img
+                            - text: Save as Variant
+                - button "Insert activity after step 1" [ref=e980] [cursor=pointer]:
+                  - img
+              - generic [ref=e981]:
+                - generic [ref=e983]:
+                  - generic [ref=e984]: Step 2
+                  - generic [ref=e986]:
+                    - generic "Valid" [ref=e988]:
+                      - img [ref=e989]
+                    - generic [ref=e996] [cursor=pointer]:
+                      - img [ref=e997]
+                      - generic [ref=e1004]:
+                        - generic [ref=e1005]:
+                          - heading "Comprehensive Vulnerability Scanner" [level=3] [ref=e1006]
+                          - generic [ref=e1007]:
+                            - generic [ref=e1008]: tool
+                            - button [ref=e1009]:
+                              - img
+                        - paragraph [ref=e1010]: "Auto-generated activity for: Perform comprehensive vulnerability scanning across all project dependencies by identifying package files (package.json, package-lock.json, yarn.lock, bun.lock, composer.json, requirements.txt, Gemfile, etc.), extracting dependency lists with versions, and checking each dependency against vulnerability databases (CVE, NVD, GitHub Security Advisories, Snyk, OSV) to generate detailed security reports with remediation recommendations"
+                        - generic [ref=e1011]:
+                          - generic [ref=e1012]: 1 tasks
+                          - button "Expand" [ref=e1013]:
+                            - text: Expand
+                            - img
+                - button "Insert activity after step 2" [ref=e1015] [cursor=pointer]:
+                  - img
+            - status [ref=e982]
+          - generic [ref=e111]:
+            - heading "Trajectory Info" [level=3] [ref=e113]
+            - generic [ref=e114]:
+              - generic [ref=e115]:
+                - generic [ref=e116]: Activities
+                - generic [ref=e117]: "2"
+              - generic [ref=e118]:
+                - generic [ref=e119]: Columns
+                - generic [ref=e120]: "2"
+              - generic [ref=e121]:
+                - paragraph [ref=e122]:
+                  - strong [ref=e123]: "Tip:"
+                  - text: Drag activities from the palette to add them to your trajectory.
+                - paragraph [ref=e124]:
+                  - strong [ref=e125]: "Keyboard navigation:"
+                  - text: Use arrow keys to navigate between activities. Press Delete to remove selected activity.
+  - contentinfo [ref=e126]:
+    - generic [ref=e127]:
+      - generic [ref=e128]:
+        - generic [ref=e129]:
+          - img [ref=e130]
+          - generic [ref=e133]: API Connected
+        - generic [ref=e134]:
+          - img [ref=e135]
+          - generic [ref=e138]: "Last update: 11:13:07 AM"
+      - generic [ref=e139]:
+        - generic [ref=e140]: LOCAL
+        - generic [ref=e141]: v0.1.0

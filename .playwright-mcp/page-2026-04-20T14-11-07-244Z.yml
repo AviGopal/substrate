@@ -1,0 +1,316 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - heading "⚡ Activity Monitor" [level=1] [ref=e3]
+    - generic [ref=e4]:
+      - generic [ref=e7]: Live
+      - generic [ref=e8]: 07:11:05
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]: Recent Executions
+        - generic [ref=e13]: 2 executions
+      - generic [ref=e14]:
+        - generic [ref=e816]:
+          - generic [ref=e817]:
+            - generic [ref=e818]:
+              - text: ✓
+              - strong [ref=e819]: activity:⟨startup:health-check⟩
+            - generic [ref=e820]: execution:act_177... • 04:39
+          - generic [ref=e821]:
+            - generic [ref=e822]: ⏱ 10.2s
+            - generic [ref=e823]: 💰 $0.1170
+          - generic [ref=e824]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e825]: SUCCESS
+        - generic [ref=e826]:
+          - generic [ref=e827]:
+            - generic [ref=e828]:
+              - text: ✓
+              - strong [ref=e829]: activity:⟨startup:health-check⟩
+            - generic [ref=e830]: execution:exec_17... • 04:39
+          - generic [ref=e831]:
+            - generic [ref=e832]: ⏱ 10.2s
+            - generic [ref=e833]: 💰 $0.1170
+          - generic [ref=e834]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e835]: SUCCESS
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - generic [ref=e37]: 📊 Learning Insights
+        - generic [ref=e38]: 2 recent
+      - generic [ref=e39]:
+        - generic [ref=e836]:
+          - generic [ref=e837]: Success Rate (Last 20)
+          - generic [ref=e838]: 100.0%
+          - generic [ref=e839]: 2/2 succeeded
+        - generic [ref=e840]:
+          - generic [ref=e841]: Average Cost
+          - generic [ref=e842]: $0.1170
+          - generic [ref=e843]: "⏱ Avg duration: 10152.00ms"
+        - generic [ref=e844]:
+          - generic [ref=e845]: Exploration Balance
+          - generic [ref=e846]: 50 / 50
+          - generic [ref=e847]:
+            - text: "🔍 Exploring: 50"
+            - text: "🎯 Exploiting: 0"
+        - generic [ref=e848]:
+          - generic [ref=e849]: 🏆 Most Used Template
+          - generic [ref=e850]: activity:⟨startup:health-check⟩
+          - generic [ref=e851]: 2 executions • 100% success
+        - generic [ref=e852]:
+          - generic [ref=e853]: System Learning State
+          - generic [ref=e854]:
+            - text: ✓ 0 templates converged (high confidence)
+            - text: ⚡ 50 templates still exploring
+            - text: 📈 50 total templates tracked
+    - generic [ref=e59]:
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - generic [ref=e62]: Activity Templates
+          - generic [ref=e63]: 50 templates
+        - generic [ref=e64]:
+          - generic [ref=e855]:
+            - generic [ref=e856]: feature
+            - generic [ref=e857]:
+              - generic [ref=e858]: "[Attempt] Implement An Automated Data Refresh Mechanism That Populates A Dashboard With Current Operational Metrics And Ci/cd Pipeline Information"
+              - generic [ref=e859]:
+                - generic [ref=e860]: NaN runs
+                - generic [ref=e861]: NaN% Thompson
+                - generic [ref=e862]: 0% success
+            - generic [ref=e863]:
+              - generic [ref=e864]: Enhance The Dashboard Ui To Display Real-time Data From Executed Activities Instead Of Mock Or Static Data, By Composing And Orchestrating Actual Activity Executions To Populate Dashboard Metrics And Visualizations.
+              - generic [ref=e865]:
+                - generic [ref=e866]: NaN runs
+                - generic [ref=e867]: NaN% Thompson
+                - generic [ref=e868]: 0% success
+            - generic [ref=e869]:
+              - generic [ref=e870]: learned-list-the-contents-of-this-folder-mo1v26qk
+              - generic [ref=e871]:
+                - generic [ref=e872]: NaN runs
+                - generic [ref=e873]: NaN% Thompson
+                - generic [ref=e874]: 0% success
+            - generic [ref=e875]:
+              - generic [ref=e876]: learned--attempt--test-the-supabase-connection-in-this-pro-mo1pyxns
+              - generic [ref=e877]:
+                - generic [ref=e878]: NaN runs
+                - generic [ref=e879]: NaN% Thompson
+                - generic [ref=e880]: 0% success
+            - generic [ref=e881]:
+              - generic [ref=e882]: List The Contents Of This Folder
+              - generic [ref=e883]:
+                - generic [ref=e884]: NaN runs
+                - generic [ref=e885]: NaN% Thompson
+                - generic [ref=e886]: 0% success
+          - generic [ref=e887]:
+            - generic [ref=e888]: infrastructure
+            - generic [ref=e889]:
+              - generic [ref=e890]: learned-parent-goal--enforce-minibob-dashboard-specificati-mo5ih7t5
+              - generic [ref=e891]:
+                - generic [ref=e892]: NaN runs
+                - generic [ref=e893]: NaN% Thompson
+                - generic [ref=e894]: 0% success
+            - generic [ref=e895]:
+              - generic [ref=e896]: learned-parent-goal--convert-specification-documents-to-au-mo5fdw6o
+              - generic [ref=e897]:
+                - generic [ref=e898]: NaN runs
+                - generic [ref=e899]: NaN% Thompson
+                - generic [ref=e900]: 0% success
+            - generic [ref=e901]:
+              - generic [ref=e902]: learned-startup-health-check-mo40jhpo
+              - generic [ref=e903]:
+                - generic [ref=e904]: NaN runs
+                - generic [ref=e905]: NaN% Thompson
+                - generic [ref=e906]: 0% success
+            - generic [ref=e907]:
+              - generic [ref=e908]: learned-startup-health-check-mo473xic
+              - generic [ref=e909]:
+                - generic [ref=e910]: NaN runs
+                - generic [ref=e911]: NaN% Thompson
+                - generic [ref=e912]: 0% success
+            - generic [ref=e913]:
+              - generic [ref=e914]: Create Activity Template (Progressive Composition)
+              - generic [ref=e915]:
+                - generic [ref=e916]: NaN runs
+                - generic [ref=e917]: NaN% Thompson
+                - generic [ref=e918]: 0% success
+          - generic [ref=e919]:
+            - generic [ref=e920]: tool
+            - generic [ref=e921]:
+              - generic [ref=e922]: learned-parent-goal--user-requested-to-compile-all-validat-mo5fq38t
+              - generic [ref=e923]:
+                - generic [ref=e924]: NaN runs
+                - generic [ref=e925]: NaN% Thompson
+                - generic [ref=e926]: 0% success
+            - generic [ref=e927]:
+              - generic [ref=e928]: Multi-Source Validation Report
+              - generic [ref=e929]:
+                - generic [ref=e930]: NaN runs
+                - generic [ref=e931]: NaN% Thompson
+                - generic [ref=e932]: 0% success
+            - generic [ref=e933]:
+              - generic [ref=e934]: Comprehensive Validation Report Generator
+              - generic [ref=e935]:
+                - generic [ref=e936]: NaN runs
+                - generic [ref=e937]: NaN% Thompson
+                - generic [ref=e938]: 0% success
+            - generic [ref=e939]:
+              - generic [ref=e940]: Validation Report Compiler
+              - generic [ref=e941]:
+                - generic [ref=e942]: NaN runs
+                - generic [ref=e943]: NaN% Thompson
+                - generic [ref=e944]: 0% success
+            - generic [ref=e945]:
+              - generic [ref=e946]: learned-parent-goal--found-specification-documents-and-rec-mo5fdfga
+              - generic [ref=e947]:
+                - generic [ref=e948]: NaN runs
+                - generic [ref=e949]: NaN% Thompson
+                - generic [ref=e950]: 0% success
+          - generic [ref=e951]:
+            - generic [ref=e952]: validation
+            - generic [ref=e953]:
+              - generic [ref=e954]: Enforce Specification Compliance
+              - generic [ref=e955]:
+                - generic [ref=e956]: NaN runs
+                - generic [ref=e957]: NaN% Thompson
+                - generic [ref=e958]: 0% success
+          - generic [ref=e959]:
+            - generic [ref=e960]: bugfix
+            - generic [ref=e961]:
+              - generic [ref=e962]: "[Attempt] Correct A Spelling Error In The Readme.md Documentation To Improve Documentation Quality And Professionalism"
+              - generic [ref=e963]:
+                - generic [ref=e964]: NaN runs
+                - generic [ref=e965]: NaN% Thompson
+                - generic [ref=e966]: 0% success
+            - generic [ref=e967]:
+              - generic [ref=e968]: "[Attempt] Continuously Develop A Dashboard By Systematically Selecting And Implementing Improvements (data Refresh, Feature Additions, Bug Fixes, Specification Validation) Until The Work Meets A Quality Threshold Suitable For A Pull Request"
+              - generic [ref=e969]:
+                - generic [ref=e970]: NaN runs
+                - generic [ref=e971]: NaN% Thompson
+                - generic [ref=e972]: 0% success
+      - generic [ref=e183]:
+        - generic [ref=e184]:
+          - generic [ref=e185]: 🎲 Thompson Sampling (Learning System)
+          - generic [ref=e186]: 50 scores
+        - generic [ref=e187]:
+          - generic [ref=e973]:
+            - generic [ref=e974]:
+              - generic [ref=e975]:
+                - generic [ref=e976]: activity:attempt_1776639954200_czzehu
+                - generic [ref=e977]: EXPLORING 0 runs
+              - generic [ref=e978]: 50.0% ±70.7%
+            - generic [ref=e979]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e980]:
+            - generic [ref=e981]:
+              - generic [ref=e982]:
+                - generic [ref=e983]: activity:tpl_1776601179533_vit7my
+                - generic [ref=e984]: EXPLORING 0 runs
+              - generic [ref=e985]: 50.0% ±70.7%
+            - generic [ref=e986]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e987]:
+            - generic [ref=e988]:
+              - generic [ref=e989]:
+                - generic [ref=e990]: activity:tpl_1776587753417_z3pzyl
+                - generic [ref=e991]: EXPLORING 0 runs
+              - generic [ref=e992]: 50.0% ±70.7%
+            - generic [ref=e993]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e994]:
+            - generic [ref=e995]:
+              - generic [ref=e996]:
+                - generic [ref=e997]: activity:tpl_1776583128558_czvuo
+                - generic [ref=e998]: EXPLORING 0 runs
+              - generic [ref=e999]: 50.0% ±70.7%
+            - generic [ref=e1000]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e1001]:
+            - generic [ref=e1002]:
+              - generic [ref=e1003]:
+                - generic [ref=e1004]: activity:⟨Enforce Specification Compliance⟩
+                - generic [ref=e1005]: EXPLORING 0 runs
+              - generic [ref=e1006]: 50.0% ±70.7%
+            - generic [ref=e1007]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e1008]:
+            - generic [ref=e1009]:
+              - generic [ref=e1010]:
+                - generic [ref=e1011]: activity:tpl_1776582559537_nrk0cs
+                - generic [ref=e1012]: EXPLORING 0 runs
+              - generic [ref=e1013]: 50.0% ±70.7%
+            - generic [ref=e1014]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e1015]:
+            - generic [ref=e1016]:
+              - generic [ref=e1017]:
+                - generic [ref=e1018]: activity:⟨Multi-Source Validation Report⟩
+                - generic [ref=e1019]: EXPLORING 0 runs
+              - generic [ref=e1020]: 50.0% ±70.7%
+            - generic [ref=e1021]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e1022]:
+            - generic [ref=e1023]:
+              - generic [ref=e1024]:
+                - generic [ref=e1025]: activity:⟨Comprehensive Validation Report Generator⟩
+                - generic [ref=e1026]: EXPLORING 0 runs
+              - generic [ref=e1027]: 50.0% ±70.7%
+            - generic [ref=e1028]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e1029]:
+            - generic [ref=e1030]:
+              - generic [ref=e1031]:
+                - generic [ref=e1032]: activity:tpl_1776367022492_spg807
+                - generic [ref=e1033]: EXPLORING 0 runs
+              - generic [ref=e1034]: 50.0% ±70.7%
+            - generic [ref=e1035]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e1036]:
+            - generic [ref=e1037]:
+              - generic [ref=e1038]:
+                - generic [ref=e1039]: activity:⟨activity:⟨activity:tpl_1776358472680_8qv8je\⟩⟩
+                - generic [ref=e1040]: EXPLORING 0 runs
+              - generic [ref=e1041]: 50.0% ±70.7%
+            - generic [ref=e1042]: α=1.0 • β=1.0 • confidence=null
+    - generic [ref=e258]:
+      - generic [ref=e259]:
+        - generic [ref=e260]:
+          - generic [ref=e261]: Impulse Resolution
+          - generic [ref=e262]: 0 shapes
+        - generic [ref=e1043]:
+          - generic [ref=e1044]: 🔒
+          - generic [ref=e1045]: Impulse metrics unavailable
+          - generic [ref=e1046]:
+            - text: Requires API key authentication
+            - text: "Status: Waiting for authenticated executions"
+      - generic [ref=e268]:
+        - generic [ref=e269]:
+          - generic [ref=e270]: 📡 Data Sources (Impulse Resolution)
+          - generic [ref=e271]: 3 data sources
+        - generic [ref=e272]:
+          - generic [ref=e1047]:
+            - generic [ref=e1048]:
+              - generic [ref=e1049]: execution_trace
+              - generic [ref=e1050]: ERROR
+            - generic [ref=e1051]:
+              - strong [ref=e1052]: "Vessel:"
+              - text: metabob-activity-api
+              - strong [ref=e1053]: "Type:"
+              - text: executions
+              - strong [ref=e1054]: "Last Fetch:"
+              - text: 07:09:57
+            - generic [ref=e1055]: GET /v2/activities/executions?limit=50
+          - generic [ref=e1056]:
+            - generic [ref=e1057]:
+              - generic [ref=e1058]: activity_template
+              - generic [ref=e1059]: ERROR
+            - generic [ref=e1060]:
+              - strong [ref=e1061]: "Vessel:"
+              - text: metabob-activity-api
+              - strong [ref=e1062]: "Type:"
+              - text: templates
+              - strong [ref=e1063]: "Last Fetch:"
+              - text: 07:09:57
+            - generic [ref=e1064]: GET /v2/activities/templates
+          - generic [ref=e1065]:
+            - generic [ref=e1066]:
+              - generic [ref=e1067]: impulse_resolution_metrics
+              - generic [ref=e1068]: ERROR
+            - generic [ref=e1069]:
+              - strong [ref=e1070]: "Vessel:"
+              - text: metabob-activity-api
+              - strong [ref=e1071]: "Type:"
+              - text: impulses
+              - strong [ref=e1072]: "Last Fetch:"
+              - text: Never
+            - generic [ref=e1073]: GET /v2/impulses/resolution-metrics?limit=20

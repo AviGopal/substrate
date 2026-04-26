@@ -1,0 +1,29 @@
+{
+  "impliedShapes": [
+    "source_code",
+    "deployment_config",
+    "container_image",
+    "kubernetes_manifests",
+    "version_metadata",
+    "deployment_status",
+    "build_artifacts",
+    "registry_credentials",
+    "health_checks",
+    "rollback_plan"
+  ],
+  "category": "infrastructure",
+  "complexity": "complex",
+  "actionVerbs": [
+    "deploy",
+    "build",
+    "push",
+    "validate",
+    "health_check",
+    "verify",
+    "rollback",
+    "configure",
+    "tag",
+    "release"
+  ],
+  "reasoning": "This is a production deployment task requiring 6+ orchestrated activities. The goal specifies an exact version (1.4.3) and deterministic deployment tool with production execution (dryRun=false). Required activities include: (1) version validation to confirm 1.4.3 exists, (2) source code checkout from git, (3) Docker image build with deterministic flags, (4) push to image registry, (5) Kubernetes manifest application via deploy-vessel-deterministic, (6) health check and pod readiness verification, (7) smoke tests and endpoint validation, (8) deployment documentation. Multiple sequential and conditional dependencies exist between steps. Requires external system access (git, container registry, K8s cluster), credentials management, and rollback capability."
+}

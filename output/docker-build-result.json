@@ -1,0 +1,6 @@
+{
+  "imageTag": "registry.example.com/myapp:v1.0.0",
+  "imageLatest": "registry.example.com/myapp:latest",
+  "built": true,
+  "buildTime": "2024-04-21T06:00:00Z"
+}

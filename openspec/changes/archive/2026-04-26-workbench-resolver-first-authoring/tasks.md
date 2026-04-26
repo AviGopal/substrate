@@ -1,28 +1,25 @@
-## 1. Create ConfigEditor component
+## 1. ConfigEditor value prop
 
-- [x] 1.1 Create `repos/workbench/src/components/trajectory/ConfigEditor.tsx` with a `ConfigEditorProps` interface: `{ resolver: string; onChange: (config: Record<string, unknown> | undefined) => void }`
-- [x] 1.2 Implement the `bash` branch: render a `command` textarea (required) and a `timeout` number input (optional); call `onChange` with `{ command, timeout? }` on every field change, omitting `timeout` when the input is empty
-- [x] 1.3 Implement the `file` branch: render a `path` text input, an `operation` Select (read/write/edit/append, default `read`), and a `content` textarea hidden when `operation === 'read'`; call `onChange` with `{ path, operation, content? }`
-- [x] 1.4 Implement the `git` branch: render an `operation` Select (diff/log/commit/push/status, default `diff`); call `onChange` with `{ operation }`
-- [x] 1.5 Implement the fallback branch for all other resolvers: render the existing raw JSON textarea with `onBlur` JSON validation (mirrors current inline textarea in `CreateActivityDialog`); call `onChange` with the parsed object or `undefined` on invalid JSON
+- [x] 1.1 Add optional `value?: Record<string, unknown>` prop to `ConfigEditor` component interface
+- [x] 1.2 Initialize ConfigEditor internal state from `value` prop on mount (use as initial state, not controlled)
 
-## 2. Reset state on resolver change
+## 2. TaskEditor resolver picker
 
-- [x] 2.1 Add a `useEffect` inside `ConfigEditor` watching the `resolver` prop; reset all internal field `useState` values to their defaults when `resolver` changes
-- [x] 2.2 Verify via manual test: switch resolver from `bash` to `git` in the dialog — command and timeout fields should be gone and the git operation picker should start at `diff`
+- [x] 2.1 Add `resolverToTierMap` local constant in `TaskEditor.tsx` mapping resolver names to `ResolverTier` (`llm→llm`, `bash/git/file/exec→deterministic`, `pattern→pattern`)
+- [x] 2.2 Import `Select`, `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectItem` from `@/components/ui/select` in `TaskEditor.tsx`
+- [x] 2.3 Import `ConfigEditor` from `./ConfigEditor` in `TaskEditor.tsx`
+- [x] 2.4 Add resolver `<Select>` to the expanded detail panel in `TaskEditor`, before the prompt/config section, reading `task.resolver ?? 'llm'` as value
+- [x] 2.5 In the resolver `onValueChange` handler, call `onChange({ ...task, resolver: v, resolver_tier: resolverToTierMap[v] ?? 'llm', config: undefined })`
+- [x] 2.6 Replace the unconditional `<TaskPromptEditor>` with conditional rendering: render `TaskPromptEditor` when resolver is `llm`, render `<ConfigEditor key={task.resolver} resolver={task.resolver} value={task.config} onChange={...} />` otherwise
 
-## 3. Wire ConfigEditor into CreateActivityDialog
+## 3. Tests
 
-- [x] 3.1 Import `ConfigEditor` into `CreateActivityDialog.tsx`
-- [x] 3.2 Remove the inline raw JSON textarea block (the `else` branch of the `task.resolver === 'llm'` conditional) and replace it with `<ConfigEditor key={task.resolver} resolver={task.resolver} onChange={(cfg) => updateTask(task.id, { config: cfg ? JSON.stringify(cfg) : '' })} />`
-- [x] 3.3 Remove the `handleConfigBlur` handler and the `configError` field from `TaskRow` — JSON validation responsibility now lives inside `ConfigEditor` for the raw JSON fallback branch; structured branches produce valid objects by construction
+- [x] 3.1 Add test: TaskEditor expanded panel renders resolver select with current resolver pre-selected
+- [x] 3.2 Add test: TaskEditor resolver select defaults to `llm` when `task.resolver` is undefined
+- [x] 3.3 Add test: changing resolver in TaskEditor calls onChange with updated resolver, resolver_tier, and config: undefined
+- [x] 3.4 Add test: TaskEditor shows ConfigEditor (not TaskPromptEditor) when resolver is `bash`
 
-## 4. Adjust submission payload
+## 4. Typecheck and Smoke
 
-- [x] 4.1 In `handleSubmit`, update the config-parsing block for non-LLM tasks: instead of `JSON.parse(t.config)`, use `t.config` as the pre-parsed object directly (since `ConfigEditor` now stores a `Record<string, unknown>` reference). Update `TaskRow.config` type from `string` to `Record<string, unknown> | undefined` to match
-- [x] 4.2 Verify the submission payload for a bash task is `{ id, description, resolver: "bash", config: { command: "bun test", timeout: 5000 } }` with no `prompt` field — check via browser network tab against a local dev API or canary
-
-## 5. Export and tests
-
-- [x] 5.1 Add `ConfigEditor` to `repos/workbench/src/components/trajectory/index.ts` exports
-- [x] 5.2 Write unit tests in `ConfigEditor.test.tsx` covering: bash config onChange output, file config with read operation omits content, git config onChange output, raw JSON fallback parses valid JSON and calls onChange, raw JSON fallback calls onChange with undefined for invalid JSON
+- [x] 4.1 Run `npx tsc --noEmit` in `repos/workbench` — zero new errors
+- [x] 4.2 Run `npx vitest run` in `repos/workbench` — no regressions (192 passing vs 187 baseline, 78 failing unchanged)

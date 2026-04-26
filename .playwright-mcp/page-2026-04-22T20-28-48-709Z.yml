@@ -1,0 +1,109 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - generic:
+          - generic:
+            - link:
+              - /url: /
+              - generic:
+                - generic: W
+              - generic: Workbench
+          - generic:
+            - generic:
+              - img
+              - generic: Connected
+            - button:
+              - img
+            - button:
+              - img
+      - generic:
+        - complementary:
+          - button:
+            - img
+          - generic:
+            - generic:
+              - heading [level=2]: Navigation
+            - navigation:
+              - link:
+                - /url: /templates
+                - img
+                - generic: Templates
+              - link:
+                - /url: /composition
+                - img
+                - generic: Composition
+              - link:
+                - /url: /executions
+                - img
+                - generic: Executions
+              - link:
+                - /url: /goals
+                - img
+                - generic: Goals
+              - link:
+                - /url: /shapes
+                - img
+                - generic: Shapes
+            - generic:
+              - heading [level=2]: Recent
+              - generic:
+                - generic: debug-auth:v3
+                - generic: implement-feat
+                - generic: refactor-core
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - heading [level=1]: Executions
+                  - paragraph: Execution trace explorer - Browse and analyze execution history
+                - generic:
+                  - button:
+                    - img
+                    - text: Auto-refresh
+                  - button [disabled]:
+                    - img
+                    - text: Export
+                  - button:
+                    - img
+              - generic:
+                - searchbox
+              - generic:
+                - generic:
+                  - button:
+                    - img
+                    - text: Last Week
+                  - button [expanded]:
+                    - img
+                    - text: Status
+                  - combobox:
+                    - generic: All Activities
+                    - img
+                  - button: Advanced
+              - generic:
+                - generic:
+                  - button:
+                    - img
+                    - text: Timeline
+                  - button:
+                    - img
+                    - text: List
+      - contentinfo:
+        - generic:
+          - generic:
+            - generic:
+              - img
+              - generic: API Connected
+            - generic:
+              - img
+              - generic: "Last update: 01:28:37 PM"
+          - generic:
+            - generic: LOCAL
+            - generic: v0.1.0
+  - menu "Status" [active] [ref=e156]:
+    - generic [ref=e157]: Execution Status
+    - separator [ref=e158]
+    - menuitemcheckbox "Success" [ref=e159]: Success
+    - menuitemcheckbox "Failure" [ref=e161]: Failure
+    - menuitemcheckbox "Partial" [ref=e163]: Partial

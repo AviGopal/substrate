@@ -1,0 +1,94 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - heading "Navigation" [level=2] [ref=e26]
+        - navigation [ref=e27]:
+          - link "Templates" [active] [ref=e28] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e29]
+            - generic [ref=e34]: Templates
+          - link "Composition" [ref=e35] [cursor=pointer]:
+            - /url: /composition
+            - img [ref=e36]
+            - generic [ref=e42]: Composition
+          - link "Executions" [ref=e43] [cursor=pointer]:
+            - /url: /executions
+            - img [ref=e44]
+            - generic [ref=e46]: Executions
+          - link "Goals" [ref=e47] [cursor=pointer]:
+            - /url: /goals
+            - img [ref=e48]
+            - generic [ref=e52]: Goals
+          - link "Shapes" [ref=e53] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e54]
+            - generic [ref=e58]: Shapes
+        - generic [ref=e59]:
+          - heading "Recent" [level=2] [ref=e60]
+          - generic [ref=e61]:
+            - generic [ref=e62]: debug-auth:v3
+            - generic [ref=e63]: implement-feat
+            - generic [ref=e64]: refactor-core
+    - main [ref=e65]:
+      - generic [ref=e1934]:
+        - generic [ref=e1935]:
+          - generic [ref=e1936]:
+            - heading "Templates" [level=1] [ref=e1937]
+            - paragraph [ref=e1938]: Activity template library - Create and manage activity templates
+          - button "New Template" [ref=e1939] [cursor=pointer]:
+            - img
+            - text: New Template
+        - generic [ref=e1940]:
+          - tablist [ref=e1941]:
+            - tab "Templates List" [selected] [ref=e1942] [cursor=pointer]:
+              - img [ref=e1943]
+              - text: Templates List
+            - tab "Thompson Sampling" [ref=e1950] [cursor=pointer]:
+              - img [ref=e1951]
+              - text: Thompson Sampling
+          - tabpanel "Templates List" [ref=e1956]:
+            - generic [ref=e1957]:
+              - generic [ref=e1958]:
+                - generic [ref=e1959]:
+                  - img [ref=e1960]
+                  - searchbox "Search templates..." [ref=e1963]
+                - button "Filters" [ref=e1964] [cursor=pointer]:
+                  - img
+                  - text: Filters
+              - generic [ref=e1965]:
+                - generic [ref=e1966]: "Category:"
+                - button "All" [ref=e1967] [cursor=pointer]
+                - button "Feature" [ref=e1968] [cursor=pointer]
+                - button "Bugfix" [ref=e1969] [cursor=pointer]
+                - button "Refactor" [ref=e1970] [cursor=pointer]
+                - button "Infrastructure" [ref=e1971] [cursor=pointer]
+                - button "Tool" [ref=e1972] [cursor=pointer]
+  - contentinfo [ref=e215]:
+    - generic [ref=e216]:
+      - generic [ref=e217]:
+        - generic [ref=e218]:
+          - img [ref=e219]
+          - generic [ref=e222]: API Connected
+        - generic [ref=e223]:
+          - img [ref=e224]
+          - generic [ref=e227]: "Last update: 11:17:43 AM"
+      - generic [ref=e228]:
+        - generic [ref=e229]: LOCAL
+        - generic [ref=e230]: v0.1.0

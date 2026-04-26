@@ -1,0 +1,60 @@
+{
+  "timestamp": "2026-04-22T20:45:09.488Z",
+  "selectedShapes": [
+    "source_code",
+    "test_results",
+    "git_diff"
+  ],
+  "recommendations": [
+    {
+      "template_id": "refactor-with-tests",
+      "name": "Refactor With Tests",
+      "thompson_score": 0.9999861541614987,
+      "success_rate": 0.9090909090909091,
+      "avg_cost_usd": 0,
+      "avg_duration_ms": 0,
+      "input_shapes": [],
+      "output_shapes": []
+    },
+    {
+      "template_id": "jwt-authentication-system",
+      "name": "Build a complete JWT-based authentication system with refresh tokens",
+      "thompson_score": 0.9943492129383776,
+      "success_rate": 0.9,
+      "avg_cost_usd": 0,
+      "avg_duration_ms": 0,
+      "input_shapes": [],
+      "output_shapes": []
+    },
+    {
+      "template_id": "hello-world-minimal",
+      "name": "Hello World Minimal",
+      "thompson_score": 0.9884174679817561,
+      "success_rate": 0.9090909090909091,
+      "avg_cost_usd": 0,
+      "avg_duration_ms": 0,
+      "input_shapes": [],
+      "output_shapes": []
+    },
+    {
+      "template_id": "database-performance-optimization",
+      "name": "Optimize database queries and add caching layer for improved performance",
+      "thompson_score": 0.9785980537330274,
+      "success_rate": 0.9,
+      "avg_cost_usd": 0,
+      "avg_duration_ms": 0,
+      "input_shapes": [],
+      "output_shapes": []
+    },
+    {
+      "template_id": "rest-api-crud-development",
+      "name": "Create a RESTful API for user management with proper validation and error handling",
+      "thompson_score": 0.9531125011944834,
+      "success_rate": 0.9,
+      "avg_cost_usd": 0,
+      "avg_duration_ms": 0,
+      "input_shapes": [],
+      "output_shapes": []
+    }
+  ]
+}

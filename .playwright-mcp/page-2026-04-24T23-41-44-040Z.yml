@@ -1,0 +1,680 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - heading "Navigation" [level=2] [ref=e26]
+        - navigation [ref=e27]:
+          - link "Templates" [ref=e28] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e29]
+            - generic [ref=e34]: Templates
+          - link "Composition" [ref=e35] [cursor=pointer]:
+            - /url: /composition
+            - img [ref=e36]
+            - generic [ref=e42]: Composition
+          - link "Executions" [ref=e43] [cursor=pointer]:
+            - /url: /executions
+            - img [ref=e44]
+            - generic [ref=e46]: Executions
+          - link "Goals" [ref=e47] [cursor=pointer]:
+            - /url: /goals
+            - img [ref=e48]
+            - generic [ref=e52]: Goals
+          - link "Shapes" [ref=e53] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e54]
+            - generic [ref=e58]: Shapes
+        - generic [ref=e59]:
+          - heading "Recent" [level=2] [ref=e60]
+          - generic [ref=e61]:
+            - generic [ref=e62]: debug-auth:v3
+            - generic [ref=e63]: implement-feat
+            - generic [ref=e64]: refactor-core
+    - main [ref=e65]:
+      - generic [ref=e67]:
+        - generic [ref=e69]:
+          - generic [ref=e70]:
+            - button "Back" [ref=e71] [cursor=pointer]:
+              - img
+              - text: Back
+            - generic [ref=e72]:
+              - heading "Trajectory Editor" [level=1] [ref=e73]
+              - paragraph [ref=e74]: Build activity sequences with horizontal grid layout
+          - generic [ref=e75]:
+            - generic [ref=e76]: Unsaved changes
+            - button "Clear" [ref=e77] [cursor=pointer]:
+              - img
+              - text: Clear
+            - button "Save" [ref=e78] [cursor=pointer]:
+              - img
+              - text: Save
+        - generic [ref=e79]:
+          - generic [ref=e84]:
+            - generic [ref=e86]:
+              - heading "Goal Description" [level=3] [ref=e88]
+              - generic [ref=e89]:
+                - textbox "Describe what you want to accomplish (e.g., 'Fix security vulnerabilities in authentication')" [ref=e90]: Write tests and fix authentication bugs, then generate a markdown report
+                - generic [ref=e91]:
+                  - paragraph [ref=e92]: Enter a goal to generate path recommendations
+                  - button "Generate Path" [disabled]:
+                    - img
+                    - text: Generate Path
+            - generic [ref=e93]:
+              - generic [ref=e95]:
+                - heading "Goal Completion" [level=3] [ref=e96]
+                - generic [ref=e97]: 1 of 4 shapes
+              - generic [ref=e98]:
+                - generic [ref=e99]:
+                  - progressbar [ref=e100]
+                  - generic [ref=e102]: 25% complete
+                - generic [ref=e103]:
+                  - generic [ref=e104]: Present (1)
+                  - generic [ref=e106]:
+                    - img [ref=e107]
+                    - text: analysis
+                - generic [ref=e110]:
+                  - generic [ref=e111]: Missing (3)
+                  - generic [ref=e112]:
+                    - generic [ref=e113]:
+                      - generic [ref=e114]:
+                        - img [ref=e115]
+                        - text: patch
+                      - button "Find" [ref=e119] [cursor=pointer]
+                    - generic [ref=e120]:
+                      - generic [ref=e121]:
+                        - img [ref=e122]
+                        - text: validation_result
+                      - button "Find" [ref=e126] [cursor=pointer]
+                    - generic [ref=e127]:
+                      - generic [ref=e128]:
+                        - img [ref=e129]
+                        - text: test_suite
+                      - button "Find" [ref=e133] [cursor=pointer]
+                - button "Edit Expected Shapes" [ref=e134] [cursor=pointer]
+            - generic [ref=e135]:
+              - generic [ref=e137]:
+                - heading "Find Prerequisites" [level=3] [ref=e138]:
+                  - img [ref=e139]
+                  - text: Find Prerequisites
+                - button [ref=e142] [cursor=pointer]:
+                  - img
+              - generic [ref=e322]:
+                - generic [ref=e323]:
+                  - generic [ref=e324]: "Select a shape to find producers:"
+                  - generic [ref=e325]:
+                    - button "patch" [ref=e326] [cursor=pointer]
+                    - button "validation_result" [ref=e327] [cursor=pointer]
+                    - button "test_suite" [ref=e328] [cursor=pointer]
+                - generic [ref=e330]: No prerequisite activities found
+                - paragraph [ref=e332]:
+                  - strong [ref=e333]: "Tip:"
+                  - text: Click "Add" to insert a prerequisite activity at the beginning of your trajectory.
+            - generic [ref=e143]:
+              - button "Hide Activities" [ref=e1123] [cursor=pointer]:
+                - img
+                - text: Hide Activities
+              - alert [ref=e1124]:
+                - img [ref=e1125]
+                - generic [ref=e1129]: task_description is required
+            - generic [ref=e145]:
+              - generic [ref=e146]:
+                - heading "Activity Palette" [level=3] [ref=e147]
+                - generic [ref=e148]:
+                  - img [ref=e149]
+                  - textbox "Search activities..." [ref=e152]
+              - generic [ref=e157]:
+                - generic [ref=e334]:
+                  - img [ref=e335]
+                  - generic [ref=e342]:
+                    - generic [ref=e343]:
+                      - generic [ref=e344]: LLM Code Review Script Generator
+                      - generic [ref=e345]: tool
+                    - paragraph [ref=e346]: "Auto-generated activity for: Create an LLM-based code review script that uses a custom code review prompt (user defined) and reviews files that the user has recently worked on"
+                    - generic [ref=e348]: 1 tasks
+                - generic [ref=e349]:
+                  - img [ref=e350]
+                  - generic [ref=e357]:
+                    - generic [ref=e358]:
+                      - generic [ref=e359]: Generate Directory Tree Diagram
+                      - generic [ref=e360]: tool
+                    - paragraph [ref=e361]: "Auto-generated activity for: Generate a visual directory tree diagram of a project folder structure and save it as a markdown file with proper formatting and tree symbols (├── └── │)"
+                    - generic [ref=e363]: 1 tasks
+                - generic [ref=e364]:
+                  - img [ref=e365]
+                  - generic [ref=e372]:
+                    - generic [ref=e373]:
+                      - generic [ref=e374]: "[Attempt] Implement An Automated Data Refresh Mechanism That Populates A Dashboard With Current Operational Metrics And Ci/cd Pipeline Information"
+                      - generic [ref=e375]: feature
+                    - paragraph [ref=e376]: Implement an automated data refresh mechanism that populates a dashboard with current operational metrics and CI/CD pipeline information
+                    - generic [ref=e378]: 1 tasks
+                - generic [ref=e379]:
+                  - img [ref=e380]
+                  - generic [ref=e387]:
+                    - generic [ref=e388]:
+                      - generic [ref=e389]: Enhance The Dashboard Ui To Display Real-time Data From Executed Activities Instead Of Mock Or Static Data, By Composing And Orchestrating Actual Activity Executions To Populate Dashboard Metrics And Visualizations.
+                      - generic [ref=e390]: feature
+                    - paragraph [ref=e391]: Enhance the dashboard UI to display real-time data from executed activities instead of mock or static data, by composing and orchestrating actual activity executions to populate dashboard metrics and visualizations.
+                    - generic [ref=e393]: 3 tasks
+                - generic [ref=e394]:
+                  - img [ref=e395]
+                  - generic [ref=e402]:
+                    - generic [ref=e403]:
+                      - generic [ref=e404]: learned-parent-goal--enforce-minibob-dashboard-specificati-mo5ih7t5
+                      - generic [ref=e405]: infrastructure
+                    - paragraph [ref=e406]: "Parent goal: Enforce MiniBob Dashboard Specifications on current codebase to ensure compliance with all 10 specification patterns and generate compliance report"
+                    - generic [ref=e408]: 1 tasks
+                - generic [ref=e409]:
+                  - img [ref=e410]
+                  - generic [ref=e417]:
+                    - generic [ref=e418]:
+                      - generic [ref=e419]: LLM Code Review Script Creator
+                      - generic [ref=e420]: tool
+                    - paragraph [ref=e421]: "Auto-generated activity for: Create an LLM-based code review script that detects recently modified files using git, applies custom user-defined review prompts via LLM API calls, and generates structured review feedback with issues, suggestions, and code quality metrics"
+                    - generic [ref=e423]: 1 tasks
+                - generic [ref=e424]:
+                  - img [ref=e425]
+                  - generic [ref=e432]:
+                    - generic [ref=e433]:
+                      - generic [ref=e434]: Dependency Vulnerability Web Research
+                      - generic [ref=e435]: tool
+                    - paragraph [ref=e436]: "Auto-generated activity for: Perform comprehensive web search for vulnerabilities in project dependencies by researching each dependency for known security issues, CVEs, and vulnerability reports"
+                    - generic [ref=e438]: 1 tasks
+                - generic [ref=e439]:
+                  - img [ref=e440]
+                  - generic [ref=e447]:
+                    - generic [ref=e448]:
+                      - generic [ref=e449]: learned-goal-processing--standard--mo8zz54s
+                      - generic [ref=e450]: meta
+                    - paragraph [ref=e451]: Activity generated from successful execution
+                    - generic [ref=e453]: 5 tasks
+                - generic [ref=e454]:
+                  - img [ref=e455]
+                  - generic [ref=e462]:
+                    - generic [ref=e463]:
+                      - generic [ref=e464]: "[Attempt] Correct A Spelling Error In The Readme.md Documentation To Improve Documentation Quality And Professionalism"
+                      - generic [ref=e465]: bugfix
+                    - paragraph [ref=e466]: Correct a spelling error in the README.md documentation to improve documentation quality and professionalism
+                    - generic [ref=e468]: 1 tasks
+                - generic [ref=e469]:
+                  - img [ref=e470]
+                  - generic [ref=e477]:
+                    - generic [ref=e478]:
+                      - generic [ref=e479]: learned-goal-processing--standard--mo8z4wkm
+                      - generic [ref=e480]: meta
+                    - paragraph [ref=e481]: Activity generated from successful execution
+                    - generic [ref=e483]: 5 tasks
+                - generic [ref=e484]:
+                  - img [ref=e485]
+                  - generic [ref=e492]:
+                    - generic [ref=e493]:
+                      - generic [ref=e494]: Deterministic Git Workflow Sync
+                      - generic [ref=e495]: infrastructure
+                    - paragraph [ref=e496]: Fully deterministic git sync using only bash resolvers. Fetches latest changes, handles uncommitted work, rebases on remote, and pushes. No LLM reasoning needed - pure bash execution with proper error handling.
+                    - generic [ref=e498]: 7 tasks
+                - generic [ref=e499]:
+                  - img [ref=e500]
+                  - generic [ref=e507]:
+                    - generic [ref=e508]:
+                      - generic [ref=e509]: Deterministic Vessel Deployment with Rollback
+                      - generic [ref=e510]: infrastructure
+                    - paragraph [ref=e511]: Fully deterministic CI/CD deployment for vessels using only bash resolvers. Includes pre-deploy rollback to clear stuck releases, version validation, and retry-enabled health checks with proper exit codes.
+                    - generic [ref=e513]: 10 tasks
+                - generic [ref=e514]:
+                  - img [ref=e515]
+                  - generic [ref=e522]:
+                    - generic [ref=e523]:
+                      - generic [ref=e524]: "[Attempt] Enable The Dashboard To Display Real-time Data Generated From Actual Activity Executions Rather Than Static Or Mock Data, By Composing And Orchestrating Existing Activity Components."
+                      - generic [ref=e525]: feature
+                    - paragraph [ref=e526]: Enable the dashboard to display real-time data generated from actual activity executions rather than static or mock data, by composing and orchestrating existing activity components.
+                    - generic [ref=e528]: 1 tasks
+                - generic [ref=e529]:
+                  - img [ref=e530]
+                  - generic [ref=e537]:
+                    - generic [ref=e538]:
+                      - generic [ref=e539]: Enforce Dashboard Specifications
+                      - generic [ref=e540]: tool
+                    - paragraph [ref=e541]: "Auto-generated activity for: Enforce MiniBob Dashboard Specifications by validating all HTML, JSON, and performance files against the comprehensive specifications defined in dashboard-specifications.json. Check for: (1) no placeholder values in HTML, (2) live data from trace files, (3) responsive UI patterns, (4) consistent JSON schemas with ISO timestamps, (5) performance thresholds, (6) accessibility standards, and (7) consistent navigation. Generate a detailed compliance report."
+                    - generic [ref=e543]: 1 tasks
+                - generic [ref=e544]:
+                  - img [ref=e545]
+                  - generic [ref=e552]:
+                    - generic [ref=e553]:
+                      - generic [ref=e554]: Convert Specifications to Contract Enforcement
+                      - generic [ref=e555]: tool
+                    - paragraph [ref=e556]: "Auto-generated activity for: Convert specification documents to contract enforcement by analyzing spec files, extracting requirements, generating validation code/tests, and setting up automated enforcement mechanisms"
+                    - generic [ref=e558]: 1 tasks
+                - generic [ref=e559]:
+                  - img [ref=e560]
+                  - generic [ref=e567]:
+                    - generic [ref=e568]:
+                      - generic [ref=e569]: Dashboard Specification Enforcement
+                      - generic [ref=e570]: tool
+                    - paragraph [ref=e571]: "Auto-generated activity for: Create a dashboard specification validation system that checks HTML and JSON files against the comprehensive specifications in dashboard-specifications.json, detects violations of all 10 specification patterns, and generates a detailed compliance report saved to specification-violations.json"
+                    - generic [ref=e573]: 1 tasks
+                - generic [ref=e574]:
+                  - img [ref=e575]
+                  - generic [ref=e582]:
+                    - generic [ref=e583]:
+                      - generic [ref=e584]: learned-goal-processing--standard--mo909w06
+                      - generic [ref=e585]: meta
+                    - paragraph [ref=e586]: Activity generated from successful execution
+                    - generic [ref=e588]: 5 tasks
+                - generic [ref=e589]:
+                  - img [ref=e590]
+                  - generic [ref=e597]:
+                    - generic [ref=e598]:
+                      - generic [ref=e599]: learned-goal-processing--standard--mo8z4wkm
+                      - generic [ref=e600]: meta
+                    - paragraph [ref=e601]: Activity generated from successful execution
+                    - generic [ref=e603]: 5 tasks
+                - generic [ref=e604]:
+                  - img [ref=e605]
+                  - generic [ref=e612]:
+                    - generic [ref=e613]:
+                      - generic [ref=e614]: learned-goal-processing--standard--mo8yzhs6
+                      - generic [ref=e615]: meta
+                    - paragraph [ref=e616]: Activity generated from successful execution
+                    - generic [ref=e618]: 5 tasks
+                - generic [ref=e619]:
+                  - img [ref=e620]
+                  - generic [ref=e627]:
+                    - generic [ref=e628]:
+                      - generic [ref=e629]: Orchestrate Test Goal
+                      - generic [ref=e630]: meta
+                    - paragraph [ref=e631]: Orchestrates test creation and execution through composed child activities. Acquires error context first, generates tests, runs tests, and optionally fixes failures.
+                    - generic [ref=e633]: 6 tasks
+                - generic [ref=e634]:
+                  - img [ref=e635]
+                  - generic [ref=e642]:
+                    - generic [ref=e643]:
+                      - generic [ref=e644]: Database Migration with Validation
+                      - generic [ref=e645]: infrastructure
+                    - paragraph [ref=e646]: Deterministic SurrealDB migration activity with version tracking, pre-migration backup query, validation, and rollback support. Uses bash resolvers for reliability with proper error handling and dry-run support.
+                    - generic [ref=e648]: 7 tasks
+                - generic [ref=e649]:
+                  - img [ref=e650]
+                  - generic [ref=e657]:
+                    - generic [ref=e658]:
+                      - generic [ref=e659]: Comprehensive Dashboard Validation
+                      - generic [ref=e660]: tool
+                    - paragraph [ref=e661]: "Auto-generated activity for: Validate MiniBob Dashboard against comprehensive specifications including placeholder detection, live data verification, responsive UI patterns, JSON schema compliance with ISO timestamps, performance thresholds, accessibility standards, and navigation consistency. Generate a detailed compliance report with actionable recommendations."
+                    - generic [ref=e663]: 1 tasks
+                - generic [ref=e664]:
+                  - img [ref=e665]
+                  - generic [ref=e672]:
+                    - generic [ref=e673]:
+                      - generic [ref=e674]: Validate Dashboard Specifications
+                      - generic [ref=e675]: tool
+                    - paragraph [ref=e676]: "Auto-generated activity for: Enforce dashboard specifications by running comprehensive validation checks against HTML, JSON, and code files using the validate-dashboard-specs.py script, generating a detailed compliance report and saving violations to specification-violations.json for tracking and visibility"
+                    - generic [ref=e678]: 1 tasks
+                - generic [ref=e679]:
+                  - img [ref=e680]
+                  - generic [ref=e687]:
+                    - generic [ref=e688]:
+                      - generic [ref=e689]: learned-goal-processing--standard--mo909w06
+                      - generic [ref=e690]: meta
+                    - paragraph [ref=e691]: Activity generated from successful execution
+                    - generic [ref=e693]: 5 tasks
+                - generic [ref=e694]:
+                  - img [ref=e695]
+                  - generic [ref=e702]:
+                    - generic [ref=e703]:
+                      - generic [ref=e704]: Validate Deployment Health
+                      - generic [ref=e705]: infrastructure
+                    - paragraph [ref=e706]: Comprehensive deployment health validation with configurable retry logic, endpoint verification, and detailed reporting. Fully deterministic using bash resolvers with proper exit codes for CI/CD integration.
+                    - generic [ref=e708]: 5 tasks
+                - generic [ref=e709]:
+                  - img [ref=e710]
+                  - generic [ref=e717]:
+                    - generic [ref=e718]:
+                      - generic [ref=e719]: Implement An Automated Data Refresh Mechanism That Pulls Current Information From Multiple External Sources And Updates The Dashboard's Local Data Files To Reflect Real-time Or Near-real-time State
+                      - generic [ref=e720]: feature
+                    - paragraph [ref=e721]: Implement an automated data refresh mechanism that pulls current information from multiple external sources and updates the dashboard's local data files to reflect real-time or near-real-time state
+                    - generic [ref=e723]: 2 tasks
+                - generic [ref=e724]:
+                  - img [ref=e725]
+                  - generic [ref=e732]:
+                    - generic [ref=e733]:
+                      - generic [ref=e734]: "[Attempt] Enhance The Dashboard Ui To Display Real-time Data From Executed Activities Instead Of Mock Or Static Data, By Composing And Orchestrating Actual Activity Executions To Populate Dashboard Metrics And Visualizations."
+                      - generic [ref=e735]: feature
+                    - paragraph [ref=e736]: Enhance the dashboard UI to display real-time data from executed activities instead of mock or static data, by composing and orchestrating actual activity executions to populate dashboard metrics and visualizations.
+                    - generic [ref=e738]: 1 tasks
+                - generic [ref=e739]:
+                  - img [ref=e740]
+                  - generic [ref=e747]:
+                    - generic [ref=e748]:
+                      - generic [ref=e749]: learned-parent-goal--execute-comprehensive-dashboard-valid-mo5icwmu
+                      - generic [ref=e750]: tool
+                    - paragraph [ref=e751]: "Parent goal: Execute comprehensive dashboard validation against all specifications to identify compliance gaps and generate detailed report"
+                    - generic [ref=e753]: 1 tasks
+                - generic [ref=e754]:
+                  - img [ref=e755]
+                  - generic [ref=e762]:
+                    - generic [ref=e763]:
+                      - generic [ref=e764]: Enforce Dashboard Specifications
+                      - generic [ref=e765]: infrastructure
+                    - paragraph [ref=e766]: "Auto-generated activity for: Enforce MiniBob Dashboard Specifications: Validate all HTML, JSON, and performance files against the comprehensive specifications defined in specifications/dashboard-specifications.json. Check for: (1) no placeholder values in HTML, (2) live data from trace files, (3) responsive UI patterns, (4) consistent JSON schemas with ISO timestamps, (5) performance thresholds, (6) accessibility standards, and (7) consistent navigation. Generate a detailed compliance report."
+                    - generic [ref=e768]: 1 tasks
+                - generic [ref=e769]:
+                  - img [ref=e770]
+                  - generic [ref=e777]:
+                    - generic [ref=e778]:
+                      - generic [ref=e779]: Convert Specification to Contract Enforcement
+                      - generic [ref=e780]: tool
+                    - paragraph [ref=e781]: "Auto-generated activity for: Convert specification documents to contract enforcement by analyzing spec files, extracting requirements, generating validation code/tests, and setting up automated enforcement mechanisms. This should analyze existing specifications, identify enforceable requirements, generate corresponding validation code, create automated tests, and establish continuous enforcement workflows."
+                    - generic [ref=e783]: 1 tasks
+                - generic [ref=e784]:
+                  - img [ref=e785]
+                  - generic [ref=e792]:
+                    - generic [ref=e793]:
+                      - generic [ref=e794]: LLM Code Review Generator
+                      - generic [ref=e795]: tool
+                    - paragraph [ref=e796]: "Auto-generated activity for: Create an LLM-based code review script that detects recently modified files, applies custom user-defined review prompts, and generates structured review feedback. The script should be configurable, support multiple file types, and provide actionable insights."
+                    - generic [ref=e798]: 1 tasks
+                - generic [ref=e799]:
+                  - img [ref=e800]
+                  - generic [ref=e807]:
+                    - generic [ref=e808]:
+                      - generic [ref=e809]: Repository Structure Analysis
+                      - generic [ref=e810]: tool
+                    - paragraph [ref=e811]: "Auto-generated activity for: Analyze repository structure comprehensively, mapping file tree, collecting statistics on file counts by type, sizes, directory organization, and providing a detailed overview of the codebase structure"
+                    - generic [ref=e813]: 1 tasks
+                - generic [ref=e814]:
+                  - img [ref=e815]
+                  - generic [ref=e822]:
+                    - generic [ref=e823]:
+                      - generic [ref=e824]: List External Dependencies
+                      - generic [ref=e825]: tool
+                    - paragraph [ref=e826]: "Auto-generated activity for: List all external dependencies in a codebase by analyzing package management files (package.json, requirements.txt, Cargo.toml, etc.) and import statements to provide a comprehensive inventory of dependencies with versions"
+                    - generic [ref=e828]: 1 tasks
+                - generic [ref=e829]:
+                  - img [ref=e830]
+                  - generic [ref=e837]:
+                    - generic [ref=e838]:
+                      - generic [ref=e839]: learned-learned-goal-processing--standard--mo909w06-mo90cexf
+                      - generic [ref=e840]: meta
+                    - paragraph [ref=e841]: Activity generated from successful execution
+                    - generic [ref=e843]: 5 tasks
+                - generic [ref=e844]:
+                  - img [ref=e845]
+                  - generic [ref=e852]:
+                    - generic [ref=e853]:
+                      - generic [ref=e854]: learned-acquire-requirements-context-mo8ztni7
+                      - generic [ref=e855]: tool
+                    - paragraph [ref=e856]: Activity generated from successful execution
+                    - generic [ref=e858]: 4 tasks
+                - generic [ref=e859]:
+                  - img [ref=e860]
+                  - generic [ref=e867]:
+                    - generic [ref=e868]:
+                      - generic [ref=e869]: Implement An Automated Data Synchronization Mechanism That Pulls Current Information From Multiple Source Systems And Refreshes The Dashboard's Data Files To Reflect Real-time Or Near-real-time State
+                      - generic [ref=e870]: feature
+                    - paragraph [ref=e871]: Implement an automated data synchronization mechanism that pulls current information from multiple source systems and refreshes the dashboard's data files to reflect real-time or near-real-time state
+                    - generic [ref=e873]: 2 tasks
+                - generic [ref=e874]:
+                  - img [ref=e875]
+                  - generic [ref=e882]:
+                    - generic [ref=e883]:
+                      - generic [ref=e884]: Dashboard Specification Enforcement
+                      - generic [ref=e885]: tool
+                    - paragraph [ref=e886]: "Auto-generated activity for: Enforce dashboard specifications by running comprehensive validation checks against HTML, JSON, and code files using the validate-dashboard-specs.py script, then generating a detailed compliance report and saving violations to specification-violations.json for tracking and visibility"
+                    - generic [ref=e888]: 1 tasks
+                - generic [ref=e889]:
+                  - img [ref=e890]
+                  - generic [ref=e897]:
+                    - generic [ref=e898]:
+                      - generic [ref=e899]: Comprehensive LLM Code Review Script
+                      - generic [ref=e900]: tool
+                    - paragraph [ref=e901]: "Auto-generated activity for: Create an LLM-based code review script that detects recently modified files using git, applies custom user-defined review prompts via LLM API calls, and generates structured review feedback with issues, suggestions, and code quality metrics. The script should be configurable, support multiple programming languages, integrate with popular LLM APIs (OpenAI, Anthropic, etc.), and output structured JSON/markdown reports."
+                    - generic [ref=e903]: 1 tasks
+                - generic [ref=e904]:
+                  - img [ref=e905]
+                  - generic [ref=e912]:
+                    - generic [ref=e913]:
+                      - generic [ref=e914]: Comprehensive Vulnerability Scanner
+                      - generic [ref=e915]: tool
+                    - paragraph [ref=e916]: "Auto-generated activity for: Perform comprehensive vulnerability scanning across all project dependencies by identifying package files (package.json, package-lock.json, yarn.lock, bun.lock, composer.json, requirements.txt, Gemfile, etc.), extracting dependency lists with versions, and checking each dependency against vulnerability databases (CVE, NVD, GitHub Security Advisories, Snyk, OSV) to generate detailed security reports with remediation recommendations"
+                    - generic [ref=e918]: 1 tasks
+                - generic [ref=e919]:
+                  - img [ref=e920]
+                  - generic [ref=e927]:
+                    - generic [ref=e928]:
+                      - generic [ref=e929]: Orchestrate Refactor Goal
+                      - generic [ref=e930]: meta
+                    - paragraph [ref=e931]: Orchestrates code refactoring through composed child activities. Analyzes codebase structure, transforms code in steps, validates with tests, and provides rollback on failure.
+                    - generic [ref=e933]: 8 tasks
+                - generic [ref=e934]:
+                  - img [ref=e935]
+                  - generic [ref=e942]:
+                    - generic [ref=e943]:
+                      - generic [ref=e944]: Full Vessel Deployment Pipeline
+                      - generic [ref=e945]: infrastructure
+                    - paragraph [ref=e946]: Complete CI/CD deployment for vessels with version checking, submodule management, and helm release recovery. Uses bash resolvers for full determinism.
+                    - generic [ref=e948]: 11 tasks
+                - generic [ref=e949]:
+                  - img [ref=e950]
+                  - generic [ref=e957]:
+                    - generic [ref=e958]:
+                      - generic [ref=e959]: learned-startup-health-check-mo7ka2lh
+                      - generic [ref=e960]: infrastructure
+                    - paragraph [ref=e961]: Activity generated from successful execution
+                    - generic [ref=e963]: 2 tasks
+                - generic [ref=e964]:
+                  - img [ref=e965]
+                  - generic [ref=e972]:
+                    - generic [ref=e973]:
+                      - generic [ref=e974]: "[Attempt] Continuously Develop A Dashboard By Systematically Selecting And Implementing Improvements (data Refresh, Feature Additions, Bug Fixes, Specification Validation) Until The Work Meets A Quality Threshold Suitable For A Pull Request"
+                      - generic [ref=e975]: bugfix
+                    - paragraph [ref=e976]: Continuously develop a dashboard by systematically selecting and implementing improvements (data refresh, feature additions, bug fixes, specification validation) until the work meets a quality threshold suitable for a pull request
+                    - generic [ref=e978]: 1 tasks
+                - generic [ref=e979]:
+                  - img [ref=e980]
+                  - generic [ref=e987]:
+                    - generic [ref=e988]:
+                      - generic [ref=e989]: "[Attempt] Enhance The Dashboard Ui Component To Display Real-time Data Sourced From Actual Activity Executions Rather Than Mock Or Static Data, By Composing And Orchestrating Existing Activity Modules To Populate The Dashboard Dynamically."
+                      - generic [ref=e990]: feature
+                    - paragraph [ref=e991]: Enhance the dashboard UI component to display real-time data sourced from actual activity executions rather than mock or static data, by composing and orchestrating existing activity modules to populate the dashboard dynamically.
+                    - generic [ref=e993]: 1 tasks
+                - generic [ref=e994]:
+                  - img [ref=e995]
+                  - generic [ref=e1002]:
+                    - generic [ref=e1003]:
+                      - generic [ref=e1004]: "[Attempt] Enhance The Dashboard Ui To Display Real-time Data From Executed Activities Instead Of Mock Or Static Data, By Composing And Orchestrating Actual Activity Executions To Populate Dashboard Metrics And Visualizations."
+                      - generic [ref=e1005]: feature
+                    - paragraph [ref=e1006]: Enhance the dashboard UI to display real-time data from executed activities instead of mock or static data, by composing and orchestrating actual activity executions to populate dashboard metrics and visualizations.
+                    - generic [ref=e1008]: 1 tasks
+                - generic [ref=e1009]:
+                  - img [ref=e1010]
+                  - generic [ref=e1017]:
+                    - generic [ref=e1018]:
+                      - generic [ref=e1019]: LLM Code Review Tool
+                      - generic [ref=e1020]: tool
+                    - paragraph [ref=e1021]: "Auto-generated activity for: Create an LLM-based code review script that detects recently modified files, applies custom user-defined review prompts, and generates structured review feedback. The script should be configurable, support multiple file types, and provide actionable insights."
+                    - generic [ref=e1023]: 1 tasks
+                - generic [ref=e1024]:
+                  - img [ref=e1025]
+                  - generic [ref=e1032]:
+                    - generic [ref=e1033]:
+                      - generic [ref=e1034]: Cleanup Stale Execution Traces v1
+                      - generic [ref=e1035]: upkeep
+                    - paragraph [ref=e1036]: v1.5.5 audit smoke — GET /v2/impulses/:id should now work
+                    - generic [ref=e1038]: 4 tasks
+                - generic [ref=e1039]:
+                  - img [ref=e1040]
+                  - generic [ref=e1047]:
+                    - generic [ref=e1048]:
+                      - generic [ref=e1049]: Comprehensive Dependency Vulnerability Scanner
+                      - generic [ref=e1050]: tool
+                    - paragraph [ref=e1051]: "Auto-generated activity for: Perform comprehensive vulnerability scanning across all project dependencies by identifying package files (package.json, package-lock.json, yarn.lock, bun.lock, composer.json, requirements.txt, Gemfile, etc.), extracting dependency lists with versions, and checking each dependency against vulnerability databases (CVE, NVD, GitHub Security Advisories, Snyk, OSV) to generate detailed security reports with remediation recommendations"
+                    - generic [ref=e1053]: 1 tasks
+                - generic [ref=e1054]:
+                  - img [ref=e1055]
+                  - generic [ref=e1062]:
+                    - generic [ref=e1063]:
+                      - generic [ref=e1064]: Comprehensive Codebase Structure Analysis
+                      - generic [ref=e1065]: tool
+                    - paragraph [ref=e1066]: "Auto-generated activity for: Analyze and document comprehensive codebase structure by combining file mapping, entry points, dependencies, and git context into a single structured metadata impulse"
+                    - generic [ref=e1068]: 1 tasks
+                - generic [ref=e1069]:
+                  - img [ref=e1070]
+                  - generic [ref=e1077]:
+                    - generic [ref=e1078]:
+                      - generic [ref=e1079]: learned-startup-health-check-mo7jnpb4
+                      - generic [ref=e1080]: infrastructure
+                    - paragraph [ref=e1081]: Activity generated from successful execution
+                    - generic [ref=e1083]: 2 tasks
+          - generic [ref=e159]:
+            - generic [ref=e161]:
+              - alert [ref=e162]:
+                - img [ref=e163]
+                - heading "Goal Not Reached" [level=5] [ref=e167]
+                - generic [ref=e168]:
+                  - paragraph [ref=e169]: Missing 3 required shapes
+                  - generic [ref=e170]:
+                    - paragraph [ref=e171]: "Missing shapes:"
+                    - generic [ref=e172]:
+                      - generic [ref=e173]: patch
+                      - generic [ref=e174]: validation_result
+                      - generic [ref=e175]: test_suite
+              - alert [ref=e176]:
+                - img [ref=e177]
+                - heading "Current Output Shapes" [level=5] [ref=e181]
+                - generic [ref=e183]:
+                  - generic [ref=e184]: analysis
+                  - generic [ref=e185]: tool_output
+            - alert [ref=e187]:
+              - img [ref=e188]
+              - heading "Productive loop detected Loop" [level=5] [ref=e193]:
+                - text: Productive loop detected
+                - generic [ref=e194]: Loop
+              - generic [ref=e195]: A repeating pattern was found in columns 0–0. Each iteration produces new shapes, so this loop is considered productive and will not block execution.
+            - generic [ref=e1086]:
+              - button "Insert activity at start" [ref=e1088] [cursor=pointer]:
+                - img
+              - generic [ref=e1089]:
+                - generic [ref=e1090]: Step 1
+                - generic [ref=e1092]:
+                  - generic:
+                    - generic "Valid":
+                      - img
+                  - generic [ref=e1096] [cursor=pointer]:
+                    - img [ref=e1097]
+                    - generic [ref=e1104]:
+                      - generic [ref=e1105]:
+                        - heading "LLM Code Review Script Generator" [level=3] [ref=e1106]
+                        - generic [ref=e1107]:
+                          - generic [ref=e1108]: tool
+                          - button [ref=e1109]:
+                            - img
+                      - paragraph [ref=e1110]: "Auto-generated activity for: Create an LLM-based code review script that uses a custom code review prompt (user defined) and reviews files that the user has recently worked on"
+                      - generic [ref=e1111]:
+                        - generic [ref=e1112]:
+                          - generic [ref=e1113]: 1 tasks
+                          - generic [ref=e1114]:
+                            - generic [ref=e1115]: α:2.0
+                            - generic [ref=e1116]: β:1.0
+                            - generic [ref=e1117]: 100%
+                        - button "Expand" [ref=e1118]:
+                          - text: Expand
+                          - img
+              - button "Insert activity after step 1" [ref=e1120] [cursor=pointer]:
+                - img
+            - status [ref=e1122]
+          - generic [ref=e199]:
+            - generic [ref=e200]:
+              - generic [ref=e201]:
+                - img [ref=e202]
+                - heading "Impulse State" [level=2] [ref=e206]
+              - button "Collapse panel (Ctrl+I)" [ref=e207] [cursor=pointer]:
+                - img
+            - generic [ref=e212]:
+              - generic [ref=e213]:
+                - generic [ref=e214]:
+                  - heading "Goal Completion" [level=3] [ref=e215]
+                  - generic [ref=e216]:
+                    - generic [ref=e217]: 25%
+                    - img [ref=e218]
+                - progressbar [ref=e222]
+                - generic [ref=e224]: 1 of 4 shapes complete
+                - generic [ref=e225]:
+                  - generic [ref=e226]:
+                    - generic [ref=e227]:
+                      - img [ref=e228]
+                      - text: Available
+                    - generic [ref=e232]: ✓ analysis
+                  - generic [ref=e233]:
+                    - generic [ref=e234]:
+                      - img [ref=e235]
+                      - text: Missing
+                    - generic [ref=e239]:
+                      - generic [ref=e240]: ⊗ patch
+                      - generic [ref=e241]: ⊗ validation_result
+                      - generic [ref=e242]: ⊗ test_suite
+              - generic [ref=e243]:
+                - heading "Current Shapes" [level=3] [ref=e245]
+                - generic [ref=e247]:
+                  - generic [ref=e248]: goal
+                  - generic [ref=e249]: directoryTree
+                  - generic [ref=e250]: analysis
+                  - generic [ref=e251]: tool_output
+              - generic [ref=e252]:
+                - heading "Shape Provenance" [level=3] [ref=e254]
+                - generic [ref=e256]:
+                  - generic [ref=e257]:
+                    - generic [ref=e258]:
+                      - img [ref=e259]
+                      - generic [ref=e263]: Initial Context (Column 0)
+                    - generic [ref=e265]:
+                      - img [ref=e266]
+                      - generic [ref=e269]: goal
+                      - generic [ref=e270]: directoryTree
+                  - generic [ref=e271]:
+                    - generic [ref=e272]:
+                      - img [ref=e273]
+                      - button "LLM Code Review Script Generator (Col 0)" [ref=e277] [cursor=pointer]
+                    - generic [ref=e279]:
+                      - img [ref=e280]
+                      - generic [ref=e283]: analysis
+                      - generic [ref=e284]: tool_output
+              - generic [ref=e285]:
+                - heading "Shape Timeline" [level=3] [ref=e287]
+                - generic [ref=e293]:
+                  - generic [ref=e294]:
+                    - generic [ref=e295]: "0"
+                    - generic [ref=e296]: Column 0(current)
+                  - generic [ref=e297]:
+                    - generic [ref=e298]:
+                      - generic [ref=e299]: + Added 2
+                      - generic [ref=e300]:
+                        - generic [ref=e301]: analysis
+                        - generic [ref=e302]: tool_output
+                    - generic [ref=e303]: "Total: 4 shapes"
+            - paragraph [ref=e305]: Press Ctrl+I to toggle
+  - contentinfo [ref=e306]:
+    - generic [ref=e307]:
+      - generic [ref=e308]:
+        - generic [ref=e309]:
+          - img [ref=e310]
+          - generic [ref=e313]: API Connected
+        - generic [ref=e314]:
+          - img [ref=e315]
+          - generic [ref=e318]: "Last update: 04:41:20 PM"
+      - generic [ref=e319]:
+        - generic [ref=e320]: LOCAL
+        - generic [ref=e321]: v0.1.0

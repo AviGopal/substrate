@@ -1,0 +1,69 @@
+{
+  "decision": "compose",
+  "reasoning": "This is a complex, non-trivial task requiring multiple sequential phases with user confirmation gates. The goal naturally decomposes into four interdependent phases: SEARCH (repository analysis), SORT (documentation inventory and classification), UPDATE (staged application with user confirmation), and REPORT (comprehensive documentation). Activity templates are not available in this environment, but the task structure supports composition of sub-goals.",
+  "subGoals": [
+    "Phase 1: SEARCH - Poll recent git changes (2 weeks) across all sub-repos to extract changed concepts, schemas, endpoints, env vars, and file paths",
+    "Phase 2: SORT - Inventory all docs by mtime, classify as keep/merge/archive/delete based on coherence analysis against canonical docs and current repo state",
+    "Phase 3: UPDATE - Execute DRY-RUN first, get user confirmation, then apply changes (archive outdated docs, update cross-references) in reverse chronological order",
+    "Phase 4: REPORT - Generate comprehensive report documenting search findings, classification methodology, changes applied, and remaining decisions"
+  ],
+  "variables": {
+    "repoBasePath": "/home/avi/documents/work/exp-repo/metabob-devbob",
+    "docsPath": "/home/avi/documents/work/exp-repo/metabob-devbob/docs",
+    "reposPath": "/home/avi/documents/work/exp-repo/metabob-devbob/repos",
+    "archivePath": "/home/avi/documents/work/exp-repo/metabob-devbob/docs/archive/2026-04-22",
+    "dryRun": true,
+    "canonicalDocs": [
+      "CLAUDE.md",
+      "README.md",
+      "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md"
+    ],
+    "gitLogTimeframe": "2 weeks ago",
+    "bulkDeleteThreshold": 10
+  },
+  "executionStrategy": {
+    "phase1": {
+      "operation": "Repository Analysis via Git",
+      "steps": [
+        "List all subdirectories in /home/avi/documents/work/exp-repo/metabob-devbob/repos/",
+        "For each repo, execute: git log --since='2 weeks ago' --stat",
+        "Collect uncommitted changes: git status and git diff",
+        "Extract and categorize changes: concepts, schemas, endpoints, env vars, file paths",
+        "Build canonical list of recent modifications"
+      ]
+    },
+    "phase2": {
+      "operation": "Documentation Inventory & Classification",
+      "steps": [
+        "List all files in /home/avi/documents/work/exp-repo/metabob-devbob/docs/",
+        "Sort by modification time (newest first)",
+        "For each doc, compare against canonical docs",
+        "Cross-reference against Phase 1 changes",
+        "Classify: keep (coherent), merge (partial coherence), archive (outdated), delete (deprecated)"
+      ]
+    },
+    "phase3": {
+      "operation": "Staged Update with Confirmation",
+      "steps": [
+        "Generate DRY-RUN report: all planned changes without execution",
+        "Present to user for review and approval",
+        "Upon approval: execute in reverse mtime order (oldest first)",
+        "Create archive directory if needed",
+        "Move archived docs to docs/archive/2026-04-22/",
+        "Update all cross-references in remaining docs",
+        "PROTECT: Never delete CLAUDE.md, README.md, IMPULSE_ACTIVITY_FOUNDATION.md",
+        "PAUSE before any bulk delete >10 files"
+      ]
+    },
+    "phase4": {
+      "operation": "Comprehensive Reporting",
+      "steps": [
+        "Document SEARCH process and findings",
+        "Explain SORT classification methodology",
+        "List all UPDATE changes applied",
+        "Provide: kept docs, archived docs, deleted docs, updated cross-references",
+        "Identify remaining manual decisions"
+      ]
+    }
+  }
+}

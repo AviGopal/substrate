@@ -1,0 +1,130 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - generic [ref=e25]: Navigation
+        - navigation [ref=e26]:
+          - link "Activities" [ref=e27] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - generic [ref=e33]: Activities
+          - link "Trajectory" [ref=e34] [cursor=pointer]:
+            - /url: /trajectory-editor
+            - img [ref=e35]
+            - generic [ref=e40]: Trajectory
+          - link "Goals" [ref=e41] [cursor=pointer]:
+            - /url: /goals
+            - img [ref=e42]
+            - generic [ref=e46]: Goals
+          - link "Shapes" [ref=e47] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e48]
+            - generic [ref=e52]: Shapes
+          - link "Studio" [ref=e53] [cursor=pointer]:
+            - /url: /studio
+            - img [ref=e54]
+            - generic [ref=e58]: Studio
+    - main [ref=e59]:
+      - generic [ref=e60]:
+        - generic [ref=e62]:
+          - generic [ref=e63]:
+            - button "back" [ref=e64] [cursor=pointer]:
+              - img
+              - text: back
+            - generic [ref=e65]:
+              - heading "trajectory editor" [level=1] [ref=e66]
+              - paragraph [ref=e67]: build activity sequences ── horizontal grid layout
+          - generic [ref=e68]:
+            - generic [ref=e69]: Unsaved changes
+            - button "Keyboard shortcuts" [ref=e70] [cursor=pointer]:
+              - img
+              - generic [ref=e71]: Keyboard shortcuts
+            - button "Clear" [ref=e72] [cursor=pointer]:
+              - img
+              - text: Clear
+            - button "Save" [ref=e73] [cursor=pointer]:
+              - img
+              - text: Save
+        - generic [ref=e74]:
+          - generic [ref=e79]:
+            - generic [ref=e80]:
+              - generic [ref=e81]:
+                - img [ref=e82]
+                - generic [ref=e84]: run goal
+              - textbox "Describe the goal…" [ref=e85]
+              - paragraph [ref=e86]: goal text required
+              - button "run" [disabled]:
+                - img
+                - text: run
+            - generic [ref=e87]:
+              - generic [ref=e88]:
+                - img [ref=e89]
+                - generic [ref=e95]: live execution
+                - generic [ref=e96]: idle
+              - generic [ref=e97]:
+                - textbox "execution id" [ref=e98]
+                - button "connect" [disabled]
+            - button "execution history" [ref=e100] [cursor=pointer]:
+              - img [ref=e101]
+              - img [ref=e103]
+              - generic [ref=e106]: execution history
+            - generic [ref=e108]:
+              - generic [ref=e109]: ── goal ──
+              - generic [ref=e110]:
+                - textbox "Describe what you want to accomplish (e.g., 'Fix security vulnerabilities in authentication')" [ref=e111]
+                - generic [ref=e112]:
+                  - paragraph [ref=e113]: enter a goal to generate recommendations
+                  - button "generate path" [disabled]:
+                    - img
+                    - text: generate path
+            - generic [ref=e114]:
+              - generic [ref=e115]: ── palette ──
+              - generic [ref=e116]:
+                - img [ref=e117]
+                - textbox "search activities..." [ref=e120]
+              - generic [ref=e122]: no activities found
+          - paragraph [ref=e126]: Loading templates...
+          - generic [ref=e127]:
+            - generic [ref=e128]:
+              - generic [ref=e129]:
+                - img [ref=e130]
+                - heading "Impulse State" [level=2] [ref=e134]
+              - button "Collapse impulse state panel (Ctrl+I)" [ref=e135] [cursor=pointer]:
+                - img
+            - generic [ref=e140]:
+              - generic [ref=e141]:
+                - heading "Current Shapes" [level=3] [ref=e143]
+                - generic [ref=e145]:
+                  - generic [ref=e146]: goal
+                  - generic [ref=e147]: directoryTree
+              - generic [ref=e148]:
+                - img [ref=e149]
+                - paragraph [ref=e153]: Add activities to see
+                - paragraph [ref=e154]: impulse shape evolution
+            - paragraph [ref=e156]: Press Ctrl+I to toggle
+  - contentinfo [ref=e157]:
+    - generic [ref=e158]:
+      - generic [ref=e159]:
+        - generic [ref=e162]: API Connected
+        - generic [ref=e163]:
+          - img [ref=e164]
+          - generic [ref=e167]: 12:52:16 AM
+      - generic [ref=e168]:
+        - generic [ref=e169]: "[LOCAL]"
+        - generic [ref=e170]: v0.1.0

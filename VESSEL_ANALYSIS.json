@@ -1,0 +1,25 @@
+{
+  "impliedShapes": [
+    "activity_template",
+    "impulse_definition",
+    "resolver_spec",
+    "vessel_manifest",
+    "execution_trace",
+    "capability_list",
+    "health_status",
+    "architecture_docs",
+    "type_definitions"
+  ],
+  "category": "meta",
+  "complexity": "medium",
+  "actionVerbs": [
+    "define",
+    "understand",
+    "document",
+    "conceptualize",
+    "decompose",
+    "synthesize",
+    "categorize"
+  ],
+  "reasoning": "This is a definitional/conceptual goal asking for understanding of a core architectural component. It requires synthesizing information from multiple sources: type definitions, canonical architecture documents, and actual implementations. Not a direct feature/bugfix/refactor, but requires comprehensive knowledge assembly - metadata-focused, no code changes needed."
+}

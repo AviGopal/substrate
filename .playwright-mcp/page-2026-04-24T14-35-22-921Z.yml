@@ -1,0 +1,1235 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - heading "Navigation" [level=2] [ref=e26]
+        - navigation [ref=e27]:
+          - link "Templates" [ref=e28] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e29]
+            - generic [ref=e34]: Templates
+          - link "Composition" [ref=e35] [cursor=pointer]:
+            - /url: /composition
+            - img [ref=e36]
+            - generic [ref=e42]: Composition
+          - link "Executions" [ref=e43] [cursor=pointer]:
+            - /url: /executions
+            - img [ref=e44]
+            - generic [ref=e46]: Executions
+          - link "Goals" [ref=e47] [cursor=pointer]:
+            - /url: /goals
+            - img [ref=e48]
+            - generic [ref=e52]: Goals
+          - link "Shapes" [ref=e53] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e54]
+            - generic [ref=e58]: Shapes
+        - generic [ref=e59]:
+          - heading "Recent" [level=2] [ref=e60]
+          - generic [ref=e61]:
+            - generic [ref=e62]: debug-auth:v3
+            - generic [ref=e63]: implement-feat
+            - generic [ref=e64]: refactor-core
+    - main [ref=e65]:
+      - generic [ref=e1262]:
+        - generic [ref=e1263]:
+          - generic [ref=e1264]:
+            - heading "Templates" [level=1] [ref=e1265]
+            - paragraph [ref=e1266]: Activity template library - Create and manage activity templates
+          - generic [ref=e1267]:
+            - button "Open Composition Builder" [ref=e1268] [cursor=pointer]:
+              - img
+              - text: Open Composition Builder
+            - button "New Template" [ref=e1269] [cursor=pointer]:
+              - img
+              - text: New Template
+        - generic [ref=e1270]:
+          - tablist [ref=e1271]:
+            - tab "Templates List" [selected] [ref=e1272] [cursor=pointer]:
+              - img [ref=e1273]
+              - text: Templates List
+            - tab "Thompson Sampling" [ref=e1280] [cursor=pointer]:
+              - img [ref=e1281]
+              - text: Thompson Sampling
+          - tabpanel "Templates List" [ref=e1286]:
+            - generic [ref=e1287]:
+              - generic [ref=e1290]:
+                - generic [ref=e1291]:
+                  - paragraph [ref=e1292]: Total Templates
+                  - paragraph [ref=e1293]: "50"
+                  - paragraph [ref=e1294]: Available activity templates
+                - img [ref=e1296]
+              - generic [ref=e1300]:
+                - generic [ref=e1301]:
+                  - paragraph [ref=e1302]: Avg Success Rate
+                  - paragraph [ref=e1303]: 0%
+                  - paragraph [ref=e1304]: Across all templates
+                - img [ref=e1306]
+              - generic [ref=e1311]:
+                - generic [ref=e1312]:
+                  - paragraph [ref=e1313]: Total Executions
+                  - paragraph [ref=e1314]: "0"
+                  - paragraph [ref=e1315]: All-time template runs
+                - img [ref=e1317]
+              - generic [ref=e1322]:
+                - generic [ref=e1323]:
+                  - paragraph [ref=e1324]: Learning Status
+                  - paragraph [ref=e1325]: 44/0
+                  - paragraph [ref=e1326]: Exploring / Exploiting
+                - img [ref=e1328]
+            - generic [ref=e1330]:
+              - generic [ref=e1331]:
+                - generic [ref=e1332]:
+                  - img [ref=e1333]
+                  - searchbox "Search templates..." [ref=e1336]
+                - button "Filters" [ref=e1337] [cursor=pointer]:
+                  - img
+                  - text: Filters
+              - generic [ref=e1338]:
+                - generic [ref=e1339]: "Category:"
+                - button "All" [ref=e1340] [cursor=pointer]
+                - button "Feature" [ref=e1341] [cursor=pointer]
+                - button "Bugfix" [ref=e1342] [cursor=pointer]
+                - button "Refactor" [ref=e1343] [cursor=pointer]
+                - button "Infrastructure" [ref=e1344] [cursor=pointer]
+                - button "Tool" [ref=e1345] [cursor=pointer]
+            - paragraph [ref=e1347]: Showing 50 of 50 templates
+            - generic [ref=e1348]:
+              - generic [ref=e1350]:
+                - button "Grid view" [ref=e1351] [cursor=pointer]:
+                  - img
+                - button "List view" [ref=e1352] [cursor=pointer]:
+                  - img
+              - generic [ref=e1353]:
+                - generic [ref=e1354] [cursor=pointer]:
+                  - generic [ref=e1355]:
+                    - heading "LLM Code Review Script Generator" [level=3] [ref=e1358]
+                    - generic [ref=e1360]: tool
+                  - generic [ref=e1361]:
+                    - paragraph [ref=e1362]: "Auto-generated activity for: Create an LLM-based code review script that uses a custom code review prompt (user defined) and reviews files that the user has recently worked on"
+                    - generic [ref=e1364]: 0 execs
+                  - generic [ref=e1366]:
+                    - generic [ref=e1367]:
+                      - button "View" [ref=e1368]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1369]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1370]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1371]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1372] [cursor=pointer]:
+                  - generic [ref=e1373]:
+                    - heading "Generate Directory Tree Diagram" [level=3] [ref=e1376]
+                    - generic [ref=e1378]: tool
+                  - generic [ref=e1379]:
+                    - paragraph [ref=e1380]: "Auto-generated activity for: Generate a visual directory tree diagram of a project folder structure and save it as a markdown file with proper formatting and tree symbols (├── └── │)"
+                    - generic [ref=e1382]: 0 execs
+                  - generic [ref=e1384]:
+                    - generic [ref=e1385]:
+                      - button "View" [ref=e1386]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1387]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1388]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1389]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1390] [cursor=pointer]:
+                  - generic [ref=e1391]:
+                    - heading "[Attempt] Implement An Automated Data Refresh Mechanism That Populates A Dashboard With Current Operational Metrics And Ci/cd Pipeline Information" [level=3] [ref=e1394]
+                    - generic [ref=e1396]: feature
+                  - generic [ref=e1397]:
+                    - paragraph [ref=e1398]: Implement an automated data refresh mechanism that populates a dashboard with current operational metrics and CI/CD pipeline information
+                    - generic [ref=e1400]: 0 execs
+                    - generic [ref=e1402]: feature
+                  - generic [ref=e1404]:
+                    - generic [ref=e1405]:
+                      - button "View" [ref=e1406]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1407]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1408]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1409]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1410] [cursor=pointer]:
+                  - generic [ref=e1411]:
+                    - heading "Enhance The Dashboard Ui To Display Real-time Data From Executed Activities Instead Of Mock Or Static Data, By Composing And Orchestrating Actual Activity Executions To Populate Dashboard Metrics And Visualizations." [level=3] [ref=e1414]
+                    - generic [ref=e1416]: feature
+                  - generic [ref=e1417]:
+                    - paragraph [ref=e1418]: Enhance the dashboard UI to display real-time data from executed activities instead of mock or static data, by composing and orchestrating actual activity executions to populate dashboard metrics and visualizations.
+                    - generic [ref=e1420]: 0 execs
+                    - generic [ref=e1422]: feature
+                  - generic [ref=e1424]:
+                    - generic [ref=e1425]:
+                      - button "View" [ref=e1426]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1427]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1428]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1429]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1430] [cursor=pointer]:
+                  - generic [ref=e1431]:
+                    - heading "learned-parent-goal--enforce-minibob-dashboard-specificati-mo5ih7t5" [level=3] [ref=e1434]
+                    - generic [ref=e1436]: infrastructure
+                  - generic [ref=e1437]:
+                    - paragraph [ref=e1438]: "Parent goal: Enforce MiniBob Dashboard Specifications on current codebase to ensure compliance with all 10 specification patterns and generate compliance report"
+                    - generic [ref=e1440]: 0 execs
+                    - generic [ref=e1442]: infrastructure
+                  - generic [ref=e1444]:
+                    - generic [ref=e1445]:
+                      - button "View" [ref=e1446]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1447]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1448]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1449]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1450] [cursor=pointer]:
+                  - generic [ref=e1451]:
+                    - heading "LLM Code Review Script Creator" [level=3] [ref=e1454]
+                    - generic [ref=e1456]: tool
+                  - generic [ref=e1457]:
+                    - paragraph [ref=e1458]: "Auto-generated activity for: Create an LLM-based code review script that detects recently modified files using git, applies custom user-defined review prompts via LLM API calls, and generates structured review feedback with issues, suggestions, and code quality metrics"
+                    - generic [ref=e1460]: 0 execs
+                  - generic [ref=e1462]:
+                    - generic [ref=e1463]:
+                      - button "View" [ref=e1464]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1465]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1466]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1467]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1468] [cursor=pointer]:
+                  - generic [ref=e1469]:
+                    - heading "Dependency Vulnerability Web Research" [level=3] [ref=e1472]
+                    - generic [ref=e1474]: tool
+                  - generic [ref=e1475]:
+                    - paragraph [ref=e1476]: "Auto-generated activity for: Perform comprehensive web search for vulnerabilities in project dependencies by researching each dependency for known security issues, CVEs, and vulnerability reports"
+                    - generic [ref=e1478]: 0 execs
+                  - generic [ref=e1480]:
+                    - generic [ref=e1481]:
+                      - button "View" [ref=e1482]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1483]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1484]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1485]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1486] [cursor=pointer]:
+                  - generic [ref=e1487]:
+                    - heading "learned-goal-processing--standard--mo8zz54s" [level=3] [ref=e1490]
+                    - generic [ref=e1492]: meta
+                  - generic [ref=e1493]:
+                    - paragraph [ref=e1494]: Activity generated from successful execution
+                    - generic [ref=e1496]: 0 execs
+                    - generic [ref=e1498]: meta
+                  - generic [ref=e1500]:
+                    - generic [ref=e1501]:
+                      - button "View" [ref=e1502]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1503]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1504]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1505]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1506] [cursor=pointer]:
+                  - generic [ref=e1507]:
+                    - heading "[Attempt] Correct A Spelling Error In The Readme.md Documentation To Improve Documentation Quality And Professionalism" [level=3] [ref=e1510]
+                    - generic [ref=e1512]: bugfix
+                  - generic [ref=e1513]:
+                    - paragraph [ref=e1514]: Correct a spelling error in the README.md documentation to improve documentation quality and professionalism
+                    - generic [ref=e1516]: 0 execs
+                    - generic [ref=e1518]: bugfix
+                  - generic [ref=e1520]:
+                    - generic [ref=e1521]:
+                      - button "View" [ref=e1522]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1523]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1524]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1525]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1526] [cursor=pointer]:
+                  - generic [ref=e1527]:
+                    - heading "learned-goal-processing--standard--mo8z4wkm" [level=3] [ref=e1530]
+                    - generic [ref=e1532]: meta
+                  - generic [ref=e1533]:
+                    - paragraph [ref=e1534]: Activity generated from successful execution
+                    - generic [ref=e1536]: 0 execs
+                    - generic [ref=e1538]: meta
+                  - generic [ref=e1540]:
+                    - generic [ref=e1541]:
+                      - button "View" [ref=e1542]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1543]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1544]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1545]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1546] [cursor=pointer]:
+                  - generic [ref=e1547]:
+                    - heading "Deterministic Git Workflow Sync" [level=3] [ref=e1550]
+                    - generic [ref=e1552]: infrastructure
+                  - generic [ref=e1553]:
+                    - paragraph [ref=e1554]: Fully deterministic git sync using only bash resolvers. Fetches latest changes, handles uncommitted work, rebases on remote, and pushes. No LLM reasoning needed - pure bash execution with proper error handling.
+                    - generic [ref=e1556]: 0 execs
+                    - generic [ref=e1557]:
+                      - generic [ref=e1558]: infrastructure.git
+                      - generic [ref=e1559]: deterministic
+                      - generic [ref=e1560]: automation
+                  - generic [ref=e1562]:
+                    - generic [ref=e1563]:
+                      - button "View" [ref=e1564]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1565]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1566]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1567]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1568] [cursor=pointer]:
+                  - generic [ref=e1569]:
+                    - heading "Deterministic Vessel Deployment with Rollback" [level=3] [ref=e1572]
+                    - generic [ref=e1574]: infrastructure
+                  - generic [ref=e1575]:
+                    - paragraph [ref=e1576]: Fully deterministic CI/CD deployment for vessels using only bash resolvers. Includes pre-deploy rollback to clear stuck releases, version validation, and retry-enabled health checks with proper exit codes.
+                    - generic [ref=e1578]: 0 execs
+                    - generic [ref=e1579]:
+                      - generic [ref=e1580]: infrastructure.deployment
+                      - generic [ref=e1581]: deterministic
+                      - generic [ref=e1582]: cicd
+                  - generic [ref=e1584]:
+                    - generic [ref=e1585]:
+                      - button "View" [ref=e1586]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1587]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1588]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1589]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1590] [cursor=pointer]:
+                  - generic [ref=e1591]:
+                    - heading "[Attempt] Enable The Dashboard To Display Real-time Data Generated From Actual Activity Executions Rather Than Static Or Mock Data, By Composing And Orchestrating Existing Activity Components." [level=3] [ref=e1594]
+                    - generic [ref=e1596]: feature
+                  - generic [ref=e1597]:
+                    - paragraph [ref=e1598]: Enable the dashboard to display real-time data generated from actual activity executions rather than static or mock data, by composing and orchestrating existing activity components.
+                    - generic [ref=e1600]: 0 execs
+                    - generic [ref=e1602]: feature
+                  - generic [ref=e1604]:
+                    - generic [ref=e1605]:
+                      - button "View" [ref=e1606]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1607]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1608]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1609]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1610] [cursor=pointer]:
+                  - generic [ref=e1611]:
+                    - heading "Enforce Dashboard Specifications" [level=3] [ref=e1614]
+                    - generic [ref=e1616]: tool
+                  - generic [ref=e1617]:
+                    - paragraph [ref=e1618]: "Auto-generated activity for: Enforce MiniBob Dashboard Specifications by validating all HTML, JSON, and performance files against the comprehensive specifications defined in dashboard-specifications.json. Check for: (1) no placeholder values in HTML, (2) live data from trace files, (3) responsive UI patterns, (4) consistent JSON schemas with ISO timestamps, (5) performance thresholds, (6) accessibility standards, and (7) consistent navigation. Generate a detailed compliance report."
+                    - generic [ref=e1620]: 0 execs
+                  - generic [ref=e1622]:
+                    - generic [ref=e1623]:
+                      - button "View" [ref=e1624]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1625]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1626]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1627]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1628] [cursor=pointer]:
+                  - generic [ref=e1629]:
+                    - heading "Convert Specifications to Contract Enforcement" [level=3] [ref=e1632]
+                    - generic [ref=e1634]: tool
+                  - generic [ref=e1635]:
+                    - paragraph [ref=e1636]: "Auto-generated activity for: Convert specification documents to contract enforcement by analyzing spec files, extracting requirements, generating validation code/tests, and setting up automated enforcement mechanisms"
+                    - generic [ref=e1638]: 0 execs
+                  - generic [ref=e1640]:
+                    - generic [ref=e1641]:
+                      - button "View" [ref=e1642]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1643]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1644]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1645]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1646] [cursor=pointer]:
+                  - generic [ref=e1647]:
+                    - heading "Dashboard Specification Enforcement" [level=3] [ref=e1650]
+                    - generic [ref=e1652]: tool
+                  - generic [ref=e1653]:
+                    - paragraph [ref=e1654]: "Auto-generated activity for: Create a dashboard specification validation system that checks HTML and JSON files against the comprehensive specifications in dashboard-specifications.json, detects violations of all 10 specification patterns, and generates a detailed compliance report saved to specification-violations.json"
+                    - generic [ref=e1656]: 0 execs
+                  - generic [ref=e1658]:
+                    - generic [ref=e1659]:
+                      - button "View" [ref=e1660]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1661]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1662]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1663]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1664] [cursor=pointer]:
+                  - generic [ref=e1665]:
+                    - heading "learned-goal-processing--standard--mo909w06" [level=3] [ref=e1668]
+                    - generic [ref=e1670]: meta
+                  - generic [ref=e1671]:
+                    - paragraph [ref=e1672]: Activity generated from successful execution
+                    - generic [ref=e1674]: 0 execs
+                    - generic [ref=e1676]: meta
+                  - generic [ref=e1678]:
+                    - generic [ref=e1679]:
+                      - button "View" [ref=e1680]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1681]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1682]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1683]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1684] [cursor=pointer]:
+                  - generic [ref=e1685]:
+                    - heading "learned-goal-processing--standard--mo8z4wkm" [level=3] [ref=e1688]
+                    - generic [ref=e1690]: meta
+                  - generic [ref=e1691]:
+                    - paragraph [ref=e1692]: Activity generated from successful execution
+                    - generic [ref=e1694]: 0 execs
+                    - generic [ref=e1696]: meta
+                  - generic [ref=e1698]:
+                    - generic [ref=e1699]:
+                      - button "View" [ref=e1700]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1701]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1702]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1703]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1704] [cursor=pointer]:
+                  - generic [ref=e1705]:
+                    - heading "learned-goal-processing--standard--mo8yzhs6" [level=3] [ref=e1708]
+                    - generic [ref=e1710]: meta
+                  - generic [ref=e1711]:
+                    - paragraph [ref=e1712]: Activity generated from successful execution
+                    - generic [ref=e1714]: 0 execs
+                    - generic [ref=e1716]: meta
+                  - generic [ref=e1718]:
+                    - generic [ref=e1719]:
+                      - button "View" [ref=e1720]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1721]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1722]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1723]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1724] [cursor=pointer]:
+                  - generic [ref=e1725]:
+                    - heading "Orchestrate Test Goal" [level=3] [ref=e1728]
+                    - generic [ref=e1730]: meta
+                  - generic [ref=e1731]:
+                    - paragraph [ref=e1732]: Orchestrates test creation and execution through composed child activities. Acquires error context first, generates tests, runs tests, and optionally fixes failures.
+                    - generic [ref=e1734]: 0 execs
+                    - generic [ref=e1736]: meta
+                  - generic [ref=e1738]:
+                    - generic [ref=e1739]:
+                      - button "View" [ref=e1740]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1741]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1742]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1743]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1744] [cursor=pointer]:
+                  - generic [ref=e1745]:
+                    - heading "Database Migration with Validation" [level=3] [ref=e1748]
+                    - generic [ref=e1750]: infrastructure
+                  - generic [ref=e1751]:
+                    - paragraph [ref=e1752]: Deterministic SurrealDB migration activity with version tracking, pre-migration backup query, validation, and rollback support. Uses bash resolvers for reliability with proper error handling and dry-run support.
+                    - generic [ref=e1754]: 0 execs
+                    - generic [ref=e1755]:
+                      - generic [ref=e1756]: infrastructure.database
+                      - generic [ref=e1757]: deterministic
+                      - generic [ref=e1758]: migration
+                  - generic [ref=e1760]:
+                    - generic [ref=e1761]:
+                      - button "View" [ref=e1762]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1763]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1764]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1765]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1766] [cursor=pointer]:
+                  - generic [ref=e1767]:
+                    - heading "Comprehensive Dashboard Validation" [level=3] [ref=e1770]
+                    - generic [ref=e1772]: tool
+                  - generic [ref=e1773]:
+                    - paragraph [ref=e1774]: "Auto-generated activity for: Validate MiniBob Dashboard against comprehensive specifications including placeholder detection, live data verification, responsive UI patterns, JSON schema compliance with ISO timestamps, performance thresholds, accessibility standards, and navigation consistency. Generate a detailed compliance report with actionable recommendations."
+                    - generic [ref=e1776]: 0 execs
+                  - generic [ref=e1778]:
+                    - generic [ref=e1779]:
+                      - button "View" [ref=e1780]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1781]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1782]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1783]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1784] [cursor=pointer]:
+                  - generic [ref=e1785]:
+                    - heading "Validate Dashboard Specifications" [level=3] [ref=e1788]
+                    - generic [ref=e1790]: tool
+                  - generic [ref=e1791]:
+                    - paragraph [ref=e1792]: "Auto-generated activity for: Enforce dashboard specifications by running comprehensive validation checks against HTML, JSON, and code files using the validate-dashboard-specs.py script, generating a detailed compliance report and saving violations to specification-violations.json for tracking and visibility"
+                    - generic [ref=e1794]: 0 execs
+                  - generic [ref=e1796]:
+                    - generic [ref=e1797]:
+                      - button "View" [ref=e1798]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1799]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1800]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1801]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1802] [cursor=pointer]:
+                  - generic [ref=e1803]:
+                    - heading "learned-goal-processing--standard--mo909w06" [level=3] [ref=e1806]
+                    - generic [ref=e1808]: meta
+                  - generic [ref=e1809]:
+                    - paragraph [ref=e1810]: Activity generated from successful execution
+                    - generic [ref=e1812]: 0 execs
+                    - generic [ref=e1814]: meta
+                  - generic [ref=e1816]:
+                    - generic [ref=e1817]:
+                      - button "View" [ref=e1818]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1819]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1820]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1821]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1822] [cursor=pointer]:
+                  - generic [ref=e1823]:
+                    - heading "Validate Deployment Health" [level=3] [ref=e1826]
+                    - generic [ref=e1828]: infrastructure
+                  - generic [ref=e1829]:
+                    - paragraph [ref=e1830]: Comprehensive deployment health validation with configurable retry logic, endpoint verification, and detailed reporting. Fully deterministic using bash resolvers with proper exit codes for CI/CD integration.
+                    - generic [ref=e1832]: 0 execs
+                    - generic [ref=e1833]:
+                      - generic [ref=e1834]: testing.deployment
+                      - generic [ref=e1835]: deterministic
+                      - generic [ref=e1836]: cicd
+                      - generic [ref=e1837]: "+1"
+                  - generic [ref=e1839]:
+                    - generic [ref=e1840]:
+                      - button "View" [ref=e1841]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1842]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1843]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1844]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1845] [cursor=pointer]:
+                  - generic [ref=e1846]:
+                    - heading "Implement An Automated Data Refresh Mechanism That Pulls Current Information From Multiple External Sources And Updates The Dashboard's Local Data Files To Reflect Real-time Or Near-real-time State" [level=3] [ref=e1849]
+                    - generic [ref=e1851]: feature
+                  - generic [ref=e1852]:
+                    - paragraph [ref=e1853]: Implement an automated data refresh mechanism that pulls current information from multiple external sources and updates the dashboard's local data files to reflect real-time or near-real-time state
+                    - generic [ref=e1855]: 0 execs
+                    - generic [ref=e1857]: feature
+                  - generic [ref=e1859]:
+                    - generic [ref=e1860]:
+                      - button "View" [ref=e1861]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1862]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1863]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1864]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1865] [cursor=pointer]:
+                  - generic [ref=e1866]:
+                    - heading "[Attempt] Enhance The Dashboard Ui To Display Real-time Data From Executed Activities Instead Of Mock Or Static Data, By Composing And Orchestrating Actual Activity Executions To Populate Dashboard Metrics And Visualizations." [level=3] [ref=e1869]
+                    - generic [ref=e1871]: feature
+                  - generic [ref=e1872]:
+                    - paragraph [ref=e1873]: Enhance the dashboard UI to display real-time data from executed activities instead of mock or static data, by composing and orchestrating actual activity executions to populate dashboard metrics and visualizations.
+                    - generic [ref=e1875]: 0 execs
+                    - generic [ref=e1877]: feature
+                  - generic [ref=e1879]:
+                    - generic [ref=e1880]:
+                      - button "View" [ref=e1881]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1882]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1883]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1884]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1885] [cursor=pointer]:
+                  - generic [ref=e1886]:
+                    - heading "learned-parent-goal--execute-comprehensive-dashboard-valid-mo5icwmu" [level=3] [ref=e1889]
+                    - generic [ref=e1891]: tool
+                  - generic [ref=e1892]:
+                    - paragraph [ref=e1893]: "Parent goal: Execute comprehensive dashboard validation against all specifications to identify compliance gaps and generate detailed report"
+                    - generic [ref=e1895]: 0 execs
+                    - generic [ref=e1897]: tool
+                  - generic [ref=e1899]:
+                    - generic [ref=e1900]:
+                      - button "View" [ref=e1901]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1902]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1903]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1904]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1905] [cursor=pointer]:
+                  - generic [ref=e1906]:
+                    - heading "Enforce Dashboard Specifications" [level=3] [ref=e1909]
+                    - generic [ref=e1911]: infrastructure
+                  - generic [ref=e1912]:
+                    - paragraph [ref=e1913]: "Auto-generated activity for: Enforce MiniBob Dashboard Specifications: Validate all HTML, JSON, and performance files against the comprehensive specifications defined in specifications/dashboard-specifications.json. Check for: (1) no placeholder values in HTML, (2) live data from trace files, (3) responsive UI patterns, (4) consistent JSON schemas with ISO timestamps, (5) performance thresholds, (6) accessibility standards, and (7) consistent navigation. Generate a detailed compliance report."
+                    - generic [ref=e1915]: 0 execs
+                    - generic [ref=e1917]: infrastructure
+                  - generic [ref=e1919]:
+                    - generic [ref=e1920]:
+                      - button "View" [ref=e1921]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1922]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1923]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1924]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1925] [cursor=pointer]:
+                  - generic [ref=e1926]:
+                    - heading "Convert Specification to Contract Enforcement" [level=3] [ref=e1929]
+                    - generic [ref=e1931]: tool
+                  - generic [ref=e1932]:
+                    - paragraph [ref=e1933]: "Auto-generated activity for: Convert specification documents to contract enforcement by analyzing spec files, extracting requirements, generating validation code/tests, and setting up automated enforcement mechanisms. This should analyze existing specifications, identify enforceable requirements, generate corresponding validation code, create automated tests, and establish continuous enforcement workflows."
+                    - generic [ref=e1935]: 0 execs
+                  - generic [ref=e1937]:
+                    - generic [ref=e1938]:
+                      - button "View" [ref=e1939]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1940]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1941]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1942]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1943] [cursor=pointer]:
+                  - generic [ref=e1944]:
+                    - heading "LLM Code Review Generator" [level=3] [ref=e1947]
+                    - generic [ref=e1949]: tool
+                  - generic [ref=e1950]:
+                    - paragraph [ref=e1951]: "Auto-generated activity for: Create an LLM-based code review script that detects recently modified files, applies custom user-defined review prompts, and generates structured review feedback. The script should be configurable, support multiple file types, and provide actionable insights."
+                    - generic [ref=e1953]: 0 execs
+                  - generic [ref=e1955]:
+                    - generic [ref=e1956]:
+                      - button "View" [ref=e1957]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1958]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1959]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1960]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1961] [cursor=pointer]:
+                  - generic [ref=e1962]:
+                    - heading "Repository Structure Analysis" [level=3] [ref=e1965]
+                    - generic [ref=e1967]: tool
+                  - generic [ref=e1968]:
+                    - paragraph [ref=e1969]: "Auto-generated activity for: Analyze repository structure comprehensively, mapping file tree, collecting statistics on file counts by type, sizes, directory organization, and providing a detailed overview of the codebase structure"
+                    - generic [ref=e1971]: 0 execs
+                  - generic [ref=e1973]:
+                    - generic [ref=e1974]:
+                      - button "View" [ref=e1975]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1976]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1977]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1978]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1979] [cursor=pointer]:
+                  - generic [ref=e1980]:
+                    - heading "List External Dependencies" [level=3] [ref=e1983]
+                    - generic [ref=e1985]: tool
+                  - generic [ref=e1986]:
+                    - paragraph [ref=e1987]: "Auto-generated activity for: List all external dependencies in a codebase by analyzing package management files (package.json, requirements.txt, Cargo.toml, etc.) and import statements to provide a comprehensive inventory of dependencies with versions"
+                    - generic [ref=e1989]: 0 execs
+                  - generic [ref=e1991]:
+                    - generic [ref=e1992]:
+                      - button "View" [ref=e1993]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1994]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1995]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1996]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1997] [cursor=pointer]:
+                  - generic [ref=e1998]:
+                    - heading "learned-learned-goal-processing--standard--mo909w06-mo90cexf" [level=3] [ref=e2001]
+                    - generic [ref=e2003]: meta
+                  - generic [ref=e2004]:
+                    - paragraph [ref=e2005]: Activity generated from successful execution
+                    - generic [ref=e2007]: 0 execs
+                    - generic [ref=e2009]: meta
+                  - generic [ref=e2011]:
+                    - generic [ref=e2012]:
+                      - button "View" [ref=e2013]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2014]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2015]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2016]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e2017] [cursor=pointer]:
+                  - generic [ref=e2018]:
+                    - heading "learned-acquire-requirements-context-mo8ztni7" [level=3] [ref=e2021]
+                    - generic [ref=e2023]: tool
+                  - generic [ref=e2024]:
+                    - paragraph [ref=e2025]: Activity generated from successful execution
+                    - generic [ref=e2027]: 0 execs
+                    - generic [ref=e2029]: tool
+                  - generic [ref=e2031]:
+                    - generic [ref=e2032]:
+                      - button "View" [ref=e2033]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2034]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2035]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2036]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e2037] [cursor=pointer]:
+                  - generic [ref=e2038]:
+                    - heading "Implement An Automated Data Synchronization Mechanism That Pulls Current Information From Multiple Source Systems And Refreshes The Dashboard's Data Files To Reflect Real-time Or Near-real-time State" [level=3] [ref=e2041]
+                    - generic [ref=e2043]: feature
+                  - generic [ref=e2044]:
+                    - paragraph [ref=e2045]: Implement an automated data synchronization mechanism that pulls current information from multiple source systems and refreshes the dashboard's data files to reflect real-time or near-real-time state
+                    - generic [ref=e2047]: 0 execs
+                    - generic [ref=e2049]: feature
+                  - generic [ref=e2051]:
+                    - generic [ref=e2052]:
+                      - button "View" [ref=e2053]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2054]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2055]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2056]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e2057] [cursor=pointer]:
+                  - generic [ref=e2058]:
+                    - heading "Dashboard Specification Enforcement" [level=3] [ref=e2061]
+                    - generic [ref=e2063]: tool
+                  - generic [ref=e2064]:
+                    - paragraph [ref=e2065]: "Auto-generated activity for: Enforce dashboard specifications by running comprehensive validation checks against HTML, JSON, and code files using the validate-dashboard-specs.py script, then generating a detailed compliance report and saving violations to specification-violations.json for tracking and visibility"
+                    - generic [ref=e2067]: 0 execs
+                    - generic [ref=e2069]: tool
+                  - generic [ref=e2071]:
+                    - generic [ref=e2072]:
+                      - button "View" [ref=e2073]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2074]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2075]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2076]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e2077] [cursor=pointer]:
+                  - generic [ref=e2078]:
+                    - heading "Comprehensive LLM Code Review Script" [level=3] [ref=e2081]
+                    - generic [ref=e2083]: tool
+                  - generic [ref=e2084]:
+                    - paragraph [ref=e2085]: "Auto-generated activity for: Create an LLM-based code review script that detects recently modified files using git, applies custom user-defined review prompts via LLM API calls, and generates structured review feedback with issues, suggestions, and code quality metrics. The script should be configurable, support multiple programming languages, integrate with popular LLM APIs (OpenAI, Anthropic, etc.), and output structured JSON/markdown reports."
+                    - generic [ref=e2087]: 0 execs
+                  - generic [ref=e2089]:
+                    - generic [ref=e2090]:
+                      - button "View" [ref=e2091]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2092]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2093]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2094]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e2095] [cursor=pointer]:
+                  - generic [ref=e2096]:
+                    - heading "Comprehensive Vulnerability Scanner" [level=3] [ref=e2099]
+                    - generic [ref=e2101]: tool
+                  - generic [ref=e2102]:
+                    - paragraph [ref=e2103]: "Auto-generated activity for: Perform comprehensive vulnerability scanning across all project dependencies by identifying package files (package.json, package-lock.json, yarn.lock, bun.lock, composer.json, requirements.txt, Gemfile, etc.), extracting dependency lists with versions, and checking each dependency against vulnerability databases (CVE, NVD, GitHub Security Advisories, Snyk, OSV) to generate detailed security reports with remediation recommendations"
+                    - generic [ref=e2105]: 0 execs
+                  - generic [ref=e2107]:
+                    - generic [ref=e2108]:
+                      - button "View" [ref=e2109]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2110]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2111]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2112]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e2113] [cursor=pointer]:
+                  - generic [ref=e2114]:
+                    - heading "Orchestrate Refactor Goal" [level=3] [ref=e2117]
+                    - generic [ref=e2119]: meta
+                  - generic [ref=e2120]:
+                    - paragraph [ref=e2121]: Orchestrates code refactoring through composed child activities. Analyzes codebase structure, transforms code in steps, validates with tests, and provides rollback on failure.
+                    - generic [ref=e2123]: 0 execs
+                    - generic [ref=e2125]: meta
+                  - generic [ref=e2127]:
+                    - generic [ref=e2128]:
+                      - button "View" [ref=e2129]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2130]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2131]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2132]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e2133] [cursor=pointer]:
+                  - generic [ref=e2134]:
+                    - heading "Full Vessel Deployment Pipeline" [level=3] [ref=e2137]
+                    - generic [ref=e2139]: infrastructure
+                  - generic [ref=e2140]:
+                    - paragraph [ref=e2141]: Complete CI/CD deployment for vessels with version checking, submodule management, and helm release recovery. Uses bash resolvers for full determinism.
+                    - generic [ref=e2143]: 0 execs
+                    - generic [ref=e2144]:
+                      - generic [ref=e2145]: infrastructure.deployment
+                      - generic [ref=e2146]: deterministic
+                      - generic [ref=e2147]: submodule.management
+                  - generic [ref=e2149]:
+                    - generic [ref=e2150]:
+                      - button "View" [ref=e2151]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2152]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2153]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2154]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e2155] [cursor=pointer]:
+                  - generic [ref=e2156]:
+                    - heading "learned-startup-health-check-mo7ka2lh" [level=3] [ref=e2159]
+                    - generic [ref=e2161]: infrastructure
+                  - generic [ref=e2162]:
+                    - paragraph [ref=e2163]: Activity generated from successful execution
+                    - generic [ref=e2165]: 0 execs
+                    - generic [ref=e2167]: infrastructure
+                  - generic [ref=e2169]:
+                    - generic [ref=e2170]:
+                      - button "View" [ref=e2171]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2172]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2173]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2174]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e2175] [cursor=pointer]:
+                  - generic [ref=e2176]:
+                    - heading "[Attempt] Continuously Develop A Dashboard By Systematically Selecting And Implementing Improvements (data Refresh, Feature Additions, Bug Fixes, Specification Validation) Until The Work Meets A Quality Threshold Suitable For A Pull Request" [level=3] [ref=e2179]
+                    - generic [ref=e2181]: bugfix
+                  - generic [ref=e2182]:
+                    - paragraph [ref=e2183]: Continuously develop a dashboard by systematically selecting and implementing improvements (data refresh, feature additions, bug fixes, specification validation) until the work meets a quality threshold suitable for a pull request
+                    - generic [ref=e2185]: 0 execs
+                    - generic [ref=e2187]: bugfix
+                  - generic [ref=e2189]:
+                    - generic [ref=e2190]:
+                      - button "View" [ref=e2191]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2192]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2193]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2194]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e2195] [cursor=pointer]:
+                  - generic [ref=e2196]:
+                    - heading "[Attempt] Enhance The Dashboard Ui Component To Display Real-time Data Sourced From Actual Activity Executions Rather Than Mock Or Static Data, By Composing And Orchestrating Existing Activity Modules To Populate The Dashboard Dynamically." [level=3] [ref=e2199]
+                    - generic [ref=e2201]: feature
+                  - generic [ref=e2202]:
+                    - paragraph [ref=e2203]: Enhance the dashboard UI component to display real-time data sourced from actual activity executions rather than mock or static data, by composing and orchestrating existing activity modules to populate the dashboard dynamically.
+                    - generic [ref=e2205]: 0 execs
+                    - generic [ref=e2207]: feature
+                  - generic [ref=e2209]:
+                    - generic [ref=e2210]:
+                      - button "View" [ref=e2211]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2212]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2213]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2214]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e2215] [cursor=pointer]:
+                  - generic [ref=e2216]:
+                    - heading "[Attempt] Enhance The Dashboard Ui To Display Real-time Data From Executed Activities Instead Of Mock Or Static Data, By Composing And Orchestrating Actual Activity Executions To Populate Dashboard Metrics And Visualizations." [level=3] [ref=e2219]
+                    - generic [ref=e2221]: feature
+                  - generic [ref=e2222]:
+                    - paragraph [ref=e2223]: Enhance the dashboard UI to display real-time data from executed activities instead of mock or static data, by composing and orchestrating actual activity executions to populate dashboard metrics and visualizations.
+                    - generic [ref=e2225]: 0 execs
+                    - generic [ref=e2227]: feature
+                  - generic [ref=e2229]:
+                    - generic [ref=e2230]:
+                      - button "View" [ref=e2231]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2232]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2233]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2234]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e2235] [cursor=pointer]:
+                  - generic [ref=e2236]:
+                    - heading "LLM Code Review Tool" [level=3] [ref=e2239]
+                    - generic [ref=e2241]: tool
+                  - generic [ref=e2242]:
+                    - paragraph [ref=e2243]: "Auto-generated activity for: Create an LLM-based code review script that detects recently modified files, applies custom user-defined review prompts, and generates structured review feedback. The script should be configurable, support multiple file types, and provide actionable insights."
+                    - generic [ref=e2245]: 0 execs
+                  - generic [ref=e2247]:
+                    - generic [ref=e2248]:
+                      - button "View" [ref=e2249]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2250]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2251]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2252]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e2253] [cursor=pointer]:
+                  - generic [ref=e2254]:
+                    - heading "Cleanup Stale Execution Traces v1" [level=3] [ref=e2257]
+                    - generic [ref=e2258]:
+                      - generic [ref=e2259]: upkeep
+                      - generic [ref=e2260]: Public
+                  - generic [ref=e2261]:
+                    - paragraph [ref=e2262]: v1.5.5 audit smoke — GET /v2/impulses/:id should now work
+                    - generic [ref=e2264]: 0 execs
+                    - generic [ref=e2265]:
+                      - generic [ref=e2266]: upkeep.cleanup.traces
+                      - generic [ref=e2267]: upkeep
+                      - generic [ref=e2268]: destructive
+                      - generic [ref=e2269]: "+1"
+                  - generic [ref=e2271]:
+                    - generic [ref=e2272]:
+                      - button "View" [ref=e2273]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2274]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2275]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2276]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e2277] [cursor=pointer]:
+                  - generic [ref=e2278]:
+                    - heading "Comprehensive Dependency Vulnerability Scanner" [level=3] [ref=e2281]
+                    - generic [ref=e2283]: tool
+                  - generic [ref=e2284]:
+                    - paragraph [ref=e2285]: "Auto-generated activity for: Perform comprehensive vulnerability scanning across all project dependencies by identifying package files (package.json, package-lock.json, yarn.lock, bun.lock, composer.json, requirements.txt, Gemfile, etc.), extracting dependency lists with versions, and checking each dependency against vulnerability databases (CVE, NVD, GitHub Security Advisories, Snyk, OSV) to generate detailed security reports with remediation recommendations"
+                    - generic [ref=e2287]: 0 execs
+                  - generic [ref=e2289]:
+                    - generic [ref=e2290]:
+                      - button "View" [ref=e2291]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2292]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2293]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2294]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e2295] [cursor=pointer]:
+                  - generic [ref=e2296]:
+                    - heading "Comprehensive Codebase Structure Analysis" [level=3] [ref=e2299]
+                    - generic [ref=e2301]: tool
+                  - generic [ref=e2302]:
+                    - paragraph [ref=e2303]: "Auto-generated activity for: Analyze and document comprehensive codebase structure by combining file mapping, entry points, dependencies, and git context into a single structured metadata impulse"
+                    - generic [ref=e2305]: 0 execs
+                  - generic [ref=e2307]:
+                    - generic [ref=e2308]:
+                      - button "View" [ref=e2309]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2310]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2311]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2312]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e2313] [cursor=pointer]:
+                  - generic [ref=e2314]:
+                    - heading "learned-startup-health-check-mo7jnpb4" [level=3] [ref=e2317]
+                    - generic [ref=e2319]: infrastructure
+                  - generic [ref=e2320]:
+                    - paragraph [ref=e2321]: Activity generated from successful execution
+                    - generic [ref=e2323]: 0 execs
+                    - generic [ref=e2325]: infrastructure
+                  - generic [ref=e2327]:
+                    - generic [ref=e2328]:
+                      - button "View" [ref=e2329]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e2330]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e2331]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e2332]:
+                      - img
+                      - text: Edit as Trajectory
+  - contentinfo [ref=e217]:
+    - generic [ref=e218]:
+      - generic [ref=e219]:
+        - generic [ref=e220]:
+          - img [ref=e221]
+          - generic [ref=e224]: API Connected
+        - generic [ref=e225]:
+          - img [ref=e226]
+          - generic [ref=e229]: "Last update: 07:34:59 AM"
+      - generic [ref=e230]:
+        - generic [ref=e231]: LOCAL
+        - generic [ref=e232]: v0.1.0

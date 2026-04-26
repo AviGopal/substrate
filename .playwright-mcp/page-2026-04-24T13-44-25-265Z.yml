@@ -1,0 +1,1429 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - heading "Navigation" [level=2] [ref=e26]
+        - navigation [ref=e27]:
+          - link "Templates" [ref=e28] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e29]
+            - generic [ref=e34]: Templates
+          - link "Composition" [ref=e35] [cursor=pointer]:
+            - /url: /composition
+            - img [ref=e36]
+            - generic [ref=e42]: Composition
+          - link "Executions" [ref=e43] [cursor=pointer]:
+            - /url: /executions
+            - img [ref=e44]
+            - generic [ref=e46]: Executions
+          - link "Goals" [ref=e47] [cursor=pointer]:
+            - /url: /goals
+            - img [ref=e48]
+            - generic [ref=e52]: Goals
+          - link "Shapes" [ref=e53] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e54]
+            - generic [ref=e58]: Shapes
+        - generic [ref=e59]:
+          - heading "Recent" [level=2] [ref=e60]
+          - generic [ref=e61]:
+            - generic [ref=e62]: debug-auth:v3
+            - generic [ref=e63]: implement-feat
+            - generic [ref=e64]: refactor-core
+    - main [ref=e65]:
+      - generic [ref=e67]:
+        - generic [ref=e68]:
+          - generic [ref=e69]:
+            - heading "Templates" [level=1] [ref=e70]
+            - paragraph [ref=e71]: Activity template library - Create and manage activity templates
+          - generic [ref=e72]:
+            - button "Open Composition Builder" [ref=e73] [cursor=pointer]:
+              - img
+              - text: Open Composition Builder
+            - button "New Template" [ref=e74] [cursor=pointer]:
+              - img
+              - text: New Template
+        - generic [ref=e75]:
+          - tablist [ref=e76]:
+            - tab "Templates List" [selected] [ref=e77] [cursor=pointer]:
+              - img [ref=e78]
+              - text: Templates List
+            - tab "Thompson Sampling" [ref=e85] [cursor=pointer]:
+              - img [ref=e86]
+              - text: Thompson Sampling
+          - tabpanel "Templates List" [ref=e91]:
+            - generic [ref=e233]:
+              - generic [ref=e236]:
+                - generic [ref=e237]:
+                  - paragraph [ref=e238]: Total Templates
+                  - paragraph [ref=e239]: "50"
+                  - paragraph [ref=e240]: Available activity templates
+                - img [ref=e242]
+              - generic [ref=e246]:
+                - generic [ref=e247]:
+                  - paragraph [ref=e248]: Avg Success Rate
+                  - paragraph [ref=e249]: 0%
+                  - paragraph [ref=e250]: Across all templates
+                - img [ref=e252]
+              - generic [ref=e257]:
+                - generic [ref=e258]:
+                  - paragraph [ref=e259]: Total Executions
+                  - paragraph [ref=e260]: "0"
+                  - paragraph [ref=e261]: All-time template runs
+                - img [ref=e263]
+              - generic [ref=e268]:
+                - generic [ref=e269]:
+                  - paragraph [ref=e270]: Learning Status
+                  - paragraph [ref=e271]: 47/0
+                  - paragraph [ref=e272]: Exploring / Exploiting
+                - img [ref=e274]
+            - generic [ref=e92]:
+              - generic [ref=e93]:
+                - generic [ref=e94]:
+                  - img [ref=e95]
+                  - searchbox "Search templates..." [ref=e98]
+                - button "Filters" [ref=e99] [cursor=pointer]:
+                  - img
+                  - text: Filters
+              - generic [ref=e100]:
+                - generic [ref=e101]: "Category:"
+                - button "All" [ref=e102] [cursor=pointer]
+                - button "Feature" [ref=e103] [cursor=pointer]
+                - button "Bugfix" [ref=e104] [cursor=pointer]
+                - button "Refactor" [ref=e105] [cursor=pointer]
+                - button "Infrastructure" [ref=e106] [cursor=pointer]
+                - button "Tool" [ref=e107] [cursor=pointer]
+            - paragraph [ref=e277]: Showing 50 of 50 templates
+            - generic [ref=e108]:
+              - generic [ref=e279]:
+                - button "Grid view" [ref=e280] [cursor=pointer]:
+                  - img
+                - button "List view" [ref=e281] [cursor=pointer]:
+                  - img
+              - generic [ref=e282]:
+                - generic [ref=e283] [cursor=pointer]:
+                  - generic [ref=e284]:
+                    - heading "Execute Shell Command" [level=3] [ref=e287]
+                    - generic [ref=e288]:
+                      - generic [ref=e289]: tool
+                      - generic [ref=e290]: org
+                  - generic [ref=e291]:
+                    - paragraph [ref=e292]: Generic template for simple shell/system operations. This is the foundation template that gets reused for common queries like 'show version', 'list files', 'check status'. As patterns emerge, more specific variants will be created through the learning loop.
+                    - generic [ref=e294]: 0 execs
+                    - generic [ref=e296]: tool
+                  - generic [ref=e298]:
+                    - generic [ref=e299]:
+                      - button "View" [ref=e300]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e301]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e302]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e303]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e304] [cursor=pointer]:
+                  - generic [ref=e305]:
+                    - heading "Goal Processing (Activity-Driven)" [level=3] [ref=e308]
+                    - generic [ref=e309]:
+                      - generic [ref=e310]: meta
+                      - generic [ref=e311]: org
+                  - generic [ref=e312]:
+                    - paragraph [ref=e313]: "Default goal-resolution meta-activity: drives goal processing entirely through the resolver chain (impulse_state_analysis → context_acquisition → goal_enrichment → activity_recommendation → variant_selection → activity dispatch → goal_verification (evidence_based; deterministic verdict from execution facts) → optional human clarification → optional goal decomposition). Every task dispatches a resolver by name; no bespoke TypeScript god-object orchestrates the flow. The dispatched activity id is resolved dynamically from the variant_selection_result impulse (Thompson Sampling output) — no hardcoded echo stub. Additive; goal-processing-standard.json still loads for fallback/comparison flows."
+                    - generic [ref=e315]: 0 execs
+                    - generic [ref=e316]:
+                      - generic [ref=e317]: goal
+                      - generic [ref=e318]: meta
+                      - generic [ref=e319]: orchestration
+                      - generic [ref=e320]: "+2"
+                  - generic [ref=e322]:
+                    - generic [ref=e323]:
+                      - button "View" [ref=e324]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e325]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e326]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e327]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e328] [cursor=pointer]:
+                  - generic [ref=e329]:
+                    - heading "Simple Resolver Composition Demo" [level=3] [ref=e332]
+                    - generic [ref=e333]:
+                      - generic [ref=e334]: tool
+                      - generic [ref=e335]: org
+                  - generic [ref=e336]:
+                    - paragraph [ref=e337]: Minimal example showing human, bash, git, and file resolvers working together in 5 tasks. Perfect for testing and learning resolver composition.
+                    - generic [ref=e339]: 0 execs
+                    - generic [ref=e340]:
+                      - generic [ref=e341]: example
+                      - generic [ref=e342]: resolver.composition
+                      - generic [ref=e343]: tutorial
+                  - generic [ref=e345]:
+                    - generic [ref=e346]:
+                      - button "View" [ref=e347]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e348]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e349]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e350]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e351] [cursor=pointer]:
+                  - generic [ref=e352]:
+                    - heading "Interactive Code Review" [level=3] [ref=e355]
+                    - generic [ref=e356]:
+                      - generic [ref=e357]: tool
+                      - generic [ref=e358]: org
+                  - generic [ref=e359]:
+                    - paragraph [ref=e360]: Comprehensive example showing human, llm, bash, git, and file resolvers working together. Human guides the review process, git shows changes, bash runs tests, file reads code, and llm analyzes quality.
+                    - generic [ref=e362]: 0 execs
+                    - generic [ref=e363]:
+                      - generic [ref=e364]: example
+                      - generic [ref=e365]: resolver.composition
+                      - generic [ref=e366]: interactive
+                      - generic [ref=e367]: "+1"
+                  - generic [ref=e369]:
+                    - generic [ref=e370]:
+                      - button "View" [ref=e371]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e372]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e373]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e374]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e375] [cursor=pointer]:
+                  - generic [ref=e376]:
+                    - heading "Interactive Activity Selector" [level=3] [ref=e379]
+                    - generic [ref=e380]:
+                      - generic [ref=e381]: tool
+                      - generic [ref=e382]: org
+                  - generic [ref=e383]:
+                    - paragraph [ref=e384]: Presents user with recommended activities and lets them choose which to execute. Supports iterative goal achievement with user guidance at each step.
+                    - generic [ref=e386]: 0 execs
+                    - generic [ref=e387]:
+                      - generic [ref=e388]: orchestration.interactive
+                      - generic [ref=e389]: user.guided
+                      - generic [ref=e390]: composition
+                      - generic [ref=e391]: "+1"
+                  - generic [ref=e393]:
+                    - generic [ref=e394]:
+                      - button "View" [ref=e395]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e396]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e397]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e398]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e399] [cursor=pointer]:
+                  - generic [ref=e400]:
+                    - heading "Human-Guided Activity Orchestrator" [level=3] [ref=e403]
+                    - generic [ref=e404]:
+                      - generic [ref=e405]: tool
+                      - generic [ref=e406]: org
+                  - generic [ref=e407]:
+                    - paragraph [ref=e408]: "Fully human-controlled orchestration where humans act as resolvers making all decisions. Asks human at each step: what to do, which activity to run, whether goal is complete."
+                    - generic [ref=e410]: 0 execs
+                    - generic [ref=e411]:
+                      - generic [ref=e412]: orchestration.human.guided
+                      - generic [ref=e413]: interactive
+                      - generic [ref=e414]: human.resolver
+                      - generic [ref=e415]: "+1"
+                  - generic [ref=e417]:
+                    - generic [ref=e418]:
+                      - button "View" [ref=e419]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e420]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e421]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e422]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e423] [cursor=pointer]:
+                  - generic [ref=e424]:
+                    - 'heading "Startup: Sync Embedded Templates" [level=3] [ref=e427]'
+                    - generic [ref=e428]:
+                      - generic [ref=e429]: infrastructure
+                      - generic [ref=e430]: org
+                  - generic [ref=e431]:
+                    - paragraph [ref=e432]: Upload all embedded templates to the backend so they participate in Thompson Sampling learning and recommendations
+                    - generic [ref=e434]: 0 execs
+                    - generic [ref=e435]:
+                      - generic [ref=e436]: startup
+                      - generic [ref=e437]: sync
+                      - generic [ref=e438]: templates
+                      - generic [ref=e439]: "+1"
+                  - generic [ref=e441]:
+                    - generic [ref=e442]:
+                      - button "View" [ref=e443]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e444]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e445]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e446]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e447] [cursor=pointer]:
+                  - generic [ref=e448]:
+                    - heading "Startup Health Check" [level=3] [ref=e451]
+                    - generic [ref=e452]:
+                      - generic [ref=e453]: infrastructure
+                      - generic [ref=e454]: org
+                  - generic [ref=e455]:
+                    - paragraph [ref=e456]: Verify MiniBob system health and connectivity on startup
+                    - generic [ref=e458]: 0 execs
+                    - generic [ref=e459]:
+                      - generic [ref=e460]: infrastructure.startup
+                      - generic [ref=e461]: health
+                      - generic [ref=e462]: diagnostics
+                  - generic [ref=e464]:
+                    - generic [ref=e465]:
+                      - button "View" [ref=e466]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e467]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e468]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e469]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e470] [cursor=pointer]:
+                  - generic [ref=e471]:
+                    - heading "Orchestrate Refactor Goal" [level=3] [ref=e474]
+                    - generic [ref=e475]:
+                      - generic [ref=e476]: meta
+                      - generic [ref=e477]: org
+                  - generic [ref=e478]:
+                    - paragraph [ref=e479]: Orchestrates code refactoring through composed child activities. Analyzes codebase structure, transforms code in steps, validates with tests, and provides rollback on failure.
+                    - generic [ref=e481]: 0 execs
+                    - generic [ref=e482]:
+                      - generic [ref=e483]: goal.orchestration
+                      - generic [ref=e484]: refactoring
+                      - generic [ref=e485]: composition
+                  - generic [ref=e487]:
+                    - generic [ref=e488]:
+                      - button "View" [ref=e489]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e490]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e491]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e492]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e493] [cursor=pointer]:
+                  - generic [ref=e494]:
+                    - heading "Orchestrate Test Goal" [level=3] [ref=e497]
+                    - generic [ref=e498]:
+                      - generic [ref=e499]: meta
+                      - generic [ref=e500]: org
+                  - generic [ref=e501]:
+                    - paragraph [ref=e502]: Orchestrates test creation and execution through composed child activities. Acquires error context first, generates tests, runs tests, and optionally fixes failures.
+                    - generic [ref=e504]: 0 execs
+                    - generic [ref=e505]:
+                      - generic [ref=e506]: goal.orchestration
+                      - generic [ref=e507]: testing
+                      - generic [ref=e508]: composition
+                  - generic [ref=e510]:
+                    - generic [ref=e511]:
+                      - button "View" [ref=e512]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e513]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e514]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e515]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e516] [cursor=pointer]:
+                  - generic [ref=e517]:
+                    - heading "Acquire Codebase Context" [level=3] [ref=e520]
+                    - generic [ref=e521]:
+                      - generic [ref=e522]: tool
+                      - generic [ref=e523]: org
+                  - generic [ref=e524]:
+                    - paragraph [ref=e525]: Map repository structure, identify entry points, analyze dependencies, and create codebase_structure impulse for refactoring activities
+                    - generic [ref=e527]: 0 execs
+                    - generic [ref=e528]:
+                      - generic [ref=e529]: context.codebase.structure
+                      - generic [ref=e530]: bootstrap.primordial
+                  - generic [ref=e532]:
+                    - generic [ref=e533]:
+                      - button "View" [ref=e534]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e535]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e536]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e537]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e538] [cursor=pointer]:
+                  - generic [ref=e539]:
+                    - heading "Acquire Requirements Context" [level=3] [ref=e542]
+                    - generic [ref=e543]:
+                      - generic [ref=e544]: tool
+                      - generic [ref=e545]: org
+                  - generic [ref=e546]:
+                    - paragraph [ref=e547]: Extract structured requirements from documentation files (spec.md, README, etc.) and create requirement impulses for feature development
+                    - generic [ref=e549]: 0 execs
+                    - generic [ref=e550]:
+                      - generic [ref=e551]: context.requirements
+                      - generic [ref=e552]: bootstrap.primordial
+                  - generic [ref=e554]:
+                    - generic [ref=e555]:
+                      - button "View" [ref=e556]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e557]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e558]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e559]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e560] [cursor=pointer]:
+                  - generic [ref=e561]:
+                    - heading "Acquire Error Log Context" [level=3] [ref=e564]
+                    - generic [ref=e565]:
+                      - generic [ref=e566]: tool
+                      - generic [ref=e567]: org
+                  - generic [ref=e568]:
+                    - paragraph [ref=e569]: Extract error information from execution traces or log files and create structured error_log impulses for debugging activities
+                    - generic [ref=e571]: 0 execs
+                    - generic [ref=e572]:
+                      - generic [ref=e573]: context.error.log
+                      - generic [ref=e574]: bootstrap.primordial
+                  - generic [ref=e576]:
+                    - generic [ref=e577]:
+                      - button "View" [ref=e578]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e579]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e580]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e581]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e582] [cursor=pointer]:
+                  - generic [ref=e583]:
+                    - heading "TypeScript Project Setup" [level=3] [ref=e586]
+                    - generic [ref=e587]:
+                      - generic [ref=e588]: infrastructure
+                      - generic [ref=e589]: org
+                  - generic [ref=e590]:
+                    - paragraph [ref=e591]: Initialize a TypeScript project with package.json, tsconfig.json, and test framework configuration. Produces config_file shapes for project infrastructure.
+                    - generic [ref=e593]: 0 execs
+                    - generic [ref=e594]:
+                      - generic [ref=e595]: typescript
+                      - generic [ref=e596]: project.setup
+                      - generic [ref=e597]: config
+                      - generic [ref=e598]: "+1"
+                  - generic [ref=e600]:
+                    - generic [ref=e601]:
+                      - button "View" [ref=e602]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e603]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e604]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e605]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e606] [cursor=pointer]:
+                  - generic [ref=e607]:
+                    - heading "Fetch Activity Metrics" [level=3] [ref=e610]
+                    - generic [ref=e611]:
+                      - generic [ref=e612]: tool
+                      - generic [ref=e613]: org
+                  - generic [ref=e614]:
+                    - paragraph [ref=e615]: Fetches activity metrics from the backend API and saves to a JSON file. Designed to be reliable with proper validation.
+                    - generic [ref=e617]: 0 execs
+                    - generic [ref=e618]:
+                      - generic [ref=e619]: metrics
+                      - generic [ref=e620]: api
+                      - generic [ref=e621]: fetch
+                      - generic [ref=e622]: "+1"
+                  - generic [ref=e624]:
+                    - generic [ref=e625]:
+                      - button "View" [ref=e626]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e627]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e628]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e629]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e630] [cursor=pointer]:
+                  - generic [ref=e631]:
+                    - heading "Decompose Goal to Output Shapes" [level=3] [ref=e634]
+                    - generic [ref=e635]:
+                      - generic [ref=e636]: meta
+                      - generic [ref=e637]: org
+                  - generic [ref=e638]:
+                    - paragraph [ref=e639]: Break down an abstract goal into concrete output shapes, enabling activity matching based on what needs to be produced rather than how to produce it. Uses the outcome-to-shape mechanism to know what we want before we get it.
+                    - generic [ref=e641]: 0 execs
+                    - generic [ref=e642]:
+                      - generic [ref=e643]: goal.decomposition
+                      - generic [ref=e644]: shape.matching
+                      - generic [ref=e645]: planning
+                      - generic [ref=e646]: "+1"
+                  - generic [ref=e648]:
+                    - generic [ref=e649]:
+                      - button "View" [ref=e650]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e651]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e652]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e653]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e654] [cursor=pointer]:
+                  - generic [ref=e655]:
+                    - heading "Jiggle and Prune Documentation" [level=3] [ref=e658]
+                    - generic [ref=e659]:
+                      - generic [ref=e660]: meta
+                      - generic [ref=e661]: org
+                  - generic [ref=e662]:
+                    - paragraph [ref=e663]: "Detect and resolve documentation conflicts: duplicates, superseded files, and temporary planning docs. Phase 1 (Jiggle) analyzes and builds conflict registry. Phase 2 (Prune) executes resolutions."
+                    - generic [ref=e665]: 0 execs
+                    - generic [ref=e666]:
+                      - generic [ref=e667]: meta.documentation
+                      - generic [ref=e668]: utility.cleanup
+                      - generic [ref=e669]: bootstrap.maintenance
+                  - generic [ref=e671]:
+                    - generic [ref=e672]:
+                      - button "View" [ref=e673]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e674]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e675]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e676]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e677] [cursor=pointer]:
+                  - generic [ref=e678]:
+                    - 'heading "Verify: Unified Learning Architecture" [level=3] [ref=e681]'
+                    - generic [ref=e682]:
+                      - generic [ref=e683]: meta
+                      - generic [ref=e684]: org
+                  - generic [ref=e685]:
+                    - paragraph [ref=e686]: "Verification activity that tests the full unified learning flow: impulse pointer types, system activities, pre-validation, and failure penalty tracking."
+                    - generic [ref=e688]: 0 execs
+                    - generic [ref=e689]:
+                      - generic [ref=e690]: verification
+                      - generic [ref=e691]: learning
+                      - generic [ref=e692]: integration.test
+                  - generic [ref=e694]:
+                    - generic [ref=e695]:
+                      - button "View" [ref=e696]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e697]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e698]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e699]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e700] [cursor=pointer]:
+                  - generic [ref=e701]:
+                    - 'heading "System: Compute Tool Risks" [level=3] [ref=e704]'
+                    - generic [ref=e705]:
+                      - generic [ref=e706]: meta
+                      - generic [ref=e707]: org
+                  - generic [ref=e708]:
+                    - paragraph [ref=e709]: System activity that computes tool risk profiles by querying tool execution history and generating a tool_risk_profile impulse for use in activity selection and pre-validation.
+                    - generic [ref=e711]: 0 execs
+                    - generic [ref=e712]:
+                      - generic [ref=e713]: system
+                      - generic [ref=e714]: tool.analysis
+                      - generic [ref=e715]: risk.profile
+                      - generic [ref=e716]: "+1"
+                  - generic [ref=e718]:
+                    - generic [ref=e719]:
+                      - button "View" [ref=e720]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e721]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e722]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e723]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e724] [cursor=pointer]:
+                  - generic [ref=e725]:
+                    - 'heading "System: Analyze Execution" [level=3] [ref=e728]'
+                    - generic [ref=e729]:
+                      - generic [ref=e730]: meta
+                      - generic [ref=e731]: org
+                  - generic [ref=e732]:
+                    - paragraph [ref=e733]: System activity that analyzes a failed or partial execution to identify failure patterns and suggest variant improvements. Produces failure_pattern and variant_suggestion impulses.
+                    - generic [ref=e735]: 0 execs
+                    - generic [ref=e736]:
+                      - generic [ref=e737]: system
+                      - generic [ref=e738]: analysis
+                      - generic [ref=e739]: failure.patterns
+                      - generic [ref=e740]: "+2"
+                  - generic [ref=e742]:
+                    - generic [ref=e743]:
+                      - button "View" [ref=e744]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e745]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e746]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e747]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e748] [cursor=pointer]:
+                  - generic [ref=e749]:
+                    - 'heading "System: Recommend Activity" [level=3] [ref=e752]'
+                    - generic [ref=e753]:
+                      - generic [ref=e754]: meta
+                      - generic [ref=e755]: org
+                  - generic [ref=e756]:
+                    - paragraph [ref=e757]: System activity that recommends activities for a goal using Thompson Sampling with failure penalties. Loads tool risk profiles and impulse relevance data to inform ranking.
+                    - generic [ref=e759]: 0 execs
+                    - generic [ref=e760]:
+                      - generic [ref=e761]: system
+                      - generic [ref=e762]: recommendation
+                      - generic [ref=e763]: thompson.sampling
+                      - generic [ref=e764]: "+1"
+                  - generic [ref=e766]:
+                    - generic [ref=e767]:
+                      - button "View" [ref=e768]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e769]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e770]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e771]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e772] [cursor=pointer]:
+                  - generic [ref=e773]:
+                    - heading "Prune Underperforming Variants" [level=3] [ref=e776]
+                    - generic [ref=e777]:
+                      - generic [ref=e778]: meta
+                      - generic [ref=e779]: org
+                  - generic [ref=e780]:
+                    - paragraph [ref=e781]: Analyzes variant family performance and identifies underperforming variants for deprecation. Generates a deprecation report with recommendations, ensuring the variant ecosystem remains healthy and efficient.
+                    - generic [ref=e783]: 0 execs
+                    - generic [ref=e784]:
+                      - generic [ref=e785]: meta.variant
+                      - generic [ref=e786]: meta.cleanup
+                      - generic [ref=e787]: learning.optimization
+                      - generic [ref=e788]: "+1"
+                  - generic [ref=e790]:
+                    - generic [ref=e791]:
+                      - button "View" [ref=e792]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e793]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e794]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e795]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e796] [cursor=pointer]:
+                  - generic [ref=e797]:
+                    - heading "Select Best Variant (Thompson Sampling)" [level=3] [ref=e800]
+                    - generic [ref=e801]:
+                      - generic [ref=e802]: meta
+                      - generic [ref=e803]: org
+                  - generic [ref=e804]:
+                    - paragraph [ref=e805]: Selects the best performing variant from a template family using Thompson Sampling. Loads variant performance metrics, applies the selection algorithm, and outputs the selected variant for execution.
+                    - generic [ref=e807]: 0 execs
+                    - generic [ref=e808]:
+                      - generic [ref=e809]: meta.variant
+                      - generic [ref=e810]: meta.selection
+                      - generic [ref=e811]: learning.thompson.sampling
+                      - generic [ref=e812]: "+1"
+                  - generic [ref=e814]:
+                    - generic [ref=e815]:
+                      - button "View" [ref=e816]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e817]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e818]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e819]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e820] [cursor=pointer]:
+                  - generic [ref=e821]:
+                    - heading "Create Variant from Failed Execution" [level=3] [ref=e824]
+                    - generic [ref=e825]:
+                      - generic [ref=e826]: meta
+                      - generic [ref=e827]: org
+                  - generic [ref=e828]:
+                    - paragraph [ref=e829]: Creates a new activity template variant from a failed execution. Analyzes the failure, proposes fixes, and generates a variant template that addresses the root cause. The new variant is linked to its parent via variant_of metadata.
+                    - generic [ref=e831]: 0 execs
+                    - generic [ref=e832]:
+                      - generic [ref=e833]: meta.variant
+                      - generic [ref=e834]: meta.debug
+                      - generic [ref=e835]: meta.template
+                      - generic [ref=e836]: "+1"
+                  - generic [ref=e838]:
+                    - generic [ref=e839]:
+                      - button "View" [ref=e840]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e841]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e842]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e843]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e844] [cursor=pointer]:
+                  - generic [ref=e845]:
+                    - heading "Verify Thompson Sampling Learning Contract" [level=3] [ref=e848]
+                    - generic [ref=e849]:
+                      - generic [ref=e850]: infrastructure
+                      - generic [ref=e851]: org
+                  - generic [ref=e852]:
+                    - paragraph [ref=e853]: Verify that Thompson Sampling correctly updates alpha/beta parameters from execution outcomes and that better-performing variants are selected more frequently over time
+                    - generic [ref=e855]: 0 execs
+                    - generic [ref=e857]: infrastructure
+                  - generic [ref=e859]:
+                    - generic [ref=e860]:
+                      - button "View" [ref=e861]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e862]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e863]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e864]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e865] [cursor=pointer]:
+                  - generic [ref=e866]:
+                    - heading "Verify Resolver Locality Contract" [level=3] [ref=e869]
+                    - generic [ref=e870]:
+                      - generic [ref=e871]: infrastructure
+                      - generic [ref=e872]: org
+                  - generic [ref=e873]:
+                    - paragraph [ref=e874]: "Verify that impulse resolution follows the 'Resolvers live where data lives' principle: local pointer types (memo, file, directoryTree, gitDiff) resolved by MiniBob, backend pointer types resolved via MCP delegation"
+                    - generic [ref=e876]: 0 execs
+                    - generic [ref=e878]: infrastructure
+                  - generic [ref=e880]:
+                    - generic [ref=e881]:
+                      - button "View" [ref=e882]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e883]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e884]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e885]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e886] [cursor=pointer]:
+                  - generic [ref=e887]:
+                    - heading "Verify Impulse Lifecycle Contract" [level=3] [ref=e890]
+                    - generic [ref=e891]:
+                      - generic [ref=e892]: infrastructure
+                      - generic [ref=e893]: org
+                  - generic [ref=e894]:
+                    - paragraph [ref=e895]: "Deterministic validation harness that verifies impulse lifecycle contract compliance: metadata-first loading, budget enforcement with truncation, relevance score updates, and resolver routing (local vs MCP)"
+                    - generic [ref=e897]: 0 execs
+                    - generic [ref=e899]: infrastructure
+                  - generic [ref=e901]:
+                    - generic [ref=e902]:
+                      - button "View" [ref=e903]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e904]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e905]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e906]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e907] [cursor=pointer]:
+                  - generic [ref=e908]:
+                    - heading "Verify Goal Alignment" [level=3] [ref=e911]
+                    - generic [ref=e912]:
+                      - generic [ref=e913]: infrastructure
+                      - generic [ref=e914]: org
+                  - generic [ref=e915]:
+                    - paragraph [ref=e916]: Post-execution check to determine if an activity execution actually moved toward the stated goal
+                    - generic [ref=e918]: 0 execs
+                    - generic [ref=e920]: infrastructure
+                  - generic [ref=e922]:
+                    - generic [ref=e923]:
+                      - button "View" [ref=e924]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e925]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e926]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e927]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e928] [cursor=pointer]:
+                  - generic [ref=e929]:
+                    - heading "Verify Activity Execution Contract" [level=3] [ref=e932]
+                    - generic [ref=e933]:
+                      - generic [ref=e934]: infrastructure
+                      - generic [ref=e935]: org
+                  - generic [ref=e936]:
+                    - paragraph [ref=e937]: "Verifies that activity executions comply with the canonical contract from IMPULSE_ACTIVITY_FOUNDATION.md: task sequencing, state capture, trace recording, and impulse evolution tracking"
+                    - generic [ref=e939]: 0 execs
+                    - generic [ref=e940]:
+                      - generic [ref=e941]: reliability
+                      - generic [ref=e942]: verification
+                      - generic [ref=e943]: contract
+                      - generic [ref=e944]: "+1"
+                  - generic [ref=e946]:
+                    - generic [ref=e947]:
+                      - button "View" [ref=e948]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e949]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e950]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e951]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e952] [cursor=pointer]:
+                  - generic [ref=e953]:
+                    - heading "Reuse Successful Activity" [level=3] [ref=e956]
+                    - generic [ref=e957]:
+                      - generic [ref=e958]: meta
+                      - generic [ref=e959]: org
+                  - generic [ref=e960]:
+                    - paragraph [ref=e961]: Adapt a successful activity execution to solve a similar goal by reusing the proven approach
+                    - generic [ref=e963]: 0 execs
+                    - generic [ref=e965]: self.improvement
+                  - generic [ref=e967]:
+                    - generic [ref=e968]:
+                      - button "View" [ref=e969]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e970]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e971]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e972]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e973] [cursor=pointer]:
+                  - generic [ref=e974]:
+                    - heading "Repair Failed Activity" [level=3] [ref=e977]
+                    - generic [ref=e978]:
+                      - generic [ref=e979]: meta
+                      - generic [ref=e980]: org
+                  - generic [ref=e981]:
+                    - paragraph [ref=e982]: Analyze a failed activity execution and create a repaired variant that addresses the failure
+                    - generic [ref=e984]: 0 execs
+                    - generic [ref=e986]: self.improvement
+                  - generic [ref=e988]:
+                    - generic [ref=e989]:
+                      - button "View" [ref=e990]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e991]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e992]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e993]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e994] [cursor=pointer]:
+                  - generic [ref=e995]:
+                    - heading "Refactor With Tests" [level=3] [ref=e998]
+                    - generic [ref=e999]:
+                      - generic [ref=e1000]: refactor
+                      - generic [ref=e1001]: org
+                  - generic [ref=e1002]:
+                    - paragraph [ref=e1003]: "Safe code refactoring workflow: analyze code, plan refactoring, implement changes, ensure all tests pass. Preserves functionality while improving code quality."
+                    - generic [ref=e1005]: 0 execs
+                    - generic [ref=e1007]: refactor
+                  - generic [ref=e1009]:
+                    - generic [ref=e1010]:
+                      - button "View" [ref=e1011]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1012]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1013]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1014]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1015] [cursor=pointer]:
+                  - generic [ref=e1016]:
+                    - heading "Hello World Minimal" [level=3] [ref=e1019]
+                    - generic [ref=e1020]:
+                      - generic [ref=e1021]: infrastructure
+                      - generic [ref=e1022]: org
+                  - generic [ref=e1023]:
+                    - paragraph [ref=e1024]: Minimal test activity with no context requirements - single task that writes a file
+                    - generic [ref=e1026]: 0 execs
+                    - generic [ref=e1028]: infrastructure
+                  - generic [ref=e1030]:
+                    - generic [ref=e1031]:
+                      - button "View" [ref=e1032]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1033]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1034]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1035]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1036] [cursor=pointer]:
+                  - generic [ref=e1037]:
+                    - heading "Git Workflow Sync" [level=3] [ref=e1040]
+                    - generic [ref=e1041]:
+                      - generic [ref=e1042]: infrastructure
+                      - generic [ref=e1043]: org
+                  - generic [ref=e1044]:
+                    - paragraph [ref=e1045]: "Synchronize local branch with remote: fetch latest changes, rebase current branch, resolve conflicts if any, and push to remote. Ensures clean git history and up-to-date codebase."
+                    - generic [ref=e1047]: 0 execs
+                    - generic [ref=e1049]: infrastructure
+                  - generic [ref=e1051]:
+                    - generic [ref=e1052]:
+                      - button "View" [ref=e1053]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1054]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1055]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1056]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1057] [cursor=pointer]:
+                  - generic [ref=e1058]:
+                    - heading "Fix Bug Complete" [level=3] [ref=e1061]
+                    - generic [ref=e1062]:
+                      - generic [ref=e1063]: bugfix
+                      - generic [ref=e1064]: org
+                  - generic [ref=e1065]:
+                    - paragraph [ref=e1066]: "Complete bug fix workflow: reproduce, analyze root cause, fix, test, commit, and annotate. Systematic debugging approach for reliable fixes."
+                    - generic [ref=e1068]: 0 execs
+                    - generic [ref=e1070]: bugfix
+                  - generic [ref=e1072]:
+                    - generic [ref=e1073]:
+                      - button "View" [ref=e1074]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1075]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1076]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1077]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1078] [cursor=pointer]:
+                  - generic [ref=e1079]:
+                    - heading "Evolve Activity Template (Self-Contained)" [level=3] [ref=e1082]
+                    - generic [ref=e1083]:
+                      - generic [ref=e1084]: infrastructure
+                      - generic [ref=e1085]: org
+                  - generic [ref=e1086]:
+                    - paragraph [ref=e1087]: Improve existing activity templates based on execution metrics and learnings without requiring git history or local files - fully self-contained
+                    - generic [ref=e1089]: 0 execs
+                    - generic [ref=e1091]: infrastructure
+                  - generic [ref=e1093]:
+                    - generic [ref=e1094]:
+                      - button "View" [ref=e1095]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1096]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1097]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1098]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1099] [cursor=pointer]:
+                  - generic [ref=e1100]:
+                    - heading "Debug Activity Execution (Self-Contained)" [level=3] [ref=e1103]
+                    - generic [ref=e1104]:
+                      - generic [ref=e1105]: meta
+                      - generic [ref=e1106]: org
+                  - generic [ref=e1107]:
+                    - paragraph [ref=e1108]: Debug failed activity executions using impulse-based trace access - teaches impulse resolution and failure analysis
+                    - generic [ref=e1110]: 0 execs
+                    - generic [ref=e1111]:
+                      - generic [ref=e1112]: meta.debug
+                      - generic [ref=e1113]: bootstrap.primordial
+                  - generic [ref=e1115]:
+                    - generic [ref=e1116]:
+                      - button "View" [ref=e1117]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1118]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1119]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1120]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1121] [cursor=pointer]:
+                  - generic [ref=e1122]:
+                    - heading "Create Activity Template (Progressive Composition)" [level=3] [ref=e1125]
+                    - generic [ref=e1126]:
+                      - generic [ref=e1127]: infrastructure
+                      - generic [ref=e1128]: org
+                  - generic [ref=e1129]:
+                    - paragraph [ref=e1130]: "Creates new activity templates using progressive composition: tries known activities stage-by-stage, verifies alignment after each stage, backtracks to alternate approaches on failure, and records composition patterns for learning. This is the ONLY way MiniBob should create templates."
+                    - generic [ref=e1132]: 0 execs
+                    - generic [ref=e1133]:
+                      - generic [ref=e1134]: progressive.composition
+                      - generic [ref=e1135]: template.creation
+                      - generic [ref=e1136]: learning
+                      - generic [ref=e1137]: "+1"
+                  - generic [ref=e1139]:
+                    - generic [ref=e1140]:
+                      - button "View" [ref=e1141]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1142]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1143]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1144]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1145] [cursor=pointer]:
+                  - generic [ref=e1146]:
+                    - heading "Break Down Goal" [level=3] [ref=e1149]
+                    - generic [ref=e1150]:
+                      - generic [ref=e1151]: meta
+                      - generic [ref=e1152]: org
+                  - generic [ref=e1153]:
+                    - paragraph [ref=e1154]: Decompose a complex goal into smaller, manageable subtasks and create a plan
+                    - generic [ref=e1156]: 0 execs
+                    - generic [ref=e1158]: meta
+                  - generic [ref=e1160]:
+                    - generic [ref=e1161]:
+                      - button "View" [ref=e1162]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1163]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1164]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1165]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1166] [cursor=pointer]:
+                  - generic [ref=e1167]:
+                    - heading "Add Feature Complete" [level=3] [ref=e1170]
+                    - generic [ref=e1171]:
+                      - generic [ref=e1172]: feature
+                      - generic [ref=e1173]: org
+                  - generic [ref=e1174]:
+                    - paragraph [ref=e1175]: "Complete feature implementation workflow: plan, implement, test, commit, and annotate. Suitable for any feature type (API endpoints, UI components, utilities, etc.)"
+                    - generic [ref=e1177]: 0 execs
+                    - generic [ref=e1179]: feature
+                  - generic [ref=e1181]:
+                    - generic [ref=e1182]:
+                      - button "View" [ref=e1183]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1184]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1185]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1186]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1187] [cursor=pointer]:
+                  - generic [ref=e1188]:
+                    - heading "Build & Execute Activity Template (Interactive)" [level=3] [ref=e1191]
+                    - generic [ref=e1192]:
+                      - generic [ref=e1193]: tool
+                      - generic [ref=e1194]: org
+                  - generic [ref=e1195]:
+                    - paragraph [ref=e1196]: "Interactively builds an activity template one step at a time. Each cycle: propose the next task, get human approval (approve/revise/stop), execute it against the live impulse state space, assess progress toward the goal, report back, and decide whether to continue. Continue-branch recursively invokes this same template with iteration+1 so execution happens in-time with template construction. Stop-branch validates and (if broken) repairs the assembled template before saving."
+                    - generic [ref=e1198]: 0 execs
+                    - generic [ref=e1199]:
+                      - generic [ref=e1200]: interactive
+                      - generic [ref=e1201]: template.creation
+                      - generic [ref=e1202]: meta
+                      - generic [ref=e1203]: "+1"
+                  - generic [ref=e1205]:
+                    - generic [ref=e1206]:
+                      - button "View" [ref=e1207]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1208]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1209]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1210]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1211] [cursor=pointer]:
+                  - generic [ref=e1212]:
+                    - heading "Goal Processing (Standard)" [level=3] [ref=e1215]
+                    - generic [ref=e1216]:
+                      - generic [ref=e1217]: meta
+                      - generic [ref=e1218]: org
+                  - generic [ref=e1219]:
+                    - paragraph [ref=e1220]: Standard goal processing activity - decomposes goals into execution steps via Thompson Sampling recommendations
+                    - generic [ref=e1222]: 0 execs
+                    - generic [ref=e1223]:
+                      - generic [ref=e1224]: goal
+                      - generic [ref=e1225]: meta
+                      - generic [ref=e1226]: orchestration
+                  - generic [ref=e1228]:
+                    - generic [ref=e1229]:
+                      - button "View" [ref=e1230]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1231]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1232]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1233]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1234] [cursor=pointer]:
+                  - generic [ref=e1235]:
+                    - heading "Execute Shell Command" [level=3] [ref=e1238]
+                    - generic [ref=e1239]:
+                      - generic [ref=e1240]: tool
+                      - generic [ref=e1241]: org
+                  - generic [ref=e1242]:
+                    - paragraph [ref=e1243]: Generic template for simple shell/system operations. This is the foundation template that gets reused for common queries like 'show version', 'list files', 'check status'. As patterns emerge, more specific variants will be created through the learning loop.
+                    - generic [ref=e1245]: 0 execs
+                    - generic [ref=e1246]:
+                      - generic [ref=e1247]: tool.shell
+                      - generic [ref=e1248]: tool.query
+                      - generic [ref=e1249]: tool.system
+                      - generic [ref=e1250]: "+2"
+                  - generic [ref=e1252]:
+                    - generic [ref=e1253]:
+                      - button "View" [ref=e1254]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1255]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1256]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1257]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1258] [cursor=pointer]:
+                  - generic [ref=e1259]:
+                    - heading "Repair Broken Template" [level=3] [ref=e1262]
+                    - generic [ref=e1263]:
+                      - generic [ref=e1264]: infrastructure
+                      - generic [ref=e1265]: org
+                  - generic [ref=e1266]:
+                    - paragraph [ref=e1267]: Minimal template to repair broken activity templates by adding missing required fields
+                    - generic [ref=e1269]: 0 execs
+                    - generic [ref=e1271]: infrastructure
+                  - generic [ref=e1273]:
+                    - generic [ref=e1274]:
+                      - button "View" [ref=e1275]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1276]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1277]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1278]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1279] [cursor=pointer]:
+                  - generic [ref=e1280]:
+                    - heading "Startup Health Check" [level=3] [ref=e1283]
+                    - generic [ref=e1284]:
+                      - generic [ref=e1285]: infrastructure
+                      - generic [ref=e1286]: org
+                  - generic [ref=e1287]:
+                    - paragraph [ref=e1288]: Verify MiniBob system health and connectivity on startup
+                    - generic [ref=e1290]: 0 execs
+                    - generic [ref=e1292]: infrastructure
+                  - generic [ref=e1294]:
+                    - generic [ref=e1295]:
+                      - button "View" [ref=e1296]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1297]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1298]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1299]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1300] [cursor=pointer]:
+                  - generic [ref=e1301]:
+                    - heading "Goal Processing (Activity-Driven)" [level=3] [ref=e1304]
+                    - generic [ref=e1305]:
+                      - generic [ref=e1306]: meta
+                      - generic [ref=e1307]: org
+                  - generic [ref=e1308]:
+                    - paragraph [ref=e1309]: "Default goal-resolution meta-activity: drives goal processing entirely through the resolver chain (impulse_state_analysis → context_acquisition → goal_enrichment → activity_recommendation → variant_selection → activity dispatch → goal_verification (evidence_based; deterministic verdict from execution facts) → optional human clarification → optional goal decomposition). Every task dispatches a resolver by name; no bespoke TypeScript god-object orchestrates the flow. The dispatched activity id is resolved dynamically from the variant_selection_result impulse (Thompson Sampling output) — no hardcoded echo stub. Additive; goal-processing-standard.json still loads for fallback/comparison flows."
+                    - generic [ref=e1311]: 0 execs
+                    - generic [ref=e1313]: meta
+                  - generic [ref=e1315]:
+                    - generic [ref=e1316]:
+                      - button "View" [ref=e1317]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1318]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1319]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1320]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1321] [cursor=pointer]:
+                  - generic [ref=e1322]:
+                    - 'heading "Startup: Sync Embedded Templates" [level=3] [ref=e1325]'
+                    - generic [ref=e1326]:
+                      - generic [ref=e1327]: infrastructure
+                      - generic [ref=e1328]: org
+                  - generic [ref=e1329]:
+                    - paragraph [ref=e1330]: Upload all embedded templates to the backend so they participate in Thompson Sampling learning and recommendations
+                    - generic [ref=e1332]: 0 execs
+                    - generic [ref=e1334]: infrastructure
+                  - generic [ref=e1336]:
+                    - generic [ref=e1337]:
+                      - button "View" [ref=e1338]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1339]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1340]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1341]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1342] [cursor=pointer]:
+                  - generic [ref=e1343]:
+                    - heading "learned-startup-health-check-mocx255i" [level=3] [ref=e1346]
+                    - generic [ref=e1347]:
+                      - generic [ref=e1348]: infrastructure
+                      - generic [ref=e1349]: org
+                  - generic [ref=e1350]:
+                    - paragraph [ref=e1351]: Activity generated from successful execution
+                    - generic [ref=e1353]: 0 execs
+                    - generic [ref=e1355]: infrastructure
+                  - generic [ref=e1357]:
+                    - generic [ref=e1358]:
+                      - button "View" [ref=e1359]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1360]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1361]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1362]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1363] [cursor=pointer]:
+                  - generic [ref=e1364]:
+                    - heading "learned-startup-health-check-mocvf84b" [level=3] [ref=e1367]
+                    - generic [ref=e1368]:
+                      - generic [ref=e1369]: infrastructure
+                      - generic [ref=e1370]: org
+                  - generic [ref=e1371]:
+                    - paragraph [ref=e1372]: Activity generated from successful execution
+                    - generic [ref=e1374]: 0 execs
+                    - generic [ref=e1376]: infrastructure
+                  - generic [ref=e1378]:
+                    - generic [ref=e1379]:
+                      - button "View" [ref=e1380]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1381]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1382]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1383]:
+                      - img
+                      - text: Edit as Trajectory
+                - generic [ref=e1384] [cursor=pointer]:
+                  - generic [ref=e1385]:
+                    - heading "Comprehensive LLM Code Review Script" [level=3] [ref=e1388]
+                    - generic [ref=e1390]: tool
+                  - generic [ref=e1391]:
+                    - paragraph [ref=e1392]: "Auto-generated activity for: Create an LLM-based code review script that detects recently modified files using git, applies custom user-defined review prompts via LLM API calls, and generates structured review feedback with issues, suggestions, and code quality metrics. The script should be configurable, support multiple programming languages, integrate with popular LLM APIs (OpenAI, Anthropic, etc.), and output structured JSON/markdown reports."
+                    - generic [ref=e1394]: 0 execs
+                  - generic [ref=e1396]:
+                    - generic [ref=e1397]:
+                      - button "View" [ref=e1398]:
+                        - img
+                        - text: View
+                      - button "Edit" [ref=e1399]:
+                        - img
+                        - text: Edit
+                      - button "Execute" [ref=e1400]:
+                        - img
+                        - text: Execute
+                    - button "Edit as Trajectory" [ref=e1401]:
+                      - img
+                      - text: Edit as Trajectory
+  - contentinfo [ref=e217]:
+    - generic [ref=e218]:
+      - generic [ref=e219]:
+        - generic [ref=e220]:
+          - img [ref=e221]
+          - generic [ref=e224]: API Connected
+        - generic [ref=e225]:
+          - img [ref=e226]
+          - generic [ref=e229]: "Last update: 06:44:21 AM"
+      - generic [ref=e230]:
+        - generic [ref=e231]: LOCAL
+        - generic [ref=e232]: v0.1.0

@@ -1,0 +1,115 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - generic:
+          - generic:
+            - link:
+              - /url: /
+              - generic:
+                - generic: W
+              - generic: Workbench
+          - generic:
+            - generic:
+              - img
+              - generic: Connected
+            - button:
+              - img
+            - button:
+              - img
+      - generic:
+        - complementary:
+          - button:
+            - img
+          - generic:
+            - generic:
+              - heading [level=2]: Navigation
+            - navigation:
+              - link:
+                - /url: /templates
+                - img
+                - generic: Templates
+              - link:
+                - /url: /composition
+                - img
+                - generic: Composition
+              - link:
+                - /url: /executions
+                - img
+                - generic: Executions
+              - link:
+                - /url: /goals
+                - img
+                - generic: Goals
+              - link:
+                - /url: /shapes
+                - img
+                - generic: Shapes
+            - generic:
+              - heading [level=2]: Recent
+              - generic:
+                - generic: debug-auth:v3
+                - generic: implement-feat
+                - generic: refactor-core
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - heading [level=1]: Executions
+                  - paragraph: Execution trace explorer - Browse and analyze execution history
+                - generic:
+                  - button:
+                    - img
+                    - text: Auto-refresh
+                  - button [disabled]:
+                    - img
+                    - text: Export
+                  - button:
+                    - img
+              - generic:
+                - searchbox
+              - generic:
+                - generic:
+                  - button [expanded]:
+                    - img
+                    - text: Last 24 Hours
+                  - button:
+                    - img
+                    - text: Status
+                  - combobox:
+                    - generic: All Activities
+                    - img
+                  - button: Advanced
+              - generic:
+                - generic:
+                  - button:
+                    - img
+                    - text: Timeline
+                  - button:
+                    - img
+                    - text: List
+              - alert:
+                - generic: "Failed to load executions: Failed to list execution traces"
+      - contentinfo:
+        - generic:
+          - generic:
+            - generic:
+              - img
+              - generic: API Connected
+            - generic:
+              - img
+              - generic: "Last update: 01:28:07 PM"
+          - generic:
+            - generic: LOCAL
+            - generic: v0.1.0
+  - menu "Last 24 Hours" [active] [ref=e123]:
+    - generic [ref=e124]: Date Range
+    - separator [ref=e125]
+    - menuitemcheckbox "Last Hour" [ref=e126]: Last Hour
+    - menuitemcheckbox "Last 24 Hours" [checked] [ref=e128]:
+      - img [ref=e131]
+      - text: Last 24 Hours
+    - menuitemcheckbox "Last Week" [ref=e133]: Last Week
+    - menuitemcheckbox "Last Month" [ref=e135]: Last Month
+    - menuitemcheckbox "Custom Range" [ref=e137]: Custom Range

@@ -1,0 +1,99 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - button "Configure API Key" [ref=e12] [cursor=pointer]:
+          - img
+          - text: Configure API Key
+        - generic [ref=e13]:
+          - img [ref=e14]
+          - generic [ref=e19]: Connected
+        - button "Toggle theme" [ref=e20] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e21] [cursor=pointer]:
+          - img
+  - generic [ref=e23]:
+    - complementary [ref=e24]:
+      - button "Collapse sidebar" [ref=e25] [cursor=pointer]:
+        - img
+      - generic [ref=e26]:
+        - heading "Navigation" [level=2] [ref=e28]
+        - navigation [ref=e29]:
+          - link "Templates" [ref=e30] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e31]
+            - generic [ref=e36]: Templates
+          - link "Composition" [ref=e37] [cursor=pointer]:
+            - /url: /composition
+            - img [ref=e38]
+            - generic [ref=e44]: Composition
+          - link "Executions" [ref=e45] [cursor=pointer]:
+            - /url: /executions
+            - img [ref=e46]
+            - generic [ref=e48]: Executions
+          - link "Goals" [ref=e49] [cursor=pointer]:
+            - /url: /goals
+            - img [ref=e50]
+            - generic [ref=e54]: Goals
+          - link "Shapes" [ref=e55] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e56]
+            - generic [ref=e60]: Shapes
+        - generic [ref=e61]:
+          - heading "Recent" [level=2] [ref=e62]
+          - generic [ref=e63]:
+            - generic [ref=e64]: debug-auth:v3
+            - generic [ref=e65]: implement-feat
+            - generic [ref=e66]: refactor-core
+    - main [ref=e67]:
+      - generic [ref=e69]:
+        - generic [ref=e70]:
+          - generic [ref=e71]:
+            - heading "Executions" [level=1] [ref=e72]
+            - paragraph [ref=e73]: Execution trace explorer - Browse and analyze execution history
+          - generic [ref=e74]:
+            - button "Auto-refresh" [ref=e75] [cursor=pointer]:
+              - img
+              - text: Auto-refresh
+            - button "Export" [disabled]:
+              - img
+              - text: Export
+            - button [ref=e76] [cursor=pointer]:
+              - img
+        - searchbox "Search executions by ID or activity..." [ref=e78]
+        - generic [ref=e80]:
+          - button "Last 24 Hours" [ref=e81] [cursor=pointer]:
+            - img
+            - text: Last 24 Hours
+          - button "Status" [ref=e82] [cursor=pointer]:
+            - img
+            - text: Status
+          - combobox [ref=e83] [cursor=pointer]:
+            - generic: All Activities
+            - img [ref=e84]
+          - button "Advanced" [ref=e86] [cursor=pointer]
+        - generic [ref=e88]:
+          - button "Timeline" [ref=e89] [cursor=pointer]:
+            - img
+            - text: Timeline
+          - button "List" [ref=e90] [cursor=pointer]:
+            - img
+            - text: List
+        - alert [ref=e91]:
+          - generic [ref=e92]: "Failed to load executions: API key not found"
+  - contentinfo [ref=e93]:
+    - generic [ref=e94]:
+      - generic [ref=e95]:
+        - generic [ref=e96]:
+          - img [ref=e97]
+          - generic [ref=e100]: API Connected
+        - generic [ref=e101]:
+          - img [ref=e102]
+          - generic [ref=e105]: "Last update: 07:12:01 AM"
+      - generic [ref=e106]:
+        - generic [ref=e107]: LOCAL
+        - generic [ref=e108]: v0.1.0

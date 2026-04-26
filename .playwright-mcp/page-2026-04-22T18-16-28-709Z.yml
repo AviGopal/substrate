@@ -1,0 +1,377 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - heading "Navigation" [level=2] [ref=e26]
+        - navigation [ref=e27]:
+          - link "Templates" [ref=e28] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e29]
+            - generic [ref=e34]: Templates
+          - link "Composition" [ref=e35] [cursor=pointer]:
+            - /url: /composition
+            - img [ref=e36]
+            - generic [ref=e42]: Composition
+          - link "Executions" [ref=e43] [cursor=pointer]:
+            - /url: /executions
+            - img [ref=e44]
+            - generic [ref=e46]: Executions
+          - link "Goals" [ref=e47] [cursor=pointer]:
+            - /url: /goals
+            - img [ref=e48]
+            - generic [ref=e52]: Goals
+          - link "Shapes" [ref=e53] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e54]
+            - generic [ref=e58]: Shapes
+        - generic [ref=e59]:
+          - heading "Recent" [level=2] [ref=e60]
+          - generic [ref=e61]:
+            - generic [ref=e62]: debug-auth:v3
+            - generic [ref=e63]: implement-feat
+            - generic [ref=e64]: refactor-core
+    - main [ref=e65]:
+      - generic [ref=e243]:
+        - generic [ref=e245]:
+          - heading "Goal Resolution" [level=1] [ref=e246]
+          - paragraph [ref=e247]: Describe goals and predict optimal execution paths using Thompson Sampling
+        - generic [ref=e248]:
+          - generic [ref=e249]:
+            - text: "Describe your goal:"
+            - textbox "e.g., Fix the authentication bug in production" [ref=e250]: Search online for new OWASP security issues and match them against our codebase dependencies
+            - generic [ref=e252]: 92 characters
+          - generic [ref=e253]:
+            - text: "Available Context Shapes:"
+            - generic [ref=e254]:
+              - generic [ref=e255]:
+                - generic [ref=e388] [cursor=pointer]:
+                  - checkbox "error_log" [ref=e389]
+                  - generic [ref=e390]: error_log
+                  - img [ref=e391]
+                - generic [ref=e395] [cursor=pointer]:
+                  - checkbox "source_code" [ref=e396]
+                  - generic [ref=e397]: source_code
+                  - img [ref=e398]
+                - generic [ref=e402] [cursor=pointer]:
+                  - checkbox "test_results" [ref=e403]
+                  - generic [ref=e404]: test_results
+                  - img [ref=e405]
+                - generic [ref=e409] [cursor=pointer]:
+                  - checkbox "git_diff" [ref=e410]
+                  - generic [ref=e411]: git_diff
+                  - img [ref=e412]
+              - generic [ref=e284]:
+                - button "Hide additional shapes" [ref=e362] [cursor=pointer]:
+                  - img [ref=e363]
+                  - text: Hide additional shapes
+                - generic [ref=e365]:
+                  - generic [ref=e416] [cursor=pointer]:
+                    - checkbox "execution_trace" [ref=e417]
+                    - generic [ref=e418]: execution_trace
+                    - img
+                  - generic [ref=e419] [cursor=pointer]:
+                    - checkbox "activity_metrics" [ref=e420]
+                    - generic [ref=e421]: activity_metrics
+                    - img
+                  - generic [ref=e422] [cursor=pointer]:
+                    - checkbox "composition_graph" [ref=e423]
+                    - generic [ref=e424]: composition_graph
+                    - img
+                  - generic [ref=e425] [cursor=pointer]:
+                    - checkbox "deployment_logs" [ref=e426]
+                    - generic [ref=e427]: deployment_logs
+                    - img
+                  - generic [ref=e428] [cursor=pointer]:
+                    - checkbox "previous_fixes" [ref=e429]
+                    - generic [ref=e430]: previous_fixes
+                    - img
+                  - generic [ref=e431] [cursor=pointer]:
+                    - checkbox "git_history" [ref=e432]
+                    - generic [ref=e433]: git_history
+                    - img [ref=e434]
+          - button "Advanced Options" [ref=e289] [cursor=pointer]:
+            - img [ref=e290]
+            - text: Advanced Options
+            - img [ref=e293]
+          - button "Predict Paths" [ref=e333] [cursor=pointer]:
+            - img
+            - text: Predict Paths
+        - generic [ref=e438]:
+          - tablist [ref=e439]:
+            - tab "Path Prediction" [selected] [ref=e440] [cursor=pointer]
+            - tab "Visual Flow" [ref=e441] [cursor=pointer]
+          - tabpanel "Path Prediction" [ref=e442]:
+            - generic [ref=e443]:
+              - generic [ref=e444]:
+                - heading "Predicted Paths" [level=2] [ref=e445]
+                - paragraph [ref=e446]:
+                  - text: "For:"
+                  - generic [ref=e447]: "\"Search online for new OWASP security issues and match them against our codebase dependencies\""
+                - generic [ref=e448]:
+                  - generic [ref=e449]: "Exploration Rate: 10%"
+                  - generic [ref=e450]: 0 Context Shapes
+              - generic [ref=e451]:
+                - generic [ref=e452]:
+                  - img [ref=e453]
+                  - heading "Recommended Path" [level=3] [ref=e456]
+                  - generic [ref=e457]: 97% Confidence
+                - generic [ref=e458]:
+                  - generic [ref=e460]:
+                    - heading "Single-Activity Resolution" [level=3] [ref=e461]
+                    - generic [ref=e463]:
+                      - generic [ref=e464]: 0s
+                      - generic [ref=e465]: $0.00
+                      - generic [ref=e466]: 90.9% success
+                  - generic [ref=e467]:
+                    - generic [ref=e468]:
+                      - generic [ref=e470]:
+                        - generic [ref=e471]:
+                          - generic [ref=e472]:
+                            - generic [ref=e473]: Step 1 of 1
+                            - generic [ref=e474]: Refactor With Tests
+                          - heading "Refactor With Tests" [level=3] [ref=e475]
+                        - generic [ref=e477]:
+                          - generic [ref=e478]: Thompson Score
+                          - generic [ref=e479]: 97%
+                      - generic [ref=e480]:
+                        - generic [ref=e481]:
+                          - generic [ref=e482]:
+                            - generic [ref=e483]: Expected Success Rate
+                            - generic [ref=e484]: 90.9%
+                          - progressbar [ref=e485]
+                          - paragraph [ref=e487]: Based on 9 executions · α=10, β=1
+                        - generic [ref=e488]:
+                          - generic [ref=e489]:
+                            - img [ref=e490]
+                            - generic [ref=e493]:
+                              - generic [ref=e494]: Duration
+                              - generic [ref=e495]: 0s
+                          - generic [ref=e496]:
+                            - img [ref=e497]
+                            - generic [ref=e500]:
+                              - generic [ref=e501]: Cost
+                              - generic [ref=e502]: $0.00
+                        - generic [ref=e503]:
+                          - paragraph [ref=e505]: "Input Shapes Required:"
+                          - paragraph [ref=e507]: "Output Shapes Produced:"
+                        - button "Why this activity?" [ref=e509] [cursor=pointer]:
+                          - img [ref=e510]
+                          - text: Why this activity?
+                    - generic [ref=e512]:
+                      - button "Execute This Path" [ref=e513] [cursor=pointer]:
+                        - img
+                        - text: Execute This Path
+                      - button "View Details" [ref=e514] [cursor=pointer]
+              - generic [ref=e515]:
+                - generic [ref=e516]:
+                  - heading "Alternative Paths" [level=3] [ref=e517]
+                  - generic [ref=e518]: "4"
+                - generic [ref=e519]:
+                  - generic [ref=e520]:
+                    - generic [ref=e522]:
+                      - generic [ref=e523]:
+                        - generic [ref=e524]: Path 2
+                        - heading "Alternative Option" [level=3] [ref=e525]
+                      - generic [ref=e526]: 97% Confidence
+                    - generic [ref=e527]:
+                      - generic [ref=e528]:
+                        - generic [ref=e530]:
+                          - generic [ref=e531]:
+                            - generic [ref=e532]:
+                              - generic [ref=e533]: Step 1 of 1
+                              - generic [ref=e534]: Manage Session Memory
+                            - heading "Manage Session Memory" [level=3] [ref=e535]
+                          - generic [ref=e537]:
+                            - generic [ref=e538]: Thompson Score
+                            - generic [ref=e539]: 97%
+                        - generic [ref=e540]:
+                          - generic [ref=e541]:
+                            - generic [ref=e542]:
+                              - generic [ref=e543]: Expected Success Rate
+                              - generic [ref=e544]: 90.9%
+                            - progressbar [ref=e545]
+                            - paragraph [ref=e547]: Based on 9 executions · α=10, β=1
+                          - generic [ref=e548]:
+                            - generic [ref=e549]:
+                              - img [ref=e550]
+                              - generic [ref=e553]:
+                                - generic [ref=e554]: Duration
+                                - generic [ref=e555]: 0s
+                            - generic [ref=e556]:
+                              - img [ref=e557]
+                              - generic [ref=e560]:
+                                - generic [ref=e561]: Cost
+                                - generic [ref=e562]: $0.00
+                          - generic [ref=e563]:
+                            - paragraph [ref=e565]: "Input Shapes Required:"
+                            - paragraph [ref=e567]: "Output Shapes Produced:"
+                          - button "Why this activity?" [ref=e569] [cursor=pointer]:
+                            - img [ref=e570]
+                            - text: Why this activity?
+                      - button "Execute This Path" [ref=e573] [cursor=pointer]
+                  - generic [ref=e574]:
+                    - generic [ref=e576]:
+                      - generic [ref=e577]:
+                        - generic [ref=e578]: Path 3
+                        - heading "Alternative Option" [level=3] [ref=e579]
+                      - generic [ref=e580]: 97% Confidence
+                    - generic [ref=e581]:
+                      - generic [ref=e582]:
+                        - generic [ref=e584]:
+                          - generic [ref=e585]:
+                            - generic [ref=e586]:
+                              - generic [ref=e587]: Step 1 of 1
+                              - generic [ref=e588]: trace-enforce-validate-loop
+                            - heading "trace-enforce-validate-loop" [level=3] [ref=e589]
+                          - generic [ref=e591]:
+                            - generic [ref=e592]: Thompson Score
+                            - generic [ref=e593]: 97%
+                        - generic [ref=e594]:
+                          - generic [ref=e595]:
+                            - generic [ref=e596]:
+                              - generic [ref=e597]: Expected Success Rate
+                              - generic [ref=e598]: 90.9%
+                            - progressbar [ref=e599]
+                            - paragraph [ref=e601]: Based on 9 executions · α=10, β=1
+                          - generic [ref=e602]:
+                            - generic [ref=e603]:
+                              - img [ref=e604]
+                              - generic [ref=e607]:
+                                - generic [ref=e608]: Duration
+                                - generic [ref=e609]: 0s
+                            - generic [ref=e610]:
+                              - img [ref=e611]
+                              - generic [ref=e614]:
+                                - generic [ref=e615]: Cost
+                                - generic [ref=e616]: $0.00
+                          - generic [ref=e617]:
+                            - paragraph [ref=e619]: "Input Shapes Required:"
+                            - paragraph [ref=e621]: "Output Shapes Produced:"
+                          - button "Why this activity?" [ref=e623] [cursor=pointer]:
+                            - img [ref=e624]
+                            - text: Why this activity?
+                      - button "Execute This Path" [ref=e627] [cursor=pointer]
+                  - generic [ref=e628]:
+                    - generic [ref=e630]:
+                      - generic [ref=e631]:
+                        - generic [ref=e632]: Path 4
+                        - heading "Alternative Option" [level=3] [ref=e633]
+                      - generic [ref=e634]: 97% Confidence
+                    - generic [ref=e635]:
+                      - generic [ref=e636]:
+                        - generic [ref=e638]:
+                          - generic [ref=e639]:
+                            - generic [ref=e640]:
+                              - generic [ref=e641]: Step 1 of 1
+                              - generic [ref=e642]: trace-data-flow-single-feature
+                            - heading "trace-data-flow-single-feature" [level=3] [ref=e643]
+                          - generic [ref=e645]:
+                            - generic [ref=e646]: Thompson Score
+                            - generic [ref=e647]: 97%
+                        - generic [ref=e648]:
+                          - generic [ref=e649]:
+                            - generic [ref=e650]:
+                              - generic [ref=e651]: Expected Success Rate
+                              - generic [ref=e652]: 90.9%
+                            - progressbar [ref=e653]
+                            - paragraph [ref=e655]: Based on 9 executions · α=10, β=1
+                          - generic [ref=e656]:
+                            - generic [ref=e657]:
+                              - img [ref=e658]
+                              - generic [ref=e661]:
+                                - generic [ref=e662]: Duration
+                                - generic [ref=e663]: 0s
+                            - generic [ref=e664]:
+                              - img [ref=e665]
+                              - generic [ref=e668]:
+                                - generic [ref=e669]: Cost
+                                - generic [ref=e670]: $0.00
+                          - generic [ref=e671]:
+                            - paragraph [ref=e673]: "Input Shapes Required:"
+                            - paragraph [ref=e675]: "Output Shapes Produced:"
+                          - button "Why this activity?" [ref=e677] [cursor=pointer]:
+                            - img [ref=e678]
+                            - text: Why this activity?
+                      - button "Execute This Path" [ref=e681] [cursor=pointer]
+                  - generic [ref=e682]:
+                    - generic [ref=e684]:
+                      - generic [ref=e685]:
+                        - generic [ref=e686]: Path 5
+                        - heading "Alternative Option" [level=3] [ref=e687]
+                      - generic [ref=e688]: 95% Confidence
+                    - generic [ref=e689]:
+                      - generic [ref=e690]:
+                        - generic [ref=e692]:
+                          - generic [ref=e693]:
+                            - generic [ref=e694]:
+                              - generic [ref=e695]: Step 1 of 1
+                              - generic [ref=e696]: Acquire Error Log Context
+                            - heading "Acquire Error Log Context" [level=3] [ref=e697]
+                          - generic [ref=e699]:
+                            - generic [ref=e700]: Thompson Score
+                            - generic [ref=e701]: 95%
+                        - generic [ref=e702]:
+                          - generic [ref=e703]:
+                            - generic [ref=e704]:
+                              - generic [ref=e705]: Expected Success Rate
+                              - generic [ref=e706]: 90.0%
+                            - progressbar [ref=e707]
+                            - paragraph [ref=e709]: Based on 8 executions · α=9, β=1
+                          - generic [ref=e710]:
+                            - generic [ref=e711]:
+                              - img [ref=e712]
+                              - generic [ref=e715]:
+                                - generic [ref=e716]: Duration
+                                - generic [ref=e717]: 0s
+                            - generic [ref=e718]:
+                              - img [ref=e719]
+                              - generic [ref=e722]:
+                                - generic [ref=e723]: Cost
+                                - generic [ref=e724]: $0.00
+                          - generic [ref=e725]:
+                            - paragraph [ref=e727]: "Input Shapes Required:"
+                            - paragraph [ref=e729]: "Output Shapes Produced:"
+                          - button "Why this activity?" [ref=e731] [cursor=pointer]:
+                            - img [ref=e732]
+                            - text: Why this activity?
+                      - button "Execute This Path" [ref=e735] [cursor=pointer]
+              - generic [ref=e736]:
+                - heading "Path Statistics" [level=3] [ref=e738]
+                - generic [ref=e740]:
+                  - generic [ref=e741]:
+                    - paragraph [ref=e742]: 90.7%
+                    - paragraph [ref=e743]: Avg Success Rate
+                  - generic [ref=e744]:
+                    - paragraph [ref=e745]: 0s
+                    - paragraph [ref=e746]: Total Duration
+                  - generic [ref=e747]:
+                    - paragraph [ref=e748]: $0.00
+                    - paragraph [ref=e749]: Total Cost
+  - contentinfo [ref=e215]:
+    - generic [ref=e216]:
+      - generic [ref=e217]:
+        - generic [ref=e218]:
+          - img [ref=e219]
+          - generic [ref=e222]: API Connected
+        - generic [ref=e223]:
+          - img [ref=e224]
+          - generic [ref=e227]: "Last update: 11:16:13 AM"
+      - generic [ref=e228]:
+        - generic [ref=e229]: LOCAL
+        - generic [ref=e230]: v0.1.0

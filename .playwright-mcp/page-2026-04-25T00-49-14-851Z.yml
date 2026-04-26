@@ -1,0 +1,6 @@
+- generic [ref=e1]:
+  - heading "Conway's Game of Life" [level=1] [ref=e2]
+  - generic [ref=e4]:
+    - button "Play" [active] [ref=e5] [cursor=pointer]
+    - button "Step" [ref=e6] [cursor=pointer]
+  - paragraph [ref=e8]: "Generation: 720 | Living Cells: 252"

@@ -1,0 +1,79 @@
+{
+  "goal": "How do we create activities by composition? How does minibob handle traversal of the activity execution graph?",
+  "impliedShapes": [
+    "source_code",
+    "activity_execution_trace",
+    "config_file",
+    "execution_output",
+    "template_registry",
+    "error_trace",
+    "composition_graph"
+  ],
+  "category": "feature",
+  "complexity": "medium",
+  "actionVerbs": [
+    "create",
+    "compose",
+    "invoke",
+    "traverse",
+    "detect",
+    "track",
+    "isolate",
+    "execute"
+  ],
+  "reasoning": "This goal asks about the activity composition system architecture - specifically how MiniBob enables activities to call other activities and how it manages the execution graph traversal. This requires understanding multiple interconnected systems: ExecutorConfig callbacks, call stack tracking, cycle detection, depth limiting, and context isolation. Medium complexity as it involves analyzing source code patterns, understanding graph traversal mechanics, and execution flow.",
+  "analysis": {
+    "composition_mechanism": {
+      "primary_interface": "ExecutorConfig.onActivityExecute callback",
+      "type": "callback-based composition",
+      "purpose": "Enables parent activities to invoke child activities during execution",
+      "return_type": "Promise<ActivityExecution>"
+    },
+    "execution_graph_traversal": {
+      "tracking_mechanism": "activityCallStack",
+      "description": "Array of activity template IDs tracking execution chain",
+      "example": "[\"process-goal\", \"explore-codebase\", \"read-file\"]"
+    },
+    "safety_mechanisms": {
+      "cycle_detection": {
+        "method": "Check if templateId in activityCallStack",
+        "blocks_pattern": "A → B → A circular dependencies",
+        "error": "Cycle detected error"
+      },
+      "depth_limiting": {
+        "config_key": "maxNestingDepth",
+        "default_value": 3,
+        "check_point": "callStack.length >= maxNestingDepth",
+        "error": "Maximum nesting depth exceeded"
+      }
+    },
+    "context_isolation": {
+      "purpose": "Prevent token accumulation and state pollution across nesting levels",
+      "implementation": "IsolatedConfig with minimal inherited settings",
+      "inherited_callbacks": [
+        "onActivityExecute",
+        "onSearchActivities",
+        "onCreateActivityFromTemplate"
+      ],
+      "not_inherited": [
+        "accumulated state",
+        "full context",
+        "custom tools with state"
+      ]
+    },
+    "key_files": {
+      "main_implementation": "repos/minibob/src/activity.ts",
+      "type_definitions": "repos/minibob/src/types.ts",
+      "resolver": "repos/minibob/src/resolvers/activity-resolver.ts"
+    },
+    "execution_flow": {
+      "step1": "Parent activity calls onActivityExecute(childId, variables)",
+      "step2": "Executor checks cycle: is childId in callStack? If yes, error",
+      "step3": "Executor checks depth: callStack.length >= maxNestingDepth? If yes, error",
+      "step4": "Create isolated config with updated callStack",
+      "step5": "Execute child activity with new executor",
+      "step6": "Return ActivityExecution result to parent",
+      "step7": "Parent continues execution with child's outputs"
+    }
+  }
+}

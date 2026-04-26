@@ -1,0 +1,97 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - heading "Navigation" [level=2] [ref=e26]
+        - navigation [ref=e27]:
+          - link "Templates" [ref=e28] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e29]
+            - generic [ref=e34]: Templates
+          - link "Composition" [ref=e35] [cursor=pointer]:
+            - /url: /composition
+            - img [ref=e36]
+            - generic [ref=e42]: Composition
+          - link "Executions" [ref=e43] [cursor=pointer]:
+            - /url: /executions
+            - img [ref=e44]
+            - generic [ref=e46]: Executions
+          - link "Goals" [ref=e47] [cursor=pointer]:
+            - /url: /goals
+            - img [ref=e48]
+            - generic [ref=e52]: Goals
+          - link "Shapes" [ref=e53] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e54]
+            - generic [ref=e58]: Shapes
+        - generic [ref=e59]:
+          - heading "Recent" [level=2] [ref=e60]
+          - generic [ref=e61]:
+            - generic [ref=e62]: debug-auth:v3
+            - generic [ref=e63]: implement-feat
+            - generic [ref=e64]: refactor-core
+    - main [ref=e65]:
+      - generic [ref=e67]:
+        - generic [ref=e68]:
+          - heading "Composition" [level=1] [ref=e90]
+          - paragraph [ref=e91]: Activity composition graph - Visualize relationships between activities
+        - generic [ref=e92]:
+          - generic [ref=e93]:
+            - img [ref=e94]
+            - textbox "Search activities..." [ref=e97]
+          - button "Filters" [ref=e98] [cursor=pointer]:
+            - img
+            - text: Filters
+        - generic [ref=e99]:
+          - generic [ref=e100]:
+            - generic [ref=e101]:
+              - generic [ref=e102]: "Layout:"
+              - combobox [ref=e103] [cursor=pointer]:
+                - generic: Hierarchical (Dagre)
+                - img [ref=e104]
+            - generic [ref=e106]:
+              - generic [ref=e107]: 1 nodes
+              - generic [ref=e108]: 100 edges
+          - generic [ref=e109]:
+            - generic [ref=e110]:
+              - button "Zoom out" [ref=e111] [cursor=pointer]:
+                - img
+              - generic [ref=e113]: 100%
+              - button "Zoom in" [ref=e114] [cursor=pointer]:
+                - img
+              - button "Reset zoom" [ref=e116] [cursor=pointer]:
+                - img
+            - button "Fit" [ref=e117] [cursor=pointer]:
+              - img
+              - text: Fit
+            - button "Export" [ref=e118] [cursor=pointer]:
+              - img
+              - text: Export
+  - contentinfo [ref=e74]:
+    - generic [ref=e75]:
+      - generic [ref=e76]:
+        - generic [ref=e77]:
+          - img [ref=e78]
+          - generic [ref=e81]: API Connected
+        - generic [ref=e82]:
+          - img [ref=e83]
+          - generic [ref=e86]: "Last update: 01:32:28 PM"
+      - generic [ref=e87]:
+        - generic [ref=e88]: LOCAL
+        - generic [ref=e89]: v0.1.0

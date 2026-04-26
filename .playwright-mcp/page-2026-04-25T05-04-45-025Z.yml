@@ -1,0 +1,103 @@
+- generic [ref=e3]:
+  - generic [ref=e6]:
+    - link [ref=e7] [cursor=pointer]:
+      - /url: ./
+    - generic [ref=e9]:
+      - paragraph [ref=e11]:
+        - link "Home" [ref=e12] [cursor=pointer]:
+          - /url: ./
+      - paragraph [ref=e14]:
+        - link "Resources" [ref=e15] [cursor=pointer]:
+          - /url: ./
+      - paragraph [ref=e17]:
+        - link "Pricing" [ref=e18] [cursor=pointer]:
+          - /url: ./pricing
+      - paragraph [ref=e20]:
+        - link "Docs" [ref=e21] [cursor=pointer]:
+          - /url: https://metabob.gitbook.io/product-docs/
+  - generic [ref=e22]:
+    - heading "Pricing" [level=1] [ref=e25]
+    - generic [ref=e26]:
+      - generic [ref=e27]:
+        - heading "Free trial" [level=4] [ref=e29]
+        - paragraph [ref=e31]: $0
+        - paragraph [ref=e33]: "Includes:"
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - img [ref=e39]
+            - paragraph [ref=e42]: Two week trial
+          - generic [ref=e43]:
+            - img [ref=e47]
+            - paragraph [ref=e50]: Gemini, Copilot, Kiro, Cursor, Claude Code support
+        - link "Contact Us" [ref=e51] [cursor=pointer]:
+          - /url: ./contact
+          - paragraph [ref=e53]: Contact Us
+      - generic [ref=e54]:
+        - heading "Pro" [level=4] [ref=e56]
+        - paragraph [ref=e58]: $40/Month
+        - paragraph [ref=e60]: "Everything in Free, plus:"
+        - generic [ref=e61]:
+          - generic [ref=e62]:
+            - img [ref=e66]
+            - paragraph [ref=e69]: 7-day trial
+          - generic [ref=e70]:
+            - img [ref=e74]
+            - paragraph [ref=e77]: Custom AI agent support
+        - link "Contact Us" [ref=e78] [cursor=pointer]:
+          - /url: ./contact
+          - paragraph [ref=e80]: Contact Us
+      - generic [ref=e81]:
+        - heading "Team" [level=4] [ref=e83]
+        - paragraph [ref=e85]: $50/Month
+        - paragraph [ref=e87]: "Everything in Pro, plus:"
+        - generic [ref=e88]:
+          - generic [ref=e89]:
+            - img [ref=e93]
+            - paragraph [ref=e96]: Analytics dashboard
+          - generic [ref=e97]:
+            - img [ref=e101]
+            - paragraph [ref=e104]: Account management
+        - link "Contact Us" [ref=e105] [cursor=pointer]:
+          - /url: ./contact
+          - paragraph [ref=e107]: Contact Us
+      - generic [ref=e108]:
+        - heading "Enterprise" [level=4] [ref=e110]
+        - paragraph [ref=e112]: Custom
+        - paragraph [ref=e114]: "Everything in Team, plus:"
+        - generic [ref=e115]:
+          - generic [ref=e116]:
+            - img [ref=e120]
+            - paragraph [ref=e123]: Full repository scans & reports
+          - generic [ref=e124]:
+            - img [ref=e128]
+            - paragraph [ref=e131]: Advanced analytics dashboard
+          - generic [ref=e132]:
+            - img [ref=e136]
+            - paragraph [ref=e139]: Priority support
+        - link "Contact Us" [ref=e140] [cursor=pointer]:
+          - /url: ./contact
+          - paragraph [ref=e142]: Contact Us
+  - generic [ref=e144]:
+    - generic:
+      - paragraph
+    - generic [ref=e146]:
+      - generic [ref=e147]:
+        - heading "Subscribe to our newsletter" [level=4] [ref=e149]
+        - paragraph [ref=e151]: Receive our product news and updates
+        - generic [ref=e154]:
+          - textbox "name@email.com" [ref=e155]
+          - button "Subscribe" [ref=e157] [cursor=pointer]
+      - generic [ref=e158]:
+        - heading "Pages" [level=4] [ref=e160]
+        - paragraph [ref=e162]:
+          - link "Contact" [ref=e163] [cursor=pointer]:
+            - /url: ./contact
+        - paragraph [ref=e165]:
+          - link "Privacy Policy" [ref=e166] [cursor=pointer]:
+            - /url: ./privacy-policy
+        - paragraph [ref=e168]:
+          - link "Case Study" [ref=e169] [cursor=pointer]:
+            - /url: ./case-study
+        - paragraph [ref=e171]:
+          - link "Blogs" [ref=e172] [cursor=pointer]:
+            - /url: ./blog-home

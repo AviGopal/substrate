@@ -1,0 +1,94 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - heading "Navigation" [level=2] [ref=e26]
+        - navigation [ref=e27]:
+          - link "Templates" [ref=e28] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e29]
+            - generic [ref=e34]: Templates
+          - link "Composition" [ref=e35] [cursor=pointer]:
+            - /url: /composition
+            - img [ref=e36]
+            - generic [ref=e42]: Composition
+          - link "Executions" [active] [ref=e43] [cursor=pointer]:
+            - /url: /executions
+            - img [ref=e44]
+            - generic [ref=e46]: Executions
+          - link "Goals" [ref=e47] [cursor=pointer]:
+            - /url: /goals
+            - img [ref=e48]
+            - generic [ref=e52]: Goals
+          - link "Shapes" [ref=e53] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e54]
+            - generic [ref=e58]: Shapes
+        - generic [ref=e59]:
+          - heading "Recent" [level=2] [ref=e60]
+          - generic [ref=e61]:
+            - generic [ref=e62]: debug-auth:v3
+            - generic [ref=e63]: implement-feat
+            - generic [ref=e64]: refactor-core
+    - main [ref=e65]:
+      - generic [ref=e1305]:
+        - generic [ref=e1306]:
+          - generic [ref=e1307]:
+            - heading "Executions" [level=1] [ref=e1308]
+            - paragraph [ref=e1309]: Execution trace explorer - Browse and analyze execution history
+          - generic [ref=e1310]:
+            - button "Auto-refresh" [ref=e1311] [cursor=pointer]:
+              - img
+              - text: Auto-refresh
+            - button "Export" [disabled]:
+              - img
+              - text: Export
+            - button [ref=e1312] [cursor=pointer]:
+              - img
+        - searchbox "Search executions by ID or activity..." [ref=e1314]
+        - generic [ref=e1316]:
+          - button "Last 24 Hours" [ref=e1317] [cursor=pointer]:
+            - img
+            - text: Last 24 Hours
+          - button "Status" [ref=e1318] [cursor=pointer]:
+            - img
+            - text: Status
+          - combobox [ref=e1319] [cursor=pointer]:
+            - generic: All Activities
+            - img [ref=e1320]
+          - button "Advanced" [ref=e1322] [cursor=pointer]
+        - generic [ref=e1324]:
+          - button "Timeline" [ref=e1325] [cursor=pointer]:
+            - img
+            - text: Timeline
+          - button "List" [ref=e1326] [cursor=pointer]:
+            - img
+            - text: List
+  - contentinfo [ref=e217]:
+    - generic [ref=e218]:
+      - generic [ref=e219]:
+        - generic [ref=e220]:
+          - img [ref=e221]
+          - generic [ref=e224]: API Connected
+        - generic [ref=e225]:
+          - img [ref=e226]
+          - generic [ref=e229]: "Last update: 10:27:04 AM"
+      - generic [ref=e230]:
+        - generic [ref=e231]: LOCAL
+        - generic [ref=e232]: v0.1.0

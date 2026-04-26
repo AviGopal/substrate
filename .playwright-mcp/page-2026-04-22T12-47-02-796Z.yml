@@ -1,0 +1,164 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - generic:
+          - generic:
+            - link:
+              - /url: /
+              - generic:
+                - generic: W
+              - generic: Workbench
+          - generic:
+            - button:
+              - img
+              - text: Configure API Key
+            - generic:
+              - img
+              - generic: Connected
+            - button:
+              - img
+            - button:
+              - img
+      - generic:
+        - complementary:
+          - button:
+            - img
+          - generic:
+            - navigation:
+              - link:
+                - /url: /templates
+                - img
+              - link:
+                - /url: /composition
+                - img
+              - link:
+                - /url: /executions
+                - img
+              - link:
+                - /url: /goals
+                - img
+              - link:
+                - /url: /shapes
+                - img
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - heading [level=1]: Executions
+                  - paragraph: Execution trace explorer - Browse and analyze execution history
+                - generic:
+                  - button:
+                    - img
+                    - text: Auto-refresh
+                  - button [disabled]:
+                    - img
+                    - text: Export
+                  - button:
+                    - img
+              - generic:
+                - searchbox
+              - generic:
+                - generic:
+                  - button:
+                    - img
+                    - text: Last 24 Hours
+                  - button:
+                    - img
+                    - text: Status
+                  - combobox:
+                    - generic: All Activities
+                    - img
+                  - button: Advanced
+              - generic:
+                - generic:
+                  - button:
+                    - img
+                    - text: Timeline
+                  - button:
+                    - img
+                    - text: List
+              - alert:
+                - generic: "Failed to load executions: API key not found"
+      - contentinfo:
+        - generic:
+          - generic:
+            - generic:
+              - img
+              - generic: API Connected
+            - generic:
+              - img
+              - generic: "Last update: 05:46:34 AM"
+          - generic:
+            - generic: LOCAL
+            - generic: v0.1.0
+  - dialog "Settings" [ref=e206]:
+    - generic [ref=e208]:
+      - generic [ref=e209]:
+        - heading "Settings" [level=2] [ref=e210]
+        - paragraph [ref=e211]: Manage your workbench preferences and configuration
+      - button [active] [ref=e212] [cursor=pointer]:
+        - img
+    - generic [ref=e213]:
+      - tablist [ref=e214]:
+        - tab "API Configuration" [selected] [ref=e215] [cursor=pointer]:
+          - img [ref=e216]
+          - text: API Configuration
+        - tab "Appearance" [ref=e220] [cursor=pointer]:
+          - img [ref=e221]
+          - text: Appearance
+        - tab "Development" [ref=e227] [cursor=pointer]:
+          - img [ref=e228]
+          - text: Development
+      - tabpanel "API Configuration" [ref=e232]:
+        - generic [ref=e233]:
+          - generic [ref=e234]:
+            - heading "API Configuration" [level=3] [ref=e235]
+            - paragraph [ref=e236]: Configure your Metabob API key to access the Activity API
+          - alert [ref=e237]:
+            - generic [ref=e238]:
+              - paragraph [ref=e239]: "To obtain an API key:"
+              - list [ref=e240]:
+                - listitem [ref=e241]:
+                  - text: Visit the
+                  - link "Metabob Identity Service" [ref=e242] [cursor=pointer]:
+                    - /url: https://identity.metabob.com
+                    - text: Metabob Identity Service
+                    - img [ref=e243]
+                - listitem [ref=e247]: Sign in with your Metabob account
+                - listitem [ref=e248]: Navigate to API Keys section
+                - listitem [ref=e249]: Generate a new API key with appropriate scopes
+                - listitem [ref=e250]: Copy the key and paste it below
+          - generic [ref=e251]:
+            - text: API Key
+            - generic [ref=e253]:
+              - textbox "API Key" [ref=e254]:
+                - /placeholder: Enter your API key
+              - button [ref=e256] [cursor=pointer]:
+                - img
+          - generic [ref=e257]:
+            - button "Save API Key" [disabled]
+          - generic [ref=e259]:
+            - generic [ref=e260]:
+              - generic [ref=e261]:
+                - paragraph [ref=e262]: Connection Status
+                - paragraph [ref=e263]: Test connectivity to Activity API
+              - button "Test Connection" [disabled]
+            - alert [ref=e264]:
+              - generic [ref=e265]: Enter an API key above to test the connection
+          - generic [ref=e266]:
+            - paragraph [ref=e267]: Configuration
+            - generic [ref=e268]:
+              - generic [ref=e269]:
+                - generic [ref=e270]: "API Endpoint:"
+                - generic [ref=e271]: https://activity.metabob.com
+              - generic [ref=e272]:
+                - generic [ref=e273]: "Environment:"
+                - generic [ref=e274]: development
+              - generic [ref=e275]:
+                - generic [ref=e276]: "Storage:"
+                - generic [ref=e277]: localStorage
+    - button "Close" [ref=e278] [cursor=pointer]:
+      - img [ref=e279]
+      - generic [ref=e282]: Close

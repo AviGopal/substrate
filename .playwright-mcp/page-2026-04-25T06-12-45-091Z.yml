@@ -1,0 +1,252 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - generic [ref=e25]: Navigation
+        - navigation [ref=e26]:
+          - link "Activities" [ref=e27] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - generic [ref=e33]: Activities
+          - link "Trajectory" [ref=e34] [cursor=pointer]:
+            - /url: /trajectory-editor
+            - img [ref=e35]
+            - generic [ref=e40]: Trajectory
+          - link "Goals" [ref=e41] [cursor=pointer]:
+            - /url: /goals
+            - img [ref=e42]
+            - generic [ref=e46]: Goals
+          - link "Shapes" [ref=e47] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e48]
+            - generic [ref=e52]: Shapes
+          - link "Studio" [ref=e53] [cursor=pointer]:
+            - /url: /studio
+            - img [ref=e54]
+            - generic [ref=e58]: Studio
+    - main [ref=e59]:
+      - generic [ref=e60]:
+        - generic [ref=e62]:
+          - generic [ref=e63]:
+            - button "back" [ref=e64] [cursor=pointer]:
+              - img
+              - text: back
+            - generic [ref=e65]:
+              - heading "trajectory editor" [level=1] [ref=e66]
+              - paragraph [ref=e67]: build activity sequences ── horizontal grid layout
+          - generic [ref=e68]:
+            - button "5 issues" [ref=e69] [cursor=pointer]:
+              - img
+              - text: 5 issues
+            - generic [ref=e70]: Unsaved changes
+            - button "Keyboard shortcuts" [ref=e71] [cursor=pointer]:
+              - img
+              - generic [ref=e72]: Keyboard shortcuts
+            - button "Clear" [ref=e73] [cursor=pointer]:
+              - img
+              - text: Clear
+            - button "Save" [ref=e74] [cursor=pointer]:
+              - img
+              - text: Save
+        - generic [ref=e75]:
+          - generic [ref=e80]:
+            - generic [ref=e82]:
+              - generic [ref=e83]: ── goal ──
+              - generic [ref=e84]:
+                - textbox "Describe what you want to accomplish (e.g., 'Fix security vulnerabilities in authentication')" [ref=e85]
+                - generic [ref=e86]:
+                  - paragraph [ref=e87]: enter a goal to generate recommendations
+                  - button "generate path" [disabled]:
+                    - img
+                    - text: generate path
+            - 'generic "Goal completion: partial" [ref=e88]':
+              - generic [ref=e89]:
+                - generic [ref=e90]: ── goal completion ──
+                - generic [ref=e91]: 2/6
+              - generic [ref=e92]:
+                - progressbar [ref=e93]
+                - generic [ref=e95]: 33%
+              - generic [ref=e96]:
+                - generic [ref=e97]: present (2)
+                - generic [ref=e98]:
+                  - generic "analysis" [ref=e99]:
+                    - img [ref=e100]
+                    - generic [ref=e103]: analysis
+                  - generic "source_code" [ref=e104]:
+                    - img [ref=e105]
+                    - generic [ref=e108]: source_code
+              - generic [ref=e109]:
+                - generic [ref=e110]: missing (4)
+                - generic [ref=e111]:
+                  - generic [ref=e112]:
+                    - generic "patch" [ref=e113]:
+                      - img [ref=e114]
+                      - generic [ref=e118]: patch
+                    - button "find" [ref=e119] [cursor=pointer]
+                  - generic [ref=e120]:
+                    - generic "validation_result" [ref=e121]:
+                      - img [ref=e122]
+                      - generic [ref=e126]: validation_result
+                    - button "find" [ref=e127] [cursor=pointer]
+                  - generic [ref=e128]:
+                    - generic "config_file" [ref=e129]:
+                      - img [ref=e130]
+                      - generic [ref=e134]: config_file
+                    - button "find" [ref=e135] [cursor=pointer]
+                  - generic [ref=e136]:
+                    - generic "test_suite" [ref=e137]:
+                      - img [ref=e138]
+                      - generic [ref=e142]: test_suite
+                    - button "find" [ref=e143] [cursor=pointer]
+              - button "edit shapes" [ref=e144] [cursor=pointer]
+            - button "── prerequisites ──" [ref=e146] [cursor=pointer]:
+              - generic [ref=e147]:
+                - img [ref=e148]
+                - text: ── prerequisites ──
+              - img [ref=e151]
+            - button "show applicable activities" [ref=e154] [cursor=pointer]:
+              - img [ref=e155]
+              - text: show applicable activities
+            - generic [ref=e158]:
+              - generic [ref=e159]: ── palette ──
+              - generic [ref=e160]:
+                - img [ref=e161]
+                - textbox "search activities..." [ref=e164]
+              - generic [ref=e166]: no activities found
+          - generic [ref=e167]:
+            - alert [ref=e169]:
+              - img [ref=e170]
+              - heading "Productive loop detected Loop" [level=5] [ref=e175]:
+                - text: Productive loop detected
+                - generic [ref=e176]: Loop
+              - generic [ref=e177]: A repeating pattern was found in columns 0–0. Each iteration produces new shapes, so this loop is considered productive and will not block execution.
+            - paragraph [ref=e180]: Loading templates...
+          - generic [ref=e181]:
+            - generic [ref=e182]:
+              - generic [ref=e183]:
+                - img [ref=e184]
+                - heading "Impulse State" [level=2] [ref=e188]
+              - button "Collapse impulse state panel (Ctrl+I)" [ref=e189] [cursor=pointer]:
+                - img
+            - generic [ref=e194]:
+              - generic [ref=e195]:
+                - generic [ref=e196]:
+                  - heading "Goal Completion" [level=3] [ref=e197]
+                  - generic [ref=e198]:
+                    - generic [ref=e199]: 33%
+                    - img [ref=e200]
+                - progressbar [ref=e204]
+                - generic [ref=e206]: 2 of 6 shapes complete
+                - generic [ref=e207]:
+                  - generic [ref=e208]:
+                    - generic [ref=e209]:
+                      - img [ref=e210]
+                      - text: Available
+                    - generic [ref=e213]:
+                      - generic [ref=e214]: ✓ analysis
+                      - generic [ref=e215]: ✓ source_code
+                  - generic [ref=e216]:
+                    - generic [ref=e217]:
+                      - img [ref=e218]
+                      - text: Missing
+                    - generic [ref=e222]:
+                      - generic [ref=e223]: ⊗ patch
+                      - generic [ref=e224]: ⊗ validation_result
+                      - generic [ref=e225]: ⊗ config_file
+                      - generic [ref=e226]: ⊗ test_suite
+              - generic [ref=e227]:
+                - heading "Current Shapes" [level=3] [ref=e229]
+                - generic [ref=e231]:
+                  - generic [ref=e232]: goal
+                  - generic [ref=e233]: directoryTree
+                  - generic [ref=e234]: analysis
+                  - generic [ref=e235]: tool_output
+                  - generic [ref=e236]: source_code
+              - generic [ref=e237]:
+                - heading "Shape Provenance" [level=3] [ref=e239]
+                - generic [ref=e241]:
+                  - generic [ref=e242]:
+                    - generic [ref=e243]:
+                      - img [ref=e244]
+                      - generic [ref=e248]: Initial Context (Column 0)
+                    - generic [ref=e250]:
+                      - img [ref=e251]
+                      - generic [ref=e254]: goal
+                      - generic [ref=e255]: directoryTree
+                  - generic [ref=e256]:
+                    - generic [ref=e257]:
+                      - img [ref=e258]
+                      - button "LLM Code Review Script Generator (Col 0)" [ref=e262] [cursor=pointer]
+                    - generic [ref=e264]:
+                      - img [ref=e265]
+                      - generic [ref=e268]: analysis
+                      - generic [ref=e269]: tool_output
+                  - generic [ref=e270]:
+                    - generic [ref=e271]:
+                      - img [ref=e272]
+                      - button "[Attempt] Implement An Automated Data Refresh Mechanism That Populates A Dashboard With Current Operational Metrics And Ci/cd Pipeline Information (Col 0)" [ref=e276] [cursor=pointer]
+                    - generic [ref=e278]:
+                      - img [ref=e279]
+                      - generic [ref=e282]: source_code
+              - generic [ref=e283]:
+                - heading "Shape Timeline" [level=3] [ref=e285]
+                - generic [ref=e290]:
+                  - generic [ref=e291]:
+                    - generic [ref=e292]:
+                      - generic [ref=e293]: "0"
+                      - generic [ref=e294]: Column 0
+                    - generic [ref=e295]:
+                      - generic [ref=e296]:
+                        - generic [ref=e297]: + Added 3
+                        - generic [ref=e298]:
+                          - generic [ref=e299]: analysis
+                          - generic [ref=e300]: tool_output
+                          - generic [ref=e301]: source_code
+                      - generic [ref=e302]: "Total: 5 shapes"
+                  - generic [ref=e304]:
+                    - generic [ref=e305]:
+                      - generic [ref=e306]: "1"
+                      - generic [ref=e307]: Column 1
+                    - generic [ref=e309]: "Total: 5 shapes"
+                  - generic [ref=e311]:
+                    - generic [ref=e312]:
+                      - generic [ref=e313]: "2"
+                      - generic [ref=e314]: Column 2
+                    - generic [ref=e316]: "Total: 5 shapes"
+                  - generic [ref=e318]:
+                    - generic [ref=e319]:
+                      - generic [ref=e320]: "3"
+                      - generic [ref=e321]: Column 3
+                    - generic [ref=e323]: "Total: 5 shapes"
+                  - generic [ref=e325]:
+                    - generic [ref=e326]:
+                      - generic [ref=e327]: "4"
+                      - generic [ref=e328]: Column 4(current)
+                    - generic [ref=e330]: "Total: 5 shapes"
+            - paragraph [ref=e332]: Press Ctrl+I to toggle
+  - contentinfo [ref=e333]:
+    - generic [ref=e334]:
+      - generic [ref=e335]:
+        - generic [ref=e338]: API Connected
+        - generic [ref=e339]:
+          - img [ref=e340]
+          - generic [ref=e343]: 11:12:44 PM
+      - generic [ref=e344]:
+        - generic [ref=e345]: "[LOCAL]"
+        - generic [ref=e346]: v0.1.0

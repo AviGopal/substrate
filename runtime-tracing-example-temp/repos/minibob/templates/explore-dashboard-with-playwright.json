@@ -1,0 +1,119 @@
+{
+  "id": "explore-dashboard-with-playwright",
+  "name": "Explore Dashboard with Playwright MCP",
+  "description": "Use Playwright to navigate dashboard, capture screenshots, test interactions, and document the UI flow",
+  "category": "tool",
+  "variables": [],
+  "tasks": [
+    {
+      "id": "check-dashboard-running",
+      "description": "Check if dashboard is accessible",
+      "prompt": {
+        "template": "Check if the dashboard is accessible.\n\n1. Try to access the dashboard:\n   curl -s http://localhost:3000/ | head -5\n\n2. Check if the process is running:\n   ps aux | grep -E 'bun.*activity-dashboard' | grep -v grep\n\n3. Report if dashboard is accessible. If not running, provide instructions to start it.",
+        "variables": []
+      },
+      "validation": {
+        "requireOutput": true
+      }
+    },
+    {
+      "id": "navigate-and-screenshot",
+      "description": "Navigate to dashboard and capture initial state",
+      "prompt": {
+        "template": "Use Playwright MCP to navigate to the dashboard and capture the initial state.\n\n1. Navigate to dashboard:\n   - Use browser_navigate tool\n   - URL: http://localhost:3000\n\n2. Wait 3 seconds for page load\n\n3. Capture page snapshot:\n   - Use browser_snapshot tool\n   - This gives you the page structure\n\n4. Take screenshot:\n   - Use browser_take_screenshot tool\n   - Filename: dashboard-homepage.png\n\n5. Describe what you see:\n   - Which tabs are visible?\n   - What is the current active tab?\n   - What sections/cards are displayed?",
+        "variables": []
+      },
+      "validation": {
+        "requireOutput": true
+      }
+    },
+    {
+      "id": "explore-overview-tab",
+      "description": "Explore and document Overview tab contents",
+      "prompt": {
+        "template": "Explore the Overview tab and document all visible information.\n\n1. Make sure Overview tab is active (should be default)\n\n2. Use browser_snapshot to analyze the page\n\n3. Document everything you can see:\n   - API Health status\n   - Total Executions count\n   - Success Rate percentage\n   - Error Rate percentage\n   - Average Duration\n   - Total Cost\n   - MiniBob Instances section\n   - Learning System Status section\n\n4. Take detailed screenshot:\n   - Use browser_take_screenshot\n   - Filename: dashboard-overview-detailed.png\n\n5. Report all metrics and their values in a structured format.",
+        "variables": []
+      },
+      "validation": {
+        "requireOutput": true
+      }
+    },
+    {
+      "id": "click-executions-tab",
+      "description": "Navigate to Executions tab and explore",
+      "prompt": {
+        "template": "Click on the Executions tab and explore its contents.\n\n1. Use browser_snapshot to find the Executions tab button\n\n2. Click the Executions tab:\n   - Use browser_click tool\n   - Target the Executions tab button\n\n3. Wait 2 seconds for content to load\n\n4. Use browser_snapshot to analyze the executions page\n\n5. Document what you see:\n   - How many executions are shown?\n   - What information is displayed for each execution?\n   - Are there pagination controls?\n   - Are there filter controls?\n\n6. Take screenshot:\n   - Use browser_take_screenshot\n   - Filename: dashboard-executions-list.png\n\n7. Try clicking on one execution to expand it (if expandable)",
+        "variables": []
+      },
+      "validation": {
+        "requireOutput": true
+      }
+    },
+    {
+      "id": "test-execution-expansion",
+      "description": "Test expanding an execution to see details",
+      "prompt": {
+        "template": "Try to expand an execution entry to see its details.\n\n1. Use browser_snapshot to find an execution entry\n\n2. Click on an execution to expand it:\n   - Use browser_click tool\n   - Click on the execution row\n\n3. Wait 1 second\n\n4. Use browser_snapshot to see what details are revealed\n\n5. Document the expanded view:\n   - What tasks are shown?\n   - What tool calls are listed?\n   - What state transitions are visible?\n   - Any files modified?\n\n6. Take screenshot:\n   - Use browser_take_screenshot\n   - Filename: dashboard-execution-expanded.png",
+        "variables": []
+      },
+      "validation": {
+        "requireOutput": true
+      }
+    },
+    {
+      "id": "click-library-tab",
+      "description": "Navigate to Library tab and explore templates",
+      "prompt": {
+        "template": "Click on the Library tab to see activity templates.\n\n1. Use browser_snapshot to find the Library tab button\n\n2. Click the Library tab:\n   - Use browser_click tool\n\n3. Wait 2 seconds for content to load\n\n4. Use browser_snapshot to analyze templates\n\n5. Document what you see:\n   - How many templates are listed?\n   - What information is shown for each template?\n   - Success rates?\n   - Execution counts?\n\n6. Take screenshot:\n   - Use browser_take_screenshot\n   - Filename: dashboard-library-templates.png",
+        "variables": []
+      },
+      "validation": {
+        "requireOutput": true
+      }
+    },
+    {
+      "id": "click-learning-tab",
+      "description": "Navigate to Learning tab and explore",
+      "prompt": {
+        "template": "Click on the Learning tab to see the learning system.\n\n1. Use browser_snapshot to find the Learning tab button\n\n2. Click the Learning tab:\n   - Use browser_click tool\n\n3. Wait 2 seconds\n\n4. Use browser_snapshot to analyze learning metrics\n\n5. Document:\n   - Thompson Sampling status\n   - Learning metrics displayed\n   - Any recommendations or insights?\n\n6. Take screenshot:\n   - Use browser_take_screenshot\n   - Filename: dashboard-learning-system.png",
+        "variables": []
+      },
+      "validation": {
+        "requireOutput": true
+      }
+    },
+    {
+      "id": "test-pagination",
+      "description": "Test pagination controls if they exist",
+      "prompt": {
+        "template": "Go back to Executions tab and test pagination.\n\n1. Click Executions tab again\n\n2. Use browser_snapshot to check for pagination controls\n\n3. If pagination exists:\n   - Note the current page info (e.g., \"Showing 1-50 of 150\")\n   - Click the Next button\n   - Wait 2 seconds\n   - Use browser_snapshot to verify page changed\n   - Take screenshot: dashboard-executions-page2.png\n\n4. If no pagination:\n   - Report that there's no pagination (probably < 50 executions)\n\n5. Report findings about pagination behavior.",
+        "variables": []
+      },
+      "validation": {
+        "requireOutput": true
+      }
+    },
+    {
+      "id": "test-filters",
+      "description": "Test filter controls",
+      "prompt": {
+        "template": "Test the filter controls on the Executions tab.\n\n1. Make sure you're on Executions tab\n\n2. Use browser_snapshot to find filter controls\n\n3. Try the status filter:\n   - Use browser_click to open the status dropdown\n   - Select \"Success\" or \"Failure\"\n   - Wait 2 seconds\n   - Use browser_snapshot to see if list updated\n   - Take screenshot: dashboard-executions-filtered.png\n\n4. Try the search box:\n   - Use browser_type to enter a search term\n   - Check if results filter\n\n5. Try the Refresh button:\n   - Click refresh\n   - Verify data reloads\n\n6. Report on all filter functionality.",
+        "variables": []
+      },
+      "validation": {
+        "requireOutput": true
+      }
+    },
+    {
+      "id": "generate-exploration-report",
+      "description": "Generate comprehensive exploration report",
+      "prompt": {
+        "template": "Create a comprehensive dashboard exploration report.\n\nGenerate: DASHBOARD_EXPLORATION_REPORT.md\n\n# Dashboard Exploration Report\n\n## Date\n{{current_date}}\n\n## Overview\n\nThis report documents a thorough exploration of the Activity Dashboard using Playwright MCP for automated browser interaction.\n\n## Dashboard Access\n\n- **URL**: http://localhost:3000\n- **Status**: [from task 1]\n\n## Tab Navigation\n\nThe dashboard has the following tabs:\n1. Overview\n2. Library  \n3. Learning\n4. Executions\n5. Variants (if visible)\n6. Vessels (if visible)\n\n## Overview Tab\n\n[Document all metrics from task 3]\n\n### Metrics Displayed\n\n- **API Health**: [value]\n- **Total Executions**: [value]\n- **Success Rate**: [value]\n- **Error Rate**: [value]\n- **Average Duration**: [value]\n- **Total Cost**: [value]\n- **Active Templates**: [value]\n\n### Sections\n\n- MiniBob Instances\n- Learning System Status\n- [any others]\n\n## Executions Tab\n\n[Document from task 4-5]\n\n### Execution List\n\n- **Total executions shown**: [value]\n- **Information per execution**:\n  - Status (success/failure)\n  - Activity ID\n  - Variant ID\n  - Duration\n  - Cost\n  - Timestamp\n\n### Expandable Details\n\n[Document from task 5]\n\nWhen expanded, execution shows:\n- Task breakdown\n- Tool calls\n- State transitions\n- Files modified\n\n## Library Tab\n\n[Document from task 6]\n\n- **Template count**: [value]\n- **Information displayed**: [list]\n\n## Learning Tab\n\n[Document from task 7]\n\n- **Thompson Sampling**: [status]\n- **Metrics**: [list]\n\n## Interactive Features\n\n### Pagination\n\n[Document from task 8]\n\n- Status: [working/not present]\n- Behavior: [describe]\n\n### Filters\n\n[Document from task 9]\n\n- **Status Filter**: [working/not working]\n- **Search**: [working/not working]\n- **Refresh**: [working/not working]\n\n## Screenshots Captured\n\n1. dashboard-homepage.png - Initial page load\n2. dashboard-overview-detailed.png - Overview metrics\n3. dashboard-executions-list.png - Executions list\n4. dashboard-execution-expanded.png - Expanded execution\n5. dashboard-library-templates.png - Template library\n6. dashboard-learning-system.png - Learning system\n7. dashboard-executions-page2.png - Pagination test\n8. dashboard-executions-filtered.png - Filter test\n\n## User Experience Observations\n\n- **Navigation**: [smooth/issues]\n- **Loading times**: [fast/slow]\n- **Responsiveness**: [good/poor]\n- **Data presentation**: [clear/confusing]\n\n## Recommendations\n\n[Any suggestions for improvements]\n\n## Conclusion\n\nThe dashboard provides [summary of capabilities and state].\n\n---\nGenerated by MiniBob Activity: explore-dashboard-with-playwright\nMethod: Playwright MCP Browser Automation\n\nWrite this complete report with all actual values from the exploration tasks.",
+        "variables": []
+      },
+      "validation": {
+        "requireOutput": true
+      }
+    }
+  ]
+}
