@@ -26,6 +26,15 @@ export type {
   RegisterRequest,
   RegisterResponse,
   HeartbeatRequest,
+  ResolveRequestFormat,
+  ResolveAuthScheme,
+  AuthTokenSource,
+  AuthDelegationMode,
+} from "./types.js"
+
+export {
+  DEFAULT_AUTH_TOKEN_SOURCE,
+  DEFAULT_AUTH_DELEGATION_MODE,
 } from "./types.js"
 
 // Metrics

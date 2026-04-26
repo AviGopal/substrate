@@ -74,6 +74,14 @@ export interface DiscoveryConfig {
   /** Max response time this vessel declares for resolve calls, in ms */
   resolve_timeout_ms?: number
 
+  /** Which credential kind callers should attach when invoking this
+   *  vessel's resolve endpoint (default: "caller_identity"). */
+  auth_token_source?: AuthTokenSource
+
+  /** How callers obtain the user-bound token they send (default: "forward").
+   *  Meaningful only when `auth_token_source === "user_identity"`. */
+  auth_delegation_mode?: AuthDelegationMode
+
   /** Maximum consecutive failures before stopping heartbeat (default: 3) */
   maxConsecutiveFailures?: number
 
@@ -99,6 +107,11 @@ export interface DiscoveryConfig {
  * The four `resolve_*` fields mirror the contract on `VesselCapability`
  * — what a vessel advertises at registration flows through to what
  * discovery returns in resolve queries. Added 2026-04-24.
+ *
+ * `auth_token_source` and `auth_delegation_mode` extend that contract
+ * with a fifth + sixth field that declare *whose* credential to attach,
+ * not just *how* to format it. See
+ * `docs/specs/auth-token-source-field.md`. Added 2026-04-23.
  */
 export interface VesselRegistration {
   vesselId: string
@@ -129,6 +142,15 @@ export interface VesselRegistration {
   /** Vessel-declared max-time-to-respond on the resolve endpoint, in
    *  milliseconds. No default — clients apply their own policy. */
   resolve_timeout_ms?: number
+
+  /** Which credential kind the caller should attach. Default when absent:
+   *  `"caller_identity"` (preserves pre-2026-04-23 behavior). */
+  auth_token_source?: AuthTokenSource
+
+  /** How the caller obtains the user-bound token to send. Default when
+   *  absent: `"forward"`. Meaningful only when
+   *  `auth_token_source === "user_identity"`. */
+  auth_delegation_mode?: AuthDelegationMode
 }
 
 /**
@@ -176,6 +198,52 @@ export type ResolveRequestFormat = "pointer" | "mcp-tool"
 export type ResolveAuthScheme = "none" | "ApiKey" | "Bearer"
 
 /**
+ * Which credential the caller should attach when invoking a vessel's
+ * resolve endpoint. Pairs with `ResolveAuthScheme`, which says *how* to
+ * format the Authorization header; this says *whose* token to format.
+ *
+ * Default when absent: `"caller_identity"` — the caller attaches its own
+ * service identity, preserving pre-2026-04-23 behavior.
+ *
+ *   "caller_identity"  caller's own service token (e.g. METABOB_API_KEY)
+ *   "user_identity"    a user JWT the caller is acting on behalf of;
+ *                      requires runtime-context plumbing on the caller
+ *   "service_identity" alias for caller_identity, future-reserved
+ *   "no_token"         vessel explicitly wants no Authorization header,
+ *                      even if `auth_scheme` would normally attach one
+ *
+ * See `docs/specs/auth-token-source-field.md`.
+ */
+export type AuthTokenSource =
+  | "caller_identity"
+  | "user_identity"
+  | "service_identity"
+  | "no_token"
+
+export const DEFAULT_AUTH_TOKEN_SOURCE: AuthTokenSource = "caller_identity"
+
+/**
+ * For vessels that advertise `auth_token_source: "user_identity"`,
+ * declares how the caller obtains the token to send.
+ *
+ * Default when absent: `"forward"` — the user JWT the caller already
+ * holds in its runtime context is passed through unchanged.
+ *
+ *   "forward" caller forwards the user JWT it already holds. Requires
+ *             a shared trust domain (same issuer, compatible audience).
+ *   "mint"    caller asks identity-vessel to mint a target-bound,
+ *             short-TTL, single-use delegated token. Used at trust-
+ *             domain boundaries or when narrower audience / replay
+ *             protection is required.
+ *   "none"    vessel does not accept delegation.
+ *
+ * See `docs/specs/auth-token-source-field.md`.
+ */
+export type AuthDelegationMode = "forward" | "mint" | "none"
+
+export const DEFAULT_AUTH_DELEGATION_MODE: AuthDelegationMode = "forward"
+
+/**
  * Vessel capability information.
  *
  * The four `resolve_*` fields are the vessel's self-describing resolve
@@ -184,6 +252,12 @@ export type ResolveAuthScheme = "none" | "ApiKey" | "Bearer"
  * registration; discovery returns them here; clients honor them. All
  * are optional for backward compatibility — clients should apply the
  * documented defaults when a field is absent.
+ *
+ * `auth_token_source` and `auth_delegation_mode` (added 2026-04-23 per
+ * `docs/specs/auth-token-source-field.md`) extend the contract: the
+ * vessel declares *whose* credential to attach (caller's service key,
+ * a user JWT, etc.), and how the caller obtains it (forward what it
+ * already holds, mint a delegated token).
  */
 export interface VesselCapability {
   vesselId: string
@@ -210,6 +284,15 @@ export interface VesselCapability {
    *  milliseconds. No default — clients apply their own policy (typically
    *  5000ms) when absent. */
   resolve_timeout_ms?: number
+
+  /** Which credential kind the caller should attach. Default when absent:
+   *  `"caller_identity"` (caller's own service token). */
+  auth_token_source?: AuthTokenSource
+
+  /** How the caller obtains the user-bound token to send. Default when
+   *  absent: `"forward"`. Meaningful only when
+   *  `auth_token_source === "user_identity"`. */
+  auth_delegation_mode?: AuthDelegationMode
 }
 
 /**
@@ -263,6 +346,14 @@ export interface RegisterRequest {
   protocol?: string
   orgId?: string
   metadata?: Record<string, unknown>
+  resolve_endpoint?: string
+  resolve_request_format?: ResolveRequestFormat
+  auth_scheme?: ResolveAuthScheme
+  resolve_timeout_ms?: number
+  /** Which credential kind callers should attach. Default: "caller_identity". */
+  auth_token_source?: AuthTokenSource
+  /** Delegation mode for user-identity tokens. Default: "forward". */
+  auth_delegation_mode?: AuthDelegationMode
 }
 
 /**

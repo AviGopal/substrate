@@ -116,6 +116,8 @@ export class VesselClient {
         resolve_request_format: this.config.resolve_request_format,
         auth_scheme: this.config.auth_scheme,
         resolve_timeout_ms: this.config.resolve_timeout_ms,
+        auth_token_source: this.config.auth_token_source,
+        auth_delegation_mode: this.config.auth_delegation_mode,
       })
 
       if (response.success) {
