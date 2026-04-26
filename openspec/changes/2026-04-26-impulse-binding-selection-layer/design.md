@@ -124,3 +124,35 @@ No new endpoints, no new tables, no schema migrations.
 - **`shape:unbindable` impulse shape**: is this a new shape, or do we reuse an existing escalation shape? Sibling spec owns the answer; flagged here so we don't ship a name conflict.
 - **Pool-selection telemetry granularity**: do we record one Thompson update per pool decision, or aggregate per task? Per-decision gives faster learning but explodes the trace. *Lean: per-decision, but add a backend coalescing pass when the relevance write rate exceeds N/sec.*
 - **Should `impulse_preparation.agent_fill` run inside the meta-activity, or be promoted to its own subscriber template?** Promotion would let Thompson choose between the cheap and expensive paths. *Lean: keep inside the same template for the first ship; promote to its own subscriber if the trace shows the agent_fill branch dominating cost.*
+
+## Validation findings
+
+Findings specific to this sibling spec's scope. Cross-cutting findings live in the umbrella `impulse-activity-loop` spec.
+
+#### F-16: `select_or_produce` simplified to producer_selection only (no per-shape branching)
+**Observation:** Sibling spec D5 calls for `select_or_produce` to branch between `impulse_pool_selection` (when candidates exist for a missing shape) and `producer_selection` (when none exist). The shipped template (`slot-binding.json`) uses `producer_selection` as the single default branch — the per-shape pool-vs-producer distinction isn't expressible in the current template format and is collapsed to a single resolver call.
+**Impact:** When the impulse pool already contains candidates for a missing shape, slot-binding still queries producers rather than ranking the existing candidates. The pool branch is documented but deferred.
+**Proposed fix:** Either (a) ship a sibling variant template `slot-binding-pool` that runs `impulse_pool_selection` first, OR (b) wait for foreach (umbrella F-4) and run both per-shape inside one template. Thompson Sampling on lifecycle subscribers will pick the variant that wins.
+**Origin:** iter 6 / Subagent H (slot-binding `metadata.openQuestions[1]` and task description).
+**Affected files:** `repos/minibob/src/embedded-templates/slot-binding.json`.
+
+#### F-17: `agent_fill_fallback` conditional uses substring-match on resolver result content
+**Observation:** The `agent_fill_fallback` task gates on `{{impulse:select_or_produce_result}} contains 'unbindable": true'` — a substring match against the JSON-stringified resolver output. Same pattern used by the `escalate_unbindable` task.
+**Impact:** Tightly couples the conditional to the resolver result format; any change to `producer_selection`'s output JSON breaks the fallback path silently.
+**Proposed fix:** Expose typed conditional primitives (e.g. `condition: { impulse_field: 'unbindable', equals: true }`), OR introduce a deterministic flag-extraction resolver that emits a top-level boolean impulse the conditional can match cleanly.
+**Origin:** iter 6 / Subagent H, iter 13 / Subagent Q (slot-binding `metadata.limitations`).
+**Affected files:** `repos/minibob/src/embedded-templates/slot-binding.json`.
+
+#### F-18: `impulse_pool_selection` reads via typed MCP helper, not the markdown pointer-resolve
+**Observation:** Sibling spec D2 / §3 references the `impulseRelevance` impulse pointer-resolve path at `repos/metabob-activity-api/src/routes/impulses.ts:1542`. The shipped resolver uses the typed `MCPClient.queryImpulseRelevance` helper instead of the markdown pointer-resolve route — sensible (typed > parsed-markdown) but worth flagging if the spec strictly requires the pointer-resolve API.
+**Impact:** Reads same backend data; differs only in serialisation path. Concern is purely contract-fidelity.
+**Proposed fix:** Update the spec's §3 wording to allow either path, OR refactor the resolver to use the markdown pointer-resolve route.
+**Origin:** iter 5 / Subagent E.
+**Affected files:** `repos/minibob/src/resolvers/impulse-pool-selection-resolver.ts`, `openspec/changes/2026-04-26-impulse-binding-selection-layer/specs/...`.
+
+#### F-19: `impulse_preparation.interpolate` callback wiring not yet threaded
+**Observation:** The `impulse_preparation` resolver accepts an optional `interpolate` callback through config. When absent (the current state for slot-binding's invocations), the resolver uses raw template strings. Phase 6 / Phase 7.2 ideally thread the executor's interpolate function through.
+**Impact:** Synthesised impulses from `synthesise_from_variables` may carry un-interpolated `{{...}}` placeholders if the template variable values themselves are interpolation expressions.
+**Proposed fix:** Have the lifecycle dispatcher pass the executor's `interpolate` bound to the parent execution's variable scope into the resolver config when invoking `impulse_preparation`.
+**Origin:** iter 4 / Subagent D, tasks.md §3.1 "Open" note.
+**Affected files:** `repos/minibob/src/resolvers/impulse-preparation-resolver.ts`, `repos/minibob/src/activity.ts:1249-1273`.

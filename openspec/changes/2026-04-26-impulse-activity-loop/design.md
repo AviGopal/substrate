@@ -110,10 +110,132 @@ Population of `taskValidations` from the WS event stream is **out of scope** for
 - Verification (this iteration): all four repos clean of unpushed work prior to Q's commit. minibob `dc8aafb`, activity-api `8f8d5d9`, workbench `0541324`, super-repo `0c0d8511` — all matched origin/dev. Canary `https://activity.metabob.com/health` returned `version: 1.12.0` healthy.
 - Pushed: minibob `dc8aafb..7cacb66` (Phase 7.2). Super-repo pointer advance to follow in the same iteration.
 
+### 2026-04-26 — iterations 14-15 (parallel S + T; Phase 2 fully closes; v0.3.1 wires live validation events)
+
+Two background subagents dispatched in iter 14, integrated in iter 15.
+
+- **Subagent S — Phase 2.5 (sibling 2 §2):** `repos/metabob-activity-api/src/routes/goal-paths.ts` gains `accumulateEndpointShapes(pathActivities)` exported helper; POST `/goal-paths` persists `endpoint_output_shapes` on insert+update; GET `/goal-paths` accepts optional `endpoint_output_shape` query param; POST `/recommend` accepts the same as a body field, applied as a hard-filter pre-Thompson; `predictEndpointState` reads the denormalized field via an optional third arg with fallback to `accumulateEndpointShapes` for legacy rows. 13 new tests in `test/routes/goal-paths.test.ts` (`bun:test` + `mock.module` on `db/surreal`); typecheck clean. **Phase 2 fully closed.** Pushed `8f8d5d9..ff38253`. Note: activity-api's local `dev` branch had 3 stale commits (`51a0109`, `1fa82f4`, `b8503d8`) from a parallel work-path that pre-dated `7e4d253`'s bundled v1.12.0 push; resolved by working in detached HEAD at `origin/dev` (pre-existing pattern). The local-`dev` divergence is worth a future cleanup but not blocking.
+- **Subagent T — WS validation_result wiring (Phase 6.3 follow-up):** `repos/workbench/src/hooks/useTrajectoryExecution.ts` gains `routeValidationResultImpulse` helper (exported for testability) routing `impulse.resolved` events of shape `validation_result` into `trajectoryStore.addTaskValidation`. Defensive `parseValidationResult` handles both flat (`event.shape/taskId/body`) and nested (`event.impulse.shape/taskId/body`) WS payloads — workbench is insulated from broadcaster contract drift. Malformed payloads `console.warn`'d and skipped (no throw). 13 new tests structural (parser 7, router 5, store-integration 1) — full WS-mock testing skipped due to a pre-existing React 19 + `@testing-library/react@14.2.2` `useEffect` non-firing issue. Workbench v0.3.0 → v0.3.1. Pushed `0541324..4d9bb0a`. Super-repo `51e961d0..cbdd37c5`.
+
+**Two upstream TODOs surfaced (not blocking):**
+1. The activity-api broadcaster's `impulse.resolved` event body contract is undocumented — the workbench is currently defensive about flat vs nested. Cleanest API change is for the broadcaster to include `body: <resolved-impulse-content>` on `impulse.resolved` events when the impulse shape is `validation_result` (or always). Recommend formalizing in a future Phase 8 or follow-up sibling spec.
+2. `@testing-library/react` should bump to v15 (React 19-compatible) — currently breaks WS-mock testing patterns including pre-existing `LiveExecutionMonitor.test.tsx`.
+
+**Status now:** Phase 1, 2, 3, 4, 6, 7 all closed and pushed to canary. Phase 5 (decommission inline executor logic) remains gated on canary firing evidence — no goal-execution traces from v0.13.0 minibob have appeared on canary yet. Phase 8 partial (backend endpoints verified live; meta-activity firing not yet observed).
+
 ## Out of scope
 
 - Canonical-composition synthesis (LLM-skill template pattern, tools-as-impulses convention, lifecycle-bootstrap as activity). Tracked here as a probable next sibling, not implemented.
 - Any redesign of sibling spec contracts. Refinements that emerge during implementation are recorded here and applied via targeted edits to the sibling specs.
+
+## Validation findings
+
+Cross-cutting findings surfaced during implementation iterations 1–15. Findings whose scope is one sibling spec live in that sibling's `## Validation findings` section.
+
+#### F-1: Lifecycle payload field-name reconciliation pending
+**Observation:** The emission point uses `executionId` for the parent execution id; sibling 1's `lifecycle-task-prebinding/spec.md` calls the same field `parentExecutionId`. Both meta-activity templates and the resolver implementations work around this by reading the JSON-stringified `{{lifecycle}}` payload.
+**Impact:** Spec/source contract drift; subscriber implementations diverge if the canonical name is later corrected without coordinated edits.
+**Proposed fix:** Pick one name (`parentExecutionId` per the spec is the natural choice) and apply it in `repos/minibob/src/activity.ts` lifecycle dispatcher + sibling 1 spec; retrofit slot-binding/validator-dispatch templates in the same pass.
+**Origin:** iter 1, iter 2, iter 3 / surfaced in tasks.md §1.3.
+**Affected files:** `repos/minibob/src/activity.ts:1249-1273`, `openspec/changes/2026-04-26-impulse-binding-selection-layer/specs/lifecycle-task-prebinding/spec.md`.
+
+#### F-2: Lifecycle payload missing `parent_goal_text`
+**Observation:** `lifecycle:task:preBinding` carries `taskId/templateId/inputShapes/currentImpulseIds/missingShapes/variables/executionId` but not the parent's goal text. The `escalate_unbindable` task in `slot-binding.json` has to forward `{{lifecycle}}` (a JSON blob) and rely on the dispatched `compose_goal` LLM to parse it back out, with `<no parent goal text available>` as the fallback framing.
+**Impact:** Recursive sub-goals composed by `create-shape-provider-goal` lose semantic anchoring to the parent goal; weaker signal for the LLM composer.
+**Proposed fix:** Extend the lifecycle dispatcher to resolve the parent execution's input goal impulse and embed its content in the payload, OR add a precursor task that fetches it via impulse-resolve.
+**Origin:** iter 13 / Subagent Q (slot-binding `_parent_goal_text_TODO`).
+**Affected files:** `repos/minibob/src/activity.ts:1249-1273`, `repos/minibob/src/embedded-templates/slot-binding.json`.
+
+#### F-3: Lifecycle payload doesn't carry `composition_chain` depth
+**Observation:** The lifecycle dispatcher doesn't thread `composition_chain` through the payload. The `escalate_unbindable` task hardcodes `parent_depth: 0` for the dispatched `create-shape-provider-goal` invocation.
+**Impact:** Recursive depth-guard (default `max_recursion_depth=3`) cannot fire correctly — a chain at depth 2 still appears as depth 1 to its child.
+**Proposed fix:** Add `parent_depth` and/or `composition_chain` fields to the lifecycle payload; alternatively have `create-shape-provider-goal` resolve them via an upstream trace fetch.
+**Origin:** iter 13 / Subagent Q (slot-binding `metadata.openQuestions[2]`).
+**Affected files:** `repos/minibob/src/activity.ts:1249-1273`, `repos/minibob/src/embedded-templates/slot-binding.json`.
+
+#### F-4: Template format lacks foreach/iteration primitive (infra gap B)
+**Observation:** Several meta-activity tasks ideally iterate over arrays (per-shape selection in slot-binding, per-validator dispatch in validator-dispatch, per-candidate cost/risk fetches in create-shape-provider-goal). The current template format has no `foreach`/`map` primitive, forcing each template to simplify to single-shape / single-candidate behaviour.
+**Impact:** Multi-shape tasks fall back to single-shape semantics; per-candidate metrics fetching collapses to aggregated org-wide queries; specialized vs wildcard validator partitioning (validators-and-failure-modes D1) is unenforceable.
+**Proposed fix:** Add a foreach primitive to the template runner (or a generic `impulse_reshape` resolver), then revisit the simplifications in slot-binding, validator-dispatch, and create-shape-provider-goal.
+**Origin:** iter 6 / Subagent H, iter 7 / Subagent I, iter 8 / Subagent O. Tracked as tasks.md task #17 ("infra gap B").
+**Affected files:** `repos/minibob/src/activity.ts` (template runner), `repos/minibob/src/embedded-templates/slot-binding.json`, `repos/minibob/src/embedded-templates/validator-dispatch.json`, `repos/minibob/src/embedded-templates/create-shape-provider-goal.json`.
+
+#### F-5: Dotted-path interpolation landed but templates not retrofitted
+**Observation:** Iter 7 / Subagent J extended `interpolate` (`activity.ts:6946`) to support dotted paths via `/\{\{([\w]+(?:\.[\w]+)*)\}\}/g`. The slot-binding and validator-dispatch templates still use `{{lifecycle}}` (the JSON-stringified blob) and parse it inside resolvers.
+**Impact:** Resolvers carry parsing complexity that should live in template interpolation; debugging is harder.
+**Proposed fix:** Retrofit both meta-activity templates from `{{lifecycle}}` JSON blobs to dotted-path access (`{{lifecycle.taskId}}`, `{{lifecycle.executionId}}`, etc.) in a single pass.
+**Origin:** iter 7 / Subagent J, validator-dispatch `metadata.openQuestions[0]`.
+**Affected files:** `repos/minibob/src/embedded-templates/slot-binding.json`, `repos/minibob/src/embedded-templates/validator-dispatch.json`.
+
+#### F-6: `vessel_resolve_call` is a TS helper, not a registered resolver
+**Observation:** Sibling 3 spec (D5) and sibling 2 design reference `vessel_resolve_call` as a resolver name for activity dispatchers, but it's a TypeScript helper inside minibob — not registered in the resolver registry. Validator-dispatch had to substitute `producer_selection` (with forward-mode + `missingShape='validation_result'`) as the closest equivalent.
+**Impact:** The spec's full `discover-by-shapes` filter wiring (backward + `output_shapes: ['validation_result']`) is not used; specialised-vs-wildcard validator filtering relies implicitly on the validator's own `inputShapes` instead.
+**Proposed fix:** Register a thin `discover_by_shapes` template-dispatchable resolver that wraps `MCPClient.discoverByShapes` with optional `output_shapes` and `mode` config, OR extend `producer_selection` config with optional `output_shapes`.
+**Origin:** iter 7 / Subagent I, validator-dispatch `metadata.openQuestions[2]`.
+**Affected files:** `repos/minibob/src/resolvers/index.ts`, `repos/minibob/src/embedded-templates/validator-dispatch.json`.
+
+#### F-7: `lifecycle:task:completed` payload missing fields needed by validator-dispatch
+**Observation:** The payload contains `taskId/taskIndex/executionId/status/outputShapes/durationMs` — it omits `skip_validation` (so the meta-activity can't short-circuit on opt-out) and the `allImpulseIds`/`loadedImpulseIds`/`toolCallRecords` arrays the `learning_signal_writer` task needs.
+**Impact:** `validator-dispatch.json` task 1 cannot enforce the `skip_validation: true` opt-out (D5); task 5 passes empty arrays as a structural placeholder so `learning_signal_writer` is a no-op until Phase 5 lifts the executor's per-task tracking arrays into the payload (or the resolver fetches them by execution id).
+**Proposed fix:** Extend the lifecycle payload at the sibling-3 emission sites to include `skip_validation` and the per-task tracking arrays. Phase 5 of this umbrella owns the rewire.
+**Origin:** iter 7 / Subagent I, validator-dispatch `metadata.openQuestions[0]` and `[5]`.
+**Affected files:** `repos/minibob/src/activity.ts:2406, :2855` (emission sites), `repos/minibob/src/embedded-templates/validator-dispatch.json`.
+
+#### F-8: Activity dispatch endpoint shimmed via `/v2/impulses/resolve`
+**Observation:** The workbench `useSpawnSubgoal` hook posts to `/v2/impulses/resolve` with a `pointer.type === 'activityDispatch'` envelope because the activity-api has no first-class dispatch endpoint. Marked `TODO(dispatch-endpoint)` at the call site.
+**Impact:** Coupled to the impulse-resolve route's payload conventions; not discoverable as an API surface; second-class to other activity-api endpoints.
+**Proposed fix:** Add `POST /v2/activities/dispatch` to activity-api with the dispatch envelope formalised; swap the workbench POST.
+**Origin:** iter 8 / Subagent M (`useSpawnSubgoal.ts`).
+**Affected files:** `repos/workbench/src/hooks/useSpawnSubgoal.ts:18,118`, `repos/metabob-activity-api/src/routes/activities.ts`.
+
+#### F-9: Activity-api `impulse.resolved` WebSocket event body contract undocumented
+**Observation:** The broadcaster emits `impulse.resolved` events with the resolved-impulse fields sometimes flattened on the event (`event.shape`, `event.taskId`, `event.body`) and sometimes nested under `event.impulse`. The workbench's `parseValidationResult` / `routeValidationResultImpulse` handlers accept both shapes defensively.
+**Impact:** Workbench is forced into defensive parsing; any consumer downstream re-implements the same fan-out; contract drift goes undetected.
+**Proposed fix:** Formalise the broadcaster contract (e.g. the broadcaster always emits a `body` field on `impulse.resolved` events; flat vs nested structure picked once and documented). Sibling spec or a follow-up Phase 8 deliverable.
+**Origin:** iter 14 / Subagent T (`useTrajectoryExecution.ts:36-69, :136-141`).
+**Affected files:** `repos/metabob-activity-api/src/services/broadcaster.ts` (or equivalent), `repos/workbench/src/hooks/useTrajectoryExecution.ts`.
+
+#### F-10: `@testing-library/react@14.2.2` does not fire `useEffect` under React 19
+**Observation:** WS-mock tests (iter 14 / Subagent T) could not exercise the full `useTrajectoryExecution` event-handler path because `renderHook` from `@testing-library/react@14.2.2` does not fire `useEffect` on React 19. Subagent shipped 13 structural tests (parser/router/store) but skipped end-to-end WS-mock coverage.
+**Impact:** Pre-existing `LiveExecutionMonitor.test.tsx` is also impaired; WS-event-handling hooks have no integration-test coverage.
+**Proposed fix:** Bump `@testing-library/react` to v15 (React 19 compatible).
+**Origin:** iter 14 / Subagent T.
+**Affected files:** `repos/workbench/package.json`, `repos/workbench/src/hooks/useTrajectoryExecution.ts:91-94`, `repos/workbench/src/components/executions/LiveExecutionMonitor.test.tsx`.
+
+#### F-11: Activity-api local `dev` branch diverged from origin
+**Observation:** During iter 14 the activity-api local `dev` branch had three stale commits (`51a0109`, `1fa82f4`, `b8503d8`) from a parallel work-path that pre-dated `7e4d253`'s bundled v1.12.0 push. Subagent S worked in detached HEAD at `origin/dev` to avoid the divergence.
+**Impact:** Local-branch confusion; future contributors hitting the same divergence will need the same workaround.
+**Proposed fix:** Reconcile local `dev` with `origin/dev` (rebase or hard-reset depending on the stale commits' fate). Cleanup, not blocking.
+**Origin:** iter 14 / Subagent S, iter 7 / Subagent K.
+**Affected files:** `repos/metabob-activity-api` (git history only).
+
+#### F-12: Activity-api trace-detail endpoint returns "not found" for ids the list returns
+**Observation:** Iter 12 canary audit: authenticated `POST /v2/impulses/resolve` with `pointer.type: "executionTraceList"` returned three traces; the same authenticated call with `pointer.type: "activityExecutionTrace", executionId: <id>` returned `Execution trace not found` for one of those ids. Likely an ACCESS-method binding mismatch on the detail endpoint.
+**Impact:** Trace-detail deep links are unreliable; pre-existing on canary, not a regression introduced by this change.
+**Proposed fix:** Audit the `activityExecutionTrace` impulse-resolve case for ACCESS-method/PERMISSIONS scoping consistency with the list case. Cleanup.
+**Origin:** iter 12 / canary audit.
+**Affected files:** `repos/metabob-activity-api/src/routes/impulses.ts:719-724`.
+
+#### F-13: Phase 5 (decommission inline executor logic) gated on canary firing evidence
+**Observation:** Phases 1, 2, 3, 4, 6, 7 closed and pushed; Phase 5 (delete `activity.ts:4949-4997`, `:5454-5529`, three `recordImpulseRelevance` call sites, and the inline tool-argument-pattern recording loop) remains pending because no v0.13.0 minibob goal-execution traces have appeared on canary to confirm the meta-activities are firing.
+**Impact:** Inline executor logic is duplicated against the meta-activity paths until canary evidence accumulates; risk of behavioural drift if both paths run in production.
+**Proposed fix:** User dispatch a representative goal against canary (`minibob --single "..."`); inspect traces for lifecycle event impulses + nested slot-binding/validator-dispatch executions; once observed, run Phase 5 deletions.
+**Origin:** iter 12, iter 13, iter 15.
+**Affected files:** `repos/minibob/src/activity.ts:4949-4997, :5454-5529, :5471, :5574, :5719, :5482-5527`.
+
+#### F-14: `taskValidations` was unwired from WS events until iteration 15
+**Observation:** Phase 6.3 (iter 11) landed `trajectoryStore.taskValidations` and the workbench validation surfaces, but the store field was populated only by direct test injection. WS-stream wiring was deferred until iter 14-15 (Subagent T); production population of the field depended on slot-binding observed firing on canary.
+**Impact:** Validation surfaces rendered no live data until iter 15. Documented but worth flagging for any reader looking at the v0.3.0 build.
+**Proposed fix:** Already addressed in iter 15 (workbench v0.3.1 / `routeValidationResultImpulse`).
+**Origin:** iter 11 narrative, iter 14 / Subagent T resolution.
+**Affected files:** `repos/workbench/src/store/trajectoryStore.ts`, `repos/workbench/src/hooks/useTrajectoryExecution.ts`.
+
+#### F-15: Pre-existing v1.12.0 post-deploy bugs (relevance-feedback NULL, missing auth)
+**Observation:** v1.12.0 canary surfaced two bugs in `repos/metabob-activity-api/src/routes/activities.ts`: (1) the `relevance_feedback` audit row is dropped silently when optional fields are absent because SurrealDB 3.x rejects `NULL` for `none | string` typed fields; (2) the `/relevance-feedback` route is missing its auth middleware, causing a 500 Hono lifecycle crash on unauthenticated requests instead of 401. Embedding backfill job has not run (0/3,051 activities have embeddings populated, semantic search returns no results).
+**Impact:** Audit trail incomplete; observability of unauthenticated callers degraded; semantic search effectively disabled until backfill runs.
+**Proposed fix:** Bug 10.1 + 10.2 fixes already shipped in iter 7 / Subagent K (commit `8f8d5d9`). Embedding backfill remains a separate operations task.
+**Origin:** Post-Deploy Observations section (already documented at end of design.md).
+**Affected files:** `repos/metabob-activity-api/src/routes/activities.ts`.
 
 ## Iteration log
 

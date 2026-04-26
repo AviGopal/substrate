@@ -116,3 +116,63 @@ This stays consistent with the existing pattern: `BackwardChainingPanel` only su
 - Cross-org goal-path sharing (`endpoint_output_shapes` is queried within the caller's org_id; see `repos/metabob-activity-api/sql/migrations/085-fix-goal-paths-permissions.surql` for the existing project-scope pattern)
 - Cleanup of orphaned shape-provider goals where the parent execution failed before consuming the sub-goal output. The trace store keeps these; a separate maintenance activity can prune
 - A dedicated `goalShapeProvider` impulse pointer type. Reusing the existing `goal` shape with the `endpoint_output_shapes` body field avoids inventing a new shape category
+
+## Validation findings
+
+Findings specific to this sibling spec's scope. Cross-cutting findings live in the umbrella `impulse-activity-loop` spec.
+
+#### F-20: Recursion-safety guards embedded in `compose_goal` LLM prompt, not deterministic tasks
+**Observation:** Spec §3.8-§3.10 calls for depth/cycle/budget guards as activity validation rules. The shipped `create-shape-provider-goal.json` embeds all three guards in the `compose_goal` LLM prompt because the existing template format has no per-task validation rule that conditionally rewrites output JSON, and splitting each guard into a separate task with a `conditional` lacks a final-merge primitive.
+**Impact:** Guard logic depends on LLM determinism for the specified condition checks; a model regression could silently weaken the safety check; no schema validation on the emitted `failure_mode` JSON.
+**Proposed fix:** Land a deterministic `goal_guard_evaluator` resolver that takes `depth/budget/composition_chain/target_shape/ancestor_endpoint_shapes` and emits a `guard_result` impulse; lift the prompt-embedded guards. External contract (the goal-shape impulse) stays the same.
+**Origin:** iter 8 / Subagent O (`metadata.openQuestions[0]`).
+**Affected files:** `repos/minibob/src/embedded-templates/create-shape-provider-goal.json`.
+
+#### F-21: `forward_chain_producers` does not pass `target_shape` as backend `required_shapes`
+**Observation:** Spec §3.2 calls for forward-chain producer enumeration filtered on the missing shape. The shipped task uses `activity_recommendation` (the recommend+Thompson wrapper); shape filtering is performed client-side downstream rather than as a `required_shapes` filter at the backend.
+**Impact:** Larger candidate set than necessary returned by the backend; downstream filtering depends on the recommend route deriving `expected_output_shapes` from goal_enrichment server-side.
+**Proposed fix:** Register a `discover_by_shapes` resolver that forwards `required_shapes: [target_shape]` directly so this template can call it explicitly. (Same fix path as umbrella F-6.)
+**Origin:** iter 8 / Subagent O (`metadata.openQuestions[1]`).
+**Affected files:** `repos/minibob/src/embedded-templates/create-shape-provider-goal.json`, `repos/minibob/src/resolvers/index.ts`.
+
+#### F-22: `goalExecutionPath` shape not advertised by activity-api
+**Observation:** Signal 2 (`prior_paths_with_endpoint`) issues an `impulse-resolve` for `pointer.type: 'goalExecutionPath'` filtered by the new `endpoint_output_shapes` field (migration 092). The shape is not in the activity-api advertised shapes list (`config.ts:158-189`) nor wired in `routes/impulses.ts`.
+**Impact:** The resolve returns an error / empty content; `compose_goal` handles defensively. Signal 2 currently produces no real signal until activity-api wires the case.
+**Proposed fix:** Add `goalExecutionPath` to `repos/metabob-activity-api/src/config.ts` advertised shapes; add a case in `repos/metabob-activity-api/src/routes/impulses.ts` that queries `goal_execution_paths` filtered by `endpoint_output_shapes CONTAINS $shape`.
+**Origin:** iter 8 / Subagent O (`metadata.openQuestions[2]`, `metadata.limitations[2]`).
+**Affected files:** `repos/metabob-activity-api/src/config.ts`, `repos/metabob-activity-api/src/routes/impulses.ts`, `repos/minibob/src/embedded-templates/create-shape-provider-goal.json`.
+
+#### F-23: `concept_lookup` keys `relatedConcepts` on `target_shape` as a `concept_id`
+**Observation:** Signal 3 (`concept_lookup`) calls concept-db's `relatedConcepts` shape with `pointer.concept_id: target_shape`. Concept-db's `relatedConcepts` requires a concept's id, not a shape name; resolution succeeds only when the shape name happens to coincide with a concept id, which is rare.
+**Impact:** Signal 3 returns 404/empty for most invocations; `compose_goal` handles defensively but loses the conceptual-neighborhood enrichment.
+**Proposed fix:** Register a `conceptSearch` shape on concept-db that accepts `pointer.shape_name`, OR have `relatedConcepts` accept either `concept_id` or `shape_name` with documented precedence.
+**Origin:** iter 8 / Subagent O (`metadata.openQuestions[3]`).
+**Affected files:** `repos/concept-db/src/...` (resolver + advertised shapes), `repos/minibob/src/embedded-templates/create-shape-provider-goal.json`.
+
+#### F-24: `cooccurrence_signal` runs over an empty trace set
+**Observation:** Signal 4 dispatches `ImpulseCooccurrenceResolver` with `traces: []`. The resolver's contract is a trace array; it does not fetch traces from the backend. No upstream task fetches `executionTraceWithSignatures` for traces of activities producing `target_shape`.
+**Impact:** Signal 4 emits an empty co-occurrence matrix; `compose_goal` handles defensively but loses the historical co-occurrence signal entirely.
+**Proposed fix:** Prepend a task that calls `impulse-resolve` with `pointer.type: 'executionTraceWithSignatures'` filtered by activity output_shape=target_shape; pass the result as an input impulse to the cooccurrence task. Out of scope per §3.5's strict "producer ids + available_shapes" framing; queued as a follow-up.
+**Origin:** iter 8 / Subagent O (`metadata.openQuestions[4]`, `metadata.limitations[4]`).
+**Affected files:** `repos/minibob/src/embedded-templates/create-shape-provider-goal.json`.
+
+#### F-25: Per-candidate cost/risk fetching not implemented (foreach gap)
+**Observation:** Spec §3.6 calls for two parallel `vessel_resolve_call`s keyed on producer ids from signal 1. The shipped template uses placeholder `activityId: 'unknown'` for `cost_priors` (resolver returns 404, treated as empty by `compose_goal`) and unfiltered (org-wide aggregated) `toolRiskProfile` for `risk_priors`. `compose_goal` cross-references inline metrics from `forward_chain_producers_result` instead.
+**Impact:** Per-candidate cost/risk discrimination is unavailable; budget guard's "cheapest producer" computation falls back to aggregated/inline metrics rather than per-candidate fetches.
+**Proposed fix:** When a foreach primitive lands (umbrella F-4), expand into per-candidate metrics+risk fetch loops.
+**Origin:** iter 8 / Subagent O (`metadata.openQuestions[5]`, `metadata.limitations[5]`).
+**Affected files:** `repos/minibob/src/embedded-templates/create-shape-provider-goal.json`.
+
+#### F-26: Cycle detection inspects only the immediate parent's trace
+**Observation:** `parent_chain_lookup` fetches the immediate parent's trace (which carries `composition_chain` — the full ancestor list) but does not recursively fetch each ancestor's trace + their goal-shaped output impulses.
+**Impact:** GUARD 2 (cycle) trips only when the immediate parent's `output_impulses` contain `target_shape`; deeper ancestor cycles slip past until the depth guard (default 3) catches them. Multi-hop ancestor inspection would be N+1 problematic without a batch-resolve primitive.
+**Proposed fix:** Add a batch trace-resolve primitive to activity-api, OR accept the depth guard as the practical bound (the design.md notes depth>1 cycles are rare).
+**Origin:** iter 8 / Subagent O (`metadata.openQuestions[6]`, `metadata.limitations[6]`).
+**Affected files:** `repos/minibob/src/embedded-templates/create-shape-provider-goal.json`, `repos/metabob-activity-api/src/routes/impulses.ts`.
+
+#### F-27: `discover-by-shapes` `output_shapes` filter scope
+**Observation:** Spec §2.3 says "filter applies in any mode" but the natural use case is backward-mode-only (validator selection). The shipped implementation gates the filter to backward mode in practice. `producer_selection` callers don't currently want to filter producer outputs.
+**Impact:** Spec/implementation drift. Reconcile if/when producer-selection callers ever want to filter producer outputs.
+**Proposed fix:** Update spec §2.3 to scope the filter to backward mode, OR extend the implementation to apply it in forward mode as well when the body field is present.
+**Origin:** iter 3 / Subagent A.
+**Affected files:** `repos/metabob-activity-api/src/routes/activities.ts:3355-3499`, sibling 3 spec §2.

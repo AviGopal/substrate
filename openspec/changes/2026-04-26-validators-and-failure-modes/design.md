@@ -219,3 +219,35 @@ No new endpoints. One schema migration. One route filter.
 - **Default `confidence` for LLM semantic validators absent self-reported confidence**: 0.7 prior is a guess. Once traces accumulate we can replace with a learned prior per validator. Lean: ship 0.7, note in spec.
 - **Should the meta-activity's `learning_signal_writer` task run on validator failure as well as task failure?** Today the executor calls `recordImpulseRelevance` on both validation-failed and execution-error paths. Migrating all three sites means the meta-activity's writer task runs on three branches: success, validation-fail, execution-error. Lean: yes — the meta-activity reads the validation_result and the task outcome and dispatches the writer with the correct success flag.
 - **Validator templates as variants vs separate activities**: should the canonical pattern validator and the wildcard LLM validator be variants of one parent template, or separate activities? Variants give us Thompson Sampling between them; separate activities give clearer authoring boundaries. Lean: separate activities for now (the wildcard's `input_shapes` is structurally different); revisit once we have a third validator.
+
+## Validation findings
+
+Findings specific to this sibling spec's scope. Cross-cutting findings (lifecycle payload gaps, `vessel_resolve_call`, foreach gap) live in the umbrella `impulse-activity-loop` spec.
+
+#### F-28: `select_validator_per_shape` is an LLM format adapter, not a deterministic reshape
+**Observation:** Sibling spec §7 calls for partitioning validator candidates per produced shape (specialized vs wildcard) and dispatching the right validator per shape. The shipped `validator-dispatch.json` task 2 collapses to a mechanical LLM format adapter that converts `producer_selection_result` → `variant_selection_result` so the downstream `activity` resolver can pick up `selected.activity_id` via `extractSelectedActivityId`.
+**Impact:** Specialized/wildcard partitioning becomes a post-hoc preference baked into `producer_selection`'s ordering rather than a hard filter; multi-validator parallel dispatch is deferred (one validator picked per task entry).
+**Proposed fix:** Replace the LLM call with a deterministic `impulse_reshape` resolver (or a `variant_selection_from_producer_selection` resolver). When foreach lands (umbrella F-4), expand task 3 into per-validator parallel dispatch.
+**Origin:** iter 7 / Subagent I (`metadata.openQuestions[3]`, `metadata.limitations[0]`).
+**Affected files:** `repos/minibob/src/embedded-templates/validator-dispatch.json`.
+
+#### F-29: `failure_mode` propagation via impulse, no mid-execution trace-metadata-write endpoint
+**Observation:** Sibling spec D7 mandates `verifier_negative` failure_mode is set by the validator-dispatch meta-activity onto the parent task's `taskResult.metadata.failure_mode`. No activity-api endpoint exists today for writing trace metadata mid-execution. The shipped `validator-dispatch.json` task 4 (`propagate_failure_mode`) emits a `failure_mode_propagation` impulse instead and relies on the lifecycle subscriber merge path to surface it in the parent execution's impulse pool.
+**Impact:** Failure-mode field is propagated as an impulse rather than stamped on the trace metadata. Phase 5 (umbrella) will lift the inline path and either land an endpoint or formalise the impulse-based propagation as authoritative.
+**Proposed fix:** Either add a mid-execution trace-metadata-write endpoint, OR formalise the impulse-based propagation as the authoritative path and have the trace store consume `failure_mode_propagation` impulses on execution close.
+**Origin:** iter 7 / Subagent I (`metadata.openQuestions[4]`, task 4 description).
+**Affected files:** `repos/minibob/src/embedded-templates/validator-dispatch.json`, `repos/metabob-activity-api/src/routes/execution-traces.ts`.
+
+#### F-30: `learning_signal_write` task hardcodes `executionSucceeded: false` with empty data arrays
+**Observation:** Task 5 of `validator-dispatch.json` invokes the `learning_signal_writer` resolver with `executionSucceeded: false` and empty `allImpulseIds/loadedImpulseIds/toolCallRecords` arrays as a structurally-valid no-op. The lifecycle:task:completed payload doesn't include those fields (umbrella F-7); the resolver tolerates empty arrays and writes no rows.
+**Impact:** No learning-signal rows are written from the meta-activity path until either the lifecycle payload is extended OR the resolver is taught to fetch the per-task arrays by parent execution id. Phase 5 (umbrella) is the migration target; until then the executor's three inline `recordImpulseRelevance` call sites are still the actual write path.
+**Proposed fix:** Extend the lifecycle:task:completed payload (umbrella F-7), OR teach `learning_signal_writer` to fetch per-task tracking arrays from the parent execution by id.
+**Origin:** iter 7 / Subagent I (`metadata.openQuestions[5]`, `metadata.limitations[1]`, `[2]`).
+**Affected files:** `repos/minibob/src/embedded-templates/validator-dispatch.json`, `repos/minibob/src/resolvers/learning-signal-writer-resolver.ts`, `repos/minibob/src/activity.ts:2406, :2855`.
+
+#### F-31: `failure_mode_taxonomy` migration ran without a live-DB rehearsal of the backfill
+**Observation:** Iter 4 / Subagent C noted the `endpoint_output_shapes` backfill SQL was constructed by analogy and "not run against a live DB." A parallel concern applies to migration 091 (`failure_mode` field): the additive `option<object>` field is low risk, but no rehearsal evidence is recorded in the iteration log.
+**Impact:** Low — additive nullable field; if rejected by SurrealDB the deploy fails fast and is reverted.
+**Proposed fix:** Record a brief rehearsal note (e.g. `INFO FOR TABLE activity_execution_traces` after migration on a non-canary SurrealDB) on next iteration touching the migration.
+**Origin:** iter 3 / Subagent B, iter 4 / Subagent C (extrapolated).
+**Affected files:** `repos/metabob-activity-api/sql/migrations/091-failure-mode-taxonomy.surql`.
