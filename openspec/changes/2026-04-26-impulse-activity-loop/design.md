@@ -331,6 +331,55 @@ User steered: produce validatable chunks via subagent delegation rather than dir
 - Subagent delegation pattern validated: each chunk is independently typecheckable; main thread saves substantial context. Will continue dispatching subagents for next chunks.
 - Open: payload field naming reconciliation (`executionId` vs `parentExecutionId`) still pending. `goal_execution_paths.endpoint_output_shapes` (sibling 2 §1) is the obvious next chunk for Phase 2 completion.
 
+### Registry cleanup 11.1 — retry, halted at B-2 (admin scope)
+
+Re-attempted task 11.1 (delete shadow templates with doubly-nested record IDs) on 2026-04-26 after the JWT-rollout (B-1) finished. Re-enumerated and confirmed **8 shadow templates** with the doubly/triply-nested pattern; identical set to the original audit. The public templates listing returns 100 entries, so up to ~10 may still be hidden behind the cap (B-4 still open) — only an admin-scoped query against the database can confirm.
+
+**Format experiments — 11 variants tried against `activity:⟨activity:tpl_1776797130982_xh8ey⟩`:**
+
+| # | templateId sent                                              | Response                          |
+|---|--------------------------------------------------------------|-----------------------------------|
+| 1 | `activity:⟨activity:tpl_1776797130982_xh8ey⟩` (literal)      | 404 Template not found            |
+| 2 | `tpl_1776797130982_xh8ey`                                    | 404 Template not found            |
+| 3 | `activity:tpl_1776797130982_xh8ey`                           | 404 Template not found            |
+| 4 | (escaped-unicode, identical bytes to #1)                     | 404 Template not found            |
+| 5 | `⟨activity:tpl_1776797130982_xh8ey⟩`                         | 404 Template not found            |
+| 6 | `activity:` + backtick-wrapped inner                         | 404 Template not found            |
+| 7 | `activity:⟨activity:⟨tpl_1776797130982_xh8ey⟩⟩` (triple)     | 404 Template not found            |
+| 8 | full id wrapped in outer backticks                           | 404 Template not found            |
+| 9 | `⟨activity:⟨tpl_1776797130982_xh8ey⟩⟩`                       | 404 Template not found            |
+| 10| `activity:⟨tpl_1776797130982_xh8ey⟩` (single-wrap inner)     | 404 Template not found            |
+| 11| `activity:tpl_1776797130982_xh8ey` (= what `record::id()` returns for the shadow) | 404 Template not found |
+
+**B-3 root cause is actually B-2.** Reading `repos/metabob-activity-api/src/routes/impulses.ts:1962-2015`, the deprecate handler matches via `record::id(id) = $id AND (org_id = $orgId OR (scope = 'global' AND $isAdmin = true))`. All 8 shadow templates have `scope = 'global'` and `org_id = 'NONE'`. Confirmation probe: deprecating a *legitimate* global template (`tpl_1776797130982_xh8ey`, the non-shadow sibling — known to exist) also returned 404. Same WHERE-clause filtering. The API key under `~/.metabob/config.json` resolves to a JWT whose `role !== 'admin'` and whose `scopes` array does not include `'admin'`, so `(scope = 'global' AND $isAdmin = true)` is always false. The handler does not differentiate "row missing" from "row excluded by RBAC" in its error message — both paths return `Template not found`, which previously read as a B-3 (id-format) issue.
+
+**Format 11 (`activity:tpl_1776797130982_xh8ey`) is almost certainly the canonical inner-id form** the handler accepts; format experiments cannot prove this without admin scope, but the SurrealDB semantics are unambiguous: for a record stored as `activity:⟨activity:tpl_1776797130982_xh8ey⟩`, `record::id(id)` returns the inner string `activity:tpl_1776797130982_xh8ey`. This is the value to send once admin scope exists.
+
+**Deprecated this iteration:** none. Halted at B-2 per the task's halt rule.
+
+**Blocker status after this attempt:**
+- **B-1 JWT auth on canary replicas** — RESOLVED (no `401 Authentication required` in any of the 11 probes; auth is unanimous across the fleet).
+- **B-2 admin scope on the deprecation API key** — OPEN (this attempt's halt cause). Resolutions: (a) issue an admin-scoped JWT or admin-scoped API key for cleanup operations; (b) introduce a separate "global-template janitor" scope that the deprecate handler accepts in addition to `admin`; (c) extend the WHERE clause to differentiate "row absent" (404) from "row excluded by RBAC" (403) so future investigations can stop chasing B-3 phantoms.
+- **B-3 doubly-nested id format mismatch** — RESOLVED-IN-PRINCIPLE (the canonical form is `activity:tpl_1776797130982_xh8ey` for the example shadow; full ID set listed below). Cannot be empirically verified without B-2.
+- **B-4 public API cap at 100** — STILL OPEN (8 shadows visible; up to ~10 may be hidden because the templates listing is paginated/capped and the API key cannot iterate past the org-public window).
+
+**Shadow set (8) — canonical inner-id form for each (use these once admin scope is granted):**
+
+```
+activity:⟨Spellcheck Readme\⟩
+activity:tpl_1776797130982_xh8ey
+activity:⟨orchestrate-test-goal\⟩
+activity:tpl_1776799043142_7x457s
+activity:tpl_1776799160980_6cmeh
+activity:⟨orchestrate-refactor-goal\⟩
+activity:⟨activity:goal_processing_standard\⟩    # triply-nested: outer record::id is itself a wrapped record id
+activity:⟨Dashboard Specification Validator\⟩
+```
+
+(Each is the value `record::id(activity:⟨activity:<name>⟩)` returns — i.e., strip the outermost `activity:⟨...⟩` wrapper from the doubly-nested form.)
+
+**Recommended next step:** unblock B-2 by either provisioning an admin scope on the cleanup API key, or by adding a controlled `template_admin` scope check to the deprecate handler. After that, replay this list with format-11 inputs and verify each succeeds (the audit row in `upkeep_audit_log` will confirm).
+
 ## Post-Deploy Observations
 
 Post-deploy validation of v1.12.0 on canary surfaced two bugs in `repos/metabob-activity-api/src/routes/activities.ts`: (1) the `relevance_feedback` audit row is silently dropped when optional fields are absent, because SurrealDB 3.x rejects `NULL` for `none | string` typed fields — the fix is to pass `undefined` instead of `null` so the driver omits the key and the DB sees `NONE`; (2) the relevance-feedback route is missing its auth middleware, causing a 500 Hono lifecycle crash on unauthenticated requests rather than the expected 401. Additionally, the embedding backfill job has not run: 0 of 3,051 activities have embeddings populated, so semantic search in the pipeline returns no results until the job is executed.
