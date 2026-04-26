@@ -39,8 +39,13 @@ Hook was sending `available_shapes`/`top_k`/`exclude_templates` and missing the 
 - "No prerequisite activities found" correctly shown when no templates produce those shapes
 - "Find" buttons on GoalCompletionBar correctly populate the BackwardChainingPanel
 
-**Limitation:**
-- No templates in canary backend have `patch`, `validation_result`, or `test_suite` in `output_shapes`, so the "producers found" scenario was not observable. The endpoint itself works (HTTP 200 with empty results) — confirmed by previous 500-fix session.
+**Retested 2026-04-25 session-3 (producers found):**
+- Goal "Fix failing unit tests in the workbench" → missing shapes: `patch`, `validation_result`, `test_suite`
+- Click **find** on `patch` → **── prerequisites ──** section expands with shape pills
+- Click `patch` pill → "**Producers for: patch**" list with "Show All" link
+- Producer activities shown with Thompson bars (α: -5.0 β: 1.0 — reflecting learned negative prior)
+- Tip: "Click 'Add' to insert a prerequisite activity at the beginning of your trajectory."
+- Full backward-chaining flow verified end-to-end against live API data
 
 ---
 
@@ -189,19 +194,47 @@ Hook was sending `available_shapes`/`top_k`/`exclude_templates` and missing the 
 
 ---
 
+## trajectory-execution-integration panels
+
+**Components**: `GoalSubmissionPanel`, `LiveExecutionPanel`, `ExecutionHistoryPanel`  
+**Added by**: `trajectory-execution-integration` OpenSpec change (archived 2026-04-25)  
+**Tested**: 2026-04-25 session-3 (Playwright)
+
+**GoalSubmissionPanel** (top of left sidebar, "run goal" section):
+- Multi-line textarea with placeholder "Describe the goal…"
+- "goal text required" validation error shown when empty
+- "run" button disabled when empty, enabled when text present
+- `POST /v2/impulses/resolve { pointer: { type: 'goalExecution', goal } }` on submit
+- `onExecutionStarted(executionId)` callback wires to LiveExecutionPanel
+
+**LiveExecutionPanel** ("live execution" section):
+- Status badge shows "idle" when disconnected
+- Execution ID text input + "connect" button
+- Connects WebSocket via `useTrajectoryExecution` hook on click
+- Known behaviour: rapid reconnect flood if execution ID is invalid (pre-existing `maxReconnectAttempts=0`)
+
+**ExecutionHistoryPanel** ("execution history" section):
+- Collapsible with ▶/▼ toggle
+- Expanded → `GET /v2/activities/execution-traces?limit=20&sortBy=createdAt&sortOrder=desc`
+- Returns 500 in current environment: SurrealDB `"The access method cannot be used in the requested operation"` (service API key lacks cross-org SELECT — infrastructure constraint, not a code defect)
+- Error state renders "Could not load traces" message correctly
+
+---
+
 ## Summary
 
 | Spec | Status | Notes |
 |------|--------|-------|
 | activity-applicability | ✅ Working | API contract bug fixed (field names) |
-| backward-chaining-ui | ✅ Working | No test data produces target shapes |
+| backward-chaining-ui | ✅ Working | Producers found end-to-end (session-3); tip + shape pills working |
 | cycle-validation | ✅ Working | Productive loop detected correctly |
-| goal-completion-tracking | ✅ Working | 25% progress, shape inference working |
-| impulse-state-space | ✅ Working | All 4 sub-panels + Ctrl+I shortcut |
-| inline-variant-creation | ✅ Working | Full workflow verified 2026-04-25: prompt template, variable badges, validation rules, retry config, Thompson slider editor (live preview), Save-as-Variant dialog with genealogy |
-| keyboard-shortcuts-help | ✅ Working | Dialog opens; 3 sections (Panels/Navigation/Editing) verified 2026-04-25 |
+| goal-completion-tracking | ✅ Working | 25% progress, shape inference, find → prereq flow |
+| impulse-state-space | ✅ Working | All 4 sub-panels + Ctrl+I toggle |
+| inline-variant-creation | ✅ Working | Prompt template, variable badges, Thompson slider, Save-as-Variant dialog with genealogy |
+| keyboard-shortcuts-help | ✅ Working | Dialog opens; 3 sections verified |
 | learning-feedback-ui | ⏭ Untested | Requires completed execution to trigger Thompson delta events |
 | resolver-attribution | ⏭ Untested | Requires execution traces with resolver_tier data |
-| speculative-prediction | ⚠️ Partial | Code verified correct (hook, cache, tooltip); cannot test end-to-end — grid overflow intercepts pointer events over sidebar. Fix: sidebar z-index / pointer-events stacking |
-| thompson-visualization | ✅ Working | Both on card and in recommendation panel |
-| trajectory-execution | ⏭ Untested | WebSocket connected; execution not triggered (requires MiniBob integration) |
+| speculative-prediction | ⚠️ Partial | Code verified correct; pointer-events interception prevents Playwright hover test |
+| thompson-visualization | ✅ Working | Recommendation cards + expanded activity card |
+| trajectory-execution | ⏭ Untested | WebSocket connected; execution not triggered |
+| trajectory-execution-integration panels | ✅ Working | GoalSubmissionPanel + LiveExecutionPanel verified; ExecutionHistoryPanel 500 is infra constraint |

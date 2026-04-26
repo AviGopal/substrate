@@ -1,10 +1,7 @@
-# live-execution-panel Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change trajectory-execution-integration. Update Purpose after archive.
-## Requirements
 ### Requirement: Execution ID connection panel
-The trajectory editor SHALL provide a "Live Execution" panel containing: an executionId text input field, a "Connect" button, and a connection status badge (idle / connecting / live / completed / failed). This panel SHALL be rendered inside the right-side live execution Sheet (see `live-execution-split-view` capability), NOT in the left sidebar scroll area. The executionId MAY also be supplied via `?executionId=` URL query param, in which case the panel SHALL auto-connect on page load. When `activeExecutionId` changes in `trajectoryStore` (e.g., from execution history "load" action), the panel SHALL reflect the new executionId in the input field and auto-connect.
+The trajectory editor SHALL provide a "Live Execution" panel containing: an executionId text input field, a "Connect" button, and a connection status badge (idle / connecting / live / completed / failed). This panel SHALL be rendered inside the right-side live execution Sheet (see `live-execution-split-view` capability), NOT in the left sidebar scroll area. The executionId MAY also be supplied via `?executionId=` URL query param, in which case the panel SHALL auto-connect on page load.
 
 #### Scenario: Manual connect by executionId
 - **WHEN** the user enters an executionId and clicks Connect
@@ -13,10 +10,6 @@ The trajectory editor SHALL provide a "Live Execution" panel containing: an exec
 #### Scenario: Auto-connect from URL param
 - **WHEN** the page loads with `?executionId=exec_xxx` in the URL
 - **THEN** the panel auto-connects without user interaction and shows "live" badge
-
-#### Scenario: Auto-connect when store activeExecutionId is set externally
-- **WHEN** `trajectoryStore.activeExecutionId` is set (e.g., via execution history load)
-- **THEN** the panel populates the executionId input with the new value and auto-connects
 
 #### Scenario: Connection failure
 - **WHEN** the WebSocket cannot authenticate or the executionId is not found
@@ -52,6 +45,8 @@ The live execution panel SHALL support explicit disconnect (button) and automati
 - **WHEN** the WebSocket drops due to a transient network error
 - **THEN** the panel reconnects with exponential back-off and replays missed events via the `lastSeenSequence` catchup header
 
+## ADDED Requirements
+
 ### Requirement: Per-task impulse resolution timeline in LiveExecutionPanel
 While a live execution is connected, `LiveExecutionPanel` SHALL display a per-task resolution timeline sourced from `taskResolutions` in trajectoryStore. For each task that has received at least one `impulse.resolved` event, the panel SHALL render an inline sub-list showing each resolution event as: shape badge (color-coded by tier), resolver name, and latency if present.
 
@@ -66,13 +61,3 @@ While a live execution is connected, `LiveExecutionPanel` SHALL display a per-ta
 #### Scenario: Resolution events appear in arrival order
 - **WHEN** three `impulse.resolved` events arrive for the same taskId at t=100ms, t=200ms, t=300ms
 - **THEN** the sub-rows are rendered in that order (oldest first, newest at bottom)
-
-### Requirement: No-events fallback when execution produces no task events within 30 seconds
-See `live-execution-no-events-fallback` capability spec for full requirement and scenarios.
-
-The `LiveExecutionPanel` SHALL integrate the no-events fallback timer and notice as defined in that capability. The notice SHALL render in place of (or above) the empty resolution timeline area.
-
-#### Scenario: Fallback notice appears in panel after 30s silence
-- **WHEN** `isLiveConnected` is `true` and `taskResolutions.size === 0` for 30 consecutive seconds
-- **THEN** the panel body shows the "No task events received" notice instead of an empty timeline
-
