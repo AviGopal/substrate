@@ -139,12 +139,12 @@ Cross-cutting findings surfaced during implementation iterations 1–15. Finding
 **Origin:** iter 1, iter 2, iter 3 / surfaced in tasks.md §1.3.
 **Affected files:** `repos/minibob/src/activity.ts:1249-1273`, `openspec/changes/2026-04-26-impulse-binding-selection-layer/specs/lifecycle-task-prebinding/spec.md`.
 
-#### F-2: Lifecycle payload missing `parent_goal_text`
-**Observation:** `lifecycle:task:preBinding` carries `taskId/templateId/inputShapes/currentImpulseIds/missingShapes/variables/executionId` but not the parent's goal text. The `escalate_unbindable` task in `slot-binding.json` has to forward `{{lifecycle}}` (a JSON blob) and rely on the dispatched `compose_goal` LLM to parse it back out, with `<no parent goal text available>` as the fallback framing.
-**Impact:** Recursive sub-goals composed by `create-shape-provider-goal` lose semantic anchoring to the parent goal; weaker signal for the LLM composer.
-**Proposed fix:** Extend the lifecycle dispatcher to resolve the parent execution's input goal impulse and embed its content in the payload, OR add a precursor task that fetches it via impulse-resolve.
-**Origin:** iter 13 / Subagent Q (slot-binding `_parent_goal_text_TODO`).
-**Affected files:** `repos/minibob/src/activity.ts:1249-1273`, `repos/minibob/src/embedded-templates/slot-binding.json`.
+#### F-2: Lifecycle payload missing `parent_goal_text` — RESOLVED 2026-04-26
+**Observation:** `lifecycle:task:preBinding` carried `taskId/templateId/inputShapes/currentImpulseIds/missingShapes/variables/executionId` but not the parent's goal text. The `escalate_unbindable` task in `slot-binding.json` had to forward `{{lifecycle}}` (a JSON blob) and rely on the dispatched `compose_goal` LLM to parse it back out, with `<no parent goal text available>` as the fallback framing.
+**Impact:** Recursive sub-goals composed by `create-shape-provider-goal` lost semantic anchoring to the parent goal; weaker signal for the LLM composer.
+**Resolution:** Extended both `lifecycle:task:preBinding` emit sites in `repos/minibob/src/activity.ts` (resolver-path at `:4438` and LLM-only path at `:5004`) with a `parentGoalText` field sourced from `this.currentGoalContext` (populated by `execute()` from `ExecuteOptions.goalContext` or `reason`). Field is `string | undefined` — `undefined` when the executor was invoked without goal context. Sibling spec `lifecycle-task-prebinding/spec.md` updated to declare the contract with two new scenarios (defined and undefined cases). `slot-binding.json::escalate_unbindable` now forwards `parent_goal_text: "{{lifecycle.parentGoalText}}"` instead of an empty string. When `parentGoalText` is undefined the dotted-path interpolator leaves the literal placeholder per its missing-segment semantics — `compose_goal`'s defensive prompt continues to fall back to `<no parent goal text available>`, equivalent UX to the prior empty-string default but with the channel now wired end-to-end so a goal-aware caller (e.g. goal-processor) populates it correctly.
+**Origin:** iter 13 / Subagent Q (slot-binding `_parent_goal_text_TODO`); resolved iter 16.
+**Affected files:** `repos/minibob/src/activity.ts:4438, :5004`, `repos/minibob/src/embedded-templates/slot-binding.json`, `openspec/changes/2026-04-26-impulse-binding-selection-layer/specs/lifecycle-task-prebinding/spec.md`.
 
 #### F-3: Lifecycle payload doesn't carry `composition_chain` depth
 **Observation:** The lifecycle dispatcher doesn't thread `composition_chain` through the payload. The `escalate_unbindable` task hardcodes `parent_depth: 0` for the dispatched `create-shape-provider-goal` invocation.

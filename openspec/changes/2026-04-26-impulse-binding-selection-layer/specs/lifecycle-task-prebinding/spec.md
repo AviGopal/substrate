@@ -12,7 +12,7 @@
 - **THEN** the executor does NOT emit `lifecycle:task:preBinding`
 
 ### Requirement: Emission payload includes binding context
-The `lifecycle:task:preBinding` payload SHALL include `taskId: string`, `templateId: string`, `inputShapes: string[]`, `currentImpulseIds: string[]`, `missingShapes: string[]`, `variables: Record<string, unknown>`, and `executionId: string`. `executionId` is the id of the currently-executing activity (the emitter), NOT a parent-of-emitter id; subscriber meta-activities use it to correlate their nested execution with the parent trace via `parent_execution_id`/`composition_chain`. `missingShapes` SHALL be computed as `inputShapes` minus the set of shapes present in the current impulse pool.
+The `lifecycle:task:preBinding` payload SHALL include `taskId: string`, `templateId: string`, `inputShapes: string[]`, `currentImpulseIds: string[]`, `missingShapes: string[]`, `variables: Record<string, unknown>`, `executionId: string`, and `parentGoalText: string | undefined`. `executionId` is the id of the currently-executing activity (the emitter), NOT a parent-of-emitter id; subscriber meta-activities use it to correlate their nested execution with the parent trace via `parent_execution_id`/`composition_chain`. `missingShapes` SHALL be computed as `inputShapes` minus the set of shapes present in the current impulse pool. `parentGoalText` SHALL be sourced from the executing activity's goal context (the value passed via `ExecuteOptions.goalContext`, falling back to `reason`); when neither is available the field SHALL be `undefined`. Subscribers SHALL tolerate `undefined` explicitly (e.g. by falling back to a documented framing string).
 
 #### Scenario: Payload reports missing shapes
 - **WHEN** a task declares `inputShapes: ["goal", "errorLog"]` and the pool contains an impulse with shape `goal` but none with shape `errorLog`
@@ -21,6 +21,14 @@ The `lifecycle:task:preBinding` payload SHALL include `taskId: string`, `templat
 #### Scenario: Payload reports empty missingShapes when all shapes are satisfied
 - **WHEN** the impulse pool already contains all declared `inputShapes`
 - **THEN** the payload includes `missingShapes: []` and emission still occurs
+
+#### Scenario: Payload carries parentGoalText when executor has goal context
+- **WHEN** the executor was invoked via `execute({ template, variables, goalContext: "fix the failing tests" })` and a task with non-empty `inputShapes` enters execution
+- **THEN** the emitted payload includes `parentGoalText: "fix the failing tests"` so subscribers (e.g. `slot-binding`'s `escalate_unbindable` task) can forward it to a recursively-dispatched activity
+
+#### Scenario: Payload reports parentGoalText as undefined when executor lacks goal context
+- **WHEN** the executor was invoked without `goalContext` or `reason` (e.g. a direct `execute({ template, variables })` call) and a task with non-empty `inputShapes` enters execution
+- **THEN** the emitted payload's `parentGoalText` is `undefined`; subscriber templates that interpolate `{{lifecycle.parentGoalText}}` will see the placeholder left unchanged (the dotted-path interpolator preserves placeholders for missing segments per `repos/minibob/src/activity.ts` interpolate semantics), and downstream LLM tasks SHALL fall back to a documented framing such as `<no parent goal text available>` when their input matches the literal placeholder or is otherwise empty
 
 ### Requirement: Subscriber outputs are merged into the parent impulse pool
 Output impulses produced by activities subscribed to `lifecycle:task:preBinding` SHALL be merged into the parent task's impulse pool before `canExecuteTask` is invoked. Merge behaviour SHALL match the existing `lifecycle:activity:preExecution` merge path: dedupe by impulse id, append to the shared array.
