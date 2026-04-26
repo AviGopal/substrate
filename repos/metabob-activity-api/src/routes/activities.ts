@@ -41,6 +41,7 @@ import {
   getVariantFamily,
   getVariantScores,
   buildVariantTree,
+  normalizeActivityId,
   type ParadigmActivity,
   type ParadigmExecution,
   type ActivityScore,
@@ -49,6 +50,10 @@ import {
   type VariantTreeNode,
 } from '../db/paradigm';
 import { mergeByRRF } from '../utils/rrf';
+import {
+  runDiscoverByShapes,
+  validateDiscoverByShapesInput,
+} from '../services/discover-by-shapes';
 
 /**
  * Thompson Sampling Beta distribution sampler.
@@ -120,6 +125,21 @@ const app = new Hono();
 const TEMPLATE_CACHE_TTL = 3600; // 1 hour in seconds
 const CACHE_KEY_PREFIX = 'activity:template:';
 const CACHE_LIST_KEY = 'activity:templates:list';
+
+/**
+ * B-4: parse the `offset` query param for paginated template listing.
+ * - Non-numeric, negative, or NaN values clamp to 0.
+ * - Floats truncate to int.
+ * - Positive integers pass through.
+ *
+ * Exported for unit tests in `routes/templates-pagination.test.ts`.
+ */
+export function parsePaginationOffset(raw: string | undefined | null): number {
+  if (raw === undefined || raw === null || raw === '') return 0;
+  const parsed = parseInt(raw, 10);
+  if (isNaN(parsed) || parsed < 0) return 0;
+  return parsed;
+}
 
 // =============================================================================
 // ActivityTemplate Interface (Canonical Field Names)
@@ -514,7 +534,8 @@ async function listAllTemplatesFromDB(
   projectId?: string | null,
   jwtToken?: string | null,
   scopeFilter?: string | null,
-  executionType?: string | null // T8: Allow filtering by execution_type
+  executionType?: string | null, // T8: Allow filtering by execution_type
+  offset: number = 0 // B-4: Pagination offset (operator audit / shadow-template enumeration)
 ): Promise<ActivityTemplate[]> {
   let query: string;
   let params: Record<string, any>;
@@ -527,7 +548,7 @@ async function listAllTemplatesFromDB(
     // The PERMISSIONS clause on activity_template uses $auth.org_id to filter
     // We just need to query all templates - SurrealDB will filter automatically
     let whereClause = '';
-    params = { limit, execution_type: effectiveExecutionType };
+    params = { limit, offset, execution_type: effectiveExecutionType };
 
     // Apply scope filter if specified
     if (scopeFilter) {
@@ -546,16 +567,17 @@ async function listAllTemplatesFromDB(
       AND (retired = false OR retired IS NONE)
       ${whereClause ? 'AND ' + whereClause.replace('WHERE ', '') : ''}
       ORDER BY created_at DESC
-      LIMIT $limit
+      LIMIT $limit START $offset
     `;
 
-    logger.debug('Fetching activities with JWT auth (RBAC enforced)', { limit, scopeFilter, executionType: effectiveExecutionType });
+    logger.debug('Fetching activities with JWT auth (RBAC enforced)', { limit, offset, scopeFilter, executionType: effectiveExecutionType });
     const result = await queryWithAuth<ActivityTemplate>(jwtToken, query, params);
 
     logger.info('SurrealDB templates fetched (RBAC)', {
       count: result.length,
       authMethod: 'jwt',
-      scopeFilter
+      scopeFilter,
+      offset,
     });
 
     // Enrich templates with metrics before returning
@@ -588,9 +610,9 @@ async function listAllTemplatesFromDB(
           OR (scope = 'project' AND project_id = $project_id)
         ) ${scopeClause}
         ORDER BY created_at DESC
-        LIMIT $limit
+        LIMIT $limit START $offset
       `;
-      params = { limit, org_id: orgId, project_id: projectId, execution_type: effectiveExecutionType };
+      params = { limit, offset, org_id: orgId, project_id: projectId, execution_type: effectiveExecutionType };
     } else {
       // User has org_id but no project_id: return global + org activities
       query = `
@@ -603,9 +625,9 @@ async function listAllTemplatesFromDB(
           OR (scope = 'org' AND org_id = $org_id)
         ) ${scopeClause}
         ORDER BY created_at DESC
-        LIMIT $limit
+        LIMIT $limit START $offset
       `;
-      params = { limit, org_id: orgId, execution_type: effectiveExecutionType };
+      params = { limit, offset, org_id: orgId, execution_type: effectiveExecutionType };
     }
   } else {
     // No org_id: return only global activities
@@ -618,24 +640,130 @@ async function listAllTemplatesFromDB(
         OR scope = 'global'
       ) ${scopeClause}
       ORDER BY created_at DESC
-      LIMIT $limit
+      LIMIT $limit START $offset
     `;
-    params = { limit, execution_type: effectiveExecutionType };
+    params = { limit, offset, execution_type: effectiveExecutionType };
   }
 
   logger.debug('Fetching templates from SurrealDB', { query, params });
   const result = await surrealDB.query<ActivityTemplate>(query, params);
-  
-  logger.info('SurrealDB templates fetched', { 
+
+  logger.info('SurrealDB templates fetched', {
     count: result.length,
     orgId,
-    projectId
+    projectId,
+    offset,
   });
 
   // Enrich templates with metrics before returning
   const enrichedTemplates = await enrichTemplatesWithMetrics(result);
   logger.info('Templates enriched with metrics', { enrichedCount: enrichedTemplates.length });
   return enrichedTemplates;
+}
+
+/**
+ * B-4: Count templates visible to caller, respecting the same RBAC + scope/exec-type
+ * filter as listAllTemplatesFromDB. Used by GET /v2/activities/templates to return
+ * a `total` field so paginating callers (operator audit) know when they've walked
+ * the full set.
+ *
+ * Mirrors listAllTemplatesFromDB's RBAC branching:
+ * - jwtToken provided → SurrealDB PERMISSIONS enforce $auth.org_id automatically
+ * - no jwtToken → application-level WHERE org_id = $org_id (legacy / API-key path)
+ */
+async function countAllTemplatesFromDB(
+  orgId?: string | null,
+  projectId?: string | null,
+  jwtToken?: string | null,
+  scopeFilter?: string | null,
+  executionType?: string | null,
+): Promise<number> {
+  const effectiveExecutionType = executionType || 'template';
+
+  let query: string;
+  let params: Record<string, any>;
+
+  if (jwtToken) {
+    // RBAC path — SurrealDB filters by $auth.org_id via PERMISSIONS
+    let whereClause = '';
+    params = { execution_type: effectiveExecutionType };
+
+    if (scopeFilter) {
+      if (scopeFilter === 'global') {
+        whereClause = 'AND (scope IS NULL OR scope = "global")';
+      } else if (scopeFilter === 'org') {
+        whereClause = 'AND scope = "org"';
+      } else if (scopeFilter === 'project') {
+        whereClause = 'AND scope = "project"';
+      }
+    }
+
+    query = `
+      SELECT count() AS total FROM activity
+      WHERE execution_type = $execution_type
+      AND (retired = false OR retired IS NONE)
+      ${whereClause}
+      GROUP ALL
+    `;
+
+    const result = await queryWithAuth<{ total: number }>(jwtToken, query, params);
+    return (result[0] as any)?.total ?? 0;
+  }
+
+  // Legacy path — application-level org/project filtering
+  let scopeClause = '';
+  if (scopeFilter === 'global') {
+    scopeClause = 'AND (scope IS NULL OR scope = "global")';
+  } else if (scopeFilter === 'org') {
+    scopeClause = 'AND scope = "org"';
+  } else if (scopeFilter === 'project') {
+    scopeClause = 'AND scope = "project"';
+  }
+
+  if (orgId) {
+    if (projectId) {
+      query = `
+        SELECT count() AS total FROM activity
+        WHERE execution_type = $execution_type
+        AND (retired = false OR retired IS NONE)
+        AND (
+          (scope = 'global' AND public = true)
+          OR (scope = 'org' AND org_id = $org_id)
+          OR (scope = 'project' AND project_id = $project_id)
+        ) ${scopeClause}
+        GROUP ALL
+      `;
+      params = { org_id: orgId, project_id: projectId, execution_type: effectiveExecutionType };
+    } else {
+      query = `
+        SELECT count() AS total FROM activity
+        WHERE execution_type = $execution_type
+        AND (retired = false OR retired IS NONE)
+        AND (
+          scope IS NULL
+          OR scope = 'global'
+          OR (scope = 'org' AND org_id = $org_id)
+        ) ${scopeClause}
+        GROUP ALL
+      `;
+      params = { org_id: orgId, execution_type: effectiveExecutionType };
+    }
+  } else {
+    query = `
+      SELECT count() AS total FROM activity
+      WHERE execution_type = $execution_type
+      AND (retired = false OR retired IS NONE)
+      AND (
+        scope IS NULL
+        OR scope = 'global'
+      ) ${scopeClause}
+      GROUP ALL
+    `;
+    params = { execution_type: effectiveExecutionType };
+  }
+
+  const result = await surrealDB.query<{ total: number }>(query, params);
+  return (result[0] as any)?.total ?? 0;
 }
 
 /**
@@ -1178,11 +1306,20 @@ app.get('/templates', async (c) => {
     }
     limit = Math.min(limit, 100);
 
+    // B-4: pagination offset for operator audit / shadow-template enumeration.
+    // Limit is still capped at 100/request — operators iterate via offset.
+    const offsetStr = c.req.query('offset') || '0';
+    const offset = parsePaginationOffset(offsetStr);
+    // B-4: when paginating (offset > 0) we bypass Redis cache since the cache
+    // holds the top-N list under one shared key; mid-page slices must hit DB.
+    const paginating = offset > 0;
+
     logger.info('GET /v2/activities/templates', {
       category,
       scopeFilter,
       executionType,
       limit,
+      offset,
       orgId,
       projectId,
       authMethod: useRbacJwtQuery ? 'jwt' : (useJwtAuth ? 'apikey' : 'session'),
@@ -1190,8 +1327,11 @@ app.get('/templates', async (c) => {
 
     // CACHE-ASIDE PATTERN
     // Step 1: Check Redis cache for template list
+    // B-4: paginated requests (offset > 0) bypass the cache because the cache
+    // holds only the top window populated on a previous limit*2 prefetch — it
+    // can't satisfy mid-page slices and would silently truncate operator audits.
     const redis = RedisClient.getInstance();
-    const templateIdsSet = await redis.smembers(CACHE_LIST_KEY);
+    const templateIdsSet = paginating ? [] : await redis.smembers(CACHE_LIST_KEY);
 
     let templates: ActivityTemplate[] = [];
     let cacheHit = false;
@@ -1244,19 +1384,25 @@ app.get('/templates', async (c) => {
           // JWTs are intentionally NOT passed here — they'd trip the
           // "access method cannot be used" error. Multi-tenant filtering for those
           // callers is enforced application-side via orgId/projectId below.
+          // B-4: when paginating, request exactly `limit` rows starting at
+          // `offset`. For un-paginated requests we keep the existing limit*2
+          // prefetch (used by the cache-population path).
           const dbTemplates = await listAllTemplatesFromDB(
-            limit * 2,
+            paginating ? limit : limit * 2,
             orgId,
             projectId,
             useRbacJwtQuery ? (jwtAuth?.jwtToken || null) : null,
             scopeFilter,
-            executionType // T8: Pass execution_type filter
+            executionType, // T8: Pass execution_type filter
+            offset
           );
 
           // Populate Redis cache only when application-level filtering produced
-          // the result set (legacy path). RBAC-filtered results are per-$auth and
-          // would leak isolation if cached under the shared list key.
-          if (dbTemplates.length > 0 && !useRbacJwtQuery) {
+          // the result set (legacy path) AND we're not paginating (paginated
+          // slices are mid-page and would corrupt the cache's top-N invariant).
+          // RBAC-filtered results are per-$auth and would leak isolation under
+          // the shared list key.
+          if (dbTemplates.length > 0 && !useRbacJwtQuery && !paginating) {
             const cachePromises: Promise<any>[] = [];
 
             for (const template of dbTemplates) {
@@ -1336,9 +1482,31 @@ app.get('/templates', async (c) => {
     logger.debug('Template enrichment point reached', { count: templates.length });
     logger.info('Templates enriched with metrics', { templatesWithMetrics: templates.filter(t => t.metrics).length });
 
+    // B-4: query a real total count (respects same RBAC + scope/exec-type filter
+    // as the list query) so paginating callers know when they've walked the full
+    // visible set. category is filtered application-side; reflect that in total.
+    let total: number;
+    try {
+      total = await countAllTemplatesFromDB(
+        orgId,
+        projectId,
+        useRbacJwtQuery ? (jwtAuth?.jwtToken || null) : null,
+        scopeFilter,
+        executionType,
+      );
+    } catch (countErr: any) {
+      // Defensive: total is informational; never fail the list response on count failure.
+      logger.warn('Template count query failed; falling back to page-size total', {
+        error: countErr?.message,
+      });
+      total = templates.length + offset;
+    }
+
     return c.json({
       templates,
-      total: templates.length,
+      total,
+      limit,
+      offset,
     });
 
   } catch (error: any) {
@@ -1771,6 +1939,14 @@ app.post('/executions', async (c) => {
     // - Subsequent executions: ON DUPLICATE KEY UPDATE increments counters atomically
     // - UNIQUE index on variant_id triggers duplicate detection
     // - No race conditions, single atomic operation aligned with SurrealDB 3.0
+    //
+    // Normalize variant_id to plain form (strip `activity:` prefix and `⟨...⟩`
+    // brackets) BEFORE the INSERT. The UNIQUE index on `variant_id` is plain
+    // string equality, so the wrapped form `activity:⟨name⟩` and the plain
+    // `name` form land in DIFFERENT rows — splitting α/β across two records
+    // and stalling Thompson Sampling. Mirrors `resolveTemplateIdsForUpdate`
+    // in execution-traces.ts.
+    const normalizedVariantId = normalizeActivityId(activityIdFromRequest);
     const upsertMetricsQuery = `
       INSERT INTO variant_performance_metrics {
         variant_id: $variant_id,
@@ -1804,7 +1980,7 @@ app.post('/executions', async (c) => {
     `;
 
     const metricsResult = await surrealDB.query(upsertMetricsQuery, {
-      variant_id: activityIdFromRequest,
+      variant_id: normalizedVariantId,
       org_id: orgId,
       success_delta,
       failure_delta,
@@ -3367,173 +3543,28 @@ app.post('/discover-by-shapes', async (c) => {
   try {
     const body = await c.req.json();
     // output_shapes: optional additive filter on backward mode — see OpenSpec change 2026-04-26-validators-and-failure-modes.
-    const { required_shapes, mode = 'forward', limit = 10, current_shapes = [], output_shapes = [] } = body;
+    const input = {
+      required_shapes: body.required_shapes,
+      mode: body.mode ?? 'forward',
+      limit: body.limit ?? 10,
+      current_shapes: body.current_shapes ?? [],
+      output_shapes: body.output_shapes ?? [],
+      predecessor_activity_id: body.predecessor_activity_id,
+    };
 
-    if (!required_shapes || !Array.isArray(required_shapes) || required_shapes.length === 0) {
+    const validationError = validateDiscoverByShapesInput(input);
+    if (validationError) {
       return c.json({
-        error: 'Validation failed',
-        message: 'required_shapes must be a non-empty array',
+        error: validationError.error,
+        message: validationError.message,
       }, 400);
     }
 
-    if (!['forward', 'backward', 'candidates_with_scores'].includes(mode)) {
-      return c.json({
-        error: 'Validation failed',
-        message: 'mode must be one of "forward", "backward", or "candidates_with_scores"',
-      }, 400);
-    }
-
-    // candidates_with_scores treats the query as forward mode (find producers)
-    // and augments each result with composition_score from activity_composition_graph.
-    // See OpenSpec change 2026-04-26-impulse-binding-selection-layer.
-    const predecessorActivityId = body.predecessor_activity_id;
-    const queryMode = mode === 'candidates_with_scores' ? 'forward' : mode;
-
-    logger.info('Discovering activities by shapes', {
-      required_shapes,
-      mode,
-      current_shapes,
-      limit,
-    });
-
-    let query: string;
-    let params: any;
-
-    if (queryMode === 'forward') {
-      // Forward mode: Find activities that PRODUCE the required shapes
-      // (backward chaining in trajectory editor - finding prerequisites)
-      query = `
-        SELECT * FROM activity
-        WHERE output_shapes CONTAINSANY $required_shapes
-          AND (retired = false OR retired IS NONE)
-        ORDER BY created_at DESC
-        LIMIT $limit
-      `;
-      params = { required_shapes, limit };
-    } else {
-      // Backward mode: Find activities that CONSUME the required shapes
-      // (forward chaining - finding next steps given current shapes)
-      // Optional additive filter on output_shapes — see OpenSpec change 2026-04-26-validators-and-failure-modes.
-      const outputFilterClause = output_shapes.length > 0
-        ? ' AND output_shapes CONTAINSANY $output_shapes_filter'
-        : '';
-      if (current_shapes.length > 0) {
-        query = `
-          SELECT * FROM activity
-          WHERE input_shapes CONTAINSANY $required_shapes${outputFilterClause}
-            AND (retired = false OR retired IS NONE)
-          ORDER BY created_at DESC
-          LIMIT $limit
-        `;
-        params = { required_shapes, current_shapes, limit };
-      } else {
-        query = `
-          SELECT * FROM activity
-          WHERE input_shapes CONTAINSANY $required_shapes${outputFilterClause}
-            AND (retired = false OR retired IS NONE)
-          ORDER BY created_at DESC
-          LIMIT $limit
-        `;
-        params = { required_shapes, limit };
-      }
-      if (output_shapes.length > 0) {
-        params.output_shapes_filter = output_shapes;
-      }
-    }
-
-    const activities = await surrealDB.query(query, params);
-
-    // Get Thompson Sampling scores for each activity
-    const activitiesWithScores = await Promise.all(
-      (activities || []).map(async (activity: any) => {
-        try {
-          const scoresQuery = `
-            SELECT * FROM activity_metrics
-            WHERE activity = $activity_id
-            LIMIT 1
-          `;
-          const scores = await surrealDB.query(scoresQuery, {
-            activity_id: activity.id,
-          });
-
-          const score = scores && scores.length > 0 ? scores[0] : null;
-
-          return {
-            ...activity,
-            metrics: score ? {
-              total_executions: score.total_executions || 0,
-              successful_executions: score.successful_executions || 0,
-              success_rate: score.success_rate || 0,
-              thompson_alpha: score.alpha || 1,
-              thompson_beta: score.beta || 1,
-              confidence: (score.alpha || 1) / ((score.alpha || 1) + (score.beta || 1)),
-            } : {
-              total_executions: 0,
-              successful_executions: 0,
-              success_rate: 0,
-              thompson_alpha: 1,
-              thompson_beta: 1,
-              confidence: 0.5,
-            },
-          };
-        } catch (error) {
-          logger.warn('Failed to fetch metrics for activity', {
-            activity_id: activity.id,
-            error: error instanceof Error ? error.message : String(error),
-          });
-          return activity;
-        }
-      })
-    );
-
-    // Transform to legacy format for compatibility
-    const legacyActivities = activitiesWithScores.map(transformToLegacyTemplate);
-
-    // Augment each result with composition_score for candidates_with_scores mode.
-    // Pulls success/execution counts from activity_composition_graph and produces
-    // smoothed Beta(α, β) parameters consumable by Thompson Sampling on the
-    // resolver side. Failures are non-fatal (composition_score: null).
-    const finalActivities = mode === 'candidates_with_scores'
-      ? await Promise.all(
-          legacyActivities.map(async (legacyActivity: any, idx: number) => {
-            const sourceActivity: any = activitiesWithScores[idx];
-            try {
-              const compQuery = predecessorActivityId
-                ? `SELECT success_count, execution_count FROM activity_composition_graph WHERE parent_activity_id = $predecessor_activity_id AND child_activity_id = $activity_id LIMIT 1`
-                : `SELECT math::sum(success_count) AS success_count, math::sum(execution_count) AS execution_count FROM activity_composition_graph WHERE child_activity_id = $activity_id GROUP ALL`;
-              const compParams: Record<string, unknown> = predecessorActivityId
-                ? { predecessor_activity_id: predecessorActivityId, activity_id: sourceActivity.id }
-                : { activity_id: sourceActivity.id };
-              const compRows: any = await surrealDB.query(compQuery, compParams);
-              const row = compRows && compRows.length > 0 ? compRows[0] : null;
-              const composition_score = row && (row.execution_count || 0) > 0
-                ? {
-                    alpha: (row.success_count || 0) + 1,
-                    beta: ((row.execution_count || 0) - (row.success_count || 0)) + 1,
-                    sample_count: row.execution_count || 0,
-                    predecessor_id: predecessorActivityId || undefined,
-                  }
-                : null;
-              return { ...legacyActivity, composition_score };
-            } catch (error) {
-              logger.warn('Failed to fetch composition score', {
-                activity_id: sourceActivity.id,
-                error: error instanceof Error ? error.message : String(error),
-              });
-              return { ...legacyActivity, composition_score: null };
-            }
-          })
-        )
-      : legacyActivities;
-
-    logger.info('Activities discovered by shapes', {
-      count: finalActivities.length,
-      required_shapes,
-    });
+    const result = await runDiscoverByShapes(input);
 
     return c.json({
-      activities: finalActivities,
-      total: finalActivities.length,
+      activities: result.activities,
+      total: result.total,
     });
 
   } catch (error: any) {
@@ -8053,6 +8084,12 @@ app.post('/relevance-feedback', async (c) => {
     const alpha_delta = was_selected ? 1 : 0;
     const beta_delta = was_selected ? 0 : 1;
 
+    // Normalize template_id to plain form before write — wrapped vs plain
+    // forms must collapse to the same row (UNIQUE index on variant_id is
+    // plain string equality). See variant_performance_metrics UPSERT comment
+    // in /executions handler.
+    const normalizedTemplateId = normalizeActivityId(template_id);
+
     // Upsert variant_performance_metrics Thompson params
     surrealDB.query(`
       INSERT INTO variant_performance_metrics {
@@ -8076,7 +8113,7 @@ app.post('/relevance-feedback', async (c) => {
         thompson_alpha += $alpha_delta,
         thompson_beta += $beta_delta,
         updated_at = time::now()
-    `, { variant_id: template_id, org_id: orgId, alpha_delta, beta_delta }).catch((err: any) => {
+    `, { variant_id: normalizedTemplateId, org_id: orgId, alpha_delta, beta_delta }).catch((err: any) => {
       logger.warn('relevance-feedback: variant_performance_metrics upsert failed', { error: err.message });
     });
 
