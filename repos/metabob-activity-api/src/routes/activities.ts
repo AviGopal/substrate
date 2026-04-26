@@ -4199,8 +4199,8 @@ app.post('/recommend', async (c) => {
     const explorationSet = new Set(explorationPool);
     for (const rec of finalRecommendations) {
       rec.selection_metadata.exploration_slot = explorationSet.has(rec);
-      delete rec._ucb_score;
-      delete rec._total_executions;
+      delete (rec as any)._ucb_score;
+      delete (rec as any)._total_executions;
     }
 
     // Generate correlation IDs for selection-to-execution linkage
@@ -6077,6 +6077,7 @@ app.post('/impulse-relevance', async (c) => {
           times_not_loaded_failed: $times_not_loaded_failed,
           relevance_score: $relevance_score,
           irrelevance_score: $irrelevance_score,
+          net_value_score: $net_value_score,
           avg_content_size_tokens: $avg_content_size_tokens,
           typical_pointer_type: $typical_pointer_type,
           resolver_tier: $resolver_tier,
@@ -6091,6 +6092,7 @@ app.post('/impulse-relevance', async (c) => {
 
       const relevanceScore = validated.was_loaded && validated.execution_succeeded ? 1.0 : 0.0;
       const irrelevanceScore = !validated.was_loaded && validated.execution_succeeded ? 1.0 : 0.0;
+      const netValueScore = Math.max(-1, Math.min(1, relevanceScore - irrelevanceScore * 0.5));
 
       const created = await surrealDB.query<ImpulseRelevanceMetric[]>(createQuery, {
         impulse_id: validated.impulse_id,
@@ -6103,6 +6105,7 @@ app.post('/impulse-relevance', async (c) => {
         times_not_loaded_failed: !validated.was_loaded && !validated.execution_succeeded ? 1 : 0,
         relevance_score: relevanceScore,
         irrelevance_score: irrelevanceScore,
+        net_value_score: netValueScore,
         avg_content_size_tokens: validated.content_size_tokens || 0,
         // Resolver tracking fields (resolver-tier-tracking)
         resolver_tier: validated.resolver_tier ?? undefined,
@@ -6125,6 +6128,7 @@ app.post('/impulse-relevance', async (c) => {
         times_not_loaded_failed: !validated.was_loaded && !validated.execution_succeeded ? 1 : 0,
         relevance_score: relevanceScore,
         irrelevance_score: irrelevanceScore,
+        net_value_score: netValueScore,
         avg_content_size_tokens: validated.content_size_tokens || 0,
         typical_pointer_type: validated.pointer_type || '',
         created_at: new Date().toISOString(),

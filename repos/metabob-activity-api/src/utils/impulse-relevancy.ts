@@ -13,6 +13,7 @@ export interface ImpulseRelevanceMetric {
   activity_variant_id: string;
   relevance_score: number;      // P(success | impulse loaded)
   irrelevance_score: number;    // P(success | impulse NOT loaded)
+  net_value_score?: number;     // relevance_score - irrelevance_score * 0.5
   times_loaded: number;
   times_execution_succeeded: number;
   times_execution_failed: number;
@@ -200,11 +201,11 @@ export async function discoverMissingImpulses(
         activity_variant_id,
         relevance_score,
         irrelevance_score,
+        net_value_score,
         times_execution_succeeded,
         times_loaded
       FROM impulse_relevance_metrics
       WHERE activity_variant_id IN $activity_ids
-        AND relevance_score - irrelevance_score > 0.3
         AND times_loaded > 0
     `;
 
@@ -214,11 +215,19 @@ export async function discoverMissingImpulses(
 
     const metrics: ImpulseRelevanceMetric[] = result || [];
 
+    // Compute net_value_score for pre-migration rows; exclude non-positive values
+    const enriched = metrics.map(m => {
+      const nvs = m.net_value_score !== undefined && m.net_value_score !== null
+        ? m.net_value_score
+        : Math.max(-1, Math.min(1, m.relevance_score - m.irrelevance_score * 0.5));
+      return { ...m, net_value_score: nvs };
+    }).filter(m => m.net_value_score! > 0);
+
     // Filter to only missing impulses
-    const missingMetrics = metrics.filter(m => !loadedImpulses.includes(m.impulse_id));
+    const missingMetrics = enriched.filter(m => !loadedImpulses.includes(m.impulse_id));
 
     // Group by impulse_id
-    const impulseGroups = new Map<string, ImpulseRelevanceMetric[]>();
+    const impulseGroups = new Map<string, typeof missingMetrics>();
     for (const metric of missingMetrics) {
       const group = impulseGroups.get(metric.impulse_id) || [];
       group.push(metric);
@@ -226,22 +235,22 @@ export async function discoverMissingImpulses(
     }
 
     // Calculate value of each missing impulse
-    const suggestions = Array.from(impulseGroups.entries()).map(([impulseId, metrics]) => {
-      const unlocksActivities = metrics.map(m => m.activity_variant_id);
-      const avgRelevanceBoost =
-        metrics.reduce((sum, m) => sum + (m.relevance_score - m.irrelevance_score), 0) / metrics.length;
-      const totalSuccesses = metrics.reduce((sum, m) => sum + m.times_execution_succeeded, 0);
+    const suggestions = Array.from(impulseGroups.entries()).map(([impulseId, mGroup]) => {
+      const unlocksActivities = mGroup.map(m => m.activity_variant_id);
+      const avgNetValue =
+        mGroup.reduce((sum, m) => sum + m.net_value_score!, 0) / mGroup.length;
+      const totalSuccesses = mGroup.reduce((sum, m) => sum + m.times_execution_succeeded, 0);
 
       return {
         impulse_id: impulseId,
-        reason: `Critical for ${metrics.length} activities (avg boost: ${(avgRelevanceBoost * 100).toFixed(1)}%, ${totalSuccesses} past successes)`,
+        reason: `Critical for ${mGroup.length} activities (avg net value: ${(avgNetValue * 100).toFixed(1)}%, ${totalSuccesses} past successes)`,
         unlocks_activities: unlocksActivities,
-        avg_relevance_boost: avgRelevanceBoost,
+        avg_relevance_boost: avgNetValue,
         total_successes: totalSuccesses,
       };
     });
 
-    // Sort by avg_relevance_boost * unlocks_count (impact)
+    // Sort by avg_net_value * unlocks_count (impact)
     suggestions.sort((a, b) => {
       const impactA = a.avg_relevance_boost * a.unlocks_activities.length;
       const impactB = b.avg_relevance_boost * b.unlocks_activities.length;
