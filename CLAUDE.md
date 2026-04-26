@@ -562,6 +562,14 @@ execution {
   // NEW: Composition tracking (minibob → activity-api v1.5.5, April 2026)
   parent_execution_id: string    // Direct parent in the composition tree (nested invocations)
   composition_chain: string[]    // Denormalized ancestor chain, ordered root-first
+
+  // NEW: Failure mode taxonomy (migration 091, 2026-04-26)
+  // See OpenSpec 2026-04-26-validators-and-failure-modes
+  failure_mode: {
+    type: "verifier_negative" | "budget_exhausted" | "safety_breach" | "cascading" | "user_abort"
+    reason: string
+    // Variant-specific fields depending on type (see FailureModeSchema in activity-api/src/models/schemas.ts)
+  } | null  // Null for legacy traces; set on failures to stratify failure types
 }
 ```
 
@@ -571,6 +579,7 @@ execution {
 - **Learn which resolvers work best** for which impulses
 - **Track vessel-level performance** and resolver selection success rates
 - **Identify optimization opportunities** through resolver tier analysis
+- **Stratify failures by type** (mutation validation, budget exhaustion, safety guards, cascading, user action) for targeted improvement
 
 **Backward Compatibility:**
 - Existing traces without these fields still valid
