@@ -57,6 +57,6 @@
 - [x] 8.1 Run `bun run typecheck` in `repos/workbench` — confirm zero TypeScript errors
 - [x] 8.2 Run `bun test` in `repos/workbench` — confirm all existing tests pass
 - [x] 8.3 Run `bun run typecheck` in `repos/minibob` — confirm zero TypeScript errors
-- [ ] 8.4 Manual smoke test in workbench: add an activity to the trajectory grid, click "Run Trajectory", confirm a `trajectoryExecution` POST is sent to MiniBob and an executionId is returned
-- [ ] 8.5 Manual smoke test: open the "New" dialog, fill in name + one task, submit, confirm the template appears in the grid and `POST /v2/activities/templates` was called
-- [ ] 8.6 Manual smoke test: connect a live execution, confirm `impulse.resolved` events with a `shape` field cause dashed-border badges to appear in the ImpulseStatePanel Realized tab
+- [x] 8.4 Manual smoke test in workbench: add an activity to the trajectory grid, click "Run Trajectory", confirm a `trajectoryExecution` POST is sent to MiniBob and an executionId is returned
+- [x] 8.5 Manual smoke test: open the "New" dialog, fill in name + one task, submit, confirm the template appears in the grid and `POST /v2/activities/templates` was called
+- [x] 8.6 Manual smoke test: connect a live execution, confirm `impulse.resolved` events with a `shape` field cause dashed-border badges to appear in the ImpulseStatePanel Realized tab

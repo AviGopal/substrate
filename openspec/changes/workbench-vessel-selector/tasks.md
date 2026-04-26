@@ -66,5 +66,5 @@
 - [x] 8.1 Run `bun run typecheck` in `repos/workbench` — confirm zero type errors introduced by the new files and store changes
 - [x] 8.2 Run `bun test` in `repos/workbench` — confirm existing tests pass (no regressions in trajectoryStore or GoalSubmissionPanel)
 - [x] 8.3 Run `bun run typecheck` in `repos/minibob` — confirm the new `GET /impulses` route and `getAllImpulses` export have no type errors
-- [ ] 8.4 Smoke-test manually: start MiniBob locally, load the workbench, confirm `VesselSelectorPanel` shows the MiniBob instance, connect to it, submit a goal, and verify the POST goes to MiniBob's endpoint
-- [ ] 8.5 Confirm "Vessel State" section in `ImpulseStatePanel` populates after connecting and submitting a goal
+- [x] 8.4 Smoke-test manually: start MiniBob locally, load the workbench, confirm `VesselSelectorPanel` shows the MiniBob instance, connect to it, submit a goal, and verify the POST goes to MiniBob's endpoint
+- [x] 8.5 Confirm "Vessel State" section in `ImpulseStatePanel` populates after connecting and submitting a goal
