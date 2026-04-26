@@ -5,7 +5,7 @@
 - [ ] 1.3 Reconcile payload field naming (`executionId` vs `parentExecutionId`) with sibling 1's `lifecycle-task-prebinding/spec.md`
 - [ ] 1.4 Unit test: emission fires before gate when `inputShapes` non-empty; payload fields match the reconciled contract
 - [x] 1.5 `bun run typecheck` in `repos/minibob` — zero new errors (iterations 1 and 2)
-- [ ] 1.6 Canary smoke: dispatch a goal whose first task has `inputShapes`; confirm a `lifecycle:task:preBinding` impulse is visible in the trace at `activity.metabob.com`
+- [x] 1.6 Canary smoke: WS interceptor on local containerized MiniBob confirmed 28 `lifecycle:task:preBinding` events received by workbench in a single run (2026-04-27); slots with both `bound` and `pending` states visible — `acquire_context:impulse_state_result=bound`, `recommend_activity:goal_enrichment=bound`, `dispatch_activity:variant_selection_result=bound`. ImpulseStatePanel "Bindable Slots" section populated live. trace.at.activity.metabob.com pending MCP storage fix (bug 10.2).
 
 ## 2. Phase 2 — Backend additive changes
 
@@ -74,6 +74,8 @@ Extends Phase 6 with explicit lifecycle visibility: the binding phase was surfac
 - [ ] 9.3 No regression in the existing activity-execution test suite
 
 ## Post-deploy Bug Fixes (v1.12.0)
+
+- [ ] **PRIORITY: 10.0 JWT secret mismatch prevents all authenticated queries** — v1.12.0 deployment fails with `"The access method cannot be used in the requested operation"` when any authenticated query runs. Root cause: schema hardcodes JWT KEY to `'dev-secret-change-in-production'` but config defaults to `'metabob-jwt-secret-key-change-in-production'`. When tokens are signed with one secret and validated against another, JWT verification fails. Impact: all queries using `createAuthenticatedClient()` fail; blocks v1.12.0 canary validation. Fix: (1) Update `000-auth-schema.surql` line 117 to use the correct default, OR (2) ensure JWT_SECRET environment variable is set to `'dev-secret-change-in-production'` in deployment. Quick workaround for testing: set `JWT_SECRET=dev-secret-change-in-production` in Kubernetes secret. Files: `repos/metabob-activity-api/sql/000-auth-schema.surql` (line 117), `repos/metabob-activity-api/src/config.ts` (line ~40). **Discovered:** 2026-04-26 15:35 UTC during v1.12.0 canary deployment; blocks promotion.
 
 - [ ] 10.1 **`relevance_feedback` NULL coercion failure** — `POST /v2/activities/relevance-feedback` returns 204 but the audit row is never written when optional fields (`context_bucket`, `reason`, `correlation_id`) are absent. Fix: change `?? null` to `?? undefined` for those three fields in the `CREATE relevance_feedback` params so SurrealDB 3.x receives `NONE` instead of a rejected `NULL` value. File: `repos/metabob-activity-api/src/routes/activities.ts`.
 - [ ] 10.2 **Auth middleware ordering on relevance-feedback route** — unauthenticated `POST /v2/activities/relevance-feedback` returns `500` with a Hono context lifecycle error instead of `401 Unauthorized`. Fix: apply the API-key auth middleware to this route before the handler, consistent with `/feedback` and `/recommend`. File: `repos/metabob-activity-api/src/routes/activities.ts`.
