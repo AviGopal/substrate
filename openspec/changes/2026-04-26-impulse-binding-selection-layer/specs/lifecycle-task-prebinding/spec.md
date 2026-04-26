@@ -12,7 +12,7 @@
 - **THEN** the executor does NOT emit `lifecycle:task:preBinding`
 
 ### Requirement: Emission payload includes binding context
-The `lifecycle:task:preBinding` payload SHALL include `taskId: string`, `templateId: string`, `inputShapes: string[]`, `currentImpulseIds: string[]`, `missingShapes: string[]`, `variables: Record<string, unknown>`, and `parentExecutionId: string | undefined`. `missingShapes` SHALL be computed as `inputShapes` minus the set of shapes present in the current impulse pool.
+The `lifecycle:task:preBinding` payload SHALL include `taskId: string`, `templateId: string`, `inputShapes: string[]`, `currentImpulseIds: string[]`, `missingShapes: string[]`, `variables: Record<string, unknown>`, and `executionId: string`. `executionId` is the id of the currently-executing activity (the emitter), NOT a parent-of-emitter id; subscriber meta-activities use it to correlate their nested execution with the parent trace via `parent_execution_id`/`composition_chain`. `missingShapes` SHALL be computed as `inputShapes` minus the set of shapes present in the current impulse pool.
 
 #### Scenario: Payload reports missing shapes
 - **WHEN** a task declares `inputShapes: ["goal", "errorLog"]` and the pool contains an impulse with shape `goal` but none with shape `errorLog`
