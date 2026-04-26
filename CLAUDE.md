@@ -651,6 +651,29 @@ gh run list --limit 5
 gh run view <run-id> --log
 ```
 
+### Branch hygiene (avoid forking)
+
+All spec work flows through a single `dev` branch per repo. To prevent divergent local branches and detached-HEAD commits going stale:
+
+```bash
+# At the start of any work in a vessel repo:
+cd repos/<vessel>
+git fetch origin
+git checkout dev
+git pull --ff-only origin dev   # fails loudly if local has diverged
+# do work, commit on dev
+git push origin dev
+```
+
+For the super-repo, additionally `git submodule update --init` after the pull so submodule pointers stay aligned.
+
+Three properties this enforces:
+- **Stay on `dev`, not detached.** Detached HEADs hide work behind unreachable refs.
+- **`pull --ff-only` refuses divergent merges.** Any divergence forces explicit triage instead of silent drift.
+- **Push `origin dev`, not `HEAD:dev`.** Same branch name on both sides; no detour through ad-hoc refspecs.
+
+If `pull --ff-only` fails, audit the divergence (`git log dev..origin/dev` and `git log origin/dev..dev`) and decide between rebase, cherry-pick, or reset — don't merge by default.
+
 ### Local Testing (Tests Only, Not Full Deployment)
 
 ```bash
