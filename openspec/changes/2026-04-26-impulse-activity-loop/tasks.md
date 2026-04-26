@@ -108,7 +108,7 @@ Findings discovered while resolving F-1..F-9 or running 11.x retries. Each is sm
 - [ ] **B-4: paginated audit endpoint** — Public `GET /v2/activities/templates` caps at limit=100 with no offset/pagination. Up to ~10 hidden shadow templates can't be enumerated via the public API. Add a paginated audit query (offset support) or operator runs SurrealDB-direct enumeration.
 - [ ] **routes/ci.ts:200-249 normalize follow-up** — Same un-normalized template_id pattern as 10.4 (CI-track Thompson updates pass `template_id` directly to UPSERT variant_performance_metrics). Subagent 10.4 flagged but kept scope tight. Apply `normalizeActivityId()` for consistency.
 - [x] **F-7: lifecycle:task:completed payload missing fields** — RESOLVED 2026-04-26. Extended both emit sites (activity.ts:2407 + :2877) with `skip_validation`, `allImpulseIds`, `loadedImpulseIds`, `toolCallRecords`. Added `ActivityTask.skip_validation` opt-out flag in `src/types.ts`. `validator-dispatch.json` task 1 now carries a `conditional` short-circuit; task 5 uses dotted-path placeholders for the array fields and `learning_signal_writer` resolver JSON.parses string-form arrays. `templateId` remains absent from the payload — Phase 5 follow-up.
-- [ ] **F-6: register thin `discover_by_shapes` resolver** — `vessel_resolve_call` is a TS helper not a registered resolver name; validator-dispatch had to use `producer_selection` as workaround. Wraps `MCPClient.discoverByShapes()` so meta-activities can dispatch the route precisely.
+- [ ] **F-6 (corrected): activity-api advertises `discoverByShapesQuery` shape via `/v2/impulses/resolve`** — Pure-vessel constraint: integrating with another vessel MUST NOT require source changes in the integrating vessel. Original framing ("register a thin discover_by_shapes resolver in minibob") would have edited minibob to call activity-api — that violates the foundation. Correct fix: activity-api adds a `discoverByShapesQuery` (or equivalent) shape handler in `repos/metabob-activity-api/src/routes/impulses.ts` that translates pointer fields (`required_shapes`, `mode`, `output_shapes`, `current_shapes`, `limit`) to the existing `/v2/activities/discover-by-shapes` query, and advertises the shape via discovery-vessel registration. Meta-activities then use the existing `impulse-resolve` resolver with `pointer.type: "discoverByShapesQuery"`. Zero minibob changes.
 
 ## Demonstration runway
 
@@ -165,6 +165,14 @@ The loop terminates when canary evidence shows:
 - ✅ MiniBob runs solely on vessel-resolvers (no embedded template fallback)
 - ✅ Impulse-activity system creates improved activities via the executor (ribosome convergence)
 - ✅ Activities compose using all MiniBob features (selection + validation + recursive escalation in one trace)
+
+### Architectural constraints reaffirmed
+
+Carry forward these constraints for all remaining work:
+
+- **Vessel-integration constraint**: integrating with another vessel MUST NOT require source changes in the integrating vessel. New cross-vessel calls happen via shape advertisement on the providing vessel + the existing generic `impulse-resolve` path on the consuming side. F-6's correction is the canonical example.
+- **Pure-vessel constraint** (already established): minibob and metabob-activity-api are pure vessels; runtime behavior is activity-driven, not hardcoded.
+- **Branch hygiene** (CLAUDE.md): stay on `dev`, ff-only pull, push `origin dev` not `HEAD:dev`.
 
 ### Deferred (out of scope for first demo)
 
