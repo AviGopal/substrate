@@ -165,18 +165,22 @@ Vessel capability registry and resolver (~1,500 LOC TypeScript/Bun):
 - `src/types.ts`: Registration, heartbeat, and query types
 
 **Capabilities:**
-- Vessel registration with shape advertisement
+- Vessel registration with shape advertisement and resolver contract
 - TTL-based expiration (5 min default, 60s cleanup)
 - Heartbeat management (60-120s intervals)
 - Capability queries (find vessels by shape)
 - Self-registration (discovery is just another vessel)
 - Circuit breaker and health scoring
 - Routing trace recording
+- **Resolver contract fields** (Wave 1A, 2026-04-24): vessels advertise `resolve_endpoint`, `resolve_request_format`, `auth_scheme`, `resolve_timeout_ms` for automated dispatch
+- **Authentication on mutations** (v0.3.0, 2026-04-25): registration, heartbeat, and deregistration require API key authentication
+- **Tenant isolation** (v0.3.0, 2026-04-25): registry queries scoped to caller's org_id
+- **Auth token source declaration** (v0.4.0, 2026-04-25): vessels declare `auth_token_source` (e.g., `caller_identity`, `user_identity`) and `auth_delegation_mode` (e.g., `forward`) to specify which credential to use for resolution
 
 **Endpoints:**
-- `POST /register` - Register vessel with shapes
-- `POST /heartbeat` - Refresh TTL
-- `DELETE /vessels/:id` - Graceful deregistration
+- `POST /register` - Register vessel with shapes and resolver contract (requires API key)
+- `POST /heartbeat` - Refresh TTL (requires API key)
+- `DELETE /vessels/:id` - Graceful deregistration (requires API key)
 - `POST /resolve` - Query vessels by capability
 - `GET /health`, `/shapes`, `/registry/stats` - Observability
 
