@@ -136,6 +136,39 @@ Two parallel subagents.
 
 The infrastructure-gap discovery is exactly the loop's purpose: implementation reveals what specs missed. Both gaps now tracked for explicit fix or deferral.
 
+### 2026-04-26 — iteration 7 (Phase 4 closes; infra gap A fixed; v0.13.0 + v1.12.0 + bug fix pushed to origin/dev)
+
+Two parallel subagents + main-thread commit/push.
+
+- **Subagent J — dotted-path interpolation (infra gap A):** `repos/minibob/src/activity.ts:6946` regex `/\{\{(\w+)\}\}/g` extended to `/\{\{([\w]+(?:\.[\w]+)*)\}\}/g`. Lookup walks dotted segments through `variables`. Backward compat preserved for: missing keys (placeholder left intact), object stringify (`JSON.stringify(value, null, 2)`), null at top level (`"null"`), and the `{{task:id:output}}` colon-separated pattern (different regex, runs first). 21 new tests in `src/activity-interpolate.test.ts`; full repo test suite shows 0 new failures vs baseline. Slot-binding and validator-dispatch templates can now be retrofitted to dotted paths in a follow-up iteration.
+- **Subagent I — `validator-dispatch.json` (sibling 3 §7):** new embedded template subscribing to `lifecycle:task:completed`. 5 tasks: `discover_validators` (uses `producer_selection` against `validation_result` since `vessel_resolve_call` isn't a registered resolver name), `select_validator_per_shape` (LLM adapter for now — `producer_selection_result` → `variant_selection_result` reshape needed), `dispatch_validators` (nested execution via `activity` resolver), `propagate_failure_mode` (emits `failure_mode_propagation` impulse since no mid-execution trace-metadata-write endpoint exists), `learning_signal_write`. 52 templates load. Several pragmatic simplifications documented in `metadata.openQuestions`. Subagent flagged: (a) the spec mentions `vessel_resolve_call` as a resolver name but it's a TS helper, not registered — recommendation to register a thin `discover_by_shapes` resolver wrapping `MCPClient.discoverByShapes`; (b) `lifecycle:task:completed` payload doesn't include `skip_validation` or impulse-id arrays — Phase 5 wires those.
+- **Subagent K — bug fixes 10.1 and 10.2 in `metabob-activity-api`:** replaced `?? null` with `?? undefined` for `context_bucket`/`reason`/`correlation_id` (so SurrealDB receives `NONE`); wrapped `/relevance-feedback` handler in `try { ... } catch` mirroring `/feedback`'s pattern (so unauth lifecycle-error returns structured response). Found the repo in detached HEAD at `origin/main` with `7e4d253 v1.12.0` already on main, dev older at `7a0b837`. Commit `8f8d5d9` created on detached HEAD.
+
+Main thread: minibob version bumped 0.12.0 → 0.13.0; staged (excluding `codebase-structure-impulse.json` artifact) and committed `ec03889 feat(minibob): impulse-binding selection layer + validators (v0.13.0)`. 15 files, 3443+/9-. Pre-commit denylist + secret scan passed.
+
+Pushed:
+- `minibob` → `origin/dev`: `18faa40..ec03889` (advances dev with v0.13.0)
+- `metabob-activity-api` → `origin/dev`: `7a0b837..8f8d5d9` (advances dev through v1.12.0 + bug fix; dev now equal-or-ahead of main)
+- super-repo → `origin/dev`: `7b514926..cd4611db` (submodule pointer advance for minibob + 2 pre-existing percolation/prune commits)
+
+Canary deploys triggered. **Phase 4 complete** (both meta-activities registered). Next: validate on canary (Phase 8 partial — confirm lifecycle event appears in trace, validator-dispatch fires, learning-loop α/β move). Then Phase 5 (decommission inline executor logic) and Phase 6 (workbench surfaces).
+
+### 2026-04-26 — iteration 8 (3 parallel subagents — Phase 6.1, 6.2, 7.1)
+
+Three parallel subagents on independent chunks. Phase 6.3 (validation surfaces) deferred to next iteration to avoid `ImpulseStatePanel.tsx` conflict with Phase 6.1.
+
+- **Subagent L — Phase 6.1 shape-slot primitive (sibling 1 §8):** extended `ResolverTierBadge` with `slotState?: 'bound' | 'bindable' | 'unbindable'` prop (overlay border-band), `ShapeCompatibilityIndicator` with `slotStates?: Map` for three distinct visual states (solid green / dashed green / red), `ImpulseStatePanel` with a "Bindable Slots" card listing α/β candidates + "use this one" → `impulseRelevance_write` override (POSTs `/v2/activities/impulse-relevance` with `source: 'manual_override'`), `ApplicableActivitiesPanel` with escalate button (stub onClick — Phase 6.2 territory). Added `computeShapeSlotState` helper to `state-space.ts` and `getShapeSlotStates` action to the trajectory store. 18 new tests pass. Per-impulse lineage data is NOT in the store today; documented TODO with shape-level approximation as fallback.
+- **Subagent M — Phase 6.2 spawn-subgoal affordance (sibling 2 §4):** new `useSpawnSubgoal` TanStack Query mutation hook + new `SpawnSubgoalPreview` component (preview + confirm with HiL warning banner). Extended `BackwardChainingPanel` with inline + selected-shape-header spawn buttons gated on `discoveryData.activities.length === 0` OR all producers' `betaMean(α, β) < 0.4`. 8 new tests pass. **Activity dispatch endpoint** doesn't exist yet in the API client — shimmed via `/v2/impulses/resolve` with `pointer.type === 'activityDispatch'` envelope (mirrors `useTrajectoryExecution.submitTrajectory`). Marked `TODO(dispatch-endpoint)` for replacement when activity-api ships `POST /v2/activities/dispatch`.
+- **Subagent O — Phase 7.1 `create-shape-provider-goal` (sibling 2 §3):** new `repos/minibob/src/embedded-templates/create-shape-provider-goal.json` (8 tasks, 7 variables): `forward_chain_producers` (via `activity_recommendation`), `prior_paths_with_endpoint` (via `impulse-resolve` for `goalExecutionPath` shape with the new `endpoint_output_shapes` filter from migration 092), `concept_lookup` (via `impulse-resolve` for `relatedConcepts`), `cooccurrence_signal` (via `impulse_cooccurrence` resolver), `cost_risk_priors` (parallel sub-tasks for `activityMetrics` and `toolRiskProfile`), `parent_chain_lookup`, `compose_goal` (LLM with structured prompt). 53 templates load. **Validation rules embedded in the LLM prompt** with explicit `failure_mode` JSON shapes citing the migration-091 taxonomy: depth → `safety_breach/depth` with `limit + ancestor_chain`; cycle → `safety_breach/cycle` (limit omitted per cycle case); budget → `budget_exhausted/cost`. The choice (LLM-embedded guards vs deterministic conditional tasks) was forced by the existing template format's lack of conditional-rewrite primitives — documented in `metadata.openQuestions` with the future-fix path being a `goal_guard_evaluator` deterministic resolver.
+
+Cross-subagent integration: L left a stub onClick on the escalate button (TODO citing Phase 6.2). M created `useSpawnSubgoal`. The bridge (one-line wiring) is queued as a small follow-up. Both panels now expose spawn affordances independently — `BackwardChainingPanel` (M) and `ApplicableActivitiesPanel` (L) — different surfaces for different user contexts.
+
+Both `bun run typecheck` runs clean (workbench, minibob). Pre-existing workbench test failures (~65 fails on the base branch) are not regressions; new tests strictly add 18 + 8 = 26 passing.
+
+**Phase 6 has 2 of 3 surfaces done.** Phase 7 has the activity authored. Phase 6.3 (validation surfaces) and the L↔M wiring are queued.
+
+Pending push: workbench v0 → some new version, minibob (only the new template + index.ts), super-repo (submodule pointer advances). Will execute in same iteration before scheduling.
+
 ### 2026-04-26 — iteration 3 (subagent-delegated chunks)
 
 User steered: produce validatable chunks via subagent delegation rather than direct implementation. Two parallel subagents dispatched.
