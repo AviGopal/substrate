@@ -241,7 +241,7 @@ Update `Ctrl+I` keyboard shortcut (search for the existing `useEffect` on `keydo
 
 ## Phase 4: Shapes Live Data
 
-### T4.1 — Replace static KNOWN_SHAPES with live discovery query
+### T4.1 — Replace static KNOWN_SHAPES with live discovery query [x]
 
 **File**: `repos/workbench/src/hooks/useShapes.ts`
 
