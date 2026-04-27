@@ -8,7 +8,7 @@ Status key: `[ ]` not started · `[x]` complete · `[-]` skipped/deferred
 
 Low-risk changes. No new UI, no API changes. Each task is independently deployable.
 
-### T1.1 — Remove CompositionBuilderPage route
+### T1.1 — Remove CompositionBuilderPage route [x]
 
 **Files**:
 - `repos/workbench/src/router.tsx` (or wherever TanStack Router routes are defined — search for `CompositionBuilderPage` import)
@@ -22,7 +22,7 @@ Low-risk changes. No new UI, no API changes. Each task is independently deployab
 
 ---
 
-### T1.2 — Remove StudioPage route
+### T1.2 — Remove StudioPage route [x]
 
 **Files**:
 - `repos/workbench/src/router.tsx`
@@ -35,7 +35,7 @@ Low-risk changes. No new UI, no API changes. Each task is independently deployab
 
 ---
 
-### T1.3 — Remove nav entries for removed pages
+### T1.3 — Remove nav entries for removed pages [x]
 
 **Files**:
 - `repos/workbench/src/components/layout/Sidebar.tsx` (or equivalent — search for nav items containing "Studio" or "Composition" or "builder")
@@ -58,7 +58,7 @@ grep -rn "Studio\|builder\|CompositionBuilder" repos/workbench/src/components/la
 
 One backend change (activity-api) and one frontend change (workbench). Independent.
 
-### T2.1 — Add `?q=` param to `GET /v2/activities/templates`
+### T2.1 — Add `?q=` param to `GET /v2/activities/templates` [x]
 
 **File**: `repos/metabob-activity-api/src/routes/activities.ts`
 
@@ -100,7 +100,7 @@ The return shape must match what the workbench `GetTemplatesResponse` type expec
 
 ---
 
-### T2.2 — Update workbench search to use `?q=`
+### T2.2 — Update workbench search to use `?q=` [x]
 
 **Files**:
 - `repos/workbench/src/hooks/useTemplates.ts`
