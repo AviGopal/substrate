@@ -1000,3 +1000,42 @@ Post-deploy: ~80% are F-50 connection failures (the F-44 wrapper fix unmasked th
 - B-2 (operator)
 
 F-51 is the most impactful next code fix — every executionTrace POST currently returns 500, even though the TRACE itself was created (minibob has the data; activity-api just can't store it). Cached-pending sync queue continues to grow until F-51 resolves.
+
+## Long-running probe validates composition (2026-04-27 10:18 UTC)
+
+Multi-step goal demonstration confirms criterion 5 + amplifies criterion 1 evidence:
+
+```
+./bin/minibob.js --single "analyze /tmp/minibob-probe/sub/orders.csv and /tmp/minibob-probe/sub/users.json. Compute the total amount spent by each user (joining orders to users by user_id), and identify any bugs in /tmp/minibob-probe/sub/server.py. Write a markdown report to /tmp/minibob-probe/analysis.md" --budget 1.50 --max-activities 8
+```
+
+**Outcome**: `achieved` at $0.28 / 86.9s / 9 activities / 22 tasks. Markdown report written with:
+- Correct user spending totals (joined orders to users, filtered on `status='completed'`: Alice $350, Bob $0 pending, Carol $0 cancelled, Dave $500)
+- Bug identification in `server.py`: correctly identified `get_user_id` returning `name` instead of `id`
+- Working-functions audit (`calculate_total`, `find_admins`)
+- Summary statistics
+
+**Phase 4 stack composed across the goal** (from log markers):
+- 5× `validator-dispatch` Status: success
+- 3× `slot-binding` Status: success
+- 1× `goal-processing-activity-driven` Status: success
+
+**Confirmed criteria from this probe**:
+- ✅ Criterion 1: goal succeeded with concrete output (markdown file written + correct content)
+- ✅ Criterion 3: vessel-resolvers (`goal-processing-activity-driven` succeeded)
+- ✅ Criterion 5: full Phase 4 stack composed in one trace, multiple iterations
+
+**Remaining 500s**: 24× `cost_usd` field-missing errors (F-51) on `POST /v2/activities/execution-traces`. The trace executes correctly (minibob has the data + writes the report); only the persistence to canary fails. Cached locally via sync queue.
+
+### Phase 8 net progress with this probe
+
+From 0/5 ✅ at start of session → **3/5 ✅ + 2/5 🟡** observed:
+- ✅ 1, 3, 5 directly demonstrated
+- 🟡 4 (ribosome convergence): mechanism live (validator-dispatch task 5 reachable), α/β movement requires multiple goals against the same template family — observable but not yet measured
+- 🟡 2 (recursive escalation): F-37/F-40 audit infra works; needs explicit shape-impossible probe (`create-shape-provider-goal` activity exists; just need to trigger it)
+
+### Conclusion of impulse-activity-loop spec implementation
+
+The integrated impulse-activity loop is **functional in production** for typical multi-step goals. Phase 4 meta-activities (slot-binding, validator-dispatch, create-shape-provider-goal) compose correctly. F-stack (F-32→F-51) brought the system from 0/5 demonstrable success criteria to 3/5 with 2 partial. F-51 remains as the most impactful next code fix (executionTrace storage); F-49/F-50 are background/secondary; F-46/F-48 are minor.
+
+**Logical next-step spec direction**: shifting focus from primitives + plumbing (impulse-activity-loop) to **registry quality** — leveraging the existing TEMPLATE_UPKEEP pipeline (5 layers, all landed 2026-04-22) to systematically improve the 2,500+ existing templates via the `audit-and-backfill-templates` activity. This is the natural application of the now-functional loop, gated on Section 11 cleanup which itself is gated on B-2 admin-scope decision (operator).
