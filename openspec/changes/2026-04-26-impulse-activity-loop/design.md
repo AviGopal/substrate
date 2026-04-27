@@ -521,3 +521,89 @@ For "get to unblocked", Path A is the targeted fix. Path B is the right long-ter
 - D9 ready (chart fix + new image tag pushed, awaiting deploy commit)
 - F-34 unresolved: replicaCount=1 captured in values.yaml as a temporary state until cluster capacity expands
 - Net positive: F-32, B-4, F-33, F-35 deployed; Phase 2.3 + 2.4 schema now actually live; access method KEY now matches `JWT_SECRET` env (verified via init-db substitution log + manual OVERWRITE test)
+
+## Success-criteria validation (D8 smoke, 2026-04-26)
+
+Read-only audit against `https://activity.metabob.com` (v1.12.0, healthy). Probed via `POST /v2/impulses/resolve` with `executionTraceList`, `executionTraceWithSignatures`, and direct template GETs. Window: 2000 most-recent traces span 2026-04-21 18:53Z → 2026-04-26 13:43Z.
+
+**Activity-id breakdown (last 5 days, 2000 traces):**
+`auth_resolve_v1` (1958, all success), `_activity_execute` (18), `activity:⟨startup:health-check⟩` (8), `activity:⟨startup:template-sync⟩` (8), `_goal_resolve` (4), `activity:goal_processing_standard` (4). Non-auth total: **42**. Last non-auth trace: 2026-04-22 15:43Z (4 days ago).
+
+### Criterion 1 — Goals regularly succeed and successes correct: NO EVIDENCE
+
+- 4 `_goal_resolve` traces and 4 `activity:goal_processing_standard` traces all on 2026-04-22 (4 days stale); all marked success. No goal_verification trace shape was queryable (the `goal` resolver requires content; no list-mode equivalent exposes verification verdicts). Cost on the two longest goal_processing_standard runs: $4.41 and $4.63 (act_1776862626500_65xgml, act_1776861531228_pcbo6b) — non-trivial spend, plausibly real work.
+- "Success" here means `status='success'`, not "verifier passed". Without verifier evidence the criterion cannot be confirmed.
+
+### Criterion 2 — Failed goals append a new activity (recursive escalation): NO EVIDENCE
+
+- Zero traces with `composition_chain.length > 0` across all 86 traces queried via `executionTraceWithSignatures` (since 2026-04-15, min_duration_ms=100). `parent_execution_id` IS being populated (~25 traces show parent links: e.g. `goal_resolve` → `_activity_execute` → `goal_processing_standard`), but the denormalized `composition_chain` array is empty everywhere.
+- `create-shape-provider-goal` template **does not exist on canary** (`GET /v2/activities/templates/create-shape-provider-goal` → 404). The escalation activity is registered as an embedded template inside minibob (per F-13) but the executor has not surfaced it to the activity-api template store.
+- No `failure_mode` records observed. The two real failures in the 2000-trace window are both test fixtures (`test_failure_*`, hardcoded duration 1500ms).
+
+### Criterion 3 — MiniBob runs solely on vessel-resolvers (no embedded fallback): NO EVIDENCE
+
+- Counts since 2026-04-21:
+  - `goal-processing-activity-driven`: **0 executions** (template exists at `activity:⟨activity:⟨goal-processing-activity-driven\⟩⟩`, created 2026-04-24, 9 tasks, but never dispatched).
+  - `goal_processing_standard`: 4 executions, all on 2026-04-22.
+- Activity-driven path has not run on canary even once. The legacy LLM chain is the only goal-processing path with traces, and even that has been quiet for 4 days.
+
+### Criterion 4 — Improved activities created via the executor (ribosome convergence): PARTIAL
+
+- 35 templates created since 2026-04-22 (e.g. `Spellcheck Readme`, `MiniBob Dashboard Validation Framework`, `Transform Enforcement Templates to Read-Only Validation Variants`, multiple `LLM Code Review *` variants — names suggest LLM-extracted goal sessions).
+- BUT every template across all sampled pages (offsets 0, 100, 200, 300, 400, 500, 600, 900, 2000 — 100/page) shows `total_executions: 0`. The template-creation pipeline is firing, but **no template (legacy or newly-created) has been executed via the proper recommend → variant → trace path that updates the counter**. The 4 `goal_processing_standard` traces from 2026-04-22 don't increment any template counter.
+- `activityTemplatesByMetrics` confirms 7 templates have execution history (1973, 502, 156, 62, 18, 7, 7 executions) — but the markdown formatter renders all IDs as "undefined" so cross-walking to ribosome-extracted templates is not possible from this resolver alone. Most likely the 1973 maps to `auth_resolve_v1`.
+
+### Criterion 5 — Single trace exhibiting all features: NO EVIDENCE
+
+- No trace combines the four required signals (selection + slot-binding + validator-dispatch + recursive escalation). The closest observed composition is the 4-deep parent chain on 2026-04-22: `goal_<id>` → `aexec_<id>` → `act_<id>: goal_processing_standard` (via `parent_execution_id` only, no composition_chain population, no nested slot-binding/validator-dispatch traces). `slot-binding` and `validator-dispatch` templates exist but have **0 executions each**.
+
+### Verdict — Phase 8 NOT complete
+
+Of 5 success criteria: **0 ✅, 1 🟡, 4 ❌**. Backend infrastructure (templates registered, schema migrations live, resolvers callable) is in place, but **no minibob v0.13.0 client has dispatched a real goal against canary since v0.13.0 deployed**. The most recent non-auth trace is 4 days old; the activity-driven goal-processing path has never run; meta-activity nesting has never been observed.
+
+**Gap diagnosis:** The deployment side closed (F-33, F-35 fixed; D7 green; activity-api healthy), but the consumer side hasn't fired. F-13 already documented this as the gating dependency — Phase 5 (decommission inline executor logic) is gated on canary firing evidence; Phase 8 closure is gated on the same evidence chain.
+
+**Suggested next runs on canary** (in order of yield):
+1. `minibob --single "list files in /tmp"` against canary endpoint — exercises baseline impulse-binding + slot-binding for `directoryTree` shape; should produce a `lifecycle:task:preBinding` impulse and a slot-binding nested execution.
+2. `minibob --single "extract concepts from CLAUDE.md and store them"` — exercises shape composition (concept-db cooperation); should populate composition_chain depth ≥ 2.
+3. `minibob --single "produce a JSON validator for the failure_mode schema"` — likely-to-fail goal that asks for a shape no template provides; **this is the explicit recursive-escalation probe** (Criterion 2). Expected: slot-binding fires `escalate_unbindable`, dispatches `create-shape-provider-goal`, recursive sub-goal appears with `parent_execution_id` set on the child.
+4. After (1)-(3), re-run this audit. Criterion 5 needs at least one trace with `composition_chain.length ≥ 3` AND a `failure_mode` field set AND a `create-shape-provider-goal` activity invocation in the chain.
+
+Pre-existing canary issues this audit also confirms: `composition_chain` field is silently empty on every trace despite `parent_execution_id` being populated correctly — likely an executor-side denormalization gap independent of F-13. Worth a follow-up finding.
+
+### F-37 (new): `composition_chain` is silently empty despite `parent_execution_id` set correctly
+
+**Discovered**: D8 smoke audit found 0 traces with `composition_chain.length > 0`, but parent chains traced via `parent_execution_id` reach depth 4 (e.g. `goal_resolve → _activity_execute → goal_processing_standard` on 2026-04-22). The denormalized `composition_chain: string[]` field that should be populated when traces are written is never set.
+
+**Implication for Phase 8 criterion 2** (recursive escalation): even if escalation fires, audits that scan `composition_chain` won't see it. Recursive-escalation evidence collection currently has to walk `parent_execution_id` chains manually.
+
+**Likely cause** (educated guess, needs trace through code): the executor-side denormalization step in minibob (or activity-api's trace insert path) doesn't compute the chain. Should be a `composition_chain = parent.composition_chain.concat(parent.id)` style computation when a trace is written.
+
+**Scope**: medium. Affects audit-time queries but not runtime execution. Tracked as F-37; not blocking the canary deploy now that we have F-32, F-33, F-35, F-36 stacked.
+
+## Operational gap (post-D8)
+
+Backend is fully deployed and ready. Empirically validated:
+- `1.12.0-611addf` running on canary (F-32 + B-4 + F-33 + F-35 + F-36)
+- 60+ migrations applied, including 091/092 (failure_mode + endpoint_output_shapes)
+- SurrealDB ACCESS method KEY rotated and matches runtime config secret
+- JWT-routed REST endpoints return 200; impulse-resolve resolves; pagination works
+- `goal-processing-activity-driven`, `slot-binding`, `validator-dispatch` templates registered with completed task graphs (9, 4, 5 tasks respectively)
+
+**Missing**: a real minibob v0.13.0 client running against canary. All goal-processing traces visible are from before v0.13.0 deploy. The 35 ribosome-derived templates have 0 executions each; the activity-driven goal-processing meta-template has 0 executions. Phase 4 meta-activities have never fired in production because no v0.13.0 minibob has dispatched a goal.
+
+**To close success criteria 1, 2, 3, 5**: dispatch minibob --single goals against canary with the v0.13.0 client. Suggested probes (in evidence yield order):
+1. `minibob --single "list files in /tmp"` — baseline impulse-binding + slot-binding for `directoryTree` shape
+2. `minibob --single "extract concepts from CLAUDE.md and store them"` — composition_chain depth via concept-db cooperation
+3. `minibob --single "produce a JSON validator for the failure_mode schema"` — explicit recursive-escalation probe (should fire `escalate_unbindable` → `create-shape-provider-goal`)
+
+Each run produces traces visible at `https://activity.metabob.com/v2/activities/execution-traces` and feeds the success-criteria audit.
+
+**Criterion 4** (ribosome convergence) is partially evidenced — 35 ribosome-derived templates exist on canary. To strengthen: dispatch goals that exercise these templates and confirm executions accrue.
+
+**Unblock authority**: dispatching minibob against canary requires:
+- Local minibob v0.13.0 binary configured with `ANTHROPIC_API_KEY` + `METABOB_API_KEY` + `endpoint=https://activity.metabob.com`
+- Optional but useful: real workspace to act in (the goals listed above are local-filesystem-bounded)
+- Cost: a few cents per run
+
+Once dispatched, the smoke audit can be re-run and the success criteria will exhibit concrete trace IDs.
