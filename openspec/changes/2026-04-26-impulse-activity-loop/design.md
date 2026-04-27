@@ -145,7 +145,7 @@ The recommendation is **(a)** because the cost of a corrupt posterior at this la
 
 **Scope acknowledgement.**
 
-The multi-agent review of this change identified a conflation between H3 (in-execution scope narrowing) and CC1 (`endpoint_output_shapes` / goal-creation scope) that affects Phase 7's escalation wiring. That conflation is addressed in `openspec/changes/2026-04-26-shape-provider-goal-creation/` and inherited by Phase 7 of this change. **Phase 5 is unaffected** — Phase 5's surface is the inline-executor-decommission only; its prerequisites do not include H3 or CC1 closure, only H1 and H5.
+The multi-agent review of this change identified a conflation between H3 (in-execution scope narrowing via signed attestations) and CC1 (structural scope narrowing across composition) that affects Phase 7's escalation wiring. The conflation is now broken: `scopeContext` is defined as a first-class body field in `openspec/changes/2026-04-26-shape-provider-goal-creation/design.md` §"Scope schema" — orthogonal to `endpoint_output_shapes` (scope is *where you operate*, output_shapes is *what you produce*) — and CC1's `verifyScopeNarrowing` algorithm is pinned in `openspec/changes/2026-04-26-security-hardening-findings/design.md` §CC1. Phase 7.3 above wires the threading; the structural narrowing fires at child-activity dispatch regardless of whether H3's signed-attestation mode is opt-in or mandatory. **Phase 5 is unaffected** — Phase 5's surface is the inline-executor-decommission only; its prerequisites do not include H3 or CC1 closure, only H1 and H5.
 
 ### Phase 6 — Workbench surfaces (siblings 1, 2, 3)
 
@@ -159,6 +159,8 @@ Acceptance: workbench typecheck + tests green; manual smoke against canary confi
 ### Phase 7 — Recursive escalation (sibling 2)
 
 Wire `create-shape-provider-goal` activity dispatch from the slot-binding meta-activity's unbindable branch. Acceptance: a task whose missing shape has no producer dispatches the activity; canary trace shows the recursive sub-goal.
+
+**Phase 7.3 — `scopeContext` threading (CC1 enforcement point).** The parent goal's `scopeContext` body field (per `openspec/changes/2026-04-26-shape-provider-goal-creation/design.md` §"Scope schema") MUST be threaded through `slot-binding.json::escalate_unbindable` into the dispatched `create-shape-provider-goal` activity, so the emitted child goal-shaped impulse carries a `scopeContext` derived from (and CC1-narrowable against) the parent's. The threading happens via the lifecycle payload — the `lifecycle:task:preBinding` emit sites in `repos/minibob/src/activity.ts` (already extended for `parentGoalText` per F-2 and `parentDepth` per F-3) gain a `parentScopeContext` field sourced from the parent execution's goal-shaped output impulse; `escalate_unbindable` forwards it as a variable on the dispatched activity's input, and `compose_goal` either copies it verbatim into the emitted child goal or applies declared narrowing. CC1's `verifyScopeNarrowing` (per `openspec/changes/2026-04-26-security-hardening-findings/design.md` §CC1) fires at child-activity dispatch in the executor — same lifecycle hook as nested execution. Deferred attestation (H3) is independent of this threading: v1 ships with `attestation: null` and the structural narrowing check is the entire CC1 surface until H3 mandatory enforcement lands.
 
 ### Phase 8 — End-to-end canary validation
 
@@ -878,3 +880,57 @@ Criterion 4 (ribosome convergence) gating now reframes:
 - **Now**: F-39 is fine; F-42 blocks the chain that would surface F-39's effect; F-43 is the next gate after F-42.
 
 Order of operations to fully unblock criterion 4: F-42 fix → re-probe → F-43 confirm/fix → re-probe → ribosome α/β observable.
+
+## Minibob own-end error inventory (2026-04-27 07:24-07:30 UTC, probes 1+2)
+
+User requested "verify minibob is not reporting any errors on its own end". Ran two `minibob --single` probes in `/tmp/minibob-probe/` with `-vv` verbosity. Results:
+
+- **Probe 1**: `"what is the version field in /tmp/minibob-probe/config.json"` — failed at budget cap ($0.33 > $0.30), 11 activities, 25 tasks
+- **Probe 2**: `"count the number of files in /tmp/minibob-probe and report their names"` — **achieved**, 9 activities, 22 tasks, $0.23, 87.5s
+
+**Both probes confirmed F-42 working live**: validator-dispatch task 1 succeeded with `lifecycle:task:completed:activity:⟨execute-shell-command⟩ via lifecycle` — the new local resolver path firing.
+
+But verbose logs surface **four new findings** + an expanded scope on F-44:
+
+### F-44 (scope expanded): "Context is not finalized" affects ALL impulse storage routes
+
+Originally documented as a `/v2/activities/impulse-relevance` issue. Verbose logs show it hits **every impulse type** minibob tries to store: `acquire_context_result`, `analyze_state_result`, `arg:bash:*`, `arg:impulse_create:*`, `arg:process_impulse:*`, `arg:write:*`, `discover_validators_result`, `dispatch_validators_result`, `enrich_goal_result`, `recommend_activity_result`, plus all `lifecycle:*` impulses. Every POST hits HTTP 500 with the same Hono message. Three-attempt retry then local-cache fallback — no data lost but heavy log noise + impulse store grows monotonically with cached-pending entries.
+
+**Likely cause**: an upstream auth or validation middleware in `repos/metabob-activity-api/src/routes/impulses.ts` POST handler returns a Response object without `return` or fails to call `await next()`, leaving Hono's context unfinalized. Single fix in middleware ordering should clear ALL these errors.
+
+### F-45 (new): `improviser.ts:1610` `inferShape` crashes on `startup:health-check`
+
+Stack trace (every probe):
+```
+TypeError: undefined is not an object (evaluating 'pointer.type')
+  at inferShape (repos/minibob/src/improviser.ts:1610:7)
+  at map
+  at execute (activity.ts:2322:10)
+  at executeWakingActivities (waking-activities.ts:207:37)
+  at runBootstrap (index.ts:390:13)
+```
+
+`improviser.ts:1610` does `if (pointer.type === "memo")` without a null guard. Kills `startup:health-check` 100% of probes. Non-fatal (main goal proceeds) but health-checks never run. Fix: null-guard at site OR fix the upstream caller passing an impulse without a pointer.
+
+### F-46 (new): template registration rejected — tag format
+
+`MCP] Failed to register template: Validation failed: tags.3/4/5: Tags must be lowercase alphanumeric with dots`. Embedded templates have non-conforming tags. Fix: normalize tags at minibob emit time OR relax the activity-api Zod constraint.
+
+### F-47 (new): vessel registration returns 400
+
+`[MCP] Failed to register vessel: 400` on startup. Silently skipped. Minibob invisible in discovery registry — affects observability. Fix: trace registration payload, find failing Zod field.
+
+### F-48 (new): JSON parse `#` error on `startup:health-check`
+
+`Impulse resolution unavailable, trying MCP backend: JSON Parse error: Unrecognized token '#'`. Local impulse resolution tries JSON.parse on content starting with `#`. Falls back to MCP successfully. Log noise.
+
+### Net assessment
+
+**Minibob is functional but noisy**. Goals achieve (probe 2: $0.23). Errors are all in non-critical paths:
+- F-44: persistent backend storage (per-impulse 3x retry + cache; ~30-60 cached impulses per probe)
+- F-45: startup health-check (background)
+- F-46: template registration (one-shot)
+- F-47: vessel registration (one-shot)
+- F-48: log noise
+
+None block goal execution. Fix order: **F-44 (high-frequency) → F-45 (deterministic crash) → F-46/F-47 (contract drift) → F-48 (noise)**.
