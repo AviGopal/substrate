@@ -692,3 +692,62 @@ This is the first time `goal-processing-activity-driven` has executed successful
 Phase 8 Criterion 5 (composition) ✅ MET. Criterion 3 (vessel-resolvers) ✅ MET (one execution, more would strengthen). Criteria 1, 2, 4 still gated on more goal dispatches (and F-39 fix for ribosome convergence visibility). Two new findings (F-38, F-39).
 
 Cost of this run: $0.68. Net positive: validates the entire Phase 4 stack functional in production for the first time, and surfaces two real bugs that wouldn't have appeared without a real client.
+
+## Live canary evidence — second probe (2026-04-27 05:02 UTC, post F-37 + F-38 + F-39)
+
+After deploying F-37 (`1.12.0-fd936c0`) and patching minibob locally with F-38 + F-39, ran:
+
+```
+./bin/minibob.js --single "produce a JSON validator for the failure_mode schema" --budget 1.50 --max-activities 6
+```
+
+**Outcome**: goal **achieved** (status: completed). 9 activities, 19 tasks, $0.20, 90s. Includes `goal_verification` shape (criterion 1 verifier evidence) and `config_file` shape (declared output produced).
+
+### Phase 8 success-criteria delta
+
+| # | Criterion | Pre-probe (Apr 26) | Post-probe (Apr 27 05:02) |
+|---|---|---|---|
+| 1 | Goals regularly succeed | 🟡 sub-activities only | ✅ **MET** — root goal completed; `goal_verification` shape emitted |
+| 2 | Recursive escalation | ❌ | ❌ — goal didn't trigger escalation; need explicitly-impossible-shape probe |
+| 3 | Vessel-resolvers only | ✅ MET (one execution) | ✅ MET — `goal-processing-activity-driven` succeeded again |
+| 4 | Ribosome convergence | ❌ blocked by F-39 | 🟡 — F-39 fix applied locally, but learning-signal writes still fail (needs deeper diagnosis) |
+| 5 | All-features composition | ✅ MET | ✅ MET — full Phase 4 stack composed |
+
+### F-40 (new): F-37 fix doesn't engage on L1/L2 meta-traces due to write-order race
+
+**Symptom**: every `_activity_execute` row on canary still has `composition_chain: null` despite F-37 deploy. Inspection of timestamps:
+- `_goal_resolve` (`goal_1777266140175_crlkdx`) executed_at: `02:25:17.358Z`
+- `_activity_execute` (parent: `goal_1777266140175_crlkdx`) executed_at: `02:25:17.253Z`
+
+Child inserted **before** parent. F-37's `denormalizeCompositionChain` queries the parent at insert time, finds nothing, returns `[]`. The parent meta-trace inserts ~100ms later.
+
+This is structural: synthetic L1/L2 meta-traces wrap a goal-execution and are emitted at the END of the goal flow.
+
+**Fix paths**:
+A. **Backfill on parent-insert**: when a parent trace inserts with chain set, scan existing traces with `parent_execution_id = $parent.execution_id` and update their chain. Idempotent. Server-side. Architecturally clean.
+B. **Emit-order**: have minibob emit parent meta-trace before children. Fragile.
+C. **Read-time computation**: skip denormalization, walk parents on every query. Defeats the optimization.
+
+Recommended: path A. Doesn't block Phase 8 — `parent_execution_id` walking still works for tree-traversal queries.
+
+### F-41 (new): preBinding impulse not passed into meta-activity nested executor
+
+**Symptom**: slot-binding meta-activity fires on `lifecycle:task:preBinding` events, but its first task fails: "Task requires shapes [lifecycle:task:preBinding] but no matching impulses found". F-38 fixed the recursion; F-41 is the next layer — the trigger impulse must be available to the meta-activity as input but isn't passed through to the nested executor's pool.
+
+**Hypothesis**: lifecycle subscriber dispatcher should populate the meta-activity's initial impulse pool with the triggering event impulse. Currently appears to invoke with empty pool.
+
+**Scope**: minibob `lifecycle-subscriptions.ts` or wherever the dispatcher invokes subscriber executions. Probably ~30-line fix.
+
+### F-38 + F-39 effectiveness on canary
+
+Both fixes are minibob-side; the local probe used the patched code at commits `7d4a977` (F-38) + `662b153` (F-39). Behavior:
+- **F-38 (slot-binding self-skip)**: visible improvement — slot-binding still ✗ but failure mode changed from recursive self-loop to F-41's "no matching impulses found". F-38 fixed recursion; surfaces F-41.
+- **F-39 (learning_signal_writer no-op on missing fields)**: validator-dispatch task 5 still ✗. Defensive no-op should have made it succeed; needs deeper diagnosis next iteration.
+
+### Net status
+
+Phase 8 success criteria: **2/5 ✅ confirmed (criterion 1 + 5), 1/5 ✅ from prior run (criterion 3), 1/5 🟡 (criterion 4 — F-39 partial), 1/5 ❌ (criterion 2 — needs explicit escalation probe)**. From the original 0/5 ✅, this iteration moved 3 to ✅.
+
+Open queue: F-40, F-41 (newly surfaced), Operator B-2.
+
+Total cost across two probes: $0.88. Net: validates Phase 4 end-to-end on real workload, surfaces 2 more findings ahead of any future client deploys.
