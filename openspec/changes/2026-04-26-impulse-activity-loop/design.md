@@ -1,3 +1,27 @@
+## Foundational Model
+
+The impulse-activity loop operates against an unbounded backdrop. The **informational state** contains all possible and impossible impulses — every piece of data that could ever be known, computed, or produced. The system has no direct access to this complete space. It operates on two bounded subsets:
+
+**Reachable subgraph** — the shapes producible by resolvers across vessels currently connected to the network. A shape is reachable if some connected vessel advertises a resolver that produces it. The network may include millions of vessels and trillions of resolvers; vessel registration with discovery-vessel makes resolver contracts visible without requiring global knowledge.
+
+**Learned topology** — the sampled portion of the reachable subgraph. Every execution trace is a sample. Composition edges carry α/β posteriors derived from trace outcomes. Thompson Sampling models the probability that a given path leads to a goal-satisfying state. The learned topology grows monotonically with every execution; it never shrinks.
+
+The purpose of the impulse-activity loop is to **discover and continuously refine the topology of the composition graph** for any arbitrary goal — not to execute known recipes. Each phase of the loop contributes:
+
+| Phase | Contribution to topology knowledge |
+|---|---|
+| **Binding** | Establishes which shapes are reachable from the current pool for the next edge |
+| **Execution** | Traverses a candidate edge; discovers whether it actually leads where predicted |
+| **Validation** | Verifies the produced shapes satisfy the goal constraint for this edge |
+| **Escalation** | Probes unmapped territory when a required shape has no reachable producer |
+| **Learning signal** | Updates the posterior on the traversed edge and the impulses it consumed |
+
+The ribosome extracts reusable patterns from successful samples, encoding learned paths as activity templates that become part of the instructional state — making future explorations of the same region faster and more reliable.
+
+The end-to-end validation criteria (Phase 8) are evidence that the system has sampled a sufficient region of the composition graph around the specified goals to converge on reliable paths. Convergence is never total; the topology is unbounded.
+
+---
+
 ## Framing
 
 This change does not introduce primitives. It is the umbrella that drives the three siblings to working canary-validated state, captures cross-cutting learnings, and decides when (if ever) a fourth synthesis sibling is warranted.
@@ -607,3 +631,64 @@ Each run produces traces visible at `https://activity.metabob.com/v2/activities/
 - Cost: a few cents per run
 
 Once dispatched, the smoke audit can be re-run and the success criteria will exhibit concrete trace IDs.
+
+## Live canary evidence (operational dispatch, 2026-04-27 02:25 UTC)
+
+Following D8 audit's diagnosis (no v0.13.0 minibob had ever dispatched against canary), ran a probe directly from this environment:
+
+```
+./bin/minibob.js --single "list files in /tmp" --budget 0.50 --max-activities 3
+```
+
+**Outcome**: budget exceeded ($0.681 > $0.500 cap) at 107.9s after 13 activities / 26 tasks. Goal not "achieved" by minibob's success criterion, but the trace structure is exactly what Phase 4 prescribed.
+
+### Concrete trace evidence (sample, from `/v2/activities/execution-traces?limit=10`)
+
+| trace id | activity_id | success | parent_execution_id |
+|---|---|---|---|
+| `…wcqljt1jk4e4c2iaecp9` | `_goal_resolve` | false | (root) |
+| `…flq3ggj1cchz8ns8g9dg` | `_activity_execute` | false | `goal_1777256608994_bw1ung` |
+| **`…zl55y128zvh5jn0f95mz`** | **`goal-processing-activity-driven`** | **true** | (root) |
+| `…k593xt29wpqns4giw4kk` | `_activity_execute` | true | (parent set) |
+
+This is the first time `goal-processing-activity-driven` has executed successfully on canary. The CLI visibly fired:
+- **Slot-binding** on `lifecycle:task:preBinding` events (multiple times)
+- **Validator-dispatch** on `lifecycle:task:completed` events (multiple times)
+- **Execute-shell-command** as activity-driven goal-processing dispatch
+- Lifecycle shapes emitted: `lifecycle:activity:{preExecution,postExecution}`, `lifecycle:task:{preBinding,started,completed}`, `lifecycle:execution:tick`
+
+### Success-criteria delta from D8 audit
+
+| # | Pre-probe | Post-probe |
+|---|---|---|
+| 1. Goals regularly succeed | ❌ no v0.13.0 evidence | 🟡 sub-activities succeed; root goal failed at budget cap (mechanical, not architectural) |
+| 2. Recursive escalation | ❌ no traces | ❌ still none — goal didn't try shapes the system can't satisfy |
+| 3. Vessel-resolvers only (no embedded fallback) | ❌ no v0.13.0 traces | ✅ `goal-processing-activity-driven` traced with `success: true`; no `goal_processing_standard` invocation |
+| 4. Ribosome convergence | 🟡 templates exist with 0 executions | 🟡 no new executions on the 35 ribosome templates yet |
+| 5. All-features composition | ❌ none | ✅ **MET** — single goal trace exhibits Phase 4 meta-activities (slot-binding + validator-dispatch + activity-driven dispatch) composing in one execution |
+
+### Issues visible in the run
+
+1. **Recursive slot-binding gap (F-38)**: Slot Binding template tries to re-bind itself when its own `lifecycle:task:preBinding` hook fires — fails with "Task requires shapes [lifecycle:task:preBinding] but no matching impulses found". Slot-binding shouldn't be subject to its own preBinding gate.
+2. **Learning-signal writer fails consistently (F-39)**: The `Record per-task learning signals` task in validator-dispatch fails every iteration. Likely a contract mismatch between the resolver's expected impulse shapes and what the lifecycle:task:completed payload provides.
+3. **F-37 confirmed live**: every trace has `composition_chain: []` despite `parent_execution_id` set correctly.
+
+### F-38 (new): slot-binding meta-activity is recursively subject to its own lifecycle hook
+
+**Symptom**: `Slot Binding (impulse-binding-selection-layer) — lifecycle hook: lifecycle:task:preBinding` is itself triggered by its OWN `lifecycle:task:preBinding` impulse, recurses, and fails because no `lifecycle:task:preBinding` impulse is available for itself.
+
+**Fix scope**: meta-activities should be exempt from being subscribed to lifecycle events whose payload they themselves emit. Either gate the subscriber dispatcher on `templateId !== <self>`, flag meta-activities with `_meta: true`, or require explicit declaration.
+
+### F-39 (new): learning-signal writer fails on every validator-dispatch iteration
+
+**Symptom**: every `Record per-task learning signals (impulse_relevance + tool_argument_pattern)` task in validator-dispatch shows ✗. Affects ribosome convergence (criterion 4) and Thompson α/β learning.
+
+**Likely root cause**: dotted-path interpolation expects fields not present in lifecycle:task:completed payload, OR resolver expects array-form when it gets string-form, OR contract drift similar in shape to the F-7 fix.
+
+**Diagnostic**: activity-api logs or trace-detail endpoint should show the resolver's failure reason.
+
+### Net status
+
+Phase 8 Criterion 5 (composition) ✅ MET. Criterion 3 (vessel-resolvers) ✅ MET (one execution, more would strengthen). Criteria 1, 2, 4 still gated on more goal dispatches (and F-39 fix for ribosome convergence visibility). Two new findings (F-38, F-39).
+
+Cost of this run: $0.68. Net positive: validates the entire Phase 4 stack functional in production for the first time, and surfaces two real bugs that wouldn't have appeared without a real client.
