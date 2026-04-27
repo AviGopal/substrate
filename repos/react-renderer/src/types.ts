@@ -18,6 +18,8 @@ export type PrimitiveType =
   | 'code'
   | 'image'
   | 'custom'
+  | 'design_token'
+  | 'form'
 
 export interface BasePrimitive {
   type: PrimitiveType
@@ -141,10 +143,41 @@ export interface CustomPrimitive extends BasePrimitive {
 
 export interface DataTableTanstackCorePrimitive extends BasePrimitive {
   type: 'data-table-v2'
-  columns: string[]
+  columns: Array<{
+    key: string
+    header: string
+    type?: 'text' | 'number' | 'date' | 'status'
+    sortable?: boolean
+    width?: string
+  }>
   data: Record<string, unknown>[]
   pageSize?: number
   onRowClick?: string
+  virtual?: boolean
+}
+
+export interface DesignTokenPrimitive extends BasePrimitive {
+  type: 'design_token'
+  content: Record<string, string>
+}
+
+export interface FormField {
+  name: string
+  label: string
+  type: 'text' | 'number' | 'date' | 'select' | 'checkbox' | 'radio' | 'textarea'
+  required?: boolean
+  errorMessage?: string
+  options?: Array<{ value: string; label: string }>
+  placeholder?: string
+  defaultValue?: unknown
+}
+
+export interface FormPrimitive extends BasePrimitive {
+  type: 'form'
+  fields: FormField[]
+  submitLabel?: string
+  action?: string
+  steps?: Array<{ title: string; fields: string[] }>
 }
 
 export type Primitive =
@@ -161,6 +194,8 @@ export type Primitive =
   | CodePrimitive
   | ImagePrimitive
   | CustomPrimitive
+  | DesignTokenPrimitive
+  | FormPrimitive
 
 // ============================================================================
 // Position Modes

@@ -7,9 +7,10 @@ import type { CodePrimitive } from '../types'
 
 export interface CodeProps {
   primitive: CodePrimitive
+  className?: string
 }
 
-export function Code({ primitive }: CodeProps) {
+export function Code({ primitive, className }: CodeProps) {
   const { code, language = 'text', showLineNumbers = true, highlightLines = [] } = primitive
 
   const lineProps = (lineNumber: number) => {
@@ -26,7 +27,7 @@ export function Code({ primitive }: CodeProps) {
       borderRadius: '8px',
       overflow: 'hidden',
       fontSize: '0.8125rem'
-    }}>
+    }} className={className}>
       <SyntaxHighlighter
         language={language}
         style={oneDark}

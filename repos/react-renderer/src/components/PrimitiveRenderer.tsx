@@ -11,11 +11,17 @@ import { Code } from '../primitives/code'
 import { DataTable } from '../primitives/data-table'
 import { DataTableTanstack, type DataTableTanstackPrimitive } from '../primitives/data-table-tanstack'
 import { Chart } from '../primitives/chart'
+import { DesignToken } from '../primitives/design-token'
+import { FormPrimitive } from '../client/primitives/form'
+import { ErrorBoundary } from './ErrorBoundary'
 
 export interface PrimitiveRendererProps {
   primitive: Primitive
   onAction?: (actionId: string, payload?: Record<string, unknown>) => void
+  depth?: number
 }
+
+const MAX_DEPTH = 10
 
 /**
  * PrimitiveRenderer
@@ -26,14 +32,31 @@ export interface PrimitiveRendererProps {
  * Unknown primitive types are rendered as debug info rather than
  * causing errors - this allows the system to gracefully degrade.
  */
-export function PrimitiveRenderer({ primitive, onAction }: PrimitiveRendererProps) {
-  // Render child primitives recursively
+export function PrimitiveRenderer({ primitive, onAction, depth = 0 }: PrimitiveRendererProps) {
+  // Render child primitives recursively, wrapping in ErrorBoundary up to MAX_DEPTH
   const renderChild = (child: Primitive, index: number): React.ReactNode => {
+    if (depth < MAX_DEPTH) {
+      return (
+        <ErrorBoundary
+          key={child.id || index}
+          impulseId="nested"
+          primitiveType={child.type ?? 'unknown'}
+          depth={depth + 1}
+        >
+          <PrimitiveRenderer
+            primitive={child}
+            onAction={onAction}
+            depth={depth + 1}
+          />
+        </ErrorBoundary>
+      )
+    }
     return (
       <PrimitiveRenderer
         key={child.id || index}
         primitive={child}
         onAction={onAction}
+        depth={depth + 1}
       />
     )
   }
@@ -76,6 +99,12 @@ export function PrimitiveRenderer({ primitive, onAction }: PrimitiveRendererProp
     case 'chart':
       return <Chart primitive={primitive} />
 
+    case 'design_token':
+      return <DesignToken primitive={primitive} />
+
+    case 'form':
+      return <FormPrimitive primitive={primitive} onAction={onAction} />
+
     case 'graph':
       // Graph primitive - using react-force-graph-2d
       return <GraphPrimitive primitive={primitive} />
@@ -113,7 +142,7 @@ export function PrimitiveRenderer({ primitive, onAction }: PrimitiveRendererProp
           borderRadius: '8px',
           border: '1px solid #fca5a5'
         }}>
-          <Badge primitive={{ type: 'badge', text: `Unknown: ${(primitive as any).type}`, variant: 'warning' }} />
+          <Badge primitive={{ type: 'badge', text: `Unknown: ${(primitive as Primitive).type}`, variant: 'warning' }} />
           <pre style={{ marginTop: '8px', fontSize: '0.75rem', color: '#991b1b' }}>
             {JSON.stringify(primitive, null, 2)}
           </pre>

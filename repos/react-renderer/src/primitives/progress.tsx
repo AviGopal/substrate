@@ -2,6 +2,7 @@
 
 import React from 'react'
 import type { ProgressPrimitive } from '../types'
+import { Progress as ShadcnProgress } from '../client/components/ui/progress'
 
 export interface ProgressProps {
   primitive: ProgressPrimitive
@@ -102,26 +103,13 @@ export function Progress({ primitive }: ProgressProps) {
     )
   }
 
-  // Default: bar
+  // Default: bar — use shadcn Progress component
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      {label && <span style={{ fontSize: '0.875rem', color: '#71717a' }}>{label}</span>}
-      <div style={{
-        width: '100%',
-        height: '8px',
-        backgroundColor: '#e4e4e7',
-        borderRadius: '4px',
-        overflow: 'hidden'
-      }}>
-        <div style={{
-          width: `${percentage}%`,
-          height: '100%',
-          backgroundColor: '#2563eb',
-          transition: 'width 0.3s ease'
-        }} />
-      </div>
+    <div className="flex flex-col gap-1">
+      {label && <span className="text-sm text-muted-foreground">{label}</span>}
+      <ShadcnProgress value={percentage} className="transition-all" />
       {showValue && (
-        <span style={{ fontSize: '0.75rem', color: '#71717a' }}>
+        <span className="text-xs text-muted-foreground">
           {value} / {max}
         </span>
       )}

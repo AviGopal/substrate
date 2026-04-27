@@ -48,7 +48,7 @@ export function Text({ primitive }: TextProps) {
 
   if (format === 'markdown') {
     return (
-      <div style={style} className={className}>
+      <div style={style} className={`prose prose-sm max-w-none${className ? ` ${className}` : ''}`}>
         <ReactMarkdown>{content}</ReactMarkdown>
       </div>
     )

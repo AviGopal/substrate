@@ -1,7 +1,7 @@
 // ImpulseRenderer - Renders all active UI component impulses
 
-import React from 'react'
-import type { UIComponentImpulse, PositionMode } from '../types'
+import React, { useEffect, useRef } from 'react'
+import type { UIComponentImpulse } from '../types'
 import { PrimitiveRenderer } from './PrimitiveRenderer'
 import { QueryClient, QueryClientProvider } from '../hooks/useImpulse'
 
@@ -18,12 +18,40 @@ export const queryClient = new QueryClient({
 })
 
 // ============================================================================
+// Keyframe injection (once per module load)
+// ============================================================================
+
+let keyframesInjected = false
+
+function ensureKeyframes() {
+  if (keyframesInjected || typeof document === 'undefined') return
+  keyframesInjected = true
+
+  const style = document.createElement('style')
+  style.textContent = `
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+  `
+  document.head.appendChild(style)
+}
+
+// ============================================================================
 // PrimitiveErrorBoundary - Isolates render errors per impulse
 // ============================================================================
 
 interface ErrorBoundaryState { error: Error | null; info: string }
 
-class PrimitiveErrorBoundary extends React.Component<
+export class PrimitiveErrorBoundary extends React.Component<
   { impulseId: string; primitiveType: string; children: React.ReactNode },
   ErrorBoundaryState
 > {
@@ -34,7 +62,7 @@ class PrimitiveErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    // Report to the vessel's error store (fire-and-forget)
+    // Report error to the vessel's error store (fire-and-forget)
     fetch(`/impulses/${this.props.impulseId}/errors`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -47,6 +75,21 @@ class PrimitiveErrorBoundary extends React.Component<
         timestamp: Date.now(),
       }),
     }).catch(() => {}) // best-effort
+
+    // Also create a render_failure impulse (fire-and-forget)
+    fetch('/impulses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'render_failure',
+        content: {
+          primitiveType: this.props.primitiveType,
+          errorMessage: error.message,
+          impulseId: this.props.impulseId,
+        },
+        priority: 'high',
+      }),
+    }).catch(() => {})
   }
 
   render() {
@@ -80,6 +123,11 @@ export interface ImpulseRendererProps {
  * to their position mode.
  */
 export function ImpulseRenderer({ impulses, onAction }: ImpulseRendererProps) {
+  // Inject keyframes on first render
+  useEffect(() => {
+    ensureKeyframes()
+  }, [])
+
   // Group impulses by position type
   const flowImpulses = impulses.filter(
     (imp) => !imp.pointer.position || imp.pointer.position.type === 'flow' || imp.pointer.position.type === 'below-input'
@@ -170,6 +218,7 @@ interface ImpulseCardProps {
 function ImpulseCard({ impulse, onAction, isModal }: ImpulseCardProps) {
   const animation = impulse.pointer.animation ?? 'fade'
   const size = impulse.pointer.size
+  const cardRef = useRef<HTMLDivElement>(null)
 
   const cardStyle: React.CSSProperties = {
     backgroundColor: 'white',
@@ -192,7 +241,7 @@ function ImpulseCard({ impulse, onAction, isModal }: ImpulseCardProps) {
   }
 
   return (
-    <div style={cardStyle} data-impulse-id={impulse.id}>
+    <div ref={cardRef} style={cardStyle} data-impulse-id={impulse.id}>
       <PrimitiveErrorBoundary
         impulseId={impulse.id}
         primitiveType={primitive.type ?? "unknown"}
@@ -224,8 +273,5 @@ function getAnimationCss(animation: string): string {
       return 'none'
   }
 }
-
-// CSS keyframes would be injected via a style tag or CSS file
-// For now, using inline styles without actual keyframes
 
 export default ImpulseRenderer

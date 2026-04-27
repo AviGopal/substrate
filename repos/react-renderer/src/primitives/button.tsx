@@ -2,38 +2,27 @@
 
 import React, { useState } from 'react'
 import type { ButtonPrimitive } from '../types'
+import { Button as ShadcnButton } from '../client/components/ui/button'
 
 export interface ButtonProps {
   primitive: ButtonPrimitive
   onAction?: (actionId: string, payload?: Record<string, unknown>) => void
 }
 
-const variantStyles: Record<string, React.CSSProperties> = {
-  primary: {
-    backgroundColor: '#2563eb',
-    color: 'white',
-    border: 'none'
-  },
-  secondary: {
-    backgroundColor: '#f4f4f5',
-    color: '#18181b',
-    border: '1px solid #d4d4d8'
-  },
-  destructive: {
-    backgroundColor: '#dc2626',
-    color: 'white',
-    border: 'none'
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-    color: '#18181b',
-    border: 'none'
-  }
+type ShadcnButtonVariant = 'default' | 'secondary' | 'destructive' | 'ghost'
+
+const variantMap: Record<string, ShadcnButtonVariant> = {
+  primary: 'default',
+  secondary: 'secondary',
+  destructive: 'destructive',
+  ghost: 'ghost',
 }
 
 export function Button({ primitive, onAction }: ButtonProps) {
   const { label, variant = 'primary', onClick, disabled, loading, confirm } = primitive
   const [confirming, setConfirming] = useState(false)
+
+  const shadcnVariant = variantMap[variant] ?? 'default'
 
   const handleClick = () => {
     if (disabled || loading) return
@@ -44,25 +33,11 @@ export function Button({ primitive, onAction }: ButtonProps) {
     }
 
     setConfirming(false)
-    onAction?.(onClick)
+    onAction?.(onClick, { action: onClick })
   }
 
   const handleCancel = () => {
     setConfirming(false)
-  }
-
-  const baseStyle: React.CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '8px 16px',
-    fontSize: '0.875rem',
-    fontWeight: 500,
-    borderRadius: '6px',
-    cursor: disabled || loading ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.5 : 1,
-    transition: 'all 0.15s ease',
-    ...variantStyles[variant]
   }
 
   if (confirming && confirm) {
@@ -71,28 +46,24 @@ export function Button({ primitive, onAction }: ButtonProps) {
         <span style={{ fontSize: '0.875rem', color: '#dc2626' }}>
           {confirm.message}
         </span>
-        <button
-          style={{ ...baseStyle, ...variantStyles.destructive, padding: '4px 12px' }}
-          onClick={handleClick}
-        >
+        <ShadcnButton variant="destructive" size="sm" onClick={handleClick}>
           Confirm
-        </button>
-        <button
-          style={{ ...baseStyle, ...variantStyles.ghost, padding: '4px 12px' }}
-          onClick={handleCancel}
-        >
+        </ShadcnButton>
+        <ShadcnButton variant="ghost" size="sm" onClick={handleCancel}>
           Cancel
-        </button>
+        </ShadcnButton>
       </div>
     )
   }
 
   return (
-    <button style={baseStyle} onClick={handleClick} disabled={disabled}>
-      {loading ? (
-        <span style={{ marginRight: '8px' }}>⏳</span>
-      ) : null}
+    <ShadcnButton
+      variant={shadcnVariant}
+      onClick={handleClick}
+      disabled={disabled || loading}
+    >
+      {loading ? <span style={{ marginRight: '8px' }}>⏳</span> : null}
       {label}
-    </button>
+    </ShadcnButton>
   )
 }
