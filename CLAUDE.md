@@ -250,6 +250,7 @@ Lightweight autonomous vessel (~3,000 LOC TypeScript/Bun):
 - **F-52: Unlisted templates resolver fix** (post-2026-04-27): Fixed resolver to properly handle unlisted/private templates, preventing unintended template visibility in discovery queries. Enables fine-grained template access control without compromising learning system visibility.
 - **Iteration resolver** (post-2026-04-27): New resolver for iteration patterns over arrays and collections. Enables looping constructs in activity tasks. Supports parameterized iteration with context passing between iterations.
 - **Make-activity resolver** (post-2026-04-27): New resolver that creates new activity templates from execution traces and specifications. Enables self-improvement loop where MiniBob generates new activities based on successful patterns.
+- **Goal-impulse seeding** (post-2026-04-27): Feature for seeding goal context as impulses at activity start. Enables activities to access initial goal context for constraint-driven execution. Complements live canvas goal impulse tracking.
 
 ### 3. metabob-activity-api (`repos/metabob-activity-api`)
 TypeScript/Bun/Hono backend - Learning system and trace storage:
