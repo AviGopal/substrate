@@ -1150,3 +1150,23 @@ When the workbench's `fetchLeafChildren` queries for children of an `act_` forma
 **Impact**: Canvas expansion only reaches down to `_activity_execute` wrapper depth (1-2 levels). The actual leaf activities that represent the trajectory columns (Goal Processing, Validator Dispatch, Execute Shell Command) are not found.
 
 **Resolution (2026-04-26, commit 142f374)**: Added fallback in `execution-traces.ts` GET `/`: when `parent_execution_id` is provided and `activity_execution_traces` returns 0 rows, re-queries the paradigm `execution` table with the same ID (plus `execution:` and `activity_execution_traces:` prefixed variants). Result rows are normalised to the same shape: `execution_id` (bare), `activity_name` (from `activity_id`), `created_at` (from `executed_at`), `error_message` (from `error.message`), `tasks` (lifted from `trace.tasks`). This unlocks the full trajectory canvas expansion for leaf activities.
+
+### L-5: Canvas expansion queried wrong level — goal-processing children vs goal-resolve children (2026-04-27)
+
+**Discovery**: The workbench's `expandChildren` function followed `trace.metadata.child_execution_id` (which points to `goal-processing-activity-driven`) and searched for ITS children. This only found the validator-dispatch wrapper — missing all sibling activities dispatched by the goal resolution.
+
+**Root cause**: `_goal_resolve` has 5 direct children via `parent_execution_id` (the 5 `_activity_execute` wrappers for each dispatched activity). The correct query is `parent_execution_id=trace.executionId`, not `parent_execution_id=trace.metadata.child_execution_id`.
+
+**Resolution (2026-04-27, workbench bfb79a7)**: Changed `expandChildren` to query `parent_execution_id=trace.executionId` directly, then call `resolveWrapperRows` on the 5 wrapper results to produce the actual activity rows (using `metadata.child_execution_id` + `metadata.template_name` from each wrapper). Falls back to the old chain-following for executions without direct children.
+
+### L-6: Auto-load used activityExecutionTrace resolver which rejects goal_ IDs (2026-04-27)
+
+**Discovery**: The optimistic trace fetch used `POST /v2/impulses/resolve` with `pointer.type: "activityExecutionTrace"` which returned `success: false` for `goal_` format execution IDs. Canvas stayed empty when navigating with `?executionId=goal_...`.
+
+**Resolution (2026-04-27, workbench 53d26c8)**: Switched to `GET /v2/activities/execution-traces/:id` (direct REST endpoint) which works for all ID formats (goal_, aexec_, act_, exec_). Normalised the response via `normalizeTrace` before passing to `handleLoadTrace`.
+
+### L-7: Live canvas expansion — no mechanism for adding columns during running goal (2026-04-27)
+
+**Discovery**: During a live goal execution, child activities appeared in the API but no mechanism existed to add them to the canvas. The canvas stayed empty until the execution completed and was loaded from history.
+
+**Resolution (2026-04-27, workbench f8f9061)**: Added live polling effect in `TrajectoryEditorPage`: when `isLive=true` and `activeExecutionId` is set, polls `GET /v2/activities/execution-traces?parent_execution_id=<id>` every 3 seconds. For each new `_activity_execute` wrapper found, resolves its `metadata.child_execution_id` and `template_name`, then calls `addActivity` to add the column. Also restored goal text from `_goal_resolve` metadata and added individual task hydration for child executions not covered by the batch window. Fixed crash when `template.tasks` is undefined (guard added to both `addActivity` and `loadFromLocalStorage`).
