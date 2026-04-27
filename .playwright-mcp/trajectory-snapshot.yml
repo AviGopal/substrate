@@ -24,191 +24,199 @@
             - /url: /templates
             - img [ref=e28]
             - generic [ref=e33]: Activities
-          - link "Trajectory" [active] [ref=e34] [cursor=pointer]:
-            - /url: /trajectory-editor
+          - link "Trajectory" [ref=e34] [cursor=pointer]:
+            - /url: /trajectory
             - img [ref=e35]
             - generic [ref=e40]: Trajectory
-          - link "Goals" [ref=e41] [cursor=pointer]:
-            - /url: /goals
-            - img [ref=e42]
-            - generic [ref=e46]: Goals
-          - link "Shapes" [ref=e47] [cursor=pointer]:
+          - link "Shapes" [ref=e41] [cursor=pointer]:
             - /url: /shapes
-            - img [ref=e48]
-            - generic [ref=e52]: Shapes
-          - link "Studio" [ref=e53] [cursor=pointer]:
+            - img [ref=e42]
+            - generic [ref=e46]: Shapes
+          - link "Studio" [ref=e47] [cursor=pointer]:
             - /url: /studio
-            - img [ref=e54]
-            - generic [ref=e58]: Studio
-    - main [ref=e59]:
-      - generic [ref=e1024]:
-        - generic [ref=e1026]:
-          - generic [ref=e1027]:
-            - button "back" [ref=e1028] [cursor=pointer]:
+            - img [ref=e48]
+            - generic [ref=e52]: Studio
+    - main [ref=e53]:
+      - generic [ref=e1112]:
+        - generic [ref=e1114]:
+          - generic [ref=e1115]:
+            - button "back" [ref=e1116] [cursor=pointer]:
               - img
               - text: back
-            - generic [ref=e1029]:
-              - heading "trajectory editor" [level=1] [ref=e1030]
-              - paragraph [ref=e1031]: build activity sequences ── horizontal grid layout
-          - generic [ref=e1032]:
-            - button "Keyboard shortcuts" [ref=e1033] [cursor=pointer]:
+            - generic [ref=e1117]:
+              - heading "trajectory editor" [level=1] [ref=e1118]
+              - paragraph [ref=e1119]: build activity sequences ── horizontal grid layout
+          - generic [ref=e1120]:
+            - button "1 issues" [ref=e1121] [cursor=pointer]:
               - img
-              - generic [ref=e1034]: Keyboard shortcuts
-            - button "Clear" [ref=e1035] [cursor=pointer]:
+              - text: 1 issues
+            - generic [ref=e1122]: Unsaved changes
+            - button "Keyboard shortcuts" [ref=e1123] [cursor=pointer]:
+              - img
+              - generic [ref=e1124]: Keyboard shortcuts
+            - button "Clear" [ref=e1125] [cursor=pointer]:
               - img
               - text: Clear
-            - button "Save" [ref=e1036] [cursor=pointer]:
+            - button "Save" [ref=e1126] [cursor=pointer]:
               - img
               - text: Save
-        - generic [ref=e1037]:
-          - generic [ref=e1040]:
-            - generic [ref=e1041]:
-              - generic [ref=e1042]:
-                - img [ref=e1043]
-                - generic [ref=e1048]: executor vessel
-              - generic [ref=e1049]:
-                - generic [ref=e1051]
-                - generic [ref=e1058]: Connected
-            - generic [ref=e1059]:
-              - generic [ref=e1060]:
-                - img [ref=e1061]
-                - generic [ref=e1063]: run goal
-              - textbox "Describe the goal…" [ref=e1064]
-              - paragraph [ref=e1065]: goal text required
+        - generic [ref=e1127]:
+          - generic [ref=e1130]:
+            - generic [ref=e1131]:
+              - generic [ref=e1132]:
+                - img [ref=e1133]
+                - generic [ref=e1138]: executor vessel
+              - generic [ref=e1139]:
+                - generic [ref=e1141]
+                - button "Connect" [ref=e1148] [cursor=pointer]
+            - generic [ref=e1149]:
+              - generic [ref=e1150]:
+                - img [ref=e1151]
+                - generic [ref=e1153]: run goal
+              - textbox "Describe the goal…" [ref=e1154]
+              - paragraph [ref=e1155]: goal text required
               - button "run" [disabled]:
                 - img
                 - text: run
-              - button "run trajectory" [ref=e1066] [cursor=pointer]:
+              - button "run trajectory" [ref=e1156] [cursor=pointer]:
                 - img
                 - text: run trajectory
-            - button "execution history" [ref=e1068] [cursor=pointer]:
-              - img [ref=e1069]
-              - img [ref=e1071]
-              - generic [ref=e1074]: execution history
-            - generic [ref=e1076]:
-              - generic [ref=e1077]: ── goal ──
-              - generic [ref=e1078]:
-                - textbox "Describe what you want to accomplish (e.g., 'Fix security vulnerabilities in authentication')" [ref=e1079]
-                - generic [ref=e1080]
-            - button "show applicable activities" [ref=e1083] [cursor=pointer]:
-              - img [ref=e1084]
+            - button "execution history 20" [ref=e1158] [cursor=pointer]:
+              - img [ref=e1159]
+              - img [ref=e1161]
+              - generic [ref=e1164]: execution history
+              - generic [ref=e1165]: "20"
+            - generic [ref=e1167]:
+              - generic [ref=e1168]: ── goal ──
+              - generic [ref=e1169]:
+                - textbox "Describe what you want to accomplish (e.g., 'Fix security vulnerabilities in authentication')" [ref=e1170]
+                - generic [ref=e1171]
+            - button "show applicable activities" [ref=e1174] [cursor=pointer]:
+              - img [ref=e1175]
               - text: show applicable activities
-            - generic [ref=e1087]:
-              - generic [ref=e1088]: palette
-              - button "New" [ref=e1089] [cursor=pointer]:
+            - generic [ref=e1178]:
+              - generic [ref=e1179]: palette
+              - button "New" [ref=e1180] [cursor=pointer]:
                 - img
                 - text: New
-            - generic [ref=e1090]:
-              - generic [ref=e1091]: ── palette ──
-              - generic [ref=e1092]:
-                - img [ref=e1093]
-                - textbox "search activities..." [ref=e1096]
-              - generic [ref=e1097]:
-                - generic [ref=e1098]
-                - generic [ref=e1112]
-                - generic [ref=e1126]
-                - generic [ref=e1140]
-                - generic [ref=e1154]
-                - generic [ref=e1168]
-                - generic [ref=e1182]
-                - generic [ref=e1196]
-                - generic [ref=e1210]
-                - generic [ref=e1224]
-                - generic [ref=e1238]
-                - generic [ref=e1252]
-                - generic [ref=e1266]
-                - generic [ref=e1280]
-                - generic [ref=e1294]
-                - generic [ref=e1308]
-                - generic [ref=e1322]
-                - generic [ref=e1336]
-                - generic [ref=e1350]
-                - generic [ref=e1364]
-                - generic [ref=e1378]
-                - generic [ref=e1392]
-                - generic [ref=e1406]
-                - generic [ref=e1420]
-                - generic [ref=e1434]
-                - generic [ref=e1448]
-                - generic [ref=e1462]
-                - generic [ref=e1476]
-                - generic [ref=e1490]
-                - generic [ref=e1504]
-                - generic [ref=e1518]
-                - generic [ref=e1532]
-                - generic [ref=e1546]
-                - generic [ref=e1560]
-                - generic [ref=e1574]
-                - generic [ref=e1588]
-                - generic [ref=e1602]
-                - generic [ref=e1616]
-                - generic [ref=e1630]
-                - generic [ref=e1644]
-                - generic [ref=e1658]
-                - generic [ref=e1672]
-                - generic [ref=e1686]
-                - generic [ref=e1700]
-                - generic [ref=e1714]
-                - generic [ref=e1728]
-                - generic [ref=e1742]
-                - generic [ref=e1756]
-                - generic [ref=e1770]
-                - generic [ref=e1784]
-          - generic [ref=e1798]:
-            - alert [ref=e1800]:
-              - img [ref=e1801]
-              - heading "Productive loop detected Loop" [level=5] [ref=e1806]:
+            - generic [ref=e1181]:
+              - generic [ref=e1182]: ── palette ──
+              - generic [ref=e1183]:
+                - img [ref=e1184]
+                - textbox "search activities..." [ref=e1187]
+              - generic [ref=e1188]:
+                - generic [ref=e1189]
+                - generic [ref=e1203]
+                - generic [ref=e1217]
+                - generic [ref=e1231]
+                - generic [ref=e1245]
+                - generic [ref=e1259]
+                - generic [ref=e1273]
+                - generic [ref=e1287]
+                - generic [ref=e1301]
+                - generic [ref=e1315]
+                - generic [ref=e1329]
+                - generic [ref=e1343]
+                - generic [ref=e1357]
+                - generic [ref=e1371]
+                - generic [ref=e1385]
+                - generic [ref=e1399]
+                - generic [ref=e1413]
+                - generic [ref=e1427]
+                - generic [ref=e1441]
+                - generic [ref=e1455]
+                - generic [ref=e1469]
+                - generic [ref=e1483]
+                - generic [ref=e1497]
+                - generic [ref=e1511]
+                - generic [ref=e1525]
+                - generic [ref=e1539]
+                - generic [ref=e1553]
+                - generic [ref=e1567]
+                - generic [ref=e1581]
+                - generic [ref=e1595]
+                - generic [ref=e1609]
+                - generic [ref=e1623]
+                - generic [ref=e1637]
+                - generic [ref=e1651]
+                - generic [ref=e1665]
+                - generic [ref=e1679]
+                - generic [ref=e1693]
+                - generic [ref=e1707]
+                - generic [ref=e1721]
+                - generic [ref=e1735]
+                - generic [ref=e1749]
+                - generic [ref=e1763]
+                - generic [ref=e1777]
+                - generic [ref=e1791]
+                - generic [ref=e1805]
+                - generic [ref=e1819]
+                - generic [ref=e1833]
+                - generic [ref=e1847]
+                - generic [ref=e1861]
+                - generic [ref=e1875]
+          - generic [ref=e1889]:
+            - alert [ref=e1891]:
+              - img [ref=e1892]
+              - heading "Productive loop detected Loop" [level=5] [ref=e1897]:
                 - text: Productive loop detected
-                - generic [ref=e1807]: Loop
-              - generic [ref=e1808]: A repeating pattern was found in columns 0–0. Each iteration produces new shapes, so this loop is considered productive and will not block execution.
-            - generic [ref=e1809]:
-              - generic [ref=e1810]:
-                - img [ref=e1811]
+                - generic [ref=e1898]: Loop
+              - generic [ref=e1899]: A repeating pattern was found in columns 0–0. Each iteration produces new shapes, so this loop is considered productive and will not block execution.
+            - generic [ref=e1900]:
+              - generic [ref=e1901]:
+                - img [ref=e1902]
                 - text: compose
-              - generic [ref=e1814]: │
-              - generic [ref=e1815]:
-                - img [ref=e1816]
+              - generic [ref=e1905]: │
+              - generic [ref=e1906]:
+                - img [ref=e1907]
                 - text: trace
-              - generic [ref=e1819]: │
-              - generic [ref=e1820]:
-                - img [ref=e1821]
+              - generic [ref=e1910]: │
+              - generic [ref=e1911]:
+                - img [ref=e1912]
                 - text: live
-            - generic [ref=e1825]:
-              - button "Insert activity at start" [ref=e1827] [cursor=pointer]:
-                - img [ref=e1828]
-                - text: insert
-              - generic [ref=e1831]:
-                - generic [ref=e1832]: ── step 1 ──
-                - button "1 shape in this column" [ref=e1834] [cursor=pointer]
-                - generic [ref=e1838]
-              - button "Insert activity after step 1" [ref=e1865] [cursor=pointer]:
-                - img [ref=e1866]
-                - text: insert
-            - status [ref=e1869]
-          - generic [ref=e1870]:
-            - generic [ref=e1871]:
-              - generic [ref=e1872]:
-                - img [ref=e1873]
-                - heading "Impulse State" [level=2] [ref=e1877]
-              - button "Collapse impulse state panel (Ctrl+I)" [ref=e1878] [cursor=pointer]:
+            - generic [ref=e1914]:
+              - img [ref=e1915]
+              - generic [ref=e1921]: "observe execution:"
+              - textbox "execution id…" [ref=e1922]
+              - button "connect" [disabled]
+            - generic [ref=e1924]:
+              - generic [ref=e1925]:
+                - generic [ref=e1926]: pool
+                - generic [ref=e1927]
+                - generic [ref=e1932]: →
+              - generic [ref=e1933]:
+                - button "Insert activity at start" [ref=e1935] [cursor=pointer]
+                - generic [ref=e1939]
+                - button "Insert activity after step 1" [ref=e1975] [cursor=pointer]
+            - status [ref=e1979]
+          - generic [ref=e1980]:
+            - generic [ref=e1981]:
+              - generic [ref=e1982]:
+                - img [ref=e1983]
+                - heading "Impulse State" [level=2] [ref=e1987]
+              - button "Collapse impulse state panel (Ctrl+I)" [ref=e1988] [cursor=pointer]:
                 - img
-            - generic [ref=e1879]:
-              - generic [ref=e1880]:
-                - generic [ref=e1881]
-                - generic [ref=e1888]
-              - generic [ref=e1916]:
-                - generic [ref=e1917]
-                - generic [ref=e1925]
-                - generic [ref=e1937]
-                - generic [ref=e1969]
-            - paragraph [ref=e1986]: Press Ctrl+I to toggle
-  - contentinfo [ref=e203]:
-    - generic [ref=e204]:
-      - generic [ref=e205]:
-        - generic [ref=e208]: API Connected
-        - generic [ref=e209]:
-          - img [ref=e210]
-          - generic [ref=e213]: 10:22:31 AM
-      - generic [ref=e214]:
-        - generic [ref=e215]: "[LOCAL]"
-        - generic [ref=e216]: v0.1.0
+            - generic [ref=e1991]:
+              - generic [ref=e1992]:
+                - heading "Current Shapes" [level=3] [ref=e1994]
+                - generic [ref=e1996]
+              - generic [ref=e2000]:
+                - heading "Task Validation" [level=3] [ref=e2002]
+                - generic [ref=e2004]
+              - generic [ref=e2019]:
+                - heading "Shape Provenance" [level=3] [ref=e2021]
+                - generic [ref=e2023]
+              - generic [ref=e2051]:
+                - heading "Shape Timeline" [level=3] [ref=e2053]
+                - generic [ref=e2057]
+            - paragraph [ref=e2068]: Press Ctrl+I to toggle
+  - contentinfo [ref=e197]:
+    - generic [ref=e198]:
+      - generic [ref=e199]:
+        - generic [ref=e202]: API Connected
+        - generic [ref=e203]:
+          - img [ref=e204]
+          - generic [ref=e207]: 10:41:48 PM
+      - generic [ref=e208]:
+        - generic [ref=e209]: "[LOCAL]"
+        - generic [ref=e210]: v0.1.0

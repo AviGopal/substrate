@@ -76,6 +76,16 @@ minibob --single "refactor the Thompson Sampling implementation"
 - **Learning** = Thompson Sampling for activities, relevance scores for impulses, ribosome for extraction
 - **LLMs** = One resolver type among many, used only when reasoning about ambiguous input is needed
 
+## Current Implementation Status & Known Issues
+
+> **See [`docs/IMPLEMENTATION_FINDINGS_2026_04.md`](docs/IMPLEMENTATION_FINDINGS_2026_04.md) for details on:**
+> - Resolved implementation findings (F-1 through F-9b)
+> - Open findings with workarounds (F-37 through F-41)
+> - Current canary deployment status and evidence
+> - Architecture notes for developers working on lifecycle events and meta-activities
+
+This document consolidates what's deployed, what's known to be working, and what's being tracked for fixes. Essential reading if you're working on composition-chain, slot-binding, validators, or any lifecycle-event-driven feature.
+
 ## Project Overview
 
 **metabob-devbob** is a self-improving AI development system built on the **process-of-becoming** - a continuous transformation that exists primarily in the transient state. The goal is to use MiniBob to develop MiniBob itself, demonstrating continuous autonomous development visible through the activity dashboard.
