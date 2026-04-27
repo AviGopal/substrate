@@ -187,7 +187,7 @@ Remove `VesselSelectorPanel`, `GoalInputBox`, `GoalSubmissionPanel` from the lef
 
 ---
 
-### T3.3 — Replace left sidebar with tab strip
+### T3.3 — Replace left sidebar with tab strip [x]
 
 **File**: `repos/workbench/src/pages/TrajectoryEditorPage.tsx`
 
