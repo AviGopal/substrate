@@ -751,3 +751,15 @@ Phase 8 success criteria: **2/5 ✅ confirmed (criterion 1 + 5), 1/5 ✅ from pr
 Open queue: F-40, F-41 (newly surfaced), Operator B-2.
 
 Total cost across two probes: $0.88. Net: validates Phase 4 end-to-end on real workload, surfaces 2 more findings ahead of any future client deploys.
+
+## Implementation Learnings
+
+### L-1: `parent_execution_id` filter missing from execution-trace list endpoint (2026-04-27)
+
+**Discovery**: Workbench `NestedTrajectoryNode` needs to fetch child executions of a given parent in order to render inline nested trajectory nodes. The natural query would be `GET /v2/activities/execution-traces?parent_execution_id=<id>`.
+
+**Finding**: The `GET /` handler in `repos/metabob-activity-api/src/routes/execution-traces.ts` (line 337) accepts `variant_id`, `activity_id`, `success`, `limit`, `offset`, `start_date`, `end_date` as query params but has no `parent_execution_id` filter. The field exists on the stored trace schema and is used during creation (line 1064) and single-trace read (line 630+), but is not exposed for list filtering.
+
+**Impact**: The workbench cannot fetch child executions by parent without either (a) fetching all traces and filtering client-side (expensive) or (b) adding the filter to the backend. The `NestedTrajectoryNode` component is implemented as a stub (depth-0 placeholder, depth≥1 link) that defers inline expansion until this filter exists.
+
+**Required backend change**: Add `parent_execution_id` as an optional query param to `GET /` in `execution-traces.ts`. When provided, append `AND parent_execution_id = $parent_execution_id` to the WHERE clause. This is additive and backward-compatible. Does not break any existing idiom.
