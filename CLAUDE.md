@@ -966,6 +966,59 @@ Applies to: `activity_execution_traces` (084), `goal_execution_paths` (085), and
 | **API Key** | MiniBob, IDE integrations | Auto-refresh | read, write |
 | **JWT External** | Dashboard users | 15 minutes | Varies by role |
 
+## Security Hardening Roadmap (Deferred)
+
+> **Status**: Out-of-scope for current implementation. Tracked in [`openspec/changes/2026-04-26-security-hardening-findings/`](openspec/changes/2026-04-26-security-hardening-findings/) with dependencies documented in related specs.
+
+The following security hardening requirements have been identified across multiple subsystems. They are documented for future implementation; current code ships without these hardening measures in place.
+
+### H1: Two-Sided Trace Verification
+
+**Affected components**: Impulse-binding-selection-layer, validators-and-failure-modes, shared-impulse-state-space
+
+**Requirement**: Cross-vessel execution traces MUST carry counterparty-signature fields proving bidirectional agreement between trace producer and consumer. Until implemented:
+- **Thompson posteriors** (`impulseRelevance_write`, `toolArgumentPattern_write`, and β/α deltas from validation results) should be gated by feature flag or kept advisory-only
+- Unverified traces should not pollute the selection layer's posterior distribution
+- WebSocket consumers should record trace signature presence (`verified_cross_sign` field) to enable post-hardening analysis
+
+**Dependency cascade**: Blocks safe learning from validators; should be prioritized before high-confidence Thompson Sampling of binding resolvers.
+
+### H2: Vessel Identity via Multihash
+
+**Affected components**: Vessel-integration-standardization, discovery-vessel registration
+
+**Requirement**: Vessel `vessel_id` MUST be derived from a vessel-held public key via multihash, with a self-signed registration challenge proving keypair possession. Schema must reserve `pubkey_hash` field on registration payload before this standardization is canonical.
+
+**Dependency cascade**: Prerequisite for H4 (authority ratification).
+
+### H4: Tailnet-Lock Authority & AUM Attestation
+
+**Affected components**: Shape-provider-goal-creation, self-development-loop, vessel-integration-standardization, impulse-binding-selection-layer (indirectly)
+
+**Requirement**: High-risk shape producers and cross-org template reuse require AUM (Authority Update Manager) attestation:
+- **Auto-dispatch gates**: Before auto-dispatching goals that produce high-risk shapes, verify the target vessel is AUM-attested
+- **Registration ratification**: High-risk shapes require k-of-n quorum authority from the AUM
+- **Disablement secrets**: ≥2 disablement secrets required per registered high-risk producer
+- Schema must reserve `aum_entry_id` and `disablement_secret_count` fields; `POST /register` flow must support AUM-attestation precondition
+
+**Affects policies**: Auto-dispatch vs. human-in-loop decisions for sub-goal creation, template reuse across org boundaries.
+
+### CC1: Scope Narrowing for Sub-Goals
+
+**Affected components**: Shape-provider-goal-creation
+
+**Requirement**: Child task `outputShapes` MUST be a subset of the parent's `endpoint_output_shapes`. When emitting a `create-shape-provider-goal` goal-shaped impulse, enforce that `target_shape` is within the parent's declared output scope. Treat out-of-scope shapes similarly to existing recursion-safety guards (convert to `human_in_the_loop_required` flag rather than hard-fail).
+
+**Impact**: Prevents sub-goal chains from producing shapes outside their original scope, reducing scope creep in recursive shape production.
+
+### Current Guidance
+
+Until H1, H2, H4, and CC1 are implemented:
+- **Learning**: Thompson Sampling operates on unverified traces; system converges more slowly but still makes progress
+- **Security posture**: Vessels cannot assert their identity cryptographically; AUM cannot validate cross-org reuse; auto-dispatch is limited to low-risk shapes
+- **Graceful degradation**: All features ship and function; verifiable traces and AUM attestation are rendered advisory-only when absent
+- **Future-proofing**: Schema fields and conditional logic are reserved; implementations can enable hardening incrementally as dependencies land
+
 ## Configuration
 
 ### MiniBob Configuration Priority
