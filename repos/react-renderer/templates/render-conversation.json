@@ -1,0 +1,45 @@
+{
+  "id": "render-conversation",
+  "name": "Render Conversational Interface",
+  "category": "tool",
+  "description": "Renders a conversational interface where agent responses include structured UI primitives inline in a message thread.",
+  "inputShapes": ["user_intent"],
+  "outputShapes": ["ui_component"],
+  "tasks": [
+    {
+      "id": "render_conversation_ui",
+      "description": "Render the conversation thread with input box",
+      "resolver": "ui_component",
+      "config": {
+        "primitive": {
+          "type": "container",
+          "layout": "vertical",
+          "gap": 12,
+          "className": "max-w-3xl mx-auto",
+          "children": [
+            {
+              "type": "container",
+              "layout": "vertical",
+              "gap": 8,
+              "className": "min-h-96 overflow-y-auto",
+              "children": "{{user_intent.messages | map(m => ({ type: 'container', layout: 'vertical', className: m.role === 'user' ? 'items-end' : 'items-start', children: [{ type: 'text', content: m.text, className: m.role === 'user' ? 'bg-primary text-primary-foreground rounded-lg px-3 py-2' : 'bg-muted rounded-lg px-3 py-2' }] }))}}"
+            },
+            {
+              "type": "container",
+              "layout": "horizontal",
+              "gap": 8,
+              "children": [
+                { "type": "input", "inputType": "text", "placeholder": "Ask a follow-up question...", "onChange": "chat_input" },
+                { "type": "button", "label": "Send", "onClick": "send_chat", "variant": "default" }
+              ]
+            }
+          ]
+        },
+        "position": { "type": "flow" },
+        "animation": "fade"
+      },
+      "inputShapes": ["user_intent"],
+      "outputShapes": ["ui_component"]
+    }
+  ]
+}

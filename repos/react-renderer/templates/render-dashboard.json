@@ -1,0 +1,64 @@
+{
+  "id": "render-dashboard",
+  "name": "Render Performance Dashboard",
+  "category": "tool",
+  "description": "Renders a performance dashboard with KPI grid, charts, and alert table from vessel performance metrics.",
+  "inputShapes": ["vesselPerformanceMetrics"],
+  "outputShapes": ["ui_component"],
+  "tasks": [
+    {
+      "id": "render_dashboard_layout",
+      "description": "Render the full dashboard layout",
+      "resolver": "ui_component",
+      "config": {
+        "primitive": {
+          "type": "container",
+          "layout": "vertical",
+          "gap": 16,
+          "children": [
+            {
+              "type": "container",
+              "layout": "grid",
+              "columns": 4,
+              "gap": 12,
+              "children": [
+                { "type": "container", "layout": "vertical", "gap": 4, "children": [
+                  { "type": "text", "content": "Executions", "className": "text-sm text-muted-foreground" },
+                  { "type": "text", "content": "{{vesselPerformanceMetrics.totalExecutions}}", "className": "text-2xl font-bold" }
+                ]},
+                { "type": "container", "layout": "vertical", "gap": 4, "children": [
+                  { "type": "text", "content": "Success Rate", "className": "text-sm text-muted-foreground" },
+                  { "type": "text", "content": "{{vesselPerformanceMetrics.successRate}}%", "className": "text-2xl font-bold" }
+                ]},
+                { "type": "container", "layout": "vertical", "gap": 4, "children": [
+                  { "type": "text", "content": "Avg Duration", "className": "text-sm text-muted-foreground" },
+                  { "type": "text", "content": "{{vesselPerformanceMetrics.avgDurationMs}}ms", "className": "text-2xl font-bold" }
+                ]},
+                { "type": "container", "layout": "vertical", "gap": 4, "children": [
+                  { "type": "text", "content": "Cost", "className": "text-sm text-muted-foreground" },
+                  { "type": "text", "content": "${{vesselPerformanceMetrics.totalCostUsd}}", "className": "text-2xl font-bold" }
+                ]}
+              ]
+            },
+            { "type": "chart", "chartType": "line", "data": "{{vesselPerformanceMetrics.timeSeries}}", "xKey": "timestamp", "yKey": "executions" },
+            {
+              "type": "data-table-v2",
+              "columns": [
+                { "key": "templateId", "header": "Activity" },
+                { "key": "successRate", "header": "Success %", "type": "number" },
+                { "key": "avgDurationMs", "header": "Avg Duration (ms)", "type": "number" },
+                { "key": "totalCostUsd", "header": "Cost ($)", "type": "number" }
+              ],
+              "data": "{{vesselPerformanceMetrics.byTemplate}}",
+              "pageSize": 20
+            }
+          ]
+        },
+        "position": { "type": "flow" },
+        "animation": "fade"
+      },
+      "inputShapes": ["vesselPerformanceMetrics"],
+      "outputShapes": ["ui_component"]
+    }
+  ]
+}

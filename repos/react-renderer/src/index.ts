@@ -21,6 +21,13 @@ import { loadRendererConfig, resolveOrgId } from './config-loader'
 
 // Load resolvers
 import './resolvers/ui-component'
+import './resolvers/layout-change'
+import './resolvers/style-change'
+import './resolvers/component-change'
+import './resolvers/data-source-change'
+import './resolvers/ui-event'
+import './resolvers/composition-metric'
+import { enqueueUiEvent } from './resolvers/ui-event'
 
 // Global discovery client
 let discoveryClient: VesselClient | null = null
@@ -49,6 +56,27 @@ interface ClientInfo {
   connectedAt: number
   lastActivity: number
   viewport?: { width: number; height: number }
+}
+
+// ============================================================================
+// API Key Auth Middleware Helper
+// ============================================================================
+
+/**
+ * Returns a 401 Response if the request lacks the correct API key.
+ * Returns null if authentication passes (or METABOB_API_KEY is not set).
+ */
+function checkApiKeyAuth(req: Request): Response | null {
+  const expectedKey = process.env.METABOB_API_KEY
+  if (!expectedKey) {
+    // Dev mode: no key configured — skip auth
+    return null
+  }
+  const authHeader = req.headers.get('Authorization') ?? ''
+  if (authHeader === `ApiKey ${expectedKey}`) {
+    return null
+  }
+  return Response.json({ error: 'unauthorized' }, { status: 401 })
 }
 
 function buildHandler() {
@@ -141,6 +169,10 @@ function buildHandler() {
 
   // Resolve specific impulse type
   app.post('/resolve/:type', async (c) => {
+    // Auth check for write resolvers (and general /resolve/:type)
+    const authErr = checkApiKeyAuth(c.req.raw)
+    if (authErr) return authErr
+
     try {
       const type = c.req.param('type')
       const body = await c.req.json()
@@ -160,6 +192,35 @@ function buildHandler() {
       )
     }
   })
+
+  // ============================================================================
+  // Write Resolver Routes
+  // Each route authenticates via API key, extracts pointer from body, calls resolver.
+  // ============================================================================
+
+  async function dispatchWriteResolver(c: any, type: string) {
+    const authErr = checkApiKeyAuth(c.req.raw)
+    if (authErr) return authErr
+    try {
+      const body = await c.req.json()
+      const pointer = { type, ...body }
+      const result = await resolve(pointer)
+      return c.json(result)
+    } catch (error) {
+      console.error(`[Server] ${type} resolver error:`, error)
+      return c.json(
+        { error: error instanceof Error ? error.message : 'Resolution failed' },
+        500
+      )
+    }
+  }
+
+  app.post('/resolve/layout_change', (c) => dispatchWriteResolver(c, 'layout_change'))
+  app.post('/resolve/style_change', (c) => dispatchWriteResolver(c, 'style_change'))
+  app.post('/resolve/component_change', (c) => dispatchWriteResolver(c, 'component_change'))
+  app.post('/resolve/data_source_change', (c) => dispatchWriteResolver(c, 'data_source_change'))
+  app.post('/resolve/ui_event', (c) => dispatchWriteResolver(c, 'ui_event'))
+  app.post('/resolve/composition_metric', (c) => dispatchWriteResolver(c, 'composition_metric'))
 
   // ============================================================================
   // Impulse Management API
@@ -400,6 +461,14 @@ function buildHandler() {
   })
 
   // ============================================================================
+  // Built Client App
+  // ============================================================================
+
+  // Serve built client app (React SPA)
+  app.get('/app', async (c) => c.html(await Bun.file('./dist/index.html').text()))
+  app.get('/app/*', async (c) => c.html(await Bun.file('./dist/index.html').text()))
+
+  // ============================================================================
   // Debugging & Inspection Routes
   // ============================================================================
 
@@ -541,6 +610,19 @@ const server = Bun.serve<ClientInfo>({
 console.log(`[Server] Listening on port ${PORT}`)
 
 // ============================================================================
+// Default Action Handler — enqueues browser action messages as ui_event impulses
+// ============================================================================
+
+setActionHandler(async (action, _sessionId) => {
+  enqueueUiEvent({
+    action: action.action,
+    payload: action.payload ?? {},
+    componentId: action.componentId,
+    timestamp: action.timestamp,
+  })
+})
+
+// ============================================================================
 // Config File Watcher
 // ============================================================================
 
@@ -569,6 +651,28 @@ if (import.meta.hot) {
 }
 
 // ============================================================================
+// Activity Templates
+// ============================================================================
+//
+// Templates registered in vessel.json (activities[].templatePath) and available
+// in templates/ are NOT automatically synced to activity-api at startup — this
+// vessel has no syncTemplates() call.  To register or refresh them, run:
+//
+//   minibob --single "sync templates for react-renderer"
+//
+// Templates present as of 2026-04-27:
+//   templates/render-file-tree.json
+//   templates/synthesize-ui-from-data.json       (Group 9: shape-mapping lookup + LLM transform + emit)
+//   templates/render-live-execution-monitor.json  (Group 11.1)
+//   templates/render-data-exploration.json        (Group 11.2)
+//   templates/render-wizard.json                  (Group 11.3)
+//   templates/render-dashboard.json               (Group 11.4)
+//   templates/render-conversation.json            (Group 11.5)
+//
+// Shape-mapping config (config/shape-mapping.json) IS loaded at startup
+// (see shapeMappingCache above) and hot-reloaded on file change (see watcher below).
+
+// ============================================================================
 // Discovery Vessel Integration
 // ============================================================================
 
@@ -580,9 +684,7 @@ async function initializeDiscovery() {
     return
   }
 
-  const hostname = process.env.HOSTNAME || 'react-renderer'
-  const podName = process.env.POD_NAME || hostname
-  const vesselId = process.env.VESSEL_ID || `react-renderer-${podName}`
+  const vesselId = process.env.VESSEL_ID ?? `react-renderer-${process.env.HOSTNAME ?? "local"}`
 
   console.log(`[Discovery] Using endpoint: ${rendererConfig.discoveryEndpoint}`)
   console.log(`[Discovery] Vessel endpoint: ${rendererConfig.vesselEndpoint}`)
@@ -598,14 +700,26 @@ async function initializeDiscovery() {
     vesselName: 'react-renderer',
     version: vesselManifest.version,
     endpoint: rendererConfig.vesselEndpoint,
-    shapes: ['uiComponent'],
+    shapes: [
+      'ui_component',
+      'ui_state',
+      'viewport_state',
+      'layout_change',
+      'style_change',
+      'component_change',
+      'data_source_change',
+      'ui_event',
+      'composition_metric',
+      'design_token',
+    ],
     protocol: 'http',
     authToken: rendererConfig.metabobApiKey || undefined,
     orgId,
     authType: 'ApiKey',
-    resolve_endpoint: '/impulses',
+    resolve_endpoint: '/resolve',
     resolve_request_format: 'pointer',
     auth_scheme: 'ApiKey',
+    resolve_timeout_ms: 10000,
     metadata: {
       capabilities: ['ui-rendering', 'websocket', 'real-time-updates'],
       environment: process.env.NODE_ENV || 'development',
@@ -618,8 +732,13 @@ async function initializeDiscovery() {
 
   if (success) {
     console.log('[Discovery] ✓ Registered successfully')
-    discoveryClient.startHeartbeat()
-    console.log('[Discovery] Heartbeat started')
+    // Use startHeartbeatManager if available, otherwise fall back to startHeartbeat
+    if (typeof (discoveryClient as any).startHeartbeatManager === 'function') {
+      (discoveryClient as any).startHeartbeatManager(60000)
+    } else {
+      discoveryClient.startHeartbeat()
+    }
+    console.log('[Discovery] Heartbeat started (60s interval)')
   } else {
     console.warn('[Discovery] ✗ Registration failed (will retry)')
   }

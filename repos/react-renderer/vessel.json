@@ -24,16 +24,40 @@
       "endpoint": "/resolve/viewport_state"
     },
     {
-      "type": "data-table-v2",
-      "description": "TanStack Table-backed data table with sorting, filtering, and pagination",
+      "type": "layout_change",
+      "description": "Patches position, size, or layer on an existing ui_component impulse",
       "protocol": "http",
-      "endpoint": "/resolve/data-table-v2"
+      "endpoint": "/resolve/layout_change"
     },
     {
-      "type": "query_state",
-      "description": "TanStack Query cache state for impulse pointer resolution",
+      "type": "style_change",
+      "description": "Patches className or variant on the root primitive of a ui_component impulse",
       "protocol": "http",
-      "endpoint": "/resolve/query_state"
+      "endpoint": "/resolve/style_change"
+    },
+    {
+      "type": "component_change",
+      "description": "Replaces the root primitive on an existing ui_component impulse",
+      "protocol": "http",
+      "endpoint": "/resolve/component_change"
+    },
+    {
+      "type": "data_source_change",
+      "description": "Patches the data field on a data-table or chart primitive",
+      "protocol": "http",
+      "endpoint": "/resolve/data_source_change"
+    },
+    {
+      "type": "ui_event",
+      "description": "Dequeues one browser action event from the in-process event queue",
+      "protocol": "http",
+      "endpoint": "/resolve/ui_event"
+    },
+    {
+      "type": "composition_metric",
+      "description": "Records UI composition outcome metrics to activity-api",
+      "protocol": "http",
+      "endpoint": "/resolve/composition_metric"
     }
   ],
 
@@ -45,10 +69,10 @@
       "templatePath": "templates/render-impulse-collection.json"
     },
     {
-      "id": "update-from-execution-trace",
+      "id": "synthesize-ui-from-data",
       "category": "ui",
-      "description": "Update UI when execution trace changes",
-      "templatePath": "templates/update-from-execution-trace.json"
+      "description": "Synthesize a UI composition from raw data impulses",
+      "templatePath": "templates/synthesize-ui-from-data.json"
     },
     {
       "id": "handle-user-interaction",
@@ -57,10 +81,34 @@
       "templatePath": "templates/handle-user-interaction.json"
     },
     {
-      "id": "render-file-tree",
-      "category": "ui",
-      "description": "Run find on a directory and render the file list as a data-table",
-      "templatePath": "templates/render-file-tree.json"
+      "id": "render-live-execution-monitor",
+      "category": "tool",
+      "description": "Renders a live execution monitor showing task progress, status badges, and task log table",
+      "templatePath": "templates/render-live-execution-monitor.json"
+    },
+    {
+      "id": "render-data-exploration",
+      "category": "tool",
+      "description": "Renders a data exploration interface with summary badges and sortable filterable table",
+      "templatePath": "templates/render-data-exploration.json"
+    },
+    {
+      "id": "render-wizard",
+      "category": "tool",
+      "description": "Renders a multi-step form wizard driven by a goal impulse",
+      "templatePath": "templates/render-wizard.json"
+    },
+    {
+      "id": "render-dashboard",
+      "category": "tool",
+      "description": "Renders a performance dashboard with KPI grid, line chart, and breakdown table",
+      "templatePath": "templates/render-dashboard.json"
+    },
+    {
+      "id": "render-conversation",
+      "category": "tool",
+      "description": "Renders a conversational interface with a message thread and text input box",
+      "templatePath": "templates/render-conversation.json"
     }
   ],
 
@@ -88,8 +136,8 @@
   },
 
   "discovery": {
-    "enabled": false,
-    "heartbeatIntervalMs": 120000,
+    "enabled": true,
+    "heartbeatIntervalMs": 60000,
     "retryAttempts": 3,
     "bootstrapDelayMs": 0,
     "metadata": {
