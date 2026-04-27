@@ -2,8 +2,8 @@
 
 This document consolidates implementation findings from the impulse-activity-loop implementation wave (April 2026) and documents what's currently deployed and working on canary.
 
-**Last updated:** 2026-04-27 05:02 UTC  
-**Deployment version:** 1.12.0-fd936c0  
+**Last updated:** 2026-04-27 12:45 UTC  
+**Deployment version:** activity-api 1.15.0 (workbench v0.7.0, minibob 0.14.0)  
 **Canary endpoint:** https://activity.metabob.com
 
 ---
@@ -11,6 +11,9 @@ This document consolidates implementation findings from the impulse-activity-loo
 ## Resolved Implementation Findings
 
 These findings were identified during implementation and have been resolved. They represent non-obvious implementation details that developers should understand.
+
+**Currently documented:** F-1 through F-9b (foundational), F-45 (null-guard fix, 2026-04-27)  
+**Open findings with workarounds:** F-37, F-38, F-39, F-40, F-41 (meta-activity lifecycle issues, in progress)
 
 ### F-1: Lifecycle Payload Field-Name Reconciliation — RESOLVED
 
@@ -204,6 +207,18 @@ These findings surface real issues that are being tracked and will be resolved i
 **Fix scope:** minibob `lifecycle-subscriptions.ts` or dispatcher entry point. Probably ~30-line change.
 
 **Implication:** Slot-binding's slot-population logic (the core of Phase 1) doesn't activate until this is fixed. Without the preBinding impulse available, the first task that reads it fails immediately.
+
+### F-45: Null-Guard Missing from InferShape During Impulse Binding — RESOLVED
+
+**Symptom:** During impulse binding when a shape pointer is malformed or missing required fields, `inferShape()` called on a null/undefined pointer throws TypeError instead of gracefully returning an unknown shape or empty signature.
+
+**Status:** Fixed in minibob commit c74f499 (2026-04-27). Version bump: 0.13.0 → 0.14.0.
+
+**Root cause:** `inferShape()` function didn't defensively guard against null/undefined input before accessing pointer properties. Edge case triggered during slot-binding's producer-selection resolver when a downstream task consumed a shape that existed but had an incomplete or missing producer entry.
+
+**Fix:** Added null-check at function entry: `if (!pointer) return { shape: 'unknown', fields: [] };` or similar. Allows binding to proceed with graceful degradation rather than throwing.
+
+**Implication:** Slot-binding and shape-binding flows now continue even when encountering malformed shape pointers, enabling partial-completion semantics during nested goal execution.
 
 ---
 
