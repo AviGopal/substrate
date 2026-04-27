@@ -663,6 +663,73 @@ Everything else is either:
 
 ---
 
+## The Composition Graph and Informational State
+
+### The Informational State
+
+The system operates against an unbounded backdrop: the **informational state** contains all possible and impossible impulses — every piece of data that could ever be known, computed, or produced. File contents that have never been read. Results of computations not yet run. The full causal graph of everything that could be known. The system cannot access this complete space directly.
+
+The system has access to two bounded subsets:
+
+**Reachable subgraph** — the shapes producible by resolvers across vessels currently connected to the network. A shape is reachable if some connected vessel advertises a resolver contract for producing it. The reachable subgraph may span millions of vessels and trillions of resolvers; vessel registration with discovery-vessel makes resolver contracts visible without requiring any single vessel to enumerate all possibilities.
+
+**Learned topology** — the sampled portion of the reachable subgraph. Every execution trace is a data point. Composition edges between activities carry α/β posteriors derived from trace outcomes. Thompson Sampling models the probability that a given path leads to a goal-satisfying state. The learned topology grows with each execution.
+
+```
+  INFORMATIONAL STATE (complete, infinite)
+  ════════════════════════════════════════
+
+    ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  ░░░░░░  ┌──────────────────────────────┐  ░░░░░░
+  ░░░░░░  │  REACHABLE SUBGRAPH          │  ░░░░░░
+  ░░░░░░  │  (connected vessel resolvers)│  ░░░░░░
+  ░░░░░░  │   ┌──────────────────────┐   │  ░░░░░░
+  ░░░░░░  │   │  LEARNED TOPOLOGY    │   │  ░░░░░░
+  ░░░░░░  │   │  (traces, Thompson   │   │  ░░░░░░
+  ░░░░░░  │   │   posteriors)        │   │  ░░░░░░
+  ░░░░░░  │   └──────────────────────┘   │  ░░░░░░
+  ░░░░░░  └──────────────────────────────┘  ░░░░░░
+    ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+```
+
+### The Composition Graph
+
+The composition graph is the graph of all activity templates connected by their input and output shapes — every activity that produces shape X is connected by an edge to every activity that consumes shape X. This graph is not a designed structure. It is **discovered** through execution. Every successful trace confirms an edge exists. Every failure provides evidence about edge quality.
+
+A **trajectory** is one path through this graph: a specific sequence of activities whose output shapes feed subsequent activities' input shapes. A trajectory is structurally identical to an activity — same tasks, same shapes, same resolver contracts. The distinction is a matter of granularity: a single-activity execution traverses one node; a multi-activity trajectory traverses a path of nodes.
+
+Thompson Sampling does not optimize over a known space. It builds a probability model over a topology that may never be fully mapped. The system's goal is not to find the optimal path through a known graph; it is to discover the topology well enough to reliably reach goal-satisfying states.
+
+### Reachability vs. Learnedness
+
+Two distinct states affect what the system can do:
+
+| Concept | Meaning | When it changes |
+|---|---|---|
+| **Reachable** | A resolver for this shape exists in currently connected vessels | Vessel connects or disconnects |
+| **Learned** | The system has traces showing this shape being produced (and with what success rate) | After executions; never decreases |
+| **Unreachable but known** | Traces confirm the shape CAN be produced, but no vessel currently provides it | Vessel goes offline |
+| **Unknown** | No traces; shape may or may not be producible | Before first successful execution |
+
+The `unbindable` state in binding slots can represent either **unreachable** (the vessel that produces this shape is not connected) or **unknown** (no evidence this shape can be produced at all). These require different responses: wait for vessel connection vs. escalate via `create-shape-provider-goal` to explore new topology.
+
+### Topology Discovery Is the Purpose
+
+The impulse-activity loop is not a recipe executor. It is a **topology discovery engine**:
+
+1. **Goal arrives** → identify which shapes would constitute a goal-satisfying state
+2. **Search learned topology** → find activities that have reliably produced those shapes
+3. **Bind impulses** → establish which shapes are reachable from the current pool
+4. **Execute** → traverse the candidate path; observe whether it leads where predicted
+5. **Validate** → verify produced shapes satisfy the goal constraint
+6. **Escalate when needed** → probe unmapped topology via `create-shape-provider-goal`
+7. **Learn** → update posteriors on traversed edges and consumed impulses
+8. **Extract patterns** → ribosome converts successful explorations into reusable templates
+
+Each iteration reduces uncertainty about the composition graph in the vicinity of the goal. Convergence — reliably reaching goal-satisfying states — is evidence that enough topology has been learned, not that the graph is fully known.
+
+---
+
 ## Relating to the Three-State Ontology
 
 This model is the operational implementation of the three-state ontology:
