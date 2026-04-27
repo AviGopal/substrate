@@ -78,7 +78,7 @@ minibob --single "refactor the Thompson Sampling implementation"
 
 ## Current Implementation Status & Known Issues
 
-**Resolved findings:** F-1 through F-9b (foundational), F-37 through F-45 (impulse-activity-loop wave, 2026-04-27)
+**Resolved findings:** F-1 through F-9b (foundational), F-37 through F-52 (impulse-activity-loop wave, 2026-04-27+)
 
 **Key fixes in latest builds:**
 - **F-41** (2026-04-27): Seed trigger impulse into meta-activity executor pool
@@ -86,8 +86,10 @@ minibob --single "refactor the Thompson Sampling implementation"
 - **F-43** (2026-04-27): Legacy field coercion for impulse-relevance (backward compatibility)
 - **F-44** (2026-04-27): Hono Context-not-finalized auth layer fix (minibob pending-sync queue unblocked)
 - **F-45** (2026-04-27): Improviser null-guard fix (minibob v0.14.0+)
+- **F-51** (post-2026-04-27): Schema fix for migration 093 (improved entity validation)
+- **F-52** (post-2026-04-27): Unlisted templates resolver fix (prevents private template leakage)
 
-**Canary deployment:** activity-api v1.15.0, minibob v0.14.0, workbench v0.7.1 (2026-04-27)
+**Canary deployment:** activity-api v1.15.0, minibob v0.14.0+, workbench v0.7.1+ (2026-04-27+)
 
 This system consolidates what's deployed, what's known to be working, and what's being tracked for fixes. Essential reading if you're working on composition-chain, slot-binding, validators, or any lifecycle-event-driven feature. Full details are embedded in the MiniBob, Activity-API, and Workbench sections below.
 
@@ -245,6 +247,7 @@ Lightweight autonomous vessel (~3,000 LOC TypeScript/Bun):
 - **F-42: Lifecycle type is local for impulse resolution** (2026-04-27): `resolvePointer` now recognizes `type === 'lifecycle'` as a local impulse type (alongside memo, file, directoryTree, gitDiff). Returns JSON-stringified representation of the lifecycle pointer's payload without requiring backend or filesystem lookup. Prevents offline-mode errors when LLM tasks force-load lifecycle impulses from validator-dispatch or slot-binding pools.
 - **F-44: Hono Context-not-finalized auth layer fix** (2026-04-27): Two compounding bugs fixed in activity-api auth layer: (1) index.ts:79 jwtAuthMiddleware wrapper missing return statement caused 401s to be lost in transit with context left unfinalized; (2) jwtAuth.ts:171-182 reject-by-default logic blocked X-Internal-Api-Key requests before handlers could explicitly accept them. Fixes now in place; minibob pending-sync queue should drain on next client run after deployment. 13-line net change; 4 new regression tests added, existing 24 impulse route tests still pass.
 - **F-45: Improviser null-guard fix** (2026-04-27): Added null safety check in improviser resolver to prevent crashes when accessing optional fields. Defensive coding prevents runtime errors during speculative template generation. Single-line fix; 1 new regression test added.
+- **F-52: Unlisted templates resolver fix** (post-2026-04-27): Fixed resolver to properly handle unlisted/private templates, preventing unintended template visibility in discovery queries. Enables fine-grained template access control without compromising learning system visibility.
 
 ### 3. metabob-activity-api (`repos/metabob-activity-api`)
 TypeScript/Bun/Hono backend - Learning system and trace storage:
@@ -351,6 +354,8 @@ Human-in-the-loop development interface for activities, executions, and learning
 - **ShapesPage live model (Phase 4: T4.2)** (2026-04-27, v0.6.1): Removes static Alert and Add Shape button. (1) **Live ShapeCard** — shows resolver count + vessel name + template usage count for each shape; resolver badges indicate which vessels provide the shape. (2) **Inline detail panel** — opens when shape is selected; displays resolver vessels, template counts, lazy-loaded impulse content examples via useShapeExamples. (3) **Dynamic discovery** — all data flows from discovery-vessel registry and template list queries; shapes appear/disappear as vessels register/deregister. 253-line rewrite (164 ins, 89 del); enables real-time shape inventory without manual curation.
 - **Impulse content inline in OutputLayer (Phase 5: T5.1-T5.6)** (2026-04-27, v0.7.0): Workbench simplification complete — all 16 tasks finished across 5 phases. Phase 5 adds expandable impulse content display in execution traces. (1) **useImpulseContent hook** (T5.1-T5.2) — new hook and store field (`trajectoryStore.impulseContentMap`) for caching impulse bodies fetched or received via WebSocket. (2) **WS broadcaster body for all shapes** (T5.5) — impulse-api's `impulse.resolved` broadcast now includes `body` for all shapes (not just validation_result), with 50KB guard: bodies > 50KB return `{ truncated: true, summary: ... }` instead of full payload. (3) **OutputLayer expansion** (T5.3-T5.4) — new expand/collapse chevrons in OutputLayer rows. When expanded: live mode uses `impulseContentMap` (no fetch), recalled mode calls `useImpulseContent` to fetch from execution trace, compose mode shows nothing. Content > 500 chars truncates with "Show more" toggle. (4) **TaskEditor pass-through** (T5.6) — `TaskEditor` now receives `executionId` and `impulseContentMap` props, enabling inline content display for recalled/live modes. Workbench v0.7.0 ships with Phase 1-5 complete; simplification roadmap concluded.
 - **Omnibar trajectory header** (2026-04-27, v0.7.1): Enhanced trajectory editor header with integrated omnibar control. Unified search and navigation surface for trajectory metadata and controls. Refined UI for improved UX in trajectory authoring workflows.
+- **Sidebar width + palette layout fixes** (post-2026-04-27): Refined responsive sidebar dimensions and activity palette layout for better space utilization. Sidebar width optimized for multi-panel layouts; palette scrolling improved for large activity lists. Reduces horizontal scrolling, improves usability on standard desktop widths.
+- **Live canvas + goal impulse** (post-2026-04-27): New live canvas view for real-time composition authoring with goal impulse tracking. Enables users to author activities while monitoring goal decomposition and shape production in parallel. Goal context flows through canvas for context-aware activity suggestions.
 
 **Distinct from activity-dashboard:** the dashboard is a read-only observability surface; the workbench is authoring + correction + live control (template editing, retries, manual trace curation, composition authoring, trace drill-down). Both talk to the same activity-api.
 
