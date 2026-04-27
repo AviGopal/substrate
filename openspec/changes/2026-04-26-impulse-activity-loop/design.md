@@ -72,6 +72,81 @@ Acceptance: each template loads at startup; subscribers fire on emitted lifecycl
 
 Remove the hardcoded blocks at `activity.ts:4949-4997` and `:5454-5529` and the three `recordImpulseRelevance` call sites at `:5471, :5574, :5719`. Acceptance: no regression in the existing activity-execution test suite; meta-activities cover the migrated paths.
 
+<!-- Discrepancy: `proposal.md` says this change "introduces no source-code changes of its own" yet tasks.md §5 lists concrete deletions in `repos/minibob/src/activity.ts`. Surfaced for separate cleanup; not resolved here. -->
+
+#### Phase 5 prerequisites and rollback
+
+Phase 5 is the only phase in this change that **deletes** running code. Every other phase is additive. The deletion is irreversible without a revert and the new path (lifecycle event → meta-activity → resolver chain) shares no code with the path it replaces, so any latent bug in the meta-activity stack converts a graceful degradation under the additive phases into a production incident under cutover. This subsection pins the prerequisites, the cutover mechanism, and the rollback plan.
+
+**Hard prerequisites — all must hold before Phase 5 starts.**
+
+1. **H1 deployed.** Two-sided execution-trace verification is live in `repos/metabob-activity-api/src/routes/execution-traces.ts`; Thompson α/β updates at `:1306` and `:1579` SHALL skip rows that do not carry `verified_cross_sign: true`. Reference: `openspec/changes/2026-04-26-security-hardening-findings/design.md` §H1. Without H1, the meta-activity path emits learning signals (via `learning_signal_writer`) over a wider, more granular surface than the inline path; an unverified-trace stream from a misbehaving vessel after Phase 5 lands routes more decisions than it does today, since binding selection itself is now Thompson-driven (`impulse-binding-selection-layer/design.md` D2).
+2. **H5 deployed.** Each resolver family that Phase 5 depends on has a registered `baseline: true` immutable variant and the auto-regression scan filters quarantined variants from Thompson candidate sets. Reference: `openspec/changes/2026-04-26-security-hardening-findings/design.md` §H5. The dependent families are:
+   - `producer_selection` (sibling 1 §4 — registered at `repos/minibob/src/resolvers/producer-selection-resolver.ts`)
+   - `impulse_pool_selection` (sibling 1 §3 — `repos/minibob/src/resolvers/impulse-pool-selection-resolver.ts`)
+   - `learning_signal_writer` (sibling 3 §6 — `repos/minibob/src/resolvers/learning-signal-writer-resolver.ts`)
+   - `validator_dispatch` (sibling 3 §7 — `repos/minibob/src/embedded-templates/validator-dispatch.json`, dispatched as a meta-activity)
+   - `impulse_preparation` (sibling 1 §2 — extended at `activity.ts:1705`)
+
+   Without H5, a self-update activity that ships a bad variant of any of these families and gains a Thompson edge during shadow-mode has no immutable baseline to fall back on; Phase 5 has already deleted the inline path that previously served as the implicit baseline.
+3. **Open-finding closures.** Each of the following becomes a production incident under Phase 5 cutover (graceful degradation under the additive phases):
+   - **F-7 / F-39** — `lifecycle:task:completed` payload carries `templateId` and `learning_signal_writer` consumes it cleanly. Both currently RESOLVED with passing tests; verify the test stays green and re-confirm on canary that `validator-dispatch.json` task 5 succeeds, not just no-ops. Reference: design.md §F-7, §F-39; tasks.md F-39 entry.
+   - **F-37 / F-40** — `composition_chain` populated reliably for both root-first inserts and L1/L2 meta-trace write-order races. Both RESOLVED; canary evidence (live probe) must show non-empty chains on at least one slot-binding nested execution before Phase 5 deletions land.
+   - **F-41** — `preBinding` impulse is propagated into the meta-activity nested executor's pool. RESOLVED via merge into `options.impulses` at `activity.ts` execute-time; Phase 5 has no inline fallback if a regression here makes slot-binding's first task fail with the missing-shapes gate.
+
+   Each finding above is RESOLVED in the current iteration log but remains a Phase 5 prerequisite gate: re-verify on canary post-deploy, do not assume the resolution holds across the merges that land between now and Phase 5 cutover.
+4. **Phase 8 synthetic-injection subset green.** The Phase 8 hardening-injection suite is its own scope, but Phase 5 specifically requires the failure-mode subset that exercises the surfaces it removes:
+   - resolver-variant cascade failure on `producer_selection` and `impulse_pool_selection` (degraded learning-signal feedback under Thompson posterior shift)
+   - missing-`templateId` silent data-loss in `learning_signal_writer` (Phase 5 deletes the inline α/β-update call sites that today catch this case structurally)
+   - meta-activity invocation failure with no inline fallback (slot-binding template fails to load, fails its own gate, or its first task errors before the existing inline `inputShapes` synthesizer block at `activity.ts:4949-4997` would have run)
+
+**Feature flag pattern.**
+
+- **Flag name**: `FEATURE_ACTIVITY_DRIVEN_BINDING` (no existing project convention found in `repos/minibob/src/config.ts` for `FEATURE_*` flags; defer to project owner if a different name is preferred).
+- **Source of truth**: env var read by `repos/minibob/src/config.ts` alongside the existing `MINIBOB_*` env-var pattern (e.g. `MINIBOB_DISCOVERY_ENABLED` at `:438`). Per-org override via SurrealDB row in `org_feature_flags` (new table; identity-vessel-owned), checked at goal-dispatch time before the executor decides which path to take. Env var is the global default; org row, when present, overrides.
+- **Default at landing**: `disabled`. Phase 5 ships the deletion code path behind the flag; the inline blocks at `:4949-4997`, `:5454-5529`, `:5471`, `:5574`, `:5719`, `:5482-5527` are kept in source guarded by `if (!FEATURE_ACTIVITY_DRIVEN_BINDING) { ... }` for one release cycle. After the parallel-run window closes successfully on each org, the inline blocks are deleted in a follow-up commit.
+- **Per-org override**: yes. Different orgs may flip the flag at different times depending on shadow-mode evidence accumulated for their workload mix.
+
+**Parallel-run / shadow-mode period.**
+
+- **Duration**: minimum 7 canary days per org with no divergence-rate threshold breached. Threshold: divergence between inline and meta-activity decisions `< 1%` per `(shape, taskId)` pair, calibration TBD on canary observation (the 1% number is a placeholder until shadow-mode telemetry exists; the current canary trace volume per org is small enough that absolute counts may matter more than rates).
+- **What runs in shadow**: while the flag is `disabled`, the executor takes the inline path as today AND in parallel invokes the meta-activity path (slot-binding, validator-dispatch) with the same inputs, comparing outputs. The meta-activity path's results are recorded but discarded; the inline result is what the executor consumes. Both decisions, both outcomes, the structural diff, and both trace IDs are logged to a new `shadow_decision_log` table (activity-api-owned).
+- **Which surfaces compare**: each of the four `activity.ts` line ranges Phase 5 deletes gets a shadow comparator:
+  - `:4949-4997` (inline `inputShapes` synthesizer / LLM-only path) ↔ slot-binding meta-activity's `prepare_pool` + `select_or_produce` chain — compare which impulses populate the pool for the same `inputShapes`.
+  - `:5454-5529` (inline validation block) ↔ validator-dispatch meta-activity's `discover_validators` + `dispatch_validators` chain — compare the `failure_mode` verdict (or absence thereof).
+  - `:5471, :5574, :5719` (three `recordImpulseRelevance` call sites) ↔ `learning_signal_writer` resolver invocations from validator-dispatch task 5 — compare which `(impulse_id, shape, taskId)` triples receive α/β deltas and what the deltas are.
+  - `:5482-5527` (inline tool-argument-pattern recording loop) ↔ `learning_signal_writer`'s `tool_argument_pattern` branch — compare the recorded patterns and stable-arg-id outputs.
+- **Termination**: explicit promotion only. An org's flag flips from `disabled` to `enabled` by operator action after reviewing the shadow-mode evidence. There is no auto-promotion. After flip, the executor takes only the meta-activity path; the inline path is dead code (still present, guarded by the flag) until the follow-up deletion commit.
+
+**Rollback triggers (post-cutover).**
+
+Concrete signals that page on-call and / or auto-revert the flag to `disabled`:
+
+- Meta-activity invocation failure rate `> 5%` over rolling 15 minutes per org. (Calibration TBD on canary observation; 5% chosen as conservative against the F-39 baseline of "every iteration fails" before its fix.)
+- `learning_signal_writer` empty-`templateId` no-op rate `> 0` (any silent drop) — F-39's defensive no-op was added precisely because the strict-fail path was too noisy, but post-Phase-5 a silent drop means the inline α/β-update is also gone, so the learning signal is fully lost.
+- Thompson-Sampled variant for any of the four dependent resolver families exceeds H5's auto-regression threshold without the immutable baseline catching it. This should be caught by H5 itself; Phase 5 only asserts the signal is observable. (Defensive — if observed, escalate to H5 ownership before reverting Phase 5.)
+- `composition_chain` corruption rate `> 0` (any trace inserted with `parent_execution_id` set but `composition_chain` empty post-deploy F-37 + F-40). Related to recursive-escalation visibility in audits.
+- Verified-cross-sign rate `< 95%` of traces feeding Thompson updates over rolling 1 hour. Calibration TBD; if H1's verification path silently degrades, Phase 5's selection layer routes on a thinner posterior than expected.
+
+**Rollback procedure.**
+
+- **Soft rollback** (preferred when the rollback trigger fires on a metric, not a crashing process): flip the per-org flag back to `disabled` via the override row. Wait for in-flight tasks to drain (≤ the longest configured task timeout). The inline path resumes on the next goal dispatch. Shadow-mode logging stays on; the divergence that triggered rollback can then be diagnosed from `shadow_decision_log`. Use this when meta-activity invocation failure rate breaches threshold but the system is still serving requests.
+- **Hard rollback** (when the meta-activity path is actively crashing the executor or producing safety-breach failure modes): flip the global env var on minibob, restart the deployment to drop in-flight work onto the inline path immediately. Quarantine traces written during the bad window (`vessel_trust_score: 0` per H1, or a Phase-5-specific tag) so the H1 pairing job excludes them from posterior updates. Use this when the trigger is a safety-breach `failure_mode` or a hard crash that compounds across requests.
+- **Distinguishing**: hard rollback is appropriate when the rollback trigger fires AND the system is failing to make forward progress (no goals completing). Soft rollback is appropriate when the trigger fires but the system is still serving (e.g. learning-signal accuracy is degrading but goals still finish).
+
+**Migration of Thompson posteriors.**
+
+Posteriors trained on traces during shadow-mode and the cutover window are derived from a mix of inline-path and meta-activity-path outcomes. The H1-verified subset is the only subset safe to retain. Two options:
+
+- **(a) Discard and re-derive from H1-verified traces only.** Reset α/β to the uniform prior for the resolver families that Phase 5 introduces dependence on; replay only `verified_cross_sign: true` traces through the Thompson update path. **Recommended for safety.** Cost: posterior history accumulated during shadow-mode is lost; new selection decisions sample uniformly from the candidate set until 50–100 traces re-accumulate per `(shape, taskId)` pair. For low-traffic orgs this is days; for high-traffic orgs hours. Calibration TBD on shadow-mode telemetry.
+- **(b) Carry forward only if shadow-mode comparison shows divergence below threshold.** Per `(shape, taskId)` pair, retain the posterior only if shadow-mode logged divergence `< 1%` for that pair. Lower cost (preserves more history) but risks carrying forward a divergent posterior whose shadow-mode sample size was too small to detect drift.
+
+The recommendation is **(a)** because the cost of a corrupt posterior at this layer is silent routing degradation that may take many traces to surface, whereas the cost of re-deriving is a bounded warmup window.
+
+**Scope acknowledgement.**
+
+The multi-agent review of this change identified a conflation between H3 (in-execution scope narrowing) and CC1 (`endpoint_output_shapes` / goal-creation scope) that affects Phase 7's escalation wiring. That conflation is addressed in `openspec/changes/2026-04-26-shape-provider-goal-creation/` and inherited by Phase 7 of this change. **Phase 5 is unaffected** — Phase 5's surface is the inline-executor-decommission only; its prerequisites do not include H3 or CC1 closure, only H1 and H5.
+
 ### Phase 6 — Workbench surfaces (siblings 1, 2, 3)
 
 Land the workbench primitives:
@@ -763,3 +838,43 @@ Total cost across two probes: $0.88. Net: validates Phase 4 end-to-end on real w
 **Impact**: The workbench cannot fetch child executions by parent without either (a) fetching all traces and filtering client-side (expensive) or (b) adding the filter to the backend. The `NestedTrajectoryNode` component is implemented as a stub (depth-0 placeholder, depth≥1 link) that defers inline expansion until this filter exists.
 
 **Required backend change**: Add `parent_execution_id` as an optional query param to `GET /` in `execution-traces.ts`. When provided, append `AND parent_execution_id = $parent_execution_id` to the WHERE clause. This is additive and backward-compatible. Does not break any existing idiom.
+
+## Diagnostic findings — F-42/F-43/F-44 (residual canary failure investigation)
+
+Subagent diagnostic at 2026-04-27 06:53 UTC found **F-39 is not the residual cause**. Validator-dispatch chain dies at task 2, not task 5 — F-39's no-op never runs because earlier tasks crash the chain.
+
+Inspected 200 most-recent traces: **all 42 validator-dispatch executions fail** with `failed_task_id: "select_validator_per_shape"` (task 2) and identical error: `Impulse type "lifecycle" requires backend connection (offline mode). Only local types (memo, file, directoryTree, gitDiff, etc.) work offline.`
+
+### F-42 (new): LLM-task path force-loads all pool impulses (incl. unresolvable lifecycle)
+
+**Bug site**: `repos/minibob/src/activity.ts:5191` — LLM path sets `taskImpulseIds = impulses.map(i => i.id)`, loading every impulse in the pool. The lifecycle impulse created at `activity.ts:1203-1213` has `pointer.type: "lifecycle"`. `resolvePointer` (`impulse.ts:578-1406`) has no STEP 2.x case for that type → discovery yields nothing → MCP fallback throws → final fallthrough at `impulse.ts:1657-1670` raises the observed error.
+
+**Asymmetry**: resolver path (`shape-resolver.ts:201-205`) correctly honors `task.inputImpulses` for narrowing. LLM path doesn't.
+
+**Fix paths** (subagent prefers option 2):
+A. Honor `task.inputImpulses` on LLM path (`activity.ts:5097-5192`) the same way `matchImpulsesForTask` does. Strict reading of the JSON schema field.
+B. Make `resolvePointer` lifecycle-aware: add STEP 2.x case in `impulse.ts:578-1406` that returns `JSON.stringify({event, ...payload})` when `pointer.type === "lifecycle"`. The data is already in the pointer; lifecycle should be a local type. More general; aligns with the resolver's documented support for "memo, file, directoryTree, gitDiff, etc."
+
+### F-43 (new): /v2/activities/impulse-relevance Zod schema mismatch
+
+**Activity-api route** at `repos/metabob-activity-api/src/routes/activities.ts:5994` requires `activity_variant_id` in Zod schema.
+**Minibob client** at `repos/minibob/src/mcp.ts:2467-2480` sends `activity_id`.
+Returns 400 on every call. Would break validator-dispatch task 5 (learning_signal_writer) once F-42 is fixed and the chain reaches task 5. Currently masked by F-42.
+
+**Fix**: align field name OR accept both. Defensive Zod schema with `.or(z.object({activity_variant_id: z.string()}).passthrough())` is cheapest.
+
+### F-44 (new): Hono "Context is not finalized" middleware bug on GET /v2/activities/impulse-relevance
+
+Auth middleware returns 200 + logs unhandled error simultaneously: `"Context is not finalized. Did you forget to return a Response object or await next()?"`. Not blocking validator-dispatch, but pollutes logs and may indicate a response-handling bug elsewhere. Likely a missing `await next()` or `return` in the auth middleware on this route.
+
+### F-39 status update
+
+F-39's two-pronged fix (templateId in payload + defensive no-op on missing fields) **is correct and ready** — but unreachable on canary due to F-42. Once F-42 is fixed, validator-dispatch task 5 will execute and F-39 + F-43 effects will both manifest.
+
+### Implication for Phase 8 success criteria
+
+Criterion 4 (ribosome convergence) gating now reframes:
+- **Before this diagnosis**: blamed on F-39 being partial.
+- **Now**: F-39 is fine; F-42 blocks the chain that would surface F-39's effect; F-43 is the next gate after F-42.
+
+Order of operations to fully unblock criterion 4: F-42 fix → re-probe → F-43 confirm/fix → re-probe → ribosome α/β observable.
