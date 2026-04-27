@@ -1125,3 +1125,15 @@ This makes the goal text visible in the ImpulseStatePanel's Current Shapes secti
 ### L-2: goal impulse shape in standard listing
 
 The `goal` shape is currently not registered as a formal impulse type in the activity-api's shape registry. It appears in the pool as an initial context shape derived from the trajectory store's seed state. For the workbench to correctly surface goal impulse content from recalled traces, the `goal` shape should be registered as a known resolver in discovery-vessel, pointing to the impulse table where `shape = 'goal'`.
+
+### L-3: JWT generation failure blocks API-key clients from impulse resolvers (2026-04-27)
+
+**Discovery**: `POST /v2/impulses/resolve` returns `{"success":false,"error":"Authentication required for destructive operations"}` for all API-key authenticated clients. This blocks the workbench from fetching task and impulse content from execution traces via the `executionTraceWithSignatures` and `activityExecutionTrace` resolver types.
+
+**Root cause**: `jwtAuthMiddleware` in `src/middleware/jwtAuth.ts` calls `generateJwtToken()` when an API key is validated. If `generateJwtToken()` returns null (JWT secret misconfigured on canary, or SurrealDB schema alignment issue), `validateApiKey` returns null, and `getJwtAuthFromContext(c)` returns null. The impulse resolve route calls `requireAuthenticated(c)` which gates on `getJwtAuthFromContext` — if null, rejects with 401.
+
+**Affected surface**: All `POST /v2/impulses/resolve` calls from the workbench, minibob clients, and any API-key-authenticated vessel that tries to read execution traces or activity templates via the impulse resolver interface.
+
+**Confirmed**: GET endpoints (`/v2/activities/templates`, `/v2/activities/execution-traces`) work correctly for API key auth because they don't call `requireAuthenticated()`. Only the impulse resolver is blocked.
+
+**Required fix**: Either (a) fix `generateJwtToken` to work reliably for API key auth on canary (check JWT_SECRET alignment between init-database and runtime config), or (b) update `requireAuthenticated()` to permit API-key-authenticated requests by checking a separate context variable set before JWT generation is attempted, so auth failures at the JWT stage don't reject otherwise-valid API key requests for read operations.
