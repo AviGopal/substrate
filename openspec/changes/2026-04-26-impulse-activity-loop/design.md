@@ -422,3 +422,44 @@ After (3), re-run this main-thread smoke. Phase 8.1–8.7 evidence collection ca
 **Next step**: read `repos/metabob-activity-api/src/routes/impulses.ts` validation block, see if these shape names are in the accepted-types list. If not, that's the fix — extend the enum. If yes, decode the validation error message (canary may not surface the field-level reason). Cheap to land; small handler change.
 
 **Scope**: independent of JWT secret operator action; can land + deploy on its own.
+
+### F-33 (new): helm chart `metabob-activity-api` does not wire `activityApi.jwtSecret`
+
+**Discovered**: 2026-04-26 deploy attempt for `1.12.0-ed5487c` aborted; helm `--atomic` rolled back to revision 71's image `8f8d5d9` after init container CrashLoop. Surfaced by F-32's companion fail-fast in `scripts/init-database.ts` ("FATAL: JWT_SECRET environment variable is unset… Refusing to apply schema with placeholder.").
+
+**Symptom chain**:
+- Working tree of `repos/deployment/secrets/{canary,production}.secrets.yaml` carries `activityApi.jwtSecret: 399c3c8c…` (plaintext, prepped for SOPS encryption).
+- Helmfile env config passes both secrets files to the chart values.
+- BUT: chart at `repos/deployment/vessels/metabob-activity-api/helm/metabob-activity-api/` does not consume the value:
+  - `templates/secret.yaml` only contains `surrealdb-username` / `surrealdb-password`. No `jwt-secret` key.
+  - `templates/deployment.yaml` has no `JWT_SECRET` env var on either the main container or the `init-database` initContainer.
+  - `values.yaml` has no `activityApi:` block.
+- Result: `JWT_SECRET` env is unset in the rendered pod spec, regardless of what's in the secrets yaml.
+
+**Why it surfaced now**: `1.12.0-ed5487c`'s `init-database.ts` adds a production fail-fast on missing/placeholder `JWT_SECRET`. Prior images silently propagated the broken state — that's exactly the "access method cannot be used" symptom F-32 routed around at the route layer. The init-db gate was the right diagnostic.
+
+**Implication for prior baseline**: `1.12.0-4aa3d85` was running with the same broken wiring; SurrealDB's `apikey_token` ACCESS method KEY has whatever value migration 069 was last applied with — probably the `__JWT_SECRET__` placeholder literal or an out-of-band manual value. JWT-routed endpoints were never going to work post-064/069 without this chart fix.
+
+**Fix scope** (chart-only, no app code change):
+1. `templates/secret.yaml`: add `jwt-secret: {{ required "activityApi.jwtSecret is required" .Values.activityApi.jwtSecret | b64enc }}`.
+2. `templates/deployment.yaml`:
+   - Main container `env`: add `JWT_SECRET` with `valueFrom.secretKeyRef.{name: <chart-secret-name>, key: jwt-secret}`.
+   - `init-database` initContainer `env`: same env var binding.
+3. `values.yaml`: add `activityApi: { jwtSecret: "" }` default.
+4. Verify helmfile env config already exposes `secrets/{env}.secrets.yaml` values to chart (it does — both files are in `environments.canary.secrets`/`environments.production.secrets`).
+5. After chart fix, re-run deploy of `1.12.0-ed5487c`. Init-db will get JWT_SECRET, substitute `__JWT_SECRET__` in migration 069, and `DEFINE ACCESS OVERWRITE apikey_token` re-keys the SurrealDB ACCESS method.
+
+**Cluster state post-failure**:
+- Image: `1.12.0-8f8d5d9` (helm revision 71's image — predates `4aa3d85`); single pod running; healthy.
+- Replicas drifted to 1 from values' 2 (capacity mitigation during deploy attempt; will re-converge on next sync).
+- Two ~30-60s windows of 0-ready pods occurred during deploy + recovery. Brief outage.
+
+**Tracked as F-33**. Companion finding F-34 covers the cluster/values image drift to be resolved on next clean sync.
+
+### F-34 (new): cluster image drifted from values.yaml
+
+**Symptom**: `kubectl get deployment metabob-activity-api -o jsonpath='{.spec.template.spec.containers[0].image}'` returns `metabobapp/metabob-activity-api:1.12.0-8f8d5d9`, but `environments/production.values.yaml` says `tag: "1.12.0-4aa3d85"`. Replicas drifted 2 → 1.
+
+**Cause**: helm `--atomic --rollback-on-failure` rolled back the F-33-failed deploy to a revision older than the values-file baseline. Subagent's capacity mitigation reduced replicas during the deploy window.
+
+**Fix**: trivial — next clean `helmfile -e canary -l name=metabob-activity-api sync` (after F-33 chart fix lands) will reconverge. No urgent action needed since cluster is healthy on the older image; just don't lose track of the drift.
