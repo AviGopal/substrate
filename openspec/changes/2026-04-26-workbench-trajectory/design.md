@@ -681,3 +681,215 @@ TrajectoryPage (src/routes/trajectory/route.tsx)
 
 - `GoalsPage` (`/goals`) → redirect to `/trajectory`
 - `CompositionBuilderPage` (`/compositions/builder`) → remove from nav, keep route shell
+
+---
+
+## Alignment with Sibling Specs
+
+This section maps the lifecycle events and artifacts produced by the 2026-04-26 sibling specs to the trajectory surface components that display them.
+
+### `lifecycle:task:preBinding` (impulse-binding-selection-layer D1)
+
+The `lifecycle:task:preBinding` WS event is emitted by MiniBob's `ActivityExecutor` before each task's `canExecuteTask` gate, carrying `{ taskId, activityId, slots[{shape, state, impulseId?}], presentShapesPre, missingShapesPre, executionId, parentGoalText, parentDepth }`.
+
+**Workbench rendering path**:
+1. `useTrajectoryExecution` receives the event on the vessel WS stream (Stream 1).
+2. `trajectoryStore.setTaskBindingPhase(taskId, slots)` stores the slots map.
+3. `TrajectoryEditorPage.deriveBindableSlots()` converts the `bindingPhase` map to `BindableSlot[]` for `ImpulseStatePanel`.
+4. `ActivityCard` reads `bindingPhase.get(taskId)` and passes `bindingSlots` to each `TaskEditor`.
+5. `TaskEditor` renders `BindingLayer` with the per-shape slot state (pending / bound / bindable / unbindable).
+6. When `task.started` fires (from Stream 2), `clearTaskBindingPhase(taskId)` is called — the binding strip disappears; execution layer takes over.
+
+**Gap**: The binding phase event carries `slots[].state` in the current implementation as `'pending'` or `'bound'`; the `'unreachable'` and `'unknown_producer'` substates defined in D11 of this spec are not yet in the minibob payload. The `producer_selection` resolver must return `{ unbindable: true, reason: "no_connected_vessel" | "no_known_producer" }` and the slot-binding meta-activity must propagate `reason` into the binding slot state. Until that lands, the workbench collapses both failure modes to `'unbindable'` (using the existing `unknown_producer` substate for display).
+
+### `lifecycle:task:completed` (validators-and-failure-modes D5)
+
+The `lifecycle:task:completed` event is the trigger for the validator-dispatch meta-activity. The workbench receives the downstream `impulse.resolved` event (shape `validation_result`) and routes it via `routeValidationResultImpulse` → `trajectoryStore.addTaskValidation(taskId, validationResult)`.
+
+**Workbench rendering path**:
+1. `useTrajectoryExecution.routeValidationResultImpulse` receives `impulse.resolved` with `shape === "validation_result"` and `task_id`.
+2. `parseValidationResult(event.body)` validates the payload against the `ValidationResult` contract.
+3. `trajectoryStore.addTaskValidation(taskId, result)` merges into `taskValidations[taskId]`.
+4. `TaskEditor` reads `taskValidation` prop (passed from `ActivityCard`) and renders the `ValidationIndicator` on the card header.
+5. `ImpulseStatePanel` reads `taskValidations` from store for its "Task Validation" card.
+6. `ExecutionHistoryPanel` reads `failure_mode` from trace `failure_mode` field for historical display.
+
+**What validator-dispatch surfaces in the trajectory**:
+- Pass: green shield badge on card header; `confidence` shown as percentage.
+- Fail: red shield badge with `failure_mode.type` label (e.g., `verifier_negative · slot-binding`).
+- No validators registered: gray shield badge (opacity 40%).
+- Multiple validators: badges aggregated; worst case shown (fail beats pass).
+
+### Slot-binding meta-activity results (impulse-binding-selection-layer D5)
+
+The `slot-binding.json` template subscribes to `lifecycle:task:preBinding` and runs `impulse_preparation` → `impulse_pool_selection` → `producer_selection`. Its nested execution trace appears in the workbench as an expandable `NestedTrajectoryNode` within the triggering task's Layer 2.
+
+**Workbench rendering path**:
+1. MiniBob emits the slot-binding execution as a child of the parent execution (`parent_execution_id = parentExecutionId`).
+2. Activity-api stores the trace with `parent_execution_id` set.
+3. When a task's binding slots show a `bound` state, the task's Layer 1 `BindingLayer` may additionally render a "resolved via slot-binding" indicator (the concrete impulse ID with a wrench icon).
+4. When the slot-binding execution contains a `producer_selection_result` impulse with `unbindable: true`, the escalation fires `create-shape-provider-goal` as a further nested execution. The workbench shows this at Layer 2 → `NestedTrajectoryNode` → child trajectory.
+
+**Gap**: The `NestedTrajectoryNode` currently fetches child executions via `GET /v2/activities/execution-traces?parent_execution_id=<id>`. This backend filter did not exist in v0.5.2; it was identified as a new requirement (D9 — "new backend query needed — nested execution children"). Until the filter lands, the nested trajectory node falls back to displaying a link to the child `executionId` directly without inline expansion.
+
+### `create-shape-provider-goal` escalation (shape-provider-goal-creation §3)
+
+When slot-binding's `escalate_unbindable` task fires, it dispatches `create-shape-provider-goal` as a nested execution. The resulting goal-shaped impulse surfaces in the workbench via two paths:
+
+**Path 1 — `SpawnSubgoalPreview` (human-dispatch mode)**:
+- `ApplicableActivitiesPanel.onEscalateUnbindableShape(shape)` is called when the user clicks the "escalate" button on an `unbindable` slot.
+- `SpawnSubgoalPreview` opens with `targetShape`, `parentGoalText`, `availableShapes`.
+- `useSpawnSubgoal` hook POSTs to the dispatch endpoint with `create-shape-provider-goal` activity.
+- The preview renders `goal.body.text`, `goal.body.endpoint_output_shapes`, `goal.body.depth`, signal summary, and `human_in_the_loop_required` banner.
+- On confirm, `subgoalId` is propagated and the sub-goal execution begins.
+
+**Path 2 — auto-dispatch from slot-binding nested execution (auto-dispatch mode)**:
+- When `producer_selection` returns `unbindable: true` and auto-dispatch conditions are met (`human_in_the_loop_required: false`, `confidence > 0.8`, `depth == 1`), slot-binding's `escalate_unbindable` task fires `create-shape-provider-goal` without user interaction.
+- The workbench sees the child execution via the `task.started` / `task.completed` WS event chain.
+- The child execution's trajectory is inlined in `NestedTrajectoryNode` at depth+1.
+- The `unbindable` slot in the parent task's Layer 1 gains a "spawning sub-goal" label once the nested execution starts, transitioning to "sub-goal dispatched: `<executionId>`" once the goal-shaped impulse is produced.
+
+**`failure_mode` from recursion guards**:
+- Depth guard exceeded → `failure_mode: { type: "safety_breach", context: { breach_type: "depth" } }` shown on the `create-shape-provider-goal` nested execution card with a depth badge.
+- Cycle guard exceeded → same with `breach_type: "cycle"`.
+- Budget exceeded → `failure_mode: { type: "budget_exhausted" }` shown with a cost badge.
+- In all three guard cases, the nested execution card shows a `human_in_the_loop_required: true` banner in `SpawnSubgoalPreview`.
+
+---
+
+## Open Questions and Validation Findings
+
+### OQ-T1: Foreach gap (F-4) in binding-slot display
+
+**Question**: The slot-binding meta-activity performs one `producer_selection` call for all missing shapes collectively rather than per-shape (see impulse-binding-selection-layer F-16 — `select_or_produce` simplified). The workbench's `BindingLayer` renders per-shape slot rows. How should the binding layer display slots when the underlying template resolves shapes collectively?
+
+**Current state**: `lifecycle:task:preBinding` emits per-shape slots from `task.inputShapes`. The slot states come from pool analysis before the meta-activity runs. After slot-binding fires, the workbench receives no per-shape breakdown of which candidate was selected for which slot — only the merged output pool.
+
+**Options**:
+- **Option A**: Reconstruct per-shape binding from the post-binding impulse pool. After the slot-binding nested execution completes, for each `inputShape` find the impulse whose metadata matches the shape and infer `bound`. This is heuristic — two impulses of the same shape cannot be disambiguated.
+- **Option B**: Extend the `lifecycle:task:preBinding` payload to include a post-binding snapshot: `slotsPost: [{ shape, state, impulseId }]`. MiniBob emits this by re-running `canExecuteTask` after the preBinding subscriber completes and diffing the pool. Workbench displays the post-binding state as the authoritative slot state.
+- **Option C**: Defer per-shape detail to the trace. In Recalled mode, reconstruct slot-to-impulse assignment from `tasks[].input_impulse_ids` + `impulses_by_id`. In Attached mode, show all `pending` until `task.started`, then collapse to a single "resolved" badge.
+
+**Lean**: Option B (post-binding snapshot in the payload). This requires a ~10-line change to minibob's preBinding emission (re-run pool check after subscriber merge) but gives the workbench authoritative per-shape binding data without heuristics. Deferred until the foreach gap (umbrella F-4) is resolved, since that unlocks proper per-shape dispatch in the first place.
+
+### OQ-T2: TemplatesPage as sidebar panel vs separate page
+
+**Question**: Should the TemplatesPage become a collapsible sidebar panel within the Trajectory page, or remain a separate route?
+
+**Arguments for sidebar**:
+- Users frequently toggle between "browsing templates" and "authoring a trajectory" — a sidebar avoids route navigation.
+- The left panel's `ActivityPalette` already does lightweight template browsing; a full sidebar could replace it with richer search and filtering.
+- Reduces top-level navigation items from 3 to 2 (Trajectory, Shapes).
+
+**Arguments for separate page**:
+- Templates are a first-class entity with their own metadata (Thompson scores, variant genealogy, audit reports). A full-page view supports richer inspection.
+- The sidebar is already densely packed (VesselSelector, GoalInput, GoalSubmission, ActivityPalette, ExecutionHistory, BackwardChaining). Adding a full template browser would require a tab system that adds interaction cost.
+- Clicking a template from any surface already opens it in Trajectory Composed mode via `location.state.template` — the navigation cost is one click, acceptable.
+
+**Decision for this spec**: TemplatesPage remains a separate route. The `ActivityPalette` in the left sidebar covers the narrow use case (drag-to-add from a filtered list). The TemplatesPage retains its full-page browsing, variant management, and Thompson score visualization. If a future spec adds a template dock to the trajectory sidebar, that can be layered on top without the D7 page consolidation.
+
+### OQ-T3: Vessel connection management in the UI
+
+**Question**: How does the user establish, authenticate, and manage the vessel WebSocket connection from within the Trajectory page?
+
+**Current implementation**: `VesselSelectorPanel` queries `discovery-vessel` via `useVesselRegistry`, lists vessels with health indicators, and calls `selectVessel(resolveUrl(vessel.endpoint, vessel.resolve_endpoint))` when the user clicks "Connect". `GoalSubmissionPanel` reads `selectedVesselEndpoint` from the trajectory store and POSTs to it.
+
+**Open issues**:
+1. **Authentication**: The vessel endpoint is called with the activity-api `apiKey` (`Authorization: ApiKey <key>`). The workbench reads `apiKey` from `ApiKeySettings` (localStorage). When the vessel's `auth_scheme` is `caller_identity` and `auth_token_source` is `caller_identity`, this works. When the vessel requires a different auth scheme, the workbench cannot currently adapt. For now, all connected vessels are assumed to accept the caller's activity-api key — deferred until discovery-vessel advertises per-vessel `auth_required_scope` and the workbench learns to negotiate.
+
+2. **Direct vessel WS URL vs activity-api relay**: The vessel-direct WS URL (`vessel.endpoint + /ws`) is used for the preBinding stream (Stream 1). The vessel may be behind a private network not accessible from the browser. In the canary deployment, MiniBob's WS is exposed via Istio at `wss://activity.metabob.com/ws?executionId=<id>` — the workbench must detect whether the vessel is the same host as activity-api and use the relay URL in that case. The `InlineExecutionBar.onConnect(id)` handler already accepts both absolute WS URLs and null (falls back to activity-api stream). No new UI is needed; the connect logic in `GoalSubmissionPanel` should prefer the relay URL when the vessel is co-located with activity-api.
+
+3. **Multi-vessel trajectory**: A trajectory where different tasks are routed to different vessels (e.g., one task dispatched to a bash-executor vessel, another to a code-analysis vessel) is not yet visualizable. The current model assumes one `selectedVesselEndpoint` for the whole trajectory. Multi-vessel visualization is deferred.
+
+**Decision**: No changes to vessel connection management in this spec. The existing `VesselSelectorPanel` + `GoalSubmissionPanel` flow is sufficient for single-vessel trajectories. The open issues (auth negotiation, relay URL detection, multi-vessel) are deferred and tracked here as dependencies for a future vessel-integration spec.
+
+### OQ-T4: Gantt and flame graph integration
+
+**Question**: The `GanttTimeline` and `ExecutionFlameGraph` components currently live in `ExecutionsPage`. Should they move into Trajectory as secondary views of the Recalled mode canvas, or stay on `ExecutionsPage`?
+
+**Decision for this spec**: Gantt and flame graph are accessible from Trajectory Recalled mode via a "View timing / cost breakdown" button in the task card header area, which navigates to `ExecutionsPage` with the trace pre-selected (or opens the components in an expandable bottom panel). They are not embedded in the main trajectory canvas because the horizontal grid layout and the Gantt's time-axis layout are orthogonal — embedding the Gantt below the grid without architectural changes requires scroll coupling that is out of scope. This is deferred. For now: `ExecutionsPage` retains both components as full-page detail views accessible from Trajectory via deep link.
+
+### OQ-T5: Concurrent edit conflict
+
+**Question**: If two users open the same trajectory in Composed mode and both click Save, which version wins?
+
+**Decision**: Last-write-wins. The workbench does not implement optimistic locking or conflict detection. The trajectory save path (`POST /v2/activities/templates` or localStorage) does not include an `etag` or `version` field. Concurrent editing is not a supported use case; the workbench is single-user by design (confirmed non-goal above). If `activity_template` records gain optimistic locking in a future spec, the workbench's save flow should add `If-Match: <etag>` and surface a "template was updated by another user" error on 412.
+
+---
+
+## Validation Findings
+
+Findings specific to this spec's scope. Cross-cutting findings live in the umbrella `impulse-activity-loop` spec.
+
+#### F-T1: `ViewModeStrip` renders `traceName` as empty when `ExecutionHistoryPanel` loads a trace with no `activityName`
+**Observation**: `TraceSummary.activityName` is derived from `execution.activity_id` in the impulse-resolve path. When an execution was created before the `activityName` field was stored (legacy traces), `activityName` is undefined. `ViewModeStrip` falls back to `traceId.slice(0, 8) + '…'` which is correct but untested.
+**Impact**: Low. Cosmetic — the strip shows an id suffix instead of a name. No data is lost.
+**Proposed fix**: Add a test for the `activityName = undefined` fallback path in the `ViewModeStrip` rendering logic.
+**Affected files**: `repos/workbench/src/pages/TrajectoryEditorPage.tsx` (inline `ViewModeStrip`).
+
+#### F-T2: Multi-trace diff `computeTaskDivergences` accepts only one trace, not two
+**Observation**: D5 calls for pairwise task comparison, but `computeTaskDivergences` at `repos/workbench/src/lib/trace-divergence.ts` currently accepts `(templateTask, traceTask)` — one template task and one trace task. Comparing two trace tasks requires extending the function signature.
+**Impact**: Medium. Multi-trace diff (`traceA vs traceB`) cannot show binding or execution diffs between two traces without this change. The existing code only annotates divergences between the composed template and a single loaded trace.
+**Proposed fix**: Add `computeTaskDivergencesBetweenTraces(traceTaskA, traceTaskB)` function that accepts two trace tasks and returns a `DivergenceAnnotation[]` covering binding diff (`impulse_id` mismatch per shape), execution diff (tool call sequence mismatch), and output diff (`output_impulse_ids` mismatch per shape). The existing `computeTaskDivergences` signature is preserved.
+**Affected files**: `repos/workbench/src/lib/trace-divergence.ts`, `repos/workbench/src/pages/TrajectoryEditorPage.tsx`.
+
+#### F-T3: `tool.call` WS event not yet emitted by activity-api broadcaster
+**Observation**: D8 identifies that `tool.call` events sourced from `tasks[].tool_calls` must be emitted by activity-api's broadcaster for Layer 2 (Execution layer) live display. As of activity-api v1.8.0 (the version at spec authoring time), the broadcaster emits `task.started`, `task.completed`, `impulse.resolved` but not `tool.call` as a per-task burst.
+**Impact**: High for Attached mode Layer 2. Tool calls are only visible in Recalled mode (from trace `tasks[].tool_calls`), not in real-time during execution.
+**Proposed fix**: In `repos/metabob-activity-api/src/routes/execution-traces.ts`, when a trace with `tasks[].tool_calls` is stored, emit a `tool.call` WS event per tool call with `{ execution_id, task_id, tool_name, arguments, result, cost_usd, duration_ms }`. The broadcaster already emits task-scoped events; tool calls follow the same per-task loop.
+**Affected files**: `repos/metabob-activity-api/src/routes/execution-traces.ts`, `repos/workbench/src/hooks/useTrajectoryExecution.ts` (add `tool.call` handler).
+
+#### F-T4: `parent_execution_id` filter on execution trace list not yet implemented
+**Observation**: D9 requires `GET /v2/activities/execution-traces?parent_execution_id=<id>` to fetch child executions for `NestedTrajectoryNode`. As of activity-api v1.8.0, the list endpoint does not accept `parent_execution_id` as a filter.
+**Impact**: High for `NestedTrajectoryNode` inline expansion. Nested executions cannot be fetched without iterating all traces and filtering client-side.
+**Proposed fix**: Add `parent_execution_id` query param to `GET /v2/activities/execution-traces` in `repos/metabob-activity-api/src/routes/execution-traces.ts`, add `WHERE parent_execution_id = $parent_execution_id` clause in the SurrealDB query.
+**Affected files**: `repos/metabob-activity-api/src/routes/execution-traces.ts`.
+
+#### F-T5: TanStack Router migration creates breaking change in `location.state.template` navigation
+**Observation**: `TemplatesPage` navigates to TrajectoryEditorPage via `location.state.template` (react-router-dom v6 navigation state). TanStack Router uses `search` params rather than `state` for persistent navigation context; `state` is supported but not type-safe and is lost on reload.
+**Impact**: Medium. After the router migration, `location.state.template` navigation from TemplatesPage breaks unless both pages are migrated simultaneously. The existing `useRouterState` call in `TrajectoryEditorPage` reads `s.location.state` — TanStack Router exposes this at the same path, so the read side survives. The write side (`navigate('/trajectory-editor', { state: { template } })`) must be updated to use `search: { templateId: template.id }` so the URL carries the reference.
+**Proposed fix**: Replace `location.state.template` / `location.state.templateId` with `search.templateId` in both `TemplatesPage` (write) and `TrajectoryEditorPage` (read). The template is then fetched by ID from the templates query cache rather than passed as a raw object in state.
+**Affected files**: `repos/workbench/src/pages/TemplatesPage.tsx`, `repos/workbench/src/pages/TrajectoryEditorPage.tsx` → `repos/workbench/src/routes/trajectory/route.tsx`.
+
+---
+
+## Addendum: Trajectory Canvas Expansion (2026-04-27)
+
+### The horizontal = vertical principle
+
+A trajectory is an activity. The horizontal axis of the trajectory canvas (activity columns) and the vertical axis (task rows within each column) are the **same structure at different levels of nesting**.
+
+When a goal is resolved, the execution tree looks like:
+
+```
+_activity_execute (outer wrapper)
+  └── _goal_resolve
+       └── goal-processing-activity-driven
+            ├── Goal Processing        ← Column 1
+            ├── Validator Dispatch     ← Column 2
+            ├── Hello World Minimal    ← Column 3
+            ├── Slot Binding           ← Column 4
+            ├── Validator Dispatch     ← Column 5
+            ...
+            └── Hello World Minimal   ← Column N
+```
+
+Each leaf activity in the tree is a **column**. Each task within that activity is a **row** within that column. The canvas should show N columns — one per activity in the execution sequence — not just the top-level wrapper.
+
+### What `handleLoadTrace` must do (current gap)
+
+Currently `handleLoadTrace` maps the top-level trace (e.g. `_activity_execute`) to a single column with no tasks. The correct behaviour:
+
+1. Load the top-level trace
+2. Follow `metadata.child_execution_id` (stored in the listing for `_activity_execute` traces) to reach the goal execution
+3. Fetch all children of the goal execution using `parent_execution_id` filter (L-1 fix, deployed v1.14.0)
+4. Each child → one column in the canvas, in sequence order
+5. Each column's tasks → rows from `TraceSummary.tasks[]` (requires the listing endpoint to include tasks, or a separate fetch per child)
+
+### L-1 format gap (follow-up from earlier)
+
+The `parent_execution_id` filter was added to `GET /v2/activities/execution-traces` in v1.14.0. However, direct child lookups return 0 results. The stored `parent_execution_id` values may use full SurrealDB record IDs (`activity_execution_traces:aexec_...`) while the filter compares against the bare execution ID (`aexec_...`). Needs investigation: either normalise the stored value or strip the table prefix in the WHERE clause.
+
+### Implementation priority
+
+Before implementing canvas expansion, L-3 (JWT auth for API-key clients) must be resolved so impulse content is accessible. Without impulse content, the expanded columns show task skeletons but not the impulses and tool calls that make each task meaningful.
