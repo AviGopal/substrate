@@ -463,3 +463,61 @@ After (3), re-run this main-thread smoke. Phase 8.1–8.7 evidence collection ca
 **Cause**: helm `--atomic --rollback-on-failure` rolled back the F-33-failed deploy to a revision older than the values-file baseline. Subagent's capacity mitigation reduced replicas during the deploy window.
 
 **Fix**: trivial — next clean `helmfile -e canary -l name=metabob-activity-api sync` (after F-33 chart fix lands) will reconverge. No urgent action needed since cluster is healthy on the older image; just don't lose track of the drift.
+
+### F-35 (RESOLVED 2026-04-26): init-database.ts only scanned `sql/` and `sql/schemas/`, never `sql/migrations/`
+
+**Discovered**: After F-33 chart wiring landed, deployed `1.12.0-8260a53` and verified `JWT_SECRET` reached pod env. But D7.1 (`/v2/activities/execution-traces`) still 500'd. Inspected init-db logs: only files from `sql/` root + `sql/schemas/` ran. Migrations 064 (DEFINE ACCESS apikey_token) and 069 (OVERWRITE re-key with substituted `__JWT_SECRET__`) live in `sql/migrations/` and were silently skipped.
+
+**Root cause**: `scripts/init-database.ts:217-229` had only two readdir blocks (root + schemas). 60+ migrations in `sql/migrations/` — including the auth re-key, F-2/F-3 fields, **migration 091 (failure_mode taxonomy) and 092 (goal-paths endpoint_output_shapes)** — never applied to canary. Phase 2.3 + 2.4 were "completed" in code but unreachable in DB.
+
+**Fix**: extended `init-database.ts` with a third readdir block scanning `sql/migrations/` and prefixing entries with `migrations/`. Apply order preserved by `.sort()`. Migrations are designed idempotent (`IF NOT EXISTS` / `OVERWRITE` semantics), and the existing applySQLFile loop already swallows errors. Activity-api commit `3b89ea7`.
+
+**Verified post-deploy** (image `1.12.0-3b89ea7`):
+- `failure_mode` field PRESENT on `activity_execution_traces`
+- `endpoint_output_shapes` field PRESENT on `goal_execution_paths`
+- Migrations 064/069 logged with `__JWT_SECRET__` substitution
+- 55/98 migrations succeeded (some legacy ones expected to fail on already-converged state — script logs and continues)
+
+**Knock-on impact**: this exposes another finding (F-36 below) that was previously masked by F-35.
+
+### F-36 (new): activity-api JWT `id` claim format incompatible with SurrealDB's record-reference resolution
+
+**Discovered**: Even after F-33 + F-35 (chart wires secret + init-db re-keys access method), D7.1 still 500s with "The access method cannot be used in the requested operation". Bisection of JWT claims via `kubectl exec` against SurrealDB:
+
+| Claim set | Result |
+|-----------|--------|
+| `{NS, DB, AC: "apikey_token"}` (minimal) | 200 OK |
+| `+ id: "api_key:test"` | **401** — access method rejection |
+| `+ id: "users:test"` | 401 |
+| `+ id: ""` | 400 parse error |
+| `+ id: "plain-string"` | 400 parse error |
+| `+ key_id: "..."` (no `id` claim) | 200 OK |
+| `+ org_id, user_id, scopes, project_ids` (no `id`) | 200 OK |
+
+SurrealDB 3.x interprets the JWT `id` claim as a record reference (`Thing`). For `TYPE JWT` access methods, when `id` is present but doesn't resolve to an existing record, auth fails with the access-method error — same symptom as a key mismatch, hence the prior misdiagnosis.
+
+**Activity-api code path**:
+- `services/auth.ts:151` sets `id: api_key:${context.keyId}` in `generateJwtToken`
+- `middleware/jwtAuth.ts:307` reads `auth.id` from `RETURN $auth.id` and uses as `keyId`
+- `routes/execution-traces.ts:438` calls `queryWithAuth(jwtAuth.jwtToken, ...)` which signs in to SurrealDB with the JWT — fails because of the `id` claim
+- `routes/activities.ts:1289` (templates) gates this path with `useRbacJwtQuery = useJwtAuth && jwtAuth?.authType !== 'apikey'` — falls back to root creds for API-key auth, sidestepping the issue
+
+**Why this is a symptom of inconsistency**: half the routes have the apikey-bypass (templates, recommend, etc.); the other half (execution-traces, and likely several more) try to use the API-key-derived JWT against SurrealDB and fail. Tests have presumably been bypassing this via mocked DB. On canary, the JWT path was always broken.
+
+**Two fix paths**:
+
+A. **Quick / pragmatic** — add the `authType !== 'apikey'` gate to all routes that currently use `useJwtAuth && jwtAuth?.jwtToken` directly. Falls back to root-creds + manual `org_id` filtering. Restores parity with templates' pattern. Doesn't change schema or token format. Probably 5-10 routes affected.
+
+B. **Correct / architectural** — change the JWT claim format so SurrealDB accepts it: rename `id` → `key_id` in `generateJwtToken`; update `jwtAuth.ts:307` to read from `$auth.key_id` instead of `$auth.id`; audit all `.surql` PERMISSIONS clauses for `$auth.id` references and migrate them. Larger blast radius but architecturally clean.
+
+For "get to unblocked", Path A is the targeted fix. Path B is the right long-term move and should be tracked separately.
+
+**Tracked as F-36**. F-32's read-path workaround already covers `/v2/impulses/resolve` (which doesn't go through this JWT path); this is specifically about REST routes that use `queryWithAuth`.
+
+### Deployment overhaul status (D-track) — closing iteration
+
+- D1-D7 complete; D7.1 specifically failing on F-36
+- D8 deferred: real goal-execution traces still absent (no minibob dispatching against canary)
+- D9 ready (chart fix + new image tag pushed, awaiting deploy commit)
+- F-34 unresolved: replicaCount=1 captured in values.yaml as a temporary state until cluster capacity expands
+- Net positive: F-32, B-4, F-33, F-35 deployed; Phase 2.3 + 2.4 schema now actually live; access method KEY now matches `JWT_SECRET` env (verified via init-db substitution log + manual OVERWRITE test)
