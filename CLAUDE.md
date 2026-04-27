@@ -78,13 +78,18 @@ minibob --single "refactor the Thompson Sampling implementation"
 
 ## Current Implementation Status & Known Issues
 
-> **See [`docs/IMPLEMENTATION_FINDINGS_2026_04.md`](docs/IMPLEMENTATION_FINDINGS_2026_04.md) for details on:**
-> - Resolved implementation findings (F-1 through F-9b)
-> - Open findings with workarounds (F-37 through F-41)
-> - Current canary deployment status and evidence
-> - Architecture notes for developers working on lifecycle events and meta-activities
+**Resolved findings:** F-1 through F-9b (foundational), F-37 through F-45 (impulse-activity-loop wave, 2026-04-27)
 
-This document consolidates what's deployed, what's known to be working, and what's being tracked for fixes. Essential reading if you're working on composition-chain, slot-binding, validators, or any lifecycle-event-driven feature.
+**Key fixes in latest builds:**
+- **F-41** (2026-04-27): Seed trigger impulse into meta-activity executor pool
+- **F-42** (2026-04-27): Lifecycle type is local for impulse resolution
+- **F-43** (2026-04-27): Legacy field coercion for impulse-relevance (backward compatibility)
+- **F-44** (2026-04-27): Hono Context-not-finalized auth layer fix (minibob pending-sync queue unblocked)
+- **F-45** (2026-04-27): Improviser null-guard fix (minibob v0.14.0+)
+
+**Canary deployment:** activity-api v1.15.0, minibob v0.14.0, workbench v0.7.1 (2026-04-27)
+
+This system consolidates what's deployed, what's known to be working, and what's being tracked for fixes. Essential reading if you're working on composition-chain, slot-binding, validators, or any lifecycle-event-driven feature. Full details are embedded in the MiniBob, Activity-API, and Workbench sections below.
 
 ## Project Overview
 
@@ -239,6 +244,7 @@ Lightweight autonomous vessel (~3,000 LOC TypeScript/Bun):
 - **F-41: Seed trigger impulse into meta-activity executor pool** (2026-04-27): Meta-activity executors (validator-dispatch, slot-binding) now receive the triggering lifecycle impulse in their initial pool so they can reference the event that caused their invocation. Enables resolvers in meta-activities to use dotted-path interpolation (e.g., `{{lifecycle.taskId}}`) to extract fields from the lifecycle event payload.
 - **F-42: Lifecycle type is local for impulse resolution** (2026-04-27): `resolvePointer` now recognizes `type === 'lifecycle'` as a local impulse type (alongside memo, file, directoryTree, gitDiff). Returns JSON-stringified representation of the lifecycle pointer's payload without requiring backend or filesystem lookup. Prevents offline-mode errors when LLM tasks force-load lifecycle impulses from validator-dispatch or slot-binding pools.
 - **F-44: Hono Context-not-finalized auth layer fix** (2026-04-27): Two compounding bugs fixed in activity-api auth layer: (1) index.ts:79 jwtAuthMiddleware wrapper missing return statement caused 401s to be lost in transit with context left unfinalized; (2) jwtAuth.ts:171-182 reject-by-default logic blocked X-Internal-Api-Key requests before handlers could explicitly accept them. Fixes now in place; minibob pending-sync queue should drain on next client run after deployment. 13-line net change; 4 new regression tests added, existing 24 impulse route tests still pass.
+- **F-45: Improviser null-guard fix** (2026-04-27): Added null safety check in improviser resolver to prevent crashes when accessing optional fields. Defensive coding prevents runtime errors during speculative template generation. Single-line fix; 1 new regression test added.
 
 ### 3. metabob-activity-api (`repos/metabob-activity-api`)
 TypeScript/Bun/Hono backend - Learning system and trace storage:
@@ -297,7 +303,7 @@ React 19/Bun real-time observability:
 - Vessel registry visualization (discovery integration)
 
 ### 5. Workbench (`repos/workbench`)
-Human-in-the-loop development interface for activities, executions, and learning-loop state. React + Vite, Vitest + Playwright, shadcn/ui primitives. **Alpha (v0.1.0) landed 2026-04-22; composition-builder + trace-viz surfaces landed 2026-04-23; ConfigEditor, history panel, trajectory/vessel-selector refinements landed 2026-04-26; inline execution bar + resolver-first TaskEditor landed 2026-04-27; Phase 6.3 validation surfaces + L→M bridge landed 2026-04-26 (v0.3.0); validation_result impulse wiring landed 2026-04-26 (v0.3.1); lifecycle:task:preBinding observability landed 2026-04-26 (v0.3.2); compositional transparency (impulse I/O visualization, resolver chain, shape-flow connectors) landed 2026-04-26 (v0.3.3); gap indicators, execution attach, resolver prediction, inline validation landed 2026-04-26 (v0.3.4); gap-free deletion, seed shapes, InitialPoolBar landed 2026-04-26 (v0.3.5); dual WS subscription + TanStack Router + D10/D11/D3 layer components landed 2026-04-26 (v0.4.0); UI test screenshots landed 2026-04-26 (v0.4.1); WS backoff, NestedTrajectoryNode, multi-trace alongside, GhostActivityCard landed 2026-04-27 (v0.5.0); template.tasks crash fix landed 2026-04-27 (v0.5.1); multi-trace diff rendering + OutputLayer wiring landed 2026-04-27 (v0.5.2); DAG/Studio route consolidation + FTS search wiring landed 2026-04-27 (v0.6.1).**
+Human-in-the-loop development interface for activities, executions, and learning-loop state. React + Vite, Vitest + Playwright, shadcn/ui primitives. **Alpha (v0.1.0) landed 2026-04-22; composition-builder + trace-viz surfaces landed 2026-04-23; ConfigEditor, history panel, trajectory/vessel-selector refinements landed 2026-04-26; inline execution bar + resolver-first TaskEditor landed 2026-04-27; Phase 6.3 validation surfaces + L→M bridge landed 2026-04-26 (v0.3.0); validation_result impulse wiring landed 2026-04-26 (v0.3.1); lifecycle:task:preBinding observability landed 2026-04-26 (v0.3.2); compositional transparency (impulse I/O visualization, resolver chain, shape-flow connectors) landed 2026-04-26 (v0.3.3); gap indicators, execution attach, resolver prediction, inline validation landed 2026-04-26 (v0.3.4); gap-free deletion, seed shapes, InitialPoolBar landed 2026-04-26 (v0.3.5); dual WS subscription + TanStack Router + D10/D11/D3 layer components landed 2026-04-26 (v0.4.0); UI test screenshots landed 2026-04-26 (v0.4.1); WS backoff, NestedTrajectoryNode, multi-trace alongside, GhostActivityCard landed 2026-04-27 (v0.5.0); template.tasks crash fix landed 2026-04-27 (v0.5.1); multi-trace diff rendering + OutputLayer wiring landed 2026-04-27 (v0.5.2); DAG/Studio route consolidation + FTS search wiring landed 2026-04-27 (v0.6.1); omnibar trajectory header landed 2026-04-27 (v0.7.1).**
 
 **Key Files:**
 - `src/App.tsx`: Root shell
@@ -344,6 +350,7 @@ Human-in-the-loop development interface for activities, executions, and learning
 - **Live shape discovery from discovery-vessel + templates (Phase 4: T4.1)** (2026-04-27, v0.6.1): Replaces static KNOWN_SHAPES hardcoding with live data. (1) **useShapes() hook** — fetches shape→resolver map from discovery-vessel registry (VITE_DISCOVERY_ENDPOINT); fetches shape usage counts from template list; enables real-time shape capability visibility without client rebuild. (2) **useShapeExamples() hook** — lazy-loads impulse content for one shape on expand, avoiding bulk data load. (3) **Component guards** — ShapeCard/ShapeDetails guarded for optional category/description fields. -75% bundle reduction (657→166 lines); enables dynamic shape registry as new vessels register capabilities.
 - **ShapesPage live model (Phase 4: T4.2)** (2026-04-27, v0.6.1): Removes static Alert and Add Shape button. (1) **Live ShapeCard** — shows resolver count + vessel name + template usage count for each shape; resolver badges indicate which vessels provide the shape. (2) **Inline detail panel** — opens when shape is selected; displays resolver vessels, template counts, lazy-loaded impulse content examples via useShapeExamples. (3) **Dynamic discovery** — all data flows from discovery-vessel registry and template list queries; shapes appear/disappear as vessels register/deregister. 253-line rewrite (164 ins, 89 del); enables real-time shape inventory without manual curation.
 - **Impulse content inline in OutputLayer (Phase 5: T5.1-T5.6)** (2026-04-27, v0.7.0): Workbench simplification complete — all 16 tasks finished across 5 phases. Phase 5 adds expandable impulse content display in execution traces. (1) **useImpulseContent hook** (T5.1-T5.2) — new hook and store field (`trajectoryStore.impulseContentMap`) for caching impulse bodies fetched or received via WebSocket. (2) **WS broadcaster body for all shapes** (T5.5) — impulse-api's `impulse.resolved` broadcast now includes `body` for all shapes (not just validation_result), with 50KB guard: bodies > 50KB return `{ truncated: true, summary: ... }` instead of full payload. (3) **OutputLayer expansion** (T5.3-T5.4) — new expand/collapse chevrons in OutputLayer rows. When expanded: live mode uses `impulseContentMap` (no fetch), recalled mode calls `useImpulseContent` to fetch from execution trace, compose mode shows nothing. Content > 500 chars truncates with "Show more" toggle. (4) **TaskEditor pass-through** (T5.6) — `TaskEditor` now receives `executionId` and `impulseContentMap` props, enabling inline content display for recalled/live modes. Workbench v0.7.0 ships with Phase 1-5 complete; simplification roadmap concluded.
+- **Omnibar trajectory header** (2026-04-27, v0.7.1): Enhanced trajectory editor header with integrated omnibar control. Unified search and navigation surface for trajectory metadata and controls. Refined UI for improved UX in trajectory authoring workflows.
 
 **Distinct from activity-dashboard:** the dashboard is a read-only observability surface; the workbench is authoring + correction + live control (template editing, retries, manual trace curation, composition authoring, trace drill-down). Both talk to the same activity-api.
 
