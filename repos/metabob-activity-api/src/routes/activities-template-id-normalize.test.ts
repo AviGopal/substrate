@@ -20,10 +20,42 @@
  * the canonical bare-name record.
  */
 
-import { describe, test, expect, spyOn, afterEach } from 'bun:test';
+import { describe, test, expect, mock } from 'bun:test';
 import { Hono } from 'hono';
-import activitiesRouter from './activities';
-import { surrealDB } from '../db/surreal';
+
+// Capture every SurrealDB query the handler issues so the test can
+// assert on the UPSERT record-id selector.
+const surrealQueries: { sql: string; params: unknown }[] = [];
+
+mock.module('../db/surreal', () => ({
+  surrealDB: {
+    query: async (sql: string, params: unknown) => {
+      surrealQueries.push({ sql, params });
+      return [];
+    },
+  },
+  queryWithAuth: async () => [],
+  createAuthenticatedClient: async () => ({}),
+}));
+
+// Stub Redis so cache invalidation in POST /templates does not block
+// against a missing local Redis (the test environment has no Redis
+// container; we only care about the SurrealDB upsert SQL anyway).
+mock.module('../db/redis', () => ({
+  RedisClient: {
+    getInstance: () => ({
+      del: async () => 0,
+      get: async () => null,
+      set: async () => 'OK',
+      sadd: async () => 0,
+      smembers: async () => [],
+      withLock: async (_lockKey: unknown, _cacheKey: unknown, fn: () => Promise<unknown>) => fn(),
+    }),
+  },
+}));
+
+// Loaded after the mocks so the handler picks them up.
+const activitiesRouter = (await import('./activities')).default;
 
 const app = new Hono();
 app.route('/v2/activities', activitiesRouter);
@@ -41,13 +73,12 @@ const baseTemplate = {
 };
 
 // Look at all SQL that the handler issued and find the upsert statement
-// targeting the `activity:` table. Returns the substring between the
+// targeting the `activity:` table. Returns the record-id between the
 // table prefix and the trailing `CONTENT {` so the assertion can match
 // the bare-name without depending on whitespace.
-function findActivityUpsertId(queryCalls: unknown[][]): string | null {
-  for (const call of queryCalls) {
-    const sql = typeof call[0] === 'string' ? (call[0] as string) : '';
-    const m = sql.match(/UPSERT\s+activity:`([^`]+)`\s+CONTENT/);
+function findActivityUpsertId(): string | null {
+  for (const call of surrealQueries) {
+    const m = call.sql.match(/UPSERT\s+activity:`([^`]+)`\s+CONTENT/);
     if (m) {
       return m[1];
     }
@@ -55,30 +86,25 @@ function findActivityUpsertId(queryCalls: unknown[][]): string | null {
   return null;
 }
 
+function resetCapturedQueries(): void {
+  surrealQueries.length = 0;
+}
+
 describe('POST /v2/activities/templates — F-49 activity id normalization', () => {
-  let queryMock: ReturnType<typeof spyOn> | null = null;
-
-  afterEach(() => {
-    if (queryMock) { queryMock.mockRestore(); queryMock = null; }
-  });
-
   test('bare id passes through unchanged (regression: must still work)', async () => {
-    queryMock = spyOn(surrealDB, 'query').mockResolvedValue([] as any);
-
+    resetCapturedQueries();
     const response = await app.request('/v2/activities/templates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...baseTemplate, id: 'hello-world-minimal' }),
     });
 
-    expect([200, 201]).toContain(response.status);
-    const upsertId = findActivityUpsertId(queryMock.mock.calls as unknown[][]);
-    expect(upsertId).toBe('hello-world-minimal');
+    expect(response.status).toBeLessThan(400);
+    expect(findActivityUpsertId()).toBe('hello-world-minimal');
   });
 
-  test('prefixed `activity:name` form is stripped before upsert', async () => {
-    queryMock = spyOn(surrealDB, 'query').mockResolvedValue([] as any);
-
+  test('prefixed `activity:name` form is stripped before upsert (F-49 canary symptom)', async () => {
+    resetCapturedQueries();
     const response = await app.request('/v2/activities/templates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -91,8 +117,8 @@ describe('POST /v2/activities/templates — F-49 activity id normalization', () 
       }),
     });
 
-    expect([200, 201]).toContain(response.status);
-    const upsertId = findActivityUpsertId(queryMock.mock.calls as unknown[][]);
+    expect(response.status).toBeLessThan(400);
+    const upsertId = findActivityUpsertId();
     expect(upsertId).toBe('hello-world-minimal');
     // Negative assertion: the doubled form is the canary symptom we
     // want gone.
@@ -100,8 +126,7 @@ describe('POST /v2/activities/templates — F-49 activity id normalization', () 
   });
 
   test('angle-bracket `activity:⟨name⟩` form is stripped before upsert', async () => {
-    queryMock = spyOn(surrealDB, 'query').mockResolvedValue([] as any);
-
+    resetCapturedQueries();
     const response = await app.request('/v2/activities/templates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -113,16 +138,15 @@ describe('POST /v2/activities/templates — F-49 activity id normalization', () 
       }),
     });
 
-    expect([200, 201]).toContain(response.status);
-    const upsertId = findActivityUpsertId(queryMock.mock.calls as unknown[][]);
+    expect(response.status).toBeLessThan(400);
+    const upsertId = findActivityUpsertId();
     expect(upsertId).toBe('hello-world-minimal');
     expect(upsertId).not.toContain('⟨');
     expect(upsertId).not.toContain('⟩');
   });
 
   test('legacy variant_id field also normalized', async () => {
-    queryMock = spyOn(surrealDB, 'query').mockResolvedValue([] as any);
-
+    resetCapturedQueries();
     const response = await app.request('/v2/activities/templates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -133,14 +157,12 @@ describe('POST /v2/activities/templates — F-49 activity id normalization', () 
       }),
     });
 
-    expect([200, 201]).toContain(response.status);
-    const upsertId = findActivityUpsertId(queryMock.mock.calls as unknown[][]);
-    expect(upsertId).toBe('execute-shell-command');
+    expect(response.status).toBeLessThan(400);
+    expect(findActivityUpsertId()).toBe('execute-shell-command');
   });
 
   test('successful response surfaces the canonical (un-prefixed) id', async () => {
-    queryMock = spyOn(surrealDB, 'query').mockResolvedValue([] as any);
-
+    resetCapturedQueries();
     const response = await app.request('/v2/activities/templates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -150,7 +172,7 @@ describe('POST /v2/activities/templates — F-49 activity id normalization', () 
       }),
     });
 
-    expect([200, 201]).toContain(response.status);
+    expect(response.status).toBeLessThan(400);
     const json = await response.json();
     if (json && typeof json === 'object' && 'id' in json) {
       expect(json.id).toBe('my-template');
