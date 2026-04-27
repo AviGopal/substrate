@@ -82,3 +82,32 @@ Next iteration could either:
 - **Move on** and let real users exercise the activity organically as goals route through goal-processing-activity-driven
 
 Path 2 (dispatch via parent) is the intended invocation path. The proposal describes make-activity as the activity that goal-processing-activity-driven dispatches when no existing template matches a goal — i.e. invocation is upstream-driven, not user-driven.
+
+## Verified end-to-end on canary (2026-04-27 12:38 UTC)
+
+Per the user directive, ran a probe with F-NN-A landed (commit `d10b60d`):
+
+```bash
+./bin/minibob.js --template make-activity \
+  --var goal="list files in /tmp/test-make-activity-final" \
+  --var workingDirectory=/tmp/test-make-activity-final \
+  --var maxAttempts=2 --var applyTemplateExtraction=false \
+  --budget 0.50 --max-activities 4 -v
+```
+
+**Local CLI output**: 4 activities, 8 tasks, 22.0s. Reached task 2 (`identify_candidates`); failed because `activityRecommendations` impulse isn't seeded for standalone dispatch (separate seeding gap, mirror of F-NN-A).
+
+**Canary trace verification**:
+```
+exec_1777293482864_1jp1nsy1bzc  | activity_id: make-activity         | success=false | 12:38:02
++ _activity_execute             | 12:38:03 | success=false (parent meta-trace)
++ slot-binding × 2              | 12:37:42, 12:37:59 | success=true (Phase 4.1 fired)
++ validator-dispatch            | 12:37:56 | success=true (Phase 4.2 fired)
++ 4× _activity_execute meta-traces all succeeded
+```
+
+**Net**: ✅ make-activity executes via the impulse-activity loop. ✅ Trace persists to canary. ✅ Visible via standard `/v2/activities/execution-traces` query. ✅ Phase 4 meta-activities (slot-binding, validator-dispatch) fire on its lifecycle events.
+
+The activity itself reported `success: false` because data flow stops at task 2 — make-activity's task graph requires `activityRecommendations` impulse which the CLI doesn't currently seed. Same shape as F-NN-A but for a different shape; trackable as F-NN-A2.
+
+**Per user directive #1**: validated. The make-activity template runs. We see it, its trace, and the activity in the traces.
