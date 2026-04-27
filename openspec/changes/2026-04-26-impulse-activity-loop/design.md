@@ -1091,3 +1091,37 @@ Once those three are in place, `applyChanges=true` invocations of audit-and-back
 - ✅ Criterion 5: composition (audit-and-backfill itself is a 4-task composition that traverses Phase 4 meta-activities)
 
 **Net Phase 8: 4/5 ✅ + 1/5 🟡**, with the 🟡 (criterion 4) gated on F-51 not on missing executor primitives.
+
+## Workbench Integration: Goal Impulse Visibility (2026-04-27)
+
+### Design principle: every execution produces a goal impulse
+
+The informational state contains all possible and impossible impulses. We always attempt to produce an impulse for any goal and validate it — there is no execution that produces "no shape." When a user submits a goal:
+
+1. **The goal text becomes a `goal`-shaped impulse** in the execution's impulse state space. It is the first impulse in the pool — the starting point for composition graph traversal.
+2. **Activities dispatched to resolve the goal appear in the trajectory canvas** as the currently executing path. The canvas is not a pre-authored template view; it is the live hypothesis being tested.
+3. **Run Trajectory (direct dispatch)** also seeds the goal text as a `goal` impulse in the state space, even though the trajectory already has explicit activities. This preserves the invariant that every execution has a goal impulse.
+
+### Workbench implementation
+
+**Canvas population during live goal execution** (`TrajectoryEditorPage.tsx`):
+
+When `task.started` WS events arrive with an `activityId` not already in the canvas, the workbench:
+1. Checks the local template cache (`templates` from the standard listing)
+2. Falls back to `GET /v2/activities/templates/{activityId}` for templates not in cache
+3. If the template is not registered (built-in or internal activities like `_goal_resolve`), creates a live placeholder card with the activity ID as its name
+4. Adds the template as a new column in the trajectory grid
+
+This transforms the canvas from "pre-authored trajectory" into "live execution view" — the trajectory becomes the currently executing hypothesis.
+
+**Goal impulse in the state space** (`onExecutionStarted` callback):
+
+When execution starts (either via goal submission or run trajectory with a goal), the workbench:
+1. Calls `addDiscoveredShape('goal')` to ensure the shape appears in the impulse pool
+2. Calls `setImpulseContent('goal_{executionId}', { text: goalText, executionId })` to store the goal text as impulse content, visible when the `goal` shape is expanded in the Output layer
+
+This makes the goal text visible in the ImpulseStatePanel's Current Shapes section and expandable in any task card's Layer 3 (OutputLayer) that produced a goal-shaped impulse.
+
+### L-2: goal impulse shape in standard listing
+
+The `goal` shape is currently not registered as a formal impulse type in the activity-api's shape registry. It appears in the pool as an initial context shape derived from the trajectory store's seed state. For the workbench to correctly surface goal impulse content from recalled traces, the `goal` shape should be registered as a known resolver in discovery-vessel, pointing to the impulse table where `shape = 'goal'`.
