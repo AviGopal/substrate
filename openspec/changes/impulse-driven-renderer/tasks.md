@@ -113,11 +113,11 @@
 
 ## 12. Integration Verification
 
-- [ ] 12.1 Start react-renderer with `DISCOVERY_ENDPOINT` set; verify registration via `GET ${DISCOVERY_ENDPOINT}/shapes`
+- [x] 12.1 Start react-renderer with `DISCOVERY_ENDPOINT` set; verify registration via `GET ${DISCOVERY_ENDPOINT}/shapes`
 - [ ] 12.2 Run minibob goal "show me a table of the last 5 execution traces" — verify `synthesize-ui-from-data` fires, `ui_component` impulse arrives at react-renderer, table renders in browser at `/app`
-- [ ] 12.3 Call `POST /resolve/layout_change` and verify browser re-renders card in new position
-- [ ] 12.4 Click a table row in `/app`; verify `ui_event` resolver returns the action and minibob receives it
-- [ ] 12.5 Trigger a render error (malformed primitive); verify error boundary shows fallback, sibling cards survive, `/debug/errors` logs the error
-- [ ] 12.6 Disconnect and reconnect WebSocket; verify `state_sync` repopulates the browser correctly
+- [x] 12.3 Call `POST /resolve/layout_change` and verify browser re-renders card in new position
+- [x] 12.4 Click a table row in `/app`; verify `ui_event` resolver returns the action and minibob receives it
+- [x] 12.5 Trigger a render error (malformed primitive); verify error boundary shows fallback, sibling cards survive, `/debug/errors` logs the error
+- [x] 12.6 Disconnect and reconnect WebSocket; verify `state_sync` repopulates the browser correctly
 - [x] 12.7 Run `bun run typecheck` in `repos/react-renderer` — zero errors
 - [x] 12.8 Run `bun test` in `repos/react-renderer` — all tests pass

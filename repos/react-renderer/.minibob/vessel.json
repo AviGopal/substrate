@@ -1,0 +1,20 @@
+{
+  "id": "react-renderer",
+  "name": "React Renderer",
+  "version": "0.1.0",
+  "description": "UI rendering vessel — resolves ui_component impulses to React primitives; provides synthesize-ui-from-data and UI pattern activities",
+  "activities": {
+    "local": [
+      "synthesize-ui-from-data",
+      "render-live-execution-monitor",
+      "render-data-exploration",
+      "render-wizard",
+      "render-dashboard",
+      "render-conversation",
+      "record-interaction-metric"
+    ]
+  },
+  "development": {
+    "enabled": true
+  }
+}
