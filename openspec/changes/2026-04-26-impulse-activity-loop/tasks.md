@@ -106,6 +106,10 @@ Findings discovered while resolving F-1..F-9 or running 11.x retries. Each is sm
 - [x] **F-9b: minibob `output_impulses[]` schema lacks `impulse_id` and `body` fields** — RESOLVED 2026-04-26. Extended `OutputImpulse` interface in `repos/minibob/src/types.ts:987-1008` with optional `body?: unknown`. Three of four emit sites already had `impulse_id`; added it to the fourth (`SearchFirstExecutor.extractOutputImpulses` at `repos/minibob/src/search-first-executor.ts:881-984`, synthesised from `step.id`). Populated `body` from inline memo content across `improviser.ts:1466-1482, :1505-1524`, `goal-processor.ts:3221-3239`, and the bash-success path in `extractOutputImpulses`. New regression test `src/output-impulse-schema.test.ts` (4 cases) pins the contract. Typecheck clean; existing 99 improviser + 3 impulse-propagation tests still green. See design.md F-9b for full RESOLVED prose.
 - [ ] **B-2-fix: deprecate handler returns 404 instead of 403 when RBAC excludes** — Discovered during 11.1 retry: handler at `repos/metabob-activity-api/src/routes/impulses.ts:1962-2015` returns `Template not found` when the WHERE clause's RBAC branch (`scope = 'global' AND $isAdmin = true`) excludes a row. Information-leak (made the 11.1 retry chase id-format phantoms before realizing it was admin scope). Fix: structure the WHERE so the existence check is independent of RBAC, return 403 vs 404 distinctly.
 
+- [x] **F-33: helm chart `metabob-activity-api` does not wire `activityApi.jwtSecret` into pod env** — RESOLVED 2026-04-26. Chart `values.yaml`, `templates/secret.yaml`, `templates/deployment.yaml` had no JWT secret wiring; helmfile.yaml.gotmpl:257 was injecting the value as `Values.secrets.jwtSecret` but the chart never read it. Caused init-db CrashLoop on `1.12.0-ed5487c` deploy attempt → helm `--atomic` rollback to revision 71 image `8f8d5d9`. Fix: added `secrets.jwtSecret` default to values.yaml; added `jwt-secret` data key to Secret with `required` directive; added `JWT_SECRET` env to BOTH main container AND init-database initContainer via `secretKeyRef`. Verified with `helm template`: `--set secrets.jwtSecret=...` renders both containers with the env + Secret resource correctly; without value, `required` directive fail-fast trips. Activity-api commit `8260a53`, super-repo `db6f117c`. Deploy can now be re-attempted once deployment submodule pointer updates to `8260a53`.
+
+- [ ] **F-34: cluster image drifted from values.yaml** — Cluster on `1.12.0-8f8d5d9` (helm rollback target), values says `1.12.0-4aa3d85`. Replicas drifted 2 → 1 (deploy-time capacity mitigation). Will reconverge on next clean sync after F-33 chart fix lands in deployment repo. No urgent action; cluster healthy on the older image. Track until next sync resolves.
+
 - [x] **F-32: /v2/impulses/resolve top-level auth gate rejects API-key auth without jwtToken** — RESOLVED 2026-04-26. Top-level `requireAuthenticated` guard at `impulses.ts:705` checked `jwtAuth?.jwtToken`, which is empty for API-key auth on canary (the `JWT_SECRET` mismatch silently fails `generateJwtToken` in `jwtAuth.ts:112-119` while still leaving the JwtAuthContext set with `authType:'apikey'` and a populated `orgId`). That made read-only resolves like `executionTraceList` reject valid API-key traffic with 401 even though the same key worked on `/v2/activities/templates` (which routes API-key auth to root creds via `executeAsAuth`). Fix: relaxed `requireAuthenticated` to require *some* `JwtAuthContext` to be set, but not require `jwtToken` to be populated. Per-case destructive checks (`_write`, `_deprecate`, `_update`, `_delete`, `templateAuditReport`) still gate writes properly. 3 regression tests in `impulses-resolve-auth.test.ts` pin the behavior. Activity-api commit `ed5487c`, super-repo `9c5ca78d`.
 - [ ] **B-2-resolution: provision admin-scoped API key OR extend deprecate handler with `template_admin` scope** — Pick one. Currently 11.x cleanup is fully blocked. Operator decision on (a) issue admin-scoped key, (b) introduce narrower `template_admin` scope, or (c) operator runs SurrealDB-direct delete bypassing RBAC.
 - [ ] **B-4: paginated audit endpoint** — Public `GET /v2/activities/templates` caps at limit=100 with no offset/pagination. Up to ~10 hidden shadow templates can't be enumerated via the public API. Add a paginated audit query (offset support) or operator runs SurrealDB-direct enumeration.
@@ -159,6 +163,30 @@ The path to a fully-demonstrable impulse-activity loop on canary. Order is rough
 23. **9.1** All sibling spec verification phases green
 24. **9.2** Workbench history panel renders integrated trace
 25. **9.3** No regression in existing activity-execution test suite
+
+## Deployment overhaul (D-track, 2026-04-26)
+
+**Motivation**: Phase 8 canary smoke surfaced two deploy gaps: (1) the canary image is `1.12.0-4aa3d85`, predating F-32 (auth gate) + B-4 (paginated audit); (2) the canary k8s secret `metabob-activity-api.jwt-secret` doesn't match the schema's `apikey_token` ACCESS method KEY → JWT-routed endpoints return 500 "The access method cannot be used in the requested operation". F-32 routes around the symptom for read-only resolves, but PERMISSIONS-based RBAC is still bypassed for API-key auth on canary.
+
+**Mechanism**: bundle the image roll (1.12.0 → ed5487c) with the JWT secret rotation. Helmfile sync forces pod replacement which (a) loads the new `JWT_SECRET` env var into the API process and (b) triggers `init-database.ts` to substitute `__JWT_SECRET__` in migration 069 (`DEFINE ACCESS OVERWRITE apikey_token KEY '__JWT_SECRET__'`) — re-keying the SurrealDB ACCESS method to match.
+
+**Single source of truth**: secrets/canary.secrets.yaml + secrets/production.secrets.yaml (working tree, SOPS-encrypted) carry `activityApi.jwtSecret: 399c3c8c…` (64-char hex). Identical for canary and production per the canary/prod-shared-secrets memory rule. Helmfile passes this value to the chart, the chart maps it into the k8s secret `metabob-activity-api.jwt-secret`, both consumers (runtime API + init-db Job) read the same env.
+
+- [x] **D1** Update `environments/production.values.yaml` + `production.canary.values.yaml` image tag → `1.12.0-ed5487c`
+- [x] **D2** `docker build -t metabobapp/metabob-activity-api:1.12.0-ed5487c` against `repos/deployment/vessels/metabob-activity-api`
+- [x] **D3** `docker push metabobapp/metabob-activity-api:1.12.0-ed5487c`
+- [x] **D4** `git submodule update --remote -- vessels/metabob-activity-api` (pointer → ed5487c)
+- [x] **D5** `helmfile --environment canary -l name=metabob-activity-api sync`
+- [x] **D6** `kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=metabob-activity-api`; verify image tag rolled
+- [x] **D7** Validate JWT rotation: GET /v2/activities/execution-traces returns 200 (was 500); POST /v2/impulses/resolve continues 200; GET /v2/activities/templates?offset=N returns echoed offset/limit
+- [x] **D8** Phase 8 smoke: query traces, look for lifecycle event coverage, slot-binding nested executions, validator-dispatch, failure_mode population, recursive escalation
+- [x] **D9** Atomic commit of staged deployment changes + push origin dev
+- [x] **D10** This section (documenting the overhaul)
+
+**Expectation gates**:
+- D6 ⇒ image tag = `metabobapp/metabob-activity-api:1.12.0-ed5487c`, all replicas Ready
+- D7 ⇒ all three endpoints return 200; `executionTraceList` shows traces from after the deploy timestamp
+- D8 ⇒ at least one fresh goal-execution trace observable (gates Stage D Phase 5 decommission); if absent, document the gap and continue with the implementation loop until a real minibob dispatch populates traces
 
 ### Stop conditions (success criteria from proposal.md)
 
