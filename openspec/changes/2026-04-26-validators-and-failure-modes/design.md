@@ -157,6 +157,9 @@ type FailureMode =
 
 **Why not just leave them in the executor**: The brief explicitly flags these as hardcoded learning-signal sites. The pure-vessel cleanup is the value here; the call sites all do MCP writes in non-blocking fire-and-forget mode (`recordImpulseRelevance` swallows errors at `:5913-5918`), so moving them out of the executor's hot path costs nothing and gains template-author control.
 
+> **Security hardening dependency** (see `openspec/changes/2026-04-26-security-hardening-findings/`):
+> - **H1 (two-sided traces)**: Validator dispatch and the `failure_mode` taxonomy may ship; `learning_signal_writer` invocations that write Thompson posteriors (`impulseRelevance_write`, `toolArgumentPattern_write`, and any β/α delta derived from `validation_result.passed`) MUST gate on cross-signed trace verification once H1 lands. This inherits the gate from sibling change `impulse-binding-selection-layer` — until verified two-sided traces are the dominant input, posterior writes from this resolver should be feature-flagged or kept advisory-only so unverified validator outcomes do not train the selection layer.
+
 ## Risks / Trade-offs
 
 - **Risk**: Synchronous validator execution adds latency to every task that produces a known shape. **Mitigation**: deterministic validators are <100ms; LLM semantic validators are gated behind a `confidence_threshold` config so they can short-circuit on high-confidence pattern-validator passes. Templates that are latency-sensitive opt out via `skip_validation: true`.

@@ -263,6 +263,9 @@ interface ExecutionTrace {
 }
 ```
 
+> **Security hardening dependency** (see `openspec/changes/2026-04-26-security-hardening-findings/`):
+> - **H1 (two-sided traces)**: Cross-vessel trace events broadcast over WebSocket WILL carry counterparty-signature fields once H1 lands. Downstream consumers of `ExecutionTrace` (TUI regions, ImpulseBridge routing, dashboard subscribers) should treat the signature presence as advisory until that point — i.e., render and route on traces regardless of signature, but record whether `verified_cross_sign` was present so post-hardening analysis can distinguish pre-/post-H1 events.
+
 ## Existing Components Status (Updated Mar 2026)
 
 ### Working Well (Build On These)

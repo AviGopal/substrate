@@ -90,6 +90,9 @@ The template structure mirrors `goal-processing-activity-driven.json`. Task chai
 
 **Success/failure recording**: `select_or_produce` records its own outcome via the unified `validation_result` shape defined by sibling spec `validators-and-failure-modes` — `passed: true` when binding resolves, `passed: false` with `failure_mode: { type: "verifier_negative", context: { validator_id: "slot-binding", ... } }` when no candidate could be selected. The `shape:unbindable` impulse remains the workbench escalation signal; the `validation_result` is the learning-signal record.
 
+> **Security hardening dependency** (see `openspec/changes/2026-04-26-security-hardening-findings/`):
+> - **H1 (two-sided traces)**: `impulse_pool_selection` and `producer_selection` resolvers may ship and read `compositionSuccess` / `impulseRelevance` data, but Thompson posterior writes (β/α deltas applied from this layer's success/failure recording) MUST gate on `verified_cross_sign: true` once H1 lands. Until H1 lands, learning-signal emission from the slot-binding meta-activity should be gated by feature flag or kept advisory-only so unverified traces do not pollute the posteriors that drive future selection decisions.
+
 ### D6: Workbench slot primitive extends existing components
 
 **Decision**: No new component tree. The three slot states render via attribute additions to existing trajectory primitives:

@@ -1255,7 +1255,7 @@ curl "http://api.minibob.local/v2/activities/execution-sequences?limit=10" | jq 
 
 **Vessel construction:**
 - [`docs/architecture/TYPESCRIPT_VESSEL_TEMPLATE.md`](docs/architecture/TYPESCRIPT_VESSEL_TEMPLATE.md): Current canonical template for building a TypeScript vessel — file layout, the three invariants, discovery-client + observer + auth patterns, Helm wiring, and what NOT to do (2026-04-24). Supersedes `VESSEL_QUICK_START.md` and `VESSEL_WIRING_PRACTICAL.md` for new work.
-- [`docs/architecture/VESSEL_CONSTRUCTION_PATTERNS.md`](docs/architecture/VESSEL_CONSTRUCTION_PATTERNS.md): Cross-vessel pattern analysis (2026-04-08). Idioms remain current; registration path is superseded by the template above.
+- `docs/archive/2026-04-26/VESSEL_CONSTRUCTION_PATTERNS.md` (archived 2026-04-26): Cross-vessel pattern analysis (2026-04-08). Registration path superseded by discovery-vessel; see TYPESCRIPT_VESSEL_TEMPLATE.md for current patterns.
 
 **Complementary architecture docs:**
 - [`repos/deployment/DEPLOYMENT_WORKFLOW.md`](repos/deployment/DEPLOYMENT_WORKFLOW.md): Kubernetes deployment procedures

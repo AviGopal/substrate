@@ -90,6 +90,10 @@ Two positions:
 
 This change does not pick a side. It implements both code paths so the meta-activity in `impulse-binding-selection-layer` can choose by configuration. The default in this proposal is **human-only dispatch** (workbench-mediated) with auto-dispatch reserved for goals where `human_in_the_loop_required: false` AND `confidence_top_producer > 0.8` AND `depth == 1`. Sibling change owns the final policy.
 
+> **Security hardening dependency** (see `openspec/changes/2026-04-26-security-hardening-findings/`):
+> - **H4 (Tailnet-Lock authority)**: Auto-dispatch of producers for shapes whose `toolRiskProfile.risk_level` exceeds the configured threshold MUST consult the Tailnet-Lock AUM and only dispatch to attested vessels. Manual / workbench-mediated dispatch is unaffected. The auto-dispatch policy gate above must be extended with an AUM-attestation precondition before high-risk shapes can be auto-dispatched.
+> - **CC1 (scope narrowing)**: Child task `outputShapes` MUST be a subset of the parent's `endpoint_output_shapes`. The `create-shape-provider-goal` activity must enforce this when emitting the goal-shaped impulse — if the proposed `target_shape` is outside the parent's declared output scope, emission is refused (treat similarly to the existing recursion-safety guards).
+
 ## Workbench integration
 
 `repos/workbench/src/components/trajectory/BackwardChainingPanel.tsx` already exists for prerequisite discovery — it queries `discover-by-shapes` and surfaces existing producer activities. This change extends it: when the discovery returns no producers (or only low-confidence ones), a "Spawn sub-goal for shape X" button appears beside the missing-shape row. Clicking it dispatches `create-shape-provider-goal` with the slot's `target_shape` and current trajectory state as the impulse pool. The resulting goal-shaped impulse is rendered in a preview pane (text, declared endpoint shapes, depth, signals used) before the user confirms dispatch.

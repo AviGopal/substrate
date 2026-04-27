@@ -1,0 +1,734 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - generic [ref=e25]: Navigation
+        - navigation [ref=e26]:
+          - link "Activities" [ref=e27] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - generic [ref=e33]: Activities
+          - link "Trajectory" [ref=e34] [cursor=pointer]:
+            - /url: /trajectory-editor
+            - img [ref=e35]
+            - generic [ref=e40]: Trajectory
+          - link "Goals" [ref=e41] [cursor=pointer]:
+            - /url: /goals
+            - img [ref=e42]
+            - generic [ref=e46]: Goals
+          - link "Shapes" [ref=e47] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e48]
+            - generic [ref=e52]: Shapes
+          - link "Studio" [ref=e53] [cursor=pointer]:
+            - /url: /studio
+            - img [ref=e54]
+            - generic [ref=e58]: Studio
+    - main [ref=e59]:
+      - generic [ref=e60]:
+        - generic [ref=e62]:
+          - generic [ref=e63]:
+            - button "back" [ref=e64] [cursor=pointer]:
+              - img
+              - text: back
+            - generic [ref=e65]:
+              - heading "trajectory editor" [level=1] [ref=e66]
+              - paragraph [ref=e67]: build activity sequences ── horizontal grid layout
+            - generic [ref=e1039]:
+              - img [ref=e1040]
+              - generic [ref=e1046]: Live Execution
+          - generic [ref=e68]:
+            - button "Keyboard shortcuts" [ref=e69] [cursor=pointer]:
+              - img
+              - generic [ref=e70]: Keyboard shortcuts
+            - button "Clear" [ref=e71] [cursor=pointer]:
+              - img
+              - text: Clear
+            - button "Save" [ref=e72] [cursor=pointer]:
+              - img
+              - text: Save
+        - generic [ref=e73]:
+          - generic [ref=e76]:
+            - generic [ref=e77]:
+              - generic [ref=e78]:
+                - img [ref=e79]
+                - generic [ref=e84]: executor vessel
+              - generic [ref=e85]:
+                - generic [ref=e87]:
+                  - generic [ref=e88]:
+                    - generic "minibob" [ref=e89]
+                    - generic [ref=e90]: …ocal-dev
+                  - generic [ref=e91]:
+                    - generic [ref=e92]: 1m ago
+                    - generic [ref=e93]: 100%
+                - generic [ref=e94]: Connected
+            - generic [ref=e95]:
+              - generic [ref=e96]:
+                - img [ref=e97]
+                - generic [ref=e99]: run goal
+              - textbox "Disconnect active execution first" [disabled] [ref=e1047]
+              - paragraph [ref=e1048]: Disconnect active execution first
+              - button "run" [disabled]:
+                - img
+                - text: run
+              - button "run trajectory" [disabled]:
+                - img
+                - text: run trajectory
+            - button "execution history live 20" [ref=e1049] [cursor=pointer]:
+              - img [ref=e105]
+              - img [ref=e107]
+              - generic [ref=e110]: execution history
+              - generic [ref=e1050]: live
+              - generic [ref=e270]: "20"
+            - generic [ref=e112]:
+              - generic [ref=e113]: ── goal ──
+              - generic [ref=e114]:
+                - textbox "Describe what you want to accomplish (e.g., 'Fix security vulnerabilities in authentication')" [ref=e115]
+                - generic [ref=e116]:
+                  - paragraph [ref=e117]: enter a goal to generate recommendations
+                  - button "generate path" [disabled]:
+                    - img
+                    - text: generate path
+            - button "show applicable activities" [ref=e119] [cursor=pointer]:
+              - img [ref=e120]
+              - text: show applicable activities
+            - generic [ref=e123]:
+              - generic [ref=e124]: palette
+              - button "New" [ref=e125] [cursor=pointer]:
+                - img
+                - text: New
+            - generic [ref=e126]:
+              - generic [ref=e127]: ── palette ──
+              - generic [ref=e128]:
+                - img [ref=e129]
+                - textbox "search activities..." [ref=e132]
+              - generic [ref=e133]:
+                - generic [ref=e271]:
+                  - img [ref=e272]
+                  - generic [ref=e279]:
+                    - generic [ref=e280]:
+                      - generic [ref=e281]: Startup Health Check
+                      - generic [ref=e282]: "[infrastructure]"
+                    - paragraph [ref=e283]: Verify MiniBob system health and connectivity on startup
+                    - generic [ref=e284]: 2 tasks
+                - generic [ref=e285]:
+                  - img [ref=e286]
+                  - generic [ref=e293]:
+                    - generic [ref=e294]:
+                      - generic [ref=e295]: Execute Shell Command
+                      - generic [ref=e296]: "[tool]"
+                    - paragraph [ref=e297]: Generic template for simple shell/system operations. This is the foundation template that gets reused for common queries like 'show version', 'list files', 'check status'. As patterns emerge, more specific variants will be created through the learning loop.
+                    - generic [ref=e298]: 1 tasks
+                - generic [ref=e299]:
+                  - img [ref=e300]
+                  - generic [ref=e307]:
+                    - generic [ref=e308]:
+                      - generic [ref=e309]: Goal Processing (Activity-Driven)
+                      - generic [ref=e310]: "[meta]"
+                    - paragraph [ref=e311]: "Default goal-resolution meta-activity: drives goal processing entirely through the resolver chain (impulse_state_analysis → context_acquisition → goal_enrichment → activity_recommendation → variant_selection → activity dispatch → goal_verification (evidence_based; deterministic verdict from execution facts) → optional human clarification → optional goal decomposition). Every task dispatches a resolver by name; no bespoke TypeScript god-object orchestrates the flow. The dispatched activity id is resolved dynamically from the variant_selection_result impulse (Thompson Sampling output) — no hardcoded echo stub. Additive; goal-processing-standard.json still loads for fallback/comparison flows."
+                    - generic [ref=e312]: 9 tasks
+                - generic [ref=e313]:
+                  - img [ref=e314]
+                  - generic [ref=e321]:
+                    - generic [ref=e322]:
+                      - generic [ref=e323]: Spec Validation Loop
+                      - generic [ref=e324]: "[meta]"
+                    - paragraph [ref=e325]: Meta-activity that chains define-specification → spec-to-enforcement-activity → enforcement-to-validation-activity → map-components-to-validations → run validation → update-specs-from-validation → synchronize-spec-validation. Exits when sync-report shows converged:true or budget is exhausted.
+                    - generic [ref=e326]: 8 tasks
+                - generic [ref=e327]:
+                  - img [ref=e328]
+                  - generic [ref=e335]:
+                    - generic [ref=e336]:
+                      - generic [ref=e337]: Synchronize Spec and Validation
+                      - generic [ref=e338]: "[infrastructure]"
+                    - paragraph [ref=e339]: Reads spec.md, validation-mapping.json, and validation-results.json. Produces sync-report.json with converged:true when all mapped components pass and no unmapped in-scope components exist.
+                    - generic [ref=e340]: 2 tasks
+                - generic [ref=e341]:
+                  - img [ref=e342]
+                  - generic [ref=e349]:
+                    - generic [ref=e350]:
+                      - generic [ref=e351]: Update Specs from Validation
+                      - generic [ref=e352]: "[infrastructure]"
+                    - paragraph [ref=e353]: Reads validation-results.json and spec.md. If any results have passed:false, refines spec.md success criteria. If all pass, confirms spec is current without modification.
+                    - generic [ref=e354]: 1 tasks
+                - generic [ref=e355]:
+                  - img [ref=e356]
+                  - generic [ref=e363]:
+                    - generic [ref=e364]:
+                      - generic [ref=e365]: Map Components to Validations
+                      - generic [ref=e366]: "[infrastructure]"
+                    - paragraph [ref=e367]: Enumerates files in the working directory and maps each to the applicable validation activity, writing validation-mapping.json.
+                    - generic [ref=e368]: 1 tasks
+                - generic [ref=e369]:
+                  - img [ref=e370]
+                  - generic [ref=e377]:
+                    - generic [ref=e378]:
+                      - generic [ref=e379]: Enforcement to Validation Activity
+                      - generic [ref=e380]: "[meta]"
+                    - paragraph [ref=e381]: Reads enforcement-activity.json and mechanically writes validation-activity.json — a read-only, idempotent variant safe to run repeatedly without modifying project files.
+                    - generic [ref=e382]: 1 tasks
+                - generic [ref=e383]:
+                  - img [ref=e384]
+                  - generic [ref=e391]:
+                    - generic [ref=e392]:
+                      - generic [ref=e393]: Spec to Enforcement Activity
+                      - generic [ref=e394]: "[meta]"
+                    - paragraph [ref=e395]: Reads spec.md and writes enforcement-activity.json — a MiniBob activity template that enforces the specification by running bash checks and producing a validation_result.
+                    - generic [ref=e396]: 1 tasks
+                - generic [ref=e397]:
+                  - img [ref=e398]
+                  - generic [ref=e405]:
+                    - generic [ref=e406]:
+                      - generic [ref=e407]: Define Specification
+                      - generic [ref=e408]: "[meta]"
+                    - paragraph [ref=e409]: Writes spec.md to the working directory describing the goal's intent, expected behaviors, and testable success criteria. The specification is an external impulse consumed by downstream validation activities.
+                    - generic [ref=e410]: 1 tasks
+                - generic [ref=e411]:
+                  - img [ref=e412]
+                  - generic [ref=e419]:
+                    - generic [ref=e420]:
+                      - generic [ref=e421]: Simple Resolver Composition Demo
+                      - generic [ref=e422]: "[tool]"
+                    - paragraph [ref=e423]: Minimal example showing human, bash, git, and file resolvers working together in 5 tasks. Perfect for testing and learning resolver composition.
+                    - generic [ref=e424]: 5 tasks
+                - generic [ref=e425]:
+                  - img [ref=e426]
+                  - generic [ref=e433]:
+                    - generic [ref=e434]:
+                      - generic [ref=e435]: Interactive Code Review
+                      - generic [ref=e436]: "[tool]"
+                    - paragraph [ref=e437]: Comprehensive example showing human, llm, bash, git, and file resolvers working together. Human guides the review process, git shows changes, bash runs tests, file reads code, and llm analyzes quality.
+                    - generic [ref=e438]: 12 tasks
+                - generic [ref=e439]:
+                  - img [ref=e440]
+                  - generic [ref=e447]:
+                    - generic [ref=e448]:
+                      - generic [ref=e449]: Interactive Activity Selector
+                      - generic [ref=e450]: "[tool]"
+                    - paragraph [ref=e451]: Presents user with recommended activities and lets them choose which to execute. Supports iterative goal achievement with user guidance at each step.
+                    - generic [ref=e452]: 5 tasks
+                - generic [ref=e453]:
+                  - img [ref=e454]
+                  - generic [ref=e461]:
+                    - generic [ref=e462]:
+                      - generic [ref=e463]: Human-Guided Activity Orchestrator
+                      - generic [ref=e464]: "[tool]"
+                    - paragraph [ref=e465]: "Fully human-controlled orchestration where humans act as resolvers making all decisions. Asks human at each step: what to do, which activity to run, whether goal is complete."
+                    - generic [ref=e466]: 13 tasks
+                - generic [ref=e467]:
+                  - img [ref=e468]
+                  - generic [ref=e475]:
+                    - generic [ref=e476]:
+                      - generic [ref=e477]: "Startup: Sync Embedded Templates"
+                      - generic [ref=e478]: "[infrastructure]"
+                    - paragraph [ref=e479]: Upload all embedded templates to the backend so they participate in Thompson Sampling learning and recommendations
+                    - generic [ref=e480]: 1 tasks
+                - generic [ref=e481]:
+                  - img [ref=e482]
+                  - generic [ref=e489]:
+                    - generic [ref=e490]:
+                      - generic [ref=e491]: Startup Health Check
+                      - generic [ref=e492]: "[infrastructure]"
+                    - paragraph [ref=e493]: Verify MiniBob system health and connectivity on startup
+                    - generic [ref=e494]: 2 tasks
+                - generic [ref=e495]:
+                  - img [ref=e496]
+                  - generic [ref=e503]:
+                    - generic [ref=e504]:
+                      - generic [ref=e505]: Orchestrate Refactor Goal
+                      - generic [ref=e506]: "[meta]"
+                    - paragraph [ref=e507]: Orchestrates code refactoring through composed child activities. Analyzes codebase structure, transforms code in steps, validates with tests, and provides rollback on failure.
+                    - generic [ref=e508]: 8 tasks
+                - generic [ref=e509]:
+                  - img [ref=e510]
+                  - generic [ref=e517]:
+                    - generic [ref=e518]:
+                      - generic [ref=e519]: Orchestrate Test Goal
+                      - generic [ref=e520]: "[meta]"
+                    - paragraph [ref=e521]: Orchestrates test creation and execution through composed child activities. Acquires error context first, generates tests, runs tests, and optionally fixes failures.
+                    - generic [ref=e522]: 6 tasks
+                - generic [ref=e523]:
+                  - img [ref=e524]
+                  - generic [ref=e531]:
+                    - generic [ref=e532]:
+                      - generic [ref=e533]: Acquire Codebase Context
+                      - generic [ref=e534]: "[tool]"
+                    - paragraph [ref=e535]: Map repository structure, identify entry points, analyze dependencies, and create codebase_structure impulse for refactoring activities
+                    - generic [ref=e536]: 5 tasks
+                - generic [ref=e537]:
+                  - img [ref=e538]
+                  - generic [ref=e545]:
+                    - generic [ref=e546]:
+                      - generic [ref=e547]: Acquire Requirements Context
+                      - generic [ref=e548]: "[tool]"
+                    - paragraph [ref=e549]: Extract structured requirements from documentation files (spec.md, README, etc.) and create requirement impulses for feature development
+                    - generic [ref=e550]: 4 tasks
+                - generic [ref=e551]:
+                  - img [ref=e552]
+                  - generic [ref=e559]:
+                    - generic [ref=e560]:
+                      - generic [ref=e561]: Acquire Error Log Context
+                      - generic [ref=e562]: "[tool]"
+                    - paragraph [ref=e563]: Extract error information from execution traces or log files and create structured error_log impulses for debugging activities
+                    - generic [ref=e564]: 4 tasks
+                - generic [ref=e565]:
+                  - img [ref=e566]
+                  - generic [ref=e573]:
+                    - generic [ref=e574]:
+                      - generic [ref=e575]: TypeScript Project Setup
+                      - generic [ref=e576]: "[infrastructure]"
+                    - paragraph [ref=e577]: Initialize a TypeScript project with package.json, tsconfig.json, and test framework configuration. Produces config_file shapes for project infrastructure.
+                    - generic [ref=e578]: 4 tasks
+                - generic [ref=e579]:
+                  - img [ref=e580]
+                  - generic [ref=e587]:
+                    - generic [ref=e588]:
+                      - generic [ref=e589]: Fetch Activity Metrics
+                      - generic [ref=e590]: "[tool]"
+                    - paragraph [ref=e591]: Fetches activity metrics from the backend API and saves to a JSON file. Designed to be reliable with proper validation.
+                    - generic [ref=e592]: 1 tasks
+                - generic [ref=e593]:
+                  - img [ref=e594]
+                  - generic [ref=e601]:
+                    - generic [ref=e602]:
+                      - generic [ref=e603]: Decompose Goal to Output Shapes
+                      - generic [ref=e604]: "[meta]"
+                    - paragraph [ref=e605]: Break down an abstract goal into concrete output shapes, enabling activity matching based on what needs to be produced rather than how to produce it. Uses the outcome-to-shape mechanism to know what we want before we get it.
+                    - generic [ref=e606]: 4 tasks
+                - generic [ref=e607]:
+                  - img [ref=e608]
+                  - generic [ref=e615]:
+                    - generic [ref=e616]:
+                      - generic [ref=e617]: Jiggle and Prune Documentation
+                      - generic [ref=e618]: "[meta]"
+                    - paragraph [ref=e619]: "Detect and resolve documentation conflicts: duplicates, superseded files, and temporary planning docs. Phase 1 (Jiggle) analyzes and builds conflict registry. Phase 2 (Prune) executes resolutions."
+                    - generic [ref=e620]: 6 tasks
+                - generic [ref=e621]:
+                  - img [ref=e622]
+                  - generic [ref=e629]:
+                    - generic [ref=e630]:
+                      - generic [ref=e631]: "Verify: Unified Learning Architecture"
+                      - generic [ref=e632]: "[meta]"
+                    - paragraph [ref=e633]: "Verification activity that tests the full unified learning flow: impulse pointer types, system activities, pre-validation, and failure penalty tracking."
+                    - generic [ref=e634]: 5 tasks
+                - generic [ref=e635]:
+                  - img [ref=e636]
+                  - generic [ref=e643]:
+                    - generic [ref=e644]:
+                      - generic [ref=e645]: "System: Compute Tool Risks"
+                      - generic [ref=e646]: "[meta]"
+                    - paragraph [ref=e647]: System activity that computes tool risk profiles by querying tool execution history and generating a tool_risk_profile impulse for use in activity selection and pre-validation.
+                    - generic [ref=e648]: 3 tasks
+                - generic [ref=e649]:
+                  - img [ref=e650]
+                  - generic [ref=e657]:
+                    - generic [ref=e658]:
+                      - generic [ref=e659]: "System: Analyze Execution"
+                      - generic [ref=e660]: "[meta]"
+                    - paragraph [ref=e661]: System activity that analyzes a failed or partial execution to identify failure patterns and suggest variant improvements. Produces failure_pattern and variant_suggestion impulses.
+                    - generic [ref=e662]: 4 tasks
+                - generic [ref=e663]:
+                  - img [ref=e664]
+                  - generic [ref=e671]:
+                    - generic [ref=e672]:
+                      - generic [ref=e673]: "System: Recommend Activity"
+                      - generic [ref=e674]: "[meta]"
+                    - paragraph [ref=e675]: System activity that recommends activities for a goal using Thompson Sampling with failure penalties. Loads tool risk profiles and impulse relevance data to inform ranking.
+                    - generic [ref=e676]: 2 tasks
+                - generic [ref=e677]:
+                  - img [ref=e678]
+                  - generic [ref=e685]:
+                    - generic [ref=e686]:
+                      - generic [ref=e687]: Prune Underperforming Variants
+                      - generic [ref=e688]: "[meta]"
+                    - paragraph [ref=e689]: Analyzes variant family performance and identifies underperforming variants for deprecation. Generates a deprecation report with recommendations, ensuring the variant ecosystem remains healthy and efficient.
+                    - generic [ref=e690]: 3 tasks
+                - generic [ref=e691]:
+                  - img [ref=e692]
+                  - generic [ref=e699]:
+                    - generic [ref=e700]:
+                      - generic [ref=e701]: Select Best Variant (Thompson Sampling)
+                      - generic [ref=e702]: "[meta]"
+                    - paragraph [ref=e703]: Selects the best performing variant from a template family using Thompson Sampling. Loads variant performance metrics, applies the selection algorithm, and outputs the selected variant for execution.
+                    - generic [ref=e704]: 3 tasks
+                - generic [ref=e705]:
+                  - img [ref=e706]
+                  - generic [ref=e713]:
+                    - generic [ref=e714]:
+                      - generic [ref=e715]: Create Variant from Failed Execution
+                      - generic [ref=e716]: "[meta]"
+                    - paragraph [ref=e717]: Creates a new activity template variant from a failed execution. Analyzes the failure, proposes fixes, and generates a variant template that addresses the root cause. The new variant is linked to its parent via variant_of metadata.
+                    - generic [ref=e718]: 4 tasks
+                - generic [ref=e719]:
+                  - img [ref=e720]
+                  - generic [ref=e727]:
+                    - generic [ref=e728]:
+                      - generic [ref=e729]: Verify Thompson Sampling Learning Contract
+                      - generic [ref=e730]: "[infrastructure]"
+                    - paragraph [ref=e731]: Verify that Thompson Sampling correctly updates alpha/beta parameters from execution outcomes and that better-performing variants are selected more frequently over time
+                    - generic [ref=e732]: 4 tasks
+                - generic [ref=e733]:
+                  - img [ref=e734]
+                  - generic [ref=e741]:
+                    - generic [ref=e742]:
+                      - generic [ref=e743]: Verify Resolver Locality Contract
+                      - generic [ref=e744]: "[infrastructure]"
+                    - paragraph [ref=e745]: "Verify that impulse resolution follows the 'Resolvers live where data lives' principle: local pointer types (memo, file, directoryTree, gitDiff) resolved by MiniBob, backend pointer types resolved via MCP delegation"
+                    - generic [ref=e746]: 4 tasks
+                - generic [ref=e747]:
+                  - img [ref=e748]
+                  - generic [ref=e755]:
+                    - generic [ref=e756]:
+                      - generic [ref=e757]: Verify Impulse Lifecycle Contract
+                      - generic [ref=e758]: "[infrastructure]"
+                    - paragraph [ref=e759]: "Deterministic validation harness that verifies impulse lifecycle contract compliance: metadata-first loading, budget enforcement with truncation, relevance score updates, and resolver routing (local vs MCP)"
+                    - generic [ref=e760]: 7 tasks
+                - generic [ref=e761]:
+                  - img [ref=e762]
+                  - generic [ref=e769]:
+                    - generic [ref=e770]:
+                      - generic [ref=e771]: Verify Goal Alignment
+                      - generic [ref=e772]: "[infrastructure]"
+                    - paragraph [ref=e773]: Post-execution check to determine if an activity execution actually moved toward the stated goal
+                    - generic [ref=e774]: 1 tasks
+                - generic [ref=e775]:
+                  - img [ref=e776]
+                  - generic [ref=e783]:
+                    - generic [ref=e784]:
+                      - generic [ref=e785]: Verify Activity Execution Contract
+                      - generic [ref=e786]: "[infrastructure]"
+                    - paragraph [ref=e787]: "Verifies that activity executions comply with the canonical contract from IMPULSE_ACTIVITY_FOUNDATION.md: task sequencing, state capture, trace recording, and impulse evolution tracking"
+                    - generic [ref=e788]: 6 tasks
+                - generic [ref=e789]:
+                  - img [ref=e790]
+                  - generic [ref=e797]:
+                    - generic [ref=e798]:
+                      - generic [ref=e799]: Reuse Successful Activity
+                      - generic [ref=e800]: "[meta]"
+                    - paragraph [ref=e801]: Adapt a successful activity execution to solve a similar goal by reusing the proven approach
+                    - generic [ref=e802]: 3 tasks
+                - generic [ref=e803]:
+                  - img [ref=e804]
+                  - generic [ref=e811]:
+                    - generic [ref=e812]:
+                      - generic [ref=e813]: Repair Failed Activity
+                      - generic [ref=e814]: "[meta]"
+                    - paragraph [ref=e815]: Analyze a failed activity execution and create a repaired variant that addresses the failure
+                    - generic [ref=e816]: 3 tasks
+                - generic [ref=e817]:
+                  - img [ref=e818]
+                  - generic [ref=e825]:
+                    - generic [ref=e826]:
+                      - generic [ref=e827]: Refactor With Tests
+                      - generic [ref=e828]: "[refactor]"
+                    - paragraph [ref=e829]: "Safe code refactoring workflow: analyze code, plan refactoring, implement changes, ensure all tests pass. Preserves functionality while improving code quality."
+                    - generic [ref=e830]: 4 tasks
+                - generic [ref=e831]:
+                  - img [ref=e832]
+                  - generic [ref=e839]:
+                    - generic [ref=e840]:
+                      - generic [ref=e841]: Hello World Minimal
+                      - generic [ref=e842]: "[infrastructure]"
+                    - paragraph [ref=e843]: Minimal test activity with no context requirements - single task that writes a file
+                    - generic [ref=e844]: 1 tasks
+                - generic [ref=e845]:
+                  - img [ref=e846]
+                  - generic [ref=e853]:
+                    - generic [ref=e854]:
+                      - generic [ref=e855]: Git Workflow Sync
+                      - generic [ref=e856]: "[infrastructure]"
+                    - paragraph [ref=e857]: "Synchronize local branch with remote: fetch latest changes, rebase current branch, resolve conflicts if any, and push to remote. Ensures clean git history and up-to-date codebase."
+                    - generic [ref=e858]: 4 tasks
+                - generic [ref=e859]:
+                  - img [ref=e860]
+                  - generic [ref=e867]:
+                    - generic [ref=e868]:
+                      - generic [ref=e869]: Fix Bug Complete
+                      - generic [ref=e870]: "[bugfix]"
+                    - paragraph [ref=e871]: "Complete bug fix workflow: reproduce, analyze root cause, fix, test, commit, and annotate. Systematic debugging approach for reliable fixes."
+                    - generic [ref=e872]: 4 tasks
+                - generic [ref=e873]:
+                  - img [ref=e874]
+                  - generic [ref=e881]:
+                    - generic [ref=e882]:
+                      - generic [ref=e883]: Evolve Activity Template (Self-Contained)
+                      - generic [ref=e884]: "[infrastructure]"
+                    - paragraph [ref=e885]: Improve existing activity templates based on execution metrics and learnings without requiring git history or local files - fully self-contained
+                    - generic [ref=e886]: 4 tasks
+                - generic [ref=e887]:
+                  - img [ref=e888]
+                  - generic [ref=e895]:
+                    - generic [ref=e896]:
+                      - generic [ref=e897]: Debug Activity Execution (Self-Contained)
+                      - generic [ref=e898]: "[meta]"
+                    - paragraph [ref=e899]: Debug failed activity executions using impulse-based trace access - teaches impulse resolution and failure analysis
+                    - generic [ref=e900]: 2 tasks
+                - generic [ref=e901]:
+                  - img [ref=e902]
+                  - generic [ref=e909]:
+                    - generic [ref=e910]:
+                      - generic [ref=e911]: Create Activity Template (Progressive Composition)
+                      - generic [ref=e912]: "[infrastructure]"
+                    - paragraph [ref=e913]: "Creates new activity templates using progressive composition: tries known activities stage-by-stage, verifies alignment after each stage, backtracks to alternate approaches on failure, and records composition patterns for learning. This is the ONLY way MiniBob should create templates."
+                    - generic [ref=e914]: 6 tasks
+                - generic [ref=e915]:
+                  - img [ref=e916]
+                  - generic [ref=e923]:
+                    - generic [ref=e924]:
+                      - generic [ref=e925]: Break Down Goal
+                      - generic [ref=e926]: "[meta]"
+                    - paragraph [ref=e927]: Decompose a complex goal into smaller, manageable subtasks and create a plan
+                    - generic [ref=e928]: 4 tasks
+                - generic [ref=e929]:
+                  - img [ref=e930]
+                  - generic [ref=e937]:
+                    - generic [ref=e938]:
+                      - generic [ref=e939]: Add Feature Complete
+                      - generic [ref=e940]: "[feature]"
+                    - paragraph [ref=e941]: "Complete feature implementation workflow: plan, implement, test, commit, and annotate. Suitable for any feature type (API endpoints, UI components, utilities, etc.)"
+                    - generic [ref=e942]: 5 tasks
+                - generic [ref=e943]:
+                  - img [ref=e944]
+                  - generic [ref=e951]:
+                    - generic [ref=e952]:
+                      - generic [ref=e953]: Build & Execute Activity Template (Interactive)
+                      - generic [ref=e954]: "[tool]"
+                    - paragraph [ref=e955]: "Interactively builds an activity template one step at a time. Each cycle: propose the next task, get human approval (approve/revise/stop), execute it against the live impulse state space, assess progress toward the goal, report back, and decide whether to continue. Continue-branch recursively invokes this same template with iteration+1 so execution happens in-time with template construction. Stop-branch validates and (if broken) repairs the assembled template before saving."
+                    - generic [ref=e956]: 9 tasks
+                - generic [ref=e957]:
+                  - img [ref=e958]
+                  - generic [ref=e965]:
+                    - generic [ref=e966]:
+                      - generic [ref=e967]: Goal Processing (Standard)
+                      - generic [ref=e968]: "[meta]"
+                    - paragraph [ref=e969]: Standard goal processing activity - decomposes goals into execution steps via Thompson Sampling recommendations
+                    - generic [ref=e970]: 5 tasks
+          - generic [ref=e135]:
+            - alert [ref=e137]:
+              - img [ref=e138]
+              - heading "Productive loop detected Loop" [level=5] [ref=e143]:
+                - text: Productive loop detected
+                - generic [ref=e144]: Loop
+              - generic [ref=e145]: A repeating pattern was found in columns 0–0. Each iteration produces new shapes, so this loop is considered productive and will not block execution.
+            - generic [ref=e146]:
+              - generic [ref=e147]:
+                - img [ref=e148]
+                - text: compose
+              - generic [ref=e151]: │
+              - generic [ref=e152]:
+                - img [ref=e153]
+                - text: trace
+              - generic [ref=e156]: │
+              - generic [ref=e157]:
+                - img [ref=e158]
+                - text: live
+                - generic "7f211b55-7cda-44dc-8347-ad16bffca347" [ref=e1052]: 7f211b55…
+            - generic [ref=e1053]:
+              - img [ref=e1054]
+              - generic "7f211b55-7cda-44dc-8347-ad16bffca347" [ref=e1060]
+              - generic [ref=e1061]:
+                - img [ref=e1062]
+                - text: live
+              - button "disconnect" [ref=e1068] [cursor=pointer]:
+                - img
+                - text: disconnect
+            - generic [ref=e973]:
+              - button "Insert activity at start" [ref=e975] [cursor=pointer]:
+                - img [ref=e976]
+                - text: insert
+              - generic [ref=e979]:
+                - generic [ref=e980]: ── step 1 ──
+                - generic [ref=e986]:
+                  - generic:
+                    - generic "Valid":
+                      - img
+                  - generic [ref=e988] [cursor=pointer]:
+                    - generic [ref=e990]:
+                      - img [ref=e991]
+                      - generic [ref=e998]:
+                        - generic [ref=e999]:
+                          - heading "Create Read-Only Validation Variant" [level=3] [ref=e1000]
+                          - generic [ref=e1001]:
+                            - generic [ref=e1002]: "[tool]"
+                            - button "Remove Create Read-Only Validation Variant from trajectory" [ref=e1003]:
+                              - img
+                        - paragraph [ref=e1004]: "Auto-generated activity for: Create a read-only validation variant of an enforcement activity by transforming an existing enforcement template to remove any write operations to project files while preserving validation checks and allowing output artifacts"
+                        - generic [ref=e1006]: tool_output
+                        - generic [ref=e1007]:
+                          - generic [ref=e1008]:
+                            - generic [ref=e1009]: 1 tasks
+                            - generic [ref=e1010]: α:1.0 β:1.0
+                          - button "Collapse activity details" [expanded] [ref=e1069]: ▴ collapse
+                    - generic [ref=e1070]:
+                      - generic [ref=e1071]:
+                        - generic [ref=e1072]: running…
+                        - generic [ref=e1073]: 2/1
+                      - progressbar [ref=e1074]
+                    - region:
+                      - generic [ref=e1077]:
+                        - generic [ref=e1078]:
+                          - generic [ref=e1079]:
+                            - generic [ref=e1080]: ── TASKS ────────────
+                            - button "+ add" [ref=e1081]
+                          - generic [ref=e1084]:
+                            - generic [ref=e1085]: "1"
+                            - generic [ref=e1086]: │
+                            - textbox "task description…" [ref=e1087]: "Accomplish: Create a read-only validation variant of an enforcement activity by transforming an existing enforce"
+                            - combobox [ref=e1089]:
+                              - generic: llm
+                              - img [ref=e1090]
+                            - generic [ref=e1092]:
+                              - button "Move task up" [disabled] [ref=e1093]: ▴
+                              - button "Move task down" [disabled] [ref=e1094]: ▾
+                            - button "Remove task" [ref=e1095]:
+                              - img
+                            - button "Expand task details" [ref=e1096]:
+                              - img
+                        - generic [ref=e1098]:
+                          - generic [ref=e1099]: OUT
+                          - generic [ref=e1100]: ◎ tool_output
+                        - generic [ref=e1101]:
+                          - generic [ref=e1102]: ── output shapes ─────────
+                          - generic [ref=e1104]:
+                            - generic [ref=e1105]:
+                              - text: tool_output
+                              - button "Remove tool_output" [ref=e1106]:
+                                - img [ref=e1107]
+                            - textbox [ref=e1110]
+                        - generic [ref=e1113]:
+                          - generic [ref=e1114]: α:1.0 β:1.0 ▓▓▓▓▓░░░░░ 50% [3–97%]
+                          - button "Edit Thompson Sampling parameters" [ref=e1115]: edit
+                        - button "save as variant" [ref=e1117]:
+                          - img
+                          - text: save as variant
+              - button "Insert activity after step 1" [ref=e1013] [cursor=pointer]:
+                - img [ref=e1014]
+                - text: insert
+            - status [ref=e1017]
+          - generic [ref=e163]:
+            - generic [ref=e164]:
+              - generic [ref=e165]:
+                - img [ref=e166]
+                - heading "Impulse State" [level=2] [ref=e170]
+              - button "Collapse impulse state panel (Ctrl+I)" [ref=e171] [cursor=pointer]:
+                - img
+            - generic [ref=e172]:
+              - generic [ref=e173]:
+                - generic [ref=e174]:
+                  - img [ref=e175]
+                  - generic [ref=e180]: Live shapes on minibob
+                - generic [ref=e1018]:
+                  - generic [ref=e1019]: unknown
+                  - generic [ref=e1020]: lifecycle:activity:preExecution
+                  - generic [ref=e1021]: lifecycle:task:started
+                  - generic [ref=e1022]: lifecycle:task:completed
+                  - generic [ref=e1023]: lifecycle:activity:postExecution
+                  - generic [ref=e1024]: sync_result
+                  - generic [ref=e1025]: impulse_state_result
+                  - generic [ref=e1026]: task_output
+                  - generic [ref=e1027]: lifecycle:task:preBinding
+                  - generic [ref=e1028]: memo
+                  - generic [ref=e1029]: context_acquisition_summary
+                  - generic [ref=e1030]: goal_enrichment
+                  - generic [ref=e1031]: activity_recommendations
+                  - generic [ref=e1032]: variant_selection_result
+                  - generic [ref=e1033]: user_interaction
+                  - generic [ref=e1034]: activityExecutionSummary
+                  - generic [ref=e1035]: activityExecutionTrace
+                  - generic [ref=e1036]: goal_verification
+                  - generic [ref=e1037]: lifecycle:execution:tick
+                  - generic [ref=e1038]: config_file
+              - generic [ref=e184]:
+                - generic [ref=e185]:
+                  - heading "Current Shapes" [level=3] [ref=e187]
+                  - generic [ref=e189]:
+                    - generic [ref=e190]: goal
+                    - generic [ref=e191]: directoryTree
+                    - generic [ref=e192]: tool_output
+                - generic [ref=e1118]:
+                  - heading "Bindable Slots" [level=3] [ref=e1120]
+                  - generic [ref=e1122]:
+                    - button "Toggle candidates for slot lifecycle:task:completed" [ref=e1124] [cursor=pointer]:
+                      - img [ref=e1125]
+                      - img [ref=e1127]
+                      - generic "lifecycle:task:completed" [ref=e1133]
+                      - generic [ref=e1134]: 0 candidates
+                    - button "Toggle candidates for slot lifecycle:task:preBinding" [ref=e1136] [cursor=pointer]:
+                      - img [ref=e1137]
+                      - img [ref=e1139]
+                      - generic "lifecycle:task:preBinding" [ref=e1145]
+                      - generic [ref=e1146]: 0 candidates
+                    - button "Toggle candidates for slot impulse_state_result" [ref=e1148] [cursor=pointer]:
+                      - img [ref=e1149]
+                      - img [ref=e1151]
+                      - generic "impulse_state_result" [ref=e1157]
+                      - generic [ref=e1158]: 0 candidates
+                    - button "Toggle candidates for slot goal_enrichment" [ref=e1160] [cursor=pointer]:
+                      - img [ref=e1161]
+                      - img [ref=e1163]
+                      - generic "goal_enrichment" [ref=e1169]
+                      - generic [ref=e1170]: 0 candidates
+                    - button "Toggle candidates for slot variant_selection_result" [ref=e1172] [cursor=pointer]:
+                      - img [ref=e1173]
+                      - img [ref=e1175]
+                      - generic "variant_selection_result" [ref=e1181]
+                      - generic [ref=e1182]: 0 candidates
+                - generic [ref=e193]:
+                  - heading "Task Validation" [level=3] [ref=e195]
+                  - generic [ref=e198]:
+                    - img [ref=e199]
+                    - 'generic "Accomplish: Create a read-only validation variant of an enforcement activity by transforming an existing enforce" [ref=e203]': "Accomplish: Create a read-only v…"
+                    - generic [ref=e204]: no validators
+                - generic [ref=e205]:
+                  - heading "Shape Provenance" [level=3] [ref=e207]
+                  - generic [ref=e209]:
+                    - generic [ref=e210]:
+                      - generic [ref=e211]:
+                        - img [ref=e212]
+                        - generic [ref=e216]: Initial Context (Column 0)
+                      - generic [ref=e218]:
+                        - img [ref=e219]
+                        - generic [ref=e222]: goal
+                        - generic [ref=e223]: directoryTree
+                    - generic [ref=e224]:
+                      - generic [ref=e225]:
+                        - img [ref=e226]
+                        - button "Create Read-Only Validation Variant (Col 0)" [ref=e230] [cursor=pointer]
+                      - generic [ref=e232]:
+                        - img [ref=e233]
+                        - generic [ref=e236]: tool_output
+                - generic [ref=e1183]:
+                  - heading "Task Provenance" [level=3] [ref=e1185]
+                  - paragraph [ref=e1189]: Task 1
+                - generic [ref=e237]:
+                  - heading "Shape Timeline" [level=3] [ref=e239]
+                  - generic [ref=e1191]:
+                    - generic [ref=e1192]: "1"
+                    - generic [ref=e1195]: no output
+            - paragraph [ref=e254]: Press Ctrl+I to toggle
+  - contentinfo [ref=e255]:
+    - generic [ref=e256]:
+      - generic [ref=e257]:
+        - generic [ref=e260]: API Connected
+        - generic [ref=e261]:
+          - img [ref=e262]
+          - generic [ref=e265]: 10:48:29 AM
+      - generic [ref=e266]:
+        - generic [ref=e267]: "[LOCAL]"
+        - generic [ref=e268]: v0.1.0

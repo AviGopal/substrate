@@ -182,6 +182,10 @@ DEFINE INDEX idx_shape_version ON shape_definition FIELDS shape_name, version UN
 
 **Rationale:** Vessels must be discoverable for routing without manual configuration.
 
+> **Security hardening dependency** (see `openspec/changes/2026-04-26-security-hardening-findings/`):
+> - **H2 (vessel-id = multihash(vessel_pubkey))**: The `vessel_id` field defined in `VesselCapabilityV2` below MUST be derived from a vessel-held public key via multihash, with a self-signed registration challenge proving keypair possession. The data model defined here SHOULD reserve a `pubkey_hash` field on the registration payload before this standardization is considered final.
+> - **H4 (Tailnet-Lock authority)**: Vessel registration MUST be ratified through the AUM with a k-of-n authority quorum for high-risk shapes, and ≥2 disablement secrets are required. The registration payload SHOULD reserve `aum_entry_id` and `disablement_secret_count` fields, and the discovery-vessel `POST /register` flow must be extended with an AUM-attestation precondition before this design lands as canonical.
+
 **Implementation:**
 - Vessels call `POST /register` to discovery-vessel on startup with registration payload
 - Discovery-vessel maintains in-memory registry with shape indexing

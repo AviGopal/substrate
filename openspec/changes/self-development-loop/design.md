@@ -200,6 +200,9 @@ await db.query(`CREATE activity_execution_traces SET org_id = $orgId...`, { orgI
 
 ## Integration Points
 
+> **Security hardening dependency** (see `openspec/changes/2026-04-26-security-hardening-findings/`):
+> - **H4 (Tailnet-Lock authority)**: When H4 lands, Thompson Sampling selection of templates SHOULD verify the source vessel is AUM-attested before templates are reused across organizational scopes. The template registration flow described below propagates `org_id`, but cross-org or cross-tenant template reuse must additionally consult the AUM to confirm the registering vessel's authority for the advertised shapes. Within-org reuse is unaffected.
+
 ### index.ts Template Extraction Flow
 
 **Current** (lines 657-688):
