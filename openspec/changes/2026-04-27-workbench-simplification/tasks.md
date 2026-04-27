@@ -145,7 +145,7 @@ This is a pure addition — no existing rendering path changes.
 
 ---
 
-### T3.2 — Move vessel/goal controls to top bar
+### T3.2 — Move vessel/goal controls to top bar [x]
 
 **File**: `repos/workbench/src/pages/TrajectoryEditorPage.tsx`
 
