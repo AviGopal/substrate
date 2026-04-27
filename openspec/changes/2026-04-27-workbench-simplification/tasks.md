@@ -131,7 +131,7 @@ Add `input_shape` and `output_shape` filter chips below the search bar:
 
 Changes to `TrajectoryEditorPage.tsx` and related components. Higher coordination cost — do T3.1, T3.2, T3.3 sequentially (each builds on the previous).
 
-### T3.1 — Add compact variant to VesselSelectorPanel
+### T3.1 — Add compact variant to VesselSelectorPanel [x]
 
 **File**: `repos/workbench/src/components/trajectory/VesselSelectorPanel.tsx`
 
