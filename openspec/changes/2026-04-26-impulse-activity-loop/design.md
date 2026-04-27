@@ -391,3 +391,34 @@ activity:⟨Dashboard Specification Validator\⟩
 ## Post-Deploy Observations
 
 Post-deploy validation of v1.12.0 on canary surfaced two bugs in `repos/metabob-activity-api/src/routes/activities.ts`: (1) the `relevance_feedback` audit row is silently dropped when optional fields are absent, because SurrealDB 3.x rejects `NULL` for `none | string` typed fields — the fix is to pass `undefined` instead of `null` so the driver omits the key and the DB sees `NONE`; (2) the relevance-feedback route is missing its auth middleware, causing a 500 Hono lifecycle crash on unauthenticated requests rather than the expected 401. Additionally, the embedding backfill job has not run: 0 of 3,051 activities have embeddings populated, so semantic search in the pipeline returns no results until the job is executed.
+
+## Phase 8 status — main-thread canary smoke (2026-04-26 17:50 PT)
+
+**Probe results from the main thread** (Bash + `curl` against `https://activity.metabob.com`, ApiKey from `~/.metabob/config.json`):
+
+- **Health**: `200 healthy` — service `metabob-activity-api`, version `1.12.0`. SurrealDB, Redis, Discovery all `healthy`. Embedding `disabled` (consistent with backfill not run).
+- **`GET /v2/activities/templates?limit=5`**: 200 with 5 templates. Auth path through API-key validation works.
+- **`GET /v2/activities/templates?limit=2&offset=2`**: 200 with 2 templates, but response shape is the **pre-B-4** form `{templates, total, offset:null, limit:null}` — `offset`/`limit` not echoed back. Confirms B-4 paginated handler (commit `1ff79df`) **not yet rolled out** to canary; build/deploy pipeline still in flight.
+- **`POST /v2/impulses/resolve` with `pointer.type=executionTraceList` (and `executionTraces`, `executionTraceWithSignatures`, `templateAuditReport`)**: returns either `{success:false, error:"Validation failed"}` or `{loaded:null, content:{}}`. Schema or routing for these shapes is not behaving as advertised. Needs investigation — but currently blocks Phase 8.2/8.3 evidence collection.
+- **`GET /v2/activities/execution-traces?limit=5`**: 500 with `"The access method cannot be used in the requested operation"`. This is the canonical JWT-secret-mismatch SurrealDB error documented in `repos/metabob-activity-api/CLAUDE.md` §"JWT Secret (Single Source of Truth)". The de-duplication code fix landed (deployment commit `121d70d`, activity-api commit pinned by `2a065bf`), but **the canary k8s secret `metabob-activity-api.jwt-secret` has not been re-encrypted with the value the new schema expects** — the runtime image is on `1.12.0` but is still mounting an old secret.
+
+**Interpretation**: API-key auth is healthy; SurrealDB JWT-token-signed queries (anything routed through `createAuthenticatedClient`) fail with the secret-mismatch 500. Templates list works because it queries via root credentials, not via JWT. Execution-trace queries, impulse-relevance writes, and most user-scoped reads/writes are blocked.
+
+**Operator action required to unblock Phase 8**:
+1. SOPS-edit `repos/deployment/secrets/canary.secrets.yaml` — populate `activityApi.jwtSecret` with the same value the running API would compute from `JWT_SECRET` env (or any 64-char random; both consumers re-read it).
+2. Commit + push `repos/deployment` dev so CI rolls out the new k8s secret.
+3. Restart `metabob-activity-api` deployment (or wait for pod replacement on next image roll).
+
+After (3), re-run this main-thread smoke. Phase 8.1–8.7 evidence collection can proceed once `GET /v2/activities/execution-traces` returns `200`.
+
+**Concurrent action item**: investigate why `executionTraceList` and `templateAuditReport` resolver shapes return `Validation failed` even with full impulse schema — possibly a pointer-schema drift between minibob's `OutputImpulse` extension (F-9b) and the activity-api validator. Tracked separately as F-32 below.
+
+### F-32 (new): impulse `pointer.type=executionTraceList` returns "Validation failed"
+
+**Symptom**: `POST /v2/impulses/resolve` with `{impulses:[{id, pointer:{type:"executionTraceList",limit:5}, budget, priority, loaded:false, content:null}]}` returns `{success:false, error:"Validation failed"}` from canary v1.12.0. Same for `executionTraces`, `executionTraceWithSignatures`, and `templateAuditReport` (the last returns `{loaded:null, content:{}}` — distinct failure mode).
+
+**Likely cause**: the canary build's impulse pointer schema validator does not include these shape names in its enum, or expects a different pointer field structure. Activity-api source declares them as resolvers (see `src/services/impulse-formatters.ts`), but the Hono route may use a Zod schema with a stale enum.
+
+**Next step**: read `repos/metabob-activity-api/src/routes/impulses.ts` validation block, see if these shape names are in the accepted-types list. If not, that's the fix — extend the enum. If yes, decode the validation error message (canary may not surface the field-level reason). Cheap to land; small handler change.
+
+**Scope**: independent of JWT secret operator action; can land + deploy on its own.
