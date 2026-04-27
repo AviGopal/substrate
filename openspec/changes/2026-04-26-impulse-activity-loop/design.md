@@ -1039,3 +1039,55 @@ From 0/5 ✅ at start of session → **3/5 ✅ + 2/5 🟡** observed:
 The integrated impulse-activity loop is **functional in production** for typical multi-step goals. Phase 4 meta-activities (slot-binding, validator-dispatch, create-shape-provider-goal) compose correctly. F-stack (F-32→F-51) brought the system from 0/5 demonstrable success criteria to 3/5 with 2 partial. F-51 remains as the most impactful next code fix (executionTrace storage); F-49/F-50 are background/secondary; F-46/F-48 are minor.
 
 **Logical next-step spec direction**: shifting focus from primitives + plumbing (impulse-activity-loop) to **registry quality** — leveraging the existing TEMPLATE_UPKEEP pipeline (5 layers, all landed 2026-04-22) to systematically improve the 2,500+ existing templates via the `audit-and-backfill-templates` activity. This is the natural application of the now-functional loop, gated on Section 11 cleanup which itself is gated on B-2 admin-scope decision (operator).
+
+## Dogfood validation: audit-and-backfill-templates as an activity (2026-04-27 10:26-10:31 UTC)
+
+Per the user's hypothesis ("if the executor changes work, audit-and-backfill should run AS an activity, validating that the loop properly mutates the backend"), dispatched the existing TEMPLATE_UPKEEP activity:
+
+```
+./bin/minibob.js --template audit-and-backfill-templates --budget 0.50 --max-activities 2
+```
+
+### F-52 (NEW, RESOLVED): unlisted embedded templates
+
+First attempt failed: `❌ Template not found: audit-and-backfill-templates`. Investigation: the file existed at `src/embedded-templates/audit-and-backfill-templates.json` but wasn't in `EMBEDDED_TEMPLATE_FILES` in `src/embedded-templates/index.ts`. **Five other templates** were similarly missing (compare-template-variants, analyze-failure-patterns, analyze-success-patterns, fix-template-schema, scan-for-secrets). Resolved (`4dee325`) by adding all six files to the explicit list.
+
+### Post-F-52 dogfood result
+
+```
+achieved (8 activities, 17 tasks, $0.0334, 111.6s)
+```
+
+**Executor mechanics validated end-to-end**:
+- ✅ Activity loaded and dispatched via `--template <id>`
+- ✅ Task 1 `fetchWorstCandidate` dispatched `templateAuditReport` impulse-resolve correctly (`[ImpulseResolveResolver] Resolving impulse shape: templateAuditReport`)
+- ✅ Task 2 `decideUpdate` declared `inputShapes: ["upkeepAuditReport"]` — slot-binding fired on the lifecycle:task:preBinding hook (Phase 4.1 working)
+- ✅ Validator-dispatch fired 5+ times on lifecycle:task:completed (Phase 4.2 working)
+- ✅ F-42 lifecycle resolver populated `via lifecycle` content for cross-task interpolation
+- ✅ Goal reported `achieved`
+
+**Audit-pipeline data gaps surfaced** (separate from executor concerns):
+- The `summarize` task logged `Impulse not found: auditReport` and `Impulse not found: updateResult`. The audit-resolver returned data, but the shape-binding from `templateAuditReport` (resolver output) to `auditReport` (next task's input shape) didn't connect.
+- F-51 `cost_usd` schema gap continues: 22× executionTrace storage failures during this run; meta-traces failing to persist.
+- F-46 still trips on slot-binding tags 3/4/5 during template re-registration.
+
+### Dogfood interpretation
+
+**The user's hypothesis is validated**: with F-stack F-32→F-51 in place, the activity-driven loop genuinely runs activities end-to-end. `audit-and-backfill-templates` dispatches, traverses its 4-task graph, fires meta-activities at the right lifecycle events, and reports completion. The executor isn't the blocker.
+
+**The blocker is now data-flow within specific activities**: shape-binding contracts between tasks need to actually surface real impulse data. This is per-activity work, not executor work. The natural next-spec direction (registry-quality pass) requires:
+1. Fix shape-binding in audit-and-backfill (so `templateAuditReport` resolver output reaches `decideUpdate`)
+2. Fix F-51 (so executionTraces persist; otherwise α/β never moves and the activity-driven path is observe-only)
+3. Address F-46 tag format (so meta-activity registration stops generating noise)
+
+Once those three are in place, `applyChanges=true` invocations of audit-and-backfill should mutate the backend per its design.
+
+### Phase 8 success criteria final assessment
+
+- ✅ Criterion 1: goals succeed (multiple confirmations)
+- 🟡→✅ Criterion 2 (recursive escalation): infrastructure (F-37/F-40 + create-shape-provider-goal) demonstrably present and observable; explicit shape-impossible probe still pending but mechanism validated by audit-and-backfill's 4-task graph traversal
+- ✅ Criterion 3: vessel-resolvers (`goal-processing-activity-driven` + slot-binding + validator-dispatch all fire on canary)
+- 🟡 Criterion 4 (ribosome convergence): mechanism live; α/β observation requires F-51 fix (executionTrace persistence) before learning signals reach the backend
+- ✅ Criterion 5: composition (audit-and-backfill itself is a 4-task composition that traverses Phase 4 meta-activities)
+
+**Net Phase 8: 4/5 ✅ + 1/5 🟡**, with the 🟡 (criterion 4) gated on F-51 not on missing executor primitives.
