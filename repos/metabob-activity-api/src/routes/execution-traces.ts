@@ -1646,7 +1646,18 @@ app.post('/', async (c) => {
           };
           if (owningTaskId) data.task_id = owningTaskId;
           if (shape) data.shape = shape;
-          if (resolvedBody !== undefined) data.body = resolvedBody;
+
+          // Include body for all shapes with 50 KB size guard
+          if (resolvedBody !== undefined) {
+            try {
+              const serialized = JSON.stringify(resolvedBody);
+              data.body = serialized.length > 50_000
+                ? { truncated: true, summary: (resolvedBody as Record<string, unknown>)?.summary ?? null }
+                : resolvedBody;
+            } catch {
+              // Non-serializable body — omit
+            }
+          }
 
           broadcaster.emit({
             type: 'impulse.resolved',

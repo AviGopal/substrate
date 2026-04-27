@@ -389,7 +389,7 @@ export function useShapeExamples(shape: string, enabled = false) {
 
 ## Phase 5: Impulse Content Inline
 
-### T5.1 — Add `useImpulseContent` hook
+### T5.1 — Add `useImpulseContent` hook [x]
 
 **File**: `repos/workbench/src/hooks/useImpulseContent.ts` (new file)
 
@@ -438,7 +438,7 @@ export function useImpulseContent(
 
 ---
 
-### T5.2 — Add impulse content store field to trajectoryStore
+### T5.2 — Add impulse content store field to trajectoryStore [x]
 
 **File**: `repos/workbench/src/stores/trajectoryStore.ts`
 
@@ -459,7 +459,7 @@ setImpulseContent: (impulseId, body) =>
 
 ---
 
-### T5.3 — Wire WS `impulse.resolved` body into store
+### T5.3 — Wire WS `impulse.resolved` body into store [x]
 
 **File**: `repos/workbench/src/hooks/useTrajectoryExecution.ts`
 
@@ -472,7 +472,7 @@ This captures live-execution impulse content as it arrives over the WS stream.
 
 ---
 
-### T5.4 — Extend OutputLayer with expandable content
+### T5.4 — Extend OutputLayer with expandable content [x]
 
 **File**: `repos/workbench/src/components/trajectory/OutputLayer.tsx`
 
@@ -540,7 +540,7 @@ export function ImpulseContentDisplay({ content }: { content: unknown }) {
 
 ---
 
-### T5.5 — Extend WS broadcaster to include `body` for all shapes
+### T5.5 — Extend WS broadcaster to include `body` for all shapes [x]
 
 **File**: `repos/metabob-activity-api/src/routes/activities.ts` (WebSocket broadcast section — search for `'impulse.resolved'` broadcast call)
 
@@ -583,7 +583,7 @@ If there are multiple broadcast call sites (for different event paths), update a
 
 ---
 
-### T5.6 — Update TaskEditor to pass executionId to OutputLayer
+### T5.6 — Update TaskEditor to pass executionId to OutputLayer [x]
 
 **File**: `repos/workbench/src/components/trajectory/TaskEditor.tsx`
 
