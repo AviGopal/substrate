@@ -86,7 +86,7 @@ minibob --single "refactor the Thompson Sampling implementation"
 - **F-43** (2026-04-27): Legacy field coercion for impulse-relevance (backward compatibility)
 - **F-44** (2026-04-27): Hono Context-not-finalized auth layer fix (minibob pending-sync queue unblocked)
 - **F-45** (2026-04-27): Improviser null-guard fix (minibob v0.14.0+)
-- **F-51** (post-2026-04-27): Schema fix for migration 093 (improved entity validation)
+- **F-51** (post-2026-04-27): Schema fix for migration 093 (improved entity validation); follow-up migration 094 adds DEFINE FIELD OVERWRITE for impulse_resolutions.* to handle SurrealDB 3.0 field flexibility requirements
 - **F-52** (post-2026-04-27): Unlisted templates resolver fix (prevents private template leakage)
 
 **Canary deployment:** activity-api v1.15.0, minibob v0.14.0+, workbench v0.7.1+ (2026-04-27+)
