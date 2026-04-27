@@ -51,10 +51,11 @@ interface FieldRendererProps {
   field: FormField
   value: unknown
   onChange: (v: unknown) => void
+  onBlur?: () => void
   error?: string
 }
 
-function FieldRenderer({ field, value, onChange, error }: FieldRendererProps) {
+function FieldRenderer({ field, value, onChange, onBlur, error }: FieldRendererProps) {
   const { type, label, placeholder, options, required } = field
 
   return (
@@ -70,6 +71,7 @@ function FieldRenderer({ field, value, onChange, error }: FieldRendererProps) {
           value={String(value ?? '')}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
         />
       )}
 
@@ -79,6 +81,7 @@ function FieldRenderer({ field, value, onChange, error }: FieldRendererProps) {
           value={String(value ?? '')}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
+          onBlur={onBlur}
         />
       )}
 
@@ -87,6 +90,7 @@ function FieldRenderer({ field, value, onChange, error }: FieldRendererProps) {
           type="date"
           value={String(value ?? '')}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
         />
       )}
 
@@ -95,6 +99,7 @@ function FieldRenderer({ field, value, onChange, error }: FieldRendererProps) {
           value={String(value ?? '')}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
         />
       )}
 
@@ -242,6 +247,7 @@ export function FormPrimitive({ primitive, onAction }: FormProps) {
               field={field}
               value={f.state.value as unknown}
               onChange={(v) => f.handleChange(v as never)}
+              onBlur={() => f.handleBlur()}
               error={f.state.meta.errors.join(', ') || undefined}
             />
           )}

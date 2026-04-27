@@ -1,8 +1,8 @@
 // Tests for ErrorBoundary component
 
-import { describe, it, expect, beforeEach, jest, spyOn } from 'bun:test'
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, cleanup } from '@testing-library/react'
 import { ErrorBoundary } from '../ErrorBoundary'
 
 // Suppress console.error for expected error boundary tests
@@ -11,10 +11,9 @@ beforeEach(() => {
   console.error = () => {}
 })
 
-// Restore after each test
-import { afterEach } from 'bun:test'
 afterEach(() => {
   console.error = originalError
+  cleanup()
 })
 
 // A component that throws on render

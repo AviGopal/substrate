@@ -1,8 +1,8 @@
 // Tests for FormPrimitive component
 
-import { describe, it, expect, mock, jest } from 'bun:test'
+import { describe, it, expect, mock, jest, afterEach } from 'bun:test'
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
 import { FormPrimitive } from '../form'
 import type { FormPrimitive as FormPrimitiveType } from '../../../types'
 
@@ -11,6 +11,10 @@ mock.module('@tanstack/react-router', () => ({
   useSearch: () => ({}),
   useNavigate: () => () => {},
 }))
+
+afterEach(() => {
+  cleanup()
+})
 
 const basePrimitive: FormPrimitiveType = {
   type: 'form',
