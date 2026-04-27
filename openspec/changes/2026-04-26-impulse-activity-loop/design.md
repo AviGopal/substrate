@@ -934,3 +934,69 @@ TypeError: undefined is not an object (evaluating 'pointer.type')
 - F-48: log noise
 
 None block goal execution. Fix order: **F-44 (high-frequency) → F-45 (deterministic crash) → F-46/F-47 (contract drift) → F-48 (noise)**.
+
+## Post-deploy validation (2026-04-27 10:12 UTC, image 1.13.0-536fd3e)
+
+Fresh probe after deploying F-44 + F-43 + F-37/F-40 (full):
+
+```
+./bin/minibob.js --single "list all files in /tmp/minibob-probe and report the version field from config.json" --budget 0.40 --max-activities 3 -vv
+```
+
+**Outcome**: goal **achieved** (status: completed). $0.33 / 162.7s / 12 activities / 28 tasks. `goal_verification` shape emitted.
+
+### Quantified delta vs pre-deploy
+
+| Marker | Pre-deploy | Post-deploy | Status |
+|---|---|---|---|
+| `Context is not finalized` 500s | 30+ | **0** | ✅ F-44 verified live |
+| `Failed to register vessel` 400s | 1 | **0** | ✅ F-47 co-resolved by F-44 |
+| `evaluating 'pointer.type'` crashes | 1 (every probe) | **0** | ✅ F-45 verified live |
+| `Failed to register template` | 3 (tag format) | 15 (mixed: ~12 connection + 3 tag-format) | F-46 partial; new F-50 surfaced |
+| Total HTTP 500s | 27+ | 25 | Net flat — F-44 wins offset by F-51 |
+| slot-binding ✗ | 100% | **success** in trace | F-38/F-41/F-42 stack working |
+| validator-dispatch | task 2 dies | **multiple successes** in trace | F-42 chain unblocked |
+| Goal achieved | partial (probe 1 fail, probe 2 succeed) | ✅ achieved | criterion 1 robust |
+
+### F-50 (new): SurrealDB connection failures from activity-api
+
+Intermittent: `"Query failed in activity-system.learning_loop: Unable to connect. Is the computer able to access the url?"` — affects template registration and impulse creation. Pod ↔ SurrealDB service flakiness (DNS, transient network, load). Causes ~12 of the 15 template registration failures observed; the OTHER 3 are the genuine F-46 tag-format Zod rejections.
+
+**Diagnostic next**: `kubectl logs -n activity-system -l app.kubernetes.io/name=surrealdb` and check service endpoints. Also `kubectl describe svc surrealdb` for endpoint health. May correlate with cluster capacity (F-34 capped replicas to 1).
+
+### F-51 (new): `impulse_resolutions[].cost_usd` field missing from SurrealDB schema
+
+Every `POST /v2/activities/execution-traces` from minibob fails with 500: `"Found field 'impulse_resolutions[N].cost_usd', but no such field exists for table 'activity_execution_traces'"`. Schema migration gap — minibob's TS contract for `impulse_resolutions` includes `cost_usd: number` per entry, but no SurrealDB DEFINE FIELD covers the nested array element's `cost_usd`.
+
+**Fix paths**:
+- A. Add `DEFINE FIELD impulse_resolutions[*].cost_usd ON TABLE activity_execution_traces TYPE float` migration.
+- B. Mark `impulse_resolutions` as `FLEXIBLE` so any nested fields are stored as-is. Less type-safe but avoids future field-by-field migrations.
+- C. Strip `cost_usd` from each impulse_resolution entry server-side before insert.
+
+Path B (FLEXIBLE) preferred — impulse_resolutions is a bag of resolver-tracking metadata; new fields will continue to surface, and per-field migrations don't scale.
+
+### F-46 status (partial-resolution)
+
+Pre-deploy: 100% of "Failed to register template" errors were tag-format Zod rejections.
+Post-deploy: ~80% are F-50 connection failures (the F-44 wrapper fix unmasked this); ~20% are genuine F-46 tag-format Zod rejections — original F-46 cause persists for ~3 templates.
+
+### Phase 8 success criteria — projected status post this validation
+
+- ✅ Criterion 1 (goals succeed) — confirmed
+- 🟡 Criterion 2 (recursive escalation) — F-37/F-40 audit infra works; need shape-impossible probe
+- ✅ Criterion 3 (vessel-resolvers only) — confirmed
+- 🟡→✅ Criterion 4 (ribosome convergence) — F-44+F-42+F-39 stack now lets validator-dispatch's learning_signal_writer execute (task ran but matched 0 impulses in this probe; would manifest with longer-running goals)
+- ✅ Criterion 5 (composition) — confirmed (slot-binding + validator-dispatch + hello-world-minimal + activity-driven dispatch in one trace)
+
+**Net Phase 8: 3-4/5 ✅ depending on whether you count Criterion 4 as observed (mechanism live) vs witnessed (α/β actually moved). Criterion 2 still pending an explicit probe.**
+
+### Open queue
+
+- F-46 (tag format genuine cause, 3 templates affected)
+- F-48 (JSON parse '#' log noise)
+- F-49 (org_id schema-coercion 500 on impulse-relevance)
+- F-50 (SurrealDB connection flakiness)
+- F-51 (impulse_resolutions cost_usd schema gap — most impactful, blocks executionTrace POSTs)
+- B-2 (operator)
+
+F-51 is the most impactful next code fix — every executionTrace POST currently returns 500, even though the TRACE itself was created (minibob has the data; activity-api just can't store it). Cached-pending sync queue continues to grow until F-51 resolves.
