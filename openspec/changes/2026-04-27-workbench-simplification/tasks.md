@@ -362,7 +362,7 @@ export function useShapeExamples(shape: string, enabled = false) {
 
 ---
 
-### T4.2 — Update ShapesPage to use live model + show examples
+### T4.2 — Update ShapesPage to use live model + show examples [x]
 
 **File**: `repos/workbench/src/pages/ShapesPage.tsx`
 
