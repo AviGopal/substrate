@@ -129,7 +129,7 @@ app.post('/resolve', async (c) => {
 #### React-Renderer Vessel
 **Status**: Doesn't exist, needs to be created
 
-**Required implementation**: See `VESSEL_QUICK_START.md` for step-by-step guide
+**Required implementation**: See `TYPESCRIPT_VESSEL_TEMPLATE.md` for step-by-step guide (canonical template for new vessels)
 
 ### The Proxy Pattern Issue
 
@@ -307,7 +307,7 @@ async resolveViaDiscovery(pointer: ImpulsePointer): Promise<ResolverResult> {
 
 5. **Create React-Renderer** - New vessel
    - Location: `repos/react-renderer/`
-   - Implement: Full vessel structure (see VESSEL_QUICK_START.md)
+   - Implement: Full vessel structure (see TYPESCRIPT_VESSEL_TEMPLATE.md)
 
 ### Long-Term Enhancements
 

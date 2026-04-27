@@ -174,7 +174,7 @@ Based on the current testing gaps, these are the priority actions:
 
 - **Main CLAUDE.md**: `/home/avi/documents/work/exp-repo/metabob-devbob/CLAUDE.md`
 - **Architecture Docs**: `/home/avi/documents/work/exp-repo/metabob-devbob/docs/architecture/`
-- **Testing Guide**: `/home/avi/documents/work/exp-repo/metabob-devbob/docs/TESTING_AND_LEARNING_LOOP_GUIDE.md`
+- **Testing Guide**: See CLAUDE.md §Key Architectural Concepts for learning loop details
 - **MiniBob CLAUDE.md**: `/home/avi/documents/work/exp-repo/metabob-devbob/repos/minibob/CLAUDE.md`
 - **Activity API CLAUDE.md**: `/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-activity-api/CLAUDE.md`
 
