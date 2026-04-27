@@ -1137,3 +1137,16 @@ The `goal` shape is currently not registered as a formal impulse type in the act
 **Confirmed**: GET endpoints (`/v2/activities/templates`, `/v2/activities/execution-traces`) work correctly for API key auth because they don't call `requireAuthenticated()`. Only the impulse resolver is blocked.
 
 **Required fix**: Either (a) fix `generateJwtToken` to work reliably for API key auth on canary (check JWT_SECRET alignment between init-database and runtime config), or (b) update `requireAuthenticated()` to permit API-key-authenticated requests by checking a separate context variable set before JWT generation is attempted, so auth failures at the JWT stage don't reject otherwise-valid API key requests for read operations.
+
+### L-4: Execution tree spans two DB tables — listing filter only searches one (2026-04-27)
+
+**Discovery**: The `parent_execution_id` filter added to `GET /v2/activities/execution-traces` (L-1 fix) only searches the `activity_execution_traces` table. The execution tree spans two tables:
+
+- `activity_execution_traces`: stores `_activity_execute` and `_goal_resolve` wrapper executions (using `aexec_` and `act_` format IDs)
+- `execution`: stores the paradigm table executions for leaf activities (`exec_` format IDs) — `validator-dispatch`, `slot-binding`, `execute-shell-command`, `hello-world-minimal`, etc.
+
+When the workbench's `fetchLeafChildren` queries for children of an `act_` format ID, it returns 0 results for the leaf activities because they're in the `execution` table with `exec_` parent references, not in `activity_execution_traces`.
+
+**Impact**: Canvas expansion only reaches down to `_activity_execute` wrapper depth (1-2 levels). The actual leaf activities that represent the trajectory columns (Goal Processing, Validator Dispatch, Execute Shell Command) are not found.
+
+**Required fix**: The listing handler in `execution-traces.ts` (GET `/`) needs to also search the paradigm `execution` table when `parent_execution_id` is provided, OR the workbench needs a dedicated "expand execution tree" endpoint that can traverse both tables. A simpler alternative: add a `parent_execution_id` filter to the paradigm `execution` table's own listing and query it as a fallback when `activity_execution_traces` returns 0 results.
