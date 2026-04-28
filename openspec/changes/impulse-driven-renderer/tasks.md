@@ -89,7 +89,7 @@
 - [x] 9.3 Implement column type inference in the transform task — detect ISO dates, numeric strings, status strings
 - [x] 9.4 Add `code` JSON fallback for shapes not in the mapping (no LLM invoked)
 - [x] 9.5 Add LLM fallback task for schema-conformant shapes where data doesn't match expected structure
-- [ ] 9.6 Sync `synthesize-ui-from-data` template to activity-api via template-sync on vessel startup
+- [x] 9.6 Sync `synthesize-ui-from-data` template to activity-api via template-sync on vessel startup
 
 ## 10. Error Boundaries
 
@@ -109,7 +109,7 @@
 - [x] 11.3 Create `templates/render-wizard.json` — multi-step form using TanStack Form primitive; input shape: `goal`
 - [x] 11.4 Create `templates/render-dashboard.json` — 4-column KPI grid + two charts + alert table; input shape: `vesselPerformanceMetrics`
 - [x] 11.5 Create `templates/render-conversation.json` — scrolling message thread with structured UI responses; input shape: `user_intent`
-- [ ] 11.6 Sync all five templates to activity-api via template-sync on vessel startup
+- [x] 11.6 Sync all five templates to activity-api via template-sync on vessel startup
 
 ## 12. Integration Verification
 

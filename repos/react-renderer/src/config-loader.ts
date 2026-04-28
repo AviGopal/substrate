@@ -27,6 +27,8 @@ export interface RendererConfig {
   vesselEndpoint: string
   /** Whether discovery registration is enabled */
   discoveryEnabled: boolean
+  /** Activity-API endpoint for template sync and trace writes */
+  activityApiEndpoint: string
 }
 
 /**
@@ -145,12 +147,23 @@ export async function loadRendererConfig(port?: number): Promise<RendererConfig>
   // Enabled by default unless explicitly set to 'false'
   const discoveryEnabled = process.env.DISCOVERY_ENABLED !== 'false'
 
+  // --- activityApiEndpoint ---
+  // env: METABOB_ENDPOINT
+  // json: metabob.endpoint
+  const activityApiEndpoint = resolveString(
+    process.env.METABOB_ENDPOINT,
+    projectConfig.metabob?.endpoint,
+    userConfig.metabob?.endpoint,
+    'https://activity.metabob.com',
+  )
+
   return {
     discoveryEndpoint,
     metabobApiKey,
     identityEndpoint,
     vesselEndpoint,
     discoveryEnabled,
+    activityApiEndpoint,
   }
 }
 

@@ -776,24 +776,72 @@ if (import.meta.hot) {
 }
 
 // ============================================================================
-// Activity Templates
+// Activity Templates — startup sync to activity-api
 // ============================================================================
-//
-// Templates registered in vessel.json (activities[].templatePath) and available
-// in templates/ are NOT automatically synced to activity-api at startup — this
-// vessel has no syncTemplates() call.  To register or refresh them, run:
-//
-//   minibob --single "sync templates for react-renderer"
-//
-// Templates present as of 2026-04-27:
-//   templates/render-file-tree.json
-//   templates/synthesize-ui-from-data.json       (Group 9: shape-mapping lookup + LLM transform + emit)
-//   templates/render-live-execution-monitor.json  (Group 11.1)
-//   templates/render-data-exploration.json        (Group 11.2)
-//   templates/render-wizard.json                  (Group 11.3)
-//   templates/render-dashboard.json               (Group 11.4)
-//   templates/render-conversation.json            (Group 11.5)
-//
+
+async function syncTemplatesToActivityApi(): Promise<void> {
+  const { activityApiEndpoint, metabobApiKey } = await loadRendererConfig(PORT)
+
+  if (!metabobApiKey) {
+    console.log('[Templates] METABOB_API_KEY not set — skipping template sync')
+    return
+  }
+
+  const { readdirSync, readFileSync } = await import('fs')
+  const { join } = await import('path')
+
+  // Templates live in .minibob/templates/ (used by minibob --dev) and
+  // templates/ (canonical path referenced in vessel.json).  Read from
+  // .minibob/templates/ since that's the complete set.
+  const templatesDir = join(import.meta.dir, '..', '.minibob', 'templates')
+  let files: string[]
+  try {
+    files = readdirSync(templatesDir).filter(f => f.endsWith('.json'))
+  } catch {
+    console.log('[Templates] .minibob/templates/ not found — skipping template sync')
+    return
+  }
+
+  const endpoint = `${activityApiEndpoint}/v2/activities/templates`
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `ApiKey ${metabobApiKey}`,
+  }
+
+  let synced = 0
+  let skipped = 0
+  for (const file of files) {
+    let template: Record<string, unknown>
+    try {
+      template = JSON.parse(readFileSync(join(templatesDir, file), 'utf8'))
+    } catch {
+      console.warn(`[Templates] Could not parse ${file} — skipping`)
+      skipped++
+      continue
+    }
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(template),
+      })
+      if (res.ok || res.status === 409) {
+        synced++
+      } else {
+        const text = await res.text().catch(() => '')
+        console.warn(`[Templates] ${file}: HTTP ${res.status} — ${text.slice(0, 120)}`)
+        skipped++
+      }
+    } catch (err) {
+      console.warn(`[Templates] ${file}: fetch error — ${err instanceof Error ? err.message : err}`)
+      skipped++
+    }
+  }
+
+  console.log(`[Templates] Sync complete: ${synced} synced, ${skipped} skipped (${files.length} total)`)
+}
+
 // Shape-mapping config (config/shape-mapping.json) IS loaded at startup
 // (see shapeMappingCache above) and hot-reloaded on file change (see watcher below).
 
@@ -872,6 +920,10 @@ async function initializeDiscovery() {
 
 initializeDiscovery().catch((error) => {
   console.error('[Discovery] Initialization error:', error)
+})
+
+syncTemplatesToActivityApi().catch((error) => {
+  console.error('[Templates] Sync error:', error)
 })
 
 // Graceful shutdown
