@@ -1236,3 +1236,68 @@ The artifact also includes 13 R6 (test/auto-generated artifact ids), 8 R8 (no-ta
 **Operator action required**: Investigate during a quieter session. Suggested approach: tail activity-api pod logs (`kubectl logs -n activity-system -l app.kubernetes.io/name=metabob-activity-api -f`) while triggering minibob calls; correlate 401 timestamps with token refresh events or pod restart timing. Inspect identity-vessel JWT-issuance logs in parallel for cache-eviction races.
 
 **Without this**: Occasional log noise plus degraded-impulse fallback fires roughly once per N requests (rate not measured). No functional impact post-F-NN-E; observability is the only cost.
+
+#### Investigation 2026-04-27 (read-only, no fix applied)
+
+**Reproduction outcome**: **unconfirmed** — 11 sequential `POST /v2/impulses/resolve` probes against canary (5 back-to-back + a parallel-attempt-blocked-by-sandbox + 5 more spaced ~0.5s apart) all returned 200. Concurrent probes via `curl` background `&` were blocked by the harness sandbox so the multi-flight race could not be exercised in this session. Probes completed without any 401, including against the same template id (`hello-world-minimal`) used by minibob's smoke flow.
+
+**Code path traced end-to-end**:
+
+1. `repos/minibob/src/http-client.ts` — every call sets `Authorization: ApiKey <key>` from `AuthService.getToken()`. There is **no client-side token cache** that could go stale; the raw API key is sent on each request. So the race is server-side.
+2. `repos/metabob-activity-api/src/middleware/jwtAuth.ts:181` `jwtAuthMiddleware` — on `ApiKey ` prefix, calls `validateApiKey()` which:
+   - Calls `validateApiKeyWithFallback()` → `validateApiKeyViaIdentityVessel()` → fetches `${IDENTITY_VESSEL_URL}/v1/auth/resolve` with `AbortSignal.timeout(5000)`.
+   - On non-network error from primary URL, **does not** retry the external fallback (only retries if reason matches `Network error|fetch|timeout|ECONNREFUSED|returned 5|getaddrinfo`).
+   - On network error, retries `IDENTITY_VESSEL_EXTERNAL_URL` (default `https://identity.metabob.com`), also 5s timeout.
+   - Calls `generateJwtToken()` — local `jose.SignJWT` using `config.auth.jwtSecret` (env `JWT_SECRET`). Pure CPU; no race possible here unless `config` is somehow mutated mid-flight (it isn't — config is module-loaded once).
+   - **L-3 fix is live** (lines 112–138): when `generateJwtToken()` returns null, the middleware logs a warning but **falls through with `jwtToken: ''`**, so `c.set('jwtAuth', jwtAuth)` is still set with a non-null context. `requireAuthenticated(c)` (`impulses.ts:99`) only checks `if (!jwtAuth)`; an empty `jwtToken` passes the gate.
+3. `repos/metabob-activity-api/src/routes/impulses.ts:710` `POST /resolve` — first line is `requireAuthenticated(c)`. With L-3 in place, the only path that emits the F-NN-G 401 is **`validateApiKey()` returning null**. There are exactly three return-null branches:
+   - **(a)** `result.authenticated === false` from `validateApiKeyWithFallback`. Triggered by either (i) identity-vessel returning a definitive non-network failure (e.g. HMAC signature mismatch), or (ii) both identity-vessel and discovery-vessel network paths failing (returns "Authentication service unavailable").
+   - **(b)** `result.keyId` missing despite `authenticated: true` — protective guard at `jwtAuth.ts:86`. Would log `error keyId is missing`.
+   - **(c)** Unhandled exception in the try block — caught at line 148, logged as "API key validation error".
+
+**Sources of identified server-side races / failure modes**:
+
+- **Identity-vessel rate limit (Hypothesis F, new)**: `repos/identity-vessel/src/index.ts:179` rate-limits `/v1/auth/resolve` to **20 requests/minute per IP** via `createRateLimitMiddleware('auth_resolve', 20)`. The middleware returns **429 Too Many Requests**, not 401 — and activity-api's `tryIdentityVesselValidation()` translates that into `reason = "Identity vessel returned 429"`, which **does not** match the `returned 5` substring (which only catches 5xx) — so the external-URL fallback does **not** fire. Result: `validateApiKey` returns null → 401 to minibob. **This is the most plausible fault class given the symptom (intermittent, no clear timing trigger, only when activity-api is under load from ≥2 minibob/workbench instances behind a single egress IP).** Identity-vessel and activity-api are in-cluster; the IP seen by identity-vessel is the activity-api pod IP, so the bucket is per-activity-api-pod. With 4-task activities × meta-activity expansion × validator-dispatch fan-out, exceeding 20/min from a single pod is plausible during burst execution.
+- **HMAC secret drift (Hypothesis G, new — adjacent to original A/D)**: `validateKeyFormat()` at `repos/identity-vessel/src/services/validation.ts:104` HMAC-verifies the key against `process.env.API_KEY_SECRET`. If identity-vessel pods restart with a different secret than the one used to mint the operator's API key, all keys signed against the old secret start failing **with HMAC mismatch → "Invalid API key signature" → 401**. This is deterministic per-pod, not intermittent, **unless** identity-vessel runs multiple replicas with secret rotation in flight (one pod has new secret, another has old) — then load-balancing between them produces an intermittent signature-mismatch pattern indistinguishable from F-NN-G. Worth checking `kubectl get pods -n activity-system -l app.kubernetes.io/name=identity-vessel -o wide` and comparing `API_KEY_SECRET` env values across replicas.
+- **Identity-vessel HTTP 5xx during cold start / SurrealDB blip (Hypothesis D, refined)**: First request after pod restart can race the SurrealDB connection or the Redis revocation-check pool. `isKeyRevoked()` fail-opens (returns false on Redis error), but a thrown error in the trace wrapper or `_resolveAuthentication` itself would surface as a 500 from identity-vessel, which **does** match `returned 5` and **does** trigger the external-URL fallback at activity-api. The fallback then has its own 5s timeout. If both the in-cluster URL and `https://identity.metabob.com` fail back-to-back within 10s, the caller gets 401 ("Authentication service unavailable").
+- **Hypothesis A (token cache race)**: ruled out — neither activity-api nor minibob caches identity-vessel results. Each request re-validates from scratch.
+- **Hypothesis B (cold start)**: possible but should be deterministic post-warmup, not "occasionally".
+- **Hypothesis C (JWT generation null)**: ruled out — L-3 fix at `jwtAuth.ts:112-138` makes this case fall through to a 200 with `jwtToken: ''`. F-NN-G 401s observed after `b147325` are **not** L-3.
+- **Hypothesis E (concurrent request invalidation)**: ruled out — no shared mutable state between concurrent identity-vessel calls in activity-api.
+
+**Most likely fault class**: **Hypothesis F (identity-vessel rate limit at 20/min/IP for `/v1/auth/resolve`).** Supporting evidence:
+- 401 reproduces "intermittently with no clear trigger" — matches per-IP token-bucket eviction at minute boundaries.
+- `curl` from operator workstation always succeeds because operator IP is in a different bucket from the activity-api pod IP.
+- F-NN-E (degraded-impulse fallback) shows the impact is "1 in N" rather than continuous outage — consistent with bursty rate-limit overflow rather than permanent secret drift.
+- Activity-api's auth-fallback chain explicitly **omits 429** from its `isNetworkError` predicate (`returned 5` matches 500-599 only), so a single rate-limited identity-vessel call propagates as 401 to minibob with no retry.
+
+**Secondary candidate**: **Hypothesis G (HMAC secret drift across identity-vessel replicas during rotation).** Lower probability because secret rotations are rare and would produce a higher constant failure rate, but plausible if the operator has rolled secrets recently.
+
+**Recommended fix sketch** (do **not** apply in this dispatch):
+
+1. **Primary**: Extend `tryIdentityVesselValidation()`'s `isNetworkError` predicate in `repos/metabob-activity-api/src/services/auth.ts:212-218` to treat HTTP 429 (and 503) as transient — they should fall through to the external-URL fallback path same as 5xx and ECONNREFUSED. This also requires the same predicate update at line 364-369 in `validateApiKeyWithFallback`. This is the smallest change that breaks the rate-limit-as-401 cascade. Optional: add a single retry-after-jitter (e.g. 100-300ms backoff) before the fallback call when the primary returned 429, to avoid stampeding the same bucket across concurrent activity-api pods.
+
+2. **Identity-vessel-side complement**: raise `auth_resolve` from 20/min to a level that reflects expected vessel-to-vessel load (e.g. 600/min), or scope the limiter by `(IP, key-prefix)` instead of just IP, so a single misbehaving caller can't starve the bucket for legitimate vessels sharing the same egress IP. The 20/min limit appears tuned for password-style endpoints, not service-to-service auth resolution. (See `repos/identity-vessel/src/index.ts:179`.)
+
+3. **Observability before fix**: instrument `validateApiKeyViaIdentityVessel()` to log the response status code distinctly when `!response.ok` (currently `Identity vessel returned ${response.status}` is at WARN level — confirm canary `LOG_LEVEL=info` captures it). Then a single grep `kubectl logs ... | grep "Identity vessel returned"` in the next observation window will confirm whether the failures are 429 (Hypothesis F), 5xx (Hypothesis D), or 401 with HMAC-mismatch reason (Hypothesis G).
+
+**Files reviewed**:
+- `repos/metabob-activity-api/src/middleware/jwtAuth.ts` (full)
+- `repos/metabob-activity-api/src/services/auth.ts` (full)
+- `repos/metabob-activity-api/src/routes/impulses.ts:85-130, 710-720`
+- `repos/metabob-activity-api/src/index.ts:42-86`
+- `repos/identity-vessel/src/index.ts:179-210` (auth_resolve route + rate limit)
+- `repos/identity-vessel/src/middleware/ratelimit.ts` (full)
+- `repos/identity-vessel/src/middleware/apiKeyAuth.ts` (full — used for /v1/keys/* routes, **not** for /v1/auth/resolve)
+- `repos/identity-vessel/src/resolvers/auth.ts` (full)
+- `repos/identity-vessel/src/services/validation.ts` (full, HMAC path)
+- `repos/identity-vessel/src/db/redis.ts` (revocation + rate-limit helpers)
+- `repos/minibob/src/http-client.ts` (full — confirms no client-side token cache)
+- `repos/minibob/src/mcp.ts:2510-2547, 3253-3310`
+- `repos/minibob/src/resolvers/impulse-resolve-resolver.ts` (full — F-NN-E mitigation path)
+
+**Open questions for the operator**:
+
+- What's the canary identity-vessel replica count? If `>1`, are `API_KEY_SECRET` env values identical across replicas? (Hypothesis G check.)
+- Is there a way to enable per-request status-code logging in `validateApiKeyViaIdentityVessel` short of a code change? Current canary log level should already capture the WARN line, so a `kubectl logs --since=1h | grep "Identity vessel returned"` on the next observation window is the cheapest next step.
+- What's the typical activity-api-pod outbound request rate to identity-vessel during a meta-activity burst? If we see >20 `/v1/auth/resolve` calls/minute from a single activity-api pod in logs, Hypothesis F is confirmed without a code change.
