@@ -78,6 +78,7 @@ const vesselTools: VesselTool[] = [
           },
         },
         animation: { type: 'string', enum: ['fade', 'slide', 'scale', 'none'] },
+        layer: { type: 'number' },
         priority: { type: 'string', enum: ['high', 'medium', 'low'] },
       },
     },
@@ -88,7 +89,7 @@ const vesselTools: VesselTool[] = [
       }
       const impulse = impulseStore.create(primitive, {
         position: args.position as UIComponentImpulse['pointer']['position'],
-        layer: 0,
+        layer: typeof args.layer === 'number' ? args.layer : 0,
         animation: args.animation as UIComponentImpulse['pointer']['animation'],
         priority: args.priority as UIComponentImpulse['priority'] | undefined,
       })
@@ -103,9 +104,10 @@ const vesselTools: VesselTool[] = [
 // Shape Mapping Cache
 // ============================================================================
 
+const SHAPE_MAPPING_PATH = `${import.meta.dir}/../config/shape-mapping.json`
 let shapeMappingCache: Record<string, string> = {}
 try {
-  shapeMappingCache = JSON.parse(readFileSync("config/shape-mapping.json", "utf-8")) as Record<string, string>
+  shapeMappingCache = JSON.parse(readFileSync(SHAPE_MAPPING_PATH, "utf-8")) as Record<string, string>
 } catch {
   // file absent or invalid JSON — default to empty mapping
 }
@@ -590,8 +592,29 @@ function buildHandler() {
   // ============================================================================
 
   // Serve built client app (React SPA)
-  app.get('/app', async (c) => c.html(await Bun.file('./dist/index.html').text()))
-  app.get('/app/*', async (c) => c.html(await Bun.file('./dist/index.html').text()))
+  const distDir = `${import.meta.dir}/../dist`
+  app.get('/app', async (c) => c.html(await Bun.file(`${distDir}/index.html`).text()))
+  app.get('/app/*', async (c) => c.html(await Bun.file(`${distDir}/index.html`).text()))
+
+  // Serve Vite-built static assets (JS bundles, CSS, fonts) referenced by index.html
+  const ASSET_MIME: Record<string, string> = {
+    js: 'application/javascript',
+    mjs: 'application/javascript',
+    css: 'text/css',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    svg: 'image/svg+xml',
+    woff2: 'font/woff2',
+    woff: 'font/woff',
+  }
+  app.get('/assets/*', async (c) => {
+    const file = Bun.file(`${distDir}${c.req.path}`)
+    if (!(await file.exists())) return c.notFound()
+    const ext = c.req.path.split('.').pop() ?? ''
+    return new Response(file, {
+      headers: { 'Content-Type': ASSET_MIME[ext] ?? 'application/octet-stream' },
+    })
+  })
 
   // ============================================================================
   // Debugging & Inspection Routes
@@ -752,15 +775,19 @@ setActionHandler(async (action, _sessionId) => {
 // ============================================================================
 
 // Verified: config reload does not restart process (2026-04-24)
-watch("config/shape-mapping.json", async () => {
-  try {
-    shapeMappingCache = JSON.parse(await Bun.file("config/shape-mapping.json").text()) as Record<string, string>
-    server.reload(buildHandler())
-    console.log("[ConfigReload] shape-mapping.json reloaded")
-  } catch (e) {
-    console.error("[ConfigReload] Failed to reload shape-mapping.json:", e)
-  }
-})
+try {
+  watch(SHAPE_MAPPING_PATH, async () => {
+    try {
+      shapeMappingCache = JSON.parse(await Bun.file(SHAPE_MAPPING_PATH).text()) as Record<string, string>
+      server.reload(buildHandler())
+      console.log("[ConfigReload] shape-mapping.json reloaded")
+    } catch (e) {
+      console.error("[ConfigReload] Failed to reload shape-mapping.json:", e)
+    }
+  })
+} catch {
+  // config/shape-mapping.json absent — watcher skipped
+}
 
 // ============================================================================
 // Hot Reload

@@ -3,43 +3,60 @@
   "name": "UI Render and Validate",
   "category": "tool",
   "description": "Generates a random UI spec, renders it to the browser viewport via render_ui, then inspects the result with browser_inspect to confirm what was displayed. Use as a single pass — run in a loop via CLI for iterative testing.",
-  "inputShapes": ["*"],
+  "inputShapes": [],
   "outputShapes": ["ui_component", "validation_result"],
   "tasks": [
     {
       "id": "generate_spec",
       "description": "Generate a creative UI primitive spec to render. Pick a random theme or concept and compose primitives that would showcase it visually.",
+      "dependencies": [],
       "prompt": {
         "template": "You are generating a random UI spec to test the react-renderer browser viewport.\n\nTheme hint (optional): {{theme}}\n\nCreate an interesting primitive spec using render_ui. Pick one of these styles at random:\n- A status dashboard with badges and progress bars\n- A data table with realistic sample rows\n- A code snippet with explanation text\n- A card-style layout with a heading, body text, and action badge\n- A wizard step with form-like content\n- A metric summary with numbers and trend indicators\n\nCall render_ui ONCE with a well-composed primitive. Use animation: 'fade' and position.mode: 'flow'.\n\nBe creative with the content — use realistic-looking data, not 'foo/bar' placeholders.",
         "variables": [
           {
             "name": "theme",
+            "type": "string",
+            "required": false,
             "description": "Optional theme or concept hint (e.g. 'deployment metrics', 'code review', 'user onboarding'). Leave blank for full random."
           }
         ]
       },
       "inputShapes": [],
-      "outputShapes": ["ui_component"]
+      "outputShapes": ["ui_component"],
+      "validation": { "requiredFiles": [], "requiredPatterns": [], "forbiddenPatterns": [], "commands": [] },
+      "retry": { "strategy": "simple", "maxAttempts": 2 }
     },
     {
       "id": "inspect_viewport",
       "description": "Capture the current state of the browser viewport after rendering.",
+      "dependencies": ["generate_spec"],
       "prompt": {
-        "template": "The previous task called render_ui to push a UI component. Now inspect the browser viewport to see what was rendered.\n\nCall browser_inspect with:\n- action: 'snapshot' (to get the DOM outline)\n- url: 'http://localhost:3001/app'\n\nThen call browser_inspect again with:\n- action: 'screenshot'\n- url: 'http://localhost:3001/app'\n\nReport back what you see in the snapshot — what primitive type was rendered, what content is visible, and the screenshot file path.",
-        "variables": []
+        "template": "The previous task called render_ui to push a UI component. Now inspect the browser viewport to see what was rendered.\n\nCall browser_inspect with:\n- action: 'snapshot' (to get the DOM outline)\n- url: 'http://localhost:3001/app'\n\nThen call browser_inspect again with:\n- action: 'screenshot'\n- outputPath: '.playwright-mcp/viewport-{{ts}}.png'\n- url: 'http://localhost:3001/app'\n\nReport back what you see in the snapshot — what primitive type was rendered, what content is visible, and the screenshot file path.",
+        "variables": [
+          {
+            "name": "ts",
+            "type": "string",
+            "required": false
+          }
+        ]
       },
       "inputShapes": ["ui_component"],
-      "outputShapes": ["bash_output"]
+      "outputShapes": ["bash_output"],
+      "validation": { "requiredFiles": [], "requiredPatterns": [], "forbiddenPatterns": [], "commands": [] },
+      "retry": { "strategy": "simple", "maxAttempts": 1 }
     },
     {
       "id": "validate_render",
       "description": "Validate that the rendered UI matches the intended spec.",
+      "dependencies": ["inspect_viewport"],
       "prompt": {
         "template": "You previously:\n1. Called render_ui with a UI primitive spec\n2. Called browser_inspect to capture the viewport state\n\nBased on the DOM snapshot and what you know about the primitive you rendered:\n\n- Did the component appear in the viewport? (yes/no)\n- What primitive type is visible?\n- Does the content match what was intended?\n- Any rendering issues (missing data, layout problems, errors)?\n\nProvide a brief validation summary (3-5 sentences). End with either PASS or FAIL on its own line.",
         "variables": []
       },
       "inputShapes": ["bash_output"],
-      "outputShapes": ["validation_result"]
+      "outputShapes": ["validation_result"],
+      "validation": { "requiredFiles": [], "requiredPatterns": [], "forbiddenPatterns": [], "commands": [] },
+      "retry": { "strategy": "simple", "maxAttempts": 1 }
     }
   ]
 }

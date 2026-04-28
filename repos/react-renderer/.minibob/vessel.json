@@ -37,7 +37,7 @@
     },
     {
       "name": "render_ui",
-      "description": "Push a UI primitive to the connected browser viewport. Any primitive created here is immediately visible at http://localhost:3001/app. Use this whenever you want to display something visually — text, tables, badges, progress bars, code blocks, or composite layouts built from nested children.",
+      "description": "Push a UI primitive to the connected browser viewport at http://localhost:3001/app. Supported types: container (layout wrapper — supports layout: vertical|horizontal|grid|absolute; sizing: width, height, maxWidth, minHeight; grid: columns; flex: justify, align, wrap; style: background, border, borderRadius, naked), text (variant: heading|subheading|body|caption, format: plain|markdown), badge (variant: success|warning|error|info|neutral), button (variant: primary|secondary|destructive|ghost), progress (progressType: bar|circle|gauge, value 0-100), code (language, showLineNumbers), data-table (columns array, data array), data-table-v2 (TanStack virtual table), chart (chartType: bar|line|pie|area|gauge|sparkline), form (fields array, steps array for wizard), design_token (content: CSS custom property map applied to :root).",
       "handler": {
         "type": "module",
         "path": ".minibob/tools/render-ui.ts"
@@ -65,6 +65,10 @@
             "enum": ["fade", "slide", "scale", "none"],
             "description": "Enter animation. Defaults to fade."
           },
+          "layer": {
+            "type": "number",
+            "description": "Z-index layer. Higher numbers render on top. Use 0 for base content, 10+ for overlays, 100+ for modals."
+          },
           "priority": {
             "type": "string",
             "enum": ["high", "medium", "low"],
@@ -84,7 +88,12 @@
       "render-dashboard",
       "render-conversation",
       "record-interaction-metric",
-      "ui-render-validate"
+      "ui-render-validate",
+      "render-status-card",
+      "render-metric-dashboard",
+      "render-code-panel",
+      "theme-setup",
+      "render-layered-layout"
     ]
   },
   "development": {

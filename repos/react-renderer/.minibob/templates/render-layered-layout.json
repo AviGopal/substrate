@@ -1,0 +1,38 @@
+{
+  "id": "render-layered-layout",
+  "name": "Render: Layered Layout Demo",
+  "category": "tool",
+  "description": "Demonstrates layering, positioning, and sizing by rendering multiple impulses with different position modes and z-index layers. Shows center overlays, absolute positioning, and flow content side-by-side.",
+  "inputShapes": [],
+  "outputShapes": ["ui_component"],
+  "tasks": [
+    {
+      "id": "render_base_layer",
+      "description": "Render the base content layer (flow, layer 0).",
+      "dependencies": [],
+      "prompt": {
+        "template": "Render the base layer of a layered layout demo.\n\nUse render_ui to push a grid dashboard as the background content:\n- primitive.type: container\n- primitive.layout: grid\n- primitive.columns: 2\n- primitive.gap: 16\n- primitive.padding: 24\n- primitive.children: 4 cards (each a vertical naked container with a heading and some content)\n- position.mode: flow\n- animation: fade\n- No layer property (defaults to 0)\n\nMake the 4 cards: 'Active Sessions (127)', 'Request Rate (2.3k/s)', 'Error Rate (0.4%)', 'Cache Hit (94%)'.\nEach card: naked container, gap 8, padding 16, background #f9fafb, borderRadius 8\n  - text heading with the metric name\n  - progress bar showing an appropriate value\n  - text caption with a brief explanation\n\nCall render_ui once.",
+        "variables": [],
+        "maxTokens": 2048
+      },
+      "inputShapes": [],
+      "outputShapes": ["ui_component"],
+      "validation": { "requiredFiles": [], "requiredPatterns": [], "forbiddenPatterns": [], "commands": [] },
+      "retry": { "strategy": "simple", "maxAttempts": 2 }
+    },
+    {
+      "id": "render_overlay",
+      "description": "Render a centered overlay on top (layer 10).",
+      "dependencies": ["render_base_layer"],
+      "prompt": {
+        "template": "The previous task rendered a grid dashboard as the base layer.\n\nNow render a notification overlay using render_ui:\n- primitive.type: container\n- primitive.layout: vertical\n- primitive.gap: 12\n- primitive.padding: 24\n- primitive.maxWidth: 400\n- primitive.background: #ffffff\n- primitive.borderRadius: 12\n- primitive.naked: true\n- primitive.children:\n  1. A horizontal naked container with a badge (variant: warning, text: 'Alert') and a text heading 'Deployment in Progress'\n  2. A progress bar (type: bar, value: 67, label: 'Step 2 of 3')\n  3. A text body 'API service rolling update — 4 of 6 instances updated'\n  4. A horizontal naked container (gap: 8) with two buttons: 'View Details' (variant: primary, onClick: view-details) and 'Dismiss' (variant: ghost, onClick: dismiss)\n- position.mode: center\n- animation: scale\n- layer: 10\n\nThis will appear as a centered modal overlay on top of the dashboard.\nCall render_ui once.",
+        "variables": [],
+        "maxTokens": 2048
+      },
+      "inputShapes": ["ui_component"],
+      "outputShapes": ["ui_component"],
+      "validation": { "requiredFiles": [], "requiredPatterns": [], "forbiddenPatterns": [], "commands": [] },
+      "retry": { "strategy": "simple", "maxAttempts": 2 }
+    }
+  ]
+}

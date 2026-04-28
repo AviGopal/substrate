@@ -33,6 +33,24 @@ export interface ContainerPrimitive extends BasePrimitive {
   padding?: number | string
   className?: string
   children: Primitive[]
+  // Sizing
+  width?: number | string
+  height?: number | string
+  maxWidth?: number | string
+  minHeight?: number | string
+  // Grid control
+  columns?: number
+  // Flex alignment
+  justify?: 'start' | 'center' | 'end' | 'between' | 'around' | 'stretch'
+  align?: 'start' | 'center' | 'end' | 'stretch' | 'baseline'
+  wrap?: boolean
+  // Overflow
+  overflow?: 'hidden' | 'scroll' | 'auto' | 'visible'
+  // Style
+  background?: string
+  border?: string
+  borderRadius?: number | string
+  naked?: boolean  // render without Card wrapper
 }
 
 export interface TextPrimitive extends BasePrimitive {
