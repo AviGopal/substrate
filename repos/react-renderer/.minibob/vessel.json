@@ -3,8 +3,49 @@
   "name": "React Renderer",
   "version": "0.1.0",
   "description": "UI rendering vessel — resolves ui_component impulses to React primitives; provides synthesize-ui-from-data and UI pattern activities",
+  "tools": [
+    {
+      "name": "render_ui",
+      "description": "Push a UI primitive to the connected browser viewport. Any primitive created here is immediately visible at http://localhost:3001/app. Use this whenever you want to display something visually — text, tables, badges, progress bars, code blocks, or composite layouts built from nested children.",
+      "handler": {
+        "type": "module",
+        "path": ".minibob/tools/render-ui.ts"
+      },
+      "inputSchema": {
+        "type": "object",
+        "required": ["primitive"],
+        "properties": {
+          "primitive": {
+            "type": "object",
+            "description": "The primitive spec to render. Must have 'type'. Supported types: container (layout wrapper with children), text (markdown/heading/body), badge (status chip), button (clickable), progress (bar/circle), code (syntax-highlighted block), data-table (sortable table with columns+data arrays).",
+            "required": ["type"]
+          },
+          "position": {
+            "type": "object",
+            "description": "Optional layout position. Defaults to flow (stacked). Use absolute for precise x/y placement, center for centered overlay.",
+            "properties": {
+              "mode": { "type": "string", "enum": ["flow", "absolute", "center"] },
+              "x": { "type": "number" },
+              "y": { "type": "number" }
+            }
+          },
+          "animation": {
+            "type": "string",
+            "enum": ["fade", "slide", "scale", "none"],
+            "description": "Enter animation. Defaults to fade."
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+            "description": "Rendering priority. Defaults to medium."
+          }
+        }
+      }
+    }
+  ],
   "activities": {
     "local": [
+      "demo-render",
       "synthesize-ui-from-data",
       "render-live-execution-monitor",
       "render-data-exploration",

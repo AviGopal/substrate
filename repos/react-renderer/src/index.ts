@@ -33,6 +33,73 @@ import { enqueueUiEvent } from './resolvers/ui-event'
 let discoveryClient: VesselClient | null = null
 
 // ============================================================================
+// Vessel Tool Registry (mcpTool shape)
+// ============================================================================
+
+interface VesselTool {
+  name: string
+  description: string
+  parameters: Record<string, unknown>
+  execute: (args: Record<string, unknown>) => Promise<{ success: boolean; output: string; error?: string }>
+}
+
+const vesselTools: VesselTool[] = [
+  {
+    name: 'render_ui',
+    description: 'Push a UI primitive to the connected browser viewport at /app. Creates a live-rendered element visible in the browser.',
+    parameters: {
+      type: 'object',
+      required: ['primitive'],
+      properties: {
+        primitive: {
+          type: 'object',
+          required: ['type'],
+          description: 'The UI primitive to render',
+          properties: {
+            type: { type: 'string', enum: ['text', 'badge', 'progress', 'code', 'container', 'data-table', 'chart', 'graph', 'input', 'button', 'image', 'custom'] },
+            variant: { type: 'string' },
+            content: { type: 'string' },
+            label: { type: 'string' },
+            value: { type: 'number' },
+            layout: { type: 'string', enum: ['vertical', 'horizontal', 'grid', 'absolute'] },
+            children: { type: 'array' },
+            columns: { type: 'array' },
+            data: { type: 'array' },
+            language: { type: 'string' },
+            code: { type: 'string' },
+          },
+        },
+        position: {
+          type: 'object',
+          properties: {
+            mode: { type: 'string', enum: ['flow', 'center', 'below-input', 'absolute'] },
+            x: { type: 'number' },
+            y: { type: 'number' },
+          },
+        },
+        animation: { type: 'string', enum: ['fade', 'slide', 'scale', 'none'] },
+        priority: { type: 'string', enum: ['high', 'medium', 'low'] },
+      },
+    },
+    async execute(args) {
+      const primitive = args.primitive as Primitive
+      if (!primitive || typeof primitive !== 'object') {
+        return { success: false, output: '', error: 'Missing or invalid primitive' }
+      }
+      const impulse = impulseStore.create(primitive, {
+        position: args.position as UIComponentImpulse['pointer']['position'],
+        layer: 0,
+        animation: args.animation as UIComponentImpulse['pointer']['animation'],
+        priority: args.priority as UIComponentImpulse['priority'] | undefined,
+      })
+      const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001
+      const endpoint = process.env.VESSEL_ENDPOINT || `http://localhost:${PORT}`
+      return { success: true, output: `Rendered in browser (impulse ${impulse.id}). View at ${endpoint}/app` }
+    },
+  },
+]
+
+// ============================================================================
 // Shape Mapping Cache
 // ============================================================================
 
@@ -143,6 +210,24 @@ function buildHandler() {
     })
   })
 
+  // MCP tool dispatch endpoint — called by minibob when LLM invokes a discovered tool
+  app.post('/mcp/tools/call', async (c) => {
+    const authErr = checkApiKeyAuth(c.req.raw)
+    if (authErr) return authErr
+    try {
+      const { tool, arguments: args } = await c.req.json() as { tool: string; arguments: Record<string, unknown> }
+      const entry = vesselTools.find(t => t.name === tool)
+      if (!entry) {
+        return c.json({ error: `Tool not found: ${tool}` }, 404)
+      }
+      const result = await entry.execute(args || {})
+      return c.json(result)
+    } catch (error) {
+      console.error('[Server] Tool dispatch error:', error)
+      return c.json({ success: false, output: '', error: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
   // Resolve impulse pointer
   app.post('/resolve', async (c) => {
     try {
@@ -152,11 +237,51 @@ function buildHandler() {
         return c.json({ error: 'Missing pointer or pointer.type' }, 400)
       }
 
+      // mcpTool: return this vessel's tool definitions for discovery-to-tools bridge
+      if (pointer.type === 'mcpTool') {
+        const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001
+        const vesselEndpoint = process.env.VESSEL_ENDPOINT || `http://localhost:${PORT}`
+        const vesselId = process.env.MINIBOB_VESSEL_ID || process.env.VESSEL_ID || `react-renderer-local`
+        const authScheme = process.env.METABOB_API_KEY ? 'ApiKey' : 'none'
+        const tools = vesselTools.map(t => ({
+          content: {
+            name: t.name,
+            description: t.description,
+            input_schema: t.parameters,
+          },
+          metadata: {
+            shape: 'mcpTool',
+            tool_name: t.name,
+            vessel_id: vesselId,
+            vessel_endpoint: vesselEndpoint,
+            resolve_endpoint: '/mcp/tools/call',
+            resolve_request_format: 'mcp-tool',
+            auth_scheme: authScheme,
+            relevance_score: 1.0,
+          },
+        }))
+        return c.json({ tools })
+      }
+
       if (!hasResolver(pointer.type)) {
         return c.json({ error: `No resolver for type: ${pointer.type}` }, 404)
       }
 
       const content = await resolve(pointer)
+
+      // When ui_component is resolved via the discovery path, also create an impulse
+      // in the browser store so it renders immediately. This is the "render on resolve"
+      // contract: any vessel that produces a ui_component shape has it appear in the viewport.
+      if (pointer.type === 'ui_component' && content && (content as Record<string, unknown>).primitive) {
+        const c2 = content as Record<string, unknown>
+        impulseStore.create(c2.primitive as Primitive, {
+          position: c2.position as UIComponentImpulse['pointer']['position'],
+          size: c2.size as UIComponentImpulse['pointer']['size'],
+          layer: typeof c2.layer === 'number' ? c2.layer : 0,
+          animation: c2.animation as UIComponentImpulse['pointer']['animation'],
+        })
+      }
+
       return c.json({ content })
     } catch (error) {
       console.error('[Server] Resolve error:', error)
@@ -711,6 +836,7 @@ async function initializeDiscovery() {
       'ui_event',
       'composition_metric',
       'design_token',
+      'mcpTool',
     ],
     protocol: 'http',
     authToken: rendererConfig.metabobApiKey || undefined,

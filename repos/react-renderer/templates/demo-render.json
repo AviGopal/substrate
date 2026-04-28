@@ -1,0 +1,22 @@
+{
+  "id": "demo-render",
+  "name": "Demo: Render to Browser",
+  "category": "tool",
+  "description": "Demonstrates live rendering via react-renderer. Given any goal or topic, uses the render_ui tool to push a UI primitive to the connected browser viewport at http://localhost:3001/app.",
+  "inputShapes": ["goal"],
+  "outputShapes": ["ui_component"],
+  "tasks": [
+    {
+      "id": "render_content",
+      "description": "Design and render appropriate UI content for the goal using the render_ui tool.",
+      "prompt": {
+        "template": "You are rendering live UI in a connected browser at http://localhost:3001/app.\n\nGoal: {{goal}}\n\nUse the render_ui tool to create one well-designed UI primitive. Choose the type that fits best:\n\n- **text**: for messages, summaries, headings. Props: variant (heading/body/caption), content (markdown supported)\n- **badge**: for status. Props: variant (success/warning/error/info/neutral), label\n- **progress**: for metrics. Props: type (bar/circle), value (0-100), label\n- **code**: for code or JSON. Props: language, code\n- **container**: for multi-part layouts. Props: layout (vertical/horizontal/grid), children (array of primitives)\n- **data-table**: for tabular data. Props: columns (array of {key, header, type?}), data (array of row objects)\n\nMake the output visually meaningful and well-structured. For a container, nest 2-4 children of different types. Call render_ui exactly once with your best design.",
+        "variables": [
+          { "name": "goal", "type": "string", "required": true }
+        ]
+      },
+      "inputShapes": ["goal"],
+      "outputShapes": ["ui_component"]
+    }
+  ]
+}
