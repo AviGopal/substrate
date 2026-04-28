@@ -13,8 +13,6 @@ interface RenderUiArgs {
   animation?: 'fade' | 'slide' | 'scale' | 'none'
   layer?: number
   priority?: 'high' | 'medium' | 'low'
-  /** Stable ID — if an impulse with this componentId already exists, update it in-place instead of creating a new one. */
-  componentId?: string
 }
 
 interface ToolResult {
@@ -33,7 +31,6 @@ export async function execute(args: RenderUiArgs): Promise<ToolResult> {
     ...(args.animation && { animation: args.animation }),
     ...(typeof args.layer === 'number' && { layer: args.layer }),
     ...(args.priority && { priority: args.priority }),
-    ...(args.componentId && { componentId: args.componentId }),
   }
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -61,10 +58,9 @@ export async function execute(args: RenderUiArgs): Promise<ToolResult> {
 
   const data = await response.json() as { impulse?: { id: string } }
   const impulseId = data.impulse?.id ?? '(unknown)'
-  const action = response.status === 200 ? 'Updated' : 'Rendered'
 
   return {
     success: true,
-    output: `${action} in browser (impulse ${impulseId}). View at ${endpoint}/app`,
+    output: `Rendered in browser (impulse ${impulseId}). View at ${endpoint}/app`,
   }
 }

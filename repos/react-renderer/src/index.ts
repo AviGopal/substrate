@@ -28,6 +28,7 @@ import './resolvers/data-source-change'
 import './resolvers/ui-event'
 import './resolvers/composition-metric'
 import { enqueueUiEvent } from './resolvers/ui-event'
+import { createActivityApiSubscriber } from './services/activity-api-subscriber'
 
 // Global discovery client
 let discoveryClient: VesselClient | null = null
@@ -371,39 +372,23 @@ function buildHandler() {
     return c.json({ impulse })
   })
 
-  // Create impulse (or update in-place if componentId matches an existing impulse)
+  // Create impulse
   app.post('/impulses', async (c) => {
     try {
       const body = await c.req.json()
-      const { primitive, position, size, layer, animation, priority, metadata, dataRef, deletable, componentId } = body
+      const { primitive, position, size, layer, animation, priority, metadata, dataRef, deletable } = body
 
       if (!primitive) {
         return c.json({ error: 'Missing primitive' }, 400)
       }
 
-      // Upsert: if a stable componentId is provided and already exists, update in-place
-      if (componentId) {
-        const existing = impulseStore.getAll().find(
-          (i) => i.metadata?.componentId === componentId
-        )
-        if (existing) {
-          const patch: Partial<UIComponentImpulse> = {
-            content: primitive as Primitive,
-            pointer: { ...existing.pointer, primitive: primitive as Primitive, ...(layer !== undefined && { layer }), ...(animation && { animation }), ...(position && { position }) },
-          }
-          impulseStore.update(existing.id, patch)
-          return c.json({ impulse: impulseStore.get(existing.id) }, 200)
-        }
-      }
-
       const impulse = impulseStore.create(primitive as Primitive, {
-        id: componentId ?? undefined,
         position,
         size,
         layer,
         animation,
         priority,
-        metadata: { ...metadata, ...(componentId && { componentId }) },
+        metadata,
         dataRef,
         deletable
       })
@@ -969,25 +954,30 @@ syncTemplatesToActivityApi().catch((error) => {
   console.error('[Templates] Sync error:', error)
 })
 
+// Subscribe to activity-api impulse.resolved events (opt-in via ACTIVITY_API_WS_URL env var).
+// When a shape resolves that matches shape-mapping.json, the subscriber builds a primitive
+// deterministically and creates/updates a local impulse — no activity coordination needed.
+const activityApiSubscriber = createActivityApiSubscriber()
+if (activityApiSubscriber) {
+  activityApiSubscriber.start()
+  console.log(`[ActivityApi] Subscribed to ${process.env.ACTIVITY_API_WS_URL}`)
+} else {
+  console.log('[ActivityApi] Subscriber inactive (set ACTIVITY_API_WS_URL to enable)')
+}
+
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('[Server] SIGTERM received, shutting down gracefully')
-
-  if (discoveryClient) {
-    await discoveryClient.shutdown()
-  }
-
+  activityApiSubscriber?.stop()
+  if (discoveryClient) await discoveryClient.shutdown()
   console.log('[Server] Graceful shutdown complete')
   process.exit(0)
 })
 
 process.on('SIGINT', async () => {
   console.log('[Server] SIGINT received, shutting down gracefully')
-
-  if (discoveryClient) {
-    await discoveryClient.shutdown()
-  }
-
+  activityApiSubscriber?.stop()
+  if (discoveryClient) await discoveryClient.shutdown()
   console.log('[Server] Graceful shutdown complete')
   process.exit(0)
 })

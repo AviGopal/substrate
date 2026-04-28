@@ -275,7 +275,7 @@ export interface UIComponentImpulse {
     queryId?: string
     streaming?: boolean
     interactive?: boolean
-    componentId?: string  // stable identity for upsert via render_ui
+    sourceShape?: string  // shape that produced this impulse via the activity-api subscriber
   }
   dataRef?: string
   deletable?: boolean

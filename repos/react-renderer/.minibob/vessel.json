@@ -73,10 +73,6 @@
             "type": "string",
             "enum": ["high", "medium", "low"],
             "description": "Rendering priority. Defaults to medium."
-          },
-          "componentId": {
-            "type": "string",
-            "description": "Stable identity for this component. If an impulse with this componentId already exists, the call updates it in-place instead of creating a new one — causing a live re-render with the new data. Use this for streaming/polling scenarios where the same visual component needs to reflect changing data (e.g. a concept graph that refreshes as concept-db returns updated edges)."
           }
         }
       }
