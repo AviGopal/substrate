@@ -3,6 +3,7 @@ import { useImpulseStoreForRender } from '../hooks/useImpulseStore'
 import { ErrorBoundary } from './ErrorBoundary'
 import { PrimitiveRenderer } from '../../components/PrimitiveRenderer'
 import { ProvenanceStrip } from '../../primitives/shape-slot'
+import { sendAction } from '../lib/ws-action'
 import type { Primitive, PositionMode, UIComponentImpulse } from '../../types'
 
 function positionStyles(position?: PositionMode, layer?: number): React.CSSProperties {
@@ -65,9 +66,7 @@ export function ImpulseViewport() {
             <div style={sourceShape ? { borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border, #e4e4e7)' } : undefined}>
               <PrimitiveRenderer
                 primitive={primitive as Primitive}
-                onAction={(actionId, payload) => {
-                  console.log('[ImpulseViewport] action', actionId, payload)
-                }}
+                onAction={(actionId, payload) => sendAction(actionId, impulse.id, payload)}
                 depth={0}
               />
               {sourceShape && (

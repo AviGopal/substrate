@@ -5,6 +5,7 @@ import { persistQueryClient } from '@tanstack/react-query-persist-client'
 import { useEffect, useRef } from 'react'
 import { ImpulseQueryBridge } from './lib/impulse-query-bridge'
 import type { ImpulseStoreEvent } from './lib/impulse-query-bridge'
+import { registerWsSend } from './lib/ws-action'
 import { routeTree } from './routes'
 
 const queryClient = new QueryClient({
@@ -44,6 +45,8 @@ export function App() {
     }
     bridge.start(clientStore)
 
+    registerWsSend(ws.send.bind(ws))
+
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data as string)
@@ -62,9 +65,10 @@ export function App() {
     }
 
     ws.onclose = () => {
-      // Reconnect after 2s
       setTimeout(() => {
-        wsRef.current = new WebSocket(wsUrl)
+        const next = new WebSocket(wsUrl)
+        wsRef.current = next
+        registerWsSend(next.send.bind(next))
       }, 2000)
     }
 

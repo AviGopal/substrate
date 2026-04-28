@@ -76,6 +76,42 @@
           }
         }
       }
+    },
+    {
+      "name": "change_layout",
+      "description": "Move, resize, or re-layer an existing impulse without replacing its content. Use to promote a flow card to a center overlay (position.type: center), push it to a specific z-index layer, or change its display size. Requires the impulseId returned by render_ui.",
+      "handler": { "type": "module", "path": ".minibob/tools/change-layout.ts" },
+      "inputSchema": {
+        "type": "object",
+        "required": ["impulseId"],
+        "properties": {
+          "impulseId": { "type": "string", "description": "ID of the impulse to reposition (returned by render_ui)." },
+          "position": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "enum": ["flow", "center", "absolute", "below-input"] },
+              "x": { "type": "number" },
+              "y": { "type": "number" }
+            }
+          },
+          "layer": { "type": "number", "description": "Z-index layer. 0 = base, 10+ = overlay, 100+ = modal." },
+          "size": { "description": "Explicit size override or 'auto'." }
+        }
+      }
+    },
+    {
+      "name": "change_component",
+      "description": "Replace the primitive on an existing impulse in-place. The impulse ID, position, and layer are preserved — only the visual content changes. Use when data changes require a different primitive type (e.g. switching a graph to a table after user interaction). Triggers an impulse_update WS event so the browser re-renders without layout shift.",
+      "handler": { "type": "module", "path": ".minibob/tools/change-component.ts" },
+      "inputSchema": {
+        "type": "object",
+        "required": ["impulseId", "primitive"],
+        "properties": {
+          "impulseId": { "type": "string", "description": "ID of the impulse to update." },
+          "primitive": { "type": "object", "required": ["type"], "description": "The new primitive spec. Must have 'type'." },
+          "animation": { "type": "string", "enum": ["none", "fade", "slide", "scale"], "description": "Enter animation for the replacement. Defaults to none (instant swap)." }
+        }
+      }
     }
   ],
   "activities": {
@@ -94,7 +130,8 @@
       "render-code-panel",
       "theme-setup",
       "render-layered-layout",
-      "render-concept-explorer"
+      "render-concept-explorer",
+      "handle-user-interaction"
     ]
   },
   "development": {
