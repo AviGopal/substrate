@@ -1,5 +1,11 @@
 # Self-Development Loop: Technical Design
 
+## Foundation realignment note (2026-04-27)
+
+The narrow problem this change addresses (org_id missing from MCP-client payloads, blocking trace storage with proper multi-tenant isolation) appears to have been superseded twice: (1) by the canary deployment of API-key + identity-vessel JWT auth where org_id flows from `$token.org_id` (CLAUDE.md authentication section), and (2) by the in-flight `account-id` migration that replaces org_id with account_id throughout activity-api (`activity-api-account-id-migration-2026-04-28`). Recommend retirement: the specific bugs this change scopes are largely closed; the broader self-development loop is now driven by `2026-04-27-meta-activity-builder` and `2026-04-27-activity-registry-quality-pass`.
+
+The foundation alignment described below remains correct — execution traces ARE impulse pointers under the corrected model, and the ribosome IS a resolver from trace to template — but the active development work has moved on. Flag for human review on retirement.
+
 > **Aligned with**: `docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`
 
 ## Foundation Alignment

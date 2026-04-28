@@ -1,5 +1,15 @@
 # Shared Impulse State Space Design
 
+## Foundation realignment note (2026-04-27)
+
+This change predates the corrected foundation framing (see `docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`) but its core architectural pattern — vessels read/write a shared impulse space rather than calling each other — is fully compatible. The four-primitive minimum set (Impulse, Pointer, Resolver, Vessel) names exactly what this change calls the "shared trace field": impulses with pointers, accessed by resolvers living in vessels.
+
+Several aspects of this change appear to overlap with later wave 2026-04-26+ specs (lifecycle callbacks → `lifecycle:task:*` events; WebSocket broadcast → activity-api WS broadcaster; per-task impulse arrays). Status of this change should be reviewed for retirement-or-merge against the impulse-activity-loop wave; the substrate it builds is largely landed under different names.
+
+The "stigmergy" framing is descriptive and aligns with the foundation's i↔t↔o motions. No structural change required if this spec is kept; flag for human review on whether to retire as superseded.
+
+---
+
 ## Overview
 
 This spec defines how vessels (MiniBob, TUI, and future vessels) share state through a unified impulse mechanism. The core insight: **vessels don't call each other—they modify a shared trace field (stigmergy)**.

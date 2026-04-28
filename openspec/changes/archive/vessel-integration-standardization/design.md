@@ -1,3 +1,15 @@
+## Foundation realignment note (2026-04-27)
+
+This change largely predates the corrected foundation framing (see `docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`) and substantial portions have already landed under different names: discovery-vessel registration with resolver contracts, vessel-to-vessel resolution via discovery, the `vessel_id` and `resolved_by_vessel_id` fields on traces, the impulse-resolutions array, and the centralized shape vocabulary (now learned-open-ended, owned by registering vessels — not a static registry as this change proposes).
+
+Two parts of this design conflict with the corrected foundation:
+1. **"Central shape registry"** — the foundation treats shapes as learned, open-ended types (multiple impulses share a shape; the binding layer selects which instance). A central registry would pin the type system; instead, vessels advertise the shapes they resolve via discovery-vessel and concept-db tracks the conceptual graph. Reframe: the `shape_definition` table proposal should become "shape advertisement metadata in discovery-vessel registry," with concept-db owning concept-level shape relationships.
+2. **mTLS as the cross-vessel auth idiom** — the canary deployment landed on API-key + identity-vessel JWT for vessel-to-vessel auth (see CLAUDE.md authentication section). mTLS path is a separable hardening, not the canonical pattern.
+
+Recommend partial retirement: the parts that have landed under impulse-binding-selection-layer / discovery-vessel resolver-contract fields / VesselClient package are obsolete here. The "central shape registry" capability should be reframed or dropped. Flag for human review on whether to retire entirely vs. retain a residual delta.
+
+---
+
 ## Context
 
 Five vessel integration plans have been developed independently:

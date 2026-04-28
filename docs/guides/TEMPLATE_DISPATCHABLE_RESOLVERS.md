@@ -7,6 +7,10 @@ An activity template's task can invoke a resolver by name via `"resolver": "<nam
 
 The larger direction is **vessels driven solely by activities**: anything a template author might want to do — analyze the current impulse state, acquire missing context, narrow a candidate pool before an LLM call — should be reachable as a named resolver in task JSON, rather than hardcoded inside `goal-processor.ts` or `activity.ts`. Every such resolver is traced like any other, so selection decisions participate in the learning loop on equal footing with tool calls and write resolvers.
 
+> **Foundation alignment.** In the corrected model, the minimum self-stable set is **Impulse, Pointer, Resolver, Vessel** (working hypothesis — the system is not yet self-stable). Activities are derived: an activity is an impulse-of-shape `activity_template` consumed by an activity-resolver. Resolver dispatch via `"resolver": "<name>"` is the literal mechanism by which a task instantiates that primitive. Any vessel can contribute resolvers; the registry below is minibob-local, not authoritative for the system as a whole.
+>
+> Top-level activity execution today is invoked via `executor.execute(template)` from `goal-processor.ts`. The unified execution path is the chosen direction (see [`IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md#unified-execution-path) → "Unified Execution Path"); the MiniBob refactor that routes goal-shaped and activity-template-shaped pointers through the standard impulse → resolver dispatch is pending.
+
 ## How registration works
 
 `ActivityExecutor` builds a name → resolver `Map` at construction and threads it through task dispatch. Any task whose `resolver` field matches a registered name gets routed to that instance, with the task's `config` object forwarded as `ResolverConfig`.
@@ -219,7 +223,7 @@ Two deterministic extractions that complete the `goal-processor.ts` Step-5 serie
 
 **Location:** `repos/minibob/src/resolvers/variant-selection-resolver.ts`.
 
-The deterministic side of variant selection: Thompson Sampling math, variant-family grouping, backend family-score lookup, and multi-family orchestration. The executor-coupled meta-activity branch (`tryMetaActivitySelection` + `parseVariantSelectionResult`) stays inline in `GoalProcessor` because it runs a meta-activity template through `this.executor`; the resolver accepts a `MetaActivityCallback` config field so it doesn't need to know about `ActivityExecutor`.
+The deterministic side of variant selection: Thompson Sampling math, variant-family grouping, backend family-score lookup, and multi-family orchestration. (Note: Thompson posteriors are currently a known-unshaped primitive — they should be a shape advertised by activity-api's implicit Thompson Sampling vessel and resolvable via the standard impulse-resolve path; today they are reachable only through dedicated REST endpoints. This is the one real shape gap in the foundation model.) The executor-coupled meta-activity branch (`tryMetaActivitySelection` + `parseVariantSelectionResult`) stays inline in `GoalProcessor` because it runs a meta-activity template through `this.executor`; the resolver accepts a `MetaActivityCallback` config field so it doesn't need to know about `ActivityExecutor`.
 
 **Statistical equivalence:** `sampleBeta(α, β)` is migrated byte-for-byte — Kumaraswamy CDF inverse, identical clamping, identical `Math.random()` consumption order. Reproducibility for the learning loop is preserved.
 

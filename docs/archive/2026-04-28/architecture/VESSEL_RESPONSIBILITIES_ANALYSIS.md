@@ -1,5 +1,9 @@
 # Vessel System: Responsibilities Analysis
 
+> **STATUS (2026-04-27): SUPERSEDED REGISTRATION PATH.** This document references the deprecated `POST /v2/vessels/register` on activity-api (now in proxy mode until July 2026). Current canonical registration is via discovery-vessel — see [`TYPESCRIPT_VESSEL_TEMPLATE.md`](TYPESCRIPT_VESSEL_TEMPLATE.md). The high-level responsibilities analysis (which vessel owns what data) is still useful and aligned with the foundation; the wire-level snippets showing `/v2/vessels/register` calls are stale. Treat the responsibilities tables as current; treat the code snippets as historical.
+>
+> **Foundation alignment:** the analysis correctly identifies that resolvers-live-where-data-lives, that activity-api is a trace store (not a universal resolver), and that vessels collaborate rather than nest. These claims still hold. The "implicit vessels" framing from the current foundation doc is not yet reflected here — ActivityExecutor inside MiniBob and the Thompson Sampling vessel inside activity-api should also appear in any updated responsibilities matrix.
+
 ## Current State vs Required Changes
 
 ### What Already Exists ✅

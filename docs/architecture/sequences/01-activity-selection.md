@@ -683,7 +683,7 @@ This sequence spans **both MiniBob (execution) and activity-api (storage/learnin
 ## Related Documentation
 
 - [Impulse Resolution](./02-impulse-resolution.md) - How impulses are loaded for execution
-- [Improvisation & Trailblazing](./04-improvisation-trailblazing.md) - How improvisation works as an activity
+- [Improvisation & Failure Modes](./04-improvisation-failure-modes.md) - How improvisation works as an activity
 - [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) - Foundational model
 - [IMPULSE_DRIVEN_COMPOSITION.md](../IMPULSE_DRIVEN_COMPOSITION.md) - Composition architecture details
 

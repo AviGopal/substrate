@@ -1,6 +1,6 @@
 # Impulse-Activity Foundation
 
-> **Status**: Canonical reference document
+> **Status**: Canonical reference document. Foundational model is **hypothesis under test**, not declaration. The system is not yet self-stable; we test the minimum set by observing what breaks.
 > **Purpose**: The foundational model for the entire system. All other architecture documents derive from this.
 
 ---
@@ -14,6 +14,57 @@ The system collapses the gap between:
 - **Code → Outcome**: Understanding what happened and why
 
 By recording the full trace of how inputs transform to outputs, we learn patterns. By constraining the search space with activities, we make execution tractable. By allowing improvisation with recording, we enable the system to grow its own capabilities.
+
+---
+
+## Three States, Two Motions
+
+The system rotates through three states, each with a single rotation:
+
+- **Informational (i)** — the structure: shapes, templates, posteriors, learned topology. What the system knows about *how things go*.
+- **Transient (t)** — the becoming: an execution in flight, an impulse being resolved, a binding being chosen.
+- **Observational (o)** — the recorded outcome: traces, validation results, success/failure signals.
+
+Two named motions traverse these states:
+
+- **Recall** (i → t → o): apply existing structure. The system retrieves an activity template (i), executes it (t), and observes the outcome (o). Thompson Sampling, activity dispatch, and composition all flow recall-direction.
+- **Learning** (o → t → i): mint structure from observation. The system reads traces (o), reasons about patterns (t), and updates posteriors / extracts templates / discovers shapes (i). The ribosome, β/α updates, impulse-relevance writes, and composition-edge updates all flow learning-direction.
+
+The system is building a **topology of the informational state** by alternating between these two motions. Recall consumes structure; learning produces it. Convergence is when recall reliably succeeds without learning needing to add new structure for known goal classes.
+
+---
+
+## Pointer-as-Shape: The Bootstrap Principle
+
+**The pointer is the shape of an impulse.** All resolution and all learning are keyed on the pointer. Without a pointer, no other primitive has a learnable address — no resolver knows what to dispatch on, no Thompson posterior has a key, no trace has a co-occurrence signal.
+
+This is the bootstrap concept: pointer-as-shape is what makes everything else addressable. Resolvers dispatch on `pointer.type`. Activity matching compares `inputSchema.required` shapes against the pointer types in the available pool. Impulse-relevance posteriors are keyed on `(activity, pointer-shape)`. Composition edges are typed by output-shape → input-shape compatibility.
+
+When this document refers to a "shape" in the abstract, the concrete artifact is always the pointer's type field plus its metadata. Shapes are not declared in a global registry; they are learned types — observed when vessels advertise resolvers, refined when traces show co-occurrence patterns, and pruned when no resolver claims them.
+
+---
+
+## Minimum Self-Stable Set (Hypothesis Under Test)
+
+A system is **self-stable** if it can describe and modify itself using only its own primitives. The conjectured minimum set is four primitives:
+
+1. **Impulse** — substrate. A pointer plus metadata plus (lazily resolved) body.
+2. **Pointer** — shape. The bootstrap key for resolution and learning.
+3. **Resolver** — function from pointer to content. Some resolvers are explicit (registered, advertised by vessels). Some are **implicit** (live inside executors and never appear in the registry — see "Implicit Vessels" below).
+4. **Vessel** — a bundling of resolvers, including the implicit ones inside executors.
+
+**Everything else should be derivable from these four:**
+
+- **Activity** = an impulse of shape `activity_template`, resolved by an activity-resolver.
+- **Lifecycle event** = an impulse of shape `lifecycle:*`, routed through an executor's implicit vessel to subscribed meta-activities.
+- **Validator** = a resolver whose output is `validation_result`-shaped.
+- **Trace** = a recorded set of impulses (inputs, intermediates, outputs).
+- **Ribosome** = a resolver: trace-shaped → template-shaped.
+- **Thompson posterior** = *should be* a shape (`thompson_posterior`); currently REST-only. This is a known structural gap (see "Known Gaps").
+
+**Status:** This is a **hypothesis under test**, not a declaration. The system is not yet self-stable. We test the minimum by observing what breaks — places where one of the four primitives fails to express something the system needs (e.g., the missing `thompson_posterior` shape, the implicit vessels lacking discovery presence). Each break is data about whether the minimum is correct or whether something must be added. Top-level activity execution is no longer one of these breaks: the unified execution path is the chosen direction (see "Unified Execution Path" below). The MiniBob refactor that routes goal-shaped and activity-template-shaped pointers through the standard impulse → resolver dispatch is pending, not unresolved.
+
+The minimum may include primitives in informational state that lack shapes; those gaps surface as forced REST endpoints, hardcoded routing, or non-impulse state shared between subsystems. We treat each such case as evidence about the minimum.
 
 ---
 
@@ -211,6 +262,31 @@ VESSEL (MiniBob, OpenCode, hardware controller, etc.)
 
 **Key insight**: The backend is not a universal resolver. It's a trace store. When a vessel "resolves" something from the backend, it's accessing historical execution data for replay and reflection. The actual data work happens in vessels, where the data lives.
 
+### Implicit Vessels
+
+Not every vessel advertises itself. **Implicit vessels** are bundles of resolvers that live inside executors but are not registered with the discovery-vessel and do not advertise shapes. They are vessels structurally — they bundle resolvers, dispatch by pointer shape, and serve content — but they are not addressable from the outside.
+
+Two implicit vessels currently exist in the system:
+
+1. **ActivityExecutor inside MiniBob** (`repos/minibob/src/activity.ts:1141`). Runs activity templates task-by-task. It is the dispatch engine for both top-level activities and lifecycle subscribers (slot-binding, validator-dispatch, create-shape-provider-goal). It is not registered with discovery; it does not advertise shapes. Top-level activity execution today is invoked via in-process call (`executor.execute(template)`) from `goal-processor.ts`; the **unified execution path** refactor (see "Unified Execution Path" below) is the confirmed direction — goal-shaped and activity-template-shaped pointers will resolve through the standard impulse → resolver dispatch, with the activity resolver running the activity to resolve the pointer.
+
+2. **Thompson Sampling vessel inside activity-api**. Computes α/β/sample_count posteriors from execution traces; serves them via REST (`variantMetricsSummary`, `GET /v2/activities/:id/variant-scores`); does **not** emit `thompson_posterior` impulses. This is the structural blocker that prevents the system from reasoning about its own decision state via the impulse mechanism — see "Known Gaps".
+
+Implicit vessels are not a sin; they are evidence about the minimum set. Each one represents a place where the system currently uses a privileged side channel rather than the impulse-resolver-vessel mechanism. Naming them functionally and tracking their limitations is how we test whether the four-primitive minimum is sufficient.
+
+### Vessels Contribute Learning Parameters Arbitrarily
+
+The model is open. Different vessels own different parts of the learned topology, and they update those parts independently. There is no central learning service that owns all parameters; learning is **decentralized across vessels**.
+
+| Vessel | Learning parameters owned |
+|---|---|
+| activity-api | Trace patterns, template Thompson posteriors, composition-edge α/β, impulse-relevance scores |
+| concept-db | Concept usage counts, conceptGraph relationships, conceptSequence patterns (text-formatted data, labeled knowledge graph leveraging impulse learning) |
+| Thompson Sampling implicit vessel | α/β/sample_count posteriors (currently REST-only — should resolve `thompson_posterior` shape) |
+| (future) any new vessel | Any parameters its resolvers learn from observed traces |
+
+Vessels can advertise new shape-typed parameters as they learn them. The system's openness means a new vessel can join the network and contribute learning signal without coordination — provided it advertises its shapes through discovery and emits its updates as impulses.
+
 ---
 
 ## Vessel Discovery
@@ -397,6 +473,22 @@ Both fields are optional for backward compatibility. Existing traces without the
 
 ## The Learning Loop
 
+### Two-Direction Learning Duality
+
+Learning updates the same composition graph from two directions. The two arms must stay symmetric — drift between them breaks the recall/learning cycle.
+
+**Forward arm — `P(success | activity X resolves pointer of shape Y)`**
+
+When activity X executes successfully with an impulse of shape Y in its input pool, the forward arm credits the (activity, shape) edge. Implementation: `impulseRelevance` writes from minibob to activity-api after execution. Used by impulse-pool selection (which impulses are worth loading for activity X).
+
+**Reverse arm — `P(success | activity X chosen given pool has shapes {A, B, C})`**
+
+When the binding layer selects activity X given a pool with shape signature {A, B, C} and X succeeds, the reverse arm credits the (shape-signature, activity) edge. Implementation: slot-binding writes and Thompson recommendation writes update composition-edge posteriors. Used by activity recommendation (which activity is worth running given the pool we have).
+
+**Symmetry invariant:** The two arms update the same edge from opposite directions. After N executions, the forward and reverse counts on each edge should be consistent. If they drift — e.g., forward arm records 100 successes but reverse arm records 80 — the recall side will sample inconsistently and the learning loop degrades.
+
+**F-39 (resolved 2026-04-26, minibob commit `662b153`)** — forward arm now writing correctly. Previously, the learning-signal writer failed on every validator-dispatch iteration because `lifecycle:task:completed` omitted `templateId` and the resolver's structural check rejected empty strings. Both emit sites in `activity.ts` now populate `templateId`, and the resolver no-ops gracefully on missing payload. After the canary deploy that includes this fix, the two arms converge; pre-deploy traces remain skewed and should be filtered out of any retroactive analysis.
+
 ### Reduce Search Space
 
 Over time, traces reveal patterns:
@@ -455,7 +547,9 @@ When irrelevance_score >= relevance_score, skip it (saves tokens/cost).
 
 ## Improvisation: Wing It With Recording
 
-When no activity matches with sufficient confidence, the system can improvise. But improvisation MUST be recorded.
+When no activity matches with sufficient confidence, the system can improvise. Improvisation MUST be recorded.
+
+> **Note**: Older documents used the terms **"Improvisation Outcome"** and **"Trailblazing"** for what is now handled by the failure-mode taxonomy plus posterior variance. Those terms have no current code path and should be replaced where encountered. See "Known Gaps → Class-(c) Terms Pruned".
 
 ### When to Improvise
 
@@ -780,6 +874,39 @@ The trace records each transformation. Learning extracts patterns. New activitie
 
 ---
 
+## Known Gaps (System Not Yet Self-Stable)
+
+The following gaps are evidence about the minimum set. Each represents a place where the four-primitive hypothesis is currently insufficient — either because the system uses a privileged side channel, or because a piece of learnable state lacks a shape, or because two arms of the duality have drifted.
+
+### Class-(b) Shape Gap: `thompson_posterior`
+
+The α/β/sample_count posterior data already exists in activity-api: it is computed for `variantMetricsSummary` REST responses and `GET /v2/activities/:id/variant-scores`. The improvised solution is the REST surface; the structural fix is to expose this same data as a shape via the Thompson implicit vessel. We need to collect the data from the activity-api as a `thompson_posterior` shape — what is currently REST-only is a workaround for the structurally missing shape.
+
+**Repair direction (Phase 9 of `2026-04-26-impulse-activity-loop`):** the Thompson implicit vessel advertises `thompson_posterior` and resolves it through the standard `POST /v2/impulses/resolve` path. The existing REST handler becomes a thin wrapper over the new shape resolver. After this, the implicit vessel becomes explicit — it can be discovered, observed, and its posteriors composed into other activities. Likely follow-on shapes: `composition_edge_posterior`, `shape_relevance_posterior`.
+
+### Unified Execution Path
+
+Unified execution path is the chosen direction. MiniBob refactor pending. Goal-shaped and activity-template-shaped pointers will resolve through the standard impulse → resolver dispatch — the activity resolver runs the activity to resolve the pointer. Today, top-level activity execution is invoked via `executor.execute(template)` from `repos/minibob/src/goal-processor.ts`; this is current-state, not a "privileged path" in target architecture.
+
+When the refactor lands, the goal-processor emits a `goal`-shaped impulse (and downstream an `activity_template`-shaped impulse), and the executor is dispatched as the resolver for the resulting shape pair. This collapses the structural distinction between "top-level" and "nested" activity execution: both flow through the same impulse → resolver dispatch.
+
+The 5 specs that already describe this unified surface (`minibob-goal-execution-resolver`, `trajectory-execution-resolver`, `goal-submission-panel`, `trajectory-submission-panel`, `vessel-wsurl-propagation`) describe target state.
+
+### Forward-Arm Breakage: F-39 (resolved)
+
+F-39 (resolved 2026-04-26, minibob commit `662b153`) — forward arm now writing correctly. The learning-signal writer previously failed on every validator-dispatch iteration because `lifecycle:task:completed` omitted `templateId` and the resolver's structural check rejected empty strings via truthiness. Both lifecycle emit sites in `repos/minibob/src/activity.ts` now populate `templateId: template.id`, and the resolver no-ops gracefully (emitting `metadata.skipped_reason: "missing_template_id"`) instead of throwing on malformed payloads. The two arms converge after the canary deploy that includes this fix; pre-deploy traces remain skewed and should be excluded from retroactive Thompson-posterior analysis.
+
+### Class-(c) Terms Pruned
+
+The following terms appear in older documents and should be removed when encountered. They have no code path:
+
+- **"Improvisation Outcome"** — superseded by variance + failure-mode tracking.
+- **"Trailblazing"** — never implemented; remains only in archived docs.
+
+The active replacement is the failure-mode taxonomy (`verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`) plus posterior variance, which together capture what these older terms gestured at.
+
+---
+
 ## Design Principles
 
 ### 1. Impulses Are Universal Data
@@ -821,13 +948,16 @@ LLMs are one resolver type. Use them for reasoning and generation. Use determini
 When implementing any feature, verify alignment with this foundation:
 
 - [ ] Does it treat data as impulses with metadata?
+- [ ] Is the **pointer the shape** of every learnable artifact (not a side-channel REST field)?
 - [ ] Does it use activities to constrain the search space?
 - [ ] Do resolvers live where the data is?
 - [ ] Does it record traces for learning?
 - [ ] Does it avoid unnecessary LLM usage?
 - [ ] Does it allow improvisation with recording?
+- [ ] Does it preserve the **two-direction learning duality** (forward arm and reverse arm both update on outcomes)?
 - [ ] Is the backend limited to trace storage and pattern learning?
 - [ ] Can this pattern be extracted and reused?
+- [ ] Does it route through the standard impulse → resolver dispatch? (Top-level activity execution is on a refactor track — see "Unified Execution Path" — but new features should not introduce new in-process bypasses.)
 
 ---
 

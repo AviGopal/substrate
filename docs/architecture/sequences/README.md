@@ -164,7 +164,7 @@ Documents how each resolver type processes impulses and creates output impulses,
 
 ---
 
-### [4. Improvisation, Trailblazing, Checkpoints, and Rollbacks](./04-improvisation-trailblazing.md)
+### [4. Improvisation, Failure Modes, Checkpoints, and Rollbacks](./04-improvisation-failure-modes.md)
 
 Shows how the system handles failures, creates variants, and extracts new templates. **Improvisation is now an activity**, not a fallback mechanism.
 

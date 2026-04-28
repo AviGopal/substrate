@@ -1,5 +1,7 @@
 # External Validation Integration Guide
 
+> **Status:** Superseded by Phase 9 of `2026-04-26-impulse-activity-loop`. The Thompson Sampling implementation described below is current code; the integration recipe will be replaced once the `thompson_posterior` shape lands. Treat this doc as historical implementation reference, not target architecture.
+
 ## Overview
 
 This document describes how to integrate the ExternalValidationResolver into MiniBob's activity execution flow. It covers:

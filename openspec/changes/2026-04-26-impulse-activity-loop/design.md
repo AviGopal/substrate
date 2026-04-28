@@ -1,3 +1,19 @@
+## Foundation realignment note (2026-04-27)
+
+The corrected foundation model (see `docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`) names three states — Informational (i), Transient (t), Observational (o) — and a minimum self-stable hypothesis set of four primitives: **Impulse, Pointer, Resolver, Vessel**. Activities, lifecycle events, validators, traces, ribosome, and Thompson posteriors are *derived* shapes built on those primitives. Specifically: a lifecycle event is an impulse-of-shape `lifecycle:*` routed through the executor's implicit vessel; a validator is a resolver emitting a `validation_result`-shaped impulse; an activity is an impulse-of-shape `activity_template` plus its activity-resolver. The two implicit vessels currently un-named-as-such are: (1) ActivityExecutor inside MiniBob, and (2) the Thompson-Sampling implicit vessel inside activity-api.
+
+The two-direction learning duality must remain symmetric:
+- **Forward**: `impulseRelevance` — P(success | activity resolves pointer of shape)
+- **Reverse**: slot-binding/Thompson recommendations — P(success | activity chosen given pool shapes)
+
+F-39 is RESOLVED (minibob commit `662b153`, 2026-04-26): both lifecycle emit sites now populate `templateId`, and the resolver no-ops gracefully on missing payload. Forward arm writes correctly post-deploy; pre-deploy traces remain skewed and should be excluded from retroactive Thompson-posterior analysis. The umbrella's Phase 5 prerequisite list correctly gates on the canary re-confirmation rather than on the original breakage.
+
+The one real shape gap surfaced by this audit is **`thompson_posterior`** — the α/β/sample_count data already exists in activity-api as an improvised REST surface (`variantMetricsSummary`, `GET /v2/activities/:id/variant-scores`); it just isn't emitted as a routable shape. Tracked as Phase 9 of this change.
+
+The narrative below uses "topology / reachable / learned" framing that describes the same model in different language; both framings are acceptable. No structural rewrite required.
+
+---
+
 ## Foundational Model
 
 The impulse-activity loop operates against an unbounded backdrop. The **informational state** contains all possible and impossible impulses — every piece of data that could ever be known, computed, or produced. The system has no direct access to this complete space. It operates on two bounded subsets:
@@ -169,6 +185,10 @@ Execute representative goals on `activity.metabob.com`. For each, document:
 - The observed trace (lifecycle events, validator results, `failure_mode` where relevant).
 - The Thompson α/β before/after.
 - Notes on any divergence from spec contracts — these become design refinements.
+
+### Phase 9 — `thompson_posterior` shape (Thompson implicit vessel becomes explicit)
+
+The α/β/sample_count posterior data already exists in activity-api but is REST-only. Phase 9 advertises and resolves a `thompson_posterior` shape so the implicit Thompson vessel becomes addressable through the standard impulse → resolver dispatch. The existing REST handler (`variantMetricsSummary`, `GET /v2/activities/:id/variant-scores`) becomes a thin wrapper over the shape resolver. Workbench reads posterior data via shape resolution where currently using REST. Documents the new shape under `docs/impulse-types/thompson_posterior.md`. See `tasks.md` §9 for the full subtask breakdown.
 
 ## Success-criteria validation
 

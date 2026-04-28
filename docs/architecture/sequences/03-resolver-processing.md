@@ -1019,7 +1019,7 @@ Resolvers execute in MiniBob (local), but their patterns are learned in the back
 
 - [Impulse Resolution](./02-impulse-resolution.md) - How impulses are loaded
 - [Activity Selection](./01-activity-selection.md) - How activities are chosen
-- [Improvisation](./04-improvisation-trailblazing.md) - What happens on failure
+- [Improvisation](./04-improvisation-failure-modes.md) - What happens on failure
 - [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) - Foundational model
 
 ---

@@ -1,4 +1,6 @@
-# Improvisation, Trailblazing, Checkpoints, and Rollbacks
+# Improvisation, Failure Modes, Checkpoints, and Rollbacks
+
+> **STATUS (2026-04-28): Renamed from `04-improvisation-trailblazing.md`.** "Trailblazing" was class-(c) terminology — never implemented and pruned from the corrected foundation model. What older versions of this doc called trailblazing is now handled by the **failure-mode taxonomy** (`verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`) plus posterior variance. Read this file for the improvisation flow (which is real and current); treat any remaining trailblazing references as historical. See [`IMPULSE_ACTIVITY_FOUNDATION.md`](../IMPULSE_ACTIVITY_FOUNDATION.md#known-gaps-system-not-yet-self-stable) → "Class-(c) Terms Pruned".
 
 ## Overview
 

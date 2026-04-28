@@ -1,5 +1,7 @@
 # Activity-Driven UI Rendering Guide
 
+> **Note:** The 12-type enumeration below is `react-renderer` vessel's locally advertised vocabulary, not a system-wide canonical shape registry. Other UI vessels may advertise their own `ui_component`-family shapes; the foundation treats shapes as open-ended and vessel-contributed.
+
 **Complete guide to creating activities that generate terminal UI and React components**
 
 ---

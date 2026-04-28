@@ -30,10 +30,27 @@ References sibling task lists. This change does not duplicate the work, only tra
 
 ## 5. Phase 5 — Decommission inline executor logic
 
-- [ ] 5.1 Remove inline synthesiser block at `activity.ts:4949-4997` (sibling 1 §7)
-- [ ] 5.2 Remove inline validation block at `activity.ts:5454-5529` (sibling 3 §8.1)
-- [ ] 5.3 Remove three `recordImpulseRelevance` call sites (sibling 3 §8.2)
-- [ ] 5.4 Remove inline tool-argument-pattern recording loop (sibling 3 §8.3)
+### 5.0 Prerequisites (gating Phase 5 cutover)
+
+See design.md §"Phase 5 prerequisites and rollback" for full rationale. None of 5.1–5.4 starts until ALL of 5.0.1–5.0.8 are met and `FEATURE_ACTIVITY_DRIVEN_BINDING` has been flipped to `enabled` for the org under cutover.
+
+- [ ] 5.0.1 Verify H1 (two-sided execution-trace verification) deployed and gating Thompson updates — `repos/metabob-activity-api/src/routes/execution-traces.ts:1306` and `:1579` skip rows lacking `verified_cross_sign: true`. Reference: `openspec/changes/2026-04-26-security-hardening-findings/design.md` §H1.
+- [ ] 5.0.2 Verify H5 baseline variants registered and immutable for each resolver family Phase 5 depends on — `producer_selection`, `impulse_pool_selection`, `learning_signal_writer`, `validator_dispatch`, `impulse_preparation`. Auto-regression scan filters quarantined variants from candidate sets. (`repos/metabob-activity-api`) Reference: §H5.
+- [ ] 5.0.3 Re-confirm F-7 / F-39 closures on canary: `lifecycle:task:completed` payload carries `templateId`; `learning_signal_writer` consumes it cleanly (not just no-op-skips). Re-run Phase 8 probe; confirm validator-dispatch task 5 succeeds, not no-ops. (`repos/minibob`)
+- [ ] 5.0.4 Re-confirm F-37 / F-40 closures on canary: `composition_chain` populated reliably for both root-first inserts and L1/L2 meta-trace write-order races. At least one slot-binding nested execution trace shows non-empty chain. (`repos/metabob-activity-api` + `repos/minibob`)
+- [ ] 5.0.5 Re-confirm F-41 closure: `preBinding` impulse propagated into the meta-activity nested executor's pool via `options.impulses` merge at `activity.ts` execute-time; slot-binding's first task does not fail with the missing-shapes gate on a real trigger. (`repos/minibob`)
+- [ ] 5.0.6 Implement `FEATURE_ACTIVITY_DRIVEN_BINDING` flag — env var read in `repos/minibob/src/config.ts` alongside existing `MINIBOB_*` patterns; per-org override row in `org_feature_flags`; default `disabled`. Implement shadow-mode comparison: while flag is disabled, run both inline and meta-activity paths, log decisions + outcomes + diffs + trace IDs to `shadow_decision_log`, consume only the inline result. (`repos/minibob`)
+- [ ] 5.0.7 Implement rollback triggers with alert wiring: meta-activity invocation failure rate, `learning_signal_writer` empty-`templateId` no-op rate, Thompson-Sampled variant exceeding H5 threshold without baseline catch, `composition_chain` corruption rate, verified-cross-sign rate. Thresholds per design.md §"Rollback triggers"; calibration TBD on canary observation. (`repos/metabob-activity-api` + observability)
+- [ ] 5.0.8 Gather minimum 7 canary days of shadow-mode evidence per org; divergence-rate threshold met (`< 1%` per `(shape, taskId)` pair, calibration TBD). Document evidence in design.md §"Success-criteria validation" before flipping flag. (operational)
+
+### 5.1–5.4 Deletion tasks
+
+Each runs only after 5.0 prerequisites met and `FEATURE_ACTIVITY_DRIVEN_BINDING` flipped to `enabled` per-org. Plan a separate follow-up commit per surface so any rollback can be partial.
+
+- [ ] 5.1 Remove inline synthesiser block at `activity.ts:4949-4997` (sibling 1 §7) (after 5.0 prerequisites met and `FEATURE_ACTIVITY_DRIVEN_BINDING` flipped to enabled per-org)
+- [ ] 5.2 Remove inline validation block at `activity.ts:5454-5529` (sibling 3 §8.1) (after 5.0 prerequisites met and `FEATURE_ACTIVITY_DRIVEN_BINDING` flipped to enabled per-org)
+- [ ] 5.3 Remove three `recordImpulseRelevance` call sites (sibling 3 §8.2) (after 5.0 prerequisites met and `FEATURE_ACTIVITY_DRIVEN_BINDING` flipped to enabled per-org)
+- [ ] 5.4 Remove inline tool-argument-pattern recording loop (sibling 3 §8.3) (after 5.0 prerequisites met and `FEATURE_ACTIVITY_DRIVEN_BINDING` flipped to enabled per-org)
 
 ## 6. Phase 6 — Workbench surfaces
 
@@ -56,6 +73,7 @@ Extends Phase 6 with explicit lifecycle visibility: the binding phase was surfac
 
 - [x] 7.1 `create-shape-provider-goal` activity authored and registered (sibling 2 §3) — dispatches a sub-goal to produce a missing shape via the goal-processing pipeline; registered as template in activity-api (v0.3.1)
 - [x] 7.2 Slot-binding meta-activity escalates via `create-shape-provider-goal` on `unbindable` — slot-binding.json wired to emit `create-shape-provider-goal` impulse when `producer_selection_result.metadata.unbindable` is true; dotted-path interpolation fix enables payload extraction (v0.3.1)
+- [ ] 7.3 Thread parent `scopeContext` into `escalate_unbindable` dispatch (BLOCKED on H3 landing for mandatory attestation; v1 ships with declarative-only scope per `openspec/changes/2026-04-26-shape-provider-goal-creation/design.md` §"Scope schema"). Acceptance: (a) `lifecycle:task:preBinding` payload extended with `parentScopeContext` at both emit sites in `repos/minibob/src/activity.ts` (mirroring F-2 / F-3 threading pattern); (b) `slot-binding.json::escalate_unbindable` forwards `parent_scope_context: "{{lifecycle.parentScopeContext}}"` as a variable on the dispatched `create-shape-provider-goal`; (c) the emitted goal-shaped impulse from `compose_goal` contains a `scopeContext` body field whose `dimensions` either equals the parent's or is a CC1-valid narrowing (parent keys preserved with same values; new keys allowed); (d) CC1's `verifyScopeNarrowing` (per `openspec/changes/2026-04-26-security-hardening-findings/specs/security-hardening/spec.md` CC1 requirements) fires at child-activity dispatch in the executor and rejects widening with `failure_mode: { type: "safety_breach", context: { breach_type: "scope_widening", limit, attempted, ancestor_chain } }`. (`repos/minibob` + `repos/metabob-activity-api`)
 
 ## 8. Phase 8 — End-to-end canary validation
 
@@ -67,11 +85,23 @@ Extends Phase 6 with explicit lifecycle visibility: the binding phase was surfac
 - [ ] 8.6 Confirm no production goal requires embedded template fallback
 - [ ] 8.7 Document each success criterion result in `design.md` §Success-criteria validation
 
-## 9. Verification gates
+## 9. Phase 9 — `thompson_posterior` shape (Thompson implicit vessel becomes explicit)
 
-- [ ] 9.1 All sibling spec verification phases (sibling 1 §9, sibling 2 §6, sibling 3 §12) green
-- [ ] 9.2 Workbench history panel renders the integrated trace (validator results, `failure_mode`, recursive sub-goal handoffs)
-- [ ] 9.3 No regression in the existing activity-execution test suite
+The α/β/sample_count posterior data already exists inside activity-api but is REST-only (`variantMetricsSummary`, `GET /v2/activities/:id/variant-scores`). This phase exposes it as a routable shape so the Thompson Sampling implicit vessel inside activity-api becomes explicit — its posteriors can be discovered, observed, and composed into other activities through the standard `POST /v2/impulses/resolve` path. Resolves the one real shape gap surfaced by the foundation-realignment audit.
+
+- [ ] 9.1 Add `thompson_posterior` to activity-api shape advertisement in `repos/metabob-activity-api/src/config.ts` (alongside the existing `discovery.shapes` block); set `resolve_endpoint`, `resolve_request_format: pointer`, `auth_scheme: ApiKey`
+- [ ] 9.2 Implement resolver for `thompson_posterior` pointer type in `repos/metabob-activity-api/src/routes/impulses.ts`. Pointer fields: `activity_variant_id` (or `activity_id`), optional `shape_signature` filter, optional `context_bucket`. Response payload: `alpha`, `beta`, `sample_count`, optional confidence interval. Reuses the same query helper that `variantMetricsSummary` already calls — no SQL duplication.
+- [ ] 9.3 Update `variantMetricsSummary` REST handler to be a thin wrapper over the new shape resolver — the REST surface remains for backward compatibility, but the shape resolver is the source of truth. No behavior change for existing callers.
+- [ ] 9.4 Update workbench to read posterior data via shape resolution where currently using REST. Start with `exploration-slot-ucb-ranking` and `context-bucketed-thompson-sampling` selection-metadata exposure; leave older surfaces on REST until they next see other changes.
+- [ ] 9.5 Document the new shape under `docs/impulse-types/thompson_posterior.md` (one file per shape, matching the existing pattern in `docs/impulse-types/`)
+
+Acceptance: a resolver dispatched from an activity template can read α/β for a named variant via `POST /v2/impulses/resolve` without hitting the REST surface; existing `variantMetricsSummary` callers see no behavior change; `docs/impulse-types/thompson_posterior.md` exists.
+
+## Verification gates
+
+- [ ] V.1 All sibling spec verification phases (sibling 1 §9, sibling 2 §6, sibling 3 §12) green
+- [ ] V.2 Workbench history panel renders the integrated trace (validator results, `failure_mode`, recursive sub-goal handoffs)
+- [ ] V.3 No regression in the existing activity-execution test suite
 
 ## Post-deploy Bug Fixes (v1.12.0)
 
@@ -168,11 +198,16 @@ The path to a fully-demonstrable impulse-activity loop on canary. Order is rough
 21. **8.6** Confirm no production goal requires embedded template fallback
 22. **8.7** Document each success criterion result in design.md
 
-### Stage F — Final verification (Phase 9)
+### Stage F — `thompson_posterior` shape (Phase 9) and final verification
 
-23. **9.1** All sibling spec verification phases green
-24. **9.2** Workbench history panel renders integrated trace
-25. **9.3** No regression in existing activity-execution test suite
+23. **9.1** Add `thompson_posterior` to activity-api shape advertisement
+24. **9.2** Implement resolver for `thompson_posterior` pointer type
+25. **9.3** `variantMetricsSummary` REST handler becomes a thin wrapper
+26. **9.4** Workbench reads posteriors via shape resolution
+27. **9.5** Document the shape in `docs/impulse-types/thompson_posterior.md`
+28. **V.1** All sibling spec verification phases green
+29. **V.2** Workbench history panel renders integrated trace
+30. **V.3** No regression in existing activity-execution test suite
 
 ## Deployment overhaul (D-track, 2026-04-26)
 
