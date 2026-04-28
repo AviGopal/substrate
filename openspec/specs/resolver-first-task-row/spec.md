@@ -1,7 +1,7 @@
 # resolver-first-task-row Specification
 
 ## Purpose
-TBD - created by archiving change workbench-resolver-first-authoring. Update Purpose after archive.
+Surface resolver selection as the primary control in the `TaskEditor` summary row so the resolver tier (deterministic / pattern / llm) is visible and changeable without expanding the detail panel. The detail panel adapts its primary content area to the selected resolver, showing `TaskPromptEditor` for `llm` tasks and `ConfigEditor` for all other resolver types.
 ## Requirements
 ### Requirement: Resolver select is visible in the TaskEditor summary row
 The `TaskEditor` summary row SHALL include a compact resolver `<Select>` that is always visible without expanding the detail panel. The select SHALL be positioned between the description input and the resolver-tier badge. The options SHALL be: `llm`, `bash`, `git`, `file`, `human`, `impulse-resolve`, `context-acquisition`. The default value SHALL be `llm` when `task.resolver` is absent.

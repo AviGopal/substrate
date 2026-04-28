@@ -231,6 +231,14 @@ selection_metadata: {
 
 No existing field is removed or renamed. Callers that do not read the new fields are unaffected.
 
+> **Phase 9 note**: `selection_metadata.alpha`, `selection_metadata.beta`, and `selection_metadata.sample`
+> are currently returned inline in REST responses. Phase 9 of the impulse-activity-loop spec will
+> expose these posterior parameters as a resolvable `thompson_posterior` impulse shape so that
+> minibob and other vessels can obtain them through the standard impulse-resolution path rather than
+> parsing `selection_metadata` directly. When Phase 9 lands, callers should prefer resolving
+> `thompson_posterior` over reading the inline fields; the inline fields will be kept for backward
+> compatibility but are considered the legacy access path from that point forward.
+
 #### Scenario: Response schema is backward-compatible
 
 - **WHEN** a caller reads only the pre-existing `selection_metadata` fields (`method`, `alpha`,

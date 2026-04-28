@@ -1,7 +1,7 @@
 # trace-history-view Specification
 
 ## Purpose
-TBD - created by archiving change trajectory-execution-integration. Update Purpose after archive.
+Provides a history panel that lists recent execution traces and lets users load any trace onto the trajectory grid for inspection, comparison, or retry — surfacing recorded observational state (trace) back into the instructional layer (trajectory) for review and learning.
 ## Requirements
 ### Requirement: Execution history panel lists recent traces
 The trajectory editor SHALL display a collapsible "Execution History" panel in the left sidebar showing the N most recent execution traces fetched from activity-api (via `executionTraceList` impulse or `GET /v2/activities/execution-traces`). Each entry SHALL show: activity name, success/failure indicator, duration, cost, and timestamp.

@@ -1,7 +1,7 @@
 # vessel-impulse-state-panel Specification
 
 ## Purpose
-TBD - created by archiving change workbench-vessel-selector. Update Purpose after archive.
+Defines the `ImpulseStatePanel` "Vessel State" section: when a vessel is selected in the trajectory store, the panel polls the vessel's `/impulses` endpoint and subscribes to its WebSocket for `impulse:created` events, rendering the live set of unique shape names as badges so authors can see what shapes are currently present on a chosen vessel without leaving the workbench.
 ## Requirements
 ### Requirement: ImpulseStatePanel renders a "Vessel State" section when a vessel is selected
 When `selectedVesselId` and `selectedVesselEndpoint` are non-null in the trajectory store, `ImpulseStatePanel` SHALL render a collapsible "Vessel State" section below the existing tabs. The section header SHALL display "Live shapes on {vesselName}" where `vesselName` is resolved from `useVesselRegistry` by matching `selectedVesselId`, falling back to `selectedVesselId` itself when no match is found.

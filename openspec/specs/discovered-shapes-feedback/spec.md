@@ -1,7 +1,7 @@
 # discovered-shapes-feedback Specification
 
 ## Purpose
-TBD - created by archiving change workbench-trajectory-execution. Update Purpose after archive.
+Track impulse shapes discovered at runtime during live trajectory execution and feed them back into the learning loop via `impulseRelevance` signals. Provides workbench-side observability of emerging shapes (forward learning duality: observation → relevance score update) without persisting ephemeral discovery state across sessions.
 ## Requirements
 ### Requirement: discoveredShapes field in trajectory store
 `TrajectoryState` SHALL include `discoveredShapes: Set<string>` initialized to `new Set()`. `TrajectoryActions` SHALL include `addDiscoveredShape(shape: string): void` which adds the shape to `discoveredShapes` if not already present (idempotent). `clearTrajectory()` SHALL reset `discoveredShapes` to an empty set. `discoveredShapes` SHALL NOT be persisted to `localStorage`.

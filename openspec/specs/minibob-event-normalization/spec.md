@@ -1,10 +1,10 @@
 # minibob-event-normalization Specification
 
 ## Purpose
-TBD - created by archiving change workbench-vessel-live-execution. Update Purpose after archive.
+Standardise the translation layer between MiniBob's namespaced WS envelope (`activity:<event>`) and the activity-api flat event format consumed by the workbench. Lifecycle events emitted over the WebSocket are impulses-of-shape `lifecycle:*` routed through the ActivityExecutor's implicit vessel; this spec defines how the workbench normalises those impulses into the flat `TrajectoryExecutionEvent` contract.
 ## Requirements
 ### Requirement: normalizeMiniBobEvent translates MiniBob envelope to activity-api flat format
-`useTrajectoryExecution` SHALL export (internally) a `normalizeMiniBobEvent(raw: unknown): TrajectoryExecutionEvent | null` function that translates MiniBob's namespaced event envelope `{ type: "activity:<event>", timestamp, data: {...} }` to the activity-api flat event format consumed by `isTrajectoryEvent`. The normalization SHALL cover at minimum: `activity:started` → `task.started`, `activity:task-completed` → `task.completed`, `impulse:completed` → `impulse.resolved`. Unknown MiniBob event types SHALL return `null`.
+`useTrajectoryExecution` SHALL export (internally) a `normalizeMiniBobEvent(raw: unknown): TrajectoryExecutionEvent | null` function that translates MiniBob's namespaced event envelope `{ type: "activity:<event>", timestamp, data: {...} }` to the activity-api flat event format consumed by `isTrajectoryEvent`. The normalization SHALL cover at minimum: `activity:started` → `task.started`, `activity:task-completed` → `task.completed`, `impulse:completed` → `impulse.resolved`. These MiniBob envelope types correspond to lifecycle impulses-of-shape `lifecycle:activity:started`, `lifecycle:task:completed`, and `lifecycle:impulse:resolved` emitted by the ActivityExecutor's implicit vessel. Unknown envelope types SHALL return `null`.
 
 #### Scenario: activity:task-completed is normalized to task.completed
 - **WHEN** a MiniBob WS message arrives as `{ type: "activity:task-completed", data: { executionId: "exec_1", taskId: "t_1", status: "completed" } }`
@@ -37,8 +37,8 @@ When `useTrajectoryExecution` processes a normalized `task.completed` event sour
 - **WHEN** a MiniBob task completes and no `impulse:completed` events were received for that task
 - **THEN** the resolution sub-list for that task in `LiveExecutionPanel` shows exactly one row (the synthetic minibob row)
 
-### Requirement: MiniBob broadcast functions called in goalExecution handler
-The MiniBob `goalExecution` HTTP handler SHALL call `broadcastActivityStarted(executionId, ...)` before invoking `processGoal`, and SHALL call `broadcastActivityTaskCompleted(executionId, ...)` in the resolved `.then()` branch (success) and in the catch branch (failure). These functions SHALL NOT be imported-only dead code.
+### Requirement: MiniBob broadcast functions called in goal-execution handler
+The MiniBob goal-execution HTTP handler (`POST /execute-goal`) SHALL emit lifecycle impulses over WebSocket by calling `broadcastActivityStarted(executionId, ...)` before invoking `processGoal`, and `broadcastActivityTaskCompleted(executionId, ...)` in both the resolved and rejected branches. These functions SHALL NOT be imported-only dead code. The emitted events are lifecycle impulses-of-shape `lifecycle:activity:started` and `lifecycle:task:completed` respectively, broadcast through the ActivityExecutor's implicit vessel.
 
 #### Scenario: WS clients receive activity:started when goal submission begins
 - **WHEN** a client calls `POST /execute-goal` on MiniBob

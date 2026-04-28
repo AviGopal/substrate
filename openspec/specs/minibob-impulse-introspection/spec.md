@@ -1,7 +1,7 @@
 # minibob-impulse-introspection Specification
 
 ## Purpose
-TBD - created by archiving change workbench-vessel-selector. Update Purpose after archive.
+Expose MiniBob's in-memory impulse pool via a `GET /impulses` HTTP endpoint so external clients (e.g., the workbench vessel selector) can introspect which impulses are currently held, their shapes, pointer types, and load state without requiring direct access to MiniBob's internal store.
 ## Requirements
 ### Requirement: MiniBob exposes GET /impulses endpoint
 MiniBob's HTTP server SHALL handle `GET /impulses` and return a JSON response with status 200. The response body SHALL conform to:

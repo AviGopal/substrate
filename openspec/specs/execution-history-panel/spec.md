@@ -1,7 +1,7 @@
 # execution-history-panel Specification
 
 ## Purpose
-TBD - created by archiving change workbench-vessel-live-execution. Update Purpose after archive.
+Provide a sidebar panel in the workbench trajectory editor that lists recent execution traces (fetched from activity-api) and allows the user to attach any historical trace as the active execution, connecting `LiveExecutionPanel` to that trace's WebSocket stream without disturbing the current composition grid.
 ## Requirements
 ### Requirement: ExecutionHistoryPanel onLoadTrace sets active execution in trajectory store
 When the user clicks the "load" button on a trace row in `ExecutionHistoryPanel`, the panel SHALL call `onLoadTrace(trace)`. The parent (`TrajectoryEditorPage`) SHALL handle this by calling `setActiveExecutionId(trace.executionId)` on `trajectoryStore`, causing `LiveExecutionPanel` to attempt a WS connection to that executionId.

@@ -1,7 +1,7 @@
 # task-shape-contributions Specification
 
 ## Purpose
-TBD - created by archiving change trajectory-execution-integration. Update Purpose after archive.
+Define how per-task input and output shape contributions are surfaced in the workbench. Governs the `ActivityTask` type extension, `ImpulseStatePanel` provenance/timeline granularity, and `TaskEditor` read-only shape badge display — making task-level resolver I/O visible in both live and recalled execution modes.
 ## Requirements
 ### Requirement: ImpulseStatePanel shows per-task shape contributions from trace
 When a trace is loaded or a live execution is active, the ImpulseStatePanel's Shape Provenance section SHALL show task-level contributions: which specific task (by index and description) produced each shape. This replaces the template-level provenance ("Activity X → shapes") with task-level resolution ("Activity X / Task N → shapes").

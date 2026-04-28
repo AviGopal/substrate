@@ -1,7 +1,7 @@
 # tags-first-classification Specification
 
 ## Purpose
-TBD - created by archiving change workbench-resolver-first-authoring. Update Purpose after archive.
+Replace the fixed `ActivityCategory` enum with open-ended `tags: string[]` across the workbench UI. Aligns ActivityTemplate classification with the foundation model's vessel-contributed, open-ended shape vocabulary — categories become the first-tag prefix rather than a centrally registered type.
 ## Requirements
 ### Requirement: ActivityCategory type is removed; ActivityTemplate.category is optional
 The `ActivityCategory` type SHALL be removed from `src/types/index.ts`. `ActivityTemplate.category` SHALL become `category?: string`. `ActivityTemplate.tags` SHALL become `tags: string[]` (required, default `[]`).

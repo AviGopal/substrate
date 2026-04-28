@@ -1,7 +1,7 @@
 # vessel-registry-hook Specification
 
 ## Purpose
-TBD - created by archiving change workbench-vessel-selector. Update Purpose after archive.
+Defines the `useVesselRegistry` React hook that fetches and caches the live vessel registry from discovery-vessel, returning executor-capable vessels (those advertising the `goalExecution` shape) for use in workbench routing and task dispatch.
 ## Requirements
 ### Requirement: Hook fetches vessel registry from discovery-vessel
 The `useVesselRegistry` hook SHALL query `VITE_DISCOVERY_ENDPOINT + "/resolve"` with body `{ pointer: { type: "vesselRegistry" } }` and return a list of registered vessels. Each vessel record SHALL include: `vesselId`, `name` (or vesselId when name is absent), `endpoint`, `resolve_endpoint`, `shapes` (string array), `health` (`"healthy" | "degraded" | "unknown"`), and `lastSeen` (ISO timestamp string).

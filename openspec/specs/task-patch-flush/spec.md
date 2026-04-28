@@ -1,7 +1,7 @@
 # task-patch-flush Specification
 
 ## Purpose
-TBD - created by archiving change workbench-resolver-first-authoring. Update Purpose after archive.
+Ensures that task-level field mutations (resolver, config, prompt, description) in the workbench `ActivityCard` are durably flushed to the activity-api via debounced PATCH, so the activity template stored in the backend stays consistent with the author's in-progress edits.
 ## Requirements
 ### Requirement: Task-level mutations are flushed to the API via PATCH
 When any task field is changed in `ActivityCard` (resolver, config, prompt, description), the system SHALL include the full `tasks` array in the next PATCH request to `/v2/activities/templates/{templateId}`. The PATCH SHALL fire on the existing 500ms debounce already used by `handleTaskChange`. The PATCH body SHALL merge `tasks` with any other fields being patched (e.g., `output_shapes`).

@@ -1,7 +1,7 @@
 # resolver-task-authoring Specification
 
 ## Purpose
-TBD - created by archiving change workbench-resolver-first-authoring. Update Purpose after archive.
+Define the resolver-first task authoring surface in the workbench: each task selects a resolver (deterministic/pattern/llm tier) before filling in configuration, ensuring tasks are authored as single resolver invocations and task payloads carry explicit `resolver`, `resolver_tier`, and shape declarations.
 ## Requirements
 ### Requirement: CreateActivityDialog exposes resolver selection per task
 Each task row in `CreateActivityDialog` SHALL include a resolver dropdown with options: `llm`, `bash`, `git`, `file`, `human`, `impulse-resolve`, `context-acquisition`. The default SHALL be `llm`.

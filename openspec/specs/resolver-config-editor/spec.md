@@ -1,7 +1,7 @@
 # resolver-config-editor Specification
 
 ## Purpose
-TBD - created by archiving change workbench-resolver-first-authoring. Update Purpose after archive.
+Define the structured resolver configuration editor (`ConfigEditor`) in the workbench trajectory editor. The component renders resolver-specific field sets (bash, file, git) instead of a raw JSON textarea, falling back to JSON for unknown resolvers, and resets state cleanly when the resolver type changes.
 ## Requirements
 ### Requirement: ConfigEditor renders structured bash config
 When the resolver is `bash`, `ConfigEditor` SHALL render a `command` textarea and a `timeout` number input instead of a raw JSON textarea. The `command` field SHALL be required (non-empty) for the config to be non-empty. The `timeout` SHALL default to empty (no constraint) and accept positive integers only.

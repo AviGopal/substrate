@@ -1,7 +1,7 @@
 # live-execution-panel Specification
 
 ## Purpose
-TBD - created by archiving change trajectory-execution-integration. Update Purpose after archive.
+Defines the LiveExecutionPanel component in the trajectory editor workbench: a right-side Sheet that connects to the activity-api WebSocket by executionId and streams real-time task progress, per-task impulse resolution events, and execution status back to the trajectory grid.
 ## Requirements
 ### Requirement: Execution ID connection panel
 The trajectory editor SHALL provide a "Live Execution" panel containing: an executionId text input field, a "Connect" button, and a connection status badge (idle / connecting / live / completed / failed). This panel SHALL be rendered inside the right-side live execution Sheet (see `live-execution-split-view` capability), NOT in the left sidebar scroll area. The executionId MAY also be supplied via `?executionId=` URL query param, in which case the panel SHALL auto-connect on page load. When `activeExecutionId` changes in `trajectoryStore` (e.g., from execution history "load" action), the panel SHALL reflect the new executionId in the input field and auto-connect.

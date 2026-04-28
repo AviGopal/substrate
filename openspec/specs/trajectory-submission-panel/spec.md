@@ -1,7 +1,7 @@
 # trajectory-submission-panel Specification
 
 ## Purpose
-TBD - created by archiving change workbench-trajectory-execution. Update Purpose after archive.
+Defines the `submitTrajectory` method on the `useTrajectoryExecution` hook, enabling the workbench to dispatch a sequenced activity trajectory through standard impulse→resolver dispatch (`POST /v2/impulses/resolve` with a `trajectoryExecution` pointer). This is the unified execution path; the MiniBob-side refactor to resolve `trajectoryExecution` pointers through the same dispatch surface is pending but this surface is the confirmed target direction.
 ## Requirements
 ### Requirement: submitTrajectory method on useTrajectoryExecution hook
 The `useTrajectoryExecution` hook SHALL expose a `submitTrajectory(activities: TrajectoryActivity[], goal?: string): Promise<string>` method on its return value. This method SHALL POST to the configured vessel endpoint `POST /v2/impulses/resolve` with `{ pointer: { type: "trajectoryExecution", activities: activities.map(a => ({ templateId: a.templateId, column: a.column, row: a.row })), goal } }`. On success it SHALL parse the returned `executionId` from the content string and return it. On failure it SHALL throw an `Error` with a descriptive message. The hook SHALL use the same `post()` API client helper and `parseExecutionId()` utility already used for goal submission.

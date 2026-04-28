@@ -174,6 +174,8 @@ The `selection_metadata` object in the response SHALL include:
 Fields SHALL be omitted (or null) when `blend_weight` is 0.0 (no context data
 applied).
 
+> **Note (interim):** Exposing blended α/β via REST `selection_metadata` is an interim approach. Phase 9 of `2026-04-26-impulse-activity-loop` will route `thompson_posterior` (including context-bucketed scores) through the standard impulse→resolver dispatch path as a resolvable shape; currently REST-only.
+
 #### Scenario: High-observation bucket dominates global prior
 
 - **WHEN** a template has `context_thompson_scores` row with α=20, β=2
@@ -335,7 +337,7 @@ The migration SHALL not modify any existing table or view.
 
 - Automatic decay or expiry of old `context_thompson_scores` rows (can be
   addressed in a separate maintenance activity).
-- Exposing `context_thompson_scores` as a queryable impulse shape.
+- Exposing `context_thompson_scores` as a queryable impulse shape (Phase 9 of `2026-04-26-impulse-activity-loop` will expose `thompson_posterior` as a resolvable shape, at which point context-bucketed scores can be surfaced through that path).
 - UI surfaces for inspecting per-bucket scores (workbench trajectory editor
   shows `selection_metadata` fields, which is sufficient for now).
 - Cross-org bucket sharing (each org's data is isolated).

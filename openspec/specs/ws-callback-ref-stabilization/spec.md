@@ -1,7 +1,7 @@
 # ws-callback-ref-stabilization Specification
 
 ## Purpose
-TBD - created by archiving change workbench-vessel-live-execution. Update Purpose after archive.
+Prevent WebSocket reconnect storms caused by unstable callback prop references in `useWebSocket`. Stores `onOpen`, `onClose`, `onMessage`, and `onError` in refs so the `connect` closure remains identity-stable across re-renders while always invoking the latest callback.
 ## Requirements
 ### Requirement: Callback props stored in refs to prevent reconnect storm
 `useWebSocket` SHALL store `onOpen`, `onClose`, `onMessage`, and `onError` callback props in `useRef` values that are updated on every render via `useEffect`. The `connect` useCallback SHALL read callbacks exclusively from these refs at event time. The `connect` useCallback's dependency array SHALL NOT include `onOpen`, `onClose`, `onMessage`, or `onError`.

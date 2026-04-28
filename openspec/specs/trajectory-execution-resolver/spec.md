@@ -1,7 +1,10 @@
 # trajectory-execution-resolver Specification
 
 ## Purpose
-TBD - created by archiving change workbench-trajectory-execution. Update Purpose after archive.
+Defines the `trajectoryExecution` pointer type that allows a workbench-authored activity sequence (trajectory) to be dispatched through MiniBob's standard impulse→resolver path. MiniBob resolves the pointer by executing the listed activity templates in column order (with within-column parallelism), returning an execution ID immediately for live WebSocket monitoring.
+
+> **Foundation alignment**: `trajectoryExecution` is resolved through standard impulse→resolver dispatch — this is the confirmed unified execution path. MiniBob refactor to register `ActivityExecutor` as an explicit vessel is pending; until then, `ActivityExecutor` remains an implicit internal vessel inside MiniBob.
+
 ## Requirements
 ### Requirement: MiniBob accepts trajectoryExecution pointer type
 MiniBob's `POST /v2/impulses/resolve` handler SHALL accept `pointer.type === "trajectoryExecution"` with payload `{ pointer: { type: "trajectoryExecution", activities: Array<{ templateId: string, column: number, row: number }>, goal?: string } }`. It SHALL return `{ success: true, content: "executionId: <id>\nwsUrl: <url>" }` immediately (fire-and-forget execution) using the same response format as `goalExecution`. Unknown pointer types SHALL still return HTTP 400 with `{ success: false, error: "unsupported pointer type: <type>" }`.

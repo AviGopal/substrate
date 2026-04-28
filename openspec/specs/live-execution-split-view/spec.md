@@ -1,7 +1,7 @@
 # live-execution-split-view Specification
 
 ## Purpose
-TBD - created by archiving change workbench-vessel-live-execution. Update Purpose after archive.
+Move `LiveExecutionPanel` out of the left sidebar and into an auto-opening right-side Sheet so that vessel selection, goal submission, and the activity palette remain visible and interactive during a live execution. The split-view keeps the trajectory grid unobstructed while giving the execution timeline its own independently scrollable pane.
 ## Requirements
 ### Requirement: LiveExecutionPanel displayed in right-side Sheet when execution is active
 In `TrajectoryEditorPage`, when a live execution becomes connected (`executionId !== null && wsConnectionState === 'connected'`), a right-side `Sheet` (shadcn Sheet component) SHALL automatically open and contain the `LiveExecutionPanel`. The Sheet SHALL remain open until the execution is disconnected or the user explicitly closes it. The Sheet SHALL NOT replace the left sidebar — vessel selection and goal submission SHALL remain in the left sidebar at all times.

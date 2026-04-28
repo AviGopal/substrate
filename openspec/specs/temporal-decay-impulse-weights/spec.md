@@ -4,6 +4,8 @@
 
 All loaded impulses are currently treated as equally relevant by both the `POST /v2/activities/recommend` recommendation pipeline and the `searchConcepts` function in concept-db. An impulse loaded 2 seconds ago (the file currently being edited) should exert much stronger signal than one loaded 20 minutes ago (context from a long-completed earlier task). This spec introduces temporal decay so that recently-loaded impulses contribute proportionally more weight in two places: the BM25 query-token selection that drives activity recommendation and the `calculateImpulseRelevancyBoosts` alpha/beta adjustment. MiniBob already records per-impulse load timestamps in `ImpulseLoadEvent.loaded_at_timestamp`; this spec surfaces those timestamps in the recommendation request.
 
+Temporal decay is a modifier on the **forward arm** of the two-direction learning duality: it scales the `impulseRelevance` posterior (alpha/beta boosts) by recency so that recently-loaded impulses carry proportionally more signal. The reverse arm (slot-binding selection and Thompson Sampling over activity variants) is unaffected by this spec; decay weights are not propagated into the selection posterior.
+
 ---
 
 ## Requirements

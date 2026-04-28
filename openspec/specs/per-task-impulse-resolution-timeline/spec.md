@@ -1,7 +1,7 @@
 # per-task-impulse-resolution-timeline Specification
 
 ## Purpose
-TBD - created by archiving change workbench-vessel-live-execution. Update Purpose after archive.
+Track impulse resolution events per task during live execution so the workbench can render an inline timeline showing which shapes were resolved, by which resolver tier, and at what latency for each task in the active execution.
 ## Requirements
 ### Requirement: ImpulseResolutionEvent type and store field
 The trajectoryStore SHALL define `ImpulseResolutionEvent = { shape: string; resolver: string; tier: string; latency_ms?: number; cost_usd?: number; timestamp: number }` and hold a runtime-only field `taskResolutions: Map<string, ImpulseResolutionEvent[]>` (not serialized to localStorage). A store action `addTaskResolution(taskId: string, event: ImpulseResolutionEvent)` SHALL append to the array for the given `taskId`, creating it if absent.

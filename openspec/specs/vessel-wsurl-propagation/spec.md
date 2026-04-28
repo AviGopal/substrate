@@ -1,7 +1,7 @@
 # vessel-wsurl-propagation Specification
 
 ## Purpose
-TBD - created by archiving change workbench-vessel-live-execution. Update Purpose after archive.
+When a vessel executes an activity it may open a dedicated WebSocket stream for that execution. This spec ensures the vessel's `wsUrl` — returned in the resolver response body — is propagated from `submitTrajectory` through `GoalSubmissionPanel` to `onExecutionStarted`, so the workbench can subscribe to the vessel-provided stream rather than the activity-api fallback stream.
 ## Requirements
 ### Requirement: submitTrajectory returns vessel-provided wsUrl alongside executionId
 `useTrajectoryExecution.submitTrajectory` SHALL return `Promise<{ executionId: string; wsUrl?: string }>`. When the vessel response content contains a `wsUrl: <url>` field, `wsUrl` SHALL be populated with that URL. When absent, `wsUrl` SHALL be `undefined`.

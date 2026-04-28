@@ -4,6 +4,8 @@
 
 `impulse_relevance_metrics` already tracks `times_not_loaded_succeeded` and `times_not_loaded_failed`, from which an `irrelevance_score` is computed and persisted. The score answers: "when this impulse was absent, did execution still succeed?" A high `irrelevance_score` is evidence that the impulse is noise for this activity. Currently this signal is computed but never used — it does not feed back into impulse loading decisions or activity recommendations. This spec closes that loop.
 
+**Foundation alignment note:** `irrelevance_score` is the symmetric counterpart to `relevance_score` in the two-direction learning duality. Both are forward-arm posteriors — `relevance_score` accumulates evidence that loading an impulse correlates with success; `irrelevance_score` accumulates evidence that *not* loading it also correlates with success. Together they form a balanced signal: neither direction can dominate without sufficient observations. `net_value_score` is the combined view, not a replacement for either component.
+
 Three changes are required:
 
 1. **`net_value_score` field** — a combined signal (`relevance_score - irrelevance_score * 0.5`) stored alongside existing metrics so downstream consumers do not have to recompute it.

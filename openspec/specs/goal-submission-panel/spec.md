@@ -1,7 +1,9 @@
 # goal-submission-panel Specification
 
 ## Purpose
-TBD - created by archiving change trajectory-execution-integration. Update Purpose after archive.
+Defines the Goal Submission Panel in the workbench trajectory editor: a UI surface that accepts a goal description (or a composed trajectory) and submits it as a goal-shaped or trajectory-shaped impulse pointer to activity-api, which resolves it through discovery to an execution vessel (MiniBob). On success the returned executionId is auto-wired into the live execution panel.
+
+> **Note**: The `goalExecution` and `trajectoryExecution` pointer resolution paths described here follow the unified execution path — goal/activity-template-shaped pointers resolve through standard impulse→resolver dispatch (activity-api → discovery-vessel → MiniBob). This is the confirmed direction; MiniBob refactor to handle these through the unified impulse surface is pending.
 ## Requirements
 ### Requirement: Goal text input and submit button
 The trajectory editor SHALL provide a "Run Goal" panel with a multi-line text input for the goal description and a "Run" button. On submit, the panel SHALL POST to activity-api `POST /v2/impulses/resolve` with `{ pointer: { type: "goalExecution", goal: "<text>" } }`. The panel SHALL be disabled while a submission is in flight or a live execution is already connected. The panel SHALL also render a "Run Trajectory" button (see Requirement: Run Trajectory button in GoalSubmissionPanel).

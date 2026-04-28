@@ -1,7 +1,9 @@
 # minibob-goal-execution-resolver Specification
 
 ## Purpose
-TBD - created by archiving change trajectory-execution-integration. Update Purpose after archive.
+Define the `POST /v2/impulses/resolve` surface on MiniBob's HTTP server that handles `goalExecution` and `trajectoryExecution` pointer types, enabling external callers and other vessels to dispatch goal execution through the standard impulse→resolver dispatch path rather than via bespoke REST calls.
+
+> **Unified execution path is the confirmed direction; MiniBob `goal-processor.ts` + `ActivityExecutor` refactor pending to implement this.**
 ## Requirements
 ### Requirement: MiniBob exposes POST /v2/impulses/resolve endpoint
 MiniBob's HTTP server SHALL expose `POST /v2/impulses/resolve` accepting `{ pointer: { type: string, ... } }`. For unknown pointer types, it SHALL return `{ success: false, error: "unsupported pointer type: <type>" }` with HTTP 400. All existing endpoints SHALL remain unchanged. The handler SHALL support both `goalExecution` and `trajectoryExecution` pointer types.

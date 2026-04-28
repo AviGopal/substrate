@@ -1,7 +1,7 @@
 # live-execution-no-events-fallback Specification
 
 ## Purpose
-TBD - created by archiving change workbench-vessel-live-execution. Update Purpose after archive.
+Defines the fallback behavior for `LiveExecutionPanel` when a WebSocket connection is established but no task events arrive within 30 seconds, preventing silent failures from appearing as indefinite loading states to the user.
 ## Requirements
 ### Requirement: No-events fallback notice after 30-second timeout
 `LiveExecutionPanel` SHALL display a "completed without events" fallback notice when the WebSocket connection status is `"connected"` (`isLiveConnected === true`) and `taskResolutions.size === 0` for more than 30 consecutive seconds. The notice SHALL be dismissed automatically if any task resolution event arrives before the timer expires or after the notice is shown. The notice SHALL be cleared when the execution is disconnected.

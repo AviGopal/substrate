@@ -1,7 +1,7 @@
 # vessel-selector-panel Specification
 
 ## Purpose
-TBD - created by archiving change workbench-vessel-selector. Update Purpose after archive.
+Provides a workbench UI panel for browsing the discovery-vessel registry and routing trajectory execution to a specific executor vessel. Users can inspect per-vessel health, Thompson selection strength, and connect to a target vessel so that subsequent activity dispatches are scoped to it.
 ## Requirements
 ### Requirement: Panel renders a row for each executor vessel
 `VesselSelectorPanel` SHALL render one row per vessel returned by `useVesselRegistry`. Each row SHALL display: a health status dot (green = healthy, yellow = degraded, grey = unknown), the vessel name (truncated to 20 chars with ellipsis), the vesselId truncated to 8 chars, a last-seen timestamp formatted as relative time (e.g., "2 min ago"), the estimated Thompson selection strength expressed as a percentage (α / (α + β) × 100, rounded to 0 decimal places), and a "Connect" button.

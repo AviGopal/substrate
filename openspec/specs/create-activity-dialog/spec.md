@@ -1,7 +1,7 @@
 # create-activity-dialog Specification
 
 ## Purpose
-TBD - created by archiving change workbench-trajectory-execution. Update Purpose after archive.
+Provides a workbench dialog for authoring a new `activity_template` impulse and posting it to the activity-api, then inserting the returned template into the trajectory grid so it is immediately available for composition.
 ## Requirements
 ### Requirement: CreateActivityDialog renders a form for a new ActivityTemplate
 The `CreateActivityDialog` component (at `src/components/trajectory/CreateActivityDialog.tsx`) SHALL render a modal dialog with the following form fields:

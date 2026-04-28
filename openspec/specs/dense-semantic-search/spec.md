@@ -48,11 +48,11 @@ The `activity` table in `metabob-activity-api` SHALL gain two new optional field
 - `name_embedding`: `option<array<float>>` — 384-element L2-normalised vector of the activity's `name` field
 - `description_embedding`: `option<array<float>>` — 384-element L2-normalised vector of the activity's `description` field (may be `NONE` when `description` is absent)
 
-Both fields SHALL be added via a SurrealDB migration file at `sql/schemas/045-dense-embeddings.surql` using `DEFINE FIELD IF NOT EXISTS` statements on the `activity` table. No FULLTEXT or HNSW index is needed — cosine similarity is computed in-process.
+Both fields SHALL be added via a SurrealDB migration file at `sql/schemas/050-dense-embeddings.surql` using `DEFINE FIELD IF NOT EXISTS` statements on the `activity` table. No FULLTEXT or HNSW index is needed — cosine similarity is computed in-process.
 
 #### Scenario: migration applied idempotently
 
-- **WHEN** `045-dense-embeddings.surql` is applied on a database that already has the fields
+- **WHEN** `050-dense-embeddings.surql` is applied on a database that already has the fields
 - **THEN** the `IF NOT EXISTS` guard produces no error and the existing data is unchanged
 
 #### Scenario: new template created without embedding yet
@@ -69,7 +69,7 @@ The `concept` table in `concept-db` SHALL gain two new optional fields:
 - `content_embedding`: `option<array<float>>` — 384-dim vector of the concept's `content` field
 - `summary_embedding`: `option<array<float>>` — 384-dim vector of the concept's `summary` field
 
-Both fields SHALL be added via a migration file at `sql/migrations/005-dense-embeddings.surql` using `DEFINE FIELD IF NOT EXISTS`. Computation and cosine scoring follow the same rules as for `activity`.
+Both fields SHALL be added via a migration file under `sql/core/` (e.g., `004-dense-embeddings.surql`) using `DEFINE FIELD IF NOT EXISTS`. Computation and cosine scoring follow the same rules as for `activity`.
 
 #### Scenario: concept with null content
 

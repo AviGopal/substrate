@@ -1,10 +1,13 @@
 # vessel-execution-routing Specification
 
 ## Purpose
-TBD - created by archiving change workbench-vessel-selector. Update Purpose after archive.
+Defines how the workbench routes goal submissions to a specific executor vessel, including vessel selection state in the trajectory store, client-side Thompson posterior tracking per vessel, fallback behaviour when no vessel is selected, and error classification for offline vessels.
+
 ## Requirements
 ### Requirement: Trajectory store holds selected vessel state
 `TrajectoryState` SHALL include `selectedVesselId: string | null` and `selectedVesselEndpoint: string | null`, both defaulting to `null`. `TrajectoryState` SHALL also include `vesselScores: Record<string, { alpha: number; beta: number }>`, defaulting to `{}`.
+
+> **Interim note — UI-local Thompson cache**: `vesselScores` is a client-side approximation of the Thompson posterior, kept in workbench localStorage because the backend does not yet expose vessel-level scores as a resolvable shape. Phase 9 of the impulse-activity-loop change (2026-04-26) will expose `thompson_posterior` as a resolvable shape; once that lands, this localStorage cache can be replaced by resolving the `thompson_posterior` shape for each vessel ID, and `recordVesselOutcome` can delegate to the write resolver rather than mutating local state directly.
 
 #### Scenario: Initial store state
 - **WHEN** the store is initialized with no localStorage data
