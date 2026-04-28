@@ -275,6 +275,7 @@ export interface UIComponentImpulse {
     queryId?: string
     streaming?: boolean
     interactive?: boolean
+    componentId?: string  // stable identity for upsert via render_ui
   }
   dataRef?: string
   deletable?: boolean

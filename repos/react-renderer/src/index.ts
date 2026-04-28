@@ -371,23 +371,39 @@ function buildHandler() {
     return c.json({ impulse })
   })
 
-  // Create impulse
+  // Create impulse (or update in-place if componentId matches an existing impulse)
   app.post('/impulses', async (c) => {
     try {
       const body = await c.req.json()
-      const { primitive, position, size, layer, animation, priority, metadata, dataRef, deletable } = body
+      const { primitive, position, size, layer, animation, priority, metadata, dataRef, deletable, componentId } = body
 
       if (!primitive) {
         return c.json({ error: 'Missing primitive' }, 400)
       }
 
+      // Upsert: if a stable componentId is provided and already exists, update in-place
+      if (componentId) {
+        const existing = impulseStore.getAll().find(
+          (i) => i.metadata?.componentId === componentId
+        )
+        if (existing) {
+          const patch: Partial<UIComponentImpulse> = {
+            content: primitive as Primitive,
+            pointer: { ...existing.pointer, primitive: primitive as Primitive, ...(layer !== undefined && { layer }), ...(animation && { animation }), ...(position && { position }) },
+          }
+          impulseStore.update(existing.id, patch)
+          return c.json({ impulse: impulseStore.get(existing.id) }, 200)
+        }
+      }
+
       const impulse = impulseStore.create(primitive as Primitive, {
+        id: componentId ?? undefined,
         position,
         size,
         layer,
         animation,
         priority,
-        metadata,
+        metadata: { ...metadata, ...(componentId && { componentId }) },
         dataRef,
         deletable
       })
