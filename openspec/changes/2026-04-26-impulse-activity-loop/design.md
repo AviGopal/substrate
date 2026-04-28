@@ -1223,7 +1223,22 @@ Items in this section require user (operator) action because they need elevated 
 
 **Current state**: Forward-fix delivered — `prune-activity` now ships `dryRun=true` by default, and the ribosome `dispatch_write_succeeded` task gracefully no-ops on 403. Pipeline is fully observable; mutations are blocked behind a clean error boundary.
 
-**Operator action required**: Either (a) grant `admin` scope to the existing API key via identity-vessel admin endpoint, or (b) issue a separate admin-scoped key (suggested name: `mb_prod_admin_key`) for write operations. Update both `~/.metabob/config.json` (operator workstation) and `repos/deployment/environments/production.values.yaml:43` (canary helm values), then re-deploy activity-system.
+**Resolution attempt 2026-04-27 (Option A failed)**: Agent `a070571f73d229559` attempted Option A — seed a new admin-scoped API key into canary via the init-data Helm chart and a SOPS-edited secret. The attempt failed for two compounding reasons surfaced as new findings:
+
+- **F-NN-H**: The init-data Helm chart's SurrealQL template encodes `org_id` as a record reference (`organizations:metabob`) while the `api_key` table schema declares `TYPE string`. SurrealDB rejects the CREATE with a coercion error, but the `IF !$existing_key THEN CREATE END` idempotency guard masks the failure as a no-op behind a 200 HTTP response. The 5 rows currently in canary's `api_key` table all predate the schema tightening; every recent CREATE has been silently no-op'ing. The seeded admin key was never persisted.
+- **F-NN-I**: Even if F-NN-H were fixed and the row were inserted, `repos/identity-vessel/src/services/validation.ts` `validateKeyFormat()` returns no `scopes` field, and `resolveAPIKey()` in `repos/identity-vessel/src/resolvers/auth.ts` hardcodes `scopes: validation.scopes || ['read', 'write']`. There is no path through identity-vessel HMAC validation that yields `scopes.includes('admin')`. The admin gate at `routes/impulses.ts:1991, 2073` therefore cannot be satisfied via API-key auth at all — only via Bearer JWT carrying `role: admin`.
+
+State after the attempt: cluster reverted; no credential leaked; SOPS-edited values discarded; init-data not re-run. Both Option A (seed admin-scoped API key) and Option B (grant admin scope to existing key via identity-vessel admin endpoint) are blocked: Option A needs F-NN-H fixed first, Option B needs identity-vessel scope plumbing (F-NN-I) before it can issue a key with non-default scopes.
+
+**Operator action required (recommended path: Option C — Bearer JWT admin auth)**:
+
+1. Login to the canary dashboard as `avi@metabob.com` (admin user, password seeded into identity-vessel during initial provisioning).
+2. Capture the issued JWT from the dashboard session (browser devtools → Application → cookies/local storage, or via the `/v1/auth/login` API). The JWT carries `role: admin` in its claims, which satisfies the admin gate at `impulses.ts:1991, 2073` (`role === 'admin'` OR `scopes.includes('admin')`).
+3. For admin-scope ops (`activityTemplate_update`, `activityTemplate_deprecate`, F-49 row deletes via privileged endpoints), use `Authorization: Bearer <jwt>` instead of `Authorization: ApiKey <key>`.
+4. JWT lifetime is ~15 min; re-login as needed during longer maintenance windows.
+5. Optional ergonomic step: save the JWT to `~/.metabob/admin.env` as `METABOB_ADMIN_BEARER=<jwt>` for opt-in by tooling that wants admin-mode (never check this file into git; never load it implicitly — must be explicitly sourced).
+
+To unblock Option A or Option B in the future, F-NN-H (init-data SurrealQL coercion) and F-NN-I (identity-vessel scope plumbing) need to be addressed in their respective subsystems.
 
 **Without this**: `prune-activity` actual destructive dispatch, `replace-activity` write-back path, `core-activity-audit` re-registration, and ribosome `dispatch_write_succeeded` task all remain in observe-only mode. Registry-quality pipeline runs end-to-end but never actually mutates the registry.
 
@@ -1321,3 +1336,69 @@ The artifact also includes 13 R6 (test/auto-generated artifact ids), 8 R8 (no-ta
 - What's the canary identity-vessel replica count? If `>1`, are `API_KEY_SECRET` env values identical across replicas? (Hypothesis G check.)
 - Is there a way to enable per-request status-code logging in `validateApiKeyViaIdentityVessel` short of a code change? Current canary log level should already capture the WARN line, so a `kubectl logs --since=1h | grep "Identity vessel returned"` on the next observation window is the cheapest next step.
 - What's the typical activity-api-pod outbound request rate to identity-vessel during a meta-activity burst? If we see >20 `/v1/auth/resolve` calls/minute from a single activity-api pod in logs, Hypothesis F is confirmed without a code change.
+
+### F-NN-H: init-data SurrealQL silently no-ops on api_key CREATE (org_id coercion)
+
+**Symptom**: Direct SurrealDB queries against canary's `api_key` table return coercion errors when init-data attempts to CREATE a new key:
+
+```
+Couldn't coerce value for field 'org_id' of 'api_key:<id>':
+  Expected 'string' but found 'organizations:metabob'
+```
+
+The init-data Helm chart wraps the CREATE in `IF !$existing_key THEN CREATE END` for idempotency. When the embedded statement fails, SurrealDB returns `200 OK` with the error nested in the per-statement result body. The init-data pod's bash wrapper has `set -e`, but `set -e` only sees curl's exit code (HTTP 200), not the embedded statement-level failure. Result: every CREATE silently no-ops while the pod logs success.
+
+**Evidence**: A read-only inspection of canary's `api_key` table (2026-04-27, agent `a070571f73d229559`) found 5 rows, all predating the `org_id` schema tightening. The agent's Option A attempt to seed `mb_prod_admin_key` via init-data left no new row, and re-running the helmfile produced no insert despite the new entry in the SOPS-edited Helm values. Same family as F-49 (org_id schema-coercion drift between writers and the table schema).
+
+**Root cause**: Schema (probably `sql/000-auth-schema.surql` in deployment, or wherever `api_key.org_id` is defined) declares `TYPE string`, but the init-data SurrealQL template at `repos/deployment/charts/init-data/templates/configmap.yaml` (or the rendered `init.surql` it produces) passes `org_id = organizations:metabob` (record reference syntax — would be valid for a `record<organizations>` typed field) instead of `org_id = "metabob"` (string literal — what the schema requires).
+
+**Fix sketch (operator-facing, not applied here)**:
+
+1. Edit the init-data SurrealQL template to wrap the org_id value as a string literal: `org_id = "metabob"` (or `org_id = $org_slug` if the value is parameterised). Confirm against the live `api_key` schema with `INFO FOR TABLE api_key;` before deciding the right form.
+2. Re-run `helmfile -e canary apply` (init-data is a Helm hook; it'll re-execute against the existing DB). Existing rows stay untouched; the previously-failing CREATE now succeeds.
+3. Optional: tighten init-data's bash wrapper to parse the SurrealDB response body and exit non-zero when any statement reports `status: "ERR"`, so the next coercion failure surfaces as a pod-level error instead of a silent no-op.
+
+**Without this**: any seeded API key (including admin-scoped keys minted by future Option A retries) silently fails to persist. The `api_key` table in canary is effectively read-only via init-data until this is addressed.
+
+### F-NN-I: identity-vessel auth returns hardcoded scopes; admin-scope unreachable via API-key
+
+**Symptom**: There is no path through identity-vessel API-key validation that yields `scopes.includes('admin')`. The admin gate at `repos/metabob-activity-api/src/routes/impulses.ts:1991, 2073` accepts either `role === 'admin'` (from JWT claims) or `scopes.includes('admin')` (from API-key validation), but the latter branch is unreachable as the code currently stands.
+
+**Evidence (code citation)**:
+
+- `repos/identity-vessel/src/services/validation.ts` — `validateKeyFormat()` performs HMAC verification and returns `{valid, orgId, userId, keyId}`. There is **no** `scopes` field on the return shape.
+- `repos/identity-vessel/src/resolvers/auth.ts` — `resolveAPIKey()` consumes the validation result and produces:
+
+  ```ts
+  scopes: validation.scopes || ['read', 'write']
+  ```
+
+  Since `validation.scopes` is always undefined, every successfully HMAC-validated key receives the hardcoded default `['read', 'write']`. Even if the underlying `api_key` row stored a `scopes: ['admin']` array, the validation pipeline doesn't read it, so the value never reaches the activity-api admin gate.
+
+**Fix paths (operator-facing, not applied here)**:
+
+- **(a)** Add a DB-backed scope lookup: after `validateKeyFormat()` succeeds, query the `api_key` row by `keyId` and return `scopes` alongside the existing fields. Then thread `scopes` through `resolveAPIKey()` instead of falling back to the hardcoded default. This is the cleanest fix because scope changes don't require re-issuing the key.
+- **(b)** Embed scopes in the HMAC-signed payload: change the key format to include scopes as part of the HMAC input (e.g. `mb-{base64(keyId+scopes)}-{hmac32}`), so `validateKeyFormat()` recovers them deterministically. Has the downside that scope changes require re-issuing the key.
+
+Either path also needs the seed/issue endpoints (`/v1/keys/issue` or equivalent) to accept and persist a `scopes` parameter, which they currently do not surface.
+
+**Without this**: only Bearer JWT admin auth works (Option C path documented under B-2). Both Option A (seed admin API key) and Option B (grant admin scope to existing API key) hit this ceiling regardless of whether F-NN-H is fixed.
+
+### F-NN-J: self-canary API key authenticates without HMAC validation (mystery)
+
+**Symptom**: Existing keys in canary SOPS — e.g. `mb_inst_canary_<hex>`, `mb_self_local_<hex>`, plus the `self-canary` key minibob uses for activity-api auth — all use **underscore-separated** layout with **no HMAC suffix**. Per `repos/identity-vessel/src/services/validation.ts` `validateKeyFormat()`, valid keys must match `mb-{base64(...)}-{hmac32}` (dash-separated with HMAC suffix). The existing keys cannot pass that validator as written. Yet minibob's `self-canary` key reportedly works against canary activity-api auth.
+
+**Three hypotheses**:
+
+- **(a) Deploy drift**: canary identity-vessel was built from a different revision than current `main` (or current `dev`). Older code may have accepted underscore-separated keys without HMAC. If true, the next identity-vessel re-deploy would break existing minibob auth.
+- **(b) Bypass path**: there's a fallback that skips HMAC validation. Candidates: the `X-Internal-Api-Key` header path that surfaced in F-44, or a leftover dev/test fallback that wasn't fully removed in the 2026-04-12 cleanup. Activity-api's auth chain has multiple layers (`validateApiKeyWithFallback` → identity-vessel → discovery-vessel → direct SurrealDB); one of them may be accepting the underscore-style key.
+- **(c) Auth currently broken or unenforced**: the gate is open and we just don't notice because nothing has tried to abuse it. Worst case for security posture.
+
+**Recommended investigation (operator)**:
+
+1. Confirm canary identity-vessel image/sha matches current source: `kubectl get pods -n activity-system -l app.kubernetes.io/name=identity-vessel -o jsonpath='{.items[*].spec.containers[*].image}'` and trace the tag back to a deployment commit.
+2. Confirm `API_KEY_SECRET` is set on the identity-vessel pod: `kubectl exec -n activity-system -l app.kubernetes.io/name=identity-vessel -- env | grep API_KEY_SECRET`. If unset, HMAC validation is silently disabled (defensive default depends on the code path; some return `valid: true` if secret is missing — needs verification).
+3. Tail minibob's actual auth path: tail activity-api logs (`kubectl logs ... metabob-activity-api -f | grep -i "api[ _]key"`) and trigger a minibob call with the `self-canary` key. The log lines should record which validation branch succeeded — identity-vessel HMAC, discovery-vessel fallback, direct SurrealDB lookup, or the `X-Internal-Api-Key` shortcut. That identifies which of the three hypotheses applies.
+4. Cross-check the `api_key` table for the underscore-style keys: `SELECT * FROM api_key WHERE id CONTAINS 'self_canary' OR id CONTAINS 'inst_canary';`. If the rows exist with `scopes: ['read','write']` and a stored `key_hash`, validation may be hashing the raw key against a stored bcrypt/argon hash rather than HMAC-verifying — a different code path entirely from `validateKeyFormat()`.
+
+**Without this**: the discrepancy between documented auth flow (HMAC required) and observed behaviour (underscore keys accepted) is a security blind spot. If hypothesis (c) is correct, anyone with network access to identity-vessel `/v1/auth/resolve` can mint successful auth without a valid signature. If (a), a future identity-vessel deploy will break canary auth without warning. If (b), the bypass should be documented and either justified or removed.
