@@ -1207,21 +1207,25 @@ Items in this section require user (operator) action because they need elevated 
 
 **Without this**: `prune-activity` actual destructive dispatch, `replace-activity` write-back path, `core-activity-audit` re-registration, and ribosome `dispatch_write_succeeded` task all remain in observe-only mode. Registry-quality pipeline runs end-to-end but never actually mutates the registry.
 
-### F-49: Pre-existing corrupted DB rows with doubled-prefix wrapping
+### F-49: Pre-existing corrupted DB rows with doubled/wrapped-id literals (revised 2026-04-27)
 
-**Symptom**: `GET /v2/activities/templates` returns 3 templates whose ids are wrapped twice — `activity:⟨activity:⟨hello-world-minimal⟩⟩`, `activity:⟨activity:⟨execute-shell-command⟩⟩`, `activity:⟨activity:⟨prune-activity⟩⟩`. Their natural id (bare name) returns 404 because the stored id has the doubled wrap.
+**Symptom**: `GET /v2/activities/templates` returns templates whose ids contain literal `⟨` and `⟩` characters — e.g. `activity:⟨activity:⟨hello-world-minimal⟩⟩`, `activity:⟨API Data Fetcher with Limited Tools⟩`. Their natural id (bare name) returns 404 because the stored id has the wrap baked in.
 
-**Current state**: F-49 forward-fix landed in commit `caa86b5` — input ids are now sanitised before UPSERT, so no new doubled-prefix rows can be created. Pre-existing rows persist; they are unreachable via API but still occupy registry space.
+**Magnitude (revised)**: A read-only canary registry inventory (2026-04-27, see `openspec/changes/2026-04-27-activity-registry-quality-pass/artifacts/canary-prune-candidates-2026-04-27.md`) finds **794 corrupted-id rows** (~34% of the 2322-row registry), not 3 as initially documented. Almost all are `category=tool` with LLM-descriptive names ("API Data Fetcher with Validation", "Analyze App Usage Traces"…) — improviser/ribosome auto-extracted templates registered via the imperative auto-register paths that were neutralised in this session (commits `5d6da4c` isEmbedded, `360e0de` ribosome refactor). Most carry `sample_count` of 0 or 1 — exploration debris that never went anywhere.
 
-**Operator action required**: Connect to canary SurrealDB with root credentials and DELETE the 3 corrupted rows. Suggested SQL (verify with SELECT first; expect 3 rows; remove the duplicate `prune-activity` row alongside the doubled-prefix ones):
+**Current state**: F-49 forward-fix landed in commit `caa86b5` — input ids are now sanitised before UPSERT, so no new doubled-prefix or descriptive-wrapped rows can be created. The 4 imperative auto-register sites that produced this debris have all been neutralised. Existing 794 rows persist; they are unreachable by bare-id but still occupy registry space and skew counts.
+
+**Operator action required**: Connect to canary SurrealDB with root credentials and DELETE the 794 corrupted rows. The full id list is in `openspec/changes/2026-04-27-activity-registry-quality-pass/artifacts/canary-prune-candidates-2026-04-27.md` under "R1: Corrupted id (HIGH)" — also persisted as structured data in the matching `canary-prune-manifest.json`. Suggested SQL pattern (verify count with SELECT first):
 
 ```sql
-SELECT id FROM activity_template WHERE meta::id(id) STARTSWITH 'activity:⟨' OR meta::id(variant_id) STARTSWITH 'activity:⟨';
--- verify 3 rows match expectation, then:
-DELETE FROM activity_template WHERE meta::id(id) STARTSWITH 'activity:⟨' OR meta::id(variant_id) STARTSWITH 'activity:⟨';
+SELECT count() AS bad FROM activity_template WHERE meta::id(id) CONTAINS '⟨' OR meta::id(variant_id) CONTAINS '⟨';
+-- verify count is in the expected range (~794), then:
+DELETE FROM activity_template WHERE meta::id(id) CONTAINS '⟨' OR meta::id(variant_id) CONTAINS '⟨';
 ```
 
-**Without this**: Three orphaned rows remain in the registry. They are unreachable by id, do not cause functional failures, but do skew template-count metrics and may surface in raw SurrealDB exports.
+The artifact also includes 13 R6 (test/auto-generated artifact ids), 8 R8 (no-tasks stub registrations), and 3 R7 (unknown-resolver references) candidates — total HIGH-confidence delete count: 794 + 13 + 8 + 3 = **818 rows** safely removable. R3 (never-executed, sample_count=0, count: 2074) and R9 (duplicate task graph, count: 994) are MEDIUM/LOW confidence — operator review needed before deleting.
+
+**Without this**: 794+ orphaned rows persist; template-count metrics skewed; recommendation/Thompson Sampling has to filter through dead weight; the registry's claimed total of 2767 is inflated by ~30%.
 
 ### F-NN-G: Activity-api intermittent 401 on POST /v2/impulses/resolve
 
