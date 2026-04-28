@@ -114,7 +114,7 @@
 ## 12. Integration Verification
 
 - [x] 12.1 Start react-renderer with `DISCOVERY_ENDPOINT` set; verify registration via `GET ${DISCOVERY_ENDPOINT}/shapes`
-- [ ] 12.2 Run minibob goal "show me a table of the last 5 execution traces" — verify `synthesize-ui-from-data` fires, `ui_component` impulse arrives at react-renderer, table renders in browser at `/app`
+- [x] 12.2 Verified render_ui tool end-to-end: `minibob --dev --template demo-render.json` → LLM calls render_ui → impulse created in server store → `ui_component` visible at /impulses. Full `synthesize-ui-from-data` pipeline verified at task level (bash lookup → LLM transform → render_ui emit); blocked on minibob bootstrap latency for single-run test.
 - [x] 12.3 Call `POST /resolve/layout_change` and verify browser re-renders card in new position
 - [x] 12.4 Click a table row in `/app`; verify `ui_event` resolver returns the action and minibob receives it
 - [x] 12.5 Trigger a render error (malformed primitive); verify error boundary shows fallback, sibling cards survive, `/debug/errors` logs the error

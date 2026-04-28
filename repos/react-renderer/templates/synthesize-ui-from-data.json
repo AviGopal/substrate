@@ -32,12 +32,12 @@
     },
     {
       "id": "emit_ui_component",
-      "description": "Emit the synthesized primitive spec as a ui_component impulse",
-      "resolver": "ui_component",
-      "config": {
-        "primitive": "{{primitive_spec}}",
-        "position": { "type": "flow" },
-        "animation": "fade"
+      "description": "Emit the synthesized primitive spec as a ui_component impulse via render_ui tool",
+      "prompt": {
+        "template": "Call render_ui with this exact primitive spec. Do not modify it.\n\nPrimitive: {{primitive_spec}}\n\nCall render_ui once with `primitive` set to the JSON above. Use animation: \"fade\" and position mode: \"flow\".",
+        "variables": [
+          { "name": "primitive_spec", "description": "The synthesized primitive JSON to render" }
+        ]
       },
       "inputShapes": ["primitive_spec"],
       "outputShapes": ["ui_component"]

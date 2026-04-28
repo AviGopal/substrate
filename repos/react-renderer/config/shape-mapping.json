@@ -3,6 +3,14 @@
     "type": "data-table-v2",
     "defaults": { "pageSize": 20 }
   },
+  "activityExecutionTrace": {
+    "type": "container",
+    "defaults": { "layout": "vertical" },
+    "children": [
+      { "type": "progress", "defaults": {} },
+      { "type": "data-table-v2", "defaults": { "pageSize": 10 } }
+    ]
+  },
   "markdown_document": {
     "type": "text",
     "defaults": { "variant": "prose" }
