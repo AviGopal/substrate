@@ -1,0 +1,55 @@
+{
+  "id": "render-concept-explorer",
+  "name": "Render: Concept Explorer",
+  "category": "tool",
+  "description": "Renders concept-db data as interactive UI. Accepts concept graph data (nodes + edges) and related concepts, renders them using graph and table primitives. Works with live concept-db impulse data or explicit JSON variables.",
+  "inputShapes": ["conceptGraph", "relatedConcepts"],
+  "outputShapes": ["ui_component"],
+  "tasks": [
+    {
+      "id": "render_header",
+      "description": "Render the concept name header and breadcrumb",
+      "dependencies": [],
+      "prompt": {
+        "template": "Render a header for a concept explorer view using render_ui.\n\nConcept name: {{conceptName}}\nDescription: {{conceptDescription}}\n\nCall render_ui once with:\n- primitive.type: container\n- primitive.layout: horizontal\n- primitive.padding: 16\n- primitive.align: center\n- primitive.gap: 12\n- primitive.naked: true\n- primitive.children:\n  1. A badge (variant: info, text: 'Concept')\n  2. A text heading with the concept name\n  3. If description is provided: a text body with the description (use style: muted)\n- animation: none\n- position.mode: flow",
+        "variables": [
+          { "name": "conceptName", "type": "string", "required": true, "description": "Name of the concept to explore" },
+          { "name": "conceptDescription", "type": "string", "required": false, "description": "Short description of the concept" }
+        ]
+      },
+      "inputShapes": [],
+      "outputShapes": ["ui_component"],
+      "retry": { "strategy": "simple", "maxAttempts": 2 }
+    },
+    {
+      "id": "render_graph",
+      "description": "Render the concept relationship graph using the graph primitive",
+      "dependencies": ["render_header"],
+      "prompt": {
+        "template": "Render a concept relationship graph using render_ui.\n\nConcept graph data (JSON): {{conceptGraphJson}}\n\nThe data has this structure:\n```\n{\n  nodes: Array<{ id: string, label: string, color?: string, size?: number }>,\n  edges: Array<{ source: string, target: string, label?: string, weight?: number }>\n}\n```\n\nIf {{conceptGraphJson}} is empty or unavailable, generate a small example graph:\n- 5 nodes representing concepts related to {{conceptName}}\n- 4-6 edges showing relationships\n- Use colors: primary concept #2563eb, related #7c3aed, supporting #0891b2\n\nCall render_ui with:\n- primitive.type: graph\n- primitive.nodes: the nodes array\n- primitive.edges: the edges array\n- primitive.height: 400\n- primitive.layout: force\n- animation: fade\n- position.mode: flow",
+        "variables": [
+          { "name": "conceptName", "type": "string", "required": true, "description": "Name of the primary concept" },
+          { "name": "conceptGraphJson", "type": "string", "required": false, "description": "JSON string with {nodes, edges} from conceptGraph impulse. If empty, LLM generates example data." }
+        ]
+      },
+      "inputShapes": ["conceptGraph"],
+      "outputShapes": ["ui_component"],
+      "retry": { "strategy": "simple", "maxAttempts": 2 }
+    },
+    {
+      "id": "render_related",
+      "description": "Render related concepts as a sortable table",
+      "dependencies": ["render_header"],
+      "prompt": {
+        "template": "Render related concepts as a data table using render_ui.\n\nRelated concepts data (JSON): {{relatedConceptsJson}}\n\nIf data is empty or unavailable, generate example related concepts for {{conceptName}}:\n- 6-8 related concept rows\n- Columns: name (string), relation (string — e.g. 'is-a', 'part-of', 'uses', 'related-to'), strength (number 0-1)\n\nCall render_ui with:\n- primitive.type: data-table-v2\n- primitive.columns: [{key: 'name', header: 'Concept', type: 'string'}, {key: 'relation', header: 'Relation', type: 'status'}, {key: 'strength', header: 'Strength', type: 'number'}]\n- primitive.data: the rows array\n- primitive.pageSize: 10\n- animation: fade\n- position.mode: flow",
+        "variables": [
+          { "name": "conceptName", "type": "string", "required": true, "description": "Name of the primary concept" },
+          { "name": "relatedConceptsJson", "type": "string", "required": false, "description": "JSON array of related concepts from relatedConcepts impulse" }
+        ]
+      },
+      "inputShapes": ["relatedConcepts"],
+      "outputShapes": ["ui_component"],
+      "retry": { "strategy": "simple", "maxAttempts": 2 }
+    }
+  ]
+}

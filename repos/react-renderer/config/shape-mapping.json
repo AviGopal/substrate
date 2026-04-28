@@ -45,7 +45,23 @@
   },
   "conceptGraph": {
     "type": "graph",
-    "defaults": {}
+    "defaults": { "height": 460, "layout": "force" }
+  },
+  "relatedConcepts": {
+    "type": "data-table-v2",
+    "defaults": { "pageSize": 15, "columns": ["name", "relation", "strength"] }
+  },
+  "conceptUsageStats": {
+    "type": "chart",
+    "defaults": { "chartType": "bar", "xKey": "concept", "yKey": "count" }
+  },
+  "conceptSequence": {
+    "type": "container",
+    "defaults": { "layout": "vertical" },
+    "children": [
+      { "type": "text", "defaults": {} },
+      { "type": "data-table-v2", "defaults": { "pageSize": 10, "columns": ["step", "concept", "action"] } }
+    ]
   },
   "validation_result": {
     "type": "container",

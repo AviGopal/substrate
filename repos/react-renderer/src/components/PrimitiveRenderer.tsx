@@ -12,6 +12,7 @@ import { DataTable } from '../primitives/data-table'
 import { DataTableTanstack, type DataTableTanstackPrimitive } from '../primitives/data-table-tanstack'
 import { Chart } from '../primitives/chart'
 import { DesignToken } from '../primitives/design-token'
+import { Graph } from '../primitives/graph'
 import { FormPrimitive } from '../client/primitives/form'
 import { ErrorBoundary } from './ErrorBoundary'
 
@@ -106,8 +107,7 @@ export function PrimitiveRenderer({ primitive, onAction, depth = 0 }: PrimitiveR
       return <FormPrimitive primitive={primitive} onAction={onAction} />
 
     case 'graph':
-      // Graph primitive - using react-force-graph-2d
-      return <GraphPrimitive primitive={primitive} />
+      return <Graph primitive={primitive} />
 
     case 'input':
       // Input primitive
@@ -152,47 +152,8 @@ export function PrimitiveRenderer({ primitive, onAction, depth = 0 }: PrimitiveR
 }
 
 // ============================================================================
-// Additional Primitive Components (inline for now)
+// Additional Primitive Components (inline)
 // ============================================================================
-
-function GraphPrimitive({ primitive }: { primitive: any }) {
-  // Simplified graph rendering - would use react-force-graph-2d in full implementation
-  const { nodes = [], edges = [] } = primitive
-
-  return (
-    <div style={{
-      padding: '16px',
-      backgroundColor: '#f9fafb',
-      borderRadius: '8px',
-      border: '1px solid #e4e4e7'
-    }}>
-      <div style={{ marginBottom: '8px', fontWeight: 500 }}>
-        Graph: {nodes.length} nodes, {edges.length} edges
-      </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-        {nodes.map((node: any) => (
-          <div
-            key={node.id}
-            style={{
-              padding: '8px 12px',
-              backgroundColor: node.color || '#2563eb',
-              color: 'white',
-              borderRadius: '4px',
-              fontSize: '0.875rem'
-            }}
-          >
-            {node.label}
-          </div>
-        ))}
-      </div>
-      {edges.length > 0 && (
-        <div style={{ marginTop: '12px', fontSize: '0.75rem', color: '#71717a' }}>
-          Connections: {edges.map((e: any) => `${e.source}→${e.target}`).join(', ')}
-        </div>
-      )}
-    </div>
-  )
-}
 
 function InputPrimitive({
   primitive,
