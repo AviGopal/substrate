@@ -1,0 +1,614 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - generic [ref=e25]: Navigation
+        - navigation [ref=e26]:
+          - link "Activities" [ref=e27] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - generic [ref=e33]: Activities
+          - link "Trajectory" [ref=e34] [cursor=pointer]:
+            - /url: /trajectory
+            - img [ref=e35]
+            - generic [ref=e40]: Trajectory
+          - link "Shapes" [ref=e41] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e42]
+            - generic [ref=e46]: Shapes
+    - main [ref=e47]:
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - button "no vessel" [ref=e51] [cursor=pointer]:
+            - generic [ref=e53]: no vessel
+            - img [ref=e54]
+          - textbox "Goal" [ref=e56]:
+            - /placeholder: ""
+            - text: What is a vessel and how does it relate to impulses and activities?
+          - generic [ref=e57]:
+            - button "107" [ref=e58] [cursor=pointer]:
+              - img [ref=e59]
+              - text: "107"
+            - generic [ref=e63]:
+              - button "Run" [ref=e64] [cursor=pointer]:
+                - img
+                - text: Run
+              - button "Run Trajectory" [ref=e65] [cursor=pointer]:
+                - img
+                - text: Run Trajectory
+            - button "Save" [ref=e66] [cursor=pointer]:
+              - img
+              - text: Save
+            - button "Clear trajectory" [ref=e67] [cursor=pointer]:
+              - img
+        - generic [ref=e68]:
+          - generic [ref=e69]:
+            - generic [ref=e70]:
+              - button "History" [ref=e71] [cursor=pointer]
+              - button "Palette" [ref=e72] [cursor=pointer]
+            - button "execution history" [ref=e75] [cursor=pointer]:
+              - img [ref=e76]
+              - img [ref=e78]
+              - generic [ref=e81]: execution history
+          - generic [ref=e82]:
+            - alert [ref=e84]:
+              - img [ref=e85]
+              - heading "Productive loop detected Loop" [level=5] [ref=e90]:
+                - text: Productive loop detected
+                - generic [ref=e91]: Loop
+              - generic [ref=e92]: A repeating pattern was found in columns 0–0. Each iteration produces new shapes, so this loop is considered productive and will not block execution.
+            - generic [ref=e93]:
+              - generic [ref=e94]:
+                - img [ref=e95]
+                - text: compose
+              - generic [ref=e98]: │
+              - generic [ref=e99]:
+                - img [ref=e100]
+                - text: trace
+              - generic [ref=e103]: │
+              - generic [ref=e104]:
+                - img [ref=e105]
+                - text: live
+            - generic [ref=e107]:
+              - img [ref=e108]
+              - generic "goal_1777336673587_oz5aiv" [ref=e114]
+              - generic [ref=e115]: idle
+              - button "disconnect" [ref=e116] [cursor=pointer]:
+                - img
+                - text: disconnect
+            - paragraph [ref=e119]: Loading templates...
+          - generic [ref=e120]:
+            - generic [ref=e121]:
+              - generic [ref=e122]:
+                - img [ref=e123]
+                - heading "Impulse State" [level=2] [ref=e127]
+              - button "Collapse impulse state panel (Ctrl+I)" [ref=e128] [cursor=pointer]:
+                - img
+            - generic [ref=e131]:
+              - generic [ref=e132]:
+                - heading "goal impulse" [level=3] [ref=e134]: goal impulse
+                - paragraph [ref=e137]: What is a vessel and how does it relate to impulses and activities?
+              - generic [ref=e138]:
+                - heading "Impulse Pool 20 shapes" [level=3] [ref=e140]:
+                  - generic [ref=e141]: Impulse Pool
+                  - generic [ref=e142]: 20 shapes
+                - generic [ref=e143]:
+                  - generic [ref=e144]:
+                    - generic [ref=e145]:
+                      - img [ref=e146]
+                      - generic [ref=e150]: 2 impulses in pool
+                    - button "seed shapes (initial pool) 2" [ref=e152] [cursor=pointer]:
+                      - img [ref=e153]
+                      - img [ref=e156]
+                      - generic [ref=e160]: seed shapes (initial pool)
+                      - generic [ref=e161]: "2"
+                  - generic [ref=e162]:
+                    - generic [ref=e163]: goal
+                    - generic [ref=e164]: directoryTree
+                    - generic [ref=e165]: activity_template
+                    - generic [ref=e166]: recommendation
+                    - generic [ref=e167]: source_code
+                    - generic [ref=e168]: config_file
+                    - generic [ref=e169]: documentation
+                    - generic [ref=e170]: patch
+                    - generic [ref=e171]: analysis
+                    - generic [ref=e172]: tool_output
+                    - generic [ref=e173]: impulse_state_result
+                    - generic [ref=e174]: context_acquisition_summary
+                    - generic [ref=e175]: goal_enrichment
+                    - generic [ref=e176]: activity_recommendations
+                    - generic [ref=e177]: variant_selection_result
+                    - generic [ref=e178]: activityExecutionSummary
+                    - generic [ref=e179]: goal_verification
+                    - generic [ref=e180]: clarification
+                    - generic [ref=e181]: human_decision
+                    - generic [ref=e182]: decomposed_goals
+              - generic [ref=e183]:
+                - heading "Task Validation" [level=3] [ref=e185]
+                - generic [ref=e187]:
+                  - generic [ref=e188]:
+                    - img [ref=e189]
+                    - generic "Detect bootstrap / cold-start condition — do we already have enough context to execute, or do we need to gather more first? Resolver reads the shared ImpulseStateManager singleton; no runtime objects passed through JSON config. The produced impulse_state_result impulse is the first link in the chain." [ref=e193]: Detect bootstrap / cold-start co…
+                    - generic [ref=e194]: no validators
+                  - generic [ref=e195]:
+                    - img [ref=e196]
+                    - generic "Gather context recommended by analyze_state — file / directoryTree / gitDiff impulses sized to the current working directory. Consumes impulse_state_result by shape (not id), so this task proves the executor correctly propagates resolver-produced shape metadata across tasks. high_priority_only strategy keeps the context pool small for cheap runs." [ref=e200]: Gather context recommended by an…
+                    - generic [ref=e201]: no validators
+                  - generic [ref=e202]:
+                    - img [ref=e203]
+                    - 'generic "Semantic enrichment of the raw goal: produces {category, clarifiedIntent, expectedOutcomes, requiredCapabilities, successCriteria}. Feeds activity_recommendation''s goal description and variant_selection''s category hint. LLM-backed; registered under goal_enrichment with the shared LLMResolver." [ref=e207]': Semantic enrichment of the raw g…
+                    - generic [ref=e208]: no validators
+                  - generic [ref=e209]:
+                    - img [ref=e210]
+                    - generic "Query the Thompson-Sampling backend (/v2/activities/recommend) for ranked activity candidates given the enriched goal. MCP client is auto-resolved via getMCPClient(); when the backend is unreachable the resolver produces an empty-recommendations impulse (metadata.empty=true) and the downstream variant_selection falls back to fallbackActivityId. Deterministic-tier — the Thompson math runs server-side." [ref=e214]: Query the Thompson-Sampling back…
+                    - generic [ref=e215]: no validators
+                  - generic [ref=e216]:
+                    - img [ref=e217]
+                    - 'generic "Thompson Sampling over the variant family for the top recommended activity. As of Investigation #5 fix (2026-04-22) the resolver now reads the activity_recommendations input impulse and picks the first shape-compatible candidate — based on expectedOutputShapes carried through from goal_enrichment — before running Thompson Sampling on that candidate''s variant family. When MCP/backend is unavailable, the recommendations list is empty, OR every candidate fails the shape compat check, the resolver falls back to `fallbackActivityId` (typically `execute-shell-command`). `baseActivityId` is the safety default used when there are no recommendations at all." [ref=e221]': Thompson Sampling over the varia…
+                    - generic [ref=e222]: no validators
+                  - generic [ref=e223]:
+                    - img [ref=e224]
+                    - 'generic "Dispatch the activity selected by variant_selection. The ActivityResolver reads variant_selection_result from its input impulses, extracts selected.activity_id, and resolves the template via loadTemplateFromMCPOrLocal (vessel cache → MCP backend → embedded). When variant_selection surfaces no id or the lookup fails, falls back to fallbackActivityId. This is the real dispatch path: the chosen activity''s resolvers/prompts run against the goal." [ref=e228]': Dispatch the activity selected b…
+                    - generic [ref=e229]: no validators
+                  - generic [ref=e230]:
+                    - img [ref=e231]
+                    - generic [ref=e235]: "Evidence-based verification: did…"
+                    - generic [ref=e236]: no validators
+                  - generic [ref=e237]:
+                    - img [ref=e238]
+                    - 'generic "Interactive-mode clarifier: when verify_goal reports achieved=false and the caller is a human at a TTY, ask how to proceed (retry / refine / abort). Non-interactive runs skip this step via the isInteractive guard in the conditional expression, and the HumanResolver itself short-circuits to the configured default when stdin is not a TTY — so `--single` in a pipe falls through silently to the next task either way. No retry loop is implemented here: the task surfaces the human''s intent as a clarification impulse; re-executing the chain on the chosen sub-goal is deferred until we land a full loop primitive." [ref=e242]': "Interactive-mode clarifier: when…"
+                    - generic [ref=e243]: no validators
+                  - generic [ref=e244]:
+                    - img [ref=e245]
+                    - generic "Runs when verify_goal reported achieved=false AND either (a) we're non-interactive (no human to ask), or (b) the human chose 'refine'. Produces 2-4 ordered sub-goals a future iteration could process. Does NOT loop here (no recursion) — surfaces the decomposition as an impulse and returns. LLM-backed; registered under goal_decomposition with the shared LLMResolver. Re-execution on sub-goals is deferred." [ref=e249]: Runs when verify_goal reported a…
+                    - generic [ref=e250]: no validators
+                  - generic [ref=e251]:
+                    - img [ref=e252]
+                    - generic "Write hello world message to file" [ref=e256]: Write hello world message to fil…
+                    - generic [ref=e257]: no validators
+                  - generic [ref=e258]:
+                    - img [ref=e259]
+                    - generic "Write hello world message to file" [ref=e263]: Write hello world message to fil…
+                    - generic [ref=e264]: no validators
+                  - generic [ref=e265]:
+                    - img [ref=e266]
+                    - generic "Execute a shell command to achieve the goal" [ref=e270]: Execute a shell command to achie…
+                    - generic [ref=e271]: no validators
+                  - generic [ref=e272]:
+                    - img [ref=e273]
+                    - generic "Write hello world message to file" [ref=e277]: Write hello world message to fil…
+                    - generic [ref=e278]: no validators
+                  - generic [ref=e279]:
+                    - img [ref=e280]
+                    - generic "Detect bootstrap / cold-start condition — do we already have enough context to execute, or do we need to gather more first? Resolver reads the shared ImpulseStateManager singleton; no runtime objects passed through JSON config. The produced impulse_state_result impulse is the first link in the chain." [ref=e284]: Detect bootstrap / cold-start co…
+                    - generic [ref=e285]: no validators
+                  - generic [ref=e286]:
+                    - img [ref=e287]
+                    - generic "Gather context recommended by analyze_state — file / directoryTree / gitDiff impulses sized to the current working directory. Consumes impulse_state_result by shape (not id), so this task proves the executor correctly propagates resolver-produced shape metadata across tasks. high_priority_only strategy keeps the context pool small for cheap runs." [ref=e291]: Gather context recommended by an…
+                    - generic [ref=e292]: no validators
+                  - generic [ref=e293]:
+                    - img [ref=e294]
+                    - 'generic "Semantic enrichment of the raw goal: produces {category, clarifiedIntent, expectedOutcomes, requiredCapabilities, successCriteria}. Feeds activity_recommendation''s goal description and variant_selection''s category hint. LLM-backed; registered under goal_enrichment with the shared LLMResolver." [ref=e298]': Semantic enrichment of the raw g…
+                    - generic [ref=e299]: no validators
+                  - generic [ref=e300]:
+                    - img [ref=e301]
+                    - generic "Query the Thompson-Sampling backend (/v2/activities/recommend) for ranked activity candidates given the enriched goal. MCP client is auto-resolved via getMCPClient(); when the backend is unreachable the resolver produces an empty-recommendations impulse (metadata.empty=true) and the downstream variant_selection falls back to fallbackActivityId. Deterministic-tier — the Thompson math runs server-side." [ref=e305]: Query the Thompson-Sampling back…
+                    - generic [ref=e306]: no validators
+                  - generic [ref=e307]:
+                    - img [ref=e308]
+                    - 'generic "Thompson Sampling over the variant family for the top recommended activity. As of Investigation #5 fix (2026-04-22) the resolver now reads the activity_recommendations input impulse and picks the first shape-compatible candidate — based on expectedOutputShapes carried through from goal_enrichment — before running Thompson Sampling on that candidate''s variant family. When MCP/backend is unavailable, the recommendations list is empty, OR every candidate fails the shape compat check, the resolver falls back to `fallbackActivityId` (typically `execute-shell-command`). `baseActivityId` is the safety default used when there are no recommendations at all." [ref=e312]': Thompson Sampling over the varia…
+                    - generic [ref=e313]: no validators
+                  - generic [ref=e314]:
+                    - img [ref=e315]
+                    - 'generic "Dispatch the activity selected by variant_selection. The ActivityResolver reads variant_selection_result from its input impulses, extracts selected.activity_id, and resolves the template via loadTemplateFromMCPOrLocal (vessel cache → MCP backend → embedded). When variant_selection surfaces no id or the lookup fails, falls back to fallbackActivityId. This is the real dispatch path: the chosen activity''s resolvers/prompts run against the goal." [ref=e319]': Dispatch the activity selected b…
+                    - generic [ref=e320]: no validators
+                  - generic [ref=e321]:
+                    - img [ref=e322]
+                    - generic [ref=e326]: "Evidence-based verification: did…"
+                    - generic [ref=e327]: no validators
+                  - generic [ref=e328]:
+                    - img [ref=e329]
+                    - 'generic "Interactive-mode clarifier: when verify_goal reports achieved=false and the caller is a human at a TTY, ask how to proceed (retry / refine / abort). Non-interactive runs skip this step via the isInteractive guard in the conditional expression, and the HumanResolver itself short-circuits to the configured default when stdin is not a TTY — so `--single` in a pipe falls through silently to the next task either way. No retry loop is implemented here: the task surfaces the human''s intent as a clarification impulse; re-executing the chain on the chosen sub-goal is deferred until we land a full loop primitive." [ref=e333]': "Interactive-mode clarifier: when…"
+                    - generic [ref=e334]: no validators
+                  - generic [ref=e335]:
+                    - img [ref=e336]
+                    - generic "Runs when verify_goal reported achieved=false AND either (a) we're non-interactive (no human to ask), or (b) the human chose 'refine'. Produces 2-4 ordered sub-goals a future iteration could process. Does NOT loop here (no recursion) — surfaces the decomposition as an impulse and returns. LLM-backed; registered under goal_decomposition with the shared LLMResolver. Re-execution on sub-goals is deferred." [ref=e340]: Runs when verify_goal reported a…
+                    - generic [ref=e341]: no validators
+                  - generic [ref=e342]:
+                    - img [ref=e343]
+                    - generic [ref=e347]: Find activities that can validat…
+                    - generic [ref=e348]: no validators
+                  - generic [ref=e349]:
+                    - img [ref=e350]
+                    - generic [ref=e354]: Reshape the discoverByShapesQuer…
+                    - generic [ref=e355]: no validators
+                  - generic [ref=e356]:
+                    - img [ref=e357]
+                    - generic [ref=e361]: Execute the chosen validator act…
+                    - generic [ref=e362]: no validators
+                  - generic [ref=e363]:
+                    - img [ref=e364]
+                    - generic [ref=e368]: When the dispatched validator em…
+                    - generic [ref=e369]: no validators
+                  - generic [ref=e370]:
+                    - img [ref=e371]
+                    - generic [ref=e375]: Record per-task learning signals…
+                    - generic [ref=e376]: no validators
+                  - generic [ref=e377]:
+                    - img [ref=e378]
+                    - generic "Execute a shell command to achieve the goal" [ref=e382]: Execute a shell command to achie…
+                    - generic [ref=e383]: no validators
+                  - generic [ref=e384]:
+                    - img [ref=e385]
+                    - generic "Write hello world message to file" [ref=e389]: Write hello world message to fil…
+                    - generic [ref=e390]: no validators
+                  - generic [ref=e391]:
+                    - img [ref=e392]
+                    - generic [ref=e396]: Fetch the just-completed executi…
+                    - generic [ref=e397]: no validators
+                  - generic [ref=e398]:
+                    - img [ref=e399]
+                    - generic [ref=e403]: LLM computes a quality score (0-…
+                    - generic [ref=e404]: no validators
+                  - generic [ref=e405]:
+                    - img [ref=e406]
+                    - generic [ref=e410]: "LLM renders an `extractedTemplat…"
+                    - generic [ref=e411]: no validators
+                  - generic [ref=e412]:
+                    - img [ref=e413]
+                    - generic [ref=e417]: LLM validates the synthesized te…
+                    - generic [ref=e418]: no validators
+                  - generic [ref=e419]:
+                    - img [ref=e420]
+                    - generic [ref=e424]: Attempt the activityTemplate_wri…
+                    - generic [ref=e425]: no validators
+                  - generic [ref=e426]:
+                    - img [ref=e427]
+                    - generic [ref=e431]: Shape-provenance task (2026-04-2…
+                    - generic [ref=e432]: no validators
+                  - generic [ref=e433]:
+                    - img [ref=e434]
+                    - generic [ref=e438]: "Emits a `learningSummary` + `goa…"
+                    - generic [ref=e439]: no validators
+                  - generic [ref=e440]:
+                    - img [ref=e441]
+                    - generic "Write hello world message to file" [ref=e445]: Write hello world message to fil…
+                    - generic [ref=e446]: no validators
+                  - generic [ref=e447]:
+                    - img [ref=e448]
+                    - generic [ref=e452]: Find activities that can validat…
+                    - generic [ref=e453]: no validators
+                  - generic [ref=e454]:
+                    - img [ref=e455]
+                    - generic [ref=e459]: Reshape the discoverByShapesQuer…
+                    - generic [ref=e460]: no validators
+                  - generic [ref=e461]:
+                    - img [ref=e462]
+                    - generic [ref=e466]: Execute the chosen validator act…
+                    - generic [ref=e467]: no validators
+                  - generic [ref=e468]:
+                    - img [ref=e469]
+                    - generic [ref=e473]: When the dispatched validator em…
+                    - generic [ref=e474]: no validators
+                  - generic [ref=e475]:
+                    - img [ref=e476]
+                    - generic [ref=e480]: Record per-task learning signals…
+                    - generic [ref=e481]: no validators
+                  - generic [ref=e482]:
+                    - img [ref=e483]
+                    - generic "Write hello world message to file" [ref=e487]: Write hello world message to fil…
+                    - generic [ref=e488]: no validators
+                  - generic [ref=e489]:
+                    - img [ref=e490]
+                    - generic [ref=e494]: Fetch the just-completed executi…
+                    - generic [ref=e495]: no validators
+                  - generic [ref=e496]:
+                    - img [ref=e497]
+                    - generic [ref=e501]: LLM computes a quality score (0-…
+                    - generic [ref=e502]: no validators
+                  - generic [ref=e503]:
+                    - img [ref=e504]
+                    - generic [ref=e508]: "LLM renders an `extractedTemplat…"
+                    - generic [ref=e509]: no validators
+                  - generic [ref=e510]:
+                    - img [ref=e511]
+                    - generic [ref=e515]: LLM validates the synthesized te…
+                    - generic [ref=e516]: no validators
+                  - generic [ref=e517]:
+                    - img [ref=e518]
+                    - generic [ref=e522]: Attempt the activityTemplate_wri…
+                    - generic [ref=e523]: no validators
+                  - generic [ref=e524]:
+                    - img [ref=e525]
+                    - generic [ref=e529]: Shape-provenance task (2026-04-2…
+                    - generic [ref=e530]: no validators
+                  - generic [ref=e531]:
+                    - img [ref=e532]
+                    - generic [ref=e536]: "Emits a `learningSummary` + `goa…"
+                    - generic [ref=e537]: no validators
+                  - generic [ref=e538]:
+                    - img [ref=e539]
+                    - generic "Detect bootstrap / cold-start condition — do we already have enough context to execute, or do we need to gather more first? Resolver reads the shared ImpulseStateManager singleton; no runtime objects passed through JSON config. The produced impulse_state_result impulse is the first link in the chain." [ref=e543]: Detect bootstrap / cold-start co…
+                    - generic [ref=e544]: no validators
+                  - generic [ref=e545]:
+                    - img [ref=e546]
+                    - generic "Gather context recommended by analyze_state — file / directoryTree / gitDiff impulses sized to the current working directory. Consumes impulse_state_result by shape (not id), so this task proves the executor correctly propagates resolver-produced shape metadata across tasks. high_priority_only strategy keeps the context pool small for cheap runs." [ref=e550]: Gather context recommended by an…
+                    - generic [ref=e551]: no validators
+                  - generic [ref=e552]:
+                    - img [ref=e553]
+                    - 'generic "Semantic enrichment of the raw goal: produces {category, clarifiedIntent, expectedOutcomes, requiredCapabilities, successCriteria}. Feeds activity_recommendation''s goal description and variant_selection''s category hint. LLM-backed; registered under goal_enrichment with the shared LLMResolver." [ref=e557]': Semantic enrichment of the raw g…
+                    - generic [ref=e558]: no validators
+                  - generic [ref=e559]:
+                    - img [ref=e560]
+                    - generic "Query the Thompson-Sampling backend (/v2/activities/recommend) for ranked activity candidates given the enriched goal. MCP client is auto-resolved via getMCPClient(); when the backend is unreachable the resolver produces an empty-recommendations impulse (metadata.empty=true) and the downstream variant_selection falls back to fallbackActivityId. Deterministic-tier — the Thompson math runs server-side." [ref=e564]: Query the Thompson-Sampling back…
+                    - generic [ref=e565]: no validators
+                  - generic [ref=e566]:
+                    - img [ref=e567]
+                    - 'generic "Thompson Sampling over the variant family for the top recommended activity. As of Investigation #5 fix (2026-04-22) the resolver now reads the activity_recommendations input impulse and picks the first shape-compatible candidate — based on expectedOutputShapes carried through from goal_enrichment — before running Thompson Sampling on that candidate''s variant family. When MCP/backend is unavailable, the recommendations list is empty, OR every candidate fails the shape compat check, the resolver falls back to `fallbackActivityId` (typically `execute-shell-command`). `baseActivityId` is the safety default used when there are no recommendations at all." [ref=e571]': Thompson Sampling over the varia…
+                    - generic [ref=e572]: no validators
+                  - generic [ref=e573]:
+                    - img [ref=e574]
+                    - 'generic "Dispatch the activity selected by variant_selection. The ActivityResolver reads variant_selection_result from its input impulses, extracts selected.activity_id, and resolves the template via loadTemplateFromMCPOrLocal (vessel cache → MCP backend → embedded). When variant_selection surfaces no id or the lookup fails, falls back to fallbackActivityId. This is the real dispatch path: the chosen activity''s resolvers/prompts run against the goal." [ref=e578]': Dispatch the activity selected b…
+                    - generic [ref=e579]: no validators
+                  - generic [ref=e580]:
+                    - img [ref=e581]
+                    - generic [ref=e585]: "Evidence-based verification: did…"
+                    - generic [ref=e586]: no validators
+                  - generic [ref=e587]:
+                    - img [ref=e588]
+                    - 'generic "Interactive-mode clarifier: when verify_goal reports achieved=false and the caller is a human at a TTY, ask how to proceed (retry / refine / abort). Non-interactive runs skip this step via the isInteractive guard in the conditional expression, and the HumanResolver itself short-circuits to the configured default when stdin is not a TTY — so `--single` in a pipe falls through silently to the next task either way. No retry loop is implemented here: the task surfaces the human''s intent as a clarification impulse; re-executing the chain on the chosen sub-goal is deferred until we land a full loop primitive." [ref=e592]': "Interactive-mode clarifier: when…"
+                    - generic [ref=e593]: no validators
+                  - generic [ref=e594]:
+                    - img [ref=e595]
+                    - generic "Runs when verify_goal reported achieved=false AND either (a) we're non-interactive (no human to ask), or (b) the human chose 'refine'. Produces 2-4 ordered sub-goals a future iteration could process. Does NOT loop here (no recursion) — surfaces the decomposition as an impulse and returns. LLM-backed; registered under goal_decomposition with the shared LLMResolver. Re-execution on sub-goals is deferred." [ref=e599]: Runs when verify_goal reported a…
+                    - generic [ref=e600]: no validators
+                  - generic [ref=e601]:
+                    - img [ref=e602]
+                    - generic [ref=e606]: Find activities that can validat…
+                    - generic [ref=e607]: no validators
+                  - generic [ref=e608]:
+                    - img [ref=e609]
+                    - generic [ref=e613]: Reshape the discoverByShapesQuer…
+                    - generic [ref=e614]: no validators
+                  - generic [ref=e615]:
+                    - img [ref=e616]
+                    - generic [ref=e620]: Execute the chosen validator act…
+                    - generic [ref=e621]: no validators
+                  - generic [ref=e622]:
+                    - img [ref=e623]
+                    - generic [ref=e627]: When the dispatched validator em…
+                    - generic [ref=e628]: no validators
+                  - generic [ref=e629]:
+                    - img [ref=e630]
+                    - generic [ref=e634]: Record per-task learning signals…
+                    - generic [ref=e635]: no validators
+                  - generic [ref=e636]:
+                    - img [ref=e637]
+                    - generic "Execute a shell command to achieve the goal" [ref=e641]: Execute a shell command to achie…
+                    - generic [ref=e642]: no validators
+                  - generic [ref=e643]:
+                    - img [ref=e644]
+                    - generic "Write hello world message to file" [ref=e648]: Write hello world message to fil…
+                    - generic [ref=e649]: no validators
+                  - generic [ref=e650]:
+                    - img [ref=e651]
+                    - generic [ref=e655]: Fetch the just-completed executi…
+                    - generic [ref=e656]: no validators
+                  - generic [ref=e657]:
+                    - img [ref=e658]
+                    - generic [ref=e662]: LLM computes a quality score (0-…
+                    - generic [ref=e663]: no validators
+                  - generic [ref=e664]:
+                    - img [ref=e665]
+                    - generic [ref=e669]: "LLM renders an `extractedTemplat…"
+                    - generic [ref=e670]: no validators
+                  - generic [ref=e671]:
+                    - img [ref=e672]
+                    - generic [ref=e676]: LLM validates the synthesized te…
+                    - generic [ref=e677]: no validators
+                  - generic [ref=e678]:
+                    - img [ref=e679]
+                    - generic [ref=e683]: Attempt the activityTemplate_wri…
+                    - generic [ref=e684]: no validators
+                  - generic [ref=e685]:
+                    - img [ref=e686]
+                    - generic [ref=e690]: Shape-provenance task (2026-04-2…
+                    - generic [ref=e691]: no validators
+                  - generic [ref=e692]:
+                    - img [ref=e693]
+                    - generic [ref=e697]: "Emits a `learningSummary` + `goa…"
+                    - generic [ref=e698]: no validators
+                  - generic [ref=e699]:
+                    - img [ref=e700]
+                    - generic "Write hello world message to file" [ref=e704]: Write hello world message to fil…
+                    - generic [ref=e705]: no validators
+                  - generic [ref=e706]:
+                    - img [ref=e707]
+                    - generic [ref=e711]: Find activities that can validat…
+                    - generic [ref=e712]: no validators
+                  - generic [ref=e713]:
+                    - img [ref=e714]
+                    - generic [ref=e718]: Reshape the discoverByShapesQuer…
+                    - generic [ref=e719]: no validators
+                  - generic [ref=e720]:
+                    - img [ref=e721]
+                    - generic [ref=e725]: Execute the chosen validator act…
+                    - generic [ref=e726]: no validators
+                  - generic [ref=e727]:
+                    - img [ref=e728]
+                    - generic [ref=e732]: When the dispatched validator em…
+                    - generic [ref=e733]: no validators
+                  - generic [ref=e734]:
+                    - img [ref=e735]
+                    - generic [ref=e739]: Record per-task learning signals…
+                    - generic [ref=e740]: no validators
+                  - generic [ref=e741]:
+                    - img [ref=e742]
+                    - generic "Write hello world message to file" [ref=e746]: Write hello world message to fil…
+                    - generic [ref=e747]: no validators
+                  - generic [ref=e748]:
+                    - img [ref=e749]
+                    - generic [ref=e753]: Fetch the just-completed executi…
+                    - generic [ref=e754]: no validators
+                  - generic [ref=e755]:
+                    - img [ref=e756]
+                    - generic [ref=e760]: LLM computes a quality score (0-…
+                    - generic [ref=e761]: no validators
+                  - generic [ref=e762]:
+                    - img [ref=e763]
+                    - generic [ref=e767]: "LLM renders an `extractedTemplat…"
+                    - generic [ref=e768]: no validators
+                  - generic [ref=e769]:
+                    - img [ref=e770]
+                    - generic [ref=e774]: LLM validates the synthesized te…
+                    - generic [ref=e775]: no validators
+                  - generic [ref=e776]:
+                    - img [ref=e777]
+                    - generic [ref=e781]: Attempt the activityTemplate_wri…
+                    - generic [ref=e782]: no validators
+                  - generic [ref=e783]:
+                    - img [ref=e784]
+                    - generic [ref=e788]: Shape-provenance task (2026-04-2…
+                    - generic [ref=e789]: no validators
+                  - generic [ref=e790]:
+                    - img [ref=e791]
+                    - generic [ref=e795]: "Emits a `learningSummary` + `goa…"
+                    - generic [ref=e796]: no validators
+                  - generic [ref=e797]:
+                    - img [ref=e798]
+                    - generic "Detect bootstrap / cold-start condition — do we already have enough context to execute, or do we need to gather more first? Resolver reads the shared ImpulseStateManager singleton; no runtime objects passed through JSON config. The produced impulse_state_result impulse is the first link in the chain." [ref=e802]: Detect bootstrap / cold-start co…
+                    - generic [ref=e803]: no validators
+                  - generic [ref=e804]:
+                    - img [ref=e805]
+                    - generic "Gather context recommended by analyze_state — file / directoryTree / gitDiff impulses sized to the current working directory. Consumes impulse_state_result by shape (not id), so this task proves the executor correctly propagates resolver-produced shape metadata across tasks. high_priority_only strategy keeps the context pool small for cheap runs." [ref=e809]: Gather context recommended by an…
+                    - generic [ref=e810]: no validators
+                  - generic [ref=e811]:
+                    - img [ref=e812]
+                    - 'generic "Semantic enrichment of the raw goal: produces {category, clarifiedIntent, expectedOutcomes, requiredCapabilities, successCriteria}. Feeds activity_recommendation''s goal description and variant_selection''s category hint. LLM-backed; registered under goal_enrichment with the shared LLMResolver." [ref=e816]': Semantic enrichment of the raw g…
+                    - generic [ref=e817]: no validators
+                  - generic [ref=e818]:
+                    - img [ref=e819]
+                    - generic "Query the Thompson-Sampling backend (/v2/activities/recommend) for ranked activity candidates given the enriched goal. MCP client is auto-resolved via getMCPClient(); when the backend is unreachable the resolver produces an empty-recommendations impulse (metadata.empty=true) and the downstream variant_selection falls back to fallbackActivityId. Deterministic-tier — the Thompson math runs server-side." [ref=e823]: Query the Thompson-Sampling back…
+                    - generic [ref=e824]: no validators
+                  - generic [ref=e825]:
+                    - img [ref=e826]
+                    - 'generic "Thompson Sampling over the variant family for the top recommended activity. As of Investigation #5 fix (2026-04-22) the resolver now reads the activity_recommendations input impulse and picks the first shape-compatible candidate — based on expectedOutputShapes carried through from goal_enrichment — before running Thompson Sampling on that candidate''s variant family. When MCP/backend is unavailable, the recommendations list is empty, OR every candidate fails the shape compat check, the resolver falls back to `fallbackActivityId` (typically `execute-shell-command`). `baseActivityId` is the safety default used when there are no recommendations at all." [ref=e830]': Thompson Sampling over the varia…
+                    - generic [ref=e831]: no validators
+                  - generic [ref=e832]:
+                    - img [ref=e833]
+                    - 'generic "Dispatch the activity selected by variant_selection. The ActivityResolver reads variant_selection_result from its input impulses, extracts selected.activity_id, and resolves the template via loadTemplateFromMCPOrLocal (vessel cache → MCP backend → embedded). When variant_selection surfaces no id or the lookup fails, falls back to fallbackActivityId. This is the real dispatch path: the chosen activity''s resolvers/prompts run against the goal." [ref=e837]': Dispatch the activity selected b…
+                    - generic [ref=e838]: no validators
+                  - generic [ref=e839]:
+                    - img [ref=e840]
+                    - generic [ref=e844]: "Evidence-based verification: did…"
+                    - generic [ref=e845]: no validators
+                  - generic [ref=e846]:
+                    - img [ref=e847]
+                    - 'generic "Interactive-mode clarifier: when verify_goal reports achieved=false and the caller is a human at a TTY, ask how to proceed (retry / refine / abort). Non-interactive runs skip this step via the isInteractive guard in the conditional expression, and the HumanResolver itself short-circuits to the configured default when stdin is not a TTY — so `--single` in a pipe falls through silently to the next task either way. No retry loop is implemented here: the task surfaces the human''s intent as a clarification impulse; re-executing the chain on the chosen sub-goal is deferred until we land a full loop primitive." [ref=e851]': "Interactive-mode clarifier: when…"
+                    - generic [ref=e852]: no validators
+                  - generic [ref=e853]:
+                    - img [ref=e854]
+                    - generic "Runs when verify_goal reported achieved=false AND either (a) we're non-interactive (no human to ask), or (b) the human chose 'refine'. Produces 2-4 ordered sub-goals a future iteration could process. Does NOT loop here (no recursion) — surfaces the decomposition as an impulse and returns. LLM-backed; registered under goal_decomposition with the shared LLMResolver. Re-execution on sub-goals is deferred." [ref=e858]: Runs when verify_goal reported a…
+                    - generic [ref=e859]: no validators
+                  - generic [ref=e860]:
+                    - img [ref=e861]
+                    - generic "Write hello world message to file" [ref=e865]: Write hello world message to fil…
+                    - generic [ref=e866]: no validators
+                  - generic [ref=e867]:
+                    - img [ref=e868]
+                    - generic "Write hello world message to file" [ref=e872]: Write hello world message to fil…
+                    - generic [ref=e873]: no validators
+                  - generic [ref=e874]:
+                    - img [ref=e875]
+                    - generic "Execute a shell command to achieve the goal" [ref=e879]: Execute a shell command to achie…
+                    - generic [ref=e880]: no validators
+                  - generic [ref=e881]:
+                    - img [ref=e882]
+                    - generic "Write hello world message to file" [ref=e886]: Write hello world message to fil…
+                    - generic [ref=e887]: no validators
+              - generic [ref=e888]:
+                - heading "Shape Provenance" [level=3] [ref=e890]
+                - generic [ref=e892]:
+                  - generic [ref=e893]:
+                    - generic [ref=e894]:
+                      - img [ref=e895]
+                      - generic [ref=e899]: Initial Context (Column 0)
+                    - generic [ref=e901]:
+                      - img [ref=e902]
+                      - generic [ref=e905]: goal
+                      - generic [ref=e906]: directoryTree
+                  - generic [ref=e907]:
+                    - generic [ref=e908]:
+                      - img [ref=e909]
+                      - button "Goal Processing (Activity-Driven) (Col 0)" [ref=e913] [cursor=pointer]
+                    - generic [ref=e915]:
+                      - img [ref=e916]
+                      - generic [ref=e919]: activity_template
+                      - generic [ref=e920]: recommendation
+                      - generic [ref=e921]: source_code
+                  - generic [ref=e922]:
+                    - generic [ref=e923]:
+                      - img [ref=e924]
+                      - button "Hello World Minimal (Col 1)" [ref=e928] [cursor=pointer]
+                    - generic [ref=e930]:
+                      - img [ref=e931]
+                      - generic [ref=e934]: config_file
+                      - generic [ref=e935]: documentation
+                  - generic [ref=e936]:
+                    - generic [ref=e937]:
+                      - img [ref=e938]
+                      - button "Validator Dispatch (validators-and-failure-modes) (Col 1)" [ref=e942] [cursor=pointer]
+                    - generic [ref=e944]:
+                      - img [ref=e945]
+                      - generic [ref=e948]: patch
+                  - generic [ref=e949]:
+                    - generic [ref=e950]:
+                      - img [ref=e951]
+                      - button "Execute Shell Command (Col 2)" [ref=e955] [cursor=pointer]
+                    - generic [ref=e957]:
+                      - img [ref=e958]
+                      - generic [ref=e961]: analysis
+                      - generic [ref=e962]: tool_output
+                  - generic [ref=e963]:
+                    - generic [ref=e964]:
+                      - img [ref=e965]
+                      - button "Goal Processing (Activity-Driven) (Col 9)" [ref=e969] [cursor=pointer]
+                    - generic [ref=e971]:
+                      - img [ref=e972]
+                      - generic [ref=e975]: impulse_state_result
+                      - generic [ref=e976]: context_acquisition_summary
+                      - generic [ref=e977]: goal_enrichment
+                      - generic [ref=e978]: activity_recommendations
+                      - generic [ref=e979]: variant_selection_result
+                      - generic [ref=e980]: activityExecutionSummary
+                      - generic [ref=e981]: goal_verification
+                      - generic [ref=e982]: clarification
+                      - generic [ref=e983]: human_decision
+                      - generic [ref=e984]: decomposed_goals
+            - paragraph [ref=e986]: Press Ctrl+I to toggle
+  - contentinfo [ref=e987]:
+    - generic [ref=e988]:
+      - generic [ref=e989]:
+        - generic [ref=e992]: API Connected
+        - generic [ref=e993]:
+          - img [ref=e994]
+          - generic [ref=e997]: 08:27:15 PM
+      - generic [ref=e998]:
+        - generic [ref=e999]: "[LOCAL]"
+        - generic [ref=e1000]: v0.1.0

@@ -1,0 +1,1094 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - generic [ref=e25]: Navigation
+        - navigation [ref=e26]:
+          - link "Activities" [ref=e27] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - generic [ref=e33]: Activities
+          - link "Trajectory" [ref=e34] [cursor=pointer]:
+            - /url: /trajectory
+            - img [ref=e35]
+            - generic [ref=e40]: Trajectory
+          - link "Shapes" [ref=e41] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e42]
+            - generic [ref=e46]: Shapes
+    - main [ref=e47]:
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - button "no vessel" [ref=e51] [cursor=pointer]:
+            - generic [ref=e53]: no vessel
+            - img [ref=e54]
+          - textbox "Goal" [ref=e56]:
+            - /placeholder: ""
+            - text: describe what an impulse is in the metabob activity system and list 3 examples
+          - generic [ref=e57]:
+            - button "23" [ref=e58] [cursor=pointer]:
+              - img [ref=e59]
+              - text: "23"
+            - generic [ref=e63]:
+              - button "Run" [ref=e64] [cursor=pointer]:
+                - img
+                - text: Run
+              - button "Run Trajectory" [ref=e65] [cursor=pointer]:
+                - img
+                - text: Run Trajectory
+            - button "Save" [ref=e66] [cursor=pointer]:
+              - img
+              - text: Save
+            - button "Clear trajectory" [ref=e67] [cursor=pointer]:
+              - img
+        - 'generic "Goal completion: complete" [ref=e69]':
+          - generic [ref=e70]:
+            - generic [ref=e71]: ── goal completion ──
+            - generic [ref=e72]: 1/1
+          - generic [ref=e73]:
+            - progressbar [ref=e74]
+            - generic [ref=e76]: 100%
+          - generic [ref=e77]:
+            - generic [ref=e78]: present (1)
+            - generic "activity_template" [ref=e80]:
+              - img [ref=e81]
+              - generic [ref=e84]: activity_template
+          - button "edit shapes" [ref=e85] [cursor=pointer]
+        - generic [ref=e86]:
+          - generic [ref=e87]:
+            - generic [ref=e88]:
+              - button "History" [ref=e89] [cursor=pointer]
+              - button "Palette" [ref=e90] [cursor=pointer]
+            - generic [ref=e92]:
+              - button "show applicable activities" [ref=e94] [cursor=pointer]:
+                - img [ref=e95]
+                - text: show applicable activities
+              - generic [ref=e98]:
+                - generic [ref=e99]: palette
+                - button "New" [ref=e100] [cursor=pointer]:
+                  - img
+                  - text: New
+              - generic [ref=e101]:
+                - generic [ref=e102]: ── palette ──
+                - generic [ref=e103]:
+                  - img [ref=e104]
+                  - textbox "search activities..." [ref=e107]
+                - generic [ref=e108]:
+                  - generic [ref=e109]:
+                    - img [ref=e110]
+                    - generic [ref=e117]:
+                      - generic [ref=e118]: Execute Shell Command
+                      - generic [ref=e119]:
+                        - generic [ref=e120]: "[tool]"
+                        - generic [ref=e121]: 1t
+                      - paragraph [ref=e122]: Generic template for simple shell/system operations. This is the foundation template that gets reused for common queries like 'show version', 'list files', 'check status'. As patterns emerge, more specific variants will be created through the learning loop.
+                  - generic [ref=e123]:
+                    - img [ref=e124]
+                    - generic [ref=e131]:
+                      - generic [ref=e132]: Replace Activity (registry-quality)
+                      - generic [ref=e133]:
+                        - generic [ref=e134]: "[meta]"
+                        - generic [ref=e135]: 5t
+                      - paragraph [ref=e136]: "Sibling #6 of the registry-quality-pass per OpenSpec change 2026-04-27-activity-registry-quality-pass. Consumes activityReview[] (severity 2-3 — idiom-aligned but improvable) plus pattern[] (from extract-pattern) and synthesizes activityTemplateProposal entries. Five tasks: (1) acquire_targets_and_patterns — impulse-resolve both shapes from the pool; (2) match_patterns_to_reviews — llm; for each review, picks the best pattern as a replacement template's basis; emits matchedReview[] (review + matched pattern); (3) synthesize_replacements — iteration; body=llm generates new template JSON proposals (NOT a write — emits activityTemplateProposal shape; never directly writes; the user/operator decides); aggregateAs=list; (4) validate_proposals — iteration; body=llm validates each proposal against compliance rules; tags valid: true|false; (5) emit_proposals — emits activityTemplateProposal[] + auditReport + goalEnd. CONTEXT-BUDGET: each per-review LLM body is bounded at maxTokens=900 (template proposals are larger than reviews/concepts but still bounded); per-validation pass at maxTokens=400. PROPOSAL-NOT-WRITE posture: this activity NEVER calls activityTemplate_write — it surfaces proposals for an operator (or a downstream activity invoking make-activity) to decide."
+                  - generic [ref=e137]:
+                    - img [ref=e138]
+                    - generic [ref=e145]:
+                      - generic [ref=e146]: Concept From Pattern (registry-quality)
+                      - generic [ref=e147]:
+                        - generic [ref=e148]: "[meta]"
+                        - generic [ref=e149]: 3t
+                      - paragraph [ref=e150]: "Sibling #5 of the registry-quality-pass per OpenSpec change 2026-04-27-activity-registry-quality-pass. Promotes pattern[] (from extract-pattern) into concept-db via concept synthesis. Three tasks: (1) acquire_patterns — impulse-resolve pattern[] from the pool; (2) synthesize_concepts — iteration over patterns; body=llm produces concept impulses (name, definition, exemplar templates, applicability rules) — these are the concept-db ingestion shape; aggregateAs=list; (3) emit_concept_writes — iteration over concepts; body=impulse-resolve with pointer.type=`concept_write` (when registered) OR emits `concept[]` impulses for the consumer to write (fallback when concept_write is not yet a registered resolver). Emit goalEnd. CONTEXT-BUDGET: per-pattern LLM body bounded at maxTokens=600. concept-db ingestion happens through impulse-resolve to keep this template free of concept-db endpoint knowledge — discovery routes the call. Per-pattern concept count capped at maxConceptsPerPattern (default 2) to bound cost when the LLM is tempted to over-decompose a pattern."
+                  - generic [ref=e151]:
+                    - img [ref=e152]
+                    - generic [ref=e159]:
+                      - generic [ref=e160]: Extract Pattern (registry-quality)
+                      - generic [ref=e161]:
+                        - generic [ref=e162]: "[meta]"
+                        - generic [ref=e163]: 4t
+                      - paragraph [ref=e164]: "Sibling #4 of the registry-quality-pass per OpenSpec change 2026-04-27-activity-registry-quality-pass. Mines successful execution traces from the load-bearing core for recurring task graphs, resolver-tier mixes, and output-shape sequences. Four tasks: (1) acquire_top_set — impulse-resolve coreActivitySet (read from impulse pool by id, same pattern as review-activity); (2) fetch_success_signatures — iteration over the set; body=impulse-resolve `executionTraceWithSignatures` filtered to success_only=true (the existing context-budget-conscious shape — per-impulse pointer/shape signatures, NOT full trace bodies); aggregateAs=list; (3) cluster_signatures — llm task; clusters traces by structural similarity (task graph shape, resolver tier mix, output shape sequence); emits traceCluster[] (new shape declared in proposal); (4) extract_patterns — iteration over clusters; body=llm extracts a reusable pattern impulse per cluster (description, applicability, success rate, exemplar template ids); aggregateAs=list. Emits pattern[] + goalEnd. CONTEXT-BUDGET: relies entirely on signature shape — never raw trace bodies. Per-template signature cap: maxTracesPerTemplate signature rows × top-N templates ≈ ~30 rows for N=10, lookbackDays=14. Cluster_signatures LLM bounded at maxTokens=2500; per-pattern extraction bounded at maxTokens=500."
+                  - generic [ref=e165]:
+                    - img [ref=e166]
+                    - generic [ref=e173]:
+                      - generic [ref=e174]: Prune Activity (registry-quality)
+                      - generic [ref=e175]:
+                        - generic [ref=e176]: "[meta]"
+                        - generic [ref=e177]: 3t
+                      - paragraph [ref=e178]: "Sibling #3 of the registry-quality-pass per OpenSpec change 2026-04-27-activity-registry-quality-pass. Consumes activityReview[] (from review-activity) and dispatches `activityTemplate_deprecate` write resolver calls for templates with severity >= minSeverity (default 4) that are NOT in coreActivitySet. Three tasks: (1) filter_deprecation_candidates — iteration over reviews; condition: severity >= minSeverity AND NOT in coreActivitySet; aggregateAs=list; emits pruneCandidate[]; (2) dispatch_deprecate_impulses — iteration over pruneCandidates; body=impulse-resolve with pointer.type=`activityTemplate_deprecate` (write resolver); aggregateAs=list. GATE on B-2 admin scope (the deprecate handler is admin-only via SurrealDB PERMISSIONS); 401 responses are expected when the calling identity lacks admin scope. dryRun=true (default) skips this task entirely; emit_prune_report still runs and surfaces the pruneCandidates as an audit signal; (3) emit_prune_report — llm summarizes the deprecation attempts (success vs 401-blocked vs dry-run-skipped); emits auditReport + goalEnd. CONTEXT-BUDGET: per-template deprecate dispatch carries only the templateId in the pointer; no template bodies echoed. dryRun guard makes the chain observable-without-mutation by default."
+                  - generic [ref=e179]:
+                    - img [ref=e180]
+                    - generic [ref=e187]:
+                      - generic [ref=e188]: Review Activity (registry-quality)
+                      - generic [ref=e189]:
+                        - generic [ref=e190]: "[meta]"
+                        - generic [ref=e191]: 4t
+                      - paragraph [ref=e192]: "Sibling #2 of the registry-quality-pass per OpenSpec change 2026-04-27-activity-registry-quality-pass. Consumes coreActivitySet (from core-activity-audit) plus the existing templateAuditReport shape (per-template deficiency reports) and produces structured activityReview impulses for the load-bearing core. Four tasks: (1) acquire_targets — resolve coreActivitySet, slice top-K (reviewSize, default 10); (2) iterate_review — iteration over the K templates, body=llm; per-template the LLM produces an activityReview body covering idiom alignment (compliance rules), missing inputShapes/outputShapes, hard-coded paths, all-LLM task chains, redundancy with siblings; aggregateAs=list; (3) score_severity — llm pass that scores each review by severity (1=cosmetic, 5=should-deprecate); emits activityReview[] impulses with severity attached; (4) emit_review_summary — llm summarizes; emits auditReport (NOT templateAuditReport — see openQuestions[0] on shape-collision avoidance) + goalEnd. CONTEXT-BUDGET: per-template LLM body call is bounded at maxTokens=600 over a per-template summary fed by templateAuditReport rather than full template bodies — review never echoes full task graphs. Sandbox: read-only — no file writes, no workingDirectory."
+                  - generic [ref=e193]:
+                    - img [ref=e194]
+                    - generic [ref=e201]:
+                      - generic [ref=e202]: Core Activity Audit
+                      - generic [ref=e203]:
+                        - generic [ref=e204]: "[meta]"
+                        - generic [ref=e205]: 4t
+                      - paragraph [ref=e206]: "Read-only audit activity that catalogues and ranks the load-bearing core of the activity registry. First concrete deliverable of OpenSpec change 2026-04-27-activity-registry-quality-pass. Five tasks: (1) fetch_templates — pull activityTemplate list (limit=500) via impulse-resolve; (2) fetch_metrics — pull activityTemplatesByMetrics for Thompson α/β + recent execution count; (3) fetch_recent_traces — pull executionTraceWithSignatures (NOT full bodies) for the last lookbackDays days, capped per template at maxTracesPerTemplate; (4) compute_load_bearing — LLM-renders a ranked array of {templateId, rank, evidence} from the three signal sources, emitting a coreActivitySet impulse with the top-N templates; (5) emit_audit_report — LLM summarizes the audit into a human-readable auditReport impulse and calls markGoalComplete (matching make-activity's emission contract). Sandbox: read-only — no file writes, no workingDirectory. Sibling activities (review-activity, prune-activity, replace-activity, extract-pattern, concept-from-pattern) consume coreActivitySet downstream; this activity is the FIRST of six per the proposal — the remaining five are designed against the real coreActivitySet output rather than speculative shapes. Context-budget: trace SIGNATURES not full traces (the existing executionTraceWithSignatures shape was built precisely for this case at activity-api/config.ts:223), capped at maxTracesPerTemplate*coreSetSize ~= 100 signature rows per invocation."
+                  - generic [ref=e207]:
+                    - img [ref=e208]
+                    - generic [ref=e215]:
+                      - generic [ref=e216]: Fix Activity Template Schema
+                      - generic [ref=e217]:
+                        - generic [ref=e218]: "[meta]"
+                        - generic [ref=e219]: 4t
+                      - paragraph [ref=e220]: Reads an invalid activity template and rewrites it to match the correct schema (tasks must have prompt or resolver). This is a meta-activity that fixes other activities.
+                  - generic [ref=e221]:
+                    - img [ref=e222]
+                    - generic [ref=e229]:
+                      - generic [ref=e230]: Audit and Backfill Template Semantic Markers
+                      - generic [ref=e231]:
+                        - generic [ref=e232]: "[meta]"
+                        - generic [ref=e233]: 4t
+                      - paragraph [ref=e234]: "Single-candidate-per-invocation upkeep activity that drains the queue of template-metadata deficiencies one at a time. Two-phase: Phase 1 fetches the single worst-scored template from the templateAuditReport resolver (read-only); Phase 2 (gated by applyChanges, default false) uses an LLM with strict safety rules to decide whether a backfill is safe, then applies it via the activityTemplate_update write resolver. Safety defaults: applyChanges=false, never auto-backfill descriptions, never auto-backfill shapes that are alias-warned, skip templates with hardcoded URLs (flagged for human review). Re-run repeatedly until the deficient set converges; each invocation produces one execution trace for Thompson Sampling."
+                  - generic [ref=e235]:
+                    - img [ref=e236]
+                    - generic [ref=e243]:
+                      - generic [ref=e244]: Verify Goal Satisfaction
+                      - generic [ref=e245]:
+                        - generic [ref=e246]: "[infrastructure]"
+                        - generic [ref=e247]: 3t
+                      - paragraph [ref=e248]: Post-execution goal completion verifier. Evidence-based verification checks whether execution outputs satisfy the goal. If the goal is partially or fully unmet, goal_decomposition identifies the remaining subgoals. Synthesizes both into a goal_satisfaction_result that includes completion fraction, evidence, and (if incomplete) prioritized subgoals with suggested next activities.
+                  - generic [ref=e249]:
+                    - img [ref=e250]
+                    - generic [ref=e257]:
+                      - generic [ref=e258]: Explore Goal Trajectories
+                      - generic [ref=e259]:
+                        - generic [ref=e260]: "[meta]"
+                        - generic [ref=e261]: 5t
+                      - paragraph [ref=e262]: Maps possible activity trajectories toward a stated goal. Uses goal_enrichment to infer required output shapes, backward chaining (activity_recommendation) to find activities that produce those shapes, forward chaining to find what is reachable from present state, and historical goal execution paths to surface high-confidence sequences with estimated completion probabilities. Produces a ranked goal_trajectory_map for downstream planning.
+                  - generic [ref=e263]:
+                    - img [ref=e264]
+                    - generic [ref=e271]:
+                      - generic [ref=e272]: Validate Template Compliance
+                      - generic [ref=e273]:
+                        - generic [ref=e274]: "[infrastructure]"
+                        - generic [ref=e275]: 3t
+                      - paragraph [ref=e276]: "Validates an activity template against post-2026-04-26 canonical criteria: resolver on every task, inputShapes/outputShapes/outputImpulses declared, no invented fields (subagent, tools object, impulseReferences, contextRequirements, top-level impulses array), activity-level inputSchema/outputSchema, no filesystem-based inter-task coordination, no stale endpoints, valid retry strategies, and proper requiredPatterns format. Emits validation_result for validator-dispatch."
+                  - generic [ref=e277]:
+                    - img [ref=e278]
+                    - generic [ref=e285]:
+                      - generic [ref=e286]: Make Activity (meta-activity-builder)
+                      - generic [ref=e287]:
+                        - generic [ref=e288]: "[meta]"
+                        - generic [ref=e289]: 6t
+                      - paragraph [ref=e290]: "Centerpiece meta-activity per OpenSpec change 2026-04-27-meta-activity-builder. Creates new activities from a goal + activityRecommendations input. Six tasks: (1) acquire_context — read goal + relevant existing templates via impulse-resolve; (2) identify_candidates — iterate over activityRecommendations via the new `iteration` resolver, scoring each candidate against the goal; (3) execute_plan — dispatch the highest-scored candidate as a child activity via the `activity` resolver; (4) handle_errors — iterate over alternate candidates on plan failure (first-success-wins); (5) declare_complete — explicit LLM tool call that emits a `goalEnd` impulse with the structured summary, INDEPENDENT of the validator-dispatch verdict; (6) extract_template — write a new activityTemplate via the `activityTemplate_write` write resolver, gated on the applyTemplateExtraction variable (default false). Sandbox: all dispatched sub-activities receive workingDirectory (default /tmp/<goal-slug>/) via forwarded variables; bash/file resolvers in dispatched children must reference {{variables.workingDirectory}}. PATH-SANDBOX ENFORCEMENT — see openQuestions[0]: pre-validation resolver does not currently support a forbiddenPathPatterns option; sandbox enforcement is documentary/contractual at this template level. Co-developed with the iteration resolver (sibling work in repos/minibob/src/resolvers/iteration-resolver.ts); when iteration is not registered, tasks 2 and 4 will report `resolver not found` and the template's success path is reduced to the LLM-orchestrated subset."
+                  - generic [ref=e291]:
+                    - img [ref=e292]
+                    - generic [ref=e299]:
+                      - generic [ref=e300]: Ribosome Extract (lifecycle-driven template extraction)
+                      - generic [ref=e301]:
+                        - generic [ref=e302]: "[meta]"
+                        - generic [ref=e303]: 7t
+                      - paragraph [ref=e304]: "Activity-driven implementation of the ribosome pattern. Subscribes to lifecycle:activity:postExecution and treats template extraction as a shape-identifying counterpart to goal/activity — input shape lifecycle:activity:postExecution, output shapes extractedTemplate / learningSummary / goalEnd. Replaces the imperative ribosome calls that previously fired inline from activity.ts (recordExecutionTrace path), goal-processor.ts (4 sites: success extraction, cost-limit attempt, LLM-verified attempt, max-turns attempt), and improviser-resolver.ts (success + cost-limit paths). The chain has six tasks: (1) acquire_trace_signature — impulse-resolve `executionTraceWithSignatures` keyed by the just-completed executionId; (2) assess_quality — llm computes a quality score from the lifecycle payload + trace signature (success rate, task count, resolver tier mix, cost-per-output ratio, depth=0 check, author-skip check); (3) gate_extraction — conditional branch on qualityScore >= qualityThreshold; (4) synthesize_template — llm renders an extractedTemplate JSON proposal from the trace signature + lifecycle payload; (5) validate_proposal — llm validates the proposal against compliance rules (similar to replace-activity::validate_proposals); (6) dispatch_write — impulse-resolve with pointer.type=`activityTemplate_write` operation=`create`, GATED on the applyExtraction variable (default false). The applyExtraction default of false makes first-canary-deploy observe-only: the chain emits an extractedTemplate proposal impulse for downstream consumers (workbench, replace-activity, operator) without actually persisting the new template. Once enough proposal traces accumulate and the quality threshold is calibrated, applyExtraction can be flipped to true (per-template variable override) for autonomous registration. RECURSION SAFETY: this template's templateAuthor on the lifecycle payload is `ribosome-pattern`, so when the meta-activity itself emits postExecution at completion, the gate_extraction conditional skips because templateAuthor is matched against a documented skip list (the meta-activity sets `templateAuthor != ribosome-pattern && templateAuthor != ribosome && templateAuthor != ribosome-sequence` as the recursion-safety filter). MIGRATION TARGET: the imperative ribosome calls reach for mcp.registerTemplate(); the meta-activity uses the activityTemplate_write resolver advertised by activity-api per docs/impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md (post L-3 auth fix). Per the system's foundational model: ribosome is the shape-identifying counterpart to goal/activity — runs after execution, registered to the lifecycle hook, declarative quality gates expressed in template variables not buried in code."
+                  - generic [ref=e305]:
+                    - img [ref=e306]
+                    - generic [ref=e313]:
+                      - generic [ref=e314]: Create Shape-Provider Goal (shape-provider-goal-creation)
+                      - generic [ref=e315]:
+                        - generic [ref=e316]: "[meta]"
+                        - generic [ref=e317]: 8t
+                      - paragraph [ref=e318]: "Activity-driven implementation of shape-provider goal creation per OpenSpec change 2026-04-26-shape-provider-goal-creation §3. When a missing input shape cannot be bound by pool selection or in-scope producer selection, this activity composes a NEW goal-shaped impulse whose `endpoint_output_shapes: [target_shape]` constraint will route the dispatched activity to a producer of that shape via the existing variant-selection pipe (goal-processing-activity-driven). Five signal-gathering tasks (forward-chain producers, prior paths with terminal-shape match, concept-db related concepts, impulse co-occurrence ranking, cost/risk priors) accumulate evidence; the parent-chain lookup task surfaces the parent execution's composition_chain for cycle detection; a final LLM compose_goal task ingests all signals and emits a single goal-shaped impulse. Three recursion-safety guards (depth, cycle, budget) are embedded in the compose_goal LLM prompt and surface as `human_in_the_loop_required: true` plus a `failure_mode` per the validators-and-failure-modes taxonomy. The activity itself records traces for Thompson Sampling — variants (cost-optimized, concept-omitted, etc.) emerge from the learning loop via save-as-variant."
+                  - generic [ref=e319]:
+                    - img [ref=e320]
+                    - generic [ref=e327]:
+                      - generic [ref=e328]: Validator Dispatch (validators-and-failure-modes)
+                      - generic [ref=e329]:
+                        - generic [ref=e330]: "[meta]"
+                        - generic [ref=e331]: 5t
+                      - paragraph [ref=e332]: "Activity-driven implementation of post-task validator dispatch per OpenSpec change 2026-04-26-validators-and-failure-modes (§7). Subscribes to lifecycle:task:completed and chains five tasks: (1) discover_validators — find activities consuming the parent task's outputShapes AND producing validation_result via the canonical `discoverByShapesQuery` impulse-resolve shape (mode=backward + output_shapes=[validation_result]); (2) select_validator_per_shape — pick a validator from the activity envelope using composition_score and Thompson α/β; (3) dispatch_validators — execute the chosen validator with the parent task's outputs as inputs; (4) propagate_failure_mode — when validation_result.passed === false, emit a failure_mode_propagation impulse carrying the structured verifier_negative failure_mode for the dispatcher to stamp on the parent trace; (5) learning_signal_write — record impulse_relevance + tool_argument_pattern signals for the parent task, gating executionSucceeded on validator outcome. As of 2026-04-26 the template uses dotted-path interpolation (e.g. {{lifecycle.taskId}}, {{lifecycle.executionId}}) — the interpolate regex was extended to /\\{\\{([\\w]+(?:\\.[\\w]+)*)\\}\\}/g in iter 7 (activity.ts:6952). F-6 corrected (2026-04-26): task 1 uses the canonical `impulse-resolve` + `discoverByShapesQuery` pattern advertised by activity-api — zero minibob source changes (vessel-integration constraint)."
+                  - generic [ref=e333]:
+                    - img [ref=e334]
+                    - generic [ref=e341]:
+                      - generic [ref=e342]: Slot Binding (impulse-binding-selection-layer)
+                      - generic [ref=e343]:
+                        - generic [ref=e344]: "[meta]"
+                        - generic [ref=e345]: 4t
+                      - paragraph [ref=e346]: "Activity-driven implementation of pool selection and producer selection per OpenSpec change 2026-04-26-impulse-binding-selection-layer (D5). Subscribes to lifecycle:task:preBinding and chains three tasks: (1) prepare_pool — synthesise impulses from same-named template variables (cheap, deterministic, runs unconditionally); (2) select_or_produce — branches between impulse_pool_selection (when candidates already exist for a missing shape) and producer_selection (when no candidate exists); (3) agent_fill_fallback — LLM-of-last-resort that runs only when steps 1-2 leave shapes unbound and producer_selection returned no producer. As of 2026-04-26 the template uses dotted-path interpolation (e.g. {{lifecycle.taskId}}, {{lifecycle.missingShapes}}) — the interpolate regex was extended to /\\{\\{([\\w]+(?:\\.[\\w]+)*)\\}\\}/g in iter 7 (activity.ts:6952). Array/object subtrees still serialise to JSON-stringified form per existing semantics (resolvers JSON.parse where needed)."
+                  - generic [ref=e347]:
+                    - img [ref=e348]
+                    - generic [ref=e355]:
+                      - generic [ref=e356]: Spec Validation Loop
+                      - generic [ref=e357]:
+                        - generic [ref=e358]: "[meta]"
+                        - generic [ref=e359]: 8t
+                      - paragraph [ref=e360]: Meta-activity that chains define-specification → spec-to-enforcement-activity → enforcement-to-validation-activity → map-components-to-validations → run validation → update-specs-from-validation → synchronize-spec-validation. Exits when sync-report shows converged:true or budget is exhausted.
+                  - generic [ref=e361]:
+                    - img [ref=e362]
+                    - generic [ref=e369]:
+                      - generic [ref=e370]: Synchronize Spec and Validation
+                      - generic [ref=e371]:
+                        - generic [ref=e372]: "[infrastructure]"
+                        - generic [ref=e373]: 2t
+                      - paragraph [ref=e374]: Reads spec.md, validation-mapping.json, and validation-results.json. Produces sync-report.json with converged:true when all mapped components pass and no unmapped in-scope components exist.
+                  - generic [ref=e375]:
+                    - img [ref=e376]
+                    - generic [ref=e383]:
+                      - generic [ref=e384]: Update Specs from Validation
+                      - generic [ref=e385]:
+                        - generic [ref=e386]: "[infrastructure]"
+                        - generic [ref=e387]: 1t
+                      - paragraph [ref=e388]: Reads validation-results.json and spec.md. If any results have passed:false, refines spec.md success criteria. If all pass, confirms spec is current without modification.
+                  - generic [ref=e389]:
+                    - img [ref=e390]
+                    - generic [ref=e397]:
+                      - generic [ref=e398]: Map Components to Validations
+                      - generic [ref=e399]:
+                        - generic [ref=e400]: "[infrastructure]"
+                        - generic [ref=e401]: 1t
+                      - paragraph [ref=e402]: Enumerates files in the working directory and maps each to the applicable validation activity, writing validation-mapping.json.
+                  - generic [ref=e403]:
+                    - img [ref=e404]
+                    - generic [ref=e411]:
+                      - generic [ref=e412]: Enforcement to Validation Activity
+                      - generic [ref=e413]:
+                        - generic [ref=e414]: "[meta]"
+                        - generic [ref=e415]: 1t
+                      - paragraph [ref=e416]: Reads enforcement-activity.json and mechanically writes validation-activity.json — a read-only, idempotent variant safe to run repeatedly without modifying project files.
+                  - generic [ref=e417]:
+                    - img [ref=e418]
+                    - generic [ref=e425]:
+                      - generic [ref=e426]: Spec to Enforcement Activity
+                      - generic [ref=e427]:
+                        - generic [ref=e428]: "[meta]"
+                        - generic [ref=e429]: 1t
+                      - paragraph [ref=e430]: Reads spec.md and writes enforcement-activity.json — a MiniBob activity template that enforces the specification by running bash checks and producing a validation_result.
+                  - generic [ref=e431]:
+                    - img [ref=e432]
+                    - generic [ref=e439]:
+                      - generic [ref=e440]: Define Specification
+                      - generic [ref=e441]:
+                        - generic [ref=e442]: "[meta]"
+                        - generic [ref=e443]: 1t
+                      - paragraph [ref=e444]: Writes spec.md to the working directory describing the goal's intent, expected behaviors, and testable success criteria. The specification is an external impulse consumed by downstream validation activities.
+                  - generic [ref=e445]:
+                    - img [ref=e446]
+                    - generic [ref=e453]:
+                      - generic [ref=e454]: Simple Resolver Composition Demo
+                      - generic [ref=e455]:
+                        - generic [ref=e456]: "[tool]"
+                        - generic [ref=e457]: 5t
+                      - paragraph [ref=e458]: Minimal example showing human, bash, git, and file resolvers working together in 5 tasks. Perfect for testing and learning resolver composition.
+                  - generic [ref=e459]:
+                    - img [ref=e460]
+                    - generic [ref=e467]:
+                      - generic [ref=e468]: Interactive Code Review
+                      - generic [ref=e469]:
+                        - generic [ref=e470]: "[tool]"
+                        - generic [ref=e471]: 12t
+                      - paragraph [ref=e472]: Comprehensive example showing human, llm, bash, git, and file resolvers working together. Human guides the review process, git shows changes, bash runs tests, file reads code, and llm analyzes quality.
+                  - generic [ref=e473]:
+                    - img [ref=e474]
+                    - generic [ref=e481]:
+                      - generic [ref=e482]: Interactive Activity Selector
+                      - generic [ref=e483]:
+                        - generic [ref=e484]: "[tool]"
+                        - generic [ref=e485]: 5t
+                      - paragraph [ref=e486]: Presents user with recommended activities and lets them choose which to execute. Supports iterative goal achievement with user guidance at each step.
+                  - generic [ref=e487]:
+                    - img [ref=e488]
+                    - generic [ref=e495]:
+                      - generic [ref=e496]: Human-Guided Activity Orchestrator
+                      - generic [ref=e497]:
+                        - generic [ref=e498]: "[tool]"
+                        - generic [ref=e499]: 13t
+                      - paragraph [ref=e500]: "Fully human-controlled orchestration where humans act as resolvers making all decisions. Asks human at each step: what to do, which activity to run, whether goal is complete."
+                  - generic [ref=e501]:
+                    - img [ref=e502]
+                    - generic [ref=e509]:
+                      - generic [ref=e510]: "Startup: Sync Embedded Templates"
+                      - generic [ref=e511]:
+                        - generic [ref=e512]: "[infrastructure]"
+                        - generic [ref=e513]: 1t
+                      - paragraph [ref=e514]: Upload all embedded templates to the backend so they participate in Thompson Sampling learning and recommendations
+                  - generic [ref=e515]:
+                    - img [ref=e516]
+                    - generic [ref=e523]:
+                      - generic [ref=e524]: Startup Health Check
+                      - generic [ref=e525]:
+                        - generic [ref=e526]: "[infrastructure]"
+                        - generic [ref=e527]: 2t
+                      - paragraph [ref=e528]: Verify MiniBob system health and connectivity on startup
+                  - generic [ref=e529]:
+                    - img [ref=e530]
+                    - generic [ref=e537]:
+                      - generic [ref=e538]: Orchestrate Refactor Goal
+                      - generic [ref=e539]:
+                        - generic [ref=e540]: "[meta]"
+                        - generic [ref=e541]: 4t
+                      - paragraph [ref=e542]: Executes a code refactoring with deterministic pre/post guards. Takes a test baseline and git snapshot before dispatching the refactoring, then validates typecheck and tests afterward. Composition routing is handled by goal-processing-activity-driven — this template provides the domain-specific guard layer.
+                  - generic [ref=e543]:
+                    - img [ref=e544]
+                    - generic [ref=e551]:
+                      - generic [ref=e552]: Orchestrate Test Goal
+                      - generic [ref=e553]:
+                        - generic [ref=e554]: "[meta]"
+                        - generic [ref=e555]: 3t
+                      - paragraph [ref=e556]: Creates and executes tests for a specified target module. Detects framework and existing tests deterministically, generates tests via LLM, runs them via bash, and reports outcomes. Composition routing is handled by goal-processing-activity-driven — this template provides the domain-specific execution layer.
+                  - generic [ref=e557]:
+                    - img [ref=e558]
+                    - generic [ref=e565]:
+                      - generic [ref=e566]: Acquire Codebase Context
+                      - generic [ref=e567]:
+                        - generic [ref=e568]: "[tool]"
+                        - generic [ref=e569]: 5t
+                      - paragraph [ref=e570]: Map repository structure, identify entry points, analyze dependencies, and create codebase_structure impulse for refactoring activities
+                  - generic [ref=e571]:
+                    - img [ref=e572]
+                    - generic [ref=e579]:
+                      - generic [ref=e580]: Acquire Requirements Context
+                      - generic [ref=e581]:
+                        - generic [ref=e582]: "[tool]"
+                        - generic [ref=e583]: 4t
+                      - paragraph [ref=e584]: Extract structured requirements from documentation files (spec.md, README, etc.) and create requirement impulses for feature development
+                  - generic [ref=e585]:
+                    - img [ref=e586]
+                    - generic [ref=e593]:
+                      - generic [ref=e594]: Acquire Error Log Context
+                      - generic [ref=e595]:
+                        - generic [ref=e596]: "[tool]"
+                        - generic [ref=e597]: 4t
+                      - paragraph [ref=e598]: Extract error information from execution traces or log files and create structured error_log impulses for debugging activities
+                  - generic [ref=e599]:
+                    - img [ref=e600]
+                    - generic [ref=e607]:
+                      - generic [ref=e608]: TypeScript Project Setup
+                      - generic [ref=e609]:
+                        - generic [ref=e610]: "[infrastructure]"
+                        - generic [ref=e611]: 4t
+                      - paragraph [ref=e612]: Initialize a TypeScript project with package.json, tsconfig.json, and test framework configuration. Produces config_file shapes for project infrastructure.
+                  - generic [ref=e613]:
+                    - img [ref=e614]
+                    - generic [ref=e621]:
+                      - generic [ref=e622]: Fetch Activity Metrics
+                      - generic [ref=e623]:
+                        - generic [ref=e624]: "[tool]"
+                        - generic [ref=e625]: 1t
+                      - paragraph [ref=e626]: Fetches activity metrics from the backend API and saves to a JSON file. Designed to be reliable with proper validation.
+                  - generic [ref=e627]:
+                    - img [ref=e628]
+                    - generic [ref=e635]:
+                      - generic [ref=e636]: Decompose Goal to Output Shapes
+                      - generic [ref=e637]:
+                        - generic [ref=e638]: "[meta]"
+                        - generic [ref=e639]: 4t
+                      - paragraph [ref=e640]: Break down an abstract goal into concrete output shapes, enabling activity matching based on what needs to be produced rather than how to produce it. Uses the outcome-to-shape mechanism to know what we want before we get it.
+                  - generic [ref=e641]:
+                    - img [ref=e642]
+                    - generic [ref=e649]:
+                      - generic [ref=e650]: Jiggle and Prune Documentation
+                      - generic [ref=e651]:
+                        - generic [ref=e652]: "[meta]"
+                        - generic [ref=e653]: 6t
+                      - paragraph [ref=e654]: "Detect and resolve documentation conflicts: duplicates, superseded files, and temporary planning docs. Phase 1 (Jiggle) analyzes and builds conflict registry. Phase 2 (Prune) executes resolutions."
+                  - generic [ref=e655]:
+                    - img [ref=e656]
+                    - generic [ref=e663]:
+                      - generic [ref=e664]: "Verify: Unified Learning Architecture"
+                      - generic [ref=e665]:
+                        - generic [ref=e666]: "[meta]"
+                        - generic [ref=e667]: 5t
+                      - paragraph [ref=e668]: "Verification activity that tests the full unified learning flow: impulse pointer types, system activities, pre-validation, and failure penalty tracking."
+                  - generic [ref=e669]:
+                    - img [ref=e670]
+                    - generic [ref=e677]:
+                      - generic [ref=e678]: "System: Compute Tool Risks"
+                      - generic [ref=e679]:
+                        - generic [ref=e680]: "[meta]"
+                        - generic [ref=e681]: 3t
+                      - paragraph [ref=e682]: System activity that computes tool risk profiles by querying tool execution history and generating a tool_risk_profile impulse for use in activity selection and pre-validation.
+                  - generic [ref=e683]:
+                    - img [ref=e684]
+                    - generic [ref=e691]:
+                      - generic [ref=e692]: "System: Analyze Execution"
+                      - generic [ref=e693]:
+                        - generic [ref=e694]: "[meta]"
+                        - generic [ref=e695]: 4t
+                      - paragraph [ref=e696]: System activity that analyzes a failed or partial execution to identify failure patterns and suggest variant improvements. Produces failure_pattern and variant_suggestion impulses.
+                  - generic [ref=e697]:
+                    - img [ref=e698]
+                    - generic [ref=e705]:
+                      - generic [ref=e706]: "System: Recommend Activity"
+                      - generic [ref=e707]:
+                        - generic [ref=e708]: "[meta]"
+                        - generic [ref=e709]: 2t
+                      - paragraph [ref=e710]: System activity that recommends activities for a goal using Thompson Sampling with failure penalties. Loads tool risk profiles and impulse relevance data to inform ranking.
+                  - generic [ref=e711]:
+                    - img [ref=e712]
+                    - generic [ref=e719]:
+                      - generic [ref=e720]: Prune Underperforming Variants
+                      - generic [ref=e721]:
+                        - generic [ref=e722]: "[meta]"
+                        - generic [ref=e723]: 4t
+                      - paragraph [ref=e724]: "Analyzes variant family performance using Thompson Sampling metrics and deprecates the worst underperformer via the activityTemplate_deprecate write resolver. Single-item deprecations per run (re-run to continue pruning). Gated by dryRun variable (default: true) so analysis is always safe. Always preserves at least preserveMinVariants active variants."
+                  - generic [ref=e725]:
+                    - img [ref=e726]
+                    - generic [ref=e733]:
+                      - generic [ref=e734]: Select Best Variant (Thompson Sampling)
+                      - generic [ref=e735]:
+                        - generic [ref=e736]: "[meta]"
+                        - generic [ref=e737]: 3t
+                      - paragraph [ref=e738]: Selects the best performing variant from a template family using Thompson Sampling. Loads variant performance metrics, applies the selection algorithm, and outputs the selected variant for execution.
+                  - generic [ref=e739]:
+                    - img [ref=e740]
+                    - generic [ref=e747]:
+                      - generic [ref=e748]: Create Variant from Failed Execution
+                      - generic [ref=e749]:
+                        - generic [ref=e750]: "[meta]"
+                        - generic [ref=e751]: 4t
+                      - paragraph [ref=e752]: Creates a new activity template variant from a failed execution. Analyzes the failure, proposes fixes, and generates a variant template that addresses the root cause. The new variant is linked to its parent via variant_of metadata.
+                  - generic [ref=e753]:
+                    - img [ref=e754]
+                    - generic [ref=e761]:
+                      - generic [ref=e762]: Verify Thompson Sampling Learning Contract
+                      - generic [ref=e763]:
+                        - generic [ref=e764]: "[infrastructure]"
+                        - generic [ref=e765]: 4t
+                      - paragraph [ref=e766]: Verify that Thompson Sampling correctly updates alpha/beta parameters from execution outcomes and that better-performing variants are selected more frequently over time
+                  - generic [ref=e767]:
+                    - img [ref=e768]
+                    - generic [ref=e775]:
+                      - generic [ref=e776]: Verify Resolver Locality Contract
+                      - generic [ref=e777]:
+                        - generic [ref=e778]: "[infrastructure]"
+                        - generic [ref=e779]: 4t
+                      - paragraph [ref=e780]: "Verify that impulse resolution follows the 'Resolvers live where data lives' principle: local pointer types (memo, file, directoryTree, gitDiff) resolved by MiniBob, backend pointer types resolved via MCP delegation"
+                  - generic [ref=e781]:
+                    - img [ref=e782]
+                    - generic [ref=e789]:
+                      - generic [ref=e790]: Verify Impulse Lifecycle Contract
+                      - generic [ref=e791]:
+                        - generic [ref=e792]: "[infrastructure]"
+                        - generic [ref=e793]: 7t
+                      - paragraph [ref=e794]: "Deterministic validation harness that verifies impulse lifecycle contract compliance: metadata-first loading, budget enforcement with truncation, relevance score updates, and resolver routing (local vs MCP)"
+                  - generic [ref=e795]:
+                    - img [ref=e796]
+                    - generic [ref=e803]:
+                      - generic [ref=e804]: Verify Goal Alignment
+                      - generic [ref=e805]:
+                        - generic [ref=e806]: "[infrastructure]"
+                        - generic [ref=e807]: 1t
+                      - paragraph [ref=e808]: "Post-execution validator: determines whether an activity execution produced outputs that advance the declared goal. Emits a validation_result shaped impulse for consumption by validator-dispatch."
+          - generic [ref=e809]:
+            - alert [ref=e811]:
+              - img [ref=e812]
+              - heading "Productive loop detected Loop" [level=5] [ref=e817]:
+                - text: Productive loop detected
+                - generic [ref=e818]: Loop
+              - generic [ref=e819]: A repeating pattern was found in columns 0–0. Each iteration produces new shapes, so this loop is considered productive and will not block execution.
+            - generic [ref=e820]:
+              - generic [ref=e821]:
+                - img [ref=e822]
+                - text: compose
+              - generic [ref=e825]: │
+              - generic [ref=e826]:
+                - img [ref=e827]
+                - text: trace
+              - generic [ref=e830]: │
+              - generic [ref=e831]:
+                - img [ref=e832]
+                - text: live
+            - generic [ref=e834]:
+              - img [ref=e835]
+              - generic [ref=e841]: "observe execution:"
+              - textbox "execution id…" [ref=e842]
+              - button "connect" [disabled]
+            - generic [ref=e843]:
+              - generic [ref=e845]:
+                - generic [ref=e846]:
+                  - generic [ref=e847]: pool
+                  - generic [ref=e848]:
+                    - 'generic "built-in: goal" [ref=e849]': goal
+                    - 'generic "built-in: directoryTree" [ref=e850]': directoryTree
+                    - button "+ seed" [ref=e851] [cursor=pointer]
+                  - generic [ref=e853]: →
+                - generic [ref=e854]:
+                  - button "Insert activity at start" [ref=e856] [cursor=pointer]:
+                    - img [ref=e857]
+                    - text: insert
+                  - generic [ref=e860]:
+                    - generic [ref=e862]:
+                      - generic [ref=e863]: ──
+                      - generic [ref=e864]: step 1
+                      - generic [ref=e865]: ──
+                    - button "4 shapes in this column" [ref=e867] [cursor=pointer]:
+                      - generic [ref=e868]: ○
+                      - generic [ref=e869]: "4"
+                      - generic [ref=e870]: →2
+                    - generic [ref=e872]:
+                      - generic:
+                        - generic "Validation errors":
+                          - img
+                      - generic [ref=e876] [cursor=pointer]:
+                        - 'generic "Topology: frontier (0 traces · CI 0.00–1.00)" [ref=e877]'
+                        - img [ref=e878]
+                        - generic [ref=e885]:
+                          - generic [ref=e886]:
+                            - heading "Execute Shell Command" [level=3] [ref=e887]
+                            - generic [ref=e888]:
+                              - generic [ref=e889]: "[tool]"
+                              - button "Remove Execute Shell Command from trajectory" [ref=e890]:
+                                - img
+                          - paragraph [ref=e891]: Generic template for simple shell/system operations. This is the foundation template that gets reused for common queries like 'show version', 'list files', 'check status'. As patterns emerge, more specific variants will be created through the learning loop.
+                          - generic [ref=e892]:
+                            - generic [ref=e893]: activity_template
+                            - generic [ref=e894]: goal
+                            - generic [ref=e895]: →
+                            - generic [ref=e896]: bash_output
+                            - generic [ref=e897]: "+1"
+                          - generic [ref=e898]:
+                            - generic [ref=e899]:
+                              - generic "resolver tier distribution" [ref=e900]:
+                                - generic "⚠ all 1 tasks use LLM — no deterministic path" [ref=e901]: ⚠1llm
+                              - generic [ref=e902]: α2β1
+                            - button "Expand activity details" [ref=e903]: ▾ expand
+                  - button "Insert activity after step 1" [ref=e905] [cursor=pointer]:
+                    - img [ref=e906]
+                    - text: insert
+                - generic [ref=e909]:
+                  - generic [ref=e912]: →
+                  - 'generic "⚠ required — not yet in pool: activity_template" [ref=e914]': ⚠activit…
+                  - 'generic "⚠ required — not yet in pool: goal" [ref=e915]': ⚠goal
+                - generic [ref=e916]:
+                  - generic [ref=e917]:
+                    - generic [ref=e919]:
+                      - generic [ref=e920]: ──
+                      - generic [ref=e921]: step 2
+                      - generic [ref=e922]: ──
+                    - button "3 shapes in this column" [ref=e924] [cursor=pointer]:
+                      - generic [ref=e925]: ○
+                      - generic [ref=e926]: "3"
+                      - generic [ref=e927]: →2
+                    - generic [ref=e929]:
+                      - generic:
+                        - generic "Validation errors":
+                          - img
+                      - generic [ref=e933] [cursor=pointer]:
+                        - 'generic "Topology: frontier (0 traces · CI 0.00–1.00)" [ref=e934]'
+                        - img [ref=e935]
+                        - generic [ref=e942]:
+                          - generic [ref=e943]:
+                            - heading "Hello World Minimal" [level=3] [ref=e944]
+                            - generic [ref=e945]:
+                              - generic [ref=e946]: "[infrastructure]"
+                              - button "Remove Hello World Minimal from trajectory" [ref=e947]:
+                                - img
+                          - paragraph [ref=e948]: Minimal test activity with no context requirements - single task that writes a file
+                          - generic [ref=e949]:
+                            - generic [ref=e950]: activity_template
+                            - generic [ref=e951]: goal
+                            - generic [ref=e952]: →
+                            - generic [ref=e953]: config_file
+                            - generic [ref=e954]: documentation
+                            - generic [ref=e955]: "+2"
+                          - generic [ref=e956]:
+                            - generic [ref=e957]:
+                              - generic "resolver tier distribution" [ref=e958]:
+                                - generic "⚠ all 1 tasks use LLM — no deterministic path" [ref=e959]: ⚠1llm
+                              - generic [ref=e960]: α2β1
+                            - button "Expand activity details" [ref=e961]: ▾ expand
+                  - button "Insert activity after step 2" [ref=e963] [cursor=pointer]:
+                    - img [ref=e964]
+                    - text: insert
+                - generic [ref=e967]:
+                  - generic [ref=e970]: →
+                  - 'generic "shape: config_file" [ref=e972]': config_f…
+                  - 'generic "shape: source_code" [ref=e973]': source_c…
+                  - 'generic "⚠ required — not yet in pool: activity_template" [ref=e974]': ⚠activit…
+                  - 'generic "⚠ required — not yet in pool: goal" [ref=e975]': ⚠goal
+                  - button "+1" [ref=e976] [cursor=pointer]
+                - generic [ref=e977]:
+                  - generic [ref=e978]:
+                    - generic [ref=e980]:
+                      - generic [ref=e981]: ──
+                      - generic [ref=e982]: step 3
+                      - generic [ref=e983]: ──
+                    - button "4 shapes in this column" [ref=e985] [cursor=pointer]:
+                      - generic [ref=e986]: ○
+                      - generic [ref=e987]: "4"
+                      - generic [ref=e988]: →2
+                    - generic [ref=e990]:
+                      - generic:
+                        - generic "Validation errors":
+                          - img
+                      - generic [ref=e994] [cursor=pointer]:
+                        - 'generic "Topology: frontier (0 traces · CI 0.00–1.00)" [ref=e995]'
+                        - img [ref=e996]
+                        - generic [ref=e1003]:
+                          - generic [ref=e1004]:
+                            - heading "Goal Processing (Activity-Driven)" [level=3] [ref=e1005]
+                            - generic [ref=e1006]:
+                              - generic [ref=e1007]: "[goal]"
+                              - button "Remove Goal Processing (Activity-Driven) from trajectory" [ref=e1008]:
+                                - img
+                          - paragraph [ref=e1009]: "Default goal-resolution meta-activity: drives goal processing entirely through the resolver chain (impulse_state_analysis → context_acquisition → goal_enrichment → activity_recommendation → variant_selection → activity dispatch → goal_verification (evidence_based; deterministic verdict from execution facts) → optional human clarification → optional goal decomposition). Every task dispatches a resolver by name; no bespoke TypeScript god-object orchestrates the flow. The dispatched activity id is resolved dynamically from the variant_selection_result impulse (Thompson Sampling output) — no hardcoded echo stub. Additive; goal-processing-standard.json still loads for fallback/comparison flows."
+                          - generic [ref=e1010]:
+                            - generic [ref=e1011]: activity_template
+                            - generic [ref=e1012]: config_file
+                            - generic [ref=e1013]: →
+                            - generic [ref=e1014]: activity_template
+                            - generic [ref=e1015]: recommendation
+                            - generic [ref=e1016]: "+4"
+                          - generic [ref=e1017]:
+                            - generic [ref=e1018]:
+                              - generic "resolver tier distribution" [ref=e1019]:
+                                - generic "5 deterministic tasks" [ref=e1020]: 5det
+                                - generic "4 LLM tasks" [ref=e1021]: 4llm
+                              - generic [ref=e1022]: α2β1
+                            - button "Expand activity details" [ref=e1023]: ▾ expand
+                  - button "Insert activity after step 3" [ref=e1025] [cursor=pointer]:
+                    - img [ref=e1026]
+                    - text: insert
+                - generic [ref=e1029]:
+                  - generic [ref=e1032]: →
+                  - 'generic "shape: activity_template" [ref=e1034]': activity…
+                  - 'generic "shape: source_code" [ref=e1035]': source_c…
+                  - 'generic "⚠ required — not yet in pool: config_file" [ref=e1036]': ⚠config_…
+                  - 'generic "⚠ required — not yet in pool: goal" [ref=e1037]': ⚠goal
+                  - button "+1" [ref=e1038] [cursor=pointer]
+                - generic [ref=e1039]:
+                  - generic [ref=e1040]:
+                    - generic [ref=e1042]:
+                      - generic [ref=e1043]: ──
+                      - generic [ref=e1044]: step 4
+                      - generic [ref=e1045]: ──
+                    - button "3 shapes in this column" [ref=e1047] [cursor=pointer]:
+                      - generic [ref=e1048]: ○
+                      - generic [ref=e1049]: "3"
+                      - generic [ref=e1050]: →2
+                    - generic [ref=e1052]:
+                      - generic:
+                        - generic "Validation errors":
+                          - img
+                      - generic [ref=e1056] [cursor=pointer]:
+                        - 'generic "Topology: frontier (0 traces · CI 0.00–1.00)" [ref=e1057]'
+                        - img [ref=e1058]
+                        - generic [ref=e1065]:
+                          - generic [ref=e1066]:
+                            - heading "Goal Processing (Activity-Driven)" [level=3] [ref=e1067]
+                            - generic [ref=e1068]:
+                              - generic [ref=e1069]: "[goal]"
+                              - button "Remove Goal Processing (Activity-Driven) from trajectory" [ref=e1070]:
+                                - img
+                          - paragraph [ref=e1071]: "Default goal-resolution meta-activity: drives goal processing entirely through the resolver chain (impulse_state_analysis → context_acquisition → goal_enrichment → activity_recommendation → variant_selection → activity dispatch → goal_verification (evidence_based; deterministic verdict from execution facts) → optional human clarification → optional goal decomposition). Every task dispatches a resolver by name; no bespoke TypeScript god-object orchestrates the flow. The dispatched activity id is resolved dynamically from the variant_selection_result impulse (Thompson Sampling output) — no hardcoded echo stub. Additive; goal-processing-standard.json still loads for fallback/comparison flows."
+                          - generic [ref=e1072]:
+                            - generic [ref=e1073]: activity_template
+                            - generic [ref=e1074]: config_file
+                            - generic [ref=e1075]: →
+                            - generic [ref=e1076]: activity_template
+                            - generic [ref=e1077]: recommendation
+                            - generic [ref=e1078]: "+4"
+                          - generic [ref=e1079]:
+                            - generic [ref=e1080]:
+                              - generic "resolver tier distribution" [ref=e1081]:
+                                - generic "⚠ all 9 tasks use LLM — no deterministic path" [ref=e1082]: ⚠9llm
+                              - generic [ref=e1083]: α1β2
+                            - button "Expand activity details" [ref=e1084]: ▾ expand
+                  - button "Insert activity after step 4" [ref=e1086] [cursor=pointer]:
+                    - img [ref=e1087]
+                    - text: insert
+                - generic [ref=e1090]:
+                  - generic [ref=e1093]: →
+                  - 'generic "shape: activity_template" [ref=e1095]': activity…
+                  - 'generic "shape: source_code" [ref=e1096]': source_c…
+                  - 'generic "⚠ required — not yet in pool: goal" [ref=e1097]': ⚠goal
+                  - 'generic "⚠ required — not yet in pool: test_suite" [ref=e1098]': ⚠test_su…
+                - generic [ref=e1099]:
+                  - generic [ref=e1100]:
+                    - generic [ref=e1102]:
+                      - generic [ref=e1103]: ──
+                      - generic [ref=e1104]: step 5
+                      - generic [ref=e1105]: ──
+                    - button "3 shapes in this column" [ref=e1107] [cursor=pointer]:
+                      - generic [ref=e1108]: ○
+                      - generic [ref=e1109]: "3"
+                      - generic [ref=e1110]: →1
+                    - generic [ref=e1112]:
+                      - generic:
+                        - generic "Validation errors":
+                          - img
+                      - generic [ref=e1116] [cursor=pointer]:
+                        - 'generic "Topology: frontier (0 traces · CI 0.00–1.00)" [ref=e1117]'
+                        - img [ref=e1118]
+                        - generic [ref=e1125]:
+                          - generic [ref=e1126]:
+                            - heading "Hello World Minimal" [level=3] [ref=e1127]
+                            - generic [ref=e1128]:
+                              - generic [ref=e1129]: "[infrastructure]"
+                              - button "Remove Hello World Minimal from trajectory" [ref=e1130]:
+                                - img
+                          - paragraph [ref=e1131]: Minimal test activity with no context requirements - single task that writes a file
+                          - generic [ref=e1132]:
+                            - generic [ref=e1133]: activity_template
+                            - generic [ref=e1134]: goal
+                            - generic [ref=e1135]: →
+                            - generic [ref=e1136]: config_file
+                            - generic [ref=e1137]: documentation
+                            - generic [ref=e1138]: "+2"
+                          - generic [ref=e1139]:
+                            - generic [ref=e1140]:
+                              - generic "resolver tier distribution" [ref=e1141]:
+                                - generic "⚠ all 1 tasks use LLM — no deterministic path" [ref=e1142]: ⚠1llm
+                              - generic [ref=e1143]: α2β1
+                            - button "Expand activity details" [ref=e1144]: ▾ expand
+                  - button "Insert activity after step 5" [ref=e1146] [cursor=pointer]:
+                    - img [ref=e1147]
+                    - text: insert
+                - generic [ref=e1150]:
+                  - generic [ref=e1153]: →
+                  - 'generic "shape: source_code" [ref=e1155]': source_c…
+                  - 'generic "⚠ required — not yet in pool: activity_template" [ref=e1156]': ⚠activit…
+                  - 'generic "⚠ required — not yet in pool: goal" [ref=e1157]': ⚠goal
+                - generic [ref=e1158]:
+                  - generic [ref=e1159]:
+                    - generic [ref=e1161]:
+                      - generic [ref=e1162]: ──
+                      - generic [ref=e1163]: step 6
+                      - generic [ref=e1164]: ──
+                    - button "3 shapes in this column" [ref=e1166] [cursor=pointer]:
+                      - generic [ref=e1167]: ○
+                      - generic [ref=e1168]: "3"
+                    - generic [ref=e1170]:
+                      - generic:
+                        - generic "Validation errors":
+                          - img
+                      - generic [ref=e1174] [cursor=pointer]:
+                        - 'generic "Topology: frontier (0 traces · CI 0.00–1.00)" [ref=e1175]'
+                        - img [ref=e1176]
+                        - generic [ref=e1183]:
+                          - generic [ref=e1184]:
+                            - heading "Execute Shell Command" [level=3] [ref=e1185]
+                            - generic [ref=e1186]:
+                              - generic [ref=e1187]: "[tool.shell]"
+                              - button "Remove Execute Shell Command from trajectory" [ref=e1188]:
+                                - img
+                          - paragraph [ref=e1189]: Generic template for simple shell/system operations. This is the foundation template that gets reused for common queries like 'show version', 'list files', 'check status'. As patterns emerge, more specific variants will be created through the learning loop.
+                          - generic [ref=e1190]:
+                            - generic [ref=e1191]: activity_template
+                            - generic [ref=e1192]: goal
+                            - generic [ref=e1193]: →
+                            - generic [ref=e1194]: analysis
+                            - generic [ref=e1195]: documentation
+                            - generic [ref=e1196]: "+1"
+                          - generic [ref=e1197]:
+                            - generic [ref=e1198]:
+                              - generic "resolver tier distribution" [ref=e1199]:
+                                - generic "⚠ all 1 tasks use LLM — no deterministic path" [ref=e1200]: ⚠1llm
+                              - generic [ref=e1201]: α1β1
+                            - button "Expand activity details" [ref=e1202]: ▾ expand
+                  - button "Insert activity after step 6" [ref=e1204] [cursor=pointer]:
+                    - img [ref=e1205]
+                    - text: insert
+              - status [ref=e1208]
+          - generic [ref=e1209]:
+            - generic [ref=e1210]:
+              - generic [ref=e1211]:
+                - img [ref=e1212]
+                - heading "Impulse State" [level=2] [ref=e1216]
+              - button "Collapse impulse state panel (Ctrl+I)" [ref=e1217] [cursor=pointer]:
+                - img
+            - generic [ref=e1220]:
+              - generic [ref=e1221]:
+                - generic [ref=e1222]:
+                  - heading "Goal Completion" [level=3] [ref=e1223]
+                  - generic [ref=e1224]:
+                    - generic [ref=e1225]: 100%
+                    - img [ref=e1226]
+                - progressbar [ref=e1229]
+                - generic [ref=e1231]: 1 of 1 shapes complete
+                - generic [ref=e1233]:
+                  - generic [ref=e1234]:
+                    - img [ref=e1235]
+                    - text: Available
+                  - generic [ref=e1239]: ✓ activity_template
+              - generic [ref=e1240]:
+                - heading "goal impulse" [level=3] [ref=e1242]: goal impulse
+                - paragraph [ref=e1245]: describe what an impulse is in the metabob activity system and list 3 examples
+              - generic [ref=e1246]:
+                - heading "Impulse Pool 10 shapes" [level=3] [ref=e1248]:
+                  - generic [ref=e1249]: Impulse Pool
+                  - generic [ref=e1250]: 10 shapes
+                - generic [ref=e1251]:
+                  - generic [ref=e1252]:
+                    - generic [ref=e1253]:
+                      - img [ref=e1254]
+                      - generic [ref=e1258]: 2 impulses in pool
+                    - button "seed shapes (initial pool) 2" [ref=e1260] [cursor=pointer]:
+                      - img [ref=e1261]
+                      - img [ref=e1264]
+                      - generic [ref=e1268]: seed shapes (initial pool)
+                      - generic [ref=e1269]: "2"
+                  - generic [ref=e1270]:
+                    - generic [ref=e1271]: goal
+                    - generic [ref=e1272]: directoryTree
+                    - generic [ref=e1273]: activity_template
+                    - generic [ref=e1274]: recommendation
+                    - generic [ref=e1275]: source_code
+                    - generic [ref=e1276]: bash_output
+                    - generic [ref=e1277]: config_file
+                    - generic [ref=e1278]: documentation
+                    - generic [ref=e1279]: analysis
+                    - generic [ref=e1280]: tool_output
+              - generic [ref=e1281]:
+                - heading "Task Validation" [level=3] [ref=e1283]
+                - generic [ref=e1285]:
+                  - generic [ref=e1286]:
+                    - img [ref=e1287]
+                    - generic "Detect bootstrap / cold-start condition — do we already have enough context to execute, or do we need to gather more first? Resolver reads the shared ImpulseStateManager singleton; no runtime objects passed through JSON config. The produced impulse_state_result impulse is the first link in the chain." [ref=e1291]: Detect bootstrap / cold-start co…
+                    - generic [ref=e1292]: no validators
+                  - generic [ref=e1293]:
+                    - img [ref=e1294]
+                    - generic "Gather context recommended by analyze_state — file / directoryTree / gitDiff impulses sized to the current working directory. Consumes impulse_state_result by shape (not id), so this task proves the executor correctly propagates resolver-produced shape metadata across tasks. high_priority_only strategy keeps the context pool small for cheap runs." [ref=e1298]: Gather context recommended by an…
+                    - generic [ref=e1299]: no validators
+                  - generic [ref=e1300]:
+                    - img [ref=e1301]
+                    - 'generic "Semantic enrichment of the raw goal: produces {category, clarifiedIntent, expectedOutcomes, requiredCapabilities, successCriteria}. Feeds activity_recommendation''s goal description and variant_selection''s category hint. LLM-backed; registered under goal_enrichment with the shared LLMResolver." [ref=e1305]': Semantic enrichment of the raw g…
+                    - generic [ref=e1306]: no validators
+                  - generic [ref=e1307]:
+                    - img [ref=e1308]
+                    - generic "Query the Thompson-Sampling backend (/v2/activities/recommend) for ranked activity candidates given the enriched goal. MCP client is auto-resolved via getMCPClient(); when the backend is unreachable the resolver produces an empty-recommendations impulse (metadata.empty=true) and the downstream variant_selection falls back to fallbackActivityId. Deterministic-tier — the Thompson math runs server-side." [ref=e1312]: Query the Thompson-Sampling back…
+                    - generic [ref=e1313]: no validators
+                  - generic [ref=e1314]:
+                    - img [ref=e1315]
+                    - 'generic "Thompson Sampling over the variant family for the top recommended activity. As of Investigation #5 fix (2026-04-22) the resolver now reads the activity_recommendations input impulse and picks the first shape-compatible candidate — based on expectedOutputShapes carried through from goal_enrichment — before running Thompson Sampling on that candidate''s variant family. When MCP/backend is unavailable, the recommendations list is empty, OR every candidate fails the shape compat check, the resolver falls back to `fallbackActivityId` (typically `execute-shell-command`). `baseActivityId` is the safety default used when there are no recommendations at all." [ref=e1319]': Thompson Sampling over the varia…
+                    - generic [ref=e1320]: no validators
+                  - generic [ref=e1321]:
+                    - img [ref=e1322]
+                    - 'generic "Dispatch the activity selected by variant_selection. The ActivityResolver reads variant_selection_result from its input impulses, extracts selected.activity_id, and resolves the template via loadTemplateFromMCPOrLocal (vessel cache → MCP backend → embedded). When variant_selection surfaces no id or the lookup fails, falls back to fallbackActivityId. This is the real dispatch path: the chosen activity''s resolvers/prompts run against the goal." [ref=e1326]': Dispatch the activity selected b…
+                    - generic [ref=e1327]: no validators
+                  - generic [ref=e1328]:
+                    - img [ref=e1329]
+                    - generic [ref=e1333]: "Evidence-based verification: did…"
+                    - generic [ref=e1334]: no validators
+                  - generic [ref=e1335]:
+                    - img [ref=e1336]
+                    - 'generic "Interactive-mode clarifier: when verify_goal reports achieved=false and the caller is a human at a TTY, ask how to proceed (retry / refine / abort). Non-interactive runs skip this step via the isInteractive guard in the conditional expression, and the HumanResolver itself short-circuits to the configured default when stdin is not a TTY — so `--single` in a pipe falls through silently to the next task either way. No retry loop is implemented here: the task surfaces the human''s intent as a clarification impulse; re-executing the chain on the chosen sub-goal is deferred until we land a full loop primitive." [ref=e1340]': "Interactive-mode clarifier: when…"
+                    - generic [ref=e1341]: no validators
+                  - generic [ref=e1342]:
+                    - img [ref=e1343]
+                    - generic "Runs when verify_goal reported achieved=false AND either (a) we're non-interactive (no human to ask), or (b) the human chose 'refine'. Produces 2-4 ordered sub-goals a future iteration could process. Does NOT loop here (no recursion) — surfaces the decomposition as an impulse and returns. LLM-backed; registered under goal_decomposition with the shared LLMResolver. Re-execution on sub-goals is deferred." [ref=e1347]: Runs when verify_goal reported a…
+                    - generic [ref=e1348]: no validators
+                  - generic [ref=e1349]:
+                    - img [ref=e1350]
+                    - generic "Write hello world message to file" [ref=e1354]: Write hello world message to fil…
+                    - generic [ref=e1355]: no validators
+                  - generic [ref=e1356]:
+                    - img [ref=e1357]
+                    - generic "Execute a shell command to achieve the goal" [ref=e1361]: Execute a shell command to achie…
+                    - generic [ref=e1362]: no validators
+                  - generic [ref=e1363]:
+                    - img [ref=e1364]
+                    - generic "Execute a shell command to achieve the goal" [ref=e1368]: Execute a shell command to achie…
+                    - generic [ref=e1369]: no validators
+                  - generic [ref=e1370]:
+                    - img [ref=e1371]
+                    - generic "Write hello world message to file" [ref=e1375]: Write hello world message to fil…
+                    - generic [ref=e1376]: no validators
+                  - generic [ref=e1377]:
+                    - img [ref=e1378]
+                    - generic "Detect bootstrap / cold-start condition — do we already have enough context to execute, or do we need to gather more first? Resolver reads the shared ImpulseStateManager singleton; no runtime objects passed through JSON config. The produced impulse_state_result impulse is the first link in the chain." [ref=e1382]: Detect bootstrap / cold-start co…
+                    - generic [ref=e1383]: no validators
+                  - generic [ref=e1384]:
+                    - img [ref=e1385]
+                    - generic "Gather context recommended by analyze_state — file / directoryTree / gitDiff impulses sized to the current working directory. Consumes impulse_state_result by shape (not id), so this task proves the executor correctly propagates resolver-produced shape metadata across tasks. high_priority_only strategy keeps the context pool small for cheap runs." [ref=e1389]: Gather context recommended by an…
+                    - generic [ref=e1390]: no validators
+                  - generic [ref=e1391]:
+                    - img [ref=e1392]
+                    - 'generic "Semantic enrichment of the raw goal: produces {category, clarifiedIntent, expectedOutcomes, requiredCapabilities, successCriteria}. Feeds activity_recommendation''s goal description and variant_selection''s category hint. LLM-backed; registered under goal_enrichment with the shared LLMResolver." [ref=e1396]': Semantic enrichment of the raw g…
+                    - generic [ref=e1397]: no validators
+                  - generic [ref=e1398]:
+                    - img [ref=e1399]
+                    - generic "Query the Thompson-Sampling backend (/v2/activities/recommend) for ranked activity candidates given the enriched goal. MCP client is auto-resolved via getMCPClient(); when the backend is unreachable the resolver produces an empty-recommendations impulse (metadata.empty=true) and the downstream variant_selection falls back to fallbackActivityId. Deterministic-tier — the Thompson math runs server-side." [ref=e1403]: Query the Thompson-Sampling back…
+                    - generic [ref=e1404]: no validators
+                  - generic [ref=e1405]:
+                    - img [ref=e1406]
+                    - 'generic "Thompson Sampling over the variant family for the top recommended activity. As of Investigation #5 fix (2026-04-22) the resolver now reads the activity_recommendations input impulse and picks the first shape-compatible candidate — based on expectedOutputShapes carried through from goal_enrichment — before running Thompson Sampling on that candidate''s variant family. When MCP/backend is unavailable, the recommendations list is empty, OR every candidate fails the shape compat check, the resolver falls back to `fallbackActivityId` (typically `execute-shell-command`). `baseActivityId` is the safety default used when there are no recommendations at all." [ref=e1410]': Thompson Sampling over the varia…
+                    - generic [ref=e1411]: no validators
+                  - generic [ref=e1412]:
+                    - img [ref=e1413]
+                    - 'generic "Dispatch the activity selected by variant_selection. The ActivityResolver reads variant_selection_result from its input impulses, extracts selected.activity_id, and resolves the template via loadTemplateFromMCPOrLocal (vessel cache → MCP backend → embedded). When variant_selection surfaces no id or the lookup fails, falls back to fallbackActivityId. This is the real dispatch path: the chosen activity''s resolvers/prompts run against the goal." [ref=e1417]': Dispatch the activity selected b…
+                    - generic [ref=e1418]: no validators
+                  - generic [ref=e1419]:
+                    - img [ref=e1420]
+                    - generic [ref=e1424]: "Evidence-based verification: did…"
+                    - generic [ref=e1425]: no validators
+                  - generic [ref=e1426]:
+                    - img [ref=e1427]
+                    - 'generic "Interactive-mode clarifier: when verify_goal reports achieved=false and the caller is a human at a TTY, ask how to proceed (retry / refine / abort). Non-interactive runs skip this step via the isInteractive guard in the conditional expression, and the HumanResolver itself short-circuits to the configured default when stdin is not a TTY — so `--single` in a pipe falls through silently to the next task either way. No retry loop is implemented here: the task surfaces the human''s intent as a clarification impulse; re-executing the chain on the chosen sub-goal is deferred until we land a full loop primitive." [ref=e1431]': "Interactive-mode clarifier: when…"
+                    - generic [ref=e1432]: no validators
+                  - generic [ref=e1433]:
+                    - img [ref=e1434]
+                    - generic "Runs when verify_goal reported achieved=false AND either (a) we're non-interactive (no human to ask), or (b) the human chose 'refine'. Produces 2-4 ordered sub-goals a future iteration could process. Does NOT loop here (no recursion) — surfaces the decomposition as an impulse and returns. LLM-backed; registered under goal_decomposition with the shared LLMResolver. Re-execution on sub-goals is deferred." [ref=e1438]: Runs when verify_goal reported a…
+                    - generic [ref=e1439]: no validators
+                  - generic [ref=e1440]:
+                    - img [ref=e1441]
+                    - generic "Detect bootstrap / cold-start condition — do we already have enough context to execute, or do we need to gather more first? Resolver reads the shared ImpulseStateManager singleton; no runtime objects passed through JSON config. The produced impulse_state_result impulse is the first link in the chain." [ref=e1445]: Detect bootstrap / cold-start co…
+                    - generic [ref=e1446]: no validators
+                  - generic [ref=e1447]:
+                    - img [ref=e1448]
+                    - generic "Gather context recommended by analyze_state — file / directoryTree / gitDiff impulses sized to the current working directory. Consumes impulse_state_result by shape (not id), so this task proves the executor correctly propagates resolver-produced shape metadata across tasks. high_priority_only strategy keeps the context pool small for cheap runs." [ref=e1452]: Gather context recommended by an…
+                    - generic [ref=e1453]: no validators
+                  - generic [ref=e1454]:
+                    - img [ref=e1455]
+                    - 'generic "Semantic enrichment of the raw goal: produces {category, clarifiedIntent, expectedOutcomes, requiredCapabilities, successCriteria}. Feeds activity_recommendation''s goal description and variant_selection''s category hint. LLM-backed; registered under goal_enrichment with the shared LLMResolver." [ref=e1459]': Semantic enrichment of the raw g…
+                    - generic [ref=e1460]: no validators
+                  - generic [ref=e1461]:
+                    - img [ref=e1462]
+                    - generic "Query the Thompson-Sampling backend (/v2/activities/recommend) for ranked activity candidates given the enriched goal. MCP client is auto-resolved via getMCPClient(); when the backend is unreachable the resolver produces an empty-recommendations impulse (metadata.empty=true) and the downstream variant_selection falls back to fallbackActivityId. Deterministic-tier — the Thompson math runs server-side." [ref=e1466]: Query the Thompson-Sampling back…
+                    - generic [ref=e1467]: no validators
+                  - generic [ref=e1468]:
+                    - img [ref=e1469]
+                    - 'generic "Thompson Sampling over the variant family for the top recommended activity. As of Investigation #5 fix (2026-04-22) the resolver now reads the activity_recommendations input impulse and picks the first shape-compatible candidate — based on expectedOutputShapes carried through from goal_enrichment — before running Thompson Sampling on that candidate''s variant family. When MCP/backend is unavailable, the recommendations list is empty, OR every candidate fails the shape compat check, the resolver falls back to `fallbackActivityId` (typically `execute-shell-command`). `baseActivityId` is the safety default used when there are no recommendations at all." [ref=e1473]': Thompson Sampling over the varia…
+                    - generic [ref=e1474]: no validators
+                  - generic [ref=e1475]:
+                    - img [ref=e1476]
+                    - 'generic "Dispatch the activity selected by variant_selection. The ActivityResolver reads variant_selection_result from its input impulses, extracts selected.activity_id, and resolves the template via loadTemplateFromMCPOrLocal (vessel cache → MCP backend → embedded). When variant_selection surfaces no id or the lookup fails, falls back to fallbackActivityId. This is the real dispatch path: the chosen activity''s resolvers/prompts run against the goal." [ref=e1480]': Dispatch the activity selected b…
+                    - generic [ref=e1481]: no validators
+                  - generic [ref=e1482]:
+                    - img [ref=e1483]
+                    - generic [ref=e1487]: "Evidence-based verification: did…"
+                    - generic [ref=e1488]: no validators
+                  - generic [ref=e1489]:
+                    - img [ref=e1490]
+                    - 'generic "Interactive-mode clarifier: when verify_goal reports achieved=false and the caller is a human at a TTY, ask how to proceed (retry / refine / abort). Non-interactive runs skip this step via the isInteractive guard in the conditional expression, and the HumanResolver itself short-circuits to the configured default when stdin is not a TTY — so `--single` in a pipe falls through silently to the next task either way. No retry loop is implemented here: the task surfaces the human''s intent as a clarification impulse; re-executing the chain on the chosen sub-goal is deferred until we land a full loop primitive." [ref=e1494]': "Interactive-mode clarifier: when…"
+                    - generic [ref=e1495]: no validators
+                  - generic [ref=e1496]:
+                    - img [ref=e1497]
+                    - generic "Runs when verify_goal reported achieved=false AND either (a) we're non-interactive (no human to ask), or (b) the human chose 'refine'. Produces 2-4 ordered sub-goals a future iteration could process. Does NOT loop here (no recursion) — surfaces the decomposition as an impulse and returns. LLM-backed; registered under goal_decomposition with the shared LLMResolver. Re-execution on sub-goals is deferred." [ref=e1501]: Runs when verify_goal reported a…
+                    - generic [ref=e1502]: no validators
+                  - generic [ref=e1503]:
+                    - img [ref=e1504]
+                    - generic "Write hello world message to file" [ref=e1508]: Write hello world message to fil…
+                    - generic [ref=e1509]: no validators
+                  - generic [ref=e1510]:
+                    - img [ref=e1511]
+                    - generic "Execute a shell command to achieve the goal" [ref=e1515]: Execute a shell command to achie…
+                    - generic [ref=e1516]: no validators
+              - generic [ref=e1517]:
+                - heading "Shape Provenance" [level=3] [ref=e1519]
+                - generic [ref=e1521]:
+                  - generic [ref=e1522]:
+                    - generic [ref=e1523]:
+                      - img [ref=e1524]
+                      - generic [ref=e1528]: Initial Context (Column 0)
+                    - generic [ref=e1530]:
+                      - img [ref=e1531]
+                      - generic [ref=e1534]: goal
+                      - generic [ref=e1535]: directoryTree
+                  - generic [ref=e1536]:
+                    - generic [ref=e1537]:
+                      - img [ref=e1538]
+                      - button "Goal Processing (Activity-Driven) (Col 0)" [ref=e1542] [cursor=pointer]
+                    - generic [ref=e1544]:
+                      - img [ref=e1545]
+                      - generic [ref=e1548]: activity_template
+                      - generic [ref=e1549]: recommendation
+                      - generic [ref=e1550]: source_code
+                  - generic [ref=e1551]:
+                    - generic [ref=e1552]:
+                      - img [ref=e1553]
+                      - button "Execute Shell Command (Col 0)" [ref=e1557] [cursor=pointer]
+                    - generic [ref=e1559]:
+                      - img [ref=e1560]
+                      - generic [ref=e1563]: bash_output
+                  - generic [ref=e1564]:
+                    - generic [ref=e1565]:
+                      - img [ref=e1566]
+                      - button "Hello World Minimal (Col 1)" [ref=e1570] [cursor=pointer]
+                    - generic [ref=e1572]:
+                      - img [ref=e1573]
+                      - generic [ref=e1576]: config_file
+                      - generic [ref=e1577]: documentation
+                  - generic [ref=e1578]:
+                    - generic [ref=e1579]:
+                      - img [ref=e1580]
+                      - button "Execute Shell Command (Col 5)" [ref=e1584] [cursor=pointer]
+                    - generic [ref=e1586]:
+                      - img [ref=e1587]
+                      - generic [ref=e1590]: analysis
+                      - generic [ref=e1591]: tool_output
+              - generic [ref=e1592]:
+                - heading "Shape Timeline" [level=3] [ref=e1594]
+                - generic [ref=e1597]:
+                  - generic [ref=e1598]:
+                    - generic [ref=e1599]:
+                      - generic [ref=e1600]: "0"
+                      - generic [ref=e1601]: Column 0
+                    - generic [ref=e1602]:
+                      - generic [ref=e1603]:
+                        - generic [ref=e1604]: + Added 4
+                        - generic [ref=e1605]:
+                          - generic [ref=e1606]: activity_template
+                          - generic [ref=e1607]: recommendation
+                          - generic [ref=e1608]: source_code
+                          - generic [ref=e1609]: bash_output
+                      - generic [ref=e1610]: "Total: 6 shapes"
+                  - generic [ref=e1612]:
+                    - generic [ref=e1613]:
+                      - generic [ref=e1614]: "1"
+                      - generic [ref=e1615]: Column 1
+                    - generic [ref=e1616]:
+                      - generic [ref=e1617]:
+                        - generic [ref=e1618]: + Added 2
+                        - generic [ref=e1619]:
+                          - generic [ref=e1620]: config_file
+                          - generic [ref=e1621]: documentation
+                      - generic [ref=e1622]: "Total: 8 shapes"
+                  - generic [ref=e1624]:
+                    - generic [ref=e1625]:
+                      - generic [ref=e1626]: "2"
+                      - generic [ref=e1627]: Column 2
+                    - generic [ref=e1629]: "Total: 8 shapes"
+                  - generic [ref=e1631]:
+                    - generic [ref=e1632]:
+                      - generic [ref=e1633]: "3"
+                      - generic [ref=e1634]: Column 3
+                    - generic [ref=e1636]: "Total: 8 shapes"
+                  - generic [ref=e1638]:
+                    - generic [ref=e1639]:
+                      - generic [ref=e1640]: "4"
+                      - generic [ref=e1641]: Column 4
+                    - generic [ref=e1643]: "Total: 8 shapes"
+                  - generic [ref=e1645]:
+                    - generic [ref=e1646]:
+                      - generic [ref=e1647]: "5"
+                      - generic [ref=e1648]: Column 5(current)
+                    - generic [ref=e1649]:
+                      - generic [ref=e1650]:
+                        - generic [ref=e1651]: + Added 2
+                        - generic [ref=e1652]:
+                          - generic [ref=e1653]: analysis
+                          - generic [ref=e1654]: tool_output
+                      - generic [ref=e1655]: "Total: 10 shapes"
+            - paragraph [ref=e1657]: Press Ctrl+I to toggle
+  - contentinfo [ref=e1658]:
+    - generic [ref=e1659]:
+      - generic [ref=e1660]:
+        - generic [ref=e1663]: API Connected
+        - generic [ref=e1664]:
+          - img [ref=e1665]
+          - generic [ref=e1668]: 05:32:00 PM
+      - generic [ref=e1669]:
+        - generic [ref=e1670]: "[LOCAL]"
+        - generic [ref=e1671]: v0.1.0

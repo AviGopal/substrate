@@ -1,0 +1,214 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - generic [ref=e25]: Navigation
+        - navigation [ref=e26]:
+          - link "Activities" [ref=e27] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - generic [ref=e33]: Activities
+          - link "Trajectory" [ref=e34] [cursor=pointer]:
+            - /url: /trajectory
+            - img [ref=e35]
+            - generic [ref=e40]: Trajectory
+          - link "Shapes" [ref=e41] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e42]
+            - generic [ref=e46]: Shapes
+    - main [ref=e47]:
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - 'button "live executing: explain how impulses flow thro…" [ref=e1212] [cursor=pointer]':
+            - generic [ref=e53]:
+              - generic [ref=e54]: live
+              - generic [ref=e1213]: "executing: explain how impulses flow thro…"
+            - img [ref=e55]
+          - textbox "Goal" [disabled] [active] [ref=e57]:
+            - /placeholder: execution in progress…
+            - text: explain how impulses flow through activities in metabob
+          - generic [ref=e58]:
+            - generic [ref=e59]:
+              - button "Run" [disabled]:
+                - img
+                - text: Run
+              - button "Run Trajectory" [disabled]:
+                - img
+                - text: Run Trajectory
+            - button "Save" [ref=e961] [cursor=pointer]:
+              - img
+              - text: Save
+            - button "Clear trajectory" [ref=e62] [cursor=pointer]:
+              - img
+        - 'generic "Goal completion: none" [ref=e1070]':
+          - generic [ref=e1071]:
+            - generic [ref=e1072]: ── goal completion ──
+            - generic [ref=e1073]: 0/1
+          - generic [ref=e1074]:
+            - progressbar [ref=e1075]
+            - generic [ref=e1077]: 0%
+          - generic [ref=e1078]:
+            - generic [ref=e1079]: missing (1)
+            - generic [ref=e1081]:
+              - generic "documentation" [ref=e1082]:
+                - img [ref=e1083]
+                - generic [ref=e1087]: documentation
+              - button "find" [ref=e1088] [cursor=pointer]
+          - button "edit shapes" [ref=e1089] [cursor=pointer]
+        - button "── prerequisites ──" [ref=e1092] [cursor=pointer]:
+          - generic [ref=e1093]:
+            - img [ref=e1094]
+            - text: ── prerequisites ──
+          - img [ref=e1097]
+        - generic [ref=e63]:
+          - generic [ref=e64]:
+            - generic [ref=e65]:
+              - button "History" [ref=e66] [cursor=pointer]
+              - button "Palette" [ref=e67] [cursor=pointer]
+            - generic [ref=e1214]:
+              - generic [ref=e1215]:
+                - generic [ref=e1218]: live · minibob
+                - generic "explain how impulses flow through activities in metabob" [ref=e1219]: ● explain how impulses flow through activiti…
+                - generic [ref=e1220]: 2 shapes in pool
+              - button "execution history live 20" [ref=e1314] [cursor=pointer]:
+                - img [ref=e1223]
+                - img [ref=e1225]
+                - generic [ref=e1228]: execution history
+                - generic [ref=e1229]: live
+                - generic [ref=e1315]: "20"
+          - generic [ref=e87]:
+            - generic [ref=e99]:
+              - generic [ref=e100]:
+                - img [ref=e101]
+                - text: compose
+              - generic [ref=e104]: │
+              - generic [ref=e105]:
+                - img [ref=e106]
+                - text: trace
+              - generic [ref=e109]: │
+              - generic [ref=e110]:
+                - img [ref=e111]
+                - text: live
+                - generic "6bf172b3-e9e2-4a8b-b3e1-2ad67506a08d" [ref=e1231]: 6bf172b3…
+            - generic [ref=e1232]:
+              - img [ref=e1233]
+              - generic "6bf172b3-e9e2-4a8b-b3e1-2ad67506a08d" [ref=e1239]
+              - generic [ref=e1240]:
+                - img [ref=e1241]
+                - text: live
+              - button "disconnect" [ref=e1247] [cursor=pointer]:
+                - img
+                - text: disconnect
+            - generic [ref=e968]:
+              - paragraph [ref=e969]: ── no activities in trajectory ──
+              - paragraph [ref=e970]: drag activities from the palette to get started
+          - generic [ref=e125]:
+            - generic [ref=e126]:
+              - generic [ref=e127]:
+                - img [ref=e128]
+                - heading "Impulse State" [level=2] [ref=e132]
+                - generic [ref=e1316]:
+                  - img [ref=e1317]
+                  - text: Live
+              - button "Collapse impulse state panel (Ctrl+I)" [ref=e133] [cursor=pointer]:
+                - img
+            - generic [ref=e1323]:
+              - tablist [ref=e1324]:
+                - tab "Speculative" [selected] [ref=e1325] [cursor=pointer]
+                - tab "Realized 1" [ref=e1326] [cursor=pointer]:
+                  - text: Realized
+                  - generic [ref=e1327]: "1"
+              - tabpanel "Speculative" [ref=e1328]:
+                - generic [ref=e1329]:
+                  - generic [ref=e1330]:
+                    - generic [ref=e1331]:
+                      - heading "Goal Completion" [level=3] [ref=e1332]
+                      - generic [ref=e1333]:
+                        - generic [ref=e1334]: 0%
+                        - img [ref=e1335]
+                    - progressbar [ref=e1339]
+                    - generic [ref=e1341]: 0 of 1 shapes complete
+                    - generic [ref=e1343]:
+                      - generic [ref=e1344]:
+                        - img [ref=e1345]
+                        - text: Missing
+                      - generic [ref=e1350]: ⊗ documentation
+                  - generic [ref=e1351]:
+                    - heading "goal impulse" [level=3] [ref=e1353]: goal impulse
+                    - paragraph [ref=e1356]: explain how impulses flow through activities in metabob
+                  - generic [ref=e1357]:
+                    - heading "Impulse Pool 2 shapes" [level=3] [ref=e1359]:
+                      - generic [ref=e1360]: Impulse Pool
+                      - generic [ref=e1361]: 2 shapes
+                    - generic [ref=e1362]:
+                      - generic [ref=e1363]:
+                        - generic [ref=e1364]:
+                          - img [ref=e1365]
+                          - generic [ref=e1369]: 2 impulses in pool
+                        - button "seed shapes (initial pool) 2" [ref=e1371] [cursor=pointer]:
+                          - img [ref=e1372]
+                          - img [ref=e1375]
+                          - generic [ref=e1379]: seed shapes (initial pool)
+                          - generic [ref=e1380]: "2"
+                      - generic [ref=e1381]:
+                        - generic [ref=e1382]: goal
+                        - generic [ref=e1383]: directoryTree
+                  - generic [ref=e1384]:
+                    - heading "Bindable Slots" [level=3] [ref=e1386]
+                    - generic [ref=e1388]:
+                      - button "Toggle candidates for slot lifecycle:task:preBinding" [ref=e1390] [cursor=pointer]:
+                        - img [ref=e1391]
+                        - img [ref=e1393]
+                        - generic "lifecycle:task:preBinding" [ref=e1399]
+                        - generic [ref=e1400]: 0 candidates
+                      - button "Toggle candidates for slot lifecycle:task:completed" [ref=e1402] [cursor=pointer]:
+                        - img [ref=e1403]
+                        - img [ref=e1405]
+                        - generic "lifecycle:task:completed" [ref=e1411]
+                        - generic [ref=e1412]: 0 candidates
+                      - button "Toggle candidates for slot impulse_state_result" [ref=e1414] [cursor=pointer]:
+                        - img [ref=e1415]
+                        - img [ref=e1417]
+                        - generic "impulse_state_result" [ref=e1423]
+                        - generic [ref=e1424]: 0 candidates
+                      - button "Toggle candidates for slot goal_enrichment" [ref=e1426] [cursor=pointer]:
+                        - img [ref=e1427]
+                        - img [ref=e1429]
+                        - generic "goal_enrichment" [ref=e1435]
+                        - generic [ref=e1436]: 0 candidates
+                      - button "Toggle candidates for slot variant_selection_result" [ref=e1438] [cursor=pointer]:
+                        - img [ref=e1439]
+                        - img [ref=e1441]
+                        - generic "variant_selection_result" [ref=e1447]
+                        - generic [ref=e1448]: 0 candidates
+                  - generic [ref=e1449]:
+                    - img [ref=e1450]
+                    - paragraph [ref=e1454]: Add activities to see
+                    - paragraph [ref=e1455]: impulse shape evolution
+            - paragraph [ref=e195]: Press Ctrl+I to toggle
+  - contentinfo [ref=e196]:
+    - generic [ref=e197]:
+      - generic [ref=e198]:
+        - generic [ref=e201]: API Connected
+        - generic [ref=e202]:
+          - img [ref=e203]
+          - generic [ref=e206]: 04:02:14 AM
+      - generic [ref=e207]:
+        - generic [ref=e208]: "[LOCAL]"
+        - generic [ref=e209]: v0.1.0

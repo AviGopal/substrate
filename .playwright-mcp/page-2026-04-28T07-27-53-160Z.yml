@@ -1,0 +1,150 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - generic [ref=e25]: Navigation
+        - navigation [ref=e26]:
+          - link "Activities" [ref=e27] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - generic [ref=e33]: Activities
+          - link "Trajectory" [ref=e34] [cursor=pointer]:
+            - /url: /trajectory
+            - img [ref=e35]
+            - generic [ref=e40]: Trajectory
+          - link "Shapes" [ref=e41] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e42]
+            - generic [ref=e46]: Shapes
+    - main [ref=e47]:
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - button "live" [ref=e51] [cursor=pointer]:
+            - generic [ref=e53]: live
+            - img [ref=e54]
+          - textbox "Goal" [disabled] [ref=e56]:
+            - /placeholder: execution in progress…
+            - text: What is a vessel and how does it relate to impulses and activities?
+          - generic [ref=e57]:
+            - generic [ref=e58]:
+              - button "Run" [disabled]:
+                - img
+                - text: Run
+              - button "Run Trajectory" [disabled]:
+                - img
+                - text: Run Trajectory
+            - button "Save" [disabled]:
+              - img
+              - text: Save
+            - button "Clear trajectory" [ref=e59] [cursor=pointer]:
+              - img
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - generic [ref=e62]:
+              - button "History" [ref=e63] [cursor=pointer]
+              - button "Palette" [ref=e64] [cursor=pointer]
+            - button "execution history live" [ref=e67] [cursor=pointer]:
+              - img [ref=e68]
+              - img [ref=e70]
+              - generic [ref=e73]: execution history
+              - generic [ref=e74]: live
+          - generic [ref=e75]:
+            - alert [ref=e77]:
+              - img [ref=e78]
+              - heading "Infinite loop detected — add an exit condition Blocked" [level=5] [ref=e82]:
+                - text: Infinite loop detected — add an exit condition
+                - generic [ref=e83]: Blocked
+              - generic [ref=e84]:
+                - paragraph [ref=e85]: The trajectory at columns 0–0 repeats without producing any new shapes. This would cause an infinite execution loop. Add an activity that introduces new output shapes to break the cycle.
+                - button "Override (execute anyway)" [ref=e86] [cursor=pointer]
+            - generic [ref=e87]:
+              - generic [ref=e88]:
+                - img [ref=e89]
+                - text: compose
+              - generic [ref=e92]: │
+              - generic [ref=e93]:
+                - img [ref=e94]
+                - text: trace
+              - generic [ref=e97]: │
+              - generic [ref=e98]:
+                - img [ref=e99]
+                - text: live
+                - generic "goal_1777336673587_oz5aiv" [ref=e102]: goal_177…
+            - generic [ref=e103]:
+              - img [ref=e104]
+              - generic "goal_1777336673587_oz5aiv" [ref=e110]
+              - generic [ref=e111]:
+                - img [ref=e112]
+                - text: live
+              - button "disconnect" [ref=e118] [cursor=pointer]:
+                - img
+                - text: disconnect
+            - paragraph [ref=e121]: Loading templates...
+          - generic [ref=e122]:
+            - generic [ref=e123]:
+              - generic [ref=e124]:
+                - img [ref=e125]
+                - heading "Impulse State" [level=2] [ref=e129]
+              - button "Collapse impulse state panel (Ctrl+I)" [ref=e130] [cursor=pointer]:
+                - img
+            - generic [ref=e133]:
+              - generic [ref=e134]:
+                - heading "goal impulse" [level=3] [ref=e136]: goal impulse
+                - paragraph [ref=e139]: What is a vessel and how does it relate to impulses and activities?
+              - generic [ref=e140]:
+                - heading "Impulse Pool 2 shapes" [level=3] [ref=e142]:
+                  - generic [ref=e143]: Impulse Pool
+                  - generic [ref=e144]: 2 shapes
+                - generic [ref=e145]:
+                  - generic [ref=e146]:
+                    - generic [ref=e147]:
+                      - img [ref=e148]
+                      - generic [ref=e152]: 2 impulses in pool
+                    - button "seed shapes (initial pool) 2" [ref=e154] [cursor=pointer]:
+                      - img [ref=e155]
+                      - img [ref=e158]
+                      - generic [ref=e162]: seed shapes (initial pool)
+                      - generic [ref=e163]: "2"
+                  - generic [ref=e164]:
+                    - generic [ref=e165]: goal
+                    - generic [ref=e166]: directoryTree
+              - generic [ref=e167]:
+                - heading "Task Validation" [level=3] [ref=e169]
+                - paragraph [ref=e171]: No tasks in trajectory
+              - generic [ref=e172]:
+                - heading "Shape Provenance" [level=3] [ref=e174]
+                - generic [ref=e177]:
+                  - generic [ref=e178]:
+                    - img [ref=e179]
+                    - generic [ref=e183]: Initial Context (Column 0)
+                  - generic [ref=e185]:
+                    - img [ref=e186]
+                    - generic [ref=e189]: goal
+                    - generic [ref=e190]: directoryTree
+            - paragraph [ref=e192]: Press Ctrl+I to toggle
+  - contentinfo [ref=e193]:
+    - generic [ref=e194]:
+      - generic [ref=e195]:
+        - generic [ref=e198]: API Connected
+        - generic [ref=e199]:
+          - img [ref=e200]
+          - generic [ref=e203]: 12:27:52 AM
+      - generic [ref=e204]:
+        - generic [ref=e205]: "[LOCAL]"
+        - generic [ref=e206]: v0.1.0

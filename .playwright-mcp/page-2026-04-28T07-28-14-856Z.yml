@@ -1,0 +1,422 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - generic [ref=e25]: Navigation
+        - navigation [ref=e26]:
+          - link "Activities" [ref=e27] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - generic [ref=e33]: Activities
+          - link "Trajectory" [ref=e34] [cursor=pointer]:
+            - /url: /trajectory
+            - img [ref=e35]
+            - generic [ref=e40]: Trajectory
+          - link "Shapes" [ref=e41] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e42]
+            - generic [ref=e46]: Shapes
+    - main [ref=e47]:
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - button "live" [ref=e51] [cursor=pointer]:
+            - generic [ref=e53]: live
+            - img [ref=e54]
+          - textbox "Goal" [disabled] [ref=e56]:
+            - /placeholder: execution in progress…
+            - text: What is a vessel and how does it relate to impulses and activities?
+          - generic [ref=e57]:
+            - generic [ref=e58]:
+              - button "Run" [disabled]:
+                - img
+                - text: Run
+              - button "Run Trajectory" [disabled]:
+                - img
+                - text: Run Trajectory
+            - button "Save" [disabled]:
+              - img
+              - text: Save
+            - button "Clear trajectory" [ref=e59] [cursor=pointer]:
+              - img
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - generic [ref=e62]:
+              - button "History" [ref=e63] [cursor=pointer]
+              - button "Palette" [ref=e64] [cursor=pointer]
+            - button "execution history live 20" [ref=e207] [cursor=pointer]:
+              - img [ref=e68]
+              - img [ref=e70]
+              - generic [ref=e73]: execution history
+              - generic [ref=e208]: live
+              - generic [ref=e209]: "20"
+          - generic [ref=e75]:
+            - alert [ref=e77]:
+              - img [ref=e78]
+              - heading "Infinite loop detected — add an exit condition Blocked" [level=5] [ref=e82]:
+                - text: Infinite loop detected — add an exit condition
+                - generic [ref=e83]: Blocked
+              - generic [ref=e84]:
+                - paragraph [ref=e85]: The trajectory at columns 0–0 repeats without producing any new shapes. This would cause an infinite execution loop. Add an activity that introduces new output shapes to break the cycle.
+                - button "Override (execute anyway)" [ref=e86] [cursor=pointer]
+            - generic [ref=e87]:
+              - generic [ref=e88]:
+                - img [ref=e89]
+                - text: compose
+              - generic [ref=e92]: │
+              - generic [ref=e93]:
+                - img [ref=e94]
+                - text: trace
+              - generic [ref=e97]: │
+              - generic [ref=e98]:
+                - img [ref=e99]
+                - text: live
+                - generic "goal_1777336673587_oz5aiv" [ref=e102]: goal_177…
+            - generic [ref=e103]:
+              - img [ref=e104]
+              - generic "goal_1777336673587_oz5aiv" [ref=e110]
+              - generic [ref=e111]:
+                - img [ref=e210]
+                - text: live
+              - button "disconnect" [ref=e118] [cursor=pointer]:
+                - img
+                - text: disconnect
+            - generic [ref=e119]:
+              - generic [ref=e217]:
+                - generic [ref=e218]:
+                  - generic [ref=e219]: pool
+                  - generic [ref=e220]:
+                    - 'generic "built-in: goal" [ref=e221]': goal
+                    - 'generic "built-in: directoryTree" [ref=e222]': directoryTree
+                    - button "+ seed" [ref=e223] [cursor=pointer]
+                  - generic [ref=e225]: →
+                - generic [ref=e226]:
+                  - button "Insert activity at start" [ref=e228] [cursor=pointer]:
+                    - img [ref=e229]
+                    - text: insert
+                  - generic [ref=e232]:
+                    - generic [ref=e234]:
+                      - generic [ref=e235]: ──
+                      - generic [ref=e236]: step 1
+                      - generic [ref=e237]: ──
+                    - generic [ref=e239]:
+                      - generic:
+                        - generic "Validation warnings":
+                          - img
+                      - generic [ref=e243] [cursor=pointer]:
+                        - 'generic "Topology: frontier (0 traces · CI 0.00–1.00)" [ref=e244]'
+                        - img [ref=e245]
+                        - generic [ref=e252]:
+                          - generic [ref=e253]:
+                            - heading "Goal Processing (Activity-Driven)" [level=3] [ref=e254]
+                            - generic [ref=e255]:
+                              - generic [ref=e256]: "[tool]"
+                              - button "Remove Goal Processing (Activity-Driven) from trajectory" [ref=e257]:
+                                - img
+                          - paragraph
+                          - button "Expand activity details" [ref=e259]: ▾ expand
+                  - button "Insert activity after step 1" [ref=e261] [cursor=pointer]:
+                    - img [ref=e262]
+                    - text: insert
+                - generic [ref=e268]: →
+                - generic [ref=e270]:
+                  - generic [ref=e271]:
+                    - generic [ref=e273]:
+                      - generic [ref=e274]: ──
+                      - generic [ref=e275]: step 2
+                      - generic [ref=e276]: ──
+                    - generic [ref=e278]:
+                      - generic:
+                        - generic "Validation warnings":
+                          - img
+                      - generic [ref=e282] [cursor=pointer]:
+                        - 'generic "Topology: frontier (0 traces · CI 0.00–1.00)" [ref=e283]'
+                        - img [ref=e284]
+                        - generic [ref=e291]:
+                          - generic [ref=e292]:
+                            - heading "_activity_execute" [level=3] [ref=e293]
+                            - generic [ref=e294]:
+                              - generic [ref=e295]: "[tool]"
+                              - button "Remove _activity_execute from trajectory" [ref=e296]:
+                                - img
+                          - paragraph
+                          - button "Expand activity details" [ref=e298]: ▾ expand
+                  - button "Insert activity after step 2" [ref=e300] [cursor=pointer]:
+                    - img [ref=e301]
+                    - text: insert
+                - generic [ref=e307]: →
+                - generic [ref=e309]:
+                  - generic [ref=e310]:
+                    - generic [ref=e312]:
+                      - generic [ref=e313]: ──
+                      - generic [ref=e314]: step 3
+                      - generic [ref=e315]: ──
+                    - generic [ref=e317]:
+                      - generic:
+                        - generic "Validation warnings":
+                          - img
+                      - generic [ref=e321] [cursor=pointer]:
+                        - 'generic "Topology: frontier (0 traces · CI 0.00–1.00)" [ref=e322]'
+                        - img [ref=e323]
+                        - generic [ref=e330]:
+                          - generic [ref=e331]:
+                            - heading "Execute Shell Command" [level=3] [ref=e332]
+                            - generic [ref=e333]:
+                              - generic [ref=e334]: "[tool]"
+                              - button "Remove Execute Shell Command from trajectory" [ref=e335]:
+                                - img
+                          - paragraph
+                          - button "Expand activity details" [ref=e337]: ▾ expand
+                  - button "Insert activity after step 3" [ref=e339] [cursor=pointer]:
+                    - img [ref=e340]
+                    - text: insert
+                - generic [ref=e346]: →
+                - generic [ref=e348]:
+                  - generic [ref=e349]:
+                    - generic [ref=e351]:
+                      - generic [ref=e352]: ──
+                      - generic [ref=e353]: step 4
+                      - generic [ref=e354]: ──
+                    - generic [ref=e356]:
+                      - generic:
+                        - generic "Validation warnings":
+                          - img
+                      - generic [ref=e360] [cursor=pointer]:
+                        - 'generic "Topology: frontier (0 traces · CI 0.00–1.00)" [ref=e361]'
+                        - img [ref=e362]
+                        - generic [ref=e369]:
+                          - generic [ref=e370]:
+                            - heading "_activity_execute" [level=3] [ref=e371]
+                            - generic [ref=e372]:
+                              - generic [ref=e373]: "[tool]"
+                              - button "Remove _activity_execute from trajectory" [ref=e374]:
+                                - img
+                          - paragraph
+                          - button "Expand activity details" [ref=e376]: ▾ expand
+                  - button "Insert activity after step 4" [ref=e378] [cursor=pointer]:
+                    - img [ref=e379]
+                    - text: insert
+                - generic [ref=e385]: →
+                - generic [ref=e387]:
+                  - generic [ref=e388]:
+                    - generic [ref=e390]:
+                      - generic [ref=e391]: ──
+                      - generic [ref=e392]: step 5
+                      - generic [ref=e393]: ──
+                    - generic [ref=e395]:
+                      - generic:
+                        - generic "Validation warnings":
+                          - img
+                      - generic [ref=e399] [cursor=pointer]:
+                        - 'generic "Topology: frontier (0 traces · CI 0.00–1.00)" [ref=e400]'
+                        - img [ref=e401]
+                        - generic [ref=e408]:
+                          - generic [ref=e409]:
+                            - heading "Hello World Minimal" [level=3] [ref=e410]
+                            - generic [ref=e411]:
+                              - generic [ref=e412]: "[tool]"
+                              - button "Remove Hello World Minimal from trajectory" [ref=e413]:
+                                - img
+                          - paragraph
+                          - button "Expand activity details" [ref=e415]: ▾ expand
+                  - button "Insert activity after step 5" [ref=e417] [cursor=pointer]:
+                    - img [ref=e418]
+                    - text: insert
+                - generic [ref=e424]: →
+                - generic [ref=e426]:
+                  - generic [ref=e427]:
+                    - generic [ref=e429]:
+                      - generic [ref=e430]: ──
+                      - generic [ref=e431]: step 6
+                      - generic [ref=e432]: ──
+                    - generic [ref=e434]:
+                      - generic:
+                        - generic "Validation warnings":
+                          - img
+                      - generic [ref=e438] [cursor=pointer]:
+                        - 'generic "Topology: frontier (0 traces · CI 0.00–1.00)" [ref=e439]'
+                        - img [ref=e440]
+                        - generic [ref=e447]:
+                          - generic [ref=e448]:
+                            - heading "_activity_execute" [level=3] [ref=e449]
+                            - generic [ref=e450]:
+                              - generic [ref=e451]: "[tool]"
+                              - button "Remove _activity_execute from trajectory" [ref=e452]:
+                                - img
+                          - paragraph
+                          - button "Expand activity details" [ref=e454]: ▾ expand
+                  - button "Insert activity after step 6" [ref=e456] [cursor=pointer]:
+                    - img [ref=e457]
+                    - text: insert
+                - generic [ref=e463]: →
+                - generic [ref=e465]:
+                  - generic [ref=e466]:
+                    - generic [ref=e468]:
+                      - generic [ref=e469]: ──
+                      - generic [ref=e470]: step 7
+                      - generic [ref=e471]: ──
+                    - generic [ref=e473]:
+                      - generic:
+                        - generic "Validation warnings":
+                          - img
+                      - generic [ref=e477] [cursor=pointer]:
+                        - 'generic "Topology: frontier (0 traces · CI 0.00–1.00)" [ref=e478]'
+                        - img [ref=e479]
+                        - generic [ref=e486]:
+                          - generic [ref=e487]:
+                            - heading "Hello World Minimal" [level=3] [ref=e488]
+                            - generic [ref=e489]:
+                              - generic [ref=e490]: "[tool]"
+                              - button "Remove Hello World Minimal from trajectory" [ref=e491]:
+                                - img
+                          - paragraph
+                          - button "Expand activity details" [ref=e493]: ▾ expand
+                  - button "Insert activity after step 7" [ref=e495] [cursor=pointer]:
+                    - img [ref=e496]
+                    - text: insert
+                - generic [ref=e502]: →
+                - generic [ref=e504]:
+                  - generic [ref=e505]:
+                    - generic [ref=e507]:
+                      - generic [ref=e508]: ──
+                      - generic [ref=e509]: step 8
+                      - generic [ref=e510]: ──
+                    - generic [ref=e512]:
+                      - generic:
+                        - generic "Validation warnings":
+                          - img
+                      - generic [ref=e516] [cursor=pointer]:
+                        - 'generic "Topology: frontier (0 traces · CI 0.00–1.00)" [ref=e517]'
+                        - img [ref=e518]
+                        - generic [ref=e525]:
+                          - generic [ref=e526]:
+                            - heading "_activity_execute" [level=3] [ref=e527]
+                            - generic [ref=e528]:
+                              - generic [ref=e529]: "[tool]"
+                              - button "Remove _activity_execute from trajectory" [ref=e530]:
+                                - img
+                          - paragraph
+                          - button "Expand activity details" [ref=e532]: ▾ expand
+                  - button "Insert activity after step 8" [ref=e534] [cursor=pointer]:
+                    - img [ref=e535]
+                    - text: insert
+                - generic [ref=e541]: →
+                - generic [ref=e543]:
+                  - generic [ref=e544]:
+                    - generic [ref=e546]:
+                      - generic [ref=e547]: ──
+                      - generic [ref=e548]: step 9
+                      - generic [ref=e549]: ──
+                    - generic [ref=e551]:
+                      - generic:
+                        - generic "Validation warnings":
+                          - img
+                      - generic [ref=e555] [cursor=pointer]:
+                        - 'generic "Topology: frontier (0 traces · CI 0.00–1.00)" [ref=e556]'
+                        - img [ref=e557]
+                        - generic [ref=e564]:
+                          - generic [ref=e565]:
+                            - heading "Hello World Minimal" [level=3] [ref=e566]
+                            - generic [ref=e567]:
+                              - generic [ref=e568]: "[tool]"
+                              - button "Remove Hello World Minimal from trajectory" [ref=e569]:
+                                - img
+                          - paragraph
+                          - button "Expand activity details" [ref=e571]: ▾ expand
+                  - button "Insert activity after step 9" [ref=e573] [cursor=pointer]:
+                    - img [ref=e574]
+                    - text: insert
+                - generic [ref=e580]: →
+                - generic [ref=e582]:
+                  - generic [ref=e583]:
+                    - generic [ref=e585]:
+                      - generic [ref=e586]: ──
+                      - generic [ref=e587]: step 10
+                      - generic [ref=e588]: ──
+                    - generic [ref=e590]:
+                      - generic:
+                        - generic "Valid":
+                          - img
+                      - generic [ref=e594] [cursor=pointer]:
+                        - 'generic "Topology: frontier (0 traces · CI 0.00–1.00)" [ref=e595]'
+                        - img [ref=e596]
+                        - generic [ref=e603]:
+                          - generic [ref=e604]:
+                            - heading "_activity_execute" [level=3] [ref=e605]
+                            - generic [ref=e606]:
+                              - generic [ref=e607]: "[tool]"
+                              - button "Remove _activity_execute from trajectory" [ref=e608]:
+                                - img
+                          - paragraph
+                          - button "Expand activity details" [ref=e610]: ▾ expand
+                  - button "Insert activity after step 10" [ref=e612] [cursor=pointer]:
+                    - img [ref=e613]
+                    - text: insert
+              - status [ref=e616]
+          - generic [ref=e122]:
+            - generic [ref=e123]:
+              - generic [ref=e124]:
+                - img [ref=e125]
+                - heading "Impulse State" [level=2] [ref=e129]
+              - button "Collapse impulse state panel (Ctrl+I)" [ref=e130] [cursor=pointer]:
+                - img
+            - generic [ref=e133]:
+              - generic [ref=e134]:
+                - heading "goal impulse" [level=3] [ref=e136]: goal impulse
+                - paragraph [ref=e139]: What is a vessel and how does it relate to impulses and activities?
+              - generic [ref=e140]:
+                - heading "Impulse Pool 2 shapes" [level=3] [ref=e142]:
+                  - generic [ref=e143]: Impulse Pool
+                  - generic [ref=e144]: 2 shapes
+                - generic [ref=e145]:
+                  - generic [ref=e146]:
+                    - generic [ref=e147]:
+                      - img [ref=e148]
+                      - generic [ref=e152]: 2 impulses in pool
+                    - button "seed shapes (initial pool) 2" [ref=e154] [cursor=pointer]:
+                      - img [ref=e155]
+                      - img [ref=e158]
+                      - generic [ref=e162]: seed shapes (initial pool)
+                      - generic [ref=e163]: "2"
+                  - generic [ref=e164]:
+                    - generic [ref=e165]: goal
+                    - generic [ref=e166]: directoryTree
+              - generic [ref=e167]:
+                - heading "Task Validation" [level=3] [ref=e169]
+                - paragraph [ref=e171]: No tasks in trajectory
+              - generic [ref=e172]:
+                - heading "Shape Provenance" [level=3] [ref=e174]
+                - generic [ref=e177]:
+                  - generic [ref=e178]:
+                    - img [ref=e179]
+                    - generic [ref=e183]: Initial Context (Column 0)
+                  - generic [ref=e185]:
+                    - img [ref=e186]
+                    - generic [ref=e189]: goal
+                    - generic [ref=e190]: directoryTree
+            - paragraph [ref=e192]: Press Ctrl+I to toggle
+  - contentinfo [ref=e193]:
+    - generic [ref=e194]:
+      - generic [ref=e195]:
+        - generic [ref=e198]: API Connected
+        - generic [ref=e199]:
+          - img [ref=e200]
+          - generic [ref=e203]: 12:27:52 AM
+      - generic [ref=e204]:
+        - generic [ref=e205]: "[LOCAL]"
+        - generic [ref=e206]: v0.1.0

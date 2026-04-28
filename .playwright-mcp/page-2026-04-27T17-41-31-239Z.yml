@@ -1,0 +1,57 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - generic [ref=e25]: Navigation
+        - navigation [ref=e26]:
+          - link "Activities" [ref=e27] [cursor=pointer]:
+            - /url: /templates
+          - link "Trajectory" [ref=e34] [cursor=pointer]:
+            - /url: /trajectory
+          - link "Shapes" [ref=e41] [cursor=pointer]:
+            - /url: /shapes
+    - main [ref=e47]:
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - generic [ref=e50]
+          - textbox "Goal" [active] [ref=e57]:
+            - /placeholder: ""
+          - generic [ref=e58]
+        - 'generic "Goal completion: none" [ref=e1070]':
+          - generic [ref=e1071]
+          - generic [ref=e1074]
+          - generic [ref=e1078]
+          - button "edit shapes" [ref=e1089] [cursor=pointer]
+        - button "── prerequisites ──" [ref=e1092] [cursor=pointer]:
+          - generic [ref=e1093]
+          - img [ref=e1097]
+        - generic [ref=e63]:
+          - generic [ref=e64]
+          - generic [ref=e87]
+          - generic [ref=e125]
+  - contentinfo [ref=e196]:
+    - generic [ref=e197]:
+      - generic [ref=e198]:
+        - generic [ref=e201]: API Connected
+        - generic [ref=e202]:
+          - img [ref=e203]
+          - generic [ref=e206]: 03:58:43 AM
+      - generic [ref=e207]:
+        - generic [ref=e208]: "[LOCAL]"
+        - generic [ref=e209]: v0.1.0

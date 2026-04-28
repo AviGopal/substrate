@@ -1,0 +1,984 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "W Workbench" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: W
+        - generic [ref=e10]: Workbench
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e18]: Connected
+        - button "Toggle theme" [ref=e19] [cursor=pointer]:
+          - img
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - button "Collapse sidebar" [ref=e23] [cursor=pointer]:
+        - img
+      - generic [ref=e24]:
+        - generic [ref=e25]: Navigation
+        - navigation [ref=e26]:
+          - link "Activities" [ref=e27] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - generic [ref=e33]: Activities
+          - link "Trajectory" [ref=e34] [cursor=pointer]:
+            - /url: /trajectory
+            - img [ref=e35]
+            - generic [ref=e40]: Trajectory
+          - link "Shapes" [ref=e41] [cursor=pointer]:
+            - /url: /shapes
+            - img [ref=e42]
+            - generic [ref=e46]: Shapes
+          - link "Studio" [ref=e47] [cursor=pointer]:
+            - /url: /studio
+            - img [ref=e48]
+            - generic [ref=e52]: Studio
+    - main [ref=e53]:
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - heading "Impulse Shapes" [level=1] [ref=e58]
+            - paragraph [ref=e59]: Browse and manage impulse shape definitions across all vessels
+          - button "Add Shape" [ref=e60] [cursor=pointer]:
+            - img
+            - text: Add Shape
+        - alert [ref=e61]:
+          - img [ref=e62]
+          - heading "Shape Registry" [level=5] [ref=e66]
+          - generic [ref=e67]: This registry shows all impulse shapes from Discovery, Activity API, Analysis API, and local resolvers. Shapes define the data types that activities can consume and produce.
+        - generic [ref=e68]:
+          - generic [ref=e70]:
+            - generic [ref=e71]:
+              - heading "Categories" [level=3] [ref=e72]
+              - generic [ref=e73]:
+                - button "All Shapes 29" [ref=e74] [cursor=pointer]:
+                  - generic [ref=e75]:
+                    - generic [ref=e76]:
+                      - img
+                    - generic [ref=e77]: All Shapes
+                  - generic [ref=e78]: "29"
+                - button "Discovery 4" [ref=e79] [cursor=pointer]:
+                  - generic [ref=e80]:
+                    - generic [ref=e81]:
+                      - img
+                    - generic [ref=e82]: Discovery
+                  - generic [ref=e83]: "4"
+                - button "Activity 12" [ref=e84] [cursor=pointer]:
+                  - generic [ref=e85]:
+                    - generic [ref=e86]:
+                      - img
+                    - generic [ref=e87]: Activity
+                  - generic [ref=e88]: "12"
+                - button "Analysis 4" [ref=e89] [cursor=pointer]:
+                  - generic [ref=e90]:
+                    - generic [ref=e91]:
+                      - img
+                    - generic [ref=e92]: Analysis
+                  - generic [ref=e93]: "4"
+                - button "Local 4" [ref=e94] [cursor=pointer]:
+                  - generic [ref=e95]:
+                    - generic [ref=e96]:
+                      - img
+                    - generic [ref=e97]: Local
+                  - generic [ref=e98]: "4"
+                - button "Custom 5" [ref=e99] [cursor=pointer]:
+                  - generic [ref=e100]:
+                    - generic [ref=e101]:
+                      - img
+                    - generic [ref=e102]: Custom
+                  - generic [ref=e103]: "5"
+            - generic [ref=e104]:
+              - heading "Legend" [level=3] [ref=e105]
+              - generic [ref=e106]:
+                - generic [ref=e107]:
+                  - img [ref=e108]
+                  - generic [ref=e110]:
+                    - paragraph [ref=e111]: Discovery
+                    - paragraph [ref=e112]: Vessel capability and routing
+                - generic [ref=e113]:
+                  - img [ref=e114]
+                  - generic [ref=e116]:
+                    - paragraph [ref=e117]: Activity
+                    - paragraph [ref=e118]: Learning backend data
+                - generic [ref=e119]:
+                  - img [ref=e120]
+                  - generic [ref=e125]:
+                    - paragraph [ref=e126]: Analysis
+                    - paragraph [ref=e127]: Code analysis and quality
+                - generic [ref=e128]:
+                  - img [ref=e129]
+                  - generic [ref=e134]:
+                    - paragraph [ref=e135]: Local
+                    - paragraph [ref=e136]: Filesystem and git
+                - generic [ref=e137]:
+                  - img [ref=e138]
+                  - generic [ref=e141]:
+                    - paragraph [ref=e142]: Custom
+                    - paragraph [ref=e143]: Project-specific shapes
+          - generic [ref=e145]:
+            - paragraph [ref=e147]: 29 shapes found
+            - generic [ref=e148]:
+              - generic [ref=e149] [cursor=pointer]:
+                - generic [ref=e150]:
+                  - generic [ref=e151]:
+                    - heading "memo" [level=3] [ref=e152]
+                    - generic [ref=e153]:
+                      - img [ref=e155]
+                      - text: local
+                  - paragraph [ref=e160]: Embedded text content with metadata for reasoning
+                - generic [ref=e161]:
+                  - generic [ref=e162]:
+                    - paragraph [ref=e163]: Resolvers (1)
+                    - generic [ref=e165]:
+                      - generic [ref=e166]: MiniBob
+                      - generic [ref=e167]: deterministic
+                  - generic [ref=e168]:
+                    - generic [ref=e169]:
+                      - paragraph [ref=e170]: "245"
+                      - paragraph [ref=e171]: uses
+                    - generic [ref=e172]:
+                      - paragraph [ref=e173]: "32"
+                      - paragraph [ref=e174]: templates
+                  - generic [ref=e176]:
+                    - generic [ref=e177]: Success Rate
+                    - generic [ref=e178]: 100.0%
+                  - generic [ref=e181]:
+                    - generic [ref=e182]: text
+                    - generic [ref=e183]: content
+                    - generic [ref=e184]: context
+                  - button "View Details" [ref=e186]
+              - generic [ref=e187] [cursor=pointer]:
+                - generic [ref=e188]:
+                  - generic [ref=e189]:
+                    - heading "file" [level=3] [ref=e190]
+                    - generic [ref=e191]:
+                      - img [ref=e193]
+                      - text: local
+                  - paragraph [ref=e198]: Read file content from filesystem with optional offset/limit
+                - generic [ref=e199]:
+                  - generic [ref=e200]:
+                    - paragraph [ref=e201]: Resolvers (1)
+                    - generic [ref=e203]:
+                      - generic [ref=e204]: MiniBob
+                      - generic [ref=e205]: deterministic
+                  - generic [ref=e206]:
+                    - generic [ref=e207]:
+                      - paragraph [ref=e208]: "892"
+                      - paragraph [ref=e209]: uses
+                    - generic [ref=e210]:
+                      - paragraph [ref=e211]: "67"
+                      - paragraph [ref=e212]: templates
+                  - generic [ref=e214]:
+                    - generic [ref=e215]: Success Rate
+                    - generic [ref=e216]: 98.0%
+                  - generic [ref=e219]:
+                    - generic [ref=e220]: filesystem
+                    - generic [ref=e221]: source-code
+                    - generic [ref=e222]: read
+                  - button "View Details" [ref=e224]
+              - generic [ref=e225] [cursor=pointer]:
+                - generic [ref=e226]:
+                  - generic [ref=e227]:
+                    - heading "directoryTree" [level=3] [ref=e228]
+                    - generic [ref=e229]:
+                      - img [ref=e231]
+                      - text: local
+                  - paragraph [ref=e236]: Directory structure listing with depth control
+                - generic [ref=e237]:
+                  - generic [ref=e238]:
+                    - paragraph [ref=e239]: Resolvers (1)
+                    - generic [ref=e241]:
+                      - generic [ref=e242]: MiniBob
+                      - generic [ref=e243]: deterministic
+                  - generic [ref=e244]:
+                    - generic [ref=e245]:
+                      - paragraph [ref=e246]: "156"
+                      - paragraph [ref=e247]: uses
+                    - generic [ref=e248]:
+                      - paragraph [ref=e249]: "28"
+                      - paragraph [ref=e250]: templates
+                  - generic [ref=e252]:
+                    - generic [ref=e253]: Success Rate
+                    - generic [ref=e254]: 99.0%
+                  - generic [ref=e257]:
+                    - generic [ref=e258]: filesystem
+                    - generic [ref=e259]: structure
+                    - generic [ref=e260]: navigation
+                  - button "View Details" [ref=e262]
+              - generic [ref=e263] [cursor=pointer]:
+                - generic [ref=e264]:
+                  - generic [ref=e265]:
+                    - heading "gitDiff" [level=3] [ref=e266]
+                    - generic [ref=e267]:
+                      - img [ref=e269]
+                      - text: local
+                  - paragraph [ref=e274]: Git diff output showing changes in working directory
+                - generic [ref=e275]:
+                  - generic [ref=e276]:
+                    - paragraph [ref=e277]: Resolvers (1)
+                    - generic [ref=e279]:
+                      - generic [ref=e280]: MiniBob
+                      - generic [ref=e281]: deterministic
+                  - generic [ref=e282]:
+                    - generic [ref=e283]:
+                      - paragraph [ref=e284]: "234"
+                      - paragraph [ref=e285]: uses
+                    - generic [ref=e286]:
+                      - paragraph [ref=e287]: "41"
+                      - paragraph [ref=e288]: templates
+                  - generic [ref=e290]:
+                    - generic [ref=e291]: Success Rate
+                    - generic [ref=e292]: 96.0%
+                  - generic [ref=e295]:
+                    - generic [ref=e296]: git
+                    - generic [ref=e297]: changes
+                    - generic [ref=e298]: diff
+                    - generic [ref=e299]: "+1"
+                  - button "View Details" [ref=e301]
+              - generic [ref=e302] [cursor=pointer]:
+                - generic [ref=e303]:
+                  - generic [ref=e304]:
+                    - heading "vesselCapability" [level=3] [ref=e305]
+                    - generic [ref=e306]:
+                      - img [ref=e308]
+                      - text: discovery
+                  - paragraph [ref=e310]: Find vessels by capability/shape they can resolve
+                - generic [ref=e311]:
+                  - generic [ref=e312]:
+                    - paragraph [ref=e313]: Resolvers (1)
+                    - generic [ref=e315]:
+                      - generic [ref=e316]: Discovery Vessel
+                      - generic [ref=e317]: deterministic
+                  - generic [ref=e318]:
+                    - generic [ref=e319]:
+                      - paragraph [ref=e320]: "45"
+                      - paragraph [ref=e321]: uses
+                    - generic [ref=e322]:
+                      - paragraph [ref=e323]: "8"
+                      - paragraph [ref=e324]: templates
+                  - generic [ref=e326]:
+                    - generic [ref=e327]: Success Rate
+                    - generic [ref=e328]: 100.0%
+                  - generic [ref=e331]:
+                    - generic [ref=e332]: discovery
+                    - generic [ref=e333]: capability
+                    - generic [ref=e334]: routing
+                  - button "View Details" [ref=e336]
+              - generic [ref=e337] [cursor=pointer]:
+                - generic [ref=e338]:
+                  - generic [ref=e339]:
+                    - heading "vesselEndpoint" [level=3] [ref=e340]
+                    - generic [ref=e341]:
+                      - img [ref=e343]
+                      - text: discovery
+                  - paragraph [ref=e345]: Get vessel endpoint URL by vessel ID
+                - generic [ref=e346]:
+                  - generic [ref=e347]:
+                    - paragraph [ref=e348]: Resolvers (1)
+                    - generic [ref=e350]:
+                      - generic [ref=e351]: Discovery Vessel
+                      - generic [ref=e352]: deterministic
+                  - generic [ref=e353]:
+                    - generic [ref=e354]:
+                      - paragraph [ref=e355]: "38"
+                      - paragraph [ref=e356]: uses
+                    - generic [ref=e357]:
+                      - paragraph [ref=e358]: "6"
+                      - paragraph [ref=e359]: templates
+                  - generic [ref=e361]:
+                    - generic [ref=e362]: Success Rate
+                    - generic [ref=e363]: 100.0%
+                  - generic [ref=e366]:
+                    - generic [ref=e367]: discovery
+                    - generic [ref=e368]: routing
+                    - generic [ref=e369]: endpoint
+                  - button "View Details" [ref=e371]
+              - generic [ref=e372] [cursor=pointer]:
+                - generic [ref=e373]:
+                  - generic [ref=e374]:
+                    - heading "vesselHealth" [level=3] [ref=e375]
+                    - generic [ref=e376]:
+                      - img [ref=e378]
+                      - text: discovery
+                  - paragraph [ref=e380]: Get health status of a specific vessel
+                - generic [ref=e381]:
+                  - generic [ref=e382]:
+                    - paragraph [ref=e383]: Resolvers (1)
+                    - generic [ref=e385]:
+                      - generic [ref=e386]: Discovery Vessel
+                      - generic [ref=e387]: deterministic
+                  - generic [ref=e388]:
+                    - generic [ref=e389]:
+                      - paragraph [ref=e390]: "22"
+                      - paragraph [ref=e391]: uses
+                    - generic [ref=e392]:
+                      - paragraph [ref=e393]: "4"
+                      - paragraph [ref=e394]: templates
+                  - generic [ref=e396]:
+                    - generic [ref=e397]: Success Rate
+                    - generic [ref=e398]: 100.0%
+                  - generic [ref=e401]:
+                    - generic [ref=e402]: discovery
+                    - generic [ref=e403]: health
+                    - generic [ref=e404]: monitoring
+                  - button "View Details" [ref=e406]
+              - generic [ref=e407] [cursor=pointer]:
+                - generic [ref=e408]:
+                  - generic [ref=e409]:
+                    - heading "vesselRegistry" [level=3] [ref=e410]
+                    - generic [ref=e411]:
+                      - img [ref=e413]
+                      - text: discovery
+                  - paragraph [ref=e415]: Query full vessel registry with filters
+                - generic [ref=e416]:
+                  - generic [ref=e417]:
+                    - paragraph [ref=e418]: Resolvers (1)
+                    - generic [ref=e420]:
+                      - generic [ref=e421]: Discovery Vessel
+                      - generic [ref=e422]: deterministic
+                  - generic [ref=e423]:
+                    - generic [ref=e424]:
+                      - paragraph [ref=e425]: "18"
+                      - paragraph [ref=e426]: uses
+                    - generic [ref=e427]:
+                      - paragraph [ref=e428]: "3"
+                      - paragraph [ref=e429]: templates
+                  - generic [ref=e431]:
+                    - generic [ref=e432]: Success Rate
+                    - generic [ref=e433]: 100.0%
+                  - generic [ref=e436]:
+                    - generic [ref=e437]: discovery
+                    - generic [ref=e438]: registry
+                    - generic [ref=e439]: metadata
+                  - button "View Details" [ref=e441]
+              - generic [ref=e442] [cursor=pointer]:
+                - generic [ref=e443]:
+                  - generic [ref=e444]:
+                    - heading "activityExecutionTrace" [level=3] [ref=e445]
+                    - generic [ref=e446]:
+                      - img [ref=e448]
+                      - text: activity
+                  - paragraph [ref=e450]: Complete execution trace with task details and state
+                - generic [ref=e451]:
+                  - generic [ref=e452]:
+                    - paragraph [ref=e453]: Resolvers (1)
+                    - generic [ref=e455]:
+                      - generic [ref=e456]: Activity API
+                      - generic [ref=e457]: deterministic
+                  - generic [ref=e458]:
+                    - generic [ref=e459]:
+                      - paragraph [ref=e460]: "567"
+                      - paragraph [ref=e461]: uses
+                    - generic [ref=e462]:
+                      - paragraph [ref=e463]: "45"
+                      - paragraph [ref=e464]: templates
+                  - generic [ref=e466]:
+                    - generic [ref=e467]: Success Rate
+                    - generic [ref=e468]: 97.0%
+                  - generic [ref=e471]:
+                    - generic [ref=e472]: execution
+                    - generic [ref=e473]: trace
+                    - generic [ref=e474]: debugging
+                    - generic [ref=e475]: "+1"
+                  - button "View Details" [ref=e477]
+              - generic [ref=e478] [cursor=pointer]:
+                - generic [ref=e479]:
+                  - generic [ref=e480]:
+                    - heading "activityTemplate" [level=3] [ref=e481]
+                    - generic [ref=e482]:
+                      - img [ref=e484]
+                      - text: activity
+                  - paragraph [ref=e486]: Activity template structure and metadata
+                - generic [ref=e487]:
+                  - generic [ref=e488]:
+                    - paragraph [ref=e489]: Resolvers (1)
+                    - generic [ref=e491]:
+                      - generic [ref=e492]: Activity API
+                      - generic [ref=e493]: deterministic
+                  - generic [ref=e494]:
+                    - generic [ref=e495]:
+                      - paragraph [ref=e496]: "423"
+                      - paragraph [ref=e497]: uses
+                    - generic [ref=e498]:
+                      - paragraph [ref=e499]: "38"
+                      - paragraph [ref=e500]: templates
+                  - generic [ref=e502]:
+                    - generic [ref=e503]: Success Rate
+                    - generic [ref=e504]: 99.0%
+                  - generic [ref=e507]:
+                    - generic [ref=e508]: template
+                    - generic [ref=e509]: activity
+                    - generic [ref=e510]: definition
+                  - button "View Details" [ref=e512]
+              - generic [ref=e513] [cursor=pointer]:
+                - generic [ref=e514]:
+                  - generic [ref=e515]:
+                    - heading "activityMetrics" [level=3] [ref=e516]
+                    - generic [ref=e517]:
+                      - img [ref=e519]
+                      - text: activity
+                  - paragraph [ref=e521]: Performance metrics and Thompson Sampling parameters
+                - generic [ref=e522]:
+                  - generic [ref=e523]:
+                    - paragraph [ref=e524]: Resolvers (1)
+                    - generic [ref=e526]:
+                      - generic [ref=e527]: Activity API
+                      - generic [ref=e528]: deterministic
+                  - generic [ref=e529]:
+                    - generic [ref=e530]:
+                      - paragraph [ref=e531]: "312"
+                      - paragraph [ref=e532]: uses
+                    - generic [ref=e533]:
+                      - paragraph [ref=e534]: "29"
+                      - paragraph [ref=e535]: templates
+                  - generic [ref=e537]:
+                    - generic [ref=e538]: Success Rate
+                    - generic [ref=e539]: 98.0%
+                  - generic [ref=e542]:
+                    - generic [ref=e543]: metrics
+                    - generic [ref=e544]: performance
+                    - generic [ref=e545]: thompson-sampling
+                  - button "View Details" [ref=e547]
+              - generic [ref=e548] [cursor=pointer]:
+                - generic [ref=e549]:
+                  - generic [ref=e550]:
+                    - heading "activityCompositionGraph" [level=3] [ref=e551]
+                    - generic [ref=e552]:
+                      - img [ref=e554]
+                      - text: activity
+                  - paragraph [ref=e556]: Activity composition relationships and flow
+                - generic [ref=e557]:
+                  - generic [ref=e558]:
+                    - paragraph [ref=e559]: Resolvers (1)
+                    - generic [ref=e561]:
+                      - generic [ref=e562]: Activity API
+                      - generic [ref=e563]: deterministic
+                  - generic [ref=e564]:
+                    - generic [ref=e565]:
+                      - paragraph [ref=e566]: "89"
+                      - paragraph [ref=e567]: uses
+                    - generic [ref=e568]:
+                      - paragraph [ref=e569]: "12"
+                      - paragraph [ref=e570]: templates
+                  - generic [ref=e572]:
+                    - generic [ref=e573]: Success Rate
+                    - generic [ref=e574]: 96.0%
+                  - generic [ref=e577]:
+                    - generic [ref=e578]: composition
+                    - generic [ref=e579]: graph
+                    - generic [ref=e580]: relationships
+                  - button "View Details" [ref=e582]
+              - generic [ref=e583] [cursor=pointer]:
+                - generic [ref=e584]:
+                  - generic [ref=e585]:
+                    - heading "impulseRelevanceMetrics" [level=3] [ref=e586]
+                    - generic [ref=e587]:
+                      - img [ref=e589]
+                      - text: activity
+                  - paragraph [ref=e591]: Impulse relevance scores for activity optimization
+                - generic [ref=e592]:
+                  - generic [ref=e593]:
+                    - paragraph [ref=e594]: Resolvers (1)
+                    - generic [ref=e596]:
+                      - generic [ref=e597]: Activity API
+                      - generic [ref=e598]: deterministic
+                  - generic [ref=e599]:
+                    - generic [ref=e600]:
+                      - paragraph [ref=e601]: "134"
+                      - paragraph [ref=e602]: uses
+                    - generic [ref=e603]:
+                      - paragraph [ref=e604]: "18"
+                      - paragraph [ref=e605]: templates
+                  - generic [ref=e607]:
+                    - generic [ref=e608]: Success Rate
+                    - generic [ref=e609]: 95.0%
+                  - generic [ref=e612]:
+                    - generic [ref=e613]: relevance
+                    - generic [ref=e614]: optimization
+                    - generic [ref=e615]: learning
+                  - button "View Details" [ref=e617]
+              - generic [ref=e618] [cursor=pointer]:
+                - generic [ref=e619]:
+                  - generic [ref=e620]:
+                    - heading "toolUsagePatterns" [level=3] [ref=e621]
+                    - generic [ref=e622]:
+                      - img [ref=e624]
+                      - text: activity
+                  - paragraph [ref=e626]: Tool usage patterns and statistics
+                - generic [ref=e627]:
+                  - generic [ref=e628]:
+                    - paragraph [ref=e629]: Resolvers (1)
+                    - generic [ref=e631]:
+                      - generic [ref=e632]: Activity API
+                      - generic [ref=e633]: deterministic
+                  - generic [ref=e634]:
+                    - generic [ref=e635]:
+                      - paragraph [ref=e636]: "78"
+                      - paragraph [ref=e637]: uses
+                    - generic [ref=e638]:
+                      - paragraph [ref=e639]: "11"
+                      - paragraph [ref=e640]: templates
+                  - generic [ref=e642]:
+                    - generic [ref=e643]: Success Rate
+                    - generic [ref=e644]: 97.0%
+                  - generic [ref=e647]:
+                    - generic [ref=e648]: tools
+                    - generic [ref=e649]: patterns
+                    - generic [ref=e650]: analytics
+                  - button "View Details" [ref=e652]
+              - generic [ref=e653] [cursor=pointer]:
+                - generic [ref=e654]:
+                  - generic [ref=e655]:
+                    - heading "executionCostSummary" [level=3] [ref=e656]
+                    - generic [ref=e657]:
+                      - img [ref=e659]
+                      - text: activity
+                  - paragraph [ref=e661]: Aggregate cost metrics grouped by activity/vessel
+                - generic [ref=e662]:
+                  - generic [ref=e663]:
+                    - paragraph [ref=e664]: Resolvers (1)
+                    - generic [ref=e666]:
+                      - generic [ref=e667]: Activity API
+                      - generic [ref=e668]: deterministic
+                  - generic [ref=e669]:
+                    - generic [ref=e670]:
+                      - paragraph [ref=e671]: "56"
+                      - paragraph [ref=e672]: uses
+                    - generic [ref=e673]:
+                      - paragraph [ref=e674]: "9"
+                      - paragraph [ref=e675]: templates
+                  - generic [ref=e677]:
+                    - generic [ref=e678]: Success Rate
+                    - generic [ref=e679]: 99.0%
+                  - generic [ref=e682]:
+                    - generic [ref=e683]: cost
+                    - generic [ref=e684]: metrics
+                    - generic [ref=e685]: analytics
+                  - button "View Details" [ref=e687]
+              - generic [ref=e688] [cursor=pointer]:
+                - generic [ref=e689]:
+                  - generic [ref=e690]:
+                    - heading "resolverCostAnalysis" [level=3] [ref=e691]
+                    - generic [ref=e692]:
+                      - img [ref=e694]
+                      - text: activity
+                  - paragraph [ref=e696]: Cost breakdown by resolver tier and resolver ID
+                - generic [ref=e697]:
+                  - generic [ref=e698]:
+                    - paragraph [ref=e699]: Resolvers (1)
+                    - generic [ref=e701]:
+                      - generic [ref=e702]: Activity API
+                      - generic [ref=e703]: deterministic
+                  - generic [ref=e704]:
+                    - generic [ref=e705]:
+                      - paragraph [ref=e706]: "42"
+                      - paragraph [ref=e707]: uses
+                    - generic [ref=e708]:
+                      - paragraph [ref=e709]: "7"
+                      - paragraph [ref=e710]: templates
+                  - generic [ref=e712]:
+                    - generic [ref=e713]: Success Rate
+                    - generic [ref=e714]: 98.0%
+                  - generic [ref=e717]:
+                    - generic [ref=e718]: cost
+                    - generic [ref=e719]: resolver
+                    - generic [ref=e720]: optimization
+                  - button "View Details" [ref=e722]
+              - generic [ref=e723] [cursor=pointer]:
+                - generic [ref=e724]:
+                  - generic [ref=e725]:
+                    - heading "vesselPerformanceMetrics" [level=3] [ref=e726]
+                    - generic [ref=e727]:
+                      - img [ref=e729]
+                      - text: activity
+                  - paragraph [ref=e731]: Performance and cost metrics for specific vessels
+                - generic [ref=e732]:
+                  - generic [ref=e733]:
+                    - paragraph [ref=e734]: Resolvers (1)
+                    - generic [ref=e736]:
+                      - generic [ref=e737]: Activity API
+                      - generic [ref=e738]: deterministic
+                  - generic [ref=e739]:
+                    - generic [ref=e740]:
+                      - paragraph [ref=e741]: "38"
+                      - paragraph [ref=e742]: uses
+                    - generic [ref=e743]:
+                      - paragraph [ref=e744]: "6"
+                      - paragraph [ref=e745]: templates
+                  - generic [ref=e747]:
+                    - generic [ref=e748]: Success Rate
+                    - generic [ref=e749]: 97.0%
+                  - generic [ref=e752]:
+                    - generic [ref=e753]: vessel
+                    - generic [ref=e754]: performance
+                    - generic [ref=e755]: metrics
+                  - button "View Details" [ref=e757]
+              - generic [ref=e758] [cursor=pointer]:
+                - generic [ref=e759]:
+                  - generic [ref=e760]:
+                    - heading "costByActivity" [level=3] [ref=e761]
+                    - generic [ref=e762]:
+                      - img [ref=e764]
+                      - text: activity
+                  - paragraph [ref=e766]: Cost breakdown grouped by activity template
+                - generic [ref=e767]:
+                  - generic [ref=e768]:
+                    - paragraph [ref=e769]: Resolvers (1)
+                    - generic [ref=e771]:
+                      - generic [ref=e772]: Activity API
+                      - generic [ref=e773]: deterministic
+                  - generic [ref=e774]:
+                    - generic [ref=e775]:
+                      - paragraph [ref=e776]: "51"
+                      - paragraph [ref=e777]: uses
+                    - generic [ref=e778]:
+                      - paragraph [ref=e779]: "8"
+                      - paragraph [ref=e780]: templates
+                  - generic [ref=e782]:
+                    - generic [ref=e783]: Success Rate
+                    - generic [ref=e784]: 99.0%
+                  - generic [ref=e787]:
+                    - generic [ref=e788]: cost
+                    - generic [ref=e789]: activity
+                    - generic [ref=e790]: breakdown
+                  - button "View Details" [ref=e792]
+              - generic [ref=e793] [cursor=pointer]:
+                - generic [ref=e794]:
+                  - generic [ref=e795]:
+                    - heading "resolverPerformanceByShape" [level=3] [ref=e796]
+                    - generic [ref=e797]:
+                      - img [ref=e799]
+                      - text: activity
+                  - paragraph [ref=e801]: Resolver performance metrics grouped by impulse shape
+                - generic [ref=e802]:
+                  - generic [ref=e803]:
+                    - paragraph [ref=e804]: Resolvers (1)
+                    - generic [ref=e806]:
+                      - generic [ref=e807]: Activity API
+                      - generic [ref=e808]: deterministic
+                  - generic [ref=e809]:
+                    - generic [ref=e810]:
+                      - paragraph [ref=e811]: "33"
+                      - paragraph [ref=e812]: uses
+                    - generic [ref=e813]:
+                      - paragraph [ref=e814]: "5"
+                      - paragraph [ref=e815]: templates
+                  - generic [ref=e817]:
+                    - generic [ref=e818]: Success Rate
+                    - generic [ref=e819]: 96.0%
+                  - generic [ref=e822]:
+                    - generic [ref=e823]: resolver
+                    - generic [ref=e824]: performance
+                    - generic [ref=e825]: shape
+                  - button "View Details" [ref=e827]
+              - generic [ref=e828] [cursor=pointer]:
+                - generic [ref=e829]:
+                  - generic [ref=e830]:
+                    - heading "costTrendOverTime" [level=3] [ref=e831]
+                    - generic [ref=e832]:
+                      - img [ref=e834]
+                      - text: activity
+                  - paragraph [ref=e836]: Time-series cost data for trend analysis
+                - generic [ref=e837]:
+                  - generic [ref=e838]:
+                    - paragraph [ref=e839]: Resolvers (1)
+                    - generic [ref=e841]:
+                      - generic [ref=e842]: Activity API
+                      - generic [ref=e843]: deterministic
+                  - generic [ref=e844]:
+                    - generic [ref=e845]:
+                      - paragraph [ref=e846]: "29"
+                      - paragraph [ref=e847]: uses
+                    - generic [ref=e848]:
+                      - paragraph [ref=e849]: "4"
+                      - paragraph [ref=e850]: templates
+                  - generic [ref=e852]:
+                    - generic [ref=e853]: Success Rate
+                    - generic [ref=e854]: 98.0%
+                  - generic [ref=e857]:
+                    - generic [ref=e858]: cost
+                    - generic [ref=e859]: trend
+                    - generic [ref=e860]: time-series
+                  - button "View Details" [ref=e862]
+              - generic [ref=e863] [cursor=pointer]:
+                - generic [ref=e864]:
+                  - generic [ref=e865]:
+                    - heading "problem_detection" [level=3] [ref=e866]
+                    - generic [ref=e867]:
+                      - img [ref=e869]
+                      - text: analysis
+                  - paragraph [ref=e874]: Code quality issues and potential bugs detected by static analysis
+                - generic [ref=e875]:
+                  - generic [ref=e876]:
+                    - paragraph [ref=e877]: Resolvers (1)
+                    - generic [ref=e879]:
+                      - generic [ref=e880]: Analysis API
+                      - generic [ref=e881]: pattern
+                  - generic [ref=e882]:
+                    - generic [ref=e883]:
+                      - paragraph [ref=e884]: "198"
+                      - paragraph [ref=e885]: uses
+                    - generic [ref=e886]:
+                      - paragraph [ref=e887]: "23"
+                      - paragraph [ref=e888]: templates
+                  - generic [ref=e890]:
+                    - generic [ref=e891]: Success Rate
+                    - generic [ref=e892]: 94.0%
+                  - generic [ref=e895]:
+                    - generic [ref=e896]: code-quality
+                    - generic [ref=e897]: bugs
+                    - generic [ref=e898]: analysis
+                  - button "View Details" [ref=e900]
+              - generic [ref=e901] [cursor=pointer]:
+                - generic [ref=e902]:
+                  - generic [ref=e903]:
+                    - heading "error_log" [level=3] [ref=e904]
+                    - generic [ref=e905]:
+                      - img [ref=e907]
+                      - text: analysis
+                  - paragraph [ref=e912]: Stack traces and error messages from logs
+                - generic [ref=e913]:
+                  - generic [ref=e914]:
+                    - paragraph [ref=e915]: Resolvers (2)
+                    - generic [ref=e916]:
+                      - generic [ref=e917]:
+                        - generic [ref=e918]: Analysis API
+                        - generic [ref=e919]: pattern
+                      - generic [ref=e920]:
+                        - generic [ref=e921]: MiniBob (file)
+                        - generic [ref=e922]: deterministic
+                  - generic [ref=e923]:
+                    - generic [ref=e924]:
+                      - paragraph [ref=e925]: "456"
+                      - paragraph [ref=e926]: uses
+                    - generic [ref=e927]:
+                      - paragraph [ref=e928]: "52"
+                      - paragraph [ref=e929]: templates
+                  - generic [ref=e931]:
+                    - generic [ref=e932]: Success Rate
+                    - generic [ref=e933]: 96.0%
+                  - generic [ref=e936]:
+                    - generic [ref=e937]: errors
+                    - generic [ref=e938]: debugging
+                    - generic [ref=e939]: logs
+                  - button "View Details" [ref=e941]
+              - generic [ref=e942] [cursor=pointer]:
+                - generic [ref=e943]:
+                  - generic [ref=e944]:
+                    - heading "source_code" [level=3] [ref=e945]
+                    - generic [ref=e946]:
+                      - img [ref=e948]
+                      - text: analysis
+                  - paragraph [ref=e953]: Source code files for analysis or context
+                - generic [ref=e954]:
+                  - generic [ref=e955]:
+                    - paragraph [ref=e956]: Resolvers (2)
+                    - generic [ref=e957]:
+                      - generic [ref=e958]:
+                        - generic [ref=e959]: Analysis API
+                        - generic [ref=e960]: deterministic
+                      - generic [ref=e961]:
+                        - generic [ref=e962]: MiniBob (file)
+                        - generic [ref=e963]: deterministic
+                  - generic [ref=e964]:
+                    - generic [ref=e965]:
+                      - paragraph [ref=e966]: 1,023
+                      - paragraph [ref=e967]: uses
+                    - generic [ref=e968]:
+                      - paragraph [ref=e969]: "78"
+                      - paragraph [ref=e970]: templates
+                  - generic [ref=e972]:
+                    - generic [ref=e973]: Success Rate
+                    - generic [ref=e974]: 99.0%
+                  - generic [ref=e977]:
+                    - generic [ref=e978]: source-code
+                    - generic [ref=e979]: analysis
+                    - generic [ref=e980]: context
+                  - button "View Details" [ref=e982]
+              - generic [ref=e983] [cursor=pointer]:
+                - generic [ref=e984]:
+                  - generic [ref=e985]:
+                    - heading "code_quality" [level=3] [ref=e986]
+                    - generic [ref=e987]:
+                      - img [ref=e989]
+                      - text: analysis
+                  - paragraph [ref=e994]: Code quality metrics and complexity scores
+                - generic [ref=e995]:
+                  - generic [ref=e996]:
+                    - paragraph [ref=e997]: Resolvers (1)
+                    - generic [ref=e999]:
+                      - generic [ref=e1000]: Analysis API
+                      - generic [ref=e1001]: pattern
+                  - generic [ref=e1002]:
+                    - generic [ref=e1003]:
+                      - paragraph [ref=e1004]: "167"
+                      - paragraph [ref=e1005]: uses
+                    - generic [ref=e1006]:
+                      - paragraph [ref=e1007]: "19"
+                      - paragraph [ref=e1008]: templates
+                  - generic [ref=e1010]:
+                    - generic [ref=e1011]: Success Rate
+                    - generic [ref=e1012]: 95.0%
+                  - generic [ref=e1015]:
+                    - generic [ref=e1016]: quality
+                    - generic [ref=e1017]: metrics
+                    - generic [ref=e1018]: complexity
+                  - button "View Details" [ref=e1020]
+              - generic [ref=e1021] [cursor=pointer]:
+                - generic [ref=e1022]:
+                  - generic [ref=e1023]:
+                    - heading "test_results" [level=3] [ref=e1024]
+                    - generic [ref=e1025]:
+                      - img [ref=e1027]
+                      - text: custom
+                  - paragraph [ref=e1030]: Test execution results and coverage data
+                - generic [ref=e1031]:
+                  - generic [ref=e1032]:
+                    - paragraph [ref=e1033]: Resolvers (1)
+                    - generic [ref=e1035]:
+                      - generic [ref=e1036]: MiniBob (file)
+                      - generic [ref=e1037]: deterministic
+                  - generic [ref=e1038]:
+                    - generic [ref=e1039]:
+                      - paragraph [ref=e1040]: "234"
+                      - paragraph [ref=e1041]: uses
+                    - generic [ref=e1042]:
+                      - paragraph [ref=e1043]: "31"
+                      - paragraph [ref=e1044]: templates
+                  - generic [ref=e1046]:
+                    - generic [ref=e1047]: Success Rate
+                    - generic [ref=e1048]: 97.0%
+                  - generic [ref=e1051]:
+                    - generic [ref=e1052]: testing
+                    - generic [ref=e1053]: coverage
+                    - generic [ref=e1054]: qa
+                  - button "View Details" [ref=e1056]
+              - generic [ref=e1057] [cursor=pointer]:
+                - generic [ref=e1058]:
+                  - generic [ref=e1059]:
+                    - heading "deployment_logs" [level=3] [ref=e1060]
+                    - generic [ref=e1061]:
+                      - img [ref=e1063]
+                      - text: custom
+                  - paragraph [ref=e1066]: Deployment and infrastructure logs
+                - generic [ref=e1067]:
+                  - generic [ref=e1068]:
+                    - paragraph [ref=e1069]: Resolvers (1)
+                    - generic [ref=e1071]:
+                      - generic [ref=e1072]: MiniBob (file)
+                      - generic [ref=e1073]: deterministic
+                  - generic [ref=e1074]:
+                    - generic [ref=e1075]:
+                      - paragraph [ref=e1076]: "89"
+                      - paragraph [ref=e1077]: uses
+                    - generic [ref=e1078]:
+                      - paragraph [ref=e1079]: "14"
+                      - paragraph [ref=e1080]: templates
+                  - generic [ref=e1082]:
+                    - generic [ref=e1083]: Success Rate
+                    - generic [ref=e1084]: 93.0%
+                  - generic [ref=e1087]:
+                    - generic [ref=e1088]: deployment
+                    - generic [ref=e1089]: infrastructure
+                    - generic [ref=e1090]: logs
+                  - button "View Details" [ref=e1092]
+              - generic [ref=e1093] [cursor=pointer]:
+                - generic [ref=e1094]:
+                  - generic [ref=e1095]:
+                    - heading "previous_fixes" [level=3] [ref=e1096]
+                    - generic [ref=e1097]:
+                      - img [ref=e1099]
+                      - text: custom
+                  - paragraph [ref=e1102]: Historical bug fixes and patches for similar issues
+                - generic [ref=e1103]:
+                  - generic [ref=e1104]:
+                    - paragraph [ref=e1105]: Resolvers (1)
+                    - generic [ref=e1107]:
+                      - generic [ref=e1108]: Activity API
+                      - generic [ref=e1109]: pattern
+                  - generic [ref=e1110]:
+                    - generic [ref=e1111]:
+                      - paragraph [ref=e1112]: "145"
+                      - paragraph [ref=e1113]: uses
+                    - generic [ref=e1114]:
+                      - paragraph [ref=e1115]: "17"
+                      - paragraph [ref=e1116]: templates
+                  - generic [ref=e1118]:
+                    - generic [ref=e1119]: Success Rate
+                    - generic [ref=e1120]: 87.0%
+                  - generic [ref=e1123]:
+                    - generic [ref=e1124]: history
+                    - generic [ref=e1125]: fixes
+                    - generic [ref=e1126]: patterns
+                  - button "View Details" [ref=e1128]
+              - generic [ref=e1129] [cursor=pointer]:
+                - generic [ref=e1130]:
+                  - generic [ref=e1131]:
+                    - heading "api_documentation" [level=3] [ref=e1132]
+                    - generic [ref=e1133]:
+                      - img [ref=e1135]
+                      - text: custom
+                  - paragraph [ref=e1138]: API documentation and endpoint specifications
+                - generic [ref=e1139]:
+                  - generic [ref=e1140]:
+                    - paragraph [ref=e1141]: Resolvers (1)
+                    - generic [ref=e1143]:
+                      - generic [ref=e1144]: MiniBob (file)
+                      - generic [ref=e1145]: deterministic
+                  - generic [ref=e1146]:
+                    - generic [ref=e1147]:
+                      - paragraph [ref=e1148]: "78"
+                      - paragraph [ref=e1149]: uses
+                    - generic [ref=e1150]:
+                      - paragraph [ref=e1151]: "11"
+                      - paragraph [ref=e1152]: templates
+                  - generic [ref=e1154]:
+                    - generic [ref=e1155]: Success Rate
+                    - generic [ref=e1156]: 98.0%
+                  - generic [ref=e1159]:
+                    - generic [ref=e1160]: documentation
+                    - generic [ref=e1161]: api
+                    - generic [ref=e1162]: spec
+                  - button "View Details" [ref=e1164]
+              - generic [ref=e1165] [cursor=pointer]:
+                - generic [ref=e1166]:
+                  - generic [ref=e1167]:
+                    - heading "dependencies" [level=3] [ref=e1168]
+                    - generic [ref=e1169]:
+                      - img [ref=e1171]
+                      - text: custom
+                  - paragraph [ref=e1174]: Project dependencies and version information
+                - generic [ref=e1175]:
+                  - generic [ref=e1176]:
+                    - paragraph [ref=e1177]: Resolvers (1)
+                    - generic [ref=e1179]:
+                      - generic [ref=e1180]: MiniBob (file)
+                      - generic [ref=e1181]: deterministic
+                  - generic [ref=e1182]:
+                    - generic [ref=e1183]:
+                      - paragraph [ref=e1184]: "112"
+                      - paragraph [ref=e1185]: uses
+                    - generic [ref=e1186]:
+                      - paragraph [ref=e1187]: "16"
+                      - paragraph [ref=e1188]: templates
+                  - generic [ref=e1190]:
+                    - generic [ref=e1191]: Success Rate
+                    - generic [ref=e1192]: 99.0%
+                  - generic [ref=e1195]:
+                    - generic [ref=e1196]: dependencies
+                    - generic [ref=e1197]: packages
+                    - generic [ref=e1198]: versions
+                  - button "View Details" [ref=e1200]
+  - contentinfo [ref=e1201]:
+    - generic [ref=e1202]:
+      - generic [ref=e1203]:
+        - generic [ref=e1206]: API Connected
+        - generic [ref=e1207]:
+          - img [ref=e1208]
+          - generic [ref=e1211]: 10:46:05 PM
+      - generic [ref=e1212]:
+        - generic [ref=e1213]: "[LOCAL]"
+        - generic [ref=e1214]: v0.1.0
