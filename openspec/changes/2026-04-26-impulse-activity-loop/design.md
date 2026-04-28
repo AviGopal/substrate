@@ -1170,3 +1170,25 @@ When the workbench's `fetchLeafChildren` queries for children of an `act_` forma
 **Discovery**: During a live goal execution, child activities appeared in the API but no mechanism existed to add them to the canvas. The canvas stayed empty until the execution completed and was loaded from history.
 
 **Resolution (2026-04-27, workbench f8f9061)**: Added live polling effect in `TrajectoryEditorPage`: when `isLive=true` and `activeExecutionId` is set, polls `GET /v2/activities/execution-traces?parent_execution_id=<id>` every 3 seconds. For each new `_activity_execute` wrapper found, resolves its `metadata.child_execution_id` and `template_name`, then calls `addActivity` to add the column. Also restored goal text from `_goal_resolve` metadata and added individual task hydration for child executions not covered by the batch window. Fixed crash when `template.tasks` is undefined (guard added to both `addActivity` and `loadFromLocalStorage`).
+
+### L-8: activity_execution_traces / execution table union needed for full child tree (2026-04-28)
+
+**Discovery**: The L-4 fallback (query paradigm `execution` table when `activity_execution_traces` returns 0) is insufficient. When a parent has at least one child in `activity_execution_traces` (typically a single `_activity_execute` wrapper), L-4 doesn't fire and all siblings stored in the `execution` table with `exec_` IDs are silently omitted.
+
+**Concrete impact**: A `_goal_resolve` execution with 18 total activities (minibob reported) shows only 9 columns in the workbench trajectory canvas. The missing 9 are `slot-binding` and `validator-dispatch` per-task hook executions stored in the `execution` table with `exec_` IDs, whose parent_execution_id points to `act_` inner executions that also have at least one `aexec_` wrapper child in `activity_execution_traces`.
+
+**Root cause**: The GET `/v2/activities/execution-traces` handler takes the first non-empty result set — `activity_execution_traces` if non-zero, `execution` (L-4 fallback) only if zero. This creates a silent union gap: a parent with 1 `aexec_` wrapper + 8 `exec_` hook children returns only the 1 wrapper.
+
+**Required fix**: When `parent_execution_id` is supplied, **always union both tables** regardless of whether the primary table returns rows:
+
+```sql
+-- Primary query (unchanged)
+SELECT * FROM activity_execution_traces WHERE parent_execution_id IN [$pid, $pid_prefixed]
+
+-- Always-run secondary query when parent_execution_id is set
+SELECT * FROM execution WHERE parent_execution_id IN [$pid, ...]
+```
+
+Merge and deduplicate by `execution_id` before returning. This ensures `slot-binding`, `validator-dispatch`, and any other paradigm-table hook executions are always visible alongside their `aexec_`/`act_` wrapper siblings.
+
+**Workaround in workbench (2026-04-28, commit 55d6c4f)**: One-level recursive expansion in `expandChildren` — after loading top-level children, fetches sub-children of each top-level activity and appends non-wrapper results. Improved canvas from 5 → 9 columns but cannot surface deeper `exec_` siblings without the server-side union.
