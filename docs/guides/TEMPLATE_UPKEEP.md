@@ -5,6 +5,8 @@
 
 Activity templates accumulate with use. Authors churn shape names (`gitDiff` vs `git_diff` vs `GitDiff`), skip `tags`, write one-line descriptions, hardcode URLs in prompts, or rely entirely on LLM tasks where a deterministic resolver would do. The system observes this drift and corrects it through the impulse-activity loop itself — no dedicated admin REST surface, no out-of-band scripts. Five layers:
 
+> **Foundation alignment.** Templates are themselves impulses: an activity template is an impulse of shape `activity_template`. The upkeep pipeline is one vessel (activity-api) auditing and rewriting its own advertised shapes through the same resolve/write contract any other vessel would use — consistent with the decentralized "vessels contribute learning parameters arbitrarily" model. Shapes are learned types, not a canonical vocabulary; the descriptive-not-prescriptive stance below is the correct posture.
+
 ```
 observed-shapes (util)          ← what's in use
        │

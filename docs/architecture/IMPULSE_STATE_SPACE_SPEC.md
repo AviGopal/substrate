@@ -1,8 +1,10 @@
 # Impulse State Space Specification
 
-> **Status**: Draft
+> **Status**: Draft (some sections superseded by 2026-04-26 spec work; see notes)
 > **Created**: 2026-04-05
 > **Relates to**: IMPULSE_ACTIVITY_FOUNDATION.md
+
+> **Foundation alignment:** State-space reasoning is the **recall motion** (informational → transient → observational) made explicit. The state space is the available pool of impulses the system can recall against; transitions track what learning would mint. The "shape signature" defined here is keyed on the **pointer-as-shape** bootstrap principle. See [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md#three-states-two-motions).
 
 This specification defines how the metabob-devbob system reasons about, predicts, and adapts to changes in the impulse state space during goal execution.
 

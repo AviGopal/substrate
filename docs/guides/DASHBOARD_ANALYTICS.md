@@ -5,6 +5,8 @@
 
 This guide describes the analytics panels in the activity dashboard and how to read them. If you're debugging a learning-loop regression, this is where you look before digging into raw traces.
 
+> **Foundation alignment.** Two-direction learning duality: `impulseRelevance` (forward arm — P(success | activity X resolves pointer of shape Y)) and slot-binding/Thompson recommendations (reverse arm — P(success | activity X chosen given pool {A,B,C})) must stay symmetric. The forward arm is currently broken (F-39) and the Thompson posterior is reachable only by REST, not as a resolvable shape — these dashboards surface the symptoms of both gaps. Read the impulse-relevance and convergence panels with that asymmetry in mind: a stalled forward arm makes the reverse arm's "convergence" misleading.
+
 ## Panels added in April 2026
 
 Four panels were added to turn execution traces into actionable signal. Each panel is a thin view over data already emitted by MiniBob and recorded by `metabob-activity-api` — the dashboard doesn't compute new metrics, it surfaces existing ones.

@@ -4,6 +4,12 @@
 **Source:** `templates/concept/` directory  
 **Vessel:** `repos/concept-db` (advertises shapes); activities call shapes through `POST /v2/impulses/resolve`
 
+## Foundation alignment
+
+The `concept`, `conceptGraph`, `relatedConcepts`, `conceptUsageStats`, and `conceptSequence` shapes are **owned by the concept-db vessel**. Concept-db is the system's text-formatted, labeled knowledge graph: it is the vessel that contributes the "context/concept" learning parameter to the decentralized learning loop. Other vessels (activity-api, the implicit Thompson Sampling vessel) contribute their own learning parameters independently — there is no central learning store. Treat anything below as a description of what concept-db chooses to advertise; templates consume those shapes through the standard `POST /v2/impulses/resolve` path that any vessel-owned shape uses.
+
+> Note: the system's minimum self-stable set (Impulse, Pointer, Resolver, Vessel) is a working hypothesis. The concept shapes here are derived — `concept` is an impulse with a pointer of shape `concept` resolved by concept-db. They are not primitives.
+
 ## Overview
 
 Concept-db advertises five impulse shapes that model reusable knowledge extracted from past executions:

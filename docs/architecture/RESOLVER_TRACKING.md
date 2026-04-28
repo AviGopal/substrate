@@ -4,6 +4,8 @@
 
 MiniBob tracks which resolvers are used for each impulse to enable learning and optimization.
 
+> **Foundation alignment:** Resolver-tracking is the data feed for the **forward arm of the two-direction learning duality** (`P(success | activity X resolves pointer of shape Y)`). It complements the reverse arm (slot-binding / Thompson recommendation writes). Both arms must update consistently — see [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md#two-direction-learning-duality).
+
 ## Architecture
 
 ```

@@ -4,7 +4,9 @@
 >
 > **Date**: 2026-04-08
 >
-> **Status**: Analysis Complete
+> **Status**: Analysis Complete (still useful as a terminology reference; not the canonical model)
+>
+> **Foundation alignment (2026-04-27):** This document predates the corrected foundation model. Its critiques of "convey intent" and "expected outcome" are still accurate. The corrected foundation model uses the explicit terms **recall** (i→t→o, apply structure) and **learning** (o→t→i, mint structure) for the two motions, and **pointer-as-shape** as the bootstrap principle. Read [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md) for the current vocabulary. Where this doc proposes terminology changes, prefer the foundation doc's wording when it exists.
 
 ---
 

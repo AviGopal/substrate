@@ -1,5 +1,7 @@
 # External Validation Guide
 
+> **Foundation alignment.** A "validator" in the corrected foundation model is a derived primitive: a resolver whose output impulse has shape `validation_result`. The "external-validation" resolver below is one such resolver. Thompson Sampling references in this guide describe a known-unshaped primitive (Thompson posteriors are a real-but-currently-unshaped primitive — reachable today only via REST inside activity-api's implicit Thompson Sampling vessel; should be a resolvable shape). Treat the Thompson-Sampling-update sections as describing a current REST integration, not a canonical mechanism.
+
 ## Overview
 
 External validation enables activities to validate outputs against real external systems (databases, APIs, test suites) instead of just internal pattern matching. This closes the 25% gap between internal validation success and external reality.
