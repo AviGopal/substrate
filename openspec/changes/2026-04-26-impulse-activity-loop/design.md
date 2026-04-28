@@ -1192,3 +1192,43 @@ SELECT * FROM execution WHERE parent_execution_id IN [$pid, ...]
 Merge and deduplicate by `execution_id` before returning. This ensures `slot-binding`, `validator-dispatch`, and any other paradigm-table hook executions are always visible alongside their `aexec_`/`act_` wrapper siblings.
 
 **Workaround in workbench (2026-04-28, commit 55d6c4f)**: One-level recursive expansion in `expandChildren` — after loading top-level children, fetches sub-children of each top-level activity and appends non-wrapper results. Improved canvas from 5 → 9 columns but cannot surface deeper `exec_` siblings without the server-side union.
+
+## Operator-Blocked Items (2026-04-27)
+
+Items in this section require user (operator) action because they need elevated credentials or operational decisions that cannot be exercised by automated agents. The session has delivered the registry-quality 6-pack, neutralised 4 polluting injection points, converted ribosome to a lifecycle meta-activity, instrumented shape provenance across all emission paths, and shipped 6 canary deploys (1.13.1 → 1.13.6). The remaining items are observable-but-not-mutative until the operator acts.
+
+### B-2: Admin scope on API key for global template writes
+
+**Symptom**: `POST /v2/impulses/resolve` with `pointer.type=activityTemplate_update` or `activityTemplate_deprecate` returns `403 Forbidden — admin scope required for global-scope templates`. Current production API key has only `read,write` scopes (`production.values.yaml:43`).
+
+**Current state**: Forward-fix delivered — `prune-activity` now ships `dryRun=true` by default, and the ribosome `dispatch_write_succeeded` task gracefully no-ops on 403. Pipeline is fully observable; mutations are blocked behind a clean error boundary.
+
+**Operator action required**: Either (a) grant `admin` scope to the existing API key via identity-vessel admin endpoint, or (b) issue a separate admin-scoped key (suggested name: `mb_prod_admin_key`) for write operations. Update both `~/.metabob/config.json` (operator workstation) and `repos/deployment/environments/production.values.yaml:43` (canary helm values), then re-deploy activity-system.
+
+**Without this**: `prune-activity` actual destructive dispatch, `replace-activity` write-back path, `core-activity-audit` re-registration, and ribosome `dispatch_write_succeeded` task all remain in observe-only mode. Registry-quality pipeline runs end-to-end but never actually mutates the registry.
+
+### F-49: Pre-existing corrupted DB rows with doubled-prefix wrapping
+
+**Symptom**: `GET /v2/activities/templates` returns 3 templates whose ids are wrapped twice — `activity:⟨activity:⟨hello-world-minimal⟩⟩`, `activity:⟨activity:⟨execute-shell-command⟩⟩`, `activity:⟨activity:⟨prune-activity⟩⟩`. Their natural id (bare name) returns 404 because the stored id has the doubled wrap.
+
+**Current state**: F-49 forward-fix landed in commit `caa86b5` — input ids are now sanitised before UPSERT, so no new doubled-prefix rows can be created. Pre-existing rows persist; they are unreachable via API but still occupy registry space.
+
+**Operator action required**: Connect to canary SurrealDB with root credentials and DELETE the 3 corrupted rows. Suggested SQL (verify with SELECT first; expect 3 rows; remove the duplicate `prune-activity` row alongside the doubled-prefix ones):
+
+```sql
+SELECT id FROM activity_template WHERE meta::id(id) STARTSWITH 'activity:⟨' OR meta::id(variant_id) STARTSWITH 'activity:⟨';
+-- verify 3 rows match expectation, then:
+DELETE FROM activity_template WHERE meta::id(id) STARTSWITH 'activity:⟨' OR meta::id(variant_id) STARTSWITH 'activity:⟨';
+```
+
+**Without this**: Three orphaned rows remain in the registry. They are unreachable by id, do not cause functional failures, but do skew template-count metrics and may surface in raw SurrealDB exports.
+
+### F-NN-G: Activity-api intermittent 401 on POST /v2/impulses/resolve
+
+**Symptom**: minibob client occasionally receives 401 on `POST /v2/impulses/resolve` while a direct `curl` with the same API key returns 200. Reproduces sporadically; no clear timing trigger identified.
+
+**Current state**: Mitigation delivered in commit `0181ec8` (F-NN-E) — minibob now synthesizes a degraded impulse when this 401 occurs, so the failure is non-fatal and does not block activity execution. Likely cause is a JWT-secret/token-cache race in identity-vessel or activity-api auth middleware (same family as F-44).
+
+**Operator action required**: Investigate during a quieter session. Suggested approach: tail activity-api pod logs (`kubectl logs -n activity-system -l app.kubernetes.io/name=metabob-activity-api -f`) while triggering minibob calls; correlate 401 timestamps with token refresh events or pod restart timing. Inspect identity-vessel JWT-issuance logs in parallel for cache-eviction races.
+
+**Without this**: Occasional log noise plus degraded-impulse fallback fires roughly once per N requests (rate not measured). No functional impact post-F-NN-E; observability is the only cost.

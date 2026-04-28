@@ -78,7 +78,7 @@ minibob --single "refactor the Thompson Sampling implementation"
 
 ## Current Implementation Status & Known Issues
 
-**Resolved findings:** F-1 through F-9b (foundational), F-37 through F-52 (impulse-activity-loop wave, 2026-04-27+)
+**Resolved findings:** F-1 through F-9b (foundational), F-37 through F-52 + F-NN-A through F-NN-F (impulse-activity-loop wave, 2026-04-27+), L-3, L-8 (workbench/canvas integration learnings)
 
 **Key fixes in latest builds:**
 - **F-41** (2026-04-27): Seed trigger impulse into meta-activity executor pool
@@ -86,12 +86,30 @@ minibob --single "refactor the Thompson Sampling implementation"
 - **F-43** (2026-04-27): Legacy field coercion for impulse-relevance (backward compatibility)
 - **F-44** (2026-04-27): Hono Context-not-finalized auth layer fix (minibob pending-sync queue unblocked)
 - **F-45** (2026-04-27): Improviser null-guard fix (minibob v0.14.0+)
-- **F-51** (post-2026-04-27): Schema fix for migration 093 (improved entity validation); follow-up migration 094 adds DEFINE FIELD OVERWRITE for impulse_resolutions.* to handle SurrealDB 3.0 field flexibility requirements
+- **F-51** (post-2026-04-27): Schema fix for migration 093 (improved entity validation). **Migration 094 (2026-04-27)**: Adds `DEFINE FIELD OVERWRITE` for `impulse_resolutions.*` fields to allow dynamic field creation in SurrealDB 3.0+. Enables impulse resolution records to store resolver-specific metadata without pre-defining all possible fields. Maintains schema safety while supporting flexible resolver output structures.
 - **F-52** (post-2026-04-27): Unlisted templates resolver fix (prevents private template leakage)
+- **F-NN-A** (2026-04-27): Registry-quality 6-pack landed — `core-activity-audit`, `prune-activity`, `replace-activity`, plus three lifecycle meta-activity wrappers form the registry hygiene pipeline.
+- **F-NN-A2** (2026-04-27): Ribosome converted from inline goal-processor logic to a lifecycle meta-activity, listening on `lifecycle:execution:succeeded` and dispatching template-extraction writes via the standard resolver path.
+- **F-NN-B** (2026-04-27): Four polluting injection points neutralised — improviser, fallback-template-shim, hardcoded-shape-defaults, and bypass-on-error paths no longer write speculative templates into the registry.
+- **F-NN-C** (2026-04-27): Shape provenance instrumented across all emission paths — every impulse now carries `produced_by` (resolver id + tier) and `produced_at_task_id` so co-occurrence learning has full ground truth.
+- **F-NN-D** (2026-04-27): F-49 forward-fix in commit `caa86b5` — `activity_template` UPSERT now sanitises input ids before write, preventing new doubled-prefix wrap rows. (Pre-existing 3 rows still need operator DELETE — see operator-blocked items below.)
+- **F-NN-E** (2026-04-27): Minibob synthesizes a degraded impulse when activity-api returns intermittent 401 on `POST /v2/impulses/resolve` (commit `0181ec8`). Failure becomes non-fatal; root cause (F-NN-G) deferred.
+- **F-NN-F** (2026-04-27): `prune-activity` now ships `dryRun=true` by default and `dispatch_write_succeeded` task gracefully no-ops on 403, so the registry-quality pipeline runs end-to-end without admin scope.
+- **L-3** (2026-04-27): JWT generation failure blocks API-key clients from impulse resolvers — symptom traced; full fix gated on JWT_SECRET alignment between init-database and runtime config (see design.md §L-3).
+- **L-8** (2026-04-28): Execution tree spans `activity_execution_traces` and `execution` tables; GET handler currently returns first non-empty result set, creating a silent union gap. Workbench has a one-level recursive workaround; server-side union is the proper fix (see design.md §L-8).
 
-**Canary deployment:** activity-api v1.15.0, minibob v0.14.0+, workbench v0.7.1+ (2026-04-27+)
+**Operator-blocked items** (require user action — full detail in [`openspec/changes/2026-04-26-impulse-activity-loop/design.md`](openspec/changes/2026-04-26-impulse-activity-loop/design.md#operator-blocked-items-2026-04-27)):
+- **B-2**: Admin scope on API key for global template writes — current key has `read,write`; `activityTemplate_update` / `_deprecate` return 403. Pipeline observe-only until operator grants admin scope or issues separate admin key.
+- **F-49 corrupted rows**: 3 pre-existing template rows have doubled-prefix wrapping (`activity:⟨activity:⟨…⟩⟩`); forward-fix prevents new occurrences, but existing rows need an operator-run SurrealDB DELETE with root creds.
+- **F-NN-G**: Intermittent 401 on `POST /v2/impulses/resolve` (likely JWT-secret/token-cache race, F-44 family); mitigated by F-NN-E degraded-impulse synthesis. Needs a quiet-session investigation correlating activity-api + identity-vessel logs.
 
-This system consolidates what's deployed, what's known to be working, and what's being tracked for fixes. Essential reading if you're working on composition-chain, slot-binding, validators, or any lifecycle-event-driven feature. Full details are embedded in the MiniBob, Activity-API, and Workbench sections below.
+**Canary deployment:** activity-api v1.13.6 (registry-quality wave) / v1.15.0 (auth-fixes baseline), minibob v0.14.0+, workbench v0.7.1+ (2026-04-27+)
+
+This system consolidates what's deployed, what's known to be working, and what's being tracked for fixes. Essential reading if you're working on composition-chain, slot-binding, validators, or any lifecycle-event-driven feature. 
+
+**For detailed implementation findings, diagnostics, and workarounds:** See [`docs/IMPLEMENTATION_FINDINGS_2026_04.md`](docs/IMPLEMENTATION_FINDINGS_2026_04.md) — canonical source for F-1 through F-45, including root causes, fix paths, and canary validation status (last updated 2026-04-27 12:45 UTC).
+
+Full details are embedded in the MiniBob, Activity-API, and Workbench sections below.
 
 ## Project Overview
 
@@ -248,9 +266,9 @@ Lightweight autonomous vessel (~3,000 LOC TypeScript/Bun):
 - **F-44: Hono Context-not-finalized auth layer fix** (2026-04-27): Two compounding bugs fixed in activity-api auth layer: (1) index.ts:79 jwtAuthMiddleware wrapper missing return statement caused 401s to be lost in transit with context left unfinalized; (2) jwtAuth.ts:171-182 reject-by-default logic blocked X-Internal-Api-Key requests before handlers could explicitly accept them. Fixes now in place; minibob pending-sync queue should drain on next client run after deployment. 13-line net change; 4 new regression tests added, existing 24 impulse route tests still pass.
 - **F-45: Improviser null-guard fix** (2026-04-27): Added null safety check in improviser resolver to prevent crashes when accessing optional fields. Defensive coding prevents runtime errors during speculative template generation. Single-line fix; 1 new regression test added.
 - **F-52: Unlisted templates resolver fix** (post-2026-04-27): Fixed resolver to properly handle unlisted/private templates, preventing unintended template visibility in discovery queries. Enables fine-grained template access control without compromising learning system visibility.
-- **Iteration resolver** (post-2026-04-27): New resolver for iteration patterns over arrays and collections. Enables looping constructs in activity tasks. Supports parameterized iteration with context passing between iterations.
-- **Make-activity resolver** (post-2026-04-27): New resolver that creates new activity templates from execution traces and specifications. Enables self-improvement loop where MiniBob generates new activities based on successful patterns.
-- **Goal-impulse seeding** (post-2026-04-27): Feature for seeding goal context as impulses at activity start. Enables activities to access initial goal context for constraint-driven execution. Complements live canvas goal impulse tracking.
+- **Iteration resolver** (2026-04-27, F-4 resolved): New resolver for iteration patterns over arrays and collections. Enables looping constructs in activity tasks. Supports parameterized iteration with context passing between iterations. 493-line implementation in `src/resolvers/iteration-resolver.ts` (verified 2026-04-27). Closes infrastructure gap B from 2026-04-26. Auto-unnests single-level arrays (e.g., `{recommendations: [...]}` → `[...]`) pragmatically to avoid redundant transform tasks in make-activity template.
+- **Make-activity meta-activity** (2026-04-27, verified end-to-end on canary 12:38 UTC): Template-based activity that creates new activity templates from execution traces and specifications. Enables self-improvement loop where MiniBob generates new activities based on successful patterns. 202-line template in `src/embedded-templates/make-activity.json` with 6 tasks: (1) acquire_context (impulse-resolve, category=meta); (2) identify_candidates (iteration over activityRecommendations, LLM scorer); (3) execute_plan (activity dispatcher); (4) handle_errors (iteration over alternates, conditional on failure); (5) declare_complete (LLM with markGoalComplete tool); (6) extract_template (impulse-resolve, gated on applyTemplateExtraction). Four open questions documented: path-sandbox check, extract_template synthesis, acquire_context filtering, and declare_complete tool registry. **F-NN-A (goal-impulse seeding)** identified and fixed (d10b60d): standalone CLI invocation of make-activity requires CLI-mode goal-impulse seeding. Intended invocation path is via parent dispatch (`--single "make me a new activity that..."`) where goal-impulse seeds correctly from goal-processing-activity-driven.
+- **Goal-impulse seeding** (2026-04-27): Feature for seeding goal context as impulses at activity start. Enables activities to access initial goal context for constraint-driven execution. Complements live canvas goal impulse tracking. CLI mode now auto-seeds `goal`-shape impulses from `--var goal=` when make-activity is invoked directly.
 
 ### 3. metabob-activity-api (`repos/metabob-activity-api`)
 TypeScript/Bun/Hono backend - Learning system and trace storage:
@@ -283,15 +301,14 @@ TypeScript/Bun/Hono backend - Learning system and trace storage:
 - **Per-task impulse ID tracking** (2026-04-26): WebSocket broadcaster now emits per-task `input_impulse_ids` and `output_impulse_ids` arrays in `task.completed` events (in addition to storage in execution traces). Enables real-time impulse co-occurrence analysis and task-scoped relevance feedback without re-reading full traces.
 - **Phase 2 backend additions** (2026-04-26): (1) **`discover-by-shapes` candidates_with_scores mode** — returns matching activities with Thompson sampling scores (`alpha`, `beta`, `sample_count`) and optional `composition_score` from edge data; null scores when no edge data (graceful uniform prior). (2) **`output_shapes` filter on backward mode** — filters producers by required output shapes, enabling constraint-driven discovery. (3) **`failure_mode` taxonomy** — stratifies execution failures by type (`verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`) with reason and variant-specific metadata; supports targeted improvement strategies. (4) **`endpoint_output_shapes` field in goal execution paths** — denormalized array of output shapes reachable at the endpoint (via correlated subquery backfill), enables shape-driven goal planning without re-traversing activity chains.
 - **Phase 2.5 goal-paths enhancements** (2026-04-26): `src/routes/goal-paths.ts` exports `accumulateEndpointShapes(pathActivities)` helper; POST `/goal-paths` persists `endpoint_output_shapes` on insert+update; GET `/goal-paths` accepts optional `endpoint_output_shape` query param for filtering; POST `/recommend` accepts the same as a body field, applied as hard-filter pre-Thompson Sampling; `predictEndpointState` reads the denormalized field with fallback to `accumulateEndpointShapes` for legacy rows. Enables shape-provider-goal creation to be filtered by output constraints without exhaustive traversal. 13 new tests added; typecheck clean.
+- **F-43: Legacy impulse-relevance field coercion** (v1.15.0, 2026-04-27): `POST /v2/activities/impulse-relevance` endpoint now accepts deprecated `activity_id` field and maps it to `activity_variant_id` for backward compatibility with legacy callers (e.g., minibob mcp.ts v0.13.0). Explicit `activity_variant_id` always wins. Logs warning when coercion is applied; to be removed once all callers are updated. Enables zero-downtime migration of older API consumers.
+- **F-44: Hono auth layer context finalization** (v1.15.0, 2026-04-27): Fixed two compounding bugs in activity-api auth layer: (1) index.ts:79 jwtAuthMiddleware wrapper missing return statement caused 401s to be lost in transit with context left unfinalized; (2) jwtAuth.ts:171-182 reject-by-default logic blocked X-Internal-Api-Key requests before handlers could explicitly accept them. Both issues prevented authorized requests from completing. 13-line net fix; 4 new regression tests added. Unblocks minibob pending-sync queue drain on next client run after deployment.
 - **Impulse.resolved body contract standardization** (2026-04-26, F-9): WebSocket `impulse.resolved` events now carry a standardized body structure: `{ shape: string, taskId: string, body: {...} }` instead of ad-hoc formats. Enables workbench to parse resolver outputs deterministically without per-resolver adapters. All resolver types (deterministic, pattern, LLM) emit the same contract; validation results, concept references, and all resolved shapes flow through the same channel.
+- **T5.5: Impulse.resolved WS broadcaster with body for all shapes** (2026-04-27): `impulse.resolved` WebSocket events now include `body` for all shapes (not just `validation_result`). Large bodies (> 50KB) are truncated: instead of full payload, returns `{ truncated: true, summary: <optional-summary> }`. Enables workbench OutputLayer inline content expansion in both live and recalled modes without explicit per-shape handling. All resolver output shapes now broadcast with body via unified event channel.
 - **Parent execution ID filtering** (2026-04-27): `GET /v2/activities/execution-traces` endpoint now accepts `parent_execution_id` query parameter to fetch only direct child executions of a given parent. Returns nested executions without requiring full tree traversal. Enables workbench NestedTrajectoryNode (v0.5.0+) to inline-expand nested execution hierarchies efficiently.
 - **Full-text search (FTS) for activity templates** (2026-04-27): `GET /v2/activities/templates` now accepts optional `q` query parameter for natural-language full-text search. Bypasses Redis cache and queries the BM25 FTS index directly, returning ranked results. Same engine used by the recommendation system (Tier 3 fallback). Enables activity discovery by feature description, error messages, or resolved shape names without exact matching.
-- **F-43: Legacy field coercion for impulse-relevance** (2026-04-27): `POST /v2/activities/impulse-relevance` endpoint now accepts deprecated `activity_id` field and maps it to `activity_variant_id` for backward compatibility with legacy callers (e.g., minibob mcp.ts). Explicit `activity_variant_id` always wins. Logs warning when coercion is applied; to be removed once all callers are updated.
 - **F-37/F-40 read-time fallback** (2026-04-27): GET execution-traces handlers apply `walkCompositionChain` helper when stored `composition_chain` is empty but `parent_execution_id` is set. Walks parent chain on the fly (read-only, never writes back) to reconstruct the composition chain for legacy traces inserted before F-37/F-40 write-time fixes. Early-exits on first non-empty ancestor chain. Capped at 16 levels with cycle-guard. Returns [] on DB errors (graceful degradation).
 - **F-37/F-40 optimization: Per-request memoization** (2026-04-27): GET /v2/activities/execution-traces list and execution-trace-with-signatures handlers now use `CompositionChainCache` (a Map keyed by executionId) to avoid redundant DB walks when multiple traces in a response share the same parent. Cache is fresh per request and passed to `resolveCompositionChain` helper. Siblings sharing a parent collapse to one DB walk; concurrent requests see in-flight promises to prevent thundering herd.
-- **T5.5: Impulse.resolved WS broadcaster with body for all shapes** (v1.15.0, 2026-04-27): `impulse.resolved` WebSocket events now include `body` for all shapes (not just `validation_result`). Large bodies (> 50KB) are truncated: instead of full payload, returns `{ truncated: true, summary: <optional-summary> }`. Enables workbench OutputLayer inline content expansion in both live and recalled modes without explicit per-shape handling. Standardized contract reduces client adaptation logic. All resolver output shapes now broadcast with body via unified event channel.
-- **F-43: Impulse-relevance legacy field coercion** (v1.15.0, 2026-04-27): Added backward-compatibility shim — `POST /v2/activities/impulse-relevance` now accepts deprecated `activity_id` field and maps to `activity_variant_id` for legacy callers. Explicit `activity_variant_id` always wins. Logs warning; to be removed once all callers updated. Enables zero-downtime migration of older API consumers.
-- **F-44: Hono auth layer context finalization** (v1.15.0, 2026-04-27): Fixed auth middleware in index.ts (line 79: missing return statement) and jwtAuth.ts (lines 171-182: reject-by-default logic blocking X-Internal-Api-Key). Both issues prevented authorized requests from completing. 13-line net fix; 4 new regression tests added. Unblocks pending-sync queue drain on minibob clients.
 
 ### 4. Activity Dashboard (`repos/activity-dashboard`)
 React 19/Bun real-time observability:
@@ -1417,6 +1434,28 @@ minibob --single "update the API documentation for the new endpoints"
 2. **Activities**: Creating and optimizing templates for development work
 
 **Success criteria:** Dashboard shows continuous activity creation and execution, with success rates improving over time through autonomous optimization.
+
+### Activity Registry Quality Pass (2026-04-27 Roadmap)
+
+The 2,500+ existing activity templates accumulated organically and need systematic review. The activity-registry-quality-pass initiative provides the pipeline:
+
+**Capability:** 6-activity main pipeline for audit → review → prune → replace → extract → concept, plus 5 sibling helper activities (2026-04-27):
+
+**Main pipeline activities:**
+- **core-activity-audit** (READY): Catalogue & rank load-bearing activities by Thompson α, recency-decayed execution count, and downstream-dependency count. Emits `coreActivitySet` (top-N, default 20) + `auditReport` summary. Core template for the entire quality-pass workflow.
+- **review-activity** (ROADMAP): Score one template against idiomatic alignment + foundation rules. Emits `activityReview` + `failure_mode` impulses.
+- **prune-activity** (ROADMAP): Soft-deprecate via `activityTemplate_deprecate` when score < threshold.
+- **replace-activity** (ROADMAP): Generate better variant; dispatches make-activity as a child.
+- **extract-pattern** (ROADMAP): Mine traces for recurring task graphs and shape-flow signatures. Emits `pattern` + `patternFrequency` impulses.
+- **concept-from-pattern** (ROADMAP): Promote a pattern to a concept via concept-db.
+
+**Sibling helper activities (2026-04-27, embedded in minibob):** Five supporting activities for decomposition and task distribution within the quality-pass flow. Callable from main activities via composition-dispatch to enable parallel review/prune/replace operations across activity template clusters.
+
+**Trace summarization primitives:** (1) `executionTraceWithSignatures` — already exists; pulls per-impulse pointer/shape signatures without full content. (2) `traceDigest` — new shape; structured summary: `{activity_id, status, duration_ms, tasks: [{id, status, duration_ms, resolver_tier}], failure_mode, output_shapes}` (3) `traceCluster` — new shape; groups traces by `(activity_id, failure_mode_type, output_shapes_intersection)` for representative sampling.
+
+**Dependencies:** make-activity resolver (verified 2026-04-27), lifecycle events + validators (2026-04-26), Thompson Sampling (production-ready), iteration resolver (F-4, 2026-04-27).
+
+See [`openspec/changes/2026-04-27-activity-registry-quality-pass/proposal.md`](openspec/changes/2026-04-27-activity-registry-quality-pass/proposal.md) for detailed specification and success criteria.
 
 ## Important Implementation Notes
 
