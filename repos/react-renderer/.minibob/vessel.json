@@ -5,6 +5,37 @@
   "description": "UI rendering vessel — resolves ui_component impulses to React primitives; provides synthesize-ui-from-data and UI pattern activities",
   "tools": [
     {
+      "name": "browser_inspect",
+      "description": "Inspect the react-renderer browser viewport at http://localhost:3001/app. Use 'screenshot' to capture a PNG, 'snapshot' to get the DOM outline, 'content' to read page text, or 'navigate' to open a URL. Essential for validating that render_ui calls produced the expected output.",
+      "handler": {
+        "type": "module",
+        "path": ".minibob/tools/playwright-tool.ts"
+      },
+      "inputSchema": {
+        "type": "object",
+        "required": ["action"],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["screenshot", "snapshot", "content", "navigate"],
+            "description": "screenshot: save PNG to .playwright-mcp/. snapshot: get DOM outline. content: get page text. navigate: open URL and confirm."
+          },
+          "url": {
+            "type": "string",
+            "description": "URL to visit. Defaults to http://localhost:3001/app"
+          },
+          "outputPath": {
+            "type": "string",
+            "description": "File path for screenshot. Defaults to .playwright-mcp/ui-<timestamp>.png"
+          },
+          "waitMs": {
+            "type": "number",
+            "description": "Extra wait after page load in ms. Defaults to 1500."
+          }
+        }
+      }
+    },
+    {
       "name": "render_ui",
       "description": "Push a UI primitive to the connected browser viewport. Any primitive created here is immediately visible at http://localhost:3001/app. Use this whenever you want to display something visually — text, tables, badges, progress bars, code blocks, or composite layouts built from nested children.",
       "handler": {
@@ -52,7 +83,8 @@
       "render-wizard",
       "render-dashboard",
       "render-conversation",
-      "record-interaction-metric"
+      "record-interaction-metric",
+      "ui-render-validate"
     ]
   },
   "development": {
