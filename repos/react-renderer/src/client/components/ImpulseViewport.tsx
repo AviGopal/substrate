@@ -2,7 +2,8 @@ import React from 'react'
 import { useImpulseStoreForRender } from '../hooks/useImpulseStore'
 import { ErrorBoundary } from './ErrorBoundary'
 import { PrimitiveRenderer } from '../../components/PrimitiveRenderer'
-import type { Primitive, PositionMode } from '../../types'
+import { ProvenanceStrip } from '../../primitives/shape-slot'
+import type { Primitive, PositionMode, UIComponentImpulse } from '../../types'
 
 function positionStyles(position?: PositionMode, layer?: number): React.CSSProperties {
   const zIndex = layer ?? 0
@@ -46,9 +47,11 @@ export function ImpulseViewport() {
     (i) => i.pointer?.position && i.pointer.position.type !== 'flow' && i.pointer.position.type !== 'below-input'
   )
 
-  const renderImpulse = (impulse: (typeof impulses)[number]) => {
+  const renderImpulse = (impulse: UIComponentImpulse) => {
     const primitive = impulse.content ?? impulse.pointer?.primitive
     const styles = positionStyles(impulse.pointer?.position, impulse.pointer?.layer)
+    // Impulses created by the subscriber (not explicit render_ui) carry dataRef = shape name
+    const sourceShape = impulse.dataRef ?? impulse.metadata?.sourceShape
 
     return (
       <div key={impulse.id} style={styles}>
@@ -59,13 +62,22 @@ export function ImpulseViewport() {
           updatedAt={impulse.updatedAt}
         >
           {primitive ? (
-            <PrimitiveRenderer
-              primitive={primitive as Primitive}
-              onAction={(actionId, payload) => {
-                console.log('[ImpulseViewport] action', actionId, payload)
-              }}
-              depth={0}
-            />
+            <div style={sourceShape ? { borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border, #e4e4e7)' } : undefined}>
+              <PrimitiveRenderer
+                primitive={primitive as Primitive}
+                onAction={(actionId, payload) => {
+                  console.log('[ImpulseViewport] action', actionId, payload)
+                }}
+                depth={0}
+              />
+              {sourceShape && (
+                <ProvenanceStrip
+                  shape={sourceShape}
+                  vessel={impulse.metadata?.componentType === 'data-binding' ? undefined : undefined}
+                  updatedAt={impulse.updatedAt}
+                />
+              )}
+            </div>
           ) : (
             <div className="impulse-card-placeholder border rounded p-2 mb-2">
               <pre className="text-xs">{JSON.stringify(impulse.pointer?.primitive, null, 2)}</pre>

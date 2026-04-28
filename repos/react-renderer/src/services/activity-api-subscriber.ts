@@ -102,15 +102,60 @@ function buildPrimitive(shape: string, payload: unknown, mapping: ShapeMappingEn
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Shape slot registry
-// One impulse per shape type. When the same shape resolves again,
-// update the existing impulse rather than stacking a new card.
+// Shape slot filling
+//
+// Two strategies, tried in order:
+//
+// 1. Slot fill: walk all existing impulse primitive trees looking for
+//    shape-slot nodes whose .shape matches. Fill them in-place — the layout
+//    skeleton is already on screen; the slot just becomes real content.
+//    This is the preferred path when an activity has declared the layout first.
+//
+// 2. Top-level insert: if no matching slot exists, create a new top-level
+//    flow impulse (one per shape type — updates in-place on re-resolution).
+//    This is the fallback when no layout was prescribed.
 // ──────────────────────────────────────────────────────────────────────────────
 
-const shapeSlots = new Map<string, string>() // shape → impulse id
+type MutablePrimitive = Record<string, unknown>
 
-function upsertShapeSlot(shape: string, primitive: Primitive): void {
-  const existingId = shapeSlots.get(shape)
+// Walk a primitive tree; call visitor on every node. Returns true if any node was mutated.
+function walkAndFill(node: MutablePrimitive, shape: string, filled: Primitive): boolean {
+  if (node.type === 'shape-slot' && node.shape === shape) {
+    node.filled = filled
+    return true
+  }
+  let mutated = false
+  // Container children
+  if (Array.isArray(node.children)) {
+    for (const child of node.children as MutablePrimitive[]) {
+      if (walkAndFill(child, shape, filled)) mutated = true
+    }
+  }
+  return mutated
+}
+
+function tryFillSlots(shape: string, filled: Primitive): boolean {
+  let anyFilled = false
+  for (const impulse of impulseStore.getAll()) {
+    const root = (impulse.content ?? impulse.pointer?.primitive) as unknown as MutablePrimitive | undefined
+    if (!root) continue
+    // Deep-clone root so we can mutate safely, then check if anything changed
+    const clone = JSON.parse(JSON.stringify(root)) as MutablePrimitive
+    if (walkAndFill(clone, shape, filled)) {
+      impulseStore.update(impulse.id, {
+        content: clone as unknown as Primitive,
+        pointer: { ...impulse.pointer, primitive: clone as unknown as Primitive },
+      })
+      anyFilled = true
+    }
+  }
+  return anyFilled
+}
+
+const topLevelSlots = new Map<string, string>() // shape → impulse id (fallback path)
+
+function upsertTopLevel(shape: string, primitive: Primitive): void {
+  const existingId = topLevelSlots.get(shape)
   if (existingId && impulseStore.get(existingId)) {
     impulseStore.update(existingId, {
       content: primitive,
@@ -124,7 +169,15 @@ function upsertShapeSlot(shape: string, primitive: Primitive): void {
       dataRef: shape,
       metadata: { componentType: 'data-binding', sourceShape: shape },
     })
-    shapeSlots.set(shape, impulse.id)
+    topLevelSlots.set(shape, impulse.id)
+  }
+}
+
+function upsertShapeSlot(shape: string, primitive: Primitive): void {
+  const filledASlot = tryFillSlots(shape, primitive)
+  if (!filledASlot) {
+    // No layout declared a slot for this shape — add as a top-level card
+    upsertTopLevel(shape, primitive)
   }
 }
 

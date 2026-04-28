@@ -20,6 +20,7 @@ export type PrimitiveType =
   | 'custom'
   | 'design_token'
   | 'form'
+  | 'shape-slot'
 
 export interface BasePrimitive {
   type: PrimitiveType
@@ -198,6 +199,18 @@ export interface FormPrimitive extends BasePrimitive {
   steps?: Array<{ title: string; fields: string[] }>
 }
 
+// A placeholder inside a layout that fills itself when a matching shape resolves.
+// The subscriber walks the primitive tree looking for shape-slot nodes and
+// replaces their content once the shape is available.
+export interface ShapeSlotPrimitive extends BasePrimitive {
+  type: 'shape-slot'
+  shape: string           // impulse shape that fills this slot, e.g. 'conceptGraph'
+  label?: string          // display name while pending
+  vessel?: string         // vessel that owns the shape — shown in the pointer badge
+  height?: number         // reserved height while pending (px)
+  filled?: Primitive      // set by subscriber when shape resolves
+}
+
 export type Primitive =
   | ContainerPrimitive
   | TextPrimitive
@@ -214,6 +227,7 @@ export type Primitive =
   | CustomPrimitive
   | DesignTokenPrimitive
   | FormPrimitive
+  | ShapeSlotPrimitive
 
 // ============================================================================
 // Position Modes

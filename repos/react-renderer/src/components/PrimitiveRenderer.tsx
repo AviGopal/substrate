@@ -13,6 +13,7 @@ import { DataTableTanstack, type DataTableTanstackPrimitive } from '../primitive
 import { Chart } from '../primitives/chart'
 import { DesignToken } from '../primitives/design-token'
 import { Graph } from '../primitives/graph'
+import { ShapeSlot } from '../primitives/shape-slot'
 import { FormPrimitive } from '../client/primitives/form'
 import { ErrorBoundary } from './ErrorBoundary'
 
@@ -108,6 +109,14 @@ export function PrimitiveRenderer({ primitive, onAction, depth = 0 }: PrimitiveR
 
     case 'graph':
       return <Graph primitive={primitive} />
+
+    case 'shape-slot':
+      return (
+        <ShapeSlot
+          primitive={primitive}
+          renderFilled={(filled) => renderChild(filled, 0)}
+        />
+      )
 
     case 'input':
       // Input primitive
