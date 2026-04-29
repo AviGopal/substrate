@@ -68,8 +68,16 @@ export interface CircuitBreakerTransition {
 export class CircuitBreakerService {
   /**
    * Get or create circuit breaker state for a vessel
+   *
+   * Phase B-followup: dual-write account_id alongside org_id on CREATE
+   * (table now has the field via migration 097). SELECT-by-record-id stays
+   * unchanged — recordId already targets a single row, no scoping needed.
    */
-  static async getState(vesselId: string, orgId: string): Promise<CircuitBreakerState> {
+  static async getState(
+    vesselId: string,
+    orgId: string,
+    accountId?: string | null
+  ): Promise<CircuitBreakerState> {
     const recordId = `vessel_circuit_breaker:${vesselId}`;
 
     try {
@@ -86,6 +94,8 @@ export class CircuitBreakerService {
         CREATE ${recordId} CONTENT {
           vessel_id: $vesselId,
           org_id: $orgId,
+          account_id: $account_id,
+          account_id_version: $account_id_version,
           state: 'closed',
           state_changed_at: time::now(),
           consecutive_failures: 0,
@@ -108,6 +118,8 @@ export class CircuitBreakerService {
       const created = await surrealDB.query<CircuitBreakerState[]>(createQuery, {
         vesselId,
         orgId,
+        account_id: accountId ?? null,
+        account_id_version: 1,
       });
 
       return created[0][0];
@@ -123,13 +135,16 @@ export class CircuitBreakerService {
   /**
    * Record a successful request
    * Resets consecutive failures, may transition to CLOSED from HALF_OPEN
+   *
+   * Phase B4a: accept optional accountId so transition records dual-write.
    */
   static async recordSuccess(
     vesselId: string,
     orgId: string,
-    latencyMs: number
+    latencyMs: number,
+    accountId?: string | null
   ): Promise<{ state: CircuitBreakerState; transitioned: boolean }> {
-    const current = await this.getState(vesselId, orgId);
+    const current = await this.getState(vesselId, orgId, accountId);
     const recordId = `vessel_circuit_breaker:${vesselId}`;
 
     // Reset failure window if it's been more than window_seconds
@@ -151,7 +166,7 @@ export class CircuitBreakerService {
         event: 'closed',
         previous_state: 'half_open',
         probe_succeeded: true,
-      });
+      }, accountId ?? null);
 
       // Release probe lock since probe succeeded
       const lockKey = `circuit_breaker:probe_lock:${vesselId}`;
@@ -195,15 +210,18 @@ export class CircuitBreakerService {
   /**
    * Record a failed request
    * May transition to OPEN if thresholds exceeded
+   *
+   * Phase B4a: accept optional accountId so transition records dual-write.
    */
   static async recordFailure(
     vesselId: string,
     orgId: string,
     errorCode: string,
     errorMessage: string,
-    activityExecutionId?: string
+    activityExecutionId?: string,
+    accountId?: string | null
   ): Promise<{ state: CircuitBreakerState; transitioned: boolean }> {
-    const current = await this.getState(vesselId, orgId);
+    const current = await this.getState(vesselId, orgId, accountId);
     const recordId = `vessel_circuit_breaker:${vesselId}`;
 
     // Can't fail in OPEN state (requests are blocked)
@@ -253,7 +271,7 @@ export class CircuitBreakerService {
         failure_rate: failureRate,
         cooldown_period_ms: current.cooldown_period_ms,
         caused_by_activity_id: activityExecutionId,
-      });
+      }, accountId ?? null);
 
       logger.warn('Circuit breaker opened', {
         vesselId,
@@ -275,7 +293,7 @@ export class CircuitBreakerService {
         probe_failed: true,
         probe_error_code: errorCode,
         cooldown_period_ms: newCooldown,
-      });
+      }, accountId ?? null);
 
       // Release probe lock since probe failed
       const lockKey = `circuit_breaker:probe_lock:${vesselId}`;
@@ -341,12 +359,15 @@ export class CircuitBreakerService {
   /**
    * Check if circuit should transition to half-open
    * Called periodically to allow recovery attempts
+   *
+   * Phase B4a: accept optional accountId so transition records dual-write.
    */
   static async checkHalfOpenTransition(
     vesselId: string,
-    orgId: string
+    orgId: string,
+    accountId?: string | null
   ): Promise<{ state: CircuitBreakerState; transitioned: boolean }> {
-    const current = await this.getState(vesselId, orgId);
+    const current = await this.getState(vesselId, orgId, accountId);
 
     if (current.state !== 'open' || !current.next_probe_at) {
       return { state: current, transitioned: false };
@@ -376,7 +397,7 @@ export class CircuitBreakerService {
       vessel_id: vesselId,
       event: 'half_open',
       previous_state: 'open',
-    });
+    }, accountId ?? null);
 
     logger.info('Circuit breaker transitioned to half-open', { vesselId });
 
@@ -389,9 +410,15 @@ export class CircuitBreakerService {
   /**
    * Check if a request should be allowed through the circuit breaker
    * Uses Redis distributed lock to ensure only ONE probe request in half-open state
+   *
+   * Phase B4a: accept optional accountId so any transition record dual-writes.
    */
-  static async shouldAllowRequest(vesselId: string, orgId: string): Promise<boolean> {
-    const current = await this.getState(vesselId, orgId);
+  static async shouldAllowRequest(
+    vesselId: string,
+    orgId: string,
+    accountId?: string | null
+  ): Promise<boolean> {
+    const current = await this.getState(vesselId, orgId, accountId);
 
     if (current.state === 'closed') {
       return true;
@@ -399,7 +426,7 @@ export class CircuitBreakerService {
 
     if (current.state === 'open') {
       // Check if we should transition to half-open
-      const { state } = await this.checkHalfOpenTransition(vesselId, orgId);
+      const { state } = await this.checkHalfOpenTransition(vesselId, orgId, accountId);
       return state.state === 'half_open';
     }
 
@@ -432,19 +459,27 @@ export class CircuitBreakerService {
 
   /**
    * Record a circuit breaker state transition
+   *
+   * Phase B4a: dual-write account_id alongside org_id on circuit_breaker_trace
+   * (table is in migration 095). Schema is option<string>; null is valid when
+   * caller has no accountId claim.
    */
   private static async recordTransition(
     orgId: string,
-    transition: CircuitBreakerTransition
+    transition: CircuitBreakerTransition,
+    accountId: string | null = null
   ): Promise<void> {
     try {
       const traceId = `cb_trace:${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
+      // Phase B4a: dual-write account_id + account_id_version alongside org_id.
       const query = `
         CREATE circuit_breaker_trace CONTENT {
           trace_id: $traceId,
           trace_type: 'circuit_breaker',
           org_id: $orgId,
+          account_id: $account_id,
+          account_id_version: $account_id_version,
           vessel_id: $vesselId,
           event: $event,
           previous_state: $previousState,
@@ -466,6 +501,8 @@ export class CircuitBreakerService {
       await surrealDB.query(query, {
         traceId,
         orgId,
+        account_id: accountId,
+        account_id_version: 1,
         vesselId: transition.vessel_id,
         event: transition.event,
         previousState: transition.previous_state,
@@ -496,16 +533,19 @@ export class CircuitBreakerService {
 
   /**
    * Get circuit states for multiple vessels
+   *
+   * Phase B-followup: thread accountId for getState CREATE path.
    */
   static async getStates(
     vesselIds: string[],
-    orgId: string
+    orgId: string,
+    accountId?: string | null
   ): Promise<Record<string, CircuitBreakerState>> {
     const states: Record<string, CircuitBreakerState> = {};
 
     await Promise.all(
       vesselIds.map(async (vesselId) => {
-        states[vesselId] = await this.getState(vesselId, orgId);
+        states[vesselId] = await this.getState(vesselId, orgId, accountId);
       })
     );
 

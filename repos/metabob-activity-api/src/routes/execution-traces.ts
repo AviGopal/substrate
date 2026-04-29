@@ -12,6 +12,10 @@ import type { SessionData } from '../models/schemas';
 import { getJwtAuthFromContext, hasJwtAuth } from '../middleware/jwtAuth';
 import { config } from '../config';
 import { insertExecution, isDualWriteEnabled, normalizeActivityId, updateShapeActivityScores, type ParadigmExecution } from '../db/paradigm';
+// Phase B2: dual-tenant helpers (defined in routes/activities.ts in B1).
+// Reuse so we don't duplicate the `accountIdScopedWhere()` fragment or the
+// `accountIdRecordRef()` record-id formatter across route modules.
+import { accountIdScopedWhere, variantMetricsRecordId } from './activities';
 import {
   extractOutputShapes,
   validateOutputShapes,
@@ -369,8 +373,15 @@ app.get('/', async (c) => {
     // Multi-tenant filtering (skip when using JWT - RBAC handles it via PERMISSIONS)
     if (!useJwtAuth) {
       if (session.org_id) {
-        whereConditions.push('(org_id = $org_id OR org_id = NULL)');
+        // Phase B2: prefer account_id; legacy/unscoped rows still match.
+        // accountIdScopedWhere() emits the canonical disjunction; we OR in
+        // `org_id = NULL` to preserve the prior behaviour where unscoped
+        // session-fed rows were visible.
+        whereConditions.push(`(${accountIdScopedWhere()} OR org_id = NULL)`);
         params.org_id = session.org_id;
+        // Sessions don't carry an accountId today, so bind null. When
+        // session.account_id is plumbed through (Phase D), prefer that here.
+        params.account_id = (session as any).account_id ?? null;
       }
 
       if (session.project_id) {
@@ -1283,6 +1294,9 @@ app.post('/', async (c) => {
     // This allows MiniBob to explicitly set org_id when sending traces
     const traceOrgId = body.org_id || jwtAuth?.orgId || session?.org_id || 'public';
     const traceProjectId = body.project_id || jwtAuth?.projectId || session?.project_id || null;
+    // Phase B2: account_id from JWT auth context (sessions don't carry one).
+    // Schema is option<string>; null is acceptable when caller has no claim.
+    const traceAccountId = body.account_id ?? jwtAuth?.accountId ?? null;
 
     logger.debug('[TRACE DEBUG] Determining org_id for trace', {
       body_org_id: body.org_id,
@@ -1353,6 +1367,11 @@ app.post('/', async (c) => {
 
       // Multi-tenancy (use org_id from request body if provided)
       org_id: traceOrgId,
+      // Phase B2: dual-write account_id alongside org_id. Schema is
+      // option<string>, so null is acceptable when caller has no accountId
+      // claim. account_id_version=1 marks this row as Phase B dual-written.
+      account_id: traceAccountId,
+      account_id_version: 1,
       project_id: traceProjectId,
 
       // Timestamps (SurrealDB datetime type)
@@ -1497,6 +1516,16 @@ app.post('/', async (c) => {
     if ((trace as any).impulse_resolutions) optionalFields.push('impulse_resolutions: $impulse_resolutions');
     // Project ID - only include if set (MiniBob instances may not have projects)
     if (trace.project_id) optionalFields.push('project_id: $project_id');
+    // Phase B2: account_id is option<string> per the deployed schema —
+    // SurrealDB 3.x rejects JSON `null` against `TYPE none | string` (the
+    // value coercion produces NULL, not NONE). Only emit the SET clause when
+    // the caller actually provided an accountId; otherwise let the field
+    // default to NONE. account_id_version is paired with account_id (only
+    // meaningful when the field is written), so guard the same way.
+    if ((trace as any).account_id) {
+      optionalFields.push('account_id: $account_id');
+      optionalFields.push('account_id_version: $account_id_version');
+    }
 
     const optionalFieldsStr = optionalFields.length > 0 ? `,\n        ${optionalFields.join(',\n        ')}` : '';
 
@@ -1572,6 +1601,14 @@ app.post('/', async (c) => {
     if (body.execution_trace?.tasks && Array.isArray(body.execution_trace.tasks)) {
       const { broadcaster } = await import('../websocket/broadcaster');
 
+      // Phase G1 (2026-04-28): denormalize tenancy fields onto each event so
+      // downstream consumers (workbench, activity-dashboard, concept-db
+      // ExecutionObserver) can filter by tenant without re-fetching the row.
+      // Sourced from the just-built `trace` object — `traceAccountId` is the
+      // resolved value (body.account_id ?? jwtAuth?.accountId ?? null).
+      const broadcastAccountId: string | null = traceAccountId;
+      const broadcastOrgId: string = traceOrgId;
+
       for (let taskIndex = 0; taskIndex < body.execution_trace.tasks.length; taskIndex++) {
         const task = body.execution_trace.tasks[taskIndex];
         const taskId = task.id || task.taskId || `task-${taskIndex}`;
@@ -1586,6 +1623,8 @@ app.post('/', async (c) => {
             task_index: taskIndex,
             description: task.description || '',
             started_at: new Date().toISOString(),
+            org_id: broadcastOrgId,
+            account_id: broadcastAccountId,
           },
         });
 
@@ -1603,6 +1642,8 @@ app.post('/', async (c) => {
                 latency_ms: toolCall.duration_ms || 0,
                 cost_usd: toolCall.cost_usd || 0,
                 timestamp: new Date().toISOString(),
+                org_id: broadcastOrgId,
+                account_id: broadcastAccountId,
               },
             });
           }
@@ -1629,6 +1670,8 @@ app.post('/', async (c) => {
             error: taskSuccess ? undefined : (task.result?.error || task.error),
             input_impulse_ids,
             output_impulse_ids,
+            org_id: broadcastOrgId,
+            account_id: broadcastAccountId,
           },
         });
       }
@@ -1712,6 +1755,7 @@ app.post('/', async (c) => {
 
           // Canonical flat payload — see ImpulseResolvedMessage in
           // src/websocket/types.ts for the formal contract.
+          // Phase G1 (2026-04-28): tenancy fields denormalized from `trace`.
           const data: Record<string, unknown> = {
             execution_id: trace.execution_id,
             impulse_id: impulseId,
@@ -1721,6 +1765,8 @@ app.post('/', async (c) => {
             latency_ms: latencyMs,
             cost_usd: costUsd,
             timestamp: new Date().toISOString(),
+            org_id: broadcastOrgId,
+            account_id: broadcastAccountId,
           };
           if (owningTaskId) data.task_id = owningTaskId;
           if (shape) data.shape = shape;
@@ -2033,9 +2079,11 @@ app.post('/', async (c) => {
         const ctxAlphaDelta = trace.success ? 1 : 0;
         const ctxBetaDelta  = trace.success ? 0 : 1;
 
+        // Phase B2: dual-tenant LET/UPDATE/CREATE. Reads use the dual-tenant
+        // WHERE; writes carry account_id + account_id_version=1.
         await surrealDB.query(`
           LET $existing = (SELECT * FROM context_thompson_scores
-            WHERE org_id = $org_id AND template_id = $template_id AND context_bucket = $bucket
+            WHERE ${accountIdScopedWhere()} AND template_id = $template_id AND context_bucket = $bucket
             LIMIT 1);
           IF array::len($existing) > 0 THEN
             UPDATE context_thompson_scores
@@ -2043,10 +2091,12 @@ app.post('/', async (c) => {
                 beta  = beta  + $beta_delta,
                 n_observations = n_observations + 1,
                 last_updated_at = time::now()
-            WHERE org_id = $org_id AND template_id = $template_id AND context_bucket = $bucket
+            WHERE ${accountIdScopedWhere()} AND template_id = $template_id AND context_bucket = $bucket
           ELSE
             CREATE context_thompson_scores CONTENT {
               org_id: $org_id,
+              account_id: $account_id,
+              account_id_version: 1,
               template_id: $template_id,
               context_bucket: $bucket,
               alpha: 1.0 + $alpha_delta,
@@ -2058,6 +2108,7 @@ app.post('/', async (c) => {
           END
         `, {
           org_id: traceOrgId,
+          account_id: traceAccountId,
           template_id: trace.variant_id,
           bucket: rawContextBucket,
           alpha_delta: ctxAlphaDelta,
@@ -2089,9 +2140,10 @@ app.post('/', async (c) => {
         const rdAlphaDelta = trace.success ? 1 : 0;
         const rdBetaDelta  = trace.success ? 0 : 1;
 
+        // Phase B2: dual-tenant LET/UPDATE/CREATE for the rederived path.
         await surrealDB.query(`
           LET $existing = (SELECT * FROM context_thompson_scores
-            WHERE org_id = $org_id AND template_id = $template_id AND context_bucket = $bucket
+            WHERE ${accountIdScopedWhere()} AND template_id = $template_id AND context_bucket = $bucket
             LIMIT 1);
           IF array::len($existing) > 0 THEN
             UPDATE context_thompson_scores
@@ -2099,10 +2151,12 @@ app.post('/', async (c) => {
                 beta  = beta  + $beta_delta,
                 n_observations = n_observations + 1,
                 last_updated_at = time::now()
-            WHERE org_id = $org_id AND template_id = $template_id AND context_bucket = $bucket
+            WHERE ${accountIdScopedWhere()} AND template_id = $template_id AND context_bucket = $bucket
           ELSE
             CREATE context_thompson_scores CONTENT {
               org_id: $org_id,
+              account_id: $account_id,
+              account_id_version: 1,
               template_id: $template_id,
               context_bucket: $bucket,
               alpha: 1.0 + $alpha_delta,
@@ -2114,6 +2168,7 @@ app.post('/', async (c) => {
           END
         `, {
           org_id: traceOrgId,
+          account_id: traceAccountId,
           template_id: trace.variant_id,
           bucket: rederived,
           alpha_delta: rdAlphaDelta,
@@ -2137,11 +2192,19 @@ app.post('/', async (c) => {
     // template's metrics row also needs the failure recorded — otherwise its
     // beta never moves.
     try {
+      // Phase E: route the duplicate detection through a deterministic
+      // record-id slug keyed on (variant_id, account_id) so different
+      // accounts in the same org get separate posteriors. The id is bound
+      // per-candidate below — we intentionally do not bake it into the SQL
+      // template here so a single template handles all candidate ids.
       const variantMetricsUpsert = `
         INSERT INTO variant_performance_metrics {
+          id: type::thing('variant_performance_metrics', $record_id_slug),
           variant_id: $variant_id,
           activity_id: $variant_id,
           org_id: $org_id,
+          account_id: $account_id,
+          account_id_version: 1,
           total_executions: 1,
           successful_executions: $success_delta,
           failed_executions: $failure_delta,
@@ -2176,8 +2239,14 @@ app.post('/', async (c) => {
 
       for (const candidateId of metricsCandidateIds) {
         const variantMetricsParams = {
+          // Phase E: account-keyed record-id slug; legacy `<variant>` slug
+          // when account_id is null so pre-Phase-E rows keep their key.
+          record_id_slug: variantMetricsRecordId(candidateId, traceAccountId),
           variant_id: candidateId,
           org_id: traceOrgId,
+          // Phase B2: account_id propagated from the request's auth context.
+          // null when caller has no accountId; option<string> in schema.
+          account_id: traceAccountId,
           success_delta: trace.success ? 1 : 0,
           failure_delta: trace.success ? 0 : 1,
           duration_ms: trace.duration_ms || 0,
@@ -2225,8 +2294,16 @@ app.post('/', async (c) => {
       || [];
 
     if (inputShapes.length > 0 && trace.variant_id && traceOrgId) {
-      // Fire and forget - don't block the response
-      updateShapeActivityScores(trace.variant_id, inputShapes, trace.success, traceOrgId)
+      // Fire and forget - don't block the response.
+      // Phase B-followup: thread accountId so dual-write fires.
+      updateShapeActivityScores(
+        trace.variant_id,
+        inputShapes,
+        trace.success,
+        traceOrgId,
+        jwtAuth?.jwtToken ?? null,
+        traceAccountId
+      )
         .catch(err => logger.warn('[paradigm] Shape score update failed (non-blocking)', {
           execution_id: trace.execution_id,
           error: err instanceof Error ? err.message : String(err),

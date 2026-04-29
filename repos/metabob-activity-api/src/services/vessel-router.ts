@@ -16,6 +16,7 @@ import { logger } from '../utils/logger';
 import { CircuitBreakerService } from './circuit-breaker';
 import { HealthScoringService } from './health-scoring';
 import { RoutingTraceService } from './routing-trace';
+import { accountIdScopedWhere } from '../routes/activities';
 
 // =============================================================================
 // TYPES
@@ -41,6 +42,9 @@ export interface RoutingDecision {
 export interface RoutingOptions {
   shape: string;
   org_id: string;
+  // Phase B4a: prefer account_id when caller carries one; legacy rows
+  // (account_id IS NONE) still match via the org_id branch.
+  account_id?: string | null;
   activity_execution_id?: string;
   correlation_id?: string;
   impulse_id: string;
@@ -53,14 +57,18 @@ export interface RoutingOptions {
 export class VesselRouter {
   /**
    * Route an impulse to the best available vessel
+   *
+   * Phase B4a: thread `options.account_id` through to discovery + circuit
+   * breaker so dual-tenant scoping and trace dual-write apply consistently.
    */
   static async route(options: RoutingOptions): Promise<RoutingDecision> {
     const startTime = Date.now();
+    const accountId = options.account_id ?? null;
 
     try {
       // Step 1: Discover vessels capable of handling the shape
       const discoveryStart = Date.now();
-      const vessels = await this.discoverVessels(options.shape, options.org_id);
+      const vessels = await this.discoverVessels(options.shape, options.org_id, accountId);
       const discoveryDuration = Date.now() - discoveryStart;
 
       if (vessels.length === 0) {
@@ -78,6 +86,7 @@ export class VesselRouter {
           impulse_id: options.impulse_id,
           shape: options.shape,
           org_id: options.org_id,
+          account_id: accountId,
           correlation_id: options.correlation_id,
           activity_execution_id: options.activity_execution_id,
           discovery_query_duration_ms: discoveryDuration,
@@ -94,14 +103,18 @@ export class VesselRouter {
       }
 
       // Step 2: Get health scores and circuit breaker states
+      // Phase B-followup: thread account_id so getMetrics/getState CREATE
+      // paths dual-write account_id when the row doesn't yet exist.
       const vesselIds = vessels.map((v) => v.id);
       const healthMetrics = await HealthScoringService.getMultipleMetrics(
         vesselIds,
-        options.org_id
+        options.org_id,
+        options.account_id ?? null
       );
       const circuitStates = await CircuitBreakerService.getStates(
         vesselIds,
-        options.org_id
+        options.org_id,
+        options.account_id ?? null
       );
 
       // Step 3: Build candidates with health and circuit info
@@ -153,6 +166,7 @@ export class VesselRouter {
           impulse_id: options.impulse_id,
           shape: options.shape,
           org_id: options.org_id,
+          account_id: accountId,
           correlation_id: options.correlation_id,
           activity_execution_id: options.activity_execution_id,
           discovery_query_duration_ms: discoveryDuration,
@@ -190,6 +204,7 @@ export class VesselRouter {
         impulse_id: options.impulse_id,
         shape: options.shape,
         org_id: options.org_id,
+        account_id: accountId,
         correlation_id: options.correlation_id,
         activity_execution_id: options.activity_execution_id,
         discovery_query_duration_ms: discoveryDuration,
@@ -221,6 +236,7 @@ export class VesselRouter {
         impulse_id: options.impulse_id,
         shape: options.shape,
         org_id: options.org_id,
+        account_id: accountId,
         correlation_id: options.correlation_id,
         activity_execution_id: options.activity_execution_id,
         discovery_query_duration_ms: Date.now() - startTime,
@@ -240,15 +256,22 @@ export class VesselRouter {
 
   /**
    * Discover vessels capable of handling a shape
+   *
+   * Phase B4a: dual-tenant scoping. Prefer account_id; legacy rows
+   * (account_id IS NONE) match via the org_id branch. accountIdScopedWhere()
+   * binds `$account_id` and `$org_id`; we keep `$orgId` here too because
+   * the helper expects `$org_id` (snake_case) while the surrounding query
+   * still uses `$shape`.
    */
   private static async discoverVessels(
     shape: string,
-    orgId: string
+    orgId: string,
+    accountId: string | null = null
   ): Promise<Array<{ id: string; endpoint: string; last_heartbeat: string }>> {
     const query = `
       SELECT id, endpoint, last_heartbeat FROM vessel
       WHERE $shape IN shapes
-        AND org_id = $orgId
+        AND ${accountIdScopedWhere()}
         AND expires_at > time::now()
       ORDER BY last_heartbeat DESC;
     `;
@@ -257,7 +280,8 @@ export class VesselRouter {
       Array<{ id: string; endpoint: string; last_heartbeat: string }>
     >(query, {
       shape,
-      orgId,
+      org_id: orgId,
+      account_id: accountId,
     });
 
     return result[0] || [];
@@ -304,18 +328,22 @@ export class VesselRouter {
 
   /**
    * Record successful vessel resolution
+   *
+   * Phase B4a: pass accountId to circuit breaker so trace dual-writes.
    */
   static async recordSuccess(
     vesselId: string,
     orgId: string,
-    latencyMs: number
+    latencyMs: number,
+    accountId?: string | null
   ): Promise<void> {
     try {
       // Update health metrics
-      await HealthScoringService.recordSuccess(vesselId, orgId, latencyMs);
+      // Phase B-followup: pass accountId so getMetrics CREATE dual-writes.
+      await HealthScoringService.recordSuccess(vesselId, orgId, latencyMs, accountId ?? null);
 
       // Update circuit breaker
-      await CircuitBreakerService.recordSuccess(vesselId, orgId, latencyMs);
+      await CircuitBreakerService.recordSuccess(vesselId, orgId, latencyMs, accountId ?? null);
 
       logger.debug('Recorded successful vessel resolution', {
         vesselId,
@@ -331,6 +359,8 @@ export class VesselRouter {
 
   /**
    * Record failed vessel resolution
+   *
+   * Phase B4a: pass accountId to circuit breaker so trace dual-writes.
    */
   static async recordFailure(
     vesselId: string,
@@ -338,11 +368,13 @@ export class VesselRouter {
     errorCode: string,
     errorMessage: string,
     latencyMs: number,
-    activityExecutionId?: string
+    activityExecutionId?: string,
+    accountId?: string | null
   ): Promise<void> {
     try {
       // Update health metrics
-      await HealthScoringService.recordFailure(vesselId, orgId, latencyMs);
+      // Phase B-followup: pass accountId so getMetrics CREATE dual-writes.
+      await HealthScoringService.recordFailure(vesselId, orgId, latencyMs, accountId ?? null);
 
       // Update circuit breaker
       await CircuitBreakerService.recordFailure(
@@ -350,7 +382,8 @@ export class VesselRouter {
         orgId,
         errorCode,
         errorMessage,
-        activityExecutionId
+        activityExecutionId,
+        accountId ?? null
       );
 
       logger.warn('Recorded failed vessel resolution', {
