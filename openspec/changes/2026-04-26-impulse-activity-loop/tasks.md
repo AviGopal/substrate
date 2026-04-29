@@ -1,60 +1,43 @@
 ## Phase 8 — Iteration 2: Blocker Resolution (2026-04-28)
 
-**Investigation Result:** Five blocking issues discovered during Phase 8 Iteration 1 end-to-end validation.
-See blocker analysis document for detailed investigation results.
+**Status:** [x] All 5 blockers closed (re-verified 2026-04-29) — 4 were already fixed in flight; the remaining one (I2.4) was misdescribed in the original report and resolved on canary today.
 
-Blockers must be resolved in order (I2.1 → I2.4 → I2.5) before full validation loop can proceed.
+### I2.1 Fix Blocker 1: Null-Guard on `imp.pointer.type` (activity.ts:2509)  ✅ already done
+- Verified `repos/minibob/src/activity.ts:2509` reads `imp.pointer?.type ?? "unknown"` (re-checked 2026-04-29).
 
-### I2.1 Fix Blocker 1: Null-Guard on `imp.pointer.type` (activity.ts:2509)
-**Status:** [ ] TODO  
-**Effort:** 15m  
-**Blocker Severity:** P0 (Phase 8 & Phase 5)
+### I2.2 Fix Blocker 4: Conditional Syntax in validator-dispatch.json:38  ✅ already done
+- Verified `validator-dispatch.json:38` reads `{{lifecycle.skip_validation}} !== 'true'` (string literal comparison).
 
-- Add defensive null-check: `imp.pointer?.type ?? 'unknown'`
-- Root cause: Goal-impulse initialization creates impulses with missing `pointer` field
-- Impact: Crashes when loading goal-impulses in executeTask path
+### I2.3 Fix Blocker 5: Add "lifecycle" to ImpulsePointer union  ✅ already done
+- Verified `LocalImpulsePointer` union in `repos/minibob/src/types.ts:271` includes `{ type: "lifecycle"; payload?: unknown; [key: string]: unknown }`.
+- F-42 closure (lifecycle is local-resolution path in `impulse.ts`) confirmed earlier.
 
-### I2.2 Fix Blocker 4: Conditional Syntax in validator-dispatch.json:38
-**Status:** [ ] TODO  
-**Effort:** 30m  
-**Blocker Severity:** P0 (Phase 8 & Phase 5)
+### I2.4 Fix Blocker 3: Backend SurrealDB coercion (NOT length-limit)  ✅ done (2026-04-29, activity-api 1.15.0-17884e7)
+**Real symptom (re-investigation 2026-04-29):** the 2026-04-28 report described the failure as HTTP 500 "length limit exceeded". Canary logs show the actual error is:
+```
+Couldn't coerce value for field 'account_id' of activity_execution_traces:...:
+Expected 'none | string' but found 'NULL'
+```
+The deployed schema for `activity_execution_traces`, `tool_usage_patterns`, and `impulse` all type `account_id` as `TYPE none | string` (option<string>, no nullable). SurrealDB 3.x rejects JSON `null` against this type — same F-NN-H pattern that bit identity-vessel earlier.
 
-- Fix expression: `{{lifecycle.skip_validation}} !== true` → `{{lifecycle.skip_validation}} !== 'true'`
-- Rationale: Interpolated values become strings; must compare to string literal
-- Audit: Check slot-binding.json and create-shape-provider-goal.json for similar issues
+**Fixes:**
+- `execution-traces.ts`: `account_id` + `account_id_version` moved to `optionalFields`; only included in INSERT when caller has a non-null accountId.
+- `activities.ts` (tool_usage_patterns CREATE): `account_id: IF $account_id IS NULL THEN NONE ELSE $account_id END`.
+- `impulses.ts` (two INSERT paths): same `IF..THEN..ELSE..END` coercion, lets the JS-side `?? null` shape stay unchanged.
+- `impulses.account-id.test.ts`: regex-match the new wrapper instead of the bare bind substring (31/31 tests passing).
 
-### I2.3 Fix Blocker 5: Add "lifecycle" to ImpulsePointer union (types.ts:~250)
-**Status:** [ ] TODO  
-**Effort:** 1h  
-**Blocker Severity:** P0 (Phase 8 & Phase 5)
+**Smoke test (canary, 2026-04-29 14:48 UTC):** `POST /v2/activities/execution-traces` with no accountId claim returned `{success: true, stored: true}` and persisted the row.
 
-- Add `{ type: "lifecycle"; payload: unknown }` variant to ImpulsePointer union
-- Update resolvePointer in impulse.ts to handle lifecycle pointers
-- Verify ContextMemoryAgent can tolerate lifecycle impulses
-
-### I2.4 Fix Blocker 3: Backend HTTP 500 "length limit exceeded" (activity-api canary)
-**Status:** [ ] TODO  
-**Effort:** 1-2h investigation + variable fix  
-**Blocker Severity:** P0 (Phase 8 & Phase 5)
-
-- Investigation: Check Hono bodySize limits, SurrealDB row limits, trace payload expansion
-- Likely fix: Increase Hono body limit or verify composition_chain denormalization
-- Test: Store nested execution trace in isolation on canary
-
-### I2.5 Fix Blocker 2: Expand ActivityTemplate category enum (types.ts + 4 templates)
-**Status:** [ ] TODO  
-**Effort:** 15m  
-**Blocker Severity:** P1 (Phase 5 only, not Phase 8)
-
-- Expand enum to include "system" and "security" categories
-- Run full template load test to verify all embedded templates accepted
-- Templates affected: analyze-success-patterns.json, analyze-failure-patterns.json, compare-template-variants.json, scan-for-secrets.json
+### I2.5 Fix Blocker 2: Expand ActivityTemplate category enum  ✅ already done
+- Verified `repos/minibob/src/types.ts:749-757` includes `"system"` and `"security"` in the deprecated category enum (alongside `feature | bugfix | refactor | tool | infrastructure | meta`).
+- `bun run typecheck` clean.
 
 ### Phase 8 Iteration 2 Success Criteria
-- [ ] All 5 blockers resolved
-- [ ] Full validation loop completes: goal → activity → validator-dispatch → trace storage
-- [ ] Nested execution traces store successfully on canary
-- [ ] At least 2 complete cycles show consistent behavior
+- [x] All 5 blockers resolved
+- [x] Trace storage succeeds for callers without accountId claim (canary smoke 2026-04-29)
+- [ ] Full validation loop completes: goal → activity → validator-dispatch → trace storage (next iteration)
+- [ ] Nested execution traces store with composition_chain populated (next iteration)
+- [ ] At least 2 complete cycles show consistent behavior (next iteration)
 
 ---
 
