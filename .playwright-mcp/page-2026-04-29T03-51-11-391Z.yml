@@ -1,0 +1,85 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - heading "Phase 3 — UI primitives & shared composites" [level=1] [ref=e5]
+    - paragraph [ref=e6]: Smoke harness verifying the new components render and interact.
+  - generic [ref=e7]:
+    - heading "Card + Badge + Button" [level=2] [ref=e8]
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - generic [ref=e11]: Card title
+        - generic [ref=e12]: Card description text.
+      - generic [ref=e13]:
+        - generic [ref=e14]: default
+        - generic [ref=e15]: secondary
+        - generic [ref=e16]: destructive
+        - generic [ref=e17]: outline
+  - generic [ref=e18]:
+    - heading "Form" [level=2] [ref=e19]
+    - generic [ref=e20]:
+      - generic [ref=e21]:
+        - generic [ref=e22]: Email
+        - textbox "Email" [ref=e23]:
+          - /placeholder: you@example.com
+        - paragraph [ref=e24]: We never share your email.
+      - button "Submit" [ref=e25]
+  - generic [ref=e26]:
+    - heading "Table" [level=2] [ref=e27]
+    - table [ref=e29]:
+      - rowgroup [ref=e30]:
+        - row "Name Status" [ref=e31]:
+          - columnheader "Name" [ref=e32]
+          - columnheader "Status" [ref=e33]
+      - rowgroup [ref=e34]:
+        - row "Alpha active" [ref=e35]:
+          - cell "Alpha" [ref=e36]
+          - cell "active" [ref=e37]:
+            - generic [ref=e38]: active
+        - row "Beta paused" [ref=e39]:
+          - cell "Beta" [ref=e40]
+          - cell "paused" [ref=e41]:
+            - generic [ref=e42]: paused
+  - generic [ref=e43]:
+    - heading "ConfirmDialog" [level=2] [ref=e44]
+    - button "Open ConfirmDialog" [ref=e45]
+  - generic [ref=e46]:
+    - heading "ErrorAlert" [level=2] [ref=e47]
+    - alert [ref=e48]:
+      - generic [ref=e49]:
+        - generic [ref=e50]:
+          - img [ref=e51]
+          - generic [ref=e55]: Something went wrong
+          - generic [ref=e56]: error
+        - button "Dismiss error" [ref=e57]:
+          - img
+      - paragraph [ref=e59]: Something exploded loudly
+  - generic [ref=e60]:
+    - heading "LoadingSpinner" [level=2] [ref=e61]
+    - generic [ref=e62]:
+      - status "Small" [ref=e63]:
+        - img [ref=e64]
+        - generic [ref=e66]: Small
+      - status "Medium" [ref=e67]:
+        - img [ref=e68]
+        - generic [ref=e70]: Medium
+      - status "Large" [ref=e71]:
+        - img [ref=e72]
+        - generic [ref=e74]: Large
+  - generic [ref=e75]:
+    - heading "PaginationControls" [level=2] [ref=e76]
+    - generic [ref=e77]:
+      - generic [ref=e79]: Showing 1–10 of 123
+      - generic [ref=e80]:
+        - generic [ref=e81]:
+          - generic [ref=e82]: Page size
+          - combobox "Page size" [ref=e83]:
+            - option "10" [selected]
+            - option "25"
+            - option "50"
+            - option "100"
+        - button "Previous page" [disabled]:
+          - img
+          - text: Prev
+        - generic [ref=e84]: Page 1 of 13
+        - button "Next page" [ref=e85]:
+          - text: Next
+          - img

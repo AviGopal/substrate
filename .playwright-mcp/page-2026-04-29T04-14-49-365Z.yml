@@ -1,0 +1,13 @@
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - generic [ref=e6]: Phase 5 — WebSocket smoke harness
+    - generic [ref=e7]: Renders live wsStore state. Used by Playwright to confirm the connection lifecycle.
+  - generic [ref=e8]:
+    - generic [ref=e9]: "connectionState: connecting"
+    - generic [ref=e10]: "reconnectAttempts: 0"
+    - generic [ref=e11]: "subscriptions: 0"
+    - generic [ref=e12]: "lastMessage: (none)"
+    - generic [ref=e13]: "history: disconnected → connecting"
+    - generic [ref=e14]:
+      - button "Disconnect" [ref=e15]
+      - button "Subscribe demo" [ref=e16]
