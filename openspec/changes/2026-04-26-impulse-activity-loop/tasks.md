@@ -255,8 +255,8 @@ Acceptance: a resolver dispatched from an activity template can read α/β for a
 - [ ] 10.11 Cache invalidation review — confirm Redis TTL path unaffected by COMPUTED field
 
 #### P3 — fn::beta_sample stored function
-- [ ] 10.12 Implement `fn::beta_sample($a, $b)` in SurrealDB embedded JS (Johnk/Cheng algorithm with Box-Muller gamma)
-- [ ] 10.13 Deploy function to canary; verify KS test p-value > 0.05 against Beta(2,5) CDF over 1000 samples
+- [x] 10.12 ✅ **DONE** 2026-04-30. `sql/migrations/104-fn-beta-sample.surql` defines `fn::beta_sample($a, $b)` as a SurrealDB JS function using the Marsaglia & Tsang (2000) gamma sampler composed via `Beta(α,β) = G(α,1) / (G(α,1) + G(β,1))`. Box-Muller for the underlying N(0,1); shape<1 boost via `gammaSample(shape+1) * U^(1/shape)`; bounded 64-iteration retry on the squeeze with mode-fallback so the function never returns NaN. Idempotent via `DEFINE FUNCTION OVERWRITE`. (`repos/metabob-activity-api`)
+- [ ] 10.13 ⏳ deploy + verify pending. `scripts/validate-beta-sample.ts` ships the K-S regression: pulls 1000 samples from live `fn::beta_sample(2, 5)` in 100-sample batches, computes the K-S D statistic against the analytic Beta(2,5) CDF (Lentz's continued-fraction for the regularised incomplete beta + Lanczos for ln Γ), prints the p-value, exits 0 iff p > 0.05. Run after migration 104 is applied to canary: `SURREALDB_URL=… SURREALDB_USERNAME=root SURREALDB_PASSWORD=… bun run scripts/validate-beta-sample.ts`.
 - [ ] 10.14 Add dual-compute path at `activities.ts:4416` (log `sample_source: "db" | "app_fallback"`)
 - [ ] 10.15 A/B compare DB vs app distribution over 1000 canary samples; deprecate app-side call once confirmed
 
