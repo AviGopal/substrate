@@ -238,9 +238,9 @@ Acceptance: a resolver dispatched from an activity template can read α/β for a
 **Pre-requisite:** Phase 9 deployed to canary (thompson_posterior shape live)
 
 #### P1 — Atomic α/β updates
-- [ ] 10.1 Replace fetch-modify-write at `execution-traces.ts:1938` (activity_template α/β) with `SET thompson_alpha += $da, thompson_beta += $db`
-- [ ] 10.2 Replace fetch-modify-write at `activities.ts:3599, 3639` (impulse_shape_activity_score α/β) with atomic increments
-- [ ] 10.3 Replace fetch-modify-write at `goal-paths.ts:402` (goal_execution_paths α/β) with atomic increments
+- [x] 10.1 ✅ **DONE** (no-op — already atomic) 2026-04-30. `execution-traces.ts:1936-1953` UPDATE statement uses server-side `(thompson_alpha ?? 1) + $alpha_delta` arithmetic — single statement, race-free at row level. No fetch-modify-write here; spec target was already in atomic form. Kept null-safe `??` over the proposed `+=` since the latter would propagate NULL on rows missing the prior.
+- [x] 10.2 ✅ **DONE** 2026-04-30. `activities.ts:3597-3654` (impulse_shape_activity_score). Replaced per-shape SELECT-then-UPDATE loop with single bulk `UPDATE … SET alpha = math::ceil((alpha ?? 1) * $multiplier)` (or `beta` on negative direction). Eliminates lost-update race when concurrent feedback writes the same activity_id; computes Math.ceil server-side via SurrealDB `math::ceil`. (`repos/metabob-activity-api`)
+- [x] 10.3 ✅ **DONE** 2026-04-30. `goal-paths.ts:380-429` (goal_execution_paths). Counter increments + thompson α/β + success_rate + rolling means now compute against pre-update row state in a single SQL statement using `(field ?? 0) + $delta` and `((field ?? 0) * (total_executions ?? 0) + $new) / ((total_executions ?? 0) + 1)`; `avg_token_usage` uses `math::floor` and an `IF $token_usage IS NULL` guard. Logging now reads from the UPDATE response rather than JS-projected pre-state. (`repos/metabob-activity-api`)
 - [ ] 10.4 Verify no remaining SELECT-then-UPDATE patterns on α/β fields across all 8 posterior tables
 - [ ] 10.5 Concurrent update regression test (10 parallel increments → correct total)
 
