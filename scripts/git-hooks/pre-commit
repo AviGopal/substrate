@@ -95,9 +95,14 @@ violations=()
 
 is_root_allowlisted() {
   local name="$1"
+  # Exact-match allowlist
   for entry in "${ROOT_ALLOWLIST[@]}"; do
     [[ "$name" == "$entry" ]] && return 0
   done
+  # Pattern: any .env template (e.g. .env.devbob.example, .env.k8s.example).
+  # Real .env files are caught by the .gitignore patterns; templates always
+  # end in .example.
+  [[ "$name" == .env.*.example ]] && return 0
   return 1
 }
 
