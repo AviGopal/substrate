@@ -239,6 +239,52 @@ EOF
   exit 1
 fi
 
+# ─── SOPS encryption check ───
+# The super-repo doesn't host secrets/ today, but if anything ever lands
+# under <area>/secrets/*.secrets.yaml we want it encrypted before commit.
+# Catches the same SOPS-edit-then-forget-to-reencrypt mistake the deployment
+# repo's hook catches.
+mapfile -t STAGED_SECRETS < <(git diff --cached --name-only --diff-filter=ACMR | grep -E '(^|/)secrets/.*\.secrets\.ya?ml$' || true)
+
+if [[ ${#STAGED_SECRETS[@]} -gt 0 ]]; then
+  if ! command -v sops >/dev/null 2>&1; then
+    printf '%s\n' "${RED}━━━ sops not installed; cannot verify encryption of staged secrets/ files ━━━${NC}"
+    printf '  install: %sbrew install sops%s | %sgo install go.mozilla.org/sops/v3/cmd/sops@latest%s\n' \
+      "$DIM" "$NC" "$DIM" "$NC"
+    printf '  staged: %s\n' "${STAGED_SECRETS[*]}"
+    exit 1
+  fi
+  unencrypted=()
+  for sf in "${STAGED_SECRETS[@]}"; do
+    if ! status="$(sops filestatus "$sf" 2>/dev/null)"; then
+      unencrypted+=("$sf  (sops could not parse)")
+      continue
+    fi
+    case "$status" in
+      *'"encrypted":true'*) ;;
+      *) unencrypted+=("$sf") ;;
+    esac
+  done
+
+  if [[ ${#unencrypted[@]} -gt 0 ]]; then
+    printf '%s\n' "${RED}━━━ sops: staged secrets file is not encrypted ━━━${NC}"
+    for f in "${unencrypted[@]}"; do
+      printf '  %s%s%s %s\n' "$YELLOW" "✗" "$NC" "$f"
+    done
+    cat <<EOF
+
+${DIM}What to do${NC}
+  1. Re-encrypt the file:    ${DIM}sops -e -i <file>${NC}
+  2. Verify it is encrypted: ${DIM}sops filestatus <file>${NC}
+  3. Re-stage and re-commit.
+
+${DIM}Bypass${NC}
+  git commit --no-verify   ${DIM}(only if the file genuinely has no secrets)${NC}
+EOF
+    exit 1
+  fi
+fi
+
 # ─── secrets scan ───
 # Run gitleaks against the staged diff. We had a real Anthropic API key
 # committed at one point; this layer is the second barrier (the first being
