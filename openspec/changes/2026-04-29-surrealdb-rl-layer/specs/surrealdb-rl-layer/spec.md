@@ -117,6 +117,29 @@ The `account_id` field on a `composes` edge records the **executor's issuing acc
 
 ---
 
+### R4.1: The `account_id` field on a `composes` edge MUST record the executor's issuing account
+
+The `account_id` field on a `composes` RELATE edge MUST be set to the account that issued the key used by the executor that observed and recorded this composition path. This field MUST NOT be set to either the `in` template's owning account or the `out` template's owning account.
+
+Thompson Sampling posteriors (α/β) on a `composes` edge are attributed to the executor's account. If Account Y's executor chains `template_A` (owned by Account X) → `template_B` (owned by Account Y), the resulting edge has `account_id = "account_Y"`. Account X does not receive this posterior update unless the federation link from Y to X has `share_learning = true`.
+
+#### Scenario: Edge account_id is set to executor's account, not template owner
+
+- **GIVEN** executor with key issued by Account Y
+- **AND** the executor chains `activity_template:A` (owned by Account X) → `activity_template:B` (owned by Account Y)
+- **WHEN** the composition is recorded
+- **THEN** the resulting `composes` edge has `account_id = "account_Y"`
+- **AND** no edge with `account_id = "account_X"` is created for this composition path
+
+#### Scenario: Two executors from different accounts create independent edges for the same template pair
+
+- **GIVEN** Account X's executor and Account Y's executor both chain `template_A → template_B`
+- **WHEN** both executions are recorded
+- **THEN** two `composes` edges exist: one with `account_id = "account_X"` and one with `account_id = "account_Y"`
+- **AND** each edge has independent α/β posteriors (unique index on `(in, out, account_id)`)
+
+---
+
 ### R5: `discover-by-shapes` query count MUST NOT exceed O(1) DB round-trips
 
 After the RELATE migration, the `discover-by-shapes` endpoint MUST issue at most 2 DB queries per call (regardless of the number of candidates returned): one for the graph traversal and at most one for supplemental metadata. The current O(N-candidates) fan-out (21 queries for 10 candidates) MUST be eliminated.
@@ -221,6 +244,8 @@ Each of P1 through P5 (6 phases) MUST be deployable to canary independently. No 
 ---
 
 ### R10: The shape gap index MUST be consulted before triggering `create-shape-provider-goal` escalation
+
+**Component ownership:** The `shape_gap_resolution` table is owned and updated by activity-api. The executor (MiniBob) queries it via a dedicated API endpoint (e.g. `GET /v2/activities/shape-gap-resolution?shape=foo&account_id=bar`) before triggering escalation. activity-api updates the `times_used` counter and inserts new rows when goal-seeking resolves a gap.
 
 Before the executor triggers a `create-shape-provider-goal` escalation for a missing shape, it MUST query the `shape_gap_resolution` table for a prior resolution of the same `(shape, account_id)` pair. If a prior resolution exists and `resolved_by` is still accessible within the executor's current key scopes, the executor MUST attempt to reuse it rather than re-running goal-seeking. A `resolution_type = 'scope_upgrade_needed'` entry MUST surface to the human (workbench) rather than triggering automatic escalation.
 

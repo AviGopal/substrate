@@ -137,6 +137,44 @@ When `impulse_state_space` is provided in the request (including when it is an e
 
 ---
 
+### R6.1: `blocking_shapes` entries MUST include a `gap_type` field
+
+Each entry in `blocking_shapes` MUST include a `gap_type` field with one of the following values:
+
+- `resolvable` — a template producing this shape exists and is accessible within the executor's current key scopes; the shape simply has not been loaded yet
+- `escalatable` — no template in the executor's current key scopes produces this shape, but `create-shape-provider-goal` goal-seeking can create one within the current budget envelope
+- `scope_upgradeable` — a template producing this shape exists in a reachable account but requires a federation link upgrade to access; this is a human-actionable resolution (surface to workbench), NOT a system-actionable one
+- `budget_blocked` — goal-seeking to produce this shape is possible but the estimated cost exceeds the executor's current budget envelope
+- `capability_blocked` — no combination of scope grants, federation links, or goal-seeking can produce this shape because the required tools or data do not exist anywhere in the system
+
+`blocking_shapes` is informational, not terminal. Except for `capability_blocked`, every gap_type has a resolution path. The executor SHOULD proceed with escalation (for `escalatable`) or surface to human (for `scope_upgradeable`) rather than treating the gap as a hard failure.
+
+#### Scenario: scope_upgradeable gap type surfaces to workbench
+
+- **GIVEN** shape `"private_config"` is required by the top-1 template
+- **AND** a template producing `"private_config"` exists in Account X but the executor's key does not include Account X's scope
+- **WHEN** `POST /v2/activities/recommend` is called with `impulse_state_space` not containing `"private_config"`
+- **THEN** `blocking_shapes` contains an entry for `"private_config"` with `gap_type: "scope_upgradeable"`
+- **AND** the workbench SHOULD display a "federation link upgrade needed" prompt rather than triggering automatic escalation
+
+#### Scenario: escalatable gap type allows goal-seeking
+
+- **GIVEN** shape `"custom_report"` is required by the top-2 template
+- **AND** no registered vessel produces `"custom_report"` (gap_type would be escalatable, not resolvable)
+- **WHEN** `POST /v2/activities/recommend` is called with `impulse_state_space` not containing `"custom_report"`
+- **THEN** `blocking_shapes` contains an entry for `"custom_report"` with `gap_type: "escalatable"`
+- **AND** the executor MAY trigger `create-shape-provider-goal` for `"custom_report"` without surfacing to human first
+
+#### Scenario: capability_blocked is the only truly terminal gap type
+
+- **GIVEN** shape `"quantum_state"` is required by the top-1 template
+- **AND** no registered vessel produces `"quantum_state"` AND goal-seeking cannot produce it (no tools exist in the system)
+- **WHEN** `POST /v2/activities/recommend` is called with `impulse_state_space` not containing `"quantum_state"`
+- **THEN** `blocking_shapes` contains an entry for `"quantum_state"` with `gap_type: "capability_blocked"`
+- **AND** the executor MUST NOT trigger `create-shape-provider-goal` for this shape (goal-seeking would also fail)
+
+---
+
 ### R7: Backward compatibility when both fields absent
 
 When neither `impulse_state_space` nor `pointer_state_space` is present in the request body, `POST /v2/activities/recommend` SHALL behave exactly as the current implementation. No new fields SHALL be present in the response. Template ranking SHALL be identical to the current Thompson Sampling output.
@@ -155,7 +193,7 @@ When neither `impulse_state_space` nor `pointer_state_space` is present in the r
 
 ### R8: MiniBob SHOULD populate impulse_state_space from loaded impulse pool
 
-When MiniBob calls `POST /v2/activities/recommend`, it SHOULD include `impulse_state_space` populated from `ImpulseStore.getLoadedImpulseSummaries()` — the set of impulses currently in `loaded: true` state. The method SHALL be pure (no I/O) and complete in under 1ms for a pool of up to 50 impulses.
+When MiniBob calls `POST /v2/activities/recommend`, it SHOULD include `impulse_state_space` populated from `ImpulseStore.getLoadedImpulseSummaries()` — the set of impulses currently in `loaded: true` state. The method SHALL be pure (no I/O) and complete in under 1ms for a pool of up to 50 impulses. MiniBob MUST NOT pass `pointer_state_space` in the request body — that is derived server-side by activity-api from `ExecutionScope`.
 
 #### Scenario: ImpulseStore.getLoadedImpulseSummaries returns loaded impulses only
 
@@ -166,12 +204,6 @@ When MiniBob calls `POST /v2/activities/recommend`, it SHOULD include `impulse_s
 
 - **WHEN** no impulses are in loaded state
 - **THEN** `getLoadedImpulseSummaries()` returns `[]` (not null or undefined)
-
----
-
-### R9: MiniBob SHOULD populate impulse_state_space from loaded impulse pool
-
-When MiniBob calls `POST /v2/activities/recommend`, it SHOULD include `impulse_state_space` populated from `ImpulseStore.getLoadedImpulseSummaries()`. MiniBob MUST NOT pass `pointer_state_space`; that is derived server-side by activity-api.
 
 #### Scenario: MiniBob recommend call includes impulse_state_space only
 
@@ -254,3 +286,13 @@ Identity-vessel `POST /v1/keys/validate` MUST return `scopes: string[]` alongsid
 - **AND** template B has `input_shapes: ["concept"]` and Thompson score 0.80
 - **WHEN** `POST /v2/activities/recommend` is called
 - **THEN** the server derives `pointer_state_space` containing `{ shape: "concept", vessel_id: "concept-db", resolve_tier: "deterministic" }`; template A appears before template B in `templates` (0.75 fully covered > 0.80 × 0.7 = 0.56 discounted); `pointer_recommendations` includes `"concept"` with `resolve_via.vessel_id: "concept-db"` because it would unlock template B; `blocking_shapes` includes `"concept"` with `in_pointer_state_space: true`
+
+### S6: blocking_shapes is informational — executor continues with escalation
+
+- **GIVEN** `impulse_state_space: []` and the top-3 templates all require shape `"activityExecutionTrace"`
+- **AND** no registered vessel (within the executor's key scopes) produces `"activityExecutionTrace"`
+- **WHEN** `POST /v2/activities/recommend` is called
+- **THEN** the response includes `blocking_shapes: [{ shape: "activityExecutionTrace", gap_type: "escalatable", required_by_template_ids: [...] }]`
+- **AND** the response ALSO includes `templates: [...]` with the blocked templates listed at lower rank (compatibility discount applied)
+- **AND** the executor is expected to trigger `create-shape-provider-goal` for `"activityExecutionTrace"` and retry the recommend call after the shape is produced
+- **AND** no error code is returned; the blocking is informational only
