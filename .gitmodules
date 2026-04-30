@@ -1,0 +1,34 @@
+[submodule "repos/concept-db"]
+	path = repos/concept-db
+	url = git@github.com:MetabobProject/concept-db.git
+	branch = main
+
+[submodule "repos/deployment"]
+	path = repos/deployment
+	url = git@github.com:MetabobProject/deployment.git
+	branch = dev
+
+[submodule "repos/discovery-vessel"]
+	path = repos/discovery-vessel
+	url = git@github.com:MetabobProject/discovery-vessel.git
+	branch = dev
+
+[submodule "repos/identity-vessel"]
+	path = repos/identity-vessel
+	url = git@github.com:MetabobProject/identity-vessel.git
+	branch = dev
+
+[submodule "repos/metabob-cloud-dashboard"]
+	path = repos/metabob-cloud-dashboard
+	url = git@github.com:MetabobProject/metabob-cloud-dashboard.git
+	branch = main
+
+[submodule "repos/minibob"]
+	path = repos/minibob
+	url = git@github.com:MetabobProject/minibob.git
+	branch = dev
+
+[submodule "repos/workbench"]
+	path = repos/workbench
+	url = git@github.com:MetabobProject/workbench.git
+	branch = dev
