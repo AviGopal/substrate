@@ -269,7 +269,7 @@ Acceptance: a resolver dispatched from an activity template can read α/β for a
 - [ ] 10.21 Deprecate `activity_composition_graph` table after 7-day dual-write stable period
 
 #### P4.5 — Shape gap index
-- [ ] 10.22 Define `shape_gap_resolution` table in activity-api (fields: shape, account_id, resolved_by, required_scope, resolution_type, escalation_depth, cost_usd, times_used)
+- [x] 10.22 ✅ **DONE** 2026-04-30. `sql/migrations/105-shape-gap-resolution.surql` defines `shape_gap_resolution` SCHEMAFULL table with PERMISSIONS for org+account scoping (`account_id IS NONE` matches every account). Required fields: `shape`, `account_id` (option<string>), `org_id`, `resolved_by`, `resolution_type` enum (`activity` | `vessel` | `subgoal` | `manual_seed`), `escalation_depth`, `cost_usd`, `times_used`, `first_seen_at`, `last_used_at`. Two indexes: `(shape, account_id)` for hot-path lookup, `last_used_at` for staleness eviction. Idempotent via `IF NOT EXISTS`. Routes (10.23) + minibob wiring (10.24) + activity-api write path (10.25) follow. (`repos/metabob-activity-api`)
 - [ ] 10.23 Implement `GET /v2/activities/shape-gap-resolution?shape=&account_id=` endpoint
 - [ ] 10.24 Wire MiniBob slot-binding escalation to query gap index before triggering `create-shape-provider-goal`
 - [ ] 10.25 Wire activity-api to insert/update gap index row on goal-seeking resolution
