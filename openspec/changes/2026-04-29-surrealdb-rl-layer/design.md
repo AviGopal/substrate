@@ -285,16 +285,24 @@ UPDATE type::thing("composes", $edge_id)
 
 ### Shape-filtered Thompson traversal (21 queries → 1-2)
 
-Traversal filters on the executor's key scope set, not `account_id` equality. `$accessible_account_ids` is derived from the executor's key claims and includes both the executor's own account and any cross-account scopes granted via active federation links. This means a key spanning Account X and Account Y scopes sees a unified subgraph containing templates from both — the visible graph is the executor's key-scoped subgraph, not a single-account graph.
+Traversal filters on the executor's key scope set, not `account_id` equality. `$accessible_account_ids` is derived from the executor's `ExecutionScope` — parsed in the activity-api auth middleware from the identity-vessel key validation response (`scopes: string[]`), not passed by the caller. It includes both the executor's own account and any cross-account scopes granted via active federation links. This means a key spanning Account X and Account Y scopes sees a unified subgraph containing templates from both.
 
 ```sql
+-- ExecutionScope extracted from auth middleware context (not caller-supplied)
+-- $primary_account_id = scope.primary_account_id
+-- $accessible_account_ids = scope.accessible_account_ids
+-- $granted_scopes = scope.scopes
+
 -- Forward: find activities that consume $required_input_shapes and sort by Thompson sample
--- $accessible_account_ids = all account IDs the executor's key scopes cover
 SELECT out.id, out.name, out.alpha, out.beta,
        fn::beta_sample(alpha, beta) AS ts_score
 FROM activity_template:$start
-  ->(composes WHERE input_shapes CONTAINSANY $required_input_shapes
-              AND output_shapes CONTAINSANY $required_output_shapes)
+  ->(composes
+     WHERE (account_id = $primary_account_id
+        OR (account_id INSIDE $accessible_account_ids
+            AND scope INSIDE $granted_scopes))
+       AND input_shapes CONTAINSANY $required_input_shapes
+       AND output_shapes CONTAINSANY $required_output_shapes)
   ->activity_template
 WHERE out.account_id INSIDE $accessible_account_ids
 ORDER BY ts_score DESC
@@ -309,6 +317,8 @@ WHERE in.account_id INSIDE $accessible_account_ids
 ORDER BY ts_score DESC
 LIMIT 10;
 ```
+
+`$accessible_account_ids` is never passed in by the MiniBob caller; it is read from the `ExecutionScope` context object attached by the auth middleware. No extra DB roundtrip is needed in the recommend handler.
 
 This replaces approximately 90 lines of JS graph-traversal and join logic in `activities.ts`.
 
@@ -528,7 +538,7 @@ Federation in this system is **scope delegation embedded in keys at issuance tim
 **Consequence for the RL layer:**
 
 - The composition graph visible to an executor is the subgraph reachable via its current key scopes. A key spanning Account X and Account Y scopes sees a unified graph containing templates from both. Account boundaries in the graph do not correspond to topology boundaries; scope grants do.
-- `$accessible_account_ids` in traversal queries is derived from the executor's key scope claims, not from a static account_id equality check.
+- `$accessible_account_ids` in traversal queries is derived from the executor's `ExecutionScope`, which is parsed in the activity-api auth middleware from identity-vessel's key validation response (`scopes: string[]`). The middleware attaches `ExecutionScope` to the Hono context; handlers read it without a second identity-vessel roundtrip. Identity-vessel MUST include `scopes: string[]` in its `POST /v1/keys/validate` response for this derivation to work.
 - Posterior updates on edges and nodes are attributed to the executor's issuing account (the account whose identity-vessel issued the key). Thompson Sampling for each account learns from its own observed outcomes.
 - **FC-3 (`share_learning = true`)** is the explicit opt-in for cross-account learning: when set on a federation link, the granting account's posteriors are seeded into the grantee's priors. This is entirely orthogonal to execution scope grants — an account can grant full execution scope without sharing its learned posteriors, and vice versa. FC-3 is out of scope for this proposal; it is documented here to prevent scope creep.
 

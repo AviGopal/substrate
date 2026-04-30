@@ -22,9 +22,11 @@ The impulse state space answers: "what domain context is the executor already re
 
 ### Pointer state space (what the executor could get)
 
-The set of shapes reachable via the executor's full key scope set — including cross-account scopes granted via active federation links. The query for pointer_state_space is `VesselDiscoveryClient.getAllRegisteredShapes()` filtered to shapes accessible given the key's scope claims. A shape is in the pointer state space if and only if at least one vessel advertises it in its registration payload AND the executor's key scopes permit access to that vessel's account.
+The set of shapes reachable via the executor's full key scope set — including cross-account scopes granted via active federation links. A shape is in the pointer state space if and only if at least one vessel advertises it in its registration payload AND the executor's key scopes permit access to that vessel's account.
 
-Federation links are scope grants embedded in keys at issuance time, not runtime identity proxies. This means the pointer state space is stable for the lifetime of a key (no runtime negotiation required) and can be computed once per session with a short cache TTL (see §5).
+**Derived server-side from `ExecutionScope.accessible_account_ids` at request time — not passed in by the caller.** The caller does not need to supply `pointer_state_space`; activity-api builds it by querying discovery-vessel with the executor's scope-derived account list. The derivation happens in the auth middleware: identity-vessel's key validation response includes `scopes: string[]`; the middleware parses these into an `ExecutionScope` object and attaches it to the Hono context; the recommend handler reads `accessible_account_ids` from that context and passes it into the discovery-vessel query.
+
+Federation links are scope grants embedded in keys at issuance time, not runtime identity proxies. This means the pointer state space is stable for the lifetime of a key (no runtime negotiation required) and can be computed once per request from the already-validated key's scope claims — no second identity-vessel roundtrip.
 
 The pointer state space answers: "what additional context is available to the executor, given the key it currently holds?" It is the universe of resolvable shapes scoped to the executor's access model, minus what has already been loaded.
 
@@ -62,17 +64,14 @@ Together the two spaces form the recommendation context. Templates whose inputs 
     loaded_at?: string        // ISO timestamp of when this impulse was resolved
   }>
 
-  // NEW: shapes resolvable from the current vessel registry
-  pointer_state_space?: Array<{
-    shape: string                                        // semantic type, e.g. "concept"
-    vessel_id: string                                    // which vessel can resolve it
-    resolve_tier: 'deterministic' | 'pattern' | 'llm'  // resolver cost class
-    resolve_timeout_ms?: number                          // from vessel's resolver contract
-  }>
+  // NOTE: pointer_state_space is NOT accepted from the request body.
+  // It is derived server-side from the executor's ExecutionScope (see §Execution Scope Extraction).
+  // Callers that previously sent pointer_state_space MUST remove it; unknown fields are ignored
+  // for now but the field is explicitly excluded from the public API surface.
 }
 ```
 
-Both new fields are optional. When absent, behavior is identical to the current implementation (backward-compatible; see §6).
+`impulse_state_space` is optional. When absent, behavior is identical to the current implementation (backward-compatible; see §6). `pointer_state_space` is always server-derived and never read from the request body.
 
 ---
 
@@ -196,9 +195,78 @@ Return all blocking shapes for the top-5 templates, even if the list is empty.
 
 ---
 
-## 5. MiniBob Integration
+## 5. Execution Scope Extraction
 
-MiniBob already holds both pieces of information needed to populate the new fields. The integration requires wiring existing data into the recommend call — no new state tracking.
+The recommend call originates in activity-api (not MiniBob). Execution scope is derived from the inbound key's validated claims, not from anything MiniBob passes.
+
+### Identity-vessel prerequisite
+
+Identity-vessel `POST /v1/keys/validate` MUST return `scopes: string[]` in its response alongside the existing fields (`valid`, `account_id`, `org_id`, `key_id`). The `scopes` array MUST include all scope strings embedded in the key at issuance time, including cross-account grants from active federation links. Scope strings have the format `account_<id>:<resource>:<role>` or `account_<id>:*`.
+
+### ExecutionScope interface
+
+```typescript
+interface ExecutionScope {
+  primary_account_id: string           // the issuing account (= account_id from validation response)
+  accessible_account_ids: string[]     // all account_ids present in any scope claim
+  scopes: string[]                     // full raw scope array from identity-vessel
+  grants: Map<string, string[]>        // account_id → granted scope strings for that account
+}
+```
+
+### Parsing logic
+
+The auth middleware (`src/middleware/jwtAuth.ts`) parses the scope array returned by identity-vessel into an `ExecutionScope` object immediately after key validation — no second roundtrip:
+
+```typescript
+function parseExecutionScope(validationResponse: KeyValidationResponse): ExecutionScope {
+  const { account_id, scopes = [] } = validationResponse;
+
+  // Extract account_<id> prefix from each scope string
+  const accountPrefixRe = /^account_([^:]+):/;
+  const grants = new Map<string, string[]>();
+  for (const scope of scopes) {
+    const m = scope.match(accountPrefixRe);
+    if (m) {
+      const acct = m[1];
+      if (!grants.has(acct)) grants.set(acct, []);
+      grants.get(acct)!.push(scope);
+    }
+  }
+
+  const accessible_account_ids = [account_id, ...grants.keys()].filter(
+    (v, i, a) => a.indexOf(v) === i   // deduplicate
+  );
+
+  return { primary_account_id: account_id, accessible_account_ids, scopes, grants };
+}
+```
+
+The middleware attaches the result to the Hono context:
+
+```typescript
+c.set('executionScope', parseExecutionScope(validationResponse));
+```
+
+A `getExecutionScopeFromContext(c)` helper sits alongside the existing `getJwtAuthFromContext(c)` in the middleware module.
+
+### Recommend handler usage
+
+The recommend handler reads `ExecutionScope` from context and passes `accessible_account_ids` into both the template fetch query and the discovery-vessel query that builds `pointer_state_space` server-side:
+
+```typescript
+const scope = getExecutionScopeFromContext(c);
+// pointer_state_space built here, not read from request body
+const pointerStateSpace = await buildPointerStateSpace(scope.accessible_account_ids);
+```
+
+No extra DB roundtrip is needed: the auth middleware already called identity-vessel once; `ExecutionScope` is available on every handler from context.
+
+---
+
+## 6. MiniBob Integration
+
+MiniBob holds the impulse-side information needed to populate `impulse_state_space`. The `pointer_state_space` is no longer MiniBob's responsibility — it is built server-side from `ExecutionScope`. The integration is therefore simpler than originally designed.
 
 ### `ImpulseStore.getLoadedImpulseSummaries()`
 
@@ -215,26 +283,9 @@ getLoadedImpulseSummaries(): Array<{
 
 Implementation: filter the store to impulses with `loaded: true`, map each to `{ shape: impulse.pointer.type, summary: impulse.summary, pointer: impulse.pointer, loaded_at: impulse.loadedAt?.toISOString() }`. The `summary` field is populated from the impulse's existing `description` or `title` metadata if present; omitted if absent. This method has no I/O.
 
-### `VesselDiscoveryClient.getAllRegisteredShapes()`
-
-Add a method to `VesselDiscoveryClient` (in `src/vessel-discovery.ts`) that returns the pointer state space payload:
-
-```typescript
-getAllRegisteredShapes(): Promise<Array<{
-  shape: string
-  vessel_id: string
-  resolve_tier: 'deterministic' | 'pattern' | 'llm'
-  resolve_timeout_ms?: number
-}>>
-```
-
-Implementation: call `POST /resolve` on the discovery-vessel endpoint with an empty shapes query (or use the existing `/shapes` or `/registry/stats` endpoint if it returns per-vessel shape listings). Map each vessel's advertised shapes to entries in the return array. If a shape is advertised by multiple vessels, emit one entry per vessel. If discovery is unavailable (offline mode or discovery not configured), return `[]` gracefully — the pointer_state_space will be empty and no pointer recommendations will be generated.
-
-**Caching**: the result should be cached for the session lifetime (until the MiniBob process exits or the user triggers a re-registration). Discovery-vessel registrations are TTL-based (5-minute default); a cache with a 4-minute TTL at the MiniBob layer prevents stale data without over-fetching. Store the cached result in the `VesselDiscoveryClient` instance.
-
 ### Goal processor wiring
 
-In `src/goal-processor.ts`, at the point where `callRecommend()` is invoked, add the two new fields:
+In `src/goal-processor.ts`, at the point where `callRecommend()` is invoked, pass `impulse_state_space` from the loaded impulse pool. Do NOT pass `pointer_state_space` — it is built server-side from `ExecutionScope`:
 
 ```typescript
 const response = await callRecommend({
@@ -242,34 +293,31 @@ const response = await callRecommend({
   expected_output_shapes: expectedOutputShapes,
   // existing fields...
 
-  // NEW
+  // NEW: impulse_state_space from loaded pool (server derives pointer_state_space)
   impulse_state_space: impulseStore.getLoadedImpulseSummaries(),
-  pointer_state_space: await vesselDiscovery.getAllRegisteredShapes(),
 })
 ```
-
-If `vesselDiscovery` is null (discovery not configured), pass `pointer_state_space: []` or omit the field entirely — both produce identical behavior (no pointer recommendations generated).
 
 The `pointer_recommendations` and `blocking_shapes` from the response can be used to:
 1. Log pointer recommendations at debug level so operators can see what the system suggests loading.
 2. Surface `blocking_shapes` in the goal-processing activity's impulse pool as a `shape_gap_report` impulse (memo type), making the gap visible to subsequent tasks in the activity chain without requiring a new endpoint.
 
+Note: `VesselDiscoveryClient.getAllRegisteredShapes()` is no longer needed for the recommend call. The method can be retained for other MiniBob uses (e.g., local resolver routing) but MUST NOT be passed to `callRecommend()`.
+
 ---
 
-## 6. Backward Compatibility
+## 7. Backward Compatibility
 
-Both new request fields are optional. The server MUST handle all four combinations:
+`impulse_state_space` is optional in the request body. `pointer_state_space` is never read from the request; it is always derived server-side from `ExecutionScope`. The server MUST handle both cases for `impulse_state_space`:
 
-| `impulse_state_space` | `pointer_state_space` | Behavior |
-|---|---|---|
-| absent | absent | Existing Thompson ranking; no new fields in response |
-| present | absent | Compatibility filtering applied; `blocking_shapes` in response; `pointer_recommendations` absent |
-| absent | present | No compatibility filtering; `pointer_recommendations` in response (based on top-20 Thompson); `blocking_shapes` absent |
-| present | present | Full behavior: compatibility filtering + `pointer_recommendations` + `blocking_shapes` |
+| `impulse_state_space` | Behavior |
+|---|---|
+| absent | Existing Thompson ranking; no new fields in response |
+| present | Compatibility filtering applied; `blocking_shapes` in response; `pointer_recommendations` present (always, since server always derives pointer_state_space) |
 
-Empty arrays (`[]`) are treated identically to absent for filtering purposes (no impulses loaded = no compatibility filtering; no pointer shapes = no pointer recommendations).
+When `impulse_state_space` is absent, `pointer_recommendations` is also omitted (server skips the pointer recommendation step since there is no impulse context to compare against). Empty array (`[]`) is treated identically to absent for compatibility filtering purposes.
 
-Existing callers that do not send either new field see zero behavior change. The response schema is additive — no existing fields are modified or removed.
+Existing callers that do not send `impulse_state_space` see zero behavior change. The response schema is additive — no existing fields are modified or removed.
 
 ---
 
@@ -288,7 +336,7 @@ The loop terminates when `pointer_recommendations` is empty (all high-utility sh
 
 ## 8. Connection to `thompson_posterior` Shape (Phase 9)
 
-The `impulse-binding-selection-layer` design notes that a future `thompson_posterior` shape would unify the read path for Thompson parameters — enabling an executor to load its own learning system's state as an impulse before choosing an activity. This spec is the consumer side of that future shape: once `thompson_posterior` is resolvable, it will appear in `pointer_state_space` returned by `getAllRegisteredShapes()`, and pointer recommendations will include it alongside domain shapes like `concept` and `activityExecutionTrace`.
+The `impulse-binding-selection-layer` design notes that a future `thompson_posterior` shape would unify the read path for Thompson parameters — enabling an executor to load its own learning system's state as an impulse before choosing an activity. This spec is the consumer side of that future shape: once `thompson_posterior` is resolvable, activity-api will include it in the server-derived `pointer_state_space` (built from `ExecutionScope`), and pointer recommendations will include it alongside domain shapes like `concept` and `activityExecutionTrace`.
 
 This connection requires no implementation work here. The recommendation algorithm treats `thompson_posterior` the same as any other shape — no special casing. The spec is forward-compatible.
 
@@ -299,9 +347,10 @@ This connection requires no implementation work here. The recommendation algorit
 ### activity-api
 
 **`src/routes/activities.ts`** — extend the `POST /v2/activities/recommend` handler:
-- Parse `impulse_state_space` and `pointer_state_space` from request body (optional; treat absent as `undefined`, not as validation error).
+- Parse `impulse_state_space` from request body (optional; treat absent as `undefined`, not as validation error). Do NOT parse `pointer_state_space` from the request body.
+- Read `ExecutionScope` from Hono context via `getExecutionScopeFromContext(c)`; call `buildPointerStateSpace(scope.accessible_account_ids)` to derive the pointer state space server-side.
 - Call the compatibility filter (new service function) if `impulse_state_space` is defined.
-- Call the pointer recommendation generator (new service function) if `pointer_state_space` is defined and non-empty.
+- Call the pointer recommendation generator (new service function) with the server-derived pointer state space.
 - Call the blocking shape identifier (new service function) if `impulse_state_space` is defined.
 - Merge results into the response.
 
@@ -324,9 +373,13 @@ All three functions are pure (no DB calls, no I/O). The handler is responsible f
 
 **`src/impulse.ts`** — add `getLoadedImpulseSummaries()` to `ImpulseStore`.
 
-**`src/vessel-discovery.ts`** — add `getAllRegisteredShapes()` to `VesselDiscoveryClient` with 4-minute session cache.
+**`src/goal-processor.ts`** — pass `impulse_state_space` (only) to the recommend call; log pointer recommendations; optionally surface `blocking_shapes` as a `shape_gap_report` impulse. Do NOT pass `pointer_state_space` — this is derived server-side.
 
-**`src/goal-processor.ts`** — pass both new fields to the recommend call; log pointer recommendations; optionally surface blocking_shapes as a `shape_gap_report` impulse.
+### activity-api middleware
+
+**`src/middleware/jwtAuth.ts`** — add `parseExecutionScope(validationResponse)` function and `getExecutionScopeFromContext(c)` helper. Attach `ExecutionScope` to Hono context after every successful key validation.
+
+**`src/services/recommendation.ts`** — add `buildPointerStateSpace(accessible_account_ids)`: queries discovery-vessel for all registered shapes filtered to the given account list; returns the pointer state space array used by the recommendation algorithm.
 
 ---
 

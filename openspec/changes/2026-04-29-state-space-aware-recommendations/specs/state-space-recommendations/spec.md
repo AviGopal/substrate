@@ -29,19 +29,27 @@ Extend `POST /v2/activities/recommend` in metabob-activity-api to accept the exe
 
 ---
 
-### R2: `pointer_state_space` field on recommend request
+### R2: `pointer_state_space` MUST be derived server-side from `ExecutionScope`
 
-`POST /v2/activities/recommend` SHALL accept an optional `pointer_state_space` array in the request body. Each entry SHALL have required `shape: string` and `vessel_id: string` fields and required `resolve_tier: 'deterministic' | 'pattern' | 'llm'` field, plus optional `resolve_timeout_ms: number`. If `pointer_state_space` is absent or empty, the endpoint SHALL omit `pointer_recommendations` from the response.
+`POST /v2/activities/recommend` MUST derive `pointer_state_space` server-side from the executor's `ExecutionScope` (parsed from the inbound key's validated scopes via identity-vessel). `pointer_state_space` MUST NOT be accepted from the request body. Any `pointer_state_space` field present in the request body SHALL be ignored (treated as an unknown field).
 
-#### Scenario: Valid pointer_state_space is accepted
+The server builds `pointer_state_space` by querying discovery-vessel with the executor's `accessible_account_ids` from `ExecutionScope`. If discovery-vessel is unreachable, the server SHALL proceed with an empty `pointer_state_space` (graceful degradation: `pointer_recommendations` will be empty).
 
-- **WHEN** a request body contains `pointer_state_space: [{ shape: "concept", vessel_id: "concept-db-v1", resolve_tier: "deterministic" }]`
-- **THEN** the server returns 200 with `pointer_recommendations` in the response
+#### Scenario: pointer_state_space is derived from validated key scopes
 
-#### Scenario: Missing pointer_state_space omits pointer_recommendations
+- **GIVEN** the executor's API key carries scopes `["account_X:templates:execute", "account_Y:templates:read"]`
+- **WHEN** `POST /v2/activities/recommend` is called (with no `pointer_state_space` in the request body)
+- **THEN** the server queries discovery-vessel with `accessible_account_ids: ["X", "Y"]` and uses the result as `pointer_state_space`; the response includes `pointer_recommendations` derived from this server-built state
 
-- **WHEN** the request body contains `goal` but no `pointer_state_space`
-- **THEN** the response does NOT include a `pointer_recommendations` field
+#### Scenario: pointer_state_space in request body is ignored
+
+- **WHEN** the request body contains a `pointer_state_space` field
+- **THEN** the server ignores it; `pointer_state_space` is still derived server-side from `ExecutionScope`
+
+#### Scenario: discovery-vessel unreachable yields empty pointer_recommendations
+
+- **WHEN** `POST /v2/activities/recommend` is called and discovery-vessel is unreachable
+- **THEN** the server proceeds with empty `pointer_state_space`; `pointer_recommendations` is an empty array; no error is returned to the caller
 
 ---
 
@@ -161,61 +169,88 @@ When MiniBob calls `POST /v2/activities/recommend`, it SHOULD include `impulse_s
 
 ---
 
-### R9: MiniBob SHOULD populate pointer_state_space from discovery-vessel query
+### R9: MiniBob SHOULD populate impulse_state_space from loaded impulse pool
 
-When MiniBob calls `POST /v2/activities/recommend` and vessel discovery is configured, it SHOULD include `pointer_state_space` populated from `VesselDiscoveryClient.getAllRegisteredShapes()`. The result SHOULD be cached for the session (at most 4-minute TTL) to avoid redundant discovery queries on each recommend call. When discovery is not configured or unavailable, `pointer_state_space` SHALL be omitted from the recommend request (equivalent to empty).
+When MiniBob calls `POST /v2/activities/recommend`, it SHOULD include `impulse_state_space` populated from `ImpulseStore.getLoadedImpulseSummaries()`. MiniBob MUST NOT pass `pointer_state_space`; that is derived server-side by activity-api.
 
-#### Scenario: getAllRegisteredShapes returns shapes from registered vessels
+#### Scenario: MiniBob recommend call includes impulse_state_space only
 
-- **WHEN** concept-db is registered with discovery-vessel advertising the `concept` shape
-- **THEN** `getAllRegisteredShapes()` returns an entry with `shape: "concept"` and `vessel_id` matching the registered concept-db vessel
+- **WHEN** MiniBob's goal processor calls `callRecommend()`
+- **THEN** the request body contains `impulse_state_space` (loaded impulses) but NOT `pointer_state_space`; the server derives pointer_state_space from the validated key's `ExecutionScope`
 
-#### Scenario: getAllRegisteredShapes returns empty array when discovery unavailable
+---
 
-- **WHEN** discovery-vessel is unreachable or discovery is not configured
-- **THEN** `getAllRegisteredShapes()` returns `[]` without throwing; the recommend call proceeds with no pointer_state_space
+### R10: Auth middleware MUST extract ExecutionScope from every validated key
 
-#### Scenario: getAllRegisteredShapes result is cached within session
+The activity-api auth middleware MUST extract an `ExecutionScope` from every validated key's scope claims. `ExecutionScope` MUST include: `primary_account_id` (the issuing account), `accessible_account_ids` (all account_ids present in any scope claim, deduplicated), and `scopes` (full raw scope array). `ExecutionScope` MUST be available on the request context for all handlers without a second identity-vessel roundtrip.
 
-- **WHEN** `getAllRegisteredShapes()` is called twice within 4 minutes
-- **THEN** the second call returns the cached result without issuing a new HTTP request to discovery-vessel
+#### Scenario: ExecutionScope available on context after key validation
+
+- **WHEN** a request presents a valid API key and identity-vessel validation succeeds
+- **THEN** `getExecutionScopeFromContext(c)` returns a populated `ExecutionScope` with at minimum `primary_account_id` matching the key's `account_id`
+
+#### Scenario: Cross-account scopes populate accessible_account_ids
+
+- **GIVEN** a key with scopes `["account_A:templates:execute", "account_B:templates:read"]`
+- **WHEN** the key is validated and `ExecutionScope` is parsed
+- **THEN** `accessible_account_ids` contains both `"A"` and `"B"`
+
+---
+
+### R11: Identity-vessel MUST return scopes in key validation response
+
+Identity-vessel `POST /v1/keys/validate` MUST return `scopes: string[]` alongside existing fields (`valid`, `account_id`, `key_id`). The `scopes` array MUST include all scope strings embedded in the key at issuance, including cross-account grants from active federation links. Scope strings MUST follow the format `account_<id>:<resource>:<role>` or `account_<id>:*`.
+
+#### Scenario: Key validation response includes scopes array
+
+- **WHEN** `POST /v1/keys/validate` is called with a valid API key
+- **THEN** the response body includes a `scopes` array; if the key has no cross-account grants, `scopes` contains at least the issuing account's own scope strings
+
+#### Scenario: Federation link grants appear in scopes
+
+- **GIVEN** a key issued for Account Y that includes a federation grant from Account X (`account_X:templates:execute`)
+- **WHEN** `POST /v1/keys/validate` is called with that key
+- **THEN** `scopes` includes `"account_X:templates:execute"` alongside Account Y's own scopes
 
 ---
 
 ## Scenarios (End-to-End)
 
-### S1: Empty state spaces — existing ranking unchanged
+### S1: No impulse_state_space — existing ranking unchanged
 
-- **GIVEN** a recommend request with no `impulse_state_space` and no `pointer_state_space`
+- **GIVEN** a recommend request with no `impulse_state_space`
 - **WHEN** `POST /v2/activities/recommend` is called with `goal: "fix auth bug"`
 - **THEN** the response contains `templates` ordered by Thompson α/(α+β), with no `pointer_recommendations` or `blocking_shapes` fields
 
 ### S2: All required shapes present — templates ranked purely by Thompson
 
-- **GIVEN** `impulse_state_space: [{ shape: "jwt_claims" }, { shape: "source_code" }]`
+- **GIVEN** the executor's key carries scopes for account A only
+- **AND** `impulse_state_space: [{ shape: "jwt_claims" }, { shape: "source_code" }]`
 - **AND** all top-5 templates declare `input_shapes` that are subsets of `["jwt_claims", "source_code"]`
 - **WHEN** `POST /v2/activities/recommend` is called
-- **THEN** `blocking_shapes` is an empty array; template order is identical to pure Thompson ranking; no compatibility discounts applied
+- **THEN** `blocking_shapes` is an empty array; template order is identical to pure Thompson ranking; no compatibility discounts applied; the server-derived `pointer_state_space` (from discovery-vessel, scoped to account A) is used internally but does not affect ranking since all required shapes are covered
 
-### S3: One key shape missing from impulse_state_space but in pointer_state_space
+### S3: One key shape missing from impulse_state_space but in server-derived pointer_state_space
 
-- **GIVEN** `impulse_state_space: []` and `pointer_state_space: [{ shape: "concept", vessel_id: "concept-db", resolve_tier: "deterministic" }]`
+- **GIVEN** the executor's key carries scopes for account A; discovery-vessel has concept-db registered (account A scope) advertising the `concept` shape
+- **AND** `impulse_state_space: []` (nothing loaded)
 - **AND** the top-3 templates by Thompson score all declare `input_shapes: ["concept"]`
 - **WHEN** `POST /v2/activities/recommend` is called
-- **THEN** `pointer_recommendations` contains an entry for `"concept"` with `expected_utility > 0`; the three templates appear in `unlocks_template_ids`; `blocking_shapes` contains an entry for `"concept"` with `in_pointer_state_space: true` and `resolve_via.vessel_id: "concept-db"`
+- **THEN** the server derives `pointer_state_space` containing `{ shape: "concept", vessel_id: "concept-db", resolve_tier: "deterministic" }`; `pointer_recommendations` contains an entry for `"concept"` with `expected_utility > 0`; the three templates appear in `unlocks_template_ids`; `blocking_shapes` contains an entry for `"concept"` with `in_pointer_state_space: true` and `resolve_via.vessel_id: "concept-db"`
 
-### S4: Key shape missing from both spaces
+### S4: Key shape missing from both impulse_state_space and server-derived pointer_state_space
 
-- **GIVEN** `impulse_state_space: []` and `pointer_state_space: []` (or no vessels advertising the needed shape)
+- **GIVEN** the executor's key carries scopes for account A; no vessel registered with discovery-vessel (account A scope) advertises the `activityExecutionTrace` shape
+- **AND** `impulse_state_space: []`
 - **AND** the top-1 template declares `input_shapes: ["activityExecutionTrace"]`
-- **WHEN** `POST /v2/activities/recommend` is called with `impulse_state_space` and `pointer_state_space` both present
-- **THEN** `blocking_shapes` contains an entry for `"activityExecutionTrace"` with `in_pointer_state_space: false`; `pointer_recommendations` is empty (no shape available to recommend)
+- **WHEN** `POST /v2/activities/recommend` is called with `impulse_state_space` present
+- **THEN** `blocking_shapes` contains an entry for `"activityExecutionTrace"` with `in_pointer_state_space: false`; `pointer_recommendations` is empty (no shape available to recommend in the server-derived pointer state space)
 
-### S5: concept-db shape available — concept templates compatibility-discounted
+### S5: concept-db shape available (server-derived) — concept templates compatibility-discounted
 
-- **GIVEN** `impulse_state_space: [{ shape: "source_code" }]`
-- **AND** `pointer_state_space: [{ shape: "concept", vessel_id: "concept-db", resolve_tier: "deterministic" }]`
+- **GIVEN** the executor's key carries scopes for account A; concept-db is registered with discovery-vessel (account A scope) advertising the `concept` shape
+- **AND** `impulse_state_space: [{ shape: "source_code" }]`
 - **AND** template A has `input_shapes: ["source_code"]` and Thompson score 0.75
 - **AND** template B has `input_shapes: ["concept"]` and Thompson score 0.80
 - **WHEN** `POST /v2/activities/recommend` is called
-- **THEN** template A appears before template B in `templates` (0.75 fully covered > 0.80 × 0.7 = 0.56 discounted); `pointer_recommendations` includes `"concept"` with `resolve_via.vessel_id: "concept-db"` because it would unlock template B; `blocking_shapes` includes `"concept"` with `in_pointer_state_space: true`
+- **THEN** the server derives `pointer_state_space` containing `{ shape: "concept", vessel_id: "concept-db", resolve_tier: "deterministic" }`; template A appears before template B in `templates` (0.75 fully covered > 0.80 × 0.7 = 0.56 discounted); `pointer_recommendations` includes `"concept"` with `resolve_via.vessel_id: "concept-db"` because it would unlock template B; `blocking_shapes` includes `"concept"` with `in_pointer_state_space: true`
