@@ -78,41 +78,43 @@ minibob --single "refactor the Thompson Sampling implementation"
 
 ## Current Implementation Status & Known Issues
 
-**Resolved findings:** F-1 through F-9b (foundational), F-37 through F-52 + F-NN-A through F-NN-F (impulse-activity-loop wave, 2026-04-27+), L-3, L-8 (workbench/canvas integration learnings)
+**Deployed versions** (canary, source of truth = each repo's `package.json`):
+- `metabob-activity-api` 1.15.0 — auth-fixes baseline, registry-quality endpoints, full-text-search, parent-execution-id filtering
+- `minibob` 0.14.0 — embedded meta-activities (slot-binding, validator-dispatch, shape-provider-goal), iteration resolver, make-activity, goal-impulse seeding, enrichment-gated verification
+- `workbench` 0.3.1 — trajectory editor, live execution overlay, weight-influence feedback, stagnation detection, oracle corpus wiring
+- `identity-vessel` 0.2.8 — HMAC API keys + JWT issuance (canonical auth resolver)
+- `discovery-vessel` 0.4.0 — vessel registry with resolver contracts and per-mutation auth
 
-**Key fixes in latest builds:**
-- **F-41** (2026-04-27): Seed trigger impulse into meta-activity executor pool
-- **F-42** (2026-04-27): Lifecycle type is local for impulse resolution
-- **F-43** (2026-04-27): Legacy field coercion for impulse-relevance (backward compatibility)
-- **F-44** (2026-04-27): Hono Context-not-finalized auth layer fix (minibob pending-sync queue unblocked)
-- **F-45** (2026-04-27): Improviser null-guard fix (minibob v0.14.0+)
-- **F-51** (post-2026-04-27): Schema fix for migration 093 (improved entity validation). **Migration 094 (2026-04-27)**: Adds `DEFINE FIELD OVERWRITE` for `impulse_resolutions.*` fields to allow dynamic field creation in SurrealDB 3.0+. Enables impulse resolution records to store resolver-specific metadata without pre-defining all possible fields. Maintains schema safety while supporting flexible resolver output structures.
-- **F-52** (post-2026-04-27): Unlisted templates resolver fix (prevents private template leakage)
-- **F-NN-A** (2026-04-27): Registry-quality 6-pack landed — `core-activity-audit`, `prune-activity`, `replace-activity`, plus three lifecycle meta-activity wrappers form the registry hygiene pipeline.
-- **F-NN-A2** (2026-04-27): Ribosome converted from inline goal-processor logic to a lifecycle meta-activity, listening on `lifecycle:execution:succeeded` and dispatching template-extraction writes via the standard resolver path.
-- **F-NN-B** (2026-04-27): Four polluting injection points neutralised — improviser, fallback-template-shim, hardcoded-shape-defaults, and bypass-on-error paths no longer write speculative templates into the registry.
-- **F-NN-C** (2026-04-27): Shape provenance instrumented across all emission paths — every impulse now carries `produced_by` (resolver id + tier) and `produced_at_task_id` so co-occurrence learning has full ground truth.
-- **F-NN-D** (2026-04-27): F-49 forward-fix in commit `caa86b5` — `activity_template` UPSERT now sanitises input ids before write, preventing new doubled-prefix wrap rows. (Pre-existing 3 rows still need operator DELETE — see operator-blocked items below.)
-- **F-NN-E** (2026-04-27): Minibob synthesizes a degraded impulse when activity-api returns intermittent 401 on `POST /v2/impulses/resolve` (commit `0181ec8`). Failure becomes non-fatal; root cause (F-NN-G) deferred.
-- **F-NN-F** (2026-04-27): `prune-activity` now ships `dryRun=true` by default and `dispatch_write_succeeded` task gracefully no-ops on 403, so the registry-quality pipeline runs end-to-end without admin scope.
-- **L-3** (2026-04-27): JWT generation failure blocks API-key clients from impulse resolvers — symptom traced; full fix gated on JWT_SECRET alignment between init-database and runtime config (see design.md §L-3).
-- **L-8** (2026-04-28): Execution tree spans `activity_execution_traces` and `execution` tables; GET handler currently returns first non-empty result set, creating a silent union gap. Workbench has a one-level recursive workaround; server-side union is the proper fix (see design.md §L-8).
+**Recent stabilisation** (most-recent first):
 
-**Operator-blocked items** (require user action — full detail in [`openspec/changes/2026-04-26-impulse-activity-loop/design.md`](openspec/changes/2026-04-26-impulse-activity-loop/design.md#operator-blocked-items-2026-04-27)):
-- **B-2**: Admin scope on API key for global template writes — current key has `read,write`; `activityTemplate_update` / `_deprecate` return 403. Option A (seed admin API key via init-data) attempted 2026-04-27 and failed due to F-NN-H + F-NN-I; Option B (grant admin scope on existing key) blocked by F-NN-I. **Recommended path: Option C** — Bearer JWT admin auth via dashboard login as `avi@metabob.com` (JWT carries `role: admin` claim).
-- **F-49 corrupted rows**: 794 pre-existing template rows have doubled-prefix or descriptive-name wrapping (`activity:⟨activity:⟨…⟩⟩`, `activity:⟨API Data Fetcher with Validation⟩`); forward-fix prevents new occurrences, but existing rows need an operator-run SurrealDB DELETE with root creds.
-- **F-NN-G**: Intermittent 401 on `POST /v2/impulses/resolve` (likely identity-vessel rate limit at 20/min/IP for `/v1/auth/resolve`, or HMAC secret drift); mitigated by F-NN-E degraded-impulse synthesis. Needs a quiet-session log inspection to confirm Hypothesis F vs G.
-- **F-NN-H**: init-data Helm chart's SurrealQL passes `org_id = organizations:metabob` (record reference) but `api_key.org_id` schema is `TYPE string`; CREATE silently no-ops via `IF !$existing_key THEN CREATE END` masking the coercion error. All recent CREATE attempts (including Option A admin key) silently fail. Needs SurrealQL template fix + helmfile re-apply.
-- **F-NN-I**: identity-vessel `validateKeyFormat()` returns no `scopes` field; `resolveAPIKey()` hardcodes `scopes: validation.scopes || ['read','write']`. No path through API-key auth yields `scopes.includes('admin')`. Needs DB-backed scope lookup or HMAC-embedded scopes before Option A/B can issue admin-scoped keys.
-- **F-NN-J**: existing canary keys (`mb_inst_canary_*`, `self-canary`) use underscore-separated format with no HMAC suffix, yet reportedly authenticate against activity-api despite identity-vessel's HMAC validator requiring dash-separated `mb-{b64}-{hmac32}` format. Three hypotheses (deploy drift / bypass path / unenforced auth) — needs investigation; potential security blind spot.
+*Reliability and auth*
+- Activity-API auth middleware now finalises Hono context correctly on 401 and stops rejecting `X-Internal-Api-Key` before route handlers can opt-in. This unblocked the minibob pending-sync queue.
+- Activity-API accepts the legacy `activity_id` field on `POST /v2/activities/impulse-relevance` and coerces to `activity_variant_id` for backward compatibility (logged as a deprecation warning).
+- MiniBob synthesises a degraded `authenticated: false` impulse when activity-api returns intermittent 401 on `/v2/impulses/resolve`, so resolver failures are non-fatal. The intermittent-401 root cause (likely identity-vessel rate-limit on `/v1/auth/resolve`) is still under investigation.
+- MiniBob improviser hardened against null pointer types.
 
-**Canary deployment:** activity-api v1.13.6 (registry-quality wave) / v1.15.0 (auth-fixes baseline), minibob v0.14.0+, workbench v0.7.1+ (2026-04-27+)
+*Registry hygiene*
+- Six-pack of registry-quality activities landed in minibob's embedded templates (`core-activity-audit`, `prune-activity`, `replace-activity`, plus lifecycle wrappers for the same). `prune-activity` defaults to `dryRun=true`; `dispatch_write_succeeded` no-ops on 403 so the pipeline runs without admin scope.
+- Ribosome (template extraction) reorganised as a lifecycle meta-activity that listens on `lifecycle:execution:succeeded` and writes via the standard resolver path.
+- Speculative-template-pollution paths (improviser, fallback-template shim, hardcoded shape defaults, bypass-on-error) no longer write into the registry.
+- `activity_template` UPSERT sanitises ids before write, preventing new doubled-prefix wrap rows. (≈800 pre-existing wrapped rows still require operator-run DELETE with root creds.)
+- Shape provenance (`produced_by`, `produced_at_task_id`) is wired through emission paths to give co-occurrence learning full ground truth.
 
-This system consolidates what's deployed, what's known to be working, and what's being tracked for fixes. Essential reading if you're working on composition-chain, slot-binding, validators, or any lifecycle-event-driven feature. 
+*Schema and storage*
+- Migration 093 + 094 introduce `DEFINE FIELD OVERWRITE` for `impulse_resolutions.*`, letting resolvers persist arbitrary metadata without pre-declaring every field.
+- Migration 101 adds `goal_verification_labels` for the oracle corpus (human verdicts + high-confidence automated labels).
+- Unlisted-template resolver fixed to never leak private templates into discovery results.
 
-**For detailed implementation findings, diagnostics, and workarounds:** See [`docs/IMPLEMENTATION_FINDINGS_2026_04.md`](docs/IMPLEMENTATION_FINDINGS_2026_04.md) — canonical source for F-1 through F-45, including root causes, fix paths, and canary validation status (last updated 2026-04-27 12:45 UTC).
+*Execution-tree visibility*
+- `executionTraceList` GET handler walks `composition_chain` at read time when storage is empty (per-request memoised), so legacy traces get a usable chain without a write-back migration.
+- The execution tree spans both `activity_execution_traces` and `execution` tables; the GET handler currently returns the first non-empty result set, leaving a silent union gap. Workbench compensates with a one-level recursive walk; server-side union is still pending.
 
-Full details are embedded in the MiniBob, Activity-API, and Workbench sections below.
+**Operator-blocked items** (require user action; full diagnostics in [`openspec/changes/2026-04-26-impulse-activity-loop/design.md`](openspec/changes/2026-04-26-impulse-activity-loop/design.md)):
+- **Admin scope** for global template writes (`activityTemplate_update` / `_deprecate`). Current canary keys are `read,write`. Two seeding paths failed: (a) init-data Helm SurrealQL passes `org_id = organizations:metabob` (record ref) into a `TYPE string` field and silently no-ops via `IF !$existing_key`; (b) `validateKeyFormat()` in identity-vessel returns no `scopes`, and `resolveAPIKey()` hardcodes `['read','write']`, so no API-key path yields `admin`. **Recommended workaround:** Bearer JWT admin auth via dashboard login (the JWT carries `role: admin`).
+- **Wrapped template ids**: ≈800 pre-existing rows with doubled-prefix or descriptive-name wrapping (`activity:⟨activity:⟨…⟩⟩`). Forward-fix prevents new occurrences; existing rows need an operator-run DELETE.
+- **Canary key format drift**: existing `mb_inst_canary_*` and `self-canary` keys use underscore-separated form with no HMAC suffix, yet authenticate against activity-api despite identity-vessel's validator requiring `mb-{b64}-{hmac32}`. Three hypotheses (deploy drift / bypass path / unenforced auth); investigate before relying on key-format constraints for security.
+
+**Detailed diagnostics:** see [`docs/IMPLEMENTATION_FINDINGS_2026_04.md`](docs/IMPLEMENTATION_FINDINGS_2026_04.md) and the per-change `design.md` files under `openspec/changes/`. CLAUDE.md describes behaviour, not ticket IDs — when you need root-cause history, follow the links.
 
 ## Project Overview
 
@@ -225,93 +227,101 @@ Vessel capability registry and resolver (~1,500 LOC TypeScript/Bun):
 **Deployment:** Singleton (1 replica) with in-memory registry
 
 ### 2. MiniBob (`repos/minibob`)
-Lightweight autonomous vessel (~3,000 LOC TypeScript/Bun):
+Autonomous activity-execution vessel (TypeScript/Bun). Drives goals end-to-end by selecting and executing activities, resolving impulses, and emitting traces.
 
 **Key Files:**
-- `index.ts`: Entry point, HTTP server, CLI
-- `src/types.ts`: Core type definitions
+- `index.ts`: entry point, HTTP server, CLI
+- `src/types.ts`: core type definitions
 - `src/llm.ts`: LLM client (Anthropic/OpenAI) with tool calling
-- `src/tools.ts`: Built-in tools (bash, read, write, edit, git)
-- `src/impulse.ts`: Impulse system for context management
-- `src/activity.ts`: Activity template executor
-- `src/goal-processor.ts`: Goal-seeking activity recommendations (12 resolvers extracted 2026-04-23; shrunk 7752 → 5982 LOC -22.8%)
+- `src/tools.ts`: built-in tools (bash, read, write, edit, git)
+- `src/impulse.ts`: impulse store + resolution
+- `src/activity.ts`: activity executor
+- `src/goal-processor.ts`: goal-seeking activity recommendations (now a thin facade over template-dispatchable resolvers)
 - `src/mcp.ts`: MCP client for backend integration
-- `src/vessel-discovery.ts`: Discovery-vessel integration (optional)
+- `src/vessel-discovery.ts`: discovery-vessel integration
+- `src/embedded-templates/`: meta-activities loaded at startup (slot-binding, validator-dispatch, create-shape-provider-goal, make-activity, registry-quality six-pack)
+- `src/resolvers/`: template-dispatchable resolvers (impulse analysis, context acquisition, goal verification/enrichment/decomposition, recommendation, iteration, ...)
 
 **Capabilities:**
-- Execute activities with LLM
-- Capture execution traces with state snapshots
-- Create impulses from executions
-- Resolve LOCAL impulse types (`memo`, `file`, `directoryTree`, `gitDiff`)
-- Enhanced resolution: local → discovery → MCP backend (when discovery enabled)
-- Self-development via ribosome pattern
-- Optional vessel registration and discovery
-- **Activity-driven goal processing** (2026-04-24): Default goal-processing now uses a meta-activity (goal_processing_activity_driven) that chains template-dispatchable resolvers for goal verification, enrichment, decomposition, and activity selection. User interacts with the DAG (divergence asks, fallback decision) via HumanResolver when on TTY. Non-interactive pipes skip UI. Backward-compatible: goal_processing_standard (LLM chain) remains loadable by ID.
-- **Template-dispatchable resolvers** (2026-04-23): 14 registered resolvers (impulse analysis, context acquisition, LLM selectors, goal verification/enrichment/decomposition, activity recommendation, orchestration detection, keyword extraction, relevance scoring) callable from activity JSON via `"resolver": "<name>"` in task config. Goal-processor shrunk 7752→5833 LOC (−24.8%) by resolver extraction
-- **Output-shape gating for variants** (2026-04-24): Goal enrichment now infers `expectedOutputShapes` from goal keywords (e.g., "write markdown" → `markdown_document`, "bash" → `bash_output`). Variant selection filters Thompson-Sampling recommendations by shape compatibility; if all candidates are incompatible, falls back to `execute-shell-command`. Prevents silent failures from routing "write file" goals to bash-only templates. Opt-in: empty `expectedOutputShapes` preserves existing selection behavior.
-- **Contract-driven resolver path** (2026-04-24): Unified `callVesselResolve()` helper honors advertised vessel contracts (`resolve_endpoint`, `resolve_request_format`, `auth_scheme`, `resolve_timeout_ms`). Eliminates split-brain impulse-resolve flow (vessel-discovery vs impulse.ts) and hardcoded per-vessel routing. Shape ownership lookup now queries discovery-vessel instead of minibob hardcoded list; discovery-first architecture enables registering new backend-owned shapes without minibob changes.
-- **Bug fix: Thompson Sampling variant scores** (2026-04-24): `getVariantFamilyScores` was calling non-existent POST endpoint, silently failing and returning empty scores. Thompson Sampling always saw "no variants" and fell back to base activity. Fixed: fan out GETs to `GET /v2/activities/:id/variant-scores` in parallel. Per-id failures isolated; one 404/500 skips that family while others still populate.
-- **Specification validation framework** (2026-04-26): Enforces impulse payload validation before task execution. Prevents invalid state from propagating through activity chains. Supports inline validation rules and pre-execution guards.
-- **Irrelevance score feedback loop** (2026-04-26): Inverse of impulse relevance feedback. Tracks impulses that were loaded but unused during execution, reducing future loading of low-utility data. Complements Thompson Sampling for impulse selection.
-- **Session context population** (2026-04-26): Activity context (accumulated state, produced shapes, decision history) shared via impulse store between tasks. Enables task-scoped reasoning about execution history without re-loading full traces. Loaded on-demand during activity execution.
-- **Activity-level executor hooks** (2026-04-26): Lifecycle impulses for nested executions (goal_execution, task_completed). Enables parent activities to monitor and respond to child execution events. Stored in activity-api for cross-vessel observability.
-- **Per-task discovered tools** (2026-04-26): Task-scoped MCP tool discovery from resolved impulses. Merged into LLM tool list per task, enabling context-aware tool selection. Tools from failed resolutions excluded from subsequent tasks to prevent cascading errors.
-- **Impulse-binding selection layer** (2026-04-27, v0.13.0, see `openspec/changes/2026-04-26-impulse-binding-selection-layer/design.md`): Multi-phase resolver selection and binding framework for impulse preparation, pool selection, and producer discovery. Phases 1-4: (1) **lifecycle:task:preBinding event** emitted to enable subscriber pools to enrich impulses before binding; (2) **selection resolvers** (impulse_preparation, impulse_pool_selection, producer_selection) dispatch via discovery for Thompson Sampling over relevance scores; (3) **producer_selection** uses discover-by-shapes with candidates_with_scores mode to emit unbindable metadata; (4) **embedded meta-activities** (slot-binding, validator-dispatch) subscribe to lifecycle events for post-binding validation. Interpolation enhanced to support dotted-path placeholders ({{a.b.c}}) for extracting nested lifecycle payload fields. 68 new unit tests added.
-  - **Lifecycle events**: Task execution emits structured impulses (type: `lifecycle:{phase}`) at key points: `lifecycle:task:preBinding` (before resolver dispatch, carries `presentShapesPre`, `missingShapesPre`, payload enrichable by subscribers), `lifecycle:task:completed` (after task finishes, carries outcomes, resolver ID, cost). Recorded in activity-api for cross-vessel observability.
-  - **Meta-activities** (embedded in minibob, v0.13.0+ Phase 7 complete): Three built-in activities that subscribe to lifecycle events without explicit wiring. (1) **slot-binding** (`slot-binding.json`): reacts to `lifecycle:task:preBinding` with `inputShapes` non-empty; dispatches `impulse_preparation` → `impulse_pool_selection` → `producer_selection` resolvers to populate shape bindings; conditional task `escalate_unbindable` dispatches `create-shape-provider-goal` activity for missing shapes when `producer_selection` returns `unbindable: true` (Phase 7.2 complete). (2) **validator-dispatch** (`validator-dispatch.json`): reacts to `lifecycle:task:completed`; extracts task validation rules and invokes per-rule resolvers; records `failure_mode` on validation failure. (3) **create-shape-provider-goal** (`shape-provider-goal.json`): fired from slot-binding's escalation task when a shape cannot be bound; recursively executes a new activity to produce the missing shape, enabling multi-level goal decomposition. See `openspec/changes/2026-04-26-shape-provider-goal-creation/design.md` for detailed specification of goal-as-shape-producer pattern with scope inheritance and cost/risk gating. All three are persisted in activity-api and loaded at executor startup; nested executions visible in traces with `parent_execution_id` and `composition_chain` fields.
-  - **Resolver configuration via lifecycle**: The `interpolate` callback and config context (`provider`, `apiKey`, `workingDirectory`, `executionId`) are threaded through lifecycle event payloads, enabling slot-binding meta-activity to invoke resolvers with full context.
-- **Compliance validator** (2026-04-26): New resolver that validates activity and template schemas against compliance rules before execution. Emits `validation_result` shape indicating pass/fail with detailed evidence. Prevents non-compliant activities from executing; enables audit trail of what passed validation.
-- **Goal trajectory explorer** (2026-04-26): Interactive resolver for exploring multi-level goal decomposition paths. Maps goal → sub-goals → candidate activities with shape annotations. Enables workbench to visualize the full execution tree before committing to a specific path.
-- **Satisfaction verifier** (2026-04-26): Post-execution resolver that validates whether the produced shapes actually match the declared output constraints. Provides feedback loop on whether activities produced what they claimed. Complements pre-execution validators for learning closed-loop verification.
-- **Lifecycle:task:completed enhancements** (2026-04-26, F-7): `lifecycle:task:completed` event payload now carries (1) **skip_validation flag** indicating whether validators were bypassed for the task; (2) **input_impulse_ids** array identifying which impulses were consumed; (3) **output_impulse_ids** array identifying which impulses were produced; (4) **tool-calls array** with details of each LLM tool call (arguments, results). Enables full task-scoped signal extraction and cross-impulse learning without re-reading full traces. WebSocket broadcasters emit all fields in real-time for live task monitoring.
-- **F-41: Seed trigger impulse into meta-activity executor pool** (2026-04-27): Meta-activity executors (validator-dispatch, slot-binding) now receive the triggering lifecycle impulse in their initial pool so they can reference the event that caused their invocation. Enables resolvers in meta-activities to use dotted-path interpolation (e.g., `{{lifecycle.taskId}}`) to extract fields from the lifecycle event payload.
-- **F-42: Lifecycle type is local for impulse resolution** (2026-04-27): `resolvePointer` now recognizes `type === 'lifecycle'` as a local impulse type (alongside memo, file, directoryTree, gitDiff). Returns JSON-stringified representation of the lifecycle pointer's payload without requiring backend or filesystem lookup. Prevents offline-mode errors when LLM tasks force-load lifecycle impulses from validator-dispatch or slot-binding pools.
-- **F-44: Hono Context-not-finalized auth layer fix** (2026-04-27): Two compounding bugs fixed in activity-api auth layer: (1) index.ts:79 jwtAuthMiddleware wrapper missing return statement caused 401s to be lost in transit with context left unfinalized; (2) jwtAuth.ts:171-182 reject-by-default logic blocked X-Internal-Api-Key requests before handlers could explicitly accept them. Fixes now in place; minibob pending-sync queue should drain on next client run after deployment. 13-line net change; 4 new regression tests added, existing 24 impulse route tests still pass.
-- **F-45: Improviser null-guard fix** (2026-04-27): Added null safety check in improviser resolver to prevent crashes when accessing optional fields. Defensive coding prevents runtime errors during speculative template generation. Single-line fix; 1 new regression test added.
-- **F-52: Unlisted templates resolver fix** (post-2026-04-27): Fixed resolver to properly handle unlisted/private templates, preventing unintended template visibility in discovery queries. Enables fine-grained template access control without compromising learning system visibility.
-- **Iteration resolver** (2026-04-27, F-4 resolved): New resolver for iteration patterns over arrays and collections. Enables looping constructs in activity tasks. Supports parameterized iteration with context passing between iterations. 493-line implementation in `src/resolvers/iteration-resolver.ts` (verified 2026-04-27). Closes infrastructure gap B from 2026-04-26. Auto-unnests single-level arrays (e.g., `{recommendations: [...]}` → `[...]`) pragmatically to avoid redundant transform tasks in make-activity template.
-- **Make-activity meta-activity** (2026-04-27, verified end-to-end on canary 12:38 UTC): Template-based activity that creates new activity templates from execution traces and specifications. Enables self-improvement loop where MiniBob generates new activities based on successful patterns. 202-line template in `src/embedded-templates/make-activity.json` with 6 tasks: (1) acquire_context (impulse-resolve, category=meta); (2) identify_candidates (iteration over activityRecommendations, LLM scorer); (3) execute_plan (activity dispatcher); (4) handle_errors (iteration over alternates, conditional on failure); (5) declare_complete (LLM with markGoalComplete tool); (6) extract_template (impulse-resolve, gated on applyTemplateExtraction). Four open questions documented: path-sandbox check, extract_template synthesis, acquire_context filtering, and declare_complete tool registry. **F-NN-A (goal-impulse seeding)** identified and fixed (d10b60d): standalone CLI invocation of make-activity requires CLI-mode goal-impulse seeding. Intended invocation path is via parent dispatch (`--single "make me a new activity that..."`) where goal-impulse seeds correctly from goal-processing-activity-driven.
-- **Goal-impulse seeding** (2026-04-27): Feature for seeding goal context as impulses at activity start. Enables activities to access initial goal context for constraint-driven execution. Complements live canvas goal impulse tracking. CLI mode now auto-seeds `goal`-shape impulses from `--var goal=` when make-activity is invoked directly.
+
+*Core execution*
+- Execute activities with deterministic resolvers + LLM, capture full traces with state snapshots, create impulses from executions.
+- Resolve **local** impulse types directly (`memo`, `file`, `directoryTree`, `gitDiff`, `lifecycle`). Everything else routes through discovery: a unified `callVesselResolve()` helper honours advertised vessel contracts (`resolve_endpoint`, `resolve_request_format`, `auth_scheme`, `resolve_timeout_ms`). Shape-ownership lookup is dynamic via discovery-vessel — minibob carries no hardcoded vessel list.
+- On 401/5xx from a vessel, synthesise a degraded `authenticated: false` impulse so resolver failures stay non-fatal.
+
+*Activity-driven goal processing*
+- Default goal-processing flow is itself an activity (`goal_processing_activity_driven`) that chains template-dispatchable resolvers (verification, enrichment, decomposition, recommendation). Interactive divergence/fallback prompts go through `HumanResolver` on TTY; non-interactive runs skip the UI. The legacy LLM-chain (`goal_processing_standard`) remains loadable by id.
+- Goal enrichment infers `expectedOutputShapes` from the goal text; variant selection filters Thompson recommendations by shape compatibility before sampling, with `execute-shell-command` as a final fallback.
+- Goal-impulse seeding emits a `goal`-shape impulse at activity start so downstream tasks can reference goal context. CLI mode auto-seeds from `--var goal=`.
+- **Enrichment-gated verification** (2026-04-29): `verifyWithEvidence` now consults the enriched goal: required-capability set must intersect with tools used, and a `category: "mutation"` goal with zero `filesTouched` is rejected. Fallbacks preserve old behaviour when enrichment is absent.
+- Stagnation detection runs alongside cycle detection: same-template repeats (≥ 3) or zero goal-shape advance triggers a warning impulse for the workbench.
+
+*Template-dispatchable resolvers*
+- Goal-processor extracted into ~14 registered resolvers (impulse analysis, context acquisition, LLM selectors, goal verification/enrichment/decomposition, recommendation, orchestration detection, keyword extraction, relevance scoring, iteration). Tasks dispatch via `"resolver": "<name>"` in their config; LLM is just one resolver.
+- **Iteration resolver** loops over array shapes (e.g. `activityRecommendations`) with context propagation; auto-unnests single-key wrappers like `{recommendations: [...]}`.
+- **Compliance validator** validates activity/template schemas pre-execution and emits a `validation_result` impulse.
+- **Goal trajectory explorer** maps goal → sub-goals → candidate activities for the workbench's planning view.
+- **Satisfaction verifier** checks produced shapes against declared output constraints post-execution.
+
+*Impulse-binding selection layer*
+- Tasks emit `lifecycle:task:preBinding` (before resolver dispatch; payload contains `presentShapesPre`, `missingShapesPre`, and is enrichable by subscribers) and `lifecycle:task:completed` (after; carries outcomes, resolver id, cost, `skip_validation`, `input_impulse_ids`, `output_impulse_ids`, tool-calls).
+- Selection resolvers (`impulse_preparation`, `impulse_pool_selection`, `producer_selection`) dispatch via discovery and Thompson-sample over relevance scores. `producer_selection` uses `discover-by-shapes candidates_with_scores` mode and emits an `unbindable` flag with metadata when no producer exists.
+- Three meta-activities ship in the embedded-templates pool, persisted into activity-api at startup, and subscribe to lifecycle events without explicit wiring:
+  - **slot-binding**: reacts to `lifecycle:task:preBinding` with non-empty `inputShapes`; chains the three selection resolvers; conditional `escalate_unbindable` task dispatches `create-shape-provider-goal` when binding fails.
+  - **validator-dispatch**: reacts to `lifecycle:task:completed`; extracts validation rules from the task and invokes per-rule resolvers; records `failure_mode` on negative.
+  - **create-shape-provider-goal**: spawns a recursive activity to produce a missing shape, with scope inheritance and cost/risk gating per the shape-provider-goal-creation spec.
+- Interpolation supports dotted-path placeholders (`{{lifecycle.taskId}}`); `interpolate` and full config context (`provider`, `apiKey`, `workingDirectory`, `executionId`) thread through lifecycle event payloads so subscribers run with full context.
+
+*Registry hygiene*
+- `make-activity` is itself a meta-activity: 6 tasks (acquire context, identify candidates via iteration + LLM scorer, dispatch, error iteration, declare complete, extract template) creating new templates from successful patterns.
+- Registry-quality six-pack ships in embedded templates: `core-activity-audit`, `prune-activity` (default `dryRun=true`), `replace-activity`, plus three lifecycle wrappers. The ribosome (template extraction) reorganised as a `lifecycle:execution:succeeded` meta-activity.
+- Speculative-template-pollution paths (improviser, fallback-template shim, hardcoded shape defaults, bypass-on-error) no longer write to the registry.
 
 ### 3. metabob-activity-api (`repos/metabob-activity-api`)
-TypeScript/Bun/Hono backend - Learning system and trace storage:
+TypeScript / Bun / Hono backend. Trace store + Thompson-Sampling learner + activity-related impulse resolver. **Not a universal resolver** — only resolves shapes it owns (traces, templates, metrics, goal paths, composition stats); everything else routes through discovery.
 
 **Key Files:**
-- `src/index.ts`: Server entry point
-- `src/routes/activities.ts`: Activity template endpoints
-- `src/routes/impulses.ts`: Impulse resolution endpoints
-- `src/services/discovery-client.ts`: Discovery-vessel integration
-- `src/models/schemas.ts`: SurrealDB schemas
+- `src/index.ts`: server entry point + middleware
+- `src/routes/activities.ts`: template endpoints, recommend, discover-by-shapes, validate-composition
+- `src/routes/impulses.ts`: `/v2/impulses/resolve` dispatcher + write resolvers
+- `src/routes/goal-paths.ts`: goal-to-trajectory recommendation, endpoint-shape persistence
+- `src/services/discovery-client.ts`: discovery-vessel integration
+- `src/services/auth.ts`: identity-vessel-backed validator
+- `src/models/schemas.ts`: SurrealDB schemas (incl. `FailureModeSchema`)
+- `sql/migrations/`: ordered migration files
 
 **Capabilities:**
-- Store execution traces persistently
-- Resolve activity-related impulse types (traces, templates, metrics)
-- Thompson Sampling for template selection
-- Pattern recognition and learning
-- Impulse relevance tracking
-- Tool usage analysis
-- Register with discovery-vessel (advertises 7 activity-related shapes)
 
-**Discovery Integration:**
-- Registers on startup, heartbeats every 60s
-- Non-blocking registration (graceful degradation)
-- Health endpoint includes discovery status
-- **Advertises resolver contract** (2026-04-24): Sends `resolve_endpoint` (/v2/impulses/resolve), `resolve_request_format` (pointer), `auth_scheme` (ApiKey), and `resolve_timeout_ms` (10000) in registration payload. Enables minibob to route impulses to activity-api via discovery without hardcoded assumptions.
-- **Bug fix: Variant family lookup + β-on-failure learning** (2026-04-24 15:16): Two critical WHERE-clause holes prevented Thompson Sampling learning from functioning end-to-end. *Symptom:* `GET /v2/activities/:id/variant-scores` always returned empty scores, and failed template executions never updated β (only α updated on successes). *Root cause:* SurrealDB record ID format mismatch in `getVariantFamily` (base activity lookup compared wrapped record IDs like `activity:⟨name⟩` against plain string form); org_id scoping accepted only one form even though templates registered via different paths stored it in both forms. *Fix:* `meta::id(id) = $base_id` for record ID matching; dual org_id match (`org_id = $org_id OR org_id = $org_id_alt`); singleton-family fallback when row not found (still resolve via variant_performance_metrics). Separate fix in execution-traces.ts: β-updates now target both direct variant AND dispatched template from meta-trace metadata, using same α/β deltas so failure path cannot drift from success path. Tests: 11 new learning-loop-failure-track tests covering variant family resolution, β on success/failure, meta-trace dispatching (all 46 related tests pass).
-- Legacy `/v2/vessels/*` endpoints deprecated (proxy mode until July 2026)
-- **Search pipeline v1.12.0** (2026-04-26): Full-text search across activity templates, execution traces, and metrics. BM25 ranking with field-specific weights. Enables activity discovery by feature description, error messages, or resolved shape names. Queryable via `/v2/activities/search` endpoint.
-- **mcpTool shape advertisement** (2026-04-26): New shape type `mcpTool` for MCP tools resolved by external tools. Advertised with empty-list resolver (tools are pulled on-demand by minibob). Enables discovery-vessel awareness of MCP capabilities without payload caching.
-- **Per-task impulse ID tracking** (2026-04-26): WebSocket broadcaster now emits per-task `input_impulse_ids` and `output_impulse_ids` arrays in `task.completed` events (in addition to storage in execution traces). Enables real-time impulse co-occurrence analysis and task-scoped relevance feedback without re-reading full traces.
-- **Phase 2 backend additions** (2026-04-26): (1) **`discover-by-shapes` candidates_with_scores mode** — returns matching activities with Thompson sampling scores (`alpha`, `beta`, `sample_count`) and optional `composition_score` from edge data; null scores when no edge data (graceful uniform prior). (2) **`output_shapes` filter on backward mode** — filters producers by required output shapes, enabling constraint-driven discovery. (3) **`failure_mode` taxonomy** — stratifies execution failures by type (`verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`) with reason and variant-specific metadata; supports targeted improvement strategies. (4) **`endpoint_output_shapes` field in goal execution paths** — denormalized array of output shapes reachable at the endpoint (via correlated subquery backfill), enables shape-driven goal planning without re-traversing activity chains.
-- **Phase 2.5 goal-paths enhancements** (2026-04-26): `src/routes/goal-paths.ts` exports `accumulateEndpointShapes(pathActivities)` helper; POST `/goal-paths` persists `endpoint_output_shapes` on insert+update; GET `/goal-paths` accepts optional `endpoint_output_shape` query param for filtering; POST `/recommend` accepts the same as a body field, applied as hard-filter pre-Thompson Sampling; `predictEndpointState` reads the denormalized field with fallback to `accumulateEndpointShapes` for legacy rows. Enables shape-provider-goal creation to be filtered by output constraints without exhaustive traversal. 13 new tests added; typecheck clean.
-- **F-43: Legacy impulse-relevance field coercion** (v1.15.0, 2026-04-27): `POST /v2/activities/impulse-relevance` endpoint now accepts deprecated `activity_id` field and maps it to `activity_variant_id` for backward compatibility with legacy callers (e.g., minibob mcp.ts v0.13.0). Explicit `activity_variant_id` always wins. Logs warning when coercion is applied; to be removed once all callers are updated. Enables zero-downtime migration of older API consumers.
-- **F-44: Hono auth layer context finalization** (v1.15.0, 2026-04-27): Fixed two compounding bugs in activity-api auth layer: (1) index.ts:79 jwtAuthMiddleware wrapper missing return statement caused 401s to be lost in transit with context left unfinalized; (2) jwtAuth.ts:171-182 reject-by-default logic blocked X-Internal-Api-Key requests before handlers could explicitly accept them. Both issues prevented authorized requests from completing. 13-line net fix; 4 new regression tests added. Unblocks minibob pending-sync queue drain on next client run after deployment.
-- **Impulse.resolved body contract standardization** (2026-04-26, F-9): WebSocket `impulse.resolved` events now carry a standardized body structure: `{ shape: string, taskId: string, body: {...} }` instead of ad-hoc formats. Enables workbench to parse resolver outputs deterministically without per-resolver adapters. All resolver types (deterministic, pattern, LLM) emit the same contract; validation results, concept references, and all resolved shapes flow through the same channel.
-- **T5.5: Impulse.resolved WS broadcaster with body for all shapes** (2026-04-27): `impulse.resolved` WebSocket events now include `body` for all shapes (not just `validation_result`). Large bodies (> 50KB) are truncated: instead of full payload, returns `{ truncated: true, summary: <optional-summary> }`. Enables workbench OutputLayer inline content expansion in both live and recalled modes without explicit per-shape handling. All resolver output shapes now broadcast with body via unified event channel.
-- **Parent execution ID filtering** (2026-04-27): `GET /v2/activities/execution-traces` endpoint now accepts `parent_execution_id` query parameter to fetch only direct child executions of a given parent. Returns nested executions without requiring full tree traversal. Enables workbench NestedTrajectoryNode (v0.5.0+) to inline-expand nested execution hierarchies efficiently.
-- **Full-text search (FTS) for activity templates** (2026-04-27): `GET /v2/activities/templates` now accepts optional `q` query parameter for natural-language full-text search. Bypasses Redis cache and queries the BM25 FTS index directly, returning ranked results. Same engine used by the recommendation system (Tier 3 fallback). Enables activity discovery by feature description, error messages, or resolved shape names without exact matching.
-- **F-37/F-40 read-time fallback** (2026-04-27): GET execution-traces handlers apply `walkCompositionChain` helper when stored `composition_chain` is empty but `parent_execution_id` is set. Walks parent chain on the fly (read-only, never writes back) to reconstruct the composition chain for legacy traces inserted before F-37/F-40 write-time fixes. Early-exits on first non-empty ancestor chain. Capped at 16 levels with cycle-guard. Returns [] on DB errors (graceful degradation).
-- **F-37/F-40 optimization: Per-request memoization** (2026-04-27): GET /v2/activities/execution-traces list and execution-trace-with-signatures handlers now use `CompositionChainCache` (a Map keyed by executionId) to avoid redundant DB walks when multiple traces in a response share the same parent. Cache is fresh per request and passed to `resolveCompositionChain` helper. Siblings sharing a parent collapse to one DB walk; concurrent requests see in-flight promises to prevent thundering herd.
+*Storage and learning*
+- Persistent execution traces with per-task `input_impulse_ids` / `output_impulse_ids`, resolver tier per task, vessel id, parent execution id, denormalised composition chain, and `failure_mode` taxonomy.
+- Thompson Sampling for template selection across variant families. β-on-failure updates both the directly-executed variant and any dispatched template recorded in meta-trace metadata, so failure attribution does not drift from success attribution.
+- Per-template, per-variant, and per-resolver metrics (success rate, cost, duration, latency). Impulse-relevance and tool-usage feedback loops feed Thompson posteriors.
+- BM25 full-text search over templates, traces, and metrics (`/v2/activities/search`); same engine drives Tier-3 recommendation fallback. `GET /v2/activities/templates?q=` exposes the FTS index directly, bypassing Redis cache.
+
+*Discovery integration*
+- Registers on startup with discovery-vessel; heartbeats every 60s; registration is non-blocking (vessel is functional even if discovery is down).
+- Advertises resolver contract: `resolve_endpoint=/v2/impulses/resolve`, `resolve_request_format=pointer`, `auth_scheme=ApiKey`, `resolve_timeout_ms=10000`.
+- Owns and advertises ~30 read shapes (traces, templates, metrics, goal records, composition success, impulse relevance, pre-validation results, audit reports, cost metrics, mcpTool, …) and 14 `*_write` shapes (`activityExecutionTrace_write`, `activityFeedback_write`, `impulseRelevance_write`, …) plus admin-only `activityTemplate_update` / `_deprecate` / `activityExecutionTrace_delete`. Legacy `/v2/vessels/*` endpoints remain in proxy mode through July 2026.
+
+*Selection-layer support*
+- `discover-by-shapes candidates_with_scores` mode returns matches with Thompson `alpha`, `beta`, `sample_count`, and optional `composition_score` from edge data. Null scores fall back to a uniform prior.
+- `discover-by-shapes` backward mode accepts an `output_shapes` filter for constraint-driven producer discovery.
+- Goal-paths track `endpoint_output_shapes` (denormalised, accumulated via `accumulateEndpointShapes`); `POST /v2/goal-paths/recommend` accepts the field as a hard pre-Thompson filter, enabling shape-provider-goal creation without exhaustive chain traversal.
+
+*WebSocket events*
+- Standard event channel `wss://activity.metabob.com/ws` with handshake (`{type:"authenticate",token}`) and replay (`{type:"catchup",lastSeenSequence:n}`).
+- `task.started`, `task.completed`, `task.failed`, `tool.call`, `impulse.resolved`. `task.completed` carries per-task input/output impulse ids in real-time. `impulse.resolved` uses a unified body contract `{ shape, taskId, body }` for all shapes; bodies > 50 KB return `{ truncated: true, summary }` instead of the full payload.
+
+*Read-time helpers*
+- `GET /v2/activities/execution-traces?parent_execution_id=…` returns direct child executions for nested-tree expansion without full traversal.
+- When stored `composition_chain` is empty but `parent_execution_id` is set, GET handlers walk the parent chain at read time (capped at 16 levels with cycle guard, never writes back). Per-request `CompositionChainCache` collapses sibling DB walks; concurrent requests share an in-flight promise.
+- `executionTraceWithSignatures` returns hydrated traces with per-impulse pointer/shape signatures and `impulses_by_id` map, enabling deterministic co-occurrence extraction without LLM reshaping.
+
+*Backward-compatibility coercions*
+- `POST /v2/activities/impulse-relevance` accepts a legacy `activity_id` field and maps to `activity_variant_id` (with deprecation warning); explicit `activity_variant_id` wins.
+
+*Auth*
+- All non-public routes call `validateApiKeyWithFallback` against identity-vessel `/v1/auth/resolve`; failure short-circuits with 401, no fallback validator. (See **Authentication** section.)
 
 ### 4. Activity Dashboard (`repos/activity-dashboard`)
 React 19/Bun real-time observability:
@@ -329,60 +339,39 @@ React 19/Bun real-time observability:
 - Vessel registry visualization (discovery integration)
 
 ### 5. Workbench (`repos/workbench`)
-Human-in-the-loop development interface for activities, executions, and learning-loop state. React + Vite, Vitest + Playwright, shadcn/ui primitives. **Alpha (v0.1.0) landed 2026-04-22; composition-builder + trace-viz surfaces landed 2026-04-23; ConfigEditor, history panel, trajectory/vessel-selector refinements landed 2026-04-26; inline execution bar + resolver-first TaskEditor landed 2026-04-27; Phase 6.3 validation surfaces + L→M bridge landed 2026-04-26 (v0.3.0); validation_result impulse wiring landed 2026-04-26 (v0.3.1); lifecycle:task:preBinding observability landed 2026-04-26 (v0.3.2); compositional transparency (impulse I/O visualization, resolver chain, shape-flow connectors) landed 2026-04-26 (v0.3.3); gap indicators, execution attach, resolver prediction, inline validation landed 2026-04-26 (v0.3.4); gap-free deletion, seed shapes, InitialPoolBar landed 2026-04-26 (v0.3.5); dual WS subscription + TanStack Router + D10/D11/D3 layer components landed 2026-04-26 (v0.4.0); UI test screenshots landed 2026-04-26 (v0.4.1); WS backoff, NestedTrajectoryNode, multi-trace alongside, GhostActivityCard landed 2026-04-27 (v0.5.0); template.tasks crash fix landed 2026-04-27 (v0.5.1); multi-trace diff rendering + OutputLayer wiring landed 2026-04-27 (v0.5.2); DAG/Studio route consolidation + FTS search wiring landed 2026-04-27 (v0.6.1); omnibar trajectory header landed 2026-04-27 (v0.7.1).**
+Human-in-the-loop authoring + live-control surface for activities, executions, and learning-loop state. React + Vite, Vitest + Playwright, shadcn/ui primitives.
 
 **Key Files:**
 - `src/App.tsx`: Root shell
-- `src/pages/`: `TemplatesPage`, `ExecutionsPage`, `GoalsPage`, `ShapesPage`, `CompositionPage`
-- `src/hooks/`: React Query data hooks for templates/executions/goals/shapes; `useWebSocket.ts` for live execution streams
+- `src/pages/`: `TemplatesPage`, `ExecutionsPage`, `GoalsPage`, `ShapesPage`, `CompositionPage`, `TrajectoryEditorPage`
+- `src/hooks/`: React Query data hooks; `useWebSocket.ts`, `useTrajectoryExecution.ts`, `useImpulseContent.ts`, `useShapes.ts`
 - `src/lib/`: API client, query setup, format utilities
 - `src/components/ui/`: Base shadcn/ui primitives (do not modify in-place)
-- `src/components/executions/`: `LiveExecutionMonitor`, `GanttTimeline`, `ExecutionFlameGraph`, `StateDiffViewer`
+- `src/components/trajectory/`: `TaskEditor`, `ImpulseStatePanel`, `ApplicableActivitiesPanel`, `ShapeProvenanceTree`, `NestedTrajectoryNode`, `GhostActivityCard`, `OutputLayer`, `BindableSlots`, `GoalCompletionBar`
 
-**Features:**
-- Interactive activity template editing and variant management
-- Execution inspection with real-time updates
-- Goal and shape browsers
-- **Composition builder** (`23e8b94`): node-based editor on React Flow — drag activities from a searchable palette, connect output→input ports with shape-compatibility validation, cycle detection, localStorage autosave, export to activity template, minimap + zoom. Real-time validation via POST `/v2/activities/validate-composition` (DFS-based cycle detection, shape compatibility checking, added `ec493b8d`)
-- **Live execution monitor + Gantt timeline** (`3a1ca84`): WebSocket connection with reconnect and event-catchup protocol for missed events; Gantt bars with expand/collapse for nested tool calls and impulse-resolution markers by resolver tier
-- **Flame graph** (`75b7a46`): D3-rendered hierarchical flame with cost and duration modes, resolver-tier color coding (deterministic / pattern / LLM), drill-down into tool calls, PNG/SVG export, time-aware mode
-- **State diff viewer** (`1235867`): split/unified diff modes on task state transitions, file-list navigation with change counts, syntax highlighting (TS/JS/JSON), task-based grouping with expand/collapse, cumulative vs incremental toggle, auto-collapse of unchanged sections
-- **Trajectory editor** (phases 1-15 complete, tested 2026-04-24; fixes landed 2026-04-26): Comprehensive activity sequence authoring with state-space reasoning. Features: (1) **Backend**: WebSocket real-time events, bidirectional shape discovery (`discover-by-shapes`), goal-to-trajectory recommendations with confidence intervals; (2) **State space**: computed available shapes per column, speculative prediction with caching, applicability filtering by shape compatibility; (3) **UI panels**: impulse-state sidebar with accumulated shapes, provenance tree, timeline, goal progress; activity-applicability panel with Thompson Sampling visualization (α/β, CI), three sections (applicable/blocked/unlocked); backward-chaining for missing shapes; cycle detection (productive vs infinite); (4) **Composition**: horizontal CSS-Grid layout, drag-reorder activities, parallel execution via multi-row columns, locally-persisted state (localStorage v2 with v1 fallback); (5) **Editing**: inline task prompts with variable highlighting, validation-rule editor, retry config, Thompson parameter sliders, save-as-variant with genealogy; (6) **Integration**: live execution overlay with pulse animation, impulse-resolved markers by resolver tier, learning-feedback post-execution (Thompson deltas, variant notifications, composition-edge updates); (7) **Keyboard**: Ctrl+I to toggle impulse-state panel, keyboard nav for activity management; (8) **Testing**: 35+ unit tests for state space, cycle detection, speculative prediction; E2E coverage deferred. **Verified (2026-04-24 canary):** all 11 tested features working, keyboard shortcuts confirmed, endpoint contracts validated. **Deferred:** responsive breakpoints (15.2), feature flags (15.4), tooltip help (15.6), E2E tests, drag-to-add from recommendations (4.5)
-- **ConfigEditor** (`2026-04-26`): Interactive resolver configuration panel for inline editing of task resolver parameters, validation rules, and retry strategies within the trajectory editor. Enables fine-tuning resolver behavior without template export/reimport.
-- **History panel** (`2026-04-26`): Execution history sidebar showing task-level outcomes, resolver selections, and Thompson Sampling feedback. Enables post-execution analysis and pattern visibility within the workbench.
-- **Vessel selector** (phases 1-5 complete, 2026-04-26): Panel for routing task execution to specific vessels. Features: vessel registry integration, impulse-state introspection per vessel, resolver-tier visualization, and dynamic vessel discovery. Enables multi-vessel compositions with explicit routing decisions.
-- **Composition-refs patch** (`2026-04-26`): Improved reference stability for composition graph edges and activity links, preventing stale pointers during multi-step edits and undo/redo operations.
-- **Inline execution bar** (2026-04-27): Replaces Sheet overlay with compact inline execution status bar. Displays live task completion status, impulse resolution progress, and resolver tier visualization. Enables users to monitor execution while authoring without context switching. No-events fallback notice appears after 30s of inactivity.
-- **Resolver-first TaskEditor** (2026-04-27): New task authoring paradigm prioritizing resolver selection. Summary-row display shows resolver ID, tier (deterministic/pattern/llm), and confidence. Task PATCH endpoint enables in-line task updates. Resolver picker integrated into expanded panel for per-task selection. Per-task resolution traces displayed inline during execution.
-- **Per-task resolver visualization** (2026-04-27): Column impulse badges and divergence markers in live execution view. Impulse-resolved markers color-coded by resolver tier. Enables task-scoped visibility into which impulses were used and how they were resolved. Integrated with live execution timeline.
-- **ExecutionHistoryPanel** (2026-04-27): Execution history sidebar showing task-level outcomes, resolver selections, and Thompson Sampling feedback. Load button to restore any prior execution to the active trajectory for inspection or retry. Enables post-execution analysis and pattern visibility within the workbench.
-- **Resolver picker** (2026-04-27): UI control for selecting resolver per task in TaskEditor. Autocomplete suggests applicable resolvers based on task type and available impulses. Enables manual override of resolver selection before execution.
-- **Phase 6.3 validation surfaces** (2026-04-26, v0.3.0): Extended validation error display with discriminated union for `runtime_validator` variant (validatorId, passed, confidence, failureMode, evidence, messages). "Task Validation" card in `ImpulseStatePanel` shows per-task validation status (green + min confidence on pass, red + `failure_mode.type` on fail, gray "no validators" otherwise). `ExecutionHistoryPanel` renders `failure_mode` summary on failed traces (e.g., `verifier_negative · slot-binding`) with fallback for legacy traces; multi-select dropdown filter by failure type. New `src/types/failure-mode.ts` mirrors activity-api schema. 26 new tests added.
-- **Phase 7 L→M bridge** (2026-04-26, v0.3.0): `TrajectoryEditorPage` wired to `SpawnSubgoalPreview` component; imports and passes `onEscalateUnbindableShape` to `ApplicableActivitiesPanel`. Phase 6.1 stub button now dispatches `create-shape-provider-goal` activity via Phase 6.2 hook when shape producer is not found. Enables multi-level goal decomposition when intermediate shapes must be produced.
-- **Validation_result impulse wiring** (2026-04-26, v0.3.1): `useTrajectoryExecution.ts` gains `routeValidationResultImpulse` helper routing WebSocket `impulse.resolved` events of shape `validation_result` into `trajectoryStore.addTaskValidation`. Defensive `parseValidationResult` handles both flat (`event.shape/taskId/body`) and nested (`event.impulse.shape/taskId/body`) WS payloads — insulates workbench from broadcaster contract drift. Closes the gap where Phase 6.3 left the Task Validation indicator card unwired from live execution events. 13 new structural tests added (parser, router, store-integration); full WS-mock coverage deferred due to React 19 testing-library limitation.
-- **Lifecycle:task:preBinding observability** (2026-04-26, v0.3.2, Phase 6b): `useTrajectoryExecution.ts` now handles `lifecycle:task:preBinding` WS events, populating `trajectoryStore.bindingPhase` state. `TaskEditor` visualizes per-task binding phase status inline. `BindableSlots` card populated from live bindingPhase state (previously static from static-composed template). New `ViewModeStrip` component shows active trajectory mode (compose / trace / live) explicitly. Phase 6b (workbench observability layer for lifecycle events) introduced in openspec tasks.md as the follow-up to Phase 7 closure (Phase 6 + 7 complete, Phase 6b observability starting).
-- **Lifecycle:task:preBinding WS broadcast + spec refinements** (2026-04-26, Phase 1.6 verified): MiniBob gained `broadcastPreBinding()` — lifecycle:task:preBinding now emitted over WebSocket in addition to impulse-store. Workbench fixed preBinding WS handler: `wsManager.broadcast()` wraps payloads as `{ type, timestamp, data: <payload> }`; handler now reads from `event.data.data`. ImpulseStatePanel Bindable Slots section populated live with slot shapes and binding states. Spec refinements: F-1 renamed `parentExecutionId` → `executionId` (field represents current activity, not parent); F-5 retrofitted slot-binding.json and validator-dispatch.json from `{{lifecycle}}` JSON blobs to dotted-path placeholders (`{{lifecycle.taskId}}`, etc). 28 preBinding events confirmed received per test run on canary.
-- **Compositional transparency** (2026-04-26, v0.3.3): Enhanced trajectory editor visualization of impulse I/O shapes per task, resolver chain visibility, shape-flow connectors showing lineage of impulses through composition. Learning delta visualization shows Thompson Sampling feedback post-execution. Enables visual debugging of shape dependencies and resolver selection chains.
-- **Gap indicators, execution attach, resolver prediction** (2026-04-26, v0.3.4): New trajectory editor features: (1) **gap indicators** — visual markers for missing impulses (unbound input shapes) in live execution view; (2) **execution attach** — ability to attach live execution to a saved trajectory for real-time monitoring; (3) **resolver prediction** — shows predicted resolver selection (deterministic/pattern/llm) and confidence before execution; (4) **inline validation** — task output validation errors displayed inline on TaskEditor card. All features integrated with live WebSocket event stream for real-time feedback during execution.
-- **Gap-free deletion, seed shapes, InitialPoolBar** (2026-04-26, v0.3.5): Composition builder improvements: (1) **gap-free deletion** — deleting an activity auto-connects its predecessor's outputs to successor's inputs to prevent orphaned shapes; (2) **seed shapes** — ability to manually declare initial impulses for the composition (e.g., "file path", "git diff") that can be used by all downstream activities; (3) **InitialPoolBar** — UI component for managing seeded impulses, shows shape availability summary, enables quick adjustment of starting state before composition execution. Composition-builder reference stability patch ensures no stale pointers during complex drag-reorder operations.
-- **Dual WS subscription + TanStack Router + D10/D11/D3 layer components** (2026-04-26, v0.4.0): Architecture upgrade enabling independent subscriptions to vessel-level preBinding events and activity-api canonical events. TanStack Router migration for improved routing layer. Introduction of D10 (decision layer), D11 (detail layer), and D3 (differential layer) rendering components with independent WS event streams per component. Enables multi-stream composition authoring with real-time feedback from heterogeneous sources.
-- **UI test screenshots + test infrastructure** (2026-04-26, v0.4.1): Comprehensive UI test coverage via Playwright + shadcn component snapshots. Baseline screenshots for regression detection (card-expanded, keyboard-shortcuts, recalled-mode, templates layout). Test infrastructure for visual/behavioral validation.
-- **WS backoff, NestedTrajectoryNode, multi-trace alongside, GhostActivityCard** (2026-04-27, v0.5.0): (1) **WS backoff** — exponential backoff on WebSocket reconnection failures, prevents thrashing on degraded connectivity; (2) **NestedTrajectoryNode** — new trajectory node type for rendering nested (child) executions, supports depth-0 fetch via `parent_execution_id` query param (activity-api support added 2026-04-27); (3) **multi-trace alongside** — ability to display multiple execution traces side-by-side for diff analysis; (4) **GhostActivityCard** — placeholder card for pending/unresolved activities in composition, enables speculative UI while resolving. Enables nested execution visualization without full tree expansion (scalability for deep compositions).
-- **Template.tasks crash fix** (2026-04-27, v0.5.1): Fixed crash when `template.tasks` is undefined in activity palette and insert dialog. Defensive optional chaining prevents errors during template loading.
-- **Multi-trace diff rendering + OutputLayer wiring** (2026-04-27, v0.5.2): (1) **multi-trace diff column rendering** — side-by-side diff columns for multiple execution traces with amber task outcome strip per activity showing success/failure status; (2) **NestedTrajectoryNode child fetch** — depth-0 fetch of child executions via `parent_execution_id` query parameter to activity-api execution-traces endpoint; (3) **OutputLayer (Layer 3) wiring** — output impulse IDs and shapes now displayed in TaskEditor, showing which impulses were produced by each task. Enables trace-driven impulse provenance analysis and nested execution navigation without manual tree traversal.
-- **DAG/Studio route consolidation + FTS search wiring** (2026-04-27, v0.6.1, see `openspec/changes/2026-04-27-workbench-simplification/design.md`): Workbench simplification Phase 1+2 implementation. (1) **Route consolidation** — `/compositions` and `/studio` routes redirect to `/trajectory`; Studio removed from sidebar navigation (T1.1-T1.3). (2) **FTS search wiring** — TemplatesPage now uses `?q=` query parameter for full-text search via activity-api FTS index; natural-language placeholder "Describe what you need..." guides users; FTS results display `fts: true` badge to distinguish from cache hits; TemplateFilters component accepts searchPlaceholder prop (T2.2). Enables activity discovery by feature description, error messages, or shape names without database schema knowledge.
-- **Header top-bar consolidation (Phase 3: T3.1-T3.2)** (2026-04-27, v0.6.1): Workbench simplification Phase 3 complete. (1) **VesselSelectorPanel compact variant** (T3.1) — new compact rendering for embedding in top-bar Row 2; reduces header space while maintaining vessel routing capability. (2) **Goal controls to top bar** (T3.2) — VesselSelectorPanel (compact), GoalInputBox, GoalSubmissionPanel move to Row 2 of header; always visible without scroll across all viewport widths; GoalCompletionBar and BackwardChainingPanel render inline below Row 2 when goal is active. Sidebar refocused: ExecutionHistoryPanel, ApplicableActivitiesPanel, and activity palette — dedicated browsing surface. Consolidates workflow entry points in persistent header area.
-- **Sidebar tab strip (Phase 3: T3.3)** (2026-04-27, v0.6.1): Replaces fixed w-64 sidebar with compact w-48 tab strip. Two tabs: (1) **History tab** — ExecutionHistoryPanel for inspecting prior executions; (2) **Palette tab** — ApplicableActivitiesPanel, ActivityPalette, and New button for activity authoring. Ctrl+I cycles between tabs (formerly toggled ImpulseStatePanel). Auto-switches to History when executionId or loadedTrace becomes set, keeping execution data visible as it arrives. Reduces sidebar footprint; enables focus on current task context.
-- **Live shape discovery from discovery-vessel + templates (Phase 4: T4.1)** (2026-04-27, v0.6.1): Replaces static KNOWN_SHAPES hardcoding with live data. (1) **useShapes() hook** — fetches shape→resolver map from discovery-vessel registry (VITE_DISCOVERY_ENDPOINT); fetches shape usage counts from template list; enables real-time shape capability visibility without client rebuild. (2) **useShapeExamples() hook** — lazy-loads impulse content for one shape on expand, avoiding bulk data load. (3) **Component guards** — ShapeCard/ShapeDetails guarded for optional category/description fields. -75% bundle reduction (657→166 lines); enables dynamic shape registry as new vessels register capabilities.
-- **ShapesPage live model (Phase 4: T4.2)** (2026-04-27, v0.6.1): Removes static Alert and Add Shape button. (1) **Live ShapeCard** — shows resolver count + vessel name + template usage count for each shape; resolver badges indicate which vessels provide the shape. (2) **Inline detail panel** — opens when shape is selected; displays resolver vessels, template counts, lazy-loaded impulse content examples via useShapeExamples. (3) **Dynamic discovery** — all data flows from discovery-vessel registry and template list queries; shapes appear/disappear as vessels register/deregister. 253-line rewrite (164 ins, 89 del); enables real-time shape inventory without manual curation.
-- **Impulse content inline in OutputLayer (Phase 5: T5.1-T5.6)** (2026-04-27, v0.7.0): Workbench simplification complete — all 16 tasks finished across 5 phases. Phase 5 adds expandable impulse content display in execution traces. (1) **useImpulseContent hook** (T5.1-T5.2) — new hook and store field (`trajectoryStore.impulseContentMap`) for caching impulse bodies fetched or received via WebSocket. (2) **WS broadcaster body for all shapes** (T5.5) — impulse-api's `impulse.resolved` broadcast now includes `body` for all shapes (not just validation_result), with 50KB guard: bodies > 50KB return `{ truncated: true, summary: ... }` instead of full payload. (3) **OutputLayer expansion** (T5.3-T5.4) — new expand/collapse chevrons in OutputLayer rows. When expanded: live mode uses `impulseContentMap` (no fetch), recalled mode calls `useImpulseContent` to fetch from execution trace, compose mode shows nothing. Content > 500 chars truncates with "Show more" toggle. (4) **TaskEditor pass-through** (T5.6) — `TaskEditor` now receives `executionId` and `impulseContentMap` props, enabling inline content display for recalled/live modes. Workbench v0.7.0 ships with Phase 1-5 complete; simplification roadmap concluded.
-- **Omnibar trajectory header** (2026-04-27, v0.7.1): Enhanced trajectory editor header with integrated omnibar control. Unified search and navigation surface for trajectory metadata and controls. Refined UI for improved UX in trajectory authoring workflows.
-- **Sidebar width + palette layout fixes** (post-2026-04-27): Refined responsive sidebar dimensions and activity palette layout for better space utilization. Sidebar width optimized for multi-panel layouts; palette scrolling improved for large activity lists. Reduces horizontal scrolling, improves usability on standard desktop widths.
-- **Live canvas + goal impulse** (post-2026-04-27): New live canvas view for real-time composition authoring with goal impulse tracking. Enables users to author activities while monitoring goal decomposition and shape production in parallel. Goal context flows through canvas for context-aware activity suggestions.
-- **TDZ fix + Playwright live execution** (post-2026-04-27): Fixed Temporal Dead Zone (TDZ) issues in workbench state initialization. Enhanced Playwright integration for live execution monitoring. Improves reliability of real-time execution tracking and state transitions during activity composition.
-- **Goal impulse visible + optimistic trace fetch** (post-2026-04-27): Goal context now visible throughout trajectory editor. Optimistic trace fetching for faster perceived performance. WebSocket auth improvements for secure real-time updates. Enables users to reference goal throughout activity authoring.
+**Surfaces:**
 
-**Distinct from activity-dashboard:** the dashboard is a read-only observability surface; the workbench is authoring + correction + live control (template editing, retries, manual trace curation, composition authoring, trace drill-down). Both talk to the same activity-api.
+- **Templates / executions / goals / shapes browsers** — TemplatesPage uses activity-api full-text search via `?q=` (FTS results badged distinct from cache hits); ShapesPage is fully live (resolver→vessel mapping from discovery-vessel registry, usage counts from templates, impulse-content examples lazy-loaded on expand); no static shape registry.
+- **Composition builder (React Flow)** — drag activities from palette, connect output→input ports with shape-compatibility validation, cycle detection, gap-free deletion (auto-connect predecessor→successor on remove), seed-shape declaration via InitialPoolBar, real-time validation through `POST /v2/activities/validate-composition`, localStorage autosave, export to template.
+- **Trajectory editor** — primary authoring surface. Horizontal CSS-Grid layout with drag-reorder, parallel rows per column, save-as-variant with genealogy, inline task editing (resolver picker first, then prompt + variables, validation rules, retry, Thompson α/β sliders). Backward-chaining for missing shapes; productive-vs-infinite cycle detection. Routes `/compositions` and `/studio` redirect here.
+- **Resolver-first TaskEditor** — every task summary shows resolver id, tier (deterministic / pattern / llm), and predicted confidence; expanded panel exposes per-task resolver picker with autocomplete filtered by available impulses. Output impulse ids + shapes inline in OutputLayer; expandable bodies (live mode reads from `impulseContentMap`, recalled mode fetches via `useImpulseContent`, > 500 chars truncates with "Show more"; bodies > 50 KB return `{ truncated: true, summary }`).
+- **Live execution overlay** — WebSocket subscription with exponential-backoff reconnect and event-catchup. Inline execution status bar replaces sheet overlay; gap indicators flag unbound input shapes; resolver-prediction badge shows tier + confidence pre-execution; per-task impulse-resolved markers colored by tier; cross-scope `↗ext` badges mark impulses produced by other vessels. NestedTrajectoryNode renders child executions on demand via `parent_execution_id` GET.
+- **Multi-trace diff** — render two or more execution traces side-by-side with amber outcome strip per task; useful for variant A/B diagnosis.
+- **Validation surfaces** — `lifecycle:task:preBinding` events populate the live `BindableSlots` card with slot shapes and binding state (`{{lifecycle.taskId}}` and other dotted-path placeholders flow through). `lifecycle:task:completed` + `validation_result` impulse events populate the Task Validation card per task (green + min confidence on pass, red + `failure_mode.type` on fail). ExecutionHistoryPanel renders failure-mode summary with multi-select filter.
+- **Goal completion + stagnation** — GoalCompletionBar runs in compose mode (declarative shape check) when no execution is loaded, and trace mode (actual produced shapes from `impulseContentMap` + per-task impulse ids, with 50-byte stub detection) when one is. Stagnation detector flags same-template repetition (≥ 3) or zero goal-shape progress as an amber warning alongside cycle detection.
+- **Subgoal escalation (L→M bridge)** — `ApplicableActivitiesPanel` exposes "spawn subgoal" when a required input shape has no producer; the click dispatches `create-shape-provider-goal` against the binding-layer hook, recursively producing the missing shape.
+- **Vessel selector** — top-bar compact variant for routing tasks to a specific vessel; sidebar tab strip exposes History (ExecutionHistoryPanel) and Palette (ApplicableActivities + Activity palette + New) tabs, with `Ctrl+I` cycling and auto-switch to History on execution attach. Header Row 2 holds GoalInputBox + GoalSubmissionPanel + vessel selector; GoalCompletionBar and BackwardChainingPanel render inline below.
+- **Trace flame graph + state diff** — `ExecutionFlameGraph` (D3, cost or duration mode, resolver-tier coloring, drill-down, PNG/SVG export); `StateDiffViewer` (split or unified, file-list with change counts, syntax highlighting, cumulative vs incremental).
+- **Provenance & weight influence** — `ShapeProvenanceTree` shows resolver chain and per-activity ↑ useful / ↓ not-useful buttons. Clicks call `POST /v2/activities/impulse-relevance` and write into `humanVerdictOverrides`; verification badges degrade or upgrade accordingly. High-confidence verdicts also feed the `goal_verification_labels` oracle corpus (migration 101) for future calibration.
+
+**Distinct from activity-dashboard:** the dashboard is a read-only observability surface; the workbench is authoring + correction + live control. Both talk to the same activity-api.
+
+**Recent UX/observability work** (2026-04-28 → 2026-04-29, deeper detail in [`openspec/changes/`](openspec/changes/)):
+- Trajectory observability — Thompson Δα/Δβ badges on activity cards in recalled-trace mode, pool-shape-count headers per column, connector-badge legibility, per-task shape-delta indicators, live-mode `discover-by-shapes` ghost preview using current pool, `[hook]` labels on slot-binding / validator-dispatch nested nodes.
+- Left panel — live pool snapshot (vessel + active goal + shape count + active task) above ExecutionHistoryPanel; palette and ImpulsePoolView contrast pass.
+- Right panel — goal-impulse + provenance-tree contrast pass; weight-influence ↑/↓ row on every activity entry; cross-scope badges for impulses sourced from other vessels.
+- Omnibar — placeholder dual-purpose hint (goal or impulse target), executing-activity line in vessel button, action-group spacing.
+- Goal-verification wiring — enrichment-gated `verifyWithEvidence` (mutation goal with zero file edits → reject; missing required capability → low-confidence), trace-reality completion bar, stagnation warning, human verdict → relevance write, oracle-corpus capture.
 
 **Docs:** local `INDEX.md`, `OPENSPEC.md`, `docs/` in-repo (this super-repo tracks only the pointer).
 
@@ -422,29 +411,51 @@ Kubernetes orchestration via Helmfile:
 ## Key Architectural Concepts
 
 ### Activities
-Structured, measured, and validatable recipes for sequences of state mutations (functional state transformations).
+Structured, measured templates that constrain the search space for a goal. Without activities, an agent faces infinite options; an activity declares which input shapes it consumes, which output shapes it produces, and which resolver steps execute the transformation. Learning improves ranking and template generation over time.
 
-**Structure:**
+**Structure** (canonical: [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md)):
 ```typescript
 {
   id: string
   name: string
-  category: "feature" | "bugfix" | "refactor" | "tool" | "infrastructure"
+  description: string
+  tags: string[]                  // hierarchical classification, e.g. "bugfix.auth.tokens"
+
+  // Shape contract — what this activity consumes and produces
+  input_shapes?: string[]         // optional; activities accept any input by default
+  output_shapes: string[]         // required
+
   tasks: Array<{
     id: string
     description: string
-    prompt: { template: string, variables: Variable[] }
-    validation: { requiredFiles, requiredPatterns, forbiddenPatterns }
-    retry: { maxAttempts, strategy }
+    resolver: string              // e.g. "bash", "git", "llm", "validation", or any registered resolver id
+    config?: Record<string, unknown>     // resolver-specific configuration
+    prompt?: { template: string, variables?: Variable[] }   // alternative to config when resolver is "llm"
+    validation?: {
+      requiredFiles?: string[]
+      requiredPatterns?: string[]
+      forbiddenPatterns?: string[]
+      commands?: ValidationCommand[]
+    }
+    retry?: { max_attempts: number, strategy: string }
   }>
+
+  // Learning state (Thompson Sampling)
+  metrics?: {
+    total_executions: number
+    successful_executions: number
+    failed_executions: number
+    success_rate: number
+    thompson_alpha: number
+    thompson_beta: number
+  }
 }
 ```
 
 **Key Points:**
-- Everything is done via activities (all behaviors are activities)
-- Activities are vessels (instructional state) for specific transformations
-- Execution is measured (success rate, cost, duration)
-- Variants created automatically on failure (trailblazing)
+- Tasks dispatch to **resolvers**, not LLM prompts. The LLM is one resolver among many.
+- Output shapes feed downstream activities; the system learns which sequences succeed for which input combinations.
+- Execution is measured (success rate, cost, duration); variants are created on failure (trailblazing) and selected via Thompson Sampling.
 
 ### Impulses
 Universal data access mechanism - lazy-loaded pointers with metadata and resource budgets.
@@ -664,13 +675,20 @@ execution {
   parent_execution_id: string    // Direct parent in the composition tree (nested invocations)
   composition_chain: string[]    // Denormalized ancestor chain, ordered root-first
 
-  // NEW: Failure mode taxonomy (migration 091, 2026-04-26)
-  // See OpenSpec 2026-04-26-validators-and-failure-modes
+  // Failure mode taxonomy (migration 091)
+  // Canonical schema: FailureModeSchema in activity-api/src/models/schemas.ts;
+  // spec: openspec/changes/2026-04-26-validators-and-failure-modes/specs/failure-mode-taxonomy/spec.md
   failure_mode: {
     type: "verifier_negative" | "budget_exhausted" | "safety_breach" | "cascading" | "user_abort"
     reason: string
-    // Variant-specific fields depending on type (see FailureModeSchema in activity-api/src/models/schemas.ts)
-  } | null  // Null for legacy traces; set on failures to stratify failure types
+    // Discriminated `context` payload — shape depends on `type`:
+    context:
+      | { validator_id: string, failed_evidence: Evidence[] }                                  // verifier_negative
+      | { budget_type: "cost" | "duration", consumed: number, allowed: number }                // budget_exhausted
+      | { breach_type: "depth" | "cycle", limit: number, ancestor_chain: string[] }            // safety_breach
+      | { upstream_task_id: string, upstream_failure_mode?: FailureMode }                      // cascading
+      | { abort_source: "human_resolver" | "ctrl_c" | "workbench_button" }                     // user_abort
+  } | null  // null for legacy traces; populated at failure detection point
 }
 ```
 
@@ -753,64 +771,9 @@ Three properties this enforces:
 
 If `pull --ff-only` fails, audit the divergence (`git log dev..origin/dev` and `git log origin/dev..dev`) and decide between rebase, cherry-pick, or reset — don't merge by default.
 
-### Local Testing (Tests Only, Not Full Deployment)
-
-```bash
-# MiniBob
-cd repos/minibob
-bun test               # Run tests
-bun run typecheck      # Type checking
-
-# metabob-activity-api
-cd repos/metabob-activity-api
-bun test               # Run tests
-bun run typecheck      # Type checking
-
-# Activity Dashboard
-cd repos/activity-dashboard
-bun test               # Run tests
-```
-
-### CI/CD Pipeline (Canary First)
-
-> **Canonical Documentation**: See [`repos/deployment/DEPLOYMENT_WORKFLOW.md`](repos/deployment/DEPLOYMENT_WORKFLOW.md)
-
-**The Flow:**
-```
-Write Code → bun test → Push to dev → Canary (auto) → Validate → Production
-   (local)    (local)    (triggers)    (activity.metabob.com)   (promote)
-```
-
-**CI/CD Commands:**
-```bash
-# Push triggers canary deployment automatically
-git push origin dev
-
-# Monitor deployment
-gh run list --repo MetabobProject/deployment --limit 5
-gh run view <run-id> --log
-
 # Production promotion (after canary validation)
 ./scripts/promote-canary-to-production.sh
 ```
-
-### Local Kubernetes (Advanced - Usually Not Needed)
-
-> **Note**: Prefer using the canary deployment at `activity.metabob.com` instead of local Kubernetes. Only set up local clusters for infrastructure changes or offline development.
-
-**Prerequisites (if you really need local):**
-1. Docker Desktop with Kubernetes enabled (context: `docker-desktop`)
-2. Istio installed: `istioctl install --set profile=demo -y`
-3. Configure `/etc/hosts`:
-   ```
-   127.0.0.1  api.metabob.local app.metabob.local activity.metabob.local
-   127.0.0.1  graph.metabob.local internal.metabob.local surql.metabob.local minibob.metabob.local
-   ```
-4. Set environment variables:
-   ```bash
-   export ANTHROPIC_API_KEY="sk-ant-your-key-here"
-   export SURREALDB_PASSWORD="surrealdb-local-dev-123"
-   ```
 
 **Deployment Repository Structure:**
 
@@ -827,7 +790,7 @@ repos/deployment/
 │   ├── build_changed.sh            # Build script (--dev or --canary)
 │   ├── promote-canary-to-production.sh  # Manual promotion with health checks
 │   └── health-check.sh             # Environment health validation
-├── vessels/                         # Vessel source code (synced from main workspace)
+├── vessels/                         # Vessel source code (synced submodules, used to tag releases to deployment manifests)
 ├── helmfile.yaml                    # Main helmfile with environments
 └── DEPLOYMENT_WORKFLOW.md          # Complete deployment documentation
 ```
@@ -902,199 +865,78 @@ See `repos/metabob-activity-api/docs/API_PHASE1_ENDPOINTS.md` for comprehensive 
 - Database: `learning_loop`
 - Auth: Username and password from environment variables
 
-### Development Network Mapping (Local K8s Only)
-
-> **Note**: This section is for local Kubernetes development only. For normal development, use `https://activity.metabob.com`.
-
-All services use the `.metabob.local` TLD for local development. Traffic routes through Istio ingress gateway on port 80.
-
-**Service Hostname Matrix:**
-
-| Hostname | Service | Port | Purpose | Notes |
-|----------|---------|------|---------|-------|
-| `app.metabob.local` | metabob-cloud-dashboard | 3000 | SaaS frontend | WebSocket at `/ws` |
-| `activity.metabob.local` | metabob-activity-api | 8080 | Learning backend | Thompson Sampling, traces |
-| `api.metabob.local` | metabob-analysis-api | 8080 | Code analysis | Problem detection |
-| `graph.metabob.local` | activity-dashboard | 3000 | Observability UI | Dev only |
-| `internal.metabob.local` | metabob-internal-dashboard | 3001 | Internal UI | WebSocket at `/ws` |
-| `surql.metabob.local` | surrealdb | 8000 | Database | Headers auto-injected |
-| `minibob.metabob.local` | minibob | 8080 | Autonomous vessel | 3 replicas |
-
-**SurrealDB Access Notes:**
-
-Istio automatically injects headers for `surql.metabob.local`:
-```yaml
-headers:
-  request:
-    set:
-      surreal-ns: activity-system
-      surreal-db: learning_loop
-      Accept: application/json
-```
-
-This means API calls work without specifying namespace/database:
-```bash
-# Works - headers injected by Istio
-curl -X POST http://surql.metabob.local/sql \
-  -u 'root:surrealdb-local-dev-123' \
-  -d 'SELECT * FROM activity LIMIT 5'
-
-# Root path redirects to Surrealist (intentional SurrealDB behavior)
-# Use https://surrealdb.com/surrealist for browser-based DB access
-```
-
-**`.local` TLD Considerations:**
-
-The `.local` TLD is reserved for mDNS (Multicast DNS). On some systems:
-- mDNS may intercept `.local` queries before checking `/etc/hosts`
-- Linux with `systemd-resolved`: Check `resolvectl status` for mDNS settings
-- macOS: May have conflicts with Bonjour
-
-If resolution fails, verify with:
-```bash
-getent hosts surql.metabob.local  # Should return 127.0.0.1
-resolvectl query surql.metabob.local  # Check resolver path
-```
 
 ## Authentication
 
-### API Key Authentication (Current)
+**identity-vessel is the single source of truth for authentication.** Every other vessel — minibob, activity-api, discovery-vessel, workbench, cloud-dashboard, and any new vessel — validates credentials by asking identity-vessel. There is no fallback to direct SurrealDB validation, no per-vessel ACCESS method, no instance-signin endpoint. Earlier patterns (`minibob_record` ACCESS, `POST /v2/auth/minibob/signin`, direct API-key checks against the `api_key` table) are removed.
 
-All MiniBob instances and clients authenticate using standard API keys managed by the identity service.
+### Two credential types, one validator
 
-**Authentication Flow:**
+| Credential | Form | Issued by | Used by |
+|---|---|---|---|
+| **HMAC API key** | `Authorization: ApiKey <key>` where `<key>` is `mb_<env>-<org>-<user>-<keyid>-<HMAC-SHA256>` | identity-vessel `/v1/keys/issue` (admin) | service-to-service: minibob, vessel-side resolvers |
+| **HMAC-signed JWT** | `Authorization: Bearer <jwt>` (HS256/HS512, signed with `JWT_SECRET`) | identity-vessel `/v1/auth/login`, `/v1/jwt/generate` | browser sessions: workbench, cloud-dashboard |
+
+### Validation paths
+
+Idiomatic vessels (Hono / Bun stack) validate by **calling identity-vessel's resolver** through the discovery contract:
+
 ```
-1. Client sends: Authorization: ApiKey <key>
-2. Activity-API validates via identity service (primary)
-3. If identity service unavailable, fallback to direct SurrealDB validation
-4. Identity service returns: org_id, user_id, key_id, scopes
-5. Activity-API uses key_id for audit trails
-```
-
-**Request Example:**
-```bash
-curl -X GET https://activity.metabob.com/v2/activities/templates \
-  -H "Authorization: ApiKey <your-api-key>"
-```
-
-**Response:**
-```json
-{
-  "templates": [...]
-}
+POST {identity_resolve_endpoint}/v1/auth/resolve
+{ "impulse": { "type": "authentication", "pointer": { "type": "apiKey" | "session", ... } } }
 ```
 
-**Key Points:**
-- **No instance_id required** - API key is sufficient
-- **Identity service manages keys** - Centralized key lifecycle
-- **Automatic fallback** - Direct SurrealDB validation when identity service unavailable
-- **Audit trails use key_id** - All operations tracked by API key ID
+The resolver returns `{ authenticated, orgId, userId, keyId, scopes, projectIds, accountId }`. Activity-API's `validateApiKeyWithFallback` is the reference implementation; on identity-vessel transport failure it fails the request rather than substituting a weaker validator.
 
-### Deprecated: MiniBob Instance Authentication
+Non-idiomatic stacks (browser app like cloud-dashboard, workbench during login flow) hit identity-vessel's HTTP service directly:
+- `POST /v1/auth/login` → JWT (15 min lifetime, role + org claims)
+- `POST /v1/keys/validate` → API-key validation (used by discovery-vessel today)
+- `GET /v1/auth/me` → user record from a Bearer token
 
-**Prior to 2026-04-08**, MiniBob instances authenticated using:
-- `instance_id` + `api_key` via `POST /v2/auth/minibob/signin`
-- `minibob_record` SurrealDB ACCESS method
-- `minibob_instance` table
+### Multi-tenant isolation via SurrealDB PERMISSIONS
 
-**Migration 052** deprecated this approach:
-- Removed `minibob_record` ACCESS method
-- Made `minibob_instance` table read-only
-- All new authentication uses API keys only
+Org scoping is enforced at the database, not the application. Every multi-tenant table carries `org_id` and uses a PERMISSIONS clause:
 
-**Rollback:** If needed, uncomment the ACCESS method in `sql/000-auth-schema.surql`
+```sql
+PERMISSIONS FOR select, update, delete WHERE org_id = $token.org_id
+```
 
-### Multi-Tenant Isolation
+Use `$token.org_id` everywhere — it is populated for both API-key resolution (via the JWT identity-vessel mints during `/v1/auth/resolve`) and direct dashboard JWTs. `$auth.org_id` works only for dashboard sessions and should be avoided.
 
-Authentication automatically enforces multi-tenant isolation via SurrealDB PERMISSIONS:
+**Project-scoped tables** (e.g. `activity_execution_traces`, `goal_execution_paths`) handle three cases — record has no project restriction, user has explicit project list, user has empty/null project list (admin / cross-project view):
 
-**Core Pattern:**
-- All multi-tenant tables enforce org scoping at the database level
-- No application-level filtering needed — isolation is automatic
-- Migrations 079, 080, 083 (2026-04) fixed org-scoping to use `$token.org_id` for API-key auth (where `$auth` is unavailable)
-- Migrations 084, 085 (2026-04-24) fixed project-scoped access for dashboard users with empty `project_ids` claims (allow-all-traces pattern)
+```sql
+WHERE org_id = $token.org_id
+  AND (
+    project_id IS NONE
+    OR project_id IN $token.project_ids
+    OR $token.project_ids IS NONE
+    OR array::len($token.project_ids) = 0
+  )
+```
 
-**Usage Pattern:**
+### Application-side usage
+
 ```typescript
-// Use authenticated connection - PERMISSIONS enforced automatically
-const db = await createAuthenticatedClient(jwtToken);
+// PERMISSIONS enforced automatically — no application-level org filter
+const db = await createAuthenticatedClient(token);   // token = JWT minted by identity-vessel
 const templates = await db.query(`SELECT * FROM activity_template`);
-// Returns only templates for authenticated caller's org
 ```
 
-**Important:** For PERMISSIONS clauses, use `$token.org_id` (works for both dashboard and API-key auth) rather than `$auth.org_id` (only works for dashboard). See [`docs/RBAC_GUIDE.md`](docs/RBAC_GUIDE.md) §`$auth` vs `$token` for details.
+See [`docs/RBAC_GUIDE.md`](docs/RBAC_GUIDE.md) for the `$auth` vs `$token` rules and [`docs/AUTH_JWT_CLAIMS.md`](docs/AUTH_JWT_CLAIMS.md) for the claim shape.
 
-**Project-Scoped Access Pattern (Migrations 084, 085):**
-Tables using project-scoping must handle three cases: user has specific projects, user has no restriction (empty/null `project_ids`), or record has no project restriction. Pattern:
-```
-WHERE org_id = $auth.org_id
-AND (
-  project_id IS NONE                    // Record has no project restriction
-  OR project_id IN $auth.project_ids   // User has access to this project
-  OR $auth.project_ids IS NONE         // User has no project restriction
-  OR array::len($auth.project_ids) = 0 // Same as above (defensive)
-)
-```
-Applies to: `activity_execution_traces` (084), `goal_execution_paths` (085), and other multi-project tables.
+## Security Hardening (forward-looking)
 
-**Authentication Methods:**
-| Method | Use Case | Token Lifetime | Scopes |
-|--------|----------|----------------|--------|
-| **API Key** | MiniBob, IDE integrations | Auto-refresh | read, write |
-| **JWT External** | Dashboard users | 15 minutes | Varies by role |
+These are hardening properties not yet implemented; the schema reserves space and degraded behaviour ships graceful fallbacks. Source: [`openspec/changes/2026-04-26-security-hardening-findings/design.md`](openspec/changes/2026-04-26-security-hardening-findings/design.md).
 
-## Security Hardening Roadmap (Deferred)
+- **Two-sided execution traces (H1)**: cross-vessel traces must carry counterparty signatures proving both producer and consumer agreed on the trace contents. Until shipped, Thompson posterior writes (`impulseRelevance_write`, `toolArgumentPattern_write`, validator α/β deltas) stay advisory-only and unverified traces do not pollute the binding-layer distribution.
+- **Vessel identity via pubkey multihash (H2)**: `vessel_id` is derived from a vessel-held public key via multihash, with a self-signed registration challenge proving keypair possession. Discovery-vessel reserves `pubkey_hash` on the registration payload.
+- **EIP-712-style signed scope attestations (H3)**: scopes are issued as signed attestations (org → user, user → vessel) rather than DB-stored strings, so revocation and delegation are auditable.
+- **Tailnet-Lock-equivalent vessel ratification (H4)**: vessel registration requires a quorum of authority signatures before the registry treats it as trusted. Depends on H2.
+- **Immutable-baseline selector with auto-regression (H5)**: selector logic ships with a signed baseline; deviations trigger automatic regression mode.
+- **Sub-goal scope narrowing (CC1)**: `create-shape-provider-goal` child tasks must declare `outputShapes ⊆ parent.endpoint_output_shapes`. Out-of-scope shapes convert to a `human_in_the_loop_required` flag rather than executing. Source: [`openspec/changes/2026-04-26-shape-provider-goal-creation/design.md`](openspec/changes/2026-04-26-shape-provider-goal-creation/design.md).
 
-> **Status**: Out-of-scope for current implementation. Tracked in [`openspec/changes/2026-04-26-security-hardening-findings/`](openspec/changes/2026-04-26-security-hardening-findings/) with dependencies documented in related specs.
-
-The following security hardening requirements have been identified across multiple subsystems. They are documented for future implementation; current code ships without these hardening measures in place.
-
-### H1: Two-Sided Trace Verification
-
-**Affected components**: Impulse-binding-selection-layer, validators-and-failure-modes, shared-impulse-state-space
-
-**Requirement**: Cross-vessel execution traces MUST carry counterparty-signature fields proving bidirectional agreement between trace producer and consumer. Until implemented:
-- **Thompson posteriors** (`impulseRelevance_write`, `toolArgumentPattern_write`, and β/α deltas from validation results) should be gated by feature flag or kept advisory-only
-- Unverified traces should not pollute the selection layer's posterior distribution
-- WebSocket consumers should record trace signature presence (`verified_cross_sign` field) to enable post-hardening analysis
-
-**Dependency cascade**: Blocks safe learning from validators; should be prioritized before high-confidence Thompson Sampling of binding resolvers.
-
-### H2: Vessel Identity via Multihash
-
-**Affected components**: Vessel-integration-standardization, discovery-vessel registration
-
-**Requirement**: Vessel `vessel_id` MUST be derived from a vessel-held public key via multihash, with a self-signed registration challenge proving keypair possession. Schema must reserve `pubkey_hash` field on registration payload before this standardization is canonical.
-
-**Dependency cascade**: Prerequisite for H4 (authority ratification).
-
-### H4: Tailnet-Lock Authority & AUM Attestation
-
-**Affected components**: Shape-provider-goal-creation, self-development-loop, vessel-integration-standardization, impulse-binding-selection-layer (indirectly)
-
-**Requirement**: High-risk shape producers and cross-org template reuse require AUM (Authority Update Manager) attestation:
-- **Auto-dispatch gates**: Before auto-dispatching goals that produce high-risk shapes, verify the target vessel is AUM-attested
-- **Registration ratification**: High-risk shapes require k-of-n quorum authority from the AUM
-- **Disablement secrets**: ≥2 disablement secrets required per registered high-risk producer
-- Schema must reserve `aum_entry_id` and `disablement_secret_count` fields; `POST /register` flow must support AUM-attestation precondition
-
-**Affects policies**: Auto-dispatch vs. human-in-loop decisions for sub-goal creation, template reuse across org boundaries.
-
-### CC1: Scope Narrowing for Sub-Goals
-
-**Affected components**: Shape-provider-goal-creation
-
-**Requirement**: Child task `outputShapes` MUST be a subset of the parent's `endpoint_output_shapes`. When emitting a `create-shape-provider-goal` goal-shaped impulse, enforce that `target_shape` is within the parent's declared output scope. Treat out-of-scope shapes similarly to existing recursion-safety guards (convert to `human_in_the_loop_required` flag rather than hard-fail).
-
-**Impact**: Prevents sub-goal chains from producing shapes outside their original scope, reducing scope creep in recursive shape production.
-
-### Current Guidance
-
-Until H1, H2, H4, and CC1 are implemented:
-- **Learning**: Thompson Sampling operates on unverified traces; system converges more slowly but still makes progress
-- **Security posture**: Vessels cannot assert their identity cryptographically; AUM cannot validate cross-org reuse; auto-dispatch is limited to low-risk shapes
-- **Graceful degradation**: All features ship and function; verifiable traces and AUM attestation are rendered advisory-only when absent
-- **Future-proofing**: Schema fields and conditional logic are reserved; implementations can enable hardening incrementally as dependencies land
+**Until these land:** Thompson Sampling converges more slowly on unverified data, vessels cannot prove identity cryptographically, AUM (Authority Use Mediator) attestations are advisory, and recursive sub-goal scope is enforced by client-side checks rather than authoritative ratification.
 
 ## Configuration
 
@@ -1226,8 +1068,6 @@ Keep commits reasonably sized and focused:
 <type>(<scope>): <subject>
 
 <body - explain why, not what>
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 ```
 
 Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
@@ -1405,34 +1245,6 @@ Before implementing any feature, verify alignment with the foundation:
 - Activities that don't record traces
 - Resolvers that don't live where data lives
 
-## Development Focus
-
-**Current objective:** Develop MiniBob with MiniBob, achieving continuous autonomous development visible in the dashboard.
-
-### Use MiniBob for Everything
-
-```bash
-# Feature development
-minibob --single "add Thompson Sampling decay to old templates"
-
-# Bug fixes
-minibob --single "fix the schema mismatch error in execution traces"
-
-# Refactoring
-minibob --single "extract the impulse resolution logic into a separate module"
-
-# Documentation
-minibob --single "update the API documentation for the new endpoints"
-```
-
-### Track Progress via Dashboard
-
-- **Canary Dashboard**: https://internal.metabob.com (when deployed)
-- **Activity API Health**: https://activity.metabob.com/health
-- **Execution Traces**: Stored automatically by MiniBob
-
-### Two Parallel Tracks
-
 1. **Vessels**: Building and improving execution environments (MiniBob variants)
 2. **Activities**: Creating and optimizing templates for development work
 
@@ -1456,19 +1268,11 @@ The 2,500+ existing activity templates accumulated organically and need systemat
 
 **Trace summarization primitives:** (1) `executionTraceWithSignatures` — already exists; pulls per-impulse pointer/shape signatures without full content. (2) `traceDigest` — new shape; structured summary: `{activity_id, status, duration_ms, tasks: [{id, status, duration_ms, resolver_tier}], failure_mode, output_shapes}` (3) `traceCluster` — new shape; groups traces by `(activity_id, failure_mode_type, output_shapes_intersection)` for representative sampling.
 
-**Dependencies:** make-activity resolver (verified 2026-04-27), lifecycle events + validators (2026-04-26), Thompson Sampling (production-ready), iteration resolver (F-4, 2026-04-27).
+**Dependencies:** make-activity resolver, lifecycle events + validators, Thompson Sampling (production-ready), iteration resolver.
 
 See [`openspec/changes/2026-04-27-activity-registry-quality-pass/proposal.md`](openspec/changes/2026-04-27-activity-registry-quality-pass/proposal.md) for detailed specification and success criteria.
 
 ## Important Implementation Notes
-
-### MiniBob is the Single Source of Truth
-OpenCode and other tools delegate everything to MiniBob library:
-- Activity execution
-- Impulse lifecycle
-- Goal processing
-- MCP integration
-- Session tracking
 
 ### Backend is Flexible
 metabob-activity-api can introduce new impulse types without MiniBob code changes. This allows the learning system to evolve independently.
