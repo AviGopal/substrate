@@ -190,15 +190,75 @@ Execute representative goals on `activity.metabob.com`. For each, document:
 
 The α/β/sample_count posterior data already exists in activity-api but is REST-only. Phase 9 advertises and resolves a `thompson_posterior` shape so the implicit Thompson vessel becomes addressable through the standard impulse → resolver dispatch. The existing REST handler (`variantMetricsSummary`, `GET /v2/activities/:id/variant-scores`) becomes a thin wrapper over the shape resolver. Workbench reads posterior data via shape resolution where currently using REST. Documents the new shape under `docs/impulse-types/thompson_posterior.md`. See `tasks.md` §9 for the full subtask breakdown.
 
+### Phase 10 — SurrealDB 3.x RL Layer
+
+Move the Thompson Sampling loop, composition graph traversal, and activity search from O(N) application-layer aggregation into SurrealDB 3.0 native primitives. Six sub-phases, each independently deployable. Defined fully in `openspec/changes/2026-04-29-surrealdb-rl-layer/`. Cross-reference: the `thompson_posterior` shape from Phase 9 is the consumer-facing surface of the Thompson implicit vessel; Phase 10 builds the internal RL primitives it depends on.
+
+**P1 — Atomic α/β updates.** Replace 4 fetch-modify-write sites (execution-traces.ts:1938, activities.ts:3599, activities.ts:3639, goal-paths.ts:402) with `SET alpha += $da, beta += $db`. SurrealDB 3.0 SSI eliminates lost updates under concurrent execution. ~12-15 lines of change.
+
+**P2 — COMPUTED `ev` field.** Define `ev = alpha / (alpha + beta)` as a COMPUTED field on all 8 tables carrying α/β posteriors. Read-time derivation; no stale cache; `ORDER BY ev DESC` in SQL replaces JS aggregation loop.
+
+**P3 — `fn::beta_sample` stored function.** Implement Johnk/Cheng Beta sampling in SurrealDB embedded JS. Move the Thompson sampling call at `activities.ts:4416` to invoke the DB function via `ORDER BY fn::beta_sample(alpha, beta) DESC`. App-side fallback to `@stdlib/random-base-beta` with `sample_source: "app_fallback"` logging.
+
+**P4 — RELATE composition graph.** Migrate `activity_composition_graph` to `RELATE activity_template:A->composes->activity_template:B` edges carrying α/β, `input_shapes`, `output_shapes` directly. `discover-by-shapes` becomes a single shape-filtered graph traversal: 21 queries per call → 1-2. RELATE edge `account_id` = executor's issuing account (see federation section). `UNIQUE(in, out, account_id)` index supports independent per-account posteriors for the same template pair. 7-day dual-write gate before switching reads.
+
+**P4.5 — Shape gap index.** Define `shape_gap_resolution` table in activity-api. Expose `GET /v2/activities/shape-gap-resolution` endpoint for MiniBob to query before triggering `create-shape-provider-goal`. activity-api updates `times_used` and inserts new rows when goal-seeking resolves a gap. `resolution_type` values: `local | federated | goal_created | scope_upgrade_needed`.
+
+**P5A — BM25 bound-param fix.** Apply inline-literal sanitisation to `paradigm.ts:998` (same fix applied to concept-db in 2026-04-29; same `@N@@ $query` parse error). Unblocks Tier 3 search correctness.
+
+**P5B — HNSW indexes + hybrid RRF.** Add HNSW index on 384-dim `name_embedding` and `description_embedding` fields. Switch `paradigm.ts:1103-1180` from O(n) cosine scan to `<|k,ef|>` KNN operator. Gate behind `DENSE_EMBEDDING_HNSW_ENABLED` env var. Hybrid BM25+HNSW via `search::rrf()` already wired in Tier 3 (`activities.ts:3918`); this makes the dense half fast.
+
+### Phase 11 — State-Space-Aware Recommendations + ExecutionScope
+
+Extend `POST /v2/activities/recommend` to rank templates by compatibility with the executor's current impulse state and to return pointer recommendations and blocking shapes. Defined fully in `openspec/changes/2026-04-29-state-space-aware-recommendations/`. Depends on Phase 9 (`thompson_posterior` shape) and Phase 10 P4 (RELATE traversal for pointer_state_space construction).
+
+**Prerequisites (Phase 11.0):**
+- **Identity-vessel** must return `scopes: string[]` in `POST /v1/keys/validate` response (scope strings embedded at key issuance, including cross-account federation grants). Format: `account_<id>:<resource>:<role>` or `account_<id>:*`.
+- **activity-api auth middleware** (`src/middleware/jwtAuth.ts`) must parse `scopes[]` into `ExecutionScope` context object and attach via `c.set('executionScope', ...)`. Helper `getExecutionScopeFromContext(c)` alongside existing `getJwtAuthFromContext(c)`. No second identity-vessel roundtrip for downstream handlers.
+
+```typescript
+interface ExecutionScope {
+  primary_account_id: string
+  accessible_account_ids: string[]   // all account_ids present in scope claims
+  scopes: string[]                   // full raw scope array
+  grants: Map<string, string[]>      // account_id → granted scope strings
+}
+```
+
+**Recommend endpoint changes (Phase 11.1):**
+- `impulse_state_space` added to request body (caller-supplied; MiniBob sends `ImpulseStore.getLoadedImpulseSummaries()`)
+- `pointer_state_space` derived server-side from `ExecutionScope.accessible_account_ids` via discovery-vessel query — NOT accepted from request body
+- Template ranking: compatibility discount applied (fully covered = 1.0×, partial coverage = 0.7×, escalatable = 0.5×, budget/capability_blocked = 0.3×)
+- Response extended with `pointer_recommendations` (top-5 shapes to load next, ranked by expected_utility) and `blocking_shapes` (gap_type: `resolvable | escalatable | scope_upgradeable | budget_blocked | capability_blocked`)
+- `blocking_shapes` is informational only — executor proceeds with escalation chain
+
+## Phase 8 Blocker Analysis (2026-04-28)
+
+Phase 8 Iteration 1 attempted to run a simple goal ("list files in /tmp") against canary to gather end-to-end evidence. The execution revealed **5 critical blockers** preventing goal dispatch:
+
+| # | Blocker | Root Cause | Severity | Status |
+|---|---------|-----------|----------|--------|
+| 1 | Bootstrap impulse null-guard | Missing `pointer` field in goal-impulse initialization | BLOCKER | Blocker task I2.1 queued |
+| 2 | Template category enum mismatch | Embedded templates use "system", "security" not in valid enum | DEGRADATION | Blocker task I2.5 queued |
+| 3 | Backend HTTP 500 length limit | Unknown (SurrealDB limit, Hono config, or trace bloat) | BLOCKER | Blocker task I2.4 queued |
+| 4 | Validator-dispatch conditional syntax | Type mismatch (string vs boolean in `{{lifecycle.*}}` comparisons) | BLOCKER | Blocker task I2.2 queued |
+| 5 | Missing "lifecycle" impulse type | F-42 incomplete; lifecycle not in ImpulsePointer union | BLOCKER | Blocker task I2.3 queued |
+
+**Phase 8 Status:** Iteration 1 cannot proceed until all 5 blockers are resolved. Blockers 1, 3, 4, 5 prevent goal execution; blocker 2 degrades template loading.
+
+**Recommended fix sequence:** I2.1 (15m) → I2.2 (30m) → I2.3 (1h) → I2.4 (1-2h investigation) → I2.5 (15m). Total: 3-4 hours.
+
+---
+
 ## Success-criteria validation
 
 For each of the five success criteria in `proposal.md`, document the canary evidence here as it is gathered. This section grows iteratively.
 
-- **Goals regularly succeed**: TBD
-- **Failed goals append a new activity**: TBD
-- **MiniBob operates off vessel resolvers only**: TBD
-- **System creates improved activities via the executor**: TBD
-- **Activities compose using all features**: TBD
+- **Goals regularly succeed**: BLOCKED on Phase 8 blockers (Iteration 1 failed at bootstrap)
+- **Failed goals append a new activity**: TBD (Phase 8 Iteration 2+)
+- **MiniBob operates off vessel resolvers only**: TBD (Phase 8 Iteration 2+)
+- **System creates improved activities via the executor**: TBD (Phase 8 Iteration 2+)
+- **Activities compose using all features**: TBD (Phase 8 Iteration 2+)
 
 ### Canary smoke evidence (iteration 10)
 
@@ -244,10 +304,91 @@ Two background subagents dispatched in iter 14, integrated in iter 15.
 
 **Status now:** Phase 1, 2, 3, 4, 6, 7 all closed and pushed to canary. Phase 5 (decommission inline executor logic) remains gated on canary firing evidence — no goal-execution traces from v0.13.0 minibob have appeared on canary yet. Phase 8 partial (backend endpoints verified live; meta-activity firing not yet observed).
 
+## Federation Security Model and Phase Gating
+
+### § Federation as Scope Delegation
+
+Federation is not data sharing — it is scope delegation embedded in keys at issuance time. A vessel authenticates with an API key that already encodes the full set of scopes it can access. A federation link is a one-time grant: Account X grants Account Y's identity-vessel the right to issue keys that carry Account X's scopes (up to the role Account X specifies). When Account Y's vessel presents such a key to Account X's services, the RBAC check is purely `key.scopes CONTAINS required_scope` — no runtime cross-boundary identity proxy.
+
+**Composition graph = executor's key-scoped subgraph.** The visible graph is not "Account Y's graph" — it is the subgraph reachable via the executor's current key scopes. A key spanning Account X and Account Y scopes sees a unified graph containing templates from both. Account boundaries do not correspond to topology boundaries; scope grants do.
+
+**Slot-binding cannot theoretically fail.** When a shape is not reachable within current key scopes, the escalation chain always has a next step: (1) local templates, (2) federated templates in current key scopes, (3) scope-upgradeable (template exists but needs federation link upgrade — human-actionable), (4) goal-seeking via `create-shape-provider-goal`, (5) capability_blocked (the only truly terminal case). Practical failure is resource-constrained (budget, depth limit) not topology-constrained.
+
+**Shape gap index.** The `shape_gap_resolution` table (activity-api, queried by MiniBob) records how each `(shape, account_id)` gap was previously resolved. On second occurrence, the executor reuses the prior resolution rather than re-running full goal-seeking. `resolution_type` values: `local`, `federated`, `goal_created`, `scope_upgrade_needed`.
+
+**RELATE edge attribution.** The `account_id` on a `composes` edge is the executor's issuing account — not either template's owning account. Thompson posteriors are attributed to the executor's account. FC-3 (`share_learning = true` on the federation link) is the mechanism by which one account's posteriors seed another's; it is entirely orthogonal to execution scope grants.
+
+---
+
+**New in 2026-04-28:** Federation introduces three attack families that require targeted hardening before cross-account composition is enabled. All analysis is captured in a new spec: `specs/federation-security-hardening/spec.md`.
+
+### Attack Families
+
+1. **Posterior Poisoning via Federated Traces** — Account A observes Account B's Thompson posteriors to infer B's failure patterns, resolver strategies, and shape validation weaknesses
+2. **Scope Widening via Composition Chains** — Account A uses Account B's templates to construct goal decomposition chains that expand scope beyond the parent, bypassing CC1 scope-narrowing if B's templates are weaker links
+3. **Authority-Key Privilege Escalation** — Account A (metabob_system member) uses authority-keys on Account B's resources, or extracts keys from leaked impulses and forges signatures
+
+### Federation Constraints (FC-1 through FC-5)
+
+Five constraints mitigate the attack surface:
+
+- **FC-1: Federation is Account-Scoped** — roles granted to accounts, not users
+- **FC-2: Federation Links Are Immutable** — links persist until explicitly revoked
+- **FC-3: Federation Learning Is Opt-In** — federated traces do NOT feed learning loop by default
+- **FC-4: Authority Keys Are Non-Delegable** — keys bound to issuing account
+- **FC-5: High-Risk Shape Dispatch Requires Approval** — risky templates require explicit sign-off
+
+### Phase 1: Read-Only Federation (Safe, No Hardening Required)
+
+**What's enabled:** Template discovery, trace visibility (filtered), role-based access, execution of federated templates
+
+**What's NOT enabled:** Cross-account composition, shared learning, cross-account mutations, authority delegation
+
+**Threat assessment:** All three attack families have LOW risk under Phase 1 constraints because:
+- Thompson Sampling is account-scoped (posterior poisoning prevented by architectural boundary)
+- No cross-account composition (scope widening impossible)
+- Authority-keys not delegated (privilege escalation prevented)
+
+**Go/No-Go:** Phase 1 is SAFE. Proceed with implementation.
+
+### Phase 1.5: Hardening Preparation (Parallel Development)
+
+While Phase 1 ships, implement two critical hardenings in parallel:
+
+- **H1 (Two-Sided Traces)**: Executor and invoked-vessel both sign their execution view. Pairing job detects discrepancies; unverified traces excluded from learning loop. **Effort: 2 weeks.** Must be deployed before Phase 2.
+- **CC1 (Scope-Narrowing Enforcement)**: Hard enforcement at composition dispatch: child output shapes ⊆ parent endpoint shapes. SurrealDB ASSERTION prevents out-of-scope inserts. **Effort: 1-2 weeks.** Must be deployed before Phase 2.
+
+### Phase 2: Cross-Account Composition (Gated on H1 + CC1)
+
+**What Phase 2 enables:** Cross-account composition, child goals in federated templates, shared learning (opt-in)
+
+**What Phase 2 requires:**
+
+1. **Ph2-1: Hard Scope Narrowing (CC1)** — Verify child scope ⊆ parent scope at dispatch time. SurrealDB ASSERTION at trace insert.
+2. **Ph2-2: Two-Sided Traces (H1)** — Both parties sign; pairing job verifies. Only verified traces feed learning loop.
+3. **Ph2-3: Authority-Key Account Scoping** — Keys include `{id, account_id}`. Validator checks: `key.account_id === target_resource.account_id`.
+4. **Ph2-4: Trace Visibility Access Control** — Federated accounts see only public fields (omit resolver IDs, latencies, tool calls).
+
+**Recommended scenario for Phase 2:** **Scenario C (Asymmetric Learning)** — Account A learns from B's outcomes, B does not learn from A. Prevents posterior poisoning while enabling collaborative composition.
+
+**Threat assessment under Ph2 requirements:** All three attack families mitigated by the five constraints + four phase requirements.
+
+**Timeline:** 4-6 weeks after H1 + CC1 validated on canary.
+
+### Integration with Existing Hardenings
+
+- **H1 (Two-Sided Traces)** — Federation-specific: pairing job must account for federated context (`executor.account_id`, `invoked.account_id`, `outcome_match` tuple)
+- **H2 (Vessel Identity via Multihash)** — Federation-specific: discovery-vessel scopes vessel capabilities by `account_id`
+- **H4 (Authority-Key Attestation & AUM)** — Federation-specific: AUM validation checks `issuer.account_id === resource.account_id`
+- **CC1 (Scope Narrowing)** — Federation-specific: enforced at cross-account composition dispatch (this spec's Ph2-1)
+
+---
+
 ## Out of scope
 
 - Canonical-composition synthesis (LLM-skill template pattern, tools-as-impulses convention, lifecycle-bootstrap as activity). Tracked here as a probable next sibling, not implemented.
 - Any redesign of sibling spec contracts. Refinements that emerge during implementation are recorded here and applied via targeted edits to the sibling specs.
+- Federation hardening implementation details (H1, H2, H4 full specs). See `openspec/changes/2026-04-26-security-hardening-findings/` for those specifications. This section defines how they interact with the impulse-activity loop and provides federation-specific constraints.
 
 ## Validation findings
 

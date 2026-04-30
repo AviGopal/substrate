@@ -213,6 +213,95 @@ The α/β/sample_count posterior data already exists inside activity-api but is 
 
 Acceptance: a resolver dispatched from an activity template can read α/β for a named variant via `POST /v2/impulses/resolve` without hitting the REST surface; existing `variantMetricsSummary` callers see no behavior change; `docs/impulse-types/thompson_posterior.md` exists.
 
+## 10. Phase 10 — SurrealDB 3.x RL Layer
+
+**Status:** [ ] Not started
+
+**Pre-requisite:** Phase 9 deployed to canary (thompson_posterior shape live)
+
+#### P1 — Atomic α/β updates
+- [ ] 10.1 Replace fetch-modify-write at `execution-traces.ts:1938` (activity_template α/β) with `SET thompson_alpha += $da, thompson_beta += $db`
+- [ ] 10.2 Replace fetch-modify-write at `activities.ts:3599, 3639` (impulse_shape_activity_score α/β) with atomic increments
+- [ ] 10.3 Replace fetch-modify-write at `goal-paths.ts:402` (goal_execution_paths α/β) with atomic increments
+- [ ] 10.4 Verify no remaining SELECT-then-UPDATE patterns on α/β fields across all 8 posterior tables
+- [ ] 10.5 Concurrent update regression test (10 parallel increments → correct total)
+
+#### P5A — BM25 bound-param fix (ship before P2/P3 — zero-risk correctness fix)
+- [ ] 10.6 Apply inline-literal sanitisation to `repos/metabob-activity-api/src/db/paradigm.ts:998` (`name @0@@ $query OR description @1@@ $query` → inline sanitised literal, same fix as concept-db 2026-04-29)
+- [ ] 10.7 Verify Tier 3 BM25 search returns non-zero scores for matching queries on canary
+
+#### P2 — COMPUTED ev field
+- [ ] 10.8 Define `COMPUTED` `ev` field migration on all 8 tables carrying α/β posteriors
+- [ ] 10.9 Verify ev reflects live α/β values without stale cache (read-time derivation)
+- [ ] 10.10 Update recommend endpoint to use `ORDER BY ev DESC` in SQL (replace JS EV aggregation)
+- [ ] 10.11 Cache invalidation review — confirm Redis TTL path unaffected by COMPUTED field
+
+#### P3 — fn::beta_sample stored function
+- [ ] 10.12 Implement `fn::beta_sample($a, $b)` in SurrealDB embedded JS (Johnk/Cheng algorithm with Box-Muller gamma)
+- [ ] 10.13 Deploy function to canary; verify KS test p-value > 0.05 against Beta(2,5) CDF over 1000 samples
+- [ ] 10.14 Add dual-compute path at `activities.ts:4416` (log `sample_source: "db" | "app_fallback"`)
+- [ ] 10.15 A/B compare DB vs app distribution over 1000 canary samples; deprecate app-side call once confirmed
+
+#### P4 — RELATE composition graph
+- [ ] 10.16 Define `composes` RELATE table schema: `alpha`, `beta`, `input_shapes`, `output_shapes`, `account_id` (executor's issuing account), `execution_count`, `success_count`; `UNIQUE(in, out, account_id)` index
+- [ ] 10.17 Backfill script: migrate `activity_composition_graph` rows to RELATE edges (`alpha = success_count + 1`, `beta = execution_count - success_count + 1`); idempotent
+- [ ] 10.18 Dual-write to both old table and RELATE edges for 7 days
+- [ ] 10.19 Rewrite `discover-by-shapes` to use single graph traversal query with shape-filtered edge predicates and `$accessible_account_ids` from ExecutionScope
+- [ ] 10.20 Verify query count: ≤ 2 DB round-trips for `candidates_with_scores` mode (was 21)
+- [ ] 10.21 Deprecate `activity_composition_graph` table after 7-day dual-write stable period
+
+#### P4.5 — Shape gap index
+- [ ] 10.22 Define `shape_gap_resolution` table in activity-api (fields: shape, account_id, resolved_by, required_scope, resolution_type, escalation_depth, cost_usd, times_used)
+- [ ] 10.23 Implement `GET /v2/activities/shape-gap-resolution?shape=&account_id=` endpoint
+- [ ] 10.24 Wire MiniBob slot-binding escalation to query gap index before triggering `create-shape-provider-goal`
+- [ ] 10.25 Wire activity-api to insert/update gap index row on goal-seeking resolution
+
+#### P5B — HNSW indexes
+- [ ] 10.26 Add HNSW index migration on 384-dim `name_embedding` and `description_embedding` fields
+- [ ] 10.27 Rewrite `paradigm.ts:1103-1180` to use `<|k,ef|>` KNN operator when `DENSE_EMBEDDING_HNSW_ENABLED=true`
+- [ ] 10.28 Benchmark: latency of HNSW vs O(n) scan on canary corpus; log `dense_search_method: "hnsw" | "scan"`
+- [ ] 10.29 Promote `DENSE_EMBEDDING_HNSW_ENABLED=true` to canary after benchmark passes
+
+#### Phase 10 Success Criteria
+- [ ] 10.S1 Zero lost α/β increments under 10 concurrent update load test
+- [ ] 10.S2 COMPUTED ev matches `alpha/(alpha+beta)` to 1e-9 tolerance after each atomic update
+- [ ] 10.S3 `fn::beta_sample` KS test p-value > 0.05 against Beta(2,5) CDF
+- [ ] 10.S4 `discover-by-shapes` issues ≤ 2 DB queries per call (logged)
+- [ ] 10.S5 BM25 Tier 3 returns non-zero scores for "bash" query against canary template corpus
+- [ ] 10.S6 Gap index consulted before every `create-shape-provider-goal` escalation (verified in traces)
+
+## 11. Phase 11 — State-Space-Aware Recommendations + ExecutionScope
+
+**Status:** [ ] Not started
+
+**Pre-requisite:** Phase 10 P4 (RELATE traversal live) for pointer_state_space construction
+
+#### Phase 11.0 — Prerequisites
+- [ ] 11.1 Identity-vessel: extend `POST /v1/keys/validate` response to include `scopes: string[]` (scope strings embedded at key issuance, including cross-account federation grants; format: `account_<id>:<resource>:<role>` or `account_<id>:*`)
+- [ ] 11.2 activity-api auth middleware: parse `scopes[]` into `ExecutionScope`; attach via `c.set('executionScope', ...)`; add `getExecutionScopeFromContext(c)` helper alongside `getJwtAuthFromContext(c)`
+- [ ] 11.3 Verify `ExecutionScope.accessible_account_ids` correctly enumerates all account_ids present in scope claims (including cross-account federation grants)
+
+#### Phase 11.1 — Recommend endpoint extension
+- [ ] 11.4 Add `impulse_state_space` to `POST /v2/activities/recommend` request body schema (optional array; absent = backward-compatible no-op)
+- [ ] 11.5 Server-side `pointer_state_space` derivation: query discovery-vessel with `ExecutionScope.accessible_account_ids`; graceful degradation if discovery-vessel unreachable (empty pointer_state_space, no error)
+- [ ] 11.6 Implement compatibility discount tier in template ranking: fully covered = 1.0×, partial = 0.7×, escalatable = 0.5×, budget/capability_blocked = 0.3×
+- [ ] 11.7 Implement `pointer_recommendations` generation: top-5 shapes by expected_utility, ordered DESC; each entry includes shape, rationale, unlocks_template_ids, expected_utility, resolve_via
+- [ ] 11.8 Implement `blocking_shapes` generation: one entry per uncovered shape in top-5 templates; gap_type: `resolvable | escalatable | scope_upgradeable | budget_blocked | capability_blocked`; `resolve_via` present iff in pointer_state_space
+- [ ] 11.9 `blocking_shapes` informational note in API docs: not terminal; executor proceeds with escalation chain for `escalatable`; surfaces to workbench for `scope_upgradeable`
+
+#### Phase 11.2 — MiniBob integration
+- [ ] 11.10 Add `ImpulseStore.getLoadedImpulseSummaries()` method: pure, no I/O, returns `Array<{shape, summary?, pointer?, loaded_at?}>` for all impulses in `loaded: true` state
+- [ ] 11.11 Wire goal-processor recommend call to pass `impulse_state_space` from `getLoadedImpulseSummaries()`
+- [ ] 11.12 Remove any `pointer_state_space` from MiniBob's recommend call (server-derives it)
+- [ ] 11.13 Wire MiniBob to consume `pointer_recommendations` from recommend response: for each recommended shape, create a candidate impulse pointer for optional pre-loading
+
+#### Phase 11 Success Criteria
+- [ ] 11.S1 Recommend response includes `pointer_recommendations` and `blocking_shapes` when `impulse_state_space` is provided
+- [ ] 11.S2 Templates with fully covered input_shapes rank above discounted templates with equal Thompson score
+- [ ] 11.S3 `pointer_state_space` is derived from key scopes (not passed by MiniBob); verified via wireshark/log trace that the request body contains only `impulse_state_space`
+- [ ] 11.S4 `scope_upgradeable` gap type surfaces in workbench (not triggering auto-escalation)
+- [ ] 11.S5 Backward compatibility: recommend call without `impulse_state_space` returns byte-identical response to pre-Phase-11 behavior
+
 ## Verification gates
 
 - [ ] V.1 All sibling spec verification phases (sibling 1 §9, sibling 2 §6, sibling 3 §12) green
