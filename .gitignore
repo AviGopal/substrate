@@ -1,8 +1,13 @@
-# Environment files with secrets
-.env.devbob
+# Environment files with secrets — never commit these
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.*.example
+.metabob_api_key
+.metabob_session
+*.pem
+*.key
+secrets.yaml
+*.secrets.yaml
 
 # Python
 __pycache__/
