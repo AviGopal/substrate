@@ -125,6 +125,18 @@ test-python-project/
 screenshots/error-screenshot.png
 screenshots/final-test-*.png
 
+# Playwright MCP session output (screenshots + page yaml dumps)
+.playwright-mcp/
+# Loose screenshots / debug images at super-repo root
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.gif
+# One-shot debug text dumps at super-repo root
+/hello-*.txt
+/*.diff.txt
+
 # Temp files from activity session
 COMMIT_MESSAGE_*.txt
 repos/minibob/

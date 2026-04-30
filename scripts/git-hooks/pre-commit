@@ -1,0 +1,236 @@
+#!/usr/bin/env bash
+#
+# metabob-devbob super-repo pre-commit hook.
+#
+# Enforces placement rules so the super-repo stays a thin coordinator over
+# repos/* + docs/ + openspec/. New cruft is rejected at commit time; the
+# message tells you where it should live instead.
+#
+# Rules apply only to NEWLY ADDED or RENAMED-INTO-SUPER-REPO files. Modifying
+# existing tracked files is never blocked — pre-existing cruft is grandfathered
+# until separately removed.
+#
+# Bypass: `git commit --no-verify` (use sparingly; prefer fixing placement).
+#
+# Rule summary (full guidance: scripts/git-hooks/README.md):
+#   - Files must live under repos/, docs/, openspec/, scripts/, packages/,
+#     .claude/, .github/, or .githooks/. The super-repo root holds only a
+#     small allowlist of project files (CLAUDE.md, README.md, .gitignore,
+#     .gitmodules, etc.).
+#   - No new top-level *.md outside docs/ or openspec/.
+#   - No new test files outside a real test suite (must live alongside the
+#     code under repos/<vessel>/test/ or repos/<vessel>/tests/).
+#   - No new image / screenshot / playwright artefact files anywhere outside
+#     repos/* (they belong in submodule asset trees or get gitignored).
+#   - No new ad-hoc *.sh / *.ts / *.js / *.mjs / *.py at root — scripts go
+#     in scripts/.
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+# Colors
+RED=$'\033[0;31m'
+YELLOW=$'\033[1;33m'
+GREEN=$'\033[0;32m'
+DIM=$'\033[2m'
+NC=$'\033[0m'
+
+# Allowed files at the super-repo root (basename match, exact).
+ROOT_ALLOWLIST=(
+  CLAUDE.md
+  README.md
+  LICENSE
+  LICENSE.md
+  .gitignore
+  .gitmodules
+  .gitattributes
+  .editorconfig
+  .nvmrc
+  .tool-versions
+  .prettierrc
+  .prettierrc.json
+  .prettierrc.yaml
+  .prettierignore
+  .eslintrc.js
+  .eslintrc.json
+  .eslintignore
+  .dockerignore
+  .env.example
+  package.json
+  bun.lock
+  package-lock.json
+  yarn.lock
+  pnpm-lock.yaml
+  tsconfig.json
+  tsconfig.base.json
+)
+
+# Allowed top-level directories. Anything under these is delegated to the
+# submodule / area's own conventions.
+ALLOWED_TOPLEVEL_DIRS=(
+  repos
+  docs
+  openspec
+  scripts
+  packages
+  .claude
+  .github
+  .githooks
+  .well-known
+)
+
+# Image / artefact extensions that are never allowed at the super-repo level.
+ARTEFACT_EXTENSIONS='png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|mov|webm|pdf|zip|tar|gz|tgz'
+
+# Files to inspect: newly added (A) or renamed-to (R) entries in the index.
+mapfile -t STAGED < <(git diff --cached --name-only --diff-filter=AR)
+
+if [[ ${#STAGED[@]} -eq 0 ]]; then
+  exit 0
+fi
+
+violations=()
+
+is_root_allowlisted() {
+  local name="$1"
+  for entry in "${ROOT_ALLOWLIST[@]}"; do
+    [[ "$name" == "$entry" ]] && return 0
+  done
+  return 1
+}
+
+is_under_allowed_toplevel() {
+  local path="$1"
+  local first="${path%%/*}"
+  for dir in "${ALLOWED_TOPLEVEL_DIRS[@]}"; do
+    [[ "$first" == "$dir" ]] && return 0
+  done
+  return 1
+}
+
+flag() {
+  local file="$1" reason="$2" remedy="$3"
+  violations+=("${file}|${reason}|${remedy}")
+}
+
+for file in "${STAGED[@]}"; do
+  base="$(basename "$file")"
+  ext="${base##*.}"
+  ext_lower="${ext,,}"
+
+  # Files inside repos/ are submodule territory — let the submodule's own
+  # hooks / conventions handle them. The super-repo only cares about
+  # pointer bumps for those.
+  if [[ "$file" == repos/* ]]; then
+    continue
+  fi
+
+  # Files under other allowed top-level dirs follow that area's conventions.
+  # We still enforce a couple of cross-cutting rules below (artefacts,
+  # one-off tests).
+  if [[ "$file" == */* ]]; then
+    if ! is_under_allowed_toplevel "$file"; then
+      flag "$file" \
+        "new file in unrecognised top-level directory" \
+        "move under repos/<vessel>/, docs/, openspec/, scripts/, or packages/"
+      continue
+    fi
+  else
+    # File at the super-repo root.
+    if ! is_root_allowlisted "$base"; then
+      case "$base" in
+        *.md)
+          flag "$file" \
+            "new markdown file at super-repo root" \
+            "move stateless docs to docs/, future-change proposals to openspec/changes/<date>-<slug>/"
+          ;;
+        *.sh|*.ts|*.tsx|*.js|*.mjs|*.cjs|*.py)
+          flag "$file" \
+            "new script at super-repo root" \
+            "move to scripts/ (and review whether it's actually needed — most one-off scripts belong in commit history, not the tree)"
+          ;;
+        test-*|*-test.*|*.test.*|tests-*)
+          flag "$file" \
+            "new test file at super-repo root" \
+            "tests live alongside their code under repos/<vessel>/test{,s}/, never in the super-repo"
+          ;;
+        *.html|*.txt|*.yaml|*.yml|*.json)
+          flag "$file" \
+            "new data/config file at super-repo root" \
+            "move under the owning area (repos/<vessel>/, scripts/, packages/, openspec/) — the super-repo root is reserved for project metadata"
+          ;;
+        *)
+          if [[ "$ext_lower" =~ ^($ARTEFACT_EXTENSIONS)$ ]]; then
+            flag "$file" \
+              "new binary/artefact at super-repo root" \
+              "binary assets go in repos/<vessel>/ (or are gitignored if they're test/playwright output)"
+          else
+            flag "$file" \
+              "new file at super-repo root not in allowlist" \
+              "extend the allowlist in scripts/git-hooks/pre-commit only if the file is genuinely project-wide metadata"
+          fi
+          ;;
+      esac
+      continue
+    fi
+  fi
+
+  # Cross-cutting rules (apply to docs/, scripts/, packages/, openspec/, etc.,
+  # but NOT to repos/* which is submodule territory).
+
+  # No screenshots / images / artefacts outside repos/ submodules and the
+  # docs/assets path (which is reserved for embedded illustrations).
+  if [[ "$ext_lower" =~ ^($ARTEFACT_EXTENSIONS)$ ]]; then
+    if [[ "$file" != docs/assets/* && "$file" != docs/*/assets/* ]]; then
+      flag "$file" \
+        "binary/artefact outside repos/* and docs/assets/" \
+        "playwright/screenshots are session artefacts (gitignore them); illustrative assets go in docs/assets/<topic>/"
+    fi
+  fi
+
+  # No one-off test files outside repos/<vessel>/test{,s}/. The super-repo
+  # itself never holds tests; tests live with the code they test.
+  if [[ "$base" =~ ^test- || "$base" =~ -test\. || "$base" =~ \.test\. || "$base" =~ ^tests- ]]; then
+    flag "$file" \
+      "test file outside a submodule test suite" \
+      "tests belong in repos/<vessel>/test{,s}/ alongside the code they cover; the super-repo never holds tests"
+  fi
+done
+
+if [[ ${#violations[@]} -eq 0 ]]; then
+  exit 0
+fi
+
+# Print findings.
+printf '%s\n' "${RED}━━━ super-repo placement check failed ━━━${NC}"
+printf '%s\n\n' "${DIM}rules: scripts/git-hooks/README.md${NC}"
+
+for v in "${violations[@]}"; do
+  IFS='|' read -r file reason remedy <<<"$v"
+  printf '  %s%s%s\n' "${YELLOW}✗${NC} " "$file" ""
+  printf '      %sreason:%s %s\n' "$DIM" "$NC" "$reason"
+  printf '      %sfix:   %s %s\n\n' "$DIM" "$NC" "$remedy"
+done
+
+cat <<EOF
+${DIM}Why this exists${NC}
+  The super-repo coordinates docs (docs/), future-change specs (openspec/),
+  scripts (scripts/), and submodule pointers (repos/*). Loose files at the
+  root, ad-hoc tests, screenshots, and exploratory writeups should live
+  inside their owning area or — if they only matter for one commit — in the
+  commit history itself, not as files.
+
+${DIM}Common moves${NC}
+  Stateless reference doc          ->  docs/<topic>.md
+  Future change proposal           ->  openspec/changes/<date>-<slug>/proposal.md
+  One-off helper script            ->  scripts/<verb>-<noun>.sh
+  Submodule WIP / asset            ->  repos/<vessel>/...
+  Playwright / screenshot output   ->  add the directory to .gitignore
+
+${DIM}Bypass${NC}
+  git commit --no-verify   ${DIM}(use sparingly; the rules exist to keep blame readable)${NC}
+EOF
+
+exit 1
