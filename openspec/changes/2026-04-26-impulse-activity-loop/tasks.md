@@ -368,7 +368,7 @@ Carry forward these constraints for all remaining work:
 
 ### Deferred (out of scope for first demo)
 
-- F-4 template foreach/iteration primitive — workaround via single-shape templates acceptable
+- ~~F-4 template foreach/iteration primitive — workaround via single-shape templates acceptable~~ — **CLOSED 2026-04-30.** The `iteration` resolver at `src/resolvers/iteration-resolver.ts` (registered in activity.ts, 654 LOC) exists since 2026-04-27 but was unused by meta-activity templates. Slot-binding's `select_or_produce` task now uses `resolver: "iteration"` over `{{lifecycle.missingShapes}}` with `body: { resolver: "producer_selection", config: { missingShape: "{{shape}}" } }` — multi-shape binding is now per-shape, not single-shape simplification. Aggregated `select_or_produce_result` impulse contains a per-shape entry list; downstream substring match on `'unbindable": true'` still fires the recursive-escalation path correctly. validator-dispatch's per-shape validator selection remains a sibling-template follow-up (single-resolver for now is workable; benefit is incremental).
 - F-10 testing-library/react v15 bump — workbench, out of scope per direction
 - F-12 trace-detail endpoint 404 fix — pre-existing
 - 501 already-split `variant_performance_metrics` rows backfill — separate decision
