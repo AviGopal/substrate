@@ -159,9 +159,9 @@ Phase 8 Iteration 1 discovered 5 critical blockers preventing goal execution on 
 
 ### I2.2 Blocker 4: Validator-dispatch conditional syntax (validator-dispatch.json:38)
 
-- [ ] I2.2.1 Fix conditional: change `{{lifecycle.skip_validation}} !== true` to `{{lifecycle.skip_validation}} !== 'true'` (string comparison)
-- [ ] I2.2.2 Verify all conditionals in validator-dispatch.json use correct type (string literals vs boolean)
-- [ ] I2.2.3 Root cause: lifecycle impulse payload fields are strings; template conditionals were using boolean comparisons
+- [x] I2.2.1 ✅ **DONE** 2026-04-30. `validator-dispatch.json:38` already uses the string-comparison form (`!== 'true'`); the residual F-V2 crash was at the *evaluator* layer, not the template — when `lifecycle.skip_validation` is absent the dotted-path interpolator left `{{lifecycle.skip_validation}}` literal in the expression, which crashed `new Function(...)` with `Unexpected token '{'`. `evaluateTaskCondition` now sweeps any surviving `{{...}}` placeholders to `undefined` before constructing the evaluator (activity.ts:7207–7218) so absent boolean flags evaluate sensibly (`undefined !== 'true'` → `true`, discover_validators proceeds rather than getting silently skipped). Typecheck clean.
+- [x] I2.2.2 ✅ **DONE** 2026-04-30. Three conditional expressions in `validator-dispatch.json` (lines 38, 102, 136) verified — all use string literals (`'true'`, `'unbindable":true'`, `'passed":false'`) or `contains`/`not-contains` pseudo-operators. No boolean-vs-string mismatches remain.
+- [x] I2.2.3 ✅ **DONE** (root cause documented). Lifecycle impulse payload fields are strings (the dotted-path interpolator JSON-stringifies values before substitution); template conditionals must compare against quoted string literals, not bare booleans.
 - [ ] I2.2.4 Acceptance: validator-dispatch.json loads without conditional parse errors; discover_validators task executes
 
 ### I2.3 Blocker 5: Missing "lifecycle" impulse type (types.ts:~250)
