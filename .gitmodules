@@ -18,6 +18,11 @@
 	url = git@github.com:MetabobProject/identity-vessel.git
 	branch = dev
 
+[submodule "repos/metabob-activity-api"]
+	path = repos/metabob-activity-api
+	url = git@github.com:MetabobProject/metabob-activity-api.git
+	branch = dev
+
 [submodule "repos/metabob-cloud-dashboard"]
 	path = repos/metabob-cloud-dashboard
 	url = git@github.com:MetabobProject/metabob-cloud-dashboard.git
@@ -26,6 +31,11 @@
 [submodule "repos/minibob"]
 	path = repos/minibob
 	url = git@github.com:MetabobProject/minibob.git
+	branch = dev
+
+[submodule "repos/user-vessel"]
+	path = repos/user-vessel
+	url = git@github.com:MetabobProject/user-vessel.git
 	branch = dev
 
 [submodule "repos/workbench"]
