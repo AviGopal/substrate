@@ -1,7 +1,13 @@
 /**
- * Type definitions for user-vessel
- * User, Organization, Project, API Key types with RBAC support
+ * Phase 1 type definitions for user-vessel.
+ *
+ * Auth (passwords, JWT, MFA) is owned by identity-vessel. This vessel only carries
+ * the auth context that identity-vessel returns from /v1/auth/resolve.
  */
+
+// =============================================================================
+// CONFIG
+// =============================================================================
 
 export interface UserVesselConfig {
   port: number
@@ -13,17 +19,11 @@ export interface UserVesselConfig {
     username: string
     password: string
   }
-  jwt: {
-    secret: string
-    expiresIn: string  // e.g., "15m"
-  }
-  activityApi: {
+  identityVessel: {
     endpoint: string
+    apiKey?: string  // optional internal-call API key
   }
-  identityVessel?: {
-    endpoint: string
-  }
-  discovery?: {
+  discovery: {
     enabled: boolean
     endpoint: string
     vesselId: string
@@ -33,175 +33,213 @@ export interface UserVesselConfig {
 }
 
 // =============================================================================
-// DOMAIN TYPES
+// AUTH (returned by identity-vessel /v1/auth/resolve)
+// =============================================================================
+
+export type Role = "owner" | "admin" | "member" | "viewer"
+
+/**
+ * Project-level role hierarchy (Phase A).
+ *
+ * Used for intra-account project_members. Cross-account federation roles are
+ * DEFERRED to Phase B (see openspec change `user-vessel-accounts-federation-model`).
+ */
+export type ProjectRole = "owner" | "maintain" | "developer" | "triage" | "viewer"
+
+export interface AuthContext {
+  /** Full record-reference-as-string, e.g. "users:abc123". */
+  user_id: string
+  /**
+   * Full record-reference-as-string, e.g. "organizations:metabob".
+   *
+   * Phase A: still emitted for back-compat. Phase B (after identity-vessel
+   * JWT migration `identity-vessel-account-id-upgrade`) it will be derived
+   * from `account_id`.
+   */
+  org_id: string
+  /**
+   * Full record-reference-as-string, e.g. "accounts:metabob".
+   *
+   * Phase A: optional — populated when identity-vessel emits the claim.
+   * Routes that need account scoping prefer this field; if absent, they
+   * fall back to mapping `org_id` ("organizations:<x>" → "accounts:<x>").
+   */
+  account_id?: string
+  role: Role
+  /** Original Authorization header value, used to forward to other vessels. */
+  authHeader: string
+}
+
+// =============================================================================
+// DOMAIN
 // =============================================================================
 
 export interface Organization {
-  id: string
-  org_id: string
+  id: string  // "organizations:slug"
   name: string
-  subscription_tier: 'free' | 'starter' | 'pro' | 'enterprise'
+  tier: "free" | "starter" | "pro" | "enterprise"
   seat_limit: number
-  seat_usage: number
   created_at: string
-  updated_at: string
+  updated_at?: string
 }
 
 export interface User {
-  id: string
-  org_id: string
+  id: string  // "users:abc"
   email: string
   name: string
-  password_hash?: string  // Only populated internally, never returned to clients
-  role: 'admin' | 'member'
+  default_org_id?: string
   created_at: string
-  last_login?: string
 }
 
-export interface Project {
-  id: string
+export interface OrganizationMember {
+  id: string  // "organization_members:..."
   org_id: string
-  name: string
-  repo_url?: string
-  created_at: string
-  metadata?: Record<string, unknown>
-}
-
-export interface ProjectMember {
-  id: string
-  org_id: string
-  project_id: string
   user_id: string
-  role: 'owner' | 'maintainer' | 'developer' | 'viewer'
-  added_at: string
-}
-
-export interface LlmBudget {
-  tokens_per_month: number
-  tokens_used: number
-  reset_at: string  // ISO datetime string for next reset
-  overage_enabled: boolean
+  role: Role
+  joined_at: string
 }
 
 export interface ApiKey {
-  id: string
-  org_id: string
-  user_id: string
-  key_id: string  // Identity-vessel key identifier (replaces key_hash)
-  scopes: string[]
-  is_active: boolean
-  created_at: string
-  last_used_at?: string
-  expires_at?: string
-  tier: 'starter' | 'pro' | 'enterprise'  // Billing tier (inherited from org)
-  max_connections: number  // Connection slot limit for this API key
-  llm_budget: LlmBudget  // Token budget for LLM usage
-  rotation_required?: boolean  // For legacy key migration
-}
-
-// =============================================================================
-// AUTH TYPES
-// =============================================================================
-
-export interface JWTPayload {
-  iss: string
-  sub: string  // user ID
-  org_id: string
-  project_ids: string[]
-  role: 'admin' | 'member'
-  user_id: string
-  exp: number
-  iat: number
-}
-
-export interface AuthContext {
-  id: string  // user ID
-  org_id: string
-  role: 'admin' | 'member'
-  project_ids: string[]
-}
-
-// =============================================================================
-// REQUEST/RESPONSE TYPES
-// =============================================================================
-
-export interface LoginRequest {
-  email: string
-  password: string
-  org_id?: string  // Optional, can be derived from email domain or required
-}
-
-export interface LoginResponse {
-  token: string
-  user: Omit<User, 'password_hash'>
-  org: Organization
-}
-
-export interface SignupRequest {
-  email: string
-  password: string
-  name: string
-  org_name?: string  // If creating new org
-  org_id?: string  // If joining existing org
-}
-
-export interface CreateUserRequest {
-  email: string
-  password: string
-  name: string
-  role?: 'admin' | 'member'
-}
-
-export interface CreateOrganizationRequest {
-  name: string
-  subscription_tier?: 'free' | 'starter' | 'pro' | 'enterprise'
-}
-
-export interface CreateProjectRequest {
-  name: string
-  repo_url?: string
-  metadata?: Record<string, unknown>
-}
-
-export interface CreateApiKeyRequest {
+  id: string  // "api_key:..."
+  key_prefix: string
+  key_hash: string
   name?: string
+  org_id: string
+  user_id: string
+  tier: "starter" | "pro" | "enterprise"
+  quota_limit: number
+  connection_limit: number
+  revoked_at?: string | null
+  created_at: string
+  /**
+   * Scopes granted to this key. Defaults to ["read","write"] for legacy rows
+   * via the schema option-default. Admin-scoped keys carry "admin" here so
+   * identity-vessel's `lookupKeyScopes()` can return it through to
+   * `resolveAPIKey()`.
+   */
   scopes?: string[]
-  expires_in_days?: number
+  /**
+   * HMAC-embedded identifier (e.g. "key_avi_canary_admin01"). Optional so
+   * legacy rows without it remain valid; populated on new rows for
+   * identity-vessel HMAC lookup. UNIQUE index enforces 1:1 mapping.
+   */
+  key_id?: string
 }
 
-/**
- * API key display format for dashboard responses
- * Contains a subset of ApiKey fields plus additional display fields
- */
-export interface ApiKeyDisplayResponse {
-  id: string
-  user_id: string
-  user_email: string
-  prefix: string
-  name?: string
-  created_at: string
-  last_used_at?: string
-  usage_count: number
-  status: 'active' | 'revoked' | 'rotation_required'
-  tier: 'starter' | 'pro' | 'enterprise'
-  max_connections: number
-  llm_budget: LlmBudget | null
-}
-
-export interface CreateApiKeyResponse {
-  key: ApiKeyDisplayResponse  // Transformed API key for dashboard display
-  secret: string  // Raw key, only returned once on creation
+export interface ApiKeyView extends Omit<ApiKey, "key_hash"> {
+  // Key hash is never returned over the wire.
 }
 
 // =============================================================================
-// VESSEL MANIFEST
+// PHASE A: Accounts + Projects (federation foundation)
 // =============================================================================
+//
+// Federation links, cross-account project access, and email invitations are
+// DEFERRED to Phase B. See openspec change user-vessel-accounts-federation-model.
 
-export interface VesselManifest {
-  id: string
+export interface Account {
+  id: string  // "accounts:slug"
   name: string
-  version: string
-  capabilities: string[]
-  impulseTypes: string[]
-  activities: string[]
+  tier: "free" | "starter" | "pro" | "enterprise"
+  seat_limit: number
+  created_by?: string
+  created_at: string
+  updated_at?: string
+}
+
+export interface AccountMember {
+  id: string  // "account_members:..."
+  account_id: string  // "accounts:<id>"
+  user_id: string  // "users:<id>"
+  role: Role
+  joined_at: string
+}
+
+export type ProjectVisibility = "private" | "account" | "public"
+
+export interface Project {
+  id: string  // "projects:..."
+  account_id: string  // "accounts:<id>"
+  name: string
+  description?: string
+  visibility: ProjectVisibility
+  created_by?: string
+  created_at: string
+  updated_at?: string
+}
+
+export interface ProjectMember {
+  id: string  // "project_members:..."
+  project_id: string  // "projects:<id>"
+  user_id: string  // "users:<id>"
+  role: ProjectRole
+  added_at: string
+  /**
+   * Phase B: set when the membership was created via an accepted federation
+   * link (cross-account access). NULL/undefined for intra-account members.
+   * Used by the revoke flow to cascade-delete cross-account memberships
+   * when the link is torn down.
+   */
+  via_federation_link?: string  // "federation_links:<id>"
+}
+
+// =============================================================================
+// PHASE B: Federation links + Invitations
+// =============================================================================
+
+export type FederationStatus = "pending" | "accepted" | "declined" | "revoked"
+
+export interface FederationLink {
+  id: string  // "federation_links:..."
+  from_account_id: string  // "accounts:<id>"
+  to_account_id: string  // "accounts:<id>"
+  project_id: string  // "projects:<id>"
+  from_role_offered: ProjectRole
+  status: FederationStatus
+  created_by: string  // "users:<id>"
+  created_at: string
+  accepted_at?: string
+  declined_at?: string
+  revoked_at?: string
+}
+
+export type InvitationStatus = "pending" | "accepted" | "expired" | "revoked"
+
+export interface Invitation {
+  id: string  // "invitations:..."
+  email: string
+  account_id: string  // "accounts:<id>"
+  role: Role
+  token: string
+  status: InvitationStatus
+  expires_at: string
+  created_by: string
+  created_at: string
+  accepted_at?: string
+  accepted_by_user_id?: string
+}
+
+// =============================================================================
+// MCP TOOLS (Phase 1 surface)
+// =============================================================================
+
+export interface McpToolDefinition {
+  name: string
+  description: string
+  inputSchema: {
+    type: "object"
+    properties: Record<string, unknown>
+    required?: string[]
+  }
+}
+
+export interface McpToolCallRequest {
+  name: string
+  arguments: Record<string, unknown>
+}
+
+export interface McpToolCallResult {
+  ok: boolean
+  result?: unknown
+  error?: string
 }
