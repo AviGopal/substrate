@@ -22,11 +22,13 @@ The impulse state space answers: "what domain context is the executor already re
 
 ### Pointer state space (what the executor could get)
 
-The set of shapes that could be resolved given the current vessel registry — derived by querying discovery-vessel for all registered shapes and their resolver contracts. A shape is in the pointer state space if and only if at least one registered vessel advertises it in its registration payload.
+The set of shapes reachable via the executor's full key scope set — including cross-account scopes granted via active federation links. The query for pointer_state_space is `VesselDiscoveryClient.getAllRegisteredShapes()` filtered to shapes accessible given the key's scope claims. A shape is in the pointer state space if and only if at least one vessel advertises it in its registration payload AND the executor's key scopes permit access to that vessel's account.
 
-The pointer state space answers: "what additional context is available to the executor if it chooses to resolve more impulses?" It is the universe of resolvable shapes, minus what has already been loaded.
+Federation links are scope grants embedded in keys at issuance time, not runtime identity proxies. This means the pointer state space is stable for the lifetime of a key (no runtime negotiation required) and can be computed once per session with a short cache TTL (see §5).
 
-Together the two spaces form the recommendation context. Templates whose inputs are fully covered by the impulse state space are immediately executable. Templates whose inputs are not yet loaded but present in the pointer state space are executable-after-fetch. Templates whose inputs are absent from both spaces are executable only if they tolerate empty inputs.
+The pointer state space answers: "what additional context is available to the executor, given the key it currently holds?" It is the universe of resolvable shapes scoped to the executor's access model, minus what has already been loaded.
+
+Together the two spaces form the recommendation context. Templates whose inputs are fully covered by the impulse state space are immediately executable. Templates whose inputs are not yet loaded but present in the pointer state space are executable-after-fetch. Templates whose inputs are absent from both spaces require escalation (see blocking_shapes in §3).
 
 ---
 
@@ -109,8 +111,13 @@ Both new fields are optional. When absent, behavior is identical to the current 
   blocking_shapes: Array<{
     shape: string
     required_by_template_ids: string[]  // which top-N templates need this shape
-    in_pointer_state_space: boolean     // can it be resolved with currently registered vessels?
-    resolve_via?: {                     // present only when in_pointer_state_space is true
+    gap_type: 'resolvable' | 'escalatable' | 'scope_upgradeable' | 'budget_blocked' | 'capability_blocked'
+    // resolvable:         template exists, in current key scopes, just not loaded yet
+    // escalatable:        no template in current scopes; goal-seeking can create one within budget
+    // scope_upgradeable:  template exists but requires a federation link upgrade (human-actionable, not system-actionable)
+    // budget_blocked:     goal-seeking possible but estimated cost exceeds the executor's budget envelope
+    // capability_blocked: requires tools/data that do not exist anywhere in the system
+    resolve_via?: {       // present when gap_type is 'resolvable'
       vessel_id: string
       resolve_tier: 'deterministic' | 'pattern' | 'llm'
     }
@@ -139,9 +146,11 @@ For each template in the full candidate set, compute a compatibility score:
 
 - **Fully covered**: all `inputShapes` entries are present as shapes in `impulse_state_space`. No discount applied. Template ranks by Thompson α/(α+β) as before.
 
-- **Partially covered (resolvable gap)**: one or more `inputShapes` are missing from `impulse_state_space` but present in `pointer_state_space`. Apply a compatibility discount: multiply the effective score by `0.7`. This reflects the real cost of a fetch round-trip — the template is not executable immediately but is reachable.
+- **Partially covered (resolvable gap)**: one or more `inputShapes` are missing from `impulse_state_space` but present in `pointer_state_space` (gap_type `resolvable`). Apply a compatibility discount: multiply the effective score by `0.7`. This reflects the real cost of a fetch round-trip — the template is not executable immediately but is reachable without escalation.
 
-- **Uncovered (unresolvable gap)**: one or more `inputShapes` are absent from both spaces. Apply a stronger discount: multiply by `0.3`. These templates are candidates of last resort and only surface when no better option exists. If `expected_output_shapes` is set, uncovered templates that cannot produce any of the expected shapes are filtered out entirely.
+- **Escalatable gap**: one or more `inputShapes` are absent from `pointer_state_space` but the shape gap index indicates goal-seeking can produce a template (gap_type `escalatable` or `scope_upgradeable`). Apply a stronger discount: multiply by `0.5`. The template is reachable but requires escalation cost.
+
+- **Uncovered (budget or capability blocked)**: one or more `inputShapes` have gap_type `budget_blocked` or `capability_blocked`. Apply the maximum discount: multiply by `0.3`. These templates are candidates of last resort. If `expected_output_shapes` is set, templates with `capability_blocked` gaps that cannot produce any of the expected shapes are filtered out entirely.
 
 The discounted score is used only for ranking order. The raw Thompson α/(α+β) values are still returned in the response unchanged so callers can display the true posterior.
 
@@ -170,11 +179,18 @@ Prerequisite: `impulse_state_space` is provided (may be empty). Always run this 
 For the top-5 templates by Thompson score (after compatibility filtering):
 
 1. For each template, identify `inputShapes` not present in `impulse_state_space`.
-2. For each missing shape, classify severity:
-   - `blocking`: the shape is marked as required in the template's task definitions (no task in the template can proceed without it, and no fallback task exists for this shape). In the absence of per-task required/optional shape metadata, treat all declared `input_shapes` as `blocking` by default.
-   - `optional`: the shape is used by at least one task but another task can produce a substitute or the template has a fallback path. This metadata must be explicitly declared in the template; in its absence, the default is `blocking`.
-3. Check `pointer_state_space` to set `in_pointer_state_space` and `resolve_via`.
+2. For each missing shape, classify `gap_type`:
+   - `resolvable`: the shape is present in `pointer_state_space` (a vessel in the executor's key scopes can resolve it right now). Set `resolve_via` from the `pointer_state_space` entry.
+   - `escalatable`: the shape is not in `pointer_state_space` but the shape gap index has no `scope_upgrade_needed` entry for this (shape, account_id) pair — meaning goal-seeking via `create-shape-provider-goal` should be able to produce a template within budget. This is the system-actionable escalation path.
+   - `scope_upgradeable`: the shape gap index has an entry with `resolution_type = 'scope_upgrade_needed'` for this (shape, account_id) pair — a template exists but the executor's current key does not include the scope to access it. This is human-actionable (federation link upgrade); the workbench surfaces it explicitly rather than triggering automatic escalation.
+   - `budget_blocked`: gap index has a prior `goal_created` entry whose recorded `cost_usd` exceeds the executor's current budget envelope, or the estimated goal-seeking cost from the recommendation service's cost model exceeds the budget. System cannot self-resolve without budget increase.
+   - `capability_blocked`: no template exists, no scope upgrade would help, and there is no known path to create one (e.g., requires external data access that does not exist in any registered vessel).
+3. Classify severity independently of gap_type:
+   - `blocking`: the shape is marked as required in the template's task definitions (no fallback task). In the absence of per-task required/optional shape metadata, treat all declared `input_shapes` as `blocking` by default.
+   - `optional`: at least one alternate task path in the template can proceed without this shape.
 4. Deduplicate: if the same shape is missing from multiple top-5 templates, emit one `blocking_shapes` entry with `required_by_template_ids` listing all templates that need it.
+
+**Important**: `blocking_shapes` is informational. Slot-binding cannot theoretically fail because the escalation chain always provides a next step: `resolvable` → load now; `escalatable` → `create-shape-provider-goal` creates a template; `scope_upgradeable` → human surfaces federation link upgrade; `budget_blocked` or `capability_blocked` are the only genuinely terminal states. The `blocking_shapes` array characterises the escalation cost and required human action — it does not indicate a dead end.
 
 Return all blocking shapes for the top-5 templates, even if the list is empty.
 
@@ -301,7 +317,7 @@ All three functions are pure (no DB calls, no I/O). The handler is responsible f
 **Tests** — add unit tests covering:
 - Compatibility filter: fully covered template scores unchanged; partially covered scores multiplied by 0.7; uncovered scores multiplied by 0.3.
 - Pointer recommendations: shapes ordered by expected utility DESC; shape already in impulse_state_space excluded; top-5 cap respected.
-- Blocking shapes: missing input shapes identified; `in_pointer_state_space` correctly set; deduplication across templates.
+- Blocking shapes: missing input shapes identified; `gap_type` correctly classified (`resolvable | escalatable | scope_upgradeable | budget_blocked | capability_blocked`); deduplication across templates.
 - Backward compatibility: empty `impulse_state_space` and absent `pointer_state_space` produce identical output to current behavior.
 
 ### minibob

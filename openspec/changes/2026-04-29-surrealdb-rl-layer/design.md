@@ -42,6 +42,10 @@ Eight tables carry Thompson posterior fields:
 | `discovered_state_pattern` | `alpha`, `beta` |
 | `activity_state_affinity` | `alpha`, `beta` |
 
+### Account attribution
+
+Posterior updates are attributed to the executor's issuing account. Queries that read α/β for Thompson Sampling MUST scope by `WHERE account_id = $token.account_id` so each account's learning reflects only its own observed outcomes. Cross-account learning opt-in is governed by `share_learning = true` on a federation link (FC-3) — that is a separate mechanism, entirely orthogonal to execution scope grants (see §10 Federation and RL scoping).
+
 ### Non-atomic update sites
 
 Four of the six active update sites use a fetch-modify-write pattern that loses updates under concurrent writes:
@@ -211,6 +215,10 @@ LIMIT $limit;
 3. Once distributions match (KS test p > 0.05 on canary sample), remove the `@stdlib` call at `activities.ts:4416` and replace with the DB path.
 4. Fallback: if DB function returns an error (e.g. SurrealDB upgrade removed the function), fall back to `betaSample()` from `@stdlib/random-base-beta`.
 
+### Account attribution note
+
+Like P1, every call to `fn::beta_sample` (or the app-side fallback) MUST happen in a query scoped to `WHERE account_id = $token.account_id`. The sampling draw is over that account's posterior — not a global posterior. This ensures Thompson Sampling selects activities based on outcomes the calling account has actually observed.
+
 ### Single insertion point
 
 `activities.ts:4416` is the only site that calls `betaSample()` in the hot path. No other sites require changes.
@@ -239,6 +247,14 @@ The `discover-by-shapes` endpoint with 10 candidates issues **21 DB queries**:
 - 10 queries for `variant_performance_metrics` (one per candidate)
 - 10 queries for `activity_composition_graph` entries (one per candidate)
 
+### RELATE edge attribution
+
+`in` and `out` nodes on a `composes` edge may belong to different accounts — a composition path that sequences an Account X template followed by an Account Y template is valid when the executor's key includes scopes for both accounts. The `account_id` field on the edge records the executor's **issuing account** (who observed this composition path), not either template's account.
+
+Posterior (α/β) updates on an edge are attributed to the executor's account. RELATE traversal filters on the executor's key scope set — not on `account_id` equality — because an executor with cross-account scopes legitimately sees edges whose `in`/`out` nodes span multiple accounts. Concretely: traversal queries MUST include a predicate that checks the executor's scope claims against the templates' account_id fields rather than requiring a single `account_id` match on the edge itself.
+
+FC-3 (`share_learning = true` on a federation link) is the separate opt-in for one account's edge posteriors to seed another account's priors. It is orthogonal to execution scope grants and is not implemented in this proposal.
+
 ### Target: RELATE with α/β on edges
 
 ```sql
@@ -246,6 +262,7 @@ The `discover-by-shapes` endpoint with 10 candidates issues **21 DB queries**:
 DEFINE TABLE composes SCHEMAFULL;
 DEFINE FIELD alpha          ON TABLE composes TYPE float DEFAULT 1.0;
 DEFINE FIELD beta           ON TABLE composes TYPE float DEFAULT 1.0;
+DEFINE FIELD account_id     ON TABLE composes TYPE string;  -- executor's issuing account
 DEFINE FIELD input_shapes   ON TABLE composes TYPE array<string> DEFAULT [];
 DEFINE FIELD output_shapes  ON TABLE composes TYPE array<string> DEFAULT [];
 DEFINE FIELD execution_count ON TABLE composes TYPE int DEFAULT 0;
@@ -268,14 +285,18 @@ UPDATE type::thing("composes", $edge_id)
 
 ### Shape-filtered Thompson traversal (21 queries → 1-2)
 
+Traversal filters on the executor's key scope set, not `account_id` equality. `$accessible_account_ids` is derived from the executor's key claims and includes both the executor's own account and any cross-account scopes granted via active federation links. This means a key spanning Account X and Account Y scopes sees a unified subgraph containing templates from both — the visible graph is the executor's key-scoped subgraph, not a single-account graph.
+
 ```sql
 -- Forward: find activities that consume $required_input_shapes and sort by Thompson sample
+-- $accessible_account_ids = all account IDs the executor's key scopes cover
 SELECT out.id, out.name, out.alpha, out.beta,
        fn::beta_sample(alpha, beta) AS ts_score
 FROM activity_template:$start
   ->(composes WHERE input_shapes CONTAINSANY $required_input_shapes
               AND output_shapes CONTAINSANY $required_output_shapes)
   ->activity_template
+WHERE out.account_id INSIDE $accessible_account_ids
 ORDER BY ts_score DESC
 LIMIT 10;
 
@@ -284,6 +305,7 @@ SELECT in.id, in.name,
        fn::beta_sample(alpha, beta) AS ts_score
 FROM activity_template:$target
   <-(composes WHERE output_shapes CONTAINS $required_shape)<-activity_template
+WHERE in.account_id INSIDE $accessible_account_ids
 ORDER BY ts_score DESC
 LIMIT 10;
 ```
@@ -307,7 +329,55 @@ This replaces approximately 90 lines of JS graph-traversal and join logic in `ac
 
 ---
 
-## 6. P5: BM25 Bound-Param Fix + HNSW Indexes
+## 6. P4.5: Shape Gap Index
+
+The shape gap index is the system's memory of its own self-expansion. When the executor needs a shape and cannot find a template for it in its current key scopes, it triggers `create-shape-provider-goal`. The result — a new template that produces the shape — gets recorded in the gap index so the next occurrence of the same gap is resolved by reuse, not by re-running goal-seeking.
+
+### Table definition
+
+```sql
+DEFINE TABLE shape_gap_resolution SCHEMAFULL;
+DEFINE FIELD shape              ON TABLE shape_gap_resolution TYPE string;
+DEFINE FIELD account_id         ON TABLE shape_gap_resolution TYPE string;       -- executor's issuing account
+DEFINE FIELD resolved_by        ON TABLE shape_gap_resolution TYPE record<activity_template>;
+DEFINE FIELD required_scope     ON TABLE shape_gap_resolution TYPE option<string>; -- null = own scope
+DEFINE FIELD resolution_type    ON TABLE shape_gap_resolution TYPE string;
+  -- 'local'               template was in own account scope
+  -- 'federated'           template was accessible via cross-account scope grant
+  -- 'goal_created'        no template existed; goal-seeking produced one
+  -- 'scope_upgrade_needed' template exists but requires a federation link upgrade (human-actionable)
+DEFINE FIELD escalation_depth   ON TABLE shape_gap_resolution TYPE int DEFAULT 0;
+  -- number of recursive create-shape-provider-goal levels required
+DEFINE FIELD cost_usd           ON TABLE shape_gap_resolution TYPE float DEFAULT 0.0;
+DEFINE FIELD times_used         ON TABLE shape_gap_resolution TYPE int DEFAULT 1;
+DEFINE INDEX shape_account_idx  ON TABLE shape_gap_resolution FIELDS shape, account_id;
+```
+
+### Lookup protocol
+
+Before triggering `create-shape-provider-goal` escalation, the executor MUST query the gap index:
+
+```sql
+SELECT * FROM shape_gap_resolution
+WHERE shape = $shape AND account_id = $account_id
+ORDER BY times_used DESC LIMIT 1;
+```
+
+If a `goal_created` or `federated` entry is found and `resolved_by` still exists and is in scope:
+- Attempt to execute `resolved_by` directly.
+- Increment `times_used` on match.
+
+If the entry has `resolution_type = 'scope_upgrade_needed'`, surface the gap to the human (workbench) rather than escalating automatically — it requires a federation link upgrade, not goal-seeking.
+
+If no index entry exists, run goal-seeking. On completion, insert a new `shape_gap_resolution` row recording the outcome.
+
+### Why this matters
+
+Goal-seeking via `create-shape-provider-goal` can be expensive (multi-level recursive activity execution). The gap index converts the second occurrence of any gap from O(goal_seeking) to O(1 lookup + 1 execute). For shapes that recur frequently (e.g., `authenticated_user`, `project_config`), this is the primary cost reduction mechanism.
+
+---
+
+## 7. P5: BM25 Bound-Param Fix + HNSW Indexes
 
 ### Issue A — BM25 bound-parameter bug
 
@@ -448,3 +518,18 @@ The principle: deterministic and RL-model computations move to DB; domain heuris
 **P5A**: log `bm25_result_count` per Tier 3 search call. Validation: count should be non-zero for any non-empty query string after fix.
 
 **P5B**: log `dense_search_latency_ms` and `dense_search_method: "hnsw" | "scan"`. Benchmark at corpus sizes 100, 1000, 10000 templates to quantify O(log n) improvement.
+
+---
+
+## 10. Federation and RL scoping
+
+Federation in this system is **scope delegation embedded in keys at issuance time**. A federation link is a one-time scope grant: Account X grants Account Y's vessels a specific set of scopes (`account_X:project_P:developer`, `account_X:templates:execute`, etc.). Account Y's identity-vessel embeds these scopes into the keys it issues. When Account Y's vessel calls activity-api, it presents a key that already carries Account X's scopes — the RBAC check is purely `key.scopes CONTAINS required_scope`. There is no runtime identity federation, no cross-boundary proxy.
+
+**Consequence for the RL layer:**
+
+- The composition graph visible to an executor is the subgraph reachable via its current key scopes. A key spanning Account X and Account Y scopes sees a unified graph containing templates from both. Account boundaries in the graph do not correspond to topology boundaries; scope grants do.
+- `$accessible_account_ids` in traversal queries is derived from the executor's key scope claims, not from a static account_id equality check.
+- Posterior updates on edges and nodes are attributed to the executor's issuing account (the account whose identity-vessel issued the key). Thompson Sampling for each account learns from its own observed outcomes.
+- **FC-3 (`share_learning = true`)** is the explicit opt-in for cross-account learning: when set on a federation link, the granting account's posteriors are seeded into the grantee's priors. This is entirely orthogonal to execution scope grants — an account can grant full execution scope without sharing its learned posteriors, and vice versa. FC-3 is out of scope for this proposal; it is documented here to prevent scope creep.
+
+**Practical implication for P4:** the `composes` edge `UNIQUE(in, out)` uniqueness constraint only makes sense within an account's observed subgraph. Two accounts observing the same composition path independently each have their own edge record with their own α/β. The unique index MUST be `UNIQUE(in, out, account_id)` so cross-account observations do not collide or overwrite each other's posteriors.

@@ -79,6 +79,10 @@ The Thompson Sampling step that selects an activity variant MUST draw a Beta-dis
 
 Forward-chaining composition discovery (`discover-by-shapes`, forward mode) MUST be implementable as a single graph traversal query: `activity_template:$start ->(composes WHERE input_shapes CONTAINSANY $shapes)-> activity_template`. Backward-chaining MUST be implementable as a single reverse traversal. Neither traversal MUST require fetching individual `variant_performance_metrics` rows separately.
 
+RELATE traversal MUST filter on executor key scopes, not account_id equality. Edges MAY cross account boundaries if the executor's key includes cross-account scopes granted via active federation links. Concretely, traversal queries MUST derive `$accessible_account_ids` from the executor's key scope claims and filter `out.account_id INSIDE $accessible_account_ids` (or equivalent) — not require `edge.account_id = $executor_account_id`.
+
+The `account_id` field on a `composes` edge records the **executor's issuing account** (who observed this composition path). The `in` and `out` templates on the edge MAY belong to different accounts.
+
 #### Scenario: Forward traversal returns activity templates reachable from start node
 
 - **GIVEN** a `composes` edge from `activity_template:A` to `activity_template:B` with `input_shapes = ["code"]`
@@ -90,6 +94,20 @@ Forward-chaining composition discovery (`discover-by-shapes`, forward mode) MUST
 - **GIVEN** edges A→B with `input_shapes = ["code"]` and A→C with `input_shapes = ["concept"]`
 - **WHEN** forward traversal is issued with `$required_input_shapes = ["code"]`
 - **THEN** only `activity_template:B` appears; `activity_template:C` is excluded
+
+#### Scenario: Cross-account traversal succeeds when executor key has cross-account scope
+
+- **GIVEN** an executor key with scopes for both Account X and Account Y
+- **AND** a `composes` edge from `activity_template:A` (Account X) to `activity_template:B` (Account Y)
+- **WHEN** a forward traversal is issued with `$accessible_account_ids = ["account_X", "account_Y"]`
+- **THEN** `activity_template:B` appears in the result set (edge crosses account boundary; key scopes permit it)
+
+#### Scenario: Cross-account traversal blocked when executor key lacks the scope
+
+- **GIVEN** an executor key with scopes only for Account X
+- **AND** a `composes` edge from `activity_template:A` (Account X) to `activity_template:B` (Account Y)
+- **WHEN** a forward traversal is issued with `$accessible_account_ids = ["account_X"]`
+- **THEN** `activity_template:B` does NOT appear in the result set
 
 #### Scenario: RELATE edge α/β updates are atomic
 
@@ -202,7 +220,35 @@ Each of P1 through P5 (6 phases) MUST be deployable to canary independently. No 
 
 ---
 
-### R10: Backfill script for RELATE edges MUST be idempotent
+### R10: The shape gap index MUST be consulted before triggering `create-shape-provider-goal` escalation
+
+Before the executor triggers a `create-shape-provider-goal` escalation for a missing shape, it MUST query the `shape_gap_resolution` table for a prior resolution of the same `(shape, account_id)` pair. If a prior resolution exists and `resolved_by` is still accessible within the executor's current key scopes, the executor MUST attempt to reuse it rather than re-running goal-seeking. A `resolution_type = 'scope_upgrade_needed'` entry MUST surface to the human (workbench) rather than triggering automatic escalation.
+
+#### Scenario: Second occurrence of a gap reuses prior resolution
+
+- **GIVEN** a `shape_gap_resolution` row with `shape = "project_config"`, `account_id = "acct_X"`, `resolution_type = "goal_created"`, and a valid `resolved_by` template still in scope
+- **WHEN** the executor encounters a missing `project_config` shape
+- **THEN** the executor executes `resolved_by` directly
+- **AND** `times_used` on the gap index row is incremented
+- **AND** `create-shape-provider-goal` is NOT triggered
+
+#### Scenario: `scope_upgrade_needed` entry routes to human
+
+- **GIVEN** a `shape_gap_resolution` row with `resolution_type = "scope_upgrade_needed"` for shape `"private_config"` and `account_id = "acct_X"`
+- **WHEN** the executor encounters a missing `private_config` shape
+- **THEN** the executor emits a `scope_upgradeable` blocking_shapes entry to the workbench
+- **AND** does NOT trigger `create-shape-provider-goal` automatically
+
+#### Scenario: No gap index entry falls through to goal-seeking
+
+- **GIVEN** no `shape_gap_resolution` row exists for `shape = "custom_report"`, `account_id = "acct_X"`
+- **WHEN** the executor encounters a missing `custom_report` shape
+- **THEN** `create-shape-provider-goal` escalation is triggered
+- **AND** on completion a new `shape_gap_resolution` row is inserted recording the outcome
+
+---
+
+### R11: Backfill script for RELATE edges MUST be idempotent
 
 The migration backfill that converts `activity_composition_graph` rows to RELATE edges MUST be runnable multiple times without creating duplicate edges or corrupting existing edge α/β values.
 
@@ -210,7 +256,7 @@ The migration backfill that converts `activity_composition_graph` rows to RELATE
 
 - **GIVEN** the backfill script has been run once (all edges created)
 - **WHEN** the backfill script is run again
-- **THEN** no duplicate edges are created (unique index on `(in, out)` prevents duplicates)
+- **THEN** no duplicate edges are created (unique index on `(in, out, account_id)` prevents duplicates — per-account edges for the same template pair are distinct)
 - **AND** existing edge α/β values are unchanged
 
 #### Scenario: Backfill handles missing composition_impulse_flow rows
