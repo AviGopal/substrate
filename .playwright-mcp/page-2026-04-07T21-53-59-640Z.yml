@@ -1,1 +1,0 @@
-- generic [ref=e2]: "{\"service\":\"metabob-activity-api\",\"version\":\"1.0.0\",\"timestamp\":\"2026-04-07T21:53:59.463Z\",\"checks\":{\"redis\":{\"status\":\"healthy\",\"latency_ms\":1},\"surrealdb\":{\"status\":\"healthy\",\"latency_ms\":5}},\"status\":\"healthy\"}"
