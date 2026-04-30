@@ -199,13 +199,11 @@ for file in "${STAGED[@]}"; do
   fi
 done
 
-if [[ ${#violations[@]} -eq 0 ]]; then
-  exit 0
-fi
-
-# Print findings.
-printf '%s\n' "${RED}━━━ super-repo placement check failed ━━━${NC}"
-printf '%s\n\n' "${DIM}rules: scripts/git-hooks/README.md${NC}"
+if [[ ${#violations[@]} -gt 0 ]]; then
+  # Print placement findings and exit before running gitleaks — fixing
+  # placement first keeps the secrets-scanner output focused.
+  printf '%s\n' "${RED}━━━ super-repo placement check failed ━━━${NC}"
+  printf '%s\n\n' "${DIM}rules: scripts/git-hooks/README.md${NC}"
 
 for v in "${violations[@]}"; do
   IFS='|' read -r file reason remedy <<<"$v"
@@ -233,4 +231,44 @@ ${DIM}Bypass${NC}
   git commit --no-verify   ${DIM}(use sparingly; the rules exist to keep blame readable)${NC}
 EOF
 
-exit 1
+  exit 1
+fi
+
+# ─── secrets scan ───
+# Run gitleaks against the staged diff. We had a real Anthropic API key
+# committed at one point; this layer is the second barrier (the first being
+# the .gitignore patterns that refuse to track .env / secrets.yaml / *.key).
+#
+# Gitleaks installation is not enforced — if it's missing we print a hint
+# and let the commit proceed. The cost of blocking developers without the
+# binary outweighs the value, and the gitignore + placement rules already
+# catch the most common shapes.
+if command -v gitleaks >/dev/null 2>&1; then
+  # --staged   scan only what's about to be committed
+  # --redact   replace matched secrets with [REDACTED] in the report so the
+  #            terminal scrollback / hook log does not itself become a leak
+  # --no-banner suppress the gitleaks ascii banner; we want the hook quiet
+  #             on the success path
+  if ! gitleaks protect --staged --redact --no-banner 2>&1; then
+    printf '\n%s\n' "${RED}━━━ gitleaks: secrets detected in staged diff ━━━${NC}"
+    cat <<EOF
+${DIM}What to do${NC}
+  1. Remove the secret from the file before committing.
+  2. Rotate the leaked credential immediately — assume it is compromised
+     once it has touched the staging tree.
+  3. If gitleaks is flagging a false positive (e.g. a placeholder value in
+     a docs example), add an inline allowlist comment:
+       ${DIM}some-value-that-looks-like-a-secret  # gitleaks:allow${NC}
+     or extend the project rule set in scripts/git-hooks/.gitleaks.toml.
+
+${DIM}Bypass${NC}
+  git commit --no-verify   ${DIM}(only after rotating the credential)${NC}
+EOF
+    exit 1
+  fi
+else
+  printf '%s\n' "${YELLOW}note:${NC} gitleaks is not installed; secrets scan was skipped."
+  printf '%s\n' "      install: ${DIM}brew install gitleaks${NC} | ${DIM}go install github.com/gitleaks/gitleaks/v8@latest${NC} | ${DIM}https://github.com/gitleaks/gitleaks/releases${NC}"
+fi
+
+exit 0

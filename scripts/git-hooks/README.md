@@ -35,6 +35,15 @@ Anything else accumulates as cruft. The pre-commit hook rejects new cruft at com
 | Playwright / screenshot output | gitignored — these are session artefacts, not source |
 | WIP analysis / exploration / debugging notes | nowhere — write a commit message or stay in conversation |
 
+## What the pre-commit hook does
+
+The hook runs two layers, in order:
+
+1. **Placement check** — rejects newly-added or renamed-into entries that violate the placement rules below. Pre-existing files are grandfathered.
+2. **Secrets scan (`gitleaks protect --staged`)** — scans the staged diff for credentials. If gitleaks isn't installed, the scan is skipped with a one-line install hint; the hook does not block commits over a missing optional dependency.
+
+If the placement check fails the secrets scan does not run — fix placement first, then re-stage. Bypass with `git commit --no-verify` (don't make a habit of it; the secrets scan in particular exists because we had a real Anthropic key committed at one point).
+
 ## What the pre-commit hook blocks
 
 A commit is rejected when it adds (or renames into) a file that violates any of these rules. Modifying existing tracked files is never blocked.
@@ -60,6 +69,30 @@ Use docs (`docs/`) for things that are still true a year from now. Use openspec 
 - It does not validate openspec contracts.
 
 The previous deploy-on-commit hook was removed — deployment runs from CI on push to `dev`, not from the developer's laptop on every commit.
+
+## Gitleaks
+
+`gitleaks protect --staged --redact --no-banner` runs after a successful placement check. Findings block the commit; the matched secret is redacted in the output so the terminal scrollback / hook log doesn't itself become a leak source.
+
+Install:
+
+```bash
+brew install gitleaks                                      # macOS
+go install github.com/gitleaks/gitleaks/v8@latest          # Go toolchain
+# or grab a binary: https://github.com/gitleaks/gitleaks/releases
+```
+
+If gitleaks is not on `PATH` the hook prints a one-line install hint and lets the commit through. The first defence against credential leaks remains the `.gitignore` patterns in the super-repo (`.env*`, `*.key`, `*.pem`, `secrets.yaml`, `.metabob_api_key`, `.metabob_session`); gitleaks is the second.
+
+**False positives.** If gitleaks flags an example value in a docs page or a placeholder in a config template, add an inline allowlist marker:
+
+```
+example_key = "AKIAEXAMPLE..."  # gitleaks:allow
+```
+
+Or extend the project rule set at `scripts/git-hooks/.gitleaks.toml` (file does not exist by default; create it only when needed and check it in).
+
+**If a secret slips through.** Rotate it immediately. The leaked value lives in git history forever; rotation is what makes the cheap `git rm` recovery path safe.
 
 ## Bypass
 
