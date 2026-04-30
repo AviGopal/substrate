@@ -249,9 +249,9 @@ Acceptance: a resolver dispatched from an activity template can read α/β for a
 - [ ] 10.7 Verify Tier 3 BM25 search returns non-zero scores for matching queries on canary
 
 #### P2 — COMPUTED ev field
-- [ ] 10.8 Define `COMPUTED` `ev` field migration on all 8 tables carrying α/β posteriors
-- [ ] 10.9 Verify ev reflects live α/β values without stale cache (read-time derivation)
-- [ ] 10.10 Update recommend endpoint to use `ORDER BY ev DESC` in SQL (replace JS EV aggregation)
+- [x] 10.8 ✅ **DONE** 2026-04-30. `sql/migrations/103-thompson-ev-computed.surql` defines `ev = α/(α+β)` as a SurrealDB VALUE field on all 12 tables carrying Beta posteriors (spec said "8" but the actual schema has more — the field handles both `thompson_alpha/beta` and `alpha/beta` naming families). VALUE re-evaluates on every CREATE/UPDATE so any atomic α/β bump propagates to ev in the same statement; no JS aggregation, no stale-cache window. `?? 1` fallback yields ev=0.5 (uniform Beta(1,1)) on rows with no prior writes. Indexes added for the four hot-path tables (`activity_template`, `goal_execution_paths`, `variant_performance_metrics`, `impulse_shape_activity_score`). Idempotent via `IF NOT EXISTS`. (`repos/metabob-activity-api`)
+- [ ] 10.9 Verify ev reflects live α/β values without stale cache (read-time derivation) — gated on migration 103 deploy + canary smoke that reads `ev` after a successful trace
+- [ ] 10.10 Update recommend endpoint to use `ORDER BY ev DESC` in SQL (replace JS EV aggregation) — gated on 10.9 verification
 - [ ] 10.11 Cache invalidation review — confirm Redis TTL path unaffected by COMPUTED field
 
 #### P3 — fn::beta_sample stored function
