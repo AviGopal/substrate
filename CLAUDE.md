@@ -1039,6 +1039,20 @@ node test-goal-processor.mjs
 
 **Commit early and often once a feature is working.** Don't accumulate large uncommitted changes.
 
+### Super-repo placement rules
+
+The super-repo is a thin coordinator over `repos/*` (submodule pointers), `docs/` (stateless documentation), `openspec/` (future-change proposals), `scripts/` (operational tooling), and `packages/` (shared TypeScript packages). Anything else accumulates as cruft.
+
+A pre-commit hook at `scripts/git-hooks/pre-commit` enforces placement rules on newly-added or renamed-into entries (modifications to existing tracked files are never blocked). Install for a fresh clone with `scripts/git-hooks/install.sh`. Full rules and rationale: [`scripts/git-hooks/README.md`](scripts/git-hooks/README.md). Summary:
+
+- Files at the super-repo root are limited to a small allowlist of project metadata (CLAUDE.md, README.md, .gitignore, .gitmodules, lockfiles, dotfile configs).
+- New top-level markdown belongs in `docs/` (stateless reference) or `openspec/changes/<date>-<slug>/` (future-change proposals + designs + tasks + specs). Writeups that only matter for one commit go in the **commit message**, not the tree.
+- Tests live under `repos/<vessel>/test{,s}/` alongside their code; the super-repo never holds tests.
+- Image / video / archive files belong in `repos/<vessel>/` or `docs/assets/`. Screenshots and playwright output should be gitignored, not committed.
+- Ad-hoc shell / TS / Python scripts at root are rejected; reusable tooling goes in `scripts/`, one-shot operations live in commit history rather than the tree.
+
+The super-repo's prior pre-commit hook (which ran `helmfile` against the local cluster on every commit) was removed; deployment runs from CI on push to `dev`, not from the developer's laptop.
+
 ### When to Commit
 
 1. **After demonstrating a working codepath in the deployed environment**
