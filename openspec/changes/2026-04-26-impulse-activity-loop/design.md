@@ -186,11 +186,15 @@ Execute representative goals on `activity.metabob.com`. For each, document:
 - The Thompson α/β before/after.
 - Notes on any divergence from spec contracts — these become design refinements.
 
+**Goal verification correctness (8.2a):** `openspec/changes/2026-04-29-goal-verification-wiring/` identifies four failure modes (FM-1 through FM-4) in `verifyWithEvidence`, `GoalCompletionBar`, and `isGoalSatisfied` that cause false-positive goal completion. These must be fixed before Phase 8.2 (lifecycle coverage audit) and before Phase 5 cutover (safety gates depend on correct learning signals). See 8.2a tasks.
+
 ### Phase 9 — `thompson_posterior` shape (Thompson implicit vessel becomes explicit)
 
 The α/β/sample_count posterior data already exists in activity-api but is REST-only. Phase 9 advertises and resolves a `thompson_posterior` shape so the implicit Thompson vessel becomes addressable through the standard impulse → resolver dispatch. The existing REST handler (`variantMetricsSummary`, `GET /v2/activities/:id/variant-scores`) becomes a thin wrapper over the shape resolver. Workbench reads posterior data via shape resolution where currently using REST. Documents the new shape under `docs/impulse-types/thompson_posterior.md`. See `tasks.md` §9 for the full subtask breakdown.
 
 ### Phase 10 — SurrealDB 3.x RL Layer
+
+**Prerequisite:** vessel-to-vessel JWT session handshake (`openspec/changes/2026-04-29-vessel-session-handshake/`) must be deployed before P4 (RELATE graph traversal, which fans out cross-vessel via discovery) and Phase 11 (pointer_state_space queries to discovery-vessel). The current `X-Internal-Api-Key` bypass is not cryptographically validated and cannot be the auth mechanism for load-bearing cross-vessel queries.
 
 Move the Thompson Sampling loop, composition graph traversal, and activity search from O(N) application-layer aggregation into SurrealDB 3.0 native primitives. Six sub-phases, each independently deployable. Defined fully in `openspec/changes/2026-04-29-surrealdb-rl-layer/`. Cross-reference: the `thompson_posterior` shape from Phase 9 is the consumer-facing surface of the Thompson implicit vessel; Phase 10 builds the internal RL primitives it depends on.
 

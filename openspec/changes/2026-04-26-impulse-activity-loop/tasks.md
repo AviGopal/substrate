@@ -87,9 +87,9 @@ References sibling task lists. This change does not duplicate the work, only tra
 
 ### 5.0 Prerequisites (gating Phase 5 cutover)
 
-See design.md §"Phase 5 prerequisites and rollback" for full rationale. None of 5.1–5.4 starts until ALL of 5.0.1–5.0.8 are met and `FEATURE_ACTIVITY_DRIVEN_BINDING` has been flipped to `enabled` for the org under cutover.
+See design.md §"Phase 5 prerequisites and rollback" for full rationale. None of 5.1–5.4 starts until ALL of 5.0.1–5.0.9 are met and `FEATURE_ACTIVITY_DRIVEN_BINDING` has been flipped to `enabled` for the org under cutover.
 
-**Survey 2026-04-30:** the safety-hardening prerequisites (5.0.1, 5.0.2, 5.0.6, 5.0.7, 5.0.8) are all undeployed — the source code carries no `verified_cross_sign`, `baseline_variant`, `FEATURE_ACTIVITY_DRIVEN_BINDING`, or `shadow_decision_log` references in either activity-api or minibob. The 5.0 track describes an aspirational safety rollout that needs a multi-day implementation effort (referencing the deferred `2026-04-26-security-hardening-findings` change). Phase 5 cutover under the strict 5.0 gate is therefore blocked on those hardenings landing first.
+**Survey 2026-04-30:** the safety-hardening prerequisites (5.0.1, 5.0.2, 5.0.6, 5.0.7, 5.0.8, 5.0.9) are all undeployed — the source code carries no `verified_cross_sign`, `baseline_variant`, `FEATURE_ACTIVITY_DRIVEN_BINDING`, or `shadow_decision_log` references in either activity-api or minibob. The 5.0 track describes an aspirational safety rollout that needs a multi-day implementation effort (referencing the deferred `2026-04-26-security-hardening-findings` change). Phase 5 cutover under the strict 5.0 gate is therefore blocked on those hardenings landing first.
 
 - [ ] 5.0.1 ⚠️ **NOT STARTED** Verify H1 (two-sided execution-trace verification) deployed and gating Thompson updates — `repos/metabob-activity-api/src/routes/execution-traces.ts:1306` and `:1579` skip rows lacking `verified_cross_sign: true`. **Survey 2026-04-30:** `verified_cross_sign` does not appear anywhere in activity-api source; H1 implementation is deferred to the security-hardening-findings change. Reference: `openspec/changes/2026-04-26-security-hardening-findings/design.md` §H1.
 - [ ] 5.0.2 ⚠️ **NOT STARTED** Verify H5 baseline variants registered and immutable for each resolver family Phase 5 depends on — `producer_selection`, `impulse_pool_selection`, `learning_signal_writer`, `validator_dispatch`, `impulse_preparation`. Auto-regression scan filters quarantined variants from candidate sets. **Survey 2026-04-30:** no `baseline_variant` field on activity-api templates; auto-regression scan does not exist. (`repos/metabob-activity-api`) Reference: §H5.
@@ -99,6 +99,7 @@ See design.md §"Phase 5 prerequisites and rollback" for full rationale. None of
 - [ ] 5.0.6 ⚠️ **NOT STARTED** Implement `FEATURE_ACTIVITY_DRIVEN_BINDING` flag — env var read in `repos/minibob/src/config.ts` alongside existing `MINIBOB_*` patterns; per-org override row in `org_feature_flags`; default `disabled`. Implement shadow-mode comparison: while flag is disabled, run both inline and meta-activity paths, log decisions + outcomes + diffs + trace IDs to `shadow_decision_log`, consume only the inline result. **Survey 2026-04-30:** flag does not exist in minibob source; no `org_feature_flags` table; no `shadow_decision_log` table. (`repos/minibob`)
 - [ ] 5.0.7 ⚠️ **NOT STARTED** Implement rollback triggers with alert wiring: meta-activity invocation failure rate, `learning_signal_writer` empty-`templateId` no-op rate, Thompson-Sampled variant exceeding H5 threshold without baseline catch, `composition_chain` corruption rate, verified-cross-sign rate. Thresholds per design.md §"Rollback triggers"; calibration TBD on canary observation. (`repos/metabob-activity-api` + observability)
 - [ ] 5.0.8 ⚠️ **NOT STARTED** Gather minimum 7 canary days of shadow-mode evidence per org; divergence-rate threshold met (`< 1%` per `(shape, taskId)` pair, calibration TBD). Document evidence in design.md §"Success-criteria validation" before flipping flag. (operational; gated on 5.0.6 landing first)
+- [ ] 5.0.9 ⚠️ **NOT STARTED** Implement vessel-to-vessel JWT session handshake — replace `X-Internal-Api-Key` bypass with cryptographically-validated HS256 JWT (15-min TTL, minted by identity-vessel `/v1/jwt/generate`, locally signature-verified on the receiving side). Required before Phase 10 P4 (RELATE graph traversal fans out cross-vessel) and Phase 11 (pointer_state_space queries to discovery-vessel). Reference: `openspec/changes/2026-04-29-vessel-session-handshake/`.
 
 **Recommended next steps (decision):** Phase 5 strict cutover is blocked on a multi-day hardening track (5.0.1, 5.0.2, 5.0.6, 5.0.7). Two pragmatic options:
 1. **Implement the hardening track** (estimated 2–4 weeks: H1 cross-sign infrastructure → H5 baseline variants → feature flag with shadow-mode → 7-day evidence collection). Aligned with the spec; conservative.
@@ -195,6 +196,23 @@ Phase 8 Iteration 1 discovered 5 critical blockers preventing goal execution on 
 
 - [ ] 8.1 Goal regression set: dispatch each representative goal class against canary; capture trace IDs
 - [ ] 8.2 Inspect traces for full lifecycle event coverage; document gaps
+
+#### 8.2a — Goal Verification Correctness (prerequisite for 8.2 and Phase 5 cutover)
+
+Reference: `openspec/changes/2026-04-29-goal-verification-wiring/`
+
+Four failure modes cause false-positive goal completion, inflating α posteriors and corrupting Thompson Sampling:
+- FM-1: `verifyWithEvidence` ignores `goalEnrichment.requiredCapabilities`, `category`, and `successCriteria` parameters
+- FM-2: `GoalCompletionBar` checks declared template `output_shapes` rather than actual trace impulses
+- FM-3: `isGoalSatisfied` uses file-count heuristic instead of shape-presence check
+- FM-4: Inline `successCriteria` from enrichment not parsed during completion check
+
+- [ ] 8.2a.1 Fix FM-1: wire `requiredCapabilities`, `category`, and `successCriteria` from `goalEnrichment` into `verifyWithEvidence` shape-presence check
+- [ ] 8.2a.2 Fix FM-2: `GoalCompletionBar` reads actual impulse shapes from execution trace rather than declared `output_shapes` from template
+- [ ] 8.2a.3 Fix FM-3: replace file-count heuristic in `isGoalSatisfied` with shape-presence check against resolved impulse pool
+- [ ] 8.2a.4 Fix FM-4: parse inline `successCriteria` from enrichment result and evaluate during completion check
+- [ ] 8.2a.5 Canary smoke: run 5 goals with explicit `successCriteria`; verify completion only fires when criteria are actually met (not on file-count proxy)
+
 - [ ] 8.3 Confirm Thompson α/β updates on success and failure paths
 - [ ] 8.4 Confirm `failure_mode` populated correctly for each of the five types
 - [ ] 8.5 Confirm at least one goal succeeds via recursive sub-goal escalation
