@@ -3,6 +3,11 @@
 	url = git@github.com:MetabobProject/concept-db.git
 	branch = main
 
+[submodule "repos/conversation-vessel"]
+	path = repos/conversation-vessel
+	url = git@github.com:MetabobProject/conversation-vessel.git
+	branch = dev
+
 [submodule "repos/deployment"]
 	path = repos/deployment
 	url = git@github.com:MetabobProject/deployment.git
@@ -31,6 +36,16 @@
 [submodule "repos/minibob"]
 	path = repos/minibob
 	url = git@github.com:MetabobProject/minibob.git
+	branch = dev
+
+[submodule "repos/react-renderer"]
+	path = repos/react-renderer
+	url = git@github.com:MetabobProject/react-renderer.git
+	branch = dev
+
+[submodule "repos/terminal"]
+	path = repos/terminal
+	url = git@github.com:MetabobProject/terminal.git
 	branch = dev
 
 [submodule "repos/user-vessel"]
