@@ -58,7 +58,7 @@ F-39 was marked closed (templateId now in lifecycle payload + resolver no-ops on
 - [x] 1.1 Emit `lifecycle:task:preBinding` in `repos/minibob/src/activity.ts` resolver-path branch (before `canExecuteTask` at `:4405`)
 - [x] 1.2 Mirror emission on the LLM-only path (`executeWithLLM` inputShapes block, recompute pool after await)
 - [x] 1.3 Reconcile payload field naming — chose `executionId` (matches existing emission); `lifecycle-task-prebinding/spec.md` updated; F-1 RESOLVED (2026-04-26 commit `60556b0f`)
-- [ ] 1.4 Unit test: emission fires before gate when `inputShapes` non-empty; payload fields match the reconciled contract — payload now also carries `parentGoalText` (F-2, commit `8ed4412`) and `parentDepth` (F-3, commit `a16028f`); test should cover both
+- [x] 1.4 ✅ **DONE** (verified 2026-04-30, 6/6 tests pass). `repos/minibob/src/activity-prebinding-emission.test.ts` covers the full contract: emission fires when `inputShapes` non-empty AND before resolver dispatch (sequence-counter assertion); does NOT fire when `inputShapes` empty; payload contains all 9 contract fields (`taskId`, `templateId`, `executionId`, `inputShapes`, `currentImpulseIds`, `missingShapes`, `variables`, `parentGoalText`, `parentDepth`) with correct types and values; `parentGoalText` falls back to `reason` when `goalContext` is absent; `parentDepth` defaults to 0 when `activityCallStack` is undefined; seeded `ExecuteOptions.impulses` appear in nested executor pool. Mocking pattern: stubs lifecycle subscription template provider with a recorder subscriber and overrides the dispatcher to capture impulses + payload as the executor fires them.
 - [x] 1.5 `bun run typecheck` in `repos/minibob` — zero new errors (iterations 1 and 2)
 - [x] 1.6 Canary smoke: WS interceptor on local containerized MiniBob confirmed 28 `lifecycle:task:preBinding` events received by workbench in a single run (2026-04-27); slots with both `bound` and `pending` states visible — `acquire_context:impulse_state_result=bound`, `recommend_activity:goal_enrichment=bound`, `dispatch_activity:variant_selection_result=bound`. ImpulseStatePanel "Bindable Slots" section populated live. trace.at.activity.metabob.com pending MCP storage fix (bug 10.2).
 
@@ -152,7 +152,7 @@ Phase 8 Iteration 1 discovered 5 critical blockers preventing goal execution on 
 
 ### I2.1 Blocker 1: Bootstrap impulse null-guard (activity.ts:2509)
 
-- [ ] I2.1.1 Add null-guard in activity.ts:2507-2509 where impulses are mapped to extract `pointer.type`
+- [x] I2.1.1 ✅ **DONE** 2026-04-30. Line numbers shifted from the spec's `2507-2509` reference; the actual two `i.pointer.type` access sites now live at activity.ts:6055 (createdImpulseIds shape collection in post-execution shape inference) and :6118 (loadedImpulses inputShapes for trace recording). Both now read `metadata?.shape ?? pointer?.type` and filter out non-string results so a malformed impulse (no pointer) doesn't crash the post-task path. typecheck clean. (`repos/minibob`)
 - [ ] I2.1.2 Root cause: goal-impulse initialization missing `pointer` field for some impulse shapes
 - [ ] I2.1.3 Test: Verify goal-impulse-seeding path creates well-formed impulses with all required fields
 - [ ] I2.1.4 Acceptance: `bun run typecheck` clean; no TypeError when impulse.pointer undefined
