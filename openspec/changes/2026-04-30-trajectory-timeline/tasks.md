@@ -106,10 +106,12 @@ New component (`src/components/trajectory/SelectionMomentNode.tsx`, ~80 lines):
 
 When `isUnfolded[activityId]` is true, replace the activity card body with `ResolverSequence`. The card header stays visible (with fold toggle). The surrounding connectors remain unchanged — they connect to the sequence's first and last resolver nodes.
 
-Insert `SelectionMomentNode` for any task where `resolver_id === 'variant_selection'`.
+Insert `SelectionMomentNode` for any task where `resolver_id === "variant_selection"`.
+
+Insert `CompositionBridgeNode` (the ◈ node) for any task where `resolver === "activity"` — this task represents a composition event and bridges to the next column.
 
 **File**: `src/components/trajectory/TrajectoryGridWithDnd.tsx`
-**Acceptance**: clicking ⊞ on a loaded trace card shows the resolver sequence inline; selection moment node appears for goal-processing.
+**Acceptance**: clicking ⊞ on a loaded trace card shows the resolver sequence inline; selection moment node appears for goal-processing; composition bridge node (◈) appears for any task with resolver="activity"; post-dispatch tasks (goal_verification etc.) appear after the bridge.
 
 ---
 
@@ -130,6 +132,21 @@ Query: does the content contain candidate activities with probabilities, α/β? 
 Add parser in `SelectionMomentNode` or a utility that extracts candidates from the impulse body. Handle missing/malformed content gracefully (show empty state).
 
 **Acceptance**: `SelectionMomentNode` populated with real data from a loaded trace.
+
+---
+
+### T2.5 — Create `CompositionBridgeNode` component
+
+New component (`src/components/trajectory/CompositionBridgeNode.tsx`, ~60 lines).
+
+Props: `resolverTier`, `durationMs?`, `composedActivityName?`.
+
+Visual: distinct bridge marker (◈) — this resolver task composed a sub-activity. Shows tier dot, duration, and the name of the composed activity if known. Connects visually to the next column card with a heavier arrow or distinct color to indicate composition rather than data flow.
+
+Data source: `tasks[i].resolver === "activity"` detection + `traceCardData.dispatchedByName` for the composed activity name (already in store).
+
+**File**: `src/components/trajectory/CompositionBridgeNode.tsx`
+**Acceptance**: renders with mock data; visually distinct from regular resolver task nodes and from the selection moment node.
 
 ---
 

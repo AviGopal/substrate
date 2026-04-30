@@ -4,22 +4,53 @@
 
 ---
 
+## Composition Model
+
+**Any task whose `resolver` field is `"activity"` is a composition event.** This is not special to `dispatch_activity` in goal-processing — any task in any activity can compose a sub-activity using the `activity` resolver, in the same way it might use `bash`, `file`, or `llm`. Examples:
+
+- `goal-processing` task 6: `activity` resolver → spawns `exec-shell-command`
+- `slot-binding` task: `activity` resolver → spawns `create-shape-provider-goal` when a shape is missing
+- `validator-dispatch` task: `activity` resolver → spawns a validator activity
+- `ribosome-extract` task: `activity` resolver → spawns `make-activity`
+
+**Consequence for temporal layout**: tasks in an activity run **before and after** the composed sub-activity. The composed activity is nested inside the parent, not parallel to it:
+
+```
+T=0                        T=35s              T=63s      T=90s
+│──── goal-processing ─────────────────────────────────────────│
+│  t1  t2  t3  t4  t5  │                   │  t7  t8  t9       │
+│              ↓ t6: activity resolver      │                   │
+│                       │──exec-shell-cmd──│                   │
+│                            (composed)                         │
+```
+
+The **composition point** (task using `activity` resolver) is the bridge between the parent activity's pre-dispatch tasks and the composed sub-activity. Post-dispatch tasks (like `goal_verification`) run after the composed activity completes. An activity can have multiple composition events — each `activity` resolver task spawns a separate sub-activity.
+
+This means columns in the trajectory editor are not independent parallel activities — they represent composed sub-activities at successive nesting depths. The column boundary IS the `activity` resolver call.
+
+---
+
 ## Practical UI Shape
 
 ### The Timeline Strip (per activity boundary)
 
-Between every pair of adjacent activities, the connector region becomes a **resolver-wire bundle**. This replaces the current `ShapeFlowConnector` component.
+The connector between columns now explicitly represents the **`activity` resolver call** that composed the right column's activity. It carries:
+1. The shapes that flowed from the left activity into the composed activity (inputs)
+2. The resolver annotation showing the `activity` resolver as the mechanism
+3. Optionally (when unfolded): which specific task in the left activity made the call
 
 ```
-┌──────────────────┐      ┌────────────────────────────┐      ┌──────────────────┐
-│  goal-processing │      │  CONNECTOR REGION           │      │  exec-shell-cmd  │
-│  [unfold ▾]      │──────│  source_code → bash [Det.]●│──────│  [unfold ▾]      │
-│                  │      │  config_file → file [Det.]● │      │                  │
-│  α:2 β:1 · 67%  │      │  recommendation (→ later)  │      │                  │
-└──────────────────┘      └────────────────────────────┘      └──────────────────┘
+┌──────────────────┐      ┌───────────────────────────────────┐      ┌──────────────────┐
+│  goal-processing │      │  COMPOSITION POINT (task 6)        │      │  exec-shell-cmd  │
+│  [unfold ▾]      │──────│  activity [Det.]●                  │──────│  [unfold ▾]      │
+│                  │      │  ├─ source_code → bash [Det.]●     │      │                  │
+│  α:2 β:1 · 67%  │      │  └─ config_file → file [Det.]●     │      │                  │
+└──────────────────┘      └───────────────────────────────────┘      └──────────────────┘
 ```
 
-**Width of connector region**: fixed at ~80px (current connector is ~52px). The extra space holds the resolver label.
+The connector header shows `activity [Det.]●` — the resolver that composed the sub-activity. Below it, the shapes flowing into the composed activity are annotated with the resolver that will consume them inside the sub-activity (same as before, but now grouped under the composition point).
+
+**Width of connector region**: fixed at ~88px. The resolver annotation fits above the shape wires.
 
 **Shape wire states:**
 - `shape_name → resolver [Tier]●` — when resolver is known (trace/live or compose+connected)
@@ -48,24 +79,29 @@ Each activity card header gets an unfold button alongside the existing expand/co
 
 ### Unfolded State
 
-When unfolded, the activity card is replaced by a horizontal sequence of resolver task nodes, each rendered using `TaskEditor` in a compact horizontal variant. The timeline reads as:
+When unfolded, the activity card is replaced by a horizontal sequence of resolver task nodes. Any task whose `resolver` is `"activity"` is identified as the **composition bridge** (`[◈]`) — it connects the pre-dispatch resolver tasks on its left to the composed sub-activity column on its right, and the post-dispatch resolver tasks continue after it:
 
 ```
-            ┌───────────────────────────────────────────────────────────────────────┐
-            │ ← goal-processing (unfolded) ────────────────────────────────────── ▸│
-            │                                                                       │
- ─{goal}────┤[1: impulse_state]─{+scan}─[2: context_acq]─{+ctx}─[3: goal_enrich]─ │
-  {dir}─────┤   Det. ● 5s               Det. ● 20s              LLM ● 10s          │
-            │                                                                       │
-            │  ─{+enriched}─[4: activity_rec]─{+recs}─[5: variant_select ★]─{+sel}─│
-            │                LLM ● 5s                  Det. ● 2s                   │
-            │                                                                       │
-            │  ─[6: dispatch]─────────────────────────────────────────────────────▸│
-            │     Det. ● <1s → spawns exec-shell-command                           │
-            └───────────────────────────────────────────────────────────────────────┘
+  ── pre-dispatch tasks ──────────────── [◈ activity] ──▶ [next column]
+                                                    │
+                                         ── post-dispatch tasks ──
 ```
 
-**Layout**: horizontal scroll within the unfolded section. Each resolver task node is ~120px wide. Inter-task connectors show the shape produced → passed to next.
+Full example for goal-processing:
+
+```
+ {goal,dir} ─[1:impulse_state Det.●5s]─{+scan}─[2:context_acq Det.●20s]─{+ctx}
+             ─[3:goal_enrich LLM●10s]─{+enriched}─[4:activity_rec LLM●5s]─{+recs}
+             ─[5:variant_select ★ Det.●2s]─{+selection}
+             ─[6:activity Det.●<1s ◈]────────────────────────▶ [exec-shell-cmd column]
+             ─[7:goal_verify Det.●5s]─[8:human? skipped]─[9:decompose LLM●8s]
+```
+
+The `◈` bridge node (task 6) is the column boundary. The column to its right (exec-shell-command) is what that `activity` resolver composed. Tasks t7-t9 run after the composed sub-activity completes — they appear after the bridge in the same unfolded section.
+
+**Multiple composition events**: if an activity has two tasks with `resolver: "activity"`, it composes two sub-activities sequentially. Both appear as `◈` nodes, each bridging to a separate column.
+
+**Layout**: horizontal scroll within the unfolded section. Each resolver task node is ~120px wide. Inter-task connectors show the shape produced and passed to the next node.
 
 ---
 
