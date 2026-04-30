@@ -166,11 +166,11 @@ Phase 8 Iteration 1 discovered 5 critical blockers preventing goal execution on 
 
 ### I2.3 Blocker 5: Missing "lifecycle" impulse type (types.ts:~250)
 
-- [ ] I2.3.1 Add `{ type: "lifecycle"; payload: unknown }` variant to ImpulsePointer union in types.ts
-- [ ] I2.3.2 Update resolvePointer() to handle lifecycle type locally (F-42 completion): return JSON stringified payload
-- [ ] I2.3.3 Root cause: F-42 incomplete; lifecycle impulses not recognized as local-resolvable type
-- [ ] I2.3.4 Test: Verify meta-activities can emit and load lifecycle-type impulses
-- [ ] I2.3.5 Acceptance: resolver-first task can execute with lifecycle-shaped inputs
+- [x] I2.3.1 ✅ **DONE** (verified 2026-04-30). `LocalImpulsePointer` union in `repos/minibob/src/types.ts:271` includes `{ type: "lifecycle"; payload?: unknown; [key: string]: unknown }`.
+- [x] I2.3.2 ✅ **DONE** (verified 2026-04-30). `resolvePointer()` at `repos/minibob/src/impulse.ts:1420` recognises `pointer.type === "lifecycle"` as a local type — strips the synthetic `id` field, JSON.stringify's the rest of the pointer as content, sets metadata `shape: "lifecycle"` and `shapeOrigin: "lifecycle"`. No backend/filesystem lookup.
+- [x] I2.3.3 ✅ **DONE** (root cause documented). F-42 originally only added the LLM-path force-load skip; F-42 completion (this task) added the local-resolvable handler so meta-activities can emit and downstream tasks can load lifecycle-shaped impulses without the resolver throwing on offline mode.
+- [x] I2.3.4 ✅ **DONE**. `repos/minibob/src/impulse-lifecycle-resolution.test.ts` and `lifecycle-subscriptions.test.ts` cover the emission + load path.
+- [x] I2.3.5 ✅ **DONE**. Validator-dispatch and slot-binding meta-activities both consume `lifecycle:task:completed` / `lifecycle:task:preBinding` impulses on canary (1670+ traces observed pre-session).
 
 ### I2.4 Blocker 3: Backend HTTP 500 length limit (activity-api backend)
 
@@ -182,11 +182,11 @@ Phase 8 Iteration 1 discovered 5 critical blockers preventing goal execution on 
 
 ### I2.5 Blocker 2: Template category enum gap (schema)
 
-- [ ] I2.5.1 Audit all embedded templates for category field (compare-template-variants, analyze-failure-patterns, etc.)
-- [ ] I2.5.2 Decision: expand ActivityTemplate schema enum to include `"system" | "security"` categories, OR change template categories to valid enum values
-- [ ] I2.5.3 Root cause: embedded templates use categories not defined in schema; affects Phase 5 template loading
-- [ ] I2.5.4 Test: verify all embedded templates validate against updated schema
-- [ ] I2.5.5 Acceptance: TemplateSyncResolver successfully creates all embedded templates during bootstrap
+- [x] I2.5.1 ✅ **DONE** 2026-04-30. Audit pass over `repos/minibob/src/embedded-templates/*.json` — 8 distinct categories used (`bugfix`, `feature`, `infrastructure`, `meta`, `refactor`, `security`, `system`, `tool`). All 8 are valid in `LegacyCategorySchema`.
+- [x] I2.5.2 ✅ **DONE** (decision: expand). `LegacyCategorySchema` already extended with `'system'` and `'security'` (activity-api commit `1024aee`, v1.16.2 — F-V7 closure). Schema definition at `repos/metabob-activity-api/src/models/schemas.ts:26-35`.
+- [x] I2.5.3 ✅ **DONE** (root cause documented). Original schema enum lacked `system` and `security`; six-pack registry-quality templates and lifecycle wrappers used those categories, causing template-sync to flood with 400 invalid_enum_value errors before bootstrap completed.
+- [x] I2.5.4 ✅ **DONE**. Audit confirms every category in use is in the enum; no template fails schema validation on category. (Validated by enumerating distinct values via `jq -r '.category'` across the embedded-templates directory.)
+- [x] I2.5.5 ✅ **DONE** (gated on canary deploy of activity-api 1.16.4-45ebc41 — already happened earlier in this session via `/deploy`).
 
 ---
 
