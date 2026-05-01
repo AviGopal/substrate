@@ -182,7 +182,7 @@ Major rework of `TrajectoryGridWithDnd.tsx`:
 
 ---
 
-### R7 — Live mode step classification
+### ✓ R7 — Live mode step classification ✅
 
 In live mode, classify each resolver step as `completed | running | pending`:
 
