@@ -554,3 +554,20 @@ Fix shipped across 3 commits:
 - `b9cdbc2`: pass `null` jwtToken to FTS+dense calls in the blend — the api-key-derived JWT hits a pre-existing `'access method cannot be used in the requested operation'` error against the schema. Multi-tenant scoping preserved by the explicit `(scope='global' OR org_id=$org_id)` WHERE clause inside `queryActivitiesByFTS`.
 
 **Verified live 2026-05-01** (image `1.16.4-b9cdbc2`): different queries return different templates. Examples — "summarize git changes" → "Analyze Development Loop Performance"; "run a bash command" → "API Data Fetch and Save"; "review code quality" → "Comprehensive Application Trace Analysis"; "extract template from execution" → "API Data Fetch and Save". The architectural fix (query-shaped candidate pool) is in place. Remaining relevance tuning (e.g. surfacing bash-explicit templates for "bash" queries) is BM25 weight calibration territory, separate from this structural bug.
+
+#### Phase 12 Postscript — JWT auth root cause (2026-05-01)
+
+Pool activation depended on `queryWithAuth` working. Live probes against canary surfaced "The access method cannot be used in the requested operation" on `db.authenticate(jwt)` — even with a freshly-minted JWT signed with the runtime `JWT_SECRET` and `AC: 'apikey_token'`. Bisect by JWT claim:
+
+| Claim payload | Result |
+|---|---|
+| `{NS, DB, AC}` only | OK |
+| `{..., id: 'api_key:test'}` | FAIL |
+| `{..., id: 'users:test'}` | FAIL |
+| `{..., org_id, user_id, scopes, project_ids}` (no `id`) | OK |
+
+Root cause: SurrealDB resolves the `id` claim as a **record reference** during `authenticate()` — and `api_key:<keyId>` is not an existing row in this schema. Resolution failure manifests as the generic "access method cannot be used" message. Both this fix and a stale-`KEY` schema (migration 112 `DEFINE ACCESS OVERWRITE`) shipped this iteration; the **`id` claim drop** (commit b44cdf3 in `services/auth.ts`) is the actual fix.
+
+PERMISSIONS canonically use `$token.<claim>` per CLAUDE.md, not `$auth.<field>`. Dropping `id` only disables the dashboard-only `$auth` record path that activity-api doesn't depend on. `keyId` is preserved as a plain string claim for audit trails.
+
+The `b9cdbc2` workaround (passing `null` jwtToken into FTS+dense from the recommend blend) stays as defense-in-depth until SDK-path reliability is verified against the new auth — the bun probe of the SurrealDB JS SDK (websocket/RPC) had `ConnectionRefused` errors in the same cluster where HTTP `/sql` worked fine. Phase 12 pool activation (`DB_POOL_ENABLED=true`) gated on a clean SDK auth pass.
