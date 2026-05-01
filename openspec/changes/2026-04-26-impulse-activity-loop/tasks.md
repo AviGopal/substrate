@@ -486,3 +486,13 @@ Carry forward these constraints for all remaining work:
 - 501 already-split `variant_performance_metrics` rows backfill — separate decision
 - Bug-finding-as-activity / self-improvement metrics — post-demo
 
+
+#### Phase 10 Postscript — relevance probe (2026-05-01)
+
+End-to-end probe of `/v2/activities/recommend` with 8 diverse `task_description` queries surfaced a **critical relevance bug**: every query returned the SAME template (`cleanup-stale-traces-v1`). Root cause was in `getActivitiesWithTieredFallback`: when `impulse_shapes` is empty (the common case for natural-language queries), Tier 1 is skipped; Tier 2 returns the entire catalog with no query content consulted; Tier 3 FTS never fires because Tier 2 always satisfies `minResults`. Thompson Sampling on global α/β then picks the same winner across all queries.
+
+Fix in commit ed4965c: when `task_description` is non-trivial AND no shape filter is provided, run Tier 3 (FTS + dense + RRF merge) **before** Tier 2. Falls through to Tier 2 only if Tier 3 returns < minResults.
+
+Impact:
+- Closes a structural gap that 10.10 (ev DESC prefilter) couldn't address — ev ranking is query-independent; the candidate pool itself has to be query-shaped.
+- Relevance verification on canary requires the new image to roll. Expected outcome: distinct queries surface distinct templates whose names/descriptions tokenize toward the query terms via the now-functional BM25 scoring (10.7 verified).
