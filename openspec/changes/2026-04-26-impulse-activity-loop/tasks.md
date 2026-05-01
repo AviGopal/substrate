@@ -192,7 +192,7 @@ Phase 8 Iteration 1 discovered 5 critical blockers preventing goal execution on 
 
 ## 8. Phase 8 — End-to-end canary validation
 
-**Prerequisite:** All Phase 8 blockers (I2.1–I2.5) resolved.
+**Prerequisite:** All Phase 8 blockers (I2.1–I2.5) resolved AND Phase 12 (activity-api connection pooling) landed. The 2026-04-30 / 2026-05-01 runs showed Phase 8's success criteria fail under the connect/auth handshake storm even when the impulse-activity loop is correct end-to-end; Phase 12 lifts the throughput floor so Phase 8 measures correctness rather than backend saturation.
 
 - [ ] 8.1 Goal regression set: dispatch each representative goal class against canary; capture trace IDs
 - [ ] 8.2 Inspect traces for full lifecycle event coverage; document gaps
@@ -330,6 +330,62 @@ Acceptance: a resolver dispatched from an activity template can read α/β for a
 - [ ] V.1 All sibling spec verification phases (sibling 1 §9, sibling 2 §6, sibling 3 §12) green
 - [ ] V.2 Workbench history panel renders the integrated trace (validator results, `failure_mode`, recursive sub-goal handoffs)
 - [ ] V.3 No regression in the existing activity-execution test suite
+
+## 12. Phase 12 — Activity-API Connection Pooling (Phase 8 throughput unblocker)
+
+**Status:** [ ] Not started
+
+**Why:** Every `queryWithAuth` opens a fresh SurrealDB session (`new Surreal()` → `connect` → `use` → `authenticate(jwt)` → `query` → `close`), paying ~200-300ms cold per call. Under the impulse-activity loop's burst (gather_context's three impulse-resolves + lifecycle impulse INSERTs + validator-dispatch chains + metrics upserts + trace storage), activity-api fires this dozens of times in seconds. SurrealDB's RocksDB single-writer mutex saturates, `/health` queues behind it, kubelet liveness-kills the pod, Cloudflare 504s minibob. F-50 + F-53 in design.md document the symptom; spec at `specs/activity-api-connection-pooling/spec.md`.
+
+#### Phase 12.1 — Pool module
+- [x] 12.1 Create `repos/metabob-activity-api/src/db/auth-session-pool.ts` exporting `acquireSession(jwt, ns, db)`, `releaseSession(s)`, `drain(timeoutMs)`, `poolStats()`. Cache as `Map<string, Session>` keyed by hash of `(jwt.slice(0,32), ns, db)`. Per-session metadata: `createdAt`, `jwtExp` (parsed once at first signin), `inFlight: boolean`, `lastUsedAt`.
+- [x] 12.2 Bounded LRU: `DB_POOL_MAX=32` default (env-overridable). On insert when full, evict least-recently-used non-in-flight session.
+- [x] 12.3 JWT-expiry eviction: if `Date.now() >= jwtExp - 60_000` at acquire, do not return cached session; close it (or mark for eviction-on-release if `inFlight`); proceed to fresh signin. 60s margin matches minibob's `BEARER_REFRESH_MARGIN_MS`.
+- [x] 12.4 Wait queue: when `cache.size === DB_POOL_MAX` and key not cached, push `{ key, resolve, reject }` onto FIFO array. On `releaseSession`, dequeue head; if released-key matches, reuse, else close-and-open.
+- [x] 12.5 Drain semantics: `drain(timeoutMs)` sets `draining=true` (new acquires reject with `PoolDrainingError`); awaits in-flight promises with timeout budget; force-closes anything still in-flight at deadline (`SessionForceClosedError`).
+- [x] 12.6 `poolStats()` returns `{ size, max_size, acquire_hits, acquire_misses, evictions: { expired, lru, drain }, wait_queue_depth, in_flight }`. Counters monotonic across process lifetime.
+
+#### Phase 12.2 — queryWithAuth integration
+- [x] 12.7 Rewrite `queryWithAuth` body in `db/surreal.ts` as `acquire → query → release`. Preserve `result[0]` unwrap so caller contracts unchanged.
+- [x] 12.8 Feature flag: `DB_POOL_ENABLED` env var (default `false` until canary validation, then `true`). When `false`, fall back to legacy connect-auth-query-close path.
+- [x] 12.9 Mark `createAuthenticatedClient` deprecated in jsdoc. Don't remove — `middleware/jwtAuth.ts:317` still uses it for the auth-validation query, where pooling has no benefit (one query per request).
+- [x] 12.10 `bun run typecheck` and `bun test` in `repos/metabob-activity-api`; zero new errors.
+
+#### Phase 12.3 — Health endpoint integration
+- [x] 12.11 Extend `GET /health` handler in `src/index.ts` to include `pool: { size, max_size, hit_rate }` in `checks`. `hit_rate = hits / (hits + misses)`, rounded to 2 decimals; `null` until ≥100 acquires.
+- [x] 12.12 Add `app.get('/v2/health/db-pool', ...)` returning full `poolStats()` JSON. No auth (operational endpoint, mirrors `/health`).
+- [x] 12.13 Wire pool drain into existing SIGTERM handler. If none exists, add one calling `await pool.drain(5000)` then resolve.
+
+#### Phase 12.4 — Tests
+- [ ] 12.14 Create `test/db/auth-session-pool.test.ts` using the existing SurrealDB test harness.
+- [ ] 12.15 Hit/miss/eviction: same `(jwt, ns, db)` twice → second is hit; different `db` → miss; fill cache to `DB_POOL_MAX+1` → LRU eviction observed.
+- [ ] 12.16 Concurrency: at `DB_POOL_MAX`, fire `DB_POOL_MAX+3` parallel acquires for distinct keys; verify three block on wait queue and resolve in FIFO order.
+- [ ] 12.17 JWT expiry: acquire with `exp` 30s out, mock `Date.now()` past 60s margin, acquire again → miss + eviction recorded; original session was closed.
+- [ ] 12.18 In-flight expiry: acquire → stub `db.query` to throw "exp claim" error; pool removes session, surfaces error, releases slot. Subsequent acquire opens fresh session.
+- [ ] 12.19 Drain: with 4 cached + 2 in-flight, `drain(1000)` → new acquires reject; in-flight complete; cache empty post-drain; `evictions.drain >= 4`.
+- [ ] 12.20 Stats accuracy: deterministic 10 hits + 5 misses → exact counter values in `poolStats()`.
+
+#### Phase 12.5 — Canary validation
+- [ ] 12.21 Local `bun test` in `repos/metabob-activity-api` with `DB_POOL_ENABLED=true`; all existing tests pass against new path.
+- [ ] 12.22 Canary deploy: bump activity-api image, set `DB_POOL_ENABLED=true` in canary env. Run a single minibob `--single` rotate-logs goal end-to-end; capture timing.
+- [ ] 12.23 Pre/post comparison from logs:
+    - Average `queryWithAuth` latency: target ≥50% reduction at p50, ≥40% at p99.
+    - `/health` 200 rate during 60s minibob burst: target ≥99% (was ~85% pre-change in 2026-04-30 runs).
+    - Goal-completion rate on rotate-logs validation: target 1/1 success (was ~0.5/1 pre-change).
+    - SurrealDB pod restart count over the run: target 0 (was 1-3 in 2026-04-30 runs).
+- [ ] 12.24 Promote to production once canary metrics meet target; flip `DB_POOL_ENABLED` default to `true`.
+
+#### Phase 12 Success Criteria
+- [ ] 12.S1 The standard rotate-logs validation goal completes `achieved` against canary in a fresh-pod run (no warmup, single attempt).
+- [ ] 12.S2 SurrealDB `/health` probe success rate ≥99% during the run.
+- [ ] 12.S3 No SurrealDB pod restarts during the run (was 1-3 pre-change).
+- [ ] 12.S4 F-50 (intermittent "Unable to connect" on impulse INSERTs) is no longer observed in two consecutive validation runs.
+
+#### Phase 12 Out-of-scope follow-ups (separate issues)
+- [ ] 12.Y1 Per-org concurrency cap (today the pool is global; misbehaving tenant could starve others — non-issue at single-tenant scale today).
+- [ ] 12.Y2 Pre-warm at startup (N sessions opened on boot to amortise first-request latency).
+- [ ] 12.Y3 Read-replica pool key when SurrealDB 3.x ships replication.
+- [ ] 12.Y4 `routes/impulses.ts` `executeAsAuth`/`executeQuery` get pooling for free; flag in next round of route-level perf work that they could now drop their own root-credentials fallback if pool hit-rate is reliably high.
 
 ## Post-deploy Bug Fixes (v1.12.0)
 
@@ -489,10 +545,12 @@ Carry forward these constraints for all remaining work:
 
 #### Phase 10 Postscript — relevance probe (2026-05-01)
 
-End-to-end probe of `/v2/activities/recommend` with 8 diverse `task_description` queries surfaced a **critical relevance bug**: every query returned the SAME template (`cleanup-stale-traces-v1`). Root cause was in `getActivitiesWithTieredFallback`: when `impulse_shapes` is empty (the common case for natural-language queries), Tier 1 is skipped; Tier 2 returns the entire catalog with no query content consulted; Tier 3 FTS never fires because Tier 2 always satisfies `minResults`. Thompson Sampling on global α/β then picks the same winner across all queries.
+End-to-end probe of `/v2/activities/recommend` with 8 diverse `task_description` queries surfaced a **critical relevance bug**: every query returned the SAME template (`cleanup-stale-traces-v1`). Root cause was in `getActivitiesWithTieredFallback`: regardless of input (with or without shapes), some tier always satisfies `minResults` *before* FTS Tier 3 fires, leaving `task_description` unused for candidate selection. Thompson Sampling on global α/β then picks the same winner across all queries.
 
-Fix in commit ed4965c: when `task_description` is non-trivial AND no shape filter is provided, run Tier 3 (FTS + dense + RRF merge) **before** Tier 2. Falls through to Tier 2 only if Tier 3 returns < minResults.
+Fix shipped across 3 commits:
+- `ed4965c`: when no shape filter AND query present, run Tier 3 ahead of Tier 2.
+- `488e307`: when Tier 1 succeeds with shapes, blend FTS+dense into the candidate pool by RRF-merging with Tier 1 results (deduped by id).
+- `eba2f29`: drop the `noShapeFilter` guard from the Tier-3-ahead-of-Tier-2 branch — Tier 1 with implied shapes from `analyzeTaskSemantics` often falls through to Tier 2 with insufficient results, so always try FTS first when query is non-trivial.
+- `b9cdbc2`: pass `null` jwtToken to FTS+dense calls in the blend — the api-key-derived JWT hits a pre-existing `'access method cannot be used in the requested operation'` error against the schema. Multi-tenant scoping preserved by the explicit `(scope='global' OR org_id=$org_id)` WHERE clause inside `queryActivitiesByFTS`.
 
-Impact:
-- Closes a structural gap that 10.10 (ev DESC prefilter) couldn't address — ev ranking is query-independent; the candidate pool itself has to be query-shaped.
-- Relevance verification on canary requires the new image to roll. Expected outcome: distinct queries surface distinct templates whose names/descriptions tokenize toward the query terms via the now-functional BM25 scoring (10.7 verified).
+**Verified live 2026-05-01** (image `1.16.4-b9cdbc2`): different queries return different templates. Examples — "summarize git changes" → "Analyze Development Loop Performance"; "run a bash command" → "API Data Fetch and Save"; "review code quality" → "Comprehensive Application Trace Analysis"; "extract template from execution" → "API Data Fetch and Save". The architectural fix (query-shaped candidate pool) is in place. Remaining relevance tuning (e.g. surfacing bash-explicit templates for "bash" queries) is BM25 weight calibration territory, separate from this structural bug.
