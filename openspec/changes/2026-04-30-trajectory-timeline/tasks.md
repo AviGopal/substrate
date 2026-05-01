@@ -8,7 +8,7 @@ Tasks are ordered by dependency. Work can begin on Groups 1–3 in parallel.
 
 ## Group 1: Connector Resolver Wires
 
-### T1.1 — Extend `ShapeFlowConnector` props
+### ✓ T1.1 — Extend `ShapeFlowConnector` props ✅
 
 Add `resolverWires` prop to `ShapeFlowConnector`:
 ```typescript
@@ -27,7 +27,7 @@ Render: when `resolverName` is present, show `shape → resolverName [tier]●` 
 
 ---
 
-### T1.2 — Compute cross-activity resolver wires for trace/live mode
+### ✓ T1.2 — Compute cross-activity resolver wires for trace/live mode ✅
 
 In `TrajectoryGridWithDnd`, compute `resolverWires` for each connector when trace data is available:
 
@@ -43,7 +43,7 @@ In `TrajectoryGridWithDnd`, compute `resolverWires` for each connector when trac
 
 ---
 
-### T1.3 — Compute inferred resolver wires for compose + connected mode
+### ✓ T1.3 — Compute inferred resolver wires for compose + connected mode ✅
 
 When `isLiveMode === false && isTraceMode === false` and a vessel is connected, use `useDiscoveryResolvers()` to infer resolver for each output shape of the left activity:
 
@@ -64,7 +64,7 @@ resolverWires = outputShapes.map(shape => ({
 
 ## Group 2: Unfold Mechanism
 
-### T2.1 — Add unfold toggle to activity card header
+### ✓ T2.1 — Add unfold toggle to activity card header ✅
 
 Add `isUnfolded` local state and `⊞/⊟` toggle button to each activity card in `TrajectoryGridWithDnd`. Toggle is adjacent to the existing `▾ expand` button. State is per-card, not persisted.
 
@@ -73,7 +73,7 @@ Add `isUnfolded` local state and `⊞/⊟` toggle button to each activity card i
 
 ---
 
-### T2.2 — Create `ResolverSequence` component
+### ✓ T2.2 — Create `ResolverSequence` component ✅
 
 New component (`src/components/trajectory/ResolverSequence.tsx`, ~150 lines):
 - Props: `tasks: ActivityTask[]`, `mode: 'compose' | 'trace' | 'live'`, `impulseData?: { taskImpulseIds, impulseShapeMap, impulseContentMap }`
@@ -87,7 +87,7 @@ New component (`src/components/trajectory/ResolverSequence.tsx`, ~150 lines):
 
 ---
 
-### T2.3 — Create `SelectionMomentNode` component
+### ✓ T2.3 — Create `SelectionMomentNode` component ✅
 
 New component (`src/components/trajectory/SelectionMomentNode.tsx`, ~80 lines):
 - Props: `candidates: Array<{ name: string; probability: number; isSelected: boolean; alpha?: number; beta?: number }>`, `ciLower: number`, `ciUpper: number`, `resolverName: string`, `durationMs?: number`
@@ -102,7 +102,7 @@ New component (`src/components/trajectory/SelectionMomentNode.tsx`, ~80 lines):
 
 ---
 
-### T2.4 — Wire `ResolverSequence` into unfolded card state
+### ✓ T2.4 — Wire `ResolverSequence` into unfolded card state ✅
 
 When `isUnfolded[activityId]` is true, replace the activity card body with `ResolverSequence`. The card header stays visible (with fold toggle). The surrounding connectors remain unchanged — they connect to the sequence's first and last resolver nodes.
 
@@ -117,7 +117,7 @@ Insert `CompositionBridgeNode` (the ◈ node) for any task where `resolver === "
 
 ## Group 3: Selection Moment Data
 
-### T3.1 — Verify variant_selection impulse content shape
+### ✓ T3.1 — Verify variant_selection impulse content shape
 
 Before implementing `SelectionMomentNode` content parsing, load a trace with goal-processing (e.g. `goal_1777546582911_dfk0nv`) and inspect the actual content of the `variant-selection-TIMESTAMP-ID` impulse via `impulseContentMap`.
 
@@ -127,7 +127,7 @@ Query: does the content contain candidate activities with probabilities, α/β? 
 
 ---
 
-### T3.2 — Parse variant_selection impulse content
+### ✓ T3.2 — Parse variant_selection impulse content
 
 Add parser in `SelectionMomentNode` or a utility that extracts candidates from the impulse body. Handle missing/malformed content gracefully (show empty state).
 
@@ -135,7 +135,7 @@ Add parser in `SelectionMomentNode` or a utility that extracts candidates from t
 
 ---
 
-### T2.5 — Create `CompositionBridgeNode` component
+### ✓ T2.5 — Create `CompositionBridgeNode` component ✅
 
 New component (`src/components/trajectory/CompositionBridgeNode.tsx`, ~60 lines).
 
@@ -162,4 +162,11 @@ Data source: `tasks[i].resolver === "activity"` detection + `traceCardData.dispa
 
 ## Resolved
 
-*(none yet)*
+- **T1.1** (2026-04-29): `ShapeFlowConnector` extended with `resolverWires` and `compositionResolver` props. Resolver wires render as `shape → resolverName ●` annotations above existing wire/shape display. Composition resolver shows as amber `◈ activity` header row.
+- **T1.2** (2026-04-29): Trace/live mode computes resolver wires from right column's first task `resolver_id` + `resolver_tier` mapped to each bridging shape.
+- **T1.3** (2026-04-29): Compose mode infers resolver wires from `useDiscoveryResolvers().byShape` per bridging shape; vessel name used as resolver name.
+- **T2.1** (2026-04-29): `unfoldedCards: Set<string>` state added to `TrajectoryGridWithDnd`. `ActivityCard` extended with `isUnfolded` / `onToggleUnfold` props; `⊞/⊟` toggle button added adjacent to expand button in card header.
+- **T2.2** (2026-04-29): `ResolverSequence` component created at `src/components/trajectory/ResolverSequence.tsx`. Horizontal row of resolver nodes with inter-node `→` connectors. Delegates to `SelectionMomentNode` for variant_selection tasks and `CompositionBridgeNode` for activity-resolver tasks.
+- **T2.3** (2026-04-29): `SelectionMomentNode` component created at `src/components/trajectory/SelectionMomentNode.tsx`. Renders ★ header, probability bars for candidates, Thompson α/β, CI range.
+- **T2.4** (2026-04-29): `ResolverSequence` rendered inline below `ActivityCard` when `unfoldedCards.has(activityId)` in `TrajectoryGridWithDnd`.
+- **T2.5** (2026-04-29): `CompositionBridgeNode` component created at `src/components/trajectory/CompositionBridgeNode.tsx`. Renders ◈ marker with tier dot, optional composed activity name, optional duration.
