@@ -366,9 +366,9 @@ Acceptance: a resolver dispatched from an activity template can read α/β for a
 - [ ] 12.20 Stats accuracy: deterministic 10 hits + 5 misses → exact counter values in `poolStats()`.
 
 #### Phase 12.5 — Canary validation
-- [ ] 12.21 Local `bun test` in `repos/metabob-activity-api` with `DB_POOL_ENABLED=true`; all existing tests pass against new path.
-- [ ] 12.22 Canary deploy: bump activity-api image, set `DB_POOL_ENABLED=true` in canary env. Run a single minibob `--single` rotate-logs goal end-to-end; capture timing.
-- [ ] 12.23 Pre/post comparison from logs:
+- [x] 12.21 Local `bun test` in `repos/metabob-activity-api` with `DB_POOL_ENABLED=true`; all existing tests pass against new path.
+- [x] 12.22 Canary deploy: bump activity-api image, set `DB_POOL_ENABLED=true` in canary env. Run a single minibob `--single` rotate-logs goal end-to-end; capture timing.
+- [x] 12.23 Pre/post comparison from logs:
     - Average `queryWithAuth` latency: target ≥50% reduction at p50, ≥40% at p99.
     - `/health` 200 rate during 60s minibob burst: target ≥99% (was ~85% pre-change in 2026-04-30 runs).
     - Goal-completion rate on rotate-logs validation: target 1/1 success (was ~0.5/1 pre-change).
