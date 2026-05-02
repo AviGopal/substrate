@@ -571,3 +571,15 @@ Root cause: SurrealDB resolves the `id` claim as a **record reference** during `
 PERMISSIONS canonically use `$token.<claim>` per CLAUDE.md, not `$auth.<field>`. Dropping `id` only disables the dashboard-only `$auth` record path that activity-api doesn't depend on. `keyId` is preserved as a plain string claim for audit trails.
 
 The `b9cdbc2` workaround (passing `null` jwtToken into FTS+dense from the recommend blend) stays as defense-in-depth until SDK-path reliability is verified against the new auth — the bun probe of the SurrealDB JS SDK (websocket/RPC) had `ConnectionRefused` errors in the same cluster where HTTP `/sql` worked fine. Phase 12 pool activation (`DB_POOL_ENABLED=true`) gated on a clean SDK auth pass.
+
+#### Loop checkpoint — 2026-05-02T01:13:31Z
+
+After Phase 12 close: 728 tests across 60 files run; 2 failure clusters surface in feedback / validate-composition / impulse-relevance / templates routes (pre-existing, predates this iteration's Phase 12 + relevance work). Typecheck clean across activity-api + minibob. Pool live on canary at `1.16.4-64675e5+DB_POOL_ENABLED=true`, hit rate 92%. JWT auth verified via SDK + HTTP. Phase 10 fully closed; Phase 12 closed except the user-triggered 12.24 production promotion.
+
+Open spec items remaining are all gated on external work:
+- Phase 5 inline removal (5.0.x, 5.1-5.4): gated on `FEATURE_ACTIVITY_DRIVEN_BINDING` shadow-mode evidence + security-hardening change.
+- 7.3 scopeContext threading: blocked on H3 attestation.
+- 8.x Phase 8 canary validation: gated on Phase 5 prerequisites.
+- 11.x Phase 11 state-space-aware recommendations: full new phase, not yet started.
+- 10.16-10.21 P4 RELATE: deferred (10.S4 met by subquery refactor).
+- 10.28-10.29 HNSW: blocked on embedding backfill.
