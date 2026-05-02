@@ -1,3 +1,49 @@
+# Gates & Dependencies (audit 2026-05-02T01:13:31Z)
+
+This spec is at "code-complete on Phase 10 + Phase 12" with 74 `[ ]` boxes remaining. None are tractable from this spec alone — every open item rolls up to either an external spec, an operational runbook, or an observation period. This section maps each open bucket to its gate so iteration on this spec stops chasing items whose blockers haven't moved.
+
+## External specs that must land first
+
+| Gating spec | What it provides | Open IAL items it unblocks |
+|---|---|---|
+| [`2026-04-26-security-hardening-findings`](../2026-04-26-security-hardening-findings/) (62 open tasks) | H1 two-sided execution traces; H2 pubkey-derived vessel-id; H3 EIP-712-style scope attestations; H4 Tailnet-Lock-equivalent ratification; H5 immutable-baseline selector; CC1 scope narrowing on composition; CC2 risk-graded dispatch | **5.0.1** (H1 trust gate on Thompson updates), **5.0.2** (H5 baseline variants + auto-regression), **7.3** (parent `scopeContext` threading needs H3 + CC1 enforcement to be load-bearing) |
+| [`2026-04-29-vessel-session-handshake`](../2026-04-29-vessel-session-handshake/) | Cryptographic vessel-to-vessel JWT handshake replacing the `X-Internal-Api-Key` bypass | **5.0.9** (replace bypass), **10.16-10.21** (P4 RELATE cross-vessel fan-out — already deferred per S4-met-without-it), **11.x** (Phase 11 needs authenticated cross-vessel discovery queries) |
+| [`2026-04-29-state-space-aware-recommendations`](../2026-04-29-state-space-aware-recommendations/) | Phase 11 design source — `impulse_state_space` + `pointer_state_space` request fields, blocking-shape ranking, scope_upgradeable gap type | **11.1-11.13, 11.S1-11.S5** are this spec's `tasks.md`. The proposal/design exist; tasks.md hasn't been authored yet — that's the next move when Phase 11 starts. |
+| [`2026-04-26-shape-provider-goal-creation`](../2026-04-26-shape-provider-goal-creation/) (42 open) | `create-shape-provider-goal` activity, recursion safety, scope inheritance | Cross-references with **7.3**; that spec's 3.8/3.9/3.10 are themselves blocked on H3 + IAL 7.3. |
+
+## Operational runbooks (not blocked, but user-triggered)
+
+| Runbook | Open IAL items |
+|---|---|
+| Production promotion (`scripts/promote-canary-to-production.sh`) | **12.24** |
+| Embedding backfill (no spec yet; instantiate `LocalEmbeddingService` and iterate templates) | **10.28** (HNSW benchmark), **10.29** (HNSW promotion) |
+
+## Observation periods (gated on canary-time)
+
+| Observation | Open IAL items |
+|---|---|
+| `FEATURE_ACTIVITY_DRIVEN_BINDING` shadow-mode — needs **5.0.6** (flag wiring + `org_feature_flags` + `shadow_decision_log`) implemented FIRST, then ≥7 canary days at <1% per-(shape, taskId) divergence | **5.0.6**, **5.0.7** (rollback triggers), **5.0.8** (evidence collection) → unblocks **5.1-5.4** (inline removal) → unblocks Phase 8 canary validation **8.1-8.7, 8.2a, V.1-V.3** |
+| Verification gates (V.x) | depend on all sibling specs being green |
+
+## Deferred (not blocked — explicit decision)
+
+- **10.16-10.21 (P4 RELATE)**: 10.S4 met by the `$parent.id` correlated-subquery refactor (commit 551ca57). Composition graph table stays in dual-purpose use until traffic justifies a denormalisation pass.
+- **9.3, 9.4**: thompson_posterior REST handler / workbench migration deferred — both surfaces co-exist; switching workbench risks breaking selection-metadata path during migration.
+- **10.13**: K-S regression script (10.S3 verified live; script lives at `scripts/validate-beta-sample.ts` for future re-runs).
+
+## Tractable from this spec alone
+
+**None.** Every open `[ ]` rolls up to one of the gates above. Continued iteration on this spec yields documentation drift, not code progress. When a gating spec moves, return here to verify the rollup item.
+
+The right next move depends on which gate the operator wants to address:
+- For **security hardening** → switch to `2026-04-26-security-hardening-findings/tasks.md`.
+- For **cross-vessel auth** → switch to `2026-04-29-vessel-session-handshake/tasks.md`.
+- For **Phase 11 work** → author `2026-04-29-state-space-aware-recommendations/tasks.md` from the existing design.md.
+- For **inline-removal observation period** → implement IAL 5.0.6 (flag + tables + shadow logging) then start the 7-day clock.
+- For **HNSW** → write the embedding-backfill runbook, run it once, then re-probe 10.28.
+
+---
+
 ## Phase 8 — Iteration 2: Blocker Resolution (2026-04-28)
 
 **Status:** [x] All 5 blockers closed (re-verified 2026-04-29) — 4 were already fixed in flight; the remaining one (I2.4) was misdescribed in the original report and resolved on canary today.
