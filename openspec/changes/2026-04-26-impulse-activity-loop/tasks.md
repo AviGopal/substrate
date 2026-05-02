@@ -42,6 +42,18 @@ The right next move depends on which gate the operator wants to address:
 - For **inline-removal observation period** → implement IAL 5.0.6 (flag + tables + shadow logging) then start the 7-day clock.
 - For **HNSW** → write the embedding-backfill runbook, run it once, then re-probe 10.28.
 
+## Operational pattern (2026-05-02 update)
+
+The active kubectx (`metabob-production`) is a pre-prod parity environment, not customer prod. `*.metabob.com` DNS on this host machine maps to it directly, so endpoints like `activity.metabob.com` reflect whatever helmfile-sync just deployed. Because there's a single shared backend, the following pattern applies to every iteration on every gate:
+
+1. **Spec / validation review** → delegate to subagents (`Agent(subagent_type: "Explore", ...)`) — pass the spec or report path, ask for findings.
+2. **Phase implementation** → delegate via `Agent(subagent_type: "general-purpose", ...)` with concrete file paths and acceptance criteria.
+3. **Deploy** → invoke `Skill(skill: "deploy", args: "<vessel-name>")` rather than reinventing the build/push/sync flow.
+4. **Promote canary → production** in the same iteration so the cluster runs a single image tag per vessel. Operationally: `helmfile --environment production -l name=<vessel> sync` immediately after the canary sync settles. Don't leave canary and production at different tags — confusing in a single-cluster setup.
+5. **SurrealDB data is precious.** All accumulated execution traces feed the learning loop and the corpus that Thompson Sampling, FTS, and (eventually) HNSW score against. Schema migrations use `DEFINE … OVERWRITE`; never wipe the DB or destroy PVCs. If a migration is potentially destructive, dry-run it via `INFO FOR TABLE` first.
+
+The orchestrator's job is routing and integration, not running 20-step tool chains inline. Delegate.
+
 ---
 
 ## Phase 8 — Iteration 2: Blocker Resolution (2026-04-28)
