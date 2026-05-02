@@ -9,8 +9,8 @@
 
 import { spawn } from "node:child_process";
 import { createWriteStream, existsSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
-import { dirname } from "node:path";
+import { mkdir, copyFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
 export interface AgentRunOptions {
   agent: "claude-code" | "minibob";
@@ -22,6 +22,11 @@ export interface AgentRunOptions {
   timeoutSeconds: number;
   anthropicApiKey: string;
   metabobConfigHostPath?: string; // ~/.metabob/config.json — mounted RO into minibob
+  /**
+   * Phase 13.1.4: when true, run minibob in standalone mode — no discovery
+   * registration, no activity-api trace POSTs. No-op for claude-code.
+   */
+  noBackend?: boolean;
 }
 
 export interface AgentRunResult {
@@ -39,7 +44,16 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   const stdoutStream = createWriteStream(stdoutPath);
   const stderrStream = createWriteStream(stderrPath);
 
-  const args = buildDockerArgs(opts);
+  // Phase 13.1.2: mount a host-writable transcript dir into minibob; copy
+  // /tmp/minibob-transcript/transcript.jsonl out to <outDir>/transcript.jsonl
+  // after the run completes.
+  let transcriptHostDir: string | undefined;
+  if (opts.agent === "minibob") {
+    transcriptHostDir = join(opts.outDir, ".transcript-mount");
+    await mkdir(transcriptHostDir, { recursive: true });
+  }
+
+  const args = buildDockerArgs(opts, transcriptHostDir);
   const start = Date.now();
 
   return await new Promise<AgentRunResult>((resolve) => {
@@ -57,10 +71,26 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     child.stdout.pipe(stdoutStream);
     child.stderr.pipe(stderrStream);
 
-    child.on("exit", (code) => {
+    child.on("exit", async (code) => {
       clearTimeout(killTimer);
       stdoutStream.end();
       stderrStream.end();
+
+      // Copy minibob's transcript.jsonl out of the bind mount to the run dir.
+      if (opts.agent === "minibob" && transcriptHostDir) {
+        const src = join(transcriptHostDir, "transcript.jsonl");
+        const dst = join(opts.outDir, "transcript.jsonl");
+        try {
+          if (existsSync(src)) {
+            await copyFile(src, dst);
+          }
+        } catch (err) {
+          process.stderr.write(
+            `warning: failed to copy minibob transcript: ${err instanceof Error ? err.message : String(err)}\n`,
+          );
+        }
+      }
+
       resolve({
         exitCode: code,
         timedOut,
@@ -72,7 +102,10 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   });
 }
 
-function buildDockerArgs(opts: AgentRunOptions): string[] {
+function buildDockerArgs(
+  opts: AgentRunOptions,
+  transcriptHostDir?: string,
+): string[] {
   // Workspace is the only host filesystem the container can write to.
   const baseMounts = [
     "-v", `${opts.workspaceHostPath}:/workspace`,
@@ -99,7 +132,23 @@ function buildDockerArgs(opts: AgentRunOptions): string[] {
   // minibob: image WORKDIR is /app where index.ts lives. Don't override it;
   // pass the workspace path to minibob via --workdir.
   const minibobArgs = ["run", "--rm", ...baseMounts];
-  if (opts.metabobConfigHostPath && existsSync(opts.metabobConfigHostPath)) {
+
+  // Mount the transcript host dir so MINIBOB_TRANSCRIPT_FILE writes survive
+  // the container's lifetime.
+  if (transcriptHostDir) {
+    minibobArgs.push("-v", `${transcriptHostDir}:/tmp/minibob-transcript`);
+    minibobArgs.push("-e", "MINIBOB_TRANSCRIPT_FILE=/tmp/minibob-transcript/transcript.jsonl");
+  }
+
+  if (opts.noBackend) {
+    // Phase 13.1.4 — standalone parity mode. Disable discovery registration
+    // and remove the activity-api credential entirely so minibob can't POST
+    // traces. Mounting an empty config dir blocks user-config inheritance.
+    minibobArgs.push("-e", "DISCOVERY_ENABLED=false");
+    minibobArgs.push("-e", "MINIBOB_DISCOVERY_ENABLED=false");
+    minibobArgs.push("-e", "METABOB_API_KEY=");
+    minibobArgs.push("-e", "MINIBOB_OFFLINE_MODE=true");
+  } else if (opts.metabobConfigHostPath && existsSync(opts.metabobConfigHostPath)) {
     minibobArgs.push("-v", `${opts.metabobConfigHostPath}:/root/.metabob/config.json:ro`);
   }
   // Pass model through MINIBOB_MODEL so the same flag controls both agents.

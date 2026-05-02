@@ -53,8 +53,11 @@ Required:
 
 Options:
   --model <id>           Model id passed to both agents (default: claude-sonnet-4-6)
-  --timeout <seconds>    Per-agent wall-clock timeout (default: 600)
+  --timeout <seconds>    Per-agent wall-clock timeout (default: per-agent in containers.json)
   --only <agent>         Run only one agent: "claude-code" or "minibob"
+  --no-backend           Run minibob in standalone mode: disables discovery registration and
+                         activity-api trace POSTs (DISCOVERY_ENABLED=false, METABOB_API_KEY unset,
+                         MINIBOB_OFFLINE_MODE=true). This is the Phase 13 standalone-parity target.
   --skip-build           Don't (re)build the local Claude Code image even if missing
   --help, -h             Show this help
 
@@ -67,8 +70,13 @@ Outputs:
 `;
 
 interface Containers {
-  minibob: { image: string };
-  claudeCode: { image: string; buildContext: string; dockerfile: string };
+  minibob: { image: string; default_timeout_seconds?: number };
+  claudeCode: {
+    image: string;
+    buildContext: string;
+    dockerfile: string;
+    default_timeout_seconds?: number;
+  };
   defaults: { model: string; timeoutSeconds: number };
 }
 
@@ -80,6 +88,7 @@ async function main() {
       model: { type: "string" },
       timeout: { type: "string" },
       only: { type: "string" },
+      "no-backend": { type: "boolean", default: false },
       "skip-build": { type: "boolean", default: false },
       help: { type: "boolean", short: "h", default: false },
     },
@@ -101,8 +110,19 @@ async function main() {
   ) as Containers;
 
   const model = values.model ?? containers.defaults.model;
-  const timeoutSeconds = Number(values.timeout ?? containers.defaults.timeoutSeconds);
+  const cliTimeout = values.timeout != null ? Number(values.timeout) : undefined;
   const only = values.only as "claude-code" | "minibob" | undefined;
+  const noBackend = values["no-backend"] === true;
+
+  // Per-agent timeout: CLI flag overrides; else use containers.json per-agent
+  // default; else fall back to global default.
+  const timeoutFor = (agent: "claude-code" | "minibob") => {
+    if (cliTimeout != null) return cliTimeout;
+    const perAgent = agent === "claude-code"
+      ? containers.claudeCode.default_timeout_seconds
+      : containers.minibob.default_timeout_seconds;
+    return perAgent ?? containers.defaults.timeoutSeconds;
+  };
 
   const promptPath = resolve(values.prompt);
   if (!existsSync(promptPath)) throw new Error(`prompt not found: ${promptPath}`);
@@ -154,6 +174,24 @@ async function main() {
   await mkdir(runDir, { recursive: true });
   await writeFile(join(runDir, "prompt.md"), promptText);
 
+  // Idempotent seed git-init. The seed `.git` dirs aren't tracked in the
+  // super-repo (nested repos are awkward to commit cleanly), so a fresh clone
+  // would have seed dirs without `.git`. Initialise on demand so minibob's
+  // memory agent doesn't flood stderr with "fatal: not a git repository".
+  // Skipped if the seed already has a `.git`.
+  const seedGitDir = join(workspaceSeed, ".git");
+  try {
+    await Bun.file(join(seedGitDir, "HEAD")).text();
+  } catch {
+    process.stderr.write(`Initialising git in seed: ${workspaceSeed}\n`);
+    await Bun.spawn(["git", "init"], { cwd: workspaceSeed }).exited;
+    await Bun.spawn(["git", "add", "."], { cwd: workspaceSeed }).exited;
+    await Bun.spawn(
+      ["git", "-c", "user.email=seed@validation", "-c", "user.name=seed", "commit", "-m", "seed"],
+      { cwd: workspaceSeed },
+    ).exited;
+  }
+
   const metabobConfigHostPath = join(homedir(), ".metabob", "config.json");
 
   const results: Record<string, AgentBundle> = {};
@@ -174,6 +212,7 @@ async function main() {
       ? containers.claudeCode.image
       : containers.minibob.image;
 
+    const agentTimeout = timeoutFor(agent);
     const run = await runAgent({
       agent,
       image,
@@ -181,12 +220,13 @@ async function main() {
       prompt: promptText,
       model,
       outDir: agentDir,
-      timeoutSeconds,
+      timeoutSeconds: agentTimeout,
       anthropicApiKey,
       metabobConfigHostPath,
+      noBackend: agent === "minibob" ? noBackend : false,
     });
     process.stderr.write(
-      `${agent}: exit=${run.exitCode} timedOut=${run.timedOut} duration=${run.durationMs}ms\n`,
+      `${agent}: exit=${run.exitCode} timedOut=${run.timedOut} duration=${run.durationMs}ms (timeout=${agentTimeout}s)\n`,
     );
 
     const transcriptPath = join(agentDir, "transcript.jsonl");
@@ -208,7 +248,12 @@ async function main() {
   const reportPath = join(runDir, "report.md");
   await writeFile(reportPath, renderReport({
     promptPath, promptText, model, runDir,
-    containers, results, timeoutSeconds,
+    containers, results,
+    timeoutSeconds: {
+      "claude-code": timeoutFor("claude-code"),
+      "minibob": timeoutFor("minibob"),
+    },
+    noBackend,
   }));
   process.stderr.write(`\nreport: ${reportPath}\n`);
 }
@@ -237,7 +282,8 @@ interface ReportInput {
   runDir: string;
   containers: Containers;
   results: Record<string, AgentBundle>;
-  timeoutSeconds: number;
+  timeoutSeconds: Record<"claude-code" | "minibob", number>;
+  noBackend: boolean;
 }
 
 function renderReport(r: ReportInput): string {
@@ -249,7 +295,9 @@ function renderReport(r: ReportInput): string {
   lines.push("");
   lines.push(`- **Prompt:** \`${r.promptPath}\``);
   lines.push(`- **Model:** \`${r.model}\``);
-  lines.push(`- **Timeout:** ${r.timeoutSeconds}s per agent`);
+  lines.push(`- **Timeout (claude-code):** ${r.timeoutSeconds["claude-code"]}s`);
+  lines.push(`- **Timeout (minibob):** ${r.timeoutSeconds["minibob"]}s`);
+  lines.push(`- **Backend mode (minibob):** ${r.noBackend ? "standalone (--no-backend)" : "default (discovery + activity-api)"}`);
   lines.push(`- **Run directory:** \`${r.runDir}\``);
   lines.push(`- **Generated:** ${new Date().toISOString()}`);
   lines.push("");

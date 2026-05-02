@@ -17,7 +17,7 @@
  * stdout.log is the source of truth.
  */
 
-import { readFile, writeFile, appendFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 
 export interface TranscriptSummary {
   agent: "claude-code" | "minibob";
@@ -88,39 +88,77 @@ export async function extractMinibobTranscript(
   stdoutPath: string,
   transcriptPath: string,
 ): Promise<TranscriptSummary> {
-  // TODO: minibob's --single mode currently does not stream LLM transcript to
-  // stdout in a structured form. Two completion paths to wire up later:
-  //  (a) Have minibob print the activity-api executionId on completion, then
-  //      curl /v2/activities/execution-traces/<id> here.
-  //  (b) Mount /tmp/minibob-trace and have minibob write JSONL into it.
-  // Until then, stub the summary from raw stdout heuristics.
+  // Phase 13.1.2: minibob writes JSONL to MINIBOB_TRANSCRIPT_FILE inside the
+  // container; docker-runner.ts copies the file out to <outDir>/transcript.jsonl
+  // before this function runs. Each line is one of:
+  //   {"ts": "...", "kind": "llm_request",  "data": { model, messages, tools, max_tokens }}
+  //   {"ts": "...", "kind": "llm_response", "data": { content, stop_reason, usage }}
+  //   {"ts": "...", "kind": "tool_call",    "data": { name, input }}
+  //   {"ts": "...", "kind": "tool_result",  "data": { name, output, is_error }}
 
-  const raw = await readFile(stdoutPath, "utf8").catch(() => "");
-  const warnings: string[] = [
-    "minibob transcript extraction is stubbed — reading heuristics from stdout. " +
-    "TODO: surface structured trace from activity-api or a mounted trace file.",
-  ];
+  const warnings: string[] = [];
+  const raw = await readFile(transcriptPath, "utf8").catch(() => "");
+  if (!raw.trim()) {
+    warnings.push(
+      "minibob transcript empty or missing — check that MINIBOB_TRANSCRIPT_FILE was honoured " +
+      "and the bind mount survived (look in <outDir>/.transcript-mount/). Falling back to zero counts.",
+    );
+    return {
+      agent: "minibob",
+      llmCallCount: 0,
+      toolCallCount: 0,
+      totalInputTokens: null,
+      totalOutputTokens: null,
+      totalCostUsd: null,
+      finalAssistantMessage: null,
+      warnings,
+    };
+  }
 
-  // Heuristic: count occurrences of `[LLM]` or `tool_call` markers in stdout.
-  // These match the current minibob log format; brittle by design — replace
-  // with structured extraction.
-  const llmCalls = (raw.match(/\b(LLMResolver|callLLM|provider:anthropic)\b/g) ?? []).length;
-  const toolCalls = (raw.match(/\btool[_-]?call\b/gi) ?? []).length;
+  let llmCalls = 0;
+  let toolCalls = 0;
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let finalMsg: string | null = null;
+  let sawTokens = false;
 
-  await writeFile(transcriptPath, "");
-  await appendFile(transcriptPath, JSON.stringify({
-    note: "stub — see warnings",
-    stdoutPath,
-  }) + "\n");
+  for (const line of raw.split("\n")) {
+    const t = line.trim();
+    if (!t) continue;
+    let evt: any;
+    try { evt = JSON.parse(t); } catch { continue; }
+    if (evt.kind === "llm_request") {
+      llmCalls++;
+    } else if (evt.kind === "llm_response") {
+      const content = evt.data?.content;
+      if (typeof content === "string") {
+        finalMsg = content;
+      } else if (Array.isArray(content)) {
+        for (const block of content) {
+          if (block?.type === "text" && typeof block.text === "string") {
+            finalMsg = block.text;
+          }
+        }
+      }
+      const usage = evt.data?.usage;
+      if (usage) {
+        sawTokens = true;
+        inputTokens += usage.input_tokens ?? usage.inputTokens ?? 0;
+        outputTokens += usage.output_tokens ?? usage.outputTokens ?? 0;
+      }
+    } else if (evt.kind === "tool_call") {
+      toolCalls++;
+    }
+  }
 
   return {
     agent: "minibob",
     llmCallCount: llmCalls,
     toolCallCount: toolCalls,
-    totalInputTokens: null,
-    totalOutputTokens: null,
+    totalInputTokens: sawTokens ? inputTokens : null,
+    totalOutputTokens: sawTokens ? outputTokens : null,
     totalCostUsd: null,
-    finalAssistantMessage: null,
+    finalAssistantMessage: finalMsg,
     warnings,
   };
 }

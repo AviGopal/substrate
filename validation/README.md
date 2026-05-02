@@ -117,12 +117,44 @@ Both containers retain outbound network access — agents need to reach
 There is no per-container firewall. The only sandboxing is filesystem:
 the bind-mount restricts writes to `/workspace`.
 
+## Standalone-parity mode (`--no-backend`)
+
+The Phase 13 target is **standalone parity**: minibob in the harness should
+behave like Claude Code — one process, one workspace, no external coordination.
+Pass `--no-backend` to disable both discovery-vessel registration and
+activity-api trace POSTs:
+
+```
+bun run lib/orchestrator.ts \
+  --prompt prompts/01-fix-failing-test.md \
+  --workspace pristine-typescript-project \
+  --no-backend \
+  --timeout 1200
+```
+
+Internally this sets `DISCOVERY_ENABLED=false`, unsets `METABOB_API_KEY`, and
+sets `MINIBOB_OFFLINE_MODE=true` in the minibob container. Without it, minibob
+will attempt to register with discovery and POST execution traces to
+activity-api — useful when you want the full learning-loop wiring exercised,
+but it confounds the head-to-head comparison.
+
+## Transcript capture
+
+minibob's container is given a host-writable mount at `/tmp/minibob-transcript/`
+and `MINIBOB_TRANSCRIPT_FILE=/tmp/minibob-transcript/transcript.jsonl`. The
+LLM client (`repos/minibob/src/transcript.ts`) appends one JSONL line per LLM
+request, LLM response, tool call, and tool result. After the run, the
+harness copies `transcript.jsonl` out to `runs/<ts>/minibob/transcript.jsonl`
+and counts the records into the report's Section 3 (Run summary).
+
+The Claude Code transcript continues to come from
+`claude -p ... --output-format stream-json`.
+
 ## Known TODOs
 
-- **minibob transcript extraction** is stubbed. Either teach minibob to
-  print the activity-api `executionId` on completion (so we curl
-  `/v2/activities/execution-traces/<id>`), or have it write a JSONL trace
-  to `/workspace/.minibob-trace.jsonl`. See `lib/transcript-capture.ts`.
 - **Claude Code `--output-format stream-json`** flag may change between
   CLI releases. If parsing breaks, the orchestrator falls back to plain
   stdout capture; the transcript section will simply note 0 LLM calls.
+- **minibob transcript token counts** are best-effort: only `usage` fields
+  recorded by the LLM resolver land in the report. Cost USD is not yet
+  computed from the transcript (minibob would need to inline pricing).

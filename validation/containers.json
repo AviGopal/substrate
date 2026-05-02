@@ -1,17 +1,19 @@
 {
   "$comment": "Canonical image refs the runner uses. Update these to bump versions.",
   "minibob": {
-    "image": "metabobapp/minibob:0.14.1-e850408",
-    "$note": "Pulled from Docker Hub by the deploy chain; rebuilt nightly. Bump tag to test newer minibob."
+    "image": "metabobapp/minibob:0.14.1-418ba39",
+    "default_timeout_seconds": 1200,
+    "$note": "Pulled from Docker Hub by the deploy chain. Tag 418ba39 includes the MINIBOB_TRANSCRIPT_FILE wiring (Phase 13.1.2) — earlier tags (e.g. e850408) ignore the env var and produce empty transcripts. default_timeout_seconds bumped 300→1200 (Phase 13.1.1) — minibob's improvisation loop needs more wall-clock to make progress on non-trivial prompts."
   },
   "claudeCode": {
     "image": "metabob-validation/claude-code:local",
+    "default_timeout_seconds": 600,
     "buildContext": ".",
     "dockerfile": "Dockerfile.claude-code",
     "$note": "Anthropic does not publish a public pre-built Claude Code container as of 2026-04. Their devcontainer Dockerfile (https://github.com/anthropics/claude-code/blob/main/.devcontainer/Dockerfile) is dev-machine-shaped (zsh, iptables, dev tools); we instead build a minimal node:20-slim image that npm-installs @anthropic-ai/claude-code. See docs/CLAUDE_CODE_CONTAINER.md."
   },
   "defaults": {
     "model": "claude-sonnet-4-6",
-    "timeoutSeconds": 600
+    "timeoutSeconds": 6000
   }
 }
