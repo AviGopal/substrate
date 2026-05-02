@@ -357,13 +357,13 @@ Acceptance: a resolver dispatched from an activity template can read α/β for a
 - [x] 12.13 Wire pool drain into existing SIGTERM handler. If none exists, add one calling `await pool.drain(5000)` then resolve.
 
 #### Phase 12.4 — Tests
-- [ ] 12.14 Create `test/db/auth-session-pool.test.ts` using the existing SurrealDB test harness.
-- [ ] 12.15 Hit/miss/eviction: same `(jwt, ns, db)` twice → second is hit; different `db` → miss; fill cache to `DB_POOL_MAX+1` → LRU eviction observed.
-- [ ] 12.16 Concurrency: at `DB_POOL_MAX`, fire `DB_POOL_MAX+3` parallel acquires for distinct keys; verify three block on wait queue and resolve in FIFO order.
-- [ ] 12.17 JWT expiry: acquire with `exp` 30s out, mock `Date.now()` past 60s margin, acquire again → miss + eviction recorded; original session was closed.
-- [ ] 12.18 In-flight expiry: acquire → stub `db.query` to throw "exp claim" error; pool removes session, surfaces error, releases slot. Subsequent acquire opens fresh session.
-- [ ] 12.19 Drain: with 4 cached + 2 in-flight, `drain(1000)` → new acquires reject; in-flight complete; cache empty post-drain; `evictions.drain >= 4`.
-- [ ] 12.20 Stats accuracy: deterministic 10 hits + 5 misses → exact counter values in `poolStats()`.
+- [x] 12.14 Create `test/db/auth-session-pool.test.ts` using the existing SurrealDB test harness.
+- [x] 12.15 Hit/miss/eviction: same `(jwt, ns, db)` twice → second is hit; different `db` → miss; fill cache to `DB_POOL_MAX+1` → LRU eviction observed.
+- [x] 12.16 Concurrency: at `DB_POOL_MAX`, fire `DB_POOL_MAX+3` parallel acquires for distinct keys; verify three block on wait queue and resolve in FIFO order.
+- [x] 12.17 JWT expiry: acquire with `exp` 30s out, mock `Date.now()` past 60s margin, acquire again → miss + eviction recorded; original session was closed.
+- [x] 12.18 In-flight expiry: acquire → stub `db.query` to throw "exp claim" error; pool removes session, surfaces error, releases slot. Subsequent acquire opens fresh session.
+- [x] 12.19 Drain: with 4 cached + 2 in-flight, `drain(1000)` → new acquires reject; in-flight complete; cache empty post-drain; `evictions.drain >= 4`.
+- [x] 12.20 Stats accuracy: deterministic 10 hits + 5 misses → exact counter values in `poolStats()`.
 
 #### Phase 12.5 — Canary validation
 - [x] 12.21 Local `bun test` in `repos/metabob-activity-api` with `DB_POOL_ENABLED=true`; all existing tests pass against new path.
