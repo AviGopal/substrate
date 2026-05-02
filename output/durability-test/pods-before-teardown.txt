@@ -1,5 +1,0 @@
-NAME                         READY   STATUS    RESTARTS   AGE    IP           NODE             NOMINATED NODE   READINESS GATES
-surrealdb-75577cb949-c8bzd   1/1     Running   0          158m   10.1.0.187   docker-desktop   <none>           <none>
-NAME                                      READY   STATUS             RESTARTS       AGE     IP           NODE             NOMINATED NODE   READINESS GATES
-metabob-rpc-api-78b9c6557b-2c6hb          1/1     Running            47 (18s ago)   3h10m   10.1.0.183   docker-desktop   <none>           <none>
-metabob-rpc-api-worker-7b87b49bdf-dfp4g   0/1     ImagePullBackOff   0              3h36m   10.1.0.175   docker-desktop   <none>           <none>

@@ -1,1 +1,0 @@
-Header of type `content-type` was missing

@@ -1,31 +1,0 @@
-Note: Unnecessary use of -X or --request, POST is already inferred.
-* Host localhost:8000 was resolved.
-* IPv6: ::1
-* IPv4: 127.0.0.1
-  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
-                                 Dload  Upload  Total   Spent   Left   Speed
-  0      0   0      0   0      0      0      0                              0*   Trying [::1]:8000...
-* Established connection to localhost (::1 port 8000) from ::1 port 52468 
-* using HTTP/1.x
-* Server auth using Basic with user 'root'
-> POST /sql HTTP/1.1
-> Host: localhost:8000
-> Authorization: Basic cm9vdDpjaGFuZ2VtZQ==
-> User-Agent: curl/8.18.0
-> Accept: */*
-> NS: metabob
-> DB: production
-> Content-Length: 14
-> Content-Type: application/x-www-form-urlencoded
-> 
-} [14 bytes data]
-* upload completely sent off: 14 bytes
-< HTTP/1.1 401 Unauthorized
-< x-request-id: 36afcf55-44d6-4d84-b1e3-3f19f20eb687
-< transfer-encoding: chunked
-< date: Sun, 01 Mar 2026 19:06:47 GMT
-< 
-{ [77 bytes data]
-100     80   0     66 100     14   1275    270                              0100     80   0     66 100     14   1273    270                              0100     80   0     66 100     14   1272    269                              0
-* Connection #0 to host localhost:8000 left intact
-There was a problem with the database: The password did not verify

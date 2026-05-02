@@ -1,9 +1,0 @@
-{
-  "metabob": {
-    "endpoint": "http://api.metabob.local"
-  },
-  "defaults": {
-    "projectName": "test-cli-project",
-    "projectRoot": "."
-  }
-}

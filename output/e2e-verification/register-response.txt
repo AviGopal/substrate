@@ -1,28 +1,0 @@
-Note: Unnecessary use of -X or --request, POST is already inferred.
-* Host localhost:8080 was resolved.
-* IPv6: ::1
-* IPv4: 127.0.0.1
-  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
-                                 Dload  Upload  Total   Spent   Left   Speed
-  0      0   0      0   0      0      0      0                              0*   Trying [::1]:8080...
-* Established connection to localhost (::1 port 8080) from ::1 port 52318 
-* using HTTP/1.x
-> POST /v2/activities/templates HTTP/1.1
-> Host: localhost:8080
-> User-Agent: curl/8.18.0
-> Accept: */*
-> Content-Type: application/json
-> Content-Length: 1567
-> 
-} [1567 bytes data]
-* upload completely sent off: 1567 bytes
-< HTTP/1.1 201 Created
-< date: Sun, 01 Mar 2026 19:17:31 GMT
-< server: uvicorn
-< content-length: 519
-< content-type: application/json
-< 
-{ [519 bytes data]
-100   2086 100    519 100   1567   2448   7393                              0100   2086 100    519 100   1567   2447   7390                              0100   2086 100    519 100   1567   2446   7388                              0
-* Connection #0 to host localhost:8080 left intact
-{"variant_id":"e2e-test-template-8a134975","activity_id":"e2e-test-template","variant_name":"E2E Test Template","description":"Test template for HTTP RPC and persistence verification","version":1,"task_steps":[],"variables":{},"context_requirements":[],"expected_duration_ms":10000,"expected_cost":0.01,"expected_quality_score":0.5,"scope":"user","org_id":null,"created_at":"2026-03-01T19:17:31.604512","genealogy":{"content_hash":"8a134975","parent_hash":null,"generation":0},"updated_at":"2026-03-01T19:17:31.604530"}

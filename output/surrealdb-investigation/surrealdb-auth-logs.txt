@@ -1,2 +1,0 @@
-[2m2026-03-01T18:14:09.339776Z[0m [32m INFO[0m [2msurreal::dbs[0m[2m:[0m Initialising credentials [3muser[0m[2m=[0mroot
-[2m2026-03-01T18:14:09.340535Z[0m [32m INFO[0m [2msurrealdb::core::kvs::ds[0m[2m:[0m Credentials were provided, and no root users were found. The root user 'root' will be created

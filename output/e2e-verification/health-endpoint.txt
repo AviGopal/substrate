@@ -1,25 +1,0 @@
-Note: Unnecessary use of -X or --request, GET is already inferred.
-* Host localhost:8080 was resolved.
-* IPv6: ::1
-* IPv4: 127.0.0.1
-  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
-                                 Dload  Upload  Total   Spent   Left   Speed
-  0      0   0      0   0      0      0      0                              0*   Trying [::1]:8080...
-* Established connection to localhost (::1 port 8080) from ::1 port 56126 
-* using HTTP/1.x
-> GET /health HTTP/1.1
-> Host: localhost:8080
-> User-Agent: curl/8.18.0
-> Accept: */*
-> 
-* Request completely sent off
-< HTTP/1.1 404 Not Found
-< date: Sun, 01 Mar 2026 19:17:15 GMT
-< server: uvicorn
-< content-length: 22
-< content-type: application/json
-< 
-{ [22 bytes data]
-100     22 100     22   0      0   2500      0                              0100     22 100     22   0      0   2479      0                              0100     22 100     22   0      0   2461      0                              0
-* Connection #0 to host localhost:8080 left intact
-{"detail":"Not Found"}

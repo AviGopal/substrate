@@ -1,6 +1,0 @@
-{
-  "totalFiles": 266,
-  "violations": [],
-  "passed": true,
-  "summary": "\n=== MCP Architecture Compliance Report ===\n\nFiles Scanned: 266\nTotal Violations: 0\n  - Errors: 0\n  - Warnings: 0\n\n✅ PASSED - 100% MCP architectural compliance\n\nAll backend communication flows through MCP:\n  OpenCode → MCP Client → metabob-cli MCP Server → Backend API\n"
-}

@@ -1,26 +1,0 @@
-Note: Unnecessary use of -X or --request, GET is already inferred.
-* Host localhost:8080 was resolved.
-* IPv6: ::1
-* IPv4: 127.0.0.1
-  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
-                                 Dload  Upload  Total   Spent   Left   Speed
-  0      0   0      0   0      0      0      0                              0*   Trying [::1]:8080...
-* Established connection to localhost (::1 port 8080) from ::1 port 34426 
-* using HTTP/1.x
-> GET /v2/activities/templates/e2e-test-template-1772392626 HTTP/1.1
-> Host: localhost:8080
-> User-Agent: curl/8.18.0
-> Accept: */*
-> Content-Type: application/json
-> 
-* Request completely sent off
-< HTTP/1.1 404 Not Found
-< date: Sun, 01 Mar 2026 19:17:37 GMT
-< server: uvicorn
-< content-length: 60
-< content-type: application/json
-< 
-{ [60 bytes data]
-100     60 100     60   0      0    452      0                              0100     60 100     60   0      0    452      0                              0100     60 100     60   0      0    452      0                              0
-* Connection #0 to host localhost:8080 left intact
-{"error":"Template not found: e2e-test-template-1772392626"}

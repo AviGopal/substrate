@@ -1,5 +1,0 @@
-  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
-                                 Dload  Upload  Total   Spent   Left   Speed
-  0      0   0      0   0      0      0      0                              0100   1392 100    511 100    881   8287  14288                              0100   1392 100    511 100    881   8278  14273                              0100   1392 100    511 100    881   8271  14260                              0
-{"variant_id":"http-rpc-test-template-2b0a8b4c","activity_id":"http-rpc-test-template","variant_name":"HTTP-RPC-Test-Template","description":"Persistence test for HTTP RPC fix","version":1,"task_steps":[],"variables":{},"context_requirements":[],"expected_duration_ms":10000,"expected_cost":0.01,"expected_quality_score":0.5,"scope":"org","org_id":null,"created_at":"2026-03-01T12:59:56.134171","genealogy":{"content_hash":"2b0a8b4c","parent_hash":null,"generation":0},"updated_at":"2026-03-01T12:59:56.134182"}
-HTTP Status: 201

@@ -1,3 +1,0 @@
-{
-    "error": "Template not found: e2e-test-template"
-}

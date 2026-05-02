@@ -1,5 +1,0 @@
-  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
-                                 Dload  Upload  Total   Spent   Left   Speed
-  0      0   0      0   0      0      0      0                              0100     54 100     54   0      0    942      0                              0100     54 100     54   0      0    940      0                              0100     54 100     54   0      0    939      0                              0
-{"error":"Template not found: http-rpc-test-template"}
-HTTP Status: 404

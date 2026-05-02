@@ -1,1 +1,0 @@
-ls: cannot access '/tmp/activity-add-logging/': No such file or directory

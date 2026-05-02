@@ -1,2 +1,0 @@
-OCI runtime exec failed: exec failed: unable to start container process: exec: "ls": executable file not found in $PATH
-command terminated with exit code 127
