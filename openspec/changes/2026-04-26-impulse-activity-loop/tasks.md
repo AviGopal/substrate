@@ -445,6 +445,50 @@ Acceptance: a resolver dispatched from an activity template can read α/β for a
 - [ ] 12.Y3 Read-replica pool key when SurrealDB 3.x ships replication.
 - [ ] 12.Y4 `routes/impulses.ts` `executeAsAuth`/`executeQuery` get pooling for free; flag in next round of route-level perf work that they could now drop their own root-credentials fallback if pool hit-rate is reliably high.
 
+## 13. Phase 13 — Standalone parity with Claude Code
+
+**Status:** [ ] In flight (loop active 2026-05-02)
+
+**Why:** Operator framing 2026-05-02 — *in the most degenerate state, where the system has no known priors, minibob should function the same as Claude Code on the same model*. Same prompt + same model + same workspace seed → output quality should match. Today they don't: dry-run on `01-fix-failing-test × pristine-typescript-project` showed claude-code finishing the trivial fix in 40s/16 LLM calls/$0.11 while minibob timed out at 300s with zero file changes. Diagnosis from operator: *"almost exclusively a prompting issue"*. The improviser code path exists; what it tells the LLM (system prompt, tool descriptions, tool-result formatting, error-feedback shape) is the gap.
+
+**"Sans network" target.** "Network" here means metabob backend services (activity-api, discovery-vessel, concept-db) — not internet. Minibob standalone with internet for LLM API + webFetch + webSearch is the parity scenario; that mirrors how Claude Code runs (no metabob backend, just Anthropic API + local tools). Backend access is the *learning* path, not the *baseline-functionality* path.
+
+#### 13.1 — Harness ergonomics
+- [ ] 13.1.1 (`validation/`) Bump minibob default timeout in `containers.json` from 300s → 1200s. The 300s ceiling kills minibob mid-improvisation on non-trivial prompts; we need real signal.
+- [ ] 13.1.2 (`validation/lib/transcript-capture.ts` + `repos/minibob`) Wire minibob transcript capture. Two acceptable options:
+    - (a) `--single` mode prints the activity-api `executionId` on completion; the harness curls `/v2/activities/execution-traces/<id>` and parses out per-task LLM calls;
+    - (b) minibob writes a JSONL transcript to a path passed via env var (`MINIBOB_TRANSCRIPT_FILE`); harness mounts the file and reads it post-run.
+  Pick (b) — works in the no-backend mode that's the explicit Phase 13 target. Acceptance: `runs/<ts>/minibob/transcript.jsonl` populated with per-LLM-call entries (`{ts, role, content, tool_calls}` minimum).
+- [ ] 13.1.3 (`validation/workspaces/`) Decide on `git init` for workspace seeds. Recommend yes (no remote) so minibob's `MemoryAgent` stops flooding stderr with `fatal: not a git repository`. Apply to both seeds.
+- [ ] 13.1.4 (`validation/lib/orchestrator.ts`) Add `--no-backend` flag for minibob runs that sets `DISCOVERY_ENABLED=false METABOB_API_KEY=""` so the run mirrors the standalone target without operator having to set env vars per call.
+
+#### 13.2 — Baseline measurement
+- [ ] 13.2.1 (`validation/`) Run all 4 prompts × both workspaces × both agents. Land 8 reports under `runs/`. Tabulate the headline metrics (duration, exit, LLM calls, file changes, did-the-task-succeed).
+- [ ] 13.2.2 Document the baseline gap in `validation/runs/baseline-2026-05-02.md` — per-prompt: did each agent succeed, and where they diverged in approach. This becomes the regression baseline; subsequent prompt patches must not make any cell worse.
+
+#### 13.3 — Iterate (the loop)
+Loop body, executed once per iteration:
+- [ ] 13.3.1 Pick the highest-divergence prompt from the latest baseline. "Divergence" = claude-code succeeded AND minibob failed/timed-out, OR both completed but minibob took >3× the LLM calls.
+- [ ] 13.3.2 Read minibob's `transcript.jsonl` from the failing run. Identify the specific LLM call where the trajectory diverged from claude-code's transcript. Cite call index + content excerpt.
+- [ ] 13.3.3 Diagnose the gap. Bucket: (a) system-prompt framing weak, (b) tool description ambiguous or missing examples, (c) tool-result format noisy/raw, (d) error-feedback shape unhelpful, (e) goal-processor over-eager template selection blocking improviser entry, (f) other.
+- [ ] 13.3.4 Patch. Single-file string edit where possible. Cite file:line.
+- [ ] 13.3.5 Re-run the same prompt × workspace. Verify the gap closed. Verify the other 7 baseline runs didn't regress.
+- [ ] 13.3.6 Record the iteration in `validation/runs/iteration-log.md` — the gap, the patch, the metric delta. Commit per-iteration so each step is auditable.
+
+Each iteration is a single commit. Loop continues until parity reached on all 4 prompts (claude-code success-rate = minibob success-rate, and minibob LLM calls within 1.5× claude-code's).
+
+#### 13.4 — Parity acceptance + spec close
+- [ ] 13.4.1 All 4 baseline prompts: minibob success-rate == claude-code success-rate, no timeouts, ≤1.5× LLM-call ratio.
+- [ ] 13.4.2 Add 4 more prompts covering: multi-file edits, longer context (>10k tokens of input), ambiguous goals (where Claude Code asks clarifying questions), and goals requiring webFetch (post-G6 webFetch shape).
+- [ ] 13.4.3 Verify parity on the extended set; fold any new gaps into 13.3 iterations.
+- [ ] 13.4.4 Write the loop's prompt-patch findings into `repos/minibob/docs/PROMPTING.md` so future prompt edits start from a documented baseline rather than rediscovering. Include the iteration-log summary.
+
+#### 13 Success criteria
+- [ ] 13.S1 Same model + same prompt + same workspace seed: minibob and claude-code produce functionally equivalent output (task accomplished, file changes valid).
+- [ ] 13.S2 minibob LLM-call count ≤ 1.5× claude-code's on the same task.
+- [ ] 13.S3 minibob completes within the same timeout window claude-code completes in (≤ 1.5× wall-clock).
+- [ ] 13.S4 No regressions on the baseline corpus across iteration loop — every patch run holds the previous iteration's pass-set.
+
 ## Post-deploy Bug Fixes (v1.12.0)
 
 - [x] 10.0 **JWT secret mismatch** — RESOLVED 2026-04-26. Single-source de-duplication: schema uses `KEY '__JWT_SECRET__'` placeholder; `scripts/init-database.ts` substitutes from env via `resolveJwtSecret()` (fail-fast in production); `src/config.ts` mirrors. activity-api commit `4aa3d85`. Operator action followed: helmfile `121d70d` + secret seeding + rolling restart; auth verified across 8/8 replicas (8/8 destructive probes succeed).
