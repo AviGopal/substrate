@@ -125,10 +125,32 @@ for file in "${STAGED[@]}"; do
   ext="${base##*.}"
   ext_lower="${ext,,}"
 
-  # Files inside repos/ are submodule territory — let the submodule's own
-  # hooks / conventions handle them. The super-repo only cares about
-  # pointer bumps for those.
+  # repos/ handling:
+  #   - A submodule pointer bump appears as exactly "repos/<name>" (depth 2).
+  #     Skip it — the submodule's own hooks govern its internals.
+  #   - A direct file addition inside a non-submodule vessel tree appears as
+  #     "repos/<name>/path/to/file" (depth 3+). Apply cross-cutting checks:
+  #     no artefacts, no committed node_modules, no secrets.
   if [[ "$file" == repos/* ]]; then
+    IFS='/' read -ra _parts <<< "$file"
+    if [[ ${#_parts[@]} -le 2 ]]; then
+      continue  # submodule pointer bump or new submodule registration
+    fi
+    # Direct file in a vessel tree — apply the cross-cutting checks below,
+    # but skip the "unrecognised top-level directory" check (repos/ is allowed).
+    if [[ "$file" == repos/*/node_modules/* ]]; then
+      flag "$file" \
+        "node_modules committed into a vessel repo" \
+        "add node_modules/ to the vessel's .gitignore; dependencies install at runtime"
+      continue
+    fi
+    if [[ "$ext_lower" =~ ^($ARTEFACT_EXTENSIONS)$ ]]; then
+      if [[ "$file" != repos/*/assets/* && "$file" != repos/*/public/* && "$file" != repos/*/docs/assets/* ]]; then
+        flag "$file" \
+          "binary/artefact committed into a vessel repo outside an asset directory" \
+          "screenshots and playwright output should be gitignored; illustrative assets go in assets/ or docs/assets/"
+      fi
+    fi
     continue
   fi
 

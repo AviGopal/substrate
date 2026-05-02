@@ -102,12 +102,34 @@ git commit --no-verify
 
 Use sparingly. The rules exist to keep `git blame` readable; bypassing routinely undoes that.
 
+## Vessel hooks
+
+Vessel repos (under `repos/<name>`) are separate git repos with their own history. The super-repo hook cannot govern their internals — it only sees submodule pointer bumps. To enforce the same placement discipline inside a vessel, install the vessel hook template:
+
+```bash
+# From the super-repo root:
+scripts/git-hooks/install.sh --vessel repos/<vessel-name>
+```
+
+This copies `scripts/git-hooks/vessel-pre-commit` into `repos/<vessel>/.git-hooks/pre-commit` and sets `core.hooksPath=.git-hooks` inside that repo. **Commit `.git-hooks/pre-commit` inside the vessel repo** so collaborators get it on clone.
+
+The vessel hook enforces:
+- Vessel root holds only project metadata (package.json, tsconfig, README, lockfiles, dotfile configs)
+- No markdown docs at vessel root (use `docs/`)
+- No loose scripts at vessel root (use `scripts/`)
+- No test files at vessel root (use `test/` or `tests/`)
+- No binary artefacts outside `assets/`, `public/`, `docs/assets/`
+- No `node_modules/` committed
+- Gitleaks secrets scan (when installed)
+
+**New vessels**: run `install.sh --vessel repos/<name>` as part of the vessel creation checklist, before the first commit.
+
 ## Extending the rules
 
-Edit `scripts/git-hooks/pre-commit`. Notable knobs:
+Edit `scripts/git-hooks/pre-commit` (super-repo) or `scripts/git-hooks/vessel-pre-commit` (vessel template). Notable knobs:
 
-- `ROOT_ALLOWLIST` — exact-name files allowed at the super-repo root.
-- `ALLOWED_TOPLEVEL_DIRS` — directories allowed at the super-repo root.
+- `ROOT_ALLOWLIST` — exact-name files allowed at root.
+- `ALLOWED_TOPLEVEL_DIRS` / `ALLOWED_VESSEL_DIRS` — directories allowed at root.
 - `ARTEFACT_EXTENSIONS` — pipe-separated extensions treated as binary artefacts.
 
-Add a comment explaining the change so future readers understand the carve-out.
+Add a comment explaining the change so future readers understand the carve-out. Changes to `vessel-pre-commit` only take effect in vessels after re-running `install.sh --vessel`.
