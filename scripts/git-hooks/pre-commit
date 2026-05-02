@@ -13,7 +13,7 @@
 # Bypass: `git commit --no-verify` (use sparingly; prefer fixing placement).
 #
 # Rule summary (full guidance: scripts/git-hooks/README.md):
-#   - Files must live under repos/, docs/, openspec/, scripts/, packages/,
+#   - Files must live under repos/, docs/, openspec/, scripts/, packages/, validation/,
 #     .claude/, .github/, or .githooks/. The super-repo root holds only a
 #     small allowlist of project files (CLAUDE.md, README.md, .gitignore,
 #     .gitmodules, etc.).
@@ -75,6 +75,7 @@ ALLOWED_TOPLEVEL_DIRS=(
   openspec
   scripts
   packages
+  validation
   .claude
   .github
   .githooks
@@ -219,10 +220,15 @@ for file in "${STAGED[@]}"; do
 
   # No one-off test files outside repos/<vessel>/test{,s}/. The super-repo
   # itself never holds tests; tests live with the code they test.
+  # Exception: validation/ workspaces and prompts intentionally contain
+  # fixture files that mimic real test code — those are inputs to the
+  # benchmark harness, not project tests.
   if [[ "$base" =~ ^test- || "$base" =~ -test\. || "$base" =~ \.test\. || "$base" =~ ^tests- ]]; then
-    flag "$file" \
-      "test file outside a submodule test suite" \
-      "tests belong in repos/<vessel>/test{,s}/ alongside the code they cover; the super-repo never holds tests"
+    if [[ "$file" != validation/* ]]; then
+      flag "$file" \
+        "test file outside a submodule test suite" \
+        "tests belong in repos/<vessel>/test{,s}/ alongside the code they cover; the super-repo never holds tests"
+    fi
   fi
 done
 

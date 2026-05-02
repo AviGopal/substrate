@@ -1,0 +1,1 @@
+Refactor `src/math.ts` so that all arithmetic functions live in a single exported object literal `arithmetic` (so callers do `arithmetic.add(...)`). Update `src/math.test.ts` to use the new API. All tests must still pass.

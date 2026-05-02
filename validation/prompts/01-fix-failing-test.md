@@ -1,0 +1,1 @@
+Look at the test in `src/math.test.ts`. It is currently failing — `add(2, 3)` returns 6 because of an off-by-one bug in `src/math.ts`. Fix the bug so the test passes. Do not modify the test. Run the test to confirm it passes.

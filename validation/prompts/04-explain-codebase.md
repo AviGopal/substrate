@@ -1,0 +1,1 @@
+Read every source file in this workspace and write a `SUMMARY.md` at the workspace root that explains, in 5-10 bullet points: what the project does, what files it contains, the public API surface, and any quirks or bugs you notice. Do not modify any other files.

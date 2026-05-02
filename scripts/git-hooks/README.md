@@ -17,6 +17,7 @@ The super-repo is a thin coordinator over:
 - `openspec/` — future-change proposals + designs + tasks + specs
 - `scripts/` — operational tooling
 - `packages/` — shared TypeScript packages used across vessels
+- `validation/` — head-to-head agent benchmark harness (manual prompt-iteration tool)
 
 Anything else accumulates as cruft. The pre-commit hook rejects new cruft at commit time so the tree stays readable. Existing files are grandfathered — the hook only checks newly-added or renamed-into entries.
 
