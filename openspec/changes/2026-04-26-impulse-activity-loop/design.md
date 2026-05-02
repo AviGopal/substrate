@@ -188,6 +188,8 @@ Execute representative goals on `activity.metabob.com`. For each, document:
 
 **Goal verification correctness (8.2a):** `openspec/changes/2026-04-29-goal-verification-wiring/` identifies four failure modes (FM-1 through FM-4) in `verifyWithEvidence`, `GoalCompletionBar`, and `isGoalSatisfied` that cause false-positive goal completion. These must be fixed before Phase 8.2 (lifecycle coverage audit) and before Phase 5 cutover (safety gates depend on correct learning signals). See 8.2a tasks.
 
+**Throughput prerequisite (Phase 12):** Phase 8 success criteria assume the activity-api can absorb the burst of `queryWithAuth` calls a single goal run produces. The 2026-04-30 / 2026-05-01 runs demonstrated this is not the case at current handshake-per-query throughput — see Phase 12 above and F-50 / F-53 below. Phase 8 is now formally gated on Phase 12 landing first; without it the validation produces false negatives where the pipeline is correct but the backend can't keep up.
+
 ### Phase 9 — `thompson_posterior` shape (Thompson implicit vessel becomes explicit)
 
 The α/β/sample_count posterior data already exists in activity-api but is REST-only. Phase 9 advertises and resolves a `thompson_posterior` shape so the implicit Thompson vessel becomes addressable through the standard impulse → resolver dispatch. The existing REST handler (`variantMetricsSummary`, `GET /v2/activities/:id/variant-scores`) becomes a thin wrapper over the shape resolver. Workbench reads posterior data via shape resolution where currently using REST. Documents the new shape under `docs/impulse-types/thompson_posterior.md`. See `tasks.md` §9 for the full subtask breakdown.
@@ -211,6 +213,35 @@ Move the Thompson Sampling loop, composition graph traversal, and activity searc
 **P5A — BM25 bound-param fix.** Apply inline-literal sanitisation to `paradigm.ts:998` (same fix applied to concept-db in 2026-04-29; same `@N@@ $query` parse error). Unblocks Tier 3 search correctness.
 
 **P5B — HNSW indexes + hybrid RRF.** Add HNSW index on 384-dim `name_embedding` and `description_embedding` fields. Switch `paradigm.ts:1103-1180` from O(n) cosine scan to `<|k,ef|>` KNN operator. Gate behind `DENSE_EMBEDDING_HNSW_ENABLED` env var. Hybrid BM25+HNSW via `search::rrf()` already wired in Tier 3 (`activities.ts:3918`); this makes the dense half fast.
+
+### Phase 12 — Activity-API Connection Pooling (Phase 8 throughput unblocker)
+
+Surfaced during the 2026-04-30 / 2026-05-01 canary validation runs: every authenticated query in `repos/metabob-activity-api/src/db/surreal.ts:queryWithAuth` opens a fresh SurrealDB session (`new Surreal()` → `connect` → `use` → `authenticate(jwt)` → `query` → `close`), paying ~200-300ms of TCP+JWT-signin overhead per call against a cold pod. Under the burst the impulse-activity loop produces in a single goal run — three `gather_context` impulse-resolves (Phase 12.B), dozens of lifecycle impulse INSERTs, validator-dispatch chains, metrics upserts, trace storage — activity-api fires that sequence dozens of times in seconds. Three secondary effects compound:
+
+- SurrealDB's RocksDB single-writer mutex saturates; concurrent writes queue.
+- The `/health` endpoint gets queued behind the same mutex; Kubernetes liveness/readiness probes time out (`context deadline exceeded`); the kubelet starts restart-looping the pod even though the underlying process is alive (mirror of F-50's connection-failure surface).
+- Cloudflare returns 504 to minibob because each activity-api request making N internal `queryWithAuth` calls accumulates handshake latency past the gateway's deadline.
+
+Effects observed:
+- Run #13 (2026-04-30) succeeded only because SurrealDB happened to be warm when the burst landed.
+- Runs #14, #15 (2026-04-30 / 2026-05-01) failed `not achieved` with ~30 HTTP 5xx errors and SurrealDB pod restart events, despite all underlying code paths being correct.
+- F-50 (intermittent "Unable to connect" on impulse INSERTs) reproduces consistently under burst — same pod, same code, same JWT — when the connect/auth handshake storm hits a single SurrealDB writer.
+
+**Resolution:** add a per-process LRU of authenticated SurrealDB sessions keyed by `(jwt-prefix, ns, db)`. `queryWithAuth` becomes acquire → query → release; the second-and-subsequent calls within a JWT's lifetime collapse to a hashmap lookup. Bounded concurrency (`DB_POOL_MAX=32` default) caps SurrealDB's connection load. JWT-expiry eviction at 60s margin matches minibob's `BEARER_REFRESH_MARGIN_MS`. Graceful drain on SIGTERM. Observability via `/v2/health/db-pool` and pool stats in `/health`.
+
+Specced under `specs/activity-api-connection-pooling/spec.md` of this change (was previously drafted as standalone `2026-05-01-activity-api-connection-pooling`, folded in here because Phase 8 validation depends on it). Acceptance criteria for Phase 12:
+- p99 `queryWithAuth` latency drops ≥40% under the standard rotate-logs validation goal.
+- `/health` 200-rate stays ≥99% during a 60s minibob burst (was ~85% pre-change).
+- SurrealDB pod restart count over a goal run is 0 (was 1-3 in 2026-04-30 runs).
+- Goal-completion rate on the standard validation reaches 1/1 success (was ~0.5/1 pre-change, even with Improvise's broad-tool fallback firing correctly).
+
+**Impacted flows in this umbrella that benefit transparently** (no source changes; the pool sits below `queryWithAuth`):
+- Phase 1's `lifecycle:task:preBinding` → slot-binding meta-activity → 3 selection-resolver calls per task (Phase 3) → impulse INSERTs back through activity-api. The whole chain reduces from ~3 × 250ms-cold to ~3 × 5ms-warm.
+- Phase 4's validator-dispatch meta-activity → 5 tasks × N impulse INSERTs per parent task completion. Same multiplicative speedup.
+- The `improvise` template's `gather_context` (added 2026-05-01 alongside this spec) fires three impulse-resolves to the new `activity_search` / `trace_search` / `tool_pattern_search` shapes; without pooling those three calls alone bound a goal run's startup at ~750ms-cold. Pooled they're sub-15ms.
+- F-50 ("SurrealDB connection failures from activity-api"): the pool replaces the connect-storm with a small steady-state connection count, eliminating the network-layer flakiness observed there. F-50 marked RESOLVED-via-Phase-12 below.
+
+**Out of scope here, tracked as follow-ups:** per-org concurrency caps (one tenant could hog all 32 slots; non-issue at single-tenant scale today), startup pre-warm (amortise first-request latency), read-replica pool key (SurrealDB 3.x doesn't yet support replication).
 
 ### Phase 11 — State-Space-Aware Recommendations + ExecutionScope
 
@@ -510,6 +541,147 @@ Cross-cutting findings surfaced during implementation iterations 1–15. Finding
 **Proposed fix:** Bug 10.1 + 10.2 fixes already shipped in iter 7 / Subagent K (commit `8f8d5d9`). Embedding backfill remains a separate operations task.
 **Origin:** Post-Deploy Observations section (already documented at end of design.md).
 **Affected files:** `repos/metabob-activity-api/src/routes/activities.ts`.
+
+#### F-V5: `DEFINE TABLE <name> OVERWRITE` syntax rejected by SurrealDB v3.0.0
+**Observation:** Migration `099-account-id-permissions.surql` fails during pod init with `HTTP 400: Parse error: Unexpected token 'OVERWRITE', expected Eof` at line 50 (`DEFINE TABLE activity OVERWRITE`). The deployed SurrealDB version is `surrealdb/surrealdb:v3.0.0` (confirmed via `kubectl --context metabob-production get pod surrealdb-0 -n activity-system -o jsonpath='{.spec.containers[0].image}'`). The init container logs this as a warning and continues, so migration 099 silently did not apply.
+**Root cause:** Two distinct `DEFINE TABLE ... OVERWRITE` syntax forms exist in the migration history:
+- **Old/accepted form** (SurrealDB pre-3.0.0): `DEFINE TABLE OVERWRITE <name> SCHEMAFULL` — keyword before table name. Used in migrations 030, 052, 064, 068, 069, 071, 074, 075, 079, 080, 083, 084, 085, 087, 093, 094, 095, 096, 097, 098, 100, 101, 102, 104, 109, 110, 111, 112 (29 files total using OVERWRITE).
+- **New/rejected form**: `DEFINE TABLE <name> OVERWRITE` — keyword after table name. Used only in migration 099 (all 41 `DEFINE TABLE` statements in that file use this form; comments in the file even cite this as the correct pattern, referencing migrations 074, 080, etc. — but those earlier migrations all use the old form, making the comment misleading).
+**Scope:** Only migration 099 uses the rejected form. All other 28 OVERWRITE-using migrations use the accepted `DEFINE TABLE OVERWRITE <name>` syntax and applied cleanly. The deployment chart confirms `tag: "v3.0.0"` in `repos/deployment/charts/surrealdb/values.yaml`.
+**Impact:** Migration 099 (Phase C — account_id-aware PERMISSIONS dual-scope) did not apply. 41 tables are missing the account_id-scoped PERMISSIONS clauses that dual-scope enforcement requires. Org-only PERMISSIONS from the earlier migrations (080, 083-087) remain active, so cross-org isolation is intact — but account-level isolation (the Phase B/C dual-scope contract) is not enforced at the DB layer. Any row carrying `account_id` is subject only to org-level PERMISSIONS checks, not the tighter `account_id = $token.account_id` check. Application-layer guards remain the sole enforcement path for account-scoped reads/writes until the migration is re-applied.
+**Proposed fix:** Rewrite all 41 `DEFINE TABLE <name> OVERWRITE` statements in `099-account-id-permissions.surql` to the accepted `DEFINE TABLE OVERWRITE <name>` form. The schema changes are identical; only the keyword ordering changes. The migration is idempotent by design (OVERWRITE semantics) so re-running after the fix is safe. No other migrations require changes.
+**Secondary fix:** Update the migration comment header to correctly reflect the accepted form (`DEFINE TABLE OVERWRITE <name>`) rather than the erroneous `DEFINE TABLE <name> OVERWRITE` reference to avoid the same mistake in future migrations.
+**Origin:** Validation harness finding F-V5 (2026-05-01 canary pod init log).
+**Affected files:** `repos/metabob-activity-api/sql/migrations/099-account-id-permissions.surql` (all 41 DEFINE TABLE statements).
+
+#### F-V8: SurrealDB CrashLoopBackOff (OOMKill) after migration 106 — HNSW index loads full vector graph into RAM on startup
+
+**Symptom:** `surrealdb-0` is in CrashLoopBackOff with exit code 137 (OOMKill). 14 restarts observed over 14 hours. Pod start sequence: SurrealDB initialises, RocksDB reports `total memory limit: 3489660928` (~3.3 GB for block cache + memtable), the process runs 1–2 minutes, the liveness probe times out (`context deadline exceeded`), and the kubelet kills the pod. The `/health` endpoint — which answers instantly when the DB is idle — gets queued behind a mutex that the startup workload holds, causing the probe timeout even before the actual OOMKill lands.
+
+**Root cause: migration 106 (`hnsw-dense-embedding-index.surql`) — primary culprit.** The migration defines two HNSW indexes on the `activity` table:
+
+```sql
+DEFINE INDEX IF NOT EXISTS idx_activity_name_embedding_hnsw
+  ON activity FIELDS name_embedding
+  HNSW DIMENSION 384 DIST COSINE TYPE F32 EFC 128 M 16;
+
+DEFINE INDEX IF NOT EXISTS idx_activity_description_embedding_hnsw
+  ON activity FIELDS description_embedding
+  HNSW DIMENSION 384 DIST COSINE TYPE F32 EFC 128 M 16;
+```
+
+SurrealDB's HNSW implementation holds the entire navigable graph in RAM. On startup, before serving any request, SurrealDB loads both index graphs into memory. With M=16 (up to M_max0=32 edges per node at layer 0), F32 vectors of dimension 384, and 2,500+ active `activity` rows (the registry size the migration header explicitly anticipates post-deprecation-pass), the per-index memory cost is approximately:
+
+- Raw vector storage: 2,500 × 384 × 4 bytes ≈ **3.75 MB** per index
+- Adjacency lists (layer 0, 32 edges × 8 bytes/edge × 2,500 nodes) ≈ **640 KB** per index
+- Upper-layer graph + node metadata overhead (empirical multiplier ~3–5×): total **~15–20 MB per index in isolation**
+
+That is not the kill by itself. The spike comes from the combination:
+
+1. **Embeddings are disabled** (`health: {"embedding": {"status": "disabled"}}`). Zero rows in the `activity` table currently carry non-null `name_embedding` or `description_embedding` values — the backfill job documented in F-15 has not run (0/3,051 activities have embeddings). SurrealDB's HNSW indexer skips null rows at write time, so the index graphs are structurally near-empty. **However**, on startup SurrealDB still reconstructs the index metadata, allocates the graph heap, and replays RocksDB WAL entries for any index mutations that landed during the last run. For an index defined but empty this overhead is minor. If any embedding rows exist (e.g. from a partial backfill) those rows are fully loaded.
+
+2. **Migrations 107, 108, and 109 trigger full-table UPDATE scans on the `activity` table as part of their `ev` backfill.** Each scan touches every row, firing the COMPUTED `ev` field expression and — because the row is being updated — causing SurrealDB to re-evaluate whether the HNSW index needs updating for that row. With 2,500+ rows this is a 2,500-UPDATE burst against an indexed table. The combined per-row CPU + in-memory graph lookup cost, multiplied across all rows in rapid succession, creates a sustained memory + CPU spike. If any row has a non-null embedding (or if SurrealDB pre-allocates HNSW graph capacity proportional to the table's total row count rather than the indexed-vector count), this spike can push the working set above the 8 Gi limit briefly enough to trigger OOMKill before the kernel can reclaim pages.
+
+3. **The liveness probe timeout compounds the issue.** The liveness probe calls `GET /health` with a short timeout (`context deadline exceeded` is the pod-log message). SurrealDB's HTTP handler queues behind the same internal lock that the migration-replay and UPDATE-burst hold at startup. The probe fails before the burst completes, causing an unnecessary restart that re-runs the same burst, burning memory again — a restart loop rather than a one-time spike.
+
+**Why not migrations 103–105 or 109?**
+- **103** (computed `ev` fields): `DEFINE FIELD` statements are cheap; no data scan at definition time; no memory spike.
+- **104** (`fn::beta_sample`): Function definitions. Zero impact on memory or startup time.
+- **105** (`shape_gap_resolution`): New empty table + indexes. Negligible.
+- **107** / **108** / **109** (`ev` backfill + float-fix + OVERWRITE): Each runs the `UPDATE activity SET updated_at = time::now()` bulk scan. These are secondary contributors — they inflate the burst that migration 106's index makes expensive, but they would be fast against a table with no HNSW index defined.
+- **106** is the root: it creates the HNSW data structure that makes the bulk UPDATE scans in 107/108/109 memory-intensive and slow.
+
+**Impact:** All activity-api backends fail immediately after the CrashLoopBackOff begins. Every API call to `activity.metabob.com` — impulse resolution, template recommendation, trace storage, Thompson Sampling — returns 5xx or times out. The learning loop is fully halted. No executions are recorded, no Thompson posteriors are updated, and the workbench cannot connect.
+
+**Recommended operator actions (choose one):**
+
+*Option A — increase pod memory limit (fast, safe, temporary):*
+Edit `repos/deployment/charts/surrealdb/values.yaml` and raise the memory limit from `8Gi` to `16Gi`. The prior bump (4 Gi → 8 Gi, 2026-04-29, F-50 comment in the file) bought several weeks; 16 Gi should absorb the HNSW startup burst plus the F-50-era nested-trace query spikes simultaneously. Re-deploy with `helmfile -e canary sync`. The index will load successfully and the restart loop will stop. This is the fastest path to restoring service.
+
+```yaml
+# repos/deployment/charts/surrealdb/values.yaml
+resources:
+  limits:
+    memory: "16Gi"   # was 8Gi — HNSW graph load + ev-backfill burst requires headroom
+    cpu: "2000m"
+```
+
+*Option B — drop the HNSW indexes (safe, keeps 8 Gi limit):*
+The HNSW indexes are behind a feature flag (`DENSE_EMBEDDING_HNSW_ENABLED`) that is not yet set on canary (the migration header says the operator switch lands in Phase 10.29, after a benchmark). With embeddings disabled, the indexes provide no query benefit. Drop them and the startup burst disappears:
+
+```sql
+-- Run against surrealdb-0 as root after the pod recovers (exec into pod or via kubectl port-forward)
+REMOVE INDEX idx_activity_name_embedding_hnsw ON activity;
+REMOVE INDEX idx_activity_description_embedding_hnsw ON activity;
+```
+
+Then gate migration 106 behind the `DENSE_EMBEDDING_HNSW_ENABLED` env-var check in the migration runner (or split it into a separate operator-run script rather than an auto-applied migration). Re-create the indexes only after the embedding backfill is complete and a memory benchmark has confirmed the 8 Gi limit is sufficient.
+
+*Option C — temporarily increase the liveness probe timeout (buys time to diagnose):*
+Extend `livenessProbe.timeoutSeconds` and `livenessProbe.initialDelaySeconds` in the SurrealDB StatefulSet so the probe does not fire during the startup burst. This stops the restart loop but leaves the underlying OOMKill risk. Use only as a diagnostic bridge alongside Option A or B.
+
+**Recommended path:** Apply Option A immediately to restore service, then evaluate Option B as the correct long-term fix before the embedding backfill runs. Option B avoids a second OOMKill event when the backfill eventually populates tens of thousands of embedding vectors, which will increase the HNSW graph size dramatically.
+
+**Origin:** F-V8 (2026-05-01 canary CrashLoopBackOff, 14 restarts / 14 h).
+**Affected files:**
+- `repos/metabob-activity-api/sql/migrations/106-hnsw-dense-embedding-index.surql` (index definition — primary root cause)
+- `repos/metabob-activity-api/sql/migrations/107-thompson-ev-backfill.surql` (bulk UPDATE on `activity` — secondary contributor)
+- `repos/metabob-activity-api/sql/migrations/108-thompson-ev-float-fix.surql` (bulk UPDATE on `activity` — secondary contributor)
+- `repos/metabob-activity-api/sql/migrations/109-thompson-ev-overwrite.surql` (bulk UPDATE on `activity` — secondary contributor)
+- `repos/deployment/charts/surrealdb/values.yaml` (memory limit — operator config change target)
+
+#### F-V9: `goal_enrichment` shape missing / race in `goal_processing_activity_driven` — swallowed resolver failure in parallel group loop
+
+**Symptom:** `minibob --single "..." --caffeine` consistently fails with:
+```
+✗ Semantic enrichment of the raw goal
+Task requires shapes [goal_enrichment] but no matching impulses found and no prompt fallback
+```
+`GoalEnrichmentResolver` logs "Enriching goal: ..." (resolver IS called), but within ~430ms `prepare_pool_result` fires from the slot-binding activity showing `missing_shapes: ["goal_enrichment"]`, then `activity.ts:4776` throws. Hypothesis A (dependency ordering bug) was the initial candidate; investigation ruled it out.
+
+**Root cause:** `executeWithResolver` (activity.ts, the `catch` block at ~line 4972) catches any exception thrown by a resolver and **returns a `TaskResult` with `status: "failed"` rather than re-throwing**. The returned failed TaskResult has no `metadata.outputImpulses` field. Immediately after, the parallel group loop's per-result iteration block at ~line 2728 contained an empty `if` for the failed-without-retry case:
+```typescript
+if (result.taskResult.status === "failed" && !groupTask.retry) {
+  // Task failed without retry - continue with error handling below
+  // (This will be caught by the existing error handling logic)
+}
+```
+This empty block caused the group loop to **silently continue to the next group** even though `enrich_goal` failed. The impulse propagation loop at ~line 2737 skips the failed task's result (no `metadata.outputImpulses`). The store sweep at ~line 2814 also finds nothing (the resolver threw before `registerLoadedImpulse` was called). Group 3 (`recommend_activity`) then starts with `goal_enrichment` absent from `impulses[]`. `canExecuteTask` returns `missing: ["goal_enrichment"]`, and since `recommend_activity` has no `prompt` fallback, the misleading "Task requires shapes" error is thrown at line 4776 instead of the real resolver error from `enrich_goal`.
+
+The 430ms timing is consistent: `GoalEnrichmentResolver.resolve()` calls the LLM; if the LLM fails quickly (timeout, API error, bad JSON response), the resolver throws, `executeWithResolver` catches and returns failed, and the next group starts within milliseconds — showing up as the ~430ms gap between "Enriching goal: ..." and the slot-binding `prepare_pool_result` event.
+
+**Hypothesis evaluation:**
+- **Hypothesis A** (dependency ordering / task level bug): RULED OUT. `groupTasksForParallelExecution` correctly places each task in its own level (0→1→2→3...) given the linear dependency chain. `enrich_goal` runs in group 2, `recommend_activity` in group 3. They never run in parallel.
+- **Hypothesis B** (error misattributed to `recommend_activity`): PARTIALLY CORRECT. The error message at 4776 is thrown by `recommend_activity`, but the CAUSE is `enrich_goal`'s resolver failure being swallowed.
+- **Hypothesis C** (swallowed `enrich_goal` exception): **CORRECT ROOT CAUSE.** `executeWithResolver`'s catch block returns a failed TaskResult; the group loop empty-if block lets execution continue to the next group.
+
+**Fix applied (2026-05-01):** The empty `if` block at ~line 2728 now throws:
+```typescript
+if (result.taskResult.status === "failed" && !groupTask.retry) {
+  throw new Error(
+    result.taskResult.error || `Task ${groupTask.id} failed without retry`,
+  );
+}
+```
+This surfaces the real resolver error and aborts the group loop at the correct point. The error propagates to the outer try/catch at ~line 3843, which records the failure and fires `lifecycle:activity:failure`. No change to `executeWithResolver`'s catch block is needed for this fix — the swallowed-exception pattern in that function is preserved for the retry path (the sequential retry loop at ~line 3192 depends on failed TaskResults being returned, not thrown).
+
+**Status:** RESOLVED — fix committed to `repos/minibob/src/activity.ts`.
+**Origin:** F-V9 investigation 2026-05-01.
+**Affected file:** `repos/minibob/src/activity.ts` (~line 2728).
+
+---
+
+#### F-V10: SurrealDB root connection loses auth on WebSocket reconnect — activity-api restart loop
+
+**Symptom:** After SurrealDB pod restarts, `metabob-activity-api` enters a CrashLoopBackOff cycle (14+ restarts). Pod logs show `SELECT * FROM activity LIMIT 1` succeeding on some health checks and failing with "Anonymous access not allowed: Not enough permissions to perform this action" on others. The flapping readiness probe eventually triggers a SIGTERM, the pod exits cleanly (Exit Code 0), Kubernetes restarts it, and the cycle repeats. Backend returns HTTP 503 to all minibob requests during this window, causing goal processing to fail at the verifier step ("Goal verification reported achieved=false").
+
+**Root cause:** The SurrealDB JS SDK uses a WebSocket transport. When SurrealDB restarts, the SDK's socket is closed and automatically reconnected. However, the SDK does **not** re-issue the `signin()` call on reconnect — the reconnected socket is anonymous. The `SurrealDBClient.connect()` guard in `repos/metabob-activity-api/src/db/surreal.ts` skips reconnection if `this.db` is non-null, so once a connection has been established, the client never calls `signin()` again even after SurrealDB restarts. Queries run against the anonymized socket fail with "Anonymous access not allowed".
+
+**Fix applied (2026-05-02):** In `SurrealDBClient.query()`, catch any error whose message contains "Anonymous access not allowed" or "Not enough permissions to perform this action" (before the final error-enrichment throw). On first occurrence (`_isRetry = false`): close the stale socket, reset `this.db = null` and `this.connecting = null`, and retry the query once. The retry path calls `this.connect()` which re-opens the WebSocket, re-issues `use()` and `signin()`, and then runs the query. If the retry also fails, the error propagates normally. This degrades gracefully: a single transient anonymous-window causes one extra connect+auth handshake per query rather than a cascade of 503 health-check failures.
+
+**Status:** RESOLVED — fix committed to `repos/metabob-activity-api/src/db/surreal.ts`.
+**Origin:** F-V10 (2026-05-02 canary restart loop after SurrealDB OOM fix / pod restart).
+**Affected file:** `repos/metabob-activity-api/src/db/surreal.ts` (`query()` method).
 
 ## Iteration log
 
@@ -1123,11 +1295,34 @@ Fresh probe after deploying F-44 + F-43 + F-37/F-40 (full):
 | validator-dispatch | task 2 dies | **multiple successes** in trace | F-42 chain unblocked |
 | Goal achieved | partial (probe 1 fail, probe 2 succeed) | ✅ achieved | criterion 1 robust |
 
-### F-50 (new): SurrealDB connection failures from activity-api
+### F-50 (RESOLVED-by-Phase-12, 2026-05-01): SurrealDB connection failures from activity-api
 
 Intermittent: `"Query failed in activity-system.learning_loop: Unable to connect. Is the computer able to access the url?"` — affects template registration and impulse creation. Pod ↔ SurrealDB service flakiness (DNS, transient network, load). Causes ~12 of the 15 template registration failures observed; the OTHER 3 are the genuine F-46 tag-format Zod rejections.
 
-**Diagnostic next**: `kubectl logs -n activity-system -l app.kubernetes.io/name=surrealdb` and check service endpoints. Also `kubectl describe svc surrealdb` for endpoint health. May correlate with cluster capacity (F-34 capped replicas to 1).
+**Root cause confirmed (2026-05-01):** the "intermittent" framing was misleading. Every `queryWithAuth` opens a fresh SurrealDB session (TCP + WebSocket upgrade + signin); under burst load the activity-api pod fires dozens of these in seconds. SurrealDB's RocksDB single-writer mutex serialises the resulting writes, the HTTP server can't answer `/health` behind the queue, the kubelet liveness-kills the pod, and minibob sees the cascading "Unable to connect" errors when the pod restarts. Not network flakiness — connection-storm contention.
+
+**Resolution:** Phase 12 (activity-api connection pooling). Per-process LRU of authenticated sessions keyed by `(jwt-prefix, ns, db)`; second-and-subsequent `queryWithAuth` calls within a JWT lifetime become hashmap lookups. Bounded concurrency caps SurrealDB's connection load below the saturation threshold. See `specs/activity-api-connection-pooling/spec.md` and Phase 12 entry above. Closes the diagnostic that lived under "may correlate with cluster capacity (F-34 capped replicas to 1)" — the bottleneck is below F-34's blast radius.
+
+### F-53 (new, 2026-05-01): handshake-per-query throughput bottleneck visible in 2026-04-30 / 2026-05-01 validation runs
+
+Observed during validation of Phase 6 (improvise template's `gather_context` + `execute` chain) and Phase 8 (end-to-end goal completion against canary). The visible failure mode was the goal failing `not achieved` with workspace empty, despite (a) the verifier returning honest `achieved=false` correctly, (b) the improvise template's prompt being correct, (c) the auth chain (identity-vessel → activity-api → SurrealDB) being verified-working in isolation, (d) the new `activity_search` / `trace_search` / `tool_pattern_search` shapes returning ranked results when called directly via curl.
+
+The hidden cause was that activity-api couldn't keep up with the burst of `queryWithAuth` calls the impulse-activity loop generates in a single goal run. Each call paid the full TCP + WebSocket + JWT-signin cost (~200-300ms cold), and the resulting concurrent connection-establishment storm pushed SurrealDB into a state where even `/health` GETs queued behind the RocksDB writer mutex.
+
+Captured timing profile of one `queryWithAuth` invocation against canary:
+
+| Step | Cold pod | Warm pod |
+|---|---|---|
+| `new Surreal()` | <1ms | <1ms |
+| `db.connect(url)` | 60-120ms | 5-15ms |
+| `db.use({ns,db})` | 5-10ms | 2-5ms |
+| `db.authenticate(jwt)` | 80-180ms | 20-40ms |
+| `db.query(sql, params)` | varies | varies |
+| `db.close()` | 10-30ms | 5-15ms |
+
+Under the standard rotate-logs validation goal, ~50 `queryWithAuth` calls happen during the goal-resolution chain. At 200ms/call cold, that's 10s of pure handshake latency before any actual work — Cloudflare's gateway timeout fires well before that.
+
+**Resolution:** Phase 12. Same as F-50; the framing here captures the throughput angle directly and the failure-shape that Phase 8 validators should watch for.
 
 ### F-51 (new): `impulse_resolutions[].cost_usd` field missing from SurrealDB schema
 

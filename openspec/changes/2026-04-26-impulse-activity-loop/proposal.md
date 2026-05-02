@@ -35,6 +35,7 @@ The integrated impulse-activity loop is considered complete when, against canary
 
 - `impulse-activity-loop-validation` — end-to-end validation procedure executed against canary at each phase, with documented expected traces and acceptance criteria.
 - `impulse-activity-loop-design-evolution` — a `design.md` that grows incrementally as implementation reveals refinements; learnings archived back into individual sibling specs as appropriate.
+- `activity-api-connection-pooling` (added 2026-05-01) — per-process LRU of authenticated SurrealDB sessions in metabob-activity-api, surfaced from Phase 8 validation runs that exposed the connect/auth handshake-per-query as the throughput bottleneck blocking goal completion. See Phase 12 in `design.md` and `specs/activity-api-connection-pooling/spec.md`.
 
 ## Impact
 
