@@ -62,11 +62,17 @@ The registry SHALL store the `pubkey` alongside the vessel record. A subsequent 
 - **THEN** the registry returns HTTP 401 and the vessel's TTL is not refreshed
 
 ### Requirement: Scope-bearing impulses carry a signed attestation envelope (H3)
-Impulses whose shape is in the configured scope-bearing list (initial value: `["scopeContext"]`) SHALL carry a `ScopeAttestation` of the form `{ issuer, audience, scope_hash, nonce, deadline, domain: { name: "metabob-scope", version, issuer_org_id }, signature }`. The signature SHALL be Ed25519 over the EIP-712-style typed-data digest `SHA-256("\x19\x01" || domain_separator_hash || struct_hash)`.
+Impulses whose shape is in the configured scope-bearing list (initial value: `["goal"]` — i.e., goal-shaped impulses carrying a `scopeContext` body field per `openspec/changes/2026-04-26-shape-provider-goal-creation/design.md` §"Scope schema") SHALL carry a `ScopeAttestation` of the form `{ issuer, audience, scope_hash, nonce, deadline, domain: { name: "metabob-scope", version, issuer_org_id }, signature }` on `body.scopeContext.attestation`. The `scope_hash` SHALL be SHA-256 over the RFC 8785 canonical-JSON serialisation of `body.scopeContext.dimensions`. The signature SHALL be Ed25519 over the EIP-712-style typed-data digest `SHA-256("\x19\x01" || domain_separator_hash || struct_hash)`.
 
-#### Scenario: Scope-bearing impulse without attestation rejected
-- **WHEN** an impulse with shape `scopeContext` is written without a `ScopeAttestation`
+In opt-in mode (the first release default), `body.scopeContext.attestation` MAY be `null`; the structural CC1 narrowing check still fires. Once H3 enforcement flips to mandatory, `attestation: null` on a scope-bearing-shape impulse SHALL be rejected at impulse-write time.
+
+#### Scenario: Scope-bearing impulse without attestation rejected under enforce mode
+- **WHEN** a goal-shaped impulse is written with `body.scopeContext.attestation: null` and H3 enforcement is `reject`
 - **THEN** the impulse-write endpoint rejects with HTTP 400
+
+#### Scenario: Scope-bearing impulse without attestation accepted under opt-in mode
+- **WHEN** a goal-shaped impulse is written with `body.scopeContext.attestation: null` and H3 enforcement is `log_only`
+- **THEN** the impulse-write endpoint accepts the impulse; CC1 narrowing still verifies on dispatch
 
 #### Scenario: Non-scope-bearing impulses unaffected
 - **WHEN** an impulse with a non-scope-bearing shape (e.g. `file`, `gitDiff`) is written without an attestation
@@ -171,16 +177,47 @@ A quarantined variant SHALL NOT be un-quarantined by the auto-regression scan. U
 - **WHEN** a quarantined variant subsequently receives invocations whose failure rate is below the threshold
 - **THEN** `quarantined: true` remains set; the scan does not flip it
 
-### Requirement: Child activity scope is a subset of parent activity scope (CC1)
-At child-activity dispatch, the executor SHALL verify `child.scope_set ⊆ parent.scope_set`. Subset semantics are scope-claim-specific (defined by the in-flight `2026-04-26-shape-provider-goal-creation` spec). On violation, the child invocation SHALL be rejected.
+### Requirement: Child activity scope narrows or preserves parent activity scope (CC1)
+At child-activity dispatch, the executor SHALL invoke `verifyScopeNarrowing(parent, child)` against the parent and child goal-shaped impulses' `scopeContext` body fields (schema in `openspec/changes/2026-04-26-shape-provider-goal-creation/design.md` §"Scope schema"). The check is structural:
 
-#### Scenario: Child with subset scope dispatches
-- **WHEN** every claim in `child.scope_set` is satisfied by an equal-or-broader claim in `parent.scope_set`
-- **THEN** the child invocation proceeds
+```
+verifyScopeNarrowing(parent: ScopeContext, child: ScopeContext) -> bool:
+  for each key K in parent.dimensions:
+    if K is absent in child.dimensions:
+      return false                              // removal of a parent constraint = widening
+    if parent.dimensions[K] != child.dimensions[K]:
+      return false                              // mutation of a parent-asserted dimension = widening
+  return true                                   // child MAY add new dimension keys
+```
 
-#### Scenario: Child with widening scope rejected
-- **WHEN** any claim in `child.scope_set` is broader than every corresponding claim in `parent.scope_set`
-- **THEN** the child invocation is rejected and a trace is written with `failure_mode: { type: "safety_breach", context: { breach_type: "scope_widening", limit, attempted, ancestor_chain } }`
+For every key K present in `parent.scopeContext.dimensions`, the child SHALL preserve K with the same value. The child MAY add NEW dimension keys not present in the parent. On violation, the child invocation SHALL be rejected before the nested execution starts.
+
+#### Scenario: Child preserves parent dimensions and dispatches
+- **WHEN** `parent.scopeContext.dimensions = { cluster_id: "alpha", branch: "main" }` and `child.scopeContext.dimensions = { cluster_id: "alpha", branch: "main" }`
+- **THEN** `verifyScopeNarrowing` returns true and the child invocation proceeds
+
+#### Scenario: Child extends with new dimension and dispatches
+- **WHEN** `parent.scopeContext.dimensions = { cluster_id: "alpha" }` and `child.scopeContext.dimensions = { cluster_id: "alpha", member_id: "u_42" }`
+- **THEN** `verifyScopeNarrowing` returns true and the child invocation proceeds (extending into a more-specific scope is allowed)
+
+#### Scenario: Child mutates a parent dimension and is rejected
+- **WHEN** `parent.scopeContext.dimensions = { cluster_id: "alpha" }` and `child.scopeContext.dimensions = { cluster_id: "beta" }`
+- **THEN** the child invocation is rejected and a trace is written with `failure_mode: { type: "safety_breach", context: { breach_type: "scope_widening", limit: { cluster_id: "alpha" }, attempted: { cluster_id: "beta" }, ancestor_chain } }`
+
+#### Scenario: Child drops a parent dimension and is rejected
+- **WHEN** `parent.scopeContext.dimensions = { cluster_id: "alpha", branch: "main" }` and `child.scopeContext.dimensions = { cluster_id: "alpha" }`
+- **THEN** the child invocation is rejected with `failure_mode.context.breach_type: "scope_widening"`
+
+#### Scenario: Top-level dispatch with empty parent dimensions
+- **WHEN** the parent goal carries `scopeContext.dimensions = {}` (top-level dispatch) and the child carries any `dimensions`
+- **THEN** `verifyScopeNarrowing` returns true (no parent keys to preserve)
+
+### Requirement: CC1 enforcement fires at child-activity dispatch in the executor
+The `verifyScopeNarrowing` check SHALL run at the same lifecycle hook that fires nested executions (per `openspec/changes/2026-04-26-impulse-binding-selection-layer/design.md` D1) and at the `escalate_unbindable` threading point added in `openspec/changes/2026-04-26-impulse-activity-loop/tasks.md` Phase 7.3. The check SHALL run before any task in the child execution begins.
+
+#### Scenario: Check runs before nested execution begins
+- **WHEN** a parent activity dispatches a child via `slot-binding.json::escalate_unbindable` (or any other nested-execution path)
+- **THEN** `verifyScopeNarrowing` is invoked with the parent and child `scopeContext` values; the child's first task does not run until the check passes
 
 ### Requirement: High-risk shapes only dispatch to externally-attested vessels (CC2)
 Shapes tagged `risk_tier: "high"` in `toolRiskProfile` SHALL set `min_attestation_tier: "external_attested"`. Discovery-vessel's `/resolve` endpoint SHALL filter responses by this tier. MiniBob's `callVesselResolve` SHALL not dispatch a high-risk resolution to a vessel below the required tier.

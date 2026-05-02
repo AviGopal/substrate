@@ -1,3 +1,15 @@
+## Foundation realignment note (2026-04-27)
+
+This change is **orthogonal to the foundation correction** and remains valid as-is. H1, H2, H4, and CC1 add safety properties to a system that the corrected foundation describes more precisely; the hardenings do not depend on (and are not invalidated by) the four-primitive framing.
+
+Two minor reframings:
+- "vessel" in this change is the same vessel that the foundation names as one of the four primitives. H2's `vessel_id = multihash(pubkey)` is the cryptographic binding for that primitive.
+- The Thompson-posterior-poisoning concern in H1 is the same concern as the two-direction learning duality flagged in the umbrella spec. Both arms of the duality (forward `impulseRelevance`, reverse slot-binding/producer-selection) read from execution traces; H1 protects both equally.
+
+If `thompson_posterior` is later promoted to a routable shape (currently REST-only inside activity-api), H1's two-sided-trace gate must extend to `thompson_posterior` writes; track when the shape lands.
+
+---
+
 ## Context
 
 The system has three trust-bearing surfaces today, all of which accept claims at face value:
@@ -90,13 +102,18 @@ This design proposes five primitives, each with a production precedent, that clo
 - **BEP-44** (BitTorrent) — mutable DHT records signed by the publisher's key with a monotonic sequence number. The DHT enforces sequence monotonicity per `(salt, publisher)`.
 - **Apple App Attest** — server issues an attestation that carries an audience binding (the server's app-id) and an expiry, and is single-use per challenge.
 
-**Translation.** A `scopeContext` impulse SHALL carry an attestation envelope:
+**Translation.** Goal-shaped (and other scope-bearing) impulses carry a `scopeContext` body field whose schema is defined in `openspec/changes/2026-04-26-shape-provider-goal-creation/design.md` §"Scope schema":
 
 ```
+ScopeContext = {
+  dimensions: Record<string, string>,    // open-ended; e.g., { cluster_id, branch, member_id }
+  attestation: ScopeAttestation | null
+}
+
 ScopeAttestation = {
   issuer: vessel_id,           // who is granting the scope
   audience: vessel_id,         // who may exercise it
-  scope_hash: bytes32,         // sha256 of canonical-form scope claim
+  scope_hash: bytes32,         // sha256 of RFC 8785 canonical-form `dimensions`
   nonce: uint64,               // monotonic per (issuer, audience)
   deadline: unix_timestamp,    // absolute expiry
   domain: {
@@ -107,6 +124,8 @@ ScopeAttestation = {
   signature: bytes,            // Ed25519 over typed-data digest
 }
 ```
+
+The `scope_hash` preimage is the RFC 8785 (JCS) canonical-JSON serialisation of `ScopeContext.dimensions`, hashed with SHA-256. Canonicalisation pins the byte sequence so issuer and verifier compute the same digest regardless of key insertion order or whitespace.
 
 The typed-data digest is computed exactly as EIP-712 prescribes: `keccak256("\x19\x01" || domain_separator_hash || struct_hash)`, except using SHA-256 to keep us inside the Ed25519 / multihash family already chosen for H2.
 
@@ -120,10 +139,9 @@ A new table `scope_nonce_state` (or a Redis structure) tracks `last_seen_nonce[(
 
 **Friction.** BEP-44 monotonic-nonce enforcement assumes a single coordinator; we have multiple activity-api replicas. **Mitigation**: use a SurrealDB CAS update on `scope_nonce_state` keyed by `(issuer, audience)`; replicas compete fairly.
 
-**Migration.** Scope attestation is opt-in for the first release: impulses without an attestation are processed as today. Once the in-flight scope-as-impulse spec lands, the attestation requirement flips to mandatory for shapes that name a scope (e.g. `scopeContext`, future shape names that the goal-creation spec defines). Other shapes are unaffected.
+**Migration.** Scope attestation is opt-in for the first release: goal-shaped impulses with `attestation: null` are accepted and the CC1 structural narrowing check still fires. Once H3 lands as mandatory, `attestation: null` on a goal-shaped impulse (or any other shape whose name appears in the configured scope-bearing list) is rejected at impulse-write time. Other (non-scope-bearing) shapes are unaffected.
 
 **Open questions.**
-- What's the canonical form for the `scope_hash` preimage? Lean: a JSON-canonicalisation per RFC 8785 of the scope object, hashed with SHA-256. Concrete form pinned in the spec when the scope object schema is finalised by the goal-creation spec.
 - Where does the signing key live for issuer = `user`? An end-user issuing scope to a vessel they invoke is the natural case. Lean: identity-vessel issues a short-lived "user signing key" tied to the user's session; the user's session key signs the attestation.
 
 ### H4: Tailnet-Lock-equivalent for vessel registration
@@ -198,13 +216,35 @@ A new table `scope_nonce_state` (or a Redis structure) tracks `last_seen_nonce[(
 
 **Borrowed mechanism.** UCAN (User Controlled Authorization Network) delegation chains and Solidity reentrancy guards. Both encode the invariant *child capability ⊆ parent capability*. UCAN does it via cryptographic delegation chains; Solidity does it locally via state guards that prevent a callee from re-entering the caller with elevated privilege.
 
-**Translation.** Every activity execution carries a `scope_set: ScopeClaim[]` (defined by the in-flight goal-creation spec; this design adopts whatever schema that spec lands on). At child-activity creation, the executor SHALL verify `child.scope_set ⊆ parent.scope_set`. The verification is structural: for each scope claim in `child.scope_set`, an equal-or-broader claim must exist in `parent.scope_set`. Subset semantics are scope-claim-specific (this spec does not pin them).
+**Translation.** Every goal-shaped impulse carries a `scopeContext` body field per the schema in `openspec/changes/2026-04-26-shape-provider-goal-creation/design.md` §"Scope schema":
 
-The check happens at the same place the lifecycle event for nested-execution dispatch fires — currently per the nested-execution path discussed in `2026-04-26-impulse-binding-selection-layer/design.md` D1 — so it is automatic for every child invocation regardless of how the child is dispatched.
+```
+ScopeContext = {
+  dimensions: Record<string, string>,    // open-ended; e.g., { cluster_id, branch, member_id }
+  attestation: ScopeAttestation | null   // null in opt-in mode; mandatory once H3 lands
+}
+```
 
-A scope-narrowing violation results in `failure_mode: { type: "safety_breach", context: { breach_type: "scope_widening", limit: <parent.scope_set>, ... } }` per the in-flight `validators-and-failure-modes` spec's taxonomy.
+At child-activity dispatch, the executor SHALL invoke `verifyScopeNarrowing(parent, child)` before the nested execution starts. The algorithm is structural and requires no LLM reasoning:
 
-**Open question.** Subset semantics for scope claims need a real definition once the goal-creation spec finalises the scope schema. The invariant is what this spec asserts; the precise check is downstream.
+```
+verifyScopeNarrowing(parent: ScopeContext, child: ScopeContext) -> bool:
+  for each key K in parent.dimensions:
+    if K is absent in child.dimensions:
+      continue                                  // narrowing by removal of constraint? — disallowed
+    if parent.dimensions[K] != child.dimensions[K]:
+      return false                              // child changed a parent-asserted dimension — widening
+  // child MAY add new dimension keys not present in parent (extending into a more-specific scope)
+  return true
+```
+
+Concretely: for every key K present in `parent.dimensions`, the child MUST preserve K with the same value. Children MAY add NEW dimension keys (extending into a more-specific scope is allowed); they MUST NOT remove or change parent keys. Removal-as-narrowing is treated as widening because the parent's constraint is silently dropped.
+
+**Enforcement point.** The check runs at child-activity dispatch in the executor — at the same lifecycle hook that fires nested executions per `openspec/changes/2026-04-26-impulse-binding-selection-layer/design.md` D1, and at the threading point added by `openspec/changes/2026-04-26-impulse-activity-loop/tasks.md` Phase 7.3 (where `slot-binding.json::escalate_unbindable` forwards parent `scopeContext` into the dispatched `create-shape-provider-goal`). The check is automatic for every child invocation regardless of how the child is dispatched.
+
+A scope-narrowing violation results in `failure_mode: { type: "safety_breach", context: { breach_type: "scope_widening", limit: <parent.scopeContext.dimensions>, attempted: <child.scopeContext.dimensions>, ancestor_chain: <composition_chain> } }` per the `validators-and-failure-modes` spec's taxonomy.
+
+**Attestation gating.** With H3 in opt-in mode (current default), `child.scopeContext.attestation` MAY be `null`; the structural narrowing check still fires. Once H3 flips to mandatory, a `null` attestation on a goal-shaped impulse is rejected at impulse-write time before CC1 can run.
 
 #### CC2: Risk-graded dispatch
 
@@ -264,12 +304,10 @@ Collected from the per-decision sections plus a few cross-cutting ones:
 - (H1) `vessel_trust_score` discrepancy threshold and downgrade curve — needs calibration data.
 - (H1) Single-sided-trace policy for purely local resolutions.
 - (H2) Pubkey-rotation flow and history continuity.
-- (H3) Canonical form for `scope_hash` preimage; pinned once goal-creation lands.
 - (H3) Issuer signing key for `issuer = user`.
 - (H4) Whether AUM log needs external transparency.
 - (H4) Per-org expansion of "high risk" beyond `toolRiskProfile`.
 - (H5) Per-family rolling-window size for auto-regression.
 - (H5) Promotion-to-baseline delay/cancel mechanism (TimelockController-equivalent).
-- (CC1) Subset semantics for scope claims — depends on goal-creation spec's scope schema.
 - Cross-cutting: how do these primitives compose with the existing API-key auth on read paths? Do scope attestations gate reads, or only writes? Lean: writes only in v1; reads continue to use API-key auth's PERMISSIONS-based isolation.
 - Cross-cutting: a future "anomaly detection on Thompson posterior shifts" hardening was discussed but not included here — out of scope; flagged for follow-up.

@@ -1,3 +1,5 @@
+**Status (2026-04-29)**: Not started. Blocking: impulse-activity-loop Phase 5 cutover. H1 is the highest-priority item.
+
 ## 1. Hardening H1 — Two-sided execution traces
 
 ### 1a. Activity-API schema and ingest
