@@ -122,6 +122,14 @@
 - [x] 12.6 `discover-by-shapes` returns 0 results for all tested shape combinations (`required_shapes`, `output_shapes`). Pre-existing issue: activity templates do not have `input_shapes`/`output_shapes` fields populated in a way the query matches. Not a trace-storage-redesign regression.
 - [x] 12.7 Phase D gate observability: `content_source: "legacy"` now logs at INFO (v1.19.7, deployed to production). Phase D monitoring begins from this version. No legacy reads observed in first 30 minutes post-deploy.
 
+## 13. Direct-curl smoke test (2026-05-03, v1.19.7, session 2)
+
+- [x] 13.1 Health check: v1.19.7, status=healthy, redis 0ms, surrealdb 5ms, pool hit-rate 99%. discovery=unhealthy (discovery-vessel API key not configured — pre-existing, non-blocking).
+- [x] 13.2 Trace write with correct body shape (`execution_trace.tasks` nested): `content_source=split`, `tasks_count=1`, `org_id=metabob`. Dual-write chain confirmed for synthetic traces.
+- [x] 13.3 Thompson Sampling recommend — 504 from Cloudflare gateway (20s timeout) when hitting via HTTPS. Root cause: endpoint latency is 9–18s depending on identity-vessel auth variability, which exceeds Cloudflare's 20s front-door timeout. Confirmed working via `kubectl port-forward` bypass: valid `recommendations` with `method: "thompson_sampling"`, UCB scores, and exploration slots. **Not a trace-storage-redesign regression** — pre-existing auth latency issue.
+- [x] 13.4 Side finding: `thompson_selection_log` INSERT fails with `Couldn't coerce value for field 'account_id': Expected none | string but found NULL`. `account_id: null` (JSON null) passed instead of SurrealDB NONE. Non-fatal — logged as WARN, response returns 200 regardless. Pre-existing bug, unrelated to trace storage redesign.
+- [ ] 13.5 **Out-of-scope (pre-existing)**: Cloudflare 20s timeout is shorter than activity-api auth latency on recommend path. Consider raising Cloudflare timeout or adding an auth token cache to reduce identity-vessel round-trips on hot paths.
+
 ## 9. Coordination checkpoints
 
 - [x] 9.1 `surrealdb-rl-layer` Phase 2 (COMPUTED `ev`) confirmed live on metabob-production: `GET /v2/activities/templates` returns `ev: 0.5` on all templates (verified 2026-05-03). Exemplar selector already deployed (v1.19.x) and reading `ev` correctly.
