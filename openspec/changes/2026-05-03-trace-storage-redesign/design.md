@@ -4,7 +4,7 @@
 
 ## Status
 
-**Phase A + B + C fully deployed** (`metabob-activity-api` v1.19.6-114176a, 2026-05-03).
+**Phase A + B + C fully deployed** (`metabob-activity-api` v1.19.7-28b5885, 2026-05-03).
 
 Verified on `metabob-production` cluster (via `kubectl`/`kubectx metabob-production`, smoke test 2026-05-03):
 - `idx_aet_activity_success_time` — `IndexScan` confirmed, metadata-only query ~164ms (was ~1400ms).
@@ -25,8 +25,8 @@ Bugs fixed during validation:
 
 Open (operator-gated):
 - Phase D (content-field drop) — gate: `content_source: "legacy"` log rate zero over 24h. Tasks 7.1-7.3.
-- Task 1.3 (P95 latency watch post-`SURREAL_SYNC_DATA=true`) — pending 24h window.
-- Task 8.5 (write-path P95 before/after) — pending 24h window.
+- Task 1.3 / 8.5 (P95 latency `SURREAL_SYNC_DATA=true` impact): external write-path latency dominated by identity-vessel auth (~3.4s P50, ~10.1s P95-first-call for cold auth); `SURREAL_SYNC_DATA` fsync overhead (~1-10ms per write) is invisible at this granularity. Meaningful delta requires pod-internal SurrealDB write metrics (not available without Prometheus). Baseline documented: write P50=3.4s, read-exemplar P50=2.2s, DB-only ops measured at <5ms via EXPLAIN.
+- Phase D (content-field drop) — monitoring live since v1.19.7 (2026-05-03 ~03:33 UTC). Gate: zero `content_source: "legacy"` INFO log hits over 24h. Migration 118 written and operator-gated. Tasks 7.2-7.3 pending operator action.
 
 ## 1. Context and current state
 
