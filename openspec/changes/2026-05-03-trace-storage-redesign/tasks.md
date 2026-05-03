@@ -112,6 +112,16 @@
 - [x] 11.6 `dispatch_activity_result` impulse storage failed with "length limit exceeded" (pre-existing SurrealDB payload size limit — not trace-storage-specific). Minibob retried 3 times and cached for later sync; execution completed successfully.
 - [x] 11.7 minibob doctor: API connected, metabob vessel reachable. Non-blocking warning: web vessel unreachable (`https://web.metabob.com`) — expected for this environment.
 
+## 12. Second-pass stress tests (2026-05-03, v1.19.7, metabob-production)
+
+- [x] 12.1 Exemplar recall latency across 7 activities: 1220-1392ms per request. Latency dominated by identity-vessel auth round-trip (~1.2s), not DB ops (which are 1-4ms). `source=exemplar` for `_activity_execute`, `ribosome-extract`, `validator-dispatch`, `slot-binding`; `source=digest_fallback` for `_goal_resolve`, `goal-processing-activity-driven`, `improvise` — confirms burst threshold not yet hit for these activities.
+- [x] 12.2 Thompson Sampling recommend: `POST /v2/activities/recommend` with `task_description` returns results with `selection_metadata.method: "thompson_sampling"`, UCB scores, and exploration slots. Working correctly.
+- [x] 12.3 Full-text search: `GET /v2/activities/templates?q=trace+storage+exemplar` returns 5 results from cache in ~1.5s (auth overhead).
+- [x] 12.4 Single trace write: `POST /v2/activities/execution-traces` succeeds; GET returns `content_source: "split"`, `org_id: "metabob"`. Dual-write chain confirmed for synthetic traces.
+- [x] 12.5 3 concurrent trace writes: all 3 succeed; total elapsed ~8s (2.7s/write). Auth round-trip is the bottleneck — not trace storage. Database writes are non-blocking.
+- [x] 12.6 `discover-by-shapes` returns 0 results for all tested shape combinations (`required_shapes`, `output_shapes`). Pre-existing issue: activity templates do not have `input_shapes`/`output_shapes` fields populated in a way the query matches. Not a trace-storage-redesign regression.
+- [x] 12.7 Phase D gate observability: `content_source: "legacy"` now logs at INFO (v1.19.7, deployed to production). Phase D monitoring begins from this version. No legacy reads observed in first 30 minutes post-deploy.
+
 ## 9. Coordination checkpoints
 
 - [x] 9.1 `surrealdb-rl-layer` Phase 2 (COMPUTED `ev`) confirmed live on metabob-production: `GET /v2/activities/templates` returns `ev: 0.5` on all templates (verified 2026-05-03). Exemplar selector already deployed (v1.19.x) and reading `ev` correctly.
