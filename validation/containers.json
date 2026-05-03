@@ -1,9 +1,9 @@
 {
   "$comment": "Canonical image refs the runner uses. Update these to bump versions.",
   "minibob": {
-    "image": "metabobapp/minibob:phase13-iter8",
+    "image": "metabobapp/minibob:phase13-iter10",
     "default_timeout_seconds": 1200,
-    "$note": "phase13-iter8: workspace-aware impulse seeding + edit tool param normalization. Achieves ≤1.5× Claude Code LLM call ratio (0.4× prompt-01, 1.3× prompt-02). Earlier tags: 418ba39 (Phase 13.1.2 transcript wiring), phase13-iter7 (workdir fix + memo suppression)."
+    "$note": "phase13-iter10: improviser rule 3 requires running tests after file edits before goal_achieved (fixes loop-restart issue). Earlier: iter9 (Python 3.11 + pytest), iter8 (workspace-aware impulse seeding + edit param normalization, ≤1.5× CC ratio)."
   },
   "claudeCode": {
     "image": "metabob-validation/claude-code:local",

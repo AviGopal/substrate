@@ -1,0 +1,1 @@
+Implement the `ComplexNumber` class so all 31 tests pass. The class must support: `real` and `imag` getters, `add`, `sub`, `mul`, `div` arithmetic (returning a new `ComplexNumber`), `abs` getter (magnitude), `conj` getter (complex conjugate), and `exp` getter (complex exponential e^(a+bi) = e^a * (cos(b) + i*sin(b))). All existing tests must pass.
