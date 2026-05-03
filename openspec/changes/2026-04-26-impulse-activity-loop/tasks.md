@@ -537,8 +537,8 @@ Each iteration is a single commit. Loop continues until parity reached on all 4 
 |---|---|---|
 | Lifecycle hooks firing and recorded in activity-api | ✅ CONFIRMED | validator-dispatch × 12, slot-binding × 6, ribosome-extract × 4 (run 2026-05-03T08-07) |
 | Execution traces stored in activity-api | ✅ CONFIRMED | 13 act_* IDs extracted from stdout; all 13 fetchable from activity-api execution-traces endpoint |
-| Impulse relevance delta > 0 | ⚠️ UNVERIFIABLE | canary `/v2/activities/impulse-relevance` returns 503 transiently during both probe windows; delta reads 0 but root cause is availability not absence of writes |
-| Cross-vessel resolver dispatch | ⚠️ NOT TRIGGERED | code editing tasks use only local resolvers (bash/file/git); discovery-routed resolution only fires when task needs an impulse shape owned by another vessel (e.g. `conceptGraph`, `problem_detection`) — see F-V12 |
+| Impulse relevance scores updated | ✅ CONFIRMED | 19 new records written during run 2026-05-03T09-57 (fixed probe: paginated count, before-snapshot taken pre-run, after-snapshot uses created_at >= runStartTime) |
+| Cross-vessel resolver dispatch via discovery | ⚠️ BLOCKED | discovery-vessel rejects METABOB_API_KEY ("invalid or revoked") so no vessels register; discovery registry shows totalVessels=0 — see F-V13 |
 
 ### F-V12: Cross-vessel resolver dispatch requires task types that need externally-owned impulse shapes (2026-05-03)
 
@@ -551,6 +551,18 @@ Each iteration is a single commit. Loop continues until parity reached on all 4 
 **Suggested Phase 14.6 prompts:**
 - "Analyse this codebase for code quality issues and create a report" — would trigger analysis-api `problem_detection` shape
 - "What activities in the registry are most relevant to this goal?" — would trigger activity-api `activityTemplate` shape resolution via discovery
+
+### F-V13: discovery-vessel rejects METABOB_API_KEY — vessels cannot register (2026-05-03)
+
+**Observed:** `GET /registry/stats` at `discovery.metabob.com` returns `{"totalVessels":0,"totalShapes":0,"healthyCount":0}`. Direct `POST /resolve` with the METABOB_API_KEY returns `{"error":{"code":"INVALID_API_KEY","message":"API key is invalid or has been revoked"}}`.
+
+**Root cause:** Discovery-vessel validates via identity-vessel's `POST /v1/keys/validate`, while activity-api validates via `POST /v1/auth/resolve`. The METABOB_API_KEY in `~/.metabob/config.json` (format: `mb-{b64}-{hmac}`) is accepted by activity-api but rejected by discovery's `/v1/keys/validate` path. The key may not be seeded into identity-vessel's key table, or the two endpoints use different validation rules.
+
+**Impact:** No vessel (minibob, activity-api, or any other) can register with discovery. Discovery-based cross-vessel routing is completely inoperative. The binding-layer's `discover-by-shapes` calls succeed (they go to activity-api directly, not via discovery), but true multi-vessel routing through discovery is blocked.
+
+**Fix:** One of: (a) issue a key via identity-vessel's `POST /v1/keys/issue` admin endpoint and register it; (b) configure discovery-vessel to use `/v1/auth/resolve` for key validation (same path as activity-api); (c) verify whether the current key is seeded in identity-vessel's key table and fix the seed if not.
+
+**Operator action required:** The discovery key validation mismatch is a deployment configuration issue. Until fixed, Phase 14 criterion 1 ("resolvers in other vessels get used via discovery") cannot be validated. Criteria 2 and 3 (impulse relevance updates + lifecycle hooks) ARE confirmed.
 
 ## Post-deploy Bug Fixes (v1.12.0)
 

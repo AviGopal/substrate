@@ -63,23 +63,34 @@ const LIFECYCLE_ACTIVITIES = new Set([
   "create-shape-provider-goal",
 ]);
 
+export async function snapshotRelevanceBefore(
+  endpoint: string,
+  apiKey: string,
+): Promise<RelevanceSnapshot> {
+  return fetchRelevanceSnapshot(endpoint, apiKey, "before");
+}
+
 export async function runBackendProbe(opts: {
   stdoutLogPath: string;
   metabobEndpoint: string;
   metabobApiKey: string;
   runStartTime: Date;
+  /** Pre-run snapshot taken before the agent started; avoids before==after problem */
+  relevanceBefore?: RelevanceSnapshot;
 }): Promise<BackendProbeResult> {
   const errors: string[] = [];
 
   // Step 1 — extract execution IDs from stdout
   const executionIdsFound = await extractExecutionIds(opts.stdoutLogPath);
 
-  // Step 2 — snapshot relevance before (uses runStartTime as proxy)
-  let relevanceBefore: RelevanceSnapshot = emptySnapshot();
-  try {
-    relevanceBefore = await fetchRelevanceSnapshot(opts.metabobEndpoint, opts.metabobApiKey, "before");
-  } catch (e) {
-    errors.push(`relevance-before: ${String(e)}`);
+  // Step 2 — use provided pre-run snapshot, or fall back to a fresh query
+  let relevanceBefore: RelevanceSnapshot = opts.relevanceBefore ?? emptySnapshot();
+  if (!opts.relevanceBefore) {
+    try {
+      relevanceBefore = await fetchRelevanceSnapshot(opts.metabobEndpoint, opts.metabobApiKey, "before");
+    } catch (e) {
+      errors.push(`relevance-before: ${String(e)}`);
+    }
   }
 
   // Step 3 — fetch all traces created during the run window
@@ -172,10 +183,17 @@ export async function runBackendProbe(opts: {
     .filter((t) => t.vessel_id && t.vessel_id !== mainVessel)
     .map((t) => ({ vessel_id: t.vessel_id!, activity_id: t.activity_id }));
 
-  // Step 9 — relevance after
+  // Step 9 — relevance after: count only records created since run started.
+  // This avoids the before==after problem (both fetched post-run) by using
+  // created_at filtering instead of a total-count delta.
   let relevanceAfter: RelevanceSnapshot = emptySnapshot();
   try {
-    relevanceAfter = await fetchRelevanceSnapshot(opts.metabobEndpoint, opts.metabobApiKey, "after");
+    relevanceAfter = await fetchRelevanceSnapshot(
+      opts.metabobEndpoint,
+      opts.metabobApiKey,
+      "after",
+      opts.runStartTime,
+    );
   } catch (e) {
     errors.push(`relevance-after: ${String(e)}`);
   }
@@ -265,19 +283,38 @@ async function fetchRelevanceSnapshot(
   endpoint: string,
   apiKey: string,
   label: string,
+  since?: Date,
 ): Promise<RelevanceSnapshot> {
-  // Fetch a window large enough to count; total field is not always present.
-  // We care about deltas (new records written during the run), so a ceiling of
-  // 1000 is sufficient — production has O(thousands) of records.
-  const url = `${endpoint}/v2/activities/impulse-relevance?limit=1000&offset=0`;
-  const resp = await fetch(url, {
-    headers: { Authorization: `ApiKey ${apiKey}` },
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!resp.ok) throw new Error(`GET impulse-relevance (${label}): ${resp.status}`);
-  const data = (await resp.json()) as { total?: number; metrics?: unknown[] };
+  // activity-api bug: the `total` field always returns 1 regardless of actual
+  // record count. Paginate through metrics[] to get the real total.
+  // Cap at 5 pages (5000 records) — we care about deltas, not exact large counts.
+  let total = 0;
+  let sinceCount = 0;
+  let offset = 0;
+  const limit = 1000;
+  const sinceMs = since?.getTime() ?? 0;
+  while (offset < 5000) {
+    const url = `${endpoint}/v2/activities/impulse-relevance?limit=${limit}&offset=${offset}`;
+    const resp = await fetch(url, {
+      headers: { Authorization: `ApiKey ${apiKey}` },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!resp.ok) throw new Error(`GET impulse-relevance (${label}): ${resp.status}`);
+    const data = (await resp.json()) as { metrics?: Array<{ created_at?: string }> };
+    const batch = data.metrics?.length ?? 0;
+    total += batch;
+    if (since) {
+      for (const r of data.metrics ?? []) {
+        if (r.created_at && new Date(r.created_at).getTime() >= sinceMs) {
+          sinceCount++;
+        }
+      }
+    }
+    if (batch < limit) break;
+    offset += limit;
+  }
   return {
-    total: data.total ?? (data.metrics?.length ?? 0),
+    total: since ? sinceCount : total,
     byShape: {},
     sampleTimestamp: new Date().toISOString(),
   };
@@ -366,19 +403,18 @@ export function renderBackendSection(probe: BackendProbeResult): string {
   // Impulse relevance
   lines.push(`### Impulse relevance updates`);
   lines.push("");
-  const delta = probe.relevanceAfter.total - probe.relevanceBefore.total;
-  lines.push(`| snapshot | total records |`);
+  // relevanceBefore = total at run start (pre-run snapshot from orchestrator)
+  // relevanceAfter = records with created_at >= runStartTime (new during run)
+  const newDuringRun = probe.relevanceAfter.total;
+  lines.push(`| metric | value |`);
   lines.push(`|---|---|`);
-  lines.push(`| before | ${probe.relevanceBefore.total} |`);
-  lines.push(`| after  | ${probe.relevanceAfter.total} |`);
-  lines.push(`| delta  | **${delta >= 0 ? "+" : ""}${delta}** |`);
+  lines.push(`| total records at run start | ${probe.relevanceBefore.total} |`);
+  lines.push(`| new records written during run | **${newDuringRun}** |`);
   lines.push("");
-  if (delta > 0) {
-    lines.push(`✅ **${delta} new impulse-relevance record(s) written** during this run.`);
-  } else if (delta === 0) {
-    lines.push(`⚠️ No new impulse-relevance records written. Validator-dispatch may not have fired, or writes were no-ops.`);
+  if (newDuringRun > 0) {
+    lines.push(`✅ **${newDuringRun} new impulse-relevance record(s) written** during this run.`);
   } else {
-    lines.push(`⚠️ Relevance count decreased (${delta}) — records may have been pruned.`);
+    lines.push(`⚠️ No new impulse-relevance records written during this run window. Existing records may have been updated (alpha/beta increments) without creating new rows.`);
   }
   lines.push("");
 

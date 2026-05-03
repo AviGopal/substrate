@@ -42,6 +42,7 @@ import {
 } from "./transcript-capture";
 import {
   runBackendProbe,
+  snapshotRelevanceBefore,
   renderBackendSection,
   type BackendProbeResult,
 } from "./backend-probe";
@@ -244,6 +245,18 @@ async function main() {
 
     const agentTimeout = timeoutFor(agent);
     const runStartTime = new Date();
+
+    // Phase 14: take relevance snapshot BEFORE the run so delta is meaningful.
+    let preRunRelevance: import("./backend-probe").RelevanceSnapshot | undefined;
+    if (agent === "minibob" && withBackend && metabobApiKey) {
+      try {
+        preRunRelevance = await snapshotRelevanceBefore(metabobEndpoint, metabobApiKey);
+        process.stderr.write(`pre-run relevance snapshot: ${preRunRelevance.total} records\n`);
+      } catch {
+        // non-fatal
+      }
+    }
+
     const run = await runAgent({
       agent,
       image,
@@ -279,9 +292,10 @@ async function main() {
         metabobEndpoint,
         metabobApiKey,
         runStartTime,
+        relevanceBefore: preRunRelevance,
       });
       process.stderr.write(
-        `  executions found: ${backendProbe.executionIdsFound.length}, lifecycle hooks: ${backendProbe.lifecycleActivities.length}, relevance delta: ${backendProbe.relevanceAfter.total - backendProbe.relevanceBefore.total}\n`,
+        `  executions found: ${backendProbe.executionIdsFound.length}, lifecycle hooks: ${backendProbe.lifecycleActivities.length}, new relevance records: ${backendProbe.relevanceAfter.total}\n`,
       );
     }
 
