@@ -129,9 +129,10 @@ function buildDockerArgs(
     ];
   }
 
-  // minibob: image WORKDIR is /app where index.ts lives. Don't override it;
-  // pass the workspace path to minibob via --workdir.
-  const minibobArgs = ["run", "--rm", ...baseMounts];
+  // minibob: image WORKDIR is /app where index.ts lives. Don't override it.
+  // Pass the workspace path via MINIBOB_WORKDIR env var — index.ts does not
+  // parse a --workdir CLI flag; only the env var is honoured by config.ts.
+  const minibobArgs = ["run", "--rm", "-e", "MINIBOB_WORKDIR=/workspace", ...baseMounts];
 
   // Mount the transcript host dir so MINIBOB_TRANSCRIPT_FILE writes survive
   // the container's lifetime.
@@ -160,7 +161,6 @@ function buildDockerArgs(
     opts.image,
     "bun", "run", "index.ts",
     "--single", opts.prompt,
-    "--workdir", "/workspace",
   ];
 }
 
