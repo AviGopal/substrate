@@ -148,6 +148,7 @@ function buildDockerArgs(
     minibobArgs.push("-e", "MINIBOB_DISCOVERY_ENABLED=false");
     minibobArgs.push("-e", "METABOB_API_KEY=");
     minibobArgs.push("-e", "MINIBOB_OFFLINE_MODE=true");
+    minibobArgs.push("-e", "MINIBOB_SKIP_STARTUP=true");
   } else if (opts.metabobConfigHostPath && existsSync(opts.metabobConfigHostPath)) {
     minibobArgs.push("-v", `${opts.metabobConfigHostPath}:/root/.metabob/config.json:ro`);
   }
