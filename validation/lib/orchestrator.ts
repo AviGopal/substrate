@@ -40,6 +40,11 @@ import {
   extractMinibobTranscript,
   type TranscriptSummary,
 } from "./transcript-capture";
+import {
+  runBackendProbe,
+  renderBackendSection,
+  type BackendProbeResult,
+} from "./backend-probe";
 
 const HELP = `\
 agent-benchmark — head-to-head harness for Claude Code vs minibob
@@ -58,6 +63,10 @@ Options:
   --no-backend           Run minibob in standalone mode: disables discovery registration and
                          activity-api trace POSTs (DISCOVERY_ENABLED=false, METABOB_API_KEY unset,
                          MINIBOB_OFFLINE_MODE=true). This is the Phase 13 standalone-parity target.
+  --with-backend         Run minibob with full backend connectivity: DISCOVERY_ENABLED=true,
+                         discovery.metabob.com registered, host ~/.metabob/config.json mounted.
+                         After the run, queries activity-api to verify resolver usage, lifecycle
+                         hook firings, and impulse-relevance updates (report section 6).
   --skip-build           Don't (re)build the local Claude Code image even if missing
   --help, -h             Show this help
 
@@ -89,6 +98,7 @@ async function main() {
       timeout: { type: "string" },
       only: { type: "string" },
       "no-backend": { type: "boolean", default: false },
+      "with-backend": { type: "boolean", default: false },
       "skip-build": { type: "boolean", default: false },
       help: { type: "boolean", short: "h", default: false },
     },
@@ -113,6 +123,11 @@ async function main() {
   const cliTimeout = values.timeout != null ? Number(values.timeout) : undefined;
   const only = values.only as "claude-code" | "minibob" | undefined;
   const noBackend = values["no-backend"] === true;
+  const withBackend = values["with-backend"] === true;
+  if (noBackend && withBackend) {
+    process.stderr.write("error: --no-backend and --with-backend are mutually exclusive\n");
+    process.exit(1);
+  }
 
   // Per-agent timeout: CLI flag overrides; else use containers.json per-agent
   // default; else fall back to global default.
@@ -194,6 +209,21 @@ async function main() {
 
   const metabobConfigHostPath = join(homedir(), ".metabob", "config.json");
 
+  // --with-backend: read API key + endpoint from host config for post-run probing
+  let metabobApiKey = process.env.METABOB_API_KEY ?? "";
+  let metabobEndpoint = "https://activity.metabob.com";
+  if (withBackend && existsSync(metabobConfigHostPath)) {
+    try {
+      const cfg = JSON.parse(await readFile(metabobConfigHostPath, "utf8")) as {
+        metabob?: { apiKey?: string; endpoint?: string };
+      };
+      metabobApiKey = cfg.metabob?.apiKey ?? metabobApiKey;
+      metabobEndpoint = cfg.metabob?.endpoint ?? metabobEndpoint;
+    } catch {
+      // ignore parse errors; fall back to env
+    }
+  }
+
   const results: Record<string, AgentBundle> = {};
 
   for (const agent of (["claude-code", "minibob"] as const)) {
@@ -213,6 +243,7 @@ async function main() {
       : containers.minibob.image;
 
     const agentTimeout = timeoutFor(agent);
+    const runStartTime = new Date();
     const run = await runAgent({
       agent,
       image,
@@ -224,6 +255,7 @@ async function main() {
       anthropicApiKey,
       metabobConfigHostPath,
       noBackend: agent === "minibob" ? noBackend : false,
+      withBackend: agent === "minibob" ? withBackend : false,
     });
     process.stderr.write(
       `${agent}: exit=${run.exitCode} timedOut=${run.timedOut} duration=${run.durationMs}ms (timeout=${agentTimeout}s)\n`,
@@ -238,9 +270,24 @@ async function main() {
     const afterTree = await snapshotTree(after);
     const treeDiff = compareTrees(beforeTree, afterTree);
 
+    // Phase 14: backend probe after minibob run
+    let backendProbe: BackendProbeResult | undefined;
+    if (agent === "minibob" && withBackend && metabobApiKey) {
+      process.stderr.write(`Probing activity-api for backend observations...\n`);
+      backendProbe = await runBackendProbe({
+        stdoutLogPath: run.stdoutPath,
+        metabobEndpoint,
+        metabobApiKey,
+        runStartTime,
+      });
+      process.stderr.write(
+        `  executions found: ${backendProbe.executionIdsFound.length}, lifecycle hooks: ${backendProbe.lifecycleActivities.length}, relevance delta: ${backendProbe.relevanceAfter.total - backendProbe.relevanceBefore.total}\n`,
+      );
+    }
+
     results[agent] = {
       run, summary, treeDiff, beforeTree, afterTree,
-      beforeDir: before, afterDir: after,
+      beforeDir: before, afterDir: after, backendProbe,
     };
   }
 
@@ -254,6 +301,7 @@ async function main() {
       "minibob": timeoutFor("minibob"),
     },
     noBackend,
+    withBackend,
   }));
   process.stderr.write(`\nreport: ${reportPath}\n`);
 }
@@ -273,6 +321,7 @@ interface AgentBundle {
   afterTree: Map<string, FileEntry>;
   beforeDir: string;
   afterDir: string;
+  backendProbe?: BackendProbeResult;
 }
 
 interface ReportInput {
@@ -284,6 +333,7 @@ interface ReportInput {
   results: Record<string, AgentBundle>;
   timeoutSeconds: Record<"claude-code" | "minibob", number>;
   noBackend: boolean;
+  withBackend: boolean;
 }
 
 function renderReport(r: ReportInput): string {
@@ -297,7 +347,7 @@ function renderReport(r: ReportInput): string {
   lines.push(`- **Model:** \`${r.model}\``);
   lines.push(`- **Timeout (claude-code):** ${r.timeoutSeconds["claude-code"]}s`);
   lines.push(`- **Timeout (minibob):** ${r.timeoutSeconds["minibob"]}s`);
-  lines.push(`- **Backend mode (minibob):** ${r.noBackend ? "standalone (--no-backend)" : "default (discovery + activity-api)"}`);
+  lines.push(`- **Backend mode (minibob):** ${r.noBackend ? "standalone (--no-backend)" : r.withBackend ? "full backend (--with-backend)" : "default (discovery + activity-api)"}`);
   lines.push(`- **Run directory:** \`${r.runDir}\``);
   lines.push(`- **Generated:** ${new Date().toISOString()}`);
   lines.push("");
@@ -444,6 +494,11 @@ function renderReport(r: ReportInput): string {
   lines.push(``);
   lines.push(`TODO`);
   lines.push("");
+
+  // ── Section 6: backend observations (--with-backend only)
+  if (r.withBackend && mb?.backendProbe) {
+    lines.push(renderBackendSection(mb.backendProbe));
+  }
 
   return lines.join("\n");
 }

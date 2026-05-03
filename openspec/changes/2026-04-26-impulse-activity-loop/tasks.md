@@ -517,6 +517,41 @@ Each iteration is a single commit. Loop continues until parity reached on all 4 
 
 **Decision:** Not a bug. The ≤1.5× target is scoped to mutation/implementation tasks. Read-only/explanation tasks are excluded from the ratio target.
 
+## Phase 14 — Backend-connected validation (2026-05-03)
+
+**Goal:** Run the same validation harness with `DISCOVERY_ENABLED=true` and `DISCOVERY_VESSEL_ENDPOINT=https://discovery.metabob.com` to verify that: (1) lifecycle hooks fire and are recorded in activity-api, (2) impulse relevance scores are updated, (3) cross-vessel resolver dispatch occurs.
+
+**Status:** Infrastructure complete. Two success criteria confirmed; one requires a different prompt class.
+
+### Tasks
+
+- [x] 14.1 ✅ Add `--with-backend` flag to harness (docker-runner.ts + orchestrator.ts)
+- [x] 14.2 ✅ Implement `backend-probe.ts` — post-run query of activity-api for execution traces, lifecycle hook counts, relevance delta
+- [x] 14.3 ✅ Wire section 6 "Backend observations" into report renderer (orchestrator.ts `renderReport`)
+- [x] 14.4 ✅ Run Phase 14 test (prompt 01, pristine-typescript-project, --with-backend --only minibob)
+- [x] 14.5 ✅ Fix probe bugs: `?limit=0` → `?limit=1000` (400 error); deduplicate execution tree by execution_id (ghost-copy doubles)
+
+### Success criteria results
+
+| criterion | result | evidence |
+|---|---|---|
+| Lifecycle hooks firing and recorded in activity-api | ✅ CONFIRMED | validator-dispatch × 12, slot-binding × 6, ribosome-extract × 4 (run 2026-05-03T08-07) |
+| Execution traces stored in activity-api | ✅ CONFIRMED | 13 act_* IDs extracted from stdout; all 13 fetchable from activity-api execution-traces endpoint |
+| Impulse relevance delta > 0 | ⚠️ UNVERIFIABLE | canary `/v2/activities/impulse-relevance` returns 503 transiently during both probe windows; delta reads 0 but root cause is availability not absence of writes |
+| Cross-vessel resolver dispatch | ⚠️ NOT TRIGGERED | code editing tasks use only local resolvers (bash/file/git); discovery-routed resolution only fires when task needs an impulse shape owned by another vessel (e.g. `conceptGraph`, `problem_detection`) — see F-V12 |
+
+### F-V12: Cross-vessel resolver dispatch requires task types that need externally-owned impulse shapes (2026-05-03)
+
+**Observed:** With `DISCOVERY_ENABLED=true`, all 13 execution traces during a "fix failing test" run are attributed to the minibob vessel. No cross-vessel resolution occurs.
+
+**Root cause:** Minibob resolves impulse shapes locally when it can: `memo`, `file`, `directoryTree`, `gitDiff`, `lifecycle` are all local. Discovery routing only fires for shapes minibob cannot resolve locally — shapes like `conceptGraph` (concept-db), `problem_detection` (analysis-api), or `activityExecutionTrace` (activity-api). A code editing task never needs any of these shapes.
+
+**Decision:** Not a bug. To see cross-vessel resolver dispatch in the validation harness, use a task that explicitly requests codebase analysis, execution history lookup, or concept-graph traversal. The harness infrastructure correctly passes `DISCOVERY_ENABLED=true`; the task type must exercise it.
+
+**Suggested Phase 14.6 prompts:**
+- "Analyse this codebase for code quality issues and create a report" — would trigger analysis-api `problem_detection` shape
+- "What activities in the registry are most relevant to this goal?" — would trigger activity-api `activityTemplate` shape resolution via discovery
+
 ## Post-deploy Bug Fixes (v1.12.0)
 
 - [x] 10.0 **JWT secret mismatch** — RESOLVED 2026-04-26. Single-source de-duplication: schema uses `KEY '__JWT_SECRET__'` placeholder; `scripts/init-database.ts` substitutes from env via `resolveJwtSecret()` (fail-fast in production); `src/config.ts` mirrors. activity-api commit `4aa3d85`. Operator action followed: helmfile `121d70d` + secret seeding + rolling restart; auth verified across 8/8 replicas (8/8 destructive probes succeed).

@@ -27,6 +27,13 @@ export interface AgentRunOptions {
    * registration, no activity-api trace POSTs. No-op for claude-code.
    */
   noBackend?: boolean;
+  /**
+   * Phase 14: when true, explicitly enable discovery registration so
+   * vessel resolvers get used. Mounts host config as usual but also
+   * sets DISCOVERY_ENABLED=true and the public discovery endpoint.
+   * No-op for claude-code. Mutually exclusive with noBackend.
+   */
+  withBackend?: boolean;
 }
 
 export interface AgentRunResult {
@@ -150,6 +157,16 @@ function buildDockerArgs(
     minibobArgs.push("-e", "METABOB_API_KEY=");
     minibobArgs.push("-e", "MINIBOB_OFFLINE_MODE=true");
     minibobArgs.push("-e", "MINIBOB_SKIP_STARTUP=true");
+  } else if (opts.withBackend) {
+    // Phase 14 — full backend mode. Mount host config (API key + endpoint)
+    // and explicitly enable discovery so vessel resolvers are used.
+    if (opts.metabobConfigHostPath && existsSync(opts.metabobConfigHostPath)) {
+      minibobArgs.push("-v", `${opts.metabobConfigHostPath}:/root/.metabob/config.json:ro`);
+    }
+    minibobArgs.push("-e", "DISCOVERY_ENABLED=true");
+    minibobArgs.push("-e", "DISCOVERY_VESSEL_ENDPOINT=https://discovery.metabob.com");
+    // Let startup waking activities run so template-sync fires and traces are richer
+    // (no MINIBOB_SKIP_STARTUP here)
   } else if (opts.metabobConfigHostPath && existsSync(opts.metabobConfigHostPath)) {
     minibobArgs.push("-v", `${opts.metabobConfigHostPath}:/root/.metabob/config.json:ro`);
   }
