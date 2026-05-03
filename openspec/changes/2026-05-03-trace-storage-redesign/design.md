@@ -4,19 +4,29 @@
 
 ## Status
 
-**Phase A + Phase B deployed to production** (`metabob-activity-api` v1.17.0-a58fafc, 2026-05-02).
+**Phase A + B + C fully deployed** (`metabob-activity-api` v1.19.6-114176a, 2026-05-03).
 
-Verified on `metabob-production` cluster:
-- `idx_aet_activity_success_time` — `IndexScan` confirmed via EXPLAIN (was TableScan pre-deploy). Metadata-only query now ~164ms (was ~1400ms).
-- `idx_aet_org_activity_success_time` — `IndexScan` confirmed via EXPLAIN.
-- `idx_execution_activity_success_time` — deployed, indexed.
-- All four new tables present: `trace_digest`, `execution_trace_content`, `execution_system_traces`, `execution_exemplar`.
-- `learning_track` + `last_classified_at` fields on both `activity` and `activity_template`.
-- Stress aggregation `count() WHERE success = true GROUP ALL` over 31K rows returned in 1.06s (no crash — previous risk).
-- Per-activity GROUP BY aggregation over 31K rows: 1.17s, healthy.
-- Dual-write paths wired (trace_digest + execution_trace_content); new tables currently at 0 rows pending first real write-path execution.
+Verified on `metabob-production` cluster (via `kubectl`/`kubectx metabob-production`, smoke test 2026-05-03):
+- `idx_aet_activity_success_time` — `IndexScan` confirmed, metadata-only query ~164ms (was ~1400ms).
+- `idx_aet_org_activity_success_time`, `idx_execution_activity_success_time` — deployed, indexed.
+- All four new tables present with data: `trace_digest` (90+ rows), `execution_trace_content` (78+ rows), `execution_system_traces` (0), `execution_exemplar` (populated by nightly selector).
+- `learning_track` + `last_classified_at` fields deployed and used by classifier job.
+- Dual-write confirmed: real `minibob --single` execution produces `org_id=metabob` AET rows, trace_digest rows, and content rows simultaneously.
+- Phase C read-fallback: `GET /v2/activities/execution-traces/:id` returns `content_source: "split"` for post-v1.19.4 traces; `"legacy"` for pre-dual-write rows (confirmed via smoke test).
+- Exemplar selector: burst + nightly triggers wired; `GET /v2/activities/execution-traces/exemplars?activity_id=_activity_execute` returns `source: "exemplar", count: 20`.
+- Digest fallback path: `source: "digest_fallback"` returned for activities with trace_digest rows but no exemplar refresh yet.
+- Thompson Sampling: `POST /v2/activities/recommend` returning results with `selection_metadata.method: "thompson_sampling"` and `ev` field confirmed on templates.
 
-Open: Phase C (read-fallback), Phase D (gated content-field drop), integration tests (3.5-3.7, 3a.7-3a.9, 4.5, 4.6, 6.5-6.6), task 1.3 (P95 latency watch), task 8.4 (storage measurement).
+Bugs fixed during validation:
+- **F-122**: Duplicate trace_digest write (paradigm.ts was writing after execution-traces.ts already wrote) — unique index violation on every AET route call. Fixed v1.19.5.
+- **F-122b**: `$auth.org_id` vs `$token.org_id` in paradigm.ts (JWT auth only populates `$token`). Fixed v1.19.5.
+- **F-123**: SurrealDB 3.x rejects ORDER BY on fields not in SELECT clause. Fixed exemplar-selector.ts and learning-track-classifier.ts (v1.19.6).
+- **Migration 121**: `DEFINE TABLE OVERWRITE` invalid in SurrealDB 3.0.0 — changed to `ALTER TABLE ... PERMISSIONS`. Fixed v1.19.5.
+
+Open (operator-gated):
+- Phase D (content-field drop) — gate: `content_source: "legacy"` log rate zero over 24h. Tasks 7.1-7.3.
+- Task 1.3 (P95 latency watch post-`SURREAL_SYNC_DATA=true`) — pending 24h window.
+- Task 8.5 (write-path P95 before/after) — pending 24h window.
 
 ## 1. Context and current state
 
