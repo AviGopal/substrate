@@ -1,9 +1,9 @@
 {
   "$comment": "Canonical image refs the runner uses. Update these to bump versions.",
   "minibob": {
-    "image": "metabobapp/minibob:0.14.1-092e90d",
+    "image": "metabobapp/minibob:0.14.1-60df11a",
     "default_timeout_seconds": 1200,
-    "$note": "0.14.1-092e90d: fix(config) isStandaloneMode false-positive with DISCOVERY_ENABLED (F-V20). prev: 0.14.1-43620f9 (F-V18+F-V19)."
+    "$note": "0.14.1-60df11a: feat(embedded-templates) trace-analysis-with-feedback for Phase 17 cross-vessel impulse resolution proof. prev: 0.14.1-092e90d (F-V20)."
   },
   "claudeCode": {
     "image": "metabob-validation/claude-code:local",
