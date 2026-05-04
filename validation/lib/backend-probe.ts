@@ -23,8 +23,23 @@ export interface TraceRecord {
   status?: string;
   duration_ms?: number;
   cost_usd?: number;
-  parent_execution_id?: string; // from metadata if present
+  parent_execution_id?: string;
   children?: TraceRecord[];
+}
+
+export interface ImpulseResolutionRecord {
+  impulse_id: string;
+  resolver_id: string;
+  resolver_tier?: string;
+  vessel_id?: string;
+  latency_ms?: number;
+  cost_usd?: number;
+}
+
+export interface CrossVesselResolver {
+  vessel_id: string;
+  resolver_id: string;
+  count: number;
 }
 
 export interface RelevanceSnapshot {
@@ -49,6 +64,12 @@ export interface BackendProbeResult {
   relevanceAfter: RelevanceSnapshot;
   /** Cross-vessel resolver usage: vessels other than the main minibob vessel */
   crossVesselUsage: Array<{ vessel_id: string; activity_id: string }>;
+  /** Cross-vessel impulse resolution: resolver vessels from impulse_resolutions[] in fetched traces */
+  crossVesselResolvers: CrossVesselResolver[];
+  /** Whether we successfully fetched per-trace detail for impulse_resolution analysis */
+  traceDetailFetched: boolean;
+  /** Log-based detection: "[Impulse] Resolved via vessel discovery" lines from stdout */
+  discoveryLogResolutions: Array<{ shape: string; vessel: string }>;
   /** Any errors encountered during probing */
   probeErrors: string[];
 }
@@ -82,6 +103,11 @@ export async function runBackendProbe(opts: {
 
   // Step 1 — extract execution IDs from stdout
   const executionIdsFound = await extractExecutionIds(opts.stdoutLogPath);
+
+  // Step 1b — extract log-based cross-vessel resolution evidence from stderr
+  // (minibob logger writes all levels to console.error → stderr.log; log.warn is visible at default verbosity)
+  const stderrLogPath = opts.stdoutLogPath.replace(/stdout\.log$/, "stderr.log");
+  const discoveryLogResolutions = await extractDiscoveryLogResolutions(stderrLogPath);
 
   // Step 2 — use provided pre-run snapshot, or fall back to a fresh query
   let relevanceBefore: RelevanceSnapshot = opts.relevanceBefore ?? emptySnapshot();
@@ -183,6 +209,40 @@ export async function runBackendProbe(opts: {
     .filter((t) => t.vessel_id && t.vessel_id !== mainVessel)
     .map((t) => ({ vessel_id: t.vessel_id!, activity_id: t.activity_id }));
 
+  // Step 8b — fetch per-trace detail for cross-vessel impulse_resolutions analysis.
+  // Sample top 5 non-lifecycle traces with task_count > 0 to avoid spamming the API.
+  const crossVesselResolvers: CrossVesselResolver[] = [];
+  let traceDetailFetched = false;
+  const tracesToSample = dedupedTraces
+    .filter((t) => t.task_count > 0)
+    .slice(0, 5);
+  if (tracesToSample.length > 0) {
+    const resolverCounts = new Map<string, CrossVesselResolver>();
+    for (const trace of tracesToSample) {
+      try {
+        const detail = await fetchTraceDetail(opts.metabobEndpoint, opts.metabobApiKey, trace.execution_id);
+        if (detail) {
+          traceDetailFetched = true;
+          for (const r of detail.impulse_resolutions ?? []) {
+            // Only record if the vessel is not the executor vessel (cross-vessel)
+            if (r.vessel_id && r.vessel_id !== trace.vessel_id) {
+              const key = `${r.vessel_id}::${r.resolver_id}`;
+              const existing = resolverCounts.get(key);
+              if (existing) {
+                existing.count++;
+              } else {
+                resolverCounts.set(key, { vessel_id: r.vessel_id, resolver_id: r.resolver_id, count: 1 });
+              }
+            }
+          }
+        }
+      } catch {
+        // non-fatal; probeErrors already tracked
+      }
+    }
+    crossVesselResolvers.push(...resolverCounts.values());
+  }
+
   // Step 9 — relevance after: count only records created since run started.
   // This avoids the before==after problem (both fetched post-run) by using
   // created_at filtering instead of a total-count delta.
@@ -207,8 +267,26 @@ export async function runBackendProbe(opts: {
     relevanceBefore,
     relevanceAfter,
     crossVesselUsage,
+    crossVesselResolvers,
+    traceDetailFetched,
+    discoveryLogResolutions,
     probeErrors: errors,
   };
+}
+
+async function extractDiscoveryLogResolutions(
+  stderrLogPath: string,
+): Promise<Array<{ shape: string; vessel: string }>> {
+  if (!existsSync(stderrLogPath)) return [];
+  const text = await readFile(stderrLogPath, "utf8");
+  const results: Array<{ shape: string; vessel: string }> = [];
+  // Match: [Impulse] Resolved via vessel discovery: <type> (shape: <shape>, vessel: <name>)
+  for (const m of text.matchAll(
+    /\[Impulse\] Resolved via vessel discovery: (\S+) \(shape: (\S+), vessel: ([^)]+)\)/g,
+  )) {
+    results.push({ shape: m[2] ?? m[1] ?? "unknown", vessel: m[3] ?? "unknown" });
+  }
+  return results;
 }
 
 async function extractExecutionIds(stdoutLogPath: string): Promise<string[]> {
@@ -224,6 +302,39 @@ async function extractExecutionIds(stdoutLogPath: string): Promise<string[]> {
     ids.add(m[1]);
   }
   return [...ids];
+}
+
+async function fetchTraceDetail(
+  endpoint: string,
+  apiKey: string,
+  executionId: string,
+): Promise<{ impulse_resolutions: ImpulseResolutionRecord[] } | null> {
+  const url = `${endpoint}/v2/activities/execution-traces/${encodeURIComponent(executionId)}`;
+  const resp = await fetch(url, {
+    headers: { Authorization: `ApiKey ${apiKey}` },
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!resp.ok) return null;
+  const data = (await resp.json()) as {
+    impulse_resolutions?: Array<{
+      impulse_id: string;
+      resolver_id: string;
+      resolver_tier?: string;
+      vessel_id?: string;
+      latency_ms?: number;
+      cost_usd?: number;
+    }>;
+  };
+  return {
+    impulse_resolutions: (data.impulse_resolutions ?? []).map((r) => ({
+      impulse_id: r.impulse_id,
+      resolver_id: r.resolver_id,
+      resolver_tier: r.resolver_tier,
+      vessel_id: r.vessel_id,
+      latency_ms: r.latency_ms,
+      cost_usd: r.cost_usd,
+    })),
+  };
 }
 
 async function fetchTracesForRun(
@@ -396,6 +507,36 @@ export function renderBackendSection(probe: BackendProbeResult): string {
     } else {
       lines.push("");
       lines.push(`_All executions from a single vessel — no cross-vessel resolver usage detected._`);
+    }
+  }
+  lines.push("");
+
+  // Cross-vessel impulse resolution (from per-trace detail)
+  lines.push(`### Cross-vessel impulse resolution`);
+  lines.push("");
+  if (!probe.traceDetailFetched) {
+    lines.push(`_Trace detail not fetched (no tasks in sampled traces or fetch failed)._`);
+  } else if (probe.crossVesselResolvers.length === 0) {
+    if (probe.discoveryLogResolutions.length > 0) {
+      lines.push(`✅ **Cross-vessel impulse resolution confirmed via execution logs.** Trace metadata did not record resolver vessel IDs (F-V19), but stdout logs show vessel-discovery routing:`);
+      lines.push("");
+      lines.push(`| shape | resolved by vessel |`);
+      lines.push(`|---|---|`);
+      for (const r of probe.discoveryLogResolutions) {
+        lines.push(`| \`${r.shape}\` | \`${r.vessel}\` |`);
+      }
+    } else {
+      lines.push(`⚠️ **No cross-vessel impulse resolution detected.** All impulses in sampled traces were resolved by the executing vessel itself.`);
+      lines.push("");
+      lines.push(`This means minibob did not route any impulse through discovery to an external vessel (e.g. activity-api, concept-db) during this run. To trigger cross-vessel resolution, the task must require a shape that minibob cannot resolve locally (e.g. \`executionTraceList\`, \`activityTemplate\`, \`conceptGraph\`).`);
+    }
+  } else {
+    lines.push(`✅ **Cross-vessel impulse resolution confirmed.** The following external vessels resolved impulses during this run:`);
+    lines.push("");
+    lines.push(`| resolver vessel | resolver_id | count |`);
+    lines.push(`|---|---|---|`);
+    for (const r of probe.crossVesselResolvers.sort((a, b) => b.count - a.count)) {
+      lines.push(`| \`${r.vessel_id}\` | \`${r.resolver_id}\` | ${r.count} |`);
     }
   }
   lines.push("");

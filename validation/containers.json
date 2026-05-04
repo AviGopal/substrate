@@ -1,9 +1,9 @@
 {
   "$comment": "Canonical image refs the runner uses. Update these to bump versions.",
   "minibob": {
-    "image": "metabobapp/minibob:0.14.1-ca9136a",
+    "image": "metabobapp/minibob:0.14.1-092e90d",
     "default_timeout_seconds": 1200,
-    "$note": "0.14.1-ca9136a: fix(impulse) fix onImpulseCreate pointer type — backend shapes (executionTraceList etc.) stored correctly instead of as {type:custom} (F-V17). prev: 0.14.1-dd9f389."
+    "$note": "0.14.1-092e90d: fix(config) isStandaloneMode false-positive with DISCOVERY_ENABLED (F-V20). prev: 0.14.1-43620f9 (F-V18+F-V19)."
   },
   "claudeCode": {
     "image": "metabob-validation/claude-code:local",

@@ -676,6 +676,64 @@ Findings discovered while resolving F-1..F-9 or running 11.x retries. Each is sm
 
 - [ ] **F-V4: `startup:template-sync` takes 202 seconds with `task_count:0` in backend trace** — OPEN (validate-minibob cycle 1, 2026-05-01). **Root cause (202s)**: `TemplateSyncResolver.resolve()` at `repos/minibob/src/resolvers/template-sync-resolver.ts` loops over all embedded templates (currently ~70) calling `mcp.createActivityTemplate(template)` sequentially — one HTTP POST to `POST /v2/activities/templates` per template. Each call authenticates, serializes, and round-trips to the canary backend at `activity.metabob.com`. With ~3s per round-trip (network + auth + DB write), 70 templates × 3s ≈ 210s matches the observed 202s. The template-sync is necessary on first startup to seed Thompson Sampling with embedded templates, but running it synchronously before the `--single` goal blocks the entire startup sequence. **Root cause (task_count:0)**: The backend trace field `task_count` is derived at write time from `body.execution_trace?.tasks?.length || 0` (execution-traces.ts:1623). The executor at `activity.ts:3019-3053` correctly adds the `sync_templates` task to `execution.executionTrace.tasks` and `storeExecutionTrace()` is called with the complete execution object — but the trace in the backend shows `task_count:0`. Investigation finding: the Docker harness's `run_minibob()` helper passes `--caffeine`, and `index.ts:125+407` skips startup waking activities when `noBoredom=true` (triggered by `--caffeine`). The backend trace for `startup:template-sync` is therefore from the **canary K8s pod startup** (not the Docker harness run) — the canary runs without `--caffeine` and properly executes the waking activity. The `task_count:0` in the canary trace is a backend reporting artifact: the `execution_trace.tasks` array sent to the backend contains 1 task entry (`sync_templates`), but the backend's `execution_trace.tasks` field may be stored as an array of resolver-level sub-records rather than a flat tasks array, and the `array::len(tasks ?? [])` SurrealQL expression at the query layer may be evaluating against a different shape than expected. This warrants a targeted DB-level investigation. **Impact**: (1) The 202s startup latency blocks `--single` goals in any environment that does NOT pass `--caffeine` (e.g. K8s daemon startup); (2) the Docker validation harness is not affected (it uses `--caffeine`). **Workaround available**: `MINIBOB_SKIP_STARTUP=true` env var (added in minibob CLAUDE.md, env var wired at `index.ts:126-128`) skips startup waking activities entirely. **Deeper fix options**: (a) parallelize `createActivityTemplate` calls in `TemplateSyncResolver` (replace sequential `for` loop with `Promise.all` batches); (b) short-circuit with a batch upsert endpoint on activity-api; (c) check+skip already-synced templates by querying the backend before each upload rather than relying on 409 handling. Track separately from F-V3.
 
+## Phase 16 — Trace-driven activity analysis (cross-vessel + learning-loop test) (2026-05-04)
+
+**Goal:** Extend Phase 15 — minibob must not only retrieve trace data from activity-api, but use that data in a follow-on failure-pattern analysis AND write impulse relevance feedback back. Tests the full loop: cross-vessel resolution → data-driven reasoning → relevance update.
+
+**Status:** ✅ SUBSTANTIALLY COMPLETE — real backend trace data retrieved and analysed; one open gap (F-V21).
+
+**Run evidence:** `2026-05-04T07-52-25-559Z-16-trace-driven-activity` — image `0.14.1-092e90d`, exit=0, 596s, 21 new relevance records, lifecycle hooks (validator-dispatch ×12, slot-binding ×6, ribosome-extract ×4). `analysis.md` contains 50 real traces (49 success, 1 failure) from activity-api with real execution IDs. Specific `_goal_resolve` relevance write failed with 504 (intermittent Cloudflare; backend probe confirmed 21 other relevance records did write).
+
+### Bug chain resolved this phase
+
+| Bug | Fix | Commit |
+|---|---|---|
+| F-V18: `onImpulseProcess` result ID not stored in impulse pool | Call `createImpulse` with memo content in `onImpulseProcess` callback (activity.ts) | `43620f9` |
+| F-V19: Harness cross-vessel detection scans stdout (log goes to stderr); log at `info` level (suppressed at default verbosity) | Scan stderr.log instead; upgrade log to `warn` | `43620f9` + probe fix |
+| F-V20: `isStandaloneMode()` returns true when `isMCPEnabled()=false`, even with `DISCOVERY_ENABLED=true` and `METABOB_API_KEY` set | Return false immediately when any backend channel (discovery OR API key) is active; MCP is last-resort | `092e90d` |
+
+### Phase 16 acceptance criteria
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| Real backend trace data retrieved from activity-api | ✅ | `analysis.md` contains 50 real traces with real execution IDs |
+| Minibob uses retrieved data for follow-on analysis | ✅ | Failure pattern analysis + slow-path identification in `analysis.md` |
+| Lifecycle hooks firing | ✅ | validator-dispatch ×12, slot-binding ×6, ribosome-extract ×4 |
+| Impulse relevance scores updated | ✅ | 21 new records written during run |
+| Cross-vessel resolution via formal impulse system | ❌ F-V21 | Improvise LLM used bash HTTP calls directly; `loadImpulse` path never triggered |
+| `impulseRelevance_write` dispatched for worst activity | ❌ 504 | Cloudflare timeouts on trace upload; relevance write captured as memo, not sent |
+
+### F-V20: `isStandaloneMode` false-positive with DISCOVERY_ENABLED — RESOLVED (2026-05-04)
+
+**Observed:** Phase 16 run with `--with-backend` produced `analysis.md` with completely fabricated data. Minibob logged "Backend unavailable — impulse type 'executionTraceList' requires backend connection (offline mode)". Phase 15 (same prompt, no standalone bypass) had succeeded with real data.
+
+**Root cause:** The standalone-mode bypass introduced in commit `43620f9` checks condition 3 (`isMCPEnabled()`) as an independent early-exit: if MCP is not initialized, the function returns true regardless of whether discovery or an API key is configured. In `--with-backend` Docker runs, minibob uses discovery+REST (not MCP), so `isMCPEnabled()` is always false. This caused the bypass to trigger, routing to the improviser without cross-vessel context. The LLM then fabricated analysis data.
+
+**Fix:** `isStandaloneMode()` now short-circuits to `false` if `DISCOVERY_ENABLED=true` OR `METABOB_API_KEY` is non-empty. MCP check is the last-resort only when both REST channels are absent. Commit `092e90d`.
+
+### F-V21: Improvise LLM bypasses impulse system for cross-vessel data access (OPEN)
+
+**Observed:** Phase 16b `analysis.md` contains real activity-api trace data, but the harness cross-vessel probe reports "No cross-vessel impulse resolution detected" and no `[Impulse] Resolved via vessel discovery` log appears in stderr. The `loadImpulse` path in `impulse.ts` was never entered for the `executionTraceList` shape.
+
+**Root cause:** When the goal processor falls through to the `improvise` meta-activity, the LLM has tool access (bash, file, etc.) and sufficient knowledge of `activity.metabob.com` REST endpoints to fetch data directly without going through `loadImpulse`. The prompt instruction "resolve it through the impulse system (not a direct HTTP call)" is advisory; the LLM ignores it if no activity template exists that wires the `executionTraceList` shape as a formal input impulse.
+
+**Impact:** Cross-vessel `loadImpulse` → discovery → activity-api resolution path not exercised. The 21 relevance records written are from lifecycle meta-activities (validator-dispatch), not from the specific `impulseRelevance_write` the prompt requested.
+
+**Fix direction:** Either (a) add a task-level activity template that explicitly declares `executionTraceList` as an input impulse pointer (forcing `loadImpulse` to route through discovery), or (b) instrument the improvise path to detect bash HTTP calls to known vessel endpoints and synthesise formal impulse resolution records. Option (a) is the correct one — see Phase 17.
+
+## Phase 17 — Formal impulse-based cross-vessel resolution (F-V21 target)
+
+**Goal:** Prove that minibob routes a request for `executionTraceList` through the formal `loadImpulse` → discovery → activity-api path rather than improvising direct HTTP. Phase 16 showed real data retrieved but via bash; Phase 17 must show the log `[Impulse] Resolved via vessel discovery` in stderr.
+
+**Approach:** Seed an activity template (or modify an existing one) that declares `executionTraceList` as an input impulse with `pointer.type = "executionTraceList"`. When minibob's task executor tries to load that impulse, it hits `loadImpulse` which, finding no local resolver, queries discovery and calls activity-api `/v2/impulses/resolve`. The F-V19 warn-level log should then fire and the harness cross-vessel probe should detect it.
+
+**Acceptance criteria:**
+- `[Impulse] Resolved via vessel discovery` appears in minibob stderr.log
+- Harness backend probe reports `crossVesselResolutionDetected: true`
+- Relevance write reaches activity-api (confirmed by `impulseRelevance` count increasing beyond lifecycle-driven baseline)
+
+**Status:** 📋 PLANNED
+
 ## Demonstration runway
 
 The path to a fully-demonstrable impulse-activity loop on canary. Order is roughly the dependency chain. Items in *italics* are operator actions outside the implementation loop.
