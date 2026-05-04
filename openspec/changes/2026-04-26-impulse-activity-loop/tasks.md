@@ -568,6 +568,56 @@ Each iteration is a single commit. Loop continues until parity reached on all 4 
 
 **Decision:** Non-critical for Phase 14 validation. The lifecycle hooks ARE firing (container logs show 43); the backend probe undercounts because trace storage was 504'ing. When the backend is stable the probe count will match.
 
+## Phase 15 — Cross-vessel trace retrieval (2026-05-04)
+
+**Goal:** Verify that minibob can fetch execution trace data from activity-api via the discovery/impulse system (shape `executionTraceList`) and use it to produce an output artifact. This is the definitive test that the full resolution pipeline works end-to-end.
+
+**Status:** ✅ COMPLETE. `analysis.md` produced with real backend data after 3 bug fixes across sessions.
+
+### Bug chain resolved
+
+| Bug | Fix | Commit |
+|---|---|---|
+| F-V16: `onImpulseProcess` callback not wired in ActivityExecutor | Wire callback in activity.ts | `f4f170f` |
+| Dockerfile build context: `COPY ../packages` + `COPY minibob/…` paths invalid | Use `deployment/` root context + `vessels/minibob/…` prefix | `dd9f389` |
+| F-V17: `onImpulseCreate` stores all backend shapes as `{type:"custom"}` | Pass `impulse.pointer` directly instead of checking `impulse.type` (which was undefined) | `ca9136a` |
+
+### Run evidence (2026-05-04T05-46-47-680Z, minibob `0.14.1-ca9136a`)
+
+- `impulse_create` with `type: "executionTraceList"` succeeded (entry 20-21 in transcript)
+- `process_impulse` returned real backend data: 50 rows, date range 2026-05-03 to 2026-05-04 (entry 25)
+- `/workspace/analysis.md` written with 5 real traces from activity-api (execution IDs confirmed live)
+- Lifecycle hooks: `validator-dispatch` × 12, `slot-binding` × 6, `ribosome-extract` × 4
+- Impulse relevance: 20 new records written during run
+
+### F-V17: `onImpulseCreate` pointer type bug — RESOLVED (2026-05-04)
+
+**Observed:** `process_impulse` returned `"Impulse type 'custom' requires backend connection (offline mode)"` for any non-local shape. The previous run's transcript showed the impulse was stored as `{ type: "custom", resolver: undefined, data: {} }`.
+
+**Root cause:** `onImpulseCreate` in `activity.ts:1681` checked `impulse.type` (undefined in the callback payload) instead of the already-constructed `impulse.pointer`. Every non-memo/file shape fell through to `{ type: "custom" }`, making them unresolvable even with full backend connectivity.
+
+**Fix:** Changed `onImpulseCreate` to pass `impulse.pointer as ImpulsePointer` directly. Commit `ca9136a` in `repos/minibob`. Deployed as `0.14.1-ca9136a`.
+
+### F-V18: `process_impulse` result ID not re-stored in impulse pool (2026-05-04)
+
+**Observed:** After `process_impulse` returns a metadata response (e.g. `processed-execution_traces_fetch-1777873741821`), a follow-up `process_impulse` with that ID as `source_ref` fails: `"Impulse not found: processed-execution_traces_fetch-1777873741821"` (transcript entry 29).
+
+**Root cause:** The `process_impulse` tool returns a result body but does not register the processed impulse back into the `ImpulseStore` under the returned ID. So chained operations on the result are impossible via the tools layer.
+
+**Impact:** LLM worked around it by parsing the first response metadata directly. For more complex multi-step impulse chaining (e.g. filter → expand → extract), this forces the LLM to parse raw JSON rather than using the tool layer idiomatically. Medium severity.
+
+**Fix needed:** In `tools.ts` `processImpulse` handler — after getting the resolution result, call `createImpulse` with the processed ID and `{ type: "memo", content: JSON.stringify(result) }` so it's accessible for follow-up operations.
+
+### F-V19: Harness cross-vessel detection false negative (2026-05-04)
+
+**Observed:** Report section 6 says "No cross-vessel impulse resolution detected" despite `analysis.md` containing real activity-api data, proving resolution did occur.
+
+**Root cause:** Harness checks `impulse_resolutions[].vessel_id` in stored execution traces. Minibob does not write a separate `vessel_id` entry for externally-resolved shapes when storing the trace via MCP. The cross-vessel call happened at the `process_impulse` level (discovery → activity-api → response) but this metadata isn't propagated back into the trace's `impulse_resolutions` array.
+
+**Impact:** Harness underreports cross-vessel usage. The data proves resolution works; only the audit trail is missing.
+
+**Fix needed:** In the `onImpulseProcess` callback (activity.ts) — when a resolution comes from an external vessel, record `{ impulse_id, resolver_id: shapeType, vessel_id: resolvedByVesselId }` into the trace's `impulse_resolutions` array. The `callVesselResolve` response contains the target vessel's ID.
+
 ## Post-deploy Bug Fixes (v1.12.0)
 
 - [x] 10.0 **JWT secret mismatch** — RESOLVED 2026-04-26. Single-source de-duplication: schema uses `KEY '__JWT_SECRET__'` placeholder; `scripts/init-database.ts` substitutes from env via `resolveJwtSecret()` (fail-fast in production); `src/config.ts` mirrors. activity-api commit `4aa3d85`. Operator action followed: helmfile `121d70d` + secret seeding + rolling restart; auth verified across 8/8 replicas (8/8 destructive probes succeed).
