@@ -24,7 +24,7 @@ From the list, identify:
 
 ## Step 2 — Fetch the activity template
 
-Use `load_impulse` with pointer `{"type": "activityTemplate", "activityId": "<the-most-frequent-id>"}` to retrieve the full template.
+Use `load_impulse` with pointer `{"type": "activityTemplate", "templateId": "<the-most-frequent-id>"}` to retrieve the full template. Note: the field is `templateId`, not `activityId`.
 
 ## Step 3 — Fetch a failed trace for that activity
 
