@@ -265,3 +265,30 @@ When minibob in a Docker container queries discovery-vessel for a shape resolver
 - [x] 21.5 **Thompson posterior accumulation confirmed.** improvise α rose from 1 to 11 over today's 10 successful runs; β held at 1. μ = 11/12 = 0.917.
 - [x] 21.6 **F-V21 documented.** Discovery-vessel auth timeout 5000ms insufficient under Cloudflare + Envoy p99 latency; recommendation to increase to 10000ms.
 - [x] 21.7 **F-V22 documented.** Internal K8s service endpoints returned by discovery-vessel are unreachable from Docker validation containers; cross-vessel routing works correctly from within the cluster.
+
+## 22. Operational incident — SurrealDB OOMKill (2026-05-05 19:35 UTC)
+
+### F-V23: Unbounded offline-cache sync triggers RocksDB compaction storm → OOMKill
+
+**Incident**: SurrealDB OOMKilled at 19:35 UTC after 7h51m uptime. Pod restarted cleanly from PVC; data intact.
+
+**Root cause chain**:
+1. Local minibob's offline cache had accumulated 5,661 files (executions + traces) from failed sync attempts since 2026-04-16, caused by intermittent 503s during prior SurrealDB pressure events.
+2. `offline-cache.ts` `syncToBackend()` iterated ALL pending files in a tight `for` loop with no rate limit, no per-pass cap, and no actual file deletion (`Bun.write(path, "")` wrote empty string but kept the file, so `getPendingCount()` never decreased).
+3. On minibob `--daemon` startup the sync fired 5,661 sequential HTTP requests to activity-api in rapid succession. Each request wrote to 3-5 SurrealDB tables (`activity_execution_traces`, `impulse_relevance_metrics`, `tool_argument_pattern`, etc.).
+4. ~28,000–56,000 SurrealDB write operations in <10 minutes triggered RocksDB background compaction. SurrealDB CPU hit 1999m (limit: 2000m, throttled). Memory climbed from 8.9Gi → >12Gi (limit) → OOMKill.
+5. All other authenticated endpoints returned 503 during this window (Istio upstream timeout) while `/health` returned 200 (no DB access).
+
+**Fixes deployed (minibob 0.14.7-545b9cf)**:
+- `fs.unlink` replaces `Bun.write(path, "")` — synced files are actually deleted
+- Zero-byte phantom files detected by `file.size === 0` and deleted immediately
+- `MAX_ITEMS_PER_SYNC_PASS = 50` caps each 60s sync run — 5,661-item backlog drains over ~113 minutes at gentle pace instead of one 10-minute burst
+- Unparseable files deleted rather than re-queued forever
+
+**Residual risk**: The 12Gi SurrealDB memory limit leaves limited headroom once the dataset is fully loaded (~9Gi steady-state). A future compaction event without the write-burst trigger could still approach the limit. If dataset grows >10Gi steady-state, raise memory limit or migrate to TiKV mode.
+
+- [x] 22.1 **SurrealDB restarted cleanly from PVC.** Data intact. Activity-api healthy at v1.19.22 post-restart.
+- [x] 22.2 **Root cause documented (F-V23).** Unbounded sync loop + phantom file accumulation identified as trigger.
+- [x] 22.3 **Fix deployed: minibob 0.14.7-545b9cf.** `fs.unlink` + 50-item cap + phantom skip in offline-cache.ts.
+- [ ] 22.4 **Monitor SurrealDB memory over next 24h.** Steady-state after full dataset reload expected ~9Gi; alert threshold at 10.5Gi.
+- [ ] 22.5 **Drain remaining local cache.** 5,661 files still present locally; will clear at 50/pass × 60s = ~2h. Confirm count reaches 0.
