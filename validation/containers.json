@@ -1,9 +1,9 @@
 {
   "$comment": "Canonical image refs the runner uses. Update these to bump versions.",
   "minibob": {
-    "image": "metabobapp/minibob:0.14.6-1dececc",
+    "image": "metabobapp/minibob:0.14.7-32403ef",
     "default_timeout_seconds": 1200,
-    "$note": "0.14.6-1dececc: fix(discovery): content envelope + vesselName match. prev: 0.14.5-adea004."
+    "$note": "0.14.7-32403ef: fix(discovery): align inferShapeFromType with advertised shape names. prev: 0.14.6-1dececc."
   },
   "claudeCode": {
     "image": "metabob-validation/claude-code:local",
