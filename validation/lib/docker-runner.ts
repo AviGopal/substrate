@@ -165,8 +165,10 @@ function buildDockerArgs(
     }
     minibobArgs.push("-e", "DISCOVERY_ENABLED=true");
     minibobArgs.push("-e", "DISCOVERY_VESSEL_ENDPOINT=https://discovery.metabob.com");
-    // Let startup waking activities run so template-sync fires and traces are richer
-    // (no MINIBOB_SKIP_STARTUP here)
+    // Skip startup waking activities: the DiscoveredTools 10s timeout during
+    // startup:health-check cascades to 504s that push minibob into offline mode,
+    // blocking subsequent vessel discovery calls during goal execution.
+    minibobArgs.push("-e", "MINIBOB_SKIP_STARTUP=true");
   } else if (opts.metabobConfigHostPath && existsSync(opts.metabobConfigHostPath)) {
     minibobArgs.push("-v", `${opts.metabobConfigHostPath}:/root/.metabob/config.json:ro`);
   }

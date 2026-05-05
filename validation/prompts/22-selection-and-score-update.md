@@ -49,8 +49,9 @@ Then immediately submit a success execution trace for the recommended variant us
 ```json
 {
   "type": "activityExecutionTrace_write",
-  "trace": {
-    "activity_id": "<the template_id from Step 2>",
+  "traceData": {
+    "execution_id": "exec_phase22_<unix_timestamp_ms>",
+    "template_id": "<the template_id from Step 2>",
     "success": true,
     "duration_ms": 500,
     "tasks": [
