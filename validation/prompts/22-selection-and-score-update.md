@@ -40,17 +40,39 @@ This asks activity-api to Thompson-sample over its template registry and recomme
 
 You MUST use `load_impulse` — do NOT use bash or curl.
 
-## Step 3 — Execute the task
+## Step 3 — Write hello.txt AND submit a success trace
 
-Now perform the actual work the recommendation is meant to enable:
+First, write the string `Hello, world!` followed by a newline to `/workspace/hello.txt` using bash or write_file. Verify the file exists and contains that text.
 
-Write the string `Hello, world!` followed by a newline to `/workspace/hello.txt`. Then verify the file exists and contains that text. This is a simple success path — the task should succeed.
+Then immediately submit a success execution trace for the recommended variant using `load_impulse`:
 
-You may use the `write_file` tool or bash for this step only. This is the real task execution whose outcome will be recorded as a success trace.
+```json
+{
+  "type": "activityExecutionTrace_write",
+  "trace": {
+    "activity_id": "<the template_id from Step 2>",
+    "success": true,
+    "duration_ms": 500,
+    "tasks": [
+      {
+        "id": "write-hello",
+        "description": "Write Hello, world! to /workspace/hello.txt",
+        "resolver": "bash",
+        "success": true,
+        "duration_ms": 500
+      }
+    ]
+  }
+}
+```
 
-## Step 4 — Snapshot scores after the run
+This is the mechanism that triggers Thompson score updates — the activity-api updates α when a success trace is submitted for the variant. Record the execution ID returned (or note if submission failed).
 
-Wait for the execution trace to be written. Then use `load_impulse` again with pointer `{"type": "variantMetricsSummary"}` to fetch the updated Thompson state.
+You MUST use `load_impulse` for the trace write — do NOT use bash or curl.
+
+## Step 4 — Snapshot scores after the trace write
+
+Use `load_impulse` again with pointer `{"type": "variantMetricsSummary"}` to fetch the updated Thompson state. This should reflect the trace submitted in Step 3.
 
 Find the same variant from Step 1 in the new results. Record its updated `alpha`, `beta`, and `sample_count`.
 
@@ -80,8 +102,8 @@ State:
 - Verdict: `SCORE_UPDATED_CORRECTLY` or `SCORE_MISMATCH` with explanation
 
 ### Section 4: Execution Reference
-- The execution ID from the recommendation response or trace (record any execution id returned)
-- Confirmation that both metrics fetches used `load_impulse` via vessel discovery
+- The execution ID returned by the `activityExecutionTrace_write` call (or the error if it failed)
+- Confirmation that all three `load_impulse` calls (pre-snapshot, trace write, post-snapshot) used vessel discovery
 
 ## Acceptance criteria
 
