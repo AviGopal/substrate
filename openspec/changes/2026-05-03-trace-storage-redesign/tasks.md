@@ -292,3 +292,23 @@ When minibob in a Docker container queries discovery-vessel for a shape resolver
 - [x] 22.3 **Fix deployed: minibob 0.14.7-545b9cf.** `fs.unlink` + 50-item cap + phantom skip in offline-cache.ts.
 - [ ] 22.4 **Monitor SurrealDB memory over next 24h.** Steady-state after full dataset reload expected ~9Gi; alert threshold at 10.5Gi.
 - [ ] 22.5 **Drain remaining local cache.** 5,661 files still present locally; will clear at 50/pass × 60s = ~2h. Confirm count reaches 0.
+
+## 23. Cascading crash-loop cluster (2026-05-05 post-OOMKill cascade)
+
+### F-V24: identity-vessel 1s liveness probe timeout causes 1122+ false kills
+
+**Finding**: `identity-vessel` was deployed with the chart default `timeoutSeconds: 1` on liveness and readiness probes. The `/health` endpoint makes a SurrealDB query; under normal load this takes 100-300ms, but under post-SurrealDB-restart load it takes 2-5s. The 1s timeout triggers 3 consecutive failures → pod killed. Over 3 days: 1122+ liveness probe failures, 67 container kills on one pod. With one pod crash-looping at any given time, ~50% of auth requests to activity-api would hit a dead backend → 5s timeout before external fallback → total auth latency 5-10s, frequently hitting the 10s Istio timeout → 503.
+
+**Fix (2026-05-05)**: Added `livenessProbe.timeoutSeconds: 10` and `readinessProbe.timeoutSeconds: 10` to the identity-vessel helmfile release definition. Deployed as revision 364. Fresh pods with 0 restarts confirmed.
+
+### F-V25: user-vessel schema migration 003 and 004 not applied in production
+
+**Finding**: `user-vessel` v0.1.5 code references `federation_links` table (introduced in `003-federation.surql`) but the migration was never applied to production SurrealDB. `SCHEMA_AUTOAPPLY` env var is `false` by default and no Helm init container was defined. Every MCP `/mcp/tools/call` request threw `"The table 'federation_links' does not exist"` → user-vessel health returned 503 → liveness probe failures → restarts. Identity-vessel calls user-vessel for `account_id` lookup on every auth request; user-vessel being crash-looped made auth take 8-10s.
+
+**Fix (2026-05-05)**: Applied `003-federation.surql` and `004-api-keys-scopes-and-key-id.surql` directly to production SurrealDB via port-forward. All 33 statements returned status OK.
+
+- [x] 23.1 **F-V24: identity-vessel probe timeout fixed.** `timeoutSeconds: 10` deployed (revision 364). Pods stable at 0 restarts.
+- [x] 23.2 **F-V25: user-vessel schema migrations applied.** `003-federation.surql` (30 statements) and `004-api-keys-scopes-and-key-id.surql` (3 statements) applied directly to production. `federation_links` table exists and queryable.
+- [ ] 23.3 **Monitor identity-vessel restart count over next 2h.** Target: 0 new restarts. Pre-fix rate was ~1 restart/80min.
+- [ ] 23.4 **Auth latency baseline.** Once SurrealDB finishes loading (CPU <800m), measure auth latency via `POST /v1/auth/resolve`. Target: <500ms P95.
+- [ ] 23.5 **Wire user-vessel SCHEMA_AUTOAPPLY or init container** to prevent future migration drift. Option A: set `SCHEMA_AUTOAPPLY=true` via helmfile env. Option B: add Helm init-job hook similar to `metabob-activity-api` initDatabase. Neither is blocking for production but prevents recurrence after next image update.
