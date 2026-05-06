@@ -1,9 +1,9 @@
 {
   "$comment": "Canonical image refs the runner uses. Update these to bump versions.",
   "minibob": {
-    "image": "metabobapp/minibob:0.14.7-32403ef",
+    "image": "metabobapp/minibob:0.14.7-9068293",
     "default_timeout_seconds": 1200,
-    "$note": "0.14.7-32403ef: fix(discovery): align inferShapeFromType with advertised shape names. prev: 0.14.6-1dececc."
+    "$note": "0.14.7-9068293: fix(discovery): remove MCP bypass in resolveViaVessel — use public endpoint directly. prev: 0.14.7-32403ef."
   },
   "claudeCode": {
     "image": "metabob-validation/claude-code:local",
