@@ -68,6 +68,9 @@ Options:
                          discovery.metabob.com registered, host ~/.metabob/config.json mounted.
                          After the run, queries activity-api to verify resolver usage, lifecycle
                          hook firings, and impulse-relevance updates (report section 6).
+  --minibob-template <id>  Run minibob with --template <id> instead of --single, passing the
+                         prompt text as --var goal=<prompt>. Bypasses Thompson sampling for
+                         prompts that require a specific execution path (e.g. "improvise").
   --skip-build           Don't (re)build the local Claude Code image even if missing
   --help, -h             Show this help
 
@@ -100,6 +103,7 @@ async function main() {
       only: { type: "string" },
       "no-backend": { type: "boolean", default: false },
       "with-backend": { type: "boolean", default: false },
+      "minibob-template": { type: "string" },
       "skip-build": { type: "boolean", default: false },
       help: { type: "boolean", short: "h", default: false },
     },
@@ -125,6 +129,7 @@ async function main() {
   const only = values.only as "claude-code" | "minibob" | undefined;
   const noBackend = values["no-backend"] === true;
   const withBackend = values["with-backend"] === true;
+  const minibobTemplate = values["minibob-template"] as string | undefined;
   if (noBackend && withBackend) {
     process.stderr.write("error: --no-backend and --with-backend are mutually exclusive\n");
     process.exit(1);
@@ -269,6 +274,7 @@ async function main() {
       metabobConfigHostPath,
       noBackend: agent === "minibob" ? noBackend : false,
       withBackend: agent === "minibob" ? withBackend : false,
+      minibobTemplate: agent === "minibob" ? minibobTemplate : undefined,
     });
     process.stderr.write(
       `${agent}: exit=${run.exitCode} timedOut=${run.timedOut} duration=${run.durationMs}ms (timeout=${agentTimeout}s)\n`,

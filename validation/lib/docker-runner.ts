@@ -34,6 +34,13 @@ export interface AgentRunOptions {
    * No-op for claude-code. Mutually exclusive with noBackend.
    */
   withBackend?: boolean;
+  /**
+   * When set, run minibob with `--template <id>` instead of `--single`,
+   * passing the prompt text as `--var goal=<prompt>`. Bypasses Thompson
+   * sampling for prompts that require a specific execution path (e.g.
+   * "improvise" to force the free-form LLM executor). No-op for claude-code.
+   */
+  minibobTemplate?: string;
 }
 
 export interface AgentRunResult {
@@ -175,11 +182,15 @@ function buildDockerArgs(
   // Pass model through MINIBOB_MODEL so the same flag controls both agents.
   minibobArgs.push("-e", `MINIBOB_MODEL=${opts.model}`);
 
+  const minibobCmd = opts.minibobTemplate
+    ? ["--template", opts.minibobTemplate, "--var", `goal=${opts.prompt}`]
+    : ["--single", opts.prompt];
+
   return [
     ...minibobArgs,
     opts.image,
     "bun", "run", "index.ts",
-    "--single", opts.prompt,
+    ...minibobCmd,
   ];
 }
 
