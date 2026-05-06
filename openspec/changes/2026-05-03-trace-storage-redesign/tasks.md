@@ -290,7 +290,7 @@ When minibob in a Docker container queries discovery-vessel for a shape resolver
 - [x] 22.1 **SurrealDB restarted cleanly from PVC.** Data intact. Activity-api healthy at v1.19.22 post-restart.
 - [x] 22.2 **Root cause documented (F-V23).** Unbounded sync loop + phantom file accumulation identified as trigger.
 - [x] 22.3 **Fix deployed: minibob 0.14.7-545b9cf.** `fs.unlink` + 50-item cap + phantom skip in offline-cache.ts.
-- [ ] 22.4 **Monitor SurrealDB memory over next 24h.** Steady-state after full dataset reload expected ~9Gi; alert threshold at 10.5Gi.
+- [ ] 22.4 **Monitor SurrealDB memory over next 24h.** Update: Restart #3 trajectory is much lighter than restart #2. After 3h20min: 3.5Gi (vs restart #2 reaching 9.7Gi in ~2h → OOMKill). CPU: 927m (vs 1852m+ on restart #2). Each OOMKill → restart makes incremental progress on the compaction backlog; by restart #3 the storm is substantially dissipated. Risk of 4th OOMKill is low but monitor. Steady-state target: <9Gi sustained.
 - [ ] 22.5 **Drain remaining local cache.** 5,661 files still present locally; will clear at 50/pass × 60s = ~2h. Confirm count reaches 0.
 
 ## 23. Cascading crash-loop cluster (2026-05-05 post-OOMKill cascade)
@@ -309,6 +309,67 @@ When minibob in a Docker container queries discovery-vessel for a shape resolver
 
 - [x] 23.1 **F-V24: identity-vessel probe timeout fixed.** `timeoutSeconds: 10` deployed (revision 364). Pods stable at 0 restarts.
 - [x] 23.2 **F-V25: user-vessel schema migrations applied.** `003-federation.surql` (30 statements) and `004-api-keys-scopes-and-key-id.surql` (3 statements) applied directly to production. `federation_links` table exists and queryable.
-- [ ] 23.3 **Monitor identity-vessel restart count over next 2h.** Target: 0 new restarts. Pre-fix rate was ~1 restart/80min.
-- [ ] 23.4 **Auth latency baseline.** Once SurrealDB finishes loading (CPU <800m), measure auth latency via `POST /v1/auth/resolve`. Target: <500ms P95.
-- [ ] 23.5 **Wire user-vessel SCHEMA_AUTOAPPLY or init container** to prevent future migration drift. Option A: set `SCHEMA_AUTOAPPLY=true` via helmfile env. Option B: add Helm init-job hook similar to `metabob-activity-api` initDatabase. Neither is blocking for production but prevents recurrence after next image update.
+- [x] 23.3 **Identity-vessel stable post-fix.** 0 new restarts confirmed over 60+ minutes. Both pods at 0 restarts as of 2026-05-05T22:00 UTC. Pre-fix rate was ~1 restart/80min from false liveness kills.
+- [ ] 23.4 **Auth latency baseline.** Partial measurement 2026-05-05T22:00 UTC (3h20min post-restart #3, CPU ~930m): `/v1/auth/resolve` P50=2.4s, P95=3.0s — above target. SurrealDB still compacting. Re-measure once CPU drops to steady-state (<200m). Identity-vessel has no auth-result cache (1s gap between calls produced same ~2s latency consistently). Auth latency is fully correlated with SurrealDB key-lookup time under compaction.
+- [x] 23.5 **Wire user-vessel SCHEMA_AUTOAPPLY.** Added `SCHEMA_AUTOAPPLY=true` env var to user-vessel helmfile release. Also fixed inline `tcpSocket` probe conflict with `production.values.yaml` httpGet probe (was causing "may not specify more than 1 handler type" on sync). Deployed revision 330. Fresh pods (0 restarts) confirm clean rollout. SCHEMA_AUTOAPPLY log shows 003 and 004 applying correctly on startup; 001/002 warn due to SurrealDB 3.x API renames (`string::is::email` → `string::is_email`, `type::thing` → `type::record`) but fail gracefully — schema already correct in production. **Residual (non-blocking)**: 001 and 002 migration files have SurrealDB 3.x compat issues that need fixing in user-vessel source before a green fresh-environment deploy is possible.
+
+## 24. F-V26: SurrealDB OOMKill cascade — second kill from compaction (2026-05-05 21:44 UTC)
+
+### Root cause
+
+The first OOMKill (F-V23, 19:35 UTC) triggered RocksDB compaction on restart. The compaction storm was not complete when the second OOMKill occurred at 21:44 UTC (~2h later). RocksDB compaction behaviour: after the 5,661-item write burst, the L0 SSTable layer accumulated a backlog that RocksDB must merge downward through L1/L2/L3. Each merge pass reads SST blocks into the block cache. With the block cache unsized, it grows until system memory is exhausted. The pod was OOMKilled at the 12Gi limit for the second time.
+
+**OOMKill timeline:**
+1. 2026-05-05 12:35 local (19:35 UTC): SurrealDB OOMKill #1 (F-V23) — unbounded offline-cache write burst
+2. 2026-05-05 14:44 local (21:44 UTC): SurrealDB OOMKill #2 (F-V26) — block cache growth during post-#1 compaction
+3. 2026-05-05 14:44:40 local (21:44:40 UTC): SurrealDB restart #3 — currently recovering
+
+**Key finding from direct EXPLAIN investigation**: "Block cache warming" was the wrong explanation for the post-restart slowness. The actual mechanism is **RocksDB compaction backlog**. Evidence:
+- Repeated query timing was erratic (7.5s, 2.7s, 4.8s, 2.5s, 2.1s), not monotonically decreasing (would be monotonic if pure cold-cache warming)
+- EXPLAIN confirms scan of all 22,761 `org_id='metabob'` rows → `SortTopKByKey` (structural — no reverse index scan in SurrealDB 3.x)
+- Memory reached 9.7Gi (steady-state block cache) but queries then got WORSE (9.1s, 13.4s), and CPU returned to 1852m — confirming RocksDB still running background compaction at that point
+- Compaction ran for 90+ minutes post-restart before OOMKilling again
+
+**Structural SurrealDB query planner limitation (F-V26b)**: The `ORDER BY executed_at DESC` clause on org-filtered queries cannot be satisfied by the composite `(org_id, executed_at)` index because SurrealDB 3.x does not perform backward index scans. The planner always chooses the single-field `idx_activity_executions_org` index + separate `SortTopKByKey` pass. Even explicit `WITH INDEX idx_aet_org_id_executed_at` hints produce forward scan + sort (SLOWER due to composite index traversal overhead). This is the structural floor for AET `ORDER BY executed_at DESC` queries at any dataset size.
+
+**Mitigation applied**: Stress tests confirm trace_digest is 20-40× faster for all metadata/recency queries. Route workbench recency view and all time-ordered metadata queries to trace_digest rather than AET.
+
+**Residual risk**: On this 3rd restart, compaction should be lighter (each restart makes progress on the SSTable level-merge backlog). Memory at 1.97Gi after 22min. If compaction is sufficiently advanced, this restart may stabilize at <12Gi. If it OOMKills again, adding `--rocksdb-block-cache-size=4g` to SurrealDB startup args is the correct fix (requires pod restart, which restarts the cycle — best applied after the current compaction naturally completes).
+
+**Recommended long-term fix**: Add `--rocksdb-block-cache-size=4g` (or the SurrealDB env var equivalent) to the SurrealDB StatefulSet to cap block cache growth. Also document: if dataset grows beyond ~10Gi steady-state, migrate to TiKV mode or provision a node with ≥32Gi RAM for SurrealDB.
+
+- [x] 24.1 **F-V26: Second OOMKill documented.** Root cause: RocksDB compaction block cache growth from F-V23 write burst. Memory exceeded 12Gi limit at 21:44 UTC on restart #2 (→ restart #3).
+- [x] 24.2 **"Block cache warming" narrative corrected.** Empirical evidence (erratic timings, EXPLAIN analysis, CPU at 1852m) confirms compaction backlog is the mechanism, not cold block cache. Repeated 5× query timing disproves monotonic-decrease expected from cache warming.
+- [x] 24.3 **Structural SurrealDB 3.x query planner limitation documented (F-V26b).** `ORDER BY executed_at DESC` on org-filtered AET queries cannot use composite index for sort elimination. Floor: ~1.3s for 22k-row org scan + TopK. Mitigation: route to trace_digest (2538 rows, composite index, 33-125ms).
+- [ ] 24.4 **Monitor restart #3 memory trajectory.** If memory approaches 10Gi, apply emergency mitigation (stop minibob writes or adjust RocksDB block cache). Target: stabilise at <12Gi.
+- [ ] 24.5 **Add RocksDB block cache cap.** After compaction stabilises (CPU <800m sustained), add `--rocksdb-block-cache-size=4g` to SurrealDB startup args in helmfile chart. Requires one more pod restart but prevents future compaction OOM.
+
+## 25. Stress test results — session 3 (2026-05-05, post-OOMKill restart #3, compaction in progress)
+
+Storage snapshot: `activity_execution_traces`: 35,149 rows; `trace_digest`: 2,700 rows; `execution_trace_content`: ~2,700 rows (not separately measured); `execution_exemplar`: 144 rows (all `org_id='public'`).
+
+Context: Tests run 10-25min into SurrealDB restart #3. RocksDB compaction active (CPU 1700-1730m of 2000m limit). All times are under compaction load, not clean baseline.
+
+| Test | Table | Runs | Time range | Status |
+|------|-------|------|-----------|--------|
+| Activity aggregate (GROUP BY activity_id) | trace_digest | 5 | 33–115ms | ✓ |
+| Success/fail breakdown (GROUP BY activity_id, success) | trace_digest | 5 | 33–99ms | ✓ |
+| Recent list LIMIT 50 (ORDER BY executed_at DESC) | trace_digest | 5 | 71–125ms | ✓ |
+| Point lookup LIMIT 20 | execution_exemplar | 3 | <7ms | ✓ |
+| Cost analysis (GROUP BY, math::sum) | trace_digest | 3 | 78–191ms | ✓ |
+| Raw AET recent list LIMIT 20 | activity_execution_traces | 5 | 1.7–3.0s | ⚠️ baseline |
+| AET full task data LIMIT 5 | activity_execution_traces | 2 | 2.2–4.2s | ⚠️ expensive |
+| Time-range filter (WHERE executed_at > d'...') | trace_digest | 3 | 803ms–3.8s | ⚠️ index gap |
+
+**Key findings**:
+1. **trace_digest is 20–40× faster than AET for metadata queries** under active compaction. Validates the redesign.
+2. **Time-range filter on trace_digest is slow** (803ms–3.8s for only 2,538 rows). Root cause: composite index `(org_id, activity_id, executed_at)` can't use executed_at range directly when activity_id is mid-key. EXPLAIN: `IndexScan(idx_trace_digest_org_activity_time, 'metabob', Forward) → Filter(executed_at > ...) → Sort`. Mitigation: add `(org_id, executed_at)` index to trace_digest (migration 124 pending).
+3. **execution_exemplar org_id = 'public' for all rows.** Exemplar selector background job runs without auth context; `$auth.org_id` is empty; default `VALUE $value OR <string>$auth.org_id` resolves to NONE, not 'public'. The field schema must have a fallback. In practice, exemplar endpoint filters by activity_id (not org_id), so query semantics are correct — but RBAC enforcement would be bypassed since `org_id='public'` rows are not tenant-isolated. Investigation pending.
+4. **CONTAINS operator on trace_digest.output_impulse_shapes**: returns 0 rows unexpectedly — may be NULL handling (field is `none | array<string>`, many rows have null). Not tested thoroughly.
+5. **String vs datetime literal**: `executed_at > '2026-05-01...'` returns 0 rows; `executed_at > d'2026-05-01...'` returns correct results. SurrealDB 3.x requires explicit `d''` datetime literal for datetime comparisons.
+
+- [x] 25.1 trace_digest aggregate and recency queries: 33–191ms under compaction load. Production-viable. ✓
+- [x] 25.2 AET baseline: 1.7–4.2s under compaction (compared to 9–13s at peak compaction — confirms this is a lighter cycle). ✓
+- [x] 25.3 **trace_digest time-range index gap fixed.** Migration 124 (`124-trace-digest-org-time-index.surql`) adds `idx_trace_digest_org_time (org_id, executed_at)`. Applied to metabob-production 2026-05-05. EXPLAIN confirms new index used: `IndexScan(idx_trace_digest_org_time, access: ['metabob'] MoreThan d'...')`. Timing: 803ms–3.8s → 39–137ms (10–90× improvement under compaction load). Schema canonical: `sql/schemas/060-trace-storage-redesign.surql` updated.
+- [x] 25.4 **execution_exemplar org_id='public' confirmed intentional.** Source: `exemplar-selector.ts` explicitly INSERTs `org_id: 'public'` for both success and failure cohorts. Design intent: exemplars are cross-org shared to bootstrap cold-start for all orgs. PERMISSIONS clause on `execution_exemplar` is empty `{}` (default full access for any authenticated session). Not a RBAC bypass — exemplar data is non-sensitive (execution IDs and metadata only, not content). No change needed.
+- [ ] 25.5 **Clean baseline after compaction.** Partial: at 3h20min post-restart #3 (CPU ~930m), trace_digest aggregate: 28-87ms; time-range (migration 124 index): 22-43ms; AET list: 1.2-2.3s. Query planner uses new `idx_trace_digest_org_time` correctly for time-range. Re-run once CPU drops to <200m steady-state for definitive baseline.
