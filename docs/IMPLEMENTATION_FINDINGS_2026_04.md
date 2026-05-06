@@ -2,8 +2,8 @@
 
 This document consolidates implementation findings from the impulse-activity-loop implementation wave (April 2026) and documents what's currently deployed and working on canary.
 
-**Last updated:** 2026-04-27 12:45 UTC  
-**Deployment version:** activity-api 1.15.0 (workbench v0.7.0, minibob 0.14.0)  
+**Last updated:** 2026-05-06 10:00 UTC  
+**Deployment version:** activity-api 1.15.0 (workbench v0.7.0, minibob 0.14.7-f6df221)  
 **Canary endpoint:** https://activity.metabob.com
 
 ---
@@ -12,7 +12,7 @@ This document consolidates implementation findings from the impulse-activity-loo
 
 These findings were identified during implementation and have been resolved. They represent non-obvious implementation details that developers should understand.
 
-**Currently documented:** F-1 through F-9b (foundational), F-45 (null-guard fix, 2026-04-27)  
+**Currently documented:** F-1 through F-9b (foundational), F-45 (null-guard fix, 2026-04-27), F-V29/F-V30/F-V31 (validation run findings, 2026-05-06)  
 **Open findings with workarounds:** F-37, F-38, F-39, F-40, F-41 (meta-activity lifecycle issues, in progress)
 
 ### F-1: Lifecycle Payload Field-Name Reconciliation — RESOLVED
@@ -320,6 +320,52 @@ Three embedded meta-activities are registered and operational:
 - **Current issue:** Always empty due to write-order race (F-37, F-40)
 - **Workaround:** Walk `parent_execution_id` chains manually for tree traversal
 - **Expected after fix:** `composition_chain: [root_id, parent_id, ancestor_id]` (root-first order)
+
+---
+
+## Validation Run Findings (May 2026)
+
+Findings from the Phase 19 and 20 validation runs (2026-05-06) verifying concept-db and activity-api integration via vessel discovery.
+
+### F-V29: Startup Waking Activities Cascade Causes Offline Mode — WORKAROUND AVAILABLE
+
+**Issue:** When minibob starts in default mode (discovery enabled, no `MINIBOB_SKIP_STARTUP`), the `startup:health-check` waking activity fires immediately. This activity queries discovery for DiscoveredTools, hitting a 10s timeout. The resulting 504s from activity-api trace writes push minibob into offline/degraded mode — meaning subsequent `load_impulse` calls for shapes like `executionTraceList`, `activityTemplate`, etc. fail with "offline mode" rather than resolving via vessel discovery.
+
+**Observed in:** Phase 20 (activity improvement) validation run. `load_impulse({"type": "executionTraceList"})` called correctly but timed out after 25 seconds; LLM concluded "I'm in offline mode" and produced simulated data.
+
+**Root cause:** Startup waking activities run before the main goal, consuming the backend connection budget. Three 504 errors from `[Activity] [Trace] Backend error: HTTP 504` push the ActivityTraceClient into offline mode, which blocks all subsequent vessel discovery calls for non-local shapes.
+
+**Workaround:** Set `MINIBOB_SKIP_STARTUP=true` environment variable before the validation container starts. In the validation harness, use the `--with-backend` flag (which sets this env var). Running with `--with-backend` resolves the issue for goal-execution prompts that need vessel discovery.
+
+**Code locations:**
+- `repos/minibob/src/impulse.ts` — startup waking activity trigger
+- `validation/lib/docker-runner.ts:171` — `MINIBOB_SKIP_STARTUP=true` set by `--with-backend`
+
+**Fix candidates:** Either (a) skip startup waking activities when running in `--single` mode, or (b) make the ActivityTraceClient failure non-fatal to vessel discovery (decouple trace writes from resolver health).
+
+### F-V30: concept-db Pod Instability from Health Endpoint SurrealDB Auth Loss — OPEN
+
+**Issue:** concept-db had 51 pod restarts in 41 hours (≈ every 48 minutes) due to liveness probe failures. The health endpoint (`GET /health`) runs `await surrealDB.query('INFO FOR DB')` using the module-level global SurrealDB client. After a connection drop or idle timeout, this query throws `"Anonymous access not allowed: Not enough permissions"` causing a 503, which fails the liveness probe and triggers a pod restart.
+
+**Root cause:** The SurrealDB client session loses its authenticated state after a connection interruption. The health endpoint uses the global client directly without reconnecting or catching auth errors gracefully. The correct fix is to either (a) health-check via a simple authenticated ping that re-authenticates if needed, or (b) use a separate health-only client that always signs in fresh.
+
+**Code location:** `repos/concept-db/src/index.ts` health route (`app.get('/health', ...)`)
+
+**Operator workaround:** The pod self-heals after restart (≈ 30s recovery). Liveness probe restartPolicy is 3 failures before kill, so short connectivity blips don't trigger it. No immediate data loss risk.
+
+**Status:** Unfixed. Pod instability is a reliability concern but not a data-correctness issue.
+
+### F-V31: Cached Vessel Resolver Bypasses Vessel auth_scheme Contract — FIXED (0.14.7-f6df221)
+
+**Issue:** After the first successful vessel-discovery resolution (e.g., `concept_create_write` → concept-db), minibob registered a cached closure at `repos/minibob/src/impulse.ts:1582`. This cached closure used `httpPost(endpoint, body)` directly instead of `callVesselResolve`. The `httpPost` path uses `httpClient`'s `AuthService`, which may inject a `Bearer JWT` token (from identity-vessel) when one is available. concept-db's impulse endpoint advertises `auth_scheme: "ApiKey"` and `auth_token_source: "caller_identity"` — a Bearer JWT path authenticates differently, causing systematic 400 errors on the 2nd and 3rd `concept_create_write` calls in every Phase 19 run.
+
+**Evidence:** Phase 19 ran three times (first run, re-run with `--with-backend`, fix-image re-run). All three runs showed exactly 1/3 concepts written — the first call succeeds via `callVesselResolve` (correct auth), subsequent calls use the cached closure (wrong auth).
+
+**Fix:** Changed the cached resolver closure to call `callVesselResolve(cachedVessel, p, { timeoutMsOverride: 30000 })` which honours the vessel's advertised `auth_scheme`, `resolve_endpoint`, and `resolve_request_format` fields. Deployed in minibob `0.14.7-f6df221` (commit `f6df221`).
+
+**Code location:** `repos/minibob/src/impulse.ts` — cached resolver registration block (after `resolveViaDiscovery` succeeds).
+
+**Verification:** Phase 19 re-run with `0.14.7-f6df221` expected to show 3/3 concepts written.
 
 ---
 
