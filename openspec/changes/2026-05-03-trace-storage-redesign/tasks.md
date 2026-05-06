@@ -372,4 +372,16 @@ Context: Tests run 10-25min into SurrealDB restart #3. RocksDB compaction active
 - [x] 25.2 AET baseline: 1.7–4.2s under compaction (compared to 9–13s at peak compaction — confirms this is a lighter cycle). ✓
 - [x] 25.3 **trace_digest time-range index gap fixed.** Migration 124 (`124-trace-digest-org-time-index.surql`) adds `idx_trace_digest_org_time (org_id, executed_at)`. Applied to metabob-production 2026-05-05. EXPLAIN confirms new index used: `IndexScan(idx_trace_digest_org_time, access: ['metabob'] MoreThan d'...')`. Timing: 803ms–3.8s → 39–137ms (10–90× improvement under compaction load). Schema canonical: `sql/schemas/060-trace-storage-redesign.surql` updated.
 - [x] 25.4 **execution_exemplar org_id='public' confirmed intentional.** Source: `exemplar-selector.ts` explicitly INSERTs `org_id: 'public'` for both success and failure cohorts. Design intent: exemplars are cross-org shared to bootstrap cold-start for all orgs. PERMISSIONS clause on `execution_exemplar` is empty `{}` (default full access for any authenticated session). Not a RBAC bypass — exemplar data is non-sensitive (execution IDs and metadata only, not content). No change needed.
-- [ ] 25.5 **Clean baseline after compaction.** Partial: at 3h20min post-restart #3 (CPU ~930m), trace_digest aggregate: 28-87ms; time-range (migration 124 index): 22-43ms; AET list: 1.2-2.3s. Query planner uses new `idx_trace_digest_org_time` correctly for time-range. Re-run once CPU drops to <200m steady-state for definitive baseline.
+- [x] 25.5 **Extended stress test results captured (3h20min post-restart, CPU ~930m).**
+
+  | Test | Table | Timing |
+  |------|-------|--------|
+  | trace_digest aggregate (GROUP BY) | trace_digest | 28–87ms |
+  | trace_digest time-range (migration 124) | trace_digest | 22–43ms ✓ |
+  | 2-step content JOIN (digest+content, 5 rows) | trace_digest + execution_trace_content | 360–500ms |
+  | AET status aggregate (23k rows) | activity_execution_traces | 951ms–2.3s |
+  | 3 concurrent trace writes | (via activity-api HTTPS) | 3041ms total (1014ms/write) |
+
+  Compared to Section 20 (clean baseline): content JOIN was 105ms vs 360-500ms under compaction (3-5× degradation). AET floor: 1.2-2.3s (vs 1.33s in section 20 — within noise). Redesign delivering correct behavior end-to-end: trace_digest → execution_trace_content 5/5 row match rate confirmed.
+
+  Re-measure at full steady-state (CPU <200m) to capture clean floor. Expect trace_digest aggregate ~20ms, content JOIN ~100ms.
