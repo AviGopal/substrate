@@ -38,6 +38,66 @@ The end-to-end validation criteria (Phase 8) are evidence that the system has sa
 
 ---
 
+## RL graph framing for topology creation (2026-05-06)
+
+The Foundational Model above describes topology-as-residue: the composition graph is what the loop creates, sample by sample. Naming this in standard reinforcement-learning vocabulary makes the loop's gaps measurable.
+
+**Mapping the deployed system onto the RL graph model:**
+
+| RL element | Implementation |
+|---|---|
+| State | Current impulse pool — `presentShapesPre` in `lifecycle:task:preBinding` |
+| Action | Activity dispatch — selecting one node from the typed activity graph |
+| Transition | Output impulse set — `output_impulse_ids` per task, `output_shapes` per activity |
+| Reward | `task.success` per step; goal verification at episode end; `failure_mode.type` for structured negative reward |
+| Policy | Thompson Sampling over `activity_metrics.thompson_alpha` / `thompson_beta` |
+| Value function | `compositionSuccess` edge weights (empirical success rate of A → B transitions) |
+| Graph | Bipartite: activity nodes ↔ shape nodes, with directed produces/consumes edges and activity → activity composition edges |
+| Topology learning | Ribosome creates new activity nodes from successful improvise walks |
+| Representation | Static `all-MiniLM-L6-v2` text embeddings + tag hierarchy + Thompson posteriors as node features |
+| Attention / retrieval | RRF over BM25(name, description, **tags**) + dense + shape-compatibility filter |
+
+The system is already a contextual-bandit-over-a-typed-shape-graph. Three structural properties make the *quality* of topology creation hinge on how well the loop closes:
+
+1. **Topology = residue of the loop.** There is no separate authoring path that produces topology. Composition edges, edge weights, and new activity nodes are all created by traces. If the loop's signal is noisy, the topology is impoverished — even when every individual subsystem is correct.
+
+2. **Reuse rate is the empirical signature of topology learning.** Goal succeeds via reuse of an existing template ⇒ the topology is sufficient for that goal. Goal succeeds via `improvise` ⇒ the topology is insufficient (the system had to fall back to broad-tool search). Improvise-share trending down + reuse rate trending up is what learning *looks like* when measured externally.
+
+3. **Multiple relevance signals are required to capture goal intent.** No single retrieval signal is sufficient. BM25-on-name handles literal token overlap. Dense embeddings handle semantic distance. Tag FTS handles hierarchical classifier intent. Shape compatibility handles structural fit. Thompson handles empirical track record. Composition edges handle contextual fit. Each is independent; each is necessary for some goal class. The retrieval pipeline rank-fuses them via RRF, and Thompson reranks the fused top-K — so the policy posterior sees the full retrieval shortlist, not a pre-filtered subset.
+
+**The four gaps that prevent the loop from closing fully:**
+
+| Gap | Effect | Closure |
+|---|---|---|
+| **Tags not indexed** | Hierarchical-classifier intent (`bugfix.auth.tokens`) missed by both BM25-on-name and dense | `tags-fts-index` (Phase 18.1) |
+| **Posterior updates are binary on failure** | Verifier-negative, budget-exhausted, safety-breach, cascading, user-abort all conflated; posterior converges slowly and mislearns | `failure-mode-stratified-updates` (Phase 18.3) |
+| **Credit terminates at the leaf** | Orchestrator activities never accumulate evidence even when they reliably select successful children | `composition-chain-credit-propagation` (Phase 18.4) |
+| **Loop quality is unmeasured** | "Is the system getting better?" answered qualitatively, not quantitatively | `activity-reuse-validation-harness` (Phase 18.2/18.6) |
+
+**What is intentionally not changed:**
+
+- The Thompson Sampling algorithm (true Beta sampling is correct; Phase 10 P3 may move it to the DB but does not change the math)
+- The bipartite shape-graph topology (already established by the impulse-binding-selection-layer)
+- The recommendation API contract (Phase 18 changes are additive; existing behaviour preserved)
+- Resource representation: shape embeddings remain static `all-MiniLM-L6-v2`; learned shape representations are deferred until trace volume + labelled co-occurrence corpus justify the lift
+
+**Relationship to existing specs:**
+
+| Spec | Role |
+|---|---|
+| `2026-04-26-impulse-binding-selection-layer` | Establishes the bipartite graph and slot-binding lifecycle |
+| `2026-04-26-shape-provider-goal-creation` | Recursive escalation when topology has gaps |
+| `2026-04-26-validators-and-failure-modes` | Failure-mode taxonomy (consumed by Phase 18.3) |
+| `2026-04-29-state-space-aware-recommendations` | Pool/pointer-aware ranking (Phase 11; consumed by retrieval) |
+| `2026-04-29-surrealdb-rl-layer` | Atomic α/β `+=` (Phase 10; required by Phase 18.3 + 18.4) |
+| `context-bucketed-thompson-sampling` (existing capability) | State-conditioned posteriors (Phase 18.4 writes through to bucketed posteriors when computable) |
+| `dense-semantic-search` (existing capability) | Second retrieval rank-list (Phase 18.5; gated on packaging ONNX model) |
+| `irrelevance-score-feedback` (existing capability) | Symmetric negative scoring (consumed by Phase 18.3 `verifier_negative` rule) |
+
+Phase 18 sits at the intersection of all of the above — it is the integration that turns these primitives into a measurable closed loop. None of Phase 18's sub-tasks introduce new core subsystems; they fill bounded gaps and add measurement.
+
+---
+
 ## Framing
 
 This change does not introduce primitives. It is the umbrella that drives the three siblings to working canary-validated state, captures cross-cutting learnings, and decides when (if ever) a fourth synthesis sibling is warranted.

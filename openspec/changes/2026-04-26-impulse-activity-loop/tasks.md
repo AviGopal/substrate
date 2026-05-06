@@ -888,3 +888,123 @@ Open spec items remaining are all gated on external work:
 - 11.x Phase 11 state-space-aware recommendations: full new phase, not yet started.
 - 10.16-10.21 P4 RELATE: deferred (10.S4 met by subquery refactor).
 - 10.28-10.29 HNSW: blocked on embedding backfill.
+
+## Phase 18 — Activity-Reuse RL Loop Closure (2026-05-06)
+
+**Motivation.** Phases 8–17 stabilised execution; Phase 10 made posterior updates atomic; Phase 12 made the data path fast. What remains is closing the loop on **topology creation through reuse**: the four gaps that prevent the system from accumulating quality signal as it runs. See `design.md` §"RL graph framing for topology creation" for the conceptual map and the reuse-loop design notes.
+
+**Sequencing principle: interleave with stability work.** Each sub-phase ships independently and can interleave with ongoing F-V findings or stability triage. The harness (18.2) runs throughout to catch regressions from concurrent stability work. Sub-phases are ordered by lowest-risk-first; none of them block stability work, and stability work does not block them except where explicitly noted.
+
+**Capability specs:**
+- `specs/tags-fts-index/spec.md`
+- `specs/failure-mode-stratified-updates/spec.md`
+- `specs/composition-chain-credit-propagation/spec.md`
+- `specs/activity-reuse-validation-harness/spec.md`
+
+**External dependencies (already-drafted specs, referenced not redone):**
+- `2026-04-29-state-space-aware-recommendations` (Phase 11) — pool/pointer-aware ranking inputs
+- `2026-04-29-surrealdb-rl-layer` P1 (atomic α/β `+=`) — Phase 10 deliverable; required by 18.3 + 18.4
+- `2026-04-29-surrealdb-rl-layer` P5A (BM25 score fix) — Phase 10 deliverable; assumed shipped
+- existing `context-bucketed-thompson-sampling` capability spec — provides the bucketed posterior surface that 18.4 writes through when available
+- existing `dense-semantic-search` capability spec — re-enables the second retrieval rank-list (depends on ONNX model packaged in image; that's a stability/ops gate, not a code gate)
+- existing `irrelevance-score-feedback` capability spec — provides the symmetric negative scoring that 18.3's `verifier_negative` rule writes to
+
+### 18.0 Pre-baseline (capture state before any change)
+
+- [ ] 18.0.1 Snapshot Thompson posteriors for top-50 templates by `total_executions` into `validation/baselines/2026-05-06-thompson.json`. Source: `GET /v2/activities/templates?limit=50&sort=total_executions:desc`.
+- [ ] 18.0.2 Snapshot template count by `learning_track` (`unclassified` / `learning` / `system`) into the baselines file.
+- [ ] 18.0.3 Compute current 7-day reuse rate and improvise-share from `trace_digest`; record in baselines file.
+- [ ] 18.0.4 Run validation harness once (Task 18.2 must be code-complete) and store as `validation/baselines/2026-05-06-mrr.json`.
+
+**Stability interlock:** safe to run while F-V monitoring is active. No writes; reads only.
+
+### 18.1 Tags FTS index (lowest-risk quality win)
+
+- [ ] 18.1.1 Migration `repos/metabob-activity-api/sql/migrations/126-activity-tags-fts.surql` defining `idx_activity_tags_fts` with the existing `activity_analyzer`, BM25(1.2, 0.75), HIGHLIGHTS. Followed by `REBUILD INDEX`.
+- [ ] 18.1.2 Update canonical schema `repos/metabob-activity-api/sql/schemas/040-fts-recommendation.surql` to include the tags index alongside name and description.
+- [ ] 18.1.3 Extend `queryActivitiesByFTS` in `repos/metabob-activity-api/src/db/paradigm.ts`: add `tags @2@ '<lit>'` to the WHERE clause; ranking expression becomes `search::score(0) * 2 + search::score(2) * 1.5 + search::score(1) AS fts_score`.
+- [ ] 18.1.4 Integration test: insert a template with `tags: ["bugfix.auth.tokens"]`, query `q=auth`, assert it appears in top-3 with non-zero `fts_score`.
+- [ ] 18.1.5 Integration test: hierarchical query `q=bugfix.auth` ranks `bugfix.auth.*` templates above `bugfix.*`-only templates.
+- [ ] 18.1.6 Deploy via canary then production using the `/deploy` skill. Verify with `INFO FOR INDEX idx_activity_tags_fts ON activity`.
+- [ ] 18.1.7 Re-run harness (18.2.x) 24h post-deploy; expect MRR delta ≥ +0.05.
+
+**Stability interlock:** migration is `DEFINE INDEX OVERWRITE` + `REBUILD INDEX`. The REBUILD is the only risk vector — at current scale (~3k rows) it completes in ~10s. Schedule during off-peak; monitor SurrealDB CPU during rebuild.
+
+### 18.2 Validation harness (measurement infrastructure; code-complete before 18.0.4)
+
+- [ ] 18.2.1 Create `validation/activity-reuse-benchmark.json` with 20 entries: 8 bug-fix, 6 feature-add, 4 refactor, 2 documentation. Curate from existing successful traces; document selection criteria in the file.
+- [ ] 18.2.2 Create `validation/scripts/reuse-harness.ts` (Bun script) — for each benchmark entry, calls `POST /v2/activities/recommend` with goal_text and seed_impulse_pool, records rank position of expected_activity_id, computes MRR.
+- [ ] 18.2.3 Extend the harness to capture a Thompson posterior snapshot for top-50 templates: `(activity_id, alpha, beta, total_executions, success_rate, ci_width)`. CI width is the Beta(α, β) 95% CI upper-lower.
+- [ ] 18.2.4 Extend the harness to compute 7-day reuse rate and improvise-share via `trace_digest` aggregation.
+- [ ] 18.2.5 Emit results to `validation/results/{ISO_DATE}-reuse-report.json` with the schema in `specs/activity-reuse-validation-harness/spec.md`.
+- [ ] 18.2.6 Companion `validation/scripts/compare-reports.ts` emits a markdown diff between two reports.
+- [ ] 18.2.7 Document run procedure in `validation/README.md` — single command `bun run validation/scripts/reuse-harness.ts [--baseline <date>]`.
+- [ ] 18.2.8 Cost cap enforcement at $5/run with abort + partial report on overrun.
+- [ ] 18.2.9 Schedule weekly run via cron skill or CI workflow (out-of-band; not blocking 18.x).
+
+**Stability interlock:** read-only against canary. Benchmark prompts target known-deterministic templates; safe to run alongside any deploy. Does not write to activity-api.
+
+### 18.3 Failure-mode-stratified posterior updates
+
+**Depends on:** Phase 10 surrealdb-rl-layer P1 (atomic `+=`). If P1 has not shipped, 18.3 still applies the per-failure-type rules but flags the concurrency risk in commits and runs an interim fetch-modify-write.
+
+- [ ] 18.3.1 Create `repos/metabob-activity-api/src/lib/posterior-update.ts` exporting `applyOutcomeToPosteriors(trace) → UpdateSummary`. Single entry point.
+- [ ] 18.3.2 Implement update rules per `specs/failure-mode-stratified-updates/spec.md`: `success` → α += 1; `verifier_negative` → β += 1 + impulse_relevance writes; `budget_exhausted` → β += 0.5 + cost-running-avg update; `safety_breach` → β += 1 + edge marked; `cascading` → β += 0 here, full β on upstream cause (handled by 18.4 propagation); `user_abort` → no change; `null` → defaults to `verifier_negative` with `level: warn` log.
+- [ ] 18.3.3 Replace the four fetch-modify-write sites (`execution-traces.ts:1938`, `activities.ts:3599`, `activities.ts:3639`, `goal-paths.ts:402`) with calls to `applyOutcomeToPosteriors`.
+- [ ] 18.3.4 Unit tests for each branch — seed posterior, apply each `failure_mode.type`, assert exact α/β deltas.
+- [ ] 18.3.5 Integration test: trigger end-to-end `verifier_negative` execution; assert `impulse_relevance_metrics` for each input shape shows `times_failed += 1`.
+- [ ] 18.3.6 Add `posterior_update.failure_mode_distribution` metric emitted every 10 minutes, surfaced in workbench observability tab.
+- [ ] 18.3.7 Re-run harness (18.2) 7 days post-deploy; expect top-10 templates to show narrower CI widths than baseline (Task 18.0.1).
+
+**Stability interlock:** changes posterior-update semantics. Requires that `failure_mode` taxonomy classifications are firing correctly at the trace-write path — verify via `posterior_update.failure_mode_distribution` for 24h before declaring complete. The `null` default + log catches incomplete classifier coverage as a backfill candidate, not a regression.
+
+### 18.4 Composition-chain credit propagation
+
+**Depends on:** 18.3 (uses the same `applyOutcomeToPosteriors` entry point) + Phase 10 surrealdb-rl-layer P1 (atomic `+=`).
+
+- [ ] 18.4.1 Add `propagateCreditAlongChain(execution, outcome)` to `posterior-update.ts`. Reads `composition_chain` from the execution record (post-storage; chain is denormalized).
+- [ ] 18.4.2 Iterate from leaf to root; cap depth at `CREDIT_PROPAGATION_MAX_DEPTH` (default 4); decay factor `γ = 0.5` (configurable via `CREDIT_PROPAGATION_GAMMA`). Per-depth deltas: 0.5, 0.25, 0.125, 0.0625.
+- [ ] 18.4.3 `cascading` failures: skip propagation past `failure_mode.context.upstream_task_id`. Upstream cause receives β += 1; activities between cause and leaf receive nothing (they are victims, not contributors).
+- [ ] 18.4.4 Bucketed-Thompson interlock: when a `context_bucket` is computable for an ancestor, write to BOTH the global and the bucketed posterior. When unavailable, global only. (Depends on `context-bucketed-thompson-sampling` deployment.)
+- [ ] 18.4.5 Unit test: 4-deep chain `A→B→C→D` succeeds on D; assert leaf and ancestor deltas (D=+1, C=+0.5, B=+0.25, A=+0.125).
+- [ ] 18.4.6 Unit test: same chain, fail with `cascading` from B; assert A receives β += 0.5 (ancestor of cause), B receives β += 1, C and D receive nothing.
+- [ ] 18.4.7 Integration test: execute `goal-processing-activity-driven → activity-recommendation → improvise`; assert improvise's success bumps `goal-processing-activity-driven.α` by 0.25.
+- [ ] 18.4.8 Re-run harness 7 days post-deploy; expect orchestrator activities (those that frequently appear in `composition_chain` ancestors) to show meaningful α growth where they previously sat near the prior.
+
+**Stability interlock:** propagation amplifies signal — both good and bad. The γ=0.5 + depth-cap-4 combination means total propagated credit per outcome is bounded at ~1.94. Monitor for runaway α/β growth in the first 48h; if any single template grows by >50% of pre-deploy total executions in that window, halt and investigate.
+
+### 18.5 Re-enable dense semantic search (gated on operations)
+
+**Status:** code path exists (`queryActivitiesByDense` in `paradigm.ts`); blocked on packaging the `all-MiniLM-L6-v2` ONNX model into the activity-api Docker image. This is operational stability work, not loop-closure. Listed here for tracking; sub-tasks belong to the `dense-semantic-search` capability spec.
+
+- [ ] 18.5.1 Bundle ONNX model + tokenizer vocab into the activity-api Docker image at `EMBEDDING_MODEL_DIR`. Image size impact: ~22 MB.
+- [ ] 18.5.2 Confirm `LocalEmbeddingService.isReady()` returns `true` after deploy.
+- [ ] 18.5.3 Integration test: `queryActivitiesByDense` returns ranked results for a sample query.
+- [ ] 18.5.4 Verify RRF merge in `mergeByRRF` activates and produces a hybrid rank-list.
+- [ ] 18.5.5 Re-run harness; expect MRR delta ≥ +0.05 over post-tags-FTS baseline (cumulative ≥ +0.10 vs pre-Phase-18 baseline).
+
+**Stability interlock:** previously HNSW indexes caused F-V31 (CPU storm). Migration 125 dropped them permanently. Re-enabling dense search uses in-process O(n) cosine scan only — no HNSW. At current ~3k template scale, this is <50 ms per query. If/when corpus grows >10k templates, re-introduce HNSW behind a feature flag with the block-cache cap from F-V26 in place.
+
+### 18.6 Validation campaign (longitudinal — runs weekly)
+
+- [ ] 18.6.1 Week 0: capture pre-Phase-18 baseline (Tasks 18.0.x complete; harness baseline run).
+- [ ] 18.6.2 Week 1: post-tags-FTS report. Confirm MRR delta ≥ +0.05.
+- [ ] 18.6.3 Week 2: post-failure-mode-stratified report. Confirm top-10 CI widths narrowed.
+- [ ] 18.6.4 Week 3: post-credit-propagation report. Confirm orchestrator α growth.
+- [ ] 18.6.5 Week 4: post-dense-search report (if 18.5 has shipped). Confirm cumulative MRR delta ≥ +0.10.
+- [ ] 18.6.6 Composite trajectory document: `docs/learning-loop-2026-05-validation.md` — 4-week MRR, reuse rate, improvise-share, top-10 CI width.
+- [ ] 18.6.7 Update CLAUDE.md "Recent stabilisation" with Phase 18 outcomes.
+
+**Stability interlock:** measurement-only. Decoupled from any deploy schedule.
+
+### Stop conditions
+
+Phase 18 is complete when:
+
+- ✅ `tags-fts-index` deployed and 18.1.7 confirms MRR delta ≥ +0.05
+- ✅ `failure-mode-stratified-updates` deployed and 18.3.7 confirms top-10 CI widths narrower than baseline
+- ✅ `composition-chain-credit-propagation` deployed and 18.4.8 confirms orchestrator activities receive meaningful α growth
+- ✅ Validation harness running weekly and producing comparable reports
+- ✅ Reuse rate trending up + improvise-share trending down across 4 consecutive harness runs
+
+Dense search re-enable (18.5) is desirable but not gating — the topology learning loop closes with 18.1, 18.3, 18.4 alone; dense search is a retrieval-quality improvement on top of the closed loop.
