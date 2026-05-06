@@ -12,7 +12,7 @@ This document consolidates implementation findings from the impulse-activity-loo
 
 These findings were identified during implementation and have been resolved. They represent non-obvious implementation details that developers should understand.
 
-**Currently documented:** F-1 through F-9b (foundational), F-45 (null-guard fix, 2026-04-27), F-V29–F-V34 (validation run findings, 2026-05-06)  
+**Currently documented:** F-1 through F-9b (foundational), F-45 (null-guard fix, 2026-04-27), F-V29–F-V36 (validation run findings, 2026-05-06)  
 **Open findings with workarounds:** F-37, F-38, F-39, F-40, F-41 (meta-activity lifecycle issues, in progress)
 
 ### F-1: Lifecycle Payload Field-Name Reconciliation — RESOLVED
@@ -396,6 +396,50 @@ Findings from the Phase 19 and 20 validation runs (2026-05-06) verifying concept
 **Residual:** `activityTemplate` with `templateId: "improvise"` returns 404 — the improvise template is embedded in minibob but not registered in the activity-api DB. The ownership gate fires correctly (F-V32 routing fix confirmed), but the backend has no record. The LLM works around the 404 using BM25 priors from task 1. This is a separate issue from F-V32; embedded templates need to be registered in the backend for `load_impulse(activityTemplate)` to resolve them.
 
 **Code location:** `validation/lib/docker-runner.ts:minibobTemplate` option; `validation/lib/orchestrator.ts:minibob-template` flag.
+
+### F-V35: `vesselCapability` Pointer Type Fails via Circular Self-Query — OPEN
+
+**Issue:** `load_impulse({"type":"vesselCapability","shape":"..."})` falls through to "offline mode" error despite the backend being reachable. Root cause: in `impulse.ts` STEP 4 (vessel discovery), `inferShapeFromType("vesselCapability")` returns `"vesselCapability"` → `discoverVesselsForShape("vesselCapability")` POSTs to discovery-vessel asking "which vessel resolves the `vesselCapability` shape?" → discovery-vessel does not self-register as a resolver for its own meta-shape → returns an empty list → falls through to offline mode error.
+
+**Evidence:** Prompt 28 run (2026-05-06T12-53-35-113Z): `[Impulse] "Impulse type 'vesselCapability' requires backend connection (offline mode)"` in stderr, even though concept-db successfully resolved `concept_create_write` via vessel discovery in the same run (confirming discovery-vessel IS reachable).
+
+**Fix:** Add a special case in `ImpulseStore.load()` BEFORE the vessel discovery step: when `pointer.type === "vesselCapability"`, call `VesselDiscoveryClient.discoverVesselsForShape(pointer.shape)` directly and return its result, bypassing the "who resolves vesselCapability?" meta-query entirely. The discovery client already has the logic; it just needs to be called before the ownership resolution loop.
+
+**Code location:** `repos/minibob/src/impulse.ts` — STEP 3/4 section; `repos/minibob/src/vessel-discovery.ts:queryBackendForShape`.
+
+### F-V36: `activityTemplateRecommendation` Does Not Surface Thompson α/β — OPEN
+
+**Issue:** `load_impulse({"type":"activityTemplateRecommendation","goal":"..."})` returns template IDs and names but does not include Thompson Sampling state (α, β, sample_count) in the response payload. Callers cannot show a before/after delta without a separate `variantMetricsSummary` call.
+
+**Evidence:** Prompt 30 run (2026-05-06T12-56-48-244Z): `loop-summary.md` section 2 records "Not available in recommendation response" for α, β, sample_count. The resolver returned 3 recommendations but without posterior state.
+
+**Fix:** Extend the `POST /v2/activities/recommend` response body (or the impulse resolver wrapper) to include `thompson_alpha`, `thompson_beta`, `sample_count` per recommended template variant. These fields are already available on the `activity_template` record in SurrealDB.
+
+**Code location:** `repos/metabob-activity-api/src/routes/activities.ts` — recommend route; shape advertised as `activityTemplateRecommendation` in discovery registration.
+
+---
+
+## Validation Evidence — Cross-vessel Ecosystem Confirmed (2026-05-06)
+
+Prompts 28–30 provide the first full cross-vessel learning loop evidence. Runs used `--with-backend --minibob-template improvise`.
+
+| Run | Prompt | Duration | LLM calls | Lifecycle hooks | New relevance records | Key evidence |
+|---|---|---|---|---|---|---|
+| 2026-05-06T12-53-35 | 28: ecosystem health | 147s | 11 | ribosome×2 + validator×6 + slot-binding×1 = 9 | 11 | concept-db write `concept:concept_JW1iZKF_aEbN` via vessel discovery ✅ |
+| 2026-05-06T12-56-44 | 29: lifecycle + score | 785s | 81 | ribosome×22 + validator×18 = 40 | 30 | `fibonacci-implementation` template extracted by ribosome ✅; 5 distinct vessel IDs |
+| 2026-05-06T12-56-48 | 30: trace-driven | 568s | 25 | ribosome×14 + validator×14 = 28 | 26 | Full loop: 30 traces fetched → template recommended → trace `exec_phase30_1778072560000` submitted ✅ |
+
+**Confirmed working in all three runs:**
+- concept-db resolves `concept_create_write` via vessel discovery (ownership gate → discovery lookup → direct HTTP call)
+- activity-api resolves `executionTraceList`, `activityTemplate`, `activityTemplateRecommendation`, `activityExecutionTrace_write` via MCP/discovery
+- ribosome-extract and validator-dispatch lifecycle hooks fire on every task in every activity
+- Impulse relevance records written on every run (26–30 new per run)
+- Cross-vessel execution: 4–5 distinct minibob vessel IDs sharing execution traces per run
+
+**Gaps confirmed:**
+- `vesselCapability` pointer type → circular self-query (F-V35)
+- `activityTemplateRecommendation` no Thompson state in response (F-V36)
+- Embedded templates (improvise, core-activity-audit, etc.) not in activity-api DB → `load_impulse(activityTemplate, templateId: "improvise")` always 404
 
 ---
 
