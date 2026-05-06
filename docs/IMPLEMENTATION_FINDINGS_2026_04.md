@@ -12,7 +12,7 @@ This document consolidates implementation findings from the impulse-activity-loo
 
 These findings were identified during implementation and have been resolved. They represent non-obvious implementation details that developers should understand.
 
-**Currently documented:** F-1 through F-9b (foundational), F-45 (null-guard fix, 2026-04-27), F-V29/F-V30/F-V31 (validation run findings, 2026-05-06)  
+**Currently documented:** F-1 through F-9b (foundational), F-45 (null-guard fix, 2026-04-27), F-V29–F-V32 (validation run findings, 2026-05-06)  
 **Open findings with workarounds:** F-37, F-38, F-39, F-40, F-41 (meta-activity lifecycle issues, in progress)
 
 ### F-1: Lifecycle Payload Field-Name Reconciliation — RESOLVED
