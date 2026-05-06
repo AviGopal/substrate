@@ -2,8 +2,8 @@
 
 This document consolidates implementation findings from the impulse-activity-loop implementation wave (April 2026) and documents what's currently deployed and working on canary.
 
-**Last updated:** 2026-05-06 10:00 UTC  
-**Deployment version:** activity-api 1.15.0 (workbench v0.7.0, minibob 0.14.7-f6df221)  
+**Last updated:** 2026-05-06 11:00 UTC  
+**Deployment version:** activity-api 1.15.0 (workbench v0.7.0, minibob 0.14.7-c8d9a73)  
 **Canary endpoint:** https://activity.metabob.com
 
 ---
@@ -12,7 +12,7 @@ This document consolidates implementation findings from the impulse-activity-loo
 
 These findings were identified during implementation and have been resolved. They represent non-obvious implementation details that developers should understand.
 
-**Currently documented:** F-1 through F-9b (foundational), F-45 (null-guard fix, 2026-04-27), F-V29–F-V32 (validation run findings, 2026-05-06)  
+**Currently documented:** F-1 through F-9b (foundational), F-45 (null-guard fix, 2026-04-27), F-V29–F-V34 (validation run findings, 2026-05-06)  
 **Open findings with workarounds:** F-37, F-38, F-39, F-40, F-41 (meta-activity lifecycle issues, in progress)
 
 ### F-1: Lifecycle Payload Field-Name Reconciliation — RESOLVED
@@ -367,21 +367,35 @@ Findings from the Phase 19 and 20 validation runs (2026-05-06) verifying concept
 
 **Verification:** Phase 19 re-run with `0.14.7-f6df221` confirmed 3/3 concepts written. Acceptance criteria met.
 
-### F-V32: Offline Mode Coupling — Trace Write Failures Block Vessel-Discovery Reads — OPEN
+### F-V32: `loadByPointer` Skipped Ownership Gate — Negative Discovery Cache on Transient 5xx — FIXED
 
-**Issue:** When activity-api returns 504 errors for trace writes (MCP execution reporting), minibob's `ActivityTraceClient` transitions to a global offline mode after 3 failures. This offline mode flag blocks ALL backend-dependent resolvers including vessel discovery reads (`discoverByShapesQuery`, `executionTraceList`, `activityTemplate`). The result: even when activity-api is reachable for reads, write failures degrade reads.
+**Issue:** When the LLM calls `load_impulse` tool, the code path is `tools.ts:load_impulse → loadByPointer → createImpulse(... no metadata ...) → loadImpulse`. The ownership gate inside `ImpulseStore.load()` checks `impulse.metadata?.shape`; without metadata this is `undefined` and the gate is skipped. The impulse falls through to STEP 4 (vessel discovery). If activity-api returns a transient 5xx during the `resolveViaDiscovery` call, the discovery client catches the error and falls through to STEP 5 (MCP), which may also fail transiently. The result is an "offline mode" error even though activity-api is healthy for other requests. Worse: if the vessel discovery call returned an empty result (no vessels) rather than throwing, the discovery client caches a negative entry for the shape (5-minute TTL), blocking all future requests for that shape within the window.
 
-**Observed in:** Phase 20 (activity improvement) runs. The `executionTraceList` pointer type resolves via vessel discovery → activity-api. When concurrent load (two runs in parallel) or transient SurrealDB connectivity caused trace write 504s, offline mode activated and blocked `executionTraceList` resolution. minibob produced simulated data instead of reading real traces.
+**Observed in:** Phase 20 solo run — `executionTraceList` resolved successfully at 09:47:35, then `activityTemplate` at 09:47:43 failed with "offline mode", then `activityExecutionTrace` at 09:47:50 succeeded. The 8-second window suggests a transient 504 on activity-api hit specifically during the `activityTemplate` vessel-discovery call.
 
-**Root cause:** The `isMCPEnabled()` / offline-mode flag in `repos/minibob/src/mcp.ts` is shared between write paths (execution trace storage) and read paths (impulse resolution via discovery). They should be decoupled — write failures should not block reads that use a different transport path (vessel discovery HTTP vs MCP socket/REST).
+**Root cause:** `loadByPointer` created impulses without `metadata.shape`, bypassing the ownership gate that routes known activity-api shapes directly to MCP (bypassing vessel discovery and its negative cache).
 
-**Workaround:** Run validation phases sequentially (not concurrently) to avoid activity-api load spikes that trigger 504s. The `--with-backend` flag correctly sets `MINIBOB_SKIP_STARTUP=true`; the issue is write/read coupling, not startup cascade.
+**Fix (0.14.7-c8d9a73):** `loadByPointer` now sets `metadata: { shape: pointer.type }` on the created impulse. The gate in `ImpulseStore.load()` fires for all `load_impulse` tool calls, routing activity-api-owned shapes through the direct MCP path and avoiding vessel-discovery negative-cache poisoning.
 
-**Code locations:**
-- `repos/minibob/src/mcp.ts` — `isMCPEnabled()` / offline state management  
-- `repos/minibob/src/impulse.ts` — offline guard on discovery path
+**Code location:** `repos/minibob/src/impulse.ts` — `loadByPointer` function, `createImpulse` call.
 
-**Fix candidate:** Split offline state into separate `traceWriteOnline` and `discoveryOnline` booleans. Discovery falls back to the same vessel-discovery client regardless of trace write health.
+### F-V33: Original F-V32 Description Partially Incorrect — Offline Mode Is NOT the Blocking Mechanism
+
+**Issue:** The original F-V32 description said "trace write 504s trigger global offline mode which blocks vessel-discovery reads". This is incorrect on closer inspection. `isMCPEnabled()` simply checks `mcpClient !== null` — it is never set to null after initialization. The offline mode message at line 1721 is thrown after ALL resolution steps fail (custom resolver, vessel discovery, MCP fallback). The real mechanism was the gate bypass in `loadByPointer` (F-V32 above).
+
+**Residual concern:** If all 5 resolution steps fail (e.g., vessel discovery throws AND MCP fallback also throws), the error message says "offline mode" which is misleading when activity-api is partially reachable. Consider improving the error message to distinguish "no resolver available" from "all resolvers failed transiently".
+
+### F-V34: Phase 20 Thompson Interference — Embedded Templates Outcompete Improviser (CLOSED via --minibob-template)
+
+**Issue:** After the F-V32 fix landed (0.14.7-c8d9a73), Phase 20 validation runs consistently selected short deterministic embedded templates (e.g., `core-activity-audit`, `slot-binding`) instead of the improviser, producing 0 LLM calls and an empty workspace. Root cause: the improviser accumulated β penalties from prior Phase 20 failures (F-V32 era), while short deterministic activities accumulated α increments, causing Thompson sampling to avoid the improviser for activity-audit goals. The MIN_THRESHOLD for template selection is 0.1 (intentionally low to prefer templates), so any plausible match gets executed.
+
+**Phase 20 run evidence:** Three consecutive runs (10:44, 10:52, 10:57 UTC 2026-05-06) showed 0 LLM calls. Workspace empty. Thompson priors stale from prior improviser failures.
+
+**Resolution (harness-side):** Added `--minibob-template <id>` flag to the validation harness (`validation/lib/orchestrator.ts` + `docker-runner.ts`) that routes through minibob's existing `--template` CLI flag, bypassing Thompson sampling. Uses `--var goal=<prompt>` to inject the prompt text. Phase 20 re-run with `--minibob-template improvise` produced 18 LLM calls, 17 tool calls, `improved-activity.json` and `audit.md` written, 8 impulse-relevance records updated.
+
+**Residual:** `activityTemplate` with `templateId: "improvise"` returns 404 — the improvise template is embedded in minibob but not registered in the activity-api DB. The ownership gate fires correctly (F-V32 routing fix confirmed), but the backend has no record. The LLM works around the 404 using BM25 priors from task 1. This is a separate issue from F-V32; embedded templates need to be registered in the backend for `load_impulse(activityTemplate)` to resolve them.
+
+**Code location:** `validation/lib/docker-runner.ts:minibobTemplate` option; `validation/lib/orchestrator.ts:minibob-template` flag.
 
 ---
 
