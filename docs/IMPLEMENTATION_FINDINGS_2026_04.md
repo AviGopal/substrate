@@ -365,7 +365,23 @@ Findings from the Phase 19 and 20 validation runs (2026-05-06) verifying concept
 
 **Code location:** `repos/minibob/src/impulse.ts` — cached resolver registration block (after `resolveViaDiscovery` succeeds).
 
-**Verification:** Phase 19 re-run with `0.14.7-f6df221` expected to show 3/3 concepts written.
+**Verification:** Phase 19 re-run with `0.14.7-f6df221` confirmed 3/3 concepts written. Acceptance criteria met.
+
+### F-V32: Offline Mode Coupling — Trace Write Failures Block Vessel-Discovery Reads — OPEN
+
+**Issue:** When activity-api returns 504 errors for trace writes (MCP execution reporting), minibob's `ActivityTraceClient` transitions to a global offline mode after 3 failures. This offline mode flag blocks ALL backend-dependent resolvers including vessel discovery reads (`discoverByShapesQuery`, `executionTraceList`, `activityTemplate`). The result: even when activity-api is reachable for reads, write failures degrade reads.
+
+**Observed in:** Phase 20 (activity improvement) runs. The `executionTraceList` pointer type resolves via vessel discovery → activity-api. When concurrent load (two runs in parallel) or transient SurrealDB connectivity caused trace write 504s, offline mode activated and blocked `executionTraceList` resolution. minibob produced simulated data instead of reading real traces.
+
+**Root cause:** The `isMCPEnabled()` / offline-mode flag in `repos/minibob/src/mcp.ts` is shared between write paths (execution trace storage) and read paths (impulse resolution via discovery). They should be decoupled — write failures should not block reads that use a different transport path (vessel discovery HTTP vs MCP socket/REST).
+
+**Workaround:** Run validation phases sequentially (not concurrently) to avoid activity-api load spikes that trigger 504s. The `--with-backend` flag correctly sets `MINIBOB_SKIP_STARTUP=true`; the issue is write/read coupling, not startup cascade.
+
+**Code locations:**
+- `repos/minibob/src/mcp.ts` — `isMCPEnabled()` / offline state management  
+- `repos/minibob/src/impulse.ts` — offline guard on discovery path
+
+**Fix candidate:** Split offline state into separate `traceWriteOnline` and `discoveryOnline` booleans. Discovery falls back to the same vessel-discovery client regardless of trace write health.
 
 ---
 
