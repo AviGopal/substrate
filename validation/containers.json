@@ -1,9 +1,9 @@
 {
   "$comment": "Canonical image refs the runner uses. Update these to bump versions.",
   "minibob": {
-    "image": "metabobapp/minibob:0.14.7-c8d9a73",
+    "image": "metabobapp/minibob:0.14.7-fd04fd1",
     "default_timeout_seconds": 1200,
-    "$note": "0.14.7-c8d9a73: fix(impulse): set metadata.shape in loadByPointer to activate ownership gate. prev: 0.14.7-f6df221."
+    "$note": "0.14.7-fd04fd1: F-V41 vesselRegistry/vesselEndpoint/vesselHealth direct short-circuit. prev: 0.14.7-8b918d2."
   },
   "claudeCode": {
     "image": "metabob-validation/claude-code:local",
