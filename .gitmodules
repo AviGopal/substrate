@@ -57,3 +57,7 @@
 	path = repos/workbench
 	url = git@github.com:MetabobProject/workbench.git
 	branch = dev
+[submodule "repos/metabob-mcp"]
+	path = repos/metabob-mcp
+	url = git@github.com:MetabobProject/metabob-mcp.git
+	branch = dev
