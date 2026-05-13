@@ -87,6 +87,14 @@ minibob --single "refactor the Thompson Sampling implementation"
 
 **Recent stabilisation** (most-recent first):
 
+*Phase 18 — Learning loop measurement + dense search (2026-05-13)*
+- **Dense semantic search active**: `all-MiniLM-L6-v2` ONNX model (INT8, 22MB) bundled in the activity-api image at `src/assets/models/`. `POST /v2/activities/recommend` returns `fallback_tier: "fts_hybrid"` confirming `queryActivitiesByDense` + `mergeByRRF` are active. O(n) cosine-similarity scan (not HNSW — indexes were dropped in migration 110 due to pod CPU spikes; HNSW is gated on infra stabilization).
+- **G5 embedding backfill complete**: 1640/3135 templates updated from 1536-dim OpenAI → 384-dim MiniLM vectors via `scripts/backfill-embeddings.ts`. 1495 double-prefix records (`activity:⟨activity:⟨…⟩⟩`) skipped (unreachable via `type::record()`; excluded from dense scan by `length === 384` guard). Post-backfill MRR: 0.1542, +0.0875 over post-tags-FTS baseline. Report: `validation/results/2026-05-13-post-g5-backfill-reuse-report.json`.
+- **Migration 128**: added `times_failed` field to `impulse_relevance_metrics` (SCHEMAFULL table was silently dropping `writeImpulseRelevancePenalty` UPDATEs). Verified via 18.3.5 integration test: two `verifier_negative` traces → `times_failed` increments by 2.
+- **Failure-mode stratified Thompson updates**: verifier_negative → full β penalty; budget_exhausted → half penalty; safety_breach → full β; cascading → no double-count; user_abort → neutral. `writeImpulseRelevancePenalty` fires on verifier_negative to increment per-impulse failure counters.
+- **Composition-chain credit propagation**: `propagateCreditAlongChain` writes α/β deltas to ancestors in the composition chain when a composed execution succeeds/fails (spec 18.4).
+- **Baseline captured**: pre-Phase-18 MRR=0.1042; post-dense-search MRR=0.1542 (cumulative +0.05). 7-day re-runs scheduled ~2026-05-20.
+
 *Reliability and auth*
 - Activity-API auth middleware now finalises Hono context correctly on 401 and stops rejecting `X-Internal-Api-Key` before route handlers can opt-in. This unblocked the minibob pending-sync queue.
 - Activity-API accepts the legacy `activity_id` field on `POST /v2/activities/impulse-relevance` and coerces to `activity_variant_id` for backward compatibility (logged as a deprecation warning).

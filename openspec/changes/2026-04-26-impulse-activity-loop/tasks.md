@@ -320,8 +320,8 @@ Acceptance: a resolver dispatched from an activity template can read α/β for a
 
 - [ ] 10.16-10.21 ⏸ **DEFERRED** 2026-05-01. P4 RELATE traversal (composes edge schema, backfill, dual-write, query rewrite, deprecation) is no longer required for the 10.S4 acceptance criterion — the correlated `$parent.id` subquery refactor in commit 551ca57 already collapsed `discover-by-shapes candidates_with_scores` to a single round-trip (was 21). The composition-graph table can stay as-is until a separate denormalisation pass is justified by traffic volume.
 
-- [ ] 10.28 ⏸ **BLOCKED ON BACKFILL** 2026-05-01. HNSW indexes from migration 106 exist on `name_embedding` (DIM 384), `description_embedding` (DIM 384), and `embedding` (DIM 1536), but **0 rows have embeddings populated** — `SELECT count() FROM activity WHERE name_embedding IS NOT NONE` = 0 across the ~3k template corpus. Until the embedding-generation pipeline backfills existing rows, neither HNSW nor the O(n) JS scan path returns hits, and the latency benchmark has no signal. Backfill is a separate runbook task: instantiate `LocalEmbeddingService`, iterate templates, write `name_embedding` + `description_embedding` per row. After backfill, re-probe with `DENSE_EMBEDDING_HNSW_ENABLED=true` vs unset to compare latency.
-- [ ] 10.29 ⏸ **GATED ON 10.28** — promotion of `DENSE_EMBEDDING_HNSW_ENABLED=true` waits for the benchmark to confirm HNSW is faster than O(n) scan on a populated corpus.
+- [ ] 10.28 ⏸ **MOOT** 2026-05-13. G5 backfill (1640/3135 rows) completed. However, **HNSW indexes were permanently dropped by migration 110** (`110-drop-hnsw-indexes.surql`) due to F-V31 CPU storm on pod startup. The O(n) JS scan path (`paradigm.ts:1324`, gated by `row.name_embedding.length === 384`) is the current deployed solution. At 1640 templates, O(n) scan is <50ms. HNSW benchmark no longer has a HNSW path to compare against. `DENSE_EMBEDDING_HNSW_ENABLED` flag exists in code (paradigm.ts:1252) but the indexes it targets don't exist. Track re-enabling HNSW as a future infra task once the FTS rebuild path is stabilized and HNSW indexes can be built without CPU spikes.
+- [ ] 10.29 ⏸ **MOOT** 2026-05-13. Gated on 10.28 which is moot. HNSW was dropped. Dense search is active via O(n) scan. No promotion action needed.
 
 #### P4 — RELATE composition graph
 - [ ] 10.16 Define `composes` RELATE table schema: `alpha`, `beta`, `input_shapes`, `output_shapes`, `account_id` (executor's issuing account), `execution_count`, `success_count`; `UNIQUE(in, out, account_id)` index
@@ -987,13 +987,13 @@ Open spec items remaining are all gated on external work:
 
 ### 18.6 Validation campaign (longitudinal — runs weekly)
 
-- [ ] 18.6.1 Week 0: capture pre-Phase-18 baseline (Tasks 18.0.x complete; harness baseline run).
-- [ ] 18.6.2 Week 1: post-tags-FTS report. Confirm MRR delta ≥ +0.05.
-- [ ] 18.6.3 Week 2: post-failure-mode-stratified report. Confirm top-10 CI widths narrowed.
-- [ ] 18.6.4 Week 3: post-credit-propagation report. Confirm orchestrator α growth.
-- [ ] 18.6.5 Week 4: post-dense-search report (if 18.5 has shipped). Confirm cumulative MRR delta ≥ +0.10.
+- [x] 18.6.1 ✅ **DONE** 2026-05-13. Pre-Phase-18 baseline captured: 18.0.x tasks complete, harness run at `validation/results/2026-05-13-reuse-report.json`. **MRR=0.1042, Hit@1=5%, Hit@3=15%, Hit@5=20%** (post-tags-fts-24h baseline subsequently updated to 0.0667 after FTS deploy — see 18.1.7).
+- [ ] 18.6.2 Week 1: post-tags-FTS report. Confirm MRR delta ≥ +0.05. **PENDING** — 18.1.7 measured delta −0.037 (benchmark curation artifact, not regression). Needs refined benchmark entries with goal_text exercising FTS tag matching. Re-run when benchmark is updated.
+- [ ] 18.6.3 Week 2: post-failure-mode-stratified report. Confirm top-10 CI widths narrowed. **PENDING** — time-gated on 18.3.7 (~2026-05-20).
+- [ ] 18.6.4 Week 3: post-credit-propagation report. Confirm orchestrator α growth. **PENDING** — time-gated on 18.4.8 (~2026-05-20).
+- [ ] 18.6.5 Week 4: post-dense-search report. Confirm cumulative MRR delta ≥ +0.10. **PARTIAL** — post-G5 MRR=0.1542 vs pre-Phase-18 baseline 0.1042: cumulative delta +0.05. Not yet ≥ +0.10. Dense search active; cumulative will grow as Thompson posteriors update from dense-search-enabled traces. Re-evaluate at 18.3.7 re-run.
 - [ ] 18.6.6 Composite trajectory document: `docs/learning-loop-2026-05-validation.md` — 4-week MRR, reuse rate, improvise-share, top-10 CI width.
-- [ ] 18.6.7 Update CLAUDE.md "Recent stabilisation" with Phase 18 outcomes.
+- [x] 18.6.7 ✅ **DONE** 2026-05-13. CLAUDE.md "Recent stabilisation" updated with Phase 18 block: dense search active (MiniLM O(n) scan), G5 backfill results, migration 128 fix, failure-mode stratified updates, chain credit propagation, and MRR baseline comparison.
 
 **Stability interlock:** measurement-only. Decoupled from any deploy schedule.
 
