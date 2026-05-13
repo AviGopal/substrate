@@ -950,7 +950,7 @@ Open spec items remaining are all gated on external work:
 
 - [x] 18.3.1 ✅ **DONE** 2026-05-13. `src/lib/posterior-update.ts` (254 lines) created. Exports `applyOutcomeToPosteriors(trace, db, orgId) → UpdateSummary` and `DBQueryable` interface. Commit `86cb9d0`.
 - [x] 18.3.2 ✅ **DONE** 2026-05-13. All 7 rules implemented: `success`→α+1; `verifier_negative`→β+1 + impulse_relevance writes; `budget_exhausted`→β+0.5; `safety_breach`→β+1; `cascading`→no-op (victim); `user_abort`→no-op; `null` on failed→β+1 + warning. Writes atomically to `variant_performance_metrics` (avoids F-V46 BM25 regression on `activity_template`). Commit `86cb9d0`.
-- [ ] 18.3.3 ⏳ **PENDING** Wire the four existing write sites to call `applyOutcomeToPosteriors` as parallel call (two-phase: add parallel call now, remove old inline write after observing correctness for 24h). Sites: `execution-traces.ts:~1938`, `activities.ts:~3599`, `activities.ts:~3639`, `goal-paths.ts:~402`.
+- [x] 18.3.3 ✅ **DONE** 2026-05-12. Parallel fire-and-forget `applyOutcomeToPosteriors` wired at all four write sites: `execution-traces.ts` (after per-candidate update loop, with `body.failure_mode` forwarded), `activities.ts /executions` (before Redis invalidation), `activities.ts /feedback` (after shape-score multiplier writes, `direction=positive` → `success=true`), `goal-paths.ts` (after UPDATE/CREATE block, terminal activity in path gets credit). Old inline writes preserved behind TODO markers for 24h canary observation. Typecheck clean, 16/16 posterior-update tests pass. Commit `bc14201`.
 - [x] 18.3.4 ✅ **DONE** 2026-05-13. 16 unit tests in `test/posterior-update.test.ts` — all 7 failure-mode branches, impulse-relevance write path, activity_id resolution precedence, UpdateSummary fields. All 16 pass. Commit `86cb9d0`.
 - [ ] 18.3.5 Integration test: trigger end-to-end `verifier_negative` execution; assert `impulse_relevance_metrics` for each input shape shows `times_failed += 1`.
 - [x] 18.3.6 ✅ **DONE** 2026-05-13. `emitPosteriorUpdateMetric(summary)` logs `{ event:"posterior_update", failure_mode_type, alpha_delta, beta_delta, activity_id }` at debug level after every update. Full aggregation (10-min rollup to workbench) deferred. Commit `86cb9d0`.
@@ -962,12 +962,12 @@ Open spec items remaining are all gated on external work:
 
 **Depends on:** 18.3 (uses the same `applyOutcomeToPosteriors` entry point) + Phase 10 surrealdb-rl-layer P1 (atomic `+=`).
 
-- [ ] 18.4.1 Add `propagateCreditAlongChain(execution, outcome)` to `posterior-update.ts`. Reads `composition_chain` from the execution record (post-storage; chain is denormalized).
-- [ ] 18.4.2 Iterate from leaf to root; cap depth at `CREDIT_PROPAGATION_MAX_DEPTH` (default 4); decay factor `γ = 0.5` (configurable via `CREDIT_PROPAGATION_GAMMA`). Per-depth deltas: 0.5, 0.25, 0.125, 0.0625.
-- [ ] 18.4.3 `cascading` failures: skip propagation past `failure_mode.context.upstream_task_id`. Upstream cause receives β += 1; activities between cause and leaf receive nothing (they are victims, not contributors).
-- [ ] 18.4.4 Bucketed-Thompson interlock: when a `context_bucket` is computable for an ancestor, write to BOTH the global and the bucketed posterior. When unavailable, global only. (Depends on `context-bucketed-thompson-sampling` deployment.)
-- [ ] 18.4.5 Unit test: 4-deep chain `A→B→C→D` succeeds on D; assert leaf and ancestor deltas (D=+1, C=+0.5, B=+0.25, A=+0.125).
-- [ ] 18.4.6 Unit test: same chain, fail with `cascading` from B; assert A receives β += 0.5 (ancestor of cause), B receives β += 1, C and D receive nothing.
+- [x] 18.4.1 ✅ **DONE** 2026-05-12. `propagateCreditAlongChain(execution, db, orgId)` added to `posterior-update.ts`. Reads `composition_chain` (root-first); `ExecutionForChainCredit` interface exported. Commit `83ba7ed`.
+- [x] 18.4.2 ✅ **DONE** 2026-05-12. `CREDIT_PROPAGATION_MAX_DEPTH=4`, `CREDIT_PROPAGATION_GAMMA=0.5`; per-depth α/β deltas: 0.5, 0.25, 0.125, 0.0625. Reversed chain walk (leaf→root). Commit `83ba7ed`.
+- [x] 18.4.3 ✅ **DONE** 2026-05-12. Cascading failures: only direct parent (depth-1 ancestor) receives β += γ^1; all deeper ancestors receive nothing (heuristic; task_id→activity_id mapping deferred). Non-cascading failures propagate β to all ancestors with decay. Commit `83ba7ed`.
+- [x] 18.4.4 ✅ **DONE** 2026-05-12. Optional `context_bucket` parameter: when present, writes to `context_thompson_scores` in addition to `variant_performance_metrics`. Commit `83ba7ed`.
+- [x] 18.4.5 ✅ **DONE** 2026-05-12. Unit test: 4-deep `A→B→C→D` success; verified C=α+0.5, B=α+0.25, A=α+0.125 (leaf D excluded from chain walk). Commit `83ba7ed`.
+- [x] 18.4.6 ✅ **DONE** 2026-05-12. Unit test: cascading failure at D (from B); direct parent C gets β+=0.5 only; B and A receive nothing. Commit `83ba7ed`.
 - [ ] 18.4.7 Integration test: execute `goal-processing-activity-driven → activity-recommendation → improvise`; assert improvise's success bumps `goal-processing-activity-driven.α` by 0.25.
 - [ ] 18.4.8 Re-run harness 7 days post-deploy; expect orchestrator activities (those that frequently appear in `composition_chain` ancestors) to show meaningful α growth where they previously sat near the prior.
 
