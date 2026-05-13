@@ -1,0 +1,142 @@
+[
+  {
+    "id": "bench-001",
+    "category": "bug-fix",
+    "goal_text": "fix failing tests and verify the activity system is working correctly",
+    "expected_activity_id": "activity:⟨Activity System Verification Test Suite⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-002",
+    "category": "bug-fix",
+    "goal_text": "verify the activity system and check all components are healthy",
+    "expected_activity_id": "activity:⟨Activity System Verification⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-003",
+    "category": "bug-fix",
+    "goal_text": "fetch data from an API endpoint and validate the JSON response format",
+    "expected_activity_id": "activity:⟨API Fetch and Validate JSON⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-004",
+    "category": "bug-fix",
+    "goal_text": "fetch data from an API and save the results to a file",
+    "expected_activity_id": "activity:⟨API Data Fetch and Save⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-005",
+    "category": "bug-fix",
+    "goal_text": "fetch data from an external API with fallback handling if the primary source fails",
+    "expected_activity_id": "activity:⟨API Data Fetcher with Fallbacks⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-006",
+    "category": "bug-fix",
+    "goal_text": "fetch and retrieve data from a remote API endpoint",
+    "expected_activity_id": "activity:⟨API Data Fetcher⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-007",
+    "category": "bug-fix",
+    "goal_text": "analyse application execution traces to find performance bottlenecks and optimization opportunities",
+    "expected_activity_id": "activity:⟨Application Trace Analysis and Optimization⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-008",
+    "category": "bug-fix",
+    "goal_text": "run a comprehensive analysis of application traces to identify issues",
+    "expected_activity_id": "activity:⟨Comprehensive Application Trace Analysis⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-009",
+    "category": "feature-add",
+    "goal_text": "perform a code review of recent changes using an LLM to identify bugs and improvements",
+    "expected_activity_id": "activity:⟨Advanced LLM Code Review Script⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-010",
+    "category": "feature-add",
+    "goal_text": "run a comprehensive LLM-powered code review across the repository",
+    "expected_activity_id": "activity:⟨Comprehensive LLM Code Review Script⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-011",
+    "category": "feature-add",
+    "goal_text": "query the backend to generate a report of activity execution metrics and performance data",
+    "expected_activity_id": "activity:⟨Backend Activity Metrics Query⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-012",
+    "category": "feature-add",
+    "goal_text": "generate a report summarising activity metrics including success rates and execution counts",
+    "expected_activity_id": "activity:⟨Activity Metrics Report Generator⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-013",
+    "category": "feature-add",
+    "goal_text": "analyse activity performance metrics to identify which templates are performing best",
+    "expected_activity_id": "activity:⟨Analyze Activity Performance Metrics⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-014",
+    "category": "feature-add",
+    "goal_text": "analyse data files to generate improvement recommendations for the system",
+    "expected_activity_id": "activity:⟨Analyze Data Files for Improvement Recommendations⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-015",
+    "category": "refactor",
+    "goal_text": "analyse existing data and generate data-driven recommendations for improving the activity system",
+    "expected_activity_id": "activity:⟨Generate Data-Driven Improvement Recommendations⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-016",
+    "category": "refactor",
+    "goal_text": "analyse activity data and generate actionable improvement recommendations",
+    "expected_activity_id": "activity:⟨Analyze Data for Improvement Recommendations⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-017",
+    "category": "refactor",
+    "goal_text": "fix specification violations found in the dashboard component",
+    "expected_activity_id": "activity:⟨Fix Dashboard Specification Violations⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-018",
+    "category": "refactor",
+    "goal_text": "fetch data from an API with limited tool access and constrained execution",
+    "expected_activity_id": "activity:⟨API Data Fetcher with Limited Tools⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-019",
+    "category": "documentation",
+    "goal_text": "audit activity templates and report which core templates have the highest usage and Thompson scores",
+    "expected_activity_id": "activity:⟨core-activity-audit⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-020",
+    "category": "documentation",
+    "goal_text": "extract reusable patterns from execution traces and promote them to concept templates",
+    "expected_activity_id": "activity:⟨extract-pattern⟩",
+    "seed_impulse_pool": []
+  }
+]
