@@ -107,6 +107,8 @@ const seedRes = await apiPost('/v2/activities/impulse-relevance', {
   present_in_failed: 0,
   absent_in_successful: 0,
   absent_in_failed: 0,
+  was_loaded: true,
+  execution_succeeded: false,
 });
 
 if (seedRes.status >= 400) {
@@ -141,6 +143,7 @@ function buildFailingTrace(runId: number) {
   // receives `trace.tasks`, so input_impulse_ids must live inside
   // `execution_trace.tasks`.
   return {
+    execution_id: `exec-18-3-5-test-${runId}-${Date.now()}`,
     template_id: TEMPLATE_ID,
     variant_id: SEED_VARIANT_ID,
     success: false,
