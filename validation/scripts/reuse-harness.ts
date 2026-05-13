@@ -593,7 +593,8 @@ async function main() {
   // Write report
   await mkdir(resultsDir, { recursive: true });
   const isoDate = runAt.slice(0, 10);
-  const outputPath = join(resultsDir, `${isoDate}-reuse-report.json`);
+  const labelSlug = report.label ? `-${report.label.replace(/[^a-z0-9]+/gi, '-')}` : '';
+  const outputPath = join(resultsDir, `${isoDate}${labelSlug}-reuse-report.json`);
   await writeFile(outputPath, JSON.stringify(report, null, 2), "utf8");
   console.log(`\nReport written to: ${outputPath}\n`);
 }

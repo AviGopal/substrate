@@ -1,10 +1,10 @@
 {
-  "run_at": "2026-05-13T05:53:01.335Z",
-  "label": "post-tags-fts-baseline",
-  "mrr": 0.10416666666666666,
+  "run_at": "2026-05-13T07:02:53.358Z",
+  "label": "post-tags-fts-24h",
+  "mrr": 0.06666666666666667,
   "hit_at_1": 0.05,
-  "hit_at_3": 0.15,
-  "hit_at_5": 0.2,
+  "hit_at_3": 0.1,
+  "hit_at_5": 0.1,
   "entries": [
     {
       "id": "bench-001",
@@ -54,9 +54,9 @@
     {
       "id": "bench-006",
       "category": "bug-fix",
-      "rank": 2,
-      "rr": 0.5,
-      "found": true,
+      "rank": 0,
+      "rr": 0,
+      "found": false,
       "goal_text": "fetch and retrieve data from a remote API endpoint",
       "expected_activity_id": "activity:⟨API Data Fetcher⟩"
     },
@@ -162,9 +162,9 @@
     {
       "id": "bench-018",
       "category": "refactor",
-      "rank": 4,
-      "rr": 0.25,
-      "found": true,
+      "rank": 0,
+      "rr": 0,
+      "found": false,
       "goal_text": "fetch data from an API with limited tool access and constrained execution",
       "expected_activity_id": "activity:⟨API Data Fetcher with Limited Tools⟩"
     },
@@ -198,17 +198,8 @@
       "ci_width": 0.35457734122345
     },
     {
-      "activity_id": "activity:⟨Advanced LLM Code Review Script⟩",
-      "name": "Advanced LLM Code Review Script",
-      "alpha": 9,
-      "beta": 1,
-      "ev": 0.9,
-      "total_executions": 8,
-      "ci_width": 0.35457734122345
-    },
-    {
-      "activity_id": "activity:⟨Comprehensive LLM Code Review Script⟩",
-      "name": "Comprehensive LLM Code Review Script",
+      "activity_id": "activity:⟨Dashboard Specification Validation⟩",
+      "name": "Dashboard Specification Validation",
       "alpha": 9,
       "beta": 1,
       "ev": 0.9,
@@ -225,8 +216,8 @@
       "ci_width": 0.38957273207996335
     },
     {
-      "activity_id": "activity:⟨Application Trace Analysis and Optimization⟩",
-      "name": "Application Trace Analysis and Optimization",
+      "activity_id": "activity:⟨Backend Activity Metrics Reporter⟩",
+      "name": "Backend Activity Metrics Reporter",
       "alpha": 8,
       "beta": 1,
       "ev": 0.8888888888888888,
@@ -243,8 +234,44 @@
       "ci_width": 0.38957273207996335
     },
     {
-      "activity_id": "activity:⟨Activity System Verification⟩",
-      "name": "Activity System Verification",
+      "activity_id": "activity:⟨Git Repository Development Metrics Analysis⟩",
+      "name": "Git Repository Development Metrics Analysis",
+      "alpha": 8,
+      "beta": 1,
+      "ev": 0.8888888888888888,
+      "total_executions": 7,
+      "ci_width": 0.38957273207996335
+    },
+    {
+      "activity_id": "activity:⟨Run Lint Checker⟩",
+      "name": "Run Lint Checker",
+      "alpha": 8,
+      "beta": 1,
+      "ev": 0.8888888888888888,
+      "total_executions": 7,
+      "ci_width": 0.38957273207996335
+    },
+    {
+      "activity_id": "activity:⟨startup:template-sync⟩",
+      "name": "Startup: Sync Embedded Templates",
+      "alpha": 7,
+      "beta": 1,
+      "ev": 0.875,
+      "total_executions": 6,
+      "ci_width": 0.4321393808072165
+    },
+    {
+      "activity_id": "activity:goal_processing_standard",
+      "name": "Goal Processing (Standard)",
+      "alpha": 7,
+      "beta": 1,
+      "ev": 0.875,
+      "total_executions": 6,
+      "ci_width": 0.4321393808072165
+    },
+    {
+      "activity_id": "activity:⟨Analyze Workflow Ecosystem Health⟩",
+      "name": "Analyze Workflow Ecosystem Health",
       "alpha": 6,
       "beta": 1,
       "ev": 0.8571428571428571,
@@ -252,17 +279,8 @@
       "ci_width": 0.48497422611928565
     },
     {
-      "activity_id": "activity:⟨Activity System Verification Test Suite⟩",
-      "name": "Activity System Verification Test Suite",
-      "alpha": 6,
-      "beta": 1,
-      "ev": 0.8571428571428571,
-      "total_executions": 5,
-      "ci_width": 0.48497422611928565
-    },
-    {
-      "activity_id": "activity:⟨API Fetch and Validate JSON⟩",
-      "name": "API Fetch and Validate JSON",
+      "activity_id": "activity:⟨Analyze System Health and Performance Issues⟩",
+      "name": "Analyze System Health and Performance Issues",
       "alpha": 5,
       "beta": 1,
       "ev": 0.8333333333333334,
@@ -270,8 +288,17 @@
       "ci_width": 0.5521674464226308
     },
     {
-      "activity_id": "activity:⟨Analyze Activity Performance Metrics⟩",
-      "name": "Analyze Activity Performance Metrics",
+      "activity_id": "activity:⟨Analyze Workflow Health Data⟩",
+      "name": "Analyze Workflow Health Data",
+      "alpha": 5,
+      "beta": 1,
+      "ev": 0.8333333333333334,
+      "total_executions": 4,
+      "ci_width": 0.5521674464226308
+    },
+    {
+      "activity_id": "activity:⟨Analyze Workflow Health Metrics⟩",
+      "name": "Analyze Workflow Health Metrics",
       "alpha": 5,
       "beta": 1,
       "ev": 0.8333333333333334,
@@ -281,24 +308,6 @@
     {
       "activity_id": "activity:⟨Analyze Data Files for Improvement Recommendations⟩",
       "name": "Analyze Data Files for Improvement Recommendations",
-      "alpha": 4,
-      "beta": 1,
-      "ev": 0.8,
-      "total_executions": 3,
-      "ci_width": 0.6401333194473372
-    },
-    {
-      "activity_id": "activity:⟨Analyze Data for Improvement Recommendations⟩",
-      "name": "Analyze Data for Improvement Recommendations",
-      "alpha": 4,
-      "beta": 1,
-      "ev": 0.8,
-      "total_executions": 3,
-      "ci_width": 0.6401333194473372
-    },
-    {
-      "activity_id": "activity:⟨Fix Dashboard Specification Violations⟩",
-      "name": "Fix Dashboard Specification Violations",
       "alpha": 4,
       "beta": 1,
       "ev": 0.8,
@@ -333,8 +342,8 @@
       "ci_width": 1.1316065276116665
     },
     {
-      "activity_id": "activity:⟨API Data Fetcher with Fallbacks⟩",
-      "name": "API Data Fetcher with Fallbacks",
+      "activity_id": "activity:⟨API Data Fetcher with Validation⟩",
+      "name": "API Data Fetcher with Validation",
       "alpha": 1,
       "beta": 1,
       "ev": 0.5,
@@ -342,8 +351,8 @@
       "ci_width": 1.1316065276116665
     },
     {
-      "activity_id": "activity:⟨API Data Fetcher with Limited Tools⟩",
-      "name": "API Data Fetcher with Limited Tools",
+      "activity_id": "activity:⟨API Metrics Fetch and Save⟩",
+      "name": "API Metrics Fetch and Save",
       "alpha": 1,
       "beta": 1,
       "ev": 0.5,
