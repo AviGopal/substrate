@@ -61,3 +61,7 @@
 	path = repos/metabob-mcp
 	url = git@github.com:MetabobProject/metabob-mcp.git
 	branch = dev
+[submodule "repos/cpg-inference-ts"]
+	path = repos/cpg-inference-ts
+	url = git@github.com:MetabobProject/cpg-inference-ts.git
+	branch = main
