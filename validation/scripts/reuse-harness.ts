@@ -15,7 +15,7 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, dirname } from "node:path";
+import { join, dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
 
@@ -112,6 +112,7 @@ interface ReuseReport {
   run_at: string;
   label: string;
   mrr: number;
+  recommend_mrr?: number;
   hit_at_1: number;
   hit_at_3: number;
   hit_at_5: number;
@@ -588,7 +589,7 @@ async function main() {
       baseline: { type: "string", default: "" },
       limit: { type: "string", short: "n", default: "20" },
       label: { type: "string", default: "" },
-      benchmark: { type: "string", default: "v1" },
+      benchmark: { type: "string", default: "" },
     },
     allowPositionals: false,
   });
@@ -597,25 +598,35 @@ async function main() {
   const limit = parseInt(values.limit ?? "20", 10);
   const label = values.label ?? "";
   const baselineDate = values.baseline ?? "";
-  const benchmarkVersion = values.benchmark ?? "v1";
+  const benchmarkArg = values.benchmark ?? "";
 
   const authHeaders = { Authorization: `ApiKey ${apiKey}` };
 
-  // Locate benchmark file relative to this script
+  // Locate benchmark file: --benchmark accepts a file path OR the legacy "v1"/"v2" shortcuts.
   const scriptDir = dirname(fileURLToPath(import.meta.url));
   const repoRoot = join(scriptDir, "..", "..");
-  const benchmarkFilename = benchmarkVersion === "v2"
-    ? "activity-reuse-benchmark-v2.json"
-    : "activity-reuse-benchmark.json";
-  const benchmarkPath = join(repoRoot, "validation", benchmarkFilename);
   const resultsDir = join(repoRoot, "validation", "results");
+
+  let benchmarkPath: string;
+  let benchmarkVersion: string;
+  if (!benchmarkArg || benchmarkArg === "v1") {
+    benchmarkPath = join(repoRoot, "validation", "activity-reuse-benchmark.json");
+    benchmarkVersion = "v1";
+  } else if (benchmarkArg === "v2") {
+    benchmarkPath = join(repoRoot, "validation", "activity-reuse-benchmark-v2.json");
+    benchmarkVersion = "v2";
+  } else {
+    // Treat as explicit file path (absolute or relative to CWD)
+    benchmarkPath = resolve(benchmarkArg);
+    benchmarkVersion = "custom";
+  }
 
   if (!existsSync(benchmarkPath)) {
     throw new Error(`Benchmark file not found: ${benchmarkPath}`);
   }
 
   const benchmarkEntries = JSON.parse(await readFile(benchmarkPath, "utf8")) as BenchmarkEntry[];
-  console.log(`\nBenchmark: ${benchmarkVersion} (${benchmarkFilename})`);
+  console.log(`\nBenchmark: ${benchmarkVersion} (${benchmarkPath})`);
   console.log(`\nLoaded ${benchmarkEntries.length} benchmark entries from ${benchmarkPath}`);
 
   // Load baseline for comparison
@@ -725,6 +736,8 @@ async function main() {
     run_at: runAt,
     label,
     mrr,
+    // recommend_mrr is an alias for mrr (v2 nomenclature; old key preserved for compare-reports.ts compat)
+    recommend_mrr: mrr,
     hit_at_1,
     hit_at_3,
     hit_at_5,

@@ -49,9 +49,15 @@ interface ReuseReport {
   run_at: string;
   label: string;
   mrr: number;
+  recommend_mrr?: number;
   hit_at_1: number;
   hit_at_3: number;
   hit_at_5: number;
+  search_mrr?: number;
+  search_hit_at_1?: number;
+  search_hit_at_3?: number;
+  search_hit_at_5?: number;
+  quadrant_counts?: { A: number; B: number; C: number; D: number };
   entries: EntryResult[];
   thompson_snapshot: ThompsonEntry[];
   trace_stats: TraceStats;
@@ -252,7 +258,50 @@ async function main() {
   }
 
   // ---------------------------------------------------------------------------
-  // Section 4: Unchanged summary
+  // Section 4: Search MRR vs Recommend MRR delta (v2 reports only)
+  // ---------------------------------------------------------------------------
+
+  const bSearchMrr = before.search_mrr;
+  const aSearchMrr = after.search_mrr;
+  const bRecommendMrr = before.recommend_mrr ?? before.mrr;
+  const aRecommendMrr = after.recommend_mrr ?? after.mrr;
+
+  if (aSearchMrr !== undefined || bSearchMrr !== undefined) {
+    console.log(`## Search MRR vs Recommend MRR\n`);
+    console.log(`| Metric | Before | After | Delta | Dir |`);
+    console.log(`|--------|--------|-------|-------|-----|`);
+
+    if (bRecommendMrr !== undefined && aRecommendMrr !== undefined) {
+      console.log(
+        `| recommend_mrr | ${fmt4(bRecommendMrr)} | ${fmt4(aRecommendMrr)} | ${deltaStr(bRecommendMrr, aRecommendMrr)} | ${arrow(bRecommendMrr, aRecommendMrr)} |`
+      );
+    }
+    if (bSearchMrr !== undefined && aSearchMrr !== undefined) {
+      console.log(
+        `| search_mrr    | ${fmt4(bSearchMrr)} | ${fmt4(aSearchMrr)} | ${deltaStr(bSearchMrr, aSearchMrr)} | ${arrow(bSearchMrr, aSearchMrr)} |`
+      );
+      if (aSearchMrr - (bSearchMrr ?? 0) < -0.05) {
+        console.log(`\n⚠  **search_mrr regression**: dropped ${((aSearchMrr - bSearchMrr) * 100).toFixed(1)}pp (threshold: −5pp). Investigate FTS index health.`);
+      }
+    } else if (aSearchMrr !== undefined) {
+      console.log(`| search_mrr    | — | ${fmt4(aSearchMrr)} | new | ▲ |`);
+    }
+
+    // Quadrant counts delta
+    if (before.quadrant_counts && after.quadrant_counts) {
+      const bq = before.quadrant_counts;
+      const aq = after.quadrant_counts;
+      console.log(`\nQuadrant shift:`);
+      console.log(`  A (search✓ recommend✓): ${bq.A} → ${aq.A}  (${aq.A >= bq.A ? "+" : ""}${aq.A - bq.A})`);
+      console.log(`  B (search✓ recommend✗): ${bq.B} → ${aq.B}  (${aq.B >= bq.B ? "+" : ""}${aq.B - bq.B})  ← Thompson burial`);
+      console.log(`  C (search✗ recommend✓): ${bq.C} → ${aq.C}  (${aq.C >= bq.C ? "+" : ""}${aq.C - bq.C})  ← Thompson recovery`);
+      console.log(`  D (search✗ recommend✗): ${bq.D} → ${aq.D}  (${aq.D >= bq.D ? "+" : ""}${aq.D - bq.D})  ← retrieval miss`);
+    }
+    console.log();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Section 5: Summary counts
   // ---------------------------------------------------------------------------
 
   const unchangedCount = after.entries.filter((e) => {
