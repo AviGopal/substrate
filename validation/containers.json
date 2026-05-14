@@ -1,9 +1,9 @@
 {
   "$comment": "Canonical image refs the runner uses. Update these to bump versions.",
   "minibob": {
-    "image": "metabobapp/minibob:0.14.7-fd04fd1",
+    "image": "metabobapp/minibob:0.14.9-d99cd85",
     "default_timeout_seconds": 1200,
-    "$note": "0.14.7-fd04fd1: F-V41 vesselRegistry/vesselEndpoint/vesselHealth direct short-circuit. prev: 0.14.7-8b918d2."
+    "$note": "0.14.9-d99cd85: F-V42 goal_processing_standard fallback in standalone mode. prev: 0.14.8-fbe70e5."
   },
   "claudeCode": {
     "image": "metabob-validation/claude-code:local",

@@ -1,0 +1,202 @@
+[
+  {
+    "id": "v2-bench-001",
+    "category": "meta",
+    "goal_text": "run task validation after each activity step and record failure modes when constraints are not met",
+    "expected_activity_id": "activity:⟨validator-dispatch⟩",
+    "expected_activity_name": "Validator Dispatch (validators-and-failure-modes)",
+    "search_query": "validator dispatch failure mode",
+    "tags": ["meta", "validator", "failure-mode", "lifecycle"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-002",
+    "category": "infrastructure",
+    "goal_text": "resolve a user-stated development goal by selecting and sequencing the right activities",
+    "expected_activity_id": "activity:_goal_resolve",
+    "expected_activity_name": "Goal Resolve",
+    "search_query": "goal resolve activity selection",
+    "tags": ["goal", "resolver", "orchestration"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-003",
+    "category": "meta",
+    "goal_text": "audit the activity template registry and rank templates by execution count and Thompson score",
+    "expected_activity_id": "activity:⟨core-activity-audit⟩",
+    "expected_activity_name": "Core Activity Audit",
+    "search_query": "activity audit registry quality",
+    "tags": ["meta", "audit", "registry", "thompson"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-004",
+    "category": "infrastructure",
+    "goal_text": "verify that the lifecycle event hooks and learning loop are firing correctly end to end",
+    "expected_activity_id": "activity:⟨Lifecycle and Learning Loop Verification⟩",
+    "expected_activity_name": "Lifecycle and Learning Loop Verification",
+    "search_query": "lifecycle learning loop verification",
+    "tags": ["lifecycle", "learning-loop", "verification", "integration"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-005",
+    "category": "infrastructure",
+    "goal_text": "check that all system components are healthy and responding correctly at startup",
+    "expected_activity_id": "activity:⟨startup:health-check⟩",
+    "expected_activity_name": "Startup Health Check",
+    "search_query": "startup health check components",
+    "tags": ["infrastructure", "health", "startup"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-006",
+    "category": "meta",
+    "goal_text": "execute a task using broad tool access when no specific activity template matches the goal",
+    "expected_activity_id": "activity:improvise",
+    "expected_activity_name": "Improvise (broad-tool fallback)",
+    "search_query": "improvise fallback broad tool",
+    "tags": ["fallback", "improvise", "tool"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-007",
+    "category": "meta",
+    "goal_text": "convert a written specification document into a concrete enforcement activity template",
+    "expected_activity_id": "activity:⟨spec-to-enforcement-activity⟩",
+    "expected_activity_name": "Spec to Enforcement Activity",
+    "search_query": "spec enforcement activity conversion",
+    "tags": ["meta", "spec", "enforcement", "template"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-008",
+    "category": "meta",
+    "goal_text": "create a new reusable activity template from a description of the desired behaviour",
+    "expected_activity_id": "activity:⟨make-activity⟩",
+    "expected_activity_name": "Make Activity (meta-activity-builder)",
+    "search_query": "make activity template builder",
+    "tags": ["meta", "make-activity", "builder", "template-creation"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-009",
+    "category": "meta",
+    "goal_text": "extract a reusable template from a successful execution trace using the lifecycle extraction hook",
+    "expected_activity_id": "activity:⟨ribosome-extract⟩",
+    "expected_activity_name": "Ribosome Extract (lifecycle-driven template extraction)",
+    "search_query": "ribosome extract template lifecycle",
+    "tags": ["meta", "ribosome", "template-extraction", "lifecycle"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-010",
+    "category": "meta",
+    "goal_text": "bind input shapes to available impulse producers before a task begins executing",
+    "expected_activity_id": "activity:⟨slot-binding⟩",
+    "expected_activity_name": "Slot Binding (impulse-binding-selection-layer)",
+    "search_query": "slot binding impulse selection",
+    "tags": ["meta", "slot-binding", "impulse", "selection-layer"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-011",
+    "category": "infrastructure",
+    "goal_text": "run a full system check to confirm the lifecycle hooks, activity execution, and learning loop are all operational",
+    "expected_activity_id": "activity:⟨System Lifecycle and Learning Loop Verification⟩",
+    "expected_activity_name": "System Lifecycle and Learning Loop Verification",
+    "search_query": "system lifecycle verification operational",
+    "tags": ["infrastructure", "system", "lifecycle", "verification"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-012",
+    "category": "infrastructure",
+    "goal_text": "run a complete cycle of activity improvement from audit through to replacement and verification",
+    "expected_activity_id": "activity:⟨Complete Activity Improvement Cycle⟩",
+    "expected_activity_name": "Complete Activity Improvement Cycle",
+    "search_query": "activity improvement cycle complete",
+    "tags": ["infrastructure", "improvement-cycle", "audit", "replacement"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-013",
+    "category": "meta",
+    "goal_text": "iteratively improve a specific activity template through repeated evaluation and refinement",
+    "expected_activity_id": "activity:⟨Activity Improvement Loop⟩",
+    "expected_activity_name": "Activity Improvement Loop",
+    "search_query": "activity improvement loop iteration",
+    "tags": ["meta", "improvement", "loop", "refinement"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-014",
+    "category": "meta",
+    "goal_text": "migrate an activity that uses enforcement-style constraints to use the new validation framework",
+    "expected_activity_id": "activity:⟨enforcement-to-validation-activity⟩",
+    "expected_activity_name": "Enforcement to Validation Activity",
+    "search_query": "enforcement validation migration activity",
+    "tags": ["meta", "enforcement", "validation", "migration"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-015",
+    "category": "tool",
+    "goal_text": "present a list of available activities and let a user interactively select which one to run",
+    "expected_activity_id": "activity:⟨interactive-activity-selector⟩",
+    "expected_activity_name": "Interactive Activity Selector",
+    "search_query": "interactive activity selector tool",
+    "tags": ["tool", "interactive", "selector"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-016",
+    "category": "meta",
+    "goal_text": "replace an underperforming activity template in the registry with a better variant",
+    "expected_activity_id": "activity:⟨replace-activity⟩",
+    "expected_activity_name": "Replace Activity (registry-quality)",
+    "search_query": "replace activity registry quality",
+    "tags": ["meta", "registry-quality", "replace", "variant"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-017",
+    "category": "meta",
+    "goal_text": "soft-deprecate low-quality activity templates that have poor Thompson scores and low execution counts",
+    "expected_activity_id": "activity:⟨prune-activity⟩",
+    "expected_activity_name": "Prune Activity (registry-quality)",
+    "search_query": "prune deprecate activity registry",
+    "tags": ["meta", "registry-quality", "prune", "deprecate"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-018",
+    "category": "infrastructure",
+    "goal_text": "create a mapping between system components and their corresponding validation activities",
+    "expected_activity_id": "activity:⟨map-components-to-validations⟩",
+    "expected_activity_name": "Map Components to Validations",
+    "search_query": "map components validations infrastructure",
+    "tags": ["infrastructure", "components", "validation", "mapping"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-019",
+    "category": "infrastructure",
+    "goal_text": "run a continuous validation loop that checks spec compliance and reports failures",
+    "expected_activity_id": "activity:⟨spec-validation-loop⟩",
+    "expected_activity_name": "Spec Validation Loop",
+    "search_query": "spec validation loop compliance",
+    "tags": ["infrastructure", "spec", "validation", "loop"],
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "v2-bench-020",
+    "category": "meta",
+    "goal_text": "scan activity templates for missing semantic markers and backfill tags and descriptions",
+    "expected_activity_id": "activity:⟨audit-and-backfill-templates⟩",
+    "expected_activity_name": "Audit and Backfill Template Semantic Markers",
+    "search_query": "audit backfill templates semantic tags",
+    "tags": ["meta", "audit", "backfill", "semantic", "tags"],
+    "seed_impulse_pool": []
+  }
+]

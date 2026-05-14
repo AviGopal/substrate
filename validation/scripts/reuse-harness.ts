@@ -482,6 +482,7 @@ async function main() {
       baseline: { type: "string", default: "" },
       limit: { type: "string", short: "n", default: "20" },
       label: { type: "string", default: "" },
+      benchmark: { type: "string", default: "v1" },
     },
     allowPositionals: false,
   });
@@ -490,13 +491,17 @@ async function main() {
   const limit = parseInt(values.limit ?? "20", 10);
   const label = values.label ?? "";
   const baselineDate = values.baseline ?? "";
+  const benchmarkVersion = values.benchmark ?? "v1";
 
   const authHeaders = { Authorization: `ApiKey ${apiKey}` };
 
   // Locate benchmark file relative to this script
   const scriptDir = dirname(fileURLToPath(import.meta.url));
   const repoRoot = join(scriptDir, "..", "..");
-  const benchmarkPath = join(repoRoot, "validation", "activity-reuse-benchmark.json");
+  const benchmarkFilename = benchmarkVersion === "v2"
+    ? "activity-reuse-benchmark-v2.json"
+    : "activity-reuse-benchmark.json";
+  const benchmarkPath = join(repoRoot, "validation", benchmarkFilename);
   const resultsDir = join(repoRoot, "validation", "results");
 
   if (!existsSync(benchmarkPath)) {
@@ -504,6 +509,7 @@ async function main() {
   }
 
   const benchmarkEntries = JSON.parse(await readFile(benchmarkPath, "utf8")) as BenchmarkEntry[];
+  console.log(`\nBenchmark: ${benchmarkVersion} (${benchmarkFilename})`);
   console.log(`\nLoaded ${benchmarkEntries.length} benchmark entries from ${benchmarkPath}`);
 
   // Load baseline for comparison
@@ -594,7 +600,8 @@ async function main() {
   await mkdir(resultsDir, { recursive: true });
   const isoDate = runAt.slice(0, 10);
   const labelSlug = report.label ? `-${report.label.replace(/[^a-z0-9]+/gi, '-')}` : '';
-  const outputPath = join(resultsDir, `${isoDate}${labelSlug}-reuse-report.json`);
+  const benchSlug = benchmarkVersion !== "v1" ? `-${benchmarkVersion}` : '';
+  const outputPath = join(resultsDir, `${isoDate}${labelSlug}${benchSlug}-reuse-report.json`);
   await writeFile(outputPath, JSON.stringify(report, null, 2), "utf8");
   console.log(`\nReport written to: ${outputPath}\n`);
 }
