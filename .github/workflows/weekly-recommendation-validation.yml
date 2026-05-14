@@ -1,0 +1,35 @@
+name: Weekly Recommendation Validation
+
+on:
+  schedule:
+    # Every Monday at 09:00 UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Recommendation quality gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Run weekly harness
+        env:
+          METABOB_API_KEY: ${{ secrets.METABOB_API_KEY_VALIDATION }}
+          LABEL: weekly-ci-${{ github.run_number }}
+        run: bash validation/scripts/run-weekly-harness.sh
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reuse-report-${{ github.run_number }}
+          path: validation/results/*-reuse-report.json
+          retention-days: 90

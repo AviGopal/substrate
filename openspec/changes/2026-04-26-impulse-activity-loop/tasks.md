@@ -1047,18 +1047,18 @@ Phase 19 has no code dependencies beyond the Phase 18 harness already deployed. 
 
 ### 19.4 Behavioral validation metrics (V2.4)
 
-- [ ] 19.4.1 (T4.1) **Improvise health** — from 200-trace window, filter improvise traces, compute `success_rate` and `ribosome_activation_rate` (ribosome/extract child via `composition_chain` or `parent_execution_id`; up to 5 extra API calls for fallback). Report `null` not `0` when no improvise traces in window.
-- [ ] 19.4.2 (T4.2) **Resolver coverage** — sample up to 10 full traces (via `GET /execution-traces/:id`; list endpoint omits `tasks[]`). Compute `llm_tier_rate`, `deterministic_rate`, `pattern_rate`, `top_resolvers` (top-10 by frequency). Costs ≤10 extra API calls.
-- [ ] 19.4.3 (T4.3) **Reuse trajectory** — from 200-trace window + Thompson snapshot (already fetched): `reuse_rate` = traces with `activity_id` in Thompson snapshot and not improvise / total. `composition_depth_distribution` (4-bucket: 0/1/2/3+). `mean_composition_depth`. Zero extra API calls.
-- [ ] 19.4.4 (T4.4) **Recommendation executability** (`--detailed` flag) — fetch template detail for top recommendation per entry; compute `executability_score = ev*0.5 + has_output_shapes*0.3 + has_det_task*0.2`. Default mode: report `mean_ev` only (no score). ≤20 extra API calls when detailed.
-- [ ] 19.4.5 (T4.5) Extend `printSummary` with behavioral health block: improvise health, resolver coverage (with `llm_tier_rate` annotated "↓ is good"), reuse trajectory (`reuse_rate` annotated "↑ is good").
-- [ ] 19.4.6 (T4.6) Extend `compare-reports.ts` with behavioral delta section: `success_rate`, `llm_tier_rate`, `reuse_rate`, `mean_composition_depth` with directional annotations.
+- [x] 19.4.1 (T4.1) ✅ **DONE** 2026-05-14. `captureImproviseHealth()` in reuse-harness.ts filters improvise traces from 200-trace window, computes success_rate + ribosome_activation_rate (up to 5 parent_execution_id child fetches). Reports null when no improvise traces.
+- [x] 19.4.2 (T4.2) ✅ **DONE** 2026-05-14. `captureResolverCoverage()` samples up to 10 full traces via GET /execution-traces/:id. Computes llm/det/pat tier rates + top-10 resolver frequency. ≤10 extra API calls.
+- [x] 19.4.3 (T4.3) ✅ **DONE** 2026-05-14. `computeReuseTrajectory()` computes reuse_rate (known-template non-improvise fraction) + 4-bucket composition_depth_distribution + mean_composition_depth. Zero extra calls.
+- [x] 19.4.4 (T4.4) ✅ **DONE** 2026-05-14. `computeExecutabilityScores()` with `--detailed` flag fetches template detail, scores ev*0.5 + has_output_shapes*0.3 + has_det_task*0.2. Default mode reports mean_ev only. ≤20 extra calls when detailed.
+- [x] 19.4.5 (T4.5) ✅ **DONE** 2026-05-14. `printSummary` behavioral health block added: improvise health, resolver coverage (llm_tier_rate ↓ is good), reuse trajectory (reuse_rate ↑ is good).
+- [x] 19.4.6 (T4.6) ✅ **DONE** 2026-05-14. `compare-reports.ts` Section 5 "Behavioral Health Delta": improvise_success_rate, ribosome_activation_rate, llm_tier_rate (↓ good), reuse_rate (↑ good), mean_composition_depth. Commit d9e22fdf.
 
 ### 19.5 Weekly CI integration (V2.3)
 
-- [ ] 19.5.1 (T3.1) `validation/scripts/run-weekly-harness.sh` — runs harness with v2 benchmark, compares vs prior report, exits non-zero if MRR regressed >10%. Path: `$(dirname "$0")/../activity-reuse-benchmark-v2.json` (one level up from `scripts/`).
-- [ ] 19.5.2 (T3.2) `.github/workflows/weekly-recommendation-validation.yml` — Monday 09:00 UTC cron + `workflow_dispatch`. Uses `METABOB_API_KEY_VALIDATION` secret. Uploads report artifact (`if: always()`).
-- [ ] 19.5.3 (T3.3) Document `METABOB_API_KEY_VALIDATION` in `repos/deployment/DEPLOYMENT_WORKFLOW.md` with provisioning and rotation instructions.
+- [x] 19.5.1 (T3.1) ✅ **DONE** 2026-05-14. `validation/scripts/run-weekly-harness.sh` — runs v2 benchmark via reuse-harness.ts, finds most recent prior report, calls compare-reports.ts, exits 1 on recommend_mrr regression >10% or search_mrr drop >0.05, exits 2 (no prior) on first run.
+- [x] 19.5.2 (T3.2) ✅ **DONE** 2026-05-14. `.github/workflows/weekly-recommendation-validation.yml` — Monday 09:00 UTC + workflow_dispatch; uses METABOB_API_KEY_VALIDATION secret; uploads *-reuse-report.json artifact (90-day retention, if: always()).
+- [x] 19.5.3 (T3.3) ✅ **DONE** 2026-05-14. `repos/deployment/DEPLOYMENT_WORKFLOW.md` — METABOB_API_KEY_VALIDATION row added to Secrets table with provisioning (identity-vessel key issue), rotation, and workflow description.
 
 ### Stop conditions
 
