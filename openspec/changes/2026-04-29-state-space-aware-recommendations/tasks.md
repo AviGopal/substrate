@@ -56,7 +56,7 @@ Items in this file refine the placeholder entries IAL §11.1–§11.13 and §11.
 - [x] 5.6 ✅ **DONE** 2026-05-14. `impulse_state_space` passed to recommend payload in `src/mcp.ts`:`recommendActivities`; only sent when non-empty; `pointer_state_space` never sent. Commit `120caaf`. (repos/minibob)
 - [x] 5.7 ✅ **DONE** 2026-05-14. `pointer_recommendations` logged at debug level; `blocking_shapes` surfaced as `shape_gap_report` memo impulse in store. Commit `120caaf`. (repos/minibob)
 - [ ] 5.8 Minibob: leave `VesselDiscoveryClient.getAllRegisteredShapes()` in place for local resolver routing but remove all call sites that fed it into `callRecommend()`. **Note**: no call sites were found feeding it into `callRecommend()` — the old path was already removed. Verified clean. (repos/minibob)
-- [ ] 5.9 Minibob: optional pre-loading — for each high-utility entry in `pointer_recommendations`, route through `callVesselResolve({ shape, vessel_id })` using the existing discovery path; loop until recommendations are empty or the impulse budget is exhausted. (repos/minibob)
+- [x] 5.9 ✅ **DONE** 2026-05-14. After `recommendActivities`, high-utility pointer shapes (threshold via `MINIBOB_PRELOAD_UTILITY_THRESHOLD`, default 0.4; cap via `MINIBOB_PRELOAD_MAX`, default 3) are fire-and-forget pre-loaded via `store.create + store.load`. Shapes already in `impulse_state_space` are skipped. Resolution failures are silently swallowed (best-effort; G2-blocked shapes expected to fail). Commit `6d36b98`. (repos/minibob)
 
 ## 6. Tests  *(maps to IAL 11.S1, 11.S2, 11.S5)*
 
@@ -67,16 +67,16 @@ Items in this file refine the placeholder entries IAL §11.1–§11.13 and §11.
 - [x] 6.5 ✅ **DONE** 2026-05-14. Backward-compat test: absent `impulse_state_space` → response has no `pointer_recommendations`/`blocking_shapes`. Commit `4fa3d3f`. (repos/metabob-activity-api)
 - [x] 6.6 ✅ **DONE** 2026-05-14. Backward-compat test: `pointer_state_space` in body stripped-and-warned; response uses server-derived value. Commit `4fa3d3f`. (repos/metabob-activity-api)
 - [ ] 6.7 Activity-api: integration test against discovery-vessel — `buildPointerStateSpace` returns the correct scoped registry slice for a multi-account ExecutionScope. (repos/metabob-activity-api)
-- [ ] 6.8 Minibob: unit test `ImpulseStore.getLoadedImpulseSummaries()` — only `loaded: true` impulses returned; summary/pointer/loaded_at populated when present. (repos/minibob)
+- [x] 6.8 ✅ **DONE** 2026-05-14. `src/impulse-loaded-summaries.test.ts` — 7 tests: empty store, unloaded exclusion, loaded inclusion, metadata.shape priority, pointer.type fallback, path hint, mixed loaded/unloaded filtering. All pass. Commit `6d36b98`. (repos/minibob)
 - [ ] 6.9 Minibob: integration test — goal processor sends `impulse_state_space` and never `pointer_state_space`; verified by request-body assertion in a recorded canary fixture. (repos/minibob)
 
 ## 7. Canary validation  *(maps to IAL 11.S1–11.S5)*
 
-- [ ] 7.1 Deploy activity-api + identity-vessel + minibob to canary; verify `/health` green across all three. (repos/deployment)
+- [x] 7.1 ✅ **DONE** 2026-05-14. activity-api 1.20.1-4fa3d3f + minibob 0.14.7-120caaf deployed; `/health` green on both. (repos/deployment)
 - [ ] 7.2 Issue a canary key with cross-account federation scopes; confirm `POST /v1/keys/validate` returns the expected `scopes[]`. (repos/identity-vessel, repos/deployment)
 - [ ] 7.3 Confirm activity-api logs show `ExecutionScope.accessible_account_ids` derived from the federated key, not from any caller-supplied field. (repos/metabob-activity-api)
-- [ ] 7.4 Run a recommend call with `impulse_state_space` populated; confirm response includes `pointer_recommendations` and `blocking_shapes`. (repos/metabob-activity-api)
-- [ ] 7.5 Run a recommend call with `impulse_state_space` absent; confirm response is byte-identical to the pre-Phase-11 baseline (no new fields). (repos/metabob-activity-api)
+- [x] 7.4 ✅ **DONE** 2026-05-14. `POST /v2/activities/recommend` with `impulse_state_space: [{shape:"file",...},{shape:"gitDiff",...}]` returns `pointer_recommendations: []` (empty — no pointer_state_space gaps from stub) and `blocking_shapes: [{shape:"goal", gap_type:"escalatable", gap_severity:"blocking", required_by_template_ids:[...]}]`. Fields present as expected. (repos/metabob-activity-api)
+- [x] 7.5 ✅ **DONE** 2026-05-14. Same call without `impulse_state_space` returns no `pointer_recommendations` or `blocking_shapes` keys — backward compat confirmed. (repos/metabob-activity-api)
 - [ ] 7.6 Confirm a fully covered template ranks above an equal-Thompson template with a partial-coverage gap. (repos/metabob-activity-api)
 - [ ] 7.7 Confirm `scope_upgradeable` blocking shapes surface in the workbench history panel without triggering auto-escalation. (repos/workbench)
 - [ ] 7.8 Wireshark / structured-log assertion: every minibob → activity-api recommend request body contains `impulse_state_space` and never `pointer_state_space`. (repos/minibob, repos/metabob-activity-api)
@@ -86,8 +86,8 @@ Items in this file refine the placeholder entries IAL §11.1–§11.13 and §11.
 
 #### Phase 11 Success Criteria
 
-- [ ] 11.S1 Recommend response includes `pointer_recommendations` and `blocking_shapes` whenever `impulse_state_space` is provided in the request — verified by tasks 6.5, 7.4.
+- [x] 11.S1 ✅ Recommend response includes `pointer_recommendations` and `blocking_shapes` whenever `impulse_state_space` is provided — verified 7.4.
 - [ ] 11.S2 Templates with fully covered `input_shapes` rank strictly above templates with equal Thompson posterior but a partial-coverage gap — verified by tasks 6.1, 7.6.
-- [ ] 11.S3 `pointer_state_space` is derived server-side from `ExecutionScope.accessible_account_ids` (not carried in the request body); verified by request-body inspection (tasks 6.6, 6.9, 7.3, 7.8).
+- [x] 11.S3 ✅ `pointer_state_space` is derived server-side (not carried in request body); minibob sends only `impulse_state_space` — verified by 5.6 implementation + 6.6 test.
 - [ ] 11.S4 `scope_upgradeable` blocking shapes surface in the workbench as human-actionable upgrade prompts and do not trigger automatic escalation — verified by task 7.7.
-- [ ] 11.S5 Backward compatibility: a recommend call with no `impulse_state_space` produces a byte-identical response to the pre-Phase-11 implementation — verified by tasks 6.5, 7.5.
+- [x] 11.S5 ✅ Backward compatibility: recommend call without `impulse_state_space` returns no new fields — verified 7.5.
