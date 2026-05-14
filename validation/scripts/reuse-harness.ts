@@ -3,7 +3,7 @@
  * reuse-harness.ts — Phase 18.2 MRR validation harness for activity recommendation quality.
  *
  * Usage:
- *   bun run validation/scripts/reuse-harness.ts [--baseline <date>] [--limit <n>] [--label <text>]
+ *   bun run validation/scripts/reuse-harness.ts [--baseline <date>] [--limit <n>] [--label <text>] [--detailed]
  *
  * Reads METABOB_ENDPOINT and METABOB_API_KEY from environment (or ~/.metabob/config.json).
  * Runs each benchmark entry through POST /v2/activities/recommend and measures MRR.
@@ -65,16 +65,60 @@ interface RecommendResponse {
 
 interface ExecutionTrace {
   id?: string;
+  execution_id?: string;
   activity_id?: string;
+  variant_id?: string;
   activity_name?: string;
   success?: boolean;
   goal?: string;
   created_at?: string;
+  composition_chain?: string[];
+  parent_execution_id?: string;
+}
+
+interface FullTaskRecord {
+  id?: string;
+  resolver_id?: string;
+  resolver_tier?: string;
+  resolver?: string;
+}
+
+interface FullTrace {
+  id?: string;
+  execution_id?: string;
+  activity_id?: string;
+  success?: boolean;
+  tasks?: FullTaskRecord[];
+  composition_chain?: string[];
+  parent_execution_id?: string;
 }
 
 interface TracesResponse {
   traces?: ExecutionTrace[];
   data?: ExecutionTrace[];
+  executions?: ExecutionTrace[];
+}
+
+interface FullTraceResponse {
+  trace?: FullTrace;
+  data?: FullTrace;
+  execution?: FullTrace;
+}
+
+interface TemplateResponse {
+  template?: {
+    id?: string;
+    output_shapes?: string[];
+    tasks?: Array<{ resolver?: string; resolver_tier?: string }>;
+  };
+  data?: {
+    id?: string;
+    output_shapes?: string[];
+    tasks?: Array<{ resolver?: string; resolver_tier?: string }>;
+  };
+  id?: string;
+  output_shapes?: string[];
+  tasks?: Array<{ resolver?: string; resolver_tier?: string }>;
 }
 
 interface EntryResult {
@@ -89,6 +133,7 @@ interface EntryResult {
   search_rr?: number;
   search_found?: boolean;
   diagnostic?: "A" | "B" | "C" | "D" | null;
+  executability_score?: number;
 }
 
 interface ThompsonEntry {
@@ -108,6 +153,26 @@ interface TraceStats {
   window_days: number;
 }
 
+interface ImproviseHealth {
+  total_improvise: number;
+  success_rate: number | null;
+  ribosome_activation_rate: number | null;
+}
+
+interface ResolverCoverage {
+  sampled_traces: number;
+  llm_tier_rate: number;
+  deterministic_rate: number;
+  pattern_rate: number;
+  top_resolvers: Array<{ resolver_id: string; count: number }>;
+}
+
+interface ReuseTrajectory {
+  reuse_rate: number;
+  composition_depth_distribution: { d0: number; d1: number; d2: number; d3plus: number };
+  mean_composition_depth: number;
+}
+
 interface ReuseReport {
   run_at: string;
   label: string;
@@ -124,6 +189,9 @@ interface ReuseReport {
   entries: EntryResult[];
   thompson_snapshot: ThompsonEntry[];
   trace_stats: TraceStats;
+  improvise_health?: ImproviseHealth;
+  resolver_coverage?: ResolverCoverage;
+  reuse_trajectory?: ReuseTrajectory;
 }
 
 // ---------------------------------------------------------------------------
@@ -182,8 +250,21 @@ function recId(r: Recommendation): string {
   return r.id ?? r.template_id ?? r.activity_id ?? "";
 }
 
+// Normalize doubled-prefix IDs: activity:⟨activity:⟨slug⟩⟩ → activity:⟨slug⟩
+// Also handles: activity:⟨activity:improvise⟩ → activity:improvise
+// These doubled-prefix forms accumulate from legacy UPSERT paths and the
+// canonical benchmark IDs use the unwrapped form.
+function normalizeId(id: string): string {
+  const m = id.match(/^activity:⟨(activity:[^⟩]*)⟩$/);
+  return m ? m[1] : id;
+}
+
 function recName(r: Recommendation): string {
   return r.name ?? r.template_name ?? r.activity_name ?? "(unknown)";
+}
+
+function isImproviseId(id: string): boolean {
+  return id.toLowerCase().includes("improvise");
 }
 
 // ---------------------------------------------------------------------------
@@ -266,7 +347,7 @@ async function evaluateBenchmark(
     // Find rank of expected activity (1-indexed)
     let rank = 0;
     for (let i = 0; i < recommendations.length; i++) {
-      if (recId(recommendations[i]) === entry.expected_activity_id) {
+      if (normalizeId(recId(recommendations[i])) === normalizeId(entry.expected_activity_id)) {
         rank = i + 1;
         break;
       }
@@ -334,7 +415,7 @@ async function evaluateSearchBenchmark(
 
     let search_rank = 0;
     for (let i = 0; i < templates.length; i++) {
-      if (templates[i].id === entry.expected_activity_id) {
+      if (normalizeId(templates[i].id ?? "") === normalizeId(entry.expected_activity_id)) {
         search_rank = i + 1;
         break;
       }
@@ -421,19 +502,22 @@ async function captureThompsonSnapshot(
 async function captureTraceStats(
   endpoint: string,
   authHeaders: Record<string, string>
-): Promise<TraceStats> {
+): Promise<{ stats: TraceStats; rawTraces: ExecutionTrace[] }> {
   let traces: ExecutionTrace[] = [];
   try {
     const data = await apiGet(
       `${endpoint}/v2/activities/execution-traces?limit=200`,
       authHeaders
     ) as TracesResponse;
-    traces = data.traces ?? data.data ?? [];
+    traces = data.traces ?? data.data ?? data.executions ?? [];
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes("budget exhausted")) throw err;
     console.warn(`  Trace stats query failed: ${msg.slice(0, 80)}`);
-    return { sample_size: 0, improvise_count: 0, improvise_rate: 0, window_days: 7 };
+    return {
+      stats: { sample_size: 0, improvise_count: 0, improvise_rate: 0, window_days: 7 },
+      rawTraces: [],
+    };
   }
 
   // Filter to last 7 days
@@ -450,11 +534,268 @@ async function captureTraceStats(
   }).length;
 
   return {
-    sample_size: recent.length,
-    improvise_count: improviseCount,
-    improvise_rate: recent.length > 0 ? improviseCount / recent.length : 0,
-    window_days: 7,
+    stats: {
+      sample_size: recent.length,
+      improvise_count: improviseCount,
+      improvise_rate: recent.length > 0 ? improviseCount / recent.length : 0,
+      window_days: 7,
+    },
+    rawTraces: recent,
   };
+}
+
+// ---------------------------------------------------------------------------
+// T4.1: Improvise health
+// ---------------------------------------------------------------------------
+
+async function captureImproviseHealth(
+  endpoint: string,
+  authHeaders: Record<string, string>,
+  windowTraces: ExecutionTrace[]
+): Promise<ImproviseHealth> {
+  const improviseTraces = windowTraces.filter((t) => {
+    const aid = (t.activity_id ?? "").toLowerCase();
+    const vid = (t.variant_id ?? "").toLowerCase();
+    return aid.includes("improvise") || vid.includes("improvise");
+  });
+
+  if (improviseTraces.length === 0) {
+    return { total_improvise: 0, success_rate: null, ribosome_activation_rate: null };
+  }
+
+  const successCount = improviseTraces.filter((t) => t.success === true).length;
+  const success_rate = successCount / improviseTraces.length;
+
+  // Check if any trace has parent_execution_id pointing to an improvise trace AND
+  // its own activity_id contains "ribosome" or "extract". Batch: check up to 5 improvise
+  // execution_ids by scanning windowTraces first (free), then fall back to extra API calls.
+  const improviseExecIds = new Set(
+    improviseTraces
+      .map((t) => t.execution_id ?? t.id)
+      .filter((id): id is string => !!id)
+  );
+
+  // Scan window traces for ribosome/extract children — zero extra calls if present
+  let ribosomeActivations = windowTraces.filter((t) => {
+    const parentId = t.parent_execution_id;
+    if (!parentId || !improviseExecIds.has(parentId)) return false;
+    const aid = (t.activity_id ?? "").toLowerCase();
+    return aid.includes("ribosome") || aid.includes("extract");
+  }).length;
+
+  // Up to 5 extra API calls: fetch neighbouring pages to find ribosome children not in window
+  const checkedIds = new Set<string>();
+  let extraCalls = 0;
+  for (const execId of improviseExecIds) {
+    if (extraCalls >= 5 || apiCallCount >= API_CALL_LIMIT - 20) break;
+    checkedIds.add(execId);
+    try {
+      const data = await apiGet(
+        `${endpoint}/v2/activities/execution-traces?parent_execution_id=${encodeURIComponent(execId)}&limit=10`,
+        authHeaders
+      ) as TracesResponse;
+      extraCalls++;
+      const children = data.traces ?? data.data ?? data.executions ?? [];
+      const hasRibosome = children.some((c) => {
+        const aid = (c.activity_id ?? "").toLowerCase();
+        return aid.includes("ribosome") || aid.includes("extract");
+      });
+      if (hasRibosome) ribosomeActivations++;
+    } catch {
+      // non-fatal; partial result is still useful
+    }
+  }
+
+  const ribosome_activation_rate = ribosomeActivations / improviseTraces.length;
+
+  return {
+    total_improvise: improviseTraces.length,
+    success_rate,
+    ribosome_activation_rate,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// T4.2: Resolver coverage — sample up to 10 full traces
+// ---------------------------------------------------------------------------
+
+async function captureResolverCoverage(
+  endpoint: string,
+  authHeaders: Record<string, string>,
+  windowTraces: ExecutionTrace[]
+): Promise<ResolverCoverage> {
+  const toSample = windowTraces.slice(0, 10);
+  const allTasks: FullTaskRecord[] = [];
+  let sampledTraces = 0;
+
+  for (const t of toSample) {
+    const traceId = t.execution_id ?? t.id;
+    if (!traceId) continue;
+    if (apiCallCount >= API_CALL_LIMIT - 25) break;
+
+    try {
+      const raw = await apiGet(
+        `${endpoint}/v2/activities/execution-traces/${encodeURIComponent(traceId)}`,
+        authHeaders
+      ) as FullTraceResponse;
+      const full: FullTrace | undefined = raw.trace ?? raw.data ?? (raw as unknown as FullTrace);
+      if (full?.tasks) {
+        allTasks.push(...full.tasks);
+        sampledTraces++;
+      }
+    } catch {
+      // non-fatal
+    }
+  }
+
+  if (allTasks.length === 0) {
+    return { sampled_traces: sampledTraces, llm_tier_rate: 0, deterministic_rate: 0, pattern_rate: 0, top_resolvers: [] };
+  }
+
+  const total = allTasks.length;
+  let llmCount = 0;
+  let detCount = 0;
+  let patCount = 0;
+  const resolverFreq = new Map<string, number>();
+
+  for (const task of allTasks) {
+    const tier = (task.resolver_tier ?? "").toLowerCase();
+    const resolverId = task.resolver_id ?? task.resolver ?? "unknown";
+
+    if (tier === "llm" || resolverId === "llm") {
+      llmCount++;
+    } else if (tier === "deterministic" || tier === "det") {
+      detCount++;
+    } else if (tier === "pattern") {
+      patCount++;
+    } else {
+      // resolver field without tier: treat non-llm named resolvers as deterministic
+      if (resolverId !== "llm" && resolverId !== "unknown") detCount++;
+    }
+
+    resolverFreq.set(resolverId, (resolverFreq.get(resolverId) ?? 0) + 1);
+  }
+
+  const top_resolvers = Array.from(resolverFreq.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([resolver_id, count]) => ({ resolver_id, count }));
+
+  return {
+    sampled_traces: sampledTraces,
+    llm_tier_rate: llmCount / total,
+    deterministic_rate: detCount / total,
+    pattern_rate: patCount / total,
+    top_resolvers,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// T4.3: Reuse trajectory — no extra API calls
+// ---------------------------------------------------------------------------
+
+function computeReuseTrajectory(
+  windowTraces: ExecutionTrace[],
+  thompsonSnapshot: ThompsonEntry[]
+): ReuseTrajectory {
+  if (windowTraces.length === 0) {
+    return {
+      reuse_rate: 0,
+      composition_depth_distribution: { d0: 0, d1: 0, d2: 0, d3plus: 0 },
+      mean_composition_depth: 0,
+    };
+  }
+
+  const snapshotIds = new Set(thompsonSnapshot.map((t) => normalizeId(t.activity_id)));
+
+  const reuseCount = windowTraces.filter((t) => {
+    const aid = normalizeId(t.activity_id ?? "");
+    return snapshotIds.has(aid) && !isImproviseId(aid);
+  }).length;
+
+  const reuse_rate = reuseCount / windowTraces.length;
+
+  const dist = { d0: 0, d1: 0, d2: 0, d3plus: 0 };
+  let depthSum = 0;
+
+  for (const t of windowTraces) {
+    const depth = (t.composition_chain ?? []).length;
+    depthSum += depth;
+    if (depth === 0) dist.d0++;
+    else if (depth === 1) dist.d1++;
+    else if (depth === 2) dist.d2++;
+    else dist.d3plus++;
+  }
+
+  return {
+    reuse_rate,
+    composition_depth_distribution: dist,
+    mean_composition_depth: depthSum / windowTraces.length,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// T4.4: Recommendation executability (--detailed flag)
+// ---------------------------------------------------------------------------
+
+async function computeExecutabilityScores(
+  entries: EntryResult[],
+  thompsonSnapshot: ThompsonEntry[],
+  endpoint: string,
+  authHeaders: Record<string, string>,
+  detailed: boolean
+): Promise<EntryResult[]> {
+  if (!detailed) {
+    // Default: attach mean_ev from snapshot as executability_score proxy
+    const snapshotById = new Map(thompsonSnapshot.map((t) => [normalizeId(t.activity_id), t]));
+    return entries.map((e) => {
+      const top = e.expected_activity_id ? snapshotById.get(normalizeId(e.expected_activity_id)) : undefined;
+      return top ? { ...e, executability_score: top.ev } : e;
+    });
+  }
+
+  const result: EntryResult[] = [];
+  let extraCalls = 0;
+
+  for (const entry of entries) {
+    if (!entry.found || !entry.expected_activity_id || extraCalls >= 20 || apiCallCount >= API_CALL_LIMIT - 5) {
+      result.push(entry);
+      continue;
+    }
+
+    let templateData: TemplateResponse | null = null;
+    try {
+      const raw = await apiGet(
+        `${endpoint}/v2/activities/templates/${encodeURIComponent(entry.expected_activity_id)}`,
+        authHeaders
+      ) as TemplateResponse;
+      templateData = raw;
+      extraCalls++;
+    } catch {
+      result.push(entry);
+      continue;
+    }
+
+    const tpl = templateData.template ?? templateData.data ?? (templateData as { output_shapes?: string[]; tasks?: Array<{ resolver?: string; resolver_tier?: string }> });
+    const outputShapes = tpl?.output_shapes ?? [];
+    const tasks = tpl?.tasks ?? [];
+
+    // ev from Thompson snapshot
+    const snapshotEntry = thompsonSnapshot.find((t) => normalizeId(t.activity_id) === normalizeId(entry.expected_activity_id ?? ""));
+    const ev = snapshotEntry?.ev ?? 0.5;
+
+    const has_output_shapes = outputShapes.length > 0;
+    const has_det_task = tasks.some((t) => {
+      const tier = (t.resolver_tier ?? "").toLowerCase();
+      const res = (t.resolver ?? "").toLowerCase();
+      return tier !== "llm" && res !== "llm" && (tier !== "" || res !== "");
+    });
+
+    const executability_score = ev * 0.5 + (has_output_shapes ? 0.3 : 0) + (has_det_task ? 0.2 : 0);
+    result.push({ ...entry, executability_score });
+  }
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -543,6 +884,42 @@ function printSummary(
   console.log(`  Sample   : ${ts.sample_size} traces`);
   console.log(`  Improvise: ${ts.improvise_count} (${pct(ts.improvise_rate)})`);
 
+  // T4.5: Behavioral health block
+  console.log(`\nBehavioral health:`);
+
+  const ih = report.improvise_health;
+  if (!ih || ih.total_improvise === 0) {
+    console.log(`  Improvise health  : null (no improvise traces in window)`);
+  } else {
+    const successStr = ih.success_rate !== null ? `${pct(ih.success_rate)} success` : "null";
+    const ribosomeStr = ih.ribosome_activation_rate !== null ? `${pct(ih.ribosome_activation_rate)} ribosome` : "null";
+    console.log(`  Improvise health  : ${ih.total_improvise} traces (${successStr}, ${ribosomeStr})`);
+  }
+
+  const rc = report.resolver_coverage;
+  if (!rc || rc.sampled_traces === 0) {
+    console.log(`  Resolver coverage : no traces sampled`);
+  } else {
+    const topNames = rc.top_resolvers.slice(0, 3).map((r) => r.resolver_id).join(", ");
+    console.log(
+      `  Resolver coverage : llm=${pct(rc.llm_tier_rate)}, det=${pct(rc.deterministic_rate)}, pat=${pct(rc.pattern_rate)}  (top: ${topNames || "none"})  [llm ↓ is good]`
+    );
+  }
+
+  const rt = report.reuse_trajectory;
+  if (!rt) {
+    console.log(`  Reuse trajectory  : unavailable`);
+    console.log(`  LLM tier rate     : unavailable`);
+  } else {
+    console.log(
+      `  Reuse trajectory  : reuse_rate=${pct(rt.reuse_rate)}  (mean_depth=${rt.mean_composition_depth.toFixed(1)})  [↑ is good]`
+    );
+    const llmRate = rc ? rc.llm_tier_rate : null;
+    if (llmRate !== null) {
+      console.log(`  LLM tier rate     : ${pct(llmRate)}  [↓ is good]`);
+    }
+  }
+
   console.log(`\nPer-entry breakdown:`);
   const COL_ID = 12;
   const COL_CAT = 14;
@@ -590,6 +967,7 @@ async function main() {
       limit: { type: "string", short: "n", default: "20" },
       label: { type: "string", default: "" },
       benchmark: { type: "string", default: "" },
+      detailed: { type: "boolean", default: false },
     },
     allowPositionals: false,
   });
@@ -599,6 +977,7 @@ async function main() {
   const label = values.label ?? "";
   const baselineDate = values.baseline ?? "";
   const benchmarkArg = values.benchmark ?? "";
+  const detailed = values.detailed ?? false;
 
   const authHeaders = { Authorization: `ApiKey ${apiKey}` };
 
@@ -674,11 +1053,14 @@ async function main() {
     }
   }
 
-  // Step 3: Trace stats
+  // Step 3: Trace stats (returns raw traces for downstream behavioral metrics)
   console.log(`\nCapturing trace stats...`);
   let traceStats: TraceStats = { sample_size: 0, improvise_count: 0, improvise_rate: 0, window_days: 7 };
+  let windowTraces: ExecutionTrace[] = [];
   try {
-    traceStats = await captureTraceStats(endpoint, authHeaders);
+    const result = await captureTraceStats(endpoint, authHeaders);
+    traceStats = result.stats;
+    windowTraces = result.rawTraces;
     console.log(`  Sampled ${traceStats.sample_size} traces, improvise_rate=${(traceStats.improvise_rate * 100).toFixed(1)}%`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -730,6 +1112,59 @@ async function main() {
     return acc;
   }, { A: 0, B: 0, C: 0, D: 0 });
 
+  // Step 5: T4.1 — Improvise health
+  console.log(`\nCapturing improvise health...`);
+  let improviseHealth: ImproviseHealth | undefined;
+  try {
+    improviseHealth = await captureImproviseHealth(endpoint, authHeaders, windowTraces);
+    console.log(`  Improvise traces: ${improviseHealth.total_improvise}, success_rate=${improviseHealth.success_rate !== null ? (improviseHealth.success_rate * 100).toFixed(1) + "%" : "null"}`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("budget exhausted")) {
+      console.warn(`  Improvise health aborted: ${msg}`);
+    } else {
+      console.warn(`  Improvise health error: ${msg}`);
+    }
+  }
+
+  // Step 6: T4.2 — Resolver coverage
+  console.log(`\nCapturing resolver coverage (sampling up to 10 full traces)...`);
+  let resolverCoverage: ResolverCoverage | undefined;
+  try {
+    resolverCoverage = await captureResolverCoverage(endpoint, authHeaders, windowTraces);
+    console.log(`  Sampled ${resolverCoverage.sampled_traces} full traces, llm_tier_rate=${(resolverCoverage.llm_tier_rate * 100).toFixed(1)}%`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("budget exhausted")) {
+      console.warn(`  Resolver coverage aborted: ${msg}`);
+    } else {
+      console.warn(`  Resolver coverage error: ${msg}`);
+    }
+  }
+
+  // Step 7: T4.3 — Reuse trajectory (no extra API calls)
+  const reuseTrajectory = computeReuseTrajectory(windowTraces, thompsonSnapshot);
+  console.log(`\nReuse trajectory: reuse_rate=${(reuseTrajectory.reuse_rate * 100).toFixed(1)}%, mean_depth=${reuseTrajectory.mean_composition_depth.toFixed(2)}`);
+
+  // Step 8: T4.4 — Executability scores (--detailed triggers template fetches)
+  let enrichedResults = mergedResults;
+  try {
+    enrichedResults = await computeExecutabilityScores(
+      mergedResults,
+      thompsonSnapshot,
+      endpoint,
+      authHeaders,
+      detailed
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("budget exhausted")) {
+      console.warn(`  Executability scoring aborted: ${msg}`);
+    } else {
+      console.warn(`  Executability scoring error: ${msg}`);
+    }
+  }
+
   // Build report
   const runAt = new Date().toISOString();
   const report: ReuseReport = {
@@ -748,7 +1183,7 @@ async function main() {
       search_hit_at_5: searchMetrics.hit_at_5,
       quadrant_counts: quadrantCounts,
     } : {}),
-    entries: mergedResults.map((e) => {
+    entries: enrichedResults.map((e) => {
       const b = benchmarkEntries.find((b) => b.id === e.id);
       return {
         ...e,
@@ -758,6 +1193,9 @@ async function main() {
     }),
     thompson_snapshot: thompsonSnapshot,
     trace_stats: traceStats,
+    improvise_health: improviseHealth,
+    resolver_coverage: resolverCoverage,
+    reuse_trajectory: reuseTrajectory,
   };
 
   // Print summary

@@ -9,6 +9,7 @@
  *   - MRR, hit@1/3/5, improvise_rate deltas
  *   - Top-5 movers by EV change in the Thompson snapshot
  *   - Entries that changed rank between reports
+ *   - Behavioral health delta (improvise, resolver coverage, reuse trajectory)
  */
 
 import { readFile } from "node:fs/promises";
@@ -45,6 +46,26 @@ interface TraceStats {
   window_days: number;
 }
 
+interface ImproviseHealth {
+  total_improvise: number;
+  success_rate: number | null;
+  ribosome_activation_rate: number | null;
+}
+
+interface ResolverCoverage {
+  sampled_traces: number;
+  llm_tier_rate: number;
+  deterministic_rate: number;
+  pattern_rate: number;
+  top_resolvers: Array<{ resolver_id: string; count: number }>;
+}
+
+interface ReuseTrajectory {
+  reuse_rate: number;
+  composition_depth_distribution: { d0: number; d1: number; d2: number; d3plus: number };
+  mean_composition_depth: number;
+}
+
 interface ReuseReport {
   run_at: string;
   label: string;
@@ -61,6 +82,9 @@ interface ReuseReport {
   entries: EntryResult[];
   thompson_snapshot: ThompsonEntry[];
   trace_stats: TraceStats;
+  improvise_health?: ImproviseHealth;
+  resolver_coverage?: ResolverCoverage;
+  reuse_trajectory?: ReuseTrajectory;
 }
 
 // ---------------------------------------------------------------------------
@@ -87,6 +111,27 @@ function deltaStr(before: number, after: number, isPct = false): string {
 function arrow(before: number, after: number): string {
   if (after > before) return "▲";
   if (after < before) return "▼";
+  return "─";
+}
+
+// Render a nullable rate as "X.X%" or "null"
+function nullablePct(v: number | null | undefined): string {
+  if (v === null || v === undefined) return "null";
+  return pct(v);
+}
+
+// Delta between two nullable rates; returns "—" when either side is absent
+function nullableDelta(before: number | null | undefined, after: number | null | undefined, lowerIsGood = false): string {
+  if (before === null || before === undefined || after === null || after === undefined) return "—";
+  const diff = after - before;
+  const sign = diff >= 0 ? "+" : "";
+  return `${sign}${(diff * 100).toFixed(1)}pp`;
+}
+
+function nullableArrow(before: number | null | undefined, after: number | null | undefined, lowerIsGood = false): string {
+  if (before === null || before === undefined || after === null || after === undefined) return "─";
+  if (after > before) return lowerIsGood ? "▼" : "▲";
+  if (after < before) return lowerIsGood ? "▲" : "▼";
   return "─";
 }
 
@@ -136,9 +181,6 @@ async function main() {
   for (const m of metrics) {
     const bVal = before[m.key] as number;
     const aVal = after[m.key] as number;
-    const display = m.isPct
-      ? `${pct(bVal)} | ${pct(aVal)}`
-      : `${fmt4(bVal)} | ${fmt4(aVal)}`;
     console.log(
       `| ${m.name} | ${m.isPct ? pct(bVal) : fmt4(bVal)} | ${m.isPct ? pct(aVal) : fmt4(aVal)} | ${deltaStr(bVal, aVal, m.isPct)} | ${arrow(bVal, aVal)} |`
     );
@@ -301,7 +343,70 @@ async function main() {
   }
 
   // ---------------------------------------------------------------------------
-  // Section 5: Summary counts
+  // Section 5: Behavioral Health Delta
+  // ---------------------------------------------------------------------------
+
+  const bih = before.improvise_health;
+  const aih = after.improvise_health;
+  const brc = before.resolver_coverage;
+  const arc = after.resolver_coverage;
+  const brt = before.reuse_trajectory;
+  const art = after.reuse_trajectory;
+
+  const hasBehavioral = (bih !== undefined || aih !== undefined) ||
+    (brc !== undefined || arc !== undefined) ||
+    (brt !== undefined || art !== undefined);
+
+  if (hasBehavioral) {
+    console.log(`## Behavioral Health Delta\n`);
+    console.log(`| Metric | Before | After | Delta | Dir |`);
+    console.log(`|--------|--------|-------|-------|-----|`);
+
+    // improvise_success_rate (↑ good)
+    const bImpSucc = bih?.success_rate ?? null;
+    const aImpSucc = aih?.success_rate ?? null;
+    console.log(
+      `| improvise_success_rate (↑) | ${nullablePct(bImpSucc)} | ${nullablePct(aImpSucc)} | ${nullableDelta(bImpSucc, aImpSucc)} | ${nullableArrow(bImpSucc, aImpSucc)} |`
+    );
+
+    // ribosome_activation_rate (↑ good)
+    const bRibo = bih?.ribosome_activation_rate ?? null;
+    const aRibo = aih?.ribosome_activation_rate ?? null;
+    console.log(
+      `| ribosome_activation_rate (↑) | ${nullablePct(bRibo)} | ${nullablePct(aRibo)} | ${nullableDelta(bRibo, aRibo)} | ${nullableArrow(bRibo, aRibo)} |`
+    );
+
+    // llm_tier_rate (↓ good — lower means more deterministic resolvers)
+    const bLlm = brc?.llm_tier_rate ?? null;
+    const aLlm = arc?.llm_tier_rate ?? null;
+    console.log(
+      `| llm_tier_rate (↓ good) | ${nullablePct(bLlm)} | ${nullablePct(aLlm)} | ${nullableDelta(bLlm, aLlm, true)} | ${nullableArrow(bLlm, aLlm, true)} |`
+    );
+
+    // reuse_rate (↑ good)
+    const bReuse = brt?.reuse_rate ?? null;
+    const aReuse = art?.reuse_rate ?? null;
+    console.log(
+      `| reuse_rate (↑ good) | ${nullablePct(bReuse)} | ${nullablePct(aReuse)} | ${nullableDelta(bReuse, aReuse)} | ${nullableArrow(bReuse, aReuse)} |`
+    );
+
+    // mean_composition_depth (informational — deeper = more chaining)
+    const bDepth = brt?.mean_composition_depth ?? null;
+    const aDepth = art?.mean_composition_depth ?? null;
+    const depthBefore = bDepth !== null ? bDepth.toFixed(2) : "null";
+    const depthAfter = aDepth !== null ? aDepth.toFixed(2) : "null";
+    const depthDelta = (bDepth !== null && aDepth !== null)
+      ? `${aDepth - bDepth >= 0 ? "+" : ""}${(aDepth - bDepth).toFixed(2)}`
+      : "—";
+    console.log(
+      `| mean_composition_depth | ${depthBefore} | ${depthAfter} | ${depthDelta} | ${nullableArrow(bDepth, aDepth)} |`
+    );
+
+    console.log();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Section 6: Summary counts
   // ---------------------------------------------------------------------------
 
   const unchangedCount = after.entries.filter((e) => {
