@@ -1008,3 +1008,66 @@ Phase 18 is complete when:
 - ✅ Reuse rate trending up + improvise-share trending down across 4 consecutive harness runs
 
 Dense search re-enable (18.5) is desirable but not gating — the topology learning loop closes with 18.1, 18.3, 18.4 alone; dense search is a retrieval-quality improvement on top of the closed loop.
+
+---
+
+## Phase 19 — Recommendation Validation v2 (2026-05-06)
+
+**Motivation.** Phase 18 shipped a harness measuring MRR against a benchmark whose 20 entries all use double-prefix wrapped IDs (`activity:⟨WrappedName⟩`) that don't appear in the Thompson recommend pool. The harness also conflates retrieval quality (FTS/dense) with Thompson ranking, and has no visibility into improvise health, resolver tool adequacy, or whether reuse is accumulating. Phase 19 closes all four gaps.
+
+**Full spec:** `openspec/changes/2026-05-06-recommendation-validation-v2/` — proposal, design, and task-level detail for all 15 tasks.
+
+**Capability specs referenced:** `recommendation-validation-v2` (standalone change)
+
+### 19.0 Sub-phase dependencies
+
+Phase 19 has no code dependencies beyond the Phase 18 harness already deployed. All tasks operate against the live canary API. The one pre-condition is T0.1 (canary ID verification) which gates all benchmark-dependent tasks.
+
+### 19.1 Benchmark v2 (V2.0)
+
+- [ ] 19.1.1 (T0.1) `validation/activity-reuse-benchmark-v2.json` — 20 entries drawn from Thompson snapshot top-50, with `expected_activity_name`, `search_query`, `tags` fields. All `expected_activity_id` values verified live against canary before commit. No double-prefix wrapped IDs. Full entry list in `openspec/changes/2026-05-06-recommendation-validation-v2/tasks.md §T0.1`.
+
+**Gate:** 19.1.1 must be complete before 19.2 (harness extension) can be smoke-tested.
+
+### 19.2 Two-metric harness extension (V2.1)
+
+- [ ] 19.2.1 (T1.1) Extend `BenchmarkEntry` interface with optional v2 fields (`expected_activity_name`, `search_query`, `tags`). Backward-compatible: v1 entries still load and process.
+- [ ] 19.2.2 (T1.2) Add search pass: `GET /v2/activities/templates?q={entry.search_query}&limit=20`. Handle both bare-array and `{templates:[]}` response shapes. Verify `fallback_tier` absent in response (confirming FTS-only, not dense-hybrid).
+- [ ] 19.2.3 (T1.3) `EntryResultV2` with `search_rank`, `search_rr`, `search_found`, `diagnostic` (A/B/C/D quadrant). Backward-compatible `EntryResult` when benchmark lacks `search_query`.
+- [ ] 19.2.4 (T1.4) `ReuseReportV2` with `search_mrr`, `recommend_mrr` (alias for `mrr`), `quadrant_counts`. Old `mrr`/`hit_at_k` keys preserved for `compare-reports.ts` compatibility.
+- [ ] 19.2.5 (T1.5) `--benchmark <path>` CLI flag. Default remains v1 benchmark.
+- [ ] 19.2.6 (T1.6) Extend `printSummary` with quadrant block (A=working, B=Thompson burial, C=lucky sample, D=retrieval miss). B entries listed by name.
+- [ ] 19.2.7 (T1.7) Extend `compare-reports.ts` with search_mrr/recommend_mrr delta section. Regression warning when `search_mrr` drops >0.05.
+- [ ] 19.2.8 (T1.8) Smoke test: run harness with v2 benchmark against canary; confirm `search_mrr` > 0 for ≥2 entries, `quadrant_counts` non-empty, exits 0.
+
+### 19.3 Composition-chain credit integration test (V2.2 / 18.4.7)
+
+- [ ] 19.3.1 (T2.1) `validation/scripts/test-18-4-7-credit-propagation.ts` — submits synthetic trace with `composition_chain=["activity:goal-processing-activity-driven","activity:⟨slot-binding⟩"]`, leaf `activity:improvise`, `success:true`. Reads ancestor α via `POST /recommend` `selection_metadata.alpha` before and after (2s wait). Asserts Δα ≥ 0.2. Exit codes: 0=pass, 1=fail, 2=inconclusive (posterior unreadable). Trace tagged with `goal: "integration test 18.4.7 — credit propagation verification"` for operator cleanup.
+- [ ] 19.3.2 (T2.2) `validation/README.md` section for 18.4.7 test: purpose, run command, expected output for all three exit codes, cleanup note.
+
+### 19.4 Behavioral validation metrics (V2.4)
+
+- [ ] 19.4.1 (T4.1) **Improvise health** — from 200-trace window, filter improvise traces, compute `success_rate` and `ribosome_activation_rate` (ribosome/extract child via `composition_chain` or `parent_execution_id`; up to 5 extra API calls for fallback). Report `null` not `0` when no improvise traces in window.
+- [ ] 19.4.2 (T4.2) **Resolver coverage** — sample up to 10 full traces (via `GET /execution-traces/:id`; list endpoint omits `tasks[]`). Compute `llm_tier_rate`, `deterministic_rate`, `pattern_rate`, `top_resolvers` (top-10 by frequency). Costs ≤10 extra API calls.
+- [ ] 19.4.3 (T4.3) **Reuse trajectory** — from 200-trace window + Thompson snapshot (already fetched): `reuse_rate` = traces with `activity_id` in Thompson snapshot and not improvise / total. `composition_depth_distribution` (4-bucket: 0/1/2/3+). `mean_composition_depth`. Zero extra API calls.
+- [ ] 19.4.4 (T4.4) **Recommendation executability** (`--detailed` flag) — fetch template detail for top recommendation per entry; compute `executability_score = ev*0.5 + has_output_shapes*0.3 + has_det_task*0.2`. Default mode: report `mean_ev` only (no score). ≤20 extra API calls when detailed.
+- [ ] 19.4.5 (T4.5) Extend `printSummary` with behavioral health block: improvise health, resolver coverage (with `llm_tier_rate` annotated "↓ is good"), reuse trajectory (`reuse_rate` annotated "↑ is good").
+- [ ] 19.4.6 (T4.6) Extend `compare-reports.ts` with behavioral delta section: `success_rate`, `llm_tier_rate`, `reuse_rate`, `mean_composition_depth` with directional annotations.
+
+### 19.5 Weekly CI integration (V2.3)
+
+- [ ] 19.5.1 (T3.1) `validation/scripts/run-weekly-harness.sh` — runs harness with v2 benchmark, compares vs prior report, exits non-zero if MRR regressed >10%. Path: `$(dirname "$0")/../activity-reuse-benchmark-v2.json` (one level up from `scripts/`).
+- [ ] 19.5.2 (T3.2) `.github/workflows/weekly-recommendation-validation.yml` — Monday 09:00 UTC cron + `workflow_dispatch`. Uses `METABOB_API_KEY_VALIDATION` secret. Uploads report artifact (`if: always()`).
+- [ ] 19.5.3 (T3.3) Document `METABOB_API_KEY_VALIDATION` in `repos/deployment/DEPLOYMENT_WORKFLOW.md` with provisioning and rotation instructions.
+
+### Stop conditions
+
+Phase 19 is complete when:
+
+- [ ] `validation/activity-reuse-benchmark-v2.json` committed with all 20 IDs verified against canary
+- [ ] `reuse-harness.ts` emits `search_mrr`, `recommend_mrr`, `improvise_health`, `resolver_coverage`, `reuse_trajectory` per run
+- [ ] First v2 harness run: `recommend_mrr` ≥ 0.30, `search_mrr` ≥ 0.50
+- [ ] `test-18-4-7-credit-propagation.ts` exits 0 against canary
+- [ ] `run-weekly-harness.sh` executes end-to-end without intervention
+- [ ] Weekly CI workflow merged and first scheduled run completes
+- [ ] Two consecutive weekly runs show `improvise_health.success_rate` ≥ 0.70 and `reuse_trajectory.reuse_rate` ≥ 0.65

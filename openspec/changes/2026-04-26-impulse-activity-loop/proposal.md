@@ -47,6 +47,7 @@ This means the loop's quality determines the topology's quality. If posterior up
 - `failure-mode-stratified-updates` (added 2026-05-06) — replace the binary β increment on failure with a structured update keyed on `failure_mode.type`. Wires the existing taxonomy into the posterior-update path. Phase 18.
 - `composition-chain-credit-propagation` (added 2026-05-06) — γ-discounted backward propagation of α/β updates through `composition_chain` ancestors. Closes the credit-assignment gap that today only credits the leaf activity for a multi-step success. Phase 18.
 - `activity-reuse-validation-harness` (added 2026-05-06) — versioned 20-prompt benchmark suite measuring MRR, reuse rate, improvise-share, and Thompson CI widths over time. Replaces ad-hoc validation runs with a longitudinal report. Phase 18.
+- `recommendation-validation-v2` (added 2026-05-06) — two-metric harness split (search-MRR vs recommend-MRR), behavioral health signals (improvise health, resolver coverage, reuse trajectory, recommendation executability), corrected benchmark anchored to the Thompson pool rather than the double-prefix wrapped namespace, composition-chain credit integration test (18.4.7), and weekly CI workflow. Addresses the measurement gap where Phase 18's harness conflated retrieval quality with Thompson ranking and had no visibility into whether the system was improvising correctly, providing resolvers as tools, or accumulating topology. Full spec: `openspec/changes/2026-05-06-recommendation-validation-v2/`. Phase 19.
 
 ## Impact
 
