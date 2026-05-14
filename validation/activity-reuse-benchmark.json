@@ -138,5 +138,75 @@
     "goal_text": "extract reusable patterns from execution traces and promote them to concept templates",
     "expected_activity_id": "activity:⟨extract-pattern⟩",
     "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-021",
+    "category": "validation",
+    "goal_text": "verify the lifecycle and learning loop is working correctly",
+    "expected_activity_id": "activity:⟨Lifecycle and Learning Loop Verification⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-022",
+    "category": "validation",
+    "goal_text": "scan dependencies for known vulnerabilities",
+    "expected_activity_id": "activity:⟨Dependency Vulnerability Scanner⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-023",
+    "category": "validation",
+    "goal_text": "verify the system lifecycle and confirm learning loop",
+    "expected_activity_id": "activity:⟨System Lifecycle and Learning Loop Verification⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-024",
+    "category": "validation",
+    "goal_text": "scan all project dependencies for vulnerability issues",
+    "expected_activity_id": "activity:⟨Vulnerability Scan All Dependencies⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-025",
+    "category": "validation",
+    "goal_text": "enforce minibob dashboard specifications and validate the dashboard display",
+    "expected_activity_id": "activity:⟨Enforce MiniBob Dashboard Specifications⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-026",
+    "category": "refactor",
+    "goal_text": "transform enforcement logic to read-only validation mode",
+    "expected_activity_id": "activity:⟨Transform Enforcement to Read-Only Validation⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-027",
+    "category": "feature-add",
+    "goal_text": "generate data-driven improvement recommendations from analysis",
+    "expected_activity_id": "activity:⟨Generate Data-Driven Improvement Recommendations⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-028",
+    "category": "feature-add",
+    "goal_text": "query metrics from the backend to generate an activity performance report",
+    "expected_activity_id": "activity:⟨Backend Activity Metrics Query⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-029",
+    "category": "improvement",
+    "goal_text": "run the complete activity improvement cycle on the learning system",
+    "expected_activity_id": "activity:⟨Complete Activity Improvement Cycle⟩",
+    "seed_impulse_pool": []
+  },
+  {
+    "id": "bench-030",
+    "category": "improvement",
+    "goal_text": "execute the activity improvement loop to iterate on template performance",
+    "expected_activity_id": "activity:⟨Activity Improvement Loop⟩",
+    "seed_impulse_pool": []
   }
 ]
