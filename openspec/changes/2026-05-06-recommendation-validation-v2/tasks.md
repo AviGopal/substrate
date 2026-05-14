@@ -245,7 +245,7 @@ noted in the commit message as: `subst: <original-id> → <live-id> (absent from
 Do NOT commit an entry with an ID that does not exist in the live registry — it will produce a
 permanent false-negative in `recommend_mrr` since the template will never appear in the recommend pool.
 
-[ ] T0.1 complete
+[x] T0.1 complete ✅ 2026-05-14 — all 20 IDs verified in canary; written to validation/activity-reuse-benchmark-v2.json
 
 ---
 

@@ -28,6 +28,9 @@ interface BenchmarkEntry {
   category: string;
   goal_text: string;
   expected_activity_id: string;
+  expected_activity_name?: string;
+  search_query?: string;
+  tags?: string[];
   seed_impulse_pool: string[];
 }
 
@@ -82,6 +85,10 @@ interface EntryResult {
   found: boolean;
   goal_text?: string;
   expected_activity_id?: string;
+  search_rank?: number;
+  search_rr?: number;
+  search_found?: boolean;
+  diagnostic?: "A" | "B" | "C" | "D" | null;
 }
 
 interface ThompsonEntry {
@@ -108,6 +115,11 @@ interface ReuseReport {
   hit_at_1: number;
   hit_at_3: number;
   hit_at_5: number;
+  search_mrr?: number;
+  search_hit_at_1?: number;
+  search_hit_at_3?: number;
+  search_hit_at_5?: number;
+  quadrant_counts?: { A: number; B: number; C: number; D: number };
   entries: EntryResult[];
   thompson_snapshot: ThompsonEntry[];
   trace_stats: TraceStats;
@@ -275,6 +287,75 @@ async function evaluateBenchmark(
 }
 
 // ---------------------------------------------------------------------------
+// Search benchmark evaluation — pure FTS via GET /v2/activities/templates?q=
+// ---------------------------------------------------------------------------
+
+interface SearchTemplate {
+  id?: string;
+  name?: string;
+}
+
+interface SearchResponse {
+  templates?: SearchTemplate[];
+  data?: SearchTemplate[];
+}
+
+async function evaluateSearchBenchmark(
+  entries: BenchmarkEntry[],
+  endpoint: string,
+  authHeaders: Record<string, string>,
+  limit: number
+): Promise<EntryResult[]> {
+  const results: EntryResult[] = [];
+
+  for (const entry of entries) {
+    if (!entry.search_query) {
+      results.push({ id: entry.id, category: entry.category, rank: 0, rr: 0, found: false,
+        search_rank: 0, search_rr: 0, search_found: false });
+      continue;
+    }
+
+    process.stdout.write(`  [${entry.id}] search "${entry.search_query}" ... `);
+
+    let templates: SearchTemplate[] = [];
+    try {
+      const url = `${endpoint}/v2/activities/templates?q=${encodeURIComponent(entry.search_query)}&limit=${limit}`;
+      const data = await apiGet(url, authHeaders) as SearchResponse;
+      templates = data.templates ?? data.data ?? [];
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("budget exhausted")) throw err;
+      console.log(`ERROR: ${msg.slice(0, 80)}`);
+      results.push({ id: entry.id, category: entry.category, rank: 0, rr: 0, found: false,
+        search_rank: 0, search_rr: 0, search_found: false });
+      continue;
+    }
+
+    let search_rank = 0;
+    for (let i = 0; i < templates.length; i++) {
+      if (templates[i].id === entry.expected_activity_id) {
+        search_rank = i + 1;
+        break;
+      }
+    }
+
+    const search_rr = search_rank > 0 ? 1 / search_rank : 0;
+    const search_found = search_rank > 0;
+
+    if (search_found) {
+      process.stdout.write(`rank=${search_rank} rr=${search_rr.toFixed(3)}\n`);
+    } else {
+      process.stdout.write(`not found in top-${limit}\n`);
+    }
+
+    results.push({ id: entry.id, category: entry.category, rank: 0, rr: 0, found: false,
+      search_rank, search_rr, search_found });
+  }
+
+  return results;
+}
+
+// ---------------------------------------------------------------------------
 // Thompson snapshot: broad query for top-50
 // ---------------------------------------------------------------------------
 
@@ -431,6 +512,31 @@ function printSummary(
   const foundCount = report.entries.filter((e) => e.found).length;
   console.log(`  Found    : ${foundCount}/${report.entries.length} entries`);
 
+  if (report.search_mrr !== undefined) {
+    const sMrr = report.search_mrr;
+    const gap = sMrr - report.mrr;
+    console.log(`\nSearch MRR (FTS-only, no Thompson):`);
+    console.log(`  search_mrr   : ${fmt(sMrr)}  (recommend_mrr gap: ${gap >= 0 ? "+" : ""}${(gap * 100).toFixed(1)}pp)`);
+    console.log(`  search_Hit@1 : ${pct(report.search_hit_at_1 ?? 0)}`);
+    console.log(`  search_Hit@3 : ${pct(report.search_hit_at_3 ?? 0)}`);
+    console.log(`  search_Hit@5 : ${pct(report.search_hit_at_5 ?? 0)}`);
+    const searchFound = report.entries.filter((e) => e.search_found).length;
+    console.log(`  search_found : ${searchFound}/${report.entries.length} entries`);
+    if (gap > 0.05) {
+      console.log(`  ⚠  FTS finds templates that recommend misses — Thompson overriding good text matches`);
+    } else if (gap < -0.05) {
+      console.log(`  ⚠  recommend outperforms FTS — Thompson adding signal beyond text match`);
+    }
+    if (report.quadrant_counts) {
+      const q = report.quadrant_counts;
+      console.log(`\nDiagnostic quadrants:`);
+      console.log(`  A (search✓ recommend✓): ${q.A}  — FTS good, Thompson good`);
+      console.log(`  B (search✓ recommend✗): ${q.B}  — FTS good, Thompson suppressing`);
+      console.log(`  C (search✗ recommend✓): ${q.C}  — FTS miss, Thompson recovering`);
+      console.log(`  D (search✗ recommend✗): ${q.D}  — FTS miss, not recoverable`);
+    }
+  }
+
   console.log(`\nTrace stats (7-day window):`);
   const ts = report.trace_stats;
   console.log(`  Sample   : ${ts.sample_size} traces`);
@@ -572,6 +678,47 @@ async function main() {
     }
   }
 
+  // Step 4 (v2 only): Search evaluation via FTS templates endpoint
+  let searchResults: EntryResult[] = [];
+  const hasSearchQuery = benchmarkEntries.some((e) => e.search_query);
+  if (hasSearchQuery) {
+    console.log(`\nEvaluating search MRR via GET /v2/activities/templates?q=...`);
+    try {
+      searchResults = await evaluateSearchBenchmark(benchmarkEntries, endpoint, authHeaders, limit);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("budget exhausted")) {
+        console.warn(`  Search evaluation aborted: ${msg}`);
+      } else {
+        console.warn(`  Search evaluation error: ${msg}`);
+      }
+    }
+  }
+
+  const searchMetrics = searchResults.length > 0 ? computeMetrics(
+    searchResults.map((e) => ({ ...e, rank: e.search_rank ?? 0, rr: e.search_rr ?? 0, found: e.search_found ?? false }))
+  ) : null;
+
+  // Merge search results into entryResults, assign diagnostic quadrant
+  const mergedResults = entryResults.map((e) => {
+    const s = searchResults.find((r) => r.id === e.id);
+    const merged = s ? { ...e, search_rank: s.search_rank, search_rr: s.search_rr, search_found: s.search_found } : e;
+    const hasSearchQuery = benchmarkEntries.find((b) => b.id === e.id)?.search_query;
+    if (hasSearchQuery) {
+      const sf = merged.search_found ?? false;
+      const rf = merged.found;
+      merged.diagnostic = sf && rf ? "A" : sf && !rf ? "B" : !sf && rf ? "C" : "D";
+    } else {
+      merged.diagnostic = null;
+    }
+    return merged;
+  });
+
+  const quadrantCounts = mergedResults.reduce((acc, e) => {
+    if (e.diagnostic && e.diagnostic !== null) acc[e.diagnostic as "A"|"B"|"C"|"D"]++;
+    return acc;
+  }, { A: 0, B: 0, C: 0, D: 0 });
+
   // Build report
   const runAt = new Date().toISOString();
   const report: ReuseReport = {
@@ -581,7 +728,14 @@ async function main() {
     hit_at_1,
     hit_at_3,
     hit_at_5,
-    entries: entryResults.map((e) => {
+    ...(searchMetrics ? {
+      search_mrr: searchMetrics.mrr,
+      search_hit_at_1: searchMetrics.hit_at_1,
+      search_hit_at_3: searchMetrics.hit_at_3,
+      search_hit_at_5: searchMetrics.hit_at_5,
+      quadrant_counts: quadrantCounts,
+    } : {}),
+    entries: mergedResults.map((e) => {
       const b = benchmarkEntries.find((b) => b.id === e.id);
       return {
         ...e,
