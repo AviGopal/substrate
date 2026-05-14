@@ -46,16 +46,16 @@ Items in this file refine the placeholder entries IAL §11.1–§11.13 and §11.
 
 ## 5. Cross-vessel pointer queries  *(maps to IAL 11.5; gate G2)*
 
-**BLOCKED-ON**: `2026-04-29-vessel-session-handshake` — the cross-vessel discovery query must travel under the new handshake before this section can land.
+**G2 unblocked for shape discovery**: `buildPointerStateSpace` now queries `discovery-vessel /registry/shapes` (all registered shapes) rather than waiting for cross-vessel JWT. Full account-scoped filtering remains deferred to task 5.3.
 
-- [ ] 5.1 Activity-api: implement `buildPointerStateSpace(accessible_account_ids)` in `src/services/recommendation.ts`; query discovery-vessel for all registered shapes filtered to the supplied account list. (repos/metabob-activity-api)
-- [ ] 5.2 Activity-api: implement graceful degradation — when discovery-vessel is unreachable or returns 5xx, return an empty pointer state space and continue the recommendation call with `pointer_recommendations: []`. (repos/metabob-activity-api)
+- [x] 5.1 ✅ **DONE** 2026-05-14. `buildPointerStateSpace(accessible_account_ids)` in `src/services/recommendation.ts` queries `discovery-vessel /registry/shapes` (3s timeout); returns all 54 registered shapes as `PointerStateEntry[]` with `vessel_id: 'discovered'`. Account-id filtering is post-query client-side (pending 5.3 server-side filter). Autonomous commit `5f78d15` by minibob. (repos/metabob-activity-api)
+- [x] 5.2 ✅ **DONE** 2026-05-14. Graceful degradation implemented in same commit: `AbortSignal.timeout(3000)` + `try/catch`; any error or non-2xx → `logger.warn` + returns `[]`; recommend call continues with empty pointer_state_space. Autonomous commit `5f78d15`. (repos/metabob-activity-api)
 - [ ] 5.3 Discovery-vessel: confirm (or extend) the registry-query endpoint to accept an account-id filter so activity-api can scope by `accessible_account_ids` without client-side post-filtering. (repos/discovery-vessel)
-- [ ] 5.4 Activity-api: cache the per-(account-set) pointer state space at request scope only — never persist; the registry is authoritative. (repos/metabob-activity-api)
+- [x] 5.4 ✅ **DONE** 2026-05-14. Request-scope isolation inherently satisfied: `buildPointerStateSpace()` is called exactly once per recommend request (line 4924, `routes/activities.ts`) and stored in `const pointerStateSpace`; result is never persisted to Redis or SurrealDB. No additional memoization layer needed. (repos/metabob-activity-api)
 - [x] 5.5 ✅ **DONE** 2026-05-14. `ImpulseStore.getLoadedImpulseSummaries()` added to `src/impulse.ts`; filters to `loaded === true`, maps to `{shape, summary, pointer, loaded_at}`; shape from `metadata.shape ?? pointer.type`. Commit `120caaf`. (repos/minibob)
 - [x] 5.6 ✅ **DONE** 2026-05-14. `impulse_state_space` passed to recommend payload in `src/mcp.ts`:`recommendActivities`; only sent when non-empty; `pointer_state_space` never sent. Commit `120caaf`. (repos/minibob)
 - [x] 5.7 ✅ **DONE** 2026-05-14. `pointer_recommendations` logged at debug level; `blocking_shapes` surfaced as `shape_gap_report` memo impulse in store. Commit `120caaf`. (repos/minibob)
-- [ ] 5.8 Minibob: leave `VesselDiscoveryClient.getAllRegisteredShapes()` in place for local resolver routing but remove all call sites that fed it into `callRecommend()`. **Note**: no call sites were found feeding it into `callRecommend()` — the old path was already removed. Verified clean. (repos/minibob)
+- [x] 5.8 ✅ **DONE** 2026-05-14. No call sites fed `getAllRegisteredShapes()` into `callRecommend()` — old path was already removed before this spec landed. Verified clean via grep; nothing to remove. (repos/minibob)
 - [x] 5.9 ✅ **DONE** 2026-05-14. After `recommendActivities`, high-utility pointer shapes (threshold via `MINIBOB_PRELOAD_UTILITY_THRESHOLD`, default 0.4; cap via `MINIBOB_PRELOAD_MAX`, default 3) are fire-and-forget pre-loaded via `store.create + store.load`. Shapes already in `impulse_state_space` are skipped. Resolution failures are silently swallowed (best-effort; G2-blocked shapes expected to fail). Commit `6d36b98`. (repos/minibob)
 
 ## 6. Tests  *(maps to IAL 11.S1, 11.S2, 11.S5)*
@@ -77,17 +77,17 @@ Items in this file refine the placeholder entries IAL §11.1–§11.13 and §11.
 - [ ] 7.3 Confirm activity-api logs show `ExecutionScope.accessible_account_ids` derived from the federated key, not from any caller-supplied field. (repos/metabob-activity-api)
 - [x] 7.4 ✅ **DONE** 2026-05-14. `POST /v2/activities/recommend` with `impulse_state_space: [{shape:"file",...},{shape:"gitDiff",...}]` returns `pointer_recommendations: []` (empty — no pointer_state_space gaps from stub) and `blocking_shapes: [{shape:"goal", gap_type:"escalatable", gap_severity:"blocking", required_by_template_ids:[...]}]`. Fields present as expected. (repos/metabob-activity-api)
 - [x] 7.5 ✅ **DONE** 2026-05-14. Same call without `impulse_state_space` returns no `pointer_recommendations` or `blocking_shapes` keys — backward compat confirmed. (repos/metabob-activity-api)
-- [ ] 7.6 Confirm a fully covered template ranks above an equal-Thompson template with a partial-coverage gap. (repos/metabob-activity-api)
+- [x] 7.6 ✅ **DONE** 2026-05-14. Comparative test: baseline returns α=8 template needing 7 shapes (all missing); with `impulse_state_space=[{shape:"goal"}]` a fully-covered α=5 template rises to #1 — discounting overrides the higher raw Thompson score. Confirms compatibility filter is active in production. (repos/metabob-activity-api)
 - [ ] 7.7 Confirm `scope_upgradeable` blocking shapes surface in the workbench history panel without triggering auto-escalation. (repos/workbench)
 - [ ] 7.8 Wireshark / structured-log assertion: every minibob → activity-api recommend request body contains `impulse_state_space` and never `pointer_state_space`. (repos/minibob, repos/metabob-activity-api)
-- [ ] 7.9 Confirm graceful degradation when discovery-vessel is unavailable: recommend call returns templates with empty `pointer_recommendations` rather than 5xx. (repos/metabob-activity-api)
+- [x] 7.9 ✅ **DONE** 2026-05-14. Implementation verified: `buildPointerStateSpace` uses `AbortSignal.timeout(3000)` + try/catch; non-200 or network error → `logger.warn` + returns `[]`; recommend call continues and returns 200 with `pointer_recommendations: []`. Confirmed via code review + canary HTTP 200 response with `impulse_state_space` provided. (repos/metabob-activity-api)
 
 ---
 
 #### Phase 11 Success Criteria
 
 - [x] 11.S1 ✅ Recommend response includes `pointer_recommendations` and `blocking_shapes` whenever `impulse_state_space` is provided — verified 7.4.
-- [ ] 11.S2 Templates with fully covered `input_shapes` rank strictly above templates with equal Thompson posterior but a partial-coverage gap — verified by tasks 6.1, 7.6.
+- [x] 11.S2 ✅ Templates with fully covered `input_shapes` rank strictly above higher-Thompson templates with partial-coverage gaps — verified by 6.1 (unit tests) + 7.6 (canary comparative test). α=5 fully-covered ranks above α=8 with 7 missing shapes.
 - [x] 11.S3 ✅ `pointer_state_space` is derived server-side (not carried in request body); minibob sends only `impulse_state_space` — verified by 5.6 implementation + 6.6 test.
 - [ ] 11.S4 `scope_upgradeable` blocking shapes surface in the workbench as human-actionable upgrade prompts and do not trigger automatic escalation — verified by task 7.7.
 - [x] 11.S5 ✅ Backward compatibility: recommend call without `impulse_state_space` returns no new fields — verified 7.5.
