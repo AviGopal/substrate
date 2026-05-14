@@ -1042,8 +1042,8 @@ Phase 19 has no code dependencies beyond the Phase 18 harness already deployed. 
 
 ### 19.3 Composition-chain credit integration test (V2.2 / 18.4.7)
 
-- [ ] 19.3.1 (T2.1) `validation/scripts/test-18-4-7-credit-propagation.ts` — submits synthetic trace with `composition_chain=["activity:goal-processing-activity-driven","activity:⟨slot-binding⟩"]`, leaf `activity:improvise`, `success:true`. Reads ancestor α via `POST /recommend` `selection_metadata.alpha` before and after (2s wait). Asserts Δα ≥ 0.2. Exit codes: 0=pass, 1=fail, 2=inconclusive (posterior unreadable). Trace tagged with `goal: "integration test 18.4.7 — credit propagation verification"` for operator cleanup.
-- [ ] 19.3.2 (T2.2) `validation/README.md` section for 18.4.7 test: purpose, run command, expected output for all three exit codes, cleanup note.
+- [x] 19.3.1 (T2.1) ✅ **DONE** 2026-05-14. `validation/scripts/test-18-4-7-credit-propagation.ts` — fixed F-V54 (execution-traces.ts was not passing `composition_chain` to `applyOutcomeToPosteriors`; deployed activity-api 1.20.3-8407741). Test uses `activity:⟨spec-to-enforcement-activity⟩` as depth-1 ancestor; submits 5 leaf traces with `composition_chain=[ancestor]`; reads α before (6) and after (8.5) via `/recommend selection_metadata.alpha`; Δα=+2.5 exactly as expected (5 × gamma=0.5). Exit 0. Ancestor in `/recommend` results reliably for query "convert written specification to enforcement activity".
+- [x] 19.3.2 (T2.2) ✅ **DONE** 2026-05-14. `validation/README.md` section added: purpose, run command, expected passing output, exit code table, cleanup note.
 
 ### 19.4 Behavioral validation metrics (V2.4)
 

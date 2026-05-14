@@ -43,6 +43,78 @@ drawn from real activity IDs in the live canary registry. Curate by querying
 
 ---
 
+## Credit Propagation Integration Test (Phase 18.4.7)
+
+Verifies that submitting an execution trace with a non-empty `composition_chain` causes
+`propagateCreditAlongChain` to fire and increment α (Thompson success count) for ancestor
+activities in the chain. Tests the F-V54 fix in activity-api 1.20.3.
+
+### Purpose
+
+`propagateCreditAlongChain` in `posterior-update.ts` walks the `composition_chain` array in
+reverse (closest ancestor first) and applies `Δα = CREDIT_PROPAGATION_GAMMA^depth` to each
+ancestor's `variant_performance_metrics` row. Before activity-api 1.20.3, this function was
+never called on the `POST /v2/activities/execution-traces` route because `composition_chain`
+was stored in the trace but not forwarded to `applyOutcomeToPosteriors` (F-V54).
+
+### Run the test
+
+```bash
+METABOB_API_KEY=<key> bun run validation/scripts/test-18-4-7-credit-propagation.ts
+```
+
+Optional override:
+```bash
+METABOB_ENDPOINT=https://activity.metabob.com METABOB_API_KEY=<key> \
+  bun run validation/scripts/test-18-4-7-credit-propagation.ts
+```
+
+### Expected output (passing)
+
+```
+=== Integration Test 18.4.7: credit propagation via composition_chain ===
+...
+Step 1: Reading baseline α for ancestor via /recommend…
+  Ancestor "activity:⟨spec-to-enforcement-activity⟩" baseline α: N
+Step 2: Submitting 5 leaf traces with composition_chain=[activity:⟨spec-to-enforcement-activity⟩]…
+  5 traces submitted successfully.
+Step 3: Waiting 3000ms for credit propagation to land…
+Step 4: Re-reading ancestor α…
+  Ancestor α after: N+2.5
+── Results ──────────────────────────────────────────────────────────────────
+  Baseline α : N
+  After α    : N+2.5
+  Δα         : +2.5000
+  Expected   : ≈ +2.50 (5 × gamma=0.5)
+  Threshold  : ≥ 0.75
+  Result     : PASS ✓
+RESULT: PASS ✓ — propagateCreditAlongChain fired; ancestor α increased as expected.
+```
+
+Exit code 0 = pass. The test submits 5 leaf traces and expects cumulative Δα ≥ 0.75 (≥30% of
+theoretical 5×0.5 = 2.5).
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | PASS — ancestor α increased by ≥ threshold |
+| `1` | FAIL — Δα below threshold (or = 0, indicating bug) |
+| `2` | INCONCLUSIVE — ancestor not found in /recommend results (service degraded) |
+
+### Cleanup
+
+The test leaves leaf traces in `activity_execution_traces` (template IDs like
+`activity:test-18-4-7-leaf-<timestamp>`). These are test-only rows; the operator can
+clean them up via `activityExecutionTrace_delete` write resolver or by pruning zero-
+execution templates with `prune-activity`.
+
+The ancestor template (`activity:⟨spec-to-enforcement-activity⟩`) gets its α slightly
+incremented on each test run — this is intentional since it's a real production template
+with high execution count and a few extra successes are negligible.
+
+---
+
 ## Head-to-head agent benchmark harness (Phase 13)
 
 A manual benchmark for comparing **Claude Code** and **minibob** on the same
