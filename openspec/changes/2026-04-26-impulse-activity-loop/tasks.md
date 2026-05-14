@@ -1038,7 +1038,7 @@ Phase 19 has no code dependencies beyond the Phase 18 harness already deployed. 
 - [x] 19.2.5 (T1.5) ✅ **DONE** 2026-05-14. `--benchmark <path>` accepts an absolute or CWD-relative file path. Backward-compat shortcuts `v1`/`v2` still work.
 - [x] 19.2.6 (T1.6) ✅ **DONE** 2026-05-14. `printSummary` shows quadrant block with A/B/C/D counts and explanatory labels. Already present pre-session.
 - [x] 19.2.7 (T1.7) ✅ **DONE** 2026-05-14. `compare-reports.ts` Section 4 shows `recommend_mrr`/`search_mrr` delta table + quadrant shift counts + regression warning if search_mrr drops >0.05.
-- [x] 19.2.8 (T1.8) ✅ **DONE** 2026-05-14. Smoke run `phase19-smoke`: exits 0, `recommend_mrr=0.1958` (7/20 found), `search_mrr=0.0036` (1/20 found), `quadrant_counts={A:1,B:0,C:6,D:13}`. FTS low due to known meta-activity BM25 indexing gap (F-V53). Report: `validation/results/2026-05-14-phase19-smoke-v2-reuse-report.json`. 5 search queries returned HTTP errors (likely FTS 500 on long queries); harness handles gracefully.
+- [x] 19.2.8 (T1.8) ✅ **DONE** 2026-05-14. Smoke run `phase19-smoke`: exits 0, `recommend_mrr=0.1958` (7/20 found), `search_mrr=0.0036` (1/20 found), `quadrant_counts={A:1,B:0,C:6,D:13}`. **NOTE:** smoke run predated FTS index rebuild (migration 127). Re-run post-rebuild (label `post-fts-rebuild-v2`): `recommend_mrr=0.1667`, `search_mrr=0.1493`, `quadrant_counts={A:2,B:6,C:4,D:8}` — B=6 means FTS surfaces 6 templates that dense search misses; FTS is complementary. Post-rebuild baseline is the canonical starting point; 0.0036 was a measurement artifact. Report: `validation/results/2026-05-14-post-fts-rebuild-v2-custom-reuse-report.json`.
 
 ### 19.3 Composition-chain credit integration test (V2.2 / 18.4.7)
 
