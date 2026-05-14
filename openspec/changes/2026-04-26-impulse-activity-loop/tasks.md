@@ -940,7 +940,7 @@ Open spec items remaining are all gated on external work:
 - [x] 18.2.6 ✅ **DONE** 2026-05-13. `validation/scripts/compare-reports.ts` (278 lines) — emits markdown delta table: MRR/hit deltas, per-entry rank changes, top-5 Thompson movers by EV. Commit `6dc21287`.
 - [x] 18.2.7 ✅ **DONE** 2026-05-13. `validation/README.md` updated with Activity Reuse Benchmark section: single command, compare workflow. Commit `6dc21287`.
 - [x] 18.2.8 ✅ **DONE** 2026-05-13. 100-call budget cap (proxy for $5): aborts with partial report if exceeded. Used 26/100 on first run. Commit `6dc21287`.
-- [ ] 18.2.9 Schedule weekly run via cron skill or CI workflow (out-of-band; not blocking 18.x).
+- [x] 18.2.9 ✅ **DONE** 2026-05-14. `.github/workflows/weekly-recommendation-validation.yml` runs every Monday 09:00 UTC via `METABOB_API_KEY_VALIDATION` secret. Regression gate: recommend_mrr >10% drop or search_mrr >0.05 drop → exit 1. Report uploaded as 90-day artifact. Commit `d9e22fdf`. (metabob-devbob)
 
 **Stability interlock:** read-only against canary. Benchmark prompts target known-deterministic templates; safe to run alongside any deploy. Does not write to activity-api.
 
