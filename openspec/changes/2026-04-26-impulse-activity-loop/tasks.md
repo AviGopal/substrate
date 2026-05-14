@@ -495,9 +495,9 @@ Each iteration is a single commit. Loop continues until parity reached on all 4 
 
 #### 13.4 — Parity acceptance + spec close
 - [x] 13.4.1 ✅ 9/10 prompts: minibob success-rate == claude-code success-rate, no timeouts, ≤1.5× LLM-call ratio. Prompt 04 exceeds ratio intentionally (see F-V11).
-- [ ] 13.4.2 Add 4 more prompts covering: multi-file edits, longer context (>10k tokens of input), ambiguous goals (where Claude Code asks clarifying questions), and goals requiring webFetch (post-G6 webFetch shape).
-- [ ] 13.4.3 Verify parity on the extended set; fold any new gaps into 13.3 iterations.
-- [ ] 13.4.4 Write the loop's prompt-patch findings into `repos/minibob/docs/PROMPTING.md` so future prompt edits start from a documented baseline rather than rediscovering. Include the iteration-log summary.
+- [x] 13.4.2 ✅ Add 4 more prompts covering: multi-file edits (35), longer context (36, ~15k token SPEC.md), ambiguous goals (37), and webFetch (38). All 4 passed minibob 0.14.9-d99cd85 (--no-backend). F-V42 fixed: standalone mode now falls back to `goal_processing_standard`.
+- [x] 13.4.3 ✅ Claude Code parity confirmed on all 4 new prompts (exit=0 × 4, no timeouts). Durations: 57s/70s/128s/16s vs minibob 55s/210s/202s/119s. No new gaps. Prompt 37 (ambiguous): CC made more changes (renamed UserID→UserId, added logout tests, modified test files) — all valid; minibob made same-scope changes without test-file edits. Both acceptable.
+- [x] 13.4.4 ✅ Wrote `repos/minibob/docs/PROMPTING.md` — iteration log summary (iter0→iter10 + Phase 13.4), key fixes table, Thompson Sampling call-count effect, goal-prompt design rules, regression checklist.
 
 #### 13 Success criteria
 - [x] 13.S1 ✅ Same model + same prompt + same workspace seed: minibob and claude-code produce functionally equivalent output (task accomplished, file changes valid) on 9/10 prompts.
