@@ -57,11 +57,11 @@
 
 ## 7. Node/Bun adapter bundle
 
-- [ ] 7.1 Create the first production adapter bundle for server-side hosts
-- [ ] 7.2 Extract filesystem/process/git behavior behind adapter implementations instead of inline Bun calls in core logic
-- [ ] 7.3 Keep adapter package free of daemon/CLI/websocket shell concerns
-- [ ] 7.4 Add adapter contract tests against fixture behaviors currently expected by MiniBob execution flows
-- [ ] 7.5 Keep adapter validation separate from pure-runtime validation; adapter tests must complement, not replace, in-memory engine tests
+- [x] 7.1 Create the first production adapter bundle for server-side hosts — `src/adapters/` with `BunFileSystemAdapter` + `BunProcessAdapter`; `./adapters` subpath export
+- [x] 7.2 Extract filesystem/process/git behavior behind adapter implementations instead of inline Bun calls in core logic — core has zero Bun imports; adapters hold them
+- [x] 7.3 Keep adapter package free of daemon/CLI/websocket shell concerns — adapters implement only `FileSystemPort` and `ProcessPort`; no daemon code
+- [x] 7.4 Add adapter contract tests against fixture behaviors — `test/adapters.test.ts` 15 tests: write/read/overwrite/unicode/multiline/cwd/exit-code/stderr/timeout against real Bun I/O in tmpdir
+- [x] 7.5 Keep adapter validation separate from pure-runtime validation — adapter tests (adapters.test.ts) use real I/O; core tests (runtime.test.ts etc.) use fakes only; no overlap
 - [ ] 7.6 Package server-side capability bundles so hosts can explicitly attach filesystem/process/git/LLM vessels rather than relying on hidden built-ins
 
 ## 8. Event and trace surfaces
@@ -73,9 +73,50 @@
 
 ## 9. MiniBob consumption path
 
-- [ ] 9.1 Map current `repos/minibob` modules into three buckets: migrate into core, reimplement as adapters, keep in MiniBob shell
+- [x] 9.1 Map current `repos/minibob` modules into three buckets:
+
+  **Bucket A — Migrate into core** (pure execution logic that belongs in ias-executor-ts):
+  - `activity.ts` → `ActivityExecutor` (partially migrated; MiniBob's version adds LLM loop on top)
+  - `impulse.ts` → `ImpulseStore` + resolution (partially migrated; MiniBob adds discovery routing)
+  - `composition-chain.ts` → folded into `ExecutionTrace.compositionChain`
+  - `types.ts` / `types/` → `ontology.ts`
+  - `activity-tracer.ts` → trace assembly in `ActivityExecutor`
+  - `lifecycle-subscriptions.ts` → `EventSink` interface + subscriber pattern
+  - `impulse-cooccurrence.ts` → pure co-occurrence analysis; no host deps; migrate
+  - `validation.ts` / `schema-validator.ts` → pure schema validation; migrate
+
+  **Bucket B — Reimplement as adapters** (I/O that should live behind ports):
+  - `tools.ts` (bash/file/git/read/write tools) → `BunFileSystemAdapter`, `BunProcessAdapter`, `BunGitAdapter`
+  - `llm.ts` (Anthropic/OpenAI calls) → `LLMAdapter` implementing `LLMPort`
+  - `pricing.ts` (cost calculation) → `CostPort` or inline in `LLMAdapter`
+  - `http-client.ts` → `FetchAdapter` implementing `FetchPort`
+  - `vessel-discovery.ts` (discovery client) → `CapabilityIndexAdapter` implementing `CapabilityIndex`
+  - `auth-service.ts` → `AuthPort` (not yet defined in ports.ts)
+  - `mcp.ts` / `mcp-activity-bridge.ts` → `MCPAdapter`
+  - `websocket.ts` → `EventSinkAdapter` (WebSocket-backed)
+  - `offline-cache.ts` → `FileSystemPort`-backed cache wrapper
+
+  **Bucket C — Keep in MiniBob shell** (daemon, CLI, conversation, session management):
+  - `index.ts`, `cli/`, `repl.ts`, `conversational-repl.ts` — entry points and REPL
+  - `boredom.ts`, `waking-activities.ts` — autonomous improvement triggers
+  - `goal-processor.ts`, `agent-runtime.ts` — MiniBob-specific goal-seeking orchestration
+  - `session.ts`, `context-memory-agent.ts`, `memory-agent.ts` — session and memory
+  - `background-task-executor.ts`, `process-registry.ts` — MiniBob process management
+  - `vessel.ts`, `vessel-bootstrap.ts`, `vessel-hooks.ts`, `vessel-registry.ts` — MiniBob vessel wiring
+  - `acp.ts`, `acp-gossip.ts` — Activity Control Protocol (MiniBob-specific mesh)
+  - `greeting.ts`, `tutor.ts`, `input.ts`, `output.ts` — conversational UI
+  - `improviser.ts` — LLM improvisation loop (orchestration + LLM call, not pure)
+  - `embedded-templates/` — MiniBob-specific template pool (host concern)
+
 - [ ] 9.2 Define the minimal host integration layer MiniBob will need to embed `ias-executor-ts`
-- [ ] 9.3 Identify singleton/global state in MiniBob that must become runtime-owned instances before migration
+- [x] 9.3 Identify singleton/global state in MiniBob that must become runtime-owned instances before migration:
+  - `config.ts` / `getConfig()` — global config singleton → pass as `ExecutionRuntimeOptions`
+  - `vessel-registry.ts` — global vessel registry map → `AttachedVesselRegistry` per runtime
+  - `vessel-discovery.ts` — singleton discovery client → inject as `CapabilityIndex` port
+  - `process-registry.ts` — global process/pid map → runtime-owned map in `ProcessAdapter`
+  - `trace-cache.ts` — global trace LRU cache → `TraceSink`-backed per runtime
+  - `llm.ts` `getClient()` — singleton LLM client → inject as `LLMPort` per runtime
+  - `mcp.ts` `getMcpSession()` — singleton MCP session → inject as `MCPAdapter` per runtime
 - [ ] 9.4 Author a follow-on migration plan for MiniBob to adopt the new repo incrementally
 
 ## 10. Validation
