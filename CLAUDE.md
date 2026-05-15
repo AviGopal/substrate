@@ -79,7 +79,7 @@ minibob --single "refactor the Thompson Sampling implementation"
 ## Current Implementation Status & Known Issues
 
 **Deployed versions** (canary, source of truth = each repo's `package.json`):
-- `metabob-activity-api` 1.15.0 — auth-fixes baseline, registry-quality endpoints, full-text-search, parent-execution-id filtering
+- `metabob-activity-api` 1.20.9 — chain-credit F-V56/F-V57 fixed, dense search, migration tracking, stratified posteriors
 - `minibob` 0.14.0 — embedded meta-activities (slot-binding, validator-dispatch, shape-provider-goal), iteration resolver, make-activity, goal-impulse seeding, enrichment-gated verification
 - `workbench` 0.3.1 — trajectory editor, live execution overlay, weight-influence feedback, stagnation detection, oracle corpus wiring
 - `identity-vessel` 0.2.8 — HMAC API keys + JWT issuance (canonical auth resolver)
@@ -93,7 +93,7 @@ minibob --single "refactor the Thompson Sampling implementation"
 - **Migration 128**: added `times_failed` field to `impulse_relevance_metrics` (SCHEMAFULL table was silently dropping `writeImpulseRelevancePenalty` UPDATEs). Verified via 18.3.5 integration test: two `verifier_negative` traces → `times_failed` increments by 2.
 - **Migration tracking** (`init_migrations` table): `scripts/init-database.ts` now records each applied migration filename and skips already-applied ones on future pod restarts. `REBUILD INDEX` migrations (111, 126, 127) blocked SurrealDB's HTTP `/sql` endpoint for 27+ minutes on large corpora — re-running them on every pod restart caused helm `--atomic` rollback timeouts. Bootstrap: if `init_migrations` is empty on first run but `activity_execution_traces` has rows, all current migrations are pre-marked applied. Activity-api 1.20.1-c2d0d96.
 - **Failure-mode stratified Thompson updates**: verifier_negative → full β penalty; budget_exhausted → half penalty; safety_breach → full β; cascading → no double-count; user_abort → neutral. `writeImpulseRelevancePenalty` fires on verifier_negative to increment per-impulse failure counters.
-- **Composition-chain credit propagation**: `propagateCreditAlongChain` writes α/β deltas to ancestors in the composition chain when a composed execution succeeds/fails (spec 18.4).
+- **Composition-chain credit propagation**: `propagateCreditAlongChain` writes α/β deltas to ancestors in the composition chain when a composed execution succeeds/fails (spec 18.4). Two bugs blocked end-to-end: **F-V56** — `variant_performance_metrics` INSERT was silently denied via `queryWithAuth` because `FOR create WHERE $auth != NONE` (migration 099) is always false for TYPE JWT access (JWT claims go to `$token`, not `$auth`); fixed by switching to root path `surrealDB.query()` for that table + migration 129 rewrites PERMISSIONS to `$token`; **F-V57** — the AET exec→variant lookup did `rows?.[0]` but `surrealDB.query()` (see `src/db/surreal.ts`) already extracts `result[0]` before returning, so `rows` is the array of rows — doing `rows[0]` grabbed the first row object and threw `{} is not iterable`; fixed by `Array.isArray(rows) ? rows : []`. Integration test 18.4.7 PASS on 1.20.9-dd83aa5 (Δα=0.30, raw 0.25).
 - **Baseline captured**: pre-Phase-18 MRR=0.1042; post-dense-search MRR=0.1542 (cumulative +0.05). 7-day re-runs scheduled ~2026-05-20.
 
 *Reliability and auth*
