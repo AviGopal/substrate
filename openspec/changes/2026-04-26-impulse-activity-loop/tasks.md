@@ -1160,3 +1160,23 @@ Phase 20 is complete when:
 - No deprecation of plain-string `inputShapes`. Both forms remain valid.
 - No cross-vessel filesystem-identity resolution. `vessel_affinity` is advisory only; the load-bearing version waits on H2 (pubkey-derived vessel identity).
 - No predicate evaluation against impulse *content* — only against `metadata.producedBy` / `produced_at_task_id`. Content-based predicates are a follow-up.
+
+## Phase 21 — Phase 11 completion: workbench blocking_shapes + impulse_state_space plumbing (2026-05-16)
+
+**Motivation.** Phase 11 (state-space-aware recommendations) shipped the API-side `blocking_shapes` and `pointer_recommendations` fields but left the workbench consuming only the raw recommendations list. Phase 21 closes the loop: wire `impulse_state_space` into the recommend request and surface `scope_upgradeable` blocking shapes as human-actionable prompts in the trajectory panel.
+
+### 21.1 Hook extension
+
+- [x] 21.1.1 ✅ **DONE** 2026-05-16. `useApplicableActivities.ts` extended with `BlockingShape` (`gap_type: 'scope_upgradeable' | 'escalatable' | 'resolvable'`, `gap_severity`, `required_by_template_ids`, `resolve_via`) and `PointerRecommendation` types. `ApplicableActivitiesResponse` extended with `blocking_shapes?` and `pointer_recommendations?`. `ApplicableActivitiesRequest` extended with `impulse_state_space?`. Commit `f7e137d`. (repos/workbench)
+
+### 21.2 Panel surface
+
+- [x] 21.2.1 ✅ **DONE** 2026-05-16. `ApplicableActivitiesPanel` sends `impulse_state_space: Array.from(currentShapes).map((shape) => ({ shape, pointer: { type: shape } }))` in recommend request. (repos/workbench)
+- [x] 21.2.2 ✅ **DONE** 2026-05-16. "Scope Gaps" section renders after the main recommendations list — only when `blocking_shapes` contains `gap_type === 'scope_upgradeable'` entries. Amber border/bg, Lock icon, admin contact prompt, `data-testid="scope-upgradeable-shape"`. Does NOT call `onEscalateUnbindableShape`. `escalatable` gaps continue through existing spawn-subgoal path. Typecheck clean. Commit `f7e137d`. (repos/workbench)
+
+### 21.S Success criteria
+
+- [x] 21.S1 ✅ `scope_upgradeable` blocking shapes render in workbench with amber card + Lock icon and do NOT trigger `onEscalateUnbindableShape` — confirmed by code review of commit `f7e137d`.
+- [x] 21.S2 ✅ `impulse_state_space` is sent in every recommend request from `ApplicableActivitiesPanel` (wired at line 73 of component) — confirmed by code review.
+- [x] 21.S3 ✅ `escalatable` gaps continue to go through the spawn-subgoal button path (no regression to existing behavior) — confirmed by code review: filter `.filter((s) => s.gap_type === 'scope_upgradeable')` leaves escalatable entries in the existing blocked-card path.
+- [x] 21.S4 ✅ IAL §11.S4 closed — `scope_upgradeable` blocking shapes surface as human-actionable upgrade prompts without auto-escalation. Updated in state-space-aware-recommendations tasks.md.
