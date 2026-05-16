@@ -159,20 +159,14 @@ See design.md §"Phase 5 prerequisites and rollback" for full rationale. None of
 - [ ] 5.0.8 ⚠️ **NOT STARTED** Gather minimum 7 canary days of shadow-mode evidence per org; divergence-rate threshold met (`< 1%` per `(shape, taskId)` pair, calibration TBD). Document evidence in design.md §"Success-criteria validation" before flipping flag. (operational; gated on 5.0.6 landing first)
 - [ ] 5.0.9 ⚠️ **NOT STARTED** Implement vessel-to-vessel JWT session handshake — replace `X-Internal-Api-Key` bypass with cryptographically-validated HS256 JWT (15-min TTL, minted by identity-vessel `/v1/jwt/generate`, locally signature-verified on the receiving side). Required before Phase 10 P4 (RELATE graph traversal fans out cross-vessel) and Phase 11 (pointer_state_space queries to discovery-vessel). Reference: `openspec/changes/2026-04-29-vessel-session-handshake/`.
 
-**Recommended next steps (decision):** Phase 5 strict cutover is blocked on a multi-day hardening track (5.0.1, 5.0.2, 5.0.6, 5.0.7). Two pragmatic options:
-1. **Implement the hardening track** (estimated 2–4 weeks: H1 cross-sign infrastructure → H5 baseline variants → feature flag with shadow-mode → 7-day evidence collection). Aligned with the spec; conservative.
-2. **Cutover under documented safety tradeoffs**, since the meta-activity path (slot-binding + validator-dispatch) is verified working end-to-end on canary with all 5 tasks succeeding. The inline executor blocks (5.1–5.4) become dead code; deletion is purely a code-cleanup exercise. Risk: any latent meta-activity bug becomes load-bearing without the safety net of shadow-mode comparison.
-
-Pivoting next iteration's focus to the smaller well-scoped remaining items (Phase 9 `thompson_posterior` shape, Infra gap B template iteration) since they don't depend on the 5.0 hardening track.
+**Decision (2026-05-16): Pragmatic cutover (option 2) — slot-binding is the canonical path; inline blocks are dead code.** The meta-activity path is verified working end-to-end on canary (all 5 tasks succeeding). `emitLifecycleImpulse` is fully `await`ed: slot-binding completes and enriches the pool before the executor proceeds. Removing the inline fallback paths makes the canonical path load-bearing, which is the correct outcome. Risk acknowledged: any slot-binding regression becomes directly observable rather than silently bypassed by the old fallback.
 
 ### 5.1–5.4 Deletion tasks
 
-Each runs only after 5.0 prerequisites met and `FEATURE_ACTIVITY_DRIVEN_BINDING` flipped to `enabled` per-org. Plan a separate follow-up commit per surface so any rollback can be partial.
-
-- [ ] 5.1 Remove inline synthesiser block at `activity.ts:4949-4997` (sibling 1 §7) (after 5.0 prerequisites met and `FEATURE_ACTIVITY_DRIVEN_BINDING` flipped to enabled per-org)
-- [ ] 5.2 Remove inline validation block at `activity.ts:5454-5529` (sibling 3 §8.1) (after 5.0 prerequisites met and `FEATURE_ACTIVITY_DRIVEN_BINDING` flipped to enabled per-org)
-- [ ] 5.3 Remove three `recordImpulseRelevance` call sites (sibling 3 §8.2) (after 5.0 prerequisites met and `FEATURE_ACTIVITY_DRIVEN_BINDING` flipped to enabled per-org)
-- [ ] 5.4 Remove inline tool-argument-pattern recording loop (sibling 3 §8.3) (after 5.0 prerequisites met and `FEATURE_ACTIVITY_DRIVEN_BINDING` flipped to enabled per-org)
+- [x] 5.1 ✅ **DONE** 2026-05-16. Removed inline synthesiser block (`synthesizeShapeImpulsesFromVariables` + `fillMissingShapesViaMemoryAgent` fallback) from `activity.ts:5454-5492` (originally ~4949-4997 before later insertions drifted line numbers). Both private helper methods removed as dead code — each had exactly one call site in the removed block. The equivalent logic lives in `impulse-preparation-resolver.ts` (ports confirmed in comments at lines 325/377). Typecheck: clean. Shape-resolver tests: 31/31 pass. Commit `30dd3cb`. (repos/minibob)
+- [ ] 5.2 Remove inline validation block (validator-dispatch inline path) — the `isMCPEnabled() && templateId && taskImpulseIds.length > 0` relevance-metric query block before resolver dispatch. Deferred: validator-dispatch is working but this block feeds the pre-execution relevance lookup, not the post-execution write. Needs targeted audit. (repos/minibob)
+- [ ] 5.3 Remove three `recordImpulseRelevance` call sites — now handled by learning_signal_writer. Deferred: confirm validator-dispatch `learning_signal_writer` covers all three call sites before removal. (repos/minibob)
+- [ ] 5.4 Remove inline tool-argument-pattern recording loop (sibling 3 §8.3) — deferred pending same audit. (repos/minibob)
 
 ## Federation Security (Phases 1.1, 1.5, 2.1)
 
@@ -1180,3 +1174,109 @@ Phase 20 is complete when:
 - [x] 21.S2 ✅ `impulse_state_space` is sent in every recommend request from `ApplicableActivitiesPanel` (wired at line 73 of component) — confirmed by code review.
 - [x] 21.S3 ✅ `escalatable` gaps continue to go through the spawn-subgoal button path (no regression to existing behavior) — confirmed by code review: filter `.filter((s) => s.gap_type === 'scope_upgradeable')` leaves escalatable entries in the existing blocked-card path.
 - [x] 21.S4 ✅ IAL §11.S4 closed — `scope_upgradeable` blocking shapes surface as human-actionable upgrade prompts without auto-escalation. Updated in state-space-aware-recommendations tasks.md.
+
+## Phase 22 — Autonomous Vessel Forge: Pure-Vessel Compliance Demonstration (2026-05-16)
+
+**Motivation.** When slot-binding hits a missing shape with zero producers anywhere in the system, ias-executor-ts forges a new vessel that owns the shape. Phase 22 is bounded by one demand: **the forged vessel must be indistinguishable from a hand-built vessel at every protocol boundary**, so it can be driven by activities, by LLM resolver tool calls, by direct `POST /v2/impulses/resolve` from another vessel, and by the workbench — all without any special-case dispatch code. Reliability is measured by the forged vessel being **used through every existing dispatch path** and reaching `vessel_production_success_rate ≥ 0.90` over a 10-consumer window.
+
+**Core principle: reuse over invention.** No new tables. No new maintenance catalog. No new dispatch paths. The reliability metric is computed from `activity_execution_traces` joined on `composition_chain`. Dedup is the existence of a registered shape in discovery-vessel. Maintenance is the already-deployed registry-quality six-pack (`core-activity-audit` / `prune-activity` / `replace-activity` / `repair-failed-activity` / `evolve-activity-self-contained`) acting on the forged vessel's activities like any other activity. The forge adds **only**: the host that runs it, the resolvers that compose it, the template that chains them, and the escalation branch in slot-binding that dispatches it.
+
+Full design: `design.md` §"Phase 22 — Autonomous Vessel Forge + Maintenance Loop", including the six-clause compliance contract and the reuse map.
+
+### 22.1 Concept seeding + intent recognition
+
+- [ ] 22.1.1 Write `extract-concepts-from-docs` as a reusable activity template in `repos/minibob/src/embedded-templates/extract-concepts-from-docs.json`. Tasks: read source doc → LLM extracts structured concepts → POST to concept-db `/concepts` (idempotent on content hash). Reusable for any future doc → concept extraction. (repos/minibob, repos/concept-db)
+- [ ] 22.1.2 Run `extract-concepts-from-docs` once with input `docs/architecture/TYPESCRIPT_VESSEL_TEMPLATE.md`. Tag-prefix scope: `vessel-construction.*`. Expected ≥ 12 concepts spanning discovery, auth, observation, helm chart, three-invariants, registration timing, JWT dual-source rule. (repos/concept-db)
+- [ ] 22.1.3 Run `extract-concepts-from-docs` with input `docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md` (sections on Vessels, Resolvers, Impulses). Tag-prefix scope: `impulse-activity.*`. Provides the foundation model concepts forge LLM resolvers need. (repos/concept-db)
+- [ ] 22.1.4 Extend `analyzeTaskSemantics` in `repos/metabob-activity-api/src/utils/semantic-tags.ts` with keyword expansions: `'forge'`, `'vessel'`, `'scaffold-vessel'`, `'new-shape-producer'`, `'create-vessel'` → `['feature.vessel.forge', 'infrastructure', 'development.scaffold']`. Update unit tests for the new tag-prefix path. (repos/metabob-activity-api)
+- [ ] 22.1.5 Add concept retrieval JSDoc to `repos/concept-db/src/routes/concepts.ts` documenting the `?source_type=vessel_construction_pattern&shape=typescript_vessel_template` query convention forge resolvers will use. (repos/concept-db)
+
+### 22.2 VesselForgeHost in ias-executor-ts
+
+- [ ] 22.2.1 New port: `DockerPort` in `repos/ias-executor-ts/src/ports.ts`. Methods: `build(contextPath, tag, opts): Promise<void>`, `push(tag, registry): Promise<void>`. Implementation `BunDockerAdapter` in `src/adapters/docker-adapter.ts` shells to `docker` via `ProcessPort`; handles registry auth via env `DOCKER_REGISTRY_AUTH`. (repos/ias-executor-ts)
+- [ ] 22.2.2 New port: `HelmfilePort` in `src/ports.ts`. Methods: `applyOverlay(overlayPath): Promise<void>`, `waitForReady(release, namespace, timeoutMs): Promise<void>`. Implementation `BunHelmfileAdapter` in `src/adapters/helmfile-adapter.ts` shells to `helmfile` + `kubectl` via `ProcessPort`. (repos/ias-executor-ts)
+- [ ] 22.2.3 New port: `DiscoveryPort` in `src/ports.ts`. Methods: `lookupShapeProducers(shape: string, orgIds?: string[]): Promise<VesselSummary[]>`, `registerVessel(payload: VesselRegistration): Promise<void>`. Implementation `HttpDiscoveryAdapter` in `src/adapters/discovery-adapter.ts` wraps `FetchPort` against `discovery-vessel`. 30s response cache to avoid thrashing. (repos/ias-executor-ts)
+- [ ] 22.2.4 `VesselForgeHost` in `src/examples/vessel-forge-host.ts`. Mirrors `BunHost` constructor pattern; wires `BunFileSystemAdapter`, `BunProcessAdapter`, `BunDockerAdapter`, `BunHelmfileAdapter`, `HttpDiscoveryAdapter`, `FetchAdapter`, `LLMAdapter`; attaches activity-api + concept-db + identity-vessel as capability vessels via `AttachedVesselRegistry`. Registers the 6 forge resolvers from 22.2.5–22.2.10. (repos/ias-executor-ts)
+- [ ] 22.2.5 Resolver `scaffold_vessel_skeleton` in `src/resolvers/scaffold-vessel-skeleton.ts`. Inputs: `vesselSpec` impulse + concept-db retrieval for `typescript_vessel_template` shape concepts. LLM generates file tree (package.json, src/index.ts, Dockerfile, helm/Chart.yaml, helm/values.yaml). Writes to `/tmp/forge_<uuid>/` via `FileSystemPort`. Output: `vesselScaffold` impulse with `pointer.path` set to the build dir. (repos/ias-executor-ts)
+- [ ] 22.2.6 Resolver `wire_discovery_registration` in `src/resolvers/wire-discovery-registration.ts`. Input: `vesselScaffold`. Queries concept-db for `vessel_discovery_probe` concepts; LLM edits `src/index.ts` to inject non-blocking registration + 60s heartbeat. Output: `vesselWithDiscovery` impulse. (repos/ias-executor-ts)
+- [ ] 22.2.7 Resolver `wire_auth_blueprint` in `src/resolvers/wire-auth-blueprint.ts`. Input: `vesselWithDiscovery`. Queries concept-db for `vessel_auth_blueprint` concepts; LLM edits to add identity-vessel client + `requireAuth()` middleware + JWT_SECRET env wire (per CLAUDE.md "Two sources, one secret" rule). Output: `vesselWithAuth` impulse. (repos/ias-executor-ts)
+- [ ] 22.2.8 Resolver `docker_build_push` in `src/resolvers/docker-build-push.ts`. Input: `vesselWithAuth`. Calls `DockerPort.build()` then `push()`; image tag = `metabobapp/forge-<shape>-<uuid7>:<timestamp>`. Retry with exponential backoff on registry transients (3 attempts). Output: `vesselImagePushed` impulse with the full image URI. Failure mode: `failure_mode: { type: "verifier_negative", reason: "docker_push_failed" }`. (repos/ias-executor-ts)
+- [ ] 22.2.9 Resolver `helmfile_sync` in `src/resolvers/helmfile-sync.ts`. Input: `vesselImagePushed`. Writes overlay file to `repos/deployment/overlays/forged-vessels/forge-<shape>-<uuid7>.yaml`; calls `HelmfilePort.applyOverlay()`; waits up to 5 minutes for pod readiness via `waitForReady()`. Output: `vesselDeployedToCanary` impulse with the cluster endpoint URL. (repos/ias-executor-ts)
+- [ ] 22.2.10 Resolver `verify_three_invariants` in `src/resolvers/verify-three-invariants.ts`. Input: `vesselDeployedToCanary`. Three probes (parallelisable): (a) discovery — query `DiscoveryPort.lookupShapeProducers()` with the new shape, expect ≥ 1 producer matching the new vessel's id; (b) observation — open WS to vessel `/ws` (or HTTP probe of impulse resolve endpoint); send test resolve request; expect `impulse.resolved` event or 200 response with the declared shape; (c) auth — call `/health` without JWT (expect 200, public), call a protected endpoint without JWT (expect 401), call with valid JWT (expect 200). Output: `vesselVerified` on green; typed `failure_mode` on per-probe failure. Up to 3 LLM-retry cycles on observation failures with error context fed back to scaffold resolver. (repos/ias-executor-ts)
+
+### 22.3 `forge_vessel_for_shape` activity template
+
+- [ ] 22.3.1 Embedded template `forge-vessel-for-shape.json` in `repos/minibob/src/embedded-templates/`. Inputs: `vesselGoal` (text), `missingShape`, `parentExecutionId`, `parentDepth`. Tasks chain: `compose_vessel_spec` (LLM) → `scaffold_vessel_skeleton` → `wire_discovery_registration` → `wire_auth_blueprint` → `docker_build_push` → `helmfile_sync` → `verify_three_invariants` → `register_in_shape_forge_history`. Outputs: `vesselDeployed` on success. (repos/minibob, repos/ias-executor-ts — template registered with activity-api on startup) 
+- [ ] 22.3.2 Depth guard inside the template: top-level task `check_recursion_depth` aborts early if `parentDepth >= 2` (max one nested forge). Returns `failure_mode: { type: "safety_breach", context: { breach_type: "depth", limit: 2, ancestor_chain: ... } }`. (repos/minibob)
+- [ ] 22.3.3 `compose_vessel_spec` task (LLM resolver): takes `vesselGoal` + `missingShape` + concept-db retrievals + discovery's `/registry/shapes` snapshot to avoid name collisions; produces `vesselSpec` impulse with structured payload (shapes advertised, activities exposed, resolver tier preferences, scope contract). Output shape: `vesselSpec`. (repos/ias-executor-ts)
+- [ ] 22.3.4 No separate `register_in_shape_forge_history` task — dedup is implicit via discovery-vessel's existing shape registry (the registered shape *is* the existence proof). The template's final task is `verify_three_invariants`. (repos/minibob)
+
+### 22.4 Slot-binding escalation branch (the connection point)
+
+- [ ] 22.4.1 New task `check_discovery_for_producer` in `repos/minibob/src/embedded-templates/slot-binding.json` between `select_or_produce` and `escalate_unbindable`. Resolver `impulse-resolve` with pointer `{type: "shape_producer_inventory", shape: "{{lifecycle.missingShape}}"}` routes through discovery. Output shape `shape_producer_inventory` carries `{count, vessel_ids, health_summary}`. (repos/minibob)
+- [ ] 22.4.2 Extend `escalate_unbindable` conditional: dispatches `forge_vessel_for_shape` when `shape_producer_inventory.count === 0 AND parentDepth < 2`; dispatches existing `create-shape-provider-goal` otherwise. Two sibling tasks with mutually-exclusive guards. (repos/minibob)
+- [ ] 22.4.3 Read resolver for `shape_producer_inventory` in `repos/metabob-activity-api/src/routes/impulses.ts`: forwards to discovery-vessel `/registry/shapes?shape=X&org_ids=Y`. Registered via `discover-by-shapes` so any consumer resolves it uniformly. (repos/metabob-activity-api)
+- [ ] 22.4.4 Concurrency dedup via existing discovery registry: a second concurrent forge for the same shape sees the first vessel's registration after its own `check_discovery_for_producer` resolves and falls through to the "wait + re-check" path (10s polling × 5 attempts). **No new mutex table — the registry's atomic registration is the mutex.** (repos/minibob)
+
+### 22.5 Reliability metric (read-only over existing traces)
+
+- [ ] 22.5.1 Add `computeVesselProductionSuccessRate(forgedVesselId, windowHours)` to `repos/metabob-activity-api/src/services/vessel-metrics.ts` (single new function). SQL: count traces where `composition_chain CONTAINS $forgedVesselId AND created_at > now() - $window` grouped by success. Read-only; **no migration, no new table**. (repos/metabob-activity-api)
+- [ ] 22.5.2 REST endpoint `GET /v2/vessels/:id/metrics?window=24h` returning `{success_rate, total_uses, failure_modes, status: green|yellow|red}`. Auth-scoped to org. The same data the registry-quality activities (existing) read to drive replace/repair decisions. (repos/metabob-activity-api)
+
+### 22.6 Maintenance reuse (no new templates)
+
+- [ ] 22.6.1 Verify `core-activity-audit` includes forged-vessel activities in its catalog. They register into `activity_template` like any other vessel's activities; no change should be required. Add a unit test on a synthetic forged-vessel activity. (repos/minibob)
+- [ ] 22.6.2 Confirm `replace-activity` accepts forged-vessel activities as input. Its variant-generation step should produce another forge run when failure-mode context indicates the whole scaffold is wrong; `evolve-activity-self-contained` handles resolver-level changes. Document the recipe-vs-forge selection criterion in `replace-activity`'s `metadata.notes`. (repos/minibob)
+- [ ] 22.6.3 **No new maintenance templates created.** The non-goal is documented in the design.
+
+### 22.7 Acceptance test: the compliance contract demonstration
+
+- [ ] 22.7.1 **Forge step**: run `forge_vessel_for_shape("json_schema_validator")` end-to-end on canary. Acceptance: `vesselVerified` impulse emitted within 5 minutes; forged vessel registered with discovery; `/health` returns 200. Fixture: `validation/scripts/test-22-forge-and-paths.ts`. (repos/minibob)
+- [ ] 22.7.2 **Path A — inputShapes binding**: run an activity declaring `inputShapes: ["json_schema_validator"]`. Assert: Phase 20 producer_selection chooses the forged vessel; binding completes; task succeeds. (repos/minibob)
+- [ ] 22.7.3 **Path B — impulse-resolve dispatch**: run an activity whose task is `{ resolver: "impulse-resolve", config: { pointer: { type: "json_schema_validator", schema: {...} } } }`. Assert: impulse-resolve routes through discovery to the forged vessel; trace records the forged vessel as resolver; output content matches the contract. (repos/minibob)
+- [ ] 22.7.4 **Path C — LLM `load_impulse` tool call**: drive an LLM task that calls `load_impulse({type: "json_schema_validator", ...})`. Assert: impulse loading path STEP 4 finds the forged vessel; `callVesselResolve()` succeeds; content returned to the LLM. (repos/minibob)
+- [ ] 22.7.5 **Path D — direct cross-vessel POST**: from a separate vessel context (ias-executor-ts test harness), call `POST <forged-vessel-endpoint>/v2/impulses/resolve` with a valid JWT and sample pointer. Assert: 200 response with content; forged vessel emits `impulse.resolved` on its WS. (repos/ias-executor-ts)
+- [ ] 22.7.6 **Path E — workbench surface**: open the trajectory panel for a goal needing `json_schema_validator`. Assert: forged vessel appears in `ApplicableActivitiesPanel` as a producer, visually identical to any hand-built vessel (no special badges, no special routing). (repos/workbench)
+- [ ] 22.7.7 **Path F — reliability under load**: issue 10 follow-up goals consuming `json_schema_validator` via mixed dispatch paths (mix of A/B/C/D). Assert: `vessel_production_success_rate >= 0.90` over the 10-trace window; existing Thompson posteriors on the forged vessel's activity reflect the consumption. (repos/minibob)
+- [ ] 22.7.8 **Maintenance reuse test**: inject a 503 fault into the forged vessel's `/resolve` for 20 minutes. Assert: existing `core-activity-audit` flags the forged vessel's activity as degraded; existing `replace-activity` or `repair-failed-activity` dispatches; the vessel returns to green within one audit cycle. **No vessel-specific maintenance code involved.** (repos/minibob)
+- [ ] 22.7.9 Canary validation document `docs/validation/2026-05-NN-vessel-forge-canary.md` summarising the eight test outcomes, dispatch-path coverage, MTTR for the maintenance recovery test, and any forge variants Thompson-elected during the validation window.
+
+### 22.8 Workbench surfaces (minimal)
+
+- [ ] 22.8.1 Trajectory panel: when slot-binding takes the forge branch, render a small "via forge" label on the escalation node; link to the nested forge execution's trace. **No special "forged vessel dashboard"** — forged vessels appear in existing vessel lists like any other vessel. (repos/workbench)
+- [ ] 22.8.2 `ImpulseStatePanel` shows the forged vessel's id in the existing per-impulse provenance string (same surface used for any other vessel's impulses; no new badges). (repos/workbench)
+
+### 22.S Success criteria
+
+- [ ] 22.S1 `VesselForgeHost` ships in ias-executor-ts; `bun typecheck` + existing tests green; forge resolvers covered by unit tests against fake ports.
+- [ ] 22.S2 Concept-db is seeded with ≥ 12 vessel-construction concepts via the reusable `extract-concepts-from-docs` activity.
+- [ ] 22.S3 Slot-binding correctly branches between `forge_vessel_for_shape` and `create-shape-provider-goal` based on the discovery pre-check.
+- [ ] 22.S4 22.7.1 produces a green-status forged vessel within 5 minutes.
+- [ ] 22.S5 **Compliance demonstration: 22.7.2–22.7.6 (paths A–E) each succeed without any path-specific code changes.** This is the load-bearing criterion — proves the forged vessel is just-another-vessel at every protocol boundary.
+- [ ] 22.S6 22.7.7 (path F) shows `vessel_production_success_rate >= 0.90` over a 10-consumer window.
+- [ ] 22.S7 22.7.8 (maintenance reuse) shows the existing registry-quality activities acting on the forged vessel's degraded activity without any forge-specific maintenance code.
+
+### Stop conditions
+
+Phase 22 is complete when:
+
+- [ ] 22.1.x concepts seeded; intent recognition tag-prefix landed
+- [ ] 22.2.x VesselForgeHost + 3 new ports + 6 forge resolvers shipped
+- [ ] 22.3.x `forge_vessel_for_shape` template registered, depth-guarded
+- [ ] 22.4.x slot-binding escalation branch working on canary; dedup via existing registry
+- [ ] 22.5.x reliability metric computable over existing traces; REST endpoint live
+- [ ] 22.6.x reuse of registry-quality six-pack verified on forged-vessel activities
+- [ ] 22.7.x acceptance tests 22.7.1–22.7.9 all pass; canary validation document written
+- [ ] 22.8.x workbench surfaces use existing vessel rendering paths
+
+### Explicit non-goals (do NOT do in this phase)
+
+- **No new database tables.** Reliability is computed from existing traces. Dedup uses existing discovery registry.
+- **No new maintenance catalog.** The existing registry-quality six-pack handles forged vessels' activities as ordinary activities.
+- **No new dispatch paths.** If a forged vessel needs a new dispatch path, the forge is wrong, not the dispatch layer.
+- **No special workbench surfaces.** Forged vessels appear in existing UIs like any other vessel.
+- **No general-purpose code generation.** Forge only produces vessels matching the concept-db proto-skeleton.
+- **No multi-language vessels.** TypeScript/Bun only.
+- **No production deployment.** Canary only; promotion stays manual.
+- **No cross-vessel state migration.** Migration tooling waits on H1.
+- **No autonomous vessel deletion.** Prune deprecates; removal is operator-only.
