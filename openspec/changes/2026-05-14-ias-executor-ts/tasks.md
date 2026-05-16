@@ -108,7 +108,11 @@
   - `improviser.ts` — LLM improvisation loop (orchestration + LLM call, not pure)
   - `embedded-templates/` — MiniBob-specific template pool (host concern)
 
-- [ ] 9.2 Define the minimal host integration layer MiniBob will need to embed `ias-executor-ts`
+- [x] 9.2 Define the minimal host integration layer — `src/examples/bun-host.ts`:
+  - `BunHost` class: creates `ExecutionRuntime` with `BunFileSystemAdapter`/`BunProcessAdapter`/optional `LLMPort` injected; registers built-in resolvers (`file-read`, `bash`, `llm`); attaches capability vessels (`bun-fs`, `bun-proc`, `llm-vessel`) for explicit capability inspection
+  - `ConsoleEventSink`: forwards lifecycle events to stdout — reference implementation for CLI/debug hosts
+  - `HttpTraceSink`: POSTs traces to activity-api `/v2/activities/execution-traces` — reference implementation for production hosts
+  - Built-in resolvers expose `task.config.path`, `task.config.command`, `task.config.cwd`, `task.config.prompt` as the resolver config surface MiniBob will use
 - [x] 9.3 Identify singleton/global state in MiniBob that must become runtime-owned instances before migration:
   - `config.ts` / `getConfig()` — global config singleton → pass as `ExecutionRuntimeOptions`
   - `vessel-registry.ts` — global vessel registry map → `AttachedVesselRegistry` per runtime
@@ -122,7 +126,7 @@
 ## 10. Validation
 
 - [x] 10.1 Validate that a pure in-memory host can execute fixture activities without host effects
-- [ ] 10.2 Validate that a Node/Bun host can execute the same fixtures by supplying adapters only
+- [x] 10.2 Validate that a Node/Bun host can execute the same fixtures by supplying adapters only — `test/bun-host-integration.test.ts` 12 tests: file-read/bash resolvers with real Bun I/O; multi-step fixture (read + count lines); capability listing; missing config error paths
 - [x] 10.3 Validate that no core package imports Bun APIs directly
 - [x] 10.4 Validate that no core package imports MiniBob shell/runtime modules directly
 - [ ] 10.5 Validate that all meaningful behavior remains expressible as activities calling resolvers with observable traces/events
