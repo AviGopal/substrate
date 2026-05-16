@@ -1088,3 +1088,75 @@ Phase 19 is complete when:
 - [x] ✅ **DONE** `run-weekly-harness.sh` executes end-to-end without intervention (19.5.1)
 - [x] ✅ **DONE** Weekly CI workflow merged (19.5.2); first scheduled run: Monday 2026-05-19
 - [ ] Two consecutive weekly runs show `improvise_health.success_rate` ≥ 0.70 and `reuse_trajectory.reuse_rate` ≥ 0.65 — **time-gated (~2026-05-26)**
+
+## Phase 20 — Predicate-Aware Binding + Pool-Selection Wiring (2026-05-15)
+
+**Motivation.** Close the binding-layer gap surfaced by the 2026-05-15 investigation: tasks today can only declare `inputShapes: ["X"]` (shape presence). The pool may contain multiple instances of X produced by different tasks/vessels; the matcher passes all of them; `canExecuteTask` reports "present" even when the specific instance the task actually needs is absent (case c). The architecture already has the building blocks — `impulse_pool_selection` resolver is implemented but unwired into slot-binding; impulses carry `producedBy` / `produced_at_task_id` provenance from the April registry-hygiene work; Thompson posteriors are already keyed per `(impulse_id, task_id)` in `impulse_relevance_metrics`. Phase 20 ships the **wire** (pool_selection into slot-binding) and the **schema field** (predicate on `inputShapes`) that lets template authors express the missing cases.
+
+Full design: `design.md` §"Phase 20 — Predicate-Aware Binding + Pool-Selection Wiring".
+
+### 20.1 Schema and types (executor parity)
+
+- [x] 20.1.1 ✅ **DONE** 2026-05-15. `InputShapeRef` added to `repos/minibob/src/types.ts`. (repos/minibob)
+- [x] 20.1.2 ✅ **DONE** 2026-05-15. `ActivityTask.inputShapes` expanded to `(string | InputShapeRef)[]`; all 14 call sites in activity.ts, mcp.ts, discovered-tools.ts, and test files updated with `typeof e === "string" ? e : e.shape` guards. (repos/minibob)
+- [x] 20.1.3 ✅ **DONE** 2026-05-15. `InputShapeRef` mirrored in `repos/ias-executor-ts/src/ontology.ts`; `ActivityTask.inputShapes` union expanded. (repos/ias-executor-ts)
+- [x] 20.1.4 ✅ **DONE** 2026-05-15. `bun run typecheck` clean in both repos. (repos/minibob, repos/ias-executor-ts)
+- [x] 20.1.5 ✅ **DONE** 2026-05-15. Predicates are executor-side only. Added task-level `inputShapes`/`outputShapes` as `string[]` to `TemplateTaskSchema` (previously stripped on storage). Comment documents the decision: predicates not stored, not interpreted by activity-api. Deployed 79a61ae. (repos/metabob-activity-api)
+
+### 20.2 Predicate-aware matcher (load-bearing logic)
+
+- [x] 20.2.1 ✅ **DONE** 2026-05-15. `resolveImpulsesByShape` accepts `(string | InputShapeRef)[]`; filters by `producedBy` and `produced_at_task_id`. (repos/minibob)
+- [x] 20.2.2 ✅ **DONE** 2026-05-15. `canExecuteTask` returns `missingRefs: InputShapeRef[]` alongside `missing: string[]`; predicate-filtered empty set → missing. (repos/minibob)
+- [x] 20.2.3 ✅ **DONE** 2026-05-15. `matchImpulsesForTask` enforces cardinality `all`/`exactly_one`; predicate-filtered Priority 2 path. (repos/minibob)
+- [x] 20.2.4 ✅ **DONE** 2026-05-15. Parity in `repos/ias-executor-ts/src/engine.ts` with `filterCandidates` helper and predicate-aware `resolveInputs`. (repos/ias-executor-ts)
+- [x] 20.2.5 ✅ **DONE** 2026-05-15. 31 unit tests (13 new predicate-aware) in `src/shape-resolver.test.ts` covering all 5 spec cases. Commit 35b5f78. (repos/minibob)
+- [x] 20.2.6 ✅ **DONE** 2026-05-15. Shared fixture `repos/ias-executor-ts/test/fixtures/predicate-binding.json`; parity test in `predicate-binding-fixture.test.ts`. (repos/ias-executor-ts)
+
+### 20.3 Lifecycle payload + slot-binding wiring
+
+- [x] 20.3.1 ✅ **DONE** 2026-05-15. `lifecycle:task:preBinding` extended with `currentImpulseShapes` and `missingInputs`. Mirrored at both call sites (~line 4789 and ~5363). (repos/minibob)
+- [x] 20.3.2 ✅ **DONE** 2026-05-15. `broadcastPreBinding` receives string-normalized shape arrays; lifecycle payload carries full union-typed data. (repos/minibob)
+- [x] 20.3.3 ✅ **DONE** 2026-05-15. `slot-binding.json` v0.2.0: `pool_precheck` task added (iteration over missing shapes via `impulse_pool_selection` with `poolCandidates`); `select_or_produce` depends on `pool_precheck`. Closes `openQuestions[0]`. (repos/minibob)
+- [x] 20.3.4 ✅ **DONE** 2026-05-15. `ImpulsePoolSelectionResolver` extended with `poolCandidates` config field — resolver auto-filters unfiltered pool by `shape` + optional `predicateProducedBy`; returns `{no_pool_candidates:true}` gracefully when empty. No interpolator changes needed. (repos/minibob)
+- [x] 20.3.5 ✅ **DONE** 2026-05-15. `ImpulsePoolSelectionResolver` verified: `poolCandidates` path maps to `ImpulseRef[]` with correct fields (id, ref, priority, budget). JSDoc added. (repos/minibob)
+
+### 20.4 Activity-api provenance audit + workbench surfaces
+
+- [ ] 20.4.1 Audit pass on activity-api impulse-write paths: verify `produced_by` and `produced_at_task_id` are populated on every emission. Touch points: `repos/metabob-activity-api/src/routes/impulses.ts` write resolvers (`*_write` shapes), `src/db/paradigm.ts` resolver write paths, lifecycle event emission in `src/routes/execution-traces.ts`. Close any gap where these fields are silently dropped. No schema change expected — fields are declared by migration 086 + April registry-hygiene migrations. (repos/metabob-activity-api)
+- [x] 20.4.2 ✅ **DONE** 2026-05-15. `TaskEditor` renders `inputShapes` object entries as `shape (from producedBy)` with predicate tooltip; plain strings unchanged. `ActivityTask.input_shapes` widened to accept union. Commit e28d025. (repos/workbench)
+- [x] 20.4.3 ✅ **DONE** 2026-05-15. `BindableSlotRow` in `ImpulseStatePanel.tsx`: computes `filteredCandidates` by `predicate.producedBy`; amber border + `AlertCircle` icon + `data-testid="predicate-mismatch-slot"` + `N/M candidates` badge when case-c. Commit e28d025. (repos/workbench)
+- [x] 20.4.4 ✅ **DONE** 2026-05-15. `ImpulseStatePanel` reads `impulseProducedByMap` from store (populated from `lifecycle:task:preBinding.currentImpulseShapes`); shows `· from task_N` suffix on each impulse row. Commit e28d025. (repos/workbench)
+- [ ] 20.4.5 `ApplicableActivitiesPanel`: no change. Predicates are an executor concern; discovery and recommendation remain shape-level. Document this explicitly in a code comment so future contributors don't add predicate-aware discovery prematurely. (repos/workbench)
+
+### 20.5 Observability
+
+- [x] 20.5.1 ✅ **DONE** 2026-05-15. At each `preBinding` event, logs `[binding] pool_selection_fired_rate taskId=... missing=N pool_candidates=M producer_fallback=K` at info level. Commit bb4268b. (repos/minibob)
+- [x] 20.5.2 ✅ **DONE** 2026-05-15. At each `canExecuteTask` with predicate miss (case-c), logs `[binding] predicate_mismatch taskId=... shapes=... pool_size=N` at info level. Commit bb4268b. (repos/minibob)
+- [ ] 20.5.3 Surface both metrics on the workbench observability layer (right-panel live stats) or the activity-dashboard, whichever already shows lifecycle-event rates. (repos/workbench or repos/activity-dashboard)
+
+### 20.6 Success criteria
+
+- [ ] 20.S1 At least one in-tree activity template uses an `InputShapeRef` predicate; canary trace shows predicate-filtered binding end-to-end. Candidate template: one of the audit/repair activities that consume specific prior-task outputs.
+- [ ] 20.S2 `pool_selection_fired_rate > 0` on canary over a 24-hour window — the branch is reachable, not dead code.
+- [ ] 20.S3 Plain-string `inputShapes` templates execute identically to pre-Phase-20 behaviour. v2 benchmark `reuse_trajectory.reuse_rate` does not regress (±0.02 noise band).
+- [ ] 20.S4 Workbench `BindableSlots` renders the predicate-mismatch state distinctly from missing-shape on a synthetic case-(c) trace.
+- [ ] 20.S5 ias-executor-ts and minibob produce identical bindings on the shared `predicate-binding.json` fixture (test in 20.2.6 enforces this).
+
+### Stop conditions
+
+Phase 20 is complete when:
+
+- [ ] 20.1.x type lands clean in both executors; no plain-string template regresses
+- [ ] 20.2.x matcher unit tests cover all five cases (predicate match, predicate miss + others present, cardinality "all", cardinality "exactly_one" error, plain-string backward compat)
+- [ ] 20.3.x slot-binding template dispatches pool_selection on canary when candidates exist
+- [ ] 20.4.x activity-api audit closes any provenance gap; workbench shows predicate-mismatched state distinctly
+- [ ] 20.5.x both observability metrics emit non-zero values on a canary goal run
+- [ ] 20.S5 parity fixture passes in both executors
+
+### Explicit non-goals (do NOT do in this phase)
+
+- No new resolver. Don't add a "pool_selection_v2" or rewrite the existing one.
+- No retrieval-time predicate evaluation. `discover-by-shapes` stays shape-level.
+- No deprecation of plain-string `inputShapes`. Both forms remain valid.
+- No cross-vessel filesystem-identity resolution. `vessel_affinity` is advisory only; the load-bearing version waits on H2 (pubkey-derived vessel identity).
+- No predicate evaluation against impulse *content* — only against `metadata.producedBy` / `produced_at_task_id`. Content-based predicates are a follow-up.
