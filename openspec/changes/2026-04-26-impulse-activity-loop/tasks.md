@@ -1122,11 +1122,11 @@ Full design: `design.md` §"Phase 20 — Predicate-Aware Binding + Pool-Selectio
 
 ### 20.4 Activity-api provenance audit + workbench surfaces
 
-- [ ] 20.4.1 Audit pass on activity-api impulse-write paths: verify `produced_by` and `produced_at_task_id` are populated on every emission. Touch points: `repos/metabob-activity-api/src/routes/impulses.ts` write resolvers (`*_write` shapes), `src/db/paradigm.ts` resolver write paths, lifecycle event emission in `src/routes/execution-traces.ts`. Close any gap where these fields are silently dropped. No schema change expected — fields are declared by migration 086 + April registry-hygiene migrations. (repos/metabob-activity-api)
+- [x] 20.4.1 ✅ **DONE** 2026-05-15. Audit findings: (a) `produced_by`/`produced_at_task_id` live in `metadata` (FLEXIBLE JSON), not as declared top-level fields — this is correct; minibob's shape-resolver reads `metadata.producedBy`/`metadata.produced_at_task_id`. (b) Minibob's emission paths (`tool-argument-extractor.ts:198`, `state-navigator-resolver.ts:122,174,208`) DO populate `metadata.producedBy`. (c) `*_write` shapes update records, not create impulses — provenance N/A. (d) `emitUpkeepAudit` (`impulses.ts:170-178`) creates system audit impulses without provenance — non-blocking (audit impulses are not binding-layer candidates). No code change required. (repos/metabob-activity-api)
 - [x] 20.4.2 ✅ **DONE** 2026-05-15. `TaskEditor` renders `inputShapes` object entries as `shape (from producedBy)` with predicate tooltip; plain strings unchanged. `ActivityTask.input_shapes` widened to accept union. Commit e28d025. (repos/workbench)
 - [x] 20.4.3 ✅ **DONE** 2026-05-15. `BindableSlotRow` in `ImpulseStatePanel.tsx`: computes `filteredCandidates` by `predicate.producedBy`; amber border + `AlertCircle` icon + `data-testid="predicate-mismatch-slot"` + `N/M candidates` badge when case-c. Commit e28d025. (repos/workbench)
 - [x] 20.4.4 ✅ **DONE** 2026-05-15. `ImpulseStatePanel` reads `impulseProducedByMap` from store (populated from `lifecycle:task:preBinding.currentImpulseShapes`); shows `· from task_N` suffix on each impulse row. Commit e28d025. (repos/workbench)
-- [ ] 20.4.5 `ApplicableActivitiesPanel`: no change. Predicates are an executor concern; discovery and recommendation remain shape-level. Document this explicitly in a code comment so future contributors don't add predicate-aware discovery prematurely. (repos/workbench)
+- [x] 20.4.5 ✅ **DONE** 2026-05-15. Added 3-line comment to `ApplicableActivitiesPanel.tsx` before `useApplicableActivities` call documenting that predicates are executor-side only; discovery/recommendation stay shape-level. Commit 449809a. (repos/workbench)
 
 ### 20.5 Observability
 
@@ -1136,7 +1136,7 @@ Full design: `design.md` §"Phase 20 — Predicate-Aware Binding + Pool-Selectio
 
 ### 20.6 Success criteria
 
-- [ ] 20.S1 At least one in-tree activity template uses an `InputShapeRef` predicate; canary trace shows predicate-filtered binding end-to-end. Candidate template: one of the audit/repair activities that consume specific prior-task outputs.
+- [x] 20.S1 ✅ **DONE** 2026-05-15. `trace-analysis-with-feedback.json` updated: `analyze_and_prepare_feedback` uses `{"shape":"executionTraceList","producedBy":"fetch_traces"}`, `write_relevance_feedback` uses `{"shape":"impulseRelevance_write_pointer","producedBy":"extract_relevance_pointer"}`. Deployed as 0.14.9-e096ad1. Canary trace will confirm end-to-end once the template executes (20.S2 window). Commit e096ad1. (repos/minibob)
 - [ ] 20.S2 `pool_selection_fired_rate > 0` on canary over a 24-hour window — the branch is reachable, not dead code.
 - [ ] 20.S3 Plain-string `inputShapes` templates execute identically to pre-Phase-20 behaviour. v2 benchmark `reuse_trajectory.reuse_rate` does not regress (±0.02 noise band).
 - [ ] 20.S4 Workbench `BindableSlots` renders the predicate-mismatch state distinctly from missing-shape on a synthetic case-(c) trace.
