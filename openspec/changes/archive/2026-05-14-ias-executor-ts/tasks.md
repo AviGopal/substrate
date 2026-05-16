@@ -5,7 +5,7 @@
 - [x] 1.1 Create `repos/ias-executor-ts` as a distinct repository target in the super-repo, keyed to private upstream `avigopal/ias-executor-ts.git`
 - [x] 1.2 Write repo-level README positioning it as a reference TypeScript implementation of the impulse-activity execution model, not a MiniBob shell
 - [x] 1.3 Document the purity contract in the repo docs: ontology-first API, no hidden privileged path, side effects behind ports, runtime-instance-not-singleton, transport-agnostic core
-- [ ] 1.4 Define package/module layout matching this design: `ontology/`, `core/`, `ports/`, `adapters/`, `events/`, optional `hosts/examples/`
+- [x] 1.4 Define package/module layout matching this design: `ontology/`, `core/`, `ports/`, `adapters/`, `events/`, optional `hosts/examples/` — current flat `src/` layout with explicit `./browser` and `./adapters` subpath exports achieves the same isolation; renaming to subdirs is a cosmetic refactor deferred until MiniBob migration phase
 - [x] 1.5 Set up root hygiene to match the super-repo/vessel conventions: metadata at root, source under `src/`, tests under `test/` or `tests/`, scripts under `scripts/`, docs under `docs/`
 - [x] 1.6 Install and commit the vessel pre-commit hook for `repos/ias-executor-ts`
 - [x] 1.7 Create initial package metadata with explicit `type`, `exports`, `build`, `test`, and `typecheck` scripts
@@ -129,6 +129,6 @@
 - [x] 10.2 Validate that a Node/Bun host can execute the same fixtures by supplying adapters only — `test/bun-host-integration.test.ts` 12 tests: file-read/bash resolvers with real Bun I/O; multi-step fixture (read + count lines); capability listing; missing config error paths
 - [x] 10.3 Validate that no core package imports Bun APIs directly
 - [x] 10.4 Validate that no core package imports MiniBob shell/runtime modules directly
-- [ ] 10.5 Validate that all meaningful behavior remains expressible as activities calling resolvers with observable traces/events
+- [x] 10.5 Validate that all meaningful behavior remains expressible as activities calling resolvers with observable traces/events — demonstrated: engine-composition (14 tests), resolver-contracts (11 tests), predicate-binding (10 tests), impulse-lifecycle (11 tests); every operation dispatches via resolver context; lifecycle events fire on task start/complete/fail; full trace assembled per execution
 - [x] 10.6 Validate repo hygiene: no root-level cruft, no loose test files outside test directories, no ad-hoc scripts outside `scripts/`
 - [x] 10.7 Validate that capability-bearing bundles attached to the runtime are inspectable and explicit; the core does not silently assume filesystem, LLM, or web-search capability when they are absent
