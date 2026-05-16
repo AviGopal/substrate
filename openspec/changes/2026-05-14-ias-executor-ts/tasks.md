@@ -51,9 +51,9 @@
 - [x] 6.1 Define first-class ports for filesystem, process, git, fetch, LLM, clock, randomness, user input, template provision, recommendation, capability index, trace sink, and event sink
 - [x] 6.2 Ensure the core engine depends only on ports and ontology types — verified via typecheck; `src/engine.ts` imports only from `./ontology`, `./impulses`, `./resolvers`, `./runtime`
 - [x] 6.3 Provide mock/fake port implementations for tests — `test/fakes.ts`: `SteppingClock`, `SequentialRandom`, `EventSinkSpy`, `TraceSinkSpy`, `FailingTraceSink`
-- [ ] 6.4 Document intended usage of each port and what kinds of downstream hosts should implement it
+- [x] 6.4 Document intended usage of each port and what kinds of downstream hosts should implement it
 - [x] 6.5 Define an explicit `AttachedVesselRegistry` or equivalent runtime surface for capability attachment
-- [ ] 6.6 Ensure discovery-backed capability lookup, when used, lives behind the attachment/capability port rather than inside core execution logic
+- [x] 6.6 Ensure discovery-backed capability lookup, when used, lives behind the attachment/capability port rather than inside core execution logic
 
 ## 7. Node/Bun adapter bundle
 
@@ -62,7 +62,7 @@
 - [x] 7.3 Keep adapter package free of daemon/CLI/websocket shell concerns — adapters implement only `FileSystemPort` and `ProcessPort`; no daemon code
 - [x] 7.4 Add adapter contract tests against fixture behaviors — `test/adapters.test.ts` 15 tests: write/read/overwrite/unicode/multiline/cwd/exit-code/stderr/timeout against real Bun I/O in tmpdir
 - [x] 7.5 Keep adapter validation separate from pure-runtime validation — adapter tests (adapters.test.ts) use real I/O; core tests (runtime.test.ts etc.) use fakes only; no overlap
-- [ ] 7.6 Package server-side capability bundles so hosts can explicitly attach filesystem/process/git/LLM vessels rather than relying on hidden built-ins
+- [x] 7.6 Package server-side capability bundles so hosts can explicitly attach filesystem/process/git/LLM vessels rather than relying on hidden built-ins
 
 ## 8. Event and trace surfaces
 
@@ -121,7 +121,7 @@
   - `trace-cache.ts` — global trace LRU cache → `TraceSink`-backed per runtime
   - `llm.ts` `getClient()` — singleton LLM client → inject as `LLMPort` per runtime
   - `mcp.ts` `getMcpSession()` — singleton MCP session → inject as `MCPAdapter` per runtime
-- [ ] 9.4 Author a follow-on migration plan for MiniBob to adopt the new repo incrementally
+- [x] 9.4 Author a follow-on migration plan for MiniBob to adopt the new repo incrementally — see `minibob-migration-plan.md`: 7 phases (add dep → dual-write traces → replace ImpulseStore → replace ActivityExecutor → capability bundles → DiscoveryCapabilityIndex → singleton elimination)
 
 ## 10. Validation
 

@@ -77,6 +77,12 @@ The core knows contracts, not concrete network paths. It should depend on interf
 
 CLI, daemon/server, boredom, waking activities, health endpoints, discovery registration, and auth bootstrap remain outside the repo's pure core. If examples are added, they must be explicitly labeled as host examples, not the center of the design.
 
+### P7. Prefer attached explicit vessels over implicit built-ins
+
+The executor should remain small. Filesystem capability, LLM capability, web-search capability, and other effect-bearing capability bundles should be attached from the outside through explicit ports, adapters, or externally-provided resolver sets.
+
+The core may still have internal runtime structure, but it should avoid growing a large shadow world of implicit vessels that are effectively hidden built-ins. If a host wants filesystem, LLM, or web search behavior, that attachment should be visible in runtime construction.
+
 ---
 
 ## Component model
@@ -247,6 +253,7 @@ Express every host effect as an explicit interface.
 - `TraceSink`
 - `EventSink`
 - `CapabilityIndex`
+- `AttachedVesselRegistry`
 - `UserInputPort`
 
 **How it should be used**
@@ -258,6 +265,12 @@ Express every host effect as an explicit interface.
 **What it must not do**
 
 - No default global implementations hidden in core
+
+**Notes**
+
+- `AttachedVesselRegistry` is the explicit runtime view of capability-bearing attachments available to the executor in this host context.
+- A host may attach a filesystem vessel, LLM vessel, web-search vessel, remote-capability vessel, or an in-memory test vessel through this surface.
+- Discovery-backed capability lookup is one possible implementation behind this port, not a core assumption.
 
 ---
 
@@ -274,11 +287,13 @@ Provide the first production-grade host adapter bundle for server/runtime use.
 - git implementation
 - Node/Bun-backed hashing/time/random support
 - host utilities for loading templates and writing traces
+- optional attached capability bundles such as filesystem-backed resolvers or process-backed resolvers
 
 **How it should be used**
 
 - Imported by MiniBob or by a standalone host
 - Supplies the ports required by the core runtime
+- Optionally contributes attached explicit vessels/resolver bundles to the runtime at construction time
 
 **What it must not do**
 
@@ -299,10 +314,12 @@ Provide a browser-compatible adapter bundle for workbench/local execution.
 - browser-safe git strategy
 - proxied process execution where needed
 - IndexedDB or in-memory persistence
+- browser-attached capability bundles such as browser-LLM, browser-search, or virtual-filesystem resolvers
 
 **How it should be used**
 
 - Browser hosts compose it with the same core engine
+- Browser hosts decide which explicit capability vessels to attach for a given session/use case
 
 **What it must not do**
 
@@ -357,6 +374,42 @@ Demonstrate embedding patterns without reintroducing shell coupling.
 **What it must not do**
 
 - Must not become the real runtime center
+
+---
+
+## Attached capability vessels
+
+To avoid a large implicit-vessel footprint, the executor should make capability attachment explicit:
+
+```text
+host runtime
+  ├─ core executor
+  ├─ attached filesystem vessel
+  ├─ attached llm vessel
+  ├─ attached web-search vessel
+  └─ attached remote/discovery-backed vessel
+```
+
+These do not need to be "vessels" in the deployment sense every time; they may be local adapter-backed resolver bundles. What matters is that they are explicit in the runtime shape rather than silently assumed by the core.
+
+### Why this matters
+
+- keeps the executor small and inspectable
+- makes capability availability a host/runtime decision
+- avoids hardcoding Bun/server assumptions into the core
+- makes tests honest: the test runtime attaches only what it means to exercise
+- lets the same executor be used in different environments with different capability topologies
+
+### Preferred pattern
+
+The host should construct the runtime by attaching capability bundles intentionally:
+
+- **minimal test host** — only in-memory transform/validation/activity bundles
+- **server host** — filesystem + process + git + LLM bundles
+- **browser host** — browser LLM + browser search + virtual filesystem bundles
+- **networked host** — remote capability bundle backed by discovery/provider lookup
+
+The executor should be able to answer "what capabilities are attached right now?" without smuggling in hidden built-ins.
 
 ---
 
