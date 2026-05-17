@@ -1186,8 +1186,8 @@ Full design: `design.md` §"Phase 22 — Autonomous Vessel Forge + Maintenance L
 ### 22.1 Concept seeding + intent recognition
 
 - [x] 22.1.1 ✅ **DONE** 2026-05-16. `extract-concepts-from-docs.json` created in `repos/minibob/src/embedded-templates/`. 3 tasks: file read → LLM extraction (maxConcepts variable, tagPrefix variable) → iteration via `concept_write` resolver through discovery. Registered in EMBEDDED_TEMPLATE_FILES. Commit `09abc1f` (repos/minibob).
-- [ ] 22.1.2 Run `extract-concepts-from-docs` once with input `docs/architecture/TYPESCRIPT_VESSEL_TEMPLATE.md`. Tag-prefix scope: `vessel-construction.*`. Expected ≥ 12 concepts spanning discovery, auth, observation, helm chart, three-invariants, registration timing, JWT dual-source rule. (repos/concept-db)
-- [ ] 22.1.3 Run `extract-concepts-from-docs` with input `docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md` (sections on Vessels, Resolvers, Impulses). Tag-prefix scope: `impulse-activity.*`. Provides the foundation model concepts forge LLM resolvers need. (repos/concept-db)
+- [x] 22.1.2 ✅ **DONE** 2026-05-17. 12 vessel-construction concepts seeded to concept-db with `source_type: "vessel_construction_pattern"`, shapes `typescript_vessel_template` (10) + `vessel_auth_blueprint` (2). Covers discovery-registration, shape-dispatch-parity, auth-identity-vessel, jwt-dual-source, helm-chart, directory-layout, hono-bun, registration-timing, trace-recording, impulse-resolve-endpoint, three-invariants, websocket-observer. Required extending SourceTypeSchema enum in concept-db (commit `7f30a36` repos/concept-db; deployment commit `1d0cc89`).
+- [x] 22.1.3 ✅ **DONE** 2026-05-17. 12 impulse-activity concepts seeded to concept-db with `source_type: "impulse_activity_pattern"`, shape `impulse_activity_foundation`. Covers pointer-as-shape, three-states-two-motions, minimum-self-stable-set, impulse-structure, activity-structure, vessel-bundle, thompson-sampling-variants, shape-matching-optimization, resolver-dispatch, trace-as-learning-substrate, implicit-vessel, recall-learning-topology. Source: `docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`.
 - [x] 22.1.4 ✅ **DONE** 2026-05-16. `analyzeTaskSemantics` extended with 5 forge keywords: `'forge'`, `'vessel'`, `'scaffold-vessel'`, `'new-shape-producer'`, `'create-vessel'` → `['feature.vessel.forge', 'infrastructure', 'development.scaffold']`. 6 new unit tests (30 total, 30/30 pass). Commit `a29640c` (repos/metabob-activity-api).
 - [x] 22.1.5 ✅ **DONE** 2026-05-16. JSDoc added to `GET /concepts/search` in `repos/concept-db/src/routes/concepts.ts` documenting `?source_type=vessel_construction_pattern&shape=typescript_vessel_template` query convention and the three forge-relevant shape values. Commit `cd9d3f9` (repos/concept-db).
 
@@ -1248,7 +1248,7 @@ Full design: `design.md` §"Phase 22 — Autonomous Vessel Forge + Maintenance L
 
 ### 22.S Success criteria
 
-- [ ] 22.S1 `VesselForgeHost` ships in ias-executor-ts; `bun typecheck` + existing tests green; forge resolvers covered by unit tests against fake ports.
+- [x] 22.S1 ✅ **DONE** 2026-05-16. `VesselForgeHost` ships in ias-executor-ts; `bun typecheck` clean (0 errors); 112/112 tests pass; `test/forge-resolvers.test.ts` covers docker_build_push, helmfile_sync, verify_three_invariants against fake ports + VesselForgeHost registration of all 6 forge resolver IDs. Commit `f6cd541` (repos/ias-executor-ts).
 - [ ] 22.S2 Concept-db is seeded with ≥ 12 vessel-construction concepts via the reusable `extract-concepts-from-docs` activity.
 - [ ] 22.S3 Slot-binding correctly branches between `forge_vessel_for_shape` and `create-shape-provider-goal` based on the discovery pre-check.
 - [ ] 22.S4 22.7.1 produces a green-status forged vessel within 5 minutes.
