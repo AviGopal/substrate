@@ -1,0 +1,459 @@
+{
+  "run_at": "2026-05-14T05:10:21.296Z",
+  "label": "post-phase-11-5.1",
+  "mrr": 0.19166666666666662,
+  "hit_at_1": 0.03333333333333333,
+  "hit_at_3": 0.3333333333333333,
+  "hit_at_5": 0.43333333333333335,
+  "entries": [
+    {
+      "id": "bench-001",
+      "category": "bug-fix",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "fix failing tests and verify the activity system is working correctly",
+      "expected_activity_id": "activity:⟨Activity System Verification Test Suite⟩"
+    },
+    {
+      "id": "bench-002",
+      "category": "bug-fix",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "verify the activity system and check all components are healthy",
+      "expected_activity_id": "activity:⟨Activity System Verification⟩"
+    },
+    {
+      "id": "bench-003",
+      "category": "bug-fix",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "fetch data from an API endpoint and validate the JSON response format",
+      "expected_activity_id": "activity:⟨API Fetch and Validate JSON⟩"
+    },
+    {
+      "id": "bench-004",
+      "category": "bug-fix",
+      "rank": 3,
+      "rr": 0.3333333333333333,
+      "found": true,
+      "goal_text": "fetch data from an API and save the results to a file",
+      "expected_activity_id": "activity:⟨API Data Fetch and Save⟩"
+    },
+    {
+      "id": "bench-005",
+      "category": "bug-fix",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "fetch data from an external API with fallback handling if the primary source fails",
+      "expected_activity_id": "activity:⟨API Data Fetcher with Fallbacks⟩"
+    },
+    {
+      "id": "bench-006",
+      "category": "bug-fix",
+      "rank": 3,
+      "rr": 0.3333333333333333,
+      "found": true,
+      "goal_text": "fetch and retrieve data from a remote API endpoint",
+      "expected_activity_id": "activity:⟨API Data Fetcher⟩"
+    },
+    {
+      "id": "bench-007",
+      "category": "bug-fix",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "analyse application execution traces to find performance bottlenecks and optimization opportunities",
+      "expected_activity_id": "activity:⟨Application Trace Analysis and Optimization⟩"
+    },
+    {
+      "id": "bench-008",
+      "category": "bug-fix",
+      "rank": 1,
+      "rr": 1,
+      "found": true,
+      "goal_text": "run a comprehensive analysis of application traces to identify issues",
+      "expected_activity_id": "activity:⟨Comprehensive Application Trace Analysis⟩"
+    },
+    {
+      "id": "bench-009",
+      "category": "feature-add",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "perform a code review of recent changes using an LLM to identify bugs and improvements",
+      "expected_activity_id": "activity:⟨Advanced LLM Code Review Script⟩"
+    },
+    {
+      "id": "bench-010",
+      "category": "feature-add",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "run a comprehensive LLM-powered code review across the repository",
+      "expected_activity_id": "activity:⟨Comprehensive LLM Code Review Script⟩"
+    },
+    {
+      "id": "bench-011",
+      "category": "feature-add",
+      "rank": 4,
+      "rr": 0.25,
+      "found": true,
+      "goal_text": "query the backend to generate a report of activity execution metrics and performance data",
+      "expected_activity_id": "activity:⟨Backend Activity Metrics Query⟩"
+    },
+    {
+      "id": "bench-012",
+      "category": "feature-add",
+      "rank": 2,
+      "rr": 0.5,
+      "found": true,
+      "goal_text": "generate a report summarising activity metrics including success rates and execution counts",
+      "expected_activity_id": "activity:⟨Activity Metrics Report Generator⟩"
+    },
+    {
+      "id": "bench-013",
+      "category": "feature-add",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "analyse activity performance metrics to identify which templates are performing best",
+      "expected_activity_id": "activity:⟨Analyze Activity Performance Metrics⟩"
+    },
+    {
+      "id": "bench-014",
+      "category": "feature-add",
+      "rank": 2,
+      "rr": 0.5,
+      "found": true,
+      "goal_text": "analyse data files to generate improvement recommendations for the system",
+      "expected_activity_id": "activity:⟨Analyze Data Files for Improvement Recommendations⟩"
+    },
+    {
+      "id": "bench-015",
+      "category": "refactor",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "analyse existing data and generate data-driven recommendations for improving the activity system",
+      "expected_activity_id": "activity:⟨Generate Data-Driven Improvement Recommendations⟩"
+    },
+    {
+      "id": "bench-016",
+      "category": "refactor",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "analyse activity data and generate actionable improvement recommendations",
+      "expected_activity_id": "activity:⟨Analyze Data for Improvement Recommendations⟩"
+    },
+    {
+      "id": "bench-017",
+      "category": "refactor",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "fix specification violations found in the dashboard component",
+      "expected_activity_id": "activity:⟨Fix Dashboard Specification Violations⟩"
+    },
+    {
+      "id": "bench-018",
+      "category": "refactor",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "fetch data from an API with limited tool access and constrained execution",
+      "expected_activity_id": "activity:⟨API Data Fetcher with Limited Tools⟩"
+    },
+    {
+      "id": "bench-019",
+      "category": "documentation",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "audit activity templates and report which core templates have the highest usage and Thompson scores",
+      "expected_activity_id": "activity:⟨core-activity-audit⟩"
+    },
+    {
+      "id": "bench-020",
+      "category": "documentation",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "extract reusable patterns from execution traces and promote them to concept templates",
+      "expected_activity_id": "activity:⟨extract-pattern⟩"
+    },
+    {
+      "id": "bench-021",
+      "category": "validation",
+      "rank": 4,
+      "rr": 0.25,
+      "found": true,
+      "goal_text": "verify the lifecycle and learning loop is working correctly",
+      "expected_activity_id": "activity:⟨Lifecycle and Learning Loop Verification⟩"
+    },
+    {
+      "id": "bench-022",
+      "category": "validation",
+      "rank": 4,
+      "rr": 0.25,
+      "found": true,
+      "goal_text": "scan dependencies for known vulnerabilities",
+      "expected_activity_id": "activity:⟨Dependency Vulnerability Scanner⟩"
+    },
+    {
+      "id": "bench-023",
+      "category": "validation",
+      "rank": 2,
+      "rr": 0.5,
+      "found": true,
+      "goal_text": "verify the system lifecycle and confirm learning loop",
+      "expected_activity_id": "activity:⟨System Lifecycle and Learning Loop Verification⟩"
+    },
+    {
+      "id": "bench-024",
+      "category": "validation",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "scan all project dependencies for vulnerability issues",
+      "expected_activity_id": "activity:⟨Vulnerability Scan All Dependencies⟩"
+    },
+    {
+      "id": "bench-025",
+      "category": "validation",
+      "rank": 2,
+      "rr": 0.5,
+      "found": true,
+      "goal_text": "enforce minibob dashboard specifications and validate the dashboard display",
+      "expected_activity_id": "activity:⟨Enforce MiniBob Dashboard Specifications⟩"
+    },
+    {
+      "id": "bench-026",
+      "category": "refactor",
+      "rank": 2,
+      "rr": 0.5,
+      "found": true,
+      "goal_text": "transform enforcement logic to read-only validation mode",
+      "expected_activity_id": "activity:⟨Transform Enforcement to Read-Only Validation⟩"
+    },
+    {
+      "id": "bench-027",
+      "category": "feature-add",
+      "rank": 2,
+      "rr": 0.5,
+      "found": true,
+      "goal_text": "generate data-driven improvement recommendations from analysis",
+      "expected_activity_id": "activity:⟨Generate Data-Driven Improvement Recommendations⟩"
+    },
+    {
+      "id": "bench-028",
+      "category": "feature-add",
+      "rank": 3,
+      "rr": 0.3333333333333333,
+      "found": true,
+      "goal_text": "query metrics from the backend to generate an activity performance report",
+      "expected_activity_id": "activity:⟨Backend Activity Metrics Query⟩"
+    },
+    {
+      "id": "bench-029",
+      "category": "improvement",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "run the complete activity improvement cycle on the learning system",
+      "expected_activity_id": "activity:⟨Complete Activity Improvement Cycle⟩"
+    },
+    {
+      "id": "bench-030",
+      "category": "improvement",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "goal_text": "execute the activity improvement loop to iterate on template performance",
+      "expected_activity_id": "activity:⟨Activity Improvement Loop⟩"
+    }
+  ],
+  "thompson_snapshot": [
+    {
+      "activity_id": "activity:⟨Specification Enforcement and Contract Validation⟩",
+      "name": "Specification Enforcement and Contract Validation",
+      "alpha": 9,
+      "beta": 1,
+      "ev": 0.9,
+      "total_executions": 8,
+      "ci_width": 0.35457734122345
+    },
+    {
+      "activity_id": "activity:⟨Specification Compliance Validation⟩",
+      "name": "Specification Compliance Validation",
+      "alpha": 9,
+      "beta": 1,
+      "ev": 0.9,
+      "total_executions": 8,
+      "ci_width": 0.35457734122345
+    },
+    {
+      "activity_id": "activity:⟨Query Activity Backend Metrics⟩",
+      "name": "Query Activity Backend Metrics",
+      "alpha": 8,
+      "beta": 1,
+      "ev": 0.8888888888888888,
+      "total_executions": 7,
+      "ci_width": 0.38957273207996335
+    },
+    {
+      "activity_id": "activity:⟨Format Activity Metrics Report⟩",
+      "name": "Format Activity Metrics Report",
+      "alpha": 8,
+      "beta": 1,
+      "ev": 0.8888888888888888,
+      "total_executions": 7,
+      "ci_width": 0.38957273207996335
+    },
+    {
+      "activity_id": "activity:⟨Generate GitHub Autonomous Development Metrics⟩",
+      "name": "Generate GitHub Autonomous Development Metrics",
+      "alpha": 8,
+      "beta": 1,
+      "ev": 0.8888888888888888,
+      "total_executions": 7,
+      "ci_width": 0.38957273207996335
+    },
+    {
+      "activity_id": "activity:⟨spec-to-enforcement-activity⟩",
+      "name": "Spec to Enforcement Activity",
+      "alpha": 8,
+      "beta": 1,
+      "ev": 0.8888888888888888,
+      "total_executions": 7,
+      "ci_width": 0.38957273207996335
+    },
+    {
+      "activity_id": "activity:⟨acquire-codebase-context⟩",
+      "name": "Acquire Codebase Context",
+      "alpha": 8,
+      "beta": 1,
+      "ev": 0.8888888888888888,
+      "total_executions": 7,
+      "ci_width": 0.38957273207996335
+    },
+    {
+      "activity_id": "activity:⟨trace-enforce-validate-loop⟩",
+      "name": "trace-enforce-validate-loop",
+      "alpha": 7,
+      "beta": 1,
+      "ev": 0.875,
+      "total_executions": 6,
+      "ci_width": 0.4321393808072165
+    },
+    {
+      "activity_id": "activity:⟨Analyze System Health and Performance Issues⟩",
+      "name": "Analyze System Health and Performance Issues",
+      "alpha": 5,
+      "beta": 1,
+      "ev": 0.8333333333333334,
+      "total_executions": 4,
+      "ci_width": 0.5521674464226308
+    },
+    {
+      "activity_id": "activity:⟨Analyze Workflow Ecosystem Health⟩",
+      "name": "Analyze Workflow Ecosystem Health",
+      "alpha": 5,
+      "beta": 1,
+      "ev": 0.8333333333333334,
+      "total_executions": 4,
+      "ci_width": 0.5521674464226308
+    },
+    {
+      "activity_id": "activity:⟨Analyze Workflow Health Data⟩",
+      "name": "Analyze Workflow Health Data",
+      "alpha": 5,
+      "beta": 1,
+      "ev": 0.8333333333333334,
+      "total_executions": 4,
+      "ci_width": 0.5521674464226308
+    },
+    {
+      "activity_id": "activity:⟨Analyze Data Files for Improvement Recommendations⟩",
+      "name": "Analyze Data Files for Improvement Recommendations",
+      "alpha": 4,
+      "beta": 1,
+      "ev": 0.8,
+      "total_executions": 3,
+      "ci_width": 0.6401333194473372
+    },
+    {
+      "activity_id": "activity:⟨Generate Data-Driven Improvement Recommendations⟩",
+      "name": "Generate Data-Driven Improvement Recommendations",
+      "alpha": 4,
+      "beta": 1,
+      "ev": 0.8,
+      "total_executions": 3,
+      "ci_width": 0.6401333194473372
+    },
+    {
+      "activity_id": "activity:⟨GitHub Issue and PR Report Generator⟩",
+      "name": "GitHub Issue and PR Report Generator",
+      "alpha": 4,
+      "beta": 1,
+      "ev": 0.8,
+      "total_executions": 3,
+      "ci_width": 0.6401333194473372
+    },
+    {
+      "activity_id": "activity:⟨Comprehensive Error Analysis⟩",
+      "name": "Comprehensive Error Analysis",
+      "alpha": 4,
+      "beta": 1,
+      "ev": 0.8,
+      "total_executions": 3,
+      "ci_width": 0.6401333194473372
+    },
+    {
+      "activity_id": "activity:⟨fetch-activity-effectiveness⟩",
+      "name": "Fetch Activity Effectiveness Metrics",
+      "alpha": 3,
+      "beta": 1,
+      "ev": 0.75,
+      "total_executions": 2,
+      "ci_width": 0.7591047358566537
+    },
+    {
+      "activity_id": "activity:⟨Format Activity Template Metrics⟩",
+      "name": "Format Activity Template Metrics",
+      "alpha": 1,
+      "beta": 1,
+      "ev": 0.5,
+      "total_executions": 0,
+      "ci_width": 1.1316065276116665
+    },
+    {
+      "activity_id": "activity:⟨Query Activity Template Metrics⟩",
+      "name": "Query Activity Template Metrics",
+      "alpha": 1,
+      "beta": 1,
+      "ev": 0.5,
+      "total_executions": 0,
+      "ci_width": 1.1316065276116665
+    },
+    {
+      "activity_id": "activity:⟨Query Activity Template Metrics Report⟩",
+      "name": "Query Activity Template Metrics Report",
+      "alpha": 1,
+      "beta": 1,
+      "ev": 0.5,
+      "total_executions": 0,
+      "ci_width": 1.1316065276116665
+    }
+  ],
+  "trace_stats": {
+    "sample_size": 0,
+    "improvise_count": 0,
+    "improvise_rate": 0,
+    "window_days": 7
+  }
+}
