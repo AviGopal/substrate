@@ -293,6 +293,66 @@ async function test_22_7_3_path_b(vesselEndpoint: string): Promise<{ success: bo
 }
 
 // ---------------------------------------------------------------------------
+// Test 22.7.4 — Path C: minibob callVesselResolve() style call via discovery
+// ---------------------------------------------------------------------------
+
+async function test_22_7_4_path_c(vesselEndpoint: string): Promise<{ success: boolean; error?: string }> {
+  console.log("\n=== 22.7.4 Path C — load_impulse via discovery routing ===");
+  // Simulate minibob's callVesselResolve() flow:
+  // 1. Ask discovery for the shape producer
+  // 2. Call the vessel's resolve_endpoint with an impulse payload
+  const discoverRes = await fetch(`${DISCOVERY_URL}/resolve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `ApiKey ${METABOB_API_KEY}` },
+    body: JSON.stringify({ pointer: { type: "vesselCapability" }, shapes: [MISSING_SHAPE], limit: 1 }),
+  }).catch(() => null);
+
+  let resolveEndpoint = "";
+  if (discoverRes?.ok) {
+    const data = (await discoverRes.json()) as any;
+    const vessels = data?.content?.vessels ?? [];
+    if (vessels.length > 0) {
+      resolveEndpoint = vessels[0]?.resolve_endpoint ?? vessels[0]?.endpoint;
+      console.log(`  ✅ discovery found vessel: endpoint=${resolveEndpoint}`);
+    }
+  }
+
+  // If discovery routing works, use the discovered endpoint; otherwise use port-forwarded endpoint
+  const targetEndpoint = resolveEndpoint && !resolveEndpoint.includes("0.0.0.0")
+    ? resolveEndpoint
+    : `${vesselEndpoint}/v2/impulses/resolve`;
+
+  console.log(`  Using endpoint: ${targetEndpoint}`);
+
+  // Simulate the callVesselResolve() call — same format minibob uses
+  const loadImpulseBody = {
+    pointer: {
+      type: MISSING_SHAPE,
+      schema: { type: "object", properties: { name: { type: "string" } }, required: ["name"] },
+      data: { name: "test-load-impulse" },
+    },
+  };
+
+  const resolveRes = await fetch(targetEndpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `ApiKey ${METABOB_API_KEY}`,
+    },
+    body: JSON.stringify(loadImpulseBody),
+  }).catch(() => null);
+
+  if (resolveRes?.ok) {
+    const data = (await resolveRes.json()) as any;
+    console.log(`  ✅ callVesselResolve → 200 (shape=${data?.shape}, ok=${data?.ok})`);
+    return { success: true };
+  } else {
+    console.log(`  ❌ callVesselResolve → ${resolveRes?.status}`);
+    return { success: false, error: `${resolveRes?.status}` };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Test 22.7.5 — Path D: direct cross-vessel POST from ias-executor-ts harness
 // ---------------------------------------------------------------------------
 
@@ -414,6 +474,7 @@ async function main() {
 
       results["22.7.2"] = await test_22_7_2_path_a_binding(localEndpoint);
       results["22.7.3"] = await test_22_7_3_path_b(localEndpoint);
+      results["22.7.4"] = await test_22_7_4_path_c(localEndpoint);
       results["22.7.5"] = await test_22_7_5_path_d(localEndpoint);
       results["22.7.7"] = await test_22_7_7_path_f(localEndpoint);
     } finally {
