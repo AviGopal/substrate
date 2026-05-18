@@ -1,0 +1,9 @@
+{
+  "name": "@metabob/shape-dispatch-check",
+  "version": "0.1.0",
+  "description": "Lint check: every advertised shape has a dispatch case and vice-versa (vessel invariant 2)",
+  "type": "module",
+  "scripts": {
+    "check": "bun check.ts"
+  }
+}

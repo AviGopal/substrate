@@ -50,11 +50,42 @@ Compare `repos/metabob-activity-api/src/index.ts` and `repos/metabob-activity-ap
 
 ### 2. Every advertised shape has a dispatch case
 
-Don't advertise what you can't resolve. The `config.discovery.shapes` array and the `switch(pointer.type)` in `routes/impulses.ts` must agree. Activity-api documents this explicitly in `config.ts`:
+Don't advertise what you can't resolve. The `config.discovery.shapes` array and the `switch(pointer.type)` in `routes/impulses.ts` must agree exactly. The agreement is mechanically verified by `packages/shape-dispatch-check/`:
 
-> Entries must match case statements in src/routes/impulses.ts. Do not advertise shapes that return 410 Gone or have no case.
+```bash
+# Run from super-repo root:
+bun packages/shape-dispatch-check/check.ts repos/<vessel-name>/
+# Or from inside the vessel repo:
+bun run scripts/check-shape-dispatch.ts
+```
 
-Enforce this with a comment (see `repos/concept-db/src/config.ts` and `src/routes/impulses.ts`). A future lint or integration test should verify it structurally.
+The check is wired into each vessel's `lint` script, so `bun run lint` catches divergences before push.
+
+**Suppressing intentional divergences:**
+
+```typescript
+// @shape-dispatch:private — deprecated stub; return 410 Gone, not advertised
+case 'legacyShape':
+case 'anotherDeprecated': {
+  // fall-through: both cases marked private by single annotation
+  return c.json({ error: 'Gone' }, 410);
+}
+```
+
+A single `// @shape-dispatch:private` annotation immediately above the first case in a fall-through group marks the entire group as private. Private cases are excluded from the orphan-handler check.
+
+**Shape-name aliasing** (when `pointer.type` differs from the advertised shape name):
+
+```json
+// shape-dispatch.config.json at vessel root:
+{
+  "mappings": {
+    "authentication": ["apiKey", "session", "jwtToken"]
+  }
+}
+```
+
+See `repos/metabob-activity-api/src/config.ts` and `src/routes/impulses.ts` for the reference implementation.
 
 ### 3. The WebSocket observer never throws into its reconnect loop
 

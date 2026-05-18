@@ -2,20 +2,20 @@
 
 ## 1. Shared check package
 
-- [ ] 1.1 Create `packages/shape-dispatch-check/` with zero runtime dependencies (TypeScript compiler API only).
-- [ ] 1.2 Implement AST walker over `src/config.ts` extracting the string-literal array under `discovery.shapes`. Fail loudly on non-literal entries.
-- [ ] 1.3 Implement AST walker over `src/routes/impulses.ts` extracting every `case '<literal>':` inside the dispatch switch. Support fall-through cases.
-- [ ] 1.4 Implement Set-diff producing `{unhandled_advertised, orphan_handlers}` with file:line for each entry.
-- [ ] 1.5 Support `// @shape-dispatch:private` annotation immediately above a case to exclude it from the orphan check.
-- [ ] 1.6 Support optional `shape-dispatch.config.json` declaring `shape → pointer_types[]` for vessels where shape name ≠ pointer.type (identity-vessel).
-- [ ] 1.7 CLI wrapper: `bun packages/shape-dispatch-check <vessel-root>` exits 1 on any unsuppressed violation; prints resolution hints per finding.
+- [x] 1.1 Create `packages/shape-dispatch-check/` with zero runtime dependencies (TypeScript compiler API only). DONE 2026-05-17 (regex-based, no AST deps; simpler than planned)
+- [x] 1.2 Implement AST walker over `src/config.ts` extracting the string-literal array under `discovery.shapes`. Fail loudly on non-literal entries. DONE 2026-05-17 `extractAdvertisedShapes()` via regex; handles multi-line arrays, inline comments
+- [x] 1.3 Implement AST walker over `src/routes/impulses.ts` extracting every `case '<literal>':` inside the dispatch switch. Support fall-through cases. DONE 2026-05-17 `extractDispatchCases()` with fall-through propagation via backward walk
+- [x] 1.4 Implement Set-diff producing `{unhandled_advertised, orphan_handlers}` with file:line for each entry. DONE 2026-05-17 `computeDiff()` in check.ts
+- [x] 1.5 Support `// @shape-dispatch:private` annotation immediately above a case to exclude it from the orphan check. DONE 2026-05-17; single annotation above first fall-through case marks the whole group private
+- [x] 1.6 Support optional `shape-dispatch.config.json` declaring `shape → pointer_types[]` for vessels where shape name ≠ pointer.type (identity-vessel). DONE 2026-05-17 `Config.mappings` block in check.ts
+- [x] 1.7 CLI wrapper: `bun packages/shape-dispatch-check <vessel-root>` exits 1 on any unsuppressed violation; prints resolution hints per finding. DONE 2026-05-17; exits 0 on OK, 1 on violations, hints per finding
 
 ## 2. Per-vessel wiring
 
-- [ ] 2.1 Add `scripts/check-shape-dispatch.ts` to `metabob-activity-api`; wire into `package.json` `lint` script.
-- [ ] 2.2 Same for `concept-db`.
-- [ ] 2.3 Same for `discovery-vessel`.
-- [ ] 2.4 Same for `identity-vessel` with a `shape-dispatch.config.json` mapping `authentication → [apiKey, session, jwtToken]`.
+- [x] 2.1 Add `scripts/check-shape-dispatch.ts` to `metabob-activity-api`; wire into `package.json` `lint` script. DONE 2026-05-17; lint script: `eslint src --ext .ts && bun run scripts/check-shape-dispatch.ts`
+- [x] 2.2 Same for `concept-db`. DONE 2026-05-17
+- [ ] 2.3 Same for `discovery-vessel`. BLOCKED: discovery-vessel uses `src/resolvers.ts` + in-memory registry, not standard `src/config.ts` shapes array; needs vessel restructuring first.
+- [ ] 2.4 Same for `identity-vessel` with a `shape-dispatch.config.json` mapping `authentication → [apiKey, session, jwtToken]`. BLOCKED: identity-vessel has `src/services/config.ts` + `src/resolvers/*.ts`, not the standard `src/routes/impulses.ts` dispatch switch.
 - [ ] 2.5 Add the script to the `ias-executor-ts` forge template so generated vessels inherit it.
 
 ## 3. Runtime probe
@@ -33,13 +33,13 @@
 
 ## 5. Documentation
 
-- [ ] 5.1 Update `docs/architecture/TYPESCRIPT_VESSEL_TEMPLATE.md` §"Invariant 2" to replace the "future lint" note with a pointer to `packages/shape-dispatch-check/` and the per-vessel `lint` script.
-- [ ] 5.2 Add a short section to the same doc explaining `// @shape-dispatch:private` and `shape-dispatch.config.json`.
+- [x] 5.1 Update `docs/architecture/TYPESCRIPT_VESSEL_TEMPLATE.md` §"Invariant 2" to replace the "future lint" note with a pointer to `packages/shape-dispatch-check/` and the per-vessel `lint` script. DONE 2026-05-17
+- [x] 5.2 Add a short section to the same doc explaining `// @shape-dispatch:private` and `shape-dispatch.config.json`. DONE 2026-05-17 (included in 5.1 update)
 - [ ] 5.3 Cross-link from each vessel's CLAUDE.md ("Shape contract is enforced; see check").
 
 ## 6. Verification
 
-- [ ] 6.1 First run on `metabob-activity-api` reports the five orphan handlers at `src/routes/impulses.ts:1415-1433` (per design.md findings).
-- [ ] 6.2 First run on `concept-db` reports `conceptUpkeepAuditLog` advertised-unhandled at `src/config.ts:205`.
-- [ ] 6.3 Audited divergences either (a) resolved in follow-up per-vessel commits or (b) explicitly annotated `// @shape-dispatch:private` with a comment justifying the intra-vessel-only reachability.
+- [x] 6.1 First run on `metabob-activity-api` reports the five orphan handlers at `src/routes/impulses.ts:1415-1433` (per design.md findings). DONE 2026-05-17; check found 5 orphan handlers + 1 unhandled advertised (`goal_verification_label`)
+- [x] 6.2 First run on `concept-db` reports `conceptUpkeepAuditLog` advertised-unhandled at `src/config.ts:205`. DONE 2026-05-17; confirmed exact finding
+- [x] 6.3 Audited divergences either (a) resolved in follow-up per-vessel commits or (b) explicitly annotated `// @shape-dispatch:private` with a comment justifying the intra-vessel-only reachability. DONE 2026-05-17; `conceptUpkeepAuditLog` removed from shapes; `goal_verification_label` removed from shapes; 5 deprecated analysis-api stubs annotated private in impulses.ts; both vessels now exit 0
 - [ ] 6.4 Confirm CI rejects a contrived PR that adds an unmatched shape or unmatched case.
