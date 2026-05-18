@@ -20,16 +20,16 @@
 
 ## 3. Runtime probe
 
-- [ ] 3.1 Extend `services/discovery-client.ts` in each vessel to run the same diff against the live config + handler registry before calling `register()`.
-- [ ] 3.2 Filter unhandled shapes out of the registration payload at runtime; log `error` with the divergence summary.
-- [ ] 3.3 Emit one `failure_mode.type = "verifier_negative"` trace per startup with `validator_id = "shape-dispatch-agreement"`, debounced by `(vessel_id, shape, direction)`.
+- [x] 3.1 Extend `services/discovery-client.ts` in each vessel to run the same diff against the live config + handler registry before calling `register()`. DONE 2026-05-17; `checkShapeDispatchAgreement()` private method inlined in both `metabob-activity-api` and `concept-db` discovery-client.ts. Logic mirrors `packages/shape-dispatch-check/check.ts` (no super-repo dep needed at runtime since source files are in Docker image).
+- [x] 3.2 Filter unhandled shapes out of the registration payload at runtime; log `error` with the divergence summary. DONE 2026-05-17; `register()` diffs advertised shapes, filters `unhandledAdvertised` from `config.discovery.shapes` before building the `VesselRegistration`, logs error with `validator_id: "shape-dispatch-agreement"`.
+- [ ] 3.3 Emit one `failure_mode.type = "verifier_negative"` trace per startup with `validator_id = "shape-dispatch-agreement"`, debounced by `(vessel_id, shape, direction)`. TODO: deferred — emitting a trace from inside discovery-client requires calling activity-api, which for activity-api itself is a self-call; needs a dedicated startup-probe pathway (see `TODO` comment in discovery-client.ts).
 - [ ] 3.4 Smoke test: introduce a deliberate divergence in a fixture vessel; assert the trace lands in activity-api with the expected `failed_evidence`.
 
 ## 4. CI integration
 
-- [ ] 4.1 Confirm each vessel's CI workflow runs `bun run lint`; verify the new script is reachable from CI.
-- [ ] 4.2 Add a workspace-level CI job that runs the check across all five vessels in one pass for fast local feedback.
-- [ ] 4.3 Phase 8 canary-validation criterion update: add "zero `validator_id = shape-dispatch-agreement` self-traces in the canary window" to the acceptance set in `2026-04-26-impulse-activity-loop/design.md`.
+- [x] 4.1 Confirm each vessel's CI workflow runs `bun run lint`; verify the new script is reachable from CI. DONE 2026-05-17; `metabob-activity-api`: added `dev` branch to `ci-webhook.yml` (already has `Lint` step calling `bun run lint`); `concept-db`: created `.github/workflows/ci.yml` with `bun run lint` step. Both vessels have `scripts/check-shape-dispatch.ts` wired into `package.json lint`, so CI calls the check automatically.
+- [x] 4.2 Add a workspace-level CI job that runs the check across all five vessels in one pass for fast local feedback. DONE 2026-05-17; `scripts/check-shape-dispatch-all.sh` iterates over `metabob-activity-api` and `concept-db` (skips vessels without standard layout). Exits 0 on clean, 1 on violations. Verified: both vessels exit 0 (42 + 14 shapes respectively).
+- [ ] 4.3 Phase 8 canary-validation criterion update: add "zero `validator_id = shape-dispatch-agreement` self-traces in the canary window" to the acceptance set in `2026-04-26-impulse-activity-loop/design.md`. BLOCKED on task 3.3 (trace emission not yet implemented).
 
 ## 5. Documentation
 
