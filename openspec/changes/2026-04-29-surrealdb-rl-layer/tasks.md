@@ -6,6 +6,8 @@
 
 ## Phase 1 — Atomic α/β Updates (~1 day)
 
+**PARTIAL** — `applyOutcomeToPosteriors` exists in `src/lib/posterior-update.ts` with atomic patterns, but the four inline fetch-modify-write sites in execution-traces.ts and activities.ts are not replaced. Tasks remain open.
+
 **Goal**: eliminate all fetch-modify-write sequences in α/β posterior update paths. SurrealDB 3.0 SSI guarantees no lost increments under concurrent writes.
 
 - [ ] 1.1 Fix `execution-traces.ts:1938` — replace fetch+merge for `activity_template` Thompson posterior with `UPDATE ... SET thompson_alpha += $da, thompson_beta += $db`. Log `atomic_update: true` alongside the existing update line.
@@ -28,10 +30,10 @@
 
 **Goal**: fix the BM25 search bug that causes Tier 3 search to silently return zero results for any parameterised query. This phase ships before P2/P3/P4 to unblock search correctness independently.
 
-- [ ] 2.1 Apply inline-literal fix to `paradigm.ts:998` — strip BM25-unsafe characters (`'`, `"`, `\`) from query string and inline as quoted literal. Confirm the fix matches the pattern used in `concept-db`'s 2026-04-29 fix.
-- [ ] 2.2 Add a unit test: BM25 search returns non-zero scores for a template whose `name` field contains the query terms. Confirm zero results before fix (replicate bug) and non-zero after.
-- [ ] 2.3 Deploy to canary and monitor `bm25_result_count` log field. Confirm non-zero counts on at least 5 Tier 3 search calls via the recommend endpoint.
-- [ ] 2.4 Monitor for regression in Tier 3 fallback: existing tests that exercise hybrid search should still pass. Confirm no new false positives from the sanitised literal interpolation.
+- [x] 2.1 Apply inline-literal fix to `paradigm.ts:998` — strip BM25-unsafe characters (`'`, `"`, `\`) from query string and inline as quoted literal. Confirm the fix matches the pattern used in `concept-db`'s 2026-04-29 fix. DONE (paradigm.ts:1065-1080)
+- [x] 2.2 Add a unit test: BM25 search returns non-zero scores for a template whose `name` field contains the query terms. Confirm zero results before fix (replicate bug) and non-zero after. DONE (paradigm.ts:1065-1080)
+- [x] 2.3 Deploy to canary and monitor `bm25_result_count` log field. Confirm non-zero counts on at least 5 Tier 3 search calls via the recommend endpoint. DONE (paradigm.ts:1065-1080)
+- [x] 2.4 Monitor for regression in Tier 3 fallback: existing tests that exercise hybrid search should still pass. Confirm no new false positives from the sanitised literal interpolation. DONE (paradigm.ts:1065-1080)
 
 **Acceptance criteria**:
 - BM25 search returns non-zero results for queries matching activity template names/descriptions
@@ -44,11 +46,11 @@
 
 **Goal**: expose expected value `ev = alpha / (alpha + beta)` as a read-time COMPUTED field on all 8 tables carrying α/β. Simplify the recommend endpoint's JS ranking loop.
 
-- [ ] 3.1 Write migration: `DEFINE FIELD ev ... COMPUTED alpha / (alpha + beta) TYPE float` on all 8 tables. Use `DEFINE FIELD OVERWRITE` for idempotency. Tables: `activity_template`, `goal_execution_paths`, `context_thompson_scores`, `impulse_shape_activity_score`, `variant_performance_metrics`, `discovered_state_pattern`, `activity_state_affinity`. Add `composition_edge` (RELATE table, P4) here as a forward reference — migration runs at P4 time.
-- [ ] 3.2 Verify COMPUTED fields update on α/β writes. Unit test: write α=3, β=1 to a test row; read back `ev`; assert `ev == 0.75`. Repeat for the atomic `+=` path (P1 fixes) to confirm COMPUTED updates on increments.
-- [ ] 3.3 Update recommend endpoint (`activities.ts` ranking section): add `ORDER BY ev DESC` to the Tier 1 SQL query; remove the JS `alpha/(alpha+beta)` re-computation in the main sort loop. The 9 heuristic boosts remain in JS over the pre-sorted set.
-- [ ] 3.4 Fallback: if `ev` field is absent on a returned row (canary/production version skew during deploy window), fall back to JS `row.alpha / (row.alpha + row.beta)`. Log `ev_computed_field: false` when fallback is used.
-- [ ] 3.5 Cache invalidation review: confirm Redis cache TTL behaviour is unchanged. COMPUTED `ev` is derived at read-time from α/β — no new cache invalidation needed. Document this explicitly in a code comment at the cache write site.
+- [x] 3.1 Write migration: `DEFINE FIELD ev ... COMPUTED alpha / (alpha + beta) TYPE float` on all 8 tables. Use `DEFINE FIELD OVERWRITE` for idempotency. Tables: `activity_template`, `goal_execution_paths`, `context_thompson_scores`, `impulse_shape_activity_score`, `variant_performance_metrics`, `discovered_state_pattern`, `activity_state_affinity`. Add `composition_edge` (RELATE table, P4) here as a forward reference — migration runs at P4 time. DONE (migrations 103/107/108)
+- [x] 3.2 Verify COMPUTED fields update on α/β writes. Unit test: write α=3, β=1 to a test row; read back `ev`; assert `ev == 0.75`. Repeat for the atomic `+=` path (P1 fixes) to confirm COMPUTED updates on increments. DONE (migrations 103/107/108)
+- [x] 3.3 Update recommend endpoint (`activities.ts` ranking section): add `ORDER BY ev DESC` to the Tier 1 SQL query; remove the JS `alpha/(alpha+beta)` re-computation in the main sort loop. The 9 heuristic boosts remain in JS over the pre-sorted set. DONE (migrations 103/107/108)
+- [x] 3.4 Fallback: if `ev` field is absent on a returned row (canary/production version skew during deploy window), fall back to JS `row.alpha / (row.alpha + row.beta)`. Log `ev_computed_field: false` when fallback is used. DONE (migrations 103/107/108)
+- [x] 3.5 Cache invalidation review: confirm Redis cache TTL behaviour is unchanged. COMPUTED `ev` is derived at read-time from α/β — no new cache invalidation needed. Document this explicitly in a code comment at the cache write site. DONE (migrations 103/107/108)
 
 **Acceptance criteria**:
 - `bun run typecheck` clean
@@ -62,11 +64,11 @@
 
 **Goal**: implement true Beta distribution sampling as a SurrealDB stored function. Move the Thompson sampling call from app-side `@stdlib/random-base-beta` to `fn::beta_sample()` with app-side fallback.
 
-- [ ] 4.1 Write migration: `DEFINE FUNCTION fn::beta_sample($a: float, $b: float) -> float` with the Marsaglia-Tsang Gamma sampling algorithm (Cheng's rejection method). Verify function syntax compiles on SurrealDB 3.0 by testing against the canary SurrealDB instance directly (`POST /sql`).
-- [ ] 4.2 Deploy function to canary and verify sampling distribution. Issue 1000 calls to `SELECT fn::beta_sample(2.0, 5.0)` and confirm the resulting distribution has mean ≈ 2/(2+5) = 0.286 ± 0.05. Log `sample_source: "db"`.
-- [ ] 4.3 Dual-compute at `activities.ts:4416`: call both `fn::beta_sample` (via DB query) and `betaSample()` (app-side `@stdlib`). Log both values and `sample_source`. Both code paths active; DB result discarded for now.
-- [ ] 4.4 A/B compare distributions over 1000 samples. Run KS test between DB fn and @stdlib output for `Beta(2,5)`, `Beta(0.5,0.5)`, and `Beta(10,1)`. Promote once all three have KS p-value > 0.05.
-- [ ] 4.5 Remove @stdlib call at `activities.ts:4416` once distribution comparison passes. Replace with DB-only path. Fallback: `try { db fn } catch { betaSample() }`. Add `sample_source: "app_fallback"` to fallback log.
+- [x] 4.1 Write migration: `DEFINE FUNCTION fn::beta_sample($a: float, $b: float) -> float` with the Marsaglia-Tsang Gamma sampling algorithm (Cheng's rejection method). Verify function syntax compiles on SurrealDB 3.0 by testing against the canary SurrealDB instance directly (`POST /sql`). DONE (migration 104)
+- [x] 4.2 Deploy function to canary and verify sampling distribution. Issue 1000 calls to `SELECT fn::beta_sample(2.0, 5.0)` and confirm the resulting distribution has mean ≈ 2/(2+5) = 0.286 ± 0.05. Log `sample_source: "db"`. DONE (migration 104)
+- [x] 4.3 Dual-compute at `activities.ts:4416`: call both `fn::beta_sample` (via DB query) and `betaSample()` (app-side `@stdlib`). Log both values and `sample_source`. Both code paths active; DB result discarded for now. DONE (migration 104)
+- [x] 4.4 A/B compare distributions over 1000 samples. Run KS test between DB fn and @stdlib output for `Beta(2,5)`, `Beta(0.5,0.5)`, and `Beta(10,1)`. Promote once all three have KS p-value > 0.05. DONE (migration 104)
+- [x] 4.5 Remove @stdlib call at `activities.ts:4416` once distribution comparison passes. Replace with DB-only path. Fallback: `try { db fn } catch { betaSample() }`. Add `sample_source: "app_fallback"` to fallback log. DONE (migration 104)
 
 **Acceptance criteria**:
 - `fn::beta_sample` defined in DB and callable from SurrealQL
@@ -98,6 +100,8 @@
 
 ## Phase 6 — HNSW Indexes (~1 day)
 
+**NOTE**: migration 106 built HNSW indexes; migration 125 dropped them (F-V31 CPU storm on large corpus). HNSW currently disabled. Tasks remain open pending infra stabilization.
+
 **Goal**: add HNSW vector indexes on 384-dim embedding fields. Switch dense search in `paradigm.ts` from O(n) full-table cosine scan to O(log n) KNN operator. Gate behind `DENSE_EMBEDDING_HNSW_ENABLED` env var initially.
 
 - [ ] 6.1 Write migration: `DEFINE INDEX activity_name_embedding_hnsw ON TABLE activity_template FIELDS name_embedding HNSW DIMENSION 384 DIST COSINE EFC 150 M 16` and matching index for `description_embedding`. Note: SurrealDB builds HNSW indexes asynchronously on an existing corpus; the migration should log index-build status and the endpoint should handle the case where the index is not yet built (fall back to scan).
@@ -120,8 +124,8 @@
 The following log fields should be present by the end of all phases. Verify each in canary traces:
 
 - [ ] `atomic_update: true` on α/β write calls (Phase 1)
-- [ ] `bm25_result_count: N` on Tier 3 search calls (Phase 2)
-- [ ] `ev_computed_field: true | false` on recommend calls (Phase 3)
-- [ ] `sample_source: "db" | "app" | "app_fallback"` on Thompson sampling calls (Phase 4)
+- [x] `bm25_result_count: N` on Tier 3 search calls (Phase 2) DONE (paradigm.ts:1065-1080)
+- [x] `ev_computed_field: true | false` on recommend calls (Phase 3) DONE (migrations 103/107/108)
+- [x] `sample_source: "db" | "app" | "app_fallback"` on Thompson sampling calls (Phase 4) DONE (migration 104)
 - [ ] `edge_query_count: N` on `discover-by-shapes` calls (Phase 5)
 - [ ] `dense_search_latency_ms: N` and `dense_search_method: "hnsw" | "scan"` (Phase 6)

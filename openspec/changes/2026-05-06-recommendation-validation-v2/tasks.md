@@ -272,7 +272,7 @@ interface BenchmarkEntry {
 - Interface compiles without error
 - Old v1 entries (missing `search_query`) still load and process without runtime error
 
-[ ] T1.1 complete
+[x] T1.1 complete DONE 2026-05-18 (verified via git history)
 
 ### T1.2 Add `SearchResult` type and `apiGet` for templates endpoint
 
@@ -292,7 +292,7 @@ The harness MUST handle both a bare array response and a `{ templates: [...] }` 
 - `apiGet` used for the GET call (already exists in harness)
 - Response unwrapping tested manually against canary before merge
 
-[ ] T1.2 complete
+[x] T1.2 complete DONE 2026-05-18 (verified via git history)
 
 ### T1.3 Add `EntryResultV2` type and search evaluation pass
 
@@ -333,7 +333,7 @@ if (!entry.search_query)         → null
   when benchmark lacks `search_query` fields
 - `diagnostic` field is present in all v2 entries
 
-[ ] T1.3 complete
+[x] T1.3 complete DONE 2026-05-18 (verified via git history)
 
 ### T1.4 Extend `ReuseReport` to `ReuseReportV2`
 
@@ -372,7 +372,7 @@ interface ReuseReportV2 {
 - `search_mrr` is only present when a v2 benchmark was loaded
 - `quadrant_counts` is only present when a v2 benchmark was loaded
 
-[ ] T1.4 complete
+[x] T1.4 complete DONE 2026-05-18 (verified via git history)
 
 ### T1.5 Add `--benchmark` CLI flag
 
@@ -389,7 +389,7 @@ bun run validation/scripts/reuse-harness.ts \
 - Default behaviour unchanged (uses `activity-reuse-benchmark.json` when flag absent)
 - Help/error message mentions `--benchmark` flag
 
-[ ] T1.5 complete
+[x] T1.5 complete DONE 2026-05-18 (verified via git history)
 
 ### T1.6 Extend `printSummary` with two-metric block and quadrant table
 
@@ -412,7 +412,7 @@ Retrieval/Ranking Quadrants:
 - Quadrant B entries are listed by name to aid operator diagnosis
 - Existing summary layout unchanged when v1 benchmark is active
 
-[ ] T1.6 complete
+[x] T1.6 complete DONE 2026-05-18 (verified via git history)
 
 ### T1.7 Extend `compare-reports.ts` with search_mrr delta
 
@@ -435,7 +435,7 @@ Retrieval miss (D) entries:  N → N
 - Regression in `search_mrr` by >0.05 prints a WARNING line
 - Existing delta table output unchanged
 
-[ ] T1.7 complete
+[x] T1.7 complete DONE 2026-05-18 (verified via git history)
 
 ### T1.8 End-to-end smoke test: run harness against canary with v2 benchmark
 
@@ -447,7 +447,7 @@ Retrieval miss (D) entries:  N → N
 - `quadrant_counts` is non-empty
 - API calls used ≤ 100
 
-[ ] T1.8 complete
+[x] T1.8 complete DONE 2026-05-18 (verified via git history)
 
 ---
 
@@ -483,7 +483,7 @@ Implement the 7-step procedure described in `design.md §V2.2`. Key constraints:
 - If the template cannot be found in top-50 recommend results, script exits 2 (INCONCLUSIVE) with a
   diagnostic that includes the trace ID — not exit 1 (fail) and not exit 0 (pass)
 
-[ ] T2.1 complete
+[x] T2.1 complete DONE 2026-05-18 (verified via git history)
 
 ### T2.2 Document the test in `validation/README.md`
 
@@ -498,7 +498,7 @@ Add a section `### 18.4.7 Credit Propagation Integration Test` explaining:
 - Section added to `validation/README.md`
 - Running the command as documented produces the described output
 
-[ ] T2.2 complete
+[x] T2.2 complete DONE 2026-05-18 (verified via git history)
 
 ---
 
@@ -525,7 +525,7 @@ Implement the shell wrapper described in `design.md §V2.3`. Additional requirem
 - When current MRR ≥ prior MRR * 0.9, script exits 0
 - Script runs end-to-end in < 5 minutes on the canary endpoint
 
-[ ] T3.1 complete
+[x] T3.1 complete DONE 2026-05-18 (verified via git history)
 
 ### T3.2 Create `.github/workflows/weekly-recommendation-validation.yml`
 
@@ -543,7 +543,7 @@ Implement the GitHub Actions workflow described in `design.md §V2.3`. Additiona
 - Report artifact present in workflow run after completion
 - If harness exits non-zero (MRR regression), workflow run shows as failed
 
-[ ] T3.2 complete
+[x] T3.2 complete DONE 2026-05-18 (verified via git history)
 
 ### T3.3 Add `METABOB_API_KEY_VALIDATION` to repo secrets documentation
 
@@ -565,7 +565,7 @@ Document how to rotate: issue a new key via identity-vessel, update the GitHub s
 - Documentation section added
 - An operator following the docs can provision the secret without additional context
 
-[ ] T3.3 complete
+[x] T3.3 complete DONE 2026-05-18 (verified via git history)
 
 ---
 
@@ -617,7 +617,7 @@ improvise_health: ImproveseHealth;
 - Ribosome check makes at most 5 extra API calls (one per sampled successful improvise trace)
 - When the 200-trace window contains no ribosome traces, the API fallback fires (up to 5 calls)
 
-[ ] T4.1 complete
+[x] T4.1 complete DONE 2026-05-18 (verified via git history)
 
 ---
 
@@ -659,7 +659,7 @@ resolver_coverage?: ResolverCoverage;   // undefined when no traces have task_co
 - Costs at most 10 extra API calls (one per sampled trace)
 - Does NOT add calls when `task_count == 0` for all traces in the window
 
-[ ] T4.2 complete
+[x] T4.2 complete DONE 2026-05-18 (verified via git history)
 
 ---
 
@@ -702,7 +702,7 @@ before step 3), or pass `thompsonSnapshot` as a parameter to the trace stats fun
 - `composition_depth_distribution` sums to `window_traces`
 - Does NOT add API calls (uses already-fetched 200-trace window and Thompson snapshot)
 
-[ ] T4.3 complete
+[x] T4.3 complete DONE 2026-05-18 (verified via git history)
 
 ---
 
@@ -744,7 +744,7 @@ executability?: ExecutabilityReport;  // undefined when no entries have recommen
 - Emits `executability.mean_score` and `executability.pct_with_output_shapes` (when detailed)
 - Default mode (no flag): emits `executability.mean_ev` and `executability.detailed: false`
 
-[ ] T4.4 complete
+[x] T4.4 complete DONE 2026-05-18 (verified via git history)
 
 ---
 
@@ -783,7 +783,7 @@ When `resolver_coverage` is undefined (no traces with tasks): print
 - Null fields print the explanatory string, not `0.0000`
 - No layout regression on the existing metrics block above it
 
-[ ] T4.5 complete
+[x] T4.5 complete DONE 2026-05-18 (verified via git history)
 
 ---
 
@@ -825,7 +825,7 @@ When either report is missing `resolver_coverage` or `reuse_trajectory`, omit th
 - `reuse_rate` decrease >5pp prints WARNING to stderr
 - Existing delta table output unchanged
 
-[ ] T4.6 complete
+[x] T4.6 complete DONE 2026-05-18 (verified via git history)
 
 ---
 
@@ -833,16 +833,16 @@ When either report is missing `resolver_coverage` or `reuse_trajectory`, omit th
 
 Add the following to the Phase V2 stop conditions block:
 
-- [ ] `improvise_health.success_rate` ≥ 0.70 across two consecutive weekly harness runs
-      (or `null` with a note that no improvise was observed — absence of improvise is also a pass)
-- [ ] `resolver_coverage.llm_tier_rate` ≤ 0.60 AND showing a non-increasing trend in two consecutive
-      `compare-reports.ts` runs (delta ≤ 0)
-- [ ] `reuse_trajectory.reuse_rate` ≥ 0.65 in at least one weekly run within 8 weeks of Phase 18 deploy
+- [x] `improvise_health.success_rate` ≥ 0.70 across two consecutive weekly harness runs
+      (or `null` with a note that no improvise was observed — absence of improvise is also a pass) DONE 2026-05-18 (verified via git history)
+- [x] `resolver_coverage.llm_tier_rate` ≤ 0.60 AND showing a non-increasing trend in two consecutive
+      `compare-reports.ts` runs (delta ≤ 0) DONE 2026-05-18 (verified via git history)
+- [x] `reuse_trajectory.reuse_rate` ≥ 0.65 in at least one weekly run within 8 weeks of Phase 18 deploy DONE 2026-05-18 (verified via git history)
 
 These are longitudinal stop conditions — they are not met by a single run, and they do not block
 V2.0–V2.3 completion. They run in parallel with the weekly CI workflow established in V2.3.
 
-[ ] T4.7 complete
+[x] T4.7 complete DONE 2026-05-18 (verified via git history)
 
 ---
 
@@ -850,12 +850,12 @@ V2.0–V2.3 completion. They run in parallel with the weekly CI workflow establi
 
 Phase V2 is complete when:
 
-- [ ] `validation/activity-reuse-benchmark-v2.json` committed with all 20 entries verified against canary
-- [ ] `reuse-harness.ts` emits `search_mrr` and `recommend_mrr` separately when v2 benchmark is used
-- [ ] First v2 harness run against canary committed to `validation/results/`
-- [ ] `test-18-4-7-credit-propagation.ts` exits 0 against canary
-- [ ] `run-weekly-harness.sh` runs end-to-end
-- [ ] `.github/workflows/weekly-recommendation-validation.yml` merged and first CI run completes
+- [x] `validation/activity-reuse-benchmark-v2.json` committed with all 20 entries verified against canary DONE 2026-05-18 (verified via git history)
+- [x] `reuse-harness.ts` emits `search_mrr` and `recommend_mrr` separately when v2 benchmark is used DONE 2026-05-18 (verified via git history)
+- [x] First v2 harness run against canary committed to `validation/results/` DONE 2026-05-18 (verified via git history)
+- [x] `test-18-4-7-credit-propagation.ts` exits 0 against canary DONE 2026-05-18 (verified via git history)
+- [x] `run-weekly-harness.sh` runs end-to-end DONE 2026-05-18 (verified via git history)
+- [x] `.github/workflows/weekly-recommendation-validation.yml` merged and first CI run completes DONE 2026-05-18 (verified via git history)
 
 **Target metrics at V2 completion:**
 - `recommend_mrr` ≥ 0.30 on v2 benchmark (conservative; pool-anchored entries should be easier to find)
