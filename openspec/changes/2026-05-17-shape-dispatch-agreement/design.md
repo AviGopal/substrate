@@ -120,18 +120,20 @@ Followed by a single trace:
 
 ## Findings (audit 2026-05-17, not fixed in this change)
 
+**Amendment note (2026-05-18 re-audit).** A re-audit of the source files cited below on 2026-05-18 found that three of the six divergences are already resolved in-tree — the 2026-05-17 audit snapshot was stale by the time this design was written. The activity-api orphan rows now carry `// @shape-dispatch:private` annotations directly above the case blocks at `src/routes/impulses.ts:1415, 1434` and return 410 Gone with a `resolver_moved` body pointing at Analysis API; they are deliberate deprecation stubs, not orphans. The concept-db `conceptUpkeepAuditLog` row was removed from `src/config.ts:203-206`; only a stale test assertion at `tests/write-shapes.test.ts:585` remains, addressed by the cleanup spec. The identity-vessel naming-disagreement row stays open with its resolution route now in the paired cleanup spec. See `openspec/changes/2026-05-18-shape-dispatch-divergence-cleanup/` for the full re-audit and the remaining cleanup tasks.
+
 These are the divergences the check will surface on first run. Recording them here so the implementer is not surprised; fixing each is a follow-up per-vessel commit, not part of this change.
 
-| Vessel | Direction | Shape / handler | Location |
-|---|---|---|---|
-| activity-api | orphan handler | `analysisResult` | `src/routes/impulses.ts:1415` |
-| activity-api | orphan handler | `cochangeSuggestions` | `src/routes/impulses.ts:1416` |
-| activity-api | orphan handler | `impactAnalysis` | `src/routes/impulses.ts:1417` |
-| activity-api | orphan handler | `codebaseSearch` | `src/routes/impulses.ts:1418` |
-| activity-api | orphan handler | `problemCluster` | `src/routes/impulses.ts:1433` |
-| concept-db | unhandled advertised | `conceptUpkeepAuditLog` | `src/config.ts:205` |
+| Vessel | Direction | Shape / handler | Location | Status |
+|---|---|---|---|---|
+| activity-api | orphan handler | `analysisResult` | `src/routes/impulses.ts:1415` | RESOLVED IN-TREE 2026-05-18 — `// @shape-dispatch:private` annotation at `src/routes/impulses.ts:1415`; handler returns 410 Gone |
+| activity-api | orphan handler | `cochangeSuggestions` | `src/routes/impulses.ts:1416` | RESOLVED IN-TREE 2026-05-18 — covered by the `:1415` annotation block |
+| activity-api | orphan handler | `impactAnalysis` | `src/routes/impulses.ts:1417` | RESOLVED IN-TREE 2026-05-18 — covered by the `:1415` annotation block |
+| activity-api | orphan handler | `codebaseSearch` | `src/routes/impulses.ts:1418` | RESOLVED IN-TREE 2026-05-18 — covered by the `:1415` annotation block |
+| activity-api | orphan handler | `problemCluster` | `src/routes/impulses.ts:1433` | RESOLVED IN-TREE 2026-05-18 — `// @shape-dispatch:private` annotation at `src/routes/impulses.ts:1434`; handler returns 410 Gone |
+| concept-db | unhandled advertised | `conceptUpkeepAuditLog` | `src/config.ts:205` | RESOLVED IN-TREE 2026-05-18 — shape removed from `discovery.shapes` at `repos/concept-db/src/config.ts:203-206`; stale test assertion at `tests/write-shapes.test.ts:585` addressed by the cleanup spec |
 
-Possible interpretation for activity-api's five: they may be legitimate intra-vessel handlers (the route is also reachable from `/v2/impulses/resolve` by internal callers). If so, the resolution is to annotate them `// @shape-dispatch:private`, not to advertise them. The check defers to the implementer.
+Possible interpretation for activity-api's five: they may be legitimate intra-vessel handlers (the route is also reachable from `/v2/impulses/resolve` by internal callers). If so, the resolution is to annotate them `// @shape-dispatch:private`, not to advertise them. The check defers to the implementer. The 2026-05-18 re-audit confirms this interpretation was applied — the annotation form `// @shape-dispatch:private` is already in place above both case blocks, and the static parser must recognise it as the suppression contract.
 
 ## Identity-vessel: shape ≠ pointer.type
 

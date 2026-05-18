@@ -1802,3 +1802,295 @@ Either path also needs the seed/issue endpoints (`/v1/keys/issue` or equivalent)
 4. Cross-check the `api_key` table for the underscore-style keys: `SELECT * FROM api_key WHERE id CONTAINS 'self_canary' OR id CONTAINS 'inst_canary';`. If the rows exist with `scopes: ['read','write']` and a stored `key_hash`, validation may be hashing the raw key against a stored bcrypt/argon hash rather than HMAC-verifying — a different code path entirely from `validateKeyFormat()`.
 
 **Without this**: the discrepancy between documented auth flow (HMAC required) and observed behaviour (underscore keys accepted) is a security blind spot. If hypothesis (c) is correct, anyone with network access to identity-vessel `/v1/auth/resolve` can mint successful auth without a valid signature. If (a), a future identity-vessel deploy will break canary auth without warning. If (b), the bypass should be documented and either justified or removed.
+
+---
+
+## Phase 20 — Predicate-Aware Binding + Pool-Selection Wiring (2026-05-15)
+
+**Motivation.** A docs+code investigation surfaced four binding cases the current shape-only matcher cannot express: (a) multiple impulses of the same shape exist and the task needs *all* of them; (b) multiple exist and the task needs *some specific subset*; (c) some exist but the *specific instance needed* is absent — `canExecuteTask` reports the shape "present" and the gate passes on the wrong impulses; (d) multiple vessels advertise the same resolver capability and the right one depends on execution locality, not shape. The architecture already contains the building blocks: `impulse_pool_selection` is implemented (`repos/minibob/src/resolvers/impulse-pool-selection-resolver.ts`), Thompson posteriors are keyed per `(impulse_id, task_id)` in `impulse_relevance_metrics`, and impulses carry `producedBy` / `produced_at_task_id` provenance metadata. What's missing is **the wire** (pool_selection into slot-binding) and **the schema field** (predicate on `inputShapes`) that lets task authors express the cases above.
+
+This phase is bounded: it closes the binding-layer gap without introducing new primitives. Vessel-locality routing (case d) is handled by the existing tier preference (`deterministic > pattern > llm`) and `ExecutionScope.accessible_account_ids` filtering from Phase 11 — Phase 20 makes locality *explicit* only where ties at the same tier are resolved by an affinity hint, deferring the harder cross-vessel filesystem-identity problem to a follow-up.
+
+**RL graph framing.** In the bipartite shape-graph model, the current matcher treats every shape-node as fungible: "shape X is present" satisfies any task requiring X. With predicates, shape-nodes gain instance identity — `(shape, producedBy)` becomes the addressable unit. This is the binding-layer dual of the state-space-aware-recommendations work (Phase 11): Phase 11 made *retrieval* state-aware ("recommend templates whose inputs are coverable by the executor's pool"); Phase 20 makes *binding* instance-aware ("bind this slot to the specific instance the task asked for"). Both work the same metadata surface (`producedBy`, `produced_at_task_id`); the difference is which side of the loop consumes it.
+
+**The four cases mapped:**
+
+| Case | Surface | Resolution |
+|---|---|---|
+| (a) All-of | `inputShapes: [{ shape: "X", cardinality: "all" }]` | New cardinality field; default `"any"` preserves current behaviour |
+| (b) Specific subset | `inputShapes: [{ shape: "X", producedBy: "task_3" }]` | New predicate field; matched against `metadata.producedBy` |
+| (c) Specific missing | Same predicate; `canExecuteTask` reports unsatisfied when predicate-filtered candidates are empty | Slot-binding fires; producer_selection / agent_fill / escalation run as today |
+| (d) Vessel locality ties | Use existing tier preference + `accessible_account_ids` filter; add optional `vessel_affinity` hint when ties remain | Affinity field on `inputShapes`; matched against `resolved_by_vessel_id` if present |
+
+Cases (a)–(c) are the load-bearing work. Case (d) ships as the minimal hook; the full cross-vessel filesystem-identity problem (which is the deeper structural gap behind "minibob's local fs vs k8s executor's mounted workspace") is **explicitly deferred** — it needs scope-context narrowing (CC1) and pubkey-derived vessel identity (H2) from the security-hardening track before it can be load-bearing. Phase 20's affinity hint is a stopgap that becomes the integration point when H2 lands.
+
+**What is intentionally not changed:**
+- The `impulse_pool_selection` resolver itself (already implemented; only the slot-binding template wires to it).
+- The shape-name-as-string contract: predicates ride on the same `inputShapes` field as discriminated-union entries. Templates that use plain string shape names continue to work unchanged.
+- The discovery and recommendation contracts: `discover-by-shapes` and `POST /v2/activities/recommend` remain shape-level. Predicates apply at task-binding time inside the executor, not during retrieval.
+- The activity-api impulse schema: `producedBy` / `produced_at_task_id` are already declared by the registry-hygiene migrations; this phase only audits that they flow through emission paths consistently.
+
+**Sub-phase ordering (lowest-risk-first):**
+
+### Phase 20.1 — Schema and types (minibob + ias-executor-ts)
+
+The discriminated-union type lands in both executors before any runtime change so payload-level interop holds during the rollout. Minibob `src/types.ts:582` (`ActivityTask.inputShapes`) expands from `string[]` to `(string | InputShapeRef)[]`; ias-executor-ts `src/ontology.ts:29` mirrors. The new `InputShapeRef` carries `shape` (required), `producedBy` (optional, matches `metadata.producedBy` or `produced_at_task_id` string), `cardinality` (optional, default `"any"`, values `"any" | "all" | "exactly_one"`), and `vessel_affinity` (optional, advisory hint used only for tie-break).
+
+This is purely a type expansion; no runtime change yet. Validates that templates parse cleanly under the new union and that all in-tree `inputShapes` declarations (string-only today) remain valid under the wider type.
+
+### Phase 20.2 — Predicate-aware matcher (`shape-resolver.ts`)
+
+`resolveImpulsesByShape`, `canExecuteTask`, `matchImpulsesForTask` (`repos/minibob/src/shape-resolver.ts:26-134`) gain predicate handling. The implementation is straightforward: extract `(shape, predicate)` from each `inputShapes` entry; filter pool by shape first, then by `metadata.producedBy === predicate.producedBy` when set. `canExecuteTask` reports "missing" when the predicate-filtered set is empty for any required entry. `matchImpulsesForTask` returns the predicate-filtered set; cardinality `"all"` passes the whole filtered list, `"exactly_one"` errors if the filtered list has > 1.
+
+ias-executor-ts gets the parallel change in `src/engine.ts`'s `resolveInputs()` path. Same algorithm.
+
+This is the load-bearing logic change. Tests cover: predicate match, predicate miss with other instances present (case c), cardinality `"all"` with multiple matches, cardinality `"exactly_one"` ambiguity error, plain string entries (backward compat).
+
+### Phase 20.3 — Lifecycle payload + slot-binding wiring
+
+`emitLifecycleImpulse("lifecycle:task:preBinding", …)` at `activity.ts:4785-4807` and `:5356` gains a new payload field `currentImpulseShapes: Array<{ id: string; shape: string; producedBy?: string }>` so slot-binding subscribers can index instances by provenance without re-querying the store. `missingShapes` becomes `missingInputs: Array<{ shape: string; predicate?: InputShapeRef }>` so subscribers see what predicate triggered the gap; the legacy `missingShapes: string[]` field is preserved as the union of unique shape names for backward compat with already-deployed subscribers.
+
+`slot-binding.json::select_or_produce` (the `iteration` task at `embedded-templates/slot-binding.json:56-77`) gains a pre-check: before dispatching `producer_selection`, query the pool for candidates matching the missing entry's shape *and* predicate. If candidates exist (≥ 1), dispatch `impulse_pool_selection` with the filtered candidate set. If candidates do not exist, fall through to `producer_selection` as today. This is the long-deferred "pool_selection branch" called out in slot-binding's `openQuestions[0]`.
+
+The `impulse_pool_selection` resolver itself needs no change — its existing `candidates: ImpulseRef[]` config takes the pre-filtered list from the new branch, so the resolver receives only predicate-compatible candidates and ranks them by `impulseRelevance` Thompson posteriors.
+
+### Phase 20.4 — Activity-api provenance audit + workbench surfaces
+
+Audit pass on activity-api: verify `producedBy` and `produced_at_task_id` populate consistently on every impulse-write path (`src/routes/impulses.ts`, `src/db/paradigm.ts` write resolvers, lifecycle event emitters in trace storage). The fields are declared per migration 086 and the April registry-hygiene work, but the spec mandates a verification pass that they're set on **every** emission path, not just the ones touched by recent work. Any gap closes here.
+
+Workbench surfaces in `src/components/trajectory/` get instance-aware rendering:
+- `TaskEditor` shows `inputShapes` entries with predicate annotations inline (`shellOutput (from task_3)`).
+- `BindableSlots` filters its candidate count by predicate when present; an empty filtered set with non-empty unfiltered set is the case-(c) signal — the slot indicator shows "predicate-mismatched" rather than "missing shape."
+- `ImpulseStatePanel` shows `producedBy` next to each impulse so authors can see what predicate would match.
+- `ApplicableActivitiesPanel` keeps using shape-level discovery; predicates are an executor concern.
+
+### Phase 20.5 — Stratification and learning
+
+`impulse_relevance_metrics` already keys per `(impulse_id, task_id)`; with predicates active, the Thompson posterior accumulates evidence on the specific `(impulse_id, task_id)` pairs that succeeded. No schema change — the existing learning surface naturally absorbs the new signal. The improvement is downstream: pool_selection now sees richer posteriors because it's actually being invoked.
+
+Two metrics surface for canary observation:
+- `pool_selection_fired_rate` — fraction of `lifecycle:task:preBinding` events that dispatched `impulse_pool_selection` instead of `producer_selection`. Expected to be non-zero on any goal run with composed sub-activities (today: 0%).
+- `predicate_mismatch_rate` — fraction of `canExecuteTask` checks that reported "missing" despite the shape being present in the pool (the case-(c) signal). Expected to be small but non-zero once authors start using predicates.
+
+### Phase 20.S — Success criteria
+
+- 20.S1 At least one in-tree activity template uses an `InputShapeRef` predicate; the executor honours it end-to-end (canary trace shows predicate-filtered binding).
+- 20.S2 `pool_selection_fired_rate > 0` on the canary over a 24-hour window — confirms the branch is reachable, not dead code.
+- 20.S3 Plain-string `inputShapes` templates execute identically to pre-Phase-20 behaviour (no regression on the v2 benchmark `reuse_trajectory`).
+- 20.S4 Workbench `BindableSlots` renders the predicate-mismatch state distinctly from the missing-shape state on a synthetic case-(c) trace.
+- 20.S5 ias-executor-ts and minibob parse the same predicate templates without divergence (validated via shared test fixture).
+
+### Phase 20.X — Explicit non-goals
+
+- No new resolver. `impulse_pool_selection` exists; this phase wires it.
+- No new write surface. Activity-api audit is read-only verification.
+- No cross-vessel filesystem identity. `vessel_affinity` is advisory; the load-bearing version waits on H2.
+- No retrieval-time predicate evaluation. `discover-by-shapes` stays shape-level; predicates are an executor concern.
+- No deprecation of plain-string `inputShapes`. Both forms remain valid indefinitely.
+
+**Dependencies.** Phase 20 has no hard prerequisites that aren't already deployed. It builds on the binding selection layer (Phase 1–5 of this umbrella, shipped), Phase 11 ExecutionScope (shipped), and the impulse-relevance / shape-provenance metadata from the registry-hygiene track (shipped). It is independent of Phase 10 (SurrealDB RL primitives), Phase 18 (RL loop closure) and Phase 19 (FTS quality); landing order with those is free.
+
+**Relationship to existing specs.** Supersedes `openspec/changes/2026-04-26-impulse-binding-selection-layer/tasks.md` §6.3 (the "pool_selection branch" that was deferred). Cross-references but does not subsume `2026-05-14-ias-executor-ts` — that change is about executor parity; Phase 20 is about a feature both executors gain in lockstep.
+
+---
+
+## Phase 22 — Autonomous Vessel Forge + Maintenance Loop (2026-05-16)
+
+**Motivation.** Phase 20 closed the binding-layer gap *within* the existing vessel set: predicate-aware binding, pool selection, slot-binding pool_precheck. What remains structurally unsatisfied is the case where **no vessel in the system advertises the missing shape at all**. Today this routes to `escalate_unbindable → create-shape-provider-goal`, which composes another *activity* that produces the shape — but if every activity that could produce it would itself need a shape no vessel produces, the recursion dies at depth limit. The corrective move is to **forge the vessel itself**: compose a new vessel that owns the missing shape, deploy it to canary, register it, and let it become the producer the binding layer was looking for.
+
+**The sharp success criterion.** Reliability is not measured by "the forge succeeded" — that's a precondition. Reliability is measured by **the forged vessel being used in downstream activities at success-rate ≥ threshold over a measurement window**. A forge that produces a vessel that registers but is never consumed, or is consumed but causes downstream failures, is by this definition unreliable regardless of how clean the forge itself was. This grounds the entire phase in observable consumption signal rather than in deploy-time invariants.
+
+**RL graph framing.** A forged vessel adds new nodes (the vessel itself, its shapes, its resolvers) and new edges (composition edges from existing activities → forged vessel's resolvers → forged vessel's outputs) to the bipartite shape-graph. The topology grows by a measured step. The forge is itself an activity whose α/β posteriors track which forge variants produce reusable vessels — variants differ on scaffolding pattern, auth wiring style, observation contract, helm chart shape. Failed forges (whether at deploy time or by downstream-consumption signal) get β-penalty; successful forges get α-credit propagated through composition-chain credit (Phase 18.4) to every ancestor that decided to escalate to forge in the first place. The forge is the **topology-growth operator** for the RL graph.
+
+**Core principle: lean on what exists.** A forged vessel is *just-another-vessel*. It registers with discovery the same way, advertises shapes the same way, validates JWTs the same way, emits `impulse.resolved` events the same way. The forge does not introduce a parallel "forged-vessel" infrastructure — no new tables, no new metric pipelines, no new maintenance catalog. Reuse map:
+
+| Need | Existing surface used |
+|---|---|
+| Forge-success Thompson trend | `variant_performance_metrics.alpha/beta` on the forge template — already aggregated by the existing learning loop |
+| Forged-vessel reliability metric | `activity_metrics` α/β on the forged vessel's activities + `composition_chain` filter — computed on-demand from existing traces, no new table |
+| Dedup ("has this shape been forged?") | `discovery-vessel /registry/shapes?shape=X` — the registry already tracks ownership; a registered shape is the existence proof |
+| Failure-mode classification | Existing `FailureModeSchema` taxonomy (Phase 18.3) — verifier_negative / budget_exhausted / safety_breach / cascading / user_abort already cover forge failures |
+| Maintenance triggers | Existing registry-quality six-pack (`core-activity-audit`, `prune-activity`, `replace-activity`, plus lifecycle wrappers) — operates on activity templates, and a forged vessel's activities register into the same template store as any other vessel's |
+| Concept retrieval | Existing concept-db `/concepts/search` endpoint — forge resolvers consult it, contribute to it, no special API |
+| Reliability remediation | Existing `evolve-activity` / `replace-activity` / `repair-failed-activity` templates — they treat the forged vessel's activities as ordinary activities and act on declining Thompson posteriors |
+
+**Connection to maintenance.** A forged vessel begins life with no observation history. As downstream activities use it, traces accumulate in `activity_execution_traces`; Thompson α/β on the forged vessel's activities update via the existing learning loop; when posteriors degrade, the **already-deployed registry-quality activities** dispatch — `core-activity-audit` flags the activity, `replace-activity` proposes a variant, `repair-failed-activity` runs the recipe. No vessel-specific maintenance catalog is added; the existing activity-level maintenance machinery sees a forged vessel's activities as ordinary activities.
+
+**Compliance contract: what makes a vessel "pure."** A forged vessel must be indistinguishable from a hand-built vessel at every protocol boundary, so it can be driven by activities and LLM resolver tool calls without special-case dispatch logic. The contract has six clauses; the three-invariants probe verifies all of them:
+
+1. **Registration**: `POST discovery-vessel/register` with `shapes[]`, `resolve_endpoint`, `auth_scheme`, `resolve_request_format`, `resolve_timeout_ms` populated per the discovery-vessel contract.
+2. **Heartbeat**: re-register every 60s; survives 90s timeout in the registry.
+3. **Auth**: validate `Authorization: ApiKey` and `Authorization: Bearer` via identity-vessel `/v1/auth/resolve`; returns 401 on missing/invalid; never embeds a fallback validator.
+4. **Resolve endpoint**: accepts `POST /v2/impulses/resolve` with `{ pointer }` envelope; returns the resolved impulse content keyed by the advertised shape; honours the unified body contract `{ shape, taskId, body }` for WebSocket emission.
+5. **Observation**: emits `impulse.resolved` over WebSocket `/ws` on the standard event channel; surfaces traces via the activity-api's existing intake.
+6. **Health**: `GET /health` returns `{ service, version, status, checks: { discovery, ... } }` matching activity-api's reference structure.
+
+A forged vessel that satisfies these six clauses is **reachable through every existing dispatch path automatically**:
+
+- An activity template with `inputShapes: [forged_shape]` binds via the Phase 20 pool/producer selection layer (the forged vessel appears as a producer in `discover-by-shapes`).
+- An activity template with `resolver: "impulse-resolve"` and `config.pointer.type: forged_shape` dispatches via the impulse-resolve resolver, which routes through discovery.
+- An LLM resolver tool call `load_impulse({type: forged_shape})` goes through `impulse.ts` STEP 4 (vessel discovery), looks up the forged vessel, and resolves through `callVesselResolve()`.
+- An ad-hoc `POST /v2/impulses/resolve` from any other vessel routes through discovery to the forged vessel.
+- A workbench user can pin/click a forged-vessel shape in `ApplicableActivitiesPanel` and it lights up the same way as any other producer.
+
+The forge does not need to teach any of these dispatch paths about its existence. They all consult discovery; the forged vessel is in discovery; therefore they all just work. The compliance contract is the proof obligation; the dispatch surface is unchanged.
+
+**The four cases the binding layer hits, mapped to Phase 22:**
+
+| Case | Today | Phase 22 |
+|---|---|---|
+| Shape produced by 0 vessels, ≥1 activities | `escalate_unbindable → create-shape-provider-goal` (works) | unchanged (cheaper than forge) |
+| Shape produced by 0 vessels, 0 activities | `escalate_unbindable → create-shape-provider-goal` (recurses forever) | `escalate_unbindable → forge_vessel_for_shape` |
+| Shape produced by 1 vessel, vessel unhealthy | unbound or fails | `repair-from-failure-mode` triggered by `vesselHealthMetrics` < threshold |
+| Shape produced by N vessels, ambiguous selection | Phase 20 producer_selection / pool_selection | unchanged |
+
+The new branch fires only in case 2 — when there is no producer anywhere in the system. Discovery is consulted first; the forge only escalates when the system genuinely lacks the capability.
+
+**Architectural choice: ias-executor-ts as the forge substrate.** The forge runs as an ias-executor-ts host (`VesselForgeHost`), not inside minibob, for three reasons. (1) The forge needs strict reproducibility — its purity contract means a given goal + concept-db state + LLM seed produces a deterministic vessel up to LLM nondeterminism. (2) The forge's adapters (`DockerPort`, `HelmfilePort`, `DiscoveryPort`) are exactly the kind of host-specific I/O the ias-executor-ts spec already isolates from core engine logic. (3) When minibob eventually migrates to ias-executor-ts (per the 2026-05-14-ias-executor-ts spec's Bucket A), the forge runs unchanged.
+
+**What is intentionally not changed:**
+- Discovery-vessel's shape registration contract — forged vessels register the same way every other vessel does.
+- Activity-api's trace storage — forge traces look like any other composition chain.
+- The slot-binding template's existing branches — pool_precheck (Phase 20.3) and producer_selection (existing) run before the forge branch. The forge is the last resort, not the first.
+- Concept-db's data model — forge consumes existing concepts, contributes new ones, no schema change.
+
+**Sub-phase ordering (lowest-risk first):**
+
+### Phase 22.1 — Concept seeding + intent recognition
+
+The forge needs concepts (recipes, anti-patterns) to scaffold idiomatically. The TYPESCRIPT_VESSEL_TEMPLATE.md document carries the rules; they need to be in concept-db as queryable `concept` impulses with structured tags (`vessel-construction.discovery`, `vessel-construction.auth`, `vessel-construction.observation`, etc.). A one-time import job — itself written as an activity (`extract-concepts-from-docs`) — reads the doc and posts to concept-db's `/concepts` endpoint. The job becomes a meta-pattern reusable for future documentation → concept extraction.
+
+Activity-api's `analyzeTaskSemantics` gets the tag prefix `feature.vessel.forge` so goals like "build a vessel that produces python_ast_type_checker" route to forge variants in the recommendation. The keyword expansion is small: `forge`, `vessel`, `scaffold-vessel`, `new-shape-producer` map to the forge tag family.
+
+### Phase 22.2 — VesselForgeHost in ias-executor-ts
+
+Duplicate `src/examples/bun-host.ts` as `src/examples/vessel-forge-host.ts`. Add three new ports:
+- `DockerPort` — `build(context, tag)` / `push(tag, registry)`. ProcessPort-backed adapter.
+- `HelmfilePort` — `applyOverlay(overlayPath)`. ProcessPort-backed adapter.
+- `DiscoveryPort` — `lookupShapeProducers(shape)`, `registerVessel(payload)`. FetchPort-backed adapter.
+
+Register five forge-specific resolvers:
+- `scaffold_vessel_skeleton` (LLM + concept-db retrieval + file-tree write)
+- `wire_discovery_registration` (LLM-edit source files to add registration + heartbeat)
+- `wire_auth_blueprint` (LLM-edit source files to add JWT validation + identity-vessel client)
+- `docker_build_push` (DockerPort)
+- `helmfile_sync` (HelmfilePort + readiness wait)
+- `verify_three_invariants` (FetchPort + DiscoveryPort + auth probe)
+
+The host attaches these ports + resolvers + a `concept-db` MCP client capability vessel + an `activity-api` MCP client capability vessel. Core engine unchanged.
+
+### Phase 22.3 — `forge_vessel_for_shape` activity template
+
+A new embedded template chaining the resolvers. Inputs: `vesselGoal` (free-text or structured), `missingShape` (the shape that triggered the forge), `parentExecutionId`, `parentDepth`. Outputs: `vesselDeployed` (the registered vessel's id + endpoint) on success, or a typed failure-mode impulse on each abort point. Depth-guarded at 1 nested forge to prevent recursive forge storms.
+
+The template's task graph mirrors the shape-flow chain from this conversation: `vesselSpec → vesselScaffold → vesselWithAuth → vesselWithDiscovery → vesselImagePushed → vesselDeployedToCanary → vesselCanaryHealth → vesselDiscoveryRegistrationVerified → vesselReadyForProduction`. Each transition is a task; each task's failure surfaces as a typed `failure_mode` that the maintenance loop later consumes.
+
+### Phase 22.4 — Slot-binding escalation branch
+
+The connection point lives in `slot-binding.json::escalate_unbindable` (the existing task). Today it dispatches `create-shape-provider-goal` when `select_or_produce` reports `unbindable: true`. Phase 22 adds a pre-check via `DiscoveryPort.lookupShapeProducers(missingShape)`:
+- If ≥ 1 producers exist (they were just unhealthy / out-of-scope): dispatch `create-shape-provider-goal` (composes an activity that uses an existing producer)
+- If 0 producers AND `parentDepth < 2` AND shape not already forged for this org in last 24h: dispatch `forge_vessel_for_shape`
+- Otherwise: emit `unbindable_terminal` impulse (the binding layer gives up gracefully; the parent goal gets the unbindable signal to surface to the user)
+
+The pre-check itself produces an impulse (`shape_producer_inventory`) so downstream tasks see why the branch was taken. The 24h dedup window prevents two concurrent goals from forging duplicate vessels for the same shape — first forge wins; second waits.
+
+### Phase 22.5 — Reliability metric (no new storage)
+
+The metric: `vessel_production_success_rate(forged_vessel_id, window_hours)` is computed on-demand from `activity_execution_traces` by joining on `composition_chain CONTAINS forged_vessel_id` and aggregating task success. The query is a one-line addition to the existing trace service; **no new table, no new aggregator, no new periodic emitter**. The existing learning loop's Thompson posteriors on the forged vessel's activities are the canonical signal — when the activity's `variant_performance_metrics.beta/(alpha+beta)` rises, that *is* the reliability degradation signal.
+
+Thresholds (advisory, applied at query time):
+- Green (≥ 0.95): vessel is production-ready
+- Yellow (0.80–0.95): monitored
+- Red (< 0.80): slot-binding may avoid; existing `replace-activity` / `repair-failed-activity` machinery acts on the declining posterior
+
+A thin REST surface `GET /v2/vessels/:id/metrics?window=24h` reads from the existing trace table and applies the thresholds. That's the only new endpoint; no schema migration.
+
+### Phase 22.6 — Maintenance via existing registry-quality activities (no new catalog)
+
+The forged vessel's activities register into `activity_template` like any other vessel's activities. The already-deployed registry-quality six-pack acts on them automatically:
+
+- `core-activity-audit` flags forged-vessel activities whose Thompson posteriors are degrading.
+- `replace-activity` proposes a successor variant; if the recipe is "redeploy the vessel with a different scaffold," the successor is itself a new forge run with the failure-mode context as input.
+- `prune-activity` deprecates a forged vessel's activity that has zero successful executions over a window.
+- `repair-failed-activity` runs failure-mode-specific recipes on the forged vessel's activities (the same recipes that operate on hand-built activities).
+- `evolve-activity-self-contained` rewrites the activity's resolver dispatch when the resolver tier proves wrong.
+
+The forge does not need its own maintenance catalog. The activity-level maintenance machinery sees a forged vessel's activities as ordinary activities and acts on the same Thompson signals it already acts on for every other activity in the registry. Re-running `verify_three_invariants` (a reusable activity) after any replace/repair completes the maintenance cycle — same probe used at creation, free verification.
+
+What this leaves out by design: vessel-level concerns that have no activity-level analog (credential rotation, resource right-sizing, helm chart patching). These are operator concerns until they become recurring enough to justify their own activities — at which point they're authored once and registered like any other activity.
+
+### Phase 22.7 — Acceptance test: the compliance contract demonstration
+
+The demonstration must prove the forged vessel is **driven through every existing dispatch path** without special-case logic. One forge run, then six independent dispatch-path tests against the same forged vessel:
+
+1. **Forge**: `forge_vessel_for_shape("json_schema_validator")` runs end-to-end; `verify_three_invariants` green within 5 minutes.
+
+2. **Path A — Activity inputShapes binding**: Run an activity that declares `inputShapes: ["json_schema_validator"]`. Slot-binding's `producer_selection` finds the forged vessel via discovery; the binding completes; the activity executes successfully.
+
+3. **Path B — `impulse-resolve` dispatch**: Run an activity whose task is `{ resolver: "impulse-resolve", config: { pointer: { type: "json_schema_validator", ... } } }`. The impulse-resolve resolver routes through discovery to the forged vessel and returns content. Trace records the forged vessel as resolver.
+
+4. **Path C — LLM tool call**: Inside an LLM task, call the `load_impulse` tool with `pointer: {type: "json_schema_validator"}`. The impulse loading path (STEP 4 vessel discovery) finds the forged vessel and calls `callVesselResolve()`. Returns content to the LLM.
+
+5. **Path D — Cross-vessel impulse-resolve from a different vessel**: Another vessel (e.g. minibob's executor) calls `POST /v2/impulses/resolve` against the forged vessel directly. Returns content; the forged vessel emits `impulse.resolved` on its WebSocket.
+
+6. **Path E — Workbench surface**: Open the workbench trajectory panel for a goal that needs the forged shape. The forged vessel appears in `ApplicableActivitiesPanel` as a producer, no different from a hand-built vessel.
+
+7. **Path F — Reliability**: Run 10 additional goals that consume the forged shape via mixed dispatch paths (A through E). `vessel_production_success_rate` over the 10-trace window crosses 0.90 for the acceptance run (≥ 0.95 for the longitudinal canary run).
+
+Paths A–E individually prove protocol compliance. Path F proves reliability under real consumption. The combined seven-test pass is the phase's hard gate. Any single-path failure indicates the compliance contract is incomplete and the forge has to be fixed, not the dispatch path.
+
+### Phase 22.S — Success criteria
+
+- 22.S1 `VesselForgeHost` ships in ias-executor-ts; `bun typecheck` and existing tests green.
+- 22.S2 Concept-db is seeded with ≥ 12 vessel-construction concepts via the reusable `extract-concepts-from-docs` activity.
+- 22.S3 Slot-binding's `escalate_unbindable` branches between forge and shape-provider-goal based on the discovery pre-check; integration test passes.
+- 22.S4 Acceptance test step 1 produces a green-status forged vessel within 5 minutes.
+- 22.S5 Acceptance test steps 2–6 (paths A–E) each succeed: the forged vessel is driven through every existing dispatch path with no special-case code.
+- 22.S6 Acceptance test step 7 (path F) shows `vessel_production_success_rate ≥ 0.90` over a 10-consumer window.
+- 22.S7 A synthetic failure injected into the forged vessel causes the existing `replace-activity` / `repair-failed-activity` machinery to act on the declining Thompson posterior — no vessel-specific maintenance code involved.
+
+### Phase 22.X — Explicit non-goals
+
+- **No new database tables.** Reliability is computed from existing traces. Dedup uses existing discovery registry. Forge history is implicit in `activity_execution_traces`.
+- **No new maintenance catalog.** The existing registry-quality six-pack handles forged vessels' activities as ordinary activities.
+- **No new dispatch paths.** Forged vessels are reached through the same surfaces that reach hand-built vessels. If a forged vessel needs a new dispatch path, the forge is wrong, not the dispatch layer.
+- **No general-purpose code generation.** The forge produces vessels matching the proto-skeleton in concept-db. Non-vessel artifacts are out of scope.
+- **No multi-language vessels in v1.** TypeScript/Bun only.
+- **No production deployment.** All forges target canary. Promotion is manual.
+- **No cross-vessel state migration.** Migration tooling waits on H1 two-sided trace verification.
+
+**Dependencies.**
+- Phase 20 (predicate-aware binding) — done; provides the `currentImpulseShapes` lifecycle payload the forge dispatcher reads to determine the missing shape's context.
+- Phase 18.4 (composition-chain credit propagation) — done; ensures forge variant α/β reflects downstream-consumption success.
+- `2026-05-14-ias-executor-ts` Phases 1–7 — done; provides the host substrate, port surface, and resolver registry.
+- Concept-db deployment status — deployed; needs the seeding job (22.1).
+- Discovery-vessel `/registry/shapes?org_ids=` filter — shipped in Phase 11; provides the shape-ownership pre-check.
+
+No hard prerequisites that aren't already in place. Phase 22 can land independently of Phase 10 (SurrealDB RL primitives) and Phase 12 (connection pooling); both would help but neither blocks.
+
+**Relationship to existing specs.** Supersedes nothing; **extends** `2026-04-26-shape-provider-goal-creation` by adding the vessel-forge escalation branch alongside the existing activity-composition branch. References but does not subsume `vessel-development-architecture` — that spec covers manual vessel development workflows; Phase 22 is autonomous. References `2026-04-26-security-hardening-findings` H1, H2, H3: forged vessels carry the same security obligations as any vessel, and the autonomous forge needs scope-narrowing (CC1) before it can fully self-direct without operator review for cross-account work.
+
+## 2026-05-18 amendment — three new siblings + two hotfixes
+
+Five sibling specs landed in the integration spec's orbit between 2026-05-17 and 2026-05-18. They are tracked in `tasks.md` as Phases 23/24/25 but introduce no new primitives of their own — each closes a structural gap the four implemented phases (18/19/20/22) surfaced.
+
+**The five siblings.**
+
+- `2026-05-17-shape-dispatch-agreement` (Phase 23) — static + runtime check enforcing TYPESCRIPT_VESSEL_TEMPLATE.md Invariant 2 (advertised shape ↔ dispatch case agreement). Closes the silent-divergence path where vessel-side bugs surface only as Thompson β drift on the caller. Audit found six concrete divergences at write time; the lint runs at build and again at startup.
+- `2026-05-17-state-space-signature-thompson-keying` (Phase 24) — versioned, deterministic state-space signature; makes the `context_thompson_scores` substrate load-bearing in the read path. The substrate has been deployed since `computeContextBucket` (`repos/metabob-activity-api/src/utils/session-context.ts:115-129`) and `writeAncestorDelta` (`posterior-update.ts:220-286`) shipped, but `applyCompatibilityFilter` (`repos/metabob-activity-api/src/services/recommendation.ts:74-131`) has never queried it. Also corrects Phase 18.4 chain-credit wiring so each ancestor receives an update keyed on **its own** signature at binding time, not the leaf's (the leaf-bucket destructure at `posterior-update.ts:308, 369`).
+- `2026-05-17-stratified-goal-generator-harness` (Phase 25) — stratified goal generator + coverage matrix + reuse-efficiency + optimality-gap + refinement-event detection + decision-record completeness + multi-witness disagreement. Additive to Phase 19; the curated v2 benchmark continues to run. Scenario D coverage is gated on Phase 22 forge completion (`vessel_production_success_rate ≥ 0.90`, 22.S6).
+- `2026-05-18-chain-credit-ancestor-signature-fix` (preventive hotfix, Phase 24.1) — replace the single-bucket destructure in `propagateCreditAlongChain` with a per-ancestor recomputation via `computeContextBucket`. The bug is **dormant in production today** because `applyOutcomeToPosteriors` hardcodes `context_bucket: null` at `repos/metabob-activity-api/src/lib/posterior-update.ts:464`, so no conditional rows are being written via chain credit at the moment — but activating conditional keying (24.2) without fixing the wiring would compound the bug across thousands of ancestor rows. Ships first, ahead of state-space-signature, so 24.2 lands on a correct substrate. Lives under the v0 API and is cleanly subsumed when v1 lands.
+- `2026-05-18-shape-dispatch-divergence-cleanup` (Phase 23.1) — small cleanup landing alongside the shape-dispatch lint: identity-vessel trim of `apiKey`/`jwtToken` (zero external callers; every caller dispatches `shape: "authentication"` with pointer-type discriminator); `shape-dispatch.config.json` declaring `{ "authentication": ["apiKey", "session"] }` at the identity-vessel root; concept-db `tests/write-shapes.test.ts:585` assertion inversion. **A 2026-05-18 re-audit found that three of the six divergences in the 2026-05-17 findings table are already resolved in-tree:** activity-api's five "orphan" cases at `repos/metabob-activity-api/src/routes/impulses.ts:1415, 1434` carry `// @shape-dispatch:private` annotations and return 410 Gone with `resolver_moved` bodies pointing at Analysis API (they are deliberate deprecation stubs, not orphans); concept-db `conceptUpkeepAuditLog` has already been removed from `repos/concept-db/src/config.ts:203-206` (only the test assertion at `tests/write-shapes.test.ts:585` is stale). The cleanup spec records this and trims the remaining identity-vessel divergence.
+
+**Why this batch lands here.** Phase 18.4 (chain credit) and Phase 11 (state-space-aware recommendations) wrote the substrate for context-conditional learning; Phase 20 (predicate-aware binding) wrote the substrate for provenance-conditional learning. The pieces exist; they are not load-bearing. The state-space-signature spec is the activation. The chain-credit hotfix is the prerequisite for that activation. The shape-dispatch lint closes a separate but adjacent invariant gap that the audit work uncovered while looking at concept-db's shape advertisements during the signature design. The stratified harness closes the measurement gap that prevents the integration spec's success criterion ("for an arbitrary goal, the loop builds enough topology") from being a measured number rather than an inferred one. None of the five add new primitives — they each make a piece of already-shipped infrastructure load-bearing or measurable.
+
+**Order of operations** (recorded so a future Claude does not relitigate the sequencing):
+
+1. Chain-credit hotfix (24.1) — small, isolated, lands first. `posterior-update.ts:464` hardcode removed; per-ancestor recomputation in place.
+2. Shape-dispatch cleanup (23.1) — concurrent with (1); independent code paths.
+3. Shape-dispatch lint (23.2) — runs lenient against the cleaned-up tree; promoted to strict after one canary window with zero `verifier_negative` self-traces.
+4. State-space signature (24.2) — activates the read path. Builds on the corrected chain-credit substrate from (1).
+5. Discrimination metric (24.3) — confirms 24.2 captured real heterogeneity, not noise.
+6. Stratified harness (25) — runs alongside the v2 benchmark; Scenario D filled once Phase 22 forge clears its own gate.
+
+This is a note, not a re-design. The implementation tasks live in the sibling specs.
