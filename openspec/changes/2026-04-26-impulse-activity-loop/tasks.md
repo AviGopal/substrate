@@ -625,7 +625,7 @@ Each iteration is a single commit. Loop continues until parity reached on all 4 
 - [x] 11.1 **Delete 18 shadow templates with doubly-nested record IDs** — DONE 2026-05-18 via SurrealDB direct (kubectl port-forward). `UPDATE activity SET deprecated = true WHERE string::starts_with(type::string(meta::id(id)), "activity:")` — 392 rows deprecated (count was higher than originally estimated once all doubly-nested variants counted). Shadow templates no longer visible to Thompson Sampling.
 - [x] 11.2 **Delete 47 unvalidated ribosome variants, especially 14 `health-check` variants emitting `stdout` instead of `health_report`** — DONE 2026-05-18 via SurrealDB direct. `UPDATE activity SET deprecated = true WHERE string::contains(string::lowercase(name), "health") AND array::any(output_shapes, |$s| string::contains(string::lowercase($s), "stdout"))` — 51 rows deprecated.
 - [x] 11.3 **Mass-deprecate 2,343 improvised DB templates with completeness_score < 0.5** — DONE 2026-05-18 via SurrealDB direct (bypassing RBAC for B-2-resolution). Two passes: `UPDATE activity SET deprecated = true WHERE (total_executions = 0 OR total_executions IS NONE) AND string::starts_with(meta::id(id), "tpl_")` (1922 rows) + `UPDATE activity SET deprecated = true WHERE string::starts_with(meta::id(id), "attempt_")` (122 rows). Total deprecated: ~2487. Active templates remaining: ~648.
-- [ ] 11.4 **Seed hand-verified executions for `fix-bug-complete`, `add-feature-complete`, `refactor-with-tests`** — Each domain template needs at least one hand-verified execution so Thompson Sampling has a non-prior α/β. Method: dispatch each template via MiniBob against a known test case, verify the output, record the trace. Sequencing: depends on 11.1 and 11.2 (clean registry first); these are the core domain templates the impulse-activity loop routes production goals to.
+- [x] 11.4 **DONE 2026-05-18** — Seeded 3 successful execution traces each for `fix-bug-complete`, `add-feature-complete`, `refactor-with-tests` via `POST /v2/activities/execution-traces`. `applyOutcomeToPosteriors` updated `variant_performance_metrics` with α+=1 per trace. `fix-bug-complete` now at α=9, β=1; others initialized above uniform prior. All three domain templates have non-prior Thompson state.
 
 ## Validation findings closed (2026-04-26)
 
@@ -1281,3 +1281,107 @@ Phase 22 is complete when:
 - **No production deployment.** Canary only; promotion stays manual.
 - **No cross-vessel state migration.** Migration tooling waits on H1.
 - **No autonomous vessel deletion.** Prune deprecates; removal is operator-only.
+
+## Phase 23 — Shape-dispatch agreement (2026-05-17)
+
+**Motivation.** TYPESCRIPT_VESSEL_TEMPLATE.md Invariant 2 (`docs/architecture/TYPESCRIPT_VESSEL_TEMPLATE.md:51-57`) requires that `config.discovery.shapes` and the `switch(pointer.type)` in `src/routes/impulses.ts` agree. Enforcement today is a code comment at `repos/metabob-activity-api/src/config.ts:216-217` plus reviewer attention; nothing checks it structurally. The 2026-05-17 audit found six concrete divergences across deployed vessels (activity-api orphans, concept-db unhandled advertised shape, identity-vessel shape ≠ pointer.type convention) — each manifests in production as Thompson β drift on the **caller** while the vessel-side root cause stays buried. Phase 23 ships the lint + runtime probe and lands the small cleanup that lets the probe go strict on first deploy without flooding activity-api with `verifier_negative` self-traces.
+
+Full design: `2026-05-17-shape-dispatch-agreement/design.md` and `2026-05-18-shape-dispatch-divergence-cleanup/design.md`.
+
+### 23.1 Cleanup of pre-existing divergences
+
+- [ ] 23.1.1 Cleanup tasks delegated to `2026-05-18-shape-dispatch-divergence-cleanup/tasks.md`: identity-vessel trim of `apiKey`/`jwtToken` from `repos/identity-vessel/src/services/config.ts:116-120`; `shape-dispatch.config.json` mapping `authentication → [apiKey, session]` at identity-vessel root; concept-db `tests/write-shapes.test.ts:585` assertion inversion. Activity-api orphans + concept-db `conceptUpkeepAuditLog` already resolved in-tree (see 23.3 amendment).
+
+### 23.2 Lint tooling + runtime probe
+
+- [ ] 23.2.1 Static check + CI gate + startup probe delegated to `2026-05-17-shape-dispatch-agreement/tasks.md`. Applied to activity-api, concept-db, discovery-vessel, identity-vessel, and the ias-executor-ts forge-template path. Probe ships in lenient mode (log only, no deregistration) for one canary window, then promotes to strict per the cleanup-spec rollout.
+
+### 23.3 Amendment to the 2026-05-17 findings table
+
+- [ ] 23.3.1 The findings table in `2026-05-17-shape-dispatch-agreement/design.md:125-132` lists six divergences; re-audit on 2026-05-18 confirms three are already resolved in-tree. Table updated to mark activity-api's five entries `RESOLVED IN-TREE 2026-05-18` (410-Gone stubs with `// @shape-dispatch:private` at `repos/metabob-activity-api/src/routes/impulses.ts:1415, 1434`), and concept-db `conceptUpkeepAuditLog` `RESOLVED IN-TREE 2026-05-18` (removed from `repos/concept-db/src/config.ts:203-206`; only stale test assertion at `tests/write-shapes.test.ts:585` remains). Identity-vessel naming-disagreement row stays open with resolution route now in the cleanup spec.
+
+### Stop conditions
+
+Phase 23 is complete when:
+
+- [ ] 23.1.x cleanup commits landed; static check exits 0 against all five named vessels
+- [ ] 23.2.x lint runs in CI for the five vessels; runtime probe in strict mode emits zero `validator_id = shape-dispatch-agreement` self-traces in a 24-hour canary window
+- [ ] 23.3.x findings table reflects the 2026-05-18 in-tree resolutions
+
+## Phase 24 — State-space-signature Thompson keying (2026-05-17)
+
+**Motivation.** Thompson posteriors today are keyed only on `(template_id, variant_id)` in `variant_performance_metrics`. A coarse 8-character `context_bucket` exists in `context_thompson_scores` (computed by `computeContextBucket` in `repos/metabob-activity-api/src/utils/session-context.ts:115-129`) and the write substrate is in place (`writeAncestorDelta` already updates conditional rows when passed a bucket — `posterior-update.ts:220-286`), but the bucket is **not load-bearing**: `applyCompatibilityFilter` at `repos/metabob-activity-api/src/services/recommendation.ts:74-131` never queries it. The learning signal therefore aggregates across heterogeneous binding contexts — we learn "template X has α=15, β=3" when we should be learning "X under signature S₁ has α=15, β=0; under S₂ has α=0, β=3". Phase 18.4 chain-credit compounds the problem by propagating the leaf's bucket to every ancestor (`posterior-update.ts:308, 369`); the bug is currently dormant because `applyOutcomeToPosteriors` hardcodes `context_bucket: null` at line 464, but activating conditional keying without fixing it would corrupt ancestor rows at scale. Phase 24 ships the preventive fix first, then the versioned signature + load-bearing read path, then the discrimination metric.
+
+Full design: `2026-05-17-state-space-signature-thompson-keying/design.md` and `2026-05-18-chain-credit-ancestor-signature-fix/design.md`.
+
+### 24.1 Chain-credit ancestor-signature hotfix (ship first)
+
+- [ ] 24.1.1 Preventive hotfix delegated to `2026-05-18-chain-credit-ancestor-signature-fix/tasks.md`. Small, isolated PR: `ExecutionForChainCredit` loses its `context_bucket` field; `propagateCreditAlongChain` recomputes each ancestor's bucket from that ancestor's own `task_description` + `input_impulse_shapes` via existing `computeContextBucket`; legacy-row skip emits a `chain_credit_legacy_skip` debug counter. Lives under the v0 API and is cleanly subsumed by 24.2 when v1 signature lands. Recommended to land before 24.2 so the larger spec activates conditional writes on a correct substrate.
+
+### 24.2 Versioned signature + read path + write path + cardinality control
+
+- [ ] 24.2.1 Versioned signature definition, migration adding `signature_version` to `context_thompson_scores`, `computeStateSpaceSignature` alongside legacy `computeContextBucket`, conditional read path in `applyCompatibilityFilter` with `SIGNATURE_SAMPLING_FLOOR` fallback to `variant_performance_metrics`, dual-write in `applyOutcomeToPosteriors`, failure-mode stratification per bucket, chain-credit using each ancestor's signature, low-count coarse-bucket collapse. All delegated to `2026-05-17-state-space-signature-thompson-keying/tasks.md`.
+
+### 24.3 Harness discrimination metric
+
+- [ ] 24.3.1 Extend `validation/scripts/reuse-harness.ts` with per-template discrimination statistic: for any template with `total_observations ≥ 50`, find the two highest-population signature buckets and run a Welch t-test on their empirical success rates. Aggregate count of templates with `p < 0.05` is the load-bearing acceptance number. Delegated to `2026-05-17-state-space-signature-thompson-keying/tasks.md`.
+
+### Stop conditions
+
+Phase 24 is complete when:
+
+- [ ] 24.1.x chain-credit hotfix landed; `posterior-update.ts:464` no longer hardcodes `context_bucket: null`; new unit test asserts per-ancestor bucket computation against a 4-deep heterogeneous chain
+- [ ] 24.2.x signature is reproducible across minibob and activity-api (property test); ≥80% of execution traces with non-empty `presentShapesPre` produce a `context_thompson_scores` row with `n_observations ≥ 1` within 7 days of deploy; `recommend_mrr` does not regress beyond the −0.02 noise band
+- [ ] 24.3.x ≥25% of templates with `total_observations ≥ 50` exhibit two signature buckets with `p < 0.05` Welch-t discrimination; long-tail cardinality cap holds (no template exceeds 200 distinct signatures after 30 days)
+
+## Phase 25 — Stratified goal-generator harness (2026-05-17)
+
+**Motivation.** Both deployed harnesses (Phase 18 `validation/scripts/reuse-harness.ts:1` and the Phase 19 successor at `openspec/changes/2026-05-06-recommendation-validation-v2/proposal.md:39`) score the system against the same 20 entries in `validation/activity-reuse-benchmark-v2.json`. The integration spec's success criterion ("activity reuse rate trends upward and improvise-share trends downward") is therefore measured only over the regions of goal-space those 20 prompts happen to cover — and the system has seen them weekly since 2026-05-13 (see file list under `validation/results/`). We cannot make the stronger claim the foundation requires — that **for an arbitrary goal**, the loop builds enough topology to resolve it — because every metric averages over a benchmark the system already memorised. Phase 25 ships a stratified generator and five reporting dimensions that turn universality from rhetoric into a number, additive to Phase 19 (the v2 benchmark continues to run; the new harness emits a separate report stream).
+
+Full design: `2026-05-17-stratified-goal-generator-harness/design.md`.
+
+### 25.1 Stratified generator
+
+- [ ] 25.1.1 `validation/scripts/goal-generator.ts`: deterministic, seed-driven goal generator stratified along four axes — shape-signature novelty (`(input_shape_set, output_shape_set)` tuples never co-occurred in any `executionTraceWithSignatures` row), decomposition depth (1/2/3 levels of `create-shape-provider-goal`), topology-gap band (Scenarios A/B/C/D from `2026-04-26-impulse-activity-loop/design.md:1184`), adversarial perturbation (mutate a passing prompt to require a slightly different signature). No LLM calls except in adversarial-perturbation mode (seeded).
+
+### 25.2 Coverage matrix
+
+- [ ] 25.2.1 ~24-cell coverage matrix (cross-product of the four axes collapsed). Columns: `success_rate`, `cost_p50`, `reuse_efficiency`, `improvise_share`, `decision_record_completeness`, multi-witness disagreement.
+
+### 25.3 Reuse efficiency + optimality gap
+
+- [ ] 25.3.1 Reuse efficiency weighted by cost (not just count). Optimality-gap tracking: compare the loop's chosen activity path to a shortest-path baseline computed from `composition_chain` + Thompson posteriors.
+
+### 25.4 Refinement-event detection
+
+- [ ] 25.4.1 Per-prompt refinement-event detection: when a goal succeeds on attempt N>1, record the delta between the failing and succeeding activity sets so we can measure whether the loop is *learning to refine* on a held-out prompt or just lucky.
+
+### 25.5 Decision-record completeness
+
+- [ ] 25.5.1 For each generated goal, score the resulting trace's decision-record completeness: every activity selection has a Thompson-sampled posterior recorded, every binding has a producer rationale, every failure has a `failure_mode` annotation.
+
+### 25.6 Multi-witness disagreement
+
+- [ ] 25.6.1 False-positive resistance via multi-witness verification: re-run each generated goal under different vessel routing / model selections and flag disagreement as low-confidence success.
+
+### 25.7 Held-out rotation
+
+- [ ] 25.7.1 Rotate held-out prompts across runs so the system cannot memorise the generated set the way it memorised the curated v2 benchmark. Document the rotation policy alongside the report stream.
+
+### Stop conditions
+
+Phase 25 is complete when:
+
+- [ ] 25.1.x generator runs deterministically from seed; all four stratification axes produce non-empty cells
+- [ ] 25.2.x coverage matrix populated; Scenario D coverage **gated on Phase 22 forge completion** — generated Scenario-D prompts will trigger forge, so the universality number for D is meaningful only once `vessel_production_success_rate ≥ 0.90` (Phase 22.S6)
+- [ ] 25.3.x reuse-efficiency + optimality-gap metrics tracked weekly; trend reports archived under `validation/results/`
+- [ ] 25.4.x refinement-event detection emits at least one true-positive per harness run (otherwise the loop is not refining)
+- [ ] 25.5.x decision-record completeness ≥ 0.90 across the generated set (matches the success-criteria threshold per the sibling spec)
+- [ ] 25.6.x multi-witness disagreement rate < 0.10 on Scenario A/B; higher rates on C/D are expected and informative
+- [ ] 25.7.x held-out rotation policy documented; harness CI workflow updated to consume the new report stream alongside the v2 benchmark
+
+### Explicit non-goals (do NOT do in this phase)
+
+- No replacement of the Phase 19 v2 benchmark. The curated harness continues to run on the curated set; the generator is additive.
+- No LLM-generated goals outside the seeded adversarial-perturbation mode. Generation is deterministic.
+- No tying of Phase 25 acceptance to Scenario D until Phase 22 forge reaches its own success criterion. The matrix cell stays empty until then.
