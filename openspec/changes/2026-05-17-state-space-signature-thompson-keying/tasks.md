@@ -1,6 +1,6 @@
 # Tasks — State-Space-Signature Thompson Keying
 
-**Status:** Draft, not started.
+**Status:** §1 substrate complete (2026-05-18). §2 write path next.
 
 **Dependencies (all hard except where noted):**
 
@@ -16,12 +16,12 @@
 
 ## 1. Signature substrate (schema + utility)
 
-- [ ] 1.1 Add `repos/metabob-activity-api/sql/migrations/130-state-space-signature.surql`: `DEFINE FIELD IF NOT EXISTS signature_version ON context_thompson_scores TYPE int DEFAULT 0` + `DEFINE INDEX IF NOT EXISTS idx_ctx_ts_versioned ON context_thompson_scores FIELDS org_id, template_id, signature_version, context_bucket`. No `REBUILD INDEX` (additive index, ~3k rows). (`repos/metabob-activity-api`)
-- [ ] 1.2 Register migration 130 in `scripts/init-database.ts` migration roster. Verify init-migrations bootstrap pre-marks 130 as applied on first run if `context_thompson_scores` already has rows (mirrors the migration 128 bootstrap pattern documented in CLAUDE.md). (`repos/metabob-activity-api`)
-- [ ] 1.3 In `repos/metabob-activity-api/src/utils/session-context.ts:115-129`, add `computeStateSpaceSignature(input: { shapes: string[], provenance?: Array<{ shape: string, producedBy?: string }>, missing?: string[], version?: 1 }): string`. 16-char lowercase hex, sha256 truncated. Defaults: `version=1`. Document the canonical input ordering at the top of the function. (`repos/metabob-activity-api`)
-- [ ] 1.4 Add property test `repos/metabob-activity-api/test/state-space-signature.test.ts`: same input → identical signature; multiset order-independence; sensitivity to `producedBy` presence vs. absence; sensitivity to `missing_shapes` element changes; version isolation (`v1` vs `v0` of identical inputs differ). (`repos/metabob-activity-api`)
-- [ ] 1.5 Mirror `computeStateSpaceSignature` in `repos/minibob/src/state-space.ts` (new file or extension of existing) with byte-identical semantics. Add `test/state-space-signature.test.ts` reusing the same test vectors as 1.4 verbatim. (`repos/minibob`)
-- [ ] 1.6 Cross-vessel round-trip integration test in `validation/scripts/test-state-space-signature-roundtrip.ts`: minibob computes signature from a fixture pool; activity-api computes the same signature from the trace metadata it receives; both must match byte-for-byte. (`repos/metabob-devbob`)
+- [x] 1.1 ✅ **DONE** 2026-05-18. Added `sql/migrations/130-state-space-signature.surql`. (`repos/metabob-activity-api`)
+- [x] 1.2 ✅ **DONE** 2026-05-18. Auto-discovered by `readdir` in `init-database.ts` — no manual roster change needed. (`repos/metabob-activity-api`)
+- [x] 1.3 ✅ **DONE** 2026-05-18. Added `computeStateSpaceSignature` + `ProvenanceTuple` + `StateSpaceSignatureInput` to `session-context.ts`. Canonical ordering documented inline. (`repos/metabob-activity-api`)
+- [x] 1.4 ✅ **DONE** 2026-05-18. 17 tests passing in `test/state-space-signature.test.ts`. (`repos/metabob-activity-api`)
+- [x] 1.5 ✅ **DONE** 2026-05-18. Mirrored in `src/state-space-signature.ts`; 15 tests passing in `test/state-space-signature.test.ts`. Byte-identical output confirmed live. (`repos/minibob`)
+- [x] 1.6 ✅ **DONE** 2026-05-18. Static fixture parity test `validation/scripts/test-state-space-signature-roundtrip.ts`; 6 fixtures pass (both vessels). (`repos/metabob-devbob`)
 
 ---
 
