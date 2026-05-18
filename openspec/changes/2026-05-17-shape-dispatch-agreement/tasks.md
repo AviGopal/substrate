@@ -16,7 +16,7 @@
 - [x] 2.2 Same for `concept-db`. DONE 2026-05-17
 - [ ] 2.3 Same for `discovery-vessel`. BLOCKED: discovery-vessel uses `src/resolvers.ts` + in-memory registry, not standard `src/config.ts` shapes array; needs vessel restructuring first.
 - [ ] 2.4 Same for `identity-vessel` with a `shape-dispatch.config.json` mapping `authentication → [apiKey, session, jwtToken]`. BLOCKED: identity-vessel has `src/services/config.ts` + `src/resolvers/*.ts`, not the standard `src/routes/impulses.ts` dispatch switch.
-- [ ] 2.5 Add the script to the `ias-executor-ts` forge template so generated vessels inherit it.
+- [x] 2.5 Add the script to the `ias-executor-ts` forge template so generated vessels inherit it. DONE 2026-05-17; `scaffold_vessel_skeleton` resolver always writes `scripts/check-shape-dispatch.ts` and the LLM prompt includes it in lint script
 
 ## 3. Runtime probe
 
@@ -35,7 +35,7 @@
 
 - [x] 5.1 Update `docs/architecture/TYPESCRIPT_VESSEL_TEMPLATE.md` §"Invariant 2" to replace the "future lint" note with a pointer to `packages/shape-dispatch-check/` and the per-vessel `lint` script. DONE 2026-05-17
 - [x] 5.2 Add a short section to the same doc explaining `// @shape-dispatch:private` and `shape-dispatch.config.json`. DONE 2026-05-17 (included in 5.1 update)
-- [ ] 5.3 Cross-link from each vessel's CLAUDE.md ("Shape contract is enforced; see check").
+- [x] 5.3 Cross-link from each vessel's CLAUDE.md ("Shape contract is enforced; see check"). DONE 2026-05-17; added to metabob-activity-api CLAUDE.md and concept-db CLAUDE.md; discovery-vessel + identity-vessel deferred until 2.3/2.4 are unblocked
 
 ## 6. Verification
 
