@@ -1,6 +1,6 @@
 # Tasks — State-Space-Signature Thompson Keying
 
-**Status:** §1–§5 complete (2026-05-19). §4 read path gated on ~7 days v1 accumulation (~2026-05-26). §6 harness instrumentation next (non-gated).
+**Status:** §1–§5 complete (2026-05-19); §6.1–§6.2 complete (2026-05-19). §4 read path gated ~2026-05-26. §6.3–§6.6 require §4 first.
 
 **Dependencies (all hard except where noted):**
 
@@ -65,8 +65,8 @@
 
 ## 6. Harness instrumentation (the discrimination gate)
 
-- [ ] 6.1 Expose `context_thompson_scores` as a read shape on activity-api. Add `contextThompsonScores` to the impulse-resolver dispatch in `src/routes/impulses.ts` (model after `case 'shape_gap_resolution'` referenced in `2026-04-26-impulse-activity-loop/tasks.md:331`). Returns `{ template_id, signature_version, context_bucket, alpha, beta, n_observations }` rows, paged. Advertise via `src/config.ts:227-233` shape list. (`repos/metabob-activity-api`)
-- [ ] 6.2 In `validation/scripts/reuse-harness.ts`, add `computeDiscriminationStat()`: pull all conditional rows via the new shape, bucket by template_id, filter to templates with `Σ n_observations >= 50`, run Welch t-test on top-two buckets, count templates with `p < 0.05`. Emit `discrimination_report` section in the JSON output. (`repos/metabob-devbob`)
+- [x] 6.1 ✅ **DONE** 2026-05-19. `contextThompsonScores` added to `src/routes/impulses.ts` and `src/config.ts`. Supports `templateId`, `signatureVersion`, `minObservations`, `limit`, `offset` pointer fields. Returns `{ total, offset, limit, entries[] }`. shape-dispatch-check: 43/48 OK. Deployed 1.20.9-e5359c7, rev 397/398. (`repos/metabob-activity-api`)
+- [x] 6.2 ✅ **DONE** 2026-05-19. `computeDiscriminationStat()` added to `validation/scripts/reuse-harness.ts`. Calls `contextThompsonScores` shape (signatureVersion=1, limit=500), groups by template_id, Welch t-test on top-two buckets for templates with Σn_obs>=50, reports `discriminating_fraction`. `DiscriminationReport` interface + `normalCDF`/`welchTTest` helpers. Appended as Step 8 in main(). Commit `0378996a`. (`repos/metabob-devbob`)
 - [ ] 6.3 Add `conditional_coverage` section to the harness report: for each benchmark entry, record `_posterior_source` from the recommend response; aggregate `conditional_coverage_fraction = conditional / (conditional + template)`. (`repos/metabob-devbob`)
 - [ ] 6.4 Split `recommend_mrr` into `recommend_mrr_overall`, `recommend_mrr_conditional_only`, `recommend_mrr_template_only` (subsets by `_posterior_source`). The conditional-only subset's MRR being lower than template-only MRR is the flag for "signature is hurting ranking" — recorded but not gated until ≥ 14 days of data. (`repos/metabob-devbob`)
 - [ ] 6.5 Extend `.github/workflows/weekly-recommendation-validation.yml` (created in Phase 18.2.9, tasks.md:937) with one new soft-gate: after the conditional path has been live for ≥ 14 days, regression on `discriminating_fraction` of more than 0.05 week-over-week → fail the workflow. Hard-gate stays on `recommend_mrr` non-regression. (`repos/metabob-devbob`)
