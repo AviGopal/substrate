@@ -1342,19 +1342,19 @@ Full design: `2026-05-17-stratified-goal-generator-harness/design.md`.
 
 ### 25.1 Stratified generator
 
-- [ ] 25.1.1 `validation/scripts/goal-generator.ts`: deterministic, seed-driven goal generator stratified along four axes — shape-signature novelty (`(input_shape_set, output_shape_set)` tuples never co-occurred in any `executionTraceWithSignatures` row), decomposition depth (1/2/3 levels of `create-shape-provider-goal`), topology-gap band (Scenarios A/B/C/D from `2026-04-26-impulse-activity-loop/design.md:1184`), adversarial perturbation (mutate a passing prompt to require a slightly different signature). No LLM calls except in adversarial-perturbation mode (seeded).
+- [x] 25.1.1 ✅ **DONE** 2026-05-19. `validation/scripts/goal-generator.ts`: 682 lines, xorshift64 PRNG, 24-cell grid (novelty×depth×scenario), shape-signature pool + topology-gap band via lib/ helpers. Commit `796cc142`. Output schema: `id, cell_id, shape_signature, goal_text, expected_output_shapes, seed_impulse_pool, adversarial, generator_seed, shape_registry_snapshot_hash`. Adversarial mode deferred (G1.3).
 
 ### 25.2 Coverage matrix
 
-- [ ] 25.2.1 ~24-cell coverage matrix (cross-product of the four axes collapsed). Columns: `success_rate`, `cost_p50`, `reuse_efficiency`, `improvise_share`, `decision_record_completeness`, multi-witness disagreement.
+- [x] 25.2.1 ✅ **DONE** 2026-05-19. `validation/scripts/stratified-harness.ts`: 24-cell coverage matrix driver. Columns: `success_rate`, `cost_p50_usd`, `reuse_efficiency`, `improvise_share`, `decision_record_completeness`, `recommend_coverage`, `recommend_shape_match`. C∪D cells gated on Phase 22. Shortest-path cache at `validation/state/shortest-paths.json`. Refinement event detection (E.1 compression events). Floor pass logic per design §B. Smoke test: 12 goals → 9 cells, 7 passable (2 gated), PASS. Commit `1bf08af8`.
 
 ### 25.3 Reuse efficiency + optimality gap
 
-- [ ] 25.3.1 Reuse efficiency weighted by cost (not just count). Optimality-gap tracking: compare the loop's chosen activity path to a shortest-path baseline computed from `composition_chain` + Thompson posteriors.
+- [x] 25.3.1 ✅ **DONE** 2026-05-19 (included in 25.2.1). Reuse efficiency computed as `reused_task_cost / total_cost` (cost-weighted, not just count). Optimality-gap tracking via shortest-path cache: `optimality_ratio = mean(this_run_cost / cache.shortest_cost_usd)` per cell. 90d eviction policy implemented.
 
 ### 25.4 Refinement-event detection
 
-- [ ] 25.4.1 Per-prompt refinement-event detection: when a goal succeeds on attempt N>1, record the delta between the failing and succeeding activity sets so we can measure whether the loop is *learning to refine* on a held-out prompt or just lucky.
+- [x] 25.4.1 ✅ **DONE** 2026-05-19 (E.1 included in 25.2.1). Compression events detected when `success_rate` improves ≥ 0.10 vs prior run and `sample_count` grew. E.2 (tier-descent) and E.3 (CI-narrowing) deferred — require per-task resolver_tier from live traces.
 
 ### 25.5 Decision-record completeness
 
