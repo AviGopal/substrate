@@ -76,12 +76,12 @@
 
 ## 7. Cardinality control (background job)
 
-- [ ] 7.1 Add `scripts/collapse-stale-signatures.ts` in `repos/metabob-activity-api`. Reads `context_thompson_scores` rows with `signature_version = 1, n_observations < SIGNATURE_SAMPLING_FLOOR, last_updated_at < time::now() - 30d`. For each, sums α/β into a v1c (coarse) row keyed on the shape-multiset-only hash; deletes the v1 row. Bounded by row count; pages 1000 at a time. (`repos/metabob-activity-api`)
-- [ ] 7.2 Define the v1c signature: `computeStateSpaceSignature({ shapes, version: '1c' })` — same algorithm, no provenance, no missing-shapes, version token `1c`. Add to `session-context.ts` alongside v1. (`repos/metabob-activity-api`)
-- [ ] 7.3 Schedule the collapse job daily via a CronJob in the helm chart `repos/deployment/charts/metabob-activity-api/templates/`. Cron expression `0 4 * * *` (04:00 UTC, off-peak). Idempotent — running it multiple times in the same day is safe. (`repos/deployment`)
-- [ ] 7.4 Read-path fallback order: v1 conditional with `n >= floor` → v1c coarse with `n >= floor` → `variant_performance_metrics`. Implemented as two lookups in `lookupConditionalPosterior` with the v1c lookup gated on the v1 miss. (`repos/metabob-activity-api`)
-- [ ] 7.5 Cardinality safety cap: hard limit of 200 distinct `context_bucket` values per `(org_id, template_id, signature_version=1)`. Enforced at write time in `execution-traces.ts`: before the LET/IF/CREATE block, count existing buckets for this template; if ≥ 200, skip the conditional write (template-level write proceeds). Log at `warn` once per template per day (de-duplicated). (`repos/metabob-activity-api`)
-- [ ] 7.6 Unit test for v1c collapse: seed 10 v1 rows with n=1..4 each, run collapse, assert single v1c row with α/β = sum of inputs and v1 rows deleted. (`repos/metabob-activity-api`)
+- [x] 7.1 ✅ **DONE** 2026-05-19. `scripts/collapse-stale-signatures.ts`: pages v1 rows with n_obs < FLOOR and last_updated_at > STALE_DAYS (defaults 5/30), upserts into v1c (signature_version=2) rows, deletes v1 row. DRY_RUN mode. PAGE_SIZE/STALE_DAYS/SIGNATURE_SAMPLING_FLOOR env-tunable. Commit `f37e90c`. (`repos/metabob-activity-api`)
+- [x] 7.2 ✅ **DONE** 2026-05-19. `computeStateSpaceSignature({ shapes, version: '1c' })`: shape-multiset only, ignores provenance + missing. v1 provenance guard made explicit. 5 new tests in `test/state-space-signature.test.ts`. Commit `f37e90c`. (`repos/metabob-activity-api`)
+- [x] 7.3 ✅ **DONE** 2026-05-19. `charts/metabob-activity-api/templates/collapse-signatures-cronjob.yaml`: CronJob `0 4 * * *` UTC, concurrencyPolicy=Forbid, configurable via `collapseSignatures.*` values. Deployed in d15ed54. (`repos/deployment`)
+- [ ] 7.4 *(deferred)* v1c fallback read path in recommend handler — gated on having enough v1c rows (first collapse run ~2026-06-18, i.e. 30 days after v1 rows accumulate). (`repos/metabob-activity-api`)
+- [x] 7.5 ✅ **DONE** 2026-05-19. `posterior-update.ts`: LET $cardinality count before CREATE; skips CREATE when ≥ SIGNATURE_CARDINALITY_CAP (default 200, env `SIGNATURE_CARDINALITY_CAP`); UPDATE still proceeds for existing rows. Commit `f37e90c`. (`repos/metabob-activity-api`)
+- [ ] 7.6 Unit test for v1c collapse — gated on 7.4 integration (requires live DB with seeded rows). (`repos/metabob-activity-api`)
 
 ---
 
