@@ -2,9 +2,11 @@
 
 This document consolidates implementation findings from the impulse-activity-loop implementation wave (April 2026) and documents what's currently deployed and working on canary.
 
-**Last updated:** 2026-05-06 11:00 UTC  
-**Deployment version:** activity-api 1.15.0 (workbench v0.7.0, minibob 0.14.7-c8d9a73)  
+**Last updated:** 2026-05-18 UTC  
+**Deployment version:** activity-api 1.20.9 (workbench 0.3.1, minibob 0.14.0)  
 **Canary endpoint:** https://activity.metabob.com
+
+> Live deployment status, current findings, and recent stabilisation work are in [`CLAUDE.md`](../CLAUDE.md). This document retains the historical F-1…F-45 / F-V29…F-V36 record from the April 2026 implementation wave.
 
 ---
 
@@ -43,13 +45,13 @@ These findings were identified during implementation and have been resolved. The
 
 **Affected files:** `repos/minibob/src/activity.ts:4438, :5004`, `repos/minibob/src/embedded-templates/slot-binding.json`
 
-### F-4: Template Format Lacks Iteration Primitive
+### F-4: Template Format Lacks Iteration Primitive — RESOLVED
 
-**Issue:** Meta-activity tasks that need to iterate over arrays (per-shape selection, per-validator dispatch) have no `foreach` primitive, forcing single-item semantics.
+**Issue:** Meta-activity tasks that need to iterate over arrays (per-shape selection, per-validator dispatch) had no `foreach` primitive, forcing single-item semantics.
 
-**Status:** Open. Tracked as infrastructure gap B. Templates work around this by simplifying to single-shape / single-candidate behavior.
+**Resolution:** Iteration resolver shipped in minibob; loops over array shapes (e.g. `activityRecommendations`) with context propagation and auto-unnests single-key wrappers like `{recommendations: [...]}`. See CLAUDE.md "template-dispatchable resolvers" section.
 
-**Implication:** Multi-shape tasks and per-candidate metric fetching are not yet fully supported. See task #17 in `openspec/changes/2026-04-26-impulse-activity-loop/tasks.md`.
+**Implication:** Multi-shape tasks and per-candidate metric fetching are now supported via the iteration resolver.
 
 ### F-5: Dotted-Path Interpolation Partially Applied — RESOLVED
 
