@@ -173,6 +173,21 @@ interface ReuseTrajectory {
   mean_composition_depth: number;
 }
 
+interface DiscriminationReport {
+  total_conditional_rows: number;
+  total_templates_with_rows: number;
+  templates_with_sufficient_obs: number;
+  discriminating_templates: number;
+  discriminating_fraction: number;
+  top_discriminating: Array<{
+    template_id: string;
+    bucket_a: { context_bucket: string; alpha: number; beta: number; n_obs: number; mean: number };
+    bucket_b: { context_bucket: string; alpha: number; beta: number; n_obs: number; mean: number };
+    t_stat: number;
+    p_value: number;
+  }>;
+}
+
 interface ReuseReport {
   run_at: string;
   label: string;
@@ -192,6 +207,7 @@ interface ReuseReport {
   improvise_health?: ImproviseHealth;
   resolver_coverage?: ResolverCoverage;
   reuse_trajectory?: ReuseTrajectory;
+  discrimination_report?: DiscriminationReport;
 }
 
 // ---------------------------------------------------------------------------
@@ -735,6 +751,126 @@ function computeReuseTrajectory(
 }
 
 // ---------------------------------------------------------------------------
+// §6.2: Discrimination stat — Welch t-test across signature buckets
+// ---------------------------------------------------------------------------
+
+function normalCDF(z: number): number {
+  // Abramowitz & Stegun rational approximation (max error 7.5e-8)
+  const a = [0.319381530, -0.356563782, 1.781477937, -1.821255978, 1.330274429];
+  const k = 1 / (1 + 0.2316419 * Math.abs(z));
+  let poly = 0;
+  let kpow = k;
+  for (const ai of a) { poly += ai * kpow; kpow *= k; }
+  const pdf = Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI);
+  const upper = 1 - pdf * poly;
+  return z >= 0 ? upper : 1 - upper;
+}
+
+function welchTTest(
+  alpha1: number, beta1: number, n1: number,
+  alpha2: number, beta2: number, n2: number,
+): { t_stat: number; df: number; p_value: number } {
+  if (n1 < 2 || n2 < 2) return { t_stat: 0, df: 0, p_value: 1 };
+  const m1 = alpha1 / (alpha1 + beta1);
+  const m2 = alpha2 / (alpha2 + beta2);
+  const v1 = (alpha1 * beta1) / (Math.pow(alpha1 + beta1, 2) * (alpha1 + beta1 + 1));
+  const v2 = (alpha2 * beta2) / (Math.pow(alpha2 + beta2, 2) * (alpha2 + beta2 + 1));
+  const se2 = v1 / n1 + v2 / n2;
+  if (se2 === 0) return { t_stat: 0, df: 0, p_value: 1 };
+  const t = (m1 - m2) / Math.sqrt(se2);
+  // Welch-Satterthwaite df
+  const df = Math.pow(se2, 2) / (Math.pow(v1 / n1, 2) / (n1 - 1) + Math.pow(v2 / n2, 2) / (n2 - 1));
+  // p-value: two-tailed, using normal approximation (accurate for df > 30)
+  const p = 2 * (1 - normalCDF(Math.abs(t)));
+  return { t_stat: t, df, p_value: p };
+}
+
+async function computeDiscriminationStat(
+  endpoint: string,
+  authHeaders: Record<string, string>,
+): Promise<DiscriminationReport> {
+  const SUFFICIENT_OBS = 50;
+
+  const resp = await apiPost(`${endpoint}/v2/impulses/resolve`, authHeaders, {
+    pointer: { type: 'contextThompsonScores', signatureVersion: 1, limit: 500 },
+  }) as { success?: boolean; content?: string };
+
+  if (!resp.success || !resp.content) {
+    return {
+      total_conditional_rows: 0,
+      total_templates_with_rows: 0,
+      templates_with_sufficient_obs: 0,
+      discriminating_templates: 0,
+      discriminating_fraction: 0,
+      top_discriminating: [],
+    };
+  }
+
+  const parsed = JSON.parse(resp.content) as {
+    entries: Array<{
+      template_id: string;
+      context_bucket: string;
+      alpha: number;
+      beta: number;
+      n_observations: number;
+    }>;
+  };
+
+  const rows = parsed.entries ?? [];
+
+  // Group rows by template_id
+  const byTemplate = new Map<string, typeof rows>();
+  for (const row of rows) {
+    const bucket = byTemplate.get(row.template_id) ?? [];
+    bucket.push(row);
+    byTemplate.set(row.template_id, bucket);
+  }
+
+  let sufficientCount = 0;
+  let discriminatingCount = 0;
+  const topDiscriminating: DiscriminationReport['top_discriminating'] = [];
+
+  for (const [templateId, buckets] of byTemplate) {
+    const totalObs = buckets.reduce((s, r) => s + r.n_observations, 0);
+    if (totalObs < SUFFICIENT_OBS) continue;
+    sufficientCount++;
+
+    // Take top-2 buckets by n_observations
+    const sorted = [...buckets].sort((a, b) => b.n_observations - a.n_observations);
+    const a = sorted[0];
+    const b = sorted[1];
+    if (!b) continue;
+
+    const { t_stat, df, p_value } = welchTTest(
+      a.alpha, a.beta, a.n_observations,
+      b.alpha, b.beta, b.n_observations,
+    );
+
+    if (p_value < 0.05) {
+      discriminatingCount++;
+      topDiscriminating.push({
+        template_id: templateId,
+        bucket_a: { context_bucket: a.context_bucket, alpha: a.alpha, beta: a.beta, n_obs: a.n_observations, mean: a.alpha / (a.alpha + a.beta) },
+        bucket_b: { context_bucket: b.context_bucket, alpha: b.alpha, beta: b.beta, n_obs: b.n_observations, mean: b.alpha / (b.alpha + b.beta) },
+        t_stat,
+        p_value,
+      });
+    }
+  }
+
+  topDiscriminating.sort((a, b) => a.p_value - b.p_value);
+
+  return {
+    total_conditional_rows: rows.length,
+    total_templates_with_rows: byTemplate.size,
+    templates_with_sufficient_obs: sufficientCount,
+    discriminating_templates: discriminatingCount,
+    discriminating_fraction: sufficientCount > 0 ? discriminatingCount / sufficientCount : 0,
+    top_discriminating: topDiscriminating.slice(0, 10),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // T4.4: Recommendation executability (--detailed flag)
 // ---------------------------------------------------------------------------
 
@@ -1146,7 +1282,23 @@ async function main() {
   const reuseTrajectory = computeReuseTrajectory(windowTraces, thompsonSnapshot);
   console.log(`\nReuse trajectory: reuse_rate=${(reuseTrajectory.reuse_rate * 100).toFixed(1)}%, mean_depth=${reuseTrajectory.mean_composition_depth.toFixed(2)}`);
 
-  // Step 8: T4.4 — Executability scores (--detailed triggers template fetches)
+  // Step 8: §6.2 — Discrimination stat (conditional Thompson buckets)
+  let discriminationReport: DiscriminationReport | undefined;
+  try {
+    discriminationReport = await computeDiscriminationStat(endpoint, authHeaders);
+    console.log(`\nDiscrimination stat: ${discriminationReport.total_conditional_rows} conditional rows, ` +
+      `${discriminationReport.discriminating_templates}/${discriminationReport.templates_with_sufficient_obs} discriminating ` +
+      `(${(discriminationReport.discriminating_fraction * 100).toFixed(1)}%)`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("budget exhausted")) {
+      console.warn(`  Discrimination stat aborted: ${msg}`);
+    } else {
+      console.warn(`  Discrimination stat unavailable: ${msg}`);
+    }
+  }
+
+  // Step 9: T4.4 — Executability scores (--detailed triggers template fetches)
   let enrichedResults = mergedResults;
   try {
     enrichedResults = await computeExecutabilityScores(
@@ -1196,6 +1348,7 @@ async function main() {
     improvise_health: improviseHealth,
     resolver_coverage: resolverCoverage,
     reuse_trajectory: reuseTrajectory,
+    discrimination_report: discriminationReport,
   };
 
   // Print summary
