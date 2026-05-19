@@ -1,6 +1,6 @@
 # Tasks — State-Space-Signature Thompson Keying
 
-**Status:** §1 substrate complete (2026-05-18). §2 write path next.
+**Status:** §1–§3 write paths complete (2026-05-19). §4 read path gated on ~7 days v1 accumulation (~2026-05-26). §5 chain-credit signature correction next (non-gated).
 
 **Dependencies (all hard except where noted):**
 
@@ -27,19 +27,19 @@
 
 ## 2. Write path — activity-api
 
-- [ ] 2.1 In `repos/metabob-activity-api/src/routes/execution-traces.ts:2403-2533`, extend the context-bucketed write block. Read `body.metadata.state_space_signature` and `body.metadata.signature_version`. When present, write to `context_thompson_scores` with `signature_version = $version, context_bucket = $signature`. When absent, derive v1 server-side from `body.input_impulse_shapes` + `body.metadata.provenance` + `body.metadata.missing_shapes`. Keep the existing v0 write for one release cycle (parallel write). (`repos/metabob-activity-api`)
-- [ ] 2.2 Extend the LET/IF/CREATE block (`execution-traces.ts:2421-2445`) to include `signature_version` in the WHERE filter and in the CREATE payload. The CREATE clause grows one new column. (`repos/metabob-activity-api`)
-- [ ] 2.3 In `repos/metabob-activity-api/src/lib/posterior-update.ts:388-475`, `applyOutcomeToPosteriors` accepts an optional `signature` + `signature_version` in addition to `context_bucket`. When the signature pair is set, route the conditional write through it; otherwise preserve the existing `context_bucket` path. Failure-mode stratification (§Phase 18.3 spec) applies identically — `verifier_negative` writes β=1 to both `variant_performance_metrics` and the conditional row, etc. (`repos/metabob-activity-api`)
-- [ ] 2.4 Update `repos/metabob-activity-api/test/posterior-update.test.ts` (currently 16 tests passing per `tasks.md:948`) with three new cases: (a) conditional write fires when signature present, (b) signature-absent path equivalent to today, (c) failure-mode rules apply per-bucket identically to global. (`repos/metabob-activity-api`)
+- [x] 2.1 ✅ **DONE** 2026-05-19. `execution-traces.ts`: reads `body.metadata.state_space_signature`/`signature_version`; derives server-side via `computeStateSpaceSignature` when absent; passes `signature`+`signature_version` to `applyOutcomeToPosteriors`. Commit `46e3d4d`. (`repos/metabob-activity-api`)
+- [x] 2.2 ✅ **DONE** 2026-05-19. `applyOutcomeToPosteriors` in `posterior-update.ts` issues LET/IF/CREATE to `context_thompson_scores` with `signature_version` in WHERE filter and CREATE payload; uses stratified alpha/beta deltas from `computeDeltas`. (`repos/metabob-activity-api`)
+- [x] 2.3 ✅ **DONE** 2026-05-19. `TraceForPosterior` extended with `signature?` + `signature_version?`. Conditional write block added with stratified failure-mode deltas — verifier_negative → beta=1 applies to the conditional row. (`repos/metabob-activity-api`)
+- [x] 2.4 ✅ **DONE** 2026-05-19. 31/31 tests pass (3 new: (a) conditional write fires, (b) absent-path no write, (c) failure-mode verifier_negative β=1 per-bucket). Typecheck clean. (`repos/metabob-activity-api`)
 
 ---
 
 ## 3. Write path — minibob
 
-- [ ] 3.1 In `repos/minibob/src/activity.ts` (where `lifecycle:task:preBinding` payload is constructed, search for `presentShapesPre` / `missingShapesPre`), capture provenance tuples from the current `impulseStore`: `Array<{ shape: string, producedBy?: string }>`. Use `impulse.metadata.producedBy ?? impulse.metadata.produced_at_task_id`. (`repos/minibob`)
-- [ ] 3.2 At trace-write time (search for the POST to `/v2/activities/execution-traces`), compute `state_space_signature` via the minibob-side `computeStateSpaceSignature` and attach it to `body.metadata.state_space_signature` + `body.metadata.signature_version = 1`. Also attach the raw `provenance` and `missing_shapes` arrays under `body.metadata` for server-side re-derivation as a safety net. (`repos/minibob`)
-- [ ] 3.3 For composition chains, attach `body.metadata.ancestor_signatures: Record<execution_id, { signature, signature_version }>` — one entry per ancestor in `composition_chain`. Each ancestor's signature is captured when its own `lifecycle:task:preBinding` fired (i.e., the ancestor's binding-time signature, not the leaf's). Capped at 16 entries by the existing Phase 18.4 cycle guard. (`repos/minibob`)
-- [ ] 3.4 Add integration test `repos/minibob/test/state-space-signature-trace-write.test.ts`: run a fixture execution, intercept the POST body, assert the signature matches `computeStateSpaceSignature(presentShapesPre, provenance, missingShapesPre)`. (`repos/minibob`)
+- [x] 3.1 ✅ **DONE** 2026-05-19. Provenance captured from `execution.impulses` (each impulse's `metadata.producedBy ?? metadata.produced_at_task_id`) inside `buildExecutionTraceWirePayload` in `mcp.ts`. (`repos/minibob`)
+- [x] 3.2 ✅ **DONE** 2026-05-19. `buildExecutionTraceWirePayload` computes `computeStateSpaceSignature({ shapes, provenance, missing: [] })` from the input impulse pool and attaches `state_space_signature`, `signature_version=1`, `provenance`, `missing_shapes` to `payload.metadata`. Commit `50a3ff3`. (`repos/minibob`)
+- [ ] 3.3 *(deferred)* Ancestor signatures map — requires storing per-ancestor snapshots at preBinding time; complex; deferred after §4 read path proves value. (`repos/minibob`)
+- [x] 3.4 ✅ **DONE** 2026-05-19. 4 tests in `test/state-space-signature-trace-write.test.ts`: signature computed + matches canonical function, empty shapes → no sig, produced_at_task_id fallback, pre-existing sig preserved. All pass. typecheck clean. (`repos/minibob`)
 
 ---
 

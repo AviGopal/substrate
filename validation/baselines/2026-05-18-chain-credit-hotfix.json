@@ -1,0 +1,19 @@
+{
+  "hotfix_deployed_at": "2026-05-19T03:27:15Z",
+  "pre_fix_window": {
+    "start": "2026-05-15T00:00:00Z",
+    "end": "2026-05-19T03:27:15Z"
+  },
+  "affected_row_count": 0,
+  "note": "Preventive fix. In-tree caller hardcoded context_bucket=null at posterior-update.ts applyOutcomeToPosteriors call site so no production rows were mis-keyed; bug fixed before larger 2026-05-17-state-space-signature-thompson-keying spec activates the path.",
+  "deploy": {
+    "vessel": "metabob-activity-api",
+    "version": "1.20.9-9daa203",
+    "helm_revision_canary": 389,
+    "helm_revision_production": 390
+  },
+  "chain_credit_legacy_skip_baseline": {
+    "note": "log observable at POST /v2/activities/execution-traces for composed activities with ancestors missing input_impulse_shapes. No data collected pre-deploy; monitor over next 24h window.",
+    "expected_skip_ratio_estimate": "low — input_impulse_shapes populated since 2026-05 on canary"
+  }
+}

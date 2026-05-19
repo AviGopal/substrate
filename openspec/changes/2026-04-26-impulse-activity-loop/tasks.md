@@ -1316,7 +1316,7 @@ Full design: `2026-05-17-state-space-signature-thompson-keying/design.md` and `2
 
 ### 24.1 Chain-credit ancestor-signature hotfix (ship first)
 
-- [ ] 24.1.1 Preventive hotfix delegated to `2026-05-18-chain-credit-ancestor-signature-fix/tasks.md`. Small, isolated PR: `ExecutionForChainCredit` loses its `context_bucket` field; `propagateCreditAlongChain` recomputes each ancestor's bucket from that ancestor's own `task_description` + `input_impulse_shapes` via existing `computeContextBucket`; legacy-row skip emits a `chain_credit_legacy_skip` debug counter. Lives under the v0 API and is cleanly subsumed by 24.2 when v1 signature lands. Recommended to land before 24.2 so the larger spec activates conditional writes on a correct substrate.
+- [x] 24.1.1 ✅ **DONE** 2026-05-19. `ExecutionForChainCredit.context_bucket` removed; per-ancestor bucket computed from `input_impulse_shapes` via `computeContextBucket`; `chain_credit_legacy_skip` INFO log when shapes absent. 28/28 tests pass. Commit `9daa203`. Deployed 1.20.9-9daa203 (canary rev 389, prod rev 390 — 2026-05-19). Baseline: `validation/baselines/2026-05-18-chain-credit-hotfix.json`.
 
 ### 24.2 Versioned signature + read path + write path + cardinality control
 
