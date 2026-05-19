@@ -1,6 +1,6 @@
 # Tasks — State-Space-Signature Thompson Keying
 
-**Status:** §1–§3 write paths complete (2026-05-19). §4 read path gated on ~7 days v1 accumulation (~2026-05-26). §5 chain-credit signature correction next (non-gated).
+**Status:** §1–§5 complete (2026-05-19). §4 read path gated on ~7 days v1 accumulation (~2026-05-26). §6 harness instrumentation next (non-gated).
 
 **Dependencies (all hard except where noted):**
 
@@ -56,10 +56,10 @@
 
 ## 5. Chain-credit signature correction
 
-- [ ] 5.1 In `repos/metabob-activity-api/src/lib/posterior-update.ts:303-371`, extend `ExecutionForChainCredit` with `ancestor_signatures?: Map<string, { signature: string, signature_version: number }>`. Default empty. (`repos/metabob-activity-api`)
-- [ ] 5.2 In `propagateCreditAlongChain`, when an ancestor's exec_id has an entry in `ancestor_signatures`, pass *that ancestor's signature* into `writeAncestorDelta` instead of the leaf's `context_bucket`. When absent, skip the conditional write for that ancestor (template-level write only). Log at `debug` level — common during the transition; never `warn`. (`repos/metabob-activity-api`)
-- [ ] 5.3 Update `writeAncestorDelta` (`posterior-update.ts:220-286`) signature: accept `signature: string | null` and `signature_version: number` in place of `contextBucket: string | null`. The UPDATE/CREATE WHERE clauses gain the `signature_version` filter. (`repos/metabob-activity-api`)
-- [ ] 5.4 Extend `repos/metabob-activity-api/test/posterior-update.test.ts` with the per-ancestor-signature case: 3-deep chain `A→B→C→D(leaf)`; A, B, C each carry their own signature; assert α-deltas land on the correct conditional rows, not all on the leaf's signature row. (`repos/metabob-activity-api`)
+- [x] 5.1 ✅ **DONE** 2026-05-19. Extended `ExecutionForChainCredit` with `ancestor_signatures?: Record<string, { signature: string; signature_version: number }>`. Removed stale doc comment about v0 bucket recomputation. (`repos/metabob-activity-api`)
+- [x] 5.2 ✅ **DONE** 2026-05-19. `propagateCreditAlongChain` now does `ancestor_signatures?.[ancestorExecId]` lookup; absent entry → null sig → skip conditional write → log at `debug` as `chain_credit_no_sig`. DB query slimmed to `execution_id, variant_id` only. (`repos/metabob-activity-api`)
+- [x] 5.3 ✅ **DONE** 2026-05-19. `writeAncestorDelta` parameter changed from `contextBucket: string | null | undefined` to `signature: string | null, signatureVersion: number = 1`. Body uses LET/IF/CREATE upsert (matching `applyOutcomeToPosteriors`) with `signature_version` in WHERE + CREATE. Removed `computeContextBucket` import. Commit `25c4e49`. (`repos/metabob-activity-api`)
+- [x] 5.4 ✅ **DONE** 2026-05-19. Replaced 3 obsolete v0-bucket edge-case tests with: (a) no `ancestor_signatures` → no conditional write, (b) 3-deep chain A→B→C→D each with own sig → correct α-deltas on per-ancestor `context_thompson_scores` rows, (c) partial entries → only matching ancestors get writes. 31/31 pass. Deployed 1.20.9-25c4e49, rev 395/396. (`repos/metabob-activity-api`)
 
 ---
 
