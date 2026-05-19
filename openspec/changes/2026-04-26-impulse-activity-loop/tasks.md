@@ -1320,7 +1320,7 @@ Full design: `2026-05-17-state-space-signature-thompson-keying/design.md` and `2
 
 ### 24.2 Versioned signature + read path + write path + cardinality control
 
-- [ ] 24.2.1 Versioned signature definition, migration adding `signature_version` to `context_thompson_scores`, `computeStateSpaceSignature` alongside legacy `computeContextBucket`, conditional read path in `applyCompatibilityFilter` with `SIGNATURE_SAMPLING_FLOOR` fallback to `variant_performance_metrics`, dual-write in `applyOutcomeToPosteriors`, failure-mode stratification per bucket, chain-credit using each ancestor's signature, low-count coarse-bucket collapse. All delegated to `2026-05-17-state-space-signature-thompson-keying/tasks.md`.
+- [x] 24.2.1 ✅ **DONE** 2026-05-19. §1–§6.2 all complete: migration 130 (`signature_version` field + versioned index), `computeStateSpaceSignature` in session-context.ts (mirrored in minibob), dual-write in `applyOutcomeToPosteriors` and `execution-traces.ts`, chain-credit per-ancestor signatures (5.1–5.4), conditional read path in recommend handler (inline `sigScoresMap` + `SIGNATURE_SAMPLING_FLOOR` override), `_posterior_source` in response, 7 unit tests, deployed 1.20.9-c9a1522. §4.4 (LRU cache) and §6.3–§6.6 (per-source MRR split) deferred ~2026-05-26 after v1 rows accumulate. Full task breakdown in `2026-05-17-state-space-signature-thompson-keying/tasks.md`.
 
 ### 24.3 Harness discrimination metric
 
@@ -1330,8 +1330,8 @@ Full design: `2026-05-17-state-space-signature-thompson-keying/design.md` and `2
 
 Phase 24 is complete when:
 
-- [ ] 24.1.x chain-credit hotfix landed; `posterior-update.ts:464` no longer hardcodes `context_bucket: null`; new unit test asserts per-ancestor bucket computation against a 4-deep heterogeneous chain
-- [ ] 24.2.x signature is reproducible across minibob and activity-api (property test); ≥80% of execution traces with non-empty `presentShapesPre` produce a `context_thompson_scores` row with `n_observations ≥ 1` within 7 days of deploy; `recommend_mrr` does not regress beyond the −0.02 noise band
+- [x] 24.1.x ✅ chain-credit hotfix landed 2026-05-19 (commit 9daa203); per-ancestor bucket from `input_impulse_shapes` via `computeContextBucket`; 28/28 tests pass.
+- [ ] 24.2.x signature is reproducible across minibob and activity-api (property test via 1.6 roundtrip fixtures ✅); ≥80% of execution traces with non-empty `presentShapesPre` produce a `context_thompson_scores` row with `n_observations ≥ 1` within 7 days of deploy (measure ~2026-05-26); `recommend_mrr` does not regress beyond the −0.02 noise band (weekly harness run 2, #102)
 - [ ] 24.3.x ≥25% of templates with `total_observations ≥ 50` exhibit two signature buckets with `p < 0.05` Welch-t discrimination; long-tail cardinality cap holds (no template exceeds 200 distinct signatures after 30 days)
 
 ## Phase 25 — Stratified goal-generator harness (2026-05-17)

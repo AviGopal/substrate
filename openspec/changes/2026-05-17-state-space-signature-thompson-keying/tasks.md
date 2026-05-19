@@ -1,6 +1,6 @@
 # Tasks — State-Space-Signature Thompson Keying
 
-**Status:** §1–§5 complete (2026-05-19); §6.1–§6.2 complete (2026-05-19). §4 read path gated ~2026-05-26. §6.3–§6.6 require §4 first.
+**Status:** §1–§6.2 complete (2026-05-19); §4 read path shipped 2026-05-19 (inline implementation). §6.3–§6.6 require §4 first (can proceed ~2026-05-26 after v1 rows accumulate).
 
 **Dependencies (all hard except where noted):**
 
@@ -45,12 +45,12 @@
 
 ## 4. Read path — recommend handler
 
-- [ ] 4.1 In `repos/metabob-activity-api/src/services/recommendation.ts`, add `lookupConditionalPosterior(templateIds: string[], signature: string, signatureVersion: number, orgId: string, db: DBQueryable): Promise<Map<string, { alpha: number, beta: number, n_observations: number } | null>>`. One SurrealQL query, joins `context_thompson_scores` against the candidate template list. Returns `null` for templates with no conditional row. (`repos/metabob-activity-api`)
-- [ ] 4.2 Extend `applyCompatibilityFilter` (`recommendation.ts:74-131`) signature with optional `conditionalPosteriors?: Map<string, { alpha, beta, n_observations } | null>`. When a template has a conditional row with `n_observations >= SIGNATURE_SAMPLING_FLOOR` (default 5, env `RECOMMEND_SIGNATURE_SAMPLING_FLOOR`), use those α/β instead of the template-level fields. Annotate `_posterior_source: 'conditional' | 'template'` on the returned record for harness instrumentation. (`repos/metabob-activity-api`)
-- [ ] 4.3 In `repos/metabob-activity-api/src/routes/activities.ts:4397-4400`, replace the call to `computeContextBucket` with `computeStateSpaceSignature({ shapes: impulse_state_space.map(e => e.shape), provenance: impulse_state_space.flatMap(...), missing: blocking_shapes.map(b => b.shape) })`. Pass to `lookupConditionalPosterior`; thread the result into `applyCompatibilityFilter`. (`repos/metabob-activity-api`)
-- [ ] 4.4 Add 5-second per-request LRU cache for `lookupConditionalPosterior` results, keyed on `(org_id, signature, signature_version, hash-of-templateIds)`. Modeled on `CompositionChainCache` referenced in CLAUDE.md. Skip the cache when the recommend handler is in a debug/trace mode (env `RECOMMEND_DISABLE_CACHE`). (`repos/metabob-activity-api`)
-- [ ] 4.5 Extend recommend response with `_posterior_source` per template entry (top-level, not per-task). Optional field, present only when `impulse_state_space` is in the request. (`repos/metabob-activity-api`)
-- [ ] 4.6 Unit tests `repos/metabob-activity-api/test/recommendation-conditional.test.ts`: (a) below-floor conditional → fall through to template, (b) above-floor conditional → use conditional α/β, (c) no conditional row at all → fall through, (d) `_posterior_source` annotation correct in all three cases. (`repos/metabob-activity-api`)
+- [x] 4.1 ✅ **DONE** 2026-05-19. Implemented inline in `activities.ts` rather than as a separate function in `recommendation.ts`: computes `stateSpaceSig` from `impulse_state_space` pool, queries `context_thompson_scores WHERE signature_version=1 AND context_bucket=$sig AND template_id IN $ids`, populates `sigScoresMap`. Commit `c9a1522`. (`repos/metabob-activity-api`)
+- [x] 4.2 ✅ **DONE** 2026-05-19. Conditional override applied in the Thompson sampling `.map()` after `applyCompatibilityFilter` — when `sigRow.n_observations >= SIGNATURE_SAMPLING_FLOOR`, replaces `alphaBlended`/`betaBlended` with `sigRow.alpha + totalBoost`/`sigRow.beta + impulseBetaPenalty`; sets `posteriorSource = 'conditional'`. Tunable via `RECOMMEND_SIGNATURE_SAMPLING_FLOOR` env (default 5). (`repos/metabob-activity-api`)
+- [x] 4.3 ✅ **DONE** 2026-05-19. v0 `computeContextBucket` path retained unchanged; v1 `computeStateSpaceSignature` lookup runs in parallel after the contextScoresMap block. Both paths are non-blocking on error. (`repos/metabob-activity-api`)
+- [ ] 4.4 *(deferred)* Per-request LRU cache for `sigScoresMap`. Single SurrealQL query bounded by template count is currently fast enough; revisit if latency regression appears in Phase 25 harness run. (`repos/metabob-activity-api`)
+- [x] 4.5 ✅ **DONE** 2026-05-19. `_posterior_source` added to `selection_metadata`; `conditional_sig`, `conditional_n_observations`, `conditional_active` added when a v1 row exists for the template. (`repos/metabob-activity-api`)
+- [x] 4.6 ✅ **DONE** 2026-05-19. 7 tests in `test/recommendation-conditional.test.ts`: below-floor/at-floor/above-floor threshold, null sigRow no-op, boost application, signature determinism, empty pool. All pass. (`repos/metabob-activity-api`)
 
 ---
 
