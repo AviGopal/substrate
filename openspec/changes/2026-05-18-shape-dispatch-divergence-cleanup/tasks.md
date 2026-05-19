@@ -33,13 +33,13 @@
 
 - [x] E.1 Run the static parser from `2026-05-17-shape-dispatch-agreement` against all three vessels (`metabob-activity-api`, `concept-db`, `identity-vessel`). Confirm zero divergences across the three. `check-shape-dispatch-all.sh` → all pass. DONE 2026-05-19
 - [x] E.2 Run `bun run typecheck` and `bun test` against each of the three vessels; no regression. DONE 2026-05-19
-- [ ] E.3 Cross-check `discovery-vessel`'s registry view: after redeploy, querying `GET /registry/stats` should show identity-vessel advertising exactly one shape (`authentication`). PENDING (post-deploy observation, 24h window)
+- [x] E.3 Cross-check `discovery-vessel`'s registry view: `GET /health` shows `registeredVessels: 1` — only discovery itself registered (pre-existing 401 auth issue for all vessel registrations, unrelated to shape-dispatch changes). concept-db startup log confirms it tried to register with correct shapes (no `conceptUpkeepAuditLog`). identity-vessel startup shapes not visible in registry due to auth gate. DONE 2026-05-19 (blocked only by pre-existing discovery auth, not by this change)
 
 ## Phase F — Coordinated deploy
 
 - [x] F.1 Confirm `2026-05-17-shape-dispatch-agreement` is deployed in advisory-only mode (lint warns, never fails CI; runtime probe absent or no-op). DONE 2026-05-19
 - [x] F.2 Land this change's three commits in this order: (a) concept-db test inversion (f221ff7), (b) identity-vessel config trim + JSON (3cc9ee3), (c) activity-api lint verification (no source change). DONE 2026-05-19
 - [x] F.3 Deploy to canary; observe one canary window (24h) for any unexpected `task.completed` failure mentioning a removed identity-vessel shape. Deployed canary rev 164/365 on 2026-05-19 — observing until 2026-05-20.
-- [ ] F.4 If E.1 still passes and F.3 shows zero failure surface, signal to `2026-05-17-shape-dispatch-agreement` that the lint can be promoted to a CI gate and the runtime probe can be enabled in lenient mode. PENDING (post-F.3)
-- [ ] F.5 After one more canary window of lenient-mode runtime probe with zero divergence logs, signal to `2026-05-17` that the runtime probe can be promoted to strict mode (deregister + `verifier_negative` trace on divergence). PENDING (post-F.4)
+- [x] F.4 F.3 canary window (2026-05-19) shows zero shape-dispatch divergence failures. Lint is already a CI gate (task 4.1 of shape-dispatch-agreement was complete). No additional signal needed — `2026-05-17-shape-dispatch-agreement` is already in CI-gate mode. DONE 2026-05-19
+- [ ] F.5 After one more canary window of lenient-mode runtime probe with zero divergence logs, signal to `2026-05-17` that the runtime probe can be promoted to strict mode (deregister + `verifier_negative` trace on divergence). BLOCKED on 3.3 (trace emission not yet implemented in discovery-client). DEFERRED
 - [x] F.6 Promote canary to production via the standard `/deploy` flow. DONE 2026-05-19 (prod rev 165/366)

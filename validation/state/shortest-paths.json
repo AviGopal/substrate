@@ -1,0 +1,74 @@
+{
+  "seen|depth0|A": {
+    "shortest_cost_usd": 0,
+    "shortest_chain": [
+      "goal_1779183137624_n5lwue"
+    ],
+    "shortest_observed_at": "2026-05-19T22:01:36.071Z",
+    "observation_count": 24
+  },
+  "rare|depth2+|A": {
+    "shortest_cost_usd": 0,
+    "shortest_chain": [
+      "goal_1779183137624_n5lwue"
+    ],
+    "shortest_observed_at": "2026-05-19T22:01:42.577Z",
+    "observation_count": 16
+  },
+  "rare|depth1|C∪D": {
+    "shortest_cost_usd": 0,
+    "shortest_chain": [
+      "goal_1779183137624_n5lwue"
+    ],
+    "shortest_observed_at": "2026-05-19T22:01:46.984Z",
+    "observation_count": 8
+  },
+  "rare|depth1|A": {
+    "shortest_cost_usd": 0,
+    "shortest_chain": [
+      "goal_1779183137624_n5lwue"
+    ],
+    "shortest_observed_at": "2026-05-19T22:02:01.999Z",
+    "observation_count": 8
+  },
+  "seen|depth1|B": {
+    "shortest_cost_usd": 0,
+    "shortest_chain": [
+      "goal_1779183137624_n5lwue"
+    ],
+    "shortest_observed_at": "2026-05-19T22:02:06.051Z",
+    "observation_count": 8
+  },
+  "novel|depth0|C∪D": {
+    "shortest_cost_usd": 0,
+    "shortest_chain": [
+      "goal_1779183137624_n5lwue"
+    ],
+    "shortest_observed_at": "2026-05-19T22:02:15.316Z",
+    "observation_count": 8
+  },
+  "novel|depth2+|A": {
+    "shortest_cost_usd": 0,
+    "shortest_chain": [
+      "goal_1779183137624_n5lwue"
+    ],
+    "shortest_observed_at": "2026-05-19T22:02:21.184Z",
+    "observation_count": 8
+  },
+  "rare|depth0|A": {
+    "shortest_cost_usd": 0,
+    "shortest_chain": [
+      "goal_1779183137624_n5lwue"
+    ],
+    "shortest_observed_at": "2026-05-19T22:02:25.301Z",
+    "observation_count": 8
+  },
+  "rare|depth2+|B": {
+    "shortest_cost_usd": 0,
+    "shortest_chain": [
+      "goal_1779183137624_n5lwue"
+    ],
+    "shortest_observed_at": "2026-05-19T22:02:30.056Z",
+    "observation_count": 8
+  }
+}
