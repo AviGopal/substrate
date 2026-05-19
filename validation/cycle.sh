@@ -11,7 +11,7 @@
 # Options:
 #   --rounds N        Number of rounds to run (default: 3)
 #   --category CAT    Category tag to filter prompts (default: general)
-#                     Recognized: general, bugfix, feature, refactor, analysis, upkeep
+#                     Recognized: general, bugfix, feature, refactor, analysis, upkeep, forge
 #
 # Exit codes:
 #   0 — ≥50% rounds succeeded AND ≥2 distinct templates selected
@@ -133,6 +133,10 @@ category_matches_prompt() {
       ;;
     upkeep)
       [[ "$base" =~ ^(20|21|22|23)- ]]
+      ;;
+    forge)
+      # 2026-05-18-forge-goal-completion-test §T5.1: prompts 40-49 (forge-required-shape and future siblings)
+      [[ "$base" =~ ^4[0-9]- ]]
       ;;
     general|*)
       # general = everything

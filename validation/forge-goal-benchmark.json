@@ -1,0 +1,21 @@
+[
+  {
+    "id": "forge-goal-completion",
+    "category": "forge",
+    "prompt": "validation/prompts/40-forge-required-shape.md",
+    "runner": "validation/scripts/test-forge-goal-completion.ts",
+    "cadence": "weekly",
+    "goal_text": "see prompt 40 — variant + target_shape selected per perturbation row",
+    "expected_activity_id": "activity:⟨slot-binding⟩",
+    "expected_activity_name": "Slot Binding (impulse-binding-selection-layer)",
+    "search_query": "slot binding forge missing shape",
+    "tags": ["forge", "slot-binding", "user-goal", "vessel-creation"],
+    "seed_impulse_pool": [],
+    "rotation_shapes": [
+      "webhook_signature_verifier",
+      "pdf_text_extractor",
+      "csv_dialect_detector"
+    ],
+    "notes": "Per openspec/changes/2026-05-18-forge-goal-completion-test/design.md §a, the target shape rotates weekly by week_number % 3. Asserts C1..C8 and D1..D4 from design.md §c and §d via executionTraceWithSignatures."
+  }
+]

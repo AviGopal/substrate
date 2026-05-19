@@ -28,6 +28,8 @@
  *   METABOB_API_KEY=<key> bun run validation/scripts/test-18-4-7-chain-credit.ts
  */
 
+import { ensureTestRegistration, installExitHandler } from "./_test-audit-loop";
+
 const API_BASE = process.env.METABOB_ENDPOINT ?? 'https://activity.metabob.com';
 const API_KEY = process.env.METABOB_API_KEY;
 
@@ -35,6 +37,31 @@ if (!API_KEY) {
   console.error('FATAL: METABOB_API_KEY environment variable is not set.');
   process.exit(1);
 }
+
+// Test-audit loop instrumentation (OpenSpec 2026-05-18-test-audit-loop Phase F).
+// Empty perturbation_schedule marks this as grandfathered; the audit machinery
+// will tag missing_sensitivity_history until perturbations are filled in.
+const __testAuditRunStart = Date.now();
+const __testAuditRunId = `t1847cc-${__testAuditRunStart}`;
+void ensureTestRegistration({
+  test_id: "validation/scripts/test-18-4-7-chain-credit",
+  inputs_schema: { credit_gamma: "number=0.5", chain_depth: "int=2" },
+  perturbation_schedule: [],
+  goal_alignment: [{
+    criterion: "#4-improved-activities",
+    discrimination_claim:
+      "Validates that composition-chain credit propagation writes γ^depth Δα to ancestor variant_performance_metrics — the mechanism by which Thompson Sampling learns over chains, not just leaves.",
+  }],
+  discrimination_claim:
+    "Discriminates a working chain-credit path from regressions where writeAncestorDelta silently no-ops (the F-V56/F-V57 bug class).",
+  witness_types: ["validator_consensus"],
+});
+installExitHandler(__testAuditRunStart, () => ({
+  test_id: "validation/scripts/test-18-4-7-chain-credit",
+  run_id: __testAuditRunId,
+  passed: (process.exitCode ?? 0) === 0,
+  caveats: [],
+}));
 
 const HEADERS = {
   'Content-Type': 'application/json',

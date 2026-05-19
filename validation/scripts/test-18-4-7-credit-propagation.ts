@@ -32,6 +32,8 @@
  *   METABOB_API_KEY=<key> bun run validation/scripts/test-18-4-7-credit-propagation.ts
  */
 
+import { ensureTestRegistration, installExitHandler } from "./_test-audit-loop";
+
 const API_BASE = process.env.METABOB_ENDPOINT ?? 'https://activity.metabob.com';
 const API_KEY = process.env.METABOB_API_KEY;
 
@@ -39,6 +41,29 @@ if (!API_KEY) {
   console.error('FATAL: METABOB_API_KEY environment variable is not set.');
   process.exit(1);
 }
+
+// Test-audit loop instrumentation (OpenSpec 2026-05-18-test-audit-loop Phase F).
+const __testAuditRunStart = Date.now();
+const __testAuditRunId = `t1847cp-${__testAuditRunStart}`;
+void ensureTestRegistration({
+  test_id: "validation/scripts/test-18-4-7-credit-propagation",
+  inputs_schema: { ancestor_template_id: "string", leaf_traces_count: "int" },
+  perturbation_schedule: [],
+  goal_alignment: [{
+    criterion: "#4-improved-activities",
+    discrimination_claim:
+      "Validates that submitting a composition_chain'd leaf trace propagates Δα to ancestor variant_performance_metrics — proves the cross-scoped credit-propagation path lands.",
+  }],
+  discrimination_claim:
+    "Discriminates the F-V55 cross-scoped credit-propagation failure from the underlying chain-credit math.",
+  witness_types: ["validator_consensus"],
+});
+installExitHandler(__testAuditRunStart, () => ({
+  test_id: "validation/scripts/test-18-4-7-credit-propagation",
+  run_id: __testAuditRunId,
+  passed: (process.exitCode ?? 0) === 0,
+  caveats: (process.exitCode === 2) ? ["inconclusive"] : [],
+}));
 
 const HEADERS = {
   'Content-Type': 'application/json',

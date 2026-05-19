@@ -26,6 +26,8 @@
  *   METABOB_API_KEY=<key> bun run validation/scripts/test-18-3-5-verifier-relevance.ts
  */
 
+import { ensureTestRegistration, installExitHandler } from "./_test-audit-loop";
+
 const API_BASE = process.env.METABOB_ENDPOINT ?? 'https://activity.metabob.com';
 const API_KEY = process.env.METABOB_API_KEY;
 
@@ -38,6 +40,32 @@ const HEADERS = {
   'Content-Type': 'application/json',
   Authorization: `ApiKey ${API_KEY}`,
 };
+
+// Test-audit loop instrumentation (OpenSpec 2026-05-18-test-audit-loop Phase F).
+// Registers the test with an empty perturbation_schedule (grandfathering mark)
+// and emits a structural test_report on process exit. Best-effort; failures
+// here MUST NOT change the test's pass/fail outcome.
+const __testAuditRunStart = Date.now();
+const __testAuditRunId = `t1835-${__testAuditRunStart}`;
+void ensureTestRegistration({
+  test_id: "validation/scripts/test-18-3-5-verifier-relevance",
+  inputs_schema: { sentinel_impulse_id: "string", failure_mode: "verifier_negative" },
+  perturbation_schedule: [],
+  goal_alignment: [{
+    criterion: "#4-improved-activities",
+    discrimination_claim:
+      "Validates that a verifier_negative trace increments impulse_relevance_metrics.times_failed, the per-impulse failure-attribution signal Thompson β updates feed on.",
+  }],
+  discrimination_claim:
+    "Tests would silently pass if writeImpulseRelevancePenalty stopped updating times_failed (the documented UPDATE-not-UPSERT regression).",
+  witness_types: ["validator_consensus"],
+});
+installExitHandler(__testAuditRunStart, () => ({
+  test_id: "validation/scripts/test-18-3-5-verifier-relevance",
+  run_id: __testAuditRunId,
+  passed: (process.exitCode ?? 0) === 0,
+  caveats: [],
+}));
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 

@@ -23,6 +23,8 @@
  *   bun run validation/scripts/test-22-maintenance-reuse.ts
  */
 
+import { ensureTestRegistration, installExitHandler } from "./_test-audit-loop";
+
 const METABOB_API_KEY = process.env.METABOB_API_KEY ?? "";
 const ACTIVITY_API_URL =
   process.env.ACTIVITY_API_URL ?? "https://activity.metabob.com";
@@ -265,6 +267,29 @@ async function step_metrics_ranking_no_exclusion(): Promise<TestResult> {
 // Main
 // ---------------------------------------------------------------------------
 async function main() {
+  // Test-audit loop instrumentation (OpenSpec 2026-05-18-test-audit-loop Phase F).
+  const __testAuditRunStart = Date.now();
+  const __testAuditRunId = `t22mr-${__testAuditRunStart}`;
+  void ensureTestRegistration({
+    test_id: "validation/scripts/test-22-maintenance-reuse",
+    inputs_schema: { forged_vessel_id: "string", failure_trace_count: "int" },
+    perturbation_schedule: [],
+    goal_alignment: [{
+      criterion: "#4-improved-activities",
+      discrimination_claim:
+        "Validates that registry-quality tooling (core-activity-audit, replace-activity, vessel metrics) treats a forged vessel's activity exactly like any other — no forge-specific maintenance code path.",
+    }],
+    discrimination_claim:
+      "Discriminates the reuse-without-special-case property: a regression introducing forge-specific exclusion would break this test while leaving the general audit path green.",
+    witness_types: ["validator_consensus"],
+  });
+  installExitHandler(__testAuditRunStart, () => ({
+    test_id: "validation/scripts/test-22-maintenance-reuse",
+    run_id: __testAuditRunId,
+    passed: (process.exitCode ?? 0) === 0,
+    caveats: [],
+  }));
+
   console.log("Phase 22.7.8 — Maintenance reuse test");
   console.log("Forged vessel ID:", FORGED_VESSEL_ID);
   console.log("Template ID:", FORGED_TEMPLATE_ID);

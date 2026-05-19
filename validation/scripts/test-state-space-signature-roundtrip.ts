@@ -9,6 +9,30 @@
 
 import { computeStateSpaceSignature as sigApi } from '../../repos/metabob-activity-api/src/utils/session-context';
 import { computeStateSpaceSignature as sigMinibob } from '../../repos/minibob/src/state-space-signature';
+import { ensureTestRegistration, installExitHandler } from "./_test-audit-loop";
+
+// Test-audit loop instrumentation (OpenSpec 2026-05-18-test-audit-loop Phase F).
+const __testAuditRunStart = Date.now();
+const __testAuditRunId = `tsssr-${__testAuditRunStart}`;
+void ensureTestRegistration({
+  test_id: "validation/scripts/test-state-space-signature-roundtrip",
+  inputs_schema: { fixtures: "Fixture[]" },
+  perturbation_schedule: [],
+  goal_alignment: [{
+    criterion: "#5-composition-via-features",
+    discrimination_claim:
+      "Validates that both implementations (activity-api and minibob) of computeStateSpaceSignature produce byte-identical hashes — the cross-vessel parity property the binding layer relies on.",
+  }],
+  discrimination_claim:
+    "Any drift between the two implementations would silently break cross-vessel slot binding; this test is the canonical regression guard.",
+  witness_types: ["differential_solve"],
+});
+installExitHandler(__testAuditRunStart, () => ({
+  test_id: "validation/scripts/test-state-space-signature-roundtrip",
+  run_id: __testAuditRunId,
+  passed: (process.exitCode ?? 0) === 0,
+  caveats: [],
+}));
 
 interface Fixture {
   label: string;

@@ -269,6 +269,56 @@ and counts the records into the report's Section 3 (Run summary).
 The Claude Code transcript continues to come from
 `claude -p ... --output-format stream-json`.
 
+## Test audit loop (OpenSpec 2026-05-18-test-audit-loop)
+
+Every test under `validation/scripts/` is treated as an activity producing a
+`test_report` impulse. The audit machinery — three meta-activities embedded in
+minibob (`audit-test-report`, `run-sensitivity-probe`, `debug-failing-audit`)
+plus impulse shapes in activity-api (`test_registration`, `test_report`,
+`test_audit_report`, `sensitivity_evidence`, `code_modification_proposal`) —
+audits each report against two criteria:
+
+1. **Representativeness** — true outcome witnessed by ≥ 1 multi-witness type,
+   sensitivity demonstrated over a ≥ 7-day perturbation window, decision
+   record complete.
+2. **Goal alignment** — declared mapping to one or more of the six IAL
+   success criteria, with a plausible discrimination claim.
+
+### How tests register
+
+Tests call `ensureTestRegistration({test_id, goal_alignment, witness_types,
+…})` from `validation/scripts/_test-audit-loop.ts` at the top of their
+`main()` (or top-level body for sequential scripts) and `installExitHandler`
+to emit a `test_report` on process exit. Tests grandfathered by Phase F ship
+with `perturbation_schedule: []` — the audit will tag those reports
+`missing_sensitivity_history` until a real schedule is filled in.
+
+### Reading audit results
+
+`reuse-harness.ts` adds an `audit_summary` block to every
+`<date>-reuse-report.json`:
+
+```json
+"audit_summary": {
+  "total_audits": 12,
+  "passed": 10,
+  "passed_with_caveat": 6,
+  "failed_by_subtype": { "audit_insensitive": 1, "audit_misaligned": 1 },
+  "caveats": { "missing_sensitivity_history": 5, "unregistered": 1 },
+  "open_proposals": 0,
+  "window_start": "2026-04-16T00:00:00.000Z"
+}
+```
+
+The weekly harness (`run-weekly-harness.sh`) additionally dispatches
+`run-sensitivity-probe` for every registered test and writes a sidecar
+`<date>-sensitivity-report.json` recording per-test dispatch outcomes.
+
+### Spec
+
+`openspec/changes/2026-05-18-test-audit-loop/` — proposal, design, tasks,
+and the canonical `specs/test-audit-loop/spec.md`.
+
 ## Known TODOs
 
 - **Claude Code `--output-format stream-json`** flag may change between

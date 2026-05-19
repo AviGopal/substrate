@@ -19,6 +19,7 @@
 import { VesselForgeHost } from "../../repos/ias-executor-ts/src/examples/vessel-forge-host";
 import type { LLMPort } from "../../repos/ias-executor-ts/src/ports";
 import type { ActivityTemplate, ExecutionTrace, Impulse } from "../../repos/ias-executor-ts/src/ontology";
+import { ensureTestRegistration as __ensureTestRegistration, installExitHandler as __installExitHandler } from "./_test-audit-loop";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY ?? "";
 const METABOB_API_KEY = process.env.METABOB_API_KEY ?? "";
@@ -440,6 +441,39 @@ async function test_22_7_7_path_f(vesselEndpoint: string): Promise<{ success: bo
 // ---------------------------------------------------------------------------
 
 async function main() {
+  const __testAuditRunStart = Date.now();
+  const __testAuditRunId = `t22fp-${__testAuditRunStart}`;
+  void __ensureTestRegistration({
+    test_id: "validation/scripts/test-22-forge-and-paths",
+    inputs_schema: {
+      target_shape: "string",
+      anthropic_api_key: "required",
+      metabob_api_key: "required",
+    },
+    perturbation_schedule: [],
+    goal_alignment: [
+      {
+        criterion: "#3-vessel-resolvers-only",
+        discrimination_claim:
+          "Tests that VesselForgeHost can stand up a new vessel that immediately resolves a previously-missing shape via the discovery contract.",
+      },
+      {
+        criterion: "#5-composition-via-features",
+        discrimination_claim:
+          "Exercises the forge → discovery → dispatch chain, three of the system's composition features in sequence.",
+      },
+    ],
+    discrimination_claim:
+      "Calls VesselForgeHost directly (not via slot-binding escalation); test-forge-goal-completion exercises the user-level surface for the same path.",
+    witness_types: ["validator_consensus"],
+  });
+  __installExitHandler(__testAuditRunStart, () => ({
+    test_id: "validation/scripts/test-22-forge-and-paths",
+    run_id: __testAuditRunId,
+    passed: (process.exitCode ?? 0) === 0,
+    caveats: [],
+  }));
+
   console.log("Phase 22 Acceptance Test — Forge + Dispatch Paths");
   console.log("=".repeat(60));
   console.log(`  CONCEPT_DB_URL: ${CONCEPT_DB_URL}`);
