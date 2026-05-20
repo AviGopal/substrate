@@ -164,9 +164,9 @@ See design.md §"Phase 5 prerequisites and rollback" for full rationale. None of
 ### 5.1–5.4 Deletion tasks
 
 - [x] 5.1 ✅ **DONE** 2026-05-16. Removed inline synthesiser block (`synthesizeShapeImpulsesFromVariables` + `fillMissingShapesViaMemoryAgent` fallback) from `activity.ts:5454-5492` (originally ~4949-4997 before later insertions drifted line numbers). Both private helper methods removed as dead code — each had exactly one call site in the removed block. The equivalent logic lives in `impulse-preparation-resolver.ts` (ports confirmed in comments at lines 325/377). Typecheck: clean. Shape-resolver tests: 31/31 pass. Commit `30dd3cb`. (repos/minibob)
-- [ ] 5.2 Remove inline validation block (validator-dispatch inline path) — the `isMCPEnabled() && templateId && taskImpulseIds.length > 0` relevance-metric query block before resolver dispatch. Deferred: validator-dispatch is working but this block feeds the pre-execution relevance lookup, not the post-execution write. Needs targeted audit. (repos/minibob)
-- [ ] 5.3 Remove three `recordImpulseRelevance` call sites — now handled by learning_signal_writer. Deferred: confirm validator-dispatch `learning_signal_writer` covers all three call sites before removal. (repos/minibob)
-- [ ] 5.4 Remove inline tool-argument-pattern recording loop (sibling 3 §8.3) — deferred pending same audit. (repos/minibob)
+- [x] 5.2 ✅ **DONE** 2026-05-20. Removed inline `queryImpulseRelevance` filter block (~76 lines, `activity.ts` approx 5443–5520). The `impulse_pool_selection` resolver (registered at activity.ts:1910) is the canonical path. No tests exercised the inline path; typecheck clean. Commit `677f8ff`. (repos/minibob)
+- [x] 5.3 ✅ **DONE** 2026-05-20. Removed three `recordImpulseRelevance` call sites + private method + `recordErrorImpulseRelevance` (~115 lines). `learning_signal_writer` resolver (validator-dispatch.json task 5) covers all three paths. Tests: 1673 pass / 27 fail (same pre/post — no regressions). Commit `677f8ff`. (repos/minibob)
+- [x] 5.4 ✅ **DONE** 2026-05-20. Removed three inline `recordToolArgumentPattern` loops (~148 lines). `learning_signal_writer` resolver task 5 covers success + validation-failure + execution-failure paths. Commit `677f8ff`. (repos/minibob)
 
 ## Federation Security (Phases 1.1, 1.5, 2.1)
 
