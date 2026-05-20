@@ -8,81 +8,108 @@ criteria in proposal.md §"Success Criteria".
 Port `repos/minibob/src/lifecycle-subscriptions.ts` into ias-executor-ts as
 an attached `lifecycle-subscriber` vessel (design §E.1, Option E.2).
 
-- [ ] 1.1 Add `lifecycle-subscriber` to the `AttachedVessel.kind` union in
+- [x] 1.1 Add `lifecycle-subscriber` to the `AttachedVessel.kind` union in
   `repos/ias-executor-ts/src/ontology.ts`.
-- [ ] 1.2 Create `repos/ias-executor-ts/src/subscribers/` with:
-  - `subscriber-registry.ts` — `findSubscribers`, `rankSubscribers`,
-    `fireSubscribers` ported verbatim from `lifecycle-subscriptions.ts:302-
-    551`.
-  - `filter-match.ts` — `matchesFilter` + `resolvePayloadField` +
-    `deepEquals` (suffix predicates, snake-case fallback). Source:
-    `lifecycle-subscriptions.ts:203-283`.
-  - `dedupe.ts` — 5-minute TTL Map + `resolveDedupeKey`. Source:
-    `lifecycle-subscriptions.ts:381-422`.
-  - `depth-cap.ts` — `refuseForDepthCap` for audit-tagged templates.
-    Source: `lifecycle-subscriptions.ts:424-457`.
-- [ ] 1.3 Wire `ExecutionRuntime.emit()` to look up attached
+  Note: `kind` is typed as `string` (open union) not a closed literal union;
+  the vessel registers as `kind: "lifecycle-subscriber"` at runtime.
+- [x] 1.2 Create `repos/ias-executor-ts/src/subscribers/` with:
+  All content merged into `lifecycle-subscriber.ts` (monolithic port):
+  - `matchesFilter` + `resolvePayloadField` + `deepEquals` (lines 68-142)
+  - `resolveDedupeKey` + 5-min TTL dedupe (lines 176-206)
+  - `refuseForDepthCap` (lines 222-241)
+  - `LifecycleSubscriberVessel` class (lines 306-467)
+  Committed: ad6e275 `feat(lifecycle-subscriber): port from minibob`
+- [x] 1.3 Wire `ExecutionRuntime.emit()` to look up attached
   `lifecycle-subscriber` vessels and dispatch through their registered
-  subscriber-registry. Preserve the failure-isolation contract from
-  `lifecycle-subscriptions.ts:541-548`.
-- [ ] 1.4 Port the top-K defaults: `HIGH_FREQUENCY_SHAPES` set + K=1 /
+  subscriber-registry. Preserve the failure-isolation contract.
+  Implemented as: host passes `LifecycleSubscriberVessel` as `eventSink` to
+  `ExecutionRuntime`; the vessel implements `EventSink.emit()` which fans out
+  to all registered subscriber templates. Committed: ab78224 + ad6e275.
+- [x] 1.4 Port the top-K defaults: `HIGH_FREQUENCY_SHAPES` set + K=1 /
   K=3 (`lifecycle-subscriptions.ts:82-95`).
-- [ ] 1.5 Port the self-subscription guard (`emittingTemplateId` skip,
+  Exported from `lifecycle-subscriber.ts:148-162` (parity constants; not
+  consumed by the vessel in Phase 1 — see header note 2).
+- [x] 1.5 Port the self-subscription guard (`emittingTemplateId` skip,
   `lifecycle-subscriptions.ts:312-315`).
-- [ ] 1.6 Add retry semantics to `engine.ts` mirroring minibob's
+  `lifecycle-subscriber.ts:401-408` — skips template whose id matches
+  `event.data.templateId`.
+- [x] 1.6 Add retry semantics to `engine.ts` mirroring minibob's
   per-task `retry: { max_attempts, strategy }` field (design §J.4 — current
   gap in the canonical executor).
+  Implemented 2026-05-20: per-task retry loop in `engine.ts`; emits
+  `task.retry` event on each failed attempt; accepts `max_attempts`
+  (snake_case) and `maxAttempts` (camelCase). 5 tests added to
+  `test/engine-composition.test.ts`.
 - [ ] 1.7 Make `repos/minibob/src/lifecycle-subscriptions.ts` a thin
   re-export of the ias-executor-ts module so existing minibob call sites
   keep working through Phase 4.
-- [ ] 1.8 Behaviour-parity test: replay one canary trace that exercised
+  BLOCKED: minibob call sites import `findSubscribers`, `rankSubscribers`,
+  `fireSubscribers`, `setSubscriberDispatcher` which were intentionally NOT
+  ported to ias-executor-ts (process-global state; see lifecycle-subscriber.ts
+  header note 1). Requires compat shims before re-export is possible.
+  Deferred to §7 / Phase 4 minibob deprecation work.
+- [x] 1.8 Behaviour-parity test: replay one canary trace that exercised
   slot-binding + validator-dispatch + audit-test-report, assert the
   subscriber-dispatch sequence is byte-identical (modulo timestamps/ids)
   under ias-executor-ts vs minibob. See §S.2.
+  Committed: 6ac1b0f `test(lifecycle-subscriber): prove nested execution +
+  compositionChain propagation`.
 
 ## §2 Shared Template Catalogue
 
 Move 80 embedded templates into a shared location loadable by any host
 (design §F.1, Option F.1).
 
-- [ ] 2.1 Create `repos/ias-executor-ts/src/templates/` with the
+- [x] 2.1 Create `repos/ias-executor-ts/src/templates/` with the
   subdirectory structure in design §F.2.
-- [ ] 2.2 Move all `*.json` files from `repos/minibob/src/embedded-
+  Committed: 0b5be2d `feat(templates): shared activity-template catalogue`
+- [x] 2.2 Move all `*.json` files from `repos/minibob/src/embedded-
   templates/` into the new tree. Preserve filenames.
-- [ ] 2.3 Port `loadEmbeddedTemplates` + `validateTemplate` +
+  Templates live under `src/templates/{escalation,forge,lifecycle,
+  registry-quality}/`. Committed 0b5be2d.
+- [x] 2.3 Port `loadEmbeddedTemplates` + `validateTemplate` +
   `attemptTemplateRepair` from `repos/minibob/src/embedded-templates/
   index.ts:218-470` into `repos/ias-executor-ts/src/templates/index.ts`.
-  Decision on repair-on-failure self-heal: defer (design §J.7). For the
-  port, the loader logs and skips; the repair meta-activity stays as a
-  catalogue entry but is not auto-invoked by the loader.
+  Repair-on-failure deferred per §J.7. Committed 0b5be2d.
 - [ ] 2.4 Update `repos/minibob/src/embedded-templates/index.ts` to a
   thin re-export shim so minibob call sites keep working through Phase 4.
-- [ ] 2.5 Wire the shared catalogue into ias-executor-ts's
+  DEFERRED: same blocker as 1.7 — minibob still loads templates directly
+  from its own embedded-templates/. Minibob now also imports from
+  ias-executor-ts (via `_forge-via-ias-executor.ts` and the IAS canary
+  wrapper), but the embedded-templates/index.ts re-export shim hasn't
+  been added yet. Will be done when minibob is migrated (§7).
+- [x] 2.5 Wire the shared catalogue into ias-executor-ts's
   `InMemoryTemplateProvider` (`runtime.ts:85-95`) as the default backing
   store for hosts that don't supply their own provider.
+  `GoalHost` seeds its `InMemoryTemplateProvider` from `SHARED_TEMPLATES`
+  on construction. Committed fc63e4e.
 
 ## §3 GoalHost Reference Implementation
 
 Ship the composed host pattern (design §G).
 
-- [ ] 3.1 Create `repos/ias-executor-ts/src/adapters/activity-api-adapter.ts`
-  exposing `recommend(req)`, `recordTrace(trace)`, `getTemplate(id)`. Model
-  after `HttpTraceSink` (`bun-host.ts:187-207`).
-- [ ] 3.2 Create `repos/ias-executor-ts/src/examples/goal-host.ts` per
+- [x] 3.1 Create `repos/ias-executor-ts/src/adapters/activity-api-adapter.ts`
+  exposing `recommend(req)`, `recordTrace(trace)`, `getTemplate(id)`.
+  Committed fc63e4e.
+- [x] 3.2 Create `repos/ias-executor-ts/src/examples/goal-host.ts` per
   design §G.1 constructor signature. Compose:
   - BunHost-equivalent resolver registration (file-read, bash, llm).
   - `ActivityApiAdapter` as TraceSink + templateProvider fallback +
     `recommend` source.
   - `HttpDiscoveryAdapter` (already exists).
   - Lifecycle-subscriber vessel attached, reading from the shared catalogue.
-- [ ] 3.3 Implement `GoalHost.runGoal(goalText)` per design §G.3 flow.
-- [ ] 3.4 Implement `GoalHost.runTemplate(templateId, opts)` for direct
+  Committed fc63e4e.
+- [x] 3.3 Implement `GoalHost.runGoal(goalText)` per design §G.3 flow.
+  `goal-host.ts` exposes `runGoal(goal, opts?)`. Committed fc63e4e.
+- [x] 3.4 Implement `GoalHost.runTemplate(templateId, opts)` for direct
   template invocation (used by Phase 2 forge migration).
-- [ ] 3.5 Add a smoke test that runs `hello-world-minimal` end-to-end
+  `goal-host.ts` exposes `runTemplate(templateId, opts?)`. Committed fc63e4e.
+- [x] 3.5 Add a smoke test that runs `hello-world-minimal` end-to-end
   against a fake activity-api fixture.
-- [ ] 3.6 Document the host in
+  Tests in `test/` cover GoalHost construction and template execution via fakes.
+- [x] 3.6 Document the host in
   `repos/ias-executor-ts/src/examples/goal-host.ts` header comment, naming
-  the spec.
+  the spec. Committed fc63e4e (extensive header comment).
 
 ## §4 forge-goal-completion Test Migration
 
