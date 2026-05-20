@@ -35,12 +35,100 @@ import {
   ConsoleEventSink,
   HttpTraceSink,
 } from "../../repos/ias-executor-ts/src/examples/bun-host";
-import type { LLMPort } from "../../repos/ias-executor-ts/src/ports";
+import type { LLMPort, TraceSink } from "../../repos/ias-executor-ts/src/ports";
 import type {
   ActivityTemplate,
   ExecutionTrace,
   Impulse,
 } from "../../repos/ias-executor-ts/src/ontology";
+
+// ---------------------------------------------------------------------------
+// TranslatingTraceSink — schema bridge from ias-executor-ts → activity-api
+// ---------------------------------------------------------------------------
+// activity-api's POST /v2/activities/execution-traces expects
+// StoreExecutionTraceRequestSchema (see repos/metabob-activity-api/src/
+// models/schemas.ts:StoreExecutionTraceRequestSchema): snake_case top-level
+// keys (execution_id, template_id, duration_ms, cost_usd), status of
+// "success" | "failure" | "partial", and execution_trace.tasks rows
+// containing actualPrompt/response/inputState/outputState. ias-executor-ts's
+// ExecutionTrace (ontology.ts:ExecutionTrace) is camelCase with status
+// "completed" | "failed" and minimal task records (taskId, success,
+// resolverId, durationMs, outputImpulseIds).
+//
+// Stock HttpTraceSink JSON.stringify's the trace verbatim — activity-api
+// rejects with 400 ("Unrecognized key", "Required field missing").
+// This sink defaults the minibob-shaped fields the ias-executor doesn't
+// capture; activity-api keeps its strict schema; we get traces on canary.
+
+class TranslatingTraceSink implements TraceSink {
+  constructor(
+    private readonly endpoint: string,
+    private readonly apiKey: string,
+  ) {}
+
+  async record(trace: ExecutionTrace): Promise<void> {
+    const statusMap: Record<string, string> = {
+      completed: "success",
+      failed: "failure",
+    };
+    const body = {
+      execution_id: trace.id,
+      template_id: trace.templateId,
+      status: statusMap[trace.status] ?? "partial",
+      duration_ms: trace.durationMs ?? 0,
+      cost_usd: trace.costUsd ?? 0,
+      execution_trace: {
+        tasks: trace.tasks.map((t) => ({
+          id: t.taskId,
+          description: (t as { description?: string }).description ?? t.taskId,
+          actualPrompt: (t as { actualPrompt?: string }).actualPrompt ?? "",
+          toolCalls: [],
+          response: (t as { response?: string }).response ?? "",
+          result: {
+            status: t.success ? "success" : "failure",
+            error: (t as { error?: string }).error,
+            metadata: { resolver_id: t.resolverId, output_impulse_ids: t.outputImpulseIds },
+          },
+          inputState: {
+            filesAvailable: [],
+            environment: {},
+            impulses: t.inputImpulseIds ?? [],
+            variables: {},
+            git: { branch: "unknown", commit: "unknown", dirty: false },
+          },
+          outputState: {
+            filesModified: [],
+            filesCreated: [],
+            filesDeleted: [],
+          },
+        })),
+        impulsesCreated: trace.outputImpulseIds ?? [],
+        filesModified: [],
+      },
+      parent_execution_id: trace.parentExecutionId,
+      composition_chain: trace.compositionChain,
+      failure_mode: trace.failureMode,
+    };
+    try {
+      const res = await fetch(`${this.endpoint}/v2/activities/execution-traces`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `ApiKey ${this.apiKey}`,
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        console.warn(
+          `[TranslatingTraceSink] ${res.status} recording trace ${trace.id}: ${text.slice(0, 200)}`,
+        );
+      }
+    } catch (err) {
+      console.warn(`[TranslatingTraceSink] network error recording trace ${trace.id}: ${(err as Error).message}`);
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Environment / configuration
@@ -189,7 +277,15 @@ async function main(): Promise<number> {
   console.log(`[ias-forge] parent_depth    = ${PARENT_DEPTH}`);
 
   const llm = new AnthropicLLMPort();
-  const traceSink = new HttpTraceSink(ACTIVITY_API_URL, METABOB_API_KEY);
+  // ias-executor-ts's stock HttpTraceSink sends the raw ExecutionTrace
+  // (camelCase, status: "completed"|"failed"); activity-api expects
+  // StoreExecutionTraceRequestSchema (snake_case, status:
+  // "success"|"failure"|"partial", with execution_trace.tasks containing
+  // actualPrompt/response/inputState/outputState fields ias-executor-ts
+  // doesn't capture). Translate at the wire boundary — defaults are
+  // intentional rather than aspirational; ias-executor traces are simpler
+  // than minibob traces by design.
+  const traceSink = new TranslatingTraceSink(ACTIVITY_API_URL, METABOB_API_KEY);
   const eventSink = new ConsoleEventSink();
 
   const host = new VesselForgeHost({
