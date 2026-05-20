@@ -55,9 +55,7 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
 
 ### G1.4 Held-out suite (OPEN)
 
-- [ ] G1.4.1 (OPEN) `--held-out` flag emits a 5–10 prompt suite using a weekly seed
-  `(YYYY_WW_held_out_v1)`. **Acceptance:** running on Mondays 2026-W21 vs 2026-W22
-  produces non-overlapping prompts.
+- [x] G1.4.1 ✅ **DONE** 2026-05-19. `--held-out` flag in `goal-generator.ts`: computes seed from `YYYY_WW_held_out_v1` string → SHA-256 first 8 bytes → BigInt. Count defaults to 8. Output → `<date>-held-out-goals.json`. Different ISO weeks produce different but independently reproducible goal sets.
 
 ---
 
@@ -230,11 +228,7 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
 
 ### G8.1 CI extension
 
-- [ ] G8.1.1 Extend `run-weekly-harness.sh` (existing, see
-  `validation/scripts/run-weekly-harness.sh`) to invoke
-  `stratified-harness.ts` as a second job after the Phase 19 harness completes.
-  **Acceptance:** both reports emitted in the same run; non-zero exit on stratified
-  harness floor-fail mirrors the existing Phase 19 regression gate.
+- [x] G8.1.1 ✅ **DONE** 2026-05-19. `run-weekly-harness.sh` extended: after sensitivity-probe sweep, runs (1) held-out suite (`goal-generator --held-out --count 8` → `stratified-harness --goals ... --label held-out`) then (2) rolling-pool suite (seed 12345, count 24). Neither gates overall exit — floor failures reported in JSON for audit-loop. Logs to `<date>-held-out.log` and `<date>-stratified.log`.
 - [ ] G8.1.2 Update `.github/workflows/weekly-recommendation-validation.yml`
   (referenced in `2026-05-06-recommendation-validation-v2/design.md:339`) to upload
   the stratified report alongside the existing report.

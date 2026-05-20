@@ -1324,7 +1324,7 @@ Full design: `2026-05-17-state-space-signature-thompson-keying/design.md` and `2
 
 ### 24.3 Harness discrimination metric
 
-- [ ] 24.3.1 Extend `validation/scripts/reuse-harness.ts` with per-template discrimination statistic: for any template with `total_observations ≥ 50`, find the two highest-population signature buckets and run a Welch t-test on their empirical success rates. Aggregate count of templates with `p < 0.05` is the load-bearing acceptance number. Delegated to `2026-05-17-state-space-signature-thompson-keying/tasks.md`.
+- [x] 24.3.1 ✅ **DONE** 2026-05-19 (via §6.2 in `2026-05-17-state-space-signature-thompson-keying/tasks.md`). `computeDiscriminationStat()` in `validation/scripts/reuse-harness.ts`: Welch t-test on top-two signature buckets for templates with Σn_obs≥50; `discriminating_fraction` in report. Commit `0378996a`.
 
 ### Stop conditions
 
@@ -1366,7 +1366,7 @@ Full design: `2026-05-17-stratified-goal-generator-harness/design.md`.
 
 ### 25.7 Held-out rotation
 
-- [ ] 25.7.1 Rotate held-out prompts across runs so the system cannot memorise the generated set the way it memorised the curated v2 benchmark. Document the rotation policy alongside the report stream.
+- [x] 25.7.1 ✅ **DONE** 2026-05-19. Rotation policy: ISO-week seed `YYYY_WW_held_out_v1` → first 8 bytes of SHA-256 → BigInt. Same week always produces same goals; different weeks produce different but reproducible sets. `--held-out` flag added to `goal-generator.ts` (count defaults 8). `run-weekly-harness.sh` extended to run held-out suite (G8.1.1) followed by rolling-pool suite (seed 12345, 24 goals) as second-job after Phase 19 harness. Neither stratified suite gates harness exit code — floor failures reported in JSON for audit-loop consumption. See `validation/scripts/goal-generator.ts` and `run-weekly-harness.sh`.
 
 ### Stop conditions
 

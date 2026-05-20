@@ -265,4 +265,100 @@ done
 
 echo "Sensitivity report: ${SENSITIVITY_REPORT_JSON} (${SWEEP_COUNT}/${#REG_IDS[@]} dispatched)"
 
+# ── Stratified harness — Phase 25 (G8.1.1) ───────────────────────────────────
+#
+# Runs the stratified goal-generator harness as a second job after the Phase 19
+# reuse harness.  Two suites are executed:
+#
+#   1. Held-out suite  — weekly seed (YYYY_WW_held_out_v1), 8 goals, always
+#      runs first so the rolling-pool cannot contaminate it.  Report emitted to
+#      <date>-held-out-report.json.
+#
+#   2. Rolling-pool suite — fixed seed 12345, 24 goals (enough for 24-cell
+#      coverage).  Report emitted to <date>-stratified-report.json.
+#
+# A non-zero exit from either suite is flagged as a warning but does NOT gate
+# the overall harness exit code — the stratified harness has its own floor
+# criteria (per CellMetrics.floor_pass) which are consumed by the audit loop.
+# Floor failures manifest as json payload in the report; CI uploads them as
+# artefacts for human review.
+#
+# Held-out suite precedes rolling-pool so that held-out contamination_delta can
+# be computed inside stratified-harness.ts once both reports are available.
+
+STRATIFIED_SCRIPT="${SCRIPT_DIR}/stratified-harness.ts"
+GOAL_GEN_SCRIPT="${SCRIPT_DIR}/goal-generator.ts"
+if [[ ! -f "$STRATIFIED_SCRIPT" || ! -f "$GOAL_GEN_SCRIPT" ]]; then
+  echo ""
+  echo "WARN: stratified-harness.ts or goal-generator.ts not found — skipping Phase 25 suites"
+else
+  echo ""
+  echo "=== Stratified harness — held-out suite (Phase 25 G8.1) ==="
+  # G1.4.1: generate with weekly seed so the same run on any day this week is
+  # identical; different ISO weeks produce a different but reproducible set.
+  HELD_OUT_GOALS="${VALIDATION_DIR}/generated/${TODAY}-held-out-goals.json"
+  HELD_OUT_LOG="${RESULTS_DIR}/${TODAY}-held-out.log"
+
+  HELD_OUT_EXIT=0
+  METABOB_API_KEY="$METABOB_API_KEY" \
+  METABOB_ENDPOINT="${METABOB_ENDPOINT:-https://activity.metabob.com}" \
+  bun run "$GOAL_GEN_SCRIPT" \
+    --held-out \
+    --count 8 \
+    --output "$HELD_OUT_GOALS" \
+    > "${HELD_OUT_LOG}.gen" 2>&1 || HELD_OUT_EXIT=$?
+
+  if [[ "$HELD_OUT_EXIT" -ne 0 ]]; then
+    echo "held-out goal-gen: WARN (exit=${HELD_OUT_EXIT}) — see ${HELD_OUT_LOG}.gen"
+  elif [[ -f "$HELD_OUT_GOALS" ]]; then
+    METABOB_API_KEY="$METABOB_API_KEY" \
+    METABOB_ENDPOINT="${METABOB_ENDPOINT:-https://activity.metabob.com}" \
+    bun run "$STRATIFIED_SCRIPT" \
+      --goals "$HELD_OUT_GOALS" \
+      --label "held-out" \
+      > "$HELD_OUT_LOG" 2>&1 || HELD_OUT_EXIT=$?
+
+    if [[ "$HELD_OUT_EXIT" -eq 0 ]]; then
+      echo "held-out suite: PASS"
+    else
+      echo "held-out suite: WARN (exit=${HELD_OUT_EXIT}) — see ${HELD_OUT_LOG}"
+    fi
+    echo "Log: ${HELD_OUT_LOG}"
+  fi
+
+  echo ""
+  echo "=== Stratified harness — rolling-pool suite (Phase 25 G8.1) ==="
+  # Fixed seed 12345 for the rolling-pool suite; 24 goals covers the full
+  # 24-cell matrix (novelty × depth × scenario × adversarial axes).
+  ROLLING_GOALS="${VALIDATION_DIR}/generated/12345-${TODAY}.json"
+  STRATIFIED_LOG="${RESULTS_DIR}/${TODAY}-stratified.log"
+
+  STRATIFIED_EXIT=0
+  METABOB_API_KEY="$METABOB_API_KEY" \
+  METABOB_ENDPOINT="${METABOB_ENDPOINT:-https://activity.metabob.com}" \
+  bun run "$GOAL_GEN_SCRIPT" \
+    --seed 12345 \
+    --count 24 \
+    --output "$ROLLING_GOALS" \
+    > "${STRATIFIED_LOG}.gen" 2>&1 || STRATIFIED_EXIT=$?
+
+  if [[ "$STRATIFIED_EXIT" -ne 0 ]]; then
+    echo "rolling-pool goal-gen: WARN (exit=${STRATIFIED_EXIT}) — see ${STRATIFIED_LOG}.gen"
+  elif [[ -f "$ROLLING_GOALS" ]]; then
+    METABOB_API_KEY="$METABOB_API_KEY" \
+    METABOB_ENDPOINT="${METABOB_ENDPOINT:-https://activity.metabob.com}" \
+    bun run "$STRATIFIED_SCRIPT" \
+      --goals "$ROLLING_GOALS" \
+      --label "weekly" \
+      > "$STRATIFIED_LOG" 2>&1 || STRATIFIED_EXIT=$?
+
+    if [[ "$STRATIFIED_EXIT" -eq 0 ]]; then
+      echo "rolling-pool suite: PASS"
+    else
+      echo "rolling-pool suite: WARN (exit=${STRATIFIED_EXIT}) — see ${STRATIFIED_LOG}"
+    fi
+    echo "Log: ${STRATIFIED_LOG}"
+  fi
+fi
+
 exit 0

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * goal-generator.ts — Phase 25 G1.2
+ * goal-generator.ts — Phase 25 G1.2 / G1.4
  *
  * Generates a stratified set of natural-language goals for the evaluation harness.
  *
@@ -12,6 +12,14 @@
  *     [--scenario-mix 0.6,0.2,0.2] \
  *     [--adversarial-fraction 0.1] \
  *     [--output validation/generated/12345-2026-05-19.json]
+ *     [--held-out]  # G1.4: weekly held-out suite (seed=YYYY_WW_held_out_v1, count=8)
+ *
+ * --held-out mode (G1.4.1):
+ *   Overrides --seed with the ISO week seed "YYYY_WW_held_out_v1" (where YYYY and WW
+ *   are the current UTC year and ISO week number).  Count defaults to 8.  Output goes
+ *   to validation/generated/<date>-held-out-goals.json.  Running the same flag in the
+ *   same ISO week always produces the same goals; different weeks produce different but
+ *   independently reproducible sets.
  *
  * Adversarial generation is deferred (G1.3); goals always have adversarial:false.
  *
@@ -592,12 +600,35 @@ async function main() {
       "scenario-mix": { type: "string", default: "0.6,0.2,0.2" },
       "adversarial-fraction": { type: "string", default: "0.0" },
       output: { type: "string", default: "" },
+      "held-out": { type: "boolean", default: false },
     },
     allowPositionals: false,
   });
 
-  const seed = BigInt(values["seed"] ?? "42");
-  const count = parseInt(values["count"] ?? "50", 10);
+  const isHeldOut = values["held-out"] === true;
+
+  // G1.4.1: held-out weekly seed — deterministic per ISO week, different each week.
+  // Seed string "YYYY_WW_held_out_v1" → first 8 bytes of SHA-256 → BigInt.
+  function weeklyHeldOutSeed(): bigint {
+    const now = new Date();
+    // ISO week number: days since nearest Thursday Jan 4
+    const jan4 = new Date(Date.UTC(now.getUTCFullYear(), 0, 4));
+    const dayOfWeek = (jan4.getUTCDay() + 6) % 7; // Mon=0
+    const weekStart = new Date(jan4.getTime() - dayOfWeek * 86400000);
+    const diffDays = Math.round((now.getTime() - weekStart.getTime()) / 86400000);
+    const isoWeek = Math.floor(diffDays / 7) + 1;
+    const isoYear = now.getUTCFullYear();
+    const label = `${isoYear}_${String(isoWeek).padStart(2, "0")}_held_out_v1`;
+    const hash = createHash("sha256").update(label).digest();
+    return (BigInt(hash[0]) << 56n) | (BigInt(hash[1]) << 48n) | (BigInt(hash[2]) << 40n) |
+           (BigInt(hash[3]) << 32n) | (BigInt(hash[4]) << 24n) | (BigInt(hash[5]) << 16n) |
+           (BigInt(hash[6]) << 8n)  | BigInt(hash[7]);
+  }
+
+  const seed = isHeldOut ? weeklyHeldOutSeed() : BigInt(values["seed"] ?? "42");
+  const count = isHeldOut
+    ? parseInt(values["count"] ?? "8", 10)
+    : parseInt(values["count"] ?? "50", 10);
 
   function parseMix(s: string): [number, number, number] {
     const parts = s.split(",").map(Number);
@@ -645,7 +676,9 @@ async function main() {
     outputPath = resolvePath(values["output"]);
   } else {
     const dateStr = new Date().toISOString().slice(0, 10);
-    outputPath = join(generatedDir, `${seed}-${dateStr}.json`);
+    outputPath = isHeldOut
+      ? join(generatedDir, `${dateStr}-held-out-goals.json`)
+      : join(generatedDir, `${seed}-${dateStr}.json`);
   }
 
   await mkdir(generatedDir, { recursive: true });
@@ -654,6 +687,7 @@ async function main() {
     generator_version: "25.G1",
     generated_at: new Date().toISOString(),
     generator_seed: seed.toString(),
+    held_out: isHeldOut,
     count: goals.length,
     novelty_mix: { seen: noveltyMix[0], rare: noveltyMix[1], novel: noveltyMix[2] },
     depth_mix: { depth0: depthMix[0], depth1: depthMix[1], "depth2+": depthMix[2] },
