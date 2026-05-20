@@ -113,8 +113,10 @@ interface TaskRecord {
   resolver_tier?: string;
   cost_usd?: number;
   activity_id?: string;
+  input_impulse_ids?: string[];
   output_impulse_ids?: string[];
   decision_record?: Record<string, unknown>;
+  failure_mode?: { type?: string; reason?: string } | null;
 }
 
 interface ExecutionTrace {
@@ -332,7 +334,23 @@ interface TraceScores {
   decision_record_completeness: number | null;
 }
 
-function scoreTasks(tasks: TaskRecord[], thompsonPoolIds: Set<string>): {
+// Keys that indicate a Thompson posterior was recorded in a task's decision_record
+const POSTERIOR_KEYS = new Set([
+  "posterior_source", "thompson_alpha", "alpha", "selection_alpha",
+  "selection_metadata", "score_source", "method",
+]);
+
+// Keys that indicate a producer/binding rationale was recorded
+const BINDING_KEYS = new Set([
+  "producer_rationale", "binding_rationale", "selected_producer",
+  "binding_producer", "producer_id", "slot_binding",
+]);
+
+function scoreTasks(
+  tasks: TaskRecord[],
+  thompsonPoolIds: Set<string>,
+  trace: ExecutionTrace
+): {
   reuse_efficiency: number | null;
   improvise_share: number | null;
   decision_record_completeness: number | null;
@@ -358,9 +376,57 @@ function scoreTasks(tasks: TaskRecord[], thompsonPoolIds: Set<string>): {
   const impCount = tasks.filter((t) => (t.activity_id ?? "").includes("improvise")).length;
   const improvise_share = impCount / tasks.length;
 
-  // Decision record completeness: fraction of tasks with a non-empty decision_record
-  const withDecision = tasks.filter((t) => t.decision_record && Object.keys(t.decision_record).length > 0).length;
-  const decision_record_completeness = withDecision / tasks.length;
+  // Decision record completeness — 3 criteria (Phase 25.5.1):
+  //   A. Every activity selection has a Thompson-sampled posterior recorded
+  //   B. Every binding task has a producer rationale recorded
+  //   C. Every failure (task or trace) has a failure_mode annotation
+
+  // Criterion A: fraction of tasks whose decision_record contains a posterior key
+  const tasksWith = tasks.filter((t) => {
+    if (!t.decision_record) return false;
+    return Object.keys(t.decision_record).some((k) => POSTERIOR_KEYS.has(k));
+  }).length;
+  const scoreA = tasksWith / tasks.length;
+
+  // Criterion B: among tasks that have input impulse bindings, fraction with producer rationale
+  const bindingTasks = tasks.filter((t) => (t.input_impulse_ids?.length ?? 0) > 0);
+  let scoreB: number;
+  if (bindingTasks.length === 0) {
+    // Vacuously true — no bindings to annotate
+    scoreB = 1.0;
+  } else {
+    const withRationale = bindingTasks.filter((t) => {
+      if (!t.decision_record) return false;
+      return Object.keys(t.decision_record).some((k) => BINDING_KEYS.has(k));
+    }).length;
+    scoreB = withRationale / bindingTasks.length;
+  }
+
+  // Criterion C: failed tasks and failed trace have failure_mode annotation
+  const failedTasks = tasks.filter(
+    (t) => t.status === "failed" || t.status === "error"
+  );
+  const traceIsFailed =
+    trace.status !== "success" && trace.status !== "completed";
+  let scoreC: number;
+  if (failedTasks.length === 0 && !traceIsFailed) {
+    // No failures — vacuously satisfied
+    scoreC = 1.0;
+  } else {
+    let annotated = 0;
+    let total = 0;
+    for (const t of failedTasks) {
+      total++;
+      if (t.failure_mode != null) annotated++;
+    }
+    if (traceIsFailed) {
+      total++;
+      if (trace.failure_mode != null) annotated++;
+    }
+    scoreC = total > 0 ? annotated / total : 1.0;
+  }
+
+  const decision_record_completeness = (scoreA + scoreB + scoreC) / 3;
 
   return { reuse_efficiency, improvise_share, decision_record_completeness };
 }
@@ -368,7 +434,7 @@ function scoreTasks(tasks: TaskRecord[], thompsonPoolIds: Set<string>): {
 function scoreTrace(trace: ExecutionTrace, thompsonPoolIds: Set<string>): TraceScores {
   const success = trace.status === "success" || trace.status === "completed";
   const cost_usd = typeof trace.cost_usd === "number" ? trace.cost_usd : null;
-  const taskScores = scoreTasks(trace.tasks ?? [], thompsonPoolIds);
+  const taskScores = scoreTasks(trace.tasks ?? [], thompsonPoolIds, trace);
   return { success, cost_usd, ...taskScores };
 }
 
@@ -437,7 +503,7 @@ function emptyCell(): CellMetrics {
 const FLOORS = {
   success_rate: 0.30,
   reuse_efficiency: 0.40,     // only when sample_count ≥ 3 and depth ≥ 1
-  decision_record_completeness: 0.80,
+  decision_record_completeness: 0.90,
   witness_disagreement_max: 0.15,
 };
 

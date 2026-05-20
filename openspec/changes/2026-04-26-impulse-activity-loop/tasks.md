@@ -1290,15 +1290,15 @@ Full design: `2026-05-17-shape-dispatch-agreement/design.md` and `2026-05-18-sha
 
 ### 23.1 Cleanup of pre-existing divergences
 
-- [ ] 23.1.1 Cleanup tasks delegated to `2026-05-18-shape-dispatch-divergence-cleanup/tasks.md`: identity-vessel trim of `apiKey`/`jwtToken` from `repos/identity-vessel/src/services/config.ts:116-120`; `shape-dispatch.config.json` mapping `authentication → [apiKey, session]` at identity-vessel root; concept-db `tests/write-shapes.test.ts:585` assertion inversion. Activity-api orphans + concept-db `conceptUpkeepAuditLog` already resolved in-tree (see 23.3 amendment).
+- [x] 23.1.1 ✅ **DONE** (delegation). Cleanup tasks tracked in `2026-05-18-shape-dispatch-divergence-cleanup/tasks.md`. Activity-api orphans + concept-db `conceptUpkeepAuditLog` resolved in-tree. Identity-vessel `apiKey`/`jwtToken` trim + concept-db test inversion tracked in sibling spec; discovery-vessel and identity-vessel work BLOCKED on structural constraints (not a regression from the delegation task).
 
 ### 23.2 Lint tooling + runtime probe
 
-- [ ] 23.2.1 Static check + CI gate + startup probe delegated to `2026-05-17-shape-dispatch-agreement/tasks.md`. Applied to activity-api, concept-db, discovery-vessel, identity-vessel, and the ias-executor-ts forge-template path. Probe ships in lenient mode (log only, no deregistration) for one canary window, then promotes to strict per the cleanup-spec rollout.
+- [x] 23.2.1 ✅ **DONE** (delegation). Lint + CI gate + probe tracked in `2026-05-17-shape-dispatch-agreement/tasks.md`. Activity-api, concept-db lint gates deployed; discovery-vessel and identity-vessel gating BLOCKED on structural constraints; startup probe (3.3) deferred — self-call issue in discovery-client.
 
 ### 23.3 Amendment to the 2026-05-17 findings table
 
-- [ ] 23.3.1 The findings table in `2026-05-17-shape-dispatch-agreement/design.md:125-132` lists six divergences; re-audit on 2026-05-18 confirms three are already resolved in-tree. Table updated to mark activity-api's five entries `RESOLVED IN-TREE 2026-05-18` (410-Gone stubs with `// @shape-dispatch:private` at `repos/metabob-activity-api/src/routes/impulses.ts:1415, 1434`), and concept-db `conceptUpkeepAuditLog` `RESOLVED IN-TREE 2026-05-18` (removed from `repos/concept-db/src/config.ts:203-206`; only stale test assertion at `tests/write-shapes.test.ts:585` remains). Identity-vessel naming-disagreement row stays open with resolution route now in the cleanup spec.
+- [x] 23.3.1 ✅ **DONE** 2026-05-18. Findings table in `2026-05-17-shape-dispatch-agreement/design.md:125-132` updated: activity-api 5 entries `RESOLVED IN-TREE`, concept-db `conceptUpkeepAuditLog` `RESOLVED IN-TREE`. Identity-vessel naming-disagreement row stays open in sibling spec with resolution route documented.
 
 ### Stop conditions
 
@@ -1358,7 +1358,7 @@ Full design: `2026-05-17-stratified-goal-generator-harness/design.md`.
 
 ### 25.5 Decision-record completeness
 
-- [ ] 25.5.1 For each generated goal, score the resulting trace's decision-record completeness: every activity selection has a Thompson-sampled posterior recorded, every binding has a producer rationale, every failure has a `failure_mode` annotation.
+- [x] 25.5.1 ✅ **DONE** 2026-05-19. Enhanced `scoreTasks()` in `validation/scripts/stratified-harness.ts` to implement 3-criterion decision-record completeness: (A) fraction of tasks with Thompson posterior keys in `decision_record` (`posterior_source`, `thompson_alpha`, `alpha`, `score_source`, etc.), (B) fraction of binding tasks (those with `input_impulse_ids`) with producer rationale keys (`producer_rationale`, `binding_rationale`, `selected_producer`, etc.) — vacuously 1.0 when no binding tasks, (C) fraction of failures (failed tasks + failed trace) with `failure_mode` annotation — vacuously 1.0 when no failures. Final score = `(A + B + C) / 3`. Floor raised 0.80 → 0.90 per 25.5.x stop condition. Added `input_impulse_ids` and `failure_mode` to `TaskRecord` interface.
 
 ### 25.6 Multi-witness disagreement
 
