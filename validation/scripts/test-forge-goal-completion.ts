@@ -164,15 +164,19 @@ interface DiscoveryProbe {
 }
 
 async function probeDiscovery(shape: string, phase: DiscoveryProbe["phase"]): Promise<DiscoveryProbe> {
-  // Discovery exposes /resolve with vesselCapability pointer (see
-  // test-22-forge-and-paths.ts:210-217 for the canonical caller).
+  // 2026-05-20 fix: discovery /resolve with vesselCapability pointer expects
+  // `pointer.shape: <name>` (inside the pointer object), NOT `shapes: [...]`
+  // at the top level. Earlier the shape went outside pointer and discovery
+  // ignored it, returning 0 vessels — which masked the fact that the forge
+  // WAS registering vessels successfully. Vessel records use `vesselId`
+  // (not `id`) per discovery-vessel/src/types.ts:345.
   const res = await fetch(`${DISCOVERY_URL}/resolve`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `ApiKey ${METABOB_API_KEY}`,
     },
-    body: JSON.stringify({ pointer: { type: "vesselCapability" }, shapes: [shape], limit: 10 }),
+    body: JSON.stringify({ pointer: { type: "vesselCapability", shape } }),
   }).catch(() => null);
 
   const ts = new Date().toISOString();
@@ -183,13 +187,13 @@ async function probeDiscovery(shape: string, phase: DiscoveryProbe["phase"]): Pr
     return { type: "discovery_registration_probe", phase, shape, count: 0, vessel_ids: [], ts };
   }
   const data = (await res.json()) as any;
-  const vessels = (data?.content?.vessels ?? data?.vessels ?? []) as Array<{ id: string }>;
+  const vessels = (data?.content?.vessels ?? data?.vessels ?? []) as Array<{ vesselId?: string; id?: string }>;
   return {
     type: "discovery_registration_probe",
     phase,
     shape,
     count: vessels.length,
-    vessel_ids: vessels.map((v) => v.id).filter(Boolean),
+    vessel_ids: vessels.map((v) => v.vesselId ?? v.id).filter((id): id is string => typeof id === "string"),
     ts,
   };
 }

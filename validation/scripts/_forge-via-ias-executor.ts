@@ -213,18 +213,18 @@ class AnthropicLLMPort implements LLMPort {
 function loadForgeTemplate(): ActivityTemplate {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
-  // Forge template lives only in the deployment-synced minibob tree (not in
-  // repos/minibob); the super-repo's repos/minibob submodule predates it.
+  // 2026-05-20: forge template now lives in the ias-executor-ts shared
+  // template catalogue (canonical-host §2). The deployment-vessels copy
+  // is stale (submodule pointer drift). This is the canonical source.
   const templatePath = pathResolve(
     __dirname,
     "..",
     "..",
     "repos",
-    "deployment",
-    "vessels",
-    "minibob",
+    "ias-executor-ts",
     "src",
-    "embedded-templates",
+    "templates",
+    "forge",
     "forge-vessel-for-shape.json",
   );
   const raw = readFileSync(templatePath, "utf8");
