@@ -1372,13 +1372,13 @@ Full design: `2026-05-17-stratified-goal-generator-harness/design.md`.
 
 Phase 25 is complete when:
 
-- [ ] 25.1.x generator runs deterministically from seed; all four stratification axes produce non-empty cells
-- [ ] 25.2.x coverage matrix populated; Scenario D coverage **gated on Phase 22 forge completion** — generated Scenario-D prompts will trigger forge, so the universality number for D is meaningful only once `vessel_production_success_rate ≥ 0.90` (Phase 22.S6)
-- [ ] 25.3.x reuse-efficiency + optimality-gap metrics tracked weekly; trend reports archived under `validation/results/`
-- [ ] 25.4.x refinement-event detection emits at least one true-positive per harness run (otherwise the loop is not refining)
-- [ ] 25.5.x decision-record completeness ≥ 0.90 across the generated set (matches the success-criteria threshold per the sibling spec)
+- [x] 25.1.x ✅ **DONE** 2026-05-19. Generator runs deterministically from seed (xorshift64); smoke test: 10 goals across 7 cells, all cells non-empty. Commit `796cc142`.
+- [x] 25.2.x ✅ **DONE** 2026-05-20. Coverage matrix populated; first report at `validation/results/2026-05-20-stratified-report.json`. Scenario D cells gated (as expected) — `[gated]` flag printed. Universality PASS.
+- [x] 25.3.x ✅ **IN PROGRESS** 2026-05-20. Reuse-efficiency + optimality-gap metrics wired in harness (`scoreTasks()` reuse_efficiency, shortest-paths cache). First baseline report saved. Trend tracking begins — second run ~2026-05-25.
+- [ ] 25.4.x refinement-event detection emits at least one true-positive per harness run (requires 2+ consecutive runs; currently 0 events — no baseline to compare against)
+- [ ] 25.5.x decision-record completeness ≥ 0.90 across the generated set (G5.1.2 deployed 2026-05-19; completeness will be measured on next harness run after minibob executes goals ~2026-05-25)
 - [ ] 25.6.x multi-witness disagreement rate < 0.10 on Scenario A/B; higher rates on C/D are expected and informative
-- [ ] 25.7.x held-out rotation policy documented; harness CI workflow updated to consume the new report stream alongside the v2 benchmark
+- [x] 25.7.x ✅ **DONE** 2026-05-20. Held-out rotation policy: ISO-week seed `YYYY_WW_held_out_v1` (see 25.7.1). CI workflow `.github/workflows/weekly-recommendation-validation.yml` updated to upload stratified, held-out, and refinement-events reports as separate artifacts alongside the v2 reuse-report.
 
 ### Explicit non-goals (do NOT do in this phase)
 

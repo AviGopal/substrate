@@ -26,10 +26,29 @@ jobs:
           LABEL: weekly-ci-${{ github.run_number }}
         run: bash validation/scripts/run-weekly-harness.sh
 
-      - name: Upload report artifact
+      - name: Upload v2 benchmark report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: reuse-report-${{ github.run_number }}
           path: validation/results/*-reuse-report.json
+          retention-days: 90
+
+      - name: Upload stratified harness reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stratified-reports-${{ github.run_number }}
+          path: |
+            validation/results/*-stratified-report.json
+            validation/results/*-held-out-report.json
+            validation/results/*-refinement-events.json
+          retention-days: 90
+
+      - name: Upload state
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harness-state-${{ github.run_number }}
+          path: validation/state/shortest-paths.json
           retention-days: 90
