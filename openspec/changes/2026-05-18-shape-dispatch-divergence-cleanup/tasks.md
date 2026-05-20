@@ -25,7 +25,7 @@
 - [x] D.1 Edit `repos/identity-vessel/src/services/config.ts:116-120` to advertise only `'authentication'`; remove `'apiKey'` and `'jwtToken'`. DONE 2026-05-19 (commit 3cc9ee3)
 - [x] D.2 Create `repos/identity-vessel/shape-dispatch.config.json` with content `{"shape_to_pointer_types":{"authentication":["apiKey","session","jwtToken"]}}`. DONE 2026-05-19
 - [x] D.3 Add a one-line comment in `config.ts` above the trimmed `shapes` array pointing readers at `shape-dispatch.config.json` for the pointer-type mapping. DONE 2026-05-19
-- [ ] D.4 Update `repos/identity-vessel/CLAUDE.md` (or `README.md`) to document that the vessel advertises one shape (`authentication`) with two credential forms (`apiKey`, `session`). Note the explicit decision to keep the shape-vs-pointer-type distinction. PENDING
+- [x] D.4 ✅ **DONE** 2026-05-19. Added "Discovery Registration" section to `repos/identity-vessel/README.md`: advertises one shape (`authentication`) with pointer types `apiKey`/`session` (plus legacy `jwtToken` alias); explains shape-vs-pointer-type distinction; references `shape-dispatch.config.json`.
 - [x] D.5 Run the static parser against `repos/identity-vessel`. Confirm zero diagnostics with the new config file in place. DONE 2026-05-19
 - [x] D.6 Run `bun test` against identity-vessel; confirm no test asserts the presence of `apiKey` or `jwtToken` in `config.discovery.shapes`. If found, update assertion. No stale assertions found. DONE 2026-05-19
 
