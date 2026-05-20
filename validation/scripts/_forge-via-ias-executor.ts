@@ -69,6 +69,12 @@ class TranslatingTraceSink implements TraceSink {
   ) {}
 
   async record(trace: ExecutionTrace): Promise<void> {
+    // 2026-05-20: send success boolean alongside enum status — the route's
+    // success derivation (execution-traces.ts:1560) checks status==='completed'
+    // OR success===true, but our schema-valid enum 'success' matches neither.
+    // See repos/ias-executor-ts/src/adapters/activity-api-trace-sink.ts for
+    // the canonical version of this bridge.
+    const isSuccess = trace.status === "completed";
     const statusMap: Record<string, string> = {
       completed: "success",
       failed: "failure",
@@ -77,6 +83,7 @@ class TranslatingTraceSink implements TraceSink {
       execution_id: trace.id,
       template_id: trace.templateId,
       status: statusMap[trace.status] ?? "partial",
+      success: isSuccess,
       duration_ms: trace.durationMs ?? 0,
       cost_usd: trace.costUsd ?? 0,
       execution_trace: {
