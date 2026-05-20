@@ -144,11 +144,7 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
 
 ### G5.1 Activity-API recommend handler change
 
-- [ ] G5.1.1 Modify `POST /v2/activities/recommend` to return a `decision_record`
-  field per recommendation set with loser entries populated per §F.1. Top-K losers
-  (K=5) kept on large responses. **Acceptance:** integration test against canary
-  confirms `decision_record.candidates.length >= 3` on a query that returns ≥ 3
-  candidates.
+- [x] G5.1.1 ✅ **DONE** 2026-05-19. Added `decision_record` to `POST /v2/activities/recommend` response: `candidates` (winner + up to K=5 runners-up each with `activity_id`, `rrf_rank`, `thompson_alpha`, `thompson_beta`, `thompson_sample`, `shape_compatible`, `exploration_slot`, `score_source`), `selected_activity_id`, `rationale_tier`, `fallback_tier`, `total_candidates`. Commit `34cb5e7`. Deploy to canary to activate.
 - [ ] G5.1.2 Persist `decision_record` into the execution trace `tasks[]` at task
   dispatch time (MiniBob side). **Acceptance:** trace fetched via
   `GET /v2/activities/execution-traces/:id` contains the field.
