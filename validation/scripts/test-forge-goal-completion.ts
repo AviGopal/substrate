@@ -60,6 +60,15 @@ const DEPTH: 0 | 1 = VARIANT.endsWith("depth-1") ? 1 : 0;
 // Per design.md §c the runner shells out exactly as a user would.
 const MINIBOB_BIN = process.env.MINIBOB_BIN ?? "minibob";
 
+// FORGE_RUNTIME: selects which executor drives the forge. Option C step 1
+// (openspec/changes/2026-04-26-impulse-activity-loop/design.md §Phase 22)
+// pivots from minibob-as-god-object toward ias-executor-ts as the canonical
+// executor. Default is "ias-executor" — the legacy minibob path remains
+// runnable by setting FORGE_RUNTIME=minibob for parity comparisons.
+type ForgeRuntime = "ias-executor" | "minibob";
+const FORGE_RUNTIME: ForgeRuntime =
+  (process.env.FORGE_RUNTIME as ForgeRuntime) || "ias-executor";
+
 const RUN_ID = `fgc-${Date.now()}`;
 const TEST_ID = "forge-goal-completion";
 
@@ -256,6 +265,100 @@ async function runMinibobSingle(goal: string): Promise<MinibobRun> {
       });
     });
   });
+}
+
+// ---------------------------------------------------------------------------
+// ias-executor wrapper invocation (FORGE_RUNTIME=ias-executor)
+// ---------------------------------------------------------------------------
+//
+// Spawns _forge-via-ias-executor.ts and parses the IAS_FORGE_RESULT sentinel
+// block (see that file's emitResult()). Reuses MinibobRun's return shape so
+// pass1/pass2 control flow doesn't fork on runtime.
+
+interface IasForgeResult {
+  ok: boolean;
+  traceId?: string;
+  vesselVerified?: { vesselId?: string | null; endpoint?: string | null } | null;
+  vesselDeployed?: { endpoint?: string | null } | null;
+  error?: string;
+  durationMs?: number;
+  failureMode?: unknown;
+}
+
+function parseIasForgeResult(stdout: string): IasForgeResult | null {
+  const start = stdout.lastIndexOf("===== IAS_FORGE_RESULT =====");
+  const end = stdout.lastIndexOf("===== END_IAS_FORGE_RESULT =====");
+  if (start < 0 || end < 0 || end <= start) return null;
+  const body = stdout
+    .slice(start + "===== IAS_FORGE_RESULT =====".length, end)
+    .trim();
+  try {
+    return JSON.parse(body) as IasForgeResult;
+  } catch {
+    return null;
+  }
+}
+
+async function runForgeViaIasExecutor(goal: string): Promise<MinibobRun & { iasResult?: IasForgeResult }> {
+  const start = Date.now();
+  return new Promise((resolveFn) => {
+    const env = {
+      ...process.env,
+      ANTHROPIC_API_KEY,
+      METABOB_API_KEY,
+      ACTIVITY_API_URL,
+      DISCOVERY_URL,
+      TARGET_SHAPE,
+      VESSEL_GOAL: goal,
+    };
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const wrapperPath = pathResolve(__dirname, "_forge-via-ias-executor.ts");
+    const child = spawn("bun", ["run", wrapperPath], { env });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d) => {
+      const s = d.toString();
+      stdout += s;
+      // Mirror to our stdout so the operator sees forge progress live.
+      process.stdout.write(s);
+    });
+    child.stderr.on("data", (d) => {
+      const s = d.toString();
+      stderr += s;
+      process.stderr.write(s);
+    });
+    child.on("close", (code) => {
+      const ias = parseIasForgeResult(stdout) ?? undefined;
+      resolveFn({
+        executionId: ias?.traceId ?? null,
+        stdout,
+        stderr,
+        exitCode: code ?? -1,
+        duration_ms: Date.now() - start,
+        iasResult: ias,
+      });
+    });
+    child.on("error", (err) => {
+      stderr += `\nspawn error: ${err.message}`;
+      resolveFn({
+        executionId: null,
+        stdout,
+        stderr,
+        exitCode: -1,
+        duration_ms: Date.now() - start,
+      });
+    });
+  });
+}
+
+async function runForge(goal: string): Promise<MinibobRun & { iasResult?: IasForgeResult }> {
+  // Switch on FORGE_RUNTIME. Both paths return the same MinibobRun shape so
+  // the rest of pass1/pass2 (trace lookup, assertions) doesn't fork.
+  if (FORGE_RUNTIME === "ias-executor") {
+    return runForgeViaIasExecutor(goal);
+  }
+  return runMinibobSingle(goal);
 }
 
 // ---------------------------------------------------------------------------
@@ -686,12 +789,15 @@ async function assertPass2(
 // Failure-mode mapping (spec R6, design.md §c/§d)
 // ---------------------------------------------------------------------------
 
+// `runtime` is an open-extension field on every FailureMode context per
+// Option C step 1 (Phase 22) — declares which executor produced the failure
+// so audit can stratify minibob vs ias-executor regressions.
 type FailureMode =
-  | { type: "verifier_negative"; reason: string; context: { failed_evidence: Array<{ source: string; expected?: unknown; actual?: unknown; assertion?: string; detail?: string }> } }
-  | { type: "budget_exhausted"; reason: string; context: { budget_type: "cost" | "duration"; consumed: number; allowed: number } }
-  | { type: "safety_breach"; reason: string; context: { breach_type: "depth" | "cycle"; limit: number; ancestor_chain: string[] } }
-  | { type: "cascading"; reason: string; context: { upstream_task_id: string } }
-  | { type: "user_abort"; reason: string; context: { abort_source: string } };
+  | { type: "verifier_negative"; reason: string; context: { failed_evidence: Array<{ source: string; expected?: unknown; actual?: unknown; assertion?: string; detail?: string }>; runtime?: ForgeRuntime } }
+  | { type: "budget_exhausted"; reason: string; context: { budget_type: "cost" | "duration"; consumed: number; allowed: number; runtime?: ForgeRuntime } }
+  | { type: "safety_breach"; reason: string; context: { breach_type: "depth" | "cycle"; limit: number; ancestor_chain: string[]; runtime?: ForgeRuntime } }
+  | { type: "cascading"; reason: string; context: { upstream_task_id: string; runtime?: ForgeRuntime } }
+  | { type: "user_abort"; reason: string; context: { abort_source: string; runtime?: ForgeRuntime } };
 
 function classifyFailedAssertion(assertion: AssertionResult): FailureMode {
   // Map an assertion id to its declared failure source per design.md tables.
@@ -702,6 +808,10 @@ function classifyFailedAssertion(assertion: AssertionResult): FailureMode {
     D1: "trace_signature", D2: "trace_signature",
     D3: "binding_layer_record", D4: "goal_verifier_result",
   };
+  // Per Option C step 1 (Phase 22): runtime is stamped into context so
+  // downstream audit can distinguish minibob vs ias-executor failure modes.
+  // `runtime` is added as an open field — FailureMode contexts are not closed
+  // shapes (see design.md §c) so adding metadata is non-breaking.
   return {
     type: "verifier_negative",
     reason: `assertion ${assertion.id} failed`,
@@ -713,6 +823,7 @@ function classifyFailedAssertion(assertion: AssertionResult): FailureMode {
           detail: assertion.inspected_field,
         },
       ],
+      runtime: FORGE_RUNTIME,
     },
   };
 }
@@ -736,6 +847,9 @@ interface TestReportBody {
     label: string;
     executionId: string | null;
     assertions: AssertionResult[];
+    // Per Option C step 1 (Phase 22): declare which executor drove this pass so
+    // downstream audit can compare minibob vs ias-executor performance.
+    runtime?: ForgeRuntime;
   }>;
   witnesses: Witness[];
   failure_mode: FailureMode | null;
@@ -771,13 +885,31 @@ async function emitTestReport(body: TestReportBody): Promise<void> {
 // test_registration emission (design.md §f, spec R4, T3)
 // ---------------------------------------------------------------------------
 
+// design.md §F: 12-row grid (3 shapes × 2 complexity × 2 depth). Each row is a
+// PerturbationSchema entry — input_path names the runner env var perturbed and
+// transform encodes the value to set. expected_effect="metric_shift" because
+// none of the variants is designed to flip pass/fail; cost/duration deltas are
+// the discriminator (design.md §F.2).
 const PERTURBATION_SCHEDULE = (() => {
-  const rows: Array<{ row: number; shape: string; complexity: string; depth: number }> = [];
-  let r = 1;
+  const rows: Array<{
+    id: string;
+    description: string;
+    apply: { input_path: string; transform: string };
+    expected_effect: "pass→fail" | "fail→pass" | "metric_shift";
+  }> = [];
   for (const shape of CANDIDATE_SHAPES) {
     for (const complexity of ["single-step", "two-step"] as const) {
       for (const depth of [0, 1] as const) {
-        rows.push({ row: r++, shape, complexity, depth });
+        const variant = `${complexity}-depth-${depth}`;
+        rows.push({
+          id: `shape-${shape}-complexity-${complexity}-depth-${depth}`,
+          description: `Target shape: ${shape}, ${complexity} depth-${depth}`,
+          apply: {
+            input_path: "TARGET_SHAPE,VARIANT",
+            transform: `set:TARGET_SHAPE=${shape};VARIANT=${variant}`,
+          },
+          expected_effect: "metric_shift",
+        });
       }
     }
   }
@@ -791,17 +923,26 @@ const REGISTRATION_BODY = {
     target_shape: `enum [${CANDIDATE_SHAPES.join(" | ")}]`,
     canary_endpoint: "https://activity.metabob.com",
     discovery_endpoint: "https://discovery.metabob.com",
+    // rotation policy (kept here since schema has no top-level slot):
+    rotation: "week_number % 12 -> row index; restart at row 1 every 12 weeks",
   },
   perturbation_schedule: PERTURBATION_SCHEDULE,
-  cadence: "weekly",
-  rotation: "week_number % 12 -> row index; restart at row 1 every 12 weeks",
+  perturbation_cadence: "weekly",
   goal_alignment: [
-    "#3-MiniBob-connected-vessels (proposal.md:24-31)",
-    "#5-activities-compose-all-features (proposal.md:24-31)",
+    {
+      criterion: "#3-vessel-resolvers-only",
+      discrimination_claim:
+        "MiniBob-connected-vessels (proposal.md:24-31): forge path must produce a discovery-registered vessel that the binding layer resolves, not a one-shot in-process resolver.",
+    },
+    {
+      criterion: "#5-composition-via-features",
+      discrimination_claim:
+        "activities-compose-all-features (proposal.md:24-31): slot-binding escalation → forge_missing_shape → downstream bind must compose end-to-end inside the goal pipeline, not just at isolated VesselForgeHost calls.",
+    },
   ],
   discrimination_claim:
     "This test passes only when slot-binding's escalation branch correctly routes count=0 cases to forge_missing_shape AND downstream tasks bind to the just-forged vessel. It discriminates a working forge path from one that succeeds on isolated VesselForgeHost calls but fails inside the goal-processing pipeline: a regression in slot-binding's condition strings, in the shape_producer_inventory resolver, in lifecycle:task:preBinding payloads, in the binding layer's producer-selection, or in goal-verifier's enrichment gate would each independently flip at least one of C1..C8 or D1..D4 to red while leaving validation/scripts/test-22-forge-and-paths.ts green.",
-  witness_types: ["trace_signature", "discovery_registration_probe", "binding_layer_record", "goal_verifier_result"],
+  witness_types: ["differential_solve", "validator_consensus"],
 };
 
 async function ensureTestRegistration(): Promise<void> {
@@ -858,6 +999,7 @@ async function main(): Promise<void> {
   console.log(`  ACTIVITY_API_URL : ${ACTIVITY_API_URL}`);
   console.log(`  DISCOVERY_URL    : ${DISCOVERY_URL}`);
   console.log(`  MINIBOB_BIN      : ${MINIBOB_BIN}`);
+  console.log(`  FORGE_RUNTIME    : ${FORGE_RUNTIME}`);
   console.log("");
 
   const t0 = Date.now();
@@ -877,6 +1019,7 @@ async function main(): Promise<void> {
       type: "verifier_negative",
       reason: "precondition_violated: shape already has producer",
       context: {
+        runtime: FORGE_RUNTIME,
         failed_evidence: [
           {
             source: "discovery_registration_probe",
@@ -905,9 +1048,9 @@ async function main(): Promise<void> {
   // Pass 1
   const since = new Date(t0 - 60_000).toISOString();
   const goalText = loadGoalText();
-  console.log("\n[pass1] invoking minibob --single ...");
-  const run1 = await runMinibobSingle(goalText);
-  console.log(`[pass1] minibob exit=${run1.exitCode} duration=${(run1.duration_ms / 1000).toFixed(1)}s executionId=${run1.executionId ?? "(not in stdout)"}`);
+  console.log(`\n[pass1] invoking forge via runtime=${FORGE_RUNTIME} ...`);
+  const run1 = await runForge(goalText);
+  console.log(`[pass1] runtime=${FORGE_RUNTIME} exit=${run1.exitCode} duration=${(run1.duration_ms / 1000).toFixed(1)}s executionId=${run1.executionId ?? "(not in stdout)"}`);
 
   // design.md §c: if executionId missing from stdout, fall back to most recent
   // root execution within a 5-minute window. We resolve that by fetching
@@ -929,7 +1072,7 @@ async function main(): Promise<void> {
     const failure: FailureMode = {
       type: "cascading",
       reason: "no_execution_id_in_window",
-      context: { upstream_task_id: "minibob_invocation" },
+      context: { upstream_task_id: `forge_invocation_${FORGE_RUNTIME}`, runtime: FORGE_RUNTIME },
     };
     await emitTestReport({
       test_id: TEST_ID,
@@ -992,7 +1135,7 @@ async function main(): Promise<void> {
       registration_id: TEST_ID,
       perturbation_row: { shape: TARGET_SHAPE, complexity: COMPLEXITY, depth: DEPTH },
       passed: false,
-      passes: [{ label: "pass1", executionId: rootExecId1, assertions: pass1.assertions }],
+      passes: [{ label: "pass1", executionId: rootExecId1, assertions: pass1.assertions, runtime: FORGE_RUNTIME }],
       witnesses,
       failure_mode: classifyFailedAssertion(firstFailed),
       duration_ms: Date.now() - t0,
@@ -1007,10 +1150,10 @@ async function main(): Promise<void> {
   console.log(`[pre-pass2] discovery count=${prePass2.count}`);
 
   // Pass 2 — same goal text
-  console.log("\n[pass2] invoking minibob --single (same goal) ...");
+  console.log(`\n[pass2] invoking forge via runtime=${FORGE_RUNTIME} (same goal) ...`);
   const sinceP2 = new Date(Date.now() - 30_000).toISOString();
-  const run2 = await runMinibobSingle(goalText);
-  console.log(`[pass2] minibob exit=${run2.exitCode} duration=${(run2.duration_ms / 1000).toFixed(1)}s executionId=${run2.executionId ?? "(not in stdout)"}`);
+  const run2 = await runForge(goalText);
+  console.log(`[pass2] runtime=${FORGE_RUNTIME} exit=${run2.exitCode} duration=${(run2.duration_ms / 1000).toFixed(1)}s executionId=${run2.executionId ?? "(not in stdout)"}`);
 
   let rootExecId2 = run2.executionId;
   if (!rootExecId2) {
@@ -1027,7 +1170,7 @@ async function main(): Promise<void> {
     const failure: FailureMode = {
       type: "cascading",
       reason: "no_execution_id_in_window_for_pass2",
-      context: { upstream_task_id: "minibob_invocation_pass2" },
+      context: { upstream_task_id: `forge_invocation_${FORGE_RUNTIME}_pass2`, runtime: FORGE_RUNTIME },
     };
     await emitTestReport({
       test_id: TEST_ID,
@@ -1035,7 +1178,7 @@ async function main(): Promise<void> {
       registration_id: TEST_ID,
       perturbation_row: { shape: TARGET_SHAPE, complexity: COMPLEXITY, depth: DEPTH },
       passed: false,
-      passes: [{ label: "pass1", executionId: rootExecId1, assertions: pass1.assertions }],
+      passes: [{ label: "pass1", executionId: rootExecId1, assertions: pass1.assertions, runtime: FORGE_RUNTIME }],
       witnesses,
       failure_mode: failure,
       duration_ms: Date.now() - t0,
@@ -1088,8 +1231,8 @@ async function main(): Promise<void> {
     perturbation_row: { shape: TARGET_SHAPE, complexity: COMPLEXITY, depth: DEPTH },
     passed: overallPassed,
     passes: [
-      { label: "pass1", executionId: rootExecId1, assertions: pass1.assertions },
-      { label: "pass2", executionId: rootExecId2, assertions: pass2.assertions },
+      { label: "pass1", executionId: rootExecId1, assertions: pass1.assertions, runtime: FORGE_RUNTIME },
+      { label: "pass2", executionId: rootExecId2, assertions: pass2.assertions, runtime: FORGE_RUNTIME },
     ],
     witnesses,
     failure_mode: firstFailed ? classifyFailedAssertion(firstFailed) : null,
