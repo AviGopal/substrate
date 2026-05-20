@@ -35,6 +35,8 @@ import {
   ConsoleEventSink,
   HttpTraceSink,
 } from "../../repos/ias-executor-ts/src/examples/bun-host";
+import { LifecycleSubscriberVessel } from "../../repos/ias-executor-ts/src/lifecycle-subscriber";
+import { loadSubscriberTemplates } from "../../repos/ias-executor-ts/src/templates";
 import type { LLMPort, TraceSink } from "../../repos/ias-executor-ts/src/ports";
 import type {
   ActivityTemplate,
@@ -286,12 +288,32 @@ async function main(): Promise<number> {
   // intentional rather than aspirational; ias-executor traces are simpler
   // than minibob traces by design.
   const traceSink = new TranslatingTraceSink(ACTIVITY_API_URL, METABOB_API_KEY);
-  const eventSink = new ConsoleEventSink();
+  const consoleSink = new ConsoleEventSink();
+
+  // Compose lifecycle subscribers: SHARED_TEMPLATES from ias-executor-ts catalogue
+  // (slot-binding, validator-dispatch, audit-test-report, ribosome-extract, etc.)
+  // get registered as subscribers. The dispatcher records but doesn't recurse
+  // into nested executor.execute() here — the forge is a single-template run;
+  // full nested dispatch is the GoalHost demonstration (spec §3 / §G). This
+  // wrapper proves subscribers FIRE on the new engine lifecycle:* emissions.
+  const subscriberFires: Array<{ templateId: string; eventType: string }> = [];
+  const subscriber = new LifecycleSubscriberVessel({
+    dispatcher: (template, event) => {
+      subscriberFires.push({ templateId: template.id, eventType: event.type });
+      console.log(`[subscriber] ${template.id} fired on ${event.type}`);
+    },
+    downstreamSink: consoleSink,
+    logger: { warn: (m) => console.warn(`[subscriber] ${m}`), debug: () => {} },
+  });
+  for (const t of loadSubscriberTemplates()) {
+    subscriber.register(t);
+  }
+  console.log(`[ias-forge] subscribers     = ${loadSubscriberTemplates().length} registered`);
 
   const host = new VesselForgeHost({
     llm,
     discoveryEndpoint: DISCOVERY_URL,
-    eventSink,
+    eventSink: subscriber, // chains: subscriber.emit() → matches + forward to consoleSink
     traceSink,
   });
 
@@ -361,6 +383,7 @@ async function main(): Promise<number> {
           endpoint: deployedContent.endpoint ?? null,
         }
       : null,
+    subscriberFires,
     tasks: trace.tasks.map((t) => ({
       taskId: t.taskId,
       success: t.success,
