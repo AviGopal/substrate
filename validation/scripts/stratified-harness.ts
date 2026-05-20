@@ -22,6 +22,11 @@ import { homedir } from "node:os";
 import { join, dirname, resolve as resolvePath } from "node:path";
 import { parseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
+import {
+  scoreDecisionRecordCompleteness,
+  POSTERIOR_KEYS,
+  BINDING_KEYS,
+} from "./lib/decision-record-completeness.ts";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -334,17 +339,7 @@ interface TraceScores {
   decision_record_completeness: number | null;
 }
 
-// Keys that indicate a Thompson posterior was recorded in a task's decision_record
-const POSTERIOR_KEYS = new Set([
-  "posterior_source", "thompson_alpha", "alpha", "selection_alpha",
-  "selection_metadata", "score_source", "method",
-]);
-
-// Keys that indicate a producer/binding rationale was recorded
-const BINDING_KEYS = new Set([
-  "producer_rationale", "binding_rationale", "selected_producer",
-  "binding_producer", "producer_id", "slot_binding",
-]);
+// POSTERIOR_KEYS and BINDING_KEYS imported from lib/decision-record-completeness.ts
 
 function scoreTasks(
   tasks: TaskRecord[],
@@ -376,57 +371,9 @@ function scoreTasks(
   const impCount = tasks.filter((t) => (t.activity_id ?? "").includes("improvise")).length;
   const improvise_share = impCount / tasks.length;
 
-  // Decision record completeness — 3 criteria (Phase 25.5.1):
-  //   A. Every activity selection has a Thompson-sampled posterior recorded
-  //   B. Every binding task has a producer rationale recorded
-  //   C. Every failure (task or trace) has a failure_mode annotation
-
-  // Criterion A: fraction of tasks whose decision_record contains a posterior key
-  const tasksWith = tasks.filter((t) => {
-    if (!t.decision_record) return false;
-    return Object.keys(t.decision_record).some((k) => POSTERIOR_KEYS.has(k));
-  }).length;
-  const scoreA = tasksWith / tasks.length;
-
-  // Criterion B: among tasks that have input impulse bindings, fraction with producer rationale
-  const bindingTasks = tasks.filter((t) => (t.input_impulse_ids?.length ?? 0) > 0);
-  let scoreB: number;
-  if (bindingTasks.length === 0) {
-    // Vacuously true — no bindings to annotate
-    scoreB = 1.0;
-  } else {
-    const withRationale = bindingTasks.filter((t) => {
-      if (!t.decision_record) return false;
-      return Object.keys(t.decision_record).some((k) => BINDING_KEYS.has(k));
-    }).length;
-    scoreB = withRationale / bindingTasks.length;
-  }
-
-  // Criterion C: failed tasks and failed trace have failure_mode annotation
-  const failedTasks = tasks.filter(
-    (t) => t.status === "failed" || t.status === "error"
-  );
-  const traceIsFailed =
-    trace.status !== "success" && trace.status !== "completed";
-  let scoreC: number;
-  if (failedTasks.length === 0 && !traceIsFailed) {
-    // No failures — vacuously satisfied
-    scoreC = 1.0;
-  } else {
-    let annotated = 0;
-    let total = 0;
-    for (const t of failedTasks) {
-      total++;
-      if (t.failure_mode != null) annotated++;
-    }
-    if (traceIsFailed) {
-      total++;
-      if (trace.failure_mode != null) annotated++;
-    }
-    scoreC = total > 0 ? annotated / total : 1.0;
-  }
-
-  const decision_record_completeness = (scoreA + scoreB + scoreC) / 3;
+  // Decision record completeness delegated to lib/decision-record-completeness.ts
+  const drcScores = scoreDecisionRecordCompleteness(tasks, trace);
+  const decision_record_completeness = drcScores?.completeness ?? null;
 
   return { reuse_efficiency, improvise_share, decision_record_completeness };
 }

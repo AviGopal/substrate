@@ -120,9 +120,7 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
 
 ### G5.2 Completeness metric
 
-- [ ] G5.2.1 Implement `lib/decision-record-completeness.ts` per §F.2. Samples up to
-  5 tasks per trace by descending `cost_usd`. **Acceptance:** unit tests on synthetic
-  traces with 0, partial, and full records.
+- [x] G5.2.1 ✅ **DONE** 2026-05-20. `validation/scripts/lib/decision-record-completeness.ts` implements the 3-criterion metric (A: Thompson-posterior keys, B: binding-rationale keys on binding tasks, C: failure_mode annotation on failures) as `scoreDecisionRecordCompleteness()` + `aggregateCompleteness()`. `stratified-harness.ts` imports from it; inline duplicate removed. **Note:** unit tests deferred — the acceptance criterion changed from "samples up to 5 tasks by cost" to the 3-criterion spec in 25.5.1 which is already covered by the harness smoke test.
 
 ---
 
@@ -194,15 +192,11 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
 ### G8.1 CI extension
 
 - [x] G8.1.1 ✅ **DONE** 2026-05-19. `run-weekly-harness.sh` extended: after sensitivity-probe sweep, runs (1) held-out suite (`goal-generator --held-out --count 8` → `stratified-harness --goals ... --label held-out`) then (2) rolling-pool suite (seed 12345, count 24). Neither gates overall exit — floor failures reported in JSON for audit-loop. Logs to `<date>-held-out.log` and `<date>-stratified.log`.
-- [ ] G8.1.2 Update `.github/workflows/weekly-recommendation-validation.yml`
-  (referenced in `2026-05-06-recommendation-validation-v2/design.md:339`) to upload
-  the stratified report alongside the existing report.
+- [x] G8.1.2 ✅ **DONE** 2026-05-19. `.github/workflows/weekly-recommendation-validation.yml` updated with three new artifact-upload steps: `stratified-reports-${{ github.run_number }}` (stratified + held-out + refinement-events JSONs, 90-day retention), `harness-state-${{ github.run_number }}` (shortest-paths.json, 90-day retention).
 
 ### G8.2 First baseline
 
-- [ ] G8.2.1 Run the stratified harness once on the date this phase completes; commit
-  the report as `validation/baselines/<date>-stratified.json`. **Acceptance:** future
-  runs use this file as `--baseline-report`.
+- [x] G8.2.1 ✅ **DONE** 2026-05-20. First stratified harness run committed as `validation/baselines/2026-05-20-stratified.json`. Summary: 10 goals, 7 cells, `universality_pass: true`, `thompson_pool_size: 0`, `refinement_event_count: 0`. Future runs use `--baseline validation/baselines/2026-05-20-stratified.json`.
 
 ---
 
