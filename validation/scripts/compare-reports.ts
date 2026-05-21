@@ -139,11 +139,227 @@ function nullableArrow(before: number | null | undefined, after: number | null |
 // Main
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Stratified report types (mirrors stratified-harness.ts output)
+// ---------------------------------------------------------------------------
+
+interface CellStats {
+  sample_count: number;
+  success_count: number;
+  success_rate: number | null;
+  cost_p50_usd: number | null;
+  reuse_efficiency: number | null;
+  improvise_share: number | null;
+  decision_record_completeness: number | null;
+  witness_disagreement?: number | null;
+  floor_pass: boolean;
+  recommend_coverage?: number | null;
+  recommend_shape_match?: number | null;
+  gated_on_phase_22?: boolean;
+  insufficient_sample?: boolean;
+}
+
+interface StratifiedReport {
+  harness_version?: string;
+  run_at: string;
+  label?: string;
+  goals_file?: string;
+  generator_seed?: number | string;
+  shape_registry_snapshot_hash?: string;
+  universality_pass: boolean;
+  cell_count: number;
+  passable_cell_count: number;
+  coverage_matrix: Record<string, CellStats>;
+  optimality_ratios?: Record<string, { optimality_ratio: number | null; trend?: string }>;
+}
+
+/**
+ * Render a nullable number as a fixed-decimal string or "—".
+ */
+function fmtNullable(v: number | null | undefined, decimals = 3): string {
+  if (v === null || v === undefined) return "—";
+  return v.toFixed(decimals);
+}
+
+function fmtNullablePct(v: number | null | undefined): string {
+  if (v === null || v === undefined) return "—";
+  return `${(v * 100).toFixed(1)}%`;
+}
+
+function cellDelta(b: number | null | undefined, a: number | null | undefined): string {
+  if (b === null || b === undefined || a === null || a === undefined) return "—";
+  const diff = a - b;
+  return `${diff >= 0 ? "+" : ""}${(diff * 100).toFixed(1)}pp`;
+}
+
+function cellArrow(b: number | null | undefined, a: number | null | undefined, lowerIsGood = false): string {
+  if (b === null || b === undefined || a === null || a === undefined) return "─";
+  if (a > b) return lowerIsGood ? "▼" : "▲";
+  if (a < b) return lowerIsGood ? "▲" : "▼";
+  return "─";
+}
+
+function floorChange(bCell: CellStats | undefined, aCell: CellStats | undefined): string {
+  if (!bCell && !aCell) return "—";
+  if (!bCell) return aCell!.floor_pass ? "new PASS" : "new FAIL";
+  if (!aCell) return "(removed)";
+  if (bCell.floor_pass === aCell.floor_pass) return bCell.floor_pass ? "PASS→PASS" : "FAIL→FAIL";
+  return bCell.floor_pass ? "**PASS→FAIL**" : "**FAIL→PASS**";
+}
+
+async function runStratifiedComparison(beforePath: string, afterPath: string): Promise<void> {
+  const before = JSON.parse(await readFile(beforePath, "utf8")) as StratifiedReport;
+  const after = JSON.parse(await readFile(afterPath, "utf8")) as StratifiedReport;
+
+  const beforeLabel = before.label || before.run_at.slice(0, 10);
+  const afterLabel = after.label || after.run_at.slice(0, 10);
+
+  // Registry snapshot hash check
+  const hashMatch =
+    before.shape_registry_snapshot_hash &&
+    after.shape_registry_snapshot_hash &&
+    before.shape_registry_snapshot_hash === after.shape_registry_snapshot_hash;
+  const hashWarning = (!hashMatch && before.shape_registry_snapshot_hash && after.shape_registry_snapshot_hash)
+    ? " ⚠️  shape registry snapshot differs — cells may not be directly comparable"
+    : "";
+
+  console.log(`\n# Stratified Harness — Cell-by-Cell Comparison${hashWarning}\n`);
+  console.log(`- Before: **${beforeLabel}** — ${before.run_at}`);
+  console.log(`- After:  **${afterLabel}** — ${after.run_at}`);
+  console.log(`- Universality: ${before.universality_pass ? "PASS" : "FAIL"} → ${after.universality_pass ? "PASS" : "FAIL"}`);
+  console.log();
+
+  // Collect all cell ids across both reports
+  const allCellIds = new Set<string>([
+    ...Object.keys(before.coverage_matrix),
+    ...Object.keys(after.coverage_matrix),
+  ]);
+  const sortedCells = [...allCellIds].sort();
+
+  // ---------------------------------------------------------------------------
+  // Section 1: Cell-by-cell floor status
+  // ---------------------------------------------------------------------------
+  console.log("## Floor Status per Cell\n");
+  console.log(`| Cell | Before floor | After floor | Change |`);
+  console.log(`|------|-------------|------------|--------|`);
+
+  const regressions: string[] = [];
+  const improvements: string[] = [];
+
+  for (const cellId of sortedCells) {
+    const bCell = before.coverage_matrix[cellId];
+    const aCell = after.coverage_matrix[cellId];
+    const change = floorChange(bCell, aCell);
+    if (change.includes("PASS→FAIL")) regressions.push(cellId);
+    if (change.includes("FAIL→PASS")) improvements.push(cellId);
+    const bFloor = bCell ? (bCell.gated_on_phase_22 ? "gated" : bCell.insufficient_sample ? "insuff" : bCell.floor_pass ? "PASS" : "FAIL") : "—";
+    const aFloor = aCell ? (aCell.gated_on_phase_22 ? "gated" : aCell.insufficient_sample ? "insuff" : aCell.floor_pass ? "PASS" : "FAIL") : "—";
+    console.log(`| \`${cellId}\` | ${bFloor} | ${aFloor} | ${change} |`);
+  }
+  console.log();
+
+  if (regressions.length > 0) {
+    console.log(`> ⚠️  Floor regressions: ${regressions.map((c) => `\`${c}\``).join(", ")}\n`);
+  }
+  if (improvements.length > 0) {
+    console.log(`> ✅ Floor improvements: ${improvements.map((c) => `\`${c}\``).join(", ")}\n`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Section 2: Key metric deltas per cell
+  // ---------------------------------------------------------------------------
+  console.log("## Key Metric Deltas per Cell\n");
+  console.log(`| Cell | Metric | Before | After | Δ | Dir |`);
+  console.log(`|------|--------|--------|-------|---|-----|`);
+
+  for (const cellId of sortedCells) {
+    const bCell = before.coverage_matrix[cellId];
+    const aCell = after.coverage_matrix[cellId];
+    if (!bCell || !aCell) continue;
+
+    const rows: Array<[string, number | null | undefined, number | null | undefined, boolean]> = [
+      ["success_rate (↑)", bCell.success_rate, aCell.success_rate, false],
+      ["reuse_efficiency (↑)", bCell.reuse_efficiency, aCell.reuse_efficiency, false],
+      ["improvise_share (↓)", bCell.improvise_share, aCell.improvise_share, true],
+      ["cost_p50_usd (↓)", bCell.cost_p50_usd, aCell.cost_p50_usd, true],
+    ];
+
+    for (const [metric, b, a, lowerIsGood] of rows) {
+      const delta = cellDelta(b, a);
+      const dir = cellArrow(b, a, lowerIsGood);
+      if (delta === "—") continue;
+      console.log(
+        `| \`${cellId}\` | ${metric} | ${fmtNullablePct(b)} | ${fmtNullablePct(a)} | ${delta} | ${dir} |`
+      );
+    }
+  }
+  console.log();
+
+  // ---------------------------------------------------------------------------
+  // Section 3: Sample count changes
+  // ---------------------------------------------------------------------------
+  console.log("## Sample Count Changes\n");
+  console.log(`| Cell | Before n | After n | Δn |`);
+  console.log(`|------|----------|---------|-----|`);
+
+  for (const cellId of sortedCells) {
+    const bCell = before.coverage_matrix[cellId];
+    const aCell = after.coverage_matrix[cellId];
+    const bN = bCell?.sample_count ?? 0;
+    const aN = aCell?.sample_count ?? 0;
+    const delta = aN - bN;
+    console.log(`| \`${cellId}\` | ${bN} | ${aN} | ${delta >= 0 ? "+" : ""}${delta} |`);
+  }
+  console.log();
+
+  // ---------------------------------------------------------------------------
+  // Section 4: Optimality ratio changes (if present)
+  // ---------------------------------------------------------------------------
+  if (before.optimality_ratios && after.optimality_ratios) {
+    console.log("## Optimality Ratio Changes\n");
+    console.log(`| Cell | Before ratio | After ratio | Trend (after) |`);
+    console.log(`|------|-------------|------------|---------------|`);
+
+    const allOptCells = new Set<string>([
+      ...Object.keys(before.optimality_ratios ?? {}),
+      ...Object.keys(after.optimality_ratios ?? {}),
+    ]);
+    for (const cellId of [...allOptCells].sort()) {
+      const bOpt = before.optimality_ratios?.[cellId]?.optimality_ratio;
+      const aOpt = after.optimality_ratios?.[cellId];
+      console.log(
+        `| \`${cellId}\` | ${fmtNullable(bOpt)} | ${fmtNullable(aOpt?.optimality_ratio)} | ${aOpt?.trend ?? "—"} |`
+      );
+    }
+    console.log();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Section 5: Summary
+  // ---------------------------------------------------------------------------
+  console.log("## Summary\n");
+  console.log(`- Cells compared: ${sortedCells.length}`);
+  console.log(`- Floor regressions: **${regressions.length}**`);
+  console.log(`- Floor improvements: **${improvements.length}**`);
+  console.log(`- Universality: ${before.universality_pass ? "PASS" : "FAIL"} → ${after.universality_pass ? "PASS" : "FAIL"}`);
+  console.log();
+}
+
 async function main() {
-  const args = process.argv.slice(2);
+  const rawArgs = process.argv.slice(2);
+  const stratified = rawArgs.includes("--stratified");
+  const args = rawArgs.filter((a) => a !== "--stratified");
+
   if (args.length < 2) {
-    console.error("Usage: bun run validation/scripts/compare-reports.ts <before.json> <after.json>");
+    console.error(
+      "Usage: bun run validation/scripts/compare-reports.ts [--stratified] <before.json> <after.json>"
+    );
     process.exit(1);
+  }
+
+  if (stratified) {
+    await runStratifiedComparison(args[0]!, args[1]!);
+    return;
   }
 
   const [beforePath, afterPath] = args;

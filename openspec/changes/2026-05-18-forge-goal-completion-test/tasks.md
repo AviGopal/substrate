@@ -2,41 +2,41 @@
 
 ## T1. Prompt authoring
 
-- [ ] T1.1 Create `validation/prompts/40-forge-required-shape.md` following the format of `validation/prompts/22-selection-and-score-update.md` (header, "What to verify" block, numbered steps, "Acceptance criteria" block).
-- [ ] T1.2 Goal text MUST name a target shape via a `{{target_shape}}` placeholder (substituted by the runner per the week's perturbation row), motivate a downstream consumer that genuinely needs the shape, and not mention forge or slot-binding directly — the user-facing goal must read like any other user goal.
-- [ ] T1.3 Include a "variant block" that the runner can select per perturbation row: single-step (goal directly needs the shape) vs two-step (goal needs an intermediate shape that the LLM-of-last-resort would map to the target).
-- [ ] T1.4 Include a "depth-1 variant" that wraps the goal text in a sub-goal trigger (a phrasing that exercises `create-shape-provider-goal` once before the forge-eligible shape surfaces).
+- [x] T1.1 Create `validation/prompts/40-forge-required-shape.md`. Done: exists at `validation/prompts/40-forge-required-shape.md`.
+- [x] T1.2 Goal text uses `{{target_shape}}` placeholder; motivates downstream consumer; no mention of forge/slot-binding. Done.
+- [x] T1.3 Variant block: single-step vs two-step variants per perturbation row. Done: `VARIANT=single-step-depth-0|two-step-depth-0` env var.
+- [x] T1.4 Depth-1 variant wraps goal in sub-goal trigger. Done: `VARIANT=...-depth-1` variants.
 
 ## T2. Runner script
 
-- [ ] T2.1 Create `validation/scripts/test-forge-goal-completion.ts` modelled on `validation/scripts/test-22-forge-and-paths.ts` for env-var handling and Anthropic / METABOB key plumbing, but distinct in that the runner shells out to the minibob CLI rather than calling `VesselForgeHost` directly.
-- [ ] T2.2 Pre-flight discovery probe per `design.md` §b. Failure here emits `test_report` with `passed: false`, `failure_mode: { type: "verifier_negative", reason: "precondition_violated" }` and exits non-zero.
-- [ ] T2.3 Pass 1 invocation via `miniBob --single "<goal>"` with `MINIBOB_SKIP_STARTUP=true`. Capture stdout for the execution id; on miss, fall back to most-recent root execution within 5 min.
-- [ ] T2.4 Trace fetch via `POST /v2/impulses/resolve` with pointer `{type: "executionTraceWithSignatures", execution_id: ...}` against `https://activity.metabob.com`.
-- [ ] T2.5 Implement assertions C1–C8 from `design.md` §c, each with the `inspected_field` excerpt recorded in the report whether green or red.
-- [ ] T2.6 Pass 2 invocation (same CLI surface, same goal text) and assertions D1–D4 from `design.md` §d.
-- [ ] T2.7 Witness harvesting per `design.md` §g — four witness types, total of 9 witness records on a successful run (2 trace signatures + 3 discovery probes + 2 binding records + 2 goal-verifier results).
-- [ ] T2.8 `test_report` emission per `design.md` §e via `POST /v2/impulses/resolve` with pointer `{type: "test_report_write", ...}`.
-- [ ] T2.9 Exit code 0 only if both passes green; exit code 1 otherwise (the audit-loop reads the impulse, not the exit code, but the harness uses the code for at-a-glance dashboard color).
+- [x] T2.1 `validation/scripts/test-forge-goal-completion.ts` created (1291 lines). Supports `FORGE_RUNTIME=ias-executor|minibob`. Done 2026-05-21.
+- [x] T2.2 Pre-flight discovery probe. Done: `runPreflightProbe()` emits `test_report` with `verifier_negative/precondition_violated` on failure.
+- [x] T2.3 Pass 1 invocation (minibob or GoalHost); captures execution id from stdout. Done.
+- [x] T2.4 Trace fetch via `executionTraceWithSignatures`. Done.
+- [x] T2.5 Assertions C1–C8. Done: `runAssertionBlock("pass1", ...)`.
+- [x] T2.6 Pass 2 + assertions D1–D4. Done.
+- [x] T2.7 Witness harvesting: 9 witness records per successful run. Done: `harvestWitnesses()`.
+- [x] T2.8 `test_report_write` emission. Done: `emitTestReport()`.
+- [x] T2.9 Exit 0 iff both passes green. Done.
 
 ## T3. test_registration emission
 
-- [ ] T3.1 On first run, POST `test_registration` impulse to activity-api with the body from `design.md` §f (12 perturbation rows, witness types, discrimination claim).
-- [ ] T3.2 Idempotent re-emission: subsequent runs check whether a `test_registration` with `id: "forge-goal-completion"` already exists in the registry; if it does and the perturbation schedule hash matches, skip. If the schedule diverges (perturbation rows changed), emit a new registration with `supersedes: <prior_id>` per the sibling spec's grandfathering rule.
+- [x] T3.1 `test_registration` POST with 12 perturbation rows + witness types. Done: `emitTestRegistration()` in script.
+- [x] T3.2 Idempotent re-emission with `supersedes` on schedule drift. Done.
 
 ## T4. Benchmark entry
 
-- [ ] T4.1 Create `validation/forge-goal-benchmark.json` parallel to `validation/activity-reuse-benchmark-v2.json`. One row: `{id: "forge-goal-completion", prompt: "validation/prompts/40-forge-required-shape.md", runner: "validation/scripts/test-forge-goal-completion.ts", cadence: "weekly"}`.
+- [x] T4.1 `validation/forge-goal-benchmark.json` created. Done.
 
 ## T5. cycle.sh forge category
 
-- [ ] T5.1 Add a `forge` case to `validation/cycle.sh:121-141`: `forge) [[ "$base" =~ ^4[0-9]- ]] ;;` so prompts 40–49 are reachable via `--category forge`.
-- [ ] T5.2 Document the new category in `validation/cycle.sh:14` help block ("Recognized: general, bugfix, feature, refactor, analysis, upkeep, forge").
+- [x] T5.1 `forge` case added to `validation/cycle.sh`. Done.
+- [x] T5.2 Help block updated. Done.
 
 ## T6. Weekly harness invocation
 
-- [ ] T6.1 Add a step to `validation/scripts/run-weekly-harness.sh` that runs `bun run validation/scripts/test-forge-goal-completion.ts` with the perturbation row selected from `date +%V`.
-- [ ] T6.2 Capture stdout/stderr to `validation/results/{date}-forge-goal.log` and the `test_report` impulse id to `validation/results/{date}-forge-goal-report.json` for cross-reference with the audit loop's outputs.
+- [x] T6.1 Step added to `validation/scripts/run-weekly-harness.sh`. Done.
+- [x] T6.2 stdout/stderr captured to `{date}-forge-goal.log`, report id to `{date}-forge-goal-report.json`. Done.
 
 ## T7. Smoke run on canary
 
