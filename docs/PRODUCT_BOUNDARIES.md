@@ -377,3 +377,25 @@ research-mode-only paths under that prefix return 404 today. The
 proper fix lands in **iteration 5** (adapter layer). The rubric
 placeholders ship skipped specifically so the loop doesn't depend on
 that surface until then.
+
+---
+
+## Stopping condition met — 2026-05-21
+
+All five plan items from the standalone-product `/loop` are archived
+under `openspec/changes/archive/`:
+
+| Spec | SHA |
+|------|-----|
+| standalone-product-boundaries | cloud-dashboard `5529fbd` |
+| playwright-dev-loop | cloud-dashboard `5529fbd` |
+| mcp-info-surface | cloud-dashboard `6a598d1` |
+| rpc-api-mcp-usage-adapter | cloud-dashboard `6a598d1` |
+| team-lead-rubric (this entry) | cloud-dashboard `fd86428` |
+
+Identity-vessel auth fixes (signup org_id cast + HS512 JWT verifier)
+deployed: identity-vessel `0.2.9-4047cc8`, helmfile rev 371.
+
+The `rubric` Playwright project is the canonical dev-loop gate for
+standalone mode. `bun run dev-loop` runs 6 specs with no auth.setup.ts
+dependency. The loop terminates here.

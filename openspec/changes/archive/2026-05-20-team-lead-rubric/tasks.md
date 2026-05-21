@@ -16,51 +16,32 @@ the loop exits.
 
 ## §2 Standalone seed
 
-- [ ] 2.1 Create
+- [x] 2.1 Create
       `repos/metabob-cloud-dashboard/e2e/fixtures/standalone-seed.ts`
       exporting `seedRubricUser()` per the design.md contract.
-      Idempotent. Pure HTTP.
-- [ ] 2.2 In `e2e/global-setup.ts`, when `E2E_STANDALONE_MODE=
+      Idempotent. Pure HTTP. — cloud-dashboard `fd86428`
+- [x] 2.2 In `e2e/global-setup.ts`, when `E2E_STANDALONE_MODE=
       true`, after the dashboard reachability check, call
       `seedRubricUser()` and write the returned `storageState`
       to `playwright/.auth/rubric.json`. Add
-      `playwright/.auth/` to `.gitignore`.
+      `playwright/.auth/` to `.gitignore`. — cloud-dashboard `fd86428`
 
 ## §3 Playwright project
 
-- [ ] 3.1 In `playwright.config.ts`, add a new project named
-      `rubric` with:
-      ```ts
-      {
-        name: "rubric",
-        testDir: "./e2e/rubric",
-        use: { ...devices["Desktop Chrome"], storageState: "playwright/.auth/rubric.json" },
-        // NO dependencies — explicitly standalone
-      }
-      ```
-- [ ] 3.2 Update `scripts/dev-loop.ts` to invoke
-      `--project=rubric` (replacing the current
-      `--project=chromium --no-deps`).
+- [x] 3.1 In `playwright.config.ts`, add a new project named
+      `rubric` with storageState + addInitScript shim for
+      sessionStorage. NO dependencies. — cloud-dashboard `fd86428`
+- [x] 3.2 Update `scripts/dev-loop.ts` to invoke
+      `--project=rubric`. — cloud-dashboard `fd86428`
 
 ## §4 Rubric specs
 
-- [ ] 4.1 Replace `e2e/rubric/01-onboard.spec.ts` body per
-      design.md. Assert API Keys page renders, create-key UX
-      works, revoke works.
-- [ ] 4.2 Replace `02-observe-agent.spec.ts`: assert
-      `/execution-traces` route shows the standalone-mode
-      placeholder and that the nav entry is absent.
-- [ ] 4.3 Replace `03-observe-mcp-usage.spec.ts`: visit `/mcp`,
-      verify tabs, exercise Usage tab against the seeded key,
-      assert either success cards or the documented error card.
-- [ ] 4.4 Replace `04-manage-team.spec.ts`: visit team page,
-      assert seeded user listed. Best-effort exercise invite if
-      UI exists.
-- [ ] 4.5 Replace `05-budget-check.spec.ts`: assert
-      `/usage-analytics` placeholder OR locate a non-gated
-      budget surface.
-- [ ] 4.6 Replace `06-cross-project-view.spec.ts`: best-effort
-      project-selector exercise or org-scope assertion.
+- [x] 4.1 Replace `e2e/rubric/01-onboard.spec.ts` — cloud-dashboard `fd86428`
+- [x] 4.2 Replace `02-observe-agent.spec.ts` — cloud-dashboard `fd86428`
+- [x] 4.3 Replace `03-observe-mcp-usage.spec.ts` — cloud-dashboard `fd86428`
+- [x] 4.4 Replace `04-manage-team.spec.ts` — cloud-dashboard `fd86428`
+- [x] 4.5 Replace `05-budget-check.spec.ts` — cloud-dashboard `fd86428`
+- [x] 4.6 Replace `06-cross-project-view.spec.ts` — cloud-dashboard `fd86428`
 
 ## §5 Verification
 
