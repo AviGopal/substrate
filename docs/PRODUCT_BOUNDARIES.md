@@ -144,6 +144,30 @@ adapter locations — never as a patch to rpc-api:
 The dashboard BFF is the default. Reach for a new vessel only when
 the BFF cannot meet the requirement.
 
+## MCP surface in dashboard
+
+The cloud-dashboard ships a `/mcp` route that surfaces a static
+mirror of the `metabob-mcp` tool registry (ten tools, each with
+tier / since / summary / parameter schema), a copy-pasteable
+install snippet pointing at `https://ide.metabob.com` and
+`https://identity.metabob.com`, and a usage tab that today is a
+placeholder. The catalog lives at
+`repos/metabob-cloud-dashboard/src/data/mcp-catalog.ts` as a
+frozen TypeScript module — not a runtime fetch against any mcp
+install — so customer installs of mcp don't have to advertise a
+catalog endpoint and the dashboard release is the single source of
+truth for "what does the product expose". The leading comment
+names the mirrored mcp version; the file must be updated whenever
+the tool registry changes upstream. Capability spec:
+[`openspec/changes/2026-05-20-mcp-info-surface/`](../openspec/changes/2026-05-20-mcp-info-surface/).
+
+The Usage tab will hydrate against the rpc-api BFF adapter in
+iteration 5 of the standalone-product loop. Until then it points
+customers at API Keys → Sessions for raw per-key session counts —
+the deepest signal the dashboard has without a new adapter layer.
+No new BFF proxy routes ship with this iteration; the surface is
+pure static UI plus a deferred adapter slot.
+
 ## Coupling audit
 
 The "Coupling Audit" is a machine-greppable table — one row per
