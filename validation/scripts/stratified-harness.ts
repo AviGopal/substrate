@@ -253,7 +253,8 @@ function evictStaleEntries(cache: ShortestPathCache): void {
 async function runRecommendation(
   goal: GeneratedGoal,
   endpoint: string,
-  authHeaders: Record<string, string>
+  authHeaders: Record<string, string>,
+  excludeVariant?: string
 ): Promise<RecommendationEntry[]> {
   try {
     const resp = await fetch(`${endpoint}/v2/activities/recommend`, {
@@ -264,6 +265,7 @@ async function runRecommendation(
         expected_output_shapes: goal.expected_output_shapes,
         impulse_pool: goal.seed_impulse_pool.map((s) => ({ type: s })),
         limit: 5,
+        ...(excludeVariant ? { exclude_variant: excludeVariant } : {}),
       }),
       signal: AbortSignal.timeout(20_000),
     });
@@ -574,6 +576,13 @@ function stripSampleArrays(matrix: CoverageMatrix): MatrixOutput {
 }
 
 
+// G6.2.1: differential-solve witness — compares top-rec from primary run vs alt run.
+interface DifferentialWitness {
+  primary_top_id: string;     // top rec from first call (no exclusion)
+  alt_top_id: string | null;  // top rec from second call (primary excluded)
+  diverged: boolean;          // alt_top_id !== primary_top_id
+}
+
 interface PerGoalResult {
   goal_id: string;
   cell_id: string;
@@ -582,6 +591,7 @@ interface PerGoalResult {
   trace_count: number;
   scores: TraceScores[];
   witnesses: WitnessEntry[];
+  differential?: DifferentialWitness;  // G6.2.1: present for 10% of goals
 }
 
 interface LoopResult {
@@ -695,6 +705,23 @@ async function runGoalLoop(
       });
     }
 
+    // G6.2.1: differential-solve — 10% of goals (deterministic: index % 10 === 0)
+    // Run recommend again with the primary top choice excluded to find next-best.
+    let differential: DifferentialWitness | undefined;
+    if (i % 10 === 0 && recs.length > 0) {
+      const primaryTopId = recs[0].id ?? recs[0].template_id ?? recs[0].activity_id ?? "";
+      if (primaryTopId) {
+        const altRecs = await runRecommendation(goal, endpoint, authHeaders, primaryTopId);
+        apiCallCount++;
+        const altTopId = altRecs[0]?.id ?? altRecs[0]?.template_id ?? altRecs[0]?.activity_id ?? null;
+        differential = {
+          primary_top_id: primaryTopId,
+          alt_top_id: altTopId,
+          diverged: altTopId !== null && altTopId !== primaryTopId,
+        };
+      }
+    }
+
     perGoalResults.push({
       goal_id: goal.id,
       cell_id: cellId,
@@ -703,6 +730,7 @@ async function runGoalLoop(
       trace_count: traces.length,
       scores: traceScores,
       witnesses,
+      ...(differential ? { differential } : {}),
     });
 
     process.stdout.write(
@@ -852,6 +880,8 @@ async function main() {
           heldOutLoopResult.perGoalResults.length > 0
             ? heldOutLoopResult.refinementEvents.length / heldOutLoopResult.perGoalResults.length
             : 0,
+        // G6.2.1: differential-solve summary for held-out suite
+        differential_witness_count: heldOutLoopResult.perGoalResults.filter((r) => r.differential).length,
         ...(values["detailed"] ? { per_goal_results: heldOutLoopResult.perGoalResults } : {}),
       };
       const resultsDir = join(repoRoot, "validation", "results");
@@ -896,6 +926,14 @@ async function main() {
     refinement_event_density:
       perGoalResults.length > 0 ? refinementEvents.length / perGoalResults.length : 0,
     refinement_events: refinementEvents,
+    // G6.2.1: differential-solve summary
+    differential_witness_count: perGoalResults.filter((r) => r.differential).length,
+    differential_diverge_rate: (() => {
+      const withDiff = perGoalResults.filter((r) => r.differential);
+      return withDiff.length > 0
+        ? withDiff.filter((r) => r.differential!.diverged).length / withDiff.length
+        : null;
+    })(),
     // G7.2.1/G7.2.2: contamination check (only when held-out suite was run)
     ...(heldOutLoopResult
       ? computeContaminationDelta(matrix, heldOutLoopResult.matrix)
@@ -914,10 +952,13 @@ async function main() {
   console.log(`\n${"═".repeat(60)}`);
   console.log(`Stratified Coverage Matrix`);
   console.log(`${"─".repeat(60)}`);
+  const diffCount = perGoalResults.filter((r) => r.differential).length;
+  const diffDiverged = perGoalResults.filter((r) => r.differential?.diverged).length;
   console.log(`  Cells populated   : ${Object.keys(matrix).length}`);
   console.log(`  Passable cells    : ${passableCells.length}`);
   console.log(`  Universality pass : ${universality_pass === null ? "N/A (no cells w/ n≥3)" : universality_pass ? "✅ PASS" : "❌ FAIL"}`);
   console.log(`  Refinement events : ${refinementEvents.length}`);
+  console.log(`  Diff-solve pairs  : ${diffCount} (${diffDiverged} diverged)`);
   console.log(`  API calls         : ${apiCallCount}`);
   console.log(`\nPer-cell summary:`);
   for (const [cellId, cell] of Object.entries(matrixOutput)) {

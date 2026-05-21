@@ -136,9 +136,9 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
 
 ### G6.1 Exclude-variant flag on recommend
 
-- [ ] G6.1.1 Add `?exclude_variant=<id>` query param to `POST /v2/activities/recommend`.
-  When present, the named variant is filtered out before Thompson sampling.
-  **Acceptance:** canary probe with the flag excludes the specified variant.
+- [x] G6.1.1 ✅ **DONE** 2026-05-21. `exclude_variant` field added to body destructuring in
+  `POST /v2/activities/recommend` T4 filter block. When present, the named variant is added
+  to the excludeSet before Thompson sampling. Pushed to canary as `21f3ccc`.
 
 ### G6.2 Witness pairing in harness
 
