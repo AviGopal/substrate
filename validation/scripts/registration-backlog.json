@@ -1,0 +1,98 @@
+{
+  "_comment": "Auto-generated 2026-05-20. Lists every validation script that does not yet emit a test_registration impulse. Registered scripts: test-forge-goal-completion.ts, _test-audit-loop.ts.",
+  "generated_at": "2026-05-20",
+  "registered_count": 2,
+  "unregistered_count": 15,
+  "entries": [
+    {
+      "id": "validation/scripts/compare-reports.ts",
+      "file": "compare-reports.ts",
+      "status": "unregistered",
+      "category": "utility"
+    },
+    {
+      "id": "validation/scripts/_forge-via-ias-executor.ts",
+      "file": "_forge-via-ias-executor.ts",
+      "status": "unregistered",
+      "category": "forge"
+    },
+    {
+      "id": "validation/scripts/goal-generator.ts",
+      "file": "goal-generator.ts",
+      "status": "unregistered",
+      "category": "harness"
+    },
+    {
+      "id": "validation/scripts/reuse-harness.ts",
+      "file": "reuse-harness.ts",
+      "status": "unregistered",
+      "category": "harness"
+    },
+    {
+      "id": "validation/scripts/stratified-harness.ts",
+      "file": "stratified-harness.ts",
+      "status": "unregistered",
+      "category": "harness"
+    },
+    {
+      "id": "validation/scripts/test-18-3-5-verifier-relevance.ts",
+      "file": "test-18-3-5-verifier-relevance.ts",
+      "status": "unregistered",
+      "category": "integration-test"
+    },
+    {
+      "id": "validation/scripts/test-18-4-7-chain-credit.ts",
+      "file": "test-18-4-7-chain-credit.ts",
+      "status": "unregistered",
+      "category": "integration-test"
+    },
+    {
+      "id": "validation/scripts/test-18-4-7-credit-propagation.ts",
+      "file": "test-18-4-7-credit-propagation.ts",
+      "status": "unregistered",
+      "category": "integration-test"
+    },
+    {
+      "id": "validation/scripts/test-22-forge-and-paths.ts",
+      "file": "test-22-forge-and-paths.ts",
+      "status": "unregistered",
+      "category": "integration-test"
+    },
+    {
+      "id": "validation/scripts/test-22-maintenance-reuse.ts",
+      "file": "test-22-maintenance-reuse.ts",
+      "status": "unregistered",
+      "category": "integration-test"
+    },
+    {
+      "id": "validation/scripts/test-goal-host-recommend.ts",
+      "file": "test-goal-host-recommend.ts",
+      "status": "unregistered",
+      "category": "integration-test"
+    },
+    {
+      "id": "validation/scripts/test-ported-resolvers.ts",
+      "file": "test-ported-resolvers.ts",
+      "status": "unregistered",
+      "category": "integration-test"
+    },
+    {
+      "id": "validation/scripts/test-slot-binding-chain.ts",
+      "file": "test-slot-binding-chain.ts",
+      "status": "unregistered",
+      "category": "integration-test"
+    },
+    {
+      "id": "validation/scripts/test-state-space-signature-roundtrip.ts",
+      "file": "test-state-space-signature-roundtrip.ts",
+      "status": "unregistered",
+      "category": "integration-test"
+    },
+    {
+      "id": "validation/scripts/thompson-compare.ts",
+      "file": "thompson-compare.ts",
+      "status": "unregistered",
+      "category": "utility"
+    }
+  ]
+}

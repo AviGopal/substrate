@@ -39,14 +39,21 @@ phase begins. Checkbox style matches
 
 ### A.3 Grandfathering
 
-- [ ] A.3.1 Build `validation/scripts/registration-backlog.json` listing every
+- [x] A.3.1 Build `validation/scripts/registration-backlog.json` listing every
   `.ts` file in `validation/scripts/` that does not yet emit a
   `test_registration`. **Acceptance:** backlog has one row per file with a
   `status: "unregistered"` field.
-- [ ] A.3.2 Implement the auto-tag rule: any `test_report` whose
+  Done 2026-05-20: `validation/scripts/registration-backlog.json` created with
+  15 unregistered entries; registered: test-forge-goal-completion.ts + _test-audit-loop.ts.
+- [x] A.3.2 Implement the auto-tag rule: any `test_report` whose
   `test_registration_id` is unset SHALL be persisted with
   `caveats: ["unregistered"]`. **Acceptance:** integration test runs an
   unregistered script and the resulting `test_report` carries the caveat.
+  Done: auto-tag already in impulses.ts test_report_write (lines 3606-3608).
+  5-test suite at `test/impulses-test-report-write.test.ts` verifies the caveat
+  is added, not added when registration_id present, merges with existing caveats,
+  400 on missing body, 401 on unauthenticated. All pass. Committed activity-api
+  `4818e02`.
 
 ---
 
