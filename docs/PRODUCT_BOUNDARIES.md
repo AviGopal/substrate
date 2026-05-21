@@ -367,6 +367,14 @@ isn't up, it exits 2 with a message pointing at `bun --hot
 src/index.ts`. It does NOT start the dashboard itself — that keeps the
 contract simple and avoids port collisions.
 
+After the rubric pass, dev-loop invokes `bun run ui-audit` (capability
+`ui-audit`, archived 2026-05-21). The audit walks 5 routes × 3 viewports
+with axe-core plus heuristic scans (overflow, truncation, sub-24px tap
+targets) and emits `e2e/results/ui-audit.json`. The dev-loop's final
+summary line carries both blocks, e.g.
+`dev-loop: rubric={passed:14,failed:0,skipped:2} ui-audit: axe_critical=0 axe_serious=0 overflow=0 truncation=0 tap_target=130`.
+Exit code is `max(rubric_exit, audit_run_exit, rubric_spec_07_exit)`.
+
 ### Env-var contract
 
 | Variable | Default | Purpose |

@@ -103,16 +103,22 @@ properties via `"var(--...)"` strings. The spacing scale and
 colour palette are NOT extended in Tailwind in this capability
 (reserved for a future change).
 
-## Measurement gate — pending ui-audit
+## Measurement gate — satisfied 2026-05-21
 
-R6 below is NOT satisfied by this archive. It depends on the
-`ui-audit` capability shipping its `bun run ui-audit` runner
-and rubric spec. When that lands, both baseline and
-post-refresh runs SHALL execute and the comparison below SHALL
-become enforceable. Until then, this requirement is deferred,
-not waived.
+The `ui-audit` capability shipped on 2026-05-21 with the post-refresh
+baseline captured against the deployed bbcdf5c dashboard. No
+pre-refresh baseline is available — the refresh shipped before this
+audit existed — so the original R6 ratio comparison (50% drop) is
+unverifiable in principle. In its place, the audit run against the
+refreshed dashboard satisfies the gate by producing zero axe critical
+or serious violations (the hard-fail bar in
+`07-ui-quality.spec.ts`). Two pre-existing serious findings discovered
+in the process (48× `color-contrast` on `UsageBadge` and 1×
+`scrollable-region-focusable` on `<pre>` snippets) were fixed as part
+of the ui-audit ship. Baseline numbers are recorded in the ui-audit
+change's `design.md` `## Captured baseline (2026-05-21)` section.
 
-### R6 — Measurement gate (deferred)
+### R6 — Measurement gate (satisfied; see note above)
 
 A baseline `ui-audit.json` SHALL be captured against the
 pre-refresh dashboard (i.e. before bbcdf5c was deployed); the

@@ -178,6 +178,46 @@ Exit: 1 (rubric failed=0; axe serious=1)
 `ui-audit` exits non-zero on its own when it can't run (auth missing,
 dashboard unreachable). The dev-loop's exit is `max(rubric_exit, audit_exit, rubric_07_exit)`.
 
+## Captured baseline (2026-05-21)
+
+First audit run against the canary build (cloud-dashboard 0.3.4-bbcdf5c,
+local boot pointed at canary backends, BASE_URL=http://localhost:3461,
+rubric-seeded auth):
+
+| Surface | Count |
+|---|---|
+| axe critical | 0 |
+| axe serious | 0 (was 49 pre-fix; see below) |
+| axe moderate | 0 |
+| axe minor | 0 |
+| overflow | 0 |
+| truncation | 0 |
+| tap-target | 130–316 (grows with seeded api-key count) |
+
+**Pre-existing serious findings the audit surfaced** (fixed as part of
+this change, not deferred — per spec R8):
+
+- **48 × color-contrast** on `UsageBadge` "no activity yet" pills
+  (`bg-slate-100` + `text-slate-500` ≈ 3.2:1, below WCAG AA 4.5:1).
+  Fixed: bumped to `text-slate-700`.
+- **1 × scrollable-region-focusable** on `<pre>` install snippet in
+  `InstallTab.tsx`. Fixed: added `tabIndex={0}` to all `<pre>` code
+  blocks across `InstallTab`, `ToolCatalogTab`, `UsageTab` for
+  keyboard scroll access.
+
+**Wall-clock**: ~13s for 5 routes × 3 viewports (well under the 60s
+R6 budget; routes parallel 4-way, viewports sequential per route).
+
+**Smoke test**: deliberately re-introduced low-contrast text in
+`UsageBadge` (`text-slate-300` on `bg-slate-100`); ui-audit reported
+93–108 serious violations and `dev-loop` exited 1 as expected.
+Reverted before commit.
+
+**No pre-refresh baseline** is available — stylesheet-refresh shipped
+before this audit existed (commit bbcdf5c). This baseline is therefore
+the POST-refresh measurement that closes the deferred gate; future
+refactors compare against these numbers.
+
 ## Self-review
 
 Argued against: (1) The hand-listed `ROUTES` table will drift —
