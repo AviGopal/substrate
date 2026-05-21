@@ -77,12 +77,12 @@ spec bodies land in iteration 4.
 
 ## §6 Archive prep
 
-- [ ] 6.1 Two commits: one inside cloud-dashboard
+- [x] 6.1 Two commits: one inside cloud-dashboard
       (`feat(cloud-dashboard): scaffold rubric e2e + dev-loop script`),
       one in super-repo (`docs(boundaries): dev-loop section +
       playwright-dev-loop spec`).
-- [ ] 6.2 Both pushed to `origin/dev`.
-- [ ] 6.3 Archive moves change dir to
+- [x] 6.2 Both pushed to `origin/dev`.
+- [x] 6.3 Archive moves change dir to
       `openspec/changes/archive/2026-05-20-playwright-dev-loop/` and
       lifts `specs/playwright-dev-loop/spec.md` to
       `openspec/specs/playwright-dev-loop/spec.md`.
