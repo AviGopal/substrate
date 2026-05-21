@@ -1,0 +1,41 @@
+[
+  {
+    "id": "oracle-001",
+    "cell_id": "novel-depth0-A",
+    "shape_signature": { "input": ["goal"], "output": ["activityTemplate"] },
+    "goal_text": "Create a new activity template for parsing JSON input and validating schema fields",
+    "expected_output_shapes": ["activityTemplate"],
+    "seed_impulse_pool": ["goal"],
+    "adversarial": false,
+    "oracle_label_id": "oracle-label:001",
+    "oracle_verdict": "pass",
+    "generator_seed": "oracle-seed-v1",
+    "shape_registry_snapshot_hash": "oracle"
+  },
+  {
+    "id": "oracle-002",
+    "cell_id": "seen-depth1-B",
+    "shape_signature": { "input": ["activityTemplate", "activityMetrics"], "output": ["activityExecutionTrace"] },
+    "goal_text": "Execute an existing authentication template and capture the full execution trace including all tool calls",
+    "expected_output_shapes": ["activityExecutionTrace"],
+    "seed_impulse_pool": ["activityTemplate", "activityMetrics"],
+    "adversarial": false,
+    "oracle_label_id": "oracle-label:002",
+    "oracle_verdict": "pass",
+    "generator_seed": "oracle-seed-v1",
+    "shape_registry_snapshot_hash": "oracle"
+  },
+  {
+    "id": "oracle-003",
+    "cell_id": "rare-depth2-A",
+    "shape_signature": { "input": ["activityExecutionTrace"], "output": ["impulseRelevance"] },
+    "goal_text": "Analyze a failed execution trace and compute impulse relevance scores for each impulse used during the run",
+    "expected_output_shapes": ["impulseRelevance"],
+    "seed_impulse_pool": ["activityExecutionTrace"],
+    "adversarial": false,
+    "oracle_label_id": "oracle-label:003",
+    "oracle_verdict": "fail",
+    "generator_seed": "oracle-seed-v1",
+    "shape_registry_snapshot_hash": "oracle"
+  }
+]

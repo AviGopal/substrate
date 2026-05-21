@@ -428,7 +428,10 @@ export interface GeneratedGoal {
   expected_output_shapes: string[];
   seed_impulse_pool: string[];
   adversarial: false;
-  oracle_label_id: null;
+  // G6.4.1: oracle fields; null for generated goals
+  oracle_label_id: string | null;
+  // Embedded oracle verdict for seed-mode testing (populated when oracle_label_id is set)
+  oracle_verdict?: "pass" | "fail";
   generator_seed: string;
   shape_registry_snapshot_hash: string;
 }

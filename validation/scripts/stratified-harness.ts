@@ -166,6 +166,8 @@ interface CellMetrics {
   witness_disagreement: number | null;
   // G6.5.1: fraction of successful traces where validator-dispatch returned passed=false
   validator_false_negative_rate: number | null;
+  // G6.4.1: fraction of oracle goals where harness success disagrees with oracle verdict
+  oracle_disagreement_rate: number | null;
   floor_pass: boolean;
   floor_status?: string;
   // Recommendation-quality sub-metrics (from recommend calls)
@@ -285,6 +287,45 @@ function recommendationCoversOutputShapes(
 ): boolean {
   if (!rec.output_shapes?.length) return false;
   return expectedOutputShapes.every((s) => rec.output_shapes!.includes(s));
+}
+
+// ---------------------------------------------------------------------------
+// G6.4.1: Oracle label fetch
+// ---------------------------------------------------------------------------
+
+interface OracleLabel {
+  id: string;
+  goal: string;
+  execution_id: string;
+  activity_id: string;
+  verdict: "pass" | "fail" | string;
+  confidence: number;
+  notes?: string;
+}
+
+async function fetchOracleLabel(
+  labelId: string,
+  endpoint: string,
+  authHeaders: Record<string, string>
+): Promise<OracleLabel | null> {
+  try {
+    const resp = await fetch(
+      `${endpoint}/v2/impulses/resolve`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({
+          pointer: { type: "preValidationResult", id: labelId },
+        }),
+        signal: AbortSignal.timeout(10_000),
+      }
+    );
+    if (!resp.ok) return null;
+    const body = await resp.json() as { data?: OracleLabel; result?: OracleLabel };
+    return body.data ?? body.result ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -472,6 +513,7 @@ function emptyCell(): CellMetrics {
     decision_record_completeness: null,
     witness_disagreement: null,
     validator_false_negative_rate: null,
+    oracle_disagreement_rate: null,
     floor_pass: false,
     recommend_coverage: null,
     recommend_shape_match: null,
@@ -610,7 +652,10 @@ interface PerGoalResult {
   trace_count: number;
   scores: TraceScores[];
   witnesses: WitnessEntry[];
-  differential?: DifferentialWitness;  // G6.2.1: present for 10% of goals
+  differential?: DifferentialWitness;     // G6.2.1: present for 10% of goals
+  oracle_disagree?: boolean;              // G6.4.1: present only for oracle goals
+  oracle_label_id?: string;
+  oracle_verdict?: "pass" | "fail";
 }
 
 interface LoopResult {
@@ -741,6 +786,29 @@ async function runGoalLoop(
       }
     }
 
+    // G6.4.1: oracle arm — compare harness success assessment vs oracle verdict
+    let oracleFields: Pick<PerGoalResult, "oracle_disagree" | "oracle_label_id" | "oracle_verdict"> = {};
+    const oracleLabelId = (goal as GeneratedGoal).oracle_label_id;
+    const embeddedVerdict = (goal as GeneratedGoal).oracle_verdict;
+    if (oracleLabelId) {
+      let verdict: "pass" | "fail" | null = embeddedVerdict ?? null;
+      if (!verdict) {
+        // Attempt API fetch when no embedded verdict
+        const oracleLabel = await fetchOracleLabel(oracleLabelId, endpoint, authHeaders);
+        apiCallCount++;
+        verdict = (oracleLabel?.verdict as "pass" | "fail") ?? null;
+      }
+      if (verdict) {
+        const harnessPass = traceScores.some((s) => s.success);
+        const oraclePass = verdict === "pass";
+        oracleFields = {
+          oracle_label_id: oracleLabelId,
+          oracle_verdict: verdict,
+          oracle_disagree: harnessPass !== oraclePass,
+        };
+      }
+    }
+
     perGoalResults.push({
       goal_id: goal.id,
       cell_id: cellId,
@@ -750,6 +818,7 @@ async function runGoalLoop(
       scores: traceScores,
       witnesses,
       ...(differential ? { differential } : {}),
+      ...oracleFields,
     });
 
     process.stdout.write(
@@ -780,6 +849,12 @@ async function runGoalLoop(
       successScores.length > 0
         ? successScores.filter((s) => s.validator_false_negative).length / successScores.length
         : null;
+    // G6.4.1: oracle disagreement rate
+    const oracleGoals = goalResults.filter((r) => r.oracle_disagree !== undefined);
+    cell.oracle_disagreement_rate =
+      oracleGoals.length > 0
+        ? oracleGoals.filter((r) => r.oracle_disagree).length / oracleGoals.length
+        : null;
     finalizeCell(cell, cellId);
   }
 
@@ -807,6 +882,8 @@ async function main() {
       baseline: { type: "string", default: "" },
       label: { type: "string", default: "" },
       detailed: { type: "boolean", default: false },
+      // G6.4.1: path to oracle seeds JSON file (array of GeneratedGoal with oracle_label_id + oracle_verdict)
+      "oracle-seeds": { type: "string", default: "" },
     },
     allowPositionals: false,
   });
@@ -829,7 +906,19 @@ async function main() {
     process.exit(1);
   }
   const goalsFile = JSON.parse(await readFile(goalsPath, "utf8")) as GeneratedGoalsFile;
-  const goals = goalsFile.goals;
+  let goals: GeneratedGoal[] = goalsFile.goals;
+
+  // G6.4.1: append oracle seeds if provided
+  if (values["oracle-seeds"]) {
+    const seedsPath = resolvePath(values["oracle-seeds"]);
+    if (existsSync(seedsPath)) {
+      const oracleSeeds = JSON.parse(await readFile(seedsPath, "utf8")) as GeneratedGoal[];
+      goals = [...goals, ...oracleSeeds];
+      console.log(`  oracle seeds: ${oracleSeeds.length} goals appended from ${seedsPath}`);
+    } else {
+      console.warn(`  oracle seeds file not found: ${seedsPath} (skipping)`);
+    }
+  }
 
   console.log(`\nStratified Harness — Phase 25.2`);
   console.log(`  goals file  : ${goalsPath}`);
@@ -957,6 +1046,14 @@ async function main() {
       const withDiff = perGoalResults.filter((r) => r.differential);
       return withDiff.length > 0
         ? withDiff.filter((r) => r.differential!.diverged).length / withDiff.length
+        : null;
+    })(),
+    // G6.4.1: oracle arm summary
+    oracle_goal_count: perGoalResults.filter((r) => r.oracle_disagree !== undefined).length,
+    oracle_disagreement_rate: (() => {
+      const withOracle = perGoalResults.filter((r) => r.oracle_disagree !== undefined);
+      return withOracle.length > 0
+        ? withOracle.filter((r) => r.oracle_disagree).length / withOracle.length
         : null;
     })(),
     // G7.2.1/G7.2.2: contamination check (only when held-out suite was run)

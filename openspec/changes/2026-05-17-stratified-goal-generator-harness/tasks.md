@@ -167,10 +167,14 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
 
 ### G6.4 Oracle-corpus arm
 
-- [ ] G6.4.1 When a generated goal has `oracle_label_id`, harness fetches the
-  labelled expected output from `goal_verification_labels` and computes oracle
-  disagreement. **Acceptance:** seed mode that injects 3 known oracle goals; harness
-  reports correct agree/disagree per shape.
+- [x] G6.4.1 ✅ **DONE** 2026-05-21. `GeneratedGoal.oracle_label_id: string | null` and
+  `oracle_verdict?: "pass" | "fail"` fields added. Harness loop checks `oracle_label_id`:
+  if `oracle_verdict` is embedded (seed mode), uses it directly; otherwise fetches from
+  API via `fetchOracleLabel()`. Computes `oracle_disagree = (harnessPass !== oraclePass)`.
+  `CellMetrics.oracle_disagreement_rate` finalized in cell loop. Report includes
+  `oracle_goal_count` + `oracle_disagreement_rate`. `--oracle-seeds <file>` option
+  appends oracle goals from JSON array. Seed file: `validation/generated/oracle-seeds.json`
+  (3 goals: 2×pass, 1×fail).
 
 ### G6.5 Validator-consensus arm
 
