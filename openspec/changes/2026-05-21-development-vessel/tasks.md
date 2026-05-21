@@ -191,13 +191,77 @@ seed) and §7 (canary parity).
   via `activity_fetch` for each id.
 - [ ] S.3 Activity-level parity gate (tasks.md §7) passes for
   ship-change AND branch-health.
-- [ ] S.4 Demo of lift: a single failing trace produces posterior
-  pressure through ≥ 2 independent judgment paths (e.g., validator +
-  propagate_judgment) without per-layer wiring beyond resolver
-  registration. Recorded as a test in `test/lift-demo.test.ts` with
-  fake activity-api capture of impulse-relevance writes.
+- [ ] S.4 Demo of lift: see §10 for concrete acceptance criteria.
 - [ ] S.5 First self-application: the development-vessel runs the
   `add-resolver-to-vessel` activity against itself to add a no-op
   resolver, ships the change via its own `ship-change` activity,
   and the resulting commit is visible in `git log`. Trace ids are
   captured in a final cycle report (`SELF_APPLICATION.md`).
+
+## §10 §S.4 Lift demo — concrete acceptance
+
+Loop stage: SPEC. Drives a subsequent DEV iteration that writes
+`test/lift-demo.test.ts`.
+
+### 10.1 — Test contract
+
+The lift demo is a single passing vitest/bun-test case in
+`repos/development-vessel/test/lift-demo.test.ts`. Setup:
+
+- Stand up an in-process fake `fetch` (FetchPort-like) that captures
+  every POST request body sent to `${METABOB_ENDPOINT}/v2/activities/impulse-relevance`.
+- Construct **three** synthetic `validation_result` impulses with:
+  - identical `target_variant_id: "demo_variant_v1"`
+  - distinct `source_tier ∈ { "validator", "audit", "human" }`
+  - `passed: false` (so the posterior pressure is on β, not α)
+- Inject the fake fetch into the propagate-judgment resolver via the
+  resolver factory (or via dependency-injecting `globalThis.fetch`).
+
+Action: call the propagate-judgment resolver three times — once per
+impulse — through the **same** resolver entry point. No per-tier
+branches in the test or the resolver.
+
+### 10.2 — Assertions
+
+| Assertion | Why it proves lift |
+|-|-|
+| `captures.length === 3` | All three judgments landed at the activity-api endpoint. |
+| `captures.every(c => c.url.endsWith("/v2/activities/impulse-relevance"))` | Single endpoint serves all tiers. |
+| `captures.every(c => c.body.activity_variant_id === "demo_variant_v1")` | Same target reinforced by all three. |
+| `new Set(captures.map(c => c.body.source_tier)).size === 3` | The three distinct tiers are preserved. |
+| `captures.every(c => c.body.was_loaded === false && c.body.execution_succeeded === false)` | Pre-existing impulse-relevance shape carries the negative-posterior signal. |
+| weights distinct per tier and monotonic (validator < audit < human) per the design.md §F default tier weights | Source-tier discrimination preserved. |
+| Resolver source file `src/resolvers/propagate-judgment.ts` MUST NOT contain the literal strings `"validator"`, `"audit"`, `"human"`, `"witness"`, `"runtime"` outside the source_tier weight lookup table | Proves "no per-layer wiring": adding a 4th tier requires editing only the weight table, not the dispatch path. |
+
+### 10.3 — The "no new wiring" assertion
+
+The test includes a single static assertion (via file-read + regex)
+that the resolver source contains exactly one location where the
+source_tier strings appear: the weight table. This is the
+load-bearing structural claim. Adding a sixth oracle (a new tier)
+should be ONE entry in that table — nothing else.
+
+### 10.4 — Out-of-scope for §S.4
+
+The following are NOT part of this test:
+- Real Thompson posterior updates (need live activity-api; covered
+  by §S.2 after operator seed).
+- Real activity execution (the test uses synthetic
+  `validation_result` impulses, not actual activity output).
+- LLM-tier resolvers or audit-test-report activity composition.
+
+### 10.5 — Acceptance gate
+
+- [ ] 10.5.1 `test/lift-demo.test.ts` exists in the sub-repo.
+- [ ] 10.5.2 `bun test test/lift-demo.test.ts` passes.
+- [ ] 10.5.3 The static "no new wiring" assertion (10.2 last row)
+  passes against the current `src/resolvers/propagate-judgment.ts`.
+- [ ] 10.5.4 The captures show three distinct source_tier values
+  with their canonical weights.
+
+### 10.6 — Next-stage hand-off
+
+After §10.5 is green, S.4 in §S is marked done. The remaining
+forward-progress autonomous-loop work is §S.5 (self-application),
+which requires §6 (operator canary seed) first. The autonomous
+loop's role on §S.4 ends at this VERIFY pass.
