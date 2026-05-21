@@ -161,12 +161,20 @@ names the mirrored mcp version; the file must be updated whenever
 the tool registry changes upstream. Capability spec:
 [`openspec/changes/2026-05-20-mcp-info-surface/`](../openspec/changes/2026-05-20-mcp-info-surface/).
 
-The Usage tab will hydrate against the rpc-api BFF adapter in
-iteration 5 of the standalone-product loop. Until then it points
-customers at API Keys → Sessions for raw per-key session counts —
-the deepest signal the dashboard has without a new adapter layer.
-No new BFF proxy routes ship with this iteration; the surface is
-pure static UI plus a deferred adapter slot.
+The Usage tab is live as of 2026-05-20 via the `/api/mcp/usage`
+BFF, which composes rpc-api 0.16.13's `POST /session` +
+`GET /session/stats` + `GET /metrics` into a single per-key JSON
+shape. The route accepts the raw API key in the POST body because
+user-vessel does not reveal raw keys after creation; the React
+client stashes a freshly-created key in `sessionStorage` so the
+tab can surface usage for keys created in the same browser
+session. `/metrics` failures are non-fatal (echoed as
+`metrics_status`); `/session` and `/session/stats` failures still
+502 with `{error:'rpc_api_unreachable', upstream_status:N}`.
+Capability spec:
+[`openspec/specs/rpc-api-mcp-usage-adapter/spec.md`](../openspec/specs/rpc-api-mcp-usage-adapter/spec.md)
+(during the iteration the locked spec lives at
+[`openspec/changes/2026-05-20-rpc-api-mcp-usage-adapter/`](../openspec/changes/2026-05-20-rpc-api-mcp-usage-adapter/)).
 
 ## Coupling audit
 
