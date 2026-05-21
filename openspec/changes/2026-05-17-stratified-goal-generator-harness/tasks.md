@@ -13,12 +13,11 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
   `executionTraceWithSignatures` over the last 30 days and emits the
   `(input_shape_set, output_shape_set)` → count map. **Done 2026-05-19.** Graceful
   degradation when traces are unavailable; fallback pool keeps callers unblocked.
-- [ ] G1.1.2 (OPEN) Implement `lib/decomposition-depth.ts` — full BFS over
-  `discover-by-shapes` backward mode. **Note:** simplified depth-0/1 classification
-  is inlined in `goal-generator.ts` (uses discover-by-shapes backward mode +
-  total_executions ≥ 5 threshold); BFS multi-hop variant is deferred.
-  **Acceptance:** unit test with hand-crafted shape graph returns expected depths
-  for 6 fixtures.
+- [x] G1.1.2 ✅ **DONE** 2026-05-21. `lib/decomposition-depth.ts`: BFS over
+  discover-by-shapes backward mode; `computeDecompositionDepth` +
+  `computeDecompositionDepthBatch`. Returns Depth 0|1|2|3+ based on count of
+  unreachable target shapes after pool expansion. 6-fixture unit tests all
+  green. Commit `64b754a9`.
 - [x] G1.1.3 Implement `lib/topology-gap-band.ts` — classifies (A/B/C/D) per the
   Phase 22 design. Reads discovery-vessel `/registry/shapes` + activity-api template
   `output_shapes` index. **Done 2026-05-19.**
@@ -74,7 +73,11 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
 ### G2.3 Report output
 
 - [x] G2.3.1 ✅ **DONE** 2026-05-19 (inline in 25.2.1). `validation/results/<date>-stratified-report.json` emitted. First report: `2026-05-20-stratified-report.json`.
-- [ ] G2.3.2 (OPEN) Extend `compare-reports.ts` with `--stratified` flag for cell-by-cell diff. Requires a second run to compare against.
+- [x] G2.3.2 ✅ **DONE** 2026-05-21. `compare-reports.ts --stratified`: cell-by-cell
+  diff between two stratified reports. Sections: floor status table (PASS/FAIL
+  regressions/improvements), key metric deltas (success_rate/reuse_efficiency/
+  improvise_share/cost_p50), sample count changes, optimality ratio changes.
+  Shape-registry hash mismatch warning. Tested. Commit `64b754a9`.
 
 ---
 
