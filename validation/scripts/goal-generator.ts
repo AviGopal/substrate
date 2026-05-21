@@ -39,6 +39,8 @@ import { computeShapeRegistryHash } from "./lib/shape-registry-hash.ts";
 import { buildShapeSignaturePool } from "./lib/shape-signature-pool.ts";
 import type { ShapeSignatureEntry } from "./lib/shape-signature-pool.ts";
 import { classifyTopologyGap } from "./lib/topology-gap-band.ts";
+import { mutateGoal } from "./lib/adversarial-mutate.ts";
+import type { AdversarialGoal, HarnessGoal } from "./lib/adversarial-mutate.ts";
 
 // ---------------------------------------------------------------------------
 // Config loading (matches reuse-harness.ts pattern)
@@ -441,11 +443,12 @@ async function generateGoals(opts: {
   noveltyMix: [number, number, number];  // seen, rare, novel fractions
   depthMix: [number, number, number];    // depth0, depth1, depth2+ fractions
   scenarioMix: [number, number, number]; // A, B, C∪D fractions
-  adversarialFraction: number;           // deferred; always 0 for now
+  adversarialFraction: number;           // G1.3.2: fraction of goals to mutate adversarially
   endpoint: string;
   apiKey: string;
   discoveryEndpoint: string;
-}): Promise<GeneratedGoal[]> {
+  anthropicApiKey?: string;             // required when adversarialFraction > 0
+}): Promise<HarnessGoal[]> {
   const authHeaders = { Authorization: `ApiKey ${opts.apiKey}` };
   const rng = new Xorshift64(opts.seed);
 
@@ -583,6 +586,31 @@ async function generateGoals(opts: {
   }
 
   console.log(`  Generated ${goals.length} goals (${attemptCount} attempts)`);
+
+  // G1.3.2 — adversarial perturbation slice
+  if (opts.adversarialFraction > 0 && opts.anthropicApiKey) {
+    const adversarialCount = Math.floor(goals.length * opts.adversarialFraction);
+    if (adversarialCount > 0) {
+      console.log(`  Applying adversarial mutations to ${adversarialCount} goals...`);
+      // Pick uniformly-spaced indices so mutations are spread across the goal list.
+      const step = Math.floor(goals.length / adversarialCount);
+      const result: HarnessGoal[] = [...goals];
+      let mutated = 0;
+      for (let i = 0; i < goals.length && mutated < adversarialCount; i += step) {
+        try {
+          result[i] = await mutateGoal(goals[i], { anthropicApiKey: opts.anthropicApiKey });
+          mutated++;
+        } catch (err) {
+          console.warn(`    Adversarial mutation failed for goal ${goals[i].id}: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+      console.log(`  Adversarial mutations applied: ${mutated}/${adversarialCount}`);
+      return result;
+    }
+  } else if (opts.adversarialFraction > 0 && !opts.anthropicApiKey) {
+    console.warn(`  --adversarial-fraction set but ANTHROPIC_API_KEY missing; skipping mutations.`);
+  }
+
   return goals;
 }
 
@@ -654,16 +682,25 @@ async function main() {
   console.log(`  endpoint  : ${endpoint}`);
   console.log(`  discovery : ${discoveryEndpoint}`);
 
+  const adversarialFraction = parseFloat(values["adversarial-fraction"] ?? "0.0");
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY ?? "";
+
+  if (adversarialFraction > 0) {
+    console.log(`  adversarial: ${adversarialFraction} (${Math.floor(count * adversarialFraction)} goals)`);
+    if (!anthropicApiKey) console.warn("  Warning: ANTHROPIC_API_KEY not set; adversarial mutations will be skipped.");
+  }
+
   const goals = await generateGoals({
     seed,
     count,
     noveltyMix,
     depthMix,
     scenarioMix,
-    adversarialFraction: 0,
+    adversarialFraction,
     endpoint,
     apiKey,
     discoveryEndpoint,
+    anthropicApiKey: anthropicApiKey || undefined,
   });
 
   // Determine output path
@@ -693,16 +730,19 @@ async function main() {
     depth_mix: { depth0: depthMix[0], depth1: depthMix[1], "depth2+": depthMix[2] },
     scenario_mix: { A: scenarioMix[0], B: scenarioMix[1], "C∪D": scenarioMix[2] },
     shape_registry_snapshot_hash: goals[0]?.shape_registry_snapshot_hash ?? "",
+    adversarial_fraction: adversarialFraction,
+    adversarial_count: goals.filter((g) => g.adversarial).length,
     cell_distribution: computeCellDistribution(goals),
     goals,
   };
 
   await writeFile(outputPath, JSON.stringify(output, null, 2), "utf8");
+  const adversarialNote = output.adversarial_count > 0 ? ` (${output.adversarial_count} adversarial)` : "";
   console.log(`\nOutput written to: ${outputPath}`);
-  console.log(`Generated ${goals.length} goals across ${Object.keys(output.cell_distribution).length} cells.\n`);
+  console.log(`Generated ${goals.length} goals across ${Object.keys(output.cell_distribution).length} cells${adversarialNote}.\n`);
 }
 
-function computeCellDistribution(goals: GeneratedGoal[]): Record<string, number> {
+function computeCellDistribution(goals: HarnessGoal[]): Record<string, number> {
   const dist: Record<string, number> = {};
   for (const g of goals) {
     dist[g.cell_id] = (dist[g.cell_id] ?? 0) + 1;

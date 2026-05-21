@@ -42,15 +42,20 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
   `oracle_label_id: null`, `generator_seed`, `shape_registry_snapshot_hash`.
   **Done 2026-05-19.**
 
-### G1.3 Adversarial-perturbation mode (OPEN)
+### G1.3 Adversarial-perturbation mode
 
-- [ ] G1.3.1 (OPEN) Implement `lib/adversarial-mutate.ts` — takes a passing goal from
-  a prior report, calls one LLM (temperature=0, model+prompt-hash recorded) to produce
-  either a `swap_output_shape` or `narrow_constraint` mutation. **Acceptance:** seeded
-  LLM call returns identical output across two runs given identical input.
-- [ ] G1.3.2 (OPEN) Wire into `goal-generator.ts` behind `--adversarial-fraction`.
-  Adversarial entries are 10% by default; LLM model+prompt-hash written into each
-  affected goal.
+- [x] G1.3.1 ✅ **DONE** 2026-05-21. `lib/adversarial-mutate.ts`: `mutateGoal()` calls
+  `claude-haiku-4-5-20251001` at temperature=0 with a deterministic prompt derived from
+  the goal's stable fields; records `llm_model` + `prompt_hash` (first 16 chars of
+  SHA-256 of prompt). Supports `swap_output_shape` (replaces `expected_output_shapes`)
+  and `narrow_constraint` (appends to `goal_text`). 7 unit tests green (fetch-mock);
+  determinism test passes (identical input → identical `AdversarialGoal`).
+- [x] G1.3.2 ✅ **DONE** 2026-05-21. `generateGoals()` accepts `adversarialFraction`
+  and `anthropicApiKey`; after base generation selects uniformly-spaced goals and
+  applies `mutateGoal()`; falls back with warning when `ANTHROPIC_API_KEY` absent.
+  CLI reads `--adversarial-fraction` (default 0.0) + `ANTHROPIC_API_KEY` env.
+  Output JSON gains `adversarial_fraction` and `adversarial_count` fields.
+  `HarnessGoal = GeneratedGoal | AdversarialGoal` union exported for harness use.
 
 ### G1.4 Held-out suite (OPEN)
 
