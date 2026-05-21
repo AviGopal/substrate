@@ -27,6 +27,7 @@ import {
   POSTERIOR_KEYS,
   BINDING_KEYS,
 } from "./lib/decision-record-completeness.ts";
+import { outputsAgree, diffOutputs } from "./lib/output-normalizers.ts";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -160,8 +161,8 @@ interface CellMetrics {
   improvise_share: number | null;
   decision_record_completeness_samples: number[];
   decision_record_completeness: number | null;
-  // Phase 25.6: witness_disagreement deferred
-  witness_disagreement: null;
+  // G6.3.2: fraction of goals with 2+ traces where witness comparison disagreed
+  witness_disagreement: number | null;
   floor_pass: boolean;
   floor_status?: string;
   // Recommendation-quality sub-metrics (from recommend calls)
@@ -171,6 +172,15 @@ interface CellMetrics {
 
 interface CoverageMatrix {
   [cellId: string]: CellMetrics;
+}
+
+// G6.3.2: witness entry comparing two trace outputs for the same goal.
+interface WitnessEntry {
+  trace_a_id: string;
+  trace_b_id: string;
+  shape: string;      // "output_shapes" or a specific shape name
+  agreed: boolean;
+  diff: Record<string, unknown> | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -616,6 +626,7 @@ async function main() {
     recommend_shape_match: boolean;
     trace_count: number;
     scores: TraceScores[];
+    witnesses: WitnessEntry[];
   }> = [];
 
   const BUDGET_CAP = 200;
@@ -687,6 +698,25 @@ async function main() {
       cell.floor_status = "gated_on_phase_22";
     }
 
+    // G6.3.2: witness comparison — compare first two traces' output_shapes.
+    // Shallow (shape-list) comparison until G6.2.1 differential-solve provides
+    // second-run impulse bodies for deep content comparison.
+    const witnesses: WitnessEntry[] = [];
+    if (traces.length >= 2) {
+      const ta = traces[0];
+      const tb = traces[1];
+      const shapesA = [...(ta.output_shapes ?? [])].sort();
+      const shapesB = [...(tb.output_shapes ?? [])].sort();
+      const agreed = outputsAgree("output_shapes", shapesA, shapesB);
+      witnesses.push({
+        trace_a_id: ta.id ?? "unknown",
+        trace_b_id: tb.id ?? "unknown",
+        shape: "output_shapes",
+        agreed,
+        diff: agreed ? null : (diffOutputs("output_shapes", shapesA, shapesB) ?? null),
+      });
+    }
+
     perGoalResults.push({
       goal_id: goal.id,
       cell_id: cellId,
@@ -694,6 +724,7 @@ async function main() {
       recommend_shape_match: hasShapeMatch,
       trace_count: traces.length,
       scores: traceScores,
+      witnesses,
     });
 
     process.stdout.write(
@@ -712,6 +743,13 @@ async function main() {
     cell.recommend_shape_match =
       goalResults.length > 0
         ? goalResults.filter((r) => r.recommend_shape_match).length / goalResults.length
+        : null;
+    // G6.3.2: witness_disagreement — fraction of goals with ≥1 disagreeing witness
+    const goalsWithWitnesses = goalResults.filter((r) => r.witnesses.length > 0);
+    cell.witness_disagreement =
+      goalsWithWitnesses.length > 0
+        ? goalsWithWitnesses.filter((r) => r.witnesses.some((w) => !w.agreed)).length /
+          goalsWithWitnesses.length
         : null;
     finalizeCell(cell, cellId);
   }

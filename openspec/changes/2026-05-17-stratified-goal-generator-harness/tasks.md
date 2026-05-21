@@ -156,8 +156,12 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
   `gitDiff` (CRLF-safe parser → sorted FilePatch[]), `directoryTree` (sort paths,
   normalise separators). Unknown shapes fall back to deep-key-sorted canonical JSON.
   22 unit tests green, each shape has agreeing + disagreeing pair.
-- [ ] G6.3.2 Wire into harness; emit `witnesses[]` array per goal with
-  `agreed: bool`, `diff: object|null`.
+- [x] G6.3.2 ✅ **DONE** 2026-05-21. `stratified-harness.ts` imports `outputsAgree` +
+  `diffOutputs` from `lib/output-normalizers.ts`. Per-goal `witnesses: WitnessEntry[]`
+  emitted when ≥2 traces exist for the goal (shape: "output_shapes", agreed/diff on
+  sorted shape arrays). `witness_disagreement` metric added to `CellMetrics`
+  (fraction of goals-with-witnesses where any witness disagreed). Deep content
+  comparison (impulse bodies) deferred to G6.2.1 differential-solve run.
 
 ### G6.4 Oracle-corpus arm
 
