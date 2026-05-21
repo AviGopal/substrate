@@ -109,7 +109,7 @@
       - super-repo:
         `docs(boundaries): mcp-usage-telemetry spec + 3 submodule bumps`
 - [x] 7.2 Push all four.
-- [ ] 7.3 Archive: move change dir to
+- [x] 7.3 Archive: move change dir to
       `openspec/changes/archive/2026-05-21-mcp-usage-telemetry/`
       and lift spec to
       `openspec/specs/mcp-usage-telemetry/spec.md`.
