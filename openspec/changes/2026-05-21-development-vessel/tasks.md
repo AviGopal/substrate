@@ -6,19 +6,19 @@ that, the vessel's own `ship-change` activity ships subsequent commits.
 
 ## §1 Scaffolding
 
-- [ ] 1.1 Create `repos/development-vessel/` with `package.json`
+- [x] 1.1 Create `repos/development-vessel/` with `package.json`
   (`@metabob/development-vessel`, `private: true`, deps: `hono`, `zod`,
-  `@avigopal/ias-executor-ts` as `file:../ias-executor-ts`).
-- [ ] 1.2 `tsconfig.json` matching the strict settings used by other
-  vessel repos (`noUncheckedIndexedAccess`, `strict`, etc.).
-- [ ] 1.3 `bun install`; confirm `1 package installed` for the local
-  ias-executor-ts file: dep.
-- [ ] 1.4 `src/config.ts` exporting `DISCOVERY_SHAPES: string[]` listing
-  every shape from spec R2.
-- [ ] 1.5 Empty stubs for each resolver file under `src/resolvers/`
-  (one file per R2.* entry).
-- [ ] 1.6 `src/routes/impulses.ts` with the dispatch switch and a
-  default `400 unknown shape` arm.
+  `@avigopal/ias-executor-ts` as `file:../ias-executor-ts`). Done 2026-05-21: commit c2d4ad6.
+- [x] 1.2 `tsconfig.json` matching the strict settings used by other
+  vessel repos (`noUncheckedIndexedAccess`, `strict`, etc.). Done 2026-05-21.
+- [x] 1.3 `bun install`; confirm `1 package installed` for the local
+  ias-executor-ts file: dep. Done: `@avigopal/ias-executor-ts@../ias-executor-ts` + hono + zod installed.
+- [x] 1.4 `src/config.ts` exporting `DISCOVERY_SHAPES: string[]` listing
+  every shape from spec R2. Done: all 13 R2.* shapes listed.
+- [x] 1.5 Empty stubs for each resolver file under `src/resolvers/`
+  (one file per R2.* entry). Done: full implementations (not stubs) — git-status/add/commit/diff/log, fs-read/write/edit, activity-fetch/create-variant, vessel-register-passthrough, code-introspect, propagate-judgment.
+- [x] 1.6 `src/routes/impulses.ts` with the dispatch switch and a
+  default `400 unknown shape` arm. Done: all 13 cases + default 400. 4 tests passing (git-status, fs-read).
 
 ## §2 Resolver implementations
 
@@ -27,38 +27,36 @@ existing bootstrap path) for now. **Each resolver in this section MUST
 have a paired test in `test/resolvers/<name>.test.ts` and pass before
 the commit lands.**
 
-- [ ] 2.1 git_status, git_add, git_commit, git_diff, git_log
+- [x] 2.1 git_status, git_add, git_commit, git_diff, git_log
   (extract the bash-resolver pattern from
   `repos/ias-executor-ts/src/examples/ship-change-vessel.ts` but with
   typed pointers — no `command: string[]` config; the resolver assembles
-  the git invocation from typed fields).
-- [ ] 2.2 fs_read, fs_write, fs_edit (with workspace-root guard per R5).
-- [ ] 2.3 activity_fetch, activity_create_variant
-  (HTTP client against METABOB_ENDPOINT; structured error impulse on 4xx).
-- [ ] 2.4 vessel_register_passthrough (HTTP POST to discovery).
-- [ ] 2.5 code_introspect (regex-based; AST upgrade deferred).
-- [ ] 2.6 propagate_judgment (HTTP POST to `/v2/activities/impulse-relevance`
+  the git invocation from typed fields). Done 2026-05-21: all 5 implemented with typed Bun.spawn wrappers.
+- [x] 2.2 fs_read, fs_write, fs_edit (with workspace-root guard per R5). Done 2026-05-21: workspace-root check via `process.env.WORKSPACE_ROOT`; fs-edit rejects 0-or-multiple occurrences.
+- [x] 2.3 activity_fetch, activity_create_variant
+  (HTTP client against METABOB_ENDPOINT; structured error impulse on 4xx). Done 2026-05-21: HTTP clients with ApiKey auth.
+- [x] 2.4 vessel_register_passthrough (HTTP POST to discovery). Done 2026-05-21.
+- [x] 2.5 code_introspect (regex-based; AST upgrade deferred). Done 2026-05-21: regex match with line/column info.
+- [x] 2.6 propagate_judgment (HTTP POST to `/v2/activities/impulse-relevance`
   with weight by source_tier).
 
 ## §3 Bootstrap template constant
 
-- [ ] 3.1 `src/templates/boot-fetch-template.ts` exporting the literal
-  `ActivityTemplate` for R3.6.
-- [ ] 3.2 Test that boot-fetch-template wraps activity_fetch correctly.
+- [x] 3.1 `src/templates/boot-fetch-template.ts` exporting the literal
+  `ActivityTemplate` for R3.6. Done 2026-05-21: id=development-vessel:boot-fetch-template, outputShapes=[activityTemplate], single activity_fetch task with {{templateId}} interpolation.
+- [x] 3.2 Test that boot-fetch-template wraps activity_fetch correctly. Done 2026-05-21: 4 assertions in test/templates/boot-fetch-template.test.ts.
 
 ## §4 HTTP service + CLI
 
-- [ ] 4.1 `src/index.ts` — Hono app with `/health` and
-  `/v2/impulses/resolve`, dispatching by pointer.type. Mirrors the
-  pattern in `repos/discovery-vessel/src/index.ts` or
-  `repos/metabob-activity-api/src/index.ts`.
-- [ ] 4.2 `src/discovery-registration.ts` — non-blocking startup
-  registration + heartbeat loop. Failure logs but does not crash.
-- [ ] 4.3 `src/cli.ts` — argument parser for the three verbs in R4
-  (run-activity, seed-templates, call-resolver).
-- [ ] 4.4 Integration test `test/vessel-integration.test.ts` — boots
+- [x] 4.1 `src/index.ts` — Hono app with `/health` and
+  `/v2/impulses/resolve`, dispatching by pointer.type. Done: health endpoint includes `discovery.registered` flag.
+- [x] 4.2 `src/discovery-registration.ts` — non-blocking startup
+  registration + heartbeat loop. Failure logs but does not crash. Done 2026-05-21: 60s heartbeat, re-register on heartbeat fail, stopDiscoveryRegistration() for clean shutdown.
+- [x] 4.3 `src/cli.ts` — argument parser for the three verbs in R4
+  (run-activity, seed-templates, call-resolver). Done 2026-05-21: seed-templates iterates SEED_TEMPLATES + uploads via activity_create_variant; call-resolver dispatches via resolveDispatch; run-activity fetches template by id (full execution after §5).
+- [x] 4.4 Integration test `test/vessel-integration.test.ts` — boots
   the HTTP server with a fake activity-api adapter, issues a
-  resolve call, asserts the response.
+  resolve call, asserts the response. Done 2026-05-21: 5 tests covering health, fs_read, git_status, unknown shape 400, missing type 400.
 
 ## §5 Bootstrap templates (uploaded by seed-templates)
 
@@ -66,20 +64,20 @@ Each template is defined in `src/seed/<name>.ts` as an `ActivityTemplate`
 constant. The `seed-templates` CLI verb iterates the list and uploads
 each via `activity_create_variant`.
 
-- [ ] 5.1 `src/seed/ship-change.ts` — port of the existing
+- [x] 5.1 `src/seed/ship-change.ts` — port of the existing
   ship-change-vessel activity, using R2.x resolvers (git_add, git_commit,
-  git_log).
-- [ ] 5.2 `src/seed/branch-health.ts` — port of the existing
+  git_log). Done 2026-05-21.
+- [x] 5.2 `src/seed/branch-health.ts` — port of the existing
   branch-health activity, using R2.x resolvers (git_status, git_diff,
-  git_log).
-- [ ] 5.3 `src/seed/release-change.ts` — new composition:
-  ship-change → branch-health → assertion.
-- [ ] 5.4 `src/seed/add-resolver-to-vessel.ts` — fs_read + fs_edit +
-  ship-change.
-- [ ] 5.5 `src/seed/propagate-judgment.ts` — single-task wrapping R2.13.
-- [ ] 5.6 Test `test/seed-templates-dry-run.test.ts` — confirms every
+  git_log). Done 2026-05-21.
+- [x] 5.3 `src/seed/release-change.ts` — new composition:
+  ship-change → branch-health → assertion. Done 2026-05-21: git_add + git_commit + git_status + git_log.
+- [x] 5.4 `src/seed/add-resolver-to-vessel.ts` — fs_read + fs_edit +
+  ship-change. Done 2026-05-21: fs_read + fs_edit + git_add + git_commit.
+- [x] 5.5 `src/seed/propagate-judgment.ts` — single-task wrapping R2.13. Done 2026-05-21.
+- [x] 5.6 Test `test/seed-templates-dry-run.test.ts` — confirms every
   bootstrap template parses + lists every resolver it references in
-  the vessel's advertised shapes.
+  the vessel's advertised shapes. Done 2026-05-21: 20 assertions across 5 templates.
 
 ## §6 Seed the canary
 
