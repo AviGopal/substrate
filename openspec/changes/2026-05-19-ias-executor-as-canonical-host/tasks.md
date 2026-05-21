@@ -304,8 +304,9 @@ Phase 4. Gated on decision-point in design §H.
     `bun run typecheck` passes with 0 errors before committing each sub-step.
   - [ ] 7.3b.12 Measure final LOC: `wc -l repos/minibob/src/*.ts | tail -1`.
     Target: activity.ts equivalent LOC (goal-host-bridge.ts) < 300 lines.
-- [ ] 7.4 Update CLAUDE.md's "Current Implementation Status" block — the
+- [x] 7.4 Update CLAUDE.md's "Current Implementation Status" block — the
   minibob version line moves under GoalHost or is removed.
+  Done 2026-05-20: bumped to 0.14.11, added GOAL_RUNTIME=ias-executor note.
 
 ## §S Success Criteria — Acceptance Gates
 

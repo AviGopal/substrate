@@ -10,25 +10,32 @@ phase begins. Checkbox style matches
 
 ### A.1 Define impulse shapes
 
-- [ ] A.1.1 Add `test_registration`, `test_report`, `test_audit_report`,
+- [x] A.1.1 Add `test_registration`, `test_report`, `test_audit_report`,
   `sensitivity_evidence` to the activity-api shape catalogue
   (`repos/metabob-activity-api/src/config.ts` shapes block). **Acceptance:**
   `GET /v2/vessels/shapes` includes all four; shape-dispatch lint
   (`2026-05-17-shape-dispatch-agreement`) passes.
-- [ ] A.1.2 Schema files under `repos/metabob-activity-api/src/models/schemas.ts`
+  Done: all 8 shapes (4 read + 4 write) in config.ts lines 328-344, plus
+  `code_modification_proposal` and `code_modification_proposal_write`.
+- [x] A.1.2 Schema files under `repos/metabob-activity-api/src/models/schemas.ts`
   for the four shapes, matching the field lists in `design.md` §E.2 and §B.3.
   **Acceptance:** unit tests for each shape's discriminated context (Zod or
   TypeScript schema validator).
+  Done: Zod schemas in schemas.ts lines 1688-1831; migrations 131 + 132 create
+  SurrealDB tables; `code_modification_proposal` schema also present.
 
 ### A.2 Write resolver
 
-- [ ] A.2.1 Add `testAuditReport_write` to `src/routes/impulses.ts` following the
+- [x] A.2.1 Add `testAuditReport_write` to `src/routes/impulses.ts` following the
   pattern of the 14 existing `*_write` resolvers documented at
   `docs/impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`. **Acceptance:**
   `POST /v2/impulses/resolve { shape: "testAuditReport_write", body: ... }`
   persists and is fetchable via `GET /v2/activities/execution-traces/:id`.
-- [ ] A.2.2 Same for `testRegistration_write`, `testReport_write`,
+  Done: `case 'test_audit_report_write'` at impulses.ts:3719.
+- [x] A.2.2 Same for `testRegistration_write`, `testReport_write`,
   `sensitivityEvidence_write`. **Acceptance:** each shape round-trips.
+  Done: all four write cases implemented; `code_modification_proposal_write` also
+  present at impulses.ts:3939.
 
 ### A.3 Grandfathering
 

@@ -128,7 +128,7 @@ Before writing code:
       note`. Adjust the "MCP surface in dashboard" section of
       `docs/PRODUCT_BOUNDARIES.md` so the iteration-5 placeholder
       language becomes "live as of <date>". Push.
-- [ ] 7.3 Archive: move change dir to
+- [x] 7.3 Archive: move change dir to
       `openspec/changes/archive/2026-05-20-rpc-api-mcp-usage-adapter/`
       and lift the spec to
       `openspec/specs/rpc-api-mcp-usage-adapter/spec.md`.
