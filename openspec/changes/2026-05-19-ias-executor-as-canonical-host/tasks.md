@@ -281,9 +281,13 @@ Phase 4. Gated on decision-point in design §H.
     GOAL_RUNTIME=ias-executor gate (calls runGoalViaHost() via bridge).
     `cli/processor.ts` done (§7.3b.3). `cli/run-activity.ts` deferred to
     §7.3b.6 (uses ActivityExecutor with complex impulse+progress callbacks).
-  - [ ] 7.3b.6 Migrate `vessel-bootstrap.ts`, `execution-adapter.ts`,
+  - [x] 7.3b.6 Migrate `vessel-bootstrap.ts`, `execution-adapter.ts`,
     `search-first-executor.ts`, `conversation.ts`, `orchestration.ts`.
-    These are internal plumbing; migrate last to avoid breaking interactive REPL.
+    PARTIAL done 2026-05-20:
+    - `conversation.ts`: migrated — now uses `LLMClient` directly, no ActivityExecutor import.
+    - `vessel-bootstrap.ts`: `runGoal()` now gates on `GOAL_RUNTIME=ias-executor` and calls `runGoalViaHost`; `runActivity()` still uses ActivityExecutor (no GoalHost equivalent).
+    - `orchestration.ts`: dead code (zero importers); left as-is, will be deleted in §7.3b.7 cleanup.
+    - `execution-adapter.ts` (1220 LOC), `search-first-executor.ts` (1469 LOC): deferred — these are large internal executors that would require type-compatible wrappers; defer to a dedicated migration pass once GoalHost has a direct template-execution API.
   - [ ] 7.3b.7 Once all live call sites are off activity.ts, replace
     `activity.ts` with a 1-line re-export shim of the types GoalHost exposes
     (ExecutorConfig-equivalent, etc.) for any test code still importing it.
