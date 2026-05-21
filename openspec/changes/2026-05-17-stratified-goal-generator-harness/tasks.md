@@ -149,10 +149,13 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
 
 ### G6.3 Output normalisers
 
-- [ ] G6.3.1 `validation/lib/output-normalizers.ts` with per-shape normalisers for at
-  least: `fileEdit`, `validation_result`, `gitDiff`, `directoryTree`. Unrecognised
-  shapes fall back to canonical JSON. **Acceptance:** unit test covers each shape with
-  agreeing and disagreeing pairs.
+- [x] G6.3.1 ✅ **DONE** 2026-05-21. `validation/scripts/lib/output-normalizers.ts`:
+  `normalizeOutput(shape, body)`, `outputsAgree(shape, a, b)`, `diffOutputs(shape, a, b)`.
+  Built-in normalizers: `fileEdit` (CRLF→LF, trim trailing spaces, collapse blank lines),
+  `validation_result` (extract structural verdict fields, drop timestamps/messages),
+  `gitDiff` (CRLF-safe parser → sorted FilePatch[]), `directoryTree` (sort paths,
+  normalise separators). Unknown shapes fall back to deep-key-sorted canonical JSON.
+  22 unit tests green, each shape has agreeing + disagreeing pair.
 - [ ] G6.3.2 Wire into harness; emit `witnesses[]` array per goal with
   `agreed: bool`, `diff: object|null`.
 
