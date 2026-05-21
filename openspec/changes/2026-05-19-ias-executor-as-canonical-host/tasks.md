@@ -191,9 +191,28 @@ specific expectations about minibob's process lifecycle.
 
 Phase 4. Gated on decision-point in design §H.
 
-- [ ] 7.1 Audit live minibob consumers. Inputs: canary helm manifests,
+- [x] 7.1 Audit live minibob consumers. Inputs: canary helm manifests,
   `repos/deployment/charts/minibob/`, `repos/k8s-activity-executor/`, any
   user TUI workflows. Output: a list of remaining hard dependencies.
+  Audit 2026-05-20:
+  - **In-cluster deployment**: `minibob` helm chart at 1 replica in
+    `activity-system` namespace; runs upkeep activities (database cleaning,
+    registry maintenance); image `0.14.11-677f8ff`.
+  - **Lifecycle hooks**: minibob's in-cluster pod is the scheduler for
+    waking activities (`startup:health-check`, `idle:self-optimize`).
+    These require a live minibob process.
+  - **TUI/REPL**: developer-facing `minibob` CLI (REPL, `/teach`, `/warn`,
+    `--single`). No hard k8s dependency but widely used.
+  - **`k8s-activity-executor/`**: independent k8s Job-based executor;
+    does NOT spawn minibob — uses its own execution runtime.
+  - **`cycle.sh`**: runs helmfile to deploy minibob Jobs; references
+    minibob container image but does not depend on minibob source.
+  - **`test-forge-goal-completion.ts`**: migrated away from minibob spawn
+    (task §4.2). Now uses ias-executor-ts directly.
+  - **`test-22-*`**: already use ias-executor-ts.
+  Summary: hard dependencies are the in-cluster upkeep pod and the
+  developer TUI/REPL workflow. No validation script hard-depends on minibob
+  after §4 migration.
 - [ ] 7.2 Decision: Path 4a (retire) or Path 4b (thin TUI shell). Write
   the decision into this tasks file with rationale before proceeding.
 - [ ] 7.3a (if 4a) Archive `repos/minibob/`. Update `.gitmodules`. Update
