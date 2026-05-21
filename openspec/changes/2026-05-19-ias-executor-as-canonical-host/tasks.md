@@ -213,8 +213,23 @@ Phase 4. Gated on decision-point in design §H.
   Summary: hard dependencies are the in-cluster upkeep pod and the
   developer TUI/REPL workflow. No validation script hard-depends on minibob
   after §4 migration.
-- [ ] 7.2 Decision: Path 4a (retire) or Path 4b (thin TUI shell). Write
-  the decision into this tasks file with rationale before proceeding.
+- [x] 7.2 Decision: **Path 4b — thin TUI shell** (decided 2026-05-20).
+  Rationale:
+  - §7.1 audit found two hard live dependencies: (a) the in-cluster upkeep
+    pod (1 replica, database-cleaning + registry-maintenance activities) and
+    (b) the developer TUI/REPL (`minibob --single`, `/teach`, `/warn`,
+    `boredom.ts`, `conversational-repl.ts`, `acp.ts`).
+  - Path 4a (retire entirely) requires immediately replacing both. The
+    upkeep pod would need a GoalHost-based k8s image (not yet built), and
+    the TUI has interactive REPL UX that has no GoalHost equivalent today.
+  - Path 4b removes only the execution internals that ias-executor-ts now
+    owns: `activity.ts`, `lifecycle-subscriptions.ts`, `embedded-templates/`
+    directory, `goal-processor.ts`. The TUI/REPL surface (`boredom.ts`,
+    `conversational-repl.ts`, `acp.ts`, CLI entry) delegates to GoalHost
+    via the public ias-executor-ts API.
+  - Threshold for §S.5: minibob LOC < 1,500 after the cut.
+  - In-cluster upkeep pod migration to GoalHost k8s image is a separate
+    Phase 5 item (not tracked here); for now the pod keeps running minibob.
 - [ ] 7.3a (if 4a) Archive `repos/minibob/`. Update `.gitmodules`. Update
   CLAUDE.md (replace minibob role with GoalHost). Remove minibob helm
   chart.
@@ -223,6 +238,50 @@ Phase 4. Gated on decision-point in design §H.
   (keep re-export shim if still used), `src/goal-processor.ts`. Keep
   `boredom.ts`, `conversational-repl.ts`, `acp.ts`, CLI entry. Re-wire CLI
   to construct a GoalHost and delegate.
+  ANALYSIS (2026-05-20): dependency audit found 15+ files importing activity.ts
+  (boredom.ts, cli/goal.ts, cli/processor.ts, cli/run-activity.ts,
+  composition-observer.ts, conversation.ts, execution-adapter.ts,
+  goal-processor.ts, lib.ts, orchestration.ts, repl.ts,
+  search-first-executor.ts, understanding/analyzer.ts, vessel-bootstrap.ts,
+  index.ts). Full cut requires the following ordered sub-steps:
+  - [ ] 7.3b.1 Add `@avigopal/ias-executor-ts` as a local workspace dep in
+    `repos/minibob/package.json` (file: path pointing at repos/ias-executor-ts
+    OR publish to a local registry). Gate on ias-executor-ts having a dist/
+    build (run `bun run build` first).
+  - [ ] 7.3b.2 Create `repos/minibob/src/goal-host-bridge.ts`: a thin adapter
+    that constructs a GoalHost from minibob's `MinibobConfig` (METABOB_API_KEY,
+    METABOB_ENDPOINT, ANTHROPIC_API_KEY, provider, model, workingDirectory).
+    Exports `runGoal(goal, config, opts)` → `GoalRunResult` and
+    `runTemplate(templateId, vars, config)`. This is the migration boundary.
+  - [ ] 7.3b.3 Migrate `index.ts` single-goal path (`--single`) to call
+    `goal-host-bridge.runGoal()` instead of constructing ActivityExecutor +
+    GoalProcessor. Keep ActivityExecutor import behind a lazy dynamic import
+    until all paths are migrated (avoid breaking REPL and boredom).
+  - [ ] 7.3b.4 Migrate `boredom.ts` `loadTemplateFromMCPOrLocal` usage to
+    `goal-host-bridge.runTemplate()`. The single import is line 13;
+    `loadTemplateFromMCPOrLocal` is used for boredom task execution.
+  - [ ] 7.3b.5 Migrate `cli/goal.ts`, `cli/processor.ts`, `cli/run-activity.ts`
+    (all direct CLI command handlers). After this step, all user-facing paths
+    go through goal-host-bridge.
+  - [ ] 7.3b.6 Migrate `vessel-bootstrap.ts`, `execution-adapter.ts`,
+    `search-first-executor.ts`, `conversation.ts`, `orchestration.ts`.
+    These are internal plumbing; migrate last to avoid breaking interactive REPL.
+  - [ ] 7.3b.7 Once all live call sites are off activity.ts, replace
+    `activity.ts` with a 1-line re-export shim of the types GoalHost exposes
+    (ExecutorConfig-equivalent, etc.) for any test code still importing it.
+  - [ ] 7.3b.8 Replace `lifecycle-subscriptions.ts` with a shim that re-exports
+    ias-executor-ts's `LifecycleSubscriberVessel` (and no-ops the
+    process-global functions if any test still calls them).
+  - [ ] 7.3b.9 Remove `src/embedded-templates/*.json` (already in ias-executor-ts
+    under `src/templates/`). Keep `src/embedded-templates/index.ts` as a shim
+    re-exporting from `@avigopal/ias-executor-ts/templates`.
+  - [ ] 7.3b.10 Remove or inline `goal-processor.ts`. Its `GoalProcessor.executeGoal`
+    is replaced by `GoalHost.runGoal`; types like `Goal`, `GoalResult` survive
+    as shim re-exports.
+  - [ ] 7.3b.11 Run `bun test` in repos/minibob after each sub-step. Verify
+    `bun run typecheck` passes with 0 errors before committing each sub-step.
+  - [ ] 7.3b.12 Measure final LOC: `wc -l repos/minibob/src/*.ts | tail -1`.
+    Target: activity.ts equivalent LOC (goal-host-bridge.ts) < 300 lines.
 - [ ] 7.4 Update CLAUDE.md's "Current Implementation Status" block — the
   minibob version line moves under GoalHost or is removed.
 
