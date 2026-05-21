@@ -558,11 +558,197 @@ function computeOptimalityRatios(
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
+// G7.1.1: Extracted goal-loop for held-out + rolling-pool dual execution
+// ---------------------------------------------------------------------------
+
+type MatrixOutput = Record<string, Omit<CellMetrics, "cost_usd_samples" | "reuse_efficiency_samples" | "improvise_share_samples" | "decision_record_completeness_samples">>;
+
+function stripSampleArrays(matrix: CoverageMatrix): MatrixOutput {
+  const out: MatrixOutput = {};
+  for (const [cellId, cell] of Object.entries(matrix)) {
+    const { cost_usd_samples, reuse_efficiency_samples, improvise_share_samples, decision_record_completeness_samples, ...rest } = cell;
+    out[cellId] = rest;
+  }
+  return out;
+}
+
+interface PerGoalResult {
+  goal_id: string;
+  cell_id: string;
+  recommend_count: number;
+  recommend_shape_match: boolean;
+  trace_count: number;
+  scores: TraceScores[];
+  witnesses: WitnessEntry[];
+}
+
+interface LoopResult {
+  matrix: CoverageMatrix;
+  rawCellCosts: Record<string, number[]>;
+  perGoalResults: PerGoalResult[];
+  refinementEvents: RefinementEvent[];
+  optimalityRatios: Record<string, number | null>;
+  apiCallCount: number;
+  universality_pass: boolean | null;
+}
+
+async function runGoalLoop(
+  goals: GeneratedGoal[],
+  opts: {
+    endpoint: string;
+    authHeaders: Record<string, string>;
+    priorReport: PriorReport | null;
+    thompsonPoolIds: Set<string>;
+    shortestPaths: ShortestPathCache;
+    budgetCap?: number;
+  }
+): Promise<LoopResult> {
+  const { endpoint, authHeaders, priorReport, thompsonPoolIds, shortestPaths } = opts;
+  const BUDGET_CAP = opts.budgetCap ?? 200;
+
+  const matrix: CoverageMatrix = {};
+  const rawCellCosts: Record<string, number[]> = {};
+  const perGoalResults: PerGoalResult[] = [];
+  let apiCallCount = 0;
+
+  console.log(`\n  Processing ${goals.length} goals...\n`);
+
+  for (let i = 0; i < goals.length; i++) {
+    const goal = goals[i];
+    const cellId = goal.cell_id;
+
+    if (!matrix[cellId]) {
+      matrix[cellId] = emptyCell();
+      rawCellCosts[cellId] = [];
+    }
+
+    const cell = matrix[cellId];
+
+    if (apiCallCount >= BUDGET_CAP) {
+      console.log(`  Budget cap (${BUDGET_CAP} API calls) reached — stopping early`);
+      break;
+    }
+
+    process.stdout.write(`  [${i + 1}/${goals.length}] cell=${cellId} `);
+
+    // 1. Run recommendation
+    const recs = await runRecommendation(goal, endpoint, authHeaders);
+    apiCallCount++;
+
+    const hasAnyRec = recs.length > 0;
+    const hasShapeMatch = recs.some((r) =>
+      recommendationCoversOutputShapes(r, goal.expected_output_shapes)
+    );
+
+    // 2. Query matching traces
+    const traces = await queryMatchingTraces(
+      goal.expected_output_shapes,
+      endpoint,
+      authHeaders,
+      5
+    );
+    apiCallCount++;
+
+    // 3. Score traces
+    const traceScores: TraceScores[] = [];
+    for (const trace of traces) {
+      const score = scoreTrace(trace, thompsonPoolIds);
+      traceScores.push(score);
+
+      cell.sample_count++;
+      if (score.success) {
+        cell.success_count++;
+        if (score.cost_usd !== null) {
+          cell.cost_usd_samples.push(score.cost_usd);
+          rawCellCosts[cellId].push(score.cost_usd);
+          const chain = trace.composition_chain ?? (trace.activity_id ? [trace.activity_id] : []);
+          updateShortestPathCache(shortestPaths, cellId, score.cost_usd, chain);
+        }
+      }
+      if (score.reuse_efficiency !== null) cell.reuse_efficiency_samples.push(score.reuse_efficiency);
+      if (score.improvise_share !== null) cell.improvise_share_samples.push(score.improvise_share);
+      if (score.decision_record_completeness !== null)
+        cell.decision_record_completeness_samples.push(score.decision_record_completeness);
+    }
+
+    // Scenario D gating
+    if (cellId.includes("C∪D") || goal.scenario === "C∪D" || goal.topology_gap_band === "D") {
+      cell.floor_status = "gated_on_phase_22";
+    }
+
+    // G6.3.2: witness comparison
+    const witnesses: WitnessEntry[] = [];
+    if (traces.length >= 2) {
+      const ta = traces[0];
+      const tb = traces[1];
+      const shapesA = [...(ta.output_shapes ?? [])].sort();
+      const shapesB = [...(tb.output_shapes ?? [])].sort();
+      const agreed = outputsAgree("output_shapes", shapesA, shapesB);
+      witnesses.push({
+        trace_a_id: ta.id ?? "unknown",
+        trace_b_id: tb.id ?? "unknown",
+        shape: "output_shapes",
+        agreed,
+        diff: agreed ? null : (diffOutputs("output_shapes", shapesA, shapesB) ?? null),
+      });
+    }
+
+    perGoalResults.push({
+      goal_id: goal.id,
+      cell_id: cellId,
+      recommend_count: recs.length,
+      recommend_shape_match: hasShapeMatch,
+      trace_count: traces.length,
+      scores: traceScores,
+      witnesses,
+    });
+
+    process.stdout.write(
+      `recs=${recs.length} shape_match=${hasShapeMatch ? "✓" : "✗"} traces=${traces.length}\n`
+    );
+  }
+
+  // Finalize cells
+  for (const [cellId, cell] of Object.entries(matrix)) {
+    const goalResults = perGoalResults.filter((r) => r.cell_id === cellId);
+    cell.recommend_coverage =
+      goalResults.length > 0
+        ? goalResults.filter((r) => r.recommend_count > 0).length / goalResults.length
+        : null;
+    cell.recommend_shape_match =
+      goalResults.length > 0
+        ? goalResults.filter((r) => r.recommend_shape_match).length / goalResults.length
+        : null;
+    const goalsWithWitnesses = goalResults.filter((r) => r.witnesses.length > 0);
+    cell.witness_disagreement =
+      goalsWithWitnesses.length > 0
+        ? goalsWithWitnesses.filter((r) => r.witnesses.some((w) => !w.agreed)).length /
+          goalsWithWitnesses.length
+        : null;
+    finalizeCell(cell, cellId);
+  }
+
+  const refinementEvents = detectRefinementEvents(matrix, priorReport);
+  const optimalityRatios = computeOptimalityRatios(rawCellCosts, shortestPaths);
+
+  const passableCells = Object.entries(matrix).filter(
+    ([, c]) => c.sample_count >= 3 && c.floor_status !== "gated_on_phase_22"
+  );
+  const universality_pass =
+    passableCells.length === 0
+      ? null
+      : passableCells.every(([, c]) => c.floor_pass);
+
+  return { matrix, rawCellCosts, perGoalResults, refinementEvents, optimalityRatios, apiCallCount, universality_pass };
+}
+
+// ---------------------------------------------------------------------------
 
 async function main() {
   const { values } = parseArgs({
     options: {
       goals: { type: "string" },
+      "held-out": { type: "boolean", default: false },
       baseline: { type: "string", default: "" },
       label: { type: "string", default: "" },
       detailed: { type: "boolean", default: false },
@@ -616,172 +802,78 @@ async function main() {
   const thompsonPoolIds = await captureThompsonSnapshot(endpoint, authHeaders);
   console.log(`  Thompson pool: ${thompsonPoolIds.size} templates`);
 
-  // Initialize coverage matrix
-  const matrix: CoverageMatrix = {};
-  const rawCellCosts: Record<string, number[]> = {};
-  const perGoalResults: Array<{
-    goal_id: string;
-    cell_id: string;
-    recommend_count: number;
-    recommend_shape_match: boolean;
-    trace_count: number;
-    scores: TraceScores[];
-    witnesses: WitnessEntry[];
-  }> = [];
+  const loopOpts = { endpoint, authHeaders, priorReport, thompsonPoolIds, shortestPaths };
 
-  const BUDGET_CAP = 200;
-  let apiCallCount = 0;
+  // G7.1.1: If --held-out, run held-out suite first and emit held-out report.
+  const isHeldOut = values["held-out"] === true;
+  if (isHeldOut) {
+    // Auto-detect held-out goals file: most recent *-held-out-goals.json in generated/
+    const generatedDir = join(repoRoot, "validation", "generated");
+    const { readdir } = await import("node:fs/promises");
+    const allFiles = (await readdir(generatedDir).catch(() => [])) as string[];
+    const heldOutFiles = allFiles
+      .filter((f) => f.endsWith("-held-out-goals.json"))
+      .sort()
+      .reverse();
+    if (heldOutFiles.length === 0) {
+      console.warn("  --held-out: no held-out goals file found in validation/generated/. Run goal-generator --held-out first.");
+    } else {
+      const heldOutPath = join(generatedDir, heldOutFiles[0]);
+      console.log(`\n  Held-out suite: ${heldOutPath}`);
+      const heldOutFile = JSON.parse(await readFile(heldOutPath, "utf8")) as GeneratedGoalsFile;
+      const heldOutGoals = heldOutFile.goals;
 
-  console.log(`\n  Processing ${goals.length} goals...\n`);
+      const heldOutLoop = await runGoalLoop(heldOutGoals, loopOpts);
 
-  for (let i = 0; i < goals.length; i++) {
-    const goal = goals[i];
-    const cellId = goal.cell_id;
-
-    if (!matrix[cellId]) {
-      matrix[cellId] = emptyCell();
-      rawCellCosts[cellId] = [];
+      // Build held-out report (G7.1.2)
+      const heldOutMatrixOutput = stripSampleArrays(heldOutLoop.matrix);
+      const heldOutReport = {
+        harness_version: "25.2",
+        suite: "held_out",
+        run_at: new Date().toISOString(),
+        label: values["label"] || undefined,
+        goals_file: heldOutPath,
+        generator_seed: heldOutFile.generator_seed,
+        shape_registry_snapshot_hash: heldOutFile.shape_registry_snapshot_hash,
+        endpoint,
+        thompson_pool_size: thompsonPoolIds.size,
+        goals_processed: heldOutLoop.perGoalResults.length,
+        api_call_count: heldOutLoop.apiCallCount,
+        universality_pass: heldOutLoop.universality_pass,
+        cell_count: Object.keys(heldOutLoop.matrix).length,
+        coverage_matrix: heldOutMatrixOutput,
+        optimality_ratios: heldOutLoop.optimalityRatios,
+        refinement_event_count: heldOutLoop.refinementEvents.length,
+        refinement_event_density:
+          heldOutLoop.perGoalResults.length > 0
+            ? heldOutLoop.refinementEvents.length / heldOutLoop.perGoalResults.length
+            : 0,
+        ...(values["detailed"] ? { per_goal_results: heldOutLoop.perGoalResults } : {}),
+      };
+      const resultsDir = join(repoRoot, "validation", "results");
+      await mkdir(resultsDir, { recursive: true });
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const heldOutReportPath = join(resultsDir, `${dateStr}-held-out-report.json`);
+      await writeFile(heldOutReportPath, JSON.stringify(heldOutReport, null, 2), "utf8");
+      console.log(`  Held-out report written to: ${heldOutReportPath}`);
     }
-
-    const cell = matrix[cellId];
-
-    if (apiCallCount >= BUDGET_CAP) {
-      console.log(`  Budget cap (${BUDGET_CAP} API calls) reached — stopping early`);
-      break;
-    }
-
-    process.stdout.write(`  [${i + 1}/${goals.length}] cell=${cellId} `);
-
-    // 1. Run recommendation
-    const recs = await runRecommendation(goal, endpoint, authHeaders);
-    apiCallCount++;
-
-    const hasAnyRec = recs.length > 0;
-    const hasShapeMatch = recs.some((r) =>
-      recommendationCoversOutputShapes(r, goal.expected_output_shapes)
-    );
-
-    // 2. Query matching traces
-    const traces = await queryMatchingTraces(
-      goal.expected_output_shapes,
-      endpoint,
-      authHeaders,
-      5
-    );
-    apiCallCount++;
-
-    // 3. Score traces
-    const traceScores: TraceScores[] = [];
-    for (const trace of traces) {
-      const score = scoreTrace(trace, thompsonPoolIds);
-      traceScores.push(score);
-
-      cell.sample_count++;
-      if (score.success) {
-        cell.success_count++;
-        if (score.cost_usd !== null) {
-          cell.cost_usd_samples.push(score.cost_usd);
-          rawCellCosts[cellId].push(score.cost_usd);
-          // Update shortest-path cache
-          const chain = trace.composition_chain ?? (trace.activity_id ? [trace.activity_id] : []);
-          updateShortestPathCache(shortestPaths, cellId, score.cost_usd, chain);
-        }
-      }
-      if (score.reuse_efficiency !== null) cell.reuse_efficiency_samples.push(score.reuse_efficiency);
-      if (score.improvise_share !== null) cell.improvise_share_samples.push(score.improvise_share);
-      if (score.decision_record_completeness !== null)
-        cell.decision_record_completeness_samples.push(score.decision_record_completeness);
-    }
-
-    // Scenario D gating — parse from cell_id since goal.scenario may be null
-    if (cellId.includes("C∪D") || goal.scenario === "C∪D" || goal.topology_gap_band === "D") {
-      cell.floor_status = "gated_on_phase_22";
-    }
-
-    // G6.3.2: witness comparison — compare first two traces' output_shapes.
-    // Shallow (shape-list) comparison until G6.2.1 differential-solve provides
-    // second-run impulse bodies for deep content comparison.
-    const witnesses: WitnessEntry[] = [];
-    if (traces.length >= 2) {
-      const ta = traces[0];
-      const tb = traces[1];
-      const shapesA = [...(ta.output_shapes ?? [])].sort();
-      const shapesB = [...(tb.output_shapes ?? [])].sort();
-      const agreed = outputsAgree("output_shapes", shapesA, shapesB);
-      witnesses.push({
-        trace_a_id: ta.id ?? "unknown",
-        trace_b_id: tb.id ?? "unknown",
-        shape: "output_shapes",
-        agreed,
-        diff: agreed ? null : (diffOutputs("output_shapes", shapesA, shapesB) ?? null),
-      });
-    }
-
-    perGoalResults.push({
-      goal_id: goal.id,
-      cell_id: cellId,
-      recommend_count: recs.length,
-      recommend_shape_match: hasShapeMatch,
-      trace_count: traces.length,
-      scores: traceScores,
-      witnesses,
-    });
-
-    process.stdout.write(
-      `recs=${recs.length} shape_match=${hasShapeMatch ? "✓" : "✗"} traces=${traces.length}\n`
-    );
   }
 
-  // Finalize cells
-  for (const [cellId, cell] of Object.entries(matrix)) {
-    // Compute recommend_coverage / recommend_shape_match from per-goal results in this cell
-    const goalResults = perGoalResults.filter((r) => r.cell_id === cellId);
-    cell.recommend_coverage =
-      goalResults.length > 0
-        ? goalResults.filter((r) => r.recommend_count > 0).length / goalResults.length
-        : null;
-    cell.recommend_shape_match =
-      goalResults.length > 0
-        ? goalResults.filter((r) => r.recommend_shape_match).length / goalResults.length
-        : null;
-    // G6.3.2: witness_disagreement — fraction of goals with ≥1 disagreeing witness
-    const goalsWithWitnesses = goalResults.filter((r) => r.witnesses.length > 0);
-    cell.witness_disagreement =
-      goalsWithWitnesses.length > 0
-        ? goalsWithWitnesses.filter((r) => r.witnesses.some((w) => !w.agreed)).length /
-          goalsWithWitnesses.length
-        : null;
-    finalizeCell(cell, cellId);
-  }
-
-  // Detect refinement events
-  const refinementEvents = detectRefinementEvents(matrix, priorReport);
-
-  // Compute optimality ratios
-  const optimalityRatios = computeOptimalityRatios(rawCellCosts, shortestPaths);
+  // Main (rolling-pool) suite
+  const loopResult = await runGoalLoop(goals, loopOpts);
+  const { matrix, rawCellCosts, perGoalResults, refinementEvents, optimalityRatios, apiCallCount, universality_pass } = loopResult;
 
   // Save shortest-path cache
   await saveShortestPathCache(statePath, shortestPaths);
 
-  // Top-level pass/fail
+  // Build report
+  const matrixOutput = stripSampleArrays(matrix);
   const passableCells = Object.entries(matrix).filter(
     ([, c]) => c.sample_count >= 3 && c.floor_status !== "gated_on_phase_22"
   );
-  const universality_pass =
-    passableCells.length === 0
-      ? null
-      : passableCells.every(([, c]) => c.floor_pass);
-
-  // Strip internal sample arrays before output
-  const matrixOutput: Record<string, Omit<CellMetrics, "cost_usd_samples" | "reuse_efficiency_samples" | "improvise_share_samples" | "decision_record_completeness_samples">> = {};
-  for (const [cellId, cell] of Object.entries(matrix)) {
-    const { cost_usd_samples, reuse_efficiency_samples, improvise_share_samples, decision_record_completeness_samples, ...rest } = cell;
-    matrixOutput[cellId] = rest;
-  }
-
-  // Build report
   const report = {
     harness_version: "25.2",
+    suite: "rolling_pool",
     run_at: new Date().toISOString(),
     label: values["label"] || undefined,
     goals_file: goalsPath,

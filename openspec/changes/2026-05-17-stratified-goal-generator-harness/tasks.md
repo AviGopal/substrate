@@ -183,9 +183,16 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
 
 ### G7.1 Held-out execution path
 
-- [ ] G7.1.1 `stratified-harness.ts` accepts `--held-out` and runs the held-out
-  suite BEFORE the rolling-pool suite in the same invocation.
-- [ ] G7.1.2 Held-out report emitted to `<date>-held-out-report.json`.
+- [x] G7.1.1 ✅ **DONE** 2026-05-21. `stratified-harness.ts` accepts `--held-out`.
+  When set, auto-detects the most recent `*-held-out-goals.json` in
+  `validation/generated/`, runs `runGoalLoop()` on those goals BEFORE the
+  rolling-pool suite (which uses `--goals` as usual). Both runs share the same
+  Thompson snapshot and shortest-path cache. The main goal-loop extracted into
+  `runGoalLoop()` function; `stripSampleArrays()` helper added.
+- [x] G7.1.2 ✅ **DONE** 2026-05-21. Held-out report emitted to
+  `validation/results/<date>-held-out-report.json` with `suite: "held_out"` field.
+  Rolling-pool report gains `suite: "rolling_pool"` for contamination delta
+  comparison (G7.2). Regular (non-held-out) invocations unchanged.
 
 ### G7.2 Contamination delta
 
