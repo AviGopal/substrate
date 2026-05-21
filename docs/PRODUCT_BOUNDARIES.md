@@ -192,6 +192,31 @@ identity-vessel `prefix` field to 12 chars to avoid leaking raw-key-
 shaped substrings into UI labels. Capability spec:
 [`openspec/specs/team-lead-key-overview/spec.md`](../openspec/specs/team-lead-key-overview/spec.md).
 
+UI refresh (2026-05-21, canary `0.3.4-bbcdf5c`): per-tool counts
+are bucketed into four intents — exploring (init_workspace,
+get_problems, search_codebase, get_metrics, get_analysis_context),
+resolving (mark_complete), documenting (annotate_component), and
+shipping (assign_git_changes, predict_cochanges, analyze_impact).
+`IntentBreakdown` renders inline on `/api-keys` (one row per key,
+under `UsageBadge`) and as a card above the per-tool list on
+`/mcp` Usage. The `/mcp` route now wraps Tools / Install / Usage
+in a Tabs primitive (`role=tablist` + three `role=tab` + visible
+`role=tabpanel`). The API-key fingerprint in `/api-keys`
+truncates at `max-w-xs` with the full prefix on `title=` and a
+lucide Copy button immediately adjacent (the dashboard never sees
+the raw key post-creation; the button copies the masked prefix
+only). Sidebar nav uses lucide `Key` / `Boxes` icons in place of
+emoji glyphs. A `tokens.css` file restates the existing scale as
+CSS custom properties wired through Tailwind v4's `@theme` block
+in `styles/index.css` (Tailwind v4 takes theme config in CSS, not
+`tailwind.config.ts`; this was a deploy-time surprise). Capability
+specs:
+[`openspec/specs/mcp-usage-intent-buckets/spec.md`](../openspec/specs/mcp-usage-intent-buckets/spec.md)
+and
+[`openspec/specs/stylesheet-refresh/spec.md`](../openspec/specs/stylesheet-refresh/spec.md).
+The `stylesheet-refresh` measurement gate (R6) remains deferred
+pending the open `ui-audit` change.
+
 ## Coupling audit
 
 The "Coupling Audit" is a machine-greppable table — one row per
