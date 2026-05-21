@@ -12,7 +12,9 @@
 - R1.5 Has `src/routes/impulses.ts` with a single `POST /v2/impulses/resolve`
   handler dispatching by `pointer.type`. Every advertised shape has a
   matching case. The shape-dispatch-check script in `packages/
-  shape-dispatch-check/` MUST pass against this file.
+  shape-dispatch-check/` MUST pass via `bun run lint`, which runs
+  `tsc --noEmit` AND `scripts/check-shape-dispatch.ts` sequentially.
+  CI invokes `bun run lint` as a gate. (Amended 2026-05-21 §9.6.)
 
 ## R2 — Advertised shapes (resolvers)
 
@@ -213,6 +215,9 @@ Three suites must pass:
   exercises a multi-resolver chain end-to-end with a fake activity-api.
 - R8.3 `test/cli.test.ts` — exercises each CLI verb in R4 with
   fixture inputs.
+- R8.4 (added 2026-05-21 §9.7) `package.json` `lint` script chains
+  `tsc --noEmit` and `scripts/check-shape-dispatch.ts`; both must
+  pass for CI to green.
 
 CI gate: `bun test` passes (0 fails) and `bun run lint` passes.
 
