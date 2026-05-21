@@ -118,13 +118,13 @@ sha `a1c0649`). The VERIFY+DEBUG stage surfaced five gaps against the
 shipped sub-repo state; these tasks close them. SPEC stage of the
 four-stage loop (VERIFY → DEBUG → SPEC → DEV); DEV stage implements.
 
-- [ ] 9.1 **G5 (high)** — wire `scripts/check-shape-dispatch.ts` in
+- [x] 9.1 **G5 (high)** — wire `scripts/check-shape-dispatch.ts` in
   `repos/development-vessel/`. Update `package.json` `lint` script
   to run typecheck AND shape-dispatch-check sequentially. The wrapper
   reads `DISCOVERY_SHAPES` from `src/config.ts` and `case` arms from
   `src/routes/impulses.ts`; exits non-zero on disagreement. Mirrors
   the pattern in `repos/metabob-activity-api/scripts/`. CI gate.
-- [ ] 9.2 **G1 (medium)** — add the 11 missing per-resolver tests in
+- [x] 9.2 **G1 (medium)** — add the 11 missing per-resolver tests in
   `test/resolvers/`:
   - `git-add.test.ts` — paths after `--` separator; reject empty paths.
   - `git-commit.test.ts` — empty staged tree returns non-zero with
@@ -144,38 +144,39 @@ four-stage loop (VERIFY → DEBUG → SPEC → DEV); DEV stage implements.
     not found returns null extents + clear note.
   - `propagate-judgment.test.ts` — weight-by-tier; 403 captured in
     `impulse_relevance_call_succeeded: false`.
-- [ ] 9.3 **G3 (medium)** — add `repos/development-vessel/README.md`
+- [x] 9.3 **G3 (medium)** — add `repos/development-vessel/README.md`
   with: one-paragraph topology summary pointing at CASES_AND_FLOWS.md,
   the three CLI verbs with example invocations, env-var matrix from
   R6, and the bootstrap order from design §C.
-- [ ] 9.4 **G4 (medium)** — add `repos/development-vessel/CLAUDE.md`
+- [x] 9.4 **G4 (medium)** — add `repos/development-vessel/CLAUDE.md`
   with: vessel-specific guidelines, mirroring the pattern in
   `repos/discovery-vessel/CLAUDE.md` and `repos/metabob-activity-api/CLAUDE.md`.
   Includes the three-layer discipline reminder and the "no JSON
   templates in source" rule from design §C.
-- [ ] 9.5 **G2 (low)** — add `test/cli.test.ts` exercising each verb
+- [x] 9.5 **G2 (low)** — add `test/cli.test.ts` exercising each verb
   end-to-end with stdout/stderr capture. Uses `Bun.spawn` against the
   vessel's CLI with fixture vars; asserts exit codes and the JSON
   shape of stdout output. Pins the contract R4.4 documents.
 
 ### Spec amendments (apply to `specs/development-vessel/spec.md`)
 
-- [ ] 9.6 Tighten R1.5: replace "MUST pass against this file" with
+- [x] 9.6 Tighten R1.5: replace "MUST pass against this file" with
   "MUST pass via `bun run lint` which runs both `tsc --noEmit` and
   `scripts/check-shape-dispatch.ts`. CI invokes `bun run lint` as a
   gate."
-- [ ] 9.7 Add R8.4: "`package.json` `lint` script chains typecheck
+- [x] 9.7 Add R8.4: "`package.json` `lint` script chains typecheck
   and shape-dispatch-check; both must pass for CI to green."
 
 ### Acceptance for §9
 
-- [ ] 9.S.1 `bun test` reports ≥ 13 test files (1 per resolver) and
-  no fails.
-- [ ] 9.S.2 `bun run lint` invokes BOTH typecheck and
-  shape-dispatch-check and exits 0.
-- [ ] 9.S.3 `repos/development-vessel/` contains README.md and CLAUDE.md.
-- [ ] 9.S.4 `test/cli.test.ts` exists and exercises all three CLI
-  verbs with at least exit-code + stdout-shape assertions.
+- [x] 9.S.1 `bun test` reports ≥ 13 test files (1 per resolver) and
+  no fails. Done 2026-05-21: 72 tests / 17 files / 0 fails.
+- [x] 9.S.2 `bun run lint` invokes BOTH typecheck and
+  shape-dispatch-check and exits 0. Done 2026-05-21.
+- [x] 9.S.3 `repos/development-vessel/` contains README.md and CLAUDE.md.
+  Done 2026-05-21: both files present.
+- [x] 9.S.4 `test/cli.test.ts` exists and exercises all three CLI
+  verbs with at least exit-code + stdout-shape assertions. Done 2026-05-21.
 
 DEV stage of the four-stage cycle closes 9.1 through 9.5 + 9.6/9.7.
 VERIFY stage re-runs `docs/VERIFY_2026_05_21.md` style assessment and
