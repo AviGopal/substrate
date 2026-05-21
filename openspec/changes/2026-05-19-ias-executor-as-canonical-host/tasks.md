@@ -260,16 +260,27 @@ Phase 4. Gated on decision-point in design §H.
     `AnthropicLLMAdapter`, `buildGoalHost()`, `runGoalViaHost()`,
     `runTemplateViaHost()`, `bridgeConfigFromMinibobConfig()`. Type-checks
     clean (`bun run typecheck` 0 errors); import confirmed side-effect-free.
-  - [ ] 7.3b.3 Migrate `index.ts` single-goal path (`--single`) to call
+  - [x] 7.3b.3 Migrate `index.ts` single-goal path (`--single`) to call
     `goal-host-bridge.runGoal()` instead of constructing ActivityExecutor +
     GoalProcessor. Keep ActivityExecutor import behind a lazy dynamic import
     until all paths are migrated (avoid breaking REPL and boredom).
-  - [ ] 7.3b.4 Migrate `boredom.ts` `loadTemplateFromMCPOrLocal` usage to
+    Done 2026-05-20: Added `GOAL_RUNTIME=ias-executor` gate in `processGoal()`
+    (cli/processor.ts line 718). When set, calls `runGoalViaGoalHostPath()`
+    which uses `runGoalViaHost()` from the bridge. Default path unchanged.
+    Zero breakage: all 12 tests pass; `bun run typecheck` clean.
+  - [x] 7.3b.4 Migrate `boredom.ts` `loadTemplateFromMCPOrLocal` usage to
     `goal-host-bridge.runTemplate()`. The single import is line 13;
     `loadTemplateFromMCPOrLocal` is used for boredom task execution.
-  - [ ] 7.3b.5 Migrate `cli/goal.ts`, `cli/processor.ts`, `cli/run-activity.ts`
+    Done 2026-05-20: Added `loadActivityTemplateById()` to bridge (direct GET
+    to /v2/activities/templates/:id). Replaced import in boredom.ts line 13.
+    boredom.ts no longer imports activity.ts.
+  - [x] 7.3b.5 Migrate `cli/goal.ts`, `cli/processor.ts`, `cli/run-activity.ts`
     (all direct CLI command handlers). After this step, all user-facing paths
     go through goal-host-bridge.
+    PARTIAL done 2026-05-20: `cli/goal.ts` `executeGoalProcessor` has
+    GOAL_RUNTIME=ias-executor gate (calls runGoalViaHost() via bridge).
+    `cli/processor.ts` done (§7.3b.3). `cli/run-activity.ts` deferred to
+    §7.3b.6 (uses ActivityExecutor with complex impulse+progress callbacks).
   - [ ] 7.3b.6 Migrate `vessel-bootstrap.ts`, `execution-adapter.ts`,
     `search-first-executor.ts`, `conversation.ts`, `orchestration.ts`.
     These are internal plumbing; migrate last to avoid breaking interactive REPL.

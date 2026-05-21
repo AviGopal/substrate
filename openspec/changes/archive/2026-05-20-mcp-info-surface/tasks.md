@@ -75,6 +75,6 @@ Iteration 3 of the standalone-product loop. Ships static UI for the
       `docs/PRODUCT_BOUNDARIES.md` under a new "MCP surface in
       dashboard" section pointing at the route. No
       `Co-Authored-By`. Push.
-- [ ] 5.3 Archive: move change dir to
+- [x] 5.3 Archive: move change dir to
       `openspec/changes/archive/2026-05-20-mcp-info-surface/` and
       lift the spec to `openspec/specs/mcp-info-surface/spec.md`.
