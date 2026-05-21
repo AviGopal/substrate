@@ -244,15 +244,22 @@ Phase 4. Gated on decision-point in design §H.
   goal-processor.ts, lib.ts, orchestration.ts, repl.ts,
   search-first-executor.ts, understanding/analyzer.ts, vessel-bootstrap.ts,
   index.ts). Full cut requires the following ordered sub-steps:
-  - [ ] 7.3b.1 Add `@avigopal/ias-executor-ts` as a local workspace dep in
+  - [x] 7.3b.1 Add `@avigopal/ias-executor-ts` as a local workspace dep in
     `repos/minibob/package.json` (file: path pointing at repos/ias-executor-ts
     OR publish to a local registry). Gate on ias-executor-ts having a dist/
     build (run `bun run build` first).
-  - [ ] 7.3b.2 Create `repos/minibob/src/goal-host-bridge.ts`: a thin adapter
+    Done 2026-05-20: rebuilt dist (fixed 4 noUncheckedIndexedAccess TS errors
+    in forge resolvers); added `"@avigopal/ias-executor-ts": "file:../ias-executor-ts"`
+    to minibob package.json; `bun install` confirmed `1 package installed`.
+  - [x] 7.3b.2 Create `repos/minibob/src/goal-host-bridge.ts`: a thin adapter
     that constructs a GoalHost from minibob's `MinibobConfig` (METABOB_API_KEY,
     METABOB_ENDPOINT, ANTHROPIC_API_KEY, provider, model, workingDirectory).
     Exports `runGoal(goal, config, opts)` → `GoalRunResult` and
     `runTemplate(templateId, vars, config)`. This is the migration boundary.
+    Done 2026-05-20: `src/goal-host-bridge.ts` created with
+    `AnthropicLLMAdapter`, `buildGoalHost()`, `runGoalViaHost()`,
+    `runTemplateViaHost()`, `bridgeConfigFromMinibobConfig()`. Type-checks
+    clean (`bun run typecheck` 0 errors); import confirmed side-effect-free.
   - [ ] 7.3b.3 Migrate `index.ts` single-goal path (`--single`) to call
     `goal-host-bridge.runGoal()` instead of constructing ActivityExecutor +
     GoalProcessor. Keep ActivityExecutor import behind a lazy dynamic import
