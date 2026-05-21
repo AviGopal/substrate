@@ -1180,6 +1180,7 @@ curl "http://api.minibob.local/v2/activities/execution-sequences?limit=10" | jq 
 
 **Canonical reference (read this first):**
 - [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md): The foundational model defining impulses, activities, vessels, and learning
+- [`docs/PRODUCT_BOUNDARIES.md`](docs/PRODUCT_BOUNDARIES.md): Standalone product surface (cloud-dashboard + metabob-mcp + frozen rpc-api 0.16.13) — env-var matrix, auth flow, coupling audit, adapter-layer principle
 
 **Discovery System:**
 - [`DISCOVERY_INTEGRATION.md`](DISCOVERY_INTEGRATION.md): Complete vessel discovery integration guide
