@@ -268,3 +268,80 @@ iterations land in their own changes:
   observe-mcp-usage, manage-team, budget-check, cross-project-view.
 - **Iteration 5** — rpc-api adapter layer: name the first vessel-vs-BFF
   decision driven by an actual UI need.
+
+## Dev loop
+
+Iteration 2 adds a driveable Playwright loop for the cloud-dashboard
+team-lead rubric. The contract is plain bash + an exit code + a
+machine-readable `last-run.json`.
+
+### How to run
+
+Two terminals from `repos/metabob-cloud-dashboard/`:
+
+```bash
+# Terminal A — start the dashboard (do NOT bundle this into the loop)
+cd repos/metabob-cloud-dashboard
+bun --hot src/index.ts
+
+# Terminal B — run the rubric
+cd repos/metabob-cloud-dashboard
+bun run dev-loop
+```
+
+The script probes `${BASE_URL}/health` (5s timeout). If the dashboard
+isn't up, it exits 2 with a message pointing at `bun --hot
+src/index.ts`. It does NOT start the dashboard itself — that keeps the
+contract simple and avoids port collisions.
+
+### Env-var contract
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `E2E_STANDALONE_MODE` | (set to `true` by dev-loop) | Tells `e2e/global-setup.ts` to skip the activity-api wait and seed. Always set by the script. |
+| `BASE_URL` | `http://localhost:3000` | Dashboard URL the loop probes and Playwright targets. |
+
+### MiniBob phrasing
+
+```bash
+minibob --single "run the team-lead rubric against the local dashboard"
+```
+
+(The MiniBob-side template ships with iteration 4 when the rubric
+specs gain bodies.)
+
+### `last-run.json` shape
+
+Written to `repos/metabob-cloud-dashboard/e2e/results/last-run.json`:
+
+```json
+{
+  "timestamp": "2026-05-20T12:34:56.000Z",
+  "exit_code": 0,
+  "total": 6,
+  "passed": 0,
+  "failed": 0,
+  "skipped": 6,
+  "specs": [
+    {
+      "file": "e2e/rubric/01-onboard.spec.ts",
+      "title": "Rubric: onboard › placeholder",
+      "status": "skipped",
+      "duration_ms": 0,
+      "error": null
+    }
+  ]
+}
+```
+
+`status` is one of `passed | failed | skipped`. `error` is `null` for
+non-failures; for failures it is the first error message truncated to
+500 chars. Exit 0 iff `failed === 0`.
+
+### Known gap
+
+The `/api/activity/*` BFF proxy is **not wired** in standalone mode —
+research-mode-only paths under that prefix return 404 today. The
+proper fix lands in **iteration 5** (adapter layer). The rubric
+placeholders ship skipped specifically so the loop doesn't depend on
+that surface until then.
