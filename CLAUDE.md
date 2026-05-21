@@ -80,7 +80,7 @@ minibob --single "refactor the Thompson Sampling implementation"
 
 **Deployed versions** (canary, source of truth = each repo's `package.json`):
 - `metabob-activity-api` 1.20.9 — chain-credit F-V56/F-V57 fixed, F-V58 ONNX path fix (dense search now active), migration tracking, stratified posteriors
-- `minibob` 0.14.0 — embedded meta-activities (slot-binding, validator-dispatch, shape-provider-goal), iteration resolver, make-activity, goal-impulse seeding, enrichment-gated verification
+- `minibob` 0.14.11 — embedded meta-activities (slot-binding, validator-dispatch, shape-provider-goal), iteration resolver, make-activity, goal-impulse seeding, enrichment-gated verification; `GOAL_RUNTIME=ias-executor` gate wires `GoalHost` (ias-executor-ts) as the canonical execution path via `goal-host-bridge.ts` — default ActivityExecutor path unchanged
 - `workbench` 0.3.1 — trajectory editor, live execution overlay, weight-influence feedback, stagnation detection, oracle corpus wiring
 - `identity-vessel` 0.2.8 — HMAC API keys + JWT issuance (canonical auth resolver)
 - `discovery-vessel` 0.4.0 — vessel registry with resolver contracts and per-mutation auth
