@@ -161,20 +161,24 @@ names the mirrored mcp version; the file must be updated whenever
 the tool registry changes upstream. Capability spec:
 [`openspec/changes/2026-05-20-mcp-info-surface/`](../openspec/changes/2026-05-20-mcp-info-surface/).
 
-The Usage tab is live as of 2026-05-20 via the `/api/mcp/usage`
-BFF, which composes rpc-api 0.16.13's `POST /session` +
-`GET /session/stats` + `GET /metrics` into a single per-key JSON
-shape. The route accepts the raw API key in the POST body because
-user-vessel does not reveal raw keys after creation; the React
-client stashes a freshly-created key in `sessionStorage` so the
-tab can surface usage for keys created in the same browser
-session. `/metrics` failures are non-fatal (echoed as
-`metrics_status`); `/session` and `/session/stats` failures still
-502 with `{error:'rpc_api_unreachable', upstream_status:N}`.
-Capability spec:
-[`openspec/specs/rpc-api-mcp-usage-adapter/spec.md`](../openspec/specs/rpc-api-mcp-usage-adapter/spec.md)
+The Usage tab is live as of 2026-05-21 via the `/api/mcp/usage`
+BFF, which proxies `GET ?api_key_id=<id>` to user-vessel
+`GET /v2/mcp/usage?api_key_id=<id>`. user-vessel owns the
+`mcp_usage_snapshot` table (one row per `api_key_id`) and
+`metabob-mcp` POSTs one telemetry event per tool call via fire-and-
+forget. rpc-api is no longer in the usage read path — it was
+removed because 0.16.13 treats identity-vessel-minted keys as
+anonymous and `/metrics` is admin-only, so the dashboard literally
+could not observe external mcp clients. The BFF still accepts the
+legacy `POST { raw_key, api_key_id }` shape for one release with a
+deprecation log; the `rawKeyStash` module remains as dead code and
+will be removed in a follow-up. Capability spec:
+[`openspec/specs/mcp-usage-telemetry/spec.md`](../openspec/specs/mcp-usage-telemetry/spec.md)
 (during the iteration the locked spec lives at
-[`openspec/changes/2026-05-20-rpc-api-mcp-usage-adapter/`](../openspec/changes/2026-05-20-rpc-api-mcp-usage-adapter/)).
+[`openspec/changes/2026-05-21-mcp-usage-telemetry/`](../openspec/changes/2026-05-21-mcp-usage-telemetry/)).
+The prior rpc-api-based shim is preserved at
+[`openspec/specs/rpc-api-mcp-usage-adapter/spec.md`](../openspec/specs/rpc-api-mcp-usage-adapter/spec.md)
+as historical context.
 
 ## Coupling audit
 
