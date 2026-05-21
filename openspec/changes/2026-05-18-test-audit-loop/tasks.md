@@ -61,29 +61,44 @@ phase begins. Checkbox style matches
 
 ### B.1 Activity scaffolding
 
-- [ ] B.1.1 Embedded template under
+- [x] B.1.1 Embedded template under
   `repos/minibob/src/embedded-templates/audit-test-report.json` declaring
   `inputShapes: ["test_report", "test_registration"]` and
   `outputShapes: ["test_audit_report"]`. Four tasks per `design.md` §B.2.
   **Acceptance:** template loads at startup; dispatches via
   `lifecycle:execution:succeeded` with shape filter.
-- [ ] B.1.2 Lifecycle subscription filter implemented in
+  Done: template exists with 6 tasks (fetch_test_report, check_decision_record_complete,
+  check_witness_presence, check_sensitivity_evidence, review_alignment_claim, compose_audit_report).
+- [x] B.1.2 Lifecycle subscription filter implemented in
   `repos/minibob/src/embedded-templates/index.ts`. **Acceptance:** dispatch
   occurs only when the lifecycle event carries `output_shapes ∋ "test_report"`.
+  Done: index.ts line 210 includes "audit-test-report.json" with
+  `"output_shapes_contains": "test_report"` filter in the template metadata.
 
 ### B.2 Deterministic checks (tasks 1–3)
+
+NOTE: The audit-test-report template uses `"resolver": "validation"` with
+`"rule": "decision_record_completeness"` / `"witness_presence"` config fields.
+The existing `ValidationResolver` only supports regex patterns (not semantic
+rule evaluation). These B.2.x tasks require extending `ValidationResolver` to
+dispatch on the `rule` field, or adding a new resolver. Resolver logic is
+NOT yet implemented.
 
 - [ ] B.2.1 `check_decision_record_complete` — re-uses the
   `decision_record_completeness` schema from
   `multi-witness-verification/spec.md:43-49`. **Acceptance:** correctly flags a
   report missing `candidates[].rrf_score`.
+  BLOCKED: requires `ValidationResolver` extension for `rule: "decision_record_completeness"`.
 - [ ] B.2.2 `check_witness_presence` — verifies the report carries ≥ 1 witness
   type from `test_registration.witness_types`. **Acceptance:** single-witness
   report tagged `passed_with_caveat: "single_witness"`.
+  BLOCKED: requires `ValidationResolver` extension for `rule: "witness_presence"`.
 - [ ] B.2.3 `check_sensitivity_evidence` — queries `sensitivity_evidence`
   impulses ≥ 7 days back and ≥ 3 runs per perturbation; computes per-perturbation
   observed delta vs expected. **Acceptance:** test fixture with synthetic 7-day
   evidence correctly classifies sensitive/insensitive/noisy.
+  BLOCKED: requires temporal query resolver; `impulse-resolve` config in the template
+  needs to call `sensitivity_evidence` shape with 7-day filter (not yet wired).
 
 ### B.3 LLM alignment-claim resolver (task 4)
 
