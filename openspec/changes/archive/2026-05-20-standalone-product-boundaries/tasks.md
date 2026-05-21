@@ -85,16 +85,16 @@ section, table form, one row per finding.
       `USE_CONNECTION_SLOTS` unset. Confirm `GET /resolve/health`
       returns 200 and that the activity bridge tool reports
       "disabled" rather than erroring.
-- [ ] 5.3 Update the super-repo memory with anything surprising the
+- [x] 5.3 Update the super-repo memory with anything surprising the
       audit found (especially if a coupling assumed OPTIONAL turns
       out to be REQUIRED).
 
 ## §6 Archive prep
 
-- [ ] 6.1 Move the spec under
+- [x] 6.1 Move the spec under
       `openspec/changes/2026-05-20-standalone-product-boundaries/specs/standalone-product-surface/`
       to `openspec/specs/standalone-product-surface/spec.md` on
       archive (handled by `opsx:archive`).
-- [ ] 6.2 Commit on `dev` (super-repo): one commit per logical group
+- [x] 6.2 Commit on `dev` (super-repo): one commit per logical group
       — boundaries doc, dashboard audit + flag, mcp audit. No
       `Co-Authored-By` trailer.
