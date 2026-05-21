@@ -35,12 +35,22 @@ class StubLLM implements LLMPort {
 const EMITS_TEST_REPORT: ActivityTemplate = {
   id: "emits-test-report",
   name: "Emits Test Report",
-  description: "Single task: synthesise a test_report-shape impulse.",
-  outputShapes: ["test_report"],
+  description: "Two tasks: synthesise both a test_report and a matching test_registration. audit-test-report.check_witness_presence needs test_registration in pool to satisfy its inputShapes.",
+  outputShapes: ["test_report", "test_registration"],
   tasks: [
     {
+      id: "emit-registration",
+      description: "wrap test_registration variable as an impulse",
+      resolver: "impulse_preparation",
+      config: {
+        operation: "synthesise_from_variables",
+        missingShapes: ["test_registration"],
+      },
+      outputShapes: ["test_registration"],
+    } as ActivityTemplate["tasks"][number],
+    {
       id: "emit-report",
-      description: "use impulse_preparation to wrap a variable as test_report",
+      description: "wrap test_report variable as an impulse",
       resolver: "impulse_preparation",
       config: {
         operation: "synthesise_from_variables",
@@ -81,7 +91,10 @@ async function main(): Promise<void> {
   console.log("[verify-audit] running emits-test-report template...");
   const result = await host.runGoal("emit test report", {
     targetTemplateId: EMITS_TEST_REPORT.id,
-    variables: { test_report: '{"summary":"hello from audit-on-report verifier"}' },
+    variables: {
+      test_report: '{"summary":"hello from audit-on-report verifier","passes":[{"trace_event_id_or_impulse_id":"evt-1"}],"witnesses":[{"type":"differential_solve"}]}',
+      test_registration: '{"test_id":"reg-1","witness_types":["differential_solve"]}',
+    },
   });
 
   console.log("");
