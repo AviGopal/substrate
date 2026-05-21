@@ -399,3 +399,17 @@ deployed: identity-vessel `0.2.9-4047cc8`, helmfile rev 371.
 The `rubric` Playwright project is the canonical dev-loop gate for
 standalone mode. `bun run dev-loop` runs 6 specs with no auth.setup.ts
 dependency. The loop terminates here.
+
+### Retry 2026-05-21 — rubric end-to-end green
+
+After the prior attempt was blocked by identity-vessel canary bugs
+(now fixed in `0.2.9-86873dc`), the rubric ran end-to-end against
+canary and reported `passed=13 failed=0 skipped=2` across the six
+spec files. Idempotent on re-run (the seed reuses
+`rubric-tester-v2@metabob.test` via signup → EMAIL_TAKEN → login).
+The two skips are documented: `/members` is not yet wired into the
+standalone route tree, and the cross-project selector is not yet
+implemented for standalone mode.
+
+Cloud-dashboard SHA: `69e2880` (rubric specs + dev-loop walker fix +
+feature-flags Bun-bundler guard).
