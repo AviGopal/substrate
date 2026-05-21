@@ -77,22 +77,23 @@ phase begins. Checkbox style matches
 
 ### B.2 Deterministic checks (tasks 1–3)
 
-NOTE: The audit-test-report template uses `"resolver": "validation"` with
-`"rule": "decision_record_completeness"` / `"witness_presence"` config fields.
-The existing `ValidationResolver` only supports regex patterns (not semantic
-rule evaluation). These B.2.x tasks require extending `ValidationResolver` to
-dispatch on the `rule` field, or adding a new resolver. Resolver logic is
-NOT yet implemented.
-
-- [ ] B.2.1 `check_decision_record_complete` — re-uses the
+- [x] B.2.1 `check_decision_record_complete` — re-uses the
   `decision_record_completeness` schema from
   `multi-witness-verification/spec.md:43-49`. **Acceptance:** correctly flags a
   report missing `candidates[].rrf_score`.
-  BLOCKED: requires `ValidationResolver` extension for `rule: "decision_record_completeness"`.
-- [ ] B.2.2 `check_witness_presence` — verifies the report carries ≥ 1 witness
+  Done 2026-05-20: `ValidationResolver` extended with `rule` dispatch.
+  `decision_record_completeness` rule checks every entry in `test_report.passes[]`
+  for `required_fields_per_assertion`; emits `failure_mode.type=verifier_negative`
+  with `failed_evidence[].audit_subtype=audit_record_incomplete` on fail.
+  minibob commit `3a1e51f`. 6 unit tests in `test/validation-resolver-rules.test.ts`.
+- [x] B.2.2 `check_witness_presence` — verifies the report carries ≥ 1 witness
   type from `test_registration.witness_types`. **Acceptance:** single-witness
   report tagged `passed_with_caveat: "single_witness"`.
-  BLOCKED: requires `ValidationResolver` extension for `rule: "witness_presence"`.
+  Done 2026-05-20: `witness_presence` rule checks `test_report.witnesses` against
+  `test_registration.witness_types`; single matching witness → `passed_with_caveat:
+  "single_witness"`; no matching witnesses → `verifier_negative` with `audit_record_incomplete`.
+  Falls back gracefully when test_registration is absent (length-only check).
+  minibob commit `3a1e51f`. 7 unit tests in `test/validation-resolver-rules.test.ts`.
 - [ ] B.2.3 `check_sensitivity_evidence` — queries `sensitivity_evidence`
   impulses ≥ 7 days back and ≥ 3 runs per perturbation; computes per-perturbation
   observed delta vs expected. **Acceptance:** test fixture with synthetic 7-day
