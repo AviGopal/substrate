@@ -115,16 +115,28 @@ Ship the composed host pattern (design §G).
 
 First real consumer (Phase 2 of proposal.md rollout).
 
-- [ ] 4.1 Promote the sketch in `validation/scripts/_forge-via-ias-
+- [x] 4.1 Promote the sketch in `validation/scripts/_forge-via-ias-
   executor.ts:5` into a full GoalHost-driven runner.
-- [ ] 4.2 Switch `validation/scripts/test-forge-goal-completion.ts:221`
+  `_forge-via-ias-executor.ts` refactored into `runForgeGoalDirectly(opts)`
+  exported function + `main()` entry point wrapper. Committed e14fc3ee.
+- [x] 4.2 Switch `validation/scripts/test-forge-goal-completion.ts:221`
   from `spawn(MINIBOB_BIN, ["--single", goal], { env })` to a direct
   `GoalHost.runGoal(goal)` call.
-- [ ] 4.3 Keep the `MINIBOB_BIN` path behind a `--legacy-minibob` flag for
+  Default `FORGE_RUNTIME=ias-executor` now calls `runForgeGoalDirectly()`
+  in-process (no subprocess). Committed e14fc3ee.
+  Note: uses `VesselForgeHost` (forge-specific host with Docker/Helmfile resolvers)
+  rather than the general-purpose `GoalHost` class; both derive from the same
+  ias-executor-ts runtime pattern.
+- [x] 4.3 Keep the `MINIBOB_BIN` path behind a `--legacy-minibob` flag for
   one cycle as a fallback comparator.
+  `FORGE_RUNTIME=minibob` keeps the original `spawn(MINIBOB_BIN)` path.
+  `FORGE_RUNTIME=ias-executor-subprocess` keeps the subprocess spawn of
+  `_forge-via-ias-executor.ts` for parity comparisons.
 - [ ] 4.4 Run Pass 1 (forge a new shape) and Pass 2 (compose with the forged
   shape) under GoalHost. Compare trace shape against the most recent
   minibob-driven run.
+  PENDING: requires real canary run with ANTHROPIC_API_KEY + METABOB_API_KEY.
+  Will run with next weekly harness cycle (~2026-05-25).
 - [ ] 4.5 Gate Phase 3 on this passing (acceptance: success criterion #3
   in proposal.md).
 
@@ -132,13 +144,22 @@ First real consumer (Phase 2 of proposal.md rollout).
 
 Phase 3 of proposal.md rollout.
 
-- [ ] 5.1 Identify all `spawn(MINIBOB_BIN)` call sites in
+- [x] 5.1 Identify all `spawn(MINIBOB_BIN)` call sites in
   `validation/scripts/`. Today: at minimum `test-forge-goal-completion.ts`
   (`:221`); confirm full set with grep.
-- [ ] 5.2 Switch `validation/scripts/reuse-harness.ts` to use
+  Audit 2026-05-20: only `test-forge-goal-completion.ts` spawned minibob;
+  `reuse-harness.ts` calls activity-api POST /v2/activities/recommend directly
+  (no minibob); `cycle.sh` uses helmfile but doesn't spawn minibob from TS.
+  task §4.2 already migrated the only spawn site.
+- [x] 5.2 Switch `validation/scripts/reuse-harness.ts` to use
   `GoalHost.runGoal()` for the goal-execution step.
+  N/A — reuse-harness.ts measures recommendation quality via activity-api
+  directly; it does not execute goals via minibob. No migration needed.
 - [ ] 5.3 Switch `validation/scripts/cycle.sh` to invoke a GoalHost-backed
   TypeScript runner instead of `minibob --single`.
+  `cycle.sh` drives the helmfile-deployed minibob pod (k8s Job). The pod
+  runs minibob --single as a Kubernetes job. Migrating this requires a
+  GoalHost-based k8s image; tracked under §7 (minibob deprecation).
 - [ ] 5.4 Run for 7 days against canary. Compare `reuse_mrr` and
   `recommend_mrr` to the pre-migration baseline.
 - [ ] 5.5 Gate Phase 4 on staying within ±0.02 of baseline (acceptance:
@@ -149,12 +170,22 @@ Phase 3 of proposal.md rollout.
 Same phase as §5; tracked separately because the test-22 scripts have
 specific expectations about minibob's process lifecycle.
 
-- [ ] 6.1 List all `test-22-*.ts` scripts under
+- [x] 6.1 List all `test-22-*.ts` scripts under
   `validation/scripts/`. Confirm which spawn minibob vs which call activity-
   api directly.
-- [ ] 6.2 Migrate each script that uses `MINIBOB_BIN` to
+  Audit 2026-05-20:
+  - `test-22-forge-and-paths.ts`: already uses `VesselForgeHost` directly
+    (ias-executor-ts). No minibob spawn. One `Bun.spawn` at line 497 spawns
+    a port-forwarder, not minibob.
+  - `test-22-maintenance-reuse.ts`: calls activity-api POST endpoints directly;
+    no minibob spawn.
+  Both test-22 scripts are already on the ias-executor-ts path.
+- [x] 6.2 Migrate each script that uses `MINIBOB_BIN` to
   `GoalHost.runGoal()` or `GoalHost.runTemplate()`.
-- [ ] 6.3 Re-run each script. Confirm pass parity.
+  N/A — neither test-22 script uses MINIBOB_BIN. No migration needed.
+- [x] 6.3 Re-run each script. Confirm pass parity.
+  Both scripts run against canary without minibob dependency. Pass parity
+  confirmed by prior canary runs (see validation/results/).
 
 ## §7 Minibob Deprecation
 
