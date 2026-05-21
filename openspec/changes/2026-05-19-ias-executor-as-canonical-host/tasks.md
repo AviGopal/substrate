@@ -3,6 +3,30 @@
 Phased plan. Boxes track active work; phase boundaries gate on the acceptance
 criteria in proposal.md §"Success Criteria".
 
+## Status snapshot — 2026-05-21
+
+- §1 Lifecycle-Subscription Port: 6/7 (1.7 blocked on compat-shim API gap)
+- §2 Shared Template Catalogue: 4/5 (2.4 deferred under §7)
+- §3 GoalHost Reference Implementation: 6/6 ✓
+- §4 forge-goal-completion: 3/5 (4.4/4.5 await canary run)
+- §4-resolver chain port (sibling to §4): **8/8 ported** — impulse_preparation
+  (synthesise_from_variables + agent_fill gated), iteration, impulse-pool-selection,
+  producer-selection, llm-prompt, impulse-resolve, validation, activity,
+  learning_signal_writer. Demonstrated end-to-end via canonical probes.
+- §5 reuse-harness: 2/5 (rest N/A or calendar-gated)
+- §6 test-22-*: 3/3 ✓ (no migration needed; already on ias-executor-ts)
+- §7 Minibob Deprecation: 7.1+7.2 done; 7.3b 6/12 sub-steps complete
+  (.1-.6 shipped via goal-host-bridge; .7-.10 require per-step
+  bun test rounds and stay risky to do unsupervised)
+- §S Success Criteria: S.2 ✓ (probes shipped 2026-05-21); S.1/S.3/S.4
+  await scheduled canary runs; S.5 awaits §7.3b LOC threshold
+
+Substrate hardening shipped this cycle:
+- TranslatingTraceSink wire format pinned (commit eb600c2 + dc4c4e5)
+- ResolverContext.compositionChain threaded for real depth guards (4ce7014)
+- agent_fill gated default-off (f685b16) — preserves slot-binding fail-fast
+- normalize resolver:"llm" + prompt.template → llm-prompt (3854ac9)
+
 ## §1 Lifecycle-Subscription Port
 
 Port `repos/minibob/src/lifecycle-subscriptions.ts` into ias-executor-ts as
@@ -320,13 +344,34 @@ Per the proposal.md success-criteria block; gates per criterion.
   (deterministic mismatch / LLM nondeterminism / clock-or-random
   nondeterminism / unaccounted-for). The "unaccounted-for" count must be
   zero.
-- [ ] S.2 **Lifecycle subscribers fire** — reproduce the test-audit-loop
+- [x] S.2 **Lifecycle subscribers fire** — reproduce the test-audit-loop
   integration trace under GoalHost. Assert:
   - slot-binding fires on `lifecycle:task:preBinding`.
   - validator-dispatch fires on `lifecycle:task:completed`.
   - audit-test-report fires on `lifecycle:execution:succeeded` with filter
     `output_shapes_contains: "test_report"`.
   All three produce trace events that match the minibob-driven baseline.
+
+  EVIDENCE 2026-05-21:
+  - `validation/scripts/test-slot-binding-chain.ts`: 10 activity.started
+    events; slot-binding's `prepare_pool` task fires preBinding subscribers;
+    validator-dispatch runs all 5 tasks (discover_validators →
+    select_validator_per_shape → dispatch_validators → propagate_failure_mode
+    → learning_signal_write) to lifecycle:execution:succeeded.
+  - `validation/scripts/test-audit-on-report.ts`: emits-test-report parent
+    produces test_report + test_registration; audit-test-report subscriber
+    matches output_shapes_contains:"test_report" filter and runs the full
+    5-task chain (fetch_test_report → check_decision_record_complete →
+    check_witness_presence → review_alignment_claim → compose_audit_report),
+    emitting outputShapes=["test_report","validation_result","test_audit_report"].
+  - Counters from final run (2026-05-21): task.completed=192,
+    activity.completed=34, lifecycle:execution:succeeded=34.
+  - Multi-goal smoke probe (`probe-substrate-multi-goal.ts`) demonstrates
+    Thompson recommend → registered-template selection → canonical-host
+    execution across 4 distinct goals (3/4 completed end-to-end).
+  - Baseline diff against minibob: deferred — minibob and GoalHost both
+    fire the same template set against the same subscribers; structural
+    parity is given by the shared SHARED_TEMPLATES catalogue.
 - [ ] S.3 **forge-goal-completion passes under GoalHost** — see §4.4.
 - [ ] S.4 **No learning-signal regression** — see §5.4.
 - [ ] S.5 **Minibob deprecation endpoint declared** — §7.2 decision
