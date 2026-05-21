@@ -1,0 +1,137 @@
+{
+  "test_id": "forge-goal-completion",
+  "run_id": "fgc-1779399889346",
+  "date": "2026-05-21",
+  "registration_id": "forge-goal-completion",
+  "perturbation_row": {
+    "shape": "webhook_signature_verifier",
+    "complexity": "single-step",
+    "depth": 0
+  },
+  "passed": false,
+  "passes": [
+    {
+      "label": "pass1",
+      "executionId": "exec_y2pvojk5",
+      "assertions": [
+        {
+          "id": "C1",
+          "passed": false,
+          "inspected_field": "composition_chain[]",
+          "detail": "STRUCTURAL: test calls forge-vessel-for-shape directly; slot-binding only fires in full goal→slot-binding→forge pipeline"
+        },
+        {
+          "id": "C2",
+          "passed": false,
+          "inspected_field": "shape_producer_inventory.count = null",
+          "detail": "STRUCTURAL: shape_producer_inventory impulse is emitted by slot-binding, not by the direct forge call path"
+        },
+        {
+          "id": "C3",
+          "passed": false,
+          "inspected_field": "task forge_missing_shape status=absent outputs=0",
+          "detail": "STRUCTURAL: forge_missing_shape task is a slot-binding task; absent when forge is called directly"
+        },
+        {
+          "id": "C4",
+          "passed": true,
+          "inspected_field": "task escalate_unbindable status=absent"
+        },
+        {
+          "id": "C5",
+          "passed": true,
+          "inspected_field": "forge-vessel-for-shape exec=exec_y2pvojk5 parent=null"
+        },
+        {
+          "id": "C6",
+          "passed": false,
+          "inspected_field": "vesselVerified discovery=undefined observation=undefined auth=undefined vessel_id=undefined",
+          "detail": "F-V62: executionTraceWithSignatures union (F-V61 fix) returns legacy table rows without impulses_by_id map; vesselVerified body fields unavailable"
+        },
+        {
+          "id": "C7",
+          "passed": false,
+          "inspected_field": "downstream vessel_id=absent forged=absent",
+          "detail": "STRUCTURAL: downstream binding to forged vessel requires full goal→slot-binding→forge pipeline; no downstream execution in direct forge path"
+        },
+        {
+          "id": "C8",
+          "passed": false,
+          "inspected_field": "validation_result passed=false validator_id= confidence=undefined",
+          "detail": "STRUCTURAL: validation_result comes from goal-verifier in the goal processing pipeline; absent in direct forge path"
+        }
+      ],
+      "runtime": "ias-executor"
+    }
+  ],
+  "witnesses": [
+    {
+      "type": "discovery_registration_probe",
+      "phase": "pre_flight",
+      "shape": "webhook_signature_verifier",
+      "count": 0,
+      "vessel_ids": [],
+      "ts": "2026-05-21T21:44:49.733Z"
+    },
+    {
+      "type": "trace_signature",
+      "executionId": "exec_y2pvojk5",
+      "signature": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "type": "discovery_registration_probe",
+      "phase": "post_pass1",
+      "shape": "webhook_signature_verifier",
+      "count": 1,
+      "vessel_ids": ["webhook_signature_verifier-vessel"],
+      "ts": "2026-05-21T21:45:58.817Z"
+    }
+  ],
+  "failure_mode": {
+    "type": "verifier_negative",
+    "reason": "assertion C1 failed",
+    "context": {
+      "failed_evidence": [
+        {
+          "source": "trace_signature",
+          "assertion": "C1",
+          "detail": "composition_chain[]"
+        }
+      ],
+      "runtime": "ias-executor"
+    }
+  },
+  "duration_ms": 69470,
+  "cost_usd": 0,
+  "notes": {
+    "baseline_version": 2,
+    "baseline_date": "2026-05-21",
+    "fixes_deployed": ["F-V60 (deploymentWorkdir priority in helmfile-sync.ts, commit 5f01e58)", "F-V61 (union legacy table in executionTraceWithSignatures, commit 004d287, deployed 1.20.9-004d287)"],
+    "trace_tree_size": 1,
+    "forge_pipeline_status": "ALL 8 TASKS COMPLETED — helmfile deploy succeeded, vessel deployed and registered in discovery (count 0→1)",
+    "assertion_delta_from_v1": [
+      "C5: FAIL→PASS (F-V61 fix: trace now visible, forge-vessel-for-shape confirmed as root execution)",
+      "C8: 'root execution not found'→'validation_result passed=false' (root execution now found; body fields still absent — F-V62)"
+    ],
+    "structural_failures": {
+      "assertions": ["C1", "C2", "C3", "C7"],
+      "reason": "These assertions require the full goal→slot-binding→forge pipeline. The test calls forge-vessel-for-shape directly via ias-executor GoalHost, bypassing slot-binding entirely. T8.1 acceptance requires a minibob/goal-pipeline runner path that goes through slot-binding."
+    },
+    "implementation_failures": {
+      "C6": "F-V62: legacy table rows in executionTraceWithSignatures union lack impulses_by_id map; vesselVerified body fields cannot be extracted. Fix: extend F-V61 union to populate impulses_by_id from legacy tasks[].output_impulse_ids.",
+      "C8": "F-V62: same root cause — validation_result impulse body unavailable from legacy trace rows"
+    },
+    "what_worked": [
+      "All 8 tasks completed: check_recursion_depth, compose_vessel_spec, scaffold_vessel_skeleton, wire_discovery_registration, wire_auth_blueprint, docker_build_push, helmfile_sync, verify_three_invariants",
+      "Forge pipeline end-to-end: vessel spec composed, scaffolded, Docker image built and pushed, deployed via helmfile, registered in discovery",
+      "Discovery count 0→1 confirmed: webhook_signature_verifier-vessel registered post-forge",
+      "Lifecycle events (slot-binding, validator-dispatch) fired on all tasks",
+      "Trace now visible via executionTraceWithSignatures (F-V61 fix confirmed)",
+      "executionId exec_y2pvojk5 returned in trace tree size=1"
+    ],
+    "open_findings": [
+      "F-V62: impulses_by_id missing from legacy table union rows — C6/C8 body field assertions blocked",
+      "Structural gap: C1/C2/C3/C7 require slot-binding pipeline; T8.1 needs full goal→slot-binding→forge path"
+    ]
+  }
+}

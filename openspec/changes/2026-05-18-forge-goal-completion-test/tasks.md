@@ -40,8 +40,8 @@
 
 ## T7. Smoke run on canary
 
-- [ ] T7.1 Run the test against canary with target_shape = `webhook_signature_verifier` (row 1) end-to-end.
-- [ ] T7.2 Capture the baseline test_report and store at `validation/results/{date}-forge-goal-baseline.json` for diff against future runs.
+- [x] T7.1 Run the test against canary with target_shape = `webhook_signature_verifier` (row 1) end-to-end. Done 2026-05-21: exec_y2pvojk5, all 8 forge tasks completed, vessel deployed + registered in discovery (count 0→1). Two bugs fixed: F-V60 (deploymentWorkdir priority, commit 5f01e58) and F-V61 (legacy table union in executionTraceWithSignatures, deployed 1.20.9-004d287). Structural assertions C1/C2/C3/C7 fail because test bypasses slot-binding pipeline; C4+C5 pass. Open: F-V62 (impulses_by_id missing from legacy rows, blocking C6/C8 body fields).
+- [x] T7.2 Capture the baseline test_report and store at `validation/results/{date}-forge-goal-baseline.json` for diff against future runs. Done 2026-05-21: saved at `validation/results/2026-05-21-forge-goal-baseline.json` (baseline_version=2, post F-V60+F-V61 fix). Prior v1 run (fgc-1779391771341) was pre-fix with trace_tree_size=0; v2 (fgc-1779399889346) confirms trace_tree_size=1, forge pipeline end-to-end working.
 - [ ] T7.3 If concurrency lock becomes necessary per `design.md` §i, file a follow-up against this spec's `tasks.md` rather than introducing the lock here.
 
 ## T8. Acceptance
