@@ -196,10 +196,14 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
 
 ### G7.2 Contamination delta
 
-- [ ] G7.2.1 After both suites complete, compute `contamination_delta` per §H.2
-  and surface in the rolling-pool report summary.
-- [ ] G7.2.2 Flag `contamination_suspected: true` when delta > 0.15. **Acceptance:**
-  unit test on synthetic per-cell rates returns expected flag.
+- [x] G7.2.1 ✅ **DONE** 2026-05-21. `lib/contamination-delta.ts`: `computeContaminationDelta()`
+  computes `mean(rolling-pool success_rate) - mean(held-out success_rate)` over
+  cells with sample_count ≥ 3 and not gated. Returns `{ delta, contamination_suspected }`.
+  Wired into `stratified-harness.ts` rolling-pool report as spread when
+  `heldOutLoopResult !== null`.
+- [x] G7.2.2 ✅ **DONE** 2026-05-21. `contamination_suspected: true` when delta > 0.15.
+  6 unit tests green (including synthetic rate fixtures, gated-cell exclusion,
+  low-sample exclusion). Acceptance criteria met.
 
 ### G7.3 Promotion logic
 

@@ -28,6 +28,7 @@ import {
   BINDING_KEYS,
 } from "./lib/decision-record-completeness.ts";
 import { outputsAgree, diffOutputs } from "./lib/output-normalizers.ts";
+import { computeContaminationDelta } from "./lib/contamination-delta.ts";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -572,6 +573,7 @@ function stripSampleArrays(matrix: CoverageMatrix): MatrixOutput {
   return out;
 }
 
+
 interface PerGoalResult {
   goal_id: string;
   cell_id: string;
@@ -806,6 +808,8 @@ async function main() {
 
   // G7.1.1: If --held-out, run held-out suite first and emit held-out report.
   const isHeldOut = values["held-out"] === true;
+  let heldOutLoopResult: LoopResult | null = null;
+
   if (isHeldOut) {
     // Auto-detect held-out goals file: most recent *-held-out-goals.json in generated/
     const generatedDir = join(repoRoot, "validation", "generated");
@@ -823,10 +827,10 @@ async function main() {
       const heldOutFile = JSON.parse(await readFile(heldOutPath, "utf8")) as GeneratedGoalsFile;
       const heldOutGoals = heldOutFile.goals;
 
-      const heldOutLoop = await runGoalLoop(heldOutGoals, loopOpts);
+      heldOutLoopResult = await runGoalLoop(heldOutGoals, loopOpts);
 
       // Build held-out report (G7.1.2)
-      const heldOutMatrixOutput = stripSampleArrays(heldOutLoop.matrix);
+      const heldOutMatrixOutput = stripSampleArrays(heldOutLoopResult.matrix);
       const heldOutReport = {
         harness_version: "25.2",
         suite: "held_out",
@@ -837,18 +841,18 @@ async function main() {
         shape_registry_snapshot_hash: heldOutFile.shape_registry_snapshot_hash,
         endpoint,
         thompson_pool_size: thompsonPoolIds.size,
-        goals_processed: heldOutLoop.perGoalResults.length,
-        api_call_count: heldOutLoop.apiCallCount,
-        universality_pass: heldOutLoop.universality_pass,
-        cell_count: Object.keys(heldOutLoop.matrix).length,
+        goals_processed: heldOutLoopResult.perGoalResults.length,
+        api_call_count: heldOutLoopResult.apiCallCount,
+        universality_pass: heldOutLoopResult.universality_pass,
+        cell_count: Object.keys(heldOutLoopResult.matrix).length,
         coverage_matrix: heldOutMatrixOutput,
-        optimality_ratios: heldOutLoop.optimalityRatios,
-        refinement_event_count: heldOutLoop.refinementEvents.length,
+        optimality_ratios: heldOutLoopResult.optimalityRatios,
+        refinement_event_count: heldOutLoopResult.refinementEvents.length,
         refinement_event_density:
-          heldOutLoop.perGoalResults.length > 0
-            ? heldOutLoop.refinementEvents.length / heldOutLoop.perGoalResults.length
+          heldOutLoopResult.perGoalResults.length > 0
+            ? heldOutLoopResult.refinementEvents.length / heldOutLoopResult.perGoalResults.length
             : 0,
-        ...(values["detailed"] ? { per_goal_results: heldOutLoop.perGoalResults } : {}),
+        ...(values["detailed"] ? { per_goal_results: heldOutLoopResult.perGoalResults } : {}),
       };
       const resultsDir = join(repoRoot, "validation", "results");
       await mkdir(resultsDir, { recursive: true });
@@ -892,6 +896,10 @@ async function main() {
     refinement_event_density:
       perGoalResults.length > 0 ? refinementEvents.length / perGoalResults.length : 0,
     refinement_events: refinementEvents,
+    // G7.2.1/G7.2.2: contamination check (only when held-out suite was run)
+    ...(heldOutLoopResult
+      ? computeContaminationDelta(matrix, heldOutLoopResult.matrix)
+      : {}),
     ...(values["detailed"] ? { per_goal_results: perGoalResults } : {}),
   };
 
