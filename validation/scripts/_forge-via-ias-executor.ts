@@ -257,52 +257,88 @@ function findImpulseByShape(
   return undefined;
 }
 
-function emitResult(payload: Record<string, unknown>): void {
-  // Sentinel bookends — parent runner greps between them. Keep on their own lines.
-  console.log("===== IAS_FORGE_RESULT =====");
-  console.log(JSON.stringify(payload));
-  console.log("===== END_IAS_FORGE_RESULT =====");
+// ---------------------------------------------------------------------------
+// Public result type — returned by runForgeGoalDirectly() and emitted as
+// the sentinel JSON block when the module is run directly. Exported so
+// test-forge-goal-completion.ts can import the type without parsing JSON.
+// ---------------------------------------------------------------------------
+
+export interface ForgeGoalResult {
+  ok: boolean;
+  runtime: "ias-executor";
+  traceId?: string;
+  templateId?: string;
+  status?: string;
+  durationMs?: number;
+  failureMode?: unknown;
+  error?: string;
+  vesselVerified?: {
+    vesselId?: string | null;
+    endpoint?: string | null;
+    discovery?: unknown;
+    observation?: unknown;
+    auth?: unknown;
+  } | null;
+  vesselDeployed?: {
+    imageTag?: string | null;
+    endpoint?: string | null;
+  } | null;
+  subscriberFires?: Array<{ templateId: string; eventType: string }>;
+  tasks?: Array<{
+    taskId: string;
+    success: boolean;
+    resolverId: string;
+    durationMs?: number;
+    outputs: number;
+  }>;
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
+export interface ForgeGoalOptions {
+  vesselGoal: string;
+  targetShape?: string;
+  anthropicApiKey?: string;
+  metabobApiKey?: string;
+  activityApiUrl?: string;
+  discoveryUrl?: string;
+  conceptDbUrl?: string;
+  conceptDbKey?: string;
+  deploymentWorkdir?: string;
+  parentExecutionId?: string;
+  parentDepth?: number;
+}
 
-async function main(): Promise<number> {
-  if (!ANTHROPIC_API_KEY) {
-    emitResult({ ok: false, error: "ANTHROPIC_API_KEY not set", runtime: "ias-executor" });
-    return 2;
-  }
-  if (!METABOB_API_KEY) {
-    emitResult({ ok: false, error: "METABOB_API_KEY not set", runtime: "ias-executor" });
-    return 2;
-  }
+/**
+ * Drive the forge end-to-end via VesselForgeHost. Called directly by
+ * test-forge-goal-completion.ts (task §4.2 — no subprocess spawn).
+ * Also invoked by the `main()` entry point when this file is run standalone.
+ */
+export async function runForgeGoalDirectly(opts: ForgeGoalOptions): Promise<ForgeGoalResult> {
+  const apiKey = opts.anthropicApiKey ?? ANTHROPIC_API_KEY;
+  const metabobKey = opts.metabobApiKey ?? METABOB_API_KEY;
+  const activityApiUrl = opts.activityApiUrl ?? ACTIVITY_API_URL;
+  const discoveryUrl = opts.discoveryUrl ?? DISCOVERY_URL;
+  const conceptDbUrl = opts.conceptDbUrl ?? CONCEPT_DB_URL;
+  const conceptDbKey = opts.conceptDbKey ?? CONCEPT_DB_KEY;
+  const deploymentWorkdir = opts.deploymentWorkdir ?? DEPLOYMENT_WORKDIR;
+  const parentExecutionId = opts.parentExecutionId ?? PARENT_EXECUTION_ID;
+  const parentDepth = opts.parentDepth ?? PARENT_DEPTH;
+  const targetShape = opts.targetShape ?? TARGET_SHAPE;
+  const vesselGoal = opts.vesselGoal;
 
-  console.log(`[ias-forge] target_shape    = ${TARGET_SHAPE}`);
-  console.log(`[ias-forge] vessel_goal     = ${VESSEL_GOAL.slice(0, 120)}${VESSEL_GOAL.length > 120 ? "..." : ""}`);
-  console.log(`[ias-forge] activity_api    = ${ACTIVITY_API_URL}`);
-  console.log(`[ias-forge] discovery_url   = ${DISCOVERY_URL}`);
-  console.log(`[ias-forge] concept_db_url  = ${CONCEPT_DB_URL}`);
-  console.log(`[ias-forge] parent_depth    = ${PARENT_DEPTH}`);
+  if (!apiKey) return { ok: false, runtime: "ias-executor", error: "ANTHROPIC_API_KEY not set" };
+  if (!metabobKey) return { ok: false, runtime: "ias-executor", error: "METABOB_API_KEY not set" };
+
+  console.log(`[ias-forge] target_shape    = ${targetShape}`);
+  console.log(`[ias-forge] vessel_goal     = ${vesselGoal.slice(0, 120)}${vesselGoal.length > 120 ? "..." : ""}`);
+  console.log(`[ias-forge] activity_api    = ${activityApiUrl}`);
+  console.log(`[ias-forge] discovery_url   = ${discoveryUrl}`);
+  console.log(`[ias-forge] concept_db_url  = ${conceptDbUrl}`);
+  console.log(`[ias-forge] parent_depth    = ${parentDepth}`);
 
   const llm = new AnthropicLLMPort();
-  // ias-executor-ts's stock HttpTraceSink sends the raw ExecutionTrace
-  // (camelCase, status: "completed"|"failed"); activity-api expects
-  // StoreExecutionTraceRequestSchema (snake_case, status:
-  // "success"|"failure"|"partial", with execution_trace.tasks containing
-  // actualPrompt/response/inputState/outputState fields ias-executor-ts
-  // doesn't capture). Translate at the wire boundary — defaults are
-  // intentional rather than aspirational; ias-executor traces are simpler
-  // than minibob traces by design.
-  const traceSink = new TranslatingTraceSink(ACTIVITY_API_URL, METABOB_API_KEY);
+  const traceSink = new TranslatingTraceSink(activityApiUrl, metabobKey);
   const consoleSink = new ConsoleEventSink();
 
-  // Compose lifecycle subscribers: SHARED_TEMPLATES from ias-executor-ts catalogue
-  // (slot-binding, validator-dispatch, audit-test-report, ribosome-extract, etc.)
-  // get registered as subscribers. The dispatcher records but doesn't recurse
-  // into nested executor.execute() here — the forge is a single-template run;
-  // full nested dispatch is the GoalHost demonstration (spec §3 / §G). This
-  // wrapper proves subscribers FIRE on the new engine lifecycle:* emissions.
   const subscriberFires: Array<{ templateId: string; eventType: string }> = [];
   const subscriber = new LifecycleSubscriberVessel({
     dispatcher: (template, event) => {
@@ -319,44 +355,40 @@ async function main(): Promise<number> {
 
   const host = new VesselForgeHost({
     llm,
-    discoveryEndpoint: DISCOVERY_URL,
-    eventSink: subscriber, // chains: subscriber.emit() → matches + forward to consoleSink
+    discoveryEndpoint: discoveryUrl,
+    eventSink: subscriber,
     traceSink,
   });
 
   const template = loadForgeTemplate();
   console.log(`[ias-forge] template        = ${template.id} v${(template as any).version ?? "?"}`);
 
-  // conceptDbEndpoint mirrors test-22-forge-and-paths.ts:169 — concept-db
-  // authentication is currently passed as a ?apiKey= query string by the forge
-  // resolvers.
-  const conceptDbEndpoint = CONCEPT_DB_KEY
-    ? `${CONCEPT_DB_URL}?apiKey=${CONCEPT_DB_KEY}`
-    : CONCEPT_DB_URL;
+  const conceptDbEndpoint = conceptDbKey
+    ? `${conceptDbUrl}?apiKey=${conceptDbKey}`
+    : conceptDbUrl;
 
   const t0 = Date.now();
   let trace: ExecutionTrace;
   try {
     trace = await host.execute(template, {
       variables: {
-        vesselGoal: VESSEL_GOAL,
-        missingShape: TARGET_SHAPE,
-        parentExecutionId: PARENT_EXECUTION_ID,
-        parentDepth: PARENT_DEPTH,
+        vesselGoal,
+        missingShape: targetShape,
+        parentExecutionId,
+        parentDepth,
         conceptDbEndpoint,
-        deploymentWorkdir: DEPLOYMENT_WORKDIR,
+        deploymentWorkdir,
       },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.log(`[ias-forge] EXCEPTION: ${msg}`);
-    emitResult({
+    return {
       ok: false,
       runtime: "ias-executor",
       error: msg,
       durationMs: Date.now() - t0,
-    });
-    return 1;
+    };
   }
 
   const durationMs = Date.now() - t0;
@@ -367,7 +399,7 @@ async function main(): Promise<number> {
   const verifiedContent = (vesselVerified?.content ?? null) as any;
   const deployedContent = (vesselDeployed?.content ?? null) as any;
 
-  emitResult({
+  return {
     ok: success,
     runtime: "ias-executor",
     traceId: trace.id,
@@ -398,19 +430,41 @@ async function main(): Promise<number> {
       durationMs: t.durationMs,
       outputs: t.outputImpulseIds.length,
     })),
-  });
-
-  return success ? 0 : 1;
+  };
 }
 
-main()
-  .then((code) => process.exit(code))
-  .catch((err) => {
-    console.error("[ias-forge] FATAL:", err);
-    emitResult({
-      ok: false,
-      runtime: "ias-executor",
-      error: err instanceof Error ? err.message : String(err),
+function emitResult(payload: Record<string, unknown>): void {
+  // Sentinel bookends — parent runner greps between them. Keep on their own lines.
+  console.log("===== IAS_FORGE_RESULT =====");
+  console.log(JSON.stringify(payload));
+  console.log("===== END_IAS_FORGE_RESULT =====");
+}
+
+// ---------------------------------------------------------------------------
+// Main (standalone entry point — emits sentinel JSON for subprocess callers)
+// ---------------------------------------------------------------------------
+
+async function main(): Promise<number> {
+  const result = await runForgeGoalDirectly({ vesselGoal: VESSEL_GOAL });
+  emitResult(result as unknown as Record<string, unknown>);
+  if (result.error === "ANTHROPIC_API_KEY not set" || result.error === "METABOB_API_KEY not set") {
+    return 2;
+  }
+  return result.ok ? 0 : 1;
+}
+
+// Guard: only run when invoked directly (not when imported as a library).
+// import.meta.main is true only when Bun executes this file as the entry point.
+if (import.meta.main) {
+  main()
+    .then((code) => process.exit(code))
+    .catch((err) => {
+      console.error("[ias-forge] FATAL:", err);
+      emitResult({
+        ok: false,
+        runtime: "ias-executor",
+        error: err instanceof Error ? err.message : String(err),
+      });
+      process.exit(1);
     });
-    process.exit(1);
-  });
+}

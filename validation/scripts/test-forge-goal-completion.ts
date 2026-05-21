@@ -27,6 +27,10 @@ import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve as pathResolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  runForgeGoalDirectly,
+  type ForgeGoalResult,
+} from "./_forge-via-ias-executor";
 
 // ---------------------------------------------------------------------------
 // Environment / configuration (matches test-22-forge-and-paths.ts env pattern)
@@ -63,9 +67,11 @@ const MINIBOB_BIN = process.env.MINIBOB_BIN ?? "minibob";
 // FORGE_RUNTIME: selects which executor drives the forge. Option C step 1
 // (openspec/changes/2026-04-26-impulse-activity-loop/design.md §Phase 22)
 // pivots from minibob-as-god-object toward ias-executor-ts as the canonical
-// executor. Default is "ias-executor" — the legacy minibob path remains
-// runnable by setting FORGE_RUNTIME=minibob for parity comparisons.
-type ForgeRuntime = "ias-executor" | "minibob";
+// executor. Default is "ias-executor" (direct in-process GoalHost/VesselForgeHost
+// call per task §4.2). Legacy paths remain behind flags for parity comparisons:
+//   FORGE_RUNTIME=minibob         — spawn minibob --single
+//   FORGE_RUNTIME=ias-executor-subprocess — spawn _forge-via-ias-executor.ts
+type ForgeRuntime = "ias-executor" | "ias-executor-subprocess" | "minibob";
 const FORGE_RUNTIME: ForgeRuntime =
   (process.env.FORGE_RUNTIME as ForgeRuntime) || "ias-executor";
 
@@ -356,10 +362,36 @@ async function runForgeViaIasExecutor(goal: string): Promise<MinibobRun & { iasR
   });
 }
 
+/** Direct in-process forge call (task §4.2). No subprocess spawn. */
+async function runForgeDirectly(goal: string): Promise<MinibobRun & { iasResult?: IasForgeResult }> {
+  const start = Date.now();
+  const result: ForgeGoalResult = await runForgeGoalDirectly({
+    vesselGoal: goal,
+    targetShape: TARGET_SHAPE,
+    anthropicApiKey: ANTHROPIC_API_KEY,
+    metabobApiKey: METABOB_API_KEY,
+    activityApiUrl: ACTIVITY_API_URL,
+    discoveryUrl: DISCOVERY_URL,
+  });
+  return {
+    executionId: result.traceId ?? null,
+    stdout: "",
+    stderr: result.error ?? "",
+    exitCode: result.ok ? 0 : 1,
+    duration_ms: result.durationMs ?? (Date.now() - start),
+    iasResult: result as IasForgeResult,
+  };
+}
+
 async function runForge(goal: string): Promise<MinibobRun & { iasResult?: IasForgeResult }> {
-  // Switch on FORGE_RUNTIME. Both paths return the same MinibobRun shape so
+  // Switch on FORGE_RUNTIME. All paths return the same MinibobRun shape so
   // the rest of pass1/pass2 (trace lookup, assertions) doesn't fork.
   if (FORGE_RUNTIME === "ias-executor") {
+    // Direct in-process call — no subprocess (task §4.2).
+    return runForgeDirectly(goal);
+  }
+  if (FORGE_RUNTIME === "ias-executor-subprocess") {
+    // Legacy subprocess path — kept for parity comparisons.
     return runForgeViaIasExecutor(goal);
   }
   return runMinibobSingle(goal);
