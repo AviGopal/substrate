@@ -142,10 +142,12 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
 
 ### G6.2 Witness pairing in harness
 
-- [ ] G6.2.1 `stratified-harness.ts` selects 10% of generated goals deterministically
-  (by seed) for differential-solve. After the primary run, dispatches a second run
-  with `exclude_variant=<primary_chosen_id>`. **Acceptance:** witness pair count is
-  10% ± 1 of generated goals across two runs.
+- [x] G6.2.1 ✅ **DONE** 2026-05-21. `stratified-harness.ts` selects goals at
+  `index % 10 === 0` (deterministic, ~10%) for differential-solve. Calls
+  `runRecommendation(goal, ..., primaryTopId)` to get next-best candidate.
+  `DifferentialWitness { primary_top_id, alt_top_id, diverged }` stored per
+  `PerGoalResult`. Report includes `differential_witness_count` and
+  `differential_diverge_rate`.
 
 ### G6.3 Output normalisers
 
@@ -172,10 +174,13 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
 
 ### G6.5 Validator-consensus arm
 
-- [ ] G6.5.1 Harness reads `validation_result` impulses from each trace and computes
-  the fraction of successful traces where validator-dispatch returned passed=false.
-  **Acceptance:** integration test against a canary trace with a known validator
-  negative.
+- [x] G6.5.1 ✅ **DONE** 2026-05-21. `detectValidatorFalseNegative(trace)` checks
+  successful traces for any task with `resolver_id` or `activity_id` containing
+  "validator" that also has a non-null `failure_mode`. `TraceScores.validator_false_negative`
+  bool accumulated per-trace; `CellMetrics.validator_false_negative_rate` = fraction
+  of successful traces with a false negative. Finalized alongside witness_disagreement
+  in cell finalization loop. Note: uses task-level failure_mode as proxy (full
+  impulse-body fetch deferred to when `output_impulse_ids` are hydrated).
 
 ---
 

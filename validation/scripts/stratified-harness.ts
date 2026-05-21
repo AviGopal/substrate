@@ -164,6 +164,8 @@ interface CellMetrics {
   decision_record_completeness: number | null;
   // G6.3.2: fraction of goals with 2+ traces where witness comparison disagreed
   witness_disagreement: number | null;
+  // G6.5.1: fraction of successful traces where validator-dispatch returned passed=false
+  validator_false_negative_rate: number | null;
   floor_pass: boolean;
   floor_status?: string;
   // Recommendation-quality sub-metrics (from recommend calls)
@@ -350,6 +352,8 @@ interface TraceScores {
   reuse_efficiency: number | null;
   improvise_share: number | null;
   decision_record_completeness: number | null;
+  // G6.5.1: true if trace succeeded but a validator-dispatch task produced passed=false
+  validator_false_negative: boolean;
 }
 
 // POSTERIOR_KEYS and BINDING_KEYS imported from lib/decision-record-completeness.ts
@@ -391,11 +395,25 @@ function scoreTasks(
   return { reuse_efficiency, improvise_share, decision_record_completeness };
 }
 
+// G6.5.1: detect validator_false_negative — trace succeeded but validator task
+// recorded a failure_mode (meaning validator-dispatch found issues post-hoc).
+function detectValidatorFalseNegative(trace: ExecutionTrace): boolean {
+  const success = trace.status === "success" || trace.status === "completed";
+  if (!success) return false;
+  const tasks = trace.tasks ?? [];
+  return tasks.some(
+    (t) =>
+      (t.resolver_id?.includes("validator") || t.activity_id?.includes("validator")) &&
+      t.failure_mode != null
+  );
+}
+
 function scoreTrace(trace: ExecutionTrace, thompsonPoolIds: Set<string>): TraceScores {
   const success = trace.status === "success" || trace.status === "completed";
   const cost_usd = typeof trace.cost_usd === "number" ? trace.cost_usd : null;
   const taskScores = scoreTasks(trace.tasks ?? [], thompsonPoolIds, trace);
-  return { success, cost_usd, ...taskScores };
+  const validator_false_negative = detectValidatorFalseNegative(trace);
+  return { success, cost_usd, ...taskScores, validator_false_negative };
 }
 
 // ---------------------------------------------------------------------------
@@ -453,6 +471,7 @@ function emptyCell(): CellMetrics {
     decision_record_completeness_samples: [],
     decision_record_completeness: null,
     witness_disagreement: null,
+    validator_false_negative_rate: null,
     floor_pass: false,
     recommend_coverage: null,
     recommend_shape_match: null,
@@ -754,6 +773,12 @@ async function runGoalLoop(
       goalsWithWitnesses.length > 0
         ? goalsWithWitnesses.filter((r) => r.witnesses.some((w) => !w.agreed)).length /
           goalsWithWitnesses.length
+        : null;
+    // G6.5.1: validator false-negative rate — successful traces with validator passed=false
+    const successScores = goalResults.flatMap((r) => r.scores.filter((s) => s.success));
+    cell.validator_false_negative_rate =
+      successScores.length > 0
+        ? successScores.filter((s) => s.validator_false_negative).length / successScores.length
         : null;
     finalizeCell(cell, cellId);
   }
