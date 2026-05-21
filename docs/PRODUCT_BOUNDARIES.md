@@ -180,6 +180,18 @@ The prior rpc-api-based shim is preserved at
 [`openspec/specs/rpc-api-mcp-usage-adapter/spec.md`](../openspec/specs/rpc-api-mcp-usage-adapter/spec.md)
 as historical context.
 
+The same BFF route now also accepts `GET /api/mcp/usage` with NO
+`api_key_id` and proxies it to user-vessel `GET /v2/mcp/usage`, an
+org-scoped batch read returning `{ snapshots, total }`. SurrealDB
+PERMISSIONS scope by `$token.org_id`; the response is capped at 500
+rows with a warning log when truncated. The APIKeysPage renders an
+inline `UsageBadge` per row (sourced from this batch read, indexed
+by `api_key_id`) so a team lead sees "N calls · last seen X" without
+navigating per-key. The `/mcp` Usage dropdown labels truncate the
+identity-vessel `prefix` field to 12 chars to avoid leaking raw-key-
+shaped substrings into UI labels. Capability spec:
+[`openspec/specs/team-lead-key-overview/spec.md`](../openspec/specs/team-lead-key-overview/spec.md).
+
 ## Coupling audit
 
 The "Coupling Audit" is a machine-greppable table — one row per
