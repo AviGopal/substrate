@@ -144,6 +144,54 @@ adapter locations — never as a patch to rpc-api:
 The dashboard BFF is the default. Reach for a new vessel only when
 the BFF cannot meet the requirement.
 
+## rpc-api session limitation
+
+A consequence of the frozen rpc-api surface: **identity-vessel-issued
+API keys aren't recognized by rpc-api as identifying a customer**.
+Every `POST /session { apiKey }` returns a fresh anonymous session
+(`session_id: "anonymous:default:<uuid>"`, `org_id: "anonymous"`),
+even when the same raw key is used across calls. Reproducible by
+curling rpc-api `/session/stats` after a `/session` exchange — files
+submitted in one `/session` exchange are invisible to a subsequent
+one because rpc-api treats each exchange as a brand-new anonymous
+caller.
+
+What this affects:
+
+- **Cross-process / cross-invocation continuity is impossible** with
+  identity-vessel keys. An `init_workspace` submission from one
+  `npx @metabob/mcp@latest` invocation cannot be queried by the next
+  `get_problems` invocation; the rpc-api session UUID is regenerated.
+  Sticky `SESSION_ID` env var on mcp is mcp's internal id and is NOT
+  forwarded to rpc-api's `/session` exchange.
+- **Per-customer analysis state is invisible to the dashboard** —
+  `/session/stats` for a fresh key always reads zero.
+- **The `mcp_usage_snapshot` + `mcp_outcome_event` telemetry path
+  (user-vessel) is the workaround.** mcp posts per-tool-call events
+  directly to user-vessel against the customer's key id (resolved via
+  identity-vessel), so the dashboard CAN observe per-key call counts,
+  intent buckets, and outcome attempts. What it CAN'T observe is
+  whether rpc-api accepted those attempts — e.g. whether a
+  `mark_complete { problem_id }` resolved a real problem in rpc-api's
+  state. The Activity Feed labels are therefore framed as **agent
+  actions** (`Marked X as endorsed`, `Added explain note on X`), not
+  as confirmed rpc-api state changes.
+
+What would close this:
+
+1. **Per-key auth on rpc-api** — `POST /session` would have to look
+   up the api key against an identity-vessel-shared table and bind
+   the session to `(org_id, user_id, key_id)`. rpc-api is frozen, so
+   this is off the table unless we accept modifying it.
+2. **A replacement analysis vessel** that recognizes identity-vessel
+   keys and exposes problem IDs the dashboard can correlate against.
+3. **Continue capturing intent via the telemetry shim** (current
+   path) and accept that the Activity Feed reflects agent actions,
+   not authoritative resolution state.
+
+Path 3 is what ships today. Path 2 is the future of this surface;
+path 1 is a non-starter under the freeze.
+
 ## MCP surface in dashboard
 
 The cloud-dashboard ships a `/mcp` route that surfaces a static
