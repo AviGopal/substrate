@@ -1362,7 +1362,7 @@ Full design: `2026-05-17-stratified-goal-generator-harness/design.md`.
 
 ### 25.6 Multi-witness disagreement
 
-- [ ] 25.6.1 False-positive resistance via multi-witness verification: re-run each generated goal under different vessel routing / model selections and flag disagreement as low-confidence success.
+- [x] 25.6.1 ✅ **DONE** 2026-05-22. Multi-witness disagreement implemented in `validation/scripts/stratified-harness.ts`. Four arms: (1) differential-solve — all goals with ≥1 rec now run exclude-top re-rec and compare; (2) trace-to-trace witness comparison (G6.3.2); (3) oracle-corpus arm (G6.4.1); (4) validator FN arm (G6.5.1). Per-goal `witness_pair_count`/`witness_disagree_count`/`low_confidence_success` fields. Per-cell `multi_witness_disagreement_rate`. Floor: < 0.10 on A/B scenario cells. Report fields: `multi_witness_total_pairs`, `multi_witness_disagree_count`, `multi_witness_disagreement_rate`, `low_confidence_success_count`. `harness_version` bumped to "25.6".
 
 ### 25.7 Held-out rotation
 

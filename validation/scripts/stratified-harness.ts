@@ -168,6 +168,8 @@ interface CellMetrics {
   validator_false_negative_rate: number | null;
   // G6.4.1: fraction of oracle goals where harness success disagrees with oracle verdict
   oracle_disagreement_rate: number | null;
+  // 25.6.1: unified multi-witness disagreement rate across all arms (diff-solve + trace + oracle)
+  multi_witness_disagreement_rate: number | null;
   floor_pass: boolean;
   floor_status?: string;
   // Recommendation-quality sub-metrics (from recommend calls)
@@ -514,6 +516,7 @@ function emptyCell(): CellMetrics {
     witness_disagreement: null,
     validator_false_negative_rate: null,
     oracle_disagreement_rate: null,
+    multi_witness_disagreement_rate: null,
     floor_pass: false,
     recommend_coverage: null,
     recommend_shape_match: null,
@@ -523,9 +526,10 @@ function emptyCell(): CellMetrics {
 // Per-cell floor thresholds (from design §B)
 const FLOORS = {
   success_rate: 0.30,
-  reuse_efficiency: 0.40,     // only when sample_count ≥ 3 and depth ≥ 1
+  reuse_efficiency: 0.40,           // only when sample_count ≥ 3 and depth ≥ 1
   decision_record_completeness: 0.90,
   witness_disagreement_max: 0.15,
+  multi_witness_disagreement_max: 0.10, // 25.6.x: A/B scenarios only
 };
 
 function computeFloorPass(cell: CellMetrics, cellId: string): boolean {
@@ -540,6 +544,11 @@ function computeFloorPass(cell: CellMetrics, cellId: string): boolean {
   const hasDepth = cellId.includes("depth1") || cellId.includes("depth2+");
   if (hasDepth && cell.reuse_efficiency !== null &&
     cell.reuse_efficiency < FLOORS.reuse_efficiency) return false;
+
+  // 25.6.x: multi-witness disagreement floor for A/B scenarios only (not C/D gap cells)
+  const isScenarioAB = !cellId.includes("C∪D") && !cellId.includes("gapD");
+  if (isScenarioAB && cell.multi_witness_disagreement_rate !== null &&
+    cell.multi_witness_disagreement_rate > FLOORS.multi_witness_disagreement_max) return false;
 
   return true;
 }
@@ -652,10 +661,14 @@ interface PerGoalResult {
   trace_count: number;
   scores: TraceScores[];
   witnesses: WitnessEntry[];
-  differential?: DifferentialWitness;     // G6.2.1: present for 10% of goals
+  differential?: DifferentialWitness;     // G6.2.1: present for goals with ≥1 recommendation
   oracle_disagree?: boolean;              // G6.4.1: present only for oracle goals
   oracle_label_id?: string;
   oracle_verdict?: "pass" | "fail";
+  // 25.6.1: multi-witness aggregates
+  witness_pair_count: number;             // total witness pairs evaluated (diff + trace + oracle)
+  witness_disagree_count: number;         // pairs that disagreed
+  low_confidence_success: boolean;        // any witness disagreement on a goal that scored success
 }
 
 interface LoopResult {
@@ -769,10 +782,10 @@ async function runGoalLoop(
       });
     }
 
-    // G6.2.1: differential-solve — 10% of goals (deterministic: index % 10 === 0)
-    // Run recommend again with the primary top choice excluded to find next-best.
+    // G6.2.1 / 25.6.1: differential-solve — run for ALL goals with ≥1 recommendation.
+    // Re-runs recommend with the primary top choice excluded to surface next-best divergence.
     let differential: DifferentialWitness | undefined;
-    if (i % 10 === 0 && recs.length > 0) {
+    if (recs.length > 0) {
       const primaryTopId = recs[0].id ?? recs[0].template_id ?? recs[0].activity_id ?? "";
       if (primaryTopId) {
         const altRecs = await runRecommendation(goal, endpoint, authHeaders, primaryTopId);
@@ -809,6 +822,30 @@ async function runGoalLoop(
       }
     }
 
+    // 25.6.1: compute per-goal multi-witness pair totals
+    let witnessPairCount = 0;
+    let witnessDisagreeCount = 0;
+    if (differential) {
+      witnessPairCount++;
+      if (differential.diverged) witnessDisagreeCount++;
+    }
+    if (witnesses.length > 0) {
+      witnessPairCount += witnesses.length;
+      witnessDisagreeCount += witnesses.filter((w) => !w.agreed).length;
+    }
+    if (oracleFields.oracle_disagree !== undefined) {
+      witnessPairCount++;
+      if (oracleFields.oracle_disagree) witnessDisagreeCount++;
+    }
+    // validator FN counts as a disagreement pair if any successful trace had validator flag it
+    const validatorFalseNeg = traceScores.some((s) => s.validator_false_negative);
+    if (traceScores.some((s) => s.success)) {
+      witnessPairCount++;
+      if (validatorFalseNeg) witnessDisagreeCount++;
+    }
+    const goalHarnessSuccess = traceScores.some((s) => s.success);
+    const lowConfidenceSuccess = goalHarnessSuccess && witnessDisagreeCount > 0;
+
     perGoalResults.push({
       goal_id: goal.id,
       cell_id: cellId,
@@ -819,6 +856,9 @@ async function runGoalLoop(
       witnesses,
       ...(differential ? { differential } : {}),
       ...oracleFields,
+      witness_pair_count: witnessPairCount,
+      witness_disagree_count: witnessDisagreeCount,
+      low_confidence_success: lowConfidenceSuccess,
     });
 
     process.stdout.write(
@@ -855,6 +895,10 @@ async function runGoalLoop(
       oracleGoals.length > 0
         ? oracleGoals.filter((r) => r.oracle_disagree).length / oracleGoals.length
         : null;
+    // 25.6.1: multi-witness disagreement rate — aggregate across all arms
+    const totalPairs = goalResults.reduce((s, r) => s + r.witness_pair_count, 0);
+    const totalDisagree = goalResults.reduce((s, r) => s + r.witness_disagree_count, 0);
+    cell.multi_witness_disagreement_rate = totalPairs > 0 ? totalDisagree / totalPairs : null;
     finalizeCell(cell, cellId);
   }
 
@@ -920,7 +964,7 @@ async function main() {
     }
   }
 
-  console.log(`\nStratified Harness — Phase 25.2`);
+  console.log(`\nStratified Harness — Phase 25.6`);
   console.log(`  goals file  : ${goalsPath}`);
   console.log(`  goal count  : ${goals.length}`);
   console.log(`  endpoint    : ${endpoint}`);
@@ -974,7 +1018,7 @@ async function main() {
       // Build held-out report (G7.1.2)
       const heldOutMatrixOutput = stripSampleArrays(heldOutLoopResult.matrix);
       const heldOutReport = {
-        harness_version: "25.2",
+        harness_version: "25.6",
         suite: "held_out",
         run_at: new Date().toISOString(),
         label: values["label"] || undefined,
@@ -994,8 +1038,16 @@ async function main() {
           heldOutLoopResult.perGoalResults.length > 0
             ? heldOutLoopResult.refinementEvents.length / heldOutLoopResult.perGoalResults.length
             : 0,
-        // G6.2.1: differential-solve summary for held-out suite
+        // G6.2.1 / 25.6.1: differential-solve + multi-witness summary for held-out suite
         differential_witness_count: heldOutLoopResult.perGoalResults.filter((r) => r.differential).length,
+        multi_witness_total_pairs: heldOutLoopResult.perGoalResults.reduce((s, r) => s + r.witness_pair_count, 0),
+        multi_witness_disagree_count: heldOutLoopResult.perGoalResults.reduce((s, r) => s + r.witness_disagree_count, 0),
+        multi_witness_disagreement_rate: (() => {
+          const pairs = heldOutLoopResult.perGoalResults.reduce((s, r) => s + r.witness_pair_count, 0);
+          const dis = heldOutLoopResult.perGoalResults.reduce((s, r) => s + r.witness_disagree_count, 0);
+          return pairs > 0 ? dis / pairs : null;
+        })(),
+        low_confidence_success_count: heldOutLoopResult.perGoalResults.filter((r) => r.low_confidence_success).length,
         ...(values["detailed"] ? { per_goal_results: heldOutLoopResult.perGoalResults } : {}),
       };
       const resultsDir = join(repoRoot, "validation", "results");
@@ -1020,7 +1072,7 @@ async function main() {
     ([, c]) => c.sample_count >= 3 && c.floor_status !== "gated_on_phase_22"
   );
   const report = {
-    harness_version: "25.2",
+    harness_version: "25.6",
     suite: "rolling_pool",
     run_at: new Date().toISOString(),
     label: values["label"] || undefined,
@@ -1056,6 +1108,15 @@ async function main() {
         ? withOracle.filter((r) => r.oracle_disagree).length / withOracle.length
         : null;
     })(),
+    // 25.6.1: multi-witness disagreement — aggregated across all arms
+    multi_witness_total_pairs: perGoalResults.reduce((s, r) => s + r.witness_pair_count, 0),
+    multi_witness_disagree_count: perGoalResults.reduce((s, r) => s + r.witness_disagree_count, 0),
+    multi_witness_disagreement_rate: (() => {
+      const pairs = perGoalResults.reduce((s, r) => s + r.witness_pair_count, 0);
+      const dis = perGoalResults.reduce((s, r) => s + r.witness_disagree_count, 0);
+      return pairs > 0 ? dis / pairs : null;
+    })(),
+    low_confidence_success_count: perGoalResults.filter((r) => r.low_confidence_success).length,
     // G7.2.1/G7.2.2: contamination check (only when held-out suite was run)
     ...(heldOutLoopResult
       ? computeContaminationDelta(matrix, heldOutLoopResult.matrix)
@@ -1076,11 +1137,17 @@ async function main() {
   console.log(`${"─".repeat(60)}`);
   const diffCount = perGoalResults.filter((r) => r.differential).length;
   const diffDiverged = perGoalResults.filter((r) => r.differential?.diverged).length;
+  const totalPairsAll = perGoalResults.reduce((s, r) => s + r.witness_pair_count, 0);
+  const totalDisagreeAll = perGoalResults.reduce((s, r) => s + r.witness_disagree_count, 0);
+  const mwdr = totalPairsAll > 0 ? (totalDisagreeAll / totalPairsAll).toFixed(3) : "n/a";
+  const lcCount = perGoalResults.filter((r) => r.low_confidence_success).length;
   console.log(`  Cells populated   : ${Object.keys(matrix).length}`);
   console.log(`  Passable cells    : ${passableCells.length}`);
   console.log(`  Universality pass : ${universality_pass === null ? "N/A (no cells w/ n≥3)" : universality_pass ? "✅ PASS" : "❌ FAIL"}`);
   console.log(`  Refinement events : ${refinementEvents.length}`);
   console.log(`  Diff-solve pairs  : ${diffCount} (${diffDiverged} diverged)`);
+  console.log(`  Multi-witness     : ${totalPairsAll} pairs, ${totalDisagreeAll} disagree, rate=${mwdr} (goal: <0.10)`);
+  console.log(`  Low-conf success  : ${lcCount} goals`);
   console.log(`  API calls         : ${apiCallCount}`);
   console.log(`\nPer-cell summary:`);
   for (const [cellId, cell] of Object.entries(matrixOutput)) {
@@ -1089,8 +1156,9 @@ async function main() {
     const is_ = cell.improvise_share !== null ? ` imp=${cell.improvise_share.toFixed(2)}` : "";
     const drc = cell.decision_record_completeness !== null ? ` drc=${cell.decision_record_completeness.toFixed(2)}` : "";
     const rc = cell.recommend_coverage !== null ? ` rcov=${cell.recommend_coverage.toFixed(2)}` : "";
+    const mw = cell.multi_witness_disagreement_rate !== null ? ` mw=${cell.multi_witness_disagreement_rate.toFixed(2)}` : "";
     const fp = cell.floor_status === "gated_on_phase_22" ? " [gated]" : (cell.floor_pass ? " ✅" : cell.sample_count >= 3 ? " ❌" : " (n<3)");
-    console.log(`  ${cellId.padEnd(22)} n=${cell.sample_count} ${sr}${re}${is_}${drc}${rc}${fp}`);
+    console.log(`  ${cellId.padEnd(22)} n=${cell.sample_count} ${sr}${re}${is_}${drc}${rc}${mw}${fp}`);
   }
   console.log(`\nReport written to: ${reportPath}`);
 }
