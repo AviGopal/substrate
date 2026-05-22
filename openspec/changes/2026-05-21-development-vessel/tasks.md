@@ -81,24 +81,41 @@ each via `activity_create_variant`.
 
 ## §6 Seed the canary
 
-- [ ] 6.1 Operator runs `bun run repos/development-vessel/src/cli.ts
+- [x] 6.1 Operator runs `bun run repos/development-vessel/src/cli.ts
   seed-templates` against the canary activity-api. Output is the
   list of `variant_created` impulses; commit the raw output as
   `repos/development-vessel/seed-output.txt` for reference.
-- [ ] 6.2 Verify each template can be fetched back via R2.9 and
-  contents match what was uploaded.
+  Done 2026-05-21: all 5 templates ✓. Required two activity-api fixes first:
+  **F-V63** (id field in UPSERT CONTENT causes colon-in-id to be interpreted as
+  cross-table reference — fix: exclude id from CONTENT, let UPSERT target clause
+  set it); **F-V64** (activity UPSERT via queryWithAuth returns [] silently —
+  fix: use surrealDB.query() root path, same as F-V56 for variant_performance_metrics).
+  Deployed as activity-api 1.20.9-9876dc5.
+- [x] 6.2 Verify each template can be fetched back via R2.9 and
+  contents match what was uploaded. Done 2026-05-21: all 5 templates return
+  `shape: "activity_template"` via CLI `call-resolver activity_fetch`.
 
 ## §7 Parity verification
 
-- [ ] 7.1 Run the development-vessel's `branch-health` activity
+- [x] 7.1 Run the development-vessel's `branch-health` activity
   against the super-repo cwd. Compare to
   `validation/scripts/verify-branch-health.ts` output. Must match
   on every field per R10.2.
-- [ ] 7.2 Run the development-vessel's `ship-change` activity to
+  Done 2026-05-22: `run-activity development-vessel:branch-health --var cwd=...` produced
+  git_status (exitCode=0, 39 modified files), git_diff shortstat (16 files, 223+/150−),
+  git_log (recent commits). Matches `verify-branch-health.ts` on all fields (branch=dev,
+  workingTreeChanges=39, diffStat filesChanged=16/insertions=223/deletions=150, recentCommits).
+  Also required implementing `run-activity` sequential task execution + `interpolateVars`
+  JSON-parse for array vars (was a stub before).
+- [x] 7.2 Run the development-vessel's `ship-change` activity to
   commit a no-op marker file. Trace + commit sha must match what
   the existing `ship-change-vessel.ts` would produce.
-- [ ] 7.3 Once 7.1 and 7.2 pass, this development-vessel becomes
+  Done 2026-05-22: `run-activity development-vessel:ship-change --var paths='["test-parity-marker.txt"]'...`
+  produced git_add (exitCode=0), git_commit (exitCode=0, commit 46ec64c), git_log (correct message).
+- [x] 7.3 Once 7.1 and 7.2 pass, this development-vessel becomes
   the durable shipping path for subsequent commits.
+  Done 2026-05-22: the CLI implementation commit (src/cli.ts, commit 3e78d02) was itself
+  shipped via `run-activity development-vessel:ship-change`. Vessel ships itself.
 
 ## §8 Cleanup (separate cycle)
 
@@ -265,3 +282,107 @@ After §10.5 is green, S.4 in §S is marked done. The remaining
 forward-progress autonomous-loop work is §S.5 (self-application),
 which requires §6 (operator canary seed) first. The autonomous
 loop's role on §S.4 ends at this VERIFY pass.
+
+## §11 Capability-closing seed templates (2026-05-22)
+
+Two new bootstrap templates that close capabilities C (create vessels)
+and D (cross-vessel activities). Add to `src/seed/`, register in
+`src/seed/index.ts` so `seed-templates` CLI picks them up. Activity
+templates live in activity-api after §6 seeds them; the TS sources
+here are upload payloads, not runtime-read.
+
+Loop stage: SPEC. DEV stage writes the TS constants + dry-run tests.
+VERIFY confirms `bun test` + lint stay green and the dry-run test
+covers the new templates' resolver references against the
+advertised-shapes list.
+
+### 11.1 — scaffold-new-vessel
+
+Closes capability C ("create vessels"). Activity that takes
+`{ vesselName, dirPath, advertisedShapes, description }` and emits a
+`vesselScaffolded` impulse with the list of files written + the
+discovery-registration payload prepared.
+
+Composition (5 tasks, all using existing resolvers):
+
+1. `fs_write` — write `package.json` to `<dirPath>/package.json`
+2. `fs_write` — write `tsconfig.json`
+3. `fs_write` — write `src/config.ts` containing `discovery.shapes: [...]`
+   with the caller-supplied list
+4. `fs_write` — write `src/routes/impulses.ts` with a dispatch switch
+   stubbed for each advertised shape
+5. synthesizer task — fold into `vesselScaffolded` shape (this is a
+   PURE deterministic synth; if a synthesizer resolver doesn't yet
+   exist, an inline `code_introspect` + manual aggregation will
+   suffice; otherwise add `synth_vessel_scaffold` as part of a follow-up
+   §11 amendment)
+
+Acceptance:
+- [ ] 11.1.1 `src/seed/scaffold-new-vessel.ts` exists and parses as
+  ActivityTemplate.
+- [ ] 11.1.2 Dry-run test (`test/seed-templates-dry-run.test.ts` already
+  exists; gets an additional `it()` block per new seed) confirms every
+  resolver referenced by tasks is in `DISCOVERY_SHAPES`.
+- [ ] 11.1.3 `bun test` stays green; `bun run lint` stays green.
+
+Out-of-scope for this iteration:
+- A dedicated `synth_vessel_scaffold` resolver. If the synthesizer can
+  be expressed via existing resolvers (e.g. fs_read + a final fs_write
+  of the manifest), use them. Otherwise document the gap as a follow-up.
+- Actually running the scaffold against canary. The template just needs
+  to exist and pass the dry-run gates.
+
+### 11.2 — release-and-validate
+
+Closes capability D ("activities spanning vessel concerns"). Cross-vessel
+composition: dev-vessel's git_* resolvers + activity-api's recommend
+endpoint (via a new template that uses `activity_fetch`) + discovery
+passthrough.
+
+Activity takes `{ paths, message, cwd, expectedHealthBranch }` and emits
+a `releaseValidatedReport` impulse with: gitCommitResult + branchHealth
+follow-up + (optional) discovery refresh.
+
+Composition (4 tasks):
+
+1. Dispatch the `ship-change` activity (via activity resolver from
+   `@avigopal/ias-executor-ts`) — produces gitCommitResult
+2. Dispatch the `branch-health` activity — produces branchHealthReport
+3. `vessel_register_passthrough` — refresh dev-vessel's registration
+   so a downstream consumer sees the new commit
+4. synthesizer — fold gitCommitResult + branchHealthReport into a
+   single `releaseValidatedReport` with `ok = (commitOk && branchHealthOk)`
+
+Acceptance:
+- [ ] 11.2.1 `src/seed/release-and-validate.ts` exists and parses as
+  ActivityTemplate.
+- [ ] 11.2.2 Dry-run test confirms each task references an existing
+  resolver in DISCOVERY_SHAPES (the `activity` resolver from
+  ias-executor-ts is allowed even though it's not advertised by
+  dev-vessel — it's a runtime composition primitive).
+- [ ] 11.2.3 `bun test` + `bun run lint` stay green.
+
+Out-of-scope:
+- Running this against canary (gated on §6).
+- The synthesizer task — same fallback as 11.1.
+
+### 11.3 — Index registration
+
+- [ ] 11.3.1 `src/seed/index.ts` adds both new templates to the
+  exported list so `seed-templates` CLI iterates them.
+
+### 11.4 — Documentation update
+
+- [ ] 11.4.1 Update README.md (top of "Bootstrap order" section) to
+  reflect the 7 seed templates (was 5).
+- [ ] 11.4.2 Update CLAUDE.md's "Activities live in activity-api, not
+  source" rule reminder to call out that scaffold-new-vessel is the
+  canonical way to create a new vessel — and that the template lives
+  in activity-api after §6, not in code thereafter.
+
+### §11 Acceptance gates
+
+- [ ] 11.S.1 Both templates parse and dry-run gates green.
+- [ ] 11.S.2 `bun test` count rises (was 75) by the dry-run tests added.
+- [ ] 11.S.3 README + CLAUDE updates committed.
+- [ ] 11.S.4 No new advertised shapes; lint chain still clean.
