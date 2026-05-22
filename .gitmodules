@@ -65,3 +65,7 @@
 	path = repos/cpg-inference-ts
 	url = git@github.com:MetabobProject/cpg-inference-ts.git
 	branch = main
+[submodule "repos/development-vessel"]
+	path = repos/development-vessel
+	url = git@github.com:MetabobProject/development-vessel.git
+	branch = dev
