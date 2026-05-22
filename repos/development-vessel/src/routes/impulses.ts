@@ -20,6 +20,10 @@ type AnyPointer = { type: string } & Record<string, unknown>;
 export async function resolveDispatch(pointer: AnyPointer): Promise<ResolverResult> {
   const p = pointer as unknown;
   switch (pointer.type) {
+    case "lift_demo_noop": {
+      const { resolveLiftDemoNoop } = await import("../resolvers/lift-demo-noop.js");
+      return resolveLiftDemoNoop();
+    }
     case "git_status":
       return resolveGitStatus(p as Parameters<typeof resolveGitStatus>[0]);
     case "git_add":

@@ -29,6 +29,7 @@ export const config = {
     // Inline literal so packages/shape-dispatch-check/check.ts can find it.
     // One entry per R2.* resolver in specs/development-vessel/spec.md.
     shapes: [
+      "lift_demo_noop",
       "git_status",
       "git_add",
       "git_commit",
