@@ -1,0 +1,44 @@
+{
+  "cycle_number": 2,
+  "started_at": "2026-05-22T20:35:00.000Z",
+  "baseline_report": "validation/results/2026-05-22-failure-mode-cycle-1.json",
+  "baseline_gap_count": 6,
+  "baseline_reuse_count": 0,
+  "proposals_authored": 3,
+  "proposals_by_author": {
+    "make_activity_autonomous": 3
+  },
+  "proposals_registered": 3,
+  "registered_variant_ids": [
+    "gap-closing:fp-11-silent-semantic-failure",
+    "gap-closing:fp-12-partial-success-recorded-as-total",
+    "gap-closing:fm-17-resolver-budget-noncompliance"
+  ],
+  "manual_intervention_debt": 2,
+  "manual_intervention_breakdown": {
+    "subagent_dispatches": 0,
+    "make_activity_autonomous_dispatches": 3,
+    "human_authored_templates": 0,
+    "operator_admin_actions_required": 2
+  },
+  "remaining_gaps": [],
+  "gaps_with_proposal": [
+    "fp-11-silent-semantic-failure",
+    "fp-12-partial-success-recorded-as-total",
+    "fm-17-resolver-budget-noncompliance",
+    "fp-15-missing-producer-stale-registration",
+    "fm-43-cascade-attribution-error",
+    "fm-44-silent-trace-loss"
+  ],
+  "lift_kpi": {
+    "debt_zero": false,
+    "gap_count_decreasing": false,
+    "consecutive_zero_debt_cycles": 0
+  },
+  "notes": [
+    "First cycle with proposals authored by make_activity_autonomous (development-vessel:draft-gap-closing-activity via llm_completion_dispatch → conversation-vessel).",
+    "Remaining debt=2 is operator-blocked (admin scope required to promote proposals from draft to active). Proposals are registered as variants in activity-api but not yet promoted.",
+    "DEV-5 complete: conversation-vessel deployed to canary, discovery llm_completion shape active, 3 autonomous proposals registered.",
+    "Next: run progression-driver, then run harness against cycle-3 to measure gap_count_decreasing."
+  ]
+}

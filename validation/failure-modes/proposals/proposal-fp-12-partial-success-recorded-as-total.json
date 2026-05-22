@@ -1,0 +1,185 @@
+{"proposal":{"scenario_id":"fp-12-partial-success-recorded-as-total","authored_by":"make_activity_autonomous","registration_status":"draft","created_at":"1970-01-01T00:00:00.000Z"},"template":"{
+  "id": "gap-closing:fp-12-partial-success-recorded-as-total",
+  "name": "Output Utilization Validator",
+  "description": "Detects partial successes recorded as total success by auditing recent successful activity executions whose output impulses were never consumed by downstream activities. Identifies cases where output_shapes contracts claim production of impulses that subsequent traces show were unusable.",
+  "inputShapes": [
+    "activityExecutionTrace",
+    "compositionSuccess",
+    "impulseRelevance"
+  ],
+  "outputShapes": [
+    "unutilizedOutputReport",
+    "outputUtilizationValidator",
+    "thompson_posterior_correction"
+  ],
+  "tags": [
+    "validation.output_utilization.gap_closing",
+    "cascade_attribution_correction",
+    "partial_success_detection"
+  ],
+  "tasks": [
+    {
+      "id": "fetch-recent-successful-traces",
+      "resolver": "activity_fetch",
+      "description": "Fetch recent activity execution traces marked as successful",
+      "parameters": {
+        "query_filter": {
+          "success": true,
+          "time_window_seconds": 604800,
+          "min_output_impulse_count": 2
+        },
+        "fields": [
+          "activity_template_id",
+          "output_impulse_ids",
+          "execution_timestamp",
+          "validation_rules_applied"
+        ]
+      },
+      "input_binding": "activityExecutionTrace",
+      "output_binding": "successful_traces_batch"
+    },
+    {
+      "id": "fetch-downstream-consumption-records",
+      "resolver": "activity_fetch",
+      "description": "Fetch all downstream activity executions within 7 days of successful upstream activities",
+      "parameters": {
+        "query_filter": {
+          "time_window_seconds": 604800,
+          "has_input_impulse_ids": true
+        },
+        "fields": [
+          "activity_template_id",
+          "input_impulse_ids",
+          "execution_timestamp",
+          "success"
+        ]
+      },
+      "input_binding": "compositionSuccess",
+      "output_binding": "downstream_traces_batch"
+    },
+    {
+      "id": "analyze-impulse-utilization",
+      "resolver": "llm_completion_dispatch",
+      "description": "Cross-reference successful output impulses against downstream input impulses to identify unutilized outputs",
+      "parameters": {
+        "prompt_template": "Analyze the following successful activity traces and their corresponding downstream consumption records. For each successful activity, identify output_impulse_ids that were never consumed by any downstream activity within 7 days. Classify each unused impulse as either: (1) legitimately unused, (2) potentially malformed, or (3) contract mismatch. Output a structured report with activity_template_id, unused_impulse_ids, classification, and confidence score.",
+        "input_context": {
+          "successful_traces": "successful_traces_batch",
+          "downstream_traces": "downstream_traces_batch"
+        },
+        "output_format": "json"
+      },
+      "output_binding": "impulse_analysis_report"
+    },
+    {
+      "id": "fetch-impulse-relevance-signals",
+      "resolver": "activity_fetch",
+      "description": "Fetch impulse relevance metrics for identified unused impulses",
+      "parameters": {
+        "query_filter": {
+          "impulse_relevance_type": "co_occurrence_success_rate"
+        },
+        "fields": [
+          "activity_pair_id",
+          "impulse_id",
+          "co_occurrence_count",
+          "successful_consumption_count",
+          "trend"
+        ]
+      },
+      "input_binding": "impulseRelevance",
+      "output_binding": "relevance_metrics"
+    },
+    {
+      "id": "correlate-partial-success-patterns",
+      "resolver": "llm_completion_dispatch",
+      "description": "Identify systematic patterns of partial success by correlating unused impulses with validation rule coverage",
+      "parameters": {
+        "prompt_template": "Given the impulse analysis report and relevance metrics, identify patterns where: (1) validation rules only sampled subset of outputs, (2) unsampled outputs show declining co-occurrence with successful downstream chains, (3) activity posterior was marked success despite partial output malformation. Generate a report listing affected activities, their validation gaps, and the correlation between unsampled outputs and downstream failures.",
+        "input_context": {
+          "impulse_analysis": "impulse_analysis_report",
+          "relevance_trends": "relevance_metrics"
+        },
+        "output_format": "json"
+      },
+      "output_binding": "partial_success_patterns"
+    },
+    {
+      "id": "generate-unutilized-output-report",
+      "resolver": "fs_write",
+      "description": "Write comprehensive unutilized output report to file",
+      "parameters": {
+        "file_path": "reports/unutilized_output_report.json",
+        "content_source": "partial_success_patterns",
+        "format": "json",
+        "include_metadata": {
+          "generated_timestamp": true,
+          "analysis_window_seconds": 604800,
+          "affected_activity_count": true,
+          "total_unused_impulses": true
+        }
+      },
+      "output_binding": "unutilizedOutputReport"
+    },
+    {
+      "id": "design-output-utilization-validator",
+      "resolver": "llm_completion_dispatch",
+      "description": "Design a new validator activity template that samples all outputs, not just a subset",
+      "parameters": {
+        "prompt_template": "Based on the partial success patterns identified, design a new activity template called 'output-utilization-validator' that: (1) enforces 100% sampling of output impulses during validation, (2) checks downstream consumption within configurable time windows, (3) records confidence scores for each output's correctness, (4) fails the activity if any output is malformed or unused. Provide the template definition in JSON format with clear input/output shapes and validation rules.",
+        "input_context": {
+          "patterns": "partial_success_patterns"
+        },
+        "output_format": "json"
+      },
+      "output_binding": "validator_template_design"
+    },
+    {
+      "id": "write-output-utilization-validator-template",
+      "resolver": "fs_write",
+      "description": "Persist the new output utilization validator template",
+      "parameters": {
+        "file_path": "templates/output-utilization-validator.json",
+        "content_source": "validator_template_design",
+        "format": "json"
+      },
+      "output_binding": "outputUtilizationValidator"
+    },
+    {
+      "id": "compute-thompson-posterior-correction",
+      "resolver": "llm_completion_dispatch",
+      "description": "Compute posterior probability corrections for affected activities",
+      "parameters": {
+        "prompt_template": "For each activity identified with partial success recorded as total success, compute a Thompson posterior correction that: (1) downgrades the success probability based on unused output count and relevance decline, (2) applies a penalty proportional to time-to-detection of downstream failure, (3) generates a corrected posterior that reflects the true success rate accounting for undetected malformations. Output as JSON with activity_template_id, original_posterior, corrected_posterior, and correction_justification.",
+        "input_context": {
+          "patterns": "partial_success_patterns",
+          "relevance_metrics": "relevance_metrics"
+        },
+        "output_format": "json"
+      },
+      "output_binding": "thompson_posterior_correction"
+    }
+  ],
+  "expectedEmergence": {
+    "class": "gap_accepted",
+    "activity_signature": {
+      "input_shapes_intersect": [
+        "activityExecutionTrace",
+        "compositionSuccess"
+      ],
+      "output_shapes_must_include": [
+        "unutilizedOutputReport"
+      ],
+      "tags_pattern": "validation.output_utilization.*"
+    }
+  },
+  "selfHealWindowSeconds": 86400,
+  "metadata": {
+    "priority": "critical",
+    "cost_asymmetry": "fp_corrosive",
+    "depends_on_scenarios": [
+      "fp-11-silent-semantic-failure"
+    ],
+    "detection_witness_required": "downstream_correlation"
+  }
+}"}

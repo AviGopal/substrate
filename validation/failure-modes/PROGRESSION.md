@@ -138,10 +138,15 @@ this order reduces debt fastest:
 - `cycles/cycle-0.json` — pure baseline: 6 gaps, 0 proposals, 0 debt.
 - `cycles/cycle-1.json` — first work cycle: 3 subagent-drafted proposals,
   2 operator-blocked, debt=5, gaps still 6 (nothing registered yet).
-- `cycles/cycle-2.json` (next) — should show either operator registration
-  closing one gap (debt drops by 2: -1 draft + -1 unblock) or new
-  proposals for the 3 remaining gaps (debt rises by 3, then we drive it
-  down again).
+- `cycles/cycle-2.json` — **first autonomous cycle**: 3 proposals authored by
+  `make_activity_autonomous` via `development-vessel:draft-gap-closing-activity`.
+  Variants registered: fp-11, fp-12, fm-17. Debt=2 (operator-blocked admin
+  promotions remain). `remaining_gaps=[]` for the first time. DEV-5 complete:
+  conversation-vessel deployed, `llm_completion` shape live in discovery.
+  Gap closed: `draft-gap-closing-activity exists` ✓.
+- `cycles/cycle-3.json` (next) — run harness against canary to measure whether
+  gap_count_decreasing; operator promotion needed to close the 2 remaining debt
+  items. If promoted, debt could reach 0 and consecutive_zero_debt_cycles starts.
 
 ## Why the First Few Cycles Look Bad
 
