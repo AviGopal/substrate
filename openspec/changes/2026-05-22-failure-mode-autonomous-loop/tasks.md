@@ -43,16 +43,22 @@ Per dev-vessel discipline: VERIFY → DEBUG → SPEC (this doc) → DEV.
 - [ ] Variant-creation smoke test deferred to DEV-5 (needs conversation-vessel
       deployed on canary with `llm_completion` shape registered).
 
-## DEV-5: End-to-end smoke test against canary
+## DEV-5: End-to-end smoke test against canary ✓
 
-- [ ] Operator runs the template against the most recent
-      `validation/results/<date>-failure-mode-cycle-N.json` (the cycle-2
-      input, once cycle-2 measurement exists).
-- [ ] Verify at least one new proposal file appears under
-      `validation/failure-modes/proposals/` with
-      `authored_by: "make_activity_autonomous"`.
-- [ ] Run `validation/scripts/progression-driver.ts` for cycle N+1.
-      Confirm `proposals_by_author.make_activity_autonomous` is > 0.
+- [x] Cycle-2 harness run (2026-05-22): 3 autonomous proposals from
+      `make_activity_autonomous` via `draft-gap-closing-activity` template.
+      Proposals in `validation/failure-modes/proposals/` with
+      `authored_by: "make_activity_autonomous"`: fp-11, fp-12, fm-17.
+- [x] Cycle-3 harness run (2026-05-22): 6 autonomous proposals (fp-11,
+      fp-12, fm-17, fm-43, fm-44, fp-15) — autonomous count doubled.
+      `proposals_by_author.make_activity_autonomous = 6`.
+- [x] progression-driver.ts ran for cycle-3 (2026-05-22). Cycle-3 summary
+      written to `validation/failure-modes/cycles/cycle-3.json`.
+      debt=5 (2 operator-blocked + 3 subagent), gap_count_decreasing=false.
+      Note: gap count unchanged (6→6) because operator has not yet promoted
+      the draft variants in activity-api to active — operator-blocked.
+      Lift criterion: NOT YET (requires 3 consecutive zero-debt cycles with
+      strictly decreasing gap count; unblocked when operator promotes proposals).
 
 ## DEV-6: Documentation ✓
 

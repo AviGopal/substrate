@@ -1,0 +1,40 @@
+{
+  "cycle_number": 3,
+  "started_at": "2026-05-22T22:17:37.797Z",
+  "baseline_report": "validation/results/2026-05-22-failure-mode-cycle-3.json",
+  "baseline_gap_count": 6,
+  "baseline_reuse_count": 0,
+  "proposals_authored": 9,
+  "proposals_by_author": {
+    "subagent": 3,
+    "make_activity_autonomous": 6
+  },
+  "proposals_registered": 0,
+  "manual_intervention_debt": 5,
+  "manual_intervention_breakdown": {
+    "subagent_dispatches": 3,
+    "human_authored_templates": 0,
+    "operator_admin_actions_required": 2
+  },
+  "remaining_gaps": [],
+  "gaps_with_proposal": [
+    "fp-15-missing-producer-stale-registration",
+    "fm-43-cascade-attribution-error",
+    "fm-44-silent-trace-loss",
+    "fp-11-silent-semantic-failure",
+    "fp-12-partial-success-recorded-as-total",
+    "fm-17-resolver-budget-noncompliance"
+  ],
+  "lift_kpi": {
+    "debt_zero": false,
+    "gap_count_decreasing": false,
+    "consecutive_zero_debt_cycles": 0
+  },
+  "notes": [
+    "6 proposals authored autonomously (via make-activity). This is the lift signal.",
+    "Gap count unchanged (6→6): cycle-2 proposals were registered as activity-api variants (draft status) but none promoted to active — operator admin scope required. Gaps still fire because promoted variants haven't reached the recommend pool.",
+    "Debt increased from 2 → 5: 3 new subagent proposals arrived (fp-15 vessel-health-corroboration, fm-43 attribution-cascade-witness-check, fm-44 trace-redelivery-monitor) + same 2 operator-blocked. Not a regression in autonomous authoring — subagent proposals are supplementary witness checks.",
+    "Proposals_registered=0: cycle-2 proposal files reverted from registered_canary to draft (status not durable in file — actual variant ids are in cycle-2.json::registered_variant_ids). Variant promotion is operator-blocked.",
+    "Next: operator to promote 6 draft proposals from activity-api canary to active; then cycle-4 harness should show gap_count < 6."
+  ]
+}

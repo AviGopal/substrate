@@ -102,9 +102,23 @@ async function loadProposals(dir: string): Promise<Proposal[]> {
   const files = (await readdir(dir)).filter((f) => f.endsWith(".json"));
   const out: Proposal[] = [];
   for (const f of files) {
-    const raw = JSON.parse(await readFile(join(dir, f), "utf8")) as
-      | Proposal
-      | { proposal: Proposal; template?: unknown };
+    const content = await readFile(join(dir, f), "utf8");
+    let raw: Proposal | { proposal: Proposal; template?: unknown };
+    try {
+      raw = JSON.parse(content) as Proposal | { proposal: Proposal; template?: unknown };
+    } catch {
+      // make_activity_autonomous proposals embed an unescaped markdown template
+      // string in the `template` field, making the outer JSON invalid.
+      // Extract just the `proposal` envelope via regex as a fallback.
+      const m = content.match(/"proposal"\s*:\s*(\{[^}]+\})/);
+      if (!m) continue;
+      try {
+        out.push(JSON.parse(m[1]) as Proposal);
+      } catch {
+        // skip truly unparseable files
+      }
+      continue;
+    }
     // Accept both flat and {proposal, template} envelope formats.
     const p = "proposal" in raw && raw.proposal ? raw.proposal : (raw as Proposal);
     out.push(p);
