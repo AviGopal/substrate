@@ -67,5 +67,5 @@
 	branch = main
 [submodule "repos/development-vessel"]
 	path = repos/development-vessel
-	url = git@github.com:MetabobProject/development-vessel.git
+	url = git@github.com:AviGopal/development-vessel.git
 	branch = dev
