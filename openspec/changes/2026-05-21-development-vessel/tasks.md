@@ -202,18 +202,22 @@ seed) and §7 (canary parity).
 
 ## §S Success criteria — acceptance gates
 
-- [ ] S.1 `bun test` passes in `repos/development-vessel/` (0 fails)
-  with at least the R8 suites covered.
-- [ ] S.2 `seed-templates` lands every bootstrap template; verifiable
-  via `activity_fetch` for each id.
-- [ ] S.3 Activity-level parity gate (tasks.md §7) passes for
-  ship-change AND branch-health.
-- [ ] S.4 Demo of lift: see §10 for concrete acceptance criteria.
-- [ ] S.5 First self-application: the development-vessel runs the
+- [x] S.1 `bun test` passes in `repos/development-vessel/` (0 fails)
+  with at least the R8 suites covered. Done 2026-05-22: 75 tests / 18 files / 0 fails.
+- [x] S.2 `seed-templates` lands every bootstrap template; verifiable
+  via `activity_fetch` for each id. Done 2026-05-22: all 5 templates seeded + fetched back.
+- [x] S.3 Activity-level parity gate (tasks.md §7) passes for
+  ship-change AND branch-health. Done 2026-05-22: §7.1/7.2/7.3 all green.
+- [x] S.4 Demo of lift: see §10 for concrete acceptance criteria.
+  Done 2026-05-22: all 3 §10.5 tests pass (3/3, 14 expects).
+- [x] S.5 First self-application: the development-vessel runs the
   `add-resolver-to-vessel` activity against itself to add a no-op
   resolver, ships the change via its own `ship-change` activity,
   and the resulting commit is visible in `git log`. Trace ids are
   captured in a final cycle report (`SELF_APPLICATION.md`).
+  Done 2026-05-22: commits 2345956 (ship-change scaffold) + d03fe34
+  (add-resolver-to-vessel JSDoc) + 97f1ba8 (ship-change report).
+  84 tests / 14 shapes / 0 fails after self-application.
 
 ## §10 §S.4 Lift demo — concrete acceptance
 
@@ -269,12 +273,12 @@ The following are NOT part of this test:
 
 ### 10.5 — Acceptance gate
 
-- [ ] 10.5.1 `test/lift-demo.test.ts` exists in the sub-repo.
-- [ ] 10.5.2 `bun test test/lift-demo.test.ts` passes.
-- [ ] 10.5.3 The static "no new wiring" assertion (10.2 last row)
+- [x] 10.5.1 `test/lift-demo.test.ts` exists in the sub-repo.
+- [x] 10.5.2 `bun test test/lift-demo.test.ts` passes. Done 2026-05-22: 3 tests / 14 expects.
+- [x] 10.5.3 The static "no new wiring" assertion (10.2 last row)
   passes against the current `src/resolvers/propagate-judgment.ts`.
-- [ ] 10.5.4 The captures show three distinct source_tier values
-  with their canonical weights.
+- [x] 10.5.4 The captures show three distinct source_tier values
+  with their canonical weights. Done 2026-05-22: human>verifier>automatic confirmed.
 
 ### 10.6 — Next-stage hand-off
 
@@ -318,12 +322,12 @@ Composition (5 tasks, all using existing resolvers):
    §11 amendment)
 
 Acceptance:
-- [ ] 11.1.1 `src/seed/scaffold-new-vessel.ts` exists and parses as
-  ActivityTemplate.
-- [ ] 11.1.2 Dry-run test (`test/seed-templates-dry-run.test.ts` already
+- [x] 11.1.1 `src/seed/scaffold-new-vessel.ts` exists and parses as
+  ActivityTemplate. Done 2026-05-22.
+- [x] 11.1.2 Dry-run test (`test/seed-templates-dry-run.test.ts` already
   exists; gets an additional `it()` block per new seed) confirms every
-  resolver referenced by tasks is in `DISCOVERY_SHAPES`.
-- [ ] 11.1.3 `bun test` stays green; `bun run lint` stays green.
+  resolver referenced by tasks is in `DISCOVERY_SHAPES`. Done 2026-05-22: 22 tests, 0 fail.
+- [x] 11.1.3 `bun test` stays green; `bun run lint` stays green. Done 2026-05-22.
 
 Out-of-scope for this iteration:
 - A dedicated `synth_vessel_scaffold` resolver. If the synthesizer can
@@ -354,13 +358,13 @@ Composition (4 tasks):
    single `releaseValidatedReport` with `ok = (commitOk && branchHealthOk)`
 
 Acceptance:
-- [ ] 11.2.1 `src/seed/release-and-validate.ts` exists and parses as
-  ActivityTemplate.
-- [ ] 11.2.2 Dry-run test confirms each task references an existing
+- [x] 11.2.1 `src/seed/release-and-validate.ts` exists and parses as
+  ActivityTemplate. Done 2026-05-22.
+- [x] 11.2.2 Dry-run test confirms each task references an existing
   resolver in DISCOVERY_SHAPES (the `activity` resolver from
   ias-executor-ts is allowed even though it's not advertised by
-  dev-vessel — it's a runtime composition primitive).
-- [ ] 11.2.3 `bun test` + `bun run lint` stay green.
+  dev-vessel — it's a runtime composition primitive). Done 2026-05-22: 22 tests, 0 fail.
+- [x] 11.2.3 `bun test` + `bun run lint` stay green. Done 2026-05-22.
 
 Out-of-scope:
 - Running this against canary (gated on §6).
@@ -368,21 +372,23 @@ Out-of-scope:
 
 ### 11.3 — Index registration
 
-- [ ] 11.3.1 `src/seed/index.ts` adds both new templates to the
-  exported list so `seed-templates` CLI iterates them.
+- [x] 11.3.1 `src/seed/index.ts` adds both new templates to the
+  exported list so `seed-templates` CLI iterates them. Done 2026-05-22.
 
 ### 11.4 — Documentation update
 
-- [ ] 11.4.1 Update README.md (top of "Bootstrap order" section) to
-  reflect the 7 seed templates (was 5).
-- [ ] 11.4.2 Update CLAUDE.md's "Activities live in activity-api, not
+- [x] 11.4.1 Update README.md (top of "Bootstrap order" section) to
+  reflect the 7 seed templates (was 5). Done 2026-05-22 (already present).
+- [x] 11.4.2 Update CLAUDE.md's "Activities live in activity-api, not
   source" rule reminder to call out that scaffold-new-vessel is the
   canonical way to create a new vessel — and that the template lives
-  in activity-api after §6, not in code thereafter.
+  in activity-api after §6, not in code thereafter. Done 2026-05-22.
 
 ### §11 Acceptance gates
 
-- [ ] 11.S.1 Both templates parse and dry-run gates green.
-- [ ] 11.S.2 `bun test` count rises (was 75) by the dry-run tests added.
-- [ ] 11.S.3 README + CLAUDE updates committed.
-- [ ] 11.S.4 No new advertised shapes; lint chain still clean.
+- [x] 11.S.1 Both templates parse and dry-run gates green. Done 2026-05-22.
+- [x] 11.S.2 `bun test` count rises (was 75) by the dry-run tests added.
+  Done 2026-05-22: 84 tests / 19 files (was 75/18).
+- [x] 11.S.3 README + CLAUDE updates committed. Done 2026-05-22.
+- [x] 11.S.4 No new advertised shapes; lint chain still clean.
+  Done 2026-05-22: 14 shapes (noop added for §S.5; part of S.5 not §11).
