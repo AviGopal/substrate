@@ -54,12 +54,17 @@ Per dev-vessel discipline: VERIFY → DEBUG → SPEC (this doc) → DEV.
 - [ ] Run `validation/scripts/progression-driver.ts` for cycle N+1.
       Confirm `proposals_by_author.make_activity_autonomous` is > 0.
 
-## DEV-6: Documentation
+## DEV-6: Documentation ✓
 
-- [ ] Update `validation/failure-modes/PROGRESSION.md` to mark the
-      "draft-gap-closing-activity exists" item complete.
-- [ ] Add a note to the relevant cycle-N.json in `cycles/` describing
-      the first autonomous proposal observed.
+- [x] Update `validation/failure-modes/PROGRESSION.md` to mark the
+      "draft-gap-closing-activity exists" item complete. DONE — PROGRESSION.md
+      updated during cycle-2 run (2026-05-22); cycles/cycle-2.json documents
+      the `draft-gap-closing-activity exists` gap as closed.
+- [x] Add a note to the relevant cycle-N.json in `cycles/` describing
+      the first autonomous proposal observed. DONE — cycles/cycle-2.json notes[0]:
+      "First cycle with proposals authored by make_activity_autonomous
+      (development-vessel:draft-gap-closing-activity via llm_completion_dispatch
+      → conversation-vessel)."
 
 ## Per-DEV-step regression check
 

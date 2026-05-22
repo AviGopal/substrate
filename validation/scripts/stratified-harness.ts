@@ -460,42 +460,40 @@ function scoreTrace(trace: ExecutionTrace, thompsonPoolIds: Set<string>): TraceS
 }
 
 // ---------------------------------------------------------------------------
-// Thompson pool snapshot (mirrors reuse-harness.ts)
+// Thompson pool snapshot (mirrors reuse-harness.ts approach)
+// Uses /v2/activities/recommend with broad queries so alpha comes from the
+// actual posterior in variant_performance_metrics, not the raw template row.
+// The templates endpoint returns thompson_alpha=1 (prior) for all templates;
+// only the recommend response carries the real posterior via selection_metadata.
 // ---------------------------------------------------------------------------
-
-interface ThompsonEntry {
-  template_id?: string;
-  id?: string;
-  activity_id?: string;
-  total_executions?: number;
-  alpha?: number;
-  beta?: number;
-  thompson_alpha?: number;  // API field name (stratified-harness used alpha, reuse-harness uses thompson_alpha)
-  thompson_beta?: number;
-}
 
 async function captureThompsonSnapshot(
   endpoint: string,
   authHeaders: Record<string, string>
 ): Promise<Set<string>> {
   const ids = new Set<string>();
-  try {
-    const resp = await fetch(`${endpoint}/v2/activities/templates?limit=200`, {
-      headers: authHeaders,
-      signal: AbortSignal.timeout(20_000),
-    });
-    if (!resp.ok) return ids;
-    const body = await resp.json() as { templates?: ThompsonEntry[]; data?: ThompsonEntry[] };
-    const templates = body.templates ?? body.data ?? [];
-    for (const t of templates) {
-      const id = t.template_id ?? t.id ?? t.activity_id;
-      const executions = t.total_executions ?? 0;
-      // API uses `thompson_alpha`; interfaces alias as `alpha`. Prior = 1.0, so alpha > 1 means ≥1 success.
-      const alpha = t.thompson_alpha ?? t.alpha ?? 1;
-      if (id && (executions > 0 || alpha > 1)) ids.add(id);
+  const broadQueries = ["fix bug", "add feature", "audit activity", "verify health", "create template"];
+  for (const q of broadQueries) {
+    try {
+      const resp = await fetch(`${endpoint}/v2/activities/recommend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ task_description: q, limit: 20 }),
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!resp.ok) continue;
+      const body = await resp.json() as { recommendations?: Array<{
+        id?: string; template_id?: string; activity_id?: string;
+        selection_metadata?: { alpha?: number };
+      }> };
+      for (const r of body.recommendations ?? []) {
+        const id = r.id ?? r.template_id ?? r.activity_id;
+        const alpha = r.selection_metadata?.alpha ?? 1;
+        if (id && alpha > 1) ids.add(id);
+      }
+    } catch {
+      // Non-fatal
     }
-  } catch {
-    // Non-fatal
   }
   return ids;
 }
