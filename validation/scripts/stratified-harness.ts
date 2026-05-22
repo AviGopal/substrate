@@ -470,6 +470,8 @@ interface ThompsonEntry {
   total_executions?: number;
   alpha?: number;
   beta?: number;
+  thompson_alpha?: number;  // API field name (stratified-harness used alpha, reuse-harness uses thompson_alpha)
+  thompson_beta?: number;
 }
 
 async function captureThompsonSnapshot(
@@ -488,7 +490,9 @@ async function captureThompsonSnapshot(
     for (const t of templates) {
       const id = t.template_id ?? t.id ?? t.activity_id;
       const executions = t.total_executions ?? 0;
-      if (id && executions > 0) ids.add(id);
+      // API uses `thompson_alpha`; interfaces alias as `alpha`. Prior = 1.0, so alpha > 1 means ≥1 success.
+      const alpha = t.thompson_alpha ?? t.alpha ?? 1;
+      if (id && (executions > 0 || alpha > 1)) ids.add(id);
     }
   } catch {
     // Non-fatal

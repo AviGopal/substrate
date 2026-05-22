@@ -76,7 +76,7 @@ echo ""
 # ── Compare and gate ──────────────────────────────────────────────────────────
 
 COMPARE_OUTPUT=$(bun run "${SCRIPT_DIR}/compare-reports.ts" \
-  "$PRIOR_REPORT" "$CURRENT_REPORT" 2>&1)
+  "$PRIOR_REPORT" "$CURRENT_REPORT" 2>&1) || true
 
 echo "$COMPARE_OUTPUT"
 
