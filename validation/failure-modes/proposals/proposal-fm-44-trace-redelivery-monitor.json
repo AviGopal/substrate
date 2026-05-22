@@ -1,0 +1,139 @@
+{
+  "proposal": {
+    "proposal_id": "proposal-fm-44-trace-redelivery-monitor",
+    "scenario_id": "fm-44-silent-trace-loss",
+    "closes_gap": true,
+    "template_name": "trace-redelivery-monitor",
+    "authored_by": "subagent",
+    "authored_at": "2026-05-22T00:00:00Z",
+    "registration_status": "blocked_operator",
+    "notes": "This template documents the work needed to close FM-44 silent trace loss. It cannot usefully execute until the following infrastructure additions land: (1) activity-api must expose GET /v2/vessels/{vesselId}/execution-count?since=&until= returning the count of stored traces grouped by vessel_id over the window — without this, divergence cannot be measured; (2) ias-executor-ts TranslatingTraceSink (repos/ias-executor-ts/src/adapters/activity-api-trace-sink.ts:67-174) must persist failed POSTs to a durable on-disk outbox and run a background re-submitter — today non-2xx and transport errors are swallowed with no retry; (3) vessels must expose an outbox-status endpoint (e.g. GET /vessel/outbox/status returning {pending_count, oldest_pending_at, last_flush_at}) OR include outbox metrics in the heartbeat payload to discovery-vessel — task 4 below is inert until this exists; (4) the trace POST contract must accept an idempotency key (execution_id as natural key) and the activity-api UPSERT path must dedupe on it so redelivery is safe — without this, redelivery could double-write traces and over-count α. Until pieces (1)-(4) ship, this template runs in degraded mode: tasks 1-3 surface the gap using whatever local counters are reachable today (heartbeat metadata.executionsCompleted) versus a coarse activity-api COUNT(*) query, and tasks 4-6 emit empty/partial impulses with skip reasons. Each future cycle should land one piece and re-enable the corresponding task."
+  },
+  "template": {
+    "id": "trace-redelivery-monitor",
+    "name": "Trace Redelivery Monitor",
+    "description": "Detect silent execution-trace loss by comparing each vessel's self-reported executionsCompleted counter against activity-api's stored trace count over a rolling time window. Flag vessels with >5% sustained gap, inspect their local outbox if reachable, emit a traceLossReport, and (when infrastructure permits) request redelivery. This activity is the FM-44 closure: it converts a silent FN at the learning stage into an observable, actionable signal so Thompson posteriors stop under-counting.",
+    "tags": [
+      "reliability.trace_durability.redelivery",
+      "reliability.trace_durability.monitor",
+      "learning.posterior_integrity",
+      "observability.cross_vessel_witness"
+    ],
+    "input_shapes": [
+      "vesselPerformanceMetrics",
+      "vesselHealth"
+    ],
+    "output_shapes": [
+      "traceLossReport",
+      "vesselOutboxStatus"
+    ],
+    "tasks": [
+      {
+        "id": "collect-vessel-local-counts",
+        "description": "Query discovery-vessel registry for all live vessels and read each vessel's self-reported executionsCompleted counter from its most recent heartbeat metadata over the audit window.",
+        "resolver": "vessel_registry_query",
+        "config": {
+          "endpoint": "https://discovery.metabob.com/registry/vessels",
+          "method": "GET",
+          "extract_path": "vessels[].{vessel_id: id, declared_count: heartbeat.metrics.executionsCompleted, heartbeat_at: heartbeat.timestamp}",
+          "window_seconds": 86400,
+          "output_impulse_shape": "vesselDeclaredCounts"
+        }
+      },
+      {
+        "id": "collect-activity-api-stored-counts",
+        "description": "Query activity-api for the count of stored execution traces grouped by vessel_id over the same time window.",
+        "resolver": "activity_api_query",
+        "config": {
+          "endpoint": "https://activity.metabob.com/v2/vessels/execution-count",
+          "method": "GET",
+          "query_params": {
+            "since": "{{window.start_iso}}",
+            "until": "{{window.end_iso}}",
+            "group_by": "vessel_id"
+          },
+          "fallback_if_endpoint_missing": {
+            "skip_reason": "GET /v2/vessels/{vesselId}/execution-count not yet implemented on activity-api; emit partial coverage flag and continue with 0 stored_count per vessel",
+            "emit_partial": true
+          },
+          "output_impulse_shape": "vesselStoredCounts"
+        }
+      },
+      {
+        "id": "compute-divergence",
+        "description": "Join declared vs stored counts per vessel, compute gap_pct = (declared - stored) / max(declared, 1), and flag vessels where gap_pct > 0.05 sustained across the window.",
+        "resolver": "deterministic_join",
+        "config": {
+          "left_impulse_shape": "vesselDeclaredCounts",
+          "right_impulse_shape": "vesselStoredCounts",
+          "join_key": "vessel_id",
+          "computed_fields": {
+            "gap": "declared_count - stored_count",
+            "gap_pct": "(declared_count - stored_count) / max(declared_count, 1)",
+            "flagged": "gap_pct > 0.05"
+          },
+          "output_impulse_shape": "vesselDivergenceTable"
+        }
+      },
+      {
+        "id": "inspect-flagged-outboxes",
+        "description": "For each flagged vessel, query its outbox-status endpoint (or read outbox metrics from heartbeat) to learn pending trace count and oldest pending timestamp.",
+        "resolver": "vessel_outbox_probe",
+        "config": {
+          "input_impulse_shape": "vesselDivergenceTable",
+          "filter": "flagged == true",
+          "probe_endpoint_template": "{{vessel.base_url}}/vessel/outbox/status",
+          "probe_timeout_ms": 3000,
+          "fallback_if_endpoint_missing": {
+            "skip_reason": "Vessel does not expose /vessel/outbox/status; emit outbox_size_if_known=null and rely solely on declared-vs-stored gap",
+            "emit_partial": true
+          },
+          "output_impulse_shape": "vesselOutboxStatus"
+        }
+      },
+      {
+        "id": "emit-trace-loss-report",
+        "description": "Compose the final traceLossReport listing per-vessel (vessel_id, declared_count, stored_count, gap_pct, outbox_size_if_known, recommended_action).",
+        "resolver": "deterministic_compose",
+        "config": {
+          "inputs": [
+            "vesselDivergenceTable",
+            "vesselOutboxStatus"
+          ],
+          "compose": {
+            "window": {
+              "start": "{{window.start_iso}}",
+              "end": "{{window.end_iso}}"
+            },
+            "vessels": "join(vesselDivergenceTable, vesselOutboxStatus, on=vessel_id)",
+            "summary": {
+              "vessels_audited": "count(vesselDivergenceTable)",
+              "vessels_flagged": "count_where(flagged)",
+              "total_gap": "sum(gap)",
+              "total_declared": "sum(declared_count)",
+              "system_loss_pct": "sum(gap) / max(sum(declared_count), 1)"
+            },
+            "recommended_action_per_vessel": "if outbox_size_if_known > 0 then 'request_redelivery' else if outbox_size_if_known == null then 'add_outbox_endpoint' else 'investigate_drop_path'"
+          },
+          "output_impulse_shape": "traceLossReport"
+        }
+      },
+      {
+        "id": "request-redelivery-if-supported",
+        "description": "For flagged vessels with non-empty outbox AND idempotent trace-POST support, dispatch a redelivery request; otherwise emit a deferral note.",
+        "resolver": "vessel_redelivery_dispatch",
+        "config": {
+          "input_impulse_shape": "traceLossReport",
+          "filter": "recommended_action == 'request_redelivery'",
+          "dispatch_endpoint_template": "{{vessel.base_url}}/vessel/outbox/flush",
+          "require_capability": "idempotent_trace_post",
+          "fallback_if_capability_missing": {
+            "skip_reason": "Activity-api trace POST does not yet accept execution_id as idempotency key; redelivery would risk double-counting α. Defer until idempotency lands.",
+            "emit_partial": true
+          },
+          "output_impulse_shape": "traceRedeliveryDispatchLog"
+        }
+      }
+    ]
+  }
+}

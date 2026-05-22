@@ -1,0 +1,92 @@
+{
+  "generated_at": "2026-05-22T11:33:37.413Z",
+  "label": "2026-05-22 cycle-1 post-proposals",
+  "endpoint": "https://activity.metabob.com",
+  "scenarios_run": 6,
+  "scenarios": [
+    {
+      "scenario_id": "fp-11-silent-semantic-failure",
+      "dispatched_at": "2026-05-22T11:33:06.967Z",
+      "recommendations_returned": 2,
+      "matched_existing_activity_id": null,
+      "emergence_class": "gap",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "no matching activity in /recommend; no emergent trace within initial poll window"
+      ]
+    },
+    {
+      "scenario_id": "fp-12-partial-success-recorded-as-total",
+      "dispatched_at": "2026-05-22T11:33:12.428Z",
+      "recommendations_returned": 2,
+      "matched_existing_activity_id": null,
+      "emergence_class": "gap",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "no matching activity in /recommend; no emergent trace within initial poll window"
+      ]
+    },
+    {
+      "scenario_id": "fp-15-missing-producer-stale-registration",
+      "dispatched_at": "2026-05-22T11:33:17.427Z",
+      "recommendations_returned": 2,
+      "matched_existing_activity_id": null,
+      "emergence_class": "gap",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "no matching activity in /recommend; no emergent trace within initial poll window"
+      ]
+    },
+    {
+      "scenario_id": "fm-17-resolver-budget-noncompliance",
+      "dispatched_at": "2026-05-22T11:33:22.489Z",
+      "recommendations_returned": 2,
+      "matched_existing_activity_id": null,
+      "emergence_class": "gap",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": true,
+      "notes": [
+        "no matching activity in /recommend; no emergent trace within initial poll window"
+      ]
+    },
+    {
+      "scenario_id": "fm-43-cascade-attribution-error",
+      "dispatched_at": "2026-05-22T11:33:27.360Z",
+      "recommendations_returned": 2,
+      "matched_existing_activity_id": null,
+      "emergence_class": "gap",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "no matching activity in /recommend; no emergent trace within initial poll window"
+      ]
+    },
+    {
+      "scenario_id": "fm-44-silent-trace-loss",
+      "dispatched_at": "2026-05-22T11:33:32.300Z",
+      "recommendations_returned": 2,
+      "matched_existing_activity_id": null,
+      "emergence_class": "gap",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "no matching activity in /recommend; no emergent trace within initial poll window"
+      ]
+    }
+  ],
+  "summary": {
+    "reuse": 0,
+    "new": 0,
+    "gap": 6,
+    "avg_self_heal_seconds": null
+  }
+}

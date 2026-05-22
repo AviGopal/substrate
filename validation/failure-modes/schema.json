@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "FailureModeScenario",
+  "description": "Validation scenario for one failure mode or false-positive mode from the 63-mode matrix.",
+  "type": "object",
+  "required": [
+    "id",
+    "mode_class",
+    "stage",
+    "outcome_class",
+    "information_state",
+    "title",
+    "description",
+    "trigger",
+    "goal_text",
+    "detection",
+    "expected_emergence",
+    "self_heal_window_seconds"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^(fm|fp)-[0-9]{2,3}-[a-z0-9-]+$",
+      "description": "Stable identifier, e.g. fp-11-silent-semantic-failure"
+    },
+    "mode_class": {
+      "enum": ["fm", "fp"],
+      "description": "fm = base failure mode; fp = false positive (detection/attribution/learning error)"
+    },
+    "stage": {
+      "enum": [
+        "pre_discovery",
+        "discovery",
+        "recommendation",
+        "binding",
+        "execution",
+        "validation",
+        "composition",
+        "learning"
+      ]
+    },
+    "outcome_class": {
+      "enum": ["TN", "TP", "FN", "FP"],
+      "description": "Confusion-matrix cell the scenario instantiates"
+    },
+    "information_state": {
+      "enum": ["known_known", "known_unknown"]
+    },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "trigger": {
+      "type": "object",
+      "description": "What state must exist for the mode to manifest",
+      "required": ["preconditions", "synthetic_setup"],
+      "properties": {
+        "preconditions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "synthetic_setup": {
+          "type": "object",
+          "description": "Optional fixture-construction recipe (impulses to seed, traces to inject)",
+          "properties": {
+            "impulses": { "type": "array", "items": { "type": "object" } },
+            "traces": { "type": "array", "items": { "type": "object" } },
+            "registry_modifications": { "type": "array", "items": { "type": "object" } }
+          }
+        }
+      }
+    },
+    "goal_text": {
+      "type": "string",
+      "description": "Natural-language goal dispatched to /v2/activities/recommend"
+    },
+    "expected_input_shapes": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "expected_output_shapes": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "detection": {
+      "type": "object",
+      "required": ["signal", "witness_required"],
+      "properties": {
+        "signal": {
+          "type": "string",
+          "description": "What pattern in trace/metric data indicates the mode occurred"
+        },
+        "witness_required": {
+          "enum": [
+            "trace_only",
+            "replay",
+            "downstream_correlation",
+            "human_verdict",
+            "cross_vessel_witness"
+          ],
+          "description": "What external evidence is needed beyond the live trace to confirm the mode (FPs typically require replay or correlation)"
+        },
+        "query_template": {
+          "type": "string",
+          "description": "SurrealQL or REST query the harness uses to look for the signal"
+        }
+      }
+    },
+    "expected_emergence": {
+      "type": "object",
+      "required": ["class", "activity_signature"],
+      "properties": {
+        "class": {
+          "enum": ["reuse", "new", "gap_accepted"],
+          "description": "What outcome counts as success: reuse existing, system creates new, or accepting that this is currently a gap (baseline)"
+        },
+        "activity_signature": {
+          "type": "object",
+          "description": "Shape signature the emergent activity should have",
+          "properties": {
+            "input_shapes_intersect": { "type": "array", "items": { "type": "string" } },
+            "output_shapes_must_include": { "type": "array", "items": { "type": "string" } },
+            "tags_pattern": { "type": "string" }
+          }
+        },
+        "minimum_thompson_alpha": {
+          "type": "number",
+          "description": "If activity must already have proven success, minimum α posterior"
+        }
+      }
+    },
+    "self_heal_window_seconds": {
+      "type": "number",
+      "description": "Maximum time from goal-dispatch to emergent-activity-trace-visible for the scenario to score as self-healed"
+    },
+    "recovery_test": {
+      "type": "object",
+      "description": "Optional: after presumed recovery, inject the failure again and verify it no longer triggers",
+      "properties": {
+        "regression_check": { "type": "boolean" },
+        "regression_query": { "type": "string" }
+      }
+    },
+    "subagent_investigation": {
+      "type": "object",
+      "description": "Notes from the Explore subagent that characterized this scenario",
+      "properties": {
+        "dispatched_at": { "type": "string", "format": "date-time" },
+        "findings_summary": { "type": "string" },
+        "code_references": { "type": "array", "items": { "type": "string" } },
+        "current_gaps_in_codebase": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "priority": { "enum": ["critical", "high", "medium", "low"] },
+        "cost_asymmetry": {
+          "enum": ["fp_corrosive", "fn_corrosive", "symmetric"],
+          "description": "Which direction of error is more damaging"
+        },
+        "depends_on_scenarios": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

@@ -12,6 +12,8 @@ import { resolveActivityCreateVariant } from "../resolvers/activity-create-varia
 import { resolveVesselRegisterPassthrough } from "../resolvers/vessel-register-passthrough.js";
 import { resolveCodeIntrospect } from "../resolvers/code-introspect.js";
 import { resolvePropagateJudgment } from "../resolvers/propagate-judgment.js";
+import { resolveLiftDemoNoop } from "../resolvers/lift-demo-noop.js";
+import { resolveLlmCompletionDispatch } from "../resolvers/llm-completion-dispatch.js";
 import type { ResolverResult } from "../resolvers/types.js";
 
 type AnyPointer = { type: string } & Record<string, unknown>;
@@ -20,10 +22,8 @@ type AnyPointer = { type: string } & Record<string, unknown>;
 export async function resolveDispatch(pointer: AnyPointer): Promise<ResolverResult> {
   const p = pointer as unknown;
   switch (pointer.type) {
-    case "lift_demo_noop": {
-      const { resolveLiftDemoNoop } = await import("../resolvers/lift-demo-noop.js");
+    case "lift_demo_noop":
       return resolveLiftDemoNoop();
-    }
     case "git_status":
       return resolveGitStatus(p as Parameters<typeof resolveGitStatus>[0]);
     case "git_add":
@@ -50,6 +50,8 @@ export async function resolveDispatch(pointer: AnyPointer): Promise<ResolverResu
       return resolveCodeIntrospect(p as Parameters<typeof resolveCodeIntrospect>[0]);
     case "propagate_judgment":
       return resolvePropagateJudgment(p as Parameters<typeof resolvePropagateJudgment>[0]);
+    case "llm_completion_dispatch":
+      return resolveLlmCompletionDispatch(p as Parameters<typeof resolveLlmCompletionDispatch>[0]);
     default:
       throw new Error(`unknown shape: ${pointer.type}`);
   }

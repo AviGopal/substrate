@@ -1,0 +1,76 @@
+{
+  "id": "fp-15-missing-producer-stale-registration",
+  "mode_class": "fp",
+  "stage": "discovery",
+  "outcome_class": "FP",
+  "information_state": "known_unknown",
+  "title": "Missing producer false positive — vessel advertises shape but is not actually serving it",
+  "description": "Gap-identification flags shape X as 'unproducible' because no vessel returns it from /resolve. But a vessel B IS registered with discovery and X IS in its advertised shapes — the registration is fresh (TTL not expired). The vessel itself is degraded: pod crashloop, dependency outage, or shape-dispatch divergence (config.ts ≠ routes/impulses.ts). System spawns make-activity to create a duplicate producer; template library bloats; Thompson sampler now arbitrates between real (broken) producer and synthetic producer.",
+  "trigger": {
+    "preconditions": [
+      "vessel registered with discovery, TTL not expired",
+      "vessel advertises shape X in registration payload",
+      "POST /v2/impulses/resolve to vessel returns 5xx, timeout, or shape-mismatch error for ≥ 80% of recent attempts"
+    ],
+    "synthetic_setup": {
+      "registry_modifications": [
+        {
+          "action": "Inject a synthetic vessel registration with advertised shape 'syntheticShapeFp15', resolve_endpoint pointing to a known-503 endpoint or unbound port.",
+          "ttl_seconds": 600
+        }
+      ]
+    }
+  },
+  "goal_text": "Find shapes advertised in discovery-vessel registry where the past 24h of resolution attempts show ≥ 80% failure rate from the advertising vessel. Distinguish 'shape is genuinely unproducible' (no registration) from 'registered vessel is broken' (registration present, dispatch fails). Propose a vessel-health-corroboration activity that gates discovery results by recent resolution success.",
+  "expected_input_shapes": [
+    "vesselRegistry",
+    "vesselHealth",
+    "activityExecutionTrace"
+  ],
+  "expected_output_shapes": [
+    "vesselHealthCorroboration",
+    "discoveryFreshnessAudit",
+    "registrationLivenessReport"
+  ],
+  "detection": {
+    "signal": "Discovery returns vessel V for shape X; resolution-traces in last 24h show ≥ 80% failures with reason=resolver_timeout or HTTP 5xx; vessel V's last_heartbeat is within TTL window.",
+    "witness_required": "cross_vessel_witness",
+    "query_template": "SELECT vessel_id, advertised_shapes, last_heartbeat FROM vessel_registrations WHERE last_heartbeat > time::now() - 5m; JOIN against impulse_resolutions WHERE resolver_vessel_id IN ($) AND created_at > time::now() - 24h GROUP BY vessel_id HAVING failure_rate > 0.8"
+  },
+  "expected_emergence": {
+    "class": "new",
+    "activity_signature": {
+      "input_shapes_intersect": ["vesselRegistry", "vesselHealth"],
+      "output_shapes_must_include": ["vesselHealthCorroboration"],
+      "tags_pattern": "discovery.liveness.*"
+    },
+    "minimum_thompson_alpha": 5
+  },
+  "self_heal_window_seconds": 43200,
+  "recovery_test": {
+    "regression_check": true,
+    "regression_query": "After corroboration activity ships, the same synthetic broken vessel should be filtered from discovery recommendations for shape 'syntheticShapeFp15' within 1 hour."
+  },
+  "subagent_investigation": {
+    "dispatched_at": "2026-05-22T00:00:00Z",
+    "findings_summary": "Infrastructure for detection exists but is disconnected. Discovery has 5-min TTL and passive heartbeat; resolveVesselHealth only actively probes when `checkEndpoint: true` passed. `impulse_resolution_metrics` table records per-resolver per-shape success/failure with vessel_id, but no aggregate query computes per-vessel per-shape failure rate over rolling 24h. MiniBob has a per-vessel circuit breaker but state is local and never fed back to discovery or activity-api. No activity gates discovery results by recent resolution success.",
+    "code_references": [
+      "repos/discovery-vessel/src/registry.ts:19,22,347-349 (TTL=5min, heartbeat=2min, isExpired check)",
+      "repos/discovery-vessel/src/resolvers.ts:100-146 (resolveVesselHealth — active probe only on checkEndpoint:true)",
+      "repos/metabob-activity-api/sql/008-impulse-resolution-metrics.surql:7-51 (per-resolution metrics with vessel_id, requested_shape, success, error_reason, timestamp)",
+      "repos/minibob/src/vessel-direct-resolver.ts:62-132 (circuit breaker: 5-fail threshold, 30s half-open, local-only)",
+      "repos/discovery-vessel/src/registry.ts:198-219 (findByShape — returns any non-expired vessel, no liveness gate)"
+    ],
+    "current_gaps_in_codebase": [
+      "No aggregate query: vessel_id × requested_shape × time-window → failure_rate",
+      "No discovery-side liveness gate on findByShape",
+      "Circuit breaker state in minibob never persisted or exposed",
+      "No `discovery.liveness.corroboration` tagged activity"
+    ]
+  },
+  "metadata": {
+    "priority": "high",
+    "cost_asymmetry": "fp_corrosive",
+    "depends_on_scenarios": []
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "id": "fm-17-resolver-budget-noncompliance",
+  "mode_class": "fm",
+  "stage": "execution",
+  "outcome_class": "FN",
+  "information_state": "known_unknown",
+  "title": "Resolver budget non-compliance — impulse.budget=N but resolver allocates >>N",
+  "description": "Impulse pointer declares budget=1000 (tokens, rows, bytes). Resolver respects metadata.budget on the API surface but the underlying load actually uses 5000. No declared failure_mode — execution succeeds and posterior is updated normally. But the budget metadata that drives downstream planning (binding-layer impulse selection, composition cost estimation) is misleading: future selections based on this 'cheap' impulse will routinely overshoot.",
+  "trigger": {
+    "preconditions": [
+      "task uses an impulse with explicit budget metadata",
+      "resolver loads the impulse and reports cost_usd / tokens_used",
+      "reported usage is materially higher than the declared budget"
+    ],
+    "synthetic_setup": {
+      "impulses": [
+        {
+          "type": "memo",
+          "budget": 100,
+          "actual_size_hint": "Pad memo content to 10000 chars; budget metadata stays at 100 to simulate divergence."
+        }
+      ]
+    }
+  },
+  "goal_text": "Audit resolver executions where the impulse declared a budget but the trace's measured cost (tokens, latency_ms, cost_usd) exceeded the budget by ≥ 2x. Propose a budget-compliance activity that updates impulse metadata to reflect realized cost, and emit a per-resolver compliance scorecard.",
+  "expected_input_shapes": [
+    "activityExecutionTrace",
+    "executionCostSummary",
+    "resolverCostAnalysis"
+  ],
+  "expected_output_shapes": [
+    "budgetComplianceReport",
+    "resolverComplianceScorecard",
+    "impulseBudgetCorrection"
+  ],
+  "detection": {
+    "signal": "Trace's impulse_resolutions[i].cost_usd > 2× the resolved impulse's declared budget (translated to USD via tier-pricing). Pattern is per-resolver, not per-impulse.",
+    "witness_required": "trace_only",
+    "query_template": "SELECT resolver_id, vessel_id, AVG(cost_usd / declared_budget_usd) as overrun_ratio FROM impulse_resolutions WHERE created_at > time::now() - 7d GROUP BY resolver_id, vessel_id HAVING overrun_ratio > 2.0"
+  },
+  "expected_emergence": {
+    "class": "new",
+    "activity_signature": {
+      "input_shapes_intersect": ["activityExecutionTrace", "resolverCostAnalysis"],
+      "output_shapes_must_include": ["budgetComplianceReport"],
+      "tags_pattern": "audit.budget_compliance.*"
+    }
+  },
+  "self_heal_window_seconds": 43200,
+  "metadata": {
+    "priority": "medium",
+    "cost_asymmetry": "symmetric",
+    "depends_on_scenarios": []
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "id": "fm-43-cascade-attribution-error",
+  "mode_class": "fm",
+  "stage": "learning",
+  "outcome_class": "FP",
+  "information_state": "known_unknown",
+  "title": "Cascade attribution error — failure blamed on upstream task that actually succeeded",
+  "description": "Task 5 in a composition chain fails. failure_mode classifier marks it as `cascading` from task 3 because task 3 was upstream. But task 3's output was correct; task 5 failed for an independent reason (resolver timeout, network blip, unrelated input). Posterior update penalizes task 3's variant; recommendation engine deprioritizes a working activity. This is the structural pair of FP-11 (silent semantic failure): there, success was wrong; here, failure attribution is wrong.",
+  "trigger": {
+    "preconditions": [
+      "composition chain with ≥ 3 tasks",
+      "failure_mode classifier marks downstream task as cascading from upstream",
+      "upstream task's output_impulse_ids appear correct under replay or shape/signature comparison to baseline"
+    ],
+    "synthetic_setup": {
+      "traces": [
+        {
+          "synthesize": "Build a composition A→B→C trace where A succeeds normally, B succeeds normally, C fails due to a deliberately-injected resolver timeout. failure_mode classifier (per FailureModeSchema heuristics) will mark C as cascading from B."
+        }
+      ]
+    }
+  },
+  "goal_text": "Identify execution chains where a task is marked failure_mode='cascading' from an upstream task, but the upstream task's outputs are valid by independent witnesses (replay produces same outputs, downstream tasks in OTHER chains successfully consumed them). Propose an attribution-disambiguation activity that downgrades 'cascading' to 'independent_failure' in those cases and reverts the spurious Thompson penalty.",
+  "expected_input_shapes": [
+    "activityExecutionTrace",
+    "executionTraceWithSignatures",
+    "compositionSuccess",
+    "impulseRelevance"
+  ],
+  "expected_output_shapes": [
+    "attributionAuditReport",
+    "thompson_posterior_correction",
+    "cascadeReclassification"
+  ],
+  "detection": {
+    "signal": "Trace C marked failure_mode.type='cascading' with context.upstream_task_id=T_B; but the same output_impulse_ids from T_B are successfully consumed by ≥ 1 other trace D within the next 24h with success=true.",
+    "witness_required": "downstream_correlation",
+    "query_template": "SELECT id, tasks FROM activity_execution_traces WHERE failure_mode.type = 'cascading' AND created_at > time::now() - 7d; CROSS-REFERENCE upstream output_impulse_ids with traces[*].input_impulse_ids WHERE success = true"
+  },
+  "expected_emergence": {
+    "class": "new",
+    "activity_signature": {
+      "input_shapes_intersect": ["activityExecutionTrace", "impulseRelevance"],
+      "output_shapes_must_include": ["attributionAuditReport", "thompson_posterior_correction"],
+      "tags_pattern": "learning.attribution.*"
+    }
+  },
+  "self_heal_window_seconds": 86400,
+  "recovery_test": {
+    "regression_check": true,
+    "regression_query": "After reclassification activity ships, planted cascade-attribution scenario should result in upstream task's α being restored to pre-incident value (within tolerance) on the next harness run."
+  },
+  "subagent_investigation": {
+    "dispatched_at": "2026-05-22T00:00:00Z",
+    "findings_summary": "Cascade tag is assigned heuristically — IterationResolver defaults to type='cascading' for ANY sub-resolver error without checking upstream output validity. Posterior update: cascading victim gets {αΔ=0, βΔ=0}, but propagateCreditAlongChain applies β+=γ^1 to direct parent (depth-1). Result: spurious penalty on a working upstream variant. Traces are immutable; no failure_mode update path exists. Cross-trace witness query (input_impulse_ids overlap) is implementable on existing per-task impulse_ids but no query joins on it today.",
+    "code_references": [
+      "repos/minibob/src/resolvers/iteration-resolver.ts:584-588 (default-cascading heuristic — root cause)",
+      "repos/metabob-activity-api/src/models/schemas.ts:920-924 (FailureModeSchema accepts upstream_task_id without validation)",
+      "repos/metabob-activity-api/src/lib/posterior-update.ts:161-163 (cascading αΔ/βΔ=0 for victim)",
+      "repos/metabob-activity-api/src/lib/posterior-update.ts:333,386-392 (propagateCreditAlongChain — parent penalty)",
+      "repos/metabob-activity-api/src/routes/execution-traces.ts:61-130 (per-task input/output impulse_ids extraction — usable for witness query)"
+    ],
+    "current_gaps_in_codebase": [
+      "No output-validity inspector on upstream task before cascade is recorded",
+      "No downstream-witness query that joins on input_impulse_ids",
+      "No mutable failure_mode revision endpoint (traces are append-only)",
+      "No `learning.attribution.*` tagged activity producing thompson_posterior_correction"
+    ]
+  },
+  "metadata": {
+    "priority": "critical",
+    "cost_asymmetry": "fp_corrosive",
+    "depends_on_scenarios": []
+  }
+}

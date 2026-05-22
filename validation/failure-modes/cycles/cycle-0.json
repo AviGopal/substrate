@@ -1,0 +1,33 @@
+{
+  "cycle_number": 0,
+  "started_at": "2026-05-22T11:32:28.992Z",
+  "baseline_report": "validation/results/2026-05-22-failure-mode-baseline.json",
+  "baseline_gap_count": 6,
+  "baseline_reuse_count": 0,
+  "proposals_authored": 1,
+  "proposals_by_author": {
+    "undefined": 1
+  },
+  "proposals_registered": 0,
+  "manual_intervention_debt": 0,
+  "manual_intervention_breakdown": {
+    "subagent_dispatches": 0,
+    "human_authored_templates": 0,
+    "operator_admin_actions_required": 0
+  },
+  "remaining_gaps": [
+    "fp-11-silent-semantic-failure",
+    "fp-12-partial-success-recorded-as-total",
+    "fp-15-missing-producer-stale-registration",
+    "fm-17-resolver-budget-noncompliance",
+    "fm-43-cascade-attribution-error",
+    "fm-44-silent-trace-loss"
+  ],
+  "gaps_with_proposal": [],
+  "lift_kpi": {
+    "debt_zero": true,
+    "gap_count_decreasing": true,
+    "consecutive_zero_debt_cycles": 1
+  },
+  "notes": []
+}
