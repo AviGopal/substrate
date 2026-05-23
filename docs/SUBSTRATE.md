@@ -2,7 +2,7 @@
 
 **Phase 26 deliverable.** This document describes how to build, run, and iterate against the local substrate — the full vessel fleet collapsed into a single systemd-managed Docker container.
 
-> This file is a forward-looking guide authored alongside the Phase 26 spec. The commands below will work once `Dockerfile.substrate` and `scripts/substrate/` exist. Check `openspec/changes/2026-05-23-single-container-substrate/tasks.md` for implementation status.
+**Phase 26 complete (2026-05-23).** The substrate is implemented and verified — 36+ traces stored, boredom loop active, `systemd_restart` confirmed, `minibob --single` producing visible traces.
 
 ## Why a single container?
 
@@ -10,20 +10,26 @@ The canary cluster (Phase 5+) requires H1 two-sided traces and cross-vessel auth
 
 A container is a valid substrate. The foundation doc defines a substrate by its fixed point (discovery-vessel) and its trust boundary, not by its infrastructure form. The same vessel code, the same seed templates, the same Thompson learning — just no pod scheduling.
 
-## Quick start (3 commands)
+## Quick start (4 steps)
 
 ```bash
 # 1. Build the substrate image
 make -C scripts/substrate substrate-build
 
-# 2. Run it (generates keys on first start, prints SUBSTRATE_API_KEY)
+# 2. Run it (all 7 vessels as systemd units, host ports 18080/18090/18100/18200)
 make -C scripts/substrate substrate-run
 
-# 3. Configure your local tooling to point at it
+# 3. Seed identity (creates org+user+API key; prints the key)
+docker exec substrate-live bun /vessels/seed-identity.ts
+# → [seed-identity] issued API key: mb-b3Jn...
+
+# 4. Configure your local tooling to point at it
 scripts/substrate/configure-local.sh
 ```
 
-After step 3, `~/.metabob/config.json` points to `http://localhost:8080` and all validation harnesses use it automatically.
+After step 4, `~/.metabob/config.json` points to `http://localhost:18080` and all validation harnesses use it automatically.
+
+**Note on ports**: The container maps internal ports to host ports with an 18000 offset — activity-api is at `localhost:18080`, discovery-vessel at `localhost:18100`, etc. Internal vessel-to-vessel calls use `127.0.0.1:808x` directly inside the container.
 
 ## Iteration loop
 
@@ -134,8 +140,10 @@ When three consecutive `convergenceReport` impulses show `lift_candidate=true` f
 
 **Units not starting within 60s**: check `make substrate-logs-<unit>` for the failing unit. Most common cause: port conflict (SurrealDB 8000, activity-api 8080) with a pre-existing process.
 
-**SUBSTRATE_API_KEY not printed**: the seeding script runs only when the `api_key` table is empty. If you already have a running instance, `docker logs substrate | grep SUBSTRATE_API_KEY` will find the original key.
+**API key needed but lost**: if you ran `seed-identity.ts` but forgot the key, re-read it from the container env file: `docker exec substrate-live grep METABOB_API_KEY /etc/substrate/env`. Then re-run `configure-local.sh` to update your local config.
 
 **Harness connection errors**: confirm `~/.metabob/config.json` points to `http://localhost:8080`, not the canary endpoint. Run `scripts/substrate/configure-local.sh` to reset.
 
 **`make substrate-restart-<vessel>` fails**: the container must be running (`make substrate-run` first). Units restart in-place; the container itself is not restarted.
+
+**`minibob --single` connects to canary instead of local**: three env vars must be set to point at the local substrate. `configure-local.sh` sets them in `~/.metabob/config.json`. Inside the container, the systemd unit reads them from `/etc/substrate/env` — the required variables are `METABOB_API_KEY`, `ACTIVITY_API_ENDPOINT=http://127.0.0.1:8080`, and `IDENTITY_ENDPOINT=http://127.0.0.1:8101`. If you rebuilt the container without pulling the latest gen-env.sh, run `docker exec substrate-live bash /scripts/substrate/gen-env.sh` to regenerate the env file.

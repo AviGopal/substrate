@@ -47,7 +47,7 @@ The system is designed to operate identically on any substrate. A **substrate** 
 Replace `endpoint` with your substrate's activity-api URL. All validation harnesses and tooling read this config; none hardcode a substrate URL.
 
 **Known substrate endpoints:**
-- `http://localhost:8080` — **local single-container substrate** (Phase 26, `make substrate-run`). Primary development target after Phase 26 ships. All inter-vessel calls are localhost; no Kubernetes required. See `docs/SUBSTRATE.md`.
+- `http://localhost:18080` — **local single-container substrate** (Phase 26, complete 2026-05-23). Primary development target. All inter-vessel calls are localhost; no Kubernetes required. Bootstrap: `make -C scripts/substrate substrate-run` → `docker exec substrate-live bun /vessels/seed-identity.ts` → `scripts/substrate/configure-local.sh`. See `docs/SUBSTRATE.md`.
 - `https://activity.metabob.com` — canary / pre-prod (current `kubectx metabob-production`). Used for canary validation and production promotion.
 - Local cluster — configure via `helmfile --environment local sync` + set endpoint to your in-cluster address (legacy; superseded by single-container substrate)
 
@@ -63,9 +63,13 @@ Replace `endpoint` with your substrate's activity-api URL. All validation harnes
 
 **Local substrate (Phase 26+, primary):**
 ```
+0. First time: make -C scripts/substrate substrate-run
+              docker exec substrate-live bun /vessels/seed-identity.ts
+              scripts/substrate/configure-local.sh
 1. Edit vessel source in repos/<vessel>/
-2. make substrate-restart-<vessel>   ← hot-reloads the vessel in the container
-3. bun run validation/scripts/failure-mode-harness.ts  ← validates against localhost:8080
+2. make -C scripts/substrate substrate-restart-<vessel>   ← hot-reloads vessel in container
+3. bun run validation/scripts/failure-mode-harness.ts    ← validates against localhost:18080
+   minibob --single "<goal>"                             ← verify trace lands
 4. Commit + push to dev → CI/CD deploys to canary for integration validation
 5. Promote canary → production via /deploy skill
 ```
@@ -995,7 +999,7 @@ MiniBob resolves configuration from multiple sources (highest to lowest priority
 }
 ```
 
-> **Important**: Use `http://localhost:8080` for local substrate development (Phase 26+); use `https://activity.metabob.com` for canary validation. Never use `.local` (Kubernetes internal) endpoints from outside the cluster.
+> **Important**: Use `http://localhost:18080` for local substrate development (Phase 26+, host-mapped port); use `https://activity.metabob.com` for canary validation. Never use `.local` (Kubernetes internal) endpoints from outside the cluster.
 
 ### Secrets Management (SOPS + Age)
 

@@ -1463,15 +1463,20 @@ is NOT required for Phase 27 lift.
   `substrate-logs-<vessel>`, `substrate-status`, `substrate-stop`, `substrate-shell`.
   Acceptance: `make substrate-status` shows all units active without entering the container. ✓ 2026-05-23
 
-- [ ] 26.3.2 `scripts/substrate/configure-local.sh` writes `~/.metabob/config.json`
-  with `endpoint: http://localhost:8080` and the seeded API key.
+- [x] 26.3.2 `scripts/substrate/configure-local.sh` writes `~/.metabob/config.json`
+  with `endpoint: http://localhost:18080` and the seeded API key.
   Acceptance: running the script then `bun run validation/scripts/failure-mode-harness.ts`
   completes without connection errors.
+  ✓ 2026-05-23: script created at scripts/substrate/configure-local.sh. Reads key from
+  container env file, backs up existing config, writes new config, runs smoke test.
+  Also added --restore flag to switch back to canary config.
 
-- [ ] 26.3.3 `docs/SUBSTRATE.md` — developer guide: quick-start (3 commands to running
+- [x] 26.3.3 `docs/SUBSTRATE.md` — developer guide: quick-start (3 commands to running
   substrate), iteration loop (edit → restart unit → validate), switching between local
   and canary (change one line in config.json), backing up / restoring learning state
   (copy `/data/` volume).
+  ✓ 2026-05-23: file updated — removed forward-looking caveat, corrected port numbers
+  (18080 etc.), added full bootstrap sequence, added IDENTITY_ENDPOINT troubleshooting.
 
 ### 26.4 Harness validation
 
@@ -1481,9 +1486,12 @@ is NOT required for Phase 27 lift.
   ✓ 2026-05-23: 6/6 gap (cold start, 0 templates). fm-17 shows detection_signal_present=true.
   HTTP errors: 0. Report: validation/baselines/local-substrate-cold.json.
 
-- [ ] 26.4.2 Run `minibob --single "list files in current directory"` against local
+- [x] 26.4.2 Run `minibob --single "list files in current directory"` against local
   substrate. Acceptance: trace appears in `GET /v2/activities/execution-traces?limit=1`.
-  (In progress 2026-05-23 — running now)
+  ✓ 2026-05-23: trace `jr9ai91u` visible via API, vessel=substrate-local, org=substrate_admin.
+  Fix required: gen-env.sh was missing `IDENTITY_ENDPOINT=http://127.0.0.1:8101` (minibob
+  reads IDENTITY_ENDPOINT, not IDENTITY_VESSEL_URL); added to gen-env.sh and container env.
+  Ran with MINIBOB_SKIP_STARTUP=true inside container: 12 activities, 29 tasks, $0.038.
 
 - [x] 26.4.3 Commit `validation/baselines/local-substrate-cold.json` capturing cold-start
   state (template count, thompson_pool_size, recommend_mrr from first stratified run).
@@ -1491,17 +1499,22 @@ is NOT required for Phase 27 lift.
 
 ### 26.5 CLAUDE.md and loop updates
 
-- [ ] 26.5.1 Update CLAUDE.md "Known substrate endpoints" to add
+- [x] 26.5.1 Update CLAUDE.md "Known substrate endpoints" to add
   `http://localhost:8080 — local single-container substrate (make substrate-run)`.
+  ✓ 2026-05-23: updated to localhost:18080 (correct host port), added bootstrap command
+  sequence inline. Also fixed the config note at bottom of CLAUDE.md to say 18080.
 
-- [ ] 26.5.2 Update CLAUDE.md "The Development Loop" to show the local iteration path
+- [x] 26.5.2 Update CLAUDE.md "The Development Loop" to show the local iteration path
   alongside the canary CI/CD path.
+  ✓ 2026-05-23: dev loop updated with step 0 (first-time bootstrap) and corrected
+  port/command for the harness validation step.
 
 Phase 26 is complete when:
 
 - [ ] 26.1.x `docker run metabob/substrate:dev` brings all vessels to healthy within 60s
 - [ ] 26.2.x `~/.metabob/config.json` → localhost passes failure-mode harness smoke test
-- [ ] 26.3.x `minibob --single "<goal>"` produces a visible trace in activity-api
+- [x] 26.3.x `minibob --single "<goal>"` produces a visible trace in activity-api
+  ✓ 2026-05-23: verified with `list files in /tmp` — trace visible via API.
 - [ ] 26.4.x `make substrate-restart-activity-api` hot-reloads the vessel without
   restarting the container
 - [ ] 26.5.x CLAUDE.md and docs/SUBSTRATE.md reflect the local-first development loop
