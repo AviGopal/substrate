@@ -217,18 +217,29 @@ development-vessel:harness-run-matrix` returns ≥1 row, and its
 
 ## F. Operational consequences
 
+- This change is downstream of the single-container substrate work
+  (`openspec/changes/2026-05-23-single-container-substrate/`). All
+  endpoints in this section refer to the in-container activity-api
+  (`http://localhost:8080`), not canary. Canary remains running for
+  reference but is not the verification target.
 - Harness output stops being a file under `validation/results/`. It becomes
   an AET in activity-api. The progression-driver needs to learn to read
   from activity-api (`failureModeReport` impulse) rather than disk. Until
   it does, the aggregator writes the file too as a transitional shim.
-- The harness fires every time a relevant lifecycle event happens. On
-  current canary that's ≤1/hour. If we see runaway, we add debouncing.
+- The harness fires every time a relevant lifecycle event happens. In a
+  fresh container that's ≤1/hour; we add debouncing only if we see
+  runaway.
 - The `draft-gap-closing-activity` runs trigger a re-score, which on the
   current 6-scenario matrix should still report reuse=6/gap=0 — i.e. the
   loop closes without changing state. That's the steady-state check.
 - For the FIRST end-to-end verification, we manually run
-  `draft-gap-closing-activity` against an artificial gap and observe the
-  matrix re-score firing. After that the loop is self-sustaining.
+  `draft-gap-closing-activity` against an artificial gap inside the
+  container and observe the matrix re-score firing. After that the loop
+  is self-sustaining within the substrate.
+- Promotion outward: once the cross-substrate trust work
+  (vessel-session-handshake / H1 / H2) lands, the lifecycle observer code
+  is unchanged; it simply reaches a different activity-api. The behaviour
+  characterised here generalises.
 
 ## G. Resolved
 

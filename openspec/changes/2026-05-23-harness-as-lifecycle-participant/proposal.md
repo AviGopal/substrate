@@ -1,5 +1,32 @@
 # 2026-05-23 — Harness as Lifecycle Participant
 
+## Sequencing
+
+This change is downstream of
+`openspec/changes/2026-05-23-single-container-substrate/`. That spec
+collapses the vessel fleet onto a single localhost trust boundary; all
+inter-vessel calls in this change (development-vessel → activity-api WS,
+development-vessel → activity-api REST for `discover-by-shapes`) become
+localhost calls within the container. The lifecycle observer pattern
+and the `activityRegistryChange` emission rely on the activity-api WS
+broadcaster being reachable and authenticated, which the substrate spec
+guarantees inside the container without requiring vessel-session-handshake
+or H1/H2.
+
+Do not begin DEV on this change until the substrate's Phase 1 (Dockerfile
++ systemd units) is healthy enough that all five vessels reach `active
+(running)` and `~/.metabob/config.json` pointing at `http://localhost:8080`
+serves harness traffic. The substrate's Phase 6 (harness smoke) is the
+last gate; that's the point this change begins.
+
+A consequence of the sequencing: the canary verification originally
+proposed in §6 of tasks.md becomes a *container* verification. The
+load-bearing R8.3 assertion stays the same — an AET appearing in
+activity-api from a non-human trigger — but the activity-api in question
+is the in-container instance, not canary. After this change is green
+inside the container, promotion to canary is a downstream operational
+task that does not require code changes.
+
 ## Motivation
 
 The failure-mode harness currently scores 6 scenarios as `reuse` consistently

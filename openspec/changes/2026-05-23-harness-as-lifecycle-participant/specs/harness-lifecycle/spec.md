@@ -3,6 +3,21 @@
 Normative requirements for the harness-as-lifecycle-participant change.
 Each requirement is testable.
 
+## R0 — Substrate prerequisite
+
+- **R0.1** This spec is downstream of
+  `openspec/changes/2026-05-23-single-container-substrate/`. DEV MUST
+  NOT begin until that change's Phase 1 (Dockerfile + systemd units) is
+  green and Phase 6 (harness smoke against in-container activity-api)
+  has passed.
+- **R0.2** All R1–R8 acceptance checks below MUST be exercised against
+  the in-container `http://localhost:8080` activity-api, not canary.
+  Promotion to canary is out of scope.
+- **R0.3** The development-vessel's lifecycle observer MUST connect to
+  `${METABOB_ENDPOINT}` resolved from environment, which inside the
+  substrate container is `http://localhost:8080`. The observer MUST NOT
+  hardcode an endpoint.
+
 ## R1 — Aggregator resolver
 
 - **R1.1** Development-vessel MUST advertise a `failure_mode_matrix_score`
@@ -117,6 +132,9 @@ Each requirement is testable.
 - **R8.1** `bun test` passes with ≥126 tests, 0 fails.
 - **R8.2** `bun run lint` reports 19 advertised shapes, 19 dispatch
   cases.
-- **R8.3** Canary verification per tasks.md §6 produces an AET in
-  activity-api whose `activity_template_id` is the harness aggregator AND
-  which was NOT triggered by a human running `bun run`.
+- **R8.3** In-container verification per tasks.md §6 produces an AET in
+  activity-api (`http://localhost:8080`) whose `activity_template_id` is
+  the harness aggregator AND which was NOT triggered by a human running
+  `bun run`. The trigger MUST be a `lifecycle:execution:succeeded` event
+  consumed by the dev-vessel's observer per R3.4. Canary verification is
+  optional and out of scope for the acceptance gate.

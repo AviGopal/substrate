@@ -6,6 +6,31 @@ All work lands in `repos/development-vessel/` under the existing
 discipline. Shape-dispatch lint + per-resolver tests + dry-run seed test
 remain green at every commit boundary.
 
+## §0 Prerequisite gate
+
+This change does NOT begin until the single-container substrate is
+healthy. See `openspec/changes/2026-05-23-single-container-substrate/`.
+
+- [ ] 0.1 Substrate Phase 1 (Dockerfile + systemd) green: `docker run
+  metabob/substrate:dev` reaches all five vessels `active (running)`.
+- [ ] 0.2 Substrate Phase 6 (harness smoke) green: existing
+  `validation/scripts/failure-mode-harness.ts` runs against
+  `http://localhost:8080` and produces the same report as it did against
+  canary. This is the substrate's own acceptance gate; it proves the
+  in-container activity-api is functionally identical to canary for our
+  purposes.
+- [ ] 0.3 `~/.metabob/config.json` points at `http://localhost:8080`. All
+  subsequent task §s in this file MUST be exercised against the container,
+  not canary. Canary remains running for production reference.
+
+Reason this gate exists: doing the lifecycle observer + AET trace
+production work against canary first, then migrating to the container,
+would either re-do the work or leave the canary instance carrying a
+half-built loop. Doing it in the container first means everything is
+localhost (no auth ambiguities, no vessel-session-handshake required) and
+the change naturally promotes outward when the cross-substrate trust
+work lands.
+
 ## §1 Aggregator resolver
 
 - [ ] 1.1 `src/resolvers/failure-mode-matrix-score.ts` — new resolver.
@@ -125,21 +150,33 @@ ask is to migrate progression-driver to read directly from activity-api.
   change required for §5 — this task is the doc note that defers the
   migration.
 
-## §6 End-to-end verification on canary
+## §6 End-to-end verification (in-container)
 
-- [ ] 6.1 Operator runs `bun run cli seed-templates` to upload
-  `harness-run-matrix` (write-scope sufficient).
-- [ ] 6.2 Manual one-off: `bun run cli run-activity
+Per §0, the substrate is the container. Canary remains running but is not
+the target of this change.
+
+- [ ] 6.1 Inside the running container (or with
+  `~/.metabob/config.json` pointing at `http://localhost:8080`), the
+  dev-vessel systemd unit runs `bun run cli seed-templates` on startup
+  via a `ConditionPathExists=!/data/.seeded` guard. Confirm
+  `harness-run-matrix` is registered.
+- [ ] 6.2 Manual one-off from the host: `bun run cli run-activity
   development-vessel:harness-run-matrix --var scenarios_dir=... --var
   out_path=...`. Confirm: report file written, AET visible in
   activity-api via
-  `GET /v2/activities/execution-traces?activity_template_id=...`.
-- [ ] 6.3 Trigger a synthetic `draft-gap-closing-activity` run on canary
-  with an artificial gap scenario. Confirm: observer fires, harness
-  template runs, second AET appears in activity-api with the same
-  template id, output_shapes includes `failureModeReport`.
-- [ ] 6.4 Run the existing progression-driver against the shim file.
-  Confirm `consecutive_zero_debt_cycles` increments from 4 → 5.
+  `GET http://localhost:8080/v2/activities/execution-traces?activity_template_id=...`.
+- [ ] 6.3 Trigger a synthetic `draft-gap-closing-activity` run against
+  the in-container activity-api with an artificial gap scenario.
+  Confirm: dev-vessel observer fires (look in `journalctl -u
+  development-vessel`), harness template runs, second AET appears in
+  activity-api with the same template id, output_shapes includes
+  `failureModeReport`.
+- [ ] 6.4 Run the existing progression-driver against the shim file
+  (still on the host, no container changes needed). Confirm
+  `consecutive_zero_debt_cycles` increments from 4 → 5.
+- [ ] 6.5 (optional, can defer to follow-up) Promote the change outward:
+  re-run §6.2–6.3 against canary once available. No code change should
+  be required.
 
 ## §S Acceptance gates
 
@@ -147,10 +184,11 @@ ask is to migrate progression-driver to read directly from activity-api.
   observer + create-variant emission update).
 - [ ] S.2 `bun run lint` clean: 19 advertised shapes, 19 dispatch cases.
 - [ ] S.3 Observer-test confirms the trigger predicate.
-- [ ] S.4 Canary verification §6.1–6.3 green.
+- [ ] S.4 In-container verification §6.1–6.3 green.
 - [ ] S.5 After §6.3, the harness has fired in response to a non-human
-  trigger AT LEAST ONCE on canary. This is the load-bearing assertion:
-  it proves the loop closes without a person in it.
+  trigger AT LEAST ONCE inside the container. This is the load-bearing
+  assertion: it proves the loop closes without a person in it. (Canary
+  re-verification via §6.5 is optional.)
 
 ## Out of scope (next change)
 
