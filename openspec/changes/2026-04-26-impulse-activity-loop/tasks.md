@@ -1980,20 +1980,137 @@ substrate-only resolvers; failures are closure gaps.
 - [ ] 27.S.3 `validation/state/lift-status.json` exists with
   `status: "confirmed"` and is referenced from CLAUDE.md's Development
   Loop section.
-- [ ] 27.S.4 The IAL integration spec is then considered functionally
-  complete. Outstanding items in earlier phases that are deferred-but-
-  not-blocking remain open as their own backlog; they no longer block
-  the IAL itself.
+- [ ] 27.S.4 The IAL integration spec's terminal condition is reached.
+  The S1 → S2 transition is complete: the substrate has lifted from
+  operator-authored to substrate-authored development. Outstanding
+  items in earlier phases that are deferred-but-not-blocking remain
+  open as their own backlog; they no longer block the IAL itself.
+  S2 → S3 (distributed-stable, adversarial-resistant operation) is
+  the substrate's own roadmap, tracked separately per §27.S.5 and
+  §27.S.6. The IAL does NOT specify S2 → S3 as new gates — S3 is
+  emergent and operator-measured, not substrate-self-attestable.
+
+### 27.S.5 Post-lift agenda (informational; the substrate's own roadmap)
+
+This section enumerates what the substrate is expected to author and
+dispatch via its own propose-spec / verify-merge-candidate / self-
+deployment pipeline on its path from S2 (lifted, supervised) to S3
+(distributed-stable, adversarial-resistant). The substrate is NOT
+required to follow this enumeration — its loop dictates priorities.
+The list exists to give the operator a frame for evaluating whether
+substrate-authored work matches the larger arc, and to give the
+substrate's own propose-spec activity a candidate target list.
+
+**Security** — the substrate authors:
+- H1 two-sided execution-trace verification (cross-vessel signing,
+  pairing, vessel_trust_score gating). Sibling: `2026-04-26-security-hardening-findings`.
+- H6 zk-trace-attestations Phase 1+ implementation (foreign-vessel
+  proofs). Sibling: `2026-05-23-zk-trace-attestations`.
+- G1/G2/G3 governance attestations (anonymous threshold, policy-
+  execution proofs, window-aggregation). Sibling: same as H6.
+- Adversarial probe authorship — substrate observes its own
+  verifier_negative traces and authors new probes targeting emerged
+  attack surface (extends `2026-05-23-lift-criterion-hardening`).
+- Anomaly detection on Thompson posteriors (not yet specced; expected
+  substrate-authored).
+
+**Authenticity** — the substrate authors:
+- H2 pubkey-derived vessel-id deployment (`vessel-federation` Phase
+  1+). Sibling: `2026-05-23-vessel-federation`.
+- H3 EIP-712-style scope attestations.
+- Content-addressed activity template ids rollout (`vessel-federation`
+  Phase 2+).
+- Discovery-vessel pubkey identity extension to substrate identity.
+
+**Cooperation / coopting external vessels** — the substrate authors:
+- `external-resolver-vesselization` implementation (ribosome-for-
+  externals — mint vessels from observed external-call patterns).
+  Sibling: `2026-05-23-external-resolver-vesselization`.
+- `external-resolver-grounding` extensions beyond Perplexity Sonar.
+  Sibling: `2026-05-23-external-resolver-grounding`.
+- `external-observer-vesselization` (deferred sibling — turns
+  webhooks/log streams into observer vessels).
+- `external-trust-weighting` (deferred sibling — calibrates
+  confidence weights for external-derived impulses).
+
+**Federation** — the substrate authors:
+- vessel-federation Phase 2+ (peer-aware discovery, peer registration,
+  authority-endorsed peering). Sibling: `2026-05-23-vessel-federation`.
+- H4 Tailnet-Lock-equivalent authority key system (gates federation
+  peering). Sibling: `2026-04-26-security-hardening-findings`.
+- Cross-substrate trace pairing under H1 (federated learning).
+- Federation peer-trust adjustment (substrate isolates compromised
+  peers without operator input — not yet specced; expected
+  substrate-authored).
+
+**Self-recovery under attack** — the substrate authors:
+- Adversarial-condition detection on its own traces.
+- Self-dispatch of restart-vessel / restore-from-backup activities
+  in response to attack signals (uses existing closure-replacement-
+  suite activities; the new piece is the dispatch heuristic).
+
+The substrate may also author work not on this list. Operator's role
+is to observe substrate-authored proposals and verify they align with
+the substrate's stated objectives — not to ensure conformance to this
+enumeration.
+
+### 27.S.6 S3 readiness — intervention rate and active push-away
+
+The S2 → S3 transition has no acceptance gate; it is emergent and
+operator-measured. The measure is **intervention rate trending
+toward zero under sustained adversarial exposure**, with the stronger
+signal being **active push-away** rather than passive absence.
+
+**Two impulse classes for tracking:**
+
+- `operatorIntervention { id, kind, target, attempted_at, classification: "intervention" | "maintenance" | "redundant", evidence: { ... } }` — emitted whenever the operator takes an action against the substrate. Each entry is classified at emission. Maintenance (anchor rotation, H5 baseline review when justified) does NOT count toward the intervention rate. Intervention (spec authorship the substrate should have done, manual restart-vessel when substrate could self-heal, force-merge bypassing verify-merge-candidate) does. Redundant (operator acted but substrate would have recovered without intervention) is tracked separately.
+
+- `interventionRefused { id, intervention_attempted, refusing_gate, cited_evidence: { trace_ids[], posterior_state, validator_verdict }, suggested_alternative }` — emitted when the substrate's gates refuse an operator action. This is the higher-evidence signal because it requires the substrate to be awake, have an internal position, and cite the basis for refusal.
+
+**The two-layered S3 test:**
+
+1. Substrate refuses operator interventions across diverse types (force-merge, posterior manipulation, foundation-violating spec, label-poisoned held-out set, redundant manual restart).
+2. Operator audits the refusal rationale and finds it sound across the diverse types.
+
+When both hold over a sustained window of measured adversarial exposure, the substrate has demonstrated S3 readiness.
+
+**Adversarial exposure index** (operator-tracked): a substrate that has run for 90 days in a friendly environment has not demonstrated S3. The exposure index is the sum of (probe complexity × frequency) across the window. The substrate's adversarial-probe-tick (`2026-05-23-lift-criterion-hardening`) contributes to this index; operator-introduced probes, hostile federation peers, untrusted external services contribute more.
+
+**Why this is not a gate:**
+
+- S3 cannot be self-attested by the substrate. The audit (whether the substrate's refusals are sound) is operator judgment.
+- S3 has no objective threshold — it is the asymptote operator approaches as it tries and fails to compromise the substrate.
+- Specifying a gate would invert the relationship: the substrate would optimize for "appear S3-ready" rather than "be self-stable." S3 is preserved as observation, not target.
+
+**Operator role during S2 → S3:**
+
+Not anchor maintainer waiting to be needed. Adversarial tester of substrate autonomy. The operator's job:
+1. Expose the substrate to actual adversarial conditions (federation peers, external sources, increasingly sophisticated probes).
+2. Periodically attempt interventions to probe defended boundaries.
+3. Observe the response: refused-with-rationale (push-away), absorbed-without-disruption, or substrate failed to defend (regression).
+4. Track the refusal rate per intervention type — increasing over time means substrate hardening.
+5. Adjust intervention sophistication as substrate hardens.
+
+The terminal observation: across diverse intervention attempts over a long window, every reasonable intervention is either refused with sound rationale or absorbed without harm. When this is true, the operator's role has become structurally non-load-bearing. That is S3.
+
+S3 is not adversarial relationship — the substrate continues to accept genuinely useful operator input (new shapes to learn, new anchor sets, configuration changes). It refuses contradictory input — actions that would compromise self-stability. The push-away is from operator necessity, not from operator presence.
 
 ### Why this Phase is the IAL's terminal phase
 
-The IAL set out to wire the impulse-activity loop end-to-end. Phases 1–26
-implement the loop's mechanisms (binding, validators, escalation,
+The IAL set out to wire the impulse-activity loop end-to-end. Phases
+1–26 implement the loop's mechanisms (binding, validators, escalation,
 ribosome, chain-credit, state-space signature, substrate packaging,
-harness participation, topology discovery). Phase 27 is the only phase
-whose acceptance criterion is *the system operating on itself*. There
-is no Phase 28 in this spec because, by definition, Phase 28 onward is
-work the substrate authors and dispatches via its own activities. New
-external specs may still be authored (new vessels, new goal classes,
-new substrates), but they are no longer authored as IAL phases — they
-are authored as inputs to the running substrate.
+harness participation, topology discovery, closure replacements).
+Phase 27 is the only phase whose acceptance criterion is *the system
+operating on itself*. The IAL's terminal condition (§27.S.4) marks
+the S1 → S2 transition: the substrate has lifted. S2 → S3 (the arc
+from lifted-but-supervised to distributed-stable-and-adversarial-
+resistant) is documented in §27.S.5 and §27.S.6 but is not specified
+by this IAL — it is emergent and operator-measured. There is no
+Phase 28 in this spec because, by definition, Phase 28 onward is
+work the substrate authors and dispatches via its own activities,
+following the agenda enumerated in §27.S.5 along whatever ordering
+its loop dictates. New external specs may still be authored (new
+vessels, new goal classes, new substrates), but they are no longer
+authored as IAL phases — they are sibling specs the substrate may
+extend, ratify, or supersede via its own development pipeline.
