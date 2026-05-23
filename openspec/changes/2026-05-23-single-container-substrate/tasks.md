@@ -231,9 +231,13 @@ the loop.
 - [x] 5.1 Smoke: all vessels reach `active (running)` within 60s of container start.
   `curl http://localhost:8080/health` returns `{"status":"healthy"}`.
 
-- [ ] 5.2 Boredom loop fires: within 5 minutes of container start with no external
+- [x] 5.2 Boredom loop fires: within 5 minutes of container start with no external
   input, minibob daemon selects and executes an activity. Verify via:
   `GET http://localhost:8080/v2/activities/execution-traces?limit=1` returns ≥1 row.
+  Verified 2026-05-23: 20+ traces with templates `startup:health-check`, `validator-dispatch`,
+  `ribosome-extract`, `_activity_execute` landing in org `organizations:substrate_admin`.
+  Unblocked by: seed-identity.ts + local API key in /etc/substrate/env + migration 133
+  (budget/stored_at schema relaxation for SurrealDB 2.3.3 compat).
 
 - [ ] 5.3 `systemd_restart` resolver functions: dispatch an activity that writes a
   trivial change to a test file in /workspace and calls `systemd_restart` for

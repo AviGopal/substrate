@@ -26,6 +26,7 @@ REDIS_URL=redis://127.0.0.1:6379
 # Vessel endpoints (all localhost)
 DISCOVERY_ENDPOINT=http://127.0.0.1:8100
 METABOB_ENDPOINT=http://127.0.0.1:8080
+ACTIVITY_API_ENDPOINT=http://127.0.0.1:8080
 IDENTITY_VESSEL_URL=http://127.0.0.1:8101
 
 # Vessel identities

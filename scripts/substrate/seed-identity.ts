@@ -29,18 +29,12 @@ async function waitForIdentity(maxMs = 30_000): Promise<void> {
 async function main() {
   await waitForIdentity();
 
-  // Check if substrate org already seeded via the health endpoint claims
-  const health = await fetch(`${IDENTITY_URL}/health`).then(r => r.json()) as { status: string };
-  if (health.status !== "healthy") {
-    throw new Error(`identity-vessel unhealthy: ${JSON.stringify(health)}`);
-  }
-
   // Attempt signup — creates org + user + returns JWT
   const signupRes = await fetch(`${IDENTITY_URL}/v1/auth/signup`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      email: "substrate@local",
+      email: "substrate@substrate.local",
       password: SEED_KEY,
       org_name: "substrate",
     }),
