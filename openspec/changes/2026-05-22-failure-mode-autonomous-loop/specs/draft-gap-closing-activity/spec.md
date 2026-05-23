@@ -1,90 +1,65 @@
-# Spec — draft-gap-closing-activity
+## ADDED Requirements
 
-## Capability
+### Requirement: draft-gap-closing-activity template exists in development-vessel
 
-A development-vessel activity template that, given a path to a
-failure-mode harness report, autonomously drafts and registers candidate
-closing-activity templates for each unclosed gap scenario.
+The development-vessel SHALL ship a seed template `draft-gap-closing-activity` that, given a path to a failure-mode harness report, drafts and registers candidate closing-activity templates for each unclosed gap scenario.
 
-## Inputs
+#### Scenario: Operator runs the template against a fresh report
 
-| Var | Shape | Source |
-|---|---|---|
-| `report_path` | string (filesystem path) | activity-arg or `lifecycle:goal` impulse |
+- **WHEN** operator invokes `bun run cli execute draft-gap-closing-activity` with `report_path=validation/failure-modes/reports/<latest>.json`
+- **THEN** the template reads the report via `fs_read`
+- **AND** iterates scenarios whose `emergence_class="gap"`
+- **AND** for each unclosed gap dispatches a draft request to a vessel advertising `llm_completion`
+- **AND** writes a `validation/failure-modes/proposals/proposal-<scenario_id>.json` with `proposal.authored_by="make_activity_autonomous"`
+- **AND** calls `activity_create_variant` to register the drafted template as a candidate variant
 
-The activity reads the report file via `fs_read`. The report is expected
-to match the JSON schema written by `failure-mode-harness.ts`:
+#### Scenario: LLM returns malformed template
 
-```
-{
-  scenarios: [
-    {
-      scenario_id: string,
-      emergence_class: "reuse" | "new" | "gap" | "gap_accepted",
-      ...
-    }
-  ]
-}
-```
+- **WHEN** the `llm_completion` dispatch returns JSON that does not parse into a valid `ActivityTemplate`
+- **THEN** the template records `failure_mode.type="verifier_negative"` with `context.validator_id="template_parse"` for that scenario
+- **AND** continues to the next scenario without aborting the run
 
-## Outputs
+#### Scenario: Rate limit on repeated drafts
 
-For each gap scenario without three or more existing proposal files in
-the last 7 days, the activity emits:
+- **WHEN** a `scenario_id` already has three or more proposal files written within the last 7 days
+- **THEN** the template skips that scenario
+- **AND** records the skip in the trace without emitting a new proposal
 
-1. A `activityTemplateProposal` impulse — the drafted template JSON,
-   wrapped per the proposal-file format
-   (`{proposal: {...}, template: {...}}`) with
-   `proposal.authored_by = "make_activity_autonomous"`.
-2. A file at
-   `validation/failure-modes/proposals/proposal-<scenario_id>.json` with
-   the proposal contents.
-3. An `activityTemplateVariant` impulse representing the activity-api
-   variant registration.
+#### Scenario: Discovery returns no LLM provider
 
-If the variant registration fails (LLM returned malformed JSON, or
-shape contract doesn't match scenario's
-`expected_emergence.activity_signature`), the activity records a
-`failure_mode.type = "verifier_negative"` for that gap iteration and
-continues to the next scenario.
+- **WHEN** no vessel advertises the `llm_completion` shape at execution time
+- **THEN** the template records `failure_mode.type="cascading"` with `context.upstream_failure_mode.reason="no_llm_completion_provider"`
+- **AND** the entire activity execution is marked failed
 
-## Behaviour contract
+### Requirement: Template does not mutate live activity-api templates
 
-1. Activity does NOT mutate any existing activity-api template. Only
-   variant creation is permitted (write-scope; CLAUDE.md §"Variant-first
-   repair").
+The `draft-gap-closing-activity` template SHALL only create variants via `activity_create_variant`. It MUST NOT call `activityTemplate_update` or `activityTemplate_deprecate` on existing templates.
 
-2. Activity does NOT invoke any LLM directly from dev-vessel TypeScript.
-   The LLM call goes through discovery to an external vessel advertising
-   the `llm_completion` shape.
+#### Scenario: Variant-only writes
 
-3. Activity rate-limits itself: if there are already ≥ 3 proposal files
-   for a given `scenario_id` in the past 7 days, the scenario is
-   skipped. This bounds variant pollution.
+- **WHEN** the template completes successfully for a scenario
+- **THEN** the activity-api write path used is `activity_create_variant`
+- **AND** no `activityTemplate_update` or `activityTemplate_deprecate` calls are recorded in the trace
 
-4. Activity is idempotent on re-run within the same cycle: scenarios
-   that already have a same-cycle proposal (matched by mtime within the
-   report's window) are skipped.
+### Requirement: Template does not invoke LLMs from dev-vessel TypeScript
 
-5. Activity produces a single `activityExecutionTrace`. Per-gap
-   sub-tasks are represented as child tasks within the trace (or child
-   executions if iteration is fanned out via composition).
+The `draft-gap-closing-activity` template SHALL route every LLM call through a discovered vessel advertising `llm_completion`. The development-vessel TypeScript source MUST NOT import or invoke any LLM SDK directly.
 
-## Failure modes
+#### Scenario: Static-import audit
 
-| Mode | Trigger | Effect |
-|---|---|---|
-| `verifier_negative` | LLM returns invalid template JSON | Skip scenario, continue |
-| `safety_breach` (cycle) | Detected re-attempt of a scenario over rate-limit | Skip scenario, log |
-| `cascading` | Discovery returns no `llm_completion` provider | Entire activity fails; manifest as a degraded trace |
-| `budget_exhausted` | Total token spend exceeds `MAX_BUDGET_USD` (config) | Halt after current scenario |
+- **WHEN** `repos/development-vessel/src/` is grepped for imports of `@anthropic-ai/sdk`, `@ai-sdk/anthropic`, `@ai-sdk/openai`, or `openai`
+- **THEN** no matches are found
 
-## Lift KPI consequence
+### Requirement: Lift KPI consequence
 
-Each successful run reduces the next cycle's
-`manual_intervention_debt` by the number of subagent dispatches it
-replaces (i.e. the number of proposals it authors with
-`authored_by: "make_activity_autonomous"`). When that count equals the
-gap count and persists for three consecutive cycles, the
-progression-driver stamps `LIFT CANDIDATE` and the human operator can
-step back.
+Each successful `draft-gap-closing-activity` run SHALL reduce the next cycle's `manual_intervention_debt` by the number of proposals it authors with `authored_by="make_activity_autonomous"`. When `manual_intervention_debt` reaches zero and `baseline_gap_count` strictly decreases for three consecutive cycles, the progression-driver SHALL stamp `LIFT CANDIDATE` in its cycle report.
+
+#### Scenario: Three-cycle clean run triggers lift stamp
+
+- **WHEN** three consecutive cycle-N.json reports show `manual_intervention_debt=0` and strictly decreasing `baseline_gap_count`
+- **THEN** the latest cycle report contains `lift_kpi.lift_candidate=true`
+
+#### Scenario: One bad cycle resets the counter
+
+- **WHEN** a cycle reports non-zero `manual_intervention_debt` after a streak of clean cycles
+- **THEN** `lift_kpi.consecutive_zero_debt_cycles` resets to zero in that cycle report
