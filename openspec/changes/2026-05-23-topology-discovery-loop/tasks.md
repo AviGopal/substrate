@@ -12,9 +12,12 @@ tests + dry-run seed test remain green at every commit boundary.
   green inside the container. In particular: the observer pattern from
   R3.x exists and is verified to fire `harness-run-matrix` on
   `lifecycle:execution:succeeded` of `draft-gap-closing-activity`.
-- [ ] 0.3 `convergence-tick` activity is the ONLY source of LIFT signal
-  from this point forward. The bookkeeping progression-driver remains
-  running for debug only.
+- [ ] 0.3 `coverage-tick` (cell-count progress) and
+  `substrate-health-tick` (posterior confidence, graph stability,
+  optimality) are the two measurement sources that feed the lift
+  hand-over decision. Lift itself is the operator decision recorded
+  in `validation/state/lift-status.json`. The bookkeeping
+  progression-driver remains running for debug only.
 
 ## §1 Measurement resolvers (read-only against existing endpoints)
 
@@ -58,8 +61,10 @@ are added; existing ones are reused.
   implementation detail.
 
 - [ ] 1.5 Wire shape + dispatch: `config.discovery.shapes` += three new
-  shapes, `routes/impulses.ts` += three cases. `bun run lint` reports
-  22 shapes / 22 dispatch cases (current 19 + 3).
+  measurement shapes, `routes/impulses.ts` += three cases. Combined
+  with §3a.4 (which adds `coverageReport` + `substrateHealthReport`),
+  `bun run lint` reports 23 shapes / 23 dispatch cases (current 19 +
+  3 measurement + 1 coverage + 1 substrate-health).
 
 ## §2 Probe activities (re-use existing dispatch primitives)
 
@@ -95,18 +100,53 @@ mechanism. No new resolvers required.
 - [ ] 2.4 Register all three in `src/seed/index.ts`. Dry-run seed test
   extends automatically.
 
-## §3 Convergence-tick
+## §3 Coverage-tick
 
-- [ ] 3.1 `src/resolvers/convergence-tick.ts` — pointer shape
-  `{ type: "convergence_tick", lookback_cycles?: number }`. Pulls the N
+> Renamed from "Convergence-tick" during spec work. The aggregator
+> measures cell-count progress in the 4-cell table, not convergence in
+> a statistical sense and not lift. See design.md §F for the rename
+> rationale.
+
+- [ ] 3.1 `src/resolvers/coverage-tick.ts` — pointer shape
+  `{ type: "coverage_tick", lookback_cycles?: number }`. Pulls the N
   most recent `learnedTopologySnapshot` impulses from activity-api and
   computes monotonicity per design §F.
 
-- [ ] 3.2 `src/seed/convergence-tick.ts` — wraps the resolver.
+- [ ] 3.2 `src/seed/coverage-tick.ts` — wraps the resolver.
 
 - [ ] 3.3 Per-resolver test asserting monotonicity computation: feed
-  three synthetic snapshots, assert lift_candidate is true when all
-  three monotonic and false otherwise.
+  three synthetic snapshots, assert `coverage_progress` is true when
+  all three monotonic and false otherwise.
+
+## §3a Substrate-health-tick
+
+Sibling aggregator to coverage-tick. Measures the properties
+coverage-tick does NOT — posterior confidence, graph stability, and
+(when available) optimality — per design §G.
+
+- [ ] 3a.1 `src/resolvers/substrate-health-tick.ts` — pointer shape
+  `{ type: "substrate_health_tick", lookback_window_seconds?: number }`.
+  Queries `variant_performance_metrics` and `context_thompson_scores`
+  for posterior confidence; queries `activity_template` and
+  `composition_success` for graph stability over the lookback window;
+  reads the most recent stratified-harness report from
+  `validation/results/` for optimality (nullable). Emits a
+  `substrateHealthReport` per design §G.
+
+- [ ] 3a.2 `src/seed/substrate-health-tick.ts` — wraps the resolver.
+
+- [ ] 3a.3 Per-resolver test feeds synthetic
+  `variant_performance_metrics`, template-count deltas, edge-count
+  deltas, and harness inputs. Asserts each `*_passing` boolean
+  computes per the default thresholds in design §G, and asserts
+  `optimality_passing` is `null` when no harness data is supplied.
+
+- [ ] 3a.4 Wire shape + dispatch: `config.discovery.shapes` += two new
+  shapes (`coverageReport`, `substrateHealthReport`),
+  `routes/impulses.ts` += two cases (`coverage_tick`,
+  `substrate_health_tick`). Combined with §1.5: `bun run lint` reports
+  23 shapes / 23 dispatch cases (current 19 + 3 measurement + 1
+  coverage + 1 substrate-health).
 
 ## §4 Observer extension
 
@@ -134,14 +174,16 @@ parallel observer.
     → escalate-unknown-shape
 
   any of the above completion
-    → convergence-tick (debounced ≥30s)
+    → coverage-tick (debounced ≥30s)
+    → substrate-health-tick (debounced ≥30s)
   ```
 - [ ] 4.2 Observer test extends `test/observers/registry-change-observer.test.ts`:
   - synthetic `learnedTopologySnapshot` event with non-empty
     `untraversed_edges` → both `reachable-unlearned-report` and
     `probe-untraversed-edge` get dispatched.
   - empty report bodies → no probe firing.
-  - 30s debounce on `convergence-tick`.
+  - 30s debounce on `coverage-tick`.
+  - 30s debounce on `substrate-health-tick`.
 
 ## §5 Trace tagging
 
@@ -162,28 +204,40 @@ parallel observer.
 
 - [ ] 6.3 Observer-driven cascade: trigger ONE `draft-gap-closing-activity`
   run. Confirm via `journalctl` that the chain
-  snapshot → report × 2 → probe × N → convergence-tick all fires
-  within 5 minutes WITHOUT human invocation.
+  snapshot → report × 2 → probe × N → coverage-tick AND
+  substrate-health-tick all fire within 5 minutes WITHOUT human
+  invocation.
 
-- [ ] 6.4 Inspect three consecutive `convergenceReport` impulses
+- [ ] 6.4 Inspect three consecutive `coverageReport` impulses
   produced over an hour. Confirm:
   - reachable_learned strictly increases (or holds at steady-state if
     no advertised shapes are Reachable+Unlearned), AND
   - reachable_unlearned strictly decreases (or holds at 0).
   When all three monotonic conditions hold for three reports, the
-  `lift_candidate` field flips to true.
+  `coverage_progress` field flips to true.
+
+- [ ] 6.5 Inspect the most recent `substrateHealthReport` emission
+  produced during the same window. Confirm
+  `health_verdict.overall_passing = true` (or document which
+  sub-block is failing and why). Both 6.4 (`coverage_progress=true`)
+  and 6.5 (`overall_passing=true`) are required for §S.4.
 
 ## §S Acceptance gates
 
-- [ ] S.1 `bun test` green; tests added in §1.4, §3.3, §4.2.
-  ≥130 tests, 0 fails (current 122 + 5 new resolver tests + 1
-  convergence test + 4 observer cases ≈ 132).
-- [ ] S.2 `bun run lint` clean: 22 advertised shapes, 22 dispatch cases.
+- [ ] S.1 `bun test` green; tests added in §1.4, §3.3, §3a.3, §4.2.
+  ≥131 tests, 0 fails (current 122 + 5 new resolver tests + 1
+  coverage test + 1 substrate-health test + 4 observer cases ≈ 133).
+- [ ] S.2 `bun run lint` clean: 23 advertised shapes, 23 dispatch cases.
 - [ ] S.3 In-container §6 chain runs end-to-end on a non-human trigger.
-- [ ] S.4 At least one `convergenceReport` impulse has
-  `lift_candidate=true` from natural substrate activity. This is the
-  load-bearing assertion — it is the foundation-doc convergence
-  criterion made operationally checkable.
+- [ ] S.4a At least one `coverageReport` impulse has
+  `coverage_progress=true` from natural substrate activity. This is
+  the cell-count progress half of the load-bearing assertion.
+- [ ] S.4b The most recent `substrateHealthReport` emission at the
+  time S.4a is evaluated has
+  `health_verdict.overall_passing=true`. This is the substrate-health
+  half. The two together are necessary inputs to lift; the hand-over
+  itself (writing `validation/state/lift-status.json`) is the
+  operator's decision and is out of scope for this spec.
 
 ## Out of scope (next change)
 

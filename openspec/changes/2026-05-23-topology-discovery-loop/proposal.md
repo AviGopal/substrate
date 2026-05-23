@@ -116,19 +116,36 @@ tag carries no special privilege; it is observational, so trace analysis
 can answer questions like "what fraction of recent traces were
 substrate-initiated probes?" without recomputing.
 
-## Convergence criterion (operational definition of lift)
+## Coverage-progress criterion (one of two inputs to lift)
 
-Foundation §33's convergence definition becomes measurable:
+> **Naming note** — earlier drafts of this spec called the report below
+> `convergenceReport` and the boolean field `lift_candidate`. Those names
+> overclaimed: what the report actually measures is **cell-count progress
+> in the 4-cell topology table**, not convergence in any statistical
+> sense, and it says nothing about posterior confidence or graph
+> stability. During spec work the report was renamed to `coverageReport`
+> and its boolean to `coverage_progress`. A sibling report
+> `substrateHealthReport` covers the properties this report does not.
+> "Lift" survives ONLY as the operator hand-over decision (recorded in
+> `validation/state/lift-status.json`), which requires BOTH coverage
+> progress AND substrate health to be passing.
 
-> The substrate is **converging** when, across consecutive measurement
-> cycles, the count in the Reachable+Unlearned cell strictly decreases AND
-> the count in the Unknown cell strictly decreases AND the count in the
-> Reachable+Learned cell strictly increases — without external goal input.
+Foundation §33's convergence definition becomes measurable as
+**coverage progress**:
+
+> The substrate is making **coverage progress** when, across consecutive
+> measurement cycles, the count in the Reachable+Unlearned cell strictly
+> decreases AND the count in the Unknown cell strictly decreases AND the
+> count in the Reachable+Learned cell strictly increases — without
+> external goal input.
 
 The prior bookkeeping lift criterion (debt=0, 6/6 reuse on a hand-picked
 matrix) is replaced by a topology-level criterion that is computable from
 the snapshot impulses alone. Three consecutive cycles meeting the
-strictly-monotonic condition is the new LIFT CANDIDATE marker.
+strictly-monotonic condition flips `coverage_progress=true` in the
+emitted `coverageReport`. That flag is one of two inputs to the lift
+hand-over decision; see §G of design.md for the sibling
+`substrateHealthReport`.
 
 ## Out of scope
 

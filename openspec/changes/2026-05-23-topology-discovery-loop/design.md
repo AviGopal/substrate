@@ -52,7 +52,13 @@ Likewise:
 - "Coverage gap" → **Reachable+Unlearned** (4-cell cell name).
 - "Vocabulary gap" → **Unknown** (4-cell cell name).
 - "Curiosity firing" → **substrate-initiated topology probe**.
-- "Lift" (per-loop bookkeeping) → **Convergence** (foundation §33).
+- "Lift" (per-loop bookkeeping) → split into **coverage progress**
+  (the substrate-measured cell-count proxy for foundation §33's
+  Convergence, in `coverageReport`), **substrate health** (the
+  substrate-measured grounding/stability/optimality block, in
+  `substrateHealthReport`), and **hand-over** (the operator decision,
+  in `validation/state/lift-status.json`). The earlier single-term
+  "Lift" overclaimed; see §F naming note.
 - "Self-directed execution" → not named in the foundation as a motion;
   this spec treats it as Recall (foundation's i→t→o motion) initiated by
   the substrate rather than by an external caller. The motion is the same;
@@ -186,10 +192,22 @@ The observer predicate becomes a small dispatch table mapping the
 incoming event's `activity_template_id` (or `output_shapes`) to the
 next-template-to-fire. No new infrastructure; just longer table.
 
-## F. Convergence measurement
+## F. Coverage measurement
 
-A new aggregator `convergence-tick` activity reads the most recent N
-`learnedTopologySnapshot` impulses and emits a `convergenceReport` with:
+> **Naming note** — earlier drafts called this aggregator
+> `convergence-tick` and its emitted shape `convergenceReport`, with a
+> `lift_candidate` boolean. The names overclaimed: what this aggregator
+> actually measures is **cell-count progress in the 4-cell table**, not
+> convergence in any statistical sense, and emphatically not lift (which
+> is the operator hand-over decision). During spec work the aggregator
+> was renamed to `coverage-tick`, the shape to `coverageReport`, the
+> boolean to `coverage_progress`, and the cycle counter to
+> `consecutive_progressing_cycles`. See §G for the sibling
+> `substrateHealthReport` that measures what this aggregator does NOT
+> (posterior confidence, graph stability, optimality).
+
+A new aggregator `coverage-tick` activity reads the most recent N
+`learnedTopologySnapshot` impulses and emits a `coverageReport` with:
 
 ```typescript
 {
@@ -204,17 +222,107 @@ A new aggregator `convergence-tick` activity reads the most recent N
     reachable_unlearned_strictly_decreasing: boolean;
     unknown_strictly_decreasing: boolean;
   };
-  consecutive_converging_cycles: number;
-  lift_candidate: boolean;   // all three monotonic & ≥ 3 consecutive cycles
+  consecutive_progressing_cycles: number;
+  coverage_progress: boolean;   // all three monotonic & ≥ 3 consecutive cycles
 }
 ```
 
-This is the new lift criterion. The progression-driver script
+This is one of the two inputs to the lift hand-over decision (the other
+is `substrateHealthReport` in §G). The progression-driver script
 (`validation/scripts/progression-driver.ts`) is left in place for the
 6-scenario debt bookkeeping but no longer carries the lift call. The
-`convergenceReport` is authoritative.
+`coverageReport` is authoritative for coverage progress; the
+`substrateHealthReport` is authoritative for substrate health; the
+operator-written `validation/state/lift-status.json` is authoritative for
+the hand-over decision itself.
 
-## G. Loop closure check
+## G. Substrate health measurement
+
+`coverageReport` measures **cell-count progress** — necessary but not
+sufficient for lift. It says nothing about whether the substrate's
+beliefs are well-grounded, whether the topology has stabilised, or
+whether learned routes are reasonable. Those properties are measured by
+a sibling aggregator `substrate-health-tick` that emits
+`substrateHealthReport`.
+
+### `substrateHealthReport`
+
+```typescript
+{
+  shape: "substrateHealthReport",
+  body: {
+    generated_at: string;            // ISO 8601
+    lookback_window_seconds: number;
+
+    // Posterior confidence — across (template_id, signature) pairs
+    // in the active pool. Reads variant_performance_metrics and
+    // context_thompson_scores from activity-api.
+    posterior_confidence: {
+      total_pairs: number;
+      pairs_above_floor: number;     // count with α+β ≥ floor (default 10)
+      floor: number;
+      median_alpha_plus_beta: number;
+      p25_alpha_plus_beta: number;
+      p75_alpha_plus_beta: number;
+      mean_variance: number;         // mean of Var(Beta(α,β)) across pairs
+    };
+
+    // Graph stability — over the lookback window. Reads
+    // activity_template and composition_success from activity-api.
+    graph_stability: {
+      new_templates_added: number;       // ribosome extractions in window
+      new_edges_added: number;           // composition_success edges added
+      template_count_at_window_start: number;
+      template_count_at_window_end: number;
+      mutation_rate_per_hour: number;    // (new templates + new edges) / hours
+    };
+
+    // Optimality — pulled from Phase 25 stratified harness if available.
+    // Reads the most recent stratified-harness report from
+    // validation/results/. Nullable: a substrate that has not yet run a
+    // stratified harness still emits a meaningful health report.
+    optimality: {
+      most_recent_harness_run_at: string | null;
+      mean_optimality_ratio: number | null;   // chosen-route cost / shortest-known cost
+    };
+
+    // Aggregate health verdict — computed from the three sub-blocks.
+    health_verdict: {
+      confidence_passing: boolean;       // pairs_above_floor / total_pairs ≥ 0.5
+      stability_passing: boolean;        // mutation_rate_per_hour ≤ ceiling
+      optimality_passing: boolean | null; // mean_optimality_ratio ≤ 2.0 when present, null when no harness data
+      overall_passing: boolean;          // all three pass (or stability+confidence when optimality null)
+    };
+  }
+}
+```
+
+### Default thresholds (operator-tunable per substrate)
+
+The health-verdict thresholds are defaults the resolver applies in the
+absence of substrate-specific configuration. Each is operator-tunable
+per substrate via a configuration file or env var (mechanism out of
+scope for this change; consumers should not hard-code these values).
+
+| Threshold                                | Default | Rationale                                                                              |
+|------------------------------------------|---------|----------------------------------------------------------------------------------------|
+| `posterior_confidence.floor` (α+β)       | 10      | Below 10 trials a Beta posterior's variance dominates its mean; ≥ 10 makes the rank stable. |
+| `confidence_passing` ratio threshold     | 0.5     | At least half the active pool must clear the floor for the substrate's choices to be informed. |
+| `stability_passing` mutation_rate ceiling | 1.0 / hr | A substrate adding more than one template+edge per hour on average is still in active learning, not stable. |
+| `optimality_passing` ratio ceiling       | 2.0     | Chosen route ≤ 2× the shortest-known cost. Looser than 1.0 because the harness is a sample. |
+| `optimality_passing` = null behaviour    | excluded from `overall_passing` | A substrate without recent harness data should not be blocked from lift; coverage + stability suffice if no optimality data exists. |
+
+### Sibling aggregator
+
+`substrate-health-tick` is a peer to `coverage-tick`: both are
+aggregators that fire on the same observer triggers, both emit a single
+report impulse + AET, both consume already-existing activity-api
+queries. No new endpoints. The two together give Phase 27 its lift
+criterion: `coverage_progress=true × 3` AND
+`health_verdict.overall_passing=true`. Operator hand-over (recorded in
+`validation/state/lift-status.json`) is the third, separate signal.
+
+## H. Loop closure check
 
 The full topology-discovery loop after this change:
 
@@ -243,10 +351,15 @@ The full topology-discovery loop after this change:
 ```
 
 The loop closes itself. After three cycles where all three monotonic
-conditions hold, the `convergence-tick` activity stamps LIFT CANDIDATE
-into its emitted report. Nothing external is required.
+conditions hold, the `coverage-tick` activity stamps
+`coverage_progress=true` into its emitted `coverageReport`. In parallel,
+`substrate-health-tick` emits `substrateHealthReport`. When both signals
+are passing on the most recent emission, the operator may write
+`status: "confirmed"` to `validation/state/lift-status.json` — that file
+is the durable hand-over marker. Coverage progress + health passing are
+necessary for hand-over; hand-over itself is the operator's decision.
 
-## H. Resolved
+## I. Resolved
 
 - *Why does this not just put everything inside `harness-run-matrix`?* —
   Each measurement activity emits a distinct shape so it can be observed,
