@@ -120,6 +120,27 @@ Reports record per-scenario:
   the same `ensureTestRegistration` mechanism so every scenario gets audited
   for representativeness and goal-alignment.
 
+## Migration to Activity-Driven Harness
+
+As of 2026-05-23, the harness is no longer triggered exclusively by a human operator
+running `failure-mode-harness.ts` by hand. The `development-vessel` lifecycle observer
+now fires `harness-run-matrix` automatically whenever a qualifying
+`execution_completed` WS event arrives (template ids: `draft-gap-closing-activity`,
+`prune-activity`, `replace-activity`, or any output carrying `activityRegistryChange`).
+
+**Current state (transitional):**
+- `validation/scripts/failure-mode-harness.ts` — original script; still runnable manually
+  and by CI.
+- `harness-run-matrix` activity (development-vessel seed) — the new automated path.
+  Calls the same `failure_mode_matrix_score` resolver. Writes an `out_path` shim file
+  so the existing `progression-driver.ts` can consume it without modification.
+- `validation/scripts/progression-driver.ts` — reads the shim file; unchanged.
+
+**Migration path (follow-up work, out of scope for harness-as-lifecycle-participant):**
+When the system reaches Phase 27+, the progression-driver will be updated to read
+the `failureModeReport` directly from activity-api (via impulse pointer), eliminating
+the disk-file shim entirely.
+
 ## Continuous Operation
 
 Once seeded, scenarios run on the weekly harness schedule. The system's

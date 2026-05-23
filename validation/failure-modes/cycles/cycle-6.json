@@ -1,31 +1,36 @@
 {
   "cycle_number": 6,
-  "started_at": "2026-05-22T00:00:00.000Z",
-  "baseline_report": "validation/results/2026-05-22-failure-mode-cycle-6.json",
-  "baseline_gap_count": 0,
-  "baseline_reuse_count": 6,
-  "proposals_authored": 0,
+  "started_at": "2026-05-23T12:06:58.375Z",
+  "baseline_report": "workspace/validation/results/s6.2-test.json",
+  "baseline_gap_count": 6,
+  "baseline_reuse_count": 0,
+  "proposals_authored": 9,
   "proposals_by_author": {
-    "make_activity_autonomous": 0
+    "subagent": 3,
+    "make_activity_autonomous": 6
   },
   "proposals_registered": 0,
-  "manual_intervention_debt": 0,
+  "manual_intervention_debt": 3,
   "manual_intervention_breakdown": {
-    "subagent_dispatches": 0,
+    "subagent_dispatches": 3,
     "human_authored_templates": 0,
-    "operator_admin_actions_required": 0
+    "operator_admin_actions_required": 2
   },
   "remaining_gaps": [],
-  "gaps_with_proposal": [],
+  "gaps_with_proposal": [
+    "fp-15-missing-producer-stale-registration",
+    "fm-43-cascade-attribution-error",
+    "fm-44-silent-trace-loss",
+    "fm-17-resolver-budget-noncompliance",
+    "fp-11-silent-semantic-failure",
+    "fp-12-partial-success-recorded-as-total"
+  ],
   "lift_kpi": {
-    "debt_zero": true,
-    "gap_count_decreasing": true,
-    "autonomous_proposals_present": true,
-    "consecutive_zero_debt_cycles": 2
+    "debt_zero": false,
+    "gap_count_decreasing": false,
+    "consecutive_zero_debt_cycles": 0
   },
   "notes": [
-    "Steady state: reuse=6, gap=0. All 6 variants still discoverable via discover-by-shapes.",
-    "No new proposals needed — all gaps covered by cycle-5 registrations.",
-    "consecutive_zero_debt_cycles=2. One more clean cycle for LIFT CANDIDATE."
+    "6 proposals authored autonomously (via make-activity). This is the lift signal."
   ]
 }
