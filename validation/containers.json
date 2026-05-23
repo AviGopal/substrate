@@ -1,9 +1,9 @@
 {
   "$comment": "Canonical image refs the runner uses. Update these to bump versions.",
   "minibob": {
-    "image": "metabobapp/minibob:0.14.9-d99cd85",
+    "image": "metabobapp/minibob:0.14.11-3a1e51f",
     "default_timeout_seconds": 1200,
-    "$note": "0.14.9-d99cd85: F-V42 goal_processing_standard fallback in standalone mode. prev: 0.14.8-fbe70e5."
+    "$note": "0.14.11-3a1e51f: GOAL_RUNTIME=ias-executor gate + GoalHost bridge + decision_record_completeness resolver. prev: 0.14.9-d99cd85 (F-V42 goal_processing_standard fallback in standalone mode)."
   },
   "claudeCode": {
     "image": "metabob-validation/claude-code:local",
