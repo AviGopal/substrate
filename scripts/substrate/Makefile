@@ -98,6 +98,9 @@ sync-development-vessel:
 	@for f in $(DEV_VESSEL_SRC)/src/resolvers/*.ts; do \
 	    docker cp $$f substrate-live:/vessels/development-vessel/src/resolvers/$$(basename $$f); \
 	done
+	@for f in $(DEV_VESSEL_SRC)/src/seed/*.ts; do \
+	    docker cp $$f substrate-live:/vessels/development-vessel/src/seed/$$(basename $$f); \
+	done
 	@echo "[sync] development-vessel source synced to substrate-live"
 
 restart-development-vessel: sync-development-vessel
