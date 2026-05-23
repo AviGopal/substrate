@@ -154,12 +154,19 @@ sufficient. H6 becomes load-bearing only when vessels federate across
 substrates. Blocking extraction on H6 means lift waits years; extracting
 now and adding H6 later is the right order.
 
+## Resolved questions
+
+- **Q1 (resolved 2026-05-24, gap-001)**: `concept-db` **is a substrate unit.**
+  Validation narration confirmed: the running substrate has 18 templates but no
+  concept layer. Without concept-db, the substrate cannot reason semantically
+  about its own templates — `propose-spec` would be limited to string-matching
+  against template names. Concept-db is a pre-existing vessel (not requiring
+  VesselDaemon extraction); its substrate plumbing is a unit file + Dockerfile
+  line + seed step. Addressed in Phase 1b below. See
+  `findings/validation.md` Finding 1 and `validation/gaps/gap-001-…`.
+
 ## Open questions
 
-- **Q1**: Does `concept-db` get a place in this layout? It already runs
-  as a vessel. The LLM-flavoured resolvers (goal-enrichment) call
-  concept-db indirectly today. After extraction, llm-resolver-vessel
-  calls concept-db as a downstream dependency — no new wiring.
 - **Q2**: Does `vessel-forge-host` (`repos/ias-executor-ts/src/examples/vessel-forge-host.ts`)
   become its own substrate unit or fold into `development-vessel`?
   Recommendation: **fold into development-vessel** as a new resolver.

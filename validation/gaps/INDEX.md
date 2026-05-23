@@ -24,7 +24,8 @@ one or more description records to this directory, update the table below:
 
 | gap_id | category | severity | recurring_count | bridge_path | observed_first | last_observed |
 |--------|----------|----------|-----------------|-------------|----------------|---------------|
-| _(no observations yet)_ | | | | | | |
+| [gap-001](gap-001-no-concept-db-in-local-substrate.md) | missing_concept | substantive | 1 | deploy concept-db as substrate unit; run extract-concepts | 2026-05-23T23:30Z | 2026-05-23T23:31Z |
+| [gap-002](gap-002-ws-auth-rejects-substrate-internal-key.md) | irreducibly_operator | minor | 1 | operator access issue — not substrate self-knowledge | 2026-05-23T23:30Z | 2026-05-23T23:31Z |
 
 ## Categories
 
@@ -33,6 +34,3 @@ See [`docs/SUBSTRATE_NARRATION_PROTOCOL.md`](../../docs/SUBSTRATE_NARRATION_PROT
 `doc_unread`, `training_knowledge`, `irreducibly_operator`.
 
 See §E for the bridge-path enumeration.
-
-| gap-001 | missing_concept | substantive | 1 | extract-concepts (blocked — concept-db not running in local substrate) | 2026-05-23T23:30Z | 2026-05-23T23:31Z |
-| gap-002 | irreducibly_operator | minor | 1 | (operator access; not substrate self-knowledge) | 2026-05-23T23:30Z | 2026-05-23T23:31Z |

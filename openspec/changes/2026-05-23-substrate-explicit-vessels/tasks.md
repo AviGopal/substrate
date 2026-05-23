@@ -43,6 +43,26 @@
 - [ ] 1.6 Smoke test: `curl localhost:8230/health` returns 200; vessel
   appears in `GET discovery-vessel:8100/resolve?type=fileContent`.
 
+## Phase 1b — concept-db substrate unit (semantic layer for self-description)
+
+Prerequisite: concept-db repo must be present at `repos/concept-db/`.
+Validation finding: gap-001 — substrate cannot reason semantically about its
+own templates without a concept layer; `propose-spec` degrades to
+string-matching.
+
+- [ ] 1b.1 Add `scripts/substrate/units/concept-db.service` — `After=activity-api.service discovery-vessel.service identity-vessel.service`. Port 8260.
+- [ ] 1b.2 Extend `scripts/substrate/gen-env.sh` with a `concept-db.env` block
+  (CONCEPT_DB_API_KEY, ACTIVITY_API_ENDPOINT, DISCOVERY_VESSEL_ENDPOINT).
+- [ ] 1b.3 Extend `scripts/substrate/seed-identity.ts` to mint a `concept-db`
+  API key and write it to `/etc/substrate/env/concept-db.env`.
+- [ ] 1b.4 Add `COPY repos/concept-db /vessels/concept-db` +
+  `RUN cd /vessels/concept-db && bun install` to `Dockerfile.substrate`.
+- [ ] 1b.5 Add a seed step: after identity seeding, POST the 24 Phase-22.S2
+  concepts (12 vessel-construction-pattern + 12 impulse-activity-pattern) to
+  concept-db's seed endpoint. Gate: idempotent (skip if already seeded).
+- [ ] 1b.6 Smoke test: `curl localhost:8260/health` returns 200; vessel appears
+  in `GET discovery-vessel:8100/registry/stats`.
+
 ## Phase 2 — llm-resolver-vessel (decouples LLM credentials)
 
 - [ ] 2.1 New repo `repos/llm-resolver-vessel/`. Move `repos/minibob/src/llm.ts`
