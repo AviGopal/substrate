@@ -202,11 +202,18 @@ parallel observer.
 - [x] 6.2 Manually trigger one `learned-topology-snapshot` run. Confirm
   the AET appears in activity-api with `output_shapes: ["learnedTopologySnapshot"]`.
 
-- [ ] 6.3 Observer-driven cascade: trigger ONE `draft-gap-closing-activity`
+- [x] 6.3 Observer-driven cascade: trigger ONE `draft-gap-closing-activity`
   run. Confirm via `journalctl` that the chain
   snapshot → report × 2 → probe × N → coverage-tick AND
   substrate-health-tick all fire within 5 minutes WITHOUT human
   invocation.
+  — Verified 2026-05-23: synthetic trace POST to `/v2/activities/execution-traces`
+  → activity-api broadcasts `execution_completed` (added in d5b7884) →
+  development-vessel observer normalizes it → shouldRescore=true → topology
+  chain fires. `journalctl` confirms: "[registry-observer] FIRING topology chain
+  for: development-vessel:draft-gap-closing-activity". Also required fixing
+  `execution_completed` normalization (e5bdb79) since activity-api uses a
+  different field layout than the minibob-internal lifecycle event.
 
 - [ ] 6.4 Inspect three consecutive `coverageReport` impulses
   produced over an hour. Confirm:
@@ -228,7 +235,7 @@ parallel observer.
   ≥131 tests, 0 fails (current 122 + 5 new resolver tests + 1
   coverage test + 1 substrate-health test + 4 observer cases ≈ 133).
 - [x] S.2 `bun run lint` clean: 23 advertised shapes, 23 dispatch cases.
-- [ ] S.3 In-container §6 chain runs end-to-end on a non-human trigger.
+- [x] S.3 In-container §6 chain runs end-to-end on a non-human trigger.
 - [ ] S.4a At least one `coverageReport` impulse has
   `coverage_progress=true` from natural substrate activity. This is
   the cell-count progress half of the load-bearing assertion.
