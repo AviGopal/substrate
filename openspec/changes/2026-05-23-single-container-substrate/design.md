@@ -128,39 +128,51 @@ callers are the processes we started on localhost.
 When H1/H2/handshake eventually land, they extend the trust model to the container
 boundary and beyond. Nothing inside the container changes.
 
-## Development Flow Impact
+## Autonomous Development Loop
 
-### Primary loop (replaces "push to canary, validate"):
+There is no developer in the loop. The container is a self-developing substrate.
 
 ```
-1. Edit vessel source in repos/<vessel>/
-2. Restart that vessel's systemd unit inside the running container
-   → docker exec substrate systemctl restart activity-api
-3. Validate immediately against localhost:8080
-4. Thompson accumulates locally from each execution
+minibob daemon (boredom loop)
+  → Thompson-selects activity from activity-api recommendations
+  → activity dispatches tasks to development-vessel resolvers:
+      file_read    — read workspace source files
+      file_write   — apply code modifications
+      test_run     — bun test in the affected directory
+      git_commit   — commit changes to /workspace
+      systemd_restart — make the change live (deterministic resolver)
+  → lifecycle:execution:succeeded fires on activity-api WS
+  → development-vessel lifecycle observer sees it
+  → harness-run-matrix fires automatically
+  → failureModeReport impulse → activity-api AET → Thompson update
+  → boredom loop wakes, Thompson now reflects the harness result
+  → repeat
 ```
 
-For source volume mounting (recommended for active development):
+The workspace volume (`/workspace`) is the substrate's own instructional state — the
+codebase it reads and modifies through its own execution. The human provides the initial
+codebase at container start and observes via workbench. The human does not submit tasks,
+run the harness, or restart units.
+
+### Container invocation:
 
 ```bash
-docker run \
-  -v ./repos/metabob-activity-api:/app/activity-api \
-  -v ./repos/minibob:/app/minibob \
-  -v ./repos/development-vessel:/app/development-vessel \
-  -v ./substrate-data:/data \
+docker run -d \
+  --name substrate \
+  --cap-add SYS_ADMIN \
+  -v /path/to/metabob-devbob:/workspace \   # the substrate's own body
+  -v ./substrate-data:/data \               # Thompson state + traces
+  -e ANTHROPIC_API_KEY=sk-ant-... \
   -p 8080:8080 \
+  -p 8100:8100 \
   metabob/substrate:dev
 ```
 
-With source volumes, editing a file and restarting the unit reflects the change without
-rebuilding the image. Bun restarts in under 2 seconds.
-
-### ~/.metabob/config.json for local substrate:
-
+`~/.metabob/config.json` (on the host, for observation and harness runs):
 ```json
 {
   "metabob": {
-    "apiKey": "<seeded-local-key>",
+    "apiKey": "<seeded-on-first-start>",
     "endpoint": "http://localhost:8080"
   },
   "providers": {
@@ -169,23 +181,38 @@ rebuilding the image. Bun restarts in under 2 seconds.
 }
 ```
 
-All harness scripts (reuse, stratified, failure-mode) read this config and require no
-other change. The canary substrate and local substrate coexist — switching is changing
-one line in config.json.
+### The `systemd_restart` resolver (required):
+
+When an activity modifies a vessel's source file and commits the change, the running
+vessel still executes the old code. `systemd_restart` is a deterministic resolver in
+development-vessel that calls `systemctl restart <unit_name>` and waits for the unit
+to reach `active (running)`. Without this resolver the autonomous loop produces code
+changes that never take effect.
+
+The resolver is simple: no LLM, no Thompson input. It requires `--cap-add SYS_ADMIN`
+(already required for systemd PID 1). It takes `{ unit: string }` as input and returns
+`{ success: boolean, active: boolean, startup_ms: number }`.
+
+The shape it owns: `systemd_unit_restart`. Development-vessel advertises it to
+discovery-vessel; activities that modify vessel code include a final task dispatching
+this shape.
 
 ### Canary relationship:
 
-The canary cluster remains the CI/CD target. `git push origin dev` still deploys to
-canary. The two substrates are independent: different Thompson posteriors, different
-trace histories. This is correct by design — each substrate learns from its own
-executions. The local substrate builds its own learning state from development activity.
+The canary cluster continues to exist as a separate substrate. `git push origin dev`
+still deploys to canary. The two substrates are independent — different Thompson
+posteriors, different trace histories. This is correct by design. The autonomous loop
+inside the container eventually produces commits that propagate to canary via the normal
+push path; at that point canary inherits the improved code but not the local Thompson
+state.
 
 ### Thompson cold-start:
 
-The local substrate starts with no execution history. Recommendation quality is low
-initially. The development activity itself (running harnesses, executing goals via
-minibob, seeding templates) accumulates the posteriors. The stratified harness provides
-a concrete measurement of when quality is sufficient.
+The container starts with no execution history. Recommendation quality is low initially
+and improves as the boredom loop accumulates traces. The harness-as-lifecycle-participant
+spec provides the measurement: `failureModeReport` impulses appear in activity-api,
+`consecutive_zero_debt_cycles` advances, and the Thompson pool warms as activities
+succeed and fail. No human needs to read these numbers for the loop to function.
 
 ## Relationship to `ias-executor-as-canonical-host`
 
@@ -195,6 +222,21 @@ daemon mode IS the canonical executor. `development-vessel` attaches to it (via 
 `GOAL_RUNTIME=ias-executor` gate already in minibob 0.14.11). The container is the
 scope within which this single-executor invariant holds.
 
+## Relationship to `harness-as-lifecycle-participant`
+
+The harness-as-lifecycle-participant spec (2026-05-23) is downstream of this one. It
+wires `harness-run-matrix` to fire automatically when `lifecycle:execution:succeeded`
+arrives from a registry-modifying activity, and defines `failureModeReport` as an
+impulse shape rather than a JSON file on disk.
+
+Together the two specs close the autonomous loop:
+- This spec: the container exists, all vessels run, the boredom loop executes activities
+- Harness spec: measurement is automatic, results feed Thompson, no human runs the harness
+
+Neither spec works without the other. The substrate without the lifecycle observer
+is an executor without a measurement mechanism. The lifecycle observer without the
+substrate has no localhost activity-api to subscribe to.
+
 ## What This Unblocks in the Main Loop
 
 | Blocked item                               | Status under single-container substrate    |
@@ -202,9 +244,9 @@ scope within which this single-executor invariant holds.
 | Phase 5 cutover (H1 + H5 prerequisites)   | Unnecessary: container is the trust boundary|
 | Cross-vessel JWT handshake                 | Unnecessary: localhost, no boundary         |
 | H2 vessel identity                         | Unnecessary: we started every process       |
-| Active local development                   | Unblocked immediately on container health   |
-| Failure-mode harness cycles                | Unblocked: point METABOB_ENDPOINT to :8080  |
-| development-vessel autonomous loop         | Unblocked: runs inside the container        |
+| Autonomous development loop                | Unblocked: boredom loop + lifecycle observer|
+| Failure-mode harness cycles                | Unblocked: fires from lifecycle events      |
+| development-vessel autonomous code changes | Unblocked: systemd_restart closes the loop  |
 
 The container does not bypass the need for H1/H2/handshake in production or in any
 multi-substrate topology. It creates a safe development context where those properties

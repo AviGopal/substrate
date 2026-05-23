@@ -164,81 +164,107 @@ a trace visible in activity-api.
 
 ---
 
-## Phase 3 — Developer Tooling
+## Phase 3 — `systemd_restart` Resolver
 
-### 3.1 Makefile
+The autonomous loop requires development-vessel to restart a systemd unit after
+modifying vessel source code. Without this resolver, code changes by activities never
+take effect — the running vessel keeps executing the old code.
 
-- [ ] 3.1.1 Write `scripts/substrate/Makefile` (or `substrate.mk`) with targets:
-  - `make substrate-build` — `docker build -f Dockerfile.substrate -t metabob/substrate:dev .`
-  - `make substrate-run` — `docker run -d --name substrate --cap-add SYS_ADMIN -v ./substrate-data:/data -p 8080:8080 -p 8100:8100 -p 8200:8200 metabob/substrate:dev`
-  - `make substrate-restart-<vessel>` — `docker exec substrate systemctl restart <vessel>` (one target per vessel)
-  - `make substrate-logs-<vessel>` — `docker exec substrate journalctl -u <vessel> -f`
-  - `make substrate-status` — `docker exec substrate systemctl status` for all vessel units
-  - `make substrate-stop` — `docker stop substrate && docker rm substrate`
-  - `make substrate-shell` — `docker exec -it substrate bash`
+- [ ] 3.1 Add `systemd_restart` resolver to `repos/development-vessel/src/resolvers/`:
+  - Input: `{ unit: string }` (systemd unit name, e.g. `"activity-api"`)
+  - Executes `systemctl restart <unit>` then polls `systemctl is-active <unit>` until
+    active or 30s timeout
+  - Output shape: `systemd_unit_restart` → `{ success: boolean, active: boolean, startup_ms: number }`
+  - Deterministic tier (no LLM). Requires the container to run with `--cap-add SYS_ADMIN`.
+  - Acceptance: calling the resolver restarts the named unit and the unit reaches
+    `active (running)` within the timeout. Returns `success: false` if the unit fails
+    to start (caller can check logs via `journalctl -u <unit> -n 50`).
 
-- [ ] 3.1.2 Write `scripts/substrate/configure-local.sh`: writes `~/.metabob/config.json`
-  with `endpoint: http://localhost:8080` and the seeded API key (fetched from container
-  logs or passed as argument). Prints next steps.
+- [ ] 3.2 Register `systemd_unit_restart` shape with discovery-vessel at
+  development-vessel startup. Advertise it alongside the other development shapes
+  (`git_status`, `git_diff`, `file_content`, etc.).
 
-### 3.2 Source volume development mode
+- [ ] 3.3 Add a per-resolver test for `systemd_restart`:
+  - Mock the `systemctl` call; verify the resolver polls until active.
+  - Verify timeout path returns `{ success: false }`.
+  - Verify the output shape matches `systemd_unit_restart` contract.
 
-- [ ] 3.2.1 Document (in a `SUBSTRATE.md` in the super-repo root or `docs/`) the
-  source-volume dev loop:
+## Phase 4 — Observation Tooling
+
+The substrate is autonomous; these tools are for observation only, not for driving
+the loop.
+
+- [ ] 4.1 Write `scripts/substrate/Makefile` with targets:
+  - `substrate-build` — build the container image
+  - `substrate-run` — start the container with workspace + data volumes
+  - `substrate-logs-<vessel>` — `docker exec substrate journalctl -u <vessel> -f`
+  - `substrate-status` — `docker exec substrate systemctl status` for all units
+  - `substrate-stop` — stop and remove the container
+  - `substrate-shell` — `docker exec -it substrate bash` for inspection
+
+  The `substrate-run` target mounts the workspace:
   ```bash
-  make substrate-run-dev  # adds -v ./repos/<vessel>:/app/<vessel> for each vessel
-  # Edit repos/metabob-activity-api/src/routes/activities.ts
-  make substrate-restart-activity-api
-  # Change is live in ~2 seconds
+  docker run -d --name substrate --cap-add SYS_ADMIN \
+    -v $(pwd):/workspace \
+    -v ./substrate-data:/data \
+    -p 8080:8080 -p 8100:8100 \
+    metabob/substrate:dev
   ```
-  Add `substrate-run-dev` target to the Makefile that mounts all repos/ source trees.
+
+- [ ] 4.2 Write `scripts/substrate/configure-local.sh`: writes `~/.metabob/config.json`
+  with `endpoint: http://localhost:8080` and the seeded API key from container logs.
+  This is for observation tools (harness runs from host, workbench access) — not for
+  driving the autonomous loop, which runs entirely inside the container.
+
+- [ ] 4.3 Write `docs/SUBSTRATE.md` covering:
+  - What the substrate is (autonomous self-developing system, not a dev environment)
+  - How to start it and observe it (Makefile targets, workbench URL)
+  - The autonomous loop topology (boredom → activity → development-vessel → systemd_restart → harness)
+  - How to read Thompson progress (stratified harness output, workbench templates view)
+  - How to steer without driving (add a spec file to /workspace/openspec/changes/ — the
+    system will discover and implement it)
 
 ---
 
-## Phase 4 — Harness Validation
+## Phase 5 — Autonomous Loop Verification
 
-### 4.1 Smoke test
+- [ ] 5.1 Smoke: all vessels reach `active (running)` within 60s of container start.
+  `curl http://localhost:8080/health` returns `{"status":"healthy"}`.
 
-- [ ] 4.1.1 With `~/.metabob/config.json` pointing to `http://localhost:8080`, run:
-  ```bash
-  bun run validation/scripts/failure-mode-harness.ts --label "local-smoke"
-  ```
-  Acceptance: harness completes without connection errors. gap_count may be non-zero
-  (cold Thompson state); that's expected. No HTTP 500s or auth failures.
+- [ ] 5.2 Boredom loop fires: within 5 minutes of container start with no external
+  input, minibob daemon selects and executes an activity. Verify via:
+  `GET http://localhost:8080/v2/activities/execution-traces?limit=1` returns ≥1 row.
 
-- [ ] 4.1.2 Run `minibob --single "list the files in the current directory"` against
-  the local substrate. Acceptance: execution completes, trace appears in activity-api
-  (`GET http://localhost:8080/v2/activities/execution-traces?limit=1` returns a row).
+- [ ] 5.3 `systemd_restart` resolver functions: dispatch an activity that writes a
+  trivial change to a test file in /workspace and calls `systemd_restart` for
+  `development-vessel`. Verify the unit restarts and returns to active without
+  container restart.
 
-### 4.2 Thompson warm-up baseline
+- [ ] 5.4 Lifecycle observer fires: manually run `draft-gap-closing-activity` via
+  minibob. Verify `harness-run-matrix` fires automatically within 30s by observing
+  a new `failureModeReport`-shaped AET in activity-api:
+  `GET http://localhost:8080/v2/activities/execution-traces?activity_template_id=development-vessel:harness-run-matrix`
+  returns ≥1 row. (This task gates on harness-as-lifecycle-participant Phase 1 being
+  complete inside the container.)
 
-- [ ] 4.2.1 Commit a `validation/baselines/local-substrate-cold.json` capturing the
-  initial state: template count, thompson_pool_size=0, recommend_mrr from first
-  stratified harness run. This is the baseline against which warm-up is measured.
-
-- [ ] 4.2.2 After 48h of development activity (or 50+ executions), run the stratified
-  harness again and compare. Acceptance: thompson_pool_size > 0, recommend_mrr > cold
-  baseline. Document the warm-up trajectory in `validation/failure-modes/PROGRESSION.md`
-  under a new "Local Substrate" section.
+- [ ] 5.5 Commit `validation/baselines/local-substrate-cold.json`: template count,
+  thompson_pool_size, recommend_mrr from first stratified harness run inside the
+  container. This is the baseline for measuring autonomous warm-up.
 
 ---
 
-## Phase 5 — Main Loop Integration
+## Phase 6 — Main Loop Integration
 
-- [ ] 5.1 Update `openspec/changes/2026-04-26-impulse-activity-loop/tasks.md` to add
-  Phase 26 (this spec) as the active development path. Note that Phase 5 cutover
-  prerequisites (H1, H5) are not required in the single-container substrate and the
-  development loop proceeds under the container trust model.
+- [ ] 6.1 Update CLAUDE.md "Known substrate endpoints" to add
+  `http://localhost:8080 — local single-container substrate (make substrate-run)`.
 
-- [ ] 5.2 Update CLAUDE.md "Known substrate endpoints" to include:
-  ```
-  - http://localhost:8080  — local single-container substrate
-  ```
-  And update "The Development Loop" to show `make substrate-restart-<vessel>` as the
-  iteration step alongside `git push`.
+- [ ] 6.2 Update CLAUDE.md "The Development Loop" to describe the autonomous model:
+  the substrate runs the loop; the human steers by adding specs to /workspace/openspec/;
+  the harness fires from lifecycle events, not from scheduled scripts.
 
-- [ ] 5.3 Update `.claude/scheduled_tasks.lock` if any scheduled harness runs are
-  pinned to the canary endpoint, so they use `METABOB_ENDPOINT` from config instead.
+- [ ] 6.3 Confirm `.claude/scheduled_tasks.lock` harness runs use `METABOB_ENDPOINT`
+  from config (not hardcoded canary). Already addressed by the portability commit
+  (`8133817d`) — verify no regressions.
 
 ---
 
@@ -246,11 +272,14 @@ a trace visible in activity-api.
 
 The spec is complete when:
 
-- [x] `docker run metabob/substrate:dev` brings up all six services (infra + 4 vessels)
-  without manual intervention
-- [x] `~/.metabob/config.json` with `endpoint: http://localhost:8080` passes the
-  failure-mode harness smoke test
-- [x] `minibob --single "<goal>"` produces a trace visible in activity-api
-- [x] Restarting a single vessel unit does not require restarting the container
-- [x] The stratified harness produces a non-error report (gap_count may be non-zero)
-- [x] CLAUDE.md and SUBSTRATE.md reflect the local-first development loop
+- [ ] `docker run metabob/substrate:dev` brings up all seven services (infra + 5 vessels)
+  without manual intervention; all units reach `active (running)` within 60s
+- [ ] Minibob boredom loop fires autonomously within 5 minutes; a trace appears in
+  activity-api without external input
+- [ ] `systemd_restart` resolver functions: an activity can restart a vessel unit and
+  the unit returns to active without container restart
+- [ ] Lifecycle observer fires `harness-run-matrix` automatically after a
+  registry-modifying activity completes (gates on harness-as-lifecycle-participant
+  Phase 1)
+- [ ] `validation/baselines/local-substrate-cold.json` committed
+- [ ] `docs/SUBSTRATE.md` describes the autonomous model, not a developer workflow
