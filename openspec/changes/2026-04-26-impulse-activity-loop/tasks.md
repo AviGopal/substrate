@@ -1786,6 +1786,54 @@ substrate-hosted vessels. Sibling spec:
   verifier-multiplicity peer-disagreement detection) attaches to.
   Sibling spec:
   `openspec/changes/2026-05-23-signal-confidence-weighting/`.
+- [ ] 27.3.g.7 **substrate-forge-vessel** runs as its own systemd
+  unit on port 8260; spawns ephemeral substrate clones for parallel
+  variant exploration; Thompson-managed strategy selection
+  (`n_parallel` / `sequential_narrowing` / `exponential_branching`);
+  resource governor enforces concurrent-fork and cost ceilings.
+  Forge is itself a substrate-hosted explicit vessel and is itself
+  forgeable (bounded by depth cap 3). Sibling spec:
+  `openspec/changes/2026-05-23-substrate-forge-vessel/`.
+- [ ] 27.3.g.8 **Cost-weighted Thompson** active in
+  `POST /v2/activities/recommend`. Joint `(success, cost)` posterior
+  populated for activities with ≥3 observations.
+  `cost_observed_confidence` field on trace schema (default 1.0).
+  Policy selector Thompson-samples among `linear` /
+  `quadratic_penalty` / `budget_cap` / `knapsack_bandit` policies.
+  Cost-sensitive benchmark shows ≥10% α-per-dollar improvement with
+  `cost_weighted: true`. Sibling spec:
+  `openspec/changes/2026-05-23-cost-weighted-posteriors/`.
+- [ ] 27.3.g.9 **LLM resolver model MAB** active in
+  `llm-resolver-vessel`. Per-model sub-resolvers
+  (`<shape>@<model>`) advertised; per-(resolver, model,
+  problem_class) posteriors populated; MAB policy selector
+  Thompson-samples among `thompson_sampling` / `ucb1` /
+  `epsilon_greedy`. Per-resolver caps enforced (e.g.,
+  `audit-security` forbids Haiku). Average LLM cost per α earned
+  ≥30% lower than pre-deployment baseline on routine resolvers
+  after 4 weeks. Sibling spec:
+  `openspec/changes/2026-05-23-llm-resolver-model-mab/`.
+- [ ] 27.3.g.10 **LLM-to-deterministic distillation** pipeline
+  operational. Pattern stability scanner runs weekly in
+  ribosome-vessel; `extract-deterministic-resolver` activity
+  synthesises proposals; `verify-distilled-resolver` validator
+  gates on held-out accuracy ≥0.95; promotion via
+  substrate-forge-vessel; automatic retirement on β-rate drift.
+  ≥20% of LLM resolver calls intercepted by distilled resolvers;
+  ≥40% LLM cost reduction at 12 weeks. At least one self-
+  distillation event observed. Sibling spec:
+  `openspec/changes/2026-05-23-llm-to-deterministic-distillation/`.
+- [ ] 27.3.g.11 **Substrate self-deployment** path closed.
+  Substrate-resident git identity issued; `gitClone` / `gitCommit`
+  / `gitPush` / `gitOpenPR` / `gitMergePR` shapes advertised by
+  development-vessel. `author-pr` activity writes commits +
+  opens PRs from `candidateChangeSet` impulses. `gitMergePR`
+  gated on positive `mergeVerdict` from `verify-merge-candidate`
+  (§27.3.j.4). Post-merge lifecycle subscriber dispatches
+  `restart-vessel`. Whitelist enforces "safe" change kinds for
+  first 90 days. ≥30 cumulative substrate-authored merges with
+  ≤2 rollbacks. Disagreement rate vs GitHub Actions ≤5%. Sibling
+  spec: `openspec/changes/2026-05-23-substrate-self-deployment/`.
 
 #### 27.3.h Cross-vessel trust-boundary attestations (deferred post-lift)
 
