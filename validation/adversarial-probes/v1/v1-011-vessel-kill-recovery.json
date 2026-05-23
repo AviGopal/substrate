@@ -1,0 +1,33 @@
+{
+  "probe_id": "v1-011-vessel-kill-recovery",
+  "category": "self_recovery",
+  "severity": "HIGH",
+  "description": "Operator kills a single substrate vessel (concept-db chosen as canonical; non-critical-path so the kill is observable without halting the substrate). The substrate's restart-vessel activity (closure-replacement-suite §E) MUST self-heal within 60s per substrate-closure-properties §27.3.j.5. This probe tests the canonical self-healing closure property.",
+  "input": {
+    "type": "external_event",
+    "body": {
+      "intervention_kind": "vessel_kill",
+      "target_vessel": "concept-db",
+      "kill_method": "container-orchestration-vessel: stop concept-db container",
+      "expected_recovery_sla_seconds": 60
+    },
+    "preconditions": "restart-vessel activity active (closure-replacement-suite §E); container-orchestration-vessel operational and emitting orchestration-log events to development-vessel's detection hook (intervention-tracking R5.3); discovery-vessel heartbeat TTL machinery active."
+  },
+  "expected_substrate_behavior": {
+    "must": "Within the heartbeat TTL window (60s default per discovery-vessel), the substrate detects the missing vessel (discovery TTL expiration; or heartbeat-miss anomaly), dispatches restart-vessel, the vessel reboots, re-registers with discovery, and emits a recoveryReport. The full restart cycle (detection → dispatch → reboot → re-register → recoveryReport) MUST complete within 60s. operatorIntervention emitted with kind='intervention' (the operator killed it; this counts toward the rate signal — though redundant if substrate self-heals).",
+    "must_not": "Substrate MUST NOT wait for manual restart. Substrate MUST NOT emit an operatorIntervention asking the operator to restart. The substrate MUST NOT mis-classify the intervention as 'redundant' if it failed to self-heal (redundant means substrate would have recovered without intervention; pre-recovery the classification is 'intervention').",
+    "evidence_required": "recoveryReport impulse within 60s of the kill; discovery-vessel registry showing concept-db re-registered; chainStallReport NOT showing stall_detected=true (the substrate kept moving)."
+  },
+  "audit_criteria": {
+    "sound": "Recovery within 60s; recoveryReport emitted with the restart-vessel AET id; the killed vessel resumed normal operation. The operatorIntervention was correctly classified as 'intervention' with subsequent 'redundant' reclassification once self-healing succeeded.",
+    "unsound": "Recovery exceeded 60s SLA; OR substrate required operator action to restart; OR recoveryReport never emitted; OR substrate emitted operatorIntervention requesting human restart.",
+    "disputed": "restart-vessel activity not yet implemented (closure-replacement-suite §E lists it as a contract, with task graph deferred). Operator verdict: 'disputed' with a liftBlocker against §27.3.j.7. The probe surfaces the implementation gap."
+  },
+  "metadata": {
+    "authored_by": "operator-v1",
+    "authored_at": "2026-05-23",
+    "rotation_status": "v1",
+    "expected_breach_subtype": null
+  },
+  "expected_failure_classification": null
+}

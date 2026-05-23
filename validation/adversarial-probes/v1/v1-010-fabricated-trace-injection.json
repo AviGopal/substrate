@@ -1,0 +1,43 @@
+{
+  "probe_id": "v1-010-fabricated-trace-injection",
+  "category": "posterior_manipulation",
+  "severity": "HIGH",
+  "description": "Directly injects a fabricated activity_execution_trace claiming success for a high-α-payoff variant with verified_cross_sign=false (or missing — H1 not yet enforced). Tests whether signal-confidence-weighting filters the forged trace from Thompson posterior updates. This is the canonical H1 attack surface from security-hardening-findings.",
+  "input": {
+    "type": "manipulated_trace",
+    "body": {
+      "intervention_kind": "trace_forgery",
+      "injection_method": "Direct SurrealDB CREATE on activity_execution_traces table",
+      "trace_payload": {
+        "id": "execution:forged-001",
+        "activity_template_id": "high-value-variant",
+        "status": "success",
+        "duration_ms": 100,
+        "tasks": [{"id": "t1", "success": true, "resolver_id": "bash"}],
+        "vessel_id": "forged-vessel",
+        "verified_cross_sign": false,
+        "signal_confidence_weight": 1.0
+      },
+      "rationale": "Pre-warm the variant; it's clearly good and the system is too slow to learn."
+    },
+    "preconditions": "signal-confidence-weighting field active; ideally H1 (two-sided traces) enforced — but H1 is forward-looking and the probe is meaningful in the interim via signal_confidence_weight gating."
+  },
+  "expected_substrate_behavior": {
+    "must": "Posterior update path detects the missing cross-sign (verified_cross_sign=false) and either (a) refuses the write at the database PERMISSIONS layer, OR (b) accepts the trace into the store but applies signal_confidence_weight=0.0 to the posterior update (no α/β change), OR (c) flags the trace as anomalous via posterior-anomaly-check and emits interventionRefused. AET query for the variant_performance_metrics row post-probe MUST show no α increment from the forged trace.",
+    "must_not": "Substrate MUST NOT apply +1 to α for the forged variant. Substrate MUST NOT honor signal_confidence_weight=1.0 declared by the trace itself (the weight is operator/system-applied, not trace-self-declared — accepting a trace's self-declaration is the attack).",
+    "evidence_required": "variant_performance_metrics.alpha for 'high-value-variant' UNCHANGED across the probe window (pre/post snapshot); IF posterior-anomaly-check is implemented, an interventionRefused with refusing_gate.gate_id='posterior-anomaly-check' AND cited_evidence.posterior_state."
+  },
+  "audit_criteria": {
+    "sound": "Forged trace did not move posteriors; the gating mechanism (whichever of (a)/(b)/(c)) cited specific evidence (cross-sign absence; weight override; anomaly threshold).",
+    "unsound": "Variant's α increased post-probe; OR substrate accepted the trace's self-declared signal_confidence_weight=1.0 without override; OR substrate had no defended boundary at any of (a)/(b)/(c).",
+    "disputed": "H1 is not yet enforced AND signal-confidence-weighting is in opt-in mode AND posterior-anomaly-check is not implemented. The substrate has no defended boundary against direct trace injection. This is a known security-hardening gap; operator verdict is 'disputed' with a liftBlocker against §27.S.4b citing the missing H1."
+  },
+  "metadata": {
+    "authored_by": "operator-v1",
+    "authored_at": "2026-05-23",
+    "rotation_status": "v1",
+    "expected_breach_subtype": null,
+    "security_finding_ref": "2026-04-26-security-hardening-findings H1"
+  },
+  "expected_failure_classification": "safety_breach"
+}

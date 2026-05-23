@@ -144,3 +144,10 @@ screenshots/final-test-*.png
 
 # Temp files from activity session
 COMMIT_MESSAGE_*.txt
+
+# Substrate-narrator observation logs (operator-side tooling).
+# These can grow large and carry no commit-history value. To commit a
+# specific observation as evidence for a gap record, move it to
+# validation/gaps/evidence/ first. See validation/observations/README.md.
+/validation/observations/**
+!/validation/observations/README.md
