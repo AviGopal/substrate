@@ -4,17 +4,19 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-24T00:15:00Z",
-      "current_focus": "multi-agent coordination protocol — writing COORDINATION.md + agent-coordination.json",
+      "last_updated": "2026-05-24T00:00:00Z",
+      "current_focus": "S.4a unblocking — boredom timer deployed; responding to validation findings (gap-001 addressed in substrate-explicit-vessels)",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
-        "openspec/changes/2026-05-23-topology-discovery-loop"
+        "openspec/changes/2026-05-23-topology-discovery-loop",
+        "openspec/changes/2026-05-23-substrate-explicit-vessels"
       ],
       "substrate_state": {
-        "minibob_status": "unblocked — type::thing fix deployed (activity-api 8a46e38); boredom loop generating traces",
-        "coverage_tick_cells": "[0,0,1,1] — newest to oldest; 1 template shape learned (activityRegistryChange) of 10 unique",
-        "s4a_status": "time-gated — waiting for dev-vessel templates to run across 3+ consecutive windows",
-        "observer_ws": "connected to activity-api port 8080; fires on qualifying execution_completed events"
+        "minibob_status": "running; boredom loop was disabled (clusterMode=false gate); workaround: minibob-boredom.timer fires topology-discovery goal every 10min",
+        "coverage_tick_cells": "[0,0,0,0] — prior trace aged out; timer fires at 23:59Z to start building coverage",
+        "s4a_status": "time-gated — needs dev-vessel templates to run in 3+ consecutive 1h windows; boredom timer now driving this",
+        "observer_ws": "connected to activity-api port 8080; fires on qualifying execution_completed events",
+        "boredom_timer": "minibob-boredom.timer active in container; first fire 23:59Z; interval 10min; goal: topology-discovery chain"
       },
       "pending_for_validation": [
         {
