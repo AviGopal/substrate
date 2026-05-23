@@ -10,8 +10,13 @@ IMAGE   := metabob/substrate
 TAG     := dev
 WORKSPACE := $(shell pwd)/workspace
 
+# Vessel source roots (relative to repo root, two levels up)
+REPO_ROOT := $(CURDIR)/../..
+DEV_VESSEL_SRC := $(REPO_ROOT)/repos/development-vessel
+
 .PHONY: build run logs-all logs-minibob logs-activity-api logs-development-vessel \
-        status shell stop clean
+        status shell stop clean \
+        sync-development-vessel restart-development-vessel
 
 build:
 	docker build -f $(CURDIR)/../../Dockerfile.substrate \
@@ -82,3 +87,20 @@ stop:
 
 clean: stop
 	docker rm -f substrate 2>/dev/null || true
+
+# ── Substrate-only iteration (substrate-live container) ──────────────────────
+
+# Sync development-vessel source into the running container then restart it.
+# Use this instead of docker cp + systemctl restart manually.
+sync-development-vessel:
+	docker cp $(DEV_VESSEL_SRC)/src/config.ts substrate-live:/vessels/development-vessel/src/config.ts
+	docker cp $(DEV_VESSEL_SRC)/src/routes/impulses.ts substrate-live:/vessels/development-vessel/src/routes/impulses.ts
+	@for f in $(DEV_VESSEL_SRC)/src/resolvers/*.ts; do \
+	    docker cp $$f substrate-live:/vessels/development-vessel/src/resolvers/$$(basename $$f); \
+	done
+	@echo "[sync] development-vessel source synced to substrate-live"
+
+restart-development-vessel: sync-development-vessel
+	docker exec substrate-live systemctl restart development-vessel.service
+	@sleep 2
+	@docker exec substrate-live systemctl is-active development-vessel.service | grep -q active && echo "[restart] development-vessel active" || echo "[restart] ERROR: development-vessel not active"
