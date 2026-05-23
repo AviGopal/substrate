@@ -94,12 +94,17 @@ clean: stop
 # Use this instead of docker cp + systemctl restart manually.
 sync-development-vessel:
 	docker cp $(DEV_VESSEL_SRC)/src/config.ts substrate-live:/vessels/development-vessel/src/config.ts
+	docker cp $(DEV_VESSEL_SRC)/src/index.ts substrate-live:/vessels/development-vessel/src/index.ts
 	docker cp $(DEV_VESSEL_SRC)/src/routes/impulses.ts substrate-live:/vessels/development-vessel/src/routes/impulses.ts
 	@for f in $(DEV_VESSEL_SRC)/src/resolvers/*.ts; do \
 	    docker cp $$f substrate-live:/vessels/development-vessel/src/resolvers/$$(basename $$f); \
 	done
 	@for f in $(DEV_VESSEL_SRC)/src/seed/*.ts; do \
 	    docker cp $$f substrate-live:/vessels/development-vessel/src/seed/$$(basename $$f); \
+	done
+	@docker exec substrate-live mkdir -p /vessels/development-vessel/src/observers
+	@for f in $(DEV_VESSEL_SRC)/src/observers/*.ts; do \
+	    docker cp $$f substrate-live:/vessels/development-vessel/src/observers/$$(basename $$f); \
 	done
 	@echo "[sync] development-vessel source synced to substrate-live"
 
