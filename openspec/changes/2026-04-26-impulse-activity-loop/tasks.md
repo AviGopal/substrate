@@ -31,6 +31,16 @@ This spec is at "code-complete on Phase 10 + Phase 12" with 74 `[ ]` boxes remai
 - **9.3, 9.4**: thompson_posterior REST handler / workbench migration deferred — both surfaces co-exist; switching workbench risks breaking selection-metadata path during migration.
 - **10.13**: K-S regression script (10.S3 verified live; script lives at `scripts/validate-beta-sample.ts` for future re-runs).
 
+## Post-lift siblings (do not block IAL; authored alongside)
+
+The IAL terminates at Phase 27 by declaration (`tasks.md:1664-1675`). Phase 27's lift criterion is achievable on a single substrate per Phase 26 — federation is **not** required for lift. The following sibling specs extend the substrate model outward from the single-container trust boundary and are authored as their own changes, not as new IAL phases.
+
+| Sibling spec | What it adds | Relationship to IAL |
+|---|---|---|
+| [`2026-05-23-vessel-federation`](../2026-05-23-vessel-federation/) | Pubkey-derived vessel ids (subset of H2), content-addressed template ids (reusing the canonical-JSON construction from `2026-05-17-state-space-signature-thompson-keying`), peer-aware discovery-vessel. Lets two discovery-vessels know about each other without leaking topology vocabulary into the rest of the system. | Post-lift. Single substrate satisfies Phase 27's lift criterion without it; federation is the first capability the running substrate can author once peering plumbing exists. Cross-references this spec from Phase 26's "Substrate Model" note about extending the trust model outward. No existing IAL phase is modified. |
+
+Distinct from the IAL's existing federation thread (`design.md §Federation as Scope Delegation`), which is account-level RBAC scope delegation via API keys. The two are orthogonal: account-scope federation decides *whether* a caller may invoke a remote vessel; vessel-federation (discovery-vessel peering) decides *how* the caller learns the remote vessel exists.
+
 ## Tractable from this spec alone
 
 **None.** Every open `[ ]` rolls up to one of the gates above. Continued iteration on this spec yields documentation drift, not code progress. When a gating spec moves, return here to verify the rollup item.
@@ -1405,6 +1415,16 @@ development context where those properties are guaranteed structurally.
 
 Full design: `openspec/changes/2026-05-23-single-container-substrate/design.md`
 Full task list: `openspec/changes/2026-05-23-single-container-substrate/tasks.md`
+
+**Extension path (post-lift, not part of Phase 26):** when the substrate
+needs to reach beyond one container — a developer's laptop talking to a
+canary substrate, two laptops in a pair-programming session — the
+[`2026-05-23-vessel-federation`](../2026-05-23-vessel-federation/)
+sibling spec extends `discovery-vessel` with pubkey-derived vessel ids
+(subset of H2) and peer-aware `/resolve`. From above discovery, the
+caller still just sees a vessel; the system continues to reason about
+vessels, not substrates. Federation is NOT a Phase 26 prerequisite and
+is NOT required for Phase 27 lift.
 
 ### 26.1 Dockerfile.substrate
 
