@@ -392,3 +392,71 @@ Out-of-scope:
 - [x] 11.S.3 README + CLAUDE updates committed. Done 2026-05-22.
 - [x] 11.S.4 No new advertised shapes; lint chain still clean.
   Done 2026-05-22: 14 shapes (noop added for §S.5; part of S.5 not §11).
+
+## §12 Harness seed template (2026-05-22)
+
+Turns the bespoke `validation/scripts/failure-mode-harness.ts` script into a
+seed template so the failure-mode check is itself an activity that produces
+traces, feeds Thompson sampling, and can be composed into the autonomous loop.
+
+Loop stage: DEV (driven by user request "turn the harness into a seed template").
+
+### 12.1 — New resolvers
+
+Two resolvers added to the vessel, matching the activity-api endpoints used
+by the harness script:
+
+- [x] 12.1.1 `src/resolvers/activity-recommend.ts` — wraps
+  `POST /v2/activities/recommend`. Returns `shape: "activity_recommendations"`
+  with `{ recommendations, count, tier }`. Handles `recommendations` / `activities`
+  / `templates` key variants in the response.
+- [x] 12.1.2 `src/resolvers/activity-discover-by-shapes.ts` — wraps
+  `POST /v2/activities/discover-by-shapes`. Accepts `required_shapes` as
+  string[] or JSON-encoded string (interpolateVars exact-match substitution
+  produces the latter). Normalises `output_schema.produces_shapes` → `output_shapes`
+  and `variant_id` → `id`. Returns `shape: "discovered_activities"` with
+  `{ activities, total, matched, first_id, first_output_shapes, emergence_class }`.
+- [x] 12.1.3 Both shapes added to `config.discovery.shapes` and
+  dispatch cases added to `src/routes/impulses.ts`. Shape-dispatch lint
+  confirms 18 shapes / 18 cases.
+
+### 12.2 — Seed template
+
+- [x] 12.2.1 `src/seed/harness-check-scenario.ts` — ActivityTemplate
+  `development-vessel:harness-check-scenario`. Scores one failure-mode
+  scenario against the live activity-api:
+  1. `fs_read` — load scenario JSON
+  2. `json_path_extract` — extract `output_shapes_must_include`
+  3. `json_path_extract` — extract `id`
+  4. `activity_discover_by_shapes` — forward-mode query; `emergence_class`
+     from result drives the ScenarioOutcome
+  5. `fs_write` — write ScenarioOutcome JSON to `out_path`
+- [x] 12.2.2 Template registered in `src/seed/index.ts`.
+
+### 12.3 — Tests
+
+- [x] 12.3.1 `test/resolvers/activity-recommend.test.ts` — 4 tests:
+  200 with recommendations key, fallback to activities key, structuredError
+  on 400, empty recommendations array.
+- [x] 12.3.2 `test/resolvers/activity-discover-by-shapes.test.ts` — 6 tests:
+  emergence_class=reuse when found, output_schema.produces_shapes normalisation,
+  JSON-string required_shapes, gap when empty, early-exit with no API call when
+  required_shapes=[], structuredError on 500.
+- [x] 12.3.3 Dry-run test (`test/seed-templates-dry-run.test.ts`) covers
+  the new template automatically (all resolvers in DISCOVERY_SHAPES).
+
+### §12 Acceptance gates
+
+- [x] 12.S.1 `bun test` passes: 122 tests / 24 files / 0 fails. Done 2026-05-22.
+- [x] 12.S.2 `bun run lint` passes: 18 shapes, 18 dispatch cases, tsc clean.
+  Done 2026-05-22.
+- [x] 12.S.3 `src/seed/harness-check-scenario.ts` exists and references
+  only resolvers in DISCOVERY_SHAPES. Done 2026-05-22.
+- [ ] 12.S.4 Operator runs `bun run cli seed-templates` to upload
+  `development-vessel:harness-check-scenario` to canary. Gated on §6
+  (write-scope key already present).
+- [ ] 12.S.5 One end-to-end invocation via `run-activity
+  development-vessel:harness-check-scenario --var scenario_path=...
+  --var out_path=...` produces a ScenarioOutcome JSON at `out_path`
+  with `emergence_class` matching the harness script's output for the
+  same scenario.
