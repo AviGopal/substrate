@@ -1,0 +1,20 @@
+[Unit]
+Description=SurrealDB
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+ExecStart=/usr/local/bin/surreal start \
+    --bind 127.0.0.1:8000 \
+    --user root \
+    --pass ${SURREAL_PASS} \
+    --log info \
+    file:/var/lib/surrealdb/data.db
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

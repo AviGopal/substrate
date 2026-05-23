@@ -1,0 +1,19 @@
+[Unit]
+Description=identity-vessel
+After=surrealdb.service valkey.service discovery-vessel.service
+Requires=surrealdb.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8101
+Environment=HOST=127.0.0.1
+WorkingDirectory=/vessels/identity-vessel
+ExecStart=/root/.bun/bin/bun /vessels/identity-vessel/src/index.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

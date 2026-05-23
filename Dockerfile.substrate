@@ -1,0 +1,135 @@
+# Dockerfile.substrate — single-container autonomous development substrate
+#
+# Runs the entire vessel fleet under systemd PID 1.
+# All inter-vessel calls are localhost — no trust boundary to cross.
+#
+# Build:
+#   docker build -f Dockerfile.substrate -t metabob/substrate:dev .
+#
+# Run:
+#   docker run --rm -it \
+#     -e JWT_SECRET=<secret> \
+#     -e SURREAL_PASS=<pass> \
+#     -e METABOB_API_KEY=<key> \
+#     -e ANTHROPIC_API_KEY=<key> \
+#     -v $(pwd)/workspace:/workspace \
+#     --tmpfs /run --tmpfs /run/lock \
+#     metabob/substrate:dev
+
+FROM debian:bookworm-slim AS base
+
+# systemd requires these
+ENV container=docker
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    systemd \
+    systemd-sysv \
+    dbus \
+    curl \
+    ca-certificates \
+    unzip \
+    git \
+    jq \
+    redis-server \
+    && rm -rf /var/lib/apt/lists/* \
+    # Remove units that try to mount real hardware or start udev
+    && systemctl mask \
+        dev-hugepages.mount \
+        sys-fs-fuse-connections.mount \
+        systemd-remount-fs.service \
+        systemd-udev-settle.service \
+        systemd-udevd.service \
+        getty.target \
+        serial-getty@.service \
+        console-getty.service \
+        systemd-journald-audit.socket
+
+# --- Bun ---
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH=/root/.bun/bin:$PATH
+
+# --- SurrealDB ---
+ARG SURREAL_VERSION=2.3.3
+RUN curl -sSf https://install.surrealdb.com | sh -s -- --version v${SURREAL_VERSION}
+
+# --- Valkey (provided by redis-server installed above) ---
+# redis-server is Redis-compatible; symlink as valkey-server for unit naming consistency
+RUN ln -s /usr/bin/redis-server /usr/local/bin/valkey-server
+
+# --- Vessel sources ---
+WORKDIR /vessels
+
+# Copy shared packages first (used by multiple vessels)
+COPY packages ./packages
+
+# discovery-vessel
+COPY repos/discovery-vessel/package.json repos/discovery-vessel/bun.lock* ./discovery-vessel/
+RUN cd discovery-vessel && bun install --frozen-lockfile
+COPY repos/discovery-vessel/src ./discovery-vessel/src
+COPY repos/discovery-vessel/index.ts ./discovery-vessel/
+COPY repos/discovery-vessel/tsconfig.json ./discovery-vessel/
+
+# identity-vessel
+COPY repos/identity-vessel/package.json repos/identity-vessel/bun.lock* ./identity-vessel/
+RUN cd identity-vessel && \
+    sed -i 's|file:../../packages/vessel-discovery-client|file:/vessels/packages/vessel-discovery-client|g' package.json && \
+    bun install
+COPY repos/identity-vessel/src ./identity-vessel/src
+COPY repos/identity-vessel/sql ./identity-vessel/sql
+COPY repos/identity-vessel/tsconfig.json ./identity-vessel/
+
+# metabob-activity-api
+COPY repos/metabob-activity-api/package.json repos/metabob-activity-api/bun.lock* ./activity-api/
+RUN cd activity-api && bun install --frozen-lockfile
+COPY repos/metabob-activity-api/src ./activity-api/src
+COPY repos/metabob-activity-api/sql ./activity-api/sql
+COPY repos/metabob-activity-api/scripts ./activity-api/scripts
+COPY repos/metabob-activity-api/tsconfig.json ./activity-api/
+
+# ias-executor-ts (local dependency of minibob)
+COPY repos/ias-executor-ts/package.json repos/ias-executor-ts/bun.lock* ./ias-executor-ts/
+COPY repos/ias-executor-ts/src ./ias-executor-ts/src
+COPY repos/ias-executor-ts/dist ./ias-executor-ts/dist
+COPY repos/ias-executor-ts/tsconfig*.json ./ias-executor-ts/
+RUN cd ias-executor-ts && bun install --frozen-lockfile
+
+# minibob
+COPY repos/minibob/package.json repos/minibob/bun.lock* ./minibob/
+RUN cd minibob && \
+    sed -i 's|file:../../packages/vessel-discovery-client|file:/vessels/packages/vessel-discovery-client|g' package.json && \
+    sed -i 's|file:../ias-executor-ts|file:/vessels/ias-executor-ts|g' package.json && \
+    bun install
+COPY repos/minibob/src ./minibob/src
+COPY repos/minibob/index.ts ./minibob/
+COPY repos/minibob/tsconfig.json ./minibob/
+
+# development-vessel
+COPY repos/development-vessel/package.json repos/development-vessel/bun.lock* ./development-vessel/
+RUN cd development-vessel && bun install --frozen-lockfile
+COPY repos/development-vessel/src ./development-vessel/src
+COPY repos/development-vessel/tsconfig.json ./development-vessel/
+
+# --- Substrate runtime config ---
+RUN mkdir -p /etc/substrate /workspace /var/lib/surrealdb
+
+COPY scripts/substrate/units/ /etc/systemd/system/
+COPY scripts/substrate/entrypoint.sh /usr/local/bin/substrate-entrypoint
+COPY scripts/substrate/gen-env.sh /usr/local/bin/gen-env
+COPY scripts/substrate/seed-identity.ts /vessels/seed-identity.ts
+
+RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env && \
+    systemctl enable \
+        surrealdb.service \
+        valkey.service \
+        discovery-vessel.service \
+        identity-vessel.service \
+        activity-api.service \
+        minibob.service \
+        development-vessel.service
+
+VOLUME ["/workspace"]
+
+STOPSIGNAL SIGRTMIN+3
+
+ENTRYPOINT ["/usr/local/bin/substrate-entrypoint"]

@@ -1,0 +1,20 @@
+[Unit]
+Description=development-vessel
+After=activity-api.service
+Requires=activity-api.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8090
+Environment=HOST=127.0.0.1
+Environment=WORKSPACE_ROOT=/workspace
+WorkingDirectory=/vessels/development-vessel
+ExecStart=/root/.bun/bin/bun /vessels/development-vessel/src/index.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

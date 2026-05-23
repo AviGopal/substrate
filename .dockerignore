@@ -1,0 +1,41 @@
+# .dockerignore for Dockerfile.substrate
+# Exclude heavy/irrelevant paths from the build context
+
+# node_modules everywhere
+**/node_modules
+**/.git
+
+# Repos not needed in the substrate container
+repos/deployment
+repos/metabob-analysis-api
+repos/metabob-cloud-dashboard
+repos/metabob-internal-dashboard
+repos/metabob-dashboard
+repos/activity-dashboard
+repos/workbench
+repos/concept-db
+repos/conversation-vessel
+repos/obsidian-vessel
+repos/react-renderer
+repos/terminal
+repos/metabob-mcp
+repos/metabob-opencode
+repos/metabob-proto
+repos/metabob-rpc-api
+repos/k8s-activity-executor
+repos/vessels
+# repos/ias-executor-ts is needed by minibob
+repos/cpg-inference-ts
+repos/user-vessel
+repos/activity-monitor
+repos/metabob-cli
+
+# Validation / test artifacts
+validation/results
+*.png
+*.jpg
+*.pdf
+docs/assets
+
+# Local workspace (mounted at runtime, not baked in)
+workspace

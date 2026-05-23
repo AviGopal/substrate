@@ -1,0 +1,20 @@
+[Unit]
+Description=metabob-activity-api
+After=identity-vessel.service discovery-vessel.service
+Requires=surrealdb.service valkey.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8080
+Environment=HOST=127.0.0.1
+WorkingDirectory=/vessels/activity-api
+ExecStartPre=/root/.bun/bin/bun /vessels/activity-api/scripts/init-database.ts
+ExecStart=/root/.bun/bin/bun /vessels/activity-api/src/index.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
