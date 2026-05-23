@@ -2001,6 +2001,19 @@ The list exists to give the operator a frame for evaluating whether
 substrate-authored work matches the larger arc, and to give the
 substrate's own propose-spec activity a candidate target list.
 
+The structural shift across S2 → S3 is an inversion: pre-lift the
+operator authors the substrate; post-lift the substrate authors
+representations of external systems (including the operator). The
+vessel pattern, established categorically pre-lift by
+`openspec/changes/2026-05-23-operator-and-public-contracts`, becomes
+the framework the substrate extends. The agenda below is organized
+by what kind of vessel the substrate models or publishes for. Items
+marked "external-system-vessel" are instances of the substrate
+authoring its model of one external system; items marked "publication"
+are instances of the substrate authoring its own emission contract for
+external consumers. The substrate may also author work outside this
+typology — its loop is not constrained by the typology.
+
 **Security** — the substrate authors:
 - H1 two-sided execution-trace verification (cross-vessel signing,
   pairing, vessel_trust_score gating). Sibling: `2026-04-26-security-hardening-findings`.
@@ -2022,7 +2035,7 @@ substrate's own propose-spec activity a candidate target list.
   Phase 2+).
 - Discovery-vessel pubkey identity extension to substrate identity.
 
-**Cooperation / coopting external vessels** — the substrate authors:
+**Cooperation / coopting external vessels** (external-system-vessels the substrate models post-lift) — the substrate authors:
 - `external-resolver-vesselization` implementation (ribosome-for-
   externals — mint vessels from observed external-call patterns).
   Sibling: `2026-05-23-external-resolver-vesselization`.
@@ -2048,6 +2061,30 @@ substrate's own propose-spec activity a candidate target list.
 - Self-dispatch of restart-vessel / restore-from-backup activities
   in response to attack signals (uses existing closure-replacement-
   suite activities; the new piece is the dispatch heuristic).
+
+**External-system catalog** (external-system-vessels) — the substrate authors:
+- Operator-vessel-trust-tuning (Thompson on operator-emitted impulse
+  categories; learns which operator inputs are most reliable).
+- External-system-vessel specs for each external system the substrate
+  observes (Anthropic API, Perplexity, GitHub, CI systems, future
+  MCP servers). Each follows the pattern in
+  `external-resolver-vesselization` / `external-resolver-grounding` /
+  the deferred `external-observer-vesselization` sibling, with the
+  operator-vessel framing from `operator-and-public-contracts`
+  generalized.
+- External-vessel-pruning (substrate retires external-vessels whose
+  contracts have drifted; pattern extends `prune-activity`).
+
+**Substrate publication** (publication) — the substrate authors:
+- Substrate-state-snapshot publication (a periodically-emitted
+  aggregate of substrate state for external consumers; extends
+  `substrate-public-contracts` from `operator-and-public-contracts`).
+- Cross-substrate substrate-attestation (proves substrate state to
+  peer substrates; consumes G3 aggregation predicates from
+  `zk-trace-attestations` when those land).
+- Operator-readable-summary contracts (substrate publishes operator-
+  consumable summaries; the format and cadence are substrate-tuned
+  based on operator audit feedback).
 
 The substrate may also author work not on this list. Operator's role
 is to observe substrate-authored proposals and verify they align with
@@ -2084,7 +2121,30 @@ When both hold over a sustained window of measured adversarial exposure, the sub
 
 **Operator role during S2 → S3:**
 
-Not anchor maintainer waiting to be needed. Adversarial tester of substrate autonomy. The operator's job:
+Two coordinate framings of the operator's role apply, both true:
+
+(a) **Adversarial tester of substrate autonomy** — actively probing
+the substrate's defended boundaries, exposing the substrate to
+adversarial conditions, observing the substrate's responses. The
+substrate's increasing capacity to refuse with cited rationale
+(push-away) is the load-bearing signal.
+
+(b) **One vessel among many the substrate models** — the operator,
+formally registered via `operator-and-public-contracts`, is a vessel
+the substrate observes, weighs inputs from, and publishes outputs to.
+The substrate's increasing accuracy in modeling the operator-vessel
+(predicting operator interventions; calibrating operator-emitted
+impulse trust weights; refining the substrate-public-contracts the
+operator consumes) is the symmetric S3 signal.
+
+S3 readiness is the conjunction: the substrate refuses operator
+interventions correctly AND the substrate's internal model of the
+operator-vessel converges with the operator's external model of the
+substrate. Push-away is the substrate's signal to the operator;
+operator-vessel-trust convergence is the substrate's signal about
+the operator.
+
+The operator's concrete job under both framings:
 1. Expose the substrate to actual adversarial conditions (federation peers, external sources, increasingly sophisticated probes).
 2. Periodically attempt interventions to probe defended boundaries.
 3. Observe the response: refused-with-rationale (push-away), absorbed-without-disruption, or substrate failed to defend (regression).
@@ -2106,7 +2166,12 @@ operating on itself*. The IAL's terminal condition (§27.S.4) marks
 the S1 → S2 transition: the substrate has lifted. S2 → S3 (the arc
 from lifted-but-supervised to distributed-stable-and-adversarial-
 resistant) is documented in §27.S.5 and §27.S.6 but is not specified
-by this IAL — it is emergent and operator-measured. There is no
+by this IAL — it is emergent and operator-measured. The post-lift
+inversion — substrate-as-modeler-of-externals rather than externals-
+as-authors-of-substrate — is the architectural property that makes
+S2 → S3 internally consistent: every external system, including the
+operator, is a vessel the substrate understands and publishes for,
+via the same primitives that govern substrate-internal vessels. There is no
 Phase 28 in this spec because, by definition, Phase 28 onward is
 work the substrate authors and dispatches via its own activities,
 following the agenda enumerated in §27.S.5 along whatever ordering
