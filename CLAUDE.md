@@ -1345,3 +1345,47 @@ Optimization happens from these measurements, not from LLM or human reasoning.
 
 ### The Becoming Never Stops
 Even "completed" activities feed learning that immediately begins transforming the next execution. The instance becomes the vessel for the next transformation in a continuous loop.
+
+## Memory: Substrate Is The Source Of Truth
+
+> **Override notice.** The historical model — operator-side memory files at `~/.claude/projects/-home-avi-documents-work-exp-repo-metabob-devbob/memory/` as the source of truth — is being replaced. The substrate (single-container or canary) is now the authoritative store of what Claude understands about this system. Operator-side files become a derived cache.
+>
+> See [`docs/MEMORY_AS_SUBSTRATE.md`](docs/MEMORY_AS_SUBSTRATE.md) for the full operational guide. This section is the executive summary that every Claude session needs at load.
+
+### The principle
+
+Memory about this system belongs to the system. Writes flow operator → substrate. Reads consult substrate first, fall back to the cache. The shape contract is `memoryNote` (`closure-replacement-suite` §A); the owning vessel is `development-vessel` (`substrate-closure-properties` §1).
+
+### How to save memories (going forward)
+
+- **Preferred (substrate live, `memoryNote_write` registered):** emit a `memoryNote_write` impulse through `/v2/impulses/resolve`. Do NOT also write the file by hand — the `memory-sync-tick` activity mirrors the substrate-side note into `~/.claude/.../memory/` automatically.
+- **Bridge path (substrate offline or `memoryNote` not yet shipped — the operating reality today):** write the file under `~/.claude/.../memory/` with full frontmatter AND add `pending_sync: true` to the frontmatter. The next `memory-pending-flush` tick emits the note to substrate and clears the flag.
+- The four memory types are unchanged: `finding` (recent percolations), `feedback` (user corrections, conventions), `reference` (project orientation). These map directly onto `memoryNote.type`.
+
+### Before recommending from memory
+
+The verification target is the substrate, not the file. When a memory is load-bearing on a recommendation:
+
+- **Preferred:** query the substrate's `memoryNote` resolver by id, type, or title prefix. The response is authoritative.
+- **Bridge path:** read from `MEMORY.md` and the linked file. Surface the fact that the read was cache-side so the user can audit drift.
+
+### Bridge state (today's operating reality)
+
+Substrate's `memoryNote` is specced (`closure-replacement-suite` §A) but not yet implemented in `development-vessel` seed templates. Until it ships:
+
+- Reads fall back to the cache without prejudice — the cache is the only available source for any pre-migration note.
+- Writes write the file with `pending_sync: true` and queue for the flush tick that doesn't yet exist. Operationally this is identical to today's discipline; the only addition is the frontmatter flag.
+- Probe readiness by checking whether `development-vessel` advertises `memoryNote` in its `/shapes` response. If yes, prefer substrate writes. If no, follow the bridge path.
+
+### What NOT to save (unchanged)
+
+These rules carry through to `memoryNote.body`:
+
+- Information available by reading a current file (read it instead)
+- Speculative claims without provenance
+- Secrets, credentials, PII
+- Workflow state that belongs in `openspec/changes/`, not memory
+
+### Migration
+
+Existing operator-side notes (~70 files as of 2026-05-23) will be one-shot bulk-emitted by `validation/scripts/migrate-memory-to-substrate.ts` once `memoryNote_write` is live. The script is idempotent, manifest-tracked, and gated on substrate readiness. After migration, wiping `~/.claude/.../memory/` becomes a recoverable operation — the next sync tick rebuilds the cache from substrate state. Closure-audit `--without=operator-memory` reporting green for three consecutive nights signals migration complete.
