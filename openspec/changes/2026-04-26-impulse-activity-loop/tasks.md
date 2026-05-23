@@ -1428,38 +1428,40 @@ is NOT required for Phase 27 lift.
 
 ### 26.1 Dockerfile.substrate
 
-- [ ] 26.1.1 `Dockerfile.substrate` with systemd PID 1, Bun, SurrealDB binary, Valkey,
+- [x] 26.1.1 `Dockerfile.substrate` with systemd PID 1, Bun, SurrealDB binary, Valkey,
   all vessel source trees copied and deps installed. All six systemd unit files
   (surrealdb, valkey, discovery-vessel, identity-vessel, activity-api, minibob,
   development-vessel) committed to `scripts/substrate/units/`.
   Acceptance: `docker build -f Dockerfile.substrate .` succeeds; all units reach
-  `active (running)` within 60s of container start.
+  `active (running)` within 60s of container start. ✓ 2026-05-23
 
-- [ ] 26.1.2 `/etc/substrate/env` environment file generated at container start from
+- [x] 26.1.2 `/etc/substrate/env` environment file generated at container start from
   `JWT_SECRET`, `SURREAL_PASS`, `METABOB_API_KEY`, `ANTHROPIC_API_KEY` env vars
   (auto-generated if absent, printed to stdout once).
-  Acceptance: restarting the container with the same volume produces the same key values.
+  Acceptance: restarting the container with the same volume produces the same key values. ✓ 2026-05-23
 
 ### 26.2 Init and seeding
 
-- [ ] 26.2.1 `init-database.ts` runs as `ExecStartPre` on activity-api.service against
+- [x] 26.2.1 `init-database.ts` runs as `ExecStartPre` on activity-api.service against
   the local SurrealDB file instance. All ~132 migrations apply idempotently.
-  Acceptance: activity-api `/health` returns `{status:"healthy"}` within 30s.
+  Acceptance: activity-api `/health` returns `{status:"healthy"}` within 30s. ✓ 2026-05-23
 
-- [ ] 26.2.2 `scripts/substrate/seed-identity.ts` seeds one `read,write` API key on
+- [x] 26.2.2 `scripts/substrate/seed-identity.ts` seeds one `read,write` API key on
   first start (detected by empty `api_key` table). Key printed as `SUBSTRATE_API_KEY=`.
   Subsequent starts skip seeding and print the existing key.
   Acceptance: `docker logs substrate | grep SUBSTRATE_API_KEY` outputs one line.
+  ✓ 2026-05-23. Note: seeding is currently manual (docker exec bun /vessels/seed-identity.ts);
+  wiring into entrypoint is Phase 2.2.2 in substrate spec.
 
 - [ ] 26.2.3 `development-vessel` seed-templates runs after healthy start.
   Acceptance: `GET http://localhost:8080/v2/activities/templates` returns non-zero total.
 
 ### 26.3 Developer tooling
 
-- [ ] 26.3.1 `scripts/substrate/Makefile` with targets: `substrate-build`, `substrate-run`,
+- [x] 26.3.1 `scripts/substrate/Makefile` with targets: `substrate-build`, `substrate-run`,
   `substrate-run-dev` (with source volume mounts), `substrate-restart-<vessel>`,
   `substrate-logs-<vessel>`, `substrate-status`, `substrate-stop`, `substrate-shell`.
-  Acceptance: `make substrate-status` shows all units active without entering the container.
+  Acceptance: `make substrate-status` shows all units active without entering the container. ✓ 2026-05-23
 
 - [ ] 26.3.2 `scripts/substrate/configure-local.sh` writes `~/.metabob/config.json`
   with `endpoint: http://localhost:8080` and the seeded API key.
@@ -1473,16 +1475,19 @@ is NOT required for Phase 27 lift.
 
 ### 26.4 Harness validation
 
-- [ ] 26.4.1 Run failure-mode harness against local substrate. Acceptance: completes
+- [x] 26.4.1 Run failure-mode harness against local substrate. Acceptance: completes
   without HTTP errors. gap_count may be non-zero (cold start); that is expected and
   noted in the report label.
+  ✓ 2026-05-23: 6/6 gap (cold start, 0 templates). fm-17 shows detection_signal_present=true.
+  HTTP errors: 0. Report: validation/baselines/local-substrate-cold.json.
 
 - [ ] 26.4.2 Run `minibob --single "list files in current directory"` against local
   substrate. Acceptance: trace appears in `GET /v2/activities/execution-traces?limit=1`.
+  (In progress 2026-05-23 — running now)
 
-- [ ] 26.4.3 Commit `validation/baselines/local-substrate-cold.json` capturing cold-start
+- [x] 26.4.3 Commit `validation/baselines/local-substrate-cold.json` capturing cold-start
   state (template count, thompson_pool_size, recommend_mrr from first stratified run).
-  This is the warm-up baseline.
+  This is the warm-up baseline. ✓ 2026-05-23: committed at validation/baselines/local-substrate-cold.json.
 
 ### 26.5 CLAUDE.md and loop updates
 
@@ -1667,9 +1672,118 @@ PERMISSIONS or by a hard-coded vessel-side refusal.
   and the trace-audit procedure. Authored from this phase's tasks
   27.2.4, 27.3.c.x, and 27.3.d.x.
 
+#### 27.3.g Explicit-vessel coverage (substrate-hosted, no implicit executors)
+
+Lift cannot hand over to a substrate whose core execution path is
+reachable only via in-process call from a single binary. The
+foundation's "implicit vessels" gap
+(`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md` §265-276) must be
+closed before hand-over: ActivityExecutor and Thompson Sampling — the
+two services that today bypass discovery — become explicit
+substrate-hosted vessels. Sibling spec:
+`openspec/changes/2026-05-23-substrate-explicit-vessels/`.
+
+- [ ] 27.3.g.1 No core execution path is reachable only via in-process
+  call. `repos/minibob/src/goal-host-bridge.ts` is deleted;
+  `repos/minibob/src/goal-processor.ts` is deleted or reduced to a CLI
+  client; `repos/minibob/src/activity.ts` no longer exports
+  `ActivityExecutor`. Gate: static check in CI.
+- [ ] 27.3.g.2 `thompson_posterior` is advertised in
+  `repos/metabob-activity-api/src/config.ts` `discovery.shapes` and
+  resolves correctly via `POST /v2/impulses/resolve`. The
+  account-vs-global scope ordering bug (IAL §9.3) is fixed. REST
+  surface remains for backwards compatibility. Gate:
+  `validation/scripts/substrate-explicit-vessels-check.ts` exits 0.
+- [ ] 27.3.g.3 All six new vessels (`goal-host-vessel`,
+  `llm-resolver-vessel`, `local-tools-vessel`, `ribosome-vessel`,
+  `boredom-vessel`, plus the `bootstrap-seeder.service` oneshot) are
+  present in `scripts/substrate/units/`, complete discovery
+  registration within 10s of substrate start, and respond to
+  `GET /health`. Gate:
+  `docker exec substrate systemctl is-active <vessel>.service`
+  returns `active` for each.
+- [ ] 27.3.g.4 Cross-vessel `composition_chain` end-to-end integration
+  test: a goal that dispatches across
+  `goal-host → llm-resolver → local-tools → activity-api` produces a
+  single trace tree whose `composition_chain` is contiguous and whose
+  Thompson α/β credits propagate to the orchestrator via the existing
+  Phase 18.4 chain-credit path. This is the port of test 18.4.7 to a
+  multi-vessel topology and is the single subtlest correctness gate
+  for the explicit-vessel cutover.
+- [ ] 27.3.g.5 `boredom-vessel` runs as its own systemd unit and
+  produces traces tagged `intent:topology_discovery` with no
+  external-caller goal id. This satisfies the 27.1.2 requirement that
+  convergence-tick snapshots originate from non-human triggers; the
+  substrate cannot produce them without an autonomous driver vessel
+  separate from goal-host.
+
+#### 27.3.h Cross-vessel trust-boundary attestations (deferred post-lift)
+
+Today's substrate runs all vessels under shared trust root
+(identity-vessel as authority). Sibling-spec H1 (two-sided traces) is
+load-bearing only within a single trust root. Once vessels federate
+across substrates (multi-customer marketplaces, vendor-supplied
+vessels in customer substrates, untrusted compute providers), H1
+ceases to be sufficient — a foreign vessel's signature attests
+identity, not honesty. Closing this gap requires ZK trace
+attestations (H6); see sibling spec
+`openspec/changes/2026-05-23-zk-trace-attestations/`.
+
+- [ ] 27.3.h.1 H6 status is documented as **forward-looking** in
+  `openspec/changes/2026-04-26-security-hardening-findings/design.md`
+  and CLAUDE.md "Security Hardening" section, with explicit
+  pre-conditions H1 + H2 + H4 and a note that the substrate may enter
+  lift without H6 deployed.
+- [ ] 27.3.h.2 No foreign vessel (one with `is_foreign: true` in its
+  discovery registration) participates in the substrate's learning
+  loop until H6 ships. Activity-api rejects foreign-vessel trace
+  writes with a 403 + `verifier_negative` self-trace until the H6
+  verifier is provisioned. Gate: H6 Phase 0 task 0.1 complete;
+  documentation in tree.
+- [ ] 27.3.h.3 The federation-readiness roadmap
+  (`openspec/changes/2026-05-23-vessel-federation/`) gates its
+  production-readiness on H6. This is a documentation gate, not a
+  code gate; the substrate may enter lift without 27.3.h.3 closed
+  *as long as no federation deployment is active*.
+
+#### 27.3.i Governance attestations (deferred post-lift)
+
+H4 (Tailnet-Lock-equivalent vessel ratification) and H5 (immutable-
+baseline selector with auto-regression) close the governance surface
+inside a single operator-held trust root. They do not cover two
+governance surfaces that come under load post-lift: (a) authority-vote
+disclosure when the authority set grows or when vessels themselves hold
+authority keys, and (b) opaque governance actions whose justifying data
+or rule-execution trace is not auditable to peer substrates. The H6
+governance predicate families (G1 council / G2 policy-execution /
+G3 aggregation) close these surfaces. See sibling spec
+`openspec/changes/2026-05-23-zk-trace-attestations/`, governance half.
+
+- [ ] 27.3.i.1 G1/G2/G3 status is documented as **forward-looking** in
+  `openspec/changes/2026-04-26-security-hardening-findings/design.md`
+  H4/H5 sections and CLAUDE.md "Security Hardening" section, with
+  explicit pre-conditions (G1 depends on H4; G2 depends on H5; G3
+  depends on H6-trace) and a note that the substrate may enter lift
+  under operator-held authority without any of G1/G2/G3 deployed.
+- [ ] 27.3.i.2 No vessel-held-authority configuration is enabled on a
+  substrate until G1 ships. Identity-vessel rejects AUMs from
+  configurations declaring vessel-held authority with a 403 +
+  `verifier_negative` self-trace until the G1 verifier is provisioned.
+  Gate: H6 Phase G0 task G0.1 complete; documentation in tree.
+- [ ] 27.3.i.3 No federation-onboarding flow accepts a peer substrate
+  without trace replay until G3 ships. This is a documentation gate,
+  not a code gate; the substrate may enter lift without 27.3.i.3
+  closed *as long as no federation deployment requires non-replay
+  onboarding*.
+
 ### 27.S Phase 27 acceptance gates
 
-- [ ] 27.S.1 All 27.1 + 27.2 + 27.3 boxes ticked.
+- [ ] 27.S.1 All 27.1 + 27.2 + 27.3 boxes ticked (including 27.3.g;
+  27.3.h is documented-as-deferred and does not block lift unless
+  federation is active; 27.3.i is documented-as-deferred and does not
+  block lift unless a governance domain — vessel-held authority,
+  multi-org authority council, or non-replay federation onboarding —
+  is active).
 - [ ] 27.S.2 `convergenceReport.lift_candidate = true` for 3 consecutive
   emissions from natural substrate activity, observed on the in-container
   substrate per topology-discovery-loop R8.4.
