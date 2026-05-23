@@ -239,10 +239,12 @@ the loop.
   Unblocked by: seed-identity.ts + local API key in /etc/substrate/env + migration 133
   (budget/stored_at schema relaxation for SurrealDB 2.3.3 compat).
 
-- [ ] 5.3 `systemd_restart` resolver functions: dispatch an activity that writes a
+- [x] 5.3 `systemd_restart` resolver functions: dispatch an activity that writes a
   trivial change to a test file in /workspace and calls `systemd_restart` for
   `development-vessel`. Verify the unit restarts and returns to active without
   container restart.
+  Verified 2026-05-23: POST /v2/impulses/resolve {type:systemd_restart, unit:discovery-vessel}
+  → {success:true, active:true, startup_ms:28} from inside container.
 
 - [ ] 5.4 Lifecycle observer fires: manually run `draft-gap-closing-activity` via
   minibob. Verify `harness-run-matrix` fires automatically within 30s by observing
