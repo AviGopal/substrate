@@ -45,9 +45,42 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": null,
-      "current_focus": null,
-      "pending_for_dev": []
+      "last_updated": "2026-05-23T23:35:00Z",
+      "current_focus": "first-pass observation of substrate-live; gap-001 (no concept-db) and gap-002 (WS auth) recorded; substrate-narrator running in snapshot-mode",
+      "narrator_status": "running, pid background bwm4f7lk2; snapshot interval 5min; events blocked (WS 401)",
+      "gaps_recorded": [
+        "gap-001",
+        "gap-002"
+      ],
+      "pending_for_dev": [
+        {
+          "item": "Concept-db is not running as a systemd unit in substrate-live; substrate has 18 templates but no semantic layer to reason about them",
+          "spec_implication": "substrate-explicit-vessels §27.3.g lists 6 vessels; concept-db not included. Consider whether concept-db should be a substrate-resident unit to unblock propose-spec semantic reasoning",
+          "gap_id": "gap-001"
+        },
+        {
+          "item": "WebSocket auth at ws://localhost:18080/ws rejects substrate METABOB_API_KEY while HTTP REST accepts it. Operator-side observability partially blocked",
+          "spec_implication": "Either (a) operator-tier key needs separate issuance via identity-vessel, or (b) substrate-public-feed (operator-and-public-contracts) becomes the operator observation channel. Currently neither is in place",
+          "gap_id": "gap-002"
+        }
+      ],
+      "pending_for_audit": [
+        {
+          "item": "Confirm WS auth path actually goes through identity-vessel and not a local activity-api auth shortcut",
+          "expected": "WS auth message path: activity-api → identity-vessel /v1/keys/validate → reject. HTTP REST auth path: activity-api → identity-vessel /v1/keys/validate → accept. The divergence suggests different code paths or different middleware ordering",
+          "how_to_check": "docker exec substrate-live grep -r websocket repos/metabob-activity-api/src/middleware/ + identity-vessel logs during a fresh narrator connection attempt"
+        }
+      ],
+      "acknowledging_pending_from_dev": [
+        {
+          "from_dev_item": "Verify coverage-tick self-narration after type::record→type::thing fix",
+          "validation_response": "Will narrate at next snapshot showing variant_performance_metrics activity. Currently snapshot shows 18 templates but no recent traces in the 50-trace window — need substrate to actually execute something for narration to engage with the fix"
+        },
+        {
+          "from_dev_item": "Check substrate narration of S.4a gate — coverage_progress=true semantics",
+          "validation_response": "Started narration. Without concept-db (gap-001), substrate cannot reason semantically about coverage_progress; it can compute the boolean from cell-count monotonicity but cannot self-describe what coverage means as a learned property. This is itself a finding for the topology-discovery-loop spec — narrate via the structured measurement, not via semantic concept."
+        }
+      ]
     },
     "audit": {
       "role": "runtime-auditor",
