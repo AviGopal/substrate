@@ -245,12 +245,14 @@ async function loadConfig(): Promise<{ endpoint: string; apiKey: string }> {
     const raw = JSON.parse(await readFile(configPath, "utf8")) as {
       metabob?: { endpoint?: string; apiKey?: string };
     };
-    const endpoint = envEndpoint ?? raw.metabob?.endpoint ?? "https://activity.metabob.com";
+    const endpoint = envEndpoint ?? raw.metabob?.endpoint;
     const apiKey = envKey ?? raw.metabob?.apiKey ?? "";
+    if (!endpoint) throw new Error("endpoint not set. Set METABOB_ENDPOINT env or metabob.endpoint in ~/.metabob/config.json");
     if (apiKey) return { endpoint, apiKey };
   }
   if (envEndpoint && envKey) return { endpoint: envEndpoint, apiKey: envKey };
-  throw new Error("METABOB_API_KEY not set. Set via env var or ~/.metabob/config.json");
+  if (envEndpoint && !envKey) throw new Error("METABOB_API_KEY not set. Set via env var or ~/.metabob/config.json");
+  throw new Error("endpoint not set. Set METABOB_ENDPOINT env or metabob.endpoint in ~/.metabob/config.json");
 }
 
 // ---------------------------------------------------------------------------

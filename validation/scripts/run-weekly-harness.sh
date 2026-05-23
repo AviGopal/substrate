@@ -9,7 +9,7 @@
 #   METABOB_API_KEY   — activity-api key
 #
 # Optional:
-#   METABOB_ENDPOINT  — defaults to https://activity.metabob.com
+#   METABOB_ENDPOINT  — substrate endpoint (required if not in ~/.metabob/config.json)
 #   LABEL             — embedded in report filename (default: "weekly")
 #
 # Exit codes:
@@ -29,6 +29,29 @@ if [[ -z "${METABOB_API_KEY:-}" ]]; then
   echo "FATAL: METABOB_API_KEY is not set." >&2
   exit 1
 fi
+
+# Resolve substrate endpoint: env var → config file → error (no default).
+# This prevents the harness from silently running against the wrong substrate.
+if [[ -z "${METABOB_ENDPOINT:-}" ]]; then
+  CONFIG_ENDPOINT=$(python3 -c "
+import json, os, sys
+p = os.path.expanduser('~/.metabob/config.json')
+try:
+  d = json.load(open(p))
+  ep = d.get('metabob', {}).get('endpoint', '')
+  print(ep)
+except Exception:
+  pass
+" 2>/dev/null || true)
+  if [[ -n "$CONFIG_ENDPOINT" ]]; then
+    METABOB_ENDPOINT="$CONFIG_ENDPOINT"
+  else
+    echo "FATAL: METABOB_ENDPOINT is not set and ~/.metabob/config.json has no endpoint." >&2
+    echo "  Set METABOB_ENDPOINT=<substrate-url> or add metabob.endpoint to ~/.metabob/config.json" >&2
+    exit 1
+  fi
+fi
+export METABOB_ENDPOINT
 
 if [[ ! -f "$BENCHMARK_V2" ]]; then
   echo "FATAL: Benchmark file not found: $BENCHMARK_V2" >&2
@@ -162,7 +185,7 @@ echo "Log : ${FORGE_LOG}"
 FORGE_EXIT=0
 TARGET_SHAPE="$TARGET_SHAPE" \
 METABOB_API_KEY="$METABOB_API_KEY" \
-ACTIVITY_API_URL="${METABOB_ENDPOINT:-https://activity.metabob.com}" \
+ACTIVITY_API_URL="\${METABOB_ENDPOINT}" \
 DISCOVERY_URL="${DISCOVERY_URL:-https://discovery.metabob.com}" \
 bun run "${SCRIPT_DIR}/test-forge-goal-completion.ts" \
   > "$FORGE_LOG" 2>&1 || FORGE_EXIT=$?
@@ -201,7 +224,7 @@ echo ""
 echo "=== Sensitivity-probe sweep (test-audit-loop §C/§G.2) ==="
 
 SENSITIVITY_REPORT_JSON="${RESULTS_DIR}/${TODAY}-sensitivity-report.json"
-ENDPOINT="${METABOB_ENDPOINT:-https://activity.metabob.com}"
+ENDPOINT="\${METABOB_ENDPOINT}"
 
 # Pull all registered tests, ignoring transport failures.
 REG_RESPONSE=$(curl -s -X POST "${ENDPOINT}/v2/impulses/resolve" \
@@ -301,7 +324,7 @@ else
 
   HELD_OUT_EXIT=0
   METABOB_API_KEY="$METABOB_API_KEY" \
-  METABOB_ENDPOINT="${METABOB_ENDPOINT:-https://activity.metabob.com}" \
+  METABOB_ENDPOINT="\${METABOB_ENDPOINT}" \
   bun run "$GOAL_GEN_SCRIPT" \
     --held-out \
     --count 8 \
@@ -312,7 +335,7 @@ else
     echo "held-out goal-gen: WARN (exit=${HELD_OUT_EXIT}) — see ${HELD_OUT_LOG}.gen"
   elif [[ -f "$HELD_OUT_GOALS" ]]; then
     METABOB_API_KEY="$METABOB_API_KEY" \
-    METABOB_ENDPOINT="${METABOB_ENDPOINT:-https://activity.metabob.com}" \
+    METABOB_ENDPOINT="\${METABOB_ENDPOINT}" \
     bun run "$STRATIFIED_SCRIPT" \
       --goals "$HELD_OUT_GOALS" \
       --label "held-out" \
@@ -335,7 +358,7 @@ else
 
   STRATIFIED_EXIT=0
   METABOB_API_KEY="$METABOB_API_KEY" \
-  METABOB_ENDPOINT="${METABOB_ENDPOINT:-https://activity.metabob.com}" \
+  METABOB_ENDPOINT="\${METABOB_ENDPOINT}" \
   bun run "$GOAL_GEN_SCRIPT" \
     --seed 12345 \
     --count 24 \
@@ -346,7 +369,7 @@ else
     echo "rolling-pool goal-gen: WARN (exit=${STRATIFIED_EXIT}) — see ${STRATIFIED_LOG}.gen"
   elif [[ -f "$ROLLING_GOALS" ]]; then
     METABOB_API_KEY="$METABOB_API_KEY" \
-    METABOB_ENDPOINT="${METABOB_ENDPOINT:-https://activity.metabob.com}" \
+    METABOB_ENDPOINT="\${METABOB_ENDPOINT}" \
     bun run "$STRATIFIED_SCRIPT" \
       --goals "$ROLLING_GOALS" \
       --label "weekly" \

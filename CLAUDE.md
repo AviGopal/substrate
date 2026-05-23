@@ -2,9 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Development Philosophy: MiniBob First, Canary Always
+## Development Philosophy: MiniBob First, Substrate-Aware
 
-> **CRITICAL**: Use MiniBob for development tasks. Validate changes against the canary deployment at `activity.metabob.com`, not local clusters.
+> **CRITICAL**: Use MiniBob for development tasks. Validate changes against the active substrate endpoint configured in `~/.metabob/config.json`.
 
 ### Why MiniBob First
 
@@ -23,21 +23,15 @@ minibob --single "refactor the Thompson Sampling implementation"
 - Thompson Sampling improves over time
 - We dogfood our own system
 
-### Why Canary First
+### Substrate-Aware Development
 
-**Do NOT develop against local Kubernetes clusters.** Instead:
+The system is designed to operate identically on any substrate. A **substrate** is one full deployment of the vessel fleet (discovery-vessel + activity-api + identity-vessel + minibob + supporting infrastructure). Substrate examples: local Kubernetes cluster, canary cloud deployment, production cloud deployment. Each substrate:
 
-1. **Write code locally** - Use your IDE, run tests with `bun test`
-2. **Push to `dev` branch** - CI/CD automatically deploys to canary
-3. **Validate against canary** - Test at `https://activity.metabob.com`
-4. **Promote to production** - After canary validation succeeds
+- Has its own discovery-vessel as a fixed point (all vessel-to-vessel routing is dynamic via it)
+- Builds its own Thompson learning state from its own execution traces (by design — "resolvers live where data lives")
+- Uses the same Helmfile charts, just with a different `environments/*.values.yaml` overlay
 
-**Production Endpoints (use these, not .local):**
-- `https://activity.metabob.com` - Activity API (learning backend)
-- `https://identity.metabob.com` - Identity/auth service
-- `https://discovery.metabob.com` - Discovery-vessel (capability registry) - if exposed
-
-**MiniBob Config** (`~/.metabob/config.json`):
+**Configure your substrate in `~/.metabob/config.json`:**
 ```json
 {
   "metabob": {
@@ -50,12 +44,26 @@ minibob --single "refactor the Thompson Sampling implementation"
 }
 ```
 
+Replace `endpoint` with your substrate's activity-api URL. All validation harnesses and tooling read this config; none hardcode a substrate URL.
+
+**Known substrate endpoints:**
+- `https://activity.metabob.com` — canary / pre-prod (current `kubectx metabob-production`)
+- Local cluster — configure via `helmfile --environment local sync` + set endpoint to your in-cluster address
+
+**Helmfile environments** (in `repos/deployment/`):
+- `environments/local.values.yaml` — local cluster overrides
+- `environments/canary.overrides.yaml` — canary-specific image tags and replicas
+- `environments/production.values.yaml` — production image tags
+
+**SOPS secrets** (one set per substrate):
+- `secrets/local.secrets.yaml`, `secrets/canary.secrets.yaml`, `secrets/production.secrets.yaml`
+
 ### The Development Loop
 
 ```
-1. Describe goal → MiniBob executes activity
-2. Activity succeeds/fails → Trace stored in canary backend
-3. Push code changes → CI/CD deploys to canary
+1. Describe goal → MiniBob executes activity (on configured substrate)
+2. Activity succeeds/fails → Trace stored in substrate backend
+3. Push code changes → CI/CD deploys to canary (or helmfile sync for local)
 4. Validate via MiniBob → More traces, more learning
 5. Repeat
 ```
@@ -730,12 +738,10 @@ execution {
 
 ## Development Workflows
 
-### Primary Workflow: MiniBob + Canary CI/CD
-
-**This is how we develop.** Don't set up local Kubernetes - use the canary deployment.
+### Primary Workflow: MiniBob + Substrate Validation
 
 ```bash
-# 1. Use MiniBob for development tasks
+# 1. Use MiniBob for development tasks (runs against configured substrate)
 minibob --single "implement the new feature"
 minibob --single "fix the bug in impulse resolution"
 
@@ -748,11 +754,11 @@ bun run typecheck
 git add . && git commit -m "feat(activity-api): add new feature"
 git push origin dev
 
-# 4. Validate against canary
-curl https://activity.metabob.com/health
+# 4. Validate against configured substrate endpoint
+curl $(cat ~/.metabob/config.json | jq -r '.metabob.endpoint')/health
 minibob --single "verify the new feature works"
 
-# 5. Monitor CI/CD
+# 5. Monitor CI/CD (if deploying via canary)
 gh run list --limit 5
 gh run view <run-id> --log
 ```
