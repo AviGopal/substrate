@@ -1453,8 +1453,9 @@ is NOT required for Phase 27 lift.
   ✓ 2026-05-23. Note: seeding is currently manual (docker exec bun /vessels/seed-identity.ts);
   wiring into entrypoint is Phase 2.2.2 in substrate spec.
 
-- [ ] 26.2.3 `development-vessel` seed-templates runs after healthy start.
+- [x] 26.2.3 `development-vessel` seed-templates runs after healthy start.
   Acceptance: `GET http://localhost:8080/v2/activities/templates` returns non-zero total.
+  ✓ 2026-05-23: root cause — `/etc/substrate/env` uses `VAR=value` (no `export`); plain `source` makes shell vars, not env vars; child Bun processes read METABOB_ENDPOINT=undefined → fallback to canary. Fix: `ExecStartPost` in development-vessel.service (systemd EnvironmentFile= handles export automatically). All 9 seed templates persist to local substrate. Also: activity-api migrations 134/135 fix SurrealDB 2.3.3 ASSERT-before-VALUE on activity and variant_performance_metrics tables.
 
 ### 26.3 Developer tooling
 
@@ -1530,40 +1531,78 @@ Phase 26 is complete when:
 Operationalises the integration spec's terminal success criterion (proposal §7).
 Lift is the formal hand-over of substrate development from human-driven (the
 four-stage VERIFY → DEBUG → SPEC → DEV cycle) to substrate-driven (the
-topology-discovery loop running on itself). This phase defines (a) the lift
-criterion, (b) the hand-over condition, and (c) the **pre-lift readiness
-checklist** — the explicit set of properties that must already be in place
-so the substrate has everything it needs to continue without external
-developer input.
+topology-discovery loop running on itself).
+
+Lift is the **operator hand-over decision**, distinct from the two
+substrate-measured properties that feed into it:
+
+1. **Coverage progress** — the substrate is touching its surface area.
+   Measured by the `coverage-tick` activity emitting `coverageReport`
+   impulses with `coverage_progress=true` for three consecutive cycles.
+   This is the cell-count-progress half of foundation §33's
+   Convergence: Reachable+Learned ↑, Reachable+Unlearned ↓, Unknown ↓
+   across consecutive measurement cycles.
+2. **Substrate health** — the substrate's beliefs are well-grounded,
+   the topology has stabilised, and learned routes are reasonable.
+   Measured by the `substrate-health-tick` activity emitting
+   `substrateHealthReport` impulses with
+   `health_verdict.overall_passing=true`. Covers what `coverageReport`
+   does NOT: posterior confidence (α+β floor on (template, signature)
+   pairs), graph stability (mutation rate of templates and composition
+   edges), and optimality (when stratified-harness data is available).
+3. **Hand-over** — the operator records the decision by writing
+   `status: "confirmed"` to `validation/state/lift-status.json`. The
+   substrate does not write this file from inside its own loop.
+
+This phase defines (a) the two measurement criteria, (b) the hand-over
+condition, and (c) the **pre-lift readiness checklist** — the explicit
+set of properties that must already be in place so the substrate has
+everything it needs to continue without external developer input.
 
 External spec source: `openspec/changes/2026-05-23-topology-discovery-loop/`.
 Phase 27 below tracks IAL-level integration; the spec proper lives there.
 
-### 27.1 Lift criterion (operational)
+### 27.1 Lift inputs (operational)
 
-- [ ] 27.1.1 The integrated loop's `convergence-tick` activity emits a
-  `convergenceReport` impulse whose body matches the schema in the
-  topology-discovery-loop design §F.
-- [ ] 27.1.2 The criterion `lift_candidate = true` MUST require ALL of:
+- [ ] 27.1.1 The integrated loop's `coverage-tick` activity emits a
+  `coverageReport` impulse whose body matches the schema in the
+  topology-discovery-loop design §F, AND the
+  `substrate-health-tick` activity emits a `substrateHealthReport`
+  impulse whose body matches design §G.
+- [ ] 27.1.2 The criterion `coverage_progress = true` MUST require ALL of:
   - `reachable_learned_strictly_increasing = true` across the last 3 snapshots,
   - `reachable_unlearned_strictly_decreasing = true` across the last 3 snapshots,
   - `unknown_strictly_decreasing = true` across the last 3 snapshots,
-  - `consecutive_converging_cycles >= 3`,
+  - `consecutive_progressing_cycles >= 3`,
   - all three snapshots produced from NON-HUMAN triggers (i.e. the
     snapshot AETs MUST carry `trace.tags ⊇ ["intent:topology_discovery"]`
     AND MUST NOT carry an external-caller goal id).
-- [ ] 27.1.3 The integration test for 27.1.2 is the end-to-end run in the
-  topology-discovery-loop spec §6.4; success at that gate flips the IAL's
-  Lift Status field (a new file `validation/state/lift-status.json`
-  authoritative on the substrate) to `candidate`.
+- [ ] 27.1.2a The criterion
+  `substrateHealthReport.health_verdict.overall_passing = true` MUST
+  hold on the most recent emission at the time 27.1.2 is evaluated.
+  Coverage progress alone is insufficient — the substrate's beliefs
+  must be well-grounded (posterior confidence), the topology must
+  have stabilised (graph stability), and (when harness data is
+  available) routes must be reasonable (optimality). See
+  topology-discovery-loop design §G for the thresholds, which are
+  operator-tunable per substrate.
+- [ ] 27.1.3 The integration test for 27.1.2 + 27.1.2a is the
+  end-to-end run in the topology-discovery-loop spec §6.4 + §6.5;
+  success at those gates makes the substrate eligible for the
+  operator hand-over decision in 27.2. The substrate does NOT write
+  `validation/state/lift-status.json` itself — that is the operator's
+  action.
 
 ### 27.2 Hand-over condition
 
-- [ ] 27.2.1 Once `lift_candidate=true` has held for 3 consecutive
-  `convergenceReport` impulses, the substrate writes
+- [ ] 27.2.1 Once `coverage_progress=true` has held for 3 consecutive
+  `coverageReport` impulses AND
+  `substrateHealthReport.health_verdict.overall_passing=true` on the
+  most recent emission, the operator (NOT the substrate) writes
   `validation/state/lift-status.json` with `status: "confirmed"` and
-  the trace ids of the supporting reports. This file is the durable
-  hand-over marker.
+  the trace ids of the supporting coverage + health reports. This
+  file is the durable hand-over marker; the hand-over itself is the
+  operator's decision, separate from the substrate-measured signals.
 - [ ] 27.2.2 The progression-driver script
   (`validation/scripts/progression-driver.ts`) is retired as the
   authoritative lift signal. It remains for debugging only; the
@@ -1608,7 +1647,8 @@ operational. Each line item is a specific verifiable observation.
   `learned-topology-snapshot`, `reachable-unlearned-report`,
   `unknown-shape-report`, `probe-reachable-unlearned`,
   `probe-untraversed-edge`, `escalate-unknown-shape`. Plus
-  `convergence-tick`. Gate: topology-discovery-loop §6.1.
+  `coverage-tick` and `substrate-health-tick`. Gate:
+  topology-discovery-loop §6.1.
 - [ ] 27.3.b.2 Improvisation (foundation §548) demonstrably succeeds on
   a synthetic goal that has no matching template. Gate: a trace exists
   carrying `improvise_health.success_rate > 0` in the past 7 days.
@@ -1668,9 +1708,9 @@ PERMISSIONS or by a hard-coded vessel-side refusal.
 #### 27.3.e Convergence-tick has enough data to be meaningful
 
 - [ ] 27.3.e.1 At least 7 days of `learnedTopologySnapshot` history
-  exists before the first lift_candidate evaluation. Below this
-  threshold the convergence-tick activity returns
-  `lift_candidate: false` regardless of monotonicity. This prevents
+  exists before the first coverage_progress evaluation. Below this
+  threshold the coverage-tick activity returns
+  `coverage_progress: false` regardless of monotonicity. This prevents
   premature lift on a cold start.
 - [ ] 27.3.e.2 The substrate's activity-template count exceeds a
   declared minimum (default: 50 templates, 10 of which authored by
@@ -1732,9 +1772,20 @@ substrate-hosted vessels. Sibling spec:
 - [ ] 27.3.g.5 `boredom-vessel` runs as its own systemd unit and
   produces traces tagged `intent:topology_discovery` with no
   external-caller goal id. This satisfies the 27.1.2 requirement that
-  convergence-tick snapshots originate from non-human triggers; the
+  coverage-tick snapshots originate from non-human triggers; the
   substrate cannot produce them without an autonomous driver vessel
   separate from goal-host.
+- [ ] 27.3.g.6 `signal_confidence_weight` field is present on every
+  row of `activity_execution_traces` (default 1.0) and the
+  `applyOutcomeToPosteriors` + `propagateCreditAlongChain` paths
+  multiply by it before writing α/β. Phase 19 reuse-validation harness
+  shows zero behavioural drift (search-MRR, recommend-MRR,
+  improvise_share, reuse_rate within ±2% of the pre-deployment
+  baseline). Provides the confidence hook that downstream work
+  (H6, robust Thompson aggregation against insider poisoning,
+  verifier-multiplicity peer-disagreement detection) attaches to.
+  Sibling spec:
+  `openspec/changes/2026-05-23-signal-confidence-weighting/`.
 
 #### 27.3.h Cross-vessel trust-boundary attestations (deferred post-lift)
 
@@ -1803,9 +1854,14 @@ G3 aggregation) close these surfaces. See sibling spec
   block lift unless a governance domain — vessel-held authority,
   multi-org authority council, or non-replay federation onboarding —
   is active).
-- [ ] 27.S.2 `convergenceReport.lift_candidate = true` for 3 consecutive
-  emissions from natural substrate activity, observed on the in-container
-  substrate per topology-discovery-loop R8.4.
+- [ ] 27.S.2a `coverageReport.coverage_progress = true` for 3
+  consecutive emissions from natural substrate activity, observed on
+  the in-container substrate per topology-discovery-loop R8.4a.
+- [ ] 27.S.2b `substrateHealthReport.health_verdict.overall_passing =
+  true` on the most recent emission at the time 27.S.2a is evaluated,
+  observed on the in-container substrate per topology-discovery-loop
+  R8.4b. Both 27.S.2a and 27.S.2b must hold for the operator
+  hand-over (27.S.3) to be eligible.
 - [ ] 27.S.3 `validation/state/lift-status.json` exists with
   `status: "confirmed"` and is referenced from CLAUDE.md's Development
   Loop section.

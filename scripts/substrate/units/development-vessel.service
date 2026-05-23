@@ -11,6 +11,7 @@ Environment=HOST=127.0.0.1
 Environment=WORKSPACE_ROOT=/workspace
 WorkingDirectory=/vessels/development-vessel
 ExecStart=/root/.bun/bin/bun /vessels/development-vessel/src/index.ts
+ExecStartPost=/root/.bun/bin/bun /vessels/development-vessel/src/cli.ts seed-templates
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

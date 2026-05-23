@@ -31,6 +31,12 @@ After step 4, `~/.metabob/config.json` points to `http://localhost:18080` and al
 
 **Note on ports**: The container maps internal ports to host ports with an 18000 offset — activity-api is at `localhost:18080`, discovery-vessel at `localhost:18100`, etc. Internal vessel-to-vessel calls use `127.0.0.1:808x` directly inside the container.
 
+**Running CLI commands inside the container**: always source the env file with auto-export so child processes (Bun) inherit the variables:
+```bash
+docker exec substrate-live bash -c 'set -a; source /etc/substrate/env; set +a; cd /vessels/development-vessel && bun run cli seed-templates'
+```
+Plain `source /etc/substrate/env` sets shell variables only — child processes won't see them. `set -a` auto-exports everything that follows.
+
 ## Iteration loop
 
 When you change a vessel's source:
@@ -125,7 +131,7 @@ Then use `/deploy <vessel>` to promote canary → production after canary health
 
 ## Development-vessel specifics
 
-`development-vessel` is substrate-only — it has no Helm chart and does not run on canary. It is the meta-vessel for substrate self-development: the failure-mode harness, topology-discovery activities, and convergence-tick all run as activities inside it. After Phase 26, `bun run cli seed-templates` inside the container seeds all 7 templates.
+`development-vessel` is substrate-only — it has no Helm chart and does not run on canary. It is the meta-vessel for substrate self-development: the failure-mode harness, topology-discovery activities, `coverage-tick`, and `substrate-health-tick` all run as activities inside it. The `development-vessel.service` unit runs `seed-templates` automatically via `ExecStartPost` on every start — seeds are idempotent UPSERTs so re-running is safe.
 
 The topology-discovery loop (Phase 26 → Phase 27) runs autonomously inside the substrate:
 
@@ -134,7 +140,7 @@ activityRegistryChange → learned-topology-snapshot → reachable-unlearned-rep
                        → probe-reachable-unlearned → activityRegistryChange → …
 ```
 
-When three consecutive `convergenceReport` impulses show `lift_candidate=true` from natural activity (no human trigger), that is the operational definition of Convergence (foundation §33) and the lift hand-over condition (IAL Phase 27).
+Lift = coverage progress + substrate health + operator hand-over. Coverage progress is measured by three consecutive `coverageReport` impulses showing `coverage_progress=true` from natural activity (no human trigger) — this is the cell-count progress proxy for Convergence (foundation §33). Substrate health is measured by the most recent `substrateHealthReport` showing `health_verdict.overall_passing=true` (posterior confidence + graph stability + optimality where available). The hand-over itself is the operator writing `validation/state/lift-status.json` with `status: "confirmed"` — the substrate does not write this file from inside its own loop. All three components are required for IAL Phase 27 lift.
 
 ## Troubleshooting
 
@@ -142,7 +148,7 @@ When three consecutive `convergenceReport` impulses show `lift_candidate=true` f
 
 **API key needed but lost**: if you ran `seed-identity.ts` but forgot the key, re-read it from the container env file: `docker exec substrate-live grep METABOB_API_KEY /etc/substrate/env`. Then re-run `configure-local.sh` to update your local config.
 
-**Harness connection errors**: confirm `~/.metabob/config.json` points to `http://localhost:8080`, not the canary endpoint. Run `scripts/substrate/configure-local.sh` to reset.
+**Harness connection errors**: confirm `~/.metabob/config.json` points to `http://localhost:18080`, not the canary endpoint. Run `scripts/substrate/configure-local.sh` to reset.
 
 **`make substrate-restart-<vessel>` fails**: the container must be running (`make substrate-run` first). Units restart in-place; the container itself is not restarted.
 
