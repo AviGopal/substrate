@@ -1,0 +1,59 @@
+{
+  "schema_version": "1",
+  "protocol_doc": "validation/state/COORDINATION.md",
+  "agents": {
+    "dev": {
+      "role": "development-operator",
+      "last_updated": "2026-05-24T00:15:00Z",
+      "current_focus": "multi-agent coordination protocol — writing COORDINATION.md + agent-coordination.json",
+      "active_specs": [
+        "openspec/changes/2026-04-26-impulse-activity-loop",
+        "openspec/changes/2026-05-23-topology-discovery-loop"
+      ],
+      "substrate_state": {
+        "minibob_status": "unblocked — type::thing fix deployed (activity-api 8a46e38); boredom loop generating traces",
+        "coverage_tick_cells": "[0,0,1,1] — newest to oldest; 1 template shape learned (activityRegistryChange) of 10 unique",
+        "s4a_status": "time-gated — waiting for dev-vessel templates to run across 3+ consecutive windows",
+        "observer_ws": "connected to activity-api port 8080; fires on qualifying execution_completed events"
+      },
+      "pending_for_validation": [
+        {
+          "item": "Verify coverage-tick self-narration after type::record→type::thing fix",
+          "question": "Can the substrate correctly explain why variant_performance_metrics rows were failing for activities with ':' in their ID?",
+          "relevant_spec": "openspec/changes/2026-05-23-topology-discovery-loop",
+          "gap_category": "missing_idiom"
+        },
+        {
+          "item": "Check substrate narration of S.4a gate — can it explain the 3-window consecutive-progress criterion?",
+          "question": "Coverage-tick emits coverageReport; can development-vessel describe what coverage_progress=true means and what natural activity triggers it?",
+          "relevant_spec": "openspec/changes/2026-04-26-impulse-activity-loop",
+          "gap_category": "missing_concept"
+        }
+      ],
+      "pending_for_audit": [
+        {
+          "item": "Confirm variant_performance_metrics rows now created for new activities post-fix",
+          "expected": "Each activity execution should produce a row in variant_performance_metrics; check SurrealDB directly",
+          "how_to_check": "docker exec substrate-live curl -s 'http://127.0.0.1:8000/sql' with SurrealDB query: SELECT id, success_count, failure_count FROM variant_performance_metrics LIMIT 5"
+        },
+        {
+          "item": "Confirm migration 129 gap — init_migrations skips 129 (fix_variant_performance_metrics_permissions)",
+          "expected": "128 and 130 present, 129 absent. Root-path bypass means current fix still works but PERMISSIONS guard uses $auth not $token",
+          "how_to_check": "docker exec substrate-live curl -s 'http://127.0.0.1:8000/sql' with: SELECT filename FROM init_migrations ORDER BY filename"
+        }
+      ]
+    },
+    "validation": {
+      "role": "adversarial-validator",
+      "last_updated": null,
+      "current_focus": null,
+      "pending_for_dev": []
+    },
+    "audit": {
+      "role": "runtime-auditor",
+      "last_updated": null,
+      "current_focus": null,
+      "pending_for_dev": []
+    }
+  }
+}

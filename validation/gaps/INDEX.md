@@ -33,3 +33,6 @@ See [`docs/SUBSTRATE_NARRATION_PROTOCOL.md`](../../docs/SUBSTRATE_NARRATION_PROT
 `doc_unread`, `training_knowledge`, `irreducibly_operator`.
 
 See §E for the bridge-path enumeration.
+
+| gap-001 | missing_concept | substantive | 1 | extract-concepts (blocked — concept-db not running in local substrate) | 2026-05-23T23:30Z | 2026-05-23T23:31Z |
+| gap-002 | irreducibly_operator | minor | 1 | (operator access; not substrate self-knowledge) | 2026-05-23T23:30Z | 2026-05-23T23:31Z |
