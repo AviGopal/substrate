@@ -5,7 +5,7 @@
       "goal_1779183137624_n5lwue"
     ],
     "shortest_observed_at": "2026-05-19T22:01:36.071Z",
-    "observation_count": 24
+    "observation_count": 64
   },
   "rare|depth2+|A": {
     "shortest_cost_usd": 0,
@@ -13,7 +13,7 @@
       "goal_1779183137624_n5lwue"
     ],
     "shortest_observed_at": "2026-05-19T22:01:42.577Z",
-    "observation_count": 16
+    "observation_count": 31
   },
   "rare|depth1|C∪D": {
     "shortest_cost_usd": 0,
@@ -21,7 +21,7 @@
       "goal_1779183137624_n5lwue"
     ],
     "shortest_observed_at": "2026-05-19T22:01:46.984Z",
-    "observation_count": 8
+    "observation_count": 23
   },
   "rare|depth1|A": {
     "shortest_cost_usd": 0,
@@ -45,7 +45,7 @@
       "goal_1779183137624_n5lwue"
     ],
     "shortest_observed_at": "2026-05-19T22:02:15.316Z",
-    "observation_count": 8
+    "observation_count": 18
   },
   "novel|depth2+|A": {
     "shortest_cost_usd": 0,
@@ -70,5 +70,53 @@
     ],
     "shortest_observed_at": "2026-05-19T22:02:30.056Z",
     "observation_count": 8
+  },
+  "seen|depth2+|B": {
+    "shortest_cost_usd": 0,
+    "shortest_chain": [
+      "activity:⟨ias-executor-ts-canary-test⟩"
+    ],
+    "shortest_observed_at": "2026-05-20T02:55:06.591Z",
+    "observation_count": 15
+  },
+  "rare|depth1|B": {
+    "shortest_cost_usd": 0,
+    "shortest_chain": [
+      "activity:⟨ias-executor-ts-canary-test⟩"
+    ],
+    "shortest_observed_at": "2026-05-20T02:55:40.685Z",
+    "observation_count": 15
+  },
+  "rare|depth0|C∪D": {
+    "shortest_cost_usd": 0,
+    "shortest_chain": [
+      "activity:⟨ias-executor-ts-canary-test⟩"
+    ],
+    "shortest_observed_at": "2026-05-20T02:55:57.316Z",
+    "observation_count": 30
+  },
+  "novel-depth0-A": {
+    "shortest_cost_usd": 0,
+    "shortest_chain": [
+      "activity:⟨ias-executor-ts-canary-test⟩"
+    ],
+    "shortest_observed_at": "2026-05-22T12:10:00.193Z",
+    "observation_count": 5
+  },
+  "seen-depth1-B": {
+    "shortest_cost_usd": 0,
+    "shortest_chain": [
+      "activity:⟨ias-executor-ts-canary-test⟩"
+    ],
+    "shortest_observed_at": "2026-05-22T12:10:03.220Z",
+    "observation_count": 5
+  },
+  "rare-depth2-A": {
+    "shortest_cost_usd": 0,
+    "shortest_chain": [
+      "activity:⟨ias-executor-ts-canary-test⟩"
+    ],
+    "shortest_observed_at": "2026-05-22T12:10:06.234Z",
+    "observation_count": 5
   }
 }

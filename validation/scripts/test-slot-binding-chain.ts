@@ -105,7 +105,23 @@ async function main(): Promise<void> {
             `[event] ${event.type} template=${data.templateId ?? "?"} task=${data.taskId ?? "?"} exec=${data.executionId ?? "?"}`,
           );
         }
+        // Print activity.failed reason inline so debug mode surfaces what's
+        // actually breaking in nested executions (spec §E.2 contract).
+        if (event.type === "activity.failed") {
+          // engine.ts:356 emits `data: {executionId, templateId, error}` (not `reason`).
+          const data = event.data as { executionId?: string; templateId?: string; error?: string };
+          console.log(
+            `[event] activity.failed exec=${data.executionId} template=${data.templateId} error=${data.error ?? "?"}`,
+          );
+        }
       },
+    },
+    // Loop-debug discipline: surface dispatcher errors that the vessel
+    // would otherwise swallow (spec §E.2). Without this, the 3 activity.failed
+    // events from the verification iteration leave no diagnostic trail.
+    logger: {
+      warn: (msg) => console.warn(`[subscriber-vessel] WARN: ${msg}`),
+      debug: () => {},
     },
   });
 
