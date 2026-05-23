@@ -43,11 +43,15 @@ load-bearing on the IAL's success criteria:
   keys, provider selection all live in operator filesystem. Substrate
   reads it; substrate does not author it.
 
-If lift means "the substrate sustains its own topology-discovery loop
-without external developer input", then each of these dependencies is a
-gap in the lift surface. The substrate cannot be said to sustain a loop
-that requires the operator to remember context, dispatch subagents,
-approve PRs, run kubectl, write specs, or pin endpoints.
+If lift (the S1 → S2 transition per IAL §27.S.4) means "the substrate
+sustains its own topology-discovery loop without external developer
+input", then each of these dependencies is a gap in the lift surface.
+The substrate cannot be said to sustain a loop that requires the
+operator to remember context, dispatch subagents, approve PRs, run
+kubectl, write specs, or pin endpoints. (Whether the substrate can
+*resist* operator interventions across these surfaces under adversarial
+exposure is the separate S2 → S3 question of IAL §27.S.6, not closed
+here.)
 
 This change introduces the **closure principle** and the enumeration of
 closure gaps that must be sealed before lift.

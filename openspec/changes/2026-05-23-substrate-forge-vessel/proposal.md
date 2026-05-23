@@ -2,10 +2,14 @@
 
 ## Why
 
-Post-lift development on local single-container substrates compresses the
+Development on local single-container substrates compresses the
 iteration cycle from minutes (canary helm rollout) to seconds (`make
-substrate-restart-X`). What this enables is not merely faster serial
-iteration — it is **parallel variant exploration**. The substrate can
+substrate-restart-X`). This applies both before the IAL §27.S.4 S1 →
+S2 lift (where the operator dispatches forge runs to verify candidate
+changes) and after (where the substrate dispatches forge runs as part
+of its own self-deployment + self-replacement loop). What this enables
+is not merely faster serial iteration — it is **parallel variant
+exploration**. The substrate can
 spawn N ephemeral clones of itself, each pursuing a different candidate
 change, observe N outcomes in parallel, and promote the winner. Variant
 exploration moves from `O(N × deploy_time)` to
@@ -54,7 +58,12 @@ set; it MUST be subject to the same conditions as every other vessel:
   be a candidate change forged by a prior forge. The first forge
   vessel ships from operator-authored code; subsequent versions may be
   substrate-authored and self-promoted through the same forge
-  mechanism.
+  mechanism. The transition from operator-promoted forge changes
+  (pre-§27.S.4, and S2-supervised after) to substrate-promoted
+  without operator review is part of the S2 → S3 arc per IAL §27.S.5;
+  the substrate's refusal to promote a forge change that would
+  compromise self-stability is the kind of cited-evidence push-away
+  §27.S.6 measures.
 
 ## What Changes
 

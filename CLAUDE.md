@@ -85,6 +85,12 @@ Replace `endpoint` with your substrate's activity-api URL. All validation harnes
 
 After Phase 27 (lift), step 1 of the local loop is substrate-initiated: the topology-discovery activities measure, probe, and escalate without human input. Human developers intervene only when the substrate flags a gap it cannot resolve.
 
+**After lift (S2 — substrate-authored, supervised):**
+The IAL terminal condition (§27.S.4) marks the S1 → S2 transition: the substrate has lifted from operator-authored to substrate-authored development. The operator role transforms — no longer the feature author, but anchor maintainer (rotating anchors when justified, reviewing H5 baselines) and adversarial tester (introducing probes, hostile peers, untrusted external sources). New specs are authored by the substrate's own propose-spec / verify-merge-candidate pipeline; see IAL §27.S.5 for the post-lift agenda (security, authenticity, cooperation, federation, self-recovery).
+
+**Toward S3 (distributed-stable, adversarial-resistant):**
+S3 has no acceptance gate. It is emergent and operator-measured by **active push-away** — substrate gates refusing operator interventions with cited evidence (`interventionRefused` impulses), not by passive intervention-absence. Measured over a sustained window of adversarial exposure; see IAL §27.S.6. When every reasonable intervention is either refused with sound rationale or absorbed without harm, the operator's role has become structurally non-load-bearing.
+
 ---
 
 ## Foundational Reference

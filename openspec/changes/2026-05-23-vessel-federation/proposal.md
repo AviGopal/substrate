@@ -1,7 +1,7 @@
 # Proposal — Vessel Federation
 
 **Date:** 2026-05-23
-**Status:** Draft (post-lift sibling to the impulse-activity loop)
+**Status:** Draft (post-lift sibling to the impulse-activity loop — authorable by the substrate after the S1 → S2 lift per IAL §27.S.4; full peer-trust adjustment under adversarial conditions belongs to the S2 → S3 arc per IAL §27.S.5/§27.S.6)
 **Relates to:** `2026-04-26-impulse-activity-loop` Phase 26 (single-container
 substrate) and Phase 27 (lift); `2026-04-26-security-hardening-findings`
 H2 (vessel-id from pubkey) and H4 (Tailnet-Lock-equivalent ratification).
@@ -102,12 +102,18 @@ addressable thing.
 
 ## Sequencing relative to lift (IAL Phase 27)
 
-The IAL terminates at Phase 27 by design (`IAL/tasks.md:1664-1675`).
-This spec is therefore **not** a new IAL phase. It is a post-lift
-sibling: the substrate may run successfully without peering (one
-container, one substrate, lift achievable per Phase 27's criterion);
-peering is the first capability the post-lift substrate can author
-*for itself* without violating the IAL's terminal condition.
+The IAL terminates its S1 → S2 transition at Phase 27 by design (per
+§27.S.4): the substrate has lifted from operator-authored to
+substrate-authored development. This spec is therefore **not** a new
+IAL phase. It is a post-lift sibling: the substrate may run
+successfully without peering (one container, one substrate, S1 → S2
+lift achievable per Phase 27's criterion); peering is the first
+capability the lifted (S2) substrate can author *for itself* without
+violating the IAL's terminal condition. Federation peer-trust
+adjustment under hostile peers — the part where the substrate isolates
+compromised peers without operator input — is part of the S2 → S3 arc
+enumerated in §27.S.5 and operator-measured per §27.S.6's push-away
+rubric, not specified here.
 
 The IAL `tasks.md` "Gates & Dependencies" section is updated to list
 this spec as a sibling. No existing IAL phase is modified.

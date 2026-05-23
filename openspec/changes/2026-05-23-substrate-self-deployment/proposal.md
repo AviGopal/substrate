@@ -30,8 +30,13 @@ git state to the canonical substrate via a substrate-authored PR".
 
 ## Self-application
 
-Self-deployment is the most consequential of the post-lift mechanisms;
-it is also the one most subject to its own conditions:
+Self-deployment is the most consequential of the closure mechanisms
+required for the IAL §27.S.4 S1 → S2 lift (it underwrites §27.3.j.4
+CI-closure and §27.3.j.6 spec-authoring closure); it is also the one
+most subject to its own conditions. The 90-day whitelist (§8 below)
+is the S2-supervised safety frame; whitelist expansion belongs to the
+substrate's own S2 → S3 agenda under IAL §27.S.5, evaluated against
+the operator's push-away rubric in §27.S.6:
 
 - **Foundation alignment** — git authorship, PR opening, and merging
   are all resolver operations. Source-of-truth (the git repository) is

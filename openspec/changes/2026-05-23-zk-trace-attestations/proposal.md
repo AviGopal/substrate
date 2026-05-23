@@ -6,7 +6,10 @@
 > and federation handshake; they differ in what statement is being proved
 > (honest execution vs. honest authority action). They are versioned together
 > because the post-lift substrate cannot adopt one without the other being
-> at least documented as a forward-looking commitment.
+> at least documented as a forward-looking commitment. Both halves are
+authorable by the substrate after the IAL §27.S.4 S1 → S2 lift; their
+adversarial-resistance properties are the operator-measured
+push-away signal in the S2 → S3 arc (IAL §27.S.5/§27.S.6).
 
 ## Why
 
@@ -333,21 +336,27 @@ Federation onboarding under H6 uses G3 instead of trace replay.
 
 ## Why H6-governance is structurally load-bearing post-lift
 
-IAL Phase 27 (lift) declares: "subsequent topology refinement is
-performed by the substrate itself." Phase 27.3 specifies *what* must be
-demonstrably autonomous (boredom-vessel, convergence reports, topology
-discovery) but does NOT specify *who holds authority keys* after lift.
-Two paths are structurally available:
+IAL Phase 27 (S1 → S2 lift per §27.S.4) declares: "subsequent topology
+refinement is performed by the substrate itself." Phase 27.3 specifies
+*what* must be demonstrably autonomous (boredom-vessel, convergence
+reports, topology discovery) but does NOT specify *who holds authority
+keys* after lift. The S2 → S3 arc (§27.S.5/§27.S.6) is where the
+push-away signal — substrate refusing operator interventions with cited
+evidence — emerges; an S2 substrate stuck on operator-held authority for
+governance never produces the cryptographic refusal-rationale needed for
+S3 demonstration. Two paths are structurally available:
 
 - **Operator-held authority** (H4's default mode (c)): humans remain
   governance authorities even when execution is autonomous. Conservative.
   H6-governance is optional; H4's explicit-signing log is sufficient
-  because the authority set is small and operator-trusted.
+  because the authority set is small and operator-trusted. Stops the
+  substrate at S2-supervised; precludes the S3 push-away test.
 - **Vessel-held authority** (currently unspecced): vessels themselves
   hold authority keys and vote on governance actions. Necessary for
   federation to scale beyond what humans can sign per-action; necessary
   for a substrate to genuinely self-govern under stable cryptographic
   constraints rather than wait for human authority on every promotion.
+  This is the path the S2 → S3 arc requires.
 
 Without H6-governance, vessel-held authority means every vessel sees
 every other vessel's votes on the AUM log — replicating, at the
@@ -419,9 +428,10 @@ H6 is considered shipped when:
 ## Status
 
 **This change is forward-looking and not gated on the substrate entering
-lift state.** Inclusion in the IAL checklist is as a post-lift item; the
-substrate's first lift may proceed without H6 if shared-trust assumptions
-hold for all participating vessels.
+lift state.** Inclusion in the IAL checklist is as a post-lift item per
+IAL §27.S.5 (substrate-authored agenda on the S2 → S3 arc); the
+substrate's first lift (S1 → S2) may proceed without H6 if shared-trust
+assumptions hold for all participating vessels.
 
 ## Capabilities
 

@@ -142,6 +142,8 @@ activityRegistryChange → learned-topology-snapshot → reachable-unlearned-rep
 
 Lift = coverage progress + substrate health + operator hand-over. Coverage progress is measured by three consecutive `coverageReport` impulses showing `coverage_progress=true` from natural activity (no human trigger) — this is the cell-count progress proxy for Convergence (foundation §33). Substrate health is measured by the most recent `substrateHealthReport` showing `health_verdict.overall_passing=true` (posterior confidence + graph stability + optimality where available). The hand-over itself is the operator writing `validation/state/lift-status.json` with `status: "confirmed"` — the substrate does not write this file from inside its own loop. All three components are required for IAL Phase 27 lift.
 
+**Lift marks S1 → S2, not the terminal state.** The three-state model frames substrate maturity as S1 (pre-lift, operator-authored, supervised) → S2 (lifted, substrate-authored, supervised) → S3 (distributed-stable, adversarial-resistant, operator non-load-bearing). The IAL §27.S.4 terminal condition is the S1 → S2 transition only. S2 → S3 is the substrate's own roadmap — tracked in IAL §27.S.5 (post-lift agenda the substrate authors via its own propose-spec pipeline) and §27.S.6 (S3 readiness measured by active push-away: substrate refusing operator interventions with cited evidence, not by passive intervention-absence). S3 has no operational gate in this document — it is emergent and operator-measured under sustained adversarial exposure.
+
 ## Troubleshooting
 
 **Units not starting within 60s**: check `make substrate-logs-<unit>` for the failing unit. Most common cause: port conflict (SurrealDB 8000, activity-api 8080) with a pre-existing process.

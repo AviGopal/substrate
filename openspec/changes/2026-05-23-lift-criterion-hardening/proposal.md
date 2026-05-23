@@ -43,9 +43,13 @@ criterion's load-bearing character:
    slowly under this regime — the loop is hot but exploration is narrow.
 
 This change closes the three risks in one bundled spec because they
-share substrate (Phase 27.S acceptance gates) and ship together as
-additions to the existing topology-discovery loop machinery. None
-introduce new resolvers, vessels, or trust roots.
+share substrate (Phase 27.S acceptance gates for the S1 → S2 lift per
+§27.S.4) and ship together as additions to the existing
+topology-discovery loop machinery. None introduce new resolvers,
+vessels, or trust roots. Note that the adversarial-probe artifact also
+contributes to the S2 → S3 adversarial exposure index per IAL §27.S.6
+once the substrate has lifted — but its primary role here is gating
+the S1 → S2 hand-over.
 
 ## Scope (three additions)
 
