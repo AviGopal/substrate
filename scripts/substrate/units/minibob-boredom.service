@@ -1,0 +1,13 @@
+[Unit]
+Description=minibob boredom trigger — post an autonomous goal
+After=minibob.service
+Requires=minibob.service
+# One-shot per timer fire; not persistent between fires.
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -sf -X POST http://127.0.0.1:8200/goal \
+  -H "Content-Type: application/json" \
+  -d '{"goal":"run the topology discovery chain: call coverage-tick, substrate-health-tick, and probe-reachable-unlearned to advance the coverage map","singleGoal":true}'
+StandardOutput=journal
+StandardError=journal

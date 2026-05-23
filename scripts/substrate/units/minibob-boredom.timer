@@ -1,0 +1,12 @@
+[Unit]
+Description=Fire minibob boredom goal every 10 minutes
+After=minibob.service
+Requires=minibob-boredom.service
+
+[Timer]
+OnActiveSec=5min
+OnUnitActiveSec=10min
+Unit=minibob-boredom.service
+
+[Install]
+WantedBy=timers.target
