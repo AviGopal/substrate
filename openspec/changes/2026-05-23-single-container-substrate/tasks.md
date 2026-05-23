@@ -13,19 +13,19 @@ a trace visible in activity-api.
 
 ### 1.1 Base image with systemd
 
-- [ ] 1.1.1 Write `Dockerfile.substrate` in super-repo root using `debian:bookworm-slim`
+- [x] 1.1.1 Write `Dockerfile.substrate` in super-repo root using `debian:bookworm-slim`
   as base. Install systemd, dbus, and the minimal set of packages needed to run it
   inside a container (`systemd-sysv`, `libpam-systemd`). Set `CMD ["/lib/systemd/systemd"]`.
   Acceptance: `docker build -f Dockerfile.substrate .` completes without error;
   `docker run --rm --cap-add SYS_ADMIN metabob/substrate:dev systemctl list-units`
   exits 0.
 
-- [ ] 1.1.2 Add Bun runtime installation to the Dockerfile (curl from bun.sh official
+- [x] 1.1.2 Add Bun runtime installation to the Dockerfile (curl from bun.sh official
   installer, pinned to the version used in vessel repos — read from any vessel
   `package.json` `engines.bun` field). Acceptance: `bun --version` inside container
   matches vessel requirement.
 
-- [ ] 1.1.3 Install SurrealDB binary (current version: 3.x, fetch from GitHub releases).
+- [x] 1.1.3 Install SurrealDB binary (current version: 3.x, fetch from GitHub releases).
   Add `surrealdb.service` systemd unit:
   ```
   ExecStart=/usr/local/bin/surreal start \
@@ -36,14 +36,14 @@ a trace visible in activity-api.
   Acceptance: unit reaches `active (running)` and `curl http://localhost:8000/health`
   returns 200.
 
-- [ ] 1.1.4 Install Valkey binary (Redis-compatible; fetch from valkey.io releases).
+- [x] 1.1.4 Install Valkey binary (Redis-compatible; fetch from valkey.io releases).
   Add `valkey.service` unit with `ExecStart=/usr/local/bin/valkey-server --port 6379
   --dir /data/valkey --appendonly yes`. Acceptance: unit active and `valkey-cli ping`
   returns PONG.
 
 ### 1.2 Vessel source layers
 
-- [ ] 1.2.1 `COPY repos/discovery-vessel /app/discovery-vessel` in Dockerfile.
+- [x] 1.2.1 `COPY repos/discovery-vessel /app/discovery-vessel` in Dockerfile.
   Run `bun install --frozen-lockfile --production` in that directory during build.
   Add `discovery-vessel.service` unit:
   ```
@@ -54,7 +54,7 @@ a trace visible in activity-api.
   RestartSec=3s
   ```
 
-- [ ] 1.2.2 `COPY repos/identity-vessel /app/identity-vessel`, install deps.
+- [x] 1.2.2 `COPY repos/identity-vessel /app/identity-vessel`, install deps.
   Add `identity-vessel.service` unit with `After=surrealdb.service valkey.service
   discovery-vessel.service`:
   ```
@@ -66,7 +66,7 @@ a trace visible in activity-api.
   ExecStart=bun run /app/identity-vessel/src/index.ts
   ```
 
-- [ ] 1.2.3 `COPY repos/metabob-activity-api /app/activity-api`, install deps.
+- [x] 1.2.3 `COPY repos/metabob-activity-api /app/activity-api`, install deps.
   Copy the ONNX embedding model (`src/assets/models/`) into the image (it's bundled
   in the source tree; verify it's not gitignored). Add `activity-api.service` with
   `After=surrealdb.service valkey.service identity-vessel.service discovery-vessel.service`:
@@ -83,7 +83,7 @@ a trace visible in activity-api.
   ExecStart=bun run /app/activity-api/src/index.ts
   ```
 
-- [ ] 1.2.4 `COPY repos/minibob /app/minibob`, install deps. Add `minibob.service`
+- [x] 1.2.4 `COPY repos/minibob /app/minibob`, install deps. Add `minibob.service`
   with `After=activity-api.service`:
   ```
   EnvironmentFile=/etc/substrate/env
@@ -94,7 +94,7 @@ a trace visible in activity-api.
   ExecStart=bun run /app/minibob/index.ts --daemon
   ```
 
-- [ ] 1.2.5 `COPY repos/development-vessel /app/development-vessel`, install deps.
+- [x] 1.2.5 `COPY repos/development-vessel /app/development-vessel`, install deps.
   Add `development-vessel.service` with `After=activity-api.service`:
   ```
   EnvironmentFile=/etc/substrate/env
@@ -106,7 +106,7 @@ a trace visible in activity-api.
 
 ### 1.3 Environment file and secrets
 
-- [ ] 1.3.1 Write `scripts/substrate/gen-env.sh`: generates `/etc/substrate/env`
+- [x] 1.3.1 Write `scripts/substrate/gen-env.sh`: generates `/etc/substrate/env`
   at container start from required env vars (`JWT_SECRET`, `SURREAL_PASS`,
   `METABOB_API_KEY`, `ANTHROPIC_API_KEY`). If `JWT_SECRET` or `SURREAL_PASS` are
   not provided, generate random values and print them to stdout once (they persist
@@ -118,7 +118,7 @@ a trace visible in activity-api.
   ANTHROPIC_API_KEY=<value>
   ```
 
-- [ ] 1.3.2 Write the container entrypoint: a shell script that (1) runs `gen-env.sh`,
+- [x] 1.3.2 Write the container entrypoint: a shell script that (1) runs `gen-env.sh`,
   (2) enables all vessel systemd units (`systemctl enable --now`), (3) execs
   `/lib/systemd/systemd`. This replaces the direct `CMD` from 1.1.1.
 
@@ -143,7 +143,7 @@ a trace visible in activity-api.
 
 ### 2.2 Identity seeding
 
-- [ ] 2.2.1 Write `scripts/substrate/seed-identity.ts`: on first container start (detect
+- [x] 2.2.1 Write `scripts/substrate/seed-identity.ts`: on first container start (detect
   by checking if any `api_key` rows exist via identity-vessel `/v1/keys/list`), create
   one initial API key with `read,write` scope and `org_id: organizations:local` and
   print it to stdout. The key is stored in SurrealDB; subsequent starts skip seeding.
@@ -170,7 +170,7 @@ The autonomous loop requires development-vessel to restart a systemd unit after
 modifying vessel source code. Without this resolver, code changes by activities never
 take effect — the running vessel keeps executing the old code.
 
-- [ ] 3.1 Add `systemd_restart` resolver to `repos/development-vessel/src/resolvers/`:
+- [x] 3.1 Add `systemd_restart` resolver to `repos/development-vessel/src/resolvers/`:
   - Input: `{ unit: string }` (systemd unit name, e.g. `"activity-api"`)
   - Executes `systemctl restart <unit>` then polls `systemctl is-active <unit>` until
     active or 30s timeout
@@ -180,11 +180,11 @@ take effect — the running vessel keeps executing the old code.
     `active (running)` within the timeout. Returns `success: false` if the unit fails
     to start (caller can check logs via `journalctl -u <unit> -n 50`).
 
-- [ ] 3.2 Register `systemd_unit_restart` shape with discovery-vessel at
+- [x] 3.2 Register `systemd_unit_restart` shape with discovery-vessel at
   development-vessel startup. Advertise it alongside the other development shapes
   (`git_status`, `git_diff`, `file_content`, etc.).
 
-- [ ] 3.3 Add a per-resolver test for `systemd_restart`:
+- [x] 3.3 Add a per-resolver test for `systemd_restart`:
   - Mock the `systemctl` call; verify the resolver polls until active.
   - Verify timeout path returns `{ success: false }`.
   - Verify the output shape matches `systemd_unit_restart` contract.
@@ -194,7 +194,7 @@ take effect — the running vessel keeps executing the old code.
 The substrate is autonomous; these tools are for observation only, not for driving
 the loop.
 
-- [ ] 4.1 Write `scripts/substrate/Makefile` with targets:
+- [x] 4.1 Write `scripts/substrate/Makefile` with targets:
   - `substrate-build` — build the container image
   - `substrate-run` — start the container with workspace + data volumes
   - `substrate-logs-<vessel>` — `docker exec substrate journalctl -u <vessel> -f`
@@ -228,7 +228,7 @@ the loop.
 
 ## Phase 5 — Autonomous Loop Verification
 
-- [ ] 5.1 Smoke: all vessels reach `active (running)` within 60s of container start.
+- [x] 5.1 Smoke: all vessels reach `active (running)` within 60s of container start.
   `curl http://localhost:8080/health` returns `{"status":"healthy"}`.
 
 - [ ] 5.2 Boredom loop fires: within 5 minutes of container start with no external
