@@ -54,6 +54,90 @@ are the future ZK-proof surface), and (b) it gives the IAL Phase 27.3
 checklist a deferred-but-documented item rather than leaving the federation
 trust story implicit.
 
+## The unifying framing: confidence-weighted posteriors
+
+H6 is **not** a parallel security subsystem grafted onto the substrate.
+The learning loop is structurally a noisy-signal aggregation system —
+Thompson posteriors weight observations, stratified failure modes
+discriminate among outcome types, validators-as-activities self-correct
+through their own α/β, "state is a projection over traces" makes the
+trace store the single source of truth. **Adversarial inputs are the
+worst-case end of the noise distribution the loop already handles for
+non-adversarial inputs.**
+
+Each attack surface that motivates H6 is structurally identical to a
+challenge the loop already solves; the defense is the existing
+mechanism applied at strength. Five mirrors are explicit:
+
+1. **Cold-start exploration ↔ vessel squatting**. New templates use
+   `Beta(1, 1)` priors; new foreign vessels would inherit the same
+   prior unless H6 supplies a basis for an informative prior derived
+   from peer-substrate trust ancestry. Openness to novelty is
+   structurally identical to susceptibility to squatting; the
+   distinction lies entirely in the prior.
+2. **Credit assignment ↔ Thompson reward poisoning**. The substrate
+   already stratifies α/β updates by failure-mode (verifier_negative
+   full β, budget_exhausted half β, cascading no double-count). H6
+   adds one more axis to the same weighting function: confidence
+   weight by attestation strength (in-substrate full weight, foreign
+   verified full weight, foreign unattested zero weight). The Wang et
+   al. pseudo-posterior construction (arXiv:2410.19705) reduces to
+   this expression in the system's native vocabulary.
+3. **Validator correctness ↔ ZK verifier compromise**. Validators are
+   already activities whose Thompson posteriors self-correct under
+   downstream-disagreement signal. ZK verifiers are validators in this
+   sense: multiple verifier-vessel implementations per predicate
+   family, with peer-disagreement detection feeding posteriors, makes
+   verifier hardening fall out of the existing loop rather than
+   requiring separate machinery.
+4. **Improvise-share telemetry ↔ Byzantine population bound**. The
+   substrate already tracks rolling-window concentration of action
+   sources (`improvise_share` went from 35% to 1.5% per Phase 18
+   metrics). Per-source trace-contribution quotas are the same
+   measurement applied to provenance instead of novelty; the
+   throttling mechanism is the existing rolling-window count.
+5. **Trace-projection invariant ↔ audit-log tampering**. The
+   substrate's deepest idiom — state is a projection over traces —
+   is already the auditability mechanism in principle. Hash-chained
+   AET writes plus periodic external Merkle-root anchoring give the
+   existing projection cryptographic teeth without changing what the
+   projection projects.
+
+The implication: **H6 is the mechanism by which a remote signal earns
+a non-zero confidence weight in the existing aggregation**. Without
+H6, foreign-vessel signals must weight zero (excluded from learning).
+With H6, the weight is determined by attestation strength under the
+predicate family the remote vessel commits to.
+
+This reframing dissolves the "new subsystem" worry: H6 contributes
+**five small additions** to existing schemas and resolvers, every one
+of which lives inside the four-primitive model.
+
+- A `signal_confidence_weight` field on trace writes (today implicitly
+  1.0 for in-substrate writes; under H6, derived from attestation
+  verification). Sibling change
+  `2026-05-23-signal-confidence-weighting` adds this field ahead of
+  H6 activation so the substrate has a hook to attach to.
+- A `vesselTrustScore` prior used at vessel registration (today
+  implicitly `Beta(1, 1)`; under H6, derived from peer trust ancestry).
+- A peer-disagreement detector running over verifier-vessel outputs
+  (today no verifier-vessel exists; H6 introduces verifier-vessel
+  multiplicity from day one).
+- A `traceContributionQuota` per source (today no quota enforced;
+  H6's federation-admission path uses the same rolling-window
+  concentration machinery as `improvise_share`).
+- A hash-chain pointer on the AET schema (today none; H6's
+  trace-projection auditability extends the existing composition-chain
+  walking with cryptographic linkage).
+
+The predicate-family material that follows ("Executor predicate",
+"Resolver predicate", "Lifecycle predicate", "Council predicates",
+"Policy-execution predicates", "Aggregation predicates") is the
+**cryptographic mechanism** by which the confidence weights get
+assigned. The cryptographic detail belongs inside resolver
+implementations; the surface the rest of the substrate sees is the
+confidence-weight field.
+
 ## What Changes
 
 This change introduces **no immediate code**. It defines:

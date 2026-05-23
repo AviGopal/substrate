@@ -1846,14 +1846,81 @@ G3 aggregation) close these surfaces. See sibling spec
   closed *as long as no federation deployment requires non-replay
   onboarding*.
 
+#### 27.3.j Closure — no external stateful resolver is load-bearing
+
+Lift requires the substrate to sustain its own topology-discovery loop
+without external developer input. The prior §27.3 sections specify
+*what* the substrate must do autonomously (§27.3.b), *what it may not
+do* without operator approval (§27.3.c), and *what it may not learn
+from* without attestation (§27.3.h/i). This section specifies
+**what the substrate may not depend on**: every property required by
+§27.1 and §27.2 MUST derive from substrate-resident vessels,
+activities, shapes, and traces alone. External tools may observe; they
+MAY NOT be required for any property to hold. Sibling spec:
+`openspec/changes/2026-05-23-substrate-closure-properties/`.
+
+Closure is distinct from autonomy. A substrate that needs the operator
+to run `make substrate-restart-X` to recover from a vessel crash
+satisfies §27.3.c (operator approval boundary) but violates §27.3.j
+(operator stateful resolver). The closure-audit script
+(`validation/scripts/closure-audit.ts`) enforces by enumeration: for
+each `(property, external_tool)` pair, attempt the property using
+substrate-only resolvers; failures are closure gaps.
+
+- [ ] 27.3.j.1 **Memory closure** — substrate-resident `memoryNote`
+  shape exists; development-vessel resolves it. Wiping the operator
+  memory directory and restarting Claude Code preserves all §27.1/§27.2
+  properties; recall is via `memoryNote` resolution. Gate: closure-audit
+  `--without=operator-memory` reports zero failures.
+- [ ] 27.3.j.2 **Skill closure** — slash-command skills mirrored as
+  substrate activity templates seeded by `bootstrap-seeder.service`:
+  `propose-spec`, `apply-spec`, `archive-spec`, `cleanup-docs`,
+  `review-pr`, `audit-security`, `deploy-substrate`, `cron-dispatch`.
+  Gate: closure-audit `--without=slash-skills` reports zero failures.
+- [ ] 27.3.j.3 **Subagent closure** — Plan / Explore / general-purpose
+  patterns mirrored as substrate activity templates composing existing
+  vessels: `subagent-plan` (→ `executionPlan`), `subagent-explore`
+  (→ `codebaseExplorationReport`), `subagent-general` (→
+  `goalCompletionReport`). Thompson-ranking selects per
+  `(template, problem-class)`. Gate: closure-audit
+  `--without=subagents` reports zero failures.
+- [ ] 27.3.j.4 **CI closure** — substrate's failure-mode-harness +
+  Phase 19 reuse-validation harness + canary deploy is the canonical
+  merge authority. `verify-merge-candidate` activity emits
+  `mergeVerdict` impulses. GitHub Actions runs as observer. Gate:
+  closure-audit `--without=github-actions` reports zero failures.
+- [ ] 27.3.j.5 **Self-healing closure** — foreseeable substrate
+  failures recover via substrate-dispatched activities:
+  `restart-vessel`, `restore-from-backup`, `rerun-migration`,
+  `inspect-vessel-logs`, `dispatch-debug-probe`. Foreseeable-failure
+  recovery test: kill an arbitrary substrate vessel; substrate
+  self-heals within 60s with no operator intervention. Gate:
+  closure-audit `--without=operator-shell` reports zero failures for
+  foreseeable failures; §27.3.c boundary preserved for unforeseeable.
+- [ ] 27.3.j.6 **Spec-authoring closure** — at least three accepted
+  spec proposals in `openspec/changes/` have substrate-authored
+  provenance (frontmatter: `authored_by: substrate-propose-spec`,
+  `extracted_from_trace_ids: [...]`). Each proposal passed
+  `foundation-compliance` and `cross-spec-consistency` validators and
+  the §27.3.j.4 merge gate. Gate: closure-audit
+  `--without=operator-spec-authoring` reports zero failures.
+- [ ] 27.3.j.7 **Closure-audit operational** —
+  `validation/scripts/closure-audit.ts` runs nightly via the
+  `nightly-closure-audit` substrate cron activity. Writes
+  `validation/state/closure-status.json` with per-property verdicts
+  across all six `--without=*` options. Failures emit a `liftBlocker`
+  impulse for operator review.
+
 ### 27.S Phase 27 acceptance gates
 
-- [ ] 27.S.1 All 27.1 + 27.2 + 27.3 boxes ticked (including 27.3.g;
-  27.3.h is documented-as-deferred and does not block lift unless
-  federation is active; 27.3.i is documented-as-deferred and does not
-  block lift unless a governance domain — vessel-held authority,
-  multi-org authority council, or non-replay federation onboarding —
-  is active).
+- [ ] 27.S.1 All 27.1 + 27.2 + 27.3 boxes ticked (including 27.3.g
+  and 27.3.j as hard gates; 27.3.h is documented-as-deferred and does
+  not block lift unless federation is active; 27.3.i is
+  documented-as-deferred and does not block lift unless a governance
+  domain — vessel-held authority, multi-org authority council, or
+  non-replay federation onboarding — is active). §27.3.j (closure)
+  requires three consecutive nightly closure-audit runs reporting
+  green across all six `--without=*` options.
 - [ ] 27.S.2a `coverageReport.coverage_progress = true` for 3
   consecutive emissions from natural substrate activity, observed on
   the in-container substrate per topology-discovery-loop R8.4a.

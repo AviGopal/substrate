@@ -2,25 +2,54 @@
 
 ## Definition
 
+H6 is the mechanism by which a signal from outside the substrate's
+trust root earns a non-zero **`signal_confidence_weight`** in the
+substrate's existing Thompson-aggregated learning loop. Without H6,
+foreign signals weight zero (excluded from learning). With H6, the
+weight is derived from verification of a zero-knowledge attestation
+proving that the foreign signal satisfies a published predicate. The
+cryptographic machinery lives inside resolver implementations; the
+surface the rest of the substrate sees is the confidence-weight field
+on the trace and the attestation impulse that produced it.
+
 This capability spans two attestation surfaces under a single ZK
 framework labelled H6:
 
 - **Trace attestations** — a foreign vessel (one operated outside the
   substrate's trust root) may submit an execution trace to the
-  substrate's learning loop only when the trace carries a
-  **zero-knowledge attestation** proving that the execution conformed
-  to the published contract of the activity template it claims to have
-  run. The attestation is verified by activity-api before any Thompson
-  posterior update derived from the trace.
+  substrate's learning loop with `signal_confidence_weight > 0` only
+  when the trace carries a zero-knowledge attestation proving that the
+  execution conformed to the published contract of the activity
+  template it claims to have run. The attestation is verified by
+  activity-api before any Thompson posterior update derived from the
+  trace.
 - **Governance attestations** — authority-update actions, governance
   policy executions, and federation-onboarding compliance reports may
   carry zero-knowledge attestations proving that the action satisfies
   the published governance rules without revealing the per-authority
   votes (G1), the data the rule was applied to (G2), or the trace
-  contents that justify the compliance claim (G3).
+  contents that justify the compliance claim (G3). Governance actions
+  carry their own confidence weighting expressed via the same field.
 
 Both surfaces share the predicate-family / proof-system / federation-
 handshake machinery defined below.
+
+## Relation to the learning loop's existing aggregation
+
+H6 introduces no parallel security subsystem. Each predicate family
+binds to an existing learning-loop mechanism:
+
+| Existing mechanism | Confidence axis H6 supplies |
+|---|---|
+| `Beta(1, 1)` prior on new templates | Prior on new foreign vessels derived from peer trust ancestry; informative prior replaces uniform when H6-trace-attestation is provisioned |
+| Stratified failure-mode α/β updates (verifier_negative full β, budget_exhausted half β, etc.) | Additional `attestation_strength` axis on the same stratification table; `signal_confidence_weight` multiplies the per-failure-mode update magnitude |
+| Validators-as-activities with self-correcting posteriors | Verifier-vessels are validators; peer-disagreement detection across verifier-vessel implementations produces the same β-on-disagreement signal that validator-dispatch already enforces |
+| `improvise_share` rolling-window concentration | `traceContributionQuota` rolling-window concentration per source; same throttle, different axis |
+| Composition-chain walking (Phase 18.4) for chain-credit | Hash-chain pointer on AET rows extends the walk with cryptographic linkage; chain-credit propagation unchanged |
+
+H6 is the **confidence-weighting** generalisation of the substrate's
+own noisy-signal aggregation. The cryptographic mechanism is the
+contribution; the aggregation behaviour is unchanged.
 
 ## Properties
 
