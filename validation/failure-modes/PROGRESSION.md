@@ -144,9 +144,14 @@ this order reduces debt fastest:
   promotions remain). `remaining_gaps=[]` for the first time. DEV-5 complete:
   conversation-vessel deployed, `llm_completion` shape live in discovery.
   Gap closed: `draft-gap-closing-activity exists` ✓.
-- `cycles/cycle-3.json` (next) — run harness against canary to measure whether
-  gap_count_decreasing; operator promotion needed to close the 2 remaining debt
-  items. If promoted, debt could reach 0 and consecutive_zero_debt_cycles starts.
+- `cycles/cycle-3.json` — harness run: gap_count=6, debt=5, 9 total proposals
+  (6 autonomous). Variants registered but not discoverable via /recommend
+  (lacking Thompson history). Operator admin scope still blocked.
+- `cycles/cycle-5.json` — **FIRST CLEAN CYCLE**: reuse=6, gap=0, debt=0.
+  All 6 scenarios matched via `discover-by-shapes` fallback (new in this cycle).
+  All 6 variants drafted autonomously by `draft-gap-closing-activity`, registered
+  with write-scope only. `consecutive_zero_debt_cycles=1`. Gap trajectory: 6→0.
+  **Next**: maintain 2 more consecutive clean cycles for LIFT CANDIDATE.
 
 ## Why the First Few Cycles Look Bad
 

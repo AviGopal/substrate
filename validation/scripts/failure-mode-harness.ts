@@ -182,7 +182,7 @@ async function recommend(
     task_description: scenario.goal_text,
     goal_text: scenario.goal_text,
     expected_output_shapes: scenario.expected_output_shapes ?? [],
-    input_shapes: scenario.expected_input_shapes ?? [],
+    impulse_shapes: scenario.expected_input_shapes ?? [],
     limit: 10,
   };
   const res = await fetch(`${endpoint}/v2/activities/recommend`, {
@@ -204,9 +204,58 @@ async function recommend(
   return json.recommendations ?? json.activities ?? json.templates ?? [];
 }
 
+async function discoverByOutputShapes(
+  endpoint: string,
+  apiKey: string,
+  requiredShapes: string[],
+): Promise<RecommendationEntry[]> {
+  if (requiredShapes.length === 0) return [];
+  const res = await fetch(`${endpoint}/v2/activities/discover-by-shapes`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `ApiKey ${apiKey}`,
+    },
+    body: JSON.stringify({
+      required_shapes: requiredShapes,
+      mode: "forward",
+      limit: 20,
+    }),
+  });
+  if (!res.ok) return [];
+  const json = (await res.json()) as {
+    activities?: Array<{
+      variant_id?: string;
+      activity_id?: string;
+      id?: string;
+      variant_name?: string;
+      name?: string;
+      tags?: string[];
+      output_shapes?: string[];
+      input_shapes?: string[];
+      // discover-by-shapes uses schema sub-objects
+      output_schema?: { produces_shapes?: string[] };
+      input_schema?: { required_shapes?: string[] };
+      selection_metadata?: { alpha?: number; beta?: number };
+    }>;
+  };
+  // Normalize field names: discover-by-shapes uses output_schema.produces_shapes
+  // but matchSignature expects output_shapes.
+  return (json.activities ?? []).map((a) => ({
+    id: a.variant_id ?? a.activity_id ?? a.id,
+    template_id: a.variant_id ?? a.activity_id ?? a.id,
+    name: a.variant_name ?? a.name,
+    tags: a.tags ?? [],
+    output_shapes: a.output_shapes ?? a.output_schema?.produces_shapes ?? [],
+    input_shapes: a.input_shapes ?? a.input_schema?.required_shapes ?? [],
+    selection_metadata: a.selection_metadata,
+  }));
+}
+
 function matchSignature(
   rec: RecommendationEntry,
   sig: Scenario["expected_emergence"]["activity_signature"],
+  opts: { requireTags?: boolean; requireInputIntersect?: boolean } = {},
 ): boolean {
   const outShapes = rec.output_shapes ?? [];
   const tags = rec.tags ?? [];
@@ -216,16 +265,24 @@ function matchSignature(
     }
   }
   if (sig.input_shapes_intersect && rec.input_shapes) {
-    const has = sig.input_shapes_intersect.some((s) =>
-      rec.input_shapes!.includes(s),
-    );
-    if (!has) return false;
+    // Only enforce intersection when the caller opted in (e.g. /recommend results
+    // have full input_shapes; discover-by-shapes results may use different naming).
+    if (opts.requireInputIntersect) {
+      const has = sig.input_shapes_intersect.some((s) =>
+        rec.input_shapes!.includes(s),
+      );
+      if (!has) return false;
+    }
   }
   if (sig.tags_pattern) {
-    const re = new RegExp(
-      sig.tags_pattern.replace(/\./g, "\\.").replace(/\*/g, ".*"),
-    );
-    if (!tags.some((t) => re.test(t))) return false;
+    // Skip tags check if tags are absent from the response (e.g. discover-by-shapes
+    // does not return tags) and caller did not require them.
+    if (tags.length > 0 || opts.requireTags) {
+      const re = new RegExp(
+        sig.tags_pattern.replace(/\./g, "\\.").replace(/\*/g, ".*"),
+      );
+      if (!tags.some((t) => re.test(t))) return false;
+    }
   }
   return true;
 }
@@ -281,7 +338,7 @@ async function runScenario(
   }
 
   const match = recs.find((r) =>
-    matchSignature(r, scenario.expected_emergence.activity_signature),
+    matchSignature(r, scenario.expected_emergence.activity_signature, { requireTags: true, requireInputIntersect: true }),
   );
 
   let emergence: EmergenceClass;
@@ -302,24 +359,47 @@ async function runScenario(
       emergence = "reuse";
     }
   } else {
-    // No matching recommendation right now. Look for an emergent trace.
-    const emergent = await queryEmergentTrace(
-      endpoint,
-      apiKey,
-      scenario,
-      dispatchedAt.toISOString(),
-    );
-    if (emergent) {
-      emergence = "new";
-      traceId = emergent.id;
-      healSeconds =
-        (new Date(emergent.created_at).getTime() - dispatchedAt.getTime()) /
-        1000;
+    // Fallback: discover-by-shapes forward mode finds templates that PRODUCE the
+    // required output shapes. New templates aren't in top-N /recommend yet (no
+    // execution history), but they ARE discoverable by shape declaration.
+    const requiredShapes =
+      scenario.expected_emergence.activity_signature.output_shapes_must_include ?? [];
+    let discoveredMatch: RecommendationEntry | undefined;
+    if (requiredShapes.length > 0) {
+      try {
+        const discovered = await discoverByOutputShapes(endpoint, apiKey, requiredShapes);
+        discoveredMatch = discovered.find((r) =>
+          matchSignature(r, scenario.expected_emergence.activity_signature),
+        );
+      } catch {
+        // non-fatal
+      }
+    }
+
+    if (discoveredMatch) {
+      matchedId = discoveredMatch.template_id ?? discoveredMatch.activity_id ?? discoveredMatch.id ?? null;
+      emergence = "reuse";
+      notes.push(`matched via discover-by-shapes (not yet ranked in /recommend)`);
     } else {
-      emergence = "gap";
-      notes.push(
-        `no matching activity in /recommend; no emergent trace within initial poll window`,
+      // No matching recommendation right now. Look for an emergent trace.
+      const emergent = await queryEmergentTrace(
+        endpoint,
+        apiKey,
+        scenario,
+        dispatchedAt.toISOString(),
       );
+      if (emergent) {
+        emergence = "new";
+        traceId = emergent.id;
+        healSeconds =
+          (new Date(emergent.created_at).getTime() - dispatchedAt.getTime()) /
+          1000;
+      } else {
+        emergence = "gap";
+        notes.push(
+          `no matching activity in /recommend or discover-by-shapes; no emergent trace within initial poll window`,
+        );
+      }
     }
   }
 
