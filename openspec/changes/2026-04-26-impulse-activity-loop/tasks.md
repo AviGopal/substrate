@@ -1385,3 +1385,98 @@ Phase 25 is complete when:
 - No replacement of the Phase 19 v2 benchmark. The curated harness continues to run on the curated set; the generator is additive.
 - No LLM-generated goals outside the seeded adversarial-perturbation mode. Generation is deterministic.
 - No tying of Phase 25 acceptance to Scenario D until Phase 22 forge reaches its own success criterion. The matrix cell stays empty until then.
+
+---
+
+## Phase 26 — Single-Container Substrate (2026-05-23)
+
+**Motivation.** The Phase 5 cutover prerequisites (H1 two-sided traces, H5 immutable
+baselines, vessel-session-handshake) are all undeployed and require multi-month
+implementation work. Meanwhile external constraints require moving primary development
+from the canary cluster to a local environment. Rather than attempting to stand up a
+local Kubernetes cluster, Phase 26 collapses the entire vessel fleet into a single
+container where systemd manages startup ordering and all inter-vessel calls are
+localhost. Within one container there is no boundary to cross: H1/H2/session-handshake
+become irrelevant because the container surface is the trust boundary. This is not a
+workaround — a substrate is defined by its fixed point (discovery-vessel) and its trust
+boundary; a container is a valid trust boundary. Phase 5 and the security hardenings
+still matter for multi-substrate and production topologies; Phase 26 creates a safe
+development context where those properties are guaranteed structurally.
+
+Full design: `openspec/changes/2026-05-23-single-container-substrate/design.md`
+Full task list: `openspec/changes/2026-05-23-single-container-substrate/tasks.md`
+
+### 26.1 Dockerfile.substrate
+
+- [ ] 26.1.1 `Dockerfile.substrate` with systemd PID 1, Bun, SurrealDB binary, Valkey,
+  all vessel source trees copied and deps installed. All six systemd unit files
+  (surrealdb, valkey, discovery-vessel, identity-vessel, activity-api, minibob,
+  development-vessel) committed to `scripts/substrate/units/`.
+  Acceptance: `docker build -f Dockerfile.substrate .` succeeds; all units reach
+  `active (running)` within 60s of container start.
+
+- [ ] 26.1.2 `/etc/substrate/env` environment file generated at container start from
+  `JWT_SECRET`, `SURREAL_PASS`, `METABOB_API_KEY`, `ANTHROPIC_API_KEY` env vars
+  (auto-generated if absent, printed to stdout once).
+  Acceptance: restarting the container with the same volume produces the same key values.
+
+### 26.2 Init and seeding
+
+- [ ] 26.2.1 `init-database.ts` runs as `ExecStartPre` on activity-api.service against
+  the local SurrealDB file instance. All ~132 migrations apply idempotently.
+  Acceptance: activity-api `/health` returns `{status:"healthy"}` within 30s.
+
+- [ ] 26.2.2 `scripts/substrate/seed-identity.ts` seeds one `read,write` API key on
+  first start (detected by empty `api_key` table). Key printed as `SUBSTRATE_API_KEY=`.
+  Subsequent starts skip seeding and print the existing key.
+  Acceptance: `docker logs substrate | grep SUBSTRATE_API_KEY` outputs one line.
+
+- [ ] 26.2.3 `development-vessel` seed-templates runs after healthy start.
+  Acceptance: `GET http://localhost:8080/v2/activities/templates` returns non-zero total.
+
+### 26.3 Developer tooling
+
+- [ ] 26.3.1 `scripts/substrate/Makefile` with targets: `substrate-build`, `substrate-run`,
+  `substrate-run-dev` (with source volume mounts), `substrate-restart-<vessel>`,
+  `substrate-logs-<vessel>`, `substrate-status`, `substrate-stop`, `substrate-shell`.
+  Acceptance: `make substrate-status` shows all units active without entering the container.
+
+- [ ] 26.3.2 `scripts/substrate/configure-local.sh` writes `~/.metabob/config.json`
+  with `endpoint: http://localhost:8080` and the seeded API key.
+  Acceptance: running the script then `bun run validation/scripts/failure-mode-harness.ts`
+  completes without connection errors.
+
+- [ ] 26.3.3 `docs/SUBSTRATE.md` — developer guide: quick-start (3 commands to running
+  substrate), iteration loop (edit → restart unit → validate), switching between local
+  and canary (change one line in config.json), backing up / restoring learning state
+  (copy `/data/` volume).
+
+### 26.4 Harness validation
+
+- [ ] 26.4.1 Run failure-mode harness against local substrate. Acceptance: completes
+  without HTTP errors. gap_count may be non-zero (cold start); that is expected and
+  noted in the report label.
+
+- [ ] 26.4.2 Run `minibob --single "list files in current directory"` against local
+  substrate. Acceptance: trace appears in `GET /v2/activities/execution-traces?limit=1`.
+
+- [ ] 26.4.3 Commit `validation/baselines/local-substrate-cold.json` capturing cold-start
+  state (template count, thompson_pool_size, recommend_mrr from first stratified run).
+  This is the warm-up baseline.
+
+### 26.5 CLAUDE.md and loop updates
+
+- [ ] 26.5.1 Update CLAUDE.md "Known substrate endpoints" to add
+  `http://localhost:8080 — local single-container substrate (make substrate-run)`.
+
+- [ ] 26.5.2 Update CLAUDE.md "The Development Loop" to show the local iteration path
+  alongside the canary CI/CD path.
+
+Phase 26 is complete when:
+
+- [ ] 26.1.x `docker run metabob/substrate:dev` brings all vessels to healthy within 60s
+- [ ] 26.2.x `~/.metabob/config.json` → localhost passes failure-mode harness smoke test
+- [ ] 26.3.x `minibob --single "<goal>"` produces a visible trace in activity-api
+- [ ] 26.4.x `make substrate-restart-activity-api` hot-reloads the vessel without
+  restarting the container
+- [ ] 26.5.x CLAUDE.md and docs/SUBSTRATE.md reflect the local-first development loop
