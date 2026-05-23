@@ -1480,3 +1480,196 @@ Phase 26 is complete when:
 - [ ] 26.4.x `make substrate-restart-activity-api` hot-reloads the vessel without
   restarting the container
 - [ ] 26.5.x CLAUDE.md and docs/SUBSTRATE.md reflect the local-first development loop
+
+## Phase 27 — Lift: Hand-over to Substrate-Driven Development (2026-05-23)
+
+Operationalises the integration spec's terminal success criterion (proposal §7).
+Lift is the formal hand-over of substrate development from human-driven (the
+four-stage VERIFY → DEBUG → SPEC → DEV cycle) to substrate-driven (the
+topology-discovery loop running on itself). This phase defines (a) the lift
+criterion, (b) the hand-over condition, and (c) the **pre-lift readiness
+checklist** — the explicit set of properties that must already be in place
+so the substrate has everything it needs to continue without external
+developer input.
+
+External spec source: `openspec/changes/2026-05-23-topology-discovery-loop/`.
+Phase 27 below tracks IAL-level integration; the spec proper lives there.
+
+### 27.1 Lift criterion (operational)
+
+- [ ] 27.1.1 The integrated loop's `convergence-tick` activity emits a
+  `convergenceReport` impulse whose body matches the schema in the
+  topology-discovery-loop design §F.
+- [ ] 27.1.2 The criterion `lift_candidate = true` MUST require ALL of:
+  - `reachable_learned_strictly_increasing = true` across the last 3 snapshots,
+  - `reachable_unlearned_strictly_decreasing = true` across the last 3 snapshots,
+  - `unknown_strictly_decreasing = true` across the last 3 snapshots,
+  - `consecutive_converging_cycles >= 3`,
+  - all three snapshots produced from NON-HUMAN triggers (i.e. the
+    snapshot AETs MUST carry `trace.tags ⊇ ["intent:topology_discovery"]`
+    AND MUST NOT carry an external-caller goal id).
+- [ ] 27.1.3 The integration test for 27.1.2 is the end-to-end run in the
+  topology-discovery-loop spec §6.4; success at that gate flips the IAL's
+  Lift Status field (a new file `validation/state/lift-status.json`
+  authoritative on the substrate) to `candidate`.
+
+### 27.2 Hand-over condition
+
+- [ ] 27.2.1 Once `lift_candidate=true` has held for 3 consecutive
+  `convergenceReport` impulses, the substrate writes
+  `validation/state/lift-status.json` with `status: "confirmed"` and
+  the trace ids of the supporting reports. This file is the durable
+  hand-over marker.
+- [ ] 27.2.2 The progression-driver script
+  (`validation/scripts/progression-driver.ts`) is retired as the
+  authoritative lift signal. It remains for debugging only; the
+  authoritative signal is `lift-status.json`.
+- [ ] 27.2.3 CLAUDE.md is updated to document the hand-over: post-lift,
+  the four-stage VERIFY → DEBUG → SPEC → DEV cycle is RUN BY THE SUBSTRATE
+  via its measurement/probe activities. Humans interact with the
+  substrate only at the boundary (new external goals, vessel addition,
+  hard intervention). The "Development Loop" section grows a new
+  "Post-lift loop" subsection describing this stance.
+- [ ] 27.2.4 The lift-status file MUST include a manual revert mechanism:
+  an operator may write `status: "reverted"` with a reason, returning
+  the substrate to human-driven development. Reversion is a SAFETY
+  CONTROL, not a failure mode. The substrate respects the file; the
+  observer pauses probe dispatch when status is `reverted`.
+
+### 27.3 Pre-lift readiness checklist (forward view)
+
+These items MUST be green BEFORE the substrate is permitted to enter
+lift state. Each maps to a sibling spec or a Phase in this document. The
+checklist's purpose is to ensure the post-lift substrate has everything
+it needs to continue.
+
+#### 27.3.a Topology persistence
+
+- [ ] 27.3.a.1 Substrate volume (`/data/`) persists across container
+  restarts AND across substrate image upgrades. Test: stop container,
+  upgrade image, restart, confirm trace history + Thompson posteriors
+  intact. Gate: Phase 26.4.3 cold-start baseline reproduces post-restart.
+- [ ] 27.3.a.2 SurrealDB migrations are idempotent and additive only.
+  Schema breaking changes between substrate versions are NOT permitted
+  post-lift. Gate: any new migration must pass forward-compat replay
+  against a captured post-lift volume snapshot.
+
+#### 27.3.b Substrate self-execution primitives all alive
+
+The substrate cannot run its own loop unless all six topology-discovery
+activities + the existing primitives they depend on are demonstrably
+operational. Each line item is a specific verifiable observation.
+
+- [ ] 27.3.b.1 All six topology-discovery seed templates registered:
+  `learned-topology-snapshot`, `reachable-unlearned-report`,
+  `unknown-shape-report`, `probe-reachable-unlearned`,
+  `probe-untraversed-edge`, `escalate-unknown-shape`. Plus
+  `convergence-tick`. Gate: topology-discovery-loop §6.1.
+- [ ] 27.3.b.2 Improvisation (foundation §548) demonstrably succeeds on
+  a synthetic goal that has no matching template. Gate: a trace exists
+  carrying `improvise_health.success_rate > 0` in the past 7 days.
+- [ ] 27.3.b.3 Ribosome (foundation §62, §604) demonstrably extracted at
+  least one new template from a successful improvise within the past 7
+  days. Gate: at least one activity_template row with `extracted_from`
+  pointing to a trace id.
+- [ ] 27.3.b.4 `create-shape-provider-goal` demonstrably runs end-to-end
+  when invoked. Gate: a trace exists with template id
+  `create-shape-provider-goal` from substrate-internal trigger in the
+  past 7 days.
+- [ ] 27.3.b.5 Thompson chain-credit propagation (Phase 18.4 / Phase 24)
+  is alive and writing to ancestor variants. Gate: integration test
+  18.4.7 green on the substrate's activity-api version.
+- [ ] 27.3.b.6 The lifecycle observer in development-vessel is running
+  and connected. Gate: `journalctl -u development-vessel | grep "ws
+  connected"` returns at least one recent entry.
+
+#### 27.3.c Boundaries — what the substrate may NOT do without human approval
+
+The substrate's autonomy is bounded. These limits exist BEFORE lift so
+they are durable through the transition. Each is enforced by activity-api
+PERMISSIONS or by a hard-coded vessel-side refusal.
+
+- [ ] 27.3.c.1 No admin-scope mutations. The substrate's API keys remain
+  `read,write` scope. `activityTemplate_update` and `_deprecate` continue
+  to be operator-gated. Lift does not change this.
+- [ ] 27.3.c.2 No external network egress beyond declared discovery
+  endpoints. The substrate may not reach the public internet from
+  topology-discovery probes. Gate: container network policy in
+  Phase 26.1 verified by negative test.
+- [ ] 27.3.c.3 No deletion of execution traces. The substrate may write
+  traces, may read traces, may not delete them. Gate:
+  `activityExecutionTrace_delete` resolver responds 403 with the
+  substrate's keys.
+- [ ] 27.3.c.4 No modification of the lift-status file from inside the
+  loop. Only operator intervention writes
+  `validation/state/lift-status.json`. Substrate-internal updates
+  produce a SECOND file (`validation/state/lift-status.observed.json`)
+  that an operator reviews before promoting to the canonical state.
+
+#### 27.3.d Hand-back capability
+
+- [ ] 27.3.d.1 An operator can pause substrate-driven probe dispatch by
+  writing `status: "reverted"` to `lift-status.json` (per 27.2.4). The
+  observer respects this within 30 seconds. Gate: integration test
+  flips the file and confirms probes stop firing within the window.
+- [ ] 27.3.d.2 An operator can inspect every substrate-initiated
+  decision via the existing trace store. No substrate decision is
+  hidden from the trace record. Gate:
+  `GET /v2/activities/execution-traces?tag=intent:topology_discovery`
+  returns the full history.
+- [ ] 27.3.d.3 An operator can wipe substrate-initiated traces while
+  preserving user-driven traces. Gate: a documented procedure exists
+  in `docs/SUBSTRATE.md` for selective trace removal.
+
+#### 27.3.e Convergence-tick has enough data to be meaningful
+
+- [ ] 27.3.e.1 At least 7 days of `learnedTopologySnapshot` history
+  exists before the first lift_candidate evaluation. Below this
+  threshold the convergence-tick activity returns
+  `lift_candidate: false` regardless of monotonicity. This prevents
+  premature lift on a cold start.
+- [ ] 27.3.e.2 The substrate's activity-template count exceeds a
+  declared minimum (default: 50 templates, 10 of which authored by
+  `make_activity_autonomous`). Below this, the Reachable+Learned cell
+  is too small for the monotonicity test to be informative. Gate:
+  `GET /v2/activities/templates?limit=1` total field ≥ 50.
+
+#### 27.3.f Documentation
+
+- [ ] 27.3.f.1 `docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`
+  remains the canonical source. This phase does NOT modify it.
+- [ ] 27.3.f.2 A new section in CLAUDE.md titled "Lift state and the
+  post-lift loop" documents the four-stage cycle continuing to run, but
+  with the substrate as the actor in each stage. Mirrors the language
+  of the topology-discovery-loop spec.
+- [ ] 27.3.f.3 A new doc `docs/LIFT_HANDOVER.md` enumerates the
+  operator's intervention rights, the substrate's autonomy boundary,
+  and the trace-audit procedure. Authored from this phase's tasks
+  27.2.4, 27.3.c.x, and 27.3.d.x.
+
+### 27.S Phase 27 acceptance gates
+
+- [ ] 27.S.1 All 27.1 + 27.2 + 27.3 boxes ticked.
+- [ ] 27.S.2 `convergenceReport.lift_candidate = true` for 3 consecutive
+  emissions from natural substrate activity, observed on the in-container
+  substrate per topology-discovery-loop R8.4.
+- [ ] 27.S.3 `validation/state/lift-status.json` exists with
+  `status: "confirmed"` and is referenced from CLAUDE.md's Development
+  Loop section.
+- [ ] 27.S.4 The IAL integration spec is then considered functionally
+  complete. Outstanding items in earlier phases that are deferred-but-
+  not-blocking remain open as their own backlog; they no longer block
+  the IAL itself.
+
+### Why this Phase is the IAL's terminal phase
+
+The IAL set out to wire the impulse-activity loop end-to-end. Phases 1–26
+implement the loop's mechanisms (binding, validators, escalation,
+ribosome, chain-credit, state-space signature, substrate packaging,
+harness participation, topology discovery). Phase 27 is the only phase
+whose acceptance criterion is *the system operating on itself*. There
+is no Phase 28 in this spec because, by definition, Phase 28 onward is
+work the substrate authors and dispatches via its own activities. New
+external specs may still be authored (new vessels, new goal classes,
+new substrates), but they are no longer authored as IAL phases — they
+are authored as inputs to the running substrate.

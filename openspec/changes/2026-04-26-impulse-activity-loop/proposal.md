@@ -29,6 +29,13 @@ The integrated impulse-activity loop is considered complete when, against canary
 4. **The impulse-activity system creates improved, specified, better-wired activities via the executor** — measurable via the ribosome pattern emitting new activity templates whose Thompson α/β converges above embedded-template baselines.
 5. **Activities compose using all MiniBob features** — measurable via composition graphs that traverse pool selection, producer selection, validators, and shape-provider escalation in a single goal-resolution trace.
 6. **Activity reuse rate trends upward and improvise-share trends downward** — measurable via the `activity-reuse-validation-harness` weekly report. The system getting better at finding the right activity is the empirical signature of topology learning. Phase 18 makes this property observable.
+7. **Lift — the substrate sustains its own topology-discovery loop without external developer input.** Operationalised as foundation §33's **Convergence**: three consecutive `convergenceReport` impulses (Phase 27, derived from the topology-discovery-loop spec) showing strict monotonic decrease in the Reachable+Unlearned and Unknown cells, and strict monotonic increase in Reachable+Learned, all driven by non-human triggers. This is the integrated loop's terminal success criterion. Criteria 1–6 describe a system that works; criterion 7 describes a system that works on itself.
+
+## Lift and hand-over
+
+Criterion 7 above is not a stretch goal — it is the **explicit hand-over condition** for this entire integration spec. When `lift_candidate=true` holds for three consecutive `convergenceReport` impulses produced from natural substrate activity (no human in the trigger path), human-driven development of the substrate is intended to step back. Subsequent topology refinement is performed by the substrate itself: the six topology-discovery activities measure their own state, the observer fires probes against measured gaps, ribosome extracts learned templates, and Thompson posteriors update. The IAL is finished when this hand-over actually happens; until then, the IAL remains an open project.
+
+Phase 27 below formalises the hand-over condition and the **pre-lift readiness checklist** — the explicit set of substrate properties that must already be in place so that the post-lift substrate has everything it needs to continue without human intervention. The checklist is not aspirational; each item maps to a concrete sub-spec or a measurable canary observation.
 
 ## Topology creation as a core property
 
