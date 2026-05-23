@@ -1,0 +1,369 @@
+{
+  "investigation_id": "2026-05-23T23-32-45-investigation-003",
+  "generated_at": "2026-05-23T23:32:45Z",
+  "investigator_session_id": "iteration-003-with-shared-infra",
+  "prior_investigation_id": "2026-05-23T23-15-01-investigation-002",
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container",
+    "version_reported": "1.20.9",
+    "auth_verified": true,
+    "narrator_state": "not currently running; last snapshot 2026-05-23T23:31:20.775Z (~1.5min before this investigation)"
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "claim": "Gameable lift criteria — unchanged at progression-driver:256-260.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "file_ref",
+          "location": "validation/scripts/progression-driver.ts:256-260",
+          "excerpt": "if (consecutiveZero >= 3 && gapDecreasing && autonomousPresent) { ... LIFT CANDIDATE ... }",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Ship 2026-05-23-lift-criterion-hardening."
+    },
+    {
+      "id": "F-002",
+      "claim": "Regex JSON fallback in progression-driver still required for malformed proposals.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "file_ref",
+          "location": "validation/scripts/progression-driver.ts:110-120",
+          "excerpt": "Regex fallback extractor for proposal envelope from invalid JSON",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-003",
+      "claim": "Trace records on the live substrate contain no cryptographic provenance fields. authored_by remains a self-declared string at proposal level; trace records carry vessel_id and org_id but no signature.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -sf -H \"Authorization: ApiKey $KEY\" http://localhost:18080/v2/activities/execution-traces?limit=2 | jq '.executions[0] | keys'",
+          "excerpt": "Returned keys: activity_id, cost_usd, duration_ms, executed_at, execution_id, id, impulse_count, metadata, org_id, status, success, task_count, variant_id, vessel_id, vessel_version. No signature, no attestation_token, no key_fingerprint.",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-004",
+      "claim": "Six failure-mode scenarios on disk; 63-mode matrix remains aspirational.",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/scenarios/ | wc -l",
+          "excerpt": "6",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-005",
+      "claim": "cycle-8.json carries no substrate target field. Refinement: trace records DO carry vessel_id and org_id (e.g. 'substrate-local' / 'organizations:substrate_admin'), so substrate-anonymity is specific to cycle reports, not the underlying traces.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq '{cycle, target, kind}' validation/failure-modes/cycles/cycle-8.json",
+          "excerpt": "{ cycle: null, target: null, kind: null }",
+          "verified_at": "2026-05-23T23:32:45Z"
+        },
+        {
+          "kind": "command",
+          "command": "curl ... /v2/activities/execution-traces | jq '.executions[0] | {vessel_id, org_id}'",
+          "excerpt": "{ vessel_id: 'substrate-local', org_id: 'organizations:substrate_admin' }",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-006",
+      "claim": "Hardcoded deployment defaults remain in three identified files.",
+      "category": "deployment",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -n 'metabob.com\\|svc.cluster.local' repos/identity-vessel/src/services/{trace,jwt}.ts repos/discovery-vessel/src/middleware/auth.ts",
+          "excerpt": "trace.ts:6, jwt.ts:15, auth.ts:63 — defaults still present",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-007",
+      "claim": "Trailblazing remains documented as never implemented.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "file_ref",
+          "location": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md:904",
+          "excerpt": "**\"Trailblazing\"** — never implemented; remains only in archived docs.",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-008",
+      "claim": "Mythic three-state language has no operational referent.",
+      "category": "idiom",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "doc_quote",
+          "location": "investigation-001 narrative",
+          "excerpt": "framing dignifies a perfectly ordinary event loop",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-009",
+      "claim": "22 changes drafted 2026-05-23; zero DEV tasks complete across five audited.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "for c in 2026-05-23-substrate-identity-resolution 2026-05-23-substrate-self-replacement-pipeline 2026-05-23-external-resolver-vesselization 2026-05-23-external-resolver-grounding 2026-05-23-lift-criterion-hardening; do grep -c '^- \\[x\\]' openspec/changes/$c/tasks.md; done",
+          "excerpt": "Zero across all five (re-confirmed)",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-010",
+      "claim": "Root remains clean (13 entries; no PNGs).",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls -1 | wc -l",
+          "excerpt": "13",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-011",
+      "claim": "Zero DEV progress on the five highest-leverage 2026-05-23 changes.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(see F-009 command)",
+          "excerpt": "Re-confirmed zero",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-012",
+      "claim": "Cycle reports do not record substrate target.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq 'keys' validation/failure-modes/cycles/cycle-8.json",
+          "excerpt": "No substrate_target, target, endpoint, or kind keys at top level",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-013",
+      "claim": "Two coexisting unsigned author tags in proposal directory.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "for f in validation/failure-modes/proposals/*.json; do jq -r '.proposal.authored_by // .authored_by' \"$f\"; done | sort | uniq -c",
+          "excerpt": "6 make_activity_autonomous; 3 subagent",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-014",
+      "claim": "F-V58 fix (memory: 'dense search restored, embedding.status=enabled, in 1.20.9-66fb99c') has not taken effect on the running local substrate. Live /health reports embedding.status='disabled' on version 1.20.9 (no commit suffix shown).",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -sf http://localhost:18080/health | jq '.checks.embedding'",
+          "excerpt": "{ status: 'disabled', model: 'all-MiniLM-L6-v2', dim: 384 }",
+          "verified_at": "2026-05-23T23:32:45Z"
+        },
+        {
+          "kind": "command",
+          "command": "curl -sf http://localhost:18080/health | jq '{service, version}'",
+          "excerpt": "{ service: 'metabob-activity-api', version: '1.20.9' }",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Verify the running container image SHA matches 1.20.9-66fb99c; check that EMBEDDING_MODEL_DIR env var is set in the systemd unit. The fix may need to be re-built or env restored."
+    },
+    {
+      "id": "F-015",
+      "claim": "Trace list endpoint returns total: -1 (sentinel for uncomputed count) rather than the actual row count or null. Documentation does not specify this contract.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -sf -H \"Authorization: ApiKey $KEY\" 'http://localhost:18080/v2/activities/execution-traces?limit=2' | jq '.total'",
+          "excerpt": "-1",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Either compute the total or use null; -1 as a sentinel is undocumented and confuses downstream consumers."
+    },
+    {
+      "id": "F-016",
+      "claim": "Narrator state: not currently running. Last snapshot is ~1.5 minutes old (snapshot-2026-05-23T23-31-20-775Z.json). No event JSONL captured. Runtime-transient capture is paused.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ps ax | grep substrate-narrator | grep -v grep",
+          "excerpt": "(no matches)",
+          "verified_at": "2026-05-23T23:32:45Z"
+        },
+        {
+          "kind": "command",
+          "command": "ls validation/observations/events* 2>&1",
+          "excerpt": "ls: cannot access 'validation/observations/events*': No such file or directory",
+          "verified_at": "2026-05-23T23:32:45Z"
+        },
+        {
+          "kind": "command",
+          "command": "ls -t validation/observations/snapshots/ | head -1",
+          "excerpt": "snapshot-2026-05-23T23-31-20-775Z.json",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Start the narrator as a background process: bun run validation/scripts/substrate-narrator.ts &. Without it, future investigations cannot perform runtime-transient comparisons except by direct HTTP queries (which only sample momentary state, not the event stream)."
+    },
+    {
+      "id": "F-017",
+      "claim": "Live substrate confirms ribosome is firing. Recent traces include template_id: 'ribosome-extract' with reason 'lifecycle hook: lifecycle:activity:postExecution', vessel_id 'substrate-local'. This is positive evidence that lifecycle subscription + template extraction is operational, not just specified.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl ... /v2/activities/execution-traces?limit=5 | jq '.executions[] | select(.metadata.template_id == \"ribosome-extract\")'",
+          "excerpt": "Returned at least one trace with template_id: 'ribosome-extract', metadata.reason: 'lifecycle hook: lifecycle:activity:postExecution', success: true, vessel_id: 'substrate-local'",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "No remediation needed; this is a positive finding. Note for the operator: ribosome firing does not imply ribosome-extracted templates are correct or load-bearing; it only confirms the lifecycle subscription path works."
+    },
+    {
+      "id": "F-018",
+      "claim": "Snapshot-vs-runtime consistency: most recent narrator snapshot reports 18 templates; live /v2/activities/templates?limit=100 returns 18. Snapshot accuracy verified.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq '.activity_api.templates | length' validation/observations/snapshots/snapshot-2026-05-23T23-31-20-775Z.json",
+          "excerpt": "18",
+          "verified_at": "2026-05-23T23:32:45Z"
+        },
+        {
+          "kind": "command",
+          "command": "curl ... /v2/activities/templates?limit=100 | jq '.templates | length'",
+          "excerpt": "18",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "resolved",
+      "operator_remediation": "No action; the narrator captured state accurately during its run."
+    },
+    {
+      "id": "F-019",
+      "claim": "Snapshot recorded discovery-vessel returned HTTP 401 to the narrator's stats request, despite the narrator using the same API key that succeeds against activity-api. Discovery-vessel and activity-api disagree on credential acceptance.",
+      "category": "deployment",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq '.discovery_vessel' validation/observations/snapshots/snapshot-2026-05-23T23-31-20-775Z.json",
+          "excerpt": "{ endpoint: 'http://localhost:18100', reachable: false, stats: null, error: 'HTTP 401' }",
+          "verified_at": "2026-05-23T23:32:45Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Audit auth coupling between identity-vessel, discovery-vessel, and activity-api. F-006 (hardcoded metabob.com defaults) may be related: discovery-vessel's auth middleware defaults to a different identity-vessel URL than activity-api's does."
+    }
+  ],
+  "regressions_since_prior": [],
+  "resolutions_since_prior": ["F-018"],
+  "new_findings": ["F-014", "F-015", "F-016", "F-017", "F-018", "F-019"],
+  "open_questions": [
+    "Is the F-V58 fix (1.20.9-66fb99c) actually in the running container? Need image SHA verification.",
+    "Why does discovery-vessel reject the same API key activity-api accepts? Identity-vessel divergence between the two consumers?",
+    "Should the auditor role start its own narrator instance, or trigger the operator to start one?",
+    "Will the next cycle-N report include a substrate target field once cycle-9 lands, or will the substrate-anonymous pattern persist?"
+  ],
+  "next_wake_recommendation": {
+    "delay_seconds": 1800,
+    "reason": "LIFT CANDIDATE remains stamped; F-019 (discovery/activity-api auth divergence) and F-014 (embedding disabled despite memory-recorded fix) are new operational findings worth re-checking after 30 minutes to see if narrator restarts or a cycle-9 report lands."
+  }
+}

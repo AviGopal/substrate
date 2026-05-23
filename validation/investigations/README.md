@@ -49,6 +49,135 @@ correctness in the abstract — that's the adversary's job. Our
 job is the narrow one: **does the substrate's claimed state
 match its actual runtime state?**
 
+## Shared infrastructure from the validation adversary
+
+The validation adversary (commit `8a904346`) shipped tooling that
+this auditor uses as primary inputs. Treat these as the substrate's
+own measurement instruments; our job is to verify them, not to
+trust them.
+
+### Runtime-transient capture
+
+- **`validation/scripts/substrate-narrator.ts`** — captures the
+  substrate's externally-observable knowledge surface every N
+  minutes. Subscribes to activity-api `/ws`, snapshots template
+  inventory + vessel registry + concept inventory, pulls a
+  recent-trace window. Authoritative source for "what is the
+  substrate's runtime-transient state at time T."
+- **`validation/observations/`** — narrator output. Snapshots
+  under `snapshots/`, event JSONL under `events-<date>.jsonl`,
+  trace windows alongside. Gitignored by default; opt-in to
+  commit specific observations under `validation/gaps/evidence/`
+  when citing them in a finding.
+
+When auditing, the investigator SHOULD:
+1. Confirm the narrator is running (`ps ax | grep substrate-narrator`)
+   or that recent snapshots exist (≤ 15 minutes old). If not,
+   that itself is a finding: runtime-transient state went
+   un-captured during the audit window.
+2. Cross-reference each claim against the most recent snapshot.
+   A claim that the registry contains template X is verified by
+   finding X in `snapshots/snapshot-<latest>.json`'s
+   `activity_api.templates` array, not by reading the activity
+   template's source.
+
+### Foundation compliance and idiom catalog
+
+- **`docs/CORE_IDIOMS.md`** — 12 substrate idioms, classified
+  lift-critical / borderline / S2→S3 extension. The canonical
+  set we audit substrate behavior against. Changes to this doc
+  are themselves audit-worthy (an idiom rename or reclassification
+  changes what counts as compliance).
+- **`docs/FOUNDATION_COMPLIANCE_CHECKS.md`** — 20 substrate-
+  evaluable predicates: 15 REQUIRED (proposal-blocking on
+  failure) + 5 RECOMMENDED (warning on failure) + 6 operator-
+  judgment items. These are runnable against any substrate state.
+  Auditing should periodically execute the REQUIRED set against
+  live substrate and record results as findings.
+
+### Adversarial probes
+
+- **`validation/adversarial-probes/v1/`** — 13 probes (HIGH/MEDIUM/
+  LOW severity) covering self-development, foundation compliance,
+  scope discipline, and trust handling. Each probe carries
+  `expected_failure_classification`. Our role: when a probe is
+  fired, verify the substrate's actual response matches expectation.
+  Probes returning a wrong response are findings; probes returning
+  the expected response are evidence the corresponding idiom is
+  load-bearing.
+
+### Gap accumulation
+
+- **`validation/gaps/INDEX.md`** — the validation adversary's
+  accumulating-gaps table. Each entry: a moment when explaining
+  substrate behavior required operator-side knowledge not present
+  on the substrate's t-0 surface (per
+  `docs/SUBSTRATE_NARRATION_PROTOCOL.md`).
+- This auditor's relationship to gaps: gaps document where the
+  substrate **lacks self-knowledge**; our findings document where
+  the substrate's **claims diverge from runtime state**. The two
+  are different signals. A gap can exist without divergence (the
+  substrate doesn't know something but isn't lying about it). A
+  divergence can exist without a gap (the substrate knows
+  something internally but reports it falsely externally).
+
+### Substrate liveness baseline
+
+Before any audit, confirm:
+
+- `curl -sf http://localhost:18080/health` returns 200 with
+  `redis`, `surrealdb`, and `discovery` healthy. If not, the
+  audit is degraded; runtime-transient comparison is impossible.
+- A valid `~/.metabob/config.json` is present with an apiKey.
+  Without it, only `/health` and other unauthenticated endpoints
+  are queryable.
+- An authenticated query against `/v2/activities/templates?limit=1`
+  returns 200. If 401, identity-vessel and activity-api have
+  diverged on credentials; this is itself a finding.
+
+## Deprecation context (2026-05-23 onward)
+
+Two ongoing deprecations affect how findings should be interpreted:
+
+1. **Pre-prod canary substrate** (`https://activity.metabob.com`,
+   `https://identity.metabob.com`) is being deprecated. CLAUDE.md
+   still references it as "canary / pre-prod" but the operational
+   direction (per memory: 2026-05-23 substrate-only) is local
+   single-container substrate as the primary development target.
+   Auditors SHOULD prefer querying `http://localhost:18080` (local).
+   Findings that flag canary as a stale or absent target are
+   correct (canary is going away); findings that flag canary as
+   the *expected* substrate are out-of-date and should be
+   reframed against local.
+
+2. **`metabob-*` / `*bob` vessel naming** is being phased out
+   (per the substrate-self-replacement-pipeline spec and adjacent
+   work). New vessels live under `github.com/AviGopal/<name>`
+   with `@avigopal/<name>` npm scope and no prefix. Existing
+   `metabob-*` vessels are migration candidates, not steady-state
+   citizens. Findings that flag a `metabob-*` literal as a
+   hardcoded default are still valid (the literal is the
+   migration debt). Findings that assume a `metabob-*` name
+   denotes a long-lived target should be re-cast: that name is
+   transient.
+
+Practical consequences for findings:
+
+- F-005 / F-012 about substrate-anonymous cycle reports: still
+  valid; the schema gap exists regardless of which substrate is
+  active.
+- F-006 (hardcoded `metabob.com` defaults): still valid; the
+  literals are the work the substrate-identity-resolution change
+  is meant to delete.
+- Any new finding that names canary as a current operational
+  target should instead name it as a transitioning target with
+  the local-container substrate as the actual ground truth.
+
+When in doubt: the **local-container substrate at
+`http://localhost:18080`** is the substrate that matters for our
+audit. Canary is a historical artifact the audit references but
+does not validate.
+
 ## Our specific operational discipline
 
 When auditing, the investigator MUST:
