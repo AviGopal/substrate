@@ -151,7 +151,12 @@ this order reduces debt fastest:
   All 6 scenarios matched via `discover-by-shapes` fallback (new in this cycle).
   All 6 variants drafted autonomously by `draft-gap-closing-activity`, registered
   with write-scope only. `consecutive_zero_debt_cycles=1`. Gap trajectory: 6→0.
-  **Next**: maintain 2 more consecutive clean cycles for LIFT CANDIDATE.
+- `cycles/cycle-6.json` — Steady state: reuse=6, gap=0, debt=0.
+  `consecutive_zero_debt_cycles=2`.
+- `cycles/cycle-7.json` — **LIFT CANDIDATE**: `consecutive_zero_debt_cycles=3`.
+  All three lift criteria met for three consecutive cycles (5, 6, 7):
+  debt=0, gap_count_decreasing (6→0), autonomous_proposals_present.
+  Harness transitions to watch mode. Re-engage only if consecutive_zero_debt_cycles resets.
 
 ## Why the First Few Cycles Look Bad
 

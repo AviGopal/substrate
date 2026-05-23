@@ -1,0 +1,32 @@
+{
+  "cycle_number": 7,
+  "started_at": "2026-05-22T00:00:00.000Z",
+  "baseline_report": "validation/results/2026-05-22-failure-mode-cycle-7.json",
+  "baseline_gap_count": 0,
+  "baseline_reuse_count": 6,
+  "proposals_authored": 0,
+  "proposals_by_author": {
+    "make_activity_autonomous": 0
+  },
+  "proposals_registered": 0,
+  "manual_intervention_debt": 0,
+  "manual_intervention_breakdown": {
+    "subagent_dispatches": 0,
+    "human_authored_templates": 0,
+    "operator_admin_actions_required": 0
+  },
+  "remaining_gaps": [],
+  "gaps_with_proposal": [],
+  "lift_kpi": {
+    "debt_zero": true,
+    "gap_count_decreasing": true,
+    "autonomous_proposals_present": true,
+    "consecutive_zero_debt_cycles": 3
+  },
+  "notes": [
+    "LIFT CANDIDATE: consecutive_zero_debt_cycles=3, gap_count_decreasing=true (6→0), autonomous_proposals_present=true.",
+    "All three lift criteria met for three consecutive cycles (5, 6, 7).",
+    "The system can now address new failure-mode gaps autonomously without manual intervention.",
+    "Harness becomes a watch: if consecutive_zero_debt_cycles resets, re-engage the loop."
+  ]
+}

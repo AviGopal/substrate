@@ -1,0 +1,92 @@
+{
+  "generated_at": "2026-05-23T06:47:33.742Z",
+  "label": "cycle-7-2026-05-22",
+  "endpoint": "https://activity.metabob.com",
+  "scenarios_run": 6,
+  "scenarios": [
+    {
+      "scenario_id": "fp-11-silent-semantic-failure",
+      "dispatched_at": "2026-05-23T06:47:20.484Z",
+      "recommendations_returned": 2,
+      "matched_existing_activity_id": "activity:⟨gap-closing:fp-11-silent-semantic-failure-1779506719973⟩",
+      "emergence_class": "reuse",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "matched via discover-by-shapes (not yet ranked in /recommend)"
+      ]
+    },
+    {
+      "scenario_id": "fp-12-partial-success-recorded-as-total",
+      "dispatched_at": "2026-05-23T06:47:22.683Z",
+      "recommendations_returned": 2,
+      "matched_existing_activity_id": "activity:⟨gap-closing:fp-12-partial-success-recorded-as-total-1779506735140⟩",
+      "emergence_class": "reuse",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "matched via discover-by-shapes (not yet ranked in /recommend)"
+      ]
+    },
+    {
+      "scenario_id": "fp-15-missing-producer-stale-registration",
+      "dispatched_at": "2026-05-23T06:47:24.632Z",
+      "recommendations_returned": 2,
+      "matched_existing_activity_id": "activity:⟨gap-closing:fp-15-missing-producer-stale-registration-1779506756536⟩",
+      "emergence_class": "reuse",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "matched via discover-by-shapes (not yet ranked in /recommend)"
+      ]
+    },
+    {
+      "scenario_id": "fm-17-resolver-budget-noncompliance",
+      "dispatched_at": "2026-05-23T06:47:27.037Z",
+      "recommendations_returned": 2,
+      "matched_existing_activity_id": "activity:⟨gap-closing:fm-17-resolver-budget-noncompliance-1779506768650⟩",
+      "emergence_class": "reuse",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": true,
+      "notes": [
+        "matched via discover-by-shapes (not yet ranked in /recommend)"
+      ]
+    },
+    {
+      "scenario_id": "fm-43-cascade-attribution-error",
+      "dispatched_at": "2026-05-23T06:47:29.241Z",
+      "recommendations_returned": 2,
+      "matched_existing_activity_id": "activity:⟨gap-closing:fm-43-cascade-attribution-error-1779506786807⟩",
+      "emergence_class": "reuse",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "matched via discover-by-shapes (not yet ranked in /recommend)"
+      ]
+    },
+    {
+      "scenario_id": "fm-44-silent-trace-loss",
+      "dispatched_at": "2026-05-23T06:47:31.667Z",
+      "recommendations_returned": 2,
+      "matched_existing_activity_id": "activity:⟨gap-closing:fm-44-silent-trace-loss-1779509866506⟩",
+      "emergence_class": "reuse",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "matched via discover-by-shapes (not yet ranked in /recommend)"
+      ]
+    }
+  ],
+  "summary": {
+    "reuse": 6,
+    "new": 0,
+    "gap": 0,
+    "avg_self_heal_seconds": null
+  }
+}
