@@ -47,8 +47,9 @@ The system is designed to operate identically on any substrate. A **substrate** 
 Replace `endpoint` with your substrate's activity-api URL. All validation harnesses and tooling read this config; none hardcode a substrate URL.
 
 **Known substrate endpoints:**
-- `https://activity.metabob.com` — canary / pre-prod (current `kubectx metabob-production`)
-- Local cluster — configure via `helmfile --environment local sync` + set endpoint to your in-cluster address
+- `http://localhost:8080` — **local single-container substrate** (Phase 26, `make substrate-run`). Primary development target after Phase 26 ships. All inter-vessel calls are localhost; no Kubernetes required. See `docs/SUBSTRATE.md`.
+- `https://activity.metabob.com` — canary / pre-prod (current `kubectx metabob-production`). Used for canary validation and production promotion.
+- Local cluster — configure via `helmfile --environment local sync` + set endpoint to your in-cluster address (legacy; superseded by single-container substrate)
 
 **Helmfile environments** (in `repos/deployment/`):
 - `environments/local.values.yaml` — local cluster overrides
@@ -60,13 +61,25 @@ Replace `endpoint` with your substrate's activity-api URL. All validation harnes
 
 ### The Development Loop
 
+**Local substrate (Phase 26+, primary):**
+```
+1. Edit vessel source in repos/<vessel>/
+2. make substrate-restart-<vessel>   ← hot-reloads the vessel in the container
+3. bun run validation/scripts/failure-mode-harness.ts  ← validates against localhost:8080
+4. Commit + push to dev → CI/CD deploys to canary for integration validation
+5. Promote canary → production via /deploy skill
+```
+
+**Canary-first (pre-Phase 26, or when validating against live data):**
 ```
 1. Describe goal → MiniBob executes activity (on configured substrate)
 2. Activity succeeds/fails → Trace stored in substrate backend
-3. Push code changes → CI/CD deploys to canary (or helmfile sync for local)
+3. Push code changes → CI/CD deploys to canary
 4. Validate via MiniBob → More traces, more learning
 5. Repeat
 ```
+
+After Phase 27 (lift), step 1 of the local loop is substrate-initiated: the topology-discovery activities measure, probe, and escalate without human input. Human developers intervene only when the substrate flags a gap it cannot resolve.
 
 ---
 
@@ -92,6 +105,7 @@ Replace `endpoint` with your substrate's activity-api URL. All validation harnes
 - `workbench` 0.3.1 — trajectory editor, live execution overlay, weight-influence feedback, stagnation detection, oracle corpus wiring
 - `identity-vessel` 0.2.8 — HMAC API keys + JWT issuance (canonical auth resolver)
 - `discovery-vessel` 0.4.0 — vessel registry with resolver contracts and per-mutation auth
+- `development-vessel` (local only, not in Helm) — meta-vessel for substrate self-development. 19 shapes, 7 seed templates (including `harness-check-scenario`, `draft-gap-closing-activity`), noop resolver, failure-mode harness. Runs as a systemd unit inside the single-container substrate (Phase 26). See `repos/development-vessel/`.
 
 **Recent stabilisation** (most-recent first):
 
@@ -981,7 +995,7 @@ MiniBob resolves configuration from multiple sources (highest to lowest priority
 }
 ```
 
-> **Important**: Always use production endpoints (`https://activity.metabob.com`), not `.local` endpoints.
+> **Important**: Use `http://localhost:8080` for local substrate development (Phase 26+); use `https://activity.metabob.com` for canary validation. Never use `.local` (Kubernetes internal) endpoints from outside the cluster.
 
 ### Secrets Management (SOPS + Age)
 
@@ -1197,7 +1211,8 @@ curl "http://api.minibob.local/v2/activities/execution-sequences?limit=10" | jq 
 - `docs/archive/2026-04-26/VESSEL_CONSTRUCTION_PATTERNS.md` (archived 2026-04-26): Cross-vessel pattern analysis (2026-04-08). Registration path superseded by discovery-vessel; see TYPESCRIPT_VESSEL_TEMPLATE.md for current patterns.
 
 **Complementary architecture docs:**
-- [`repos/deployment/DEPLOYMENT_WORKFLOW.md`](repos/deployment/DEPLOYMENT_WORKFLOW.md): Kubernetes deployment procedures
+- [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md): Local single-container substrate — quick-start, iteration loop, backing up learning state, switching between local and canary (Phase 26+)
+- [`repos/deployment/DEPLOYMENT_WORKFLOW.md`](repos/deployment/DEPLOYMENT_WORKFLOW.md): Kubernetes deployment procedures (canary / production)
 - [`docs/archive/2026-04-11-jiggle-and-prune/ACTIVITY_BASED_IMPROVISATION.md`](docs/archive/2026-04-11-jiggle-and-prune/ACTIVITY_BASED_IMPROVISATION.md): VM-as-executor philosophy (archived)
 
 **Multi-tenant & RBAC:**

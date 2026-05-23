@@ -1,0 +1,141 @@
+# Local Single-Container Substrate
+
+**Phase 26 deliverable.** This document describes how to build, run, and iterate against the local substrate — the full vessel fleet collapsed into a single systemd-managed Docker container.
+
+> This file is a forward-looking guide authored alongside the Phase 26 spec. The commands below will work once `Dockerfile.substrate` and `scripts/substrate/` exist. Check `openspec/changes/2026-05-23-single-container-substrate/tasks.md` for implementation status.
+
+## Why a single container?
+
+The canary cluster (Phase 5+) requires H1 two-sided traces and cross-vessel auth hardening before it can be a safe primary development environment. A container gives a structurally equivalent trust boundary without the Kubernetes overhead: all inter-vessel calls are localhost, SurrealDB runs as a local file instance, and a `systemd-restart` is the equivalent of a helm rollout.
+
+A container is a valid substrate. The foundation doc defines a substrate by its fixed point (discovery-vessel) and its trust boundary, not by its infrastructure form. The same vessel code, the same seed templates, the same Thompson learning — just no pod scheduling.
+
+## Quick start (3 commands)
+
+```bash
+# 1. Build the substrate image
+make -C scripts/substrate substrate-build
+
+# 2. Run it (generates keys on first start, prints SUBSTRATE_API_KEY)
+make -C scripts/substrate substrate-run
+
+# 3. Configure your local tooling to point at it
+scripts/substrate/configure-local.sh
+```
+
+After step 3, `~/.metabob/config.json` points to `http://localhost:8080` and all validation harnesses use it automatically.
+
+## Iteration loop
+
+When you change a vessel's source:
+
+```bash
+# Edit the vessel
+vim repos/metabob-activity-api/src/routes/activities.ts
+
+# Restart just that unit — no container restart, no rebuild
+make -C scripts/substrate substrate-restart-activity-api
+
+# Verify
+curl http://localhost:8080/health
+```
+
+Units available for restart:
+- `substrate-restart-surrealdb`
+- `substrate-restart-identity-vessel`
+- `substrate-restart-discovery-vessel`
+- `substrate-restart-activity-api`
+- `substrate-restart-development-vessel`
+- `substrate-restart-minibob`
+
+## Validating after a change
+
+```bash
+# Failure-mode harness smoke test
+bun run validation/scripts/failure-mode-harness.ts
+
+# Full stratified harness (longer; run before canary promotion)
+bun run validation/scripts/stratified-harness.ts
+
+# Single MiniBob goal to produce a trace
+minibob --single "list files in current directory"
+
+# Check the trace appeared
+curl -s "http://localhost:8080/v2/activities/execution-traces?limit=1" | jq .
+```
+
+## Monitoring
+
+```bash
+# All unit statuses
+make -C scripts/substrate substrate-status
+
+# Follow a vessel's logs
+make -C scripts/substrate substrate-logs-activity-api
+
+# Shell into the container
+make -C scripts/substrate substrate-shell
+```
+
+## Backing up and restoring learning state
+
+The SurrealDB data volume (`/data/` inside the container) holds all execution traces, Thompson posteriors, and template registry. Back it up before destructive operations:
+
+```bash
+# Backup
+docker cp substrate:/data ./substrate-data-backup-$(date +%Y%m%d)
+
+# Restore
+docker cp ./substrate-data-backup-YYYYMMDD/. substrate:/data
+make -C scripts/substrate substrate-restart-surrealdb
+```
+
+## Switching between local and canary
+
+Change one line in `~/.metabob/config.json`:
+
+```json
+{
+  "metabob": {
+    "endpoint": "http://localhost:8080"     ← local substrate
+    // "endpoint": "https://activity.metabob.com"  ← canary
+  }
+}
+```
+
+All harnesses and `minibob` CLI read this file. No code changes needed.
+
+## Promoting to canary
+
+Once a change validates locally:
+
+```bash
+git add repos/<vessel>
+git commit -m "feat(<vessel>): <description>"
+git push origin dev          # CI/CD deploys to canary automatically
+```
+
+Then use `/deploy <vessel>` to promote canary → production after canary health checks pass.
+
+## Development-vessel specifics
+
+`development-vessel` is substrate-only — it has no Helm chart and does not run on canary. It is the meta-vessel for substrate self-development: the failure-mode harness, topology-discovery activities, and convergence-tick all run as activities inside it. After Phase 26, `bun run cli seed-templates` inside the container seeds all 7 templates.
+
+The topology-discovery loop (Phase 26 → Phase 27) runs autonomously inside the substrate:
+
+```
+activityRegistryChange → learned-topology-snapshot → reachable-unlearned-report
+                       → probe-reachable-unlearned → activityRegistryChange → …
+```
+
+When three consecutive `convergenceReport` impulses show `lift_candidate=true` from natural activity (no human trigger), that is the operational definition of Convergence (foundation §33) and the lift hand-over condition (IAL Phase 27).
+
+## Troubleshooting
+
+**Units not starting within 60s**: check `make substrate-logs-<unit>` for the failing unit. Most common cause: port conflict (SurrealDB 8000, activity-api 8080) with a pre-existing process.
+
+**SUBSTRATE_API_KEY not printed**: the seeding script runs only when the `api_key` table is empty. If you already have a running instance, `docker logs substrate | grep SUBSTRATE_API_KEY` will find the original key.
+
+**Harness connection errors**: confirm `~/.metabob/config.json` points to `http://localhost:8080`, not the canary endpoint. Run `scripts/substrate/configure-local.sh` to reset.
+
+**`make substrate-restart-<vessel>` fails**: the container must be running (`make substrate-run` first). Units restart in-place; the container itself is not restarted.

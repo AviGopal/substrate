@@ -1,14 +1,19 @@
 # Deploy Vessel
 
-Deploy a vessel to production using the manual deployment workflow.
+Deploy a vessel — either to the local single-container substrate (fast iteration) or to canary/production via Helm.
 
 ## Overview
 
-This skill handles the complete deployment workflow for any vessel in the helmfile. It follows a strict sequential process, deploying one release at a time, and resolves any issues as they arise.
+Two deployment targets:
+
+1. **Local substrate** (`--substrate`, Phase 26+) — restart a vessel inside the running container. No Docker build, no Helm. Use this for development iterations.
+2. **Canary / production** (default) — full Docker build → push → helmfile sync. Use this after local validation to promote changes.
 
 ## Input
 
 **Required**: Vessel name - one of:
+
+*Helm-managed (canary/production):*
 - `metabob-activity-api`
 - `metabob-analysis-api`
 - `metabob-cloud-dashboard`
@@ -19,9 +24,41 @@ This skill handles the complete deployment workflow for any vessel in the helmfi
 - `user-vessel`
 - `concept-db`
 
+*Substrate-only (local container, not Helm-managed):*
+- `development-vessel`
+
 **Optional**:
 - Version (e.g., `1.8.1`) - If not specified, deploys the latest from origin/dev
+- `--substrate` - Restart the vessel inside the local container instead of deploying to Helm
 - `--dry-run` - Show what would be deployed without making changes
+
+## Local Substrate Deployment (Phase 26+)
+
+Use this path when iterating locally against `http://localhost:8080`.
+
+```bash
+# Restart a single vessel in the running substrate container
+make -C scripts/substrate substrate-restart-<vessel-name>
+
+# Check unit status
+make -C scripts/substrate substrate-status
+
+# View vessel logs
+make -C scripts/substrate substrate-logs-<vessel-name>
+```
+
+**When to use:**
+- After editing vessel source in `repos/<vessel-name>/`
+- For any vessel including `development-vessel` (which has no Helm chart)
+- When `~/.metabob/config.json` points to `http://localhost:8080`
+
+**Validate after restart:**
+```bash
+curl http://localhost:8080/health
+bun run validation/scripts/failure-mode-harness.ts
+```
+
+After local validation passes, proceed with the canary deploy below to promote the change.
 
 ## Deployment Procedure
 
