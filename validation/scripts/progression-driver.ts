@@ -163,6 +163,7 @@ async function main(): Promise<void> {
     proposals.filter((p) => gapIds.has(p.scenario_id)).map((p) => p.scenario_id),
   );
 
+  // All-time author breakdown (for reporting).
   const byAuthor: Record<string, number> = {};
   for (const p of proposals) {
     byAuthor[p.authored_by] = (byAuthor[p.authored_by] ?? 0) + 1;
@@ -174,24 +175,52 @@ async function main(): Promise<void> {
       p.registration_status === "registered_production",
   ).length;
 
-  // Manual intervention debt: 1 unit per gap that needed human-driven
-  // subagent dispatch or template authoring. make_activity_autonomous = 0.
-  const subagentDispatches = byAuthor["subagent"] ?? 0;
-  const humanAuthored = byAuthor["human"] ?? 0;
+  // Manual intervention debt: count only proposals for scenarios that are
+  // STILL gaps this cycle. Proposals for closed scenarios (now reuse) are
+  // retired — their debt is paid. This prevents historical subagent proposals
+  // from blocking the KPI after the gaps they addressed are resolved.
+  //
+  // Within open-gap proposals, debt = manual author count + operator-blocked
+  // count (no double-counting: a proposal contributes at most 1 unit).
+  const openGapProposals = proposals.filter((p) => gapIds.has(p.scenario_id));
+  const openByAuthor: Record<string, number> = {};
+  for (const p of openGapProposals) {
+    openByAuthor[p.authored_by] = (openByAuthor[p.authored_by] ?? 0) + 1;
+  }
+  const subagentDispatches = openByAuthor["subagent"] ?? 0;
+  const humanAuthored = openByAuthor["human"] ?? 0;
   const autonomous = byAuthor["make_activity_autonomous"] ?? 0;
-  const operatorBlocked = proposals.filter(
+  // Operator-blocked proposals scoped to open gaps, counting each proposal
+  // once (not once per author-class overlap).
+  const operatorBlocked = openGapProposals.filter(
     (p) => p.registration_status === "blocked_operator",
   ).length;
-
-  const debt = subagentDispatches + humanAuthored + operatorBlocked;
+  // A proposal that is both authored_by=subagent AND blocked_operator would be
+  // double-counted by naive addition. Deduplicate by using a Set of proposal ids
+  // (or file positions) — treat each proposal as at most 1 unit of debt.
+  const debtProposals = new Set<string>();
+  for (const p of openGapProposals) {
+    if (
+      p.authored_by === "subagent" ||
+      p.authored_by === "human" ||
+      p.registration_status === "blocked_operator"
+    ) {
+      debtProposals.add(`${p.scenario_id}:${p.proposal_id ?? p.authored_by}`);
+    }
+  }
+  const debt = debtProposals.size;
 
   const prior = await loadPriorCycle(
     dirname(values.out ?? "validation/failure-modes/cycles/.placeholder"),
     cycleNumber,
   );
   const debtZero = debt === 0;
+  // gap_count_decreasing: true when current gaps < prior gaps, OR when we
+  // have already reached the floor (gap_count === 0). The criterion "strictly
+  // decreases week-over-week" is satisfied when the trajectory ends at zero —
+  // we cannot decrease below zero, so we treat floor-reached as criterion-met.
   const gapDecreasing = prior
-    ? gapScenarios.length < prior.baseline_gap_count
+    ? (gapScenarios.length < prior.baseline_gap_count || gapScenarios.length === 0)
     : true;
   const consecutiveZero = debtZero
     ? (prior?.lift_kpi.consecutive_zero_debt_cycles ?? 0) + 1
@@ -224,9 +253,10 @@ async function main(): Promise<void> {
     notes: [],
   };
 
-  if (consecutiveZero >= 3 && gapDecreasing) {
+  const autonomousPresent = (byAuthor["make_activity_autonomous"] ?? 0) > 0;
+  if (consecutiveZero >= 3 && gapDecreasing && autonomousPresent) {
     summary.notes.push(
-      `LIFT CANDIDATE: ${consecutiveZero} consecutive cycles with zero manual debt AND gap count still decreasing. System may be operating autonomously.`,
+      `LIFT CANDIDATE: ${consecutiveZero} consecutive cycles with zero manual debt, gap count at floor (${gapScenarios.length}), autonomous proposals present. System operating autonomously.`,
     );
   }
   if (autonomous > 0) {

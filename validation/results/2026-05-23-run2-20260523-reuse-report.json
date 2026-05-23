@@ -1,0 +1,534 @@
+{
+  "run_at": "2026-05-23T09:25:09.557Z",
+  "label": "run2-20260523",
+  "mrr": 0.3611111111111111,
+  "recommend_mrr": 0.3611111111111111,
+  "hit_at_1": 0.16666666666666666,
+  "hit_at_3": 0.5333333333333333,
+  "hit_at_5": 0.6,
+  "entries": [
+    {
+      "id": "bench-001",
+      "category": "bug-fix",
+      "rank": 2,
+      "rr": 0.5,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "fix failing tests and verify the activity system is working correctly",
+      "expected_activity_id": "activity:⟨Activity System Verification Test Suite⟩"
+    },
+    {
+      "id": "bench-002",
+      "category": "bug-fix",
+      "rank": 1,
+      "rr": 1,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "verify the activity system and check all components are healthy",
+      "expected_activity_id": "activity:⟨Activity System Verification⟩"
+    },
+    {
+      "id": "bench-003",
+      "category": "bug-fix",
+      "rank": 2,
+      "rr": 0.5,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "fetch data from an API endpoint and validate the JSON response format",
+      "expected_activity_id": "activity:⟨API Fetch and Validate JSON⟩"
+    },
+    {
+      "id": "bench-004",
+      "category": "bug-fix",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "diagnostic": null,
+      "goal_text": "fetch data from an API and save the results to a file",
+      "expected_activity_id": "activity:⟨API Data Fetch and Save⟩"
+    },
+    {
+      "id": "bench-005",
+      "category": "bug-fix",
+      "rank": 1,
+      "rr": 1,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "fetch data from an external API with fallback handling if the primary source fails",
+      "expected_activity_id": "activity:⟨API Data Fetcher with Fallbacks⟩"
+    },
+    {
+      "id": "bench-006",
+      "category": "bug-fix",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "diagnostic": null,
+      "goal_text": "fetch and retrieve data from a remote API endpoint",
+      "expected_activity_id": "activity:⟨API Data Fetcher⟩"
+    },
+    {
+      "id": "bench-007",
+      "category": "bug-fix",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "diagnostic": null,
+      "goal_text": "analyse application execution traces to find performance bottlenecks and optimization opportunities",
+      "expected_activity_id": "activity:⟨Application Trace Analysis and Optimization⟩"
+    },
+    {
+      "id": "bench-008",
+      "category": "bug-fix",
+      "rank": 2,
+      "rr": 0.5,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "run a comprehensive analysis of application traces to identify issues",
+      "expected_activity_id": "activity:⟨Comprehensive Application Trace Analysis⟩"
+    },
+    {
+      "id": "bench-009",
+      "category": "feature-add",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "diagnostic": null,
+      "goal_text": "perform a code review of recent changes using an LLM to identify bugs and improvements",
+      "expected_activity_id": "activity:⟨Advanced LLM Code Review Script⟩"
+    },
+    {
+      "id": "bench-010",
+      "category": "feature-add",
+      "rank": 3,
+      "rr": 0.3333333333333333,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "run a comprehensive LLM-powered code review across the repository",
+      "expected_activity_id": "activity:⟨Comprehensive LLM Code Review Script⟩"
+    },
+    {
+      "id": "bench-011",
+      "category": "feature-add",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "diagnostic": null,
+      "goal_text": "query the backend to generate a report of activity execution metrics and performance data",
+      "expected_activity_id": "activity:⟨Backend Activity Metrics Query⟩"
+    },
+    {
+      "id": "bench-012",
+      "category": "feature-add",
+      "rank": 4,
+      "rr": 0.25,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "generate a report summarising activity metrics including success rates and execution counts",
+      "expected_activity_id": "activity:⟨Activity Metrics Report Generator⟩"
+    },
+    {
+      "id": "bench-013",
+      "category": "feature-add",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "diagnostic": null,
+      "goal_text": "analyse activity performance metrics to identify which templates are performing best",
+      "expected_activity_id": "activity:⟨Analyze Activity Performance Metrics⟩"
+    },
+    {
+      "id": "bench-014",
+      "category": "feature-add",
+      "rank": 2,
+      "rr": 0.5,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "analyse data files to generate improvement recommendations for the system",
+      "expected_activity_id": "activity:⟨Analyze Data Files for Improvement Recommendations⟩"
+    },
+    {
+      "id": "bench-015",
+      "category": "refactor",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "diagnostic": null,
+      "goal_text": "analyse existing data and generate data-driven recommendations for improving the activity system",
+      "expected_activity_id": "activity:⟨Generate Data-Driven Improvement Recommendations⟩"
+    },
+    {
+      "id": "bench-016",
+      "category": "refactor",
+      "rank": 2,
+      "rr": 0.5,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "analyse activity data and generate actionable improvement recommendations",
+      "expected_activity_id": "activity:⟨Analyze Data for Improvement Recommendations⟩"
+    },
+    {
+      "id": "bench-017",
+      "category": "refactor",
+      "rank": 1,
+      "rr": 1,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "fix specification violations found in the dashboard component",
+      "expected_activity_id": "activity:⟨Fix Dashboard Specification Violations⟩"
+    },
+    {
+      "id": "bench-018",
+      "category": "refactor",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "diagnostic": null,
+      "goal_text": "fetch data from an API with limited tool access and constrained execution",
+      "expected_activity_id": "activity:⟨API Data Fetcher with Limited Tools⟩"
+    },
+    {
+      "id": "bench-019",
+      "category": "documentation",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "diagnostic": null,
+      "goal_text": "audit activity templates and report which core templates have the highest usage and Thompson scores",
+      "expected_activity_id": "activity:⟨core-activity-audit⟩"
+    },
+    {
+      "id": "bench-020",
+      "category": "documentation",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "diagnostic": null,
+      "goal_text": "extract reusable patterns from execution traces and promote them to concept templates",
+      "expected_activity_id": "activity:⟨extract-pattern⟩"
+    },
+    {
+      "id": "bench-021",
+      "category": "validation",
+      "rank": 2,
+      "rr": 0.5,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "verify the lifecycle and learning loop is working correctly",
+      "expected_activity_id": "activity:⟨Lifecycle and Learning Loop Verification⟩"
+    },
+    {
+      "id": "bench-022",
+      "category": "validation",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "diagnostic": null,
+      "goal_text": "scan dependencies for known vulnerabilities",
+      "expected_activity_id": "activity:⟨Dependency Vulnerability Scanner⟩"
+    },
+    {
+      "id": "bench-023",
+      "category": "validation",
+      "rank": 1,
+      "rr": 1,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "verify the system lifecycle and confirm learning loop",
+      "expected_activity_id": "activity:⟨System Lifecycle and Learning Loop Verification⟩"
+    },
+    {
+      "id": "bench-024",
+      "category": "validation",
+      "rank": 2,
+      "rr": 0.5,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "scan all project dependencies for vulnerability issues",
+      "expected_activity_id": "activity:⟨Vulnerability Scan All Dependencies⟩"
+    },
+    {
+      "id": "bench-025",
+      "category": "validation",
+      "rank": 2,
+      "rr": 0.5,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "enforce minibob dashboard specifications and validate the dashboard display",
+      "expected_activity_id": "activity:⟨Enforce MiniBob Dashboard Specifications⟩"
+    },
+    {
+      "id": "bench-026",
+      "category": "refactor",
+      "rank": 2,
+      "rr": 0.5,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "transform enforcement logic to read-only validation mode",
+      "expected_activity_id": "activity:⟨Transform Enforcement to Read-Only Validation⟩"
+    },
+    {
+      "id": "bench-027",
+      "category": "feature-add",
+      "rank": 4,
+      "rr": 0.25,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "generate data-driven improvement recommendations from analysis",
+      "expected_activity_id": "activity:⟨Generate Data-Driven Improvement Recommendations⟩"
+    },
+    {
+      "id": "bench-028",
+      "category": "feature-add",
+      "rank": 0,
+      "rr": 0,
+      "found": false,
+      "diagnostic": null,
+      "goal_text": "query metrics from the backend to generate an activity performance report",
+      "expected_activity_id": "activity:⟨Backend Activity Metrics Query⟩"
+    },
+    {
+      "id": "bench-029",
+      "category": "improvement",
+      "rank": 1,
+      "rr": 1,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "run the complete activity improvement cycle on the learning system",
+      "expected_activity_id": "activity:⟨Complete Activity Improvement Cycle⟩"
+    },
+    {
+      "id": "bench-030",
+      "category": "improvement",
+      "rank": 2,
+      "rr": 0.5,
+      "found": true,
+      "diagnostic": null,
+      "goal_text": "execute the activity improvement loop to iterate on template performance",
+      "expected_activity_id": "activity:⟨Activity Improvement Loop⟩"
+    }
+  ],
+  "thompson_snapshot": [
+    {
+      "activity_id": "activity:⟨fix-bug-complete⟩",
+      "name": "Fix Bug Complete",
+      "alpha": 14,
+      "beta": 1,
+      "ev": 0.9333333333333333,
+      "total_executions": 13,
+      "ci_width": 0.24445494926923084
+    },
+    {
+      "activity_id": "activity:⟨activity:⟨fix-bug-simple\\⟩⟩",
+      "name": "Fix Bug (Simple)",
+      "alpha": 11,
+      "beta": 1,
+      "ev": 0.9166666666666666,
+      "total_executions": 10,
+      "ci_width": 0.30048962892921466
+    },
+    {
+      "activity_id": "activity:⟨add-feature-complete⟩",
+      "name": "Add Feature Complete",
+      "alpha": 10,
+      "beta": 1,
+      "ev": 0.9090909090909091,
+      "total_executions": 9,
+      "ci_width": 0.3253140038515532
+    },
+    {
+      "activity_id": "activity:⟨activity:⟨fix-bug-complete\\⟩⟩",
+      "name": "Fix Bug Complete",
+      "alpha": 9,
+      "beta": 1,
+      "ev": 0.9,
+      "total_executions": 8,
+      "ci_width": 0.35457734122345
+    },
+    {
+      "activity_id": "activity:⟨acquire-codebase-context⟩",
+      "name": "Acquire Codebase Context",
+      "alpha": 8,
+      "beta": 1,
+      "ev": 0.8888888888888888,
+      "total_executions": 7,
+      "ci_width": 0.38957273207996335
+    },
+    {
+      "activity_id": "activity:⟨fix-bug-simple⟩",
+      "name": "Fix Bug (Simple)",
+      "alpha": 5,
+      "beta": 1,
+      "ev": 0.8333333333333334,
+      "total_executions": 4,
+      "ci_width": 0.5521674464226308
+    },
+    {
+      "activity_id": "activity:⟨safe-refactor-verified⟩",
+      "name": "Safe Refactoring with Verification",
+      "alpha": 5,
+      "beta": 1,
+      "ev": 0.8333333333333334,
+      "total_executions": 4,
+      "ci_width": 0.5521674464226308
+    },
+    {
+      "activity_id": "activity:attempt_1775756303035_9kkm1f",
+      "name": "[Attempt] Review And Evaluate Code Quality, Structure, Functionality, And Potential Issues To Gain Understanding Or Identify Improvements",
+      "alpha": 5,
+      "beta": 1,
+      "ev": 0.8333333333333334,
+      "total_executions": 4,
+      "ci_width": 0.5521674464226308
+    },
+    {
+      "activity_id": "activity:tpl_1775780517283_ggpzve",
+      "name": "Diagnose System Health And Performance Issues By Analyzing Execution Traces From The Activity Backend To Identify Bottlenecks, Failures, And Optimization Opportunities",
+      "alpha": 5,
+      "beta": 1,
+      "ev": 0.8333333333333334,
+      "total_executions": 4,
+      "ci_width": 0.5521674464226308
+    },
+    {
+      "activity_id": "activity:⟨Analyze System Health & Performance⟩",
+      "name": "Analyze System Health & Performance",
+      "alpha": 5,
+      "beta": 1,
+      "ev": 0.8333333333333334,
+      "total_executions": 4,
+      "ci_width": 0.5521674464226308
+    },
+    {
+      "activity_id": "activity:attempt_1775888700740_obmp6n",
+      "name": "[Attempt] Diagnose System Health And Performance Issues By Analyzing Execution Traces From The Activity Backend To Identify Bottlenecks, Failures, And Optimization Opportunities",
+      "alpha": 5,
+      "beta": 1,
+      "ev": 0.8333333333333334,
+      "total_executions": 4,
+      "ci_width": 0.5521674464226308
+    },
+    {
+      "activity_id": "activity:⟨Analyze System Health and Performance Issues⟩",
+      "name": "Analyze System Health and Performance Issues",
+      "alpha": 5,
+      "beta": 1,
+      "ev": 0.8333333333333334,
+      "total_executions": 4,
+      "ci_width": 0.5521674464226308
+    },
+    {
+      "activity_id": "activity:⟨add-feature-simple⟩",
+      "name": "Add Feature (Simple)",
+      "alpha": 4,
+      "beta": 1,
+      "ev": 0.8,
+      "total_executions": 3,
+      "ci_width": 0.6401333194473372
+    },
+    {
+      "activity_id": "activity:⟨activity-template-explainer⟩",
+      "name": "Activity Template Explainer",
+      "alpha": 7,
+      "beta": 2,
+      "ev": 0.7777777777777778,
+      "total_executions": 7,
+      "ci_width": 0.5153562833277887
+    },
+    {
+      "activity_id": "activity:attempt_1776115554921_1ghs1p",
+      "name": "[Attempt] Conduct A Code Review Of The Activities Directory To Identify And Implement A Single, Low-complexity Improvement That Enhances Template Quality, Adds Missing Features, Or Improves Maintainability",
+      "alpha": 3,
+      "beta": 1,
+      "ev": 0.75,
+      "total_executions": 2,
+      "ci_width": 0.7591047358566537
+    },
+    {
+      "activity_id": "activity:tpl_1776070622928_arqb6j",
+      "name": "Audit The Activities/ Directory For Code Quality And Functionality Gaps, Then Implement A Single, Low-complexity Improvement To Enhance Template Consistency Or Add Missing Features.",
+      "alpha": 3,
+      "beta": 1,
+      "ev": 0.75,
+      "total_executions": 2,
+      "ci_width": 0.7591047358566537
+    },
+    {
+      "activity_id": "activity:⟨refactor-code-simple⟩",
+      "name": "Refactor Code (Simple)",
+      "alpha": 3,
+      "beta": 1,
+      "ev": 0.75,
+      "total_executions": 2,
+      "ci_width": 0.7591047358566537
+    },
+    {
+      "activity_id": "activity:tpl_1776066328941_f3soo9",
+      "name": "Audit The Activities Directory For Quality Improvements Or Missing Features, Implement A Single Straightforward Enhancement To Improve Code Templates Or Functionality",
+      "alpha": 1,
+      "beta": 1,
+      "ev": 0.5,
+      "total_executions": 0,
+      "ci_width": 1.1316065276116665
+    },
+    {
+      "activity_id": "activity:tpl_1776044838527_tr9phi",
+      "name": "Audit The Activities Directory For Quality Improvements Or Missing Features, Implement One Small Enhancement To Templates, And Document The Change",
+      "alpha": 1,
+      "beta": 1,
+      "ev": 0.5,
+      "total_executions": 0,
+      "ci_width": 1.1316065276116665
+    },
+    {
+      "activity_id": "activity:⟨Extract Activity Template Statistics⟩",
+      "name": "Extract Activity Template Statistics",
+      "alpha": 1,
+      "beta": 1,
+      "ev": 0.5,
+      "total_executions": 0,
+      "ci_width": 1.1316065276116665
+    }
+  ],
+  "trace_stats": {
+    "sample_size": 200,
+    "improvise_count": 2,
+    "improvise_rate": 0.01,
+    "window_days": 7
+  },
+  "improvise_health": {
+    "total_improvise": 2,
+    "success_rate": 1,
+    "ribosome_activation_rate": 0
+  },
+  "resolver_coverage": {
+    "sampled_traces": 3,
+    "llm_tier_rate": 0.14285714285714285,
+    "deterministic_rate": 0.07142857142857142,
+    "pattern_rate": 0,
+    "top_resolvers": [
+      {
+        "resolver_id": "unknown",
+        "count": 11
+      },
+      {
+        "resolver_id": "llm",
+        "count": 2
+      },
+      {
+        "resolver_id": "learning_signal_writer",
+        "count": 1
+      }
+    ]
+  },
+  "reuse_trajectory": {
+    "reuse_rate": 0,
+    "composition_depth_distribution": {
+      "d0": 131,
+      "d1": 43,
+      "d2": 16,
+      "d3plus": 10
+    },
+    "mean_composition_depth": 0.575
+  }
+}
