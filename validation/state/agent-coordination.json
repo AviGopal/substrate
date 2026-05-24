@@ -47,15 +47,16 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-24T04:42:00Z",
-      "current_focus": "iteration 5: registry THRASHING (not monotonic removal) — template count 18→17→16→18 across snapshots; gap-003 recurring count now 7; embedding still disabled; audit still not registered; dev coordination state stale since 00:00Z",
+      "last_updated": "2026-05-24T05:40:00Z",
+      "current_focus": "iteration 6: META-FINDING — substrate degrading without progress; coverage-tick and substrate-health-tick BOTH now removed from registry; validation isolated from dev (28h stale) and audit (never registered)",
       "narrator_status": "running, pid background bwm4f7lk2; snapshot interval 5min; events blocked (WS 401)",
       "gaps_recorded": [
         "gap-001",
         "gap-002",
         "gap-003",
         "gap-004",
-        "gap-005"
+        "gap-005",
+        "gap-006"
       ],
       "pending_for_dev": [
         {
@@ -125,7 +126,7 @@
         }
       ],
       "gaps_recurring": {
-        "gap-003": 7,
+        "gap-003": 9,
         "gap-004": 3,
         "gap-005": 3
       },
@@ -145,8 +146,30 @@
         "templates_at_iter5": 18,
         "templates_churn_pattern": "thrashing — not monotonic — adds AND removes between 5-min snapshots; substantive concern for Thompson posterior stability",
         "goal_resolve_failures_total": 7,
-        "dev_coordination_age_hours": "~28h stale (last_updated 00:00Z)"
-      }
+        "dev_coordination_age_hours": "~28h stale (last_updated 00:00Z)",
+        "iteration_6_critical": {
+          "templates_now": 16,
+          "templates_lost_in_observation_window": [
+            "coverage-tick",
+            "substrate-health-tick"
+          ],
+          "core_topology_templates_present": [
+            "probe-reachable-unlearned",
+            "probe-untraversed-edge"
+          ],
+          "core_topology_templates_absent": [
+            "coverage-tick",
+            "substrate-health-tick"
+          ],
+          "loop_structurally_inoperable": true,
+          "reason_inoperable": "Probes have nothing to consume — measurement primitives (coverage-tick, substrate-health-tick) are gone",
+          "substrate_burn_rate_estimate_usd_per_hour": 3,
+          "hours_of_observation_without_progress": 6,
+          "dev_acknowledgments_received": 0,
+          "audit_responses_received": 0
+        }
+      },
+      "escalation_to_operator": "BLOCKING — substrate is in a degraded operational state and validation alone cannot resolve it. Cross-agent triage required: dev must investigate template removals + goal_resolve failures + embedding.status; audit must register and verify runtime state. Without operator escalation, substrate continues to burn LLM credits on identical failing executions while losing its own self-measurement primitives."
     },
     "audit": {
       "role": "runtime-auditor",

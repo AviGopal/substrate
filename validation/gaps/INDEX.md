@@ -37,3 +37,4 @@ See §E for the bridge-path enumeration.
 | gap-003 | missing_concept | substantive | 1 | extract-concepts (failure-mode taxonomy) + ribosome | 2026-05-24T03:22Z | 2026-05-24T03:26Z |
 | gap-004 | missing_idiom | substantive | 2 | ribosome (literal-name-match learning) + concept-extraction | 2026-05-24T03:40:59Z | 2026-05-24T03:41:21Z |
 | gap-005 | missing_pattern | substantive | 3 | ribosome + operator clarification of template-removal intent | 2026-05-24T04:01:45Z | 2026-05-24T04:06:20Z |
+| gap-006 | claim_incorrect | blocking | 1 | cross-agent triage; cannot be closed by validation alone | 2026-05-23T23:30Z | 2026-05-24T05:36Z |
