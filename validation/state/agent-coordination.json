@@ -79,8 +79,8 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-24T17:35:00Z",
-      "current_focus": "iteration 9: SUBSTANTIVE POSITIVE state changes (registry stable at 18, embedding healthy, coverage-tick INVOKED 3x successfully) plus NEW STRUCTURAL FINDING gap-007 (named-template success but goal_resolve still marks failure; composition_chain empty on coverage-tick traces)",
+      "last_updated": "2026-05-24T20:25:00Z",
+      "current_focus": "iteration 10: gap-007 pattern RECURS on substrate-health-tick; cross-corroborated by auditor F-037 (Thompson posteriors not updating despite 60/68 successes). Single root cause with 3 symptoms (goal_resolve verify, composition_chain empty, posteriors flat).",
       "narrator_status": "running (background bxtpvio72)",
       "gaps_recorded": [
         "gap-001",
@@ -159,9 +159,10 @@
         }
       ],
       "gaps_recurring": {
-        "gap-003": 15,
+        "gap-003": 20,
         "gap-004": 3,
-        "gap-005": 3
+        "gap-005": 3,
+        "gap-007": 6
       },
       "observations_summary": {
         "templates_at_iter4": 17,
@@ -234,6 +235,20 @@
           "goal_resolve_failures_continuing": true,
           "audit_iterations_available": "iter-007, iter-008, iter-009 (latest at 16:21Z reported zero-delta)",
           "audit_latest_reading_at_16_21Z": "still reported 16 templates and embedding disabled — that snapshot was taken before dev fixes propagated; substrate state has since materially improved"
+        },
+        "iteration_10": {
+          "templates_stable_at": 18,
+          "registry_thrashing": false,
+          "embedding_status": "healthy",
+          "coverage_tick_invocations_total": "3 from iter-9 + more visible at 17:16; iter-10 trace window shows substrate-health-tick invocations at 19:56",
+          "substrate_health_tick_invocations": "3 successful at 19:56:50Z",
+          "probe_reachable_unlearned_invocations": 0,
+          "goal_resolve_failures_iter_10": 5,
+          "goal_resolve_failures_total_observed": 20,
+          "all_failures_failure_mode_null": true,
+          "composition_chain_empty_on_named_templates": true,
+          "thompson_posteriors_flat_per_F037": "60/68 success on coverage-tick yields success_rate=0",
+          "audit_iter_10_date": "2026-05-24T17:24:17Z"
         }
       },
       "escalation_to_operator": "BLOCKING — substrate is in a degraded operational state and validation alone cannot resolve it. Cross-agent triage required: dev must investigate template removals + goal_resolve failures + embedding.status; audit must register and verify runtime state. Without operator escalation, substrate continues to burn LLM credits on identical failing executions while losing its own self-measurement primitives.",
@@ -248,6 +263,12 @@
       "gaps_resolved": {
         "gap-004_root_cause_partial": "Embedding status now healthy (F-V58 fixed); coverage-tick IS now being invoked. But name-to-template binding still has surface issues — goal_resolve does not recognize the named-template success",
         "gap-005_root_cause": "Activity-api cache bug (b129695 + 93cd621) fixed; registry now stable at 18 across 3 sequential queries"
+      },
+      "audit_cross_corroboration": {
+        "audit_finding": "F-037 Thompson posteriors disconnect from execution outcomes",
+        "validation_finding": "gap-007 named-template success without goal closure",
+        "relationship": "SAME ROOT CAUSE, two observation layers — trace-level (validation) and metrics-level (audit). Data flows but signals don't propagate from execution-outcome to posterior-update to goal-closure",
+        "criticality": "BLOCKING for §27.S.4a lift criterion — coverage_progress=true requires Thompson learning, which requires posterior updates, which are not happening"
       }
     },
     "audit": {
