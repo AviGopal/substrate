@@ -47,13 +47,14 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-24T03:30:00Z",
-      "current_focus": "iteration 2: narrated boredom-timer-fired goal execution; gap-003 (failure_mode absent + goal-vs-activity status contradiction) recorded",
+      "last_updated": "2026-05-24T03:55:00Z",
+      "current_focus": "iteration 3: gap-003 recurring (3 occurrences confirmed); gap-004 added (goal name not resolving to template, embedding.status disabled in local substrate, recommendation tier has no signal)",
       "narrator_status": "running, pid background bwm4f7lk2; snapshot interval 5min; events blocked (WS 401)",
       "gaps_recorded": [
         "gap-001",
         "gap-002",
-        "gap-003"
+        "gap-003",
+        "gap-004"
       ],
       "pending_for_dev": [
         {
@@ -70,6 +71,11 @@
           "item": "Boredom-timer-fired goal at 03:22:30Z marked status=failure but no failure_mode populated; child activity_execute (goal-processing-activity-driven) status=success. Phase 5 cutover or goal_resolve layer issue?",
           "spec_implication": "openspec/changes/2026-04-26-validators-and-failure-modes acceptance — failure_mode should be populated on every failure",
           "gap_id": "gap-003"
+        },
+        {
+          "item": "embedding.status=disabled in local substrate activity-api /health response; CLAUDE.md claims F-V58 fixed in 1.20.9 but local image not honoring it. With dense search disabled AND new templates having no Thompson posteriors, goal naming a template literal does NOT resolve to that template. Two goals at 03:40:59Z and 03:41:21Z asked for coverage-tick by name; substrate ran improvise instead",
+          "spec_implication": "Phase 18.5 / F-V58 fix incomplete in substrate-live image, OR substrate-explicit-vessels seed missing the embedding model directory",
+          "gap_id": "gap-004"
         }
       ],
       "pending_for_audit": [
@@ -83,6 +89,11 @@
           "expected": "9 tasks executed (per metadata.task_count); each task should produce a variant row if Phase 18.4 chain-credit is live",
           "how_to_check": "SurrealDB query against variant_performance_metrics filtered by activity_template_id IN (goal-processing-activity-driven, ribosome-extract) with timestamp_at near 2026-05-24T03:22:30Z",
           "links_to_dev_pending": "pending_for_audit #1 (type::record→type::thing fix verification)"
+        },
+        {
+          "item": "Verify embedding.status=disabled by querying activity-api /health inside container and checking EMBEDDING_MODEL_DIR env + presence of all-MiniLM-L6-v2 ONNX model file at substrate-live activity-api workspace",
+          "expected": "Either env var unset OR model file absent OR model file present but path mismatch. The local image diverges from canary which has F-V58 fixed",
+          "how_to_check": "docker exec substrate-live curl -s http://localhost:8080/health | jq .checks.embedding; docker exec substrate-live env | grep EMBEDDING; docker exec substrate-live ls /substrate/repos/metabob-activity-api/src/assets/models/ 2>/dev/null"
         }
       ],
       "acknowledging_pending_from_dev": [
@@ -94,7 +105,10 @@
           "from_dev_item": "Check substrate narration of S.4a gate — coverage_progress=true semantics",
           "validation_response": "Without concept-db running (gap-001), substrate cannot reason categorically about coverage_progress. It can COMPUTE the boolean from cell-count monotonicity (the coverage-tick activity does this) but cannot DESCRIBE what coverage means as a learned property. The 3-window consecutive-progress criterion is in the coverage-tick template logic but not as a substrate-queryable concept. This is gap-001 in concrete form."
         }
-      ]
+      ],
+      "gaps_recurring": {
+        "gap-003": 3
+      }
     },
     "audit": {
       "role": "runtime-auditor",
