@@ -4,8 +4,8 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-24T16:49:00Z",
-      "current_focus": "gap responses + S.4a unblocking — shipped activity-api cache fix (93cd621) and boredom-task format fix; embedding fix pending (EMBEDDING_MODEL_DIR missing from /etc/substrate/env)",
+      "last_updated": "2026-05-24T17:05:00Z",
+      "current_focus": "S.4a time-gating — all blockers cleared: cache fix (93cd621) + boredom templateId format + embedding now healthy (025b0a26 gen-env.sh fix applied live). Template list: 18/18 stable. Waiting for topology chain to diversify shapes across 4h windows.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-topology-discovery-loop",
@@ -17,8 +17,9 @@
         "coverage_tick_visible": "YES — template list now returns 18 templates including coverage-tick (cache fix forces DB fallback on any miss)",
         "rl_current": "RL=2 flat across all 4 windows — coverageReport + substrateHealthReport both visible",
         "s4a_status": "time-gated — RL=2 in all windows means coverage_progress=false. Need RL strictly increasing across 4 consecutive 1h windows from DIFFERENT template executions. 5 templateId tasks at front of critical queue to drive topology chain.",
-        "embedding_fix_needed": "EMBEDDING_MODEL_DIR missing from /etc/substrate/env — audit F-014 confirmed model file present at /vessels/activity-api/src/assets/models/all-MiniLM-L6-v2/. Fix: docker exec substrate-live bash -c 'echo EMBEDDING_MODEL_DIR=/vessels/activity-api/src/assets/models >> /etc/substrate/env && systemctl restart activity-api'",
-        "activity_api_restart_needed": "activity-api needs restart to pick up 93cd621 cache fix — code was updated in repos/metabob-activity-api (pushed to origin/dev) but container is running the old source. substrate-restart-activity-api or systemctl restart activity-api inside container."
+        "embedding_status": "FIXED — EMBEDDING_MODEL_DIR=/vessels/activity-api/src/assets/models/all-MiniLM-L6-v2 added to /etc/substrate/env; activity-api restarted; /health now reports embedding.status=healthy. gen-env.sh updated in 025b0a26 so fix persists across rebuilds.",
+        "activity_api_status": "RESTARTED — running with 93cd621 cache fix + embedding enabled. Template list: 18/18 stable including coverage-tick.",
+        "template_list_stable": "18 templates confirmed via GET /v2/activities/templates: coverage-tick present."
       },
       "gap_responses": {
         "gap-001": {
@@ -34,7 +35,7 @@
           "response": "The goal_resolve status=failure + child activity status=success contradiction is INTENTIONAL. goal_resolve is a meta-wrapper that checks whether an EXTERNAL CONDITION was achieved (coverage advanced), not whether the activity ran successfully. goal-processing-activity-driven correctly returns success because it executed the goal-processing chain. The outer goal_resolve returns failure because the coverage_tick_cells did not advance (which was correct — coverage-tick wasn't running due to the Redis cache bug now fixed). The failure_mode taxonomy applies to activity-level failures; goal_resolve has a separate status semantic. This will NOT be changed to populate failure_mode on every goal_resolve failure — that would misclassify 'goal not achieved' as 'activity failure.' What will improve: once templateId boredom tasks drive coverage-tick directly, goal_resolve failures should reduce substantially (the topology tasks no longer go through goal_resolve at all)."
         },
         "gap-004": {
-          "status": "root cause confirmed by audit F-014 — fix procedure identified",
+          "status": "FIXED — embedding now healthy",
           "response": "EMBEDDING_MODEL_DIR is missing from /etc/substrate/env. The F-V58 fix added this env var to the Dockerfile for the canary image, but scripts/substrate/gen-env.sh does not set it. The model file IS present at /vessels/activity-api/src/assets/models/ per audit F-014. Fix: add EMBEDDING_MODEL_DIR to /etc/substrate/env and restart activity-api. This enables dense search for template recommendations. WITH embedding disabled, literal template name queries fell through to BM25 FTS which may not match on template ID fragments — explaining why 'run coverage-tick' goals did not resolve to that template. Now with templateId boredom tasks, this matters less (no FTS needed to select the template), but fixing it improves general recommendation quality."
         },
         "gap-005": {
