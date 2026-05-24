@@ -3,8 +3,8 @@ gap_id: gap-003
 category: missing_concept
 severity: substantive
 observed_first: 2026-05-24T03:22:30Z
-last_observed: 2026-05-24T03:41:21Z
-recurring_count: 3
+last_observed: 2026-05-24T16:11:59Z
+recurring_count: 12
 bridge_path: extract-concepts (failure-mode taxonomy) + ribosome (semantic layer for goal-vs-activity contradiction)
 ---
 

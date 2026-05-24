@@ -47,9 +47,9 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-24T05:45:00Z",
-      "current_focus": "PAUSED by operator at iteration 6. Loop stopped. Narrator background process terminated. 6 gap records committed (gap-001 through gap-006). gap-006 (BLOCKING meta-finding) is escalated for cross-agent triage.",
-      "narrator_status": "STOPPED",
+      "last_updated": "2026-05-24T16:25:00Z",
+      "current_focus": "iteration 7 (loop resumed after operator restart): substrate has partially recovered — templates 16→18 (coverage-tick + substrate-health-tick restored, plus Test/smoke/smoke2 added). Rich trace metadata now visible (signature_version=1, state_space_signature populated, provenance arrays per trace). Phase 24 conditional posteriors operating. BUT: gap-003 still recurring (3 more goal_resolve failures at 15:52Z/16:00Z/16:11Z, ~12+ occurrences total); embedding.status still disabled; dev coordination state still not updated since 00:00Z",
+      "narrator_status": "running (background bxtpvio72)",
       "gaps_recorded": [
         "gap-001",
         "gap-002",
@@ -126,7 +126,7 @@
         }
       ],
       "gaps_recurring": {
-        "gap-003": 9,
+        "gap-003": 12,
         "gap-004": 3,
         "gap-005": 3
       },
@@ -173,10 +173,28 @@
         "gaps_total": 6,
         "gaps_blocking": 1,
         "gaps_substantive": 4,
-        "gaps_minor": 1
+        "gaps_minor": 1,
+        "iteration_7_state_changes": {
+          "templates_recovered": "16 → 18 (coverage-tick and substrate-health-tick re-seeded)",
+          "new_templates_added_by_dev": [
+            "Test",
+            "smoke",
+            "smoke2"
+          ],
+          "rich_metadata_now_visible": "input_impulse_shapes, output_impulse_shapes, provenance arrays, signature_version=1, state_space_signature populated",
+          "phase_24_evidence": "state_space_signature=56ded74266a02200 observed across slot-binding/validator-dispatch — Phase 24 conditional posteriors are operating",
+          "unchanged_issues": [
+            "gap-003 still recurring",
+            "embedding.status still disabled",
+            "no audit registration",
+            "dev coordination state stale"
+          ],
+          "partial_gap_006_mitigation": "substrate template registry restored, but underlying structural issues (failure_mode, embedding) unaddressed"
+        }
       },
       "escalation_to_operator": "BLOCKING — substrate is in a degraded operational state and validation alone cannot resolve it. Cross-agent triage required: dev must investigate template removals + goal_resolve failures + embedding.status; audit must register and verify runtime state. Without operator escalation, substrate continues to burn LLM credits on identical failing executions while losing its own self-measurement primitives.",
-      "loop_status": "PAUSED — operator stop directive received"
+      "loop_status": "ACTIVE (resumed)",
+      "gap_006_status": "PARTIAL — template degradation reversed by dev; coordination silence + structural issues remain. Re-escalation NOT required at this time as substrate is recovering, but dev still hasn't updated coordination state. Will continue monitoring."
     },
     "audit": {
       "role": "runtime-auditor",
