@@ -79,8 +79,8 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-24T16:35:00Z",
-      "current_focus": "iteration 8 RECALIBRATION: discovered audit is active (validation/investigations/), audit independently confirmed gaps 001-004, audit caught my gap-005 misattribution. Dev did engage via findings/ channel (just not via agent-coordination.json). gap-005 root cause is activity-api cache bug, fixed in commits b129695/93cd621. gap-004 partial-closure claim retracted.",
+      "last_updated": "2026-05-24T17:35:00Z",
+      "current_focus": "iteration 9: SUBSTANTIVE POSITIVE state changes (registry stable at 18, embedding healthy, coverage-tick INVOKED 3x successfully) plus NEW STRUCTURAL FINDING gap-007 (named-template success but goal_resolve still marks failure; composition_chain empty on coverage-tick traces)",
       "narrator_status": "running (background bxtpvio72)",
       "gaps_recorded": [
         "gap-001",
@@ -88,7 +88,8 @@
         "gap-003",
         "gap-004",
         "gap-005",
-        "gap-006"
+        "gap-006",
+        "gap-007"
       ],
       "pending_for_dev": [
         {
@@ -158,7 +159,7 @@
         }
       ],
       "gaps_recurring": {
-        "gap-003": 12,
+        "gap-003": 15,
         "gap-004": 3,
         "gap-005": 3
       },
@@ -222,6 +223,17 @@
             "dev coordination state stale"
           ],
           "partial_gap_006_mitigation": "substrate template registry restored, but underlying structural issues (failure_mode, embedding) unaddressed"
+        },
+        "iteration_9_state": {
+          "templates_count": 18,
+          "templates_stability_verified": "3 sequential queries all returned 18",
+          "embedding_status": "healthy",
+          "coverage_tick_invocations": 3,
+          "coverage_tick_success_rate": "3/3",
+          "coverage_tick_composition_chain": "EMPTY on all 3 traces (gap-007)",
+          "goal_resolve_failures_continuing": true,
+          "audit_iterations_available": "iter-007, iter-008, iter-009 (latest at 16:21Z reported zero-delta)",
+          "audit_latest_reading_at_16_21Z": "still reported 16 templates and embedding disabled — that snapshot was taken before dev fixes propagated; substrate state has since materially improved"
         }
       },
       "escalation_to_operator": "BLOCKING — substrate is in a degraded operational state and validation alone cannot resolve it. Cross-agent triage required: dev must investigate template removals + goal_resolve failures + embedding.status; audit must register and verify runtime state. Without operator escalation, substrate continues to burn LLM credits on identical failing executions while losing its own self-measurement primitives.",
@@ -232,7 +244,11 @@
         "I misattributed the iter-4 template removal — coverage-tick was removed, not substrate-health-tick (auditor F-031 caught it)",
         "I claimed gap-004 partial closure based on substrate-health-tick invocation, but those were degenerate failure traces, not actual closure evidence",
         "gap-005 was a cache-bug observability artifact, not substrate self-management churn — root cause fixed by dev"
-      ]
+      ],
+      "gaps_resolved": {
+        "gap-004_root_cause_partial": "Embedding status now healthy (F-V58 fixed); coverage-tick IS now being invoked. But name-to-template binding still has surface issues — goal_resolve does not recognize the named-template success",
+        "gap-005_root_cause": "Activity-api cache bug (b129695 + 93cd621) fixed; registry now stable at 18 across 3 sequential queries"
+      }
     },
     "audit": {
       "role": "runtime-auditor",
