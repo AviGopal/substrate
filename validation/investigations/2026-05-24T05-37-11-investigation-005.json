@@ -1,0 +1,88 @@
+{
+  "investigation_id": "2026-05-24T05-37-11-investigation-005",
+  "generated_at": "2026-05-24T05:37:11Z",
+  "investigator_session_id": "loop-iteration-009",
+  "prior_investigation_id": "2026-05-24T04-58-14-investigation-004",
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container",
+    "version_reported": "1.20.9",
+    "auth_verified": true,
+    "narrator_state": "running ~6h05m; 75 snapshots; template count NOW 16 (was 18 in iter-001, 17 in iter-008)"
+  },
+  "findings": [
+    {"id": "F-001", "claim": "Gameable lift; cycle-8 unchanged.", "category": "lift", "severity": "high", "first_seen_in": "2026-05-23T23-12-41-investigation-001", "evidence": [{"kind": "command", "command": "ls cycles/", "excerpt": "still cycle-8 latest", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-002", "claim": "6 malformed proposals.", "category": "provenance", "severity": "high", "first_seen_in": "2026-05-23T23-12-41-investigation-001", "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "carried", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-003", "claim": "Traces lack signature.", "category": "provenance", "severity": "high", "first_seen_in": "2026-05-23T23-12-41-investigation-001", "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "carried", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-004", "claim": "Six scenarios.", "category": "validation", "severity": "high", "first_seen_in": "2026-05-23T23-12-41-investigation-001", "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "6", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-005", "claim": "No new cycle.", "category": "lift", "severity": "high", "first_seen_in": "2026-05-23T23-12-41-investigation-001", "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "8 cycles", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-006", "claim": "Three files retain metabob.com.", "category": "deployment", "severity": "medium", "first_seen_in": "2026-05-23T23-12-41-investigation-001", "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "carried", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-007", "claim": "Trailblazing unimplemented.", "category": "operational", "severity": "medium", "first_seen_in": "2026-05-23T23-12-41-investigation-001", "evidence": [{"kind": "file_ref", "location": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md:904", "excerpt": "unchanged", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-008", "claim": "Mythic language.", "category": "idiom", "severity": "low", "first_seen_in": "2026-05-23T23-12-41-investigation-001", "evidence": [], "status": "unverifiable"},
+    {"id": "F-009", "claim": "Zero DEV on five audited.", "category": "operational", "severity": "medium", "first_seen_in": "2026-05-23T23-12-41-investigation-001", "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "0 0 0 0 0", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-010", "claim": "Root clean.", "category": "operational", "severity": "low", "first_seen_in": "2026-05-23T23-12-41-investigation-001", "evidence": [{"kind": "command", "command": "ls -1 | wc -l", "excerpt": "13", "verified_at": "2026-05-24T05:37:11Z"}], "status": "resolved"},
+    {"id": "F-011", "claim": "Lift-criterion-hardening zero DEV.", "category": "operational", "severity": "high", "first_seen_in": "2026-05-23T23-15-01-investigation-002", "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "0", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-012", "claim": "Cycle reports substrate-anonymous.", "category": "lift", "severity": "high", "first_seen_in": "2026-05-23T23-15-01-investigation-002", "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "carried", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-013", "claim": "6 invalid + 3 subagent proposals.", "category": "provenance", "severity": "high", "first_seen_in": "2026-05-23T23-15-01-investigation-002", "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "carried", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-014", "claim": "Embedding disabled.", "category": "operational", "severity": "medium", "first_seen_in": "2026-05-23T23-32-45-investigation-003", "evidence": [{"kind": "command", "command": "curl /health | jq .checks.embedding.status", "excerpt": "\"disabled\"", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-015", "claim": "total: -1.", "category": "operational", "severity": "low", "first_seen_in": "2026-05-23T23-32-45-investigation-003", "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "carried", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-016", "claim": "Narrator running ~6h05m; 75 snapshots.", "category": "operational", "severity": "medium", "first_seen_in": "2026-05-23T23-32-45-investigation-003", "evidence": [{"kind": "command", "command": "ps -eo etime,cmd | grep substrate-narrator", "excerpt": "stable", "verified_at": "2026-05-24T05:37:11Z"}], "status": "resolved"},
+    {"id": "F-017", "claim": "Ribosome firing on lifecycle hook.", "category": "operational", "severity": "low", "first_seen_in": "2026-05-23T23-32-45-investigation-003", "evidence": [{"kind": "command", "command": "(carried; ribosome variants visible per validator iter-5)", "excerpt": "carried positive", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-018", "claim": "Snapshot consistency.", "category": "operational", "severity": "low", "first_seen_in": "2026-05-23T23-32-45-investigation-003", "evidence": [], "status": "resolved"},
+    {"id": "F-019", "claim": "Discovery 401.", "category": "deployment", "severity": "high", "first_seen_in": "2026-05-23T23-32-45-investigation-003", "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "carried", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-020", "claim": "WS event capture inactive.", "category": "operational", "severity": "medium", "first_seen_in": "2026-05-23T23-49-08-investigation-004", "evidence": [{"kind": "command", "command": "ls events*", "excerpt": "absent", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-021", "claim": "concept-db not running.", "category": "operational", "severity": "high", "first_seen_in": "2026-05-23T23-49-08-investigation-004", "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "carried", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-022", "claim": "Clock-view consistent this iter.", "category": "operational", "severity": "low", "first_seen_in": "2026-05-24T02-28-30-investigation-001", "evidence": [{"kind": "command", "command": "date -u (single invocation 05:37:11Z; consistent)", "excerpt": "consistent", "verified_at": "2026-05-24T05:37:11Z"}], "status": "resolved"},
+    {"id": "F-023", "claim": "No cycle-9.", "category": "lift", "severity": "low", "first_seen_in": "2026-05-24T02-28-30-investigation-001", "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "8 cycles", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-024", "claim": "Boredom timer steady-state failing. 2 firings observed in last 30 min (05:19, 05:29), both completed with curl 'Goal not achieved' response. No exit-code 7 failures since iter-007.", "category": "operational", "severity": "high", "first_seen_in": "2026-05-24T03-22-13-investigation-002", "evidence": [{"kind": "command", "command": "docker exec substrate-live journalctl -u minibob-boredom.service --since='30 min ago' | tail -8", "excerpt": "Two firings, both completed with curl 'Goal not achieved'", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-025", "claim": "Doc-vs-runtime: gap-001 'addressed' spec-only.", "category": "provenance", "severity": "medium", "first_seen_in": "2026-05-24T03-22-13-investigation-002", "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "carried", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-026", "claim": "Cycle-8 LIFT CANDIDATE on stale coverage.", "category": "lift", "severity": "high", "first_seen_in": "2026-05-24T03-22-13-investigation-002", "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "carried", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-027", "claim": "Dev operator adjacent progress; five audited still zero.", "category": "operational", "severity": "low", "first_seen_in": "2026-05-24T03-22-13-investigation-002", "evidence": [{"kind": "command", "command": "git log --oneline -8", "excerpt": "Only new commit since iter-008 is validator's ac6cc55c (iter-5)", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-028", "claim": "Goal-text-to-template binding broken; compounded by F-031 and F-032.", "category": "operational", "severity": "high", "first_seen_in": "2026-05-24T03-58-12-investigation-003", "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "carried; validator partial closure stale per iter-008", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-029", "claim": "goal-resolve failures don't populate failure_mode. Validator iter-5 reports gap-003 recurring ×7 (was ×5 in iter-008, ×3 in iter-007). Linear accumulation as boredom firings continue.", "category": "provenance", "severity": "medium", "first_seen_in": "2026-05-24T03-58-12-investigation-003", "evidence": [{"kind": "command", "command": "git show ac6cc55c --stat | head", "excerpt": "Commit message: 'gap-003 ×7'", "verified_at": "2026-05-24T05:37:11Z"}], "status": "regressed"},
+    {"id": "F-030", "claim": "Template metrics: null.", "category": "operational", "severity": "high", "first_seen_in": "2026-05-24T03-58-12-investigation-003", "evidence": [{"kind": "command", "command": "(carried; with F-032 thrashing, posteriors per-template are even less meaningful)", "excerpt": "carried", "verified_at": "2026-05-24T05:37:11Z"}], "status": "open"},
+    {"id": "F-031", "claim": "Template count is now 16 (was 17 in iter-008, 18 in iter-001). Two operator-authored seed templates absent: both coverage-tick AND substrate-health-tick are now missing. The auditor's iter-008 correction (only coverage-tick missing) is now stale; substrate-health-tick was removed sometime between iter-008 (04:58) and now (05:37). This is consistent with validator iter-5's THRASHING observation.",
+      "category": "operational", "severity": "high",
+      "first_seen_in": "2026-05-24T04-58-14-investigation-004",
+      "evidence": [
+        {"kind": "command", "command": "diff <(jq -r '.activity_api.templates[] | .name' validation/observations/snapshots/snapshot-2026-05-23T23-31-20-775Z.json | sort) <(curl ... templates?limit=100 | jq -r '.templates[].name' | sort)", "excerpt": "3d2 < coverage-tick; 17d15 < substrate-health-tick — BOTH now missing", "verified_at": "2026-05-24T05:37:11Z"},
+        {"kind": "command", "command": "curl /v2/activities/templates?limit=100 | jq '.templates | length'", "excerpt": "16", "verified_at": "2026-05-24T05:37:11Z"}
+      ],
+      "status": "regressed",
+      "operator_remediation": "Two operator-authored seed templates have been removed. The boredom-driven goal naming the chain (coverage-tick + substrate-health-tick + probe-reachable-unlearned) now has TWO of the three targets missing. Operator should: (1) investigate auto-removal mechanism causing this, (2) re-register both templates, (3) constrain template deletion to deliberate operator action only."
+    },
+    {"id": "F-032", "claim": "Registry THRASHING confirmed by validator iter-5 and auditor's runtime check. Template count is non-monotonic across observations: 18 (iter-001 snapshot) → 17 (iter-008) → 16 (this iter). Validator's iter-5 sequence is: 18 → 17 → 16 → 18 — bidirectional churn within 5-minute windows. Implications: (a) Thompson posteriors keyed on template_id are structurally unstable; (b) seed templates are not safe from churn; (c) ribosome-extracted variants visible per validator (activity:⟨variant-1779534644901⟩ etc.) but interacting with seed-template removal.",
+      "category": "operational", "severity": "high",
+      "first_seen_in": "2026-05-24T05-37-11-investigation-005",
+      "evidence": [
+        {"kind": "command", "command": "git show ac6cc55c", "excerpt": "Validator iter-5 commit body: 'Template count across 5 snapshots: 18 → 17 → 16 → 18 (live). Substrate is adding AND removing templates between observations — not monotonic pruning but bidirectional churn within 5-minute windows.'", "verified_at": "2026-05-24T05:37:11Z"},
+        {"kind": "command", "command": "(this auditor's longitudinal sequence)", "excerpt": "18 (iter-001 snapshot 23:31) → 17 (iter-008 04:58) → 16 (iter-009 05:37). Monotonically decreasing from auditor's vantage; validator's between-snapshot vantage sees bidirectional churn.", "verified_at": "2026-05-24T05:37:11Z"}
+      ],
+      "status": "open",
+      "operator_remediation": "THRASHING is the immediate operational concern. Either pause template auto-removal until the causal chain is understood (gap-005's three hypotheses), or implement an audit trail (templateRemoval impulse) so the substrate can self-describe deletions. Currently the substrate is deleting templates and the substrate cannot explain why."
+    },
+    {"id": "F-033", "claim": "Validator iter-5's commit message names 'dev coordination stale'. The dev agent's last commit was iter-008's window (no new commits since), and the dev-coordination JSON's last_updated timestamp is presumably stale. The three-agent topology's coordination layer is degrading: dev not responding, validator filing recurrence updates, auditor running but unable to escalate beyond reports.",
+      "category": "operational", "severity": "medium",
+      "first_seen_in": "2026-05-24T05-37-11-investigation-005",
+      "evidence": [
+        {"kind": "command", "command": "git show ac6cc55c", "excerpt": "Validator iter-5 explicitly states 'dev coordination stale'", "verified_at": "2026-05-24T05:37:11Z"},
+        {"kind": "command", "command": "git log --oneline --author='Devbob' --since='2 hours ago'", "excerpt": "Only validator commits (ac6cc55c, 25ed977e); no dev-feature commits in last 2 hours", "verified_at": "2026-05-24T05:37:11Z"}
+      ],
+      "status": "open",
+      "operator_remediation": "If the dev operator is offline/idle, the substrate continues degrading (F-024 boredom failures, F-031 template loss, F-032 thrashing) without remediation. Consider escalating gap-005 severity and tagging dev with the registry-thrashing issue as actionable."
+    }
+  ],
+  "regressions_since_prior": ["F-029", "F-031"],
+  "resolutions_since_prior": [],
+  "new_findings": ["F-032", "F-033"],
+  "open_questions": [
+    "What process is removing operator-authored seed templates (coverage-tick, substrate-health-tick)? Is it substrate-self-replacement-pipeline activity firing in response to repeated failures, OR a different deletion path?",
+    "Validator reports the count returned to 18 between their observations — what process is RE-ADDING templates? Where do the re-additions come from?",
+    "Will the dev operator's coordination state get updated, or remain stale?",
+    "If template thrashing continues unchecked, will the substrate eventually delete all templates or stabilize at some lower bound?"
+  ],
+  "next_wake_recommendation": {
+    "delay_seconds": 1800,
+    "reason": "Active degradation: template count trending downward (18→17→16); validator notes thrashing; dev coordination stale. 30-min wake captures 2-3 boredom firings and any further template churn."
+  }
+}

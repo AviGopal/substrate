@@ -1,0 +1,411 @@
+{
+  "investigation_id": "2026-05-24T02-28-30-investigation-001",
+  "generated_at": "2026-05-24T02:28:30Z",
+  "investigator_session_id": "loop-iteration-005",
+  "prior_investigation_id": "2026-05-23T23-49-08-investigation-004",
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container",
+    "version_reported": "1.20.9",
+    "auth_verified": true,
+    "narrator_state": "running for ~2h57m (started 2026-05-23T23:31:20Z); 14 snapshots produced; latest 2026-05-24T02:26:20Z"
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "claim": "Gameable lift criteria unchanged.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq '.lift_kpi' validation/failure-modes/cycles/cycle-8.json",
+          "excerpt": "{ debt_zero: true, gap_count_decreasing: true, consecutive_zero_debt_cycles: 4 }",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-002",
+      "claim": "Regex JSON fallback still required; 6 of 9 proposal files fail jq parse.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "for f in validation/failure-modes/proposals/*.json; do jq empty \"$f\" 2>/dev/null || echo INVALID; done | grep -c INVALID",
+          "excerpt": "6",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-003",
+      "claim": "Live traces still lack signature/attestation.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(per iter-003 trace dump; trace schema unchanged)",
+          "excerpt": "Carried forward; no schema change observed",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-004",
+      "claim": "Six failure-mode scenarios; matrix unchanged.",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/scenarios/ | wc -l",
+          "excerpt": "6",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-005",
+      "claim": "Cycle-8 substrate-anonymous; live traces carry vessel_id.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/cycles/ — no new cycle-N report since iter-001",
+          "excerpt": "Still: cycle-0..3, 5..8 (no cycle-4, no cycle-9)",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-006",
+      "claim": "Hardcoded defaults still present in three files.",
+      "category": "deployment",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -lE 'metabob.com|svc.cluster.local' repos/identity-vessel/src/services/trace.ts repos/identity-vessel/src/services/jwt.ts repos/discovery-vessel/src/middleware/auth.ts",
+          "excerpt": "All three files still match",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-007",
+      "claim": "Trailblazing unimplemented.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "file_ref",
+          "location": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md:904",
+          "excerpt": "Unchanged",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-008",
+      "claim": "Mythic three-state language.",
+      "category": "idiom",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-009",
+      "claim": "Zero DEV tasks complete across five highest-leverage 2026-05-23 changes.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "for c in substrate-identity-resolution substrate-self-replacement-pipeline external-resolver-vesselization external-resolver-grounding lift-criterion-hardening; do grep -c '^- \\[x\\]' openspec/changes/2026-05-23-$c/tasks.md; done",
+          "excerpt": "0 0 0 0 0",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-010",
+      "claim": "Root remains clean; 13 entries.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls -1 | wc -l",
+          "excerpt": "13",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-011",
+      "claim": "Lift-criterion-hardening at zero DEV progress.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -c '^- \\[x\\]' openspec/changes/2026-05-23-lift-criterion-hardening/tasks.md",
+          "excerpt": "0",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-012",
+      "claim": "Cycle reports record no substrate target.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(no new cycle report since iter-001; cycle-8 still authoritative)",
+          "excerpt": "Carried forward",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-013",
+      "claim": "6 proposal files fail jq parse; 3 valid with authored_by='subagent'.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(inline counter)",
+          "excerpt": "valid-subagent: 3; invalid-json: 6",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-014",
+      "claim": "Embedding still disabled.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -sf http://localhost:18080/health | jq '.checks.embedding.status'",
+          "excerpt": "\"disabled\"",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-015",
+      "claim": "Trace list total: -1.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(unchanged since iter-004)",
+          "excerpt": "Carried forward",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-016",
+      "claim": "Narrator running stably for ~3 hours; one process; 14 snapshots produced at ~5-min cadence.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ps -eo pid,lstart,cmd | grep substrate-narrator | grep -v grep",
+          "excerpt": "PID 3604730, lstart Sat May 23 16:31:20 2026 (local PDT) = 23:31:20Z UTC",
+          "verified_at": "2026-05-24T02:28:30Z"
+        },
+        {
+          "kind": "command",
+          "command": "ls validation/observations/snapshots/ | wc -l",
+          "excerpt": "14",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "resolved",
+      "operator_remediation": "Note for future investigations: ps ax | grep -c may inflate the count due to grep matching its own command line; use ps -eo + grep -v grep for accurate process counts. The iter-004 finding of 4 narrator processes was an artifact of this; only 1 narrator is actually running."
+    },
+    {
+      "id": "F-017",
+      "claim": "Ribosome firing remains positive evidence.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried from iter-003; substrate continues producing ribosome-extract traces in lifecycle:activity:postExecution per design)",
+          "excerpt": "Carried forward",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-018",
+      "claim": "Snapshot template count matches live query.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(re-verifiable; consistency holds across all 14 snapshots)",
+          "excerpt": "Carried forward",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-019",
+      "claim": "Discovery-vessel still returns 401 to narrator key; reproduced in latest snapshot.",
+      "category": "deployment",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq '.discovery_vessel.error' validation/observations/snapshots/snapshot-2026-05-24T02-26-20-906Z.json",
+          "excerpt": "\"HTTP 401\"",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-020",
+      "claim": "Narrator WebSocket event capture still inactive after ~3 hours running. No events JSONL file written.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-49-08-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/observations/events* 2>&1",
+          "excerpt": "ls: cannot access 'validation/observations/events*': No such file or directory",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Three hours running with zero events captured indicates a silent failure in the narrator's WebSocket subscription. Operator: check narrator stdout/stderr for WS connection errors. The discovery-vessel 401 (F-019) may share root cause if the same identity-vessel URL mismatch affects WS auth."
+    },
+    {
+      "id": "F-021",
+      "claim": "Concept-db endpoint still 'not configured' in snapshots.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-49-08-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq '.concept_db.error' validation/observations/snapshots/snapshot-2026-05-24T02-26-20-906Z.json",
+          "excerpt": "\"not configured\"",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-022",
+      "claim": "Auditor session experienced inconsistent `date -u` output within a single iteration: the first invocation returned 2026-05-24T00:33:17Z, a later invocation returned 2026-05-24T02:28:30Z (~2-hour delta). Substrate's own timestamps (narrator snapshots, file mtimes) are consistent with the later value, so the discrepancy is in the auditor's session, not in the substrate. Provenance impact: low for this report (used the later, substrate-consistent timestamp), but the agent's own time-source needs scrutiny.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T02-28-30-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "date -u (first invocation in this iteration)",
+          "excerpt": "Returned 2026-05-24T00:33:17Z",
+          "verified_at": "2026-05-24T02:28:30Z"
+        },
+        {
+          "kind": "command",
+          "command": "date -u (later invocation in same iteration)",
+          "excerpt": "Returned Sun May 24 02:28:30 AM UTC 2026",
+          "verified_at": "2026-05-24T02:28:30Z"
+        },
+        {
+          "kind": "command",
+          "command": "stat -c '%y' validation/observations/snapshots/snapshot-2026-05-24T02-26-20-906Z.json",
+          "excerpt": "2026-05-23 19:26:20.905 -0700 (= 2026-05-24T02:26:20Z UTC; consistent with later date output)",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Investigations should run `date -u` at the start AND end of each iteration and compare. If discrepancy > 60s, prefer the later value but record both. The auditor's provenance discipline (real timestamps, no epoch-zero) depends on a trustworthy clock; this finding flags that the agent's clock view is not necessarily monotonic-with-wall-clock-time."
+    },
+    {
+      "id": "F-023",
+      "claim": "No cycle-9 report has landed across the ~3-hour window since iter-001. The substrate ran (traces produced, narrator captured 14 snapshots) but the failure-mode harness has not re-fired and the progression-driver has not produced a new cycle report. Either the harness is idle by design after a lift-candidate stamp, or scheduling is operator-driven and the operator has not re-fired it.",
+      "category": "lift",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T02-28-30-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/cycles/",
+          "excerpt": "cycle-0.json through cycle-8.json (cycle-4 missing). No cycle-9.",
+          "verified_at": "2026-05-24T02:28:30Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Either re-fire the harness manually or document the post-lift-candidate harness cadence policy. If LIFT CANDIDATE is the terminal stamp until operator review, that's worth stating explicitly; if it's not, the harness should be running periodically and isn't."
+    }
+  ],
+  "regressions_since_prior": [],
+  "resolutions_since_prior": [],
+  "new_findings": ["F-022", "F-023"],
+  "open_questions": [
+    "Is the agent's clock-view discrepancy (F-022) reproducible across loop iterations, or specific to this one?",
+    "Why has cycle-9 not landed in 3 hours? Is the harness cadence operator-driven or substrate-driven?",
+    "Will the dev operator make any DEV progress on the five highest-leverage changes overnight?",
+    "Does the validation adversary plan to populate validation/gaps/INDEX.md with active gap records?"
+  ],
+  "next_wake_recommendation": {
+    "delay_seconds": 3000,
+    "reason": "Quiet substrate (no new cycles, no DEV progress, snapshots accumulating normally). LIFT CANDIDATE still stamped; 50-minute cadence balances cache discipline with catching any overnight change."
+  }
+}
