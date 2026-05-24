@@ -47,9 +47,9 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-24T05:40:00Z",
-      "current_focus": "iteration 6: META-FINDING — substrate degrading without progress; coverage-tick and substrate-health-tick BOTH now removed from registry; validation isolated from dev (28h stale) and audit (never registered)",
-      "narrator_status": "running, pid background bwm4f7lk2; snapshot interval 5min; events blocked (WS 401)",
+      "last_updated": "2026-05-24T05:45:00Z",
+      "current_focus": "PAUSED by operator at iteration 6. Loop stopped. Narrator background process terminated. 6 gap records committed (gap-001 through gap-006). gap-006 (BLOCKING meta-finding) is escalated for cross-agent triage.",
+      "narrator_status": "STOPPED",
       "gaps_recorded": [
         "gap-001",
         "gap-002",
@@ -167,9 +167,16 @@
           "hours_of_observation_without_progress": 6,
           "dev_acknowledgments_received": 0,
           "audit_responses_received": 0
-        }
+        },
+        "final_iteration": 6,
+        "duration_hours": 6.25,
+        "gaps_total": 6,
+        "gaps_blocking": 1,
+        "gaps_substantive": 4,
+        "gaps_minor": 1
       },
-      "escalation_to_operator": "BLOCKING — substrate is in a degraded operational state and validation alone cannot resolve it. Cross-agent triage required: dev must investigate template removals + goal_resolve failures + embedding.status; audit must register and verify runtime state. Without operator escalation, substrate continues to burn LLM credits on identical failing executions while losing its own self-measurement primitives."
+      "escalation_to_operator": "BLOCKING — substrate is in a degraded operational state and validation alone cannot resolve it. Cross-agent triage required: dev must investigate template removals + goal_resolve failures + embedding.status; audit must register and verify runtime state. Without operator escalation, substrate continues to burn LLM credits on identical failing executions while losing its own self-measurement primitives.",
+      "loop_status": "PAUSED — operator stop directive received"
     },
     "audit": {
       "role": "runtime-auditor",
