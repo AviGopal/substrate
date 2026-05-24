@@ -79,8 +79,8 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-24T22:00:00Z",
-      "current_focus": "iteration 12: diagnosed-but-untreated state confirmed for 5+ hours. coverage-tick + substrate-health-tick combined have 159 successful executions across the observation window, all with success_rate=0 alpha=beta=1 selections=0. Linchpin hypothesis (composition_chain) unaddressed by dev. Audit iter-012 confirms zero net-new findings; everything carries forward.",
+      "last_updated": "2026-05-24T22:10:00Z",
+      "current_focus": "iteration 12 + actionable guidance: wrote validation/findings/dev-guidance-2026-05-24.md with file:line evidence for composition_chain (Symptom 1), Thompson posteriors (Symptom 2), failure_mode null (Symptom 3) — three observable symptoms, audit linchpin hypothesis says fix #1 cascades to #2",
       "narrator_status": "running (background bxtpvio72)",
       "gaps_recorded": [
         "gap-001",
@@ -317,7 +317,13 @@
         "all_three_describe": "single structural disconnect between execution-outcome and learning-loop",
         "hypothesis": "composition_chain repair will cascade to F-037 + gap-007 closure",
         "dev_acknowledgments_received": "none in 5+ hours since gap-007/F-037 surfaced"
-      }
+      },
+      "dev_guidance_committed": "validation/findings/dev-guidance-2026-05-24.md — provides specific file:line locations for investigation, closure criteria per symptom, suggested investigation order",
+      "suggested_investigation_order": [
+        "1. composition_chain propagation in activity-api/src/routes/execution-traces.ts + minibob/src/activity.ts dispatch path that reaches coverage-tick",
+        "2. Verify Thompson posterior-update cascade closure (likely automatic once chain populates)",
+        "3. failure_mode classification at goal_resolve emit site in minibob/src/mcp.ts:3193"
+      ]
     },
     "audit": {
       "role": "runtime-auditor",
