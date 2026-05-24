@@ -34,3 +34,4 @@ See [`docs/SUBSTRATE_NARRATION_PROTOCOL.md`](../../docs/SUBSTRATE_NARRATION_PROT
 `doc_unread`, `training_knowledge`, `irreducibly_operator`.
 
 See §E for the bridge-path enumeration.
+| gap-003 | missing_concept | substantive | 1 | extract-concepts (failure-mode taxonomy) + ribosome | 2026-05-24T03:22Z | 2026-05-24T03:26Z |
