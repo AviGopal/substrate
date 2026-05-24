@@ -1,10 +1,10 @@
 ---
 gap_id: gap-005
 category: missing_pattern
-severity: minor
+severity: substantive
 observed_first: 2026-05-24T04:01:45Z
 last_observed: 2026-05-24T04:06:20Z
-recurring_count: 1
+recurring_count: 3
 bridge_path: ribosome (extract pattern "failed templates may be removed"); operator clarification needed on whether this is substrate-driven or dev-driven removal
 ---
 
@@ -79,3 +79,23 @@ The substrate has no concept layer to disambiguate these. The trace existence pr
   3. What the duration_ms=0 metadata=null failure traces actually represent in the activity-api dispatch path
 
 - **my role**: continue narrating. If more templates churn, the pattern becomes more describable; substrate may eventually accumulate enough trace data for ribosome to extract "template-churn" as a pattern (once ribosome has access to substrate-self-replacement-pipeline traces).
+
+## Update — Iteration 5 (2026-05-24T04:42Z)
+
+Template count trajectory across snapshots:
+- Iteration 3 (~03:51Z): **18** templates (incl. substrate-health-tick)
+- Iteration 4 (04:06Z): **17** templates (substrate-health-tick removed)
+- Iteration 4.5 (04:36:43Z): substrate-health-tick INVOKED 2× (back in registry briefly?)
+- Iteration 5 snapshot (04:36:20Z): **16** templates
+- Iteration 5 live (04:42Z): **18** templates (substrate-health-tick re-added)
+
+The substrate is **thrashing** its registry — adding and removing templates between observations, not just monotonically pruning. The 5-minute snapshot interval is too coarse to capture all transitions; the substrate's template-set state is unstable on much shorter timescales.
+
+This rules out interpretation (a) "substrate auto-removed via substrate-self-replacement-pipeline" because that would be monotonic removal. The behavior is more consistent with:
+- **Re-registration loop**: development-vessel may be re-seeding templates on each restart of some sub-process
+- **Variant-creation cycle**: ribosome-extract creating variants that hit unique-id conflict and get removed, then re-extracted on next cycle
+- **Auth-window churn**: templates being created under one auth context and removed under another
+
+The 2 timestamp-suffixed variants `activity:⟨variant-1779534644901⟩` and `activity:⟨variant-1779534714750⟩` confirm ribosome IS creating variants. But the named development-vessel templates (substrate-health-tick) shouldn't be churning — they're operator-authored seed templates.
+
+**Updated severity**: minor → **substantive**. Registry instability means the substrate's self-knowledge of "what templates exist" is unreliable across short windows. This affects Thompson posterior accumulation (rows keyed on template_id that disappears and reappears).

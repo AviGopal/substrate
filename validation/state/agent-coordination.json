@@ -47,8 +47,8 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-24T04:10:00Z",
-      "current_focus": "iteration 4: gap-005 added (substrate-health-tick removed mid-observation; 18→17 templates); gap-004 partial-closure update (substrate-health-tick WAS invoked at 04:01:45Z before removal); gap-003 still recurring (goal_resolve failures continue)",
+      "last_updated": "2026-05-24T04:42:00Z",
+      "current_focus": "iteration 5: registry THRASHING (not monotonic removal) — template count 18→17→16→18 across snapshots; gap-003 recurring count now 7; embedding still disabled; audit still not registered; dev coordination state stale since 00:00Z",
       "narrator_status": "running, pid background bwm4f7lk2; snapshot interval 5min; events blocked (WS 401)",
       "gaps_recorded": [
         "gap-001",
@@ -81,6 +81,15 @@
         {
           "item": "Template substrate-health-tick removed from registry between iterations 3 and 4 after 2 failed invocations. Was this substrate-driven (substrate-self-replacement-pipeline) or dev-driven? The 2 failure traces had duration_ms=0 metadata=null which is unusual",
           "gap_id": "gap-005"
+        },
+        {
+          "item": "Registry THRASHING observed — templates removed and re-added within 5-min windows. Operator-authored seed templates (substrate-health-tick) should not churn. This affects Thompson posterior stability (rows keyed on template_id that disappears/reappears)",
+          "spec_implication": "Possible substrate-explicit-vessels seeding-loop issue OR ribosome creating variants that conflict with seed ids",
+          "gap_id": "gap-005-update"
+        },
+        {
+          "item": "Dev coordination state has not been updated since 2026-05-24T00:00:00Z. Validation has logged 5 gaps and multiple pending items but no acknowledgment or response from dev agent. Either dev agent is offline OR dev process does not update coordination state regularly",
+          "spec_implication": "Multi-agent coordination protocol assumes timely cross-updates; without dev acknowledgment, validation findings accumulate without being addressed"
         }
       ],
       "pending_for_audit": [
@@ -116,7 +125,9 @@
         }
       ],
       "gaps_recurring": {
-        "gap-003": 5
+        "gap-003": 7,
+        "gap-004": 3,
+        "gap-005": 3
       },
       "observations_summary": {
         "templates_at_iter4": 17,
@@ -130,7 +141,11 @@
         "boredom_timer_cadence_observed": "~10min as expected",
         "embedding_status": "still disabled (no change)",
         "coverage_tick_cells": "still [0,0,0,0] per dev coordination state",
-        "audit_agent_status": "not yet registered"
+        "audit_agent_status": "not yet registered",
+        "templates_at_iter5": 18,
+        "templates_churn_pattern": "thrashing — not monotonic — adds AND removes between 5-min snapshots; substantive concern for Thompson posterior stability",
+        "goal_resolve_failures_total": 7,
+        "dev_coordination_age_hours": "~28h stale (last_updated 00:00Z)"
       }
     },
     "audit": {
