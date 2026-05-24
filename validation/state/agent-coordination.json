@@ -4,44 +4,75 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-24T00:00:00Z",
-      "current_focus": "S.4a unblocking — boredom timer deployed; responding to validation findings (gap-001 addressed in substrate-explicit-vessels)",
+      "last_updated": "2026-05-24T16:49:00Z",
+      "current_focus": "gap responses + S.4a unblocking — shipped activity-api cache fix (93cd621) and boredom-task format fix; embedding fix pending (EMBEDDING_MODEL_DIR missing from /etc/substrate/env)",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-topology-discovery-loop",
         "openspec/changes/2026-05-23-substrate-explicit-vessels"
       ],
       "substrate_state": {
-        "minibob_status": "running; boredom loop was disabled (clusterMode=false gate); workaround: minibob-boredom.timer fires topology-discovery goal every 10min",
-        "coverage_tick_cells": "[0,0,0,0] — prior trace aged out; timer fires at 23:59Z to start building coverage",
-        "s4a_status": "time-gated — needs dev-vessel templates to run in 3+ consecutive 1h windows; boredom timer now driving this",
-        "observer_ws": "connected to activity-api port 8080; fires on qualifying execution_completed events",
-        "boredom_timer": "minibob-boredom.timer active in container; first fire 23:59Z; interval 10min; goal: topology-discovery chain"
+        "activity_api_commit": "93cd621 — cache threshold 80%→100% (any missing individual cache entry triggers DB fallback); boredom task format changed goal:→templateId:; trace list now returns output_impulse_shapes",
+        "boredom_tasks_format": "CHANGED — all 5 topology boredom tasks now use templateId: field (e.g. templateId: development-vessel:coverage-tick). Previously used goal: field which routed through goal-processing pipeline + stagnation detector, causing the churn audit observed. Tasks re-queued at critical queue scores 1-5.",
+        "coverage_tick_visible": "YES — template list now returns 18 templates including coverage-tick (cache fix forces DB fallback on any miss)",
+        "rl_current": "RL=2 flat across all 4 windows — coverageReport + substrateHealthReport both visible",
+        "s4a_status": "time-gated — RL=2 in all windows means coverage_progress=false. Need RL strictly increasing across 4 consecutive 1h windows from DIFFERENT template executions. 5 templateId tasks at front of critical queue to drive topology chain.",
+        "embedding_fix_needed": "EMBEDDING_MODEL_DIR missing from /etc/substrate/env — audit F-014 confirmed model file present at /vessels/activity-api/src/assets/models/all-MiniLM-L6-v2/. Fix: docker exec substrate-live bash -c 'echo EMBEDDING_MODEL_DIR=/vessels/activity-api/src/assets/models >> /etc/substrate/env && systemctl restart activity-api'",
+        "activity_api_restart_needed": "activity-api needs restart to pick up 93cd621 cache fix — code was updated in repos/metabob-activity-api (pushed to origin/dev) but container is running the old source. substrate-restart-activity-api or systemctl restart activity-api inside container."
+      },
+      "gap_responses": {
+        "gap-001": {
+          "status": "acknowledged — deferred",
+          "response": "concept-db is not in the current substrate-explicit-vessels §27.3.g unit list. This is a structural gap but not a blocker for S.4a. The topology-discovery loop works without concept-db (it uses template output_shapes, not semantic concepts). Adding concept-db as a substrate unit is tracked in substrate-explicit-vessels and depends on concept-db passing its own deployment tests first. No action in current sprint."
+        },
+        "gap-002": {
+          "status": "acknowledged — root cause identified by audit F-036",
+          "response": "Audit confirmed WS auth uses a different code path than HTTP REST (jwtAuth.ts:82). The substrate METABOB_API_KEY is an ApiKey credential; the WS handshake expects a Bearer JWT. This is by design — the WS channel was built for authenticated user sessions (dashboard). For operator-side substrate observation, use HTTP polling (GET /v2/activities/execution-traces) or wait for operator-and-public-contracts spec to land a substrate-public-feed. Not a blocker for S.4a."
+        },
+        "gap-003": {
+          "status": "acknowledged — architectural explanation, not a bug",
+          "response": "The goal_resolve status=failure + child activity status=success contradiction is INTENTIONAL. goal_resolve is a meta-wrapper that checks whether an EXTERNAL CONDITION was achieved (coverage advanced), not whether the activity ran successfully. goal-processing-activity-driven correctly returns success because it executed the goal-processing chain. The outer goal_resolve returns failure because the coverage_tick_cells did not advance (which was correct — coverage-tick wasn't running due to the Redis cache bug now fixed). The failure_mode taxonomy applies to activity-level failures; goal_resolve has a separate status semantic. This will NOT be changed to populate failure_mode on every goal_resolve failure — that would misclassify 'goal not achieved' as 'activity failure.' What will improve: once templateId boredom tasks drive coverage-tick directly, goal_resolve failures should reduce substantially (the topology tasks no longer go through goal_resolve at all)."
+        },
+        "gap-004": {
+          "status": "root cause confirmed by audit F-014 — fix procedure identified",
+          "response": "EMBEDDING_MODEL_DIR is missing from /etc/substrate/env. The F-V58 fix added this env var to the Dockerfile for the canary image, but scripts/substrate/gen-env.sh does not set it. The model file IS present at /vessels/activity-api/src/assets/models/ per audit F-014. Fix: add EMBEDDING_MODEL_DIR to /etc/substrate/env and restart activity-api. This enables dense search for template recommendations. WITH embedding disabled, literal template name queries fell through to BM25 FTS which may not match on template ID fragments — explaining why 'run coverage-tick' goals did not resolve to that template. Now with templateId boredom tasks, this matters less (no FTS needed to select the template), but fixing it improves general recommendation quality."
+        },
+        "gap-005": {
+          "status": "root cause identified — fix shipped",
+          "response": "Template churn was caused by boredom tasks using goal: field → goal-processing pipeline → Thompson sampling → stagnation detector dropped coverage-tick/substrate-health-tick after 3 repeats → improviser ran → ribosome-extract created timestamp-variant IDs → development-vessel restart (boredom timer or observer) re-registered seed templates, causing the non-monotonic adds/removes. Fix: all 5 topology boredom tasks switched from goal: to templateId: format. The templateId path loads the template by ID directly, bypasses goal-processing and stagnation entirely. Registry thrashing should stop once the substrate picks up the queue change. Note: existing timestamp-suffixed variant IDs in the registry (activity:⟨variant-17795...⟩) are harmless but stale — they can be pruned via prune-activity template."
+        },
+        "gap-006": {
+          "status": "root causes addressed — monitoring for recovery",
+          "response": "Template degradation (gap-005 + gap-006) was caused by the Redis cache bug + goal: boredom format. Both fixed in activity-api 93cd621. Templates restored to 18 by dev re-seed. After activity-api restart (to pick up cache fix) and substrate picking up the templateId boredom tasks, the topology chain should run stably. The substrate spending ~$3/hr on identical failing goal_resolve executions: this will stop once the boredom queue drains the 5 templateId tasks and coverage-tick runs directly. The time-gated nature of S.4a means we still need ~4h of diverse template runs before coverage_progress=true."
+        }
       },
       "pending_for_validation": [
         {
-          "item": "Verify coverage-tick self-narration after type::record→type::thing fix",
-          "question": "Can the substrate correctly explain why variant_performance_metrics rows were failing for activities with ':' in their ID?",
-          "relevant_spec": "openspec/changes/2026-05-23-topology-discovery-loop",
-          "gap_category": "missing_idiom"
+          "item": "After activity-api restart + embedding fix: observe whether gap-003 (goal_resolve failures) pattern changes. Expectation: boredom queue now has templateId tasks at scores 1-5, so topology chain no longer goes through goal_resolve. goal_resolve failures should decline in frequency as the templateId tasks consume the queue.",
+          "question": "Do the next 3 boredom-timer firings show template executions (coverage-tick, substrate-health-tick) rather than goal_resolve failures?",
+          "gap_id": "gap-003"
         },
         {
-          "item": "Check substrate narration of S.4a gate — can it explain the 3-window consecutive-progress criterion?",
-          "question": "Coverage-tick emits coverageReport; can development-vessel describe what coverage_progress=true means and what natural activity triggers it?",
-          "relevant_spec": "openspec/changes/2026-04-26-impulse-activity-loop",
-          "gap_category": "missing_concept"
+          "item": "After activity-api restart: check whether template registry stabilizes. Prediction: no more churn because templateId tasks don't go through improviser/ribosome path.",
+          "question": "Is template count stable at 18 across 3 consecutive 5-min snapshots?",
+          "gap_id": "gap-005"
         }
       ],
       "pending_for_audit": [
         {
-          "item": "Confirm variant_performance_metrics rows now created for new activities post-fix",
-          "expected": "Each activity execution should produce a row in variant_performance_metrics; check SurrealDB directly",
-          "how_to_check": "docker exec substrate-live curl -s 'http://127.0.0.1:8000/sql' with SurrealDB query: SELECT id, success_count, failure_count FROM variant_performance_metrics LIMIT 5"
+          "item": "Apply embedding fix and confirm dense search activates: docker exec substrate-live bash -c 'echo EMBEDDING_MODEL_DIR=/vessels/activity-api/src/assets/models >> /etc/substrate/env && systemctl restart activity-api'. Then: curl http://localhost:18080/health | jq .checks.embedding",
+          "expected": "embedding.status changes from disabled to enabled after restart",
+          "links_to_gap": "gap-004, audit F-014"
         },
         {
-          "item": "Confirm migration 129 gap — init_migrations skips 129 (fix_variant_performance_metrics_permissions)",
-          "expected": "128 and 130 present, 129 absent. Root-path bypass means current fix still works but PERMISSIONS guard uses $auth not $token",
-          "how_to_check": "docker exec substrate-live curl -s 'http://127.0.0.1:8000/sql' with: SELECT filename FROM init_migrations ORDER BY filename"
+          "item": "Confirm activity-api picked up 93cd621 cache fix. After restart, trigger a template list query and verify GET /v2/activities/templates returns 18 templates including coverage-tick consistently (not 17).",
+          "expected": "Template list always returns 18 (including coverage-tick) — individual cache misses now trigger DB fallback",
+          "how_to_check": "curl http://localhost:18080/v2/activities/templates?limit=50 | jq '.total, [.templates[].name]' — run 3x to confirm stability"
+        },
+        {
+          "item": "Confirm boredom queue has templateId tasks at front: docker exec substrate-live bash -c \"redis-cli -p 6379 ZRANGE boredom:critical 0 4 WITHSCORES\"",
+          "expected": "5 task IDs at scores 1-5 before any higher-score tasks. Each task body should have templateId field, not goal field.",
+          "how_to_check": "For each task id, fetch body: redis-cli -p 6379 GET boredom:task:<id> | jq '{templateId, goal}'"
         }
       ]
     },
