@@ -4,7 +4,7 @@ category: missing_idiom
 severity: substantive
 observed_first: 2026-05-24T03:40:59Z
 last_observed: 2026-05-24T03:41:21Z
-recurring_count: 2
+recurring_count: 3
 bridge_path: ribosome (substrate to learn "goal text containing template name → invoke that template") + concept-extraction (template-name→template-id mapping)
 ---
 

@@ -47,14 +47,15 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-24T03:55:00Z",
-      "current_focus": "iteration 3: gap-003 recurring (3 occurrences confirmed); gap-004 added (goal name not resolving to template, embedding.status disabled in local substrate, recommendation tier has no signal)",
+      "last_updated": "2026-05-24T04:10:00Z",
+      "current_focus": "iteration 4: gap-005 added (substrate-health-tick removed mid-observation; 18→17 templates); gap-004 partial-closure update (substrate-health-tick WAS invoked at 04:01:45Z before removal); gap-003 still recurring (goal_resolve failures continue)",
       "narrator_status": "running, pid background bwm4f7lk2; snapshot interval 5min; events blocked (WS 401)",
       "gaps_recorded": [
         "gap-001",
         "gap-002",
         "gap-003",
-        "gap-004"
+        "gap-004",
+        "gap-005"
       ],
       "pending_for_dev": [
         {
@@ -76,6 +77,10 @@
           "item": "embedding.status=disabled in local substrate activity-api /health response; CLAUDE.md claims F-V58 fixed in 1.20.9 but local image not honoring it. With dense search disabled AND new templates having no Thompson posteriors, goal naming a template literal does NOT resolve to that template. Two goals at 03:40:59Z and 03:41:21Z asked for coverage-tick by name; substrate ran improvise instead",
           "spec_implication": "Phase 18.5 / F-V58 fix incomplete in substrate-live image, OR substrate-explicit-vessels seed missing the embedding model directory",
           "gap_id": "gap-004"
+        },
+        {
+          "item": "Template substrate-health-tick removed from registry between iterations 3 and 4 after 2 failed invocations. Was this substrate-driven (substrate-self-replacement-pipeline) or dev-driven? The 2 failure traces had duration_ms=0 metadata=null which is unusual",
+          "gap_id": "gap-005"
         }
       ],
       "pending_for_audit": [
@@ -94,6 +99,10 @@
           "item": "Verify embedding.status=disabled by querying activity-api /health inside container and checking EMBEDDING_MODEL_DIR env + presence of all-MiniLM-L6-v2 ONNX model file at substrate-live activity-api workspace",
           "expected": "Either env var unset OR model file absent OR model file present but path mismatch. The local image diverges from canary which has F-V58 fixed",
           "how_to_check": "docker exec substrate-live curl -s http://localhost:8080/health | jq .checks.embedding; docker exec substrate-live env | grep EMBEDDING; docker exec substrate-live ls /substrate/repos/metabob-activity-api/src/assets/models/ 2>/dev/null"
+        },
+        {
+          "item": "Verify templateUpkeepAuditLog or activity-api dispatch logs for the substrate-health-tick removal between 04:01:45Z and 04:06:00Z",
+          "how_to_check": "Query activity-api for templateUpkeepAuditLog impulses; check substrate-live container logs for activity-api around 04:01:45Z to 04:05:00Z"
         }
       ],
       "acknowledging_pending_from_dev": [
@@ -107,7 +116,21 @@
         }
       ],
       "gaps_recurring": {
-        "gap-003": 3
+        "gap-003": 5
+      },
+      "observations_summary": {
+        "templates_at_iter4": 17,
+        "templates_change_from_iter3": "-1 (substrate-health-tick removed)",
+        "goal_resolve_failures_in_window": 4,
+        "named_templates_invoked_count": {
+          "coverage-tick": 0,
+          "substrate-health-tick": 2,
+          "probe-reachable-unlearned": 0
+        },
+        "boredom_timer_cadence_observed": "~10min as expected",
+        "embedding_status": "still disabled (no change)",
+        "coverage_tick_cells": "still [0,0,0,0] per dev coordination state",
+        "audit_agent_status": "not yet registered"
       }
     },
     "audit": {
