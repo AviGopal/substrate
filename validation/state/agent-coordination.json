@@ -47,8 +47,8 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-24T16:25:00Z",
-      "current_focus": "iteration 7 (loop resumed after operator restart): substrate has partially recovered — templates 16→18 (coverage-tick + substrate-health-tick restored, plus Test/smoke/smoke2 added). Rich trace metadata now visible (signature_version=1, state_space_signature populated, provenance arrays per trace). Phase 24 conditional posteriors operating. BUT: gap-003 still recurring (3 more goal_resolve failures at 15:52Z/16:00Z/16:11Z, ~12+ occurrences total); embedding.status still disabled; dev coordination state still not updated since 00:00Z",
+      "last_updated": "2026-05-24T16:35:00Z",
+      "current_focus": "iteration 8 RECALIBRATION: discovered audit is active (validation/investigations/), audit independently confirmed gaps 001-004, audit caught my gap-005 misattribution. Dev did engage via findings/ channel (just not via agent-coordination.json). gap-005 root cause is activity-api cache bug, fixed in commits b129695/93cd621. gap-004 partial-closure claim retracted.",
       "narrator_status": "running (background bxtpvio72)",
       "gaps_recorded": [
         "gap-001",
@@ -194,13 +194,36 @@
       },
       "escalation_to_operator": "BLOCKING — substrate is in a degraded operational state and validation alone cannot resolve it. Cross-agent triage required: dev must investigate template removals + goal_resolve failures + embedding.status; audit must register and verify runtime state. Without operator escalation, substrate continues to burn LLM credits on identical failing executions while losing its own self-measurement primitives.",
       "loop_status": "ACTIVE (resumed)",
-      "gap_006_status": "PARTIAL — template degradation reversed by dev; coordination silence + structural issues remain. Re-escalation NOT required at this time as substrate is recovering, but dev still hasn't updated coordination state. Will continue monitoring."
+      "gap_006_status": "PARTIAL — template degradation reversed by dev; coordination silence + structural issues remain. Re-escalation NOT required at this time as substrate is recovering, but dev still hasn't updated coordination state. Will continue monitoring.",
+      "calibration_corrections": [
+        "I was monitoring agent-coordination.json but the dev/audit coordination is happening via findings/ files and validation/investigations/",
+        "I misattributed the iter-4 template removal — coverage-tick was removed, not substrate-health-tick (auditor F-031 caught it)",
+        "I claimed gap-004 partial closure based on substrate-health-tick invocation, but those were degenerate failure traces, not actual closure evidence",
+        "gap-005 was a cache-bug observability artifact, not substrate self-management churn — root cause fixed by dev"
+      ]
     },
     "audit": {
       "role": "runtime-auditor",
-      "last_updated": null,
-      "current_focus": null,
-      "pending_for_dev": []
+      "last_updated": "2026-05-24T07:00:44Z",
+      "current_focus": "active runtime-transient investigation; uses validation/investigations/ rather than agent-coordination.json",
+      "findings_directory": "validation/investigations/",
+      "findings_format": "paired JSON (structured evidence) + MD (narrative); each iteration has reproducible commands",
+      "total_findings": 36,
+      "open": 27,
+      "resolved": 5,
+      "regressed": 2,
+      "unverifiable": 1,
+      "iterations_completed": "iter-001 through iter-006 (after burning four iter-001 to iter-004 numbering in the prior session) plus iter-001 through iter-004 of resumed loop",
+      "last_iteration_committed": "iter-006 at 07:00Z 2026-05-24",
+      "confirmed_validation_findings": [
+        "gap-001 (F-021)",
+        "gap-002 (F-019, F-020, F-036)",
+        "gap-003 (F-029)",
+        "gap-004 (F-028)"
+      ],
+      "caught_validation_errors": [
+        "gap-005 misattributed substrate-health-tick removal when actually coverage-tick was removed (F-031)"
+      ]
     }
   }
 }

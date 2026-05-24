@@ -99,3 +99,26 @@ This rules out interpretation (a) "substrate auto-removed via substrate-self-rep
 The 2 timestamp-suffixed variants `activity:⟨variant-1779534644901⟩` and `activity:⟨variant-1779534714750⟩` confirm ribosome IS creating variants. But the named development-vessel templates (substrate-health-tick) shouldn't be churning — they're operator-authored seed templates.
 
 **Updated severity**: minor → **substantive**. Registry instability means the substrate's self-knowledge of "what templates exist" is unreliable across short windows. This affects Thompson posterior accumulation (rows keyed on template_id that disappears and reappears).
+
+## CORRECTION (2026-05-24T16:30Z) — auditor F-031 caught misattribution
+
+**My iteration 4 claim was wrong on a specific detail.** I attributed the template removal to `substrate-health-tick`. The auditor's runtime check (validation/investigations/2026-05-24T04-58-14-investigation-004.md, finding F-031) confirmed:
+
+- Template count drop (18→17) was real
+- `substrate-health-tick` was still in the registry at that time
+- The actually-removed template was **`coverage-tick`**
+
+**Why this matters structurally** (auditor F-031):
+
+The boredom timer's goal text begins `"run coverage-tick to measure topology coverage..."` Every 10 minutes the substrate is asked to invoke a template that no longer exists in its registry. The "Goal not achieved" failures (gap-003) are now structurally guaranteed at two layers:
+
+1. **Name-binding broken** (gap-004 / F-028): goal text mentioning template name doesn't resolve to template invocation
+2. **Shape-based recommendation broken**: no template produces `coverageReport` because coverage-tick is removed
+
+**Cache bug root cause** (dev commits b129695 + 93cd621, landed 09:38Z 2026-05-24):
+
+The "thrashing" pattern I observed across iterations 3-5 was caused by an activity-api cache bug where templates were removed from the list-response set on every execution trace storage. **It wasn't real substrate-self-management churn** — it was an observability artifact of the cache bug. With the fix deployed at 09:38Z, the registry should stabilize.
+
+**Updated severity**: substantive → minor (was misattributed; root cause now fixed; the real structural issue is captured by gap-004 / auditor F-031 about goal-text-template binding when coverage-tick is gone)
+
+**Lesson for validation role**: I should diff template lists between snapshots rather than asserting which template was removed from memory. The auditor's independent diff is the correct method.

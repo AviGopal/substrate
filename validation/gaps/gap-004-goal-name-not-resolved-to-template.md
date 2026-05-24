@@ -90,3 +90,14 @@ This is the substrate failing to compose a basic capability (goal → named-temp
   3. Confirm whether Thompson posteriors exist for coverage-tick, substrate-health-tick, probe-reachable-unlearned (likely empty since no prior successful executions).
 
 - **my role**: this pattern recurs every boredom firing. Will watch for whether dev's fixes (or substrate improvisation eventually producing successful coverage-tick executions and seeding posteriors) close the gap.
+
+## CORRECTION (2026-05-24T16:30Z) — partial-closure claim retracted
+
+In iteration 4 I claimed "partial closure — substrate-health-tick WAS invoked at 04:01:45Z." The auditor's F-031 reveals this was based on iter-3 state BEFORE coverage-tick was removed from the registry. The actually-invoked-and-failed template situation:
+
+- substrate-health-tick: WAS in registry, did briefly run, recorded degenerate failures (duration_ms=0, metadata=null) — these are "template not properly resolvable" synthetic failure traces, not actual executions
+- coverage-tick: was removed at iter-4 (per auditor F-031); boredom timer continues asking for it by name
+
+**Revised verdict**: gap-004 is NOT partially closed. The substrate has never successfully invoked any of the three named templates from the boredom-fired goal text. Name-binding remains broken across the entire observation period.
+
+After dev's cache-bug fix (commits b129695 + 93cd621 at 09:38Z), the registry now shows 18 templates including coverage-tick — but until embedding.status changes from "disabled" and/or a literal-name-match idiom lands, the goal "run coverage-tick" still won't resolve to invoking coverage-tick.
