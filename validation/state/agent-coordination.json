@@ -79,8 +79,8 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-24T20:25:00Z",
-      "current_focus": "iteration 10: gap-007 pattern RECURS on substrate-health-tick; cross-corroborated by auditor F-037 (Thompson posteriors not updating despite 60/68 successes). Single root cause with 3 symptoms (goal_resolve verify, composition_chain empty, posteriors flat).",
+      "last_updated": "2026-05-24T21:25:00Z",
+      "current_focus": "iteration 11: audit iter-011 explicitly maps F-038=my gap-007 and proposes the linchpin hypothesis — composition_chain repair likely cascades to F-037 posterior updates. No new dev commits since 09:38Z; the diagnostic has converged but the fix hasn't landed yet.",
       "narrator_status": "running (background bxtpvio72)",
       "gaps_recorded": [
         "gap-001",
@@ -159,10 +159,10 @@
         }
       ],
       "gaps_recurring": {
-        "gap-003": 20,
+        "gap-003": 22,
         "gap-004": 3,
         "gap-005": 3,
-        "gap-007": 6
+        "gap-007": 12
       },
       "observations_summary": {
         "templates_at_iter4": 17,
@@ -249,6 +249,15 @@
           "composition_chain_empty_on_named_templates": true,
           "thompson_posteriors_flat_per_F037": "60/68 success on coverage-tick yields success_rate=0",
           "audit_iter_10_date": "2026-05-24T17:24:17Z"
+        },
+        "iteration_11": {
+          "templates_count": 18,
+          "embedding": "healthy",
+          "coverage_tick_executions_growing": "68→77 in 3h (+9 successes)",
+          "thompson_alpha_beta_unchanged": "1/1 (uniform prior, no update from 77 executions)",
+          "named_template_invocations_this_iter": "substrate-health-tick at 20:46:50 (3x); coverage-tick at 21:06:54 (3x)",
+          "goal_resolve_failures_this_iter": "20:47, 20:58, 21:07, 21:17 (4 more)",
+          "no_new_dev_commits_since": "09:38Z 2026-05-24 (12h+ since cache fix)"
         }
       },
       "escalation_to_operator": "BLOCKING — substrate is in a degraded operational state and validation alone cannot resolve it. Cross-agent triage required: dev must investigate template removals + goal_resolve failures + embedding.status; audit must register and verify runtime state. Without operator escalation, substrate continues to burn LLM credits on identical failing executions while losing its own self-measurement primitives.",
@@ -269,6 +278,14 @@
         "validation_finding": "gap-007 named-template success without goal closure",
         "relationship": "SAME ROOT CAUSE, two observation layers — trace-level (validation) and metrics-level (audit). Data flows but signals don't propagate from execution-outcome to posterior-update to goal-closure",
         "criticality": "BLOCKING for §27.S.4a lift criterion — coverage_progress=true requires Thompson learning, which requires posterior updates, which are not happening"
+      },
+      "linchpin_hypothesis": {
+        "source": "auditor iter-011 (2026-05-24T20:26:32Z)",
+        "claim": "F-038 composition_chain empty is the LINCHPIN that causes F-037 Thompson posteriors flat",
+        "mechanism": "Without composition_chain populated, Thompson update path looks for parent-selection records and finds none → posteriors don't move despite repeated execution successes",
+        "convergent_evidence": "coverage-tick: 68→77 executions (+9 successes in 3h), success_rate STILL 0, alpha=beta=1 unchanged",
+        "implication": "If composition_chain propagation is repaired, gap-007 + F-038 + F-037 may all cascade to closure with one fix",
+        "cross_corroboration": "audit F-038 = validation gap-007 (different names for same trace-level observation); audit F-037 = metrics-level downstream symptom"
       }
     },
     "audit": {
