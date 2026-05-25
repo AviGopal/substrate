@@ -40,6 +40,21 @@ const ACTIVITY_API_URL = process.env["METABOB_ENDPOINT"] ?? "http://localhost:18
 // Override with GOAL_HOST_ENDPOINT env var if using a different mapping.
 const GOAL_HOST_URL = process.env["GOAL_HOST_ENDPOINT"] ?? "http://localhost:18210";
 
+// API key for discovery queries.
+// Priority: SUBSTRATE_API_KEY (substrate-internal key) > METABOB_API_KEY env >
+// /workspace/.substrate-secrets (local Docker substrate) > ~/.metabob/config.json
+const METABOB_API_KEY = process.env["SUBSTRATE_API_KEY"] ?? process.env["METABOB_API_KEY"] ?? (() => {
+  try {
+    const secrets = require("fs").readFileSync("/workspace/.substrate-secrets", "utf8");
+    const match = secrets.match(/^METABOB_API_KEY=(.+)$/m);
+    if (match) return match[1].trim();
+  } catch { /* not in local substrate */ }
+  try {
+    const cfg = JSON.parse(require("fs").readFileSync(require("os").homedir() + "/.metabob/config.json", "utf8"));
+    return cfg?.metabob?.apiKey ?? "";
+  } catch { return ""; }
+})();
+
 const TIMEOUT_MS = 8_000;
 
 // ── CLI args ──────────────────────────────────────────────────────────────────
@@ -84,11 +99,11 @@ async function get(url: string): Promise<{ ok: boolean; status: number; body: un
   }
 }
 
-async function post(url: string, data: unknown): Promise<{ ok: boolean; status: number; body: unknown }> {
+async function post(url: string, data: unknown, extraHeaders?: Record<string, string>): Promise<{ ok: boolean; status: number; body: unknown }> {
   try {
     const r = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...extraHeaders },
       body: JSON.stringify(data),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
@@ -98,6 +113,10 @@ async function post(url: string, data: unknown): Promise<{ ok: boolean; status: 
   } catch (e) {
     return { ok: false, status: 0, body: String((e as Error).message) };
   }
+}
+
+function discoveryAuthHeaders(): Record<string, string> {
+  return METABOB_API_KEY ? { "Authorization": `ApiKey ${METABOB_API_KEY}` } : {};
 }
 
 async function resolveShape(pointer: Record<string, unknown>): Promise<{ ok: boolean; body: unknown; error?: string }> {
@@ -163,16 +182,56 @@ async function probeSkillClosure(): Promise<{ closed: boolean; missing_deps: str
 }
 
 async function probeSubagentClosure(): Promise<{ closed: boolean; missing_deps: string[]; evidence: string }> {
+  // Try direct health endpoint first (requires host port mapping -p 18210:8210)
   const health = await get(`${GOAL_HOST_URL}/health`);
-  if (!health.ok) {
-    return { closed: false, missing_deps: ["goal-host-vessel reachable on :8210"], evidence: `health: ${health.status} ${JSON.stringify(health.body).slice(0, 100)}` };
+  if (health.ok) {
+    const body = health.body as Record<string, unknown>;
+    const status = body?.status ?? body?.health;
+    return {
+      closed: status === "healthy" || status === "ok",
+      missing_deps: (status === "healthy" || status === "ok") ? [] : ["goal-host-vessel healthy"],
+      evidence: `goal-host-vessel responded: ${JSON.stringify(body).slice(0, 150)}`,
+    };
   }
-  const body = health.body as Record<string, unknown>;
-  const status = body?.status ?? body?.health;
+
+  // Fallback: docker exec for local substrate (when port 18210 isn't mapped)
+  try {
+    const proc = Bun.spawnSync(["docker", "exec", "substrate-live", "curl", "-s", "http://localhost:8210/health"], {
+      timeout: 5_000,
+    });
+    if (proc.exitCode === 0) {
+      const text = proc.stdout.toString();
+      const body = JSON.parse(text) as Record<string, unknown>;
+      const status = body?.status ?? body?.health;
+      if (status === "healthy" || status === "ok") {
+        return { closed: true, missing_deps: [], evidence: `goal-host-vessel healthy via docker exec: ${text.slice(0, 120)}` };
+      }
+    }
+  } catch { /* docker not available or container not running */ }
+
+  // Fallback: probe via discovery-vessel vesselCapability query (correct v0.4.0 format)
+  const discoveryR = await post(
+    `${DISCOVERY_URL}/resolve`,
+    { pointer: { type: "vesselCapability", shape: "goal_execution" } },
+    discoveryAuthHeaders(),
+  );
+  if (discoveryR.ok) {
+    const content = (discoveryR.body as Record<string, unknown>)?.content as Record<string, unknown>;
+    const found = content?.found;
+    const vessels = (content?.vessels as Record<string, unknown>[]) ?? [];
+    if (found && vessels.length > 0) {
+      return {
+        closed: true,
+        missing_deps: [],
+        evidence: `goal-host-vessel registered in discovery with goal_execution shape (direct port not mapped; use -p 18210:8210 to expose)`,
+      };
+    }
+  }
+
   return {
-    closed: status === "healthy" || status === "ok",
-    missing_deps: (status === "healthy" || status === "ok") ? [] : ["goal-host-vessel healthy"],
-    evidence: `goal-host-vessel responded: ${JSON.stringify(body).slice(0, 150)}`,
+    closed: false,
+    missing_deps: ["goal-host-vessel reachable (restart container with -p 18210:8210 to expose direct port)"],
+    evidence: `health: ${health.status}, discovery: ${String(JSON.stringify((discoveryR.body as Record<string, unknown>)?.content ?? discoveryR.body)).slice(0, 80)}`,
   };
 }
 

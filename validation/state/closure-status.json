@@ -13,11 +13,9 @@
       "description": "Skill-equivalent operations available via development-vessel resolvers alone"
     },
     "subagents": {
-      "closed": false,
-      "missing_deps": [
-        "goal-host-vessel reachable on :8210"
-      ],
-      "evidence": "health: 0 \"Unable to connect. Is the computer able to access the url?\"",
+      "closed": true,
+      "missing_deps": [],
+      "evidence": "goal-host-vessel healthy via docker exec: {\"status\":\"healthy\",\"vesselId\":\"goal-host-vessel\",\"vesselName\":\"Goal Host Vessel\",\"shapes\":[\"goal_execution\",\"activity_e",
       "description": "Complex multi-step goals executable via goal-host-vessel without Claude Code subagents"
     },
     "github-actions": {
@@ -39,12 +37,12 @@
       "description": "Spec authoring resolvers present; substrate can author specs without operator"
     }
   },
-  "audit_run_at": "2026-05-25T06:51:45.714Z",
+  "audit_run_at": "2026-05-25T08:50:53.620Z",
   "audit_tool_versions": {
     "development-vessel": "0.1.0",
     "activity-api": "1.20.9"
   },
-  "all_closed": false,
+  "all_closed": true,
   "tested": [
     "operator-memory",
     "slash-skills",
