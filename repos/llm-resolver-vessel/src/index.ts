@@ -34,7 +34,7 @@ import type { ResolverHandler } from "@avigopal/ias-executor-ts";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PORT = parseInt(process.env.PORT ?? "8220", 10);
-const VESSEL_ID = process.env.VESSEL_ID ?? "llm-resolver-vessel";
+const VESSEL_ID = process.env.LLM_RESOLVER_VESSEL_ID ?? process.env.VESSEL_ID ?? "llm-resolver-vessel";
 const DISCOVERY_ENDPOINT = process.env.DISCOVERY_VESSEL_ENDPOINT ?? "http://127.0.0.1:8100";
 const API_KEY = process.env.LLM_RESOLVER_VESSEL_API_KEY ?? process.env.METABOB_API_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;

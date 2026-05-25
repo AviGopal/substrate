@@ -8,6 +8,7 @@ Type=simple
 EnvironmentFile=/etc/substrate/env
 Environment=PORT=8220
 Environment=HOST=127.0.0.1
+Environment=LLM_RESOLVER_VESSEL_ID=llm-resolver-vessel
 WorkingDirectory=/vessels/llm-resolver-vessel
 ExecStart=/root/.bun/bin/bun /vessels/llm-resolver-vessel/src/index.ts
 Restart=on-failure
