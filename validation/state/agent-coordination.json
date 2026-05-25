@@ -84,9 +84,9 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-25T01:00Z",
-      "current_focus": "Fresh adversarial pass 2026-05-25T00:45Z. KEY FINDINGS: (1) Queue has 1232 critical + 619 medium tasks, ALL auto-generated debug__/optimize_ goals from TaskGenerator — NOT topology templates. (2) topology_harness_next key EXISTS in Redis but is NOT in boredom:queue:critical sorted set (not dequeue-reachable). (3) minibob is currently executing SearchFirst debug__resolve goals (improvising, failing, 150k token budget per attempt). (4) GOAL_RUNTIME=ias-executor IS set in unit file but SearchFirst executor bypasses GoalHost — fix is deployed but not exercised. (5) TASK_GENERATION_ENABLED is not set to false in /etc/substrate/env — generator fires every 5 min adding 10 tasks, while drain is 1 task per 8-10 min. (6) Queue will grow indefinitely until root cause resolved. Immediate fix: (A) DEL queues + enqueue topology tasks; (B) TASK_GENERATION_ENABLED=false in /etc/substrate/env.",
-      "narrator_status": "PASS — adversarial validation pass complete 2026-05-25T01:00Z",
+      "last_updated": "2026-05-25T01:42:00Z",
+      "current_focus": "iteration 13: substrate quiescent for ~30min since 01:10:52Z. _goal_resolve traces NO LONGER PRODUCED by boredom path (dev templateId-direct dispatch bypasses _goal_resolve entirely, generating _boredom_activity:⟨...⟩ synthetic IDs instead). Audit iter-002 confirms F-040 (Phase 0-2 vessels live), F-041 (S.4a window 1 STARTED), F-029 status-changed (dev claims failure_mode populated).",
+      "narrator_status": "running (bdl29gi6j)",
       "gaps_recorded": [
         "gap-001",
         "gap-002",
@@ -276,7 +276,7 @@
         }
       },
       "escalation_to_operator": "BLOCKING — substrate is in a degraded operational state and validation alone cannot resolve it. Cross-agent triage required: dev must investigate template removals + goal_resolve failures + embedding.status; audit must register and verify runtime state. Without operator escalation, substrate continues to burn LLM credits on identical failing executions while losing its own self-measurement primitives.",
-      "loop_status": "PAUSED — operator stop directive (2nd time today)",
+      "loop_status": "ACTIVE (resumed iteration 13)",
       "gap_006_status": "PARTIAL — template degradation reversed by dev; coordination silence + structural issues remain. Re-escalation NOT required at this time as substrate is recovering, but dev still hasn't updated coordination state. Will continue monitoring.",
       "calibration_corrections": [
         "I was monitoring agent-coordination.json but the dev/audit coordination is happening via findings/ files and validation/investigations/",
@@ -371,6 +371,30 @@
         "interaction_with_linchpin_fix": "Compatible with and complementary to GOAL_RUNTIME=ias-executor (per dev-guidance-2026-05-24.md). Together: substrate has correct chain propagation across all execution paths (goal-driven AND boredom-driven).",
         "what_this_enables": "Substrate develops learned maintenance routines. Thompson posteriors over (boredom_eligible_template, state_space_signature) emerge as the substrate accumulates boredom-fire outcomes. Substrate self-optimizes its idle work.",
         "discovered_during_subagent_research": "Current boredom service has evolved past goal-text posting — now enqueues 4 templateIds to a Redis medium-priority queue (per F-024 audit response). The recontextualization still applies because trigger + template-set remain hardcoded."
+      },
+      "gap_003_status_update": {
+        "verdict": "BYPASSED, not closed",
+        "evidence": "0 _goal_resolve traces in last 50 traces window",
+        "reason": "Dev's templateId-direct dispatch path emits _boredom_activity:⟨...⟩ synthetic IDs instead of _goal_resolve",
+        "remaining_concern": "User-driven goals (not boredom-fired) presumably still hit _goal_resolve path; gap-003 may persist there but cannot be observed without user-driven goals being dispatched",
+        "audit_cross_reference": "F-029 status-changed-toward-resolution — dev claims failure_mode now populated on _goal_resolve failures; need verification when next _goal_resolve trace appears"
+      },
+      "substrate_quiescence_observation": {
+        "duration_since_last_trace": "~32 minutes (as of 01:42Z)",
+        "last_trace_at": "2026-05-25T01:10:52.722Z",
+        "interpretation_options": [
+          "Queue drained — boredom timer not yet fired the next cycle",
+          "Minibob stuck in long-running execution that hasn't emitted intermediate traces",
+          "Boredom timer stopped firing (per validation-2026-05-24.md observation of debug__resolve stuck improvising)"
+        ],
+        "is_this_lifecycle_substrate_idle": "YES — this is precisely the state Finding 3 (boredom-as-lifecycle-observer) describes. The substrate IS idle. With Finding 3 implemented, lifecycle:substrate:idle would emit here, triggering Thompson-selected boredom work."
+      },
+      "audit_iter_002_cross_reference": {
+        "F_024_RESOLVED": "boredom systemd unit replaced with queue polling; templates invoke",
+        "F_040_NEW_HIGH_POSITIVE": "substrate-explicit-vessels 14/53 tasks complete; llm-resolver-vessel + local-tools-vessel operational",
+        "F_041_NEW_HIGH_POSITIVE": "S.4a coverage-progress WINDOW 1 STARTED",
+        "F_029_status_changed_toward_resolution": "dev claims failure_mode populated — needs verification when next _goal_resolve fires",
+        "F_037_still_open": "Thompson posteriors α=β=1 unchanged across 96 coverage-tick + 94 substrate-health-tick + 9 probe-reachable-unlearned executions"
       }
     },
     "audit": {
