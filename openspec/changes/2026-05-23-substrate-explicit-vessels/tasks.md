@@ -89,7 +89,7 @@ string-matching.
   (UPSERT semantics — idempotent).
 - [x] 3.2 Idempotency: POST /v2/activities/templates uses UPSERT; safe to
   repeat across substrate restarts without a separate tracking table.
-- [ ] 3.3 Smoke test: stop substrate, wipe `/data/templates/*`, restart;
+- [x] 3.3 Smoke test: stop substrate, wipe `/data/templates/*`, restart;
   confirm catalogue is restored within 30s.
 
 ## Phase 4 — goal-host-vessel (the core lift)
