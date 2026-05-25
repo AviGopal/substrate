@@ -4,8 +4,8 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-25T08:50:00Z",
-      "current_focus": "Thompson posteriors now updating \u2014 proxy resolver fix + normalize fix landed. All 6/6 closure gates closed. 3 fixes shipped: goal-host proxy resolvers, posterior normalization, boredom timeout 300s.",
+      "last_updated": "2026-05-25T09:22:00Z",
+      "current_focus": "Thompson posteriors now live: activity_recommendation resolver registered in goal-host-vessel; RETURN {shorthand} SurrealDB 3.x parse error fixed in execution-traces.ts; validator-dispatch alpha=16, slot-binding alpha=4, create-shape-provider-goal beta=5 and accumulating.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties"
@@ -16,7 +16,9 @@
         "goal-host-vessel: registers dev-vessel proxy resolvers at startup (was task_count=0 on all executions)",
         "posterior-update.ts: normalizeActivityId() on rawActivityId before WHERE lookup (was alpha/beta stuck at initial values)",
         "migration 138: execution_trace_content.created_at option<datetime> (was non-fatal NONE error on every trace)",
-        "boredom-vessel.service: TimeoutStartSec=300 (was killed at 90s during slow topology goals)"
+        "boredom-vessel.service: TimeoutStartSec=300 (was killed at 90s during slow topology goals)",
+        "goal-host-vessel: activity_recommendation built-in resolver registered (was create-shape-provider-goal 0ms failures)",
+        "execution-traces.ts: RETURN { id: id, total_executions: total_executions } — SurrealDB 3.x object shorthand parse error blocked applyOutcomeToPosteriors from being called on every trace; Thompson posteriors now increment correctly"
       ],
       "coordination_notes": [
         "closure-audit 6/6: all properties closed including subagents (port 18210 is now mapped in run-live target)",
