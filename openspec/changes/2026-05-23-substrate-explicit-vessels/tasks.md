@@ -40,7 +40,7 @@
   `Dockerfile.substrate`.
 - [x] 1.5 Extend `scripts/substrate/seed-identity.ts` to mint
   `local-tools-vessel` API key at boot. Add to `gen-env.sh`.
-- [ ] 1.6 Smoke test: `curl localhost:8230/health` returns 200; vessel
+- [x] 1.6 Smoke test: `curl localhost:8230/health` returns 200; vessel
   appears in `GET discovery-vessel:8100/resolve?type=fileContent`.
 
 ## Phase 1b — concept-db substrate unit (semantic layer for self-description)
