@@ -32,8 +32,8 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-25T04:20:06Z",
-      "current_focus": "BLOCKER: iteration 17 \u2014 substrate-live container is DEAD. Last dev commit at 03:52Z (iter-16 narration). substrate-explicit-vessels advanced 39\u219244/53 (+5 tasks) between 03:52-crash, but then container terminated. Docker status: Dead. No exit logs accessible. New findings: F-044 (substrate crash type TBD), gap-008 (no external monitoring/alerting on substrate crashes). Validation loop blocked pending operator: (1) restart substrate-live, (2) diagnose crash cause, (3) audit impact. All substrate queries return errors. Iteration 17 is HALT state. See validation/findings/iter-17-narration.md.",
+      "last_updated": "2026-05-25T06:35:03Z",
+      "current_focus": "BLOCKER: iteration 18 \u2014 substrate restarted but template seeding FAILED. Bootstrap-seeder (06:30Z) attempted 13 shared templates; ALL 13 returned 500 org_id:NONE error. Result: 0 seeded, 13 failed. Substrate technically live (8 vessels, health ok) but application impossible (template_count=0, trace_count=0). F-049 (template registration org_id error) is blocker. Audit iter-004 (06:03Z): F-044 root cause resolved (JWT_SECRET); F-038 RESOLVED (composition_chain); F-037/F-043 OPEN (Thompson bypass); F-029 REGRESSED (failure_mode); F-047 NEW (gate provenance). 11 new commits landed: substrate-only loop, minibob removed from container, etc. substrate-explicit-vessels final: 48/53 (91%). Blocked on F-049 fix. See iter-18-narration.md.",
       "narrator_status": "running (bdl29gi6j)",
       "gaps_recorded": [
         "gap-001",
