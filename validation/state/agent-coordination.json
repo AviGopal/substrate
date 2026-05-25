@@ -79,9 +79,9 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-24T22:35:00Z",
+      "last_updated": "2026-05-24T22:45:00Z",
       "current_focus": "iteration 12 + readiness audit: discovered the ias-executor bridge is FULLY WIRED in minibob but GOAL_RUNTIME env var is not set on substrate's minibob.service. Adding ONE line to the unit file should close Symptoms 1+2 (composition_chain + Thompson posteriors) by routing all execution through ias-executor-ts's correct dispatch path. <10-LOC fix vs months of work for full vessel replacement.",
-      "narrator_status": "running (background bxtpvio72)",
+      "narrator_status": "STOPPED",
       "gaps_recorded": [
         "gap-001",
         "gap-002",
@@ -261,7 +261,7 @@
         }
       },
       "escalation_to_operator": "BLOCKING — substrate is in a degraded operational state and validation alone cannot resolve it. Cross-agent triage required: dev must investigate template removals + goal_resolve failures + embedding.status; audit must register and verify runtime state. Without operator escalation, substrate continues to burn LLM credits on identical failing executions while losing its own self-measurement primitives.",
-      "loop_status": "ACTIVE (resumed)",
+      "loop_status": "PAUSED — operator stop directive (2nd time today)",
       "gap_006_status": "PARTIAL — template degradation reversed by dev; coordination silence + structural issues remain. Re-escalation NOT required at this time as substrate is recovering, but dev still hasn't updated coordination state. Will continue monitoring.",
       "calibration_corrections": [
         "I was monitoring agent-coordination.json but the dev/audit coordination is happening via findings/ files and validation/investigations/",
@@ -332,6 +332,20 @@
         "scope": "<10 LOC; rollback = remove the env var",
         "what_it_doesnt_fix": "gap-003 (failure_mode null) — independent, requires goal_resolve emit-site fix in minibob/src/mcp.ts:3193 OR may also resolve if GoalHost handles failures differently",
         "deferred": "Full substrate-explicit-vessels Phase 0-8 cutover remains valuable for architectural cleanness but is months of work and not required for this closure"
+      },
+      "final_iteration": 12,
+      "session_summary": {
+        "iterations_completed": "12 (plus readiness audit + dev-guidance authoring)",
+        "gaps_recorded": 7,
+        "gap_001_concept_db": "addressed in spec; runtime confirmation pending",
+        "gap_002_ws_auth": "minor; irreducibly_operator",
+        "gap_003_failure_mode_null": "recurring ×25; independent fix needed at minibob/src/mcp.ts:3193",
+        "gap_004_name_binding": "partial — coverage-tick + substrate-health-tick now invoked but goal_resolve still fails",
+        "gap_005_template_thrashing": "CLOSED — was cache bug, fixed by dev commits b129695 + 93cd621",
+        "gap_006_meta_finding": "partial mitigation; audit-validator-dev triangle working",
+        "gap_007_chain_empty_to_goal_failure": "structural disconnect; cross-corroborated by audit F-037/F-038; proposed fix: enable GOAL_RUNTIME=ias-executor on substrate's minibob.service",
+        "highest_leverage_finding": "ias-executor bridge fully wired in minibob code but NOT activated on substrate — proposed <10 LOC fix in scripts/substrate/units/minibob.service",
+        "deferred_track": "substrate-explicit-vessels Phase 0-8 cutover remains valuable for architectural cleanness; parallel-runnable as months-long initiative"
       }
     },
     "audit": {
