@@ -1,0 +1,21 @@
+[Unit]
+Description=local-tools-vessel
+After=activity-api.service discovery-vessel.service identity-vessel.service
+Requires=activity-api.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8230
+Environment=HOST=127.0.0.1
+# Use the vessel-specific key for trace attribution (D4); falls back to shared key if unset
+EnvironmentFile=-/etc/substrate/local-tools-vessel.env
+WorkingDirectory=/vessels/local-tools-vessel
+ExecStart=/root/.bun/bin/bun /vessels/local-tools-vessel/src/index.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

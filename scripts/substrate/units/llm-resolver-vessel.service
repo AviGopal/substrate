@@ -1,0 +1,19 @@
+[Unit]
+Description=llm-resolver-vessel
+After=activity-api.service discovery-vessel.service identity-vessel.service
+Requires=activity-api.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8220
+Environment=HOST=127.0.0.1
+WorkingDirectory=/vessels/llm-resolver-vessel
+ExecStart=/root/.bun/bin/bun /vessels/llm-resolver-vessel/src/index.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

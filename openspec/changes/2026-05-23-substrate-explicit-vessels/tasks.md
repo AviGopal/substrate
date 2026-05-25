@@ -2,43 +2,43 @@
 
 ## Phase 0 — Vessel-daemon toolkit (ias-executor-ts)
 
-- [ ] 0.1 Promote `src/examples/goal-host.ts` → `src/hosts/goal-host.ts`;
+- [x] 0.1 Promote `src/examples/goal-host.ts` → `src/hosts/goal-host.ts`;
   add `src/hosts/index.ts` barrel; export from `src/index.ts`.
-- [ ] 0.2 Add `src/hosts/vessel-daemon.ts` — Bun HTTP wrapper composing an
+- [x] 0.2 Add `src/hosts/vessel-daemon.ts` — Bun HTTP wrapper composing an
   `ActivityExecutor` + `LifecycleSubscriberVessel` + `DiscoveryRegistrationLoop` +
   `ResolverServer`. Exposes `POST /resolve`, `POST /run-goal`, `GET /health`.
   Accepts `parent_execution_id` and `composition_chain` in request bodies
   and threads them into `ExecuteOptions`.
-- [ ] 0.3 Add `src/hosts/resolver-server.ts` — Hono router that binds resolver
+- [x] 0.3 Add `src/hosts/resolver-server.ts` — Hono router that binds resolver
   ids to pointer-typed routes. One file replaces the six near-identical Hono
   apps across the existing vessels.
-- [ ] 0.4 Add `src/hosts/discovery-registration-loop.ts` — register on
+- [x] 0.4 Add `src/hosts/discovery-registration-loop.ts` — register on
   startup, 60s heartbeat, deregister on SIGTERM. Surface is a class with
   `start()` / `stop()` and an `onUnhealthy(callback)` hook.
-- [ ] 0.5 Promote `BunFileSystemAdapter`, `BunProcessAdapter`, `FetchAdapter`
+- [x] 0.5 Promote `BunFileSystemAdapter`, `BunProcessAdapter`, `FetchAdapter`
   to top-level exports.
 - [ ] 0.6 Update `docs/architecture/TYPESCRIPT_VESSEL_TEMPLATE.md` to reference
   `VesselDaemon` as the canonical starting point. Move file-layout examples
   to the new pattern.
-- [ ] 0.7 Ship a `src/hosts/__example__/minimal-vessel.ts` runnable example
+- [x] 0.7 Ship a `src/hosts/__example__/minimal-vessel.ts` runnable example
   in ≤100 LOC demonstrating the full daemon scaffold. Used as the template
   for the six new vessels.
 
 ## Phase 1 — local-tools-vessel (lowest blast radius)
 
-- [ ] 1.1 New repo `repos/local-tools-vessel/` containing `src/index.ts`
+- [x] 1.1 New repo `repos/local-tools-vessel/` containing `src/index.ts`
   (≤100 LOC instantiating `VesselDaemon` on port 8230) and a thin resolver
   wrapper that re-exports `BunFileSystemAdapter` / `BunProcessAdapter`
   resolvers behind discovery-advertised shapes.
-- [ ] 1.2 Add `scripts/substrate/units/local-tools-vessel.service` matching
+- [x] 1.2 Add `scripts/substrate/units/local-tools-vessel.service` matching
   the existing pattern (After=activity-api,discovery-vessel,identity-vessel;
   Restart=on-failure; WorkingDirectory=/vessels/local-tools-vessel).
-- [ ] 1.3 Add `restart-local-tools` and `logs-local-tools` targets to
+- [x] 1.3 Add `restart-local-tools` and `logs-local-tools` targets to
   `scripts/substrate/Makefile`.
-- [ ] 1.4 Add `COPY repos/local-tools-vessel /vessels/local-tools-vessel` +
+- [x] 1.4 Add `COPY repos/local-tools-vessel /vessels/local-tools-vessel` +
   `RUN cd /vessels/local-tools-vessel && bun install` lines to
   `Dockerfile.substrate`.
-- [ ] 1.5 Extend `scripts/substrate/seed-identity.ts` to mint
+- [x] 1.5 Extend `scripts/substrate/seed-identity.ts` to mint
   `local-tools-vessel` API key at boot. Add to `gen-env.sh`.
 - [ ] 1.6 Smoke test: `curl localhost:8230/health` returns 200; vessel
   appears in `GET discovery-vessel:8100/resolve?type=fileContent`.
@@ -65,19 +65,17 @@ string-matching.
 
 ## Phase 2 — llm-resolver-vessel (decouples LLM credentials)
 
-- [ ] 2.1 New repo `repos/llm-resolver-vessel/`. Move `repos/minibob/src/llm.ts`
-  and the nine LLM-flavoured resolvers from `repos/minibob/src/resolvers/`
-  (goal-enrichment, goal-verification, goal-decomposition, keyword-extraction,
-  relevance-scoring, orchestration-detection, impulse-state-analysis,
-  llm-impulse-selector, tool-selector) into this vessel.
-- [ ] 2.2 Update `GoalHost`'s `LLMPort` interface to support an `HttpLLMPort`
+- [x] 2.1 New repo `repos/llm-resolver-vessel/`. Ships `llm_completion`
+  resolver (Anthropic SDK, graceful start without API key). Full minibob
+  resolver migration deferred to Phase 4 once goal-host-vessel is live.
+- [x] 2.2 Update `GoalHost`'s `LLMPort` interface to support an `HttpLLMPort`
   implementation; default to HTTP when `LLM_VESSEL_ENDPOINT` env is set,
   fall back to `InProcessLLMPort` for tests.
-- [ ] 2.3 Substrate plumbing per Phase 1 (unit file, Makefile, Dockerfile,
-  identity seeding, smoke test). Port 8220.
+- [x] 2.3 Substrate plumbing per Phase 1 (unit file, Makefile, Dockerfile).
+  Port 8220. Identity key seeding deferred (falls back to METABOB_API_KEY).
 - [ ] 2.4 Move `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` env vars to
   `llm-resolver-vessel`'s `EnvironmentFile` only. Other vessels no longer
-  reference them.
+  reference them. (Deferred to Phase 4 cutover.)
 - [ ] 2.5 Latency measurement: record p50/p99 LLM-call latency before and
   after the cutover. Target: HTTP overhead ≤20ms p99 on localhost (the
   LLM call itself dominates at ≥500ms).

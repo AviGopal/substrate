@@ -26,6 +26,30 @@ async function waitForIdentity(maxMs = 30_000): Promise<void> {
   throw new Error(`identity-vessel not ready after ${maxMs}ms`);
 }
 
+async function issueKey(
+  token: string,
+  user_id: string,
+  org_id: string,
+  name: string,
+): Promise<string> {
+  const issueRes = await fetch(`${IDENTITY_URL}/v1/keys/issue`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify({ user_id, org_id, scopes: ["read", "write"], name }),
+  });
+
+  if (!issueRes.ok) {
+    const body = await issueRes.text();
+    throw new Error(`key issue failed for '${name}' ${issueRes.status}: ${body}`);
+  }
+
+  const { key } = await issueRes.json() as { key: string };
+  return key;
+}
+
 async function main() {
   await waitForIdentity();
 
@@ -58,29 +82,15 @@ async function main() {
 
   console.log(`[seed-identity] org created: ${org_id}, user: ${user_id}`);
 
-  // Issue an API key scoped to this org (used by all vessels)
-  const issueRes = await fetch(`${IDENTITY_URL}/v1/keys/issue`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      user_id,
-      org_id,
-      scopes: ["read", "write"],
-      name: "substrate-default",
-    }),
-  });
-
-  if (!issueRes.ok) {
-    const body = await issueRes.text();
-    throw new Error(`key issue failed ${issueRes.status}: ${body}`);
-  }
-
-  const { key } = await issueRes.json() as { key: string };
-  console.log(`[seed-identity] issued API key: ${key}`);
+  // Issue the shared substrate default key
+  const defaultKey = await issueKey(token, user_id, org_id, "substrate-default");
+  console.log(`[seed-identity] issued API key (substrate-default): ${defaultKey}`);
   console.log("[seed-identity] write this key to /etc/substrate/env as METABOB_API_KEY on first run");
+
+  // Issue a dedicated key for local-tools-vessel (per D4 — per-vessel trace attribution)
+  const localToolsKey = await issueKey(token, user_id, org_id, "local-tools-vessel");
+  console.log(`[seed-identity] issued API key (local-tools-vessel): ${localToolsKey}`);
+  console.log("[seed-identity] set LOCAL_TOOLS_VESSEL_API_KEY in /etc/substrate/env or vessel env file");
 }
 
 main().catch(e => {

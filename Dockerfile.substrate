@@ -110,6 +110,22 @@ RUN cd development-vessel && bun install --frozen-lockfile
 COPY repos/development-vessel/src ./development-vessel/src
 COPY repos/development-vessel/tsconfig.json ./development-vessel/
 
+# local-tools-vessel
+COPY repos/local-tools-vessel/package.json ./local-tools-vessel/
+RUN cd local-tools-vessel && \
+    sed -i 's|file:../ias-executor-ts|file:/vessels/ias-executor-ts|g' package.json && \
+    bun install
+COPY repos/local-tools-vessel/src ./local-tools-vessel/src
+COPY repos/local-tools-vessel/tsconfig.json ./local-tools-vessel/
+
+# llm-resolver-vessel
+COPY repos/llm-resolver-vessel/package.json repos/llm-resolver-vessel/bun.lock* ./llm-resolver-vessel/
+RUN cd llm-resolver-vessel && \
+    sed -i 's|file:../ias-executor-ts|file:/vessels/ias-executor-ts|g' package.json && \
+    bun install
+COPY repos/llm-resolver-vessel/src ./llm-resolver-vessel/src
+COPY repos/llm-resolver-vessel/tsconfig.json ./llm-resolver-vessel/
+
 # --- Substrate runtime config ---
 RUN mkdir -p /etc/substrate /workspace /var/lib/surrealdb
 
@@ -126,7 +142,9 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env && \
         identity-vessel.service \
         activity-api.service \
         minibob.service \
-        development-vessel.service
+        development-vessel.service \
+        local-tools-vessel.service \
+        llm-resolver-vessel.service
 
 VOLUME ["/workspace"]
 
