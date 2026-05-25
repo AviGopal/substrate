@@ -82,6 +82,7 @@ const discoveryLoop = new DiscoveryRegistrationLoop({
   resolveEndpoint: `http://127.0.0.1:${PORT}/resolve`,
   apiKey: API_KEY,
   port: PORT,
+  systemVessel: true,
 });
 
 discoveryLoop.onUnhealthy(() => {
