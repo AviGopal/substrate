@@ -5,10 +5,16 @@
 #   SURREAL_PASS      — SurrealDB root password
 #   METABOB_API_KEY   — API key for inter-vessel auth
 #   ANTHROPIC_API_KEY — LLM provider key for llm-resolver-vessel
+#
+# Two container flavours:
+#   substrate       — interactive / ephemeral dev container (port 8080)
+#   substrate-live  — persistent development substrate (port 18080)
+#                     All substrate-only iteration targets use substrate-live.
 
-IMAGE   := metabob/substrate
-TAG     := dev
-WORKSPACE := $(shell pwd)/workspace
+IMAGE        := metabob/substrate
+TAG          := dev
+WORKSPACE    := $(shell pwd)/workspace
+LIVE_NAME    := substrate-live
 
 # Vessel source roots (relative to repo root, two levels up)
 REPO_ROOT := $(CURDIR)/../..
@@ -20,10 +26,11 @@ BOREDOM_VESSEL_SRC := $(REPO_ROOT)/repos/boredom-vessel
 RIBOSOME_VESSEL_SRC := $(REPO_ROOT)/repos/ribosome-vessel
 CONCEPT_DB_SRC := $(REPO_ROOT)/repos/concept-db
 
-.PHONY: build run logs-all logs-activity-api logs-development-vessel \
+.PHONY: build run run-detach run-live seed-live health health-live \
+        logs-all logs-activity-api logs-development-vessel \
         logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
         logs-goal-host-vessel logs-boredom-vessel logs-ribosome-vessel logs-concept-db \
-        status shell stop clean \
+        status status-live shell shell-live stop stop-live clean clean-live \
         sync-development-vessel restart-development-vessel \
         sync-local-tools-vessel restart-local-tools-vessel \
         sync-llm-resolver-vessel restart-llm-resolver-vessel \
@@ -67,143 +74,185 @@ run-detach:
 	    --tmpfs /run/lock \
 	    $(IMAGE):$(TAG)
 
-logs-all:
-	docker exec substrate journalctl -f
+# ── substrate-live container (persistent, host ports 18080/18090/18100) ─────
+# Primary target for all local development iteration.
+# Run once; use sync-*/restart-* targets to hot-reload vessels without rebuild.
 
-logs-activity-api:
-	docker exec substrate journalctl -fu activity-api.service
+run-live:
+	@mkdir -p $(WORKSPACE)
+	docker run -d \
+	    --name $(LIVE_NAME) \
+	    -e JWT_SECRET="$(JWT_SECRET)" \
+	    -e SURREAL_PASS="$(SURREAL_PASS)" \
+	    -e METABOB_API_KEY="$(METABOB_API_KEY)" \
+	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
+	    -p 18080:8080 \
+	    -p 18090:8090 \
+	    -p 18100:8100 \
+	    -v $(WORKSPACE):/workspace \
+	    --tmpfs /run \
+	    --tmpfs /run/lock \
+	    $(IMAGE):$(TAG)
+	@echo "[run-live] substrate-live started — activity-api on :18080, development-vessel on :18090, discovery-vessel on :18100"
+	@echo "[run-live] Wait ~15s for services to start, then: make -C scripts/substrate seed-live"
 
-logs-development-vessel:
-	docker exec substrate journalctl -fu development-vessel.service
+# Seed identity and API keys into a freshly started substrate-live container.
+seed-live:
+	docker exec $(LIVE_NAME) bun /vessels/seed-identity.ts
+	@echo "[seed-live] Identity seeded. Substrate ready."
 
-logs-local-tools-vessel:
-	docker exec substrate journalctl -fu local-tools-vessel.service
+health-live:
+	@echo "=== activity-api ===" && curl -s http://localhost:18080/health | jq '{version,status}'
+	@echo "=== discovery-vessel ===" && curl -s http://localhost:18100/health | jq '{status}'
+	@echo "=== development-vessel ===" && curl -s http://localhost:18090/health | jq .
+	@echo "=== local-tools-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8230/health | jq .
+	@echo "=== llm-resolver-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8220/health | jq .
+	@echo "=== goal-host-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8210/health | jq .
+	@echo "=== ribosome-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8240/health | jq .
+	@echo "=== concept-db (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8260/health | jq '{status,service}'
 
-logs-llm-resolver-vessel:
-	docker exec substrate journalctl -fu llm-resolver-vessel.service
-
-logs-bootstrap-seeder:
-	docker exec substrate journalctl -u bootstrap-seeder.service --no-pager
-
-logs-goal-host-vessel:
-	docker exec substrate journalctl -fu goal-host-vessel.service
-
-logs-boredom-vessel:
-	docker exec substrate journalctl -u boredom-vessel.service --no-pager
-
-logs-ribosome-vessel:
-	docker exec substrate journalctl -fu ribosome-vessel.service
-
-logs-concept-db:
-	docker exec substrate journalctl -fu concept-db.service
-
-logs-surrealdb:
-	docker exec substrate journalctl -fu surrealdb.service
-
-status:
-	docker exec substrate systemctl status --no-pager \
+status-live:
+	docker exec $(LIVE_NAME) systemctl status --no-pager \
 	    surrealdb valkey discovery-vessel identity-vessel activity-api development-vessel local-tools-vessel llm-resolver-vessel goal-host-vessel bootstrap-seeder boredom-vessel.timer ribosome-vessel concept-db
 
-shell:
-	docker exec -it substrate bash
+shell-live:
+	docker exec -it $(LIVE_NAME) bash
 
-health:
-	@echo "=== activity-api ===" && curl -s http://localhost:8080/health | jq '{version,status}'
-	@echo "=== discovery-vessel ===" && curl -s http://localhost:8100/health | jq '{status}'
-	@echo "=== development-vessel ===" && curl -s http://localhost:8090/health | jq .
-	@echo "=== local-tools-vessel ===" && curl -s http://localhost:8230/health | jq .
-	@echo "=== llm-resolver-vessel ===" && curl -s http://localhost:8220/health | jq .
-	@echo "=== goal-host-vessel ===" && curl -s http://localhost:8210/health | jq .
-	@echo "=== ribosome-vessel ===" && curl -s http://localhost:8240/health | jq .
-	@echo "=== concept-db ===" && curl -s http://localhost:8260/health | jq '{status,service}'
+stop-live:
+	docker stop $(LIVE_NAME)
 
-stop:
-	docker stop substrate
+clean-live:
+	docker rm -f $(LIVE_NAME) 2>/dev/null || true
 
-clean: stop
-	docker rm -f substrate 2>/dev/null || true
+# ── ephemeral dev container (port 8080) ─────────────────────────────────────
+
+logs-all:
+	docker exec $(LIVE_NAME) journalctl -f
+
+logs-activity-api:
+	docker exec $(LIVE_NAME) journalctl -fu activity-api.service
+
+logs-development-vessel:
+	docker exec $(LIVE_NAME) journalctl -fu development-vessel.service
+
+logs-local-tools-vessel:
+	docker exec $(LIVE_NAME) journalctl -fu local-tools-vessel.service
+
+logs-llm-resolver-vessel:
+	docker exec $(LIVE_NAME) journalctl -fu llm-resolver-vessel.service
+
+logs-bootstrap-seeder:
+	docker exec $(LIVE_NAME) journalctl -u bootstrap-seeder.service --no-pager
+
+logs-goal-host-vessel:
+	docker exec $(LIVE_NAME) journalctl -fu goal-host-vessel.service
+
+logs-boredom-vessel:
+	docker exec $(LIVE_NAME) journalctl -u boredom-vessel.service --no-pager
+
+logs-ribosome-vessel:
+	docker exec $(LIVE_NAME) journalctl -fu ribosome-vessel.service
+
+logs-concept-db:
+	docker exec $(LIVE_NAME) journalctl -fu concept-db.service
+
+logs-surrealdb:
+	docker exec $(LIVE_NAME) journalctl -fu surrealdb.service
+
+status: status-live
+
+shell: shell-live
+
+# health targets the substrate-live container (18080 ports).
+# Use health-live for the named container; this alias exists for make -C scripts/substrate health
+# called from dev-guidance scripts that predate the run-live split.
+health: health-live
+
+stop: stop-live
+
+clean: clean-live
 
 # ── Substrate-only iteration (substrate-live container) ──────────────────────
 
 # Sync development-vessel source into the running container then restart it.
 # Use this instead of docker cp + systemctl restart manually.
 sync-development-vessel:
-	docker cp $(DEV_VESSEL_SRC)/src/config.ts substrate-live:/vessels/development-vessel/src/config.ts
-	docker cp $(DEV_VESSEL_SRC)/src/index.ts substrate-live:/vessels/development-vessel/src/index.ts
-	docker cp $(DEV_VESSEL_SRC)/src/routes/impulses.ts substrate-live:/vessels/development-vessel/src/routes/impulses.ts
+	docker cp $(DEV_VESSEL_SRC)/src/config.ts $(LIVE_NAME):/vessels/development-vessel/src/config.ts
+	docker cp $(DEV_VESSEL_SRC)/src/index.ts $(LIVE_NAME):/vessels/development-vessel/src/index.ts
+	docker cp $(DEV_VESSEL_SRC)/src/routes/impulses.ts $(LIVE_NAME):/vessels/development-vessel/src/routes/impulses.ts
 	@for f in $(DEV_VESSEL_SRC)/src/resolvers/*.ts; do \
-	    docker cp $$f substrate-live:/vessels/development-vessel/src/resolvers/$$(basename $$f); \
+	    docker cp $$f $(LIVE_NAME):/vessels/development-vessel/src/resolvers/$$(basename $$f); \
 	done
 	@for f in $(DEV_VESSEL_SRC)/src/seed/*.ts; do \
-	    docker cp $$f substrate-live:/vessels/development-vessel/src/seed/$$(basename $$f); \
+	    docker cp $$f $(LIVE_NAME):/vessels/development-vessel/src/seed/$$(basename $$f); \
 	done
-	@docker exec substrate-live mkdir -p /vessels/development-vessel/src/observers
+	@docker exec $(LIVE_NAME) mkdir -p /vessels/development-vessel/src/observers
 	@for f in $(DEV_VESSEL_SRC)/src/observers/*.ts; do \
-	    docker cp $$f substrate-live:/vessels/development-vessel/src/observers/$$(basename $$f); \
+	    docker cp $$f $(LIVE_NAME):/vessels/development-vessel/src/observers/$$(basename $$f); \
 	done
 	@echo "[sync] development-vessel source synced to substrate-live"
 
 restart-development-vessel: sync-development-vessel
-	docker exec substrate-live systemctl restart development-vessel.service
+	docker exec $(LIVE_NAME) systemctl restart development-vessel.service
 	@sleep 2
-	@docker exec substrate-live systemctl is-active development-vessel.service | grep -q active && echo "[restart] development-vessel active" || echo "[restart] ERROR: development-vessel not active"
+	@docker exec $(LIVE_NAME) systemctl is-active development-vessel.service | grep -q active && echo "[restart] development-vessel active" || echo "[restart] ERROR: development-vessel not active"
 
 # Sync local-tools-vessel source into the running container then restart it.
 sync-local-tools-vessel:
-	docker cp $(LOCAL_TOOLS_SRC)/src/index.ts substrate-live:/vessels/local-tools-vessel/src/index.ts
+	docker cp $(LOCAL_TOOLS_SRC)/src/index.ts $(LIVE_NAME):/vessels/local-tools-vessel/src/index.ts
 	@echo "[sync] local-tools-vessel source synced to substrate-live"
 
 restart-local-tools-vessel: sync-local-tools-vessel
-	docker exec substrate-live systemctl restart local-tools-vessel.service
+	docker exec $(LIVE_NAME) systemctl restart local-tools-vessel.service
 	@sleep 2
-	@docker exec substrate-live systemctl is-active local-tools-vessel.service | grep -q active && echo "[restart] local-tools-vessel active" || echo "[restart] ERROR: local-tools-vessel not active"
+	@docker exec $(LIVE_NAME) systemctl is-active local-tools-vessel.service | grep -q active && echo "[restart] local-tools-vessel active" || echo "[restart] ERROR: local-tools-vessel not active"
 
 # Sync llm-resolver-vessel source into the running container then restart it.
 sync-llm-resolver-vessel:
-	docker cp $(LLM_VESSEL_SRC)/src/index.ts substrate-live:/vessels/llm-resolver-vessel/src/index.ts
+	docker cp $(LLM_VESSEL_SRC)/src/index.ts $(LIVE_NAME):/vessels/llm-resolver-vessel/src/index.ts
 	@echo "[sync] llm-resolver-vessel source synced to substrate-live"
 
 restart-llm-resolver-vessel: sync-llm-resolver-vessel
-	docker exec substrate-live systemctl restart llm-resolver-vessel.service
+	docker exec $(LIVE_NAME) systemctl restart llm-resolver-vessel.service
 	@sleep 2
-	@docker exec substrate-live systemctl is-active llm-resolver-vessel.service | grep -q active && echo "[restart] llm-resolver-vessel active" || echo "[restart] ERROR: llm-resolver-vessel not active"
+	@docker exec $(LIVE_NAME) systemctl is-active llm-resolver-vessel.service | grep -q active && echo "[restart] llm-resolver-vessel active" || echo "[restart] ERROR: llm-resolver-vessel not active"
 
 # Sync goal-host-vessel source into the running container then restart it.
 sync-goal-host-vessel:
-	docker cp $(GOAL_HOST_SRC)/src/index.ts substrate-live:/vessels/goal-host-vessel/src/index.ts
+	docker cp $(GOAL_HOST_SRC)/src/index.ts $(LIVE_NAME):/vessels/goal-host-vessel/src/index.ts
 	@echo "[sync] goal-host-vessel source synced to substrate-live"
 
 restart-goal-host-vessel: sync-goal-host-vessel
-	docker exec substrate-live systemctl restart goal-host-vessel.service
+	docker exec $(LIVE_NAME) systemctl restart goal-host-vessel.service
 	@sleep 2
-	@docker exec substrate-live systemctl is-active goal-host-vessel.service | grep -q active && echo "[restart] goal-host-vessel active" || echo "[restart] ERROR: goal-host-vessel not active"
+	@docker exec $(LIVE_NAME) systemctl is-active goal-host-vessel.service | grep -q active && echo "[restart] goal-host-vessel active" || echo "[restart] ERROR: goal-host-vessel not active"
 
 # Sync boredom-vessel source into the running container then trigger a manual run.
 sync-boredom-vessel:
-	docker cp $(BOREDOM_VESSEL_SRC)/src/index.ts substrate-live:/vessels/boredom-vessel/src/index.ts
+	docker cp $(BOREDOM_VESSEL_SRC)/src/index.ts $(LIVE_NAME):/vessels/boredom-vessel/src/index.ts
 	@echo "[sync] boredom-vessel source synced to substrate-live"
 
 trigger-boredom-vessel: sync-boredom-vessel
-	docker exec substrate-live systemctl start boredom-vessel.service
+	docker exec $(LIVE_NAME) systemctl start boredom-vessel.service
 	@sleep 3
-	@docker exec substrate-live journalctl -u boredom-vessel.service --no-pager -n 10
+	@docker exec $(LIVE_NAME) journalctl -u boredom-vessel.service --no-pager -n 10
 
 # Sync ribosome-vessel source into the running container then restart it.
 sync-ribosome-vessel:
-	docker cp $(RIBOSOME_VESSEL_SRC)/src/index.ts substrate-live:/vessels/ribosome-vessel/src/index.ts
+	docker cp $(RIBOSOME_VESSEL_SRC)/src/index.ts $(LIVE_NAME):/vessels/ribosome-vessel/src/index.ts
 	@echo "[sync] ribosome-vessel source synced to substrate-live"
 
 restart-ribosome-vessel: sync-ribosome-vessel
-	docker exec substrate-live systemctl restart ribosome-vessel.service
+	docker exec $(LIVE_NAME) systemctl restart ribosome-vessel.service
 	@sleep 2
-	@docker exec substrate-live systemctl is-active ribosome-vessel.service | grep -q active && echo "[restart] ribosome-vessel active" || echo "[restart] ERROR: ribosome-vessel not active"
+	@docker exec $(LIVE_NAME) systemctl is-active ribosome-vessel.service | grep -q active && echo "[restart] ribosome-vessel active" || echo "[restart] ERROR: ribosome-vessel not active"
 
 # Sync concept-db source into the running container then restart it.
 sync-concept-db:
-	docker cp $(CONCEPT_DB_SRC)/src substrate-live:/vessels/concept-db/src
+	docker cp $(CONCEPT_DB_SRC)/src $(LIVE_NAME):/vessels/concept-db/src
 	@echo "[sync] concept-db source synced to substrate-live"
 
 restart-concept-db: sync-concept-db
-	docker exec substrate-live systemctl restart concept-db.service
+	docker exec $(LIVE_NAME) systemctl restart concept-db.service
 	@sleep 2
-	@docker exec substrate-live systemctl is-active concept-db.service | grep -q active && echo "[restart] concept-db active" || echo "[restart] ERROR: concept-db not active"
+	@docker exec $(LIVE_NAME) systemctl is-active concept-db.service | grep -q active && echo "[restart] concept-db active" || echo "[restart] ERROR: concept-db not active"
