@@ -13,7 +13,7 @@ repos/metabob-internal-dashboard
 repos/metabob-dashboard
 repos/activity-dashboard
 repos/workbench
-repos/concept-db
+# repos/concept-db is needed by substrate (Phase 1b)
 repos/conversation-vessel
 repos/obsidian-vessel
 repos/react-renderer
