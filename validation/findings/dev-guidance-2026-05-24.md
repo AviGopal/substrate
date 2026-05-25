@@ -91,3 +91,97 @@ curl -s -H "Authorization: ApiKey $KEY" "http://localhost:18080/v2/activities/ex
 ---
 
 Validation will detect changes within ~30 min via the narration loop. Audit independently verifies at runtime.
+
+---
+
+## 2026-05-24T22:30Z UPDATE — The <10-LOC fix
+
+A subagent readiness audit of substrate-explicit-vessels + ias-executor-ts uncovered a much simpler closure path for Symptoms 1 + 2 than the in-place minibob fix I described above.
+
+### The actual state
+
+The ias-executor → GoalHost bridge IS ALREADY WIRED in minibob:
+
+- `repos/minibob/src/vessel-bootstrap.ts:241` — gates on `GOAL_RUNTIME=ias-executor`
+- `repos/minibob/src/cli/goal.ts:111` — same gate
+- `repos/minibob/src/cli/processor.ts:712, 1193-1222` — full GoalHost path when gate is on
+- `repos/minibob/src/goal-host-bridge.ts` exists and provides AnthropicLLMAdapter + buildGoalHost/runGoal against `@avigopal/ias-executor-ts`
+
+But the substrate is NOT using it. Verification:
+
+```bash
+# scripts/substrate/units/minibob.service has NO GOAL_RUNTIME env var:
+grep -i "goal_runtime\|ias" scripts/substrate/units/minibob.service
+# (returns nothing)
+
+# Confirmed at runtime:
+docker exec substrate-live env | grep -i "GOAL_RUNTIME\|IAS_"
+# (returns nothing)
+```
+
+### What ias-executor-ts has that minibob's dispatch path doesn't
+
+`repos/ias-executor-ts/src/engine.ts:396` in `dispatchCompose`:
+```typescript
+const childChain = [...opts.compositionChain, opts.executionId];
+```
+
+`repos/ias-executor-ts/src/resolvers/activity.ts:92-96` in the activity resolver:
+```typescript
+compositionChain: [...(context.compositionChain ?? []), context.executionId]
+```
+
+Both correctly extend the chain. The wire-format serialization is pinned by `engine-composition.test.ts` and `translating-trace-sink.test.ts`.
+
+### The proposed change
+
+Add one line to `scripts/substrate/units/minibob.service`:
+
+```diff
+ [Service]
+ Type=simple
+ EnvironmentFile=/etc/substrate/env
+ Environment=MINIBOB_PORT=8200
+ Environment=HOST=127.0.0.1
+ Environment=MINIBOB_PROVIDER=anthropic
++Environment=GOAL_RUNTIME=ias-executor
+ WorkingDirectory=/vessels/minibob
+ ExecStart=/root/.bun/bin/bun /vessels/minibob/index.ts --daemon
+```
+
+Then `systemctl daemon-reload && systemctl restart minibob.service` in the substrate container.
+
+### Expected outcome
+
+All subsequent goal_resolve dispatches route through GoalHost → ActivityExecutor (ias-executor-ts). New traces should have:
+- `parent_execution_id` populated on coverage-tick and substrate-health-tick traces
+- `composition_chain` non-empty
+- Thompson posterior updates landing (alpha/beta moving from 1/1)
+- success_rate computing correctly (was 0 with 60/68 successes)
+
+Symptom 3 (gap-003 failure_mode null) remains independent — needs the separate goal_resolve emit-site fix in minibob/src/mcp.ts:3193 OR may also resolve if GoalHost's failure handling populates failure_mode where minibob's doesn't (worth checking).
+
+### Why this works without full vessel replacement
+
+The substrate-explicit-vessels Phase 0-8 cutover (6 greenfield vessels + VesselDaemon toolkit) is months of work. The bridge approach is a parallel-runnable interim:
+- Minibob remains the host process (HTTP server, REPL, bootstrap)
+- Execution path delegates to ias-executor-ts's GoalHost
+- composition_chain works because GoalHost's dispatch is correct
+- Tests cover this path (engine-composition.test.ts:207-316)
+
+The full vessel replacement still has value (architectural cleanness, true vessel-isolation, federation-ready) but isn't required to close the linchpin bug.
+
+### Risk and rollback
+
+Risk: GoalHost's goal→template binding is less rich than minibob's goal-processor (no enrichment-gated verification, no HumanResolver fallback). For the boredom-fired topology-discovery goal text, this should be acceptable — slot-binding handles the dispatch. For broader goal types it may regress.
+
+Rollback: remove the env var line, restart minibob. Zero schema change. Zero state migration.
+
+### Recommended order
+
+1. **First**: add `GOAL_RUNTIME=ias-executor` to minibob.service. Restart. Watch the next 1-2 boredom firings via narrator + audit. If composition_chain populates and posteriors move, Symptoms 1+2 close together as predicted.
+
+2. **Then**: address Symptom 3 (failure_mode classification in goal_resolve emit site) — independent fix.
+
+3. **Defer**: full substrate-explicit-vessels Phase 0-8 implementation. Track separately as the architectural-cleanness initiative.
+

@@ -79,8 +79,8 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-24T22:10:00Z",
-      "current_focus": "iteration 12 + actionable guidance: wrote validation/findings/dev-guidance-2026-05-24.md with file:line evidence for composition_chain (Symptom 1), Thompson posteriors (Symptom 2), failure_mode null (Symptom 3) — three observable symptoms, audit linchpin hypothesis says fix #1 cascades to #2",
+      "last_updated": "2026-05-24T22:35:00Z",
+      "current_focus": "iteration 12 + readiness audit: discovered the ias-executor bridge is FULLY WIRED in minibob but GOAL_RUNTIME env var is not set on substrate's minibob.service. Adding ONE line to the unit file should close Symptoms 1+2 (composition_chain + Thompson posteriors) by routing all execution through ias-executor-ts's correct dispatch path. <10-LOC fix vs months of work for full vessel replacement.",
       "narrator_status": "running (background bxtpvio72)",
       "gaps_recorded": [
         "gap-001",
@@ -323,7 +323,16 @@
         "1. composition_chain propagation in activity-api/src/routes/execution-traces.ts + minibob/src/activity.ts dispatch path that reaches coverage-tick",
         "2. Verify Thompson posterior-update cascade closure (likely automatic once chain populates)",
         "3. failure_mode classification at goal_resolve emit site in minibob/src/mcp.ts:3193"
-      ]
+      ],
+      "actionable_finding_summary": {
+        "discovery": "ias-executor bridge wired in minibob but not activated on substrate",
+        "evidence": "scripts/substrate/units/minibob.service lacks GOAL_RUNTIME=ias-executor; runtime env empty",
+        "proposed_fix": "Add Environment=GOAL_RUNTIME=ias-executor to minibob.service, systemctl daemon-reload && restart",
+        "expected_outcome": "composition_chain populates, Thompson posteriors update, gap-007/F-037/F-038 cascade closed",
+        "scope": "<10 LOC; rollback = remove the env var",
+        "what_it_doesnt_fix": "gap-003 (failure_mode null) — independent, requires goal_resolve emit-site fix in minibob/src/mcp.ts:3193 OR may also resolve if GoalHost handles failures differently",
+        "deferred": "Full substrate-explicit-vessels Phase 0-8 cutover remains valuable for architectural cleanness but is months of work and not required for this closure"
+      }
     },
     "audit": {
       "role": "runtime-auditor",
