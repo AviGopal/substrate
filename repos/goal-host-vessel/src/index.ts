@@ -72,6 +72,79 @@ const host = new GoalHost({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Built-in resolvers referenced by SHARED_TEMPLATES but not in GoalHost core
+//
+// SHARED_TEMPLATES (ias-executor-ts) ship escalation templates (e.g.
+// create-shape-provider-goal) whose tasks reference resolvers that GoalHost
+// doesn't register by default.  We register them here so those templates can
+// execute inside the substrate.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function registerBuiltinResolvers(): void {
+  // activity_recommendation — wraps POST /v2/activities/recommend.
+  // Used by create-shape-provider-goal:forward_chain_producers to find activity
+  // templates that produce a required output shape.
+  host.runtime.resolvers.register({
+    id: "activity_recommendation",
+    tier: "pattern" as const,
+    async resolve(context: Record<string, unknown>) {
+      const task = context.task as Record<string, unknown> | undefined;
+      const config = (task?.config ?? {}) as Record<string, unknown>;
+      const variables = (context.variables ?? {}) as Record<string, unknown>;
+      const random = context.random as { id: (prefix: string) => string };
+
+      const limit = typeof config.limit === "number" ? config.limit : 5;
+      const minSuccessRate = typeof config.minSuccessRate === "number" ? config.minSuccessRate : 0.0;
+
+      // Collect goal text and shape hints from variables injected by GoalHost
+      const goal = typeof variables.goal === "string" ? variables.goal
+        : typeof variables.goalDescription === "string" ? variables.goalDescription
+        : undefined;
+      const requiredShape = typeof variables.requiredShape === "string" ? variables.requiredShape
+        : typeof variables.targetShape === "string" ? variables.targetShape
+        : undefined;
+
+      const body: Record<string, unknown> = {
+        limit,
+        min_success_rate: minSuccessRate,
+      };
+      if (goal) body.goal = goal;
+      if (requiredShape) body.expected_output_shapes = [requiredShape];
+
+      try {
+        const resp = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/recommend`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}),
+          },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(15_000),
+        });
+        const result = await resp.json();
+        return [{
+          id: random.id("activity_rec"),
+          pointer: { type: "memo" },
+          metadata: { shape: "activityTemplateRecommendation", source: "activity-api", ok: resp.ok },
+          loaded: true,
+          content: result,
+        }];
+      } catch (err) {
+        return [{
+          id: random.id("activity_rec:err"),
+          pointer: { type: "memo" },
+          metadata: { shape: "activityTemplateRecommendation", source: "activity-api", degraded: true },
+          loaded: true,
+          content: { error: (err as Error).message, recommendations: [] },
+        }];
+      }
+    },
+  });
+
+  console.log("[goal-host-vessel] registered built-in resolver: activity_recommendation");
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Development-vessel proxy resolvers
 //
 // GoalHost only knows its own built-in resolvers (fs, bash, llm, slot-binding,
@@ -337,6 +410,7 @@ console.log(
   ` | llm: ${LLM_VESSEL_ENDPOINT ? `vessel(${LLM_VESSEL_ENDPOINT})` : "in-process"}`,
 );
 
+registerBuiltinResolvers();
 await registerDevVesselProxies();
 await discoveryLoop.start();
 
