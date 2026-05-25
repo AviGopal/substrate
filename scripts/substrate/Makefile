@@ -26,7 +26,7 @@ BOREDOM_VESSEL_SRC := $(REPO_ROOT)/repos/boredom-vessel
 RIBOSOME_VESSEL_SRC := $(REPO_ROOT)/repos/ribosome-vessel
 CONCEPT_DB_SRC := $(REPO_ROOT)/repos/concept-db
 
-.PHONY: build run run-detach run-live seed-live health health-live \
+.PHONY: build run run-detach run-live seed-live import-memory health health-live \
         logs-all logs-activity-api logs-development-vessel \
         logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
         logs-goal-host-vessel logs-boredom-vessel logs-ribosome-vessel logs-concept-db \
@@ -162,6 +162,12 @@ logs-surrealdb:
 status: status-live
 
 shell: shell-live
+
+# Seed operator-side memory files into the substrate's memory store.
+# Run once after seed-live. Pass DEV_VESSEL_ENDPOINT to write via HTTP
+# (requires substrate running); omit to write directly to workspace/memory/.
+import-memory:
+	WORKSPACE_DIR=$(WORKSPACE) bun $(CURDIR)/import-operator-memory.ts
 
 # health targets the substrate-live container (18080 ports).
 # Use health-live for the named container; this alias exists for make -C scripts/substrate health
