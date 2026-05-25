@@ -106,7 +106,7 @@ string-matching.
   POSTs to goal-host-vessel:8210/run-goal. In-process bridge remains as
   fallback. `scripts/substrate/units/minibob.service` sets
   `GOAL_HOST_VESSEL_ENDPOINT=http://127.0.0.1:8210`.
-- [ ] 4.4 Delete `repos/minibob/src/goal-host-bridge.ts` and the
+- [x] 4.4 Delete `repos/minibob/src/goal-host-bridge.ts` and the
   `GOAL_RUNTIME=ias-executor` env gate. The bridge was a transitional shim;
   with goal-host-vessel running, every dispatch is HTTP.
 - [x] 4.5 Substrate plumbing: unit file, Makefile targets, Dockerfile COPY +
