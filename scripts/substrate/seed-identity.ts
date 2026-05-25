@@ -5,9 +5,12 @@
 // Usage: bun run /vessels/seed-identity.ts
 //   Requires METABOB_API_KEY, JWT_SECRET env vars (set via EnvironmentFile).
 
+import { writeFileSync, readFileSync, existsSync } from "node:fs";
+
 const IDENTITY_URL = process.env.IDENTITY_VESSEL_URL ?? "http://127.0.0.1:8101";
 const SEED_KEY = process.env.METABOB_API_KEY ?? "";
 const JWT_SECRET = process.env.JWT_SECRET ?? "";
+const SECRETS_FILE = "/workspace/.substrate-secrets";
 
 if (!SEED_KEY || !JWT_SECRET) {
   console.error("[seed-identity] METABOB_API_KEY and JWT_SECRET must be set");
@@ -85,7 +88,30 @@ async function main() {
   // Issue the shared substrate default key
   const defaultKey = await issueKey(token, user_id, org_id, "substrate-default");
   console.log(`[seed-identity] issued API key (substrate-default): ${defaultKey}`);
-  console.log("[seed-identity] write this key to /etc/substrate/env as METABOB_API_KEY on first run");
+
+  // Write the issued key back to .substrate-secrets and /etc/substrate/env
+  // so configure-local.sh and subsequent vessel restarts use the proper HMAC key.
+  try {
+    const envContent = readFileSync("/etc/substrate/env", "utf-8");
+    const updatedEnv = envContent.replace(
+      /^METABOB_API_KEY=.*/m,
+      `METABOB_API_KEY=${defaultKey}`,
+    );
+    writeFileSync("/etc/substrate/env", updatedEnv, { mode: 0o600 });
+
+    if (existsSync(SECRETS_FILE)) {
+      const secretsContent = readFileSync(SECRETS_FILE, "utf-8");
+      const updatedSecrets = secretsContent.replace(
+        /^METABOB_API_KEY=.*/m,
+        `METABOB_API_KEY=${defaultKey}`,
+      );
+      writeFileSync(SECRETS_FILE, updatedSecrets, { mode: 0o600 });
+    }
+    console.log("[seed-identity] updated METABOB_API_KEY in /etc/substrate/env and .substrate-secrets");
+  } catch (e) {
+    console.warn(`[seed-identity] could not update env file: ${(e as Error).message}`);
+    console.warn(`[seed-identity] manually set METABOB_API_KEY=${defaultKey}`);
+  }
 
   // Issue a dedicated key for local-tools-vessel (per D4 — per-vessel trace attribution)
   const localToolsKey = await issueKey(token, user_id, org_id, "local-tools-vessel");

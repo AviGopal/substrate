@@ -151,3 +151,4 @@ COMMIT_MESSAGE_*.txt
 # validation/gaps/evidence/ first. See validation/observations/README.md.
 /validation/observations/**
 !/validation/observations/README.md
+scripts/substrate/workspace/.substrate-secrets

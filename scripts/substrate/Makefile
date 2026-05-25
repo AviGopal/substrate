@@ -1,10 +1,16 @@
 # Makefile — substrate container lifecycle
 #
-# Required env vars (export or pass inline):
-#   JWT_SECRET        — shared HMAC secret for all vessel JWTs
-#   SURREAL_PASS      — SurrealDB root password
-#   METABOB_API_KEY   — API key for inter-vessel auth
+# Only one credential is required from the operator:
 #   ANTHROPIC_API_KEY — LLM provider key for llm-resolver-vessel
+#
+# All other secrets (JWT_SECRET, SURREAL_PASS, METABOB_API_KEY) are generated
+# automatically on first run and persisted to workspace/.substrate-secrets so
+# restarts reuse the same values without operator input.
+#
+# Quick start:
+#   make -C scripts/substrate run-live ANTHROPIC_API_KEY=sk-ant-...
+#   make -C scripts/substrate seed-live
+#   scripts/substrate/configure-local.sh
 #
 # Two container flavours:
 #   substrate       — interactive / ephemeral dev container (port 8080)
@@ -15,6 +21,9 @@ IMAGE        := metabob/substrate
 TAG          := dev
 WORKSPACE    := $(shell pwd)/workspace
 LIVE_NAME    := substrate-live
+
+# ANTHROPIC_API_KEY — load from environment or existing ~/.metabob/config.json
+ANTHROPIC_API_KEY ?= $(shell jq -r '.providers.anthropic.apiKey // empty' $(HOME)/.metabob/config.json 2>/dev/null || true)
 
 # Vessel source roots (relative to repo root, two levels up)
 REPO_ROOT := $(CURDIR)/../..
@@ -45,12 +54,13 @@ build:
 	    $(CURDIR)/../..
 
 run:
+	@if [ -z "$(ANTHROPIC_API_KEY)" ]; then \
+	  echo "[substrate] ERROR: ANTHROPIC_API_KEY is required. Pass it inline or add it to ~/.metabob/config.json"; \
+	  exit 1; \
+	fi
 	@mkdir -p $(WORKSPACE)
 	docker run --rm -it \
 	    --name substrate \
-	    -e JWT_SECRET="$(JWT_SECRET)" \
-	    -e SURREAL_PASS="$(SURREAL_PASS)" \
-	    -e METABOB_API_KEY="$(METABOB_API_KEY)" \
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 	    -p 8080:8080 \
 	    -p 8090:8090 \
@@ -60,12 +70,13 @@ run:
 	    $(IMAGE):$(TAG)
 
 run-detach:
+	@if [ -z "$(ANTHROPIC_API_KEY)" ]; then \
+	  echo "[substrate] ERROR: ANTHROPIC_API_KEY is required. Pass it inline or add it to ~/.metabob/config.json"; \
+	  exit 1; \
+	fi
 	@mkdir -p $(WORKSPACE)
 	docker run -d \
 	    --name substrate \
-	    -e JWT_SECRET="$(JWT_SECRET)" \
-	    -e SURREAL_PASS="$(SURREAL_PASS)" \
-	    -e METABOB_API_KEY="$(METABOB_API_KEY)" \
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 	    -p 8080:8080 \
 	    -p 8090:8090 \
@@ -79,12 +90,15 @@ run-detach:
 # Run once; use sync-*/restart-* targets to hot-reload vessels without rebuild.
 
 run-live:
+	@if [ -z "$(ANTHROPIC_API_KEY)" ]; then \
+	  echo "[substrate] ERROR: ANTHROPIC_API_KEY is required."; \
+	  echo "  Pass inline:  make run-live ANTHROPIC_API_KEY=sk-ant-..."; \
+	  echo "  Or add to:    ~/.metabob/config.json .providers.anthropic.apiKey"; \
+	  exit 1; \
+	fi
 	@mkdir -p $(WORKSPACE)
 	docker run -d \
 	    --name $(LIVE_NAME) \
-	    -e JWT_SECRET="$(JWT_SECRET)" \
-	    -e SURREAL_PASS="$(SURREAL_PASS)" \
-	    -e METABOB_API_KEY="$(METABOB_API_KEY)" \
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 	    -p 18080:8080 \
 	    -p 18090:8090 \
@@ -94,12 +108,13 @@ run-live:
 	    --tmpfs /run/lock \
 	    $(IMAGE):$(TAG)
 	@echo "[run-live] substrate-live started — activity-api on :18080, development-vessel on :18090, discovery-vessel on :18100"
+	@echo "[run-live] Internal secrets auto-generated and persisted to workspace/.substrate-secrets"
 	@echo "[run-live] Wait ~15s for services to start, then: make -C scripts/substrate seed-live"
 
 # Seed identity and API keys into a freshly started substrate-live container.
 seed-live:
 	docker exec $(LIVE_NAME) bun /vessels/seed-identity.ts
-	@echo "[seed-live] Identity seeded. Substrate ready."
+	@echo "[seed-live] Identity seeded. Run: scripts/substrate/configure-local.sh"
 
 health-live:
 	@echo "=== activity-api ===" && curl -s http://localhost:18080/health | jq '{version,status}'
@@ -170,8 +185,6 @@ import-memory:
 	WORKSPACE_DIR=$(WORKSPACE) bun $(CURDIR)/import-operator-memory.ts
 
 # health targets the substrate-live container (18080 ports).
-# Use health-live for the named container; this alias exists for make -C scripts/substrate health
-# called from dev-guidance scripts that predate the run-live split.
 health: health-live
 
 stop: stop-live
@@ -181,7 +194,6 @@ clean: clean-live
 # ── Substrate-only iteration (substrate-live container) ──────────────────────
 
 # Sync development-vessel source into the running container then restart it.
-# Use this instead of docker cp + systemctl restart manually.
 sync-development-vessel:
 	docker cp $(DEV_VESSEL_SRC)/src/config.ts $(LIVE_NAME):/vessels/development-vessel/src/config.ts
 	docker cp $(DEV_VESSEL_SRC)/src/index.ts $(LIVE_NAME):/vessels/development-vessel/src/index.ts
