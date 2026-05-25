@@ -135,6 +135,43 @@ Before any audit, confirm:
   returns 200. If 401, identity-vessel and activity-api have
   diverged on credentials; this is itself a finding.
 
+## Dev operator status (correction 2026-05-24)
+
+Operator confirms the dev agent is **engaged and working**, but
+**having challenges solving the issues** the audit and validator
+have surfaced. The lack of visible commits on the five
+highest-leverage 2026-05-23 changes (substrate-identity-
+resolution, substrate-self-replacement-pipeline,
+external-resolver-vesselization, external-resolver-grounding,
+lift-criterion-hardening) is NOT idle — it reflects that the
+structural problems (gap-004 binding, gap-003 failure_mode,
+gap-005 template churn, F-014 embedding env, F-019 cross-vessel
+auth, F-021 concept-db deployment) are genuinely difficult.
+
+Auditor framing for future iterations:
+
+- **F-009 / F-011** ("zero DEV on five audited"): true at the
+  surface, but does not imply operator absence. The dev is
+  working; the work is not yet shipping. Future reports should
+  carry this caveat.
+- **F-033** ("dev coordination stale"): the `last_updated`
+  field in agent-coordination.json IS stale, but this is a
+  metadata-update gap rather than evidence of idle dev. Severity
+  should reflect that.
+- **gap-006 framing** ("validation isolated from dev/audit"):
+  the validator's framing was based on absence of commits; the
+  operator was active, just not committing on the audited set.
+- **F-024 / structural cascade**: the substrate's continuing
+  failure to self-improve is not "operator absent" but
+  "operator working on hard problems while substrate continues
+  to fail." The audit's role is to keep producing evidence;
+  remediation cadence is up to the operator.
+
+The substrate's structural findings remain accurate — boredom
+firings still fail, templates still thrash, LIFT CANDIDATE
+still stamped on stale data. The framing about *who is
+responding* needs the above correction.
+
 ## Deprecation context (2026-05-23 onward)
 
 Two ongoing deprecations affect how findings should be interpreted:
