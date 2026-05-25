@@ -13,7 +13,7 @@ Environment=VESSEL_ID=development-vessel-local
 Environment=VESSEL_ENDPOINT=http://127.0.0.1:8090
 WorkingDirectory=/vessels/development-vessel
 ExecStart=/root/.bun/bin/bun /vessels/development-vessel/src/index.ts
-ExecStartPost=/root/.bun/bin/bun /vessels/development-vessel/src/cli.ts seed-templates
+ExecStartPost=/bin/bash -c 'for i in $(seq 1 15); do curl -sf http://127.0.0.1:8080/health >/dev/null 2>&1 && break || sleep 3; done && /root/.bun/bin/bun /vessels/development-vessel/src/cli.ts seed-templates'
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
