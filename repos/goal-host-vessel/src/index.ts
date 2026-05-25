@@ -142,6 +142,33 @@ function registerBuiltinResolvers(): void {
   });
 
   console.log("[goal-host-vessel] registered built-in resolver: activity_recommendation");
+
+  // impulse_cooccurrence — stateless co-occurrence pair-counter used by
+  // create-shape-provider-goal:cooccurrence_signal. The template always passes
+  // config.traces:[] (no upstream trace fetch exists), so this resolver always
+  // runs over an empty trace set and emits an empty matrix. compose_goal handles
+  // empty signal 4 defensively.
+  host.runtime.resolvers.register({
+    id: "impulse_cooccurrence",
+    tier: "pattern" as const,
+    async resolve(context: Record<string, unknown>) {
+      const random = context.random as { id: (prefix: string) => string };
+      const id = random.id("cooccurrence");
+      return [{
+        id,
+        pointer: { type: "memo" },
+        metadata: {
+          shape: "cooccurrenceRanking",
+          source: "impulse_cooccurrence",
+          summary: "0 pairs across 0 traces",
+        },
+        loaded: true,
+        content: { pairs: [], trace_count: 0 },
+      }];
+    },
+  });
+
+  console.log("[goal-host-vessel] registered built-in resolver: impulse_cooccurrence");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
