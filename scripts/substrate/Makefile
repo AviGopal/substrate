@@ -15,13 +15,16 @@ REPO_ROOT := $(CURDIR)/../..
 DEV_VESSEL_SRC := $(REPO_ROOT)/repos/development-vessel
 LOCAL_TOOLS_SRC := $(REPO_ROOT)/repos/local-tools-vessel
 LLM_VESSEL_SRC := $(REPO_ROOT)/repos/llm-resolver-vessel
+GOAL_HOST_SRC := $(REPO_ROOT)/repos/goal-host-vessel
 
 .PHONY: build run logs-all logs-minibob logs-activity-api logs-development-vessel \
-        logs-local-tools-vessel logs-llm-resolver-vessel \
+        logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
+        logs-goal-host-vessel \
         status shell stop clean \
         sync-development-vessel restart-development-vessel \
         sync-local-tools-vessel restart-local-tools-vessel \
-        sync-llm-resolver-vessel restart-llm-resolver-vessel
+        sync-llm-resolver-vessel restart-llm-resolver-vessel \
+        sync-goal-host-vessel restart-goal-host-vessel
 
 build:
 	docker build -f $(CURDIR)/../../Dockerfile.substrate \
@@ -78,12 +81,18 @@ logs-local-tools-vessel:
 logs-llm-resolver-vessel:
 	docker exec substrate journalctl -fu llm-resolver-vessel.service
 
+logs-bootstrap-seeder:
+	docker exec substrate journalctl -u bootstrap-seeder.service --no-pager
+
+logs-goal-host-vessel:
+	docker exec substrate journalctl -fu goal-host-vessel.service
+
 logs-surrealdb:
 	docker exec substrate journalctl -fu surrealdb.service
 
 status:
 	docker exec substrate systemctl status --no-pager \
-	    surrealdb valkey discovery-vessel identity-vessel activity-api minibob development-vessel local-tools-vessel llm-resolver-vessel
+	    surrealdb valkey discovery-vessel identity-vessel activity-api minibob development-vessel local-tools-vessel llm-resolver-vessel goal-host-vessel bootstrap-seeder
 
 shell:
 	docker exec -it substrate bash
@@ -94,6 +103,7 @@ health:
 	@echo "=== development-vessel ===" && curl -s http://localhost:8090/health | jq .
 	@echo "=== local-tools-vessel ===" && curl -s http://localhost:8230/health | jq .
 	@echo "=== llm-resolver-vessel ===" && curl -s http://localhost:8220/health | jq .
+	@echo "=== goal-host-vessel ===" && curl -s http://localhost:8210/health | jq .
 
 stop:
 	docker stop substrate
@@ -145,3 +155,13 @@ restart-llm-resolver-vessel: sync-llm-resolver-vessel
 	docker exec substrate-live systemctl restart llm-resolver-vessel.service
 	@sleep 2
 	@docker exec substrate-live systemctl is-active llm-resolver-vessel.service | grep -q active && echo "[restart] llm-resolver-vessel active" || echo "[restart] ERROR: llm-resolver-vessel not active"
+
+# Sync goal-host-vessel source into the running container then restart it.
+sync-goal-host-vessel:
+	docker cp $(GOAL_HOST_SRC)/src/index.ts substrate-live:/vessels/goal-host-vessel/src/index.ts
+	@echo "[sync] goal-host-vessel source synced to substrate-live"
+
+restart-goal-host-vessel: sync-goal-host-vessel
+	docker exec substrate-live systemctl restart goal-host-vessel.service
+	@sleep 2
+	@docker exec substrate-live systemctl is-active goal-host-vessel.service | grep -q active && echo "[restart] goal-host-vessel active" || echo "[restart] ERROR: goal-host-vessel not active"

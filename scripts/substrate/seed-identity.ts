@@ -91,6 +91,11 @@ async function main() {
   const localToolsKey = await issueKey(token, user_id, org_id, "local-tools-vessel");
   console.log(`[seed-identity] issued API key (local-tools-vessel): ${localToolsKey}`);
   console.log("[seed-identity] set LOCAL_TOOLS_VESSEL_API_KEY in /etc/substrate/env or vessel env file");
+
+  // Issue a dedicated key for goal-host-vessel (per D4 — per-vessel trace attribution)
+  const goalHostKey = await issueKey(token, user_id, org_id, "goal-host-vessel");
+  console.log(`[seed-identity] issued API key (goal-host-vessel): ${goalHostKey}`);
+  console.log("[seed-identity] set GOAL_HOST_VESSEL_API_KEY in /etc/substrate/env or vessel env file");
 }
 
 main().catch(e => {

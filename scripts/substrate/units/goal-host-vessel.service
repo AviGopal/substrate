@@ -1,0 +1,23 @@
+[Unit]
+Description=goal-host-vessel
+After=activity-api.service discovery-vessel.service identity-vessel.service llm-resolver-vessel.service
+Requires=activity-api.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8210
+Environment=HOST=127.0.0.1
+Environment=GOAL_HOST_VESSEL_ID=goal-host-vessel
+Environment=LLM_VESSEL_ENDPOINT=http://127.0.0.1:8220
+Environment=DISCOVERY_VESSEL_ENDPOINT=http://127.0.0.1:8100
+Environment=ACTIVITY_API_ENDPOINT=http://127.0.0.1:8080
+WorkingDirectory=/vessels/goal-host-vessel
+ExecStart=/root/.bun/bin/bun /vessels/goal-host-vessel/src/index.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,24 @@
+[Unit]
+Description=bootstrap-seeder (seed shared activity templates)
+# Run after activity-api is up so POST /v2/activities/templates is available
+After=activity-api.service
+Requires=activity-api.service
+
+# Smoke test (task 3.3):
+#   docker exec substrate-live systemctl start bootstrap-seeder.service
+#   docker exec substrate-live systemctl status bootstrap-seeder.service
+#   docker exec substrate-live journalctl -u bootstrap-seeder.service --no-pager
+#   # Confirm catalogue restored: curl -s http://localhost:8080/v2/activities/templates | jq '.total'
+#   # For full wipe test: docker exec substrate-live rm -rf /var/lib/surrealdb/data
+#   # then restart substrate; templates should reappear within 30s of activity-api readiness.
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+WorkingDirectory=/vessels/ias-executor-ts
+ExecStart=/root/.bun/bin/bun /scripts/bootstrap-seeder.ts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

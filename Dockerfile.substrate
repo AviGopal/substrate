@@ -126,13 +126,22 @@ RUN cd llm-resolver-vessel && \
 COPY repos/llm-resolver-vessel/src ./llm-resolver-vessel/src
 COPY repos/llm-resolver-vessel/tsconfig.json ./llm-resolver-vessel/
 
+# goal-host-vessel
+COPY repos/goal-host-vessel/package.json ./goal-host-vessel/
+RUN cd goal-host-vessel && \
+    sed -i 's|file:../ias-executor-ts|file:/vessels/ias-executor-ts|g' package.json && \
+    bun install
+COPY repos/goal-host-vessel/src ./goal-host-vessel/src
+COPY repos/goal-host-vessel/tsconfig.json ./goal-host-vessel/
+
 # --- Substrate runtime config ---
-RUN mkdir -p /etc/substrate /workspace /var/lib/surrealdb
+RUN mkdir -p /etc/substrate /workspace /var/lib/surrealdb /scripts
 
 COPY scripts/substrate/units/ /etc/systemd/system/
 COPY scripts/substrate/entrypoint.sh /usr/local/bin/substrate-entrypoint
 COPY scripts/substrate/gen-env.sh /usr/local/bin/gen-env
 COPY scripts/substrate/seed-identity.ts /vessels/seed-identity.ts
+COPY scripts/bootstrap-seeder.ts /scripts/bootstrap-seeder.ts
 
 RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env && \
     systemctl enable \
@@ -144,7 +153,9 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env && \
         minibob.service \
         development-vessel.service \
         local-tools-vessel.service \
-        llm-resolver-vessel.service
+        llm-resolver-vessel.service \
+        goal-host-vessel.service \
+        bootstrap-seeder.service
 
 VOLUME ["/workspace"]
 

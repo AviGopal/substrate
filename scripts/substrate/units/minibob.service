@@ -10,6 +10,7 @@ Environment=MINIBOB_PORT=8200
 Environment=HOST=127.0.0.1
 Environment=MINIBOB_PROVIDER=anthropic
 Environment=GOAL_RUNTIME=ias-executor
+Environment=GOAL_HOST_VESSEL_ENDPOINT=http://127.0.0.1:8210
 Environment=MINIBOB_BOREDOM_ENABLED=true
 Environment=DISCOVERY_ENABLED=true
 Environment=MINIBOB_DISCOVERY_ENABLED=true
