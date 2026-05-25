@@ -18,17 +18,19 @@ LLM_VESSEL_SRC := $(REPO_ROOT)/repos/llm-resolver-vessel
 GOAL_HOST_SRC := $(REPO_ROOT)/repos/goal-host-vessel
 BOREDOM_VESSEL_SRC := $(REPO_ROOT)/repos/boredom-vessel
 RIBOSOME_VESSEL_SRC := $(REPO_ROOT)/repos/ribosome-vessel
+CONCEPT_DB_SRC := $(REPO_ROOT)/repos/concept-db
 
 .PHONY: build run logs-all logs-minibob logs-activity-api logs-development-vessel \
         logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
-        logs-goal-host-vessel logs-boredom-vessel logs-ribosome-vessel \
+        logs-goal-host-vessel logs-boredom-vessel logs-ribosome-vessel logs-concept-db \
         status shell stop clean \
         sync-development-vessel restart-development-vessel \
         sync-local-tools-vessel restart-local-tools-vessel \
         sync-llm-resolver-vessel restart-llm-resolver-vessel \
         sync-goal-host-vessel restart-goal-host-vessel \
         sync-boredom-vessel trigger-boredom-vessel \
-        sync-ribosome-vessel restart-ribosome-vessel
+        sync-ribosome-vessel restart-ribosome-vessel \
+        sync-concept-db restart-concept-db
 
 build:
 	docker build -f $(CURDIR)/../../Dockerfile.substrate \
@@ -97,12 +99,15 @@ logs-boredom-vessel:
 logs-ribosome-vessel:
 	docker exec substrate journalctl -fu ribosome-vessel.service
 
+logs-concept-db:
+	docker exec substrate journalctl -fu concept-db.service
+
 logs-surrealdb:
 	docker exec substrate journalctl -fu surrealdb.service
 
 status:
 	docker exec substrate systemctl status --no-pager \
-	    surrealdb valkey discovery-vessel identity-vessel activity-api minibob development-vessel local-tools-vessel llm-resolver-vessel goal-host-vessel bootstrap-seeder boredom-vessel.timer ribosome-vessel
+	    surrealdb valkey discovery-vessel identity-vessel activity-api minibob development-vessel local-tools-vessel llm-resolver-vessel goal-host-vessel bootstrap-seeder boredom-vessel.timer ribosome-vessel concept-db
 
 shell:
 	docker exec -it substrate bash
@@ -115,6 +120,7 @@ health:
 	@echo "=== llm-resolver-vessel ===" && curl -s http://localhost:8220/health | jq .
 	@echo "=== goal-host-vessel ===" && curl -s http://localhost:8210/health | jq .
 	@echo "=== ribosome-vessel ===" && curl -s http://localhost:8240/health | jq .
+	@echo "=== concept-db ===" && curl -s http://localhost:8260/health | jq '{status,service}'
 
 stop:
 	docker stop substrate
@@ -196,3 +202,13 @@ restart-ribosome-vessel: sync-ribosome-vessel
 	docker exec substrate-live systemctl restart ribosome-vessel.service
 	@sleep 2
 	@docker exec substrate-live systemctl is-active ribosome-vessel.service | grep -q active && echo "[restart] ribosome-vessel active" || echo "[restart] ERROR: ribosome-vessel not active"
+
+# Sync concept-db source into the running container then restart it.
+sync-concept-db:
+	docker cp $(CONCEPT_DB_SRC)/src substrate-live:/vessels/concept-db/src
+	@echo "[sync] concept-db source synced to substrate-live"
+
+restart-concept-db: sync-concept-db
+	docker exec substrate-live systemctl restart concept-db.service
+	@sleep 2
+	@docker exec substrate-live systemctl is-active concept-db.service | grep -q active && echo "[restart] concept-db active" || echo "[restart] ERROR: concept-db not active"

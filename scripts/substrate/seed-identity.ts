@@ -96,6 +96,11 @@ async function main() {
   const goalHostKey = await issueKey(token, user_id, org_id, "goal-host-vessel");
   console.log(`[seed-identity] issued API key (goal-host-vessel): ${goalHostKey}`);
   console.log("[seed-identity] set GOAL_HOST_VESSEL_API_KEY in /etc/substrate/env or vessel env file");
+
+  // Issue a dedicated key for concept-db (semantic layer)
+  const conceptDbKey = await issueKey(token, user_id, org_id, "concept-db");
+  console.log(`[seed-identity] issued API key (concept-db): ${conceptDbKey}`);
+  console.log("[seed-identity] set CONCEPT_DB_API_KEY in /etc/substrate/env or concept-db.env");
 }
 
 main().catch(e => {

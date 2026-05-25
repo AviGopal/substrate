@@ -146,6 +146,13 @@ RUN cd ribosome-vessel && bun install
 COPY repos/ribosome-vessel/src ./ribosome-vessel/src
 COPY repos/ribosome-vessel/tsconfig.json ./ribosome-vessel/
 
+# concept-db
+COPY repos/concept-db/package.json repos/concept-db/bun.lock* ./concept-db/
+RUN cd concept-db && bun install
+COPY repos/concept-db/src ./concept-db/src
+COPY repos/concept-db/sql ./concept-db/sql
+COPY repos/concept-db/tsconfig.json ./concept-db/
+
 # --- Substrate runtime config ---
 RUN mkdir -p /etc/substrate /workspace /var/lib/surrealdb /scripts
 
@@ -153,6 +160,7 @@ COPY scripts/substrate/units/ /etc/systemd/system/
 COPY scripts/substrate/entrypoint.sh /usr/local/bin/substrate-entrypoint
 COPY scripts/substrate/gen-env.sh /usr/local/bin/gen-env
 COPY scripts/substrate/seed-identity.ts /vessels/seed-identity.ts
+COPY scripts/substrate/seed-concepts.ts /vessels/seed-concepts.ts
 COPY scripts/bootstrap-seeder.ts /scripts/bootstrap-seeder.ts
 
 RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env && \
@@ -169,7 +177,9 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env && \
         goal-host-vessel.service \
         bootstrap-seeder.service \
         boredom-vessel.timer \
-        ribosome-vessel.service
+        ribosome-vessel.service \
+        concept-db.service \
+        concept-db-seeder.service
 
 VOLUME ["/workspace"]
 

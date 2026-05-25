@@ -1,0 +1,16 @@
+[Unit]
+Description=concept-db concept seeder (Phase-22.S2 seed concepts)
+After=concept-db.service
+Requires=concept-db.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+Environment=CONCEPT_DB_URL=http://127.0.0.1:8260
+ExecStartPre=/bin/sh -c 'until curl -sf http://127.0.0.1:8260/health > /dev/null; do sleep 2; done'
+ExecStart=/root/.bun/bin/bun /vessels/seed-concepts.ts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

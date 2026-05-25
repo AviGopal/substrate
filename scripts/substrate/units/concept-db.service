@@ -1,0 +1,22 @@
+[Unit]
+Description=concept-db
+After=activity-api.service discovery-vessel.service identity-vessel.service
+Requires=activity-api.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8260
+Environment=HOST=127.0.0.1
+Environment=ACTIVITY_API_URL=http://127.0.0.1:8080
+Environment=DISCOVERY_VESSEL_ENDPOINT=http://127.0.0.1:8100
+EnvironmentFile=-/etc/substrate/concept-db.env
+WorkingDirectory=/vessels/concept-db
+ExecStart=/root/.bun/bin/bun /vessels/concept-db/src/index.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
