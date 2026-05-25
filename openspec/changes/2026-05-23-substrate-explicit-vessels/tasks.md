@@ -118,11 +118,11 @@ string-matching.
 
 ## Phase 5 — Thompson posterior advertisement
 
-- [ ] 5.1 Add `thompson_posterior` to `repos/metabob-activity-api/src/config.ts`
+- [x] 5.1 Add `thompson_posterior` to `repos/metabob-activity-api/src/config.ts`
   `discovery.shapes`.
 - [ ] 5.2 Fix the account-vs-global scope ordering bug noted in IAL
   Phase 9.3 — global rows must be the fallback, not the precedence.
-- [ ] 5.3 Smoke test: `POST /v2/impulses/resolve` with
+- [x] 5.3 Smoke test: `POST /v2/impulses/resolve` with
   `{ type: 'thompson_posterior', activity_variant_id: '...' }` returns the
   same payload as `GET /v2/activities/:id/variant-scores`.
 - [ ] 5.4 Workbench: replace one of its REST callsites for variant scores
