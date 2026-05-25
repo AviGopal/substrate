@@ -163,22 +163,29 @@ string-matching.
   "substrate busy". Verify goal traces carry intent:topology_discovery tag.
 - [x] 7.4 Delete `repos/minibob/src/boredom.ts` (replaced with no-op stub; full removal in Phase 8.1 with repl.ts cleanup).
 
-## Phase 8 — minibob shrink and rename
+## Phase 8 — minibob shrink (CLI-only wrapper; planned for deprecation)
 
-- [ ] 8.1 Delete `repos/minibob/src/activity.ts` (ActivityExecutor),
-  `mcp.ts`, `process-registry.ts`, `vessel-bootstrap.ts`, `vessel.ts`,
-  `vessel-registry.ts`, `acp.ts`, `acp-gossip.ts`, `boredom.ts`,
-  `improviser.ts`, `waking-activities.ts`, `template-extractor.ts`,
-  `ribosome-resolver.ts`, `lifecycle-subscriptions.ts`,
-  `goal-processor.ts`, `agent-runtime.ts`, `orchestration.ts`,
-  `background-task-executor.ts`, `embedded-templates/` (now ias-executor-ts owned).
-- [ ] 8.2 What remains: `cli/`, `conversational-repl.ts`, `repl.ts`,
-  thin HTTP client. ~200 LOC target.
-- [ ] 8.3 Rename `repos/minibob/` → `repos/metabob-cli/`. Update super-repo
-  `.gitmodules` and `Dockerfile.substrate`. Keep `minibob` binary symlink for
-  one release.
-- [ ] 8.4 Update CLAUDE.md §2 (MiniBob description) to reflect the new
-  CLI-only role; list the substrate-hosted vessels under §6.
+**Direction (2026-05-24):** minibob is planned for full deprecation. Phase 8 reduces it to a
+thin CLI dispatcher that delegates all execution to goal-host-vessel. No rename; the binary
+will be retired once the substrate vessels fully replace the CLI-driven workflow.
+
+- [x] 8.1 Delete execution-engine files: `ActivityExecutor`, `mcp.ts`, `process-registry.ts`,
+  `vessel-bootstrap.ts`, `vessel.ts`, `vessel-registry.ts`, `acp.ts`, `acp-gossip.ts`,
+  `boredom.ts`, `improviser.ts`, `waking-activities.ts`, `template-extractor.ts`,
+  `ribosome-resolver.ts`, `lifecycle-subscriptions.ts`, `goal-processor.ts`,
+  `agent-runtime.ts`, `orchestration.ts`, `background-task-executor.ts`, `embedded-templates/`,
+  plus dead secondary files (`execution-adapter.ts`, `search-first-executor.ts`, resolvers/,
+  `session.ts`, etc.). All stubs removed; 0 typecheck errors.
+  (commits e534a72, 814d215, 3a6b4fd)
+- [x] 8.2 What remains: `cli/` (processor, patterns, context, progress), `repl.ts`,
+  `conversational-repl.ts`, `index.ts` (298 LOC). `processGoal` delegates via HTTP POST
+  to `GOAL_HOST_VESSEL_ENDPOINT` (default `http://127.0.0.1:8210`) using `METABOB_API_KEY`.
+- [ ] 8.3 ~~Rename `repos/minibob/` → `repos/metabob-cli/`~~ — SUPERSEDED: minibob will
+  be deprecated directly once boredom-vessel, goal-host-vessel, and ribosome-vessel
+  cover the full execution surface. No rename needed.
+- [x] 8.4 Update CLAUDE.md §2 (MiniBob description) to reflect CLI-only/deprecated role.
+  Added substrate-hosted vessel list to §6 (goal-host-vessel, llm-resolver-vessel,
+  local-tools-vessel, ribosome-vessel, boredom-vessel, bootstrap-seeder).
 
 ## Phase 9 — IAL Phase 27.3.c integration
 

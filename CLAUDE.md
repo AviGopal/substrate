@@ -268,55 +268,27 @@ Vessel capability registry and resolver (~1,500 LOC TypeScript/Bun):
 **Deployment:** Singleton (1 replica) with in-memory registry
 
 ### 2. MiniBob (`repos/minibob`)
-Autonomous activity-execution vessel (TypeScript/Bun). Drives goals end-to-end by selecting and executing activities, resolving impulses, and emitting traces.
+**Planned for deprecation.** Thin CLI wrapper (298 LOC in `index.ts`) that delegates all goal execution to `goal-host-vessel` (port 8210) over HTTP. No in-process execution engine; the substrate-hosted vessels (§6) handle all execution, LLM calls, template selection, and ribosome extraction.
 
 **Key Files:**
-- `index.ts`: entry point, HTTP server, CLI
-- `src/types.ts`: core type definitions
-- `src/llm.ts`: LLM client (Anthropic/OpenAI) with tool calling
-- `src/tools.ts`: built-in tools (bash, read, write, edit, git)
-- `src/impulse.ts`: impulse store + resolution
-- `src/activity.ts`: activity executor
-- `src/goal-processor.ts`: goal-seeking activity recommendations (now a thin facade over template-dispatchable resolvers)
-- `src/mcp.ts`: MCP client for backend integration
-- `src/vessel-discovery.ts`: discovery-vessel integration
-- `src/embedded-templates/`: meta-activities loaded at startup (slot-binding, validator-dispatch, create-shape-provider-goal, make-activity, registry-quality six-pack)
-- `src/resolvers/`: template-dispatchable resolvers (impulse analysis, context acquisition, goal verification/enrichment/decomposition, recommendation, iteration, ...)
+- `index.ts`: entry point — `--single`, `--daemon`, `--idle`, REPL mode
+- `src/cli/processor.ts`: `processGoal()` — HTTP dispatch to `GOAL_HOST_VESSEL_ENDPOINT` + REPL slash-command handlers (`/auth`, `/config`, `/status`)
+- `src/repl.ts`: readline REPL loop with slash commands; `handleStatus` probes goal-host-vessel `/health`
+- `src/config.ts`: config loading (user + project config, API key resolution)
+- `src/logger.ts`, `src/version.ts`: logging and version cache
 
-**Capabilities:**
+**Goal dispatch:**
+`processGoal(message)` POSTs `{ goal, variables }` to `GOAL_HOST_VESSEL_ENDPOINT/run-goal` (default `http://127.0.0.1:8210`) with `Authorization: ApiKey <METABOB_API_KEY>`. Returns `{ executionId, status, selectedTemplateId }`. Exit code 0 on `status=success|completed`, 1 otherwise.
 
-*Core execution*
-- Execute activities with deterministic resolvers + LLM, capture full traces with state snapshots, create impulses from executions.
-- Resolve **local** impulse types directly (`memo`, `file`, `directoryTree`, `gitDiff`, `lifecycle`). Everything else routes through discovery: a unified `callVesselResolve()` helper honours advertised vessel contracts (`resolve_endpoint`, `resolve_request_format`, `auth_scheme`, `resolve_timeout_ms`). Shape-ownership lookup is dynamic via discovery-vessel — minibob carries no hardcoded vessel list.
-- On 401/5xx from a vessel, synthesise a degraded `authenticated: false` impulse so resolver failures stay non-fatal.
+**What moved to substrate vessels (Phase 8, 2026-05-24):**
+- `ActivityExecutor`, goal-processor, all resolvers → `goal-host-vessel` (§6)
+- LLM calls → `llm-resolver-vessel` (§6)
+- Boredom / autonomous loop → `boredom-vessel` (§6)
+- Template extraction (ribosome) → `ribosome-vessel` (§6)
+- File/process tools → `local-tools-vessel` (§6)
+- Bootstrap template seeding → `bootstrap-seeder.service` (§6)
 
-*Activity-driven goal processing*
-- Default goal-processing flow is itself an activity (`goal_processing_activity_driven`) that chains template-dispatchable resolvers (verification, enrichment, decomposition, recommendation). Interactive divergence/fallback prompts go through `HumanResolver` on TTY; non-interactive runs skip the UI. The legacy LLM-chain (`goal_processing_standard`) remains loadable by id.
-- Goal enrichment infers `expectedOutputShapes` from the goal text; variant selection filters Thompson recommendations by shape compatibility before sampling, with `execute-shell-command` as a final fallback.
-- Goal-impulse seeding emits a `goal`-shape impulse at activity start so downstream tasks can reference goal context. CLI mode auto-seeds from `--var goal=`.
-- **Enrichment-gated verification** (2026-04-29): `verifyWithEvidence` now consults the enriched goal: required-capability set must intersect with tools used, and a `category: "mutation"` goal with zero `filesTouched` is rejected. Fallbacks preserve old behaviour when enrichment is absent.
-- Stagnation detection runs alongside cycle detection: same-template repeats (≥ 3) or zero goal-shape advance triggers a warning impulse for the workbench.
-
-*Template-dispatchable resolvers*
-- Goal-processor extracted into ~14 registered resolvers (impulse analysis, context acquisition, LLM selectors, goal verification/enrichment/decomposition, recommendation, orchestration detection, keyword extraction, relevance scoring, iteration). Tasks dispatch via `"resolver": "<name>"` in their config; LLM is just one resolver.
-- **Iteration resolver** loops over array shapes (e.g. `activityRecommendations`) with context propagation; auto-unnests single-key wrappers like `{recommendations: [...]}`.
-- **Compliance validator** validates activity/template schemas pre-execution and emits a `validation_result` impulse.
-- **Goal trajectory explorer** maps goal → sub-goals → candidate activities for the workbench's planning view.
-- **Satisfaction verifier** checks produced shapes against declared output constraints post-execution.
-
-*Impulse-binding selection layer*
-- Tasks emit `lifecycle:task:preBinding` (before resolver dispatch; payload contains `presentShapesPre`, `missingShapesPre`, and is enrichable by subscribers) and `lifecycle:task:completed` (after; carries outcomes, resolver id, cost, `skip_validation`, `input_impulse_ids`, `output_impulse_ids`, tool-calls).
-- Selection resolvers (`impulse_preparation`, `impulse_pool_selection`, `producer_selection`) dispatch via discovery and Thompson-sample over relevance scores. `producer_selection` uses `discover-by-shapes candidates_with_scores` mode and emits an `unbindable` flag with metadata when no producer exists.
-- Three meta-activities ship in the embedded-templates pool, persisted into activity-api at startup, and subscribe to lifecycle events without explicit wiring:
-  - **slot-binding**: reacts to `lifecycle:task:preBinding` with non-empty `inputShapes`; chains the three selection resolvers; conditional `escalate_unbindable` task dispatches `create-shape-provider-goal` when binding fails.
-  - **validator-dispatch**: reacts to `lifecycle:task:completed`; extracts validation rules from the task and invokes per-rule resolvers; records `failure_mode` on negative.
-  - **create-shape-provider-goal**: spawns a recursive activity to produce a missing shape, with scope inheritance and cost/risk gating per the shape-provider-goal-creation spec.
-- Interpolation supports dotted-path placeholders (`{{lifecycle.taskId}}`); `interpolate` and full config context (`provider`, `apiKey`, `workingDirectory`, `executionId`) thread through lifecycle event payloads so subscribers run with full context.
-
-*Registry hygiene*
-- `make-activity` is itself a meta-activity: 6 tasks (acquire context, identify candidates via iteration + LLM scorer, dispatch, error iteration, declare complete, extract template) creating new templates from successful patterns.
-- Registry-quality six-pack ships in embedded templates: `core-activity-audit`, `prune-activity` (default `dryRun=true`), `replace-activity`, plus three lifecycle wrappers. The ribosome (template extraction) reorganised as a `lifecycle:execution:succeeded` meta-activity.
-- Speculative-template-pollution paths (improviser, fallback-template shim, hardcoded shape defaults, bypass-on-error) no longer write to the registry.
+**Deprecation path:** once boredom-vessel, goal-host-vessel, and ribosome-vessel cover the full execution surface, minibob's binary is retired. No rename (`repos/minibob` stays as-is until deletion).
 
 ### 3. metabob-activity-api (`repos/metabob-activity-api`)
 TypeScript / Bun / Hono backend. Trace store + Thompson-Sampling learner + activity-related impulse resolver. **Not a universal resolver** — only resolves shapes it owns (traces, templates, metrics, goal paths, composition stats); everything else routes through discovery.
@@ -419,6 +391,16 @@ Human-in-the-loop authoring + live-control surface for activities, executions, a
 ### 6. Adjacent Vessels (brief)
 
 Additional vessels tracked in this super-repo with less CLAUDE.md coverage — each owns its own `CLAUDE.md` / `README.md`:
+
+**Substrate-hosted vessels** (Phase 23, `scripts/substrate/units/`; run as systemd units inside the single-container substrate):
+
+- **goal-host-vessel** (`repos/goal-host-vessel`, port 8210): wraps `GoalHost` from `ias-executor-ts`. Exposes `POST /run-goal` and `POST /resolve` (`goal_execution`, `activity_execution` shapes). Primary dispatch target for all goal execution — minibob and boredom-vessel both POST here. Uses `DiscoveryRegistrationLoop` on startup; `parent_execution_id` and `composition_chain` thread through `ExecuteOptions`.
+- **llm-resolver-vessel** (`repos/llm-resolver-vessel`, port 8220): `llm_completion` resolver backed by Anthropic SDK. Decouples LLM credentials from other vessels. `GoalHost`'s `HttpLLMPort` implementation calls this when `LLM_VESSEL_ENDPOINT` is set; in-process `InProcessLLMPort` remains as test fallback.
+- **local-tools-vessel** (`repos/local-tools-vessel`, port 8230): re-exports `BunFileSystemAdapter` and `BunProcessAdapter` resolvers behind discovery-advertised shapes. Lowest blast-radius vessel; added first.
+- **ribosome-vessel** (`repos/ribosome-vessel`, port 8240): WebSocket client to `activity-api:8080/ws`; subscribes to `task.completed` and `execution:succeeded`; calls `assembleTemplateFromExecution`; writes via `activityTemplate_update` impulse. Replaces the inline ribosome lifecycle path that was in minibob.
+- **boredom-vessel** (`repos/boredom-vessel`): systemd timer (`OnUnitActiveSec=5min`) that POSTs rotating topology-discovery goals to `goal-host-vessel:8210/run-goal`. Idle check queries activity-api for recent external traces. Goal rotation: measurement, probing, health, escalation, coverage. Replaces minibob's `boredom.ts`.
+- **concept-db** (`repos/concept-db`, port 8260): resolves concept-graph shapes (also substrate-hosted; see below).
+- **bootstrap-seeder** (`scripts/substrate/units/bootstrap-seeder.service`): `Type=oneshot` unit that POSTs `SHARED_TEMPLATES` from `@avigopal/ias-executor-ts` to `POST /v2/activities/templates` on startup. UPSERT semantics; idempotent.
 
 - **concept-db** (`repos/concept-db`): resolves concept-graph shapes. As of `04157b1` (2026-04-23) registers with discovery-vessel and advertises five shapes — `concept`, `conceptGraph`, `relatedConcepts`, `conceptUsageStats`, `conceptSequence` — all routed through `POST /v2/impulses/resolve` by `pointer.type`. Legacy `VesselHeartbeat` targeting the deprecated activity-api `/v2/vessels/register` endpoint is no longer invoked from startup (removed in `faa7d8e`). As of `8399767`, an `ExecutionObserver` WebSocket client subscribes to activity-api's `/ws` broadcaster, listens for `task.completed` / `tool.call` events across all vessels (standardized in activity-api `ec493b8d`), and calls `recordUsage` locally when a concept-referencing `impulse_resolutions` entry appears — cross-vessel passive learning without explicit calls. Handshake: `{type:"authenticate", token:apiKey}` first, then optionally `{type:"catchup", lastSeenSequence:n}` on reconnect. Exponential backoff 1s→30s; all handlers swallow and log so the observer never throws into the WS loop or startup. **Deployment status:** Helm plumbing for the discovery client and observer landed in `deployment/6c8746e` (env-var surface + `METABOB_API_KEY` via `secretKeyRef` + `POD_NAME` via `fieldRef` for stable `VESSEL_ID` + `needs:` dependency on `activity-system/discovery-vessel`). **Pending before canary activation:** add a `conceptDb` block to `deployment/scripts/generate-secrets.sh`, sops-edit `canary.secrets.yaml` with `conceptDb.apiKey` (openssl rand -hex 32, prefix `mb_concept_canary_`), and register the key in identity-vessel seed.
 - **conversation-vessel** (`repos/conversation-vessel`): new lightweight vessel (v0.1.0, 2026-04-23) for LLM conversations using Vercel `ai-sdk` (`@ai-sdk/anthropic`, `@ai-sdk/openai`, `ai`, `zod`). Builds up impulse system, AI provider, tools, context management, and resolver server. As of `002144b`, resolver server exposes four endpoints: `POST /resolve/impulse` (resolve impulses), `POST /resolve/tool` (execute tools), `POST /resolve/llm` (LLM resolution with tool calling), `GET /resolve/health` (health check). Adds multi-LLM conversation support via `callLLM` tool for relaying messages between LLMs.
