@@ -17,7 +17,7 @@
   `start()` / `stop()` and an `onUnhealthy(callback)` hook.
 - [x] 0.5 Promote `BunFileSystemAdapter`, `BunProcessAdapter`, `FetchAdapter`
   to top-level exports.
-- [ ] 0.6 Update `docs/architecture/TYPESCRIPT_VESSEL_TEMPLATE.md` to reference
+- [x] 0.6 Update `docs/architecture/TYPESCRIPT_VESSEL_TEMPLATE.md` to reference
   `VesselDaemon` as the canonical starting point. Move file-layout examples
   to the new pattern.
 - [x] 0.7 Ship a `src/hosts/__example__/minimal-vessel.ts` runnable example
