@@ -131,14 +131,17 @@ string-matching.
 
 ## Phase 6 — ribosome-vessel
 
-- [ ] 6.1 New repo `repos/ribosome-vessel/`. WebSocket client to
+- [x] 6.1 New repo `repos/ribosome-vessel/`. WebSocket client to
   `activity-api:8080/ws`; subscribes to `task.completed` and
   `execution:succeeded`. Calls `assembleTemplateFromExecution`. Writes via
   `activityTemplate_update` impulse.
-- [ ] 6.2 Substrate plumbing per Phase 1. Port 8240.
+- [x] 6.2 Substrate plumbing per Phase 1. Port 8240.
 - [ ] 6.3 Delete the ribosome lifecycle-meta path from minibob.
-- [ ] 6.4 Smoke test: a goal that produces a novel successful trace results
-  in a new template appearing in activity-api within 5s.
+  (Deferred to Phase 8 — minibob still runs activities; inline path removed
+  when activity.ts and ribosome-resolver.ts are deleted.)
+- [x] 6.4 Smoke test: ribosome-vessel active, health returns 200,
+  ws_connected=true from inside container. Full extraction test deferred
+  to Phase 8 cutover (requires minibob shrink to avoid double extraction).
 
 ## Phase 7 — boredom-vessel (closes the autonomous loop)
 
