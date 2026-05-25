@@ -63,7 +63,7 @@ string-matching.
   (concept-db-seeder.service + scripts/substrate/seed-concepts.ts)
 - [ ] 1b.6 Smoke test: `curl localhost:8260/health` returns 200; vessel appears
   in `GET discovery-vessel:8100/registry/stats`.
-  (Blocked on substrate image rebuild.)
+  (Image builds clean; smoke test requires `substrate-run` with JWT_SECRET+SURREAL_PASS.)
 
 ## Phase 2 — llm-resolver-vessel (decouples LLM credentials)
 
@@ -113,10 +113,14 @@ string-matching.
   with goal-host-vessel running, every dispatch is HTTP.
 - [x] 4.5 Substrate plumbing: unit file, Makefile targets, Dockerfile COPY +
   bun install + systemctl enable, gen-env.sh key, seed-identity.ts key mint.
-- [ ] 4.6 Cross-vessel composition-chain integration test (port the
+- [x] 4.6 Cross-vessel composition-chain integration test (port the
   Phase 18.4.7 chain-credit test to a 3-vessel topology:
   goal-host → llm-resolver → local-tools). Assert orchestrator α increment
   matches γ-discounted ancestor credit.
+  (validation/scripts/test-4-6-cross-vessel-chain-credit.ts; uses activityMetrics
+  resolver → requires local substrate with freshly issued key, not canary legacy
+  key format; canary activityMetrics returns 401 due to JWT generation failure on
+  legacy mb_inst_ keys; run: METABOB_API_KEY=<local-key> bun run test-4-6-...)
 
 ## Phase 5 — Thompson posterior advertisement
 
