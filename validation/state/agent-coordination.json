@@ -4,21 +4,19 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-25T09:22:00Z",
-      "current_focus": "Thompson posteriors now live: activity_recommendation resolver registered in goal-host-vessel; RETURN {shorthand} SurrealDB 3.x parse error fixed in execution-traces.ts; validator-dispatch alpha=16, slot-binding alpha=4, create-shape-provider-goal beta=5 and accumulating.",
+      "last_updated": "2026-05-25T09:48:00Z",
+      "current_focus": "Discovery registry fully populated: 7 vessels/107 shapes. Fixes: dev-vessel VESSEL_ID collision with concept-db resolved (both now have unique IDs); activity-api now registered in discovery (was using K8s DNS fallback for DISCOVERY_VESSEL_ENDPOINT). Coverage-tick confirmed executing at 09:40 (44s, success). Thompson: validator-dispatch alpha=93, slot-binding alpha=15, create-shape-provider-goal beta=16 (deprioritized). Architectural direction: remove metabob-* vessels in favor of ias-executor-ts standard vessels.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties"
       ],
-      "substrate_state": "running \u2014 all vessels healthy; goal-host-vessel executing templates (exec completed); Thompson alpha/beta updating correctly after fix; boredom-vessel running topology goals",
+      "substrate_state": "running \u2014 7 vessels healthy; discovery registry has 107 shapes; coverage-tick executed at 09:40 (44s success); Thompson posteriors accumulating (validator-dispatch alpha=93); boredom dispatching topology goals every 5min",
       "open_gates": [],
       "recent_fixes": [
-        "goal-host-vessel: registers dev-vessel proxy resolvers at startup (was task_count=0 on all executions)",
-        "posterior-update.ts: normalizeActivityId() on rawActivityId before WHERE lookup (was alpha/beta stuck at initial values)",
-        "migration 138: execution_trace_content.created_at option<datetime> (was non-fatal NONE error on every trace)",
-        "boredom-vessel.service: TimeoutStartSec=300 (was killed at 90s during slow topology goals)",
+        "substrate units: development-vessel and concept-db both used VESSEL_ID=substrate-local from global env, colliding in discovery registry; fixed by adding per-vessel VESSEL_ID/VESSEL_ENDPOINT Environment= overrides and removing global lines from gen-env.sh",
+        "activity-api service unit: added DISCOVERY_VESSEL_ENDPOINT=http://127.0.0.1:8100 (was falling back to K8s DNS that fails silently in container); now registered in discovery as activity-api-local with 53 shapes",
         "goal-host-vessel: activity_recommendation built-in resolver registered (was create-shape-provider-goal 0ms failures)",
-        "execution-traces.ts: RETURN { id: id, total_executions: total_executions } — SurrealDB 3.x object shorthand parse error blocked applyOutcomeToPosteriors from being called on every trace; Thompson posteriors now increment correctly"
+        "execution-traces.ts: RETURN { id: id, total_executions: total_executions } — SurrealDB 3.x object shorthand parse error blocked applyOutcomeToPosteriors; Thompson posteriors now increment correctly"
       ],
       "coordination_notes": [
         "closure-audit 6/6: all properties closed including subagents (port 18210 is now mapped in run-live target)",
