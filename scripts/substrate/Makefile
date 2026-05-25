@@ -16,15 +16,17 @@ DEV_VESSEL_SRC := $(REPO_ROOT)/repos/development-vessel
 LOCAL_TOOLS_SRC := $(REPO_ROOT)/repos/local-tools-vessel
 LLM_VESSEL_SRC := $(REPO_ROOT)/repos/llm-resolver-vessel
 GOAL_HOST_SRC := $(REPO_ROOT)/repos/goal-host-vessel
+BOREDOM_VESSEL_SRC := $(REPO_ROOT)/repos/boredom-vessel
 
 .PHONY: build run logs-all logs-minibob logs-activity-api logs-development-vessel \
         logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
-        logs-goal-host-vessel \
+        logs-goal-host-vessel logs-boredom-vessel \
         status shell stop clean \
         sync-development-vessel restart-development-vessel \
         sync-local-tools-vessel restart-local-tools-vessel \
         sync-llm-resolver-vessel restart-llm-resolver-vessel \
-        sync-goal-host-vessel restart-goal-host-vessel
+        sync-goal-host-vessel restart-goal-host-vessel \
+        sync-boredom-vessel trigger-boredom-vessel
 
 build:
 	docker build -f $(CURDIR)/../../Dockerfile.substrate \
@@ -87,12 +89,15 @@ logs-bootstrap-seeder:
 logs-goal-host-vessel:
 	docker exec substrate journalctl -fu goal-host-vessel.service
 
+logs-boredom-vessel:
+	docker exec substrate journalctl -u boredom-vessel.service --no-pager
+
 logs-surrealdb:
 	docker exec substrate journalctl -fu surrealdb.service
 
 status:
 	docker exec substrate systemctl status --no-pager \
-	    surrealdb valkey discovery-vessel identity-vessel activity-api minibob development-vessel local-tools-vessel llm-resolver-vessel goal-host-vessel bootstrap-seeder
+	    surrealdb valkey discovery-vessel identity-vessel activity-api minibob development-vessel local-tools-vessel llm-resolver-vessel goal-host-vessel bootstrap-seeder boredom-vessel.timer
 
 shell:
 	docker exec -it substrate bash
@@ -165,3 +170,13 @@ restart-goal-host-vessel: sync-goal-host-vessel
 	docker exec substrate-live systemctl restart goal-host-vessel.service
 	@sleep 2
 	@docker exec substrate-live systemctl is-active goal-host-vessel.service | grep -q active && echo "[restart] goal-host-vessel active" || echo "[restart] ERROR: goal-host-vessel not active"
+
+# Sync boredom-vessel source into the running container then trigger a manual run.
+sync-boredom-vessel:
+	docker cp $(BOREDOM_VESSEL_SRC)/src/index.ts substrate-live:/vessels/boredom-vessel/src/index.ts
+	@echo "[sync] boredom-vessel source synced to substrate-live"
+
+trigger-boredom-vessel: sync-boredom-vessel
+	docker exec substrate-live systemctl start boredom-vessel.service
+	@sleep 3
+	@docker exec substrate-live journalctl -u boredom-vessel.service --no-pager -n 10

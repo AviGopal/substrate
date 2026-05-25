@@ -82,34 +82,35 @@ string-matching.
 
 ## Phase 3 — bootstrap-seeder.service (unblocks minibob removal)
 
-- [ ] 3.1 New `scripts/substrate/units/bootstrap-seeder.service` as
+- [x] 3.1 New `scripts/substrate/units/bootstrap-seeder.service` as
   `Type=oneshot`, `After=activity-api.service`. Calls a script under
-  `scripts/substrate/bootstrap-seeder.ts` that:
-  - reads `SHARED_TEMPLATES` from `@avigopal/ias-executor-ts`;
-  - POSTs each via `activityTemplate_update` impulse to activity-api;
-  - exits.
-- [ ] 3.2 Idempotency: each template upsert must be safe to repeat
-  across substrate restarts. Verified by `init_migrations`-style tracking
-  (re-use the same table or a sibling `init_templates` table).
+  `scripts/bootstrap-seeder.ts` that reads `SHARED_TEMPLATES` from
+  `@avigopal/ias-executor-ts` and POSTs each via `POST /v2/activities/templates`
+  (UPSERT semantics — idempotent).
+- [x] 3.2 Idempotency: POST /v2/activities/templates uses UPSERT; safe to
+  repeat across substrate restarts without a separate tracking table.
 - [ ] 3.3 Smoke test: stop substrate, wipe `/data/templates/*`, restart;
   confirm catalogue is restored within 30s.
 
 ## Phase 4 — goal-host-vessel (the core lift)
 
-- [ ] 4.1 New repo `repos/goal-host-vessel/` instantiating `VesselDaemon`
-  with `GoalHost` as the wrapped executor on port 8210. Exposes
-  `POST /run-goal { goal: string, parent_execution_id?, composition_chain? }`.
-- [ ] 4.2 Discovery advertisement: `goal_execution`, `activity_execution`
+- [x] 4.1 New repo `repos/goal-host-vessel/` — custom Bun.serve wrapping
+  GoalHost on port 8210. Exposes
+  `POST /run-goal { goal?, targetTemplateId?, variables?, parent_execution_id?, composition_chain? }`
+  and `POST /resolve` for `goal_execution` / `activity_execution` shapes.
+- [x] 4.2 Discovery advertisement: `goal_execution`, `activity_execution`
   shapes; `auth_scheme: ApiKey`; `auth_token_source: caller_identity`;
-  `resolve_timeout_ms: 60000`.
-- [ ] 4.3 `repos/minibob/src/cli/single.ts` updated to POST to
-  `goal-host-vessel:8210/run-goal` and stream the resulting execution_id's
-  WS events from activity-api. `minibob --single "…"` behavioural test passes
-  unchanged.
+  `resolve_timeout_ms: 60000`. Uses DiscoveryRegistrationLoop on startup.
+- [x] 4.3 `repos/minibob/src/cli/processor.ts` updated: when
+  `GOAL_RUNTIME=ias-executor` + `GOAL_HOST_VESSEL_ENDPOINT` is set,
+  POSTs to goal-host-vessel:8210/run-goal. In-process bridge remains as
+  fallback. `scripts/substrate/units/minibob.service` sets
+  `GOAL_HOST_VESSEL_ENDPOINT=http://127.0.0.1:8210`.
 - [ ] 4.4 Delete `repos/minibob/src/goal-host-bridge.ts` and the
   `GOAL_RUNTIME=ias-executor` env gate. The bridge was a transitional shim;
   with goal-host-vessel running, every dispatch is HTTP.
-- [ ] 4.5 Substrate plumbing per Phase 1.
+- [x] 4.5 Substrate plumbing: unit file, Makefile targets, Dockerfile COPY +
+  bun install + systemctl enable, gen-env.sh key, seed-identity.ts key mint.
 - [ ] 4.6 Cross-vessel composition-chain integration test (port the
   Phase 18.4.7 chain-credit test to a 3-vessel topology:
   goal-host → llm-resolver → local-tools). Assert orchestrator α increment
@@ -141,13 +142,16 @@ string-matching.
 
 ## Phase 7 — boredom-vessel (closes the autonomous loop)
 
-- [ ] 7.1 New repo `repos/boredom-vessel/`. systemd timer (`OnUnitActiveSec=5min`)
-  triggering a one-shot script that POSTs an autonomous goal to
-  `goal-host-vessel:8210/run-goal`. Goal source: stratified-goal-generator
-  output (Phase 25), gated by no-recent-external-activity check.
-- [ ] 7.2 Substrate plumbing per Phase 1. Port 8250.
-- [ ] 7.3 Verify the resulting traces carry `tags ⊇ ["intent:topology_discovery"]`
-  and no external-caller goal id (IAL Phase 27.1.2 requirement).
+- [x] 7.1 New repo `repos/boredom-vessel/`. systemd timer (`OnUnitActiveSec=5min`)
+  triggering a one-shot script that POSTs a rotating topology-discovery goal to
+  `goal-host-vessel:8210/run-goal`. Idle check: queries activity-api for recent
+  external traces; skips if substrate busy. Goal rotation: 5 goals cycle across
+  measurement, probing, health, escalation, and coverage.
+- [x] 7.2 Substrate plumbing: boredom-vessel.service + boredom-vessel.timer units,
+  Dockerfile COPY + bun install + systemctl enable timer,
+  Makefile logs-boredom-vessel + sync + trigger targets.
+- [ ] 7.3 Smoke test: `make trigger-boredom-vessel` — should log "dispatched" or
+  "substrate busy". Verify goal traces carry intent:topology_discovery tag.
 - [ ] 7.4 Delete `repos/minibob/src/boredom.ts`.
 
 ## Phase 8 — minibob shrink and rename

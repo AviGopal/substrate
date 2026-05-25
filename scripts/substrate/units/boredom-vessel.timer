@@ -1,0 +1,10 @@
+[Unit]
+Description=boredom-vessel autonomous trigger (every 5 minutes)
+
+[Timer]
+OnActiveSec=2min
+OnUnitActiveSec=5min
+Unit=boredom-vessel.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,23 @@
+[Unit]
+Description=boredom-vessel — one-shot autonomous goal dispatch
+After=activity-api.service goal-host-vessel.service
+Requires=goal-host-vessel.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+Environment=ACTIVITY_API_ENDPOINT=http://127.0.0.1:8080
+Environment=GOAL_HOST_VESSEL_ENDPOINT=http://127.0.0.1:8210
+Environment=BOREDOM_IDLE_WINDOW_SECONDS=300
+WorkingDirectory=/vessels/boredom-vessel
+ExecStart=/root/.bun/bin/bun /vessels/boredom-vessel/src/index.ts
+StandardOutput=journal
+StandardError=journal
+
+# Smoke test:
+#   systemctl start boredom-vessel.service
+#   journalctl -u boredom-vessel.service --no-pager
+#   # Should log: "dispatched — executionId=..." or "substrate busy — skipping"
+
+[Install]
+WantedBy=multi-user.target
