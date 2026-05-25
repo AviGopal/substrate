@@ -12,6 +12,8 @@ Environment=MINIBOB_PROVIDER=anthropic
 Environment=GOAL_RUNTIME=ias-executor
 Environment=MINIBOB_BOREDOM_ENABLED=true
 Environment=DISCOVERY_ENABLED=true
+Environment=MINIBOB_DISCOVERY_ENABLED=true
+Environment=DISCOVERY_VESSEL_ENDPOINT=http://127.0.0.1:8100
 WorkingDirectory=/vessels/minibob
 ExecStart=/root/.bun/bin/bun /vessels/minibob/index.ts --daemon
 Restart=on-failure

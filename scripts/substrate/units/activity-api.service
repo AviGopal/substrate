@@ -8,6 +8,7 @@ Type=simple
 EnvironmentFile=/etc/substrate/env
 Environment=PORT=8080
 Environment=HOST=127.0.0.1
+Environment=TASK_GENERATION_ENABLED=false
 WorkingDirectory=/vessels/activity-api
 ExecStartPre=/root/.bun/bin/bun /vessels/activity-api/scripts/init-database.ts
 ExecStart=/root/.bun/bin/bun /vessels/activity-api/src/index.ts
