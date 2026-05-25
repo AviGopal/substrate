@@ -49,7 +49,9 @@ async function issueKey(
     throw new Error(`key issue failed for '${name}' ${issueRes.status}: ${body}`);
   }
 
-  const { key } = await issueRes.json() as { key: string };
+  const body = await issueRes.json() as { key?: string; data?: { key: string } };
+  const key = body.key ?? body.data?.key;
+  if (!key) throw new Error(`key issue for '${name}': unexpected response shape: ${JSON.stringify(body)}`);
   return key;
 }
 

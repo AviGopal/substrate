@@ -23,7 +23,7 @@ if [[ -z "${METABOB_API_KEY:-}" ]]; then
     # shellcheck disable=SC1090
     source "$SECRETS_FILE"
   fi
-  METABOB_API_KEY="${METABOB_API_KEY:-$(openssl rand -hex 24)}"
+  METABOB_API_KEY="${METABOB_API_KEY:-$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 32)}"
 fi
 
 # Optional per-vessel keys — fall back to METABOB_API_KEY if unset (D4)
@@ -43,6 +43,9 @@ LOCAL_TOOLS_VESSEL_API_KEY=${LOCAL_TOOLS_VESSEL_API_KEY}
 GOAL_HOST_VESSEL_API_KEY=${GOAL_HOST_VESSEL_API_KEY}
 RIBOSOME_VESSEL_API_KEY=${RIBOSOME_VESSEL_API_KEY}
 CONCEPT_DB_API_KEY=${CONCEPT_DB_API_KEY}
+
+# Substrate internal: allow all localhost calls to bypass identity-vessel rate limiting
+RATE_LIMIT_ALLOWLIST_IPS=127.0.0.1,unknown
 
 # Infrastructure
 SURREALDB_URL=http://127.0.0.1:8000

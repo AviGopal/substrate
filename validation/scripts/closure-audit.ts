@@ -36,7 +36,9 @@ const OUTPUT_PATH = join(STATE_DIR, "closure-status.json");
 const DEV_VESSEL_URL = process.env["DEV_VESSEL_ENDPOINT"] ?? "http://localhost:18090";
 const DISCOVERY_URL = process.env["DISCOVERY_ENDPOINT"] ?? "http://localhost:18100";
 const ACTIVITY_API_URL = process.env["METABOB_ENDPOINT"] ?? "http://localhost:18080";
-const GOAL_HOST_URL = process.env["GOAL_HOST_ENDPOINT"] ?? "http://localhost:8210";
+// goal-host-vessel: internal port 8210. In local substrate, expose via -p 18210:8210.
+// Override with GOAL_HOST_ENDPOINT env var if using a different mapping.
+const GOAL_HOST_URL = process.env["GOAL_HOST_ENDPOINT"] ?? "http://localhost:18210";
 
 const TIMEOUT_MS = 8_000;
 
@@ -99,7 +101,8 @@ async function post(url: string, data: unknown): Promise<{ ok: boolean; status: 
 }
 
 async function resolveShape(pointer: Record<string, unknown>): Promise<{ ok: boolean; body: unknown; error?: string }> {
-  const r = await post(`${DEV_VESSEL_URL}/v2/impulses/resolve`, pointer);
+  // development-vessel expects { impulse: { pointer: { type, ... } } }
+  const r = await post(`${DEV_VESSEL_URL}/v2/impulses/resolve`, { impulse: { pointer } });
   if (!r.ok) return { ok: false, body: r.body, error: `HTTP ${r.status}` };
   const body = r.body as Record<string, unknown>;
   if (body?.success === false) return { ok: false, body, error: String(body.error) };

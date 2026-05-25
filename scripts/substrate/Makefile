@@ -61,6 +61,7 @@ run:
 	@mkdir -p $(WORKSPACE)
 	docker run --rm -it \
 	    --name substrate \
+	    --privileged \
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 	    -p 8080:8080 \
 	    -p 8090:8090 \
@@ -77,6 +78,7 @@ run-detach:
 	@mkdir -p $(WORKSPACE)
 	docker run -d \
 	    --name substrate \
+	    --privileged \
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 	    -p 8080:8080 \
 	    -p 8090:8090 \
@@ -99,21 +101,23 @@ run-live:
 	@mkdir -p $(WORKSPACE)
 	docker run -d \
 	    --name $(LIVE_NAME) \
+	    --privileged \
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 	    -p 18080:8080 \
 	    -p 18090:8090 \
 	    -p 18100:8100 \
+	    -p 18210:8210 \
 	    -v $(WORKSPACE):/workspace \
 	    --tmpfs /run \
 	    --tmpfs /run/lock \
 	    $(IMAGE):$(TAG)
-	@echo "[run-live] substrate-live started — activity-api on :18080, development-vessel on :18090, discovery-vessel on :18100"
+	@echo "[run-live] substrate-live started — activity-api on :18080, development-vessel on :18090, discovery-vessel on :18100, goal-host-vessel on :18210"
 	@echo "[run-live] Internal secrets auto-generated and persisted to workspace/.substrate-secrets"
 	@echo "[run-live] Wait ~15s for services to start, then: make -C scripts/substrate seed-live"
 
 # Seed identity and API keys into a freshly started substrate-live container.
 seed-live:
-	docker exec $(LIVE_NAME) bun /vessels/seed-identity.ts
+	docker exec $(LIVE_NAME) bash -c 'set -a; source /etc/substrate/env; set +a; bun /vessels/seed-identity.ts'
 	@echo "[seed-live] Identity seeded. Run: scripts/substrate/configure-local.sh"
 
 health-live:
