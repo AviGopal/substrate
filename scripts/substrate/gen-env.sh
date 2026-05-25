@@ -62,10 +62,6 @@ ACTIVITY_API_ENDPOINT=http://127.0.0.1:8080
 IDENTITY_VESSEL_URL=http://127.0.0.1:8101
 IDENTITY_ENDPOINT=http://127.0.0.1:8101
 
-# Vessel identities
-VESSEL_ID=substrate-local
-VESSEL_ENDPOINT=http://127.0.0.1:8080
-
 # Dense search (F-V58 fix — must point to directory containing model.onnx + vocab.txt)
 EMBEDDING_MODEL_DIR=/vessels/activity-api/src/assets/models/all-MiniLM-L6-v2
 EOF

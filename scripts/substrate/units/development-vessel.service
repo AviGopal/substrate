@@ -9,6 +9,8 @@ EnvironmentFile=/etc/substrate/env
 Environment=PORT=8090
 Environment=HOST=0.0.0.0
 Environment=WORKSPACE_ROOT=/workspace
+Environment=VESSEL_ID=development-vessel-local
+Environment=VESSEL_ENDPOINT=http://127.0.0.1:8090
 WorkingDirectory=/vessels/development-vessel
 ExecStart=/root/.bun/bin/bun /vessels/development-vessel/src/index.ts
 ExecStartPost=/root/.bun/bin/bun /vessels/development-vessel/src/cli.ts seed-templates
