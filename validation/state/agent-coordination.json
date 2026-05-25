@@ -84,8 +84,8 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-25T02:47:00Z",
-      "current_focus": "iteration 14: substrate active again (~02:40-02:46Z) but mostly failing. New activity classes appearing in trace stream: harness-check-scenario (FAIL), test-template (FAIL), variant-1779534644901 (SUCCESS), harness-run-matrix (FAIL), probe-untraversed-edge (FAIL). Thompson posteriors STILL flat across all named templates. substrate-explicit-vessels 14→22/53 tasks (+8 since iter-13 audit reading).",
+      "last_updated": "2026-05-25T03:25:27Z",
+      "current_focus": "iteration 15: substrate active (~5-min cadence, 02:51-03:22Z window); SIX explicit vessels now running (goal-host-vessel, llm-resolver-vessel, local-tools-vessel joined since iter-14). Dev velocity +7 commits / +5 substrate-explicit-vessels tasks (22→27/53) in ~85 min. Thompson posteriors STILL flat on all four observable named templates (coverage-tick 98/85/13, substrate-health-tick 94/82/12, probe-reachable-unlearned 10/4/6, harness-run-matrix 6/3/3 — all α=β=1, selections=0). Named templates fail in ≤2ms; variants succeed. composition_chain + failure_mode not exposed on list endpoint — verification gap. gap-007 / F-043 still the linchpin. See validation/findings/iter-15-narration.md.",
       "narrator_status": "running (bdl29gi6j)",
       "gaps_recorded": [
         "gap-001",
