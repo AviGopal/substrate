@@ -9,6 +9,7 @@ EnvironmentFile=/etc/substrate/env
 Environment=MINIBOB_PORT=8200
 Environment=HOST=127.0.0.1
 Environment=MINIBOB_PROVIDER=anthropic
+Environment=GOAL_RUNTIME=ias-executor
 WorkingDirectory=/vessels/minibob
 ExecStart=/root/.bun/bin/bun /vessels/minibob/index.ts --daemon
 Restart=on-failure
