@@ -107,6 +107,7 @@ await new VesselDaemon({
   apiKey: API_KEY || undefined,
   version: "0.1.0",
   enforceCompositionChain: false,
+  systemVessel: true,
 }).start();
 
 console.log(`[local-tools-vessel] listening on http://127.0.0.1:${PORT}`);
