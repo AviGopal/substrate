@@ -124,8 +124,8 @@ async function main(): Promise<void> {
       headers: authHeaders(),
       body: JSON.stringify({
         goal,
+        tags: ["intent:topology_discovery", BOREDOM_TAG],
         variables: {
-          intent_tag: "topology_discovery",
           source: "boredom-vessel",
         },
       }),
