@@ -84,8 +84,8 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-25T03:25:27Z",
-      "current_focus": "iteration 15: substrate active (~5-min cadence, 02:51-03:22Z window); SIX explicit vessels now running (goal-host-vessel, llm-resolver-vessel, local-tools-vessel joined since iter-14). Dev velocity +7 commits / +5 substrate-explicit-vessels tasks (22→27/53) in ~85 min. Thompson posteriors STILL flat on all four observable named templates (coverage-tick 98/85/13, substrate-health-tick 94/82/12, probe-reachable-unlearned 10/4/6, harness-run-matrix 6/3/3 — all α=β=1, selections=0). Named templates fail in ≤2ms; variants succeed. composition_chain + failure_mode not exposed on list endpoint — verification gap. gap-007 / F-043 still the linchpin. See validation/findings/iter-15-narration.md.",
+      "last_updated": "2026-05-25T03:52:09Z",
+      "current_focus": "iteration 16: BREAKTHROUGH on F-038 — composition_chain + parent_execution_id POPULATING on new validator-dispatch / slot-binding / create-shape-provider-goal chain (verified by GET /v2/activities/execution-traces/:id, chain depth 1-2 observed). Eight vessels running: +boredom-vessel, +ribosome-vessel since iter-15. Plus concept-db Phase 1b shipped (commit 7bf4be1d). substrate-explicit-vessels 27→39/53 (+12) in ~27 min — dev velocity peak. Trace durations grown to 4-285s for real-work chains. BUT Thompson STILL flat on four topology templates (coverage 100/85/15, health 95/82/13, probe 11/4/7, harness 7/3/4, all α=β=1 sel=0) — +5 failures with zero posterior movement. F-037/F-043 unchanged on topology-template path; F-038 partial-closes on new dispatch path. failure_mode null even on chain-populated create-shape-provider-goal failure. See validation/findings/iter-16-narration.md.",
       "narrator_status": "running (bdl29gi6j)",
       "gaps_recorded": [
         "gap-001",
