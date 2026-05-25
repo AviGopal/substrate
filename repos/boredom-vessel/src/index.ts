@@ -23,14 +23,17 @@ const API_KEY = process.env.METABOB_API_KEY ?? "";
 const IDLE_WINDOW_SECONDS = parseInt(process.env.BOREDOM_IDLE_WINDOW_SECONDS ?? "300", 10);
 const GOAL_INDEX_FILE = process.env.BOREDOM_GOAL_INDEX_FILE ?? "/tmp/boredom-goal-index";
 
-// Rotating set of topology-discovery goals. Thompson Sampling will learn which
+// Rotating set of autonomous goals. Thompson Sampling will learn which
 // templates satisfy these goals and rank them over time.
+// Goals are split into topology-discovery (learning) and self-healing (operational).
 const AUTONOMOUS_GOALS: readonly string[] = [
+  // topology / coverage
   "measure the substrate topology and report coverage progress",
   "probe unlearned shapes — find templates that have no execution traces and recommend the best one to run",
-  "check substrate health and report on posterior confidence and graph stability",
-  "identify shapes in the execution graph that have no known producer and escalate the most critical one",
   "run the full topology discovery chain and emit a coverage report",
+  "identify shapes in the execution graph that have no known producer and escalate the most critical one",
+  // health / self-healing
+  "check substrate health including vessel liveness — report which vessels are active or down and restart any that are inactive",
 ];
 
 const BOREDOM_TAG = "intent:boredom_source";
