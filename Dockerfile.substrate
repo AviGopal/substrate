@@ -140,6 +140,12 @@ RUN cd boredom-vessel && bun install
 COPY repos/boredom-vessel/src ./boredom-vessel/src
 COPY repos/boredom-vessel/tsconfig.json ./boredom-vessel/
 
+# ribosome-vessel
+COPY repos/ribosome-vessel/package.json repos/ribosome-vessel/bun.lock* ./ribosome-vessel/
+RUN cd ribosome-vessel && bun install
+COPY repos/ribosome-vessel/src ./ribosome-vessel/src
+COPY repos/ribosome-vessel/tsconfig.json ./ribosome-vessel/
+
 # --- Substrate runtime config ---
 RUN mkdir -p /etc/substrate /workspace /var/lib/surrealdb /scripts
 
@@ -162,7 +168,8 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env && \
         llm-resolver-vessel.service \
         goal-host-vessel.service \
         bootstrap-seeder.service \
-        boredom-vessel.timer
+        boredom-vessel.timer \
+        ribosome-vessel.service
 
 VOLUME ["/workspace"]
 

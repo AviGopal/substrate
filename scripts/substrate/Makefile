@@ -17,16 +17,18 @@ LOCAL_TOOLS_SRC := $(REPO_ROOT)/repos/local-tools-vessel
 LLM_VESSEL_SRC := $(REPO_ROOT)/repos/llm-resolver-vessel
 GOAL_HOST_SRC := $(REPO_ROOT)/repos/goal-host-vessel
 BOREDOM_VESSEL_SRC := $(REPO_ROOT)/repos/boredom-vessel
+RIBOSOME_VESSEL_SRC := $(REPO_ROOT)/repos/ribosome-vessel
 
 .PHONY: build run logs-all logs-minibob logs-activity-api logs-development-vessel \
         logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
-        logs-goal-host-vessel logs-boredom-vessel \
+        logs-goal-host-vessel logs-boredom-vessel logs-ribosome-vessel \
         status shell stop clean \
         sync-development-vessel restart-development-vessel \
         sync-local-tools-vessel restart-local-tools-vessel \
         sync-llm-resolver-vessel restart-llm-resolver-vessel \
         sync-goal-host-vessel restart-goal-host-vessel \
-        sync-boredom-vessel trigger-boredom-vessel
+        sync-boredom-vessel trigger-boredom-vessel \
+        sync-ribosome-vessel restart-ribosome-vessel
 
 build:
 	docker build -f $(CURDIR)/../../Dockerfile.substrate \
@@ -92,12 +94,15 @@ logs-goal-host-vessel:
 logs-boredom-vessel:
 	docker exec substrate journalctl -u boredom-vessel.service --no-pager
 
+logs-ribosome-vessel:
+	docker exec substrate journalctl -fu ribosome-vessel.service
+
 logs-surrealdb:
 	docker exec substrate journalctl -fu surrealdb.service
 
 status:
 	docker exec substrate systemctl status --no-pager \
-	    surrealdb valkey discovery-vessel identity-vessel activity-api minibob development-vessel local-tools-vessel llm-resolver-vessel goal-host-vessel bootstrap-seeder boredom-vessel.timer
+	    surrealdb valkey discovery-vessel identity-vessel activity-api minibob development-vessel local-tools-vessel llm-resolver-vessel goal-host-vessel bootstrap-seeder boredom-vessel.timer ribosome-vessel
 
 shell:
 	docker exec -it substrate bash
@@ -109,6 +114,7 @@ health:
 	@echo "=== local-tools-vessel ===" && curl -s http://localhost:8230/health | jq .
 	@echo "=== llm-resolver-vessel ===" && curl -s http://localhost:8220/health | jq .
 	@echo "=== goal-host-vessel ===" && curl -s http://localhost:8210/health | jq .
+	@echo "=== ribosome-vessel ===" && curl -s http://localhost:8240/health | jq .
 
 stop:
 	docker stop substrate
@@ -180,3 +186,13 @@ trigger-boredom-vessel: sync-boredom-vessel
 	docker exec substrate-live systemctl start boredom-vessel.service
 	@sleep 3
 	@docker exec substrate-live journalctl -u boredom-vessel.service --no-pager -n 10
+
+# Sync ribosome-vessel source into the running container then restart it.
+sync-ribosome-vessel:
+	docker cp $(RIBOSOME_VESSEL_SRC)/src/index.ts substrate-live:/vessels/ribosome-vessel/src/index.ts
+	@echo "[sync] ribosome-vessel source synced to substrate-live"
+
+restart-ribosome-vessel: sync-ribosome-vessel
+	docker exec substrate-live systemctl restart ribosome-vessel.service
+	@sleep 2
+	@docker exec substrate-live systemctl is-active ribosome-vessel.service | grep -q active && echo "[restart] ribosome-vessel active" || echo "[restart] ERROR: ribosome-vessel not active"

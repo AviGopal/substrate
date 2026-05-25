@@ -1,0 +1,20 @@
+[Unit]
+Description=ribosome-vessel — extracts templates from successful execution traces via activity-api WebSocket
+After=activity-api.service discovery-vessel.service identity-vessel.service
+Requires=activity-api.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8240
+Environment=HOST=127.0.0.1
+EnvironmentFile=-/etc/substrate/ribosome-vessel.env
+WorkingDirectory=/vessels/ribosome-vessel
+ExecStart=/root/.bun/bin/bun /vessels/ribosome-vessel/src/index.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
