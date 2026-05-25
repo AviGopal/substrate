@@ -1,15 +1,55 @@
 # TypeScript Vessel Template
 
-**Last updated:** 2026-04-24 (distilled from the `repos/concept-db` Wave 1-3 upgrade, commits `3d160fc` → `8399767` on concept-db + `6c8746e` on deployment + `6bb1993a` on super-repo)
+**Last updated:** 2026-05-24 (Phase 0.6 — added VesselDaemon as the canonical starting point; see also `openspec/changes/2026-05-23-substrate-explicit-vessels/`)
+
+**Previous update:** 2026-04-24 (distilled from the `repos/concept-db` Wave 1-3 upgrade)
 
 A practical template for building a well-formed TypeScript vessel in this monorepo. Read [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md) first for the conceptual model; this doc is about the concrete mechanics.
 
+## Quick-start: VesselDaemon (preferred)
+
+**For new substrate vessels, use `VesselDaemon` from `@avigopal/ias-executor-ts`** rather than wiring the pieces individually. VesselDaemon composes `ActivityExecutor` + `LifecycleSubscriberVessel` + `DiscoveryRegistrationLoop` + `ResolverServer` into a single launch point and handles startup, health, and graceful shutdown.
+
+Minimal scaffold (see `repos/ias-executor-ts/src/hosts/__example__/minimal-vessel.ts` for a runnable ≤100 LOC example):
+
+```typescript
+import { VesselDaemon } from '@avigopal/ias-executor-ts';
+
+const daemon = new VesselDaemon({
+  vesselId: process.env.VESSEL_ID ?? 'my-vessel',
+  port: parseInt(process.env.PORT ?? '8250', 10),
+  discoveryEndpoint: process.env.DISCOVERY_VESSEL_ENDPOINT ?? 'http://127.0.0.1:8100',
+  apiKey: process.env.METABOB_API_KEY ?? '',
+  activityApiEndpoint: process.env.ACTIVITY_API_ENDPOINT ?? 'http://127.0.0.1:8080',
+  shapes: ['myShape'],          // impulse types this vessel resolves
+  systemVessel: true,           // required for substrate visibility without orgId
+  resolvers: {
+    myShape: async (pointer) => ({ loaded: true, content: '...' }),
+  },
+});
+
+await daemon.start();
+```
+
+`VesselDaemon` handles all three invariants (non-blocking registration, shape-dispatch agreement, WS-observer safety) out of the box. It also:
+- Exposes `POST /resolve`, `POST /run-goal`, `GET /health`
+- Accepts `parent_execution_id` and `composition_chain` in request bodies
+- Threads them into `ExecuteOptions` for cross-vessel composition tracking
+
+**When to use the manual approach instead:** if your vessel does not execute activities (e.g. it's a pure resolver like `local-tools-vessel`) or has no shapes to advertise (e.g. `ribosome-vessel` which is a pure WebSocket consumer), assemble `DiscoveryRegistrationLoop` directly and skip `ActivityExecutor`.
+
 **Live references:**
+- `repos/local-tools-vessel/` — minimal resolver vessel using `VesselDaemon` (≤100 LOC)
+- `repos/goal-host-vessel/` — HTTP wrapper for `GoalHost` using `DiscoveryRegistrationLoop`
+- `repos/ribosome-vessel/` — pure WebSocket consumer (no shapes); shows when NOT to use VesselDaemon
 - `repos/metabob-activity-api/` — the north-star implementation (production, full feature set)
-- `repos/concept-db/` — a minimal modern vessel (post-April-2026; mirrors the pattern at lower complexity)
+- `repos/concept-db/` — a minimal modern vessel (post-April-2026; mirrors the manual pattern at lower complexity)
 - `repos/discovery-vessel/` — the registry itself; also a useful minimal-vessel reference
+- `repos/ias-executor-ts/src/hosts/__example__/minimal-vessel.ts` — runnable ≤100 LOC VesselDaemon example
 
 **Superseded docs** (still in-tree but referencing the deprecated `POST /v2/vessels/register` on activity-api, which is in proxy mode until July 2026): `VESSEL_QUICK_START.md`, `VESSEL_WIRING_PRACTICAL.md`, `VESSEL_CREATION_GUIDE.md`. Prefer this doc for new work.
+
+---
 
 ---
 
