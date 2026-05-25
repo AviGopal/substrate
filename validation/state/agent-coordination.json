@@ -4,18 +4,19 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-25T12:00:00Z",
-      "current_focus": "F-069 FIXED: UPSERT...CONTENT was resetting Thompson posteriors (alpha/beta) to 1.0 on every template registration (bootstrap-seeder runs on every activity-api restart). Changed to UPSERT...SET with ?? nullish coalescing in activities.ts (2 sites). Posteriors now survive restarts: coverage-tick a=2 b=2 n=4 verified post-restart. Architectural direction: remove metabob-* scoped vessels (metabob-activity-api, metabob-analysis-api, etc.) in favor of ias-executor-ts standard vessels. Migration spec created at openspec/changes/2026-05-25-metabob-vessel-migration/.",
+      "last_updated": "2026-05-25T15:45:00Z",
+      "current_focus": "F-036 FIXED: create-shape-provider-goal was failing 4-5ms. Two-part fix: (1) compose_goal task in create-shape-provider-goal.json was missing 'resolver':'llm-prompt' field — ias-executor-ts engine threw 'Resolver undefined is not registered' immediately; (2) impulse_cooccurrence resolver was not registered in goal-host-vessel's registerBuiltinResolvers() — template always passes config.traces:[] so stub returns empty matrix. Both fixes committed (ebb683f in ias-executor-ts, ad1221ee in goal-host-vessel) and container updated. Verified: create-shape-provider-goal now showing status=success at 5066ms and 7090ms. Thompson posteriors: a=208 b=84 n=267 (healthy accumulation). New observation: forge-vessel-for-shape showing beta=9 (9 failures, 1 success) — new failure class to investigate.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
         "openspec/changes/2026-05-25-metabob-vessel-migration"
       ],
-      "substrate_state": "running -- 7 vessels/107 shapes; validator-dispatch a=285 (n=636 all success); slot-binding a=42 (n=88); create-shape-provider-goal b=43 (n=89 all fail, naturally deprioritized); coverage-tick a=2 b=2 n=4 (posteriors accumulating correctly after F-069 fix); boredom loop active; S.4a time-gated (need 3 consecutive coverage_progress=True runs, inter-success gap ~109min)",
+      "substrate_state": "running -- 7 vessels/107 shapes; validator-dispatch a=1878 b=1 n=1835; slot-binding a=275 b=1 n=251; create-shape-provider-goal a=208 b=84 n=267 (NOW SUCCEEDING post-F-036 fix); forge-vessel-for-shape a=1 b=9 n=6 (failing, 105s timeouts); ribosome-extract a=8 b=1 n=7; boredom loop active; S.4a time-gated (need 3 consecutive coverage_progress=True runs)",
       "open_gates": [
         "S.4a: coverage_progress=True for 3 consecutive runs -- time-gated, no code change needed"
       ],
       "recent_fixes": [
+        "F-036: create-shape-provider-goal 4-5ms failures. Two-part fix: (a) added 'resolver':'llm-prompt' to compose_goal task in create-shape-provider-goal.json (ebb683f in ias-executor-ts) — engine was throwing 'Resolver undefined not registered'; (b) registered impulse_cooccurrence stub resolver in goal-host-vessel registerBuiltinResolvers() (ad1221ee) — was throwing at task 4. Template always sends config.traces:[] so stub returns empty matrix. Container updated via docker cp + vessel restart. Verified: success traces at 5066ms/7090ms, a=208 b=84 n=267.",
         "F-069: activities.ts UPSERT...CONTENT reset all Thompson posteriors (alpha/beta/counters) to initial values on every template registration. Fixed by changing to UPSERT...SET with field ?? default nullish coalescing at 2 sites (~line 1244 template registration path, ~line 5290 improvised variant creation). Committed c1364e4 to repos/metabob-activity-api, submodule pointer cb4dd022 in super-repo.",
         "substrate units: development-vessel and concept-db both used VESSEL_ID=substrate-local from global env, colliding in discovery registry; fixed by adding per-vessel VESSEL_ID/VESSEL_ENDPOINT Environment= overrides and removing global lines from gen-env.sh",
         "activity-api service unit: added DISCOVERY_VESSEL_ENDPOINT=http://127.0.0.1:8100 (was falling back to K8s DNS that fails silently in container); now registered in discovery as activity-api-local with 53 shapes",
