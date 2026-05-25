@@ -37,6 +37,7 @@ const LLM_VESSEL_ENDPOINT = process.env.LLM_VESSEL_ENDPOINT;
 
 const SHAPES = ["goal_execution", "activity_execution"] as const;
 const VERSION = "0.1.0";
+const DEV_VESSEL_ENDPOINT = process.env.DEVELOPMENT_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LLM port — HttpLLMPort when LLM_VESSEL_ENDPOINT is set, InProcessLLMPort
@@ -69,6 +70,89 @@ const host = new GoalHost({
   discoveryEndpoint: DISCOVERY_ENDPOINT,
   enableAgentFill: true,
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Development-vessel proxy resolvers
+//
+// GoalHost only knows its own built-in resolvers (fs, bash, llm, slot-binding,
+// etc.). Templates seeded by development-vessel use resolver IDs like
+// "fs_read", "coverage_tick", or "development-vessel:coverage_tick" — names
+// that live in development-vessel, not in GoalHost's registry.
+//
+// Fix: at startup, fetch /shapes from development-vessel and register a proxy
+// resolver for each shape. Each proxy POSTs to development-vessel's
+// /v2/impulses/resolve endpoint with a pointer built from task.config.
+// Registered under both the bare name ("coverage_tick") and the
+// qualified name ("development-vessel:coverage_tick") so both conventions work.
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function registerDevVesselProxies(): Promise<void> {
+  try {
+    const r = await fetch(`${DEV_VESSEL_ENDPOINT}/shapes`, {
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!r.ok) {
+      console.warn(`[goal-host-vessel] dev-vessel /shapes HTTP ${r.status} — proxy resolvers not registered`);
+      return;
+    }
+    const body = await r.json() as { shapes?: string[] };
+    const shapes: string[] = Array.isArray(body.shapes) ? body.shapes : [];
+    if (shapes.length === 0) {
+      console.warn("[goal-host-vessel] dev-vessel /shapes returned empty list — proxy resolvers not registered");
+      return;
+    }
+
+    for (const shape of shapes) {
+      const ids = [shape, `development-vessel:${shape}`];
+      for (const id of ids) {
+        host.runtime.resolvers.register({
+          id,
+          tier: "pattern" as const,
+          async resolve(context: Record<string, unknown>) {
+            const task = context.task as Record<string, unknown>;
+            const config = (task.config ?? {}) as Record<string, unknown>;
+            const variables = (context.variables ?? {}) as Record<string, unknown>;
+            const random = context.random as { id: (prefix: string) => string };
+            // Build the pointer: merge config fields + task variables + shape type
+            const pointer: Record<string, unknown> = { type: shape, ...config, ...variables };
+            try {
+              const resp = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}),
+                },
+                body: JSON.stringify({ impulse: { pointer } }),
+                signal: AbortSignal.timeout(30_000),
+              });
+              const bodyText = await resp.text();
+              let parsed: unknown;
+              try { parsed = JSON.parse(bodyText); } catch { parsed = bodyText; }
+              return [{
+                id: random.id(`dev:${shape}`),
+                pointer: { type: "memo" },
+                metadata: { shape, source: "development-vessel", ok: resp.ok },
+                loaded: true,
+                content: parsed,
+              }];
+            } catch (err) {
+              return [{
+                id: random.id(`dev:${shape}:err`),
+                pointer: { type: "memo" },
+                metadata: { shape, source: "development-vessel", degraded: true },
+                loaded: true,
+                content: { error: (err as Error).message },
+              }];
+            }
+          },
+        });
+      }
+    }
+    console.log(`[goal-host-vessel] registered ${shapes.length} development-vessel proxy resolvers`);
+  } catch (err) {
+    console.warn(`[goal-host-vessel] failed to register dev-vessel proxies: ${(err as Error).message}`);
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Discovery registration loop
@@ -253,6 +337,7 @@ console.log(
   ` | llm: ${LLM_VESSEL_ENDPOINT ? `vessel(${LLM_VESSEL_ENDPOINT})` : "in-process"}`,
 );
 
+await registerDevVesselProxies();
 await discoveryLoop.start();
 
 // Graceful shutdown on SIGTERM.
