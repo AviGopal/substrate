@@ -281,3 +281,105 @@ independent of, the full vessel-isolation work. Two viable orderings:
   `GOAL_RUNTIME=ias-executor` flip that closes the dispatch-path
   linchpin (gap-007 / F-037 / F-038) referenced above.
 - `docs/CORE_IDIOMS.md:152-168` — Idiom 4 canonical reference.
+
+---
+
+## Finding 3 — 2026-05-25T01:30Z UPDATE: dev's templateId fix migrated the problem
+
+Since this finding was filed (2026-05-24T22:55Z, commit `ea5ef10a`), dev shipped two relevant commits:
+
+**`14e23e95` — "fix(substrate): topology discovery running"** (2026-05-24T18:11Z):
+- Boredom task format shifted from `goal:` field to `templateId:` field
+- Explicit motivation per commit message: "bypassing goal-processing and stagnation entirely"
+- Three named templates now invoke successfully (coverage-tick, substrate-health-tick, probe-reachable-unlearned)
+
+**`daf81ce4` — "Phase 0-2 explicit vessel scaffolds + VesselDaemon toolkit"** (2026-05-24T18:23Z):
+- Phase 0 of substrate-explicit-vessels landed (VesselDaemon, ResolverServer, DiscoveryRegistrationLoop, GoalHost in src/hosts/)
+- Phases 1+2 landed (local-tools-vessel + llm-resolver-vessel)
+
+### What this changed about the substrate's behavior
+
+**Positive observable changes** (verified at 2026-05-25T01:08-01:10Z):
+- coverage-tick, substrate-health-tick, probe-reachable-unlearned ALL invoke successfully via boredom
+- `composition_chain` now populates with depth=1 on these traces (gap-007 partial closure)
+- Registry thrashing stopped (gap-005 closed)
+- New synthetic meta-trace class `_boredom_activity:⟨...⟩` introduced as the boredom dispatch root
+
+**Negative observable changes** (verified same time):
+| Template | total | success | success_rate | α/β | total_selections |
+|---|---|---|---|---|---|
+| coverage-tick | 96 | 85 | **0** | 1/1 | **0** |
+| substrate-health-tick | 94 | 82 | **0** | 1/1 | **0** |
+| probe-reachable-unlearned | 9 | 4 | **0** | 1/1 | **0** |
+
+`total_selections: 0` across all three despite 199 executions. **Thompson learning is dead.**
+
+### The problem has migrated, not been solved
+
+Dev's templateId-direct dispatch fix bypassed:
+1. The broken goal-processing pipeline (correctly — it was producing thrash)
+2. **The Thompson selection pathway** (incorrectly — the substrate now executes without learning)
+
+The boredom mechanism evolved through three states:
+
+| State | Trigger | Selection | Execution | Learning |
+|---|---|---|---|---|
+| Original (pre-fix) | timer → goal text | goal-processor (broken) | minibob ActivityExecutor | corrupted via thrashing |
+| Current (dev's fix) | timer → templateId queue | none (direct dispatch) | _boredom_activity dispatch | **none — bypassed** |
+| Recontextualized (this finding) | `lifecycle:substrate:idle` event | normal recommend → Thompson over subscribers | standard slot-binding → execute | normal Thompson update from outcome |
+
+Dev's fix is a strict improvement over the original — the thrashing is real and was urgent. But it's a local optimum: the substrate runs but cannot learn from boredom executions. The recontextualization is now **more necessary, not less**, because:
+
+- Before dev's fix: the broken dispatch path made everything visibly fail (loud signal). The thrashing made the bug discoverable.
+- After dev's fix: the substrate succeeds at the execution layer (199 successful named-template invocations) but silently fails at the learning layer (zero posterior updates). The bug becomes harder to detect.
+
+### Why the recontextualization is the structurally correct fix
+
+The current state has a clear failure mode: Thompson posteriors stay uniform regardless of how many boredom executions accumulate. The substrate cannot:
+- Learn which boredom templates produce useful coverage_progress
+- Develop state-conditional preferences (PSS/ISS-driven selection)
+- Adapt boredom-fire frequency based on observed outcomes
+- Avoid templates that consistently fail (probe-reachable-unlearned: 5/9 failure rate — Thompson should be pushing away from this; instead α=β=1)
+
+The recontextualization (lifecycle:substrate:idle → normal recommend → Thompson over subscribers → slot-binding → execute) preserves dev's improvements:
+- Still bypasses the broken goal-processing pipeline (idle event triggers slot-binding directly, not goal-processor)
+- Still avoids registry thrashing (subscription-driven dispatch doesn't invoke improviser/ribosome paths spuriously)
+- ADDS Thompson learning (recommend → slot-binding records the selection event that posterior-update consumes)
+
+### Concrete migration path from dev's current state
+
+The current `templateId:` direct dispatch is one step in the right direction. The full move:
+
+**Step 1** (already shipped by dev): boredom enqueues `templateId:` rather than goal-text. Bypasses goal-processor. ✓
+**Step 2** (this finding's proposed work): replace the templateId-direct dispatch with `lifecycle:substrate:idle` event emission. The event triggers normal recommend/slot-binding which selects ONE of the subscribing templates (per Thompson posterior over current ISS state).
+**Step 3**: subscribing templates declare eligibility via `subscription: { event: "lifecycle:substrate:idle", priority, applicability_filter }`. Removes the hardcoded template list (currently 4 templateIds enqueued per fire).
+**Step 4**: boredom-vessel becomes the idle-detection emitter only (~50 LOC). The systemd timer either stays (firing a substrate-resident `boredom-tick` that emits the lifecycle event) or moves to substrate-internal cron.
+
+### Queue flooding observation (corroborating data)
+
+A fresh validation pass at 2026-05-25T00:45Z (in `openspec/changes/2026-04-26-impulse-activity-loop/findings/validation-2026-05-24.md`) observed:
+- `boredom:queue:critical`: 1232 tasks
+- `boredom:queue:medium`: 619 tasks
+- "topology tasks in critical queue: 0 — none found via name search"
+- minibob currently executing `debug__resolve`, "improvising, failing step-1 repeatedly"
+
+The 1850-task accumulation suggests the boredom-enqueue mechanism is producing tasks faster than the substrate can drain them. The recontextualization eliminates this class of failure mode entirely: lifecycle-event-driven dispatch doesn't accumulate a queue — it fires when idle AND drains immediately.
+
+### Updated severity
+
+**substantive → important.** With Thompson learning dead, the substrate cannot use its boredom executions to advance §27.S.4a's coverage_progress criterion through learned exploration. coverage_progress requires the substrate to discover which boredom firings advance topology; without posterior updates, that discovery cannot happen.
+
+### Updated proposed action
+
+The recontextualization is now MORE pressing than when filed. Concrete next moves:
+
+1. Move boredom-vessel from "templateId enqueue" to "lifecycle:substrate:idle emit"
+2. Add `subscription: { event: "lifecycle:substrate:idle", priority, applicability_filter }` clauses to the 4-5 boredom-eligible templates
+3. Extend the development-vessel lifecycle observer (per topology-discovery-loop R3.2) to dispatch via standard recommend/slot-binding on lifecycle:substrate:idle events
+4. Retire the templateId-direct enqueue path (it served its purpose — provided a stop-gap that bypassed the broken goal-processor — but it's now the bottleneck blocking Thompson learning)
+
+### Cross-reference
+
+- `validation/findings/dev-guidance-2026-05-24.md` Symptom 2 closure remains incomplete; recontextualization addresses it via different mechanism than originally proposed
+- `openspec/changes/2026-04-26-impulse-activity-loop/findings/dev.md` D-IAL-001 — dev's documentation of the boredom format fix from their side
+- `openspec/changes/2026-04-26-impulse-activity-loop/findings/validation-2026-05-24.md` — corroborating fresh validation pass with queue-flooding evidence
