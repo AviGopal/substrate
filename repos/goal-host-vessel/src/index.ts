@@ -107,6 +107,7 @@ async function handleRunGoal(req: Request): Promise<Response> {
   const variables = typeof body.variables === "object" && body.variables !== null
     ? (body.variables as Record<string, unknown>)
     : {};
+  const tags = Array.isArray(body.tags) ? (body.tags as string[]) : undefined;
   const parentExecutionId = typeof body.parent_execution_id === "string"
     ? body.parent_execution_id
     : undefined;
@@ -131,6 +132,7 @@ async function handleRunGoal(req: Request): Promise<Response> {
     const result = await host.runGoal(goal ?? `execute template ${targetTemplateId}`, {
       variables,
       targetTemplateId,
+      tags,
       parentExecutionId,
       compositionChain,
     });
