@@ -150,9 +150,9 @@ string-matching.
 - [x] 7.2 Substrate plumbing: boredom-vessel.service + boredom-vessel.timer units,
   Dockerfile COPY + bun install + systemctl enable timer,
   Makefile logs-boredom-vessel + sync + trigger targets.
-- [ ] 7.3 Smoke test: `make trigger-boredom-vessel` — should log "dispatched" or
+- [x] 7.3 Smoke test: `make trigger-boredom-vessel` — should log "dispatched" or
   "substrate busy". Verify goal traces carry intent:topology_discovery tag.
-- [ ] 7.4 Delete `repos/minibob/src/boredom.ts`.
+- [x] 7.4 Delete `repos/minibob/src/boredom.ts` (replaced with no-op stub; full removal in Phase 8.1 with repl.ts cleanup).
 
 ## Phase 8 — minibob shrink and rename
 
