@@ -143,6 +143,12 @@ COPY repos/concept-db/src ./concept-db/src
 COPY repos/concept-db/sql ./concept-db/sql
 COPY repos/concept-db/tsconfig.json ./concept-db/
 
+# analysis-vessel (replaces metabob-analysis-api; depends on cpg-inference-ts above)
+COPY repos/analysis-vessel/package.json repos/analysis-vessel/bun.lock* ./analysis-vessel/
+RUN cd analysis-vessel && bun install --no-save 2>/dev/null || bun install
+COPY repos/analysis-vessel/src ./analysis-vessel/src
+COPY repos/analysis-vessel/tsconfig.json ./analysis-vessel/
+
 # --- Substrate runtime config ---
 RUN mkdir -p /etc/substrate /workspace /var/lib/surrealdb /scripts
 
@@ -168,7 +174,8 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env && \
         boredom-vessel.timer \
         ribosome-vessel.service \
         concept-db.service \
-        concept-db-seeder.service
+        concept-db-seeder.service \
+        analysis-vessel.service
 
 VOLUME ["/workspace"]
 

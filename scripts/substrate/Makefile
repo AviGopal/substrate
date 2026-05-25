@@ -34,11 +34,13 @@ GOAL_HOST_SRC := $(REPO_ROOT)/repos/goal-host-vessel
 BOREDOM_VESSEL_SRC := $(REPO_ROOT)/repos/boredom-vessel
 RIBOSOME_VESSEL_SRC := $(REPO_ROOT)/repos/ribosome-vessel
 CONCEPT_DB_SRC := $(REPO_ROOT)/repos/concept-db
+ANALYSIS_VESSEL_SRC := $(REPO_ROOT)/repos/analysis-vessel
 
 .PHONY: build run run-detach run-live seed-live import-memory health health-live \
         logs-all logs-activity-api logs-development-vessel \
         logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
         logs-goal-host-vessel logs-boredom-vessel logs-ribosome-vessel logs-concept-db \
+        logs-analysis-vessel \
         status status-live shell shell-live stop stop-live clean clean-live \
         sync-development-vessel restart-development-vessel \
         sync-local-tools-vessel restart-local-tools-vessel \
@@ -46,7 +48,8 @@ CONCEPT_DB_SRC := $(REPO_ROOT)/repos/concept-db
         sync-goal-host-vessel restart-goal-host-vessel \
         sync-boredom-vessel trigger-boredom-vessel \
         sync-ribosome-vessel restart-ribosome-vessel \
-        sync-concept-db restart-concept-db
+        sync-concept-db restart-concept-db \
+        sync-analysis-vessel restart-analysis-vessel
 
 build:
 	docker build -f $(CURDIR)/../../Dockerfile.substrate \
@@ -107,11 +110,12 @@ run-live:
 	    -p 18090:8090 \
 	    -p 18100:8100 \
 	    -p 18210:8210 \
+	    -p 18260:8260 \
 	    -v $(WORKSPACE):/workspace \
 	    --tmpfs /run \
 	    --tmpfs /run/lock \
 	    $(IMAGE):$(TAG)
-	@echo "[run-live] substrate-live started — activity-api on :18080, development-vessel on :18090, discovery-vessel on :18100, goal-host-vessel on :18210"
+	@echo "[run-live] substrate-live started — activity-api on :18080, development-vessel on :18090, discovery-vessel on :18100, goal-host-vessel on :18210, concept-db on :18260"
 	@echo "[run-live] Internal secrets auto-generated and persisted to workspace/.substrate-secrets"
 	@echo "[run-live] Wait ~15s for services to start, then: make -C scripts/substrate seed-live"
 
@@ -129,10 +133,11 @@ health-live:
 	@echo "=== goal-host-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8210/health | jq .
 	@echo "=== ribosome-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8240/health | jq .
 	@echo "=== concept-db (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8260/health | jq '{status,service}'
+	@echo "=== analysis-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8250/health | jq .
 
 status-live:
 	docker exec $(LIVE_NAME) systemctl status --no-pager \
-	    surrealdb valkey discovery-vessel identity-vessel activity-api development-vessel local-tools-vessel llm-resolver-vessel goal-host-vessel bootstrap-seeder boredom-vessel.timer ribosome-vessel concept-db
+	    surrealdb valkey discovery-vessel identity-vessel activity-api development-vessel local-tools-vessel llm-resolver-vessel goal-host-vessel bootstrap-seeder boredom-vessel.timer ribosome-vessel concept-db analysis-vessel
 
 shell-live:
 	docker exec -it $(LIVE_NAME) bash
@@ -278,3 +283,15 @@ restart-concept-db: sync-concept-db
 	docker exec $(LIVE_NAME) systemctl restart concept-db.service
 	@sleep 2
 	@docker exec $(LIVE_NAME) systemctl is-active concept-db.service | grep -q active && echo "[restart] concept-db active" || echo "[restart] ERROR: concept-db not active"
+
+logs-analysis-vessel:
+	docker exec $(LIVE_NAME) journalctl -fu analysis-vessel.service
+
+sync-analysis-vessel:
+	docker cp $(ANALYSIS_VESSEL_SRC)/src $(LIVE_NAME):/vessels/analysis-vessel/src
+	@echo "[sync] analysis-vessel source synced to substrate-live"
+
+restart-analysis-vessel: sync-analysis-vessel
+	docker exec $(LIVE_NAME) systemctl restart analysis-vessel.service
+	@sleep 2
+	@docker exec $(LIVE_NAME) systemctl is-active analysis-vessel.service | grep -q active && echo "[restart] analysis-vessel active" || echo "[restart] ERROR: analysis-vessel not active"

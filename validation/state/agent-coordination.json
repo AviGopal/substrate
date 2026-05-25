@@ -4,32 +4,38 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-25T10:12:00Z",
-      "current_focus": "Substrate healthy (7 vessels/106 shapes). Thompson working correctly: validator-dispatch α=178 (n=533), slot-binding α=27 (n=73), create-shape-provider-goal β=28 (n=77, naturally deprioritized). Fixed coverage-tick org_id mismatch (was 'public', now 'organizations:substrate' — Thompson alpha now accumulates). Boredom loop running every 5min on goal rotation. S.4a coverage_progress needs 4h+ of substrate run time before RL trends show monotonic increase. Architectural direction: remove metabob-* vessels in favor of ias-executor-ts standard vessels.",
+      "last_updated": "2026-05-25T12:00:00Z",
+      "current_focus": "F-069 FIXED: UPSERT...CONTENT was resetting Thompson posteriors (alpha/beta) to 1.0 on every template registration (bootstrap-seeder runs on every activity-api restart). Changed to UPSERT...SET with ?? nullish coalescing in activities.ts (2 sites). Posteriors now survive restarts: coverage-tick a=2 b=2 n=4 verified post-restart. Architectural direction: remove metabob-* scoped vessels (metabob-activity-api, metabob-analysis-api, etc.) in favor of ias-executor-ts standard vessels. Migration spec created at openspec/changes/2026-05-25-metabob-vessel-migration/.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
-        "openspec/changes/2026-05-23-substrate-closure-properties"
+        "openspec/changes/2026-05-23-substrate-closure-properties",
+        "openspec/changes/2026-05-25-metabob-vessel-migration"
       ],
-      "substrate_state": "running \u2014 7 vessels/106 shapes; validator-dispatch \u03b1=178 (n=533 all success); slot-binding \u03b1=27 (n=73); create-shape-provider-goal \u03b2=28 (n=77 all fail, naturally deprioritized); boredom firing every 5min; coverage-tick org_id fixed; S.4a pending (need 4h+ for RL trend)",
-      "open_gates": [],
+      "substrate_state": "running -- 7 vessels/107 shapes; validator-dispatch a=285 (n=636 all success); slot-binding a=42 (n=88); create-shape-provider-goal b=43 (n=89 all fail, naturally deprioritized); coverage-tick a=2 b=2 n=4 (posteriors accumulating correctly after F-069 fix); boredom loop active; S.4a time-gated (need 3 consecutive coverage_progress=True runs, inter-success gap ~109min)",
+      "open_gates": [
+        "S.4a: coverage_progress=True for 3 consecutive runs -- time-gated, no code change needed"
+      ],
       "recent_fixes": [
+        "F-069: activities.ts UPSERT...CONTENT reset all Thompson posteriors (alpha/beta/counters) to initial values on every template registration. Fixed by changing to UPSERT...SET with field ?? default nullish coalescing at 2 sites (~line 1244 template registration path, ~line 5290 improvised variant creation). Committed c1364e4 to repos/metabob-activity-api, submodule pointer cb4dd022 in super-repo.",
         "substrate units: development-vessel and concept-db both used VESSEL_ID=substrate-local from global env, colliding in discovery registry; fixed by adding per-vessel VESSEL_ID/VESSEL_ENDPOINT Environment= overrides and removing global lines from gen-env.sh",
         "activity-api service unit: added DISCOVERY_VESSEL_ENDPOINT=http://127.0.0.1:8100 (was falling back to K8s DNS that fails silently in container); now registered in discovery as activity-api-local with 53 shapes",
         "goal-host-vessel: activity_recommendation built-in resolver registered (was create-shape-provider-goal 0ms failures)",
-        "execution-traces.ts: RETURN { id: id, total_executions: total_executions } — SurrealDB 3.x object shorthand parse error blocked applyOutcomeToPosteriors; Thompson posteriors now increment correctly",
-        "variant_performance_metrics: coverage-tick row had org_id='public' (from prior substrate run) causing applyOutcomeToPosteriors UPDATE to miss (WHERE org_id='organizations:substrate' != 'public'); fixed with direct SQL update"
+        "execution-traces.ts: RETURN { id: id, total_executions: total_executions } -- SurrealDB 3.x object shorthand parse error blocked applyOutcomeToPosteriors; Thompson posteriors now increment correctly",
+        "variant_performance_metrics: coverage-tick row had org_id=public (from prior substrate run) causing applyOutcomeToPosteriors UPDATE to miss (WHERE org_id=organizations:substrate != public); fixed with direct SQL update"
       ],
       "coordination_notes": [
+        "F-069 root cause: bootstrap-seeder.service runs every activity-api restart and calls POST /v2/activities/templates for 13 shared templates; each call did UPSERT...CONTENT destroying accumulated a/b. All historical alpha accumulation was being lost on every restart.",
         "closure-audit 6/6: all properties closed including subagents (port 18210 is now mapped in run-live target)",
-        "Thompson update path verified: success alpha 1\u21922, failure beta 2\u21923, confirmed via SurrealDB direct query",
+        "Thompson update path verified: success alpha 1->2, failure beta 2->3, confirmed via SurrealDB direct query",
         "boredom loop active: completing goals like probe-unlearned-shapes (~4min duration)",
-        "goal-host-vessel uses METABOB_API_KEY from /etc/substrate/env \u2014 traces land in org=organizations:substrate"
+        "goal-host-vessel uses METABOB_API_KEY from /etc/substrate/env -- traces land in org=organizations:substrate",
+        "metabob-* migration: direction confirmed by operator. metabob-analysis-api (6 shapes: problem_detection, error_log, source_code, code_quality, code_annotation, cpg_query_result) identified as first migration target -- smallest surface area, no SurrealDB schema ownership."
       ]
     },
     "validation": {
       "role": "adversarial-validator",
       "last_updated": "2026-05-25T06:35:03Z",
-      "current_focus": "BLOCKER: iteration 18 \u2014 substrate restarted but template seeding FAILED. Bootstrap-seeder (06:30Z) attempted 13 shared templates; ALL 13 returned 500 org_id:NONE error. Result: 0 seeded, 13 failed. Substrate technically live (8 vessels, health ok) but application impossible (template_count=0, trace_count=0). F-049 (template registration org_id error) is blocker. Audit iter-004 (06:03Z): F-044 root cause resolved (JWT_SECRET); F-038 RESOLVED (composition_chain); F-037/F-043 OPEN (Thompson bypass); F-029 REGRESSED (failure_mode); F-047 NEW (gate provenance). 11 new commits landed: substrate-only loop, minibob removed from container, etc. substrate-explicit-vessels final: 48/53 (91%). Blocked on F-049 fix. See iter-18-narration.md.",
+      "current_focus": "BLOCKER: iteration 18 — substrate restarted but template seeding FAILED. Bootstrap-seeder (06:30Z) attempted 13 shared templates; ALL 13 returned 500 org_id:NONE error. Result: 0 seeded, 13 failed. Substrate technically live (8 vessels, health ok) but application impossible (template_count=0, trace_count=0). F-049 (template registration org_id error) is blocker. Audit iter-004 (06:03Z): F-044 root cause resolved (JWT_SECRET); F-038 RESOLVED (composition_chain); F-037/F-043 OPEN (Thompson bypass); F-029 REGRESSED (failure_mode); F-047 NEW (gate provenance). 11 new commits landed: substrate-only loop, minibob removed from container, etc. substrate-explicit-vessels final: 48/53 (91%). Blocked on F-049 fix. See iter-18-narration.md.",
       "narrator_status": "running (bdl29gi6j)",
       "gaps_recorded": [
         "gap-001",
@@ -53,7 +59,7 @@
         },
         {
           "item": "Concept-db is not running as a systemd unit in substrate-live; substrate has 18 templates but no semantic layer to reason about them",
-          "spec_implication": "substrate-explicit-vessels \u00a727.3.g lists 6 vessels; concept-db not included. Consider whether concept-db should be a substrate-resident unit to unblock propose-spec semantic reasoning",
+          "spec_implication": "substrate-explicit-vessels §27.3.g lists 6 vessels; concept-db not included. Consider whether concept-db should be a substrate-resident unit to unblock propose-spec semantic reasoning",
           "gap_id": "gap-001"
         },
         {
@@ -63,7 +69,7 @@
         },
         {
           "item": "Boredom-timer-fired goal at 03:22:30Z marked status=failure but no failure_mode populated; child activity_execute (goal-processing-activity-driven) status=success. Phase 5 cutover or goal_resolve layer issue?",
-          "spec_implication": "openspec/changes/2026-04-26-validators-and-failure-modes acceptance \u2014 failure_mode should be populated on every failure",
+          "spec_implication": "openspec/changes/2026-04-26-validators-and-failure-modes acceptance — failure_mode should be populated on every failure",
           "gap_id": "gap-003"
         },
         {
@@ -76,7 +82,7 @@
           "gap_id": "gap-005"
         },
         {
-          "item": "Registry THRASHING observed \u2014 templates removed and re-added within 5-min windows. Operator-authored seed templates (substrate-health-tick) should not churn. This affects Thompson posterior stability (rows keyed on template_id that disappears/reappears)",
+          "item": "Registry THRASHING observed — templates removed and re-added within 5-min windows. Operator-authored seed templates (substrate-health-tick) should not churn. This affects Thompson posterior stability (rows keyed on template_id that disappears/reappears)",
           "spec_implication": "Possible substrate-explicit-vessels seeding-loop issue OR ribosome creating variants that conflict with seed ids",
           "gap_id": "gap-005-update"
         },
@@ -88,14 +94,14 @@
       "pending_for_audit": [
         {
           "item": "Confirm WS auth path actually goes through identity-vessel and not a local activity-api auth shortcut",
-          "expected": "WS auth message path: activity-api \u2192 identity-vessel /v1/keys/validate \u2192 reject. HTTP REST auth path: activity-api \u2192 identity-vessel /v1/keys/validate \u2192 accept. The divergence suggests different code paths or different middleware ordering",
+          "expected": "WS auth message path: activity-api → identity-vessel /v1/keys/validate → reject. HTTP REST auth path: activity-api → identity-vessel /v1/keys/validate → accept. The divergence suggests different code paths or different middleware ordering",
           "how_to_check": "docker exec substrate-live grep -r websocket repos/metabob-activity-api/src/middleware/ + identity-vessel logs during a fresh narrator connection attempt"
         },
         {
           "item": "Verify variant_performance_metrics rows created for the 6-level composition chain ending in ribosome-extract success at 03:22:30Z",
           "expected": "9 tasks executed (per metadata.task_count); each task should produce a variant row if Phase 18.4 chain-credit is live",
           "how_to_check": "SurrealDB query against variant_performance_metrics filtered by activity_template_id IN (goal-processing-activity-driven, ribosome-extract) with timestamp_at near 2026-05-24T03:22:30Z",
-          "links_to_dev_pending": "pending_for_audit #1 (type::record\u2192type::thing fix verification)"
+          "links_to_dev_pending": "pending_for_audit #1 (type::record→type::thing fix verification)"
         },
         {
           "item": "Verify embedding.status=disabled by querying activity-api /health inside container and checking EMBEDDING_MODEL_DIR env + presence of all-MiniLM-L6-v2 ONNX model file at substrate-live activity-api workspace",
@@ -109,11 +115,11 @@
       ],
       "acknowledging_pending_from_dev": [
         {
-          "from_dev_item": "Verify coverage-tick self-narration after type::record\u2192type::thing fix",
-          "validation_response": "Cannot validate from my role \u2014 variant_performance_metrics state requires runtime DB inspection (audit territory). I pass this to audit. From narration side: boredom-fired goal at 03:22:30Z DID execute (cost $0.895, 6-level composition chain), but coverage_tick_cells stayed [0,0,0,0] per dev coordination. Either coverage-tick didnt actually fire, or it fired but produced no progress."
+          "from_dev_item": "Verify coverage-tick self-narration after type::record→type::thing fix",
+          "validation_response": "Cannot validate from my role — variant_performance_metrics state requires runtime DB inspection (audit territory). I pass this to audit. From narration side: boredom-fired goal at 03:22:30Z DID execute (cost $0.895, 6-level composition chain), but coverage_tick_cells stayed [0,0,0,0] per dev coordination. Either coverage-tick didnt actually fire, or it fired but produced no progress."
         },
         {
-          "from_dev_item": "Check substrate narration of S.4a gate \u2014 coverage_progress=true semantics",
+          "from_dev_item": "Check substrate narration of S.4a gate — coverage_progress=true semantics",
           "validation_response": "Without concept-db running (gap-001), substrate cannot reason categorically about coverage_progress. It can COMPUTE the boolean from cell-count monotonicity (the coverage-tick activity does this) but cannot DESCRIBE what coverage means as a learned property. The 3-window consecutive-progress criterion is in the coverage-tick template logic but not as a substrate-queryable concept. This is gap-001 in concrete form."
         }
       ],
@@ -137,7 +143,7 @@
         "coverage_tick_cells": "still [0,0,0,0] per dev coordination state",
         "audit_agent_status": "not yet registered",
         "templates_at_iter5": 18,
-        "templates_churn_pattern": "thrashing \u2014 not monotonic \u2014 adds AND removes between 5-min snapshots; substantive concern for Thompson posterior stability",
+        "templates_churn_pattern": "thrashing — not monotonic — adds AND removes between 5-min snapshots; substantive concern for Thompson posterior stability",
         "goal_resolve_failures_total": 7,
         "dev_coordination_age_hours": "~28h stale (last_updated 00:00Z)",
         "iteration_6_critical": {
@@ -155,7 +161,7 @@
             "substrate-health-tick"
           ],
           "loop_structurally_inoperable": true,
-          "reason_inoperable": "Probes have nothing to consume \u2014 measurement primitives (coverage-tick, substrate-health-tick) are gone",
+          "reason_inoperable": "Probes have nothing to consume — measurement primitives (coverage-tick, substrate-health-tick) are gone",
           "substrate_burn_rate_estimate_usd_per_hour": 3,
           "hours_of_observation_without_progress": 6,
           "dev_acknowledgments_received": 0,
@@ -168,14 +174,14 @@
         "gaps_substantive": 4,
         "gaps_minor": 1,
         "iteration_7_state_changes": {
-          "templates_recovered": "16 \u2192 18 (coverage-tick and substrate-health-tick re-seeded)",
+          "templates_recovered": "16 → 18 (coverage-tick and substrate-health-tick re-seeded)",
           "new_templates_added_by_dev": [
             "Test",
             "smoke",
             "smoke2"
           ],
           "rich_metadata_now_visible": "input_impulse_shapes, output_impulse_shapes, provenance arrays, signature_version=1, state_space_signature populated",
-          "phase_24_evidence": "state_space_signature=56ded74266a02200 observed across slot-binding/validator-dispatch \u2014 Phase 24 conditional posteriors are operating",
+          "phase_24_evidence": "state_space_signature=56ded74266a02200 observed across slot-binding/validator-dispatch — Phase 24 conditional posteriors are operating",
           "unchanged_issues": [
             "gap-003 still recurring",
             "embedding.status still disabled",
@@ -193,7 +199,7 @@
           "coverage_tick_composition_chain": "EMPTY on all 3 traces (gap-007)",
           "goal_resolve_failures_continuing": true,
           "audit_iterations_available": "iter-007, iter-008, iter-009 (latest at 16:21Z reported zero-delta)",
-          "audit_latest_reading_at_16_21Z": "still reported 16 templates and embedding disabled \u2014 that snapshot was taken before dev fixes propagated; substrate state has since materially improved"
+          "audit_latest_reading_at_16_21Z": "still reported 16 templates and embedding disabled — that snapshot was taken before dev fixes propagated; substrate state has since materially improved"
         },
         "iteration_10": {
           "templates_stable_at": 18,
@@ -212,7 +218,7 @@
         "iteration_11": {
           "templates_count": 18,
           "embedding": "healthy",
-          "coverage_tick_executions_growing": "68\u219277 in 3h (+9 successes)",
+          "coverage_tick_executions_growing": "68→77 in 3h (+9 successes)",
           "thompson_alpha_beta_unchanged": "1/1 (uniform prior, no update from 77 executions)",
           "named_template_invocations_this_iter": "substrate-health-tick at 20:46:50 (3x); coverage-tick at 21:06:54 (3x)",
           "goal_resolve_failures_this_iter": "20:47, 20:58, 21:07, 21:17 (4 more)",
@@ -228,41 +234,41 @@
             "probe-untraversed-edge FAIL"
           ],
           "metrics_delta_since_iter_13": {
-            "coverage_tick": "96\u219298 total (+2, no new success)",
+            "coverage_tick": "96→98 total (+2, no new success)",
             "substrate_health_tick": "94 unchanged",
-            "probe_reachable_unlearned": "9\u219211 total (+2, no new success)"
+            "probe_reachable_unlearned": "9→11 total (+2, no new success)"
           },
-          "thompson_posteriors": "alpha=beta=1 unchanged, total_selections=0 across all three named templates \u2014 F-037 fully persists",
-          "_goal_resolve_traces": "still 0 in last 200 traces \u2014 gap-003 path genuinely bypassed by boredom system",
-          "substrate_explicit_vessels_task_progress": "14/53 (audit iter-002) \u2192 22/53 (now); +8 tasks completed",
+          "thompson_posteriors": "alpha=beta=1 unchanged, total_selections=0 across all three named templates — F-037 fully persists",
+          "_goal_resolve_traces": "still 0 in last 200 traces — gap-003 path genuinely bypassed by boredom system",
+          "substrate_explicit_vessels_task_progress": "14/53 (audit iter-002) → 22/53 (now); +8 tasks completed",
           "new_failure_classes_observed": "harness-check-scenario, test-template, harness-run-matrix, probe-untraversed-edge all FAILING",
-          "interpretation": "substrate is exercising more templates but accumulating failures without populating failure_mode. Boredom system reaches a wider template set than before but Thompson learning still dead \u2014 substrate cannot prefer the templates that succeed (coverage-tick) over the ones that fail (harness-check-scenario etc.)"
+          "interpretation": "substrate is exercising more templates but accumulating failures without populating failure_mode. Boredom system reaches a wider template set than before but Thompson learning still dead — substrate cannot prefer the templates that succeed (coverage-tick) over the ones that fail (harness-check-scenario etc.)"
         }
       },
-      "escalation_to_operator": "BLOCKING \u2014 substrate is in a degraded operational state and validation alone cannot resolve it. Cross-agent triage required: dev must investigate template removals + goal_resolve failures + embedding.status; audit must register and verify runtime state. Without operator escalation, substrate continues to burn LLM credits on identical failing executions while losing its own self-measurement primitives.",
+      "escalation_to_operator": "BLOCKING — substrate is in a degraded operational state and validation alone cannot resolve it. Cross-agent triage required: dev must investigate template removals + goal_resolve failures + embedding.status; audit must register and verify runtime state. Without operator escalation, substrate continues to burn LLM credits on identical failing executions while losing its own self-measurement primitives.",
       "loop_status": "ACTIVE (resumed iteration 13)",
-      "gap_006_status": "PARTIAL \u2014 template degradation reversed by dev; coordination silence + structural issues remain. Re-escalation NOT required at this time as substrate is recovering, but dev still hasn't updated coordination state. Will continue monitoring.",
+      "gap_006_status": "PARTIAL — template degradation reversed by dev; coordination silence + structural issues remain. Re-escalation NOT required at this time as substrate is recovering, but dev still hasn't updated coordination state. Will continue monitoring.",
       "calibration_corrections": [
         "I was monitoring agent-coordination.json but the dev/audit coordination is happening via findings/ files and validation/investigations/",
-        "I misattributed the iter-4 template removal \u2014 coverage-tick was removed, not substrate-health-tick (auditor F-031 caught it)",
+        "I misattributed the iter-4 template removal — coverage-tick was removed, not substrate-health-tick (auditor F-031 caught it)",
         "I claimed gap-004 partial closure based on substrate-health-tick invocation, but those were degenerate failure traces, not actual closure evidence",
-        "gap-005 was a cache-bug observability artifact, not substrate self-management churn \u2014 root cause fixed by dev"
+        "gap-005 was a cache-bug observability artifact, not substrate self-management churn — root cause fixed by dev"
       ],
       "gaps_resolved": {
-        "gap-004_root_cause_partial": "Embedding status now healthy (F-V58 fixed); coverage-tick IS now being invoked. But name-to-template binding still has surface issues \u2014 goal_resolve does not recognize the named-template success",
+        "gap-004_root_cause_partial": "Embedding status now healthy (F-V58 fixed); coverage-tick IS now being invoked. But name-to-template binding still has surface issues — goal_resolve does not recognize the named-template success",
         "gap-005_root_cause": "Activity-api cache bug (b129695 + 93cd621) fixed; registry now stable at 18 across 3 sequential queries"
       },
       "audit_cross_corroboration": {
         "audit_finding": "F-037 Thompson posteriors disconnect from execution outcomes",
         "validation_finding": "gap-007 named-template success without goal closure",
-        "relationship": "SAME ROOT CAUSE, two observation layers \u2014 trace-level (validation) and metrics-level (audit). Data flows but signals don't propagate from execution-outcome to posterior-update to goal-closure",
-        "criticality": "BLOCKING for \u00a727.S.4a lift criterion \u2014 coverage_progress=true requires Thompson learning, which requires posterior updates, which are not happening"
+        "relationship": "SAME ROOT CAUSE, two observation layers — trace-level (validation) and metrics-level (audit). Data flows but signals don't propagate from execution-outcome to posterior-update to goal-closure",
+        "criticality": "BLOCKING for §27.S.4a lift criterion — coverage_progress=true requires Thompson learning, which requires posterior updates, which are not happening"
       },
       "linchpin_hypothesis": {
         "source": "auditor iter-011 (2026-05-24T20:26:32Z)",
         "claim": "F-038 composition_chain empty is the LINCHPIN that causes F-037 Thompson posteriors flat",
-        "mechanism": "Without composition_chain populated, Thompson update path looks for parent-selection records and finds none \u2192 posteriors don't move despite repeated execution successes",
-        "convergent_evidence": "coverage-tick: 68\u219277 executions (+9 successes in 3h), success_rate STILL 0, alpha=beta=1 unchanged",
+        "mechanism": "Without composition_chain populated, Thompson update path looks for parent-selection records and finds none → posteriors don't move despite repeated execution successes",
+        "convergent_evidence": "coverage-tick: 68→77 executions (+9 successes in 3h), success_rate STILL 0, alpha=beta=1 unchanged",
         "implication": "If composition_chain propagation is repaired, gap-007 + F-038 + F-037 may all cascade to closure with one fix",
         "cross_corroboration": "audit F-038 = validation gap-007 (different names for same trace-level observation); audit F-037 = metrics-level downstream symptom"
       },
@@ -297,7 +303,7 @@
         "hypothesis": "composition_chain repair will cascade to F-037 + gap-007 closure",
         "dev_acknowledgments_received": "none in 5+ hours since gap-007/F-037 surfaced"
       },
-      "dev_guidance_committed": "validation/findings/dev-guidance-2026-05-24.md \u2014 provides specific file:line locations for investigation, closure criteria per symptom, suggested investigation order",
+      "dev_guidance_committed": "validation/findings/dev-guidance-2026-05-24.md — provides specific file:line locations for investigation, closure criteria per symptom, suggested investigation order",
       "suggested_investigation_order": [
         "1. composition_chain propagation in activity-api/src/routes/execution-traces.ts + minibob/src/activity.ts dispatch path that reaches coverage-tick",
         "2. Verify Thompson posterior-update cascade closure (likely automatic once chain populates)",
@@ -309,7 +315,7 @@
         "proposed_fix": "Add Environment=GOAL_RUNTIME=ias-executor to minibob.service, systemctl daemon-reload && restart",
         "expected_outcome": "composition_chain populates, Thompson posteriors update, gap-007/F-037/F-038 cascade closed",
         "scope": "<10 LOC; rollback = remove the env var",
-        "what_it_doesnt_fix": "gap-003 (failure_mode null) \u2014 independent, requires goal_resolve emit-site fix in minibob/src/mcp.ts:3193 OR may also resolve if GoalHost handles failures differently",
+        "what_it_doesnt_fix": "gap-003 (failure_mode null) — independent, requires goal_resolve emit-site fix in minibob/src/mcp.ts:3193 OR may also resolve if GoalHost handles failures differently",
         "deferred": "Full substrate-explicit-vessels Phase 0-8 cutover remains valuable for architectural cleanness but is months of work and not required for this closure"
       },
       "final_iteration": 12,
@@ -318,47 +324,47 @@
         "gaps_recorded": 7,
         "gap_001_concept_db": "addressed in spec; runtime confirmation pending",
         "gap_002_ws_auth": "minor; irreducibly_operator",
-        "gap_003_failure_mode_null": "recurring \u00d725; independent fix needed at minibob/src/mcp.ts:3193",
-        "gap_004_name_binding": "partial \u2014 coverage-tick + substrate-health-tick now invoked but goal_resolve still fails",
-        "gap_005_template_thrashing": "CLOSED \u2014 was cache bug, fixed by dev commits b129695 + 93cd621",
+        "gap_003_failure_mode_null": "recurring ×25; independent fix needed at minibob/src/mcp.ts:3193",
+        "gap_004_name_binding": "partial — coverage-tick + substrate-health-tick now invoked but goal_resolve still fails",
+        "gap_005_template_thrashing": "CLOSED — was cache bug, fixed by dev commits b129695 + 93cd621",
         "gap_006_meta_finding": "partial mitigation; audit-validator-dev triangle working",
         "gap_007_chain_empty_to_goal_failure": "structural disconnect; cross-corroborated by audit F-037/F-038; proposed fix: enable GOAL_RUNTIME=ias-executor on substrate's minibob.service",
-        "highest_leverage_finding": "ias-executor bridge fully wired in minibob code but NOT activated on substrate \u2014 proposed <10 LOC fix in scripts/substrate/units/minibob.service",
+        "highest_leverage_finding": "ias-executor bridge fully wired in minibob code but NOT activated on substrate — proposed <10 LOC fix in scripts/substrate/units/minibob.service",
         "deferred_track": "substrate-explicit-vessels Phase 0-8 cutover remains valuable for architectural cleanness; parallel-runnable as months-long initiative"
       },
       "design_contribution": {
         "title": "Boredom-as-lifecycle-observer recontextualization",
         "filed_at": "2026-05-24T22:55:00Z",
         "destination": "openspec/changes/2026-05-23-substrate-explicit-vessels/findings/validation.md (Finding 3)",
-        "summary": "Boredom should not be a parallel mechanism. It should be one more application of the lifecycle hook idiom (Idiom 4 in CORE_IDIOMS.md): subscribers to a new lifecycle:substrate:idle event, dispatched through the standard recommend \u2192 slot-binding \u2192 execute pipeline, selecting via Thompson Sampling conditioned on the current ISS/PSS state.",
+        "summary": "Boredom should not be a parallel mechanism. It should be one more application of the lifecycle hook idiom (Idiom 4 in CORE_IDIOMS.md): subscribers to a new lifecycle:substrate:idle event, dispatched through the standard recommend → slot-binding → execute pipeline, selecting via Thompson Sampling conditioned on the current ISS/PSS state.",
         "interaction_with_existing_phase_7": "Refines Phase 7 (boredom-vessel) scope: vessel becomes just an idle-detection emitter (~50 LOC) + subscription mechanism. No separate boredom registry. No hardcoded goal text or template list.",
         "interaction_with_linchpin_fix": "Compatible with and complementary to GOAL_RUNTIME=ias-executor (per dev-guidance-2026-05-24.md). Together: substrate has correct chain propagation across all execution paths (goal-driven AND boredom-driven).",
         "what_this_enables": "Substrate develops learned maintenance routines. Thompson posteriors over (boredom_eligible_template, state_space_signature) emerge as the substrate accumulates boredom-fire outcomes. Substrate self-optimizes its idle work.",
-        "discovered_during_subagent_research": "Current boredom service has evolved past goal-text posting \u2014 now enqueues 4 templateIds to a Redis medium-priority queue (per F-024 audit response). The recontextualization still applies because trigger + template-set remain hardcoded."
+        "discovered_during_subagent_research": "Current boredom service has evolved past goal-text posting — now enqueues 4 templateIds to a Redis medium-priority queue (per F-024 audit response). The recontextualization still applies because trigger + template-set remain hardcoded."
       },
       "gap_003_status_update": {
         "verdict": "BYPASSED, not closed",
         "evidence": "0 _goal_resolve traces in last 50 traces window",
-        "reason": "Dev's templateId-direct dispatch path emits _boredom_activity:\u27e8...\u27e9 synthetic IDs instead of _goal_resolve",
+        "reason": "Dev's templateId-direct dispatch path emits _boredom_activity:⟨...⟩ synthetic IDs instead of _goal_resolve",
         "remaining_concern": "User-driven goals (not boredom-fired) presumably still hit _goal_resolve path; gap-003 may persist there but cannot be observed without user-driven goals being dispatched",
-        "audit_cross_reference": "F-029 status-changed-toward-resolution \u2014 dev claims failure_mode now populated on _goal_resolve failures; need verification when next _goal_resolve trace appears"
+        "audit_cross_reference": "F-029 status-changed-toward-resolution — dev claims failure_mode now populated on _goal_resolve failures; need verification when next _goal_resolve trace appears"
       },
       "substrate_quiescence_observation": {
         "duration_since_last_trace": "~32 minutes (as of 01:42Z)",
         "last_trace_at": "2026-05-25T01:10:52.722Z",
         "interpretation_options": [
-          "Queue drained \u2014 boredom timer not yet fired the next cycle",
+          "Queue drained — boredom timer not yet fired the next cycle",
           "Minibob stuck in long-running execution that hasn't emitted intermediate traces",
           "Boredom timer stopped firing (per validation-2026-05-24.md observation of debug__resolve stuck improvising)"
         ],
-        "is_this_lifecycle_substrate_idle": "YES \u2014 this is precisely the state Finding 3 (boredom-as-lifecycle-observer) describes. The substrate IS idle. With Finding 3 implemented, lifecycle:substrate:idle would emit here, triggering Thompson-selected boredom work."
+        "is_this_lifecycle_substrate_idle": "YES — this is precisely the state Finding 3 (boredom-as-lifecycle-observer) describes. The substrate IS idle. With Finding 3 implemented, lifecycle:substrate:idle would emit here, triggering Thompson-selected boredom work."
       },
       "audit_iter_002_cross_reference": {
         "F_024_RESOLVED": "boredom systemd unit replaced with queue polling; templates invoke",
         "F_040_NEW_HIGH_POSITIVE": "substrate-explicit-vessels 14/53 tasks complete; llm-resolver-vessel + local-tools-vessel operational",
         "F_041_NEW_HIGH_POSITIVE": "S.4a coverage-progress WINDOW 1 STARTED",
-        "F_029_status_changed_toward_resolution": "dev claims failure_mode populated \u2014 needs verification when next _goal_resolve fires",
-        "F_037_still_open": "Thompson posteriors \u03b1=\u03b2=1 unchanged across 96 coverage-tick + 94 substrate-health-tick + 9 probe-reachable-unlearned executions"
+        "F_029_status_changed_toward_resolution": "dev claims failure_mode populated — needs verification when next _goal_resolve fires",
+        "F_037_still_open": "Thompson posteriors α=β=1 unchanged across 96 coverage-tick + 94 substrate-health-tick + 9 probe-reachable-unlearned executions"
       }
     },
     "audit": {
