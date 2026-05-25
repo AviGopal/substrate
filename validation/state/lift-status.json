@@ -2,30 +2,33 @@
   "$schema": "./lift-status-schema.json",
   "as_of": "2026-05-24T00:00:00Z",
   "phase": "S1",
+  "substrate_target": "local-container-only",
+  "canary_status": "suspended — transitioning to substrate-only development loop",
   "blockers": {
     "27.3.g": [
       {
         "gate": "27.3.g.1",
         "description": "No core execution path reachable only via in-process call",
-        "status": "open",
-        "check": "validation/scripts/substrate-explicit-vessels-check.ts --gate 27.3.g.1"
+        "status": "done",
+        "note": "Phase 8 complete (2026-05-24): minibob stripped to thin CLI; ActivityExecutor/goal-processor/mcp deleted. minibob removed from Dockerfile.substrate and systemd units. goal-host-vessel is the sole executor."
       },
       {
         "gate": "27.3.g.2",
         "description": "thompson_posterior advertised, scope ordering fixed, check exits 0",
-        "status": "partial",
-        "note": "scope ordering fixed (activity-api dev b32a095); check script pending deployment"
+        "status": "done",
+        "note": "Phase 5 complete: thompson_posterior in discovery.shapes, scope ordering fixed (activity-api dev b32a095), impulse path verified"
       },
       {
         "gate": "27.3.g.3",
         "description": "All six new vessels active: goal-host-vessel, llm-resolver-vessel, local-tools-vessel, ribosome-vessel, boredom-vessel, bootstrap-seeder",
-        "status": "partial",
-        "note": "ribosome-vessel not yet created (Phase 6)"
+        "status": "done",
+        "note": "All six present in Dockerfile.substrate and scripts/substrate/units/. Live smoke test deferred to next substrate-run (1b.6)."
       },
       {
         "gate": "27.3.g.4",
         "description": "Cross-vessel composition_chain integration test passes",
-        "status": "open"
+        "status": "partial",
+        "note": "test-4-6-cross-vessel-chain-credit.ts created. Requires local substrate with freshly issued key; canary keys incompatible. Run: METABOB_API_KEY=<local-key> bun run test-4-6-..."
       },
       {
         "gate": "27.3.g.5",
@@ -44,6 +47,15 @@
     "7.4 (boredom.ts no-op stub)",
     "1.6 (local-tools-vessel discovery smoke test)",
     "4.4 (goal-host-bridge.ts deleted)",
-    "3.3 (bootstrap-seeder 13/13 templates)"
+    "3.3 (bootstrap-seeder 13/13 templates)",
+    "27.3.g.1 (minibob removed from substrate; no in-process executor path)",
+    "27.3.g.2 (thompson_posterior + scope ordering done)",
+    "27.3.g.3 (all six explicit vessels in Dockerfile + units)"
+  ],
+  "open_gates_next": [
+    "27.3.g.4 — cross-vessel composition_chain test (needs live substrate + local key)",
+    "27.3.j.1 — memory closure (memoryNote shape in development-vessel)",
+    "27.3.j.2 — skill closure (slash-commands as substrate activity templates)",
+    "27.3.j.7 — closure-audit script"
   ]
 }

@@ -4,7 +4,7 @@
 #   JWT_SECRET        — shared HMAC secret for all vessel JWTs
 #   SURREAL_PASS      — SurrealDB root password
 #   METABOB_API_KEY   — API key for inter-vessel auth
-#   ANTHROPIC_API_KEY — LLM provider key for minibob
+#   ANTHROPIC_API_KEY — LLM provider key for llm-resolver-vessel
 
 IMAGE   := metabob/substrate
 TAG     := dev
@@ -20,7 +20,7 @@ BOREDOM_VESSEL_SRC := $(REPO_ROOT)/repos/boredom-vessel
 RIBOSOME_VESSEL_SRC := $(REPO_ROOT)/repos/ribosome-vessel
 CONCEPT_DB_SRC := $(REPO_ROOT)/repos/concept-db
 
-.PHONY: build run logs-all logs-minibob logs-activity-api logs-development-vessel \
+.PHONY: build run logs-all logs-activity-api logs-development-vessel \
         logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
         logs-goal-host-vessel logs-boredom-vessel logs-ribosome-vessel logs-concept-db \
         status shell stop clean \
@@ -47,7 +47,6 @@ run:
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 	    -p 8080:8080 \
 	    -p 8090:8090 \
-	    -p 8200:8200 \
 	    -v $(WORKSPACE):/workspace \
 	    --tmpfs /run \
 	    --tmpfs /run/lock \
@@ -63,7 +62,6 @@ run-detach:
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 	    -p 8080:8080 \
 	    -p 8090:8090 \
-	    -p 8200:8200 \
 	    -v $(WORKSPACE):/workspace \
 	    --tmpfs /run \
 	    --tmpfs /run/lock \
@@ -71,9 +69,6 @@ run-detach:
 
 logs-all:
 	docker exec substrate journalctl -f
-
-logs-minibob:
-	docker exec substrate journalctl -fu minibob.service
 
 logs-activity-api:
 	docker exec substrate journalctl -fu activity-api.service
@@ -107,7 +102,7 @@ logs-surrealdb:
 
 status:
 	docker exec substrate systemctl status --no-pager \
-	    surrealdb valkey discovery-vessel identity-vessel activity-api minibob development-vessel local-tools-vessel llm-resolver-vessel goal-host-vessel bootstrap-seeder boredom-vessel.timer ribosome-vessel concept-db
+	    surrealdb valkey discovery-vessel identity-vessel activity-api development-vessel local-tools-vessel llm-resolver-vessel goal-host-vessel bootstrap-seeder boredom-vessel.timer ribosome-vessel concept-db
 
 shell:
 	docker exec -it substrate bash

@@ -87,22 +87,12 @@ COPY repos/metabob-activity-api/sql ./activity-api/sql
 COPY repos/metabob-activity-api/scripts ./activity-api/scripts
 COPY repos/metabob-activity-api/tsconfig.json ./activity-api/
 
-# ias-executor-ts (local dependency of minibob)
+# ias-executor-ts (shared executor library for goal-host, local-tools, llm-resolver vessels)
 COPY repos/ias-executor-ts/package.json repos/ias-executor-ts/bun.lock* ./ias-executor-ts/
 COPY repos/ias-executor-ts/src ./ias-executor-ts/src
 COPY repos/ias-executor-ts/dist ./ias-executor-ts/dist
 COPY repos/ias-executor-ts/tsconfig*.json ./ias-executor-ts/
 RUN cd ias-executor-ts && bun install --frozen-lockfile
-
-# minibob
-COPY repos/minibob/package.json repos/minibob/bun.lock* ./minibob/
-RUN cd minibob && \
-    sed -i 's|file:../../packages/vessel-discovery-client|file:/vessels/packages/vessel-discovery-client|g' package.json && \
-    sed -i 's|file:../ias-executor-ts|file:/vessels/ias-executor-ts|g' package.json && \
-    bun install
-COPY repos/minibob/src ./minibob/src
-COPY repos/minibob/index.ts ./minibob/
-COPY repos/minibob/tsconfig.json ./minibob/
 
 # development-vessel
 COPY repos/development-vessel/package.json repos/development-vessel/bun.lock* ./development-vessel/
@@ -170,7 +160,6 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env && \
         discovery-vessel.service \
         identity-vessel.service \
         activity-api.service \
-        minibob.service \
         development-vessel.service \
         local-tools-vessel.service \
         llm-resolver-vessel.service \
