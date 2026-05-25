@@ -125,6 +125,7 @@ async function main(): Promise<void> {
     res = await fetch(`${GOAL_HOST_ENDPOINT}/run-goal`, {
       method: "POST",
       headers: authHeaders(),
+      signal: AbortSignal.timeout(8 * 60 * 1000),
       body: JSON.stringify({
         goal,
         tags: ["intent:topology_discovery", BOREDOM_TAG],
