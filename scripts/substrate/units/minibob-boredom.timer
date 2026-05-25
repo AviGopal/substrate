@@ -1,11 +1,14 @@
 [Unit]
-Description=Fire minibob boredom goal every 10 minutes
-After=minibob.service
+Description=Enqueue topology-discovery boredom tasks every 6 hours
+After=activity-api.service
 Requires=minibob-boredom.service
 
 [Timer]
-OnActiveSec=5min
-OnUnitActiveSec=10min
+# First fire 10 min after container start to let vessels settle.
+# Subsequent fires every 6 hours — topology templates run slowly;
+# pile-up guard in the .service prevents over-queueing.
+OnActiveSec=10min
+OnUnitActiveSec=6h
 Unit=minibob-boredom.service
 
 [Install]
