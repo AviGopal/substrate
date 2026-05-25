@@ -2094,3 +2094,15 @@ Five sibling specs landed in the integration spec's orbit between 2026-05-17 and
 6. Stratified harness (25) — runs alongside the v2 benchmark; Scenario D filled once Phase 22 forge clears its own gate.
 
 This is a note, not a re-design. The implementation tasks live in the sibling specs.
+
+## 2026-05-23 amendment — substrate-explicit-vessels + zk-trace-attestations
+
+Two sibling specs landed in the integration spec's orbit 2026-05-23. They are tracked in `tasks.md` as Phase 27.3.g (explicit-vessel coverage) and do not add new primitives — each closes a structural gap that the implicit-executor architecture left open for lift.
+
+- `openspec/changes/2026-05-23-substrate-explicit-vessels/` (Phase 27.3.g) — replaces the implicit ActivityExecutor and Thompson Sampling in-process paths with a fleet of explicit substrate-hosted vessels (`goal-host-vessel`, `llm-resolver-vessel`, `local-tools-vessel`, `ribosome-vessel`, `boredom-vessel`, `bootstrap-seeder`). Closes IAL §27.3.g gates 1–5. The `thompson_posterior` impulse shape is now load-bearing in the read path; the account-vs-global scope ordering bug (org-scoped learning was diluted by global baseline rows, not used as fallback) is fixed in `activity-api src/routes/impulses.ts`. `validation/scripts/substrate-explicit-vessels-check.ts` is the gate harness.
+
+- `openspec/changes/2026-05-23-zk-trace-attestations/` (forward reference) — cross-vessel traces will carry counterparty signatures proving both producer and consumer agreed on trace contents. Until shipped, Thompson posterior writes stay advisory-only and unverified traces do not pollute the binding-layer distribution (per the H1 hardening property in `openspec/changes/2026-04-26-security-hardening-findings/design.md`).
+
+**Why this batch matters for lift.** Phase 27.3.g.1 is a hard lift gate: no core execution path may be reachable only via in-process call from a single binary. The substrate-explicit-vessels spec closes this gap. The gate harness (`substrate-explicit-vessels-check.ts`) reads `systemctl is-active` for each vessel and checks `validation/state/lift-status.json` for any blocking entries.
+
+This is a note, not a re-design. The implementation tasks live in the sibling specs.

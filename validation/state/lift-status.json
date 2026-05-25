@@ -1,0 +1,49 @@
+{
+  "$schema": "./lift-status-schema.json",
+  "as_of": "2026-05-24T00:00:00Z",
+  "phase": "S1",
+  "blockers": {
+    "27.3.g": [
+      {
+        "gate": "27.3.g.1",
+        "description": "No core execution path reachable only via in-process call",
+        "status": "open",
+        "check": "validation/scripts/substrate-explicit-vessels-check.ts --gate 27.3.g.1"
+      },
+      {
+        "gate": "27.3.g.2",
+        "description": "thompson_posterior advertised, scope ordering fixed, check exits 0",
+        "status": "partial",
+        "note": "scope ordering fixed (activity-api dev b32a095); check script pending deployment"
+      },
+      {
+        "gate": "27.3.g.3",
+        "description": "All six new vessels active: goal-host-vessel, llm-resolver-vessel, local-tools-vessel, ribosome-vessel, boredom-vessel, bootstrap-seeder",
+        "status": "partial",
+        "note": "ribosome-vessel not yet created (Phase 6)"
+      },
+      {
+        "gate": "27.3.g.4",
+        "description": "Cross-vessel composition_chain integration test passes",
+        "status": "open"
+      },
+      {
+        "gate": "27.3.g.5",
+        "description": "boredom-vessel produces traces tagged intent:topology_discovery",
+        "status": "done",
+        "note": "verified via make trigger-boredom-vessel"
+      }
+    ]
+  },
+  "closed_gates": [
+    "5.1 (thompson_posterior in discovery.shapes)",
+    "5.2 (account-vs-global scope ordering)",
+    "5.3 (thompson_posterior impulse smoke test)",
+    "5.4 (workbench callsite migrated to impulse path)",
+    "7.3 (boredom-vessel tags end-to-end)",
+    "7.4 (boredom.ts no-op stub)",
+    "1.6 (local-tools-vessel discovery smoke test)",
+    "4.4 (goal-host-bridge.ts deleted)",
+    "3.3 (bootstrap-seeder 13/13 templates)"
+  ]
+}

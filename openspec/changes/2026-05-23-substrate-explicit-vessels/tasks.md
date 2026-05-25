@@ -120,12 +120,12 @@ string-matching.
 
 - [x] 5.1 Add `thompson_posterior` to `repos/metabob-activity-api/src/config.ts`
   `discovery.shapes`.
-- [ ] 5.2 Fix the account-vs-global scope ordering bug noted in IAL
+- [x] 5.2 Fix the account-vs-global scope ordering bug noted in IAL
   Phase 9.3 — global rows must be the fallback, not the precedence.
 - [x] 5.3 Smoke test: `POST /v2/impulses/resolve` with
   `{ type: 'thompson_posterior', activity_variant_id: '...' }` returns the
   same payload as `GET /v2/activities/:id/variant-scores`.
-- [ ] 5.4 Workbench: replace one of its REST callsites for variant scores
+- [x] 5.4 Workbench: replace one of its REST callsites for variant scores
   with the impulse path. Validates the impulse surface end-to-end. Other
   callsites remain on REST until a follow-up change.
 
@@ -173,13 +173,14 @@ string-matching.
 
 ## Phase 9 — IAL Phase 27.3.c integration
 
-- [ ] 9.1 Amend `openspec/changes/2026-04-26-impulse-activity-loop/tasks.md`
+- [x] 9.1 Amend `openspec/changes/2026-04-26-impulse-activity-loop/tasks.md`
   Phase 27.3 with §27.3.c (this change's success criteria 1–4).
-- [ ] 9.2 Add to the IAL proposal.md New Capabilities list a pointer to
+  (Satisfied by existing §27.3.g; section already present.)
+- [x] 9.2 Add to the IAL proposal.md New Capabilities list a pointer to
   `2026-05-23-substrate-explicit-vessels` and `2026-05-23-zk-trace-attestations`.
-- [ ] 9.3 Update `validation/state/lift-status.json` schema to include
+- [x] 9.3 Update `validation/state/lift-status.json` schema to include
   `blockers["27.3.c"]` array.
-- [ ] 9.4 Add `validation/scripts/substrate-explicit-vessels-check.ts` —
+- [x] 9.4 Add `validation/scripts/substrate-explicit-vessels-check.ts` —
   reads `systemctl is-active <vessel>.service` for each of the six new
   vessels and updates the blockers field.
 
