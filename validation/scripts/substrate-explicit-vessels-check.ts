@@ -100,11 +100,13 @@ async function check_g2(): Promise<GateResult> {
 }
 
 async function check_g3(): Promise<GateResult> {
-  // Gate 27.3.g.3: all six vessels active inside the container.
+  // Gate 27.3.g.3: all explicit vessels active inside the container.
   const vessels = [
     { name: 'goal-host-vessel', port: 8210 },
     { name: 'llm-resolver-vessel', port: 8220 },
     { name: 'local-tools-vessel', port: 8230 },
+    { name: 'ribosome-vessel', port: 8240 },
+    { name: 'concept-db', port: 8260 },
     { name: 'boredom-vessel.timer', port: null },
     { name: 'bootstrap-seeder', port: null },
   ];
