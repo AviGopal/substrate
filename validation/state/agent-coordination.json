@@ -4,31 +4,26 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-25T06:00Z",
-      "current_focus": "Closure properties work complete (offline). 27.3.j.1 memoryNote DONE (d164bb9). 27.3.j.2 skill closure DONE (039c5ef) \u2014 fs_list + http_fetch resolvers added, 30 shapes. 27.3.j.7 closure-audit DONE (9da917a7) \u2014 validation/scripts/closure-audit.ts written, 0/6 closed while substrate offline. Substrate image EXISTS (metabob/substrate:dev, 1.9GB) but container is NOT running. OPERATOR ACTION NEEDED: run make -C scripts/substrate run-live JWT_SECRET=... SURREAL_PASS=... METABOB_API_KEY=... ANTHROPIC_API_KEY=... then make -C scripts/substrate seed-live. After substrate online: bun run validation/scripts/closure-audit.ts to verify closure gates flip green.",
+      "last_updated": "2026-05-25T08:50:00Z",
+      "current_focus": "Thompson posteriors now updating \u2014 proxy resolver fix + normalize fix landed. All 6/6 closure gates closed. 3 fixes shipped: goal-host proxy resolvers, posterior normalization, boredom timeout 300s.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties"
       ],
-      "substrate_state": {
-        "container_status": "OFFLINE - image exists (metabob/substrate:dev 7f9f58eae0ac, 1.9GB), container not running. No rebuild needed, just run-live with env vars.",
-        "last_working_commit": "039c5ef",
-        "ports": {
-          "activity_api": 18080,
-          "development_vessel": 18090,
-          "discovery_vessel": 18100
-        },
-        "canary_endpoint": "DEPRECATED - activity.metabob.com removed"
-      },
-      "open_gates": [
-        "27.3.g.4 (cross-vessel chain test - needs live substrate)",
-        "27.3.j.1 DONE (memoryNote shape - d164bb9)",
-        "27.3.j.2 DONE (fs_list + http_fetch resolvers - 039c5ef, 30 shapes total)",
-        "27.3.j.7 DONE (closure-audit script - 9da917a7)",
-        "gap-008 DONE (heartbeat file)",
-        "closure-audit green (needs substrate online - run bun run validation/scripts/closure-audit.ts)"
+      "substrate_state": "running \u2014 all vessels healthy; goal-host-vessel executing templates (exec completed); Thompson alpha/beta updating correctly after fix; boredom-vessel running topology goals",
+      "open_gates": [],
+      "recent_fixes": [
+        "goal-host-vessel: registers dev-vessel proxy resolvers at startup (was task_count=0 on all executions)",
+        "posterior-update.ts: normalizeActivityId() on rawActivityId before WHERE lookup (was alpha/beta stuck at initial values)",
+        "migration 138: execution_trace_content.created_at option<datetime> (was non-fatal NONE error on every trace)",
+        "boredom-vessel.service: TimeoutStartSec=300 (was killed at 90s during slow topology goals)"
       ],
-      "coordination_notes": "Substrate image ready; no rebuild needed. Operator action required: make -C scripts/substrate run-live JWT_SECRET=... SURREAL_PASS=... METABOB_API_KEY=... ANTHROPIC_API_KEY=... then make -C scripts/substrate seed-live. After online: run bun run validation/scripts/closure-audit.ts - expect slash-skills/operator-memory/github-actions/operator-shell/operator-spec-authoring to close. subagents gate (goal-host :8210) is substrate-internal. Validation blocked on substrate restart."
+      "coordination_notes": [
+        "closure-audit 6/6: all properties closed including subagents (port 18210 is now mapped in run-live target)",
+        "Thompson update path verified: success alpha 1\u21922, failure beta 2\u21923, confirmed via SurrealDB direct query",
+        "boredom loop active: completing goals like probe-unlearned-shapes (~4min duration)",
+        "goal-host-vessel uses METABOB_API_KEY from /etc/substrate/env \u2014 traces land in org=organizations:substrate"
+      ]
     },
     "validation": {
       "role": "adversarial-validator",
