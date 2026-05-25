@@ -1,0 +1,71 @@
+{
+  "properties": {
+    "operator-memory": {
+      "closed": false,
+      "missing_deps": [
+        "memoryNote resolver in development-vessel"
+      ],
+      "evidence": "HTTP 0",
+      "description": "Substrate memory (memoryNote) works without operator ~/.claude/memory files"
+    },
+    "slash-skills": {
+      "closed": false,
+      "missing_deps": [
+        "development-vessel reachable"
+      ],
+      "evidence": "health check failed: 0",
+      "description": "Skill-equivalent operations available via development-vessel resolvers alone"
+    },
+    "subagents": {
+      "closed": false,
+      "missing_deps": [
+        "goal-host-vessel reachable on :8210"
+      ],
+      "evidence": "health: 0 \"Unable to connect. Is the computer able to access the url?\"",
+      "description": "Complex multi-step goals executable via goal-host-vessel without Claude Code subagents"
+    },
+    "github-actions": {
+      "closed": false,
+      "missing_deps": [
+        "failure_mode_matrix_score resolver"
+      ],
+      "evidence": "HTTP 0",
+      "description": "Merge/CI gating available via failure_mode_matrix_score without GitHub Actions"
+    },
+    "operator-shell": {
+      "closed": false,
+      "missing_deps": [
+        "systemd_restart resolver",
+        "substrate_health_tick resolver"
+      ],
+      "evidence": "missing: systemd_restart resolver, substrate_health_tick resolver",
+      "description": "Substrate self-heals via systemd_restart + substrate_health_tick without operator shell"
+    },
+    "operator-spec-authoring": {
+      "closed": false,
+      "missing_deps": [
+        "memoryNote_write",
+        "activity_create_variant",
+        "fs_write",
+        "git_commit",
+        "llm_completion_dispatch"
+      ],
+      "evidence": "could not reach development-vessel /shapes",
+      "description": "Spec authoring resolvers present; substrate can author specs without operator"
+    }
+  },
+  "audit_run_at": "2026-05-25T06:15:33.365Z",
+  "audit_tool_versions": {
+    "development-vessel": "unreachable",
+    "activity-api": "unreachable"
+  },
+  "all_closed": false,
+  "tested": [
+    "operator-memory",
+    "slash-skills",
+    "subagents",
+    "github-actions",
+    "operator-shell",
+    "operator-spec-authoring"
+  ]
+}
