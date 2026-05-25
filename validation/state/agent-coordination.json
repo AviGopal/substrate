@@ -84,8 +84,8 @@
     },
     "validation": {
       "role": "adversarial-validator",
-      "last_updated": "2026-05-25T01:42:00Z",
-      "current_focus": "iteration 13: substrate quiescent for ~30min since 01:10:52Z. _goal_resolve traces NO LONGER PRODUCED by boredom path (dev templateId-direct dispatch bypasses _goal_resolve entirely, generating _boredom_activity:⟨...⟩ synthetic IDs instead). Audit iter-002 confirms F-040 (Phase 0-2 vessels live), F-041 (S.4a window 1 STARTED), F-029 status-changed (dev claims failure_mode populated).",
+      "last_updated": "2026-05-25T02:47:00Z",
+      "current_focus": "iteration 14: substrate active again (~02:40-02:46Z) but mostly failing. New activity classes appearing in trace stream: harness-check-scenario (FAIL), test-template (FAIL), variant-1779534644901 (SUCCESS), harness-run-matrix (FAIL), probe-untraversed-edge (FAIL). Thompson posteriors STILL flat across all named templates. substrate-explicit-vessels 14→22/53 tasks (+8 since iter-13 audit reading).",
       "narrator_status": "running (bdl29gi6j)",
       "gaps_recorded": [
         "gap-001",
@@ -273,6 +273,26 @@
           "named_template_invocations_this_iter": "substrate-health-tick at 20:46:50 (3x); coverage-tick at 21:06:54 (3x)",
           "goal_resolve_failures_this_iter": "20:47, 20:58, 21:07, 21:17 (4 more)",
           "no_new_dev_commits_since": "09:38Z 2026-05-24 (12h+ since cache fix)"
+        },
+        "iteration_14": {
+          "substrate_state": "ACTIVE but mostly failing",
+          "trace_window_02_40_to_02_46Z": [
+            "harness-check-scenario FAIL",
+            "test-template FAIL",
+            "variant-1779534644901 SUCCESS",
+            "harness-run-matrix FAIL",
+            "probe-untraversed-edge FAIL"
+          ],
+          "metrics_delta_since_iter_13": {
+            "coverage_tick": "96→98 total (+2, no new success)",
+            "substrate_health_tick": "94 unchanged",
+            "probe_reachable_unlearned": "9→11 total (+2, no new success)"
+          },
+          "thompson_posteriors": "alpha=beta=1 unchanged, total_selections=0 across all three named templates — F-037 fully persists",
+          "_goal_resolve_traces": "still 0 in last 200 traces — gap-003 path genuinely bypassed by boredom system",
+          "substrate_explicit_vessels_task_progress": "14/53 (audit iter-002) → 22/53 (now); +8 tasks completed",
+          "new_failure_classes_observed": "harness-check-scenario, test-template, harness-run-matrix, probe-untraversed-edge all FAILING",
+          "interpretation": "substrate is exercising more templates but accumulating failures without populating failure_mode. Boredom system reaches a wider template set than before but Thompson learning still dead — substrate cannot prefer the templates that succeed (coverage-tick) over the ones that fail (harness-check-scenario etc.)"
         }
       },
       "escalation_to_operator": "BLOCKING — substrate is in a degraded operational state and validation alone cannot resolve it. Cross-agent triage required: dev must investigate template removals + goal_resolve failures + embedding.status; audit must register and verify runtime state. Without operator escalation, substrate continues to burn LLM credits on identical failing executions while losing its own self-measurement primitives.",
