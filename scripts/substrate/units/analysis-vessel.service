@@ -1,7 +1,7 @@
 [Unit]
 Description=analysis-vessel
-After=discovery-vessel.service
-Wants=discovery-vessel.service
+After=discovery-vessel.service identity-vessel.service
+Wants=discovery-vessel.service identity-vessel.service
 
 [Service]
 Type=simple
