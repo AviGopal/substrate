@@ -383,3 +383,149 @@ The recontextualization is now MORE pressing than when filed. Concrete next move
 - `validation/findings/dev-guidance-2026-05-24.md` Symptom 2 closure remains incomplete; recontextualization addresses it via different mechanism than originally proposed
 - `openspec/changes/2026-04-26-impulse-activity-loop/findings/dev.md` D-IAL-001 — dev's documentation of the boredom format fix from their side
 - `openspec/changes/2026-04-26-impulse-activity-loop/findings/validation-2026-05-24.md` — corroborating fresh validation pass with queue-flooding evidence
+
+---
+
+## Finding 4: Vessel-registered hooks integrate via `2026-05-25-impulse-lifecycle-events`
+
+**Claim in spec**: `proposal.md:44-67` names six explicit vessels and their
+advertised shapes + replaced subsystems. The proposal treats vessels as
+"shapes + resolver contracts" bundles. It does not address the lifecycle
+responsibilities for the shapes each vessel owns.
+
+**Observed reality**: Finding 3 above demonstrated that the boredom-vessel
+benefits from being recontextualized as a lifecycle observer rather than a
+hardcoded enqueue dispatcher. The same observation generalizes: every
+vessel that owns a shape also owns the lifecycle responsibilities for that
+shape. Re-resolving stale `fileContents`. Refreshing expired `session`.
+Reacting to `lifecycle:impulse:created` on a `fileContents` impulse whose
+path matches `docs/`. None of these have a current home — they fall outside
+the activity-api global registry (they are vessel-scoped) and outside
+existing lifecycle event classes (which cover task/execution layers, not
+impulse layer).
+
+`2026-05-25-impulse-lifecycle-events` introduces the missing event class
+plus a `registered_activities` extension on discovery-vessel's
+`RegisterRequest`. With that change, each vessel registers three things:
+
+- **Shapes + resolver contracts** (today)
+- **Activity templates** (new)
+- **Event subscriptions on those templates** (new)
+
+This is a strict extension of the registration surface, not a refactor.
+Vessels that don't ship templates work exactly as today.
+
+### Per-vessel hook breakdown
+
+| Vessel | Owned shapes | Registered activity templates | Subscription clauses |
+|---|---|---|---|
+| **goal-host-vessel** | `goal_execution`, `activity_execution` | none | none — it is the goal dispatcher; events route through it but it doesn't subscribe |
+| **local-tools-vessel** | `fileContents`, `commandResult`, `gitDiff`, `directoryTree` | `reload-stale-file`, `refresh-directory-tree` | `reload-stale-file` → `lifecycle:impulse:stale` for `fileContents`; `refresh-directory-tree` → `lifecycle:impulse:stale` for `directoryTree`; vessel also registers a `Bun.fs.watch()` watcher per active directory to emit those stale events |
+| **llm-resolver-vessel** | `llmText`, `llmStructured`, `llmToolCall`, `llmCompletion` | `cache-expired-completion`, `re-resolve-failed-completion` | `cache-expired-completion` → `lifecycle:impulse:expired` for `llmCompletion`; `re-resolve-failed-completion` → `lifecycle:impulse:invalidated` for any `llm*` shape when cascade root was an LLM provider failure |
+| **ribosome-vessel** | (no advertised shape — listener) | `extract-from-trace` (formal `ownership: vessel_local`) | `extract-from-trace` → `lifecycle:execution:succeeded` (existing pattern, now formally vessel-registered rather than process-global) |
+| **boredom-vessel** | (no advertised shape — emitter) | none registered; idle-detection only | emits `lifecycle:substrate:idle`; other vessels' templates subscribe (e.g., development-vessel's `coverage-tick`) |
+| **concept-db-vessel** (Phase 1b) | `concept`, `conceptGraph`, `relatedConcepts`, `conceptUsageStats`, `conceptSequence` | `extract-concepts-from-doc`, `link-trace-to-concept` | `extract-concepts-from-doc` → `lifecycle:impulse:created` for `fileContents` with `applicability_filter` matching `docs/` paths; `link-trace-to-concept` → `lifecycle:impulse:consumed` for shapes mentioned in concept graph |
+| **bootstrap-seeder.service** | none | seeds the `SHARED_TEMPLATES` set; not a long-running vessel | none — oneshot |
+
+The pattern: each vessel that owns a shape ships the activity that handles
+its lifecycle, declared as `ownership: vessel_local` so it deregisters with
+the vessel. Cross-cutting templates (debug-null-pointer, audit-and-backfill,
+etc.) remain `ownership: global` in activity-api's registry.
+
+### What this changes about substrate-explicit-vessels' Phase 1-7 scope
+
+The proposal's per-phase tasks need to expand at three points:
+
+**Phase 0 (vessel-daemon-toolkit)** gains a method on `VesselDaemon`:
+```typescript
+class VesselDaemon {
+  registerActivity(template: ActivityTemplate, ownership: "vessel_local" | "global"): void;
+}
+```
+The daemon collects these and forwards them at registration time to
+discovery-vessel, which in turn forwards to activity-api per
+`2026-05-25-impulse-lifecycle-events` §F.
+
+**Phase 1 (local-tools-vessel)** gains task 1.7: register `reload-stale-file`
+and `refresh-directory-tree` templates; wire `Bun.fs.watch()` to emit
+`lifecycle:impulse:stale` for each known impulse id derived from the watched
+path.
+
+**Phase 2 (llm-resolver-vessel)** gains task 2.7: register
+`cache-expired-completion` and `re-resolve-failed-completion` templates;
+implement the cache-TTL sweeper that populates `pointer.staleAt` on
+`llmCompletion` impulses.
+
+**Phase 4 (ribosome-vessel)** gains task 4.5: change ribosome's lifecycle
+subscription from process-global (today) to vessel-registered (`ownership:
+vessel_local` on the ribosome-extract template). No behavioural change; the
+subscription is the same, just attributed to the vessel.
+
+**Phase 7 (boredom-vessel, per Finding 3)** the proposed
+`lifecycle:substrate:idle` emitter becomes one of the emit sources defined
+in `2026-05-25-impulse-lifecycle-events` §C.3 (watch-based, where the
+"watch" is wall-clock time).
+
+**Phase 1b (concept-db-vessel)** gains task 1b.6: register
+`extract-concepts-from-doc` and `link-trace-to-concept` templates with
+subscriptions per the table above. This makes concept-db semantically
+reactive to substrate state — a doc edit triggers concept refresh without
+operator intervention.
+
+### Why this co-evolution matters
+
+Without `2026-05-25-impulse-lifecycle-events`, the substrate-explicit-vessels
+work produces six vessels that **advertise** their shapes correctly but
+have no mechanism to **maintain** them. A vessel that owns `fileContents`
+but cannot notice file changes is structurally incomplete. The operator
+must drive every refresh.
+
+With both specs together, the substrate becomes environment-driven:
+external state changes surface as lifecycle events; vessels that own the
+affected shapes react via their registered hook activities; the recommend
+pipeline selects among multiple eligible hooks via Thompson sampling; the
+learning loop updates posteriors keyed on `(template_id, event_signature)`.
+
+This closes the architectural loop that Finding 3 opened (boredom learning
+collapse): vessel-registered hooks dispatch through the same recommend →
+slot-binding → execute pipeline as every other meta-activity, so
+posteriors update naturally. The "templateId-direct" workaround in
+Finding 3 §UPDATE becomes unnecessary because the subscription clause +
+recommend pipeline + Thompson selection cover the same ground without
+bypassing learning.
+
+### Gap type and severity
+
+- Type: **co-evolution opportunity** (not a gap; substrate-explicit-vessels
+  is correct as-is; this finding identifies the natural seam for the
+  vessel-registered-hooks extension to land alongside).
+- Severity: **substantive** — the structural integration is small (one
+  method on VesselDaemon + per-phase template registrations) but the
+  architectural payoff is large: every vessel becomes environmentally
+  reactive without bespoke per-vessel orchestration code.
+
+### Proposed action
+
+1. No change to existing substrate-explicit-vessels task checkboxes.
+2. Land `2026-05-25-impulse-lifecycle-events` after Phase 0 of
+   substrate-explicit-vessels ships (`VesselDaemon` exists; extending it
+   with `registerActivity` is non-breaking).
+3. Append per-phase tasks 1.7, 2.7, 4.5, 7.* (per Finding 3 update),
+   1b.6 once `2026-05-25-impulse-lifecycle-events` is in `proposed`
+   status.
+4. Cross-reference both specs in each other's `Cross-references` blocks
+   (already wired via the present spec's `Cross-references` and the
+   new spec's "Dependencies" section).
+
+### Cross-references
+
+- `openspec/changes/2026-05-25-impulse-lifecycle-events/proposal.md` —
+  the new spec this finding integrates with.
+- `openspec/changes/2026-05-25-impulse-lifecycle-events/design.md` §F —
+  the `registered_activities` extension on discovery-vessel.
+- `openspec/changes/2026-05-25-impulse-lifecycle-events/design.md` §H —
+  the two-layer template ownership model (vessel_local vs. global).
+- Finding 3 above — the special case (`lifecycle:substrate:idle`) this
+  finding generalizes.
+- `docs/CORE_IDIOMS.md:152-185` Idiom 4 — the canonical lifecycle
+  subscription pattern both specs reuse.
