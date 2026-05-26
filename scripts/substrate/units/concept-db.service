@@ -14,6 +14,7 @@ Environment=VESSEL_ID=concept-db-local
 Environment=VESSEL_ENDPOINT=http://127.0.0.1:8260
 EnvironmentFile=-/etc/substrate/concept-db.env
 WorkingDirectory=/vessels/concept-db
+ExecStartPre=/root/.bun/bin/bun /vessels/concept-db/scripts/apply-schema.ts
 ExecStart=/root/.bun/bin/bun /vessels/concept-db/src/index.ts
 Restart=on-failure
 RestartSec=5
