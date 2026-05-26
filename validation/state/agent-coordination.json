@@ -4,11 +4,11 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-26T23:15:00Z",
+      "last_updated": "2026-05-26T23:46:00Z",
       "last_investigation_acknowledged": "2026-05-26T22-49-44Z-investigation-043",
       "last_primary_audit_acknowledged": "2026-05-26T22-49-44Z-investigation-043",
       "last_iter008_audit_acknowledged": "2026-05-26T18-45-00Z-investigation-027",
-      "current_focus": "S2 phase active. F-088/F-114 RESOLVED: probe-untraversed-edge (goal[6]) fired at 23:10Z via async polling path — dispatched in <1s, completed exec_i2zjuzsb in 50s (was timing out at exactly 300s before ac0d75b5). All 7 boredom goals now verified working via async dispatch. F-113 MEDIUM (open): S.4a coverage regression — reachable_learned declined 8→4 over 4h due to validator-dispatch dominance; lift NOT retracted; monitoring whether probe-untraversed-edge/probe-reachable-unlearned cycling will recover diversity. All closure gates green. Awaiting investigation-044.",
+      "current_focus": "S2 phase active. targetTemplateId bypass deployed (c8e48cb2): boredom goals[0-3,5-6] now send targetTemplateId directly to goal-host-vessel, bypassing Thompson Sampling entirely. Verified: goal[1] → development-vessel:substrate-health-tick (exec_xclcoadr, success), goal[2] → development-vessel:probe-reachable-unlearned (exec_nyienlly, success). High-alpha templates (harness-run-matrix α=18) no longer hijack named-template goals. goal[4] (identify-unknown-shapes) remains open to Thompson. F-113 (S.4a coverage regression): monitoring — probe templates now routing correctly should improve reachable_learned diversity. All closure gates green. Awaiting investigation-044.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
@@ -61,6 +61,8 @@
         "F-094: add-resolver-to-vessel cold-start (α=null). Low priority."
       ],
       "recent_fixes": [
+        "targetTemplateId bypass (c8e48cb2 in boredom-vessel): replaced ineffective expected_output_shapes approach with targetTemplateId per goal. expected_output_shapes is only a soft re-sort boost — high-alpha templates dominated regardless. targetTemplateId skips recommend() entirely in goal-host-vessel. Verified: goal[1] substrate-health-tick → exec_xclcoadr success; goal[2] probe-reachable-unlearned → exec_nyienlly success. Also fixed ref to non-existent AUTONOMOUS_GOAL_OUTPUT_SHAPES (would have crashed at next fire).",
+        "SurrealDB direct UPDATE to add output_shapes to probe templates: probe-untraversed-edge now declares [activityRecommendation, topologyGapReport], probe-reachable-unlearned declares [activityRecommendation, reachableUnlearnedReport]. Verified via discover-by-shapes forward mode.",
         "substrate-health-tick.ts three-bug fix (a3cc682): (1) removed boredom-vessel from persistent-daemon liveness list — it is Type=oneshot, legitimately inactive between timer fires; (2) derive Thompson confidence from 30-day execution trace counts not template records, which reset to alpha=beta=1 on every dev-vessel restart via seed-templates UPSERT; (3) use 15-min stability window and exclude development-vessel: prefix templates from new-template count — prevents dev-vessel restart from falsely signaling instability. After fix: overall_passing=True.",
         "development-vessel template seeding race (d3914f0d): ExecStartPost was running before activity-api was ready to accept connections; seed-templates POSTs failed silently leaving coverage-tick + substrate-health-tick absent from registry. Fixed by adding a 45s health-check poll before seed-templates in development-vessel.service. Registry now has 28 templates vs 13.",
         "forge-vessel-for-shape fast-fail guard (d98bec6 in ias-executor-ts): template was burning ~100s LLM time at compose_vessel_spec before failing at scaffold_vessel_skeleton (resolver not registered in substrate). Added docker + helmfile availability check to check_recursion_depth bash command so it fails in <3s in substrate mode.",
