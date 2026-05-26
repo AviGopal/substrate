@@ -131,10 +131,12 @@ async function main(): Promise<void> {
 
   let res: Response;
   try {
+    // No AbortSignal: Bun 1.3.14 caps AbortSignal.timeout at 300s regardless of
+    // the argument, causing goals that take 5+ minutes to always fail.
+    // Hard kill is handled by systemd TimeoutStartSec=600 in the service unit.
     res = await fetch(`${GOAL_HOST_ENDPOINT}/run-goal`, {
       method: "POST",
       headers: authHeaders(),
-      signal: AbortSignal.timeout(8 * 60 * 1000),
       body: JSON.stringify({
         goal,
         tags: ["intent:topology_discovery", BOREDOM_TAG],
