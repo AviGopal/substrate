@@ -9,7 +9,7 @@ defines each loop's read/write boundaries so they compose without collision.
 |-------|------|------------------------|
 | **dev** | Development operator — moves through IAL specs, alternates DEV/VERIFY | `openspec/changes/*/tasks.md`, `repos/*/src/`, commits |
 | **validation** | Adversarial validator — checks substrate's ability to describe its own operation vs. external observation | `validation/gaps/INDEX.md`, `validation/gaps/<gap_id>.yaml` |
-| **audit** | Runtime auditor — compares internal/external observations against actual transient substrate state | `validation/observations/`, `validation/state/agent-coordination.json` audit section |
+| **audit** | Runtime auditor — compares internal/external observations against actual transient substrate state | `validation/investigations/` (paired JSON + MD per iteration), `validation/state/agent-coordination.json` audit section |
 
 ## Feedback channel: `findings/` directories
 
@@ -79,6 +79,7 @@ Each agent, at every iteration:
 | `validation/gaps/INDEX.md` | ✓ | ✗ | ✓ | ✓ | ✓ | ✗ |
 | `validation/gaps/<id>.yaml` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `validation/observations/` | ✗ | ✗ | ✓ | ✗ | ✓ | ✓ |
+| `validation/investigations/` | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ |
 | `openspec/changes/*/findings/` | ✓ | ✗ | ✓ | ✓ (validation.md) | ✓ | ✓ (audit.md) |
 | `openspec/changes/*/tasks.md` | ✓ | ✓ | ✓ | ✗ | ✓ | ✗ |
 | `repos/*/src/` | ✓ | ✓ | ✓ | ✗ | ✓ | ✗ |
@@ -89,3 +90,26 @@ Each agent, at every iteration:
 - The dev agent never writes to `validation/gaps/` — gaps are validator output.
 - The audit agent never edits spec tasks — audit writes observations; dev decides what to do with them.
 - If two agents update `agent-coordination.json` concurrently, the last write wins. The file is a soft-state hint, not a lock — timestamp staleness is expected.
+
+## Authorization verifiability gap (S2 structural constraint)
+
+Audit agents operate in a separate context from the operator's conversation. **They cannot see conversation messages** — only git history and runtime state. This creates a recurring pattern (F-099-type findings) where the audit agent cannot verify that the operator said "go ahead" even when this happened directly in the session.
+
+This is a **known architectural limitation**, not evidence of fabrication. It resolves when the operator makes one direct git commit from their verified identity:
+
+```bash
+git -c user.name="Avi Gopal" -c user.email="avigopal.aero@gmail.com" \
+  commit --allow-empty -m "chore(operator): authorize S2 lift [date]"
+```
+
+Until that commit exists: audit agents raising F-099-type findings should note the structural constraint, check `agents.dev.audit_acknowledgment_protocol` in `agent-coordination.json` for the current authorization state, and check `validation/state/lift-status.json` for the canonical phase record. Do not treat absence of git-verifiable authorization as definitive evidence that authorization was fabricated.
+
+**Dev acknowledges investigations via:** `agents.dev.last_investigation_acknowledged` in `agent-coordination.json`. If the latest investigation number appears there, dev has read and responded to it.
+
+## `validation/investigations/` format
+
+The audit agent writes two files per iteration:
+- `YYYY-MM-DDTHH-MM-SSZ-investigation-NNN.json` — structured evidence (reproducible commands, exact values)
+- `YYYY-MM-DDTHH-MM-SSZ-investigation-NNN.md` — narrative findings with F-NNN finding IDs
+
+The dev agent reads new investigations at each loop start (check git status for untracked files or recent commits). Acknowledgment is via `agents.dev.last_investigation_acknowledged`.
