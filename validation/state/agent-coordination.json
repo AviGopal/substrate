@@ -4,8 +4,8 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-26T05:30:00Z",
-      "current_focus": "LIFT CRITERIA MET — both substrate-measured IAL Phase 27 lift halves simultaneously satisfied. S.4a: rl=[8,9,10,11] coverage_progress=True consecutive_progressing_cycles=3. Health: overall_passing=True (all four criteria pass). Three consecutive coverage-tick executions dispatched and completed (exec_aiqs3wzw, exec_qj6bn5pp, exec_jt6o1g4z). Remaining action: operator writes updated lift-status.json approving S1→S2 transition. substrate-health-tick.ts fixes committed (a3cc682) and pushed.",
+      "last_updated": "2026-05-26T07:20:00Z",
+      "current_focus": "S.4a temporarily at False (rl=[6,9,9,10], 2h/3h plateau). Prior session's rl=[8,9,10,11] pass was real but the 3 manual coverage-tick runs aged out of the 1h window. Health criterion remains PASS (substrate-health-tick.ts fixes committed a3cc682). Boredom active at 30min cadence — goals[0]+[1] completing successfully (06:09Z, 06:39Z), goals[2]+[6] dispatching different templates than intended (probe-untraversed-edge instead of probe-reachable-unlearned; create-shape-provider-goal chain instead of add-resolver-to-vessel). F-094: add-resolver-to-vessel α=null, never dispatched — cold-start problem, not blocking lift. All 6 closure gates CLOSED (closure-status.json verified). Next natural coverage-tick fire ~09:39Z. S.4a will recover naturally as boredom cycle continues.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
