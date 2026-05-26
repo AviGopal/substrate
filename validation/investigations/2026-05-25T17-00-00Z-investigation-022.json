@@ -1,0 +1,68 @@
+{
+  "investigation_id": "2026-05-25T17-00-00Z-investigation-022",
+  "generated_at": "2026-05-25T17:00:00Z",
+  "investigator_session_id": "claude-opus-4-7-audit-iter-007",
+  "prior_investigation_id": "2026-05-25T15-05-00Z-investigation-021",
+  "loop_iteration": 7,
+  "framing": "concrete design for Cα and Cβ — operator-insertable concepts",
+  "substrate_target": "http://localhost:18080",
+  "subagent_inputs": [
+    {"task_id": "aea74157a49b5561e", "name": "Cα and Cβ concrete concept design"}
+  ],
+  "concept_payloads": [
+    {
+      "name": "Cα",
+      "id": "concept:prompt_directive:compose_goal_empty_cooccurrence",
+      "shape": "prompt_directive",
+      "source_type": "human_input",
+      "scope": "global",
+      "purpose": "Cold-start directive: empty cooccurrence_signal_result → conservative synthesis, not confabulation",
+      "audit_signals": [
+        "endpoint_output_shapes.length flat at 1",
+        "signals_summary.cooccurrence_top_shape null-rate ≥80%",
+        "text length drop ≥30%"
+      ]
+    },
+    {
+      "name": "Cβ",
+      "id": "concept:resolver_pattern:validator_dispatch_lifecycle_task_completed",
+      "shape": "resolver_pattern",
+      "source_type": "extracted",
+      "scope": "global",
+      "purpose": "Route (lifecycle:task:completed → validation_result) pairs to validator-dispatch before LLM tier (73/73 measured prior)",
+      "audit_signals": [
+        "resolver_tier 'deterministic' count rises for validation_result-producing tasks",
+        "cost_usd per task drops ≥0.8× median LLM-tier cost",
+        "resolver_id shifts from llm/llm-prompt to activity"
+      ]
+    }
+  ],
+  "retrieval": {
+    "endpoint": "GET /concepts/search?shape=<...>&source_type=<...>&limit=N",
+    "handler": "repos/concept-db/src/routes/concepts.ts:107-140",
+    "consumer_side_filter_on": "pointer.applies_to_template, pointer.applies_to_task"
+  },
+  "integration_points": [
+    {"target": "Cα", "file": "repos/ias-executor-ts/src/resolvers/llm-prompt.ts", "line": 85, "change_loc": 21},
+    {"target": "Cα", "file": "repos/ias-executor-ts/src/templates/.../create-shape-provider-goal.json", "line": 233, "change": "one-line placeholder addition"},
+    {"target": "Cβ", "file": "repos/ias-executor-ts/src/engine.ts", "line": 144, "change_loc": 40},
+    {"target": "Cβ-helper", "file": "repos/ias-executor-ts/src/resolvers/concept-routing.ts", "change_loc": 60, "new_file": true}
+  ],
+  "critical_guard": {
+    "where": "Cβ pre-dispatch helper",
+    "condition": "if (task.resolver === 'activity') skip",
+    "consequence_if_missed": "infinite-loop / stack overflow when validator-dispatch's own dispatch_validators task re-enters concept routing"
+  },
+  "interaction_analysis": {
+    "compose_in_common_path": true,
+    "adversarial_scenario": "future create-shape-provider-goal variant whose compose_goal emits validation_result would let Cβ silently bypass Cα",
+    "mitigation": "consumer-side predicate require task.id != 'compose_goal' until pointer.templateId_exclude lands"
+  },
+  "blocked_by": "record<concept> schema mismatch in concept-db's create handler (iter-018 Finding A)",
+  "audit_status": "both payloads queued for insertion the moment schema unblocks",
+  "correction": {
+    "by_investigation": "2026-05-26T18-15-00Z-investigation-026",
+    "summary": "envelope-vs-impulse split — Cα/Cβ as concept-db impulses remain valid; iter-022's 'concept_directives envelope field' framing is replaced by declared inputShapes"
+  },
+  "next_wake_recommendation": "monitor schema-fix gate"
+}

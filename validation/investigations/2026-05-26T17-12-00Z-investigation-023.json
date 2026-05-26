@@ -1,0 +1,64 @@
+{
+  "investigation_id": "2026-05-26T17-12-00Z-investigation-023",
+  "generated_at": "2026-05-26T17:12:00Z",
+  "investigator_session_id": "claude-opus-4-7-audit-iter-008",
+  "prior_investigation_id": "2026-05-25T17-00-00Z-investigation-022",
+  "loop_iteration": 8,
+  "framing": "executor-time gap detection + forge-vs-dispatch decision",
+  "substrate_target": "http://localhost:18080",
+  "subagent_inputs": [
+    {"task_id": "a798715294be7f12c", "name": "Gap detection + vessel-forge decision from executor POV"}
+  ],
+  "gap_taxonomy": [
+    {"id": 1, "name": "missing-resolver", "detection_cost": "us", "signal": "runtime.resolvers.get(task.resolver) undefined AND not in attachedVessels", "detected_today": true},
+    {"id": 2, "name": "missing-vessel-attachment", "detection_cost": "sub-ms", "signal": "not in runtime.resolvers but is in attachedVessels — retry via passthrough", "detected_today": false},
+    {"id": 3, "name": "missing-shape-in-pool", "detection_cost": "us", "signal": "declaredInputShapeNames not subset of pool.shapes; already computed at lifecycle:task:preBinding engine.ts:88-94", "detected_today": true},
+    {"id": 4, "name": "primitive-shape", "detection_cost": "ms", "signal": "backward-producer query returns 0 candidates", "detected_today": false},
+    {"id": 5, "name": "shape-ambiguity", "detection_cost": "ms", "signal": "≥2 producers, Thompson margin < ε; defer to slot-binding NOT a gap", "detected_today": false},
+    {"id": 6, "name": "synthesis-failure", "detection_cost": "post-hoc only", "signal": "resolver fired, empty output OR failure_mode.type=verifier_negative", "detected_today": false},
+    {"id": 7, "name": "scope-exhaustion", "detection_cost": "us (orthogonal)", "signal": "compositionChain.length ≥ CC1 cap", "detected_today": false}
+  ],
+  "decision_rule_forge_vs_dispatch_vs_hitl": {
+    "primitive-shape (cascade bottoms out)": "FORGE",
+    "missing-resolver (recurring)": "FORGE",
+    "synthesis-failure (LLM refuses with adequate inputs)": "HITL or single re-prompt with richer context — NEVER forge (forge gives capability, not judgment)",
+    "missing-shape-in-pool (producers exist)": "DISPATCH create-shape-provider-goal with candidate set as hint",
+    "shape-ambiguity": "SLOT-BINDING / Thompson — NOT a gap"
+  },
+  "forge_gating_conditions_all_required": [
+    "gap_type = primitive-shape",
+    "shape requested ≥k times (default k=3)",
+    "within per-day forge budget AND per-shape limit of 1",
+    "concept-db has some prior on this shape (description_of or partial resolver_pattern)",
+    "originating goal endpoint_output_shapes covers proposed forge output (CC1)"
+  ],
+  "concept_db_conditioning_gate": {
+    "resolver_pattern_present": "dispatch with that sequence as hint (playbook IS the answer)",
+    "description_of_present_but_no_resolver_pattern": "strong forge signal — documented but unimplemented capability",
+    "both_empty": "HITL safer than forge (no prior to ground new vessel's design)"
+  },
+  "cheapest_experiment": {
+    "name": "gap.classified lifecycle event",
+    "action": "emit classification event for every detected gap; KEEP executor's response unchanged",
+    "measurement_window": "24h boredom-tick day",
+    "decision_rule": {
+      "compositional_dominates": "richer in-band detection is load-bearing lever — forge stays cold",
+      "primitive_dominates": "substrate is capability-bounded — forge needs wiring before dispatch tuning pays"
+    },
+    "implementation_cost_loc": "single-digit",
+    "infra_added": "one new lifecycle event emission + one new field in failure_mode context payload"
+  },
+  "mapping_to_existing_substrate": {
+    "type_1_detection": "engine.ts:144 (resolver lookup)",
+    "type_3_detection": "engine.ts:88-94 (preBinding missingShapes)",
+    "types_2_4_5_6_7": "currently surface only as thrown errors",
+    "backward_producer_query": "activity-api discover-by-shapes backward mode (CLAUDE.md)",
+    "forge_primitive": "VesselForgeHost in repos/development-vessel; exercised by forge-test direct calls",
+    "concept_db_conditioning": "now writable end-to-end per iter-022 (modulo schema-fix gate)"
+  },
+  "correction": {
+    "by_investigation": "2026-05-26T18-15-00Z-investigation-026",
+    "summary": "gap.classified lifecycle event should also emit a gapClassificationImpulse into the pool — the information then flows natively to any resolver declaring it as inputShape"
+  },
+  "next_wake_recommendation": "monitor for adoption of gap.classified emit + forge wiring readiness"
+}

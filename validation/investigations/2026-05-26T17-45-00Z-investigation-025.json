@@ -1,0 +1,94 @@
+{
+  "investigation_id": "2026-05-26T17-45-00Z-investigation-025",
+  "generated_at": "2026-05-26T17:45:00Z",
+  "investigator_session_id": "claude-opus-4-7-audit-iter-010",
+  "prior_investigation_id": "2026-05-26T17-30-00Z-investigation-024",
+  "loop_iteration": 10,
+  "framing": "concrete metadata-envelope shape contract",
+  "substrate_target": "http://localhost:18080",
+  "subagent_inputs": [
+    {"task_id": "aca42e8bf149e35d3", "name": "Metadata envelope design"}
+  ],
+  "wire_change": {
+    "old": "{type:'llm_completion', prompt, model, max_tokens, system?}",
+    "new": "{type:'llm_completion', prompt, model, max_tokens, system?, envelope?}",
+    "envelope_omission_meaning": "legacy behavior",
+    "envelope_presence_meaning": "activated"
+  },
+  "forward_envelope_LLMInvocationEnvelope": {
+    "required_fields": [
+      {"name": "goal_class", "type": "enum", "values": ["top_level_goal", "boredom_probe", "composed_subgoal", "lifecycle_decision", "self_reflection"]},
+      {"name": "composition_depth", "type": "integer", "cap": 16}
+    ],
+    "optional_fields": [
+      {"name": "goal_class_chain", "type": "array root-first ≤4 deep"},
+      {"name": "gap_context", "type": "object", "fields": ["gap_type (enum of 7)", "missing_shapes (string[])", "is_compositional (boolean)"]},
+      {"name": "parent_goal_text", "type": "string", "size_budget": "hard truncate at 500 chars"},
+      {"name": "variant_maturity", "type": "object", "fields": ["sample_count (number only — α/β dropped)"]},
+      {"name": "concept_directives", "type": "array", "limit": "5 directives, 1KB total, ≤200 chars each, confidence-descending"},
+      {"name": "budget_remaining", "type": "enum", "values": ["healthy", "constrained", "critical"]}
+    ],
+    "cut_list_with_reasons": {
+      "parent_execution_id": "opaque id is noise; belongs in trace metadata",
+      "variant_id": "same",
+      "trace_id": "same — CONTROVERSIAL, see adversarial-test note",
+      "full_thompson_alpha_beta": "LLM has no counterfactual access; α/β alone unactionable",
+      "raw_budget_numbers": "tier enum is the actionable form",
+      "backward_producer_candidate_list": "LLM cannot invoke templates directly; tokens without behavior change"
+    }
+  },
+  "rendering_decision": {
+    "chosen": "system prompt with XML fencing <envelope>...</envelope>",
+    "rejected_a_prefix": "indistinguishable from user content; competes with existing template prefixes; prompt-injection vector",
+    "rejected_b_tool_call": "latency cost per call; envelope is small (<2KB worst case)",
+    "rendering_site": "llm-resolver-vessel src/index.ts:94-99"
+  },
+  "reciprocal_response_LLMInvocationResponse": {
+    "required_fields": [
+      {"name": "outcome", "type": "enum", "values": ["synthesized", "insufficient_signal", "contradictory_signal", "out_of_scope"]},
+      {"name": "body", "type": "free-form/JSON", "required_when": "outcome=synthesized"},
+      {"name": "unmet_requirements", "type": "object", "required_when": "outcome != synthesized", "fields": ["reason (≤300 chars)", "missing_shapes?", "conflicting_directives?"]}
+    ],
+    "optional_fields": [
+      {"name": "confidence", "type": "enum", "values": ["low", "medium", "high"], "thompson_interaction": "synthesized + low → Δα = 0.5 (extends F-V56/F-V57 stratified-update pattern)"}
+    ],
+    "trace_sink_fix": "when outcome != synthesized, failure_mode = {type: 'synthesis_failure', reason, context:{missing_shapes, conflicting_directives}}",
+    "consequence": "chain-credit propagation debits the variant that should have produced the output, not the variant that detected its absence — closes Thompson-posterior corruption from iter-024"
+  },
+  "backward_compat_policy": {
+    "default": "hard-opt-out — envelope ON by default; templates set prompt.envelope:false to suppress",
+    "gating_on_iter024_confabulation_rate": {
+      "below_5pct": "ship opt-in (broad-rollout cost > benefit)",
+      "above_15pct": "ship opt-out, accept measurable regression on confused legacy prompts",
+      "5_to_15pct": "second experiment on randomized template subset"
+    },
+    "kill_switches": {
+      "per_template": "prompt.envelope:false",
+      "fleet_level_env_var": "ENVELOPE_DISABLED=1 on llm-resolver-vessel"
+    }
+  },
+  "concept_db_integration": {
+    "retrieval_site": "repos/ias-executor-ts/src/resolvers/llm-prompt.ts:85 (pre-interpolation)",
+    "retrieval_query": "GET /concepts/search?shape=prompt_directive&applies_to_template=<X>&applies_to_goal_class=<Y>&limit=5",
+    "lands_in_envelope_field": "concept_directives (dedicated; NOT interpolated into prompt body)",
+    "rationale": [
+      "interpolation requires templates to know about {{envelope.directives}} — violates backward-compat",
+      "system-prompt framing keeps directive content separate from task content",
+      "conflict reporting requires stable identifiers"
+    ]
+  },
+  "controversial_choice_for_adversarial_test": {
+    "choice": "dropping trace_id/parent_execution_id from envelope",
+    "position": "opaque ids are noise; provenance belongs in trace metadata",
+    "adversarial_alternative": "when goal_class=self_reflection, LLM may need to read prior traces — without trace_id cannot name what reflecting on",
+    "test": "measure if self-reflection prompts degrade under lean envelope; if so add trace_handles gated on goal_class=self_reflection only"
+  },
+  "correction": {
+    "by_investigation": "2026-05-26T18-15-00Z-investigation-026",
+    "summary": "envelope is ~30% correct, ~70% misplaced under foundation alignment",
+    "what_stays_envelope": ["goal_class", "composition_depth", "budget_remaining tier", "variant_maturity.sample_count"],
+    "what_becomes_impulses": ["concept_directives", "gap_context.missing_shapes", "parent_goal_text"],
+    "response_envelope_entirely_replaced_by": "multi-impulse emission: [synthesisOutcome, synthesisBody?, unmetRequirements?]"
+  },
+  "next_wake_recommendation": "patch llm-prompt.ts (read inputImpulses; emit structured outcome impulses) BEFORE deploying envelope"
+}
