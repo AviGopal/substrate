@@ -1,0 +1,273 @@
+{
+  "investigation_id": "2026-05-25T09-42-37-investigation-014",
+  "generated_at": "2026-05-25T09:42:37Z",
+  "investigator_session_id": "claude-sonnet-4-6-iter-030",
+  "prior_investigation_id": "2026-05-25T09-33-42-investigation-013",
+  "loop_iteration": 30,
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container",
+    "substrate_reachable": true,
+    "substrate_version": "1.20.9",
+    "auth_verified": true,
+    "container_name": "substrate-live",
+    "container_status": "Up ~39 minutes (started ~09:03:36Z, development-vessel restarted at 09:35:54Z post vesselId fix)",
+    "health_check": {
+      "redis": "healthy",
+      "surrealdb": "healthy",
+      "discovery": "unhealthy (registered: false — F-025 persistent)",
+      "embedding": "healthy (all-MiniLM-L6-v2, dim=384)",
+      "pool_size": 0
+    },
+    "discovery_vessel": "5 registered vessels, 54 shapes (upgraded from 4/24 post vesselId fix 67bbcdb6)"
+  },
+  "commits_analyzed": [
+    {
+      "sha": "5605057b",
+      "message": "validation iter-24: Thompson posteriors live (RETURN fix); execution metrics verified; create-shape-provider-goal post-fix status; critical blockers (task-generation-flooding, topology-queue)",
+      "what_return_fix_means": "SurrealDB 3.x RETURN shorthand syntax 'RETURN { id, total_executions }' was causing a parse error in execution-traces.ts. The applyOutcomeToPosteriors callback never fired on trace writes. Fix: changed to explicit RETURN syntax (per c48c4333 submodule update). Result: Thompson posteriors now increment on every trace outcome.",
+      "what_task_generation_flooding_means": "TASK_GENERATION_ENABLED env var is not set to false in /etc/substrate/env. A TaskGenerator process fires every 5 minutes, adding 10 debug__* / optimize_* tasks to the boredom:queue:critical Redis sorted set. ZCARD reached 1232 — topology tasks are enqueued but never reached because debug/optimize tasks are ahead of them in the priority queue. The queue fills faster than it can drain.",
+      "what_topology_queue_means": "The topology_harness_next Redis key exists but the topology templates are NOT in the boredom:queue:critical sorted set (the active execution queue). Even if seeded, they are not being dispatched to goal-host. Two sub-issues: (1) task-generation-flooding blocking queue drain, (2) topology goals need explicit ZADD to boredom:queue:critical or a POST /v2/activities/boredom/enqueue call."
+    },
+    {
+      "sha": "e9ec7c20",
+      "message": "validation iter-25: create-shape-provider-goal regression 24%→0%; topology templates absent from traces; S.4a blocked; failure_mode null on all 21 failures",
+      "note": "Narration-only commit. Reports 0 topology traces in 300-trace window. The '24%→0% regression' the validator observed likely corresponds to the period before the RETURN fix (posteriors not moving) vs after (posteriors moving but create-shape-provider-goal failures accumulating β rapidly)."
+    },
+    {
+      "sha": "ae54d0e9",
+      "message": "validation iter-26: execution volume growing (300 traces); validator-dispatch 228/228 success; create-shape-provider-goal 0/32; new templates seeded; Thompson posteriors updating correctly",
+      "note": "Narration-only commit. Confirms validator-dispatch dominant. Notes new templates debug-failing-audit and evolve-activity-self-contained appearing in traces."
+    },
+    {
+      "sha": "67bbcdb6",
+      "message": "fix(substrate): assign unique vesselId/endpoint to development-vessel and concept-db",
+      "what_vesselid_fix_does": "Prior to this fix, both development-vessel and concept-db were reading VESSEL_ID=substrate-local and VESSEL_ENDPOINT=http://127.0.0.1:8080 from the global /etc/substrate/env file. They were registering with the same vesselId in the discovery registry, overwriting each other. concept-db won the last heartbeat, leaving development-vessel's 30 shapes invisible. Fix: added per-vessel Environment= overrides in each .service unit (development-vessel gets VESSEL_ID=development-vessel-local, VESSEL_ENDPOINT=http://127.0.0.1:8090; concept-db gets VESSEL_ID=concept-db-local, VESSEL_ENDPOINT=http://127.0.0.1:8260). Removed the global VESSEL_ID/VESSEL_ENDPOINT lines from gen-env.sh. After fix: 5 distinct vessels in discovery (54 shapes total vs prior 4/24). F-050 resolved.",
+      "files_changed": [
+        "scripts/substrate/gen-env.sh (-4 lines: removed global VESSEL_ID + VESSEL_ENDPOINT)",
+        "scripts/substrate/units/concept-db.service (+2: VESSEL_ID=concept-db-local, VESSEL_ENDPOINT=http://127.0.0.1:8260)",
+        "scripts/substrate/units/development-vessel.service (+2: VESSEL_ID=development-vessel-local, VESSEL_ENDPOINT=http://127.0.0.1:8090)"
+      ]
+    }
+  ],
+  "thompson_audit": {
+    "verdict": "CONVERGING — correct direction, systematic under-counting of magnitude",
+    "ratios_by_template": {
+      "validator_dispatch": {"n": 456, "ok": 456, "alpha_actual": 100, "alpha_expected": 457, "ratio": 0.22},
+      "slot_binding": {"n": 63, "ok": 63, "alpha_actual": 16, "alpha_expected": 64, "ratio": 0.25},
+      "create_shape_provider_goal": {"n": 66, "fail": 66, "beta_actual": 17, "beta_expected": 67, "ratio": 0.25},
+      "harness_run_matrix": {"n": 7, "ok": 3, "alpha_actual": 2, "alpha_expected": 4, "ratio": 0.5},
+      "prune_activity": {"n": 2, "ok": 2, "alpha_actual": 3, "alpha_expected": 3, "ratio": 1.0},
+      "core_activity_audit": {"n": 1, "ok": 1, "alpha_actual": 2, "alpha_expected": 2, "ratio": 1.0}
+    },
+    "pattern": "Low n (1-3): ratio ≈ 1.0. Medium n (7): ratio ≈ 0.5. High n (63-456): ratio ≈ 0.22-0.25. Systematic under-counting proportional to execution volume. Pattern consistent with batching or sampling every 4th write, NOT random missing writes.",
+    "selection_impact": "Under-counting does NOT impair selection. validator-dispatch EV=100/101=0.99 vs create-shape-provider-goal EV=1/18=0.056. The ordering is correct regardless of absolute magnitude. Thompson Sampling is selecting correctly.",
+    "f037_status": "NOT REGRESSED — posteriors moving in correct direction with high confidence",
+    "f043_status": "CONFIRMED RESOLVED — normalizeActivityId fix active, posteriors updating"
+  },
+  "f065_resolution": {
+    "finding": "F-065: Redis 'activity:templates:list' SET stale cache",
+    "prior_status": "new (iter-013)",
+    "current_status": "RESOLVED",
+    "evidence": "API now returns 28 templates (verified at 09:38:23Z and 09:41:13Z). Prior: 2 templates. Redis DEL was applied (either by operator per iter-013 recommendation or by cache expiry). Bootstrap-seeder templates are now all visible via /v2/activities/templates.",
+    "verified_at": "2026-05-25T09:38:23Z"
+  },
+  "vesselid_fix_verification": {
+    "finding": "F-050: development-vessel and concept-db vesselId collision",
+    "prior_status": "open",
+    "current_status": "RESOLVED by commit 67bbcdb6",
+    "verification": {
+      "discovery_before": {"vessels": 4, "shapes": 24, "all_from": "discovery-vessel self"},
+      "discovery_after": {"vessels": 5, "shapes": 54, "note": "5 distinct vessels including development-vessel-local and concept-db-local"},
+      "development_vessel_status": "Active (running) since Mon 2026-05-25 09:35:54 UTC, registered=true per /health",
+      "concept_db_status": "Active (running) since Mon 2026-05-25 09:35:52 UTC, registered as concept-db-local per logs",
+      "development_vessel_shapes": "30 shapes now advertised: coverage_tick, memoryNote, memoryNote_write, substrate_health_tick, learned_topology_snapshot, reachable_unlearned_report, escalate_unknown_shape, systemd_restart, plus filesystem/git/code ops"
+    }
+  },
+  "coverage_tick_status": {
+    "first_success_observed": "2026-05-25T09:40:19Z (during this investigation)",
+    "trace": {
+      "activity_id": "activity:⟨development-vessel:coverage-tick⟩",
+      "success": true,
+      "duration_ms": 44122,
+      "task_count": 0,
+      "impulse_count": 0
+    },
+    "note": "First coverage-tick success in this substrate run. Occurred 4m25s after vesselId fix applied (development-vessel restart at 09:35:54). The fix enabling discovery of development-vessel's shapes unblocked coverage-tick execution.",
+    "template_metrics_post_success": {
+      "total_executions": 4,
+      "successful_executions": 2,
+      "failed_executions": 2,
+      "thompson_alpha": 1.0,
+      "thompson_beta": 2.0
+    },
+    "thompson_write_anomaly": "F-066 CONFIRMED: 2 successes in metric but alpha=1 (expected 3). Thompson write not incrementing alpha for coverage-tick successes. The direction is correct (beta=2 reflects 2 failures) but alpha is stuck at 1 despite 2 successes.",
+    "s4a_status": "PARTIALLY UNBLOCKED — first success observed. Requires 2 more successful cycles for S.4a gate."
+  },
+  "create_shape_provider_goal_root_cause": {
+    "regression_explanation": "The '24%→0% regression' the validator observed is explained by the composition chain. Prior to the RETURN fix + vesselId fix, create-shape-provider-goal was dispatched as a top-level goal. Now it is dispatched as a CHILD within coverage-tick's composition chain: coverage-tick → validator-dispatch → slot-binding → create-shape-provider-goal. The child execution has impulse_count=0 (no impulses passed down the chain), causing instant failure (1ms) before any task executes.",
+    "composition_chain_verified": "exec_476s6blt (coverage-tick) → exec_f0g1bo5l (validator-dispatch) → exec_y5qzn92w (slot-binding) → exec_5etnnwlg (create-shape-provider-goal, FAIL, 1ms)",
+    "all_task_count_zero": "ALL executions in the chain have task_count=0. Tasks are executing (evidenced by duration: coverage-tick=44s, validator-dispatch=43s, slot-binding=36s) but not being written to the trace. This is a separate finding: task storage gap in IAS executor for composed executions.",
+    "failure_reason": "create-shape-provider-goal receives no impulses (impulse_count=0) when dispatched as a composition child. The activity requires input shapes (activity_metrics, activity_template, goal, execution_trace, etc.) that are not propagated through the composition chain. The activity fails before executing any task because required inputs are absent.",
+    "f036_update": "OPEN with new root cause: composition dispatch provides no impulses. This is distinct from the resolver registration issue (resolved in iter-022). The activity_recommendation resolver is registered but the activity fails before calling it because slot-binding did not pass impulses forward."
+  },
+  "topology_templates_in_traces": {
+    "previous_count_300_traces": 0,
+    "current_count_300_traces": 1,
+    "finding": "coverage-tick NOW appears in traces (1 success at 09:40:19Z). substrate-health-tick still absent in 300-trace window. probe-* templates also absent.",
+    "explanation": "vesselId fix (67bbcdb6) at 09:35:54 enabled development-vessel registration. Boredom dispatched a coverage-tick goal that succeeded. This is the first coverage-tick trace visible via the API in this substrate run.",
+    "topology_template_metrics": {
+      "coverage_tick": {"n": 4, "ok": 2, "fail": 2, "alpha": 1.0, "beta": 2.0},
+      "substrate_health_tick": {"n": 3, "ok": 1, "fail": 2, "alpha": 1.0, "beta": 2.0},
+      "probe_reachable_unlearned": {"n": 2, "ok": 0, "fail": 2, "alpha": 1.0, "beta": 2.0},
+      "escalate_unknown_shape": {"n": 2, "ok": 0, "fail": 2, "alpha": 1.0, "beta": 2.0}
+    }
+  },
+  "task_generation_flooding_explanation": {
+    "what_it_is": "A TaskGenerator process in the substrate runs every 5 minutes, adding debug__* and optimize_* task variants to the boredom:queue:critical Redis sorted set. With TASK_GENERATION_ENABLED not set to false, the queue fills with debugging and optimization tasks faster than the boredom-vessel can drain them. ZCARD reached 1232 at iter-24 observation.",
+    "consequence": "Topology goals (coverage-tick, substrate-health-tick, probe-*) are pushed to the back of the queue by the continuously-generated debug/optimize tasks. They never reach execution.",
+    "fix": "Set TASK_GENERATION_ENABLED=false in /etc/substrate/env and reload services. OR: Implement a priority scheme where topology tasks preempt debug/optimize tasks.",
+    "status": "Still open per iter-24 observation. This investigation could not verify queue ZCARD directly without redis-cli access."
+  },
+  "topology_queue_explanation": {
+    "what_it_is": "The topology_harness_next Redis key exists (tracking which topology goal is next) but topology goals are not in the boredom:queue:critical sorted set where boredom-vessel reads from. Two causes: (1) task-generation-flooding fills the queue with other tasks, (2) topology templates may need explicit enqueuing via POST /v2/activities/boredom/enqueue.",
+    "status": "Likely partially resolved by vesselId fix: now that development-vessel is properly registered, boredom can discover coverage-tick and dispatch it directly without going through the Redis queue (evidenced by the successful coverage-tick trace at 09:40:19Z)."
+  },
+  "failure_mode_null": {
+    "finding": "F-029: failure_mode null on all failures",
+    "current_count": "22 failures in 200-trace window, all with failure_mode=null",
+    "templates_affected": ["create-shape-provider-goal (22)", "activity:create-shape-provider-goal (3)", "forge-vessel-for-shape (1)"],
+    "status": "OPEN — persistent across all iterations since F-029 first observed"
+  },
+  "f025_status": {
+    "finding": "F-025: activity-api failing to register with discovery-vessel",
+    "evidence": "health check at 09:40:16Z: discovery.status=unhealthy, registered=false, error='Was there a typo in the url or port?'",
+    "discovery_vessel_count": "5 vessels total but activity-api is not one of them",
+    "note": "Despite activity-api using DISCOVERY_ENDPOINT=http://127.0.0.1:8100 (correct), registration continues to fail. This has been persistent across all substrate restarts in this audit series.",
+    "status": "OPEN — persistent"
+  },
+  "f063_status": {
+    "finding": "F-063: boredom-vessel.service Requires=goal-host-vessel.service",
+    "status": "OPEN — fix not applied. The Requires= dependency remains.",
+    "note": "Not triggering SIGTERM cascade in current substrate run because goal-host has been stable."
+  },
+  "f067_status": {
+    "finding": "F-067: Goal-host 5min HTTP timeout on boredom goals",
+    "status": "UNVERIFIABLE — cannot observe current boredom dispatches without reading substrate logs directly. The successful coverage-tick at 09:40:19Z (44s duration) suggests boredom dispatches are completing, not timing out, in the current run."
+  },
+  "new_findings": [
+    {
+      "id": "F-068",
+      "title": "task_count=0 for all executions in composition chains — tasks not stored in execution trace",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T09-42-37-investigation-014",
+      "status": "open",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl -sf -H 'Authorization: ApiKey $APIKEY' 'http://localhost:18080/v2/activities/execution-traces?limit=200' | python3 -c 'show task_count for executions'",
+          "excerpt": "coverage-tick: task_count=0, dur=44122ms; validator-dispatch: task_count=0, dur=43664ms; slot-binding: task_count=0, dur=36376ms; create-shape-provider-goal: task_count=0, dur=1ms",
+          "verified_at": "2026-05-25T09:41:13Z"
+        }
+      ],
+      "note": "Every execution in the 200-trace window has task_count=0. Durations (44s, 43s, 36s) prove tasks ARE executing. The IAS executor is not writing per-task records to activity_execution_traces. Affects: (a) per-task impulse grouping for co-occurrence learning, (b) root cause diagnosis of create-shape-provider-goal failures, (c) resolver performance tracking.",
+      "operator_remediation": "Investigate IAS executor task write path. Per-task records should be appended to the trace during execution. Likely the ias-executor-ts GoalHost task completion handler is not calling the task write endpoint."
+    },
+    {
+      "id": "F-069",
+      "title": "Thompson alpha systematically under-counted by ~4x for high-volume templates",
+      "category": "validation",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T09-42-37-investigation-014",
+      "status": "open",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl .../v2/activities/templates | compute alpha/expected_alpha ratios",
+          "excerpt": "validator-dispatch: n=456, ok=456, alpha=100 (expected 457, ratio=0.22); slot-binding: n=63, ok=63, alpha=16 (expected 64, ratio=0.25); create-shape-provider-goal: n=66, fail=66, beta=17 (expected 67, ratio=0.25). Low-n templates: ratio close to 1.0.",
+          "verified_at": "2026-05-25T09:42:37Z"
+        }
+      ],
+      "note": "Direction is correct; under-counting does not affect selection ordering. validator-dispatch EV=0.99 >> create-shape-provider-goal EV=0.056. Likely cause: batching or sampling writes at rate ~1/4 for high-volume templates. Not lift-blocking but represents sampling loss in the learning loop.",
+      "operator_remediation": "Investigate applyOutcomeToPosteriors write path for batching configuration. If intentional sampling, document the sample rate. If unintentional, identify where the 3/4 of writes are dropped."
+    }
+  ],
+  "finding_updates": [
+    {
+      "id": "F-065",
+      "prior_status": "new (iter-013)",
+      "new_status": "resolved",
+      "update": "Redis cache cleared (operator applied 'redis-cli DEL activity:templates:list' per iter-013 recommendation, or cache expired). 28 templates now visible via API, matching DB count."
+    },
+    {
+      "id": "F-050",
+      "prior_status": "open",
+      "new_status": "resolved",
+      "update": "vesselId collision fixed by commit 67bbcdb6. development-vessel now registered as 'development-vessel-local', concept-db as 'concept-db-local'. Discovery: 5 vessels, 54 shapes."
+    },
+    {
+      "id": "F-020",
+      "prior_status": "open",
+      "new_status": "partially-resolved",
+      "update": "coverage-tick first success observed at 09:40:19Z (enabled by vesselId fix). S.4a still requires 2 more successful cycles. F-066 (alpha not incrementing on success) remains open as sub-issue."
+    },
+    {
+      "id": "F-066",
+      "prior_status": "new (iter-013)",
+      "new_status": "open",
+      "update": "Still confirmed: coverage-tick has 2 successes in metrics but alpha=1 (not incremented). Part of the broader F-069 under-counting pattern."
+    },
+    {
+      "id": "F-036",
+      "prior_status": "open",
+      "new_status": "open",
+      "update": "Root cause refined: create-shape-provider-goal fails as a composition child with impulse_count=0. The activity_recommendation resolver is registered but never called because the activity fails before task execution (no input impulses passed from slot-binding parent). Regression from 24%→0% explained by shift from top-level dispatch to composition-chain dispatch."
+    }
+  ],
+  "resolutions_since_prior": ["F-065", "F-050"],
+  "regressions_since_prior": [],
+  "new_findings": ["F-068", "F-069"],
+  "s4a_gate_status": {
+    "s1": "passed",
+    "s2": "passed",
+    "s3": "passed",
+    "s4a": "PARTIALLY UNBLOCKED — 1 of 3 required coverage-tick successes observed (at 09:40:19Z). Requires 2 more consecutive successes.",
+    "s4b": "substrate-health-tick: 1 success (metric), no trace in current 300-window. Still blocked.",
+    "blocking_issue": "F-066 (Thompson alpha not incrementing for coverage-tick successes) means the learning signal is not propagating correctly even when cycles succeed. S.4a may complete observationally before the posterior anomaly is fixed.",
+    "estimate": "If boredom dispatches coverage-tick every ~5 minutes and succeeds, S.4a could close within ~10-15 minutes of this report. But F-068 (task_count=0) and F-066 mean coverage_progress payload quality is unverifiable."
+  },
+  "findings_tally": {
+    "open": 30,
+    "resolved": 41,
+    "partially_resolved": 1,
+    "regressed": 0,
+    "unverifiable": 1,
+    "total": 73,
+    "new_this_iteration": 2,
+    "resolved_this_iteration": 2,
+    "regressed_this_iteration": 0,
+    "key_new_findings": [
+      "F-068: task_count=0 for ALL executions (tasks executing but not stored in trace)",
+      "F-069: Thompson alpha under-counted ~4x for high-volume templates (direction correct, magnitude degraded)"
+    ],
+    "critical_open": [
+      "F-020/F-066: coverage-tick alpha not incrementing; S.4a partially unblocked (1/3 successes)",
+      "F-036: create-shape-provider-goal 0% success — dispatched with impulse_count=0 in composition chain",
+      "F-025: activity-api not registering with discovery (persistent)",
+      "F-029: failure_mode null on all failures (persistent)",
+      "F-068: task_count=0 across all executions (new, medium severity)"
+    ]
+  },
+  "open_questions": [
+    "Will coverage-tick succeed 2 more times in the next 10-15 minutes to close S.4a?",
+    "Why does slot-binding dispatch create-shape-provider-goal without passing any impulses?",
+    "What is the ~4x Thompson write batching/sampling rate and is it intentional?",
+    "Why does activity-api fail to register with discovery despite using the correct endpoint (127.0.0.1:8100)?",
+    "Has TASK_GENERATION_ENABLED been set to false after the topology-queue finding in iter-24?"
+  ],
+  "next_wake_recommendation": {
+    "delay_seconds": 1800,
+    "reason": "coverage-tick first success just observed (09:40:19Z) — watching for S.4a closure (needs 2 more). 30 minutes gives ~6 boredom cycles to accumulate more coverage-tick traces. Active dev fix landed (vesselId 67bbcdb6); both resolved findings need confirmation in next run. create-shape-provider-goal still at 0% but root cause now clear (composition impulse propagation gap)."
+  }
+}

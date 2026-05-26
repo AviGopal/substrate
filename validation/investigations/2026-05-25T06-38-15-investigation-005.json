@@ -1,0 +1,873 @@
+{
+  "investigation_id": "2026-05-25T06-38-15-investigation-005",
+  "generated_at": "2026-05-25T06:38:15Z",
+  "investigator_session_id": "loop-iteration-022",
+  "prior_investigation_id": "2026-05-25T06-03-29-investigation-004",
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container",
+    "version_reported": "1.20.9",
+    "auth_verified": true,
+    "narrator_state": "running; substrate reachable but partially degraded"
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "claim": "Gameable lift; cycle-8 unchanged.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/cycles/*.json | wc -l",
+          "excerpt": "8 cycle files (cycle-0 through cycle-8, no cycle-4, no cycle-9). Unchanged from iter-004.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "No new cycle generated. cycle-8 LIFT_CANDIDATE still gameable."
+    },
+    {
+      "id": "F-002",
+      "claim": "6 malformed proposals (epoch-zero timestamps).",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried from prior investigations; not re-verified this iteration)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-003",
+      "claim": "Traces lack signature.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-004",
+      "claim": "Only 8 failure-mode scenarios on disk (spec implies 63).",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/cycles/*.json | wc -l",
+          "excerpt": "8 cycle files; 9 proposals in proposals/ dir. No new cycles since iter-004.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-005",
+      "claim": "No cycle-9 generated. Lift cycle count stalled at 8.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/cycles/*.json",
+          "excerpt": "cycle-0 through cycle-8 (missing cycle-4). No cycle-9. Substrate was offline for ~2.5 hours; just restarted.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-006",
+      "claim": "Three files retain hardcoded identity.metabob.com or svc.cluster.local defaults.",
+      "category": "deployment",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -rn 'identity.metabob.com|svc.cluster.local' repos/identity-vessel/src/ repos/discovery-vessel/src/",
+          "excerpt": "identity-vessel/src/services/jwt.ts:15: process.env.JWT_ISSUER || 'https://identity.metabob.com'; identity-vessel/src/services/keyGeneration.ts:35: process.env.IDENTITY_ENDPOINT || 'https://identity.metabob.com'; identity-vessel/src/services/trace.ts:6: process.env.ACTIVITY_API_ENDPOINT || 'http://metabob-activity-api.activity-system.svc.cluster.local:8080'; identity-vessel/src/services/config.ts:92,110,125: svc.cluster.local defaults for SurrealDB, discovery, user-vessel; discovery-vessel/src/middleware/auth.ts:68: process.env.IDENTITY_VESSEL_URL ?? 'https://identity.metabob.com'",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Four distinct hardcoded defaults found (up from one in iter-004): identity-vessel/src/services/jwt.ts, keyGeneration.ts, trace.ts, config.ts, plus discovery-vessel/src/middleware/auth.ts."
+    },
+    {
+      "id": "F-007",
+      "claim": "Trailblazing unimplemented.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "file_ref",
+          "location": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md",
+          "excerpt": "unchanged",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-008",
+      "claim": "Mythic language in substrate self-description.",
+      "category": "idiom",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-009",
+      "claim": "Zero DEV on original five 2026-05-23 audited (carried). substrate-explicit-vessels at 48/53 tasks.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -c '^- \\[x\\]' openspec/changes/2026-05-23-substrate-explicit-vessels/tasks.md",
+          "excerpt": "48 (total tasks: 53). Unchanged from iter-004.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-010",
+      "claim": "Root clean.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls -1 . | wc -l",
+          "excerpt": "13 entries at root. No binary artifacts (.png, .jpg, .mp4, .zip, .tar, .sh).",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-011",
+      "claim": "Lift-criterion-hardening zero DEV.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-012",
+      "claim": "Cycle reports substrate-anonymous.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-013",
+      "claim": "6 invalid + 3 subagent proposals remain.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/proposals/ | wc -l",
+          "excerpt": "9 proposal files in proposals/. Unchanged.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-014",
+      "claim": "Embedding healthy.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -s http://localhost:18080/health | jq .checks.embedding",
+          "excerpt": "{\"status\":\"healthy\",\"model\":\"all-MiniLM-L6-v2\",\"dim\":384}",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "resolved",
+      "operator_remediation": "Embedding is healthy on the restarted substrate. F-014 RESOLVED."
+    },
+    {
+      "id": "F-015",
+      "claim": "total: -1 sentinel in trace list endpoint.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -s 'http://localhost:18080/v2/activities/execution-traces?limit=1' -H 'Authorization: ApiKey <key>'",
+          "excerpt": "{\"executions\":[],\"total\":-1,\"limit\":1,\"offset\":0} — total=-1 sentinel persists on fresh substrate.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-016",
+      "claim": "Narrator stable.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ps aux | grep narrator | grep -v grep",
+          "excerpt": "bun run validation/scripts/substrate-narrator.ts — running (PID 1081198). Snapshots being produced every 5 minutes through 06:37 UTC.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-017",
+      "claim": "Ribosome firing — confirmed ACTIVE before crash.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-018",
+      "claim": "Snapshot consistency.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-019",
+      "claim": "Discovery 401 on resolve queries — narrator cannot authenticate with discovery.",
+      "category": "deployment",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "cat validation/observations/snapshots/snapshot-2026-05-25T06-37-30-433Z.json | jq .discovery_vessel",
+          "excerpt": "{\"endpoint\":\"http://localhost:18100\",\"reachable\":false,\"stats\":null,\"error\":\"HTTP 401\"} — discovery-vessel auth still rejecting narrator queries. Narrator reads API key from ~/.metabob/config.json which may differ from substrate-generated key.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-020",
+      "claim": "WS event capture inactive.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-49-08-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u activity-api.service --since '1 min ago' 2>/dev/null | grep WebSocket",
+          "excerpt": "API key authentication failed (reason: Identity vessel returned 401) — WS connections being rejected. Identity-vessel cascade (429/401 storm) is killing WebSocket auth.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-021",
+      "claim": "concept-db not running as substrate service (Phase 1b.6 blocked on image rebuild).",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-49-08-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live systemctl list-units --type=service --no-legend | grep concept",
+          "excerpt": "concept-db-seeder.service loaded failed failed. No concept-db.service present. The seeder failed with 'WARN failed to seed ...' — 0 seeded, 24 failed. concept-db binary is not in this image.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Image requires rebuild to include concept-db binary (Phase 1b.6). The self-bootstrapping commit (b1d14073) simplifies restart but still requires image rebuild to add new vessels."
+    },
+    {
+      "id": "F-022",
+      "claim": "Clock alignment fine.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T02-28-30-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-023",
+      "claim": "No cycle-9.",
+      "category": "lift",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T02-28-30-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/cycles/*.json",
+          "excerpt": "8 cycles, no cycle-9. Substrate was offline during the audit window.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-024",
+      "claim": "Boredom-vessel source committed and was running before crash.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live systemctl status boredom-vessel.service",
+          "excerpt": "boredom-vessel.service: failed (exit-code). Triggered by boredom-vessel.timer at 06:34:51. Error: 'goal-host-vessel unreachable: Unable to connect'. The timer fired 4 minutes after startup, but the boredom-vessel process could not reach goal-host-vessel on 127.0.0.1:8210 — even though goal-host-vessel WAS running on 8210 by then.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "regressed",
+      "operator_remediation": "Boredom-vessel fails on restart. Root cause unclear: goal-host-vessel logged as started at 06:34:51, boredom-vessel also triggered at 06:34:51 — race condition where boredom-vessel checks connectivity before goal-host-vessel's socket is bound. Requires investigation. This is a NEW regression introduced with fresh restart."
+    },
+    {
+      "id": "F-025",
+      "claim": "Doc-vs-runtime gap-001 spec-only.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-026",
+      "claim": "Cycle-8 stamped on stale coverage.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-027",
+      "claim": "Dev shipping at record pace — superseded.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-028",
+      "claim": "Goal-text-to-template binding partial. goal-host-vessel operational.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-58-12-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live curl -s http://127.0.0.1:8210/health",
+          "excerpt": "{\"status\":\"healthy\",\"vesselId\":\"goal-host-vessel\",\"vesselName\":\"Goal Host Vessel\",\"shapes\":[\"goal_execution\",\"activity_execution\"],\"version\":\"0.1.0\",\"llm\":\"http-vessel:http://127.0.0.1:8220\"}",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-029",
+      "claim": "failure_mode still null on new path.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T03-58-12-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(cannot verify — substrate has zero traces on fresh restart)",
+          "excerpt": "Template count=0, trace count=0. Cannot verify failure_mode population without executed traces.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-030",
+      "claim": "Thompson α=β=1 on coverage-tick. Posteriors unchanged despite executions.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-58-12-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -s 'http://localhost:18080/v2/activities/templates?limit=50' -H 'Authorization: ApiKey <key>'",
+          "excerpt": "template_count=0. No templates seeded (bootstrap-seeder failed). Cannot verify Thompson state.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-031",
+      "claim": "Template count at 0 on fresh restart (was 31 before crash).",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T04-58-14-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -s 'http://localhost:18080/v2/activities/templates?limit=1' -H 'Authorization: ApiKey <key>' | jq .total",
+          "excerpt": "total=0 — bootstrap-seeder failed on fresh restart; all 13 templates returned 500 org_id:NONE. Template count reset to 0.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "regressed",
+      "operator_remediation": "Bootstrap-seeder failed because it ran before seed-identity established the org. F-049 (new finding) documents the race condition. Operator must run 'docker exec substrate-live systemctl restart bootstrap-seeder.service' after seed-live completes."
+    },
+    {
+      "id": "F-032",
+      "claim": "Registry thrashing resolved.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T05-37-11-investigation-005",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-033",
+      "claim": "Dev coord engaged.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T05-37-11-investigation-005",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "cat validation/state/agent-coordination.json | jq '.agents.dev.last_updated'",
+          "excerpt": "\"2026-05-25T06:00Z\" — dev last_updated reflects closure work complete, substrate offline at that time.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-034",
+      "claim": "Validator engaged.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T07-00-44-investigation-006",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "cat validation/state/agent-coordination.json | jq '.agents.validation.last_updated'",
+          "excerpt": "\"2026-05-25T06:35:03Z\" — validation last_updated at 06:35 UTC, documenting F-049 org_id bootstrap failure.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-035",
+      "claim": "gap-006 framing superseded — substrate IS progressing.",
+      "category": "lift",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T07-00-44-investigation-006",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-036",
+      "claim": "WS auth different code path.",
+      "category": "deployment",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T07-00-44-investigation-006",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u activity-api.service --since '1 min ago' | grep WebSocket",
+          "excerpt": "[WebSocket] API key authentication failed {reason: 'Identity vessel returned 401'} — WS auth cascade failure active. Identity-vessel returning 401 to activity-api's auth validation for WS connections.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-037",
+      "claim": "Thompson disconnect PERSISTS. Zero Thompson movement despite executions.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T17-24-17-investigation-010",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -s 'http://localhost:18080/v2/activities/templates?limit=50' | jq .total",
+          "excerpt": "total=0 — no templates seeded. Cannot verify Thompson state on fresh restart. Root cause (new path bypasses POST /v2/activities/execution-traces feedback call) still unresolved per last verified evidence from iter-016.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-038",
+      "claim": "composition_chain ALIVE on new path.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T20-26-32-investigation-011",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-039",
+      "claim": "Validator wrote dev-guidance.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T00-34-24-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-040",
+      "claim": "substrate-explicit-vessels MAJOR PROGRESS. 48/53 tasks complete.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T01-39-09-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -c '^- \\[x\\]' openspec/changes/2026-05-23-substrate-explicit-vessels/tasks.md",
+          "excerpt": "48 complete of 53 total. Unchanged from iter-004.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-041",
+      "claim": "S.4a window 2 blocked by substrate crash. Topology discovery loop tasks 6.4, 6.5, S.4a, S.4b all open.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T01-39-09-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep '^- \\[.\\]' openspec/changes/2026-05-23-topology-discovery-loop/tasks.md | head -10",
+          "excerpt": "[ ] 6.4 Inspect three consecutive coverageReport impulses; [ ] 6.5 Inspect most recent substrateHealthReport; [ ] S.4a At least one coverageReport with coverage_progress=true; [ ] S.4b Most recent substrateHealthReport. Also 29 checked tasks.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        },
+        {
+          "kind": "command",
+          "command": "curl -s 'http://localhost:18080/v2/activities/templates?limit=50' | jq .total",
+          "excerpt": "total=0 — no templates means boredom-vessel cannot fire topology goals, so S.4a window 2 still blocked even with substrate up.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "regressed",
+      "operator_remediation": "Substrate restarted but bootstrap-seeder failed; no templates seeded. Boredom-vessel cannot fire useful goals without templates. Fix F-049 first, then S.4a window 2 can proceed."
+    },
+    {
+      "id": "F-042",
+      "claim": "Vessels restored on restart — partial.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T02-51-09-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live systemctl list-units --type=service --no-legend | grep -E 'vessel|seeder|boredom|ribosome|bootstrap'",
+          "excerpt": "running: development-vessel, discovery-vessel, goal-host-vessel, identity-vessel, llm-resolver-vessel, local-tools-vessel, ribosome-vessel (7 of 8). FAILED: bootstrap-seeder.service, boredom-vessel.service, concept-db-seeder.service. Total registered: 1 vessel in discovery (self-only).",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "regressed",
+      "operator_remediation": "7 vessels running but bootstrap-seeder and boredom-vessel both failed. Discovery shows only 1 registered vessel — all other vessels getting 401 from identity-vessel on discovery registration. This is the org_id / auth cascade from F-049."
+    },
+    {
+      "id": "F-043",
+      "claim": "Thompson posteriors flat despite executions.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T02-51-09-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(cannot verify — zero templates seeded, zero traces on fresh restart)",
+          "excerpt": "unverifiable on fresh restart",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-044",
+      "claim": "RESOLVED: substrate-live container restarted. Crash caused by JWT_SECRET absent on prior restart — fixed by self-bootstrapping commit.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker inspect substrate-live | jq '.[0].State | {Status, StartedAt}'",
+          "excerpt": "{\"Status\":\"running\",\"StartedAt\":\"2026-05-25T06:30:03.82086568Z\"} — container started at 06:30 UTC. Image: metabob/substrate:dev.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        },
+        {
+          "kind": "command",
+          "command": "curl -s http://localhost:18080/health | jq .status",
+          "excerpt": "\"healthy\"",
+          "verified_at": "2026-05-25T06:38:15Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker inspect substrate-live | jq '.[0].Config.Env | map(split(\"=\")[0])'",
+          "excerpt": "[\"ANTHROPIC_API_KEY\",\"PATH\",\"container\",\"DEBIAN_FRONTEND\"] — container started with only ANTHROPIC_API_KEY. JWT_SECRET and SURREAL_PASS now auto-generated by gen-env.sh (commit b1d14073).",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "resolved",
+      "operator_remediation": "F-044 root cause (JWT_SECRET absent) resolved by self-bootstrapping commit b1d14073. Substrate restarted successfully. However, bootstrap-seeder race condition (F-049) is a new blocker."
+    },
+    {
+      "id": "F-045",
+      "claim": "Narrator running but no alerting on substrate crashes.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ps aux | grep narrator | grep -v grep",
+          "excerpt": "bun run validation/scripts/substrate-narrator.ts — running (PID 1081198). Substrate was down for ~2.5h with no automated alert.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-046",
+      "claim": "Template count jumped to 31 before crash. Now reset to 0.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -s 'http://localhost:18080/v2/activities/templates?limit=1' | jq .total",
+          "excerpt": "total=0 — reset on restart (SurrealDB data was in-memory or bootstrap-seeder failed). Template count does NOT persist across restarts without bootstrap-seeder completing.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-047",
+      "claim": "Gate 27.3.g.3 marked 'done' but live smoke test (1b.6) never passed.",
+      "category": "lift",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "cat validation/state/lift-status.json | jq '.blockers[\"27.3.g\"][] | select(.gate == \"27.3.g.3\")'",
+          "excerpt": "status: \"done\", note: \"All six present in Dockerfile.substrate and scripts/substrate/units/. Live smoke test deferred to next substrate-run (1b.6).\" But concept-db is NOT in the current running image (concept-db-seeder.service fails; no concept-db.service exists).",
+          "verified_at": "2026-05-25T06:38:15Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live systemctl list-units --no-legend | grep concept-db.service",
+          "excerpt": "No concept-db.service present. Only concept-db-seeder.service (failed).",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Gate 27.3.g.3 claims 'done' but concept-db is not running. Requires image rebuild to include concept-db binary (Phase 1b.6)."
+    },
+    {
+      "id": "F-048",
+      "claim": "minibob removed from Dockerfile.substrate — Phase 8 complete.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live which minibob 2>/dev/null || echo 'not found'",
+          "excerpt": "Cannot run directly, but systemctl list-units shows no minibob.service — confirmed absent from running substrate.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-049",
+      "claim": "NEW: Bootstrap-seeder race condition — fires before seed-identity establishes org_id, causing 500 org_id:NONE on all 13 template writes.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T06-38-15-investigation-005",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u bootstrap-seeder.service --no-pager",
+          "excerpt": "[bootstrap-seeder] Seeding complete: 0 seeded, 13 failed. All failures: 'Query failed in activity-system.learning_loop: Found NONE for field `org_id`, with record `activity:⟨...⟩`, but expected a string'",
+          "verified_at": "2026-05-25T06:38:15Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u identity-vessel.service --no-pager | grep 'keys/issue'",
+          "excerpt": "[KeyIssuance] Issued key at 06:33:42 (key_N7nGRA2lX0Duypcu) and 06:34:33. But bootstrap-seeder ran and failed at 06:30:16 — 3 minutes before key issuance completed.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "bootstrap-seeder.service should Require=seed-identity.service or have an ExecStartPre that waits for org_id to be established in SurrealDB. Quick fix: 'docker exec substrate-live systemctl restart bootstrap-seeder.service' after seed-live completes. This is a structural ordering bug in the self-bootstrapping commit (b1d14073)."
+    },
+    {
+      "id": "F-050",
+      "claim": "NEW: Auth cascade — identity-vessel returning 401 to all other vessels on discovery registration, causing only 1 vessel registered in discovery (self-only).",
+      "category": "deployment",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T06-38-15-investigation-005",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u goal-host-vessel.service | grep DiscoveryRegistrationLoop",
+          "excerpt": "[DiscoveryRegistrationLoop] register failed: 401 — vessel will be unreachable via discovery",
+          "verified_at": "2026-05-25T06:38:15Z"
+        },
+        {
+          "kind": "command",
+          "command": "curl -s http://localhost:18100/registry/stats",
+          "excerpt": "{\"totalVessels\":1,\"totalShapes\":30,\"healthyCount\":1} — only discovery-vessel self-registered. All other vessels getting 401 from identity-vessel via discovery auth middleware.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u identity-vessel.service --since '1 min ago' | grep 429",
+          "excerpt": "POST /v1/auth/resolve returning 429 — rate-limit storm. Every vessel attempting to validate its registration key simultaneously on startup → rate-limit triggers → 401 cascade to all vessels.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Identity-vessel rate-limits all vessels on startup. The /v1/auth/resolve endpoint is being hammered simultaneously by all vessels starting up. Rate limit window needs to be larger or vessel startup should be staggered. The discovery-vessel only has 1 registered vessel (itself) — all other vessels are invisible to each other."
+    },
+    {
+      "id": "F-051",
+      "claim": "NEW: development-vessel added memoryNote + fs_list + http_fetch resolvers (IAL 27.3.j.1 and j.2) but closure-audit shows all 6 properties as closed=false — audit ran while substrate was offline.",
+      "category": "lift",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T06-38-15-investigation-005",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "cd repos/development-vessel && git log --since='4 hours ago' --oneline",
+          "excerpt": "039c5ef feat(dev-vessel): add fs_list + http_fetch resolvers (IAL 27.3.j.2 skill closure); d164bb9 feat(dev-vessel): memoryNote + memoryNote_write resolver shapes (IAL 27.3.j.1); 927384e feat(dev-vessel): vessel liveness in health tick + default to localhost endpoints",
+          "verified_at": "2026-05-25T06:38:15Z"
+        },
+        {
+          "kind": "command",
+          "command": "cat validation/state/closure-status.json | jq .all_closed",
+          "excerpt": "false — closure-audit ran at 2026-05-25T06:15:33Z while substrate was offline. All 6 properties show closed=false, missing_deps=[development-vessel reachable], evidence='HTTP 0'. The audit result is stale and should be re-run against live substrate.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Closure-audit.ts needs to be re-run against the live substrate after F-049 and F-050 are resolved. The current closure-status.json is a stale result from a substrate-offline run. Development-vessel has the memoryNote and skill resolvers committed but they haven't been verified against live substrate."
+    },
+    {
+      "id": "F-052",
+      "claim": "NEW: Self-bootstrapping commit (b1d14073) fixes JWT_SECRET crash but introduces bootstrap ordering race. Requires image rebuild to take full effect.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T06-38-15-investigation-005",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "git show b1d14073 --format='%s%n%b' --stat | head -30",
+          "excerpt": "feat(substrate): self-bootstrapping startup — only ANTHROPIC_API_KEY required. JWT_SECRET, SURREAL_PASS, and the bootstrap METABOB_API_KEY are now auto-generated on first run and persisted to workspace/.substrate-secrets. Requires image rebuild: bun make -C scripts/substrate build. Changes: gen-env.sh, seed-identity.ts, Makefile (+92/-22 lines).",
+          "verified_at": "2026-05-25T06:38:15Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker inspect substrate-live | jq '.[0].Config.Env | map(split(\"=\")[0])'",
+          "excerpt": "[\"ANTHROPIC_API_KEY\",\"PATH\",\"container\",\"DEBIAN_FRONTEND\"] — JWT_SECRET and SURREAL_PASS are now generated inside the container (auto-bootstrapped). Self-bootstrapping is working correctly for the operator-facing restart experience.",
+          "verified_at": "2026-05-25T06:38:15Z"
+        }
+      ],
+      "status": "open"
+    }
+  ],
+  "regressions_since_prior": ["F-024", "F-031", "F-041", "F-042"],
+  "resolutions_since_prior": ["F-014", "F-044"],
+  "new_findings": ["F-049", "F-050", "F-051", "F-052"],
+  "open_questions": [
+    "F-049: Bootstrap-seeder ordering race — when will operator add Requires= dependency on seed-identity completion?",
+    "F-050: Identity-vessel 429 storm on startup — will this self-resolve after rate-limit window passes, or does it require staggered startup?",
+    "F-051: Closure-audit ran offline — what does re-running against live substrate show for the 6 closure properties?",
+    "F-041: S.4a window 2 still blocked — boredom-vessel failed and templates=0; can the substrate self-recover or does operator need to trigger bootstrap-seeder retry?",
+    "F-037/F-043: Thompson bypass — is this still the root cause of flat posteriors, or did the self-bootstrapping change anything about the trace-write path?"
+  ],
+  "findings_tally": {
+    "open": 26,
+    "resolved": 19,
+    "regressed": 4,
+    "unverifiable": 5,
+    "total": 52,
+    "new_this_iteration": 4
+  },
+  "next_wake_recommendation": {
+    "delay_seconds": 1800,
+    "reason": "Substrate just restarted but has critical bootstrap failures (F-049, F-050). 30 minutes gives identity-vessel rate-limit storm time to subside and operator a chance to re-trigger bootstrap-seeder. Check if template seeding recovers."
+  }
+}

@@ -1,0 +1,218 @@
+{
+  "investigation_id": "2026-05-25T10-29-42Z-investigation-018",
+  "generated_at": "2026-05-25T10:29:42Z",
+  "investigator_session_id": "claude-sonnet-4-6-audit-loop-33",
+  "prior_investigation_id": "2026-05-25T10-13-47Z-investigation-016",
+  "loop_iteration": 33,
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container"
+  },
+  "findings": [
+    {
+      "id": "F-074",
+      "claim": "The validator's 'irreversibly blocked' label for S.4a is premature on timing grounds: 91 minutes remain before the 4h window expires (11:50:27Z), and coverage-tick is still being dispatched by boredom",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "date -u +\"%Y-%m-%dT%H:%M:%SZ\"",
+          "excerpt": "2026-05-25T10:29:42Z — window-1 anchor 07:50:27Z, elapsed 159 min of 240 min required, 81 min remain before 11:50:27Z deadline",
+          "verified_at": "2026-05-25T10:29:42Z"
+        },
+        {
+          "kind": "command",
+          "command": "git -C /home/avi/documents/work/exp-repo/metabob-devbob show a2700242 --stat",
+          "excerpt": "commit message: 'S.4a Cycle 2 CONFIRMED MISSING (24+ min)' — this was filed at 10:04Z when only 24 minutes had elapsed since Cycle 1 at 09:40:19Z. The validator called 'irreversibly blocked' without waiting for the actual 4h window to expire.",
+          "verified_at": "2026-05-25T10:29:42Z"
+        },
+        {
+          "kind": "command",
+          "command": "python3 -c 'trace data from /tmp/traces2.json + /tmp/traces_old.json'",
+          "excerpt": "Root traces after 09:40:19Z (coverage-tick success): probe-reachable-unlearned at 09:45, substrate-health-tick at 09:50, probe-reachable-unlearned at 09:56, draft-gap-closing at 10:05, release-and-validate at 10:07, probe-reachable-unlearned at 10:12, harness-check-scenario at 10:19, substrate-health-tick at 10:21. Coverage-tick NOT in this list, but boredom is actively firing every ~5-10min.",
+          "verified_at": "2026-05-25T10:29:42Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "No action needed on the timing claim. However the structural block (finding F-075) is the real issue — timing alone will not produce coverage_progress=true."
+    },
+    {
+      "id": "F-075",
+      "claim": "S.4a is structurally blocked (not just timing-blocked): coverage_progress is false because reachable_learned saturates at 17 beyond the 1h window — the 1h window always shows fewer learned shapes than the 2h+ windows due to Thompson-weighted validator-dispatch dominance",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "python3 simulation against /tmp/traces_p1.json + /tmp/traces_p2.json (841 total traces), /tmp/templates.json (28 templates, 23 advertised shapes)",
+          "excerpt": "-1h window: traces=346 RL=13 RU=10. -2h window: traces=701 RL=17 RU=6. -3h window: traces=834 RL=17 RU=6. -4h window: traces=841 RL=17 RU=6. Monotonicity: 1h→2h PROGRESSING, 2h→3h STAGNANT, 3h→4h STAGNANT. progressing_pairs=1 of 3 required. coverage_progress=False.",
+          "verified_at": "2026-05-25T10:29:42Z"
+        },
+        {
+          "kind": "command",
+          "command": "python3 -c unlearned shapes from 4h window",
+          "excerpt": "Unlearned shapes at 4h lookback: commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, vesselScaffolded. These 6 shapes are advertised by templates but no trace has ever produced them in the current substrate run.",
+          "verified_at": "2026-05-25T10:29:42Z"
+        },
+        {
+          "kind": "command",
+          "command": "python3 from /tmp/templates.json — Thompson posteriors",
+          "excerpt": "Validator Dispatch α=251 n=602 sr=1.00. Slot Binding α=37 n=83 sr=1.00. validator-dispatch and slot-binding consume 685 of 841 traces (81.5%). These templates produce: activityRecommendation, activity_template, recommendation, activityTemplateVariant — all already learned. Their dominance means the 1h window saturates to the same set as 2h+.",
+          "verified_at": "2026-05-25T10:29:42Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "For coverage_progress=true, new shape-producing activities must execute in the most recent 1h window that were NOT executing in the 2h window. This requires Thompson rotation to include lower-alpha templates (commandResult, fileEditResult producers) OR new templates seeding shapes currently absent. draft-gap-closing-activity (10:05Z success) may have triggered ribosome extraction — check template count growth."
+    },
+    {
+      "id": "F-076",
+      "claim": "The org_id fix in 766cdbea was a direct SQL data patch to variant_performance_metrics (not a source code change), and it has successfully unblocked Thompson posterior accumulation for coverage-tick: α rose from 1 to 2 (1 success recorded post-fix)",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "file_ref",
+          "location": "validation/investigations/2026-05-25T10-29-42Z-investigation-018.json — git show 766cdbea -p",
+          "excerpt": "diff to validation/state/agent-coordination.json adds: 'variant_performance_metrics: coverage-tick row had org_id=\\'public\\' (from prior substrate run) causing applyOutcomeToPosteriors UPDATE to miss (WHERE org_id=\\'organizations:substrate\\' != \\'public\\'); fixed with direct SQL update'. No source code diff. Only agent-coordination.json and closure-status.json changed.",
+          "verified_at": "2026-05-25T10:29:42Z"
+        },
+        {
+          "kind": "http_query",
+          "command": "curl http://localhost:18080/v2/activities/templates?limit=100 | grep coverage-tick metrics",
+          "excerpt": "coverage-tick template metrics: total_executions=4, successful_executions=2, failed_executions=2, thompson_alpha=2, thompson_beta=2. Template-level fields: total_executions=0, successful_executions=0 (template row not updated — only variant_performance_metrics row was patched).",
+          "verified_at": "2026-05-25T10:29:42Z"
+        },
+        {
+          "kind": "command",
+          "command": "grep from /tmp/traces_old.json — coverage-tick history",
+          "excerpt": "07:41:25Z success=False dur=0ms (pre-execution rejection — likely the org_id mismatch era). 07:50:27Z success=True dur=42326ms (Window-1 anchor). 09:40:19Z success=True dur=44122ms (current page — post-fix).",
+          "verified_at": "2026-05-25T10:29:42Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "The data patch is effective but not durable across substrate restarts — if the container restarts, the variant_performance_metrics row will reset. A code-level fix ensuring org_id='organizations:substrate' on initial insert would make this permanent."
+    },
+    {
+      "id": "F-077",
+      "claim": "Coverage-tick has executed 3 times (1 fail + 2 success) in the observable trace history, not the 4 times the template metrics claim, indicating a trace that is not in the paginated results or a metrics-vs-traces accounting discrepancy",
+      "category": "provenance",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep coverage from all 841 traces (traces_p1 + traces_p2 + traces_old + traces_mid)",
+          "excerpt": "Found: 07:41:25Z fail (0ms), 07:50:27Z success (42326ms), 09:40:19Z success (44122ms). Total: 3. Template metrics report total_executions=4, successful_executions=2, failed_executions=2. Discrepancy: 1 execution missing from traces.",
+          "verified_at": "2026-05-25T10:29:42Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Minor discrepancy. May be a trace stored before the substrate's current run (container restart wipes in-memory state but SurrealDB persists). Not blocking."
+    },
+    {
+      "id": "F-036",
+      "claim": "create-shape-provider-goal continues to fail with all 3 child tasks succeeding but parent recording status=failure, duration=4ms — the parent-fail-on-child-success pattern is unresolved",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T09-59-06Z-investigation-015",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl http://localhost:18080/v2/activities/execution-traces/exec_3rz81kt6",
+          "excerpt": "activity_id=create-shape-provider-goal, duration_ms=4, status=failure, success=false. Tasks: forward_chain_producers(activity_recommendation,dur=2ms,success=true), prior_paths_with_endpoint(impulse-resolve,dur=1ms,success=true), concept_lookup(impulse-resolve,dur=1ms,success=true). Total 3 tasks all success=true.",
+          "verified_at": "2026-05-25T10:29:42Z"
+        },
+        {
+          "kind": "command",
+          "command": "python3 counter from /tmp/traces2.json",
+          "excerpt": "create-shape-provider-goal: 55 total, 0 success, 55 failure. Short failures (<10ms): 47. Long failures (>100ms): 2. Failure persists across entire run window (08:56Z to 10:21Z).",
+          "verified_at": "2026-05-25T10:29:42Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "The failure appears structural — the parent execution reports failure even when all tasks report success. This pattern (noted in investigation-017 as Finding B) suggests an executor-level bug where the parent wrapper fails post-task validation or the success signal from task completion is not reaching the parent trace record."
+    },
+    {
+      "id": "F-053",
+      "claim": "All 56 failures in the current trace window (100%) have failure_mode=null — failure taxonomy is not being recorded on any failure",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T09-42-37-investigation-014",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "python3 counter from /tmp/traces2.json",
+          "excerpt": "Total failures: 56. Failures with null failure_mode: 56 (100%). This is unchanged from investigation-016 (58/58 null). F-053 persists with no fixes deployed.",
+          "verified_at": "2026-05-25T10:29:42Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "failure_mode taxonomy classification requires the executor to detect and record failure type at trace write time. The 4ms failures (create-shape-provider-goal pattern) and 0ms failures both record null. This needs an executor-level fix in goal-host-vessel or the trace write path."
+    },
+    {
+      "id": "F-078",
+      "claim": "draft-gap-closing-activity succeeded at 10:05Z (282s) but produced zero new templates: template count remains 28 with no additions after 09:40Z, meaning the ribosome did not extract a new template from the successful execution",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl http://localhost:18080/v2/activities/templates?limit=100 | python3 filter created_at > 09:40",
+          "excerpt": "Templates created after 09:40Z: 0. Template count: 28 (unchanged from investigation-016). draft-gap-closing-activity at 10:05Z (success, 282s) did not seed new templates.",
+          "verified_at": "2026-05-25T10:29:42Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live systemctl list-units | grep ribosome",
+          "excerpt": "ribosome-vessel.service loaded active running. Ribosome subscribes to lifecycle:execution:succeeded events via WebSocket. Whether the 10:05Z draft-gap-closing success triggered ribosome extraction depends on output shapes — if the trace had no output_shapes field, ribosome would not extract.",
+          "verified_at": "2026-05-25T10:29:42Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Ribosome extraction requires output_shapes on the trace OR a non-empty output_impulse_ids on tasks. If draft-gap-closing-activity produced no output impulses with extractable shapes, ribosome would have nothing to extract. Verify the execution detail for task output_impulse_ids."
+    },
+    {
+      "id": "F-068",
+      "claim": "Coverage-tick Cycle 2 (second SUCCESS execution since Window-1 anchor 07:50:27Z) occurred at 09:40:19Z — 109 minutes after Cycle 1, not the 'missing Cycle 2' the validator described in iter-33/34/35",
+      "category": "lift",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep coverage from all trace pages",
+          "excerpt": "07:50:27Z success=True (Window-1 / Cycle 1). 09:40:19Z success=True (Cycle 2, 109 min later). Coverage-tick was in boredom rotation throughout — it appeared as root trace position 10 of 18 in the 08:56-10:21Z window. The validator at 10:04Z called 'Cycle 2 missing 24+ min' after only 24 minutes had elapsed since 09:40 success.",
+          "verified_at": "2026-05-25T10:29:42Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Validator naming was imprecise: Cycle 2 DID occur at 09:40:19Z. The validator was looking for 'Cycle 2' meaning the third execution, but coverage-tick ran twice successfully (07:50 and 09:40). The question now is whether a THIRD success (Cycle 3 in the validator's numbering) will occur before 11:50Z."
+    }
+  ],
+  "regressions_since_prior": [],
+  "resolutions_since_prior": [],
+  "new_findings": ["F-074", "F-075", "F-076", "F-077", "F-078", "F-068"],
+  "findings_tally": {
+    "open": 8,
+    "resolved": 0,
+    "regressed": 0,
+    "new_this_iteration": 6,
+    "prior_reconfirmed": ["F-036", "F-053"]
+  },
+  "open_questions": [
+    "Will coverage-tick execute a third time (Cycle 3 in validator terms) before 11:50Z? At the observed ~109-minute cadence, next expected execution is ~11:29Z — within the window.",
+    "Even if coverage-tick runs again before 11:50Z, will coverage_progress be true? The simulation shows structural RL saturation at 17 beyond 1h — without new shape-producing template executions in the most recent 1h, coverage_progress stays false.",
+    "What failure causes create-shape-provider-goal parent=failure when all 3 tasks succeed? Is it a post-task validation step in goal-host-vessel that checks for required output shapes and finds them missing?",
+    "Is the data-only org_id fix in 766cdbea durable across substrate restarts? If the container restarts, does the variant_performance_metrics row reset to org_id='public'?",
+    "Why has draft-gap-closing-activity produced no new templates despite 2 successful executions? Is ribosome receiving the lifecycle:execution:succeeded events for this activity?"
+  ],
+  "next_wake_recommendation": {
+    "delay_seconds": 3600,
+    "reason": "S.4a window expires at 11:50:27Z (~81 min from now). A 60-minute wake allows: (1) observation of coverage-tick Cycle 3 (expected ~11:29Z based on ~109min cadence), (2) verification of coverage_progress=true/false in that execution, (3) final verdict on whether S.4a was structurally blocked or timing-blocked. If coverage-tick runs and coverage_progress remains false, the structural block finding (F-075) is confirmed and the operator needs to seed shape-producing templates."
+  }
+}

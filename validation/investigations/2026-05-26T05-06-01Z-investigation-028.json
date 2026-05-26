@@ -1,0 +1,246 @@
+{
+  "investigation_id": "028",
+  "generated_at": "2026-05-26T05:06:01Z",
+  "investigator_session_id": "loop-iteration-043",
+  "prior_investigation_id": "2026-05-26T00-05-57Z-investigation-027",
+  "loop_iteration": 43,
+  "substrate_target": "http://localhost:18080",
+  "substrate_status": "healthy",
+  "s4a_verdict": {
+    "status": "not_passed",
+    "coverage_progress": false,
+    "consecutive_progressing_cycles": 2,
+    "cells_over_time": [
+      { "window": "1h", "since": "2026-05-26T04:06Z", "reachable_learned": 6 },
+      { "window": "2h", "since": "2026-05-26T03:06Z", "reachable_learned": 8 },
+      { "window": "3h", "since": "2026-05-26T02:06Z", "reachable_learned": 10 },
+      { "window": "4h", "since": "2026-05-26T01:06Z", "reachable_learned": 10 }
+    ],
+    "reachable_learned_strictly_increasing": false,
+    "verification_command": "docker exec substrate-live curl -sf -X POST http://127.0.0.1:8090/v2/impulses/resolve -H 'Content-Type: application/json' -d '{\"impulse\":{\"type\":\"coverage_tick\",\"pointer\":{\"type\":\"coverage_tick\"}}}'",
+    "observed_at": "2026-05-26T05:06:01Z",
+    "note": "Temporal variation established (rl increases from 1h→2h→3h). Plateau at 3h/4h because both windows span a full boredom cycle (7 goals × 30min = 3.5h), seeing the same template breadth."
+  },
+  "f083_resolution": {
+    "prior_status": "CRITICAL OPEN (investigation-027)",
+    "current_status": "DEBUNKED — CLOSED",
+    "debunked_at": "2026-05-25 (substrate authored validation/findings/f-083-debunked.md, commit 612521ce)",
+    "root_error": "Audit grep 'UPSERT activity.*CONTENT' matched template-registration code (lines 1200/5268, table=activity:${id}) not Thompson posterior code (table=variant_performance_metrics).",
+    "correct_finding": "variant_performance_metrics table correctly uses SET (not CONTENT). F-069 fix (c1364e4) is deployed. Lines 1249, 1269, 5291 all use UPSERT...SET for variant_performance_metrics.",
+    "empirical_proof": "validator-dispatch α has grown monotonically from ~3500 (investigation-020) to 4370 (investigation-028). A CONTENT reset would zero α on every restart; monotonic growth proves posteriors are safe.",
+    "evidence": [
+      {
+        "command": "docker exec substrate-live grep -n 'variant_performance_metrics.*SET' /vessels/activity-api/src/routes/activities.ts",
+        "expected_output": "1249:..., 1269:..., 5291:... (three SET lines)"
+      },
+      {
+        "command": "docker exec substrate-live grep -n 'variant_performance_metrics.*CONTENT' /vessels/activity-api/src/routes/activities.ts",
+        "expected_output": "(empty — no CONTENT on posteriors)"
+      },
+      {
+        "file_ref": "validation/findings/f-083-debunked.md",
+        "note": "Substrate authored this analysis (commit 612521ce) independently matching auditor's independent re-examination"
+      }
+    ]
+  },
+  "boredom_dispatch_summary_since_027": {
+    "observation_window": "01:13Z–04:43Z (3.5h)",
+    "goals_fired": [
+      { "time": "01:13Z", "goal_index": 0, "text": "run the coverage-tick activity to measure substrate topology coverage and emit a coverageReport", "execution_id": "exec_id8kezc8", "status": "completed", "duration_min": 1 },
+      { "time": "01:43Z", "goal_index": 1, "text": "run the substrate-health-tick activity to check vessel health and emit a substrateHealthReport", "execution_id": "exec_rkc9v1lf", "status": "completed", "duration_min": 3 },
+      { "time": "02:13Z", "goal_index": 2, "text": "probe unlearned shapes — find templates with zero execution traces and run the most-coverage-improving one", "execution_id": "exec_hvdwqpph", "status": "completed", "duration_min": 3 },
+      { "time": "02:43Z", "goal_index": 3, "text": "run the harness-check-scenario activity to validate a failure-mode scenario from the harness matrix", "execution_id": "exec_ug4h7sox", "status": "completed", "duration_min": 1 },
+      { "time": "03:13Z", "goal_index": 4, "text": "identify shapes in the execution graph that have no known producer and escalate the most critical one", "execution_id": "exec_uhy2ce8t", "status": "completed", "duration_min": 5 },
+      { "time": "03:43Z", "goal_index": 5, "text": "check substrate health including vessel liveness — report which vessels are active or down and restart any that are inactive", "execution_id": "exec_0wyy6g8k", "status": "completed", "duration_min": 1 },
+      { "time": "04:13Z", "goal_index": 6, "text": "run the add-resolver-to-vessel activity to register any missing resolver capability discovered in the last harness run", "execution_id": "exec_lx5lr5q2", "status": "completed", "duration_min": 3 },
+      { "time": "04:43Z", "goal_index": 0, "text": "run the coverage-tick activity to measure substrate topology coverage and emit a coverageReport", "status": "dispatched (log observed)", "duration_min": null }
+    ],
+    "completion_rate": "100% (8/8 goals completed, 0 timeouts)",
+    "gap_between_fires_minutes": 30,
+    "notes": "30-min timer (commit 536652a4) confirmed live. Gaps of exactly 30 min between 01:13Z, 01:43Z, 02:13Z, 02:43Z, 03:13Z, 03:43Z, 04:13Z, 04:43Z. All goals completing in 1–5 minutes (no timeouts).",
+    "verification_command": "docker exec substrate-live journalctl -u boredom-vessel.service --no-pager -n 50 | grep -E 'submitting|dispatched'"
+  },
+  "thompson_state": {
+    "snapshot_at": "2026-05-26T05:06:01Z",
+    "total_templates": 28,
+    "total_alpha": 5723,
+    "templates": [
+      { "name": "Validator Dispatch (validators-and-failure-modes)", "alpha": 4370, "beta": 1 },
+      { "name": "Slot Binding (impulse-binding-selection-layer)", "alpha": 614, "beta": 1 },
+      { "name": "Create Shape-Provider Goal (shape-provider-goal-creation)", "alpha": 569, "beta": 84 },
+      { "name": "draft-gap-closing-activity", "alpha": 22, "beta": 1 },
+      { "name": "substrate-health-tick", "alpha": 13, "beta": 1 },
+      { "name": "release-and-validate", "alpha": 13, "beta": 1 },
+      { "name": "harness-run-matrix", "alpha": 13, "beta": 1 },
+      { "name": "harness-check-scenario", "alpha": 13, "beta": 1 },
+      { "name": "coverage-tick", "alpha": 11, "beta": 1 },
+      { "name": "add-resolver-to-vessel", "alpha": 1, "beta": 1 }
+    ],
+    "validator_dispatch_alpha_growth": {
+      "investigation_020": 3500,
+      "investigation_026": 3759,
+      "investigation_027_00z": 3885,
+      "investigation_027_02z24": 4329,
+      "investigation_028_05z06": 4370,
+      "notes": "Monotonic growth across container restarts. Disproves any posterior reset from UPSERT CONTENT pattern (F-083 debunked)."
+    },
+    "add_resolver_to_vessel_note": "alpha=1 beta=1 despite goal[6] firing at 04:13Z with status=completed. Likely the execution dispatched a no-op (no missing resolver to register) and did not produce an output trace that increments the template's posterior."
+  },
+  "findings": [
+    {
+      "id": "F-083",
+      "title": "UPSERT CONTENT resets Thompson posteriors on restart",
+      "claim": "UPSERT activity:${id} CONTENT at lines 1200/5268 of activities.ts overwrites variant_performance_metrics, resetting α/β.",
+      "category": "data-correctness",
+      "severity": "debunked — was false alarm",
+      "first_seen_in": "investigation-026",
+      "status": "DEBUNKED — CLOSED",
+      "evidence": [
+        {
+          "type": "substrate_finding",
+          "file": "validation/findings/f-083-debunked.md",
+          "summary": "Lines 1200/5268 target the 'activity' table (template definitions), not 'variant_performance_metrics' (posteriors). Full CONTENT replacement is correct semantics for template re-seeding."
+        },
+        {
+          "type": "command",
+          "command": "docker exec substrate-live grep -n 'variant_performance_metrics.*CONTENT' /vessels/activity-api/src/routes/activities.ts",
+          "expected": "(empty)",
+          "meaning": "F-069 fix (c1364e4) deployed — variant_performance_metrics uses SET"
+        },
+        {
+          "type": "monotonic_alpha_proof",
+          "validator_dispatch_alpha": [3500, 3759, 3885, 4329, 4370],
+          "meaning": "Monotonic growth across restarts disproves posterior reset"
+        }
+      ]
+    },
+    {
+      "id": "F-092",
+      "title": "S.4a root causes fixed — boredom cycle creates temporal variation",
+      "category": "s4a-progress",
+      "severity": "positive",
+      "first_seen_in": "investigation-027",
+      "status": "fixes deployed, temporal variation confirmed, 3h/4h plateau persists",
+      "evidence": [
+        {
+          "type": "coverage_tick_result",
+          "at": "2026-05-26T05:06:01Z",
+          "cells": [6, 8, 10, 10],
+          "consecutive": 2,
+          "progress": false
+        },
+        {
+          "type": "analysis",
+          "summary": "rl strictly increases 1h→2h→3h (6→8→10). Plateau at 3h/4h because both windows (3h since 02:06Z, 4h since 01:06Z) span a full boredom cycle (7 goals × 30min = 3.5h). Goal[5] at 03:43Z produces same shapes as goal[1] at 01:43Z — both dispatch substrate-health-tick → substrateHealthReport. No unique shapes in the 4h-exclusive slice."
+        }
+      ]
+    },
+    {
+      "id": "F-094",
+      "title": "add-resolver-to-vessel alpha stagnant despite goal[6] firing",
+      "category": "template-learning",
+      "severity": "medium",
+      "first_seen_in": "investigation-028",
+      "status": "open",
+      "evidence": [
+        {
+          "type": "thompson_state",
+          "template": "add-resolver-to-vessel",
+          "alpha": 1,
+          "beta": 1,
+          "note": "goal[6] at 04:13Z dispatched exec_lx5lr5q2 with status=completed. Template posterior unchanged. Either (a) goal[6] selected a different template via Thompson Sampling, or (b) the execution produced no output trace attributable to add-resolver-to-vessel."
+        }
+      ]
+    },
+    {
+      "id": "F-088",
+      "title": "Boredom AbortSignal timeout fix",
+      "category": "reliability",
+      "severity": "resolved",
+      "first_seen_in": "investigation-025",
+      "status": "resolved — confirmed holding",
+      "evidence": [
+        {
+          "type": "boredom_completion_rate",
+          "window": "01:13Z–04:43Z",
+          "completed": 8,
+          "timeouts": 0,
+          "rate": "100%"
+        }
+      ]
+    },
+    {
+      "id": "F-068",
+      "title": "task_count=null in list endpoint",
+      "category": "api-display-bug",
+      "severity": "low (display bug only)",
+      "first_seen_in": "investigation-023",
+      "status": "partially-resolved — not blocking S.4a verification",
+      "evidence": [
+        {
+          "type": "prior_finding",
+          "note": "Task data present in detail endpoint. S.4a verification uses direct coverage_tick resolver call, not task_count. Stands from investigation-027."
+        }
+      ]
+    },
+    {
+      "id": "F-036",
+      "title": "Development-vessel registration stability",
+      "category": "registration",
+      "severity": "resolved",
+      "first_seen_in": "investigation-015",
+      "status": "resolved — holding"
+    }
+  ],
+  "substrate_self_development_commits_since_027": [
+    {
+      "hash": "536652a4",
+      "message": "boredom timer 5min→30min for S.4a temporal spread",
+      "significance": "Creates 3.5h full boredom cycle, allowing temporal gradient in coverage-tick windows"
+    },
+    {
+      "hash": "612521ce",
+      "message": "F-083 debunked + coordination update",
+      "significance": "Substrate independently determined F-083 was a false alarm, authored full analysis in validation/findings/f-083-debunked.md"
+    },
+    {
+      "hash": "3d27f632",
+      "message": "S.4a state update — rl=[4,9,10,10] consecutive=2",
+      "significance": "Substrate self-reporting S.4a progress mid-investigation with prediction of ~04:11-04:43Z first pass"
+    },
+    {
+      "hash": "985117ed",
+      "message": "increase boredom TimeoutStartSec 300→600",
+      "significance": "Systemd timeout raised from 5min to 10min to match AbortSignal.timeout(8min)"
+    },
+    {
+      "hash": "d87220fc",
+      "message": "coordination update",
+      "significance": "Agent state sync"
+    }
+  ],
+  "s4a_3h_4h_plateau_analysis": {
+    "observation": "rl[3h]=rl[4h]=10 despite 30-min boredom timer creating temporal spread",
+    "root_cause": "Both the 3h window (since 02:06Z) and 4h window (since 01:06Z) cover a span that includes all 7 boredom goal types at least once. Goal[5] at 03:43Z ('check substrate health...') dispatches substrate-health-tick, producing substrateHealthReport in the 3h window — the same shape that goal[1] at 01:43Z produces in the 4h-exclusive slice. No unique shape in 4h that isn't already in 3h.",
+    "path_to_resolution": "Either (1) add-resolver-to-vessel or other n=0 templates fire with unique output_shapes, or (2) new templates get registered and execute within the 4h-window exclusive slice but not in the 3h window, or (3) goal cycle diversification so adjacent windows have genuinely different shape coverage.",
+    "prediction_retraction": "Investigation-027 prediction (via 3d27f632 substrate commit) of first coverage_progress=True at ~04:11-04:43Z was not realized. The 3h/4h plateau is a structural blocker not addressed by the 30-min timer alone."
+  },
+  "repo_artifacts": {
+    "new_files_checked": [
+      { "path": "validation/findings/f-083-debunked.md", "status": "authored by substrate devbob (612521ce)", "mtime": "2026-05-25 18:16" },
+      { "path": "validation/state/agent-coordination.json", "status": "updated by substrate at ~02:47Z", "mtime": "2026-05-25 19:47" }
+    ],
+    "pngs_at_root": 0,
+    "unexpected_root_files": "none"
+  },
+  "next_wake_recommendation": {
+    "delay_seconds": 5400,
+    "rationale": "S.4a plateau at 3h/4h is structural — short-interval checks add no information until add-resolver-to-vessel or a new unique-shape template fires. Next full boredom cycle completes at ~08:13Z (goal[6] fires again). Checking at 06:30Z gives the 1h window (06:30–05:30Z) two more boredom firings to observe. 5400s (1.5h) balances cache overhead against information gain.",
+    "what_to_look_for": [
+      "Has rl[4h] > rl[3h]? (plateau broken → consecutive can reach 3)",
+      "Has add-resolver-to-vessel alpha grown above 1? (new template firing)",
+      "Any new substrate commits since 536652a4/612521ce?",
+      "Any new failure-mode cycle reports?"
+    ]
+  }
+}

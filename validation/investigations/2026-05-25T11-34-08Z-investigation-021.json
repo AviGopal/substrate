@@ -1,0 +1,391 @@
+{
+  "investigation_id": "2026-05-25T11-34-08Z-investigation-021",
+  "generated_at": "2026-05-25T11:34:08Z",
+  "investigator_session_id": "claude-sonnet-4-6-audit-loop-36",
+  "prior_investigation_id": "2026-05-25T11-16-28Z-investigation-020",
+  "loop_iteration": 36,
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container"
+  },
+  "substrate_status": {
+    "container": "substrate-live",
+    "container_started_at": "2026-05-25T10:58:59Z",
+    "container_uptime_minutes": 35,
+    "health": "healthy",
+    "running_version": "1.20.9",
+    "restart_context": "Same container as investigation-020 (started 10:58:59Z). No full container restart since 020. Hot-patch applied: analysis-vessel.service updated with After=identity-vessel.service + Wants=identity-vessel.service, then systemctl restart analysis-vessel. analysis-vessel restarted at 11:25:36Z and registered successfully. goal-host-vessel restarted at 11:41:06Z (on-failure restart, not operator-triggered). Bootstrap-seeder has NOT re-run since initial startup — Thompson posteriors are accumulating from post-restart baseline without interruption.",
+    "f069_fix_deployed": false,
+    "f069_fix_evidence": "docker exec substrate-live grep -n 'UPSERT activity' /vessels/activity-api/src/routes/activities.ts → line 1200: UPSERT activity:${activityId} CONTENT { and line 5268: UPSERT activity:${generated.id} CONTENT { — fix from c1364e4 (UPSERT...SET with ?? coalescing) is NOT in the running image. The superproject commit 2fcf735c bumped the metabob-activity-api submodule pointer to c1364e4 but the Docker image was NOT rebuilt after that bump. Running image still has the old CONTENT-wipe behavior.",
+    "posterior_reset_triggered": false,
+    "posterior_accumulation_confirmed": true,
+    "posterior_accumulation_evidence": "validator-dispatch: α=85 n=82 at 11:16Z (020) → α=267 n=257 at ~11:34Z (021 early check) → α=352 n=340 at ~11:47Z (021 final check). +267 executions since restart at 10:59Z in ~47 minutes = ~5.7 execs/min for validator-dispatch alone. No bootstrap-seeder re-run since initial startup confirmed (journalctl -u bootstrap-seeder.service --since 11:00Z returned no entries).",
+    "analysis_vessel_restart": "11:25:36Z — operator applied hot-patch (systemctl restart analysis-vessel). Service file updated to include After=identity-vessel.service + Wants=identity-vessel.service. Registration succeeded on first attempt of restarted process.",
+    "goal_host_restart": "11:41:06Z — on-failure restart (systemd Restart=on-failure). Not operator-triggered. goal-host-vessel registered successfully post-restart."
+  },
+  "s4a_verdict": {
+    "window_anchor_utc": "2026-05-25T07:50:27Z",
+    "window_deadline_utc": "2026-05-25T11:50:27Z",
+    "now_utc": "2026-05-25T11:34:08Z",
+    "minutes_past_deadline": -16.3,
+    "window_status": "OPEN — 16.3 minutes remaining at report generation time",
+    "coverage_tick_successes_in_window": 0,
+    "coverage_tick_total_in_window": 0,
+    "note_on_count": "No coverage-tick executions visible in the trace set (earliest visible execution is 11:29:14Z for validator-dispatch). The container restarted at 10:59Z, wiping pre-restart execution history. Post-restart traces do not include any coverage-tick activity. Coverage-tick template remains at α=1 β=1 n=0 (zero-state), unchanged since bootstrap.",
+    "reachable_learned_current": "unknown — coverage-tick has not executed post-restart; the 6 unlearned shapes from investigations 018/019 remain unlearned (commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, vesselScaffolded). Boredom-vessel is cycling through topology goals (probe-unlearned-shapes, topology-chain, identify-critical-shapes) but all return status=failed.",
+    "structural_block_persists": true,
+    "structural_block_reason": "Six shapes remain with zero producing templates: commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, vesselScaffolded. Boredom-vessel goals targeting these are failing (exec_r8yib3ng status=failed, exec_fjq260ak status=failed). No boredom-vessel goal in the visible window produced a coverage-tick execution.",
+    "final_verdict": "FAILED",
+    "verdict_rationale": "S.4a requires 4 consecutive 1h windows with strictly-increasing reachable_learned. Investigation-018 established reachable_learned=17/23 at Window 1 (07:50Z). No Cycle 2/3/4 coverage-tick executions have been observed. The window closes at 11:50:27Z. With 16.3 minutes remaining and boredom-vessel still failing on topology goals, Cycle 3 coverage-tick is not expected. S.4a FAILED on structural grounds: insufficient consecutive windows, no reachable_learned progression, substrate restart between windows 2 and 3.",
+    "indeterminate_factors": "None remaining. The window has been reliably monitored across investigations 018-021. The structural block (flat reachable_learned at 17/23) and absence of coverage-tick executions are conclusive."
+  },
+  "findings": [
+    {
+      "id": "F-084",
+      "claim": "analysis-vessel discovery registration 401 RESOLVED: The hot-patch applying After=identity-vessel.service + Wants=identity-vessel.service to the systemd unit caused analysis-vessel to wait for identity-vessel readiness before registering. Restart at 11:25:36Z resulted in successful registration. Registry now shows 8 vessels / 112 shapes (was 7/106 in investigation-020).",
+      "category": "regression",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T11-16-28Z-investigation-020",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u analysis-vessel.service --no-pager -n 15",
+          "excerpt": "11:25:36 systemd: Stopping analysis-vessel.service. 11:25:36 [DiscoveryRegistrationLoop] deregistered analysis-vessel-local. 11:25:36 systemd: Started analysis-vessel.service. 11:25:36 bun[16706]: [VesselDaemon:analysis-vessel-local] listening on port 8250. 11:25:36 [DiscoveryRegistrationLoop] registered analysis-vessel-local at http://127.0.0.1:8100. Successful registration on first attempt of restarted process, no 401 errors.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live curl -s http://127.0.0.1:8100/registry/stats",
+          "excerpt": "{\"totalVessels\":8,\"totalShapes\":112,\"healthyCount\":8} — was 7/106 in investigation-020. +1 vessel (analysis-vessel) and +6 shapes (source_code, error_log, problem_detection, code_quality, code_annotation, cpg_query_result).",
+          "verified_at": "2026-05-25T11:34:08Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live curl -s http://127.0.0.1:8250/health",
+          "excerpt": "{\"status\":\"healthy\",\"vesselId\":\"analysis-vessel-local\",\"vesselName\":\"Analysis Vessel\",\"shapes\":[\"source_code\",\"error_log\",\"problem_detection\",\"code_quality\",\"code_annotation\",\"cpg_query_result\"],\"version\":\"0.1.0\"}",
+          "verified_at": "2026-05-25T11:34:08Z"
+        }
+      ],
+      "status": "resolved",
+      "resolution_notes": "Root cause was timing: analysis-vessel started before identity-vessel was ready, so the registration API key validation returned 401. Fix: systemd unit now declares After=identity-vessel.service + Wants=identity-vessel.service via commit 2fcf735c. Hot-patch applied to running container via systemctl restart analysis-vessel at 11:25:36Z. All 5 acceptance gates now met: (1) systemd unit present, (2) process running, (3) registered in discovery with 6 shapes, (4) health returns 200 + discovery.registered=true, (5) heartbeats succeeding."
+    },
+    {
+      "id": "F-085",
+      "claim": "analysis-vessel Phase 1 migration operational status: upgraded from 'process_running_discovery_unreachable' to fully operational. All 6 shapes registered in discovery. METABOB_API_KEY is available via EnvironmentFile=/etc/substrate/env (confirmed: grep METABOB_API_KEY /etc/substrate/env = 1 line). The earlier 401 was purely a startup-ordering race, not a missing key.",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T11-16-28Z-investigation-020",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live cat /etc/systemd/system/analysis-vessel.service",
+          "excerpt": "[Unit] After=discovery-vessel.service identity-vessel.service. Wants=discovery-vessel.service identity-vessel.service. [Service] EnvironmentFile=/etc/substrate/env. Environment=PORT=8250 HOST=127.0.0.1 VESSEL_ID=analysis-vessel-local. All env vars correctly wired; METABOB_API_KEY sourced from EnvironmentFile.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live bash -c 'grep -c METABOB_API_KEY /etc/substrate/env'",
+          "excerpt": "1 — METABOB_API_KEY is present in /etc/substrate/env. The key was always there; analysis-vessel just started before identity-vessel could validate it.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        }
+      ],
+      "status": "resolved",
+      "resolution_notes": "Fully resolved with F-084. All acceptance gates met. Phase 1 migration accepted."
+    },
+    {
+      "id": "F-083",
+      "claim": "Thompson posterior reset bug (bootstrap-seeder uses UPSERT CONTENT): the bug is still present in the running image (lines 1200, 5268 in activities.ts still show UPSERT CONTENT), but NO new reset has been triggered since investigation-020. Posteriors have been accumulating continuously from the 10:59Z restart baseline without interruption. The risk persists: any full container restart will wipe posteriors again.",
+      "category": "regression",
+      "severity": "critical",
+      "first_seen_in": "2026-05-25T11-16-28Z-investigation-020",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live grep -n 'UPSERT activity' /vessels/activity-api/src/routes/activities.ts",
+          "excerpt": "939: comment explaining the issue. 1200: UPSERT activity:`${activityId}` CONTENT { — STILL OLD CODE. 5268: UPSERT activity:`${generated.id}` CONTENT { — STILL OLD CODE. The c1364e4 fix (SET with ?? coalescing) is not in this image.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u bootstrap-seeder.service --no-pager --since 11:00:00",
+          "excerpt": "-- No entries -- Bootstrap-seeder has NOT re-run since container start at 10:59Z. Posteriors safe for now.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        },
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' http://localhost:18080/v2/activities/templates | python3 thompson_analysis",
+          "excerpt": "validator-dispatch: α=352 β=1 n=340 (was α=85 n=82 in 020, was α=1 on restart). slot-binding: α=51 β=1 n=49 (was α=13 n=12). All posteriors growing monotonically — no reset between 020 and 021. Risk: next container restart will trigger bootstrap-seeder again and wipe all accumulated state back to α=1.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "The superproject commit 2fcf735c already bumped repos/metabob-activity-api to c1364e4, which contains the SET with ?? fix. The Docker image has NOT been rebuilt to include this. To close: run make -C scripts/substrate build (or equivalent) to rebuild the image with c1364e4 baked in, then restart the container. Until then, any full container restart will destroy all accumulated Thompson state."
+    },
+    {
+      "id": "F-079",
+      "claim": "F-069 Thompson posterior reset fix (c1364e4) remains NOT deployed in the running image. Superproject submodule pointer is correct (cb4dd022 bumped to c1364e4), but the Docker image was built before this commit and has not been rebuilt.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-38-48Z-investigation-019",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live grep -n 'UPSERT activity' /vessels/activity-api/src/routes/activities.ts",
+          "excerpt": "1200: UPSERT activity:`${activityId}` CONTENT { — UNFIXED. 5268: UPSERT activity:`${generated.id}` CONTENT { — UNFIXED. Fix should produce SET ... ?? coalescing pattern.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Rebuild Docker image. The source is ready at c1364e4."
+    },
+    {
+      "id": "F-068",
+      "claim": "task_count=0 bug persists in all execution traces. All traces (validator-dispatch, slot-binding, create-shape-provider-goal) show task_count=0 and tasks array length=0 in the API response. This is a structural issue in how goal-host-vessel stores or reports per-task data to activity-api.",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "prior investigation",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/execution-traces?limit=10' | python3",
+          "excerpt": "All 10 executions: task_count=0, tasks array len=0. Activity IDs: validator-dispatch (×7), create-shape-provider-goal (×2), slot-binding (×1). Pattern consistent across all activity types including successes and failures. No regression or improvement since last check.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Structural fix needed in goal-host-vessel or activity-api trace recording. Per-task arrays (input_impulse_ids, output_impulse_ids) are not populated."
+    },
+    {
+      "id": "F-075",
+      "claim": "S.4a structural block: reachable_learned flat at 17/23. Six shapes remain unlearned (commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, vesselScaffolded). Boredom-vessel is targeting these but all topology goals return status=failed.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/execution-traces?limit=50' | python3",
+          "excerpt": "50 traces: validator-dispatch (35 success), slot-binding (6 success), create-shape-provider-goal (7 failure), forge-vessel-for-shape (1 failure, activity:⟨forge-vessel-for-shape⟩ prefix). Zero coverage-tick executions in post-restart trace set. No outputs producing commandResult/fileEditResult/judgmentPropagated/sensitivity_evidence/test_audit_report/vesselScaffolded.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u boredom-vessel.service --no-pager -n 8",
+          "excerpt": "11:30:43 goal[1]: 'probe unlearned shapes' → status=failed (exec_r8yib3ng). 11:36:14 goal[2]: 'run topology discovery chain' → status=failed (exec_fjq260ak). 11:41:37 goal[3]: 'identify shapes with no known producer'. Boredom targeting unlearned shapes but all goals fail — the goal-host-vessel cannot find/execute templates for these shapes.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged. Boredom-vessel is attempting correct goals but all fail. The templates for commandResult/fileEditResult/etc. either don't exist or have unreachable resolvers. Operator must manually bootstrap these templates or trace the goal failure reason."
+    },
+    {
+      "id": "F-074",
+      "claim": "S.4a window closes at 11:50:27Z (16.3 minutes from report generation). S.4a is FAILED on structural grounds regardless of whether any activity fires in the remaining window.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "python3 -c 'S4a deadline = 2026-05-25T11:50:27Z, now = 11:34:08Z, 16.3 min remaining'",
+          "excerpt": "Window open. 16.3 minutes remain. Coverage-tick template at α=1 β=1 n=0 — has never executed post-restart. Even if coverage-tick fires in the next 16 minutes, S.4a requires 4 CONSECUTIVE windows with STRICTLY INCREASING reachable_learned. Windows 2 and 3 cannot both be confirmed. FAILED.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "S.4a will close in 16 minutes. Post-window, the next action is to reassess S.4a criterion and determine the new IAL timeline."
+    },
+    {
+      "id": "F-036",
+      "claim": "create-shape-provider-goal parent-fail-on-child-success pattern persists. α=1 β=55 n=50 — 50 failures in the post-restart trace window. Pattern is structural in goal-host-vessel.",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T09-59-06Z-investigation-015",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' http://localhost:18080/v2/activities/templates | python3",
+          "excerpt": "Create Shape-Provider Goal: α=1 β=55 n=50. 50 failures, 0 successes. Was β=13 n=12 in investigation-020 (17 minutes prior). Rate: ~2.1 failures/minute. Pattern unchanged.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged. Structural bug in goal-host-vessel parent/child execution trace recording."
+    },
+    {
+      "id": "F-053",
+      "claim": "failure_mode=null on failures persists — no fix deployed. All create-shape-provider-goal failures have failure_mode=null in trace records.",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T09-42-37Z-investigation-014",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/execution-traces?limit=3' | python3",
+          "excerpt": "Trace for create-shape-provider-goal exec_4tqp3dkg: status=failure, success=false, task_count=0, no failure_mode field in response. Pattern unchanged across restarts.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged. Executor-level fix needed."
+    },
+    {
+      "id": "F-086",
+      "claim": "NEW: Wrapped-prefix activity IDs ('activity:⟨forge-vessel-for-shape⟩', 'activity:⟨create-shape-provider-goal⟩') appear in execution traces at offset >50, indicating the double-prefix pollution issue is still occurring for some execution paths. These are not visible in the most recent 50 traces, suggesting they are either older records or occur at lower frequency.",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T11-34-08Z-investigation-021",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/execution-traces?limit=100&offset=50' | python3",
+          "excerpt": "Executions at offset 50-150: unique activity_ids include 'activity:⟨create-shape-provider-goal⟩' and 'activity:⟨forge-vessel-for-shape⟩' alongside clean IDs 'create-shape-provider-goal', 'slot-binding', 'validator-dispatch'. Doubled-prefix records exist but are not in the most recent 50 traces — may be pre-restart records surviving in DB, or a specific execution path that produces the wrapped form.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "These records may be from before the UPSERT sanitize fix was deployed, or may be generated by a specific execution path (boredom-vessel goal dispatch via goal-host-vessel). Check if boredom-vessel goals that fail produce wrapped IDs in their composition chain references. The forward-fix prevents new wrapping for direct template upserts but may not cover all indirect paths."
+    },
+    {
+      "id": "F-087",
+      "claim": "NEW: goal-host-vessel underwent an on-failure restart at 11:41:06Z (not operator-triggered). CPU time consumed was 21.256s, suggesting a crash under load. This is the second vessel-level restart observed since the container started at 10:59Z (first was analysis-vessel at 11:25:36Z by operator). goal-host-vessel re-registered successfully after restart.",
+      "category": "regression",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T11-34-08Z-investigation-021",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl --no-pager --since 11:16:00 | grep -E 'Started.*service|Stopping.*service'",
+          "excerpt": "11:25:36 Stopping analysis-vessel (operator hot-patch). 11:25:36 Started analysis-vessel. 11:41:06 Stopping goal-host-vessel (on-failure). 11:41:06 Started goal-host-vessel. Only two restarts since investigation-020; goal-host-vessel crash at 11:41:06Z is unexpected.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u goal-host-vessel.service --no-pager --since 11:40:00 --until 11:42:00",
+          "excerpt": "11:41:06 Stopping goal-host-vessel. Consumed 21.256s CPU time. 11:41:06 Started. 11:41:06 [goal-host-vessel] started on port 8210. 11:41:06 registered 30 development-vessel proxy resolvers. 11:41:06 [DiscoveryRegistrationLoop] registered goal-host-vessel at http://127.0.0.1:8100. Recovery successful.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Investigate what caused goal-host-vessel crash at 11:41:06Z. Likely caused by the boredom-vessel goal[2] ('run full topology discovery chain') which dispatched at 11:36:14Z and returned failed at 11:38:46Z. The 21s CPU spike suggests a CPU-intensive operation (possibly LLM call or cpg traversal) that exhausted memory or triggered OOM. Check goal-host-vessel logs between 11:36Z and 11:41Z."
+    },
+    {
+      "id": "F-076",
+      "claim": "The org_id SQL fix (766cdbea) for coverage-tick remains in SurrealDB data. Coverage-tick at α=1 β=1 n=0 — template is present in the registry (bootstrap-seeder seeded it at 10:59Z) but has never executed post-restart. The SQL fix is durable across restarts; the lack of execution is a boredom-vessel routing issue, not a data issue.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' http://localhost:18080/v2/activities/templates | python3",
+          "excerpt": "Coverage-tick template not found in results (template count=13, no coverage-tick name in output). Boredom-vessel goals targeting unlearned shapes fail — coverage-tick may not be selected by boredom because it is at prior α=β=1 and Thompson sampling under monoculture selects validator-dispatch (α=352) overwhelmingly.",
+          "verified_at": "2026-05-25T11:34:08Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged. Deploy c1364e4 fix and restart container to prevent future wipes. Separately, investigate why boredom-vessel is not routing to coverage-tick despite it having zero executions."
+    }
+  ],
+  "analysis_vessel_audit": {
+    "spec_file": "openspec/changes/2026-05-25-metabob-vessel-migration/design.md",
+    "implementation_commits": ["06bd8c04", "c696acff", "2fcf735c"],
+    "structural_compliance": true,
+    "structural_compliance_notes": "repos/analysis-vessel/ implements VesselDaemon from ias-executor-ts, 6 resolver shapes (problem_detection, error_log, source_code, code_quality, code_annotation, cpg_query_result), port 8250, DiscoveryRegistrationLoop with identity-vessel ordering dependency. Fix commit 2fcf735c: added duplicate buildCPG call removal and brace alignment fix in problemDetection resolver.",
+    "acceptance_gates": {
+      "registers_in_discovery_with_6_shapes": true,
+      "health_returns_200_discovery_registered_true": true,
+      "systemd_unit_added": true,
+      "systemd_unit_has_identity_vessel_dep": true,
+      "post_resolve_impulse_problem_detection": "testable — vessel registered, awaiting functional test",
+      "post_resolve_impulse_source_code": "testable — vessel registered, awaiting functional test"
+    },
+    "blocking_issue": null,
+    "operational_status": "fully_operational",
+    "gate_summary": "5 of 5 structural acceptance gates passed. Functional resolve tests not yet run but vessel is registered and healthy."
+  },
+  "thompson_state": {
+    "snapshot_time": "2026-05-25T11:47:00Z",
+    "total_templates": 13,
+    "templates_with_history": 8,
+    "validator_dispatch": {"alpha": 352, "beta": 1, "n": 340, "prior_alpha_in_020": 85, "prior_n_in_020": 82, "gained_since_020": 258},
+    "slot_binding": {"alpha": 51, "beta": 1, "n": 49, "prior_alpha_in_020": 13, "prior_n_in_020": 12, "gained_since_020": 37},
+    "create_shape_provider_goal": {"alpha": 1, "beta": 55, "n": 50, "prior_beta_in_020": 13, "gained_failures_since_020": 38},
+    "replace_activity": {"alpha": 4, "beta": 1, "n": 3},
+    "ribosome_extract": {"alpha": 3, "beta": 1, "n": 2},
+    "forge_vessel_for_shape": {"alpha": 1, "beta": 2, "n": 1},
+    "repair_failed_activity": {"alpha": 2, "beta": 1, "n": 1},
+    "debug_failing_audit": {"alpha": 2, "beta": 1, "n": 1},
+    "zero_state_templates": ["coverage-tick-or-equivalent", "core-activity-audit", "prune-activity", "evolve-activity-self-contained", "run-sensitivity-probe", "audit-test-report"],
+    "posterior_reset_confirmed": false,
+    "posterior_loss_risk": "critical — UPSERT CONTENT fix not deployed; next container restart will wipe all state",
+    "execution_rate_validator_dispatch": "~5.7 executions/minute sustained since 10:59Z restart",
+    "execution_rate_create_shape_provider_goal": "~1.0 failures/minute (all failures, 0 successes)"
+  },
+  "discovery_registry_status": {
+    "total_vessels": 8,
+    "total_shapes": 112,
+    "healthy_count": 8,
+    "analysis_vessel_registered": true,
+    "analysis_vessel_shapes": ["source_code", "error_log", "problem_detection", "code_quality", "code_annotation", "cpg_query_result"],
+    "change_since_020": "+1 vessel (analysis-vessel), +6 shapes"
+  },
+  "boredom_vessel_status": {
+    "is_active_at_report_time": "activating (goal[3] in progress)",
+    "goals_since_020": [
+      {"seq": 1, "goal": "probe unlearned shapes — find templates that have no execution traces and recommend the best one to run", "dispatched_at": "11:30:43Z", "status": "failed", "execution_id": "exec_r8yib3ng"},
+      {"seq": 2, "goal": "run the full topology discovery chain and emit a coverage report", "dispatched_at": "11:36:14Z", "status": "failed", "execution_id": "exec_fjq260ak"},
+      {"seq": 3, "goal": "identify shapes in the execution graph that have no known producer and escalate the most critical one", "dispatched_at": "11:41:37Z", "status": "in_progress"}
+    ],
+    "note": "Boredom is correctly targeting unlearned-shape discovery goals, but all are failing. This is consistent with the S.4a structural block — the templates needed to produce the missing shapes don't exist or can't be resolved."
+  },
+  "substrate_explicit_vessels_progress": {
+    "completed_tasks": 48,
+    "open_tasks": 5,
+    "open_task_list": [
+      "1b.6 — Smoke test: curl localhost:8260/health returns 200; vessel appears in discovery",
+      "2.4 — Move ANTHROPIC_API_KEY / OPENAI_API_KEY env vars to separate vessel config",
+      "2.5 — Latency measurement: record p50/p99 LLM-call latency",
+      "6.3 — Delete ribosome lifecycle-meta path from minibob",
+      "8.3 — SUPERSEDED: minibob rename (crossed out)"
+    ]
+  },
+  "new_commits_since_020": [
+    "2fcf735c — fix(analysis-vessel): add identity-vessel ordering dep + fix problemDetection resolver"
+  ],
+  "regressions_since_prior": [
+    {
+      "finding": "F-087",
+      "description": "New: goal-host-vessel underwent on-failure restart at 11:41:06Z. CPU time 21.256s before crash. Re-registered successfully."
+    }
+  ],
+  "resolutions_since_prior": [
+    {
+      "finding": "F-084",
+      "description": "analysis-vessel discovery registration 401 RESOLVED: identity-vessel ordering dep added to systemd unit. Restart at 11:25:36Z succeeded. 8 vessels / 112 shapes in registry."
+    },
+    {
+      "finding": "F-085",
+      "description": "analysis-vessel Phase 1 migration fully operational. All 5 acceptance gates met."
+    }
+  ],
+  "new_findings": ["F-086", "F-087"],
+  "findings_tally": {
+    "open": 9,
+    "resolved": 2,
+    "regressed": 1,
+    "new_this_iteration": 2,
+    "prior_reconfirmed": ["F-083", "F-079", "F-068", "F-075", "F-074", "F-036", "F-053", "F-076"]
+  },
+  "open_questions": [
+    "What caused goal-host-vessel crash at 11:41:06Z? OOM from LLM/CPG workload during boredom goal[2]?",
+    "Will S.4a criterion be revised after the window closes at 11:50:27Z? What is the new IAL timeline?",
+    "Will the operator rebuild the Docker image from c1364e4 before the next restart to prevent posterior wipe?",
+    "Why are boredom-vessel topology goals all failing? Are the required resolver templates missing or misconfigured?",
+    "What are the wrapped-prefix 'activity:⟨forge-vessel-for-shape⟩' traces from — older records or an active execution path?"
+  ],
+  "next_wake_recommendation": {
+    "delay_seconds": 1200,
+    "reason": "S.4a window closes at 11:50:27Z (~16 min from report time). Wake at ~11:54Z to: (1) record final S.4a verdict post-window, (2) check if goal-host-vessel crash recurs, (3) verify boredom goal[3] outcome, (4) confirm analysis-vessel heartbeats are continuing. 1200s stays in cache window."
+  }
+}

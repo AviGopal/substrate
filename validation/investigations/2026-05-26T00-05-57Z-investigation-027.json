@@ -1,0 +1,327 @@
+{
+  "investigation_id": "2026-05-26T00-05-57Z-investigation-027",
+  "generated_at": "2026-05-26T00:05:57Z",
+  "investigator_session_id": "claude-sonnet-4-6-audit-loop-42",
+  "prior_investigation_id": "2026-05-25T22-06-00Z-investigation-026",
+  "loop_iteration": 42,
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container"
+  },
+  "substrate_status": {
+    "container": "substrate-live",
+    "health": "healthy",
+    "running_version": "1.20.9",
+    "uptime_seconds": null,
+    "container_started_at": "2026-05-25T10:59:01Z",
+    "container_uptime_hours": 13,
+    "registry_vessels": 8,
+    "registry_shapes": 112,
+    "registry_healthy": 8,
+    "f069_fix_deployed": false,
+    "f069_fix_evidence": "docker exec substrate-live grep -n 'UPSERT activity.*CONTENT' /vessels/activity-api/src/routes/activities.ts -> lines 1200 and 5268 still show UPSERT CONTENT pattern. UNCHANGED since investigation-020.",
+    "new_commits_since_026": 5,
+    "new_commits_list": [
+      "71960aff fix(boredom): explicit template names in goals to fix F-092 convergence",
+      "bbf8d583 chore(validation): update agent-coordination with iteration-026 findings",
+      "b39db49f chore(submodule): bump development-vessel to 84638bb (coverage-tick limit 200→2000)",
+      "eb179580 fix(boredom): add 8-minute AbortSignal timeout to goal-host fetch",
+      "13a61a61 chore(coordination): update dev state — 3 fixes this session, 28 templates in registry (late arrival from 026 window)"
+    ],
+    "hot_patches_applied_since_026": [
+      "development-vessel restarted at 23:39:47Z — limit=2000 fix confirmed deployed (grep shows limit=2000 in /vessels/development-vessel/src/resolvers/coverage-tick.ts)",
+      "boredom-vessel updated with explicit template goals — confirmed live (00:03Z log shows new goal text 'run the coverage-tick activity to measure substrate topology...')"
+    ]
+  },
+  "s4a_verdict": {
+    "verdict": "NOT PASSED — coverage_progress=false confirmed. Root cause diagnosed and fixes deployed. S.4a path now unblocked.",
+    "verdict_final": false,
+    "direct_verification_timestamp": "2026-05-25T23:54:43Z",
+    "coverage_progress": false,
+    "consecutive_progressing_cycles": 1,
+    "cells_over_time": [
+      {"window": "1h (since 22:54Z)", "reachable_learned": 9, "reachable_unlearned": 14, "unknown": 0},
+      {"window": "2h (since 21:54Z)", "reachable_learned": 11, "reachable_unlearned": 12, "unknown": 0},
+      {"window": "3h (since 20:54Z)", "reachable_learned": 11, "reachable_unlearned": 12, "unknown": 0},
+      {"window": "4h (since 19:54Z)", "reachable_learned": 11, "reachable_unlearned": 12, "unknown": 0}
+    ],
+    "root_cause_diagnosed": "TWO-PART ROOT CAUSE for S.4a blockage:",
+    "root_cause_1_coverage_tick_limit": "coverage-tick was fetching traces with limit=200. With ~5 traces/min from boredom, limit=200 covered only ~40min of history. The client-side time filter (ts >= since) DOES work, but the 2h/3h/4h windows all got the same 200 most recent traces — their filters were broad enough to accept all 200, giving identical rl counts. Only the 1h window filtered enough to show fewer traces (rl=9 vs 11). The substrate diagnosed this and fixed it (b39db49f bumps dev-vessel to 84638bb limit=2000). DEPLOYED: confirmed in container at /vessels/development-vessel/src/resolvers/coverage-tick.ts line 45.",
+    "root_cause_2_boredom_template_monoculture": "Boredom's abstract goal phrasing ('measure the substrate topology and report coverage progress') was being matched by compose_goal's LLM to high-alpha templates (validator-dispatch α=3759, slot-binding α=534). These 3 templates produce only 3 unique shapes, causing rl to plateau. The substrate diagnosed this (commit 71960aff message explicitly cites 'validator-dispatch a=3887, slot-binding a=552'). FIX: goals now name templates explicitly ('run the coverage-tick activity', 'run the harness-check-scenario activity', 'run the add-resolver-to-vessel activity'). DEPLOYED: confirmed in boredom-vessel logs at 00:03Z.",
+    "coverage_tick_fix_evidence": "docker exec substrate-live grep -n 'limit=' /vessels/development-vessel/src/resolvers/coverage-tick.ts → line 45: limit=2000. Deployed via development-vessel restart at 23:39:47Z.",
+    "boredom_fix_evidence": "docker exec substrate-live journalctl -u boredom-vessel.service → 00:03:19: 'submitting goal[0]: run the coverage-tick activity to measure substrate topology coverage and emit a coverageReport' — new explicit goal text confirmed live.",
+    "s4a_unblocked": true,
+    "s4a_path_now": "With boredom now explicitly running coverage-tick, substrate-health-tick, harness-check-scenario, and add-resolver-to-vessel, the substrate will exercise templates producing unique shapes. Over the next 1-4 hours, rl should grow as more template types execute. S.4a requires 4 consecutive 1h windows of strictly-increasing rl — this requires sustained varied execution for 4+ hours.",
+    "estimated_s4a_earliest": "2026-05-26T04:00Z (4h from fixes being live at 00:00Z)",
+    "coverage_tick_alpha": 8,
+    "coverage_tick_n": 5,
+    "substrate_health_tick_alpha": 8,
+    "substrate_health_tick_n": 7
+  },
+  "substrate_self_development": {
+    "new_commits_since_026": 5,
+    "commit_cadence": "HIGH — 5 commits in ~2h (17:00Z to 17:03Z commit times on host = 00:00Z to 00:03Z UTC). All 5 authored by Devbob Agent (devbob@metabob.local).",
+    "diagnosis_quality": "EXCEPTIONAL. The substrate correctly diagnosed both root causes of S.4a blockage without operator input: (1) coverage-tick limit=200 → all windows saw same traces, (2) boredom abstract goals → LLM selected high-alpha templates. Both diagnoses match the auditor's independent analysis.",
+    "commits_detail": [
+      {
+        "hash": "71960aff",
+        "message": "fix(boredom): explicit template names in goals to fix F-092 convergence",
+        "impact": "RESOLVES F-092. Boredom goals now explicitly name coverage-tick, substrate-health-tick, harness-check-scenario, add-resolver-to-vessel. Deployed and confirmed active.",
+        "deployed": true
+      },
+      {
+        "hash": "b39db49f",
+        "message": "chore(submodule): bump development-vessel to 84638bb (coverage-tick limit 200→2000)",
+        "impact": "RESOLVES F-092-root-cause-1. coverage-tick now fetches 2000 traces per window (was 200). All temporal windows now show real historical variation.",
+        "deployed": true
+      },
+      {
+        "hash": "eb179580",
+        "message": "fix(boredom): add 8-minute AbortSignal timeout to goal-host fetch",
+        "impact": "RESOLVES F-088 (boredom timeout). 8-min AbortSignal allows LLM-heavy goals (probe-unlearned, topology-chain) to complete without SIGTERM. Previously Bun's default socket timeout caused ~36% failures.",
+        "deployed": true
+      },
+      {
+        "hash": "bbf8d583",
+        "message": "chore(validation): update agent-coordination with iteration-026 findings",
+        "impact": "Coordination state update. Non-functional."
+      },
+      {
+        "hash": "13a61a61",
+        "message": "chore(coordination): update dev state — 3 fixes this session, 28 templates in registry",
+        "impact": "Late-arriving commit from 026 window. Coordination state update."
+      }
+    ],
+    "f092_self_diagnosis_evidence": "Commit 71960aff message explicitly states: 'The abstract goals (\"measure substrate topology\") were being matched by the LLM's compose_goal step to high-alpha templates (validator-dispatch a=3887, slot-binding a=552), producing only 3 unique shapes in the 1h window while 2-4h windows show 11+ shapes. This makes S.4a reachable_learned_strictly_increasing impossible.' — exact diagnosis matches auditor F-092.",
+    "limit_self_diagnosis_evidence": "Commit 84638bb message states: 'At ~300 validator-dispatch traces/hour, limit=200 captured only ~40min of execution history. All 4 time windows saw the same 200 traces and reported identical rl counts (spurious plateau). With limit=2000 (~6h coverage) the resolver now shows real temporal variation: rl[0]=9 vs rl[1]=11, consecutive_progressing_cycles=1 (was 0).' — exact diagnosis."
+  },
+  "f068_status_revised": {
+    "finding_id": "F-068",
+    "prior_status": "open — task_count=0 on all traces, blocks S.4a verification",
+    "revised_status": "PARTIALLY RESOLVED — tasks ARE stored in detail endpoint; task_count summary field absent",
+    "evidence": [
+      "curl 'http://localhost:18080/v2/activities/execution-traces/exec_9toamz6h' → tasks=[{task_id: compute_coverage, resolver_id: development-vessel:coverage_tick, output_impulse_ids: ['dev:coverage_tick_iwh9pzcr'], success: true}]. Task data IS present in detail endpoint.",
+      "List endpoint shows task_count: null. Summary count not populated — display/count bug, not data loss.",
+      "S.4a verification via direct coverage_tick resolver call (not blocked by F-068). Direct call at 23:54Z returned coverage_progress=false."
+    ],
+    "revised_severity": "medium — S.4a verification blocker claim RETRACTED. Direct resolver call is authoritative."
+  },
+  "thompson_state": {
+    "snapshot_time": "2026-05-25T23:56:29Z",
+    "total_templates": 28,
+    "total_alpha_all_templates": 5081,
+    "total_beta_all_templates": 120,
+    "total_executions_all_templates": 5080,
+    "delta_from_026": {
+      "elapsed_minutes": 110,
+      "alpha_delta": 610,
+      "executions_delta": 603,
+      "rate_per_minute": 5.5
+    },
+    "validator_dispatch": {"alpha": 3759, "beta": 1, "n": 3885},
+    "slot_binding": {"alpha": 534, "beta": 1, "n": 542},
+    "create_shape_provider_goal": {"alpha": 482, "beta": 84, "n": 527},
+    "coverage_tick": {"alpha": 8, "beta": 1, "n": 5},
+    "substrate_health_tick": {"alpha": 8, "beta": 1, "n": 7},
+    "forge_vessel_for_shape": {"alpha": 1, "beta": 10, "n": 7},
+    "draft_gap_closing_activity": {"alpha": 16, "beta": 1, "n": 14},
+    "harness_check_scenario": {"alpha": 12, "beta": 1, "n": 10},
+    "other_notable": {
+      "release_change": {"alpha": 1, "beta": 1, "n": 0, "note": "NEW boredom goal explicitly references add-resolver-to-vessel which will generate executions soon"},
+      "add_resolver_to_vessel": {"alpha": 1, "beta": 1, "n": 0},
+      "scaffold_new_vessel": {"alpha": 1, "beta": 1, "n": 0},
+      "audit_test_report": {"alpha": 1, "beta": 1, "n": 0},
+      "propagate_judgment": {"alpha": 1, "beta": 1, "n": 0},
+      "ship_change": {"alpha": 1, "beta": 1, "n": 0}
+    },
+    "posterior_loss_risk": {
+      "total_alpha_at_risk": 5081,
+      "fix_deployed": false,
+      "rate_per_min": 5.5,
+      "risk_level": "CRITICAL — 5081 alpha units will be wiped on container restart. c1364e4 UPSERT MERGE fix still not deployed to running image."
+    }
+  },
+  "findings": [
+    {
+      "id": "F-092",
+      "title": "S.4a UNBLOCKED — two root causes diagnosed and fixed by substrate self-development",
+      "claim": "S.4a was blocked by two bugs diagnosed and fixed by the substrate autonomously: (1) coverage-tick limit=200 → all time windows saw same 200 traces, giving spurious plateau rl=11 across all windows and cycles=0; (2) boredom abstract goals → compose_goal LLM selected validator-dispatch (high-alpha) instead of coverage/health templates. Both fixes are now deployed in the running container. S.4a is not yet passed but the path is unblocked.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-26T00-05-57Z-investigation-027",
+      "status": "root-causes-fixed — S.4a path unblocked. Pass requires 4+ hours of sustained varied execution.",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live curl -sf -X POST http://127.0.0.1:8090/v2/impulses/resolve -H 'Content-Type: application/json' -d '{\"impulse\":{\"type\":\"coverage_tick\",\"pointer\":{\"type\":\"coverage_tick\"}}}'",
+          "excerpt": "{\"coverage_progress\":false,\"consecutive_progressing_cycles\":1,\"cells_over_time\":[{\"timestamp\":\"2026-05-25T22:54:41Z\",\"reachable_learned\":9},{\"timestamp\":\"2026-05-25T21:54:41Z\",\"reachable_learned\":11},{...rl=11...}]}",
+          "verified_at": "2026-05-25T23:54:43Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live grep -n 'limit=' /vessels/development-vessel/src/resolvers/coverage-tick.ts",
+          "excerpt": "line 45: limit=2000. Fix confirmed deployed.",
+          "verified_at": "2026-05-26T00:00:00Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u boredom-vessel.service --no-pager -n 5",
+          "excerpt": "00:03:19: submitting goal[0]: 'run the coverage-tick activity to measure substrate topology coverage and emit a coverageReport'. New explicit goal text confirmed.",
+          "verified_at": "2026-05-26T00:04:00Z"
+        },
+        {
+          "kind": "commit",
+          "hash": "71960aff",
+          "message": "fix(boredom): explicit template names in goals to fix F-092 convergence",
+          "verified_at": "2026-05-26T00:00:00Z"
+        },
+        {
+          "kind": "commit",
+          "hash": "b39db49f",
+          "message": "chore(submodule): bump development-vessel to 84638bb (coverage-tick limit 200→2000)",
+          "verified_at": "2026-05-26T00:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "F-083",
+      "title": "Thompson posterior UPSERT CONTENT bug — α=5081 at risk, 13h without fix",
+      "claim": "UPSERT CONTENT at lines 1200 and 5268 still present. c1364e4 NOT deployed. Total α=5081 at risk on container restart. Rate 5.5α/min.",
+      "category": "regression",
+      "severity": "critical",
+      "status": "open — CRITICAL. Timing note: since S.4a is not yet passed, the 'wait for S.4a before rebuilding' rationale from 026 no longer applies — deploy when convenient.",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live grep -n 'UPSERT activity.*CONTENT' /vessels/activity-api/src/routes/activities.ts",
+          "excerpt": "1200: UPSERT activity:`${activityId}` CONTENT {. 5268: UPSERT activity:`${generated.id}` CONTENT {.",
+          "verified_at": "2026-05-26T00:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "F-088",
+      "title": "Boredom timeout — RESOLVED. 8-min AbortSignal deployed (eb179580)",
+      "claim": "eb179580 adds AbortSignal.timeout(8 * 60 * 1000) to the goal-host fetch call. Prior behavior: Bun's default socket timeout caused SIGTERM at 5min (systemd) for LLM-heavy goals. With 8-min explicit timeout, goals can complete in full before the process times out. Completion rate in observation window: ~90% (9/10 boredom ticks completed).",
+      "category": "regression",
+      "severity": "resolved",
+      "status": "resolved — fix deployed and confirmed via boredom log observation",
+      "delta_from_026": "MAJOR IMPROVEMENT. From 64% → ~90% completion rate. goal[2] (topology chain) completing in 1-3min in this window."
+    },
+    {
+      "id": "F-068",
+      "title": "task_count list-view field = 0/null — REVISED: tasks stored, count field bug only",
+      "claim": "Tasks ARE stored in individual trace detail endpoint. task_count summary field in list view is absent/null. This is a display/count bug. S.4a verification is unblocked by direct coverage_tick resolver call (bypass).",
+      "category": "validation",
+      "severity": "medium",
+      "status": "partially-resolved — data stored, count field wrong. Not blocking S.4a."
+    },
+    {
+      "id": "F-036",
+      "title": "create-shape-provider-goal — STABLE",
+      "claim": "α=482 β=84 n=527. Fix holding. α+47 β+0 since 026.",
+      "category": "positive",
+      "severity": "info",
+      "status": "resolved"
+    },
+    {
+      "id": "F-DEV-RESTART",
+      "title": "development-vessel restart at 23:39:47Z — EXPLAINED. Sync of limit=2000 fix.",
+      "claim": "The development-vessel restart at 23:39:47Z was a sync of the 84638bb commit (coverage-tick limit 200→2000). The restart was intentional — it deployed the fix. coverage-tick α=8 n=5 unchanged, confirming no posterior reset from restart (development-vessel templates are seeded from activity-api, not reset on restart).",
+      "category": "positive",
+      "severity": "info",
+      "status": "explained — intentional sync restart"
+    },
+    {
+      "id": "F-093",
+      "title": "Substrate self-diagnosis accuracy — EXCEPTIONAL. Two S.4a root causes independently confirmed.",
+      "claim": "The substrate's devbob agent correctly identified BOTH root causes of S.4a failure (coverage-tick limit=200 spurious plateau + boredom abstract goals → high-alpha template selection) without any operator input. The commit messages describe the root causes in language that precisely matches the auditor's independent analysis. This is the highest-quality substrate self-diagnosis observed across 27 investigations.",
+      "category": "positive",
+      "severity": "info",
+      "first_seen_in": "2026-05-26T00-05-57Z-investigation-027",
+      "status": "positive-observation",
+      "evidence": [
+        {
+          "kind": "commit",
+          "hash": "71960aff",
+          "message_excerpt": "The abstract goals were being matched by compose_goal LLM to high-alpha templates (validator-dispatch a=3887, slot-binding a=552), producing only 3 unique shapes — making S.4a reachable_learned_strictly_increasing impossible.",
+          "verification": "Matches auditor analysis independently derived from template execution distribution and coverage_tick cells_over_time data."
+        },
+        {
+          "kind": "commit",
+          "hash": "84638bb",
+          "message_excerpt": "At ~300 validator-dispatch traces/hour, limit=200 captured only ~40min of execution history. All 4 time windows saw same 200 traces and reported identical rl counts (spurious plateau). With limit=2000 the resolver shows real temporal variation: rl[0]=9 vs rl[1]=11.",
+          "verification": "Matches auditor analysis of the limit=200 root cause derived from code reading + live query results."
+        }
+      ]
+    }
+  ],
+  "boredom_dispatch_summary_since_026": {
+    "period": "22:06Z to 00:05Z (~119 minutes)",
+    "ticks_in_window_22_to_00": 13,
+    "completed": 12,
+    "timed_out": 1,
+    "completion_rate_pct": 92,
+    "new_goal_text_confirmed": "00:03:19: goal[0]: 'run the coverage-tick activity to measure substrate topology coverage and emit a coverageReport'",
+    "improvement_from_026": "64% → 92% completion rate. goal[2] (topology chain) reliably completing in 1-3min."
+  },
+  "key_delta_from_026": {
+    "positive": [
+      "F-092 root causes DIAGNOSED AND FIXED by substrate (5 commits in ~2h): coverage-tick limit=200→2000, boredom explicit goal names",
+      "F-088 RESOLVED: 8-min AbortSignal timeout deployed (eb179580). Boredom completion rate 64%→92%.",
+      "F-DEV-RESTART EXPLAINED: intentional sync of limit=2000 fix",
+      "F-068 REVISED: tasks ARE stored (detail endpoint); S.4a verification no longer blocked",
+      "Boredom confirmed dispatching new goals ('run the coverage-tick activity...') — confirmed live at 00:03Z",
+      "Substrate self-diagnosis quality: EXCEPTIONAL — both root causes precisely identified without operator input",
+      "F-093 NEW POSITIVE: substrate self-diagnosis matches auditor analysis independently"
+    ],
+    "negative": [
+      "S.4a NOT YET PASSED — coverage_progress=false as of 23:54Z. Fixes deployed but pass requires 4+ hours of continued varied execution.",
+      "F-083 worsening: α=5081 at risk (was 4471). Container 13h without UPSERT MERGE fix.",
+      "5 commits authoring window: 17:00-17:03Z host time — all in a ~3-min burst, suggesting agent loop triggered bulk self-improvement"
+    ],
+    "corrections_to_026": [
+      "S.4a 'window 1 open' claim from 026 RETRACTED. coverage_progress was not and is not satisfied. The window designation was premature.",
+      "F-068 severity downgraded: tasks stored in detail endpoint. Not a data loss bug."
+    ]
+  },
+  "substrate_explicit_vessels_progress": {
+    "tasks_complete": 48,
+    "tasks_open": 5,
+    "notes": "48/53 unchanged."
+  },
+  "topology_discovery_loop_progress": {
+    "tasks_complete": 29,
+    "tasks_open": 4,
+    "s4a_status": "ROOT CAUSES FIXED. Pass requires 4+ hours of sustained execution.",
+    "notes": "29/33 tasks done. S.4a (window 1) and S.4b (window 2) criteria not yet met."
+  },
+  "repo_artifacts": {
+    "root_file_count": 13,
+    "new_artifacts": "None — stable at 13"
+  },
+  "prioritized_actions": [
+    {
+      "priority": 1,
+      "action": "Monitor S.4a progress over next 4 hours",
+      "rationale": "Both root causes fixed. With boredom now explicitly running coverage-tick and varied templates, rl should grow hour over hour. First coverage_progress=true possible ~04:00Z (after 4h of varied execution).",
+      "urgency": "monitor"
+    },
+    {
+      "priority": 2,
+      "action": "Deploy c1364e4 (UPSERT MERGE fix) at operator convenience",
+      "rationale": "F-083: 5081 alpha units at risk. The timing constraint from 026 ('wait for S.4a pass') is now less pressing since S.4a is not yet passed and may take 4+ hours. Deploy should happen before next container restart.",
+      "urgency": "high"
+    },
+    {
+      "priority": 3,
+      "action": "Verify harness-check-scenario and add-resolver-to-vessel dispatch succeeds",
+      "rationale": "These are the new templates added to boredom rotation with n=0. Their first successful execution would add scenarioOutcome and commandResult/fileEditResult shapes to the learned set, growing rl.",
+      "urgency": "medium"
+    }
+  ],
+  "next_wake_recommendation": {
+    "delay_seconds": 3600,
+    "rationale": "S.4a pass requires 4+ hours of varied execution with fixes now in place. Checking every 30 min is excessive — no new code changes expected in the next hour. 1h wake gives time for coverage-tick to fire 2-4 times with new boredom goals, showing whether rl is growing. If rl grows in each 1h window, we'll see consecutive_progressing_cycles increase."
+  }
+}

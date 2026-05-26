@@ -1,0 +1,887 @@
+{
+  "investigation_id": "2026-05-25T07-02-07-investigation-007",
+  "generated_at": "2026-05-25T07:02:07Z",
+  "investigator_session_id": "loop-iteration-023-post-bootstrap-fix",
+  "prior_investigation_id": "2026-05-25T06-48-38-investigation-006",
+  "loop_iteration": 23,
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container",
+    "substrate_reachable": true,
+    "substrate_version": "1.20.9",
+    "auth_verified": true,
+    "narrator_state": "running; substrate reachable; 2 templates visible to narrator"
+  },
+  "commits_since_prior": [
+    {
+      "hash": "60daf3a6",
+      "subject": "validation iter-20: boredom executing; F-050 partially resolved; F-051/F-052/F-053 new",
+      "files_changed": 1,
+      "summary": "Validator recorded boredom resuming (6:45+) with goals dispatching status=failed. Named 3 new findings: F-051 (instant 1-2ms failures), F-052 (empty composition_chain), F-053 (failure_mode null). F-050 declared 'partially resolved' — observed as self-healing after 15 minutes uptime, not a code fix."
+    },
+    {
+      "hash": "9c14b955",
+      "subject": "feat(substrate): bootstrap fixes + 5/6 closure gates closed",
+      "files_changed": 7,
+      "summary": "Five fixes: (1) gen-env.sh base64 with uppercase to avoid WEAK_PASSWORD rejection; (2) RATE_LIMIT_ALLOWLIST_IPS=127.0.0.1,unknown added to env; (3) seed-identity.ts handles {success,data:{key}} response shape; (4) development-vessel.service HOST=0.0.0.0 for Docker port mapping; (5) Makefile adds -p 18210:8210 goal-host port + auto-loads ANTHROPIC_API_KEY. Closure audit result: 5/6 closed; subagents gate remains open (port 18210 not mapped in running container — fix is in Makefile for NEXT run). Commit landed at 23:52 PDT (06:52 UTC), AFTER the current container started at 06:30 UTC — so fixes are NOT active in the running container."
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-001",
+      "claim": "Gameable lift; cycle-8 unchanged.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls /home/avi/documents/work/exp-repo/metabob-devbob/validation/failure-modes/cycles/*.json | wc -l",
+          "excerpt": "8 cycle files (cycle-0 through cycle-8, no cycle-4, no cycle-9). Unchanged from iter-006.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "cycle-8 LIFT_CANDIDATE unchanged. No new cycle generated."
+    },
+    {
+      "id": "F-002",
+      "claim": "6 malformed proposals (epoch-zero timestamps).",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried from prior investigations)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-003",
+      "claim": "Traces lack signature.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl -s 'http://localhost:18080/v2/activities/execution-traces?limit=4' -H 'Authorization: ApiKey <key>'",
+          "excerpt": "4 traces present. None carry a signature field. Structural fix not committed.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-004",
+      "claim": "Only 8 failure-mode scenarios on disk (spec implies 63).",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/cycles/*.json | wc -l",
+          "excerpt": "8 cycle files. No change from iter-006.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-005",
+      "claim": "No cycle-9 generated. Lift cycle count stalled at 8.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/cycles/*.json",
+          "excerpt": "cycle-0 through cycle-8 (missing cycle-4). No cycle-9.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-006",
+      "claim": "Hardcoded identity.metabob.com and svc.cluster.local defaults in multiple files.",
+      "category": "deployment",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -n 'identity.metabob.com' repos/discovery-vessel/src/middleware/auth.ts",
+          "excerpt": "repos/discovery-vessel/src/middleware/auth.ts:68: process.env.IDENTITY_VESSEL_URL ?? 'https://identity.metabob.com'",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-007",
+      "claim": "Trailblazing unimplemented.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-008",
+      "claim": "Mythic language in substrate self-description.",
+      "category": "idiom",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-009",
+      "claim": "Zero DEV on original five 2026-05-23 audited (carried). substrate-explicit-vessels at 48/53 tasks.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -c '^- \\[x\\]' openspec/changes/2026-05-23-substrate-explicit-vessels/tasks.md",
+          "excerpt": "48 complete of 53 total. Open: 1b.6, 2.4, 2.5, 6.3, 8.3(superseded). Unchanged from iter-006.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-010",
+      "claim": "Root clean.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-011",
+      "claim": "Lift-criterion-hardening zero DEV.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-012",
+      "claim": "Cycle reports substrate-anonymous.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-013",
+      "claim": "6 invalid + 3 subagent proposals remain.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/proposals/ | wc -l",
+          "excerpt": "9 proposal files in proposals/. Unchanged from iter-006.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-014",
+      "claim": "Embedding healthy.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl -s http://localhost:18080/health | jq .checks.embedding",
+          "excerpt": "{\"status\":\"healthy\",\"model\":\"all-MiniLM-L6-v2\",\"dim\":384}",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-015",
+      "claim": "total: -1 sentinel in trace list endpoint.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl -s 'http://localhost:18080/v2/activities/execution-traces?limit=10' -H 'Authorization: ApiKey <key>'",
+          "excerpt": "total=-1, count=4 — 4 actual traces present but total still -1 sentinel. Persists despite execution activity.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-016",
+      "claim": "Narrator stable.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls -lt validation/observations/snapshots/ | head -3",
+          "excerpt": "snapshot-2026-05-25T06-57-30-437Z.json — most recent snapshot at 06:57Z, 5 minutes ago. Narrator is running and producing snapshots every 5 minutes.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-017",
+      "claim": "Ribosome firing.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-018",
+      "claim": "Snapshot consistency.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-019",
+      "claim": "Discovery 401 on resolve queries — narrator cannot authenticate with discovery.",
+      "category": "deployment",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "cat validation/observations/snapshots/snapshot-2026-05-25T06-57-30-437Z.json | jq .discovery_vessel",
+          "excerpt": "{\"endpoint\":\"http://localhost:18100\",\"reachable\":false,\"stats\":null,\"error\":\"HTTP 401\"} — narrator still using port 18100 for discovery, same 401 error.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-020",
+      "claim": "WS event capture inactive — ribosome-vessel auth loop.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-49-08-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u ribosome-vessel.service --since '10 minutes ago' --no-pager | tail -5",
+          "excerpt": "[ribosome-vessel] WebSocket connected followed immediately by WARN WebSocket closed — reconnecting in 1000 ms. Pattern repeating. After restart at 06:53:54 it connected and registered with discovery, but WS auth still failing — no [ribosome-vessel] API key authentication failed message visible, suggesting the auth error happens at a lower level.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-021",
+      "claim": "concept-db running; seeder failed.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-49-08-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live systemctl status concept-db.service --no-pager | head -3",
+          "excerpt": "(carried from iter-006) Active: active (running). concept-db-seeder.service: failed (0/24 seeded). Root cause same as F-049.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-022",
+      "claim": "Clock alignment fine.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T02-28-30-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-023",
+      "claim": "No cycle-9.",
+      "category": "lift",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T02-28-30-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/cycles/*.json",
+          "excerpt": "8 cycles, no cycle-9.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-024",
+      "claim": "Boredom-vessel executing but all executions fail with 0-1ms duration.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u boredom-vessel.service --no-pager | grep 'dispatched'",
+          "excerpt": "4 dispatches since 06:45Z, all status=failed: exec_9wfdsxy6 (06:45:37), exec_qq8b52ka (06:46:44), exec_vb19syo9 (06:48:14), exec_0rljwk3l (06:53:38), exec_1347dwna (06:58:44). Timer is active (every ~5 min). Boredom IS dispatching — but executions are failing instantly.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        },
+        {
+          "kind": "http_query",
+          "command": "curl -s 'http://localhost:18080/v2/activities/execution-traces?limit=4' -H 'Authorization: ApiKey <key>'",
+          "excerpt": "4 traces: all status=failure, duration_ms=0-1ms, task_count=0, failure_mode=null, composition_chain=None. Templates selected: harness-check-scenario (3x) and substrate-health-tick (1x). Wrong template selection observed (harness-check-scenario selected for topology goals).",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "regressed",
+      "operator_remediation": "Boredom IS executing (progress from 'timer waiting' in iter-006). But executions fail with 0ms duration — wrong template selection and immediate failure. Two blockers: (1) recommend endpoint uses 'task_description' parameter but goal-host may send 'goal' causing recommend to return empty; (2) Only 2 of 15 templates visible via list API — scope/org filter prevents recommendation of correct templates."
+    },
+    {
+      "id": "F-025",
+      "claim": "Doc-vs-runtime gap-001 spec-only.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-026",
+      "claim": "Cycle-8 stamped on stale coverage.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-027",
+      "claim": "Dev shipping at record pace — superseded.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-028",
+      "claim": "goal-host-vessel operational with health check.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-58-12-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u goal-host-vessel.service --no-pager | tail -3",
+          "excerpt": "goal-host-vessel started on port 8210 at 06:46:06. Registered with discovery. Currently accepting boredom dispatch calls. Health-check status unverified (host port 18210 not mapped in current container — Makefile fix in 9c14b955 not active until container rebuild).",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-029",
+      "claim": "failure_mode still null on new path.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T03-58-12-investigation-003",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl -s 'http://localhost:18080/v2/activities/execution-traces?limit=4' -H 'Authorization: ApiKey <key>' | jq '[.executions[].failure_mode]'",
+          "excerpt": "[null, null, null, null] — all 4 traces have failure_mode=null despite status=failure. F-053 (named in iter-20 narration) is a restatement of this finding.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-030",
+      "claim": "Thompson α=β=1 on coverage-tick. Posteriors unchanged despite boredom executions.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-58-12-investigation-003",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl -s 'http://localhost:18080/v2/activities/templates?q=coverage-tick' -H 'Authorization: ApiKey <key>'",
+          "excerpt": "coverage-tick: thompson_alpha=1, thompson_beta=1, total_executions=0. Despite 5 boredom dispatches in the last 30 minutes, all failing, coverage-tick shows 0 executions. The 4 traces in activity-api are against harness-check-scenario and substrate-health-tick — coverage-tick has not been selected by any execution.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "coverage-tick is not being selected because goal-host template recommendation fails to return it. The scope filtering issue (F-031) means only 2 templates appear in list API. The recommend endpoint DOES return templates from the correct set (verified: POST /v2/activities/recommend with task_description returns escalate-unknown-shape with alpha=6 beta=1). Root cause: goal-host may be calling recommend with wrong parameter ('goal' vs 'task_description')."
+    },
+    {
+      "id": "F-031",
+      "claim": "Template list returns only 2 of 15 total — scope filter prevents correct template selection.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T04-58-14-investigation-004",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl -s 'http://localhost:18080/v2/activities/templates?limit=50' -H 'Authorization: ApiKey <key>'",
+          "excerpt": "total=15, returned=2. Only substrate-health-tick and harness-run-matrix returned. Both have org_id=organizations:substrate and public=False. All 15 templates have org_id=organizations:substrate per FTS queries. The external API key returns only 2 — implies a scope/org mismatch between this key's org and organizations:substrate for non-public templates.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        },
+        {
+          "kind": "http_query",
+          "command": "curl -s 'http://localhost:18080/v2/activities/templates?q=topology' -H 'Authorization: ApiKey <key>'",
+          "excerpt": "FTS search (?q=) finds 5 topology templates not visible in list. FTS bypasses the scope filter that list uses. This is the same discrepancy as prior investigations.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "The 13 development-vessel templates seeded at 06:50:39 are under org_id=organizations:substrate. The external API key's org does not match (or the templates are not public). Fix: either mark all development-vessel templates as public=true, or ensure the bootstrap key belongs to the same org. This directly causes F-024/F-051 wrong template selection."
+    },
+    {
+      "id": "F-032",
+      "claim": "Registry thrashing resolved.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T05-37-11-investigation-005",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-033",
+      "claim": "Dev coord engaged.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T05-37-11-investigation-005",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-034",
+      "claim": "Validator engaged.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T07-00-44-investigation-006",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-035",
+      "claim": "gap-006 framing superseded — substrate IS progressing.",
+      "category": "lift",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T07-00-44-investigation-006",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-036",
+      "claim": "WS auth 401 storm on startup — identity-vessel rate-limiting.",
+      "category": "deployment",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T07-00-44-investigation-006",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u goal-host-vessel.service --no-pager | grep '401'",
+          "excerpt": "goal-host-vessel: register failed 401 (06:30:14), heartbeat 401 x4 (06:31-06:34). All vessels that attempted discovery registration at startup got 401. Self-healed by ~06:46:06 when rate limit window passed and all vessels registered successfully.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "9c14b955 adds RATE_LIMIT_ALLOWLIST_IPS=127.0.0.1,unknown to gen-env.sh. This fix is NOT active in running container (committed after container started). Will resolve on next container restart."
+    },
+    {
+      "id": "F-037",
+      "claim": "Thompson disconnect PERSISTS. Root cause: new execution path bypasses Thompson update.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T17-24-17-investigation-010",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl -s 'http://localhost:18080/v2/activities/templates?q=coverage-tick' -H 'Authorization: ApiKey <key>'",
+          "excerpt": "coverage-tick: total_executions=0, alpha=1, beta=1. Five boredom executions have completed; coverage-tick has 0 executions. Traces against harness-check-scenario and substrate-health-tick also show 0 execution counts on those templates (not verified via FTS but inferred from total_executions=0 on coverage-tick).",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-038",
+      "claim": "composition_chain ALIVE on new path.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T20-26-32-investigation-011",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-039",
+      "claim": "Validator wrote dev-guidance.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T00-34-24-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-040",
+      "claim": "substrate-explicit-vessels MAJOR PROGRESS. 48/53 tasks complete.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T01-39-09-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -c '^- \\[x\\]' openspec/changes/2026-05-23-substrate-explicit-vessels/tasks.md",
+          "excerpt": "48 complete of 53 total. Open: 1b.6, 2.4, 2.5, 6.3, 8.3(superseded). Unchanged.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-041",
+      "claim": "S.4a window 2 blocked. topology-discovery-loop tasks S.4a, S.4b both open.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T01-39-09-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep '^- \\[.\\] S\\.4' openspec/changes/2026-05-23-topology-discovery-loop/tasks.md",
+          "excerpt": "[ ] S.4a: At least one coverageReport with coverage_progress=true from natural substrate activity. [ ] S.4b: Most recent substrateHealthReport has health_verdict.overall_passing=true. Both open.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        },
+        {
+          "kind": "http_query",
+          "command": "curl -s 'http://localhost:18080/v2/activities/templates?q=coverage-tick' | jq '.templates[0].total_executions'",
+          "excerpt": "0 — coverage-tick has never been selected for execution. All 5 boredom dispatches selected wrong templates (harness-check-scenario, substrate-health-tick). No coverageReport impulse can be produced without coverage-tick executing.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "regressed"
+    },
+    {
+      "id": "F-042",
+      "claim": "8 vessels running; 4 registered in discovery.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T02-51-09-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live curl -s http://localhost:8100/registry/stats",
+          "excerpt": "{\"totalVessels\":4,\"totalShapes\":10,\"healthyCount\":4} — still 4 registered vessels. ribosome-vessel registers and deregisters every ~1 second (WS reconnect storm). development-vessel registered at 06:42:16 and 06:45:58 but may have cycled. Stable count appears to be 4 (discovery, activity-api [via health check], goal-host, llm-resolver or local-tools).",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-043",
+      "claim": "Thompson posteriors flat — all templates show alpha=1, beta=1, total_executions=0.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T02-51-09-investigation-003",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl -s 'http://localhost:18080/v2/activities/templates?q=coverage-tick' -H 'Authorization: ApiKey <key>' | jq '.templates[0] | {thompson_alpha, thompson_beta, total_executions}'",
+          "excerpt": "{alpha:1, beta:1, total_executions:0}. Note: recommend endpoint shows escalate-unknown-shape with alpha=6, beta=1 — suggesting Thompson updates ARE being written for SOME templates. But coverage-tick remains at 1/1/0.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-044",
+      "claim": "RESOLVED: substrate-live container restarted. Self-bootstrapping commit resolves JWT_SECRET crash.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-045",
+      "claim": "Narrator running but no alerting on substrate crashes.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ps ax | grep substrate-narrator | grep -v grep",
+          "excerpt": "Narrator running. Produces 5-minute snapshots. No alert mechanism observed.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-046",
+      "claim": "Template count 15 total; external key sees only 2 via list.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl -s 'http://localhost:18080/v2/activities/templates?limit=50' -H 'Authorization: ApiKey <key>'",
+          "excerpt": "total=15, returned=2. The 15 template count reflects SUCCESSFUL full seeding by development-vessel at 06:50:39 (all 15 seeded: ship-change, branch-health, release-change, add-resolver-to-vessel, propagate-judgment, scaffold-new-vessel, release-and-validate, draft-gap-closing-activity, harness-check-scenario, probe-reachable-unlearned, probe-untraversed-edge, escalate-unknown-shape, coverage-tick, substrate-health-tick, harness-run-matrix). But the list API returns only 2 — org_id scope filter blocks the other 13.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-047",
+      "claim": "Gate 27.3.g.3 marked done but concept-db live smoke test (1b.6) never passed.",
+      "category": "lift",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried from iter-006)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-048",
+      "claim": "minibob removed from Dockerfile.substrate — Phase 8 complete.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-049",
+      "claim": "Bootstrap-seeder race condition — fires before org established, 0/13 SHARED_TEMPLATES seeded.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T06-38-15-investigation-005",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u bootstrap-seeder.service --no-pager | tail -3",
+          "excerpt": "bootstrap-seeder: Seeding complete: 0 seeded, 13 failed. Error: 'Found NONE for field org_id, with record activity:core-activity-audit, but expected a string'. Service failed at 06:30:16 (14 seconds after container start). Still failed — no fix in current container. 9c14b955 did NOT fix bootstrap-seeder ordering; it fixed OTHER issues (gen-env base64, seed-identity response shape, development-vessel HOST, goal-host port mapping).",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "bootstrap-seeder still fires before identity/org is established. The 9c14b955 commit does not fix this. Fix requires either: (1) Requires= ordering in bootstrap-seeder.service to wait for seed-identity-complete.target; or (2) retry logic in the seeder. Manual workaround: docker exec substrate-live systemctl restart bootstrap-seeder.service after seed-live."
+    },
+    {
+      "id": "F-050",
+      "claim": "Auth cascade: self-healed at ~15-16 min post-startup. Root cause not fixed in running container.",
+      "category": "deployment",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T06-38-15-investigation-005",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u goal-host-vessel.service --no-pager | grep -E 'registered|401' | head -5",
+          "excerpt": "goal-host: register failed 401 (06:30), heartbeat 401 x4 (06:31-06:34), finally registered at 06:46:06. Self-healing confirms: rate limit window expires after ~16 minutes, then all vessels can register. RATE_LIMIT_ALLOWLIST_IPS fix in 9c14b955 is NOT active in running container.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Self-healing confirmed. Root cause fix (RATE_LIMIT_ALLOWLIST_IPS=127.0.0.1,unknown in gen-env.sh) is committed in 9c14b955 and will be active on next container restart. No operator action needed for current container."
+    },
+    {
+      "id": "F-051",
+      "claim": "Boredom executions select wrong templates — harness-check-scenario chosen for topology goals.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T06-48-38-investigation-006",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl -s 'http://localhost:18080/v2/activities/execution-traces?limit=4' -H 'Authorization: ApiKey <key>'",
+          "excerpt": "3 of 4 traces: activity_id=development-vessel:harness-check-scenario, 1 trace: substrate-health-tick. Boredom goals submitted: 'measure topology', 'probe unlearned shapes', 'run topology discovery chain', 'check substrate health'. First three should select topology/coverage templates but got harness-check-scenario. This is wrong template matching — likely caused by the recommendation returning incorrect templates based on FTS scoring.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        },
+        {
+          "kind": "http_query",
+          "command": "POST http://localhost:18080/v2/activities/recommend with task_description='measure substrate coverage progress'",
+          "excerpt": "Returns escalate-unknown-shape (alpha=6, beta=1, sample=0.96). This is likely also wrong — escalate-unknown-shape requires unknownShapeReport input, not appropriate for a coverage measurement goal. Thompson sampling is selecting based on highest alpha/beta regardless of semantic fit.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Two root causes: (1) Recommend endpoint parameter mismatch (goal-host uses 'goal' param, API expects 'task_description'); (2) Thompson scores for escalate-unknown-shape are inflated (alpha=6 vs coverage-tick alpha=1), causing it to be selected even for unrelated goals. F-051 was named in iter-20 narration as 'instant failures' — this investigation refines it as wrong-template selection causing instant failure."
+    },
+    {
+      "id": "F-052",
+      "claim": "composition_chain empty on all boredom traces (chain_len=0).",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T06-48-38-investigation-006",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl -s 'http://localhost:18080/v2/activities/execution-traces?limit=4' -H 'Authorization: ApiKey <key>'",
+          "excerpt": "All 4 traces: composition_chain=None, task_count=0. These are single-level boredom dispatches (no nesting expected). chain=0 is correct for top-level executions. The iter-20 narration flagged this as an anomaly but single-level boredom executions should have empty chain. Evidence does NOT support this as a bug for top-level executions.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "resolved",
+      "operator_remediation": "F-052 as framed in iter-20 (chain=0 is unexpected) appears to be a misclassification. Top-level boredom executions have no parent, so composition_chain=None is correct. The real issue is that task_count=0, meaning no tasks were executed — which maps to the instant failure in F-051/F-024."
+    },
+    {
+      "id": "F-053",
+      "claim": "failure_mode null on all failure traces — F-029 still open.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T06-48-38-investigation-006",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl -s 'http://localhost:18080/v2/activities/execution-traces?limit=4' -H 'Authorization: ApiKey <key>'",
+          "excerpt": "All 4 traces: failure_mode=null despite status=failure. F-053 is a restatement of F-029. No new evidence — root cause fix (populating failure_mode at trace-write time) still uncommitted.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "F-053 = F-029. Merge tracking. failure_mode must be populated when goal-host writes the failure trace."
+    },
+    {
+      "id": "F-054",
+      "claim": "9c14b955 fixes NOT active in running container — committed after container start.",
+      "category": "deployment",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T07-02-07-investigation-007",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "git -C /home/avi/documents/work/exp-repo/metabob-devbob log --format='%H %ai %s' 9c14b955 -1 && docker exec substrate-live date",
+          "excerpt": "9c14b955 committed at 2026-05-24 23:52:51 -0700 (06:52 UTC). Container started at 06:30 UTC. RATE_LIMIT_ALLOWLIST_IPS, seed-identity response fix, HOST=0.0.0.0, and -p 18210:8210 port mapping are all NOT active in running container.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live printenv RATE_LIMIT_ALLOWLIST_IPS",
+          "excerpt": "NOT SET — confirms env var from 9c14b955 is absent in running container.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Operator must rebuild and restart the substrate container to activate the 9c14b955 fixes: make -C scripts/substrate substrate-run (or equivalent restart target). Until then: rate-limit allowlist missing, subagent closure gate still open, HOST=0.0.0.0 fix absent (development-vessel inaccessible from host on its port)."
+    },
+    {
+      "id": "F-055",
+      "claim": "Subagent closure gate remains open — goal-host-vessel port 18210 not mapped on running container.",
+      "category": "lift",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T07-02-07-investigation-007",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "cat validation/state/closure-status.json | jq '.properties.subagents'",
+          "excerpt": "{\"closed\":false,\"missing_deps\":[\"goal-host-vessel reachable on :8210\"],\"evidence\":\"health: 0 Unable to connect\"}. Audit ran at 06:51:45 UTC. The Makefile fix (-p 18210:8210) is in 9c14b955 but requires container restart. This is the one open closure gate.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Restart substrate container with updated Makefile to expose port 18210. Then re-run closure-audit.ts to confirm 6/6 closed."
+    },
+    {
+      "id": "F-056",
+      "claim": "escalate-unknown-shape has inflated Thompson alpha=6 vs coverage-tick alpha=1 — priority inversion biasing template selection.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T07-02-07-investigation-007",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "POST http://localhost:18080/v2/activities/recommend {task_description: 'measure substrate coverage progress', limit: 10}",
+          "excerpt": "escalate-unknown-shape: alpha=6, beta=1, sample=0.96 — top recommendation. coverage-tick: alpha=1, beta=1 (not returned in first result). escalate-unknown-shape requires unknownShapeReport input; boredom goals are general topology queries. The high alpha on escalate-unknown-shape causes it to win Thompson sampling even when semantically inappropriate.",
+          "verified_at": "2026-05-25T07:02:07Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Investigate why escalate-unknown-shape has alpha=6. This may be from prior execution history written before the substrate restart (SurrealDB data persisted across container restart). Check if the alpha represents legitimate historical successes or is a residual from a prior test run. If the latter, reset the posterior for escalate-unknown-shape."
+    }
+  ],
+  "regressions_since_prior": [],
+  "resolutions_since_prior": ["F-052"],
+  "new_findings": ["F-054", "F-055", "F-056"],
+  "open_questions": [
+    "F-056: Why does escalate-unknown-shape have alpha=6 on a fresh substrate? SurrealDB persists data across container restarts — is this from prior successful executions, or from a prior test seeding Thompson scores directly?",
+    "F-051: Why does goal-host select harness-check-scenario for topology goals? Is goal-host calling recommend with 'goal' parameter instead of 'task_description'? Or is the template description matching 'harness' on semantic similarity to 'measure/check'?",
+    "F-031: Is the external API key's org intentionally different from organizations:substrate? If so, development-vessel templates should be marked public=true to be universally selectable.",
+    "F-049: Will the operator rebuild the container to activate 9c14b955 fixes? The RATE_LIMIT_ALLOWLIST_IPS fix is critical for a clean next startup without the 16-minute auth storm.",
+    "F-037/F-043: With 5 boredom executions completed but all showing 0 in Thompson counts — are Thompson updates being written at all? The harness-check-scenario trace has 0 total_executions suggesting updates are not being written back to the template."
+  ],
+  "findings_tally": {
+    "open": 30,
+    "resolved": 20,
+    "regressed": 2,
+    "unverifiable": 1,
+    "total": 56,
+    "new_this_iteration": 3
+  },
+  "next_wake_recommendation": {
+    "delay_seconds": 1800,
+    "reason": "Boredom is executing every ~5 minutes but failing with wrong template selection. Operator needs to either restart container (activates 9c14b955 fixes) or mark dev-vessel templates public. 30 minutes gives time for next boredom cycles and potential operator action."
+  }
+}

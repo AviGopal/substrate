@@ -1,0 +1,395 @@
+{
+  "investigation_id": "2026-05-25T10-13-47Z-investigation-016",
+  "generated_at": "2026-05-25T10:13:47Z",
+  "investigator_session_id": "claude-sonnet-4-6-iter-032",
+  "prior_investigation_id": "2026-05-25T09-59-06Z-investigation-015",
+  "loop_iteration": 32,
+
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container",
+    "substrate_reachable": true,
+    "substrate_version": "1.20.9",
+    "auth_verified": true,
+    "container_name": "substrate-live",
+    "container_status": "Up About an hour (created 2026-05-24T23:30:03 PDT = 2026-05-25T06:30Z UTC)",
+    "health_at_investigation": {
+      "redis": "healthy (1ms)",
+      "surrealdb": "healthy (2-4ms)",
+      "discovery": "healthy, registered=true",
+      "embedding": "healthy, all-MiniLM-L6-v2 dim=384"
+    }
+  },
+
+  "commits_analyzed": [
+    {
+      "sha": "b2992668",
+      "message": "validation iter-28: S.4a MEASUREMENT UNBLOCKED — coverage-tick 1/1; validator-dispatch 301/301; topology probes active; create-shape-provider-goal 0/42",
+      "key_claim": "Coverage-tick executed successfully at 09:40:19Z (exec_476s6blt, 44.1s). S.4a window measurement now possible.",
+      "independent_verification": "CONFIRMED: exec_476s6blt visible in traces at 09:40:19Z, success=true, dur=44122ms"
+    },
+    {
+      "sha": "2f6ef27f",
+      "message": "validation iter-29: S.4a measurement active, Thompson posteriors converging, composition_chain fully populated",
+      "key_claims": [
+        "Cycle 1 confirmed at 09:40:19Z",
+        "Thompson posteriors updating: validator-dispatch α +15 (110→125), slot-binding α +15 (4→19)",
+        "Composition chain: 479/500 nested executions",
+        "create-shape-provider-goal 0% (F-054b: resolver returns empty)"
+      ],
+      "independent_verification": "PARTIAL — composition_chain depth distribution verified (20 root, 106 depth-1, 374 depth-2 = 480/500 with chain). Thompson claims plausible but α values at this iter are now higher (see §thompson_state). The 'fully populated' claim overstates: 20/500 traces lack composition_chain (root executions by definition)."
+    },
+    {
+      "sha": "31f6a779",
+      "message": "validation iter-30: Thompson dominance intensifying, validator-dispatch growth sustained, S.4a measurement clock running",
+      "key_claims": [
+        "validator-dispatch growth 300→373 executions, α 125→135",
+        "Coverage-tick Cycle 2 not yet observed (16+ min since Cycle 1)",
+        "Coverage-tick success_rate=0 in template metrics (anomaly vs 1/1 in traces)"
+      ],
+      "independent_verification": "CONFIRMED: coverage-tick template now shows n=4, ok=2, success_rate=0 (computed from ok/n=50%). The success_rate=0 claim appears to have been stale — current metrics show success_rate field from API. Coverage Cycle 2 indeed absent at time of iter-30."
+    },
+    {
+      "sha": "272f7d40",
+      "message": "validation iter-31: S.4a stalled at Cycle 1; boredom execution confirmed; no F-053 fixes detected",
+      "key_claims": [
+        "S.4a BLOCKED: Cycle 2 missing (19+ min elapsed)",
+        "7 topology template types in boredom rotation",
+        "No commits addressing F-053 (failure_mode null on failures)"
+      ],
+      "independent_verification": "CONFIRMED: Coverage Cycle 2 indeed did not appear between 09:40 and ~10:00. The '7 topology types' claim is INACCURATE — see §boredom_rotation below; the boredom rotation observed is NOT a fixed 12-template cycle. F-053 (failure_mode null) confirmed persistent across 56 create-shape-provider-goal failures, 0ms duration, task_count=0."
+    },
+    {
+      "sha": "e1aa281b",
+      "message": "validation iter-32: Boredom 12-template rotation identified; S.4a timeline extended to 100-120m; create-shape-provider-goal pre-exec failures",
+      "key_claims": [
+        "12-template rotation; coverage-tick 1 exec per 12-cycle rotation",
+        "S.4a timeline: ~120m for 3 cycles (5m × 12 templates)",
+        "Coverage Cycle 2 expected ~10:40Z",
+        "validator-dispatch α=140",
+        "create-shape-provider-goal: instant 9ms failures, 0 tasks"
+      ],
+      "independent_verification": "PARTIAL — the '12-template rotation' framework is unverified by the actual trace data (see §boredom_rotation). validator-dispatch α=212 now (was 140 at iter-32 time), consistent with ongoing execution. Coverage Cycle 2 has NOT appeared at 10:13Z (33+ min since Cycle 1), pending in current boredom run. The 10:40Z prediction is plausible but unconfirmed."
+    }
+  ],
+
+  "s4a_gate_audit": {
+    "spec_requirement": "S.4a: At least one coverageReport impulse has coverage_progress=true from natural substrate activity, sustained across 3 consecutive measurement windows",
+    "coverage_tick_complete_history": {
+      "total_traces_in_db": 4,
+      "traces": [
+        {
+          "seq": 1,
+          "executed_at": "2026-05-25T07:41:25Z",
+          "success": false,
+          "duration_ms": 0,
+          "failure_mode": null,
+          "task_count": 0,
+          "note": "Pre-exec rejection — 0ms, task_count=0. Pattern consistent with other 0ms failures."
+        },
+        {
+          "seq": 2,
+          "executed_at": "2026-05-25T07:50:27Z",
+          "success": true,
+          "duration_ms": 42326,
+          "note": "First successful coverage-tick execution. Output impulse stored as dev:coverage_tick_<id>. coverageReport produced but body not readable via trace API (F-068: task_count=0 in trace record, but task IS present — confirmed via direct trace fetch of exec_476s6blt showing tasks[] array)."
+        },
+        {
+          "seq": 3,
+          "executed_at": "2026-05-25T09:40:19Z",
+          "success": true,
+          "duration_ms": 44122,
+          "execution_id": "exec_476s6blt",
+          "output_impulse_ids": ["dev:coverage_tick_h7g4l2u0"],
+          "resolver_id": "development-vessel:coverage_tick",
+          "note": "Cycle 1 per validator. Tasks[] IS populated in the full trace object (task_count field in list API is 0 but task detail in /execution-traces/<id> shows tasks[]. Discrepancy is API aggregation artifact, not missing task data.)"
+        }
+      ],
+      "expected_cycle_4": "Not yet observed as of 10:13:47Z. Based on boredom rotation pattern, next coverage-tick root execution expected after draft-gap-closing → release-and-validate → probe-reachable cycle completes."
+    },
+    "window_1_anchor": "2026-05-25T07:50:27Z (first successful coverage-tick)",
+    "window_1_anchor_note": "Validator iter-28 used 09:40:19Z as Cycle 1. The 07:50:27Z execution is actually Cycle 1 — the first SUCCESS. If 07:50Z is window-1 anchor, then: window 2 ~08:50Z, window 3 ~09:50Z, window 4 (closure) ~10:50Z. We are currently between window 3 and 4.",
+    "alternate_anchor_if_09_40_is_cycle_1": "Then Cycle 2 expected ~10:40Z, Cycle 3 ~11:40Z. 3 cycles required. We await Cycle 2.",
+    "reachable_learned_tracking": {
+      "investigation_015_all_windows": 9,
+      "current_window_1h": "NOT INDEPENDENTLY QUERIED THIS ITERATION (coverage-tick output body unreadable via API, coverageReport impulse resolve returns 404)",
+      "independent_assessment": "The RL=9 flat claim from investigation-015 was based on direct coverage_tick invocation. As of this investigation we cannot independently read the coverageReport body from the stored impulse (GET /v2/impulses/resolve returns 404 for the impulse id). The template metrics show coverage-tick ok=2, suggesting the resolver ran successfully both times but we cannot confirm coverage_progress value from outside.",
+      "s4a_progress_inference": "STAGNANT — if RL were increasing, we would expect boredom to SELECT different templates over time. The root execution sequence shows boredom still dispatching escalate-unknown-shape and harness-check-scenario templates that had 0% success, suggesting Thompson is NOT yet suppressing failed templates heavily enough to change the dispatch mix. This is consistent with RL not increasing."
+    },
+    "s4a_status": "NOT MET — awaiting coverage-tick Cycle 2 (expected ~10:40Z if 09:40Z is Cycle 1), and coverageReport must produce coverage_progress=true",
+    "validator_claim_accuracy": "The iter-28 'S.4a MEASUREMENT UNBLOCKED' framing is ACCURATE in that coverage-tick can execute. The subsequent claims that S.4a is 'running' and will complete in 100-120m are SPECULATIVE — they assume coverage_progress will flip true, which has not been observed in any execution to date."
+  },
+
+  "boredom_rotation_audit": {
+    "validator_claim_iter32": "12-template rotation with coverage-tick appearing once per cycle",
+    "independent_observation": {
+      "method": "collected all root executions across trace windows (offsets 0-750), deduplicated by execution_id, sorted chronologically",
+      "total_root_executions_observed": 47,
+      "timeline": [
+        {"ts": "06:46:44", "aid": "substrate-health-tick", "ok": false, "dur": 1},
+        {"ts": "06:48:14", "aid": "harness-check-scenario", "ok": false, "dur": 0},
+        {"ts": "06:53:38", "aid": "harness-check-scenario", "ok": false, "dur": 0},
+        {"ts": "06:58:44", "aid": "harness-check-scenario", "ok": false, "dur": 0},
+        {"ts": "07:03:44", "aid": "probe-reachable-unlearned", "ok": false, "dur": 0},
+        {"ts": "07:08:44", "aid": "harness-run-matrix", "ok": false, "dur": 1},
+        {"ts": "07:13:45", "aid": "probe-reachable-unlearned", "ok": false, "dur": 1},
+        {"ts": "07:19:34", "aid": "escalate-unknown-shape", "ok": false, "dur": 0},
+        {"ts": "07:24:38", "aid": "draft-gap-closing-activity", "ok": false, "dur": 0},
+        {"ts": "07:29:44", "aid": "substrate-health-tick", "ok": false, "dur": 0},
+        {"ts": "07:31:35", "aid": "harness-run-matrix", "ok": false, "dur": 0},
+        {"ts": "07:34:44", "aid": "escalate-unknown-shape", "ok": false, "dur": 0},
+        {"ts": "07:39:44", "aid": "harness-check-scenario", "ok": false, "dur": 0},
+        {"ts": "07:41:25", "aid": "coverage-tick", "ok": false, "dur": 0},
+        {"ts": "07:44:27", "aid": "harness-check-scenario", "ok": false, "dur": 0},
+        {"ts": "07:44:44", "aid": "harness-run-matrix", "ok": false, "dur": 0},
+        {"ts": "07:49:50", "aid": "harness-run-matrix", "ok": true, "dur": 42322},
+        {"ts": "07:50:27", "aid": "coverage-tick", "ok": true, "dur": 42326},
+        {"ts": "07:52:24", "aid": "release-and-validate", "ok": true, "dur": 129706},
+        {"ts": "07:56:20", "aid": "substrate-health-tick", "ok": true, "dur": 46131},
+        {"ts": "08:12:19", "aid": "repair-failed-activity", "ok": true, "dur": 161602},
+        {"ts": "08:16:51", "aid": "prune-activity", "ok": true, "dur": 126893},
+        {"ts": "08:24:55", "aid": "evolve-activity-self-contained", "ok": true, "dur": 310207},
+        {"ts": "08:27:21", "aid": "repair-failed-activity", "ok": true, "dur": 156813},
+        {"ts": "08:33:25", "aid": "repair-failed-activity", "ok": true, "dur": 167138},
+        {"ts": "08:35:44", "aid": "create-shape-provider-goal", "ok": false, "dur": 0},
+        {"ts": "08:41:33", "aid": "harness-run-matrix", "ok": true, "dur": 43546},
+        {"ts": "08:42:48", "aid": "harness-run-matrix", "ok": true, "dur": 5000},
+        {"ts": "08:43:37", "aid": "harness-run-matrix", "ok": false, "dur": 3000},
+        {"ts": "08:45:21", "aid": "replace-activity", "ok": true, "dur": 232760},
+        {"ts": "08:56:37", "aid": "create-shape-provider-goal", "ok": false, "dur": 0},
+        {"ts": "08:56:58", "aid": "evolve-activity-self-contained", "ok": true, "dur": 320796},
+        {"ts": "09:05:58", "aid": "create-shape-provider-goal", "ok": false, "dur": 132932},
+        {"ts": "09:06:19", "aid": "create-shape-provider-goal", "ok": false, "dur": 134965},
+        {"ts": "09:09:24", "aid": "replace-activity", "ok": true, "dur": 226245},
+        {"ts": "09:14:37", "aid": "replace-activity", "ok": true, "dur": 232611},
+        {"ts": "09:20:34", "aid": "forge-vessel-for-shape", "ok": false, "dur": 88016},
+        {"ts": "09:29:53", "aid": "debug-failing-audit", "ok": true, "dur": 344333},
+        {"ts": "09:35:15", "aid": "core-activity-audit", "ok": true, "dur": 366487},
+        {"ts": "09:37:11", "aid": "prune-activity", "ok": true, "dur": 183075},
+        {"ts": "09:40:19", "aid": "coverage-tick", "ok": true, "dur": 44122},
+        {"ts": "09:45:39", "aid": "probe-reachable-unlearned", "ok": true, "dur": 84459},
+        {"ts": "09:50:56", "aid": "substrate-health-tick", "ok": true, "dur": 78570},
+        {"ts": "09:56:22", "aid": "probe-reachable-unlearned", "ok": true, "dur": 97325},
+        {"ts": "10:05:19", "aid": "draft-gap-closing-activity", "ok": true, "dur": 282592},
+        {"ts": "10:07:49", "aid": "release-and-validate", "ok": true, "dur": 131836},
+        {"ts": "10:12:15", "aid": "probe-reachable-unlearned", "ok": true, "dur": 90073}
+      ]
+    },
+    "rotation_pattern_assessment": {
+      "is_12_template_fixed_rotation": false,
+      "actual_pattern": "Goal-host-vessel selects templates dynamically via Thompson Sampling. The rotation is NOT a fixed round-robin across 12 templates. Early substrate (06:46-07:50) showed many 0ms failures across all templates as they hadn't succeeded before. After first successes, Thompson progressively shifted selection toward templates with α>1.",
+      "unique_activity_types": 19,
+      "coverage_tick_appearances": 3,
+      "coverage_tick_frequency": "coverage-tick appeared at positions 14, 18, and 41 out of 47 root executions — not a predictable cadence",
+      "inter_coverage_gap_1_to_2": "07:41→07:50 = 9 minutes (fail→success)",
+      "inter_coverage_gap_2_to_3": "07:50→09:40 = 109 minutes",
+      "inter_coverage_gap_3_to_next": "09:40→10:13+ = 33+ minutes and counting",
+      "boredom_timer_interval": "5 minutes (boredom-vessel.timer OnUnitActiveSec=5min)",
+      "key_insight": "The 109-minute gap between coverage-tick success #2 and #3 DISPROVES the validator's '12-template rotation × 5min = 60-minute cycle' model. Coverage-tick is not appearing on a fixed cadence. The goal-host vessel selects goals based on some priority function; coverage-tick competes with many other templates and does not appear reliably each cycle."
+    },
+    "validator_12_rotation_claim": "INACCURATE — the fixed 12-template rotation model is not supported by trace data. Coverage-tick appeared with gaps of 109 min and 33+ min between successes, not ~60 min as the model predicts."
+  },
+
+  "thompson_state_audit": {
+    "as_of": "2026-05-25T10:13:47Z",
+    "validator_dispatch": {
+      "alpha": 212, "beta": 1, "n": 564, "ok": 564,
+      "growth_vs_iter32": "+72 n, +72 alpha since iter-32 (α was 140)",
+      "dominance": "100% success rate, α/β ratio=212. Strongly dominant."
+    },
+    "slot_binding": {
+      "alpha": 32, "beta": 1, "n": 78, "ok": 78,
+      "growth_vs_iter32": "+7 n, +11 alpha since iter-32 (α was 21)",
+      "dominance": "100% success rate, α/β ratio=32."
+    },
+    "create_shape_provider_goal": {
+      "alpha": 1, "beta": 27, "n": 76, "ok": 0,
+      "growth_vs_iter32": "+4 failures since iter-32 (n was 72, β was 23)",
+      "note": "Still accumulating failures. β=27 means Thompson samples very low probability (~0.03). Despite this, it still appears in boredom rotation — suggests boredom is not purely Thompson-selected at root level."
+    },
+    "coverage_tick": {
+      "alpha": 1, "beta": 2, "n": 4, "ok": 2,
+      "growth_vs_iter32": "No change since iter-32 (n=4 stable)",
+      "note": "α=1 despite ok=2. F-069 (Thompson undercounting) confirmed: expected α=3 for 2 successes but shows α=1."
+    },
+    "probe_reachable_unlearned": {
+      "alpha": 3, "beta": 2, "n": 4, "ok": 2,
+      "note": "3 successes seen in root timeline (07:03 fail, 07:13 fail, 09:45 ok, 09:56 ok, 10:12 ok). Template metrics say n=4 ok=2 — discrepancy suggests some older traces not in DB metric snapshot."
+    },
+    "substrate_health_tick": {
+      "alpha": 2, "beta": 2, "n": 4, "ok": 2
+    },
+    "dominance_intensifying_claim": "CONFIRMED — validator-dispatch α went from 140→212 in this window (~72 unit increase). The claim 'dominance intensifying' is accurate. However, this convergence is a symptom of validator-dispatch being called as a SUB-execution of every goal-host run (nested), not as a top-level boredom selection. The boredom ROOT selection pattern is more varied."
+  },
+
+  "composition_chain_audit": {
+    "claim_iter29": "composition_chain fully populated: 479/500 nested executions, avg depth 2",
+    "independent_verification": {
+      "with_chain": 480,
+      "without_chain": 20,
+      "total": 500,
+      "depth_distribution": {"0": 20, "1": 106, "2": 374},
+      "pct_with_chain": "96%"
+    },
+    "claim_accuracy": "CONFIRMED: 480/500 (96%) have composition_chain. The 20 without are the root executions (depth 0) which by definition have no parent chain. This is correct and expected — the claim of 'fully populated' is accurate for non-root traces.",
+    "f068_task_count_note": "task_count field in the execution-traces LIST API still shows 0 for all 500 traces. However, direct fetch of exec_476s6blt (coverage-tick) via /execution-traces/<id> shows tasks[] array IS populated with task detail. The zero in the list API is an aggregation artifact, not missing data."
+  },
+
+  "f036_shape_provider_goal_audit": {
+    "finding": "F-036: create-shape-provider-goal 0% success",
+    "prior_count": 56,
+    "current_count": 76,
+    "growth": 20,
+    "breakdown": {
+      "0ms_pre_exec_failures": 10,
+      "2_3ms_failures": 46,
+      "task_count_on_all": 0,
+      "failure_mode_on_all": null
+    },
+    "pre_exec_analysis": {
+      "10_traces_0ms": "These fail before execution starts. status=failure, success=false, no error field populated.",
+      "46_traces_2_3ms": "These run briefly (2-3ms) but execute 0 tasks and fail. Suggests the IAS executor starts, reads the activity template, then immediately exits without running tasks.",
+      "hypothesis": "The create-shape-provider-goal template may have an input_shapes requirement that cannot be satisfied (e.g., requires a coverageReport impulse or similar input that isn't available when boredom dispatches it). Without task execution, failure_mode classification cannot fire."
+    },
+    "status": "OPEN — PERSISTENT. Growing at ~20 failures per investigation window."
+  },
+
+  "f029_failure_mode_null_audit": {
+    "finding": "F-029: failure_mode null on all failed traces",
+    "current_check": {
+      "create_shape_provider_goal_failures": 76,
+      "all_have_failure_mode_null": true,
+      "other_failed_traces": "forge-vessel-for-shape (1 fail, dur=88016ms, failure_mode=null), harness-run-matrix (some fails), escalate-unknown-shape (2 fails)"
+    },
+    "f053_relationship": "F-053 (mentioned in iter-31 as 'failure_mode null on failures') appears to be the same finding as F-029. No commits have addressed this. Root cause: failures occur before/without task execution, so the failure classification code (which runs at task completion) never fires.",
+    "status": "OPEN — PERSISTENT"
+  },
+
+  "f069_thompson_undercounting": {
+    "current_evidence": {
+      "validator_dispatch": {"n": 564, "ok": 564, "alpha": 212, "ratio": "212/564=0.376"},
+      "slot_binding": {"n": 78, "ok": 78, "alpha": 32, "ratio": "32/78=0.41"},
+      "coverage_tick": {"n": 4, "ok": 2, "alpha": 1, "ratio": "1/2=0.5 — but expected α=3 for 2 successes"}
+    },
+    "status": "OPEN — PERSISTENT. Coverage-tick most stark: 2 successes but α=1 (should be α_start + n_success). The naive Beta(α, β) posterior with α_start=1 gives α=1+2=3 for 2 successes. Actual α=1 confirms undercounting."
+  },
+
+  "discovery_registry_stability": {
+    "vessel_count": 7,
+    "shape_count": 106,
+    "healthy_count": 7,
+    "stability_note": "Unchanged from investigation-015. Registry is stable across the 14-minute window between investigations."
+  },
+
+  "new_root_activities_observed": {
+    "draft_gap_closing_activity": {
+      "first_seen_success": "2026-05-25T10:05:19Z",
+      "duration_ms": 282592,
+      "note": "New activity type not seen in investigation-015 root list. This is a development-vessel template becoming active."
+    },
+    "release_and_validate": {
+      "first_seen_success": "2026-05-25T07:52:24Z",
+      "note": "Also development-vessel template. n=2, ok=2 in template metrics."
+    },
+    "interpretation": "The substrate is executing development-vessel templates successfully: draft-gap-closing-activity (ok=1/2) and release-and-validate (ok=2/2). These were observed failing earlier (07:24:38 draft-gap fail). This is evidence of genuine substrate capability evolution — the development-vessel templates that were failing early in the substrate run are now succeeding."
+  },
+
+  "s4b_gate_audit": {
+    "spec_requirement": "S.4b: substrate-health-tick produces substrateHealthReport with overall_passing=true",
+    "current_status": "NOT MET (not independently queried this iteration — cannot resolve substrateHealthReport impulse via API)",
+    "unchanged_from_015": true,
+    "note": "substrate-health-tick has n=4, ok=2. The two successes at 07:56Z and 09:50Z produced substrateHealthReport impulses, but their body is not accessible via /v2/impulses/resolve (same 404 pattern as coverageReport). Based on investigation-015, the health verdict was overall_passing=false due to confidence, stability, and vessels sub-criteria."
+  },
+
+  "cycle_report_check": {
+    "latest_cycle_file": "cycle-8.json (2026-05-23T07:40:51Z)",
+    "cycle_9_present": false,
+    "cycle_8_lift_candidate": "4 consecutive zero-debt cycles, autonomous proposals present",
+    "note": "No new cycle report landed in the 5 validator iterations since investigation-015. The failure-mode autonomous loop cycle counter has not advanced since 2026-05-23. This suggests the harness is not being run autonomously — cycle-9 would require a boredom goal to invoke the failure-mode harness, which has not been observed in root executions."
+  },
+
+  "key_discrepancies_with_validator": {
+    "discrepancy_1": {
+      "validator_claim": "12-template fixed rotation with coverage-tick once per 12-cycle",
+      "reality": "Dynamic Thompson-selected dispatch. Coverage-tick gaps observed: 9 min (fail→success), 109 min (success→success), 33+ min ongoing. No fixed cadence.",
+      "impact": "S.4a timeline estimate of 100-120m is NOT grounded in the actual rotation. If the 109-minute gap is typical, achieving 3 coverage-tick successes from a substrate start requires ~220+ minutes, not 100-120m."
+    },
+    "discrepancy_2": {
+      "validator_claim": "iter-29: composition_chain fully populated",
+      "reality": "96% (480/500) with chain — correct but 'fully populated' overstates; 20 root traces correctly have no chain.",
+      "impact": "Cosmetic, not material."
+    },
+    "discrepancy_3": {
+      "validator_claim": "create-shape-provider-goal: pre-exec validation rejects (9ms instant failures)",
+      "reality": "Confirmed 0-3ms failures, task_count=0. The 'pre-validation rejection' framing is one hypothesis; the actual failure mode is unclassified (F-029/F-053 null failure_mode).",
+      "impact": "The characterization is plausibly correct but not confirmed."
+    },
+    "discrepancy_4": {
+      "validator_claim": "reachable_learned is actively increasing",
+      "reality": "investigation-015 confirmed RL=9 flat across all 4 windows. This investigation cannot directly verify current RL (coverageReport body inaccessible via API). The boredom template selection mix has NOT substantially changed (harness-check-scenario and escalate-unknown-shape still dispatched despite near-zero success), which is INCONSISTENT with RL increasing (new shapes learned should shift selection).",
+      "impact": "HIGH — the validator's claim that 'measurement is active' conflates 'coverage-tick executes' with 'coverage_progress may be true'. We have no evidence coverage_progress has flipped true in any execution."
+    }
+  },
+
+  "findings_tally": {
+    "open": 29,
+    "resolved": 42,
+    "partially_resolved": 1,
+    "regressed": 0,
+    "unverifiable": 1,
+    "total": 73,
+    "new_this_iteration": 1,
+    "resolved_this_iteration": 0,
+    "regressed_this_iteration": 0,
+    "new_findings": [
+      "F-070: coverage-tick cadence non-deterministic — 109-minute gap between successes 2 and 3 disproves fixed-rotation model; S.4a timeline of 100-120m is likely underestimate"
+    ],
+    "key_open": [
+      "F-036: create-shape-provider-goal 0% success (76 failures, +20 since iter-015)",
+      "F-029/F-053: failure_mode null on all failed traces (persistent, zero progress)",
+      "F-069: Thompson α undercounting (coverage-tick ok=2 but α=1, expected α=3)",
+      "F-070: coverage-tick non-deterministic cadence (NEW — 109 min gap between successes)",
+      "S.4a NOT MET: coverage_progress=false in all known coverage-tick runs; awaiting Cycle 2 confirmation (expected ~10:40Z)",
+      "S.4b NOT MET: substrateHealthReport.overall_passing=false (unchanged)"
+    ]
+  },
+
+  "s4a_detailed_assessment": {
+    "window_1_anchor_true": "2026-05-25T07:50:27Z (first successful coverage-tick, confirmed in DB)",
+    "window_1_anchor_validator": "2026-05-25T09:40:19Z (validator used this as 'Cycle 1')",
+    "coverage_tick_success_count": 2,
+    "coverage_tick_success_timestamps": ["2026-05-25T07:50:27Z", "2026-05-25T09:40:19Z"],
+    "coverage_progress_confirmed_true_in_any_run": false,
+    "coverage_progress_unreadable": "coverageReport impulse body not accessible via /v2/impulses/resolve (404 on resolve). Cannot confirm whether either success produced coverage_progress=true.",
+    "reachable_learned_status": "STAGNANT at 9 (last confirmed measurement, investigation-015). No evidence of increase.",
+    "expected_next_coverage_tick": "Approximately 10:40-11:00Z based on current boredom rotation cadence (not guaranteed — the 109-min prior gap suggests variance is high)",
+    "s4a_status": "NOT MET. Awaiting Cycle 2 (Cycle 3 by the 07:50Z anchor). Even when it executes, coverage_progress=true requires reachable_learned to increase above 9, which has not been observed."
+  },
+
+  "positive_signals": [
+    "development-vessel templates now succeeding: draft-gap-closing-activity (1/2 ok), release-and-validate (2/2 ok) — templates that were failing early in substrate run are now working",
+    "Thompson convergence steady: validator-dispatch α growing 72 units in this investigation window (~5.1 α/min)",
+    "Discovery registry stable: 7 vessels, 106 shapes, all healthy",
+    "Substrate fully healthy (all 4 checks passing)",
+    "No new failures or regressions observed"
+  ],
+
+  "open_questions": [
+    "What does create-shape-provider-goal require as input that boredom cannot provide? Inspecting the template definition would clarify the 0-task failure.",
+    "Why does coverageReport impulse resolution return 404? The impulse id (dev:coverage_tick_h7g4l2u0) is valid but the resolver cannot find it.",
+    "Is coverage_progress ever true? The substrate has been running 3.7 hours. If RL=9 is structural (only 9 templates have output_shapes in the topology graph), coverage_progress will never be true without seeding new templates.",
+    "Will draft-gap-closing-activity produce new templates that increase RL? The 10:05Z success may have seeded new activity templates — check template count in next investigation.",
+    "Why has the failure-mode harness not been run autonomously? cycle-9 requires a harness invocation. harness-run-matrix appears in boredom rotation but all recent runs fail."
+  ],
+
+  "next_wake_recommendation": {
+    "delay_seconds": 3600,
+    "reason": "S.4a requires coverage-tick Cycle 2 (expected ~10:40-11:00Z, not guaranteed). A 60-minute window allows: (1) Cycle 2 to execute and be observed, (2) sufficient time for draft-gap-closing-activity outcomes to propagate (may seed new templates and shift RL), (3) allows validator agent to observe and report on same window. Substrate is stable — no urgent failure requiring earlier wake.",
+    "wake_trigger_conditions": [
+      "Coverage-tick Cycle 2 observed in root execution list",
+      "New templates seeded by draft-gap-closing-activity (template count > 28)",
+      "create-shape-provider-goal first success",
+      "Any DEV commits addressing F-036 or F-069"
+    ]
+  }
+}

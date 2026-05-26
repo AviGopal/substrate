@@ -1,0 +1,839 @@
+{
+  "investigation_id": "2026-05-25T06-03-29-investigation-004",
+  "generated_at": "2026-05-25T06:03:29Z",
+  "investigator_session_id": "loop-iteration-021",
+  "prior_investigation_id": "2026-05-25T02-51-09-investigation-003",
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container",
+    "version_reported": null,
+    "auth_verified": false,
+    "narrator_state": "running but substrate unreachable"
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "claim": "Gameable lift; cycle-8 unchanged.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/cycles/*.json | wc -l",
+          "excerpt": "8 cycle files (cycle-0 through cycle-8, no cycle-4, no cycle-9)",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "No new cycle generated. cycle-8 LIFT_CANDIDATE still gameable."
+    },
+    {
+      "id": "F-002",
+      "claim": "6 malformed proposals (epoch-zero timestamps).",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried from prior investigations; not re-verified this iteration due to substrate down)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-003",
+      "claim": "Traces lack signature.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-004",
+      "claim": "Only 6 failure-mode scenarios on disk (spec implies 63).",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/cycles/ | grep '.json' | wc -l",
+          "excerpt": "8 cycle files; 9 proposals in proposals/ dir",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-005",
+      "claim": "No cycle-9 generated. Lift cycle count stalled at 8.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/cycles/*.json",
+          "excerpt": "cycle-0 through cycle-8 (missing cycle-4). No cycle-9.",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-006",
+      "claim": "One file retains hardcoded identity.metabob.com default.",
+      "category": "deployment",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -rn 'identity.metabob.com' repos/discovery-vessel/src/",
+          "excerpt": "repos/discovery-vessel/src/middleware/auth.ts:68: process.env.IDENTITY_VESSEL_URL ?? 'https://identity.metabob.com'",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "identity-vessel test files use @metabob.com email addresses (fixture data, acceptable). discovery-vessel/src/middleware/auth.ts:68 retains hardcoded identity.metabob.com as default fallback — this is the operative concern."
+    },
+    {
+      "id": "F-007",
+      "claim": "Trailblazing unimplemented.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "file_ref",
+          "location": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md:904",
+          "excerpt": "unchanged",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-008",
+      "claim": "Mythic language in substrate self-description.",
+      "category": "idiom",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-009",
+      "claim": "Zero DEV on original five 2026-05-23 audited (carried). substrate-explicit-vessels now at 48/53 tasks (was 22 in iter-003; +26).",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -c '^- \\[x\\]' openspec/changes/2026-05-23-substrate-explicit-vessels/tasks.md",
+          "excerpt": "48 (was 22 in iter-003; total tasks: 53)",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-010",
+      "claim": "Root clean.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-011",
+      "claim": "Lift-criterion-hardening zero DEV.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-012",
+      "claim": "Cycle reports substrate-anonymous.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-013",
+      "claim": "6 invalid + 3 subagent proposals remain.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/proposals/ | wc -l",
+          "excerpt": "9 proposal files in proposals/",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-014",
+      "claim": "Embedding healthy.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [],
+      "status": "unverifiable",
+      "operator_remediation": "Previously resolved. Cannot verify — substrate DOWN. Re-check on next live substrate."
+    },
+    {
+      "id": "F-015",
+      "claim": "total: -1 sentinel in template list endpoint.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(cannot verify — substrate DOWN)",
+          "excerpt": "unverifiable",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-016",
+      "claim": "Narrator stable.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/observations/snapshots/ | tail -5",
+          "excerpt": "5 snapshots through 2026-05-25T05-57-30-416Z, all showing substrate unreachable — narrator is still running but substrate is dead",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "resolved",
+      "operator_remediation": "Narrator is alive and faithfully recording substrate-down state."
+    },
+    {
+      "id": "F-017",
+      "claim": "Ribosome firing — confirmed ACTIVE between 03:22 and 03:27 UTC.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "cat validation/observations/snapshots/snapshot-2026-05-25T03-22-31-048Z.json | jq .activity_api.template_count",
+          "excerpt": "18",
+          "verified_at": "2026-05-25T06:03:29Z"
+        },
+        {
+          "kind": "command",
+          "command": "cat validation/observations/snapshots/snapshot-2026-05-25T03-27-31-021Z.json | jq .activity_api.template_count",
+          "excerpt": "30 — jumped +12 in 5 minutes. New templates: forge-vessel-for-shape, evolve-activity-self-contained, repair-failed-activity, replace-activity, prune-activity, core-activity-audit, create-shape-provider-goal, ribosome-extract, run-sensitivity-probe, audit-test-report, validator-dispatch, slot-binding",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "resolved",
+      "operator_remediation": "Template count jumped from 18 to 30 in a 5-minute window at 03:22–03:27 UTC, consistent with bootstrap-seeder re-seeding SHARED_TEMPLATES from ias-executor-ts after ribosome-vessel or bootstrap-seeder restart. 31 templates total at final live snapshot."
+    },
+    {
+      "id": "F-018",
+      "claim": "Snapshot consistency.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-019",
+      "claim": "Discovery 401 on resolve queries.",
+      "category": "deployment",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(cannot verify — substrate DOWN)",
+          "excerpt": "unverifiable",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-020",
+      "claim": "WS event capture inactive.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-49-08-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(cannot verify — substrate DOWN)",
+          "excerpt": "unverifiable",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-021",
+      "claim": "concept-db not running as substrate service (Phase 1b.6 blocked on image rebuild).",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-49-08-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "git show 0dad764b --format=%s",
+          "excerpt": "chore(spec): mark Phase 1b.1-1b.5 complete; 1b.6 blocked on image rebuild",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "concept-db Phase 1b code is committed; running as systemd unit requires image rebuild. Blocked on substrate restart + rebuild. This finding is also now blocked by F-044."
+    },
+    {
+      "id": "F-022",
+      "claim": "Clock alignment fine.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T02-28-30-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-023",
+      "claim": "No cycle-9.",
+      "category": "lift",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T02-28-30-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/cycles/*.json",
+          "excerpt": "8 cycles, no cycle-9",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-024",
+      "claim": "Boredom RESOLVED. boredom-vessel source committed (Phase 7, commit 818ccbfc) and per iter-016 was running as a systemd unit.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "git show 818ccbfc --format=%s",
+          "excerpt": "feat(substrate): Phase 7 — boredom-vessel replaces minibob boredom loop",
+          "verified_at": "2026-05-25T06:03:29Z"
+        },
+        {
+          "kind": "command",
+          "command": "(cannot verify live — substrate container REMOVED)",
+          "excerpt": "iter-016 validator confirmed 8 vessels running including boredom-vessel before crash",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-025",
+      "claim": "Doc-vs-runtime gap-001 spec-only.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-026",
+      "claim": "Cycle-8 stamped on stale coverage.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(carried)",
+          "excerpt": "carried",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-027",
+      "claim": "Dev shipping at record pace (resolved — superseded by velocity measurement in F-040).",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-028",
+      "claim": "Goal-text-to-template binding partial. goal-host-vessel operational.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-58-12-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(cannot verify live — substrate container REMOVED)",
+          "excerpt": "iter-016 validator confirmed goal-host-vessel running; substrate now dead",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-029",
+      "claim": "failure_mode still null on new path. gap-003 path bypassed means new vessel traces don't populate failure_mode at all.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T03-58-12-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "git show 9f34ec91 --format=%b",
+          "excerpt": "failure_mode still null even on chain-populated create-shape-provider-goal failure (per validator iter-16)",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "regressed",
+      "operator_remediation": "failure_mode remains null even on chain-populated traces. The bypassing of the old path means new vessels simply never populate failure_mode. This is a regression in observability."
+    },
+    {
+      "id": "F-030",
+      "claim": "Thompson α=β=1 on coverage-tick. Posteriors unchanged despite 98+ executions. Cannot verify current counts — substrate DOWN.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-58-12-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(cannot verify live — substrate container REMOVED)",
+          "excerpt": "Last verified in iter-003: 98 executions, 13 failed, α=β=1",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-031",
+      "claim": "Template count jumped to 31 (was 18 in iter-003).",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T04-58-14-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "cat validation/observations/snapshots/snapshot-2026-05-25T03-32-31-036Z.json | jq .activity_api.template_count",
+          "excerpt": "31 — was 18 in iter-003 (02:52Z); jumped to 30 at 03:27Z and 31 at 03:32Z. Resolved per template list: 31 distinct templates at crash time.",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Template count growth is positive — bootstrap-seeder re-seeded 12-13 new SHARED_TEMPLATES from ias-executor-ts. However, template count at crash is unknown for post-crash state."
+    },
+    {
+      "id": "F-032",
+      "claim": "Registry thrashing resolved.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T05-37-11-investigation-005",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-033",
+      "claim": "Dev coord engaged.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T05-37-11-investigation-005",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-034",
+      "claim": "Validator engaged.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T07-00-44-investigation-006",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "git show fcf4c4e5 --format=%s",
+          "excerpt": "validator iter-17: CRITICAL — substrate-live container is DEAD",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-035",
+      "claim": "gap-006 framing superseded — substrate IS progressing; degradation framing was empirically false.",
+      "category": "lift",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T07-00-44-investigation-006",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -c '^- \\[x\\]' openspec/changes/2026-05-23-substrate-explicit-vessels/tasks.md",
+          "excerpt": "48 complete of 53 total — substrate has been progressing at velocity",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-036",
+      "claim": "WS auth different code path.",
+      "category": "deployment",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T07-00-44-investigation-006",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(cannot verify — substrate DOWN)",
+          "excerpt": "unverifiable",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-037",
+      "claim": "Thompson disconnect PERSISTS. Validator iter-16 confirms: '+5 topology failures, zero Thompson movement'.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T17-24-17-investigation-010",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "git show 9f34ec91 --format=%b",
+          "excerpt": "F-037/F-043 unchanged: +5 topology failures, zero Thompson movement (per validator iter-16)",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Thompson posteriors are completely decoupled from execution outcomes. The new vessel execution path (ias-executor-ts GoalHost → goal-host-vessel → activity-api trace write) writes execution traces but does NOT call activity-api's Thompson update path. Fix requires explicit feedback call after each execution."
+    },
+    {
+      "id": "F-038",
+      "claim": "composition_chain ALIVE on new path (validator iter-16 confirmed).",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T20-26-32-investigation-011",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "git show 9f34ec91 --format=%b",
+          "excerpt": "F-038 partial closure: composition_chain + parent_execution_id populating on validator-dispatch / slot-binding / create-shape-provider-goal traces (chain depth 1-2 observed)",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-039",
+      "claim": "Validator wrote dev-guidance.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T00-34-24-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-040",
+      "claim": "substrate-explicit-vessels MAJOR PROGRESS. 48/53 tasks complete (was 22 in iter-003; +26 in ~3h). Phases 0-9 nearly all done. 5 remaining tasks open.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T01-39-09-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -c '^- \\[x\\]' openspec/changes/2026-05-23-substrate-explicit-vessels/tasks.md",
+          "excerpt": "48 complete (was 22 in iter-003, +26)",
+          "verified_at": "2026-05-25T06:03:29Z"
+        },
+        {
+          "kind": "command",
+          "command": "grep '^- \\[ \\]' openspec/changes/2026-05-23-substrate-explicit-vessels/tasks.md",
+          "excerpt": "5 open tasks: 1b.6 (concept-db smoke test), 2.4 (ANTHROPIC_API_KEY env), 2.5 (LLM latency), 6.3 (delete ribosome lifecycle path from minibob), 8.3 (minibob rename superseded)",
+          "verified_at": "2026-05-25T06:03:29Z"
+        },
+        {
+          "kind": "command",
+          "command": "git log --oneline --since='2026-05-25T02:51:09' | wc -l",
+          "excerpt": "~20+ commits since iter-003 covering Phase 6-9 delivery",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-041",
+      "claim": "S.4a window 1 started. Window 2 pending. BLOCKED — substrate crash prevents coverage-tick firing.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T01-39-09-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep '^- \\[.\\] S.4' openspec/changes/2026-05-23-topology-discovery-loop/tasks.md",
+          "excerpt": "S.4a and S.4b remain [ ] (unchecked). S.4a requires coverageReport with coverage_progress=true from natural substrate activity.",
+          "verified_at": "2026-05-25T06:03:29Z"
+        },
+        {
+          "kind": "command",
+          "command": "(substrate DOWN — no coverage-tick can fire)",
+          "excerpt": "S.4a window 2 cannot arrive until substrate is restarted",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "regressed",
+      "operator_remediation": "Substrate crash halts S.4a window progression. Window 2 of 4 is blocked until substrate-live is restarted with correct JWT_SECRET env var."
+    },
+    {
+      "id": "F-042",
+      "claim": "Three explicit vessels were operational before crash. Now substrate is dead and vessels cannot be verified.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T02-51-09-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker ps -a | grep substrate",
+          "excerpt": "No substrate-live container in docker ps -a — container has been removed, not just exited",
+          "verified_at": "2026-05-25T06:03:29Z"
+        },
+        {
+          "kind": "command",
+          "command": "git show 9f34ec91 --format=%b",
+          "excerpt": "validator iter-16: 8 vessels running: +boredom-vessel +ribosome-vessel since iter-15",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "regressed"
+    },
+    {
+      "id": "F-043",
+      "claim": "Thompson posteriors flat despite executions. Validator iter-16 added +5 topology failures with zero Thompson movement.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T02-51-09-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "git show 9f34ec91 --format=%b",
+          "excerpt": "F-037/F-043 unchanged: +5 topology failures, zero Thompson movement",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-044",
+      "claim": "CRITICAL: substrate-live container DEAD and REMOVED. Primary development target offline. Crash cause: JWT_SECRET env var not set when container restarted.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker ps -a | grep substrate",
+          "excerpt": "No output — substrate-live container has been removed entirely (not just exited)",
+          "verified_at": "2026-05-25T06:03:29Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker logs substrate-live --tail=50 (from earlier check, now container removed)",
+          "excerpt": "[substrate] generating /etc/substrate/env\\n/usr/local/bin/gen-env: line 6: JWT_SECRET: JWT_SECRET is required",
+          "verified_at": "2026-05-25T06:03:29Z"
+        },
+        {
+          "kind": "command",
+          "command": "cat validation/observations/snapshots/snapshot-2026-05-25T03-57-31-056Z.json | jq .activity_api.reachable",
+          "excerpt": "true (last alive snapshot at 03:57 UTC)",
+          "verified_at": "2026-05-25T06:03:29Z"
+        },
+        {
+          "kind": "command",
+          "command": "cat validation/observations/snapshots/snapshot-2026-05-25T04-02-30-404Z.json | jq .activity_api.reachable",
+          "excerpt": "false (first dead snapshot at 04:02 UTC)",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Run: JWT_SECRET=<secret> SURREAL_PASS=<pass> METABOB_API_KEY=<key> ANTHROPIC_API_KEY=<key> make -C scripts/substrate run-live. Container died because JWT_SECRET was unset on container restart (gen-env.sh line 6: ${JWT_SECRET:?JWT_SECRET is required}). Container was removed after crash (no longer in docker ps -a). Requires rebuild if concept-db or minibob-removal changes need baking in."
+    },
+    {
+      "id": "F-045",
+      "claim": "Narrator continues running despite substrate death — evidence of gap-008 (no external monitoring/alerting on substrate crashes).",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/observations/snapshots/ | sort | tail -5",
+          "excerpt": "5 snapshots through 05:57 UTC, all showing substrate unreachable — narrator alive, substrate dead for 2h+",
+          "verified_at": "2026-05-25T06:03:29Z"
+        },
+        {
+          "kind": "command",
+          "command": "git show fcf4c4e5 --format=%b",
+          "excerpt": "gap-008: No external monitoring/alerting on substrate crashes (BLOCKER) — noted by validator iter-17",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "The narrator correctly records substrate-down state. gap-008 (no alerting) is confirmed — substrate has been down for 2h+ without automated notification. Narrator healthcheck should emit an alert when substrate is unreachable for >15 minutes."
+    },
+    {
+      "id": "F-046",
+      "claim": "Template count grew 18→31 between 03:22 and 03:32 UTC — confirmed ribosome/bootstrap seeding active in final minutes before crash.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "cat validation/observations/snapshots/snapshot-2026-05-25T03-22-31-048Z.json | jq .activity_api.template_count",
+          "excerpt": "18",
+          "verified_at": "2026-05-25T06:03:29Z"
+        },
+        {
+          "kind": "command",
+          "command": "cat validation/observations/snapshots/snapshot-2026-05-25T03-27-31-021Z.json | jq .activity_api.template_count",
+          "excerpt": "30 (+12 in 5 minutes)",
+          "verified_at": "2026-05-25T06:03:29Z"
+        },
+        {
+          "kind": "command",
+          "command": "cat validation/observations/snapshots/snapshot-2026-05-25T03-32-31-036Z.json | jq .activity_api.template_count",
+          "excerpt": "31 (stabilized)",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Positive: template growth confirms bootstrap-seeder re-seeded ias-executor-ts SHARED_TEMPLATES after ribosome-vessel and other Phase 6 vessels came online. New templates include forge-vessel-for-shape, evolve-activity-self-contained, ribosome-extract, etc. Template count will likely reset to 0 on next substrate restart and re-seed."
+    },
+    {
+      "id": "F-047",
+      "claim": "substrate-explicit-vessels gate 27.3.g.3 redefined — now requires ribosome-vessel + concept-db in addition to original 6 vessels.",
+      "category": "lift",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "git show 40630f86 --format=%s",
+          "excerpt": "chore(gate): add ribosome-vessel + concept-db to 27.3.g.3 vessel check",
+          "verified_at": "2026-05-25T06:03:29Z"
+        },
+        {
+          "kind": "command",
+          "command": "cat validation/state/lift-status.json | jq '.blockers[\"27.3.g\"][] | select(.gate == \"27.3.g.3\")'",
+          "excerpt": "gate 27.3.g.3 status: done, note: 'All six present in Dockerfile.substrate and scripts/substrate/units/. Live smoke test deferred to next substrate-run (1b.6).'",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "The g.3 gate is marked 'done' in lift-status.json with 'live smoke test deferred to next substrate-run'. But concept-db Phase 1b.6 (the smoke test) is explicitly blocked on image rebuild, and the substrate is now dead. The 'done' marking is premature — live smoke test has not passed."
+    },
+    {
+      "id": "F-048",
+      "claim": "minibob removed from Dockerfile.substrate — Phase 8 complete. All goal execution now routes through goal-host-vessel.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "git show 57d74520 --format=%s",
+          "excerpt": "chore(substrate): remove minibob from container; substrate-only loop",
+          "verified_at": "2026-05-25T06:03:29Z"
+        },
+        {
+          "kind": "command",
+          "command": "git show 57d74520 --format=%b | head -10",
+          "excerpt": "Dockerfile.substrate: delete minibob COPY/install block; systemctl enable: remove minibob.service; Delete units/minibob.service, minibob-boredom.service, minibob-boredom.timer",
+          "verified_at": "2026-05-25T06:03:29Z"
+        }
+      ],
+      "status": "resolved",
+      "operator_remediation": "Positive finding. Phase 8 delivered: minibob removed from substrate. Gate 27.3.g.1 closed."
+    }
+  ],
+  "regressions_since_prior": ["F-041", "F-042"],
+  "resolutions_since_prior": ["F-017", "F-035", "F-038", "F-040", "F-048"],
+  "new_findings": ["F-044", "F-045", "F-046", "F-047", "F-048"],
+  "open_questions": [
+    "F-044: When will operator restart substrate-live? The JWT_SECRET env var was absent — what changed between when substrate was last launched and when it was restarted?",
+    "F-041: S.4a window 2 cannot arrive until substrate restarts. How long will substrate be down?",
+    "F-047: gate 27.3.g.3 is marked 'done' but live smoke test (1b.6) never passed. Should this be re-opened?",
+    "F-037/F-043: Thompson disconnect — 3h of active development with validator confirming '+5 failures, zero Thompson movement'. Root cause is likely that goal-host-vessel's trace sink writes AET records but does not call POST /v2/activities/execution-traces with the success/failure field that triggers Thompson update. Needs investigation in activity-api-trace-sink.ts."
+  ],
+  "findings_tally": {
+    "open": 23,
+    "resolved": 19,
+    "regressed": 3,
+    "unverifiable": 7,
+    "total": 48
+  },
+  "next_wake_recommendation": {
+    "delay_seconds": 7200,
+    "reason": "Substrate is dead and removed; no new activity possible until operator restarts it. 2-hour wake to check for substrate restart while avoiding excessive cache misses."
+  }
+}

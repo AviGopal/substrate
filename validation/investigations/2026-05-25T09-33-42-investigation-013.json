@@ -1,0 +1,285 @@
+{
+  "investigation_id": "2026-05-25T09-33-42-investigation-013",
+  "generated_at": "2026-05-25T09:33:42Z",
+  "investigator_session_id": "claude-sonnet-4-6-iter-029",
+  "prior_investigation_id": "2026-05-25T09-18-16-investigation-012",
+  "loop_iteration": 29,
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container",
+    "substrate_reachable": true,
+    "substrate_version": "1.20.9",
+    "auth_verified": true,
+    "container_name": "substrate-live",
+    "container_status": "Up 30 minutes (started ~09:03:36Z, last vessel restart ~09:17:51Z)",
+    "health_check": {
+      "redis": "healthy",
+      "surrealdb": "healthy",
+      "discovery": "unhealthy (registered: false — persistent since restart)",
+      "embedding": "healthy (all-MiniLM-L6-v2, dim=384)",
+      "pool_size": 0
+    },
+    "discovery_vessel": "healthy (port 18100, 4 registered vessels, 24 shapes — all from discovery-vessel self)"
+  },
+  "commits_analyzed": [
+    {
+      "sha": "ede99a25",
+      "message": "validation iter-23: activity_recommendation registered but create-shape-provider-goal instant failures persist; template registry regression (2 vs 15+ from iter-22)",
+      "changes": ["validation/findings/iter-23-narration.md (+137 lines)"],
+      "note": "Narration-only commit. No code changes. Reports validator observation of 2 templates vs 15+ in iter-22."
+    },
+    {
+      "sha": "c48c4333",
+      "message": "chore: update submodule pointers + agent-coordination after Thompson fixes",
+      "submodule_updates": {
+        "repos/metabob-activity-api": "SurrealDB RETURN shorthand fix (thompson posteriors now live)",
+        "note": "repos/goal-host-vessel not updated in this commit (but activity_recommendation resolver was registered in prior commit 156f1c30)"
+      },
+      "state_update": "validation/state/agent-coordination.json updated to reflect substrate state"
+    }
+  ],
+  "template_regression_root_cause": {
+    "verdict": "CONFIRMED REGRESSION — but NOT a new bug. This is F-023/F-046 (existing open finding) expressing as a Redis cache stale-population race condition.",
+    "classification": "F-046 REGRESSED (new mechanism identified: Redis SET stale-population)",
+    "evidence": {
+      "api_returns": 2,
+      "db_total": 28,
+      "api_reported_total": 28,
+      "discrepancy_explanation": "API response carries total=28 (from countAllTemplatesFromDB — a direct DB query) but templates=2 (from Redis cache). The Redis 'activity:templates:list' SET has only 2 members.",
+      "redis_list_contents": [
+        "activity:⟨forge-vessel-for-shape⟩",
+        "activity:⟨evolve-activity-self-contained⟩"
+      ],
+      "root_cause": "The Redis SET 'activity:templates:list' was populated during a period when only the last 2 templates had been seeded by bootstrap-seeder. The cache-aside logic in GET /v2/activities/templates populates the SET as each template is seeded via POST /v2/activities/templates. If the cache was checked and found non-empty after 2 seeds but before all 13 completed, subsequent GET requests serve from the 2-entry SET indefinitely (SADD adds to set but the individual TTL keys expire while the SET key persists). The cache has no expiry on the SMEMBERS key; it will serve stale data until manually cleared.",
+      "confirmation_method": "redis-cli SMEMBERS 'activity:templates:list' → 2 entries only. DB has 28 in 'activity' table. The auth/org-scoping path was a red herring — all 28 templates are org=organizations:substrate, scope=global, public=false. The LEGACY PATH (API key auth) returns scope=global templates, which should match all 28.",
+      "why_not_a_new_regression": "F-046 (iter-012) already documented '2/28 returned'. The root cause (Redis cache stale population) was not identified until this iteration. The validator's 'iter-22 showed 15+' claim may reflect a post-seed window before cache was re-populated from the partial set.",
+      "fix": "redis-cli DEL 'activity:templates:list' will force cache miss and repopulate from DB (all 28 templates). The bootstrap-seeder should invalidate this key on completion. Permanent fix: add EXPIRE to the SET key (currently indefinite TTL), or invalidate on every seeder run."
+    }
+  },
+  "bootstrap_seeder_status": {
+    "last_run_at": "2026-05-25T09:03:40Z",
+    "result": "13/13 templates seeded (SUCCESS)",
+    "seeded_templates": [
+      "slot-binding", "validator-dispatch", "audit-test-report",
+      "run-sensitivity-probe", "debug-failing-audit", "ribosome-extract",
+      "create-shape-provider-goal", "core-activity-audit", "prune-activity",
+      "replace-activity", "repair-failed-activity", "evolve-activity-self-contained",
+      "forge-vessel-for-shape"
+    ],
+    "note": "13/13 seeded successfully. The 2-template problem is NOT a seeding failure. It is a Redis cache stale-population issue predating or racing with the seeder."
+  },
+  "create_shape_provider_goal_status": {
+    "traces_this_session": 11,
+    "successes": 0,
+    "failures": 11,
+    "duration_range_ms": "2-13",
+    "task_count_on_failures": 0,
+    "f036_update": "STILL FAILING. The activity_recommendation resolver is registered (confirmed in goal-host startup: 'registered built-in resolver: activity_recommendation'), yet create-shape-provider-goal continues to fail pre-task (task_count=0) in 2-13ms. This rules out the resolver as the sole blocker.",
+    "root_cause_hypothesis": "Pre-task slot-binding or impulse-resolution failure. The template requires 'activity_recommendation' as resolver for the FIRST task (forward_chain_producers). With the resolver now registered, the failure must occur at a different pre-execution check: (a) slot-binding cannot find a required input shape, (b) the template's required input_shapes (activity_metrics, activity_template, error, execution_trace, goal, source_code, sql_schema, test_suite, trace) are not available in the impulse pool, (c) there is a runtime error in the resolver that fails fast before writing a task trace.",
+    "variant_performance_metrics": {
+      "alpha": 1.0,
+      "beta": 10.0,
+      "total_executions": 60,
+      "successful_executions": 0,
+      "ev": 0.0909,
+      "note": "n=60 (vs n=35 in iter-012) — 25 new failures since iter-012. Resolver registration (156f1c30) did NOT fix the instant failures."
+    },
+    "action_needed": "Inspect goal-host-vessel internal logs at execution time for the actual error message. Likely a missing-impulse or unresolved-shape failure on the slot-binding task. May need boredom to provide required input impulses when dispatching this goal."
+  },
+  "f063_fix_status": {
+    "finding": "F-063: boredom-vessel.service 'Requires=goal-host-vessel.service' causes SIGTERM cascade",
+    "current_unit_file": "After=activity-api.service goal-host-vessel.service; Requires=goal-host-vessel.service",
+    "status": "OPEN — fix NOT applied. Requires= still present in boredom-vessel.service unit file.",
+    "evidence": [
+      "boredom goal[0] at 09:24:08 → goal-host timed out at 09:29:08 (5min HTTP timeout exhausted)",
+      "boredom exited with code 1 (not SIGTERM this time — goal-host still running but unresponsive)",
+      "goal-host running since 09:17:51 (now 16min+ — avoiding SIGTERM cascade this cycle)",
+      "boredom goal[1] now dispatched at 09:29:08"
+    ],
+    "note": "The SIGTERM cascade is not occurring in this cycle because goal-host has been running 14+ minutes without restart. But the Requires= dependency remains a ticking problem for the next goal-host restart. F-063 remains open."
+  },
+  "thompson_semantic_inversion_status": {
+    "finding": "F-021/F-056: replace-activity selected for topology goals (semantic mismatch)",
+    "current_posteriors_from_variant_performance_metrics": {
+      "validator_dispatch": {"alpha": 53.0, "beta": 1.0, "n": 409, "ev": 0.9814, "note": "DOMINANT — 409 executions, all success"},
+      "slot_binding": {"alpha": 9.0, "beta": 1.0, "n": 57, "ev": 0.9, "note": "Strong positive posterior"},
+      "replace_activity": {"alpha": 2.0, "beta": 1.0, "n": 3, "ev": 0.6666, "note": "High EV due to low n — still winning boredom selection over coverage-tick"},
+      "coverage_tick": {"alpha": 1.0, "beta": 2.0, "n": 3, "ev": 0.3333, "note": "1 success found! (successful_executions=1). But Thompson α still 1 — posterior write may not be landing correctly"},
+      "create_shape_provider_goal": {"alpha": 1.0, "beta": 10.0, "n": 60, "ev": 0.0909, "note": "All failures"},
+      "forge_vessel_for_shape": {"alpha": 1.0, "beta": 2.0, "n": 1, "ev": 0.3333},
+      "harness_run_matrix": {"alpha": 2.0, "beta": 3.0, "n": 7, "ev": 0.4}
+    },
+    "semantic_inversion_status": "OPEN. replace-activity (ev=0.67) still winning over coverage-tick (ev=0.33) for boredom topology goals. Coverage-tick needs more successful executions to raise posterior.",
+    "coverage_tick_success_note": "coverage-tick now has 1 successful execution (vs 0 in iter-012), but α remains 1.0 — suggesting the Thompson write for the success landed β-side or the write failed. The execution table shows 1 entry for coverage-tick (success=False, dur=2ms from 06:45:37). The 'successful_executions=1' in variant_performance_metrics contradicts the execution trace showing success=False. Data inconsistency.",
+    "f043_status": "RESOLVED (confirmed in iter-011) — normalizeActivityId fix active, posteriors moving for validator-dispatch and slot-binding.",
+    "api_vs_db_discrepancy": "The API returns α=2 β=1 for the 2 visible templates (Forge + Evolve). The DB shows much richer posteriors (validator-dispatch α=53). The enrichTemplatesWithMetrics call uses variant_performance_metrics data — the API is showing correct data for the 2 it can see."
+  },
+  "boredom_vessel_current_state": {
+    "goal_0_at_09_24": {
+      "goal": "measure the substrate topology and report coverage progress",
+      "status": "goal-host timed out (5min HTTP timeout)",
+      "dispatched_at": "09:24:08",
+      "failed_at": "09:29:08",
+      "note": "HTTP timeout on goal-host — goal-host vessel is running but not responding to the run-goal POST"
+    },
+    "goal_1_at_09_29": {
+      "goal": "probe unlearned shapes",
+      "status": "IN PROGRESS at time of investigation",
+      "dispatched_at": "09:29:08"
+    },
+    "goal_host_status": "Active (running since 09:17:51, 16+ minutes — CPU=5.462s, Memory=25.2M)",
+    "f061_status": "PARTIALLY OPEN — goal[0] timing out again (was completing in 226-232s in iter-012). Goal-host appears unresponsive to boredom dispatches despite being running."
+  },
+  "discovery_registration_status": {
+    "activity_api_registered": false,
+    "discovery_vessels_registered": 4,
+    "discovery_shapes": ["vesselCapability", "vesselEndpoint", "vesselHealth", "vesselRegistry"],
+    "note": "Only 4 shapes from discovery-vessel self. Activity-api not registered. activity_recommendation shape NOT in discovery. The goal-host-vessel IS registered (it appears in the 4 vessels). Activity-api has been failing to register with discovery since restart.",
+    "activity_api_discovery_error": "Was there a typo in the url or port? — despite DISCOVERY_ENDPOINT=http://127.0.0.1:8100 being correct",
+    "f025_status": "OPEN — persistent, not just a post-restart window. Activity-api failing to register since this container run."
+  },
+  "new_findings": [
+    {
+      "id": "F-065",
+      "title": "Redis 'activity:templates:list' SET has indefinite TTL causing stale cache on restart",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T09-33-42-investigation-013",
+      "status": "new",
+      "evidence": [
+        "redis-cli SMEMBERS 'activity:templates:list' returns only 2 members despite DB having 28",
+        "The 2 members are the last 2 seeded by bootstrap-seeder: forge-vessel-for-shape + evolve-activity-self-contained",
+        "SADD writes during POST /v2/activities/templates populate the SET; but the SET key has no EXPIRE",
+        "Cache was populated with 2 entries from a prior partial seeding run; subsequent DB adds don't invalidate the SET"
+      ],
+      "fix": "In bootstrap-seeder: DEL 'activity:templates:list' before seeding to force cache invalidation. OR: Add EXPIRE to the SET key (e.g., 3600s). OR: In activity-api POST /templates handler, also add to the SET with pipeline that respects the set's expiry.",
+      "immediate_workaround": "docker exec substrate-live redis-cli DEL 'activity:templates:list'"
+    },
+    {
+      "id": "F-066",
+      "title": "coverage-tick successful_executions=1 but Thompson α not incrementing (data inconsistency)",
+      "category": "execution",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T09-33-42-investigation-013",
+      "status": "new",
+      "evidence": [
+        "variant_performance_metrics: coverage-tick successful_executions=1, thompson_alpha=1.0 (should be 2.0 after 1 success)",
+        "execution table: coverage-tick has 1 trace, success=False, dur=2ms",
+        "The 'successful_executions' counter may have been manually incremented or is inconsistent with actual trace data",
+        "OR: Thompson write path writes successful_executions but not α (partial write)"
+      ],
+      "note": "This contradicts the prior assumption that coverage-tick has 0 successes. It may have 1 success from before the substrate restart (07:19:52 era seeded templates). Requires verification against full trace history."
+    },
+    {
+      "id": "F-067",
+      "title": "Goal-host-vessel timing out on boredom goal[0] despite being alive (16+ min uptime)",
+      "category": "execution",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T09-33-42-investigation-013",
+      "status": "new",
+      "evidence": [
+        "boredom goal[0] at 09:24:08 → 'goal-host-vessel unreachable: The operation timed out' at 09:29:08 (5min timeout)",
+        "goal-host-vessel service status: Active (running) since 09:17:51, Memory=25.2M, CPU=5.462s",
+        "goal-host IS responding to other requests (boredom dispatched goal[1] immediately after)",
+        "The timeout may be LLM-level (the run-goal POST returned but the goal execution itself hung)"
+      ],
+      "note": "Different failure mode from earlier SIGTERM cascade. Goal-host is alive but the POST /run-goal for goal[0] took exactly 5 minutes — suggesting the boredom HTTP client has a 5min timeout on the run-goal request. The LLM completion may have hung inside the execution. F-061 is regressing."
+    }
+  ],
+  "finding_updates": [
+    {
+      "id": "F-046",
+      "prior_status": "open",
+      "new_status": "open",
+      "update": "Root cause identified: Redis 'activity:templates:list' SET has indefinite TTL and was stale-populated with 2 entries. This is the template regression mechanism. F-065 documents the fix path."
+    },
+    {
+      "id": "F-036",
+      "prior_status": "open",
+      "new_status": "open",
+      "update": "Resolver registration (156f1c30) confirmed active but did NOT fix instant failures. n=60 (was 35). task_count=0 on all failures. Pre-task failure persists via a different mechanism — likely missing required input impulses for slot-binding."
+    },
+    {
+      "id": "F-063",
+      "prior_status": "open",
+      "new_status": "open",
+      "update": "Requires= still present. Not triggering SIGTERM this cycle (goal-host stable 16+ min). But F-067 (new: 5min timeout on goal-host) shows a new failure mode emerged."
+    },
+    {
+      "id": "F-020",
+      "prior_status": "open",
+      "new_status": "open",
+      "update": "coverage-tick has 1 success in variant_performance_metrics (was 0 in iter-012). But α still 1.0 — Thompson posterior write may be inconsistent. S.4a still blocked."
+    },
+    {
+      "id": "F-061",
+      "prior_status": "resolved",
+      "new_status": "regressed",
+      "update": "Goal[0] timed out again at 09:29:08 (5min HTTP timeout). Was completing in 226s in iter-012. F-067 documents the new mechanism. Marking as regressed."
+    }
+  ],
+  "findings_tally": {
+    "open": 30,
+    "resolved": 39,
+    "partially_resolved": 0,
+    "regressed": 1,
+    "unverifiable": 1,
+    "total": 71,
+    "new_this_iteration": 3,
+    "resolved_this_iteration": 0,
+    "regressed_this_iteration": 1,
+    "key_new_findings": [
+      "F-065: Redis stale-SET is the template regression root cause (actionable fix: redis-cli DEL 'activity:templates:list')",
+      "F-066: coverage-tick successful_executions=1 but α=1 (Thompson write inconsistency)",
+      "F-067: goal-host 5min timeout on boredom goal[0] despite vessel being alive"
+    ],
+    "critical_open": [
+      "F-020 (coverage-tick 0→1 success but posterior not incrementing, S.4a still blocked)",
+      "F-036 (create-shape-provider-goal still 0 successes, resolver fix insufficient)",
+      "F-065 (Redis stale-SET: 2/28 templates visible — HIGH PRIORITY, easy fix)"
+    ]
+  },
+  "actionable_fixes_priority_ordered": [
+    {
+      "priority": 1,
+      "finding": "F-065",
+      "action": "docker exec substrate-live redis-cli DEL 'activity:templates:list'",
+      "effect": "Immediately fixes template count (2→28 visible). No restart needed. Cache will repopulate from DB on next GET.",
+      "risk": "None — cache miss will be served from DB correctly."
+    },
+    {
+      "priority": 2,
+      "finding": "F-063",
+      "action": "Edit boredom-vessel.service: change 'Requires=goal-host-vessel.service' to 'Wants=goal-host-vessel.service'",
+      "effect": "Prevents future SIGTERM cascade when goal-host restarts. Requires substrate-restart-boredom-vessel.",
+      "risk": "Low — Wants is weaker dependency; boredom already handles goal-host unavailability with exit code 1."
+    },
+    {
+      "priority": 3,
+      "finding": "F-036",
+      "action": "Investigate create-shape-provider-goal pre-task failure. Check if required input impulses (goal, execution_trace, etc.) are being provided when boredom dispatches this template.",
+      "effect": "If fixed, would allow the template to actually execute its 8 tasks.",
+      "risk": "Medium — requires understanding how boredom constructs the goal dispatch payload."
+    }
+  ],
+  "s4a_gate_status": {
+    "s1": "passed",
+    "s2": "passed",
+    "s3": "passed",
+    "s4a": "BLOCKED — requires coverage_progress=true in a coverageReport impulse. coverage-tick has 1 success but posterior is anomalous (α=1 despite 1 success). S.4a gate remains closed.",
+    "s4b": "BLOCKED — substrate-health-tick: 1 success, α=1 (same anomaly).",
+    "cycle_files": "Last: cycle-8.json (2026-05-23). No cycle-9 generated. Lift cycle count stalled at 8.",
+    "note": "Both coverage-tick and substrate-health-tick now have 1 success in variant_performance_metrics, but Thompson posteriors show α=1 suggesting the success may predate the current counting epoch or the write path is inconsistent."
+  },
+  "next_wake_recommendation": {
+    "delay_seconds": 900,
+    "rationale": "Redis stale-SET is the critical blocker for template visibility (F-065 — easy actionable fix). Boredom goal[1] is currently executing (dispatched at 09:29:08) — 15min window gives it time to complete. Three items need confirmation: (1) If F-065 Redis fix was applied, verify 28 templates visible. (2) Whether create-shape-provider-goal failures decrease with resolver fix + more boredom cycles. (3) Goal-host 5min timeout pattern (F-067) — if it repeats, means goal-host is hanging on LLM calls for topology goals.",
+    "watch_for": [
+      "Template count: should be 28 after redis-cli DEL 'activity:templates:list' (F-065 fix)",
+      "create-shape-provider-goal: any task_count > 0 trace would indicate resolver fix is working",
+      "boredom goal[1] outcome (dispatched at 09:29:08) — did it complete or timeout?",
+      "coverage-tick α value: should move to 2 if the 1 success is valid",
+      "goal-host-vessel CPU/memory growth (OOM risk if hanging on LLM)"
+    ]
+  }
+}

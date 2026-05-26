@@ -1,0 +1,363 @@
+{
+  "investigation_id": "2026-05-25T11-53-03Z-investigation-022",
+  "generated_at": "2026-05-25T11:53:03Z",
+  "investigator_session_id": "claude-sonnet-4-6-audit-loop-37",
+  "prior_investigation_id": "2026-05-25T11-34-08Z-investigation-021",
+  "loop_iteration": 37,
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container"
+  },
+  "substrate_status": {
+    "container": "substrate-live",
+    "container_started_at": "2026-05-25T10:58:59Z",
+    "container_uptime_minutes": 54.1,
+    "health": "healthy",
+    "running_version": "1.20.9",
+    "restart_context": "Same container as investigations 020-021 (started 10:58:59Z). No new container-level restarts since 021. goal-host-vessel still shows last restart at 11:41:06Z. analysis-vessel still shows last restart (operator hot-patch) at 11:25:36Z. No new vessel-level restarts since investigation-021. Bootstrap-seeder has NOT re-run since initial startup — Thompson posteriors continue accumulating without reset.",
+    "f069_fix_deployed": false,
+    "f069_fix_evidence": "docker exec substrate-live grep -n 'UPSERT activity' /vessels/activity-api/src/routes/activities.ts → line 1200: UPSERT activity:${activityId} CONTENT { and line 5268: UPSERT activity:${generated.id} CONTENT { — fix from c1364e4 (UPSERT...SET with ?? coalescing) is NOT in the running image. Unchanged from investigation-021.",
+    "posterior_reset_triggered": false,
+    "posterior_accumulation_confirmed": true,
+    "posterior_accumulation_evidence": "validator-dispatch: α=352 n=340 at 11:47Z (021) → α=409 n=396 at 11:53Z (022). +57 executions in ~6 minutes ≈ 9.5 execs/min. Monotonic growth confirmed. No bootstrap-seeder re-run since 10:59Z.",
+    "boredom_goal_host_timeout_pattern": "NEW: boredom-vessel is now systematically timing out on goal-host-vessel's /run-goal endpoint. Two consecutive 5-minute timeout events observed at 11:46:37Z (goal[3] started ~11:41:37Z) and 11:51:37Z (goal[4] started ~11:46:37Z). /health at 127.0.0.1:8210 returns 200 immediately — the vessel is alive but /run-goal hangs for >5 minutes on complex topology goals. Each timeout causes boredom-vessel to exit(1), which immediately triggers the systemd OnActiveSec timer restart."
+  },
+  "s4a_verdict": {
+    "window_anchor_utc": "2026-05-25T07:50:27Z",
+    "window_deadline_utc": "2026-05-25T11:50:27Z",
+    "now_utc": "2026-05-25T11:53:03Z",
+    "minutes_past_deadline": 2.6,
+    "window_status": "CLOSED — window deadline 11:50:27Z passed 2.6 minutes before this report",
+    "coverage_tick_successes_in_window": 0,
+    "coverage_tick_total_in_window": 0,
+    "coverage_tick_evidence": "curl -H 'Authorization: ApiKey ...' http://localhost:18080/v2/activities/execution-traces?limit=50 — zero coverage-tick entries in the 50 most-recent traces. Activity distribution: validator-dispatch=38, slot-binding=6, create-shape-provider-goal=5, activity:⟨ribosome-extract⟩=1. coverage-tick template remains at α=1 β=1 n=0.",
+    "reachable_learned_final": "17/23 — unchanged since investigation-018. Six shapes remain unlearned: commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, vesselScaffolded.",
+    "structural_block_persists": true,
+    "final_verdict": "FAILED — CONFIRMED",
+    "verdict_rationale": "S.4a window closed at 11:50:27Z. Coverage-tick has zero executions in the entire post-restart trace set (since 10:59Z). Boredom-vessel topology goals all timed out or failed — goals 1-4 in the window all returned status=failed or timeout. reachable_learned flat at 17/23 with no movement since investigation-018. S.4a requires 4 consecutive 1-hour windows with strictly-increasing reachable_learned. Windows 2+3 cannot be confirmed. FAILED on structural grounds, now confirmed post-deadline.",
+    "post_window_actions_needed": [
+      "Manually bootstrap the 6 zero-exec templates to produce the missing shapes",
+      "Investigate why boredom-vessel topology goals hang goal-host-vessel for >5 minutes",
+      "Redefine IAL S.4a criterion or set a new evaluation window start"
+    ]
+  },
+  "findings": [
+    {
+      "id": "F-088",
+      "claim": "NEW: boredom-vessel is systematically timing out on goal-host-vessel /run-goal endpoint. Two consecutive 5-minute timeout events observed: (1) goal[3] dispatched ~11:41:37Z, boredom timed out at 11:46:37Z; (2) goal[4] ('check substrate health including vessel liveness') dispatched at 11:46:37Z, boredom timed out at 11:51:37Z. /health at 127.0.0.1:8210 returns 200 immediately — goal-host-vessel is alive. The /run-goal endpoint hangs on complex topology/health-check goals. Each timeout causes boredom-vessel exit(1) → immediate systemd restart → next goal dispatched. The boredom loop is alive but all goal dispatches are failing via timeout.",
+      "category": "regression",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T11-53-03Z-investigation-022",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u boredom-vessel.service --no-pager -n 10",
+          "excerpt": "11:46:37 [boredom-vessel] submitting goal[4]: 'check substrate health including vessel liveness — report which vessels are active or down and restart any that are inactive'. 11:51:37 [boredom-vessel] goal-host-vessel unreachable: The operation timed out. 11:51:37 boredom-vessel.service: Failed with result 'exit-code'. 11:51:37 Starting boredom-vessel.service. 11:51:37 [boredom-vessel] submitting goal[0]: 'measure the substrate topology and report coverage progress'.",
+          "verified_at": "2026-05-25T11:53:03Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live curl -sf http://127.0.0.1:8210/health",
+          "excerpt": "{\"status\":\"healthy\",\"vesselId\":\"goal-host-vessel\",\"vesselName\":\"Goal Host Vessel\",\"shapes\":[\"goal_execution\",\"activity_execution\"],\"version\":\"0.1.0\",\"llm\":\"http-vessel:http://127.0.0.1:8220\"} — health returns 200 immediately. The vessel is live; only /run-goal hangs.",
+          "verified_at": "2026-05-25T11:53:03Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Investigate goal-host-vessel /run-goal hang for topology/health-check goals. Hypothesis: LLM call to llm-resolver-vessel hangs indefinitely waiting for Anthropic API response on complex multi-step goals. Check llm-resolver-vessel for in-flight requests. Possible fixes: (1) add timeout to goal-host-vessel's LLM call path, (2) rate-limit boredom-vessel goal complexity, (3) check Anthropic API reachability from container."
+    },
+    {
+      "id": "F-084",
+      "claim": "analysis-vessel discovery registration RESOLVED and STABLE: registered since 11:25:36Z hot-patch restart. Still showing in registry at 8 vessels / 112 shapes / healthyCount=8. Most recent log lines show normal operation — last event was the successful restart at 11:25:36Z, no errors since then.",
+      "category": "regression",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T11-16-28Z-investigation-020",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u analysis-vessel.service --no-pager -n 15",
+          "excerpt": "Last log entry: 11:25:36 [analysis-vessel] listening on http://127.0.0.1:8250. No new errors or heartbeat failures since the hot-patch restart. Most recent lines show normal operation. No 401 errors post-restart.",
+          "verified_at": "2026-05-25T11:53:03Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live curl -s http://127.0.0.1:8100/registry/stats",
+          "excerpt": "{\"totalVessels\":8,\"totalShapes\":112,\"healthyCount\":8} — unchanged from investigation-021. analysis-vessel registered and healthy.",
+          "verified_at": "2026-05-25T11:53:03Z"
+        }
+      ],
+      "status": "resolved",
+      "resolution_notes": "STABLE — analysis-vessel has been continuously registered for 27+ minutes since the hot-patch. No new heartbeat failures. All acceptance gates confirmed met in investigation-021 remain met."
+    },
+    {
+      "id": "F-083",
+      "claim": "Thompson posterior reset bug (UPSERT CONTENT) — unchanged: fix still not in running image. Posteriors continue accumulating correctly because bootstrap-seeder has not re-run. Risk unchanged from investigation-021.",
+      "category": "regression",
+      "severity": "critical",
+      "first_seen_in": "2026-05-25T11-16-28Z-investigation-020",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live grep -n 'UPSERT activity.*CONTENT' /vessels/activity-api/src/routes/activities.ts",
+          "excerpt": "1200: UPSERT activity:`${activityId}` CONTENT { — STILL OLD CODE. 5268: UPSERT activity:`${generated.id}` CONTENT { — STILL OLD CODE. No change from investigation-021.",
+          "verified_at": "2026-05-25T11:53:03Z"
+        },
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' http://localhost:18080/v2/activities/templates | python3 thompson_analysis",
+          "excerpt": "validator-dispatch: α=409 β=1 n=396 (was α=352 n=340 in 021). +57 successes in ~6 minutes ≈ 9.5 execs/min. slot-binding: α=59 β=1 n=56 (was α=51 n=49). create-shape-provider-goal: α=1 β=64 n=59 (was β=55 n=50). All posteriors growing monotonically from restart baseline.",
+          "verified_at": "2026-05-25T11:53:03Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged. Rebuild Docker image from c1364e4 to deploy the SET with ?? fix. Next container restart will wipe all accumulated Thompson state (~400 executions of validator-dispatch, ~56 of slot-binding) unless fixed first."
+    },
+    {
+      "id": "F-079",
+      "claim": "F-069 posterior reset fix (c1364e4) not deployed in running image — unchanged from investigation-021.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-38-48Z-investigation-019",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live grep -n 'UPSERT activity.*CONTENT' /vessels/activity-api/src/routes/activities.ts",
+          "excerpt": "Lines 1200, 5268 still show UPSERT CONTENT pattern. c1364e4 fix not present.",
+          "verified_at": "2026-05-25T11:53:03Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Rebuild Docker image. Source ready at c1364e4."
+    },
+    {
+      "id": "F-087",
+      "claim": "goal-host-vessel on-failure crash (11:41:06Z, F-087 from investigation-021) — no new crashes observed since 11:41:06Z, but a related new pattern emerged: goal-host-vessel /run-goal endpoint now hangs for >5 minutes on complex goals dispatched by boredom-vessel (F-088). goal-host-vessel did NOT crash on these hangings — it stayed running while boredom-vessel timed out and exited. No new on-failure restart of goal-host-vessel since 11:41:06Z.",
+      "category": "regression",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T11-34-08Z-investigation-021",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u goal-host-vessel.service --no-pager --since '11:41:10' | grep -E 'Started|Stopped|Failed|exited'",
+          "excerpt": "No output — no new restarts, stops, or failures of goal-host-vessel since the 11:41:06Z restart. Service remains running continuously. The 11:41Z crash was a one-time event; subsequent goal execution attempts did NOT crash goal-host-vessel (they simply hung until boredom-vessel timeout).",
+          "verified_at": "2026-05-25T11:53:03Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live curl -sf http://127.0.0.1:8210/health",
+          "excerpt": "{\"status\":\"healthy\"} — immediately responsive on /health port 8210.",
+          "verified_at": "2026-05-25T11:53:03Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Root cause still unknown. The 11:41Z crash under 21.256s CPU time remains unexplained, but has not recurred. Monitor over next investigation cycles. The new F-088 (hang without crash) may be a related but distinct failure mode."
+    },
+    {
+      "id": "F-068",
+      "claim": "task_count=0 bug persists unchanged. All execution traces show task_count=0 and tasks array length=0.",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "prior investigation",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/execution-traces?limit=5' | python3",
+          "excerpt": "5 traces: success=True task_count=0, success=True task_count=0, success=False task_count=0, success=True task_count=0, success=True task_count=0. Pattern unchanged across all activity types.",
+          "verified_at": "2026-05-25T11:53:03Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged. Structural fix needed in goal-host-vessel trace recording."
+    },
+    {
+      "id": "F-075",
+      "claim": "S.4a structural block: reachable_learned flat at 17/23. Six shapes remain unlearned: commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, vesselScaffolded. S.4a window now closed (FAILED verdict confirmed post-deadline).",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/execution-traces?limit=50' | python3",
+          "excerpt": "50 traces: validator-dispatch=38, slot-binding=6, create-shape-provider-goal=5, activity:⟨ribosome-extract⟩=1. Zero coverage-tick executions. No outputs producing the 6 missing shapes.",
+          "verified_at": "2026-05-25T11:53:03Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "S.4a window now closed. Remediation: (1) manually bootstrap templates for the 6 unlearned shapes, (2) investigate boredom-vessel goal-host timeout pattern before attempting new evaluation window."
+    },
+    {
+      "id": "F-074",
+      "claim": "S.4a FAILED — window closed at 11:50:27Z (2.6 minutes before this report). Final confirmed verdict: FAILED.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "computed",
+          "command": "python3 -c 'deadline=11:50:27Z, now=11:53:03Z, delta=+2.6 min past deadline'",
+          "excerpt": "Window closed. Coverage-tick n=0. reachable_learned=17/23. No consecutive windows with increasing reachable_learned. FAILED.",
+          "verified_at": "2026-05-25T11:53:03Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Define next S.4a attempt window. Prerequisite: resolve F-088 (boredom goal timeout), F-075 (6 missing shape templates)."
+    },
+    {
+      "id": "F-036",
+      "claim": "create-shape-provider-goal parent-fail-on-child-success pattern unchanged. α=1 β=64 n=59 — 59 failures, 0 successes. Was β=55 n=50 in investigation-021 (+9 failures in ~19 minutes ≈ 0.5 failures/minute).",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T09-59-06Z-investigation-015",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' http://localhost:18080/v2/activities/templates | python3",
+          "excerpt": "Create Shape-Provider Goal: α=1 β=64 n=59. 59 failures, 0 successes. Monotonically increasing failures.",
+          "verified_at": "2026-05-25T11:53:03Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged. Structural bug in goal-host-vessel parent/child execution trace recording."
+    },
+    {
+      "id": "F-053",
+      "claim": "failure_mode=null on failures persists — no fix deployed.",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T09-42-37Z-investigation-014",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/execution-traces?limit=5' | python3",
+          "excerpt": "failure_mode=None on all 5 traces including the failed one (success=False). Pattern unchanged.",
+          "verified_at": "2026-05-25T11:53:03Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged."
+    },
+    {
+      "id": "F-086",
+      "claim": "Wrapped-prefix activity IDs persist in the trace set at offset >50. Not observed in the most-recent 50 traces — `activity:⟨ribosome-extract⟩` appears once, which is the ribosome-vessel execution path. The clean activity IDs (validator-dispatch, slot-binding, create-shape-provider-goal) dominate recent traces.",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T11-34-08Z-investigation-021",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/execution-traces?limit=50' | python3 activity_distribution",
+          "excerpt": "validator-dispatch=38, slot-binding=6, create-shape-provider-goal=5, activity:⟨ribosome-extract⟩=1. One wrapped-prefix entry visible in recent 50. ribosome-vessel is generating the wrapped form for this one execution path.",
+          "verified_at": "2026-05-25T11:53:03Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "The ribosome-vessel execution path appears to be generating wrapped IDs. Check ribosome-vessel template submission logic — it may be prepending 'activity:' to already-wrapped IDs."
+    },
+    {
+      "id": "F-076",
+      "claim": "coverage-tick template still at α=1 β=1 n=0. S.4a window closed without any coverage-tick executions. Boredom-vessel is not routing to coverage-tick due to Thompson monoculture (validator-dispatch α=409 overwhelms prior α=1) combined with boredom goal-host timeout failures.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' http://localhost:18080/v2/activities/templates | python3",
+          "excerpt": "Core Activity Audit: α=1 β=1 n=0. Evolve Activity Template: α=1 β=1 n=0. Run Sensitivity Probe: α=1 β=1 n=0. Prune Activity: α=1 β=1 n=0. Audit Test Report: α=1 β=1 n=0. All zero-state templates unchanged since restart.",
+          "verified_at": "2026-05-25T11:53:03Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged. Deploy c1364e4 fix and investigate boredom goal routing."
+    }
+  ],
+  "thompson_state": {
+    "snapshot_time": "2026-05-25T11:53:03Z",
+    "total_templates": 13,
+    "templates_with_history": 8,
+    "validator_dispatch": {"alpha": 409, "beta": 1, "n": 396, "prior_alpha_in_021": 352, "prior_n_in_021": 340, "gained_since_021": 56},
+    "slot_binding": {"alpha": 59, "beta": 1, "n": 56, "prior_alpha_in_021": 51, "prior_n_in_021": 49, "gained_since_021": 7},
+    "create_shape_provider_goal": {"alpha": 1, "beta": 64, "n": 59, "prior_beta_in_021": 55, "gained_failures_since_021": 9},
+    "replace_activity": {"alpha": 4, "beta": 1, "n": 3},
+    "ribosome_extract": {"alpha": 4, "beta": 1, "n": 3},
+    "forge_vessel_for_shape": {"alpha": 1, "beta": 2, "n": 1},
+    "repair_failed_activity": {"alpha": 2, "beta": 1, "n": 1},
+    "debug_failing_audit": {"alpha": 2, "beta": 1, "n": 1},
+    "zero_state_templates": ["core-activity-audit", "evolve-activity-template", "run-sensitivity-probe", "prune-activity", "audit-test-report"],
+    "posterior_reset_confirmed": false,
+    "posterior_loss_risk": "critical — UPSERT CONTENT fix not deployed; next container restart will wipe all state (currently ~400 validator-dispatch + ~56 slot-binding executions accumulated)",
+    "execution_rate_validator_dispatch": "~9.5 executions/minute (accelerating vs ~5.7/min in investigation-021)",
+    "execution_rate_create_shape_provider_goal": "~0.5 failures/minute (all failures, 0 successes; rate slowing vs 021 possibly due to boredom goal timeout disrupting dispatch)"
+  },
+  "discovery_registry_status": {
+    "total_vessels": 8,
+    "total_shapes": 112,
+    "healthy_count": 8,
+    "analysis_vessel_registered": true,
+    "analysis_vessel_stable_since": "11:25:36Z",
+    "change_since_021": "no change — 8/112/8 same as 021"
+  },
+  "boredom_vessel_status": {
+    "is_active_at_report_time": "activating — goal[0] submitted at 11:51:37Z ('measure substrate topology and report coverage progress'), currently running",
+    "goals_since_021": [
+      {"seq": 3, "goal": "identify shapes in the execution graph that have no known producer and escalate the most critical one", "dispatched_at": "~11:41:37Z", "status": "timeout", "timeout_at": "~11:46:37Z", "note": "goal[3] from 021 — outcome was timeout, not explicit fail"},
+      {"seq": 4, "goal": "check substrate health including vessel liveness — report which vessels are active or down and restart any that are inactive", "dispatched_at": "11:46:37Z", "status": "timeout", "timeout_at": "11:51:37Z"},
+      {"seq": 0, "goal": "measure the substrate topology and report coverage progress", "dispatched_at": "11:51:37Z", "status": "in_progress"}
+    ],
+    "timeout_pattern": "Two consecutive 5-minute timeouts (goals[3] and [4]). boredom-vessel exits with code 1 on timeout, systemd immediately restarts. Loop is alive but all complex goals hang goal-host-vessel /run-goal.",
+    "note": "Boredom is rotating goals correctly but the goal-host /run-goal endpoint hangs indefinitely on complex topology goals. The 5-minute timeout is boredom-vessel's own connection timeout, not a configured goal timeout. goal-host-vessel stays healthy (returns /health 200) but the LLM execution path for multi-step goals is blocked."
+  },
+  "substrate_explicit_vessels_progress": {
+    "completed_tasks": 48,
+    "open_tasks": 5,
+    "open_task_list": [
+      "1b.6 — Smoke test: curl localhost:8260/health returns 200; vessel appears in discovery",
+      "2.4 — Move ANTHROPIC_API_KEY / OPENAI_API_KEY env vars to separate vessel config",
+      "2.5 — Latency measurement: record p50/p99 LLM-call latency",
+      "6.3 — Delete ribosome lifecycle-meta path from minibob",
+      "8.3 — SUPERSEDED: minibob rename (crossed out)"
+    ],
+    "note": "Unchanged from investigation-021."
+  },
+  "service_status": {
+    "analysis_vessel": "active running (stable since 11:25:36Z)",
+    "boredom_vessel": "activating — goal[0] in progress at 11:51:37Z",
+    "concept_db": "active running",
+    "concept_db_seeder": "failed (persistent failure, pre-existing)",
+    "development_vessel": "active running",
+    "discovery_vessel": "active running",
+    "goal_host_vessel": "active running (last restart 11:41:06Z, no new restarts)",
+    "identity_vessel": "active running",
+    "llm_resolver_vessel": "active running (no errors in last 10 log lines)",
+    "local_tools_vessel": "active running",
+    "ribosome_vessel": "active running"
+  },
+  "new_commits_since_021": [],
+  "regressions_since_prior": [
+    {
+      "finding": "F-088",
+      "description": "New: boredom-vessel is now systematically timing out on goal-host-vessel /run-goal for all complex topology goals. Two consecutive 5-minute timeouts at 11:46:37Z and 11:51:37Z."
+    }
+  ],
+  "resolutions_since_prior": [],
+  "new_findings": ["F-088"],
+  "findings_tally": {
+    "open": 10,
+    "resolved": 0,
+    "regressed": 0,
+    "new_this_iteration": 1,
+    "prior_reconfirmed": ["F-084", "F-083", "F-079", "F-087", "F-068", "F-075", "F-074", "F-036", "F-053", "F-086", "F-076"],
+    "note": "F-084 remains in resolved state and is reconfirmed stable. Total open count = 10 (was 9 in 021, +1 for F-088)."
+  },
+  "open_questions": [
+    "What is hanging goal-host-vessel's /run-goal endpoint for complex topology goals? LLM call to Anthropic API timing out? No response from llm-resolver-vessel? (llm-resolver-vessel /health not checked directly in this investigation)",
+    "Is goal[0] ('measure substrate topology') at 11:51:37Z also going to timeout at ~11:56:37Z? Will confirm in next investigation.",
+    "Will the operator rebuild the Docker image with c1364e4 before the next container restart to prevent posterior wipe (~400+ executions at risk)?",
+    "With S.4a confirmed FAILED, what is the revised IAL timeline and next evaluation window criteria?",
+    "Is the wrapped-prefix 'activity:⟨ribosome-extract⟩' from ribosome-vessel a persistent issue or a one-off? Check if ribosome-vessel is double-wrapping activity IDs in its template submissions."
+  ],
+  "next_wake_recommendation": {
+    "delay_seconds": 270,
+    "reason": "boredom goal[0] at 11:51:37Z will either timeout (~11:56:37Z) or complete; check within ~4 minutes to confirm F-088 pattern or rule it out. Also verify analysis-vessel heartbeat continuity. Stay in cache window at 270s."
+  }
+}

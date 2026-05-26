@@ -1,0 +1,293 @@
+{
+  "investigation_id": "2026-05-25T11-16-28Z-investigation-020",
+  "generated_at": "2026-05-25T11:16:28Z",
+  "investigator_session_id": "claude-sonnet-4-6-audit-loop-35",
+  "prior_investigation_id": "2026-05-25T10-38-48Z-investigation-019",
+  "loop_iteration": 35,
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container"
+  },
+  "substrate_status": {
+    "container": "substrate-live",
+    "container_started_at": "2026-05-25T10:59:01Z",
+    "container_uptime_minutes": 17,
+    "health": "healthy",
+    "running_version": "1.20.9",
+    "restart_context": "Container restarted between investigation-019 and investigation-020. SUBSTRATE_DOWN/SUBSTRATE_UP event. New image includes analysis-vessel (06bd8c04 + c696acff) but does NOT include F-069 posterior fix (c1364e4) — UPSERT activity CONTENT found at lines 1200 and 5268 of activities.ts.",
+    "f069_fix_deployed": false,
+    "f069_fix_evidence": "docker exec substrate-live grep -n 'UPSERT activity' /vessels/activity-api/src/routes/activities.ts → line 1200: UPSERT activity:${activityId} CONTENT {, line 5268: UPSERT activity:${generated.id} CONTENT { — old code, not fixed.",
+    "posterior_reset_triggered": true,
+    "posterior_reset_evidence": "bootstrap-seeder ran at 10:59:12Z with UPSERT CONTENT, wiping all accumulated posteriors. validator-dispatch was α=300 β=1 n=651 (019) → now α=85 β=1 n=82. slot-binding was α=44 β=1 n=89 → now α=13 β=1 n=12. Represents loss of ~570 validator-dispatch and ~77 slot-binding execution history.",
+    "bootstrap_seeder_result": "13/13 templates seeded successfully at 10:59:12Z (3 seconds after container start). All posteriors reset to α=1 β=1 by UPSERT CONTENT; execution since restart rebuilt partial state."
+  },
+  "s4a_verdict": {
+    "window_anchor_utc": "2026-05-25T07:50:27Z",
+    "window_deadline_utc": "2026-05-25T11:50:27Z",
+    "now_utc": "2026-05-25T11:16:28Z",
+    "minutes_past_deadline": -33.98,
+    "window_status": "OPEN — 33.98 minutes remaining",
+    "coverage_tick_successes_in_window": 0,
+    "coverage_tick_total_in_window": 0,
+    "note_on_count": "Container restarted at 10:59Z — execution history wiped. The 19 traces visible at this time are post-restart only. Pre-restart had 2 coverage-tick successes (07:50:27Z, 09:40:19Z). Post-restart has 0 coverage-tick executions visible in the new trace set.",
+    "reachable_learned_current": "unknown — execution history wiped by restart; measuring reachable_learned requires execution context not available in current 19-trace snapshot",
+    "structural_block_persists": true,
+    "structural_block_reason": "Even if coverage-tick fires before 11:50Z, reachable_learned was flat at 17/23 in investigation-018/019 due to Thompson monoculture. The restart reset all posteriors, which does not help with the unlearned shapes (commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, vesselScaffolded).",
+    "final_verdict": "FAILED",
+    "verdict_rationale": "The S.4a window closes at 11:50:27Z. The criterion requires 4 consecutive 1h windows with strictly-increasing reachable_learned. Investigation-018 established reachable_learned=17/23 (Window 1 at 07:50, Window 2 at 09:40). The value never increased — Windows 3 and 4 cannot be confirmed increasing. The substrate restarted at 10:59Z, wiping execution history, making any Window 3 measurement impossible from the post-restart trace set. S.4a FAILED: insufficient consecutive windows with strictly-increasing reachable_learned, compounded by substrate down event and posterior reset.",
+    "indeterminate_factors": "Substrate was DOWN during part of the window (restart between ~10:57Z and 10:59Z). This makes the Window 3 (expected ~11:30Z) observation impossible. However, the structural block (flat reachable_learned) was already conclusive before the restart — INDETERMINATE on timing, FAILED on structure."
+  },
+  "findings": [
+    {
+      "id": "F-083",
+      "claim": "Posterior reset bug (F-081) triggered on this restart: bootstrap-seeder ran at 10:59:12Z with UPSERT CONTENT, destroying all accumulated Thompson posteriors. validator-dispatch lost 569 executions of learning (α=300→85 after 82 new post-restart execs). slot-binding lost 77 executions (α=44→13).",
+      "category": "regression",
+      "severity": "critical",
+      "first_seen_in": "2026-05-25T11-16-28Z-investigation-020",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "APIKEY=... curl http://localhost:18080/v2/activities/templates | python3 thompson_analysis",
+          "excerpt": "validator-dispatch: α=85.0 β=1.0 n=82 (was α=300 β=1 n=651 in investigation-019). slot-binding: α=13.0 β=1.0 n=12 (was α=44 β=1 n=89). create-shape-provider-goal: α=1.0 β=13.0 n=12 (persistent failures accumulate fast after reset). Total templates: 13. Templates with non-default state: 6.",
+          "verified_at": "2026-05-25T11:16:28Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u bootstrap-seeder.service -n 20",
+          "excerpt": "10:59:10 Starting bootstrap-seeder. 10:59:12 activity-api ready. Seeding 13 shared templates. 10:59:12-13: 13/13 templates seeded. The old UPSERT CONTENT code ran — confirmed by activities.ts lines 1200,5268 still showing CONTENT not SET.",
+          "verified_at": "2026-05-25T11:16:28Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live grep -n 'UPSERT activity' /vessels/activity-api/src/routes/activities.ts",
+          "excerpt": "1200: UPSERT activity:`${activityId}` CONTENT { — old code (reset bug). 5268: UPSERT activity:`${generated.id}` CONTENT { — old code. cb4dd022/c1364e4 fix NOT in this image.",
+          "verified_at": "2026-05-25T11:16:28Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "The container was rebuilt from commits 06bd8c04 + c696acff (analysis-vessel migration) but the activities.ts UPSERT fix from c1364e4 is NOT in the new image. The rebuild did not incorporate the posterior fix. To deploy the fix: verify that repos/metabob-activity-api is at c1364e4, then rebuild with make -C scripts/substrate build and restart."
+    },
+    {
+      "id": "F-084",
+      "claim": "analysis-vessel is running on port 8250 but FAILED discovery registration (401 on initial register, then 404 on all heartbeats). It is NOT registered in discovery. The registry shows 7 vessels / 106 shapes — same count as before analysis-vessel was added, confirming it is not registered.",
+      "category": "regression",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T11-16-28Z-investigation-020",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u analysis-vessel.service --since 10:59:00 -n 40",
+          "excerpt": "10:59:01 [DiscoveryRegistrationLoop] register failed: 401 — vessel will be unreachable via discovery. 11:00:01 through 11:16:01: heartbeat HTTP 404 (failure #1 through #17). Heartbeats hitting /heartbeat endpoint which returns 404 because the vessel was never registered (initial 401 prevented it).",
+          "verified_at": "2026-05-25T11:16:28Z"
+        },
+        {
+          "kind": "command",
+          "command": "curl http://localhost:18100/registry/stats",
+          "excerpt": "totalVessels: 7, totalShapes: 106, healthyCount: 7. If analysis-vessel had registered, it would contribute 6 new shapes and appear as vessel #8. 7 vessels confirms analysis-vessel is NOT registered.",
+          "verified_at": "2026-05-25T11:16:28Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "analysis-vessel startup registers with discovery using API_KEY from METABOB_API_KEY env. The 401 means either (a) the API key is missing from analysis-vessel.service unit, or (b) discovery-vessel rejects the key format. Check scripts/substrate/units/analysis-vessel.service for METABOB_API_KEY env var. The heartbeat 404s are a consequence of never registering (vessel has no slot_id in the registry to heartbeat against). The acceptance gate 'analysis-vessel registers in discovery with all 6 shapes' is NOT met."
+    },
+    {
+      "id": "F-085",
+      "claim": "analysis-vessel Phase 1 migration is partially complete: the vessel is running (port 8250, systemd active), code is correct (VesselDaemon, cpg-inference-ts, 6 resolver shapes), but discovery registration fails (401). The implementation is spec-compliant in structure but operationally blocked by auth.",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T11-16-28Z-investigation-020",
+      "evidence": [
+        {
+          "kind": "file",
+          "file": "repos/analysis-vessel/src/index.ts",
+          "excerpt": "import { ActivityExecutor, ExecutionRuntime, VesselDaemon } from '@avigopal/ias-executor-ts'. Uses DiscoveryRegistrationLoop. Advertises shapes: problem_detection, error_log, source_code, code_quality, code_annotation, cpg_query_result. Port 8250. Structurally matches the spec in openspec/changes/2026-05-25-metabob-vessel-migration/design.md.",
+          "verified_at": "2026-05-25T11:16:28Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live systemctl status analysis-vessel.service",
+          "excerpt": "Active: active (running) since Mon 2026-05-25 10:59:01 UTC; 16min ago. Main PID: 51 (bun). CPU: 2.950s. The vessel process is alive and running but is not discoverable.",
+          "verified_at": "2026-05-25T11:16:28Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Fix METABOB_API_KEY in analysis-vessel.service systemd unit. After key fix, restart analysis-vessel.service; it will re-attempt registration. Acceptance gate 'discovery.registered=true' in /health response is not currently met."
+    },
+    {
+      "id": "F-079",
+      "claim": "F-069 'Thompson posterior reset' fix (c1364e4) was committed in cb4dd022 but NOT deployed in the current image. The image was rebuilt for analysis-vessel commits but activities.ts still shows UPSERT CONTENT at lines 1200 and 5268.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-38-48Z-investigation-019",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live grep -n 'UPSERT activity' /vessels/activity-api/src/routes/activities.ts",
+          "excerpt": "1200: UPSERT activity:${activityId} CONTENT { — UNFIXED. 5268: UPSERT activity:${generated.id} CONTENT { — UNFIXED. The fix (c1364e4) should produce UPSERT activity:${activityId} SET with ?? coalescing. It is absent.",
+          "verified_at": "2026-05-25T11:16:28Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Verify repos/metabob-activity-api submodule is checked out at c1364e4, then rebuild the Docker image. Without rebuild, every restart will reset posteriors."
+    },
+    {
+      "id": "F-075",
+      "claim": "S.4a structural block: reachable_learned was flat at 17/23 before restart; the restart wiped execution history making current measurement indeterminate. The 6 unlearned shapes (commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, vesselScaffolded) remain unlearned.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl http://localhost:18080/v2/activities/execution-traces?limit=200 | python3",
+          "excerpt": "Post-restart executions: 19 total. Activity breakdown: validator-dispatch 15, slot-binding 2, create-shape-provider-goal 2. Zero coverage-tick executions. No executions producing commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, or vesselScaffolded.",
+          "verified_at": "2026-05-25T11:16:28Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged. Boredom must rotate to zero-exec templates, or operator must manually trigger them."
+    },
+    {
+      "id": "F-074",
+      "claim": "S.4a window closes at 11:50:27Z (34 minutes from now). Coverage-tick Cycle 3 expected at ~11:30Z was not observed pre-restart. Post-restart, no coverage-tick traces exist.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "date -u; NOW=$(date -u +%s); DEADLINE=$((1748166627 + 4*3600)); echo $((DEADLINE-NOW)) seconds remaining",
+          "excerpt": "Deadline: 2026-05-25T11:50:27Z. Now: 2026-05-25T11:16:28Z. ~34 minutes remaining. No coverage-tick visible in post-restart traces. Pre-restart had 2 successes (07:50Z, 09:40Z only).",
+          "verified_at": "2026-05-25T11:16:28Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Window will close in 34 minutes. S.4a outcome is already FAILED on structural grounds."
+    },
+    {
+      "id": "F-076",
+      "claim": "The org_id SQL fix (766cdbea) for coverage-tick remains in SurrealDB data. However, the restart's bootstrap-seeder CONTENT wipe reset coverage-tick's Thompson posteriors (α=2→1, β=2→1, n=4→0). The data fix survives but the learned state does not.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl http://localhost:18080/v2/activities/templates | grep coverage",
+          "excerpt": "coverage-tick is one of the 13 seeded templates with α=1 β=1 n=0 post-restart. The SQL fix that corrected org_id matching is in SurrealDB (data-layer fix, not subject to bootstrap-seeder wipe), but the template row metrics were wiped. When coverage-tick next executes, α will increment to 2 again.",
+          "verified_at": "2026-05-25T11:16:28Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Deploying c1364e4 fix (SET with ??) would prevent future posterior wipes on restart. The SQL data fix is durable."
+    },
+    {
+      "id": "F-036",
+      "claim": "create-shape-provider-goal parent-fail-on-child-success pattern continues post-restart. 2 new failures observed in post-restart traces (10:59Z window). β=13 (13 failures already in the 17-minute post-restart window).",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T09-59-06Z-investigation-015",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl http://localhost:18080/v2/activities/execution-traces | python3 activity_count",
+          "excerpt": "create-shape-provider-goal: α=1.0 β=13.0 n=12 — 12 failures in 17 minutes post-restart. 0 successes. The pattern (parent fails in 3-6ms, child tasks succeed) persists across restarts. This is a structural bug in goal-host-vessel's parent/child trace recording.",
+          "verified_at": "2026-05-25T11:16:28Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged. Structural bug in goal-host-vessel."
+    },
+    {
+      "id": "F-053",
+      "claim": "failure_mode=null on failures persists — no fix deployed.",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T09-42-37Z-investigation-014",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "post-restart traces: create-shape-provider-goal failures all have failure_mode=null",
+          "excerpt": "Pattern unchanged across restart. No fix in current image.",
+          "verified_at": "2026-05-25T11:16:28Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged. Executor-level fix needed in goal-host-vessel or activity-api trace recording."
+    }
+  ],
+  "analysis_vessel_audit": {
+    "spec_file": "openspec/changes/2026-05-25-metabob-vessel-migration/design.md",
+    "implementation_commits": ["06bd8c04", "c696acff"],
+    "structural_compliance": true,
+    "structural_compliance_notes": "repos/analysis-vessel/ exists with correct structure: src/index.ts uses VesselDaemon from ias-executor-ts, cpg-inference-ts for structural analysis, 6 resolver shapes (problem_detection, error_log, source_code, code_quality, code_annotation, cpg_query_result), port 8250, DiscoveryRegistrationLoop. Matches spec in design.md.",
+    "acceptance_gates": {
+      "registers_in_discovery_with_6_shapes": false,
+      "post_resolve_impulse_problem_detection": "untestable — not registered",
+      "post_resolve_impulse_source_code": "untestable — not registered",
+      "health_returns_200_discovery_registered_true": false,
+      "systemd_unit_added": true,
+      "metabob_analysis_api_disabled": "unknown — not checked, but analysis-vessel is intended replacement"
+    },
+    "blocking_issue": "Discovery registration 401 on startup. Heartbeats then hit 404 because vessel was never registered. Root cause: METABOB_API_KEY likely missing or wrong in analysis-vessel.service systemd unit.",
+    "operational_status": "process_running_discovery_unreachable",
+    "gate_summary": "1 of 5 acceptance gates passed (systemd unit present). 4 gates fail or untestable due to discovery registration failure."
+  },
+  "thompson_state_post_restart": {
+    "total_templates": 13,
+    "templates_with_history": 6,
+    "validator_dispatch": {"alpha": 85.0, "beta": 1.0, "n": 82, "prior_alpha": 300, "prior_n": 651, "lost_executions": 569},
+    "slot_binding": {"alpha": 13.0, "beta": 1.0, "n": 12, "prior_alpha": 44, "prior_n": 89, "lost_executions": 77},
+    "create_shape_provider_goal": {"alpha": 1.0, "beta": 13.0, "n": 12},
+    "replace_activity": {"alpha": 2.0, "beta": 1.0, "n": 1},
+    "repair_failed_activity": {"alpha": 2.0, "beta": 1.0, "n": 1},
+    "debug_failing_audit": {"alpha": 2.0, "beta": 1.0, "n": 1},
+    "zero_state_templates": ["coverage-tick", "audit-test-report", "ribosome-extract", "core-activity-audit", "prune-activity", "evolve-activity-self-contained", "forge-vessel-for-shape"],
+    "posterior_reset_confirmed": true
+  },
+  "discovery_registry_status": {
+    "total_vessels": 7,
+    "total_shapes": 106,
+    "healthy_count": 7,
+    "analysis_vessel_registered": false,
+    "note": "7 vessels is unchanged from pre-analysis-vessel baseline — analysis-vessel's 401 registration failure means it contributes 0 shapes to the 106 total."
+  },
+  "hardcoded_url_check": {
+    "checked_paths": ["repos/identity-vessel/src", "repos/discovery-vessel/src"],
+    "hardcoded_urls_found": false,
+    "stray_png_count": 0
+  },
+  "new_commits_since_019": [
+    "06bd8c04 — feat(analysis-vessel): Phase 1 migration — stateless VesselDaemon replaces metabob-analysis-api",
+    "c696acff — fix(substrate): add cpg-inference-ts to Docker image for analysis-vessel"
+  ],
+  "regressions_since_prior": [
+    {
+      "finding": "F-083",
+      "description": "Posterior reset triggered on restart — warning F-081 materialized. validator-dispatch lost 569 executions of accumulated Thompson state."
+    },
+    {
+      "finding": "F-084",
+      "description": "New: analysis-vessel discovery registration failed (401), making it unreachable via discovery despite being deployed."
+    }
+  ],
+  "resolutions_since_prior": [],
+  "new_findings": ["F-083", "F-084", "F-085"],
+  "findings_tally": {
+    "open": 11,
+    "resolved": 0,
+    "regressed": 2,
+    "new_this_iteration": 3,
+    "prior_reconfirmed": ["F-079", "F-074", "F-075", "F-076", "F-036", "F-053", "F-080", "F-081", "F-082"]
+  },
+  "open_questions": [
+    "Will analysis-vessel.service be fixed (API key in env) and restarted to complete discovery registration?",
+    "Will the operator rebuild the container image from c1364e4 before the next restart to prevent another posterior reset?",
+    "Does coverage-tick Cycle 3 fire before 11:50:27Z? Even if yes, S.4a is already FAILED on structural grounds.",
+    "What is the post-S.4a plan: manually bootstrap the 6 zero-exec templates to unblock reachable_learned past 17?"
+  ],
+  "next_wake_recommendation": {
+    "delay_seconds": 1800,
+    "reason": "Active dev session (posterior reset occurred, analysis-vessel deployment in progress). S.4a window closes at 11:50:27Z (34 min). Wake at ~12:46Z to: (1) record final S.4a verdict after window close, (2) confirm whether analysis-vessel registration was fixed, (3) check Thomson recovery progress. 1800s keeps cache warm across the window closure."
+  }
+}

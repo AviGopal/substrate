@@ -1,0 +1,247 @@
+{
+  "investigation_id": "2026-05-25T10-38-48Z-investigation-019",
+  "generated_at": "2026-05-25T10:38:48Z",
+  "investigator_session_id": "claude-sonnet-4-6-audit-loop-34",
+  "prior_investigation_id": "2026-05-25T10-29-42Z-investigation-018",
+  "loop_iteration": 34,
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container"
+  },
+  "substrate_status": {
+    "container": "substrate-live",
+    "container_started_at": "2026-05-25T09:03:32Z",
+    "health": "healthy",
+    "running_version": "1.20.9",
+    "f069_fix_deployed": false,
+    "f069_fix_notes": "cb4dd022 updated the submodule pointer to c1364e4 at ~10:28Z but the running container image (metabob/substrate:dev) was built before this commit. The container has UPSERT...CONTENT (old code) not UPSERT...SET (fix). A rebuild+restart would be required to deploy c1364e4."
+  },
+  "s4a_window": {
+    "anchor_utc": "2026-05-25T07:50:27Z",
+    "deadline_utc": "2026-05-25T11:50:27Z",
+    "now_utc": "2026-05-25T10:38:48Z",
+    "minutes_remaining": 71.7,
+    "status": "OPEN",
+    "coverage_tick_cycle3_expected": "2026-05-25T11:30:11Z",
+    "minutes_to_cycle3": 51.4,
+    "minutes_margin_after_cycle3": 20.3
+  },
+  "findings": [
+    {
+      "id": "F-079",
+      "claim": "F-069 'Thompson posterior reset' is a misnaming: commit c1364e4 PREVENTS future resets — it does NOT reset current posteriors. The fix changes UPSERT...CONTENT to UPSERT...SET with ?? nullish coalescing so bootstrap-seeder no longer overwrites accumulated α/β on re-registration.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-38-48Z-investigation-019",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "git -C repos/metabob-activity-api show c1364e4 -p | head -100",
+          "excerpt": "fix(thompson): preserve posteriors on template re-registration (F-069). UPSERT...CONTENT was resetting thompson_alpha/thompson_beta to 1.0 and all execution counters to 0 on every bootstrap-seeder run. Changed to UPSERT...SET with ?? nullish coalescing so existing rows keep their accumulated posteriors (only new rows get initialized with defaults). Two sites fixed: template registration (POST /v2/activities/templates) and improvised variant creation (POST /v2/activities/improvise).",
+          "verified_at": "2026-05-25T10:38:48Z"
+        },
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live grep -n 'UPSERT.*CONTENT' /vessels/activity-api/src/routes/activities.ts | head -5",
+          "excerpt": "1246: UPSERT variant_performance_metrics:`${metricsRecordIdSlug}` CONTENT { ... — confirms the running container has the OLD code, not the fix. The fix is in the super-repo submodule pointer (cb4dd022) but NOT deployed to the running container.",
+          "verified_at": "2026-05-25T10:38:48Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "The fix does not require immediate deployment. It prevents regression at the NEXT container restart/rebuild. A restart WITHOUT rebuilding from c1364e4 would run the old bootstrap-seeder and reset all posteriors. To safely deploy: rebuild image from c1364e4 first, then restart. Do NOT restart with the current image if preserving Thompson state is desired."
+    },
+    {
+      "id": "F-080",
+      "claim": "The F-069 fix is NOT currently deployed in the running container and does NOT affect S.4a outcome. S.4a is structurally blocked by flat reachable_learned=17/23, independent of the posterior reset mechanism.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-38-48Z-investigation-019",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl http://localhost:18080/v2/activities/templates?limit=100 | python3 shape analysis",
+          "excerpt": "reachable_learned=17, reachable_total=23. Unlearned shapes: commandResult (4 templates), fileEditResult (1), judgmentPropagated (1), sensitivity_evidence (1), test_audit_report (1), vesselScaffolded (1). Same as investigation-018. coverage_progress requires STRICTLY INCREASING reachable_learned across >=3 consecutive 1h windows. With reachable_learned flat at 17, coverage_progress=false regardless of whether coverage-tick executes a third time.",
+          "verified_at": "2026-05-25T10:38:48Z"
+        },
+        {
+          "kind": "command",
+          "command": "Thompson analysis of 18 templates with executions",
+          "excerpt": "18 templates have executions (up from 17 in investigation-018) but produce only 17 unique shapes — Core Activity Audit, Forge Vessel For Shape, and Debug Failing Audit each produced 1 execution but their output shapes (activity_template, analysis, patch, code_modification_proposal, system_modification_proposal, human_review_request) are already in the learned set. Net change in reachable_learned: 0.",
+          "verified_at": "2026-05-25T10:38:48Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "For coverage_progress=true, boredom-vessel must dispatch at least one template that produces a currently-unlearned shape (commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, or vesselScaffolded) within the measurement window. These templates have zero Thompson priors — boredom's rotation must include them OR operator must manually trigger one."
+    },
+    {
+      "id": "F-081",
+      "claim": "A container restart to apply the F-069 fix (c1364e4) would DESTROY all accumulated Thompson posteriors (Validator Dispatch α=300/n=651, Slot Binding α=44/n=89) because the running container still has UPSERT...CONTENT, and bootstrap-seeder runs on every container start.",
+      "category": "lift",
+      "severity": "critical",
+      "first_seen_in": "2026-05-25T10-38-48Z-investigation-019",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u bootstrap-seeder --since 09:00 | grep -E 'seeding|seeded|Starting'",
+          "excerpt": "09:03:36 Starting bootstrap-seeder. 09:03:38 Seeding 13 shared templates. 09:03:40 Seeding complete: 13/13 templates seeded. This ran on the container restart at 09:03:32Z. The previous container (started ~06:30Z) had the same pattern. Each restart triggers UPSERT CONTENT which resets α/β to 1.0 for all 13 templates — then the system rebuilds posteriors from scratch through execution.",
+          "verified_at": "2026-05-25T10:38:48Z"
+        },
+        {
+          "kind": "command",
+          "command": "Thompson state: Validator Dispatch α=300 β=1 n=651 ok=651",
+          "excerpt": "If container restarts NOW with current image: all 651 validator-dispatch executions' posteriors reset to α=1, β=1. System would need to rebuild 651+ executions' worth of learning. Coverage-tick α=2 β=2 would reset to α=1 β=1. The S.4a window (73 min) would not survive this posterior collapse.",
+          "verified_at": "2026-05-25T10:38:48Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "CRITICAL: Do NOT restart the container with the current image during the S.4a window. If deploying c1364e4 is required, rebuild the image first (make -C scripts/substrate build) so the new bootstrap-seeder (SET with ??) runs instead of CONTENT. Alternatively, defer deployment until after 11:50Z when the S.4a window closes, since the outcome is already structurally decided."
+    },
+    {
+      "id": "F-074",
+      "claim": "S.4a window has 71.7 minutes remaining (deadline 11:50:27Z). Coverage-tick Cycle 3 is expected at ~11:30:11Z (53 min from now) based on observed 109.9-minute cadence between Cycle 1 (07:50:27Z) and Cycle 2 (09:40:19Z).",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "python3 cadence analysis",
+          "excerpt": "Cycle1=07:50:27Z, Cycle2=09:40:19Z. Cadence=109.9min. Cycle3_expected=11:30:11Z. Deadline=11:50:27Z. Margin=20.3 min after Cycle3 before deadline. But even if Cycle 3 fires successfully, coverage_progress=false because reachable_learned=17/23 is flat — not strictly increasing across consecutive windows.",
+          "verified_at": "2026-05-25T10:38:48Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "No timing intervention possible. S.4a fate is determined by whether reachable_learned increases in the next 1h window — a function of boredom template selection, not operator action within the remaining window."
+    },
+    {
+      "id": "F-075",
+      "claim": "S.4a remains STRUCTURALLY BLOCKED: reachable_learned=17/23 has not changed since investigation-016. The 6 unlearned shapes (commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, vesselScaffolded) come from templates with zero Thompson priors — boredom's probabilistic rotation virtually never selects them.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl http://localhost:18080/v2/activities/templates?limit=100 | shape analysis",
+          "excerpt": "18 templates with executions (up from 17), but reachable_learned still 17. New templates executed (Core Activity Audit, Forge Vessel For Shape, Debug Failing Audit) produce shapes already in the learned set. Zero-exec templates with novel shapes: branch-health, release-change, ship-change, add-resolver-to-vessel, propagate-judgment, scaffold-new-vessel, run-sensitivity-probe, audit-test-report, probe-untraversed-edge — all α=1 β=1 (never run).",
+          "verified_at": "2026-05-25T10:38:48Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged from investigation-018. Boredom must rotate to unlearned-shape templates. Alternatively, operator can manually trigger one of the zero-exec templates via MiniBob or direct goal dispatch to bootstrap coverage."
+    },
+    {
+      "id": "F-076",
+      "claim": "The org_id SQL fix (766cdbea) remains effective: coverage-tick has accumulated α=2, β=2, n=4 (2 success, 2 fail) without reverting. The fix is data-level and persists in SurrealDB across bootstrap-seeder restarts (SurrealDB data survives container restarts).",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl http://localhost:18080/v2/activities/templates | grep coverage-tick metrics",
+          "excerpt": "coverage-tick: thompson_alpha=2 thompson_beta=2 total_executions=4 successful_executions=2 (note: template-row fields show α=1 β=1 total_executions=0 — the variant_performance_metrics row carries the correct values). Container restarted at 09:03:32Z and bootstrap-seeder ran 09:03:38-40Z. The UPSERT CONTENT reset α/β to 1 for this template during that restart, then 2 subsequent successes (07:50 and 09:40) rebuilt α to 2. The data-level fix itself was a single SQL UPDATE before 09:03; bootstrap wiped it; the 09:40 success re-applied +1α.",
+          "verified_at": "2026-05-25T10:38:48Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "The current α=2 β=2 coverage-tick state is durable in SurrealDB but would reset to α=1 β=1 if the container restarts (bootstrap-seeder CONTENT wipe pattern). Deploying c1364e4 (via image rebuild) would prevent future resets."
+    },
+    {
+      "id": "F-036",
+      "claim": "create-shape-provider-goal continues to fail with all 3 child tasks succeeding but parent recording status=failure, duration=4ms — the parent-fail-on-child-success pattern is unresolved. 22 new failures observed since investigation-018.",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T09-59-06Z-investigation-015",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl http://localhost:18080/v2/activities/execution-traces?limit=500 | python3 activity counter",
+          "excerpt": "create-shape-provider-goal: 22 new failures in page-1 (09:05 to 10:36 window). Pattern unchanged: parent fails in 3-6ms, child tasks succeed. Total since session: 91 total, 0 success, 91 fail (was 55 in investigation-018). β=45 in Thompson.",
+          "verified_at": "2026-05-25T10:38:48Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "No new information. Structural bug in parent/child execution trace recording in goal-host-vessel."
+    },
+    {
+      "id": "F-082",
+      "claim": "Boredom-vessel is actively dispatching goals on the 5-minute timer: goal[0]=coverage at 10:15, goal[1]=probe-unlearned at 10:20, goal[2]=topology at 10:25, goal[3]=escalation at 10:30, goal[4]=health-check at 10:35. No coverage-tick execution has fired since Cycle 2 (09:40Z) despite this active rotation.",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T10-38-48Z-investigation-019",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u boredom-vessel --since 10:00 | tail -30",
+          "excerpt": "10:15:45 submitting goal[0]: measure substrate topology and report coverage progress → 10:19:30 dispatched exec_7iwc2vfw status=completed. 10:20:45 submitting goal[1]: probe unlearned shapes → 10:21:24 dispatched exec_h6vo4z3h completed. 10:25:45 submitting goal[2]: run full topology discovery chain → 10:26:24 dispatched exec_139571nk completed. 10:30:45 submitting goal[3]: identify shapes with no known producer → 10:34:41 dispatched exec_hll6e73x completed. 10:35:45 submitting goal[4]: check substrate health.",
+          "verified_at": "2026-05-25T10:38:48Z"
+        },
+        {
+          "kind": "command",
+          "command": "curl http://localhost:18080/v2/activities/execution-traces?limit=500 | python3 trace analysis",
+          "excerpt": "None of these boredom dispatches produced a coverage-tick activity trace. The goals are being submitted but Thompson routing selects validator-dispatch (α=300) and slot-binding (α=44) for nearly all sub-activities, producing 0 coverage-tick executions in the 09:40→10:38 window (58 minutes).",
+          "verified_at": "2026-05-25T10:38:48Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "The boredom goals (coverage, probe-unlearned, topology) are resulting in executions but the goal-host-vessel's Thompson router selects validator-dispatch for them rather than coverage-tick. This is the Thompson monoculture problem — validator-dispatch α=300 dominates all selections even when the goal text explicitly mentions coverage. The 53-minute wait for Cycle 3 depends on boredom eventually submitting a goal that maps to coverage-tick via template recommendation."
+    },
+    {
+      "id": "F-053",
+      "claim": "failure_mode=null on all failures persists with no fix deployed.",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T09-42-37-investigation-014",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl http://localhost:18080/v2/activities/execution-traces?limit=200 | failures with null failure_mode",
+          "excerpt": "22 create-shape-provider-goal failures (3-6ms duration) all have failure_mode=null. No change since investigation-018.",
+          "verified_at": "2026-05-25T10:38:48Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged. Executor-level fix needed."
+    }
+  ],
+  "posterior_reset_analysis": {
+    "commit": "cb4dd022 (super-repo) → c1364e4 (activity-api)",
+    "mechanism": "PREVENTION not RESET: changes UPSERT...CONTENT to UPSERT...SET with ?? nullish coalescing",
+    "currently_deployed": false,
+    "deployment_risk": "CRITICAL — restarting container with current image triggers OLD bootstrap-seeder which uses UPSERT CONTENT and resets ALL 13 seeded template posteriors (Validator Dispatch α=300→1, Slot Binding α=44→1, coverage-tick α=2→1). Would destroy 1.5h of learning state.",
+    "safe_deployment_path": "Rebuild image from c1364e4 first (make -C scripts/substrate build), then restart. The new bootstrap-seeder would preserve accumulated α/β via SET+??.",
+    "s4a_impact": "None. The fix prevents future resets but does not cause coverage_progress=true. S.4a is blocked by flat reachable_learned=17, not by posterior magnitude."
+  },
+  "s4a_verdict": {
+    "window_status": "OPEN",
+    "minutes_remaining": 71.7,
+    "cycle3_timing_viable": true,
+    "cycle3_expected_utc": "2026-05-25T11:30:11Z",
+    "coverage_progress_when_cycle3_fires": "false",
+    "structural_block": "reachable_learned=17/23 is FLAT — not strictly increasing across consecutive 1h windows. Even if Cycle 3 fires at 11:30Z, the coverage_progress field will be false because no new shapes have been learned in the last 58+ minutes.",
+    "would_restart_help": false,
+    "would_restart_hurt": true,
+    "final_verdict": "S.4a WILL FAIL — timing is viable (Cycle 3 expected 20 min before deadline) but coverage_progress=false structurally. The 6 unlearned shapes have zero-prior templates that boredom has never selected."
+  },
+  "regressions_since_prior": [],
+  "resolutions_since_prior": [],
+  "new_findings": ["F-079", "F-080", "F-081", "F-082"],
+  "findings_tally": {
+    "open": 9,
+    "resolved": 0,
+    "regressed": 0,
+    "new_this_iteration": 4,
+    "prior_reconfirmed": ["F-074", "F-075", "F-076", "F-036", "F-053"]
+  },
+  "open_questions": [
+    "Will the operator rebuild the container image from c1364e4 before attempting any restart? A restart with the current image resets all Thompson posteriors.",
+    "Will boredom-vessel's rotation select coverage-tick in the next 53 minutes (before 11:30Z) to produce Cycle 3? Even if yes, coverage_progress=false due to flat reachable_learned.",
+    "After S.4a window closes at 11:50Z, what is the operator's plan for achieving coverage_progress=true? Manually triggering one of the 6 zero-exec templates (branch-health, release-change, ship-change, etc.) would bootstrap reachable_learned past 17.",
+    "Is the create-shape-provider-goal parent-fail pattern causing the harness to record unlearned shapes as attempted but failed, thereby preventing coverage attribution?"
+  ],
+  "next_wake_recommendation": {
+    "delay_seconds": 1800,
+    "reason": "S.4a window closes at 11:50:27Z (~72 min from now). Coverage-tick Cycle 3 expected at ~11:30Z (~52 min). Wake at 12:08Z to verify: (1) whether Cycle 3 fired, (2) coverage_progress field value, (3) whether S.4a window closed with pass or fail, (4) whether any container restart occurred. 1800s keeps cache warm and arrives 18 minutes after expected Cycle 3 and ~17 minutes after window closure."
+  }
+}

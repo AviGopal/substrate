@@ -1,0 +1,792 @@
+{
+  "investigation_id": "2026-05-25T08-58-34-investigation-010",
+  "generated_at": "2026-05-25T08:58:34Z",
+  "investigator_session_id": "claude-sonnet-4-6-iter-026",
+  "prior_investigation_id": "2026-05-25T08-52-35-investigation-009",
+  "loop_iteration": 26,
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container",
+    "substrate_reachable": true,
+    "substrate_version": "1.20.9",
+    "auth_verified": true,
+    "container_name": "substrate-live",
+    "container_image": "metabob/substrate:dev",
+    "container_status": "Up 7 minutes",
+    "container_start_time": "2026-05-25T08:50:00Z (approx)",
+    "health_check": {
+      "redis": "healthy",
+      "surrealdb": "healthy",
+      "discovery": "unhealthy (Was there a typo in the url or port?)",
+      "embedding": "healthy (all-MiniLM-L6-v2, dim=384)",
+      "pool_size": 0
+    }
+  },
+  "commits_since_prior": [
+    {
+      "sha": "71feaeff",
+      "message": "fix(substrate): boredom-vessel TimeoutStartSec=300 — topology goals exceed default 90s",
+      "files_changed": ["scripts/substrate/units/boredom-vessel.service"],
+      "impact": "Systemd unit now allows boredom-vessel 300s to complete before being killed. Prior: 90s default caused SIGTERM during topology goal execution. Verified active: 'TimeoutStartSec=300' present in systemctl cat output."
+    },
+    {
+      "sha": "82095119",
+      "message": "chore(validation): update dev coordination — 6/6 closure, Thompson fix, boredom timeout",
+      "files_changed": ["validation/state/agent-coordination.json"],
+      "impact": "Dev agent updated coordination state at 08:50:00Z claiming: (1) all 6/6 closure gates closed, (2) Thompson posteriors now updating correctly after normalizeActivityId fix, (3) boredom timeout 300s shipped. coordination.agents.dev.open_gates = []."
+    },
+    {
+      "sha": "87300931",
+      "message": "fix(closure-audit): substrate API key fallback + docker exec for subagents probe",
+      "files_changed": ["validation/scripts/closure-audit.ts", "validation/state/closure-status.json"],
+      "impact": "Two changes: (1) API key resolution now tries /workspace/.substrate-secrets before ~/.metabob/config.json — the audit was using operator-side key which was invalid inside the substrate; (2) subagents closure test now falls back to docker exec when port 18210 isn't host-mapped. This caused the subagents gate to show 'closed' even though port 18210 is NOT mapped on the host."
+    },
+    {
+      "sha": "61478b0b",
+      "message": "docs(validation): 2026-05-25 finding — Thompson normalize + proxy resolver + closure 6/6",
+      "files_changed": ["validation/findings/validation-2026-05-25.md"],
+      "impact": "New finding document. Referenced by dev coordination update. Content not yet readable (file was not found at expected path during investigation; path may be 'validation/findings/')."
+    },
+    {
+      "sha": "4bb6ca7e",
+      "message": "chore: update metabob-activity-api submodule pointer (Thompson fix + migration 138)",
+      "files_changed": ["repos/metabob-activity-api"],
+      "impact": "Submodule pointer updated to commit containing: (1) normalizeActivityId() in posterior-update.ts called on rawActivityId before WHERE clause — strips 'activity:⟨⟩' prefix so UPDATE hits the correct variant_performance_metrics row; (2) migration 138: execution_trace_content.created_at changed to option<datetime> with VALUE $value OR time::now(), fixing 'Found NONE for field created_at' on every trace write."
+    }
+  ],
+  "migration_138_analysis": {
+    "file": "repos/metabob-activity-api/sql/migrations/138-execution-trace-content-optional-created-at.surql",
+    "content": "DEFINE FIELD OVERWRITE created_at ON execution_trace_content TYPE option<datetime> VALUE $value OR time::now();",
+    "what_was_broken": "VALUE default on DEFINE FIELD doesn't fire on INSERT INTO in this SurrealDB version. When caller omits created_at, the field gets NONE, causing 'Found NONE for field created_at' on every execution_trace_content write. This was a non-fatal but logged error on every trace.",
+    "fix_mirrors": "Mirrors migration 133 (stored_at on same table). Both fields had the same problem; 133 fixed stored_at, 138 fixes created_at.",
+    "impact_on_thompson": "Reduced error noise on trace writes, but the real Thompson fix is the normalizeActivityId() call in posterior-update.ts, not this migration."
+  },
+  "thompson_fix_analysis": {
+    "location": "repos/metabob-activity-api/src/lib/posterior-update.ts, line 437",
+    "code": "const activityId = normalizeActivityId(rawActivityId);",
+    "what_was_broken": "Prior to this fix, rawActivityId was used directly in WHERE clause: 'WHERE variant_id = $activity_id'. If the incoming trace had activity_id='activity:⟨coverage-tick⟩' but variant_performance_metrics stored 'coverage-tick', the UPDATE matched 0 rows, leaving posteriors at their initial values forever. This explains all the 0-update observations across 100+ executions in prior investigations (F-037).",
+    "fix_mechanism": "normalizeActivityId() strips the 'activity:⟨⟩' wrapper. After the fix, WHERE variant_id='coverage-tick' matches the stored row and posteriors update.",
+    "current_state": "coverage-tick alpha=1 beta=2 execs=3 (all from BEFORE the fix landed). These 3 failures drove beta to 2 correctly — BUT this investigation cannot confirm new post-fix executions have landed yet. The substrate restarted at ~08:50Z and only a few boredom cycles have fired.",
+    "critical_caveat": "The Thompson fix is in the SUBMODULE code. Whether the running container image contains this fix depends on when 'make -C scripts/substrate substrate-restart-metabob-activity-api' was last run. The submodule pointer update (4bb6ca7e) updates the source, but the container still runs the image built BEFORE the fix unless explicitly rebuilt and restarted."
+  },
+  "closure_gate_analysis": {
+    "reported_status": "6/6 closed per closure-status.json (audit_run_at: 2026-05-25T08:50:53Z)",
+    "gates": {
+      "operator-memory": {"status": "closed", "evidence": "memoryNote resolver live, 0 notes returned"},
+      "slash-skills": {"status": "closed", "evidence": "all 14 required resolver shapes present"},
+      "subagents": {"status": "closed", "evidence": "goal-host-vessel healthy via docker exec — {status:healthy,vesselId:goal-host-vessel,...}"},
+      "github-actions": {"status": "closed", "evidence": "failure_mode_matrix_score resolver responded"},
+      "operator-shell": {"status": "closed", "evidence": "systemd_restart + substrate_health_tick resolvers present"},
+      "operator-spec-authoring": {"status": "closed", "evidence": "all 5 spec-authoring resolver shapes present"}
+    },
+    "subagents_gate_concern": "The subagents gate closed via the docker exec fallback path (commit 87300931). This is a methodological change: the gate now verifies goal-host-vessel is reachable INSIDE the container, not via the host-mapped port 18210. Port 18210 is still NOT mapped to the host (only 8080→18080, 8090→18090, 8100→18100). Subagents that run OUTSIDE the container cannot reach goal-host-vessel. The closure-audit.ts comment says port mapping requires container restart to activate Makefile fix. F-055 should be re-evaluated: the gate is 'closed' by probe methodology change, not by port mapping fix.",
+    "finding": "F-055 methodological closure — docker exec fallback means the gate tests internal reachability, not external (host-accessible) reachability. A subagent running outside the substrate container cannot dispatch to goal-host-vessel."
+  },
+  "boredom_timeout_analysis": {
+    "fix_verified": true,
+    "command": "docker exec substrate-live systemctl cat boredom-vessel.service",
+    "output_excerpt": "ExecStart=/root/.bun/bin/bun /vessels/boredom-vessel/src/index.ts / TimeoutStartSec=300",
+    "prior_behavior": "Boredom-vessel was killed after 90s (systemd default). Topology goals (e.g. 'measure the substrate topology') take > 90s to complete. This caused SIGTERM during execution, which appeared as boredom-vessel 'unreachable' errors.",
+    "observed_post_fix": "At 08:51:37Z boredom submitted goal[0] 'measure the substrate topology'. The process was NOT killed at 90s (08:53:07Z) — it ran until 08:56:37Z (300 seconds from start) before timing out on goal-host-vessel connection. This is a DIFFERENT failure: the goal-host-vessel connection itself is timing out (5 minutes), not the systemd unit.",
+    "new_finding": "F-061: boredom-vessel goal[0] topology goal 'measure the substrate topology' still failing but now with 'goal-host-vessel unreachable: The operation timed out.' after 300s instead of SIGTERM after 90s. The topology goal is triggering a 5-minute HTTP timeout on the boredom→goal-host call, not a 90s systemd kill. Root cause: goal-host-vessel is accepting the /run-goal request but taking > 300s to complete, or the connection is hanging without response."
+  },
+  "coverage_tick_post_fix": {
+    "template_metrics": {
+      "coverage-tick": {"alpha": 1, "beta": 2, "execs": 3, "success_rate": 0},
+      "substrate-health-tick": {"alpha": 1, "beta": 2, "execs": 3, "success_rate": 0},
+      "escalate-unknown-shape": {"alpha": 1, "beta": 2, "execs": 2, "success_rate": 0},
+      "probe-reachable-unlearned": {"alpha": 1, "beta": 2, "execs": 2, "success_rate": 0},
+      "harness-check-scenario": {"alpha": 1, "beta": 2, "execs": 5, "success_rate": 0},
+      "harness-run-matrix": {"alpha": 2, "beta": 3, "execs": 7, "success_rate": 0}
+    },
+    "observation": "ZERO new executions since investigation-009 (09 minutes ago). The 3 coverage-tick execs from before the restart are unchanged. No new boredom cycles have successfully dispatched to goal-host-vessel since the latest container restart at ~08:50Z. Boredom fired at 08:56:37Z but goal[0] timed out; goal[1] 'probe unlearned shapes' returned status=failed immediately (executionId=exec_mvvea66f).",
+    "thompson_fix_visible": "Cannot confirm post-fix posteriors yet — no new executions landed in this investigation window. The Thompson fix requires new execution traces to write. Discovery still unhealthy in activity-api /health."
+  },
+  "discovery_regression": {
+    "current_count": 4,
+    "prior_count_iter009": 5,
+    "regression": true,
+    "explanation": "In investigation-009, 5 vessels were registered (development-vessel had just joined). Now 4 vessels (24 shapes). This matches the pattern: goal-host-vessel periodically de-registers and re-registers during restarts. The current 4-vessel count is 4 healthy vessels with heartbeats at ~60s intervals. activity-api /health still shows discovery unhealthy ('Was there a typo in the url or port?') suggesting the discovery-client inside activity-api is failing DNS lookup."
+  },
+  "s4a_window_status": {
+    "s1": "passed (bun test green)",
+    "s2": "passed",
+    "s3": "passed",
+    "s4a": "BLOCKED — requires coverage_progress=true on a successful coverage-tick execution. No successful coverage-tick since investigation began.",
+    "s4b": "BLOCKED — requires overall_passing=true on substrate-health-tick",
+    "cycle_count": "8 cycles on disk (cycle-0 through cycle-8, no cycle-9). Stalled since investigation-001.",
+    "next_window": "S.4a window requires 3 consecutive coverage-tick successes with coverage_progress=true. Currently 0 successes. Boredom-vessel failing to dispatch topology goals successfully."
+  },
+  "development_vessel_seeder": {
+    "status": "NO ENTRIES in last 5 minutes of journalctl",
+    "interpretation": "development-vessel service produced no output since container restart settled. The seeder sub-process (which was failing all 15 templates with 'Unable to connect' in iter-009) may have run at startup and completed silently, OR the seeder is not firing on this restart. Cannot confirm F-059 improved or not."
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "claim": "Gameable lift; cycle-8 unchanged.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls /home/avi/documents/work/exp-repo/metabob-devbob/validation/failure-modes/cycles/*.json",
+          "excerpt": "8 cycle files (cycle-0 through cycle-8). No cycle-9. Unchanged from iter-009.",
+          "verified_at": "2026-05-25T08:58:34Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-002",
+      "claim": "6 malformed proposals (epoch-zero timestamps).",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-003",
+      "claim": "Traces lack signature; task_count=0 on all traces via API.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-004",
+      "claim": "Only 8 failure-mode scenarios on disk (spec implies 63).",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-005",
+      "claim": "No cycle-9 generated. Lift cycle count stalled at 8.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-006",
+      "claim": "Hardcoded identity.metabob.com and svc.cluster.local defaults in multiple files.",
+      "category": "deployment",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-007",
+      "claim": "Trailblazing unimplemented.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-008",
+      "claim": "Mythic language in substrate self-description.",
+      "category": "idiom",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-009",
+      "claim": "substrate-explicit-vessels at 48/53 tasks. Tasks 1b.6, 2.4, 2.5, 6.3 still open.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-010",
+      "claim": "Root clean.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-011",
+      "claim": "Lift-criterion-hardening zero DEV.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-012",
+      "claim": "Cycle reports substrate-anonymous.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-013",
+      "claim": "6 invalid + 3 subagent proposals remain.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-014",
+      "claim": "Embedding healthy.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-015",
+      "claim": "total: -1 sentinel in trace list endpoint.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-016",
+      "claim": "Narrator stable.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-017",
+      "claim": "Ribosome firing.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-018",
+      "claim": "Snapshot consistency.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-019",
+      "claim": "Discovery 401 on resolve queries.",
+      "category": "deployment",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u discovery-vessel.service --no-pager -n 10 --since '2 minutes ago'",
+          "excerpt": "GET /registry/stats returned 401 at 08:57:30Z. Heartbeats returning 200. Only unauthenticated /registry/stats blocked. POST /resolve not observed in this window.",
+          "verified_at": "2026-05-25T08:58:34Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-020",
+      "claim": "WS event capture inactive — ribosome-vessel auth loop.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-49-08-investigation-004",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-021",
+      "claim": "concept-db running; seeder failed.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-49-08-investigation-004",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-022",
+      "claim": "Clock alignment fine.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T02-28-30-investigation-001",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-023",
+      "claim": "No cycle-9.",
+      "category": "lift",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T02-28-30-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-024",
+      "claim": "Boredom-vessel executing.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-025",
+      "claim": "Doc-vs-runtime gap-001 spec-only.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-026",
+      "claim": "Cycle-8 stamped on stale coverage.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-027",
+      "claim": "Dev shipping at record pace — superseded.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-028",
+      "claim": "goal-host-vessel operational with health check.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-58-12-investigation-003",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-029",
+      "claim": "failure_mode still null on new path.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T03-58-12-investigation-003",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-030",
+      "claim": "RESOLVED: Thompson IS updating. Coverage-tick now shows execs=3 (was 0).",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-58-12-investigation-003",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-031",
+      "claim": "Template list returns only 2 of 28 via limit param — scope filter issue.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T04-58-14-investigation-004",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-032",
+      "claim": "Registry thrashing resolved.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T05-37-11-investigation-005",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-033",
+      "claim": "Dev coord engaged.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T05-37-11-investigation-005",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-034",
+      "claim": "Validator engaged.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T07-00-44-investigation-006",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-035",
+      "claim": "gap-006 framing superseded.",
+      "category": "lift",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T07-00-44-investigation-006",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-036",
+      "claim": "WS auth 401 storm on startup — identity-vessel rate-limiting.",
+      "category": "deployment",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T07-00-44-investigation-006",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-037",
+      "claim": "RESOLVED: Thompson disconnect resolved. Topology templates now executing (execs>0).",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T17-24-17-investigation-010",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-038",
+      "claim": "composition_chain ALIVE.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T20-26-32-investigation-011",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-039",
+      "claim": "Validator wrote dev-guidance.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T00-34-24-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-040",
+      "claim": "substrate-explicit-vessels MAJOR PROGRESS. 48/53 tasks complete.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T01-39-09-investigation-002",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-041",
+      "claim": "S.4a window blocked. coverage-tick executing but failing (execs=3, success_rate=0).",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T01-39-09-investigation-002",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "curl -H Authorization http://localhost:18080/v2/activities/templates",
+          "excerpt": "coverage-tick: alpha=1, beta=2, execs=3, success_rate=0. No new executions in this investigation window (9 minutes post-restart). Boredom fired once but goal[0] timed out after 300s; goal[1] returned status=failed immediately.",
+          "verified_at": "2026-05-25T08:58:34Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-042",
+      "claim": "5 vessels registered in discovery; 28 shapes.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T02-51-09-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live curl -sf http://localhost:8100/registry/stats",
+          "excerpt": "{totalVessels:4, totalShapes:24, healthyCount:4}. DOWN from 5 vessels in iter-009. Regression: one vessel (likely goal-host-vessel during restart) temporarily deregistered. Heartbeats active at 60s.",
+          "verified_at": "2026-05-25T08:58:34Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Vessel count dropped from 5 to 4. This may be transient (goal-host deregistered then reregistered). Re-verify on next wake."
+    },
+    {
+      "id": "F-043",
+      "claim": "RESOLVED: Thompson posteriors updating on topology templates.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T02-51-09-investigation-003",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-044",
+      "claim": "substrate-live container restarted.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-045",
+      "claim": "Narrator running but no alerting on substrate crashes.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-046",
+      "claim": "Template count 28; external key sees only 2 via limit param.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-047",
+      "claim": "Gate 27.3.g.3 marked done but concept-db live smoke test (1b.6) never passed.",
+      "category": "lift",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-048",
+      "claim": "minibob removed from Dockerfile.substrate — Phase 8 complete.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T06-03-29-investigation-004",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-049",
+      "claim": "Bootstrap-seeder race condition — RESOLVED.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T06-38-15-investigation-005",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-050",
+      "claim": "Auth cascade: self-healed at ~15-16 min post-startup.",
+      "category": "deployment",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T06-38-15-investigation-005",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-051",
+      "claim": "RESOLVED: Topology templates now being selected by Thompson.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T06-48-38-investigation-006",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-052",
+      "claim": "composition_chain empty resolved.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T06-48-38-investigation-006",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-053",
+      "claim": "failure_mode null on all failure traces.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T06-48-38-investigation-006",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-054",
+      "claim": "RESOLVED: 9c14b955 fixes active in new container.",
+      "category": "deployment",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T07-02-07-investigation-007",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-055",
+      "claim": "Subagent closure gate — METHODOLOGICALLY CLOSED via docker exec fallback; host port 18210 still not mapped.",
+      "category": "lift",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T07-02-07-investigation-007",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker inspect substrate-live --format '{{json .HostConfig.PortBindings}}'",
+          "excerpt": "PortBindings: {8080/tcp: [{HostPort: 18080}], 8090/tcp: [{HostPort: 18090}], 8100/tcp: [{HostPort: 18100}]}. Port 8210 not mapped to host.",
+          "verified_at": "2026-05-25T08:58:34Z"
+        },
+        {
+          "kind": "command",
+          "command": "cat validation/state/closure-status.json",
+          "excerpt": "subagents: {closed: true, evidence: 'goal-host-vessel healthy via docker exec: {status:healthy...}'}",
+          "verified_at": "2026-05-25T08:58:34Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "The closure-audit.ts now falls back to docker exec when port 18210 isn't mapped. This closes the gate for probes running INSIDE the container. External subagents (running on the host, as Claude Code does) still cannot reach goal-host-vessel. The gate should distinguish internal vs external accessibility. True closure requires either: (a) port mapping -p 18210:8210 in Docker run command, or (b) gate criteria explicitly scoped to internal-only reachability."
+    },
+    {
+      "id": "F-056",
+      "claim": "Heuristic boost inflates newly-seeded templates.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T07-02-07-investigation-007",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-057",
+      "claim": "create-shape-provider-goal failures dominating failure traces.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T08-43-08-investigation-008",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "Template metrics",
+          "excerpt": "create-shape-provider-goal: alpha=1, beta=2, execs=35, success_rate=0. Still highest execution count among failing templates.",
+          "verified_at": "2026-05-25T08:58:34Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-058",
+      "claim": "Thompson IS updating. RESOLVED.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T08-43-08-investigation-008",
+      "evidence": [],
+      "status": "resolved"
+    },
+    {
+      "id": "F-059",
+      "claim": "development-vessel template seeder fails all 15 templates on every container start ('Unable to connect').",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T08-52-35-investigation-009",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u development-vessel.service --no-pager -n 30 --since '5 minutes ago'",
+          "excerpt": "No entries in last 5 minutes. Cannot re-verify F-059 in this window — seeder runs at startup and may have already completed or been skipped.",
+          "verified_at": "2026-05-25T08:58:34Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-060",
+      "claim": "All topology templates failing — coverage-tick execs=3 success_rate=0.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T08-52-35-investigation-009",
+      "evidence": [
+        {
+          "kind": "http_query",
+          "command": "Template list metrics",
+          "excerpt": "coverage-tick: execs=3, alpha=1, beta=2. No new executions in this 9-minute window. Boredom goal[0] timed out; goal[1] returned status=failed immediately. Root cause still unclear: proxy resolver registered (30 resolvers in goal-host) but execution succeeds zero times.",
+          "verified_at": "2026-05-25T08:58:34Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-061",
+      "claim": "NEW: Boredom goal[0] 'measure the substrate topology' times out goal-host-vessel after 300s — not a systemd kill but a 5-minute HTTP connection timeout.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T08-58-34-investigation-010",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u boredom-vessel.service --no-pager --since '10 minutes ago'",
+          "excerpt": "08:51:37Z: boredom tick, submitting goal[0] 'measure the substrate topology'. 08:56:37Z (300s later): 'goal-host-vessel unreachable: The operation timed out.' Then immediately: goal[1] 'probe unlearned shapes' dispatched and returned status=failed in 1 second.",
+          "verified_at": "2026-05-25T08:58:34Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "TimeoutStartSec=300 fixed the SIGTERM issue but revealed that the boredom→goal-host HTTP call for topology goals takes > 300s. The goal-host-vessel is either hanging on the LLM call or spending too long in the execution pipeline. Consider: (a) adding request-level timeout on boredom → goal-host POST /run-goal (e.g. 60s), (b) reducing topology goal scope so execution completes under 60s, (c) checking goal-host-vessel logs for what's consuming the 300s."
+    },
+    {
+      "id": "F-062",
+      "claim": "NEW: Thompson normalizeActivityId fix is in submodule source but NOT verified active in running container image.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T08-58-34-investigation-010",
+      "evidence": [
+        {
+          "kind": "file_ref",
+          "location": "repos/metabob-activity-api/src/lib/posterior-update.ts:437",
+          "excerpt": "const activityId = normalizeActivityId(rawActivityId); — normalizeActivityId strips 'activity:⟨⟩' prefix before WHERE clause. Fix present in submodule source.",
+          "verified_at": "2026-05-25T08:58:34Z"
+        },
+        {
+          "kind": "http_query",
+          "command": "Template metrics: coverage-tick execs in this window",
+          "excerpt": "coverage-tick: execs=3, unchanged since iter-009. Zero new executions landed in this 9-minute window. Cannot confirm whether the running image has the fix active because no new traces have been written.",
+          "verified_at": "2026-05-25T08:58:34Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Verify the running container image was rebuilt after 4bb6ca7e landed. Run: docker exec substrate-live grep -r 'normalizeActivityId' /vessels/metabob-activity-api/src/ or check the built JS. If the image predates the fix, run 'make -C scripts/substrate substrate-restart-metabob-activity-api' to rebuild."
+    }
+  ],
+  "regressions_since_prior": ["F-042"],
+  "resolutions_since_prior": [],
+  "new_findings": ["F-061", "F-062"],
+  "open_questions": [
+    "F-061: What is goal-host-vessel doing for 300s on the topology goal? Check goal-host-vessel logs for the 08:51:37Z-08:56:37Z window — any LLM calls, resolver dispatches, or hangs visible?",
+    "F-062: Is normalizeActivityId fix live in the running container or only in the submodule source? Without a new successful trace, we cannot confirm the fix is doing anything.",
+    "F-055: Subagents gate closed via docker exec fallback — is this closure philosophically valid? The gate description says 'complex multi-step goals executable via goal-host-vessel without Claude Code subagents', which requires internal reachability, not host port mapping. Consider clarifying the gate semantics.",
+    "Coverage-tick has 3 failures and the proxy resolver is registered — but are those 3 failures ALL from before the proxy resolver fix (e53bae09)? If so, post-proxy-fix execution count is still 0 and the resolver registration has never been exercised.",
+    "F-042 regression: discovery went from 5 to 4 vessels. Is this a transient restart artifact or is development-vessel no longer registering?"
+  ],
+  "findings_tally": {
+    "open": 27,
+    "resolved": 34,
+    "regressed": 0,
+    "unverifiable": 1,
+    "total": 63,
+    "new_this_iteration": 2
+  },
+  "next_wake_recommendation": {
+    "delay_seconds": 1800,
+    "reason": "Thompson fix and boredom timeout fix both landed but neither has produced a verifiable post-fix execution. Need time for: (a) boredom to fire another topology goal and see if F-061 timeout persists, (b) new coverage-tick executions to land so we can verify F-062 (normalizeActivityId active). 30 min gives ~6 boredom cycles to fire."
+  }
+}
