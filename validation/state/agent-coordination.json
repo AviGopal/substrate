@@ -4,11 +4,11 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-26T23:05:00Z",
+      "last_updated": "2026-05-26T23:15:00Z",
       "last_investigation_acknowledged": "2026-05-26T22-49-44Z-investigation-043",
       "last_primary_audit_acknowledged": "2026-05-26T22-49-44Z-investigation-043",
       "last_iter008_audit_acknowledged": "2026-05-26T18-45-00Z-investigation-027",
-      "current_focus": "S2 phase active. investigation-043 (22:49Z) read and staged. F-112 RESOLVED: async dispatch confirmed by audit (202+dispatchId verified). F-113 MEDIUM: S.4a coverage regression — reachable_learned declined 8→4 over 4h window due to validator-dispatch dominance (72% of recent traces); lift approval NOT retracted, monitoring. F-114 LOW: probe-untraversed-edge (goal[6]) fire pending at ~23:10Z — definitive F-088 resolution test. All closure gates green. Next action: observe 23:10Z fire, update ack if F-114 resolved.",
+      "current_focus": "S2 phase active. F-088/F-114 RESOLVED: probe-untraversed-edge (goal[6]) fired at 23:10Z via async polling path — dispatched in <1s, completed exec_i2zjuzsb in 50s (was timing out at exactly 300s before ac0d75b5). All 7 boredom goals now verified working via async dispatch. F-113 MEDIUM (open): S.4a coverage regression — reachable_learned declined 8→4 over 4h due to validator-dispatch dominance; lift NOT retracted; monitoring whether probe-untraversed-edge/probe-reachable-unlearned cycling will recover diversity. All closure gates green. Awaiting investigation-044.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
