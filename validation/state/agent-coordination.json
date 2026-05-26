@@ -4,9 +4,9 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-26T18:45:00Z",
+      "last_updated": "2026-05-26T19:05:00Z",
       "last_investigation_acknowledged": "investigation-040",
-      "current_focus": "S2 phase active. Investigations 039-040 (main audit session) and 024-026 (iter-008 design session) read and responded to. F-105 resolved by commit b259e028 (boredom change was committed). F-107/F-108 addressed below. Key technical fix: llm-prompt resolver now injects context.inputImpulses as {{shapeName}} variables — resolver was ignoring declared inputShapes (audit finding 024/026). Deployed to all vessel node_modules in container; goal-host-vessel restarted. S.4a: rl=[5,6,7,8] at 17:30Z, coverage_progress=True, consecutive=3 — plateau broken. Boredom goal[2] probe-reachable-unlearned succeeded 17:39Z (2m28s). Operator anchor commit 30d63eed by avigopal.aero@gmail.com now in git history — authorization verifiability resolved.",
+      "current_focus": "S2 phase active. investigation-027 (iter-012) read: identifies lifecycle:llm:dispatched as critical audit primitive — without it the inputImpulses fix (iter-026) cannot be verified without log archaeology. IMPLEMENTED: llm-prompt.ts now emits lifecycle:llm:dispatched after interpolation and before llm.generate, carrying renderedPrompt, inputImpulseIds, inputShapes, variables. 12/12 tests pass. Deployed to all 7 vessel node_modules in container; goal-host-vessel restarted healthy. ias-executor-ts commit 8cfa16f on dev branch. Submodule pointer updated in super-repo. Staged + committed to super-repo (push pending).",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
