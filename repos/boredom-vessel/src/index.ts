@@ -29,8 +29,8 @@ const GOAL_INDEX_FILE = process.env.BOREDOM_GOAL_INDEX_FILE ?? "/tmp/boredom-goa
 //
 // NOTE: Goals that name templates explicitly ("run coverage-tick", "run substrate-health-tick")
 // ensure the LLM's compose_goal step selects the intended template rather than defaulting to
-// high-alpha templates. Goals must also name a distinctive output shape to force the right routing
-// via discover-by-shapes backward chaining — otherwise Thompson Sampling always picks coverage-tick.
+// high-alpha templates. expected_output_shapes per goal forces routing via recommend's
+// output-shape pre-filter — bypassing Thompson bias toward high-alpha templates.
 const AUTONOMOUS_GOALS: readonly string[] = [
   // topology / coverage — explicit template names + output shapes to bypass high-alpha template bias
   "run the coverage-tick activity to measure substrate topology coverage and emit a coverageReport",
@@ -43,6 +43,19 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   "run the harness-run-matrix activity to score all failure-mode scenarios against the live activity registry and emit a failureModeReport",
   // exploration — exercises n=0 templates to build Thompson priors; async dispatch now handles >5min runs
   "run the probe-untraversed-edge activity to find unreachable execution graph edges and emit a topologyGapReport",
+];
+
+// Optional expected_output_shapes per goal — forces recommend() to pre-filter by shape,
+// bypassing Thompson Sampling bias toward high-alpha templates like harness-run-matrix.
+// undefined means no shape constraint (use Thompson Sampling freely).
+const AUTONOMOUS_GOAL_OUTPUT_SHAPES: readonly (string[] | undefined)[] = [
+  ["coverageReport"],           // goal[0] coverage-tick
+  ["substrateHealthReport"],    // goal[1] substrate-health-tick
+  ["reachableUnlearnedReport"], // goal[2] probe-reachable-unlearned
+  undefined,                    // goal[3] harness-check-scenario (Thompson OK)
+  undefined,                    // goal[4] identify-unknown-shapes (Thompson OK)
+  ["failureModeReport"],        // goal[5] harness-run-matrix
+  ["topologyGapReport"],        // goal[6] probe-untraversed-edge
 ];
 
 const BOREDOM_TAG = "intent:boredom_source";
@@ -127,22 +140,27 @@ async function main(): Promise<void> {
 
   const goalIdx = await nextGoalIndex();
   const goal = AUTONOMOUS_GOALS[goalIdx]!;
+  const expectedOutputShapes = AUTONOMOUS_GOAL_OUTPUT_SHAPES[goalIdx];
   console.log(`[boredom-vessel] submitting goal[${goalIdx}]: "${goal}"`);
 
   let res: Response;
   try {
     // Async dispatch: POST /run-goal returns 202+dispatchId immediately (no 300s block).
     // We then poll GET /executions/:dispatchId until done or systemd kills us (TimeoutStartSec=600).
+    const requestBody: Record<string, unknown> = {
+      goal,
+      tags: ["intent:topology_discovery", BOREDOM_TAG],
+      variables: {
+        source: "boredom-vessel",
+      },
+    };
+    if (expectedOutputShapes) {
+      requestBody.expected_output_shapes = expectedOutputShapes;
+    }
     res = await fetch(`${GOAL_HOST_ENDPOINT}/run-goal`, {
       method: "POST",
       headers: authHeaders(),
-      body: JSON.stringify({
-        goal,
-        tags: ["intent:topology_discovery", BOREDOM_TAG],
-        variables: {
-          source: "boredom-vessel",
-        },
-      }),
+      body: JSON.stringify(requestBody),
     });
   } catch (err) {
     console.error(`[boredom-vessel] goal-host-vessel unreachable: ${(err as Error).message}`);

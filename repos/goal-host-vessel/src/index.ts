@@ -293,6 +293,9 @@ async function handleRunGoal(req: Request): Promise<Response> {
     ? (body.variables as Record<string, unknown>)
     : {};
   const tags = Array.isArray(body.tags) ? (body.tags as string[]) : undefined;
+  const expectedOutputShapes = Array.isArray(body.expected_output_shapes)
+    ? (body.expected_output_shapes as string[]).filter((s) => typeof s === "string")
+    : undefined;
   const parentExecutionId = typeof body.parent_execution_id === "string"
     ? body.parent_execution_id
     : undefined;
@@ -327,6 +330,7 @@ async function handleRunGoal(req: Request): Promise<Response> {
     tags,
     parentExecutionId,
     compositionChain,
+    expectedOutputShapes,
   }).then((result) => {
     record.status = result.trace.status === "failed" ? "failed" : "completed";
     record.executionId = result.trace.id;
