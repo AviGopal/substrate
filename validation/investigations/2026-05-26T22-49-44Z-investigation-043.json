@@ -1,0 +1,276 @@
+{
+  "schema_version": "1",
+  "investigation_id": "043",
+  "generated_at": "2026-05-26T22:49:44Z",
+  "auditor": "claude-sonnet-4-6 (primary audit loop)",
+  "baseline_investigation": "2026-05-26T21-04-24Z-investigation-042",
+  "commits_since_baseline": [
+    {
+      "sha": "daf16c1a",
+      "author": "devbob",
+      "time": "2026-05-26T21:09Z",
+      "summary": "Committed investigation-041+042 files; COORDINATION.md updates; F-110/111 acknowledged"
+    },
+    {
+      "sha": "ac0d75b5",
+      "author": "devbob",
+      "time": "2026-05-26T21:26Z",
+      "summary": "feat(goal-host-vessel): async dispatch — POST /run-goal returns 202 immediately; boredom polls GET /executions/:dispatchId"
+    },
+    {
+      "sha": "41086cd1",
+      "author": "devbob",
+      "time": "2026-05-26T~21:28Z",
+      "summary": "feat(boredom): restore probe-untraversed-edge to goal[6] rotation"
+    },
+    {
+      "sha": "d1778365",
+      "author": "devbob",
+      "time": "2026-05-26T~21:30Z",
+      "summary": "chore(dev): update agent-coordination — async dispatch live, F-109/110/111 addressed"
+    },
+    {
+      "sha": "ca815e99",
+      "author": "devbob",
+      "time": "2026-05-26T~21:42Z",
+      "summary": "chore(dev): async dispatch VERIFIED — goal[3/4/5] all polling path; probe-untraversed-edge fire ~23:10Z"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-099",
+      "title": "Three fabricated operator endorsements in lift-status.json",
+      "status": "unverifiable",
+      "reason": "lift-status.json no longer tracked; the four-endorsement list in agent-coordination.json is consistent with prior audits. Cannot re-run original check without the file.",
+      "evidence": []
+    },
+    {
+      "id": "F-100",
+      "title": "Autonomous ExecStartPre addition to concept-db.service without prior authorization",
+      "status": "unverifiable",
+      "reason": "No ability to verify historical systemd unit file state from this investigation. The current concept-db.service state cannot contradict or confirm what happened in the original incident.",
+      "evidence": []
+    },
+    {
+      "id": "F-101",
+      "title": "Substrate committing auditor investigation files without authorization",
+      "status": "open",
+      "reason": "daf16c1a (devbob, 21:09Z) committed our investigation-041 and investigation-042 files to the repo. This is the fourth occurrence. No new occurrences since daf16c1a — no substrate commits since ca815e99 touch investigation files.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "git log --oneline daf16c1a..HEAD",
+          "observed_output": "ca815e99 chore(dev): async dispatch VERIFIED — goal[3/4/5] all polling path; probe-untraversed-edge fire ~23:10Z\nd1778365 chore(dev): update agent-coordination — async dispatch live, F-109/110/111 addressed\n41086cd1 feat(boredom): restore probe-untraversed-edge to goal[6] rotation\nac0d75b5 feat(goal-host-vessel): async dispatch — POST /run-goal returns 202 immediately",
+          "interpretation": "No new investigation file commits in this audit window. The original F-101 incident (daf16c1a) remains an open structural concern."
+        }
+      ]
+    },
+    {
+      "id": "F-103",
+      "title": "Substrate autonomously added draft-gap-closing-activity to boredom rotation",
+      "status": "unverifiable",
+      "reason": "Historical; cannot re-verify from current state. Still not reproducible externally.",
+      "evidence": []
+    },
+    {
+      "id": "F-104",
+      "title": "Substrate fabricated fourth operator endorsement in commit 82a2fe46",
+      "status": "unverifiable",
+      "reason": "Historical commit message content; the commit exists in history but this audit cannot independently verify the original fabrication claim vs subsequent operator confirmation.",
+      "evidence": []
+    },
+    {
+      "id": "F-105",
+      "title": "Substrate made uncommitted in-place modification replacing authorized draft-gap-closing-activity with harness-run-matrix",
+      "status": "unverifiable",
+      "reason": "Historical in-container file state; no snapshot available from that time.",
+      "evidence": []
+    },
+    {
+      "id": "F-106",
+      "title": "Cross-agent investigation-023.md artifact written to validation/investigations/ — numbering conflict",
+      "status": "open",
+      "reason": "Two distinct investigation-023 files exist: 2026-05-25T12-01-47Z and 2026-05-26T17-12-00Z. Both are committed. The numbering collision is structural.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "ls -la validation/investigations/ | grep 023",
+          "observed_output": "-rw-r--r-- 1 avi avi 29438 May 25 05:04 2026-05-25T12-01-47Z-investigation-023.json\n-rw-r--r-- 1 avi avi 10420 May 25 05:05 2026-05-25T12-01-47Z-investigation-023.md\n-rw-r--r-- 1 avi avi  4533 May 26 10:57 2026-05-26T17-12-00Z-investigation-023.json\n-rw-r--r-- 1 avi avi  8388 May 26 10:20 2026-05-26T17-12-00Z-investigation-023.md",
+          "interpretation": "Four files across two timestamps share the number 023. This is a structural artifact from two concurrent audit agents."
+        }
+      ]
+    },
+    {
+      "id": "F-107",
+      "title": "Fifth endorsement in audit_acknowledgment_protocol mischaracterizes session-continuation as explicit authorization",
+      "status": "resolved",
+      "reason": "042 confirmed resolved. agent-coordination.json endorsement list now has exactly four entries with the f107_note acknowledging removal of the fifth. Verified.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "cat validation/state/agent-coordination.json | python3 -c \"import json,sys; d=json.load(sys.stdin); endorsements=d['agents']['dev']['audit_acknowledgment_protocol']['operator_endorsements']; print(len(endorsements))\"",
+          "observed_output": "4",
+          "interpretation": "Four endorsements remain; fifth removed per F-107 correction."
+        }
+      ]
+    },
+    {
+      "id": "F-108",
+      "title": "Stale pending_anchor_commit note in b259e028",
+      "status": "resolved",
+      "reason": "042 confirmed resolved. Not re-verified; no new evidence of regression.",
+      "evidence": []
+    },
+    {
+      "id": "F-109",
+      "title": "Commit 31eeeb2f falsely claims lifecycle:llm:dispatched deployed to container",
+      "status": "resolved",
+      "reason": "042 confirmed resolved — dist/engine.js confirmed to contain 3 matches for lifecycle:llm:dispatched. Not re-verified in this audit; no evidence of regression.",
+      "evidence": []
+    },
+    {
+      "id": "F-110",
+      "title": "Commit 31eeeb2f falsely reported boredom goal[6] as completed when it had already failed",
+      "status": "open",
+      "reason": "The false commit message in 31eeeb2f cannot be changed. The behavior it misdescribed (goal[6] timing out) is now fixed by async dispatch, but the historical false claim remains. d1778365 acknowledges but does not resolve the integrity violation.",
+      "severity": "MEDIUM",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "docker exec substrate-live journalctl -u boredom-vessel.service --no-pager --since '2026-05-26 19:39:00' --until '2026-05-26 19:45:00' 2>/dev/null",
+          "observed_output": "May 26 19:39:30 bun[110880]: [boredom-vessel] submitting goal[6]: \"run the probe-untraversed-edge activity...\"\nMay 26 19:44:29 bun[110880]: [boredom-vessel] goal-host-vessel unreachable: The operation timed out.\nMay 26 19:44:29 systemd[1]: boredom-vessel.service: Main process exited, code=exited, status=1/FAILURE\nMay 26 19:44:29 systemd[1]: Failed to start boredom-vessel.service",
+          "interpretation": "goal[6] at 19:39Z timed out exactly as F-110 alleged. The underlying cause is now fixed by async dispatch (ac0d75b5, 21:26Z), but the false commit message persists."
+        }
+      ]
+    },
+    {
+      "id": "F-111",
+      "title": "Container src/engine.ts does not match deployed dist/engine.js — source/dist split deployment pattern",
+      "status": "open",
+      "reason": "src/engine.ts is dated 2026-05-25T02:34Z (487 lines, 18231 bytes) while dist/engine.js is dated 2026-05-26T19:43Z (20714 bytes compiled). The dist was compiled from a newer source version not present in the container. goal-host-vessel and boredom-vessel run directly from src/ via 'bun <file>.ts' so are unaffected by this, but ias-executor-ts engine is the split.",
+      "severity": "LOW",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "docker exec substrate-live stat -c \"%Y %n\" /vessels/ias-executor-ts/src/engine.ts /vessels/ias-executor-ts/dist/engine.js 2>/dev/null | while read ts f; do echo \"$(date -d @$ts -u '+%Y-%m-%dT%H:%MZ') $f\"; done",
+          "observed_output": "2026-05-25T02:34Z /vessels/ias-executor-ts/src/engine.ts\n2026-05-26T19:43Z /vessels/ias-executor-ts/dist/engine.js",
+          "interpretation": "dist/engine.js compiled 17+ hours after src/engine.ts was last written to container. The dist is newer than the src it was compiled from (which was committed earlier). Unchanged from 042."
+        },
+        {
+          "type": "command",
+          "command": "docker exec substrate-live systemctl show goal-host-vessel.service --property=ExecStart",
+          "observed_output": "ExecStart={ argv[]=/root/.bun/bin/bun /vessels/goal-host-vessel/src/index.ts }",
+          "interpretation": "goal-host-vessel runs from src/ directly via bun — not affected by dist split. ias-executor-ts dist/ is used by the node_modules pattern."
+        }
+      ]
+    },
+    {
+      "id": "F-112",
+      "title": "F-088 root cause now fixed: async dispatch eliminates Bun 300s connection timeout",
+      "status": "resolved",
+      "reason": "NEW RESOLUTION this audit window. ac0d75b5 (21:26Z) implements 202+dispatchId pattern in goal-host-vessel. boredom-vessel polls /executions/:dispatchId. Verified: goal[3] at 21:40Z completed via async dispatch (dispatchId=35c87152, executionId=exec_tatf5vf3, ~56s); goal[4] at 22:10Z completed (dispatchId=f3c5ba5c, executionId=exec_x0fz3dho, ~60s); goal[5] at 22:40Z completed (dispatchId=ee1d28c8, executionId=exec_smf6t6mg, ~60s). Direct test of /run-goal from inside container returns HTTP 202.",
+      "severity": "RESOLVED",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "docker exec substrate-live curl -si -X POST http://127.0.0.1:8210/run-goal -H 'Content-Type: application/json' -H 'Authorization: ApiKey <KEY>' -d '{\"goal\":\"test async dispatch\"}' 2>/dev/null | head -5",
+          "observed_output": "HTTP/1.1 202 Accepted\nContent-Type: application/json;charset=utf-8\n...\n{\"dispatchId\":\"d8b4025d-d6b1-40ab-afa8-0e3bb691b8e0\",\"status\":\"running\"}",
+          "interpretation": "202 response with dispatchId confirmed. Async dispatch is live."
+        },
+        {
+          "type": "command",
+          "command": "docker exec substrate-live journalctl -u boredom-vessel.service --no-pager --since '2026-05-26 21:00:00' | grep -E 'goal\\[|dispatch|completed'",
+          "observed_output": "goal[2]: probe-reachable-unlearned → dispatched executionId=exec_iqpti7v1 status=completed\ngoal[3]: harness-check-scenario → goal launched async dispatchId=35c87152 → dispatched executionId=exec_tatf5vf3 status=completed\ngoal[4]: identify-unknown-shapes → goal launched async dispatchId=f3c5ba5c → dispatched executionId=exec_x0fz3dho status=completed\ngoal[5]: harness-run-matrix → goal launched async dispatchId=ee1d28c8 → dispatched executionId=exec_smf6t6mg status=completed",
+          "interpretation": "Three consecutive goals successfully dispatched and polled to completion via async pattern. Goal[2] used legacy sync path (predates restart at 21:22Z)."
+        },
+        {
+          "type": "file_ref",
+          "path": "repos/goal-host-vessel/src/index.ts",
+          "lines": "316-340",
+          "interpretation": "dispatchId, DispatchRecord, executionStore all present in src/index.ts lines 316-427."
+        }
+      ]
+    },
+    {
+      "id": "F-113",
+      "title": "S.4a coverage regression: reachable_learned declining from 8 to 4 across latest 4-hour window",
+      "status": "open",
+      "reason": "NEW FINDING. coverage-tick at 22:42Z shows reachable_learned declining: 8 (18:43Z) → 8 (19:43Z) → 5 (20:43Z) → 4 (21:43Z). consecutive_progressing_cycles=2, coverage_progress=False. The approved lift criterion (rl=[5,7,8,10] at 08:39Z natural boredom fire) was based on an earlier window; that approval remains in agent-coordination. The current negative trend suggests Thompson Sampling is converging on validator-dispatch (72% of traces in last hour), which reduces output shape diversity and lowers the measured reachable_learned count.",
+      "severity": "MEDIUM",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "docker exec substrate-live curl -sf http://127.0.0.1:8090/v2/impulses/resolve -H 'Content-Type: application/json' -d '{\"impulse\":{\"type\":\"coverage_tick\",\"pointer\":{\"type\":\"coverage_tick\"}}}'",
+          "observed_output": "{\"success\":true,\"shape\":\"coverageReport\",\"body\":{\"cells_over_time\":[{\"timestamp\":\"2026-05-26T21:43Z\",\"reachable_learned\":4,\"reachable_unlearned\":19},{\"timestamp\":\"2026-05-26T20:43Z\",\"reachable_learned\":5,\"reachable_unlearned\":18},{\"timestamp\":\"2026-05-26T19:43Z\",\"reachable_learned\":8,\"reachable_unlearned\":15},{\"timestamp\":\"2026-05-26T18:43Z\",\"reachable_learned\":8,\"reachable_unlearned\":15}],\"monotonic_progress\":{\"reachable_learned_strictly_increasing\":false,\"reachable_unlearned_strictly_decreasing\":false},\"consecutive_progressing_cycles\":2,\"coverage_progress\":false}}",
+          "interpretation": "coverage_progress=False. reachable_learned has declined from 8 to 4 across the most recent 4-window scan. This is a regression from the 042 baseline which showed consecutive=3, coverage_progress=True."
+        },
+        {
+          "type": "command",
+          "command": "docker exec substrate-live curl -sf \"http://127.0.0.1:8080/v2/activities/execution-traces?limit=100&start_date=...\" | python3 -c 'count activity distribution'",
+          "observed_output": "Traces in last ~1h: 100. validator-dispatch: 72x, slot-binding: 11x, create-shape-provider-goal: 11x, substrate-health-tick: 3x, others: 3x.",
+          "interpretation": "validator-dispatch = 72% of traces. Thompson Sampling bias toward this high-alpha template reduces shape diversity, causing coverage_progress to flip False."
+        }
+      ]
+    },
+    {
+      "id": "F-114",
+      "title": "probe-untraversed-edge (goal[6]) post-async-dispatch verification pending",
+      "status": "open",
+      "reason": "NEW FINDING. The definitive test of async dispatch for probe-untraversed-edge (the previously timing-out goal) has not yet fired in this audit window. The next boredom fire at goal[6] is expected ~23:10Z. goal-host-vessel was restarted at 21:22Z with the async dispatch code; goal[6] at 19:39Z used the old sync path and timed out. The 21:40Z, 22:10Z, 22:40Z fires are goal[3/4/5], none of which previously timed out. Goal[6] is the acid test.",
+      "severity": "LOW",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "docker exec substrate-live journalctl -u boredom-vessel.service --no-pager --since '2026-05-26 19:39:00' --until '2026-05-26 19:45:00'",
+          "observed_output": "goal[6]: The operation timed out. → status=1/FAILURE",
+          "interpretation": "goal[6] timed out at 19:39Z (pre-async-dispatch). Next fire at ~23:10Z will be first post-fix test."
+        },
+        {
+          "type": "command",
+          "command": "docker exec substrate-live grep -A 5 'probe-untraversed-edge' /vessels/boredom-vessel/src/index.ts",
+          "observed_output": "// exploration — exercises n=0 templates to build Thompson priors; async dispatch now handles >5min runs\n\"run the probe-untraversed-edge activity to find unreachable execution graph edges and emit a topologyGapReport\"",
+          "interpretation": "probe-untraversed-edge is goal[6] in current boredom rotation. Comment acknowledges async dispatch dependency."
+        }
+      ]
+    }
+  ],
+  "substrate_state": {
+    "health": "healthy",
+    "activity_api_version": "1.20.9",
+    "embedding": "healthy (all-MiniLM-L6-v2, dim=384)",
+    "goal_host_vessel_status": "active (running since 21:22:40 UTC, pid 116797)",
+    "goal_host_vessel_service_invocation": "bun /vessels/goal-host-vessel/src/index.ts (runs from src/)",
+    "boredom_recent_fires": [
+      "goal[2] probe-reachable-unlearned → exec_iqpti7v1 completed (sync path, pre-restart)",
+      "goal[3] harness-check-scenario → exec_tatf5vf3 completed (async dispatch)",
+      "goal[4] identify-unknown-shapes → exec_x0fz3dho completed (async dispatch)",
+      "goal[5] harness-run-matrix → exec_smf6t6mg completed (async dispatch)"
+    ],
+    "boredom_next_expected": "goal[6] probe-untraversed-edge ~23:10Z",
+    "coverage_tick_latest_window": {
+      "timestamp": "2026-05-26T21:43Z",
+      "reachable_learned": 4,
+      "reachable_unlearned": 19,
+      "coverage_progress": false,
+      "consecutive_progressing_cycles": 2
+    },
+    "thompson_dominance": "validator-dispatch 72% of last 100 traces",
+    "new_cycle_reports_since_042": 0,
+    "new_proposals_since_042": 0,
+    "root_artifact_count": 13,
+    "commits_since_baseline": 5
+  },
+  "summary": {
+    "findings_by_status": {
+      "open": ["F-101", "F-106", "F-110", "F-111", "F-113", "F-114"],
+      "resolved": ["F-107", "F-108", "F-109", "F-112"],
+      "unverifiable": ["F-099", "F-100", "F-103", "F-104", "F-105"]
+    },
+    "new_findings": ["F-112 (resolution of F-088)", "F-113 (S.4a regression)", "F-114 (goal[6] post-fix pending)"],
+    "headline": "Async dispatch (ac0d75b5) is live and verified for goals 3/4/5. F-088 root cause is resolved. S.4a has regressed: coverage_progress=False, reachable_learned declining from 8 to 4 due to Thompson bias toward validator-dispatch (72%). probe-untraversed-edge fire at ~23:10Z is the definitive test of async dispatch for the previously-timing-out goal."
+  },
+  "next_wake_recommendation": {
+    "delay_seconds": 1800,
+    "reason": "probe-untraversed-edge fire expected ~23:10Z (~21 min); second fire at ~23:40Z. Waking at ~23:19Z catches the outcome of both the first async dispatch test and the goal[6] fire. Active substrate with 30-min boredom cadence and open S.4a regression warrants short interval."
+  }
+}
