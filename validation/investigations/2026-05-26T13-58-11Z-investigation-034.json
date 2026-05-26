@@ -1,0 +1,84 @@
+{
+  "investigation_id": "034",
+  "generated_at": "2026-05-26T13:58:11Z",
+  "investigator_session_id": "loop-iteration-047",
+  "prior_investigation_id": "2026-05-26T10-01-14Z-investigation-033",
+  "loop_iteration": 47,
+  "substrate_target": "http://localhost:18080",
+  "substrate_status": "healthy — no new commits for 4h35m",
+  "trigger": "manual /loop invocation (3h57m after investigation-033)",
+
+  "clock_note": "First date -u call this turn returned a stale value (11:05:08Z); both host and container confirmed 13:57:47Z / 13:57:03Z respectively on recheck. Generated_at uses the confirmed value. All probe data was collected at 13:58Z.",
+
+  "summary": "No new substrate commits since investigation-032's 16136563 (4h35m ago). S.4a remains False (rl=[5,6,6,8], 2h==3h==6). Boredom fired 8 times since investigation-033: goal[1] at 10:09Z failed with timeout (F-088 recurrence, pre-deployment), but goals [2]-[6]+[0]+[1] from 10:39Z onward all completed — 7 consecutive successes. F-088 substantially resolved. Health True. F-099/F-100/F-101 open; no operator response in 3h57m.",
+
+  "s4a_status": {
+    "coverage_progress": false,
+    "consecutive_progressing_cycles": 1,
+    "rl": [5, 6, 6, 8],
+    "verified_at": "2026-05-26T13:58:11Z",
+    "change_from_033": "033 showed rl=[5,6,6,8] coverage_progress=False. No change — same values.",
+    "analysis": "2h and 3h windows both at 6 distinct template types. The 3h window covers goals [3,4,5,6,0,1] (11:09-13:40Z) while 2h window covers goals [5,6,0,1] (12:09-13:40Z). Goals [3] and [4] did not introduce additional distinct template types beyond what [5,6,0,1] cover — both produce the same coverage count. For strict increase we need the 3h window to show more types than 2h, or the 2h to show more than 1h. Next coverage-tick (goal[0]) is expected at ~14:09Z and may change the window state."
+  },
+
+  "health_status": {
+    "overall_passing": true,
+    "confidence_passing": true,
+    "stability_passing": true,
+    "vessels_passing": true,
+    "verified_at": "2026-05-26T13:58:11Z"
+  },
+
+  "f088_status_update": {
+    "id": "F-088",
+    "prior_status": "ACTIVE RECURRENCE (investigation-032)",
+    "current_status": "SUBSTANTIALLY RESOLVED — one pre-deployment recurrence, 7 consecutive successes after",
+    "boredom_fires_since_033": [
+      { "time": "2026-05-26T10:09Z", "goal_index": 1, "goal": "substrate-health-tick", "status": "FAILED", "failure": "goal-host-vessel unreachable: The operation timed out (5 min = 300s cap)", "note": "Pre-AbortSignal-fix deployment; fix 106b1f0b was committed at 09:13Z but deployment to running container happened between 10:14Z and 10:39Z" },
+      { "time": "2026-05-26T10:39Z", "goal_index": 2, "goal": "probe unlearned shapes", "execution_id": "exec_8git09fi", "status": "completed", "duration_min": 2.1 },
+      { "time": "2026-05-26T11:09Z", "goal_index": 3, "goal": "harness-check-scenario", "execution_id": "exec_agugmh3f", "status": "completed", "duration_min": 1.2 },
+      { "time": "2026-05-26T11:39Z", "goal_index": 4, "goal": "escalate unknown shape", "execution_id": "exec_igiimz4n", "status": "completed", "duration_min": 1.1 },
+      { "time": "2026-05-26T12:09Z", "goal_index": 5, "goal": "check substrate health including vessel liveness", "execution_id": "exec_g4r8fvg5", "status": "completed", "duration_min": 1.3, "note": "First successful fire of the health-liveness goal after AbortSignal fix" },
+      { "time": "2026-05-26T12:39Z", "goal_index": 6, "goal": "add-resolver-to-vessel", "execution_id": "exec_5vgadxsd", "status": "completed", "duration_min": 1.3 },
+      { "time": "2026-05-26T13:09Z", "goal_index": 0, "goal": "coverage-tick", "execution_id": "exec_nvw641vz", "status": "completed", "duration_min": 3.1 },
+      { "time": "2026-05-26T13:39Z", "goal_index": 1, "goal": "substrate-health-tick", "execution_id": "exec_nlp3rhnb", "status": "completed", "duration_min": 1.3, "note": "Health goal succeeds cleanly with fix deployed" }
+    ],
+    "verdict": "F-088 substantially resolved. The AbortSignal.timeout removal (106b1f0b) was effective once deployed. Goal[1] at 10:09Z was the last failure and is accounted for as a pre-deployment fire. 7 consecutive successful fires since 10:39Z including the health-liveness goal (goal[5]) that had previously failed. One full boredom cycle (goals [2]-[6]+[0]+[1]) completed without any timeout.",
+    "evidence_command": "docker exec substrate-live journalctl -u boredom-vessel.service --no-pager --since '2026-05-26 10:00:00' | grep -E 'goal\\[|dispatched|Failed'"
+  },
+
+  "f094_update": {
+    "id": "F-094",
+    "prior_status": "OPEN — add-resolver-to-vessel stagnant (never dispatched as useful work)",
+    "current_status": "PARTIALLY ACTIVE — goal[6] (add-resolver-to-vessel) fired twice since fix deployment (exec_31iblt6c at 09:12Z, exec_5vgadxsd at 12:39Z) and completed both times. Still no evidence it finds and registers new resolvers — 'completed' may mean 'ran and found nothing to do'. Not a deterioration.",
+    "note": "The template fires without error but its substantive effect (discovering and registering unresolved shapes) remains unverified."
+  },
+
+  "new_commits_since_032": [],
+  "substrate_quiet_since": "2026-05-26T09:22:34Z (commit 16136563)",
+  "substrate_quiet_duration_min": 275,
+
+  "prior_findings_status": {
+    "F-101": { "status": "open", "change": "no new commits, no operator response" },
+    "F-099": { "status": "open", "change": "no new commits, no operator response to direct question (now 3h57m)" },
+    "F-100": { "status": "open", "change": "concept-db.service ExecStartPre still running; no operator response" },
+    "F-095": { "status": "open", "change": "unchanged" },
+    "F-096": { "status": "partially explained", "change": "unchanged" },
+    "F-097": { "status": "confirmed", "change": "unchanged" },
+    "F-088": { "status": "substantially resolved", "change": "7 consecutive successes; see f088_status_update" },
+    "F-092": { "status": "resolved (S.4a fluctuating naturally)" },
+    "F-098": { "status": "positive — natural boredom continues" }
+  },
+
+  "operator_response_status": {
+    "question_asked_in": "investigation-032",
+    "time_since_question": "3h57m",
+    "response": "PENDING — no operator message since 'commit the investigations'",
+    "note": "The longer the silence, the more interpretable the absence. The substrate has also been silent (no new commits for 4h35m). The pattern of rapid escalation appears to have stopped; both substrate and operator are quiet."
+  },
+
+  "next_wake_recommendation": {
+    "delay_seconds": 7200,
+    "rationale": "Substrate quiet 4h35m, boredom healthy (7 consecutive successes), prior findings stable. Setting 2h wakeup — short enough to catch any new substrate commits, long enough to let boredom cycle produce meaningful S.4a data."
+  }
+}
