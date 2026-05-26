@@ -131,9 +131,8 @@ async function main(): Promise<void> {
 
   let res: Response;
   try {
-    // No AbortSignal: Bun 1.3.14 caps AbortSignal.timeout at 300s regardless of
-    // the argument, causing goals that take 5+ minutes to always fail.
-    // Hard kill is handled by systemd TimeoutStartSec=600 in the service unit.
+    // Async dispatch: POST /run-goal returns 202+dispatchId immediately (no 300s block).
+    // We then poll GET /executions/:dispatchId until done or systemd kills us (TimeoutStartSec=600).
     res = await fetch(`${GOAL_HOST_ENDPOINT}/run-goal`, {
       method: "POST",
       headers: authHeaders(),
@@ -150,21 +149,52 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  if (!res.ok) {
+  if (!res.ok && res.status !== 202) {
     const text = await res.text().catch(() => "(no body)");
     console.error(`[boredom-vessel] goal-host-vessel HTTP ${res.status}: ${text}`);
     process.exit(1);
   }
 
-  const body = await res.json() as { executionId?: string; status?: string; error?: string };
-  if (body.error) {
-    console.error(`[boredom-vessel] goal dispatch error: ${body.error}`);
+  const dispatch = await res.json() as { dispatchId?: string; executionId?: string; status?: string; error?: string };
+  if (dispatch.error) {
+    console.error(`[boredom-vessel] goal dispatch error: ${dispatch.error}`);
     process.exit(1);
   }
 
-  console.log(
-    `[boredom-vessel] dispatched — executionId=${body.executionId ?? "?"} status=${body.status ?? "?"}`,
-  );
+  // If synchronous response (legacy / no dispatchId), log and exit.
+  if (!dispatch.dispatchId) {
+    console.log(
+      `[boredom-vessel] dispatched — executionId=${dispatch.executionId ?? "?"} status=${dispatch.status ?? "?"}`,
+    );
+    process.exit(0);
+  }
+
+  // Poll for async completion. Budget: ~270s (systemd TimeoutStartSec=600 is the hard kill).
+  const { dispatchId } = dispatch;
+  console.log(`[boredom-vessel] goal launched async dispatchId=${dispatchId}, polling...`);
+  const pollDeadline = Date.now() + 270_000;
+  while (Date.now() < pollDeadline) {
+    await new Promise((r) => setTimeout(r, 10_000));
+    let pollRes: Response;
+    try {
+      pollRes = await fetch(`${GOAL_HOST_ENDPOINT}/executions/${dispatchId}`, {
+        headers: authHeaders(),
+      });
+    } catch (err) {
+      console.warn(`[boredom-vessel] poll error: ${(err as Error).message}`);
+      continue;
+    }
+    if (!pollRes.ok) continue;
+    const poll = await pollRes.json() as { status?: string; executionId?: string; error?: string };
+    if (poll.status === "completed" || poll.status === "failed") {
+      console.log(
+        `[boredom-vessel] dispatched — executionId=${poll.executionId ?? "?"} status=${poll.status}`,
+      );
+      process.exit(poll.status === "failed" ? 1 : 0);
+    }
+  }
+  // Systemd will kill us at TimeoutStartSec=600; goal continues async.
+  console.log(`[boredom-vessel] poll budget exhausted — goal continuing async, dispatchId=${dispatchId}`);
   process.exit(0);
 }
 

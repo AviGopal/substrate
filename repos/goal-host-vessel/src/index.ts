@@ -313,23 +313,31 @@ async function handleRunGoal(req: Request): Promise<Response> {
     );
   }
 
-  try {
-    const result = await host.runGoal(goal ?? `execute template ${targetTemplateId}`, {
-      variables,
-      targetTemplateId,
-      tags,
-      parentExecutionId,
-      compositionChain,
-    });
-    return Response.json({
-      executionId: result.trace.id,
-      status: result.trace.status,
-      selectedTemplateId: result.selectedTemplateId,
-    });
-  } catch (err) {
-    console.error("[goal-host-vessel] /run-goal error:", err);
-    return Response.json({ error: (err as Error).message }, { status: 500 });
-  }
+  // Async dispatch: return 202+dispatchId immediately so the caller is not
+  // subject to Bun's built-in 300s connection timeout. The caller polls
+  // GET /executions/:dispatchId for the outcome.
+  const dispatchId = crypto.randomUUID();
+  pruneStore();
+  const record: DispatchRecord = { dispatchId, startedAt: Date.now(), status: "running" };
+  executionStore.set(dispatchId, record);
+
+  host.runGoal(goal ?? `execute template ${targetTemplateId}`, {
+    variables,
+    targetTemplateId,
+    tags,
+    parentExecutionId,
+    compositionChain,
+  }).then((result) => {
+    record.status = result.trace.status === "failed" ? "failed" : "completed";
+    record.executionId = result.trace.id;
+    record.selectedTemplateId = result.selectedTemplateId;
+  }).catch((err: unknown) => {
+    record.status = "failed";
+    record.error = (err as Error).message;
+    console.error("[goal-host-vessel] async /run-goal error:", err);
+  });
+
+  return Response.json({ dispatchId, status: "running" }, { status: 202 });
 }
 
 async function handleResolve(req: Request): Promise<Response> {
@@ -395,6 +403,36 @@ async function handleResolve(req: Request): Promise<Response> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Async dispatch store — fire-and-forget execution with polling
+//
+// Bun's built-in fetch() has a 300s connection timeout that cannot be overridden
+// via AbortSignal (Bun 1.3.14 caps it). Goals that take >5min cause boredom-vessel
+// to see a connection failure even though goal-host-vessel is still executing.
+//
+// Solution: POST /run-goal returns 202+dispatchId immediately; the goal runs async;
+// GET /executions/:dispatchId lets callers poll for completion. Boredom-vessel
+// polls for up to ~270s then exits (systemd restarts it); the goal continues async.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface DispatchRecord {
+  dispatchId: string;
+  startedAt: number;
+  status: "running" | "completed" | "failed";
+  executionId?: string;
+  selectedTemplateId?: string;
+  error?: string;
+}
+
+// Cap store at 100 records to prevent unbounded growth across long uptime.
+const executionStore = new Map<string, DispatchRecord>();
+function pruneStore(): void {
+  if (executionStore.size > 100) {
+    const oldest = [...executionStore.entries()].sort((a, b) => a[1].startedAt - b[1].startedAt);
+    for (const [id] of oldest.slice(0, 20)) executionStore.delete(id);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // HTTP server
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -416,6 +454,19 @@ const server = Bun.serve({
 
     if (req.method === "POST" && url.pathname === "/run-goal") {
       return handleRunGoal(req);
+    }
+
+    if (req.method === "GET" && url.pathname.startsWith("/executions/")) {
+      const dispatchId = url.pathname.slice("/executions/".length);
+      const record = executionStore.get(dispatchId);
+      if (!record) return Response.json({ error: "dispatch not found" }, { status: 404 });
+      return Response.json({
+        dispatchId: record.dispatchId,
+        status: record.status,
+        executionId: record.executionId,
+        selectedTemplateId: record.selectedTemplateId,
+        error: record.error,
+      });
     }
 
     if (req.method === "POST" && url.pathname === "/resolve") {
