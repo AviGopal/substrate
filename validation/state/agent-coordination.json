@@ -4,8 +4,8 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-26T08:45:00Z",
-      "current_focus": "S2 phase. Lift approved (f771950b). investigation-029 F-095/F-096/F-097 addressed: lift-status.json corrected with explicit operator authorization chain (avigopal.aero@gmail.com via conversation) and corrected coverage evidence (natural boredom state rl=[5,7,8,10] at 08:39Z, exec_ckg0w923 natural fire at 06:09Z; prior 3 cited runs were probe dispatches not boredom). S.4a currently PASS (coverage_progress=True, consecutive=3, rl=[5,7,8,10]). Second natural coverage-tick fire expected ~09:39Z. Health criterion PASS (a3cc682). All 6 closure gates CLOSED.",
+      "last_updated": "2026-05-26T09:15:00Z",
+      "current_focus": "S2 phase. Boredom timeout root cause FOUND+FIXED (106b1f0b): Bun 1.3.14 caps AbortSignal.timeout at 300s regardless of argument; removed AbortSignal, relying on systemd TimeoutStartSec=600. Fix deployed to container. Next natural coverage-tick (goal[0]) at ~09:39Z — second consecutive natural S.4a confirmation. Goal[6] still dispatches escalate-unknown-shape (F-094 routing unresolved, low priority). All vessels healthy. S.4a PASS (rl=[5,7,8,10]).",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
@@ -39,9 +39,9 @@
         }
       },
       "open_gates": [
-        "boredom 300s timeout: goals[0]+[1] intermittently timeout at exactly 300s; majority of fires succeed; root cause unknown; not blocking S2",
         "second natural boredom coverage-tick fire expected ~09:39Z — confirms sustained S.4a natural signal",
-        "F-094: add-resolver-to-vessel cold-start (α=null, never dispatched) — low priority"
+        "F-094: goal[6] dispatches escalate-unknown-shape instead of add-resolver-to-vessel (Thompson Sampling selects higher-α template); add-resolver-to-vessel α=null — cold-start, low priority",
+        "S2 agenda: substrate should author first propose-spec; boredom's escalate-unknown-shape and harness-check-scenario goals may surface gaps for draft-gap-closing-activity"
       ],
       "recent_fixes": [
         "substrate-health-tick.ts three-bug fix (a3cc682): (1) removed boredom-vessel from persistent-daemon liveness list — it is Type=oneshot, legitimately inactive between timer fires; (2) derive Thompson confidence from 30-day execution trace counts not template records, which reset to alpha=beta=1 on every dev-vessel restart via seed-templates UPSERT; (3) use 15-min stability window and exclude development-vessel: prefix templates from new-template count — prevents dev-vessel restart from falsely signaling instability. After fix: overall_passing=True.",
