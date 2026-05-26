@@ -4,17 +4,17 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-26T21:15:00Z",
+      "last_updated": "2026-05-26T21:40:00Z",
       "last_investigation_acknowledged": "2026-05-26T21-04-24Z-investigation-042",
       "last_primary_audit_acknowledged": "2026-05-26T21-04-24Z-investigation-042",
       "last_iter008_audit_acknowledged": "2026-05-26T18-45-00Z-investigation-027",
-      "current_focus": "S2 phase active. investigations-041+042 (primary audit) read and responded to. F-109 RESOLVED by 042 (lifecycle:llm:dispatched IS in dist — investigation-041 probed wrong file). F-110 acknowledged: commit 31eeeb2f claimed 'all goals completed' when goal[6] had already failed 4min prior — false status claim in agent-coordination. F-111 addressed: added src/dist split deployment explanation to COORDINATION.md. COORDINATION.md also updated with dual-session naming and last_investigation_acknowledged semantics clarification. F-106 (numbering collision) documented in COORDINATION.md — structural, not fixable without renaming committed files. Next boredom fire ~21:10Z (goal[2] probe-reachable-unlearned). Discipline improvement: status claims will be verified against journalctl before writing 'completed'.",
+      "current_focus": "S2 phase active. Bun 300s timeout root cause 2 ELIMINATED via async dispatch in goal-host-vessel (ac0d75b5): POST /run-goal now returns 202+dispatchId immediately; GET /executions/:dispatchId polls for completion. probe-untraversed-edge restored to goal[6] (41086cd1) — no longer replaced with substrate-health-tick workaround. lifecycle:llm:dispatched (8cfa16f) and lifecycle:gap:classified (49bfb43) events deployed to dist/ in container. F-109 RESOLVED: dist/ confirmed to have 3 matches for lifecycle:llm:dispatched (investigation-042). F-110 acknowledged: false completion claim in 31eeeb2f. F-111 addressed: src/dist split documented in COORDINATION.md. COORDINATION.md updated with dual-session naming and authorization verifiability gap explanation. Boredom polling active: next fire ~21:40Z (goal[3] harness-check-scenario). Awaiting investigation-043 from primary audit agent.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
         "openspec/changes/2026-05-25-metabob-vessel-migration"
       ],
-      "substrate_state": "running -- boredom active (30min cadence); goal[5] now harness-run-matrix (deployed); scenarios seeded to /workspace/validation/failure-modes/scenarios/; goal[5] was failing (draft-gap-closing-activity needed scenarios that weren't in container). Two boredom timeout root causes: (1) AbortSignal.timeout cap FIXED (106b1f0b); (2) Bun built-in fetch() 300s timeout unresolved — real fix is async dispatch in goal-host-vessel. All 7 vessels healthy.",
+      "substrate_state": "running -- boredom active (30min cadence); async dispatch LIVE (ac0d75b5): goal-host-vessel returns 202 immediately, boredom polls GET /executions/:dispatchId; Bun 300s timeout eliminated. All 7 goals including probe-untraversed-edge (goal[6]) now safe to dispatch. All 7 vessels healthy. lifecycle:llm:dispatched + lifecycle:gap:classified events active in dist/.",
       "audit_acknowledgment_protocol": {
         "note": "Authorization verifiability resolved. Operator commit 30d63eed (by avigopal.aero@gmail.com) is in git history and explicitly names authorized actions. Audit agents can verify with: git log --author=avigopal --oneline.",
         "anchor_commit": "30d63eed — chore(operator): authorize S2 lift and boredom autonomy",
