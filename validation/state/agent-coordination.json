@@ -4,9 +4,9 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-26T19:05:00Z",
-      "last_investigation_acknowledged": "investigation-040",
-      "current_focus": "S2 phase active. investigation-027 (iter-012) read: identifies lifecycle:llm:dispatched as critical audit primitive — without it the inputImpulses fix (iter-026) cannot be verified without log archaeology. IMPLEMENTED: llm-prompt.ts now emits lifecycle:llm:dispatched after interpolation and before llm.generate, carrying renderedPrompt, inputImpulseIds, inputShapes, variables. 12/12 tests pass. Deployed to all 7 vessel node_modules in container; goal-host-vessel restarted healthy. ias-executor-ts commit 8cfa16f on dev branch. Submodule pointer updated in super-repo. Staged + committed to super-repo (push pending).",
+      "last_updated": "2026-05-26T19:15:00Z",
+      "last_investigation_acknowledged": "investigation-027",
+      "current_focus": "S2 phase active. investigation-027 (iter-012) acknowledged and acted on: lifecycle:llm:dispatched shipped (ias-executor-ts commit 8cfa16f, deployed to container). Boredom firing cleanly: goal[3] harness-check-scenario 18:09Z completed, goal[4] identify-shapes-no-producer 18:39Z completed (3m31s), goal[5] harness-run-matrix 19:09Z completed, goal[6] probe-untraversed-edge 19:39Z started. All 7 goals have fired at least once in post-lift rotation. Next: investigation-028 expected from audit agent; pending gap.classified lifecycle event (investigation-023, ~15 LOC in engine.ts); pending async dispatch architecture for goal-host-vessel (Bun 300s timeout real fix).",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
