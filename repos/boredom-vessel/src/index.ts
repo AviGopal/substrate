@@ -26,14 +26,23 @@ const GOAL_INDEX_FILE = process.env.BOREDOM_GOAL_INDEX_FILE ?? "/tmp/boredom-goa
 // Rotating set of autonomous goals. Thompson Sampling will learn which
 // templates satisfy these goals and rank them over time.
 // Goals are split into topology-discovery (learning) and self-healing (operational).
+//
+// NOTE: Goals that name templates explicitly ("run coverage-tick", "run substrate-health-tick")
+// ensure the LLM's compose_goal step selects the intended template rather than defaulting to
+// high-alpha templates (validator-dispatch, slot-binding) that produce only 3 unique shapes.
+// This is required for S.4a (coverage_progress=true) since the 1h window must show MORE
+// learned shapes than 2h windows — impossible if boredom only exercises 3 template types.
 const AUTONOMOUS_GOALS: readonly string[] = [
-  // topology / coverage
-  "measure the substrate topology and report coverage progress",
-  "probe unlearned shapes — find templates that have no execution traces and recommend the best one to run",
-  "run the full topology discovery chain and emit a coverage report",
+  // topology / coverage — explicit template names to bypass high-alpha template bias
+  "run the coverage-tick activity to measure substrate topology coverage and emit a coverageReport",
+  "run the substrate-health-tick activity to check vessel health and emit a substrateHealthReport",
+  "probe unlearned shapes — find templates with zero execution traces and run the most-coverage-improving one",
+  "run the harness-check-scenario activity to validate a failure-mode scenario from the harness matrix",
+  // gap-closing / self-healing
   "identify shapes in the execution graph that have no known producer and escalate the most critical one",
-  // health / self-healing
   "check substrate health including vessel liveness — report which vessels are active or down and restart any that are inactive",
+  // exploration — exercises n=0 templates to build Thompson priors
+  "run the add-resolver-to-vessel activity to register any missing resolver capability discovered in the last harness run",
 ];
 
 const BOREDOM_TAG = "intent:boredom_source";
