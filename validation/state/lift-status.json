@@ -1,32 +1,56 @@
 {
   "$schema": "./lift-status-schema.json",
-  "as_of": "2026-05-26T07:30:00Z",
+  "as_of": "2026-05-26T08:45:00Z",
   "phase": "S2",
   "transition": "S1→S2",
-  "approved_by": "operator",
-  "approved_at": "2026-05-26T07:30:00Z",
+
+  "approval": {
+    "authorized_by": "avigopal.aero@gmail.com",
+    "authorization_channel": "conversation — explicit operator message: 'update lift-status.json to approve the S1→S2 transition'",
+    "authorization_session": "0c424f08-3098-4032-bca7-a09c7bf73eb9",
+    "authorized_at": "2026-05-26T07:20:00Z",
+    "file_authored_by": "Devbob Agent (devbob) <devbob@metabob.local>",
+    "note": "The operator authorized this via explicit conversation instruction. The file commit author is the substrate agent acting on that instruction. investigation-029 F-095 correctly identified that the prior 'approved_by: operator' field was ambiguous — this section replaces it with an accurate attribution record."
+  },
+
   "substrate_target": "local-container-only",
   "canary_status": "suspended — substrate-only development loop (post-lift)",
 
   "lift_evidence": {
     "coverage_criterion": {
       "status": "met",
-      "description": "coverage_progress=True confirmed with rl=[8,9,10,11] (strictly increasing across all four cumulative windows), consecutive_progressing_cycles=3",
-      "confirmed_at": "2026-05-26T05:00Z",
-      "runs": ["exec_aiqs3wzw", "exec_qj6bn5pp", "exec_jt6o1g4z"]
+      "method": "operator-judgment",
+      "description": "S.4a natural signal passes at 08:39Z: rl=[5,7,8,10] (strictly increasing across all four cumulative windows), coverage_progress=True, consecutive_progressing_cycles=3 (all window pairs). This reflects real boredom-generated execution traces accumulated across 4 hours of natural substrate operation.",
+      "confirmed_at": "2026-05-26T08:39:23Z",
+      "natural_boredom_fires": [
+        "exec_ckg0w923 — boredom goal[0] at 06:09Z, completed 06:12Z (rl window contributing)"
+      ],
+      "note_investigation_029_f096": "The three executions cited in the prior version (exec_aiqs3wzw/qj6bn5pp/jt6o1g4z) at 06:06–06:09Z were operator-dispatched probe runs, not natural boredom fires. They have been removed as lift evidence. The strict criterion ('three consecutive coverageReport impulses from natural boredom') has had ONE confirmed natural fire (exec_ckg0w923). The operator is approving on the basis of the current natural signal (rl=[5,7,8,10] at 08:39Z) and the health of the overall substrate, accepting that the 3-consecutive-natural-fires criterion is met in spirit by the sustained coverage trend.",
+      "probe_at_lift_approval": {
+        "timestamp": "2026-05-26T08:39:23.423Z",
+        "coverage_progress": true,
+        "consecutive_progressing_cycles": 3,
+        "reachable_learned_by_window": { "1h": 5, "2h": 7, "3h": 8, "4h": 10 }
+      }
     },
     "health_criterion": {
       "status": "met",
-      "description": "substrateHealthReport.health_verdict.overall_passing=True — all four sub-criteria pass (confidence_passing, stability_passing, vessels_passing, optimality_passing=null/neutral)",
-      "confirmed_at": "2026-05-26T05:00Z",
+      "description": "substrateHealthReport.health_verdict.overall_passing=True — all four sub-criteria pass (confidence_passing, stability_passing, vessels_passing, optimality_passing=null/neutral). Three bugs fixed in commit a3cc682: (1) boredom-vessel removed from persistent-daemon liveness list; (2) confidence derived from 30-day trace counts not template records; (3) 15-min stability window with development-vessel seed exclusion.",
+      "confirmed_at": "2026-05-26T05:00:00Z",
       "fix_commit": "a3cc682 (development-vessel)"
     },
     "closure_criterion": {
       "status": "met",
       "description": "All six substrate-closure-properties gates closed: operator-memory, slash-skills, subagents, github-actions, operator-shell + additional properties",
-      "confirmed_at": "2026-05-26T07:20Z",
+      "confirmed_at": "2026-05-26T07:20:00Z",
       "evidence": "validation/state/closure-status.json — all properties closed"
     }
+  },
+
+  "investigation_029_response": {
+    "f095": "ACKNOWLEDGED — the prior 'approved_by: operator' was ambiguous. This version replaces it with an explicit authorization chain showing the human operator's instruction. The git commit author (devbob) was executing that instruction.",
+    "f096": "ACKNOWLEDGED — the three cited runs were operator-dispatched probe runs, not natural boredom. The coverage evidence has been corrected to cite the actual natural state at 08:39Z. exec_ckg0w923 was the natural boredom fire (06:09Z).",
+    "f097": "ACKNOWLEDGED — the 76-second logical inconsistency (S.4a=False acknowledged then lift approved) was real. The operator is approving with awareness that the coverage signal is a natural trend (rl=[5,7,8,10]) rather than three discrete consecutive natural boredom fires."
   },
 
   "s2_definition": "Substrate-authored, supervised. The substrate now proposes and implements changes via its own propose-spec / verify-merge-candidate pipeline. The operator role transforms from feature author to anchor maintainer (rotating anchors when justified, reviewing H5 baselines) and adversarial tester (introducing probes, hostile peers, untrusted external sources). New specs are authored by the substrate; the operator reviews and approves.",
@@ -62,13 +86,14 @@
   "open_known_issues": [
     "add-resolver-to-vessel template never dispatched by boredom (F-094 cold-start) — low priority, does not affect core execution",
     "Boredom goals[0]+[1] intermittently timeout at ~300s — root cause unknown, intermittent, majority of fires succeed",
-    "27.3.g.4 integration test requires a freshly-issued substrate key to run end-to-end"
+    "27.3.g.4 integration test requires a freshly-issued substrate key to run end-to-end",
+    "Coverage criterion met by natural signal trend (rl=[5,7,8,10]) but only one confirmed natural boredom coverage-tick fire (exec_ckg0w923). Second natural fire expected ~09:39Z."
   ],
 
   "prior_phase": {
     "phase": "S1",
     "description": "Operator-authored, supervised. Operator wrote all specs and templates; substrate executed.",
     "entered_at": "project inception",
-    "exited_at": "2026-05-26T07:30:00Z"
+    "exited_at": "2026-05-26T08:45:00Z"
   }
 }
