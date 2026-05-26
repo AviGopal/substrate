@@ -29,20 +29,20 @@ const GOAL_INDEX_FILE = process.env.BOREDOM_GOAL_INDEX_FILE ?? "/tmp/boredom-goa
 //
 // NOTE: Goals that name templates explicitly ("run coverage-tick", "run substrate-health-tick")
 // ensure the LLM's compose_goal step selects the intended template rather than defaulting to
-// high-alpha templates (validator-dispatch, slot-binding) that produce only 3 unique shapes.
-// This is required for S.4a (coverage_progress=true) since the 1h window must show MORE
-// learned shapes than 2h windows — impossible if boredom only exercises 3 template types.
+// high-alpha templates. Goals must also name a distinctive output shape to force the right routing
+// via discover-by-shapes backward chaining — otherwise Thompson Sampling always picks coverage-tick.
 const AUTONOMOUS_GOALS: readonly string[] = [
-  // topology / coverage — explicit template names to bypass high-alpha template bias
+  // topology / coverage — explicit template names + output shapes to bypass high-alpha template bias
   "run the coverage-tick activity to measure substrate topology coverage and emit a coverageReport",
   "run the substrate-health-tick activity to check vessel health and emit a substrateHealthReport",
-  "probe unlearned shapes — find templates with zero execution traces and run the most-coverage-improving one",
+  "run the probe-reachable-unlearned activity to find templates with zero execution traces and emit a reachableUnlearnedReport",
   "run the harness-check-scenario activity to validate a failure-mode scenario from the harness matrix",
   // gap-closing / self-healing
   "identify shapes in the execution graph that have no known producer and escalate the most critical one",
-  "check substrate health including vessel liveness — report which vessels are active or down and restart any that are inactive",
+  // S2 propose-spec pipeline — substrate should draft a gap-closing proposal
+  "run the draft-gap-closing-activity to draft a proposal for the most critical substrate gap and emit a gapClosingProposal",
   // exploration — exercises n=0 templates to build Thompson priors
-  "run the add-resolver-to-vessel activity to register any missing resolver capability discovered in the last harness run",
+  "run the probe-untraversed-edge activity to find unreachable execution graph edges and emit a topologyGapReport",
 ];
 
 const BOREDOM_TAG = "intent:boredom_source";
