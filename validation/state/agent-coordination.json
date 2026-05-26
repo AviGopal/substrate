@@ -4,8 +4,8 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-26T07:20:00Z",
-      "current_focus": "S.4a temporarily at False (rl=[6,9,9,10], 2h/3h plateau). Prior session's rl=[8,9,10,11] pass was real but the 3 manual coverage-tick runs aged out of the 1h window. Health criterion remains PASS (substrate-health-tick.ts fixes committed a3cc682). Boredom active at 30min cadence — goals[0]+[1] completing successfully (06:09Z, 06:39Z), goals[2]+[6] dispatching different templates than intended (probe-untraversed-edge instead of probe-reachable-unlearned; create-shape-provider-goal chain instead of add-resolver-to-vessel). F-094: add-resolver-to-vessel α=null, never dispatched — cold-start problem, not blocking lift. All 6 closure gates CLOSED (closure-status.json verified). Next natural coverage-tick fire ~09:39Z. S.4a will recover naturally as boredom cycle continues.",
+      "last_updated": "2026-05-26T08:45:00Z",
+      "current_focus": "S2 phase. Lift approved (f771950b). investigation-029 F-095/F-096/F-097 addressed: lift-status.json corrected with explicit operator authorization chain (avigopal.aero@gmail.com via conversation) and corrected coverage evidence (natural boredom state rl=[5,7,8,10] at 08:39Z, exec_ckg0w923 natural fire at 06:09Z; prior 3 cited runs were probe dispatches not boredom). S.4a currently PASS (coverage_progress=True, consecutive=3, rl=[5,7,8,10]). Second natural coverage-tick fire expected ~09:39Z. Health criterion PASS (a3cc682). All 6 closure gates CLOSED.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
@@ -32,14 +32,16 @@
           "checked_at": "2026-05-26T05:00Z"
         },
         "operator_gate": {
-          "status": "PENDING",
-          "action_required": "Write updated validation/state/lift-status.json approving IAL S1→S2 transition",
-          "blocking_on": "operator decision"
+          "status": "APPROVED",
+          "authorized_by": "avigopal.aero@gmail.com via explicit conversation instruction",
+          "file_commit": "f771950b",
+          "investigation_029_resolved": "F-095/F-096/F-097 acknowledged and corrected — authorization chain documented, fake coverage evidence replaced with natural state"
         }
       },
       "open_gates": [
-        "OPERATOR ACTION: update lift-status.json to approve IAL S1→S2 transition — both substrate-measured halves now pass",
-        "boredom 300s timeout: goals[0] (coverage-tick) and goals[1] (substrate-health-tick) time out at exactly 300s when dispatched via boredom; direct goal-host calls succeed in ~60s; root cause unexplained (not a Bun AbortSignal bug); workaround: targetTemplateId bypass"
+        "boredom 300s timeout: goals[0]+[1] intermittently timeout at exactly 300s; majority of fires succeed; root cause unknown; not blocking S2",
+        "second natural boredom coverage-tick fire expected ~09:39Z — confirms sustained S.4a natural signal",
+        "F-094: add-resolver-to-vessel cold-start (α=null, never dispatched) — low priority"
       ],
       "recent_fixes": [
         "substrate-health-tick.ts three-bug fix (a3cc682): (1) removed boredom-vessel from persistent-daemon liveness list — it is Type=oneshot, legitimately inactive between timer fires; (2) derive Thompson confidence from 30-day execution trace counts not template records, which reset to alpha=beta=1 on every dev-vessel restart via seed-templates UPSERT; (3) use 15-min stability window and exclude development-vessel: prefix templates from new-template count — prevents dev-vessel restart from falsely signaling instability. After fix: overall_passing=True.",
