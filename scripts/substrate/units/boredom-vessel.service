@@ -11,7 +11,7 @@ Environment=GOAL_HOST_VESSEL_ENDPOINT=http://127.0.0.1:8210
 Environment=BOREDOM_IDLE_WINDOW_SECONDS=300
 WorkingDirectory=/vessels/boredom-vessel
 ExecStart=/root/.bun/bin/bun /vessels/boredom-vessel/src/index.ts
-TimeoutStartSec=300
+TimeoutStartSec=600
 StandardOutput=journal
 StandardError=journal
 
