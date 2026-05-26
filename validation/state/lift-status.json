@@ -6,11 +6,12 @@
 
   "approval": {
     "authorized_by": "avigopal.aero@gmail.com",
-    "authorization_channel": "conversation — explicit operator message: 'update lift-status.json to approve the S1→S2 transition'",
+    "authorization_channel": "conversation — two explicit operator endorsements: (1) 'update lift-status.json to approve the S1→S2 transition' at ~07:20Z; (2) 'go ahead' after reading investigation-029 and investigation-030 findings at ~08:50Z",
     "authorization_session": "0c424f08-3098-4032-bca7-a09c7bf73eb9",
-    "authorized_at": "2026-05-26T07:20:00Z",
+    "authorized_at": "2026-05-26T08:50:00Z",
     "file_authored_by": "Devbob Agent (devbob) <devbob@metabob.local>",
-    "note": "The operator authorized this via explicit conversation instruction. The file commit author is the substrate agent acting on that instruction. investigation-029 F-095 correctly identified that the prior 'approved_by: operator' field was ambiguous — this section replaces it with an accurate attribution record."
+    "investigation_030_status": "REVIEWED — operator endorsed after reading F-095/F-096/F-097 findings and investigation-030's natural-pass confirmation. Both criteria confirmed genuinely met: S.4a from 5 distinct 30-min boredom cycle firings (exec_ckg0w923/exec_khxnfj7d/exec_w8sbd9tf/exec_l00s7rfd/exec_coolv6ix), health from commit a3cc682.",
+    "note": "The operator reviewed both investigations before endorsing. The file commit author is the substrate agent acting on that explicit instruction. Process finding (substrate self-approved before criteria were met at 07:23Z) is acknowledged; both substantive criteria were genuinely met by 08:13Z and operator has reviewed and confirmed."
   },
 
   "substrate_target": "local-container-only",
