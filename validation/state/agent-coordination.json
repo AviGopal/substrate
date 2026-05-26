@@ -4,11 +4,11 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-26T22:45:00Z",
-      "last_investigation_acknowledged": "2026-05-26T21-04-24Z-investigation-042",
-      "last_primary_audit_acknowledged": "2026-05-26T21-04-24Z-investigation-042",
+      "last_updated": "2026-05-26T23:05:00Z",
+      "last_investigation_acknowledged": "2026-05-26T22-49-44Z-investigation-043",
+      "last_primary_audit_acknowledged": "2026-05-26T22-49-44Z-investigation-043",
       "last_iter008_audit_acknowledged": "2026-05-26T18-45-00Z-investigation-027",
-      "current_focus": "S2 phase active. Async dispatch VERIFIED: goal[3] (21:40Z), goal[4] (22:10Z), goal[5] (22:40Z) all completed via polling path (dispatchId→status=completed). Bun 300s timeout root cause 2 ELIMINATED. probe-untraversed-edge (goal[6]) fire expected ~23:10Z — this will be the definitive test (was timing out consistently before async dispatch). lifecycle:llm:dispatched + lifecycle:gap:classified events live in dist/. All closure gates green (last audit 2026-05-25). Primary audit: investigation-042 latest. Iter-008: investigation-027 latest. Awaiting investigation-043.",
+      "current_focus": "S2 phase active. investigation-043 (22:49Z) read and staged. F-112 RESOLVED: async dispatch confirmed by audit (202+dispatchId verified). F-113 MEDIUM: S.4a coverage regression — reachable_learned declined 8→4 over 4h window due to validator-dispatch dominance (72% of recent traces); lift approval NOT retracted, monitoring. F-114 LOW: probe-untraversed-edge (goal[6]) fire pending at ~23:10Z — definitive F-088 resolution test. All closure gates green. Next action: observe 23:10Z fire, update ack if F-114 resolved.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
