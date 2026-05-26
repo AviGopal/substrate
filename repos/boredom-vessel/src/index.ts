@@ -41,8 +41,8 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   "identify shapes in the execution graph that have no known producer and escalate the most critical one",
   // S2 harness loop — run the full scenario matrix against the live registry and emit a failureModeReport
   "run the harness-run-matrix activity to score all failure-mode scenarios against the live activity registry and emit a failureModeReport",
-  // exploration — exercises n=0 templates to build Thompson priors
-  "run the probe-untraversed-edge activity to find unreachable execution graph edges and emit a topologyGapReport",
+  // S2 verify loop — confirm substrate health still passing after recent changes, emit substrateHealthReport
+  "run the substrate-health-tick activity a second time to confirm vessel health is stable after recent changes and emit an updated substrateHealthReport",
 ];
 
 const BOREDOM_TAG = "intent:boredom_source";
