@@ -27,10 +27,10 @@ const GOAL_INDEX_FILE = process.env.BOREDOM_GOAL_INDEX_FILE ?? "/tmp/boredom-goa
 // templates satisfy these goals and rank them over time.
 // Goals are split into topology-discovery (learning) and self-healing (operational).
 //
-// NOTE: Goals that name templates explicitly ("run coverage-tick", "run substrate-health-tick")
-// ensure the LLM's compose_goal step selects the intended template rather than defaulting to
-// high-alpha templates. expected_output_shapes per goal forces routing via recommend's
-// output-shape pre-filter — bypassing Thompson bias toward high-alpha templates.
+// NOTE: Goals that name templates explicitly use targetTemplateId (see AUTONOMOUS_GOAL_TARGET_TEMPLATES)
+// to bypass Thompson Sampling entirely. expected_output_shapes is a soft re-sort boost, not a hard
+// filter — high-alpha templates (harness-run-matrix α=18, substrate-health-tick α=25) would dominate
+// without direct template routing. goal[4] is open-ended and lets Thompson choose freely.
 const AUTONOMOUS_GOALS: readonly string[] = [
   // topology / coverage — explicit template names + output shapes to bypass high-alpha template bias
   "run the coverage-tick activity to measure substrate topology coverage and emit a coverageReport",
@@ -45,17 +45,16 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   "run the probe-untraversed-edge activity to find unreachable execution graph edges and emit a topologyGapReport",
 ];
 
-// Optional expected_output_shapes per goal — forces recommend() to pre-filter by shape,
-// bypassing Thompson Sampling bias toward high-alpha templates like harness-run-matrix.
-// undefined means no shape constraint (use Thompson Sampling freely).
-const AUTONOMOUS_GOAL_OUTPUT_SHAPES: readonly (string[] | undefined)[] = [
-  ["coverageReport"],           // goal[0] coverage-tick
-  ["substrateHealthReport"],    // goal[1] substrate-health-tick
-  ["reachableUnlearnedReport"], // goal[2] probe-reachable-unlearned
-  undefined,                    // goal[3] harness-check-scenario (Thompson OK)
-  undefined,                    // goal[4] identify-unknown-shapes (Thompson OK)
-  ["failureModeReport"],        // goal[5] harness-run-matrix
-  ["topologyGapReport"],        // goal[6] probe-untraversed-edge
+// targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
+// undefined means use Thompson Sampling freely (only for goals that don't name a template).
+const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
+  "development-vessel:coverage-tick",              // goal[0]
+  "development-vessel:substrate-health-tick",      // goal[1]
+  "development-vessel:probe-reachable-unlearned",  // goal[2]
+  "development-vessel:harness-check-scenario",     // goal[3]
+  undefined,                                       // goal[4] — open-ended, let Thompson choose
+  "development-vessel:harness-run-matrix",         // goal[5]
+  "development-vessel:probe-untraversed-edge",     // goal[6]
 ];
 
 const BOREDOM_TAG = "intent:boredom_source";
@@ -140,13 +139,15 @@ async function main(): Promise<void> {
 
   const goalIdx = await nextGoalIndex();
   const goal = AUTONOMOUS_GOALS[goalIdx]!;
-  const expectedOutputShapes = AUTONOMOUS_GOAL_OUTPUT_SHAPES[goalIdx];
-  console.log(`[boredom-vessel] submitting goal[${goalIdx}]: "${goal}"`);
+  const targetTemplateId = AUTONOMOUS_GOAL_TARGET_TEMPLATES[goalIdx];
+  console.log(`[boredom-vessel] submitting goal[${goalIdx}]: "${goal}"${targetTemplateId ? ` (targetTemplateId=${targetTemplateId})` : ""}`);
 
   let res: Response;
   try {
     // Async dispatch: POST /run-goal returns 202+dispatchId immediately (no 300s block).
     // We then poll GET /executions/:dispatchId until done or systemd kills us (TimeoutStartSec=600).
+    // targetTemplateId bypasses Thompson Sampling — goal-host-vessel skips recommend() and
+    // executes the named template directly. Only set for goals that name a specific template.
     const requestBody: Record<string, unknown> = {
       goal,
       tags: ["intent:topology_discovery", BOREDOM_TAG],
@@ -154,8 +155,8 @@ async function main(): Promise<void> {
         source: "boredom-vessel",
       },
     };
-    if (expectedOutputShapes) {
-      requestBody.expected_output_shapes = expectedOutputShapes;
+    if (targetTemplateId) {
+      requestBody.targetTemplateId = targetTemplateId;
     }
     res = await fetch(`${GOAL_HOST_ENDPOINT}/run-goal`, {
       method: "POST",
