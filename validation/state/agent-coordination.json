@@ -4,8 +4,8 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-26T09:15:00Z",
-      "current_focus": "S2 phase. Boredom timeout root cause FOUND+FIXED (106b1f0b): Bun 1.3.14 caps AbortSignal.timeout at 300s regardless of argument; removed AbortSignal, relying on systemd TimeoutStartSec=600. Fix deployed to container. Next natural coverage-tick (goal[0]) at ~09:39Z — second consecutive natural S.4a confirmation. Goal[6] still dispatches escalate-unknown-shape (F-094 routing unresolved, low priority). All vessels healthy. S.4a PASS (rl=[5,7,8,10]).",
+      "last_updated": "2026-05-26T15:57:00Z",
+      "current_focus": "S2 phase, investigation-031 resolved. F-099 (fabricated authorization) and F-100 (concept-db.service ExecStartPre) both acknowledged and resolved by operator endorsement (commit 16136563). Boredom running cleanly since AbortSignal fix (106b1f0b): 11 successful boredom fires in last 6h cycling through all 7 goals with diverse template routing (coverage-tick, substrate-health-tick, probe-untraversed-edge, escalate-unknown-shape, harness-check-scenario, harness-run-matrix). S.4a currently rl=[5,7,8,8] — coverage plateau at 8/23 learned templates (35%), coverage_progress=False. This is expected post-lift: the substrate needs to diversify template discovery beyond its current 8-template comfort zone. S2 agenda: substrate authoring propose-spec via draft-gap-closing-activity chain.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
@@ -39,9 +39,10 @@
         }
       },
       "open_gates": [
-        "second natural boredom coverage-tick fire expected ~09:39Z — confirms sustained S.4a natural signal",
-        "F-094: goal[6] dispatches escalate-unknown-shape instead of add-resolver-to-vessel (Thompson Sampling selects higher-α template); add-resolver-to-vessel α=null — cold-start, low priority",
-        "S2 agenda: substrate should author first propose-spec; boredom's escalate-unknown-shape and harness-check-scenario goals may surface gaps for draft-gap-closing-activity"
+        "S.4a coverage plateau: rl=[5,7,8,8] at 15:57Z (coverage_progress=False). 8/23 templates learned. Substrate needs to probe more of the 15 unlearned templates. The probe-untraversed-edge and probe-reachable-unlearned goals are attempting this; Thompson Sampling needs to accumulate exposure to escalate-unknown-shape variants that target unlearned templates.",
+        "F-094: goal[6] dispatches substrate-health-tick/escalate-unknown-shape instead of add-resolver-to-vessel (Thompson Sampling picks high-α templates). add-resolver-to-vessel α=null — cold-start. Low priority.",
+        "S2 propose-spec pipeline: boredom currently fires escalate-unknown-shape which surfaces gap data, but draft-gap-closing-activity (which creates proposals) has not been invoked yet. Escalate-unknown-shape → draft-gap-closing-activity chain is the S2 substrate-authored-spec path.",
+        "Investigation audit loop: now at investigation-031. F-099/F-100 resolved. Next scheduled audit should focus on S2 coverage diversity progress and whether draft-gap-closing-activity is producing proposals."
       ],
       "recent_fixes": [
         "substrate-health-tick.ts three-bug fix (a3cc682): (1) removed boredom-vessel from persistent-daemon liveness list — it is Type=oneshot, legitimately inactive between timer fires; (2) derive Thompson confidence from 30-day execution trace counts not template records, which reset to alpha=beta=1 on every dev-vessel restart via seed-templates UPSERT; (3) use 15-min stability window and exclude development-vessel: prefix templates from new-template count — prevents dev-vessel restart from falsely signaling instability. After fix: overall_passing=True.",
