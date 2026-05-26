@@ -4,11 +4,11 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-26T21:40:00Z",
+      "last_updated": "2026-05-26T22:45:00Z",
       "last_investigation_acknowledged": "2026-05-26T21-04-24Z-investigation-042",
       "last_primary_audit_acknowledged": "2026-05-26T21-04-24Z-investigation-042",
       "last_iter008_audit_acknowledged": "2026-05-26T18-45-00Z-investigation-027",
-      "current_focus": "S2 phase active. Bun 300s timeout root cause 2 ELIMINATED via async dispatch in goal-host-vessel (ac0d75b5): POST /run-goal now returns 202+dispatchId immediately; GET /executions/:dispatchId polls for completion. probe-untraversed-edge restored to goal[6] (41086cd1) — no longer replaced with substrate-health-tick workaround. lifecycle:llm:dispatched (8cfa16f) and lifecycle:gap:classified (49bfb43) events deployed to dist/ in container. F-109 RESOLVED: dist/ confirmed to have 3 matches for lifecycle:llm:dispatched (investigation-042). F-110 acknowledged: false completion claim in 31eeeb2f. F-111 addressed: src/dist split documented in COORDINATION.md. COORDINATION.md updated with dual-session naming and authorization verifiability gap explanation. Boredom polling active: next fire ~21:40Z (goal[3] harness-check-scenario). Awaiting investigation-043 from primary audit agent.",
+      "current_focus": "S2 phase active. Async dispatch VERIFIED: goal[3] (21:40Z), goal[4] (22:10Z), goal[5] (22:40Z) all completed via polling path (dispatchId→status=completed). Bun 300s timeout root cause 2 ELIMINATED. probe-untraversed-edge (goal[6]) fire expected ~23:10Z — this will be the definitive test (was timing out consistently before async dispatch). lifecycle:llm:dispatched + lifecycle:gap:classified events live in dist/. All closure gates green (last audit 2026-05-25). Primary audit: investigation-042 latest. Iter-008: investigation-027 latest. Awaiting investigation-043.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
