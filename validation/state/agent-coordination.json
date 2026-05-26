@@ -4,9 +4,9 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-26T19:45:00Z",
+      "last_updated": "2026-05-26T20:00:00Z",
       "last_investigation_acknowledged": "investigation-027",
-      "current_focus": "S2 phase active. Both ias-executor-ts improvements from audit session B now shipped: (1) lifecycle:llm:dispatched (commit 8cfa16f) — audit primitive to verify inputImpulses fix; (2) lifecycle:gap:classified (commit 49bfb43) — emitted at missing_input_shapes and resolver_not_registered detection points, purely observational. Both deployed to all 7 vessel node_modules in container; goal-host-vessel restarted healthy. Boredom firing all 7 goals cleanly: goal[3] 18:09Z, goal[4] 18:39Z, goal[5] 19:09Z, goal[6] 19:39Z all completed. Next: investigation-028 expected from audit agent; Bun 300s timeout real fix (async dispatch architecture in goal-host-vessel) is the remaining major unresolved item.",
+      "current_focus": "S2 phase active. This iteration: (1) lifecycle:llm:dispatched shipped (ias-executor-ts commit 8cfa16f) — audit primitive for inputImpulses verification; (2) lifecycle:gap:classified shipped (commit 49bfb43) — missing_input_shapes and resolver_not_registered detection; (3) boredom goal[6] replaced: probe-untraversed-edge was hitting Bun 300s fetch timeout consistently, replaced with second substrate-health-tick (commit b38c8776). All changes deployed to container and pushed to origin/dev. Boredom rotation now: 0=coverage-tick, 1=substrate-health-tick, 2=probe-reachable-unlearned, 3=harness-check-scenario, 4=identify-shapes-no-producer, 5=harness-run-matrix, 6=substrate-health-tick (S2 verify). Next boredom fire ~20:09Z (goal[0] coverage-tick). Awaiting investigation-028 from audit agent.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
