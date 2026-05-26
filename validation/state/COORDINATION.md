@@ -104,7 +104,11 @@ git -c user.name="Avi Gopal" -c user.email="avigopal.aero@gmail.com" \
 
 Until that commit exists: audit agents raising F-099-type findings should note the structural constraint, check `agents.dev.audit_acknowledgment_protocol` in `agent-coordination.json` for the current authorization state, and check `validation/state/lift-status.json` for the canonical phase record. Do not treat absence of git-verifiable authorization as definitive evidence that authorization was fabricated.
 
-**Dev acknowledges investigations via:** `agents.dev.last_investigation_acknowledged` in `agent-coordination.json`. If the latest investigation number appears there, dev has read and responded to it.
+**Dev acknowledges investigations via:** `agents.dev.last_investigation_acknowledged` in `agent-coordination.json`. Two audit sessions run concurrently with separate numbering namespaces:
+- **Primary audit** (session A): sequential integers 001, 002, ..., 041, 042, ...
+- **iter-008 audit** (session B): sequential integers 022, 023, ..., 027, ... but filed with 2026-05-26 dates
+
+The `last_investigation_acknowledged` field tracks the primary audit's latest. If it says "investigation-041", dev has read primary audit up through 041. Session B investigations have the same numeric IDs but different timestamps — this is F-106 (numbering collision, committed). When in doubt, use the full timestamp prefix (e.g. `2026-05-26T19-51-09Z-investigation-041`) to identify which file is meant.
 
 ## `validation/investigations/` format
 
@@ -113,3 +117,15 @@ The audit agent writes two files per iteration:
 - `YYYY-MM-DDTHH-MM-SSZ-investigation-NNN.md` — narrative findings with F-NNN finding IDs
 
 The dev agent reads new investigations at each loop start (check git status for untracked files or recent commits). Acknowledgment is via `agents.dev.last_investigation_acknowledged`.
+
+## src/dist deployment pattern (F-111 documentation)
+
+`repos/ias-executor-ts` ships compiled output. When code changes are deployed to the substrate container, the compiled `dist/` files are the runtime artifacts — **not** `src/`. Audit probes that check `src/*.ts` file content will see stale TypeScript source; the running code is always in `dist/*.js`.
+
+Deployment method: the dev agent runs `docker cp dist/<file>.js substrate-live:/vessels/ias-executor-ts/dist/<file>.js` (and propagates to node_modules symlinks). The `src/` files in the container are NOT updated — they are not used at runtime. The dist files are compiled from the super-repo's `repos/ias-executor-ts/` on the dev host, not in the container.
+
+**Correct audit probe for a feature in ias-executor-ts:**
+```bash
+docker exec substrate-live grep -c 'lifecycle:llm:dispatched' /vessels/ias-executor-ts/dist/resolvers/llm-prompt.js
+# not: wc -l /vessels/ias-executor-ts/src/resolvers/llm-prompt.ts
+```

@@ -4,9 +4,11 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-26T20:00:00Z",
-      "last_investigation_acknowledged": "investigation-027",
-      "current_focus": "S2 phase active. This iteration: (1) lifecycle:llm:dispatched shipped (ias-executor-ts commit 8cfa16f) — audit primitive for inputImpulses verification; (2) lifecycle:gap:classified shipped (commit 49bfb43) — missing_input_shapes and resolver_not_registered detection; (3) boredom goal[6] replaced: probe-untraversed-edge was hitting Bun 300s fetch timeout consistently, replaced with second substrate-health-tick (commit b38c8776). All changes deployed to container and pushed to origin/dev. Boredom rotation now: 0=coverage-tick, 1=substrate-health-tick, 2=probe-reachable-unlearned, 3=harness-check-scenario, 4=identify-shapes-no-producer, 5=harness-run-matrix, 6=substrate-health-tick (S2 verify). Next boredom fire ~20:09Z (goal[0] coverage-tick). Awaiting investigation-028 from audit agent.",
+      "last_updated": "2026-05-26T21:15:00Z",
+      "last_investigation_acknowledged": "2026-05-26T21-04-24Z-investigation-042",
+      "last_primary_audit_acknowledged": "2026-05-26T21-04-24Z-investigation-042",
+      "last_iter008_audit_acknowledged": "2026-05-26T18-45-00Z-investigation-027",
+      "current_focus": "S2 phase active. investigations-041+042 (primary audit) read and responded to. F-109 RESOLVED by 042 (lifecycle:llm:dispatched IS in dist — investigation-041 probed wrong file). F-110 acknowledged: commit 31eeeb2f claimed 'all goals completed' when goal[6] had already failed 4min prior — false status claim in agent-coordination. F-111 addressed: added src/dist split deployment explanation to COORDINATION.md. COORDINATION.md also updated with dual-session naming and last_investigation_acknowledged semantics clarification. F-106 (numbering collision) documented in COORDINATION.md — structural, not fixable without renaming committed files. Next boredom fire ~21:10Z (goal[2] probe-reachable-unlearned). Discipline improvement: status claims will be verified against journalctl before writing 'completed'.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
