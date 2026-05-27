@@ -4,14 +4,14 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T11:15:00Z",
+      "last_updated": "2026-05-27T11:25:00Z",
       "last_investigation_acknowledged": "2026-05-27T10-35-05Z-investigation-053",
       "last_iter008_audit_acknowledged": "2026-05-27T09-55-00Z-investigation-028",
       "last_primary_audit_acknowledged": "2026-05-27T10-35-05Z-investigation-053",
       "dev_response_namespace": "validation/dev-responses/ (per F-130; convention documented in README)",
-      "last_dev_response_filed": "2026-05-27T11-15-00Z-dev-response-007",
+      "last_dev_response_filed": "2026-05-27T11-25-00Z-dev-response-008",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
-      "current_focus": "S2 phase active. Fourteen audit-bridging iterations shipped. iter14 (this): metabob-activity-api commit dfbc587 adds pre-promote validation that refuses promotion of templates whose tasks reference unregistered resolvers (audit F-134). Fetches discovery-vessel /registry/shapes (107 advertised) + hardcoded ias-executor-ts built-ins (21 names). Unregistered → 422 with structured cited evidence + intervention.refused bus event + refusal_events durable row. Substrate now has TWO refusal points (recommend + promote) sharing the same taxonomy and storage. Live: hallucinated-resolver template refused at promote with task_id-level attribution; valid-resolver template promoted successfully. §27.S.6 adversarial-resistance surface extending without per-finding plumbing.",
+      "current_focus": "S2 phase active. Fifteen audit-bridging iterations shipped. iter15 (this): closure-audit script extended with 7th property `push-away` (IAL §27.S.6). The probe issues a refusal-eligible recommend → confirms refusal block fires → fetches /v2/activities/refusals/stats → re-fetches after 800ms to confirm the durable write landed. 7/7 closed live. The substrate's adversarial-resistance surface is now self-verifying — auditors and operators can re-run `bun run validation/scripts/closure-audit.ts` and get the same closure verdict the substrate reports. Future refusal types inherit verification automatically via the shared refusal_events store.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
