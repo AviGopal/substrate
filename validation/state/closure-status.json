@@ -3,7 +3,7 @@
     "operator-memory": {
       "closed": true,
       "missing_deps": [],
-      "evidence": "memoryNote resolver live, 0 notes returned",
+      "evidence": "memoryNote resolver live, 1 notes returned",
       "description": "Substrate memory (memoryNote) works without operator ~/.claude/memory files"
     },
     "slash-skills": {
@@ -15,7 +15,7 @@
     "subagents": {
       "closed": true,
       "missing_deps": [],
-      "evidence": "goal-host-vessel healthy via docker exec: {\"status\":\"healthy\",\"vesselId\":\"goal-host-vessel\",\"vesselName\":\"Goal Host Vessel\",\"shapes\":[\"goal_execution\",\"activity_e",
+      "evidence": "goal-host-vessel responded: {\"status\":\"healthy\",\"vesselId\":\"goal-host-vessel\",\"vesselName\":\"Goal Host Vessel\",\"shapes\":[\"goal_execution\",\"activity_execution\"],\"version\":\"0.1.0\",\"",
       "description": "Complex multi-step goals executable via goal-host-vessel without Claude Code subagents"
     },
     "github-actions": {
@@ -35,9 +35,15 @@
       "missing_deps": [],
       "evidence": "all 5 spec-authoring resolver shapes present",
       "description": "Spec authoring resolvers present; substrate can author specs without operator"
+    },
+    "push-away": {
+      "closed": true,
+      "missing_deps": [],
+      "evidence": "refusal pathway + stats endpoint + durable recording all working (probe shape existent_shape_1779880929009__ recorded)",
+      "description": "Substrate refuses incompetent interventions with cited evidence + durable record (IAL §27.S.6)"
     }
   },
-  "audit_run_at": "2026-05-25T10:11:58.385Z",
+  "audit_run_at": "2026-05-27T11:22:09.995Z",
   "audit_tool_versions": {
     "development-vessel": "0.1.0",
     "activity-api": "1.20.9"
@@ -49,6 +55,7 @@
     "subagents",
     "github-actions",
     "operator-shell",
-    "operator-spec-authoring"
+    "operator-spec-authoring",
+    "push-away"
   ]
 }
