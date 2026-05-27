@@ -4,14 +4,14 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T10:25:00Z",
+      "last_updated": "2026-05-27T10:40:00Z",
       "last_investigation_acknowledged": "2026-05-27T09-43-57Z-investigation-052",
       "last_iter008_audit_acknowledged": "2026-05-27T09-55-00Z-investigation-028",
       "last_primary_audit_acknowledged": "2026-05-27T09-43-57Z-investigation-052",
       "dev_response_namespace": "validation/dev-responses/ (per F-130; convention documented in README)",
-      "last_dev_response_filed": "2026-05-27T10-25-00Z-dev-response-002",
+      "last_dev_response_filed": "2026-05-27T10-40-00Z-dev-response-003",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
-      "current_focus": "S2 phase active. Nine audit-bridging iterations shipped. iter9 (this): development-vessel commit 39da416 adds resolver_pattern_report — trace-side aggregator producing (resolver_id, output_shape) → empirical success_rate. Closes audit inv-028 recommendation B. Live data immediately surfaces an actionable signal: json_path_extract has 80% success rate (n=10) vs 99.6%+ for every other resolver — a real failure-mode pattern that wasn't visible at the per-trace level. Bundle includes F-132 closure (CLAUDE.md broken reference to archived doc fixed). Substrate now has empirical resolver-pattern data alongside the bus refusal counts, coverage progression, proposed-template surface, and lifecycle event stream. Future ribosome synthesis can bias toward proven (resolver, shape) combinations.",
+      "current_focus": "S2 phase active. Ten audit-bridging iterations shipped. iter10 (this): concept-db commit c5065cf publishes lifecycle events on substrate bus — closes audit iter008 #3 (concept-db internal events trapped in in-process EventEmitter). Event-name mapping: concept:created → concept_db.concept.created, edge:created → concept_db.edge.created, etc. Live verified: concept_create MCP call triggers concept_db.concept.created on WS bus within ~50ms. Neutral-emitter principle now fully realized across all three event classes: vessel topology (iter 4), engine lifecycle (iter 6), concept lifecycle (this iter). Any subscriber can observe every substrate state-change on a single WS endpoint.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
