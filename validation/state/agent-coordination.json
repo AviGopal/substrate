@@ -4,11 +4,11 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T03:15:00Z",
-      "last_investigation_acknowledged": "2026-05-26T22-49-44Z-investigation-043",
-      "last_primary_audit_acknowledged": "2026-05-26T22-49-44Z-investigation-043",
+      "last_updated": "2026-05-27T07:55:00Z",
+      "last_investigation_acknowledged": "2026-05-27T07-15-54Z-investigation-048",
+      "last_primary_audit_acknowledged": "2026-05-27T07-15-54Z-investigation-048",
       "last_iter008_audit_acknowledged": "2026-05-26T18-45-00Z-investigation-027",
-      "current_focus": "S2 phase active. reachable_unlearned_probe resolver added (commit 6c3448e): probe-reachable-unlearned now uses a single probe_and_dispatch task instead of 3 tasks with {{}} interpolation. Root cause: ias-executor-ts engine does not interpolate {{}} in task configs for non-llm resolvers — only llm-prompt and iteration resolvers do explicit interpolation. This is a generic architectural gap. Probe verified working: exec_1gvhy1tb succeeded, child exec_20yhwxp3 dispatched. F-113 still active (rl=[8,10,11,15] newest-to-oldest = declining). Boredom cycling — waiting for probe dispatches to accumulate new shape traces.",
+      "current_focus": "S2 phase active. Acknowledging investigations 044-048. Key state: (1) reachable_unlearned_probe resolver REVERTED (9e99f11) after locating slot-binding spec — combining tasks into one resolver was a proliferation trap; the proper path is observer-based and was already implemented at repos/development-vessel/src/observers/registry-change-observer.ts (verified live: probe exec_7q46mntc → child exec_4odu07vb dispatched server-side). (2) F-124 fix in progress: probe-reachable-unlearned stripped to single get_report task. The dead recommend task was passing literal '{{get_report_top_shape}}' to activity_recommend, causing every probe to bogusly recommend harness-run-matrix (Thompson fallback). Observer re-derives correctly; the in-template recommendation was actively harmful pollution. (3) F-123 (coverage_progress structural flaw) and F-118 (validator-dispatch 74% dominance) queued — coverage-tick redesign next. (4) Memory note feedback_slot_binding_not_resolver_proliferation landed in substrate via memoryNote_write.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
@@ -54,7 +54,9 @@
         }
       },
       "open_gates": [
-        "S.4a coverage plateau: rl=[5,6,8,8] at ~17:00Z (coverage_progress=False, consecutive=2). 8/23 templates learned. probe-reachable-unlearned (goal[2]) and probe-untraversed-edge (goal[6]) are running to diversify coverage. harness-run-matrix (goal[5], newly added) will also contribute failureModeReport impulses.",
+        "F-123 (HIGH): coverage_progress=True is structurally guaranteed by cumulative window design. coverage-tick computes traces since (now - i*windowSize) for i=1..N; each window is a SUPERSET of the prior, so reachable_learned is monotonically non-decreasing by construction. Strictly-increasing check is satisfied trivially once any execution exists. Fix queued: non-overlapping rolling windows ([0-1h], [1h-2h], ...) so progress requires genuine new shape learning, not just trace existence. S2 lift was operator-authored so stands, but the substrate-measured criterion has been vacuous for the post-lift period.",
+        "F-118 (HIGH): validator-dispatch + slot-binding meta-activities = 85% of all traces. These bookkeeping templates dominate the learned-shapes calculation and drown out probe-driven learning signal. Fix queued: exclude meta-activity output shapes (validationResult, slotBinding) from coverage-tick's reachable_learned set.",
+        "F-124 (MEDIUM): probe-reachable-unlearned had a dead recommend task with literal '{{get_report_top_shape}}'; ADDRESSED this iteration by stripping the task. Observer at registry-change-observer.ts re-derives the recommendation server-side so dispatch continues to work correctly.",
         "Authorization verifiability: audit agent cannot verify operator conversation messages. Structural fix pending — operator needs to make one direct git commit with avigopal.aero@gmail.com identity to create an anchored root of trust. See audit_acknowledgment_protocol.pending_anchor_commit.",
         "Bun fetch() 300s timeout: goal-host-vessel occasionally hangs >5min causing boredom to timeout. Real fix requires async dispatch (POST /run-goal returns executionId immediately). Currently mitigated by removing long-running goals from boredom rotation.",
         "S2 propose-spec pipeline: draft-gap-closing-activity removed from boredom rotation (goal[5]) because it needs failureModeReport input that wasn't available. harness-run-matrix now produces failureModeReports each cycle; when this data accumulates, draft-gap-closing-activity should be re-added as a downstream goal.",
