@@ -4,14 +4,14 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T10:10:00Z",
+      "last_updated": "2026-05-27T10:25:00Z",
       "last_investigation_acknowledged": "2026-05-27T09-43-57Z-investigation-052",
       "last_iter008_audit_acknowledged": "2026-05-27T09-55-00Z-investigation-028",
       "last_primary_audit_acknowledged": "2026-05-27T09-43-57Z-investigation-052",
       "dev_response_namespace": "validation/dev-responses/ (per F-130; convention documented in README)",
-      "last_dev_response_filed": "2026-05-27T10-10-00Z-dev-response-001",
+      "last_dev_response_filed": "2026-05-27T10-25-00Z-dev-response-002",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
-      "current_focus": "S2 phase active. Eight audit-bridging iterations shipped. iter8 (this): metabob-activity-api commit eee8b67 emits intervention.refused event on the substrate WS bus when recommend refuses, with cited evidence (refusal_type, expected_output_shapes, candidates_examined, task_description, reason, suggestion). Closes audit F-129 (HIGH): §27.S.6 push-away no longer just an HTTP JSON field — auditors can subscribe and count refusals over sustained windows. F-130 (HIGH) addressed: created validation/dev-responses/ with README documenting the dev-response-NNN.md naming convention separate from investigation-NNN.md. First file dev-response-001.md filed. Refusal composes with prior iterations (recommend guard, bus publish endpoint, broadcaster). Live verified via WS subscriber receiving intervention.refused within ~50ms of a refusal-eligible recommend call.",
+      "current_focus": "S2 phase active. Nine audit-bridging iterations shipped. iter9 (this): development-vessel commit 39da416 adds resolver_pattern_report — trace-side aggregator producing (resolver_id, output_shape) → empirical success_rate. Closes audit inv-028 recommendation B. Live data immediately surfaces an actionable signal: json_path_extract has 80% success rate (n=10) vs 99.6%+ for every other resolver — a real failure-mode pattern that wasn't visible at the per-trace level. Bundle includes F-132 closure (CLAUDE.md broken reference to archived doc fixed). Substrate now has empirical resolver-pattern data alongside the bus refusal counts, coverage progression, proposed-template surface, and lifecycle event stream. Future ribosome synthesis can bias toward proven (resolver, shape) combinations.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",

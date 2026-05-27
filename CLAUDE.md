@@ -155,7 +155,7 @@ S3 has no acceptance gate. It is emergent and operator-measured by **active push
 - **Wrapped template ids**: ≈800 pre-existing rows with doubled-prefix or descriptive-name wrapping (`activity:⟨activity:⟨…⟩⟩`). Forward-fix prevents new occurrences; existing rows need an operator-run DELETE.
 - **Canary key format drift**: existing `mb_inst_canary_*` and `self-canary` keys use underscore-separated form with no HMAC suffix, yet authenticate against activity-api despite identity-vessel's validator requiring `mb-{b64}-{hmac32}`. Three hypotheses (deploy drift / bypass path / unenforced auth); investigate before relying on key-format constraints for security.
 
-**Detailed diagnostics:** see [`docs/IMPLEMENTATION_FINDINGS_2026_04.md`](docs/IMPLEMENTATION_FINDINGS_2026_04.md) and the per-change `design.md` files under `openspec/changes/`. CLAUDE.md describes behaviour, not ticket IDs — when you need root-cause history, follow the links.
+**Detailed diagnostics:** see [`docs/archive/2026-05-27/IMPLEMENTATION_FINDINGS_2026_04.md`](docs/archive/2026-05-27/IMPLEMENTATION_FINDINGS_2026_04.md) and the per-change `design.md` files under `openspec/changes/`. CLAUDE.md describes behaviour, not ticket IDs — when you need root-cause history, follow the links.
 
 ## Project Overview
 
