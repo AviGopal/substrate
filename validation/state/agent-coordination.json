@@ -4,12 +4,12 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T08:45:00Z",
-      "last_investigation_acknowledged": "2026-05-27T08-45-00Z-investigation-050",
-      "last_primary_audit_acknowledged": "2026-05-27T07-15-54Z-investigation-048",
-      "last_iter008_audit_acknowledged": "2026-05-26T18-45-00Z-investigation-027",
+      "last_updated": "2026-05-27T08:55:00Z",
+      "last_investigation_acknowledged": "2026-05-27T08-50-00Z-investigation-051",
+      "last_primary_audit_acknowledged": "2026-05-27T08-36-14Z-investigation-050",
+      "last_iter008_audit_acknowledged": "2026-05-27T08-50-00Z-investigation-026",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
-      "current_focus": "S2 phase active. Investigation-050 closes the operator probe (Disrupt 2026 application) by adding a refusal guard in activity-api recommend. Substrate now REFUSES with cited evidence when expected_output_shapes have no producer in the catalogue. First substrate-side push-away closure mechanism (IAL §27.S.6). Verified end-to-end: bogus-shape goal-host call → fallback_tier=refused, status=failed, no wrong-template dispatch. Prior iteration closed F-118/F-122/F-123/F-124/F-125 via probe template strip + coverage-tick non-overlapping windows + meta-activity exclusion. The substrate's three core honesty signals are now substantively correct: (a) coverage_progress reflects real shape discovery, (b) probe template no longer pollutes Thompson with bogus recommendations, (c) selector refuses rather than silently mis-dispatching.",
+      "current_focus": "S2 phase active. Three audit-bridging iterations shipped: (1) commit 9a36c751 closed F-118/F-122/F-123/F-124/F-125 — coverage-tick now uses non-overlapping rolling windows, meta-activity exclusion, probe template stripped to single trigger task. (2) commit 4ece17e1 added recommend refusal guard — substrate refuses with cited evidence when expected_output_shapes have no producer (push-away closure, IAL §27.S.6; resolves operator Disrupt probe). (3) commit c412e5d (this iteration) added probe rotation by producer last-execution timestamp — closes F-126/F-127. Live: top went release-change → forge-vessel-for-shape; producers_exercised_last_24h=19. New finding F-129 (MEDIUM) filed: goal-host proxy registration is one-shot at startup, races with dev-vessel restarts → zero proxies registered. iter008 neutral-emitter principle (investigation-026) acknowledged as substrate-spanning architectural item; ties to F-129 root cause. Substrate now produces honest signals + refuses incompetent goals + systematically expands competent producer set.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
