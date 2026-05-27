@@ -4,14 +4,15 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T12:55:00Z",
-      "last_investigation_acknowledged": "2026-05-27T12-50-00Z-investigation-030",
+      "last_updated": "2026-05-27T13:15:00Z",
+      "last_investigation_acknowledged": "2026-05-27T12-45-02Z-investigation-055",
       "last_iter008_audit_acknowledged": "2026-05-27T12-50-00Z-investigation-030",
-      "last_primary_audit_acknowledged": "2026-05-27T11-18-17Z-investigation-054",
+      "last_primary_audit_acknowledged": "2026-05-27T12-45-02Z-investigation-055",
       "dev_response_namespace": "validation/dev-responses/ (per F-130; convention documented in README)",
-      "last_dev_response_filed": "2026-05-27T12-55-00Z-dev-response-010",
+      "last_dev_response_filed": "2026-05-27T13-15-00Z-dev-response-011",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
-      "current_focus": "S2 phase active. Seventeen audit-bridging iterations shipped. iter17 (this): F-138 (MEDIUM) closed via recovery bundle (validation/recovery/ias-executor-ts-2026-05-27.bundle, 315KB) + super-repo gitlink pointer advance from 49bfb43 → b6b58a2. The 3 ias-executor-ts commits (BusForwardingEventSink, resolveInputs poll-and-wait, verify-dist-fresh) are now referenced from super-repo HEAD and cannot orphan. F-139 (LOW) closed: promote-guard allowlist narrowed from 21 to 18 names — removed helmfile_sync, docker_build_push, scaffold_vessel_skeleton (CI-only resolvers absent from substrate goal-host). Inv-030 (opus promote-gate-resolver design, weighted Beta-Binomial w/ Jaccard similarity) acknowledged + queued for next implementation iteration. All HIGH and MEDIUM structural findings now closed; remaining open: F-128/F-131 (LOW), F-101 (structural-choice).",
+      "last_operator_probe_provenance": "unverified (F-131): file is not backed by an operator-signed git commit; substrate-process authorship cannot be ruled out. Acknowledged for substantive content; provenance protocol documented in validation/findings/README.md.",
+      "current_focus": "S2 phase active. Eighteen audit-bridging iterations shipped. iter18 (this): F-128 (LOW) closed in dev-vessel commit 9d318bb — coverage-tick response adds consecutive_windows_with_new_shapes (primary) + consecutive_windows_max (cap), preserves consecutive_progressing_cycles as legacy alias. F-131 (LOW→MEDIUM) addressed: created validation/findings/README.md documenting provenance protocol (frontmatter agent: claims are self-description, not provenance — only operator-signed git commits establish authorship); annotated existing operator-probe file with provenance: unverified + provenance_note; coordination JSON now carries last_operator_probe_provenance flag. F-138 and F-139 were closed in iter 17 (commits landed 10 minutes after inv-055 ran); next audit cycle will pick up. Substrate audit backlog now structurally empty modulo F-101 (architectural-choice item). Next concrete unlock: inv-030 promote-gate-resolver implementation, queued.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
