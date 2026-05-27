@@ -186,72 +186,182 @@ function registerBuiltinResolvers(): void {
 // qualified name ("development-vessel:coverage_tick") so both conventions work.
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function registerDevVesselProxies(): Promise<void> {
+// Currently-registered proxy shape ids, tracked so re-registration can be idempotent
+// and produce useful diff logs. Keyed on the bare shape name (we register both bare
+// and qualified forms but the bare name is the canonical identity).
+const registeredProxyShapes = new Set<string>();
+
+function buildProxyResolver(shape: string) {
+  return {
+    id: shape,
+    tier: "pattern" as const,
+    async resolve(context: Record<string, unknown>) {
+      const task = context.task as Record<string, unknown>;
+      const config = (task.config ?? {}) as Record<string, unknown>;
+      const variables = (context.variables ?? {}) as Record<string, unknown>;
+      const random = context.random as { id: (prefix: string) => string };
+      const pointer: Record<string, unknown> = { type: shape, ...config, ...variables };
+      try {
+        const resp = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}),
+          },
+          body: JSON.stringify({ impulse: { pointer } }),
+          signal: AbortSignal.timeout(30_000),
+        });
+        const bodyText = await resp.text();
+        let parsed: unknown;
+        try { parsed = JSON.parse(bodyText); } catch { parsed = bodyText; }
+        return [{
+          id: random.id(`dev:${shape}`),
+          pointer: { type: "memo" },
+          metadata: { shape, source: "development-vessel", ok: resp.ok },
+          loaded: true,
+          content: parsed,
+        }];
+      } catch (err) {
+        return [{
+          id: random.id(`dev:${shape}:err`),
+          pointer: { type: "memo" },
+          metadata: { shape, source: "development-vessel", degraded: true },
+          loaded: true,
+          content: { error: (err as Error).message },
+        }];
+      }
+    },
+  };
+}
+
+/**
+ * Idempotent registration of development-vessel proxy resolvers.
+ *
+ * Fetches /shapes from dev-vessel, diffs against the currently-registered set,
+ * and registers proxies for any new shapes (both bare and `development-vessel:`
+ * qualified). Existing proxies are left alone — re-registration would be safe
+ * but the diff avoids redundant work.
+ *
+ * Called at startup AND reactively from the vessel-registration WS subscriber
+ * whenever a `vessel.registered` event fires for the dev-vessel identity. Per
+ * openspec/changes/2026-05-27-neutral-emitter-lifecycle-bus
+ * proxy-resolver-reactive-registration capability. Dissolves F-129 (proxy
+ * registration race when goal-host restarts before dev-vessel is up).
+ */
+async function registerDevVesselProxies(): Promise<{ added: string[]; total: number }> {
   try {
     const r = await fetch(`${DEV_VESSEL_ENDPOINT}/shapes`, {
       signal: AbortSignal.timeout(5_000),
     });
     if (!r.ok) {
-      console.warn(`[goal-host-vessel] dev-vessel /shapes HTTP ${r.status} — proxy resolvers not registered`);
-      return;
+      console.warn(`[goal-host-vessel] dev-vessel /shapes HTTP ${r.status} — proxy resolvers not registered yet`);
+      return { added: [], total: registeredProxyShapes.size };
     }
     const body = await r.json() as { shapes?: string[] };
     const shapes: string[] = Array.isArray(body.shapes) ? body.shapes : [];
     if (shapes.length === 0) {
-      console.warn("[goal-host-vessel] dev-vessel /shapes returned empty list — proxy resolvers not registered");
+      console.warn("[goal-host-vessel] dev-vessel /shapes returned empty list");
+      return { added: [], total: registeredProxyShapes.size };
+    }
+
+    const added: string[] = [];
+    for (const shape of shapes) {
+      if (registeredProxyShapes.has(shape)) continue;
+      const resolver = buildProxyResolver(shape);
+      // Cast: the proxy resolve fn uses a loose Record-typed context for
+      // forward-compat with engine context shape evolution. The runtime
+      // Resolver interface in ias-executor-ts is structurally compatible.
+      host.runtime.resolvers.register(resolver as unknown as Parameters<typeof host.runtime.resolvers.register>[0]);
+      host.runtime.resolvers.register({ ...resolver, id: `development-vessel:${shape}` } as unknown as Parameters<typeof host.runtime.resolvers.register>[0]);
+      registeredProxyShapes.add(shape);
+      added.push(shape);
+    }
+
+    if (added.length > 0) {
+      console.log(
+        `[goal-host-vessel] proxy registration: +${added.length} new shapes ` +
+          `(now ${registeredProxyShapes.size} total) — ${added.slice(0, 5).join(", ")}` +
+          (added.length > 5 ? `, ...` : ""),
+      );
+    }
+    return { added, total: registeredProxyShapes.size };
+  } catch (err) {
+    console.warn(`[goal-host-vessel] failed to register dev-vessel proxies: ${(err as Error).message}`);
+    return { added: [], total: registeredProxyShapes.size };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reactive vessel-registration subscriber (openspec proxy-resolver-reactive-registration)
+//
+// Subscribes to activity-api's WS bus and listens for `vessel.registered` events.
+// When the dev-vessel re-registers (after restart, or for the first time when
+// goal-host beat it to startup), triggers a debounced re-fetch + diff-and-register
+// of dev-vessel proxy resolvers. This is the architectural antidote to F-129.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DEV_VESSEL_ID_PATTERN = /^development-vessel(-|$)/;
+const REGISTRATION_DEBOUNCE_MS = 500;
+let registrationDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let busWsClient: WebSocket | null = null;
+let busReconnectDelay = 1_000;
+const BUS_RECONNECT_MAX_DELAY = 30_000;
+
+function startVesselRegistrationSubscriber(): void {
+  // Convert http://... to ws://... for the WS endpoint
+  const wsEndpoint = ACTIVITY_API_ENDPOINT.replace(/^http/, "ws") + "/ws";
+
+  function connect(): void {
+    try {
+      busWsClient = new WebSocket(wsEndpoint);
+    } catch (err) {
+      console.warn(`[goal-host-vessel] WS subscriber connect failed: ${(err as Error).message}`);
+      scheduleReconnect();
       return;
     }
 
-    for (const shape of shapes) {
-      const ids = [shape, `development-vessel:${shape}`];
-      for (const id of ids) {
-        host.runtime.resolvers.register({
-          id,
-          tier: "pattern" as const,
-          async resolve(context: Record<string, unknown>) {
-            const task = context.task as Record<string, unknown>;
-            const config = (task.config ?? {}) as Record<string, unknown>;
-            const variables = (context.variables ?? {}) as Record<string, unknown>;
-            const random = context.random as { id: (prefix: string) => string };
-            // Build the pointer: merge config fields + task variables + shape type
-            const pointer: Record<string, unknown> = { type: shape, ...config, ...variables };
-            try {
-              const resp = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}),
-                },
-                body: JSON.stringify({ impulse: { pointer } }),
-                signal: AbortSignal.timeout(30_000),
-              });
-              const bodyText = await resp.text();
-              let parsed: unknown;
-              try { parsed = JSON.parse(bodyText); } catch { parsed = bodyText; }
-              return [{
-                id: random.id(`dev:${shape}`),
-                pointer: { type: "memo" },
-                metadata: { shape, source: "development-vessel", ok: resp.ok },
-                loaded: true,
-                content: parsed,
-              }];
-            } catch (err) {
-              return [{
-                id: random.id(`dev:${shape}:err`),
-                pointer: { type: "memo" },
-                metadata: { shape, source: "development-vessel", degraded: true },
-                loaded: true,
-                content: { error: (err as Error).message },
-              }];
-            }
-          },
-        });
+    busWsClient.addEventListener("open", () => {
+      busReconnectDelay = 1_000; // reset backoff
+      busWsClient?.send(JSON.stringify({ type: "authenticate", token: API_KEY }));
+      // Catch-up: registrations could have happened while we were disconnected.
+      // Re-run the diff-and-register once on reconnect.
+      void registerDevVesselProxies();
+    });
+
+    busWsClient.addEventListener("message", (e: MessageEvent) => {
+      try {
+        const msg = JSON.parse(typeof e.data === "string" ? e.data : e.data.toString());
+        if (msg?.type !== "vessel.registered") return;
+        const vesselId = msg.data?.vessel_id;
+        if (typeof vesselId !== "string" || !DEV_VESSEL_ID_PATTERN.test(vesselId)) return;
+        // Debounce: coalesce rapid re-registrations into one re-fetch.
+        if (registrationDebounceTimer) clearTimeout(registrationDebounceTimer);
+        registrationDebounceTimer = setTimeout(() => {
+          registrationDebounceTimer = null;
+          void registerDevVesselProxies();
+        }, REGISTRATION_DEBOUNCE_MS);
+      } catch {
+        // ignore unparseable / non-event frames
       }
-    }
-    console.log(`[goal-host-vessel] registered ${shapes.length} development-vessel proxy resolvers`);
-  } catch (err) {
-    console.warn(`[goal-host-vessel] failed to register dev-vessel proxies: ${(err as Error).message}`);
+    });
+
+    busWsClient.addEventListener("close", () => {
+      scheduleReconnect();
+    });
+
+    busWsClient.addEventListener("error", () => {
+      // Errors will also trigger close; let close handle reconnect.
+    });
   }
+
+  function scheduleReconnect(): void {
+    busWsClient = null;
+    setTimeout(connect, busReconnectDelay);
+    busReconnectDelay = Math.min(busReconnectDelay * 2, BUS_RECONNECT_MAX_DELAY);
+  }
+
+  connect();
+  console.log(`[goal-host-vessel] vessel-registration subscriber started → ${wsEndpoint}`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -494,6 +604,10 @@ console.log(
 
 registerBuiltinResolvers();
 await registerDevVesselProxies();
+// Reactive proxy registration: subscribe to vessel.registered events on the bus
+// so we re-fetch /shapes when dev-vessel (re)registers, regardless of whether
+// goal-host or dev-vessel booted first. Dissolves F-129.
+startVesselRegistrationSubscriber();
 await discoveryLoop.start();
 
 // Graceful shutdown on SIGTERM.
