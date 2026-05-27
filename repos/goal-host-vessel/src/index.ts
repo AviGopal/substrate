@@ -22,6 +22,7 @@ import {
   DiscoveryRegistrationLoop,
   createLLMPort,
 } from "@avigopal/ias-executor-ts";
+import { BusForwardingEventSink } from "@avigopal/ias-executor-ts/adapters";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Configuration
@@ -63,12 +64,31 @@ const llm = createLLMPort(anthropicClient);
 // GoalHost
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Inner event sink — default no-op (engine accepts undefined; default sink is
+// the engine's internal noop). We wrap with BusForwardingEventSink so engine
+// lifecycle events (lifecycle:task:preBinding, lifecycle:execution:succeeded,
+// lifecycle:gap:classified, lifecycle:llm:dispatched) flow onto activity-api's
+// WS bus via POST /v2/events/publish. Per openspec change
+// 2026-05-27-neutral-emitter-lifecycle-bus, task 2.
+//
+// The forwarder is fire-and-forget: HTTP publish failures never block engine
+// progression. Subscribers receive events with type mapped to the bus form
+// (replace `:` with `.`, camelCase → snake_case).
+const noopInnerSink = { emit: () => {} };
+const busSink = new BusForwardingEventSink({
+  inner: noopInnerSink,
+  activityApiEndpoint: ACTIVITY_API_ENDPOINT,
+  apiKey: API_KEY,
+  sourceVesselId: "goal-host-vessel",
+});
+
 const host = new GoalHost({
   llm,
   activityApiEndpoint: ACTIVITY_API_ENDPOINT,
   apiKey: API_KEY,
   discoveryEndpoint: DISCOVERY_ENDPOINT,
   enableAgentFill: true,
+  eventSink: busSink,
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

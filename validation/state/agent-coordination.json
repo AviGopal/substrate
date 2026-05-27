@@ -4,12 +4,12 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T09:25:00Z",
-      "last_investigation_acknowledged": "2026-05-27T09-25-00Z-investigation-053",
+      "last_updated": "2026-05-27T09:40:00Z",
+      "last_investigation_acknowledged": "2026-05-27T09-40-00Z-investigation-054",
       "last_primary_audit_acknowledged": "2026-05-27T08-36-14Z-investigation-050",
       "last_iter008_audit_acknowledged": "2026-05-27T08-50-00Z-investigation-026",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
-      "current_focus": "S2 phase active. Five audit-bridging iterations shipped. iter5 (this): Task 3 of neutral-emitter-bus spec landed. F-129 CLOSED — reproduced race scenario (stop dev-vessel → restart goal-host with 0 proxies → start dev-vessel) and verified reactive recovery via vessel.registered event in <10s, no operator intervention. iter008 #4 (lifecycle:task:* consumer-coupled to workbench) partially addressed by bus infrastructure existence. Remaining: Task 2 (ias-executor-ts BusForwardingEventSink) closes iter008 #4 fully. Substrate state: honest signals (coverage-tick) + push-away refusal (operator probe) + producer rotation (probe expansion) + neutral-emitter bus foundation + reactive vessel topology. The substrate today is materially more self-correcting than five iterations ago.",
+      "current_focus": "S2 phase active. Six audit-bridging iterations shipped. iter6 (this): Task 2 of neutral-emitter-bus spec landed. ias-executor-ts BusForwardingEventSink wraps GoalHost's eventSink — engine lifecycle events (lifecycle:task:preBinding, :completed, :execution:succeeded, :gap:classified, :llm:dispatched) now flow onto activity-api WS bus with name-mapped form (lifecycle.task.pre_binding, etc.). Live: single probe generated 6+15+6+2=29 lifecycle events on the bus across 4 distinct types. iter008 #4 (lifecycle:task:* consumer-coupled to workbench) CLOSED. All four spec tasks live. Substrate is now fully reactive across both topology (vessel.*) and execution (lifecycle.*) — any vessel joins by subscribing to a single WS endpoint, no per-source plumbing, no polling.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
