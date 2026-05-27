@@ -4,14 +4,14 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T10:40:00Z",
+      "last_updated": "2026-05-27T10:50:00Z",
       "last_investigation_acknowledged": "2026-05-27T09-43-57Z-investigation-052",
       "last_iter008_audit_acknowledged": "2026-05-27T09-55-00Z-investigation-028",
       "last_primary_audit_acknowledged": "2026-05-27T09-43-57Z-investigation-052",
       "dev_response_namespace": "validation/dev-responses/ (per F-130; convention documented in README)",
-      "last_dev_response_filed": "2026-05-27T10-40-00Z-dev-response-003",
+      "last_dev_response_filed": "2026-05-27T10-50-00Z-dev-response-004",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
-      "current_focus": "S2 phase active. Ten audit-bridging iterations shipped. iter10 (this): concept-db commit c5065cf publishes lifecycle events on substrate bus — closes audit iter008 #3 (concept-db internal events trapped in in-process EventEmitter). Event-name mapping: concept:created → concept_db.concept.created, edge:created → concept_db.edge.created, etc. Live verified: concept_create MCP call triggers concept_db.concept.created on WS bus within ~50ms. Neutral-emitter principle now fully realized across all three event classes: vessel topology (iter 4), engine lifecycle (iter 6), concept lifecycle (this iter). Any subscriber can observe every substrate state-change on a single WS endpoint.",
+      "current_focus": "S2 phase active. Eleven audit-bridging iterations shipped. iter11 (this): ias-executor-ts local commit 37a9ddb converts engine resolveInputs to async with poll-and-wait — closes audit inv-028 recommendation C (fragility around slot-binding subscribers populating store before resolveInputs throws). Default EXECUTOR_INPUT_RESOLUTION_TIMEOUT_MS=0 preserves original behavior; opt-in via env var gives subscribers a deterministic window. F-133 closed: tasks.md regex updated to match implementation. ALL THREE inv-028 recommendations (A/B/C) now closed. Substrate audit-grade closure surface substantively complete. Remaining open: F-101, F-111 (MEDIUM, non-structural), F-128, F-131 (LOW).",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",

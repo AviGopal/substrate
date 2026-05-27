@@ -1,6 +1,6 @@
 ## 1. Activity-api: publish endpoint
 
-- [ ] 1.1 Create `repos/metabob-activity-api/src/routes/events.ts`. `POST /v2/events/publish` accepts `{ type: string, source_vessel_id?: string, scope?: "broadcast" | "org" | "session", target?: string, data: object }`. Validates type matches `^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$` (`<source>.<noun>.<verb>` form).
+- [ ] 1.1 Create `repos/metabob-activity-api/src/routes/events.ts`. `POST /v2/events/publish` accepts `{ type: string, source_vessel_id?: string, scope?: "broadcast" | "org" | "session", target?: string, data: object }`. Validates type matches `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,3}$` (2-to-4 dotted snake_case segments — accepts `vessel.registered`, `lifecycle.task.pre_binding`, etc.; F-133 inv-052 correction.)
 - [ ] 1.2 Default scope is `"broadcast"` → calls `broadcaster.emit({ type, timestamp: Date.now(), source_vessel_id, ...data })`. `"org"` → `emitToOrg(message, target=orgId from JWT)`. `"session"` → `emitToSession(message, target=sessionId from body)`.
 - [ ] 1.3 Mount route at `repos/metabob-activity-api/src/index.ts` after auth middleware. Returns `{ accepted: true, ts: number }`. Never throws — broadcaster failures logged and swallowed (lifecycle is best-effort).
 - [ ] 1.4 Add test `repos/metabob-activity-api/src/routes/events.test.ts`: (a) valid type publishes; (b) malformed type returns 400; (c) broadcaster failure does NOT propagate; (d) `org` scope requires JWT orgId; (e) emitter receives the wrapped message via subscribed client.
