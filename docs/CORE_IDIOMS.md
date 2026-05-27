@@ -40,6 +40,7 @@ requires a minimum cohesive idiom set. Subsequent S2 → S3 motion (§27.S.5,
 | 10 | Forge variant testing | **Borderline** (S1→S2 named in §27.3.g.7) | Operator-dispatched pre-lift; substrate-dispatched post-lift. `2026-05-23-substrate-forge-vessel`. |
 | 11 | Push-away with cited rationale | **Borderline** (S2→S3 readiness measure per §27.S.6) | Data primitives needed pre-lift; rate-trend measured post-lift. `2026-05-23-intervention-tracking`. |
 | 12 | External-resolver-vesselization | **No — S2→S3 extension** | Post-lift acceleration; ribosome repointed at external calls. `2026-05-23-external-resolver-vesselization`. |
+| 13 | Neutral emitter | **No — S2→S3 extension** | Decouples event topology from vessel topology; required for environment-reactive vessels and federated substrates. |
 
 The lift-critical set (1–9) is the minimum cohesive substrate. The borderline
 pair (10, 11) is named in the lift acceptance gates but the *trend* they
@@ -183,6 +184,18 @@ each declared validation rule; on failure it emits a `failure_mode` impulse.
 **Anti-pattern.** Calling validators or ribosome inline from the executor.
 Couples the executor to specific meta-activities; precludes adding new
 subscribers without editing executor source.
+
+**Third event layer — environment-reactive impulse events.** Task events and
+execution events describe what the substrate did to itself. Impulse events
+describe what changed in the environment around the substrate.
+`lifecycle:impulse:stale` fires when an external change makes a loaded impulse's
+content unreliable (a file the impulse points to has been modified since load
+time; a DB row has been updated by a concurrent resolver). `lifecycle:impulse:expired`
+fires when a time-bounded resource has run out (a token budget, a lock, a
+cache TTL). Subscribers to these events are environment-reactive: they can
+re-load the affected impulse, abort dependent tasks, or trigger a re-probe.
+This third layer is what gives the substrate genuine environment awareness —
+not just "what did I do" but "what changed around me."
 
 ---
 
@@ -468,6 +481,59 @@ error-mode `{rate_limit | auth_failure}`, cost ≈ $0. Ribosome mints
 **Anti-pattern.** Operator pre-declaring a vessel for every external
 endpoint. Brittle, premature, and not foundation-aligned (vessels are
 introspected at the point of use, foundation §294).
+
+---
+
+### Idiom 13 — Neutral emitter
+
+**Definition.** Every lifecycle event — task binding, execution completion,
+gap classification, vessel registration, impulse state change — is emitted on
+the substrate-wide broadcast bus without targeting a specific consumer. Vessels
+subscribe to the events they need; emitters have no knowledge of their
+subscribers. This decouples the substrate's internal event topology from its
+vessel topology: new subscribers can attach without any change to emitting
+vessels; removing a subscriber never breaks an emitter.
+
+The architectural invariant: if removing a subscriber breaks an emitter, the
+emitter was targeting that subscriber. Fix the emitter — it was not emitting
+neutrally.
+
+**Recurrence.** activity-api's WebSocket broadcaster is the canonical bus for
+all substrate events (`wss://localhost:18081/ws` externally; inside the
+container at the in-process port). Discovery-vessel emits `vessel.registered`,
+`vessel.heartbeat`, `vessel.deregistered`, and `vessel.expired` on this bus.
+goal-host-vessel subscribes to `vessel.registered` to register proxy resolvers
+for newly-appearing vessels; ribosome-vessel subscribes to
+`lifecycle:execution:succeeded`; validator-dispatch subscribes to
+`lifecycle:task:completed`. None of these subscriber registrations are visible
+to the emitting vessel.
+
+**Composability.** Composes Lifecycle hook subscription (idiom 4; this idiom
+defines the broadcast semantics under which lifecycle hooks operate). Also
+composes Discovery + Resolve (idiom 2; a vessel that learns about a peer
+vessel via `vessel.registered` can immediately resolve shapes against it without
+a restart cycle). Federation extends this idiom inter-substrate: a peer
+discovery-vessel's `vessel.registered` events propagate into the local bus as
+`provisional` entries, making remote vessels appear shape-addressable.
+
+**Lift-critical / S2→S3 extension.** S2→S3 extension. The substrate operates
+without this idiom as a strictly named idiom — Lifecycle hook subscription
+(idiom 4) covers the functional requirement pre-lift. The neutral-emitter
+framing becomes load-bearing at S2→S3 scale, where adding a new subscriber
+(an adversarial probe vessel, an audit vessel, a federated peer) must not
+require touching any emitting vessel's source.
+
+**Example invocation.** A new `audit-vessel` is added to the substrate. It
+subscribes to `vessel.registered` (to detect unrecognized vessels),
+`task.completed` (to sample output shapes for purity audit), and
+`interventionRefused` (to aggregate the S2→S3 signal). The addition requires
+zero changes to discovery-vessel, goal-host-vessel, or any task executor. The
+bus is the integration point; the bus is not changed.
+
+**Anti-pattern.** An emitter that constructs its subscriber list and dispatches
+to each subscriber explicitly. This couples the emitter to subscriber identity
+and requires emitter edits when the subscriber set changes — the architectural
+dual of the inline-validator anti-pattern in idiom 4.
 
 ---
 

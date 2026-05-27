@@ -42,6 +42,12 @@ Enable learning:
 | `pattern` | Pattern matching from history | PreValidationResolver |
 | `llm` | LLM reasoning required | LLMResolver with tool calling |
 
+### Per-model LLM sub-resolvers
+
+LLM-tier resolvers are moving toward per-model sub-resolver identifiers stored in the `resolver_id` field: `llmText@haiku`, `llmText@sonnet`, `llmText@opus` (and equivalent per-provider variants when multiple providers are configured). Each sub-resolver accrues its own α/β posterior, cost distribution, and resolver-tier metadata. Traces already record which model was invoked; the sub-resolver identifier promotes that fact to a first-class Thompson key so the substrate can learn which model suffices for which `(resolver, problem-class)` combination.
+
+Routine tasks — keyword extraction, simple validation, slot filling — converge to cheaper models as their posteriors accumulate. Novel or high-stakes tasks — decomposition, cross-domain compliance, security checks — converge to more capable models because cheaper models fail more often and drive β up. The selection mechanism is identical to activity variant selection; no new infrastructure is required. Sub-resolver ids are plain strings in the existing `resolver_id` field, so legacy traces that recorded only `"llm"` remain valid and continue to feed a coarse-grained posterior alongside the per-model ones.
+
 ## Data Model
 
 ### TaskResult.metadata.resolverData
@@ -154,6 +160,16 @@ const patterns = [
   ['local-cache', 'discovery']       // Cache-then-fetch
 ];
 ```
+
+### 5. Deterministic Distillation
+
+**Goal**: Replace LLM resolvers with deterministic equivalents on inputs where the LLM output has become predictable.
+
+**Method**: When an LLM resolver consistently produces semantically equivalent outputs for inputs sharing a stable signature — same shape, similar content fingerprint, identical output structure across N executions — the ribosome extracts a deterministic equivalent resolver and registers it as a sibling under the same shape. The distilled resolver starts with a conservative prior (lower α than the LLM resolver) and earns its way up via Thompson as it accumulates its own success traces.
+
+Under cost-weighted selection, the distilled resolver dominates the LLM resolver on routine inputs because its per-call cost is near zero. Over time the LLM call rate for that shape decreases as patterns are extracted. Each successful distillation is an observable substrate self-improvement event: the ratio of `deterministic` to `llm` resolver calls for a shape is a direct readout of how much that problem class has been learned.
+
+**Invariant**: The LLM resolver is never removed — it remains the fallback for inputs that fall outside the distilled resolver's input signature. The distillation is additive, not a replacement.
 
 ## Implementation
 

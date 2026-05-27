@@ -206,5 +206,32 @@ The substrate's failure modes appear as gap **accumulation patterns**: a
 class of events that consistently force the operator to reach into
 `missing_concept` or `missing_idiom` is precisely what the substrate's
 ribosome / concept-extractor should target next. This is the same logic as
-§27.S.6's intervention-rate-trending-to-zero criterion, applied to the
-narration channel rather than the action channel.
+the intervention-rate-trending-to-zero criterion, applied to the narration
+channel rather than the action channel.
+
+## §G. Intervention emission protocol
+
+The narration protocol doubles as the mechanism for classifying and emitting `operatorIntervention` events. The narrator should watch for the following and emit or log an `operatorIntervention` impulse for each:
+
+- **Commits from the operator's git author identity** that modify substrate vessel source files — detected by comparing `git log --author` against the set of operator-known identities versus the substrate's `devbob` author. A commit modifying `repos/development-vessel/src/` by the operator is an intervention; a commit from `devbob` is substrate-authored.
+- **Direct `docker exec` commands** that mutate substrate state without going through the activity system — for example, manually editing `/etc/substrate/env`, running a SurrealDB SQL statement directly, or modifying a unit file.
+- **Writes to `validation/state/` files** by the operator — lift-status updates, coordination file edits, manual gap overrides. These are actions against substrate-measured signals.
+- **Forced closure gate passes** — any edit to `validation/scripts/closure-audit.ts` or a coordination file that makes a gate pass by assertion rather than by the substrate earning the pass.
+
+Each intervention should be classified into one of three categories:
+
+- `maintenance` — routine operational action that does not override substrate judgment (e.g. restarting a crashed unit, rotating a secret, fixing a broken port mapping).
+- `intervention` — operator overriding or short-circuiting substrate judgment (e.g. manually editing a Thompson posterior, forcing a closure gate, reverting a substrate-authored commit).
+- `redundant` — operator performing an action the substrate was already in the process of performing (e.g. manually seeding a template the ribosome was about to extract).
+
+`maintenance` counts do not contribute to the intervention-rate signal; `intervention` and `redundant` counts do. The distinction matters for reading the S2→S3 trend correctly.
+
+## §H. Operator-as-vessel framing
+
+The post-lift structural shift changes the operator's relationship to the substrate. Rather than standing as an external authority above the system, the operator is moving toward being a **registered participant within it**.
+
+An `operator-vessel` registration gives the operator a `vessel_id`, an advertised shape contract — known inputs: `operatorJudgment`, `adversarialProbe`, `liftBlocker`; known outputs: `proposedChange`, `approvedLift` — and a confidence-weight ancestry comparable to any other vessel. This means the substrate can model the operator's behavior, track its intervention patterns, and eventually issue `interventionRefused` impulses when an operator action contradicts substrate evidence.
+
+The `interventionRefused` response to an operator action is the push-away signal for S2→S3. It is the substrate saying "I have evidence against this; here is the evidence; here is what you should do instead." The operator's remaining role at S3 is not to be absent but to be the one entity the substrate cannot forge — the source of genuine adversarial intent that the substrate has no prior for. That is an irreducibly operator function; everything else the substrate can absorb.
+
+Until the `operator-vessel` registration is live, the narration protocol is the bridge: it is how operator actions enter the substrate's observation model, even if they are not yet emitted as typed impulses with a vessel origin.

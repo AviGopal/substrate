@@ -282,6 +282,20 @@ Two implicit vessels currently exist in the system:
 
 2. **Thompson Sampling vessel inside activity-api**. Computes α/β/sample_count posteriors from execution traces; serves them via REST (`variantMetricsSummary`, `GET /v2/activities/:id/variant-scores`); does **not** emit `thompson_posterior` impulses. This is the structural blocker that prevents the system from reasoning about its own decision state via the impulse mechanism — see "Known Gaps".
 
+**Impulse-layer lifecycle events (environment-driven).** Beyond the task-layer and execution-layer events above, the system recognises a third layer of lifecycle events: changes to the impulse pool itself. These are emitted by `ImpulseStore` on pool mutations and are the substrate's interface to external environment changes — the mechanism through which the outside world drives the substrate without a human operator.
+
+| Event | When fired | Key payload fields |
+|---|---|---|
+| `lifecycle:impulse:created` | A new impulse enters the pool | `impulseId`, `shape`, `pointer.type` |
+| `lifecycle:impulse:loaded` | A pointer is resolved; content is now available | `impulseId`, `shape`, `resolver_id`, `latency_ms` |
+| `lifecycle:impulse:consumed` | An impulse was used as input to a task and an output impulse was produced | `impulseId`, `taskId`, `outputImpulseIds` |
+| `lifecycle:impulse:stale` | An external change (file system, peer API, time) has made content potentially out of date | `impulseId`, `reason`, `detector_vessel_id`, `detected_at` |
+| `lifecycle:impulse:invalidated` | The pointer target no longer exists | `impulseId`, `pointer`, `reason` |
+| `lifecycle:impulse:expired` | The impulse exceeded its budget or TTL | `impulseId`, `budget_type`, `consumed`, `allowed` |
+| `lifecycle:impulse:unloaded` | An impulse was evicted from active memory | `impulseId`, `eviction_reason` |
+
+Activities and meta-activities subscribe to these events exactly as they do to `lifecycle:task:*` events. The `stale` event in particular is how time-sensitive or externally-mutated data surfaces without requiring the substrate to poll — a connected vessel detects the change and emits the event, and the execution pool reacts.
+
 Implicit vessels are not a sin; they are evidence about the minimum set. Each one represents a place where the system currently uses a privileged side channel rather than the impulse-resolver-vessel mechanism. Naming them functionally and tracking their limitations is how we test whether the four-primitive minimum is sufficient.
 
 ### Vessels Contribute Learning Parameters Arbitrarily
@@ -342,6 +356,12 @@ MiniBob (vessel)  ←→  Codebase (vessel)
 ```
 
 Activities compose resolvers from BOTH vessels. The codebase provides local tools; MiniBob provides LLM reasoning and backend access.
+
+### External Resolver Vesselization
+
+Stable external call targets — HTTP APIs, databases, shell commands, MCP servers — are first-class vesselization candidates. When N successful invocations of an external endpoint accumulate consistent input/output shape patterns in the trace store, those traces constitute an implicit contract for that endpoint. The substrate can read that contract out of the trace store and register the endpoint as a provisional vessel with its own `vessel_id`, `input_shapes`, and `output_shapes`, joining the discovery registry without manual configuration.
+
+This is the external counterpart to ribosome. The ribosome extracts activity templates from successful activity executions; endpoint vesselization extracts vessel shape contracts from successful external calls. Both are "learning → informational" direction flows that grow the reachable subgraph without operator intervention. Once vesselized, the endpoint's Thompson posteriors accrue normally — the substrate learns which inputs produce reliable outputs just as it does for any other vessel.
 
 ### Performance Tracking
 
@@ -471,6 +491,8 @@ Task 5: Validate
 - `composition_chain` — root-first list of all ancestors including self. Written atomically alongside the execution row; lets the learning loop answer "which root goals triggered resolver X" cheaply.
 
 Both fields are optional for backward compatibility. Existing traces without them remain valid; queries must handle null values.
+
+**Trace integrity — hash chain.** The trace store maintains a per-vessel hash chain: each execution trace record carries a `prev_hash` field containing the SHA-256 of the canonical JSON of the previous trace from the same vessel. This makes the store append-only-verifiable — silently modifying a past trace breaks the chain for every subsequent trace from that vessel, and the break is detectable without access to the original data. This is a foundation property for the learning loop. The claim "state is a projection over traces" requires traces to be immutable; the hash chain enforces that requirement at the storage layer rather than relying on application-level discipline.
 
 ### 5. Learn
 

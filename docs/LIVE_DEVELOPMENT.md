@@ -190,6 +190,31 @@ With `--hot` and `buildHandler()`, the process never restarts, so the registrati
 
 ---
 
+## WS Bus Subscription for Development
+
+The activity-api WebSocket broadcaster (`ws://localhost:18081/ws` in the local substrate) carries three event classes that are useful for development tooling:
+
+- **Execution lifecycle events** (`task.started`, `task.completed`, `task.failed`, `tool.call`, `impulse.resolved`, `lifecycle:task:preBinding`, `lifecycle:gap:classified`, `lifecycle:llm:dispatched`) — the same events the workbench uses for its live execution overlay, now available to any subscriber. Subscribe to these to observe goal-host-vessel activity in real time.
+- **Vessel registration events** (`vessel.registered`, `vessel.heartbeat`, `vessel.deregistered`, `vessel.expired`) — fired by discovery-vessel whenever the registry changes. Subscribe to these instead of polling `/shapes` to detect topology changes reactively.
+- **Concept-db internal events** (`concept:created`, `edge:created`) — forwarded onto the bus when concept-db records new knowledge.
+
+Connection pattern (same as the workbench):
+
+```typescript
+const ws = new WebSocket("ws://localhost:18081/ws")
+ws.onopen = () => {
+  ws.send(JSON.stringify({ type: "authenticate", token: METABOB_API_KEY }))
+}
+ws.onmessage = ({ data }) => {
+  const event = JSON.parse(data)
+  // event.type is one of the above
+}
+```
+
+Goal-host-vessel itself subscribes to `vessel.registered` to reactively register proxy resolvers when a new vessel appears in the registry. Any development vessel that needs to respond to topology changes — registering a proxy resolver, invalidating a cache, updating routing tables — should use this same pattern rather than polling.
+
+---
+
 ## Verification Checklist
 
 Before pushing a change:

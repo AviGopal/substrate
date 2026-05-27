@@ -95,6 +95,32 @@ Response:
 }
 ```
 
+## Signal confidence weight
+
+Traces carry a `signal_confidence_weight: number` field (default `1.0`). This weight multiplies into the α/β update rather than treating every observation as equally trustworthy:
+
+- `weight = 1.0` — in-substrate default under a shared trust root. Full credit or penalty applied.
+- `weight < 1.0` — the observation is down-weighted. Example sources: a vessel with lower attestation strength; a cross-substrate trace that lacks full corroboration; an execution whose verifier confidence was marginal.
+- `weight = 0.0` — observation is present in the trace store (for audit) but contributes nothing to the posterior.
+
+The formula for a success observation becomes `alpha += weight` instead of `alpha += 1`. For failures, `beta += weight`. This field is the substrate's hook for all future confidence-related machinery — attestation strength (H2), cross-substrate federation, oracle-corpus calibration — without requiring schema changes to the posterior model itself.
+
+## Cost-weighted selection
+
+The Thompson selection rule is evolving from "maximize marginal α" to "maximize marginal α per dollar". The current Beta posteriors model `P(success | activity)`. The direction is a joint posterior over (success, cost) — a knapsack bandit formulation.
+
+Activities with high α but high cost are structurally different from activities with the same α at low cost. Under local substrate development where infrastructure cost is near zero, per-activity LLM API spend becomes the dominant variable. The selection layer learns the cost distribution alongside the success distribution: each execution records `cost_usd`, and the recommendation path will sample from a (success_rate, expected_cost) joint to favour cheaper activities when their success probability is statistically indistinguishable from a more expensive alternative.
+
+This does not change the posterior schema — `alpha`, `beta`, `sample_count` remain — but adds a parallel cost distribution (mean, variance) per variant that the selection rule weights against the Thompson sample.
+
+## LLM model sub-resolvers
+
+LLM-tier resolvers are on a path to advertising per-model sub-resolver identifiers: `llmText@haiku`, `llmText@sonnet`, `llmText@opus` (and equivalent per-provider variants when configured). Each sub-resolver accrues its own α/β posterior, cost distribution, and resolver-tier metadata. Traces already record which model was used; the sub-resolver identifier makes that fact a first-class Thompson key.
+
+This enables the substrate to learn model-to-problem-class mappings rather than using a single hardcoded model for all LLM tasks. Routine resolvers — keyword extraction, simple format validation, template slot filling — converge to cheaper models as their posteriors accumulate. Novel resolvers — decomposition, compliance checking, cross-domain reasoning — converge to more capable ones because cheaper models fail more often and accumulate β faster.
+
+These are ordinary resolver variants that happen to differ by model; the selection mechanism is identical to activity variant selection. No new infrastructure is required — sub-resolver ids are strings in the existing `resolver_id` field.
+
 ## Multi-tenant scoping
 
 The query uses `accountIdScopedWhere()` from `src/routes/activities.ts`, so the posterior is scoped to the caller's `(account_id || org_id)` per the standard dual-tenant pattern. Cross-tenant posterior leakage is not possible.

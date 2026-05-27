@@ -6,6 +6,8 @@
 > **Purpose**: Transform the workbench into a chain-like interface where user stories, goals, and workflows are treated as executable activities
 >
 > **Implementation note (2026-05-27):** The features described in this document are now implemented. The workbench ships a trajectory editor (horizontal CSS-Grid drag-reorder, parallel rows, save-as-variant), composition builder (React Flow drag-and-drop with shape-compatibility validation and cycle detection), resolver-first TaskEditor, live execution overlay (WebSocket with backoff + catchup), backward-chaining panel for missing shapes, and goal-completion bar. This document remains the design reference for the chain-based UX intent and the vocabulary it introduced (impulse cards, insertion zones, shape badges, Thompson Δα/Δβ badges). For the current feature inventory see `CLAUDE.md §Workbench`.
+>
+> **Bus update (2026-05-27):** The workbench's real-time overlay (the `task.*` and `impulse.resolved` events that drive the live execution view) now draws from the substrate-wide neutral broadcast bus rather than a dedicated workbench-only WebSocket channel. Existing subscribers — workbench, ribosome-vessel, concept-db — continue receiving events unchanged; the bus is additive, not a breaking change. The practical consequence is that the workbench shares its event source with every other substrate subscriber: what the workbench sees is exactly what the substrate does, with no filtering layer that could introduce divergence between the UI view and actual execution state.
 
 ---
 

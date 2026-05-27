@@ -286,6 +286,16 @@ The diagrams reveal:
 - **Composition patterns** - How activities orchestrate other activities
 - **Recursive nature** - How meta-activities enable unlimited composition depth
 
+## Neutral Bus and Sequence Topology
+
+The sequence diagrams in this directory describe message flows between substrate participants. The execution sequences (`01`–`05`) were written when lifecycle events were in-process only — consumers were tightly coupled to emitters. The substrate now uses a neutral broadcast bus (the activity-api WebSocket broadcaster) as the event transport. Key changes to the sequence topology:
+
+- All `lifecycle:task:*`, `lifecycle:execution:*`, `lifecycle:gap:*`, and `lifecycle:llm:*` events flow on the bus. Workbench, ribosome-vessel, concept-db, and any future vessel subscribe rather than being explicitly wired to the emitter.
+- Discovery-vessel emits `vessel.registered`, `vessel.heartbeat`, `vessel.deregistered`, and `vessel.expired` on the same bus. Goal-host-vessel subscribes to `vessel.registered` to reactively register proxy resolvers when new vessels appear.
+- The `sequences/05-hooks-behavior-injection.md` hook registration sequence describes the in-process registration model. On the bus model, "hook registration" becomes WebSocket subscription; the payload contract is the same.
+
+When reading the sequence diagrams, substitute: any participant that previously received a lifecycle event via direct in-process callback now receives it via WebSocket bus subscription. Arrows that show a direct push from emitter to consumer pass through the bus; the consumer's subscription filter determines which events reach it. This decoupling means new vessels can observe the full execution event stream without requiring changes to goal-host-vessel or activity-api.
+
 ## Relationship to Other Documentation
 
 These sequence diagrams complement:

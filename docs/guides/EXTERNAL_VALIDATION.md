@@ -657,6 +657,16 @@ Let LLM fix test failures:
 2. Category weights appropriate?
 3. External validation actually differentiating good/bad templates?
 
+## Toward Validator Vessels
+
+External validators are on a path toward becoming first-class vessels. The current pattern — a generic `external-validation` resolver that fans out to multiple validation types — works for a bounded set of known validators. As the substrate accumulates successful calls to a consistent external endpoint (a database, a test runner, an API validator), those traces constitute an implicit shape contract: what inputs the endpoint accepts, what outputs it produces, what error modes it has, and what latency and cost distributions it exhibits.
+
+The substrate can read that contract out of the trace store and register the endpoint as a provisional vessel with its own `vessel_id` and shape advertisement. Once registered, the endpoint is discoverable, selectable by Thompson Sampling, and subject to confidence weighting like any other resolver. The generic `external-validation` resolver remains the entry point for validators with no prior trace history; vesselization happens after sufficient evidence accumulates — no explicit manifest or registration step required.
+
+This is the same principle as ribosome (successful execution patterns → reusable templates) applied to external calls: successful call patterns → vessel shape contracts. A database that has been validated against 50 times with consistent input/output shapes is indistinguishable from a purpose-built vessel that declares those same shapes. The trace store is the registration form.
+
+The practical consequence for activity authors: design external-validation tasks so their inputs and outputs are described precisely by impulse shapes. The more consistently shaped the calls, the sooner the substrate can promote the endpoint from anonymous resolver to named vessel — and from there, Thompson Sampling can learn when to prefer it over alternatives.
+
 ## Related Documentation
 
 - [Validation Resolver Design](/tmp/validation-resolver-design.md) - Complete design document

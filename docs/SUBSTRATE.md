@@ -157,7 +157,33 @@ activityRegistryChange → learned-topology-snapshot → reachable-unlearned-rep
 
 **S1 → S2 completed 2026-05-26.** The lift criteria (coverage progress + substrate health + operator hand-over) were met and the operator authorised the transition. The substrate now authors its own activities via the `draft-gap-closing-activity` goal and the `propose-spec` / `verify-merge-candidate` pipeline.
 
-**S2 → S3 is the active direction.** S3 (distributed-stable, adversarial-resistant, operator non-load-bearing) is tracked in IAL §27.S.5 (post-lift agenda) and §27.S.6 (S3 readiness measured by active push-away: substrate refusing operator interventions with cited evidence, not by passive intervention-absence). S3 has no operational gate in this document — it is emergent and operator-measured under sustained adversarial exposure.
+**S2 → S3 is the active direction.** S3 (distributed-stable, adversarial-resistant, operator non-load-bearing) is tracked in the post-lift agenda and S3 readiness criteria (measured by active push-away: substrate refusing operator interventions with cited evidence, not by passive intervention-absence). S3 has no operational gate in this document — it is emergent and operator-measured under sustained adversarial exposure.
+
+**Measuring S2→S3 readiness.** S2→S3 readiness is observable through two shape families owned by development-vessel:
+
+- `operatorIntervention` — emitted when the substrate detects operator action against substrate state. Carries `classification` (`intervention | maintenance | redundant`), `target`, `rationale`, and supporting evidence. The operator can emit these explicitly; development-vessel also detects them by watching commits, lifecycle overrides, and direct file mutations.
+- `interventionRefused` — emitted by substrate gates (promote-guard, template-sanitizer, etc.) when they reject an operator action with cited rationale and supporting evidence.
+- `interventionRateReport` — periodic aggregation of intervention and refusal rates. A trend toward zero under adversarial exposure is the S2→S3 signal.
+
+The substrate cannot self-declare S3. Only the operator can observe sustained push-away and make that judgment. These shapes give the operator the data to do so.
+
+## Event bus
+
+All lifecycle events — task binding, execution completion, gap classification, LLM dispatch — flow on the activity-api WebSocket broadcaster (`wss://localhost:18081/ws`) in addition to any in-process eventSink. Discovery-vessel emits four additional event types on the same bus: `vessel.registered`, `vessel.heartbeat`, `vessel.deregistered`, and `vessel.expired`. Any vessel subscribing to the bus receives all of these without any per-emitter configuration.
+
+This has a practical consequence for vessel startup: goal-host-vessel subscribes to `vessel.registered` and uses those events to reactively register proxy resolvers for newly-appearing vessels. This replaces the race-prone one-shot registration that happened once at startup — a vessel that starts after goal-host-vessel now gets picked up automatically rather than being invisible until the next restart cycle.
+
+## Vessel self-replacement
+
+Vessels that accumulate idiom-purity gaps are candidates for substrate-driven self-replacement. Purity gaps include: serving legacy REST endpoints alongside the resolver contract, implementing built-in tools (bash, read, write, git) instead of routing through discovery-resolved ones, or maintaining internal state that belongs in the substrate's shared store. The substrate audits purity against the canonical idiom set, mints a replacement vessel via the forge, validates the replacement in shadow against live traffic, and promotes it on evidence. The original vessel is archived rather than modified in-place.
+
+The two vessels with known purity gaps at this writing are `metabob-activity-api` (20+ legacy REST endpoints that predate the resolver contract) and `minibob` (built-in bash/read/write/edit/git tools that bypass discovery). Self-replacement for these is substrate-driven and not operator-led — the operator's role is adversarial testing of the replacement, not authoring it.
+
+## Vessel federation (inter-substrate routing)
+
+Federation is the mechanism by which two substrate containers know about each other's vessels. Each substrate's discovery-vessel can peer with another discovery-vessel; peer registrations propagate into the local registry as `provisional` entries. From the perspective of any vessel above discovery, the routing is invisible — they call `POST /resolve` and receive a vessel record, whether that vessel lives in the same container or a peer container.
+
+Vessel identity in a federated topology is derived from a public key (`vessel_id = multihash(pubkey)`), enabling cross-substrate verification without a shared trust root. A vessel that migrates from one substrate to another retains its identity; peer substrates can verify it independently. Federation is not yet active in the local single-container substrate — the peering mechanism and identity-by-pubkey are forward infrastructure for the S2→S3 distributed-stable phase.
 
 ## Troubleshooting
 
