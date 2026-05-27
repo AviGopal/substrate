@@ -1,7 +1,8 @@
 # Activity Task Context Propagation
 
-**Applies to:** `minibob` commit `61a6617` and later (2026-04-22)
-**Source:** `src/activity.ts` (executor), `src/embedded-templates/`, `src/memory-agent.ts`
+**Applies to:** `minibob` commit `61a6617` and later (2026-04-22); concepts carry forward into `ias-executor-ts` / `goal-host-vessel` (Phase 26+ substrate)
+**Source (Phase 26+):** execution logic lives in `repos/goal-host-vessel/` and `@avigopal/ias-executor-ts`; the four propagation mechanisms below are substrate-vessel responsibilities, not minibob-internal.
+**Source (historical):** `repos/minibob/src/activity.ts` (executor), `src/embedded-templates/`, `src/memory-agent.ts`
 
 Within a single activity execution, later tasks need to see impulses that earlier tasks produced, and declarative shape requirements on templates need to actually influence what reaches the LLM. Three mechanisms in the executor make this hold:
 

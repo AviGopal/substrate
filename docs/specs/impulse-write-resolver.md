@@ -4,7 +4,7 @@ Spec scope: extend concept-db so activities can *create* concept-db records (con
 
 This spec also introduces an `impulse` table to concept-db. Once the vessel exposes write resolvers, the things they emit (audit records, query-result snapshots, metrics) are themselves impulses in the universal-data sense and need a place to live that is *not* activity-api's tables. The vessel that owns the data owns its impulses.
 
-Status: design only. No code changes here.
+Status: **Partially superseded (re-assessed 2026-05-27).** The activity-api half of this spec is fully shipped — 14 `*_write` shapes live at `POST /v2/impulses/resolve`, documented in CLAUDE.md. The concept-db half (five write shapes: `concept_create_write`, `conceptLink_write`, `conceptSignatureUpsert_write`, `conceptUsage_write`, `conceptSequence_write`) and the concept-db `impulse` table are NOT yet shipped. This spec is the design reference for that remaining work.
 
 ---
 

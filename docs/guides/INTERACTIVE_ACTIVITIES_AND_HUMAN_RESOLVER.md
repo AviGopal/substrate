@@ -1,7 +1,8 @@
 # Interactive Activities and the Human Resolver
 
-**Applies to:** `minibob` with `HumanResolver` (April 2026 onward)
-**Source:** `repos/minibob/src/resolvers/human-resolver.ts`, `repos/minibob/src/embedded-templates/`
+**Applies to:** `minibob` with `HumanResolver` (April 2026 onward); the `human` resolver contract and non-TTY fallback semantics apply to any vessel implementing a human-gate resolver
+**Source (historical):** `repos/minibob/src/resolvers/human-resolver.ts`, `repos/minibob/src/embedded-templates/`
+**Note (2026-05-27):** MiniBob is on a deprecation path. The resolver pattern, TTY-aware fallback semantics, and `clarification` impulse shape described here are still correct. File paths are minibob-historical; the same pattern applies wherever a `human` resolver is registered in a vessel's task registry.
 
 The human at the terminal is just another resolver. This guide explains how `HumanResolver` fits into the resolver hierarchy and how to author activities that ask the user a question at the right moment instead of burning LLM tokens on a guess.
 

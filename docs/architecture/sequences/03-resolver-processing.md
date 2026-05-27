@@ -1,5 +1,7 @@
 # Processing of Required Input Impulses by Resolvers
 
+> **Status (2026-05-27):** Resolver types (LLM, bash, git, activity, ribosome) and the impulse context-injection flow are still accurate. All file refs (`llm.ts`, `tools.ts`, `activity.ts`, `template-extractor.ts`) are for the old minibob copies; the live equivalents are `llm-resolver-vessel`, `local-tools-vessel`, `goal-host-vessel`, and `ribosome-vessel` respectively. The `MCP Backend (mcp.ts)` participant is now `activity-api` reached over HTTP via discovery routing.
+
 ## Overview
 
 This document maps how different resolver types (LLM, bash, git, file operations, activities, ribosome) process required input impulses during task execution. It shows the complete flow from impulse context injection through tool execution to output impulse creation.

@@ -18,11 +18,13 @@ This spec covers two coupled problems:
    JWT is by receiving it from an upstream vessel, and the only way it
    forwards it safely is by spec.
 
-Status: **Partially Implemented (Wave A3, 2026-04-23)**
-- ✅ `auth_token_source` field added to vessel registration contract
+Status: **Partially Implemented (Wave A3, 2026-04-23; re-assessed 2026-05-27)**
+- ✅ `auth_token_source` field added to vessel registration contract (discovery-vessel v0.4.0, 2026-04-25)
 - ✅ `auth_delegation_mode` field added to vessel registration contract
 - ✅ Activity-API declares `auth_token_source: 'caller_identity'` and `auth_delegation_mode: 'forward'` on registration
-- ⏳ Delegation header surface pending (awaiting first `user_identity` consumers)
+- ⏳ Delegation header surface (`X-Metabob-Delegation-Chain`, `X-Metabob-Delegation-Hop`) pending — no `user_identity` consumers exist yet
+- ⏳ Identity-vessel mint endpoint (`POST /v2/tokens/delegate`, §5.9) pending
+- NOTE: MiniBob is on a deprecation path (replaced by goal-host-vessel + substrate vessels); the minibob-side changes in §6.3 may target goal-host-vessel instead
 
 Phased rollout: the credential-kind field now lands with `caller_identity` declared on existing vessels (no behavior change), delegation header surface to follow when first `user_identity` consumers come online.
 

@@ -1,7 +1,8 @@
 # Template-Dispatchable Resolvers
 
-**Applies to:** `minibob` commit `70a722b` and later (2026-04-23, extended by `afe9b8d` + `690247a` + `96f8533` + `755ba4d` + `529994c` + `1262c1b` + `fb28d32` + `110f6d8` + `e16f73c` + `f0301ba` + `19dbce8` + `b289508` + `02094ba` same day).
-**Source:** `repos/minibob/src/activity.ts` resolver registry; `repos/minibob/src/resolvers/`.
+**Applies to:** `minibob` commit `70a722b` and later (2026-04-23); the resolver-dispatch pattern applies to any executor (goal-host-vessel, ias-executor-ts) that maintains a name→resolver registry.
+**Source (historical):** `repos/minibob/src/activity.ts` resolver registry; `repos/minibob/src/resolvers/`. Phase 26+ executors: `repos/goal-host-vessel/` + `@avigopal/ias-executor-ts`.
+**Note (2026-05-27):** MiniBob is on a deprecation path. The resolver-dispatch mechanism (`"resolver": "<name>"` in task JSON), the resolver registry pattern, and the goal-processing-activity-driven PoC described here are still the canonical approach. The specific resolver file paths are minibob-historical; the same named resolvers are registered in the substrate-hosted goal-host-vessel.
 
 An activity template's task can invoke a resolver by name via `"resolver": "<name>"` in the JSON — no runtime object passing, no custom executor change. This note lists the resolvers currently wired into the registry for template dispatch and the two new classes of resolvers introduced in `70a722b` (bootstrap context chain and selection-as-resolver).
 

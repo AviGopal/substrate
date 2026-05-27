@@ -21,18 +21,21 @@ Following [IMPULSE_ACTIVITY_FOUNDATION.md](../architecture/IMPULSE_ACTIVITY_FOUN
 
 ### Cost and Metrics Shapes
 
-[COST_METRICS_SHAPES.md](./COST_METRICS_SHAPES.md) - Cost, token consumption, and usage metrics
+Cost and usage metrics resolved by `activity-api` (has execution trace data).
 
-**Shapes defined**:
-- `execution_cost_summary` - Aggregated cost metrics over time window
-- `token_consumption_timeline` - Time-series token consumption
-- `cost_breakdown_by_activity` - Per-activity cost distribution
-- `cost_breakdown_by_user` - Per-user cost and usage
-- `cost_breakdown_by_api_key` - Per-API-key usage tracking
-- `resolver_cost_breakdown` - Cost by resolver type (LLM vs deterministic)
-- `activity_usage_metrics` - Activity execution frequency
+> **Note (2026-05-27):** The live advertised shape names are camelCase (matching CLAUDE.md and `config.ts`). The snake_case names below were early design names; do not use them in pointer types.
 
-**Resolver**: `activity-api` (has execution trace data)
+**Shapes advertised by `activity-api`** (camelCase — use these in pointer types):
+- `executionCostSummary` — Aggregate cost metrics for executions (grouped by activity/vessel). Pointer fields: `activityId?`, `templateId?`, `vesselId?`, `since?`, `until?`, `groupBy?: 'day'|'week'|'month'|'activity'|'vessel'`.
+- `resolverCostAnalysis` — Cost breakdown by resolver tier and resolver ID. Pointer fields: `shape?`, `vesselId?`, `since?`, `limit?` (default 50).
+- `vesselPerformanceMetrics` — Performance and cost metrics for a specific vessel. Pointer fields: `vesselId` (required), `since?`, `includeResolutions?`.
+- `costByActivity` — Cost breakdown grouped by activity template. Pointer fields: `since?`, `until?`, `limit?` (default 50), `minCost?`.
+- `resolverPerformanceByShape` — Resolver performance metrics grouped by impulse shape. Pointer fields: `shape` (required), `since?`, `limit?` (default 20).
+- `costTrendOverTime` — Time-series cost data for trend analysis. Pointer fields: `activityId?`, `vesselId?`, `interval: 'hour'|'day'|'week'` (required), `since?`, `until?`.
+
+**Response format**: All resolvers return markdown-formatted content. Multi-tenant isolation is enforced via SurrealDB PERMISSIONS (`org_id = $token.org_id`) — no application-level org filter needed.
+
+**Implementation status**: Shapes are documented in CLAUDE.md and were implemented (2026-04-20) but are not visible in `repos/metabob-activity-api/src/config.ts` discovery advertisement as of 2026-05-27 — verify `discovery.shapes` before relying on dynamic routing for these shapes.
 
 ### Activity Learning Shapes
 
@@ -113,10 +116,12 @@ When defining new impulse shapes:
 
 ## Shape Naming Conventions
 
-- Use snake_case: `execution_cost_summary`, not `ExecutionCostSummary`
-- Be descriptive: `token_consumption_timeline`, not `tokens`
-- Indicate data type: `_summary`, `_timeline`, `_breakdown`, `_metrics`
-- Avoid redundancy: `cost_breakdown_by_activity`, not `activity_cost_breakdown_by_activity`
+> **Note (2026-05-27):** The live convention for activity-api shapes is **camelCase** (e.g. `executionCostSummary`, `activityExecutionTrace`). The snake_case convention below was an early proposal that was not adopted. Use camelCase for any new shapes advertised via discovery and resolved through `POST /v2/impulses/resolve`.
+
+- Use camelCase for activity-api shapes: `executionCostSummary`, not `execution_cost_summary`
+- Be descriptive: name the data type it returns, not the query filter
+- Indicate data granularity: `Summary`, `Timeline`, `Breakdown`, `Metrics`, `List`
+- Avoid redundancy in the name
 
 ## Cross-Vessel Shapes
 
@@ -131,7 +136,7 @@ Some shapes require data from multiple vessels:
 2. **Client-side join**: Dashboard requests two impulses and joins locally
 3. **Denormalization**: Store redundant data (not recommended)
 
-See [COST_METRICS_SHAPES.md](./COST_METRICS_SHAPES.md) Phase 2 for implementation patterns.
+See CLAUDE.md (Cost & metrics shape family) and the pointer-field notes in the Cost and Metrics Shapes section above for implementation patterns.
 
 ## Discovery Integration
 

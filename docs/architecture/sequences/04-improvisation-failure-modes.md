@@ -2,6 +2,8 @@
 
 > **STATUS (2026-04-28): Renamed from `04-improvisation-trailblazing.md`.** "Trailblazing" was class-(c) terminology — never implemented and pruned from the corrected foundation model. What older versions of this doc called trailblazing is now handled by the **failure-mode taxonomy** (`verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`) plus posterior variance. Read this file for the improvisation flow (which is real and current); treat any remaining trailblazing references as historical. See [`IMPULSE_ACTIVITY_FOUNDATION.md`](../IMPULSE_ACTIVITY_FOUNDATION.md#known-gaps-system-not-yet-self-stable) → "Class-(c) Terms Pruned".
 
+> **Status (2026-05-27):** The failure-mode taxonomy and improvisation-as-activity model are accurate. File refs (`goal-processor.ts`, `improviser.ts`, `rollback.ts`, `template-extractor.ts`) point to minibob source that has moved: improvisation and ribosome extraction now live in `goal-host-vessel` / `ias-executor-ts`; `ribosome-vessel` handles template extraction via the `lifecycle:execution:succeeded` WebSocket subscription. The `GoalProcessor` / `ActivityExecutor` participant labels should be read as `GoalHost (goal-host-vessel)`.
+
 ## Overview
 
 This document maps the complete flow of how MiniBob handles situations when no activity template matches (improvisation), learns from failures (trailblazing), and manages execution safety (checkpoints and rollbacks). These mechanisms enable continuous learning and autonomous adaptation.

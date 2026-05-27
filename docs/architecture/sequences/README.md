@@ -1,5 +1,7 @@
 # MiniBob Sequence Diagrams
 
+> **Status (2026-05-27):** File references throughout this directory point to `repos/minibob/src/goal-processor.ts`, `activity.ts` (ActivityExecutor), `improviser.ts`, `lifecycle-hooks.ts`, `vessel-hooks.ts`, `promotion-hooks.ts`, `impulse-verification-hooks.ts`, and `template-extractor.ts` — all of which moved to `goal-host-vessel` / `ias-executor-ts` in Phase 8 (2026-05-24). The conceptual flows (Thompson sampling, impulse resolution, resolver dispatch, lifecycle hooks) remain accurate; the per-file line-number citations and `GoalProcessor`/`ActivityExecutor` participant labels now refer to substrate-vessel internals rather than minibob source. Update participant labels to `GoalHostVessel` / `GoalHost (ias-executor-ts)` before using these diagrams for implementation navigation.
+
 This directory contains comprehensive sequence diagrams mapping the complete implementation of MiniBob's core workflows. All diagrams are implementation-based, with line numbers and file references from the actual codebase.
 
 ## Overview

@@ -1,5 +1,7 @@
 # Hook Registration and Behavior Injection
 
+> **Status (2026-05-27):** The hook/lifecycle-event model is partially stale. `lifecycle-hooks.ts`, `vessel-hooks.ts`, `promotion-hooks.ts`, and `impulse-verification-hooks.ts` no longer exist in `repos/minibob/src/`; lifecycle events are now emitted as substrate impulses (`lifecycle:task:preBinding`, `lifecycle:task:completed`, `lifecycle:execution:succeeded`, `lifecycle:gap:classified`, `lifecycle:llm:dispatched`) and handled by vessel subscribers, not in-process hook registries. The concepts of pre-task behavior injection and promotion hooks remain accurate in spirit; the implementation is event-driven across vessels rather than a per-session hook registry inside minibob.
+
 ## Overview
 
 This document maps the complete hook system in MiniBob, showing how behavior can be customized and extended at all lifecycle points. Hooks enable behavior injection without modifying core code, making MiniBob highly extensible.

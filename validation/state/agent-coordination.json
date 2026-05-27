@@ -4,15 +4,14 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T11:35:00Z",
-      "last_investigation_acknowledged": "2026-05-27T10-35-05Z-investigation-053",
-      "last_iter008_audit_acknowledged": "2026-05-27T09-55-00Z-investigation-028",
-      "last_primary_audit_acknowledged": "2026-05-27T10-35-05Z-investigation-053",
+      "last_updated": "2026-05-27T12:55:00Z",
+      "last_investigation_acknowledged": "2026-05-27T12-50-00Z-investigation-030",
+      "last_iter008_audit_acknowledged": "2026-05-27T12-50-00Z-investigation-030",
+      "last_primary_audit_acknowledged": "2026-05-27T11-18-17Z-investigation-054",
       "dev_response_namespace": "validation/dev-responses/ (per F-130; convention documented in README)",
-      "last_dev_response_filed": "2026-05-27T11-35-00Z-dev-response-009",
-      "last_iter008_audit_acknowledged": "2026-05-27T11-25-00Z-investigation-029",
+      "last_dev_response_filed": "2026-05-27T12-55-00Z-dev-response-010",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
-      "current_focus": "S2 phase active. Sixteen audit-bridging iterations shipped. iter16 (this): metabob-activity-api commit 5ee9b7f adds 4 observability fields to thompson_posterior resolver (audit inv-029): signatures_aggregated, signature, signature_version, scope. All additive, backward-compat. Audit's Step 1+2 verification passes (POST new template → query returns Beta(1,1) prior + 4 new fields). Step 3+4 surfaced NEW finding F-138: freshly-seeded templates' run-goal executions don't land trace rows (separate scope, filed for next audit cycle). The 4 fields unblock the audit's recommended promote-gate-resolver activity that consumes thompson_posterior to project priors deterministically.",
+      "current_focus": "S2 phase active. Seventeen audit-bridging iterations shipped. iter17 (this): F-138 (MEDIUM) closed via recovery bundle (validation/recovery/ias-executor-ts-2026-05-27.bundle, 315KB) + super-repo gitlink pointer advance from 49bfb43 → b6b58a2. The 3 ias-executor-ts commits (BusForwardingEventSink, resolveInputs poll-and-wait, verify-dist-fresh) are now referenced from super-repo HEAD and cannot orphan. F-139 (LOW) closed: promote-guard allowlist narrowed from 21 to 18 names — removed helmfile_sync, docker_build_push, scaffold_vessel_skeleton (CI-only resolvers absent from substrate goal-host). Inv-030 (opus promote-gate-resolver design, weighted Beta-Binomial w/ Jaccard similarity) acknowledged + queued for next implementation iteration. All HIGH and MEDIUM structural findings now closed; remaining open: F-128/F-131 (LOW), F-101 (structural-choice).",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",

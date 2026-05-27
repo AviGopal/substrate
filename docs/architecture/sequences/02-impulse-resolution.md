@@ -1,5 +1,7 @@
 # Impulse Resolution During Activity Execution
 
+> **Status (2026-05-27):** The 6-step resolver dispatch chain (local → custom → discovery → MCP → fallback) and the filtering/budget/context-injection flow are still conceptually accurate. The `impulse.ts` and `vessel-discovery.ts` file refs are for minibob's old copy; the live implementation lives in `goal-host-vessel` / `ias-executor-ts`. The `ActivityExecutor (activity.ts)` participant has moved to `GoalHost (goal-host-vessel)`; `MCPBackend (mcp.ts)` is now `activity-api` reached via HTTP discovery contract rather than a local MCP client.
+
 ## Overview
 
 This document maps the complete lifecycle of impulse resolution during activity execution, from filtering through resolution to context injection into LLM prompts. The impulse resolution system is the core data access mechanism in MiniBob, enabling metadata-first reasoning and lazy-loaded content.

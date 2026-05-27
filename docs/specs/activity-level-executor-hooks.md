@@ -1,6 +1,6 @@
 # Activity-Level Executor Hooks
 
-**Status**: spec, no implementation yet.
+**Status**: partially superseded (2026-05-27). Basic lifecycle events (`lifecycle:task:preBinding`, `lifecycle:task:completed`, `lifecycle:execution:succeeded`, `lifecycle:gap:classified`, `lifecycle:llm:dispatched`) are live in the substrate. The broader subscriber architecture — `subscription: "subscriber"` impulse field, `POST /v2/activities/lifecycle-subscribers`, Thompson-ranked hook dispatch — is NOT yet shipped. This spec remains the design reference for that second half.
 **Audience**: a reviewer who wants to understand why minibob's foundation
 doc claims an "activity lifecycle with hooks" that the executor never
 fires, and how to wire it without inventing a parallel mechanism alongside

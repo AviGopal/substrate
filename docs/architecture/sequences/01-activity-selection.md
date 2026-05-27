@@ -1,5 +1,7 @@
 # Activity Selection from Impulse State Space
 
+> **Status (2026-05-27):** Conceptual flow (Thompson Sampling, tiered fallback, composition chain, impulse state space) is still accurate. All `GoalProcessor (goal-processor.ts)` and `ActivityExecutor (activity.ts)` references now map to `GoalHost` inside `goal-host-vessel` / `ias-executor-ts` — those files no longer exist in `repos/minibob/src/`. Line-number citations are stale; use `repos/goal-host-vessel/` and `@avigopal/ias-executor-ts` for implementation navigation.
+
 ## Overview
 
 This document maps the complete flow from user goal to activity execution through Thompson Sampling recommendation. The activity selection process is the entry point for all MiniBob executions, determining which activity template should be used to achieve a given goal.

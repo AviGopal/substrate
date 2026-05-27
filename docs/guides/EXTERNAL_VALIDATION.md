@@ -1,6 +1,8 @@
 # External Validation Guide
 
-> **Foundation alignment.** A "validator" in the corrected foundation model is a derived primitive: a resolver whose output impulse has shape `validation_result`. The "external-validation" resolver below is one such resolver. Thompson Sampling references in this guide describe a known-unshaped primitive (Thompson posteriors are a real-but-currently-unshaped primitive — reachable today only via REST inside activity-api's implicit Thompson Sampling vessel; should be a resolvable shape). Treat the Thompson-Sampling-update sections as describing a current REST integration, not a canonical mechanism.
+> **Status (2026-05-27).** The `external-validation` resolver pattern described here predates the failure-mode taxonomy (migration 091, `FailureModeSchema`). The current canonical failure model is `verifier_negative` / `budget_exhausted` / `safety_breach` / `cascading` / `user_abort` — see `openspec/changes/2026-04-26-validators-and-failure-modes/`. Use this guide for the error-type taxonomy, retry-strategy guidance, and validation-as-resolver pattern; treat the Thompson Sampling penalty weight tables as directionally correct but not wired through the current `writeImpulseRelevancePenalty` / `propagateCreditAlongChain` paths.
+>
+> **Foundation alignment.** A "validator" in the corrected foundation model is a derived primitive: a resolver whose output impulse has shape `validation_result`. The "external-validation" resolver below is one such resolver. Thompson Sampling is now production-active (activity-api 1.20.9+); the weighted-penalty mechanism below is aspirational — the live path applies stratified β updates via the failure-mode taxonomy, not the 13-category weight table.
 
 ## Overview
 
