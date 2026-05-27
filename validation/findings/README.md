@@ -43,3 +43,31 @@ After F-131:
 
 The frontmatter `agent:` field is a *self-description claim*. Provenance is the
 git history. When the two conflict, trust git.
+
+## F-number namespace collisions (F-140, inv-056)
+
+Two independent agents — the **substrate dev process** (this directory's
+authors of `dev-response-*` files) and the **audit chain** (authors of
+`investigations/`) — both file findings using `F-<num>` identifiers and both
+increment independently. Three confirmed collisions to date (F-129, F-130,
+F-139 between substrate-side and audit-side numbering).
+
+**Protocol to avoid collision going forward**:
+
+| Range | Owner | Notes |
+|---|---|---|
+| `F-001` – `F-099` | **audit chain** (primary auditor + opus-iter auditors) | Audit agents continue here as they have been. |
+| `F-100` – `F-199` | reserved — see existing usage; current open: F-101 (structural), F-140 (this protocol), F-141 (no remote) | Mixed historical assignments. Treat as read-only; do not allocate new numbers here. |
+| `F-200` – `F-299` | **substrate dev process** (this dev session and future devbob iterations) | All new substrate-self-authored findings start at F-200. |
+| `F-300` – `F-399` | **operator-filed findings** (committed by `avigopal.aero@gmail.com`) | Operator probes that are filed as findings rather than ad-hoc files. |
+| `F-V*` series | **validation harness** (`validation/scripts/*`) | Already in use; harness-machine-generated. |
+
+When an existing F-number is referenced in a dev-response or investigation, it
+keeps its original number regardless of owner — the protocol only governs new
+allocations. Both audit and dev chains must check this README before allocating
+to confirm the next free number in their owned range.
+
+**Why ranges, not prefixes**: prefixes like `audit-F-1` would require migrating
+every existing reference in commits, dev-responses, and investigations. Ranges
+let existing F-numbers keep their identity while structurally preventing future
+collisions.
