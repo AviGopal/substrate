@@ -4,14 +4,14 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T10:50:00Z",
+      "last_updated": "2026-05-27T11:00:00Z",
       "last_investigation_acknowledged": "2026-05-27T09-43-57Z-investigation-052",
       "last_iter008_audit_acknowledged": "2026-05-27T09-55-00Z-investigation-028",
       "last_primary_audit_acknowledged": "2026-05-27T09-43-57Z-investigation-052",
       "dev_response_namespace": "validation/dev-responses/ (per F-130; convention documented in README)",
-      "last_dev_response_filed": "2026-05-27T10-50-00Z-dev-response-004",
+      "last_dev_response_filed": "2026-05-27T11-00-00Z-dev-response-005",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
-      "current_focus": "S2 phase active. Eleven audit-bridging iterations shipped. iter11 (this): ias-executor-ts local commit 37a9ddb converts engine resolveInputs to async with poll-and-wait — closes audit inv-028 recommendation C (fragility around slot-binding subscribers populating store before resolveInputs throws). Default EXECUTOR_INPUT_RESOLUTION_TIMEOUT_MS=0 preserves original behavior; opt-in via env var gives subscribers a deterministic window. F-133 closed: tasks.md regex updated to match implementation. ALL THREE inv-028 recommendations (A/B/C) now closed. Substrate audit-grade closure surface substantively complete. Remaining open: F-101, F-111 (MEDIUM, non-structural), F-128, F-131 (LOW).",
+      "current_focus": "S2 phase active. Twelve audit-bridging iterations shipped. iter12 (this): ias-executor-ts local commit b6b58a2 adds verify-dist-fresh.ts — detects drift between substrate container's deployed /vessels/ias-executor-ts/dist/ and a fresh local build of current src/. Wired as `bun run dist:check`. Self-tested: caught real drift in two passes (stale nested src dir, residual test markers) then verified container matches local after cleanup. Closes F-111. All HIGH/MEDIUM structural audit findings now closed. Remaining open are LOW (F-128 naming, F-131 provenance) and F-101 (historical files, structural choice). Substrate audit-grade closure surface complete across selection, execution, topology, concept-graph, empirical-learning, capability-generation, subscriber-robustness, and source/runtime alignment.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
