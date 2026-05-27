@@ -4,12 +4,12 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T09:15:00Z",
-      "last_investigation_acknowledged": "2026-05-27T09-15-00Z-investigation-052",
+      "last_updated": "2026-05-27T09:25:00Z",
+      "last_investigation_acknowledged": "2026-05-27T09-25-00Z-investigation-053",
       "last_primary_audit_acknowledged": "2026-05-27T08-36-14Z-investigation-050",
       "last_iter008_audit_acknowledged": "2026-05-27T08-50-00Z-investigation-026",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
-      "current_focus": "S2 phase active. Four audit-bridging iterations shipped. iter4 (this): openspec change 2026-05-27-neutral-emitter-lifecycle-bus written + tasks 1 & 4 of 4 implemented and live. activity-api commit 24160db adds POST /v2/events/publish (substrate-wide bus). discovery-vessel commit 64489e2 emits vessel.{registered,heartbeat,expired} on each registry mutation. WS subscriber verified end-to-end: registration POST → bus event arrives in ~50ms. Remaining tasks: 2 (ias-executor-ts BusForwardingEventSink — lifecycle.task.* onto bus), 3 (goal-host reactive proxy registration — dissolves F-129 once subscribing to vessel.registered). Three substrate honesty signals + push-away refusal + producer rotation + neutral-emitter bus foundation now in place.",
+      "current_focus": "S2 phase active. Five audit-bridging iterations shipped. iter5 (this): Task 3 of neutral-emitter-bus spec landed. F-129 CLOSED — reproduced race scenario (stop dev-vessel → restart goal-host with 0 proxies → start dev-vessel) and verified reactive recovery via vessel.registered event in <10s, no operator intervention. iter008 #4 (lifecycle:task:* consumer-coupled to workbench) partially addressed by bus infrastructure existence. Remaining: Task 2 (ias-executor-ts BusForwardingEventSink) closes iter008 #4 fully. Substrate state: honest signals (coverage-tick) + push-away refusal (operator probe) + producer rotation (probe expansion) + neutral-emitter bus foundation + reactive vessel topology. The substrate today is materially more self-correcting than five iterations ago.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
