@@ -4,12 +4,12 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T09:40:00Z",
-      "last_investigation_acknowledged": "2026-05-27T09-40-00Z-investigation-054",
+      "last_updated": "2026-05-27T10:00:00Z",
+      "last_investigation_acknowledged": "2026-05-27T10-00-00Z-investigation-055",
+      "last_iter008_audit_acknowledged": "2026-05-27T09-55-00Z-investigation-028",
       "last_primary_audit_acknowledged": "2026-05-27T08-36-14Z-investigation-050",
-      "last_iter008_audit_acknowledged": "2026-05-27T08-50-00Z-investigation-026",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
-      "current_focus": "S2 phase active. Six audit-bridging iterations shipped. iter6 (this): Task 2 of neutral-emitter-bus spec landed. ias-executor-ts BusForwardingEventSink wraps GoalHost's eventSink — engine lifecycle events (lifecycle:task:preBinding, :completed, :execution:succeeded, :gap:classified, :llm:dispatched) now flow onto activity-api WS bus with name-mapped form (lifecycle.task.pre_binding, etc.). Live: single probe generated 6+15+6+2=29 lifecycle events on the bus across 4 distinct types. iter008 #4 (lifecycle:task:* consumer-coupled to workbench) CLOSED. All four spec tasks live. Substrate is now fully reactive across both topology (vessel.*) and execution (lifecycle.*) — any vessel joins by subscribing to a single WS endpoint, no per-source plumbing, no polling.",
+      "current_focus": "S2 phase active. Seven audit-bridging iterations shipped. iter7 (this): inv-028 recommendation A landed. metabob-activity-api commit 4e4f4ae adds proposed flag to template schema + UPSERT, migration 139 (DEFINE FIELD proposed), recommend filter excludes proposed templates, POST /templates/:id/promote endpoint flips the flag (idempotent + bus emit). Live verified: create proposed → refused on recommend; promote → returns as top. Closes IAL §27.S.5 actualization gap (substrate-authored development cycle now has proposal→review→promote→use with rollback). Composes with refusal guard correctly. Remaining inv-028: B (resolver_pattern aggregator), C (impulse-pull semantics). Substrate today: observe honestly + refuse incompetent + expand competent + react to topology + react to execution + propose capabilities safely.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
