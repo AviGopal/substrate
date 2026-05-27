@@ -661,4 +661,4 @@ Let LLM fix test failures:
 
 - [Validation Resolver Design](/tmp/validation-resolver-design.md) - Complete design document
 - [IMPULSE_ACTIVITY_FOUNDATION.md](architecture/IMPULSE_ACTIVITY_FOUNDATION.md) - Core architecture
-- [CLAUDE.md](../CLAUDE.md) - Development philosophy
+- [CLAUDE.md](../../CLAUDE.md) - Development philosophy

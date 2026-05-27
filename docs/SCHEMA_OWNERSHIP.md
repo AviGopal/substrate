@@ -29,8 +29,8 @@ This document defines which service owns which tables and the boundaries for dat
                     ┌───────────────┼───────────────┐
                     ▼               ▼               ▼
 ┌──────────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐
-│ metabob-activity-api │ │ metabob-analysis-api │ │  metabob-mcp         │
-│                      │ │                      │ │  (No owned tables)   │
+│ metabob-activity-api │ │  analysis-vessel     │ │  metabob-mcp         │
+│                      │ │ (fka analysis-api)   │ │  (No owned tables)   │
 ├──────────────────────┤ ├──────────────────────┤ ├──────────────────────┤
 │ activity_template    │ │ analysis_problems    │ │ Reads from:          │
 │ activity_execution   │ │ code_components      │ │ - activity_template  │
@@ -77,19 +77,19 @@ Owned by `metabob-activity-api`. Manages activity definitions, execution traces,
 | `dataflows` | Data flow patterns | activity-api | activity-api |
 | `execution_sequences` | Ordered executions | activity-api | activity-api |
 
-## Analysis API Tables
+## Analysis Vessel Tables
 
-Owned by `metabob-analysis-api`. Manages code analysis results and patterns.
+Owned by `analysis-vessel` (formerly `metabob-analysis-api`). Manages code analysis results and patterns.
 
 | Table | Description | Readers | Writers |
 |-------|-------------|---------|---------|
-| `analysis_problems` | Detected issues | mcp, dashboard | analysis-api |
-| `code_components` | Code structure | mcp, dashboard | analysis-api |
-| `cochange_patterns` | Co-change relations | analysis-api | analysis-api |
-| `impact_relations` | Change impact graph | analysis-api | analysis-api |
-| `design_patterns` | Pattern detection | analysis-api | analysis-api |
-| `annotations` | Human annotations | mcp, dashboard | analysis-api |
-| `progressive_sync_state` | Sync progress | analysis-api | analysis-api |
+| `analysis_problems` | Detected issues | mcp, dashboard | analysis-vessel |
+| `code_components` | Code structure | mcp, dashboard | analysis-vessel |
+| `cochange_patterns` | Co-change relations | analysis-vessel | analysis-vessel |
+| `impact_relations` | Change impact graph | analysis-vessel | analysis-vessel |
+| `design_patterns` | Pattern detection | analysis-vessel | analysis-vessel |
+| `annotations` | Human annotations | mcp, dashboard | analysis-vessel |
+| `progressive_sync_state` | Sync progress | analysis-vessel | analysis-vessel |
 
 ## Cross-Service Data Access
 
@@ -156,10 +156,10 @@ Applies core schemas first, then:
 - `schemas/012-composition.surql`
 - `schemas/013-impulse-tool-usage.surql`
 
-### Analysis API Schema
+### Analysis Vessel Schema
 
 ```bash
-cd repos/metabob-analysis-api
+cd repos/analysis-vessel
 bun run sql/migrate.ts
 ```
 
@@ -183,11 +183,11 @@ Example:
 
 DEFINE TABLE new_feature SCHEMAFULL
   PERMISSIONS
-    FOR select, create, update, delete WHERE org_id = $auth.org_id;
+    FOR select, create, update, delete WHERE org_id = $token.org_id;
 
 DEFINE FIELD org_id ON new_feature TYPE record<organizations>
   ASSERT $value != NONE
-  VALUE $value OR $auth.org_id;
+  VALUE $value OR $token.org_id;
 
 DEFINE FIELD name ON new_feature TYPE string;
 DEFINE FIELD created_at ON new_feature TYPE datetime DEFAULT time::now();

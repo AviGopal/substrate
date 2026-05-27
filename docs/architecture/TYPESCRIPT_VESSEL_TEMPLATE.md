@@ -401,7 +401,7 @@ Before cutting the first release:
 ## Related
 
 - [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md) — The conceptual model. Read first.
-- [`../../DISCOVERY_INTEGRATION.md`](../../DISCOVERY_INTEGRATION.md) — Discovery-vessel integration details.
+- [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md) — Discovery-vessel integration is covered in the foundational model.
 - `VESSEL_CONSTRUCTION_PATTERNS.md` (archived 2026-04-26) — Cross-vessel pattern analysis (2026-04-08). Idioms remain current; registration path superseded by discovery-vessel.
 - [`RESOLVER_TRACKING.md`](RESOLVER_TRACKING.md) — Per-impulse resolution tracking for learning.
 - [`../guides/CONCEPT_INTEGRATION_TEMPLATES.md`](../guides/CONCEPT_INTEGRATION_TEMPLATES.md) — Example activity templates that consume a vessel's shapes.

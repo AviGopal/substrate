@@ -469,11 +469,14 @@ non-failures; for failures it is the first error message truncated to
 
 ### Known gap
 
-The `/api/activity/*` BFF proxy is **not wired** in standalone mode —
-research-mode-only paths under that prefix return 404 today. The
-proper fix lands in **iteration 5** (adapter layer). The rubric
-placeholders ship skipped specifically so the loop doesn't depend on
-that surface until then.
+The `/api/activity/*` BFF proxy is **not wired** in either standalone or
+research mode — paths under that prefix return 404. The
+`VITE_ENABLE_ACTIVITY_VIEWS` flag gates the UI routes and the
+`/api/v2/activities/*` proxy (which does return 501 in standalone mode),
+but the `/api/activity/*` path was never registered in `src/index.ts` and
+has no handler in any mode. This is a known open item; the rubric
+placeholders ship skipped so the loop doesn't depend on that surface until
+it lands (target: iteration 5, adapter layer).
 
 ---
 

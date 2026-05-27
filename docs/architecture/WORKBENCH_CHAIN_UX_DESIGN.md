@@ -1,9 +1,11 @@
 # Workbench Chain-Based UX Design
 
-> **Status**: Design Document
+> **Status**: Design complete — implementation shipped as of workbench v0.3.x
 > **Version**: 1.0.0
 > **Date**: 2026-04-24
 > **Purpose**: Transform the workbench into a chain-like interface where user stories, goals, and workflows are treated as executable activities
+>
+> **Implementation note (2026-05-27):** The features described in this document are now implemented. The workbench ships a trajectory editor (horizontal CSS-Grid drag-reorder, parallel rows, save-as-variant), composition builder (React Flow drag-and-drop with shape-compatibility validation and cycle detection), resolver-first TaskEditor, live execution overlay (WebSocket with backoff + catchup), backward-chaining panel for missing shapes, and goal-completion bar. This document remains the design reference for the chain-based UX intent and the vocabulary it introduced (impulse cards, insertion zones, shape badges, Thompson Δα/Δβ badges). For the current feature inventory see `CLAUDE.md §Workbench`.
 
 ---
 

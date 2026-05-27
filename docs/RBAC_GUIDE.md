@@ -44,7 +44,7 @@ After authentication, `$token` contains the claims from the JWT:
 
 ## PERMISSIONS Patterns
 
-> **Note:** The examples below use `$auth.*` for readability and historical continuity. In deployed activity-api migrations these are `$token.*` — see the `$auth` vs `$token` section above. When authoring new migrations, default to `$token.*` for org/project scoping; reach for `$auth.*` only when you truly need the authenticated record.
+> **Note:** The examples below use `$auth.*` for historical continuity only. In deployed activity-api migrations these are `$token.*` — see the `$auth` vs `$token` section above. **When authoring new migrations, always use `$token.*` for org/project scoping.** Reach for `$auth.*` only when you genuinely need the authenticated record (dashboard JWT callers only). Using `$auth.org_id` in new migrations will silently filter out all API-key callers.
 
 ### Pattern 1: Org-Scoped Read/Write
 
@@ -160,7 +160,7 @@ const templates = await db.query(`
 // Use authenticated connection - PERMISSIONS enforced
 const db = await createAuthenticatedClient(jwtToken);
 const templates = await db.query(`SELECT * FROM activity_template`);
-// SurrealDB automatically filters by $auth.org_id
+// SurrealDB automatically filters by $token.org_id
 ```
 
 ### Mistake 2: Missing PERMISSIONS
@@ -319,7 +319,7 @@ DEFINE ACCESS test_user ON DATABASE TYPE JWT
 
 1. **Always use PERMISSIONS** on multi-tenant tables
 2. **Never rely only on application-level filtering**
-3. **Use $auth.org_id** as the primary isolation mechanism
+3. **Use `$token.org_id`** as the primary isolation mechanism (works for both API-key and dashboard-JWT callers; `$auth.org_id` silently drops API-key results)
 4. **Create indexes** on org_id fields
 5. **Test isolation** between organizations
 6. **Use authenticated connections** (`createAuthenticatedClient`)

@@ -813,7 +813,7 @@ The 6-step resolver dispatch is **MiniBob's responsibility**, not the backend's.
 - [Activity Selection](./01-activity-selection.md) - How activities are chosen
 - [Resolver Processing](./03-resolver-processing.md) - How resolvers use impulses
 - [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) - Foundational model
-- [DISCOVERY_INTEGRATION.md](../../DISCOVERY_INTEGRATION.md) - Vessel discovery system
+- [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) - Vessel discovery system overview
 
 ---
 

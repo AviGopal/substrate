@@ -1,12 +1,12 @@
-# MiniBob Sequence Diagrams
+# Substrate Execution Sequence Diagrams
 
 > **Status (2026-05-27):** File references throughout this directory point to `repos/minibob/src/goal-processor.ts`, `activity.ts` (ActivityExecutor), `improviser.ts`, `lifecycle-hooks.ts`, `vessel-hooks.ts`, `promotion-hooks.ts`, `impulse-verification-hooks.ts`, and `template-extractor.ts` — all of which moved to `goal-host-vessel` / `ias-executor-ts` in Phase 8 (2026-05-24). The conceptual flows (Thompson sampling, impulse resolution, resolver dispatch, lifecycle hooks) remain accurate; the per-file line-number citations and `GoalProcessor`/`ActivityExecutor` participant labels now refer to substrate-vessel internals rather than minibob source. Update participant labels to `GoalHostVessel` / `GoalHost (ias-executor-ts)` before using these diagrams for implementation navigation.
 
-This directory contains comprehensive sequence diagrams mapping the complete implementation of MiniBob's core workflows. All diagrams are implementation-based, with line numbers and file references from the actual codebase.
+This directory contains comprehensive sequence diagrams mapping the complete implementation of the substrate vessel execution workflows. All diagrams are implementation-based, with line numbers and file references from the actual codebase. Note: participant labels referencing `GoalProcessor`/`ActivityExecutor` in minibob source now refer to `GoalHostVessel` / `GoalHost (ias-executor-ts)` after Phase 8 (2026-05-24).
 
 ## Overview
 
-**MiniBob operates through activity composition** - a recursive architecture where everything is an activity, including the goal processing system itself. Goal processing is a meta-activity that orchestrates other activities through composition edges, not a separate code path.
+**The substrate operates through activity composition** - a recursive architecture where everything is an activity, including the goal processing system itself. Goal processing is a meta-activity that orchestrates other activities through composition edges, not a separate code path.
 
 The system is built on five core workflows that work together to create a self-improving development system:
 
@@ -289,10 +289,7 @@ The diagrams reveal:
 ## Relationship to Other Documentation
 
 These sequence diagrams complement:
-- [`IMPULSE_ACTIVITY_FOUNDATION.md`](../IMPULSE_ACTIVITY_FOUNDATION.md) - The foundational model
-- [`COMPOSITION_AND_CONTROL_FLOW.md`](../COMPOSITION_AND_CONTROL_FLOW.md) - Activity composition patterns
-- [`IMPULSE_DRIVEN_COMPOSITION.md`](../IMPULSE_DRIVEN_COMPOSITION.md) - Composition-based architecture
-- [`DISCOVERY_INTEGRATION.md`](../../../DISCOVERY_INTEGRATION.md) - Vessel discovery system
+- [`IMPULSE_ACTIVITY_FOUNDATION.md`](../IMPULSE_ACTIVITY_FOUNDATION.md) - The foundational model; activity composition patterns and composition-based architecture
 - [`DEPLOYMENT_WORKFLOW.md`](../../../repos/deployment/DEPLOYMENT_WORKFLOW.md) - CI/CD and deployment
 
 ## Architectural Clarity: MiniBob vs Activity-API

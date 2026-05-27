@@ -376,4 +376,4 @@ interface KeywordExtractorResolverConfig {
 - [`./ACTIVITY_TASK_CONTEXT_PROPAGATION.md`](./ACTIVITY_TASK_CONTEXT_PROPAGATION.md) — how later tasks see the impulses these resolvers produce.
 - [`./CONDITIONAL_TASKS.md`](./CONDITIONAL_TASKS.md) — `{{impulse:id}}` and `exists` pseudo-operator for gating on selection output.
 - [`./TEMPLATE_UPKEEP.md`](./TEMPLATE_UPKEEP.md) — the `impulse-resolve` primitive and the broader "every capability is a resolver" pattern.
-- [`../architecture/ADVANCED_IMPULSE_PATTERNS.md`](../architecture/ADVANCED_IMPULSE_PATTERNS.md) §1.2 — resolver composition at the conceptual layer.
+- [`../architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — resolver composition at the conceptual layer.

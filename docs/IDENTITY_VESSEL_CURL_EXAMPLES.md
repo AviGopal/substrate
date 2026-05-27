@@ -29,6 +29,8 @@ curl https://identity.metabob.com/health | jq
 
 ## Generate API Key
 
+> **Current key format:** `mb_<env>-<org>-<user>-<keyid>-<HMAC-SHA256>` (e.g. `mb_canary-orgabc-userabc-key01-a1b2c3d4...`). The example response below shows an older base64 blob form — actual issued keys follow the HMAC format. The generate endpoint is admin-only (`/v1/keys/issue`); the examples below use the older `/v1/keys/generate` path for illustration.
+
 ```bash
 curl -X POST https://identity.metabob.com/v1/keys/generate \
   -H "Content-Type: application/json" \
@@ -219,35 +221,37 @@ curl -X POST https://identity.metabob.com/v1/keys/validate \
 
 ---
 
-## MiniBob Authentication
+## Auth Resolve (service-to-service)
+
+Idiomatic vessels validate incoming credentials by calling identity-vessel's resolver:
 
 ```bash
-curl -X POST https://identity.metabob.com/v1/auth/minibob/signin \
+curl -X POST https://identity.metabob.com/v1/auth/resolve \
   -H "Content-Type: application/json" \
   -d '{
-    "instance_id": "minibob-local-001",
-    "api_key": "minibob-local-dev-key"
+    "impulse": {
+      "type": "authentication",
+      "pointer": { "type": "apiKey", "value": "'$API_KEY'" }
+    }
   }' | jq
 ```
 
 **Expected Response:**
 ```json
 {
-  "success": true,
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "org_id": "metabob_internal"
+  "authenticated": true,
+  "orgId": "organizations:acme",
+  "userId": "users:alice",
+  "keyId": "key_abcdefghijklmnop",
+  "scopes": ["read", "write"]
 }
 ```
 
-**v2 endpoint (same functionality):**
-```bash
-curl -X POST https://identity.metabob.com/v2/auth/minibob/signin \
-  -H "Content-Type: application/json" \
-  -d '{
-    "instance_id": "minibob-local-001",
-    "api_key": "minibob-local-dev-key"
-  }' | jq
-```
+> **Removed endpoints (do not use):**
+> - `POST /v1/auth/minibob/signin` — the `minibob_record` ACCESS pattern is removed
+> - `POST /v2/auth/minibob/signin` — same
+>
+> Vessel-to-vessel auth now uses a plain HMAC API key (`mb_<env>-<org>-<user>-<keyid>-<hmac>`) passed as `Authorization: ApiKey <key>`. The key is validated by the receiving vessel via `POST /v1/auth/resolve`.
 
 ---
 

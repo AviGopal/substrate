@@ -423,7 +423,6 @@ ORDER BY usage_count DESC;
 ## Related Documentation
 
 - [Impulse Resolution Sequence](./sequences/02-impulse-resolution.md)
-- [Discovery Integration](../../DISCOVERY_INTEGRATION.md)
 - [CLAUDE.md Trace Model](../../CLAUDE.md#execution-trace-model)
 - [Activity Execution Foundation](./IMPULSE_ACTIVITY_FOUNDATION.md)
 

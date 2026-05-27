@@ -237,5 +237,5 @@ Together, they demonstrate the three core patterns:
 - [`TEMPLATE_DISPATCHABLE_RESOLVERS.md`](./TEMPLATE_DISPATCHABLE_RESOLVERS.md) — Resolver extraction and registry pattern
 - [`../architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — Core impulse model
 - [`ACTIVITY_TASK_CONTEXT_PROPAGATION.md`](./ACTIVITY_TASK_CONTEXT_PROPAGATION.md) — Impulse pool propagation and shape-aware selection
-- [`UNIFIED_IMPULSE_DRIVEN_ARCHITECTURE.md`](./UNIFIED_IMPULSE_DRIVEN_ARCHITECTURE.md) *(if created)* — Extended template-level impulse declaration patterns
+- [`../architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — Extended template-level impulse declaration patterns and the unified impulse-driven architecture
 - `repos/concept-db` (submodule) — Concept-db vessel and shape advertisement

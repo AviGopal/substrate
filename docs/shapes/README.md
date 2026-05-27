@@ -61,7 +61,7 @@ Canonical source of truth for advertised shapes: [`repos/metabob-activity-api/sr
 - 14 `*_write` shapes (e.g. `activityExecutionTrace_write`, `activityFeedback_write`, `impulseRelevance_write`) that delegate to REST endpoints so activities can invoke learning-loop writes through `POST /v2/impulses/resolve` without hardcoding routes.
 
 **Destructive shapes** (admin-only, emit `upkeepAuditLog`):
-- `activityTemplate_update` / `activityTemplate_deprecate` — see [`../guides/ACTIVITY_LIFECYCLE_DEPRECATION.md`](../guides/ACTIVITY_LIFECYCLE_DEPRECATION.md)
+- `activityTemplate_update` / `activityTemplate_deprecate` — see [`../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`](../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md)
 - `activityExecutionTrace_delete` — hard delete, audited.
 
 **Resolver**: `activity-api`

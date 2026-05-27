@@ -130,6 +130,5 @@ Templates with empty per-task shape metadata still work, but they get the pre-61
 
 ## Related
 
-- [`../architecture/ADVANCED_IMPULSE_PATTERNS.md`](../architecture/ADVANCED_IMPULSE_PATTERNS.md) — resolver-level impulse composition (layer below this one)
-- [`../architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — impulse model and activity structure
-- [`./MINIBOB_CLI_EXECUTION_TREE.md`](./MINIBOB_CLI_EXECUTION_TREE.md) — how propagated impulses surface in the CLI tree
+- [`../architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — impulse model and activity structure, including resolver-level impulse composition
+- propagated impulses surface in the workbench execution tree (see `repos/workbench`)
