@@ -4,12 +4,12 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T08:55:00Z",
-      "last_investigation_acknowledged": "2026-05-27T08-50-00Z-investigation-051",
+      "last_updated": "2026-05-27T09:15:00Z",
+      "last_investigation_acknowledged": "2026-05-27T09-15-00Z-investigation-052",
       "last_primary_audit_acknowledged": "2026-05-27T08-36-14Z-investigation-050",
       "last_iter008_audit_acknowledged": "2026-05-27T08-50-00Z-investigation-026",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
-      "current_focus": "S2 phase active. Three audit-bridging iterations shipped: (1) commit 9a36c751 closed F-118/F-122/F-123/F-124/F-125 — coverage-tick now uses non-overlapping rolling windows, meta-activity exclusion, probe template stripped to single trigger task. (2) commit 4ece17e1 added recommend refusal guard — substrate refuses with cited evidence when expected_output_shapes have no producer (push-away closure, IAL §27.S.6; resolves operator Disrupt probe). (3) commit c412e5d (this iteration) added probe rotation by producer last-execution timestamp — closes F-126/F-127. Live: top went release-change → forge-vessel-for-shape; producers_exercised_last_24h=19. New finding F-129 (MEDIUM) filed: goal-host proxy registration is one-shot at startup, races with dev-vessel restarts → zero proxies registered. iter008 neutral-emitter principle (investigation-026) acknowledged as substrate-spanning architectural item; ties to F-129 root cause. Substrate now produces honest signals + refuses incompetent goals + systematically expands competent producer set.",
+      "current_focus": "S2 phase active. Four audit-bridging iterations shipped. iter4 (this): openspec change 2026-05-27-neutral-emitter-lifecycle-bus written + tasks 1 & 4 of 4 implemented and live. activity-api commit 24160db adds POST /v2/events/publish (substrate-wide bus). discovery-vessel commit 64489e2 emits vessel.{registered,heartbeat,expired} on each registry mutation. WS subscriber verified end-to-end: registration POST → bus event arrives in ~50ms. Remaining tasks: 2 (ias-executor-ts BusForwardingEventSink — lifecycle.task.* onto bus), 3 (goal-host reactive proxy registration — dissolves F-129 once subscribing to vessel.registered). Three substrate honesty signals + push-away refusal + producer rotation + neutral-emitter bus foundation now in place.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
