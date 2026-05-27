@@ -4,11 +4,11 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-26T23:46:00Z",
+      "last_updated": "2026-05-27T03:15:00Z",
       "last_investigation_acknowledged": "2026-05-26T22-49-44Z-investigation-043",
       "last_primary_audit_acknowledged": "2026-05-26T22-49-44Z-investigation-043",
       "last_iter008_audit_acknowledged": "2026-05-26T18-45-00Z-investigation-027",
-      "current_focus": "S2 phase active. targetTemplateId bypass deployed (c8e48cb2): boredom goals[0-3,5-6] now send targetTemplateId directly to goal-host-vessel, bypassing Thompson Sampling entirely. Verified: goal[1] → development-vessel:substrate-health-tick (exec_xclcoadr, success), goal[2] → development-vessel:probe-reachable-unlearned (exec_nyienlly, success). High-alpha templates (harness-run-matrix α=18) no longer hijack named-template goals. goal[4] (identify-unknown-shapes) remains open to Thompson. F-113 (S.4a coverage regression): monitoring — probe templates now routing correctly should improve reachable_learned diversity. All closure gates green. Awaiting investigation-044.",
+      "current_focus": "S2 phase active. reachable_unlearned_probe resolver added (commit 6c3448e): probe-reachable-unlearned now uses a single probe_and_dispatch task instead of 3 tasks with {{}} interpolation. Root cause: ias-executor-ts engine does not interpolate {{}} in task configs for non-llm resolvers — only llm-prompt and iteration resolvers do explicit interpolation. This is a generic architectural gap. Probe verified working: exec_1gvhy1tb succeeded, child exec_20yhwxp3 dispatched. F-113 still active (rl=[8,10,11,15] newest-to-oldest = declining). Boredom cycling — waiting for probe dispatches to accumulate new shape traces.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
