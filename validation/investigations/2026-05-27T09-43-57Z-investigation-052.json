@@ -1,0 +1,224 @@
+{
+  "investigation_id": "052",
+  "generated_at": "2026-05-27T09:43:57Z",
+  "prior_investigation_id": "2026-05-27T08-41-09Z-investigation-051",
+  "trigger": "scheduled wakeup + monitor notifications for commits 4ece17e1, d4603756, ec938f7e, 4167ba2a, 4ec72006",
+  "investigator": "claude-sonnet-4-6 (primary auditor)",
+  "substrate_target": "http://localhost:18080",
+  "substrate_container_time": "2026-05-27T09:43:57Z",
+
+  "commits_audited": [
+    {
+      "sha": "4ece17e1",
+      "message": "feat(closure): push-away refusal active — operator probe addressed (IAL §27.S.6)",
+      "vessels_affected": ["metabob-activity-api"],
+      "verdict": "RE-VERIFY ONLY — F-129 status checked, see findings"
+    },
+    {
+      "sha": "d4603756",
+      "message": "docs: update docs/ for S2 lift, async dispatch, analysis-vessel, new lifecycle events",
+      "vessels_affected": ["docs-only"],
+      "verdict": "FINDING: CLAUDE.md references docs/IMPLEMENTATION_FINDINGS_2026_04.md which was archived to docs/archive/2026-05-27/ — broken reference"
+    },
+    {
+      "sha": "ec938f7e",
+      "message": "feat(probe): rotate unlearned producers; close F-126/F-127, file F-129",
+      "vessels_affected": ["development-vessel"],
+      "verdict": "VERIFIED: rotation key code present and correct; coverage_fraction improved from 0.32 to 0.44; F-126/F-127 substantively addressed"
+    },
+    {
+      "sha": "4167ba2a",
+      "message": "spec(neutral-emitter-bus): substrate event bus foundation — tasks 1+4 live",
+      "vessels_affected": ["metabob-activity-api", "discovery-vessel", "openspec"],
+      "verdict": "VERIFIED: POST /v2/events/publish deployed and responsive; vessel.registered emission confirmed in discovery-vessel registry.ts; FINDING: spec inconsistency in tasks.md 1.1 vs design on event type regex"
+    },
+    {
+      "sha": "4ec72006",
+      "message": "feat(reactive-proxies): subscribe to vessel.registered to dissolve F-129",
+      "vessels_affected": ["goal-host-vessel", "ias-executor-ts"],
+      "verdict": "VERIFIED: WS subscriber deployed, reactive registration confirmed live at 09:20:43Z (+5s after restart); BusForwardingEventSink wired in goal-host"
+    }
+  ],
+
+  "findings": [
+    {
+      "id": "F-126",
+      "title": "Coverage fraction below threshold (was 0.32, 8/25 shapes learned)",
+      "status": "CLOSED",
+      "prior_severity": "MEDIUM",
+      "resolution": "ec938f7e rotation key in reachable-unlearned-report resolver causes probe to prefer producers not recently exercised. Live coverage_fraction now 0.44 (11/25 shapes learned in most recent window). Progress is real — 4 consecutive windows show new_shapes_introduced > 0. Auditor independently closes.",
+      "evidence": {
+        "coverage_tick_response": {
+          "coverage_fraction": 0.44,
+          "total_learned_unique": 11,
+          "total_advertised_shapes": 25,
+          "consecutive_progressing_cycles": 4,
+          "window_latest_reachable_learned": 8,
+          "window_latest_trace_count": 9
+        },
+        "prior_value": 0.32
+      }
+    },
+    {
+      "id": "F-127",
+      "title": "Thompson pool 96% meta-activity skew — boredom converging on single template",
+      "status": "PARTIALLY_RESOLVED",
+      "prior_severity": "LOW",
+      "resolution": "Boredom goal rotation is working correctly in observed window: goals[2]=probe-reachable-unlearned, goals[3]=harness-check-scenario, goals[4]=escalate-unknown-shape, goals[5]=harness-run-matrix, goals[6]=probe-untraversed-edge. Diverse template dispatch confirmed. Probe rotation by last-execution (ec938f7e) prevents single-template lock-in. Goals[5] failed (harness-run-matrix) but dispatch pattern is healthy. Meta-activity skew was a consequence of single-template lock; rotation dissolves the root cause. Auditor downgrades to INFO and marks resolved.",
+      "evidence": {
+        "boredom_dispatch_window": "2026-05-27T07:13-09:17Z",
+        "templates_dispatched": [
+          "development-vessel:probe-reachable-unlearned",
+          "development-vessel:harness-check-scenario",
+          "unknown (escalate-unknown-shape, no targetTemplateId)",
+          "development-vessel:harness-run-matrix",
+          "development-vessel:probe-untraversed-edge"
+        ],
+        "failed_dispatch": "harness-run-matrix at 08:43Z (exit-code failure, not dispatch issue)"
+      }
+    },
+    {
+      "id": "F-128",
+      "title": "consecutive_progressing_cycles semantics — counts windows not distinct boredom events",
+      "status": "OPEN",
+      "prior_severity": "LOW",
+      "resolution": "No code change. Semantics confirmed: consecutive_progressing_cycles counts consecutive 1h windows from newest where new_shapes_introduced > 0. Current value = 4 (all four windows progressing). The S.4a lift criterion used this field but required 3 across 4h windows. With 4 windows and all progressing, the criterion is currently met. However, the semantic ambiguity remains — the field is a window-count, not a distinct boredom-fire-count as the S.4a spec implied. LOW severity maintained. Operator should note this interpretation difference.",
+      "evidence": {
+        "current_value": 4,
+        "calculation": "for i in [0..3]: if cells_over_time[i].new_shapes_introduced > 0: consecutive_progressing_cycles++; else break",
+        "semantics_note": "Counts consecutive non-empty windows from newest end. Not monotonic across polling calls. A window can be empty in the next poll if no executions happen in that hour."
+      }
+    },
+    {
+      "id": "F-129",
+      "title": "§27.S.6 push-away overstated — interventionRefused impulse shape not implemented",
+      "status": "OPEN",
+      "prior_severity": "HIGH",
+      "resolution": "Still HIGH. The interventionRefused impulse shape does NOT exist in any .ts file under repos/. Two openspec documents reference it (operator-and-public-contracts, intervention-tracking) but neither is implemented. The recommend guard in activity-api (commit 0e64843) returns fallback_tier=refused in JSON but does not emit any interventionRefused impulse. IAL §27.S.6 requires active push-away to be signaled via interventionRefused impulses with cited evidence that are observable to the operator. The current implementation is a passive fallback_tier flag on an HTTP response — not an auditable push-away event. The overstated S2→S3 framing from investigation-051 remains.",
+      "evidence": {
+        "interventionRefused_in_ts_files": "NONE",
+        "interventionRefused_in_openspec": [
+          "openspec/changes/2026-05-23-operator-and-public-contracts/tasks.md",
+          "openspec/changes/2026-05-23-operator-and-public-contracts/design.md",
+          "openspec/changes/2026-05-23-intervention-tracking/design.md",
+          "openspec/changes/2026-05-23-intervention-tracking/spec.md",
+          "openspec/changes/2026-05-23-intervention-tracking/tasks.md"
+        ],
+        "implementation_status": "openspec only, not shipped",
+        "actual_behavior": "POST /v2/activities/recommend returns {fallback_tier: 'refused'} when no producer exists for expected_output_shapes — response field only, no impulse emitted, no audit trail"
+      }
+    },
+    {
+      "id": "F-130",
+      "title": "Substrate claiming and filing investigation numbers from auditor sequence",
+      "status": "ESCALATED",
+      "prior_severity": "MEDIUM",
+      "resolution": "ESCALATED from MEDIUM to HIGH. Pattern is accelerating, not stable. Collision inventory for 2026-05-27:\n- 08:45 investigation-050 (substrate authored, duplicates primary 08:36 050)\n- 08:50 investigation-026 (substrate authored — CROSS-DAY number reuse, this is opus iter-011's session investigation)\n- 08:50 investigation-051 (substrate authored, collides with primary 08:41 051)\n- 09:15 investigation-052 (substrate authored, will collide with this primary audit file)\n- 09:25 investigation-053 (substrate authored, claiming NEXT primary audit number ahead of time)\n- 09:30 investigation-027 (substrate authored — cross-day reuse again)\n- 09:55 investigation-028 (substrate authored — cross-day reuse again)\nThe substrate is filing investigation-053 BEFORE the primary auditor runs investigation-052. It is claiming future numbers. Investigation-026/027/028 are cross-session numbers from opus iter-008/011/012. The numbering space is effectively corrupted for date-independent lookup. Operator should establish explicit namespace convention: substrate files use 'dev-response-' prefix, primary auditor files use 'investigation-NNN' prefix.",
+      "evidence": {
+        "primary_auditor_files": [
+          "2026-05-27T00-06-32Z-investigation-045 (primary, JSON+MD)",
+          "2026-05-27T03-01-58Z-investigation-046 (primary, JSON+MD)",
+          "2026-05-27T04-06-54Z-investigation-047 (primary, JSON+MD)",
+          "2026-05-27T07-15-54Z-investigation-048 (primary, JSON+MD)",
+          "2026-05-27T08-36-14Z-investigation-050 (primary, JSON+MD)",
+          "2026-05-27T08-41-09Z-investigation-051 (primary, JSON+MD)",
+          "2026-05-27T09-43-57Z-investigation-052 (this file, primary)"
+        ],
+        "substrate_authored_files": [
+          "2026-05-27T08-30-00Z-investigation-049.md (substrate response, no JSON, single .md — unusual format)",
+          "2026-05-27T08-45-00Z-investigation-050.md (substrate, collides with primary 050)",
+          "2026-05-27T08-50-00Z-investigation-026.md (substrate, CROSS-DAY number from opus iter-011)",
+          "2026-05-27T08-50-00Z-investigation-051.md (substrate, collides with primary 051)",
+          "2026-05-27T09-15-00Z-investigation-052.md (substrate, pre-committed primary 052 number)",
+          "2026-05-27T09-25-00Z-investigation-053.md (substrate, claimed FUTURE primary 053 number)",
+          "2026-05-27T09-30-00Z-investigation-027.md (substrate, cross-session opus iter-012 number)",
+          "2026-05-27T09-55-00Z-investigation-028.md (substrate, cross-session opus iter-013 number)"
+        ],
+        "collision_count": 8,
+        "future_claim": true,
+        "cross_session_reuse": true
+      }
+    },
+    {
+      "id": "F-131",
+      "title": "Operator probe file provenance — timestamp 5.4h before response session",
+      "status": "OPEN",
+      "prior_severity": "LOW",
+      "resolution": "No new evidence. Probe file at validation/findings/operator-probe-2026-05-27-application-question-answering.md has 03:30Z timestamp; response commit 0e64843 (recommend guard) was acknowledged at 08:45Z. The substrate's response (investigation-050 08:45Z) states this was an organic probe response. Timeline is plausible if operator created the probe file in an early-morning session and the substrate ran boredom loops until the 08:45Z response session. LOW severity maintained — no evidence of substrate-authoring the probe.",
+      "evidence": {
+        "probe_timestamp": "2026-05-27T03:30Z",
+        "response_timestamp": "2026-05-27T08:45Z",
+        "gap_hours": 5.25
+      }
+    },
+    {
+      "id": "F-132",
+      "title": "CLAUDE.md references archived path docs/IMPLEMENTATION_FINDINGS_2026_04.md",
+      "status": "NEW",
+      "severity": "LOW",
+      "description": "Commit d4603756 moved IMPLEMENTATION_FINDINGS_2026_04.md to docs/archive/2026-05-27/. CLAUDE.md line 158 still references docs/IMPLEMENTATION_FINDINGS_2026_04.md as a live cross-reference. The file exists only at docs/archive/2026-05-27/IMPLEMENTATION_FINDINGS_2026_04.md. Any reader following the CLAUDE.md link gets a 404. LOW severity — it is a diagnostics reference, not a load-bearing architecture document.",
+      "evidence": {
+        "claude_md_reference": "docs/IMPLEMENTATION_FINDINGS_2026_04.md (line 158)",
+        "live_path_exists": false,
+        "archive_path": "docs/archive/2026-05-27/IMPLEMENTATION_FINDINGS_2026_04.md"
+      }
+    },
+    {
+      "id": "F-133",
+      "title": "Spec inconsistency: tasks.md 1.1 regex requires 3-part event types; design/implementation accept 2-part",
+      "status": "NEW",
+      "severity": "LOW",
+      "description": "openspec tasks.md §1.1 specifies the event type regex as ^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$ (exactly 3 parts). The design.md, spec files, and implementation all use 2-part names: vessel.registered, vessel.heartbeat, vessel.expired, vessel.deregistered. The implementation regex is /^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*){1,3}$/ (2-4 parts), which correctly accepts the vessel.* events. The tasks.md regex would reject the very events tasks 4.1-4.4 require. The implementation is correct; the tasks.md has a documentation error in its proposed regex.",
+      "evidence": {
+        "tasks_md_regex": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+        "implementation_regex": "/^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*){1,3}$/",
+        "design_examples": ["vessel.registered", "vessel.heartbeat", "vessel.expired"],
+        "verdict": "Implementation is correct; tasks.md §1.1 has a documentation-level error (would reject the events it requires in §4)"
+      }
+    }
+  ],
+
+  "finding_summary": {
+    "F-126": "CLOSED",
+    "F-127": "CLOSED (resolved, downgraded to INFO)",
+    "F-128": "OPEN (LOW — semantics confirmed, no defect but ambiguity remains)",
+    "F-129": "OPEN (HIGH — interventionRefused still not implemented; §27.S.6 claim remains overstated)",
+    "F-130": "ESCALATED to HIGH (8 collisions including future-claim and cross-session reuse)",
+    "F-131": "OPEN (LOW — no new evidence, unchanged)",
+    "F-132": "NEW LOW — CLAUDE.md broken reference to archived doc",
+    "F-133": "NEW LOW — tasks.md regex inconsistency (implementation is correct)"
+  },
+
+  "substrate_health": {
+    "activity_api": "healthy (all checks passing: redis, surrealdb, discovery, embedding)",
+    "overall_passing": true,
+    "vessel_liveness": {
+      "all_active": true,
+      "vessels": ["activity-api", "development-vessel", "discovery-vessel", "goal-host-vessel", "identity-vessel", "llm-resolver-vessel", "local-tools-vessel", "ribosome-vessel", "concept-db"]
+    }
+  },
+
+  "neutral_emitter_bus_status": {
+    "task_1_publish_endpoint": "DEPLOYED — POST /v2/events/publish live at 8080, responds {accepted:true,ts:N}",
+    "task_2_ias_executor_forwarder": "DEPLOYED — BusForwardingEventSink in repos/ias-executor-ts/src/adapters/bus-forwarder.ts, wired in goal-host",
+    "task_3_goal_host_reactive_proxy": "DEPLOYED — vessel-registration WS subscriber confirmed live; reactive registration at 09:20:43Z (+5s from restart)",
+    "task_4_discovery_vessel_events": "DEPLOYED — publishVesselEvent() in repos/discovery-vessel/src/event-bus.ts; registry.ts emits vessel.registered/heartbeat/expired",
+    "f129_dissolved": "VERIFIED — reactive path replaces one-shot startup fetch; race condition eliminated",
+    "tasks_incomplete": ["task 5 (docs updates)", "task 6 (verification gates)", "task 7 (out-of-scope follow-ups)"]
+  },
+
+  "probe_rotation_status": {
+    "rotation_key_implemented": true,
+    "rotation_logic": "Sort unlearned entries by (priority desc, last_executed_ms asc, shape asc) — stale producers first",
+    "24h_wide_window": true,
+    "coverage_fraction_current": 0.44,
+    "coverage_fraction_prior": 0.32,
+    "consecutive_progressing_cycles": 4,
+    "all_four_windows_progressing": true
+  },
+
+  "next_wake_recommendation": {
+    "delay_seconds": 3600,
+    "reason": "High commit velocity (5 commits in <1h), new bus infrastructure live but tasks 5-7 incomplete, F-129 still HIGH (interventionRefused unimplemented), F-130 escalated (future investigation numbers being pre-claimed by substrate)"
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "investigation_id": "2026-05-26T23-25-00Z-investigation-029",
+  "generated_at": "2026-05-26T23:25:00Z",
+  "investigator_session_id": "claude-opus-4-7-audit-iter-014",
+  "prior_investigation_id": "2026-05-26T23-20-00Z-investigation-028",
+  "loop_iteration": 14,
+  "framing": "lifecycle hooks as PSS/ISS mutation channel + validation activities as closed-loop feedback",
+  "substrate_target": "http://localhost:18080",
+  "subagent_inputs": [{"task_id": "ab2625189c4332227", "name": "Lifecycle hooks × ISS mutation × validation feedback"}],
+  "lifecycle_mutation_surface": [
+    {"site": "engine.ts:95-109", "event": "lifecycle:task:preBinding", "carries": ["currentImpulseShapes", "missingShapes", "parentGoalText"], "primary_subscriber": "slot-binding"},
+    {"site": "engine.ts:111-124, :161-172", "event": "lifecycle:gap:classified", "carries": ["gapType", "missingShapes", "parentDepth", "parentGoalText"], "primary_subscriber": "NONE"},
+    {"site": "engine.ts:228-233", "event": "(outputs land in store)", "primary_subscriber": "every resolver"},
+    {"site": "engine.ts:274-297", "event": "lifecycle:task:completed", "carries": ["inputShapes", "outputShapes", "parentDepth", "compositionChain", "costUsd"], "primary_subscribers": ["validator-dispatch", "concept-db ExecutionObserver"]},
+    {"site": "engine.ts:338-355", "event": "lifecycle:execution:succeeded", "carries": ["outputShapes", "outputImpulseIds"], "primary_subscribers": ["ribosome-extract", "audit-test-report"]}
+  ],
+  "data_flow_shape": "lattice through shared pool, NOT tree (compositionChain records parent-child as tree but data flows through pool independent of subscription graph)",
+  "emergent_behaviors_observed_today": [
+    {"name": "implicit gap-escalation chains", "composite": "slot-binding → create-shape-provider-goal → goal impulse → validator-dispatch → validation_result", "specified_by_any_template": false},
+    {"name": "cross-template Thompson conditioning shifts", "mechanism": "slot-binding adds impulse → signature changes → next subscriber's recommendation distribution shifts"},
+    {"name": "passive concept formation via WS observer", "mechanism": "concept-db ExecutionObserver indexes lifecycle events without any template explicitly invoking concept-db"}
+  ],
+  "pss_vs_iss_distinction": {
+    "verdict": "specialization not duplication",
+    "pss_content_location": "goal-shape impulses in pool (subscribers can reason about goal)",
+    "pss_structure_location": "parentExecutionId + compositionChain on traces (recommender conditions on depth without lookup cost)",
+    "iss_mutation_extends_pss": "only when subscriber emits goal-shape impulse OR dispatches nested execution (which writes parentExecutionId)"
+  },
+  "guard_sufficiency_analysis": {
+    "existing_guards": ["emittingTemplateId self-block at lifecycle-subscriptions.ts:315", "auditDepthCap at :424-449 (default 2, hard cap 4)"],
+    "uncovered_cycle_patterns": [
+      {"name": "A→B→A through different templates subscribing to each other's emitted shapes", "saved_by": "depth-cap as actual safety net (emittingTemplateId just optimization)"},
+      {"name": "pool-mediated cycles", "example": "A emits X on task:completed → B subscribes on X-present emits Y → C subscribes on Y re-emits X", "saved_by": "depth-cap terminates after cap levels of churn", "cost": "non-trivial at ~$0.10/LLM-call"}
+    ],
+    "iter028_finding_A5_consistency": "validator-dispatch burning LLM budget producing null parent failure_mode IS consistent with unintended-cascade class"
+  },
+  "validation_closed_loop": {
+    "round_trip_latency_seconds": "5-15 dominated by validator LLM call",
+    "signals_preserved": ["outcome", "confidence", "failure_mode.type"],
+    "signals_lost": [
+      "per-task tool calls (only output_impulse_ids survives)",
+      "resolver tier of intermediate tasks (only validator's tier logged)",
+      "validator's considered evidence (most validators don't emit Evidence[] in failure_mode.context)"
+    ]
+  },
+  "failure_mode_taxonomy_to_repair_affordance": [
+    {"mode": "verifier_negative", "diagnostic": "which contract breached (validator_id + failed_evidence)", "repair": "adjust producing template output schema OR add missing task"},
+    {"mode": "budget_exhausted", "diagnostic": "which resource ran out", "repair": "decompose template OR hoist work upstream"},
+    {"mode": "safety_breach", "diagnostic": "lifecycle layer itself in runaway", "repair": "tighten depth-cap OR fix subscriber filter"},
+    {"mode": "cascading", "diagnostic": "walk backward across composition chain", "repair": "upstream repair"},
+    {"mode": "user_abort", "diagnostic": "human intervention vs system failure", "repair": "critical for S2→S3 push-away signal"}
+  ],
+  "iter028_findingA5_explained": {
+    "root_cause": "validator's validation_result impulse emitted into CHILD's trace, never written back to parent's failureMode field at engine.ts:361-374",
+    "why_catch_block_misses_it": "engine.ts catch block only sets failureMode on thrown errors; validators that REPORT failure without throwing leave parent labeled 'completed'",
+    "fix_wireable_from_existing_primitives": "parent-level subscriber on lifecycle:execution:succeeded reads validation_result impulses with pass=false from pool and rewrites trace status/failure_mode",
+    "no_new_mechanism_required": true
+  },
+  "gap_type_to_validator_signature_mapping": [
+    {"type": 3, "name": "missing-shape-in-pool", "validator_equivalent": "lifecycle:gap:classified at engine.ts:110-124 BEFORE validator runs", "llm_needed": false},
+    {"type": 6, "name": "synthesis-failure", "validator_equivalent": "content-reading validator (verify-goal-alignment) emits validation_result.pass=false with failed_evidence"},
+    {"type": 8, "name": "stub-masked content absence (NEW from iter-028)", "validator_equivalent": "validate-template-compliance for structural; body-length validator for general", "current_gap": "no shape-agnostic body-presence validator runs today"}
+  ],
+  "recursive_validation_foundation": {
+    "audit_resolver_divergence_emits": ["expectationGap", "resolverDivergenceReport"],
+    "meta_validation_pattern": "validate-validator-divergence template subscribed on lifecycle:execution:succeeded filtered to templateId=audit-resolver-divergence emits second-order validation_result",
+    "termination_guard": "audit depth-cap (4)",
+    "cycle_prevention": "expectationGap is a sink shape no validator emits except as result of analysis",
+    "foundation_safety": "validators are pure functions of pool+trace; lattice has no feedback edges except via Thompson posteriors (bounded learning-rate updates)"
+  },
+  "single_most_underused_property": {
+    "channel": "lifecycle:gap:classified",
+    "emit_site": "engine.ts:111-124 and :161-172",
+    "covers": ["missing-shape gaps", "unregistered-resolver gaps"],
+    "self_contained": true,
+    "llm_required": false,
+    "subscribers_today": 0,
+    "fix_template_count": 1,
+    "fix_subscription_block": "lifecycle:gap:classified",
+    "what_it_unlocks": [
+      "converts substrate gap-discovery from human-driven (29 numbered investigations) to continuously-maintained gap catalog",
+      "feeds escalate-unknown-shape and create-shape-provider-goal without LLM in detection step",
+      "composes with iter-027 lifecycle:llm:dispatched (both currently emit-without-listener)"
+    ]
+  },
+  "structural_pattern_surfaced": {
+    "name": "emit-without-listener",
+    "instances": [
+      {"channel": "lifecycle:llm:dispatched", "emit_commit": "41382521", "subscribers": 0, "audit_finding": "Finding 3 in audit.md"},
+      {"channel": "lifecycle:gap:classified", "emit_commit": "31eeeb2f", "subscribers": 0, "audit_finding": "this investigation"}
+    ],
+    "proposed_coding_convention": "no lifecycle:X:Y emit ships without a paired default subscriber template (even if subscriber's only action is to write event payload to a queryable impulse)",
+    "auditable_check": "grep -r 'lifecycle:' repos/.../templates/ should always return at least one subscriber per emit type"
+  },
+  "cheapest_immediate_dev_action": {
+    "deliverable": "gap-catalog subscriber template",
+    "trigger": "lifecycle:gap:classified",
+    "task": "learning_signal_write of event payload as substrateGap impulse",
+    "mirror_for_llm_dispatched": "dispatchedPrompt impulse",
+    "location": "repos/ias-executor-ts/src/templates/lifecycle/",
+    "loc_per_template": "~20 LOC JSON",
+    "engine_changes_required": "none",
+    "shape_changes_required": "none",
+    "effect": "closes emit-without-listener structural pattern"
+  },
+  "loop_bookkeeping": {
+    "saturation_note": "subagent-driven research has reached saturation on design-side questions for the lifecycle/validation arc",
+    "next_leverage_move": "dev-side wiring of lifecycle subscribers (gap-catalog + dispatchedPrompt)",
+    "validation_composition_with_iter028": "lifecycle:gap:classified → gap-catalog → audit-resolver-divergence reads catalog → proposes fixes via expectationGap → meta-validator validates the proposal"
+  },
+  "next_wake_recommendation": "cron 23:47Z; watch for gap-catalog subscriber template or activity-api lifecycle WS broadcast"
+}

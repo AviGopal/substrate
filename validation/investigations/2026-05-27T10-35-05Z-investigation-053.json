@@ -1,0 +1,233 @@
+{
+  "investigation_id": "053",
+  "generated_at": "2026-05-27T10:35:05Z",
+  "prior_investigation_id": "2026-05-27T09-43-57Z-investigation-052",
+  "auditor": "substrate-auditor-sonnet",
+  "scope": "commits since investigation-052 (2026-05-27T09:43:57Z)",
+  "commits_audited": [
+    {
+      "sha": "87ab8d18",
+      "vessel": "metabob-activity-api",
+      "vessel_sha": "4e4f4ae",
+      "description": "proposed-template flow — optional proposed field, recommend filter excludes proposed, POST /templates/:id/promote"
+    },
+    {
+      "sha": "361c629a",
+      "vessel": "metabob-activity-api",
+      "vessel_sha": "eee8b67",
+      "description": "refusal emits intervention.refused on WS bus with cited evidence; creates validation/dev-responses/ namespace"
+    },
+    {
+      "sha": "229edcba",
+      "vessel": "development-vessel",
+      "vessel_sha": "39da416",
+      "description": "resolver_pattern aggregator computing (resolver_id, output_shape) → success_rate over recent trace window; fixes CLAUDE.md broken reference (F-132)"
+    },
+    {
+      "sha": "696b3957",
+      "vessel": "concept-db",
+      "vessel_sha": "c5065cf",
+      "description": "concept lifecycle events published to WS bus via POST /v2/events/publish"
+    },
+    {
+      "sha": "34c55690",
+      "vessel": "ias-executor-ts",
+      "vessel_sha": "37a9ddb",
+      "description": "engine resolveInputs poll-and-wait (inv-028 C closure); F-133 tasks.md regex doc fix"
+    }
+  ],
+
+  "prior_findings": [
+    {
+      "id": "F-128",
+      "severity": "LOW",
+      "description": "consecutive_progressing_cycles semantics — S.4a criterion ambiguous between discrete-cycle count vs continuous cells_over_time",
+      "status": "open",
+      "evidence": "tasks.md §S.4a still reads 'At least one coverageReport impulse has coverage_progress=true from natural substrate activity'. No change to this criterion wording observed in audited commits. S.4a itself remains unchecked ([ ]) in tasks.md. The coverage_tick live output shows coverage_progress=True in latest cell but the criterion requires evaluation across a sustained window — semantic ambiguity unresolved."
+    },
+    {
+      "id": "F-129",
+      "severity": "HIGH",
+      "description": "§27.S.6 push-away measurement surface absent — interventionRefused shape not emitted on WS bus",
+      "status": "partially_resolved",
+      "evidence": "Commit 361c629a (deployed at /vessels/activity-api/src/routes/activities.ts, confirmed via grep count=2) adds async WS emission of type='intervention.refused' on every refusal path. Live probe confirmed: POST /v2/activities/recommend with expected_output_shapes=['shape_that_does_not_exist_xyz123'] returns HTTP 200 with refusal field populated (type='no_producer_for_expected_shapes'). The async bus emit fires in a void IIFE — failures are caught and logged but never block the HTTP response. ASSESSMENT: The measurement surface now exists and is live. However §27.S.6 requires measurement over 'sustained adversarial exposure' with substrate gates refusing operator interventions 'with cited evidence over a sustained window of adversarial exposure'. The current implementation: (1) emits the event, (2) returns refusal JSON to the caller, (3) does NOT yet record refusal events durably in SurrealDB for subsequent counting or attribution across sessions. No query surface for 'count interventions refused over last N hours' was found. The WS bus is ephemeral — events not delivered to a subscriber at emission time are lost. This is the minimum necessary surface to start accumulating the S3 signal, but sustained measurement requires a durable store or subscriber that counts. VERDICT: F-129 PARTIALLY_RESOLVED — emit surface exists and fires live; durable measurement for S3 assessment remains absent.",
+      "recommendation": "Add a lightweight SurrealDB write (or durable counter) for each intervention.refused event so the refusal rate over time is queryable. Without this, §27.S.6 sustained-window assessment requires correlating ephemeral WS bus messages — unreliable."
+    },
+    {
+      "id": "F-130",
+      "severity": "HIGH",
+      "description": "Investigation numbering collisions — 10 instances of dev-response files using investigation-NNN pattern in validation/investigations/",
+      "status": "resolved",
+      "evidence": "validation/dev-responses/ directory created with README.md explaining the separation rationale. 3 dev-response files filed (dev-response-001, dev-response-002, dev-response-003). A 4th (dev-response-004) was filed in commit 34c55690. Naming convention is now YYYY-MM-DDTHH-MM-SSZ-dev-response-NNN.md — distinct from the primary auditor's investigation-NNN.md pattern. New investigation files in validation/investigations/ (24 today) all use the primary auditor's pattern without collision."
+    },
+    {
+      "id": "F-131",
+      "severity": "LOW",
+      "description": "Operator probe file provenance — probe result files in validation/findings/ lack clear authorship attribution",
+      "status": "open",
+      "evidence": "validation/findings/operator-probe-2026-05-27-application-question-answering.md exists with agent: operator, generated_at: 2026-05-27T03:30:00Z. This file has agent header but it is unclear whether 'operator' is a substrate-authored attribution or a literal operator action. No change to this file in audited commits. F-131 remains open — provenance convention not formally specified."
+    },
+    {
+      "id": "F-132",
+      "severity": "LOW",
+      "description": "CLAUDE.md stale reference to docs/IMPLEMENTATION_FINDINGS_2026_04.md — original path no longer valid after archive move",
+      "status": "resolved",
+      "evidence": "CLAUDE.md line 158 now reads: 'see docs/archive/2026-05-27/IMPLEMENTATION_FINDINGS_2026_04.md' (archived path). Commit 229edcba (dev-vessel 39da416) states 'fixes CLAUDE.md broken reference (F-132)'. The path is live in the file."
+    },
+    {
+      "id": "F-133",
+      "severity": "LOW",
+      "description": "tasks.md regex mismatch — §1.1 cited strict 3-segment event type regex but ias-executor-ts uses 2-to-4 segments",
+      "status": "resolved",
+      "evidence": "Commit 34c55690 (super-repo) + 37a9ddb (ias-executor-ts). The diff for openspec/changes/2026-05-27-neutral-emitter-lifecycle-bus/tasks.md line 3 now reads: 'Validates type matches ^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*){1,3}$ (2-to-4 dotted snake_case segments — F-133 inv-052 correction.)'. The regex now correctly matches 2-to-4 segment event types including vessel.registered and lifecycle.task.pre_binding."
+    }
+  ],
+
+  "new_findings": [
+    {
+      "id": "F-134",
+      "severity": "MEDIUM",
+      "description": "proposal non-executability — several proposal files use hallucinated resolver names not registered in the ias-executor-ts resolver registry",
+      "affected_files": [
+        "validation/failure-modes/proposals/proposal-fm-17-resolver-budget-noncompliance.json",
+        "validation/failure-modes/proposals/proposal-fm-44-trace-redelivery-monitor.json",
+        "validation/failure-modes/proposals/proposal-fm-43-attribution-cascade-witness-check.json"
+      ],
+      "detail": "Audit of all 9 proposal files found resolver names that do not correspond to any registered resolver in development-vessel (31 registered resolvers listed in /shapes). HALLUCINATED resolvers found: activity_fetch (proposal-fm-17; used for raw SurrealQL via activity-api — no such resolver; would require surrealql or http_fetch), deterministic-projection, deterministic-classifier, impulse-emitter (proposal-fm-43; none of these exist in ias-executor-ts resolver registry), vessel_outbox_probe, vessel_registry_query, activity_api_query, deterministic_compose, deterministic_join, vessel_redelivery_dispatch (proposal-fm-44; none exist). REAL resolvers observed in proposals: llm_completion_dispatch, fs_write, surrealql (proposal-fm-43 uses surrealql — this IS a real resolver), bash (proposal-fp-15). The resolver_pattern_report aggregator confirms only real resolvers are appearing in actual trace data (16 unique resolvers seen over 24h). CONCLUSION: hallucinated resolvers are in draft proposal files only — they never ran and did not pollute the Thompson registry. However these proposals are permanently non-executable unless the hallucinated resolvers are either (a) implemented, or (b) replaced with equivalent real resolver calls.",
+      "resolver_check": {
+        "registered_in_dev_vessel": ["fs_read", "fs_write", "fs_edit", "fs_list", "git_status", "git_add", "git_commit", "git_diff", "git_log", "http_fetch", "json_path_extract", "llm_completion_dispatch", "activity_fetch", "activity_recommend", "activity_discover_by_shapes", "activity_create_variant", "code_introspect", "propagate_judgment", "systemd_restart", "learned_topology_snapshot", "reachable_unlearned_report", "unknown_shape_report", "coverage_tick", "substrate_health_tick", "failure_mode_matrix_score", "boredom_enqueue", "memoryNote", "memoryNote_write", "vessel_register_passthrough", "lift_demo_noop", "noop"],
+        "note": "activity_fetch IS registered in dev-vessel — but proposal-fm-17 uses it in a way that expects SQL query execution (raw SurrealQL), which is not how the activity_fetch resolver works (it fetches activity templates, not raw DB rows). This is a semantic mismatch even where the resolver name is correct.",
+        "hallucinated_in_proposals": ["deterministic-projection", "deterministic-classifier", "impulse-emitter", "vessel_outbox_probe", "vessel_registry_query", "activity_api_query", "deterministic_compose", "deterministic_join", "vessel_redelivery_dispatch"],
+        "json_path_extract_not_hallucinated": "json_path_extract IS a real registered resolver in dev-vessel (src/resolvers/json-path-extract.ts). It appears in resolver_pattern_report with 8 executions, success_rate=0.750. NOT a hallucinated resolver."
+      },
+      "proposal_timestamp_issue": "Proposals from subagent (proposal-fm-43-cascade-attribution-error, proposal-fp-11, proposal-fp-12, proposal-fp-15-missing-producer, proposal-fm-44-silent-trace-loss) could not be parsed as JSON due to embedded control characters — likely embedded newlines in the template JSON string field. This is a secondary defect. Readable proposals: proposal-fm-17 has created_at=1970-01-01T00:00:00.000Z (epoch), proposal-fm-43-attribution-cascade-witness-check has authored_at=2026-05-22T00:00:00Z, proposal-fm-44-trace-redelivery-monitor has created_at=2026-05-22T00:00:00Z (midnight, not actual timestamp). The epoch timestamp in proposal-fm-17 persists from prior audit finding and has NOT been corrected.",
+      "status": "open",
+      "recommendation": "Before attempting to promote any proposal to the activity registry, validate all resolver names against the registered resolver list. For proposals using deterministic-projection/deterministic-classifier/impulse-emitter patterns, consider implementing these as thin wrappers in development-vessel or rewriting tasks using json_path_extract + llm_completion_dispatch + fs_write chains."
+    },
+    {
+      "id": "F-135",
+      "severity": "LOW",
+      "description": "concept-db bus.ts not deployed — lifecycle event publishing commit c5065cf merged 2026-05-27T03:16Z but /vessels/concept-db was not updated in container (concept-db was last synced 2026-05-26T06:09Z)",
+      "detail": "docker exec substrate-live ls -la /vessels/concept-db/src/lifecycle/ shows bus.ts with modification time Wed May 27 10:15:23 UTC 2026 — this is after the commit time and AFTER the container was last restarted (vessels dir timestamp is 2026-05-25). The file is present and up to date. CORRECTION: bus.ts IS deployed (mtime 10:15 UTC today, dispatcher.ts mtime 10:14). Concept-db was hot-reloaded or make substrate-restart-concept-db was run. The publish endpoint POST /v2/events/publish exists in activity-api (confirmed via grep in src/index.ts). VERDICT: concept-db bus integration appears deployed. However the /vessels/concept-db directory timestamp (2026-05-26T06:09Z) predates the commit — the individual files within lifecycle/ have newer timestamps, suggesting an incremental file copy rather than full vessel restart. Unclear if concept-db service was restarted to pick up the changes.",
+      "deployment_evidence": {
+        "bus_ts_mtime": "2026-05-27T10:15:23Z",
+        "dispatcher_ts_mtime": "2026-05-27T10:14:00Z",
+        "vessel_dir_mtime": "2026-05-26T06:09Z (container directory timestamp, may be stale)"
+      },
+      "status": "open",
+      "recommendation": "Verify concept-db service was restarted after bus.ts was written to the container. Run docker exec substrate-live journalctl -u concept-db.service --since '2026-05-27 10:10:00' to confirm restart and new lifecycle event emissions."
+    },
+    {
+      "id": "F-136",
+      "severity": "LOW",
+      "description": "resolver_pattern_report shape advertised but not accessible via CamelCase — query requires snake_case form",
+      "detail": "The development-vessel advertises 'resolver_pattern_report' (snake_case) in /shapes. The audit instructions referenced 'resolverPatternReport' (camelCase) which returns 'unknown shape'. This inconsistency with the dev-vessel's own shape naming convention (most other shapes are camelCase: memoryNote, coverageReport, etc.) creates a usability gap. The aggregator IS functional when queried with snake_case — it returned 20 rows / 16 unique resolvers across 24h window with total_observations=984.",
+      "status": "open",
+      "recommendation": "Normalize resolver_pattern_report to resolverPatternReport in both the shape type definition and the dispatcher registration, matching the camelCase convention used by all other development-vessel shapes."
+    },
+    {
+      "id": "F-137",
+      "severity": "LOW",
+      "description": "S.4a criterion — temporal spread evidence exists across 4 cells (06:39–10:39 UTC) but coverage_fraction=0.593 with reachable_unlearned=18 out of 27 reachable shapes — sustained 4h spread present but learning is not converging toward completion",
+      "detail": "Coverage tick output: cells_over_time shows 4 non-overlapping hourly cells from 06:39 to 10:39 UTC 2026-05-27. All 4 cells have reachable_learned > 0 (3, 5, 7, 9 respectively — monotonically increasing). coverage_fraction=0.593, coverage_progress=True in the latest cell. S.4a requires 'at least one coverageReport impulse has coverage_progress=true from natural substrate activity' — this IS satisfied. However, 18 shapes remain unlearned in the latest cell. The rate of learning (2 new shapes/hour) projects full coverage at ~9 hours from now — well within the 4-hour window requirement. Boredom vessel is functioning (dispatched goals[0] and goals[1] since audit start). This finding is informational rather than blocking.",
+      "status": "open",
+      "recommendation": "S.4a criterion as written (a single coverage_progress=true impulse from natural activity) appears to be met by the current coverage data. The operator should evaluate whether the checkbox in tasks.md can be marked complete, or whether a stronger interpretation (e.g., multiple consecutive cells) is intended. See F-128 for the related ambiguity."
+    }
+  ],
+
+  "verification_results": {
+    "F129_intervention_refused_live": {
+      "probe": "POST /v2/activities/recommend with task_description='test task' and expected_output_shapes=['shape_that_does_not_exist_xyz123']",
+      "http_status": 200,
+      "response_keys": ["recommendations", "fallback_tier", "refusal", "decision_record"],
+      "refusal_type": "no_producer_for_expected_shapes",
+      "refusal_reason": "No template in the full candidate pool emits any of the requested output_shapes. Selector refused rather than falling back to highest-α prior.",
+      "candidates_examined": 9,
+      "bus_emit_in_source": true,
+      "bus_emit_deployed": true,
+      "bus_emit_durable": false
+    },
+    "proposed_template_flow": {
+      "proposed_field_in_source": true,
+      "promote_endpoint": "POST /templates/:templateId/promote — flips proposed=true to proposed=false, idempotent, emits activity_template.promoted bus event",
+      "recommend_filter_excludes_proposed": true,
+      "location": "repos/metabob-activity-api/src/routes/activities.ts lines 4742-4743"
+    },
+    "resolver_pattern_aggregator": {
+      "deployed": true,
+      "functional": true,
+      "query_shape": "resolver_pattern_report (snake_case)",
+      "total_rows": 20,
+      "unique_resolvers": 16,
+      "total_observations": 984,
+      "sample_resolvers_seen": ["reachable_unlearned_report", "activity_recommend", "http_fetch", "json_path_extract", "git_add", "git_commit", "llm_completion_dispatch", "fs_write", "fs_read"],
+      "hallucinated_resolvers_in_aggregator_output": false,
+      "note": "json_path_extract IS a real resolver with 8 executions at success_rate=0.750"
+    },
+    "concept_db_bus_integration": {
+      "bus_ts_present_in_container": true,
+      "dispatcher_ts_updated": true,
+      "events_endpoint_in_activity_api": true,
+      "service_restart_confirmed": "unverified — individual files updated but service restart not confirmed via journalctl"
+    },
+    "F132_claude_md_reference": {
+      "fixed": true,
+      "current_value": "docs/archive/2026-05-27/IMPLEMENTATION_FINDINGS_2026_04.md"
+    },
+    "F133_tasks_md_regex": {
+      "fixed": true,
+      "current_value": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*){1,3}$ (2-to-4 dotted snake_case segments)"
+    }
+  },
+
+  "substrate_state": {
+    "health_endpoint": "http://localhost:18080/health",
+    "status": "healthy",
+    "version": "1.20.9",
+    "timestamp": "2026-05-27T10:36:36.100Z",
+    "boredom_vessel": {
+      "recent_goals": [
+        {"goal_index": 0, "template": "development-vessel:coverage-tick", "status": "completed", "dispatched_at": "2026-05-27T09:43:30Z", "exec_id": "exec_3sbjdr74"},
+        {"goal_index": 1, "template": "development-vessel:substrate-health-tick", "status": "completed", "dispatched_at": "2026-05-27T10:13:30Z", "exec_id": "exec_9j797thk"}
+      ]
+    },
+    "coverage": {
+      "fraction": 0.593,
+      "reachable_learned": 9,
+      "reachable_unlearned": 18,
+      "coverage_progress": true,
+      "window_design": "non_overlapping_rolling_v2",
+      "cells_4h": [
+        {"window": "06:39-07:39", "learned": 3, "traces": 3},
+        {"window": "07:39-08:39", "learned": 5, "traces": 5},
+        {"window": "08:39-09:39", "learned": 7, "traces": 8},
+        {"window": "09:39-10:39", "learned": 9, "traces": 9}
+      ]
+    }
+  },
+
+  "agent_coordination": {
+    "last_primary_audit_acknowledged": "2026-05-27T09-43-57Z-investigation-052",
+    "agent_dev_last_updated": "2026-05-27T10:50:00Z",
+    "dev_responses_filed": 4
+  },
+
+  "lift_status_assessment": {
+    "S1_criteria": {
+      "S1": "pass",
+      "S2": "pass",
+      "S3": "pass",
+      "S4a": "conditionally_pass — coverage_progress=True in latest cell, 4 cells with monotonically increasing learned count. F-128 ambiguity unresolved.",
+      "S4b": "unverified in this audit — activity-api reports healthy but full health criterion requires substrateHealthReport.health_verdict.overall_passing=true"
+    },
+    "S2_transition_blocked_by": "none_observed",
+    "S3_assessment": "F-129 partially resolved — emit surface exists but durable accumulation for sustained-window measurement absent"
+  },
+
+  "root_file_count": 14,
+
+  "next_wake_recommendation": {
+    "delay_seconds": 1800,
+    "rationale": "Active commit velocity with 5 commits since investigation-052 (spanning ~1h20m). Three open findings (F-134 non-executable proposals, F-135 concept-db service restart, F-136 snake_case naming). S.4a approaching criterion threshold. 1800s gives time for the next boredom cycle (~30min) and potential commits addressing F-134/F-135."
+  }
+}

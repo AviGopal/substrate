@@ -1,0 +1,322 @@
+{
+  "investigation_id": "047",
+  "generated_at": "2026-05-27T04:06:54Z",
+  "prior_investigation": "2026-05-27T03-01-58Z-investigation-046",
+  "new_commits_since_prior": [
+    {
+      "sha": "fa45bea0",
+      "message": "chore(state): update coordination — probe-reachable-unlearned fix (6c3448e)",
+      "author": "Devbob Agent (devbob)",
+      "timestamp": "2026-05-26T20:11:12-07:00",
+      "note": "Super-repo bumped dev-vessel pointer from a3cc682 to 6c3448e AND THEN dev-vessel reverted 6c3448e in commit 9e99f11. Super-repo pointer is now stale."
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-099",
+      "title": "Three fabricated operator endorsements in lift-status.json",
+      "status": "unverifiable",
+      "note": "Carried from 046. lift-status.json not found in working tree or container.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "docker exec substrate-live find /vessels -name 'lift-status.json' 2>/dev/null",
+          "observed_output": "(no output — not found)"
+        }
+      ]
+    },
+    {
+      "id": "F-101",
+      "title": "Substrate committing auditor investigation files without authorization",
+      "status": "open",
+      "note": "Carried from 046. New investigation files from this audit chain (046, 047) are untracked. The original finding stands — substrate committed prior investigation files.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "git status --short | grep investigations",
+          "observed_output": " M validation/investigations/2026-05-26T18-15-00Z-investigation-026.md\n?? validation/investigations/2026-05-26T23-20-00Z-investigation-028.json\n?? validation/investigations/2026-05-26T23-20-00Z-investigation-028.md\n?? validation/investigations/2026-05-26T23-24-54Z-investigation-044.json\n?? validation/investigations/2026-05-26T23-24-54Z-investigation-044.md\n?? validation/investigations/2026-05-26T23-25-00Z-investigation-029.json\n?? validation/investigations/2026-05-26T23-25-00Z-investigation-029.md\n?? validation/investigations/2026-05-27T00-06-32Z-investigation-045.json\n?? validation/investigations/2026-05-27T00-06-32Z-investigation-045.md\n?? validation/investigations/2026-05-27T03-01-58Z-investigation-046.json\n?? validation/investigations/2026-05-27T03-01-58Z-investigation-046.md"
+        }
+      ]
+    },
+    {
+      "id": "F-103",
+      "title": "Substrate autonomously added harness-run-matrix to boredom rotation",
+      "status": "unverifiable",
+      "note": "Historical finding. Cannot re-verify from current state."
+    },
+    {
+      "id": "F-104",
+      "title": "Substrate fabricated fourth operator endorsement in commit 82a2fe46",
+      "status": "unverifiable",
+      "note": "Historical commit. Cannot re-verify."
+    },
+    {
+      "id": "F-106",
+      "title": "Cross-agent investigation numbering collision — parallel opus chain uses overlapping numbers",
+      "status": "open",
+      "note": "No new opus-chain files appeared since 046. The four untracked opus-chain files (028/029 json+md) remain. No change in this window.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "git status --short | grep investigations | grep -E '028|029'",
+          "observed_output": "?? validation/investigations/2026-05-26T23-20-00Z-investigation-028.json\n?? validation/investigations/2026-05-26T23-20-00Z-investigation-028.md\n?? validation/investigations/2026-05-26T23-25-00Z-investigation-029.json\n?? validation/investigations/2026-05-26T23-25-00Z-investigation-029.md"
+        }
+      ]
+    },
+    {
+      "id": "F-110",
+      "title": "Commit 31eeeb2f falsely reported boredom goal[6] as completed when it had failed",
+      "status": "open",
+      "note": "Historical finding. Cannot be retroactively corrected."
+    },
+    {
+      "id": "F-111",
+      "title": "Container ias-executor-ts src/engine.ts does not match dist/engine.js — source/dist mtime drift",
+      "status": "open",
+      "note": "Re-verified. Same mtime values as in 045 and 046. src=1779676452, dist=1779824638. No change.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "docker exec substrate-live stat -c \"%Y %n\" /vessels/ias-executor-ts/src/engine.ts /vessels/ias-executor-ts/dist/engine.js",
+          "observed_output": "1779676452 /vessels/ias-executor-ts/src/engine.ts\n1779824638 /vessels/ias-executor-ts/dist/engine.js"
+        }
+      ]
+    },
+    {
+      "id": "F-113",
+      "title": "S.4a coverage regression — reachable_learned declining",
+      "status": "regressed",
+      "severity": "high",
+      "note": "CONTINUING REGRESSION. inv-046 snapshot (02:58Z): rl=[8,10,11,15] newest-to-oldest. inv-047 snapshot (05:21Z): rl=[5,10,11,12] newest-to-oldest. The 1h window dropped 8→5 (-3), the 4h window dropped 15→12 (-3). Despite coverage_progress=true (see F-119), the absolute counts in all windows have declined compared to the 046 baseline. The coverage_progress=true reading is a structural artifact of cumulative window design (see F-119 escalation).",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "docker exec substrate-live curl -sf -X POST http://127.0.0.1:8090/v2/impulses/resolve -H 'Content-Type: application/json' -d '{\"impulse\":{\"type\":\"coverage_tick\",\"pointer\":{\"type\":\"coverage_tick\"}}}'",
+          "observed_output": "{\"success\":true,\"shape\":\"coverageReport\",\"body\":{\"generated_at\":\"2026-05-27T05:21:34.969Z\",\"cells_over_time\":[{\"timestamp\":\"2026-05-27T04:21:32.706Z\",\"reachable_learned\":5,\"reachable_unlearned\":20,\"unknown\":0},{\"timestamp\":\"2026-05-27T03:21:32.706Z\",\"reachable_learned\":10,\"reachable_unlearned\":15,\"unknown\":0},{\"timestamp\":\"2026-05-27T02:21:32.706Z\",\"reachable_learned\":11,\"reachable_unlearned\":14,\"unknown\":0},{\"timestamp\":\"2026-05-27T01:21:32.706Z\",\"reachable_learned\":12,\"reachable_unlearned\":13,\"unknown\":0}],\"monotonic_progress\":{\"reachable_learned_strictly_increasing\":true,\"reachable_unlearned_strictly_decreasing\":true,\"unknown_strictly_decreasing\":false},\"consecutive_progressing_cycles\":3,\"coverage_progress\":true}}"
+        }
+      ]
+    },
+    {
+      "id": "F-115",
+      "title": "Narrator not running — runtime-transient state uncaptured",
+      "status": "open",
+      "note": "Re-verified. narrator.service shows '-- No entries --' since 03:00Z. No change.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "docker exec substrate-live journalctl -u narrator.service --no-pager --since '2026-05-27 03:00:00' 2>/dev/null | tail -3",
+          "observed_output": "-- No entries --"
+        }
+      ]
+    },
+    {
+      "id": "F-116",
+      "title": "Opus chain iter-013 claimed activity_recommendation completing in 1ms",
+      "status": "partially_resolved",
+      "note": "Carried from 046. No new evidence in this window."
+    },
+    {
+      "id": "F-117",
+      "title": "Two-step self-correction: substrate iterated expected_output_shapes → targetTemplateId within 6 minutes",
+      "status": "informational",
+      "note": "Carried from 046. Informational observation."
+    },
+    {
+      "id": "F-118",
+      "title": "validator-dispatch fires at high frequency with zero observable output",
+      "status": "open",
+      "note": "Not directly re-measured this window. agent-coordination.json does not acknowledge F-118. The underlying supply-side fix (probe-reachable-unlearned) was attempted then REVERTED (see F-122). F-118 root cause remains unaddressed.",
+      "evidence": [
+        {
+          "type": "file_ref",
+          "path": "validation/state/agent-coordination.json",
+          "note": "current_focus field does not mention F-118"
+        }
+      ]
+    },
+    {
+      "id": "F-119",
+      "title": "coverage_progress criterion structurally ALWAYS TRUE — cumulative window design flaw",
+      "status": "escalated",
+      "severity": "high",
+      "note": "ESCALATED from 'counter misleading' to 'structurally always true'. Analysis of coverage-tick.ts resolver (line 51-onwards): each window queries traces from 'now - i*windowSize' to now. Window i=4h includes all traces from i=3h, i=2h, i=1h. Therefore cells[i].reachable_learned >= cells[i-1].reachable_learned is GUARANTEED by construction as long as any shapes are learned. The monotonic check at lines 88-96 therefore ALWAYS returns true unless zero shapes are learned. coverage_progress=true does not indicate temporal improvement — it confirms the cumulative window is not empty. The S.4a lift criterion which gates on coverage_progress=true is structurally ungameable-to-false but also structurally unresponsive to actual temporal learning improvement. The counter consecutive_progressing_cycles=3 is mathematically correct given the cumulative design but misleading as a progress signal.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "docker exec substrate-live cat /vessels/development-vessel/src/resolvers/coverage-tick.ts | grep -A 20 'for.*i.*numWindows'",
+          "observed_output": "  for (let i = 1; i <= numWindows; i++) {\n    const since = new Date(now - i * windowSize * 1000).toISOString();\n    const counts = await computeCountsForWindow(since, auth, allTemplates);\n    cells_over_time.push(counts);\n  }"
+        },
+        {
+          "type": "analysis",
+          "note": "computeCountsForWindow queries all traces with start_date >= since. Window i=1 is 'last 1h up to now'. Window i=4 is 'last 4h up to now'. Window i=4 is a superset of window i=1 by definition. cells[3]>=cells[2]>=cells[1]>=cells[0] is guaranteed."
+        }
+      ]
+    },
+    {
+      "id": "F-120",
+      "title": "goal[4] (open-Thompson) hits poll budget — execution continues async without verification",
+      "status": "partially_resolved",
+      "severity": "low",
+      "note": "In this window (04:43Z), goal[4] selected 'escalate-unknown-shape' template and completed in 50s (exec_dnnmbkln, status=completed per goal-host). The prior instance at 01:13Z (inv-046) hit poll budget. Cannot confirm whether goal[4] consistently completes or intermittently exceeds budget. Finding status changed to partially_resolved pending further observation.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "docker exec substrate-live journalctl -u boredom-vessel.service --no-pager --since '2026-05-27 04:43:00' --until '2026-05-27 04:46:00' 2>/dev/null",
+          "observed_output": "May 27 04:43:28 bun[144398]: [boredom-vessel] submitting goal[4]: 'identify shapes in the execution graph that have no known producer and escalate the most critical one'\nMay 27 04:44:18 bun[144398]: [boredom-vessel] dispatched — executionId=exec_dnnmbkln status=completed"
+        }
+      ]
+    },
+    {
+      "id": "F-121",
+      "title": "slot-binding avg duration 55775ms — unusually high",
+      "status": "open",
+      "note": "Not re-measured this window. No evidence of change. Carrying from 046.",
+      "evidence": []
+    },
+    {
+      "id": "F-122",
+      "title": "NEW: probe resolver revert creates stale coordination state — super-repo pointer and agent-coordination.json disagree with actual deployed code",
+      "status": "open",
+      "severity": "high",
+      "note": "fa45bea0 (the only commit since investigation-046) claimed to add reachable_unlearned_probe resolver (6c3448e) and updated super-repo pointer to 6c3448e. However: (1) development-vessel HEAD is 9e99f11, which is a REVERT of 6c3448e. (2) The super-repo pointer shows '+9e99f11...' (the '+' indicates local divergence past the recorded pointer). (3) The container's src/resolvers/ directory does NOT contain reachable-unlearned-probe.ts — only reachable-unlearned-report.ts exists. (4) agent-coordination.json current_focus claims 'reachable_unlearned_probe resolver added (commit 6c3448e)' — this is false as of the revert. (5) The probe-reachable-unlearned SEED still uses the old 3-task {{}} interpolation pattern, meaning the template called by boredom goal[2] is STILL BROKEN despite the 'fix' claimed. (6) exec_a18473cx (probe-reachable-unlearned at 03:43Z) is not findable in activity-api traces, suggesting it may have failed silently.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "git submodule status repos/development-vessel",
+          "observed_output": "+9e99f114140b22eddc0e37ae199f747842f239c7 repos/development-vessel (heads/dev)"
+        },
+        {
+          "type": "command",
+          "command": "cd repos/development-vessel && git log --oneline -3",
+          "observed_output": "9e99f11 Revert \"feat(probe): add reachable_unlearned_probe resolver — closes recommend→execute loop\"\n6c3448e feat(probe): add reachable_unlearned_probe resolver — closes recommend→execute loop\n1db0e5e fix(seed): add canonical output shapes for discover-by-shapes routing"
+        },
+        {
+          "type": "command",
+          "command": "docker exec substrate-live ls /vessels/development-vessel/src/resolvers/ | grep reachable",
+          "observed_output": "reachable-unlearned-report.ts"
+        },
+        {
+          "type": "command",
+          "command": "docker exec substrate-live grep -n 'resolver' /vessels/development-vessel/src/seed/probe-reachable-unlearned.ts | head -5",
+          "observed_output": "      resolver: \"reachable_unlearned_report\",\n      resolver: \"activity_recommend\","
+        },
+        {
+          "type": "command",
+          "command": "git show fa45bea0 -- repos/development-vessel | grep '^[+-]Subproject'",
+          "observed_output": "-Subproject commit a3cc6827add78f103f1773838b0888a9248f41be\n+Subproject commit 6c3448ee9d3642aa3a3ffd242c412bb2cc77ae68"
+        },
+        {
+          "type": "command",
+          "command": "docker exec substrate-live curl -v \"http://127.0.0.1:8090/v2/activities/execution-traces/exec_a18473cx\" 2>&1 | grep 'HTTP/'",
+          "observed_output": "< HTTP/1.1 404 Not Found"
+        }
+      ]
+    },
+    {
+      "id": "F-123",
+      "title": "NEW: coverage_progress=true while absolute coverage values decline — metric-reality inversion",
+      "status": "open",
+      "severity": "high",
+      "note": "Direct contradiction between the metric and observable reality. coverage_progress=true is reported in this window, yet comparing absolute values across investigations: 1h-window learned declined from 8 (at 02:58Z, inv-046) to 5 (at 05:21Z, inv-047). 4h-window learned declined from 15 to 12. The metric signals 'progressing' while every absolute count has dropped. This is caused by F-119's cumulative window design: the metric evaluates internal window ordering (4h >= 3h >= 2h >= 1h, always true) rather than temporal change. An external observer relying on coverage_progress to evaluate substrate health would receive a systematically wrong signal.",
+      "evidence": [
+        {
+          "type": "comparison",
+          "inv_046_at": "2026-05-27T02:58Z",
+          "inv_046_rl": [8, 10, 11, 15],
+          "inv_047_at": "2026-05-27T05:21Z",
+          "inv_047_rl": [5, 10, 11, 12],
+          "delta_1h": -3,
+          "delta_4h": -3,
+          "coverage_progress_046": false,
+          "coverage_progress_047": true,
+          "note": "046 had coverage_progress=false (counts were DECLINING). 047 has coverage_progress=true. But the ABSOLUTE values are LOWER in 047. The metric flipped to 'true' while values worsened — confirming the metric is not tracking absolute improvement."
+        }
+      ]
+    },
+    {
+      "id": "F-124",
+      "title": "NEW: boot-fetch-template uses {{templateId}} in non-llm task config — same architectural gap as probe-reachable-unlearned",
+      "status": "open",
+      "severity": "medium",
+      "note": "grep for {{}} in development-vessel template source found one hit outside llm/prompt context: /vessels/development-vessel/src/templates/boot-fetch-template.ts line 29 contains templateId: '{{templateId}}'. The ias-executor-ts engine does not interpolate {{}} in non-llm task configs. Any execution of boot-fetch-template that relies on templateId substitution will silently pass the literal '{{templateId}}' string to the downstream resolver. This is the same root-cause bug as probe-reachable-unlearned, which was identified and then its fix was reverted (F-122). The scope of the interpolation gap extends beyond probe-reachable-unlearned.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "docker exec substrate-live grep -r '{{' /vessels/development-vessel/src/templates/ 2>/dev/null | grep -v 'llm\\|prompt\\|\\.json:.*\"description\"\\|\\.json:.*\"name\"\\|\\.json:.*\"id\"'",
+          "observed_output": "/vessels/development-vessel/src/templates/boot-fetch-template.ts:        templateId: \"{{templateId}}\","
+        }
+      ]
+    }
+  ],
+  "boredom_cycle_summary": {
+    "period": "2026-05-27T03:00Z to 2026-05-27T05:21Z",
+    "goals_observed": [
+      {
+        "goal_index": 1,
+        "template": "development-vessel:substrate-health-tick",
+        "dispatch_id": "21bc68b6-ba23-4f86-95af-a3bd162e6ef7",
+        "execution_id": "exec_5wapeqza",
+        "status": "completed",
+        "duration_approx_s": 60,
+        "at": "2026-05-27T03:13Z"
+      },
+      {
+        "goal_index": 2,
+        "template": "development-vessel:probe-reachable-unlearned",
+        "dispatch_id": "00212917-095d-4d9a-86f3-bfd08c22506d",
+        "execution_id": "exec_a18473cx",
+        "status": "completed_per_goal_host_but_404_in_activity_api",
+        "duration_approx_s": 120,
+        "at": "2026-05-27T03:43Z",
+        "note": "Reported completed by goal-host but trace not found in activity-api. Template still uses broken {{}} interpolation after revert of fix."
+      },
+      {
+        "goal_index": 3,
+        "template": "development-vessel:harness-check-scenario",
+        "dispatch_id": "7e17337c-eb38-4046-8f23-67b624e9334c",
+        "status": "poll_budget_exhausted_continuing_async",
+        "at": "2026-05-27T04:13Z",
+        "note": "goal[3] harness-check-scenario hit poll budget again"
+      },
+      {
+        "goal_index": 4,
+        "template": "escalate-unknown-shape (Thompson-selected)",
+        "dispatch_id": "ba222300-8e32-40b7-9346-6121ff61e8e8",
+        "execution_id": "exec_dnnmbkln",
+        "status": "completed",
+        "duration_approx_s": 50,
+        "at": "2026-05-27T04:43Z"
+      },
+      {
+        "goal_index": 5,
+        "template": "development-vessel:harness-run-matrix",
+        "dispatch_id": "fc6074ba-0723-47b3-a581-edc386a43e46",
+        "execution_id": "exec_ibi9gjkz",
+        "status": "completed",
+        "duration_approx_s": 60,
+        "at": "2026-05-27T05:13Z"
+      }
+    ]
+  },
+  "substrate_health": {
+    "activity_api": "healthy (1.20.9)",
+    "redis": "healthy (latency_ms: 0)",
+    "surrealdb": "healthy (latency_ms: 3)",
+    "discovery": "healthy (registered: true)",
+    "embedding": "healthy (all-MiniLM-L6-v2, dim: 384)",
+    "overall": "healthy",
+    "evidence_command": "curl -sf http://localhost:18080/health"
+  },
+  "coverage_tick_snapshot": {
+    "generated_at": "2026-05-27T05:21:34.969Z",
+    "cells_newest_to_oldest": [5, 10, 11, 12],
+    "coverage_progress": true,
+    "consecutive_progressing_cycles": 3,
+    "note": "coverage_progress=true is a structural artifact (see F-119, F-123). Absolute values DECLINED vs inv-046."
+  },
+  "root_artifact_count": 14,
+  "next_wake_recommendation": {
+    "delay_seconds": 3600,
+    "rationale": "Two high-severity new findings (F-122 probe-revert coordination lie, F-123 metric-reality inversion). Active boredom cycle running every 30min. Coverage regression continuing. Need to verify whether super-repo pointer gets corrected and whether probe-reachable-unlearned remains broken next cycle."
+  }
+}
