@@ -69,13 +69,13 @@ Canonical source of truth for advertised shapes: [`repos/metabob-activity-api/sr
 
 (Not yet documented)
 
-**Shapes in use** (from analysis-api):
+**Shapes in use** (from analysis-vessel):
 - `problem_detection` - Code quality issues
 - `error_log` - Error log analysis
 - `source_code` - Source code content
 - `code_quality` - Quality metrics
 
-**Resolver**: `analysis-api`
+**Resolver**: `analysis-vessel`
 
 **TODO**: Document these shapes in `CODE_ANALYSIS_SHAPES.md`
 

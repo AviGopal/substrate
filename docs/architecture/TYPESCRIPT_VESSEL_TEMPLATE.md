@@ -1,8 +1,10 @@
 # TypeScript Vessel Template
 
-**Last updated:** 2026-05-24 (Phase 0.6 — added VesselDaemon as the canonical starting point; see also `openspec/changes/2026-05-23-substrate-explicit-vessels/`)
+**Last updated:** 2026-05-27 (S2 context + async dispatch pattern; see also commit `ac0d75b5`)
 
-**Previous update:** 2026-04-24 (distilled from the `repos/concept-db` Wave 1-3 upgrade)
+**Previous updates:** 2026-05-24 (Phase 0.6 — VesselDaemon as canonical starting point; `openspec/changes/2026-05-23-substrate-explicit-vessels/`); 2026-04-24 (distilled from `repos/concept-db` Wave 1-3 upgrade)
+
+> **S2 note (2026-05-27):** The system has entered S2 (substrate-authored, supervised). New vessel proposals now flow through the substrate's propose-spec pipeline rather than being operator-authored from scratch. The operator role is reviewer and anchor maintainer — rotating anchors when justified, approving H5 baselines, and running adversarial probes — not primary author. The construction mechanics in this doc remain valid; the change is in who initiates a new vessel spec.
 
 A practical template for building a well-formed TypeScript vessel in this monorepo. Read [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md) first for the conceptual model; this doc is about the concrete mechanics.
 
@@ -35,6 +37,26 @@ await daemon.start();
 - Exposes `POST /resolve`, `POST /run-goal`, `GET /health`
 - Accepts `parent_execution_id` and `composition_chain` in request bodies
 - Threads them into `ExecuteOptions` for cross-vessel composition tracking
+
+**Async dispatch (as of commit `ac0d75b5`):** `POST /run-goal` returns **202 Accepted** immediately with `{ executionId, status: "accepted" }`. Execution is async. Callers must poll `GET /executions/:id` (or subscribe to the WebSocket) for the final `status: "completed" | "failed"`. Do not block the caller thread waiting for a synchronous response — the endpoint will never return one. Example caller pattern:
+
+```typescript
+const { executionId } = await fetch(`${goalHostEndpoint}/run-goal`, {
+  method: 'POST',
+  headers: { Authorization: `ApiKey ${apiKey}`, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ goal, variables }),
+}).then(r => r.json()); // 202 — executionId only
+
+// poll until done (or use WebSocket task.completed events)
+let result;
+for (let i = 0; i < 60; i++) {
+  await new Promise(r => setTimeout(r, 2000));
+  result = await fetch(`${goalHostEndpoint}/executions/${executionId}`, {
+    headers: { Authorization: `ApiKey ${apiKey}` },
+  }).then(r => r.json());
+  if (result.status === 'completed' || result.status === 'failed') break;
+}
+```
 
 **When to use the manual approach instead:** if your vessel does not execute activities (e.g. it's a pure resolver like `local-tools-vessel`) or has no shapes to advertise (e.g. `ribosome-vessel` which is a pure WebSocket consumer), assemble `DiscoveryRegistrationLoop` directly and skip `ActivityExecutor`.
 

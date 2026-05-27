@@ -270,6 +270,16 @@ Two implicit vessels currently exist in the system:
 
 1. **ActivityExecutor inside MiniBob** (`repos/minibob/src/activity.ts:1141`). Runs activity templates task-by-task. It is the dispatch engine for both top-level activities and lifecycle subscribers (slot-binding, validator-dispatch, create-shape-provider-goal). It is not registered with discovery; it does not advertise shapes. Top-level activity execution today is invoked via in-process call (`executor.execute(template)`) from `goal-processor.ts`; the **unified execution path** refactor (see "Unified Execution Path" below) is the confirmed direction — goal-shaped and activity-template-shaped pointers will resolve through the standard impulse → resolver dispatch, with the activity resolver running the activity to resolve the pointer.
 
+   **Shipped lifecycle events** emitted by the ActivityExecutor (all are `lifecycle:*`-shaped impulses routed to subscribed meta-activities):
+
+   | Event | When fired | Key payload fields |
+   |---|---|---|
+   | `lifecycle:task:preBinding` | Before a task's input slots are bound | `taskId`, `requiredShapes`, `availablePool` |
+   | `lifecycle:task:completed` | After a task resolves successfully | `taskId`, `templateId`, `outputShapes`, `resolverTier` |
+   | `lifecycle:execution:succeeded` | After the full activity completes | `executionId`, `templateId`, `outputShapes` |
+   | `lifecycle:gap:classified` | When the engine classifies a missing shape (gap) in the execution pool | `gapShape`, `executionId`, `classifiedAs` (`unreachable` \| `unknown`) — part of the coverage/topology-discovery loop (shipped `31eeeb2f`, engine commit `49bfb43`) |
+   | `lifecycle:llm:dispatched` | When an LLM resolver task is dispatched | `taskId`, `resolver_id`, `model`, `estimated_cost_usd` (shipped `41382521`) |
+
 2. **Thompson Sampling vessel inside activity-api**. Computes α/β/sample_count posteriors from execution traces; serves them via REST (`variantMetricsSummary`, `GET /v2/activities/:id/variant-scores`); does **not** emit `thompson_posterior` impulses. This is the structural blocker that prevents the system from reasoning about its own decision state via the impulse mechanism — see "Known Gaps".
 
 Implicit vessels are not a sin; they are evidence about the minimum set. Each one represents a place where the system currently uses a privileged side channel rather than the impulse-resolver-vessel mechanism. Naming them functionally and tracking their limitations is how we test whether the four-primitive minimum is sufficient.
@@ -891,6 +901,8 @@ Unified execution path is the chosen direction. MiniBob refactor pending. Goal-s
 When the refactor lands, the goal-processor emits a `goal`-shaped impulse (and downstream an `activity_template`-shaped impulse), and the executor is dispatched as the resolver for the resulting shape pair. This collapses the structural distinction between "top-level" and "nested" activity execution: both flow through the same impulse → resolver dispatch.
 
 The 5 specs that already describe this unified surface (`minibob-goal-execution-resolver`, `trajectory-execution-resolver`, `goal-submission-panel`, `trajectory-submission-panel`, `vessel-wsurl-propagation`) describe target state.
+
+**Async dispatch (shipped `ac0d75b5`, 2026-05-27):** `POST /run-goal` on goal-host-vessel (port 8210) now returns `202 Accepted` immediately with `{ executionId, status: "accepted" }` and runs the execution asynchronously. Callers (minibob, boredom-vessel) must poll `GET /executions/:executionId` or subscribe to the activity-api WebSocket for `task.completed` / `execution:succeeded` events to observe the outcome. The synchronous response that previously blocked until completion is retired; any code that assumes a blocking `/run-goal` call must be updated to the poll/subscribe pattern.
 
 ### Forward-Arm Breakage: F-39 (resolved)
 

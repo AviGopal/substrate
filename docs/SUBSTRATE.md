@@ -4,6 +4,8 @@
 
 **Phase 26 complete (2026-05-23).** The substrate is implemented and verified — 36+ traces stored, boredom loop active, `systemd_restart` confirmed, `minibob --single` producing visible traces.
 
+**S1→S2 lift completed (2026-05-26).** The operator approved the IAL S1→S2 transition (commits `07453944 feat(lift): approve IAL S1→S2 transition`, `4c60b0a1 chore(operator): authorize S2 lift 2026-05-26`). The substrate is now in S2 — substrate-authored, supervised. The active direction is S2→S3.
+
 ## Why a single container?
 
 The canary cluster (Phase 5+) requires H1 two-sided traces and cross-vessel auth hardening before it can be a safe primary development environment. A container gives a structurally equivalent trust boundary without the Kubernetes overhead: all inter-vessel calls are localhost, SurrealDB runs as a local file instance, and a `systemd-restart` is the equivalent of a helm rollout.
@@ -133,16 +135,29 @@ Then use `/deploy <vessel>` to promote canary → production after canary health
 
 `development-vessel` is substrate-only — it has no Helm chart and does not run on canary. It is the meta-vessel for substrate self-development: the failure-mode harness, topology-discovery activities, `coverage-tick`, and `substrate-health-tick` all run as activities inside it. The `development-vessel.service` unit runs `seed-templates` automatically via `ExecStartPost` on every start — seeds are idempotent UPSERTs so re-running is safe.
 
-The topology-discovery loop (Phase 26 → Phase 27) runs autonomously inside the substrate:
+**goal-host-vessel async dispatch (commit `ac0d75b5`).** `POST /run-goal` now returns HTTP 202 immediately; goal execution happens asynchronously. Callers (minibob CLI and boredom-vessel) must poll for execution status rather than waiting for a synchronous response. This means a 202 from `/run-goal` does not indicate goal success — check the execution trace in activity-api to confirm completion.
+
+The topology-discovery loop (Phase 26 → Phase 27) runs autonomously inside the substrate. In S2 the boredom-vessel rotates through the following goals (timer: 30min):
+
+1. `substrate-health-tick` — measurement
+2. `probe-reachable-unlearned` — probing newly-reachable but unlearned activities
+3. `probe-untraversed-edge` — probing untraversed composition edges
+4. health goal
+5. escalation goal
+6. coverage goal
+7. `draft-gap-closing-activity` — substrate authors a new activity to close an identified gap
+
+The prior 5-minute timer was slowed to 30 minutes (commit `536652a4`) to enable the temporal spread required for the S.4a measurement window.
 
 ```
 activityRegistryChange → learned-topology-snapshot → reachable-unlearned-report
                        → probe-reachable-unlearned → activityRegistryChange → …
+                       → draft-gap-closing-activity → new template in registry
 ```
 
-Lift = coverage progress + substrate health + operator hand-over. Coverage progress is measured by three consecutive `coverageReport` impulses showing `coverage_progress=true` from natural activity (no human trigger) — this is the cell-count progress proxy for Convergence (foundation §33). Substrate health is measured by the most recent `substrateHealthReport` showing `health_verdict.overall_passing=true` (posterior confidence + graph stability + optimality where available). The hand-over itself is the operator writing `validation/state/lift-status.json` with `status: "confirmed"` — the substrate does not write this file from inside its own loop. All three components are required for IAL Phase 27 lift.
+**S1 → S2 completed 2026-05-26.** The lift criteria (coverage progress + substrate health + operator hand-over) were met and the operator authorised the transition. The substrate now authors its own activities via the `draft-gap-closing-activity` goal and the `propose-spec` / `verify-merge-candidate` pipeline.
 
-**Lift marks S1 → S2, not the terminal state.** The three-state model frames substrate maturity as S1 (pre-lift, operator-authored, supervised) → S2 (lifted, substrate-authored, supervised) → S3 (distributed-stable, adversarial-resistant, operator non-load-bearing). The IAL §27.S.4 terminal condition is the S1 → S2 transition only. S2 → S3 is the substrate's own roadmap — tracked in IAL §27.S.5 (post-lift agenda the substrate authors via its own propose-spec pipeline) and §27.S.6 (S3 readiness measured by active push-away: substrate refusing operator interventions with cited evidence, not by passive intervention-absence). S3 has no operational gate in this document — it is emergent and operator-measured under sustained adversarial exposure.
+**S2 → S3 is the active direction.** S3 (distributed-stable, adversarial-resistant, operator non-load-bearing) is tracked in IAL §27.S.5 (post-lift agenda) and §27.S.6 (S3 readiness measured by active push-away: substrate refusing operator interventions with cited evidence, not by passive intervention-absence). S3 has no operational gate in this document — it is emergent and operator-measured under sustained adversarial exposure.
 
 ## Troubleshooting
 

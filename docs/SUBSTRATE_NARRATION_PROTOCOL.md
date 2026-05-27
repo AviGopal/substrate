@@ -4,6 +4,13 @@
 `validation/scripts/substrate-narrator.ts`; gap accumulation lives at
 `validation/gaps/`.
 
+**Lift state (2026-05-26):** S1→S2 transition confirmed. The substrate is now in
+S2 (substrate-authored, supervised). The operator role has shifted from primary
+author to reviewer/anchor maintainer and adversarial tester. Gap accumulation via
+this protocol remains in force — it is now also evidence for the §27.S.6
+S2→S3 push-away criterion: gaps that the substrate closes autonomously without
+operator prompting count toward the intervention-rate-trending-to-zero measure.
+
 ## §A. Purpose
 
 The substrate (the deployed vessel fleet — discovery-vessel + activity-api +

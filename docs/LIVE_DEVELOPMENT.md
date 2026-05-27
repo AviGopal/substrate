@@ -21,6 +21,10 @@ code change  →  bun --hot  →  handler swap (~50ms, zero downtime)
 
 ## Per-Vessel Dev Commands
 
+### Local dev vessels
+
+These vessels run directly on the host and support `bun --hot` / `bun --watch` development:
+
 | Vessel | `dev` command | Default port | Hot-reload type | Notes |
 |---|---|---|---|---|
 | `metabob-activity-api` | `bun run --watch src/index.ts` | 8080 | --watch | SurrealDB + Redis required |
@@ -33,6 +37,27 @@ code change  →  bun --hot  →  handler swap (~50ms, zero downtime)
 | `minibob` | `bun --watch run index.ts` | 8080 | --watch | CLI + HTTP |
 | `concept-db` | `bun run --watch src/index.ts` | 8080 | --watch | |
 | `metabob-mcp` | `bun --watch src/index.ts` | stdio | --watch | MCP stdio only |
+| `analysis-vessel` | `bun run --watch src/index.ts` | 8080 | --watch | Stateless VesselDaemon; replaced `metabob-analysis-api` (commit `06bd8c04`) |
+
+### Substrate-hosted vessels
+
+These vessels run as systemd units **inside the substrate container** and are not started directly with `bun run dev`. Edit source in `repos/<vessel>/`, then hot-reload via:
+
+```bash
+make -C scripts/substrate substrate-restart-<vessel>
+# e.g.:
+make -C scripts/substrate substrate-restart-goal-host-vessel
+make -C scripts/substrate substrate-restart-boredom-vessel
+```
+
+| Vessel | Port (in-container) | Role | Notes |
+|---|---|---|---|
+| `goal-host-vessel` | 8210 | `POST /run-goal` — primary goal dispatch target | Async: returns 202 immediately (commit `ac0d75b5`); minibob + boredom-vessel both POST here |
+| `llm-resolver-vessel` | 8220 | `llm_completion` resolver backed by Anthropic SDK | Decouples LLM credentials from other vessels |
+| `local-tools-vessel` | 8230 | Filesystem + process resolvers (`BunFileSystemAdapter`, `BunProcessAdapter`) | Lowest blast-radius vessel |
+| `ribosome-vessel` | 8240 | Template extraction from execution traces | WebSocket client to activity-api `/ws`; writes via `activityTemplate_update` impulse |
+| `boredom-vessel` | — | Systemd timer; POSTs rotating topology-discovery goals to goal-host-vessel | Fires every 30min (commit `536652a4`; was 5min) |
+| `development-vessel` | — | Meta-vessel for substrate self-development; 19 shapes, 7 seed templates | Runs as systemd unit; see `repos/development-vessel/` |
 
 Run `bun run dev:debug` (where available) to include ISO timestamps in hot-reload log lines:
 
