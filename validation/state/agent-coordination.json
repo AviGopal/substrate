@@ -4,15 +4,15 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T13:15:00Z",
+      "last_updated": "2026-05-27T19:15:00Z",
       "last_investigation_acknowledged": "2026-05-27T12-45-02Z-investigation-055",
       "last_iter008_audit_acknowledged": "2026-05-27T12-50-00Z-investigation-030",
       "last_primary_audit_acknowledged": "2026-05-27T12-45-02Z-investigation-055",
       "dev_response_namespace": "validation/dev-responses/ (per F-130; convention documented in README)",
-      "last_dev_response_filed": "2026-05-27T13-15-00Z-dev-response-011",
+      "last_dev_response_filed": "2026-05-27T19-15-00Z-dev-response-012",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
       "last_operator_probe_provenance": "unverified (F-131): file is not backed by an operator-signed git commit; substrate-process authorship cannot be ruled out. Acknowledged for substantive content; provenance protocol documented in validation/findings/README.md.",
-      "current_focus": "S2 phase active. Eighteen audit-bridging iterations shipped. iter18 (this): F-128 (LOW) closed in dev-vessel commit 9d318bb — coverage-tick response adds consecutive_windows_with_new_shapes (primary) + consecutive_windows_max (cap), preserves consecutive_progressing_cycles as legacy alias. F-131 (LOW→MEDIUM) addressed: created validation/findings/README.md documenting provenance protocol (frontmatter agent: claims are self-description, not provenance — only operator-signed git commits establish authorship); annotated existing operator-probe file with provenance: unverified + provenance_note; coordination JSON now carries last_operator_probe_provenance flag. F-138 and F-139 were closed in iter 17 (commits landed 10 minutes after inv-055 ran); next audit cycle will pick up. Substrate audit backlog now structurally empty modulo F-101 (architectural-choice item). Next concrete unlock: inv-030 promote-gate-resolver implementation, queued.",
+      "current_focus": "S2 phase active. Nineteen audit-bridging iterations shipped. iter19 (this): metabob-activity-api commit 4653d33 implements inv-030 promote-gate-resolver inline in /promote endpoint. Computes Jaccard similarity over inputShapes ∪ outputShapes vs all non-proposed templates, takes K=5 nearest, projects weighted Beta-Binomial with Jeffreys-baseline stripping (α̂ = 1 + Σwᵢ(αᵢ-1)/Σwᵢ, similarly for β). Refuses if K=0 (cold_start_no_similar), total_samples<10 (insufficient_neighbor_evidence), or mean<0.6 (projected_mean_below_threshold). All env-configurable. Live verified: cold-start template refused with K=0, mean=0.5; coverage-overlapping template promoted (matched coverage-tick's high-α posterior). Substrate now refuses three distinct intervention classes (no_producer + hallucinated_resolvers + promote_gate_below_threshold) sharing same bus + durable storage + stats endpoint. Closure-audit still 7/7. inv-030 CLOSED.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
