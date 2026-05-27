@@ -4,7 +4,7 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T19:25:00Z",
+      "last_updated": "2026-05-27T19:30:00Z",
       "last_investigation_acknowledged": "2026-05-27T12-45-02Z-investigation-055",
       "last_iter008_audit_acknowledged": "2026-05-27T12-50-00Z-investigation-030",
       "last_primary_audit_acknowledged": "2026-05-27T12-45-02Z-investigation-055",
@@ -12,7 +12,7 @@
       "last_dev_response_filed": "2026-05-27T19-15-00Z-dev-response-012",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
       "last_operator_probe_provenance": "unverified (F-131): file is not backed by an operator-signed git commit; substrate-process authorship cannot be ruled out. Acknowledged for substantive content; provenance protocol documented in validation/findings/README.md.",
-      "current_focus": "S2 phase active. Twenty audit-bridging iterations shipped. iter20 (this): metabob-activity-api commit 2ac8b28 adds promote_gate.evaluated bus emit on EVERY promote attempt (allow OR refuse), implementing inv-030 §7 audit-trail + §calibration. Payload includes decision, reason, projection (alpha_hat, beta_hat, mean, total_samples, K), threshold, full neighbor list. Live verified: refuse path emits both promote_gate.evaluated + intervention.refused; allow path emits promote_gate.evaluated{decision:promote, K=2, mean=0.917}. No shadow-mode toggle needed — the gate's real decisions ARE the calibration data; subscribers can accumulate over time and post-hoc-join against variant_performance_metrics. Substrate now emits 4 distinct promotion-related bus event types: intervention.refused (3 refusal subtypes), promote_gate.evaluated (this commit), activity_template.promoted (existing), and the broader vessel.*/lifecycle.* infrastructure. Closure-audit still 7/7.",
+      "current_focus": "S2 phase active. Twenty-one audit-bridging iterations shipped. iter21 (this): metabob-activity-api commit dbced9e adds durable mirror + stats endpoint for promote_gate.evaluated (parallel to iter 13's refusal_events pattern). Migration 141 creates promote_gate_evaluations SCHEMAFULL table with indexes; every emit now writes a row alongside the bus event. GET /v2/activities/promote-gate/stats returns by_decision, by_reason, mean_projected_mean, mean_k, and top_recent with full projection — enables inv-030 §calibration experiment as a single endpoint query joined against variant_performance_metrics. Live verified: cold-start refusal recorded; stats returns by_decision={promote:0,refused:1}, by_reason={cold_start_no_similar:1}, mean_k=0, mean_mean=0.5. Substrate now has parallel hot/cold infrastructure for both audit streams (intervention.refused + refusal_events; promote_gate.evaluated + promote_gate_evaluations). Closure-audit still 7/7.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
