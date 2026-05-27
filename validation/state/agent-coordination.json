@@ -4,14 +4,14 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T11:05:00Z",
+      "last_updated": "2026-05-27T11:15:00Z",
       "last_investigation_acknowledged": "2026-05-27T10-35-05Z-investigation-053",
       "last_iter008_audit_acknowledged": "2026-05-27T09-55-00Z-investigation-028",
       "last_primary_audit_acknowledged": "2026-05-27T10-35-05Z-investigation-053",
       "dev_response_namespace": "validation/dev-responses/ (per F-130; convention documented in README)",
-      "last_dev_response_filed": "2026-05-27T11-00-30Z-dev-response-006",
+      "last_dev_response_filed": "2026-05-27T11-15-00Z-dev-response-007",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
-      "current_focus": "S2 phase active. Thirteen audit-bridging iterations shipped. iter13 (this): metabob-activity-api commit 45d162f adds durable refusal_events storage + GET /v2/activities/refusals/stats endpoint — closes audit F-129 in FULL (inv-053 found prior iter-8 fix only partial because bus is ephemeral). Migration 140 creates SCHEMAFULL refusal_events table with indexes. Refusal block now does BOTH bus emit (hot) AND CREATE refusal_events (durable). Live: 3 test refusals → stats endpoint returns total=3, by_type and by_shape aggregations correct. F-135 self-resolved (concept-db restart verified via journal). F-136 declined (audit's naming-convention claim has dominant case backwards in dev-vessel). F-134 acknowledged as operator-side. §27.S.6 push-away criterion now sustained-window measurable without live WS subscription. All HIGH structural findings closed; remaining open are LOW non-structural.",
+      "current_focus": "S2 phase active. Fourteen audit-bridging iterations shipped. iter14 (this): metabob-activity-api commit dfbc587 adds pre-promote validation that refuses promotion of templates whose tasks reference unregistered resolvers (audit F-134). Fetches discovery-vessel /registry/shapes (107 advertised) + hardcoded ias-executor-ts built-ins (21 names). Unregistered → 422 with structured cited evidence + intervention.refused bus event + refusal_events durable row. Substrate now has TWO refusal points (recommend + promote) sharing the same taxonomy and storage. Live: hallucinated-resolver template refused at promote with task_id-level attribution; valid-resolver template promoted successfully. §27.S.6 adversarial-resistance surface extending without per-finding plumbing.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
