@@ -43,6 +43,12 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   "run the harness-run-matrix activity to score all failure-mode scenarios against the live activity registry and emit a failureModeReport",
   // exploration — exercises n=0 templates to build Thompson priors; async dispatch now handles >5min runs
   "run the probe-untraversed-edge activity to find unreachable execution graph edges and emit a topologyGapReport",
+  // substrate-authoring — draft-gap-closing-activity reads a failure-mode scenario and produces an
+  // activityTemplateVariant via activity_create_variant resolver. This is the lift path: substrate
+  // authors templates from observed failure modes. Re-added after b259e028 removed it; scenarios are
+  // now seeded in /workspace/validation/failure-modes/scenarios/ so the input gap is closed.
+  // Per operator directive 2026-05-28: minimum substrate self-bootstrap requires this dispatch.
+  "draft a gap-closing activity variant from a recent failure-mode scenario, producing an activityTemplateVariant",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -55,7 +61,36 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   undefined,                                       // goal[4] — open-ended, let Thompson choose
   "development-vessel:harness-run-matrix",         // goal[5]
   "development-vessel:probe-untraversed-edge",     // goal[6]
+  "development-vessel:draft-gap-closing-activity", // goal[7] — substrate-authoring path
 ];
+
+// Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
+// default `source` variable; goal[7] (draft-gap-closing-activity) needs explicit paths.
+// Scenarios rotate via SCENARIO_ROTATION below to spread learning across failure modes.
+const SCENARIO_ROTATION: readonly string[] = [
+  "fm-17-resolver-budget-noncompliance",
+  "fm-43-cascade-attribution-error",
+  "fm-44-silent-trace-loss",
+  "fp-11-silent-semantic-failure",
+  "fp-12-partial-success-recorded-as-total",
+  "fp-15-missing-producer-stale-registration",
+];
+
+function extraVariablesForGoal(goalIdx: number): Record<string, unknown> {
+  if (goalIdx === 7) {
+    // draft-gap-closing-activity reads {{report_path}} and {{scenarios_dir}}/{{scenario_id}}.json.
+    // Rotate scenario_id across the 6 seeded scenarios so different failure modes get drafted over time.
+    const rotIdx = Math.floor(Date.now() / (30 * 60 * 1000)) % SCENARIO_ROTATION.length;
+    return {
+      scenarios_dir: "/workspace/validation/failure-modes/scenarios",
+      scenario_id: SCENARIO_ROTATION[rotIdx]!,
+      // report_path points to the most-recent harness-run-matrix output — goal[5] writes here.
+      // If the file is missing, fs_read fails fast and the gap-drafting skips (graceful).
+      report_path: "/workspace/validation/results/latest-failure-mode-report.json",
+    };
+  }
+  return {};
+}
 
 const BOREDOM_TAG = "intent:boredom_source";
 
@@ -153,6 +188,7 @@ async function main(): Promise<void> {
       tags: ["intent:topology_discovery", BOREDOM_TAG],
       variables: {
         source: "boredom-vessel",
+        ...extraVariablesForGoal(goalIdx),
       },
     };
     if (targetTemplateId) {
