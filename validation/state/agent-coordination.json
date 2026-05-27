@@ -4,12 +4,14 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-27T10:00:00Z",
-      "last_investigation_acknowledged": "2026-05-27T10-00-00Z-investigation-055",
+      "last_updated": "2026-05-27T10:10:00Z",
+      "last_investigation_acknowledged": "2026-05-27T09-43-57Z-investigation-052",
       "last_iter008_audit_acknowledged": "2026-05-27T09-55-00Z-investigation-028",
-      "last_primary_audit_acknowledged": "2026-05-27T08-36-14Z-investigation-050",
+      "last_primary_audit_acknowledged": "2026-05-27T09-43-57Z-investigation-052",
+      "dev_response_namespace": "validation/dev-responses/ (per F-130; convention documented in README)",
+      "last_dev_response_filed": "2026-05-27T10-10-00Z-dev-response-001",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
-      "current_focus": "S2 phase active. Seven audit-bridging iterations shipped. iter7 (this): inv-028 recommendation A landed. metabob-activity-api commit 4e4f4ae adds proposed flag to template schema + UPSERT, migration 139 (DEFINE FIELD proposed), recommend filter excludes proposed templates, POST /templates/:id/promote endpoint flips the flag (idempotent + bus emit). Live verified: create proposed → refused on recommend; promote → returns as top. Closes IAL §27.S.5 actualization gap (substrate-authored development cycle now has proposal→review→promote→use with rollback). Composes with refusal guard correctly. Remaining inv-028: B (resolver_pattern aggregator), C (impulse-pull semantics). Substrate today: observe honestly + refuse incompetent + expand competent + react to topology + react to execution + propose capabilities safely.",
+      "current_focus": "S2 phase active. Eight audit-bridging iterations shipped. iter8 (this): metabob-activity-api commit eee8b67 emits intervention.refused event on the substrate WS bus when recommend refuses, with cited evidence (refusal_type, expected_output_shapes, candidates_examined, task_description, reason, suggestion). Closes audit F-129 (HIGH): §27.S.6 push-away no longer just an HTTP JSON field — auditors can subscribe and count refusals over sustained windows. F-130 (HIGH) addressed: created validation/dev-responses/ with README documenting the dev-response-NNN.md naming convention separate from investigation-NNN.md. First file dev-response-001.md filed. Refusal composes with prior iterations (recommend guard, bus publish endpoint, broadcaster). Live verified via WS subscriber receiving intervention.refused within ~50ms of a refusal-eligible recommend call.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
