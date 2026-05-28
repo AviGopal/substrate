@@ -87,6 +87,8 @@ function extraVariablesForGoal(goalIdx: number): Record<string, unknown> {
       // report_path points to the most-recent harness-run-matrix output — goal[5] writes here.
       // If the file is missing, fs_read fails fast and the gap-drafting skips (graceful).
       report_path: "/workspace/validation/results/latest-failure-mode-report.json",
+      // proposals_dir: where draft-gap-closing-activity writes the proposal JSON.
+      proposals_dir: "/workspace/proposals",
     };
   }
   return {};
