@@ -110,12 +110,14 @@ run-live:
 	    -p 18090:8090 \
 	    -p 18100:8100 \
 	    -p 18210:8210 \
+	    -p 18250:8250 \
 	    -p 18260:8260 \
 	    -v $(WORKSPACE):/workspace \
+	    -v $(REPO_ROOT):$(REPO_ROOT):ro \
 	    --tmpfs /run \
 	    --tmpfs /run/lock \
 	    $(IMAGE):$(TAG)
-	@echo "[run-live] substrate-live started — activity-api on :18080, development-vessel on :18090, discovery-vessel on :18100, goal-host-vessel on :18210, concept-db on :18260"
+	@echo "[run-live] substrate-live started — activity-api on :18080, development-vessel on :18090, discovery-vessel on :18100, goal-host-vessel on :18210, analysis-vessel on :18250, concept-db on :18260"
 	@echo "[run-live] Internal secrets auto-generated and persisted to workspace/.substrate-secrets"
 	@echo "[run-live] Wait ~15s for services to start, then: make -C scripts/substrate seed-live"
 
@@ -133,7 +135,7 @@ health-live:
 	@echo "=== goal-host-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8210/health | jq .
 	@echo "=== ribosome-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8240/health | jq .
 	@echo "=== concept-db (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8260/health | jq '{status,service}'
-	@echo "=== analysis-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8250/health | jq .
+	@echo "=== analysis-vessel ===" && curl -s http://localhost:18250/health | jq .
 
 status-live:
 	docker exec $(LIVE_NAME) systemctl status --no-pager \
