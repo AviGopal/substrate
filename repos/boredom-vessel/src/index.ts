@@ -163,8 +163,51 @@ async function nextGoalIndex(): Promise<number> {
   return idx;
 }
 
+/**
+ * Substrate-internal autonomous promoter tick. Calls activity-api's
+ * auto-promote endpoint which scans proposed templates and promotes any with
+ * sufficient real empirical evidence (α/(α+β) ≥ 0.6 AND samples ≥ 20 by default).
+ * Best-effort: errors are logged but never block boredom dispatch.
+ *
+ * Per operator directive 2026-05-28 ("push back against more operator-keyed gates"):
+ * no operator action is required for promotion. Substrate decides on its own
+ * empirical evidence whether to graduate proposed templates.
+ */
+async function tickAutoPromote(): Promise<void> {
+  try {
+    const res = await fetch(
+      `${ACTIVITY_API_ENDPOINT}/v2/activities/templates/auto-promote`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({}),
+      },
+    );
+    if (!res.ok) {
+      console.warn(`[boredom-vessel] auto-promote tick HTTP ${res.status} — skipping`);
+      return;
+    }
+    const body = await res.json() as {
+      promoted?: Array<{ template_id?: string; empirical_mean?: number; empirical_samples?: number }>;
+      considered?: number;
+    };
+    const promoted = body.promoted ?? [];
+    console.log(
+      `[boredom-vessel] auto-promote tick: considered=${body.considered ?? 0} promoted=${promoted.length}` +
+      (promoted.length > 0 ? ` ids=[${promoted.map(p => p.template_id).join(",")}]` : ""),
+    );
+  } catch (err) {
+    console.warn(`[boredom-vessel] auto-promote tick error: ${(err as Error).message}`);
+  }
+}
+
 async function main(): Promise<void> {
   console.log("[boredom-vessel] tick start");
+
+  // Run auto-promote scan first — independent of idle check. Substrate-authored
+  // proposed templates that accumulated real empirical evidence get promoted
+  // without any operator intervention. Closes the loop on goal[7]'s outputs.
+  await tickAutoPromote();
 
   const idle = await isIdle();
   if (!idle) {
