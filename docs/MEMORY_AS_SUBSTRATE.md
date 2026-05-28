@@ -52,7 +52,9 @@ The override is **one-directional in principle**: writes flow operator → subst
 
 ### Bridge state (today's operating reality — load-bearing)
 
-The substrate's `memoryNote` is not yet implemented. `extract-memory-note` is in `closure-replacement-suite` tasks, not in seed templates. Until that ships:
+Operator memory is one of seven formal substrate closure gaps — external stateful dependencies that currently load-bear on lift properties. The `memory-sync-tick` and `memory-pending-flush` activities (§E) are part of the broader closure replacement suite: the substrate-resident replacements for all seven external stateful dependencies. Memory closure is not just about convenience; it is a hard prerequisite for the closure-audit gate that guards lift. Until memory is substrate-resident, wiping `~/.claude/.../memory/` breaks lift-surface properties that the substrate cannot currently recover on its own.
+
+The substrate's `memoryNote` is not yet implemented. `extract-memory-note` is in the closure replacement tasks, not in seed templates. Until that ships:
 
 - **Writes:** When Claude observes something memorable:
   1. *If substrate is reachable and `memoryNote_write` is registered:* emit the `memoryNote_write` impulse via the substrate's `/v2/impulses/resolve` endpoint. Mirror to `~/.claude/.../memory/` happens automatically on the next sync tick. Do NOT also write the file by hand.
@@ -212,9 +214,15 @@ When the substrate is unreachable for an extended period:
 
 After migration is complete:
 
-- `validation/scripts/closure-audit.ts --without=operator-memory` MUST report green for three consecutive nightly runs (per `substrate-closure-properties` success criterion #2)
-- A separate one-shot validation MUST pass: in a non-production Claude session, wipe `~/.claude/projects/-home-avi-documents-work-exp-repo-metabob-devbob/memory/`, restart, and verify recall of three known facts via substrate query alone
-- After both pass, `substrate-closure-properties` §27.3.i.1 (memory closure) flips to green
+- `validation/scripts/closure-audit.ts --without=operator-memory` MUST report green for three consecutive nightly runs. The closure-audit script tests each of the seven `(property, external_tool)` pairs — operator memory, slash-command skills, subagent dispatch, GitHub Actions CI, operator shell access, operator spec-authoring, and operator git access — against substrate-only resolvers and returns a per-pair verdict. Memory closure is one of the seven test targets.
+
+- The specific memory-closure test: given a Claude session with `~/.claude/.../memory/` wiped, can the operator recall three known facts via substrate query alone? If yes, memory closure is provisionally green. Three consecutive nightly green runs on this test (and the other six pairs) constitute the hard closure-audit gate.
+
+- A separate one-shot validation MUST pass: in a non-production Claude session, wipe `~/.claude/projects/-home-avi-documents-work-exp-repo-metabob-devbob/memory/`, restart, and verify recall of three known facts via substrate query alone. This is the same test as above, run once manually before the nightly runs are initiated.
+
+- After both the manual one-shot and three nightly runs pass, memory closure (the first of the seven gaps) flips to green. Full lift-gate closure requires all seven pairs to be green for three consecutive nights.
+
+**Self-documenting substrate:** `extract-memory-note` is the ribosome-side activity that automatically emits `finding`-type `memoryNote` impulses from `lifecycle:execution:succeeded` events. This means successful substrate activities self-document — the substrate's operational experience accumulates in its own memory without operator-side filing. Operator-emitted `feedback` and `reference` notes supplement this automatic layer, but the base of `finding` notes grows without human intervention.
 
 ---
 

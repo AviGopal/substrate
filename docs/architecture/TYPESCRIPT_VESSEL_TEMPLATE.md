@@ -354,6 +354,60 @@ Without these the pod starts but registration stays unauthenticated (and the Sec
 
 ---
 
+## Substrate identity resolution
+
+### The minimum-bootstrap-credential pattern
+
+Every vessel requires exactly two pieces of env-supplied material at boot:
+
+- `SUBSTRATE_IDENTITY_URL` — the URL of the identity vessel that will resolve all other endpoints
+- `VESSEL_BOOTSTRAP_KEY` — a short-lived bootstrap credential used only to authenticate the initial identity resolution call
+
+From those two inputs, the vessel calls `POST {SUBSTRATE_IDENTITY_URL}/v1/identity/resolve` at startup to receive: its own `vessel_id`, the substrate's JWT issuer URL, the activity-api endpoint, the discovery-vessel endpoint, and any other substrate-specific routing. No other env vars are required for cross-vessel routing.
+
+This makes the vessel deployment-agnostic: the same image boots correctly against the local single-container substrate (where `SUBSTRATE_IDENTITY_URL=http://localhost:8101`), a canary cluster, or a federated peer. The identity resolver is the single permitted hardcoded contact point.
+
+```typescript
+// Canonical startup pattern
+const identityUrl = process.env.SUBSTRATE_IDENTITY_URL ?? 'http://localhost:8101';
+const bootstrapKey = process.env.VESSEL_BOOTSTRAP_KEY ?? '';
+
+const { vesselId, activityApiEndpoint, discoveryEndpoint, jwtIssuerUrl } =
+  await fetch(`${identityUrl}/v1/identity/resolve`, {
+    method: 'POST',
+    headers: { Authorization: `ApiKey ${bootstrapKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vessel: process.env.VESSEL_NAME }),
+  }).then(r => r.json());
+
+// All subsequent configuration flows from these resolved values
+const daemon = new VesselDaemon({
+  vesselId,
+  discoveryEndpoint,
+  activityApiEndpoint,
+  // ...
+});
+```
+
+### Anti-pattern: hardcoded peer endpoints
+
+If a vessel has `http://metabob-activity-api.activity-system.svc.cluster.local:8080` or `https://identity.metabob.com` as a default in source, that default will silently fail outside the Kubernetes cluster it was written for. Kubernetes-internal DNS names (`.svc.cluster.local`) are unreachable from the local substrate container; public hostnames (`*.metabob.com`) are unreachable in air-gapped or offline environments. The substrate identity resolver is the one permitted hardcoded point — everything else must be resolved from it.
+
+The correct fallback, when `SUBSTRATE_IDENTITY_URL` is not set, is to fail loudly at startup with a clear error message, not to fall back to a Kubernetes service DNS name.
+
+### Known gap
+
+Five vessels currently have hardcoded defaults that pre-date this pattern:
+
+- `identity-vessel/src/services/trace.ts`
+- `identity-vessel/src/services/jwt.ts`
+- `identity-vessel/src/services/keyGeneration.ts`
+- `discovery-vessel/src/middleware/auth.ts`
+- `identity-vessel/src/services/discovery-client.ts`
+
+These are overridden by env vars in the substrate container; the override is env-var discipline holding the system closed rather than the bootstrap pattern. New vessels MUST follow the bootstrap pattern. Existing vessels will migrate as they undergo their next significant revision.
+
+---
+
 ## What NOT to do
 
 ### Don't register against activity-api's `/v2/vessels/register`

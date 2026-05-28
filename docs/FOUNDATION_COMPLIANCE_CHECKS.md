@@ -421,10 +421,75 @@ promote them to §B as the substrate's parsing capacity grows.
 
 ---
 
+---
+
+## §E — Closure compliance checks (CC-001 through CC-007)
+
+Closure checks verify that the substrate is not load-bearing on the seven external stateful dependencies enumerated in the substrate closure properties. Unlike FC-001..FC-020, which test individual code artifacts for foundation alignment, CC checks are system-level: they test whether removing an external tool breaks a substrate property.
+
+The closure-audit script runs CC-001..CC-007 nightly and emits a `closureStatusReport` impulse. Three consecutive green runs across all seven checks are a hard prerequisite for lift approval.
+
+---
+
+**Check ID:** CC-001
+**Title:** Operator memory closure
+**Invariant:** Wiping `~/.claude/.../memory/` and restarting a Claude session does not cause loss of known substrate facts. The substrate resolves recalled facts via `memoryNote` queries rather than operator-side files.
+**Test:** Wipe the operator-side memory cache. In a fresh session, query the substrate for three known facts via `memoryNote` resolver. Verify accuracy ≥ 80% (at least 2 of 3 facts recalled correctly from substrate alone, without the cache).
+**Severity:** REQUIRED
+
+---
+
+**Check ID:** CC-002
+**Title:** Slash-skill closure
+**Invariant:** The workflows behind operator slash-skills (spec proposal, review, deployment) are executable as substrate activities without invoking operator-side harness skills. The substrate can drive its own development cycle end-to-end.
+**Test:** Trigger `develop-vessel:propose-spec` as a substrate goal; verify the activity produces a valid `proposedSpec` impulse. Trigger `verify-merge-candidate` as a substrate goal; verify it produces a `ciAgreementReport` impulse.
+**Severity:** REQUIRED
+
+---
+
+**Check ID:** CC-003
+**Title:** Subagent closure
+**Invariant:** Research and planning tasks (topology analysis, failure-mode investigation, gap analysis) are dispatched as substrate goals, not as operator-side subagent invocations.
+**Test:** Dispatch `draft-gap-closing-activity` as a substrate goal (not via operator-spawned subagent). Verify the activity produces a candidate template without a subagent spawn event in the execution trace.
+**Severity:** REQUIRED
+
+---
+
+**Check ID:** CC-004
+**Title:** CI closure
+**Invariant:** The substrate harness is the merge authority. It produces a `ciAgreementReport` that the CI pipeline accepts as its primary gate signal, without requiring manual operator approval for substrate-authored proposals.
+**Test:** Confirm a substrate-authored PR has merged on harness-green with a `ciAgreementReport` as the gate signal and no manual approval event recorded on the merge.
+**Severity:** REQUIRED
+
+---
+
+**Check ID:** CC-005
+**Title:** Shell-access closure
+**Invariant:** Restart and restore operations for substrate vessels are dispatched as substrate activities, not as `docker exec` or `kubectl` commands from the operator shell.
+**Test:** Trigger `restart-vessel` activity for a named vessel from inside the substrate container (not via operator shell). Verify the vessel restarts and re-registers with discovery.
+**Severity:** REQUIRED
+
+---
+
+**Check ID:** CC-006
+**Title:** Spec-authoring closure
+**Invariant:** At least three accepted proposals have substrate-authored provenance — authored by a substrate vessel, not the operator.
+**Test:** Query the proposal trace store for `proposedSpec` impulses with `authored_by` set to a substrate `vessel_id` (not an operator identity). Verify count ≥ 3 and that each reached `validation_status: accepted`.
+**Severity:** REQUIRED
+
+---
+
+**Check ID:** CC-007
+**Title:** Git-access closure
+**Invariant:** At least one commit, PR, and merge cycle has been completed by the substrate without operator git credentials. The substrate can write to its own source tree.
+**Test:** Inspect merge history for a commit with `author.email` matching the substrate's `operator-vessel` registration identity. Verify the associated PR was opened and merged without operator-credential git operations.
+**Severity:** REQUIRED
+
+---
+
 ## References
 
 - [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — canonical foundation document; cited throughout.
-- [`openspec/changes/2026-05-23-closure-replacement-suite/`](../openspec/changes/2026-05-23-closure-replacement-suite/) — proposal, design (§F), spec (§R6) that named this validator.
 - [`docs/architecture/RESOLVER_TRACKING.md`](architecture/RESOLVER_TRACKING.md) — resolver-tier definitions used in FC-009.
 - [`docs/PRODUCT_BOUNDARIES.md`](PRODUCT_BOUNDARIES.md) — adapter-layer principle referenced in FC-004.
 - [`CLAUDE.md`](../CLAUDE.md) — "Red flags" section feeding FC-001, FC-004, FC-016, FC-018.

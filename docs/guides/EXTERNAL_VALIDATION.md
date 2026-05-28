@@ -667,6 +667,38 @@ This is the same principle as ribosome (successful execution patterns → reusab
 
 The practical consequence for activity authors: design external-validation tasks so their inputs and outputs are described precisely by impulse shapes. The more consistently shaped the calls, the sooner the substrate can promote the endpoint from anonymous resolver to named vessel — and from there, Thompson Sampling can learn when to prefer it over alternatives.
 
+## Probe-Driven Grounding Pipeline
+
+When the substrate identifies a capability gap (a required shape with no vessel providing it) and a candidate external endpoint exists, the grounding pipeline onboards the endpoint without operator authorship of a vessel manifest. The pipeline is a five-stage sequence:
+
+### Stage 1: Compile and smoke-test
+
+Verify the candidate endpoint is reachable and returns parseable output on a known input. This is a single structured call with a well-understood input to confirm the endpoint is live and speaking the expected protocol. Produces a `smokeTestReport` impulse recording reachability, response latency, and output parse result.
+
+### Stage 2: Probe
+
+Issue N structured calls with diverse inputs; record input/output pairs in traces. The goal is to accumulate enough trace evidence to infer the endpoint's shape contract — what input structures it accepts, what output structures it consistently produces, and what error modes it has under different inputs. Produces an `externalResolverProbeReport` impulse summarising input/output variance, observed error types, and latency distribution.
+
+### Stage 3: Synthesize scaffold
+
+From the probe traces, extract a candidate `vessel_id`, `input_shapes`, `output_shapes`, and an activity template that wraps the endpoint as a resolver. The synthesizer reads the `externalResolverProbeReport` and the raw probe traces to construct a `vesselScaffold` impulse: a draft vessel registration payload with a shape contract grounded in observed behaviour rather than assumed specification.
+
+### Stage 4: Register provisional
+
+Register the synthesized vessel with discovery-vessel under the `provisional` flag. Provisional vessels are discoverable and participate in Thompson selection, but Thompson treats them with a conservative prior (low initial α, elevated initial β) until sufficient successful evidence accumulates. This prevents an untested endpoint from immediately displacing an established vessel for a shape they both claim to resolve.
+
+### Stage 5: Promote
+
+After N successful executions under provisional status (configurable threshold, default 10 successes with success rate ≥ 0.7), the `provisional` flag is removed and the vessel participates fully in Thompson selection with its accumulated posterior. If the threshold is not met within a time window, the provisional registration expires and the grounding pipeline can be re-triggered.
+
+### Scope and current state
+
+This pipeline is how the substrate extends its own resolver surface without operator authorship. The operator's role is choosing which external endpoints are worth grounding — that judgment belongs to the adversarial tester role. The substrate executes the pipeline and promotes on evidence.
+
+The pipeline applies to any external call target: HTTP APIs, MCP servers, shell commands, databases. The first concrete target under active grounding is a fresh-web-search capability (not yet promoted to a named vessel).
+
+The five stages map cleanly onto activities: `smoke-test-endpoint`, `probe-endpoint`, `synthesize-vessel-scaffold`, `register-provisional-vessel`, `promote-provisional-vessel`. Each produces a typed output shape that feeds the next stage, making the pipeline composable and traceable end-to-end.
+
 ## Related Documentation
 
 - [Validation Resolver Design](/tmp/validation-resolver-design.md) - Complete design document
