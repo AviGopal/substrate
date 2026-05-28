@@ -87,7 +87,12 @@ const llmCompletionHandler: ResolverHandler = async (ctx) => {
     };
   }
 
-  const model = body.model ?? DEFAULT_MODEL;
+  // Normalize model id: callers send "anthropic/claude-..." (provider-prefixed)
+  // but the Anthropic SDK expects bare names like "claude-haiku-4-5-20251001".
+  // Strip the leading "anthropic/" if present. Defensive — broader provider
+  // routing would live in a fleet selector, not here.
+  const rawModel = body.model ?? DEFAULT_MODEL;
+  const model = rawModel.startsWith("anthropic/") ? rawModel.slice("anthropic/".length) : rawModel;
   const maxTokens = body.max_tokens ?? DEFAULT_MAX_TOKENS;
 
   try {
@@ -149,7 +154,17 @@ const daemon = new VesselDaemon({
   port: PORT,
   vesselId: VESSEL_ID,
   vesselName: "LLM Resolver Vessel",
-  shapes: ["llmCompletion"],
+  // Advertise BOTH names. The handler is registered as `llm_completion`
+  // (snake_case, line 145) so that's what discovery clients must POST to
+  // /resolve with `pointer.type`. Older callers query discovery for the
+  // camelCase `llmCompletion` — keep both advertised so neither shape-name
+  // convention breaks. Without this dual advertisement, discovery-routed
+  // LLM calls have been silently failing for the entire substrate
+  // (53 traces with 0/0 tokens during goal[7]'s exec_x19p0558 confirmed
+  // the gap — every llm-touching task across slot-binding,
+  // create-shape-provider-goal, validator-dispatch, draft-gap-closing-
+  // activity, and try-direct-answer was reaching no LLM).
+  shapes: ["llm_completion", "llmCompletion"],
   executor,
   resolvers,
   discoveryEndpoint: DISCOVERY_ENDPOINT,
