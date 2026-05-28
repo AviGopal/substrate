@@ -185,7 +185,8 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env && \
         ribosome-vessel.service \
         concept-db.service \
         concept-db-seeder.service \
-        analysis-vessel.service
+        analysis-vessel.service \
+        journald-stdout-forwarder.service
 
 VOLUME ["/workspace"]
 

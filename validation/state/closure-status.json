@@ -39,11 +39,11 @@
     "push-away": {
       "closed": true,
       "missing_deps": [],
-      "evidence": "refusal pathway + stats endpoint + durable recording all working (probe shape existent_shape_1779922889176__ recorded)",
+      "evidence": "refusal pathway + stats endpoint + durable recording all working (probe shape existent_shape_1779940873908__ recorded)",
       "description": "Substrate refuses incompetent interventions with cited evidence + durable record (IAL §27.S.6)"
     }
   },
-  "audit_run_at": "2026-05-27T23:01:30.175Z",
+  "audit_run_at": "2026-05-28T04:01:14.868Z",
   "audit_tool_versions": {
     "development-vessel": "0.1.0",
     "activity-api": "1.20.9"
