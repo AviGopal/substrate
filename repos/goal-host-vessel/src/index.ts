@@ -211,15 +211,61 @@ function registerBuiltinResolvers(): void {
 // and qualified forms but the bare name is the canonical identity).
 const registeredProxyShapes = new Set<string>();
 
+/**
+ * Interpolate {{var}} and {{a.b}} placeholders in a value. Mirrors the
+ * semantics in resolvers/llm-prompt.ts (the engine's llm path interpolates,
+ * but proxy resolvers in this file bypass that — so register_variant tasks
+ * with config like `{template: "{{draft_via_llm_text}}"}` were forwarding
+ * the literal placeholder to dev-vessel, which then rejected on parse, which
+ * proxy treated as success because activity_create_variant returns a
+ * structuredError without `failure_mode` field. Triple silent failure.
+ *
+ * Handles strings, arrays, and plain objects recursively. Unresolved
+ * placeholders remain literal (matches llm-prompt behavior).
+ */
+function interpolateProxyValue(value: unknown, variables: Record<string, unknown>): unknown {
+  if (typeof value === "string") {
+    return value.replace(/\{\{([\w]+(?:\.[\w]+)*)\}\}/g, (match, path: string) => {
+      const segs = path.split(".");
+      let cur: unknown = variables;
+      for (const seg of segs) {
+        if (cur && typeof cur === "object" && seg in (cur as Record<string, unknown>)) {
+          cur = (cur as Record<string, unknown>)[seg];
+        } else {
+          return match; // unresolved → leave literal
+        }
+      }
+      if (cur === undefined || cur === null) return match;
+      if (typeof cur === "string") return cur;
+      if (typeof cur === "number" || typeof cur === "boolean") return String(cur);
+      try { return JSON.stringify(cur); } catch { return match; }
+    });
+  }
+  if (Array.isArray(value)) return value.map((v) => interpolateProxyValue(v, variables));
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      out[k] = interpolateProxyValue(v, variables);
+    }
+    return out;
+  }
+  return value;
+}
+
 function buildProxyResolver(shape: string) {
   return {
     id: shape,
     tier: "pattern" as const,
     async resolve(context: Record<string, unknown>) {
       const task = context.task as Record<string, unknown>;
-      const config = (task.config ?? {}) as Record<string, unknown>;
+      const configRaw = (task.config ?? {}) as Record<string, unknown>;
       const variables = (context.variables ?? {}) as Record<string, unknown>;
       const random = context.random as { id: (prefix: string) => string };
+      // Interpolate {{var}} placeholders in task.config BEFORE building the pointer
+      // so dev-vessel resolvers receive substituted values rather than literal
+      // placeholder strings (which were causing silent failures in
+      // register_variant — see comment on interpolateProxyValue).
+      const config = interpolateProxyValue(configRaw, variables) as Record<string, unknown>;
       const pointer: Record<string, unknown> = { type: shape, ...config, ...variables };
       try {
         const resp = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
@@ -234,12 +280,81 @@ function buildProxyResolver(shape: string) {
         const bodyText = await resp.text();
         let parsed: unknown;
         try { parsed = JSON.parse(bodyText); } catch { parsed = bodyText; }
+
+        // Detect resolver-level failure even when HTTP returns 200. Dev-vessel's
+        // /v2/impulses/resolve route wraps the resolver's ResolverResult as
+        // { success: true, shape, body }. When the resolver itself produced a
+        // failure-mode-tagged structuredError (e.g. URL invalid, downstream
+        // 4xx, validation rejection), the body carries the signal but the HTTP
+        // status is still 200. Without propagating this, every chained activity
+        // (draft-gap-closing-activity, etc.) reports task=success on a silent
+        // failure — the substrate has been swallowing real errors. Throw so
+        // the engine records task.failure with the resolver's reason.
+        if (!resp.ok) {
+          throw new Error(`dev-vessel ${shape} HTTP ${resp.status}: ${bodyText.slice(0, 200)}`);
+        }
+        const parsedObj = (typeof parsed === "object" && parsed !== null) ? (parsed as Record<string, unknown>) : null;
+        if (parsedObj) {
+          const innerShape = parsedObj["shape"];
+          const innerBody = parsedObj["body"] as Record<string, unknown> | undefined;
+          // Any structuredError shape signals resolver-level failure — the
+          // resolver explicitly chose this shape to indicate an error. The
+          // earlier narrower guard (require failure_mode set) missed cases
+          // like activity_create_variant 4xx responses which return
+          // structuredError WITHOUT failure_mode. Treat all of them as task
+          // failure so the substrate sees real signal instead of silent
+          // swallowing.
+          if (innerShape === "structuredError") {
+            const reason = innerBody?.["failure_mode"]
+              ? `failure_mode=${innerBody["failure_mode"]}`
+              : `status=${innerBody?.["status"] ?? "n/a"}`;
+            const detail = String(innerBody?.["detail"] ?? innerBody?.["error"] ?? "no detail");
+            throw new Error(`dev-vessel ${shape} resolver returned structuredError (${reason}): ${detail.slice(0, 200)}`);
+          }
+        }
+
+        // Unwrap the dev-vessel response envelope. Dev-vessel's /v2/impulses/resolve
+        // wraps every resolver's ResolverResult as { success, shape, body }. The
+        // outer wrapper is plumbing, not content — when subsequent tasks reference
+        // {{<taskId>_text}}, they want body's content (e.g. body.text for llm,
+        // body.variantId for activity_create_variant), not the wrapper object.
+        // Without this unwrap, register_variant gets fed the entire envelope and
+        // activity-api rejects on schema validation. Set impulse.content = body
+        // when the wrapper shape is detected; else pass parsed through.
+        let impulseContent: unknown = parsed;
+        if (parsedObj && parsedObj["success"] === true && "body" in parsedObj) {
+          const innerBody = parsedObj["body"];
+          const innerShapeName = parsedObj["shape"];
+          // For llm-completion-style results, the text is the canonical content
+          // of the response. For other shapes, return the body object.
+          if (innerBody && typeof innerBody === "object" && !Array.isArray(innerBody)) {
+            const body = innerBody as Record<string, unknown>;
+            if (innerShapeName === "llm_completion_result" && typeof body["text"] === "string") {
+              // Strip markdown code fences that LLMs commonly wrap JSON in.
+              let text = body["text"] as string;
+              text = text.replace(/^```(?:json|JSON)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+              impulseContent = text;
+            } else if (innerShapeName === "fileContent" && typeof body["content"] === "string") {
+              // fs_read returns {shape:"fileContent", body:{content:"..."}}. Unwrap so
+              // {{taskId_content}} gives the raw file string rather than the envelope object.
+              impulseContent = body["content"];
+            } else if (innerShapeName === "json_extracted_value") {
+              // json_path_extract returns {valueJson, value, path}. Expose value directly.
+              impulseContent = body["value"] ?? body["valueJson"] ?? innerBody;
+            } else {
+              impulseContent = innerBody;
+            }
+          } else {
+            impulseContent = innerBody;
+          }
+        }
+
         return [{
           id: random.id(`dev:${shape}`),
           pointer: { type: "memo" },
           metadata: { shape, source: "development-vessel", ok: resp.ok },
           loaded: true,
-          content: parsed,
+          content: impulseContent,
         }];
       } catch (err) {
         return [{
