@@ -35,6 +35,10 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // topology / coverage — explicit template names + output shapes to bypass high-alpha template bias
   "run the coverage-tick activity to measure substrate topology coverage and emit a coverageReport",
   "run the substrate-health-tick activity to check vessel health and emit a substrateHealthReport",
+  // self-healing — closes diagnostic→action loop: reads health verdict + below-floor list →
+  // dispatches the cheapest template to close the confidence gap. The substrate identifies
+  // which activities to run from its own diagnosis, not operator judgment.
+  "run the close-health-gap activity to identify and dispatch the template most needed to close the confidence gap",
   "run the probe-reachable-unlearned activity to find templates with zero execution traces and emit a reachableUnlearnedReport",
   "run the harness-check-scenario activity to validate a failure-mode scenario from the harness matrix",
   // gap-closing / self-healing
@@ -44,10 +48,7 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // exploration — exercises n=0 templates to build Thompson priors; async dispatch now handles >5min runs
   "run the probe-untraversed-edge activity to find unreachable execution graph edges and emit a topologyGapReport",
   // substrate-authoring — draft-gap-closing-activity reads a failure-mode scenario and produces an
-  // activityTemplateVariant via activity_create_variant resolver. This is the lift path: substrate
-  // authors templates from observed failure modes. Re-added after b259e028 removed it; scenarios are
-  // now seeded in /workspace/validation/failure-modes/scenarios/ so the input gap is closed.
-  // Per operator directive 2026-05-28: minimum substrate self-bootstrap requires this dispatch.
+  // activityTemplateVariant via activity_create_variant resolver.
   "draft a gap-closing activity variant from a recent failure-mode scenario, producing an activityTemplateVariant",
 ];
 
@@ -56,16 +57,17 @@ const AUTONOMOUS_GOALS: readonly string[] = [
 const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   "development-vessel:coverage-tick",              // goal[0]
   "development-vessel:substrate-health-tick",      // goal[1]
-  "development-vessel:probe-reachable-unlearned",  // goal[2]
-  "development-vessel:harness-check-scenario",     // goal[3]
-  undefined,                                       // goal[4] — open-ended, let Thompson choose
-  "development-vessel:harness-run-matrix",         // goal[5]
-  "development-vessel:probe-untraversed-edge",     // goal[6]
-  "development-vessel:draft-gap-closing-activity", // goal[7] — substrate-authoring path
+  "development-vessel:close-health-gap",           // goal[2] — self-healing: diagnose→act on confidence gap
+  "development-vessel:probe-reachable-unlearned",  // goal[3]
+  "development-vessel:harness-check-scenario",     // goal[4]
+  undefined,                                       // goal[5] — open-ended, let Thompson choose
+  "development-vessel:harness-run-matrix",         // goal[6]
+  "development-vessel:probe-untraversed-edge",     // goal[7]
+  "development-vessel:draft-gap-closing-activity", // goal[8] — substrate-authoring path
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
-// default `source` variable; goal[7] (draft-gap-closing-activity) needs explicit paths.
+// default `source` variable; goal[8] (draft-gap-closing-activity) needs explicit paths.
 // Scenarios rotate via SCENARIO_ROTATION below to spread learning across failure modes.
 const SCENARIO_ROTATION: readonly string[] = [
   "fm-17-resolver-budget-noncompliance",
@@ -77,7 +79,7 @@ const SCENARIO_ROTATION: readonly string[] = [
 ];
 
 function extraVariablesForGoal(goalIdx: number): Record<string, unknown> {
-  if (goalIdx === 7) {
+  if (goalIdx === 8) {
     // draft-gap-closing-activity reads {{report_path}} and {{scenarios_dir}}/{{scenario_id}}.json.
     // Rotate scenario_id across the 6 seeded scenarios so different failure modes get drafted over time.
     const rotIdx = Math.floor(Date.now() / (30 * 60 * 1000)) % SCENARIO_ROTATION.length;
