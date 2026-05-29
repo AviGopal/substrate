@@ -273,7 +273,7 @@ async function testCoverageLoop(): Promise<Result[]> {
   }
 
   // Step 5: Verify observer fired — check dev-vessel logs for [recommend-dispatch]
-  await new Promise(r => setTimeout(r, 8_000)); // give observer time to fire
+  await new Promise(r => setTimeout(r, 15_000)); // give observer time to fire (WS event + dispatch)
   try {
     const { execSync } = await import("node:child_process");
     const logs = execSync(
