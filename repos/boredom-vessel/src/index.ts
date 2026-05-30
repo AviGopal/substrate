@@ -58,6 +58,8 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // gap-drain — wires substrateGap impulses (persisted by substrateGap_write) into the drafter.
   // Spec: openspec/changes/2026-05-30-substrate-gap-drafter-wiring.
   "run the drain-pending-substrate-gaps activity to convert open substrateGap impulses into gap-closing template variants",
+  // audit-ingestion bridge (iter-080): reads audit findings → substrateGap impulses → drain pipeline
+  "run the ingest-audit-findings activity to parse audit findings and create substrateGap impulses for the drain pipeline",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -74,6 +76,7 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   "development-vessel:draft-gap-closing-activity", // goal[8] — substrate-authoring path
   undefined,                                       // goal[9] — dynamic: top proposed gap-closing template
   "development-vessel:drain-pending-substrate-gaps", // goal[10] — substrateGap → drafter wiring
+  "development-vessel:ingest-audit-findings",       // goal[11] — audit findings → substrateGap pipeline
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
@@ -377,7 +380,9 @@ async function main(): Promise<void> {
       console.log(
         `[boredom-vessel] dispatched — executionId=${poll.executionId ?? "?"} status=${poll.status}`,
       );
-      process.exit(poll.status === "failed" ? 1 : 0);
+      // Always exit 0 — goal failure is a normal outcome (β+=1 in Thompson posteriors).
+      // Exiting 1 marks the systemd unit as failed and disrupts the boredom timer.
+      process.exit(0);
     }
   }
   // Systemd will kill us at TimeoutStartSec=600; goal continues async.
