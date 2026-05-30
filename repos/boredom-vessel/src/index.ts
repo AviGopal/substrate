@@ -112,6 +112,13 @@ const EXECUTABLE_RESOLVERS = new Set([
   "json_path_extract", "http_fetch", "noop",
 ]);
 
+interface TemplateWithAlpha {
+  id?: string;
+  proposed?: boolean;
+  tasks?: Array<{ resolver?: string }>;
+  thompson_alpha?: number;
+}
+
 async function pickTopProposedGapClosingTemplate(): Promise<string | null> {
   try {
     const res = await fetch(
@@ -119,7 +126,7 @@ async function pickTopProposedGapClosingTemplate(): Promise<string | null> {
       { headers: authHeaders() },
     );
     if (!res.ok) return null;
-    const data = await res.json() as { templates?: Array<{ id?: string; proposed?: boolean; tasks?: Array<{ resolver?: string }> }> };
+    const data = await res.json() as { templates?: TemplateWithAlpha[] };
     const candidates = (data.templates ?? []).filter(t => {
       if (!t.proposed) return false;
       const id = (t.id ?? "").replace(/^activity:⟨(.+)⟩$/, "$1");
@@ -128,10 +135,16 @@ async function pickTopProposedGapClosingTemplate(): Promise<string | null> {
       const tasks = t.tasks ?? [];
       return tasks.length > 0 && tasks.every(task => EXECUTABLE_RESOLVERS.has(task.resolver ?? ""));
     });
-    // Pick the most recently added (last in list, since templates are ordered by created_at DESC)
-    // — the constrained-prompt templates were authored last and have correct resolver schemas.
-    const top = candidates[candidates.length - 1];
-    return top?.id ? top.id.replace(/^activity:⟨(.+)⟩$/, "$1") : null;
+    if (candidates.length === 0) return null;
+    // Pick the template with the HIGHEST alpha (most executions so far) to drive it
+    // over the 3-sample threshold fastest. Consistent selection means 3 focused runs
+    // promote one template rather than distributing 3 runs across different templates.
+    const top = candidates.reduce((best, cur) => {
+      const bestAlpha = best.thompson_alpha ?? 1;
+      const curAlpha = cur.thompson_alpha ?? 1;
+      return curAlpha > bestAlpha ? cur : best;
+    });
+    return top.id ? top.id.replace(/^activity:⟨(.+)⟩$/, "$1") : null;
   } catch {
     return null;
   }
