@@ -129,6 +129,35 @@ export interface MetabobVesselSettings {
 
   /** Sync interval in milliseconds (alias for syncIntervalMinutes * 60000) */
   syncInterval: number;
+
+  // ==========================================================================
+  // Concept-DB Frontend Settings
+  // ==========================================================================
+
+  /** Enable mirroring concept-db into the vault (opt-in). */
+  enableConceptDbSync: boolean;
+
+  /** Concept-db HTTP endpoint (default: local substrate host port). */
+  conceptDbEndpoint: string;
+
+  /** API key for concept-db; falls back to `apiKey` if empty. */
+  conceptDbApiKey: string;
+
+  /** Vault sub-folder where concept notes live. */
+  conceptDbSyncRoot: string;
+
+  /** Pull interval in seconds. */
+  conceptDbSyncIntervalSec: number;
+
+  /** Enable vault → concept-db writeback (opt-in, requires sync also on). */
+  enableConceptDbWriteback: boolean;
+
+  /**
+   * If non-empty, restrict sync to these source_type values. Empty array
+   * means "all source_types EXCEPT impulse_signature" (which would
+   * dominate the vault).
+   */
+  conceptDbSyncSourceTypes: string[];
 }
 
 /**
@@ -154,7 +183,7 @@ export const DEFAULT_SETTINGS: MetabobVesselSettings = {
   vesselName: 'Obsidian Vessel',
   heartbeatInterval: 30000,  // 30 seconds
   registrationTtl: 300,      // 5 minutes
-  shapes: ['obsidian:note', 'obsidian:search', 'obsidian:canvas', 'obsidian:backlinks', 'obsidian:frontmatter', 'obsidian:daily_note', 'obsidian:graph_query'],
+  shapes: ['obsidian:note', 'obsidian:search', 'obsidian:canvas', 'obsidian:backlinks', 'obsidian:frontmatter', 'obsidian:daily_note', 'obsidian:graph_query', 'obsidian:concept_view', 'obsidian:concept_writeback'],
 
   // Sync preferences
   executionNotesFolder: 'Metabob/Executions',
@@ -189,6 +218,15 @@ export const DEFAULT_SETTINGS: MetabobVesselSettings = {
   websocketUrl: '',  // Will be derived from activityApiUrl if empty
   autoSync: true,
   syncInterval: 300000,  // 5 minutes in ms
+
+  // Concept-DB Frontend
+  enableConceptDbSync: false,
+  conceptDbEndpoint: 'http://127.0.0.1:18260',
+  conceptDbApiKey: '',
+  conceptDbSyncRoot: 'concept-db',
+  conceptDbSyncIntervalSec: 300,
+  enableConceptDbWriteback: false,
+  conceptDbSyncSourceTypes: [],
 };
 
 /**

@@ -1,7 +1,7 @@
 {
   "vesselId": "obsidian-vessel",
   "vesselName": "Obsidian Knowledge Vessel",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "shapes": [
     "obsidian:note",
     "obsidian:search",
@@ -9,12 +9,24 @@
     "obsidian:backlinks",
     "obsidian:frontmatter",
     "obsidian:daily_note",
-    "obsidian:graph_query"
+    "obsidian:graph_query",
+    "obsidian:concept_view",
+    "obsidian:concept_writeback"
   ],
   "capabilities": [
     {
       "type": "impulse-resolver",
-      "shapes": ["obsidian:note", "obsidian:search", "obsidian:canvas", "obsidian:backlinks", "obsidian:frontmatter", "obsidian:daily_note", "obsidian:graph_query"]
+      "shapes": [
+        "obsidian:note",
+        "obsidian:search",
+        "obsidian:canvas",
+        "obsidian:backlinks",
+        "obsidian:frontmatter",
+        "obsidian:daily_note",
+        "obsidian:graph_query",
+        "obsidian:concept_view",
+        "obsidian:concept_writeback"
+      ]
     },
     {
       "type": "http-server",

@@ -139,6 +139,46 @@ export function registerCommands(plugin: MetabobVesselPlugin): void {
     }
   });
 
+  // Concept Graph: Open Here
+  // Reads concept_id from the active note's frontmatter, fetches a
+  // 2-hop neighborhood from concept-db, writes a canvas under the
+  // configured canvas folder, and opens it.
+  plugin.addCommand({
+    id: 'metabob-concept-graph-open-here',
+    name: 'Concept Graph: Open Here',
+    icon: 'network',
+    checkCallback: (checking: boolean) => {
+      const file = plugin.app.workspace.getActiveFile();
+      if (!file) return false;
+      const cache = plugin.app.metadataCache.getFileCache(file);
+      const conceptId = cache?.frontmatter?.concept_id;
+      if (!conceptId) return false;
+      if (checking) return true;
+      void (async () => {
+        if (!plugin.conceptCanvasBuilder || !plugin.conceptDbClient) {
+          new Notice('Concept-DB frontend not initialized. Enable it in settings.');
+          return;
+        }
+        const notice = new Notice('Building concept canvas...', 0);
+        try {
+          const path = await plugin.conceptCanvasBuilder.buildConceptCanvas(
+            plugin.conceptDbClient,
+            String(conceptId),
+            { hops: 2, maxNodes: 25 },
+          );
+          await plugin.app.workspace.openLinkText(path, '', true);
+          notice.setMessage('Concept canvas opened');
+          setTimeout(() => notice.hide(), 2000);
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          notice.setMessage(`Concept canvas failed: ${msg}`);
+          setTimeout(() => notice.hide(), 5000);
+        }
+      })();
+      return true;
+    },
+  });
+
   // Open Settings
   plugin.addCommand({
     id: 'metabob-open-settings',

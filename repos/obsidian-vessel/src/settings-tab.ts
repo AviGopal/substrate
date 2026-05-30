@@ -33,8 +33,126 @@ export class MetabobVesselSettingTab extends PluginSettingTab {
     this.createHttpServerSection(containerEl);
     this.createNoteFormattingSection(containerEl);
     this.createCanvasSection(containerEl);
+    this.createConceptDbSection(containerEl);
     this.createStatusSection(containerEl);
     this.createActionsSection(containerEl);
+  }
+
+  /**
+   * Concept-DB frontend section. See proposal
+   * 2026-05-30-obsidian-vessel-concept-db-frontend.
+   */
+  private createConceptDbSection(containerEl: HTMLElement): void {
+    containerEl.createEl('h2', { text: 'Concept-DB Frontend' });
+    containerEl.createEl('p', {
+      text:
+        'Mirror concept-db into the vault. When enabled, concepts ' +
+        'materialize as notes under the sync root; edges render as ' +
+        'wikilinks. Writeback (opt-in) propagates vault edits back to ' +
+        'concept-db.',
+      cls: 'setting-item-description',
+    });
+
+    new Setting(containerEl)
+      .setName('Enable concept-db sync')
+      .setDesc('Pull concepts from concept-db into the vault.')
+      .addToggle(t =>
+        t
+          .setValue(this.plugin.settings.enableConceptDbSync)
+          .onChange(async (v) => {
+            this.plugin.settings.enableConceptDbSync = v;
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName('Concept-DB endpoint')
+      .setDesc('HTTP URL for concept-db (default: local substrate host port).')
+      .addText(t =>
+        t
+          .setPlaceholder(DEFAULT_SETTINGS.conceptDbEndpoint)
+          .setValue(this.plugin.settings.conceptDbEndpoint)
+          .onChange(async (v) => {
+            this.plugin.settings.conceptDbEndpoint = v;
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName('Concept-DB API key')
+      .setDesc('Leave blank to reuse the Activity API key.')
+      .addText(t =>
+        t
+          .setPlaceholder('(uses Activity API key if blank)')
+          .setValue(this.plugin.settings.conceptDbApiKey)
+          .onChange(async (v) => {
+            this.plugin.settings.conceptDbApiKey = v;
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName('Sync root folder')
+      .setDesc('Vault folder where concept notes live.')
+      .addText(t =>
+        t
+          .setPlaceholder(DEFAULT_SETTINGS.conceptDbSyncRoot)
+          .setValue(this.plugin.settings.conceptDbSyncRoot)
+          .onChange(async (v) => {
+            this.plugin.settings.conceptDbSyncRoot = v;
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName('Sync interval (seconds)')
+      .setDesc('How often to pull concept-db (default 300).')
+      .addText(t =>
+        t
+          .setPlaceholder(String(DEFAULT_SETTINGS.conceptDbSyncIntervalSec))
+          .setValue(String(this.plugin.settings.conceptDbSyncIntervalSec))
+          .onChange(async (v) => {
+            const n = parseInt(v, 10);
+            if (Number.isFinite(n) && n > 0) {
+              this.plugin.settings.conceptDbSyncIntervalSec = n;
+              await this.plugin.saveSettings();
+            }
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName('Source types (comma-separated)')
+      .setDesc(
+        'Restrict sync to these source_types. Empty = all except ' +
+          'impulse_signature (which would dominate the vault).',
+      )
+      .addText(t =>
+        t
+          .setPlaceholder('(all except impulse_signature)')
+          .setValue(this.plugin.settings.conceptDbSyncSourceTypes.join(','))
+          .onChange(async (v) => {
+            this.plugin.settings.conceptDbSyncSourceTypes = v
+              .split(',')
+              .map(s => s.trim())
+              .filter(Boolean);
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName('Enable writeback')
+      .setDesc(
+        'Propagate vault edits back to concept-db on save. Requires ' +
+          'Enable concept-db sync.',
+      )
+      .addToggle(t =>
+        t
+          .setValue(this.plugin.settings.enableConceptDbWriteback)
+          .onChange(async (v) => {
+            this.plugin.settings.enableConceptDbWriteback = v;
+            await this.plugin.saveSettings();
+          }),
+      );
   }
 
   /**

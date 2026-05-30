@@ -146,6 +146,30 @@ export interface ObsidianGraphQueryPointer {
 /**
  * Union of all Obsidian impulse pointer types
  */
+export interface ObsidianConceptViewPointer {
+  type: 'obsidian:concept_view';
+  /** Concept id (short form or full `concept:<short>` form). */
+  concept_id: string;
+  /** Include neighbors in the rendered output (default: true). */
+  include_neighbors?: boolean;
+}
+
+export interface ObsidianConceptWritebackPointer {
+  type: 'obsidian:concept_writeback';
+  /** Concept id to materialize/refresh in the vault. */
+  concept_id: string;
+  /**
+   * If true and the concept does not yet exist in concept-db, mint it
+   * from this payload. Otherwise the resolver only refreshes the
+   * vault note from the existing concept.
+   */
+  create_if_missing?: boolean;
+  shape?: string;
+  source_type?: string;
+  summary?: string;
+  content?: string;
+}
+
 export type ImpulsePointer =
   | ObsidianNotePointer
   | ObsidianSearchPointer
@@ -153,7 +177,9 @@ export type ImpulsePointer =
   | ObsidianBacklinksPointer
   | ObsidianFrontmatterPointer
   | ObsidianDailyNotePointer
-  | ObsidianGraphQueryPointer;
+  | ObsidianGraphQueryPointer
+  | ObsidianConceptViewPointer
+  | ObsidianConceptWritebackPointer;
 
 // =============================================================================
 // RESOLVER RESULT TYPES

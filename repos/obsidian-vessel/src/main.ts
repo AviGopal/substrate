@@ -5,7 +5,12 @@ import { HTTPServer } from './server/index';
 import { VesselClient } from './vessel-client';
 import { ActivityAPIClient } from './api-client';
 import { SyncService } from './sync/index';
+import { ConceptSyncService, makeObsidianNoteWriter } from './sync/concept-sync';
+import { ConceptWritebackService } from './sync/concept-writeback';
+import { ConceptBusListener } from './sync/concept-bus-listener';
+import { ConceptDbClient } from './concept-db-client';
 import { ExecutionCanvasBuilder } from './canvas/index';
+import { ConceptCanvasBuilder } from './canvas/concept-canvas';
 import { ExecutionFormatter, TemplateFormatter } from './formatters/index';
 import { StatusBarManager } from './status-bar';
 import { registerCommands } from './commands';
@@ -36,6 +41,10 @@ import './resolvers/backlinks-resolver';
 import './resolvers/frontmatter-resolver';
 import './resolvers/daily-note-resolver';
 import './resolvers/graph-resolver';
+import './resolvers/concept-view-resolver';
+import './resolvers/concept-writeback-resolver';
+import { setConceptDbResolverContext } from './resolvers/concept-view-resolver';
+import { setConceptWritebackResolverContext } from './resolvers/concept-writeback-resolver';
 
 /**
  * Current status of the vessel plugin
@@ -82,7 +91,14 @@ export default class MetabobVesselPlugin extends Plugin {
   apiClient: ActivityAPIClient | null = null;
   syncService: SyncService | null = null;
   canvasBuilder: ExecutionCanvasBuilder | null = null;
+  conceptCanvasBuilder: ConceptCanvasBuilder | null = null;
   statusBarManager: StatusBarManager | null = null;
+
+  // Concept-DB frontend services
+  conceptDbClient: ConceptDbClient | null = null;
+  conceptSync: ConceptSyncService | null = null;
+  conceptWriteback: ConceptWritebackService | null = null;
+  conceptBusListener: ConceptBusListener | null = null;
 
   // Formatters
   executionFormatter: ExecutionFormatter | null = null;
@@ -154,6 +170,12 @@ export default class MetabobVesselPlugin extends Plugin {
     // Phase 8: Initialize canvas builder
     // Canvas builder creates visual execution graphs
     this.canvasBuilder = new ExecutionCanvasBuilder(this.app, this.settings);
+    this.conceptCanvasBuilder = new ConceptCanvasBuilder(this.app, this.settings);
+
+    // Phase 8b: Initialize concept-db frontend (opt-in)
+    if (this.settings.enableConceptDbSync) {
+      await this.initializeConceptDbFrontend();
+    }
 
     // Phase 9: Register UI components
     // Settings tab for configuration
@@ -216,6 +238,11 @@ export default class MetabobVesselPlugin extends Plugin {
 
     // Cleanup sync service (close connections)
     this.syncService?.cleanup();
+
+    // Stop concept-db frontend services
+    this.conceptBusListener?.stop();
+    this.conceptWriteback?.stop();
+    this.conceptSync?.stop();
 
     // Stop HTTP server last (may have pending requests)
     try {
@@ -402,6 +429,54 @@ export default class MetabobVesselPlugin extends Plugin {
     }
 
     console.log('[Metabob Vessel] HTTP server restart complete');
+  }
+
+  /**
+   * Initialize the concept-db frontend services (Phase 1+3+4 wiring).
+   *
+   * Idempotent: stops any existing instances before constructing new
+   * ones so this can be called again after settings changes.
+   */
+  async initializeConceptDbFrontend(): Promise<void> {
+    // Stop existing instances if any
+    this.conceptBusListener?.stop();
+    this.conceptWriteback?.stop();
+    this.conceptSync?.stop();
+
+    const apiKey = this.settings.conceptDbApiKey || this.settings.apiKey;
+    this.conceptDbClient = new ConceptDbClient(
+      this.settings.conceptDbEndpoint,
+      apiKey,
+    );
+
+    const writer = makeObsidianNoteWriter(this.app);
+    this.conceptSync = new ConceptSyncService(
+      this.settings,
+      this.conceptDbClient,
+      writer,
+    );
+    await this.conceptSync.start();
+
+    if (this.settings.enableConceptDbWriteback) {
+      this.conceptWriteback = new ConceptWritebackService(
+        this.app,
+        this.settings,
+        this.conceptDbClient,
+      );
+      this.conceptWriteback.start();
+    }
+
+    // Phase 4: subscribe to the activity-api WS bus for live updates
+    this.conceptBusListener = new ConceptBusListener(
+      this.settings,
+      this.conceptSync,
+      this.conceptDbClient,
+    );
+    this.conceptBusListener.start();
+
+    // Make the client/sync available to the impulse resolvers
+    setConceptDbResolverContext(this.conceptDbClient, this.settings);
+    setConceptWritebackResolverContext(this.conceptDbClient, this.conceptSync);
   }
 
   /**
