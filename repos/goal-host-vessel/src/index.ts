@@ -357,13 +357,13 @@ function buildProxyResolver(shape: string) {
           content: impulseContent,
         }];
       } catch (err) {
-        return [{
-          id: random.id(`dev:${shape}:err`),
-          pointer: { type: "memo" },
-          metadata: { shape, source: "development-vessel", degraded: true },
-          loaded: true,
-          content: { error: (err as Error).message },
-        }];
+        // F13 fix (inv-084): re-throw so engine records success=false + β+=1.
+        // Previously: returning a degraded impulse caused engine to record
+        // success=true → Thompson α+=1 for every failed dev-vessel call.
+        // This corrupted posteriors — drain cycles accumulated false-positive α
+        // even when fs_write/llm_completion tasks consistently failed.
+        // Re-throwing lets the engine task-catch handle it correctly.
+        throw err;
       }
     },
   };
