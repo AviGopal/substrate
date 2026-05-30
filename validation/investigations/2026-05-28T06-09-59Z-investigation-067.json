@@ -1,0 +1,46 @@
+{
+  "investigation_id": "067",
+  "generated_at": "2026-05-28T06:09:59Z",
+  "investigator_session_id": "loop-dynamic-mode",
+  "prior_investigation_id": "2026-05-28T05-03-06Z-investigation-066",
+  "substrate_target": "http://localhost:18080",
+  "substrate_status": "healthy",
+
+  "critical_summary": "No new commits since investigation-066 (quiescent ~67 min; ~3h38m since iter-29 f18bb246). Substrate healthy. All findings carry forward unchanged. F-148 HIGH (engine LLM gap), F-146 CRITICAL (4d0c305e substrate-authored). Auto-promote: considered=6, promoted=0. Root count 30. Extended overnight quiescence continues — operator likely offline. Heartbeat 3600s (max runtime allows).",
+
+  "commits_since_066": [],
+
+  "findings_reverification": {
+    "F-148": {"prior_status": "HIGH OPEN", "current_status": "HIGH OPEN — 3h38m since iter-29, no iter-30", "evidence": [{"type": "no_new_commits", "command": "git log --oneline --since='2026-05-28T05:03:06Z' --format='%H %ae %s'", "observed": "(empty)"}]},
+    "F-147": {"prior_status": "LOW OPEN", "current_status": "LOW OPEN — root count 30", "evidence": [{"type": "root_count", "command": "ls -1 | wc -l", "observed": "30"}]},
+    "F-146": {"prior_status": "CRITICAL OPEN", "current_status": "CRITICAL OPEN — unchanged", "evidence": [{"type": "no_operator_commit", "command": "git log --all --author='avigopal' --format='%H %ae %s' | grep -v 'f18bb246\\|93a6cb42\\|4d0c305e'", "observed": "4d0c305e authored by devbob@metabob.local, no operator-signed authorization commit present"}]},
+    "F-145": {"prior_status": "OPEN", "current_status": "OPEN"},
+    "F-144": {"prior_status": "RE-OPENED", "current_status": "RE-OPENED"},
+    "F-143": {"prior_status": "CLOSED", "current_status": "CLOSED"},
+    "F-142": {"prior_status": "ACKNOWLEDGED", "current_status": "ACKNOWLEDGED"},
+    "F-141": {"prior_status": "OPEN", "current_status": "OPEN"},
+    "F-140": {"prior_status": "ADDRESSED", "current_status": "ADDRESSED"},
+    "F-101": {"prior_status": "OPEN", "current_status": "OPEN"}
+  },
+
+  "substrate_health": "healthy",
+  "root_file_count": {"count": 30, "within_limit": false},
+
+  "prior_findings_status": {
+    "F-148": "HIGH OPEN",
+    "F-147": "LOW OPEN",
+    "F-146": "CRITICAL OPEN",
+    "F-145": "OPEN",
+    "F-144": "RE-OPENED",
+    "F-143": "CLOSED",
+    "F-142": "ACKNOWLEDGED",
+    "F-141": "OPEN",
+    "F-140": "ADDRESSED",
+    "F-101": "OPEN"
+  },
+
+  "next_wake_recommendation": {
+    "delay_seconds": 3600,
+    "rationale": "3h38m quiescent, overnight gap continues. Monitor fires on any commit. 1h fallback heartbeat (runtime max 3600s)."
+  }
+}
