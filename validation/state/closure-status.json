@@ -40,7 +40,7 @@
       "closed": true,
       "missing_deps": [],
       "evidence": "refusal pathway + stats endpoint + durable recording all working (probe shape existent_shape_1779940873908__ recorded)",
-      "description": "Substrate refuses incompetent interventions with cited evidence + durable record (IAL §27.S.6)"
+      "description": "Substrate refuses incompetent interventions with cited evidence + durable record (IAL \u00a727.S.6)"
     }
   },
   "audit_run_at": "2026-05-28T04:01:14.868Z",
@@ -63,7 +63,10 @@
     "S4b_overall_passing": true,
     "S4a_consecutive_windows": 1,
     "S4a_required_consecutive": 3,
-    "last_measured": "2026-05-30T20:07:18Z",
-    "notes": "iter-080: audit-ingestion bridge deployed; drain-pending scenario synthesis fixed; boredom exit-0 fix; goal[11] wired. Both S.4a and S.4b currently True — need 2 more consecutive 1h windows with new_shapes_introduced>0 for durable lift."
+    "last_measured": "2026-05-30T21:05:00Z",
+    "notes": "Timer fixed 30min\u21925min; F24 posterior repair done; boredom exit-0 fix. Window[0] has 20 new shapes. Need windows[1] and [2] to also have new shapes for 3 consecutive.",
+    "timer_fix_deployed": true,
+    "boredom_ticks_per_hour": 12,
+    "window0_new_shapes": 20
   }
 }
