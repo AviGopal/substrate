@@ -599,9 +599,15 @@ async function handleResolve(req: Request): Promise<Response> {
     return Response.json({ error: (err as Error).message }, { status: 400 });
   }
 
-  // Support both direct { type, goal, ... } and impulse-wrapper { impulse: { pointer: { type } } }.
-  const type = (body.type as string | undefined) ??
-    ((body.impulse as Record<string, unknown> | undefined)?.pointer as Record<string, unknown> | undefined)?.type as string | undefined;
+  // Support both direct { type, goal, ... } and impulse-wrapper
+  // { impulse: { pointer: { type, goal, ... } } }. The impulse-wrapper form is
+  // the compliant impulse-contract path used by discovery-routed and
+  // MCP-fronted dispatches; the top-level form is the legacy convenience
+  // shape. Each field falls back from top-level → impulse.pointer.
+  const pointer = ((body.impulse as Record<string, unknown> | undefined)
+    ?.pointer as Record<string, unknown> | undefined) ?? {};
+
+  const type = (body.type as string | undefined) ?? (pointer.type as string | undefined);
 
   if (type !== "goal_execution" && type !== "activity_execution") {
     return Response.json(
@@ -610,18 +616,21 @@ async function handleResolve(req: Request): Promise<Response> {
     );
   }
 
-  const goal = typeof body.goal === "string" ? body.goal : undefined;
-  const targetTemplateId = typeof body.target_template_id === "string"
-    ? body.target_template_id
+  const goal = typeof body.goal === "string" ? body.goal
+    : typeof pointer.goal === "string" ? pointer.goal
     : undefined;
-  const variables = typeof body.variables === "object" && body.variables !== null
-    ? (body.variables as Record<string, unknown>)
+  const targetTemplateId = typeof body.target_template_id === "string" ? body.target_template_id
+    : typeof pointer.target_template_id === "string" ? pointer.target_template_id
+    : undefined;
+  const variablesSrc = (typeof body.variables === "object" && body.variables !== null) ? body.variables
+    : (typeof pointer.variables === "object" && pointer.variables !== null) ? pointer.variables
     : {};
-  const parentExecutionId = typeof body.parent_execution_id === "string"
-    ? body.parent_execution_id
+  const variables = variablesSrc as Record<string, unknown>;
+  const parentExecutionId = typeof body.parent_execution_id === "string" ? body.parent_execution_id
+    : typeof pointer.parent_execution_id === "string" ? pointer.parent_execution_id
     : undefined;
-  const compositionChain = Array.isArray(body.composition_chain)
-    ? (body.composition_chain as string[])
+  const compositionChain = Array.isArray(body.composition_chain) ? (body.composition_chain as string[])
+    : Array.isArray(pointer.composition_chain) ? (pointer.composition_chain as string[])
     : [];
 
   if (!goal && !targetTemplateId) {
