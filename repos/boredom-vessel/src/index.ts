@@ -50,6 +50,11 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // substrate-authoring — draft-gap-closing-activity reads a failure-mode scenario and produces an
   // activityTemplateVariant via activity_create_variant resolver.
   "draft a gap-closing activity variant from a recent failure-mode scenario, producing an activityTemplateVariant",
+  // evidence accumulation — executes the top proposed gap-closing template to build Thompson
+  // posteriors so auto-promote can graduate it. Closes the author→execute→promote loop:
+  // goal[8] authors templates (proposed=true), goal[9] exercises them, tickAutoPromote()
+  // promotes them once they have ≥3 successful executions.
+  "execute the most recently authored proposed gap-closing template to accumulate empirical evidence for promotion",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -64,6 +69,7 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   "development-vessel:harness-run-matrix",         // goal[6]
   "development-vessel:probe-untraversed-edge",     // goal[7]
   "development-vessel:draft-gap-closing-activity", // goal[8] — substrate-authoring path
+  undefined,                                       // goal[9] — dynamic: top proposed gap-closing template
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
@@ -94,6 +100,41 @@ function extraVariablesForGoal(goalIdx: number): Record<string, unknown> {
     };
   }
   return {};
+}
+
+// ── Proposed gap-closing template picker ─────────────────────────────────────
+// Fetches the most recently authored proposed gap-closing template that uses
+// only executable resolvers (fs_read, fs_write, llm_completion_dispatch,
+// json_path_extract, http_fetch). Returns null if none are found or all use
+// invalid resolvers.
+const EXECUTABLE_RESOLVERS = new Set([
+  "fs_read", "fs_write", "llm_completion_dispatch",
+  "json_path_extract", "http_fetch", "noop",
+]);
+
+async function pickTopProposedGapClosingTemplate(): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `${ACTIVITY_API_ENDPOINT}/v2/activities/templates?limit=60`,
+      { headers: authHeaders() },
+    );
+    if (!res.ok) return null;
+    const data = await res.json() as { templates?: Array<{ id?: string; proposed?: boolean; tasks?: Array<{ resolver?: string }> }> };
+    const candidates = (data.templates ?? []).filter(t => {
+      if (!t.proposed) return false;
+      const id = (t.id ?? "").replace(/^activity:⟨(.+)⟩$/, "$1");
+      if (!id.startsWith("gap-closing:")) return false;
+      // Check all tasks use executable resolvers
+      const tasks = t.tasks ?? [];
+      return tasks.length > 0 && tasks.every(task => EXECUTABLE_RESOLVERS.has(task.resolver ?? ""));
+    });
+    // Pick the most recently added (last in list, since templates are ordered by created_at DESC)
+    // — the constrained-prompt templates were authored last and have correct resolver schemas.
+    const top = candidates[candidates.length - 1];
+    return top?.id ? top.id.replace(/^activity:⟨(.+)⟩$/, "$1") : null;
+  } catch {
+    return null;
+  }
 }
 
 const BOREDOM_TAG = "intent:boredom_source";
@@ -184,7 +225,12 @@ async function tickAutoPromote(): Promise<void> {
       {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({}),
+        // min_samples=3: substrate-authored templates need only 3 successful executions
+        // to graduate. The default of 20 means gap-closing templates would never promote
+        // in a reasonable timeframe (~80h per template at current dispatch rate).
+        // 3 samples provides statistical confidence that the template is runnable while
+        // keeping the promotion loop fast enough to matter within a session.
+        body: JSON.stringify({ min_samples: 3, min_success_rate: 0.6 }),
       },
     );
     if (!res.ok) {
@@ -221,7 +267,19 @@ async function main(): Promise<void> {
 
   const goalIdx = await nextGoalIndex();
   const goal = AUTONOMOUS_GOALS[goalIdx]!;
-  const targetTemplateId = AUTONOMOUS_GOAL_TARGET_TEMPLATES[goalIdx];
+  // goal[9]: dynamic target — pick the top executable proposed gap-closing template at runtime.
+  // This closes the author→execute→promote loop without hardcoding a specific template ID.
+  let targetTemplateId = AUTONOMOUS_GOAL_TARGET_TEMPLATES[goalIdx];
+  if (goalIdx === 9 && targetTemplateId === undefined) {
+    const dynamicTarget = await pickTopProposedGapClosingTemplate();
+    if (dynamicTarget) {
+      targetTemplateId = dynamicTarget;
+      console.log(`[boredom-vessel] goal[9] dynamic target: ${dynamicTarget}`);
+    } else {
+      console.log("[boredom-vessel] goal[9] no executable proposed gap-closing template found — skipping dispatch");
+      process.exit(0);
+    }
+  }
   console.log(`[boredom-vessel] submitting goal[${goalIdx}]: "${goal}"${targetTemplateId ? ` (targetTemplateId=${targetTemplateId})` : ""}`);
 
   let res: Response;
