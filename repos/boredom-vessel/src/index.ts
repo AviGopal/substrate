@@ -55,6 +55,9 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // goal[8] authors templates (proposed=true), goal[9] exercises them, tickAutoPromote()
   // promotes them once they have ≥3 successful executions.
   "execute the most recently authored proposed gap-closing template to accumulate empirical evidence for promotion",
+  // gap-drain — wires substrateGap impulses (persisted by substrateGap_write) into the drafter.
+  // Spec: openspec/changes/2026-05-30-substrate-gap-drafter-wiring.
+  "run the drain-pending-substrate-gaps activity to convert open substrateGap impulses into gap-closing template variants",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -70,6 +73,7 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   "development-vessel:probe-untraversed-edge",     // goal[7]
   "development-vessel:draft-gap-closing-activity", // goal[8] — substrate-authoring path
   undefined,                                       // goal[9] — dynamic: top proposed gap-closing template
+  "development-vessel:drain-pending-substrate-gaps", // goal[10] — substrateGap → drafter wiring
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
@@ -85,6 +89,16 @@ const SCENARIO_ROTATION: readonly string[] = [
 ];
 
 function extraVariablesForGoal(goalIdx: number): Record<string, unknown> {
+  if (goalIdx === 10) {
+    // drain-pending-substrate-gaps reads gap.id from the resolver and passes it
+    // as scenario_id to the drafter. The drafter still needs scenarios_dir / report_path /
+    // proposals_dir on the filesystem — same paths as goal[8].
+    return {
+      scenarios_dir: "/workspace/validation/failure-modes/scenarios",
+      report_path: "/workspace/validation/results/latest-failure-mode-report.json",
+      proposals_dir: "/workspace/proposals",
+    };
+  }
   if (goalIdx === 8) {
     // draft-gap-closing-activity reads {{report_path}} and {{scenarios_dir}}/{{scenario_id}}.json.
     // Rotate scenario_id across the 6 seeded scenarios so different failure modes get drafted over time.
