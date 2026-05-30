@@ -57,5 +57,13 @@
     "operator-shell",
     "operator-spec-authoring",
     "push-away"
-  ]
+  ],
+  "lift": {
+    "S4a_coverage_progress": true,
+    "S4b_overall_passing": true,
+    "S4a_consecutive_windows": 1,
+    "S4a_required_consecutive": 3,
+    "last_measured": "2026-05-30T20:07:18Z",
+    "notes": "iter-080: audit-ingestion bridge deployed; drain-pending scenario synthesis fixed; boredom exit-0 fix; goal[11] wired. Both S.4a and S.4b currently True — need 2 more consecutive 1h windows with new_shapes_introduced>0 for durable lift."
+  }
 }
