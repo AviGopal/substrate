@@ -39,6 +39,10 @@ const LLM_VESSEL_ENDPOINT = process.env.LLM_VESSEL_ENDPOINT;
 const SHAPES = ["goal_execution", "activity_execution"] as const;
 const VERSION = "0.1.0";
 const DEV_VESSEL_ENDPOINT = process.env.DEVELOPMENT_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";
+// Proxy resolver timeout (ms). Default 240s — must accommodate LLM-heavy
+// dispatches (sonnet on ~45K-token inputs can take 90-180s) while staying
+// under Bun's ~300s fetch cap. Override via GOAL_HOST_PROXY_TIMEOUT_MS.
+const PROXY_TIMEOUT_MS = parseInt(process.env.GOAL_HOST_PROXY_TIMEOUT_MS ?? "240000", 10);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LLM port — HttpLLMPort when LLM_VESSEL_ENDPOINT is set, InProcessLLMPort
@@ -275,7 +279,7 @@ function buildProxyResolver(shape: string) {
             ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}),
           },
           body: JSON.stringify({ impulse: { pointer } }),
-          signal: AbortSignal.timeout(30_000),
+          signal: AbortSignal.timeout(PROXY_TIMEOUT_MS),
         });
         const bodyText = await resp.text();
         let parsed: unknown;
