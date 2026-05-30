@@ -20,7 +20,11 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { resolve, join } from "node:path";
-import { globSync } from "bun";
+import { Glob } from "bun";
+
+function globSync(pattern: string, opts: { cwd: string }): string[] {
+  return Array.from(new Glob(pattern).scanSync({ cwd: opts.cwd }));
+}
 
 const REPO_ROOT = resolve(import.meta.dir, "../../");
 
