@@ -152,3 +152,12 @@ COMMIT_MESSAGE_*.txt
 /validation/observations/**
 !/validation/observations/README.md
 scripts/substrate/workspace/.substrate-secrets
+
+# Operator-side Obsidian vault for browsing concept-db (see vault/README.md).
+# Auto-mirrored concept notes and runtime workspace files do not belong in git.
+# Plugin install + settings ARE committed so the vault is reproducible.
+/vault/concept-db/**
+/vault/.obsidian/workspace*
+/vault/.obsidian/cache
+/vault/.obsidian/graph.json
+/vault/.obsidian/plugins/metabob-vessel/data.json.local
