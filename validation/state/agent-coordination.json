@@ -4,7 +4,7 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-31T06:00:00Z",
+      "last_updated": "2026-05-31T07:25:00Z",
       "last_investigation_acknowledged": "2026-05-30T09-38-00Z-investigation-084",
       "last_iter008_audit_acknowledged": "2026-05-30T08-00-00Z-investigation-075",
       "last_primary_audit_acknowledged": "2026-05-30T09-38-00Z-investigation-084",
@@ -12,13 +12,13 @@
       "last_dev_response_filed": "2026-05-28T01-30-00Z-dev-response-018",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
       "last_operator_probe_provenance": "unverified (F-131): file is not backed by an operator-signed git commit; substrate-process authorship cannot be ruled out. Acknowledged for substantive content; provenance protocol documented in validation/findings/README.md.",
-      "current_focus": "iter-084 (2026-05-31): substrate-self-detection family expansion per the principle (every operator-side audit is a missed substrate-citizen activity). Added trace_failure_pattern_report \u2014 groups failed traces by (template, first_failed_task) and reports systematic patterns. Detected drain-pending-substrate-gaps zero-task failure \u00d7 2 occurrences; manually composed report \u2192 substrateGap_write chain end-to-end. Companion to phantom_trace_scan (success-side), precondition_rejection_scan (F25 pattern), and dispatch_target_drift_scan (meta-meta). 38 shapes/cases all agree. json_path_extract ban (iter-083) holds.",
+      "current_focus": "iter-085 (2026-05-31): substrate-self-detection feedback loop closure \u2014 phantom_trace_scan was emitting 48/50 false positives per scan window for meta-templates (validator-dispatch, slot-binding, create-shape-provider-goal) that legitimately have task_count=0. This clogged drain-pending, hung boredom goal[10] past systemd TimeoutStartSec=600s, and triggered SIGTERM kill+container restart. Added exclude_meta_templates parameter (default true) with META_TEMPLATE_PATTERNS check. Same exclusion pattern as trace_failure_pattern_report. 48 existing false-positive gaps closed via substrateGap_write status=closed. Container restarted (137 SIGKILL after systemd grace). 40 shapes/cases agree.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
         "openspec/changes/2026-05-25-metabob-vessel-migration"
       ],
-      "substrate_state": "running \u2014 boredom 5min cadence; picker fixed (metrics.alpha); convergent validity live; 2/3 consecutive coverage windows (new=[4,18]). Thompson: validator-dispatch a=9239, harness-run-matrix a=32, ingest-audit-findings a=22.",
+      "substrate_state": "running \u2014 restarted after container exited 137 from boredom hang on phantom-success drain. phantom_trace_scan exclude_meta_templates=true default. consecutive=2 coverage windows. substrate-self-detection family: phantom_trace_scan + trace_failure_pattern_report + precondition_rejection_scan + dispatch_target_drift_scan all live with meta exclusion.",
       "audit_acknowledgment_protocol": {
         "note": "Authorization verifiability resolved. Operator commit 30d63eed (by avigopal.aero@gmail.com) is in git history and explicitly names authorized actions. Audit agents can verify with: git log --author=avigopal --oneline.",
         "anchor_commit": "30d63eed \u2014 chore(operator): authorize S2 lift and boredom autonomy",
