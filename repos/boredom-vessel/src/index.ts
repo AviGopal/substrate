@@ -222,6 +222,40 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   "development-vessel:ingest-audit-findings",       // goal[11] — audit findings → substrateGap pipeline
 ];
 
+/**
+ * Per-goal cost classification — used by load-aware gating to skip expensive
+ * goals when system_load_report reports anomalous load (concept_uNEIKtMneq5c
+ * load_aware_boredom_triage_policy). Each tier maps to the maximum acceptable
+ * cost given the current load state:
+ *
+ *   load_anomaly_severe  → cheap only
+ *   load_anomaly         → cheap or moderate
+ *   normal               → any tier
+ *
+ * cheap     = single resolver call, no LLM, bounded I/O
+ * moderate  = small dispatch, may include one bounded scan
+ * expensive = multi-task LLM chain, full-matrix scan, or long-running dispatch
+ *
+ * Classification derived from observed loadAttribution records (iter-089):
+ * close-health-gap consumed 1.6 cores + 16 GB per dispatch → expensive.
+ * coverage-tick + substrate-health-tick are single-query primitives → cheap.
+ */
+type GoalCost = "cheap" | "moderate" | "expensive";
+const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
+  "cheap",     // goal[0]  coverage-tick
+  "cheap",     // goal[1]  substrate-health-tick
+  "expensive", // goal[2]  close-health-gap (observed: 1.6 cores, 16GB, 304s+)
+  "moderate",  // goal[3]  probe-reachable-unlearned (bounded query)
+  "moderate",  // goal[4]  harness-check-scenario (single scenario)
+  "moderate",  // goal[5]  escalate-unknown-shape (bounded)
+  "expensive", // goal[6]  harness-run-matrix (full scenario matrix scan)
+  "moderate",  // goal[7]  probe-untraversed-edge (bounded)
+  "expensive", // goal[8]  draft-gap-closing-activity (14 tasks, 2 LLM calls)
+  "expensive", // goal[9]  proposed gap-closing template (variable, often heavy)
+  "moderate",  // goal[10] drain-pending-substrate-gaps (1 resolver + 1 dispatch)
+  "moderate",  // goal[11] ingest-audit-findings (fs_read + LLM + http_fetch)
+];
+
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
 // default `source` variable; goal[8] (draft-gap-closing-activity) needs explicit paths.
 // Scenarios rotate via SCENARIO_ROTATION below to spread learning across failure modes.
@@ -368,21 +402,82 @@ async function isIdle(): Promise<boolean> {
   return true;
 }
 
-/** Read and increment the rotating goal index so successive runs cycle goals. */
-async function nextGoalIndex(): Promise<number> {
-  let idx = 0;
+/** Read the persisted goal index without advancing — gating may move it. */
+async function peekGoalIndex(): Promise<number> {
   try {
     const file = Bun.file(GOAL_INDEX_FILE);
     if (await file.exists()) {
       const raw = parseInt(await file.text(), 10);
-      if (!isNaN(raw)) idx = raw;
+      if (!isNaN(raw)) return raw;
     }
   } catch {}
-  const next = (idx + 1) % AUTONOMOUS_GOALS.length;
+  return 0;
+}
+
+/** Persist the next position (one past the dispatched index). */
+async function advanceGoalIndex(dispatchedIdx: number): Promise<void> {
+  const next = (dispatchedIdx + 1) % AUTONOMOUS_GOALS.length;
   try {
     await Bun.write(GOAL_INDEX_FILE, String(next));
   } catch {}
+}
+
+/**
+ * Pre-iter-090 nextGoalIndex(): read-and-advance round-robin without
+ * load-awareness. Retained as a fallback for codepaths that don't need
+ * gating. New code should use peekGoalIndex + selectGoalForLoad +
+ * advanceGoalIndex so the rotation cursor stays consistent with what
+ * actually gets dispatched.
+ */
+async function nextGoalIndex(): Promise<number> {
+  const idx = await peekGoalIndex();
+  await advanceGoalIndex(idx);
   return idx;
+}
+
+/**
+ * Maximum acceptable goal cost for the current load state. Implements the
+ * triage policy from concept_uNEIKtMneq5c (load_aware_boredom_triage_policy):
+ *
+ *   load_anomaly_severe → "cheap" only — substrate is over its head; even
+ *                         monitors should be cheap. The substrate's own
+ *                         observation surface must remain available.
+ *   load_anomaly        → "moderate" — defer expensive multi-task chains.
+ *                         Single-query monitors and bounded scans are fine.
+ *   normal              → "expensive" — anything goes.
+ *
+ * On null sample (system_load_report unreachable), assume normal — the
+ * substrate makes a forward-progress choice when its own observation surface
+ * is unavailable. The alternative (stop everything when blind) would be a
+ * worse equilibrium: substrate stalls when its instruments degrade.
+ */
+function maxCostForLoad(sample: LoadSample | null): GoalCost {
+  if (sample === null) return "expensive";
+  if (sample.load_anomaly_severe) return "cheap";
+  if (sample.load_anomaly) return "moderate";
+  return "expensive";
+}
+
+const COST_RANK: Record<GoalCost, number> = { cheap: 0, moderate: 1, expensive: 2 };
+
+/**
+ * Walk forward from the round-robin pick until we find a goal whose cost
+ * is acceptable for current load. The walk preserves rotation fairness —
+ * we skip-not-cancel — so once load recovers, expensive goals naturally
+ * re-enter rotation. If nothing within budget is found (rare; would mean
+ * cheap-tier full of pending work and load_anomaly_severe), fall back to
+ * goal[0] (coverage-tick) which is the cheapest always-safe activity.
+ */
+function selectGoalForLoad(startIdx: number, maxCost: GoalCost): number {
+  const budgetRank = COST_RANK[maxCost];
+  const n = AUTONOMOUS_GOALS.length;
+  for (let offset = 0; offset < n; offset++) {
+    const candidateIdx = (startIdx + offset) % n;
+    const cost = AUTONOMOUS_GOAL_COSTS[candidateIdx] ?? "expensive";
+    if (COST_RANK[cost] <= budgetRank) return candidateIdx;
+  }
+  // Defensive fallback — should be unreachable since goal[0] is cheap.
+  return 0;
 }
 
 /**
@@ -442,7 +537,29 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  const goalIdx = await nextGoalIndex();
+  // Sample system load FIRST — gates both goal selection AND attribution.
+  // Without an early sample, the substrate would commit to an expensive goal
+  // before knowing it can afford it. The same sample is reused as load_before
+  // for the attribution record so we don't double-pay for the call.
+  const loadBefore = await sampleLoad();
+  const dispatchedAt = new Date().toISOString();
+  const dispatchStartMs = Date.now();
+
+  // Load-aware goal selection: walk forward from the round-robin pointer
+  // until we find a goal whose cost is acceptable for current load
+  // (concept_uNEIKtMneq5c load_aware_boredom_triage_policy).
+  const roundRobinIdx = await peekGoalIndex();
+  const maxCost = maxCostForLoad(loadBefore);
+  const goalIdx = selectGoalForLoad(roundRobinIdx, maxCost);
+  await advanceGoalIndex(goalIdx);
+  const skipped = (goalIdx - roundRobinIdx + AUTONOMOUS_GOALS.length) % AUTONOMOUS_GOALS.length;
+  if (skipped > 0) {
+    console.log(
+      `[boredom-vessel] load-gating: maxCost=${maxCost} (load_anomaly=${loadBefore?.load_anomaly}, severe=${loadBefore?.load_anomaly_severe}) — ` +
+      `skipped ${skipped} goal(s) from idx=${roundRobinIdx} to idx=${goalIdx}`,
+    );
+  }
+
   const goal = AUTONOMOUS_GOALS[goalIdx]!;
   // goal[9]: dynamic target — pick the top executable proposed gap-closing template at runtime.
   // This closes the author→execute→promote loop without hardcoding a specific template ID.
@@ -458,12 +575,6 @@ async function main(): Promise<void> {
     }
   }
   console.log(`[boredom-vessel] submitting goal[${goalIdx}]: "${goal}"${targetTemplateId ? ` (targetTemplateId=${targetTemplateId})` : ""}`);
-
-  // Sample system load BEFORE dispatch for causal-attribution delta.
-  // Best-effort: null if dev-vessel unreachable. The dispatch happens either way.
-  const loadBefore = await sampleLoad();
-  const dispatchedAt = new Date().toISOString();
-  const dispatchStartMs = Date.now();
 
   let res: Response;
   try {
