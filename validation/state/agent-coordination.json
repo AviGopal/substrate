@@ -4,7 +4,7 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-31T05:45:00Z",
+      "last_updated": "2026-05-31T06:00:00Z",
       "last_investigation_acknowledged": "2026-05-30T09-38-00Z-investigation-084",
       "last_iter008_audit_acknowledged": "2026-05-30T08-00-00Z-investigation-075",
       "last_primary_audit_acknowledged": "2026-05-30T09-38-00Z-investigation-084",
@@ -12,7 +12,7 @@
       "last_dev_response_filed": "2026-05-28T01-30-00Z-dev-response-018",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
       "last_operator_probe_provenance": "unverified (F-131): file is not backed by an operator-signed git commit; substrate-process authorship cannot be ruled out. Acknowledged for substantive content; provenance protocol documented in validation/findings/README.md.",
-      "current_focus": "iter-083 (2026-05-31): json_path_extract banned from gap-closing templates at validator. Prompt already said DO NOT USE but enforcement was only on JMESPath syntax in path. fp-12-1780147252079 (15 tasks, heavy json_path_extract use) consistently failed at task 2. New: removed from ALLOWED_RESOLVERS for templates with id starting gap-closing:. Also primed local concept-db: 13 concepts + 10 typed edges via scripts/substrate/prime-concept-db.ts. Discovered local has 463 concepts + 1913 typed edges already (search endpoint shows slice). Window[0] has 21 new shapes; goal[8] mint chain working end-to-end.",
+      "current_focus": "iter-084 (2026-05-31): substrate-self-detection family expansion per the principle (every operator-side audit is a missed substrate-citizen activity). Added trace_failure_pattern_report \u2014 groups failed traces by (template, first_failed_task) and reports systematic patterns. Detected drain-pending-substrate-gaps zero-task failure \u00d7 2 occurrences; manually composed report \u2192 substrateGap_write chain end-to-end. Companion to phantom_trace_scan (success-side), precondition_rejection_scan (F25 pattern), and dispatch_target_drift_scan (meta-meta). 38 shapes/cases all agree. json_path_extract ban (iter-083) holds.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
