@@ -57,6 +57,117 @@ const BUS_MAX_INFLIGHT_BYTES = parseInt(
 const BUS_QUEUE_MAX = 100;
 const BUS_STATS_INTERVAL_MS = 30_000;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// L2 instrumentation — process.memoryUsage() trajectory probe
+//
+// Hypothesis #1 (Promise queue in BusForwardingEventSink) was REFUTED by L1
+// stats showing in_flight=0 across the pre-OOM window while RSS grew 0→10 GB.
+// Signature is event-loop starvation (stats stopped at ~1.6 GB).
+//
+// This module:
+//   - Captures process.memoryUsage() into a circular ring (MEM_RING_SIZE=512)
+//   - Records on every WS message arrival (cheapest signal density), every
+//     BoundedBusSink emit, and at a 5s interval
+//   - Dumps ring → /workspace/.goal-host-mem-dump.json every 5s (survives OOM)
+//   - Re-dumps + flushes on SIGTERM (so post-mortem catches the last moments
+//     before systemd's SIGKILL escalation)
+//
+// What each region tells us:
+//   - heapUsed grows: JS object retention (listener closures, parsed event objs)
+//   - external grows: C++-backed Buffers / WS frames not released
+//   - arrayBuffers grows: raw byte arrays (likely WS frame payloads)
+//   - rss grows but heap/external/arrayBuffers flat: V8 fragmentation / native
+//     allocator (less likely under Bun)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MEM_RING_SIZE = 512;
+const MEM_DUMP_PATH = process.env.MEM_DUMP_PATH ?? "/workspace/.goal-host-mem-dump.json";
+const MEM_DUMP_INTERVAL_MS = 5_000;
+
+interface MemSample {
+  t: number;             // ms since epoch
+  source: string;        // "ws" | "bus" | "tick"
+  msgSize?: number;      // bytes of triggering WS payload, if any
+  msgType?: string;      // type field of WS event, if any
+  rss: number;
+  heapUsed: number;
+  heapTotal: number;
+  external: number;
+  arrayBuffers: number;
+}
+
+const memRing: MemSample[] = [];
+let memRingHead = 0;
+let biggestMsg: { size: number; type: string; at: number } = { size: 0, type: "", at: 0 };
+
+function recordMemSample(source: string, msgSize?: number, msgType?: string): void {
+  const mu = process.memoryUsage();
+  const sample: MemSample = {
+    t: Date.now(),
+    source,
+    msgSize,
+    msgType,
+    rss: mu.rss,
+    heapUsed: mu.heapUsed,
+    heapTotal: mu.heapTotal,
+    external: mu.external,
+    arrayBuffers: mu.arrayBuffers,
+  };
+  if (memRing.length < MEM_RING_SIZE) {
+    memRing.push(sample);
+  } else {
+    memRing[memRingHead] = sample;
+    memRingHead = (memRingHead + 1) % MEM_RING_SIZE;
+  }
+  if (msgSize !== undefined && msgSize > biggestMsg.size) {
+    biggestMsg = { size: msgSize, type: msgType ?? "?", at: sample.t };
+  }
+}
+
+async function flushMemDump(reason: string): Promise<void> {
+  try {
+    // Order ring oldest-first when wrapped.
+    const ordered = memRing.length < MEM_RING_SIZE
+      ? memRing.slice()
+      : memRing.slice(memRingHead).concat(memRing.slice(0, memRingHead));
+    const payload = {
+      generated_at: new Date().toISOString(),
+      reason,
+      pid: process.pid,
+      uptime_s: process.uptime(),
+      samples: ordered,
+      biggest_msg: biggestMsg,
+      env: {
+        BUS_MAX_INFLIGHT,
+        BUS_MAX_INFLIGHT_BYTES,
+      },
+    };
+    await Bun.write(MEM_DUMP_PATH, JSON.stringify(payload));
+  } catch (err) {
+    // Never let dump failures kill the process — they're observability, not load-bearing.
+    console.warn(`[mem-probe] dump failed: ${(err as Error).message}`);
+  }
+}
+
+setInterval(() => {
+  recordMemSample("tick");
+  void flushMemDump("interval");
+}, MEM_DUMP_INTERVAL_MS).unref();
+
+setInterval(() => {
+  const mu = process.memoryUsage();
+  console.log(
+    `[mem-probe] rss=${(mu.rss / 1024 / 1024).toFixed(1)}MB ` +
+      `heapUsed=${(mu.heapUsed / 1024 / 1024).toFixed(1)}MB ` +
+      `external=${(mu.external / 1024 / 1024).toFixed(1)}MB ` +
+      `arrayBuffers=${(mu.arrayBuffers / 1024 / 1024).toFixed(1)}MB ` +
+      `biggest_msg=${(biggestMsg.size / 1024).toFixed(1)}KB(${biggestMsg.type})`,
+  );
+}, BUS_STATS_INTERVAL_MS).unref();
+
+process.on("SIGTERM", () => { void flushMemDump("SIGTERM"); });
+process.on("SIGINT", () => { void flushMemDump("SIGINT"); });
+
 class BoundedBusSink implements EventSink {
   private readonly inner: BusForwardingEventSink;
   private readonly queue: Array<{ event: unknown; bytes: number }> = [];
@@ -604,8 +715,34 @@ function startVesselRegistrationSubscriber(): void {
     });
 
     busWsClient.addEventListener("message", (e: MessageEvent) => {
+      // L2 instrumentation: capture frame size BEFORE JSON.parse (cheap).
+      // This tells us whether WS frame bytes correlate with memory growth.
+      // We also do a substring sniff for "vessel.registered" before parsing —
+      // if not present, skip parse entirely (hypothesis #2 fix option A).
+      let rawSize = 0;
+      let rawText: string | undefined;
+      try {
+        if (typeof e.data === "string") {
+          rawSize = e.data.length;
+          rawText = e.data;
+        } else if (e.data && typeof (e.data as { byteLength?: number }).byteLength === "number") {
+          rawSize = (e.data as { byteLength: number }).byteLength;
+        }
+      } catch { /* size sniff is best-effort */ }
+
+      // FIX OPTION A: cheap substring guard before allocating parsed object.
+      // Bus broadcasts task.completed, lifecycle.*, etc. all of which include
+      // large impulse / LLM bodies. Only vessel.registered events trigger work.
+      // If rawText is not a string (binary frame) we keep the prior behavior
+      // to avoid silently dropping events of unknown shape.
+      if (rawText !== undefined && !rawText.includes('"vessel.registered"')) {
+        recordMemSample("ws", rawSize, "filtered");
+        return;
+      }
+
       try {
         const msg = JSON.parse(typeof e.data === "string" ? e.data : e.data.toString());
+        recordMemSample("ws", rawSize, typeof msg?.type === "string" ? msg.type : "?");
         if (msg?.type !== "vessel.registered") return;
         const vesselId = msg.data?.vessel_id;
         if (typeof vesselId !== "string" || !DEV_VESSEL_ID_PATTERN.test(vesselId)) return;
