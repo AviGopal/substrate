@@ -169,7 +169,21 @@ export async function handleResolve(
 ): Promise<void> {
   try {
     // Parse request body
-    const body = await parseJsonBody<ResolveRequest>(req);
+    const rawBody = await parseJsonBody<ResolveRequest & {
+      impulse?: { pointer?: { type?: string; [k: string]: unknown }; options?: unknown };
+    }>(req);
+
+    // Accept both forms (vessel_resolve_handler_dual_form, concept_y-CPpfVcAhL0):
+    //   flat:    { type, pointer, options? }
+    //   wrapped: { impulse: { pointer: { type, ... }, options? } }  ← compliant impulse-contract
+    const wrappedPointer = rawBody?.impulse?.pointer;
+    const body: ResolveRequest = wrappedPointer
+      ? {
+          type: rawBody.type ?? wrappedPointer.type ?? '',
+          pointer: { ...(wrappedPointer as Record<string, unknown>) },
+          options: (rawBody.options ?? rawBody.impulse?.options) as ResolveRequest['options'],
+        }
+      : rawBody;
 
     // Validate request
     if (!body.type) {
