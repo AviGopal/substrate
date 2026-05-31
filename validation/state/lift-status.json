@@ -103,9 +103,33 @@
     "add-resolver-to-vessel template never dispatched by boredom (F-094 cold-start) — low priority, does not affect core execution",
     "Boredom goal[5] (health-liveness check) repeatedly times out at ~5min even after AbortSignal removal; root cause unresolved — goal-host-vessel hangs on certain health-check goal types. Workaround: removed goal[5] from rotation (commit f3e8051a).",
     "27.3.g.4 integration test requires a freshly-issued substrate key to run end-to-end",
-    "S.4a coverage plateau: rl=[5,7,8,8] at 16:15Z post-lift. 8/23 templates learned. New boredom goals (probe-reachable-unlearned, draft-gap-closing-activity) should improve diversity.",
-    "Audit agent structural limitation: cannot verify conversation-based authorizations. F-099 (now re-raised as F-103) reflects audit agent's inability to see operator 'go ahead' messages. Fourth explicit operator endorsement given 2026-05-26T16:40Z after reviewing investigations-036/037."
+    "Audit agent structural limitation: cannot verify conversation-based authorizations. F-099 (now re-raised as F-103) reflects audit agent's inability to see operator 'go ahead' messages. Fourth explicit operator endorsement given 2026-05-26T16:40Z after reviewing investigations-036/037.",
+    "draft-spec-from-gap not in boredom rotation — only fires via binding-layer backward-chaining when specProposal shape is demanded",
+    "variant_performance_metrics has no write-resolver — posterior repair requires direct SurrealDB UPDATE (F24 pattern)",
+    "semantic substitution detection (shape X substitutes for Y in composition Z) not implemented — composition graph uses structural identity only",
+    "H1-H4 hardening (two-sided traces, vessel pubkey identity, signed attestations, vessel ratification) not yet shipped"
   ],
+
+  "s2_sustained_validation": {
+    "as_of": "2026-05-31T01:47:00Z",
+    "coverage_plateau_resolved": true,
+    "resolution": "Two root causes fixed: (1) boredom timer was 30min not 5min — only 2 ticks/hr instead of 12; (2) boredom-vessel exit-code 1 on goal failure was stopping the systemd timer on each failure. Timer fixed to 5min (OnUnitActiveSec=5min), exit-code fixed to always 0.",
+    "current_coverage_windows": [
+      {"window": 0, "new_shapes": 1,  "traces": 13, "since": "2026-05-31T00:41:53Z"},
+      {"window": 1, "new_shapes": 10, "traces": 13, "since": "2026-05-30T23:41:53Z"},
+      {"window": 2, "new_shapes": 10, "traces": 6,  "since": "2026-05-30T22:41:53Z"}
+    ],
+    "S4a_consecutive": 3,
+    "S4b_overall_passing": true,
+    "additional_s2_capabilities_deployed": [
+      "audit-ingestion bridge: ingest-audit-findings reads audit.md → substrateGap impulses → drain pipeline",
+      "drain-pending scenario synthesis: gap IDs → scenario JSON → draft-gap-closing-activity dispatch",
+      "goal[11] ingest-audit-findings in boredom rotation",
+      "F13 proxy-catch re-throw (ghost-success corruption eliminated)",
+      "F24 posterior repair (draft-spec-from-gap α reset from 12.5 to 1)",
+      "concept-db memory feeds every draft-gap-closing-activity LLM prompt"
+    ]
+  }
 
   "prior_phase": {
     "phase": "S1",
