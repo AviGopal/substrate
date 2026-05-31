@@ -101,31 +101,65 @@ interface AttributionContext {
   goal_status?: string;
 }
 async function recordLoadAttribution(ctx: AttributionContext): Promise<void> {
-  const loadAfter = await sampleLoad();
+  // Retry the after-sample up to 3 times under load — dev-vessel is the
+  // primary suspect for timeout when boredom-attribution matters most
+  // (substrate is heavily loaded, dev-vessel is part of that load). Detection
+  // primitives must be resilient to the very loads they're measuring.
+  let loadAfter: LoadSample | null = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    loadAfter = await sampleLoad();
+    if (loadAfter !== null) break;
+    await new Promise((r) => setTimeout(r, 500 * attempt));
+  }
+
   const durationMs = Date.now() - ctx.dispatch_start_ms;
-  const cpu_usec_before = ctx.load_before?.cpu_usec ?? 0;
-  const cpu_usec_after = loadAfter?.cpu_usec ?? 0;
-  const mem_before = ctx.load_before?.mem_bytes ?? null;
-  const mem_after = loadAfter?.mem_bytes ?? null;
-  const load_before = ctx.load_before?.load_1m ?? null;
-  const load_after = loadAfter?.load_1m ?? null;
+
+  // CRITICAL: if either sample is missing, the delta is meaningless.
+  // Earlier bug — defaulting null to 0 produced negative deltas (cpu_after=0
+  // - cpu_before=87B = -87B), corrupting the substrate's load-attribution
+  // signal at exactly the moments the substrate was under stress. Record
+  // the raw samples with null markers so load_attribution_report can filter,
+  // never fabricate a delta from missing data.
+  const haveBefore = ctx.load_before !== null;
+  const haveAfter = loadAfter !== null;
+  const cpu_usec_delta =
+    haveBefore && haveAfter
+      ? loadAfter!.cpu_usec - ctx.load_before!.cpu_usec
+      : null;
+  const mem_bytes_delta =
+    haveBefore && haveAfter && ctx.load_before!.mem_bytes !== null && loadAfter!.mem_bytes !== null
+      ? loadAfter!.mem_bytes - ctx.load_before!.mem_bytes
+      : null;
+  const load_1m_delta =
+    haveBefore && haveAfter && ctx.load_before!.load_1m !== null && loadAfter!.load_1m !== null
+      ? loadAfter!.load_1m - ctx.load_before!.load_1m
+      : null;
+
   await writeLoadAttribution({
     dispatch_id: ctx.dispatch_id,
     execution_id: ctx.execution_id,
     goal_idx: ctx.goal_idx,
     template_id: ctx.template_id,
     duration_ms: durationMs,
-    cpu_usec_before,
-    cpu_usec_after,
-    cpu_usec_delta: cpu_usec_after - cpu_usec_before,
-    mem_bytes_before: mem_before,
-    mem_bytes_after: mem_after,
-    mem_bytes_delta:
-      mem_before !== null && mem_after !== null ? mem_after - mem_before : null,
-    load_1m_before: load_before,
-    load_1m_after: load_after,
-    load_1m_delta:
-      load_before !== null && load_after !== null ? load_after - load_before : null,
+    // Raw cpu_usec values stored as nullable — preserves provenance vs the
+    // delta computation. Use the delta for attribution; the raw values are
+    // for forensics / re-derivation if the delta logic changes.
+    cpu_usec_before: ctx.load_before?.cpu_usec ?? null,
+    cpu_usec_after: loadAfter?.cpu_usec ?? null,
+    cpu_usec_delta,
+    mem_bytes_before: ctx.load_before?.mem_bytes ?? null,
+    mem_bytes_after: loadAfter?.mem_bytes ?? null,
+    mem_bytes_delta,
+    load_1m_before: ctx.load_before?.load_1m ?? null,
+    load_1m_after: loadAfter?.load_1m ?? null,
+    load_1m_delta,
+    // Surface measurement quality so the aggregation resolver can filter:
+    // records with sample_quality=both_missing are unusable; before_only is
+    // a partial signal; both_present is the fully-attributable case.
+    sample_quality:
+      haveBefore && haveAfter ? "both_present" :
+      haveBefore ? "after_missing" :
+      haveAfter ? "before_missing" : "both_missing",
     goal_status: ctx.goal_status,
     dispatched_at: ctx.dispatched_at,
     completed_at: new Date().toISOString(),
