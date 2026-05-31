@@ -4,7 +4,7 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-31T07:25:00Z",
+      "last_updated": "2026-05-31T21:40:00Z",
       "last_investigation_acknowledged": "2026-05-30T09-38-00Z-investigation-084",
       "last_iter008_audit_acknowledged": "2026-05-30T08-00-00Z-investigation-075",
       "last_primary_audit_acknowledged": "2026-05-30T09-38-00Z-investigation-084",
@@ -12,13 +12,13 @@
       "last_dev_response_filed": "2026-05-28T01-30-00Z-dev-response-018",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
       "last_operator_probe_provenance": "unverified (F-131): file is not backed by an operator-signed git commit; substrate-process authorship cannot be ruled out. Acknowledged for substantive content; provenance protocol documented in validation/findings/README.md.",
-      "current_focus": "iter-085 (2026-05-31): substrate-self-detection feedback loop closure \u2014 phantom_trace_scan was emitting 48/50 false positives per scan window for meta-templates (validator-dispatch, slot-binding, create-shape-provider-goal) that legitimately have task_count=0. This clogged drain-pending, hung boredom goal[10] past systemd TimeoutStartSec=600s, and triggered SIGTERM kill+container restart. Added exclude_meta_templates parameter (default true) with META_TEMPLATE_PATTERNS check. Same exclusion pattern as trace_failure_pattern_report. 48 existing false-positive gaps closed via substrateGap_write status=closed. Container restarted (137 SIGKILL after systemd grace). 40 shapes/cases agree.",
+      "current_focus": "iter-086 (2026-05-31): substrate CPU/memory thrash diagnosed and fixed. phantom_trace_scan was running 1 LIST + 200 single-trace GETs per invocation (N+1 pattern for migration-118 confirmation), boredom firing every 5min generated ~2400 GETs/hr against SurrealDB UNION queries. Result: 1315% CPU, 93% memory, 15.8TB block I/O in 7hr. Fix: DEFAULT_LIMIT 200\u219225 + pre-confirmation meta-template skip + 30min confirmation cache. Steady-state ~8 GETs/scan vs ~200 = 25x reduction. Recovery: restarted activity-api dumped 28.5GiB held in query backlog (29.49\u21920.97 GiB). Also fixed: discovery vessel registry was empty due to stale auth cache (discovery restart cleared); 4 vessels back at 108 shapes. Deferred (instrumentation debt): activity-api LIST endpoint should compute task_count via UNION at LIST time so phantom_trace_scan confirmation becomes unnecessary.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
         "openspec/changes/2026-05-25-metabob-vessel-migration"
       ],
-      "substrate_state": "running \u2014 restarted after container exited 137 from boredom hang on phantom-success drain. phantom_trace_scan exclude_meta_templates=true default. consecutive=2 coverage windows. substrate-self-detection family: phantom_trace_scan + trace_failure_pattern_report + precondition_rejection_scan + dispatch_target_drift_scan all live with meta exclusion.",
+      "substrate_state": "recovered \u2014 CPU 508% (briefly post-boredom-restart), memory 6%, all 5 vessels healthy. phantom_trace_scan steady-state ~8 GETs/scan (was 200). Boredom 5min timer active. Discovery registry 4 vessels / 108 shapes.",
       "audit_acknowledgment_protocol": {
         "note": "Authorization verifiability resolved. Operator commit 30d63eed (by avigopal.aero@gmail.com) is in git history and explicitly names authorized actions. Audit agents can verify with: git log --author=avigopal --oneline.",
         "anchor_commit": "30d63eed \u2014 chore(operator): authorize S2 lift and boredom autonomy",
