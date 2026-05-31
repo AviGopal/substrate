@@ -8,10 +8,16 @@ Type=oneshot
 EnvironmentFile=/etc/substrate/env
 Environment=ACTIVITY_API_ENDPOINT=http://127.0.0.1:8080
 Environment=GOAL_HOST_VESSEL_ENDPOINT=http://127.0.0.1:8210
+Environment=DEV_VESSEL_ENDPOINT=http://127.0.0.1:8090
 Environment=BOREDOM_IDLE_WINDOW_SECONDS=300
 WorkingDirectory=/vessels/boredom-vessel
 ExecStart=/root/.bun/bin/bun /vessels/boredom-vessel/src/index.ts
-TimeoutStartSec=600
+# TimeoutStartSec=1200 (20 min). The internal poll budget is 270s, plus before-sample
+# (~3s), dispatch (~5s), after-sample with up to 3 retries (~3+0.5+1+1.5=6s), and
+# attribution write (~1s). Worst case is ~286s. 1200s gives substantial headroom for
+# slow dispatches without truncating mid-poll. Real prevention of mid-poll kills also
+# requires the timer not to race a still-running instance — see boredom-vessel.timer.
+TimeoutStartSec=1200
 StandardOutput=journal
 StandardError=journal
 

@@ -2,8 +2,18 @@
 Description=boredom-vessel autonomous trigger (every 5 minutes)
 
 [Timer]
-OnActiveSec=2min
-OnUnitActiveSec=5min
+# OnActiveSec was 2min; raised to 5min so the first post-activation fire doesn't
+# race a manual `systemctl start` or a prior tick that hasn't completed.
+# Without this, observed kill at 23:07:59 was the timer's first fire (timer
+# activated at 23:05, +2min = 23:07) terminating the manual fire from 23:06:26
+# that was still polling — mid-poll SIGTERM lost the attribution record.
+OnActiveSec=5min
+# OnUnitActiveSec=10min (was 5min). Single dispatches can run up to ~286s
+# (270s poll budget + samples + retries). At 5min cadence the timer could fire
+# while the prior dispatch is still polling, causing systemd to kill it for the
+# next start (Type=oneshot has no parallelism). 10min gives boredom room to
+# complete and write its attribution record before the next fire begins.
+OnUnitActiveSec=10min
 Unit=boredom-vessel.service
 
 [Install]
