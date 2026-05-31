@@ -19,9 +19,118 @@
 
 const ACTIVITY_API_ENDPOINT = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";
 const GOAL_HOST_ENDPOINT = process.env.GOAL_HOST_VESSEL_ENDPOINT ?? "http://127.0.0.1:8210";
+const DEV_VESSEL_ENDPOINT = process.env.DEV_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";
 const API_KEY = process.env.METABOB_API_KEY ?? "";
 const IDLE_WINDOW_SECONDS = parseInt(process.env.BOREDOM_IDLE_WINDOW_SECONDS ?? "300", 10);
 const GOAL_INDEX_FILE = process.env.BOREDOM_GOAL_INDEX_FILE ?? "/tmp/boredom-goal-index";
+
+interface LoadSample {
+  cpu_usec: number;
+  mem_bytes: number | null;
+  load_1m: number | null;
+  load_anomaly: boolean;
+  load_anomaly_severe: boolean;
+}
+
+/**
+ * Sample system_load_report via dev-vessel. Used before/after each goal
+ * dispatch to compute load deltas — substrate-citizen causal attribution
+ * per concept_QCBqcPjQbdF_ (delta_observation_causal_attribution).
+ *
+ * Returns null on failure (dev-vessel unreachable etc) — load attribution is
+ * best-effort, the goal dispatch happens either way.
+ */
+async function sampleLoad(): Promise<LoadSample | null> {
+  try {
+    const res = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `ApiKey ${API_KEY}` },
+      body: JSON.stringify({ impulse: { pointer: { type: "system_load_report" } } }),
+      signal: AbortSignal.timeout(3_000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as { body?: Record<string, unknown> };
+    const body = data?.body;
+    if (!body || typeof body !== "object") return null;
+    const cpuStat = (body as Record<string, unknown>)["cpu_stat_cumulative"] as
+      | { usage_usec?: number }
+      | undefined;
+    const memBytes = (body as Record<string, unknown>)["mem_cgroup_current_bytes"];
+    const load1m = (body as Record<string, unknown>)["load_avg_1m"];
+    return {
+      cpu_usec: typeof cpuStat?.usage_usec === "number" ? cpuStat.usage_usec : 0,
+      mem_bytes: typeof memBytes === "number" ? memBytes : null,
+      load_1m: typeof load1m === "number" ? load1m : null,
+      load_anomaly: (body as Record<string, unknown>)["load_anomaly"] === true,
+      load_anomaly_severe: (body as Record<string, unknown>)["load_anomaly_severe"] === true,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Write a loadAttribution record via dev-vessel. Best-effort. */
+async function writeLoadAttribution(record: Record<string, unknown>): Promise<void> {
+  try {
+    await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `ApiKey ${API_KEY}` },
+      body: JSON.stringify({
+        impulse: { pointer: { type: "loadAttribution_write", record } },
+      }),
+      signal: AbortSignal.timeout(3_000),
+    });
+  } catch {
+    // best-effort
+  }
+}
+
+/**
+ * Sample load AFTER the goal completes, compute deltas vs the before sample,
+ * and write the loadAttribution record. Called at every exit path that
+ * follows a successful dispatch — substrate-citizen causal attribution.
+ */
+interface AttributionContext {
+  dispatch_id: string;
+  execution_id?: string;
+  goal_idx: number;
+  template_id?: string;
+  dispatched_at: string;
+  dispatch_start_ms: number;
+  load_before: LoadSample | null;
+  goal_status?: string;
+}
+async function recordLoadAttribution(ctx: AttributionContext): Promise<void> {
+  const loadAfter = await sampleLoad();
+  const durationMs = Date.now() - ctx.dispatch_start_ms;
+  const cpu_usec_before = ctx.load_before?.cpu_usec ?? 0;
+  const cpu_usec_after = loadAfter?.cpu_usec ?? 0;
+  const mem_before = ctx.load_before?.mem_bytes ?? null;
+  const mem_after = loadAfter?.mem_bytes ?? null;
+  const load_before = ctx.load_before?.load_1m ?? null;
+  const load_after = loadAfter?.load_1m ?? null;
+  await writeLoadAttribution({
+    dispatch_id: ctx.dispatch_id,
+    execution_id: ctx.execution_id,
+    goal_idx: ctx.goal_idx,
+    template_id: ctx.template_id,
+    duration_ms: durationMs,
+    cpu_usec_before,
+    cpu_usec_after,
+    cpu_usec_delta: cpu_usec_after - cpu_usec_before,
+    mem_bytes_before: mem_before,
+    mem_bytes_after: mem_after,
+    mem_bytes_delta:
+      mem_before !== null && mem_after !== null ? mem_after - mem_before : null,
+    load_1m_before: load_before,
+    load_1m_after: load_after,
+    load_1m_delta:
+      load_before !== null && load_after !== null ? load_after - load_before : null,
+    goal_status: ctx.goal_status,
+    dispatched_at: ctx.dispatched_at,
+    completed_at: new Date().toISOString(),
+  });
+}
 
 // Rotating set of autonomous goals. Thompson Sampling will learn which
 // templates satisfy these goals and rank them over time.
@@ -316,6 +425,12 @@ async function main(): Promise<void> {
   }
   console.log(`[boredom-vessel] submitting goal[${goalIdx}]: "${goal}"${targetTemplateId ? ` (targetTemplateId=${targetTemplateId})` : ""}`);
 
+  // Sample system load BEFORE dispatch for causal-attribution delta.
+  // Best-effort: null if dev-vessel unreachable. The dispatch happens either way.
+  const loadBefore = await sampleLoad();
+  const dispatchedAt = new Date().toISOString();
+  const dispatchStartMs = Date.now();
+
   let res: Response;
   try {
     // Async dispatch: POST /run-goal returns 202+dispatchId immediately (no 300s block).
@@ -355,11 +470,21 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // If synchronous response (legacy / no dispatchId), log and exit.
+  // If synchronous response (legacy / no dispatchId), log + attribute load + exit.
   if (!dispatch.dispatchId) {
     console.log(
       `[boredom-vessel] dispatched — executionId=${dispatch.executionId ?? "?"} status=${dispatch.status ?? "?"}`,
     );
+    await recordLoadAttribution({
+      dispatch_id: dispatch.executionId ?? "sync-no-id",
+      execution_id: dispatch.executionId,
+      goal_idx: goalIdx,
+      template_id: targetTemplateId,
+      dispatched_at: dispatchedAt,
+      dispatch_start_ms: dispatchStartMs,
+      load_before: loadBefore,
+      goal_status: dispatch.status,
+    });
     process.exit(0);
   }
 
@@ -384,6 +509,16 @@ async function main(): Promise<void> {
       console.log(
         `[boredom-vessel] dispatched — executionId=${poll.executionId ?? "?"} status=${poll.status}`,
       );
+      await recordLoadAttribution({
+        dispatch_id: dispatchId,
+        execution_id: poll.executionId,
+        goal_idx: goalIdx,
+        template_id: targetTemplateId,
+        dispatched_at: dispatchedAt,
+        dispatch_start_ms: dispatchStartMs,
+        load_before: loadBefore,
+        goal_status: poll.status,
+      });
       // Always exit 0 — goal failure is a normal outcome (β+=1 in Thompson posteriors).
       // Exiting 1 marks the systemd unit as failed and disrupts the boredom timer.
       process.exit(0);
@@ -391,6 +526,15 @@ async function main(): Promise<void> {
   }
   // Systemd will kill us at TimeoutStartSec=600; goal continues async.
   console.log(`[boredom-vessel] poll budget exhausted — goal continuing async, dispatchId=${dispatchId}`);
+  await recordLoadAttribution({
+    dispatch_id: dispatchId,
+    goal_idx: goalIdx,
+    template_id: targetTemplateId,
+    dispatched_at: dispatchedAt,
+    dispatch_start_ms: dispatchStartMs,
+    load_before: loadBefore,
+    goal_status: "poll_budget_exhausted",
+  });
   process.exit(0);
 }
 
