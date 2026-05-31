@@ -4,7 +4,7 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-31T03:20:00Z",
+      "last_updated": "2026-05-31T05:10:00Z",
       "last_investigation_acknowledged": "2026-05-30T09-38-00Z-investigation-084",
       "last_iter008_audit_acknowledged": "2026-05-30T08-00-00Z-investigation-075",
       "last_primary_audit_acknowledged": "2026-05-30T09-38-00Z-investigation-084",
@@ -12,7 +12,7 @@
       "last_dev_response_filed": "2026-05-28T01-30-00Z-dev-response-018",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
       "last_operator_probe_provenance": "unverified (F-131): file is not backed by an operator-signed git commit; substrate-process authorship cannot be ruled out. Acknowledged for substantive content; provenance protocol documented in validation/findings/README.md.",
-      "current_focus": "iter-081 (2026-05-31): picker bug fixed \u2014 pickTopProposedGapClosingTemplate was reading top-level thompson_alpha=1 (static prior) instead of metrics.thompson_alpha (learned posterior). fp-11 (a=1,b=9) was selected every time instead of fm-17 (a=3,b=1). Convergent validity checks live: engine degraded-impulse + fs_write artifact; dev-vessel convergent_validity_check with concept-db co-occurrence (strict=auto, threshold=10). draft-gap-closing-activity: 9 tasks with verify_outputs. 2/3 consecutive coverage windows. PRIOR: iter-080 audit-ingestion bridge + drain-pending scenario synthesis + boredom exit-0 fix.",
+      "current_focus": "iter-082 (2026-05-31): concept mint placeholder fix \u2014 extract_learning_{shape,summary,content}_value are not valid engine keys; changed to _text suffix (engine stores json_path_extract outputs as task_id_text/task_id_valueJson). Previous successful draft-gap-closing execution (exec_ifqqwmwf) silently failed to mint concept despite success=True. Fixed and re-seeded. Also: boredom picker bug fixed (reads metrics.alpha not top-level prior); verify_outputs with strict=auto live; gap_closing_semantic_failure concept manually minted. 28 new shapes in current window[0]. consecutive=1/3 (older windows rolled out).",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
