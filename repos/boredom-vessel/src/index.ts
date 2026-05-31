@@ -133,7 +133,10 @@ interface TemplateWithAlpha {
   id?: string;
   proposed?: boolean;
   tasks?: Array<{ resolver?: string }>;
+  // top-level thompson_alpha is the static prior (always 1); the learned
+  // posterior lives in metrics.thompson_alpha — always prefer metrics.
   thompson_alpha?: number;
+  metrics?: { thompson_alpha?: number; thompson_beta?: number };
 }
 
 async function pickTopProposedGapClosingTemplate(): Promise<string | null> {
@@ -157,8 +160,9 @@ async function pickTopProposedGapClosingTemplate(): Promise<string | null> {
     // over the 3-sample threshold fastest. Consistent selection means 3 focused runs
     // promote one template rather than distributing 3 runs across different templates.
     const top = candidates.reduce((best, cur) => {
-      const bestAlpha = best.thompson_alpha ?? 1;
-      const curAlpha = cur.thompson_alpha ?? 1;
+      // metrics.thompson_alpha is the learned posterior; top-level is always 1 (prior).
+      const bestAlpha = best.metrics?.thompson_alpha ?? best.thompson_alpha ?? 1;
+      const curAlpha = cur.metrics?.thompson_alpha ?? cur.thompson_alpha ?? 1;
       return curAlpha > bestAlpha ? cur : best;
     });
     return top.id ? top.id.replace(/^activity:⟨(.+)⟩$/, "$1") : null;
