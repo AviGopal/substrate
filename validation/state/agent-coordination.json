@@ -4,7 +4,7 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-31T22:55:00Z",
+      "last_updated": "2026-05-31T23:10:00Z",
       "last_investigation_acknowledged": "2026-05-30T09-38-00Z-investigation-084",
       "last_iter008_audit_acknowledged": "2026-05-30T08-00-00Z-investigation-075",
       "last_primary_audit_acknowledged": "2026-05-30T09-38-00Z-investigation-084",
@@ -12,13 +12,13 @@
       "last_dev_response_filed": "2026-05-28T01-30-00Z-dev-response-018",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
       "last_operator_probe_provenance": "unverified (F-131): file is not backed by an operator-signed git commit; substrate-process authorship cannot be ruled out. Acknowledged for substantive content; provenance protocol documented in validation/findings/README.md.",
-      "current_focus": "iter-089 complete: end-to-end load attribution VERIFIED. First clean record: goal=2 close-health-gap, sample_quality=both_present, cpu_\u0394=489.66s, mem_\u0394=16440MB, dur=304s, status=poll_budget_exhausted. Single dispatch consumed 1.6 cores avg + 16GB. This template would be flagged as load-spiking once \u22653 records accumulate (default cpu_threshold=5s; this is 98\u00d7 over). Substrate-self-detection meta-pattern complete: system_load_report + loadAttribution per-dispatch + load_attribution_report aggregation. Substrate now has the data to gate its own boredom dispatch on observed load.",
+      "current_focus": "iter-090 SHIPPED: load-aware boredom gating verified on first dispatch. AUTONOMOUS_GOAL_COSTS classifies 12 goals (cheap/moderate/expensive). maxCostForLoad reads system_load_report \u2192 triage tier. selectGoalForLoad walks forward from round-robin pointer past unacceptable goals. Verified: load_anomaly_severe=true, round-robin idx=3, gating skipped 9 goals to land on goal[0] coverage-tick (cheap). The substrate now decides what to do based on its own observation surface \u2014 completes the substrate-self-detection loop for resource pathologies. concept_uNEIKtMneq5c load_aware_boredom_triage_policy implemented.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
         "openspec/changes/2026-05-25-metabob-vessel-migration"
       ],
-      "substrate_state": "load attribution end-to-end verified. boredom 5min timer to be restarted when operator judges substrate ready. close-health-gap currently consuming ~1.6 cores per dispatch \u2014 substrate now sees its own most-expensive activity directly.",
+      "substrate_state": "load-aware gating live. boredom now: sample \u2192 triage \u2192 select within budget \u2192 dispatch \u2192 sample after \u2192 write attribution. Full closed loop. Operator no longer needs to stop boredom by hand when load spikes \u2014 substrate refuses expensive work autonomously.",
       "audit_acknowledgment_protocol": {
         "note": "Authorization verifiability resolved. Operator commit 30d63eed (by avigopal.aero@gmail.com) is in git history and explicitly names authorized actions. Audit agents can verify with: git log --author=avigopal --oneline.",
         "anchor_commit": "30d63eed \u2014 chore(operator): authorize S2 lift and boredom autonomy",
