@@ -4,7 +4,7 @@
   "agents": {
     "dev": {
       "role": "development-operator",
-      "last_updated": "2026-05-31T21:40:00Z",
+      "last_updated": "2026-05-31T22:10:00Z",
       "last_investigation_acknowledged": "2026-05-30T09-38-00Z-investigation-084",
       "last_iter008_audit_acknowledged": "2026-05-30T08-00-00Z-investigation-075",
       "last_primary_audit_acknowledged": "2026-05-30T09-38-00Z-investigation-084",
@@ -12,13 +12,13 @@
       "last_dev_response_filed": "2026-05-28T01-30-00Z-dev-response-018",
       "last_operator_probe_acknowledged": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
       "last_operator_probe_provenance": "unverified (F-131): file is not backed by an operator-signed git commit; substrate-process authorship cannot be ruled out. Acknowledged for substantive content; provenance protocol documented in validation/findings/README.md.",
-      "current_focus": "iter-086 (2026-05-31): substrate CPU/memory thrash diagnosed and fixed. phantom_trace_scan was running 1 LIST + 200 single-trace GETs per invocation (N+1 pattern for migration-118 confirmation), boredom firing every 5min generated ~2400 GETs/hr against SurrealDB UNION queries. Result: 1315% CPU, 93% memory, 15.8TB block I/O in 7hr. Fix: DEFAULT_LIMIT 200\u219225 + pre-confirmation meta-template skip + 30min confirmation cache. Steady-state ~8 GETs/scan vs ~200 = 25x reduction. Recovery: restarted activity-api dumped 28.5GiB held in query backlog (29.49\u21920.97 GiB). Also fixed: discovery vessel registry was empty due to stale auth cache (discovery restart cleared); 4 vessels back at 108 shapes. Deferred (instrumentation debt): activity-api LIST endpoint should compute task_count via UNION at LIST time so phantom_trace_scan confirmation becomes unnecessary.",
+      "current_focus": "iter-088 (2026-05-31): substrate-citizen load attribution shipped. 4 new shapes (44/44 lint): system_load_report (reads /proc + cgroup, anomaly flags), loadAttribution + loadAttribution_write (JSONL storage), load_attribution_report (per-template spike aggregation). boredom-vessel now samples system_load before/after every dispatch and writes a loadAttribution record. End-to-end verified: triggered boredom run wrote record for goal[11] ingest-audit-findings (status=poll_budget_exhausted, duration=361s). Framework concepts minted to canary concept-db (concept_uNEIKtMneq5c load_aware_boredom_triage_policy, concept_QCBqcPjQbdF_ delta_observation_causal_attribution, concept_GQOxmoGZ94z5 detection_primitive_self_meta_check, concept_U1GbuEbgtcM7 substrate_self_detection_recursive). Follow-up: cgroup path reads dev-vessel-only stats not container-wide \u2014 measurement quality fix, framework plumbing correct.",
       "active_specs": [
         "openspec/changes/2026-04-26-impulse-activity-loop",
         "openspec/changes/2026-05-23-substrate-closure-properties",
         "openspec/changes/2026-05-25-metabob-vessel-migration"
       ],
-      "substrate_state": "recovered \u2014 CPU 508% (briefly post-boredom-restart), memory 6%, all 5 vessels healthy. phantom_trace_scan steady-state ~8 GETs/scan (was 200). Boredom 5min timer active. Discovery registry 4 vessels / 108 shapes.",
+      "substrate_state": "recovered + substrate-citizen attribution live. CPU 5%, memory 776MB (2%). boredom 5min timer active. 44 shapes/cases agree. Load samples landing in /workspace/load-attribution/records.jsonl. concept-db: framework concepts wired with edges.",
       "audit_acknowledgment_protocol": {
         "note": "Authorization verifiability resolved. Operator commit 30d63eed (by avigopal.aero@gmail.com) is in git history and explicitly names authorized actions. Audit agents can verify with: git log --author=avigopal --oneline.",
         "anchor_commit": "30d63eed \u2014 chore(operator): authorize S2 lift and boredom autonomy",
