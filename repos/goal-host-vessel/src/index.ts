@@ -1153,6 +1153,43 @@ async function handleRunGoal(req: Request): Promise<Response> {
           tags: ["substrate.auto.draft", `auto_draft_for_dispatch:${dispatchId}`],
         });
         console.log(`[goal-host-vessel] auto-draft: drafter completed for scenario ${scenarioId}`);
+        // Find the just-authored template + promote it + capture its id so the
+        // ORIGINAL goal runs against the substrate's freshly-authored capability
+        // instead of falling back through recommend to a generic attractor.
+        // Mitigation for the mode-collapse identified by the consistency batch
+        // (validation/findings/substrate-consistency/2026-06-01T22-19-05Z-…).
+        try {
+          // FTS index lags template-create. List recent templates and
+          // filter for the scenario_id substring in id — substrate-authored
+          // templates have the pattern `gap-closing:<scenario_id>-<timestamp>`.
+          const listRes = await fetch(
+            `${ACTIVITY_API_ENDPOINT}/v2/activities/templates?limit=200`,
+            { headers: { Authorization: `ApiKey ${process.env.METABOB_API_KEY ?? ""}` } },
+          );
+          if (listRes.ok) {
+            const list = await listRes.json() as { templates?: Array<{ id: string }> };
+            const authored = (list.templates ?? []).find((t) =>
+              typeof t.id === "string" && t.id.includes(scenarioId)
+            );
+            if (authored?.id) {
+              authoredTemplateId = authored.id;
+              console.log(`[goal-host-vessel] auto-draft: authored ${authored.id}; promoting + overriding targetTemplateId`);
+              await fetch(
+                `${ACTIVITY_API_ENDPOINT}/v2/activities/templates/${encodeURIComponent(authored.id)}/promote`,
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `ApiKey ${process.env.METABOB_API_KEY ?? ""}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: "{}",
+                },
+              );
+            }
+          }
+        } catch (promoteErr) {
+          console.warn(`[goal-host-vessel] auto-draft: promote step skipped:`, promoteErr instanceof Error ? promoteErr.message : promoteErr);
+        }
       } catch (drafterErr) {
         console.error(`[goal-host-vessel] auto-draft: drafter error:`, drafterErr);
       }
@@ -1160,13 +1197,20 @@ async function handleRunGoal(req: Request): Promise<Response> {
       console.warn(`[goal-host-vessel] auto-draft skipped:`, recErr instanceof Error ? recErr.message : recErr);
     }
   };
+  // Captured from autoDraft so main runGoal can use the freshly-authored
+  // template instead of an unsuitable attractor.
+  let authoredTemplateId: string | undefined;
 
   (async () => {
     try {
       await autoDraft();
-      const result = await host.runGoal(goal ?? `execute template ${targetTemplateId}`, {
+      const effectiveTargetId = targetTemplateId ?? authoredTemplateId;
+      if (authoredTemplateId && !targetTemplateId) {
+        console.log(`[goal-host-vessel] /run-goal: using auto-authored template ${authoredTemplateId} for goal`);
+      }
+      const result = await host.runGoal(goal ?? `execute template ${effectiveTargetId}`, {
         variables,
-        targetTemplateId,
+        targetTemplateId: effectiveTargetId,
         tags,
         parentExecutionId,
         compositionChain,
