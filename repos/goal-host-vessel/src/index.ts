@@ -197,6 +197,89 @@ process.on("SIGINT", () => { void flushMemDump("SIGINT"); });
 // (deferred to iter 7 once substrate is stable enough to probe).
 //
 // .unref() so this timer doesn't prevent process exit.
+// ─────────────────────────────────────────────────────────────────────────────
+// Iteration 7 instrumentation — per-fetch RSS delta probe.
+//
+// If iter-6's Bun.gc(true) workaround doesn't bound RSS, this gives us the
+// exact leaking fetch site. Wraps globalThis.fetch with a labeled probe that
+// records pre/post process.memoryUsage().rss per call. Aggregates by label
+// over a 60s window, dumped to /workspace/.fetch-trace.json on every gc tick.
+//
+// The label is passed via an `x-fetch-label` header that THIS wrapper strips
+// before calling the real fetch. Existing fetch sites unchanged; new sites
+// can pass the label to attribute their leak. Sites that don't pass a label
+// get attributed to their request URL host.
+//
+// Gated on env GOAL_HOST_FETCH_PROBE=1 so it's opt-in (the probe itself adds
+// overhead). Default OFF; enable when iter-6's GC workaround fails the
+// 30-min observation.
+const FETCH_PROBE_ENABLED = process.env.GOAL_HOST_FETCH_PROBE === "1";
+interface FetchProbeStats {
+  count: number;
+  total_rss_delta: number;
+  max_rss_delta: number;
+  total_duration_ms: number;
+}
+const fetchProbeStats = new Map<string, FetchProbeStats>();
+if (FETCH_PROBE_ENABLED) {
+  const realFetch = globalThis.fetch.bind(globalThis);
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    let label: string | undefined;
+    let cleanInit = init;
+    if (init?.headers) {
+      const headers = new Headers(init.headers);
+      const labelValue = headers.get("x-fetch-label");
+      if (labelValue) {
+        label = labelValue;
+        headers.delete("x-fetch-label");
+        cleanInit = { ...init, headers };
+      }
+    }
+    if (!label) {
+      try {
+        const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+        label = `auto:${new URL(url).host}`;
+      } catch {
+        label = "auto:unknown";
+      }
+    }
+    const rssBefore = process.memoryUsage().rss;
+    const t0 = performance.now();
+    try {
+      return await realFetch(input, cleanInit);
+    } finally {
+      const rssAfter = process.memoryUsage().rss;
+      const duration = performance.now() - t0;
+      const delta = rssAfter - rssBefore;
+      const cur = fetchProbeStats.get(label) ?? {
+        count: 0, total_rss_delta: 0, max_rss_delta: 0, total_duration_ms: 0,
+      };
+      cur.count += 1;
+      cur.total_rss_delta += delta;
+      cur.max_rss_delta = Math.max(cur.max_rss_delta, delta);
+      cur.total_duration_ms += duration;
+      fetchProbeStats.set(label, cur);
+    }
+  }) as typeof globalThis.fetch;
+  console.log("[fetch-probe] instrumented globalThis.fetch (label via x-fetch-label header)");
+}
+
+function flushFetchProbeStats(): void {
+  if (!FETCH_PROBE_ENABLED || fetchProbeStats.size === 0) return;
+  const entries = Array.from(fetchProbeStats.entries())
+    .map(([label, s]) => ({
+      label,
+      count: s.count,
+      total_rss_delta_mb: +(s.total_rss_delta / 1024 / 1024).toFixed(2),
+      max_rss_delta_mb: +(s.max_rss_delta / 1024 / 1024).toFixed(2),
+      mean_rss_delta_kb: +(s.total_rss_delta / s.count / 1024).toFixed(1),
+      mean_duration_ms: +(s.total_duration_ms / s.count).toFixed(1),
+    }))
+    .sort((a, b) => b.total_rss_delta_mb - a.total_rss_delta_mb);
+  console.log(`[fetch-probe] ${JSON.stringify(entries.slice(0, 10))}`);
+  fetchProbeStats.clear();
+}
+
 const GC_INTERVAL_MS = parseInt(process.env.GOAL_HOST_GC_INTERVAL_MS ?? "30000", 10);
 interface BunGlobal { Bun?: { gc?: (force: boolean) => number } }
 const bunGlobal = globalThis as unknown as BunGlobal;
@@ -211,6 +294,7 @@ setInterval(() => {
       console.warn(`[gc-tick] Bun.gc failed: ${(err as Error).message}`);
     }
   }
+  flushFetchProbeStats();
 }, GC_INTERVAL_MS).unref();
 
 class BoundedBusSink implements EventSink {
