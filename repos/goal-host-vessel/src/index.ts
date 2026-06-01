@@ -168,6 +168,51 @@ setInterval(() => {
 process.on("SIGTERM", () => { void flushMemDump("SIGTERM"); });
 process.on("SIGINT", () => { void flushMemDump("SIGINT"); });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Iteration 6 of the OOM hunt — periodic Bun.gc(true) workaround.
+//
+// Per iteration-5 findings (see concept_s9ye5GKLw2L8 / concept_T-CTTOEl97IM):
+// goal-host RSS grew 16.6 → 18.4 GB in 60s of IDLE time (boredom timer
+// inactive, no inbound requests). Map count slightly DECREASED while RSS
+// increased. This signature is heap-arena retention by Bun's native allocator
+// — memory is freed at the JS level but not released back to the OS until a
+// full GC + arena trim runs.
+//
+// process.memoryUsage().heapUsed stayed at ~2 MB throughout (V8/JSC's
+// accounting doesn't see arena retention). The cause survived all of:
+//   - BoundedBusSink bus-path backpressure (iter 1)
+//   - WS message buffer audit (iter 2)
+//   - Response.body drain across 11 fetch sites (iter 3)
+//   - AbortSignal.timeout → manual AbortController + clearTimeout (iter 4)
+//   - BunProcessAdapter pipe FD investigation (iter 5 — refuted by location)
+//
+// Pragmatic workaround: force a full GC every 30s. Bun.gc(true) performs
+// generational + major mark-sweep AND releases freed allocator pages back to
+// the OS. If the leak is heap-arena retention, this bounds RSS.
+//
+// This is a workaround, not a root-cause fix. The underlying issue is in
+// Bun 1.3.14's native allocator behavior under high-frequency idle-time
+// fetch/WS load. A proper fix requires either upstream Bun work OR
+// identifying the specific allocation site through per-fetch instrumentation
+// (deferred to iter 7 once substrate is stable enough to probe).
+//
+// .unref() so this timer doesn't prevent process exit.
+const GC_INTERVAL_MS = parseInt(process.env.GOAL_HOST_GC_INTERVAL_MS ?? "30000", 10);
+interface BunGlobal { Bun?: { gc?: (force: boolean) => number } }
+const bunGlobal = globalThis as unknown as BunGlobal;
+setInterval(() => {
+  const gc = bunGlobal.Bun?.gc;
+  if (typeof gc === "function") {
+    try {
+      const freed = gc(true);
+      const rssMB = (process.memoryUsage().rss / 1024 / 1024).toFixed(1);
+      console.log(`[gc-tick] freed=${freed}B rss_after=${rssMB}MB`);
+    } catch (err) {
+      console.warn(`[gc-tick] Bun.gc failed: ${(err as Error).message}`);
+    }
+  }
+}, GC_INTERVAL_MS).unref();
+
 class BoundedBusSink implements EventSink {
   private readonly inner: BusForwardingEventSink;
   private readonly queue: Array<{ event: unknown; bytes: number }> = [];
