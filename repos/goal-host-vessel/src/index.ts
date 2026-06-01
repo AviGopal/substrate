@@ -1088,6 +1088,19 @@ async function handleRunGoal(req: Request): Promise<Response> {
       if (top && topScore >= threshold) return;
       console.log(`[goal-host-vessel] auto-draft trigger: goal="${(goal as string).slice(0, 80)}" top_score=${topScore} < ${threshold}`);
       const scenarioId = `auto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      // Drafter tasks 6/8 (extract_required_shapes + register_variant) require
+      // expected_emergence.activity_signature.output_shapes_must_include to be
+      // a non-empty array. Operator-curated fp-* scenarios always set this;
+      // auto-synthesized scenarios previously omitted the field and json_path_extract
+      // returned structuredError, halting the drafter chain after task 5. Synthesize
+      // a placeholder shape derived from the scenario id so the chain advances
+      // through proposal write + variant registration. The registered variant's
+      // outputShapes is set by output_shapes_override using this value.
+      const shortId = scenarioId.replace(/[^A-Za-z0-9]/g, "").slice(-8);
+      const outputShapesMustInclude =
+        Array.isArray(expectedOutputShapes) && expectedOutputShapes.length > 0
+          ? expectedOutputShapes
+          : [`autoDraftedOutput_${shortId}`];
       const scenario = {
         id: scenarioId,
         mode_class: "auto",
@@ -1100,6 +1113,15 @@ async function handleRunGoal(req: Request): Promise<Response> {
         expected_output_shapes: expectedOutputShapes ?? [],
         cited_concepts: ["concept_9ldsmRgqSTd5"],
         auto_draft_for_dispatch: dispatchId,
+        expected_emergence: {
+          class: "new",
+          activity_signature: {
+            input_shapes_intersect: [],
+            output_shapes_must_include: outputShapesMustInclude,
+            tags_pattern: "substrate.auto.draft.*",
+          },
+          minimum_thompson_alpha: 1,
+        },
       };
       const fsWriteBody = JSON.stringify({
         impulse: {
@@ -1122,7 +1144,12 @@ async function handleRunGoal(req: Request): Promise<Response> {
       try {
         await host.runGoal(`auto-draft for gap: ${(goal as string).slice(0, 60)}`, {
           targetTemplateId: "activity:⟨development-vessel:draft-gap-closing-activity⟩",
-          variables: { scenario_id: scenarioId },
+          variables: {
+            scenario_id: scenarioId,
+            report_path: `/workspace/validation/failure-modes/scenarios/${scenarioId}.json`,
+            proposals_dir: "/workspace/proposals",
+            scenarios_dir: "/workspace/validation/failure-modes/scenarios",
+          },
           tags: ["substrate.auto.draft", `auto_draft_for_dispatch:${dispatchId}`],
         });
         console.log(`[goal-host-vessel] auto-draft: drafter completed for scenario ${scenarioId}`);
