@@ -46,6 +46,8 @@ The IAL terminates at Phase 27 by declaration (`tasks.md:1664-1675`). Phase 27's
 | [`2026-05-31-display-perception-vessel`](../2026-05-31-display-perception-vessel/) | Adds **read-only visual perception** to the substrate via four shape contracts (`displayCapture`, `displayObjectDetection`, `displayContextAggregate`, `displayContextSummary`), OmniParser V2 detection (purpose-built for GUI screens, vs. COCO-trained YOLO rejected), peer-vessel architecture on operator's machine (in-container + host-display-shared options rejected on portability + H3 grounds), coarse projection signatures (no raw OCR in hash), and two-tier concept-bridge denylist. Substrate is currently blind to operator display state; this opens the channel. | Post-lift. Hard prereqs: `2026-05-31-display-signature-partitioning` Phase B, `2026-05-31-display-failure-mode-extensions` Phase B+C, `2026-05-31-display-vessel-host-peer` Phase B. Phase E enforces a ≥2-week perception-only soak that gates the action sibling. |
 | [`2026-05-31-display-control-extension`](../2026-05-31-display-control-extension/) | Adds **action primitives** (mouse, keyboard, window control) on top of the perception channel via Anthropic `computer_20251124` wire format (vendored at `repos/vessels/ai/packages/anthropic/src/tool/`). `reversibility_class ∈ {reversible, soft_irreversible, hard_irreversible}` is the load-bearing contract; the class is a **signature partition dimension** (not a β scalar). Continuous-consent attestations with second-scale deadlines. Operator interrupt hotkey emits `actionAborted` → `consent_revoked` Thompson update + `(template, signature)` veto. Tiered verifier success criteria. Hard n=0 gate. **Autonomy gradient per action-class is the S2→S3 push-away credit mechanism** — `reversible × small_region × focused_window` graduates first by demonstrating ≥3 `interventionRefused` impulses; `hard_irreversible` never graduates (operator role structurally permanent for those classes). | Post-lift. Phase A is a hard soak gate — implementation cannot begin until perception spec Phase E.2 returns `ready: true` for ≥14 days. Then Phase B onward. Phase F is direct S2→S3 push-away credit contribution per IAL §27.S.6. |
 | [`2026-05-31-display-vessel-host-peer`](../2026-05-31-display-vessel-host-peer/) | The peer-vessel **implementation** that hosts both perception and action: `bun build --compile` single-file binaries per platform (Linux x64/arm64, macOS x64/arm64, Windows x64), ed25519 keypair on first install (H2-ready: `vessel_id = base32(multihash(SHA-256, pubkey))`), `curl \| sh` install → systemd-user / launchd / Windows-service unit, discovery-vessel registration via existing `RegisterVesselRequest` (no discovery change required), per-platform display API via child-process shellouts (`scrot`+`xdotool`, `grim`+`ydotool`, `screencapture`+`cliclick`, PowerShell+`nircmd`), OmniParser V2 weights bundled inside the binary. Network topology v1 = local-only (127.0.0.1); reverse-tunnel + Tailscale paths in Phase G / docs. | Post-lift. Phase A is independent (skeleton + identity). Companion to `2026-05-31-display-perception-vessel` (hosts its shape contracts) and `2026-05-31-display-control-extension` (Phase B+ hosts the action resolver). Federation across multiple host-peers per operator rides `2026-05-23-vessel-federation/`. |
+| [`2026-05-31-substrate-self-audit-meta`](../2026-05-31-substrate-self-audit-meta/) | Lifecycle-driven fan-out meta-template for the substrate-self-detection family. The four existing canonical detectors (`detect-phantom-success-trace`, `detect-precondition-rejection`, `audit-dispatch-target-drift`, `detect-service-oom-cascade`) are catalogue citizens but loop second-class — they fire only when Thompson boredom rotation samples them. This proposal subscribes the family to `lifecycle:execution:succeeded` (top-level only, debounced per `template_id` within a 1-minute window) and `activityRegistryChange`, fanning out all family members in parallel via `resolveDispatch`. The meta-template itself follows the immunity pattern (`inputShapes: []`, `variables: []`). Rate-limited to ≤1 audit / 2 min. Phase E.1 emits `substrate_audit_pressure` impulses that the load-aware gate from super-repo `04441ca9` reads as additional refusal evidence. | Post-lift. Independent — every dependency (family members, lifecycle observer, `resolveDispatch`) already exists. Companion to `2026-05-31-detect-resource-budget-violation/` (joins the fan-out). Phase E contributes to the S2→S3 sustained-push-away window per IAL §27.S.6. |
+| [`2026-05-31-detect-resource-budget-violation`](../2026-05-31-detect-resource-budget-violation/) | Graduates the load-attribution stack (super-repo `d4dc7a25` + `3e1400db` + `1a57745b` + `41835bde` + `04441ca9`) into the substrate-self-detection family. New detector seed template following the immunity pattern reads recent `load_attribution_report` impulses, identifies per-template p95 violations across (cpu_ms, wall_ms, rss_delta_mb), and emits `substrateGap` impulses with structured evidence. Per-template budget overrides via discovery-vessel `resolver_contract.resource_budget`. Phase C couples with the existing load-aware gate so refusals cite the family-emitted gap (citation chain `refusal → gap → attribution_report`) rather than the raw attribution surface. Phase D wires each refusal-with-cited-violation into IAL §27.S.6 sustained-push-away accounting — this is the substrate's second concrete refusal class for S3 push-away, complementing `2026-05-30-vessel-binary-redeploy-on-source-drift/` E.2. | Post-lift. Phase A independent — load stack already shipped. Phase C requires coordination with boredom-vessel's load-aware gate. Companion to `2026-05-31-substrate-self-audit-meta/`. Complements `2026-05-31-display-failure-mode-extensions/` `budget_exhausted.budget_type` (this proposal = detector side; that one = failure-mode side). |
 
 Distinct from the IAL's existing federation thread (`design.md §Federation as Scope Delegation`), which is account-level RBAC scope delegation via API keys. The two are orthogonal: account-scope federation decides *whether* a caller may invoke a remote vessel; vessel-federation (discovery-vessel peering) decides *how* the caller learns the remote vessel exists.
 
@@ -2063,6 +2065,16 @@ typology — its loop is not constrained by the typology.
 - Federation peer-trust adjustment (substrate isolates compromised
   peers without operator input — not yet specced; expected
   substrate-authored).
+- **Fleet federation umbrella** (`2026-05-31-substrate-fleet-federation`):
+  binds the items above into an adversary-model progression. (a)
+  trusted-peer audit (operator-controlled fleet, scoped probes,
+  needs H1+H2+H3+H5); (b) semi-trusted federation (mutually
+  untrusted parties, needs H4 + signed-trace revocation); (c) open
+  federation (anyone may peer, gated on §27.S.6 push-away measure,
+  no concrete date). Phase 1 of that change is substrate-as-image
+  (no security primitives required); Phases 2–5 promote H1–H5 from
+  forward-looking to critical-path per phase. (c) is the
+  inter-substrate operationalization of S3 — see §27.S.6 below.
 
 **Self-recovery under attack** — the substrate authors:
 - Adversarial-condition detection on its own traces.
@@ -2162,6 +2174,25 @@ The operator's concrete job under both framings:
 The terminal observation: across diverse intervention attempts over a long window, every reasonable intervention is either refused with sound rationale or absorbed without harm. When this is true, the operator's role has become structurally non-load-bearing. That is S3.
 
 S3 is not adversarial relationship — the substrate continues to accept genuinely useful operator input (new shapes to learn, new anchor sets, configuration changes). It refuses contradictory input — actions that would compromise self-stability. The push-away is from operator necessity, not from operator presence.
+
+**Open federation as the operationalization of S3.**
+`2026-05-31-substrate-fleet-federation` partitions inter-substrate
+trust into three adversary models: (a) operator-controlled trusted
+peers, (b) semi-trusted federation across mutually untrusted
+parties, and (c) open federation in which any operator may stand up
+a substrate and peer with any other. The (a)→(b) gate is technical
+(H4 ratification, signed-trace revocation). The (b)→(c) gate is
+**this section's push-away rubric, applied at fleet scope**: the
+substrate may admit untrusted peers only once it has demonstrated
+sustained `interventionRefused` with sound cited rationale across
+diverse hostile-peer attack families. Phase 5 of that change
+(adversarial auditor substrate) is the controlled mechanism by
+which the operator manufactures adversarial exposure for the
+push-away signal; opening to genuinely untrusted peers extends the
+exposure to the wider environment. Open federation is therefore not
+a parallel feature — it is the structural mechanism by which S3
+generalizes from intra-substrate self-stability to inter-substrate
+self-stability. Per §27.S.6, no concrete date.
 
 ### Why this Phase is the IAL's terminal phase
 
