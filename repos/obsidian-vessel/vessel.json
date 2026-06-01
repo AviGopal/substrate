@@ -11,7 +11,10 @@
     "obsidian:daily_note",
     "obsidian:graph_query",
     "obsidian:concept_view",
-    "obsidian:concept_writeback"
+    "obsidian:concept_writeback",
+    "obsidian:event_observed",
+    "obsidian:interaction_episode",
+    "obsidian:action_effect_model"
   ],
   "capabilities": [
     {
@@ -25,7 +28,10 @@
         "obsidian:daily_note",
         "obsidian:graph_query",
         "obsidian:concept_view",
-        "obsidian:concept_writeback"
+        "obsidian:concept_writeback",
+        "obsidian:event_observed",
+        "obsidian:interaction_episode",
+        "obsidian:action_effect_model"
       ]
     },
     {

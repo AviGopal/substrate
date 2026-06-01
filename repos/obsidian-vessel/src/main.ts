@@ -43,8 +43,18 @@ import './resolvers/daily-note-resolver';
 import './resolvers/graph-resolver';
 import './resolvers/concept-view-resolver';
 import './resolvers/concept-writeback-resolver';
+import './resolvers/observe-obsidian-events';
+import './resolvers/group-interaction-episodes';
+import './resolvers/probe-obsidian-action-effects';
 import { setConceptDbResolverContext } from './resolvers/concept-view-resolver';
 import { setConceptWritebackResolverContext } from './resolvers/concept-writeback-resolver';
+import {
+  setObserveObsidianEventsContext,
+  startObserveObsidianEvents,
+  stopObserveObsidianEvents,
+} from './resolvers/observe-obsidian-events';
+import { setGroupInteractionEpisodesContext } from './resolvers/group-interaction-episodes';
+import { ObsidianEventLog } from './resolvers/observation-types';
 
 /**
  * Current status of the vessel plugin
@@ -99,6 +109,12 @@ export default class MetabobVesselPlugin extends Plugin {
   conceptSync: ConceptSyncService | null = null;
   conceptWriteback: ConceptWritebackService | null = null;
   conceptBusListener: ConceptBusListener | null = null;
+
+  // Phase 1 observation layer — shared event log + workspace observer.
+  // The log is bounded (cap = 10_000) and survives plugin lifetime so
+  // both the windowing and probe resolvers see the same events.
+  obsidianEventLog: ObsidianEventLog | null = null;
+  private stopObservation: (() => void) | null = null;
 
   // Formatters
   executionFormatter: ExecutionFormatter | null = null;
@@ -177,6 +193,13 @@ export default class MetabobVesselPlugin extends Plugin {
       await this.initializeConceptDbFrontend();
     }
 
+    // Phase 8c: Phase 1 observation layer.
+    // Always on — the resolvers are inert until queried, and the
+    // workspace subscriptions feed the shared event log so downstream
+    // activities (`group-interaction-episodes`,
+    // `probe-obsidian-action-effects`) have data to consume.
+    this.initializeObservationLayer();
+
     // Phase 9: Register UI components
     // Settings tab for configuration
     this.addSettingTab(new MetabobVesselSettingTab(this.app, this));
@@ -243,6 +266,19 @@ export default class MetabobVesselPlugin extends Plugin {
     this.conceptBusListener?.stop();
     this.conceptWriteback?.stop();
     this.conceptSync?.stop();
+
+    // Stop the Phase 1 observation layer (unsubscribes workspace + vault
+    // handlers and clears the resolver context).
+    try {
+      this.stopObservation?.();
+      stopObserveObsidianEvents();
+      setObserveObsidianEventsContext(null, null);
+      setGroupInteractionEpisodesContext(null);
+    } catch (error) {
+      console.error('[Metabob Vessel] Error stopping observation layer:', error);
+    }
+    this.obsidianEventLog = null;
+    this.stopObservation = null;
 
     // Stop HTTP server last (may have pending requests)
     try {
@@ -477,6 +513,29 @@ export default class MetabobVesselPlugin extends Plugin {
     // Make the client/sync available to the impulse resolvers
     setConceptDbResolverContext(this.conceptDbClient, this.settings);
     setConceptWritebackResolverContext(this.conceptDbClient, this.conceptSync);
+  }
+
+  /**
+   * Initialize the Phase 1 Obsidian observation layer.
+   *
+   * Creates the shared `ObsidianEventLog`, injects it into the three
+   * observation resolvers, and starts the workspace + vault event
+   * subscriptions. Idempotent: re-invocation tears down existing
+   * subscriptions first.
+   */
+  initializeObservationLayer(): void {
+    try {
+      this.stopObservation?.();
+    } catch (error) {
+      console.error('[Metabob Vessel] Error tearing down prior observation layer:', error);
+    }
+
+    const log = new ObsidianEventLog(10_000);
+    this.obsidianEventLog = log;
+    setObserveObsidianEventsContext(this.app, log);
+    setGroupInteractionEpisodesContext(log);
+    this.stopObservation = startObserveObsidianEvents();
+    console.log('[Metabob Vessel] Observation layer started (event log cap=10000)');
   }
 
   /**

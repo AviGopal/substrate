@@ -117,6 +117,13 @@ registerResolver('obsidian:daily_note', resolveDailyNote);
 // Graph query resolver - obsidian:graph_query
 registerResolver('obsidian:graph_query', resolveGraphQuery);
 
+// Phase 1 observation resolvers (`obsidian:event_observed`,
+// `obsidian:interaction_episode`, `obsidian:action_effect_model`) are
+// loaded by main.ts via side-effect imports — they cannot self-register
+// from this file because doing so would create a circular import (the
+// resolver modules import `registerResolver` from here, so loading
+// them here before the Map is initialized would trip TDZ).
+
 // =============================================================================
 // RE-EXPORTS
 // =============================================================================
