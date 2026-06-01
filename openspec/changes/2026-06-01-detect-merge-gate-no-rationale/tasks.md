@@ -8,73 +8,39 @@ implementation files, acceptance criterion, and the gate it unblocks.
 - [ ] **A.1** — Implement seed template
   `detect-merge-gate-no-rationale` in
   `repos/development-vessel/src/seed/detect-merge-gate-no-rationale.ts`.
-  - Immunity pattern verbatim: `inputShapes: []`, `variables: []`,
-    single task `scan_and_emit`, deterministic resolver.
-  - Header comment cites `concept_9ldsmRgqSTd5`,
-    `concept_qcctOLBT5-CL`, `concept_MNYEq7xc_46U` and explains
-    why the detector is structurally safe from the bug class it
-    catches (no inputShapes, no variables, no multi-task chain —
-    so it cannot produce a `null_failure_mode` or `f25_zero_task`
-    failure of its own).
-  - `outputShapes: ["substrateGap", "mergeGateNoRationaleReport"]`.
-  - Cites exec_ids in the description: `exec_bdi43hzm`,
-    `exec_meur43e0`, `exec_hpw8n07m`, `exec_q4xlw1vd`,
-    `exec_imbmjn3f`, `exec_u7xeinm9` as the empirical motivation
-    fixture so the seed itself is auditable.
-  - Acceptance: file format matches the existing four canonical
-    family members; lint clean (`bun run lint` runs
-    `scripts/check-shape-dispatch.ts`).
+  Immunity pattern verbatim (`inputShapes: []`, `variables: []`,
+  single task `scan_and_emit`). Header cites
+  `concept_9ldsmRgqSTd5`, `concept_qcctOLBT5-CL`,
+  `concept_MNYEq7xc_46U` and the six motivating exec_ids.
+  `outputShapes: ["substrateGap", "mergeGateNoRationaleReport"]`.
+  Acceptance: format matches the four canonical family members;
+  lint clean.
 - [ ] **A.2** — Implement resolver
   `merge_gate_no_rationale_scan` in
   `repos/development-vessel/src/resolvers/merge-gate-no-rationale-scan.ts`.
-  - Input shape: `{ window_hours?: number,
-    gate_name_patterns?: string[], min_duration_ms?: number,
-    max_emits?: number, dry_run?: boolean }`.
-  - Defaults: `window_hours = 24`,
-    `gate_name_patterns = ["evaluate-pr-*", "*-gate",
-    "verify-iteration-by-*"]`, `max_emits = 50`.
-  - Fetches recent failed traces via the same activity-api
-    `executionTraceList` fetch pattern
-    `detect-phantom-success-trace` uses.
-  - Filters to gate-class templates by metadata `tags`
-    containing `gate=true` first; falls back to
-    `gate_name_patterns` glob match on `template_name`.
-  - For each gate-class failed trace classifies into one of:
-    `null_failure_mode`, `missing_intervention_refused`,
-    `missing_cited_evidence`, `f25_zero_task`. Exempts
-    `failure_mode.type ∈ {"budget_exhausted", "user_abort"}`
-    from the cited-evidence requirement.
-  - Emits a `substrateGap` per finding via `substrateGap_write`
-    with the body specified in the proposal.
-  - Self-immunity: excludes
-    `development-vessel:detect-merge-gate-no-rationale` and
-    `development-vessel:substrate-self-audit-meta` from
-    iteration.
-  - Acceptance: unit tests with mocked traces for each
-    `failure_shape` variant. (a) `failure_mode: null` trace
-    → `null_failure_mode` gap. (b) `failure_mode.context = {}`
-    → `missing_intervention_refused`. (c) context with
-    `intervention_refused: true` but no `cited_evidence`
-    → `missing_cited_evidence`. (d) `task_count: 0` trace
-    → `f25_zero_task`. (e) `failure_mode.type:
-    "budget_exhausted"` → no gap (exemption).
-    (f) detector's own template_id is excluded.
-- [ ] **A.3** — Three-place rule.
-  - Add `merge_gate_no_rationale_scan` to `discovery.shapes` in
-    `repos/development-vessel/src/config.ts`.
-  - Add the matching `case` in
-    `repos/development-vessel/src/routes/impulses.ts`.
-  - Add `mergeGateNoRationaleReport` as its own shape with the
-    same two-place wiring.
-  - Acceptance: `bun run lint` clean.
-- [ ] **A.4** — Wire the template into `src/seed/index.ts`.
-  Append `DETECT_MERGE_GATE_NO_RATIONALE_TEMPLATE` to
-  `SEED_TEMPLATES` following the header-comment style at lines
-  100-106 (most recent family-member entry).
+  Input/defaults per proposal. Fetches failed traces via
+  `executionTraceList`; filters to gate-class by tag `gate=true`
+  or `gate_name_patterns`; classifies each failure into one of
+  the four `failure_shape` values; exempts `failure_mode.type
+  ∈ {budget_exhausted, user_abort}`; emits per-finding
+  `substrateGap` via `substrateGap_write`; self-excludes the
+  detector and `substrate-self-audit-meta`. Acceptance: unit
+  tests cover (a) `null_failure_mode` (b)
+  `missing_intervention_refused` (c) `missing_cited_evidence`
+  (d) `f25_zero_task` (e) `budget_exhausted` exemption (f)
+  self-exclusion.
+- [ ] **A.3** — Three-place rule: add
+  `merge_gate_no_rationale_scan` and `mergeGateNoRationaleReport`
+  to `discovery.shapes` in `src/config.ts` AND matching `case`
+  entries in `src/routes/impulses.ts`. Acceptance: `bun run
+  lint` clean.
+- [ ] **A.4** — Append `DETECT_MERGE_GATE_NO_RATIONALE_TEMPLATE`
+  to `SEED_TEMPLATES` in `src/seed/index.ts` following the
+  header-comment style at lines 100-106.
 - [ ] **A.5** — Per-resolver test (spec R8.1):
-  `test/resolvers/merge-gate-no-rationale-scan.test.ts`.
-  Scripted fake `executionTraceList` fixture including the six
-  cited exec_ids' trace shapes; assert idempotency under re-run.
+  `test/resolvers/merge-gate-no-rationale-scan.test.ts` with
+  scripted fixtures including the six cited exec_ids' shapes;
+  assert idempotency.
 
 ## Phase B — Audit-meta fan-out integration (depends on A + companion ship)
 
@@ -120,29 +86,20 @@ implementation files, acceptance criterion, and the gate it unblocks.
 
 - [ ] **D.1** — Couple emissions with
   `2026-05-30-vessel-binary-redeploy-on-source-drift` Phase E.2
-  push-away credit accounting. Each gate-without-rationale
-  refusal cited as evidence in
-  `validation/state/lift-status.json` WHEN AND ONLY WHEN the
-  same gate later emits a trace with full
+  push-away credit. A gate-without-rationale refusal earns one
+  S3 credit in `validation/state/lift-status.json` WHEN AND
+  ONLY WHEN the same gate later emits a refusal with
   `failure_mode.context.{intervention_refused, cited_evidence}`
-  populated for the same template family. The pre-fix refusal
-  is observability bankruptcy; the post-fix refusal closes the
-  loop and earns the credit.
-  - Acceptance: integration test asserting that a fixture
-    sequence (gate fails opaquely → detector emits gap → gate
-    fixed → gate fails with cited rationale → lift-status.json
-    increments a sub-criterion under S3-load-axis-push-away)
-    walks the full chain.
-- [ ] **D.2** — Surface in `substrate-health-tick` report a
-  `merge_gate_no_rationale_24h` field with counts by
-  `failure_shape`. Operator reads this as the leading
-  indicator of merge-gate rationale hygiene.
+  populated. Acceptance: fixture sequence (opaque refusal →
+  detector gap → fix → cited refusal → lift-status increment)
+  walks end-to-end.
+- [ ] **D.2** — Surface `merge_gate_no_rationale_24h` counts by
+  `failure_shape` in the `substrate-health-tick` report.
 - [ ] **D.3** — Acceptance gate: when
-  `merge_gate_no_rationale_24h.total == 0` for three consecutive
-  observation days AND at least one gate refusal WITH cited
-  evidence landed in the same window, mark a
-  "merge-gate-axis push-away" S3 credit in `lift-status.json`.
-  One credit toward the sustained window; not a gate on its own.
+  `merge_gate_no_rationale_24h.total == 0` for three
+  consecutive days AND ≥1 cited-rationale refusal landed in
+  the same window, mark a "merge-gate-axis push-away" S3
+  credit in `lift-status.json`.
 
 ## Gates
 

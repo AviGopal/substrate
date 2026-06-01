@@ -5,95 +5,71 @@
 The substrate-as-git-author merge surface is gated by
 `evaluate-pr-via-internal-idioms`
 (`repos/development-vessel/src/seed/evaluate-pr-via-internal-idioms.ts:27-175`):
-a seven-task composition (`read_artifact` → `phantom_scan` →
-`precondition_scan` → `score_artifact_comprehensibility` →
-`synthesize_evidence` → `debug_dump_evidence` → `merge_pr`) whose
-verdict is supposed to be auditable from a single trace
-(per operator directive 2026-06-01, cited in the seed's own header
-at lines 14-17). Throughout 2026-06-01 the gate has exhibited
-**rejection without cited rationale** in multiple distinct trace
+a seven-task composition whose verdict is meant to be auditable
+from a single trace (operator directive 2026-06-01, cited at
+lines 14-17 of the seed). Throughout 2026-06-01 the gate has
+exhibited **rejection without cited rationale** in three trace
 shapes:
 
 - **Opaque mid-execution failure** — `exec_bdi43hzm` (2.0s) and
-  `exec_meur43e0` (2.4s): all three completed tasks report
-  `ok=true` at the task level, top-level `status=failure`,
-  `failure_mode: null`, top-level `output_impulse_ids: []`. The
-  gate refused, but the trace does not say why.
-- **F25 sub-second sink** — `exec_hpw8n07m` (5ms) and
-  `exec_q4xlw1vd` (5ms): engine pre-flight rejection shape,
-  zero tasks recorded, the F25 phantom-success signature
-  (`concept_qcctOLBT5-CL`) the substrate has already named —
-  except here the *gate itself* is the F25 victim.
-- **Variable-length failures** — `exec_imbmjn3f` (7.8s) and
-  `exec_u7xeinm9` (6.7s): longer runs, still
-  `failure_mode: null`, still empty
-  `output_impulse_ids`. Wall time varies; rationale-absence does
-  not.
+  `exec_meur43e0` (2.4s): all completed tasks `ok=true`,
+  top-level `status=failure`, `failure_mode: null`,
+  `output_impulse_ids: []`. Gate refused without saying why.
+- **F25 sub-second sink** — `exec_hpw8n07m` and `exec_q4xlw1vd`
+  (both 5ms): engine pre-flight rejection, zero tasks recorded,
+  F25 phantom-success signature (`concept_qcctOLBT5-CL`) the
+  substrate has already named — the gate itself is the F25 victim.
+- **Variable-length failures** — `exec_imbmjn3f` (7.8s),
+  `exec_u7xeinm9` (6.7s): longer runs, still `failure_mode: null`,
+  still empty `output_impulse_ids`.
 
-The seed runs `phantom_trace_scan` and
-`precondition_rejection_scan` as `dry_run=true`
-(`evaluate-pr-via-internal-idioms.ts:62-82`, citing
-`concept_qcctOLBT5-CL` directly in the task description), so the
-gate *knows* about F25. It just doesn't apply the same observability
-discipline to its own refusals.
-
-Commit `dbd0b8f` ("traceable refusal-with-reason") landed
-2026-06-01 21:23Z claiming to fix this; post-deploy traces still
-show the 5ms F25 sink. Either the running container has not picked
-up the fix (`2026-05-30-vessel-binary-redeploy-on-source-drift`
-applies) or `dbd0b8f` addresses a sibling code path.
+The seed runs `phantom_trace_scan` and `precondition_rejection_scan`
+as `dry_run=true` (`evaluate-pr-via-internal-idioms.ts:62-82`,
+citing `concept_qcctOLBT5-CL`) — so the gate *knows* about F25; it
+just doesn't apply the same observability discipline to its own
+refusals. Commit `dbd0b8f` ("traceable refusal-with-reason") at
+21:23Z claimed to fix this; post-deploy traces still show the 5ms
+F25 sink — either container drift
+(`2026-05-30-vessel-binary-redeploy-on-source-drift`) or sibling
+code path.
 
 **The structural problem.** A merge gate that rejects without
-cited evidence is the *exact opposite* of S2→S3 push-away (IAL
-§27.S.6: "refusal of operator interventions with cited evidence").
-S2→S3 requires
-`failure_mode.context.intervention_refused: true` AND
-`cited_evidence: [concept_ids]`. Today the gate produces
-`failure_mode: null` and empty output, which is rationale
-bankruptcy. Every gate refusal that lands this way is operator-
-opaque, drafter-opaque, and selector-opaque: the next drafter
-cannot read the refusal as a prior; the operator cannot audit
-the refusal; Thompson posteriors absorb a "failure" with no
-attribution. This is the same bug class
-`detect-phantom-success-trace.ts:8-9` calls out for
-`validator-dispatch` (9367+ phantom traces) — except the gate
-is *more* load-bearing because it sits in the self-merge loop.
+cited evidence is the *opposite* of S2→S3 push-away (IAL §27.S.6
+requires `failure_mode.context.intervention_refused: true` AND
+`cited_evidence: [concept_ids]`). Today the gate produces
+`failure_mode: null` and empty output — rationale bankruptcy.
+Every such refusal is operator-opaque, drafter-opaque, and
+selector-opaque; Thompson posteriors absorb a "failure" with no
+attribution. Same bug class as
+`detect-phantom-success-trace.ts:8-9` on `validator-dispatch`
+(9367+ phantom traces) — but more load-bearing because the gate
+sits in the self-merge loop.
 
 ## What changes
 
 ### 1. New seed template
 
 `repos/development-vessel/src/seed/detect-merge-gate-no-rationale.ts`:
-
-- Immunity pattern (`inputShapes: []`, `variables: []`, single
-  task, deterministic resolver) mirroring
-  `detect-phantom-success-trace.ts:38-62` and
-  `detect-precondition-rejection.ts:35-77` structurally.
-- Header comment cites `concept_9ldsmRgqSTd5`
-  (`substrate_self_detection_principle`), `concept_qcctOLBT5-CL`
-  (F25 phantom-success), and `concept_MNYEq7xc_46U` (F25
-  architectural asymmetry).
-- `outputShapes: ["substrateGap", "mergeGateNoRationaleReport"]`.
+immunity pattern (`inputShapes: []`, `variables: []`, single task,
+deterministic resolver) mirroring
+`detect-phantom-success-trace.ts:38-62`. Header cites
+`concept_9ldsmRgqSTd5`, `concept_qcctOLBT5-CL`,
+`concept_MNYEq7xc_46U`. `outputShapes: ["substrateGap",
+"mergeGateNoRationaleReport"]`.
 
 ### 2. New resolver
 
 `repos/development-vessel/src/resolvers/merge-gate-no-rationale-scan.ts`:
 
-- Input: `{ window_hours?: number, gate_name_patterns?: string[],
-  min_duration_ms?: number, max_emits?: number, dry_run?: boolean }`.
-- Defaults: `window_hours = 24`,
+- Input: `{ window_hours?, gate_name_patterns?, min_duration_ms?,
+  max_emits?, dry_run? }`. Defaults: `window_hours = 24`,
   `gate_name_patterns = ["evaluate-pr-*", "*-gate",
   "verify-iteration-by-*"]`, `max_emits = 50`.
-- Reads recent failed traces via the same activity-api
-  `executionTraceList` surface the family already consumes
-  (`detect-phantom-success-trace`,
-  `detect-precondition-rejection`).
-- **Filter to gate-class templates** by either:
-  - Template name matching one of `gate_name_patterns`, OR
-  - Template metadata tag `gate=true` (preferred — Phase C
-    proposes adding the tag to gate-class seeds).
-- For each gate-class trace with `status=failure`, classify into
-  one of four `failure_shape` values:
+- Reads failed traces via the same activity-api
+  `executionTraceList` surface the family already consumes.
+- Filters to gate-class templates by metadata tag `gate=true`
+  (preferred — Phase C) or `gate_name_patterns` (bridge).
+- Classifies each failed gate trace into a `failure_shape`:
   - `null_failure_mode` — `failure_mode == null`
   - `missing_intervention_refused` — `failure_mode.context` lacks
     the `intervention_refused` field
@@ -152,22 +128,16 @@ their own `substrateGap` (gap_class:
 
 ## Out of scope
 
-- **Fixing individual gates.** This is the detector; gate repair
-  is per-template work (e.g. ensuring `merge_pr` task emits
-  `failure_mode.context.intervention_refused` on
-  `evaluationInsufficient`). Each detector finding contains a
-  `proposed_fix` string; drafting a fix is a downstream
-  `draft-gap-closing-activity` concern.
-- **Meta-rule "every gate must have a watcher".** A separate
-  openspec (`detect-unwatched-gate`) is the right home for the
-  meta-rule; this proposal ships the first concrete watcher.
-- **Changing the FailureMode taxonomy.**
-  `2026-05-31-display-failure-mode-extensions` already added
-  schema room for `budget_exhausted.budget_type = "display"`;
-  this proposal *reads* the schema, doesn't extend it.
-- **Operator-side dashboards.** Display surfacing of
-  `mergeGateNoRationaleReport` rides the existing concept-bridge
-  + dashboard work; not part of this proposal.
+- **Fixing individual gates.** Gate repair is per-template;
+  detector findings carry a `proposed_fix` string for downstream
+  `draft-gap-closing-activity`.
+- **Meta-rule "every gate must have a watcher".** Separate
+  openspec (`detect-unwatched-gate`); this is the first watcher.
+- **Changing the FailureMode taxonomy.** This proposal *reads*
+  the schema; `2026-05-31-display-failure-mode-extensions` owns
+  extensions.
+- **Operator-side dashboards** for `mergeGateNoRationaleReport`
+  — rides existing concept-bridge + dashboard work.
 
 ## Dependencies
 
@@ -180,38 +150,28 @@ their own `substrateGap` (gap_class:
 
 ## Risk
 
-- **False positives on gate-shaped templates with legitimate
-  null failure_mode.** Some failures are genuinely
-  `budget_exhausted` with non-cited rationale (operator-aborted,
-  cost-ceiling). Mitigation: align with
-  `2026-05-31-display-failure-mode-extensions` — only flag
-  gates where rationale is *constitutionally* required (gates
-  that refuse PRs or refuse dispatches; not gates that abort
-  on budget). The detector reads `failure_mode.type`
-  and treats `budget_exhausted` / `user_abort` as exempt from
-  the cited-evidence requirement.
+- **False positives on legitimate null failure_mode.**
+  `budget_exhausted` / `user_abort` failures have non-cited
+  rationale by design. Mitigation: detector reads
+  `failure_mode.type` and exempts those two types from the
+  cited-evidence requirement (aligns with
+  `2026-05-31-display-failure-mode-extensions`).
 - **Recursive trap.** If this detector becomes a gate and fails
   opaquely, it becomes its own finding. Mitigation: explicit
-  `template_id` self-exclusion in the resolver (same discipline
-  every family member already practices) plus the immunity
-  pattern (no inputShapes / variables / multi-task chain) makes
-  the detector structurally unable to phantom-succeed.
-- **Pattern-based gate detection drift.** Name patterns may miss
-  gates added after this detector ships. Mitigation: Phase C's
-  `gate=true` tag convention is the long-term answer; pattern
-  matching is the bridge until the tag is universal.
+  self-exclusion plus the immunity pattern (no inputShapes /
+  variables / multi-task chain) makes it structurally unable to
+  phantom-succeed.
+- **Pattern-based gate detection drift.** Name patterns may
+  miss gates added after this detector ships. Mitigation: Phase
+  C's `gate=true` tag convention is the long-term answer.
 
 ## Companion concepts
 
 - `concept_9ldsmRgqSTd5` — `substrate_self_detection_principle`
-  (the constitutional principle every family member cites)
-- `concept_qcctOLBT5-CL` — F25 phantom-success signature
-  (the 5ms zero-task case this detector catches on the gate
-  itself)
-- `concept_MNYEq7xc_46U` — F25 architectural asymmetry (the
-  fact that the same bug class can recur higher up the stack;
-  this detector instantiates that observation on the merge
-  gate)
+- `concept_qcctOLBT5-CL` — F25 phantom-success signature (the
+  5ms zero-task case this detector catches on the gate itself)
+- `concept_MNYEq7xc_46U` — F25 architectural asymmetry (same
+  bug class recurring higher up the stack)
 
 ## Related openspecs
 
@@ -237,24 +197,17 @@ their own `substrateGap` (gap_class:
 
 Gates without cited rationale are the operational anti-pattern of
 S2→S3 push-away. IAL §27.S.6 measures S3 readiness by **active
-push-away with cited evidence**: refusal that names *why* the
-substrate refused, walkable from the refusal record to the
-underlying concept_ids. The detector enforces the structural
-property: refusal without citation is **observability bankruptcy**,
-not push-away.
+push-away with cited evidence** — refusal that names *why*,
+walkable from the refusal record to underlying concept_ids. The
+detector enforces the structural property: refusal without
+citation is **observability bankruptcy**, not push-away.
 
 In RL terms: a refused action with `failure_mode: null` is an
-**unattributed negative reward**. Thompson posteriors absorb the
-β increment without learning *which feature* of the action drove
-the refusal; future drafters cannot read the refusal as a prior
-because the refusal carries no payload to read. With cited
-evidence the substrate can refuse operator/self interventions
-*auditably*, the citation chain `(refusal → concept_id → trace)`
-is walkable, and the same refusal becomes a structural lesson
-the selector can generalize from. Without it, every refusal is
-opaque and S3 cannot be measured.
-
-This detector is the minimal structural enforcement: the family
-already names what observability bankruptcy looks like on
-`validator-dispatch`; this proposal extends the same vocabulary
-to the substrate's own merge gate.
+unattributed negative reward. Thompson posteriors absorb the β
+increment without learning which feature of the action drove
+refusal; future drafters cannot read the refusal as a prior; the
+selector cannot generalize. With cited evidence, the citation
+chain `(refusal → concept_id → trace)` is walkable and the
+refusal becomes a structural lesson. The family already names
+this anti-pattern on `validator-dispatch`; this proposal extends
+the same vocabulary to the substrate's own merge gate.
