@@ -1197,10 +1197,41 @@ console.log(
 
 registerBuiltinResolvers();
 await registerDevVesselProxies();
-// Reactive proxy registration: subscribe to vessel.registered events on the bus
-// so we re-fetch /shapes when dev-vessel (re)registers, regardless of whether
-// goal-host or dev-vessel booted first. Dissolves F-129.
-startVesselRegistrationSubscriber();
+// Iteration 8 of the OOM hunt — WS subscriber ablation experiment.
+//
+// The leak signature from iter-5 (concept_s9ye5GKLw2L8): goal-host RSS grew
+// 16.6 → 18.4 GB in 60s of IDLE time, boredom timer inactive, no inbound
+// requests. The ONLY high-frequency idle-time actor not yet ablated is this
+// WS subscriber, which receives EVERY broadcast from activity-api's `/ws`
+// (task.*, lifecycle.*, vessel.* — from every vessel in the substrate) just
+// to filter for `vessel.registered`. Even with the substring pre-parse guard
+// (line 775), the raw frame allocation per message accumulates.
+//
+// Gated on env GOAL_HOST_WS_SUBSCRIBER (default "on"). Set to "off" to
+// ablate. Verification path when substrate recovers:
+//   - Restart goal-host with GOAL_HOST_WS_SUBSCRIBER=off
+//   - Watch [gc-tick] for 5 min. If RSS stays bounded → WS is the source.
+//   - If still grows → restore subscriber, escalate to iter 9.
+//
+// If WS is the source: the fix is NOT to permanently disable (we'd lose
+// reactive dev-vessel re-registration after restarts). The fix is to either
+// (a) switch to a topic-filtered subscription at activity-api side, or
+// (b) replace the WS subscriber with a polling /shapes refresh every N
+// seconds. Both are iter-9 work; this iteration only confirms the source.
+const WS_SUBSCRIBER_ENABLED = (process.env.GOAL_HOST_WS_SUBSCRIBER ?? "on") !== "off";
+if (WS_SUBSCRIBER_ENABLED) {
+  // Reactive proxy registration: subscribe to vessel.registered events on the bus
+  // so we re-fetch /shapes when dev-vessel (re)registers, regardless of whether
+  // goal-host or dev-vessel booted first. Dissolves F-129.
+  startVesselRegistrationSubscriber();
+} else {
+  console.log("[startup] WS subscriber DISABLED via GOAL_HOST_WS_SUBSCRIBER=off (iter-8 ablation)");
+  // Fallback: poll dev-vessel /shapes every 60s to catch re-registrations.
+  // Polling is bounded (one HTTP call per minute) so it can't accumulate.
+  setInterval(() => {
+    void registerDevVesselProxies();
+  }, 60_000).unref();
+}
 await discoveryLoop.start();
 
 // Graceful shutdown on SIGTERM.
