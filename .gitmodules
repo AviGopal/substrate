@@ -69,3 +69,6 @@
 	path = repos/development-vessel
 	url = git@github.com:AviGopal/development-vessel.git
 	branch = dev
+[submodule "repos/analysis-vessel"]
+	path = repos/analysis-vessel
+	url = git@github.com:AviGopal/analysis-vessel.git
