@@ -2106,3 +2106,143 @@ Two sibling specs landed in the integration spec's orbit 2026-05-23. They are tr
 **Why this batch matters for lift.** Phase 27.3.g.1 is a hard lift gate: no core execution path may be reachable only via in-process call from a single binary. The substrate-explicit-vessels spec closes this gap. The gate harness (`substrate-explicit-vessels-check.ts`) reads `systemctl is-active` for each vessel and checks `validation/state/lift-status.json` for any blocking entries.
 
 This is a note, not a re-design. The implementation tasks live in the sibling specs.
+
+## 2026-05-31 amendment — post-lift Functional→Vessel arrow closure agenda
+
+### Why this amendment
+
+The IAL terminates at Phase 27 by declaration (`tasks.md:1664-1675`) and the substrate is currently sitting at **S2 sustained** — three consecutive coverage windows green per `validation/state/lift-status.json` after the picker-fix lineage (`ebfb1075` → `39c4e2ae` → `dcc87ae4` → `afceb1ca`, → `67540fed` recorded the first window, `afceb1ca` recorded the third). The terminal-phase rule in this design.md (§Implementation phases, Phase 27) forbids new IAL phases; everything beyond Phase 27 is post-lift sibling territory tracked in `tasks.md` lines 34–52.
+
+That sibling table grew to twelve entries in a single 2026-05-30 → 2026-05-31 authoring burst. Eleven of those entries were drafted in one continuous session by the operator + the dev-loop's `DevBob Assistant` subagent under empirical pressure from the 8-cycle controlled probe (concept `concept_WikGVLa5d6kp` — `selector_anchor_vocabulary_gate`), the F25 architectural-asymmetry finding (`concept_MNYEq7xc_46U`), the substrate-self-detection family birth, and the load-attribution stack culminating in the first concrete S3-shaped push-away.
+
+Read piecewise the eleven specs look like a heterogeneous to-do list. Read together they trace a coherent shape: the **Functional → Vessel arrow** of the three-states model (`CLAUDE.md §Core Ontology: The Three States`) is closed for activity templates (ribosome-vessel) and for impulse-signature concepts (concept-bridge-observer) but open for (a) vessel-binary code, (b) autonomous learning-from-traces, (c) explicit count-based exploration, and (d) visual perception → action. The eleven specs collectively close each of those four sub-arrows and supply the **citation infrastructure** the running S2 substrate will need before §27.S.6 push-away accounting can count refusals from more than one class.
+
+This amendment names that shape so future investigators do not have to re-derive it from the sibling-table prose alone. It adds no tasks. It introduces no primitives. The implementation work lives in each sibling's `tasks.md`.
+
+### Three architectural threads the 11 openspecs collectively address
+
+#### Thread 1 — Functional → Vessel arrow closure (4 specs)
+
+The three-states model says every functional state immediately becomes a vessel for the next transformation. Today, two of the substrate's four feedback paths from execution-evidence-back-to-instructional-state are wired, and two are dark. This thread wires the remaining two and adds the missing learning-rate symmetry.
+
+- **`2026-05-30-vessel-binary-redeploy-on-source-drift`** (super-repo `9e169f47`, extended in `0f6cf954`). Adds the ribosome's analog for **vessel-binary code**. The empirical motivation is the F26 incident in the proposal: `concept_HKlz4FAc2cpf` (`substrate_self_fix_pattern`) recorded "awaiting substrate-restart for activation" and the substrate dispatched a generic `gap-closing:test-valid-1780148026306` template (1.2s task-level success, 0 actual restart). Today the substrate cannot rebuild itself; Phase A ships an operator-mediated rebuild activity and Phase B–E add `vesselManifest` authorship attribution, `auto-substrate/<vessel>/<exec_id>` branching, 24h admin-scope hold, and a rollback discriminator. Phase E.2 is the **first push-away contribution** of this thread: three operator-contradicted-but-substrate-cited refusals contribute toward the §27.S.6 sustained-push-away window.
+
+- **`2026-05-30-trace-to-concept-mining`** (super-repo `9e169f47`). Adds the parallel arrow on the **learning-from-traces** side. The 8-cycle controlled probe (`concept_WikGVLa5d6kp`) produced eight complete traces and exactly zero new concepts — the autonomous loop produces traces, the autonomous loop does not consume its own traces without operator mediation. This spec adds a clustering activity that mints `conceptProposal` impulses as `source_type: extracted` concepts. Independent of any other spec; ships against existing infrastructure (`executionTraceList` + `concept_create_write` both live).
+
+- **`2026-05-30-info-gain-bonus-on-success`** (super-repo `5b9f4309`). Symmetric posterior asymmetry. `posterior-update.ts:134-174` stratifies the **failure** side (`verifier_negative` → β=1, `budget_exhausted` → β=0.5, `cascading` → 0, `user_abort` → 0) but the **success** side is unconditional `α += 1` regardless of how informative the success is. The 8-cycle probe surfaced `drain-pending-substrate-gaps` as a high-α sink built precisely from this asymmetry — misrouted dispatches produce 10ms task-level successes (1 `http_fetch`, 0 outputs) and each one inflates α by a full point. The spec adds `α += 1/(1 + n_observations)` on the per-signature posterior. With boredom-vessel's tick shrunk 30→5 min in `26390d62`, dispatch density makes redundancy 6× worse without this correction.
+
+- **`2026-05-30-event-driven-novelty-surface`** (super-repo `5b9f4309`). Converts novelty detection from post-hoc polling (pattern-miner `minFrequency` default 10, runs on its own cadence) into a synchronous event at the exact moment a novel `(signature, template)` bucket is created. Emits `lifecycle:execution:novelty` and `lifecycle:pattern:discovered`. This is a **precondition for substrate-self-audit-meta to fire correctly** — the audit-meta fans the detection family out on lifecycle events, and the novelty event is one of the events it needs.
+
+The four specs share an empirical anchor: the 8-cycle probe at session start. C7 and C8 ran the same goal-string with substrate-internal vocabulary and produced three different template selections (`draft-spec-from-gap`, `gap-closing:fp-11-silent-semantic-failure`, `detect-stale-pointer`) across the cycles — the selector behaves as a lexical/shape-affinity gate, not a learned policy, because per-`(signature, template)` posteriors are too sparse to discriminate. C5/C6 falsified variable-seeding as a workaround (out-of-vocabulary goal failed identically with and without variables). C7 confirmed vocabulary-gating (substrate-internal anchor → success → 10-task `draft-spec-from-gap` execution). C8 surfaced the **selector-vs-executor split** (anchor won selection, executor failed in 14ms). The four specs each target one symptom of the same root cause: the substrate produces evidence faster than it consumes it as priors.
+
+The F25 architectural-asymmetry concept `concept_MNYEq7xc_46U` is the load-bearing finding for the trace-to-concept-mining + info-gain pair: `/recommend` (semantic-search-driven) and `discover-by-shapes` (shape-affinity-driven) are not symmetrically biased — `discover-by-shapes` is the higher-leverage path but lacks the semantic prior the mining activity supplies.
+
+#### Thread 2 — Display perception → action substrate-extension (5 specs)
+
+The substrate has sensory surfaces for logs, filesystem, HTTP, and traces. It has zero sensory surface for **visual perception** and zero action surface for **operator-environment affordances**. The five display specs open both, with strict ordering: signature + failure-mode infrastructure → perception (read-only) → ≥2-week perception-only soak → action (reversibility-class-gated) → autonomy-gradient as S2→S3 push-away credit.
+
+- **`2026-05-31-display-signature-partitioning`** (super-repo `580d6943`). Signature infrastructure prerequisite. Three things in one spec because the display use case forced each into view simultaneously:
+
+  - **Cardinality cap bug fix.** `posterior-update.ts:~486` has `SIGNATURE_CARDINALITY_CAP` default 200; once a template hits 200 distinct buckets, the `ELSE IF $cardinality < $cap THEN CREATE` branch is the only CREATE path and there is no fallback. New signatures silently fail to create rows. UPDATEs against would-be-new buckets don't fire because there is no row. For a display stream (every fresh window is a new signature via `computeStateSpaceSignature`, `src/utils/session-context.ts:~141`) that ceiling is one workday. This affects every high-cardinality input class, not just display — fixing it is independently valuable.
+  - **Display tier in `computeStateSpaceSignature`.** Bounded-vocabulary icon-label + functional-caption classes only; raw OCR text never enters the hash.
+  - **Hierarchical empirical-Bayes prior on the CREATE branch.** Today fresh buckets start at flat Beta(1,1). With info-gain-on-success n=0 supplying a full 1.0 step against a flat prior, most fresh display signatures (transient modals, animation frames) would receive disproportionate credit. Hierarchical EB prior fixes the n=0 case structurally.
+  - **Three signature partition dimensions** (`source_app_id`, `source_window_id`, `reversibility_class`).
+
+  This spec is hard prerequisite for any display-vessel posterior writes; Phase A (cardinality fix) is also a standalone win for any non-display high-cardinality class.
+
+- **`2026-05-31-display-failure-mode-extensions`** (super-repo `580d6943`). Failure-side dual of the success-side novelty stratification. Adds two new top-level failure types (`consent_revoked` with cool-down veto side-effect, `action_reversal_failed` with β=2 + H5 trigger) plus sub-mode extensions (`safety_breach.region`, `safety_breach.attestation_expired`, `budget_exhausted.budget_type = "display"`, `verifier_negative.confidence_tier`). The **cross-cutting `root_cause_step` field** is the single highest-leverage change in the spec: `propagateCreditAlongChain` (`posterior-update.ts:~386-392`) today blames depth-1 for cascading failures, but perception→action chains routinely fail mid-chain (perception picked wrong element → binding chose wrong target → action verified false). The trace already knows which step failed; the schema didn't carry that information. Phase A (root-cause attribution) closes the cascading-misattribution gap as a standalone win for any chain failure, not just display. The 8-cycle probe surfaced this: `gap-closing:test-valid-*` β-attribution went to the dispatcher when the trace knew which step was the actual cause.
+
+- **`2026-05-31-display-perception-vessel`** (super-repo `2e416df5`). Read-only visual perception via four shape contracts (`displayCapture`, `displayObjectDetection`, `displayContextAggregate`, `displayContextSummary`). The architectural choice is recorded explicitly: in-container capture rejected (container has no display, mounting host X11 breaks portability, impossible on Wayland, incompatible with H3 attestation direction), host-display-shared rejected (substrate cannot attest a capture it cannot have witnessed), peer-vessel selected (operator's machine, federated through discovery-vessel). OmniParser V2 selected over COCO-trained YOLO (purpose-built for GUI screens). Two-tier concept-bridge denylist (coarse projection signatures only; raw OCR never in hash). Phase E enforces the **≥2-week perception-only soak window** that gates the action sibling.
+
+- **`2026-05-31-display-control-extension`** (super-repo `2e416df5`). Action primitives via Anthropic `computer_20251124` wire format (vendored at `repos/vessels/ai/packages/anthropic/src/tool/`). `reversibility_class ∈ {reversible, soft_irreversible, hard_irreversible}` is **load-bearing as a signature partition dimension** (per signature-partitioning Phase D), not a β scalar — the spec is explicit that a single signature conflating reversible + irreversible variants is unsafe. Continuous-consent attestations with second-scale deadlines. Operator interrupt hotkey emits `actionAborted` → `consent_revoked` Thompson update + `(template, signature)` veto. **The autonomy gradient per action-class is the direct S2→S3 push-away credit mechanism**: `reversible × small_region × focused_window` graduates first by demonstrating ≥3 `interventionRefused` impulses; `hard_irreversible` never graduates (operator role structurally permanent for those classes per §27.S.6's "non-load-bearing" definition).
+
+- **`2026-05-31-display-vessel-host-peer`** (super-repo `2e416df5`). The implementation site for the two specs above. `bun build --compile` single-file binaries per platform (Linux x64/arm64, macOS x64/arm64, Windows x64), ed25519 keypair on first install (H2-ready: `vessel_id = base32(multihash(SHA-256, pubkey))`), `curl | sh` install → systemd-user / launchd / Windows-service unit, discovery-vessel registration via existing `RegisterVesselRequest` (no discovery change required), per-platform display API via child-process shellouts (`scrot`+`xdotool`, `grim`+`ydotool`, `screencapture`+`cliclick`, PowerShell+`nircmd`), OmniParser V2 weights bundled. Network topology v1 = local-only (127.0.0.1); reverse-tunnel + Tailscale paths deferred to Phase G / docs. This is **the first non-substrate-hosted peer vessel** in the system.
+
+The thread's ordering is enforced by Phase gating in each spec: signature-partitioning Phase B + failure-mode-extensions Phase B+C + host-peer Phase B all gate display-perception-vessel; display-perception-vessel Phase E.2 (≥14-day soak returning `ready: true`) gates display-control-extension; control-extension Phase F is the first concrete push-away contribution of this thread.
+
+#### Thread 3 — Substrate-self-detection family graduation (2 specs)
+
+The substrate-self-detection family was **substrate-authored during this session by the `DevBob Assistant` agent**, not operator-authored. The relevant commits and the constitutional structure:
+
+- `5bb048e` (referenced in the iter chain) shipped three detectors in one commit with first-run findings embedded in the message: `detect-phantom-success-trace`, `detect-precondition-rejection`, `audit-dispatch-target-drift`.
+- `9564e06` added `detect-service-oom-cascade` after the goal-host OOM cascade incident.
+- `6237efb` added `trace_failure_pattern_report` as a resolver-only family member (no seed wrapper, per `6ad12425` "trace_failure_pattern_report joins substrate-self-detection family").
+- The constitutional anchor is `concept_9ldsmRgqSTd5` (the family's "what counts as substrate-self-detection" memo).
+- The explicit "immunity pattern" sibling concepts are `concept_Y2zGpFNBrcgb`, `concept_pFSLV6s5s3lQ`, `concept_t2jHO8I-LxD3` — family members must declare `inputShapes: []` and `variables: []` so they cannot be selected by the selector for non-detection purposes (selector immunity).
+
+The family is catalogue-complete (six members at `repos/development-vessel/src/seed/index.ts:56-107`) but **loop second-class**: members fire only when Thompson boredom rotation samples them on its 5-minute tick, decoupled from the events they are meant to observe. Phantom-success traces written at time T are not detected until boredom happens to draw the detector minutes-to-hours later, by which time selector Thompson posteriors have already absorbed the polluted α update.
+
+- **`2026-05-31-substrate-self-audit-meta`** (super-repo `8ac96201`). Subscribes the family to `lifecycle:execution:succeeded` (top-level only, debounced per `template_id` in a 1-minute window) and `activityRegistryChange`, fanning out all family members in parallel via `resolveDispatch`. The meta-template itself follows the immunity pattern (`inputShapes: []`, `variables: []`). Rate-limited to ≤1 audit / 2 min. Detection becomes deterministic and event-time rather than rotation-stochastic. Phase E.1 emits `substrate_audit_pressure` impulses that the load-aware gate from `04441ca9` reads as additional refusal evidence — coupling Thread 3 into Thread 3's own resource-budget detector for refusal citation.
+
+- **`2026-05-31-detect-resource-budget-violation`** (super-repo `8ac96201`). Graduates the load-attribution stack into the detection family as a seed template (immunity pattern). The stack itself was substrate-shipped across `d4dc7a25` (boredom samples `system_load_report` before/after each dispatch) → `3e1400db` (load_attribution_report per-template aggregation, same group-by-template idiom as `trace_failure_pattern_report`) → `1a57745b` (retry-sample + sample_quality discipline) → `41835bde` (substrate observes its own load directly) → `04441ca9` (load-aware boredom gate: **first concrete S3-shaped push-away — refusal with cited evidence**). Today the gate refuses opportunistically but the detection family never names the offending template as a first-class `substrateGap`; Thompson posteriors don't penalize repeatedly-expensive templates the way they penalize verifier-negative ones because the load axis was never modelled as a failure-mode. Phase A authors the detector. Phase C couples it with the gate so refusals cite the **family-emitted gap** rather than the raw attribution surface — citation chain `refusal → gap → attribution_report`. Phase D wires each refusal-with-cited-violation into §27.S.6 sustained-push-away accounting. This is the **second concrete refusal class for S3 push-away**, complementing `vessel-binary-redeploy-on-source-drift` Phase E.2 (refusal class 1) and the perception/control autonomy-gradient mechanism (refusal class 3+).
+
+The two Thread-3 specs together convert the detection family from a catalogue into a lifecycle-wired observer with a citable refusal channel. The operator-mediated bridge concept until the openspecs land is `concept_HKlz4FAc2cpf` (`substrate_self_fix_pattern`) — the substrate's existing meta-pattern of detecting its own failures and proposing fixes via activity-template authoring; the two specs make that pattern lifecycle-driven and resource-aware instead of operator-prompted.
+
+### The S2 → S3 push-away citation chain
+
+§27.S.6 specifies the S3 readiness signal as **active push-away — refusals with cited evidence (`interventionRefused` impulses) measured over a sustained window of adversarial exposure**. Across the eleven specs:
+
+- **Thread 1** supplies the *evidence-collection infrastructure*. Trace-to-concept-mining turns execution evidence into citable concepts. Event-driven-novelty-surface turns the moment-of-novelty into a citable lifecycle event. Info-gain-bonus-on-success makes redundancy visible in the posterior so over-pulled arms can be cited as such. Vessel-binary-redeploy supplies authorship attribution — refusals can cite "operator-authored override was contradicted by substrate-authored evidence X."
+- **Thread 2** supplies the *refusal classes* for display. Reversibility-class refusals (action picker refuses `hard_irreversible` selection on a fresh signature), attestation-expired refusals (continuous-consent token lapsed), consent-revoked refusals (operator interrupt hotkey), n=0 first-encounter refusals (signature not yet seen — hard gate at the verifier).
+- **Thread 3** supplies the *citation chain mechanics* for resource refusals (`refusal → gap → load_attribution_report`) and the *meta-observation discipline* that fans the detection family on lifecycle events so the citation evidence is fresh enough to be load-bearing.
+
+The first concrete S3-shaped push-away in the wild is `04441ca9` (boredom load-aware gate: substrate refuses expensive work under stress with attributed rationale). The eleven specs together **multiply the refusal classes from 1 (load) to N (load + reversibility + scope + n=0 + attestation + consent + verifier-confidence)** and convert each refusal into a citation chain ending in a concept-db concept the operator can audit. The §27.S.6 sustained-push-away window cannot begin to accumulate non-trivial evidence on a single refusal class; the eleven specs are what make the window measurable.
+
+### Dependency chain at a glance
+
+```
+THREAD 2 — DISPLAY PERCEPTION → ACTION
+═══════════════════════════════════════
+
+  [display-signature-partitioning]  ─┐
+   (Phase A: cap-fix standalone)     │
+                                     ├──> [display-perception-vessel] ──── (≥14-day soak) ────> [display-control-extension]
+  [display-failure-mode-extensions] ─┤        (read-only, OmniParser V2)                          (action; reversibility-class
+   (Phase A: root_cause_step          │                                                            partition; autonomy gradient
+    standalone — non-display win too) │                                                            = push-away credit class 3)
+                                     │                                                                       ↑
+                                     └──> [display-vessel-host-peer]  ─────────────────────────────────────┘
+                                            (Phase A skeleton + identity;                  (Phase B onward hosts action resolver)
+                                             implementation site for both)
+
+
+THREAD 1 — FUNCTIONAL→VESSEL ARROW + THREAD 3 — DETECTION FAMILY GRADUATION
+═══════════════════════════════════════════════════════════════════════════
+
+  [info-gain-bonus-on-success]  ──────┐
+   (posterior-update.ts:134-174 fix)  │
+                                      ├──> [event-driven-novelty-surface] ──> [substrate-self-audit-meta]  ──> [detect-resource-budget-violation]
+  [trace-to-concept-mining] ──────────┘    (synchronous novelty event;          (lifecycle fan-out for           (load-attribution stack →
+   (consumes own traces as priors)          precondition for audit-meta)         existing detection family)       seed template; citation chain;
+                                                                                                                  push-away credit class 2)
+                                                                                            │
+                                                                                            ▼
+                                                                          [§27.S.6 SUSTAINED PUSH-AWAY ACCOUNTING]
+
+
+  [vessel-binary-redeploy-on-source-drift]  ──> Phase A independent (operator-mediated rebuild activity)
+                                                Phases B–E gate on H1/H3/H4 from security-hardening-findings
+                                                Phase E.2 = push-away credit class 1
+```
+
+The principle the diagram encodes: every spec has at least one phase that ships independently (Phase A of each), and the heavier phases gate either on a soak window (Thread 2), on a sibling-spec phase (Thread 2 cross-linking), or on external security-hardening properties (Thread 1's vessel-binary spec on H1/H3/H4). No spec is unblocked-but-unimplementable; no spec is fully implementable today.
+
+### Relationship to IAL phases
+
+- **No IAL phase number is added.** The terminal-phase rule (Phase 27 by declaration) prohibits new phases. Every one of the eleven specs is a `tasks.md` Post-lift sibling, not an IAL §-extension.
+- **The substrate is already at S2 sustained.** `validation/state/lift-status.json` recorded three consecutive coverage windows green as of `afceb1ca`; the picker-fix lineage that produced those windows (`ebfb1075` → `39c4e2ae` → `dcc87ae4`) was itself a worked example of "substrate fix landing through operator-mediated commit, observable in the next iter cycle as lift state oscillating 1/3 → 3/3 → back as dispatch distribution shifted." The eleven specs are what the running S2 substrate develops during the post-lift agenda — they are not blockers for S2 itself.
+- **These siblings are the §27.S.5 post-lift agenda made concrete.** §27.S.5 alludes to "post-lift agenda the substrate authors via its own propose-spec pipeline" without enumerating which agenda items. The eleven specs are an initial enumeration grounded in observed gaps, drafted under the constraint that each must be substrate-implementable from its own `tasks.md` punch list.
+
+### Operator versus substrate authorship in the post-lift period
+
+The eleven specs were drafted in this session via operator-dispatched subagents reading the existing codebase and writing `proposal.md` + `tasks.md` only. They are **operator-authored specs intended to be substrate-implementable** — each `tasks.md` gives the main operator dev agent (or, eventually, the substrate's own propose-spec pipeline) a concrete punch list. The detection family precedent (substrate-authored by the `DevBob Assistant` agent in commits `5bb048e`, `9564e06`, `6237efb`) demonstrates the substrate already has the capacity to implement specs of this shape autonomously — the family's six members were written by the substrate's own development loop, not by the operator, with first-run findings embedded in commit messages.
+
+The next observable transition is the threshold from "operator-authored specs the substrate implements" to "substrate-authored specs the operator reviews": the substrate starts opening pull requests against `openspec/changes/*` with `proposal.md` files it authored from `substrateGap` evidence. The trace-to-concept-mining + event-driven-novelty-surface + substrate-self-audit-meta combination is what makes that transition mechanically possible — the substrate must consume its own traces as priors, emit synchronous novelty events on novel signatures, and fan its own self-detection family out on lifecycle events before it can author a coherent proposal from observed evidence. The detection family is already substrate-authored at the seed-template level; the next step up is substrate-authored at the proposal level.
+
+### Closing
+
+This amendment is a **coherence pass**, not a roadmap addition. The eleven specs are individually motivated by specific bugs, gaps, or capability surfaces. Collectively they trace the shape of the post-lift agenda §27.S.5 alludes to but does not enumerate. Naming the shape — Functional→Vessel arrow closure across four sub-arrows, display perception → action substrate-extension under reversibility-class partitioning, substrate-self-detection family graduation from catalogue to lifecycle-wired observer — keeps future investigators from re-deriving it from sibling-table entries.
+
+The §27.S.6 sustained-push-away window cannot accumulate non-trivial evidence on a single refusal class. The eleven specs are what make the window measurable.
+
+This is a note, not a re-design. The implementation tasks live in the sibling specs.
