@@ -60,12 +60,84 @@ if (!ANTHROPIC_API_KEY) {
 // llm_completion resolver
 // ─────────────────────────────────────────────────────────────────────────────
 
+interface AnthropicToolDef {
+  name: string;
+  description: string;
+  input_schema: Record<string, unknown>;
+}
+
 interface LlmCompletionRequest {
   type: "llm_completion";
   prompt: string;
   model?: string;
   max_tokens?: number;
   system?: string;
+  // Tool-use mode (#121): when `tools` is non-empty, run an iterative tool-use
+  // loop. Each tool_use block is dispatched to `tool_dispatch_endpoint`
+  // (default: dev-vessel /v2/impulses/resolve) by wrapping the tool's `name`
+  // + `input` as a pointer `{type: <name>, ...input}`. Append tool_result,
+  // call Anthropic again, repeat until stop_reason != tool_use or
+  // max_tool_iterations reached.
+  tools?: AnthropicToolDef[];
+  tool_dispatch_endpoint?: string;
+  tool_dispatch_api_key?: string;
+  max_tool_iterations?: number;
+}
+
+interface ToolCallTraceEntry {
+  iteration: number;
+  tool_name: string;
+  tool_input: unknown;
+  tool_output: unknown;
+  duration_ms: number;
+}
+
+const DEFAULT_TOOL_DISPATCH_ENDPOINT =
+  process.env.LLM_TOOL_DISPATCH_ENDPOINT ?? "http://127.0.0.1:8090/v2/impulses/resolve";
+const DEFAULT_MAX_TOOL_ITERATIONS = parseInt(
+  process.env.LLM_MAX_TOOL_ITERATIONS ?? "8",
+  10,
+);
+
+async function dispatchTool(
+  endpoint: string,
+  apiKey: string,
+  toolName: string,
+  toolInput: Record<string, unknown>,
+): Promise<{ ok: boolean; result: unknown; error?: string }> {
+  const pointer = { type: toolName, ...toolInput };
+  const reqBody = JSON.stringify({ impulse: { pointer } });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 60_000);
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `ApiKey ${apiKey}`,
+      },
+      body: reqBody,
+      signal: ctrl.signal,
+    });
+    clearTimeout(timer);
+    const text = await res.text();
+    if (!res.ok) {
+      return { ok: false, result: null, error: `HTTP ${res.status}: ${text.slice(0, 300)}` };
+    }
+    let parsed: unknown;
+    try { parsed = JSON.parse(text); } catch { parsed = text; }
+    if (parsed && typeof parsed === "object" && "body" in parsed) {
+      const env = parsed as Record<string, unknown>;
+      if (env.shape === "structuredError") {
+        return { ok: false, result: env.body, error: JSON.stringify(env.body).slice(0, 300) };
+      }
+      return { ok: true, result: env.body };
+    }
+    return { ok: true, result: parsed };
+  } catch (err) {
+    clearTimeout(timer);
+    return { ok: false, result: null, error: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 const llmCompletionHandler: ResolverHandler = async (ctx) => {
@@ -89,43 +161,139 @@ const llmCompletionHandler: ResolverHandler = async (ctx) => {
 
   // Normalize model id: callers send "anthropic/claude-..." (provider-prefixed)
   // but the Anthropic SDK expects bare names like "claude-haiku-4-5-20251001".
-  // Strip the leading "anthropic/" if present. Defensive — broader provider
-  // routing would live in a fleet selector, not here.
   const rawModel = body.model ?? DEFAULT_MODEL;
   const model = rawModel.startsWith("anthropic/") ? rawModel.slice("anthropic/".length) : rawModel;
   const maxTokens = body.max_tokens ?? DEFAULT_MAX_TOKENS;
 
-  try {
-    const response = await anthropic.messages.create({
-      model,
-      max_tokens: maxTokens,
-      ...(body.system ? { system: body.system } : {}),
-      messages: [{ role: "user", content: body.prompt }],
-    });
+  // Plain completion path (no tools)
+  if (!body.tools || body.tools.length === 0) {
+    try {
+      const response = await anthropic.messages.create({
+        model,
+        max_tokens: maxTokens,
+        ...(body.system ? { system: body.system } : {}),
+        messages: [{ role: "user", content: body.prompt }],
+      });
 
-    const content = response.content
-      .filter((block) => block.type === "text")
-      .map((block) => (block as { type: "text"; text: string }).text)
-      .join("");
+      const content = response.content
+        .filter((block) => block.type === "text")
+        .map((block) => (block as { type: "text"; text: string }).text)
+        .join("");
 
-    return {
-      resolved: true,
-      shape: "llmCompletion",
-      content,
-      usage: {
-        input_tokens: response.usage.input_tokens,
-        output_tokens: response.usage.output_tokens,
-      },
-    };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[llm-resolver-vessel] llm_completion error:", message);
+      return {
+        resolved: true,
+        shape: "llmCompletion",
+        content,
+        usage: {
+          input_tokens: response.usage.input_tokens,
+          output_tokens: response.usage.output_tokens,
+        },
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[llm-resolver-vessel] llm_completion error:", message);
+      return {
+        resolved: false,
+        shape: "llmCompletion",
+        error: message,
+      };
+    }
+  }
+
+  // Tool-use loop path (#121)
+  const dispatchEndpoint = body.tool_dispatch_endpoint ?? DEFAULT_TOOL_DISPATCH_ENDPOINT;
+  const dispatchApiKey = body.tool_dispatch_api_key ?? process.env.METABOB_API_KEY ?? "";
+  const maxIter = Math.max(1, Math.min(body.max_tool_iterations ?? DEFAULT_MAX_TOOL_ITERATIONS, 20));
+
+  if (!dispatchApiKey) {
     return {
       resolved: false,
       shape: "llmCompletion",
-      error: message,
+      error: "tool-use requested but neither tool_dispatch_api_key nor METABOB_API_KEY is set",
     };
   }
+
+  const messages: Array<{ role: "user" | "assistant"; content: unknown }> = [
+    { role: "user", content: body.prompt },
+  ];
+  const toolCalls: ToolCallTraceEntry[] = [];
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+  let finalText = "";
+
+  for (let iter = 1; iter <= maxIter; iter++) {
+    let response;
+    try {
+      response = await anthropic.messages.create({
+        model,
+        max_tokens: maxTokens,
+        tools: body.tools as unknown as Anthropic.Messages.Tool[],
+        ...(body.system ? { system: body.system } : {}),
+        messages: messages as unknown as Anthropic.Messages.MessageParam[],
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return {
+        resolved: false,
+        shape: "llmCompletion",
+        error: `anthropic call (iter ${iter}): ${message}`,
+        tool_calls: toolCalls,
+      };
+    }
+
+    totalInputTokens += response.usage.input_tokens;
+    totalOutputTokens += response.usage.output_tokens;
+
+    messages.push({ role: "assistant", content: response.content });
+
+    if (response.stop_reason !== "tool_use") {
+      finalText = response.content
+        .filter((b) => b.type === "text")
+        .map((b) => (b as { type: "text"; text: string }).text)
+        .join("");
+      break;
+    }
+
+    const toolUses = response.content.filter((b) => b.type === "tool_use") as Array<{
+      type: "tool_use"; id: string; name: string; input: Record<string, unknown>;
+    }>;
+
+    const toolResults: Array<{ type: "tool_result"; tool_use_id: string; content: string; is_error?: boolean }> = [];
+    for (const tu of toolUses) {
+      const start = Date.now();
+      const r = await dispatchTool(dispatchEndpoint, dispatchApiKey, tu.name, tu.input);
+      const duration = Date.now() - start;
+      toolCalls.push({
+        iteration: iter,
+        tool_name: tu.name,
+        tool_input: tu.input,
+        tool_output: r.ok ? r.result : { error: r.error },
+        duration_ms: duration,
+      });
+      toolResults.push({
+        type: "tool_result",
+        tool_use_id: tu.id,
+        content: typeof r.result === "string"
+          ? r.result
+          : JSON.stringify(r.result ?? r.error ?? null),
+        ...(r.ok ? {} : { is_error: true }),
+      });
+    }
+
+    messages.push({ role: "user", content: toolResults });
+  }
+
+  return {
+    resolved: true,
+    shape: "llmCompletion",
+    content: finalText,
+    tool_calls: toolCalls,
+    iterations: toolCalls.length > 0 ? toolCalls[toolCalls.length - 1]!.iteration : 0,
+    usage: {
+      input_tokens: totalInputTokens,
+      output_tokens: totalOutputTokens,
+    },
+  };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
