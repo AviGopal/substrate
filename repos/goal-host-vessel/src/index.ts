@@ -1056,22 +1056,104 @@ async function handleRunGoal(req: Request): Promise<Response> {
   const record: DispatchRecord = { dispatchId, startedAt: Date.now(), status: "running" };
   executionStore.set(dispatchId, record);
 
-  host.runGoal(goal ?? `execute template ${targetTemplateId}`, {
-    variables,
-    targetTemplateId,
-    tags,
-    parentExecutionId,
-    compositionChain,
-    expectedOutputShapes,
-  }).then((result) => {
-    record.status = result.trace.status === "failed" ? "failed" : "completed";
-    record.executionId = result.trace.id;
-    record.selectedTemplateId = result.selectedTemplateId;
-  }).catch((err: unknown) => {
-    record.status = "failed";
-    record.error = (err as Error).message;
-    console.error("[goal-host-vessel] async /run-goal error:", err);
-  });
+  // Auto-draft fallback: when caller provides a free-form goal but no
+  // targetTemplateId, pre-check activity-api /recommend. If top candidate
+  // score is below SUBSTRATE_AUTO_DRAFT_THRESHOLD, the catalogue has no fit
+  // — dispatch the drafter to author one before the original goal runs. The
+  // result is substrate creating new capability AS A SIDE EFFECT of trying
+  // to accomplish something operational. Async (run inside the dispatch
+  // promise) so the immediate 202 response isn't delayed.
+  const autoDraft = async (): Promise<void> => {
+    if (process.env.SUBSTRATE_AUTO_DRAFT_ENABLED === "0") return;
+    if (!goal || targetTemplateId) return;
+    const threshold = parseFloat(process.env.SUBSTRATE_AUTO_DRAFT_THRESHOLD ?? "0.3");
+    try {
+      const preRec = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/recommend`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `ApiKey ${process.env.METABOB_API_KEY ?? ""}`,
+        },
+        body: JSON.stringify({ task_description: goal, ...(expectedOutputShapes?.length ? { expected_output_shapes: expectedOutputShapes } : {}) }),
+      });
+      if (!preRec.ok) {
+        const errText = await preRec.text().catch(() => "");
+        console.warn(`[goal-host-vessel] auto-draft pre-recommend HTTP ${preRec.status}: ${errText.slice(0, 200)}`);
+        return;
+      }
+      console.log(`[goal-host-vessel] auto-draft pre-recommend OK for goal="${(goal as string).slice(0, 60)}"`);
+      const data = await preRec.json() as { recommendations?: Array<{ template_id: string; score?: number }> };
+      const top = (data.recommendations ?? [])[0];
+      const topScore = top?.score ?? 0;
+      if (top && topScore >= threshold) return;
+      console.log(`[goal-host-vessel] auto-draft trigger: goal="${(goal as string).slice(0, 80)}" top_score=${topScore} < ${threshold}`);
+      const scenarioId = `auto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const scenario = {
+        id: scenarioId,
+        mode_class: "auto",
+        stage: "synthesis",
+        outcome_class: "gap",
+        title: `Auto-synthesized gap: ${(goal as string).slice(0, 80)}`,
+        description: `Goal-host /recommend returned top_score=${topScore} (< ${threshold}) for goal: "${goal}". Substrate catalogue has no fit. Auto-synthesized scenario so drafter can author a closing activity. This is the substrate creating new functionality as a side effect of trying to do something else (the operator's actual goal).`,
+        goal_text: goal,
+        expected_input_shapes: [],
+        expected_output_shapes: expectedOutputShapes ?? [],
+        cited_concepts: ["concept_9ldsmRgqSTd5"],
+        auto_draft_for_dispatch: dispatchId,
+      };
+      const fsWriteBody = JSON.stringify({
+        impulse: {
+          pointer: {
+            type: "fs_write",
+            path: `/workspace/validation/failure-modes/scenarios/${scenarioId}.json`,
+            content: JSON.stringify(scenario, null, 2),
+          },
+        },
+      });
+      await fetch("http://127.0.0.1:8090/v2/impulses/resolve", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `ApiKey ${process.env.METABOB_API_KEY ?? ""}`,
+        },
+        body: fsWriteBody,
+      });
+      console.log(`[goal-host-vessel] auto-draft: scenario ${scenarioId}.json written; dispatching draft-gap-closing-activity`);
+      try {
+        await host.runGoal(`auto-draft for gap: ${(goal as string).slice(0, 60)}`, {
+          targetTemplateId: "activity:⟨development-vessel:draft-gap-closing-activity⟩",
+          variables: { scenario_id: scenarioId },
+          tags: ["substrate.auto.draft", `auto_draft_for_dispatch:${dispatchId}`],
+        });
+        console.log(`[goal-host-vessel] auto-draft: drafter completed for scenario ${scenarioId}`);
+      } catch (drafterErr) {
+        console.error(`[goal-host-vessel] auto-draft: drafter error:`, drafterErr);
+      }
+    } catch (recErr) {
+      console.warn(`[goal-host-vessel] auto-draft skipped:`, recErr instanceof Error ? recErr.message : recErr);
+    }
+  };
+
+  (async () => {
+    try {
+      await autoDraft();
+      const result = await host.runGoal(goal ?? `execute template ${targetTemplateId}`, {
+        variables,
+        targetTemplateId,
+        tags,
+        parentExecutionId,
+        compositionChain,
+        expectedOutputShapes,
+      });
+      record.status = result.trace.status === "failed" ? "failed" : "completed";
+      record.executionId = result.trace.id;
+      record.selectedTemplateId = result.selectedTemplateId;
+    } catch (err) {
+      record.status = "failed";
+      record.error = (err as Error).message;
+      console.error("[goal-host-vessel] async /run-goal error:", err);
+    }
+  })();
 
   return Response.json({ dispatchId, status: "running" }, { status: 202 });
 }
