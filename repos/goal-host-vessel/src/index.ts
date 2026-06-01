@@ -694,7 +694,15 @@ function buildProxyResolver(shape: string) {
       // placeholder strings (which were causing silent failures in
       // register_variant — see comment on interpolateProxyValue).
       const config = interpolateProxyValue(configRaw, variables) as Record<string, unknown>;
-      const pointer: Record<string, unknown> = { type: shape, ...config, ...variables };
+      // Spread variables BEFORE config so the interpolated config wins on key
+      // conflicts. Templates intentionally use variable names that match
+      // config-key meanings inside the activity layer (e.g. target_branch
+      // means "feature branch" to the activity but "PR base" to gh_pr_create's
+      // config). If variables spread last, they shadow the config's
+      // interpolated value, and the resolver sees the wrong field. Variables
+      // remain available for resolvers whose pointer fields aren't explicit
+      // in the task config — they just don't override an interpolated config.
+      const pointer: Record<string, unknown> = { type: shape, ...variables, ...config };
       // ITER-4 fix: manual AbortController + clearTimeout instead of
       // AbortSignal.timeout — the implicit timer leaks native buffers. Also
       // drain response body explicitly via .cancel() since Bun retains the
