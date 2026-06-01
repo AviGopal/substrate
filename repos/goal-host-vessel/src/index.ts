@@ -474,6 +474,35 @@ if (useNoOpSink) {
   console.log("[goal-host-vessel] ITER-4 DIAG: pure NoOp sink active (bus path disabled)");
 }
 
+// Iteration 10 — lifecycle subscriber ablation.
+//
+// Single-dispatch isolation test revealed: a single-task immunity-pattern
+// template (detect-precondition-rejection) caused 37 MB → 2.7 GB in 30s
+// (~90 MB/sec growth). Iter-8 fixed the idle-WS leak; iter-10 addresses
+// the dispatch-path leak which is distinct.
+//
+// Hypothesis: every task.completed event fires the validator-dispatch
+// subscriber template (a 5-task LLM-using activity). Iter-3
+// (concept_KAQEz-Xq5FwT) made dispatchSubscribers use void-async so they
+// don't block the parent, BUT it didn't bound concurrency. With each
+// validator-dispatch execution emitting 5 more task.completed events,
+// the recursive cascade is unbounded.
+//
+// Gated on GOAL_HOST_DISABLE_SUBSCRIBERS env. Default OFF (subscribers
+// enabled — preserve original behavior). Set =1 to pass empty
+// subscriberTemplates to GoalHost, disabling lifecycle dispatch entirely.
+//
+// When disabled, we lose:
+//   - validator-dispatch (per-task validation against rules + LLM judge)
+//   - slot-binding (impulse-pool pre-binding by shape)
+//   - audit-test-report and other registered subscribers
+// But we gain stability. Until a durable bounded-subscriber-dispatch is
+// shipped in ias-executor-ts, this ablation is the operational workaround.
+const DISABLE_SUBSCRIBERS = process.env.GOAL_HOST_DISABLE_SUBSCRIBERS === "1";
+if (DISABLE_SUBSCRIBERS) {
+  console.log("[startup] Lifecycle subscribers DISABLED via GOAL_HOST_DISABLE_SUBSCRIBERS=1 (iter-10 ablation)");
+}
+
 const host = new GoalHost({
   llm,
   activityApiEndpoint: ACTIVITY_API_ENDPOINT,
@@ -481,6 +510,7 @@ const host = new GoalHost({
   discoveryEndpoint: DISCOVERY_ENDPOINT,
   enableAgentFill: true,
   eventSink: (useNoOpSink ? pureNoOpSink : boundedSink) as unknown as typeof busSink,
+  ...(DISABLE_SUBSCRIBERS ? { subscriberTemplates: [] } : {}),
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
