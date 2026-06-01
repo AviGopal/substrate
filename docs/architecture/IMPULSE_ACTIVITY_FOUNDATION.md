@@ -839,6 +839,93 @@ Two distinct states affect what the system can do:
 
 The `unbindable` state in binding slots can represent either **unreachable** (the vessel that produces this shape is not connected) or **unknown** (no evidence this shape can be produced at all). These require different responses: wait for vessel connection vs. escalate via `create-shape-provider-goal` to explore new topology.
 
+### Reachability Across Substrates
+
+A single substrate's reachable subgraph is bounded by the vessels its
+own discovery-vessel knows about. The post-lift agenda extends this
+boundary: peer substrates make additional vessels reachable, and
+foreign-provenance impulses flow into the local concept graph under
+explicit signature-gated trust weighting. The structural mechanism is
+fleet federation — see `openspec/changes/2026-05-23-vessel-federation`
+for the peer-aware discovery primitive and
+`openspec/changes/2026-05-31-substrate-fleet-federation` for the
+information-flow, image-artifact, self-install, and adversarial-audit
+layers built on top.
+
+The invariant that survives: no vessel above the discovery layer
+learns about substrates as routing targets. Substrate identity
+surfaces only as a discovery-vessel pubkey (per H2) and as a
+`foreign_provenance` annotation on cross-substrate impulses. From
+inside any reasoning vessel, the system is still "vessels and
+shapes" — the reachable subgraph is just larger.
+
+The (a)/(b)/(c) inter-substrate adversary-model progression
+(operator-trusted peers → semi-trusted federation → open federation)
+is the structural mechanism by which the post-lift agenda items
+named in `openspec/changes/2026-04-26-impulse-activity-loop/tasks.md`
+§27.S.5 — security, authenticity, cooperation, federation,
+self-recovery — get realized. Open federation (c) is the
+inter-substrate operationalization of S3: the substrate may admit
+untrusted peers only once the §27.S.6 push-away rubric measures
+sustained refusal of hostile-peer probes with sound cited rationale.
+
+### Adaptive Immune System: Observe, Detect, Resolve
+
+Conventional security postures decompose into four boxes — IDS
+(intrusion detection), IPS (prevention), SIEM (event aggregation),
+SOAR (automated response). Humans sit at the SIEM and read; humans
+configure the SOAR. The substrate collapses the four boxes into one
+mechanism: **detection and resolution are activities**. They consume
+ingestion impulses, emit findings and resolution impulses,
+accumulate Thompson posteriors, and are extracted into reusable
+templates by the ribosome. Static rules become learned activity
+chains. The operator is a downstream affordance, not the design
+center.
+
+Four shape families implement the loop:
+
+| Family | Examples | Role |
+|---|---|---|
+| Ingestion impulses | `auditEvent`, `httpRequest`, `connectionEvent`, `tlsHandshakeEvent`, `peerInteraction`, `dependencyAdded`, `llmResponse` (with `taint` metadata), `operatorAction`, `hostSyscallAnomaly` | Surface-specific events translated into common vocabulary by guardian-vessels. |
+| Findings | `securityFinding`, `anomalyFinding` | Detector activities emit these when ingestion patterns cross thresholds; carry supporting evidence impulse ids. |
+| Resolution impulses | `resolutionProposal` (dry-run), `resolutionAction` (state-changing), `resolutionRefused` (push-away applied to self) | The resolver activity's output. Proposal precedes action; refusal is a positive Thompson outcome. |
+| Baselines | `fileBaseline`, `behaviorBaseline`, `peerBaseline` | Reference distributions detectors compare current state against. Rebaselining is itself an activity, triggered by legitimate state-change events. |
+
+The guardian-vessel pattern is the general extension mechanism: one
+vessel per external surface (HTTP, federation, package registry,
+LLM output, operator input, host syscalls), translating surface-
+native events into the common ingestion vocabulary. Downstream
+detectors do not need to know surface specifics. The pattern is the
+same separation-of-concerns principle that makes "vessels and
+shapes" work for the rest of the substrate, applied to the security
+surface. A `detect-novel-source-ip` detector consumes `httpRequest`
+impulses without caring whether they came from the substrate's own
+HTTP surface, a Kubernetes ingress, or a federated peer's
+forwarding layer.
+
+Authority to emit a `resolutionAction` is gated by four
+reversibility tiers (dry-run, reversible, semi-reversible,
+irreversible) and earned via Thompson promotion. The substrate's
+Phase 1 ships a small allowlist of reversible resolvers (rate-limit
+an erroring resolver, quarantine a malformed-responding vessel,
+refuse an invalid peer, reject an overbudget resolution) under
+operator-issued standing attestations; everything else is
+proposal-only until promotion. The §27.S.6 push-away rubric applies
+to the substrate's own firings: before any resolution, the
+resolver checks whether the detection is suspect (operator-induced
+anomaly during deploy, recent rebaseline, adversarial induction,
+foreign-evidence-only) and refuses with cited rationale if so.
+Refusals feed the §27.S.6 `interventionRefused` ledger with
+`source: "observe-detect-resolve"` provenance.
+
+See `openspec/changes/2026-05-31-substrate-fleet-federation/specs/
+observe-detect-resolve/spec.md` for the full requirements. The
+foundation-level invariant: from inside any reasoning vessel, the
+security loop is still "vessels and shapes" — guardian-vessels
+ingest, detector activities classify, resolver activities (gated by
+the four tiers) act. No separate detection plane, no parallel
+control mechanism.
+
 ### Topology Discovery Is the Purpose
 
 The impulse-activity loop is not a recipe executor. It is a **topology discovery engine**:

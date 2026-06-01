@@ -2036,16 +2036,52 @@ typology — its loop is not constrained by the typology.
 - Adversarial probe authorship — substrate observes its own
   verifier_negative traces and authors new probes targeting emerged
   attack surface (extends `2026-05-23-lift-criterion-hardening`).
-- Anomaly detection on Thompson posteriors (not yet specced; expected
-  substrate-authored).
+- **Observe-detect-resolve loop authorship** — beyond the Phase 1
+  detector minimum (auth-failure-rate, malformed-response-rate,
+  signature-validation-failure) seeded operator-side per
+  `2026-05-31-substrate-fleet-federation/specs/observe-detect-resolve/spec.md
+  §R3.2`, the substrate authors additional detector activities as
+  ingestion patterns accumulate. Each detector follows the immunity
+  pattern (§R3.3); each is subject to the §R5 autonomy-promotion
+  gate. Sibling: `2026-05-31-substrate-fleet-federation`
+  observe-detect-resolve delta. The "anomaly detection on Thompson
+  posteriors" item below is one instance of this broader pattern.
+- **Resolver-chain authorship under the four reversibility tiers**.
+  The substrate authors new resolvers (dry-run by default; earning
+  promotion to reversible-autonomous via §R5.3, to semi-reversible
+  via §R5.4 with peer corroboration). Irreversible-tier resolvers
+  remain operator-gated through S3 (§27.S.6). Sibling: same.
+- **Adaptive baseline maintenance** — `fileBaseline`,
+  `behaviorBaseline`, and `peerBaseline` rotation activities
+  (§R1.4.4). The substrate authors rebaseline activities for each
+  legitimate state-change class; H5 baseline review remains an
+  operator anchor role per the operator-role typology below.
+- Anomaly detection on Thompson posteriors — concrete instance of
+  the observe-detect-resolve detector authorship pattern;
+  substrate-authored.
 
 **Authenticity** — the substrate authors:
 - H2 pubkey-derived vessel-id deployment (`vessel-federation` Phase
   1+). Sibling: `2026-05-23-vessel-federation`.
-- H3 EIP-712-style scope attestations.
+- H3 EIP-712-style scope attestations. **Critical-path for all
+  phases of `2026-05-31-substrate-fleet-federation`**: the Phase 1
+  standing-approval allowlist for observe-detect-resolve uses
+  H3-shaped long-deadline attestations, and Phase 5 audit-substrate
+  probes use H3 short-deadline attestations. H3 is the load-bearing
+  primitive for the resolver-authority model.
 - Content-addressed activity template ids rollout (`vessel-federation`
   Phase 2+).
 - Discovery-vessel pubkey identity extension to substrate identity.
+- **Container-local key model authorship** — every substrate
+  generates its own identity keypair under
+  `/var/lib/substrate/identity.key` on first boot, derives an
+  audit-signing subkey, and consumes only authorization-only
+  external material (trust-roots bundle). The model is operator-
+  authored in Phase 1; substrate-authored key rotation
+  (`identity_rotation` activity) graduates to semi-reversible-tier
+  per observe-detect-resolve §R8.6 once the §R5.4 promotion gate
+  passes. Sibling: `2026-05-31-substrate-fleet-federation/specs/
+  observe-detect-resolve/spec.md §R8`.
 
 **Cooperation / coopting external vessels** (external-system-vessels the substrate models post-lift) — the substrate authors:
 - `external-resolver-vesselization` implementation (ribosome-for-
@@ -2057,6 +2093,24 @@ typology — its loop is not constrained by the typology.
   webhooks/log streams into observer vessels).
 - `external-trust-weighting` (deferred sibling — calibrates
   confidence weights for external-derived impulses).
+- **Guardian-vessel authorship for additional external surfaces** —
+  beyond the Phase 1 `audit-vessel` (internal privileged operations)
+  and `network-guardian` (HTTP listening surface), the substrate
+  authors guardians for surfaces it observes: `federation-guardian`
+  (`crossSubstrateResolve` ingestion); `supply-chain-guardian`
+  (`dependencyAdded` / `dependencyAdvisoryEvent` ingestion against
+  package-registry advisory streams); `llm-output-guardian`
+  (`llmResponse` taint tagging — `ungrounded` / `operator` /
+  `external` / `self`); `operator-input-guardian` (`operatorAction`
+  with origin and timing); `host-guardian` (`hostSyscallAnomaly`
+  ingestion via eBPF or equivalent). Each guardian follows the
+  pattern in `2026-05-31-substrate-fleet-federation/specs/
+  observe-detect-resolve/spec.md §R7`: subscribe to surface-native
+  events, translate to ingestion impulses with `guardian_vessel_id`
+  set to itself, register with discovery-vessel, emit `auditEvent`
+  on configuration changes. The downstream detector + resolver path
+  does not need to know the surface specifics — the guardian
+  abstracts the surface into the common ingestion vocabulary.
 
 **Federation** — the substrate authors:
 - vessel-federation Phase 2+ (peer-aware discovery, peer registration,
@@ -2079,10 +2133,22 @@ typology — its loop is not constrained by the typology.
   inter-substrate operationalization of S3 — see §27.S.6 below.
 
 **Self-recovery under attack** — the substrate authors:
-- Adversarial-condition detection on its own traces.
+- Adversarial-condition detection on its own traces — concrete
+  instance of the observe-detect-resolve detector authorship
+  pattern (Security subsection above) consuming `auditEvent` and
+  `anomalyFinding` impulses; emits `securityFinding` severity ≥
+  high with structured evidence chain into the existing
+  closure-replacement-suite activities.
 - Self-dispatch of restart-vessel / restore-from-backup activities
   in response to attack signals (uses existing closure-replacement-
-  suite activities; the new piece is the dispatch heuristic).
+  suite activities; the new piece is the dispatch heuristic). The
+  dispatch heuristic graduates from dry-run to reversible-
+  autonomous via observe-detect-resolve §R5.3 once the substrate
+  demonstrates push-away refusals on suspect firings (e.g.
+  refusing to restart-vessel during an operator-induced anomaly
+  window — observe-detect-resolve §R6.1's
+  `operator_deploy_window` suspect-basis is the canonical
+  example).
 
 **External-system catalog** (external-system-vessels) — the substrate authors:
 - Operator-vessel-trust-tuning (Thompson on operator-emitted impulse
