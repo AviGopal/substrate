@@ -333,13 +333,25 @@ const busSink = new BusForwardingEventSink({
 
 const boundedSink = new BoundedBusSink({ inner: busSink });
 
+// ITER-4 DIAGNOSTIC: NoOp binary isolation. If GOAL_HOST_NOOP_SINK=1, bypass
+// BusForwardingEventSink + BoundedBusSink entirely. Pure in-process noop. If
+// cgroup stays bounded under boredom load, the leak source is the bus path
+// (BusForwardingEventSink HTTP fetch / AbortSignal.timeout / response body).
+// If cgroup still grows, the bus path is innocent and the leak is elsewhere
+// (proxy resolver fetches, runtime internals, activity-api recommend).
+const pureNoOpSink = { emit: () => {} };
+const useNoOpSink = process.env.GOAL_HOST_NOOP_SINK === "1";
+if (useNoOpSink) {
+  console.log("[goal-host-vessel] ITER-4 DIAG: pure NoOp sink active (bus path disabled)");
+}
+
 const host = new GoalHost({
   llm,
   activityApiEndpoint: ACTIVITY_API_ENDPOINT,
   apiKey: API_KEY,
   discoveryEndpoint: DISCOVERY_ENDPOINT,
   enableAgentFill: true,
-  eventSink: boundedSink as unknown as typeof busSink,
+  eventSink: (useNoOpSink ? pureNoOpSink : boundedSink) as unknown as typeof busSink,
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -382,6 +394,9 @@ function registerBuiltinResolvers(): void {
       if (goal) body.goal = goal;
       if (requiredShape) body.expected_output_shapes = [requiredShape];
 
+      // ITER-4 fix: manual timer cleanup + body drain.
+      const recCtrl = new AbortController();
+      const recTimer = setTimeout(() => recCtrl.abort(), 15_000);
       try {
         const resp = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/recommend`, {
           method: "POST",
@@ -390,9 +405,11 @@ function registerBuiltinResolvers(): void {
             ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}),
           },
           body: JSON.stringify(body),
-          signal: AbortSignal.timeout(15_000),
+          signal: recCtrl.signal,
         });
+        clearTimeout(recTimer);
         const result = await resp.json();
+        try { await resp.body?.cancel(); } catch { /* swallow */ }
         return [{
           id: random.id("activity_rec"),
           pointer: { type: "memo" },
@@ -401,6 +418,7 @@ function registerBuiltinResolvers(): void {
           content: result,
         }];
       } catch (err) {
+        clearTimeout(recTimer);
         return [{
           id: random.id("activity_rec:err"),
           pointer: { type: "memo" },
@@ -518,17 +536,29 @@ function buildProxyResolver(shape: string) {
       // register_variant — see comment on interpolateProxyValue).
       const config = interpolateProxyValue(configRaw, variables) as Record<string, unknown>;
       const pointer: Record<string, unknown> = { type: shape, ...config, ...variables };
+      // ITER-4 fix: manual AbortController + clearTimeout instead of
+      // AbortSignal.timeout — the implicit timer leaks native buffers. Also
+      // drain response body explicitly via .cancel() since Bun retains the
+      // readable stream mmap pages even after .text() consumes them.
+      const proxyCtrl = new AbortController();
+      const proxyTimer = setTimeout(() => proxyCtrl.abort(), PROXY_TIMEOUT_MS);
+      let resp: Response;
       try {
-        const resp = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
+        resp = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}),
           },
           body: JSON.stringify({ impulse: { pointer } }),
-          signal: AbortSignal.timeout(PROXY_TIMEOUT_MS),
+          signal: proxyCtrl.signal,
         });
+      } finally {
+        clearTimeout(proxyTimer);
+      }
+      try {
         const bodyText = await resp.text();
+        try { await resp.body?.cancel(); } catch { /* swallow */ }
         let parsed: unknown;
         try { parsed = JSON.parse(bodyText); } catch { parsed = bodyText; }
 
@@ -635,15 +665,21 @@ function buildProxyResolver(shape: string) {
  * registration race when goal-host restarts before dev-vessel is up).
  */
 async function registerDevVesselProxies(): Promise<{ added: string[]; total: number }> {
+  // ITER-4 fix: manual AbortController + clearTimeout + drain body.
+  const shapesCtrl = new AbortController();
+  const shapesTimer = setTimeout(() => shapesCtrl.abort(), 5_000);
   try {
     const r = await fetch(`${DEV_VESSEL_ENDPOINT}/shapes`, {
-      signal: AbortSignal.timeout(5_000),
+      signal: shapesCtrl.signal,
     });
+    clearTimeout(shapesTimer);
     if (!r.ok) {
+      try { await r.body?.cancel(); } catch { /* swallow */ }
       console.warn(`[goal-host-vessel] dev-vessel /shapes HTTP ${r.status} — proxy resolvers not registered yet`);
       return { added: [], total: registeredProxyShapes.size };
     }
     const body = await r.json() as { shapes?: string[] };
+    try { await r.body?.cancel(); } catch { /* swallow */ }
     const shapes: string[] = Array.isArray(body.shapes) ? body.shapes : [];
     if (shapes.length === 0) {
       console.warn("[goal-host-vessel] dev-vessel /shapes returned empty list");
@@ -672,6 +708,7 @@ async function registerDevVesselProxies(): Promise<{ added: string[]; total: num
     }
     return { added, total: registeredProxyShapes.size };
   } catch (err) {
+    clearTimeout(shapesTimer);
     console.warn(`[goal-host-vessel] failed to register dev-vessel proxies: ${(err as Error).message}`);
     return { added: [], total: registeredProxyShapes.size };
   }
