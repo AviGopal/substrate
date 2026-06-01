@@ -21,6 +21,7 @@ import type {
   ConceptDbClient,
   ConceptRecord,
 } from '../concept-db-client';
+import { stripWritebackEnvelope } from './concept-writeback-strip';
 
 interface ParsedNote {
   frontmatter: Record<string, unknown>;
@@ -140,16 +141,6 @@ function setPendingSync(content: string, value: boolean): string {
   return '---' + newFm + content.slice(endIdx);
 }
 
-/**
- * Strip the body of the `## Related` section so that we don't ship it
- * as concept content (the related section is the rendered edge view,
- * not part of the concept's text).
- */
-function stripRelated(body: string): string {
-  const relIdx = body.search(/^##\s+Related\s*$/m);
-  if (relIdx < 0) return body.trim();
-  return body.slice(0, relIdx).trim();
-}
 
 export class ConceptWritebackService {
   private modifyHandler: ((file: TAbstractFile) => void) | null = null;
@@ -213,7 +204,7 @@ export class ConceptWritebackService {
       const shape = String(parsed.frontmatter['shape'] || 'note');
       const sourceType = String(parsed.frontmatter['source_type'] || 'vault_note');
       const summary = String(parsed.frontmatter['summary'] || '').trim();
-      const body = stripRelated(parsed.body);
+      const body = stripWritebackEnvelope(parsed.body);
 
       let mintedId: string | undefined;
       if (!conceptId) {
