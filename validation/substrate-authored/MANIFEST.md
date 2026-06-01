@@ -12,7 +12,9 @@ its own (also substrate-authored, also published via the composition).
 |---|---|---|
 | ac67e366 | 2026-06-01-first-substrate-merge-0326 | First end-to-end substrate-published artifact. Documented the composition mechanism. |
 | 4ef55761 | 2026-06-01T10-45-30Z-vessel-heartbeat-starvation-scan-development-vessel | Proposed `vessel_heartbeat_starvation_scan` detector — substrate's first authored CAPABILITY artifact (vs documentation). |
-| _this commit_ | 2026-06-01T10-49-24Z-substrate-authored-manifest-bump-super-repo | Manifest bump recording the heartbeat-starvation detector. |
+| 34410d71 | 2026-06-01T10-49-24Z-substrate-authored-manifest-bump-super-repo | Manifest bump recording 4ef55761 (heartbeat detector). |
+| 8cffdce4 | 2026-06-01T10-59-19Z-substrate-self-observation-report-development-vessel | Substrate composed 5 self-detection resolvers + LLM synthesis; published the report. Demonstrated composition + adjustment to unexpected detector counts. |
+| _this commit_ | 2026-06-01T11-08-33Z-substrate-authored-manifest-bump-super-repo | Manifest bump recording 8cffdce4. |
 
 ## Version identifier format
 
