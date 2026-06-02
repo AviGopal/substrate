@@ -51,7 +51,8 @@ STATEFUL_UI_VESSEL_SRC := $(REPO_ROOT)/repos/stateful-ui-vessel
         sync-ribosome-vessel restart-ribosome-vessel \
         sync-concept-db restart-concept-db \
         sync-analysis-vessel restart-analysis-vessel \
-        sync-stateful-ui-vessel restart-stateful-ui-vessel
+        sync-stateful-ui-vessel restart-stateful-ui-vessel \
+        ui-bridge-up ui-bridge-down ui-bridge-status
 
 build:
 	docker build -f $(CURDIR)/../../Dockerfile.substrate \
@@ -318,6 +319,40 @@ restart-stateful-ui-vessel: sync-stateful-ui-vessel
 	docker exec $(LIVE_NAME) systemctl restart stateful-ui-vessel.service
 	@sleep 3
 	@docker exec $(LIVE_NAME) systemctl is-active stateful-ui-vessel.service | grep -q active && echo "[restart] stateful-ui-vessel active" || echo "[restart] ERROR: stateful-ui-vessel not active"
+
+# -----------------------------------------------------------------------------
+# UI bridge: alpine/socat sidecar that publishes host port 18270 to the
+# substrate-live container's internal port 8270 (stateful-ui-vessel).
+#
+# Why a sidecar instead of `docker run -p`? Adding a published port to a
+# running container requires recreation, which destroys the in-memory state
+# the substrate has been accumulating. The sidecar attaches to the docker
+# bridge network, reaches substrate-live by its bridge IP, and publishes
+# 18270 to the host — without touching substrate-live itself.
+#
+# Runs with --restart unless-stopped, so it survives docker daemon restarts.
+# Operator opens http://localhost:18270/ — the substrate's face.
+BRIDGE_NAME := stateful-ui-bridge
+.PHONY: ui-bridge-up ui-bridge-down ui-bridge-status
+
+ui-bridge-up:
+	@docker rm -f $(BRIDGE_NAME) >/dev/null 2>&1 || true
+	@CONTAINER_IP=$$(docker inspect $(LIVE_NAME) --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'); \
+	if [ -z "$$CONTAINER_IP" ]; then echo "[ui-bridge-up] ERROR: substrate-live has no bridge IP — is it running?"; exit 1; fi; \
+	echo "[ui-bridge-up] target: $$CONTAINER_IP:8270"; \
+	docker run -d --name $(BRIDGE_NAME) --restart unless-stopped \
+	  -p 18270:18270 alpine/socat:latest \
+	  TCP-LISTEN:18270,reuseaddr,fork TCP:$$CONTAINER_IP:8270 >/dev/null
+	@sleep 2
+	@docker ps --filter name=$(BRIDGE_NAME) --format '[ui-bridge-up] {{.Names}} {{.Status}} {{.Ports}}'
+	@curl -sf --max-time 4 http://localhost:18270/health >/dev/null && echo "[ui-bridge-up] http://localhost:18270/ reachable" || echo "[ui-bridge-up] WARNING: bridge up but vessel not reachable"
+
+ui-bridge-down:
+	@docker rm -f $(BRIDGE_NAME) >/dev/null 2>&1 && echo "[ui-bridge-down] removed" || echo "[ui-bridge-down] not running"
+
+ui-bridge-status:
+	@docker ps -a --filter name=$(BRIDGE_NAME) --format '{{.Names}}\t{{.Status}}\t{{.Ports}}' || echo "(none)"
+	@curl -sf --max-time 3 http://localhost:18270/health 2>&1 | head -1 || echo "[ui-bridge-status] vessel unreachable via host:18270"
 
 # -----------------------------------------------------------------------------
 # Writable vessel repo clones for substrate-managed publication.
