@@ -1,0 +1,20 @@
+[Unit]
+Description=stateful-ui-vessel
+After=discovery-vessel.service development-vessel.service
+Requires=discovery-vessel.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8270
+Environment=HOST=0.0.0.0
+Environment=STATEFUL_UI_VESSEL_ID=stateful-ui-vessel
+WorkingDirectory=/vessels/stateful-ui-vessel
+ExecStart=/root/.bun/bin/bun /vessels/stateful-ui-vessel/src/index.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

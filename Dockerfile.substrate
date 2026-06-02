@@ -159,6 +159,12 @@ RUN cd analysis-vessel && \
 COPY repos/analysis-vessel/src ./analysis-vessel/src
 COPY repos/analysis-vessel/tsconfig.json ./analysis-vessel/
 
+# stateful-ui-vessel (substrate's face — port 8270)
+COPY repos/stateful-ui-vessel/package.json ./stateful-ui-vessel/
+RUN cd stateful-ui-vessel && bun install
+COPY repos/stateful-ui-vessel/src ./stateful-ui-vessel/src
+COPY repos/stateful-ui-vessel/tsconfig.json ./stateful-ui-vessel/
+
 # --- Substrate runtime config ---
 RUN mkdir -p /etc/substrate /workspace /var/lib/surrealdb /scripts
 
@@ -186,6 +192,7 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env && \
         concept-db.service \
         concept-db-seeder.service \
         analysis-vessel.service \
+        stateful-ui-vessel.service \
         journald-stdout-forwarder.service
 
 VOLUME ["/workspace"]

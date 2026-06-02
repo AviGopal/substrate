@@ -35,6 +35,7 @@ BOREDOM_VESSEL_SRC := $(REPO_ROOT)/repos/boredom-vessel
 RIBOSOME_VESSEL_SRC := $(REPO_ROOT)/repos/ribosome-vessel
 CONCEPT_DB_SRC := $(REPO_ROOT)/repos/concept-db
 ANALYSIS_VESSEL_SRC := $(REPO_ROOT)/repos/analysis-vessel
+STATEFUL_UI_VESSEL_SRC := $(REPO_ROOT)/repos/stateful-ui-vessel
 
 .PHONY: build run run-detach run-live seed-live import-memory health health-live \
         logs-all logs-activity-api logs-development-vessel \
@@ -49,7 +50,8 @@ ANALYSIS_VESSEL_SRC := $(REPO_ROOT)/repos/analysis-vessel
         sync-boredom-vessel trigger-boredom-vessel \
         sync-ribosome-vessel restart-ribosome-vessel \
         sync-concept-db restart-concept-db \
-        sync-analysis-vessel restart-analysis-vessel
+        sync-analysis-vessel restart-analysis-vessel \
+        sync-stateful-ui-vessel restart-stateful-ui-vessel
 
 build:
 	docker build -f $(CURDIR)/../../Dockerfile.substrate \
@@ -112,12 +114,13 @@ run-live:
 	    -p 18210:8210 \
 	    -p 18250:8250 \
 	    -p 18260:8260 \
+	    -p 18270:8270 \
 	    -v $(WORKSPACE):/workspace \
 	    -v $(REPO_ROOT):$(REPO_ROOT):ro \
 	    --tmpfs /run \
 	    --tmpfs /run/lock \
 	    $(IMAGE):$(TAG)
-	@echo "[run-live] substrate-live started — activity-api on :18080, development-vessel on :18090, discovery-vessel on :18100, goal-host-vessel on :18210, analysis-vessel on :18250, concept-db on :18260"
+	@echo "[run-live] substrate-live started — activity-api on :18080, development-vessel on :18090, discovery-vessel on :18100, goal-host-vessel on :18210, analysis-vessel on :18250, concept-db on :18260, stateful-ui-vessel on :18270"
 	@echo "[run-live] Internal secrets auto-generated and persisted to workspace/.substrate-secrets"
 	@echo "[run-live] Wait ~15s for services to start, then: make -C scripts/substrate seed-live"
 
@@ -297,6 +300,24 @@ restart-analysis-vessel: sync-analysis-vessel
 	docker exec $(LIVE_NAME) systemctl restart analysis-vessel.service
 	@sleep 2
 	@docker exec $(LIVE_NAME) systemctl is-active analysis-vessel.service | grep -q active && echo "[restart] analysis-vessel active" || echo "[restart] ERROR: analysis-vessel not active"
+
+# Sync stateful-ui-vessel source into the running container.
+# Also installs the systemd unit on first sync (idempotent).
+sync-stateful-ui-vessel:
+	docker exec $(LIVE_NAME) mkdir -p /vessels/stateful-ui-vessel/src
+	docker cp $(STATEFUL_UI_VESSEL_SRC)/package.json $(LIVE_NAME):/vessels/stateful-ui-vessel/package.json
+	docker cp $(STATEFUL_UI_VESSEL_SRC)/tsconfig.json $(LIVE_NAME):/vessels/stateful-ui-vessel/tsconfig.json
+	docker cp $(STATEFUL_UI_VESSEL_SRC)/src $(LIVE_NAME):/vessels/stateful-ui-vessel/
+	docker cp $(REPO_ROOT)/scripts/substrate/units/stateful-ui-vessel.service $(LIVE_NAME):/etc/systemd/system/stateful-ui-vessel.service
+	docker exec $(LIVE_NAME) bash -c 'cd /vessels/stateful-ui-vessel && bun install --silent 2>&1 | tail -3'
+	docker exec $(LIVE_NAME) systemctl daemon-reload
+	docker exec $(LIVE_NAME) systemctl enable stateful-ui-vessel.service 2>/dev/null || true
+	@echo "[sync] stateful-ui-vessel synced + unit installed"
+
+restart-stateful-ui-vessel: sync-stateful-ui-vessel
+	docker exec $(LIVE_NAME) systemctl restart stateful-ui-vessel.service
+	@sleep 3
+	@docker exec $(LIVE_NAME) systemctl is-active stateful-ui-vessel.service | grep -q active && echo "[restart] stateful-ui-vessel active" || echo "[restart] ERROR: stateful-ui-vessel not active"
 
 # -----------------------------------------------------------------------------
 # Writable vessel repo clones for substrate-managed publication.
