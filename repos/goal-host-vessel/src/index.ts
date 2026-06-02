@@ -1087,41 +1087,64 @@ async function handleRunGoal(req: Request): Promise<Response> {
       const topScore = top?.score ?? 0;
       if (top && topScore >= threshold) return;
       console.log(`[goal-host-vessel] auto-draft trigger: goal="${(goal as string).slice(0, 80)}" top_score=${topScore} < ${threshold}`);
-      // PRE-DRAFTER reuse lookup: before authoring a new template, check if
-      // a prior dispatch already authored a promoted gap-closing template
-      // that matches this goal. Substring-match significant keywords against
-      // name/description. activity-api's recommend lags due to fire-and-forget
-      // embedding + FTS indexing, so we list directly.
-      try {
-        const STOP = new Set(["this","that","with","from","into","over","under","have","been","were","will","they","them","their","what","when","where","which","while","there","than","then","such","some","also","each","most","more","less","very","just","only","about","across","among","being","every","other","these","those","through","upon","because"]);
-        const minOverlap = parseInt(process.env.SUBSTRATE_REUSE_KEYWORD_MIN ?? "3", 10);
-        const keywords = (goal as string).toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 4 && !STOP.has(t));
-        if (keywords.length >= minOverlap) {
+      // PRE-DRAFTER reuse lookup (LLM intent-match): before authoring a new
+      // template, ask llm-resolver-vessel whether any prior gap-closing:auto-*
+      // template would truly answer this goal. Replaces the earlier bag-of-
+      // tokens overlap heuristic, which fired false positives whenever two
+      // unrelated goals shared substrate-domain keywords (e.g. "substrate",
+      // "vessel", "trace"). The LLM call is one-shot, low-cost (haiku,
+      // max_tokens=10, no tools), 15s-bounded, and crash-safe — any error
+      // falls through to drafter dispatch.
+      if (process.env.SUBSTRATE_REUSE_LLM_ENABLED !== "0") {
+        try {
           const reuseList = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/templates?limit=200`, {
             headers: { Authorization: `ApiKey ${process.env.METABOB_API_KEY ?? ""}` },
           });
           if (reuseList.ok) {
             const rl = await reuseList.json() as { templates?: Array<{ id: string; name?: string; description?: string; proposed?: boolean }> };
-            // Prefer promoted (proposed===false) matches; fall back to any
-            // auto-authored match when none are promoted (promote-gate may
-            // refuse low-sample templates per IAL §27.S.6 push-away; id
-            // pattern `^activity:⟨gap-closing:auto-` is the real safety guard).
-            const candidates = (rl.templates ?? []).filter((t) => {
-              if (typeof t.id !== "string" || !/gap-closing:auto-/.test(t.id)) return false;
-              const hay = `${t.name ?? ""} ${t.description ?? ""}`.toLowerCase();
-              const hits = keywords.filter((k) => hay.includes(k)).length;
-              return hits >= minOverlap;
-            });
-            const match = candidates.find((t) => t.proposed === false) ?? candidates[0];
-            if (match?.id) {
-              authoredTemplateId = match.id;
-              console.log(`[goal-host-vessel] auto-draft REUSE: ${match.id} for goal="${(goal as string).slice(0, 60)}" (${keywords.length} keywords, threshold=${minOverlap})`);
-              return;
+            const autoCands = (rl.templates ?? []).filter((t) => typeof t.id === "string" && /gap-closing:auto-/.test(t.id));
+            // Rank by created_at unix-ms embedded as the second number in
+            // `gap-closing:auto-<ts1>-<rand>-<ts2>`; fall back to first number.
+            const idTs = (id: string): number => {
+              const nums = id.match(/\d{10,}/g) ?? [];
+              const parsed = nums.map((n) => parseInt(n, 10)).filter((n) => Number.isFinite(n));
+              return parsed.length > 1 ? parsed[1] : (parsed[0] ?? 0);
+            };
+            const topN = autoCands.sort((a, b) => idTs(b.id) - idTs(a.id)).slice(0, 5);
+            if (topN.length > 0) {
+              const listing = topN.map((t, i) => `${i + 1}. name: ${(t.name ?? "(unnamed)").slice(0, 120)}; description: ${(t.description ?? "(none)").slice(0, 240)}`).join("\n");
+              const prompt = `You are deciding whether to REUSE an existing activity template or AUTHOR a new one for a goal.\n\nGoal: ${goal}\n\nCandidate templates:\n${listing}\n\nRules:\n- Answer with a candidate number (1-${topN.length}) ONLY if that template's stated purpose directly and specifically answers this goal — same subject, same measurement, same artifact.\n- If candidates are merely topically adjacent (same domain, overlapping keywords, related but distinct subject), answer "NONE".\n- When uncertain, answer "NONE". Authoring a fresh template is cheap; reusing a wrong one is harmful.\n\nReply with ONLY the number or "NONE", no prose.`;
+              const ctrl = new AbortController();
+              const timer = setTimeout(() => ctrl.abort(), 15000);
+              try {
+                const llmRes = await fetch("http://127.0.0.1:8220/resolve", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `ApiKey ${process.env.METABOB_API_KEY ?? ""}` },
+                  body: JSON.stringify({ type: "llm_completion", prompt, model: "claude-haiku-4-5-20251001", max_tokens: 10 }),
+                  signal: ctrl.signal,
+                });
+                clearTimeout(timer);
+                if (llmRes.ok) {
+                  const lr = await llmRes.json() as { resolved?: boolean; content?: string };
+                  const ans = (lr.content ?? "").trim().match(/^\d+/)?.[0];
+                  const idx = ans ? parseInt(ans, 10) : NaN;
+                  if (Number.isFinite(idx) && idx >= 1 && idx <= topN.length) {
+                    const picked = topN[idx - 1];
+                    authoredTemplateId = picked.id;
+                    console.log(`[goal-host-vessel] auto-draft REUSE (LLM): selected candidate ${idx} "${picked.name ?? picked.id}" for goal="${(goal as string).slice(0, 80)}"`);
+                    return;
+                  }
+                  console.log(`[goal-host-vessel] auto-draft REUSE (LLM): no candidate selected (raw="${(lr.content ?? "").trim().slice(0, 20)}"); proceeding to author`);
+                }
+              } catch (llmErr) {
+                clearTimeout(timer);
+                console.warn(`[goal-host-vessel] auto-draft reuse LLM call failed; falling through to author:`, llmErr instanceof Error ? llmErr.message : llmErr);
+              }
             }
           }
+        } catch (reuseErr) {
+          console.warn(`[goal-host-vessel] auto-draft reuse lookup skipped:`, reuseErr instanceof Error ? reuseErr.message : reuseErr);
         }
-      } catch (reuseErr) {
-        console.warn(`[goal-host-vessel] auto-draft reuse lookup skipped:`, reuseErr instanceof Error ? reuseErr.message : reuseErr);
       }
       const scenarioId = `auto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       // Drafter tasks 6/8 (extract_required_shapes + register_variant) require
