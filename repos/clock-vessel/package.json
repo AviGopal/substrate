@@ -1,0 +1,23 @@
+{
+  "name": "@metabob/clock-vessel",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Minimal vessel exposing a single resolver that reads the current time. First lift-test artifact: substrate authors a vessel end-to-end.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "bun run typecheck && tsc",
+    "dev": "bun run src/index.ts",
+    "start": "bun run src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "lint": "tsc --noEmit && bun run scripts/check-shape-dispatch.ts"
+  },
+  "dependencies": {
+    "hono": "^4",
+    "@avigopal/ias-executor-ts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  }
+}
