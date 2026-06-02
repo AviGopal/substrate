@@ -152,6 +152,10 @@ COMMIT_MESSAGE_*.txt
 /validation/observations/**
 !/validation/observations/README.md
 scripts/substrate/workspace/.substrate-secrets
+# Writable vessel-repo clones for substrate-managed publication (see
+# `make -C scripts/substrate clone-vessel-repos`). Operator-local artifacts;
+# the super-repo records only the Makefile target, not the clones themselves.
+scripts/substrate/workspace/git/
 
 # Operator-side Obsidian vault for browsing concept-db (see vault/README.md).
 # Auto-mirrored concept notes and runtime workspace files do not belong in git.

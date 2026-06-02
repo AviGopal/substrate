@@ -297,3 +297,38 @@ restart-analysis-vessel: sync-analysis-vessel
 	docker exec $(LIVE_NAME) systemctl restart analysis-vessel.service
 	@sleep 2
 	@docker exec $(LIVE_NAME) systemctl is-active analysis-vessel.service | grep -q active && echo "[restart] analysis-vessel active" || echo "[restart] ERROR: analysis-vessel not active"
+
+# -----------------------------------------------------------------------------
+# Writable vessel repo clones for substrate-managed publication.
+#
+# The substrate publishes artifacts (commits + PRs) via the
+# `publish-substrate-authored-artifact` activity. The activity's variables
+# (`cwd`, `owner`, `repo`, `target_path`, …) are vessel-agnostic — only the
+# defaults change per repo. To author against an individual vessel repo
+# (e.g. AviGopal/development-vessel), the substrate needs a writable clone
+# with an HTTPS-with-token remote at /workspace/git/vessels/<vessel>/.
+#
+# These clones live under WORKSPACE (bind-mounted to /workspace inside the
+# substrate container) and are gitignored from the super-repo. Run once per
+# operator machine; re-running is a no-op if the clone already exists.
+#
+# Add a new vessel by appending another `if [ ! -d … ]; then git clone …; fi`
+# block below. Only vessels with their OWN GitHub remote need a clone;
+# vessels that live directly in the super-repo (e.g. goal-host-vessel,
+# llm-resolver-vessel) are reached via /workspace/git/super-repo/repos/<v>/.
+# -----------------------------------------------------------------------------
+clone-vessel-repos:
+	@command -v gh >/dev/null 2>&1 || { echo "ERROR: gh CLI required"; exit 1; }
+	@mkdir -p $(WORKSPACE)/git/vessels
+	@GH_TOKEN_VAL=$$(gh auth token); \
+	if [ ! -d $(WORKSPACE)/git/vessels/development-vessel/.git ]; then \
+	  echo "[clone] development-vessel → $(WORKSPACE)/git/vessels/development-vessel"; \
+	  git clone --no-recurse-submodules \
+	    "https://x-access-token:$$GH_TOKEN_VAL@github.com/AviGopal/development-vessel.git" \
+	    $(WORKSPACE)/git/vessels/development-vessel; \
+	  git -C $(WORKSPACE)/git/vessels/development-vessel config user.email "substrate-live@substrate.local"; \
+	  git -C $(WORKSPACE)/git/vessels/development-vessel config user.name "substrate-live"; \
+	else \
+	  echo "[clone] development-vessel already present (skipping)"; \
+	fi
+	@echo "[clone] vessel-repo clones ready; substrate can publish via cwd=/workspace/git/vessels/<vessel>"
