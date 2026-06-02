@@ -1097,6 +1097,7 @@ async function handleRunGoal(req: Request): Promise<Response> {
           topScore,
           thresholdValue: threshold,
           candidatesConsidered,
+          stateSignatureHash: record.stateSignature?.signature_hash ?? null,
           timestamp: new Date().toISOString(),
         });
       // PRE-DRAFTER reuse lookup (LLM intent-match): before authoring a new
@@ -1155,6 +1156,7 @@ async function handleRunGoal(req: Request): Promise<Response> {
                         selectedCandidateIdx: idx,
                         authoredTemplateId: picked.id,
                         durationMs: Date.now() - triggerStart,
+                        stateSignatureHash: record.stateSignature?.signature_hash ?? null,
                         timestamp: new Date().toISOString(),
                       });
                     return;
@@ -1280,6 +1282,7 @@ async function handleRunGoal(req: Request): Promise<Response> {
                   authoredTemplateId: authored.id,
                   selectedCandidateIdx: "NONE",
                   durationMs: Date.now() - triggerStart,
+                  stateSignatureHash: record.stateSignature?.signature_hash ?? null,
                   timestamp: new Date().toISOString(),
                 });
             }
@@ -1300,6 +1303,17 @@ async function handleRunGoal(req: Request): Promise<Response> {
 
   (async () => {
     try {
+      // Compute state-space signature BEFORE dispatch so the trace records
+      // the environment in which template selection happened. The hash is
+      // appended to `tags` as `state_signature:<hash>`; the full body is
+      // attached to the dispatch record for later inspection.
+      const stateSignature = await computeStateSignature();
+      record.stateSignature = stateSignature;
+      const sigTag = stateSignature?.signature_hash
+        ? [`state_signature:${stateSignature.signature_hash}`]
+        : [];
+      const effectiveTags = [...(tags ?? []), ...sigTag];
+
       await autoDraft();
       const effectiveTargetId = targetTemplateId ?? authoredTemplateId;
       if (authoredTemplateId && !targetTemplateId) {
@@ -1313,13 +1327,14 @@ async function handleRunGoal(req: Request): Promise<Response> {
             goal: goal.slice(0, 200),
             authoredTemplateId: null,
             selectedCandidateIdx: "NONE",
+            stateSignatureHash: stateSignature?.signature_hash ?? null,
             timestamp: new Date().toISOString(),
           });
       }
       const result = await host.runGoal(goal ?? `execute template ${effectiveTargetId}`, {
         variables,
         targetTemplateId: effectiveTargetId,
-        tags,
+        tags: effectiveTags,
         parentExecutionId,
         compositionChain,
         expectedOutputShapes,
@@ -1427,6 +1442,50 @@ interface DispatchRecord {
   executionId?: string;
   selectedTemplateId?: string;
   error?: string;
+  /** State-space signature computed at dispatch time; threaded onto trace tags. */
+  stateSignature?: StateSignatureBody;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// computeStateSignature — fetch the substrate's current state-space
+// signature from dev-vessel's compute_state_signature resolver. Threaded
+// onto every dispatch's tags array so traces carry the environment they
+// ran in. If the resolver fails or times out (10s AbortController), returns
+// undefined and the caller proceeds without the tag.
+// ─────────────────────────────────────────────────────────────────────────────
+interface StateSignatureBody {
+  signature_hash?: string;
+  computed_at?: string;
+  load?: Record<string, unknown>;
+  recent_traces?: Record<string, unknown>;
+  catalogue?: Record<string, unknown>;
+}
+async function computeStateSignature(): Promise<StateSignatureBody | undefined> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10_000);
+  try {
+    const resp = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}),
+      },
+      body: JSON.stringify({ impulse: { pointer: { type: "compute_state_signature" } } }),
+      signal: ctrl.signal,
+    });
+    const text = await resp.text();
+    try { await resp.body?.cancel(); } catch { /* swallow */ }
+    if (!resp.ok) return undefined;
+    const parsed = JSON.parse(text) as { success?: boolean; shape?: string; body?: StateSignatureBody };
+    if (parsed?.success === true && parsed.body && typeof parsed.body === "object") {
+      return parsed.body;
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
