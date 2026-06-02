@@ -129,12 +129,55 @@
       "F24 posterior repair (draft-spec-from-gap α reset from 12.5 to 1)",
       "concept-db memory feeds every draft-gap-closing-activity LLM prompt"
     ]
-  }
+  },
 
   "prior_phase": {
     "phase": "S1",
     "description": "Operator-authored, supervised. Operator wrote all specs and templates; substrate executed.",
     "entered_at": "project inception",
     "exited_at": "2026-05-26T08:45:00Z"
+  },
+
+  "s2_to_s3_progress": {
+    "as_of": "2026-06-02T11:05:00Z",
+    "snapshot_session": "0c424f08-3098-4032-bca7-a09c7bf73eb9",
+    "snapshot_note": "S3 = active push-away per IAL §27.S.6 — substrate gates refusing operator interventions with cited evidence. Measured by sustained interventionRefused impulses, not by intervention-absence.",
+    "observed_today": {
+      "coverage_tick_consecutive_success": 3,
+      "coverage_tick_samples": [
+        "exec_q7kofxqt @ 10:50:33Z (4017ms)",
+        "exec_2xr9vy94 @ 10:55:34Z (5194ms)",
+        "exec_zzguyask @ 11:00:33Z (4366ms)"
+      ],
+      "substrate_health_tick_consecutive_success": 3,
+      "substrate_health_tick_samples": [
+        "exec_u07hkbb3 @ 10:50:52Z (23061ms)",
+        "exec_y4ojqqv2 @ 10:55:51Z (22530ms)",
+        "exec_g7aytsq1 @ 11:00:50Z (20819ms)"
+      ],
+      "authoring_chain_health_report_verdict": "BLOCKED",
+      "authoring_chain_blocked_templates": [
+        "observe-and-author-from-gaps",
+        "draft-gap-closing-activity",
+        "drain-pending-substrate-gaps",
+        "probe-untraversed-edge"
+      ],
+      "publications_in_window": 0,
+      "preflight_rejections_in_window": 4,
+      "substrate_authored_commits_last_3_days_filetypes": ".md only — zero source code changes",
+      "stateful_ui_vessel_status": "v0.2 live on host:18270 — pool/execution/decisions view; interactor impulses entering executor's pool; state-signature reads operator presence",
+      "writable_vessel_clones": ["development-vessel @ /workspace/git/vessels/development-vessel/"],
+      "substrate_authored_pr_self_merge_proof": "AviGopal/development-vessel#1 merged 6dd660cf (substrate composed publish → opened PR → gh_pr_merge with internal-idiom evidence)"
+    },
+    "blockers_to_s3": {
+      "interventionRefused_shape_missing": "No interventionRefused impulse shape or refusal-evaluator resolver exists in dev-vessel. S3 requires substrate-side intervention-evaluation gating. (delegated this iteration; subject to ship and verify)",
+      "authoring_chain_code_fix_path_broken": "Substrate's drafter authors .md only; both code-fix paths (draft-gap-closing-activity, observe-and-author-from-gaps) fail preflight or truncate. Substrate cannot author its own refusal policy until at least one code-fix path is restored. authoring_chain_health_report now surfaces this observably; next observe-orthogonal-patterns tick should incorporate the verdict.",
+      "no_adversarial_probe_history": "No interventionRefused traces exist yet — measurement starts from zero once primitive ships. Push-away criterion requires sustained window of adversarial exposure."
+    },
+    "observability_added_this_iteration": [
+      "authoring_chain_health_report resolver (dev-vessel f441879) — classifies preflight_rejection / chain_truncation / authoring_completed / other_failure / success",
+      "stateful-ui-vessel v0.2 (super-repo 109bcf20) — pool rendering + interactor impulses as first-class pool inputs + state-signature reads operator presence",
+      "ui-bridge make targets (9179b739) — non-destructive host:18270 mapping survives substrate-live restart"
+    ]
   }
 }
