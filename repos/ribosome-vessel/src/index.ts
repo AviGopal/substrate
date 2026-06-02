@@ -92,10 +92,13 @@ async function dispatchRibosomeExtract(executionId: string) {
       signal: AbortSignal.timeout(10_000),
     });
     const body = await res.json() as { success?: boolean; error?: string };
-    if (!res.ok || !body.success) {
-      log.warn("ribosome-extract dispatch failed:", body.error ?? res.status);
-    } else {
+    // 202 Accepted is a successful async dispatch; other 2xx requires body.success
+    const isAsyncSuccess = res.status === 202;
+    const isNormalSuccess = res.ok && body.success;
+    if (isAsyncSuccess || isNormalSuccess) {
       log.info("ribosome-extract dispatched for", executionId);
+    } else {
+      log.warn("ribosome-extract dispatch failed:", body.error ?? res.status);
     }
   } catch (err: unknown) {
     log.warn("ribosome-extract dispatch error:", (err as Error)?.message ?? err);
