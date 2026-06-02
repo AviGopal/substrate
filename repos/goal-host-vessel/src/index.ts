@@ -1087,6 +1087,42 @@ async function handleRunGoal(req: Request): Promise<Response> {
       const topScore = top?.score ?? 0;
       if (top && topScore >= threshold) return;
       console.log(`[goal-host-vessel] auto-draft trigger: goal="${(goal as string).slice(0, 80)}" top_score=${topScore} < ${threshold}`);
+      // PRE-DRAFTER reuse lookup: before authoring a new template, check if
+      // a prior dispatch already authored a promoted gap-closing template
+      // that matches this goal. Substring-match significant keywords against
+      // name/description. activity-api's recommend lags due to fire-and-forget
+      // embedding + FTS indexing, so we list directly.
+      try {
+        const STOP = new Set(["this","that","with","from","into","over","under","have","been","were","will","they","them","their","what","when","where","which","while","there","than","then","such","some","also","each","most","more","less","very","just","only","about","across","among","being","every","other","these","those","through","upon","because"]);
+        const minOverlap = parseInt(process.env.SUBSTRATE_REUSE_KEYWORD_MIN ?? "3", 10);
+        const keywords = (goal as string).toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 4 && !STOP.has(t));
+        if (keywords.length >= minOverlap) {
+          const reuseList = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/templates?limit=200`, {
+            headers: { Authorization: `ApiKey ${process.env.METABOB_API_KEY ?? ""}` },
+          });
+          if (reuseList.ok) {
+            const rl = await reuseList.json() as { templates?: Array<{ id: string; name?: string; description?: string; proposed?: boolean }> };
+            // Prefer promoted (proposed===false) matches; fall back to any
+            // auto-authored match when none are promoted (promote-gate may
+            // refuse low-sample templates per IAL §27.S.6 push-away; id
+            // pattern `^activity:⟨gap-closing:auto-` is the real safety guard).
+            const candidates = (rl.templates ?? []).filter((t) => {
+              if (typeof t.id !== "string" || !/gap-closing:auto-/.test(t.id)) return false;
+              const hay = `${t.name ?? ""} ${t.description ?? ""}`.toLowerCase();
+              const hits = keywords.filter((k) => hay.includes(k)).length;
+              return hits >= minOverlap;
+            });
+            const match = candidates.find((t) => t.proposed === false) ?? candidates[0];
+            if (match?.id) {
+              authoredTemplateId = match.id;
+              console.log(`[goal-host-vessel] auto-draft REUSE: ${match.id} for goal="${(goal as string).slice(0, 60)}" (${keywords.length} keywords, threshold=${minOverlap})`);
+              return;
+            }
+          }
+        }
+      } catch (reuseErr) {
+        console.warn(`[goal-host-vessel] auto-draft reuse lookup skipped:`, reuseErr instanceof Error ? reuseErr.message : reuseErr);
+      }
       const scenarioId = `auto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       // Drafter tasks 6/8 (extract_required_shapes + register_variant) require
       // expected_emergence.activity_signature.output_shapes_must_include to be
