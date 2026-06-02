@@ -1,0 +1,20 @@
+[Unit]
+Description=metric-collector-vessel
+After=activity-api.service discovery-vessel.service
+Requires=activity-api.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8280
+Environment=HOST=127.0.0.1
+Environment=VESSEL_ID=metric-collector-vessel
+WorkingDirectory=/vessels/metric-collector-vessel
+ExecStart=/root/.bun/bin/bun /vessels/metric-collector-vessel/src/index.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
