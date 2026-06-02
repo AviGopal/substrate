@@ -1,29 +1,28 @@
 /**
- * Concept Formatter
+ * Concept Formatter — data-shaped redesign (substrate-authored, exec_6hklezdj, fm-57).
  *
- * Renders a concept-db ConceptRecord (plus its neighbors) as a markdown
- * note that takes advantage of Obsidian's formatting affordances:
+ * Frontmatter-rich, minimal-body: all queryable state lives in YAML
+ * (typed fields, nested pointer object, related edges as wikilink
+ * arrays). The body is reduced to:
  *
- *   - Frontmatter carries substrate ids, timestamps, AND tags
- *     (`concept/<source-type>`, `shape/<slug>`) for tag-pane filtering.
- *   - Aliases let `Ctrl+O` find by short_id, shape (Title Case or
- *     snake_case), or summary head.
- *   - Body opens with an H1 derived from the shape, so the outline view
- *     is populated and the note title is human at-a-glance.
- *   - A `> [!abstract]` callout surfaces the one-line summary right
- *     under the title.
- *   - A compact stats callout shows relevance / loaded / succeeded /
- *     failed, with the same data also in frontmatter for queries.
- *   - When `concept.pointer.path` is present, a `> [!quote] Source`
- *     callout points at the file the concept tracks.
- *   - The `## Related` section renders each edge_type as a Title Case
- *     subheading with an emoji prefix; each neighbor line is
- *     "de-normalized" with the neighbor's source_type and relevance
- *     inline so the reader doesn't need to click through. Neighbors
- *     are deduplicated by (target, edge_type).
- *   - Concept-bridge-minted noise edges (those whose description is
- *     literally "Auto-discovered relationship") collapse under a
- *     `<details>` so they don't drown signal edges.
+ *   # {humanTitle}
+ *   {summary}
+ *   {optional user prose}
+ *   ---
+ *   *Source: [[{pointer.path}|§ {pointer.section}]]*
+ *
+ * Wins over the prior heading + 3-callout wrapper:
+ *   - Round-trip identity becomes structurally guaranteed:
+ *     stripWritebackEnvelope(render(c, "")) === ""  (fm-50 echo loop closed).
+ *   - Stats become queryable by Dataview / Bases / graph filters
+ *     because they are typed YAML, not prose callouts.
+ *   - Relationships are YAML wikilink arrays grouped by edge_type so
+ *     Obsidian's graph view picks them up as first-class edges.
+ *   - Body holds only what the operator owns: optional user prose.
+ *
+ * Cites concept_kxeA7gRK7NEW (writeback_echo_loop),
+ * concept_HqdWDywYZzK3 (round_trip_idempotence_contract),
+ * concept_lzKXyoYYwEBR.
  */
 
 import type { ConceptRecord, ConceptNeighbor } from '../concept-db-client';
@@ -307,53 +306,82 @@ export function renderRelatedSection(rawNeighbors: ConceptNeighbor[]): string {
 }
 
 /**
- * Render the source pointer as a `> [!quote] Source` callout when the
- * concept carries one. Handles common pointer shapes:
- *   { type: "memo", path: "...", section: "..." }
- *   { type: "human_input", session_date: "..." }
- *   { type, ...arbitrary fields }
+ * Extract structured pointer fields. Returns a typed view; missing
+ * fields are simply absent. We surface the three load-bearing fields
+ * (type, path, section) — everything else stays inside `metadata` on
+ * the concept record and is not re-emitted to YAML to keep the
+ * pointer object compact and predictable.
  */
-function renderPointerCallout(pointer: Record<string, unknown> | undefined): string {
-  if (!pointer || typeof pointer !== 'object') return '';
-  const type = typeof pointer.type === 'string' ? pointer.type : null;
-  const path = typeof pointer.path === 'string' ? pointer.path : null;
-  const section = typeof pointer.section === 'string' ? pointer.section : null;
-  const date = typeof pointer.session_date === 'string' ? pointer.session_date : null;
-
-  let line: string;
-  if (path) {
-    line = `\`${path}\``;
-    if (section) line += ` § ${section}`;
-  } else if (type === 'human_input' && date) {
-    line = `Operator session · ${date}`;
-  } else {
-    // `{type: "memo"}` and similar bare-type pointers carry no
-    // location signal; suppress rather than render an empty Source.
-    return '';
-  }
-  return `> [!quote] Source\n> ${line}\n`;
-}
-
-function renderStatsCallout(concept: ConceptRecord): string {
-  const parts: string[] = [];
-  if (typeof concept.relevance === 'number') parts.push(`relevance ${concept.relevance.toFixed(2)}`);
-  if (typeof concept.times_loaded === 'number') parts.push(`loaded ${concept.times_loaded}`);
-  if (typeof concept.times_succeeded === 'number') parts.push(`succeeded ${concept.times_succeeded}`);
-  if (typeof concept.times_failed === 'number' && concept.times_failed > 0) {
-    parts.push(`failed ${concept.times_failed}`);
-  }
-  if (!parts.length) return '';
-  return `> [!info] Stats\n> ${parts.join(' · ')}\n`;
-}
-
-function renderAbstractCallout(summary: string): string {
-  if (!summary) return '';
-  return `> [!abstract] Summary\n> ${summary.replace(/\n+/g, ' ')}\n`;
+function pointerView(pointer: Record<string, unknown> | undefined): {
+  type?: string;
+  path?: string;
+  section?: string;
+  session_date?: string;
+} {
+  if (!pointer || typeof pointer !== 'object') return {};
+  const out: { type?: string; path?: string; section?: string; session_date?: string } = {};
+  if (typeof pointer.type === 'string') out.type = pointer.type;
+  if (typeof pointer.path === 'string') out.path = pointer.path;
+  if (typeof pointer.section === 'string') out.section = pointer.section;
+  if (typeof pointer.session_date === 'string') out.session_date = pointer.session_date;
+  return out;
 }
 
 /**
- * Render the complete note: frontmatter + title + abstract + stats +
- * source + body + related.
+ * Group neighbors by edge_type and produce a YAML `related:` map whose
+ * values are arrays of `"[[short_id]]"` wikilinks. The wikilink uses
+ * the short id (not the humanized shape) so that Obsidian's filename
+ * resolver doesn't fight with display titles — the short id is
+ * registered as an alias on every concept note. Buckets with zero
+ * neighbors are omitted.
+ *
+ * Returns the YAML-string lines (each pre-indented as a top-level
+ * `related:` block), or null if there are no neighbors at all.
+ */
+function renderRelatedYaml(neighbors: ConceptNeighbor[]): string[] | null {
+  if (!neighbors.length) return null;
+  const deduped = dedupeNeighbors(neighbors);
+  if (!deduped.length) return null;
+
+  const buckets = new Map<string, ConceptNeighbor[]>();
+  for (const n of deduped) {
+    const key = n.edge_type || 'related_to';
+    const arr = buckets.get(key) ?? [];
+    arr.push(n);
+    buckets.set(key, arr);
+  }
+  if (buckets.size === 0) return null;
+
+  const lines: string[] = ['related:'];
+  const keys = Array.from(buckets.keys()).sort(compareEdgeTypes);
+  for (const key of keys) {
+    const arr = buckets.get(key)!;
+    lines.push(`  ${key}:`);
+    for (const n of arr) {
+      lines.push(`    - ${yamlQuote(`[[${shortConceptId(n.id)}]]`)}`);
+    }
+  }
+  return lines;
+}
+
+/**
+ * Render the data-shaped concept note.
+ *
+ * Frontmatter holds all queryable state (typed fields, nested pointer,
+ * related as edge_type → wikilink-array map). Body holds only:
+ *
+ *   # {humanTitle}
+ *
+ *   {summary}
+ *
+ *   {optional user-edited prose — preserved through writeback}
+ *
+ *   ---
+ *   *Source: [[{pointer.path}|§ {pointer.section}]]*
+ *
+ * The summary line + source footer are emitted by the formatter; the
+ * strip path (concept-writeback-strip.ts) removes exactly those so
+ * round-trip identity holds: stripWritebackEnvelope(render(c, "")) === "".
  */
 export function renderConceptNote(
   concept: ConceptRecord,
@@ -364,6 +392,7 @@ export function renderConceptNote(
   const shortId = shortConceptId(concept.id);
   const summary = (concept.summary || '').replace(/\n+/g, ' ').trim();
   const titleHuman = humanizeShape(concept.shape || concept.source_type || 'Concept');
+  const ptr = pointerView(concept.pointer);
 
   // ─── Frontmatter ─────────────────────────────────────────────────────
   const fm: string[] = ['---'];
@@ -372,18 +401,35 @@ export function renderConceptNote(
   if (concept.source_type) fm.push(`source_type: ${concept.source_type}`);
   if (summary) fm.push(`summary: ${yamlQuote(summary)}`);
   if (concept.relevance !== undefined) fm.push(`relevance: ${concept.relevance}`);
-  if (concept.times_loaded !== undefined) fm.push(`times_loaded: ${concept.times_loaded}`);
-  if (concept.times_succeeded !== undefined) fm.push(`times_succeeded: ${concept.times_succeeded}`);
-  if (concept.times_failed !== undefined) fm.push(`times_failed: ${concept.times_failed}`);
+  // Numeric stats use the canonical (queryable) names. Counters that
+  // are explicitly zero stay in the frontmatter so Dataview queries
+  // can group "succeeded == 0" rows cleanly.
+  if (concept.times_loaded !== undefined) fm.push(`loaded: ${concept.times_loaded}`);
+  if (concept.times_succeeded !== undefined) fm.push(`succeeded: ${concept.times_succeeded}`);
+  if (concept.times_failed !== undefined) fm.push(`failed: ${concept.times_failed}`);
   if (concept.updated_at) fm.push(`updated_at: ${concept.updated_at}`);
-  fm.push(`last_substrate_pull_at: ${pulledAt}`);
+  fm.push(`pulled_at: ${pulledAt}`);
   fm.push('pending_sync: false');
   fm.push('concept-db: true');
 
+  // Pointer as a nested YAML object — typed fields the operator and
+  // Dataview can both query without unpacking a free-form callout.
+  if (ptr.type || ptr.path || ptr.section || ptr.session_date) {
+    fm.push('pointer:');
+    if (ptr.type) fm.push(`  type: ${ptr.type}`);
+    if (ptr.path) fm.push(`  path: ${yamlQuote(ptr.path)}`);
+    if (ptr.section) fm.push(`  section: ${yamlQuote(ptr.section)}`);
+    if (ptr.session_date) fm.push(`  session_date: ${ptr.session_date}`);
+  }
+
+  // Relationships as a YAML map of edge_type -> [[wikilink]] arrays.
+  // Obsidian's graph view picks these up as first-class edges.
+  const relatedLines = renderRelatedYaml(neighbors);
+  if (relatedLines) fm.push(...relatedLines);
+
   // Tags for Obsidian's tag pane. Nested form `concept/<source>` and
   // `shape/<slug>` lets the operator filter the whole vault by category
-  // with a single click. Slashes work inside YAML inline tags but for
-  // safety we keep slug values kebab-case only.
+  // with a single click.
   const tags: string[] = [];
   if (concept.source_type) tags.push(`concept/${slugifyShape(concept.source_type)}`);
   if (concept.shape) tags.push(`shape/${slugifyShape(concept.shape)}`);
@@ -398,31 +444,40 @@ export function renderConceptNote(
     fm.push(`  - ${yamlQuote(titleHuman)}`);
     fm.push(`  - ${concept.shape}`);
   }
-  if (summary) {
-    const head = summary.slice(0, 60).trim();
-    if (head && head !== titleHuman) fm.push(`  - ${yamlQuote(head)}`);
-  }
   fm.push('---');
 
-  // ─── Title + Callouts ────────────────────────────────────────────────
-  const heading = `# ${titleHuman}`;
-  const abstract = renderAbstractCallout(summary);
-  const stats = renderStatsCallout(concept);
-  const source = renderPointerCallout(concept.pointer);
+  // ─── Body (minimal) ──────────────────────────────────────────────────
+  // # title + summary one-liner + optional user prose + footer source.
+  //
+  // The user-prose region is whatever sits in `concept.content` that
+  // is NOT just an echo of `summary`. Writeback strips the exact same
+  // wrapper so this round-trips cleanly.
+  let userProse = (concept.content || '').trim();
+  if (summary && userProse === summary) userProse = '';
 
-  // ─── Body ────────────────────────────────────────────────────────────
-  // Drop summary from body when it's already in the abstract callout.
-  let body = (concept.content || '').trim();
-  if (summary && body.trim() === summary) body = '';
+  const sourceFooter = renderSourceFooter(ptr);
 
-  const related = renderRelatedSection(neighbors);
-
-  const sections: string[] = [fm.join('\n'), '', heading, ''];
-  if (abstract) sections.push(abstract);
-  if (stats) sections.push(stats);
-  if (source) sections.push(source);
-  if (body) sections.push(body);
-  if (related) sections.push(related);
+  const sections: string[] = [fm.join('\n'), '', `# ${titleHuman}`, ''];
+  if (summary) sections.push(summary, '');
+  if (userProse) sections.push(userProse, '');
+  if (sourceFooter) sections.push('---', sourceFooter);
 
   return sections.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+}
+
+/**
+ * Render the single-line `*Source: [[path|§ section]]*` footer, or
+ * the operator-session variant for human_input pointers. Returns
+ * empty string when the pointer carries no location signal — we
+ * never emit a hollow `---` separator.
+ */
+function renderSourceFooter(ptr: ReturnType<typeof pointerView>): string {
+  if (ptr.path) {
+    const display = ptr.section ? `${ptr.path}|§ ${ptr.section}` : ptr.path;
+    return `*Source: [[${display}]]*`;
+  }
+  if (ptr.type === 'human_input' && ptr.session_date) {
+    return `*Source: operator session · ${ptr.session_date}*`;
+  }
+  return '';
 }
