@@ -203,6 +203,11 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   "run the drain-pending-substrate-gaps activity to convert open substrateGap impulses into gap-closing template variants",
   // audit-ingestion bridge (iter-080): reads audit findings → substrateGap impulses → drain pipeline
   "run the ingest-audit-findings activity to parse audit findings and create substrateGap impulses for the drain pipeline",
+  // Lift-iter (2026-06-02): vessel-demand-driven scaffold dispatch.
+  // The resolver surfaces shapes ≥3 templates demand but no vessel produces.
+  // When demand crosses the threshold, the substrate authors a new vessel
+  // via scaffold-and-publish-vessel rather than waiting for an operator.
+  "run vessel-demand-report; if the highest-priority demand has occurrence >= 3, dispatch scaffold-and-publish-vessel with that shape as the new vessel's advertised shape",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -220,6 +225,10 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   undefined,                                       // goal[9] — dynamic: top proposed gap-closing template
   "development-vessel:drain-pending-substrate-gaps", // goal[10] — substrateGap → drafter wiring
   "development-vessel:ingest-audit-findings",       // goal[11] — audit findings → substrateGap pipeline
+  // goal[12] — open-ended: let Thompson route vessel-demand-report dispatch.
+  // Resolver-only goal; the substrate decides downstream whether to invoke
+  // scaffold-and-publish-vessel based on the demand verdict.
+  undefined,
 ];
 
 /**
@@ -254,6 +263,7 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "expensive", // goal[9]  proposed gap-closing template (variable, often heavy)
   "moderate",  // goal[10] drain-pending-substrate-gaps (1 resolver + 1 dispatch)
   "moderate",  // goal[11] ingest-audit-findings (fs_read + LLM + http_fetch)
+  "cheap",     // goal[12] vessel-demand-report (single resolver, no LLM)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
