@@ -1,7 +1,7 @@
 [submodule "repos/concept-db"]
 	path = repos/concept-db
 	url = git@github.com:MetabobProject/concept-db.git
-	branch = main
+	branch = dev
 
 [submodule "repos/conversation-vessel"]
 	path = repos/conversation-vessel
@@ -72,3 +72,8 @@
 [submodule "repos/analysis-vessel"]
 	path = repos/analysis-vessel
 	url = git@github.com:AviGopal/analysis-vessel.git
+	branch = dev
+[submodule "repos/ias-executor-ts"]
+	path = repos/ias-executor-ts
+	url = git@github.com:AviGopal/ias-executor-ts.git
+	branch = dev
