@@ -1087,6 +1087,18 @@ async function handleRunGoal(req: Request): Promise<Response> {
       const topScore = top?.score ?? 0;
       if (top && topScore >= threshold) return;
       console.log(`[goal-host-vessel] auto-draft trigger: goal="${(goal as string).slice(0, 80)}" top_score=${topScore} < ${threshold}`);
+      const triggerStart = Date.now();
+      const candidatesConsidered = (data.recommendations ?? []).slice(0, 5).map((r) => ({ id: r.template_id, score: r.score ?? 0 }));
+      void emitAuthoringDecision("auto_draft_triggered",
+        `top_score=${topScore} < threshold=${threshold} for goal: ${(goal as string).slice(0, 120)}`,
+        {
+          dispatchId,
+          goal: (goal as string).slice(0, 200),
+          topScore,
+          thresholdValue: threshold,
+          candidatesConsidered,
+          timestamp: new Date().toISOString(),
+        });
       // PRE-DRAFTER reuse lookup (LLM intent-match): before authoring a new
       // template, ask llm-resolver-vessel whether any prior gap-closing:auto-*
       // template would truly answer this goal. Replaces the earlier bag-of-
@@ -1132,6 +1144,19 @@ async function handleRunGoal(req: Request): Promise<Response> {
                     const picked = topN[idx - 1];
                     authoredTemplateId = picked.id;
                     console.log(`[goal-host-vessel] auto-draft REUSE (LLM): selected candidate ${idx} "${picked.name ?? picked.id}" for goal="${(goal as string).slice(0, 80)}"`);
+                    void emitAuthoringDecision("auto_draft_reused",
+                      `reused ${picked.id} (cand ${idx}/${topN.length}) for goal: ${(goal as string).slice(0, 120)}`,
+                      {
+                        dispatchId,
+                        goal: (goal as string).slice(0, 200),
+                        topScore,
+                        thresholdValue: threshold,
+                        candidatesConsidered: topN.map((t) => ({ id: t.id, name: t.name })),
+                        selectedCandidateIdx: idx,
+                        authoredTemplateId: picked.id,
+                        durationMs: Date.now() - triggerStart,
+                        timestamp: new Date().toISOString(),
+                      });
                     return;
                   }
                   console.log(`[goal-host-vessel] auto-draft REUSE (LLM): no candidate selected (raw="${(lr.content ?? "").trim().slice(0, 20)}"); proceeding to author`);
@@ -1244,6 +1269,19 @@ async function handleRunGoal(req: Request): Promise<Response> {
                   body: "{}",
                 },
               );
+              void emitAuthoringDecision("auto_draft_authored",
+                `authored + promoted ${authored.id} for goal: ${(goal as string).slice(0, 120)}`,
+                {
+                  dispatchId,
+                  goal: (goal as string).slice(0, 200),
+                  topScore,
+                  thresholdValue: threshold,
+                  scenarioId,
+                  authoredTemplateId: authored.id,
+                  selectedCandidateIdx: "NONE",
+                  durationMs: Date.now() - triggerStart,
+                  timestamp: new Date().toISOString(),
+                });
             }
           }
         } catch (promoteErr) {
@@ -1266,6 +1304,17 @@ async function handleRunGoal(req: Request): Promise<Response> {
       const effectiveTargetId = targetTemplateId ?? authoredTemplateId;
       if (authoredTemplateId && !targetTemplateId) {
         console.log(`[goal-host-vessel] /run-goal: using auto-authored template ${authoredTemplateId} for goal`);
+      }
+      if (!effectiveTargetId && goal) {
+        void emitAuthoringDecision("auto_draft_fallback_recommend",
+          `no targetTemplateId; falling through to /recommend for goal: ${goal.slice(0, 120)}`,
+          {
+            dispatchId,
+            goal: goal.slice(0, 200),
+            authoredTemplateId: null,
+            selectedCandidateIdx: "NONE",
+            timestamp: new Date().toISOString(),
+          });
       }
       const result = await host.runGoal(goal ?? `execute template ${effectiveTargetId}`, {
         variables,
@@ -1378,6 +1427,52 @@ interface DispatchRecord {
   executionId?: string;
   selectedTemplateId?: string;
   error?: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// emitAuthoringDecision — write a `substrateGap` impulse via dev-vessel so
+// goal-host's auto-draft decisions become inspectable substrate state instead
+// of console.log lines lost to journald. Categories:
+//   - auto_draft_triggered           (top recommend score below threshold)
+//   - auto_draft_reused              (LLM picked an existing gap-closing:auto-* template)
+//   - auto_draft_authored            (drafter produced a new template; promoted)
+//   - auto_draft_fallback_recommend  (no targetTemplateId AND no authored id; runGoal
+//                                     falls through to /recommend selection)
+// Wrapped in try/catch; 10s AbortController. Toggle via
+// SUBSTRATE_AUTHORING_DECISION_EMIT=0 (default on).
+async function emitAuthoringDecision(
+  category: string,
+  summary: string,
+  classification_metadata: Record<string, unknown>,
+): Promise<void> {
+  if (process.env.SUBSTRATE_AUTHORING_DECISION_EMIT === "0") return;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10_000);
+  try {
+    const gap = {
+      id: `auto_draft_decision:${(classification_metadata.dispatchId as string | undefined) ?? crypto.randomUUID()}:${category}`,
+      category,
+      source: "goal_host_auto_draft",
+      summary,
+      detected_at: new Date().toISOString(),
+      status: "open",
+      classification_metadata,
+    };
+    const res = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}),
+      },
+      body: JSON.stringify({ impulse: { pointer: { type: "substrateGap_write", gap } } }),
+      signal: ctrl.signal,
+    });
+    try { await res.body?.cancel(); } catch { /* swallow */ }
+  } catch (err) {
+    console.warn(`[goal-host-vessel] emitAuthoringDecision(${category}) failed: ${(err as Error).message}`);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // Cap store at 100 records to prevent unbounded growth across long uptime.
