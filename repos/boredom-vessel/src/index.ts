@@ -222,6 +222,13 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // this, container destruction wipes all Thompson posteriors, all concepts,
   // and all execution traces. Closes Gap A from the lift iteration.
   "run backend_snapshot_to_git to dump SurrealDB state to /workspace/snapshots/<ISO>/ and commit the manifest to git so container destruction does not lose learning state",
+  // Autonomous mitosis evaluate+cutover (iter 2026-06-03, goal[15]):
+  // run mitosis-tick to evaluate the most recent mitosis pair recorded in
+  // /workspace/mitosis-pending.json. vessel_mitosis_cutover self-refuses
+  // unless the verdict is FAVORABLE, so the chain is safe to fire on cadence —
+  // refuse traces ARE the substrate's audited NO; accept traces are the
+  // audited YES. Closes the lift loop on the modify path.
+  "run mitosis-tick to evaluate the most recent mitosis pair and cut over to the new track if vessel_mitosis_evaluate returns FAVORABLE",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -257,6 +264,10 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // goal[14] — backend-snapshot-to-git: deterministic dump+publish chain;
   // explicit targetTemplateId so Thompson cannot misroute to a high-α template.
   "development-vessel:backend-snapshot-to-git",
+  // goal[15] — mitosis-tick: deterministic evaluate+cutover chain. Reads
+  // /workspace/mitosis-pending.json, dispatches vessel_mitosis_evaluate
+  // and vessel_mitosis_cutover. Cutover self-refuses unless FAVORABLE.
+  "development-vessel:mitosis-tick",
 ];
 
 /**
@@ -294,6 +305,7 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "cheap",     // goal[12] vessel-demand-report (single resolver, no LLM)
   "expensive", // goal[13] enact-orthogonal-decisions (1 LLM dispatch + child mitosis or drafter goal)
   "moderate",  // goal[14] backend-snapshot-to-git (surreal export + small commit; bigger than a tick, smaller than LLM)
+  "moderate",  // goal[15] mitosis-tick (fs_read + 4 json_path_extract + 2 mitosis resolvers; no LLM)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
