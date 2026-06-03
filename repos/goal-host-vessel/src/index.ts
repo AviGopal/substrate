@@ -1131,7 +1131,7 @@ async function handleRunGoal(req: Request): Promise<Response> {
       // falls through to drafter dispatch.
       if (process.env.SUBSTRATE_REUSE_LLM_ENABLED !== "0") {
         try {
-          const reuseList = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/templates?limit=200`, {
+          const reuseList = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/templates?q=gap-closing&limit=10`, {
             headers: { Authorization: `ApiKey ${process.env.METABOB_API_KEY ?? ""}` },
           });
           if (reuseList.ok) {
@@ -1275,7 +1275,7 @@ async function handleRunGoal(req: Request): Promise<Response> {
           // filter for the scenario_id substring in id — substrate-authored
           // templates have the pattern `gap-closing:<scenario_id>-<timestamp>`.
           const listRes = await fetch(
-            `${ACTIVITY_API_ENDPOINT}/v2/activities/templates?limit=200`,
+            `${ACTIVITY_API_ENDPOINT}/v2/activities/templates?q=gap-closing&limit=10`,
             { headers: { Authorization: `ApiKey ${process.env.METABOB_API_KEY ?? ""}` } },
           );
           if (listRes.ok) {
