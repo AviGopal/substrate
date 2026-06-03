@@ -240,6 +240,17 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // to concept-db. Per tick: one writeback. Over many ticks: per-concept
   // relevance accumulates. cheap tier — no LLM, single HTTP round-trip.
   "run concept-usage-backfill to surface a candidate concept and POST a conceptUsageRecorded outcome so concept-db's relevance signal accumulates both-sided data",
+  // Horizon detectors (Stage 1 of openspec change
+  // 2026-06-03-pre-lift-bootstrap-and-architecture-aware-loop). Four
+  // immunity-pattern detectors that consult architectural principle
+  // concepts and emit substrateGap impulses for violations. Each goal
+  // pins targetTemplateId to the corresponding *-tick wrapper template so
+  // the goal text routes deterministically to the resolver dispatch.
+  // Cost: cheap (single resolver, bounded I/O, no LLM).
+  "run vessel-responsibility-audit-tick to scan vessel sources against architectural_pattern_principle concepts and emit substrateGap for responsibility misallocations",
+  "run vessel-architecture-pattern-scan-tick to detect cross-vessel SPOFs / catalogue-bloat / cost-output mismatches and emit substrateGap for each finding",
+  "run activity-lifecycle-audit-tick to rank templates by success-recency-affinity and surface hot/cold/promote sets",
+  "run resolver-distribution-audit-tick to detect shape orphans, demand-supply mismatches, and responsibility imbalance per principle concepts",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -285,6 +296,13 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // template; the goal text doesn't semantically match any prior template
   // and LLM-reuse on novel goals is currently brittle.
   "development-vessel:concept-usage-backfill",
+  // goal[17..20] — horizon detector ticks (Stage 1 of pre-lift-bootstrap).
+  // All four are immunity-pattern single-resolver wrappers; explicit
+  // targetTemplateId ensures Thompson cannot misroute to high-α templates.
+  "development-vessel:vessel-responsibility-audit-tick",
+  "development-vessel:vessel-architecture-pattern-scan-tick",
+  "development-vessel:activity-lifecycle-audit-tick",
+  "development-vessel:resolver-distribution-audit-tick",
 ];
 
 /**
@@ -324,6 +342,10 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "moderate",  // goal[14] backend-snapshot-to-git (surreal export + small commit; bigger than a tick, smaller than LLM)
   "moderate",  // goal[15] mitosis-tick (fs_read + 4 json_path_extract + 2 mitosis resolvers; no LLM)
   "cheap",     // goal[16] concept-usage-backfill (3 resolvers, no LLM, bounded HTTP)
+  "cheap",     // goal[17] vessel-responsibility-audit-tick (fs scan + concept-db; no LLM)
+  "cheap",     // goal[18] vessel-architecture-pattern-scan-tick (HTTP only; no LLM)
+  "cheap",     // goal[19] activity-lifecycle-audit-tick (templates + traces; no LLM)
+  "cheap",     // goal[20] resolver-distribution-audit-tick (HTTP only; no LLM)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
