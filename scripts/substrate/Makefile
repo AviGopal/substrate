@@ -25,6 +25,14 @@ LIVE_NAME    := substrate-live
 # ANTHROPIC_API_KEY — load from environment or existing ~/.metabob/config.json
 ANTHROPIC_API_KEY ?= $(shell jq -r '.providers.anthropic.apiKey // empty' $(HOME)/.metabob/config.json 2>/dev/null || true)
 
+# GITHUB_TOKEN — load from environment, fall back to gh CLI's cached auth.
+# Used by gh_repo_create resolver + gh_pr_create when authoring substrate-
+# authored repos and PRs. Optional — when absent, gh_repo_create returns
+# structuredError with detail "no GITHUB_TOKEN", and substrate can still
+# author into existing repos via SSH-key-backed git push (which doesn't
+# need this env var).
+GITHUB_TOKEN ?= $(shell gh auth token 2>/dev/null || true)
+
 # Vessel source roots (relative to repo root, two levels up)
 REPO_ROOT := $(CURDIR)/../..
 DEV_VESSEL_SRC := $(REPO_ROOT)/repos/development-vessel
@@ -69,6 +77,7 @@ run:
 	    --name substrate \
 	    --privileged \
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
+	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -p 8080:8080 \
 	    -p 8090:8090 \
 	    -v $(WORKSPACE):/workspace \
@@ -86,6 +95,7 @@ run-detach:
 	    --name substrate \
 	    --privileged \
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
+	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -p 8080:8080 \
 	    -p 8090:8090 \
 	    -v $(WORKSPACE):/workspace \
@@ -109,6 +119,7 @@ run-live:
 	    --name $(LIVE_NAME) \
 	    --privileged \
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
+	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -p 18080:8080 \
 	    -p 18090:8090 \
 	    -p 18100:8100 \
