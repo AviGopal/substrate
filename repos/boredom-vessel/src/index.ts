@@ -208,6 +208,13 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // When demand crosses the threshold, the substrate authors a new vessel
   // via scaffold-and-publish-vessel rather than waiting for an operator.
   "run vessel-demand-report; if the highest-priority demand has occurrence >= 3, dispatch scaffold-and-publish-vessel with that shape as the new vessel's advertised shape",
+  // Autonomous self-improvement loop (2026-06-03, goal[13]):
+  // run scaffold-mitosis-track for the highest-priority MODIFY decision from
+  // code_needs_report — when authoring_chain_health_report returns BLOCKED,
+  // the substrate authors a parallel-track fix for the broken template. The
+  // resulting trace shows the substrate observed a need, dispatched a fix,
+  // and produced a parallel-track artifact without operator direction.
+  "run scaffold-mitosis-track for the highest-priority MODIFY decision from code_needs_report — when authoring_chain_health_report returns BLOCKED, the substrate authors a parallel-track fix for the broken template",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -233,6 +240,12 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // wired in a follow-up template once vessel-demand-tick output exposes the
   // top_priority entry in a chainable shape.
   "development-vessel:vessel-demand-tick",
+  // goal[13] — autonomous self-modification: scaffold-mitosis-track composes
+  // concept_select_for_prompt + fs_read + llm_completion_dispatch +
+  // vessel_mitosis_start. Target file + vessel + intent are passed via
+  // extraVariablesForGoal(13) seeded against the current MODIFY priority
+  // (draft-gap-closing-activity #140 — chain truncates at task 7).
+  "development-vessel:scaffold-mitosis-track",
 ];
 
 /**
@@ -268,6 +281,7 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "moderate",  // goal[10] drain-pending-substrate-gaps (1 resolver + 1 dispatch)
   "moderate",  // goal[11] ingest-audit-findings (fs_read + LLM + http_fetch)
   "cheap",     // goal[12] vessel-demand-report (single resolver, no LLM)
+  "expensive", // goal[13] scaffold-mitosis-track (1 LLM dispatch + fs/copy I/O)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
@@ -283,6 +297,24 @@ const SCENARIO_ROTATION: readonly string[] = [
 ];
 
 function extraVariablesForGoal(goalIdx: number): Record<string, unknown> {
+  if (goalIdx === 13) {
+    // scaffold-mitosis-track expects vessel_name / target_file_path /
+    // intent_summary. Seeded against the current highest-priority MODIFY
+    // decision (draft-gap-closing-activity #140 — chain truncates at task 7).
+    // A future iteration should read the top entry from code_needs_report at
+    // dispatch time instead of hardcoding; for now the hardcoded target
+    // produces a meaningful trace + parallel-track artifact on every fire.
+    return {
+      vessel_name: "development-vessel",
+      target_file_path: "src/seed/draft-gap-closing-activity.ts",
+      intent_summary:
+        "Repair the chain truncation at task 7 in draft-gap-closing-activity. The current " +
+        "template's prelude makes the gap-closing LLM emit malformed multi-block source that " +
+        "the parser cannot recover. Replace the variables-self-discovery prelude with a single " +
+        "well-formed task graph that matches the failure-mode scenario at " +
+        "/workspace/scenarios/fm-17-resolver-budget-noncompliance.json.",
+    };
+  }
   if (goalIdx === 10) {
     // drain-pending-substrate-gaps reads gap.id from the resolver and passes it
     // as scenario_id to the drafter. The drafter still needs scenarios_dir / report_path /
