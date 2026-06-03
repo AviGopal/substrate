@@ -216,6 +216,12 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // template, not hardcoded here. Closes Gap #3+#4: the substrate observes a need,
   // derives its own variables, and dispatches its own self-mitosis or self-authoring.
   "run enact-orthogonal-decisions to read live observations + code_needs_report and dispatch self-mitosis (MODIFY) or self-authoring (CREATE_*)",
+  // Durability cadence (iter 2026-06-03, goal[14]):
+  // Dispatch backend-snapshot-to-git so SurrealDB tables get dumped to the
+  // bind-mounted /workspace/snapshots/<ISO>/ on a regular cadence. Without
+  // this, container destruction wipes all Thompson posteriors, all concepts,
+  // and all execution traces. Closes Gap A from the lift iteration.
+  "run backend_snapshot_to_git to dump SurrealDB state to /workspace/snapshots/<ISO>/ and commit the manifest to git so container destruction does not lose learning state",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -248,6 +254,9 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // (CREATE_* priority). All downstream variables are LIVE-derived inside the
   // template; no operator hardcoding.
   "development-vessel:enact-orthogonal-decisions",
+  // goal[14] — backend-snapshot-to-git: deterministic dump+publish chain;
+  // explicit targetTemplateId so Thompson cannot misroute to a high-α template.
+  "development-vessel:backend-snapshot-to-git",
 ];
 
 /**
@@ -284,6 +293,7 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "moderate",  // goal[11] ingest-audit-findings (fs_read + LLM + http_fetch)
   "cheap",     // goal[12] vessel-demand-report (single resolver, no LLM)
   "expensive", // goal[13] enact-orthogonal-decisions (1 LLM dispatch + child mitosis or drafter goal)
+  "moderate",  // goal[14] backend-snapshot-to-git (surreal export + small commit; bigger than a tick, smaller than LLM)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
@@ -299,6 +309,37 @@ const SCENARIO_ROTATION: readonly string[] = [
 ];
 
 function extraVariablesForGoal(goalIdx: number): Record<string, unknown> {
+  if (goalIdx === 14) {
+    // backend-snapshot-to-git — derive a sortable compact ISO timestamp
+    // (YYYY-MM-DDTHH-mm-ssZ) for the snapshot dir and manifest path.
+    const ts = new Date().toISOString().replace(/[:.]/g, "-").replace(/-\d{3}Z$/, "Z");
+    const snapshotDir = `/workspace/snapshots/${ts}`;
+    const manifestRel = `validation/snapshots/${ts}/manifest.md`;
+    const branch = `substrate-authored/backend-snapshot-${ts}`;
+    return {
+      cwd: "/workspace/git/super-repo",
+      snapshot_ts: ts,
+      snapshot_dir: snapshotDir,
+      manifest_relpath: manifestRel,
+      manifest_body:
+        `# Backend snapshot ${ts}\n\n` +
+        `- snapshot_dir (host bind-mount): \`${snapshotDir}\`\n` +
+        `- tables dumped: activity_template, activity_execution_traces, activity_metrics, concept, substrate_gap\n` +
+        `- replay: \`surrealdb_import {input_dir: "${snapshotDir}"}\`\n` +
+        `- author: boredom-vessel goal[14] / backend-snapshot-to-git\n`,
+      target_branch: branch,
+      base_branch: "dev",
+      commit_message: `substrate-authored: backend snapshot ${ts}\n\nSubstrate-Authored-By: boredom-vessel:backend-snapshot-to-git`,
+      owner: "AviGopal",
+      repo: "metabob-devbob",
+      pr_title: `substrate-authored: backend snapshot ${ts}`,
+      pr_body:
+        `Backend snapshot manifest authored by the substrate.\n\n` +
+        `Snapshot bodies live in \`${snapshotDir}\` (bind-mounted, not committed). ` +
+        `This manifest is the durable index.\n\n` +
+        `Substrate-Authored-By: boredom-vessel:backend-snapshot-to-git\n`,
+    };
+  }
   if (goalIdx === 13) {
     // enact-orthogonal-decisions derives its own dispatch decision LIVE from
     // (a) the latest orthogonal-decisions observation file and
