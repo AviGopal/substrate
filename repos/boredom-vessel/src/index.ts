@@ -225,10 +225,14 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   undefined,                                       // goal[9] — dynamic: top proposed gap-closing template
   "development-vessel:drain-pending-substrate-gaps", // goal[10] — substrateGap → drafter wiring
   "development-vessel:ingest-audit-findings",       // goal[11] — audit findings → substrateGap pipeline
-  // goal[12] — open-ended: let Thompson route vessel-demand-report dispatch.
-  // Resolver-only goal; the substrate decides downstream whether to invoke
-  // scaffold-and-publish-vessel based on the demand verdict.
-  undefined,
+  // goal[12] — explicit targetTemplateId (2026-06-03 fix): wraps vessel_demand_report
+  // resolver in a deterministic single-task template. Eliminates the LLM-reuse
+  // misalignment that mapped goal[12] to detect-service-oom-cascade in earlier
+  // session (see validation/findings/autonomous-loop-fires-2026-06-03/). The
+  // downstream conditional dispatch to scaffold-and-publish-vessel will be
+  // wired in a follow-up template once vessel-demand-tick output exposes the
+  // top_priority entry in a chainable shape.
+  "development-vessel:vessel-demand-tick",
 ];
 
 /**
