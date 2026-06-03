@@ -248,8 +248,13 @@ export class GoalDispatchView extends ItemView {
       return;
     }
 
-    const wsUrl = this.plugin.settings.websocketUrl ||
-      this.plugin.settings.activityApiUrl.replace(/^http/, 'ws') + '/ws';
+    const wsUrl = (() => {
+      let ep = this.plugin.settings.websocketUrl || this.plugin.settings.activityApiUrl;
+      ep = ep.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
+      ep = ep.replace(/\/$/, '');
+      if (!ep.endsWith('/ws')) ep = ep + '/ws';
+      return ep;
+    })();
     const apiKey = this.plugin.settings.apiKey;
 
     try {
