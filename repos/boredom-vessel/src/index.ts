@@ -229,6 +229,17 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // refuse traces ARE the substrate's audited NO; accept traces are the
   // audited YES. Closes the lift loop on the modify path.
   "run mitosis-tick to evaluate the most recent mitosis pair and cut over to the new track if vessel_mitosis_evaluate returns FAVORABLE",
+  // Concept-db relevance writeback (iter 2026-06-03, goal[16]):
+  // Empirically, 29/37 concepts have times_loaded > 0 (reads work) but only
+  // 6 have times_succeeded > 0 (all from one manual backfill). Zero
+  // autonomous traces invoke concept_usage_record. The Bayesian relevance
+  // formula (ts+1)/(tl+2) is one-sided — concepts decay from 0.5 toward 0
+  // the more they're cited, inverting the signal. This goal dispatches
+  // concept-usage-backfill on cadence: select a candidate concept via
+  // concept_select_for_prompt, extract the top id, POST conceptUsageRecorded
+  // to concept-db. Per tick: one writeback. Over many ticks: per-concept
+  // relevance accumulates. cheap tier — no LLM, single HTTP round-trip.
+  "run concept-usage-backfill to surface a candidate concept and POST a conceptUsageRecorded outcome so concept-db's relevance signal accumulates both-sided data",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -268,6 +279,12 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // /workspace/mitosis-pending.json, dispatches vessel_mitosis_evaluate
   // and vessel_mitosis_cutover. Cutover self-refuses unless FAVORABLE.
   "development-vessel:mitosis-tick",
+  // goal[16] — concept-usage-backfill: deterministic 3-task chain
+  // (concept_select_for_prompt → json_path_extract → concept_usage_record).
+  // Explicit targetTemplateId so Thompson doesn't misroute to a high-α
+  // template; the goal text doesn't semantically match any prior template
+  // and LLM-reuse on novel goals is currently brittle.
+  "development-vessel:concept-usage-backfill",
 ];
 
 /**
@@ -306,6 +323,7 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "expensive", // goal[13] enact-orthogonal-decisions (1 LLM dispatch + child mitosis or drafter goal)
   "moderate",  // goal[14] backend-snapshot-to-git (surreal export + small commit; bigger than a tick, smaller than LLM)
   "moderate",  // goal[15] mitosis-tick (fs_read + 4 json_path_extract + 2 mitosis resolvers; no LLM)
+  "cheap",     // goal[16] concept-usage-backfill (3 resolvers, no LLM, bounded HTTP)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
@@ -320,7 +338,32 @@ const SCENARIO_ROTATION: readonly string[] = [
   "fp-15-missing-producer-stale-registration",
 ];
 
+// Rotating query for concept-usage-backfill (goal[16]). Spreads the
+// candidate-concept surface across different substrate topics so different
+// source_types and tag clusters get exercised on successive ticks.
+const CONCEPT_BACKFILL_QUERIES: readonly string[] = [
+  "substrate authoring failure modes",
+  "concept-db Bayesian relevance",
+  "boredom vessel selection policy",
+  "Thompson sampling posterior",
+  "lift verdict push-away",
+  "discovery vessel registration",
+  "impulse resolver contract",
+  "trace failure mode taxonomy",
+];
+
 function extraVariablesForGoal(goalIdx: number): Record<string, unknown> {
+  if (goalIdx === 16) {
+    // concept-usage-backfill — rotate the query across topic clusters so
+    // different concepts get exercised; supply a unique trace_id per tick
+    // (autonomous_backfill_<ISO>) so concept-db's writeback gating works.
+    const rotIdx = Math.floor(Date.now() / (5 * 60 * 1000)) % CONCEPT_BACKFILL_QUERIES.length;
+    const isoNow = new Date().toISOString();
+    return {
+      query: CONCEPT_BACKFILL_QUERIES[rotIdx]!,
+      trace_id: `autonomous_backfill_${isoNow}`,
+    };
+  }
   if (goalIdx === 14) {
     // backend-snapshot-to-git — derive a sortable compact ISO timestamp
     // (YYYY-MM-DDTHH-mm-ssZ) for the snapshot dir and manifest path.
