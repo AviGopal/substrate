@@ -1312,7 +1312,21 @@ async function handleRunGoal(req: Request): Promise<Response> {
       const sigTag = stateSignature?.signature_hash
         ? [`state_signature:${stateSignature.signature_hash}`]
         : [];
-      const effectiveTags = [...(tags ?? []), ...sigTag];
+      // Wire 1 (2026-06-03): propagate MITOSIS_VERSION_ID into the trace so
+      // mitosis_evaluate can segment AET rows by version. When goal-host runs
+      // as part of a mitosis-spawned vessel, the systemd unit injects
+      // MITOSIS_VERSION_ID + MITOSIS_BASE_VESSEL. Surfaced as trace tags
+      // (open schema) — keeps the change zero-API-surface while making the
+      // version observable to the differential evaluator.
+      const mitosisVersionId = process.env["MITOSIS_VERSION_ID"];
+      const mitosisBaseVessel = process.env["MITOSIS_BASE_VESSEL"];
+      const mitosisTags = mitosisVersionId
+        ? [
+            `mitosis_version_id:${mitosisVersionId}`,
+            ...(mitosisBaseVessel ? [`mitosis_base_vessel:${mitosisBaseVessel}`] : []),
+          ]
+        : [];
+      const effectiveTags = [...(tags ?? []), ...sigTag, ...mitosisTags];
 
       await autoDraft();
       const effectiveTargetId = targetTemplateId ?? authoredTemplateId;
