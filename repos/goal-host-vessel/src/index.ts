@@ -259,6 +259,13 @@ if (FETCH_PROBE_ENABLED) {
       cur.max_rss_delta = Math.max(cur.max_rss_delta, delta);
       cur.total_duration_ms += duration;
       fetchProbeStats.set(label, cur);
+      // v2 mitosis: bound the per-label map to prevent unbounded URL growth.
+      if (fetchProbeStats.size > 50) {
+        const keys = Array.from(fetchProbeStats.keys());
+        for (let i = 0; i < 20 && i < keys.length; i++) {
+          fetchProbeStats.delete(keys[i]);
+        }
+      }
     }
   }) as typeof globalThis.fetch;
   console.log("[fetch-probe] instrumented globalThis.fetch (label via x-fetch-label header)");
@@ -1129,6 +1136,7 @@ async function handleRunGoal(req: Request): Promise<Response> {
           });
           if (reuseList.ok) {
             const rl = await reuseList.json() as { templates?: Array<{ id: string; name?: string; description?: string; proposed?: boolean }> };
+            try { reuseList.body?.cancel(); } catch {} // v2 mitosis: explicit kernel-buffer release
             const autoCands = (rl.templates ?? []).filter((t) => typeof t.id === "string" && /gap-closing:auto-/.test(t.id));
             // Rank by created_at unix-ms embedded as the second number in
             // `gap-closing:auto-<ts1>-<rand>-<ts2>`; fall back to first number.
@@ -1153,6 +1161,7 @@ async function handleRunGoal(req: Request): Promise<Response> {
                 clearTimeout(timer);
                 if (llmRes.ok) {
                   const lr = await llmRes.json() as { resolved?: boolean; content?: string };
+                  try { llmRes.body?.cancel(); } catch {} // v2 mitosis: explicit kernel-buffer release
                   const ans = (lr.content ?? "").trim().match(/^\d+/)?.[0];
                   const idx = ans ? parseInt(ans, 10) : NaN;
                   if (Number.isFinite(idx) && idx >= 1 && idx <= topN.length) {
@@ -1176,6 +1185,9 @@ async function handleRunGoal(req: Request): Promise<Response> {
                     return;
                   }
                   console.log(`[goal-host-vessel] auto-draft REUSE (LLM): no candidate selected (raw="${(lr.content ?? "").trim().slice(0, 20)}"); proceeding to author`);
+                  // v2 mitosis: drop candidate refs + sync GC to release retained closures.
+                  topN.length = 0;
+                  try { (globalThis as { Bun?: { gc?: (b: boolean) => number } }).Bun?.gc?.(true); } catch {}
                 }
               } catch (llmErr) {
                 clearTimeout(timer);
