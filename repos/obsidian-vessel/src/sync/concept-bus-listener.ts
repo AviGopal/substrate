@@ -74,7 +74,8 @@ export class ConceptBusListener {
     let endpoint = this.settings.websocketUrl || this.settings.activityApiUrl;
     endpoint = endpoint.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
     endpoint = endpoint.replace(/\/$/, '');
-    return `${endpoint}/ws`;
+    if (!endpoint.endsWith('/ws')) endpoint = `${endpoint}/ws`;
+    return endpoint;
   }
 
   private connect(): void {

@@ -192,8 +192,9 @@ export class RealtimeSyncService {
     // Remove trailing slash
     endpoint = endpoint.replace(/\/$/, '');
 
-    // Add /ws path
-    return `${endpoint}/ws`;
+    // Add /ws path only if not already present
+    if (!endpoint.endsWith('/ws')) endpoint = `${endpoint}/ws`;
+    return endpoint;
   }
 
   /**

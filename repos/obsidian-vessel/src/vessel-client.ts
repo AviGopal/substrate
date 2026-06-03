@@ -9,6 +9,7 @@
  * - repos/metabob-activity-api/src/routes/vessel-registry.ts
  */
 
+import { requestUrl } from 'obsidian';
 import { MetabobVesselSettings } from './settings';
 
 // =============================================================================
@@ -527,20 +528,22 @@ export class VesselClient {
   private async fetchWithTimeout(
     url: string,
     options: RequestInit,
-    timeoutMs: number
-  ): Promise<Response> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal,
-      });
-      return response;
-    } finally {
-      clearTimeout(timeout);
-    }
+    _timeoutMs: number
+  ): Promise<{ ok: boolean; status: number; statusText: string; text(): Promise<string>; json(): Promise<unknown> }> {
+    const resp = await requestUrl({
+      url,
+      method: (options.method as string) || 'GET',
+      headers: (options.headers as Record<string, string>) || {},
+      body: options.body as string | undefined,
+      throw: false,
+    });
+    return {
+      ok: resp.status >= 200 && resp.status < 300,
+      status: resp.status,
+      statusText: String(resp.status),
+      text: () => Promise.resolve(resp.text),
+      json: () => Promise.resolve(resp.json),
+    };
   }
 
   /**
