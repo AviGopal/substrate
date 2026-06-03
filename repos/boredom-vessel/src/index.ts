@@ -209,12 +209,13 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // via scaffold-and-publish-vessel rather than waiting for an operator.
   "run vessel-demand-report; if the highest-priority demand has occurrence >= 3, dispatch scaffold-and-publish-vessel with that shape as the new vessel's advertised shape",
   // Autonomous self-improvement loop (2026-06-03, goal[13]):
-  // run scaffold-mitosis-track for the highest-priority MODIFY decision from
-  // code_needs_report — when authoring_chain_health_report returns BLOCKED,
-  // the substrate authors a parallel-track fix for the broken template. The
-  // resulting trace shows the substrate observed a need, dispatched a fix,
-  // and produced a parallel-track artifact without operator direction.
-  "run scaffold-mitosis-track for the highest-priority MODIFY decision from code_needs_report — when authoring_chain_health_report returns BLOCKED, the substrate authors a parallel-track fix for the broken template",
+  // dispatch enact-orthogonal-decisions — the substrate reads its own observations
+  // (orthogonal-decisions file + live code_needs_report) and decides between
+  // mitosis (MODIFY) and drafter (CREATE_*) on its own. All variables (vessel_name,
+  // target_file_path, intent_summary, scenario_id) are derived LIVE inside the
+  // template, not hardcoded here. Closes Gap #3+#4: the substrate observes a need,
+  // derives its own variables, and dispatches its own self-mitosis or self-authoring.
+  "run enact-orthogonal-decisions to read live observations + code_needs_report and dispatch self-mitosis (MODIFY) or self-authoring (CREATE_*)",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -240,12 +241,13 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // wired in a follow-up template once vessel-demand-tick output exposes the
   // top_priority entry in a chainable shape.
   "development-vessel:vessel-demand-tick",
-  // goal[13] — autonomous self-modification: scaffold-mitosis-track composes
-  // concept_select_for_prompt + fs_read + llm_completion_dispatch +
-  // vessel_mitosis_start. Target file + vessel + intent are passed via
-  // extraVariablesForGoal(13) seeded against the current MODIFY priority
-  // (draft-gap-closing-activity #140 — chain truncates at task 7).
-  "development-vessel:scaffold-mitosis-track",
+  // goal[13] — autonomous self-improvement entry point (2026-06-03 retarget):
+  // enact-orthogonal-decisions reads BOTH the orthogonal-decisions file AND
+  // a live code_needs_report, then synthesizes a single dispatch — either
+  // scaffold-mitosis-track (MODIFY priority) or draft-gap-closing-activity
+  // (CREATE_* priority). All downstream variables are LIVE-derived inside the
+  // template; no operator hardcoding.
+  "development-vessel:enact-orthogonal-decisions",
 ];
 
 /**
@@ -281,7 +283,7 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "moderate",  // goal[10] drain-pending-substrate-gaps (1 resolver + 1 dispatch)
   "moderate",  // goal[11] ingest-audit-findings (fs_read + LLM + http_fetch)
   "cheap",     // goal[12] vessel-demand-report (single resolver, no LLM)
-  "expensive", // goal[13] scaffold-mitosis-track (1 LLM dispatch + fs/copy I/O)
+  "expensive", // goal[13] enact-orthogonal-decisions (1 LLM dispatch + child mitosis or drafter goal)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
@@ -298,21 +300,19 @@ const SCENARIO_ROTATION: readonly string[] = [
 
 function extraVariablesForGoal(goalIdx: number): Record<string, unknown> {
   if (goalIdx === 13) {
-    // scaffold-mitosis-track expects vessel_name / target_file_path /
-    // intent_summary. Seeded against the current highest-priority MODIFY
-    // decision (draft-gap-closing-activity #140 — chain truncates at task 7).
-    // A future iteration should read the top entry from code_needs_report at
-    // dispatch time instead of hardcoding; for now the hardcoded target
-    // produces a meaningful trace + parallel-track artifact on every fire.
+    // enact-orthogonal-decisions derives its own dispatch decision LIVE from
+    // (a) the latest orthogonal-decisions observation file and
+    // (b) a fresh code_needs_report resolver call.
+    // We supply only filesystem paths; vessel_name / target_file_path /
+    // intent_summary / scenario_id are synthesized inside the template from
+    // the live observation data (Gap #3 closure — no operator hardcoding).
     return {
-      vessel_name: "development-vessel",
-      target_file_path: "src/seed/draft-gap-closing-activity.ts",
-      intent_summary:
-        "Repair the chain truncation at task 7 in draft-gap-closing-activity. The current " +
-        "template's prelude makes the gap-closing LLM emit malformed multi-block source that " +
-        "the parser cannot recover. Replace the variables-self-discovery prelude with a single " +
-        "well-formed task graph that matches the failure-mode scenario at " +
-        "/workspace/scenarios/fm-17-resolver-budget-noncompliance.json.",
+      observation_path: "/workspace/observations/orthogonal-latest.json",
+      scenarios_dir: "/workspace/validation/failure-modes/scenarios",
+      report_path: "/workspace/validation/results/latest-failure-mode-report.json",
+      proposals_dir: "/workspace/proposals",
+      dispatch_ts: new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15) + "Z",
+      modify_priority_floor: 0.4,
     };
   }
   if (goalIdx === 10) {
@@ -526,6 +526,168 @@ function selectGoalForLoad(startIdx: number, maxCost: GoalCost): number {
   return 0;
 }
 
+// ── Gap #2: state-conditioned Thompson selection ───────────────────────────
+// Sample Beta(alpha+1, beta+1) — Marsaglia approximation via the trick
+// Beta(a,b) = X/(X+Y) where X ~ Gamma(a,1), Y ~ Gamma(b,1). For integer
+// a,b > 0 we draw Gamma as sum of -ln(U_i) over i=1..a (Bun's Math.random is
+// fine; this is a policy, not a security primitive).
+function gammaIntApprox(shape: number): number {
+  let acc = 0;
+  const n = Math.max(1, Math.floor(shape));
+  for (let i = 0; i < n; i++) acc += -Math.log(Math.max(1e-9, Math.random()));
+  return acc;
+}
+function sampleBeta(alpha: number, beta: number): number {
+  const x = gammaIntApprox(alpha);
+  const y = gammaIntApprox(beta);
+  const denom = x + y;
+  return denom === 0 ? 0.5 : x / denom;
+}
+
+/**
+ * Fetch the substrate's current state-space signature via dev-vessel. Returns
+ * null when dev-vessel is unreachable — caller falls back to unconditioned
+ * round-robin. Best-effort and bounded (3s).
+ */
+async function fetchCurrentSignature(): Promise<string | null> {
+  try {
+    const res = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `ApiKey ${API_KEY}` },
+      body: JSON.stringify({ impulse: { pointer: { type: "compute_state_signature" } } }),
+      signal: AbortSignal.timeout(3_000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { body?: { signature_hash?: string } };
+    return data?.body?.signature_hash ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Pull recent traces and segment by (signature_hash, goal_idx) tag. Returns a
+ * map goalIdx → { alpha, beta, samples } for the current signature only. Falls
+ * back to empty map on any error so the caller degrades to round-robin.
+ *
+ * We read traces from the last 24h (limit 200). Each trace has tags including
+ * `state_signature:<hash>` (added by goal-host) and `boredom_source` + an
+ * implicit goal_idx via the targetTemplateId. We map template_id back to
+ * goal_idx via AUTONOMOUS_GOAL_TARGET_TEMPLATES.
+ */
+interface PosteriorCell { alpha: number; beta: number; samples: number; }
+async function fetchPosteriorsForSignature(
+  signature: string,
+): Promise<Map<number, PosteriorCell>> {
+  const cells = new Map<number, PosteriorCell>();
+  try {
+    const since = Date.now() - 24 * 60 * 60 * 1000;
+    const res = await fetch(
+      `${ACTIVITY_API_ENDPOINT}/v2/activities/execution-traces?limit=200&since=${since}`,
+      { headers: authHeaders(), signal: AbortSignal.timeout(5_000) },
+    );
+    if (!res.ok) return cells;
+    const data = (await res.json()) as
+      | { executions?: unknown; traces?: unknown }
+      | unknown;
+    const arr = Array.isArray(data)
+      ? (data as Array<Record<string, unknown>>)
+      : ((data as { executions?: unknown; traces?: unknown })?.executions
+        ?? (data as { executions?: unknown; traces?: unknown })?.traces
+        ?? []) as Array<Record<string, unknown>>;
+    if (!Array.isArray(arr)) return cells;
+    const sigTag = `state_signature:${signature}`;
+    // Build template_id → goal_idx index once.
+    const tplToGoal = new Map<string, number>();
+    AUTONOMOUS_GOAL_TARGET_TEMPLATES.forEach((tid, idx) => {
+      if (typeof tid === "string") tplToGoal.set(tid, idx);
+    });
+    for (const t of arr) {
+      const tags = Array.isArray(t.tags) ? (t.tags as string[]) : [];
+      if (!tags.includes(sigTag)) continue;
+      // Trace's template id (one of several possible field names).
+      const tid =
+        (typeof t.activity_id === "string" ? t.activity_id : undefined)
+        ?? (typeof t.template_id === "string" ? t.template_id : undefined)
+        ?? (typeof t.selected_template_id === "string" ? t.selected_template_id : undefined);
+      if (!tid) continue;
+      const normalized = tid.replace(/^activity:⟨(.+)⟩$/, "$1");
+      const goalIdx = tplToGoal.get(normalized) ?? tplToGoal.get(tid);
+      if (goalIdx === undefined) continue;
+      const status = t.status;
+      const success = status === "success" || status === "completed" || t.success === true;
+      let cell = cells.get(goalIdx);
+      if (!cell) { cell = { alpha: 0, beta: 0, samples: 0 }; cells.set(goalIdx, cell); }
+      if (success) cell.alpha += 1;
+      else cell.beta += 1;
+      cell.samples += 1;
+    }
+  } catch {
+    /* swallow — degrade to round-robin */
+  }
+  return cells;
+}
+
+/**
+ * State-conditioned goal selection (Gap #2). Layers Thompson Sampling on top
+ * of the load-aware round-robin walk:
+ *
+ *   1. Compute candidates that satisfy the cost budget for current load.
+ *   2. Fetch posteriors keyed by (current_signature, goal_idx) from recent
+ *      24h traces.
+ *   3. If any cell has samples >= MIN_CELL_SAMPLES, Thompson-sample over all
+ *      eligible cells (with Beta(1,1) prior for goals lacking data) and pick
+ *      the highest draw.
+ *   4. If no cell has enough samples (cold start for this signature),
+ *      fall back to load-aware round-robin (unchanged behavior).
+ *
+ * Degrades gracefully on any error or null signature.
+ */
+const MIN_CELL_SAMPLES = 3;
+async function selectGoalForLoadConditioned(
+  startIdx: number,
+  maxCost: GoalCost,
+): Promise<{ goalIdx: number; mode: "thompson" | "round_robin"; signature: string | null; cellsExamined: number }> {
+  const rrPick = selectGoalForLoad(startIdx, maxCost);
+  const signature = await fetchCurrentSignature();
+  if (!signature) return { goalIdx: rrPick, mode: "round_robin", signature: null, cellsExamined: 0 };
+
+  // Build eligible-candidate list (respects cost budget, preserves rotation
+  // fairness by starting at startIdx).
+  const budgetRank = COST_RANK[maxCost];
+  const n = AUTONOMOUS_GOALS.length;
+  const eligible: number[] = [];
+  for (let offset = 0; offset < n; offset++) {
+    const idx = (startIdx + offset) % n;
+    const cost = AUTONOMOUS_GOAL_COSTS[idx] ?? "expensive";
+    if (COST_RANK[cost] <= budgetRank) eligible.push(idx);
+  }
+  if (eligible.length === 0) return { goalIdx: rrPick, mode: "round_robin", signature, cellsExamined: 0 };
+
+  const posteriors = await fetchPosteriorsForSignature(signature);
+  // Require AT LEAST ONE eligible cell with sufficient samples — otherwise
+  // every draw is from Beta(1,1) which is uniform noise.
+  let anyConfident = false;
+  for (const idx of eligible) {
+    const cell = posteriors.get(idx);
+    if (cell && cell.samples >= MIN_CELL_SAMPLES) { anyConfident = true; break; }
+  }
+  if (!anyConfident) {
+    return { goalIdx: rrPick, mode: "round_robin", signature, cellsExamined: posteriors.size };
+  }
+
+  // Thompson sample across eligible candidates. Beta(α+1, β+1) — +1 prior
+  // keeps zero-data cells in play with uniform draws.
+  let bestIdx = eligible[0]!;
+  let bestDraw = -1;
+  for (const idx of eligible) {
+    const cell = posteriors.get(idx) ?? { alpha: 0, beta: 0, samples: 0 };
+    const draw = sampleBeta(cell.alpha + 1, cell.beta + 1);
+    if (draw > bestDraw) { bestDraw = draw; bestIdx = idx; }
+  }
+  return { goalIdx: bestIdx, mode: "thompson", signature, cellsExamined: posteriors.size };
+}
+
 /**
  * Substrate-internal autonomous promoter tick. Calls activity-api's
  * auto-promote endpoint which scans proposed templates and promotes any with
@@ -591,18 +753,32 @@ async function main(): Promise<void> {
   const dispatchedAt = new Date().toISOString();
   const dispatchStartMs = Date.now();
 
-  // Load-aware goal selection: walk forward from the round-robin pointer
-  // until we find a goal whose cost is acceptable for current load
-  // (concept_uNEIKtMneq5c load_aware_boredom_triage_policy).
+  // Load-aware goal selection + state-conditioned Thompson sampling (Gap #2):
+  // walk forward from the round-robin pointer (cost-budget filter), then if
+  // enough posterior data exists for the current state signature, sample
+  // Thompson over eligible cells. Cold-start falls back to pure round-robin.
   const roundRobinIdx = await peekGoalIndex();
   const maxCost = maxCostForLoad(loadBefore);
-  const goalIdx = selectGoalForLoad(roundRobinIdx, maxCost);
+  const selection = await selectGoalForLoadConditioned(roundRobinIdx, maxCost);
+  const goalIdx = selection.goalIdx;
   await advanceGoalIndex(goalIdx);
   const skipped = (goalIdx - roundRobinIdx + AUTONOMOUS_GOALS.length) % AUTONOMOUS_GOALS.length;
-  if (skipped > 0) {
+  if (selection.mode === "thompson") {
+    console.log(
+      `[boredom-vessel] state-conditioned selection: signature=${selection.signature} ` +
+      `mode=thompson cells_examined=${selection.cellsExamined} picked=${goalIdx} ` +
+      `(round_robin would have picked ${roundRobinIdx})`,
+    );
+  } else if (skipped > 0) {
     console.log(
       `[boredom-vessel] load-gating: maxCost=${maxCost} (load_anomaly=${loadBefore?.load_anomaly}, severe=${loadBefore?.load_anomaly_severe}) — ` +
-      `skipped ${skipped} goal(s) from idx=${roundRobinIdx} to idx=${goalIdx}`,
+      `skipped ${skipped} goal(s) from idx=${roundRobinIdx} to idx=${goalIdx}` +
+      ` (signature=${selection.signature ?? "unknown"}, mode=round_robin)`,
+    );
+  } else if (selection.signature) {
+    console.log(
+      `[boredom-vessel] state-conditioned selection: signature=${selection.signature} ` +
+      `mode=round_robin (insufficient posterior samples) picked=${goalIdx}`,
     );
   }
 
