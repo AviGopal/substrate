@@ -955,6 +955,10 @@ function startVesselRegistrationSubscriber(): void {
         const msg = JSON.parse(typeof e.data === "string" ? e.data : e.data.toString());
         recordMemSample("ws", rawSize, typeof msg?.type === "string" ? msg.type : "?");
         if (msg?.type !== "vessel.registered") return;
+        // 2.A.1: any vessel registration changes the substrate's resolver
+        // topology — and therefore the state-signature inputs. Drop the cache
+        // so the next dispatch re-computes.
+        invalidateSignatureCache();
         const vesselId = msg.data?.vessel_id;
         if (typeof vesselId !== "string" || !DEV_VESSEL_ID_PATTERN.test(vesselId)) return;
         // Debounce: coalesce rapid re-registrations into one re-fetch.
@@ -1333,7 +1337,11 @@ async function handleRunGoal(req: Request): Promise<Response> {
       // the environment in which template selection happened. The hash is
       // appended to `tags` as `state_signature:<hash>`; the full body is
       // attached to the dispatch record for later inspection.
-      const stateSignature = await computeStateSignature(loadedConceptIds);
+      // 2.A.1: use cached signature (TTL SIGNATURE_CACHE_MS, default 60s)
+      // so multi-task dispatches don't re-trigger dev-vessel's full /proc +
+      // recent-trace + catalogue compute per dispatch. Reduces the dispatch-
+      // setup memory churn that dominates goal-host's per-dispatch RSS delta.
+      const stateSignature = await getCachedStateSignature(loadedConceptIds);
       record.stateSignature = stateSignature;
       const sigTag = stateSignature?.signature_hash
         ? [`state_signature:${stateSignature.signature_hash}`]
@@ -1352,7 +1360,12 @@ async function handleRunGoal(req: Request): Promise<Response> {
             ...(mitosisBaseVessel ? [`mitosis_base_vessel:${mitosisBaseVessel}`] : []),
           ]
         : [];
-      const effectiveTags = [...(tags ?? []), ...sigTag, ...mitosisTags];
+      // 2.C.5: trace metadata — record which dispatcher produced this trace.
+      // goal-host is the legacy full-machinery dispatcher; light-dispatch-vessel
+      // sets the equivalent tag on its own traces. boredom-vessel uses these
+      // tags downstream to build per-dispatcher Thompson posteriors.
+      const dispatcherTag = ["dispatcher_used:goal-host"];
+      const effectiveTags = [...(tags ?? []), ...sigTag, ...mitosisTags, ...dispatcherTag];
 
       await autoDraft();
       const effectiveTargetId = targetTemplateId ?? authoredTemplateId;
@@ -1532,6 +1545,52 @@ async function computeStateSignature(
   } finally {
     clearTimeout(timer);
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2.A.1 — Lazy state-signature cache (openspec 2026-06-03 pre-lift-bootstrap).
+//
+// computeStateSignature() above triggers a /proc-reading + recent-trace-aggregate
+// + catalogue-count fetch on dev-vessel. Per the observation in
+// validation/findings/goal-host-dispatch-setup-leak-2026-06-03/ this happens
+// once per dispatch, and combined with the in-process state-signature compute
+// inside dev-vessel, dominates the ~2 GB per-dispatch RSS delta.
+//
+// Cache the result with a TTL (default 60s). Invalidate on:
+//   - WS event vessel.registered (proxy-registration triggers also fire)
+//   - explicit invalidateSignatureCache() call (e.g. on environment-change
+//     observability hooks we may add later)
+//
+// loaded_concept_ids vary per-dispatch; cache on the JSON-sorted form so two
+// dispatches with the same loaded set share the cache, while different sets
+// trigger a fresh compute. Cap variants at 8 to bound the cache.
+// ─────────────────────────────────────────────────────────────────────────────
+const SIGNATURE_CACHE_MS = parseInt(process.env["SIGNATURE_CACHE_MS"] ?? "60000", 10);
+interface SignatureCacheEntry { computed_at: number; body: StateSignatureBody | undefined; }
+const signatureCache = new Map<string, SignatureCacheEntry>();
+const SIGNATURE_CACHE_MAX_KEYS = 8;
+function invalidateSignatureCache(): void { signatureCache.clear(); }
+function signatureCacheKey(loadedConceptIds?: string[]): string {
+  if (!loadedConceptIds || loadedConceptIds.length === 0) return "_";
+  return [...loadedConceptIds].sort().join(",");
+}
+async function getCachedStateSignature(
+  loadedConceptIds?: string[],
+): Promise<StateSignatureBody | undefined> {
+  const key = signatureCacheKey(loadedConceptIds);
+  const hit = signatureCache.get(key);
+  if (hit && (Date.now() - hit.computed_at) < SIGNATURE_CACHE_MS) {
+    return hit.body;
+  }
+  const body = await computeStateSignature(loadedConceptIds);
+  // Evict oldest if at cap.
+  if (signatureCache.size >= SIGNATURE_CACHE_MAX_KEYS && !signatureCache.has(key)) {
+    const oldestKey = [...signatureCache.entries()]
+      .sort((a, b) => a[1].computed_at - b[1].computed_at)[0]?.[0];
+    if (oldestKey !== undefined) signatureCache.delete(oldestKey);
+  }
+  signatureCache.set(key, { computed_at: Date.now(), body });
+  return body;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
