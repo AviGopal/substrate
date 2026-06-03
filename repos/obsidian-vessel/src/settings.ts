@@ -158,6 +158,16 @@ export interface MetabobVesselSettings {
    * dominate the vault).
    */
   conceptDbSyncSourceTypes: string[];
+
+  // ==========================================================================
+  // Goal Dispatch Settings
+  // ==========================================================================
+
+  /** HTTP endpoint for goal-host-vessel (default: local substrate). */
+  goalHostEndpoint: string;
+
+  /** Enable the Goal Dispatch sidebar and command. */
+  enableGoalDispatch: boolean;
 }
 
 /**
@@ -227,6 +237,10 @@ export const DEFAULT_SETTINGS: MetabobVesselSettings = {
   conceptDbSyncIntervalSec: 300,
   enableConceptDbWriteback: false,
   conceptDbSyncSourceTypes: [],
+
+  // Goal Dispatch
+  goalHostEndpoint: 'http://127.0.0.1:8210',
+  enableGoalDispatch: true,
 };
 
 /**

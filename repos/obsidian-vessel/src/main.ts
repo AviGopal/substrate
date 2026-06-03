@@ -1,4 +1,6 @@
 import { App, Plugin, PluginManifest, TFile, Notice } from 'obsidian';
+import { GoalDispatchView, VIEW_TYPE_GOAL_DISPATCH } from './views/goal-dispatch-view';
+import { GoalInputModal } from './views/goal-input-modal';
 import { MetabobVesselSettings, DEFAULT_SETTINGS } from './settings';
 import { MetabobVesselSettingTab } from './settings-tab';
 import { HTTPServer } from './server/index';
@@ -204,8 +206,32 @@ export default class MetabobVesselPlugin extends Plugin {
     // Settings tab for configuration
     this.addSettingTab(new MetabobVesselSettingTab(this.app, this));
 
+    // Register Goal Dispatch sidebar view
+    this.registerView(
+      VIEW_TYPE_GOAL_DISPATCH,
+      (leaf) => new GoalDispatchView(leaf, this),
+    );
+
     // Register all commands (sync, status, create note, etc.)
     registerCommands(this);
+
+    // Register goal dispatch command
+    if (this.settings.enableGoalDispatch) {
+      this.addCommand({
+        id: 'dispatch-goal',
+        name: 'Dispatch goal to substrate',
+        callback: () => {
+          new GoalInputModal(this.app, async (goal) => {
+            await this.activateGoalDispatchView();
+            const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_GOAL_DISPATCH);
+            const leaf = leaves[0];
+            if (leaf && leaf.view instanceof GoalDispatchView) {
+              await (leaf.view as GoalDispatchView).dispatchGoal(goal);
+            }
+          }).open();
+        },
+      });
+    }
 
     // Phase 10: Setup status bar
     // Status bar shows connection state and sync status
@@ -213,8 +239,8 @@ export default class MetabobVesselPlugin extends Plugin {
     this.statusBarManager = new StatusBarManager(this, statusBarEl);
     this.statusBarManager.start();
 
-    // Phase 11: Add ribbon icon
-    // Quick access to status command
+    // Phase 11: Add ribbon icons
+    // Existing: quick access to status command
     this.addRibbonIcon('activity', 'Metabob Vessel', () => {
       // Execute the status command when clicked
       const command = this.app.commands.commands['metabob-vessel:status'];
@@ -222,6 +248,13 @@ export default class MetabobVesselPlugin extends Plugin {
         this.app.commands.executeCommandById('metabob-vessel:status');
       }
     });
+
+    // Goal dispatch ribbon icon
+    if (this.settings.enableGoalDispatch) {
+      this.addRibbonIcon('bot', 'Goal Dispatch', () => {
+        this.activateGoalDispatchView();
+      });
+    }
 
     // Phase 12: Initial sync (if configured)
     // Delay to let Obsidian fully initialize its workspace
@@ -772,6 +805,22 @@ export default class MetabobVesselPlugin extends Plugin {
       new Notice(`Sync failed: ${errorMessage}`);
     } finally {
       this.syncing = false;
+    }
+  }
+
+  /**
+   * Open (or reveal) the Goal Dispatch sidebar panel.
+   */
+  async activateGoalDispatchView(): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_GOAL_DISPATCH);
+    if (existing.length > 0) {
+      this.app.workspace.revealLeaf(existing[0]);
+      return;
+    }
+    const leaf = this.app.workspace.getRightLeaf(false);
+    if (leaf) {
+      await leaf.setViewState({ type: VIEW_TYPE_GOAL_DISPATCH, active: true });
+      this.app.workspace.revealLeaf(leaf);
     }
   }
 
