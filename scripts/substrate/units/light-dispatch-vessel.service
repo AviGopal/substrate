@@ -1,0 +1,22 @@
+[Unit]
+Description=light-dispatch-vessel — stateless oneshot dispatcher (Stage 2.B)
+After=activity-api.service discovery-vessel.service
+Requires=activity-api.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8280
+Environment=HOST=127.0.0.1
+Environment=LIGHT_DISPATCH_VESSEL_ID=light-dispatch-vessel
+WorkingDirectory=/vessels/light-dispatch-vessel
+ExecStart=/root/.bun/bin/bun /vessels/light-dispatch-vessel/src/index.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+MemoryHigh=512M
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target

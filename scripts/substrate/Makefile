@@ -39,6 +39,7 @@ DEV_VESSEL_SRC := $(REPO_ROOT)/repos/development-vessel
 LOCAL_TOOLS_SRC := $(REPO_ROOT)/repos/local-tools-vessel
 LLM_VESSEL_SRC := $(REPO_ROOT)/repos/llm-resolver-vessel
 GOAL_HOST_SRC := $(REPO_ROOT)/repos/goal-host-vessel
+LIGHT_DISPATCH_SRC := $(REPO_ROOT)/repos/light-dispatch-vessel
 BOREDOM_VESSEL_SRC := $(REPO_ROOT)/repos/boredom-vessel
 RIBOSOME_VESSEL_SRC := $(REPO_ROOT)/repos/ribosome-vessel
 CONCEPT_DB_SRC := $(REPO_ROOT)/repos/concept-db
@@ -55,6 +56,7 @@ STATEFUL_UI_VESSEL_SRC := $(REPO_ROOT)/repos/stateful-ui-vessel
         sync-local-tools-vessel restart-local-tools-vessel \
         sync-llm-resolver-vessel restart-llm-resolver-vessel \
         sync-goal-host-vessel restart-goal-host-vessel \
+        sync-light-dispatch-vessel restart-light-dispatch-vessel \
         sync-boredom-vessel trigger-boredom-vessel \
         sync-ribosome-vessel restart-ribosome-vessel \
         sync-concept-db restart-concept-db \
@@ -270,6 +272,23 @@ restart-goal-host-vessel: sync-goal-host-vessel
 	docker exec $(LIVE_NAME) systemctl restart goal-host-vessel.service
 	@sleep 2
 	@docker exec $(LIVE_NAME) systemctl is-active goal-host-vessel.service | grep -q active && echo "[restart] goal-host-vessel active" || echo "[restart] ERROR: goal-host-vessel not active"
+
+# Sync light-dispatch-vessel into the running container then restart it.
+# Stateless oneshot dispatcher (openspec 2026-06-03 Stage 2.B). Port 8250.
+sync-light-dispatch-vessel:
+	docker exec $(LIVE_NAME) mkdir -p /vessels/light-dispatch-vessel/src
+	docker cp $(LIGHT_DISPATCH_SRC)/package.json $(LIVE_NAME):/vessels/light-dispatch-vessel/package.json
+	docker cp $(LIGHT_DISPATCH_SRC)/tsconfig.json $(LIVE_NAME):/vessels/light-dispatch-vessel/tsconfig.json
+	docker cp $(LIGHT_DISPATCH_SRC)/src/index.ts $(LIVE_NAME):/vessels/light-dispatch-vessel/src/index.ts
+	docker cp $(CURDIR)/units/light-dispatch-vessel.service $(LIVE_NAME):/etc/systemd/system/light-dispatch-vessel.service
+	docker exec $(LIVE_NAME) systemctl daemon-reload
+	docker exec $(LIVE_NAME) systemctl enable light-dispatch-vessel.service 2>/dev/null || true
+	@echo "[sync] light-dispatch-vessel source + unit synced to substrate-live"
+
+restart-light-dispatch-vessel: sync-light-dispatch-vessel
+	docker exec $(LIVE_NAME) systemctl restart light-dispatch-vessel.service
+	@sleep 2
+	@docker exec $(LIVE_NAME) systemctl is-active light-dispatch-vessel.service | grep -q active && echo "[restart] light-dispatch-vessel active" || echo "[restart] ERROR: light-dispatch-vessel not active"
 
 # Sync boredom-vessel source into the running container then trigger a manual run.
 sync-boredom-vessel:
