@@ -19,10 +19,20 @@
 
 const ACTIVITY_API_ENDPOINT = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";
 const GOAL_HOST_ENDPOINT = process.env.GOAL_HOST_VESSEL_ENDPOINT ?? "http://127.0.0.1:8210";
+const LIGHT_DISPATCH_ENDPOINT = process.env.LIGHT_DISPATCH_ENDPOINT ?? "http://127.0.0.1:8280";
 const DEV_VESSEL_ENDPOINT = process.env.DEV_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";
 const API_KEY = process.env.METABOB_API_KEY ?? "";
 const IDLE_WINDOW_SECONDS = parseInt(process.env.BOREDOM_IDLE_WINDOW_SECONDS ?? "300", 10);
 const GOAL_INDEX_FILE = process.env.BOREDOM_GOAL_INDEX_FILE ?? "/tmp/boredom-goal-index";
+const DISPATCHER_EXPLORATION_RATE = parseFloat(
+  process.env.BOREDOM_DISPATCHER_EXPLORATION_RATE ?? "0.15",
+);
+const DISPATCHER_COMPARISON_INTERVAL = parseInt(
+  process.env.BOREDOM_DISPATCHER_COMPARISON_INTERVAL ?? "50",
+  10,
+);
+const DISPATCHER_CYCLE_COUNTER_FILE =
+  process.env.BOREDOM_DISPATCHER_COUNTER_FILE ?? "/tmp/boredom-dispatcher-cycle";
 
 interface LoadSample {
   cpu_usec: number;
@@ -849,6 +859,251 @@ async function tickAutoPromote(): Promise<void> {
   }
 }
 
+// ── Stage 2.C: capability-based dispatcher routing ──────────────────────────
+//
+// Two dispatchers now exist:
+//   - goal-host   — full machinery (LLM-reuse, state-space services, proxy
+//                   resolvers, ProxyImpulseBus). Required for open-ended goals
+//                   without targetTemplateId or templates needing state-space
+//                   services.
+//   - light-dispatch — stateless oneshot (port 8280). Walks tasks, calls
+//                   resolver-owning vessels via discovery, posts trace.
+//                   Cheaper per-dispatch; cannot do LLM-reuse.
+//
+// Selection: hard filter (capability) → soft filter (recent OOM count) →
+// Thompson sample over (dispatcher × signature × goalIdx) posteriors with
+// DISPATCHER_EXPLORATION_RATE for keep-warm exploration.
+// ─────────────────────────────────────────────────────────────────────────────
+
+type DispatcherChoice = "goal-host" | "light-dispatch";
+
+interface CapabilityHints {
+  requires_llm_reuse: boolean;
+  requires_state_space_services: boolean;
+  is_multi_task: boolean;
+}
+
+interface DispatcherDecision {
+  dispatcher: DispatcherChoice;
+  reason: "capability_filter" | "health_soft_filter" | "thompson_sample" | "exploration_bonus" | "comparison_probe";
+  eligible: DispatcherChoice[];
+  capability_hints: CapabilityHints;
+}
+
+/**
+ * Derive capability hints from goal/template metadata. Pessimistic by default
+ * (assumes any unknown goal needs full machinery) so we never route an
+ * LLM-needing goal to light-dispatch.
+ *
+ * Templates whose id ends in "-tick", "-scan", "-audit", "-report", "-backfill"
+ * are deterministic detector wrappers — light-dispatch eligible. Open-ended
+ * goals (no targetTemplateId) ALWAYS go to goal-host (need LLM-reuse).
+ */
+function deriveCapabilityHints(
+  _goalIdx: number,
+  targetTemplateId: string | undefined,
+): CapabilityHints {
+  if (!targetTemplateId) {
+    return { requires_llm_reuse: true, requires_state_space_services: true, is_multi_task: true };
+  }
+  // Detector / tick templates: deterministic chains, no LLM, no state-space services.
+  const isDeterministicChain =
+    /-(tick|scan|audit|report|backfill)$/.test(targetTemplateId) ||
+    targetTemplateId.endsWith(":coverage-tick") ||
+    targetTemplateId.endsWith(":concept-usage-backfill") ||
+    targetTemplateId.endsWith(":mitosis-tick") ||
+    targetTemplateId.endsWith(":backend-snapshot-to-git");
+  return {
+    requires_llm_reuse: false,
+    requires_state_space_services: !isDeterministicChain,
+    is_multi_task: true,
+  };
+}
+
+/**
+ * Fetch per-dispatcher Thompson posteriors for the given signature, segmented
+ * by `dispatcher_used:<choice>` tags. Returns {alpha, beta, samples} per
+ * dispatcher; missing entries default to zero (uniform Beta(1,1) prior in
+ * sampleBeta call).
+ */
+async function fetchDispatcherPosteriors(
+  signature: string,
+  goalIdx: number,
+): Promise<Map<DispatcherChoice, PosteriorCell>> {
+  const cells = new Map<DispatcherChoice, PosteriorCell>();
+  try {
+    const since = Date.now() - 24 * 60 * 60 * 1000;
+    const res = await fetch(
+      `${ACTIVITY_API_ENDPOINT}/v2/activities/execution-traces?limit=200&since=${since}`,
+      { headers: authHeaders(), signal: AbortSignal.timeout(5_000) },
+    );
+    if (!res.ok) return cells;
+    const data = (await res.json()) as { executions?: unknown; traces?: unknown } | unknown;
+    const arr = (Array.isArray(data)
+      ? (data as Array<Record<string, unknown>>)
+      : ((data as { executions?: unknown; traces?: unknown })?.executions
+        ?? (data as { executions?: unknown; traces?: unknown })?.traces
+        ?? [])) as Array<Record<string, unknown>>;
+    if (!Array.isArray(arr)) return cells;
+    const sigTag = `state_signature:${signature}`;
+    const targetTpl = AUTONOMOUS_GOAL_TARGET_TEMPLATES[goalIdx];
+    for (const t of arr) {
+      const tags = Array.isArray(t.tags) ? (t.tags as string[]) : [];
+      if (!tags.includes(sigTag)) continue;
+      let dispatcher: DispatcherChoice | undefined;
+      for (const tag of tags) {
+        if (tag === "dispatcher_used:goal-host") { dispatcher = "goal-host"; break; }
+        if (tag === "dispatcher_used:light-dispatch") { dispatcher = "light-dispatch"; break; }
+      }
+      if (!dispatcher) continue;
+      // Optionally filter by goal-template match — when targetTpl is undefined,
+      // the goal is open-ended and we accept any trace at this signature.
+      if (targetTpl) {
+        const tid =
+          (typeof t.activity_id === "string" ? t.activity_id : undefined)
+          ?? (typeof t.template_id === "string" ? t.template_id : undefined)
+          ?? (typeof t.selected_template_id === "string" ? t.selected_template_id : undefined);
+        if (tid && !tid.includes(targetTpl)) continue;
+      }
+      const status = t.status;
+      const success = status === "success" || status === "completed" || t.success === true;
+      let cell = cells.get(dispatcher);
+      if (!cell) { cell = { alpha: 0, beta: 0, samples: 0 }; cells.set(dispatcher, cell); }
+      if (success) cell.alpha += 1; else cell.beta += 1;
+      cell.samples += 1;
+    }
+  } catch { /* degrade to empty map */ }
+  return cells;
+}
+
+/**
+ * Check recent OOM count for the given systemd service. Used as soft filter:
+ * if goal-host has OOMed > N times recently, prefer light-dispatch when
+ * eligible. Best-effort; degrades to zero on any error.
+ *
+ * Reads from activity-api's recent traces for tags indicating dispatcher OOMs
+ * (when the trace records dispatcher health). For now: degrade to zero — wire
+ * to a real OOM-detection resolver in a follow-up. The architectural piece
+ * (eligible-dispatcher routing) is what unblocks autonomous chains; the soft
+ * filter is a refinement.
+ */
+async function checkRecentOOMCount(_dispatcher: DispatcherChoice): Promise<number> {
+  return 0;
+}
+
+/**
+ * Read+bump the per-cycle counter persisted at DISPATCHER_CYCLE_COUNTER_FILE.
+ * Used to fire a comparison probe every DISPATCHER_COMPARISON_INTERVAL cycles
+ * (same goal through both dispatchers, tagged comparison_probe:true).
+ */
+function readCycleCounter(): number {
+  try {
+    const text = Bun.file(DISPATCHER_CYCLE_COUNTER_FILE).text();
+    // Synchronous-style: the file is < 32 bytes; use the sync API.
+    void text;
+  } catch { /* swallow */ }
+  // Use sync fs since Bun.file().text() is async; fall back to atomic read here.
+  try {
+    const fs = require("node:fs") as typeof import("node:fs");
+    if (fs.existsSync(DISPATCHER_CYCLE_COUNTER_FILE)) {
+      const n = parseInt(fs.readFileSync(DISPATCHER_CYCLE_COUNTER_FILE, "utf8"), 10);
+      return Number.isFinite(n) ? n : 0;
+    }
+  } catch { /* swallow */ }
+  return 0;
+}
+
+function writeCycleCounter(n: number): void {
+  try {
+    const fs = require("node:fs") as typeof import("node:fs");
+    fs.writeFileSync(DISPATCHER_CYCLE_COUNTER_FILE, String(n));
+  } catch { /* swallow */ }
+}
+
+async function selectDispatcher(
+  goalIdx: number,
+  signature: string | null,
+  capability_hints: CapabilityHints,
+): Promise<DispatcherDecision> {
+  // Hard filter: capability
+  const eligible: DispatcherChoice[] = ["goal-host"];
+  if (!capability_hints.requires_llm_reuse && !capability_hints.requires_state_space_services) {
+    eligible.push("light-dispatch");
+  }
+  if (eligible.length === 1) {
+    return { dispatcher: eligible[0]!, reason: "capability_filter", eligible, capability_hints };
+  }
+
+  // Soft filter: dispatcher health
+  const goalHostOOMs = await checkRecentOOMCount("goal-host");
+  if (goalHostOOMs > 2 && eligible.includes("light-dispatch")) {
+    return { dispatcher: "light-dispatch", reason: "health_soft_filter", eligible, capability_hints };
+  }
+
+  // Exploration bonus — keep both paths warm.
+  if (Math.random() < DISPATCHER_EXPLORATION_RATE) {
+    const pick = eligible[Math.floor(Math.random() * eligible.length)]!;
+    return { dispatcher: pick, reason: "exploration_bonus", eligible, capability_hints };
+  }
+
+  // Thompson sample over (dispatcher × signature × goalIdx).
+  if (signature) {
+    const posteriors = await fetchDispatcherPosteriors(signature, goalIdx);
+    let bestDraw = -1;
+    let bestPick: DispatcherChoice = eligible[0]!;
+    for (const d of eligible) {
+      const cell = posteriors.get(d) ?? { alpha: 0, beta: 0, samples: 0 };
+      const draw = sampleBeta(cell.alpha + 1, cell.beta + 1);
+      if (draw > bestDraw) { bestDraw = draw; bestPick = d; }
+    }
+    return { dispatcher: bestPick, reason: "thompson_sample", eligible, capability_hints };
+  }
+
+  // Cold-start: prefer light-dispatch (saves goal-host resources for goals
+  // that NEED its full machinery).
+  return { dispatcher: "light-dispatch", reason: "thompson_sample", eligible, capability_hints };
+}
+
+/**
+ * Dispatch a goal to the chosen dispatcher. Returns a unified result shape.
+ * goal-host returns 202+dispatchId (then poll); light-dispatch returns 200/207
+ * + outcome inline (single request).
+ */
+async function dispatchGoal(
+  dispatcher: DispatcherChoice,
+  goal: string,
+  targetTemplateId: string | undefined,
+  variables: Record<string, unknown>,
+  tags: string[],
+): Promise<Response> {
+  if (dispatcher === "light-dispatch") {
+    if (!targetTemplateId) {
+      throw new Error("light-dispatch requires targetTemplateId");
+    }
+    return await fetch(`${LIGHT_DISPATCH_ENDPOINT}/dispatch`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({
+        template_id: targetTemplateId,
+        variables: { source: "boredom-vessel", ...variables },
+        tags,
+      }),
+    });
+  }
+  // goal-host
+  const requestBody: Record<string, unknown> = {
+    goal,
+    tags,
+    variables: { source: "boredom-vessel", ...variables },
+  };
+  if (targetTemplateId) requestBody.targetTemplateId = targetTemplateId;
+  return await fetch(`${GOAL_HOST_ENDPOINT}/run-goal`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(requestBody),
+  });
+}
+
 async function main(): Promise<void> {
   console.log("[boredom-vessel] tick start");
 
@@ -914,38 +1169,73 @@ async function main(): Promise<void> {
       process.exit(0);
     }
   }
+  // Stage 2.C: capability-based dispatcher selection.
+  const capability_hints = deriveCapabilityHints(goalIdx, targetTemplateId);
+  const decision = await selectDispatcher(goalIdx, selection.signature, capability_hints);
+  let dispatcher = decision.dispatcher;
+
+  // Comparison probe: every Nth cycle, dispatch the same goal through BOTH
+  // dispatchers (when both are eligible) so downstream analysis can compare.
+  // The "primary" dispatch follows the Thompson choice; the "probe" fire-and-
+  // forgets to the other dispatcher with a comparison_probe tag.
+  const cycle = readCycleCounter() + 1;
+  writeCycleCounter(cycle);
+  const fireComparisonProbe =
+    decision.eligible.length === 2 &&
+    DISPATCHER_COMPARISON_INTERVAL > 0 &&
+    cycle % DISPATCHER_COMPARISON_INTERVAL === 0;
+
+  console.log(
+    `[boredom-vessel] dispatcher selected: ${dispatcher} (reason=${decision.reason}, ` +
+    `eligible=[${decision.eligible.join(",")}], signature=${selection.signature ?? "null"}, goalIdx=${goalIdx}, ` +
+    `cycle=${cycle}${fireComparisonProbe ? ", comparison_probe=on" : ""})`,
+  );
+
   console.log(`[boredom-vessel] submitting goal[${goalIdx}]: "${goal}"${targetTemplateId ? ` (targetTemplateId=${targetTemplateId})` : ""}`);
+
+  const baseTags = [
+    "intent:topology_discovery",
+    BOREDOM_TAG,
+    `dispatcher_reason:${decision.reason}`,
+  ];
+  const extraVars = extraVariablesForGoal(goalIdx);
+
+  // Fire comparison probe (fire-and-forget; tagged so it can be filtered out
+  // of normal posterior aggregation).
+  if (fireComparisonProbe) {
+    const probeDispatcher: DispatcherChoice =
+      dispatcher === "goal-host" ? "light-dispatch" : "goal-host";
+    void dispatchGoal(probeDispatcher, goal, targetTemplateId, extraVars,
+      [...baseTags, "comparison_probe:true", `comparison_probe_pair:${dispatcher}`])
+      .catch((err) => {
+        console.warn(`[boredom-vessel] comparison probe (${probeDispatcher}) failed: ${(err as Error).message}`);
+      });
+  }
 
   let res: Response;
   try {
-    // Async dispatch: POST /run-goal returns 202+dispatchId immediately (no 300s block).
-    // We then poll GET /executions/:dispatchId until done or systemd kills us (TimeoutStartSec=600).
-    // targetTemplateId bypasses Thompson Sampling — goal-host-vessel skips recommend() and
-    // executes the named template directly. Only set for goals that name a specific template.
-    const requestBody: Record<string, unknown> = {
-      goal,
-      tags: ["intent:topology_discovery", BOREDOM_TAG],
-      variables: {
-        source: "boredom-vessel",
-        ...extraVariablesForGoal(goalIdx),
-      },
-    };
-    if (targetTemplateId) {
-      requestBody.targetTemplateId = targetTemplateId;
-    }
-    res = await fetch(`${GOAL_HOST_ENDPOINT}/run-goal`, {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify(requestBody),
-    });
+    res = await dispatchGoal(dispatcher, goal, targetTemplateId, extraVars, baseTags);
   } catch (err) {
-    console.error(`[boredom-vessel] goal-host-vessel unreachable: ${(err as Error).message}`);
-    process.exit(1);
+    console.error(`[boredom-vessel] ${dispatcher} dispatcher unreachable: ${(err as Error).message}`);
+    // Fallback: if primary was light-dispatch and goal-host is eligible, try goal-host
+    if (dispatcher === "light-dispatch" && decision.eligible.includes("goal-host")) {
+      console.warn(`[boredom-vessel] falling back to goal-host`);
+      dispatcher = "goal-host";
+      try {
+        res = await dispatchGoal("goal-host", goal, targetTemplateId, extraVars,
+          [...baseTags, "dispatcher_fallback:from_light-dispatch"]);
+      } catch (err2) {
+        console.error(`[boredom-vessel] fallback also failed: ${(err2 as Error).message}`);
+        process.exit(1);
+      }
+    } else {
+      process.exit(1);
+    }
   }
 
-  if (!res.ok && res.status !== 202) {
+  if (!res.ok && res.status !== 202 && res.status !== 207) {
     const text = await res.text().catch(() => "(no body)");
-    console.error(`[boredom-vessel] goal-host-vessel HTTP ${res.status}: ${text}`);
+    console.error(`[boredom-vessel] ${dispatcher} HTTP ${res.status}: ${text}`);
     process.exit(1);
   }
 
@@ -953,6 +1243,25 @@ async function main(): Promise<void> {
   if (dispatch.error) {
     console.error(`[boredom-vessel] goal dispatch error: ${dispatch.error}`);
     process.exit(1);
+  }
+
+  // light-dispatch returns the full outcome inline (200/207) — no polling
+  // needed. status is "success"|"failure". Treat as synchronous completion.
+  if (dispatcher === "light-dispatch") {
+    console.log(
+      `[boredom-vessel] dispatched via light-dispatch — executionId=${dispatch.executionId ?? "?"} status=${dispatch.status ?? "?"}`,
+    );
+    await recordLoadAttribution({
+      dispatch_id: dispatch.dispatchId ?? dispatch.executionId ?? "light-no-id",
+      execution_id: dispatch.executionId,
+      goal_idx: goalIdx,
+      template_id: targetTemplateId,
+      dispatched_at: dispatchedAt,
+      dispatch_start_ms: dispatchStartMs,
+      load_before: loadBefore,
+      goal_status: dispatch.status,
+    });
+    process.exit(0);
   }
 
   // If synchronous response (legacy / no dispatchId), log + attribute load + exit.
