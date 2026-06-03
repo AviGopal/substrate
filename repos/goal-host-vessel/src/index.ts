@@ -1034,6 +1034,20 @@ async function handleRunGoal(req: Request): Promise<Response> {
   const compositionChain = Array.isArray(body.composition_chain)
     ? (body.composition_chain as string[])
     : [];
+  // Concept priors threaded into state-signature (Gap #1): when an upstream
+  // task (e.g. concept_select_for_prompt) has identified the priors loaded
+  // for this dispatch, surfacing them in the signature lets posteriors be
+  // segmented by concept-conditioned environment. Accepts top-level
+  // `loaded_concept_ids` or nested under variables; either form survives.
+  let loadedConceptIds: string[] | undefined;
+  if (Array.isArray(body.loaded_concept_ids)) {
+    loadedConceptIds = (body.loaded_concept_ids as unknown[]).filter(
+      (s): s is string => typeof s === "string",
+    );
+  } else if (Array.isArray((variables as Record<string, unknown>).loaded_concept_ids)) {
+    loadedConceptIds = ((variables as Record<string, unknown>).loaded_concept_ids as unknown[])
+      .filter((s): s is string => typeof s === "string");
+  }
 
   if (!goal && !targetTemplateId) {
     return Response.json({ error: "goal or targetTemplateId is required" }, { status: 400 });
@@ -1307,7 +1321,7 @@ async function handleRunGoal(req: Request): Promise<Response> {
       // the environment in which template selection happened. The hash is
       // appended to `tags` as `state_signature:<hash>`; the full body is
       // attached to the dispatch record for later inspection.
-      const stateSignature = await computeStateSignature();
+      const stateSignature = await computeStateSignature(loadedConceptIds);
       record.stateSignature = stateSignature;
       const sigTag = stateSignature?.signature_hash
         ? [`state_signature:${stateSignature.signature_hash}`]
@@ -1474,17 +1488,23 @@ interface StateSignatureBody {
   recent_traces?: Record<string, unknown>;
   catalogue?: Record<string, unknown>;
 }
-async function computeStateSignature(): Promise<StateSignatureBody | undefined> {
+async function computeStateSignature(
+  loadedConceptIds?: string[],
+): Promise<StateSignatureBody | undefined> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 10_000);
   try {
+    const pointer: Record<string, unknown> = { type: "compute_state_signature" };
+    if (loadedConceptIds && loadedConceptIds.length > 0) {
+      pointer.loaded_concept_ids = loadedConceptIds;
+    }
     const resp = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}),
       },
-      body: JSON.stringify({ impulse: { pointer: { type: "compute_state_signature" } } }),
+      body: JSON.stringify({ impulse: { pointer } }),
       signal: ctrl.signal,
     });
     const text = await resp.text();
