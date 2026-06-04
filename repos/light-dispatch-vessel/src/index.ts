@@ -405,12 +405,19 @@ async function runDispatch(
 
   const overallStatus: "success" | "failure" = failureCount === 0 ? "success" : "failure";
   const duration = Date.now() - t0;
+  // activity-api's POST /v2/activities/execution-traces derives `success` via
+  // `body.status === 'completed' || body.success === true` (see
+  // metabob-activity-api/src/routes/execution-traces.ts:1561). Send BOTH the
+  // explicit success bool AND status:"completed" on the success path so the
+  // downstream row's success/status fields match light-dispatch's own view of
+  // the trace. (Bootstrap 3.)
   const trace = {
     execution_id: executionId,
     template_id: templateId,
     activity_id: templateId,
     activity_variant_id: templateId,
-    status: overallStatus === "success" ? ("success" as const) : ("failed" as const),
+    status: overallStatus === "success" ? ("completed" as const) : ("failed" as const),
+    success: overallStatus === "success",
     started_at: startedAt,
     duration_ms: duration,
     tasks: taskRecords,
