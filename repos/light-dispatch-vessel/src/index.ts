@@ -96,6 +96,47 @@ const auth = (): Record<string, string> =>
  * references via underscore — e.g. {{fetch_traces_text}} resolves to the
  * `text` field of the task whose id is `fetch_traces`).
  */
+function resolvePath(
+  path: string,
+  variables: Record<string, unknown>,
+  priorResults: Map<string, TaskResult>,
+  sortedIds: string[],
+): { found: boolean; value?: unknown } {
+  if (path in variables) {
+    return { found: true, value: variables[path] };
+  }
+  for (const taskId of sortedIds) {
+    if (path === taskId) {
+      const r = priorResults.get(taskId);
+      if (r?.body !== undefined) return { found: true, value: r.body };
+      return { found: false };
+    }
+    if (path.startsWith(taskId + "_")) {
+      const field = path.slice(taskId.length + 1);
+      const r = priorResults.get(taskId);
+      if (r?.body && typeof r.body === "object") {
+        const fld = field.split(".").reduce<unknown>(
+          (acc, k) => (acc && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined),
+          r.body,
+        );
+        if (fld !== undefined) return { found: true, value: fld };
+      }
+      return { found: false };
+    }
+  }
+  const segs = path.split(/[._]/);
+  let cur: unknown = variables;
+  for (const seg of segs) {
+    if (cur && typeof cur === "object" && seg in (cur as Record<string, unknown>)) {
+      cur = (cur as Record<string, unknown>)[seg];
+    } else {
+      return { found: false };
+    }
+  }
+  if (cur === undefined || cur === null) return { found: false };
+  return { found: true, value: cur };
+}
+
 function interpolate(
   value: unknown,
   variables: Record<string, unknown>,
@@ -106,6 +147,20 @@ function interpolate(
     // Pre-sort taskIds longest-first so multi-underscore IDs (e.g. `split_sections`)
     // are matched before any shorter prefix.
     const sortedIds = [...knownTaskIds].sort((a, b) => b.length - a.length);
+
+    // Whole-string substitution: if the value is EXACTLY {{path}} (single
+    // placeholder with no surrounding text), substitute the underlying value
+    // verbatim — objects stay objects, arrays stay arrays. Mirrors goal-host's
+    // interpolateProxyValue behavior. Without this, json_path_extract
+    // results get JSON-stringified and downstream resolvers fail their
+    // typeof-object checks (e.g. vessel_mitosis_cutover.evaluation_evidence).
+    const exactMatch = /^\{\{([\w]+(?:[._][\w]+)*)\}\}$/.exec(value);
+    if (exactMatch) {
+      const resolved = resolvePath(exactMatch[1]!, variables, priorResults, sortedIds);
+      if (resolved.found) return resolved.value;
+      return value;
+    }
+
     return value.replace(/\{\{([\w]+(?:[._][\w]+)*)\}\}/g, (match, path: string) => {
       // Try variables direct match
       if (path in variables) {
