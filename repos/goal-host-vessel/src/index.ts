@@ -575,7 +575,6 @@ function registerBuiltinResolvers(): void {
         });
         clearTimeout(recTimer);
         const result = await resp.json();
-        try { await resp.body?.cancel(); } catch { /* swallow */ }
         return [{
           id: random.id("activity_rec"),
           pointer: { type: "memo" },
@@ -732,7 +731,6 @@ function buildProxyResolver(shape: string) {
       }
       try {
         const bodyText = await resp.text();
-        try { await resp.body?.cancel(); } catch { /* swallow */ }
         let parsed: unknown;
         try { parsed = JSON.parse(bodyText); } catch { parsed = bodyText; }
 
@@ -853,7 +851,6 @@ async function registerDevVesselProxies(): Promise<{ added: string[]; total: num
       return { added: [], total: registeredProxyShapes.size };
     }
     const body = await r.json() as { shapes?: string[] };
-    try { await r.body?.cancel(); } catch { /* swallow */ }
     const shapes: string[] = Array.isArray(body.shapes) ? body.shapes : [];
     if (shapes.length === 0) {
       console.warn("[goal-host-vessel] dev-vessel /shapes returned empty list");
@@ -1140,7 +1137,6 @@ async function handleRunGoal(req: Request): Promise<Response> {
           });
           if (reuseList.ok) {
             const rl = await reuseList.json() as { templates?: Array<{ id: string; name?: string; description?: string; proposed?: boolean }> };
-            try { reuseList.body?.cancel(); } catch {} // v2 mitosis: explicit kernel-buffer release
             const autoCands = (rl.templates ?? []).filter((t) => typeof t.id === "string" && /gap-closing:auto-/.test(t.id));
             // Rank by created_at unix-ms embedded as the second number in
             // `gap-closing:auto-<ts1>-<rand>-<ts2>`; fall back to first number.
@@ -1165,7 +1161,6 @@ async function handleRunGoal(req: Request): Promise<Response> {
                 clearTimeout(timer);
                 if (llmRes.ok) {
                   const lr = await llmRes.json() as { resolved?: boolean; content?: string };
-                  try { llmRes.body?.cancel(); } catch {} // v2 mitosis: explicit kernel-buffer release
                   const ans = (lr.content ?? "").trim().match(/^\d+/)?.[0];
                   const idx = ans ? parseInt(ans, 10) : NaN;
                   if (Number.isFinite(idx) && idx >= 1 && idx <= topN.length) {
@@ -1533,7 +1528,6 @@ async function computeStateSignature(
       signal: ctrl.signal,
     });
     const text = await resp.text();
-    try { await resp.body?.cancel(); } catch { /* swallow */ }
     if (!resp.ok) return undefined;
     const parsed = JSON.parse(text) as { success?: boolean; shape?: string; body?: StateSignatureBody };
     if (parsed?.success === true && parsed.body && typeof parsed.body === "object") {
