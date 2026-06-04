@@ -345,7 +345,162 @@ demands it for sample-efficient topology discovery; the data model
 already accommodates it; the dispatcher is one well-scoped change away
 from supporting it.
 
-## 8. Recap
+## 8. Vessel-level horizontal scaling
+
+§7 covered horizontal composition within a single dispatch — parallel
+sibling trajectories from a shared parent state. Vessel addition is the
+**same primitive at one level up**: each new vessel contributes an
+independent action subspace to the substrate's posterior.
+
+### 8.1 What a new vessel contributes
+
+A vessel `v` joining via discovery-vessel adds three independent
+contributions to the state-action graph:
+
+- **ΔS_v** — new shapes advertised. Adds coordinates to S that were
+  previously absent.
+- **ΔA_v** — new templates whose `input_shapes` are now satisfiable.
+  Expands `applicable(s)` for every s where the new shapes are in the
+  pool.
+- **ΔR_v** — new resolvers. Where an existing edge was estimable only
+  via an `llm` or `pattern` tier, the new vessel may collapse it to
+  `deterministic`, freeing posterior capacity that was tied up
+  estimating stochastic transitions.
+
+None of these are new mechanisms. Discovery-vessel is the registry,
+`applicable(s)` is computed at recommend-time, resolver-tier
+decomposition is per-task in `activity_execution_traces`. Vessel
+addition is the mechanism the substrate has always used to grow its
+action space.
+
+### 8.2 Monotone capacity addition
+
+Posterior cell count grows from |S × A| to |(S ∪ ΔS_v) × (A ∪ ΔA_v)|.
+New cells start at the uninformed prior Beta(1, 1). Old cells are
+untouched, because per-cell independence (§4.1) means new cells'
+posteriors are factorized away from old cells':
+
+$$
+P\big(\{\text{succ}_{s,a}\}_{\text{old}} \cup \{\text{succ}_{s',a'}\}_{\text{new}}\big)
+\;=\; \prod_{\text{old}} P(\cdot) \cdot \prod_{\text{new}} P(\cdot)
+$$
+
+This is the **monotone-capacity property**: vessel addition is
+strictly additive on the substrate's posterior. No re-estimation of
+old cells; no sample budget stolen from converged cells. Thompson
+selection naturally allocates exploration to the new high-uncertainty
+cells via posterior variance.
+
+### 8.3 Vector-field extension on new horizons
+
+The policy gradient ∇π is a vector field over cells. Per cell:
+
+$$
+\frac{\partial \hat Q(s,a)}{\partial \alpha_{s,a}} = \frac{\beta_{s,a}}{(\alpha_{s,a} + \beta_{s,a})^2}, \quad
+\frac{\partial \hat Q(s,a)}{\partial \beta_{s,a}} = -\frac{\alpha_{s,a}}{(\alpha_{s,a} + \beta_{s,a})^2}
+$$
+
+Vessel addition adds |ΔS_v × ΔA_v| new coordinates to that vector
+field. Regions where gradient was *undefined* (no action existed) become
+regions where gradient is *defined-but-uninformed* (Beta(1,1)). The
+substrate's gradient-detection capacity grows linearly with vessel
+count; each vessel's coordinates are independently estimable.
+
+### 8.4 Horizon classification
+
+A horizon is a region of S × A the substrate hasn't explored. Vessel
+addition addresses three structurally distinct classes:
+
+1. **Orphaned-shape horizon.** A shape with no applicable producer or
+   consumer is a divergence point in the trace-flow field
+   (Laplacian-style net divergence ≠ 0). A new vessel that produces
+   or consumes the shape conserves the flow.
+
+2. **Bridge horizon.** Two previously-disconnected subgraphs of S × A.
+   A vessel whose input is shape A (reachable in one subgraph) and
+   output is shape B (consumed only in the other) creates a long-range
+   edge. The substrate's reachable set grows discontinuously.
+
+3. **Tier-refinement horizon.** A transition currently estimable only
+   via `llm`-tier resolution (high stochasticity, high cost). A new
+   vessel with a deterministic resolver collapses P(s′ | s, a) from a
+   learned distribution to a delta. Posterior capacity is freed for
+   higher-uncertainty cells elsewhere.
+
+The autonomous loop's existing topology-discovery goals
+(`reachable-unlearned-report`, `escalate-unknown-shape`) detect
+horizons within the existing vessel set. Vessel addition extends the
+substrate's ability to *act* on what it detects when the gap is
+"no resolver exists for this transition" rather than "no template
+exists for this resolver chain."
+
+### 8.5 Why vessel-horizontal is needed
+
+**1. Coverage growth must come from somewhere.** The drafter authors
+templates within existing resolver vocabularies. Once a vocabulary is
+saturated for a horizon, no template the substrate authors from
+current resolvers will close the gap. Only new resolvers — i.e. new
+vessels — extend the action space at that scale.
+
+**2. Specialization without contention.** Each vessel's
+(signature, template) subspace is independent of every other's. A new
+vessel develops deep posterior in its own subspace without competing
+for posterior capacity with old vessels' subspaces. This is local
+specialization through factorization.
+
+**3. Federation generalizes from this primitive.** Cross-substrate
+aggregation is mathematically identical to in-substrate vessel
+addition: ΔS, ΔA, ΔR contributions, factorized posterior preserved,
+monotone capacity. The single-substrate vessel-addition primitive is
+the local analogue of the federation peer-addition operation. If
+vessel-addition isn't clean locally, federation can't build on it.
+
+**4. The drafter's recursive case.** `scaffold-new-vessel` already
+exists as a template. The substrate can author a new vessel via the
+same draft + variant promotion mechanism it uses for new activity
+templates. What's missing is the *detection*: a horizon report whose
+verdict is "this gap cannot be closed with existing vessels' resolvers;
+scaffold a new vessel that produces shape X." Today that detection is
+operator-side.
+
+### 8.6 What's needed, mechanically
+
+1. **Horizon-classification step distinguishing "draft a new template"
+   from "scaffold a new vessel."** Boredom-vessel currently routes all
+   gap detection to `draft-gap-closing-activity`. Adding a tier check
+   — "does any existing resolver cover the missing transition?" — and
+   routing to `scaffold-new-vessel` when no, closes the recursive loop.
+   One classifier step, no new vocabulary.
+
+2. **Posterior-aware vessel-saturation signal.** When all (s, a) cells
+   in an existing vessel's subspace have converged variance below
+   threshold and reward bounded away from 1, the vessel has saturated
+   its contribution to the current goal. The signal — "vessel posterior
+   has converged; remaining uncertainty is outside its action subspace"
+   — should trigger horizon-escalation. Today implicit; making it
+   explicit needs a small aggregator over `concept_usage_stats` per
+   vessel.
+
+3. **Sibling dispatch across vessels.** The §7 primitive applied at
+   vessel scale: when multiple newly-added vessels produce the same
+   output shape, parallel-sibling dispatch lets the substrate observe
+   all candidates' outcomes in one cycle, accelerating OR-edge
+   resolution across vessels by √k just as it does within a vessel.
+
+### 8.7 The three scales of the same primitive
+
+The orthogonality is what lets the same math apply at each scale
+without contamination across scales:
+
+| Scale | Sibling unit | Adds dimensions to | Convergence speedup |
+|---|---|---|---|
+| Within-dispatch (§7) | parallel trajectories from shared parent state | sample-per-wall-clock for a single cell | √k per wall-clock |
+| Within-substrate (§8) | vessels contributing independent action subspaces | posterior cell count | linear in vessel count, monotone |
+| Cross-substrate (federation) | peer substrates contributing converged posteriors | aggregate posterior under provenance weighting | √N_peers per cell for shared signatures, sublinear coverage for novel signatures (Heaps' law) |
+
+Same factorization. Three scales. No new vocabulary at any of them.
+
+## 9. Recap
 
 Every quantity in this document already exists in the running substrate.
 The contribution of this writeup is to **name them in standard RL
