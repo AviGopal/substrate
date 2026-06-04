@@ -152,6 +152,10 @@ COMMIT_MESSAGE_*.txt
 /validation/observations/**
 !/validation/observations/README.md
 scripts/substrate/workspace/.substrate-secrets
+# Host-sync intent + results streams — runtime workspace state, written by
+# the substrate cutover resolver and the host-side poller respectively.
+scripts/substrate/workspace/mitosis-applied-host-sync.jsonl
+scripts/substrate/workspace/mitosis-applied-host-sync-results.jsonl
 # Writable vessel-repo clones for substrate-managed publication (see
 # `make -C scripts/substrate clone-vessel-repos`). Operator-local artifacts;
 # the super-repo records only the Makefile target, not the clones themselves.

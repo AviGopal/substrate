@@ -122,6 +122,7 @@ run-live:
 	    --privileged \
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
+	    -e MITOSIS_HOST_SYNC_MODE=1 \
 	    -p 18080:8080 \
 	    -p 18090:8090 \
 	    -p 18100:8100 \
