@@ -96,24 +96,43 @@ const auth = (): Record<string, string> =>
  * references via underscore — e.g. {{fetch_traces_text}} resolves to the
  * `text` field of the task whose id is `fetch_traces`).
  */
-function interpolate(value: unknown, variables: Record<string, unknown>, priorResults: Map<string, TaskResult>): unknown {
+function interpolate(
+  value: unknown,
+  variables: Record<string, unknown>,
+  priorResults: Map<string, TaskResult>,
+  knownTaskIds: string[] = [],
+): unknown {
   if (typeof value === "string") {
+    // Pre-sort taskIds longest-first so multi-underscore IDs (e.g. `split_sections`)
+    // are matched before any shorter prefix.
+    const sortedIds = [...knownTaskIds].sort((a, b) => b.length - a.length);
     return value.replace(/\{\{([\w]+(?:[._][\w]+)*)\}\}/g, (match, path: string) => {
       // Try variables direct match
       if (path in variables) {
         const v = variables[path];
         return typeof v === "string" ? v : JSON.stringify(v);
       }
-      // Try taskId_field via underscore split
-      const usPos = path.indexOf("_");
-      if (usPos > 0) {
-        const taskId = path.slice(0, usPos);
-        const field = path.slice(usPos + 1);
-        const r = priorResults.get(taskId);
-        if (r?.body && typeof r.body === "object") {
-          const fld = (r.body as Record<string, unknown>)[field];
-          if (typeof fld === "string") return fld;
-          if (fld !== undefined) return JSON.stringify(fld);
+      // Try taskId_field via longest-prefix match against known task IDs
+      for (const taskId of sortedIds) {
+        if (path === taskId) {
+          const r = priorResults.get(taskId);
+          if (r?.body !== undefined) {
+            return typeof r.body === "string" ? r.body : JSON.stringify(r.body);
+          }
+          continue;
+        }
+        if (path.startsWith(taskId + "_")) {
+          const field = path.slice(taskId.length + 1);
+          const r = priorResults.get(taskId);
+          if (r?.body && typeof r.body === "object") {
+            // Support dotted field paths inside the result body.
+            const fld = field.split(".").reduce<unknown>(
+              (acc, k) => (acc && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined),
+              r.body,
+            );
+            if (typeof fld === "string") return fld;
+            if (fld !== undefined) return JSON.stringify(fld);
+          }
         }
       }
       // Try dotted path through variables
@@ -131,11 +150,11 @@ function interpolate(value: unknown, variables: Record<string, unknown>, priorRe
       return JSON.stringify(cur);
     });
   }
-  if (Array.isArray(value)) return value.map((v) => interpolate(v, variables, priorResults));
+  if (Array.isArray(value)) return value.map((v) => interpolate(v, variables, priorResults, knownTaskIds));
   if (value && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      out[k] = interpolate(v, variables, priorResults);
+      out[k] = interpolate(v, variables, priorResults, knownTaskIds);
     }
     return out;
   }
@@ -333,12 +352,13 @@ async function runDispatch(
   let successCount = 0;
   let failureCount = 0;
   const outputShapesProduced: string[] = [];
+  const knownTaskIds = tpl.tasks.map((t) => t.id);
 
   for (let i = 0; i < tpl.tasks.length; i++) {
     const task = tpl.tasks[i]!;
     const tTask0 = Date.now();
     const rawConfig = (task.config ?? {}) as Record<string, unknown>;
-    const config = interpolate({ ...variables, ...rawConfig }, variables, priorResults) as Record<string, unknown>;
+    const config = interpolate({ ...variables, ...rawConfig }, variables, priorResults, knownTaskIds) as Record<string, unknown>;
     const endpoint = await findVesselEndpointFor(task.resolver);
     // Strip namespace prefix for the actual pointer type sent to the vessel —
     // the vessel resolves on the bare shape name.
