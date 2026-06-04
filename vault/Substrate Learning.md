@@ -165,6 +165,34 @@ What the substrate has identified and is actively working on:
 
 ---
 
+## Topology Coverage
+
+Activity-api is the topology explorer. It tracks which (pool-signature × template) pairs have been attempted and learns which transitions succeed. Now observable:
+
+```
+GET http://localhost:18080/v2/activities/topology-coverage
+Authorization: ApiKey <key>
+```
+
+| Field | Meaning |
+|---|---|
+| `distinct_pool_signatures` | Unique impulse-pool states seen |
+| `total_v1_observations` | Precondition-conditioned Thompson observations |
+| `dark_signature_count` | Pool signatures with ≤1 template tried — unexplored |
+| `top_signatures[].exploration` | Exploitation (proven) vs. exploration (first contact) |
+
+Each `/recommend` response now includes per-recommendation:
+- `pool_signature` — 16-char hash of the current impulse pool
+- `exploration: true/false` — whether this is an exploration move
+- `signature_observations` — how many times this (template × pool) has run before
+
+**Current state**: `cold_start` — no v1 observations yet. Populates after first execution completes through the wiring (ias-executor now sends `impulse_state_space` with every template-selection call).
+
+> [!note] Remaining item
+> `autoDraft` pre-recommend in goal-host is still a raw fetch (no `impulse_state_space`). Moving `autoDraft` into activity-api's `/recommend` handler closes this — selection oracle owns the draft decision, goal-host becomes a pure executor.
+
+---
+
 ## Goal Dispatch
 
 > [!todo] In progress — sidebar panel being added
