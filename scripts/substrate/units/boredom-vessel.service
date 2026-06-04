@@ -1,30 +1,42 @@
 [Unit]
-Description=boredom-vessel — one-shot autonomous goal dispatch
-After=activity-api.service goal-host-vessel.service
+Description=boredom-vessel — concurrent dispatch pool daemon (2026-06-04)
+After=activity-api.service goal-host-vessel.service light-dispatch-vessel.service
 Requires=goal-host-vessel.service
 
 [Service]
-Type=oneshot
+# Type=simple (was oneshot): boredom now runs as a long-lived daemon that
+# maintains MAX_CONCURRENT in-flight dispatches and reacts to WS completion
+# events. The 5-minute timer cadence is retired — throughput is paced by the
+# pool, not the systemd clock.
+#
+# Backwards-compat: BOREDOM_DAEMON_MODE=0 in the env file switches the binary
+# back to oneshot behaviour for rollback without touching the unit file.
+Type=simple
 EnvironmentFile=/etc/substrate/env
 Environment=ACTIVITY_API_ENDPOINT=http://127.0.0.1:8080
 Environment=GOAL_HOST_VESSEL_ENDPOINT=http://127.0.0.1:8210
+Environment=LIGHT_DISPATCH_ENDPOINT=http://127.0.0.1:8280
 Environment=DEV_VESSEL_ENDPOINT=http://127.0.0.1:8090
+Environment=BOREDOM_DAEMON_MODE=1
+Environment=BOREDOM_MAX_CONCURRENT=3
+Environment=BOREDOM_MIN_DISPATCH_INTERVAL_MS=2000
+Environment=BOREDOM_POOL_LOOP_INTERVAL_MS=5000
+Environment=BOREDOM_STATE_REFRESH_MS=30000
+Environment=BOREDOM_IN_FLIGHT_TIMEOUT_MS=300000
 Environment=BOREDOM_IDLE_WINDOW_SECONDS=300
 WorkingDirectory=/vessels/boredom-vessel
-ExecStart=/root/.bun/bin/bun /vessels/boredom-vessel/src/index.ts
-# TimeoutStartSec=1200 (20 min). The internal poll budget is 270s, plus before-sample
-# (~3s), dispatch (~5s), after-sample with up to 3 retries (~3+0.5+1+1.5=6s), and
-# attribution write (~1s). Worst case is ~286s. 1200s gives substantial headroom for
-# slow dispatches without truncating mid-poll. Real prevention of mid-poll kills also
-# requires the timer not to race a still-running instance — see boredom-vessel.timer.
-TimeoutStartSec=1200
+ExecStart=/root/.bun/bin/bun /vessels/boredom-vessel/src/index.ts --daemon
+Restart=always
+RestartSec=10
+MemoryHigh=512M
+MemoryMax=1G
 StandardOutput=journal
 StandardError=journal
 
 # Smoke test:
-#   systemctl start boredom-vessel.service
-#   journalctl -u boredom-vessel.service --no-pager
-#   # Should log: "dispatched — executionId=..." or "substrate busy — skipping"
+#   systemctl restart boredom-vessel.service
+#   journalctl -u boredom-vessel -f
+#   # Should log: "[pool] daemon starting:" then repeated "[pool] dispatched goal[N]"
 
 [Install]
 WantedBy=multi-user.target
