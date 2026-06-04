@@ -121,6 +121,30 @@ function resolvePath(
         );
         if (fld !== undefined) return { found: true, value: fld };
       }
+      // goal-host parity aliases (ias-executor-ts engine.ts ~line 408-437):
+      // when a downstream task references {{<taskId>_text}} / _content /
+      // _valueJson but the body has no such field, fall back to the canonical
+      // body content. This keeps templates portable between dispatchers —
+      // goal-host populates these as accumulated-variable aliases of the first
+      // output impulse's content; light-dispatch reads from the resolver's
+      // body and must synthesize the same aliases or templates authored for
+      // one dispatcher silently break the other. Fix anchors:
+      //   concept_K-NGhlSQ3grT (mitosis cutover chain post-fix state)
+      //   concept_jhOVI4a8DfMD (substrate durable gap closure verified)
+      //   concept_Orn4yVaJYD24 (operator audit becomes tick template)
+      if (r?.body !== undefined) {
+        if (field === "content" || field === "text" || field === "valueJson") {
+          // For shapes like json_extracted_value the canonical scalar lives
+          // under body.value; for others (e.g. vesselMitosisEvaluation) the
+          // body itself IS the content object. Prefer body.value when present,
+          // else the whole body — mirroring goal-host's special-case unwrap
+          // for json_extracted_value plus its default pass-through.
+          if (r.body && typeof r.body === "object" && "value" in (r.body as Record<string, unknown>)) {
+            return { found: true, value: (r.body as Record<string, unknown>)["value"] };
+          }
+          return { found: true, value: r.body };
+        }
+      }
       return { found: false };
     }
   }
@@ -162,47 +186,21 @@ function interpolate(
     }
 
     return value.replace(/\{\{([\w]+(?:[._][\w]+)*)\}\}/g, (match, path: string) => {
-      // Try variables direct match
-      if (path in variables) {
-        const v = variables[path];
+      // Delegate to resolvePath so the goal-host parity aliases (_text /
+      // _content / _valueJson fallback to body.value or whole-body) also
+      // fire inside partial-string substitutions like
+      // "/vessels/{{extract_vessel_name_content}}". Without this, embedded
+      // {{<taskId>_content}} placeholders silently left the literal placeholder
+      // in the string for json_extracted_value results (whose body has no
+      // `content` field), and the downstream resolver received a path like
+      // "/vessels/{{extract_vessel_name_content}}" — broken static_check_base
+      // _root → INSUFFICIENT_DATA verdict instead of FAVORABLE.
+      const resolved = resolvePath(path, variables, priorResults, sortedIds);
+      if (resolved.found) {
+        const v = resolved.value;
         return typeof v === "string" ? v : JSON.stringify(v);
       }
-      // Try taskId_field via longest-prefix match against known task IDs
-      for (const taskId of sortedIds) {
-        if (path === taskId) {
-          const r = priorResults.get(taskId);
-          if (r?.body !== undefined) {
-            return typeof r.body === "string" ? r.body : JSON.stringify(r.body);
-          }
-          continue;
-        }
-        if (path.startsWith(taskId + "_")) {
-          const field = path.slice(taskId.length + 1);
-          const r = priorResults.get(taskId);
-          if (r?.body && typeof r.body === "object") {
-            // Support dotted field paths inside the result body.
-            const fld = field.split(".").reduce<unknown>(
-              (acc, k) => (acc && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined),
-              r.body,
-            );
-            if (typeof fld === "string") return fld;
-            if (fld !== undefined) return JSON.stringify(fld);
-          }
-        }
-      }
-      // Try dotted path through variables
-      const segs = path.split(/[._]/);
-      let cur: unknown = variables;
-      for (const seg of segs) {
-        if (cur && typeof cur === "object" && seg in (cur as Record<string, unknown>)) {
-          cur = (cur as Record<string, unknown>)[seg];
-        } else {
-          return match;
-        }
-      }
-      if (cur === undefined || cur === null) return match;
-      if (typeof cur === "string") return cur;
-      return JSON.stringify(cur);
+      return match;
     });
   }
   if (Array.isArray(value)) return value.map((v) => interpolate(v, variables, priorResults, knownTaskIds));
