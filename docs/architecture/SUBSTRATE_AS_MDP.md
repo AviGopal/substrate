@@ -500,7 +500,212 @@ without contamination across scales:
 
 Same factorization. Three scales. No new vocabulary at any of them.
 
-## 9. Recap
+## 9. Federation — recursion of the vessel-addition pattern
+
+§8 named vessel addition as a horizontal primitive at one scale above
+parallel trajectories. Federation is the **same primitive at one scale
+above vessels**: each peer substrate contributes an independent posterior
+over the action subspaces it has explored. The five-step pattern repeats
+verbatim with the unit type rebound:
+
+| Step | Trajectory scale | Vessel scale | Federation scale |
+|---|---|---|---|
+| Unit | parallel rollout | registered vessel | peer substrate |
+| Contributes | extra samples per cell | (ΔS, ΔA, ΔR) per vessel | (ΔS, ΔA, ΔR) per peer |
+| Existing untouched | per-cell factorization | per-vessel subspace independence | per-substrate posterior independence |
+| New cells | shared parent's posterior | Beta(1,1) at new (s,a) | Beta(1,1) at new (s,a) under peer-scope |
+| Validation | local trace outcome | within-substrate convergent-validity | behavioral-continuation replay on local data |
+
+The math is **scale-invariant**: at every level, the same factorization
+makes estimation tractable, and the same Bayesian regret bound applies
+per cell with no cross-cell interference term. This is what licenses
+calling it recursive — not a metaphor, an actual property of the
+posterior decomposition.
+
+### 9.1 Federation-level orthogonality
+
+The four within-substrate axes propagate, each gaining a federation
+analogue. None of the federation-level axes are new categories — they
+are the existing axes carrying provenance markers as an extra
+coordinate.
+
+| Within-substrate | Federation analogue |
+|---|---|
+| Signature namespace | shared signature schema; provenance-tagged when minted in another peer |
+| Vessel inventory | substrate inventory (which peers exist; H4 quorum-ratified) |
+| Resolver tier | trust tier (`local-verified`, `peer-attested`, `unattested`) introduced by H1/H2/H3 |
+| Scope hierarchy (org/account/global) | gains a fourth level: `peer-scope` above `global` |
+
+The hierarchical partial-pooling rule from §4.2 extends one level up.
+Where the within-substrate rule was
+
+$$
+P_{\text{org}}(\text{succ} \mid s, a) \;=\; \text{Beta}\big(\alpha_{s,a}^{\text{global}} + n_{\text{org,succ}},\ \beta_{s,a}^{\text{global}} + n_{\text{org,fail}}\big)
+$$
+
+the federation rule for peer $j$ is
+
+$$
+P_{\text{peer}_j}(\text{succ} \mid s, a) \;=\; \text{Beta}\big(\alpha_{s,a}^{\text{fed}} + n_{j,\text{succ}},\ \beta_{s,a}^{\text{fed}} + n_{j,\text{fail}}\big)
+$$
+
+with the wrinkle that "fed" here is the federation-level pooled prior,
+not the local org/account/global ladder. Shared signatures get
+acceleration $\sqrt{N_{\text{peers}}}$ in per-cell convergence; signatures
+unique to one peer get zero acceleration (the prior is the local one
+and other peers contribute nothing).
+
+### 9.2 What capability growth means at each scale
+
+Capability at any scale is the dimensionality of the policy-gradient
+vector field $\nabla\pi$ — the count of cells where gradients are
+defined (i.e. where some action is possible) and informed (i.e. where
+posterior is non-prior).
+
+- **Trajectory scale**: capacity grows with parallel-rollout count k →
+  $\sqrt{k}$ posterior-variance reduction per wall-clock.
+- **Vessel scale**: capacity grows linearly with vessel count → each
+  vessel adds $|\Delta S_v \times \Delta A_v|$ new coordinates to
+  $\nabla\pi$.
+- **Federation scale**: capacity grows with peer count for shared
+  signatures (accelerated convergence) and with the *union* of unique
+  signatures across peers (coverage breadth).
+
+Multiplicatively across scales, the substrate's gradient-detection
+capacity is
+
+$$
+\dim(\nabla\pi) \;\sim\; N_{\text{peers}} \times \bar V_{\text{per peer}} \times \bar T_{\text{per vessel}} \times \bar\Sigma_{\text{per template}}
+$$
+
+where $\bar V, \bar T, \bar\Sigma$ are average vessels per peer, templates
+per vessel, signatures per template. This is the upper bound under
+ideal factorization; the limits in §9.3 cut into it.
+
+### 9.3 Limiting characteristics
+
+The pattern doesn't scale infinitely. Eight concrete limits, ordered
+roughly by how hard they bite first.
+
+**1. Coordination overhead per signed event.** H3 attestations + H4
+quorum ratification → without aggregate signatures or batched
+attestations, per-impulse verification cost grows linearly with peer
+count. Practical ceiling at dozens of peers under naïve protocol.
+
+**2. Heaps'-law vocabulary saturation.** Total novel-shape vocabulary
+across $N$ peers grows as $O(N^\beta)$ with $\beta < 1$ (empirically
+$\beta \approx 0.5$ for natural language; structural ontologies behave
+similarly). After ~10 peers, marginal vocabulary contribution becomes
+negligible. Capability gain is **sublinear** in peer count for the
+coverage-breadth term.
+
+**3. Posterior poisoning without H1/H2.** Naive aggregation amplifies
+hostile or low-quality peer contributions. Federation can be **net
+negative** versus single-substrate baseline if verification doesn't
+keep pace with aggregation. The existing single-substrate
+posterior-fidelity bugs (cascade attribution without witness; single-
+signal trace success) compound across peers.
+
+**4. Behavioral-continuation coverage limit.** Behavioral-continuation
+is the only universal cross-substrate validation. It works for
+templates whose outputs are observable in the local environment. For
+templates whose effects are abstract — meta-activities, drafting
+strategies, orchestration patterns — local verification doesn't reduce
+to behavioral continuation; trust bootstrap requires other channels
+(e.g. proof-of-execution attestations).
+
+**5. Per-cell convergence floor.** $O(1/\varepsilon^2)$ samples per cell
+regardless of scale. Federation accelerates only **shared** signatures;
+novel signatures unique to one peer get zero acceleration. There's a
+long tail where federation does nothing.
+
+**6. Embedding-space drift.** The dense-search index (currently
+`all-MiniLM-L6-v2`, 384-dim INT8 in concept-db) works cross-substrate
+only while peers' concept-graphs share enough semantic density. Two
+substrates whose vocabularies diverge enough hit a threshold past which
+similarity queries return cross-substrate noise rather than signal.
+
+**7. Specialization–vs–convergence equilibrium.** Mature federation is
+mutual push-away, not consensus. Cannot be measured by "how much peers
+agree" — that would be a failure mode. Proper metric is whether each
+peer's *local* posterior improves on its *local* objective while
+imported templates verify by behavioral-continuation.
+
+**8. Detection-authoring recursion truncation.** Each recursion level
+needs a corresponding detector to be operationally meaningful. Today
+the substrate detects template gaps (`reachable-unlearned-report`); it
+cannot yet detect "we need a whole new peer substrate." Capability
+authoring at level $N$ requires gap-detection at level $N$. The
+detection chain is currently truncated at the substrate boundary.
+
+### 9.4 Measurement — what to observe
+
+For capability growth to be claimed honestly, each scale needs a
+substrate-internal, trace-inspectable observable. None of these are new
+metrics; most are computable from existing data.
+
+| Scale | Observable | What it proves |
+|---|---|---|
+| Per-cell | $\mathrm{Var}[\mathrm{Beta}(\alpha, \beta)] = \frac{\alpha\beta}{(\alpha+\beta)^2(\alpha+\beta+1)}$ over time | gradient accuracy at that cell |
+| Per-vessel | fraction of vessel's $(s, a)$ cells with $\mathrm{Var}$ below threshold | vessel has saturated its capacity |
+| Per-substrate | fraction of $\mathrm{reachable}(S \times A)$ with non-prior posterior; `coverage_progress` flag | substrate is exploring effectively |
+| Per-federation | replay-success of imported templates on local behavioral-continuation; spectral rank of joint posterior over shared signatures | trust-free cross-substrate value |
+| Push-away | count of `interventionRefused` impulses per window with cited evidence | S3 readiness (already in IAL §27.S.6) |
+| Topology stability | spectral drift of empirical $(P, R)$ over time windows | learning has converged on the underlying topology, not chasing noise |
+| Vocabulary growth | new-shape mint rate per peer per window | Heaps'-law saturation curve; tells you whether federation is still adding coverage or just adding noise |
+| Detection coverage | fraction of detected horizons (orphaned-shape / bridge / tier-refinement) closed autonomously vs operator-escalated | recursion depth of the capability-authoring loop |
+
+### 9.5 What "prove" means
+
+Two senses, both necessary.
+
+**Mathematical.** Bayesian regret bounds apply per cell. For
+Beta-Bernoulli Thompson sampling, the regret bound is
+$O(\sqrt{T \log T})$ per cell with $T$ pulls. Vessel and substrate
+addition are monotone: no regret introduced at existing cells; new
+cells start at the prior, so per-cell bounds reset. There's **no global
+convergence theorem at federation scale** except per-shared-signature;
+for unique signatures, peers are isolated bandits with their own
+per-cell bounds. The federation is tractable in the sense that the
+joint regret bound is the sum of per-cell bounds **with no cross-cell
+interference term** — exactly because of the factorization.
+
+**Empirical.** The existing IAL lift criterion
+(`coverage_progress=true` AND
+`substrateHealthReport.health_verdict.overall_passing=true` for ≥ 3
+windows) is the operational analogue. Generalized to federation:
+
+  - for each peer, its local coverage and health pass;
+  - collectively, the spectral rank of the joint posterior over shared
+    signatures grows monotonically across windows;
+  - behavioral-continuation replay-success of cross-imported templates
+    stays above each peer's local baseline.
+
+All three are locally computable, trace-inspectable, and require no
+central oracle. Sustained for $k$ consecutive windows (mirroring the
+IAL $k = 3$ rule but at federation scope) constitutes the
+"federation-sustained" evidence.
+
+### 9.6 Net statement
+
+The substrate's factorization is what makes the entire stack — from
+per-cell Beta posterior to federation-level capability composition —
+the **same Bayesian Q-learning math** at every scale. Capability
+growth across the network is dimensionality growth of $\nabla\pi$,
+multiplicative across the three scales until bounded by Heaps'-law
+saturation (coverage term) and coordination overhead (verification
+term). Convergence is per-cell, with $\sqrt{N_{\text{peers}}}$
+acceleration for shared signatures and no acceleration for unique ones.
+
+The proof is empirical, locally computable, and trace-inspectable —
+the same shape of evidence the IAL S2-sustained criterion already
+uses, applied recursively at each scale with the appropriate observable
+for that scale. There is no new math to invent. There is mechanical
+work to do at the federation boundary (H1/H2/H3/H4, batched signatures,
+behavioral-continuation replay infrastructure) without which the
+recursion is unsafe rather than unsupported.
+
+## 10. Recap
 
 Every quantity in this document already exists in the running substrate.
 The contribution of this writeup is to **name them in standard RL
