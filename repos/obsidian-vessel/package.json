@@ -8,7 +8,9 @@
     "build": "node esbuild.config.mjs production",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
-    "test": "bun test"
+    "test": "bun test",
+    "test:integration": "bun test/integration/http-harness.ts",
+    "test:integration:port": "bun test/integration/http-harness.ts --port"
   },
   "keywords": [
     "obsidian",
