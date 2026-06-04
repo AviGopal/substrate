@@ -104,6 +104,9 @@ export class GoalDispatchView extends ItemView {
       }
     });
 
+    // Keyboard hint
+    inputSection.createDiv({ cls: 'goal-dispatch-hint', text: '⌘↵ to dispatch' });
+
     const btnRow = inputSection.createDiv('goal-dispatch-btn-row');
 
     this.dispatchBtn = btnRow.createEl('button', {
@@ -125,7 +128,7 @@ export class GoalDispatchView extends ItemView {
     const outputSection = contentEl.createDiv('goal-dispatch-output-section');
     this.outputEl = outputSection.createDiv('goal-dispatch-output');
 
-    this.appendMessage('Ready. Enter a goal and press Dispatch (or Ctrl+Enter).');
+    this.appendMessage('Ready. Enter a goal and press Dispatch (or Ctrl+Enter).', 'ready');
   }
 
   // ---------------------------------------------------------------------------
@@ -180,14 +183,14 @@ export class GoalDispatchView extends ItemView {
         this.appendMessage(`Template: ${result.selectedTemplateId}`);
       }
       this.appendMessage(`Status: ${result.status}`);
-      this.appendMessage('---');
+      this.appendMessage('---', 'divider');
 
       // Create vault note
       this.goalFile = await this.goalNoteManager.createGoalNote(result.executionId, goal);
 
       // If goal completed synchronously already, mark done
       if (result.status === 'success' || result.status === 'completed') {
-        this.appendMessage('Goal completed.');
+        this.appendMessage('Goal completed.', 'success');
         if (this.goalFile) {
           await this.goalNoteManager.markComplete(this.goalFile, result.status);
         }
@@ -203,7 +206,7 @@ export class GoalDispatchView extends ItemView {
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      this.appendMessage(`Error dispatching goal: ${msg}`);
+      this.appendMessage(`Error dispatching goal: ${msg}`, 'error');
       new Notice(`Goal dispatch failed: ${msg}`);
       this.dispatching = false;
       this.setDispatchBtnState(false);
@@ -217,12 +220,16 @@ export class GoalDispatchView extends ItemView {
   /**
    * Append a timestamped message line to the output panel.
    * Also callable from external code (e.g. after WS reconnect).
+   *
+   * type maps to CSS class gd-{type} for color-coding:
+   *   ready | success | failure | error | task | tool | impulse | divider
    */
-  appendMessage(text: string): void {
+  appendMessage(text: string, type?: string): void {
     if (!this.outputEl) return;
-    const line = this.outputEl.createDiv('goal-dispatch-line');
-    const ts = new Date().toLocaleTimeString();
-    line.createSpan({ cls: 'goal-dispatch-ts', text: `[${ts}] ` });
+    const cls = ['goal-dispatch-line', type ? `gd-${type}` : ''].filter(Boolean).join(' ');
+    const line = this.outputEl.createDiv(cls);
+    const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    line.createSpan({ cls: 'goal-dispatch-ts', text: `${ts}` });
     line.createSpan({ cls: 'goal-dispatch-msg', text });
     // Auto-scroll to bottom
     this.outputEl.scrollTop = this.outputEl.scrollHeight;
@@ -322,6 +329,14 @@ export class GoalDispatchView extends ItemView {
     const icon = EVENT_ICONS[type] ?? '•';
     let line = `${icon} ${type}`;
 
+    // Derive CSS type for colour-coding
+    let lineType: string | undefined;
+    if (type === 'task.completed') lineType = 'task';
+    else if (type === 'task.started') lineType = 'task';
+    else if (type === 'task.failed') lineType = 'failure';
+    else if (type === 'tool.call') lineType = 'tool';
+    else if (type === 'impulse.resolved') lineType = 'impulse';
+
     if (type === 'task.started' || type === 'task.completed' || type === 'task.failed') {
       const taskId = (msg.taskId ?? msg.task_id) as string | undefined;
       const desc = msg.description as string | undefined;
@@ -335,7 +350,7 @@ export class GoalDispatchView extends ItemView {
       if (shape) line += `: ${shape}`;
     }
 
-    this.appendMessage(line);
+    this.appendMessage(line, lineType);
 
     // Persist to vault note
     if (this.goalFile) {
@@ -344,7 +359,7 @@ export class GoalDispatchView extends ItemView {
 
     // Detect terminal events
     if (type === 'task.failed' || type === 'execution.failed') {
-      this.appendMessage('Execution failed.');
+      this.appendMessage('Execution failed.', 'failure');
       if (this.goalFile) {
         this.goalNoteManager.markComplete(this.goalFile, 'failed');
       }
@@ -359,7 +374,7 @@ export class GoalDispatchView extends ItemView {
       (msgExecId && status === 'success') ||
       (msgExecId && status === 'completed')
     ) {
-      this.appendMessage('Execution complete.');
+      this.appendMessage('Execution complete.', 'success');
       if (this.goalFile) {
         this.goalNoteManager.markComplete(this.goalFile, 'completed');
       }
