@@ -261,6 +261,15 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   "run vessel-architecture-pattern-scan-tick to detect cross-vessel SPOFs / catalogue-bloat / cost-output mismatches and emit substrateGap for each finding",
   "run activity-lifecycle-audit-tick to rank templates by success-recency-affinity and surface hot/cold/promote sets",
   "run resolver-distribution-audit-tick to detect shape orphans, demand-supply mismatches, and responsibility imbalance per principle concepts",
+  // Gap-drain bridges (Break 1+2 close, 2026-06-04). goal[21] runs the
+  // gap→scenario bridge so detector-emitted + operator-seeded substrateGap
+  // rows materialise as scenario JSON files the file-polling drafter
+  // already consumes. goal[22] picks the newest unexecuted gap-closing:auto-*
+  // template and dispatches it through light-dispatch so its Thompson
+  // posterior gets seeded — drains the 6+ unexecuted auto-drafts blocking
+  // the executor side of the loop.
+  "run gap-to-scenario-bridge-tick to drain open substrateGap rows into scenario JSON files the drafter consumes",
+  "run dispatch-latest-auto-draft to pick the newest unexecuted gap-closing:auto-* template and seed its Thompson posterior via light-dispatch",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -313,6 +322,12 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   "development-vessel:vessel-architecture-pattern-scan-tick",
   "development-vessel:activity-lifecycle-audit-tick",
   "development-vessel:resolver-distribution-audit-tick",
+  // goal[21..22] — gap-drain bridges (Break 1+2 close, 2026-06-04). Both are
+  // single-resolver deterministic ticks routed through light-dispatch via
+  // capability hints. Explicit targetTemplateId prevents Thompson from
+  // misrouting to a high-α template (goal texts are novel).
+  "development-vessel:gap-to-scenario-bridge-tick",
+  "development-vessel:dispatch-latest-auto-draft",
 ];
 
 /**
@@ -356,6 +371,8 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "cheap",     // goal[18] vessel-architecture-pattern-scan-tick (HTTP only; no LLM)
   "cheap",     // goal[19] activity-lifecycle-audit-tick (templates + traces; no LLM)
   "cheap",     // goal[20] resolver-distribution-audit-tick (HTTP only; no LLM)
+  "cheap",     // goal[21] gap-to-scenario-bridge-tick (single fs scan + bounded writes; no LLM)
+  "moderate",  // goal[22] dispatch-latest-auto-draft (resolver + downstream light-dispatch chain runs an authored 4-task LLM template)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
@@ -912,7 +929,9 @@ function deriveCapabilityHints(
     targetTemplateId.endsWith(":coverage-tick") ||
     targetTemplateId.endsWith(":concept-usage-backfill") ||
     targetTemplateId.endsWith(":mitosis-tick") ||
-    targetTemplateId.endsWith(":backend-snapshot-to-git");
+    targetTemplateId.endsWith(":backend-snapshot-to-git") ||
+    // Gap-drain bridges (2026-06-04): single deterministic resolvers, no LLM.
+    targetTemplateId.endsWith(":dispatch-latest-auto-draft");
   return {
     requires_llm_reuse: false,
     requires_state_space_services: !isDeterministicChain,
