@@ -65,6 +65,20 @@ IDENTITY_ENDPOINT=http://127.0.0.1:8101
 
 # Dense search (F-V58 fix — must point to directory containing model.onnx + vocab.txt)
 EMBEDDING_MODEL_DIR=/vessels/activity-api/src/assets/models/all-MiniLM-L6-v2
+
+# M1 embedding-conditioned Thompson prior (concept_vugylIHzIMvk).
+# When true, posterior-update.ts looks up per-cell embeddings from concept-db
+# and routes prior seeding through computeEmbeddingConditionedPrior. Falls
+# back to the concept-neighbor empirical-Bayes path on any miss.
+EMBEDDING_PRIOR_ENABLED=true
+
+# M1 continuous-training observer (concept_KKwxHmPfEMSY). Opt-in: when true,
+# activity-api spawns an in-process broadcaster subscriber that buffers
+# eligible (variant, signature) cells from task.completed events and re-fits
+# θ_α/θ_β into embedding_prior_weights on count or time threshold. Default
+# off — Layer 1 (systemd m1-trainer.timer) handles the periodic re-fit; turn
+# this on for sub-15min responsiveness once it's been load-tested.
+EMBEDDING_PRIOR_OBSERVER_ENABLED=false
 EOF
 
 chmod 600 /etc/substrate/env

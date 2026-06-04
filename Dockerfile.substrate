@@ -193,7 +193,8 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env && \
         concept-db-seeder.service \
         analysis-vessel.service \
         stateful-ui-vessel.service \
-        journald-stdout-forwarder.service
+        journald-stdout-forwarder.service \
+        m1-trainer.timer
 
 VOLUME ["/workspace"]
 

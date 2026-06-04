@@ -157,7 +157,7 @@ health-live:
 
 status-live:
 	docker exec $(LIVE_NAME) systemctl status --no-pager \
-	    surrealdb valkey discovery-vessel identity-vessel activity-api development-vessel local-tools-vessel llm-resolver-vessel goal-host-vessel bootstrap-seeder boredom-vessel.timer ribosome-vessel concept-db analysis-vessel
+	    surrealdb valkey discovery-vessel identity-vessel activity-api development-vessel local-tools-vessel llm-resolver-vessel goal-host-vessel bootstrap-seeder boredom-vessel.timer m1-trainer.timer ribosome-vessel concept-db analysis-vessel
 
 shell-live:
 	docker exec -it $(LIVE_NAME) bash
@@ -187,6 +187,14 @@ logs-llm-resolver-vessel:
 
 logs-bootstrap-seeder:
 	docker exec $(LIVE_NAME) journalctl -u bootstrap-seeder.service --no-pager
+
+logs-m1-trainer:
+	docker exec $(LIVE_NAME) journalctl -u m1-trainer.service --no-pager
+
+trigger-m1-trainer:
+	docker exec $(LIVE_NAME) systemctl start m1-trainer.service
+	@sleep 2
+	@docker exec $(LIVE_NAME) journalctl -u m1-trainer.service --no-pager -n 20
 
 logs-goal-host-vessel:
 	docker exec $(LIVE_NAME) journalctl -fu goal-host-vessel.service

@@ -1,0 +1,24 @@
+[Unit]
+Description=M1 embedding-prior trainer (concept_KKwxHmPfEMSY)
+# Train ridge-regression θ_α/θ_β heads against variant_performance_metrics ⨯
+# concept-db embeddings. Writes one row per run into embedding_prior_weights;
+# posterior-update.ts consumes the latest row when EMBEDDING_PRIOR_ENABLED=true.
+After=activity-api.service
+Requires=activity-api.service
+
+# Smoke test:
+#   docker exec substrate-live systemctl start m1-trainer.service
+#   docker exec substrate-live journalctl -u m1-trainer.service --no-pager
+#   # Confirm a fresh ridge-v1-* row landed:
+#   curl -s http://localhost:18080/v2/admin/embedding-prior-weights | jq '.[0].model_version'
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+WorkingDirectory=/vessels/activity-api
+ExecStart=/root/.bun/bin/bun /vessels/activity-api/scripts/m1-train.ts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

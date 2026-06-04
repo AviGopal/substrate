@@ -275,6 +275,14 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // cutover machinery (mitosis-tick + vessel_mitosis_cutover) can apply.
   // Closes the analyse→enact gap end-to-end.
   "run apply-proposal-as-patch to convert the newest unstaged proposal report into a staged mitosis directory with mitosis-pending.json updated",
+  // mechanism-health-tick (goal[24], 2026-06-04): aggregator that composes the
+  // 3 generic detection templates (classifier-skew / feature-flag-zero-exercise /
+  // filter-saturation) against the M1-M6 observable surface defined in
+  // concept_q2n0_XaSvphV. Detects wiring anomalies in the learning-rate
+  // mechanisms autonomously every ~5 minutes; emits per-mechanism
+  // mechanismHealthFinding memos + a substrateHealthReport rollup that the
+  // drafter primes against on next tick.
+  "run mechanism-health-tick to detect wiring anomalies in M1-M6 learning-rate mechanisms",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -337,6 +345,10 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // wrapper around apply_proposal_as_patch resolver. One LLM call + deterministic
   // I/O — moderate tier.
   "development-vessel:apply-proposal-as-patch",
+  // goal[24] — mechanism-health-tick (2026-06-04): explicit targetTemplateId
+  // so Thompson cannot misroute to a high-α template. The goal text is novel
+  // and the aggregator orchestrates 5 deterministic child dispatches.
+  "development-vessel:mechanism-health-tick",
 ];
 
 /**
@@ -383,6 +395,7 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "cheap",     // goal[21] gap-to-scenario-bridge-tick (single fs scan + bounded writes; no LLM)
   "moderate",  // goal[22] dispatch-latest-auto-draft (resolver + downstream light-dispatch chain runs an authored 4-task LLM template)
   "moderate",  // goal[23] apply-proposal-as-patch (1 LLM patch call + bounded fs I/O)
+  "moderate",  // goal[24] mechanism-health-tick (5 child dispatches via /run-goal; no LLM, bounded HTTP + bash + journalctl)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the

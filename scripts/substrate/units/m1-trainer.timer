@@ -1,0 +1,19 @@
+[Unit]
+Description=M1 embedding-prior trainer timer (concept_KKwxHmPfEMSY)
+
+[Timer]
+# Fire 15 minutes after activation so activity-api has time to warm up and the
+# embedding_prior_weights table is reachable.
+OnActiveSec=15min
+# Re-fit every 15 minutes. The one-shot trainer (scripts/m1-train.ts) reads
+# variant_performance_metrics joined to concept-db embeddings and inserts one
+# row into embedding_prior_weights per run. Type=oneshot — no parallelism, so
+# a still-running trainer blocks the next fire (Bun script typically finishes
+# in <30s on a few-thousand-variant corpus; well under the 15min cadence).
+OnUnitActiveSec=15min
+Persistent=true
+AccuracySec=30s
+Unit=m1-trainer.service
+
+[Install]
+WantedBy=timers.target
