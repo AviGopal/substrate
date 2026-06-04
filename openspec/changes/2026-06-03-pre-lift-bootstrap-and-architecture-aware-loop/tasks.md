@@ -73,12 +73,14 @@ Each detector follows the immunity pattern (single resolver, no LLM, no iteratio
 
 ## Stage 3 — Empirical verification
 
-- [ ] **3.1** All four horizon detectors emit a non-trivial substrateGap each (≥1 violation per detector against current substrate state). Sample run dispatched manually + reviewed.
-- [ ] **3.2** `vessel_responsibility_audit` specifically emits a substrateGap flagging goal-host's LLM-reuse logic as a responsibility-misallocation per the "Backend = pattern learner" principle.
-- [ ] **3.3** concept-db's `times_succeeded` count grows beyond 6 (baseline) — autonomous concept-usage-backfill (goal[16]) completes at least once via either dispatcher.
-- [ ] **3.4** At least one cheap-tier multi-task chain completes via light-dispatch-vessel (e.g. concept-usage-backfill, mitosis-tick, coverage-tick).
-- [ ] **3.5** boredom logs show `dispatcher_used` derived from Thompson sampling (not always the same dispatcher) — observable across ≥10 boredom cycles.
-- [ ] **3.6** goal-host per-dispatch VmRSS delta drops from ~2 GB to ≤100 MB after Stage 2.A patches.
+Observation pass 2026-06-03. Full report: `validation/findings/stage-3-observation-2026-06-03/observation.md`.
+
+- [~] **3.1** PARTIAL — 2 of 4 detectors emit substrateGap (pattern-scan: 3, distribution: 1). Responsibility + lifecycle are data-gapped or descriptive-only. All 4 dispatchable via light-dispatch.
+- [ ] **3.2** GAP — vessel_responsibility_audit ran on 20 vessels but `principles_fetched_total: 0`. Blocked by Stage 0 ingestion.
+- [ ] **3.3** GAP — concept-usage-backfill chain task-0 `concept_select_for_prompt` returns `selected: []` (no concepts of `prior_source_types` filter exist); task-2 POSTs to `/concepts//usage` → 404. Concept-db writeback IS functional when called with valid id (verified). Finding 3.3a: state_signature_hash not persisted on trace metadata.
+- [x] **3.4** PASS — concept-usage-backfill 3/3 tasks success via light-dispatch (exec_39a7c719-b5b, 702ms); all 4 detector dispatches also 1-task light-dispatch chains.
+- [~] **3.5** PARTIAL — 4 cycles observed (#33-36). Mix: 1 light-dispatch (thompson_sample), 3 goal-host (capability_filter). Selection logic exercised; goal-host hangs prevent rapid accumulation of ≥10 cycles.
+- [ ] **3.6** GAP — Stage 2.A not applied. 3/4 boredom cycles timed out on goal-host this pass — consistent with unfixed VmRSS leak.
 
 ## Stage 4 — Substrate-authored next iteration (NOT in this change's scope)
 
