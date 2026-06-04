@@ -131,11 +131,12 @@
 .goal-dispatch-line.gd-success { color: var(--color-green); }
 .goal-dispatch-line.gd-failure { color: var(--color-red); }
 .goal-dispatch-line.gd-task    { color: var(--interactive-accent); }
-.goal-dispatch-line.gd-tool    { color: var(--text-muted); }
-.goal-dispatch-line.gd-impulse { color: var(--text-muted); }
+.goal-dispatch-line.gd-tool    { color: var(--text-muted); font-size: 10.5px; }
+.goal-dispatch-line.gd-impulse { color: var(--text-faint); font-size: 10.5px; }
+.goal-dispatch-line.gd-sub     { color: var(--color-yellow); }
 .goal-dispatch-line.gd-error   { color: var(--color-red); font-weight: 600; }
 .goal-dispatch-line.gd-ready   { color: var(--text-faint); font-style: italic; }
-.goal-dispatch-line.gd-divider { color: var(--text-faint); letter-spacing: 0.1em; }
+.goal-dispatch-line.gd-divider { color: var(--text-faint); letter-spacing: 0.05em; opacity: 0.4; }
 
 .goal-dispatch-ts {
   color: var(--text-faint);

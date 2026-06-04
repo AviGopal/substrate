@@ -25,14 +25,46 @@ import { GoalNoteManager } from '../goals/goal-note-manager';
 
 export const VIEW_TYPE_GOAL_DISPATCH = 'metabob-goal-dispatch';
 
-/** Map of event type → display emoji */
-const EVENT_ICONS: Record<string, string> = {
-  'task.started': '▶',
-  'task.completed': '✓',
-  'task.failed': '✗',
-  'tool.call': '⚙',
-  'impulse.resolved': '◎',
-};
+// ---------------------------------------------------------------------------
+// Execution context tracking
+// ---------------------------------------------------------------------------
+
+interface TaskCtx {
+  index: number;
+  description: string;
+  startedAt: number;
+}
+
+interface ExecCtx {
+  variantId?: string;
+  tasks: Map<string, TaskCtx>;
+}
+
+/** Shorten a variant/resolver/vessel id to a readable slug (last 2 segments). */
+function shortId(id: string): string {
+  const parts = id.split(/[-_:]/);
+  return parts.slice(-2).join('-');
+}
+
+/** Human label for resolver tier. */
+function tierLabel(tier: string | undefined): string {
+  if (tier === 'deterministic') return 'fast';
+  if (tier === 'pattern') return 'cached';
+  if (tier === 'llm') return 'llm';
+  return tier ?? '';
+}
+
+/** Format milliseconds as a compact duration string. */
+function fmtDuration(ms: number): string {
+  return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
+}
+
+/** Truncate a string for inline preview. */
+function preview(val: unknown, max = 70): string {
+  const s = typeof val === 'string' ? val : JSON.stringify(val);
+  if (!s || s === 'null' || s === '{}') return '';
+  return s.length > max ? s.slice(0, max) + '…' : s;
+}
 
 export class GoalDispatchView extends ItemView {
   private plugin: MetabobVesselPlugin;
@@ -49,6 +81,9 @@ export class GoalDispatchView extends ItemView {
   private goalFile: TFile | null = null;
   private goalNoteManager: GoalNoteManager;
   private dispatching = false;
+
+  // Execution context: tracks activity name + task descriptions per execId
+  private execCtxs = new Map<string, ExecCtx>();
 
   constructor(leaf: WorkspaceLeaf, plugin: MetabobVesselPlugin) {
     super(leaf);
@@ -171,19 +206,26 @@ export class GoalDispatchView extends ItemView {
     this.dispatching = true;
     this.setDispatchBtnState(true);
     this.clearOutput();
-    this.appendMessage(`Dispatching: ${goal}`);
+    this.execCtxs.clear();
+    this.appendMessage(`⟶ Goal: "${goal}"`);
+    this.appendMessage('Selecting activity…', 'ready');
 
     try {
       const client = new GoalHostClient(goalHostEndpoint, apiKey);
       const result = await client.dispatchGoal(goal);
 
       this.activeExecutionId = result.executionId;
-      this.appendMessage(`Execution ID: ${result.executionId}`);
       if (result.selectedTemplateId) {
-        this.appendMessage(`Template: ${result.selectedTemplateId}`);
+        this.appendMessage(`◈ Activity: ${result.selectedTemplateId}`);
+        // Seed context so we have the variant name even before execution_started arrives
+        this.execCtxs.set(result.executionId, {
+          variantId: result.selectedTemplateId,
+          tasks: new Map(),
+        });
+      } else {
+        this.appendMessage(`◈ Execution ${result.executionId.slice(0, 8)}…`);
       }
-      this.appendMessage(`Status: ${result.status}`);
-      this.appendMessage('---', 'divider');
+      this.appendMessage('─'.repeat(36), 'divider');
 
       // Create vault note
       this.goalFile = await this.goalNoteManager.createGoalNote(result.executionId, goal);
@@ -198,7 +240,6 @@ export class GoalDispatchView extends ItemView {
         this.setDispatchBtnState(false);
       } else {
         // Keep dispatching=true until WS tells us it's done
-        this.appendMessage('Listening for events…');
         // Ensure WS is connected so we receive events
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
           this.connectWS();
@@ -309,6 +350,13 @@ export class GoalDispatchView extends ItemView {
     }
   }
 
+  private getExecCtx(execId: string): ExecCtx {
+    if (!this.execCtxs.has(execId)) {
+      this.execCtxs.set(execId, { tasks: new Map() });
+    }
+    return this.execCtxs.get(execId)!;
+  }
+
   private handleWSMessage(raw: string): void {
     let msg: Record<string, unknown>;
     try {
@@ -320,66 +368,172 @@ export class GoalDispatchView extends ItemView {
     const type = msg.type as string | undefined;
     if (!type) return;
 
-    // Only surface events for the active execution
-    const msgExecId = (msg.executionId ?? msg.execution_id) as string | undefined;
-    if (this.activeExecutionId && msgExecId && msgExecId !== this.activeExecutionId) {
-      return;
+    // Only narrate events while a dispatch is active or we have an execution to watch.
+    if (!this.dispatching && !this.activeExecutionId) return;
+
+    const execId = (msg.execution_id ?? msg.executionId) as string | undefined;
+    const taskId = (msg.task_id ?? msg.taskId) as string | undefined;
+
+    // Show sub-execution events as well as root — they reveal how the
+    // composition is unfolding. Root events have no indent; sub-executions
+    // are indented one level. We skip events from unrelated executions that
+    // arrive while we're watching (they have no execCtx entry).
+    const isRoot = !execId || execId === this.activeExecutionId;
+    const isTracked = isRoot || this.execCtxs.has(execId ?? '');
+
+    // Pre-filter: drop events from executions we haven't seen start yet
+    // (they belong to concurrent boredom goals, not our dispatch).
+    if (!isRoot && !isTracked) return;
+
+    const pad = isRoot ? '' : '  ';     // indent sub-executions
+    const cpd = isRoot ? '  ' : '    '; // deeper indent for continuations
+
+    switch (type) {
+
+      // ── execution lifecycle ───────────────────────────────────────────────
+      case 'execution_started':
+      case 'execution.started': {
+        const variantId = (msg.variant_id ?? msg.variantId) as string | undefined;
+        if (execId) {
+          const ctx = this.getExecCtx(execId);
+          ctx.variantId = variantId;
+        }
+        if (!isRoot && variantId) {
+          // A sub-execution started — announce it so the observer can follow
+          this.appendMessage(`${pad}↳ Sub-activity: ${variantId}`, 'sub');
+        }
+        break;
+      }
+
+      // ── task lifecycle ────────────────────────────────────────────────────
+      case 'task.started': {
+        const idx = msg.task_index as number | undefined;
+        const desc = msg.description as string | undefined;
+        if (execId && taskId) {
+          const ctx = this.getExecCtx(execId);
+          ctx.tasks.set(taskId, { index: idx ?? 0, description: desc ?? taskId, startedAt: Date.now() });
+        }
+        const n = idx !== undefined ? `${idx + 1}` : '?';
+        this.appendMessage(`${pad}▶ Task ${n}: ${desc ?? taskId}`, 'task');
+        break;
+      }
+
+      case 'task.completed': {
+        const success = msg.success as boolean | undefined;
+        const durationMs = (msg.duration_ms ?? msg.durationMs) as number | undefined;
+        const error = msg.error as string | undefined;
+        const outputIds = msg.output_impulse_ids as string[] | undefined;
+        const inputIds = msg.input_impulse_ids as string[] | undefined;
+        const idx = (msg.task_index as number | undefined)
+          ?? (execId && taskId ? this.execCtxs.get(execId)?.tasks.get(taskId)?.index : undefined);
+        const n = idx !== undefined ? `${idx + 1}` : '?';
+        const durStr = durationMs ? `  ${fmtDuration(durationMs)}` : '';
+        const outStr = outputIds?.length ? `  → ${outputIds.length} output${outputIds.length > 1 ? 's' : ''}` : '';
+        const inStr = inputIds?.length ? `  ← ${inputIds.length} in` : '';
+
+        if (success === false) {
+          const errStr = error ? `  ${error.slice(0, 100)}` : '';
+          this.appendMessage(`${pad}✗ Task ${n} failed${errStr}`, 'failure');
+        } else {
+          this.appendMessage(`${pad}✓ Task ${n} done${durStr}${inStr}${outStr}`, 'task');
+        }
+        break;
+      }
+
+      // ── resolver events ───────────────────────────────────────────────────
+      case 'tool.call': {
+        const toolName = (msg.tool_name ?? msg.tool) as string | undefined;
+        const tier = msg.resolver_tier as string | undefined;
+        const latMs = (msg.latency_ms ?? msg.latencyMs) as number | undefined;
+        const cost = msg.cost_usd as number | undefined;
+        const tl = tierLabel(tier);
+        const parts: string[] = [`⚙ ${toolName ?? '?'}`];
+        if (tl) parts.push(`[${tl}]`);
+        if (latMs) parts.push(fmtDuration(latMs));
+        if (cost && cost > 0) parts.push(`$${cost.toFixed(4)}`);
+        this.appendMessage(`${cpd}${parts.join('  ')}`, 'tool');
+        break;
+      }
+
+      case 'impulse.resolved': {
+        const shape = (msg.shape ?? msg.impulse_id) as string | undefined;
+        const resolverId = msg.resolver_id as string | undefined;
+        const vessel = msg.vessel_id as string | undefined;
+        const body = msg.body;
+        const latMs = (msg.latency_ms ?? msg.latencyMs) as number | undefined;
+
+        const parts: string[] = [`◎ ${shape ?? '?'}`];
+        if (resolverId) parts.push(`via ${shortId(resolverId)}`);
+        if (vessel && vessel !== resolverId) parts.push(`@ ${shortId(vessel)}`);
+        if (latMs) parts.push(fmtDuration(latMs));
+
+        // Body preview: show what context was actually loaded
+        if (body !== undefined && body !== null) {
+          const b = body as Record<string, unknown> | string;
+          if (typeof b === 'object' && b.truncated) {
+            parts.push(`↯ ${preview(b.summary, 50)}`);
+          } else {
+            const p = preview(body, 60);
+            if (p) parts.push(`"${p}"`);
+          }
+        }
+        this.appendMessage(`${cpd}${parts.join('  ')}`, 'impulse');
+        break;
+      }
+
+      // ── execution completion ──────────────────────────────────────────────
+      case 'execution.completed':
+      case 'execution_completed': {
+        const success = msg.success as boolean | undefined;
+        const durationMs = (msg.duration_ms ?? msg.durationMs) as number | undefined;
+        const cost = msg.cost as number | undefined;
+        const durStr = durationMs ? `  ${fmtDuration(durationMs)}` : '';
+        const costStr = cost && cost > 0 ? `  $${cost.toFixed(4)}` : '';
+
+        if (isRoot) {
+          const ok = success !== false;
+          this.appendMessage(
+            `${ok ? '✓' : '✗'} Execution ${ok ? 'complete' : 'failed'}${durStr}${costStr}`,
+            ok ? 'success' : 'failure',
+          );
+          if (this.goalFile) {
+            this.goalNoteManager.markComplete(this.goalFile, ok ? 'completed' : 'failed');
+          }
+          this.dispatching = false;
+          this.setDispatchBtnState(false);
+        } else {
+          const ok = success !== false;
+          this.appendMessage(`${pad}${ok ? '✓' : '✗'} Sub-activity done${durStr}`, ok ? 'sub' : 'failure');
+        }
+        break;
+      }
+
+      case 'execution.failed': {
+        if (isRoot) {
+          const err = msg.error as string | undefined;
+          this.appendMessage(`✗ Execution failed${err ? `  ${err.slice(0, 80)}` : ''}`, 'failure');
+          if (this.goalFile) this.goalNoteManager.markComplete(this.goalFile, 'failed');
+          this.dispatching = false;
+          this.setDispatchBtnState(false);
+        } else {
+          this.appendMessage(`${pad}✗ Sub-activity failed`, 'failure');
+        }
+        break;
+      }
+
+      default: {
+        // Unknown event — show type so nothing is silently swallowed
+        if (isRoot) this.appendMessage(`• ${type}`, undefined);
+        break;
+      }
     }
 
-    const icon = EVENT_ICONS[type] ?? '•';
-    let line = `${icon} ${type}`;
-
-    // Derive CSS type for colour-coding
-    let lineType: string | undefined;
-    if (type === 'task.completed') lineType = 'task';
-    else if (type === 'task.started') lineType = 'task';
-    else if (type === 'task.failed') lineType = 'failure';
-    else if (type === 'tool.call') lineType = 'tool';
-    else if (type === 'impulse.resolved') lineType = 'impulse';
-
-    if (type === 'task.started' || type === 'task.completed' || type === 'task.failed') {
-      const taskId = (msg.taskId ?? msg.task_id) as string | undefined;
-      const desc = msg.description as string | undefined;
-      if (taskId) line += ` [${taskId}]`;
-      if (desc) line += `: ${desc}`;
-    } else if (type === 'tool.call') {
-      const tool = msg.tool as string | undefined;
-      if (tool) line += `: ${tool}`;
-    } else if (type === 'impulse.resolved') {
-      const shape = msg.shape as string | undefined;
-      if (shape) line += `: ${shape}`;
-    }
-
-    this.appendMessage(line, lineType);
-
-    // Persist to vault note
+    // Append raw line to vault note for audit
     if (this.goalFile) {
-      this.goalNoteManager.appendEvent(this.goalFile, `- ${new Date().toISOString()} ${line}`);
-    }
-
-    // Detect terminal events
-    if (type === 'task.failed' || type === 'execution.failed') {
-      this.appendMessage('Execution failed.', 'failure');
-      if (this.goalFile) {
-        this.goalNoteManager.markComplete(this.goalFile, 'failed');
-      }
-      this.dispatching = false;
-      this.setDispatchBtnState(false);
-    }
-
-    // Check for execution-level success signals
-    const status = msg.status as string | undefined;
-    if (
-      type === 'execution.completed' ||
-      (msgExecId && status === 'success') ||
-      (msgExecId && status === 'completed')
-    ) {
-      this.appendMessage('Execution complete.', 'success');
-      if (this.goalFile) {
-        this.goalNoteManager.markComplete(this.goalFile, 'completed');
-      }
-      this.dispatching = false;
-      this.setDispatchBtnState(false);
+      this.goalNoteManager.appendEvent(
+        this.goalFile,
+        `- ${new Date().toISOString()} ${type} exec=${execId ?? ''} task=${taskId ?? ''}`,
+      );
     }
   }
 }
