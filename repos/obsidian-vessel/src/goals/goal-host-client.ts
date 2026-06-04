@@ -47,6 +47,29 @@ export class GoalHostClient {
     private apiKey: string,
   ) {}
 
+  /**
+   * Poll GET /executions/:dispatchId until the execution_id is known (status ≠ running)
+   * or the timeout elapses. Returns the executionId or null on timeout.
+   */
+  async pollExecutionId(dispatchId: string, timeoutMs = 30000): Promise<string | null> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 600));
+      try {
+        const r = await requestUrl({
+          url: `${this.endpoint}/executions/${dispatchId}`,
+          method: 'GET',
+          headers: { 'Authorization': `ApiKey ${this.apiKey}` },
+        });
+        const body = r.json as Record<string, unknown>;
+        if (body.executionId) return body.executionId as string;
+        // status=failed without executionId means it crashed before starting
+        if (body.status === 'failed') return null;
+      } catch { /* ignore transient errors, keep polling */ }
+    }
+    return null;
+  }
+
   async dispatchGoal(goal: string, ctx?: VaultContext): Promise<GoalDispatchResult> {
     // Build variables from the vault context snapshot.
     // expected_output_shapes hints to Thompson sampling which activities can
