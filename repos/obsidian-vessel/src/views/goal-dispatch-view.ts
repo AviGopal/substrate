@@ -18,9 +18,9 @@
  * - Reconnects WS on 3s backoff
  */
 
-import { ItemView, WorkspaceLeaf, TFile, Notice } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFile, Notice, MarkdownView } from 'obsidian';
 import type MetabobVesselPlugin from '../main';
-import { GoalHostClient } from '../goals/goal-host-client';
+import { GoalHostClient, type VaultContext } from '../goals/goal-host-client';
 import { GoalNoteManager } from '../goals/goal-note-manager';
 
 export const VIEW_TYPE_GOAL_DISPATCH = 'metabob-goal-dispatch';
@@ -167,6 +167,92 @@ export class GoalDispatchView extends ItemView {
   }
 
   // ---------------------------------------------------------------------------
+  // Vault context collection
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Snapshot the current Obsidian workspace state into a VaultContext.
+   *
+   * The snapshot is passed as `variables` to /run-goal so activities can
+   * reference live vault content via template interpolation:
+   *   - {{active_note_path}}   → path of the focused note
+   *   - {{selection}}          → selected text (if any)
+   *   - {{open_note_paths}}    → JSON array of open tabs
+   *   - {{vault_path}}         → filesystem root of the vault
+   *   - {{obsidian_vessel_endpoint}} → resolver call-back URL
+   *
+   * Activities that have tasks with resolver `obsidian:note` will
+   * automatically receive these variables in their impulse pointer.
+   * The `available_shapes` list is forwarded as `expected_output_shapes`
+   * to bias Thompson sampling toward vault-aware activities.
+   */
+  private collectVaultContext(): VaultContext {
+    const app = this.plugin.app;
+    const ctx: VaultContext = {};
+
+    // Active note
+    const activeFile = app.workspace.getActiveFile();
+    if (activeFile) {
+      ctx.active_note_path = activeFile.path;
+
+      // Cursor section: heading breadcrumb from the active MarkdownView
+      const mdView = app.workspace.getActiveViewOfType(MarkdownView);
+      if (mdView) {
+        const editor = mdView.editor;
+        const cursor = editor.getCursor();
+        const cache = app.metadataCache.getFileCache(activeFile);
+        if (cache?.headings?.length) {
+          // Walk headings in order; last one whose line <= cursor line is active
+          const activeHeadings: string[] = [];
+          let lastLevel = 0;
+          for (const h of cache.headings) {
+            if (h.position.start.line > cursor.line) break;
+            if (h.level <= lastLevel || activeHeadings.length === 0) {
+              // pop deeper headings when we encounter a same-or-higher level
+              while (activeHeadings.length > 0 && h.level <= lastLevel) {
+                activeHeadings.pop();
+                lastLevel = h.level - 1;
+              }
+            }
+            activeHeadings.push(h.heading);
+            lastLevel = h.level;
+          }
+          if (activeHeadings.length) ctx.active_note_section = activeHeadings.join(' › ');
+        }
+
+        // Selection
+        const sel = editor.getSelection();
+        if (sel?.trim()) ctx.selection = sel.trim();
+      }
+    }
+
+    // All open markdown leaves → distinct paths
+    const openPaths = new Set<string>();
+    app.workspace.iterateAllLeaves(leaf => {
+      const view = leaf.view;
+      if (view instanceof MarkdownView && view.file) {
+        openPaths.add(view.file.path);
+      }
+    });
+    if (openPaths.size > 0) ctx.open_note_paths = Array.from(openPaths);
+
+    // Vault filesystem root
+    const adapter = app.vault.adapter as { basePath?: string };
+    if (adapter.basePath) ctx.vault_path = adapter.basePath;
+
+    // Obsidian-vessel HTTP endpoint so activities can call back for resolution
+    const port = this.plugin.settings.serverPort;
+    if (port && this.plugin.settings.serverEnabled) {
+      ctx.obsidian_vessel_endpoint = `http://127.0.0.1:${port}`;
+    }
+
+    // Shapes this context makes available for impulse resolution
+    ctx.available_shapes = [...this.plugin.settings.shapes];
+
+    return ctx;
+  }
+
+  // ---------------------------------------------------------------------------
   // Dispatch
   // ---------------------------------------------------------------------------
 
@@ -208,11 +294,16 @@ export class GoalDispatchView extends ItemView {
     this.clearOutput();
     this.execCtxs.clear();
     this.appendMessage(`⟶ Goal: "${goal}"`);
+
+    // Collect and display the vault context that will accompany the goal
+    const ctx = this.collectVaultContext();
+    this.appendVaultContextSummary(ctx);
+
     this.appendMessage('Selecting activity…', 'ready');
 
     try {
       const client = new GoalHostClient(goalHostEndpoint, apiKey);
-      const result = await client.dispatchGoal(goal);
+      const result = await client.dispatchGoal(goal, ctx);
 
       this.activeExecutionId = result.executionId;
       if (result.selectedTemplateId) {
@@ -274,6 +365,40 @@ export class GoalDispatchView extends ItemView {
     line.createSpan({ cls: 'goal-dispatch-msg', text });
     // Auto-scroll to bottom
     this.outputEl.scrollTop = this.outputEl.scrollHeight;
+  }
+
+  /**
+   * Emit a concise impulse state space summary so an outside observer can see
+   * exactly what vault context was attached to the goal.
+   */
+  private appendVaultContextSummary(ctx: VaultContext): void {
+    const parts: string[] = [];
+
+    if (ctx.active_note_path) {
+      const name = ctx.active_note_path.split('/').pop() ?? ctx.active_note_path;
+      const section = ctx.active_note_section ? ` › ${ctx.active_note_section}` : '';
+      parts.push(`active: ${name}${section}`);
+    } else {
+      parts.push('active: none');
+    }
+
+    if (ctx.selection) {
+      const snippet = ctx.selection.length > 40
+        ? ctx.selection.slice(0, 40) + '…'
+        : ctx.selection;
+      parts.push(`selection: "${snippet}"`);
+    }
+
+    const openCount = ctx.open_note_paths?.length ?? 0;
+    if (openCount > 1) {
+      parts.push(`open: ${openCount} notes`);
+    }
+
+    if (ctx.available_shapes?.length) {
+      parts.push(`shapes: ${ctx.available_shapes.length}`);
+    }
+
+    this.appendMessage(`◎ Context  ${parts.join('  ·  ')}`, 'impulse');
   }
 
   private clearOutput(): void {
