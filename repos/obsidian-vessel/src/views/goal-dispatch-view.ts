@@ -499,16 +499,16 @@ export class GoalDispatchView extends ItemView {
     const execId = (msg.execution_id ?? msg.executionId) as string | undefined;
     const taskId = (msg.task_id ?? msg.taskId) as string | undefined;
 
-    // Show sub-execution events as well as root — they reveal how the
-    // composition is unfolding. Root events have no indent; sub-executions
-    // are indented one level. We skip events from unrelated executions that
-    // arrive while we're watching (they have no execCtx entry).
-    const isRoot = !execId || execId === this.activeExecutionId;
-    const isTracked = isRoot || this.execCtxs.has(execId ?? '');
+    // The async 202 dispatch returns a dispatchId, not the real execution_id.
+    // Latch the first execution_id we see in any event as the root execution.
+    if (execId && !this.activeExecutionId) {
+      this.activeExecutionId = execId;
+    }
 
-    // Pre-filter: drop events from executions we haven't seen start yet
-    // (they belong to concurrent boredom goals, not our dispatch).
-    if (!isRoot && !isTracked) return;
+    // While dispatching, show all events — we just fired a goal and the
+    // activity system is responding. Root = first execution we latched;
+    // everything else is a sub-execution and gets indented.
+    const isRoot = !execId || execId === this.activeExecutionId;
 
     const pad = isRoot ? '' : '  ';     // indent sub-executions
     const cpd = isRoot ? '  ' : '    '; // deeper indent for continuations
