@@ -30,6 +30,12 @@ export class GoalHostClient {
       },
       body: JSON.stringify({ goal }),
     });
-    return resp.json as GoalDispatchResult;
+    const raw = resp.json as Record<string, unknown>;
+    return {
+      // goal-host-vessel returns dispatchId; fall back to executionId for older builds
+      executionId: (raw.executionId ?? raw.dispatchId ?? '') as string,
+      status: (raw.status ?? 'unknown') as string,
+      selectedTemplateId: raw.selectedTemplateId as string | undefined,
+    };
   }
 }
