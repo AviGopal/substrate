@@ -1398,6 +1398,449 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-await main();
+// ────────────────────────────────────────────────────────────────────────────
+// DAEMON MODE — throughput-paced concurrent dispatch pool (2026-06-04).
+//
+// Replaces the 5-minute timer cadence with a continuously-running pool that
+// maintains N concurrent dispatches. On any completion, the pool immediately
+// picks the next best goal given current substrate state + per-goal momentum.
+//
+// Why: timer-paced cadence (~0.2 dispatch/min) is the slowest substrate clock.
+// State-conditioned Thompson learning needs throughput more than coverage —
+// concurrent dispatches amortize the WS roundtrip + state-poll cost and let
+// posteriors accumulate fast enough to make momentum measurable within a
+// session. Backwards-compat: BOREDOM_DAEMON_MODE=0 keeps oneshot behaviour.
+// ────────────────────────────────────────────────────────────────────────────
+
+const DAEMON_FLAG = process.argv.includes("--daemon") || process.env["BOREDOM_DAEMON_MODE"] === "1";
+const MAX_CONCURRENT = parseInt(process.env["BOREDOM_MAX_CONCURRENT"] ?? "3", 10);
+const MIN_DISPATCH_INTERVAL_MS = parseInt(process.env["BOREDOM_MIN_DISPATCH_INTERVAL_MS"] ?? "2000", 10);
+const POOL_LOOP_INTERVAL_MS = parseInt(process.env["BOREDOM_POOL_LOOP_INTERVAL_MS"] ?? "5000", 10);
+const POOL_STATE_REFRESH_MS = parseInt(process.env["BOREDOM_STATE_REFRESH_MS"] ?? "30000", 10);
+const POOL_AUTOPROMOTE_INTERVAL_MS = parseInt(process.env["BOREDOM_AUTOPROMOTE_INTERVAL_MS"] ?? "600000", 10);
+const IN_FLIGHT_TIMEOUT_MS = parseInt(process.env["BOREDOM_IN_FLIGHT_TIMEOUT_MS"] ?? "300000", 10);
+
+interface SubstrateState {
+  // Observable counts derived from the workspace + activity-api. Each predicate
+  // (Part 2) reads these — refreshed every POOL_STATE_REFRESH_MS so daemon
+  // selection stays cheap. Best-effort: missing files / API errors degrade to
+  // null/0 so we never block dispatch on instrument health.
+  openGapCount: number;
+  unbridgedScenarioGapCount: number;
+  stagedMitosisPresent: boolean;
+  pendingProposalCount: number;
+  unrankedAutoTemplateCount: number;
+  refreshedAt: number;
+}
+
+interface InFlightEntry {
+  goal_idx: number;
+  dispatch_id: string;
+  execution_id?: string;
+  template_id?: string;
+  started_at: number;
+  signature: string | null;
+}
+
+interface Momentum {
+  outcomes: ("success" | "failure")[];
+}
+
+const inFlight = new Map<string, InFlightEntry>();
+const momentumByGoal = new Map<number, Momentum>();
+let running = true;
+let lastDispatchAt = 0;
+let lastAutoPromoteAt = 0;
+
+async function refreshSubstrateState(): Promise<SubstrateState> {
+  const fs = await import("node:fs/promises");
+  let stagedMitosisPresent = false;
+  let pendingProposalCount = 0;
+  let unbridgedScenarioGapCount = 0;
+  let openGapCount = 0;
+  let unrankedAutoTemplateCount = 0;
+  try {
+    stagedMitosisPresent = !!(await fs.stat("/workspace/mitosis-pending.json").catch(() => null));
+  } catch { /* ignore */ }
+  try {
+    const proposalDir = await fs.readdir("/workspace/proposals").catch(() => [] as string[]);
+    pendingProposalCount = proposalDir.filter((n) => n.endsWith(".json") && !n.startsWith("applied-")).length;
+  } catch { /* ignore */ }
+  try {
+    const gapsRaw = await fs.readFile("/workspace/gaps.json", "utf8").catch(() => "");
+    if (gapsRaw) {
+      const parsed = JSON.parse(gapsRaw) as { gaps?: Array<{ status?: string; scenario_id?: string }> };
+      const gaps = parsed.gaps ?? [];
+      openGapCount = gaps.filter((g) => g.status !== "closed" && g.status !== "resolved").length;
+      const scenarios = await fs.readdir(SCENARIOS_DIR).catch(() => [] as string[]);
+      const scenarioIds = new Set(scenarios.filter((n) => n.endsWith(".json")).map((n) => n.replace(/\.json$/, "")));
+      unbridgedScenarioGapCount = gaps.filter(
+        (g) => g.status !== "closed" && (!g.scenario_id || !scenarioIds.has(g.scenario_id)),
+      ).length;
+    }
+  } catch { /* ignore */ }
+  try {
+    const res = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/templates?limit=60`, {
+      headers: authHeaders(),
+      signal: AbortSignal.timeout(4_000),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as { templates?: Array<{ id?: string; metrics?: { total_executions?: number } }> };
+      unrankedAutoTemplateCount = (data.templates ?? []).filter((t) => {
+        const id = (t.id ?? "").replace(/^activity:⟨(.+)⟩$/, "$1");
+        return id.includes("gap-closing:auto-") && (t.metrics?.total_executions ?? 0) === 0;
+      }).length;
+    }
+  } catch { /* ignore */ }
+  return {
+    openGapCount,
+    unbridgedScenarioGapCount,
+    stagedMitosisPresent,
+    pendingProposalCount,
+    unrankedAutoTemplateCount,
+    refreshedAt: Date.now(),
+  };
+}
+
+/**
+ * Per-goal precondition predicates. Returning false means "skip this goal in
+ * the current state space" — daemon never dispatches an ineligible goal.
+ *
+ * Defaults: any goal not listed always fires (observation / detector / probe
+ * goals that emit findings regardless of backlog state). Listed goals gate on
+ * their specific signal: gap-closing only when there's a gap to close,
+ * mitosis-tick only when pending.json exists, apply-proposal only when there
+ * are proposals, etc.
+ */
+function goalCanFire(goalIdx: number, state: SubstrateState): boolean {
+  switch (goalIdx) {
+    case 8:  // draft-gap-closing-activity
+    case 10: // drain-pending-substrate-gaps
+      return state.openGapCount > 0;
+    case 15: // mitosis-tick
+      return state.stagedMitosisPresent;
+    case 21: // gap-to-scenario-bridge-tick
+      return state.unbridgedScenarioGapCount > 0;
+    case 22: // dispatch-latest-auto-draft
+      return state.unrankedAutoTemplateCount > 0;
+    case 23: // apply-proposal-as-patch
+      return state.pendingProposalCount > 0;
+    default:
+      return true;
+  }
+}
+
+function recordOutcome(goalIdx: number, success: boolean): void {
+  let m = momentumByGoal.get(goalIdx);
+  if (!m) { m = { outcomes: [] }; momentumByGoal.set(goalIdx, m); }
+  m.outcomes.push(success ? "success" : "failure");
+  while (m.outcomes.length > 10) m.outcomes.shift();
+}
+
+function momentumScore(goalIdx: number): number {
+  const m = momentumByGoal.get(goalIdx);
+  if (!m || m.outcomes.length === 0) return 1.0; // neutral prior
+  const succ = m.outcomes.filter((o) => o === "success").length;
+  return (succ + 1) / (m.outcomes.length + 2); // Laplace
+}
+
+function statePressure(goalIdx: number, state: SubstrateState): number {
+  const backlog =
+    goalIdx === 8 || goalIdx === 10 ? state.openGapCount :
+    goalIdx === 21 ? state.unbridgedScenarioGapCount :
+    goalIdx === 22 ? state.unrankedAutoTemplateCount :
+    goalIdx === 23 ? state.pendingProposalCount :
+    goalIdx === 15 ? (state.stagedMitosisPresent ? 1 : 0) :
+    0;
+  return 1 + Math.log(1 + backlog);
+}
+
+/**
+ * Pick the highest-scoring eligible goal. Score = momentum × state-pressure ×
+ * uniform-noise-perturbation (keeps exploration without a separate ε-greedy
+ * branch). We do NOT fetch per-signature posteriors here — the existing one-
+ * shot path's selectGoalForLoadConditioned does that on each dispatch; the
+ * daemon-side selection adds momentum + backlog-pressure on top of the cost
+ * filter.
+ */
+function pickBestEligible(
+  eligibleIdxs: number[],
+  state: SubstrateState,
+): { idx: number; score: number; reason: string } {
+  const scored = eligibleIdxs.map((idx) => {
+    const mom = momentumScore(idx);
+    const press = statePressure(idx, state);
+    const noise = 0.7 + Math.random() * 0.6; // ε-greedy-equivalent jitter
+    return { idx, score: mom * press * noise, mom, press };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  const top = scored[0]!;
+  return {
+    idx: top.idx,
+    score: top.score,
+    reason: `mom=${top.mom.toFixed(2)} press=${top.press.toFixed(2)}`,
+  };
+}
+
+function inFlightHasGoal(goalIdx: number): boolean {
+  for (const entry of inFlight.values()) {
+    if (entry.goal_idx === goalIdx) return true;
+  }
+  return false;
+}
+
+function reapStaleInFlight(): void {
+  const now = Date.now();
+  const stale: string[] = [];
+  for (const [k, v] of inFlight.entries()) {
+    if (now - v.started_at > IN_FLIGHT_TIMEOUT_MS) stale.push(k);
+  }
+  for (const k of stale) {
+    const e = inFlight.get(k)!;
+    inFlight.delete(k);
+    console.warn(
+      `[pool] reaped stale in-flight: dispatch_id=${k.slice(0, 8)} goal[${e.goal_idx}] ` +
+      `age=${Math.round((now - e.started_at) / 1000)}s — assuming hung`,
+    );
+    recordOutcome(e.goal_idx, false);
+  }
+}
+
+/**
+ * Subscribe to activity-api /ws for execution_completed events. On completion
+ * matching one of our in-flight executions, remove from pool + record momentum.
+ * Best-effort: drops connection on error and lets the in-flight timeout reaper
+ * clean up. Reconnect with exponential backoff.
+ */
+async function startWSObserver(): Promise<void> {
+  const wsUrl = ACTIVITY_API_ENDPOINT.replace(/^http/, "ws") + "/ws";
+  let backoff = 1000;
+  const connect = (): void => {
+    let ws: WebSocket;
+    try {
+      ws = new WebSocket(wsUrl);
+    } catch (err) {
+      console.warn(`[pool-ws] connect threw: ${(err as Error).message}`);
+      setTimeout(connect, backoff);
+      backoff = Math.min(backoff * 2, 30_000);
+      return;
+    }
+    ws.onopen = () => {
+      backoff = 1000;
+      ws.send(JSON.stringify({ type: "authenticate", token: API_KEY }));
+      console.log(`[pool-ws] connected to ${wsUrl}`);
+    };
+    ws.onmessage = (ev: MessageEvent) => {
+      try {
+        const msg = JSON.parse(typeof ev.data === "string" ? ev.data : String(ev.data)) as {
+          type?: string;
+          data?: { execution_id?: string; success?: boolean };
+        };
+        if (msg.type !== "execution_completed") return;
+        const execId = msg.data?.execution_id;
+        if (!execId) return;
+        // Match by execution_id; otherwise leave for reaper. The dispatch
+        // response from goal-host returns executionId; light-dispatch's
+        // synchronous response also returns executionId.
+        for (const [dispatchId, entry] of inFlight.entries()) {
+          if (entry.execution_id === execId) {
+            inFlight.delete(dispatchId);
+            recordOutcome(entry.goal_idx, msg.data?.success === true);
+            console.log(
+              `[pool] completion: goal[${entry.goal_idx}] (${entry.template_id ?? "?"}) ` +
+              `success=${msg.data?.success === true} in_flight=${inFlight.size}/${MAX_CONCURRENT}`,
+            );
+            break;
+          }
+        }
+      } catch { /* swallow malformed messages */ }
+    };
+    ws.onclose = () => {
+      console.warn(`[pool-ws] closed, reconnecting in ${backoff}ms`);
+      setTimeout(connect, backoff);
+      backoff = Math.min(backoff * 2, 30_000);
+    };
+    ws.onerror = () => { /* onclose handles reconnect */ };
+  };
+  connect();
+}
+
+/**
+ * Fire one dispatch through the existing capability-aware selectDispatcher +
+ * dispatchGoal path. Returns dispatch_id + execution_id so the pool can track.
+ * Synchronous (light-dispatch) completions are handled inline; async (goal-host)
+ * completions arrive via WS or in-flight reaper.
+ */
+async function dispatchOne(goalIdx: number, state: SubstrateState): Promise<{ dispatch_id: string; execution_id?: string } | null> {
+  void state; // state is computed for selection, not passed downstream
+  // Pull signature + Thompson posteriors via the existing one-shot path.
+  const loadBefore = await sampleLoad();
+  const maxCost = maxCostForLoad(loadBefore);
+  const goal = AUTONOMOUS_GOALS[goalIdx]!;
+  let targetTemplateId = AUTONOMOUS_GOAL_TARGET_TEMPLATES[goalIdx];
+  if (goalIdx === 9 && !targetTemplateId) {
+    const dyn = await pickTopProposedGapClosingTemplate();
+    if (!dyn) return null;
+    targetTemplateId = dyn;
+  }
+  // Respect the cost budget too — skip if our budget can't afford the goal.
+  const cost = AUTONOMOUS_GOAL_COSTS[goalIdx] ?? "expensive";
+  if (COST_RANK[cost] > COST_RANK[maxCost]) {
+    console.log(`[pool] skipping goal[${goalIdx}] cost=${cost} > budget=${maxCost} (load-gated)`);
+    return null;
+  }
+  const signature = await fetchCurrentSignature();
+  const capability_hints = deriveCapabilityHints(goalIdx, targetTemplateId);
+  const decision = await selectDispatcher(goalIdx, signature, capability_hints);
+  const baseTags = [
+    "intent:topology_discovery",
+    BOREDOM_TAG,
+    `dispatcher_reason:${decision.reason}`,
+    "pool:daemon",
+  ];
+  const extraVars = extraVariablesForGoal(goalIdx);
+  let res: Response;
+  try {
+    res = await dispatchGoal(decision.dispatcher, goal, targetTemplateId, extraVars, baseTags, signature);
+  } catch (err) {
+    console.warn(`[pool] dispatch failed: ${(err as Error).message}`);
+    return null;
+  }
+  if (!res.ok && res.status !== 202 && res.status !== 207) {
+    const text = await res.text().catch(() => "(no body)");
+    console.warn(`[pool] ${decision.dispatcher} HTTP ${res.status}: ${text.slice(0, 200)}`);
+    return null;
+  }
+  const dispatch = (await res.json()) as {
+    dispatchId?: string;
+    executionId?: string;
+    status?: string;
+  };
+  const dispatchId = dispatch.dispatchId ?? dispatch.executionId ?? `pool-${Date.now()}`;
+  // Fire load attribution best-effort (non-blocking).
+  void recordLoadAttribution({
+    dispatch_id: dispatchId,
+    execution_id: dispatch.executionId,
+    goal_idx: goalIdx,
+    template_id: targetTemplateId,
+    dispatched_at: new Date().toISOString(),
+    dispatch_start_ms: Date.now(),
+    load_before: loadBefore,
+    goal_status: dispatch.status,
+  });
+  // Light-dispatch returns synchronously — record outcome immediately.
+  if (decision.dispatcher === "light-dispatch") {
+    const success = dispatch.status === "success" || dispatch.status === "completed";
+    recordOutcome(goalIdx, success);
+    console.log(
+      `[pool] light-dispatch sync goal[${goalIdx}] (${targetTemplateId ?? "?"}) status=${dispatch.status} ` +
+      `executionId=${dispatch.executionId ?? "?"} dispatcher=${decision.dispatcher}`,
+    );
+    // Return null so the caller doesn't add it to inFlight (already complete).
+    return null;
+  }
+  return { dispatch_id: dispatchId, execution_id: dispatch.executionId };
+}
+
+async function poolLoop(): Promise<void> {
+  console.log(
+    `[pool] daemon starting: MAX_CONCURRENT=${MAX_CONCURRENT} ` +
+    `MIN_DISPATCH_INTERVAL_MS=${MIN_DISPATCH_INTERVAL_MS} ` +
+    `LOOP_INTERVAL_MS=${POOL_LOOP_INTERVAL_MS} STATE_REFRESH_MS=${POOL_STATE_REFRESH_MS}`,
+  );
+  void startWSObserver();
+  let state = await refreshSubstrateState();
+  let lastStateRefresh = Date.now();
+  while (running) {
+    reapStaleInFlight();
+    if (Date.now() - lastStateRefresh > POOL_STATE_REFRESH_MS) {
+      state = await refreshSubstrateState();
+      lastStateRefresh = Date.now();
+    }
+    // Run auto-promote on a slower cadence than the pool loop.
+    if (Date.now() - lastAutoPromoteAt > POOL_AUTOPROMOTE_INTERVAL_MS) {
+      await tickAutoPromote();
+      lastAutoPromoteAt = Date.now();
+    }
+    // Inner fill loop: fire dispatches in PARALLEL up to MAX_CONCURRENT.
+    // Each dispatch is wrapped in a fire-and-forget IIFE so the loop body
+    // doesn't await network. Reserve the goal slot via a synthetic
+    // in-flight entry first; replace with the real dispatch_id on resolve.
+    // This is what makes the pool genuinely throughput-paced rather than
+    // serialized on dispatchOne's HTTP latency.
+    while (inFlight.size < MAX_CONCURRENT && Date.now() - lastDispatchAt >= MIN_DISPATCH_INTERVAL_MS) {
+      const eligible: number[] = [];
+      for (let i = 0; i < AUTONOMOUS_GOALS.length; i++) {
+        if (!goalCanFire(i, state)) continue;
+        if (inFlightHasGoal(i)) continue;
+        eligible.push(i);
+      }
+      if (eligible.length === 0) break;
+      const pick = pickBestEligible(eligible, state);
+      const goalIdx = pick.idx;
+      const reserveId = `reserve-${Date.now()}-${goalIdx}`;
+      inFlight.set(reserveId, {
+        goal_idx: goalIdx,
+        dispatch_id: reserveId,
+        template_id: AUTONOMOUS_GOAL_TARGET_TEMPLATES[goalIdx],
+        started_at: Date.now(),
+        signature: null,
+      });
+      lastDispatchAt = Date.now();
+      console.log(
+        `[pool] reserving goal[${goalIdx}] (${AUTONOMOUS_GOAL_TARGET_TEMPLATES[goalIdx] ?? "?"}) ` +
+        `score=${pick.score.toFixed(2)} (${pick.reason}) ` +
+        `in_flight=${inFlight.size}/${MAX_CONCURRENT}`,
+      );
+      // Fire-and-forget dispatch — completion arrives via WS observer
+      // (async path) or is recorded synchronously (light-dispatch path).
+      void (async () => {
+        try {
+          const dispatched = await dispatchOne(goalIdx, state);
+          // Drop the reserve and (for async paths only) re-insert with the
+          // real dispatch id so the WS observer can match it. Sync paths
+          // return null because dispatchOne already recorded the outcome.
+          inFlight.delete(reserveId);
+          if (dispatched) {
+            inFlight.set(dispatched.dispatch_id, {
+              goal_idx: goalIdx,
+              dispatch_id: dispatched.dispatch_id,
+              execution_id: dispatched.execution_id,
+              template_id: AUTONOMOUS_GOAL_TARGET_TEMPLATES[goalIdx],
+              started_at: Date.now(),
+              signature: null,
+            });
+            console.log(
+              `[pool] dispatched goal[${goalIdx}] dispatch_id=${dispatched.dispatch_id.slice(0, 8)} ` +
+              `in_flight=${inFlight.size}/${MAX_CONCURRENT}`,
+            );
+          }
+        } catch (err) {
+          inFlight.delete(reserveId);
+          recordOutcome(goalIdx, false);
+          console.warn(`[pool] dispatch goal[${goalIdx}] threw: ${(err as Error).message}`);
+        }
+      })();
+      // Respect inter-dispatch throttle but do NOT block on HTTP.
+      await new Promise((r) => setTimeout(r, MIN_DISPATCH_INTERVAL_MS));
+    }
+    await new Promise((r) => setTimeout(r, POOL_LOOP_INTERVAL_MS));
+  }
+}
+
+const shutdown = (signal: string): void => {
+  console.log(`[pool] received ${signal} — shutting down`);
+  running = false;
+  // Give the loop one tick to exit cleanly.
+  setTimeout(() => process.exit(0), 1000);
+};
+
+if (DAEMON_FLAG) {
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  await poolLoop();
+} else {
+  await main();
+}
 
 export {};
