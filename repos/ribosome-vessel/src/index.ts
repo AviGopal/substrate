@@ -14,6 +14,7 @@
  */
 
 import { DiscoveryRegistrationLoop } from "@avigopal/ias-executor-ts";
+import { onTemplateCreated, type ReplayObserverDeps } from "./replay-observer";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Config
@@ -137,6 +138,12 @@ let ws: WebSocket | null = null;
 let lastSeenSequence = 0;
 let reconnectDelay = 1_000;
 
+const replayDeps: ReplayObserverDeps = {
+  activityApiEndpoint: ACTIVITY_API_ENDPOINT,
+  apiKey: API_KEY,
+  llmEndpoint: process.env.LLM_RESOLVER_VESSEL_ENDPOINT ?? "http://127.0.0.1:8220",
+};
+
 function connectWS() {
   log.info("Connecting to activity-api WebSocket:", WS_URL);
   ws = new WebSocket(WS_URL);
@@ -183,6 +190,11 @@ function connectWS() {
       if (execId && taskId) {
         onTaskCompleted(execId, taskId, false);
       }
+    } else if (type === "template_created") {
+      // M3: background trace replay for new templates
+      // (concept_YinkepAheImS). Fire-and-forget; the observer module
+      // catches and logs its own errors.
+      onTemplateCreated(msg, replayDeps);
     }
   });
 
