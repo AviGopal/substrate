@@ -85,6 +85,11 @@ export class GoalDispatchView extends ItemView {
   // Execution context: tracks activity name + task descriptions per execId
   private execCtxs = new Map<string, ExecCtx>();
 
+  // Event buffer: accumulate WS messages while waiting for the real executionId
+  // from the poll. Keyed by execId so we can replay just the right one.
+  private eventBuffer = new Map<string, Array<Record<string, unknown>>>();
+  private buffering = false;
+
   constructor(leaf: WorkspaceLeaf, plugin: MetabobVesselPlugin) {
     super(leaf);
     this.plugin = plugin;
@@ -298,44 +303,52 @@ export class GoalDispatchView extends ItemView {
     // Collect and display the vault context that will accompany the goal
     const ctx = this.collectVaultContext();
     this.appendVaultContextSummary(ctx);
-    this.appendMessage('Queuing…', 'ready');
-
     try {
       const client = new GoalHostClient(goalHostEndpoint, apiKey);
 
-      // Step 1: dispatch → get dispatchId (202 async)
+      // Start buffering WS events NOW — the execution may complete and fire
+      // its events BEFORE the poll returns the executionId (auto-draft LLM
+      // calls can take 30+ seconds while the actual execution runs in <100ms).
+      this.eventBuffer.clear();
+      this.buffering = true;
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        this.connectWS();
+      }
+
+      // Step 1: dispatch → 202 with dispatchId
       const result = await client.dispatchGoal(goal, ctx);
       const dispatchId = result.executionId; // holds dispatchId from 202 body
+      this.appendMessage('Activity selecting…', 'ready');
 
-      // Step 2: poll /executions/:dispatchId until the real execution_id is known.
-      // WS events carry execution_id, not dispatchId — we must resolve this before
-      // opening the stream, otherwise everything pours in unfiltered.
-      this.appendMessage('Waiting for execution to start…', 'ready');
+      // Step 2: poll until the real execution_id is known, then replay buffer
       const executionId = await client.pollExecutionId(dispatchId);
 
       if (!executionId) {
-        this.appendMessage('Execution did not start within 30s — check goal-host logs.', 'error');
+        this.appendMessage('Execution did not start within 30s.', 'error');
+        this.buffering = false;
+        this.eventBuffer.clear();
         this.dispatching = false;
         this.setDispatchBtnState(false);
         return;
       }
 
-      // Now we have the real execution_id — set it before connecting WS so the
-      // filter is in place from the first message.
+      // Step 3: replay buffered events for this execution_id, then switch to live
+      this.buffering = false;
       this.activeExecutionId = executionId;
       this.appendMessage('─'.repeat(36), 'divider');
 
-      // Create vault note
-      this.goalFile = await this.goalNoteManager.createGoalNote(executionId, goal);
-
-      // Step 3: subscribe to WS, now filtered to this execution_id
-      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-        this.connectWS();
+      const buffered = this.eventBuffer.get(executionId) ?? [];
+      if (buffered.length > 0) {
+        for (const msg of buffered) this.processWSEvent(msg);
       }
+      this.eventBuffer.clear();
+
+      this.goalFile = await this.goalNoteManager.createGoalNote(executionId, goal);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       this.appendMessage(`Error dispatching goal: ${msg}`, 'error');
       new Notice(`Goal dispatch failed: ${msg}`);
+      this.buffering = false;
       this.dispatching = false;
       this.setDispatchBtnState(false);
     }
@@ -485,30 +498,46 @@ export class GoalDispatchView extends ItemView {
     } catch {
       return;
     }
+    if (!this.dispatching && !this.activeExecutionId) return;
 
+    // While buffering (waiting for poll to return executionId), stash events
+    // keyed by execId so we can replay just the right one afterward.
+    if (this.buffering) {
+      const d = (msg.data ?? msg) as Record<string, unknown>;
+      const eid = (d.execution_id ?? d.executionId) as string | undefined;
+      if (eid) {
+        if (!this.eventBuffer.has(eid)) this.eventBuffer.set(eid, []);
+        this.eventBuffer.get(eid)!.push(msg);
+      }
+      return;
+    }
+
+    this.processWSEvent(msg);
+  }
+
+  private processWSEvent(msg: Record<string, unknown>): void {
     const type = msg.type as string | undefined;
     if (!type) return;
 
-    // Only narrate events while a dispatch is active or we have an execution to watch.
-    if (!this.dispatching && !this.activeExecutionId) return;
+    // Events nest their payload under `data`; older broadcasts hoist to top.
+    const data = (msg.data ?? msg) as Record<string, unknown>;
+    const execId = (data.execution_id ?? data.executionId) as string | undefined;
+    const taskId = (data.task_id ?? data.taskId) as string | undefined;
 
-    const execId = (msg.execution_id ?? msg.executionId) as string | undefined;
-    const taskId = (msg.task_id ?? msg.taskId) as string | undefined;
-
-    // Strict filter: only show events from the root execution we resolved via
-    // polling, plus sub-executions that start while it's running.
+    // Strict filter: root execution + registered sub-executions.
     const isRoot = !execId || execId === this.activeExecutionId;
     if (!isRoot && !this.execCtxs.has(execId ?? '')) return;
 
-    const pad = isRoot ? '' : '  ';     // indent sub-executions
-    const cpd = isRoot ? '  ' : '    '; // deeper indent for continuations
+    const pad = isRoot ? '' : '  ';
+    const cpd = isRoot ? '  ' : '    ';
 
     switch (type) {
 
       // ── execution lifecycle ───────────────────────────────────────────────
+      case 'activity.started':
       case 'execution_started':
       case 'execution.started': {
-        const variantId = (msg.variant_id ?? msg.variantId) as string | undefined;
+        const variantId = (data.template_name ?? data.templateName ?? data.variant_id ?? data.variantId ?? data.templateId) as string | undefined;
         if (execId) {
           const ctx = this.getExecCtx(execId); // registers it, passes future filter
           ctx.variantId = variantId;
@@ -524,8 +553,8 @@ export class GoalDispatchView extends ItemView {
 
       // ── task lifecycle ────────────────────────────────────────────────────
       case 'task.started': {
-        const idx = msg.task_index as number | undefined;
-        const desc = msg.description as string | undefined;
+        const idx = (data.task_index ?? data.taskIndex) as number | undefined;
+        const desc = (data.description ?? data.task_description) as string | undefined;
         if (execId && taskId) {
           const ctx = this.getExecCtx(execId);
           ctx.tasks.set(taskId, { index: idx ?? 0, description: desc ?? taskId, startedAt: Date.now() });
@@ -536,12 +565,12 @@ export class GoalDispatchView extends ItemView {
       }
 
       case 'task.completed': {
-        const success = msg.success as boolean | undefined;
-        const durationMs = (msg.duration_ms ?? msg.durationMs) as number | undefined;
-        const error = msg.error as string | undefined;
-        const outputIds = msg.output_impulse_ids as string[] | undefined;
-        const inputIds = msg.input_impulse_ids as string[] | undefined;
-        const idx = (msg.task_index as number | undefined)
+        const success = (data.success ?? data.succeeded) as boolean | undefined;
+        const durationMs = (data.duration_ms ?? data.durationMs) as number | undefined;
+        const error = (data.error ?? data.error_message) as string | undefined;
+        const outputIds = (data.output_impulse_ids ?? data.outputImpulseIds) as string[] | undefined;
+        const inputIds = (data.input_impulse_ids ?? data.inputImpulseIds) as string[] | undefined;
+        const idx = ((data.task_index ?? data.taskIndex) as number | undefined)
           ?? (execId && taskId ? this.execCtxs.get(execId)?.tasks.get(taskId)?.index : undefined);
         const n = idx !== undefined ? `${idx + 1}` : '?';
         const durStr = durationMs ? `  ${fmtDuration(durationMs)}` : '';
@@ -559,10 +588,10 @@ export class GoalDispatchView extends ItemView {
 
       // ── resolver events ───────────────────────────────────────────────────
       case 'tool.call': {
-        const toolName = (msg.tool_name ?? msg.tool) as string | undefined;
-        const tier = msg.resolver_tier as string | undefined;
-        const latMs = (msg.latency_ms ?? msg.latencyMs) as number | undefined;
-        const cost = msg.cost_usd as number | undefined;
+        const toolName = (data.tool_name ?? data.tool) as string | undefined;
+        const tier = (data.resolver_tier ?? data.resolverTier) as string | undefined;
+        const latMs = (data.latency_ms ?? data.latencyMs) as number | undefined;
+        const cost = (data.cost_usd ?? data.costUsd) as number | undefined;
         const tl = tierLabel(tier);
         const parts: string[] = [`⚙ ${toolName ?? '?'}`];
         if (tl) parts.push(`[${tl}]`);
@@ -573,11 +602,11 @@ export class GoalDispatchView extends ItemView {
       }
 
       case 'impulse.resolved': {
-        const shape = (msg.shape ?? msg.impulse_id) as string | undefined;
-        const resolverId = msg.resolver_id as string | undefined;
-        const vessel = msg.vessel_id as string | undefined;
-        const body = msg.body;
-        const latMs = (msg.latency_ms ?? msg.latencyMs) as number | undefined;
+        const shape = (data.shape ?? data.impulse_id ?? data.impulseId) as string | undefined;
+        const resolverId = (data.resolver_id ?? data.resolverId) as string | undefined;
+        const vessel = (data.vessel_id ?? data.vesselId) as string | undefined;
+        const body = data.body;
+        const latMs = (data.latency_ms ?? data.latencyMs) as number | undefined;
 
         const parts: string[] = [`◎ ${shape ?? '?'}`];
         if (resolverId) parts.push(`via ${shortId(resolverId)}`);
@@ -599,11 +628,12 @@ export class GoalDispatchView extends ItemView {
       }
 
       // ── execution completion ──────────────────────────────────────────────
+      case 'activity.completed':
       case 'execution.completed':
       case 'execution_completed': {
-        const success = msg.success as boolean | undefined;
-        const durationMs = (msg.duration_ms ?? msg.durationMs) as number | undefined;
-        const cost = msg.cost as number | undefined;
+        const success = (data.success ?? data.succeeded) as boolean | undefined;
+        const durationMs = (data.duration_ms ?? data.durationMs) as number | undefined;
+        const cost = (data.cost ?? data.cost_usd) as number | undefined;
         const durStr = durationMs ? `  ${fmtDuration(durationMs)}` : '';
         const costStr = cost && cost > 0 ? `  $${cost.toFixed(4)}` : '';
 
@@ -625,9 +655,10 @@ export class GoalDispatchView extends ItemView {
         break;
       }
 
+      case 'activity.failed':
       case 'execution.failed': {
         if (isRoot) {
-          const err = msg.error as string | undefined;
+          const err = (data.error ?? data.error_message) as string | undefined;
           this.appendMessage(`✗ Execution failed${err ? `  ${err.slice(0, 80)}` : ''}`, 'failure');
           if (this.goalFile) this.goalNoteManager.markComplete(this.goalFile, 'failed');
           this.dispatching = false;
@@ -645,7 +676,6 @@ export class GoalDispatchView extends ItemView {
       }
     }
 
-    // Append raw line to vault note for audit
     if (this.goalFile) {
       this.goalNoteManager.appendEvent(
         this.goalFile,
