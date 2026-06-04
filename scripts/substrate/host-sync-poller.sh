@@ -153,7 +153,18 @@ Base SHA at staging: $base_sha
 Intent: $intent_id
 EOF
 )
-  if ! (cd "$host_vessel_root" && git commit -m "$msg") >/dev/null 2>&1; then
+  # Use a distinct git identity for substrate-autonomous commits so they can be
+  # cleanly disambiguated from operator + agent commits (both of which use the
+  # host's global DevBob Assistant identity). Counting commits by
+  # "Substrate Autonomous" gives a clean measurement of autonomous fixes.
+  # Identity is overridden via environment variables for THIS commit only —
+  # the host's global config is unaffected.
+  if ! (cd "$host_vessel_root" && \
+        GIT_AUTHOR_NAME="Substrate Autonomous" \
+        GIT_AUTHOR_EMAIL="substrate-autonomous@metabob.com" \
+        GIT_COMMITTER_NAME="Substrate Autonomous" \
+        GIT_COMMITTER_EMAIL="substrate-autonomous@metabob.com" \
+        git commit -m "$msg") >/dev/null 2>&1; then
     log "reject $intent_id: git commit failed (possibly nothing to commit)"
     write_result "$intent_id" "" "rejected_commit_failed" "see host repo $host_vessel_root"
     return 0
