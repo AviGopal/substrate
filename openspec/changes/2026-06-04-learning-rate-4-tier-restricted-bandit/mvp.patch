@@ -1,0 +1,363 @@
+diff --git a/src/services/tier-classifier.ts b/src/services/tier-classifier.ts
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/src/services/tier-classifier.ts
+@@ -0,0 +1,82 @@
++/**
++ * Tier classifier for templates (2026-06-04 tier-restricted-bandit).
++ *
++ * Maps a template's `tasks[].resolver` strings to a tier classification.
++ * Used to skip Thompson Sampling posterior maintenance on all-deterministic
++ * templates (deterministic cells have degenerate transition kernels and a
++ * Beta posterior on them captures propagated upstream uncertainty rather
++ * than cell-local signal).
++ *
++ * The deterministic-resolver set mirrors the built-in resolver inventory
++ * in `src/routes/activities.ts:3708-3723`. Unknown / missing resolvers
++ * fall through to the stochastic path (conservative).
++ */
++
++const DETERMINISTIC_RESOLVERS: ReadonlySet<string> = new Set([
++  // ias-executor-ts deterministic resolvers
++  'compose',
++  'activity',
++  'iteration',
++  'impulse-resolve',
++  'validation',
++  'impulse_pool_selection',
++  'producer_selection',
++  'impulse_preparation',
++  'wire_discovery_registration',
++  'wire_auth_blueprint',
++  'learning_signal_writer',
++  'verify_three_invariants',
++  // goal-host wiring
++  'file_read',
++  'bash',
++  // goal-host-vessel built-ins
++  'activity_recommendation',
++  'impulse_cooccurrence',
++]);
++
++const LLM_RESOLVERS: ReadonlySet<string> = new Set([
++  'llm',
++  'llm-prompt',
++]);
++
++export type TierClass = 'all_deterministic' | 'mixed' | 'all_stochastic';
++
++export type ResolverTier = 'deterministic' | 'pattern' | 'llm';
++
++export function classifyResolver(resolver: string | undefined | null): ResolverTier {
++  if (!resolver || typeof resolver !== 'string') return 'llm';
++  if (DETERMINISTIC_RESOLVERS.has(resolver)) return 'deterministic';
++  if (LLM_RESOLVERS.has(resolver)) return 'llm';
++  // Unknown registered resolver — treat as pattern (still stochastic).
++  return 'pattern';
++}
++
++export interface TemplateLike {
++  tasks?: Array<{
++    resolver?: string;
++    prompt?: unknown;
++  }> | null;
++}
++
++export function classifyTemplateTiers(template: TemplateLike): TierClass {
++  const tasks = template?.tasks;
++  if (!Array.isArray(tasks) || tasks.length === 0) {
++    // No tasks declared → conservative stochastic.
++    return 'all_stochastic';
++  }
++  let detCount = 0;
++  let stochCount = 0;
++  for (const task of tasks) {
++    // A task with a `prompt` and no `resolver` is an LLM-prompt task.
++    if (!task?.resolver && task?.prompt) {
++      stochCount++;
++      continue;
++    }
++    const tier = classifyResolver(task?.resolver);
++    if (tier === 'deterministic') detCount++;
++    else stochCount++;
++  }
++  if (stochCount === 0) return 'all_deterministic';
++  if (detCount === 0) return 'all_stochastic';
++  return 'mixed';
++}
+diff --git a/src/services/tier-classifier.test.ts b/src/services/tier-classifier.test.ts
+new file mode 100644
+index 0000000..2222222
+--- /dev/null
++++ b/src/services/tier-classifier.test.ts
+@@ -0,0 +1,52 @@
++import { describe, expect, test } from 'bun:test';
++import { classifyResolver, classifyTemplateTiers } from './tier-classifier';
++
++describe('classifyResolver', () => {
++  test('known deterministic resolvers', () => {
++    expect(classifyResolver('bash')).toBe('deterministic');
++    expect(classifyResolver('file_read')).toBe('deterministic');
++    expect(classifyResolver('iteration')).toBe('deterministic');
++    expect(classifyResolver('validation')).toBe('deterministic');
++  });
++  test('known llm resolvers', () => {
++    expect(classifyResolver('llm')).toBe('llm');
++    expect(classifyResolver('llm-prompt')).toBe('llm');
++  });
++  test('unknown resolver → pattern (stochastic)', () => {
++    expect(classifyResolver('some-vessel-resolver')).toBe('pattern');
++  });
++  test('missing resolver → llm (conservative)', () => {
++    expect(classifyResolver(undefined)).toBe('llm');
++    expect(classifyResolver(null as any)).toBe('llm');
++    expect(classifyResolver('')).toBe('llm');
++  });
++});
++
++describe('classifyTemplateTiers', () => {
++  test('all deterministic tasks', () => {
++    const t = { tasks: [{ resolver: 'bash' }, { resolver: 'file_read' }, { resolver: 'validation' }] };
++    expect(classifyTemplateTiers(t)).toBe('all_deterministic');
++  });
++  test('all llm tasks', () => {
++    const t = { tasks: [{ resolver: 'llm-prompt' }, { resolver: 'llm' }] };
++    expect(classifyTemplateTiers(t)).toBe('all_stochastic');
++  });
++  test('mixed tasks', () => {
++    const t = { tasks: [{ resolver: 'bash' }, { resolver: 'llm-prompt' }] };
++    expect(classifyTemplateTiers(t)).toBe('mixed');
++  });
++  test('prompt-only task counts as stochastic', () => {
++    const t = { tasks: [{ resolver: 'bash' }, { prompt: 'do thing' }] };
++    expect(classifyTemplateTiers(t)).toBe('mixed');
++  });
++  test('no tasks → conservative stochastic', () => {
++    expect(classifyTemplateTiers({})).toBe('all_stochastic');
++    expect(classifyTemplateTiers({ tasks: [] })).toBe('all_stochastic');
++    expect(classifyTemplateTiers({ tasks: null as any })).toBe('all_stochastic');
++  });
++  test('unknown resolver counts as stochastic (pattern tier)', () => {
++    const t = { tasks: [{ resolver: 'bash' }, { resolver: 'mystery-resolver' }] };
++    expect(classifyTemplateTiers(t)).toBe('mixed');
++  });
++});
+diff --git a/src/routes/activities.ts b/src/routes/activities.ts
+index 3333333..4444444 100644
+--- a/src/routes/activities.ts
++++ b/src/routes/activities.ts
+@@ -6188,8 +6188,29 @@
+         // 10.15 promotes DB-side as the source-of-truth once K-S parity
+         // (10.13) is verified and the recommend query is restructured to
+         // pull samples in the same batch as α/β.
+-        const sample = betaSample(alphaBlended, betaBlended);
+-        const sampleSource = 'app_fallback' as const;
++        //
++        // 2026-06-04 tier-restricted-bandit: classify this template's tasks
++        // by resolver tier. All-deterministic templates have degenerate
++        // P(s'|s,a) per cell, so the Beta posterior on them tracks
++        // propagated upstream uncertainty rather than cell-local signal.
++        // We skip the Beta sample and dispatch with uniform priority (1.0),
++        // freeing the sample budget for stochastic cells. The classifier
++        // is conservative: unknown resolvers fall through to stochastic,
++        // and any task without a `resolver` field (LLM-prompt task) keeps
++        // the Thompson path.
++        const tierClass = classifyTemplateTiers(template);
++        let sample: number;
++        let sampleSource: 'app_fallback' | 'tier_uniform';
++        if (tierClass === 'all_deterministic') {
++          // Uniform priority — keep candidate in the set but don't
++          // compete for the exploration slot. The selection_metadata
++          // below records the skip reason so traces can audit.
++          sample = 1.0;
++          sampleSource = 'tier_uniform';
++        } else {
++          sample = betaSample(alphaBlended, betaBlended);
++          sampleSource = 'app_fallback';
++        }
+
+         const rawTotalExecs = scores?.total_executions ?? 0;
+         const rawSuccesses = scores?.successes ?? 0;
+@@ -6230,6 +6251,7 @@
+             // origin. Today every recommend call uses 'app_fallback'.
+             // After 10.15 promotes DB-side, this label flips to 'db'
+             // (or stays 'app_fallback' on the explicit override path).
++            tier_class: tierClass,
+             sample_source: sampleSource,
+             score: sample,
+             ucb_score: computed_ucb_score,
+diff --git a/src/routes/activities.ts b/src/routes/activities.ts
+--- a/src/routes/activities.ts
++++ b/src/routes/activities.ts
+@@ -19,6 +19,7 @@
+ import { extractOutputShapes, computeShapeMatchScore, computeWeightedSuccessScore, computeThompsonSamplingUpdates } from '../services/thompson-sampling';
+ import { applyOutcomeToPosteriors } from '../lib/posterior-update';
+ import { semanticMatcher } from '../services/semantic-matcher';
++import { classifyTemplateTiers } from '../services/tier-classifier';
+ import { observeShapes } from '../utils/observed-shapes';
+ import { surrealDB } from '../db/surreal';
+ import { withResolver } from '../middleware/runtime-tracing';
+diff --git a/src/lib/posterior-update.ts b/src/lib/posterior-update.ts
+index 5555555..6666666 100644
+--- a/src/lib/posterior-update.ts
++++ b/src/lib/posterior-update.ts
+@@ -41,8 +41,10 @@
+   failure_mode?: FailureMode | null;
+   /** Input impulse ids across all tasks — used for impulse_relevance writes on verifier_negative */
+   tasks?: Array<{
++    resolver?: string;
++    resolver_tier?: string;
+     input_impulse_ids?: string[];
+     output_impulse_ids?: string[];
+   }>;
+   org_id?: string;
+   cost_usd?: number;
+@@ -94,11 +96,13 @@
+ export interface UpdateSummary {
+   activity_id: string;
+   alpha_delta: number;
+   beta_delta: number;
+   failure_mode_type: string | null;
+   impulse_relevance_writes: number;
+   warnings: string[];
++  /** 2026-06-04: when set, the canonical α/β write was deliberately skipped. */
++  skipped_reason?: 'all_deterministic';
+ }
+
+ // ---------------------------------------------------------------------------
+@@ -456,6 +460,38 @@
+ export async function applyOutcomeToPosteriors(
+   trace: TraceForPosterior,
+   db: DBQueryable,
+   orgId: string,
+ ): Promise<UpdateSummary> {
+   const warnings: string[] = [];
+
++  // 2026-06-04 tier-restricted-bandit: skip canonical posterior writes when
++  // every task in this trace ran on a deterministic-tier resolver. Such
++  // cells have degenerate transition kernels — the Beta posterior on them
++  // captures propagated upstream uncertainty, not cell-local signal.
++  // Chain-credit propagation still fires below because ancestors may be
++  // stochastic.
++  const tasks = trace.tasks ?? [];
++  const allDeterministic =
++    tasks.length > 0 &&
++    tasks.every((t) => t?.resolver_tier === 'deterministic');
++  if (allDeterministic) {
++    const skipSummary: UpdateSummary = {
++      activity_id: normalizeActivityId(
++        trace.activity_variant_id ?? trace.variant_id ?? trace.activity_id,
++      ),
++      alpha_delta: 0,
++      beta_delta: 0,
++      failure_mode_type: trace.failure_mode?.type ?? null,
++      impulse_relevance_writes: 0,
++      warnings,
++      skipped_reason: 'all_deterministic',
++    };
++    emitPosteriorUpdateMetric(skipSummary);
++    // Still propagate chain credit — ancestors may be stochastic.
++    if (trace.composition_chain && trace.composition_chain.length > 0) {
++      propagateCreditAlongChain(
++        {
++          activity_id: skipSummary.activity_id,
++          composition_chain: trace.composition_chain,
++          success: trace.success,
++          failure_mode: trace.failure_mode,
++        },
++        db,
++        orgId,
++      ).catch((err) => {
++        logger.warn('posterior-update: propagateCreditAlongChain failed (tier-skip path)', {
++          activity_id: skipSummary.activity_id,
++          error: err instanceof Error ? err.message : String(err),
++        });
++      });
++    }
++    return skipSummary;
++  }
++
+   const rawActivityId = trace.activity_variant_id ?? trace.variant_id ?? trace.activity_id;
+diff --git a/src/lib/posterior-update.tier.test.ts b/src/lib/posterior-update.tier.test.ts
+new file mode 100644
+index 0000000..7777777
+--- /dev/null
++++ b/src/lib/posterior-update.tier.test.ts
+@@ -0,0 +1,75 @@
++import { describe, expect, test } from 'bun:test';
++import { applyOutcomeToPosteriors, type DBQueryable, type TraceForPosterior } from './posterior-update';
++
++function makeMockDb(): { db: DBQueryable; queries: Array<{ sql: string; params?: any }> } {
++  const queries: Array<{ sql: string; params?: any }> = [];
++  const db: DBQueryable = {
++    async query(sql, params) {
++      queries.push({ sql, params });
++      return [] as any;
++    },
++  };
++  return { db, queries };
++}
++
++const baseTrace = (overrides: Partial<TraceForPosterior>): TraceForPosterior => ({
++  activity_id: 'tmpl-1',
++  success: true,
++  ...overrides,
++});
++
++describe('applyOutcomeToPosteriors — tier-restricted bandit', () => {
++  test('all-deterministic trace skips variant_performance_metrics UPDATE', async () => {
++    const { db, queries } = makeMockDb();
++    const trace = baseTrace({
++      tasks: [
++        { resolver: 'bash', resolver_tier: 'deterministic' },
++        { resolver: 'file_read', resolver_tier: 'deterministic' },
++      ],
++    });
++    const summary = await applyOutcomeToPosteriors(trace, db, 'org-x');
++    expect(summary.skipped_reason).toBe('all_deterministic');
++    expect(summary.alpha_delta).toBe(0);
++    expect(summary.beta_delta).toBe(0);
++    // No DB UPDATE issued on variant_performance_metrics
++    const vpm = queries.filter((q) => q.sql.includes('variant_performance_metrics'));
++    expect(vpm.length).toBe(0);
++  });
++
++  test('mixed-tier trace writes posterior as before', async () => {
++    const { db, queries } = makeMockDb();
++    const trace = baseTrace({
++      success: false,
++      failure_mode: { type: 'verifier_negative' } as any,
++      tasks: [
++        { resolver: 'bash', resolver_tier: 'deterministic' },
++        { resolver: 'llm-prompt', resolver_tier: 'llm' },
++      ],
++    });
++    const summary = await applyOutcomeToPosteriors(trace, db, 'org-x');
++    expect(summary.skipped_reason).toBeUndefined();
++    expect(summary.beta_delta).toBe(1);
++    const vpm = queries.filter((q) => q.sql.includes('variant_performance_metrics'));
++    expect(vpm.length).toBeGreaterThan(0);
++  });
++
++  test('all-stochastic (llm) trace writes posterior', async () => {
++    const { db, queries } = makeMockDb();
++    const trace = baseTrace({
++      tasks: [{ resolver: 'llm-prompt', resolver_tier: 'llm' }],
++    });
++    const summary = await applyOutcomeToPosteriors(trace, db, 'org-x');
++    expect(summary.skipped_reason).toBeUndefined();
++    expect(summary.alpha_delta).toBe(1);
++    const vpm = queries.filter((q) => q.sql.includes('variant_performance_metrics'));
++    expect(vpm.length).toBeGreaterThan(0);
++  });
++
++  test('trace without resolver_tier on tasks falls through to stochastic path', async () => {
++    const { db, queries } = makeMockDb();
++    const trace = baseTrace({ tasks: [{ resolver: 'bash' }] });
++    const summary = await applyOutcomeToPosteriors(trace, db, 'org-x');
++    expect(summary.skipped_reason).toBeUndefined();
++    const vpm = queries.filter((q) => q.sql.includes('variant_performance_metrics'));
++    expect(vpm.length).toBeGreaterThan(0);
++  });
++});

@@ -1,0 +1,303 @@
+diff --git a/repos/metabob-activity-api/src/lib/prior-seed.ts b/repos/metabob-activity-api/src/lib/prior-seed.ts
+new file mode 100644
+--- /dev/null
++++ b/repos/metabob-activity-api/src/lib/prior-seed.ts
+@@ -0,0 +1,124 @@
++/**
++ * Concept-conditioned Thompson prior (learning-rate mechanism 2).
++ *
++ * When a new (signature, template) cell is created, query concept-db for
++ * dense-search neighbors of the (template_id, signature) key and compute a
++ * weighted-mean Beta prior from neighbor relevance + loaded/succeeded counts.
++ *
++ * The new cell starts with effective κ "virtual trials" at the neighbor mean
++ * rate, instead of Beta(1, 1). Empirical Bayes; cheapest of the 8 mechanisms.
++ *
++ * Citations: concept_uTVZPoaxMmo2 (mechanism), concept_TbN0eSf7U_hM (parent),
++ * concept_W9CzngXfixvh (cold-start dominance evidence),
++ * concept_YdzaAAQGx4xC (picker bug this mitigates).
++ *
++ * Fallback discipline: any error / timeout / empty response / disabled flag
++ * returns Beta(1, 1) — the substrate never blocks on prior seeding.
++ */
++
++import { logger } from '../utils/logger';
++
++export interface SeededPrior {
++  alpha0: number;
++  beta0: number;
++  source: 'concepts' | 'fallback';
++  neighbor_count?: number;
++}
++
++const FALLBACK: SeededPrior = { alpha0: 1, beta0: 1, source: 'fallback' };
++
++interface ConceptHit {
++  id?: string;
++  relevance?: number;
++  loaded_count?: number;
++  succeeded_count?: number;
++}
++
++export async function seedPriorFromConcepts(
++  templateId: string,
++  signature: string | null,
++  orgId: string,
++): Promise<SeededPrior> {
++  if (process.env.PRIOR_SEED_ENABLED === 'false') return FALLBACK;
++
++  const url = process.env.CONCEPT_DB_URL;
++  if (!url) return FALLBACK;
++
++  const K = parseInt(process.env.PRIOR_SEED_K ?? '5', 10);
++  const kappa = parseFloat(process.env.PRIOR_SEED_KAPPA ?? '10');
++  const timeoutMs = parseInt(process.env.PRIOR_SEED_TIMEOUT_MS ?? '500', 10);
++
++  const query = signature ? `${templateId} ${signature}` : templateId;
++
++  const ctrl = new AbortController();
++  const t = setTimeout(() => ctrl.abort(), timeoutMs);
++  try {
++    const res = await fetch(
++      `${url}/concepts/search?query=${encodeURIComponent(query)}&limit=${K}`,
++      {
++        signal: ctrl.signal,
++        headers: { 'X-Org-Id': orgId },
++      },
++    );
++    clearTimeout(t);
++    if (!res.ok) return FALLBACK;
++    const body = (await res.json()) as { concepts?: ConceptHit[] };
++    const concepts = Array.isArray(body?.concepts) ? body.concepts : [];
++    if (concepts.length === 0) return FALLBACK;
++
++    let weightedAlpha = 0;
++    let weightedBeta = 0;
++    let totalWeight = 0;
++    for (const c of concepts) {
++      const r = typeof c.relevance === 'number' ? c.relevance : 0;
++      if (r <= 0) continue;
++      const loaded = typeof c.loaded_count === 'number' ? c.loaded_count : 0;
++      const succeeded = typeof c.succeeded_count === 'number' ? c.succeeded_count : 0;
++      // Treat the concept's accumulated empirical evidence as a Beta(a_i, b_i).
++      // a_i = succeeded; b_i = max(0, loaded - succeeded). Use relevance as the
++      // similarity weight; degenerate concepts (loaded=0) fall back to r itself.
++      const a_i = loaded > 0 ? succeeded : r;
++      const b_i = loaded > 0 ? Math.max(0, loaded - succeeded) : (1 - r);
++      weightedAlpha += r * a_i;
++      weightedBeta += r * b_i;
++      totalWeight += r;
++    }
++    if (totalWeight <= 0) return FALLBACK;
++
++    const meanAlpha = weightedAlpha / totalWeight;
++    const meanBeta = weightedBeta / totalWeight;
++    const sum = meanAlpha + meanBeta;
++    if (sum <= 0 || !Number.isFinite(sum)) return FALLBACK;
++
++    // Scale to κ virtual trials at the neighbor mean rate.
++    const alpha0 = kappa * (meanAlpha / sum);
++    const beta0 = kappa * (meanBeta / sum);
++    if (!Number.isFinite(alpha0) || !Number.isFinite(beta0)) return FALLBACK;
++
++    const result: SeededPrior = {
++      alpha0,
++      beta0,
++      source: 'concepts',
++      neighbor_count: concepts.length,
++    };
++    logger.debug('prior_seed_applied', {
++      event: 'prior_seed_applied',
++      template_id: templateId,
++      signature,
++      org_id: orgId,
++      ...result,
++    });
++    return result;
++  } catch (err) {
++    clearTimeout(t);
++    logger.debug('prior_seed_applied', {
++      event: 'prior_seed_applied',
++      template_id: templateId,
++      signature,
++      org_id: orgId,
++      source: 'fallback',
++      reason: err instanceof Error ? err.message : String(err),
++    });
++    return FALLBACK;
++  }
++}
+diff --git a/repos/metabob-activity-api/src/lib/posterior-update.ts b/repos/metabob-activity-api/src/lib/posterior-update.ts
+--- a/repos/metabob-activity-api/src/lib/posterior-update.ts
++++ b/repos/metabob-activity-api/src/lib/posterior-update.ts
+@@ -22,6 +22,7 @@
+ import { logger } from '../utils/logger';
+ import { normalizeActivityId } from '../db/paradigm';
+ import type { FailureMode } from '../models/schemas';
++import { seedPriorFromConcepts } from './prior-seed';
+
+@@ -295,6 +296,8 @@ async function writeAncestorDelta(
+
+   if (signature != null) {
+     try {
++      const seed = await seedPriorFromConcepts(ancestorId, signature, orgId);
+       await db.query(
+         `
+         LET $existing = (SELECT * FROM context_thompson_scores
+@@ -308,8 +311,8 @@ async function writeAncestorDelta(
+         ELSE
+           CREATE context_thompson_scores CONTENT {
+             org_id: $org_id, template_id: $activity_id, context_bucket: $sig,
+-            signature_version: $sig_version, alpha: 1.0 + $alpha_delta,
+-            beta: 1.0 + $beta_delta, n_observations: 1,
++            signature_version: $sig_version, alpha: $alpha0 + $alpha_delta,
++            beta: $beta0 + $beta_delta, n_observations: 1,
+             last_updated_at: time::now(), created_at: time::now()
+           }
+         END
+@@ -321,6 +324,8 @@ async function writeAncestorDelta(
+           sig_version: signatureVersion,
+           alpha_delta: alphaDelta,
+           beta_delta: betaDelta,
++          alpha0: seed.alpha0,
++          beta0: seed.beta0,
+         },
+       );
+     } catch (err) {
+@@ -513,6 +518,7 @@ export async function applyOutcomeToPosteriors(
+       // creating it. If the template already has ≥ 200 distinct signature buckets,
+       // skip the CREATE (UPDATE still proceeds for existing rows).
+       const CARDINALITY_CAP = parseInt(process.env.SIGNATURE_CARDINALITY_CAP ?? '200', 10);
++      const seed = await seedPriorFromConcepts(activityId, trace.signature, orgId);
+       await db.query(
+         `
+         LET $existing = (SELECT * FROM context_thompson_scores
+@@ -540,8 +546,8 @@ export async function applyOutcomeToPosteriors(
+             template_id: $activity_id,
+             context_bucket: $sig,
+             signature_version: $sig_version,
+-            alpha: 1.0 + $alpha_delta,
+-            beta:  1.0 + $beta_delta,
++            alpha: $alpha0 + $alpha_delta,
++            beta:  $beta0 + $beta_delta,
+             n_observations: 1,
+             last_updated_at: time::now(),
+             created_at: time::now()
+@@ -556,6 +562,8 @@ export async function applyOutcomeToPosteriors(
+           alpha_delta: alphaDelta,
+           beta_delta: betaDelta,
+           cap: CARDINALITY_CAP,
++          alpha0: seed.alpha0,
++          beta0: seed.beta0,
+         },
+       );
+       logger.debug('posterior_update_v1_conditional', {
+@@ -566,6 +574,8 @@ export async function applyOutcomeToPosteriors(
+         alpha_delta: alphaDelta,
+         beta_delta: betaDelta,
+         cardinality_cap: CARDINALITY_CAP,
++        prior_seed_source: seed.source,
++        prior_seed_neighbors: seed.neighbor_count ?? 0,
+       });
+     } catch (v1Err) {
+       logger.warn('posterior-update: context_thompson_scores v1 write failed (non-blocking)', {
+diff --git a/repos/metabob-activity-api/src/lib/prior-seed.test.ts b/repos/metabob-activity-api/src/lib/prior-seed.test.ts
+new file mode 100644
+--- /dev/null
++++ b/repos/metabob-activity-api/src/lib/prior-seed.test.ts
+@@ -0,0 +1,96 @@
++/**
++ * Unit tests for seedPriorFromConcepts (learning-rate mechanism 2).
++ *
++ * Verifies the empirical-Bayes prior seeding logic and its fallback
++ * discipline: any error / timeout / empty response / disabled flag MUST
++ * return Beta(1, 1).
++ */
++
++import { describe, expect, it, beforeEach, afterEach, mock } from 'bun:test';
++import { seedPriorFromConcepts } from './prior-seed';
++
++const originalFetch = globalThis.fetch;
++
++function setEnv(overrides: Record<string, string | undefined>) {
++  for (const [k, v] of Object.entries(overrides)) {
++    if (v === undefined) delete (process.env as Record<string, string | undefined>)[k];
++    else process.env[k] = v;
++  }
++}
++
++describe('seedPriorFromConcepts', () => {
++  beforeEach(() => {
++    setEnv({
++      CONCEPT_DB_URL: 'http://concept-db.test:8081',
++      PRIOR_SEED_ENABLED: 'true',
++      PRIOR_SEED_K: '5',
++      PRIOR_SEED_KAPPA: '10',
++      PRIOR_SEED_TIMEOUT_MS: '500',
++    });
++  });
++
++  afterEach(() => {
++    globalThis.fetch = originalFetch;
++  });
++
++  it('falls back when disabled', async () => {
++    setEnv({ PRIOR_SEED_ENABLED: 'false' });
++    const r = await seedPriorFromConcepts('tpl', 'sig', 'org-1');
++    expect(r).toEqual({ alpha0: 1, beta0: 1, source: 'fallback' });
++  });
++
++  it('falls back when CONCEPT_DB_URL is unset', async () => {
++    setEnv({ CONCEPT_DB_URL: undefined });
++    const r = await seedPriorFromConcepts('tpl', 'sig', 'org-1');
++    expect(r.source).toBe('fallback');
++  });
++
++  it('falls back on empty response', async () => {
++    globalThis.fetch = mock(async () =>
++      new Response(JSON.stringify({ concepts: [] }), { status: 200 }),
++    ) as unknown as typeof fetch;
++    const r = await seedPriorFromConcepts('tpl', 'sig', 'org-1');
++    expect(r.source).toBe('fallback');
++  });
++
++  it('falls back on non-2xx', async () => {
++    globalThis.fetch = mock(async () => new Response('', { status: 500 })) as unknown as typeof fetch;
++    const r = await seedPriorFromConcepts('tpl', 'sig', 'org-1');
++    expect(r.source).toBe('fallback');
++  });
++
++  it('falls back on thrown fetch (network error / timeout)', async () => {
++    globalThis.fetch = mock(async () => {
++      throw new Error('ECONNREFUSED');
++    }) as unknown as typeof fetch;
++    const r = await seedPriorFromConcepts('tpl', 'sig', 'org-1');
++    expect(r.source).toBe('fallback');
++  });
++
++  it('computes κ-scaled prior from neighbor concepts', async () => {
++    globalThis.fetch = mock(async () =>
++      new Response(
++        JSON.stringify({
++          concepts: [
++            // 80% success rate, weight 1.0
++            { id: 'c1', relevance: 1.0, loaded_count: 10, succeeded_count: 8 },
++            // 40% success rate, weight 0.5
++            { id: 'c2', relevance: 0.5, loaded_count: 10, succeeded_count: 4 },
++          ],
++        }),
++        { status: 200 },
++      ),
++    ) as unknown as typeof fetch;
++    const r = await seedPriorFromConcepts('tpl', 'sig', 'org-1');
++    expect(r.source).toBe('concepts');
++    expect(r.neighbor_count).toBe(2);
++    // α₀ + β₀ ≈ κ = 10
++    expect(r.alpha0 + r.beta0).toBeCloseTo(10, 4);
++    // Weighted mean success: (1.0 * 8 + 0.5 * 4) / (1.0 * 10 + 0.5 * 10)
++    //                     = (8 + 2) / 15 = 0.6667
++    // → α₀ ≈ 10 * 0.6667 ≈ 6.667
++    expect(r.alpha0).toBeGreaterThan(6.5);
++    expect(r.alpha0).toBeLessThan(6.9);
++  });
++});
