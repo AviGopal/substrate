@@ -1607,6 +1607,77 @@ function reapStaleInFlight(): void {
 }
 
 /**
+ * Resolve dispatchId → executionId by polling goal-host's /executions/:id.
+ * goal-host returns 202+dispatchId immediately from /run-goal but only sets
+ * record.executionId once the engine assigns it (inside the async closure).
+ * Poll briefly (max ~15s) so the WS observer can match execution_completed
+ * against this in-flight entry by execution_id. Best-effort; failures are
+ * silent because the stale reaper still cleans up if this never resolves.
+ */
+/**
+ * Buffer of recent execution_completed WS events keyed by execution_id.
+ * Holds events that arrived before our inFlight entry had its execution_id
+ * resolved. resolveExecutionIdForDispatch checks this buffer when it sets
+ * a new execution_id so we don't lose completions to the race.
+ */
+const recentWsCompletions = new Map<string, { success: boolean; received_at: number }>();
+
+async function resolveExecutionIdForDispatch(dispatchId: string): Promise<void> {
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 1000));
+    if (!inFlight.has(dispatchId)) return; // already completed/reaped
+    let res: Response;
+    try {
+      res = await fetch(`${GOAL_HOST_ENDPOINT}/executions/${dispatchId}`, { headers: authHeaders() });
+    } catch { continue; }
+    if (!res.ok) continue;
+    const body = await res.json().catch(() => ({})) as { executionId?: string; status?: string };
+    if (body.executionId) {
+      const entry = inFlight.get(dispatchId);
+      if (entry && !entry.execution_id) {
+        entry.execution_id = body.executionId;
+        console.log(
+          `[pool] resolved execution_id for dispatch_id=${dispatchId.slice(0, 8)} ` +
+          `execution_id=${body.executionId.slice(0, 12)}`,
+        );
+        // Race fix: a WS execution_completed event may have arrived in the
+        // window between dispatch and execution_id resolution (typically
+        // milliseconds for fast templates). Replay recent events to catch any
+        // completion that fired before our entry had its execution_id set.
+        const pending = recentWsCompletions.get(body.executionId);
+        if (pending) {
+          recentWsCompletions.delete(body.executionId);
+          inFlight.delete(dispatchId);
+          recordOutcome(entry.goal_idx, pending.success);
+          console.log(
+            `[pool] completion (replay): goal[${entry.goal_idx}] (${entry.template_id ?? "?"}) ` +
+            `success=${pending.success} in_flight=${inFlight.size}/${MAX_CONCURRENT}`,
+          );
+        }
+      }
+      return;
+    }
+    // Terminal state without executionId (e.g. template-not-found,
+    // pre-execute throw) — no trace ever lands, no WS event will arrive.
+    // Record the outcome here and drop from inFlight so the 5-min reaper
+    // doesn't keep the slot held for nothing.
+    if (body.status === "completed" || body.status === "failed") {
+      const entry = inFlight.get(dispatchId);
+      if (entry) {
+        inFlight.delete(dispatchId);
+        recordOutcome(entry.goal_idx, body.status === "completed");
+        console.log(
+          `[pool] early-terminal: goal[${entry.goal_idx}] (${entry.template_id ?? "?"}) ` +
+          `status=${body.status} (no executionId; not awaiting WS) in_flight=${inFlight.size}/${MAX_CONCURRENT}`,
+        );
+      }
+      return;
+    }
+  }
+}
+
+/**
  * Subscribe to activity-api /ws for execution_completed events. On completion
  * matching one of our in-flight executions, remove from pool + record momentum.
  * Best-effort: drops connection on error and lets the in-flight timeout reaper
@@ -1639,9 +1710,8 @@ async function startWSObserver(): Promise<void> {
         if (msg.type !== "execution_completed") return;
         const execId = msg.data?.execution_id;
         if (!execId) return;
-        // Match by execution_id; otherwise leave for reaper. The dispatch
-        // response from goal-host returns executionId; light-dispatch's
-        // synchronous response also returns executionId.
+        // Try direct match first.
+        let matched = false;
         for (const [dispatchId, entry] of inFlight.entries()) {
           if (entry.execution_id === execId) {
             inFlight.delete(dispatchId);
@@ -1650,10 +1720,25 @@ async function startWSObserver(): Promise<void> {
               `[pool] completion: goal[${entry.goal_idx}] (${entry.template_id ?? "?"}) ` +
               `success=${msg.data?.success === true} in_flight=${inFlight.size}/${MAX_CONCURRENT}`,
             );
+            matched = true;
             break;
           }
         }
-      } catch { /* swallow malformed messages */ }
+        // Race fix: WS event may arrive before resolveExecutionIdForDispatch
+        // sets entry.execution_id. Stash so resolveExecutionId can replay it
+        // on the next poll-resolved entry.
+        if (!matched) {
+          recentWsCompletions.set(execId, { success: msg.data?.success === true, received_at: Date.now() });
+          // Bound the buffer (drop oldest if >200 entries).
+          if (recentWsCompletions.size > 200) {
+            const oldest = [...recentWsCompletions.entries()]
+              .sort((a, b) => a[1].received_at - b[1].received_at)[0]?.[0];
+            if (oldest !== undefined) recentWsCompletions.delete(oldest);
+          }
+        }
+      } catch (err) {
+        console.warn(`[pool-ws] message parse error: ${(err as Error).message}`);
+      }
     };
     ws.onclose = () => {
       console.warn(`[pool-ws] closed, reconnecting in ${backoff}ms`);
@@ -1814,6 +1899,16 @@ async function poolLoop(): Promise<void> {
               `[pool] dispatched goal[${goalIdx}] dispatch_id=${dispatched.dispatch_id.slice(0, 8)} ` +
               `in_flight=${inFlight.size}/${MAX_CONCURRENT}`,
             );
+            // goal-host's /run-goal returns 202+dispatchId immediately, but
+            // executionId is only known after the engine assigns it inside the
+            // async closure. Without execution_id, the WS observer cannot match
+            // execution_completed events against this in-flight entry and the
+            // 5-min stale reaper fires instead. Short-poll /executions/:id
+            // until executionId is populated, then patch the entry so the WS
+            // matcher works. Best-effort; reaper remains the safety net.
+            if (!dispatched.execution_id) {
+              void resolveExecutionIdForDispatch(dispatched.dispatch_id);
+            }
           }
         } catch (err) {
           inFlight.delete(reserveId);
