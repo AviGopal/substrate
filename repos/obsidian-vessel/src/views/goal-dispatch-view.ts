@@ -318,13 +318,22 @@ export class GoalDispatchView extends ItemView {
       // Step 1: dispatch → 202 with dispatchId
       const result = await client.dispatchGoal(goal, ctx);
       const dispatchId = result.executionId; // holds dispatchId from 202 body
-      this.appendMessage('Activity selecting…', 'ready');
+
+      // Show elapsed time while the auto-draft LLM selects/authors an activity.
+      // This can take 30-120s; without feedback the UI looks frozen.
+      const selectStart = Date.now();
+      const elapsedTimer = window.setInterval(() => {
+        const secs = Math.floor((Date.now() - selectStart) / 1000);
+        this.updateSelectingMessage(secs);
+      }, 5000);
+      this.updateSelectingMessage(0);
 
       // Step 2: poll until the real execution_id is known, then replay buffer
       const executionId = await client.pollExecutionId(dispatchId);
+      window.clearInterval(elapsedTimer);
 
       if (!executionId) {
-        this.appendMessage('Execution did not start within 30s.', 'error');
+        this.appendMessage('Execution did not start within 5 min — check goal-host logs.', 'error');
         this.buffering = false;
         this.eventBuffer.clear();
         this.dispatching = false;
@@ -408,6 +417,24 @@ export class GoalDispatchView extends ItemView {
     }
 
     this.appendMessage(`◎ Context  ${parts.join('  ·  ')}`, 'impulse');
+  }
+
+  /** Update (or create) the 'selecting' status line in place rather than appending. */
+  private updateSelectingMessage(elapsedSecs: number): void {
+    if (!this.outputEl) return;
+    const existing = this.outputEl.querySelector('.gd-selecting-line');
+    const text = elapsedSecs === 0
+      ? 'Activity selecting…'
+      : `Activity selecting…  ${elapsedSecs}s`;
+    if (existing) {
+      existing.querySelector('.goal-dispatch-msg')!.textContent = text;
+    } else {
+      const line = this.outputEl.createDiv('goal-dispatch-line gd-selecting-line');
+      const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      line.createSpan({ cls: 'goal-dispatch-ts', text: ts });
+      line.createSpan({ cls: 'goal-dispatch-msg', text });
+    }
+    this.outputEl.scrollTop = this.outputEl.scrollHeight;
   }
 
   private clearOutput(): void {
