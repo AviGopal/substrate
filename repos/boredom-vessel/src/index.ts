@@ -966,15 +966,23 @@ function deriveCapabilityHints(
   if (!targetTemplateId) {
     return { requires_llm_reuse: true, requires_state_space_services: true, is_multi_task: true };
   }
-  // Detector / tick templates: deterministic chains, no LLM, no state-space services.
+  // Detector / tick / single-shot templates: no LLM reuse, no state-space services.
+  // Light-dispatch can make single LLM calls (via llm-resolver-vessel) and can
+  // run fs_read/fs_write/http_fetch chains. What it CAN'T do is reuse LLM
+  // context across goals or query state-space services. So everything that's
+  // a single autonomous chain (even one with an LLM step) belongs here.
   const isDeterministicChain =
     /-(tick|scan|audit|report|backfill)$/.test(targetTemplateId) ||
     targetTemplateId.endsWith(":coverage-tick") ||
     targetTemplateId.endsWith(":concept-usage-backfill") ||
     targetTemplateId.endsWith(":mitosis-tick") ||
     targetTemplateId.endsWith(":backend-snapshot-to-git") ||
-    // Gap-drain bridges (2026-06-04): single deterministic resolvers, no LLM.
-    targetTemplateId.endsWith(":dispatch-latest-auto-draft");
+    // Gap-drain bridges (2026-06-04): single-LLM chains, no reuse, no state.
+    targetTemplateId.endsWith(":dispatch-latest-auto-draft") ||
+    targetTemplateId.endsWith(":apply-proposal-as-patch") ||
+    targetTemplateId.endsWith(":auto-promote") ||
+    targetTemplateId.endsWith(":drain-pending-substrate-gaps") ||
+    targetTemplateId.endsWith(":gap-to-scenario-bridge-tick");
   return {
     requires_llm_reuse: false,
     requires_state_space_services: !isDeterministicChain,
@@ -1418,7 +1426,13 @@ const MIN_DISPATCH_INTERVAL_MS = parseInt(process.env["BOREDOM_MIN_DISPATCH_INTE
 const POOL_LOOP_INTERVAL_MS = parseInt(process.env["BOREDOM_POOL_LOOP_INTERVAL_MS"] ?? "5000", 10);
 const POOL_STATE_REFRESH_MS = parseInt(process.env["BOREDOM_STATE_REFRESH_MS"] ?? "30000", 10);
 const POOL_AUTOPROMOTE_INTERVAL_MS = parseInt(process.env["BOREDOM_AUTOPROMOTE_INTERVAL_MS"] ?? "600000", 10);
-const IN_FLIGHT_TIMEOUT_MS = parseInt(process.env["BOREDOM_IN_FLIGHT_TIMEOUT_MS"] ?? "300000", 10);
+// Reaper deadline for in-flight dispatches. Original 300s (5 min) was too short
+// for goal-host LLM chains (apply-proposal-as-patch, drafter chains, mitosis-evaluate
+// with overlay typecheck). The trace eventually lands but our inFlight entry
+// gets reaped first, so even the WS-replay buffer can't help (the entry no
+// longer exists when execution_id is finally resolved). Bumped to 900s so
+// 5-10 min LLM chains complete naturally.
+const IN_FLIGHT_TIMEOUT_MS = parseInt(process.env["BOREDOM_IN_FLIGHT_TIMEOUT_MS"] ?? "900000", 10);
 
 interface SubstrateState {
   // Observable counts derived from the workspace + activity-api. Each predicate
