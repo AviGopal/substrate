@@ -408,7 +408,7 @@ export function renderConceptNote(
   if (concept.times_succeeded !== undefined) fm.push(`succeeded: ${concept.times_succeeded}`);
   if (concept.times_failed !== undefined) fm.push(`failed: ${concept.times_failed}`);
   if (concept.updated_at) fm.push(`updated_at: ${concept.updated_at}`);
-  fm.push(`pulled_at: ${pulledAt}`);
+  fm.push(`last_substrate_pull_at: ${pulledAt}`);
   fm.push('pending_sync: false');
   fm.push('concept-db: true');
 
