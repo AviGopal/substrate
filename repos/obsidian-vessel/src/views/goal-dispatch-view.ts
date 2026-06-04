@@ -298,43 +298,39 @@ export class GoalDispatchView extends ItemView {
     // Collect and display the vault context that will accompany the goal
     const ctx = this.collectVaultContext();
     this.appendVaultContextSummary(ctx);
-
-    this.appendMessage('Selecting activity…', 'ready');
+    this.appendMessage('Queuing…', 'ready');
 
     try {
       const client = new GoalHostClient(goalHostEndpoint, apiKey);
-      const result = await client.dispatchGoal(goal, ctx);
 
-      this.activeExecutionId = result.executionId;
-      if (result.selectedTemplateId) {
-        this.appendMessage(`◈ Activity: ${result.selectedTemplateId}`);
-        // Seed context so we have the variant name even before execution_started arrives
-        this.execCtxs.set(result.executionId, {
-          variantId: result.selectedTemplateId,
-          tasks: new Map(),
-        });
-      } else {
-        this.appendMessage(`◈ Execution ${result.executionId.slice(0, 8)}…`);
+      // Step 1: dispatch → get dispatchId (202 async)
+      const result = await client.dispatchGoal(goal, ctx);
+      const dispatchId = result.executionId; // holds dispatchId from 202 body
+
+      // Step 2: poll /executions/:dispatchId until the real execution_id is known.
+      // WS events carry execution_id, not dispatchId — we must resolve this before
+      // opening the stream, otherwise everything pours in unfiltered.
+      this.appendMessage('Waiting for execution to start…', 'ready');
+      const executionId = await client.pollExecutionId(dispatchId);
+
+      if (!executionId) {
+        this.appendMessage('Execution did not start within 30s — check goal-host logs.', 'error');
+        this.dispatching = false;
+        this.setDispatchBtnState(false);
+        return;
       }
+
+      // Now we have the real execution_id — set it before connecting WS so the
+      // filter is in place from the first message.
+      this.activeExecutionId = executionId;
       this.appendMessage('─'.repeat(36), 'divider');
 
       // Create vault note
-      this.goalFile = await this.goalNoteManager.createGoalNote(result.executionId, goal);
+      this.goalFile = await this.goalNoteManager.createGoalNote(executionId, goal);
 
-      // If goal completed synchronously already, mark done
-      if (result.status === 'success' || result.status === 'completed') {
-        this.appendMessage('Goal completed.', 'success');
-        if (this.goalFile) {
-          await this.goalNoteManager.markComplete(this.goalFile, result.status);
-        }
-        this.dispatching = false;
-        this.setDispatchBtnState(false);
-      } else {
-        // Keep dispatching=true until WS tells us it's done
-        // Ensure WS is connected so we receive events
-        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-          this.connectWS();
-        }
+      // Step 3: subscribe to WS, now filtered to this execution_id
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        this.connectWS();
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
@@ -499,16 +495,10 @@ export class GoalDispatchView extends ItemView {
     const execId = (msg.execution_id ?? msg.executionId) as string | undefined;
     const taskId = (msg.task_id ?? msg.taskId) as string | undefined;
 
-    // The async 202 dispatch returns a dispatchId, not the real execution_id.
-    // Latch the first execution_id we see in any event as the root execution.
-    if (execId && !this.activeExecutionId) {
-      this.activeExecutionId = execId;
-    }
-
-    // While dispatching, show all events — we just fired a goal and the
-    // activity system is responding. Root = first execution we latched;
-    // everything else is a sub-execution and gets indented.
+    // Strict filter: only show events from the root execution we resolved via
+    // polling, plus sub-executions that start while it's running.
     const isRoot = !execId || execId === this.activeExecutionId;
+    if (!isRoot && !this.execCtxs.has(execId ?? '')) return;
 
     const pad = isRoot ? '' : '  ';     // indent sub-executions
     const cpd = isRoot ? '  ' : '    '; // deeper indent for continuations
@@ -520,11 +510,13 @@ export class GoalDispatchView extends ItemView {
       case 'execution.started': {
         const variantId = (msg.variant_id ?? msg.variantId) as string | undefined;
         if (execId) {
-          const ctx = this.getExecCtx(execId);
+          const ctx = this.getExecCtx(execId); // registers it, passes future filter
           ctx.variantId = variantId;
         }
-        if (!isRoot && variantId) {
-          // A sub-execution started — announce it so the observer can follow
+        if (isRoot && variantId) {
+          // Show the activity name for the root execution
+          this.appendMessage(`◈ Activity: ${variantId}`);
+        } else if (!isRoot && variantId) {
           this.appendMessage(`${pad}↳ Sub-activity: ${variantId}`, 'sub');
         }
         break;
