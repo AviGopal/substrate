@@ -48,13 +48,23 @@ export class GoalHostClient {
   ) {}
 
   /**
-   * Poll GET /executions/:dispatchId until the execution_id is known (status ≠ running)
-   * or the timeout elapses. Returns the executionId or null on timeout.
+   * Poll GET /executions/:dispatchId until execution_id is known or timeout.
+   * Returns { executionId, variantId } on success, throws with reason on failure.
+   *
+   * Does NOT bail early on status=failed — auto-draft LLM errors are transient
+   * and the execution may be retried. Only gives up after the full timeout or
+   * after seeing failed status on 3 consecutive polls.
    */
-  async pollExecutionId(dispatchId: string, timeoutMs = 300000): Promise<string | null> {
+  async pollExecutionId(
+    dispatchId: string,
+    timeoutMs = 300000,
+  ): Promise<{ executionId: string; variantId?: string }> {
     const deadline = Date.now() + timeoutMs;
+    let consecutiveFails = 0;
+    let lastError = '';
+
     while (Date.now() < deadline) {
-      await new Promise(r => setTimeout(r, 600));
+      await new Promise(r => setTimeout(r, 800));
       try {
         const r = await requestUrl({
           url: `${this.endpoint}/executions/${dispatchId}`,
@@ -62,12 +72,30 @@ export class GoalHostClient {
           headers: { 'Authorization': `ApiKey ${this.apiKey}` },
         });
         const body = r.json as Record<string, unknown>;
-        if (body.executionId) return body.executionId as string;
-        // status=failed without executionId means it crashed before starting
-        if (body.status === 'failed') return null;
-      } catch { /* ignore transient errors, keep polling */ }
+        if (body.executionId) {
+          return {
+            executionId: body.executionId as string,
+            variantId: body.selectedTemplateId as string | undefined,
+          };
+        }
+        if (body.status === 'failed') {
+          lastError = (body.error as string) || 'execution failed';
+          consecutiveFails++;
+          if (consecutiveFails >= 3) {
+            throw new Error(`Dispatch failed: ${lastError}`);
+          }
+          // keep polling — may recover
+        } else {
+          consecutiveFails = 0; // reset on running/other status
+        }
+      } catch (e) {
+        // Re-throw our own deliberate errors
+        if (e instanceof Error && e.message.startsWith('Dispatch failed:')) throw e;
+        // Network/timeout errors — keep polling
+        lastError = e instanceof Error ? e.message : String(e);
+      }
     }
-    return null;
+    throw new Error(`No response after ${Math.round(timeoutMs / 60000)} min${lastError ? `: ${lastError}` : ''}`);
   }
 
   async dispatchGoal(goal: string, ctx?: VaultContext): Promise<GoalDispatchResult> {

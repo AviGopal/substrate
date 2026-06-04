@@ -328,22 +328,22 @@ export class GoalDispatchView extends ItemView {
       }, 5000);
       this.updateSelectingMessage(0);
 
-      // Step 2: poll until the real execution_id is known, then replay buffer
-      const executionId = await client.pollExecutionId(dispatchId);
+      // Step 2: poll until the real execution_id is known, then replay buffer.
+      // Throws with a descriptive message on persistent failure.
+      const { executionId, variantId: dispatchVariantId } = await client.pollExecutionId(dispatchId);
       window.clearInterval(elapsedTimer);
-
-      if (!executionId) {
-        this.appendMessage('Execution did not start within 5 min — check goal-host logs.', 'error');
-        this.buffering = false;
-        this.eventBuffer.clear();
-        this.dispatching = false;
-        this.setDispatchBtnState(false);
-        return;
-      }
 
       // Step 3: replay buffered events for this execution_id, then switch to live
       this.buffering = false;
       this.activeExecutionId = executionId;
+
+      // Seed execCtx from poll response so we have the variant name before
+      // execution_started events arrive (or in case they were already buffered).
+      if (dispatchVariantId) {
+        const ctx2 = this.getExecCtx(executionId);
+        ctx2.variantId = ctx2.variantId ?? dispatchVariantId;
+        this.appendMessage(`◈ Activity: ${dispatchVariantId}`);
+      }
       this.appendMessage('─'.repeat(36), 'divider');
 
       const buffered = this.eventBuffer.get(executionId) ?? [];
@@ -352,9 +352,8 @@ export class GoalDispatchView extends ItemView {
       }
       this.eventBuffer.clear();
 
-      // Fire impulse relevance feedback for the obsidian shapes that were in
-      // context. Derive success from the buffered execution_completed event.
-      const variantId = this.execCtxs.get(executionId)?.variantId;
+      // Fire impulse relevance feedback for the obsidian shapes in context.
+      const variantId = this.execCtxs.get(executionId)?.variantId ?? dispatchVariantId;
       if (variantId && ctx?.available_shapes?.length) {
         const completedEvent = buffered.find(m =>
           m.type === 'execution_completed' || m.type === 'activity.completed',
