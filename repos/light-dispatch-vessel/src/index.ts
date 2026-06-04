@@ -285,6 +285,7 @@ async function runDispatch(
   extraTags: string[] = [],
   parentExecutionId?: string,
   compositionChain: string[] = [],
+  stateSignatureHash?: string,
 ): Promise<DispatchOutcome> {
   const dispatchId = crypto.randomUUID();
   const executionId = `exec_${dispatchId.slice(0, 12)}`;
@@ -312,6 +313,7 @@ async function runDispatch(
         dispatcher_used: "light-dispatch",
         dispatch_id: dispatchId,
         failure_reason: "template_not_found",
+        ...(stateSignatureHash ? { state_signature_hash: stateSignatureHash } : {}),
       },
       parent_execution_id: parentExecutionId,
       composition_chain: compositionChain,
@@ -423,6 +425,7 @@ async function runDispatch(
     tasks: taskRecords,
     tags: [
       `dispatcher_used:light-dispatch`,
+      ...(stateSignatureHash ? [`state_signature:${stateSignatureHash}`] : []),
       ...extraTags,
     ],
     metadata: {
@@ -431,6 +434,7 @@ async function runDispatch(
       task_count: tpl.tasks.length,
       success_count: successCount,
       failure_count: failureCount,
+      ...(stateSignatureHash ? { state_signature_hash: stateSignatureHash } : {}),
     },
     parent_execution_id: parentExecutionId,
     composition_chain: compositionChain,
@@ -497,8 +501,10 @@ const server = Bun.serve({
         ? body["parent_execution_id"] : undefined;
       const compositionChain = Array.isArray(body["composition_chain"])
         ? (body["composition_chain"] as string[]) : [];
+      const stateSignatureHash = typeof body["state_signature_hash"] === "string"
+        ? body["state_signature_hash"] as string : undefined;
       try {
-        const outcome = await runDispatch(templateId, variables, tags, parentExecutionId, compositionChain);
+        const outcome = await runDispatch(templateId, variables, tags, parentExecutionId, compositionChain, stateSignatureHash);
         return Response.json(outcome, { status: outcome.status === "success" ? 200 : 207 });
       } catch (err) {
         return Response.json({ error: (err as Error).message }, { status: 500 });

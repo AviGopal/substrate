@@ -1075,6 +1075,7 @@ async function dispatchGoal(
   targetTemplateId: string | undefined,
   variables: Record<string, unknown>,
   tags: string[],
+  stateSignatureHash?: string | null,
 ): Promise<Response> {
   if (dispatcher === "light-dispatch") {
     if (!targetTemplateId) {
@@ -1087,6 +1088,7 @@ async function dispatchGoal(
         template_id: targetTemplateId,
         variables: { source: "boredom-vessel", ...variables },
         tags,
+        ...(stateSignatureHash ? { state_signature_hash: stateSignatureHash } : {}),
       }),
     });
   }
@@ -1097,6 +1099,7 @@ async function dispatchGoal(
     variables: { source: "boredom-vessel", ...variables },
   };
   if (targetTemplateId) requestBody.targetTemplateId = targetTemplateId;
+  if (stateSignatureHash) requestBody.state_signature_hash = stateSignatureHash;
   return await fetch(`${GOAL_HOST_ENDPOINT}/run-goal`, {
     method: "POST",
     headers: authHeaders(),
@@ -1206,7 +1209,8 @@ async function main(): Promise<void> {
     const probeDispatcher: DispatcherChoice =
       dispatcher === "goal-host" ? "light-dispatch" : "goal-host";
     void dispatchGoal(probeDispatcher, goal, targetTemplateId, extraVars,
-      [...baseTags, "comparison_probe:true", `comparison_probe_pair:${dispatcher}`])
+      [...baseTags, "comparison_probe:true", `comparison_probe_pair:${dispatcher}`],
+      selection.signature)
       .catch((err) => {
         console.warn(`[boredom-vessel] comparison probe (${probeDispatcher}) failed: ${(err as Error).message}`);
       });
@@ -1214,7 +1218,7 @@ async function main(): Promise<void> {
 
   let res: Response;
   try {
-    res = await dispatchGoal(dispatcher, goal, targetTemplateId, extraVars, baseTags);
+    res = await dispatchGoal(dispatcher, goal, targetTemplateId, extraVars, baseTags, selection.signature);
   } catch (err) {
     console.error(`[boredom-vessel] ${dispatcher} dispatcher unreachable: ${(err as Error).message}`);
     // Fallback: if primary was light-dispatch and goal-host is eligible, try goal-host
@@ -1223,7 +1227,7 @@ async function main(): Promise<void> {
       dispatcher = "goal-host";
       try {
         res = await dispatchGoal("goal-host", goal, targetTemplateId, extraVars,
-          [...baseTags, "dispatcher_fallback:from_light-dispatch"]);
+          [...baseTags, "dispatcher_fallback:from_light-dispatch"], selection.signature);
       } catch (err2) {
         console.error(`[boredom-vessel] fallback also failed: ${(err2 as Error).message}`);
         process.exit(1);
