@@ -352,6 +352,25 @@ export class GoalDispatchView extends ItemView {
       }
       this.eventBuffer.clear();
 
+      // Fire impulse relevance feedback for the obsidian shapes that were in
+      // context. Derive success from the buffered execution_completed event.
+      const variantId = this.execCtxs.get(executionId)?.variantId;
+      if (variantId && ctx?.available_shapes?.length) {
+        const completedEvent = buffered.find(m =>
+          m.type === 'execution_completed' || m.type === 'activity.completed',
+        );
+        const completedData = (completedEvent?.data ?? completedEvent ?? {}) as Record<string, unknown>;
+        const succeeded = completedData.success !== false;
+        // Fire and forget — don't await, don't block the UI
+        void client.recordImpulseRelevance(
+          this.plugin.settings.activityApiUrl,
+          executionId,
+          variantId,
+          ctx.available_shapes,
+          succeeded,
+        );
+      }
+
       this.goalFile = await this.goalNoteManager.createGoalNote(executionId, goal);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);

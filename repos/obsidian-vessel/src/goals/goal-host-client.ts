@@ -71,13 +71,18 @@ export class GoalHostClient {
   }
 
   async dispatchGoal(goal: string, ctx?: VaultContext): Promise<GoalDispatchResult> {
-    // Build variables from the vault context snapshot.
-    // expected_output_shapes hints to Thompson sampling which activities can
-    // USE the obsidian shapes we're providing — biasing toward vault-aware ones.
     const variables: Record<string, unknown> = ctx ? { ...ctx } : {};
     const expectedOutputShapes = ctx?.available_shapes?.length
       ? ctx.available_shapes
       : undefined;
+
+    // Tags persist to the execution trace so the vault context is visible to
+    // the learning loop even though variables themselves are ephemeral.
+    const tags: string[] = ['dispatcher:obsidian-vessel'];
+    if (ctx?.active_note_path) tags.push('obsidian:has_active_note');
+    if (ctx?.selection) tags.push('obsidian:has_selection');
+    if (ctx?.open_note_paths?.length) tags.push(`obsidian:open_notes_${ctx.open_note_paths.length}`);
+    if (ctx?.available_shapes?.length) tags.push(`obsidian:shapes_${ctx.available_shapes.length}`);
 
     const resp = await requestUrl({
       url: `${this.endpoint}/run-goal`,
@@ -89,15 +94,58 @@ export class GoalHostClient {
       body: JSON.stringify({
         goal,
         variables,
+        tags,
         ...(expectedOutputShapes ? { expected_output_shapes: expectedOutputShapes } : {}),
       }),
     });
     const raw = resp.json as Record<string, unknown>;
     return {
-      // goal-host-vessel returns dispatchId; fall back to executionId for older builds
       executionId: (raw.executionId ?? raw.dispatchId ?? '') as string,
       status: (raw.status ?? 'unknown') as string,
       selectedTemplateId: raw.selectedTemplateId as string | undefined,
     };
+  }
+
+  /**
+   * Submit impulse relevance feedback to the learning loop after execution.
+   *
+   * Records `P(success | obsidian:shape present)` for each shape that was in
+   * the vault context. This teaches the recommender which activities benefit
+   * from having vault content available as context, biasing future selections
+   * toward vault-aware templates when obsidian shapes are in the pool.
+   *
+   * Fires once per dispatch: was_loaded=true because the shapes were available
+   * to the execution (even if not all were resolved); execution_succeeded
+   * reflects the actual trace outcome.
+   */
+  async recordImpulseRelevance(
+    activityApiUrl: string,
+    executionId: string,
+    variantId: string,
+    shapes: string[],
+    succeeded: boolean,
+  ): Promise<void> {
+    for (const shape of shapes) {
+      try {
+        await requestUrl({
+          url: `${activityApiUrl}/v2/activities/impulse-relevance`,
+          method: 'POST',
+          headers: {
+            'Authorization': `ApiKey ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            impulse_id: shape,
+            activity_variant_id: variantId,
+            execution_id: executionId,
+            was_loaded: true,
+            execution_succeeded: succeeded,
+            pointer_type: shape,
+          }),
+        });
+      } catch {
+        // relevance writes are best-effort — don't surface errors to the user
+      }
+    }
   }
 }
