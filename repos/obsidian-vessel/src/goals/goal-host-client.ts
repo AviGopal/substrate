@@ -51,7 +51,7 @@ export class GoalHostClient {
    * Poll GET /executions/:dispatchId until the execution_id is known (status ≠ running)
    * or the timeout elapses. Returns the executionId or null on timeout.
    */
-  async pollExecutionId(dispatchId: string, timeoutMs = 30000): Promise<string | null> {
+  async pollExecutionId(dispatchId: string, timeoutMs = 300000): Promise<string | null> {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 600));
