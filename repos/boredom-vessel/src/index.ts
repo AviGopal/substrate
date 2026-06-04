@@ -270,6 +270,11 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // the executor side of the loop.
   "run gap-to-scenario-bridge-tick to drain open substrateGap rows into scenario JSON files the drafter consumes",
   "run dispatch-latest-auto-draft to pick the newest unexecuted gap-closing:auto-* template and seed its Thompson posterior via light-dispatch",
+  // Apply-proposal close (Break 3, 2026-06-04, goal[23]): convert the newest
+  // unstaged drafter proposal into a staged mitosis directory the existing
+  // cutover machinery (mitosis-tick + vessel_mitosis_cutover) can apply.
+  // Closes the analyse→enact gap end-to-end.
+  "run apply-proposal-as-patch to convert the newest unstaged proposal report into a staged mitosis directory with mitosis-pending.json updated",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -328,6 +333,10 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // misrouting to a high-α template (goal texts are novel).
   "development-vessel:gap-to-scenario-bridge-tick",
   "development-vessel:dispatch-latest-auto-draft",
+  // goal[23] — apply-proposal-as-patch (Break 3, 2026-06-04). Single-task
+  // wrapper around apply_proposal_as_patch resolver. One LLM call + deterministic
+  // I/O — moderate tier.
+  "development-vessel:apply-proposal-as-patch",
 ];
 
 /**
@@ -373,12 +382,15 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "cheap",     // goal[20] resolver-distribution-audit-tick (HTTP only; no LLM)
   "cheap",     // goal[21] gap-to-scenario-bridge-tick (single fs scan + bounded writes; no LLM)
   "moderate",  // goal[22] dispatch-latest-auto-draft (resolver + downstream light-dispatch chain runs an authored 4-task LLM template)
+  "moderate",  // goal[23] apply-proposal-as-patch (1 LLM patch call + bounded fs I/O)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
 // default `source` variable; goal[8] (draft-gap-closing-activity) needs explicit paths.
-// Scenarios rotate via SCENARIO_ROTATION below to spread learning across failure modes.
-const SCENARIO_ROTATION: readonly string[] = [
+// Scenarios picked DYNAMICALLY from disk (2026-06-04, Part C): newest mtime wins so
+// freshly-bridged gaps get drafted with low latency. Fallback to the hardcoded list
+// only if the scenarios dir is unreadable or empty (defensive).
+const SCENARIO_ROTATION_FALLBACK: readonly string[] = [
   "fm-17-resolver-budget-noncompliance",
   "fm-43-cascade-attribution-error",
   "fm-44-silent-trace-loss",
@@ -386,6 +398,24 @@ const SCENARIO_ROTATION: readonly string[] = [
   "fp-12-partial-success-recorded-as-total",
   "fp-15-missing-producer-stale-registration",
 ];
+
+const SCENARIOS_DIR = process.env.SCENARIOS_DIR ?? "/workspace/validation/failure-modes/scenarios";
+
+function pickScenarioForCycle(): string {
+  try {
+    const fs = require("node:fs") as typeof import("node:fs");
+    const names = fs.readdirSync(SCENARIOS_DIR).filter((n) => n.endsWith(".json"));
+    if (names.length === 0) return SCENARIO_ROTATION_FALLBACK[0]!;
+    const ranked = names
+      .map((n) => ({ id: n.replace(/\.json$/, ""), mtime: fs.statSync(`${SCENARIOS_DIR}/${n}`).mtimeMs }))
+      .sort((a, b) => b.mtime - a.mtime);
+    const rotIdx = Math.floor(Date.now() / (30 * 60 * 1000)) % ranked.length;
+    return ranked[rotIdx]!.id;
+  } catch {
+    const rotIdx = Math.floor(Date.now() / (30 * 60 * 1000)) % SCENARIO_ROTATION_FALLBACK.length;
+    return SCENARIO_ROTATION_FALLBACK[rotIdx]!;
+  }
+}
 
 // Rotating query for concept-usage-backfill (goal[16]). Spreads the
 // candidate-concept surface across different substrate topics so different
@@ -472,11 +502,11 @@ function extraVariablesForGoal(goalIdx: number): Record<string, unknown> {
   }
   if (goalIdx === 8) {
     // draft-gap-closing-activity reads {{report_path}} and {{scenarios_dir}}/{{scenario_id}}.json.
-    // Rotate scenario_id across the 6 seeded scenarios so different failure modes get drafted over time.
-    const rotIdx = Math.floor(Date.now() / (30 * 60 * 1000)) % SCENARIO_ROTATION.length;
+    // Dynamic scenario rotation (2026-06-04, Part C): pickScenarioForCycle reads the
+    // scenarios dir live and prefers newest-mtime entries so freshly-bridged gaps drain.
     return {
-      scenarios_dir: "/workspace/validation/failure-modes/scenarios",
-      scenario_id: SCENARIO_ROTATION[rotIdx]!,
+      scenarios_dir: SCENARIOS_DIR,
+      scenario_id: pickScenarioForCycle(),
       // report_path points to the most-recent harness-run-matrix output — goal[5] writes here.
       // If the file is missing, fs_read fails fast and the gap-drafting skips (graceful).
       report_path: "/workspace/validation/results/latest-failure-mode-report.json",
