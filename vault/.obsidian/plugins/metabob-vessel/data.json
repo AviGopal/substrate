@@ -1,10 +1,11 @@
 {
   "activityApiUrl": "http://127.0.0.1:18080",
-  "apiKey": "",
+  "apiKey": "mb-b3JnYW5pemF0aW9uczpzdWJzdHJhdGUtdXNlcnM6N2o4Y2QybjNhczN2cXVjdXBsZmUta2V5X0ZFa1pCQzNHU1BMTXhvblctaHR0cDovLzEyNy4wLjAuMTo4MTAx-d207a2d393c154159c4def1072276026",
   "orgId": "",
   "vesselId": "obsidian-vessel-devbob",
   "vesselName": "Obsidian Vessel (devbob)",
-  "websocketUrl": "ws://127.0.0.1:18080/ws",
+  "heartbeatInterval": 30000,
+  "registrationTtl": 300,
   "shapes": [
     "obsidian:note",
     "obsidian:search",
@@ -16,12 +17,11 @@
     "obsidian:concept_view",
     "obsidian:concept_writeback"
   ],
-  "heartbeatInterval": 30000,
-  "registrationTtl": 300,
   "executionNotesFolder": "Substrate/Executions",
   "activityTemplatesFolder": "Substrate/Templates",
   "canvasFolder": "Substrate/Canvases",
   "syncOnStart": false,
+  "historicalSyncLimit": 0,
   "syncIntervalMinutes": 5,
   "syncBatchSize": 50,
   "preserveUserContent": true,
@@ -41,14 +41,16 @@
   "canvasAutoUpdate": true,
   "canvasLayout": "hierarchical",
   "maxNodesPerCanvas": 100,
+  "websocketUrl": "ws://127.0.0.1:18080/ws",
   "autoSync": false,
   "syncInterval": 300000,
-  "historicalSyncLimit": 0,
   "enableConceptDbSync": true,
   "conceptDbEndpoint": "http://127.0.0.1:18260",
   "conceptDbApiKey": "",
   "conceptDbSyncRoot": "concept-db",
   "conceptDbSyncIntervalSec": 300,
+  "enableConceptDbWriteback": false,
   "conceptDbSyncSourceTypes": [],
-  "enableConceptDbWriteback": true
+  "goalHostEndpoint": "http://127.0.0.1:18210",
+  "enableGoalDispatch": true
 }
