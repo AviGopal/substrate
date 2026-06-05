@@ -1650,9 +1650,21 @@ function pickBestEligible(
   const top = scored[0]!;
   // Surface the signature boost in the log so we can audit self-direction.
   if (top.sigBoost > 1.0) {
+    // Count cells that met the sample threshold and contributed boost to any
+    // eligible goal — this is the per-signature Thompson cell count whose
+    // posterior means drive the boost-weighted selection.
+    let cellsExamined = 0;
+    for (const idx of eligibleIdxs) {
+      const cell = posteriorsBySig.get(idx);
+      if (cell && cell.samples >= SIG_CONTINUITY_MIN_SAMPLES) cellsExamined++;
+    }
+    const sigShort = currentSignature?.slice(0, 8) ?? "null";
     console.log(
       `[pool] signature-continuity: boosted goal[${top.idx}] by ${(top.sigBoost - 1).toFixed(2)} ` +
-      `based on prior wins at signature=${currentSignature?.slice(0, 8) ?? "null"}`,
+      `based on prior wins at signature=${sigShort}`,
+    );
+    console.log(
+      `[pool] mode=thompson cells_examined=${cellsExamined} picked=goal[${top.idx}] at signature=${sigShort}`,
     );
   }
   return {
