@@ -1104,13 +1104,30 @@ async function handleRunGoal(req: Request): Promise<Response> {
         return;
       }
       console.log(`[goal-host-vessel] auto-draft pre-recommend OK for goal="${(goal as string).slice(0, 60)}"`);
-      const data = await preRec.json() as { recommendations?: Array<{ template_id: string; score?: number }> };
-      const top = (data.recommendations ?? [])[0];
+      const data = await preRec.json() as { recommendations?: Array<{ template_id: string; score?: number }>; fallback_tier?: string };
+      const recommendations = data.recommendations ?? [];
+      const top = recommendations[0];
       const topScore = top?.score ?? 0;
       if (top && topScore >= threshold) return;
-      console.log(`[goal-host-vessel] auto-draft trigger: goal="${(goal as string).slice(0, 80)}" top_score=${topScore} < ${threshold}`);
+      // Fix A: exploration picks (score < threshold but fallback_tier != "refused")
+      // should be executed by ias-executor directly — autoDraft only fires when
+      // fallback_tier=refused (genuinely nothing returned, no exploration picks).
+      const fallbackTier = data.fallback_tier ?? "none";
+      if (top) {
+        // At least one recommendation exists (even with score=0, exploration=true).
+        // Let ias-executor handle selection; autoDraft would preempt a valid pick.
+        console.log(`[goal-host-vessel] auto-draft skipped: ${recommendations.length} exploration pick(s) available (top_score=${topScore.toFixed(3)}, fallback_tier=${fallbackTier})`);
+        return;
+      }
+      if (fallbackTier !== "refused") {
+        // No top recommendation but fallback_tier indicates some tier returned
+        // something — still not a hard empty; skip autoDraft.
+        console.log(`[goal-host-vessel] auto-draft skipped: fallback_tier=${fallbackTier} (not refused), no template selected but not a hard gap`);
+        return;
+      }
+      console.log(`[goal-host-vessel] auto-draft trigger: goal="${(goal as string).slice(0, 80)}" fallback_tier=refused (top_score=${topScore})`);
       const triggerStart = Date.now();
-      const candidatesConsidered = (data.recommendations ?? []).slice(0, 5).map((r) => ({ id: r.template_id, score: r.score ?? 0 }));
+      const candidatesConsidered = recommendations.slice(0, 5).map((r) => ({ id: r.template_id, score: r.score ?? 0 }));
       void emitAuthoringDecision("auto_draft_triggered",
         `top_score=${topScore} < threshold=${threshold} for goal: ${(goal as string).slice(0, 120)}`,
         {
