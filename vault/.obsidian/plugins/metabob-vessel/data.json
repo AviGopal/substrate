@@ -52,5 +52,8 @@
   "enableConceptDbWriteback": false,
   "conceptDbSyncSourceTypes": [],
   "goalHostEndpoint": "http://127.0.0.1:18210",
-  "enableGoalDispatch": true
+  "enableGoalDispatch": true,
+  "enableActivityFamilySync": true,
+  "enableVesselSync": true,
+  "discoveryVesselEndpoint": "http://127.0.0.1:18100"
 }
