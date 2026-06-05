@@ -1920,11 +1920,21 @@ async function dispatchOne(goalIdx: number, state: SubstrateState): Promise<{ di
   });
   // Light-dispatch returns synchronously — record outcome immediately.
   if (decision.dispatcher === "light-dispatch") {
-    const success = dispatch.status === "success" || dispatch.status === "completed";
+    // Outcome shape check: light-dispatch returns status=success when the
+    // resolver chain completed without throwing, but the LAST task's body
+    // may be `structuredError` — meaning the resolver itself reported
+    // no_eligible_work / validation_rejected / missing_dependency. Treat
+    // those as failures for momentum/Thompson purposes; otherwise the pool
+    // gets trapped in echo chambers where goals that always succeed-with-
+    // no-work keep dominating selection.
+    const shapes = (dispatch as Record<string, unknown>)["output_shapes"] as string[] | undefined;
+    const lastShape = Array.isArray(shapes) && shapes.length > 0 ? shapes[shapes.length - 1] : undefined;
+    const noOpSignaled = lastShape === "structuredError";
+    const success = (dispatch.status === "success" || dispatch.status === "completed") && !noOpSignaled;
     recordOutcome(goalIdx, success);
     console.log(
       `[pool] light-dispatch sync goal[${goalIdx}] (${targetTemplateId ?? "?"}) status=${dispatch.status} ` +
-      `executionId=${dispatch.executionId ?? "?"} dispatcher=${decision.dispatcher}`,
+      `outcome=${success ? "success" : "no_op"} executionId=${dispatch.executionId ?? "?"} dispatcher=${decision.dispatcher}`,
     );
     // Return null so the caller doesn't add it to inFlight (already complete).
     return null;
