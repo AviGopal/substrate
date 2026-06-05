@@ -196,6 +196,21 @@ EOF
     log "warn $intent_id: commit $git_sha created but push failed"
     write_result "$intent_id" "$git_sha" "local_only" "push failed"
   fi
+
+  # Mirror patched files back into the container's /vessels/<vessel>/ tree.
+  # Without this, the container's source drifts behind host after each
+  # autonomous commit — apply-proposal-as-patch re-reads the still-original
+  # file, stages with the same base_sha, the next intent's freshness
+  # check rejects on host (current_sha now matches the committed patch,
+  # not the staged sentinel). Chain produces exactly one commit and stops.
+  # Mirror = `docker cp host_path container_path` for each staged file.
+  local f
+  while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
+    docker cp "$host_vessel_root/$f" "$CONTAINER:/vessels/$vessel_name/$f" 2>/dev/null \
+      && log "mirrored $f → container:/vessels/$vessel_name/$f" \
+      || log "warn: mirror failed for $f (chain may stall on next intent)"
+  done <<<"$staged_files"
 }
 
 main_loop_once() {
