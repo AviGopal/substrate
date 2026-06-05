@@ -308,6 +308,15 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // claimed Thompson α/β cells against empirical trace counts; emits substrateGap
   // (posterior_consistency_drift) when posterior means drift > threshold.
   "run posterior-consistency-audit-tick to cross-check claimed Thompson α/β cells against empirical trace counts and emit posterior_consistency_drift substrateGap impulses for stale posteriors",
+  // Meta-cognition bootstrap (goal[29], 2026-06-05). The last operator-extension
+  // required for the substrate to extend its own capability surface. Detects
+  // failure traces with "unknown shape" / "no resolver for type" signatures
+  // and emits substrateGap (category=missing_capability). The resolver-author
+  // seed template consumes those gaps on a subsequent tick and produces a
+  // 4-file new-resolver patch that apply_proposal_as_patch's multifile branch
+  // stages for cutover. After this loop closes the substrate authors its own
+  // resolvers in response to its own observed needs.
+  "run capability-gap-audit-tick to scan recent failure traces for missing-capability signatures (unknown shape, no resolver for type, endpoint 404) and emit substrateGap impulses for each capability gap cluster",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -388,6 +397,10 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // goal[28] — posterior-consistency-audit-tick (2026-06-05): immunity-pattern
   // single-resolver wrapper. Explicit targetTemplateId; goal text is novel.
   "development-vessel:posterior-consistency-audit-tick",
+  // goal[29] — capability-gap-audit-tick (2026-06-05): meta-cognition bootstrap
+  // detector half. Single-resolver immunity-pattern wrapper; explicit
+  // targetTemplateId routes the novel goal text deterministically.
+  "development-vessel:capability-gap-audit-tick",
 ];
 
 /**
@@ -439,6 +452,7 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "cheap",     // goal[26] vector-space-orthogonality-audit-tick (HTTP only; no LLM)
   "cheap",     // goal[27] trace-outcome-validity-audit-tick (HTTP only; no LLM)
   "cheap",     // goal[28] posterior-consistency-audit-tick (HTTP only; no LLM)
+  "cheap",     // goal[29] capability-gap-audit-tick (HTTP only; no LLM)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
