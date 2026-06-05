@@ -16,6 +16,7 @@
  *   - Otherwise: InProcessLLMPort wrapping the Anthropic SDK (requires ANTHROPIC_API_KEY).
  */
 
+import { appendFile } from "node:fs/promises";
 import Anthropic from "@anthropic-ai/sdk";
 import {
   GoalHost,
@@ -49,13 +50,27 @@ import type { EventSink } from "@avigopal/ias-executor-ts";
 // (backpressure working).
 // ─────────────────────────────────────────────────────────────────────────────
 
-const BUS_MAX_INFLIGHT = parseInt(process.env.BUS_MAX_INFLIGHT ?? "32", 10);
+const BUS_MAX_INFLIGHT = parseInt(
+  process.env.IAS_BUS_MAX_INFLIGHT ?? process.env.BUS_MAX_INFLIGHT ?? "256",
+  10,
+);
 const BUS_MAX_INFLIGHT_BYTES = parseInt(
   process.env.BUS_MAX_INFLIGHT_BYTES ?? String(50 * 1024 * 1024),
   10,
 );
-const BUS_QUEUE_MAX = 100;
+const BUS_QUEUE_MAX = parseInt(
+  process.env.IAS_BUS_QUEUE_SIZE ?? process.env.BUS_QUEUE_MAX ?? "1024",
+  10,
+);
 const BUS_STATS_INTERVAL_MS = 30_000;
+// When backpressure exceeds this window, fall through to drop+signal. Bounded
+// to keep callers from hanging indefinitely if activity-api is wedged.
+const BUS_BACKPRESSURE_MAX_WAIT_MS = parseInt(
+  process.env.IAS_BUS_BACKPRESSURE_MAX_WAIT_MS ?? "30000",
+  10,
+);
+const DISPATCH_DROP_LOG_PATH =
+  process.env.IAS_BUS_DROP_LOG_PATH ?? "/workspace/dispatch-dropped.jsonl";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // L2 instrumentation — process.memoryUsage() trajectory probe
@@ -307,11 +322,14 @@ setInterval(() => {
 class BoundedBusSink implements EventSink {
   private readonly inner: BusForwardingEventSink;
   private readonly queue: Array<{ event: unknown; bytes: number }> = [];
+  private readonly waiters: Array<() => void> = [];
   private inFlight = 0;
   private bytesInFlight = 0;
   private droppedSinceLastStats = 0;
   private droppedQueueOverflow = 0;
   private droppedByteCap = 0;
+  private droppedTimeout = 0;
+  private dispatchSeq = 0;
 
   constructor(opts: { inner: BusForwardingEventSink }) {
     this.inner = opts.inner;
@@ -319,29 +337,88 @@ class BoundedBusSink implements EventSink {
   }
 
   emit(event: unknown): void | Promise<void> {
-    // Inner sink: BusForwardingEventSink.emit() calls its own inner sink
-    // (the noop) and then schedules its fire-and-forget forward(). We can't
-    // call its emit directly without re-triggering the unbounded queue. So
-    // we replicate the noop-inner contract here and only forward via OUR
-    // bounded queue. The inner BusForwardingEventSink's outageLogged state
-    // is still used by the actual forwardOnce.
     let bytes = 0;
     try {
       bytes = JSON.stringify(event).length;
     } catch {
       bytes = 0;
     }
-    this.enqueue({ event, bytes });
+    if (this.queue.length < BUS_QUEUE_MAX) {
+      this.queue.push({ event, bytes });
+      this.drain();
+      return;
+    }
+    // Queue full — apply backpressure: caller awaits until a slot frees up.
+    // Cap the wait at BUS_BACKPRESSURE_MAX_WAIT_MS to avoid hanging callers
+    // when activity-api is wedged; beyond that, drop + emit observable signal.
+    return this.awaitCapacityThenEnqueue({ event, bytes });
+  }
+
+  private async awaitCapacityThenEnqueue(item: {
+    event: unknown;
+    bytes: number;
+  }): Promise<void> {
+    const waited = await this.waitForSlot();
+    if (!waited) {
+      this.droppedTimeout += 1;
+      this.droppedSinceLastStats += 1;
+      this.recordDispatchDropped("timeout_exceeded", item);
+      return;
+    }
+    if (this.queue.length >= BUS_QUEUE_MAX) {
+      // Still full after wake — drop oldest (preserve newer signal).
+      this.queue.shift();
+      this.droppedQueueOverflow += 1;
+      this.droppedSinceLastStats += 1;
+      this.recordDispatchDropped("queue_overflow", item);
+    }
+    this.queue.push(item);
     this.drain();
   }
 
-  private enqueue(item: { event: unknown; bytes: number }): void {
-    if (this.queue.length >= BUS_QUEUE_MAX) {
-      this.queue.shift(); // drop oldest
-      this.droppedQueueOverflow += 1;
-      this.droppedSinceLastStats += 1;
-    }
-    this.queue.push(item);
+  private waitForSlot(): Promise<boolean> {
+    return new Promise((resolve) => {
+      let settled = false;
+      const wake = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(true);
+      };
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        const idx = this.waiters.indexOf(wake);
+        if (idx >= 0) this.waiters.splice(idx, 1);
+        resolve(false);
+      }, BUS_BACKPRESSURE_MAX_WAIT_MS);
+      this.waiters.push(wake);
+    });
+  }
+
+  private notifyWaiter(): void {
+    const wake = this.waiters.shift();
+    if (wake) wake();
+  }
+
+  private recordDispatchDropped(
+    reason: "queue_overflow" | "byte_overflow" | "timeout_exceeded",
+    _item: { event: unknown; bytes: number },
+  ): void {
+    const entry = {
+      dispatch_id: `dispatch-drop-${Date.now()}-${++this.dispatchSeq}`,
+      dropped_at: new Date().toISOString(),
+      reason,
+      queue_state: {
+        in_flight: this.inFlight,
+        queue: this.queue.length,
+        bytes_in_flight: this.bytesInFlight,
+      },
+    };
+    // Fire-and-forget; never throw. JSONL line per drop.
+    appendFile(DISPATCH_DROP_LOG_PATH, JSON.stringify(entry) + "\n").catch(
+      () => {},
+    );
   }
 
   private drain(): void {
@@ -357,6 +434,7 @@ class BoundedBusSink implements EventSink {
       if (this.bytesInFlight > 0 && this.bytesInFlight + item.bytes > BUS_MAX_INFLIGHT_BYTES) {
         this.droppedByteCap += 1;
         this.droppedSinceLastStats += 1;
+        this.recordDispatchDropped("byte_overflow", item);
         continue;
       }
       this.inFlight += 1;
@@ -389,8 +467,9 @@ class BoundedBusSink implements EventSink {
       this.inFlight -= 1;
       this.bytesInFlight -= item.bytes;
       if (this.bytesInFlight < 0) this.bytesInFlight = 0;
-      // Pull more work in.
+      // Pull more work in, then wake any backpressured caller waiting on a slot.
       this.drain();
+      this.notifyWaiter();
     }
   }
 
@@ -399,7 +478,8 @@ class BoundedBusSink implements EventSink {
       `[BoundedBusSink] in_flight=${this.inFlight} queue=${this.queue.length} ` +
         `bytes_in_flight=${this.bytesInFlight} ` +
         `dropped_since_last=${this.droppedSinceLastStats} ` +
-        `(overflow=${this.droppedQueueOverflow} byte_cap=${this.droppedByteCap})`,
+        `(overflow=${this.droppedQueueOverflow} byte_cap=${this.droppedByteCap} ` +
+        `timeout=${this.droppedTimeout} waiters=${this.waiters.length})`,
     );
     this.droppedSinceLastStats = 0;
   }
