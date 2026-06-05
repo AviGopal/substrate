@@ -1466,6 +1466,31 @@ let running = true;
 let lastDispatchAt = 0;
 let lastAutoPromoteAt = 0;
 
+// ── Signature-continuity self-direction (2026-06-04, Part C) ───────────────
+// Cache the current state-space signature + per-goal posteriors at the same
+// cadence as substrate state. `pickBestEligible` boosts the score of any goal
+// that has prior wins at the current signature so the substrate's self-
+// direction reflects "what worked recently in this operational class".
+//
+// The boost is multiplicative (factor = 1 + SIG_CONTINUITY_GAIN * winRate)
+// so cold-cell goals (samples=0) are unaffected and high-prior-win goals get
+// up to a +SIG_CONTINUITY_GAIN multiplier when winRate=1.
+const SIG_CONTINUITY_GAIN = parseFloat(process.env["BOREDOM_SIG_CONTINUITY_GAIN"] ?? "0.5");
+const SIG_CONTINUITY_MIN_SAMPLES = 2;
+let currentSignature: string | null = null;
+let posteriorsBySig: Map<number, PosteriorCell> = new Map();
+let lastSigRefreshAt = 0;
+const SIG_REFRESH_INTERVAL_MS = 60_000;
+
+async function refreshSignatureAndPosteriors(): Promise<void> {
+  try {
+    const sig = await fetchCurrentSignature();
+    if (!sig) { currentSignature = null; posteriorsBySig = new Map(); return; }
+    currentSignature = sig;
+    posteriorsBySig = await fetchPosteriorsForSignature(sig);
+  } catch { /* tolerant */ }
+}
+
 async function refreshSubstrateState(): Promise<SubstrateState> {
   const fs = await import("node:fs/promises");
   let stagedMitosisPresent = false;
@@ -1581,18 +1606,40 @@ function pickBestEligible(
   eligibleIdxs: number[],
   state: SubstrateState,
 ): { idx: number; score: number; reason: string } {
+  // Signature-continuity boost: when the substrate is in the same operational
+  // class as recent successful dispatches, repeat what worked. Cells with
+  // < SIG_CONTINUITY_MIN_SAMPLES samples contribute no boost (avoids
+  // amplifying noise from cold cells).
   const scored = eligibleIdxs.map((idx) => {
     const mom = momentumScore(idx);
     const press = statePressure(idx, state);
     const noise = 0.7 + Math.random() * 0.6; // ε-greedy-equivalent jitter
-    return { idx, score: mom * press * noise, mom, press };
+    let sigBoost = 1.0;
+    let boostNote = "";
+    if (currentSignature) {
+      const cell = posteriorsBySig.get(idx);
+      if (cell && cell.samples >= SIG_CONTINUITY_MIN_SAMPLES) {
+        const winRate = cell.alpha / Math.max(1, cell.alpha + cell.beta);
+        sigBoost = 1 + SIG_CONTINUITY_GAIN * winRate;
+        boostNote = ` sig+${(sigBoost - 1).toFixed(2)}`;
+      }
+    }
+    const score = mom * press * noise * sigBoost;
+    return { idx, score, mom, press, sigBoost, boostNote };
   });
   scored.sort((a, b) => b.score - a.score);
   const top = scored[0]!;
+  // Surface the signature boost in the log so we can audit self-direction.
+  if (top.sigBoost > 1.0) {
+    console.log(
+      `[pool] signature-continuity: boosted goal[${top.idx}] by ${(top.sigBoost - 1).toFixed(2)} ` +
+      `based on prior wins at signature=${currentSignature?.slice(0, 8) ?? "null"}`,
+    );
+  }
   return {
     idx: top.idx,
     score: top.score,
-    reason: `mom=${top.mom.toFixed(2)} press=${top.press.toFixed(2)}`,
+    reason: `mom=${top.mom.toFixed(2)} press=${top.press.toFixed(2)}${top.boostNote}`,
   };
 }
 
@@ -1849,12 +1896,18 @@ async function poolLoop(): Promise<void> {
   );
   void startWSObserver();
   let state = await refreshSubstrateState();
+  await refreshSignatureAndPosteriors();
+  lastSigRefreshAt = Date.now();
   let lastStateRefresh = Date.now();
   while (running) {
     reapStaleInFlight();
     if (Date.now() - lastStateRefresh > POOL_STATE_REFRESH_MS) {
       state = await refreshSubstrateState();
       lastStateRefresh = Date.now();
+    }
+    if (Date.now() - lastSigRefreshAt > SIG_REFRESH_INTERVAL_MS) {
+      await refreshSignatureAndPosteriors();
+      lastSigRefreshAt = Date.now();
     }
     // Run auto-promote on a slower cadence than the pool loop.
     if (Date.now() - lastAutoPromoteAt > POOL_AUTOPROMOTE_INTERVAL_MS) {
