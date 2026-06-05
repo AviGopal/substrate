@@ -4,6 +4,7 @@ import { GoalInputModal } from './views/goal-input-modal';
 import { MetabobVesselSettings, DEFAULT_SETTINGS } from './settings';
 import { MetabobVesselSettingTab } from './settings-tab';
 import { HTTPServer } from './server/index';
+import { sendJson, sendError, parseJsonBody } from './server/routes';
 import { VesselClient } from './vessel-client';
 import { ActivityAPIClient } from './api-client';
 import { SyncService } from './sync/index';
@@ -466,6 +467,7 @@ export default class MetabobVesselPlugin extends Plugin {
       });
 
       await this.httpServer.start();
+      this.registerActionObservationRoutes(this.httpServer);
       console.log(`[Metabob Vessel] HTTP server started on port ${this.settings.serverPort}`);
     } catch (error) {
       console.error('[Metabob Vessel] Failed to start HTTP server:', error);
@@ -477,6 +479,169 @@ export default class MetabobVesselPlugin extends Plugin {
       // Server failure is not fatal - we can still work in offline mode
       this.httpServer = null;
     }
+  }
+
+  /**
+   * Register action + observation HTTP endpoints on the running server.
+   *
+   * Action endpoints (POST) let external callers trigger plugin behaviours.
+   * Observation endpoints (GET) expose aggregated vault/plugin state.
+   */
+  private registerActionObservationRoutes(server: HTTPServer): void {
+    // ── POST /actions/sync ──────────────────────────────────────────────
+    server.addRoute('POST', '/actions/sync', async (_req, res) => {
+      try {
+        if (!this.conceptSync) {
+          sendJson(res, { success: false, errors: ['Concept sync not enabled'] });
+          return;
+        }
+        const synced = await this.conceptSync.pullAll();
+        sendJson(res, { success: true, synced });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        sendJson(res, { success: false, synced: 0, errors: [msg] });
+      }
+    });
+
+    // ── POST /actions/rebuild ───────────────────────────────────────────
+    server.addRoute('POST', '/actions/rebuild', async (_req, res) => {
+      try {
+        if (!this.conceptSync) {
+          sendJson(res, { success: false, rebuilt: 0 });
+          return;
+        }
+        const result = await this.conceptSync.forceRebuild(this.app);
+        sendJson(res, { success: true, rebuilt: result.rebuilt });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        sendJson(res, { success: false, rebuilt: 0, errors: [msg] });
+      }
+    });
+
+    // ── POST /actions/open-note ─────────────────────────────────────────
+    server.addRoute('POST', '/actions/open-note', async (req, res) => {
+      try {
+        const body = await parseJsonBody<{ path?: string }>(req);
+        if (!body.path || typeof body.path !== 'string') {
+          sendError(res, 'Missing required field: path', 400);
+          return;
+        }
+        await this.app.workspace.openLinkText(body.path, '', false);
+        sendJson(res, { success: true, path: body.path });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        sendError(res, msg, 500);
+      }
+    });
+
+    // ── POST /actions/dispatch-goal ─────────────────────────────────────
+    server.addRoute('POST', '/actions/dispatch-goal', async (req, res) => {
+      try {
+        const body = await parseJsonBody<{ goal?: string }>(req).catch(() => ({})) as { goal?: string };
+        await this.activateGoalDispatchView();
+        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_GOAL_DISPATCH);
+        const leaf = leaves[0];
+        let executionId: string | undefined;
+        if (leaf && leaf.view instanceof GoalDispatchView && body.goal) {
+          // dispatchGoal is fire-and-forget from the HTTP perspective;
+          // we return immediately after enqueue so the HTTP call doesn't block.
+          (leaf.view as GoalDispatchView).dispatchGoal(body.goal).catch((err) => {
+            console.error('[Metabob Vessel] dispatch-goal error:', err);
+          });
+        }
+        sendJson(res, { success: true, ...(executionId ? { executionId } : {}) });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        sendError(res, msg, 500);
+      }
+    });
+
+    // ── GET /observations/status ────────────────────────────────────────
+    server.addRoute('GET', '/observations/status', (_req, res) => {
+      try {
+        const activeFile = this.app.workspace.getActiveFile()?.path ?? null;
+        const syncStatus = this.conceptSync?.getStatus();
+        const realtimeSyncStatus = this.syncService?.getStatus();
+        const goalLeaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_GOAL_DISPATCH);
+        sendJson(res, {
+          activeFile,
+          lastSyncAt: syncStatus?.lastPullAt ?? null,
+          totalConceptNotes: syncStatus?.syncedCount ?? 0,
+          serverPort: this.settings.serverPort,
+          websocketConnected: realtimeSyncStatus?.realtimeConnected ?? false,
+          goalDispatchOpen: goalLeaves.length > 0,
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        sendError(res, msg, 500);
+      }
+    });
+
+    // ── GET /observations/concept-status ───────────────────────────────
+    server.addRoute('GET', '/observations/concept-status', async (_req, res) => {
+      try {
+        const syncRoot = this.settings.conceptDbSyncRoot || 'concept-db';
+        const allFiles = this.app.vault.getMarkdownFiles();
+        const conceptFiles = allFiles.filter((f) => f.path.startsWith(syncRoot + '/'));
+
+        let totalNotes = 0;
+        let notesWithEdges = 0;
+        let notesWithSignal = 0;
+        let relevanceSum = 0;
+        let relevanceCount = 0;
+        let familyNotes = 0;
+        let vesselNotes = 0;
+        let lowestRelevance: { path: string; relevance: number } | null = null;
+
+        for (const file of conceptFiles) {
+          totalNotes++;
+          const cache = this.app.metadataCache.getFileCache(file);
+          if (!cache) continue;
+          const fm = cache.frontmatter;
+          if (!fm) continue;
+
+          // Edges check: frontmatter has `edges:` key
+          if (fm.edges && typeof fm.edges === 'object' && Object.keys(fm.edges).length > 0) {
+            notesWithEdges++;
+          }
+
+          // Signal check: loaded > 0
+          if (typeof fm.loaded === 'number' && fm.loaded > 0) {
+            notesWithSignal++;
+          }
+
+          // Relevance aggregation
+          if (typeof fm.relevance === 'number') {
+            relevanceSum += fm.relevance;
+            relevanceCount++;
+            if (lowestRelevance === null || fm.relevance < lowestRelevance.relevance) {
+              lowestRelevance = { path: file.path, relevance: fm.relevance };
+            }
+          }
+
+          // Family/vessel source types
+          if (fm.source_type === 'activity_family') familyNotes++;
+          if (fm.source_type === 'vessel') vesselNotes++;
+        }
+
+        const avgRelevance = relevanceCount > 0
+          ? Math.round((relevanceSum / relevanceCount) * 100) / 100
+          : 0;
+
+        sendJson(res, {
+          totalNotes,
+          notesWithEdges,
+          notesWithSignal,
+          avgRelevance,
+          lowestRelevance,
+          familyNotes,
+          vesselNotes,
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        sendError(res, msg, 500);
+      }
+    });
   }
 
   /**

@@ -207,23 +207,40 @@ function neighborLinkTarget(n: ConceptNeighbor): string {
 }
 
 /**
- * Render a single neighbor line. The link target is the filename stem
- * so Obsidian's filename-match resolves directly; the display text is
- * the humanized shape. Metadata (source_type · relevance) and the edge
- * description are denormalized inline so the line is self-describing.
+ * Render a 7-character weight bar using block characters.
+ * Each position represents 1/7 ≈ 14.3% of the weight.
+ * Full blocks: █, partial: ▓, empty: ░
+ */
+function renderWeightBar(weight: number): string {
+  const clamped = Math.max(0, Math.min(1, weight));
+  const total = 7;
+  const filled = clamped * total;
+  const fullBlocks = Math.floor(filled);
+  const partial = filled - fullBlocks;
+  let bar = '█'.repeat(fullBlocks);
+  if (partial >= 0.5 && fullBlocks < total) bar += '▓';
+  else if (fullBlocks < total) bar += '';
+  bar = bar.padEnd(total, '░');
+  return bar;
+}
+
+/**
+ * Render a single neighbor line with weight badge and visual bar.
+ *
+ * Format: - [[target|Display]] `w:0.85` ████▓░░ — description
  */
 function renderNeighborLine(n: ConceptNeighbor): string {
   const target = neighborLinkTarget(n);
   const display = neighborDisplay(n);
-  const meta: string[] = [];
-  if (n.source_type) meta.push(n.source_type);
-  if (typeof n.relevance === 'number') meta.push(`rel ${n.relevance.toFixed(2)}`);
-  if (typeof n.edge_weight === 'number') meta.push(`w ${n.edge_weight.toFixed(2)}`);
-  const metaSuffix = meta.length ? ` · ${meta.join(' · ')}` : '';
+  const weightParts: string[] = [];
+  if (typeof n.edge_weight === 'number') {
+    weightParts.push(`\`w:${n.edge_weight.toFixed(2)}\` ${renderWeightBar(n.edge_weight)}`);
+  }
+  const weightStr = weightParts.length ? ` ${weightParts.join('')}` : '';
   const tail = n.edge_description
     ? ` — ${n.edge_description.replace(/\n+/g, ' ').slice(0, 200)}`
     : '';
-  return `- [[${target}|${display}]]${metaSuffix}${tail}`;
+  return `- [[${target}|${display}]]${weightStr}${tail}`;
 }
 
 /**
@@ -257,6 +274,72 @@ function compareEdgeTypes(a: string, b: string): number {
 }
 
 /**
+ * Render the learning signal confidence callout.
+ *
+ * Callout type depends on success rate:
+ *   [!success]  ≥ 66%
+ *   [!warning]  33–66%
+ *   [!danger]   < 33% with any loads
+ *   [!tip]      never loaded (cold)
+ *
+ * Bar: 5 Unicode block chars, each = 20% of success rate.
+ * Label: never validated / converging / reliable / confirmed
+ */
+function renderSignalCallout(concept: ConceptRecord): string {
+  const loaded = concept.times_loaded ?? 0;
+  const succeeded = concept.times_succeeded ?? 0;
+  const rate = loaded > 0 ? succeeded / loaded : 0;
+  const pct = Math.round(rate * 100);
+
+  let calloutType: string;
+  let label: string;
+  if (loaded === 0) {
+    calloutType = 'tip';
+    label = 'never validated';
+  } else if (rate >= 0.66) {
+    calloutType = 'success';
+    label = rate >= 0.9 ? 'confirmed' : 'reliable';
+  } else if (rate >= 0.33) {
+    calloutType = 'warning';
+    label = 'converging';
+  } else {
+    calloutType = 'danger';
+    label = 'converging';
+  }
+
+  // 5-char bar: each █ = 20%
+  const filled = Math.round(rate * 5);
+  const bar = '█'.repeat(filled) + '░'.repeat(5 - filled);
+
+  return `> [!${calloutType}] Signal  ${bar}  ${pct}% · loaded ${loaded} · ${label}`;
+}
+
+/**
+ * Render the Mermaid graph block for high-confidence edges (weight ≥ 0.6).
+ * Limits to max 6 edges. Returns empty string if no qualifying edges.
+ */
+function renderMermaidGraph(concept: ConceptRecord, neighbors: ConceptNeighbor[]): string {
+  const highConf = neighbors
+    .filter((n) => typeof n.edge_weight === 'number' && n.edge_weight >= 0.6 && !isBridgeNoise(n))
+    .sort((a, b) => (b.edge_weight ?? 0) - (a.edge_weight ?? 0))
+    .slice(0, 6);
+  if (highConf.length === 0) return '';
+
+  const centerLabel = humanizeShape(concept.shape || concept.source_type || 'Concept');
+  const lines: string[] = ['## Graph', '', '```mermaid', 'graph LR'];
+  lines.push(`  this["${centerLabel}"]`);
+  for (const n of highConf) {
+    const display = neighborDisplay(n);
+    const edgeType = n.edge_type || 'related_to';
+    const w = (n.edge_weight ?? 0).toFixed(2);
+    const safe = display.replace(/"/g, "'");
+    lines.push(`  this -->|"${edgeType} ${w}"| n${shortConceptId(n.id).replace(/[^a-z0-9]/gi, '')}["${safe}"]`);
+  }
+  lines.push('```', '');
+  return lines.join('\n');
+}
+
+/**
  * Render the `## Related` section. Substantive edges render as Title
  * Case subheadings with an emoji prefix; bridge-noise edges collapse
  * under a single `<details>` block at the bottom.
@@ -286,7 +369,10 @@ export function renderRelatedSection(rawNeighbors: ConceptNeighbor[]): string {
     for (const key of keys) {
       const emoji = EDGE_EMOJI[key] || '🔗';
       parts.push(`### ${emoji} ${humanizeEdgeType(key)}`);
-      for (const n of groups.get(key)!) parts.push(renderNeighborLine(n));
+      const sorted = (groups.get(key)!).slice().sort(
+        (a, b) => (b.edge_weight ?? 0) - (a.edge_weight ?? 0),
+      );
+      for (const n of sorted) parts.push(renderNeighborLine(n));
       parts.push('');
     }
   }
@@ -523,9 +609,16 @@ export function renderConceptNote(
 
   const sourceFooter = renderSourceFooter(ptr);
 
+  const signalCallout = renderSignalCallout(concept);
+  const mermaidGraph = renderMermaidGraph(concept, neighbors);
+  const relatedSection = renderRelatedSection(neighbors);
+
   const sections: string[] = [fm.join('\n'), '', `# ${titleHuman}`, ''];
+  sections.push(signalCallout, '');
   if (summary) sections.push(summary, '');
   if (userProse) sections.push(userProse, '');
+  if (relatedSection) sections.push(relatedSection);
+  if (mermaidGraph) sections.push(mermaidGraph);
   if (sourceFooter) sections.push('---', sourceFooter);
 
   return sections.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';

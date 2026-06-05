@@ -764,3 +764,44 @@
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
+
+/* ============================================
+   Concept Note Signal Styles
+   ============================================ */
+
+/* Weight bar inline code — monospace pill with a subtle background tint */
+.mv-weight-bar,
+.markdown-rendered code.mv-weight-bar {
+  font-family: var(--font-monospace);
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(var(--interactive-accent-rgb), 0.08);
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+/* Signal confidence callout content colour overrides */
+.mv-signal-cold {
+  color: var(--text-faint);
+}
+
+.mv-signal-low {
+  color: var(--color-red);
+}
+
+.mv-signal-mid {
+  color: var(--color-yellow);
+}
+
+.mv-signal-high {
+  color: var(--color-green);
+}
+
+/* Smooth status bar transitions */
+.metabob-status-bar,
+.metabob-status-indicator,
+.metabob-status-bar .status-dot {
+  transition: color 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
+}
+
