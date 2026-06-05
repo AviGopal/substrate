@@ -330,6 +330,18 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   "run mitosis-pending-observer-tick to read mitosis-pending.json and emit mitosisPendingState indicating whether a staged mitosis is awaiting host-sync push",
   "run dispatch-dropped-observer-tick to read the BoundedBusSink drop log and emit dispatchDroppedHistory with recent-window drop counts and dominant reason",
   "run llm-api-health-observer-tick to probe llm-resolver-vessel /health and emit llmApiHealth with reachability, HTTP status, and roundtrip latency",
+  // Round 2 shadow-state observer ticks (goals[36..41], 2026-06-05). Close
+  // the remaining round-1 impulse-coverage gaps. host-container-source-drift
+  // is the headline: surfaces the dominant host-sync rejection cause
+  // (rejected_base_sha, ~43% of intents). The rest cover disk pressure,
+  // concept-db reachability, discovery-registry staleness, substrate-heartbeat
+  // liveness, and LLM-quota signals from recent trace error patterns.
+  "run host-container-source-drift-observer-tick to walk each substrate vessel's src/ tree in both container and host paths and emit hostContainerSourceDriftState with per-vessel drift counts, surfacing the dominant rejected_base_sha cause of host-sync rejections",
+  "run disk-space-observer-tick to run df -k on /workspace, /vessels, / and emit diskSpaceState with per-mount used_pct and green/yellow/red pressure level so disk-pressure becomes substrate-observable",
+  "run concept-db-health-observer-tick to probe concept-db /health and /concepts/search and emit conceptDbHealth distinguishing control-plane outage from data-plane wedge",
+  "run discovery-vessel-registry-observer-tick to query the vesselRegistry impulse and emit discoveryRegistryState with per-vessel last-heartbeat age and stale-count threshold so silently-degraded vessels become observable",
+  "run substrate-heartbeat-observer-tick to read /workspace/substrate-heartbeat.json mtime and emit substrateHeartbeatState with age_seconds and stale flag — coarse boredom-loop liveness signal",
+  "run llm-quota-observer-tick to scan recent llm_completion traces for 429 and rate-limit signatures and emit llmQuotaState with recent-window counts and estimated quota remaining so the substrate can throttle expensive goals before hitting a wall",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -424,6 +436,14 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   "development-vessel:mitosis-pending-observer-tick",
   "development-vessel:dispatch-dropped-observer-tick",
   "development-vessel:llm-api-health-observer-tick",
+  // goal[36..41] — round 2 shadow-state observer ticks (2026-06-05). Explicit
+  // targetTemplateId routes the novel goal text deterministically.
+  "development-vessel:host-container-source-drift-observer-tick",
+  "development-vessel:disk-space-observer-tick",
+  "development-vessel:concept-db-health-observer-tick",
+  "development-vessel:discovery-vessel-registry-observer-tick",
+  "development-vessel:substrate-heartbeat-observer-tick",
+  "development-vessel:llm-quota-observer-tick",
 ];
 
 /**
@@ -483,6 +503,13 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "cheap",     // goal[33] mitosis-pending-observer-tick (1 small JSON read)
   "cheap",     // goal[34] dispatch-dropped-observer-tick (1 JSONL read)
   "cheap",     // goal[35] llm-api-health-observer-tick (1 HTTP GET)
+  // Round 2 observers — all cheap (bounded I/O, no LLM).
+  "cheap",     // goal[36] host-container-source-drift-observer-tick (bounded fs walk + sha256)
+  "cheap",     // goal[37] disk-space-observer-tick (Bun.spawn df × N mounts)
+  "cheap",     // goal[38] concept-db-health-observer-tick (2 HTTP GETs)
+  "cheap",     // goal[39] discovery-vessel-registry-observer-tick (1 HTTP POST)
+  "cheap",     // goal[40] substrate-heartbeat-observer-tick (1 stat + 1 read)
+  "cheap",     // goal[41] llm-quota-observer-tick (1 HTTP GET, bounded scan)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
