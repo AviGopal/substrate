@@ -317,6 +317,19 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // stages for cutover. After this loop closes the substrate authors its own
   // resolvers in response to its own observed needs.
   "run capability-gap-audit-tick to scan recent failure traces for missing-capability signatures (unknown shape, no resolver for type, endpoint 404) and emit substrateGap impulses for each capability gap cluster",
+  // Shadow-state observer ticks (goals[30..35], 2026-06-05). Promote
+  // out-of-band substrate state (systemd unit health, mitosis intent queue,
+  // applied-proposal sentinel, mitosis pending pointer, BoundedBusSink drop
+  // log, LLM-resolver reachability) into shape-typed impulses so the
+  // orthogonality / validation audits can observe the same surface the
+  // operator does. Single-resolver immunity-pattern templates, cheap tier;
+  // dispatch is precondition-always-true (empty inputShapes / variables).
+  "run systemd-unit-health-observer-tick to probe each substrate vessel unit and emit one systemdUnitHealth impulse with active/inactive/failed counts so detectors can observe vessel up/down state",
+  "run mitosis-intent-queue-observer-tick to read the host-sync intent queue + results and emit mitosisIntentQueueState with pending/pushed/rejected counts and oldest-pending age",
+  "run applied-proposal-sentinel-observer-tick to list proposals/.applied/ and emit appliedProposalSentinelState with applied_count, recent_applied entries, and last_applied timestamp",
+  "run mitosis-pending-observer-tick to read mitosis-pending.json and emit mitosisPendingState indicating whether a staged mitosis is awaiting host-sync push",
+  "run dispatch-dropped-observer-tick to read the BoundedBusSink drop log and emit dispatchDroppedHistory with recent-window drop counts and dominant reason",
+  "run llm-api-health-observer-tick to probe llm-resolver-vessel /health and emit llmApiHealth with reachability, HTTP status, and roundtrip latency",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -401,6 +414,16 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // detector half. Single-resolver immunity-pattern wrapper; explicit
   // targetTemplateId routes the novel goal text deterministically.
   "development-vessel:capability-gap-audit-tick",
+  // goal[30..35] — shadow-state observer ticks (2026-06-05). Each promotes
+  // one out-of-band substrate state into impulse form. Single-resolver
+  // immunity-pattern templates; explicit targetTemplateId routes the novel
+  // goal text deterministically so Thompson can't misroute to a high-α one.
+  "development-vessel:systemd-unit-health-observer-tick",
+  "development-vessel:mitosis-intent-queue-observer-tick",
+  "development-vessel:applied-proposal-sentinel-observer-tick",
+  "development-vessel:mitosis-pending-observer-tick",
+  "development-vessel:dispatch-dropped-observer-tick",
+  "development-vessel:llm-api-health-observer-tick",
 ];
 
 /**
@@ -453,6 +476,13 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "cheap",     // goal[27] trace-outcome-validity-audit-tick (HTTP only; no LLM)
   "cheap",     // goal[28] posterior-consistency-audit-tick (HTTP only; no LLM)
   "cheap",     // goal[29] capability-gap-audit-tick (HTTP only; no LLM)
+  // Shadow-state observer ticks — all cheap (one resolver, bounded file/HTTP I/O).
+  "cheap",     // goal[30] systemd-unit-health-observer-tick (Bun.spawn × N units)
+  "cheap",     // goal[31] mitosis-intent-queue-observer-tick (2 small JSONL reads)
+  "cheap",     // goal[32] applied-proposal-sentinel-observer-tick (readdir + stat)
+  "cheap",     // goal[33] mitosis-pending-observer-tick (1 small JSON read)
+  "cheap",     // goal[34] dispatch-dropped-observer-tick (1 JSONL read)
+  "cheap",     // goal[35] llm-api-health-observer-tick (1 HTTP GET)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
