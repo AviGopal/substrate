@@ -770,9 +770,15 @@ async function fetchPosteriorsForSignature(
   const cells = new Map<number, PosteriorCell>();
   try {
     const since = Date.now() - 24 * 60 * 60 * 1000;
+    // Bump limit 200 → 1000: lifecycle-spawned nested traces now inherit
+    // state_signature: tags (ias-executor 95636c3) but have null template_id,
+    // so they pass the tag filter but get skipped at the goal-idx lookup.
+    // limit=200 was dominated by them; root traces (the ones that actually
+    // map to a goal_idx) became invisible. limit=1000 restores enough root
+    // headroom for cells to cross MIN_CELL_SAMPLES=3.
     const res = await fetch(
-      `${ACTIVITY_API_ENDPOINT}/v2/activities/execution-traces?limit=200&since=${since}`,
-      { headers: authHeaders(), signal: AbortSignal.timeout(5_000) },
+      `${ACTIVITY_API_ENDPOINT}/v2/activities/execution-traces?limit=1000&since=${since}`,
+      { headers: authHeaders(), signal: AbortSignal.timeout(10_000) },
     );
     if (!res.ok) return cells;
     const data = (await res.json()) as
@@ -1003,9 +1009,10 @@ async function fetchDispatcherPosteriors(
   const cells = new Map<DispatcherChoice, PosteriorCell>();
   try {
     const since = Date.now() - 24 * 60 * 60 * 1000;
+    // See fetchPosteriorsForSignature comment — same dilution issue.
     const res = await fetch(
-      `${ACTIVITY_API_ENDPOINT}/v2/activities/execution-traces?limit=200&since=${since}`,
-      { headers: authHeaders(), signal: AbortSignal.timeout(5_000) },
+      `${ACTIVITY_API_ENDPOINT}/v2/activities/execution-traces?limit=1000&since=${since}`,
+      { headers: authHeaders(), signal: AbortSignal.timeout(10_000) },
     );
     if (!res.ok) return cells;
     const data = (await res.json()) as { executions?: unknown; traces?: unknown } | unknown;
