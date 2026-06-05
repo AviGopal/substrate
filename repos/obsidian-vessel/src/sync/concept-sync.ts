@@ -241,6 +241,41 @@ export class ConceptSyncService {
   }
 
   /**
+   * Force a full re-sync of all concept notes under `conceptDbSyncRoot`.
+   *
+   * Iterates every markdown file in the concept-db folder, removes the
+   * `last_substrate_pull_at` frontmatter field on notes that carry
+   * `concept-db: true` (so `shouldRefresh` treats them as stale on next
+   * pull), then calls `pullAll()` to re-materialise everything.
+   *
+   * Requires `app` so it can use `fileManager.processFrontMatter` for
+   * safe YAML mutation.
+   *
+   * @param app - The Obsidian App instance (available from main.ts).
+   * @returns `{ rebuilt }` — number of notes whose timestamp was cleared.
+   */
+  async forceRebuild(app: App): Promise<{ rebuilt: number }> {
+    const prefix = this.settings.conceptDbSyncRoot + '/';
+    const files = app.vault
+      .getMarkdownFiles()
+      .filter((f) => f.path.startsWith(prefix));
+
+    let rebuilt = 0;
+    for (const file of files) {
+      await app.fileManager.processFrontMatter(file, (fm) => {
+        if (fm['concept-db'] === true) {
+          delete fm['last_substrate_pull_at'];
+          rebuilt += 1;
+        }
+      });
+    }
+
+    this.logger('info', 'forceRebuild: cleared timestamps', { rebuilt });
+    await this.pullAll();
+    return { rebuilt };
+  }
+
+  /**
    * Fetch neighbors, render, and write the note for one concept.
    * Returns true if a write actually happened. The optional
    * `collisions` map (built by pullAll's pre-scan) disambiguates

@@ -284,6 +284,24 @@ export default class MetabobVesselPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: 'rebuild-vault',
+      name: 'Rebuild Vault (force re-sync all concept notes)',
+      callback: async () => {
+        if (!this.conceptSync) {
+          new Notice('Concept DB sync is not enabled (check settings)');
+          return;
+        }
+        new Notice('Rebuilding vault — re-syncing all concept notes...');
+        try {
+          const result = await this.conceptSync.forceRebuild(this.app);
+          new Notice(`Vault rebuilt: ${result.rebuilt} notes updated`);
+        } catch (err) {
+          new Notice(`Rebuild failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      },
+    });
+
     // Phase 10: Setup status bar
     // Status bar shows connection state and sync status
     const statusBarEl = this.addStatusBarItem();
