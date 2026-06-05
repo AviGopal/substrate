@@ -83,13 +83,20 @@ process_intent() {
   fi
 
   # Re-check base_sha freshness against current host source.
+  # apply_proposal_as_patch computes base_sha from the FILE IT'S PATCHING
+  # (the first staged file), not from src/index.ts. Using src/index.ts as
+  # the freshness sentinel causes every cutover to reject with
+  # base_sha_mismatch unless the patch happens to target src/index.ts.
+  # Hash the first staged file instead — matches what apply hashed.
   if [[ -n "$base_sha" ]]; then
-    local current_sha
-    if [[ -f "$host_vessel_root/src/index.ts" ]]; then
-      current_sha=$(sha256sum "$host_vessel_root/src/index.ts" | cut -c1-12)
+    local sentinel_rel sentinel_path current_sha
+    sentinel_rel=$(jq -r '.staged_files[0] // "src/index.ts"' <<<"$line")
+    sentinel_path="$host_vessel_root/$sentinel_rel"
+    if [[ -f "$sentinel_path" ]]; then
+      current_sha=$(sha256sum "$sentinel_path" | cut -c1-12)
       if [[ "$current_sha" != "$base_sha" ]]; then
-        log "reject $intent_id: base_sha mismatch (intent=$base_sha current=$current_sha)"
-        write_result "$intent_id" "" "rejected_base_sha" "intent=$base_sha current=$current_sha"
+        log "reject $intent_id: base_sha mismatch on $sentinel_rel (intent=$base_sha current=$current_sha)"
+        write_result "$intent_id" "" "rejected_base_sha" "sentinel=$sentinel_rel intent=$base_sha current=$current_sha"
         return 0
       fi
     fi
