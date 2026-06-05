@@ -283,6 +283,13 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // mechanismHealthFinding memos + a substrateHealthReport rollup that the
   // drafter primes against on next tick.
   "run mechanism-health-tick to detect wiring anomalies in M1-M6 learning-rate mechanisms",
+  // Template-mitosis variant-authoring loop (goal[25], 2026-06-04). Audits
+  // weak template families (Thompson posterior mean < 0.3, samples >= 10) and
+  // authors improved variants through activity_create_variant (write-scope).
+  // Variant-first repair discipline — never calls activityTemplate_update or
+  // _deprecate (admin-scope; would 403). Thompson Sampling promotes the
+  // better variant naturally over time as samples accumulate on the successor.
+  "run template-mitosis-tick to detect the weakest template family by Thompson posterior mean and author an improved variant via activity_create_variant",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -349,6 +356,10 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // so Thompson cannot misroute to a high-α template. The goal text is novel
   // and the aggregator orchestrates 5 deterministic child dispatches.
   "development-vessel:mechanism-health-tick",
+  // goal[25] — template-mitosis-tick (2026-06-04): variant-authoring loop
+  // around weak template families. One LLM call (haiku) wrapped by
+  // deterministic audit + fetch + register. Moderate cost.
+  "development-vessel:template-mitosis-tick",
 ];
 
 /**
@@ -396,6 +407,7 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "moderate",  // goal[22] dispatch-latest-auto-draft (resolver + downstream light-dispatch chain runs an authored 4-task LLM template)
   "moderate",  // goal[23] apply-proposal-as-patch (1 LLM patch call + bounded fs I/O)
   "moderate",  // goal[24] mechanism-health-tick (5 child dispatches via /run-goal; no LLM, bounded HTTP + bash + journalctl)
+  "moderate",  // goal[25] template-mitosis-tick (1 LLM call + deterministic audit/fetch/register; variant-first repair)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
