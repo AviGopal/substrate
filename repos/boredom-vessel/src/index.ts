@@ -290,6 +290,14 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // _deprecate (admin-scope; would 403). Thompson Sampling promotes the
   // better variant naturally over time as samples accumulate on the successor.
   "run template-mitosis-tick to detect the weakest template family by Thompson posterior mean and author an improved variant via activity_create_variant",
+  // Vector-space orthogonality audit (goal[26], 2026-06-04): substrate scans
+  // recent failure traces for embeddings orthogonal to all existing
+  // architectural_pattern_principle concepts (max cosine similarity below
+  // threshold) and emits substrateGap impulses (category=
+  // novel_failure_mode_detected) for each cluster. Closes the meta-recursion
+  // — the drafter then authors a new principle covering that vector subspace
+  // on the next gap-drain cycle. cheap tier (no LLM, HTTP-only).
+  "run vector-space-orthogonality-audit-tick to detect failure traces orthogonal to existing architectural_pattern_principle concepts and emit novel_failure_mode_detected substrateGap impulses",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -360,6 +368,10 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // around weak template families. One LLM call (haiku) wrapped by
   // deterministic audit + fetch + register. Moderate cost.
   "development-vessel:template-mitosis-tick",
+  // goal[26] — vector-space-orthogonality-audit-tick (2026-06-04): immunity-
+  // pattern single-resolver wrapper. Explicit targetTemplateId so Thompson
+  // cannot misroute to a high-α template; the goal text is novel.
+  "development-vessel:vector-space-orthogonality-audit-tick",
 ];
 
 /**
@@ -408,6 +420,7 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "moderate",  // goal[23] apply-proposal-as-patch (1 LLM patch call + bounded fs I/O)
   "moderate",  // goal[24] mechanism-health-tick (5 child dispatches via /run-goal; no LLM, bounded HTTP + bash + journalctl)
   "moderate",  // goal[25] template-mitosis-tick (1 LLM call + deterministic audit/fetch/register; variant-first repair)
+  "cheap",     // goal[26] vector-space-orthogonality-audit-tick (HTTP only; no LLM)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
