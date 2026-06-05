@@ -208,6 +208,55 @@ const HAND_LISTED_PRINCIPLES: PrincipleEntry[] = [
     signature: "principle__every_execution_traces_for_learning",
     applies_to: ["activity_lifecycle_audit", "vessel_architecture_pattern_scan"],
   },
+  {
+    name: "no_silent_failures",
+    shape: "architectural_pattern_principle",
+    severity: "structural",
+    summary:
+      "No silent failures. Component failures must emit substrate-observable signals " +
+      "(substrateGap, structured error, or shape-typed impulse) — not be dropped silently.",
+    content:
+      "[principle__no_silent_failures] Component failures must emit substrate-observable " +
+      "signals (substrateGap, structured error, or shape-typed impulse). Silent drops " +
+      "(BoundedBusSink queue overflow), failures-in-finally-blocks, fire-and-forget " +
+      "Promises whose rejections aren't caught — all violate this principle. " +
+      "Detection mechanism: scan logs/metrics for failure indicators that don't " +
+      "correspond to substrate-observable impulses. Architectural rule: every failure " +
+      "path must produce a trace, an impulse, or an explicit refuse. Reference: " +
+      "BoundedBusSink dropped 22,172 dispatches silently in a 2-hour window with no " +
+      "substrateGap emission until operator-seeded.",
+    signature: "principle__no_silent_failures",
+    applies_to: [
+      "vessel_responsibility_audit",
+      "vessel_architecture_pattern_scan",
+      "resolver_distribution_audit",
+      "vector_space_orthogonality_audit",
+    ],
+  },
+  {
+    name: "novel_failure_modes_must_be_detectable_via_vector_orthogonality",
+    shape: "architectural_pattern_principle",
+    severity: "structural",
+    summary:
+      "Substrate detection coverage must grow by detecting failure traces orthogonal " +
+      "to all current architectural_pattern_principle concepts and authoring new ones.",
+    content:
+      "[principle__novel_failure_modes_via_orthogonality] The substrate's detector " +
+      "inventory is bounded by operator-seeded principles. To extend detection " +
+      "coverage autonomously, the substrate must scan failure traces for those whose " +
+      "embedding has max cosine similarity < threshold (default 0.45) against all " +
+      "existing architectural_pattern_principle concepts. Such traces are orthogonal " +
+      "to current understanding — novel failure modes. Cluster them, propose a new " +
+      "principle for each cluster, ingest via concept_create_write. The new principle " +
+      "becomes detection coverage for that vector subspace. This closes the " +
+      "meta-recursion: substrate detects what it wasn't taught to detect, then teaches " +
+      "itself. Reference: vector_space_orthogonality_audit resolver in development-vessel.",
+    signature: "principle__novel_failure_modes_via_orthogonality",
+    applies_to: [
+      "vector_space_orthogonality_audit",
+      "vessel_architecture_pattern_scan",
+    ],
+  },
 ];
 
 const INDEX_CONCEPT: PrincipleEntry = {
