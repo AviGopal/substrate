@@ -298,6 +298,16 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // — the drafter then authors a new principle covering that vector subspace
   // on the next gap-drain cycle. cheap tier (no LLM, HTTP-only).
   "run vector-space-orthogonality-audit-tick to detect failure traces orthogonal to existing architectural_pattern_principle concepts and emit novel_failure_mode_detected substrateGap impulses",
+  // Trace-recording correctness audit (goal[27], 2026-06-05). Substrate inspects
+  // its own traces for tail_shape/status mismatches (e.g. structuredError +
+  // success) and emits trace_outcome_inconsistency substrateGap. Closes the
+  // operator-detected-via-journal-scraping gap that caused the apply-proposal-
+  // as-patch echo chamber (commit a0f9f593) — substrate now detects via activity.
+  "run trace-outcome-validity-audit-tick to detect tail_shape/status mismatches in recent traces (structuredError + success, mitosisStaged + success, etc.) and emit trace_outcome_inconsistency substrateGap impulses",
+  // Posterior consistency audit (goal[28], 2026-06-05). Substrate cross-checks
+  // claimed Thompson α/β cells against empirical trace counts; emits substrateGap
+  // (posterior_consistency_drift) when posterior means drift > threshold.
+  "run posterior-consistency-audit-tick to cross-check claimed Thompson α/β cells against empirical trace counts and emit posterior_consistency_drift substrateGap impulses for stale posteriors",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -372,6 +382,12 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // pattern single-resolver wrapper. Explicit targetTemplateId so Thompson
   // cannot misroute to a high-α template; the goal text is novel.
   "development-vessel:vector-space-orthogonality-audit-tick",
+  // goal[27] — trace-outcome-validity-audit-tick (2026-06-05): immunity-pattern
+  // single-resolver wrapper. Explicit targetTemplateId; goal text is novel.
+  "development-vessel:trace-outcome-validity-audit-tick",
+  // goal[28] — posterior-consistency-audit-tick (2026-06-05): immunity-pattern
+  // single-resolver wrapper. Explicit targetTemplateId; goal text is novel.
+  "development-vessel:posterior-consistency-audit-tick",
 ];
 
 /**
@@ -421,6 +437,8 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "moderate",  // goal[24] mechanism-health-tick (5 child dispatches via /run-goal; no LLM, bounded HTTP + bash + journalctl)
   "moderate",  // goal[25] template-mitosis-tick (1 LLM call + deterministic audit/fetch/register; variant-first repair)
   "cheap",     // goal[26] vector-space-orthogonality-audit-tick (HTTP only; no LLM)
+  "cheap",     // goal[27] trace-outcome-validity-audit-tick (HTTP only; no LLM)
+  "cheap",     // goal[28] posterior-consistency-audit-tick (HTTP only; no LLM)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
