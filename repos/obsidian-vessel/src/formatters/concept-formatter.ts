@@ -365,6 +365,65 @@ function renderRelatedYaml(neighbors: ConceptNeighbor[]): string[] | null {
 }
 
 /**
+ * Render the `edges:` YAML block for a concept note. This is a parallel
+ * structure to `related:` that adds weight and description metadata so
+ * Dataview queries and downstream activities can rank relationships
+ * without parsing prose.
+ *
+ * Format:
+ *   edges:
+ *     derived_from:
+ *       - target: "[[short_id]]"
+ *         weight: 0.90
+ *         description: "…up to 120 chars…"
+ *
+ * Only emits entries that carry at least one of: a non-trivial weight
+ * (>0) or a non-bridge-noise description. Returns null if there is
+ * nothing meaningful to emit.
+ */
+function renderEdgesYaml(neighbors: ConceptNeighbor[]): string[] | null {
+  if (!neighbors.length) return null;
+  const deduped = dedupeNeighbors(neighbors);
+
+  // Only emit entries with weight or meaningful description
+  const interesting = deduped.filter(
+    (n) =>
+      (typeof n.edge_weight === 'number' && n.edge_weight > 0) ||
+      (n.edge_description && !isBridgeNoise(n)),
+  );
+  if (!interesting.length) return null;
+
+  const buckets = new Map<string, ConceptNeighbor[]>();
+  for (const n of interesting) {
+    const key = n.edge_type || 'related_to';
+    const arr = buckets.get(key) ?? [];
+    arr.push(n);
+    buckets.set(key, arr);
+  }
+
+  const lines: string[] = ['edges:'];
+  const keys = Array.from(buckets.keys()).sort(compareEdgeTypes);
+  for (const key of keys) {
+    lines.push(`  ${key}:`);
+    for (const n of buckets.get(key)!) {
+      const target = yamlQuote(`[[${shortConceptId(n.id)}]]`);
+      lines.push(`    - target: ${target}`);
+      if (typeof n.edge_weight === 'number') {
+        lines.push(`      weight: ${n.edge_weight.toFixed(2)}`);
+      }
+      if (n.edge_description && !isBridgeNoise(n)) {
+        const desc = n.edge_description
+          .replace(/\n+/g, ' ')
+          .trim()
+          .slice(0, 120);
+        lines.push(`      description: ${yamlQuote(desc)}`);
+      }
+    }
+  }
+  return lines;
+}
+
+/**
  * Render the data-shaped concept note.
  *
  * Frontmatter holds all queryable state (typed fields, nested pointer,
@@ -426,6 +485,13 @@ export function renderConceptNote(
   // Obsidian's graph view picks these up as first-class edges.
   const relatedLines = renderRelatedYaml(neighbors);
   if (relatedLines) fm.push(...relatedLines);
+
+  // Edge weights/descriptions as a structured YAML block so Dataview
+  // and downstream activities can query weight-ranked relationships
+  // without parsing prose. Grouped by edge_type; each entry carries
+  // target wikilink, weight (2 dp), and description (≤120 chars).
+  const edgesLines = renderEdgesYaml(neighbors);
+  if (edgesLines) fm.push(...edgesLines);
 
   // Tags for Obsidian's tag pane. Nested form `concept/<source>` and
   // `shape/<slug>` lets the operator filter the whole vault by category

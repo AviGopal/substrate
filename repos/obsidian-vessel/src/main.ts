@@ -10,6 +10,8 @@ import { SyncService } from './sync/index';
 import { ConceptSyncService, makeObsidianNoteWriter } from './sync/concept-sync';
 import { ConceptWritebackService } from './sync/concept-writeback';
 import { ConceptBusListener } from './sync/concept-bus-listener';
+import { ActivityFamilySyncService } from './sync/activity-family-sync';
+import { VesselSyncService } from './sync/vessel-sync';
 import { ConceptDbClient } from './concept-db-client';
 import { ExecutionCanvasBuilder } from './canvas/index';
 import { ConceptCanvasBuilder } from './canvas/concept-canvas';
@@ -112,6 +114,10 @@ export default class MetabobVesselPlugin extends Plugin {
   conceptWriteback: ConceptWritebackService | null = null;
   conceptBusListener: ConceptBusListener | null = null;
 
+  // Activity Family and Vessel sync services
+  activityFamilySync: ActivityFamilySyncService | null = null;
+  vesselSync: VesselSyncService | null = null;
+
   // Phase 1 observation layer — shared event log + workspace observer.
   // The log is bounded (cap = 10_000) and survives plugin lifetime so
   // both the windowing and probe resolvers see the same events.
@@ -195,6 +201,16 @@ export default class MetabobVesselPlugin extends Plugin {
       await this.initializeConceptDbFrontend();
     }
 
+    // Phase 8c-ext: Activity Family and Vessel sync services (opt-in)
+    if (this.settings.enableActivityFamilySync && this.apiClient) {
+      this.activityFamilySync = new ActivityFamilySyncService(this.app, this.settings, this.apiClient);
+      await this.activityFamilySync.start();
+    }
+    if (this.settings.enableVesselSync) {
+      this.vesselSync = new VesselSyncService(this.app, this.settings);
+      await this.vesselSync.start();
+    }
+
     // Phase 8c: Phase 1 observation layer.
     // Always on — the resolvers are inert until queried, and the
     // workspace subscriptions feed the shared event log so downstream
@@ -232,6 +248,41 @@ export default class MetabobVesselPlugin extends Plugin {
         },
       });
     }
+
+    // Commands for activity family and vessel sync
+    this.addCommand({
+      id: 'sync-activity-families',
+      name: 'Sync Activity Families',
+      callback: async () => {
+        if (!this.activityFamilySync) {
+          new Notice('Activity Family Sync is not enabled (check settings)');
+          return;
+        }
+        try {
+          await this.activityFamilySync.syncAll();
+          new Notice('Activity families synced');
+        } catch (err) {
+          new Notice(`Activity family sync failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      },
+    });
+
+    this.addCommand({
+      id: 'sync-vessels',
+      name: 'Sync Vessels',
+      callback: async () => {
+        if (!this.vesselSync) {
+          new Notice('Vessel Sync is not enabled (check settings)');
+          return;
+        }
+        try {
+          await this.vesselSync.syncAll();
+          new Notice('Vessels synced');
+        } catch (err) {
+          new Notice(`Vessel sync failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      },
+    });
 
     // Phase 10: Setup status bar
     // Status bar shows connection state and sync status
@@ -299,6 +350,10 @@ export default class MetabobVesselPlugin extends Plugin {
     this.conceptBusListener?.stop();
     this.conceptWriteback?.stop();
     this.conceptSync?.stop();
+
+    // Stop activity family and vessel sync services
+    this.activityFamilySync?.stop();
+    this.vesselSync?.stop();
 
     // Stop the Phase 1 observation layer (unsubscribes workspace + vault
     // handlers and clears the resolver context).

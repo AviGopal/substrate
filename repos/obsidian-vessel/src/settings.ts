@@ -168,6 +168,29 @@ export interface MetabobVesselSettings {
 
   /** Enable the Goal Dispatch sidebar and command. */
   enableGoalDispatch: boolean;
+
+  // ==========================================================================
+  // Activity Family Sync Settings
+  // ==========================================================================
+
+  /** Enable syncing activity families from activity-api into the vault. */
+  enableActivityFamilySync: boolean;
+
+  /** Vault folder for activity family notes. */
+  activityFamilyFolder: string;
+
+  // ==========================================================================
+  // Vessel Sync Settings
+  // ==========================================================================
+
+  /** Enable syncing vessel registry from discovery-vessel into the vault. */
+  enableVesselSync: boolean;
+
+  /** Vault folder for vessel notes. */
+  vesselFolder: string;
+
+  /** Discovery-vessel HTTP endpoint. */
+  discoveryVesselEndpoint: string;
 }
 
 /**
@@ -241,6 +264,15 @@ export const DEFAULT_SETTINGS: MetabobVesselSettings = {
   // Goal Dispatch
   goalHostEndpoint: 'http://127.0.0.1:8210',
   enableGoalDispatch: true,
+
+  // Activity Family Sync
+  enableActivityFamilySync: false,
+  activityFamilyFolder: 'substrate/activity-families',
+
+  // Vessel Sync
+  enableVesselSync: false,
+  vesselFolder: 'substrate/vessels',
+  discoveryVesselEndpoint: 'http://127.0.0.1:8100',
 };
 
 /**
