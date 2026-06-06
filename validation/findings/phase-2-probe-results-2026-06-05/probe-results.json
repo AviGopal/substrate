@@ -1,0 +1,78 @@
+{
+  "stages": {
+    "stage1_detection": {
+      "pass": 5,
+      "total": 5,
+      "gaps_per_run": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "clusters_per_run": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "stage2_bridge": {
+      "pass": 5,
+      "total": 5,
+      "scenarios_before": 370,
+      "scenarios_after": 420,
+      "per_run_deltas": [
+        10,
+        10,
+        10,
+        10,
+        10
+      ]
+    },
+    "stage3_draft": {
+      "goal_status": "running",
+      "selected_template": "?",
+      "proposals_before": 190,
+      "proposals_after": 190,
+      "proposals_delta": 0
+    },
+    "stage4_apply": {
+      "pass": 5,
+      "total": 5,
+      "mitosis_staged_count": 0,
+      "shapes_per_run": [
+        "structuredError",
+        "structuredError",
+        "structuredError",
+        "structuredError",
+        "structuredError"
+      ]
+    },
+    "stage5_evaluate": {
+      "pass": 5,
+      "total": 5,
+      "verdicts": [
+        "INSUFFICIENT_DATA",
+        "INSUFFICIENT_DATA",
+        "NEUTRAL",
+        "NEUTRAL",
+        "NEUTRAL"
+      ],
+      "mitosis_root": "/vessels/development-vessel-mitosis-2026-06-05T04-43-06-733Z"
+    },
+    "stage6_cutover": {
+      "result": {
+        "code": "200",
+        "shape": "structuredError",
+        "reason": ""
+      }
+    },
+    "stage7_host_sync": {
+      "results_before": 42,
+      "results_after": 42,
+      "delta": 0
+    }
+  }
+}

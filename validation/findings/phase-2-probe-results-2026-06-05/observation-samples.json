@@ -1,0 +1,25 @@
+{
+  "ts": "2026-06-06T00:39:00.271Z",
+  "samples": [
+    {
+      "idx": 0,
+      "ts": "2026-06-06T00:38:59.958Z",
+      "proposals": 190,
+      "scenarios": 6,
+      "gap_files": [
+        "audit-findings-batch.json",
+        "gaps.json"
+      ],
+      "mitosis_dirs": 196,
+      "intents": 39,
+      "results": 42,
+      "results_by_status": {
+        "rejected_commit_failed": 9,
+        "pushed": 12,
+        "rejected_scope_creep": 3,
+        "rejected_base_sha": 18
+      },
+      "commits_last_hour": 0
+    }
+  ]
+}
