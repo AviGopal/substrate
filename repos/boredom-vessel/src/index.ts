@@ -1707,7 +1707,15 @@ function recordOutcome(goalIdx: number, success: boolean): void {
 
 function momentumScore(goalIdx: number): number {
   const m = momentumByGoal.get(goalIdx);
-  if (!m || m.outcomes.length === 0) return 1.0; // neutral prior
+  // Cold-start exploration bonus (V22, 2026-06-07): goals with zero outcome
+  // history get mom=1.5 instead of 1.0. Without this, brand-new goal entries
+  // (e.g. drafter-trigger-tick at goal[42]) lose every Thompson roll against
+  // established goals that have accumulated press-based scores in the 4-6
+  // range. Cold-start bonus expires as soon as the first outcome lands —
+  // after that Laplace smoothing takes over and mom returns to evidence-based
+  // tracking. Maximum amplification is just ×1.5 so well-established goals
+  // still dominate when their press is high.
+  if (!m || m.outcomes.length === 0) return 1.5;
   const succ = m.outcomes.filter((o) => o === "success").length;
   return (succ + 1) / (m.outcomes.length + 2); // Laplace
 }
@@ -1720,7 +1728,20 @@ function statePressure(goalIdx: number, state: SubstrateState): number {
     goalIdx === 23 ? state.pendingProposalCount :
     goalIdx === 15 ? (state.stagedMitosisPresent ? 1 : 0) :
     0;
-  return 1 + Math.log(1 + backlog);
+  const rawPress = 1 + Math.log(1 + backlog);
+  // V22 adaptive press decay (2026-06-07): when a goal's recent success rate
+  // drops below 0.3, scale press down by the success rate. Prevents goal[23]
+  // (apply-proposal) from monopolizing the pool when every dispatch returns
+  // no_op — press stays high because the proposals queue is full, but failures
+  // accumulate so other goals starve. Decay restores room for cold-start /
+  // exploration goals to find slots once failure-bias kicks in.
+  const m = momentumByGoal.get(goalIdx);
+  if (m && m.outcomes.length >= 5) {
+    const succ = m.outcomes.filter((o) => o === "success").length;
+    const succRate = succ / m.outcomes.length;
+    if (succRate < 0.3) return rawPress * Math.max(0.2, succRate);
+  }
+  return rawPress;
 }
 
 /**
