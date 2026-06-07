@@ -444,6 +444,13 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   "development-vessel:discovery-vessel-registry-observer-tick",
   "development-vessel:substrate-heartbeat-observer-tick",
   "development-vessel:llm-quota-observer-tick",
+  // drafter-trigger-tick (V21, 2026-06-07) — bridges boredom rotation to the
+  // drafter's variable-supply requirement. fs_list scenarios → pick → strip
+  // .json → POST light-dispatch /dispatch with scenario_id+paths filled.
+  // Without this entry, goal[8] (draft-gap-closing-activity) sits in the
+  // rotation but precondition-rejects every dispatch because boredom can't
+  // seed report_path/scenario_id variables. This tick supplies them.
+  "development-vessel:drafter-trigger-tick",
 ];
 
 /**
