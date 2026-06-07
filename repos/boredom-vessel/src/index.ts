@@ -517,6 +517,7 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "cheap",     // goal[39] discovery-vessel-registry-observer-tick (1 HTTP POST)
   "cheap",     // goal[40] substrate-heartbeat-observer-tick (1 stat + 1 read)
   "cheap",     // goal[41] llm-quota-observer-tick (1 HTTP GET, bounded scan)
+  "moderate",  // goal[42] drafter-trigger-tick (fs_list + json_path_extract + HTTP POST → drafter, ~15s)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
