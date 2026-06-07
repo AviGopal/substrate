@@ -342,6 +342,11 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   "run discovery-vessel-registry-observer-tick to query the vesselRegistry impulse and emit discoveryRegistryState with per-vessel last-heartbeat age and stale-count threshold so silently-degraded vessels become observable",
   "run substrate-heartbeat-observer-tick to read /workspace/substrate-heartbeat.json mtime and emit substrateHeartbeatState with age_seconds and stale flag — coarse boredom-loop liveness signal",
   "run llm-quota-observer-tick to scan recent llm_completion traces for 429 and rate-limit signatures and emit llmQuotaState with recent-window counts and estimated quota remaining so the substrate can throttle expensive goals before hitting a wall",
+  // V21c (2026-06-07): producer-chain bridge. Without this entry, the pool's
+  // n = AUTONOMOUS_GOALS.length bound stops at 42 and goal[42] never gets
+  // considered for scoring. The matching template entry is in
+  // AUTONOMOUS_GOAL_TARGET_TEMPLATES (V21) and cost is moderate (V21b).
+  "run drafter-trigger-tick to enumerate scenarios on disk, pick one, and dispatch draft-gap-closing-activity with scenario_id + paths filled in — closes the producer chain so boredom rotation can drive new gap-closing variants",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
