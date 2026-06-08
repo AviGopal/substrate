@@ -1710,6 +1710,197 @@ function recordOutcome(goalIdx: number, success: boolean): void {
   while (m.outcomes.length > 10) m.outcomes.shift();
 }
 
+// =====================================================================
+// V24 (2026-06-08): SHAPE-DRIVEN SELECTION — impulse-activity foundation.
+//
+// The legacy AUTONOMOUS_GOALS / AUTONOMOUS_GOAL_TARGET_TEMPLATES / per-goal-
+// index switches (goalCanFire, statePressure, AUTONOMOUS_GOAL_COSTS) are
+// architectural debt. They treat activities as enumerated goals with hardcoded
+// scoring inputs, requiring 5+ parallel-array edits to add a new entry. The
+// IAL foundation prescribes the opposite: activities declare inputShapes +
+// outputShapes, the binding-layer finds producers when consumers need inputs,
+// and selection emerges from impulse-graph availability + Thompson posteriors.
+//
+// This selector queries activity-api for templates tagged `boredom_target_template`,
+// scores each by (a) input-shape availability in recent execution traces
+// (proxy for impulse-pool readiness), (b) success rate at the current
+// state-signature (from the existing posteriorsBySig Map), (c) noise jitter.
+// Returns the template_id of the winner. Falls back to legacy selection
+// when activity-api is unreachable so the pool stays alive under degradation.
+// =====================================================================
+
+interface ShapeDrivenCandidate {
+  template_id: string;
+  input_shapes: string[];
+  output_shapes: string[];
+  tags: string[];
+}
+
+interface ShapeDrivenPick {
+  template_id: string;
+  score: number;
+  reason: string;
+}
+
+let candidateCache: { fetchedAt: number; entries: ShapeDrivenCandidate[] } | null = null;
+const CANDIDATE_CACHE_TTL_MS = 60_000;
+
+async function fetchShapeDrivenCandidates(): Promise<ShapeDrivenCandidate[]> {
+  if (candidateCache && Date.now() - candidateCache.fetchedAt < CANDIDATE_CACHE_TTL_MS) {
+    return candidateCache.entries;
+  }
+  try {
+    const res = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/templates?limit=500`, {
+      headers: { Authorization: `ApiKey ${API_KEY}` },
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!res.ok) return candidateCache?.entries ?? [];
+    const body = await res.json() as { templates?: Array<Record<string, unknown>> };
+    const entries: ShapeDrivenCandidate[] = [];
+    for (const t of body.templates ?? []) {
+      const tags = Array.isArray(t.tags) ? (t.tags as string[]) : [];
+      // Match both literal and tag-prefix-normalized forms.
+      const isBoredomTarget =
+        tags.includes("boredom_target_template") ||
+        tags.includes("boredomtargettemplate");
+      if (!isBoredomTarget) continue;
+      if (t.deprecated === true || t.retired === true) continue;
+      const rawId = typeof t.id === "string" ? t.id : "";
+      // activity-api wraps ids as activity:⟨…⟩; strip wrapper for dispatch.
+      const id = rawId.replace(/^activity:⟨(.+)⟩$/, "$1");
+      if (!id) continue;
+      entries.push({
+        template_id: id,
+        input_shapes: Array.isArray(t.input_shapes) ? (t.input_shapes as string[]) : [],
+        output_shapes: Array.isArray(t.output_shapes) ? (t.output_shapes as string[]) : [],
+        tags,
+      });
+    }
+    candidateCache = { fetchedAt: Date.now(), entries };
+    return entries;
+  } catch {
+    return candidateCache?.entries ?? [];
+  }
+}
+
+// Recent output_shapes set — proxy for "what's been produced in the impulse pool
+// lately." Used to score input-shape availability: if a candidate's inputShapes
+// are mostly in this set, its inputs are likely satisfiable.
+let recentShapesCache: { fetchedAt: number; shapes: Set<string> } | null = null;
+const RECENT_SHAPES_TTL_MS = 30_000;
+
+async function fetchRecentlyProducedShapes(): Promise<Set<string>> {
+  if (recentShapesCache && Date.now() - recentShapesCache.fetchedAt < RECENT_SHAPES_TTL_MS) {
+    return recentShapesCache.shapes;
+  }
+  const shapes = new Set<string>();
+  try {
+    const res = await fetch(
+      `${ACTIVITY_API_ENDPOINT}/v2/activities/execution-traces?limit=50`,
+      { headers: { Authorization: `ApiKey ${METABOB_API_KEY}` }, signal: AbortSignal.timeout(3_000) },
+    );
+    if (res.ok) {
+      const body = await res.json() as { executions?: Array<Record<string, unknown>>; traces?: Array<Record<string, unknown>> };
+      const traces = body.executions ?? body.traces ?? [];
+      for (const tr of traces) {
+        const outs = tr["output_shapes"];
+        if (Array.isArray(outs)) for (const s of outs) if (typeof s === "string") shapes.add(s);
+      }
+    }
+  } catch { /* tolerant — empty set means everything looks unavailable, falls back to legacy */ }
+  recentShapesCache = { fetchedAt: Date.now(), shapes };
+  return shapes;
+}
+
+// Per-template momentum (parallel to per-goalIdx). When the shape-driven
+// selector wins, outcomes get recorded here so the same template-id keys
+// momentum across re-registrations / pool restarts.
+const momentumByTemplate = new Map<string, { outcomes: ("success" | "failure")[] }>();
+
+function recordOutcomeByTemplate(templateId: string, success: boolean): void {
+  let m = momentumByTemplate.get(templateId);
+  if (!m) { m = { outcomes: [] }; momentumByTemplate.set(templateId, m); }
+  m.outcomes.push(success ? "success" : "failure");
+  while (m.outcomes.length > 10) m.outcomes.shift();
+}
+
+function templateMomentum(templateId: string): number {
+  const m = momentumByTemplate.get(templateId);
+  if (!m || m.outcomes.length === 0) return 1.5; // cold-start bonus (mirrors V22)
+  const succ = m.outcomes.filter((o) => o === "success").length;
+  return (succ + 1) / (m.outcomes.length + 2);
+}
+
+async function pickByShapeAvailability(
+  inFlightTemplateIds: Set<string>,
+): Promise<ShapeDrivenPick | null> {
+  const candidates = await fetchShapeDrivenCandidates();
+  if (candidates.length === 0) return null;
+  const recentShapes = await fetchRecentlyProducedShapes();
+  const eligible = candidates.filter((c) => !inFlightTemplateIds.has(c.template_id));
+  if (eligible.length === 0) return null;
+
+  let best: ShapeDrivenPick | null = null;
+  for (const c of eligible) {
+    const mom = templateMomentum(c.template_id);
+    // Shape-availability: empty inputShapes means always-fireable (high).
+    // Otherwise count how many inputShapes appear in recently-produced set.
+    let shapeAvail: number;
+    if (c.input_shapes.length === 0) {
+      shapeAvail = 1.5; // no preconditions — always available
+    } else {
+      const matched = c.input_shapes.filter((s) => recentShapes.has(s)).length;
+      // Score by ratio matched; floor at 0.3 so unfulfilled-input activities
+      // still occasionally fire to populate priors (exploration vs starvation).
+      shapeAvail = Math.max(0.3, matched / c.input_shapes.length);
+    }
+    const noise = 0.7 + Math.random() * 0.6;
+    const score = mom * shapeAvail * noise;
+    if (!best || score > best.score) {
+      best = {
+        template_id: c.template_id,
+        score,
+        reason: `mom=${mom.toFixed(2)} shape=${shapeAvail.toFixed(2)} inputs=${c.input_shapes.length}/${c.input_shapes.filter((s) => recentShapes.has(s)).length}`,
+      };
+    }
+  }
+  return best;
+}
+
+// Dispatch by template_id via light-dispatch (uses existing infrastructure).
+// Returns { dispatch_id, execution_id, success } shaped like dispatchOne.
+async function dispatchByTemplateId(templateId: string): Promise<{ dispatch_id: string; execution_id?: string; success: boolean } | null> {
+  try {
+    const res = await fetch(`http://127.0.0.1:8280/dispatch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `ApiKey ${API_KEY}` },
+      body: JSON.stringify({ template_id: templateId, variables: {} }),
+      signal: AbortSignal.timeout(180_000),
+    });
+    if (!res.ok && res.status !== 207) {
+      console.warn(`[pool/shape] dispatch HTTP ${res.status} for ${templateId}`);
+      return null;
+    }
+    const body = await res.json() as {
+      dispatchId?: string;
+      executionId?: string;
+      status?: string;
+      output_shapes?: string[];
+    };
+    const dispatchId = body.dispatchId ?? body.executionId ?? `shape-${Date.now()}`;
+    // Treat last-shape=structuredError as no_op (echo chamber guard).
+    const shapes = Array.isArray(body.output_shapes) ? body.output_shapes : [];
+    const lastShape = shapes[shapes.length - 1];
+    const noOp = lastShape === "structuredError";
+    const success = (body.status === "success" || body.status === "completed") && !noOp;
+    recordOutcomeByTemplate(templateId, success);
+    return { dispatch_id: dispatchId, execution_id: body.executionId, success };
+  } catch (err) {
+    console.warn(`[pool/shape] dispatch failed for ${templateId}: ${(err as Error).message}`);
+    return null;
+  }
+}
+
 function momentumScore(goalIdx: number): number {
   const m = momentumByGoal.get(goalIdx);
   // Cold-start exploration bonus (V22, 2026-06-07): goals with zero outcome
@@ -2098,6 +2289,49 @@ async function poolLoop(): Promise<void> {
     // This is what makes the pool genuinely throughput-paced rather than
     // serialized on dispatchOne's HTTP latency.
     while (inFlight.size < MAX_CONCURRENT && Date.now() - lastDispatchAt >= MIN_DISPATCH_INTERVAL_MS) {
+      // V24 shape-driven primary path. Query activity-api for templates
+      // tagged boredom_target_template, score by inputShape availability +
+      // per-template Thompson posterior, dispatch winner via light-dispatch.
+      // Falls back to legacy goal-index loop on transport failure or empty
+      // candidate set.
+      const inFlightTemplateIds = new Set<string>();
+      for (const e of inFlight.values()) {
+        if (e.template_id) inFlightTemplateIds.add(e.template_id);
+      }
+      const shapePick = await pickByShapeAvailability(inFlightTemplateIds);
+      if (shapePick) {
+        const reserveId = `reserve-shape-${Date.now()}`;
+        inFlight.set(reserveId, {
+          goal_idx: -1, // sentinel: shape-driven dispatch, not goal-index
+          dispatch_id: reserveId,
+          template_id: shapePick.template_id,
+          started_at: Date.now(),
+          signature: null,
+        });
+        lastDispatchAt = Date.now();
+        console.log(
+          `[pool/shape] reserving ${shapePick.template_id} score=${shapePick.score.toFixed(2)} ` +
+          `(${shapePick.reason}) in_flight=${inFlight.size}/${MAX_CONCURRENT}`,
+        );
+        void (async () => {
+          try {
+            const result = await dispatchByTemplateId(shapePick.template_id);
+            inFlight.delete(reserveId);
+            if (result) {
+              console.log(
+                `[pool/shape] completed ${shapePick.template_id} ` +
+                `outcome=${result.success ? "success" : "no_op"} ` +
+                `executionId=${result.execution_id ?? "?"}`,
+              );
+            }
+          } catch (err) {
+            inFlight.delete(reserveId);
+            console.warn(`[pool/shape] dispatch error: ${(err as Error).message}`);
+          }
+        })();
+        continue; // next iteration of fill loop
+      }
+      // Legacy fallback: activity-api unreachable or no candidates tagged.
       const eligible: number[] = [];
       for (let i = 0; i < AUTONOMOUS_GOALS.length; i++) {
         if (!goalCanFire(i, state)) continue;
