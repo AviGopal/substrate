@@ -1750,7 +1750,12 @@ async function fetchShapeDrivenCandidates(): Promise<ShapeDrivenCandidate[]> {
     return candidateCache.entries;
   }
   try {
-    const res = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/templates?limit=500`, {
+    // V24b (2026-06-08): activity-api caps `limit` at 100 internally even when
+    // higher values requested. Use FTS search on the collapsed tag form
+    // ("boredomtargettemplate" — activity-api strips underscores from tag
+    // tokens) so we get all boredom-target templates regardless of total
+    // template count. Returns ~37 vs the 13 the first-page query missed.
+    const res = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/templates?q=boredomtargettemplate&limit=200`, {
       headers: { Authorization: `ApiKey ${API_KEY}` },
       signal: AbortSignal.timeout(5_000),
     });
