@@ -1856,16 +1856,33 @@ async function pickByShapeAvailability(
   let best: ShapeDrivenPick | null = null;
   for (const c of eligible) {
     const mom = templateMomentum(c.template_id);
-    // Shape-availability: empty inputShapes means always-fireable (high).
-    // Otherwise count how many inputShapes appear in recently-produced set.
+    // V24d (2026-06-08): refined shape-availability scoring rewards
+    // PIPELINE-PULL — templates whose inputShapes are freshly satisfied by
+    // recent producer outputs get lifted, so the chain self-pulls through
+    // the selector. Previously empty-inputShapes = 1.5 and matched inputs
+    // = 1.0, which meant declaring inputs LOWERED selection score (anti-
+    // incentive). Now:
+    //   - No declared inputShapes (observer/audit class): baseline 1.0
+    //   - All inputShapes recently produced: 2.0 (pull-active boost)
+    //   - Partial match: between 0.5 and 1.5
+    //   - No match (waiting for input): 0.3 (starvation floor)
     let shapeAvail: number;
+    let inputMatchSummary: string;
     if (c.input_shapes.length === 0) {
-      shapeAvail = 1.5; // no preconditions — always available
+      shapeAvail = 1.0; // baseline — no pipeline-pull signal either direction
+      inputMatchSummary = "0/0";
     } else {
       const matched = c.input_shapes.filter((s) => recentShapes.has(s)).length;
-      // Score by ratio matched; floor at 0.3 so unfulfilled-input activities
-      // still occasionally fire to populate priors (exploration vs starvation).
-      shapeAvail = Math.max(0.3, matched / c.input_shapes.length);
+      const ratio = matched / c.input_shapes.length;
+      inputMatchSummary = `${matched}/${c.input_shapes.length}`;
+      if (ratio >= 1.0) {
+        shapeAvail = 2.0; // full pull-active boost — this template is the
+                          // natural next step in an in-flight pipeline
+      } else if (ratio > 0) {
+        shapeAvail = 0.5 + ratio; // 0.5-1.5 partial
+      } else {
+        shapeAvail = 0.3; // starvation — keep sampleable
+      }
     }
     const noise = 0.7 + Math.random() * 0.6;
     const score = mom * shapeAvail * noise;
@@ -1873,7 +1890,7 @@ async function pickByShapeAvailability(
       best = {
         template_id: c.template_id,
         score,
-        reason: `mom=${mom.toFixed(2)} shape=${shapeAvail.toFixed(2)} inputs=${c.input_shapes.length}/${c.input_shapes.filter((s) => recentShapes.has(s)).length}`,
+        reason: `mom=${mom.toFixed(2)} shape=${shapeAvail.toFixed(2)} inputs=${inputMatchSummary}`,
       };
     }
   }
