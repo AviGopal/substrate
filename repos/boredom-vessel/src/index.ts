@@ -1833,7 +1833,15 @@ function templateMomentum(templateId: string): number {
   const m = momentumByTemplate.get(templateId);
   if (!m || m.outcomes.length === 0) return 1.5; // cold-start bonus (mirrors V22)
   const succ = m.outcomes.filter((o) => o === "success").length;
-  return (succ + 1) / (m.outcomes.length + 2);
+  // V24c (2026-06-08): floor at 0.5 so low-success templates stay sampleable.
+  // Without this floor a template that fails its first 2-3 dispatches drops to
+  // mom~0.25 and never recovers — Thompson exploration gets monopolized by the
+  // 1-2 templates with run-of-the-mill 1.0 mom. Floor=0.5 keeps every template
+  // within a 3x band so poor performers continue to participate in selection,
+  // which is what lets apply-proposal-as-patch and dispatch-latest-auto-draft
+  // (which fail often when proposals/variants are stale) keep getting sampled.
+  const raw = (succ + 1) / (m.outcomes.length + 2);
+  return Math.max(0.5, raw);
 }
 
 async function pickByShapeAvailability(
