@@ -1827,6 +1827,7 @@ function recordOutcomeByTemplate(templateId: string, success: boolean): void {
   if (!m) { m = { outcomes: [] }; momentumByTemplate.set(templateId, m); }
   m.outcomes.push(success ? "success" : "failure");
   while (m.outcomes.length > 10) m.outcomes.shift();
+  totalPicksV24f += 1;
 }
 
 function templateMomentum(templateId: string): number {
@@ -1834,14 +1835,46 @@ function templateMomentum(templateId: string): number {
   if (!m || m.outcomes.length === 0) return 1.5; // cold-start bonus (mirrors V22)
   const succ = m.outcomes.filter((o) => o === "success").length;
   // V24c (2026-06-08): floor at 0.5 so low-success templates stay sampleable.
-  // Without this floor a template that fails its first 2-3 dispatches drops to
-  // mom~0.25 and never recovers — Thompson exploration gets monopolized by the
-  // 1-2 templates with run-of-the-mill 1.0 mom. Floor=0.5 keeps every template
-  // within a 3x band so poor performers continue to participate in selection,
-  // which is what lets apply-proposal-as-patch and dispatch-latest-auto-draft
-  // (which fail often when proposals/variants are stale) keep getting sampled.
   const raw = (succ + 1) / (m.outcomes.length + 2);
   return Math.max(0.5, raw);
+}
+
+// V24f (2026-06-08): UCB1 — Upper Confidence Bound. Replaces the multiplicative
+// mom × shape × noise scoring that let early winners run away. UCB1 score is
+// the empirical mean plus an exploration bonus that decays with sample count:
+//
+//   ucb_score = mean_reward + c * sqrt(2 * ln(N_total) / n_template)
+//
+// where N_total is total picks across all templates and n_template is picks of
+// this template. For unsampled templates (n=0), bonus is +∞ — they are ALWAYS
+// picked before any sampled template. After each template has been picked at
+// least once, the bonus shrinks per template as it accumulates samples; under-
+// sampled templates get a larger bonus, naturally lifting them in selection.
+// This is the standard solution to multi-armed bandit exploration-exploitation
+// that the previous Laplace+noise formulation was approximating poorly.
+//
+// We retain shape-availability as a multiplicative factor (1.0 baseline, 2.0
+// for pipeline-pull, 0.3 for starving inputs) so pipeline activity still gets
+// the natural pull boost.
+let totalPicksV24f = 0;
+
+function ucbScore(templateId: string, shapeAvail: number): { score: number; reason: string } {
+  const m = momentumByTemplate.get(templateId);
+  const picks = m?.outcomes.length ?? 0;
+  if (picks === 0) {
+    // Unsampled templates always win until they've been tried once.
+    return { score: Number.POSITIVE_INFINITY, reason: `ucb=∞ picks=0 shape=${shapeAvail.toFixed(2)}` };
+  }
+  const succ = m!.outcomes.filter((o) => o === "success").length;
+  const mean = succ / picks;
+  // Exploration constant c=1.4 (≈ sqrt(2)) — common UCB1 setting. Higher = more
+  // exploration, lower = more exploitation. 1.4 keeps under-sampled templates
+  // competitive without overwhelming high-mean templates.
+  const explore = 1.4 * Math.sqrt(2 * Math.log(Math.max(1, totalPicksV24f)) / picks);
+  const baseScore = mean + explore;
+  // Pipeline-pull factor applied multiplicatively so the rank order across
+  // shape-availability bands is preserved.
+  return { score: baseScore * shapeAvail, reason: `mean=${mean.toFixed(2)} ucb=${explore.toFixed(2)} picks=${picks} shape=${shapeAvail.toFixed(2)}` };
 }
 
 async function pickByShapeAvailability(
@@ -1854,43 +1887,30 @@ async function pickByShapeAvailability(
   if (eligible.length === 0) return null;
 
   let best: ShapeDrivenPick | null = null;
+  // V24f (2026-06-08): score each eligible template via UCB1 + shape-availability.
+  // Unsampled templates are picked first (UCB bonus is +∞ for n=0). Once sampled,
+  // exploration bonus decays naturally; pipeline-pull factor still rewards
+  // templates whose inputs are freshly produced.
   for (const c of eligible) {
-    const mom = templateMomentum(c.template_id);
-    // V24d (2026-06-08): refined shape-availability scoring rewards
-    // PIPELINE-PULL — templates whose inputShapes are freshly satisfied by
-    // recent producer outputs get lifted, so the chain self-pulls through
-    // the selector. Previously empty-inputShapes = 1.5 and matched inputs
-    // = 1.0, which meant declaring inputs LOWERED selection score (anti-
-    // incentive). Now:
-    //   - No declared inputShapes (observer/audit class): baseline 1.0
-    //   - All inputShapes recently produced: 2.0 (pull-active boost)
-    //   - Partial match: between 0.5 and 1.5
-    //   - No match (waiting for input): 0.3 (starvation floor)
     let shapeAvail: number;
     let inputMatchSummary: string;
     if (c.input_shapes.length === 0) {
-      shapeAvail = 1.0; // baseline — no pipeline-pull signal either direction
+      shapeAvail = 1.0;
       inputMatchSummary = "0/0";
     } else {
       const matched = c.input_shapes.filter((s) => recentShapes.has(s)).length;
       const ratio = matched / c.input_shapes.length;
       inputMatchSummary = `${matched}/${c.input_shapes.length}`;
-      if (ratio >= 1.0) {
-        shapeAvail = 2.0; // full pull-active boost — this template is the
-                          // natural next step in an in-flight pipeline
-      } else if (ratio > 0) {
-        shapeAvail = 0.5 + ratio; // 0.5-1.5 partial
-      } else {
-        shapeAvail = 0.3; // starvation — keep sampleable
-      }
+      if (ratio >= 1.0) shapeAvail = 2.0;
+      else if (ratio > 0) shapeAvail = 0.5 + ratio;
+      else shapeAvail = 0.3;
     }
-    const noise = 0.7 + Math.random() * 0.6;
-    const score = mom * shapeAvail * noise;
-    if (!best || score > best.score) {
+    const ucb = ucbScore(c.template_id, shapeAvail);
+    if (!best || ucb.score > best.score) {
       best = {
         template_id: c.template_id,
-        score,
-        reason: `mom=${mom.toFixed(2)} shape=${shapeAvail.toFixed(2)} inputs=${inputMatchSummary}`,
+        score: ucb.score,
+        reason: `${ucb.reason} inputs=${inputMatchSummary}`,
       };
     }
   }
