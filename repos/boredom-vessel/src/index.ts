@@ -1929,6 +1929,10 @@ async function dispatchByTemplateId(templateId: string): Promise<{ dispatch_id: 
     });
     if (!res.ok && res.status !== 207) {
       console.warn(`[pool/shape] dispatch HTTP ${res.status} for ${templateId}`);
+      // Penalize: a non-OK dispatch is a failure outcome. Without this the
+      // template's picks stays 0, ucb stays +∞, and the pool re-selects it
+      // forever (livelock observed 2026-06-13 when light-dispatch was down).
+      recordOutcomeByTemplate(templateId, false);
       return null;
     }
     const body = await res.json() as {
@@ -1947,6 +1951,12 @@ async function dispatchByTemplateId(templateId: string): Promise<{ dispatch_id: 
     return { dispatch_id: dispatchId, execution_id: body.executionId, success };
   } catch (err) {
     console.warn(`[pool/shape] dispatch failed for ${templateId}: ${(err as Error).message}`);
+    // Penalize: a connect error / timeout is a failure outcome. Without this the
+    // template's picks stays 0, ucb stays +∞, and the pool fixates on this one
+    // unreachable shape indefinitely (the ~2h mitosis-tick livelock, 2026-06-13).
+    // After one failure picks=1/mean=0 → score is finite, so other shapes get
+    // selected; outcome decay (where enabled) lets it recover once infra heals.
+    recordOutcomeByTemplate(templateId, false);
     return null;
   }
 }
