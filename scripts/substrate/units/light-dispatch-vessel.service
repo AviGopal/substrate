@@ -2,6 +2,12 @@
 Description=light-dispatch-vessel — stateless oneshot dispatcher (Stage 2.B)
 After=activity-api.service discovery-vessel.service
 Requires=activity-api.service
+# Watchdog: never permanently give up. The whole boredom shape-pool dispatches
+# through this vessel on :8280; a silent death here livelocks the entire
+# autonomous self-dev loop (observed 2026-06-13). StartLimitIntervalSec=0
+# disables the default 5-starts/10s rate limit so systemd keeps retrying
+# indefinitely instead of parking the unit in failed/dead.
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
@@ -11,7 +17,10 @@ Environment=HOST=127.0.0.1
 Environment=LIGHT_DISPATCH_VESSEL_ID=light-dispatch-vessel
 WorkingDirectory=/vessels/light-dispatch-vessel
 ExecStart=/root/.bun/bin/bun /vessels/light-dispatch-vessel/src/index.ts
-Restart=on-failure
+# Restart=always (not on-failure): this vessel was found inactive(dead) with
+# Result=success — a clean exit that on-failure does NOT restart. always catches
+# clean exits, crashes, and OOM alike. Matches the boredom-vessel must-never-die tier.
+Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
