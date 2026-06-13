@@ -188,7 +188,7 @@ export class VesselClient {
 
     // Endpoint the SUBSTRATE (in the container) uses to reach this host-side
     // plugin: the container->host gateway, not localhost.
-    const endpoint = `http://${advertisedHost}:${port}`;
+    const endpoint = `http://${advertisedHost || 'host.docker.internal'}:${port}`;
 
     // Discovery RegisterRequest. systemVessel:true is REQUIRED or the substrate's
     // org-scoped vesselRegistry query hides it (the original bug). Resolve
@@ -368,7 +368,7 @@ export class VesselClient {
         vesselId,
         vesselName,
         version: '0.1.0',
-        endpoint: `http://${advertisedHost}:${this.serverPort}`,
+        endpoint: `http://${advertisedHost || 'host.docker.internal'}:${this.serverPort}`,
         shapes,
         protocol: 'http',
         systemVessel: true,
