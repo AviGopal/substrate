@@ -30,10 +30,55 @@
  * referenced resolvers' vessels need resolving).
  */
 
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const PORT = Number(process.env["PORT"] ?? 8280);
+
+/**
+ * Check 2b parity — fence-tolerant JSON-artifact validity test, ported verbatim
+ * from ias-executor-ts engine.ts `isParseableJsonArtifact`. light-dispatch
+ * delegates fs_write over HTTP (to local-tools-vessel), so the engine's
+ * write-time convergent-validity guard never runs on this dispatch path; this
+ * inline copy lets light-dispatch refuse the same ghost-success (a `.json`
+ * artifact whose bytes don't parse — e.g. raw fenced LLM text interpolated into
+ * a JSON string slot). Fence-tolerant so intentionally-fenced `-report.json`
+ * writes the pipeline already accepts do NOT regress. Kept as an inline copy
+ * rather than a dependency because light-dispatch does not vendor the engine
+ * (mirrors the existing "goal-host parity aliases" duplication pattern).
+ */
+function isParseableJsonArtifact(raw: string): boolean {
+  if (typeof raw !== "string" || raw.trim().length === 0) return false;
+  try { JSON.parse(raw); return true; } catch { /* fall through to fence-tolerant path */ }
+  const s = raw.replace(/^\s*```(?:json)?\n?/i, "").trimStart();
+  const startObj = s.indexOf("{");
+  const startArr = s.indexOf("[");
+  const candidates: Array<[number, string, string]> = [];
+  if (startObj >= 0) candidates.push([startObj, "{", "}"]);
+  if (startArr >= 0) candidates.push([startArr, "[", "]"]);
+  candidates.sort((a, b) => a[0] - b[0]);
+  for (const [start, open, close] of candidates) {
+    let depth = 0, inStr = false, escape = false;
+    for (let i = start; i < s.length; i++) {
+      const ch = s[i]!;
+      if (escape) { escape = false; continue; }
+      if (inStr) {
+        if (ch === "\\") { escape = true; continue; }
+        if (ch === '"') inStr = false;
+        continue;
+      }
+      if (ch === '"') { inStr = true; continue; }
+      if (ch === open) depth++;
+      else if (ch === close) {
+        depth--;
+        if (depth === 0) {
+          try { JSON.parse(s.slice(start, i + 1)); return true; } catch { break; }
+        }
+      }
+    }
+  }
+  return false;
+}
 const VESSEL_ID = process.env["LIGHT_DISPATCH_VESSEL_ID"] ?? "light-dispatch-vessel";
 const ACTIVITY_API = process.env["ACTIVITY_API_ENDPOINT"] ?? "http://127.0.0.1:8080";
 const DISCOVERY = process.env["DISCOVERY_ENDPOINT"] ?? "http://127.0.0.1:8100";
@@ -445,6 +490,27 @@ async function runDispatch(
       break;
     }
     const resolved = await resolveTask(endpoint, pointerType, config);
+    // Check 2b parity (ias-executor-ts engine.ts convergent-validity). fs_write
+    // is delegated over HTTP, so the engine guard never sees this write — verify
+    // here that a workspace-scoped `.json` artifact actually parses. Reading the
+    // just-written file back also subsumes the existence check for .json targets.
+    // A failure flips the task to failure with the same error the engine emits,
+    // so the chain halts and the trace records a real failure (β-penalty) rather
+    // than a ghost-success.
+    if (resolved.ok && pointerType === "fs_write") {
+      const wpath = typeof config["path"] === "string" ? (config["path"] as string) : "";
+      if (wpath.startsWith("/workspace/") && wpath.endsWith(".json") && !wpath.includes("{{")) {
+        let okJson = false;
+        try { okJson = isParseableJsonArtifact(await readFile(wpath, "utf-8")); } catch { okJson = false; }
+        if (!okJson) {
+          resolved.ok = false;
+          resolved.error =
+            `convergent_validity[json_artifact]: fs_write reported success but ${wpath} ` +
+            `does not contain parseable JSON (even after fence-stripping) — likely raw ` +
+            `text interpolated into a JSON string slot.`;
+        }
+      }
+    }
     const r: TaskResult = {
       taskId: task.id,
       resolver: task.resolver,
