@@ -184,35 +184,28 @@ export class VesselClient {
     this.vaultPath = vaultPath;
     this.serverPort = port;
 
-    const { vesselId, vesselName, activityApiUrl, shapes, apiKey } = this.settings;
+    const { vesselId, vesselName, discoveryVesselEndpoint, advertisedHost, shapes, apiKey } = this.settings;
 
-    // Build the endpoint URL that external systems can use to reach this vessel
-    const endpoint = `http://localhost:${port}`;
+    // Endpoint the SUBSTRATE (in the container) uses to reach this host-side
+    // plugin: the container->host gateway, not localhost.
+    const endpoint = `http://${advertisedHost}:${port}`;
 
-    const registration: VesselRegistration = {
+    // Discovery RegisterRequest. systemVessel:true is REQUIRED or the substrate's
+    // org-scoped vesselRegistry query hides it (the original bug). Resolve
+    // contract points callers at `${endpoint}/resolve`, ApiKey auth, pointer body.
+    const registration = {
       vesselId,
       vesselName,
+      version: '0.1.0',
       endpoint,
       shapes,
-      capabilities: [
-        {
-          type: 'impulse-resolver',
-          shapes,
-          port,
-        },
-      ],
-      metadata: {
-        version: '1.0.0',
-        capabilities: [
-          {
-            type: 'impulse-resolver',
-            shapes,
-            port,
-          },
-        ],
-        vaultPath,
-        pluginVersion: '1.0.0',
-      },
+      protocol: 'http',
+      systemVessel: true,
+      resolve_endpoint: '/resolve',
+      resolve_request_format: 'pointer',
+      auth_scheme: 'ApiKey',
+      resolve_timeout_ms: 10000,
+      metadata: { vaultPath, pluginVersion: '0.1.0' },
       ttl: this.settings.registrationTtl,
     };
 
@@ -228,12 +221,12 @@ export class VesselClient {
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
       try {
         const response = await this.fetchWithTimeout(
-          `${activityApiUrl}/v2/vessels/register`,
+          `${discoveryVesselEndpoint}/register`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {}),
+              ...(apiKey ? { 'Authorization': `ApiKey ${apiKey}` } : {}),
             },
             body: JSON.stringify(registration),
           },
@@ -289,17 +282,17 @@ export class VesselClient {
       return;
     }
 
-    const { vesselId, activityApiUrl, apiKey } = this.settings;
+    const { vesselId, discoveryVesselEndpoint, apiKey } = this.settings;
 
     this.logger('info', 'Deregistering vessel', { vesselId });
 
     try {
       const response = await this.fetchWithTimeout(
-        `${activityApiUrl}/v2/vessels/${vesselId}`,
+        `${discoveryVesselEndpoint}/vessels/${vesselId}`,
         {
           method: 'DELETE',
           headers: {
-            ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {}),
+            ...(apiKey ? { 'Authorization': `ApiKey ${apiKey}` } : {}),
           },
         },
         10000
@@ -365,56 +358,35 @@ export class VesselClient {
       return;
     }
 
-    const { vesselId, activityApiUrl, apiKey } = this.settings;
-
-    const payload: HeartbeatPayload = {
-      vesselId,
-      status: this.currentStatus,
-      metrics: {
-        resolutionsCompleted: this.resolutionCount,
-        syncedNotes: this.syncedNotesCount,
-        uptime: Date.now() - this.startTime,
-        lastError: this.lastError,
-      },
-    };
+    const { vesselId, vesselName, discoveryVesselEndpoint, advertisedHost, shapes, apiKey } = this.settings;
 
     try {
-      // The vessel-registry.ts uses POST /v2/vessels/register as heartbeat endpoint
-      // (re-registration refreshes the TTL)
-      const registration: VesselRegistration = {
+      // Re-registering with discovery is idempotent and refreshes the TTL while
+      // keeping the resolve contract current; it also self-heals if discovery
+      // restarted and lost the registry.
+      const registration = {
         vesselId,
-        vesselName: this.settings.vesselName,
-        endpoint: `http://localhost:${this.serverPort}`,
-        shapes: this.settings.shapes,
-        capabilities: [
-          {
-            type: 'impulse-resolver',
-            shapes: this.settings.shapes,
-            port: this.serverPort,
-          },
-        ],
-        metadata: {
-          version: '1.0.0',
-          capabilities: [
-            {
-              type: 'impulse-resolver',
-              shapes: this.settings.shapes,
-              port: this.serverPort,
-            },
-          ],
-          vaultPath: this.vaultPath,
-          pluginVersion: '1.0.0',
-        },
+        vesselName,
+        version: '0.1.0',
+        endpoint: `http://${advertisedHost}:${this.serverPort}`,
+        shapes,
+        protocol: 'http',
+        systemVessel: true,
+        resolve_endpoint: '/resolve',
+        resolve_request_format: 'pointer',
+        auth_scheme: 'ApiKey',
+        resolve_timeout_ms: 10000,
+        metadata: { vaultPath: this.vaultPath, pluginVersion: '0.1.0' },
         ttl: this.settings.registrationTtl,
       };
 
       const response = await this.fetchWithTimeout(
-        `${activityApiUrl}/v2/vessels/register`,
+        `${discoveryVesselEndpoint}/register`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {}),
+            ...(apiKey ? { 'Authorization': `ApiKey ${apiKey}` } : {}),
           },
           body: JSON.stringify(registration),
         },
@@ -562,3 +534,4 @@ export class VesselClient {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
+

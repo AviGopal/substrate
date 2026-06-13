@@ -191,6 +191,13 @@ export interface MetabobVesselSettings {
 
   /** Discovery-vessel HTTP endpoint. */
   discoveryVesselEndpoint: string;
+
+  /**
+   * Hostname the SUBSTRATE (in the container) uses to reach this host-side
+   * plugin. Inside the container `localhost` is the container itself, so the
+   * advertised endpoint must be the container->host gateway.
+   */
+  advertisedHost: string;
 }
 
 /**
@@ -272,7 +279,9 @@ export const DEFAULT_SETTINGS: MetabobVesselSettings = {
   // Vessel Sync
   enableVesselSync: false,
   vesselFolder: 'substrate/vessels',
-  discoveryVesselEndpoint: 'http://127.0.0.1:8100',
+  // Host-mapped discovery port (in-container :8100 is published on host :18100).
+  discoveryVesselEndpoint: 'http://127.0.0.1:18100',
+  advertisedHost: 'host.docker.internal',
 };
 
 /**
