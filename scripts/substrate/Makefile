@@ -290,9 +290,14 @@ sync-light-dispatch-vessel:
 	docker cp $(LIGHT_DISPATCH_SRC)/tsconfig.json $(LIVE_NAME):/vessels/light-dispatch-vessel/tsconfig.json
 	docker cp $(LIGHT_DISPATCH_SRC)/src/index.ts $(LIVE_NAME):/vessels/light-dispatch-vessel/src/index.ts
 	docker cp $(CURDIR)/units/light-dispatch-vessel.service $(LIVE_NAME):/etc/systemd/system/light-dispatch-vessel.service
+	docker cp $(CURDIR)/light-dispatch-healthcheck.sh $(LIVE_NAME):/usr/local/bin/light-dispatch-healthcheck
+	docker exec $(LIVE_NAME) chmod +x /usr/local/bin/light-dispatch-healthcheck
+	docker cp $(CURDIR)/units/light-dispatch-healthcheck.service $(LIVE_NAME):/etc/systemd/system/light-dispatch-healthcheck.service
+	docker cp $(CURDIR)/units/light-dispatch-healthcheck.timer $(LIVE_NAME):/etc/systemd/system/light-dispatch-healthcheck.timer
 	docker exec $(LIVE_NAME) systemctl daemon-reload
 	docker exec $(LIVE_NAME) systemctl enable light-dispatch-vessel.service 2>/dev/null || true
-	@echo "[sync] light-dispatch-vessel source + unit synced to substrate-live"
+	docker exec $(LIVE_NAME) systemctl enable --now light-dispatch-healthcheck.timer 2>/dev/null || true
+	@echo "[sync] light-dispatch-vessel source + unit + liveness watchdog synced to substrate-live"
 
 restart-light-dispatch-vessel: sync-light-dispatch-vessel
 	docker exec $(LIVE_NAME) systemctl restart light-dispatch-vessel.service
