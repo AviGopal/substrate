@@ -347,6 +347,14 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // considered for scoring. The matching template entry is in
   // AUTONOMOUS_GOAL_TARGET_TEMPLATES (V21) and cost is moderate (V21b).
   "run drafter-trigger-tick to enumerate scenarios on disk, pick one, and dispatch draft-gap-closing-activity with scenario_id + paths filled in — closes the producer chain so boredom rotation can drive new gap-closing variants",
+  // goal[43] — vessel-scaffold-trigger-tick (Loop C dispatch, SUBSTRATE_AS_MDP §8.6).
+  // The dual of drafter-trigger-tick: drains validation/failure-modes/vessel-scenarios/
+  // (capability gaps the recombination drafter structurally cannot close, §8.5) by
+  // designing a vessel from the demanded shape and dispatching scaffold-and-publish-vessel.
+  // Without this entry the vessel-authoring queue gap-to-scenario-bridge fills has no
+  // deterministic consumer — the §8.6 horizon recursion is detected+queued but never
+  // dispatched. Terminates in a PR against dev (merge-gated), so safe to run autonomously.
+  "run vessel-scaffold-trigger-tick to drain the vessel-authoring scenario queue: pick a routed capability gap, synthesize the smallest vessel supplying the demanded shape, and dispatch scaffold-and-publish-vessel — closes the §8.6 vessel-addition recursion so capability horizons no recombination can reach get an actual vessel PR",
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -456,6 +464,10 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // rotation but precondition-rejects every dispatch because boredom can't
   // seed report_path/scenario_id variables. This tick supplies them.
   "development-vessel:drafter-trigger-tick",
+  // goal[43] — vessel-scaffold-trigger-tick (Loop C dispatch, §8.6). Explicit
+  // targetTemplateId: the goal text is novel and the tick is deterministic plumbing
+  // around one constrained LLM design task, so Thompson must not misroute it.
+  "development-vessel:vessel-scaffold-trigger-tick",
 ];
 
 /**
@@ -523,6 +535,7 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "cheap",     // goal[40] substrate-heartbeat-observer-tick (1 stat + 1 read)
   "cheap",     // goal[41] llm-quota-observer-tick (1 HTTP GET, bounded scan)
   "moderate",  // goal[42] drafter-trigger-tick (fs_list + json_path_extract + HTTP POST → drafter, ~15s)
+  "moderate",  // goal[43] vessel-scaffold-trigger-tick (fs_list + 1 haiku design call + json_path_extract + HTTP POST → scaffold)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
@@ -1820,20 +1833,35 @@ async function fetchRecentlyProducedShapes(): Promise<Set<string>> {
 // Per-template momentum (parallel to per-goalIdx). When the shape-driven
 // selector wins, outcomes get recorded here so the same template-id keys
 // momentum across re-registrations / pool restarts.
-const momentumByTemplate = new Map<string, { outcomes: ("success" | "failure")[] }>();
+// V27 (2026-06-09): time-stamped outcomes so stale failures (e.g. from an LLM
+// outage window) decay out of the mean within OUTCOME_TTL_MS. Without decay,
+// chain templates that failed during the outage are permanently dominated by
+// deterministic templates (vessel-demand-tick mean=1.0) — UCB1's explore
+// bonus alone is insufficient when picks=10 mean=1.0 wins against picks=10 mean=0.
+const OUTCOME_TTL_MS = 60 * 60 * 1000; // 1 hour
+const momentumByTemplate = new Map<string, { outcomes: { outcome: "success" | "failure"; at: number }[] }>();
+
+function pruneStaleOutcomes(m: { outcomes: { outcome: "success" | "failure"; at: number }[] }): void {
+  const cutoff = Date.now() - OUTCOME_TTL_MS;
+  while (m.outcomes.length > 0 && m.outcomes[0]!.at < cutoff) m.outcomes.shift();
+}
 
 function recordOutcomeByTemplate(templateId: string, success: boolean): void {
   let m = momentumByTemplate.get(templateId);
   if (!m) { m = { outcomes: [] }; momentumByTemplate.set(templateId, m); }
-  m.outcomes.push(success ? "success" : "failure");
-  while (m.outcomes.length > 10) m.outcomes.shift();
+  m.outcomes.push({ outcome: success ? "success" : "failure", at: Date.now() });
+  pruneStaleOutcomes(m);
+  // Soft cap on memory: keep at most 50 outcomes per template, dropping oldest.
+  while (m.outcomes.length > 50) m.outcomes.shift();
   totalPicksV24f += 1;
 }
 
 function templateMomentum(templateId: string): number {
   const m = momentumByTemplate.get(templateId);
   if (!m || m.outcomes.length === 0) return 1.5; // cold-start bonus (mirrors V22)
-  const succ = m.outcomes.filter((o) => o === "success").length;
+  pruneStaleOutcomes(m);
+  if (m.outcomes.length === 0) return 1.5;
+  const succ = m.outcomes.filter((o) => o.outcome === "success").length;
   // V24c (2026-06-08): floor at 0.5 so low-success templates stay sampleable.
   const raw = (succ + 1) / (m.outcomes.length + 2);
   return Math.max(0.5, raw);
@@ -1860,21 +1888,27 @@ let totalPicksV24f = 0;
 
 function ucbScore(templateId: string, shapeAvail: number): { score: number; reason: string } {
   const m = momentumByTemplate.get(templateId);
+  if (m) pruneStaleOutcomes(m); // V27: ensure stale outcomes don't poison the score
   const picks = m?.outcomes.length ?? 0;
   if (picks === 0) {
-    // Unsampled templates always win until they've been tried once.
+    // Unsampled (or fully-decayed) templates always win until they've been tried once.
     return { score: Number.POSITIVE_INFINITY, reason: `ucb=∞ picks=0 shape=${shapeAvail.toFixed(2)}` };
   }
-  const succ = m!.outcomes.filter((o) => o === "success").length;
+  const succ = m!.outcomes.filter((o) => o.outcome === "success").length;
   const mean = succ / picks;
-  // Exploration constant c=1.4 (≈ sqrt(2)) — common UCB1 setting. Higher = more
-  // exploration, lower = more exploitation. 1.4 keeps under-sampled templates
-  // competitive without overwhelming high-mean templates.
   const explore = 1.4 * Math.sqrt(2 * Math.log(Math.max(1, totalPicksV24f)) / picks);
   const baseScore = mean + explore;
-  // Pipeline-pull factor applied multiplicatively so the rank order across
-  // shape-availability bands is preserved.
-  return { score: baseScore * shapeAvail, reason: `mean=${mean.toFixed(2)} ucb=${explore.toFixed(2)} picks=${picks} shape=${shapeAvail.toFixed(2)}` };
+  // V27 (2026-06-09): pipeline-pull is ADDITIVE when ratio=1.0 (all inputs fresh)
+  // so a chain template with low mean still gets prioritised when its upstream
+  // just fired. Previously shapeAvail multiplied the whole baseScore — a chain
+  // template at mean=0 with shapeAvail=2.0 scored 0+explore vs a deterministic
+  // template at mean=1.0 shape=1.0 scoring 1.0+explore, so the deterministic
+  // template always won. The additive +2.0 bonus dominates that gap.
+  const pipelinePull = shapeAvail >= 2.0 ? 2.0 : 0.0;
+  return {
+    score: baseScore * Math.max(shapeAvail, 1.0) + pipelinePull,
+    reason: `mean=${mean.toFixed(2)} ucb=${explore.toFixed(2)} picks=${picks} shape=${shapeAvail.toFixed(2)} pull=${pipelinePull}`,
+  };
 }
 
 async function pickByShapeAvailability(
