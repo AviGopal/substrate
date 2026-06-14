@@ -1917,6 +1917,21 @@ function pruneStaleOutcomes(m: { outcomes: { outcome: "success" | "failure"; at:
 // actual learning rate — and frees pool budget for genuinely uncertain cells.
 const NOVELTY_WINDOW = 120; // recent finding hashes retained per template
 const findingHistoryByTemplate = new Map<string, string[]>();
+// Per-template novelty stats so the selector snapshot can expose the substrate's
+// own *learning rate* (novel-yield), not just completion-saturation. A detector
+// pinned by re-finding the same thing shows high `productive` but low
+// `novel_fraction` — the redundant-pinned pathology that completion-only
+// observability (selector-saturation-audit) is structurally blind to. Bounded
+// rolling counts within the same OUTCOME_TTL window the means use.
+const noveltyStatsByTemplate = new Map<string, { at: number; kind: "novel" | "redundant" | "idle" }[]>();
+function recordNovelty(templateId: string, kind: "novel" | "redundant" | "idle"): void {
+  let s = noveltyStatsByTemplate.get(templateId);
+  if (!s) { s = []; noveltyStatsByTemplate.set(templateId, s); }
+  s.push({ at: Date.now(), kind });
+  const cutoff = Date.now() - OUTCOME_TTL_MS;
+  while (s.length > 0 && s[0]!.at < cutoff) s.shift();
+  while (s.length > 50) s.shift();
+}
 function gradeNovelty(templateId: string, hashes: string[] | undefined): "novel" | "redundant" {
   if (!Array.isArray(hashes) || hashes.length === 0) return "novel"; // no fingerprint → assume novel (no regression)
   let hist = findingHistoryByTemplate.get(templateId);
@@ -1951,13 +1966,26 @@ function recordOutcomeByTemplate(templateId: string, outcome: boolean | number):
 const SELECTOR_STATE_FILE = "/workspace/state/boredom-selector-state.json";
 function writeSelectorStateSnapshot(): void {
   try {
-    const perTemplate: Array<{ template_id: string; picks: number; mean: number }> = [];
+    const perTemplate: Array<{ template_id: string; picks: number; mean: number; novel_fraction: number | null; productive_picks: number }> = [];
     for (const [tid, m] of momentumByTemplate.entries()) {
       pruneStaleOutcomes(m);
       const picks = m.outcomes.length;
       if (picks === 0) continue;
       const mean = m.outcomes.reduce((s, o) => s + o.reward, 0) / picks;
-      perTemplate.push({ template_id: tid, picks, mean: Math.round(mean * 1000) / 1000 });
+      // Novel-yield: of the productive (finding-bearing) ticks in-window, what
+      // fraction surfaced something NEW. null when no productive ticks (idle-only
+      // detector — a different signal than redundant-pinned).
+      const nstats = noveltyStatsByTemplate.get(tid) ?? [];
+      const novel = nstats.filter((s) => s.kind === "novel").length;
+      const redundant = nstats.filter((s) => s.kind === "redundant").length;
+      const productive = novel + redundant;
+      perTemplate.push({
+        template_id: tid,
+        picks,
+        mean: Math.round(mean * 1000) / 1000,
+        productive_picks: productive,
+        novel_fraction: productive > 0 ? Math.round((novel / productive) * 1000) / 1000 : null,
+      });
     }
     const n = perTemplate.length;
     const means = perTemplate.map((t) => t.mean);
@@ -1968,6 +1996,16 @@ function writeSelectorStateSnapshot(): void {
     // exact pathology V28's graded reward fixes.
     const saturatedFraction = n ? perTemplate.filter((t) => t.mean >= 0.95).length / n : 0;
     const distinctMeans = new Set(means).size;
+    // Learning-rate observability: redundant-pinned detectors produce findings
+    // every run but nothing NEW (novel_fraction≈0). Completion-only saturation
+    // is blind to these post-novelty-grading (their mean already decayed), so
+    // this is the signal a novelty-aware audit needs. Aggregate over detectors
+    // with enough productive samples to judge.
+    const novelable = perTemplate.filter((t) => t.productive_picks >= 3 && t.novel_fraction !== null);
+    const redundantPinned = novelable.filter((t) => (t.novel_fraction ?? 1) <= 0.2);
+    const meanNovelFraction = novelable.length
+      ? Math.round((novelable.reduce((s, t) => s + (t.novel_fraction ?? 0), 0) / novelable.length) * 1000) / 1000
+      : null;
     const snapshot = {
       generated_at: new Date().toISOString(),
       sampled_templates: n,
@@ -1977,6 +2015,12 @@ function writeSelectorStateSnapshot(): void {
       distinct_means: distinctMeans,
       // Heuristic verdict the audit detector can act on without re-deriving.
       saturation_verdict: n >= 8 && saturatedFraction >= 0.8 && variance < 0.01 ? "saturated" : "healthy",
+      // Novel-yield (learning rate) observability, V29 (2026-06-14).
+      mean_novel_fraction: meanNovelFraction,
+      redundant_pinned_count: redundantPinned.length,
+      redundant_pinned_templates: redundantPinned.map((t) => t.template_id),
+      novelty_verdict: novelable.length >= 5 && redundantPinned.length / novelable.length >= 0.3
+        ? "redundant_pinned" : "healthy",
       templates: perTemplate.sort((a, b) => b.mean - a.mean),
     };
     const fs = require("node:fs") as typeof import("node:fs");
@@ -2121,7 +2165,7 @@ async function dispatchByTemplateId(templateId: string): Promise<{ dispatch_id: 
     let reward: number;
     if (!completed) reward = 0;
     else if (body.information_yield === "error") reward = 0; // error completion is zero-work, not productive — the curl penalty (D, 2026-06-14): stop rewarding error-circulation so high-cyclic templates decay in UCB selection
-    else if (body.information_yield === "idle") reward = IDLE_REWARD;
+    else if (body.information_yield === "idle") { reward = IDLE_REWARD; recordNovelty(templateId, "idle"); }
     else {
       // "productive": grade by NOVELTY. Re-emitting only already-seen findings is
       // zero new information yield (redundant) and earns IDLE_REWARD, so a
@@ -2129,6 +2173,7 @@ async function dispatchByTemplateId(templateId: string): Promise<{ dispatch_id: 
       // mean=1.0 and starving genuinely-uncertain cells of pool budget.
       const novelty = gradeNovelty(templateId, body.finding_hashes);
       reward = novelty === "redundant" ? IDLE_REWARD : 1;
+      recordNovelty(templateId, novelty);
       if (novelty === "redundant") {
         console.log(`[pool/shape] ${templateId} productive-but-redundant (${(body.finding_hashes ?? []).length} findings, all previously seen) → reward=${IDLE_REWARD}`);
       }
