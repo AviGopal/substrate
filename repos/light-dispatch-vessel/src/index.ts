@@ -30,7 +30,7 @@
  * referenced resolvers' vessels need resolving).
  */
 
-import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile, readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 
 const PORT = Number(process.env["PORT"] ?? 8280);
@@ -85,6 +85,33 @@ const DISCOVERY = process.env["DISCOVERY_ENDPOINT"] ?? "http://127.0.0.1:8100";
 const API_KEY = process.env["METABOB_API_KEY"] ?? "";
 const VERSION = "0.1.0";
 const WORKDIR_ROOT = process.env["LIGHT_DISPATCH_WORKDIR"] ?? "/workspace/light-dispatch";
+
+// Artifact retention. Per-dispatch task-*.json artifacts are ephemeral debug
+// state — the durable record is the SurrealDB trace. Left uncleaned they
+// accumulated to 68k+ dirs / 146k+ files on the /workspace bind-mount
+// (2026-06-14), exhausting the Docker-Desktop file-sharing layer's fd table and
+// wedging /workspace with EMFILE (which crawled the whole substrate loop). This
+// sweep caps retention so the leak cannot recur.
+const ARTIFACT_TTL_MS = parseInt(process.env["LIGHT_DISPATCH_ARTIFACT_TTL_MS"] ?? "1800000", 10); // 30 min
+async function pruneOldArtifacts(): Promise<void> {
+  try {
+    const entries = await readdir(WORKDIR_ROOT, { withFileTypes: true });
+    const cutoff = Date.now() - ARTIFACT_TTL_MS;
+    let pruned = 0;
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      const full = join(WORKDIR_ROOT, e.name);
+      try {
+        const st = await stat(full);
+        if (st.mtimeMs < cutoff) { await rm(full, { recursive: true, force: true }); pruned++; }
+      } catch { /* entry vanished mid-sweep — fine */ }
+    }
+    if (pruned > 0) console.log(`[light-dispatch] pruned ${pruned} expired artifact dirs (>${ARTIFACT_TTL_MS}ms)`);
+  } catch { /* WORKDIR_ROOT missing or unreadable — fine */ }
+}
+// Sweep on startup (after a short delay so boot I/O settles) and every 10 min.
+setTimeout(() => { void pruneOldArtifacts(); }, 60_000);
+setInterval(() => { void pruneOldArtifacts(); }, 600_000);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
