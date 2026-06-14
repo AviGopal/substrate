@@ -175,6 +175,12 @@ interface DispatchOutcome {
    * next recursion of V28 — reward information *gain*, not information *presence*.)
    */
   finding_hashes: string[];
+  /**
+   * V31 (2026-06-14): cost-weighted LLM tokens consumed by this dispatch
+   * (input + 5×output). The second cost dimension the boredom selector folds into
+   * value-of-information-per-cost. 0 for deterministic detector ticks (no LLM).
+   */
+  cost_tokens: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -604,6 +610,7 @@ async function runDispatch(
       status: "failure", startedAt,
       duration_ms: Date.now() - t0,
       finding_hashes: [],
+      cost_tokens: 0,
       taskCount: 0, successCount: 0, failureCount: 0,
       output_shapes: [],
       information_yield: "error",
@@ -615,6 +622,13 @@ async function runDispatch(
   const taskRecords: Array<Record<string, unknown>> = [];
   let successCount = 0;
   let failureCount = 0;
+  // V31 (2026-06-14): accumulate the second cost dimension — cost-weighted LLM
+  // tokens (input + 5×output approximates the output/input price asymmetry without
+  // committing to an absolute $ rate). LLM tasks surface usage via the
+  // llm_completion_dispatch body; deterministic tasks carry none → contribute 0.
+  // Makes the boredom cost model a vector {wall_ms, tokens} so the selector ranks
+  // efficiency across ALL measured cost parameters, not just wall-clock.
+  let costTokens = 0;
   const outputShapesProduced: string[] = [];
   const knownTaskIds = tpl.tasks.map((t) => t.id);
 
@@ -687,6 +701,17 @@ async function runDispatch(
       body: resolved.body,
     };
     priorResults.set(task.id, r);
+    // V31: harvest LLM token usage surfaced in the task body (llm_completion_dispatch
+    // returns { text, model, usage:{input_tokens, output_tokens} }). Cost-weighted.
+    if (resolved.body && typeof resolved.body === "object") {
+      const ub = resolved.body as Record<string, unknown>;
+      const usage = ub["usage"] && typeof ub["usage"] === "object" ? (ub["usage"] as Record<string, unknown>) : undefined;
+      if (usage) {
+        const it = typeof usage["input_tokens"] === "number" ? (usage["input_tokens"] as number) : 0;
+        const ot = typeof usage["output_tokens"] === "number" ? (usage["output_tokens"] as number) : 0;
+        costTokens += it + 5 * ot;
+      }
+    }
     if (r.status === "success") {
       successCount++;
       if (r.shape) outputShapesProduced.push(r.shape);
@@ -760,6 +785,7 @@ async function runDispatch(
       information_yield: informationYield,
       findings_count: findingsCount,
       finding_hashes: findingHashes,
+      cost_tokens: costTokens,
       ...(stateSignatureHash ? { state_signature_hash: stateSignatureHash } : {}),
     },
     parent_execution_id: parentExecutionId,
@@ -777,6 +803,7 @@ async function runDispatch(
     information_yield: informationYield,
     findings_count: findingsCount,
     finding_hashes: findingHashes,
+    cost_tokens: costTokens,
   };
 }
 
