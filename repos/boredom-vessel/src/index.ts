@@ -1887,17 +1887,30 @@ async function fetchRecentlyProducedShapes(): Promise<Set<string>> {
 // deterministic templates (vessel-demand-tick mean=1.0) — UCB1's explore
 // bonus alone is insufficient when picks=10 mean=1.0 wins against picks=10 mean=0.
 const OUTCOME_TTL_MS = 60 * 60 * 1000; // 1 hour
-const momentumByTemplate = new Map<string, { outcomes: { outcome: "success" | "failure"; at: number }[] }>();
+// V28 (2026-06-14): outcomes carry a graded `reward` ∈ [0,1], not just a
+// success/failure bit. The mean used by UCB is the average reward, so the
+// selector discriminates *information yield* (a detector that emits gaps earns
+// 1.0; one that completes but finds nothing earns IDLE_REWARD) rather than mere
+// completion — which previously pinned 86% of templates at mean=1.0 and
+// collapsed UCB to uniform allocation. `outcome` is retained (derived) for any
+// reader that still keys on the bit.
+const momentumByTemplate = new Map<string, { outcomes: { outcome: "success" | "failure"; at: number; reward: number }[] }>();
+// Reward a clean-but-empty tick earns. Non-zero so health/observer detectors
+// stay periodically sampleable via the UCB explore bonus, but well below a
+// productive tick (1.0) so finding-producing detectors win more budget.
+const IDLE_REWARD = 0.2;
 
-function pruneStaleOutcomes(m: { outcomes: { outcome: "success" | "failure"; at: number }[] }): void {
+function pruneStaleOutcomes(m: { outcomes: { outcome: "success" | "failure"; at: number; reward: number }[] }): void {
   const cutoff = Date.now() - OUTCOME_TTL_MS;
   while (m.outcomes.length > 0 && m.outcomes[0]!.at < cutoff) m.outcomes.shift();
 }
 
-function recordOutcomeByTemplate(templateId: string, success: boolean): void {
+function recordOutcomeByTemplate(templateId: string, outcome: boolean | number): void {
+  // Accepts a legacy boolean (true→1.0, false→0.0) or a graded reward ∈ [0,1].
+  const reward = typeof outcome === "number" ? Math.max(0, Math.min(1, outcome)) : (outcome ? 1 : 0);
   let m = momentumByTemplate.get(templateId);
   if (!m) { m = { outcomes: [] }; momentumByTemplate.set(templateId, m); }
-  m.outcomes.push({ outcome: success ? "success" : "failure", at: Date.now() });
+  m.outcomes.push({ outcome: reward > 0 ? "success" : "failure", at: Date.now(), reward });
   pruneStaleOutcomes(m);
   // Soft cap on memory: keep at most 50 outcomes per template, dropping oldest.
   while (m.outcomes.length > 50) m.outcomes.shift();
@@ -1909,9 +1922,10 @@ function templateMomentum(templateId: string): number {
   if (!m || m.outcomes.length === 0) return 1.5; // cold-start bonus (mirrors V22)
   pruneStaleOutcomes(m);
   if (m.outcomes.length === 0) return 1.5;
-  const succ = m.outcomes.filter((o) => o.outcome === "success").length;
+  // V28: average graded reward (information yield), Laplace-smoothed.
+  const rewardSum = m.outcomes.reduce((s, o) => s + o.reward, 0);
   // V24c (2026-06-08): floor at 0.5 so low-success templates stay sampleable.
-  const raw = (succ + 1) / (m.outcomes.length + 2);
+  const raw = (rewardSum + 1) / (m.outcomes.length + 2);
   return Math.max(0.5, raw);
 }
 
@@ -1942,8 +1956,9 @@ function ucbScore(templateId: string, shapeAvail: number): { score: number; reas
     // Unsampled (or fully-decayed) templates always win until they've been tried once.
     return { score: Number.POSITIVE_INFINITY, reason: `ucb=∞ picks=0 shape=${shapeAvail.toFixed(2)}` };
   }
-  const succ = m!.outcomes.filter((o) => o.outcome === "success").length;
-  const mean = succ / picks;
+  // V28: mean = average information-yield reward (not success fraction), so UCB
+  // exploits detectors that actually produce findings.
+  const mean = m!.outcomes.reduce((s, o) => s + o.reward, 0) / picks;
   const explore = 1.4 * Math.sqrt(2 * Math.log(Math.max(1, totalPicksV24f)) / picks);
   const baseScore = mean + explore;
   // V27 (2026-06-09): pipeline-pull is ADDITIVE when ratio=1.0 (all inputs fresh)
@@ -2022,14 +2037,24 @@ async function dispatchByTemplateId(templateId: string): Promise<{ dispatch_id: 
       executionId?: string;
       status?: string;
       output_shapes?: string[];
+      information_yield?: "productive" | "idle" | "error";
+      findings_count?: number;
     };
     const dispatchId = body.dispatchId ?? body.executionId ?? `shape-${Date.now()}`;
     // Treat last-shape=structuredError as no_op (echo chamber guard).
     const shapes = Array.isArray(body.output_shapes) ? body.output_shapes : [];
     const lastShape = shapes[shapes.length - 1];
     const noOp = lastShape === "structuredError";
-    const success = (body.status === "success" || body.status === "completed") && !noOp;
-    recordOutcomeByTemplate(templateId, success);
+    const completed = (body.status === "success" || body.status === "completed") && !noOp;
+    // V28 (2026-06-14): graded reward by information yield. light-dispatch reports
+    // whether the tick emitted findings (`productive`) or completed empty (`idle`).
+    // Fall back to the completion bit when the field is absent (older dispatcher).
+    let reward: number;
+    if (!completed) reward = 0;
+    else if (body.information_yield === "idle") reward = IDLE_REWARD;
+    else reward = 1; // "productive" or field-absent → full reward (no regression)
+    const success = reward > 0;
+    recordOutcomeByTemplate(templateId, reward);
     return { dispatch_id: dispatchId, execution_id: body.executionId, success };
   } catch (err) {
     console.warn(`[pool/shape] dispatch failed for ${templateId}: ${(err as Error).message}`);

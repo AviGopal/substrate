@@ -126,11 +126,67 @@ interface DispatchOutcome {
   successCount: number;
   failureCount: number;
   output_shapes: string[];
+  /**
+   * Information yield of this dispatch — the discriminator the boredom selector
+   * needs to grade reward by *learning produced*, not mere completion.
+   *  - "productive": the tick emitted real findings (a gap, an emission, a
+   *    non-empty findings collection) — full reward.
+   *  - "idle": the tick completed cleanly but produced nothing new
+   *    (e.g. an audit whose `gaps_emitted=0`, a queue drain of `{"gaps":[],"total":0}`)
+   *    — reduced reward, so UCB stops spending equal budget on detectors that
+   *    are currently finding nothing.
+   *  - "error": the chain failed — zero reward (unchanged from prior behaviour).
+   */
+  information_yield: "productive" | "idle" | "error";
+  /** Count of findings/emissions detected across all task bodies (0 for idle). */
+  findings_count: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Findings-bearing array keys the substrate's detectors actually emit (anchored
+// on real report bodies 2026-06-14: capabilityGapReport `gaps`, audit
+// `cluster_summaries`/`emissions`, substrateGap resolve `gaps`, drafter
+// `drafts`/`scenarios`, etc.). Empty arrays (`"gaps":[]`) correctly score 0.
+const FINDINGS_ARRAY_KEYS = new Set([
+  "gaps", "emissions", "cluster_summaries", "findings", "anomalies", "drafts",
+  "scenarios", "candidates", "mismatches", "violations", "drifts", "issues",
+  "problems", "proposals", "promoted", "orphans", "novel", "unlearned",
+  "uncovered", "recommendations", "missing",
+]);
+// Explicit numeric yield counters detectors self-report.
+const FINDINGS_COUNT_KEYS = new Set([
+  "gaps_emitted", "gapsemitted", "emitted", "findings_count", "findingscount",
+  "anomalies_found", "drafted", "promoted_count",
+]);
+
+/**
+ * Walk a resolved task body (depth-bounded) and count the findings it reports.
+ * Counts non-empty findings arrays by length and explicit `*_emitted`/count
+ * fields by value. Skips string fields (avoids double-counting `bodyText` JSON
+ * blobs whose parsed form is already present as `bodyJson`). Pure read; never throws.
+ */
+function extractFindingsCount(node: unknown, depth = 0): number {
+  if (depth > 5 || node == null || typeof node !== "object") return 0;
+  let total = 0;
+  if (Array.isArray(node)) {
+    for (const el of node) total += extractFindingsCount(el, depth + 1);
+    return total;
+  }
+  for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+    const key = k.toLowerCase();
+    if (Array.isArray(v) && FINDINGS_ARRAY_KEYS.has(key)) {
+      total += v.length;
+    } else if (typeof v === "number" && FINDINGS_COUNT_KEYS.has(key) && v > 0) {
+      total += v;
+    } else if (v && typeof v === "object") {
+      total += extractFindingsCount(v, depth + 1);
+    }
+  }
+  return total;
+}
 
 const auth = (): Record<string, string> =>
   API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {};
@@ -442,6 +498,8 @@ async function runDispatch(
       duration_ms: Date.now() - t0,
       taskCount: 0, successCount: 0, failureCount: 0,
       output_shapes: [],
+      information_yield: "error",
+      findings_count: 0,
     };
   }
 
@@ -546,6 +604,17 @@ async function runDispatch(
 
   const overallStatus: "success" | "failure" = failureCount === 0 ? "success" : "failure";
   const duration = Date.now() - t0;
+  // Information yield: scan every task body for findings the detector reported.
+  // A clean completion that produced no findings is "idle" (reduced reward),
+  // which is what lets the boredom UCB selector stop spending equal budget on
+  // detectors currently finding nothing. (2026-06-14: closes the reward-
+  // saturation that pinned 86% of selections at mean=1.0.)
+  let findingsCount = 0;
+  for (const r of priorResults.values()) {
+    if (r.status === "success" && r.body != null) findingsCount += extractFindingsCount(r.body);
+  }
+  const informationYield: "productive" | "idle" | "error" =
+    overallStatus !== "success" ? "error" : findingsCount > 0 ? "productive" : "idle";
   // activity-api's POST /v2/activities/execution-traces derives `success` via
   // `body.status === 'completed' || body.success === true` (see
   // metabob-activity-api/src/routes/execution-traces.ts:1561). Send BOTH the
@@ -573,6 +642,8 @@ async function runDispatch(
       task_count: tpl.tasks.length,
       success_count: successCount,
       failure_count: failureCount,
+      information_yield: informationYield,
+      findings_count: findingsCount,
       ...(stateSignatureHash ? { state_signature_hash: stateSignatureHash } : {}),
     },
     parent_execution_id: parentExecutionId,
@@ -587,6 +658,8 @@ async function runDispatch(
     taskCount: tpl.tasks.length,
     successCount, failureCount,
     output_shapes: Array.from(new Set(outputShapesProduced)),
+    information_yield: informationYield,
+    findings_count: findingsCount,
   };
 }
 
