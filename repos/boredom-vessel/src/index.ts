@@ -1957,6 +1957,119 @@ function recordOutcomeByTemplate(templateId: string, outcome: boolean | number):
   totalPicksV24f += 1;
 }
 
+// ─── Cost model (V30, 2026-06-14): cost as a predicted-and-validated posterior ───
+// V28 made the selector grade *information yield* but left it cost-blind: it spent
+// equal regard on a detector that yields a finding in 200ms and one that yields the
+// same finding in 180s — yet the fast one collects ~900× more samples per unit
+// wall-clock, and wall-clock is the substrate's actual rate limiter (SUBSTRATE_AS_MDP
+// §7). Cost is the negative component of the §1.1 reward vector, so we treat it the
+// SAME way as reward: maintain a per-template expected-cost posterior (in-window mean
+// of observed dispatch wall-clock), VALIDATE each actual against the prior expectation
+// (the residual is a detected cost-surprise — the analog of budget_exhausted), and
+// fold value-per-cost into the UCB score so equal-yield templates rank by how cheaply
+// they yield. duration_ms is the cost parameter already measured; cost_usd / tokens
+// are not yet captured and stay warm-start-neutral until they are.
+const COST_TTL_MS = OUTCOME_TTL_MS; // share the 1h reward window
+const DEFAULT_COST_MS = 5000;       // pool default before any observation lands
+// V31 (2026-06-14): cost is a VECTOR, not a scalar — {wall_ms, tokens}. wall_ms is
+// the throughput limiter (§7); tokens is the LLM-$ dimension (input + 5×output,
+// surfaced by light-dispatch). Each dimension is predicted + validated + folded
+// identically; the selector combines them in combinedCostAdj. Deterministic ticks
+// carry tokens=0, so the token dim only discriminates among LLM-using templates —
+// honest "all cost parameters" coverage without fabricating cost where there is none.
+interface CostSample { ms: number; tokens: number; at: number }
+const costByTemplate = new Map<string, { samples: CostSample[] }>();
+// Per-dimension cost-expectation validation: rolling |actual − expected| / expected.
+// Surfaced in the selector snapshot so the substrate's *expectations about cost*
+// become first-class, trace-inspectable observables, per dimension.
+const costResidualsMs: { rel: number; at: number }[] = [];
+const costResidualsTok: { rel: number; at: number }[] = [];
+
+function pushResidual(arr: { rel: number; at: number }[], actual: number, expected: number): void {
+  if (expected > 0) {
+    arr.push({ rel: Math.abs(actual - expected) / expected, at: Date.now() });
+    while (arr.length > 200) arr.shift();
+  }
+}
+
+function recordCostByTemplate(templateId: string, ms: number, tokens: number): void {
+  if (!Number.isFinite(ms) || ms < 0) return;
+  const tok = Number.isFinite(tokens) && tokens > 0 ? tokens : 0;
+  // Validate-before-update: residual of each actual against the current expectation.
+  const prior = costByTemplate.get(templateId);
+  if (prior && prior.samples.length > 0) {
+    const live = prior.samples.filter((s) => s.at >= Date.now() - COST_TTL_MS);
+    if (live.length > 0) {
+      pushResidual(costResidualsMs, ms, live.reduce((s, o) => s + o.ms, 0) / live.length);
+      const tokLive = live.filter((s) => s.tokens > 0);
+      if (tok > 0 && tokLive.length > 0) pushResidual(costResidualsTok, tok, tokLive.reduce((s, o) => s + o.tokens, 0) / tokLive.length);
+    }
+  }
+  let c = costByTemplate.get(templateId);
+  if (!c) { c = { samples: [] }; costByTemplate.set(templateId, c); }
+  c.samples.push({ ms, tokens: tok, at: Date.now() });
+  const cutoff = Date.now() - COST_TTL_MS;
+  while (c.samples.length > 0 && c.samples[0]!.at < cutoff) c.samples.shift();
+  while (c.samples.length > 50) c.samples.shift();
+}
+
+let _poolMedianCache: { at: number; ms: number; tokens: number } | null = null;
+function computePoolMedians(): { ms: number; tokens: number } {
+  // Memo within a selection cycle. Median, not mean, so one 180s timeout (or one
+  // huge-token drafter run) doesn't drag the pool reference up.
+  if (_poolMedianCache && Date.now() - _poolMedianCache.at < 1000) return { ms: _poolMedianCache.ms, tokens: _poolMedianCache.tokens };
+  const cutoff = Date.now() - COST_TTL_MS;
+  const msMeans: number[] = [];
+  const tokMeans: number[] = [];
+  for (const c of costByTemplate.values()) {
+    const live = c.samples.filter((s) => s.at >= cutoff);
+    if (live.length > 0) msMeans.push(live.reduce((s, o) => s + o.ms, 0) / live.length);
+    const tokLive = live.filter((s) => s.tokens > 0);
+    if (tokLive.length > 0) tokMeans.push(tokLive.reduce((s, o) => s + o.tokens, 0) / tokLive.length);
+  }
+  const median = (a: number[], d: number): number => { if (a.length === 0) return d; a.sort((x, y) => x - y); return a[Math.floor(a.length / 2)]!; };
+  const out = { ms: median(msMeans, DEFAULT_COST_MS), tokens: median(tokMeans, 0) };
+  _poolMedianCache = { at: Date.now(), ms: out.ms, tokens: out.tokens };
+  return out;
+}
+function poolMedianCostMs(): number { return computePoolMedians().ms; }
+function poolMedianCostTokens(): number { return computePoolMedians().tokens; }
+
+function expectedCostMs(templateId: string): number {
+  const c = costByTemplate.get(templateId);
+  if (!c || c.samples.length === 0) return poolMedianCostMs(); // warm-start neutral (partial pooling §4.2)
+  const cutoff = Date.now() - COST_TTL_MS;
+  const live = c.samples.filter((s) => s.at >= cutoff);
+  if (live.length === 0) return poolMedianCostMs();
+  return live.reduce((s, o) => s + o.ms, 0) / live.length;
+}
+function expectedCostTokens(templateId: string): number {
+  const c = costByTemplate.get(templateId);
+  if (!c) return 0;
+  const live = c.samples.filter((s) => s.at >= Date.now() - COST_TTL_MS && s.tokens > 0);
+  if (live.length === 0) return 0;
+  return live.reduce((s, o) => s + o.tokens, 0) / live.length;
+}
+
+// Combined value-of-information cost adjustment across the cost vector. Each present
+// dimension is normalized to its own pool median and averaged (a pool with no token
+// usage → ms-only). sqrt keeps it gentle; clamp [0.5,2.0] so cost can neither
+// dominate the exploration bonus nor zero a template.
+function combinedCostAdj(templateId: string): number {
+  const med = computePoolMedians();
+  const ratios: number[] = [];
+  if (med.ms > 0) ratios.push(expectedCostMs(templateId) / med.ms);
+  if (med.tokens > 0) {
+    const t = expectedCostTokens(templateId);
+    // No token history in a token-using pool → neutral on that axis (ratio 1.0),
+    // not free, so a never-yet-LLM template isn't spuriously over-rewarded.
+    ratios.push(t > 0 ? t / med.tokens : 1.0);
+  }
+  if (ratios.length === 0) return 1.0;
+  const rel = ratios.reduce((s, r) => s + r, 0) / ratios.length;
+  return Math.max(0.5, Math.min(2.0, Math.sqrt(1 / Math.max(rel, 1e-6))));
+}
+
 // V28 (2026-06-14): snapshot the selector's reward distribution to a bind-mounted
 // file so the substrate can *observe its own selection health*. The selector
 // means live only in this process's memory, so a degenerate reward (e.g. the
@@ -1966,7 +2079,7 @@ function recordOutcomeByTemplate(templateId: string, outcome: boolean | number):
 const SELECTOR_STATE_FILE = "/workspace/state/boredom-selector-state.json";
 function writeSelectorStateSnapshot(): void {
   try {
-    const perTemplate: Array<{ template_id: string; picks: number; mean: number; novel_fraction: number | null; productive_picks: number }> = [];
+    const perTemplate: Array<{ template_id: string; picks: number; mean: number; novel_fraction: number | null; productive_picks: number; expected_cost_ms: number; expected_cost_tokens: number; value_per_sec: number | null }> = [];
     for (const [tid, m] of momentumByTemplate.entries()) {
       pruneStaleOutcomes(m);
       const picks = m.outcomes.length;
@@ -1979,12 +2092,18 @@ function writeSelectorStateSnapshot(): void {
       const novel = nstats.filter((s) => s.kind === "novel").length;
       const redundant = nstats.filter((s) => s.kind === "redundant").length;
       const productive = novel + redundant;
+      const ecost = expectedCostMs(tid);
       perTemplate.push({
         template_id: tid,
         picks,
         mean: Math.round(mean * 1000) / 1000,
         productive_picks: productive,
         novel_fraction: productive > 0 ? Math.round((novel / productive) * 1000) / 1000 : null,
+        expected_cost_ms: Math.round(ecost),
+        expected_cost_tokens: Math.round(expectedCostTokens(tid)),
+        // Value-of-information per second: the efficiency the cost-aware selector
+        // maximizes. mean (yield) divided by expected wall-clock cost in seconds.
+        value_per_sec: ecost > 0 ? Math.round((mean / (ecost / 1000)) * 1000) / 1000 : null,
       });
     }
     const n = perTemplate.length;
@@ -2021,6 +2140,43 @@ function writeSelectorStateSnapshot(): void {
       redundant_pinned_templates: redundantPinned.map((t) => t.template_id),
       novelty_verdict: novelable.length >= 5 && redundantPinned.length / novelable.length >= 0.3
         ? "redundant_pinned" : "healthy",
+      // V31 (2026-06-14): cost-expectation observability over the cost VECTOR. Each
+      // dimension's mean residual is the substrate's calibration error on its OWN
+      // cost predictions (validated per dispatch). "surprising" on either dimension
+      // = expectations about cost are systematically wrong = a detected constraint
+      // (analog of budget_exhausted). mean_cost_residual kept (= ms) for back-compat.
+      ...(() => {
+        const liveOf = (arr: { rel: number; at: number }[]) => arr.filter((r) => r.at >= Date.now() - COST_TTL_MS);
+        const meanOf = (arr: { rel: number; at: number }[]) => { const l = liveOf(arr); return l.length ? Math.round((l.reduce((s, r) => s + r.rel, 0) / l.length) * 1000) / 1000 : null; };
+        const med = computePoolMedians();
+        const msR = meanOf(costResidualsMs), tokR = meanOf(costResidualsTok);
+        const verdict = (mr: number | null, n: number) => mr === null || n < 5 ? "cold" : mr <= 0.5 ? "calibrated" : "surprising";
+        // GATE observable (allocation efficiency): pick-weighted mean value_per_sec
+        // ÷ unweighted mean. > 1 ⟺ the selector concentrates budget on the more
+        // cost-efficient templates — the trace-inspectable signal that the cost-aware
+        // selection is actually shifting allocation (status≠acceptance, watched over
+        // a window). Computed over templates with a defined value_per_sec.
+        const vps = perTemplate.filter((t) => t.value_per_sec !== null) as Array<{ picks: number; value_per_sec: number }>;
+        const allocEff = (() => {
+          if (vps.length < 3) return null;
+          const unw = vps.reduce((s, t) => s + t.value_per_sec, 0) / vps.length;
+          const totPicks = vps.reduce((s, t) => s + t.picks, 0);
+          if (unw <= 0 || totPicks <= 0) return null;
+          const w = vps.reduce((s, t) => s + t.value_per_sec * t.picks, 0) / totPicks;
+          return Math.round((w / unw) * 1000) / 1000;
+        })();
+        return {
+          pool_median_cost_ms: Math.round(med.ms),
+          pool_median_cost_tokens: Math.round(med.tokens),
+          mean_cost_residual: msR,
+          mean_cost_residual_tokens: tokR,
+          cost_residual_samples: liveOf(costResidualsMs).length,
+          cost_residual_samples_tokens: liveOf(costResidualsTok).length,
+          cost_model_verdict: verdict(msR, liveOf(costResidualsMs).length),
+          cost_model_verdict_tokens: verdict(tokR, liveOf(costResidualsTok).length),
+          allocation_efficiency_ratio: allocEff,
+        };
+      })(),
       templates: perTemplate.sort((a, b) => b.mean - a.mean),
     };
     const fs = require("node:fs") as typeof import("node:fs");
@@ -2080,9 +2236,18 @@ function ucbScore(templateId: string, shapeAvail: number): { score: number; reas
   // template at mean=1.0 shape=1.0 scoring 1.0+explore, so the deterministic
   // template always won. The additive +2.0 bonus dominates that gap.
   const pipelinePull = shapeAvail >= 2.0 ? 2.0 : 0.0;
+  // V30 (2026-06-14): value-of-information per unit cost. Bias the exploit value
+  // toward templates that yield cheaply (faster wall-clock = more samples/sec =
+  // higher learning rate, §7). sqrt keeps it gentle; clamp to [0.5,2.0] so cost can
+  // neither dominate the exploration bonus nor zero a template. Cold-start (picks=0)
+  // already returned ∞ above, so unmeasured templates are still tried before cost
+  // ever applies — cost only discriminates among templates with a yield history.
+  const expCost = expectedCostMs(templateId);
+  const expTok = expectedCostTokens(templateId);
+  const costAdj = combinedCostAdj(templateId); // V31: combined over the cost vector {ms, tokens}
   return {
-    score: baseScore * Math.max(shapeAvail, 1.0) + pipelinePull,
-    reason: `mean=${mean.toFixed(2)} ucb=${explore.toFixed(2)} picks=${picks} shape=${shapeAvail.toFixed(2)} pull=${pipelinePull}`,
+    score: baseScore * costAdj * Math.max(shapeAvail, 1.0) + pipelinePull,
+    reason: `mean=${mean.toFixed(2)} ucb=${explore.toFixed(2)} cost=${Math.round(expCost)}ms${expTok > 0 ? `/${Math.round(expTok)}tok` : ""}×${costAdj.toFixed(2)} picks=${picks} shape=${shapeAvail.toFixed(2)} pull=${pipelinePull}`,
   };
 }
 
@@ -2129,6 +2294,10 @@ async function pickByShapeAvailability(
 // Dispatch by template_id via light-dispatch (uses existing infrastructure).
 // Returns { dispatch_id, execution_id, success } shaped like dispatchOne.
 async function dispatchByTemplateId(templateId: string): Promise<{ dispatch_id: string; execution_id?: string; success: boolean } | null> {
+  // V30: dispatch wall-clock IS the cost actual the pool experiences (it blocks the
+  // loop for this duration). Declared before the try so the catch path (timeouts —
+  // legitimately expensive) records cost too. Validates against expectedCostMs.
+  const costT0 = Date.now();
   try {
     const res = await fetch(`http://127.0.0.1:8280/dispatch`, {
       method: "POST",
@@ -2141,6 +2310,7 @@ async function dispatchByTemplateId(templateId: string): Promise<{ dispatch_id: 
       // Penalize: a non-OK dispatch is a failure outcome. Without this the
       // template's picks stays 0, ucb stays +∞, and the pool re-selects it
       // forever (livelock observed 2026-06-13 when light-dispatch was down).
+      recordCostByTemplate(templateId, Date.now() - costT0, 0);
       recordOutcomeByTemplate(templateId, false);
       return null;
     }
@@ -2152,6 +2322,7 @@ async function dispatchByTemplateId(templateId: string): Promise<{ dispatch_id: 
       information_yield?: "productive" | "idle" | "error";
       findings_count?: number;
       finding_hashes?: string[];
+      cost_tokens?: number;
     };
     const dispatchId = body.dispatchId ?? body.executionId ?? `shape-${Date.now()}`;
     // Treat last-shape=structuredError as no_op (echo chamber guard).
@@ -2179,6 +2350,7 @@ async function dispatchByTemplateId(templateId: string): Promise<{ dispatch_id: 
       }
     }
     const success = reward > 0;
+    recordCostByTemplate(templateId, Date.now() - costT0, typeof body.cost_tokens === "number" ? body.cost_tokens : 0);
     recordOutcomeByTemplate(templateId, reward);
     return { dispatch_id: dispatchId, execution_id: body.executionId, success };
   } catch (err) {
@@ -2188,6 +2360,7 @@ async function dispatchByTemplateId(templateId: string): Promise<{ dispatch_id: 
     // unreachable shape indefinitely (the ~2h mitosis-tick livelock, 2026-06-13).
     // After one failure picks=1/mean=0 → score is finite, so other shapes get
     // selected; outcome decay (where enabled) lets it recover once infra heals.
+    recordCostByTemplate(templateId, Date.now() - costT0, 0);
     recordOutcomeByTemplate(templateId, false);
     return null;
   }
