@@ -56,7 +56,12 @@ const fsWrite: ResolverHandler = async (ctx) => {
 };
 
 const fsEdit: ResolverHandler = async (ctx) => {
-  const path = str(ctx.body, "path"), old_string = str(ctx.body, "old_string"), new_string = str(ctx.body, "new_string");
+  // Read from impulse.pointer too — callers (patch_with_tools) dispatch via the
+  // impulse envelope, so top-level-only reads (the prior bug) made every call
+  // fail with "required". Mirrors code_replace_lines' fix.
+  const path = str(ctx.body, "impulse", "pointer", "path") ?? str(ctx.body, "path");
+  const old_string = str(ctx.body, "impulse", "pointer", "old_string") ?? str(ctx.body, "old_string");
+  const new_string = str(ctx.body, "impulse", "pointer", "new_string") ?? str(ctx.body, "new_string");
   if (!path || old_string === undefined || new_string === undefined)
     return { error: "path, old_string, and new_string are required" };
   try {
