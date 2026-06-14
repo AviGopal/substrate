@@ -355,6 +355,21 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // deterministic consumer — the §8.6 horizon recursion is detected+queued but never
   // dispatched. Terminates in a PR against dev (merge-gated), so safe to run autonomously.
   "run vessel-scaffold-trigger-tick to drain the vessel-authoring scenario queue: pick a routed capability gap, synthesize the smallest vessel supplying the demanded shape, and dispatch scaffold-and-publish-vessel — closes the §8.6 vessel-addition recursion so capability horizons no recombination can reach get an actual vessel PR",
+  // goal[44] — characterize-arrived-vessel (vessel-ARRIVAL horizon classifier,
+  // SUBSTRATE_AS_MDP §8.4/§8.6). The arrival trigger the loop was missing: the
+  // §8.6 routing (draft-template vs scaffold-vessel) and registry-staleness
+  // observation already existed, but nothing watched a NEW vessel joining
+  // discovery to characterize the shapes it brought. Without it an arbitrary
+  // connected vessel stays observable-but-unmanipulable (no template consumes
+  // its shapes). Diffs the registry vs a persisted snapshot, classifies each
+  // new vessel's shape coverage, routes uncovered shapes into the drafter, and
+  // credits the shapes (reward edge) so their cold-start relevance leaves zero.
+  "run characterize-arrived-vessel to detect vessels that joined discovery since the last run, classify each advertised shape's coverage via discover-by-shapes, write a gap scenario for shapes no activity consumes so the drafter authors an integrating template, and credit the new vessel's shapes so they leave zero relevance — the arrival trigger that turns a connected vessel into a usable action surface",
+  // NOTE (2026-06-13): obsidian operation is deliberately NOT a core-loop goal.
+  // Obsidian is an external app that may be disconnected; forcing it into the
+  // self-optimization rotation would pollute the core loop with availability-
+  // dependent failures. It is driven OUTSIDE the core loop as an external test
+  // (operator/external-harness initiated; see scripts/substrate/obsidian-learning-probe.sh).
 ];
 
 // targetTemplateId per goal — bypasses recommend() entirely for goals that name a specific template.
@@ -468,6 +483,10 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // targetTemplateId: the goal text is novel and the tick is deterministic plumbing
   // around one constrained LLM design task, so Thompson must not misroute it.
   "development-vessel:vessel-scaffold-trigger-tick",
+  // goal[44] — characterize-arrived-vessel. Explicit targetTemplateId: the goal
+  // text is novel and the tick is deterministic single-resolver plumbing, so
+  // Thompson must not misroute it to a semantically-near template.
+  "development-vessel:characterize-arrived-vessel",
 ];
 
 /**
@@ -536,6 +555,7 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "cheap",     // goal[41] llm-quota-observer-tick (1 HTTP GET, bounded scan)
   "moderate",  // goal[42] drafter-trigger-tick (fs_list + json_path_extract + HTTP POST → drafter, ~15s)
   "moderate",  // goal[43] vessel-scaffold-trigger-tick (fs_list + 1 haiku design call + json_path_extract + HTTP POST → scaffold)
+  "cheap",     // goal[44] characterize-arrived-vessel (1 registry POST + discover-by-shapes per new-vessel shape + scenario write; no LLM, usually a no-op baseline)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
