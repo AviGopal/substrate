@@ -167,6 +167,14 @@ interface DispatchOutcome {
   information_yield: "productive" | "idle" | "error";
   /** Count of findings/emissions detected across all task bodies (0 for idle). */
   findings_count: number;
+  /**
+   * Stable per-finding identity hashes (sorted, deduped) across all task bodies.
+   * Lets the boredom selector grade *novelty* — a `productive` tick that re-emits
+   * only findings it has emitted before has zero new information yield and should
+   * decay toward IDLE_REWARD rather than earn full reward forever. (2026-06-14:
+   * next recursion of V28 — reward information *gain*, not information *presence*.)
+   */
+  finding_hashes: string[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -213,6 +221,78 @@ function extractFindingsCount(node: unknown, depth = 0): number {
     }
   }
   return total;
+}
+
+/** Short stable hash (FNV-1a, 32-bit, hex) for finding-identity fingerprints. */
+function fnv1a(s: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+
+/**
+ * Derive a stable identity for one finding object. Prefer an explicit id-ish
+ * field (the thing that makes two findings "the same finding"); fall back to a
+ * bounded JSON projection. Mirrors extractFindingIdentities' element handling.
+ */
+const FINDING_ID_KEYS = ["id", "gap_id", "gapid", "scenario_id", "template_id",
+  "templateid", "key", "type", "category", "summary", "title", "name", "path", "shape"];
+/**
+ * Strip volatile tokens so the same logical finding hashes identically across
+ * runs. Detectors routinely embed `Date.now()` / ISO datetimes in gap ids
+ * (e.g. `responsibility-${vessel}-${p}-${Date.now()}`), which would make every
+ * re-emission of the same gap look novel and defeat novelty grading. Removes
+ * 10/13-digit epoch stamps, ISO datetimes, and bare YYYY-MM-DD dates.
+ */
+function stripVolatile(s: string): string {
+  return s
+    .replace(/\d{4}-\d{2}-\d{2}T[\d:.\-Z]+/g, "T")        // ISO datetime
+    .replace(/\d{4}-\d{2}-\d{2}/g, "D")                    // bare date
+    .replace(/\d{13}/g, "M")                               // epoch millis
+    .replace(/\d{10}/g, "S");                              // epoch seconds
+}
+function findingIdentity(el: unknown): string {
+  if (el == null) return "null";
+  if (typeof el !== "object") return stripVolatile(String(el)).slice(0, 160);
+  const o = el as Record<string, unknown>;
+  const parts: string[] = [];
+  for (const k of FINDING_ID_KEYS) {
+    const v = o[k];
+    if (typeof v === "string" || typeof v === "number") parts.push(`${k}=${v}`);
+  }
+  if (parts.length > 0) return stripVolatile(parts.join("|")).slice(0, 240);
+  // No id-ish field: fall back to a stable, bounded JSON projection.
+  try { return stripVolatile(JSON.stringify(el)).slice(0, 240); } catch { return "unhashable"; }
+}
+
+/**
+ * Walk a resolved task body and collect a STABLE IDENTITY per finding (not just
+ * a count). Two runs of the same detector that surface the same findings yield
+ * the same identity set — which is how the boredom selector tells genuine
+ * discovery (novel hashes) from redundant re-emission (all hashes already seen).
+ * Mirrors extractFindingsCount's traversal exactly. Pure read; never throws.
+ */
+function extractFindingIdentities(node: unknown, out: string[], depth = 0): void {
+  if (depth > 5 || node == null || typeof node !== "object" || out.length > 200) return;
+  if (Array.isArray(node)) {
+    for (const el of node) extractFindingIdentities(el, out, depth + 1);
+    return;
+  }
+  for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+    const key = k.toLowerCase();
+    if (Array.isArray(v) && FINDINGS_ARRAY_KEYS.has(key)) {
+      for (const el of v) out.push(fnv1a(`${key}:${findingIdentity(el)}`));
+    } else if (typeof v === "number" && FINDINGS_COUNT_KEYS.has(key) && v > 0) {
+      // A bare counter has no per-item identity; fold key+value so a stable
+      // count reads as redundant and a changed count reads as novel.
+      out.push(fnv1a(`${key}#${v}`));
+    } else if (v && typeof v === "object") {
+      extractFindingIdentities(v, out, depth + 1);
+    }
+  }
 }
 
 const auth = (): Record<string, string> =>
@@ -523,6 +603,7 @@ async function runDispatch(
       dispatchId, executionId, templateId,
       status: "failure", startedAt,
       duration_ms: Date.now() - t0,
+      finding_hashes: [],
       taskCount: 0, successCount: 0, failureCount: 0,
       output_shapes: [],
       information_yield: "error",
@@ -637,9 +718,16 @@ async function runDispatch(
   // detectors currently finding nothing. (2026-06-14: closes the reward-
   // saturation that pinned 86% of selections at mean=1.0.)
   let findingsCount = 0;
+  const findingHashSet = new Set<string>();
   for (const r of priorResults.values()) {
-    if (r.status === "success" && r.body != null) findingsCount += extractFindingsCount(r.body);
+    if (r.status === "success" && r.body != null) {
+      findingsCount += extractFindingsCount(r.body);
+      const ids: string[] = [];
+      extractFindingIdentities(r.body, ids);
+      for (const h of ids) findingHashSet.add(h);
+    }
   }
+  const findingHashes = Array.from(findingHashSet).sort();
   const informationYield: "productive" | "idle" | "error" =
     overallStatus !== "success" ? "error" : findingsCount > 0 ? "productive" : "idle";
   // activity-api's POST /v2/activities/execution-traces derives `success` via
@@ -671,6 +759,7 @@ async function runDispatch(
       failure_count: failureCount,
       information_yield: informationYield,
       findings_count: findingsCount,
+      finding_hashes: findingHashes,
       ...(stateSignatureHash ? { state_signature_hash: stateSignatureHash } : {}),
     },
     parent_execution_id: parentExecutionId,
@@ -687,6 +776,7 @@ async function runDispatch(
     output_shapes: Array.from(new Set(outputShapesProduced)),
     information_yield: informationYield,
     findings_count: findingsCount,
+    finding_hashes: findingHashes,
   };
 }
 

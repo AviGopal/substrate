@@ -1863,7 +1863,7 @@ async function fetchRecentlyProducedShapes(): Promise<Set<string>> {
   try {
     const res = await fetch(
       `${ACTIVITY_API_ENDPOINT}/v2/activities/execution-traces?limit=50`,
-      { headers: { Authorization: `ApiKey ${METABOB_API_KEY}` }, signal: AbortSignal.timeout(3_000) },
+      { headers: { Authorization: `ApiKey ${API_KEY}` }, signal: AbortSignal.timeout(3_000) },
     );
     if (res.ok) {
       const body = await res.json() as { executions?: Array<Record<string, unknown>>; traces?: Array<Record<string, unknown>> };
@@ -1903,6 +1903,31 @@ const IDLE_REWARD = 0.2;
 function pruneStaleOutcomes(m: { outcomes: { outcome: "success" | "failure"; at: number; reward: number }[] }): void {
   const cutoff = Date.now() - OUTCOME_TTL_MS;
   while (m.outcomes.length > 0 && m.outcomes[0]!.at < cutoff) m.outcomes.shift();
+}
+
+// Novelty grading (2026-06-14, next recursion of V28): a `productive` tick that
+// re-emits only findings the detector has surfaced before has ZERO new
+// information yield — it is re-sampling a non-orthogonal direction that adds
+// nothing to span(traces). Grading it as productive=1.0 pins such detectors at
+// mean=1.0 forever (observed: trace-outcome-validity-audit findings_count=[3,3,3],
+// vessel-responsibility-audit=[2,2,2] — identical every run). We keep a bounded
+// rolling set of recently-seen finding hashes per template; a productive tick is
+// `novel` only if it surfaces ≥1 hash not in that set, else `redundant` (graded
+// down to IDLE_REWARD). This makes `mean` track the *novel-yield rate* — the
+// actual learning rate — and frees pool budget for genuinely uncertain cells.
+const NOVELTY_WINDOW = 120; // recent finding hashes retained per template
+const findingHistoryByTemplate = new Map<string, string[]>();
+function gradeNovelty(templateId: string, hashes: string[] | undefined): "novel" | "redundant" {
+  if (!Array.isArray(hashes) || hashes.length === 0) return "novel"; // no fingerprint → assume novel (no regression)
+  let hist = findingHistoryByTemplate.get(templateId);
+  if (!hist) { hist = []; findingHistoryByTemplate.set(templateId, hist); }
+  const seen = new Set(hist);
+  const fresh = hashes.filter((h) => !seen.has(h));
+  // Record this run's hashes (bounded FIFO) regardless of verdict so a finding
+  // that stops being emitted can become novel again after it ages out.
+  for (const h of hashes) hist.push(h);
+  while (hist.length > NOVELTY_WINDOW) hist.shift();
+  return fresh.length > 0 ? "novel" : "redundant";
 }
 
 function recordOutcomeByTemplate(templateId: string, outcome: boolean | number): void {
@@ -2082,6 +2107,7 @@ async function dispatchByTemplateId(templateId: string): Promise<{ dispatch_id: 
       output_shapes?: string[];
       information_yield?: "productive" | "idle" | "error";
       findings_count?: number;
+      finding_hashes?: string[];
     };
     const dispatchId = body.dispatchId ?? body.executionId ?? `shape-${Date.now()}`;
     // Treat last-shape=structuredError as no_op (echo chamber guard).
@@ -2096,7 +2122,17 @@ async function dispatchByTemplateId(templateId: string): Promise<{ dispatch_id: 
     if (!completed) reward = 0;
     else if (body.information_yield === "error") reward = 0; // error completion is zero-work, not productive — the curl penalty (D, 2026-06-14): stop rewarding error-circulation so high-cyclic templates decay in UCB selection
     else if (body.information_yield === "idle") reward = IDLE_REWARD;
-    else reward = 1; // "productive" or field-absent → full reward (no regression)
+    else {
+      // "productive": grade by NOVELTY. Re-emitting only already-seen findings is
+      // zero new information yield (redundant) and earns IDLE_REWARD, so a
+      // detector stuck re-finding the same thing decays instead of pinning at
+      // mean=1.0 and starving genuinely-uncertain cells of pool budget.
+      const novelty = gradeNovelty(templateId, body.finding_hashes);
+      reward = novelty === "redundant" ? IDLE_REWARD : 1;
+      if (novelty === "redundant") {
+        console.log(`[pool/shape] ${templateId} productive-but-redundant (${(body.finding_hashes ?? []).length} findings, all previously seen) → reward=${IDLE_REWARD}`);
+      }
+    }
     const success = reward > 0;
     recordOutcomeByTemplate(templateId, reward);
     return { dispatch_id: dispatchId, execution_id: body.executionId, success };
