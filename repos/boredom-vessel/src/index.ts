@@ -1917,6 +1917,49 @@ function recordOutcomeByTemplate(templateId: string, outcome: boolean | number):
   totalPicksV24f += 1;
 }
 
+// V28 (2026-06-14): snapshot the selector's reward distribution to a bind-mounted
+// file so the substrate can *observe its own selection health*. The selector
+// means live only in this process's memory, so a degenerate reward (e.g. the
+// 86%-saturated-at-1.0 state that pinned UCB to uniform allocation) was
+// structurally undetectable by any detector. This snapshot makes reward
+// saturation a first-class observable a `selector-saturation-audit` can read.
+const SELECTOR_STATE_FILE = "/workspace/state/boredom-selector-state.json";
+function writeSelectorStateSnapshot(): void {
+  try {
+    const perTemplate: Array<{ template_id: string; picks: number; mean: number }> = [];
+    for (const [tid, m] of momentumByTemplate.entries()) {
+      pruneStaleOutcomes(m);
+      const picks = m.outcomes.length;
+      if (picks === 0) continue;
+      const mean = m.outcomes.reduce((s, o) => s + o.reward, 0) / picks;
+      perTemplate.push({ template_id: tid, picks, mean: Math.round(mean * 1000) / 1000 });
+    }
+    const n = perTemplate.length;
+    const means = perTemplate.map((t) => t.mean);
+    const avg = n ? means.reduce((s, v) => s + v, 0) / n : 0;
+    const variance = n ? means.reduce((s, v) => s + (v - avg) ** 2, 0) / n : 0;
+    // Saturation: fraction of sampled templates whose mean is pinned high. When
+    // this is large AND variance is ~0 the selector cannot discriminate — the
+    // exact pathology V28's graded reward fixes.
+    const saturatedFraction = n ? perTemplate.filter((t) => t.mean >= 0.95).length / n : 0;
+    const distinctMeans = new Set(means).size;
+    const snapshot = {
+      generated_at: new Date().toISOString(),
+      sampled_templates: n,
+      mean_of_means: Math.round(avg * 1000) / 1000,
+      variance_of_means: Math.round(variance * 1e4) / 1e4,
+      saturated_fraction: Math.round(saturatedFraction * 1000) / 1000,
+      distinct_means: distinctMeans,
+      // Heuristic verdict the audit detector can act on without re-deriving.
+      saturation_verdict: n >= 8 && saturatedFraction >= 0.8 && variance < 0.01 ? "saturated" : "healthy",
+      templates: perTemplate.sort((a, b) => b.mean - a.mean),
+    };
+    const fs = require("node:fs") as typeof import("node:fs");
+    fs.mkdirSync("/workspace/state", { recursive: true });
+    fs.writeFileSync(SELECTOR_STATE_FILE, JSON.stringify(snapshot, null, 2));
+  } catch { /* best-effort; never break the pool loop on a snapshot write */ }
+}
+
 function templateMomentum(templateId: string): number {
   const m = momentumByTemplate.get(templateId);
   if (!m || m.outcomes.length === 0) return 1.5; // cold-start bonus (mirrors V22)
@@ -2438,6 +2481,7 @@ async function poolLoop(): Promise<void> {
     reapStaleInFlight();
     if (Date.now() - lastStateRefresh > POOL_STATE_REFRESH_MS) {
       state = await refreshSubstrateState();
+      writeSelectorStateSnapshot();
       lastStateRefresh = Date.now();
     }
     if (Date.now() - lastSigRefreshAt > SIG_REFRESH_INTERVAL_MS) {

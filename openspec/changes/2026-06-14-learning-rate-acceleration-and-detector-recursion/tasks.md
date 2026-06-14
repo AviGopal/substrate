@@ -8,12 +8,28 @@ Sequencing rationale: **A** makes every later workstream's samples land where th
 - [ ] 0.2 Confirm the per-goal information-yield signal is computable from a tick's return (Var-delta query cost ≤ one cheap read; else widen the tick result).
 - [ ] 0.3 Snapshot trace store + prune to working size if bloated (`finding_2026_06_12_manual_operation_runbook`: 235K traces hang endpoints; keep ≤ ~5K for fast selector queries — throughput precondition).
 
-## Phase A — Value-of-information goal selection (targeting)
+## Phase A — Value-of-information goal selection (targeting) — CORE DONE 2026-06-14 (commit 3b6219294)
 
-- [ ] A.1 Add per-goal Beta posterior + Thompson selection in `boredom-vessel/src/index.ts`, gated by existing `maxCostForLoad` (round-robin stays as Beta(1,1) cold-start).
-- [ ] A.2 Define information-yield reward: `1` if tick caused {Var-reduction > ε on a touched cell, fresh gap-class, posterior-moving verdict}, else `0`.
-- [ ] A.3 Conditional-independence guard: log goal-posterior correlation; surface drift (§4 orthogonality is measured).
-- [ ] **A.GATE** (trace-inspectable): over a ≥2h window, mean ticks-to-first-dispatch for a freshly-high-`Var` detector drops vs round-robin baseline (expect ≪ 46-tick worst case); load-triage still skips expensive goals under `load_anomaly_severe`.
+Live diagnosis corrected the plan: the selector was already UCB1 (not round-robin),
+but its **reward was completion, not yield** — `success = completed && lastShape!==structuredError`.
+Measured saturation: **463/540 (86%) of selections at mean=1.0**, ~uniform 16-17 picks each.
+
+- [x] A.1 (revised) Graded **information-yield** reward, not a separate posterior. light-dispatch
+  computes `information_yield`(productive|idle|error)+`findings_count` from task bodies
+  (`extractFindingsCount` over the counters detectors already emit: `gaps_emitted`,
+  `cluster_summaries`, `emissions`, `gaps[]`). boredom maps productive→1.0, idle→`IDLE_REWARD`=0.2,
+  error→0; UCB `mean` is now average reward. Gated by existing `maxCostForLoad` (unchanged).
+- [x] A.2 Yield defined from real emitted findings (anchored on live report bodies, not a heuristic guess).
+- [ ] A.3 Conditional-independence guard — deferred (per-template factorisation, low risk).
+- [x] **A.GATE (partial, trace-inspectable):** direct dispatch — capability-gap-audit→idle/0,
+  trace-outcome-validity→productive/3-4, resolver-distribution→productive/1, gap-to-scenario-bridge→idle/0.
+  Early de-saturation: means split from 86%@1.0 to `{0.20 idle, 1.00 productive}`.
+  **Full allocation-shift maturation BLOCKED by infra:** the host `/workspace` bind-mount
+  (Docker Desktop file-sharing) wedged mid-session with EMFILE, slowing every dispatch
+  (light-dispatch artifact writes + trace POSTs to `/workspace` hang) — the loop crawls, so
+  picks don't accumulate. Reward fix itself is unaffected (in-memory) and verified robust under
+  the wedge. Resume allocation measurement once the mount recovers (operator: Docker Desktop
+  file-sharing restart).
 
 ## Phase D — Stability-as-curl
 
