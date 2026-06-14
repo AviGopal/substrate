@@ -2094,6 +2094,7 @@ async function dispatchByTemplateId(templateId: string): Promise<{ dispatch_id: 
     // Fall back to the completion bit when the field is absent (older dispatcher).
     let reward: number;
     if (!completed) reward = 0;
+    else if (body.information_yield === "error") reward = 0; // error completion is zero-work, not productive — the curl penalty (D, 2026-06-14): stop rewarding error-circulation so high-cyclic templates decay in UCB selection
     else if (body.information_yield === "idle") reward = IDLE_REWARD;
     else reward = 1; // "productive" or field-absent → full reward (no regression)
     const success = reward > 0;
