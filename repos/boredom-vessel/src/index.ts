@@ -207,7 +207,7 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // posteriors so auto-promote can graduate it. Closes the author→execute→promote loop:
   // goal[8] authors templates (proposed=true), goal[9] exercises them, tickAutoPromote()
   // promotes them once they have ≥3 successful executions.
-  "execute the most recently authored proposed gap-closing template to accumulate empirical evidence for promotion",
+  "execute a proposed authored activity (gap-closing OR any draft-activity-from-pattern output) to accumulate empirical evidence so auto-promote can graduate it into the selectable set",
   // gap-drain — wires substrateGap impulses (persisted by substrateGap_write) into the drafter.
   // Spec: openspec/changes/2026-05-30-substrate-gap-drafter-wiring.
   "run the drain-pending-substrate-gaps activity to convert open substrateGap impulses into gap-closing template variants",
@@ -365,6 +365,13 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // new vessel's shape coverage, routes uncovered shapes into the drafter, and
   // credits the shapes (reward edge) so their cold-start relevance leaves zero.
   "run characterize-arrived-vessel to detect vessels that joined discovery since the last run, classify each advertised shape's coverage via discover-by-shapes, write a gap scenario for shapes no activity consumes so the drafter authors an integrating template, and credit the new vessel's shapes so they leave zero relevance — the arrival trigger that turns a connected vessel into a usable action surface",
+  // goal[45] — detect-recurring-trace-pattern (real-chain author feeder, 2026-06-14).
+  // The NON-OBSIDIAN feeder for draft-activity-from-pattern: mines the substrate's
+  // own success traces for a recurrent output-shape topology and dispatches the
+  // real-chain author to compose a clean producing chain for it. Replaces the
+  // obsidian-coupled detect-recurring-pattern in the core loop (the author was
+  // previously unwired for lack of a non-obsidian feeder). Deterministic, cheap.
+  "run detect-recurring-trace-pattern to mine recent success traces for the most-recurrent output-shape topology and dispatch draft-activity-from-pattern so the substrate authors a clean producing chain for it",
   // NOTE (2026-06-13): obsidian operation is deliberately NOT a core-loop goal.
   // Obsidian is an external app that may be disconnected; forcing it into the
   // self-optimization rotation would pollute the core loop with availability-
@@ -487,6 +494,10 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // text is novel and the tick is deterministic single-resolver plumbing, so
   // Thompson must not misroute it to a semantically-near template.
   "development-vessel:characterize-arrived-vessel",
+  // goal[45] — detect-recurring-trace-pattern. Explicit targetTemplateId:
+  // deterministic single-resolver feeder; the goal text is novel so Thompson
+  // must not misroute it.
+  "development-vessel:detect-recurring-trace-pattern",
 ];
 
 /**
@@ -556,6 +567,7 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "moderate",  // goal[42] drafter-trigger-tick (fs_list + json_path_extract + HTTP POST → drafter, ~15s)
   "moderate",  // goal[43] vessel-scaffold-trigger-tick (fs_list + 1 haiku design call + json_path_extract + HTTP POST → scaffold)
   "cheap",     // goal[44] characterize-arrived-vessel (1 registry POST + discover-by-shapes per new-vessel shape + scenario write; no LLM, usually a no-op baseline)
+  "cheap",     // goal[45] detect-recurring-trace-pattern (1 traces GET + in-memory group + cluster write + 1 author dispatch; no LLM)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
@@ -690,15 +702,30 @@ function extraVariablesForGoal(goalIdx: number): Record<string, unknown> {
   return {};
 }
 
-// ── Proposed gap-closing template picker ─────────────────────────────────────
-// Fetches the most recently authored proposed gap-closing template that uses
-// only executable resolvers (fs_read, fs_write, llm_completion_dispatch,
-// json_path_extract, http_fetch). Returns null if none are found or all use
-// invalid resolvers.
+// ── Proposed authored-activity picker ────────────────────────────────────────
+// Fetches a proposed authored activity to EXERCISE so it accrues execution
+// evidence and auto-promote can graduate it. Generalized 2026-06-14 beyond the
+// `gap-closing:` prefix: ANY system-authored proposed activity (concept-priming,
+// draft-from-pattern outputs, etc.) needs the same bootstrap — without it,
+// non-gap-closing authored capability stays `proposed` forever and never enters
+// applicable(s). This closes the self-sustaining author→exercise→promote loop
+// for all authored activities, not just gap-closing.
+//
+// Resolver gate: built-in engine resolvers PLUS deterministic vessel resolvers
+// that dispatch cleanly via discovery (concept_select_for_prompt et al.). The
+// point is to skip activities whose tasks reference resolvers the exercise path
+// cannot route — not to whitelist a paradigm.
 const EXECUTABLE_RESOLVERS = new Set([
   "fs_read", "fs_write", "llm_completion_dispatch",
   "json_path_extract", "http_fetch", "noop",
+  // deterministic vessel resolvers (discovery-routed) commonly emitted by the
+  // real-chain author for non-gap-closing capability:
+  "concept_select_for_prompt", "concept_create_write", "concept_usage_record",
 ]);
+// Authored-activity id prefixes the picker exercises. `gap-closing:` is the
+// historical set; `proposed_pattern_authored_` is what draft-activity-from-pattern
+// emits (e.g. the concept prime-context activity).
+const AUTHORED_PREFIXES = ["gap-closing:", "proposed_pattern_authored_"];
 
 interface TemplateWithAlpha {
   id?: string;
@@ -720,9 +747,10 @@ async function pickTopProposedGapClosingTemplate(): Promise<string | null> {
     const data = await res.json() as { templates?: TemplateWithAlpha[] };
     const candidates = (data.templates ?? []).filter(t => {
       if (!t.proposed) return false;
-      const id = (t.id ?? "").replace(/^activity:⟨(.+)⟩$/, "$1");
-      if (!id.startsWith("gap-closing:")) return false;
-      // Check all tasks use executable resolvers
+      // Normalize both wrapping forms: activity:⟨id⟩ and bare activity:id.
+      const id = (t.id ?? "").replace(/^activity:⟨(.+)⟩$/, "$1").replace(/^activity:/, "");
+      if (!AUTHORED_PREFIXES.some(p => id.startsWith(p))) return false;
+      // Check all tasks use resolvers the exercise path can route.
       const tasks = t.tasks ?? [];
       return tasks.length > 0 && tasks.every(task => EXECUTABLE_RESOLVERS.has(task.resolver ?? ""));
     });
