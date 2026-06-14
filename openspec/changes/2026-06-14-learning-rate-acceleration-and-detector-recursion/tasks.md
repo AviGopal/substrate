@@ -38,6 +38,21 @@ Measured saturation: **463/540 (86%) of selections at mean=1.0**, ~uniform 16-17
 - [ ] D.3 Add one boredom goal for `cyclic-flow-scan`.
 - [ ] **D.GATE** (trace-inspectable): scan emits a `wastedCycle` for a deliberately-induced loop (e.g. re-enable a bounded validator-dispatch echo); the offending goal's Phase-A selection probability visibly decays in the next windows.
 
+## Phase C-bis — Recursive self-detector DONE 2026-06-14 (dev-vessel a0f1a0a)
+
+The first concrete instance of the keystone, shipped: `selector_saturation_audit`
+detector + `selector-saturation-audit-tick` seed. It detects degeneracy in the
+substrate's OWN selector reward (the §9.3 limit-8 recursion) — the exact class of
+bug V28 fixed, which previously nothing detected. Reads the new selector-state
+observable, emits a `substrateGap` (→ existing drafter pipeline) when saturated.
+Three-place rule + per-resolver test (4 pass) + lint green; seeded as
+`boredom_target_template`; verified live (boredom selects it; reads current state
+as verdict=healthy). This is operator-bootstrap of the novel primitive (the
+legitimate operator role); the substrate now RUNS it autonomously and its gaps
+feed the same drafter used for all activities. Remaining for full C.GATE:
+the substrate's drafter autonomously authoring a *fix* from an emitted detector-gap
+(gated on the substrate being non-converged / a real saturation event).
+
 ## Phase C — Detector-authoring recursion (KEYSTONE)
 
 - [ ] C.1 Bootstrap `detector-coverage-audit` (deterministic seed): cluster `failure_mode`/anomaly signatures; diff against existing-detector class-set; emit `detector-gap` scenario for uncovered clusters.
