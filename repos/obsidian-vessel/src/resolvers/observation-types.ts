@@ -113,12 +113,35 @@ export type ReversibilityClass =
   | 'unknown';
 
 /**
+ * Heuristic reversibility classification of an Obsidian command id. Lives here
+ * (the dependency-free base module) so both the probe and the permission layer
+ * can use it without a circular import. Intentionally conservative — when in
+ * doubt, return `unknown`.
+ */
+export function classifyReversibility(commandId: string): ReversibilityClass {
+  if (/(^|:)delete(-|$)|trash|remove/i.test(commandId)) return 'soft_irreversible';
+  if (/(^|:)edit|toggle|insert|paste|cut/i.test(commandId)) return 'reversible';
+  if (/disable|uninstall|reset/i.test(commandId)) return 'hard_irreversible';
+  return 'unknown';
+}
+
+/**
  * Pointer used to invoke the probe resolver.
  */
 export interface ProbeActionEffectsPointer {
   type: 'obsidian:action_effect_model';
-  /** Absolute filesystem path of the probe vault (safety check). */
-  probe_vault_path: string;
+  /**
+   * DEPRECATED — was the host-specific probe-vault-path confinement. Now
+   * ignored; safety is the portable grant model below. Kept optional for
+   * backward compatibility with older callers.
+   */
+  probe_vault_path?: string;
+  /**
+   * Authority granted by the impulse state space. The probe only exercises
+   * commands whose permission class is covered. Absent → the safe default
+   * (`read`,`navigate`), which is non-destructive on ANY vault.
+   */
+  granted_classes?: Array<'read' | 'navigate' | 'mutate' | 'destructive'>;
   /** Max commands to probe in a single invocation (default: 10). */
   max_commands?: number;
   /** Per-command timeout, milliseconds (default: 30_000, max: 30_000). */

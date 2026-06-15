@@ -1,0 +1,14 @@
+[Unit]
+Description=obsidian-learn autonomous trigger (every 30 min, side loop)
+
+[Timer]
+# First fire shortly after boot, then every 30 min. Learning is gradual — the
+# navigate subset is ~40 commands at 10/run; a handful of fires covers it, then
+# re-probing refines the post-state distributions. Idle (no-op) when the target
+# Obsidian instance is down.
+OnActiveSec=2min
+OnUnitActiveSec=30min
+Unit=obsidian-learn.service
+
+[Install]
+WantedBy=timers.target

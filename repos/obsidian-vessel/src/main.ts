@@ -52,6 +52,7 @@ import './resolvers/observe-obsidian-events';
 import './resolvers/group-interaction-episodes';
 import './resolvers/probe-obsidian-action-effects';
 import './resolvers/execute-command';
+import './resolvers/command-catalog';
 import './resolvers/workspace-resolvers';
 import { setConceptDbResolverContext } from './resolvers/concept-view-resolver';
 import { setConceptWritebackResolverContext } from './resolvers/concept-writeback-resolver';

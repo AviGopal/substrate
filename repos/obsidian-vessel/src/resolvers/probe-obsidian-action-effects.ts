@@ -30,26 +30,15 @@ import {
   ActionEffectModel,
   DEFAULT_PROBE_DENY_GLOBS,
   ProbeActionEffectsPointer,
-  ReversibilityClass,
+  classifyReversibility,
   isCommandAllowedForProbe,
 } from './observation-types';
+import { classifyPermission, resolveGrant } from './command-permissions';
 import { sha256Hex } from './observation-hash';
 
 const HARD_MAX_COMMANDS = 10;
 const HARD_MAX_TIMEOUT_MS = 30_000;
 const DEFAULT_TIMEOUT_MS = 30_000;
-
-/**
- * Heuristic reversibility classification. The result feeds the seed
- * corpus for a later learned classifier; it is intentionally
- * conservative — when in doubt, return `unknown`.
- */
-export function classifyReversibility(commandId: string): ReversibilityClass {
-  if (/(^|:)delete(-|$)|trash|remove/i.test(commandId)) return 'soft_irreversible';
-  if (/(^|:)edit|toggle|insert|paste|cut/i.test(commandId)) return 'reversible';
-  if (/disable|uninstall|reset/i.test(commandId)) return 'hard_irreversible';
-  return 'unknown';
-}
 
 /**
  * Snapshot of vault + workspace state used to compute pre/post
@@ -59,6 +48,12 @@ export function classifyReversibility(commandId: string): ReversibilityClass {
 export interface VaultStateSnapshot {
   activeFilePath: string | null;
   filePaths: string[];
+  /**
+   * sha256 of the active file's CONTENT. Present only on content-aware
+   * snapshots. The structural fields above cannot see an in-file edit, so a
+   * `mutate` command's effect is observable only when this is included.
+   */
+  activeFileContentHash?: string;
 }
 
 export function captureSnapshot(app: App): VaultStateSnapshot {
@@ -69,6 +64,25 @@ export function captureSnapshot(app: App): VaultStateSnapshot {
     activeFilePath: active ? active.path : null,
     filePaths: allFiles,
   };
+}
+
+/**
+ * Structural snapshot PLUS a hash of the active file's content, so that a
+ * content-mutating (`mutate`) command's effect is actually observable. Async
+ * because reading file content is async; falls back to the structural snapshot
+ * when there is no active file.
+ */
+export async function captureContentAwareSnapshot(app: App): Promise<VaultStateSnapshot> {
+  const base = captureSnapshot(app);
+  const active = app.workspace.getActiveFile();
+  if (!active) return base;
+  try {
+    const content = await app.vault.read(active);
+    return { ...base, activeFileContentHash: sha256Hex(content) };
+  } catch {
+    // Unreadable active file — degrade to structural so we never throw here.
+    return base;
+  }
 }
 
 export function signatureOf(snapshot: VaultStateSnapshot): string {
@@ -128,40 +142,20 @@ async function withTimeout<T>(p: Promise<T>, ms: number, tag: string): Promise<T
   }
 }
 
-/**
- * Verify the active vault path matches the supplied probe path. We
- * compare against `app.vault.adapter.basePath` (the FileSystemAdapter
- * convention used elsewhere in this vessel for vault identification).
- */
-function assertProbeVault(app: App, probePath: string): void {
-  const adapter = app.vault.adapter as { basePath?: string };
-  const vaultPath = adapter.basePath ?? '';
-  if (!vaultPath) {
-    throw new Error('probe-obsidian-action-effects: cannot determine active vault path');
-  }
-  if (vaultPath !== probePath) {
-    const err = new Error(
-      `probe-obsidian-action-effects: refusing to dispatch — active vault ${vaultPath} ≠ probe vault ${probePath}`,
-    );
-    (err as Error & { failure_mode?: unknown }).failure_mode = {
-      type: 'verifier_negative',
-      reason: 'safety_breach',
-      validator_id: 'probe-vault-match',
-      failed_evidence: [{ check_id: 'probe-vault-match', details: 'active vault path mismatch' }],
-    };
-    throw err;
-  }
-}
-
 async function resolveProbeActionEffects(
   pointer: ImpulsePointer,
   app: App,
 ): Promise<ResolverResult> {
   const p = pointer as unknown as ProbeActionEffectsPointer;
-  if (!p.probe_vault_path) {
-    throw new Error('obsidian:action_effect_model requires probe_vault_path');
-  }
-  assertProbeVault(app, p.probe_vault_path);
+
+  // Portable authorization (replaces the old host-path `assertProbeVault`): the
+  // probe only exercises commands the impulse-carried grant covers. Default
+  // grant is read+navigate, which is non-destructive and structurally
+  // observable on ANY vault — so blind-probing is safe anywhere by default, and
+  // exercising `mutate`/`destructive` requires the substrate to explicitly
+  // elevate the grant in the impulse state space.
+  const grant = resolveGrant(p.granted_classes);
+  const mutateGranted = grant.includes('mutate') || grant.includes('destructive');
 
   const maxCommands = Math.min(p.max_commands ?? HARD_MAX_COMMANDS, HARD_MAX_COMMANDS);
   const timeoutMs = Math.min(
@@ -173,19 +167,26 @@ async function resolveProbeActionEffects(
   const catalogue = (app as App).commands?.commands ?? {};
   const commandIds = Object.keys(catalogue)
     .filter((id) => isCommandAllowedForProbe(id, extraDeny))
+    .filter((id) => grant.includes(classifyPermission(id)))
     .slice(0, maxCommands);
+
+  // When a content-mutating command may run, observe content too so the effect
+  // is not invisible (structural signature can't see in-file edits).
+  const snap = mutateGranted
+    ? async () => signatureOf(await captureContentAwareSnapshot(app))
+    : async () => signatureOf(captureSnapshot(app));
 
   const models: ActionEffectModel[] = [];
   for (const commandId of commandIds) {
     try {
-      const pre = signatureOf(captureSnapshot(app));
+      const pre = await snap();
       const dispatched = withTimeout(
         Promise.resolve().then(() => app.commands.executeCommandById(commandId)),
         timeoutMs,
         commandId,
       );
       await dispatched;
-      const post = signatureOf(captureSnapshot(app));
+      const post = await snap();
       models.push(accumulateModel(commandId, [{ pre_signature: pre, post_signature: post }]));
     } catch (err) {
       console.warn(`[probe-obsidian-action-effects] ${commandId}:`, err);
