@@ -1092,7 +1092,10 @@ async function tickAutoPromote(): Promise<void> {
         // in a reasonable timeframe (~80h per template at current dispatch rate).
         // 3 samples provides statistical confidence that the template is runnable while
         // keeping the promotion loop fast enough to matter within a session.
-        body: JSON.stringify({ min_samples: 3, min_success_rate: 0.6 }),
+        // prune_failed_out: deprecate drafts exercised >= 6 times that never clear
+        // the success bar (structurally non-viable no_op/validation_rejected drafts)
+        // so the backlog actually shrinks instead of accumulating dead drafts.
+        body: JSON.stringify({ min_samples: 3, min_success_rate: 0.6, prune_failed_out: true, prune_min_samples: 6 }),
       },
     );
     if (!res.ok) {
@@ -1110,6 +1113,110 @@ async function tickAutoPromote(): Promise<void> {
     );
   } catch (err) {
     console.warn(`[boredom-vessel] auto-promote tick error: ${(err as Error).message}`);
+  }
+}
+
+// ── Proposal-exercise tick (2026-06-14, autonomy keystone) ──────────────────
+// The drafter authors gap-closing proposals (proposed=true) continuously, but
+// the live shape-pool selector only enumerates `boredom_target_template`-tagged
+// templates — so authored proposals were NEVER exercised (backlogged at
+// total_executions=0), starving auto-promote of the evidence it needs to
+// graduate them. This tick closes the author→execute→promote loop: it pulls a
+// deduped, bounded set of proposed gap-closing templates from activity-api
+// (`/templates/proposed-for-exercise`, which dedups by gap_class and excludes
+// failed-out drafts) and dispatches a small budget per interval via
+// light-dispatch. Each dispatch posts an execution trace, so the proposal
+// accrues samples; once it clears the 3-sample / 0.6-success bar tickAutoPromote
+// graduates it. Failing drafts stay proposed and their failure traces become new
+// observations for the detectors. Bounded by EXERCISE_BUDGET and gated on
+// MAX_CONCURRENT so it never starves the productive shape-pool.
+async function tickExerciseProposal(): Promise<void> {
+  try {
+    if (inFlight.size >= MAX_CONCURRENT) return; // pool saturated — yield to shape picks
+    const res = await fetch(
+      `${ACTIVITY_API_ENDPOINT}/v2/activities/templates/proposed-for-exercise?limit=40`,
+      { headers: authHeaders(), signal: AbortSignal.timeout(5_000) },
+    );
+    if (!res.ok) {
+      console.warn(`[exercise] proposed-for-exercise HTTP ${res.status} — skipping`);
+      return;
+    }
+    const body = await res.json() as {
+      templates?: Array<{ id?: string; gap_class?: string; resolvers?: string[]; executions?: number }>;
+      backlog_total?: number;
+      distinct_classes?: number;
+      failed_out_classes?: number;
+    };
+    const allCandidates = (body.templates ?? []).filter((t) => {
+      const resolvers = Array.isArray(t.resolvers) ? t.resolvers : [];
+      return t.id && resolvers.length > 0 && resolvers.every((r) => EXECUTABLE_RESOLVERS.has(r));
+    });
+    if (allCandidates.length === 0) {
+      console.log(
+        `[exercise] no executable proposals (backlog=${body.backlog_total ?? 0}, ` +
+        `classes=${body.distinct_classes ?? 0}, failed_out=${body.failed_out_classes ?? 0})`,
+      );
+      return;
+    }
+    // Cooldown filter: skip drafts exercised within EXERCISE_COOLDOWN_MS so the
+    // exerciser rotates across distinct classes instead of re-hammering the
+    // alphabetical-first no_op draft.
+    const now = Date.now();
+    const candidates = allCandidates.filter((t) => {
+      const last = exercisedAt.get(t.id!);
+      return last === undefined || now - last >= EXERCISE_COOLDOWN_MS;
+    });
+    if (candidates.length === 0) {
+      console.log(`[exercise] all ${allCandidates.length} executable candidates in cooldown — skipping this tick`);
+      return;
+    }
+    const inFlightIds = new Set<string>();
+    for (const e of inFlight.values()) if (e.template_id) inFlightIds.add(e.template_id);
+    let dispatched = 0;
+    for (const t of candidates) {
+      if (dispatched >= EXERCISE_BUDGET) break;
+      if (inFlight.size >= MAX_CONCURRENT) break;
+      const id = t.id!;
+      if (inFlightIds.has(id)) continue;
+      const reserveId = `reserve-exercise-${Date.now()}-${dispatched}`;
+      inFlight.set(reserveId, {
+        goal_idx: -2, // sentinel: proposal-exercise dispatch
+        dispatch_id: reserveId,
+        template_id: id,
+        started_at: Date.now(),
+        signature: null,
+      });
+      lastDispatchAt = Date.now();
+      dispatched++;
+      exercisedAt.set(id, Date.now());
+      console.log(
+        `[exercise] reserving proposal ${id} (class=${t.gap_class ?? "?"}, execs=${t.executions ?? 0}, ` +
+        `backlog=${body.backlog_total ?? 0}/${body.distinct_classes ?? 0} classes, ` +
+        `failed_out=${body.failed_out_classes ?? 0}) in_flight=${inFlight.size}/${MAX_CONCURRENT}`,
+      );
+      void (async () => {
+        try {
+          const result = await dispatchByTemplateId(id);
+          inFlight.delete(reserveId);
+          if (result) {
+            console.log(
+              `[exercise] completed proposal ${id} outcome=${result.success ? "success" : "no_op"} ` +
+              `executionId=${result.execution_id ?? "?"}`,
+            );
+            if (result.success) {
+              // Race a succeeding draft back to the front so it accrues its 3
+              // promotion samples quickly; no_op keeps the full cooldown.
+              exercisedAt.set(id, Date.now() - EXERCISE_COOLDOWN_MS + EXERCISE_SUCCESS_RETRY_MS);
+            }
+          }
+        } catch (err) {
+          inFlight.delete(reserveId);
+          console.warn(`[exercise] dispatch error for ${id}: ${(err as Error).message}`);
+        }
+      })();
+    }
+  } catch (err) {
+    console.warn(`[exercise] tick error: ${(err as Error).message}`);
   }
 }
 
@@ -1620,7 +1727,16 @@ const MAX_CONCURRENT = parseInt(process.env["BOREDOM_MAX_CONCURRENT"] ?? "3", 10
 const MIN_DISPATCH_INTERVAL_MS = parseInt(process.env["BOREDOM_MIN_DISPATCH_INTERVAL_MS"] ?? "2000", 10);
 const POOL_LOOP_INTERVAL_MS = parseInt(process.env["BOREDOM_POOL_LOOP_INTERVAL_MS"] ?? "5000", 10);
 const POOL_STATE_REFRESH_MS = parseInt(process.env["BOREDOM_STATE_REFRESH_MS"] ?? "30000", 10);
-const POOL_AUTOPROMOTE_INTERVAL_MS = parseInt(process.env["BOREDOM_AUTOPROMOTE_INTERVAL_MS"] ?? "600000", 10);
+// 2 min (was 10): with the proposal exerciser feeding evidence continuously, a
+// draft can clear the 3-sample bar within minutes — promote promptly so the
+// author→execute→promote loop closes fast instead of stalling on a slow tick.
+const POOL_AUTOPROMOTE_INTERVAL_MS = parseInt(process.env["BOREDOM_AUTOPROMOTE_INTERVAL_MS"] ?? "120000", 10);
+// Proposal-exercise tick (2026-06-14, autonomy keystone): how often to dispatch
+// authored proposals so they accrue execution evidence, and how many to fire per
+// tick. Bounded so the exerciser never starves the productive shape-pool of
+// concurrency — it shares the MAX_CONCURRENT in-flight budget.
+const POOL_EXERCISE_INTERVAL_MS = parseInt(process.env["BOREDOM_EXERCISE_INTERVAL_MS"] ?? "15000", 10);
+const EXERCISE_BUDGET = parseInt(process.env["BOREDOM_EXERCISE_BUDGET"] ?? "2", 10);
 // Reaper deadline for in-flight dispatches. Original 300s (5 min) was too short
 // for goal-host LLM chains (apply-proposal-as-patch, drafter chains, mitosis-evaluate
 // with overlay typecheck). The trace eventually lands but our inFlight entry
@@ -1660,6 +1776,17 @@ const momentumByGoal = new Map<number, Momentum>();
 let running = true;
 let lastDispatchAt = 0;
 let lastAutoPromoteAt = 0;
+let lastExerciseAt = 0;
+// Per-proposal exercise cooldown — avoid re-hammering the same draft. A draft
+// that no_ops never accrues failure evidence (so the endpoint's failed-out guard
+// can't fire), and would otherwise dominate the ordering slot forever. The
+// cooldown forces the exerciser to rotate across distinct gap classes.
+const exercisedAt = new Map<string, number>();
+const EXERCISE_COOLDOWN_MS = parseInt(process.env["BOREDOM_EXERCISE_COOLDOWN_MS"] ?? "600000", 10);
+// After a SUCCESS, re-exercise the draft almost immediately so it races to the
+// 3-sample promotion threshold (instead of waiting the full no_op cooldown). A
+// no_op draft keeps the full cooldown set at reserve time.
+const EXERCISE_SUCCESS_RETRY_MS = parseInt(process.env["BOREDOM_EXERCISE_SUCCESS_RETRY_MS"] ?? "20000", 10);
 
 // ── Signature-continuity self-direction (2026-06-04, Part C) ───────────────
 // Cache the current state-space signature + per-goal posteriors at the same
@@ -2041,7 +2168,8 @@ function expectedCostMs(templateId: string): number {
   const cutoff = Date.now() - COST_TTL_MS;
   const live = c.samples.filter((s) => s.at >= cutoff);
   if (live.length === 0) return poolMedianCostMs();
-  return live.reduce((s, o) => s + o.ms, 0) / live.length;
+  const sorted = live.map((o) => o.ms).sort((a, b) => a - b);
+  return sorted[Math.floor(0.75 * (sorted.length - 1))];
 }
 function expectedCostTokens(templateId: string): number {
   const c = costByTemplate.get(templateId);
@@ -2747,6 +2875,13 @@ async function poolLoop(): Promise<void> {
     if (Date.now() - lastAutoPromoteAt > POOL_AUTOPROMOTE_INTERVAL_MS) {
       await tickAutoPromote();
       lastAutoPromoteAt = Date.now();
+    }
+    // Exercise authored proposals on a faster cadence than auto-promote so the
+    // backlog accrues execution evidence and the author→execute→promote loop
+    // closes. Bounded per tick; shares the MAX_CONCURRENT in-flight budget.
+    if (Date.now() - lastExerciseAt > POOL_EXERCISE_INTERVAL_MS) {
+      await tickExerciseProposal();
+      lastExerciseAt = Date.now();
     }
     // Inner fill loop: fire dispatches in PARALLEL up to MAX_CONCURRENT.
     // Each dispatch is wrapped in a fire-and-forget IIFE so the loop body
