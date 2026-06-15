@@ -39,9 +39,32 @@ interface Ctx {
   log: ObsidianEventLog | null;
   /** Unsubscribe callbacks installed by `startObserveObsidianEvents`. */
   cleanups: Array<() => void>;
+  /**
+   * Vault-relative path prefixes whose file events are the SUBSTRATE's own writes
+   * (concept-sync note materialization, vessel/activity-family sync, substrate
+   * reflection notes) — NOT operator actions. File events under these are skipped
+   * at source so they never flood the 10k log and evict real operator events.
+   * This is the durable root fix for the observation-channel pollution the
+   * behavior scan detected (substrate-side render filtering was the stopgap).
+   */
+  substrateWritePrefixes: string[];
 }
 
-const ctx: Ctx = { app: null, log: null, cleanups: [] };
+const ctx: Ctx = { app: null, log: null, cleanups: [], substrateWritePrefixes: [] };
+
+/**
+ * Configure which vault path prefixes are substrate-originated writes (skipped
+ * from the observed-event log). main.ts wires this from settings (concept-sync
+ * root + substrate folders). Trailing slash recommended for folder-prefix match.
+ */
+export function setSubstrateWritePrefixes(prefixes: string[]): void {
+  ctx.substrateWritePrefixes = prefixes.filter((p) => typeof p === 'string' && p.length > 0);
+}
+
+function isSubstrateWritePath(path: string | undefined): boolean {
+  if (!path) return false;
+  return ctx.substrateWritePrefixes.some((pfx) => path === pfx || path.startsWith(pfx));
+}
 
 /**
  * Wire the resolver. main.ts calls this with the shared event log so
@@ -121,16 +144,23 @@ export function startObserveObsidianEvents(): () => void {
   const workspaceLayout = app.workspace.on('layout-change', onLayout);
 
   // Vault events -------------------------------------------------------------
+  // Skip the substrate's OWN writes (paths under substrateWritePrefixes) so the
+  // operator-interaction signal is never evicted from the log by the concept-sync
+  // file-create flood. Workspace events (leaf/editor/layout) are always operator.
   const onCreate = (file: TAbstractFile) => {
+    if (isSubstrateWritePath(file.path)) return;
     push(buildObsidianEvent({ kind: 'file-create', rawPayload: { path: file.path }, path: file.path }));
   };
   const onModify = (file: TAbstractFile) => {
+    if (isSubstrateWritePath(file.path)) return;
     push(buildObsidianEvent({ kind: 'file-modify', rawPayload: { path: file.path }, path: file.path }));
   };
   const onDelete = (file: TAbstractFile) => {
+    if (isSubstrateWritePath(file.path)) return;
     push(buildObsidianEvent({ kind: 'file-delete', rawPayload: { path: file.path }, path: file.path }));
   };
   const onRename = (file: TAbstractFile, oldPath: string) => {
+    if (isSubstrateWritePath(file.path) && isSubstrateWritePath(oldPath)) return;
     push(
       buildObsidianEvent({
         kind: 'file-rename',

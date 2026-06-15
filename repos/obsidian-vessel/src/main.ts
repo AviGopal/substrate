@@ -54,10 +54,12 @@ import './resolvers/probe-obsidian-action-effects';
 import './resolvers/execute-command';
 import './resolvers/command-catalog';
 import './resolvers/workspace-resolvers';
+import './resolvers/write-note-resolver';
 import { setConceptDbResolverContext } from './resolvers/concept-view-resolver';
 import { setConceptWritebackResolverContext } from './resolvers/concept-writeback-resolver';
 import {
   setObserveObsidianEventsContext,
+  setSubstrateWritePrefixes,
   startObserveObsidianEvents,
   stopObserveObsidianEvents,
 } from './resolvers/observe-obsidian-events';
@@ -463,7 +465,7 @@ export default class MetabobVesselPlugin extends Plugin {
         manifest: {
           vesselId: this.settings.vesselId || 'obsidian-vessel',
           vesselName: this.settings.vesselName,
-          version: '0.1.0',
+          version: '0.1.2',
           shapes: this.settings.shapes,
         },
         resolvers,
@@ -807,6 +809,11 @@ export default class MetabobVesselPlugin extends Plugin {
     const log = new ObsidianEventLog(10_000);
     this.obsidianEventLog = log;
     setObserveObsidianEventsContext(this.app, log);
+    // Durable flood fix: the observer skips the substrate's OWN writes (concept-sync
+    // root + substrate-owned folders incl. the write_note reflection namespace) so
+    // operator-interaction signal is never evicted from the log.
+    const syncRoot = (this.settings.conceptDbSyncRoot || 'concept-db').replace(/\/+$/, '');
+    setSubstrateWritePrefixes([`${syncRoot}/`, 'substrate/', 'Substrate/']);
     setGroupInteractionEpisodesContext(log);
     this.stopObservation = startObserveObsidianEvents();
     console.log('[Metabob Vessel] Observation layer started (event log cap=10000)');

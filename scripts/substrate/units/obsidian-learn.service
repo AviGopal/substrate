@@ -8,11 +8,14 @@ After=development-vessel.service concept-db.service
 [Service]
 Type=oneshot
 EnvironmentFile=/etc/substrate/env
-# Default target is the PROBE instance (27184) so autonomous probing never churns
-# the operator's working vault. Override OBSIDIAN_LEARN_ENDPOINT (e.g. ...:27183)
-# to learn against another instance. An unreachable instance makes the resolver
-# return {unreachable:true} — treated as an idle no-op, never a hard failure.
-Environment=OBSIDIAN_LEARN_ENDPOINT=http://host.docker.internal:27184
+# CATALOG mode (default): non-intrusive surface learning — reads
+# obsidian:command_catalog and persists each command's permission/reversibility
+# classification, NO execution, so it is safe on the LIVE vault the operator is
+# using (27183). Idempotent (only new commands persisted). Set
+# OBSIDIAN_LEARN_MODE=probe + a probe-instance endpoint for execution-based
+# effect learning. Unreachable instance → {unreachable:true}, a graceful idle.
+Environment=OBSIDIAN_LEARN_MODE=catalog
+Environment=OBSIDIAN_LEARN_ENDPOINT=http://host.docker.internal:27183
 Environment=OBSIDIAN_LEARN_GRANT=navigate
 Environment=OBSIDIAN_LEARN_MAX=10
 ExecStart=/usr/bin/bash /usr/local/bin/obsidian-learn-tick.sh
