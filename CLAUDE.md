@@ -411,7 +411,13 @@ Additional vessels tracked in this super-repo with less CLAUDE.md coverage — e
 - **activity-monitor** (`repos/activity-monitor`): Real-time monitoring dashboard for MiniBob activity system. Polls activity-api every 3 seconds to display recent executions (last 50), activity templates with Thompson scores, and impulse resolution patterns. Single-page Bun application with clean UI; useful for observing MiniBob activity in development. Provides `/api/data` and `/api/health` endpoints. Configuration via `METABOB_API_KEY` and `ACTIVITY_API_URL` env vars. Complements the workbench (authoring) and activity-dashboard (canary observability) as a lightweight monitoring vessel.
 - **Other vessels under `repos/`** (`metabob-analysis-api`, `metabob-rpc-api`, `metabob-mcp`, `metabob-opencode`, `metabob-cli`, `metabob-cloud-dashboard`, `metabob-internal-dashboard`, `minibob-tui`, `obsidian-vessel`, `user-vessel`, `terminal`, `react-renderer`, `cpg-inference` / `cpg-inference-ts`, `k8s-activity-executor`, `platform`, `vessels`, `metabob-proto`): tracked in the super-repo (some as git submodules, some as direct file trees); consult each vessel's own docs.
 
-### 7. Helm Deployment (`repos/deployment/`)
+### 7. Helm Deployment (`repos/deployment/`) — canary/production only
+
+> **Legacy for local work.** Local development runs on the single-container substrate
+> (`substrate-live`), which has no Helm, no Istio, and no Kubernetes. Helmfile applies
+> only to the **downstream** canary/production substrates. Do not reach for `helm` /
+> `kubectl` in the local loop — use `make -C scripts/substrate ...` instead.
+
 Kubernetes orchestration via Helmfile:
 
 **Key Files:**
@@ -746,29 +752,35 @@ execution {
 
 ## Development Workflows
 
-### Primary Workflow: MiniBob + Substrate Validation
+### Primary Workflow: dispatch through the running substrate
+
+> The default is **not** to hand-edit a file and run `bun test`. The default is to
+> dispatch the change as a goal so it produces a trace and feeds the learning loop.
+> The local substrate (`substrate-live`, Phase 26+) is the development target;
+> canary/production K8s is a downstream promotion target, not where you work.
 
 ```bash
-# 1. Use MiniBob for development tasks (runs against configured substrate)
-minibob --single "implement the new feature"
-minibob --single "fix the bug in impulse resolution"
+# 0. Confirm the substrate is up (host-mapped ports; see §"Substrate endpoints")
+curl -s http://localhost:18080/health   # activity-api (trace store + learner)
+curl -s http://localhost:18210/health   # goal-host-vessel (goal dispatch)
 
-# 2. Run tests locally before pushing
-cd repos/metabob-activity-api
-bun test
-bun run typecheck
+# 1. Dispatch development goals through the substrate. minibob is the entry
+#    point; it POSTs to goal-host-vessel and the work is traced.
+minibob --single "fix the failing tests in metabob-activity-api"
+minibob --single "add input validation to the impulse endpoint"
 
-# 3. Push to dev branch - CI/CD deploys to canary automatically
-git add . && git commit -m "feat(activity-api): add new feature"
+# 2. Hot-reload the edited vessel inside the container and re-validate.
+make -C scripts/substrate substrate-restart-<vessel>
+bun run validation/scripts/failure-mode-harness.ts   # validates against :18080
+minibob --single "verify the change works"            # confirms a trace lands
+
+# 3. Conscious one-off direct edits (rare) bypass the edit-gate explicitly:
+SUBSTRATE_ALLOW_DIRECT_EDIT=1   # set in env for a deliberate manual edit
+
+# 4. Commit + push to dev. CI/CD deploys to canary for integration validation;
+#    promote canary → production via the /deploy skill (both are K8s, downstream).
+git add . && git commit -m "feat(activity-api): ..."
 git push origin dev
-
-# 4. Validate against configured substrate endpoint
-curl $(cat ~/.metabob/config.json | jq -r '.metabob.endpoint')/health
-minibob --single "verify the new feature works"
-
-# 5. Monitor CI/CD (if deploying via canary)
-gh run list --limit 5
-gh run view <run-id> --log
 ```
 
 ### Branch hygiene (avoid forking)
@@ -794,9 +806,13 @@ Three properties this enforces:
 
 If `pull --ff-only` fails, audit the divergence (`git log dev..origin/dev` and `git log origin/dev..dev`) and decide between rebase, cherry-pick, or reset — don't merge by default.
 
-# Production promotion (after canary validation)
-./scripts/promote-canary-to-production.sh
-```
+---
+
+> **Legacy: canary / production Kubernetes deployment.** Everything from here to the
+> end of this section concerns the **downstream** K8s substrates (canary, production),
+> not local development. You do not run these in the normal substrate-first loop —
+> CI/CD deploys to canary on push to `dev`, and the `/deploy` skill promotes canary →
+> production. Kept for reference when operating those environments.
 
 **Deployment Repository Structure:**
 
@@ -866,27 +882,27 @@ See `repos/metabob-activity-api/docs/API_PHASE1_ENDPOINTS.md` for comprehensive 
 - State transition analysis
 - Error handling and testing procedures
 
-**Local Development (if using local K8s):**
-- **Backend API:** `http://activity.metabob.local` (external) / `http://metabob-activity-api.activity-system.svc.cluster.local:8080` (internal)
-- `GET /health`: Health check
-- `POST /v2/activities/recommend`: Thompson Sampling recommendations with optional `expected_output_shapes` filter for shape-compatible variants
-- `GET /v2/activities/templates`: List templates
-- `POST /v2/goal-paths/recommend`: Goal-to-trajectory generation with Thompson Sampling
-- `POST /v2/impulses/resolve`: Resolve impulse pointers
-- `POST /v2/activities/execution-traces`: Store execution trace
-- `POST /v2/activities/composition`: Record activity composition
-- `POST /v2/activities/impulse-relevance`: Track impulse relevance
-- `POST /v2/activities/tool-usage`: Record tool usage patterns
-- `POST /v2/activities/execution-sequences`: Store execution sequences
-- `POST /v2/activities/discover-by-shapes`: Find activities by input/output shapes (Phase 1)
-- `POST /v2/activities/validate-composition`: Validate activity composition graphs (Phase 1)
-- `GET /v2/activities/composition/state-transitions`: Analyze shape flow through compositions (Phase 1)
-- `wss://activity.metabob.local/ws`: WebSocket real-time events with event types: `task.started`, `task.completed`, `task.failed`, `tool.call`, `impulse.resolved` (Phase 1)
+### Substrate endpoints (local development — USE THESE)
 
-**SurrealDB:** `http://surql.metabob.local` (external) / `http://surrealdb.activity-system.svc.cluster.local:8000` (internal)
-- Namespace: `activity-system`
-- Database: `learning_loop`
-- Auth: Username and password from environment variables
+The local single-container substrate (`substrate-live`, Phase 26+) is the primary
+development target. Vessels run as systemd units inside the container; each is
+host-mapped on port `18xxx → 8xxx`. Confirm with `docker ps --filter name=substrate`.
+
+| Host port | Vessel | Role |
+|---|---|---|
+| `http://localhost:18080` | activity-api | trace store + Thompson learner + activity-shape resolver |
+| `http://localhost:18090` | development-vessel | `memoryNote` resolver (authoritative memory) + dev meta-activities |
+| `http://localhost:18210` | goal-host-vessel | `POST /run-goal` (goal dispatch), `POST /resolve` |
+| `http://localhost:18260` | concept-db | concept-graph shapes + dense (MiniLM) search |
+| `http://localhost:18100`, `18250` | (supporting units) | resolver / tooling units as wired in `scripts/substrate/units/` |
+
+activity-api on `:18080` exposes the full API surface (`/health`,
+`/v2/activities/recommend`, `/v2/activities/templates`, `/v2/goal-paths/recommend`,
+`/v2/impulses/resolve`, `/v2/activities/execution-traces`, `discover-by-shapes`,
+`validate-composition`, `/ws` WebSocket events, …). LLM credentials are decoupled
+into `llm-resolver-vessel` (`:8220` in-container). Bootstrap and iteration:
+`make -C scripts/substrate substrate-run` / `substrate-restart-<vessel>`; full guide in
+[`docs/SUBSTRATE.md`](docs/SUBSTRATE.md).
 
 
 ## Authentication
@@ -1047,15 +1063,16 @@ ACTIVITY_API_URL            # Backend API URL
 
 ## Testing and Validation
 
+Validate against the local substrate (`:18080`), not a `.local` K8s endpoint. The
+substrate-first validation path is the failure-mode harness plus a confirming dispatch:
+
 ```bash
-# Learning system integration
-MCP_ENDPOINT=http://api.minibob.local bun run test-learning-system-integration.ts
+# Validate vessel behavior against the local substrate
+bun run validation/scripts/failure-mode-harness.ts        # targets localhost:18080
+minibob --single "verify <the change> works"              # confirms a trace lands
 
-# MiniBob verification
-./run-integration-tests.sh
-
-# Goal processor standalone
-node test-goal-processor.mjs
+# Direct learning-system integration (point MCP_ENDPOINT at the local substrate)
+MCP_ENDPOINT=http://localhost:18080 bun run test-learning-system-integration.ts
 ```
 
 ## Commit Practices
@@ -1111,83 +1128,60 @@ Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
 
 Scopes: `activity-api`, `analysis-api`, `minibob`, `dashboard`, `helm`, `schema`
 
-### Before Redeploying from Scratch
+### Before Restarting the Substrate
 
-Always audit before `helmfile destroy` or namespace deletion:
-1. Check `git status` for uncommitted changes
-2. Verify schema files match deployed database (`INFO FOR DB`)
-3. Ensure no manual database workarounds that aren't in migration scripts
+The local substrate restarts a single container, not a cluster. Before
+`make -C scripts/substrate substrate-restart` (or restarting a unit):
+1. Check `git status` for uncommitted changes.
+2. Confirm no long-running activity is mid-flight (`curl -s http://localhost:18080/health`;
+   inspect recent traces before pulling the rug). The learning state is persisted in
+   the container's volume — back it up per [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md)
+   before any destructive reset.
+3. Never hand-edit the database; schema changes ship as migrations and apply on unit start.
 
 ## Common Operations
 
-### Troubleshooting Deployments
+### Troubleshooting the local substrate
 
-**Check deployment status:**
+The local substrate is one container (`substrate-live`) running vessels as systemd
+units. Diagnose with `docker` + `systemctl`, not `kubectl`:
+
 ```bash
-# All pods in activity-system namespace
-kubectl get pods -n activity-system
+# Container up? Ports mapped?
+docker ps --filter name=substrate
 
-# Specific component
-kubectl get pods -n activity-system -l app.kubernetes.io/name=minibob
-kubectl get pods -n activity-system -l app.kubernetes.io/name=metabob-activity-api
+# Is a vessel's unit active? (run systemctl inside the container)
+docker exec substrate-live systemctl is-active goal-host-vessel
+docker exec substrate-live systemctl status llm-resolver-vessel --no-pager
+
+# Tail a vessel's logs
+docker exec substrate-live journalctl -u activity-api -n 100 --no-pager
+docker logs substrate-live --tail 100
+
+# Hot-reload a vessel after editing its source
+make -C scripts/substrate substrate-restart-<vessel>
+
+# Health probes (host-mapped ports)
+for p in 18080 18090 18210 18260; do curl -s -o /dev/null -w "$p %{http_code}\n" localhost:$p/health; done
 ```
 
-**View logs:**
-```bash
-# API logs (follow mode)
-kubectl logs -n activity-system -l app.kubernetes.io/name=metabob-activity-api -f
+**Common issues:** vessel unit failed to start → `journalctl -u <unit>`; goal dispatch
+hangs → check `llm-resolver-vessel` is active and `~/.metabob/config.json` has a valid
+Anthropic key; memory/concept reads empty → confirm `:18090`/`:18260` are healthy (hooks
+fail open and fall back to the cache when they are not).
 
-# MiniBob logs (all replicas)
-kubectl logs -n activity-system -l app.kubernetes.io/name=minibob --all-containers=true -f
-
-# Dashboard logs
-kubectl logs -n activity-system -l app.kubernetes.io/name=activity-dashboard --tail=100
-```
-
-**Restart deployments:**
-```bash
-# Restart specific deployment
-kubectl rollout restart deployment -n activity-system metabob-activity-api
-kubectl rollout restart deployment -n activity-system minibob
-
-# Wait for rollout to complete
-kubectl rollout status deployment -n activity-system metabob-activity-api --timeout=300s
-```
-
-**Debug failed deployments:**
-```bash
-# Check events for errors
-kubectl get events -n activity-system --sort-by='.lastTimestamp' | tail -20
-
-# Describe pod for detailed info
-kubectl describe pod -n activity-system <pod-name>
-
-# Check if images are available
-kubectl describe deployment -n activity-system metabob-activity-api | grep Image:
-
-# Verify secrets exist
-kubectl get secrets -n activity-system minibob-api-keys
-```
-
-**Common issues:**
-
-1. **Image pull failures**: Ensure Docker images are built locally with correct tags
-2. **Secret not found**: Create secret with: `kubectl create secret generic minibob-api-keys --from-literal=anthropic-api-key=$ANTHROPIC_API_KEY -n activity-system`
-3. **Istio not ready**: Install Istio before deploying: `istioctl install --set profile=demo -y`
-4. **Namespace not labeled**: Enable Istio injection: `kubectl label namespace activity-system istio-injection=enabled --overwrite`
-5. **Health checks failing**: Check service connectivity between pods using `kubectl exec`
+> **K8s troubleshooting (canary/production only):** `kubectl get pods -n activity-system`,
+> `kubectl logs -l app.kubernetes.io/name=<vessel> -f`, `kubectl rollout restart deployment …`,
+> `kubectl get events --sort-by='.lastTimestamp'`. These apply to the downstream cluster,
+> never to local work.
 
 ### Querying Backend Data
 
 ```bash
-# Composition graph
-curl "http://api.minibob.local/v2/activities/composition/graph?limit=10" | jq .
-
-# Tool usage patterns
-curl "http://api.minibob.local/v2/activities/tool-usage?limit=10" | jq .
-
-# Execution sequences
-curl "http://api.minibob.local/v2/activities/execution-sequences?limit=10" | jq .
+# Against the local substrate's activity-api (:18080)
+curl -s "http://localhost:18080/v2/activities/composition/graph?limit=10" | jq .
+curl -s "http://localhost:18080/v2/activities/tool-usage?limit=10" | jq .
+curl -s "http://localhost:18080/v2/activities/execution-sequences?limit=10" | jq .
 ```
 
 ## Architecture Documentation

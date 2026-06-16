@@ -1,6 +1,6 @@
 ---
 name: minibob
-description: Execute development tasks through MiniBob, an autonomous vessel that processes goals through the activity/impulse system.
+description: Dispatch development work through the substrate. MiniBob is the thin CLI entry point that POSTs goals to goal-host-vessel (local substrate :18210) so the work runs as a traced activity and feeds the learning loop — not a standalone agent. Use it instead of hand-editing vessel source.
 license: MIT
 compatibility: Requires Node.js 18+ or Bun. Install via npm i -g @metabob/minibob@latest
 metadata:
@@ -10,7 +10,22 @@ metadata:
 
 # MiniBob CLI
 
-MiniBob is a goal-first development vessel. All inputs are treated as goals to be achieved through the activity/impulse system.
+MiniBob is a **goal-first development vessel and the entry point for substrate-dispatched
+work.** All inputs are treated as goals. MiniBob does not execute in-process — it POSTs
+`{goal, variables}` to `goal-host-vessel` (`GOAL_HOST_VESSEL_ENDPOINT`, default
+`http://127.0.0.1:18210/run-goal`) with `Authorization: ApiKey $METABOB_API_KEY`. The
+substrate-hosted vessels do the work (LLM calls, template selection, resolvers, ribosome
+extraction), every dispatch produces a trace, and the trace feeds Thompson Sampling.
+
+**This is the default path for code changes in this repo.** Direct `Write`/`Edit` on
+`repos/<vessel>/src/**` is blocked by the `substrate-vessel-edit-gate` hook precisely so
+the work routes here. Reach for `minibob --single "<goal>"` first; only set
+`SUBSTRATE_ALLOW_DIRECT_EDIT=1` for a deliberate one-off manual edit. Edits to `docs/`,
+`scripts/`, `openspec/`, `.claude/`, tests, and config are never gated.
+
+> Prerequisite: the local substrate (`substrate-live`) must be up. Confirm goal-host with
+> `curl -s http://localhost:18210/health`. If it is down, dispatch can't route and you
+> fall back to manual edits (the gate fails open).
 
 ---
 
@@ -118,8 +133,9 @@ minibob doctor tutor <path> # Submit templates to registry
 | Variable | Description |
 |----------|-------------|
 | `ANTHROPIC_API_KEY` | API key for Claude |
-| `METABOB_API_KEY` | API key for Metabob backend |
-| `ACTIVITY_API_ENDPOINT` | Activity API URL (default: https://activity.metabob.com) |
+| `METABOB_API_KEY` | API key for Metabob backend (sent as `Authorization: ApiKey ...`) |
+| `GOAL_HOST_VESSEL_ENDPOINT` | goal-host-vessel dispatch URL (local substrate default: `http://127.0.0.1:18210`) |
+| `ACTIVITY_API_ENDPOINT` | Activity API URL (local substrate: `http://localhost:18080`; canary: `https://activity.metabob.com`) |
 | `MINIBOB_PORT` | Server port (default: 8080) |
 | `MINIBOB_PROVIDER` | LLM provider: anthropic \| openai |
 | `MINIBOB_MODEL` | Model to use |
