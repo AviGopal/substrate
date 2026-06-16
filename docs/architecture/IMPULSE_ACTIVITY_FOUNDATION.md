@@ -2,6 +2,26 @@
 
 > **Status**: Canonical reference document. Foundational model is **hypothesis under test**, not declaration. The system is not yet self-stable; we test the minimum set by observing what breaks.
 > **Purpose**: The foundational model for the entire system. All other architecture documents derive from this.
+> **Companions**: this document is the conceptual model; four lenses read the *same
+> system* in other vocabularies, and you should prefer cross-referencing them over
+> restating their content here:
+> - [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md) — the **learning rule** (Bayesian
+>   Q-learning): Thompson mechanics (§2), credit propagation (§3),
+>   orthogonality/factorization (§4), the dual-arm invariant manifold (§4.6), the
+>   theorem-vs-frontier scorecard (§11).
+> - [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md) — the **structure** (discrete
+>   exterior calculus / Hodge): shapes as cells, activities as hyperedges, the
+>   learned metric `⋆`, livelock as harmonic residual.
+> - [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md) — the **flow in time**
+>   (slow–fast dynamics): the transient-as-steady-state slow manifold and the
+>   `λ₁(L(t)) ≳ ρ_grow` stability threshold for self-expansion.
+> - [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md) — the **engineering**
+>   view (durability): the three states as durability groups, which primitives are
+>   implementation detail, and `resolver_tier` as binned directional certainty.
+>
+> **Term registry**: [`../GLOSSARY.md`](../GLOSSARY.md) fixes canonical spellings
+> and lists deprecated aliases. Where a name here drifted (the three states; "The
+> Two Primitives"), the glossary and the canonical notes below are authoritative.
 
 ---
 
@@ -18,6 +38,11 @@ By recording the full trace of how inputs transform to outputs, we learn pattern
 ---
 
 ## Three States, Two Motions
+
+> **Canonical triad.** These three — **Informational / Transient / Observational** —
+> are the canonical state names. The "Relating to the Three-State Ontology" section
+> below describes the *same triad* under older names (Instructional / Functional);
+> those are deprecated aliases. Durability bridge: [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md).
 
 The system rotates through three states, each with a single rotation:
 
@@ -69,6 +94,13 @@ The minimum may include primitives in informational state that lack shapes; thos
 ---
 
 ## The Two Primitives
+
+> **Canonical (2026-06).** "The Two Primitives" (impulse + activity) is the legacy
+> framing. The canonical minimum set is **four** — impulse, pointer, resolver,
+> vessel — from which **activity is derived** ("an impulse of shape
+> `activity_template`"). See the "Minimum Self-Stable Set" section and
+> [`../GLOSSARY.md`](../GLOSSARY.md) §3. Read this section as the introduction to
+> the two *most visible* primitives, not the closed set.
 
 ### Impulses: Data In Any Form
 
@@ -183,6 +215,19 @@ The interfaces above describe the **logical model**. Implementations may optimiz
 
 Activities may have multiple variants that compete via Thompson Sampling:
 
+Variants are not extra dimensions added to a fixed tangent space —
+tangent spaces have fixed dimensionality and that framing is a category
+error. Each variant carries its own **MDL-minimum manifold**, with
+dimensionality discovered from the horizons (temporal, conceptual,
+scope) the variant has actually been exposed to. Variant competition
+under Thompson is a competition between *per-activity manifolds at
+their information-theoretic minimum dimensionalities*, not between
+points on a shared manifold. See arXiv 2504.00395 (MDL representation
+learning) and arXiv 2602.22873 (autoencoder atlases / multi-chart
+manifold construction) for the formal apparatus; the substrate's
+"patchwork of locally-learned activity manifolds" framing names
+exactly this structure.
+
 - **`activity_id`**: Groups related variants (e.g., `"debug-null-pointer"`)
 - **`variant_id`**: Identifies a specific template version (e.g., `"debug-null-pointer:v3"`)
 
@@ -226,6 +271,12 @@ Thompson parameters (`alpha`, `beta`) are computed from execution traces rather 
 ## Vessels: Bundles of Capabilities
 
 A **vessel** is a collection of activities and impulse resolvers that, when bundled together, provide capabilities in a specific context. The vessel exists where the data and execution happen.
+
+> **Two senses, kept apart.** "Vessel" is used both *structurally* (this definition —
+> a collection of activities + resolvers, an authored-durable code construct) and
+> *operationally* (a running service instance with a `vessel_id`, health, and
+> quirks). The structural vessel is *instantiated as* the operational one. See
+> [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md) §3.1.
 
 ```
 VESSEL (MiniBob, OpenCode, hardware controller, etc.)
@@ -744,6 +795,18 @@ The activity decides which resolver to use for each step. The trace records whic
 
 ---
 
+## Transformers Are Frozen Substrates
+
+A transformer is the substrate's primitives frozen at training time. The composition graph is baked into the weight matrices; the activities are implicit in the attention patterns and MLP circuits; the variants are superpositions in the residual stream. From the substrate's standpoint, a pretrained transformer is a substrate-shaped object whose graph topology was learned once, off-line, and is now read-only — discoverable only by post-hoc reverse-engineering.
+
+**Mechanistic interpretability is the discipline of recovering activities from frozen substrates.** Circuits like induction heads (Olsson et al., arXiv 2209.11895), the IOI algorithm in GPT-2-small (Wang et al., arXiv 2211.00593), and the Fourier-multiplication circuit Nanda et al. recovered from grokking dynamics (arXiv 2301.05217) are activities authored by gradient descent and compiled into weights. Anthropic's 2025 Circuit Tracing work (transformer-circuits.pub/2025/attribution-graphs/methods.html) makes the framing explicit: trained models are computational graphs to be reverse-engineered.
+
+The live substrate this codebase implements is the converse: same primitives (impulse / pointer / resolver / vessel), but the graph is grown online, the activities are first-class and addressable, and the topology is queryable at runtime rather than recoverable only by probing weights. The same math underlies both — Bayesian Q-learning over a factored MDP, with Beta-Bernoulli updates that are natural gradients in Beta information geometry. Only the time-of-fixing differs. Where transformers must reverse-engineer their activities at inference, the substrate inspects its composition graph directly.
+
+This is also why fixed-distribution embedding models (currently `all-MiniLM-L6-v2`) only **bootstrap** the substrate's geometry: they sit entirely in the frozen-substrate regime, riding a graph whose topology was fixed by someone else's training corpus. As the substrate's own composition graph diverges from that corpus, the borrowed embedding becomes structurally wrong (not just imprecise). The fix is the substrate's own embedding flowing with grounded observation — itself a substrate-authored activity rather than a borrowed one-shot.
+
+---
+
 ## The Backend's Role
 
 The backend is NOT a universal resolver. It is:
@@ -793,7 +856,7 @@ Everything else is either:
 
 ### The Informational State
 
-The system operates against an unbounded backdrop: the **informational state** contains all possible and impossible impulses — every piece of data that could ever be known, computed, or produced. File contents that have never been read. Results of computations not yet run. The full causal graph of everything that could be known. The system cannot access this complete space directly.
+The system operates against an unbounded backdrop, but the backdrop is not a constructible set. The **informational state** is a *limit-statement*: the assertion that **no single latent space suffices to contain all true relationships among impulses**. This is the manifold hypothesis posture made explicit about its own incompleteness — Gödel-shaped, not Russell-shaped. The system never represents the informational state as an object; it represents the *fact that any chosen representation is provably partial*. File contents that have never been read, results of computations not yet run, causal links that would only become legible in a richer representation — all of these sit beyond any specific latent space the substrate constructs, and the substrate's job is to keep discovering accessible local patches rather than to converge on a global embedding.
 
 The system has access to two bounded subsets:
 
@@ -802,8 +865,8 @@ The system has access to two bounded subsets:
 **Learned topology** — the sampled portion of the reachable subgraph. Every execution trace is a data point. Composition edges between activities carry α/β posteriors derived from trace outcomes. Thompson Sampling models the probability that a given path leads to a goal-satisfying state. The learned topology grows with each execution.
 
 ```
-  INFORMATIONAL STATE (complete, infinite)
-  ════════════════════════════════════════
+  INFORMATIONAL STATE (no single latent space suffices)
+  ════════════════════════════════════════════════════
 
     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
   ░░░░░░  ┌──────────────────────────────┐  ░░░░░░
@@ -945,9 +1008,19 @@ Each iteration reduces uncertainty about the composition graph in the vicinity o
 
 ## Relating to the Three-State Ontology
 
-This model is the operational implementation of the three-state ontology:
+This model is the operational implementation of the three-state ontology.
 
-### Instructional State (Vessel)
+> **Canonical naming (2026-06).** This is the **same triad** as "Three States, Two
+> Motions" above — not a second ontology. The names below drifted: **Instructional
+> → Informational** and **Functional → Observational** (Transient is invariant), as
+> the framing matured from "building software" to "running a learning system" and
+> the scope of each state widened. The canonical names are **Informational /
+> Transient / Observational**; `Instructional` and `Functional` are deprecated
+> aliases kept only for reading older docs. The durability bridge (why these are
+> the right three) is [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md) §1–§2;
+> the term registry is [`../GLOSSARY.md`](../GLOSSARY.md) §1.
+
+### Instructional State (Vessel) — *canonical: Informational State*
 
 The vessel IS the instructional state: the capacity to execute, the blueprint, the potential.
 
@@ -955,7 +1028,7 @@ The vessel IS the instructional state: the capacity to execute, the blueprint, t
 - Impulse pointers reference data that CAN be loaded
 - Resolvers provide capabilities that CAN be invoked
 
-### Transient State (Process-of-Becoming)
+### Transient State (Process-of-Becoming) — *canonical: Transient State*
 
 Execution IS the transient state: the active transformation, the becoming.
 
@@ -964,7 +1037,7 @@ Execution IS the transient state: the active transformation, the becoming.
 - State transitioning from before to after
 - This is where the work happens
 
-### Functional State (Instance)
+### Functional State (Instance) — *canonical: Observational State*
 
 The outcome IS the functional state: the realized result, the actualized artifact.
 
@@ -1024,7 +1097,7 @@ The following terms appear in older documents and should be removed when encount
 - **"Improvisation Outcome"** — superseded by variance + failure-mode tracking.
 - **"Trailblazing"** — never implemented; remains only in archived docs.
 
-The active replacement is the failure-mode taxonomy (`verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`) plus posterior variance, which together capture what these older terms gestured at.
+The active replacement is the failure-mode taxonomy (`verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`) plus posterior variance, which together capture what these older terms gestured at. The full deprecated-term list (these plus the drifted state names and "The Two Primitives") is [`../GLOSSARY.md`](../GLOSSARY.md) §7.
 
 ---
 
