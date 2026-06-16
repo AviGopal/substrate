@@ -61,7 +61,10 @@
       lag-tolerant). **Single atomic commit** for the 5 + the `git mv`.
       ⚠ the CI `paths:` trigger silently stops firing until `:7`/`:58`
       update even though k8s is "out of scope."
-- [~] M2.5 **De-metabob packaging (build-affecting — one atomic commit + build smoke-test).** IN PROGRESS 2026-06-16.
+- [x] M2.5 **De-metabob packaging** DONE 2026-06-16 — build green (`:m2-validate`,
+      analysis-vessel resolved `@avigopal/cpg-inference`), committed super-repo
+      `94b38dd56` + submodules cpg-inference-ts `b0e85cf`, analysis-vessel `0dcf613`
+      (both pushed). Super-repo commit local (not pushed).
       Precondition DONE: activity-api local work committed (`f305a12` trace-store
       viability guard, `5b47b6d` migration 136) + pushed to `AviGopal/activity-api`
       dev; submodule clean.
@@ -98,23 +101,32 @@
         `metabob-vessel` → TBD; needs vault folder `git mv` + one-time re-init).
       Validate: `docker build -f Dockerfile.substrate` green before commit.
       </details>
-- [ ] M2.6 Smoke gate (health + harness + a `minibob --single` dispatch
-      lands a trace). **Gate before M3.**
+- [x] M2.6 Smoke gate PASSED 2026-06-16 — all vessels healthy; goal dispatch via
+      goal-host accepted (`dispatchId cc74ffdc`, status running); traces landing
+      real-time (latest == now, 30 in recent window). minibob deprecated → used
+      goal-host `/run-goal` directly. (Also resolved the turn-1 "0 traces"
+      anomaly: response key is `.executions`, not `.traces`.)
 
 ## M3 — docker-compose minimal surface
 
-- [ ] M3.1 Author `docker-compose.yml`: substrate image + surrealdb + valkey
-      as services; named volume for `/workspace` (state via the parent
-      change's Phase-0 bundle, not a host bind-mount); env via `.env` /
-      compose secrets (ANTHROPIC_API_KEY, SUBSTRATE_GIT_PAT).
-- [ ] M3.2 Remove host-coupling from the start path: no `docker cp`
-      hot-reload requirement to *run* (dev hot-reload becomes optional, not
-      load-bearing); ports parameterized.
-- [ ] M3.3 Build + publish the substrate image to a registry (private).
-- [ ] M3.4 **Acceptance:** on a clean checkout (or second machine), `docker
-      compose up` with only the image + compose + `.env` yields a healthy
-      substrate that restores state from the Phase-0 bundle. No Makefile,
-      no host `repos/` mount.
+- [x] M3.1 DONE 2026-06-16 — `scripts/substrate/docker-compose.yml` +
+      `.env.example`. Single fat `substrate` service (surrealdb+valkey+vessels
+      baked as systemd units; privileged + tmpfs /run). Validated via
+      `docker compose config`. NOT `up`'d (would collide with running
+      substrate-live ports). Corrected the original plan: DB/cache are baked
+      in, not separate services.
+- [x] M3.2 DONE — host-couplings removed in the compose file: no
+      `$(REPO_ROOT):ro` repo mount, no `MITOSIS_HOST_SYNC_MODE`, `/workspace`
+      is a NAMED VOLUME (not host bind-mount); ports/image/container/env
+      parameterized via `.env` (gitignored).
+- [ ] M3.3 Build + publish image to private registry
+      (`ghcr.io/avigopal/substrate`). **Gated:** needs a token with
+      `write:packages` (Contents-scoped SUBSTRATE_GIT_PAT won't push packages)
+      + `docker push` of ~2.9GB.
+- [ ] M3.4 **Acceptance — GATED on parent Phase 0 + two fixes:** clean
+      `docker compose up` (image + compose + `.env`) → healthy substrate that
+      RESTORES state from the Phase-0 snapshot bundle. No Makefile, no host
+      `repos/` mount. Blockers below.
 
 > Review-flagged gaps to close before M3.4 can pass:
 > - **3 substrate-required vessels are NOT in the image today** —
