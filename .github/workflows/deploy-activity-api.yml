@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'repos/metabob-activity-api/**'
+      - 'repos/activity-api/**'
       - '.github/workflows/deploy-activity-api.yml'
   workflow_dispatch:
     inputs:
@@ -55,7 +55,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: repos
-          file: repos/metabob-activity-api/Dockerfile
+          file: repos/activity-api/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

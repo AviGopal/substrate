@@ -13,7 +13,7 @@ CHECK_SCRIPT="$REPO_ROOT/packages/shape-dispatch-check/check.ts"
 QUIET="${1:-}"
 
 VESSELS=(
-  "repos/metabob-activity-api"
+  "repos/activity-api"
   "repos/concept-db"
 )
 

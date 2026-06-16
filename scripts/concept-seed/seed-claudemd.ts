@@ -56,7 +56,7 @@ interface SourceFile {
 const SOURCES: SourceFile[] = [
   { path: "CLAUDE.md", source_type: "vessel_construction_pattern", max_level: 2 },
   { path: "repos/development-vessel/CLAUDE.md", source_type: "vessel_construction_pattern", max_level: 2 },
-  { path: "repos/metabob-activity-api/CLAUDE.md", source_type: "vessel_construction_pattern", max_level: 2 },
+  { path: "repos/activity-api/CLAUDE.md", source_type: "vessel_construction_pattern", max_level: 2 },
   { path: "repos/concept-db/CLAUDE.md", source_type: "vessel_construction_pattern", max_level: 2 },
   { path: "repos/metabob-mcp/CLAUDE.md", source_type: "vessel_construction_pattern", max_level: 2 },
   { path: "repos/discovery-vessel/CLAUDE.md", source_type: "vessel_construction_pattern", max_level: 2 },

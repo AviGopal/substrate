@@ -23,7 +23,7 @@
 	url = git@github.com:AviGopal/identity-vessel.git
 	branch = dev
 
-[submodule "repos/metabob-activity-api"]
+[submodule "repos/activity-api"]
 	path = repos/activity-api
 	url = git@github.com:AviGopal/activity-api.git
 	branch = dev

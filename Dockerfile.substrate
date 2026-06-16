@@ -79,13 +79,13 @@ COPY repos/identity-vessel/src ./identity-vessel/src
 COPY repos/identity-vessel/sql ./identity-vessel/sql
 COPY repos/identity-vessel/tsconfig.json ./identity-vessel/
 
-# metabob-activity-api
-COPY repos/metabob-activity-api/package.json repos/metabob-activity-api/bun.lock* ./activity-api/
+# activity-api
+COPY repos/activity-api/package.json repos/activity-api/bun.lock* ./activity-api/
 RUN cd activity-api && bun install --frozen-lockfile
-COPY repos/metabob-activity-api/src ./activity-api/src
-COPY repos/metabob-activity-api/sql ./activity-api/sql
-COPY repos/metabob-activity-api/scripts ./activity-api/scripts
-COPY repos/metabob-activity-api/tsconfig.json ./activity-api/
+COPY repos/activity-api/src ./activity-api/src
+COPY repos/activity-api/sql ./activity-api/sql
+COPY repos/activity-api/scripts ./activity-api/scripts
+COPY repos/activity-api/tsconfig.json ./activity-api/
 
 # ias-executor-ts (shared executor library for goal-host, local-tools, llm-resolver vessels)
 COPY repos/ias-executor-ts/package.json repos/ias-executor-ts/bun.lock* ./ias-executor-ts/
