@@ -1,0 +1,52 @@
+{
+  "enabledPlugins": {
+    "playwright@claude-plugins-official": true
+  },
+  "worktree": {
+    "bgIsolation": "none"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/avi/documents/work/exp-repo/metabob-devbob/.claude/hooks/substrate-session-start.sh"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/avi/documents/work/exp-repo/metabob-devbob/.claude/hooks/substrate-session-end.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/avi/documents/work/exp-repo/metabob-devbob/.claude/hooks/substrate-memory-mirror.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/avi/documents/work/exp-repo/metabob-devbob/.claude/hooks/substrate-vessel-edit-gate.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

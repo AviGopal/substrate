@@ -100,7 +100,7 @@ async function importViaHttp(note: MemoryNote): Promise<void> {
   const res = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pointer: { type: "memoryNote_write", note } }),
+    body: JSON.stringify({ impulse: { type: "memoryNote_write", note } }),
   });
   if (!res.ok) {
     const text = await res.text();

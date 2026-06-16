@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **CRITICAL**: Use MiniBob for development tasks. Validate changes against the active substrate endpoint configured in `~/.metabob/config.json`.
 
+> **Hook-enforced (2026-06-16).** Direct `Write`/`Edit`/`MultiEdit` on vessel source under `repos/<vessel>/src/**` is gated by the `substrate-vessel-edit-gate` PreToolUse hook. The default path for code changes is to **dispatch through the substrate** — `minibob --single "<goal>"` (delegates to `goal-host-vessel` on `:8210`) — so the work produces a trace and feeds the learning loop, rather than an untraced manual edit. The gate **fails open** when the substrate is unreachable (you can't route through a dead substrate). Conscious one-off direct edits set `SUBSTRATE_ALLOW_DIRECT_EDIT=1` in the environment to bypass. Edits to `docs/`, `scripts/`, `openspec/`, `.claude/`, tests, and config are never gated — only vessel runtime source.
+
 ### Why MiniBob First
 
 MiniBob is not just a tool we're building - it's how we build. Every development task should go through MiniBob when possible:
@@ -1328,46 +1330,50 @@ Optimization happens from these measurements, not from LLM or human reasoning.
 ### The Becoming Never Stops
 Even "completed" activities feed learning that immediately begins transforming the next execution. The instance becomes the vessel for the next transformation in a continuous loop.
 
-## Memory: Substrate Is The Source Of Truth
+## Memory: The Substrate Is The Source Of Truth (LIVE, hook-enforced)
 
-> **Override notice.** The historical model — operator-side memory files at `~/.claude/projects/-home-avi-documents-work-exp-repo-metabob-devbob/memory/` as the source of truth — is being replaced. The substrate (single-container or canary) is now the authoritative store of what Claude understands about this system. Operator-side files become a derived cache.
->
-> See [`docs/MEMORY_AS_SUBSTRATE.md`](docs/MEMORY_AS_SUBSTRATE.md) for the full operational guide. This section is the executive summary that every Claude session needs at load.
+> **Status as of 2026-06-16: the cutover is done.** The `memoryNote` / `memoryNote_write` resolvers are **live** on `development-vessel` (host `http://localhost:18090`, container `:8090`), the 169-file operator cache has been imported (store now holds 171 notes), and **harness hooks enforce the read/write flow automatically** — you rarely invoke it by hand. This section is the executive summary every session needs at load. Full operational guide: [`docs/MEMORY_AS_SUBSTRATE.md`](docs/MEMORY_AS_SUBSTRATE.md).
 
 ### The principle
 
-Memory about this system belongs to the system. Writes flow operator → substrate. Reads consult substrate first, fall back to the cache. The shape contract is `memoryNote` (`closure-replacement-suite` §A); the owning vessel is `development-vessel` (`substrate-closure-properties` §1).
+Memory about this system belongs to the system. The substrate is the authoritative store; the operator-side files under `~/.claude/.../memory/` are a derived read-cache. The shape contract is `memoryNote`; the owning vessel is `development-vessel`.
 
-### How to save memories (going forward)
+### The flow is automatic (you don't have to remember to do it)
 
-- **Preferred (substrate live, `memoryNote_write` registered):** emit a `memoryNote_write` impulse through `/v2/impulses/resolve`. Do NOT also write the file by hand — the `memory-sync-tick` activity mirrors the substrate-side note into `~/.claude/.../memory/` automatically.
-- **Bridge path (substrate offline or `memoryNote` not yet shipped — the operating reality today):** write the file under `~/.claude/.../memory/` with full frontmatter AND add `pending_sync: true` to the frontmatter. The next `memory-pending-flush` tick emits the note to substrate and clears the flag.
-- The four memory types are unchanged: `finding` (recent percolations), `feedback` (user corrections, conventions), `reference` (project orientation). These map directly onto `memoryNote.type`.
+- **Session start** — the `substrate-session-start` hook queries the `memoryNote` resolver and injects recent + high-confidence notes into your context. You begin every session reading from the substrate, not from a truncated `MEMORY.md`.
+- **On memory write** — when you Write/Edit any file under `~/.claude/.../memory/`, the `substrate-memory-mirror` PostToolUse hook emits the corresponding `memoryNote_write` to the substrate. Writing the file is still fine (habit, manual recall), but the substrate copy is authoritative and is written for you.
+- **Session end** — the `substrate-session-end` hook dispatches a memory-consolidation goal to the substrate so this session's learnings are absorbed by the loop.
 
-### Before recommending from memory
+All three hooks **fail open**: if `localhost:18090` is unreachable they no-op and you fall back to the cache.
 
-The verification target is the substrate, not the file. When a memory is load-bearing on a recommendation:
+### Saving a memory by hand (not via a file)
 
-- **Preferred:** query the substrate's `memoryNote` resolver by id, type, or title prefix. The response is authoritative.
-- **Bridge path:** read from `MEMORY.md` and the linked file. Surface the fact that the read was cache-side so the user can audit drift.
+Emit `memoryNote_write` directly — note the `impulse` envelope and the `.note` body:
 
-### Bridge state (today's operating reality)
+```bash
+curl -s -X POST http://localhost:18090/v2/impulses/resolve -H 'Content-Type: application/json' \
+  -d '{"impulse":{"type":"memoryNote_write","note":{"id":"<kebab-slug>","type":"finding|feedback|reference|project","title":"...","body":"...","confidence_weight":0.7}}}'
+```
 
-Substrate's `memoryNote` is specced (`closure-replacement-suite` §A) but not yet implemented in `development-vessel` seed templates. Until it ships:
+The four types map directly onto `memoryNote.type`: `finding` (recent conclusions/percolations), `feedback` (user corrections, conventions), `reference` (project orientation), `project` (ongoing-work state). Upsert is by `id`.
 
-- Reads fall back to the cache without prejudice — the cache is the only available source for any pre-migration note.
-- Writes write the file with `pending_sync: true` and queue for the flush tick that doesn't yet exist. Operationally this is identical to today's discipline; the only addition is the frontmatter flag.
-- Probe readiness by checking whether `development-vessel` advertises `memoryNote` in its `/shapes` response. If yes, prefer substrate writes. If no, follow the bridge path.
+### Recalling a memory (the verification target is the substrate, not the file)
+
+```bash
+curl -s -X POST http://localhost:18090/v2/impulses/resolve -H 'Content-Type: application/json' \
+  -d '{"impulse":{"type":"memoryNote","note_type":"feedback","limit":20}}'
+# filters: id | note_type | title_prefix | provenance_tag | limit
+```
+
+The response is authoritative. Read `MEMORY.md` / cache files only when the substrate is unreachable — and say so, so the user can audit drift.
 
 ### What NOT to save (unchanged)
-
-These rules carry through to `memoryNote.body`:
 
 - Information available by reading a current file (read it instead)
 - Speculative claims without provenance
 - Secrets, credentials, PII
 - Workflow state that belongs in `openspec/changes/`, not memory
 
-### Migration
+### Migration record + degraded-mode recovery
 
-Existing operator-side notes (~70 files as of 2026-05-23) will be one-shot bulk-emitted by `validation/scripts/migrate-memory-to-substrate.ts` once `memoryNote_write` is live. The script is idempotent, manifest-tracked, and gated on substrate readiness. After migration, wiping `~/.claude/.../memory/` becomes a recoverable operation — the next sync tick rebuilds the cache from substrate state. Closure-audit `--without=operator-memory` reporting green for three consecutive nights signals migration complete.
+The one-shot import ran 2026-06-16 via `scripts/substrate/import-operator-memory.ts` (`make -C scripts/substrate import-memory`, HTTP path with `DEV_VESSEL_ENDPOINT=http://localhost:18090`): 169 files → substrate, store now 171 notes (63 finding / 76 project / 31 feedback / 1 reference). The script is idempotent (upsert-by-id, `operator-import:<stem>` ids, provenance tag `operator-import-2026-05-25`). If the substrate was down during a stretch of work, re-run that import to reconcile the cache back into the substrate once it returns. (This supersedes the stale reference to `validation/scripts/migrate-memory-to-substrate.ts`, which never existed.)

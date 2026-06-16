@@ -97,13 +97,18 @@ These accumulate the "feedback" half of auto-memory in the substrate, not just i
 
 ### Routine: finding a memory file (or writing one)
 
-When `~/.claude/projects/-home-avi-documents-work-exp-repo-metabob-devbob/memory/` is consulted or extended:
+**As of 2026-06-16 memory is substrate-resident and hook-enforced** (CLAUDE.md §"Memory: The Substrate Is The Source Of Truth"). The `memoryNote` / `memoryNote_write` resolvers are live on development-vessel (`http://localhost:18090`), and:
 
-1. Save the memory file as today (per the memory rules in root CLAUDE.md).
-2. **Also** mint a concept of `source_type: memo` whose `content` is the file's body and whose `pointer: {type: "memo", file: "<filename>"}` cross-references it.
-3. `concept_link` from the new memory concept to any concepts it cites (use `description_of` or `derived_from`).
+- **Reads** come from the `substrate-session-start` hook (auto-injected at load) or a direct `memoryNote` query — not from `MEMORY.md`, which is now a thin pointer.
+- **Writes** to any file under the memory dir are auto-mirrored to `memoryNote_write` by the `substrate-memory-mirror` hook. You don't need to mirror by hand.
 
-The file is the cache; the substrate concept is the authoritative copy. Per `feedback_memory_as_substrate`, this is the canonical direction.
+So the memory↔substrate sync is handled. The concept-graph layer is still **complementary** and worth doing for *load-bearing* knowledge:
+
+1. The memoryNote already holds the full text (via the hook). You don't need to duplicate it as a `memo` concept.
+2. **Do** `concept_create` / `concept_link` when the memory encodes a relationship that belongs in the typed graph (e.g. a finding that `contradicts` a prior concept, or `derived_from` an existing pattern) — the concept graph adds typed edges the flat memoryNote store doesn't have.
+3. Skip per-note concept minting for routine findings; reserve it for abstractions the graph can reason over.
+
+Memory is the substrate's flat recall; concept-db is its typed reasoning layer. Use memoryNote for "what did I learn," concept-db for "how does it relate."
 
 ### Routine: closing a non-trivial task
 

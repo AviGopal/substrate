@@ -1,6 +1,6 @@
 # Memory As Substrate
 
-**Status:** Operational guide for the operator-side memory override. References specs already accepted in `openspec/changes/2026-05-23-substrate-closure-properties/` (§1, Memory closure) and `openspec/changes/2026-05-23-closure-replacement-suite/` (§A, `memoryNote` + `extract-memory-note`). No new spec proposed here — this document operationalises the existing closure principle.
+**Status (updated 2026-06-16): LIVE and hook-enforced.** The `memoryNote` / `memoryNote_write` resolvers ship in `development-vessel` and are advertised at `http://localhost:18090/shapes`. The one-shot import has run (169 operator files → substrate; store holds 171 notes). The operator→substrate write direction and the substrate→context read direction are now enforced by **Claude Code harness hooks** (see §E), not by the substrate-resident cron activities this doc originally specced (those — `memory-sync-tick`, `memory-pending-flush` — were never built; the hooks supersede them). References specs accepted in `openspec/changes/2026-05-23-substrate-closure-properties/` (§1, Memory closure) and `openspec/changes/2026-05-23-closure-replacement-suite/` (§A, `memoryNote` + `extract-memory-note`). No new spec proposed here.
 
 **Audience:** Claude (the operator), and any other agent or human who reads or writes operator-side memory while working in this super-repo.
 
@@ -50,21 +50,19 @@ The override is **one-directional in principle**: writes flow operator → subst
 - Operator-side files become a mirror: a 5-minute `memory-sync-tick` activity pulls `memoryNote` impulses and writes the cache. Wiping the cache is recoverable; wiping the substrate is not.
 - Closure-audit `--without=operator-memory` (per `substrate-closure-properties` §27.3.j.1) reports green
 
-### Bridge state (today's operating reality — load-bearing)
+### Now (post-cutover, 2026-06-16) — hook-enforced
 
-Operator memory is one of seven formal substrate closure gaps — external stateful dependencies that currently load-bear on lift properties. The `memory-sync-tick` and `memory-pending-flush` activities (§E) are part of the broader closure replacement suite: the substrate-resident replacements for all seven external stateful dependencies. Memory closure is not just about convenience; it is a hard prerequisite for the closure-audit gate that guards lift. Until memory is substrate-resident, wiping `~/.claude/.../memory/` breaks lift-surface properties that the substrate cannot currently recover on its own.
+The readiness probe (`development-vessel` advertises `memoryNote` in `/shapes`) now returns **true**, so the bridge state below is **historical**. The override is no longer "partial" — it is enforced by three Claude Code harness hooks (defined in `.claude/settings.json`, scripts under `.claude/hooks/`):
 
-The substrate's `memoryNote` is not yet implemented. `extract-memory-note` is in the closure replacement tasks, not in seed templates. Until that ships:
+- **Writes** — the `substrate-memory-mirror` PostToolUse hook fires on every `Write`/`Edit`/`MultiEdit` of a file under `~/.claude/.../memory/` and emits the corresponding `memoryNote_write`. The write envelope is `{"impulse":{"type":"memoryNote_write","note":{…}}}` (top-level `impulse`, body under `.note` — NOT the `{"pointer":{…}}` form the old import script used). You may still write the file; the substrate copy is authoritative and is written for you.
+- **Reads** — the `substrate-session-start` hook queries `memoryNote` (recent + high-confidence) and injects the result into session context. Read envelope: `{"impulse":{"type":"memoryNote", id?|note_type?|title_prefix?|provenance_tag?|limit?}}`. The substrate response is authoritative; cache reads are a fallback only when the substrate is down (say so when you use them).
+- **Consolidation** — the `substrate-session-end` hook dispatches a memory-consolidation goal so the session's learnings are absorbed by the loop.
 
-- **Writes:** When Claude observes something memorable:
-  1. *If substrate is reachable and `memoryNote_write` is registered:* emit the `memoryNote_write` impulse via the substrate's `/v2/impulses/resolve` endpoint. Mirror to `~/.claude/.../memory/` happens automatically on the next sync tick. Do NOT also write the file by hand.
-  2. *If substrate is unreachable, or `memoryNote_write` is not yet registered:* write the file directly under `~/.claude/.../memory/` with frontmatter, AND add a `pending_sync: true` flag in the frontmatter. The next sync tick flushes pending notes to substrate when it becomes reachable.
-- **Reads:** When Claude needs to recall:
-  1. *If substrate is reachable:* query `memoryNote` by id, type, or title prefix via the substrate resolver. Read result is authoritative.
-  2. *Otherwise:* read from `~/.claude/.../memory/` cache as fallback. Note any reads from cache in the response context so the user can audit divergence risk.
-- **Readiness probe:** Claude determines whether `memoryNote` is "ready" by querying the substrate's `/shapes` advertisement at session start. If `memoryNote` is not listed by `development-vessel`, treat the bridge state as the operating reality. If it is listed, prefer substrate writes.
+All hooks **fail open**: substrate unreachable ⇒ hook no-ops ⇒ cache fallback. To reconcile cache→substrate after an outage, re-run the import (§C.3).
 
-The bridge state is not a workaround — it is the documented operating mode for the period between *this document landing* and *`memoryNote` shipping in development-vessel seed templates*. The discipline (types, when to save, what not to save) is identical in both modes; only the destination changes.
+### Bridge state (historical — pre-2026-06-16, retained for context)
+
+Before the cutover, `memoryNote` was specced but unshipped, so memory was file-first with a `pending_sync: true` flag and a planned (never-built) flush tick. The discipline (types, when to save, what not to save) was identical to today; only the destination and the enforcement mechanism changed. This block is kept only so older traces and commits that reference "bridge state" remain legible.
 
 ---
 
@@ -96,17 +94,16 @@ For each file:
 | `last_validated_at` | File mtime |
 | `supersedes_id` | None for first import (supersession is recorded only for explicit replaces) |
 
-### C.3 Bulk-emit script
+### C.3 Bulk-emit script (as built)
 
-Lives at **`validation/scripts/migrate-memory-to-substrate.ts`** (substrate-resident; not operator-side):
+The script is **`scripts/substrate/import-operator-memory.ts`** (wired as `make -C scripts/substrate import-memory`). The originally-specced path `validation/scripts/migrate-memory-to-substrate.ts` was never created; this is its as-built replacement.
 
-- Reads every file under `~/.claude/projects/-home-avi-documents-work-exp-repo-metabob-devbob/memory/` (excluding `MEMORY.md`)
-- Parses frontmatter + body
-- Applies C.2 mapping
-- POSTs to substrate `/v2/impulses/resolve` with `memoryNote_write` body for each note
-- Writes a manifest `validation/state/memory-migration-manifest.json` recording `{ filename, memoryNote.id, status }` for each
-- Idempotent: re-runs skip notes whose `id` already exists in substrate
-- Gate: refuses to run until substrate's `development-vessel` advertises `memoryNote_write` in its resolver contract
+- Reads every `.md` under `~/.claude/projects/-home-avi-documents-work-exp-repo-metabob-devbob/memory/` (excluding `MEMORY.md`)
+- Parses frontmatter + body; types by frontmatter `type` or filename prefix (`feedback_*`→feedback, `percolation_*`/`project_*`→project, else finding)
+- Note id is `operator-import:<filename-stem>`; provenance tag `operator-import-2026-05-25`; confidence by type
+- **HTTP path** (`DEV_VESSEL_ENDPOINT=http://localhost:18090`): POSTs `{"impulse":{"type":"memoryNote_write","note":{…}}}` to `/v2/impulses/resolve` for each note — this is the path that populates the live substrate. **Offline path** (no `DEV_VESSEL_ENDPOINT`): writes `WORKSPACE/memory/notes.json` instead (does NOT touch the running store).
+- Idempotent: upsert-by-id, skips notes whose body is unchanged
+- Run record: 2026-06-16, `imported=169 updated=0 skipped=0`, store 1→171.
 
 ### C.4 Verification
 
@@ -169,9 +166,19 @@ What NOT to save (rules carry over from existing memory discipline):
 
 ---
 
-## §E. The override mechanism (interim)
+## §E. The override mechanism
 
-Two substrate-resident activities operationalise the override:
+> **As built (2026-06-16): harness hooks, not cron activities.** The two substrate-resident cron activities specced below (`memory-sync-tick`, `memory-pending-flush`) were never implemented. Their job is now done by Claude Code harness hooks defined in `.claude/settings.json` with scripts in `.claude/hooks/`:
+>
+> | Specced activity | As-built replacement | Direction |
+> |---|---|---|
+> | `memory-pending-flush` (push cache→substrate) | `substrate-memory-mirror` (PostToolUse on memory-file Write/Edit) | operator → substrate, event-driven (not 5-min poll) |
+> | `memory-sync-tick` (pull substrate→cache) | `substrate-session-start` (pull substrate→**context** at session start) | substrate → operator, at session start |
+> | — | `substrate-session-end` (dispatch consolidation goal) | operator → substrate, at session end |
+>
+> The hooks fire on real events (tool use, session lifecycle) instead of a 5-minute cron, and they inject substrate state into *context* rather than regenerating cache files — the cache is left as a static read-fallback. The conflict-handling and outage semantics below still describe the intended end-state if/when a substrate-resident sync activity is added; today, conflicts resolve substrate-authoritative simply because reads come from the substrate.
+
+The original interim design (substrate-resident activities) is retained below for reference:
 
 ### E.1 `memory-sync-tick` (cron, every 5 minutes)
 
