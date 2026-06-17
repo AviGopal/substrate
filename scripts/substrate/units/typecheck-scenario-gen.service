@@ -1,0 +1,20 @@
+[Unit]
+Description=Typecheck-scenario generator — turn tsc errors into concrete patchable scenarios (funnel fuel)
+After=development-vessel.service activity-api.service
+Requires=development-vessel.service
+
+# Smoke test:
+#   docker exec substrate-live systemctl start typecheck-scenario-gen.service
+#   docker exec substrate-live journalctl -u typecheck-scenario-gen.service --no-pager -n 3
+#   # last line is JSON: {total_tc_errors, scenarios_created, created:[...]}
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/substrate/env
+ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/typecheck-scenario-gen.ts
+TimeoutStartSec=600
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
