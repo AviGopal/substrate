@@ -122,11 +122,19 @@ process_intent() {
     mv "$tmpfile" "$host_vessel_root/$f"
   done <<<"$staged_files"
 
-  # Scope-creep gate: only staged_files may be dirty in the working tree.
+  # Scope-creep gate: only staged_files may be dirty among TRACKED files.
+  # NB (2026-06-17): untracked files (porcelain "??") are excluded. We commit via
+  # `git add <explicit staged_files>` below, so untracked files can NEVER enter
+  # the commit — they are not a scope-creep risk. They also survive `git checkout
+  # -- .` (which only reverts tracked changes), so flagging them rejected EVERY
+  # intent forever: persistent untracked WIP (e.g. unregistered in-progress
+  # resolvers) blocked all autonomous cutovers for 3 days. Only tracked
+  # modifications outside the staged set are real scope creep.
   local porcelain unexpected=()
   porcelain=$(cd "$host_vessel_root" && git status --porcelain)
   while IFS= read -r entry; do
     [[ -z "$entry" ]] && continue
+    [[ "${entry:0:2}" == "??" ]] && continue   # untracked — cannot pollute an explicit-add commit
     local path="${entry:3}"
     if ! grep -qxF "$path" <<<"$staged_files"; then
       unexpected+=("$path")
