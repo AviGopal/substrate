@@ -17,7 +17,13 @@
 > reads it as a normal-hyperbolicity / stability threshold for runtime growth; and
 > [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md) is the *engineering* chart,
 > reading the system as software sorted by durability. The dictionary mapping each
-> quantity across the charts is `SUBSTRATE_AS_DYNAMICS.md` §0.
+> quantity across the charts is `SUBSTRATE_AS_DYNAMICS.md` §0. Two later companions
+> take the durability lens across the container line:
+> [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md) (durability across a multi-container
+> fleet — what may cross the boundary) and
+> [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md) (the protocol/engineering layer
+> that realizes the crossings). The sparsity-of-`L` argument of §2 is what FLEET §3
+> invokes to forbid a dense global posterior merge across substrates.
 >
 > The MDP doc disowns continuous/Riemannian structure (`SUBSTRATE_AS_MDP.md`
 > §8.3) and already leans on combinatorial Hodge theory (§8.4). This document is

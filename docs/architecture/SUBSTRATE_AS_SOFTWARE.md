@@ -7,7 +7,12 @@
 > three read the substrate as mathematics. This one reads the **same running
 > system as software** — organized by the one axis the math charts abstract away:
 > **durability**, i.e. *what persists, what is ephemeral, what is appended, and
-> who is allowed to change each.* It introduces no new primitives.
+> who is allowed to change each.* It introduces no new primitives. Two further
+> companions extend this durability lens past the single-container boundary:
+> [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md) takes the four durability groups
+> of §2 across a multi-container fleet (the cross-container algebra of each group),
+> and [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md) supplies the
+> protocol/engineering layer that realizes those crossings.
 >
 > This doc is also the **canonical home for two naming decisions** the rest of the
 > documentation should defer to: (1) the resolved three-state triad

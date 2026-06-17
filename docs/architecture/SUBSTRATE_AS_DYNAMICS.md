@@ -27,7 +27,12 @@ The substrate is a single running system. These docs are coordinate charts on it
 not different systems. The three **math** charts are below; a fourth, **engineering**
 chart — the same system sorted by durability — is
 [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md), which extends this table
-with a "where does it live / how durable is it" column (SOFTWARE §0). Read this
+with a "where does it live / how durable is it" column (SOFTWARE §0). That
+durability lens is then carried across the container line by two further
+companions: [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md) (what may cross the
+substrate boundary, per durability group) and
+[`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md) (the protocol/engineering layer
+that realizes those crossings). Read this
 table as the dictionary; each row is **one quantity** named in each chart.
 
 | Quantity in the substrate | MDP lens (the rule) | DEC lens (the structure) | Dynamics lens (this doc — the flow) |

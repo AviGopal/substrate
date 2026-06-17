@@ -21,7 +21,15 @@
 > (engineering). Where this doc makes sample complexity and regret legible, DEC
 > makes locality and the gluing obstruction `H¹` legible, the dynamics chart makes
 > *when the learning stops keeping up with the growth* legible, and the software
-> chart makes *what it is made of and how durable it is* legible.
+> chart makes *what it is made of and how durable it is* legible. Two further
+> companions carry the durability lens across containers:
+> [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md) reads the same system as a
+> multi-container fleet (what may cross the substrate boundary, per durability
+> group), and [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md) supplies the
+> protocol/engineering layer (identity, transport, verification, self-propagation)
+> that realizes those crossings. The non-constructibility ceiling of §11 is the
+> limit both inherit: more peers enlarge the pool of observation but never complete
+> the model.
 
 ## 1. The MDP, in the substrate's own primitives
 
