@@ -1,0 +1,16 @@
+[Unit]
+Description=Self-alteration funnel drain timer
+
+[Timer]
+# Fire 4 minutes after activation (let the drafter produce proposals first), then
+# every 12 minutes. Type=oneshot so a still-running drain (apply + patch_with_tools
+# ~25s + cutover/push) blocks the next fire; 12min is comfortably above worst case
+# and lets a self-modifying cutover (which restarts development-vessel) settle.
+OnActiveSec=4min
+OnUnitActiveSec=12min
+Persistent=true
+AccuracySec=30s
+Unit=funnel-drain.service
+
+[Install]
+WantedBy=timers.target
