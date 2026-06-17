@@ -1,0 +1,15 @@
+[Unit]
+Description=Composition-edge reconciler timer
+
+[Timer]
+# Fire 10 minutes after activation (let activity-api warm up), then every 30
+# minutes. Type=oneshot, so a still-running reconcile blocks the next fire
+# (the derivation is a few SQL pages + a handful of UPSERTs — well under cadence).
+OnActiveSec=10min
+OnUnitActiveSec=30min
+Persistent=true
+AccuracySec=30s
+Unit=composition-edge-reconcile.service
+
+[Install]
+WantedBy=timers.target

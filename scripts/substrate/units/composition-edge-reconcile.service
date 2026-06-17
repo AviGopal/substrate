@@ -1,0 +1,24 @@
+[Unit]
+Description=Composition-edge reconciler — derive activity_composition_graph from traces
+# The executor stores parent_execution_id + composition_chain on nested traces
+# but nothing maintains the aggregate parent->child edge table that
+# GET /v2/activities/composition/graph (and the topological / backward-chaining
+# model) reads. This oneshot re-derives the full edge set from the trace store
+# and UPSERTs it (idempotent), keeping the backward-model substrate fresh.
+After=activity-api.service surrealdb.service
+Requires=surrealdb.service
+
+# Smoke test:
+#   docker exec substrate-live systemctl start composition-edge-reconcile.service
+#   docker exec substrate-live journalctl -u composition-edge-reconcile.service --no-pager -n 5
+#   # last line is JSON: {distinct_edges, upserted, graph_total, ...}
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/composition-edge-reconcile.ts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
