@@ -1,0 +1,15 @@
+[Unit]
+Description=Autonomy metrics collector (READ-ONLY) — snapshots autonomy KPIs to a JSONL time series
+# Strictly read-only: SELECT / GET / read-resolves only. No writes, no gap
+# emission, no fixes. Records whether the substrate is reaching autonomy on its
+# own (lift gate, forward/backward model health, self-alteration funnel, open
+# model-reality gaps, DEC rate-limiters, S3 push-away) so we can OBSERVE
+# self-correction without nudging.
+After=activity-api.service surrealdb.service development-vessel.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/autonomy-metrics.ts
+StandardOutput=journal
+StandardError=journal

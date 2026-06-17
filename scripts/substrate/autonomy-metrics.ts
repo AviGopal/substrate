@@ -1,0 +1,171 @@
+#!/usr/bin/env bun
+/**
+ * autonomy-metrics.ts — READ-ONLY autonomy metrics collector.
+ *
+ * Snapshots the KPIs that say whether the substrate is reaching autonomous
+ * operation, and appends one JSONL line per run to a metrics log so we get a
+ * time series. STRICTLY read-only: only SELECT / GET / read-resolves — no
+ * writes, no gap emission, no fixes. The point is to OBSERVE whether the
+ * substrate self-corrects without operator nudging.
+ *
+ * Run inside substrate-live (reads creds from /etc/substrate/env):
+ *   bun scripts/substrate/autonomy-metrics.ts
+ * Appends to: /workspace/metrics/autonomy-metrics.jsonl
+ *
+ * Metric groups (each is "is it getting more autonomous on its own?"):
+ *   lift            — IAL lift gate (overall_passing, template_count) from heartbeat
+ *   forward_model   — recommend selector scored-fraction, embedding coverage
+ *   backward_model  — composition graph edges, orphan-parent rate
+ *   self_alteration — authored/staged/landed funnel (filesystem-derived)
+ *   gaps            — open gaps by category (does the loop CLOSE model-reality gaps?)
+ *   dec_limiters    — ρ_sample (traces/hr), κ (posterior-mean spread), λ₁ proxy (edges)
+ *   push_away       — interventionRefused count (S3 readiness)
+ */
+const NS = process.env.SURREALDB_NAMESPACE || "activity-system";
+const DB = process.env.SURREALDB_DATABASE || "learning_loop";
+const PASS = process.env.SURREALDB_PASSWORD || process.env.SURREAL_PASS || "";
+const USER = process.env.SURREALDB_USERNAME || "root";
+const SQL_URL = (process.env.SURREALDB_URL || "http://127.0.0.1:8000").replace(/\/$/, "") + "/sql";
+const API = process.env.METABOB_ENDPOINT || "http://127.0.0.1:8080";
+const DEV = process.env.DEV_VESSEL_ENDPOINT || "http://127.0.0.1:8090";
+const KEY = process.env.METABOB_API_KEY || "";
+const OUT = process.env.METRICS_OUT || "/workspace/metrics/autonomy-metrics.jsonl";
+const sqlAuth = "Basic " + Buffer.from(`${USER}:${PASS}`).toString("base64");
+
+async function sql<T = any>(q: string): Promise<T[]> {
+  const r = await fetch(SQL_URL, {
+    method: "POST",
+    headers: { Accept: "application/json", "Surreal-NS": NS, "Surreal-DB": DB, Authorization: sqlAuth, "Content-Type": "text/plain" },
+    body: q,
+  });
+  const j = (await r.json()) as Array<{ status: string; result: T[] }>;
+  const last = j[j.length - 1];
+  if (!last || last.status !== "OK") throw new Error(JSON.stringify(j).slice(0, 200));
+  return last.result;
+}
+async function tryNum(fn: () => Promise<number | null>): Promise<number | null> {
+  try { const v = await fn(); return v; } catch { return null; }
+}
+async function apiGet(path: string): Promise<any> {
+  const r = await fetch(`${API}${path}`, { headers: KEY ? { Authorization: `ApiKey ${KEY}` } : {}, signal: AbortSignal.timeout(20_000) });
+  if (!r.ok) throw new Error(`GET ${path} ${r.status}`);
+  return r.json();
+}
+async function devResolve(impulse: Record<string, unknown>): Promise<any> {
+  const r = await fetch(`${DEV}/v2/impulses/resolve`, {
+    method: "POST", headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
+    body: JSON.stringify({ impulse }), signal: AbortSignal.timeout(30_000),
+  });
+  if (!r.ok) throw new Error(`resolve ${impulse.type} ${r.status}`);
+  return r.json();
+}
+const count = async (q: string): Promise<number | null> => {
+  const r = await sql<{ count: number }>(q);
+  return (r && r[0] && typeof r[0].count === "number") ? r[0].count : 0;
+};
+
+// ── lift gate (from heartbeat — written by substrate-health-tick) ──
+let lift: any = { overall_passing: null, template_count: null, vessels_down: null, heartbeat_age_s: null };
+try {
+  const hb = JSON.parse(await Bun.file("/workspace/substrate-heartbeat.json").text());
+  lift = {
+    overall_passing: hb.overall_passing ?? null,
+    template_count: hb.template_count ?? null,
+    vessels_down: Array.isArray(hb.vessels_down) ? hb.vessels_down.length : null,
+  };
+} catch { /* heartbeat absent */ }
+
+// ── forward model ──
+const totalActivities = await tryNum(() => count("SELECT count() FROM activity GROUP ALL;"));
+const embedded = await tryNum(() => count("SELECT count() FROM activity WHERE name_embedding != NONE GROUP ALL;"));
+let selector_scored_fraction: number | null = null;
+try {
+  const rec = await (await fetch(`${API}/v2/activities/recommend`, {
+    method: "POST", headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
+    body: JSON.stringify({ task_description: "audit activity templates and report quality", limit: 20 }), signal: AbortSignal.timeout(20_000),
+  })).json();
+  const recs = rec.recommendations ?? [];
+  const scored = recs.filter((x: any) => typeof (x.selection_metadata?.score) === "number").length;
+  selector_scored_fraction = recs.length ? Math.round((scored / recs.length) * 1000) / 1000 : null;
+} catch { /* recommend unreachable */ }
+const forward_model = {
+  total_activities: totalActivities,
+  embedding_coverage: totalActivities && embedded != null ? Math.round((embedded / totalActivities) * 1000) / 1000 : null,
+  selector_scored_fraction,
+};
+
+// ── backward model (composition graph) ──
+const comp_edges = await tryNum(() => count("SELECT count() FROM activity_composition_graph GROUP ALL;"));
+let orphan_parent_rate: number | null = null;
+try {
+  // sample 500 children, resolve parent activity_id presence
+  const kids = await sql<{ parent_execution_id: string }>("SELECT parent_execution_id FROM activity_execution_traces WHERE parent_execution_id != NONE LIMIT 500;");
+  if (kids.length) {
+    let resolved = 0;
+    for (const k of kids) {
+      const p = await sql<{ c: number }>(`SELECT count() AS c FROM activity_execution_traces WHERE execution_id = ${JSON.stringify(k.parent_execution_id)} GROUP ALL;`);
+      if (p[0]?.c) resolved++;
+    }
+    orphan_parent_rate = Math.round((1 - resolved / kids.length) * 1000) / 1000;
+  }
+} catch { /* leave null */ }
+const backward_model = { composition_edges: comp_edges, orphan_parent_rate };
+
+// ── self-alteration funnel (filesystem) ──
+let self_alteration: any = { landed: null, open_proposals: null };
+try {
+  const { readdirSync } = await import("node:fs");
+  // Applied (landed) proposals are per-file reports under proposals/.applied/.
+  self_alteration.landed = readdirSync("/workspace/proposals/.applied").filter((f) => f.endsWith(".json")).length;
+} catch { /* */ }
+try {
+  const { readdirSync } = await import("node:fs");
+  self_alteration.open_proposals = readdirSync("/workspace/proposals").filter((f) => f.endsWith(".json")).length;
+} catch { /* */ }
+
+// ── gaps by category (does the loop close model-reality gaps autonomously?) ──
+let gaps: any = { total: null, by_category: {}, model_reality_open: null };
+try {
+  const g = await devResolve({ type: "substrateGap", limit: 200 });
+  const list = g?.body?.gaps ?? [];
+  const by: Record<string, number> = {};
+  for (const x of list) by[x.category ?? "unknown"] = (by[x.category ?? "unknown"] ?? 0) + 1;
+  const mrCats = ["forward_model_artifact", "reference_integrity", "detector_value_sanity_violation", "auto_draft_fallback_recommend", "posterior_consistency_drift", "composition_coverage"];
+  gaps = {
+    total: g?.body?.total ?? list.length,
+    by_category: by,
+    model_reality_open: mrCats.reduce((s, c) => s + (by[c] ?? 0), 0),
+  };
+} catch { /* */ }
+
+// ── DEC rate-limiters ──
+const traces_per_hour = await tryNum(() => count("SELECT count() FROM activity_execution_traces WHERE created_at > (time::now() - 1h) GROUP ALL;"));
+let kappa_posterior_spread: any = { min: null, max: null, mean: null, n: null };
+try {
+  const tpl = await apiGet("/v2/activities/templates?limit=100&offset=0");
+  const means = (tpl.templates ?? [])
+    .map((t: any) => { const a = t.metrics?.thompson_alpha ?? t.thompson_alpha; const b = t.metrics?.thompson_beta ?? t.thompson_beta; return (typeof a === "number" && typeof b === "number" && a + b > 0) ? a / (a + b) : null; })
+    .filter((x: number | null): x is number => x != null);
+  if (means.length) kappa_posterior_spread = {
+    min: Math.round(Math.min(...means) * 1000) / 1000, max: Math.round(Math.max(...means) * 1000) / 1000,
+    mean: Math.round((means.reduce((s, x) => s + x, 0) / means.length) * 1000) / 1000, n: means.length,
+  };
+} catch { /* */ }
+const dec_limiters = {
+  rho_sample_traces_per_hour: traces_per_hour,
+  kappa_posterior_spread,              // flat (min≈max) = degenerate metric = reward saturation
+  lambda1_composition_edges: comp_edges, // 0 edges = no graph to propagate credit over
+};
+
+// ── push-away (S3) ──
+const intervention_refused = await tryNum(() => count("SELECT count() FROM impulse WHERE shape = 'interventionRefused' GROUP ALL;"));
+
+const record = {
+  at: new Date().toISOString(),
+  lift, forward_model, backward_model, self_alteration, gaps, dec_limiters,
+  push_away: { intervention_refused },
+};
+
+try { const { mkdirSync } = await import("node:fs"); mkdirSync(OUT.replace(/\/[^/]+$/, ""), { recursive: true }); } catch { /* */ }
+await Bun.write(Bun.file(OUT), (await Bun.file(OUT).exists() ? await Bun.file(OUT).text() : "") + JSON.stringify(record) + "\n");
+console.log(JSON.stringify(record, null, 2));
