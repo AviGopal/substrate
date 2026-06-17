@@ -1,0 +1,25 @@
+[Unit]
+Description=Model-reality audit — aggregate forward/backward-model vs trace-reality checks
+# Runs the substrate-authored scripts/substrate/model-reality-audit.ts over the
+# WHOLE trace store (not a 4h/200-trace window like the per-trace detectors),
+# checking that the forward model (Thompson posteriors, recommend selector) and
+# backward model (composition graph, parent links) match the reality recorded in
+# traces. Emits substrateGaps for divergences (EMIT_GAPS=1) so model-reality
+# mismatches flow into the self-alteration loop instead of going undetected.
+After=activity-api.service surrealdb.service
+Requires=surrealdb.service
+
+# Smoke test:
+#   docker exec substrate-live systemctl start model-reality-audit.service
+#   docker exec substrate-live journalctl -u model-reality-audit.service --no-pager -n 20
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+Environment=EMIT_GAPS=1
+ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/model-reality-audit.ts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
