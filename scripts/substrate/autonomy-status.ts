@@ -104,6 +104,8 @@ console.log(fmt("explore breadth", last.capability?.exploration_breadth, delta("
   arrow("capability.exploration_breadth", "up"), `distinct activities run 24h ÷ total (${last.capability?.distinct_exercised_24h ?? "·"}/${last.capability?.total_activities ?? "·"}, ${last.capability?.proposed_templates ?? "·"} proposed)`));
 console.log(fmt("cross-vessel comp", last.capability?.cross_vessel_frac, delta("capability.cross_vessel_frac"),
   arrow("capability.cross_vessel_frac", "up"), `edges spanning vessels ÷ total (${last.capability?.cross_vessel_edges ?? "·"}/${last.capability?.total_edges ?? "·"}) — activities spanning vessels`));
+console.log(fmt("shape closure", last.capability?.shape_closure, delta("capability.shape_closure"),
+  arrow("capability.shape_closure", "up"), `produced shapes w/ a consumer ÷ produced (${last.capability?.orphaned_shapes ?? "·"} orphaned/divergent) — activity closure for topology discovery`));
 
 // ── scarcest DEC limiter (R_conv ~ λ₁ · ρ_sample · κ⁻¹) ──────────────────────
 console.log(`  ${"─".repeat(64)}`);

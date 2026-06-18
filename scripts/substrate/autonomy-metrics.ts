@@ -280,6 +280,25 @@ try {
   const proposed = await tryNum(() => count("SELECT count() AS count FROM activity WHERE proposed = true GROUP ALL;"));
   const edges = await sql<{ parent_activity_id: string; child_activity_id: string }>("SELECT parent_activity_id, child_activity_id FROM activity_composition_graph LIMIT 500;");
   const xv = edges.filter((e) => vesselOf(e.parent_activity_id) !== vesselOf(e.child_activity_id)).length;
+  // SHAPE CLOSURE: fraction of PRODUCED output shapes that some activity CONSUMES as
+  // input. Closed shapes form producer→consumer edges the substrate can traverse to
+  // discover topology; orphaned shapes (produced, no consumer) are divergence points
+  // (DEC §1.4) — activities WITHOUT closure. Rising closure = the substrate authoring
+  // activities that feed the discovery loop, not dead-ends. Low closure explains a
+  // sparse composition graph (few shape-flow edges).
+  let shape_closure: number | null = null, orphaned_shapes: number | null = null, produced_shapes: number | null = null;
+  try {
+    const shp = await sql<{ output_shapes: string[]; input_shapes: string[] }>("SELECT output_shapes, input_shapes FROM activity WHERE output_shapes != NONE OR input_shapes != NONE LIMIT 3000;");
+    const produced = new Set<string>(), consumed = new Set<string>();
+    for (const r of shp) {
+      for (const s of (r.output_shapes ?? [])) produced.add(s);
+      for (const s of (r.input_shapes ?? [])) consumed.add(s);
+    }
+    const closed = [...produced].filter((s) => consumed.has(s)).length;
+    produced_shapes = produced.size;
+    orphaned_shapes = produced.size - closed;
+    shape_closure = produced.size ? Math.round((closed / produced.size) * 1000) / 1000 : null;
+  } catch { /* leave null */ }
   capability = {
     distinct_exercised_24h: distinct,
     total_activities: totalActivities,
@@ -288,6 +307,7 @@ try {
     total_edges: edges.length,
     cross_vessel_frac: edges.length ? Math.round((xv / edges.length) * 1000) / 1000 : null,
     proposed_templates: proposed,
+    shape_closure, orphaned_shapes, produced_shapes,
   };
 } catch { /* leave null */ }
 
