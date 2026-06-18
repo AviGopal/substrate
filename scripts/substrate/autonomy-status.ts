@@ -88,8 +88,10 @@ console.log(fmt("  └ orphan RECENT", last.backward_model?.recent_orphan_rate, 
 console.log(fmt("S3 push-away", last.push_away?.intervention_refused, delta("push_away.intervention_refused"),
   arrow("push_away.intervention_refused", "up"), "interventionRefused — substrate refusing nudges w/ evidence"));
 console.log(`  ${"·".repeat(64)}`);
-console.log(fmt("learn-speed conv", last.posterior_convergence?.converged_frac, delta("posterior_convergence.converged_frac"),
-  arrow("posterior_convergence.converged_frac", "up"), `converged-variant fraction (${last.posterior_convergence?.cold ?? "·"} cold) — rising = faster learning`));
+console.log(fmt("learn-speed MGD", last.posterior_convergence?.managed_converged_frac, delta("posterior_convergence.managed_converged_frac"),
+  arrow("posterior_convergence.managed_converged_frac", "up"), `converged ÷ Thompson-managed (${last.posterior_convergence?.converged ?? "·"}c/${last.posterior_convergence?.learning ?? "·"}l) — HONEST learning speed`));
+console.log(fmt("  └ conv (all)", last.posterior_convergence?.converged_frac, delta("posterior_convergence.converged_frac"),
+  arrow("posterior_convergence.converged_frac", "up"), `over ALL variants (${last.posterior_convergence?.cold ?? "·"} cold, mostly deterministic-by-design)`));
 console.log(fmt("topology depth2", last.topology?.depth2, delta("topology.depth2"),
   arrow("topology.depth2", "up"), `depth-2 compositions (${last.topology?.depth3plus ?? "·"} deeper) — deeper = richer topology`));
 console.log(fmt("topology visible", last.topology?.edge_visibility, delta("topology.edge_visibility"),

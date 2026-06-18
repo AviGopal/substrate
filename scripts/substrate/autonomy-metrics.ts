@@ -196,7 +196,19 @@ try {
   for (const r of rows) by[r.bucket] = r.n;
   const conv = by.converged ?? 0, learn = by.learning ?? 0, cold = by.cold ?? 0;
   const tot = conv + learn + cold;
-  posterior_convergence = { converged: conv, learning: learn, cold, converged_frac: tot ? Math.round((conv / tot) * 1000) / 1000 : null };
+  // managed_converged_frac is the HONEST learning-speed signal: fraction converged
+  // among Thompson-MANAGED variants (α+β≥7, i.e. those actually accumulating
+  // posterior). The cold bucket is dominated by all-deterministic templates whose
+  // variant_performance_metrics UPDATE is SKIPPED BY DESIGN (M4 tier-restricted
+  // bandit, posterior-update.ts:554-589) — counting them as "not converged" understates
+  // learning. converged_frac (over ALL variants) is kept for continuity but is
+  // deflated by deterministic variants that never converge by design.
+  const managed = conv + learn;
+  posterior_convergence = {
+    converged: conv, learning: learn, cold,
+    converged_frac: tot ? Math.round((conv / tot) * 1000) / 1000 : null,
+    managed_converged_frac: managed ? Math.round((conv / managed) * 1000) / 1000 : null,
+  };
 } catch { /* leave null */ }
 
 // ── TOPOLOGY-BUILDOUT KPI: composition depth + edge visibility ──
