@@ -23,6 +23,13 @@ Environment=MITOSIS_PUSH_CLONE_DIR=/workspace/git/vessels
 WorkingDirectory=/vessels/development-vessel
 ExecStart=/root/.bun/bin/bun /vessels/development-vessel/src/index.ts
 ExecStartPost=/bin/bash -c 'for i in $(seq 1 15); do curl -sf http://127.0.0.1:8080/health >/dev/null 2>&1 && break || sleep 3; done && /root/.bun/bin/bun /vessels/development-vessel/src/cli.ts seed-templates'
+# 2026-06-18: the default 90s start timeout was killing the whole cgroup when the
+# ExecStartPost seed (≤45s health-wait + ~98 template uploads) overran it — which
+# also SIGTERM'd in-flight patch_with_tools attempts mid-edit (long patches on large
+# files never completed → the autonomous self-alteration loop could never land).
+# Give the start phase room; the HTTP server is up immediately via ExecStart, so a
+# long start-post does not block serving.
+TimeoutStartSec=600
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
