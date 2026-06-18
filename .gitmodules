@@ -31,7 +31,7 @@
 [submodule "repos/metabob-cloud-dashboard"]
 	path = repos/metabob-cloud-dashboard
 	url = git@github.com:MetabobProject/metabob-cloud-dashboard.git
-	branch = main
+	branch = dev
 
 [submodule "repos/minibob"]
 	path = repos/minibob
@@ -64,7 +64,7 @@
 [submodule "repos/cpg-inference-ts"]
 	path = repos/cpg-inference-ts
 	url = git@github.com:AviGopal/cpg-inference-ts.git
-	branch = main
+	branch = dev
 [submodule "repos/development-vessel"]
 	path = repos/development-vessel
 	url = git@github.com:AviGopal/development-vessel.git
