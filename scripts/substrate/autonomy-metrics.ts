@@ -227,11 +227,43 @@ try {
     edge_visibility: (nested && comp_edges != null) ? Math.round((comp_edges / nested) * 100000) / 100000 : null };
 } catch { /* leave null */ }
 
+// ── #6 UNCERTAINTY REDUCTION: mean Beta posterior variance over managed cells ──
+// Var[Beta(α,β)] = αβ / ((α+β)²(α+β+1)) is the per-cell uncertainty; its mean over
+// Thompson-managed variants is the substrate's aggregate epistemic uncertainty. It
+// should DECREASE as evidence accumulates (DEC §9.4) — the direct "we decrease
+// uncertainty" signal. Independent verification of state changes is the
+// model-reality-audit (it checks the forward/backward model against trace reality
+// and emits gaps); model_reality_open in `gaps` is its closing-rate signal.
+let posterior_uncertainty: any = { mean_variance: null, managed_cells: null };
+try {
+  const r = await sql<{ mv: number; n: number }>(
+    `SELECT math::mean((thompson_alpha * thompson_beta) / ((thompson_alpha+thompson_beta) * (thompson_alpha+thompson_beta) * (thompson_alpha+thompson_beta+1))) AS mv, count() AS n FROM variant_performance_metrics WHERE (thompson_alpha+thompson_beta) >= 7 GROUP ALL;`,
+  );
+  if (r[0]) posterior_uncertainty = { mean_variance: r[0].mv != null ? Math.round(r[0].mv * 1e6) / 1e6 : null, managed_cells: r[0].n ?? null };
+} catch { /* leave null */ }
+
+// ── #5 VESSEL-POPULATION LEARNING: attribution coverage + active-vessel count ──
+// The substrate learns per-vessel/per-resolver-tier performance only if traces carry
+// vessel_id + resolver_tier. attribution_coverage = fraction of recent traces with both
+// → if low, per-vessel learning is starved (a real gap, distinct from the loop running).
+// active_vessels = distinct vessels resolving recently (vessel-population breadth).
+let vessel_population: any = { active_vessels: null, attribution_coverage: null, recent_traces: null };
+try {
+  const tot = await tryNum(() => count("SELECT count() AS count FROM activity_execution_traces WHERE created_at > type::datetime(time::now() - 2h) GROUP ALL;"));
+  const attributed = await tryNum(() => count("SELECT count() AS count FROM activity_execution_traces WHERE created_at > type::datetime(time::now() - 2h) AND vessel_id != NONE AND resolver_tier != NONE GROUP ALL;"));
+  const vrows = await sql<{ vessel_id: string }>("SELECT vessel_id FROM activity_execution_traces WHERE created_at > type::datetime(time::now() - 2h) AND vessel_id != NONE GROUP BY vessel_id;");
+  vessel_population = {
+    active_vessels: vrows.length,
+    attribution_coverage: (tot && attributed != null) ? Math.round((attributed / tot) * 1000) / 1000 : null,
+    recent_traces: tot,
+  };
+} catch { /* leave null */ }
+
 const record = {
   at: new Date().toISOString(),
   lift, forward_model, backward_model, self_alteration, gaps, dec_limiters,
   push_away: { intervention_refused },
-  posterior_convergence, topology,
+  posterior_convergence, topology, posterior_uncertainty, vessel_population,
 };
 
 try { const { mkdirSync } = await import("node:fs"); mkdirSync(OUT.replace(/\/[^/]+$/, ""), { recursive: true }); } catch { /* */ }

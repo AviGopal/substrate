@@ -96,6 +96,10 @@ console.log(fmt("topology depth2", last.topology?.depth2, delta("topology.depth2
   arrow("topology.depth2", "up"), `depth-2 compositions (${last.topology?.depth3plus ?? "·"} deeper) — deeper = richer topology`));
 console.log(fmt("topology visible", last.topology?.edge_visibility, delta("topology.edge_visibility"),
   arrow("topology.edge_visibility", "up"), "edges ÷ nested-execs — fraction of run topology that's learnable"));
+console.log(fmt("#6 uncertainty", last.posterior_uncertainty?.mean_variance, delta("posterior_uncertainty.mean_variance"),
+  arrow("posterior_uncertainty.mean_variance", "down"), `mean Beta variance over ${last.posterior_uncertainty?.managed_cells ?? "·"} managed cells — DOWN = uncertainty decreasing`));
+console.log(fmt("#5 vessel-attrib", last.vessel_population?.attribution_coverage, delta("vessel_population.attribution_coverage"),
+  arrow("vessel_population.attribution_coverage", "up"), `traces w/ vessel_id+tier (${last.vessel_population?.active_vessels ?? "·"} active vessels) — per-vessel learning data`));
 
 // ── scarcest DEC limiter (R_conv ~ λ₁ · ρ_sample · κ⁻¹) ──────────────────────
 console.log(`  ${"─".repeat(64)}`);
