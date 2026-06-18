@@ -128,4 +128,35 @@ if (scored.length) {
   const scarce = scored.sort((a, b) => a.score - b.score)[0];
   console.log(`  ⟶ scarcest: ${scarce.name}  (lever: ${scarce.lever})`);
 }
+
+// ── GROWTH RATE + ACCELERATION (is the pace increasing?) ────────────────────
+// Per the standing goal "the rate the system is growing is measurable and
+// increasing": compute the per-hour growth of cumulative quantities across the
+// window, split first-half vs second-half. ⤴ = accelerating, ⤵ = decelerating.
+console.log(`  ${"─".repeat(64)}`);
+console.log(`  GROWTH RATE (first-half → second-half per hour; ⤴ accelerating):`);
+const series = win.map((r) => ({
+  t: Date.parse(r.at),
+  edges: r.backward_model?.composition_edges,
+  landed: r.self_alteration?.landed,
+  proposed: r.capability?.proposed_templates,
+  concepts_total: r.forward_model?.total_activities,
+}));
+const rateBetween = (a: any, b: any, k: string): number | null => {
+  if (a?.[k] == null || b?.[k] == null) return null;
+  const hrs = (b.t - a.t) / 3.6e6;
+  return hrs > 0 ? (b[k] - a[k]) / hrs : null;
+};
+const growth = (k: string, label: string) => {
+  const pts = series.filter((s) => s[k as keyof typeof s] != null);
+  if (pts.length < 4) { console.log(`    ${label.padEnd(16)} (insufficient points)`); return; }
+  const a = pts[0], m = pts[Math.floor(pts.length / 2)], b = pts[pts.length - 1];
+  const r1 = rateBetween(a, m, k), r2 = rateBetween(m, b, k);
+  if (r1 == null || r2 == null) { console.log(`    ${label.padEnd(16)} (gaps)`); return; }
+  const mark = r2 > r1 + 1e-6 ? "⤴ accelerating" : r2 < r1 - 1e-6 ? "⤵ decelerating" : "→ steady";
+  console.log(`    ${label.padEnd(16)} ${r1.toFixed(2).padStart(8)} → ${r2.toFixed(2).padStart(8)} /hr   ${mark}`);
+};
+growth("edges", "edges (λ₁)");
+growth("landed", "self-alteration");
+growth("proposed", "proposed tmpl");
 console.log("");
