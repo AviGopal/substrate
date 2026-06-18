@@ -249,8 +249,11 @@ try {
 // active_vessels = distinct vessels resolving recently (vessel-population breadth).
 let vessel_population: any = { active_vessels: null, attribution_coverage: null, recent_traces: null };
 try {
+  // vessel_id is trace-level (fixed in ias-executor-ts 4aa6ec4: the sink now stamps it
+  // from VESSEL_ID). resolver_tier is per-TASK (tasks[].resolver_tier), not trace-level,
+  // so attribution_coverage measures vessel_id presence — the per-vessel learning signal.
   const tot = await tryNum(() => count("SELECT count() AS count FROM activity_execution_traces WHERE created_at > type::datetime(time::now() - 2h) GROUP ALL;"));
-  const attributed = await tryNum(() => count("SELECT count() AS count FROM activity_execution_traces WHERE created_at > type::datetime(time::now() - 2h) AND vessel_id != NONE AND resolver_tier != NONE GROUP ALL;"));
+  const attributed = await tryNum(() => count("SELECT count() AS count FROM activity_execution_traces WHERE created_at > type::datetime(time::now() - 2h) AND vessel_id != NONE GROUP ALL;"));
   const vrows = await sql<{ vessel_id: string }>("SELECT vessel_id FROM activity_execution_traces WHERE created_at > type::datetime(time::now() - 2h) AND vessel_id != NONE GROUP BY vessel_id;");
   vessel_population = {
     active_vessels: vrows.length,
