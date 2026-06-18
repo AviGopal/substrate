@@ -1,0 +1,10 @@
+[Unit]
+Description=Run substrate host-pull sync every 5 min
+
+[Timer]
+OnBootSec=90s
+OnUnitActiveSec=300s
+Unit=host-pull-sync.service
+
+[Install]
+WantedBy=timers.target
