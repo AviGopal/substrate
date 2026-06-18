@@ -205,6 +205,22 @@ EOF
     write_result "$intent_id" "$git_sha" "local_only" "push failed"
   fi
 
+  # Clear the singleton pending-mitosis once THIS mitosis has landed (2026-06-18).
+  # In host-sync mode the land is async (here, on the host) so the in-container
+  # cutover returns before the land and never clears /workspace/mitosis-pending.json.
+  # Left in place, apply-proposal-as-patch refuses new work ("pending mitosis in
+  # flight") for the full 30m stale window — throttling sustained self-alteration to
+  # ~1 land / 30m. Clearing it on confirmed land unblocks the apply loop immediately,
+  # which is what lets the substrate self-develop at a STEADY pace. Match by version id
+  # so we never clear a different in-flight stage.
+  local pending_file="$WORKSPACE_DIR/mitosis-pending.json"
+  if [[ -n "$mitosis_version_id" && -f "$pending_file" ]]; then
+    local pend_ver; pend_ver=$(jq -r '.mitosis_version_id // ""' "$pending_file" 2>/dev/null)
+    if [[ "$pend_ver" == "$mitosis_version_id" ]]; then
+      rm -f "$pending_file" && log "cleared pending-mitosis $mitosis_version_id (landed) — apply loop unblocked"
+    fi
+  fi
+
   # Mirror patched files back into the container's /vessels/<vessel>/ tree.
   # Without this, the container's source drifts behind host after each
   # autonomous commit — apply-proposal-as-patch re-reads the still-original
