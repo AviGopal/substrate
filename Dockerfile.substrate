@@ -148,6 +148,7 @@ COPY repos/concept-db/package.json repos/concept-db/bun.lock* ./concept-db/
 RUN cd concept-db && bun install
 COPY repos/concept-db/src ./concept-db/src
 COPY repos/concept-db/sql ./concept-db/sql
+COPY repos/concept-db/scripts ./concept-db/scripts
 COPY repos/concept-db/tsconfig.json ./concept-db/
 
 # analysis-vessel (replaces metabob-analysis-api; depends on cpg-inference-ts above)
@@ -165,18 +166,42 @@ RUN cd stateful-ui-vessel && bun install
 COPY repos/stateful-ui-vessel/src ./stateful-ui-vessel/src
 COPY repos/stateful-ui-vessel/tsconfig.json ./stateful-ui-vessel/
 
+# light-dispatch-vessel (stateless dispatcher — :8280). LOAD-BEARING: boredom
+# routes EVERY autonomous dispatch through this vessel; if it's absent the whole
+# loop livelocks (the unit's own comment warns this).
+COPY repos/light-dispatch-vessel/package.json repos/light-dispatch-vessel/bun.lock* ./light-dispatch-vessel/
+RUN cd light-dispatch-vessel && bun install
+COPY repos/light-dispatch-vessel/src ./light-dispatch-vessel/src
+COPY repos/light-dispatch-vessel/tsconfig.json ./light-dispatch-vessel/
+
+# metric-collector-vessel
+COPY repos/metric-collector-vessel/package.json repos/metric-collector-vessel/bun.lock* ./metric-collector-vessel/
+RUN cd metric-collector-vessel && bun install
+COPY repos/metric-collector-vessel/src ./metric-collector-vessel/src
+COPY repos/metric-collector-vessel/tsconfig.json ./metric-collector-vessel/
+
 # --- Substrate runtime config ---
 RUN mkdir -p /etc/substrate /workspace /var/lib/surrealdb /scripts
 
 COPY scripts/substrate/units/ /etc/systemd/system/
 COPY scripts/substrate/entrypoint.sh /usr/local/bin/substrate-entrypoint
 COPY scripts/substrate/gen-env.sh /usr/local/bin/gen-env
+COPY scripts/substrate/setup-git-push.sh /usr/local/bin/setup-git-push
+# Side-loop tick scripts referenced by their .service units' ExecStart. Without
+# these baked in, the units exit 127 (command not found) on every fire — which is
+# how obsidian-learn + goal-host-behavior (two LEARNING loops) sat silently dead
+# after a container recreate. (Now also surfaced by systemd_unit_health_observer.)
+COPY scripts/substrate/obsidian-learn-tick.sh /usr/local/bin/obsidian-learn-tick.sh
+COPY scripts/substrate/goal-host-behavior-tick.sh /usr/local/bin/goal-host-behavior-tick.sh
+COPY scripts/substrate/light-dispatch-healthcheck.sh /usr/local/bin/light-dispatch-healthcheck
+RUN chmod +x /usr/local/bin/obsidian-learn-tick.sh /usr/local/bin/goal-host-behavior-tick.sh /usr/local/bin/light-dispatch-healthcheck
 COPY scripts/substrate/seed-identity.ts /vessels/seed-identity.ts
 COPY scripts/substrate/seed-concepts.ts /vessels/seed-concepts.ts
 COPY scripts/bootstrap-seeder.ts /scripts/bootstrap-seeder.ts
 
-RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env && \
+RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/local/bin/setup-git-push && \
     systemctl enable \
+        git-push-setup.service \
         surrealdb.service \
         valkey.service \
         discovery-vessel.service \
@@ -193,11 +218,88 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env && \
         concept-db-seeder.service \
         analysis-vessel.service \
         stateful-ui-vessel.service \
+        light-dispatch-vessel.service \
+        light-dispatch-healthcheck.timer \
         journald-stdout-forwarder.service \
         m1-trainer.timer
 
 VOLUME ["/workspace"]
 
 STOPSIGNAL SIGRTMIN+3
+
+ENTRYPOINT ["/usr/local/bin/substrate-entrypoint"]
+
+# ──────────────────────────────────────────────────────────────────────────
+# substrate-obsidian — base fleet + an in-container Obsidian desktop as the
+# primary interface, reachable from a browser via noVNC.
+#
+#   docker build -f Dockerfile.substrate --target substrate-obsidian \
+#       -t metabob/substrate:obsidian .
+#
+# In this flavour Obsidian stops being a host peer (host.docker.internal:27183)
+# and becomes an in-substrate citizen: the obsidian-vessel plugin talks to
+# activity-api / concept-db over plain localhost. Operator opens the GUI at
+# http://localhost:16080/vnc.html (host-mapped from the container's :6080).
+# ──────────────────────────────────────────────────────────────────────────
+FROM base AS substrate-obsidian
+
+# GUI + remote-access stack. The Electron runtime libs (libnss3/gtk/asound/gbm)
+# are what an extracted Obsidian AppImage needs to start under Xvfb.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        xvfb x11vnc fluxbox novnc websockify \
+        libnss3 libgtk-3-0 libasound2 libgbm1 libdrm2 libxshmfence1 \
+        libgtk-3-bin xdg-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Obsidian desktop. AppImage is extracted (no FUSE inside the container).
+ARG OBSIDIAN_VERSION=1.6.7
+RUN curl -fsSL -o /tmp/obsidian.AppImage \
+        "https://github.com/obsidianmd/obsidian-releases/releases/download/v${OBSIDIAN_VERSION}/Obsidian-${OBSIDIAN_VERSION}.AppImage" \
+    && cd /opt && chmod +x /tmp/obsidian.AppImage \
+    && /tmp/obsidian.AppImage --appimage-extract \
+    && mv squashfs-root /opt/obsidian && rm -f /tmp/obsidian.AppImage \
+    && ln -sf /opt/obsidian/obsidian.png /opt/obsidian/icon.png 2>/dev/null || true
+
+# obsidian-vessel plugin — built IN the substrate so it is directly editable.
+# The source lives at /vessels/obsidian-vessel (like every other vessel); the
+# vault's plugin files are symlinks to the build artifacts, so the dev loop is
+# edit → rebuild (bun esbuild) → restart-obsidian-vessel. esbuild.config.mjs
+# uses esbuild as a library, so it runs under bun (the base image has no node).
+COPY repos/obsidian-vessel/package.json repos/obsidian-vessel/bun.lock* ./obsidian-vessel/
+RUN cd obsidian-vessel && bun install
+COPY repos/obsidian-vessel/src ./obsidian-vessel/src
+COPY repos/obsidian-vessel/styles ./obsidian-vessel/styles
+COPY repos/obsidian-vessel/esbuild.config.mjs \
+     repos/obsidian-vessel/manifest.json \
+     repos/obsidian-vessel/tsconfig.json \
+     ./obsidian-vessel/
+RUN cd obsidian-vessel && bun esbuild.config.mjs production
+
+# Seed vault: the committed vault/ (notes + data.json) with the plugin's three
+# loadable files symlinked to the in-container build artifacts. Rebuilding the
+# plugin updates main.js in place; restarting obsidian-desktop reloads it.
+# data.json stays a real file — re-pointed from host ports (18080/18260) to
+# in-container ports at boot by obsidian-desktop-launch.
+COPY vault/ /vaults/substrate-vault/
+RUN PLUGIN_DIR=/vaults/substrate-vault/.obsidian/plugins/metabob-vessel \
+    && mkdir -p "$PLUGIN_DIR" \
+    && rm -f "$PLUGIN_DIR/main.js" "$PLUGIN_DIR/manifest.json" "$PLUGIN_DIR/styles.css" \
+    && ln -sf /vessels/obsidian-vessel/main.js           "$PLUGIN_DIR/main.js" \
+    && ln -sf /vessels/obsidian-vessel/manifest.json     "$PLUGIN_DIR/manifest.json" \
+    && ln -sf /vessels/obsidian-vessel/styles/styles.css "$PLUGIN_DIR/styles.css" \
+    && printf '%s\n' '["metabob-vessel"]' \
+        > /vaults/substrate-vault/.obsidian/community-plugins.json
+
+COPY scripts/substrate/obsidian-xorg-launch.sh /usr/local/bin/obsidian-xorg-launch
+COPY scripts/substrate/obsidian-desktop-launch.sh /usr/local/bin/obsidian-desktop-launch
+RUN chmod +x /usr/local/bin/obsidian-xorg-launch /usr/local/bin/obsidian-desktop-launch \
+    && systemctl enable obsidian-xorg.service obsidian-desktop.service novnc.service
+
+# In this flavour the vault is in-container on localhost, so the side-loop
+# learner targets 127.0.0.1:27183 instead of the host-peer default. Drop-in
+# override keeps the shared unit's host-Obsidian default intact for other images.
+RUN mkdir -p /etc/systemd/system/obsidian-learn.service.d \
+    && printf '[Service]\nEnvironment=OBSIDIAN_LEARN_ENDPOINT=http://127.0.0.1:27183\n' \
+        > /etc/systemd/system/obsidian-learn.service.d/override.conf
 
 ENTRYPOINT ["/usr/local/bin/substrate-entrypoint"]
