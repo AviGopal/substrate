@@ -15,9 +15,17 @@
  *   bun scripts/substrate/autonomy-status.ts          # window = last 24 snapshots
  *   N=60 bun scripts/substrate/autonomy-status.ts      # widen the delta window
  */
-const FILE = process.env.METRICS_OUT || "/workspace/metrics/autonomy-metrics.jsonl";
 const N = Number(process.env.N ?? 24);
 const STALE_MIN = Number(process.env.STALE_MIN ?? 45); // collector runs every 20m; >45m = timer trouble
+
+// Resolve the metrics file: explicit override wins, then the in-container path,
+// then the host-side bind-mount location. Run on the HOST the container path
+// (/workspace/...) does not exist, so without the host fallback the view falsely
+// reported "no metrics recorded yet" — an operator-blinding defect (2026-06-18).
+const HOST_FALLBACK = `${import.meta.dir}/workspace/metrics/autonomy-metrics.jsonl`;
+const CANDIDATES = [process.env.METRICS_OUT, "/workspace/metrics/autonomy-metrics.jsonl", HOST_FALLBACK].filter(Boolean) as string[];
+let FILE = CANDIDATES[0]!;
+for (const c of CANDIDATES) { if (await Bun.file(c).exists()) { FILE = c; break; } }
 
 const text = await Bun.file(FILE).exists() ? await Bun.file(FILE).text() : "";
 const rows = text.split("\n").filter((l) => l.trim())
