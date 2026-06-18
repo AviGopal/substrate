@@ -108,6 +108,10 @@ console.log(fmt("shape closure", last.capability?.shape_closure, delta("capabili
   arrow("capability.shape_closure", "up"), `composed ÷ produced — activity closure for topology discovery`));
 console.log(fmt("  └ real closure", last.capability?.real_closure, delta("capability.real_closure"),
   arrow("capability.real_closure", "up"), `effective over REAL shapes (excl. ${last.capability?.orphan_auto_artifact ?? "·"} legacy LLM-artifacts); genuine orphans: ${last.capability?.orphan_genuine ?? "·"}`));
+console.log(fmt("#11 self-manip", last.substrate_self?.manipulation_activities, delta("substrate_self.manipulation_activities"),
+  arrow("substrate_self.manipulation_activities", "up"), `activities that manipulate the substrate (vessels/units/mitosis/scaffold)`));
+console.log(fmt("#12 info (concepts)", last.substrate_self?.concepts, delta("substrate_self.concepts"),
+  arrow("substrate_self.concepts", "up"), `concept-db size — accumulated information (resolver-tier/cost efficiency BLOCKED by trace-attribution gap)`));
 
 // ── scarcest DEC limiter (R_conv ~ λ₁ · ρ_sample · κ⁻¹) ──────────────────────
 console.log(`  ${"─".repeat(64)}`);
