@@ -109,7 +109,29 @@ try {
     orphan_parent_rate = Math.round((1 - resolved / kids.length) * 1000) / 1000;
   }
 } catch { /* leave null */ }
-const backward_model = { composition_edges: comp_edges, orphan_parent_rate };
+// LEADING INDICATOR for the trace-sink retry fix (ias-executor-ts 09c32a0):
+// orphan rate restricted to recently-created children. The broad rate above is
+// dominated by legacy orphans and moves slowly; this window shows whether NEW
+// compositions are persisting their parents (should fall toward 0 post-fix).
+// recent_composition_count also surfaces whether composition traffic is even
+// flowing — if 0, the metric is n/a (the loop is on single-resolver ticks).
+let recent_orphan_rate: number | null = null;
+let recent_composition_count: number | null = null;
+try {
+  const rk = await sql<{ parent_execution_id: string }>(
+    "SELECT parent_execution_id FROM activity_execution_traces WHERE parent_execution_id != NONE AND created_at > type::datetime(time::now() - 60m) LIMIT 400;",
+  );
+  recent_composition_count = rk.length;
+  if (rk.length) {
+    let resolved = 0;
+    for (const k of rk) {
+      const p = await sql<{ c: number }>(`SELECT count() AS c FROM activity_execution_traces WHERE execution_id = ${JSON.stringify(k.parent_execution_id)} GROUP ALL;`);
+      if (p[0]?.c) resolved++;
+    }
+    recent_orphan_rate = Math.round((1 - resolved / rk.length) * 1000) / 1000;
+  }
+} catch { /* leave null */ }
+const backward_model = { composition_edges: comp_edges, orphan_parent_rate, recent_orphan_rate, recent_composition_count };
 
 // ── self-alteration funnel (filesystem) ──
 let self_alteration: any = { landed: null, open_proposals: null };

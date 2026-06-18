@@ -82,7 +82,9 @@ console.log(fmt("  └ fwd artifacts", g(last, "gaps.by_category.forward_model_a
 console.log(fmt("backward model", last.backward_model?.composition_edges, delta("backward_model.composition_edges"),
   arrow("backward_model.composition_edges", "up"), "composition edges — converging on trace reality"));
 console.log(fmt("  └ orphan parents", last.backward_model?.orphan_parent_rate, delta("backward_model.orphan_parent_rate"),
-  arrow("backward_model.orphan_parent_rate", "down"), "dangling parent links — should fall"));
+  arrow("backward_model.orphan_parent_rate", "down"), "dangling parent links (broad) — should fall"));
+console.log(fmt("  └ orphan RECENT", last.backward_model?.recent_orphan_rate, delta("backward_model.recent_orphan_rate"),
+  arrow("backward_model.recent_orphan_rate", "down"), `60m window (${last.backward_model?.recent_composition_count ?? "·"} compositions) — leading indicator of trace-sink fix`));
 console.log(fmt("S3 push-away", last.push_away?.intervention_refused, delta("push_away.intervention_refused"),
   arrow("push_away.intervention_refused", "up"), "interventionRefused — substrate refusing nudges w/ evidence"));
 console.log(`  ${"·".repeat(64)}`);
