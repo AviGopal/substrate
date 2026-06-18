@@ -60,10 +60,31 @@ if (!ANTHROPIC_API_KEY) {
 // llm_completion resolver
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Tool definitions accepted by /resolve. Two forms:
+ *
+ * 1. Client-side custom tool: `{ name, description, input_schema }`. The
+ *    model emits `tool_use` blocks; this vessel dispatches them to
+ *    `tool_dispatch_endpoint` (default dev-vessel /v2/impulses/resolve).
+ *
+ * 2. Server-side built-in tool: `{ type: "web_search_20250305", name,
+ *    max_uses? }` and similar. Anthropic executes these server-side; the
+ *    response carries `server_tool_use` + `web_search_tool_result` blocks
+ *    inline and the loop continues to a final text block without any
+ *    client dispatch. No `description`/`input_schema` for these.
+ *
+ * The SDK accepts either via the typed-tools union; we keep our request
+ * type permissive and forward verbatim.
+ */
 interface AnthropicToolDef {
+  type?: string;
   name: string;
-  description: string;
-  input_schema: Record<string, unknown>;
+  description?: string;
+  input_schema?: Record<string, unknown>;
+  // web_search-specific knobs (max_uses, allowed_domains, etc.) flow through
+  // via index access — keep the interface open rather than enumerating every
+  // server-tool field.
+  [k: string]: unknown;
 }
 
 interface LlmCompletionRequest {
@@ -200,16 +221,25 @@ const llmCompletionHandler: ResolverHandler = async (ctx) => {
     }
   }
 
-  // Tool-use loop path (#121)
+  // Tool-use loop path (#121, +web_search 2026-06-09)
   const dispatchEndpoint = body.tool_dispatch_endpoint ?? DEFAULT_TOOL_DISPATCH_ENDPOINT;
   const dispatchApiKey = body.tool_dispatch_api_key ?? process.env.METABOB_API_KEY ?? "";
   const maxIter = Math.max(1, Math.min(body.max_tool_iterations ?? DEFAULT_MAX_TOOL_ITERATIONS, 20));
 
-  if (!dispatchApiKey) {
+  // Client-side tools require a dispatch key (each tool_use block is POSTed
+  // to dev-vessel). Server-side tools (web_search_20250305 and similar) run
+  // inside Anthropic and need no dispatch. Only enforce the key when there
+  // is at least one client-side custom tool. A custom tool is identified by
+  // the absence of a `type` field (server tools always carry one like
+  // "web_search_20250305").
+  const hasClientSideTools = body.tools.some(
+    (t) => !t.type || (typeof t.type === "string" && t.type === "custom"),
+  );
+  if (hasClientSideTools && !dispatchApiKey) {
     return {
       resolved: false,
       shape: "llmCompletion",
-      error: "tool-use requested but neither tool_dispatch_api_key nor METABOB_API_KEY is set",
+      error: "tool-use requested with client-side tools but neither tool_dispatch_api_key nor METABOB_API_KEY is set",
     };
   }
 

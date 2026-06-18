@@ -66,6 +66,34 @@ function preview(val: unknown, max = 70): string {
   return s.length > max ? s.slice(0, max) + '…' : s;
 }
 
+/**
+ * Sub-activity templates that are pure infrastructure — IAS Executor's
+ * binding-layer, validator-dispatch, shape-provider escalation, and
+ * substrate-internal observer ticks. They fire dozens of nested
+ * activity.started/task.* events per real user task. The user-facing
+ * dispatch view collapses them into a single suppressed counter so the
+ * panel shows only the activity's real tasks + cross-vessel resolutions
+ * + the minted concept. To inspect them, look at the trace in workbench.
+ *
+ * Matched by substring against `templateId` / `templateName`. Keep this
+ * list narrow — if a new infrastructure template floods the panel, add
+ * it here rather than building a general suppression policy.
+ */
+const HIDDEN_TEMPLATE_FRAGMENTS = [
+  'slot-binding',
+  'Slot Binding',
+  'validator-dispatch',
+  'Validator Dispatch',
+  'create-shape-provider-goal',
+  'Create Shape-Provider Goal',
+  'mitosis-pending-observer-tick',
+];
+
+function isHiddenTemplate(name: string | undefined): boolean {
+  if (!name) return false;
+  return HIDDEN_TEMPLATE_FRAGMENTS.some((f) => name.includes(f));
+}
+
 export class GoalDispatchView extends ItemView {
   private plugin: MetabobVesselPlugin;
 
@@ -89,6 +117,17 @@ export class GoalDispatchView extends ItemView {
   // from the poll. Keyed by execId so we can replay just the right one.
   private eventBuffer = new Map<string, Array<Record<string, unknown>>>();
   private buffering = false;
+
+  // Concepts minted during the active dispatch — appended to the goal note on completion.
+  private mintedConcepts: Array<{ id: string; summary?: string }> = [];
+
+  // Suppressed infrastructure events for the active dispatch. Per HIDDEN_TEMPLATE_FRAGMENTS:
+  // when an activity.started fires for one of those templates we register its execId here
+  // and silently drop every subsequent event on that execId, incrementing the counter so
+  // the user can see how many were collapsed without their content flooding the panel.
+  private hiddenExecIds = new Set<string>();
+  private suppressedCount = 0;
+  private suppressedSummaryLine: HTMLElement | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: MetabobVesselPlugin) {
     super(leaf);
@@ -298,6 +337,10 @@ export class GoalDispatchView extends ItemView {
     this.setDispatchBtnState(true);
     this.clearOutput();
     this.execCtxs.clear();
+    this.mintedConcepts = [];
+    this.hiddenExecIds.clear();
+    this.suppressedCount = 0;
+    this.suppressedSummaryLine = null;
     this.appendMessage(`⟶ Goal: "${goal}"`);
 
     // Collect and display the vault context that will accompany the goal
@@ -536,6 +579,48 @@ export class GoalDispatchView extends ItemView {
     return this.execCtxs.get(execId)!;
   }
 
+  /**
+   * Render the goal's authored answer as a distinct multi-line block in the
+   * panel so the user reads the response directly without opening the vault
+   * note or querying concept-db. Called once per dispatch when a goalAnswer
+   * concept fires for the root execution.
+   */
+  private appendAnswerBlock(answer: string, conceptId: string | undefined): void {
+    if (!this.outputEl) return;
+    const wrap = this.outputEl.createDiv('goal-dispatch-line gd-answer-block');
+    const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    wrap.createSpan({ cls: 'goal-dispatch-ts', text: ts });
+    const inner = wrap.createDiv({ cls: 'goal-dispatch-msg gd-answer-body' });
+    inner.createDiv({ cls: 'gd-answer-header', text: '◇ Answer' });
+    inner.createDiv({ cls: 'gd-answer-text', text: answer });
+    if (conceptId) {
+      inner.createDiv({ cls: 'gd-answer-attribution', text: `↳ stored as ${shortId(conceptId)}` });
+    }
+    this.outputEl.scrollTop = this.outputEl.scrollHeight;
+  }
+
+  /**
+   * Increment the suppressed-event counter and update (or create) a single
+   * collapsed summary line in the output so the user can see the count
+   * without the events themselves flooding the panel.
+   */
+  private bumpSuppressed(): void {
+    this.suppressedCount++;
+    if (!this.outputEl) return;
+    const text = `· ${this.suppressedCount} infrastructure event${this.suppressedCount === 1 ? '' : 's'} suppressed (binding / validators / scope)`;
+    if (this.suppressedSummaryLine) {
+      const msgSpan = this.suppressedSummaryLine.querySelector('.goal-dispatch-msg');
+      if (msgSpan) msgSpan.textContent = text;
+      return;
+    }
+    const line = this.outputEl.createDiv('goal-dispatch-line gd-suppressed');
+    const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    line.createSpan({ cls: 'goal-dispatch-ts', text: ts });
+    line.createSpan({ cls: 'goal-dispatch-msg', text });
+    this.suppressedSummaryLine = line;
+    this.outputEl.scrollTop = this.outputEl.scrollHeight;
+  }
+
   private handleWSMessage(raw: string): void {
     let msg: Record<string, unknown>;
     try {
@@ -572,6 +657,28 @@ export class GoalDispatchView extends ItemView {
     // Strict filter: root execution + registered sub-executions.
     const isRoot = !execId || execId === this.activeExecutionId;
     if (!isRoot && !this.execCtxs.has(execId ?? '')) return;
+
+    // Suppress infrastructure sub-activities (slot-binding, validator-dispatch,
+    // shape-provider-goal escalation, etc.). Their templateName is checked on
+    // activity.started; if hidden, the execId is recorded and all subsequent
+    // events on that execId are dropped + counted. The root execution and
+    // concept events are never suppressed.
+    if (!isRoot && execId && this.hiddenExecIds.has(execId)) {
+      this.bumpSuppressed();
+      return;
+    }
+    if (
+      !isRoot &&
+      execId &&
+      (type === 'activity.started' || type === 'execution_started' || type === 'execution.started')
+    ) {
+      const variantName = (data.template_name ?? data.templateName ?? data.templateId ?? data.variant_id) as string | undefined;
+      if (isHiddenTemplate(variantName)) {
+        this.hiddenExecIds.add(execId);
+        this.bumpSuppressed();
+        return;
+      }
+    }
 
     const pad = isRoot ? '' : '  ';
     const cpd = isRoot ? '  ' : '    ';
@@ -672,6 +779,62 @@ export class GoalDispatchView extends ItemView {
         break;
       }
 
+      // ── concept lifecycle ─────────────────────────────────────────────────
+      case 'concept.created':
+      case 'concept_created': {
+        // concept-db's bus payload wraps the concept as `data.concept = {...}`.
+        // Older / unprefixed payloads hoisted fields to data.* directly. Read both.
+        const conceptObj = (data.concept ?? data) as Record<string, unknown>;
+        const conceptId = (conceptObj.id ?? data.concept_id ?? data.conceptId) as string | undefined;
+        const content = conceptObj.content as string | undefined;
+        const summary = (conceptObj.summary ?? data.summary ?? data.title) as string | undefined;
+        const shape = (conceptObj.shape ?? data.shape ?? conceptObj.source_type ?? data.source_type) as string | undefined;
+
+        if (conceptId && isRoot) {
+          this.mintedConcepts.push({ id: conceptId, summary });
+        }
+
+        const parts: string[] = ['◆'];
+        if (shape) parts.push(shape);
+        parts.push(`Concept: ${conceptId ? shortId(conceptId) : '?'}`);
+        const previewText = summary ?? content;
+        if (previewText) {
+          const p = preview(previewText, 60);
+          if (p) parts.push(`"${p}"`);
+        }
+        this.appendMessage(`${pad}${parts.join('  ')}`, 'concept');
+
+        // When the concept is the goal's authored answer (shape goalAnswer or
+        // origin=summarize-and-emit-concept), render the full answer as a
+        // distinct block so the user reads the response directly in the panel.
+        // Without this they'd see only a 60-char preview and have to open the
+        // vault note or query concept-db to read the actual answer.
+        const meta = (conceptObj.pointer as Record<string, unknown> | undefined)?.metadata as Record<string, unknown> | undefined;
+        const origin = meta?.origin as string | undefined;
+        const isGoalAnswer = shape === 'goalAnswer' || origin === 'summarize-and-emit-concept';
+        if (isRoot && isGoalAnswer && content) {
+          this.appendAnswerBlock(content, conceptId);
+        }
+        break;
+      }
+
+      case 'concept.linked':
+      case 'concept_linked': {
+        const from = (data.from_concept_id ?? data.fromConceptId ?? data.from) as string | undefined;
+        const to = (data.to_concept_id ?? data.toConceptId ?? data.to) as string | undefined;
+        const edgeType = (data.edge_type ?? data.edgeType ?? data.relation) as string | undefined;
+        const parts: string[] = [
+          `↔ Linked ${from ? shortId(from) : '?'} ↔ ${to ? shortId(to) : '?'}`,
+        ];
+        if (edgeType) parts.push(`(${edgeType})`);
+        this.appendMessage(`${pad}${parts.join('  ')}`, 'concept-link');
+        break;
+      }
+
+      case 'concept.usage':
+        // Silently skip — too noisy for the dispatch view.
+        break;
+
       // ── execution completion ──────────────────────────────────────────────
       case 'activity.completed':
       case 'execution.completed':
@@ -689,7 +852,11 @@ export class GoalDispatchView extends ItemView {
             ok ? 'success' : 'failure',
           );
           if (this.goalFile) {
-            this.goalNoteManager.markComplete(this.goalFile, ok ? 'completed' : 'failed');
+            this.goalNoteManager.markComplete(
+              this.goalFile,
+              ok ? 'completed' : 'failed',
+              this.mintedConcepts,
+            );
           }
           this.dispatching = false;
           this.setDispatchBtnState(false);
@@ -705,7 +872,7 @@ export class GoalDispatchView extends ItemView {
         if (isRoot) {
           const err = (data.error ?? data.error_message) as string | undefined;
           this.appendMessage(`✗ Execution failed${err ? `  ${err.slice(0, 80)}` : ''}`, 'failure');
-          if (this.goalFile) this.goalNoteManager.markComplete(this.goalFile, 'failed');
+          if (this.goalFile) this.goalNoteManager.markComplete(this.goalFile, 'failed', this.mintedConcepts);
           this.dispatching = false;
           this.setDispatchBtnState(false);
         } else {

@@ -78,13 +78,42 @@ export class GoalNoteManager {
 
   /**
    * Update frontmatter to mark the goal complete/failed.
+   *
+   * When `mintedConcepts` is non-empty, also append a "Concepts produced"
+   * section to the note body with wikilinks to each concept's vault note.
+   * Concept notes are expected to live under `concepts/<id>.md` — matches
+   * the fallback path; the full materialized path computed by
+   * `conceptNotePath` may differ but Obsidian's wikilink resolver falls
+   * back to basename lookup, so `[[concept_xyz|concept_xyz]]` will still
+   * resolve when the ConceptSyncService materializes the note under any
+   * `<source_type>/<title>.md` path.
    */
-  async markComplete(file: TFile, status: string): Promise<void> {
+  async markComplete(
+    file: TFile,
+    status: string,
+    mintedConcepts?: Array<{ id: string; summary?: string }>,
+  ): Promise<void> {
     try {
       await this.app.fileManager.processFrontMatter(file, (fm) => {
         fm.status = status;
         fm.completedAt = new Date().toISOString();
       });
+
+      if (mintedConcepts && mintedConcepts.length > 0) {
+        const lines = [
+          '',
+          '## Concepts produced',
+          '',
+          ...mintedConcepts.map(c => {
+            const path = `concepts/${c.id}`;
+            const label = c.summary ? `${c.id}` : c.id;
+            const tail = c.summary ? ` — ${c.summary}` : '';
+            return `- [[${path}|${label}]]${tail}`;
+          }),
+          '',
+        ];
+        await this.app.vault.process(file, (data) => data + lines.join('\n'));
+      }
     } catch (error) {
       console.error('[GoalNoteManager] Failed to mark complete:', error);
     }

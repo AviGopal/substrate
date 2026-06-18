@@ -22,6 +22,12 @@ TAG          := dev
 WORKSPACE    := $(shell pwd)/workspace
 LIVE_NAME    := substrate-live
 
+# Vessels with @avigopal/ias-executor-ts as a `file:` dep. Bun copies dist
+# physically per-consumer rather than symlinking, so rebuilds of the
+# canonical package don't propagate. sync-ias-executor-ts pushes the new
+# dist into every consumer's node_modules path inside the container.
+IAS_CONSUMERS := goal-host-vessel ribosome-vessel boredom-vessel development-vessel local-tools-vessel llm-resolver-vessel analysis-vessel
+
 # ANTHROPIC_API_KEY — load from environment or existing ~/.metabob/config.json
 ANTHROPIC_API_KEY ?= $(shell jq -r '.providers.anthropic.apiKey // empty' $(HOME)/.metabob/config.json 2>/dev/null || true)
 
@@ -45,8 +51,9 @@ RIBOSOME_VESSEL_SRC := $(REPO_ROOT)/repos/ribosome-vessel
 CONCEPT_DB_SRC := $(REPO_ROOT)/repos/concept-db
 ANALYSIS_VESSEL_SRC := $(REPO_ROOT)/repos/analysis-vessel
 STATEFUL_UI_VESSEL_SRC := $(REPO_ROOT)/repos/stateful-ui-vessel
+OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
 
-.PHONY: build run run-detach run-live seed-live import-memory health health-live \
+.PHONY: build build-obsidian run run-detach run-live run-live-obsidian seed-live import-memory health health-live \
         logs-all logs-activity-api logs-development-vessel \
         logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
         logs-goal-host-vessel logs-boredom-vessel logs-ribosome-vessel logs-concept-db \
@@ -62,11 +69,22 @@ STATEFUL_UI_VESSEL_SRC := $(REPO_ROOT)/repos/stateful-ui-vessel
         sync-concept-db restart-concept-db \
         sync-analysis-vessel restart-analysis-vessel \
         sync-stateful-ui-vessel restart-stateful-ui-vessel \
+        sync-obsidian-vessel restart-obsidian-vessel \
+        sync-ias-executor-ts \
         ui-bridge-up ui-bridge-down ui-bridge-status
 
 build:
 	docker build -f $(CURDIR)/../../Dockerfile.substrate \
 	    -t $(IMAGE):$(TAG) \
+	    $(CURDIR)/../..
+
+# substrate-obsidian flavour: base fleet + in-container Obsidian desktop served
+# over noVNC. Tagged metabob/substrate:obsidian.
+OBSIDIAN_TAG := obsidian
+build-obsidian:
+	docker build -f $(CURDIR)/../../Dockerfile.substrate \
+	    --target substrate-obsidian \
+	    -t $(IMAGE):$(OBSIDIAN_TAG) \
 	    $(CURDIR)/../..
 
 run:
@@ -122,7 +140,7 @@ run-live:
 	    --privileged \
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
-	    -e MITOSIS_HOST_SYNC_MODE=1 \
+	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
 	    -p 18080:8080 \
 	    -p 18090:8090 \
 	    -p 18100:8100 \
@@ -138,6 +156,42 @@ run-live:
 	@echo "[run-live] substrate-live started — activity-api on :18080, development-vessel on :18090, discovery-vessel on :18100, goal-host-vessel on :18210, analysis-vessel on :18250, concept-db on :18260, stateful-ui-vessel on :18270"
 	@echo "[run-live] Internal secrets auto-generated and persisted to workspace/.substrate-secrets"
 	@echo "[run-live] Wait ~15s for services to start, then: make -C scripts/substrate seed-live"
+
+# Same as run-live but boots the substrate-obsidian image: the full fleet PLUS
+# an in-container Obsidian desktop, with the GUI exposed over noVNC on host
+# :16080. Reuses the substrate-live container name so every sync-/restart-/
+# health- target keeps working unchanged. Requires `make build-obsidian` first.
+run-live-obsidian:
+	@if [ -z "$(ANTHROPIC_API_KEY)" ]; then \
+	  echo "[substrate] ERROR: ANTHROPIC_API_KEY is required."; \
+	  echo "  Pass inline:  make run-live-obsidian ANTHROPIC_API_KEY=sk-ant-..."; \
+	  echo "  Or add to:    ~/.metabob/config.json .providers.anthropic.apiKey"; \
+	  exit 1; \
+	fi
+	@mkdir -p $(WORKSPACE)
+	docker run -d \
+	    --name $(LIVE_NAME) \
+	    --privileged \
+	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
+	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
+	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
+	    -p 18080:8080 \
+	    -p 18090:8090 \
+	    -p 18100:8100 \
+	    -p 18210:8210 \
+	    -p 18250:8250 \
+	    -p 18260:8260 \
+	    -p 18270:8270 \
+	    -p 16080:6080 \
+	    -v $(WORKSPACE):/workspace \
+	    -v $(REPO_ROOT):$(REPO_ROOT):ro \
+	    --tmpfs /run \
+	    --tmpfs /run/lock \
+	    --shm-size=512m \
+	    $(IMAGE):$(OBSIDIAN_TAG)
+	@echo "[run-live-obsidian] substrate-live (obsidian flavour) started."
+	@echo "[run-live-obsidian] Fleet ports as run-live; Obsidian GUI at http://localhost:16080/vnc.html"
+	@echo "[run-live-obsidian] Wait ~20s, then: make -C scripts/substrate seed-live"
 
 # Seed identity and API keys into a freshly started substrate-live container.
 seed-live:
@@ -325,7 +379,10 @@ restart-ribosome-vessel: sync-ribosome-vessel
 	@docker exec $(LIVE_NAME) systemctl is-active ribosome-vessel.service | grep -q active && echo "[restart] ribosome-vessel active" || echo "[restart] ERROR: ribosome-vessel not active"
 
 # Sync concept-db source into the running container then restart it.
+# `docker cp <src>/src <container>:/vessels/x/src` nests into x/src/src when
+# the destination exists. Wipe the target first so the copy lands cleanly.
 sync-concept-db:
+	docker exec $(LIVE_NAME) rm -rf /vessels/concept-db/src
 	docker cp $(CONCEPT_DB_SRC)/src $(LIVE_NAME):/vessels/concept-db/src
 	@echo "[sync] concept-db source synced to substrate-live"
 
@@ -338,6 +395,7 @@ logs-analysis-vessel:
 	docker exec $(LIVE_NAME) journalctl -fu analysis-vessel.service
 
 sync-analysis-vessel:
+	docker exec $(LIVE_NAME) rm -rf /vessels/analysis-vessel/src
 	docker cp $(ANALYSIS_VESSEL_SRC)/src $(LIVE_NAME):/vessels/analysis-vessel/src
 	@echo "[sync] analysis-vessel source synced to substrate-live"
 
@@ -363,6 +421,67 @@ restart-stateful-ui-vessel: sync-stateful-ui-vessel
 	docker exec $(LIVE_NAME) systemctl restart stateful-ui-vessel.service
 	@sleep 3
 	@docker exec $(LIVE_NAME) systemctl is-active stateful-ui-vessel.service | grep -q active && echo "[restart] stateful-ui-vessel active" || echo "[restart] ERROR: stateful-ui-vessel not active"
+
+# obsidian-vessel: the Obsidian plugin built IN the substrate (substrate-obsidian
+# flavour only). Dev loop is edit → sync → rebuild → reload Obsidian. The vault's
+# plugin files are symlinks to /vessels/obsidian-vessel build artifacts, so a
+# rebuild updates them in place. Restarting obsidian-desktop reloads the plugin
+# WITHOUT tearing down the display (obsidian-xorg), so the noVNC session survives.
+# `docker cp <src>/src <container>:/vessels/x/src` nests when the dest exists —
+# wipe first so the copy lands cleanly.
+sync-obsidian-vessel:
+	docker exec $(LIVE_NAME) rm -rf /vessels/obsidian-vessel/src /vessels/obsidian-vessel/styles
+	docker cp $(OBSIDIAN_VESSEL_SRC)/src $(LIVE_NAME):/vessels/obsidian-vessel/src
+	docker cp $(OBSIDIAN_VESSEL_SRC)/styles $(LIVE_NAME):/vessels/obsidian-vessel/styles
+	docker cp $(OBSIDIAN_VESSEL_SRC)/esbuild.config.mjs $(LIVE_NAME):/vessels/obsidian-vessel/esbuild.config.mjs
+	docker cp $(OBSIDIAN_VESSEL_SRC)/manifest.json $(LIVE_NAME):/vessels/obsidian-vessel/manifest.json
+	@echo "[sync] obsidian-vessel source synced to substrate-live"
+
+restart-obsidian-vessel: sync-obsidian-vessel
+	docker exec $(LIVE_NAME) bash -c 'cd /vessels/obsidian-vessel && bun esbuild.config.mjs production'
+	docker exec $(LIVE_NAME) systemctl restart obsidian-desktop.service
+	@sleep 3
+	@docker exec $(LIVE_NAME) systemctl is-active obsidian-desktop.service | grep -q active && echo "[restart] obsidian-desktop active (plugin reloaded; refresh noVNC if needed)" || echo "[restart] ERROR: obsidian-desktop not active"
+
+# -----------------------------------------------------------------------------
+# ias-executor-ts: rebuild dist on host and push into every consumer vessel's
+# node_modules path inside the container. Bun's `file:` resolver makes a
+# physical copy of dist per consumer rather than a symlink, so a host rebuild
+# of ias-executor-ts does NOT propagate without this target.
+#
+# Usage:
+#   make -C scripts/substrate sync-ias-executor-ts                  # all consumers
+#   make -C scripts/substrate sync-ias-executor-ts RESTART=1        # restart each consumer's systemd unit too
+#
+# Consumers list lives at the top of this Makefile (IAS_CONSUMERS).
+# -----------------------------------------------------------------------------
+IAS_SRC := $(REPO_ROOT)/repos/ias-executor-ts
+
+sync-ias-executor-ts:
+	@echo "[ias] building dist on host…"
+	@cd $(IAS_SRC) && bun run build >/dev/null
+	@echo "[ias] pushing dist → /vessels/ias-executor-ts/dist"
+	docker exec $(LIVE_NAME) rm -rf /vessels/ias-executor-ts/dist
+	docker cp $(IAS_SRC)/dist $(LIVE_NAME):/vessels/ias-executor-ts/dist
+	@for v in $(IAS_CONSUMERS); do \
+	  target=/vessels/$$v/node_modules/@avigopal/ias-executor-ts/dist; \
+	  if docker exec $(LIVE_NAME) test -d /vessels/$$v/node_modules/@avigopal/ias-executor-ts; then \
+	    echo "[ias] pushing dist → $$target"; \
+	    docker exec $(LIVE_NAME) rm -rf $$target; \
+	    docker cp $(IAS_SRC)/dist $(LIVE_NAME):$$target; \
+	  else \
+	    echo "[ias] skip $$v (no @avigopal/ias-executor-ts in node_modules)"; \
+	  fi; \
+	done
+	@if [ "$(RESTART)" = "1" ]; then \
+	  for v in $(IAS_CONSUMERS); do \
+	    if docker exec $(LIVE_NAME) systemctl list-unit-files $$v.service >/dev/null 2>&1; then \
+	      echo "[ias] restarting $$v.service"; \
+	      docker exec $(LIVE_NAME) systemctl restart $$v.service || echo "[ias] WARN: $$v restart failed"; \
+	    fi; \
+	  done; \
+	fi
+	@echo "[ias] sync complete"
 
 # -----------------------------------------------------------------------------
 # UI bridge: alpine/socat sidecar that publishes host port 18270 to the

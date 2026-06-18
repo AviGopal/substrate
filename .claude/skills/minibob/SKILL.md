@@ -1,6 +1,6 @@
 ---
 name: minibob
-description: Dispatch development work through the substrate. MiniBob is the thin CLI entry point that POSTs goals to goal-host-vessel (local substrate :18210) so the work runs as a traced activity and feeds the learning loop — not a standalone agent. Use it instead of hand-editing vessel source.
+description: "DEPRECATED entry point. Dispatch development work through the substrate so it runs as a traced activity and feeds the learning loop. The agent-facing way to do this is now the metabob-mcp tool `mcp__metabob__run_goal` (metabob-mcp is the agent-IDE interaction surface). The minibob CLI below still works and forwards to goal-host-vessel, but is being retired — prefer the MCP tool. Reference retained for the CLI's flags/modes."
 license: MIT
 compatibility: Requires Node.js 18+ or Bun. Install via npm i -g @metabob/minibob@latest
 metadata:
@@ -8,20 +8,32 @@ metadata:
   version: "5.1"
 ---
 
-# MiniBob CLI
+# MiniBob CLI (deprecated — prefer metabob-mcp)
 
-MiniBob is a **goal-first development vessel and the entry point for substrate-dispatched
-work.** All inputs are treated as goals. MiniBob does not execute in-process — it POSTs
-`{goal, variables}` to `goal-host-vessel` (`GOAL_HOST_VESSEL_ENDPOINT`, default
-`http://127.0.0.1:18210/run-goal`) with `Authorization: ApiKey $METABOB_API_KEY`. The
-substrate-hosted vessels do the work (LLM calls, template selection, resolvers, ribosome
-extraction), every dispatch produces a trace, and the trace feeds Thompson Sampling.
+> **DEPRECATED.** `minibob` is being retired. The agent-facing way to dispatch a goal
+> to the substrate is the **metabob-mcp** tool **`mcp__metabob__run_goal`** (metabob-mcp
+> is the agent-IDE interaction surface — the IDE analogue of obsidian-vessel; it is *not*
+> an internal substrate component). The substrate's execution path is unchanged
+> (goal-host-vessel does the work); only the entry point moved off the CLI. The minibob
+> CLI documented below still functions and forwards to goal-host-vessel, so this reference
+> is retained — but reach for `mcp__metabob__run_goal` first. Do not add new `minibob`
+> invocations.
 
-**This is the default path for code changes in this repo.** Direct `Write`/`Edit` on
-`repos/<vessel>/src/**` is blocked by the `substrate-vessel-edit-gate` hook precisely so
-the work routes here. Reach for `minibob --single "<goal>"` first; only set
-`SUBSTRATE_ALLOW_DIRECT_EDIT=1` for a deliberate one-off manual edit. Edits to `docs/`,
-`scripts/`, `openspec/`, `.claude/`, tests, and config are never gated.
+MiniBob is a thin **goal-first dispatch CLI**: all inputs are treated as goals. It does
+not execute in-process — it POSTs `{goal, variables}` to `goal-host-vessel`
+(`GOAL_HOST_VESSEL_ENDPOINT`, default `http://127.0.0.1:18210/run-goal`) with
+`Authorization: ApiKey $METABOB_API_KEY`. The substrate-hosted vessels do the work (LLM
+calls, template selection, resolvers, ribosome extraction), every dispatch produces a
+trace, and the trace feeds Thompson Sampling. **`mcp__metabob__run_goal` reaches the same
+goal-host-vessel** — prefer it.
+
+**Dispatching through the substrate is the default path for code changes in this repo.**
+Direct `Write`/`Edit` on `repos/<vessel>/src/**` is blocked by the
+`substrate-vessel-edit-gate` hook precisely so the work routes through the substrate.
+Reach for **`mcp__metabob__run_goal "<goal>"`** first (or the deprecated
+`minibob --single "<goal>"`); only set `SUBSTRATE_ALLOW_DIRECT_EDIT=1` for a deliberate
+one-off manual edit. Edits to `docs/`, `scripts/`, `openspec/`, `.claude/`, tests, and
+config are never gated.
 
 > Prerequisite: the local substrate (`substrate-live`) must be up. Confirm goal-host with
 > `curl -s http://localhost:18210/health`. If it is down, dispatch can't route and you

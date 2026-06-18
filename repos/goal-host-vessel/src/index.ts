@@ -902,6 +902,154 @@ function buildProxyResolver(shape: string) {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Discovery-routed proxy resolvers (cross-vessel dispatch).
+//
+// goal-host natively dispatches local resolvers + dev-vessel proxies. Shapes
+// advertised by OTHER vessels (e.g. obsidian-vessel's obsidian:workspace_state /
+// obsidian:write_note) had NO resolver, so an authored activity composing them
+// failed "Resolver not registered" before task 1 — the runtime-dispatch blocker
+// that stopped authored obsidian activities from executing. This proxy looks the
+// shape's producer up in discovery AT RESOLVE TIME (so vessel restarts are picked
+// up) and POSTs to its resolve_endpoint. Generalises the dev-vessel proxy to the
+// "resolvers live where data lives + discovery enables dynamic routing" principle.
+// Fallback list if the vessel registry is unreachable at startup. The LIVE list
+// is discovered from the registry (see registerDiscoveryProxies) so the substrate
+// composes from obsidian's FULL advertised capability surface — "understand how to
+// use obsidian" (incl. execute_command, command_catalog, graph_query, canvas) —
+// rather than a hardcoded subset that left the author blind to real capabilities.
+const DISCOVERY_PROXY_SHAPE_FALLBACK: string[] = [
+  "obsidian:workspace_state", "obsidian:note", "obsidian:write_note",
+  "obsidian:search", "obsidian:backlinks", "obsidian:frontmatter",
+  "obsidian:daily_note", "obsidian:command_catalog", "obsidian:open_note",
+];
+let discoveredProxyShapes: string[] = [...DISCOVERY_PROXY_SHAPE_FALLBACK];
+
+function buildDiscoveryProxyResolver(shape: string) {
+  return {
+    id: shape,
+    tier: "pattern" as const,
+    async resolve(context: Record<string, unknown>) {
+      const task = context.task as Record<string, unknown>;
+      const configRaw = (task.config ?? {}) as Record<string, unknown>;
+      const variables = (context.variables ?? {}) as Record<string, unknown>;
+      const random = context.random as { id: (prefix: string) => string };
+      const config = interpolateProxyValue(configRaw, variables) as Record<string, unknown>;
+      const pointer: Record<string, unknown> = { type: shape, ...variables, ...config };
+
+      // 1. Resolve the producer endpoint via discovery (lazy → survives restarts).
+      const discCtrl = new AbortController();
+      const discTimer = setTimeout(() => discCtrl.abort(), 5_000);
+      let endpoint = "";
+      let resolvePath = "/resolve";
+      try {
+        const dr = await fetch(`${DISCOVERY_ENDPOINT}/resolve`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+          body: JSON.stringify({ pointer: { type: "vesselCapability", shape } }),
+          signal: discCtrl.signal,
+        });
+        const dj = await dr.json() as { content?: { vessels?: Array<{ endpoint?: string; resolve_endpoint?: string }> } };
+        const v = dj?.content?.vessels?.[0];
+        if (!v?.endpoint) throw new Error(`discovery: no vessel advertises ${shape}`);
+        endpoint = v.endpoint.replace(/\/+$/, "");
+        resolvePath = v.resolve_endpoint || "/resolve";
+      } finally {
+        clearTimeout(discTimer);
+      }
+
+      // 2. POST to the producer vessel (wrapped impulse-contract form; obsidian
+      //    accepts both flat and {impulse:{pointer}}).
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), PROXY_TIMEOUT_MS);
+      let resp: Response;
+      try {
+        resp = await fetch(`${endpoint}${resolvePath}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+          body: JSON.stringify({ impulse: { pointer } }),
+          signal: ctrl.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+      const bodyText = await resp.text();
+      if (!resp.ok) throw new Error(`${shape} via ${endpoint} HTTP ${resp.status}: ${bodyText.slice(0, 200)}`);
+      let parsed: unknown;
+      try { parsed = JSON.parse(bodyText); } catch { parsed = bodyText; }
+
+      // 3. Unwrap: obsidian → {success, content, metadata}; dev-vessel-style → {success, shape, body}.
+      let impulseContent: unknown = parsed;
+      const pObj = (typeof parsed === "object" && parsed !== null) ? parsed as Record<string, unknown> : null;
+      if (pObj) {
+        if (pObj["success"] === false) {
+          throw new Error(`${shape} resolver returned error: ${String(pObj["error"] ?? "no detail").slice(0, 200)}`);
+        }
+        if ("content" in pObj) impulseContent = pObj["content"];
+        else if ("body" in pObj) impulseContent = pObj["body"];
+      }
+
+      return [{
+        id: random.id(`disc:${shape}`),
+        pointer: { type: "memo" },
+        metadata: { shape, source: "discovery", endpoint, ok: resp.ok },
+        loaded: true,
+        content: impulseContent,
+      }];
+    },
+  };
+}
+
+async function registerDiscoveryProxies(): Promise<string[]> {
+  // Discover obsidian's FULL advertised capability surface from the vessel registry
+  // so the substrate knows + can dispatch every shape obsidian actually offers
+  // (the keystone of "understand how to use obsidian"). Falls back to the static
+  // list only if the registry is unreachable.
+  let shapes: string[] = DISCOVERY_PROXY_SHAPE_FALLBACK;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 5_000);
+    let r: Response;
+    try {
+      r = await fetch(`${DISCOVERY_ENDPOINT}/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+        body: JSON.stringify({ pointer: { type: "vesselRegistry" } }),
+        signal: ctrl.signal,
+      });
+    } finally {
+      clearTimeout(t);
+    }
+    const j = await r.json() as { content?: { vessels?: Array<{ shapes?: string[] }> } };
+    const vessels = j?.content?.vessels ?? [];
+    const obs = new Set<string>();
+    for (const v of vessels) {
+      for (const s of (v.shapes ?? [])) {
+        if (typeof s === "string" && s.startsWith("obsidian:")) obs.add(s);
+      }
+    }
+    if (obs.size > 0) {
+      shapes = [...obs];
+      discoveredProxyShapes = shapes;
+      console.log(`[goal-host-vessel] discovered obsidian capability surface from registry: ${shapes.length} shapes`);
+    }
+  } catch (err) {
+    console.warn(`[goal-host-vessel] obsidian shape discovery failed, using fallback (${DISCOVERY_PROXY_SHAPE_FALLBACK.length}): ${(err as Error).message}`);
+  }
+  const added: string[] = [];
+  for (const shape of shapes) {
+    if (registeredProxyShapes.has(shape)) continue;
+    const resolver = buildDiscoveryProxyResolver(shape);
+    host.runtime.resolvers.register(resolver as unknown as Parameters<typeof host.runtime.resolvers.register>[0]);
+    registeredProxyShapes.add(shape);
+    added.push(shape);
+  }
+  if (added.length > 0) {
+    console.log(`[goal-host-vessel] discovery-proxy registration: +${added.length} cross-vessel shapes — ${added.join(", ")}`);
+  }
+  return added;
+}
+
 /**
  * Idempotent registration of development-vessel proxy resolvers.
  *
@@ -1112,6 +1260,17 @@ async function handleRunGoal(req: Request): Promise<Response> {
   const variables = typeof body.variables === "object" && body.variables !== null
     ? (body.variables as Record<string, unknown>)
     : {};
+  // Auto-populate `variables.goal` from the request's goal text when the caller
+  // didn't already set it. Templates that interpolate `{{goal}}` (e.g. user-goal
+  // terminal templates like summarize-and-emit-concept) rely on this — without
+  // it, the LLM prompt receives the literal "{{goal}}" placeholder string and
+  // produces useless output. Callers can override by setting variables.goal
+  // explicitly. The seeded goal-impulse content carries the same text, but the
+  // engine's variable-substitution pass only looks at accumulatedVariables, not
+  // at impulse content.
+  if (typeof body.goal === "string" && typeof variables.goal !== "string") {
+    variables.goal = body.goal;
+  }
   const tags = Array.isArray(body.tags) ? (body.tags as string[]) : undefined;
   const expectedOutputShapes = Array.isArray(body.expected_output_shapes)
     ? (body.expected_output_shapes as string[]).filter((s) => typeof s === "string")
@@ -1491,6 +1650,110 @@ async function handleRunGoal(req: Request): Promise<Response> {
       record.status = "failed";
       record.error = (err as Error).message;
       console.error("[goal-host-vessel] async /run-goal error:", err);
+      // Detection (operator-goal observability). When an OPERATOR-originated
+      // dispatch fails because nothing in the catalogue could serve it (recommend
+      // refused + auto-draft did not converge), that is the strongest signal of a
+      // real capability gap: a human asked for something the substrate cannot yet
+      // do and got nothing back. Today that failure is only a swallowed log line +
+      // a fire-and-forget auto-draft that drafts the wrong shape, so operator goals
+      // go unserved invisibly. Emit a high-priority, class-deduped substrateGap so
+      // (a) "operator goals going unserved" is MEASURABLE, and (b) the value-directed
+      // drafter prioritises real operator goals over synthetic ones. Synthetic
+      // auto-draft dispatches are excluded (they have their own loop).
+      try {
+        const msg = (err as Error).message ?? "";
+        const isOperator = Array.isArray(tags) && tags.some((t) =>
+          typeof t === "string" && t.startsWith("dispatcher:") && !t.includes("auto"));
+        const isUnservable = /no template id returned|fallback_tier=refused/i.test(msg);
+        if (isOperator && isUnservable && typeof goal === "string") {
+          const dispatcher = (tags as string[]).find((t) =>
+            typeof t === "string" && t.startsWith("dispatcher:")) ?? "dispatcher:unknown";
+          // Dedup by goal CLASS so repeated identical operator goals collapse to one
+          // gap whose recurrence the substrate can count (convergence-blindness
+          // detector: a stable gap id lets a picker/escalator see "still open after
+          // N drafts") rather than flooding the backlog.
+          const goalClass = goal.toLowerCase().replace(/\s+/g, " ").trim().slice(0, 120);
+          const gapId = `operator_goal_unservable:${goalClass.replace(/[^a-z0-9]+/g, "_").slice(0, 64)}`;
+          const gap = {
+            id: gapId,
+            category: "operator_goal_unservable",
+            source: "operator_dispatch",
+            summary: `An operator dispatched the goal "${goal.slice(0, 160)}" via ${dispatcher} but the substrate could not serve it: recommend refused and auto-draft did not converge. This is a REAL capability gap — a human is waiting and got nothing. The substrate should author an activity that serves this goal class` +
+              (Array.isArray(expectedOutputShapes) && expectedOutputShapes.length
+                ? ` (expected output shapes: ${expectedOutputShapes.join(", ")}).` : "."),
+            detected_at: new Date().toISOString(),
+            status: "open",
+            goal_text: goal.slice(0, 400),
+            expected_output_shapes: Array.isArray(expectedOutputShapes) ? expectedOutputShapes : [],
+            classification_metadata: {
+              detector: "goal_host_operator_dispatch_failure",
+              gap_class: "operator_goal_unservable",
+              dispatcher,
+              dispatch_id: dispatchId,
+              error: msg.slice(0, 200),
+              priority_hint: "high",
+            },
+          };
+          await fetch("http://127.0.0.1:8090/v2/impulses/resolve", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `ApiKey ${process.env.METABOB_API_KEY ?? ""}` },
+            body: JSON.stringify({ impulse: { pointer: { type: "substrateGap_write", gap } } }),
+            signal: AbortSignal.timeout(8000),
+          });
+          console.log(`[goal-host-vessel] operator_goal_unservable gap emitted: ${gapId}`);
+          // Remediation routing (convergence). A runtime-capability gap needs a
+          // RUNTIME ACTIVITY (read→reason→write composing the vessel's own
+          // resolvers, output = expectedOutputShapes), NOT a code-fix patch_proposal.
+          // The code-fix drafter (draft-gap-closing-activity) is hardwired to
+          // patch_proposal and cannot serve it. Route to the real-chain author
+          // (draft-activity-from-pattern), which composes forward from a hand-built
+          // cluster spec. PROVEN 2026-06-15: this produced
+          // proposed_pattern_authored_reorganize_daily_notes_by_topic
+          // (obsidian:workspace_state → llm → obsidian:write_note, output obsidian:note).
+          try {
+            const patternId = gapId.replace(/[^a-z0-9]+/gi, "_").slice(0, 64);
+            const outShapes = Array.isArray(expectedOutputShapes) && expectedOutputShapes.length
+              ? expectedOutputShapes : ["obsidian:note"];
+            const cluster = {
+              pattern_id: patternId,
+              summary: `An operator dispatched the goal "${goal.slice(0, 120)}" but the substrate has no template that serves it. Author the smallest REAL resolver chain that performs this work and yields ${outShapes.join(", ")}. Use the vessel's own typed resolvers for those shapes (resolvers live where the data lives).`,
+              observation_window: "operator_dispatch",
+              n_observations: 1,
+              n_contrast_examples: 0,
+              expected_outputs: outShapes,
+              example_trace_ids: [],
+              contrast_trace_ids: [],
+              producing_activities: [],
+              topology_hint: `Compose REAL resolver calls that READ the relevant state, REASON over it (llm_completion_dispatch), and WRITE the result. The LAST task MUST emit one of [${outShapes.join(", ")}] so executing the template serves the operator's goal. Use ONLY these EXACT resolver ids for vessel operations — do NOT invent variants (e.g. there is no obsidian:read_note or obsidian:write_frontmatter; use obsidian:note to read and obsidian:write_note to write a whole note including its frontmatter): ${discoveredProxyShapes.join(", ")}, llm_completion_dispatch. An authored task whose resolver id is not in that list will fail at dispatch. To PERFORM AN ACTION in the app (beyond reading/writing notes — e.g. open a view, toggle a panel, run a built-in command), FIRST read obsidian:command_catalog (config {permission_filter:["navigate"],query:"<keyword>"}) to discover the exact command_id, then dispatch obsidian:execute_command (config {command_id:"<id>", granted_classes:["read","navigate"]}). execute_command REFUSES any command whose authority class is not in granted_classes and any destructive/irreversible command, so default granted_classes to ["read","navigate"] unless the operator goal clearly authorises mutation. CONFIG CONTRACTS (use exactly): obsidian:write_note REQUIRES config {path:"Substrate/<descriptive-name>.md", content:"{{<prior_task>_text}}"} — path is MANDATORY, must start with "Substrate/" and end with ".md"; there is NO note_type or auto-path field, always set an explicit path (writes are hard-restricted to the Substrate/ namespace). obsidian:write_note is also how you produce any "note"/"daily_note"/"index" output — there is no separate daily-note writer. VERIFY YOUR OWN OUTPUT — it is easy to hallucinate success: after the write task, ALWAYS append a FINAL task with resolver obsidian_verify_output and config {path:"<the EXACT path you wrote>", request:"<the operator goal>", strict:true}. With strict:true the activity FAILS unless the written note independently exists, is substantive (not a stub), is not a self-undermining non-answer, and is on-topic — so a hallucinated "I need more data" completion is recorded as a FAILURE, not a success. The expected output is not real until this verification passes. Do NOT author a read_scenario→analyse→write-a-Proposal scaffold; emit no *Proposal output.`,
+              deny_list: ["activityTemplateProposal", "patch_proposal", "read_scenario"],
+              bridge_source: "operator_goal_unservable",
+            };
+            await fetch("http://127.0.0.1:8090/v2/impulses/resolve", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `ApiKey ${process.env.METABOB_API_KEY ?? ""}` },
+              body: JSON.stringify({ impulse: { pointer: { type: "fs_write", path: `/workspace/patterns/${patternId}.json`, content: JSON.stringify(cluster, null, 2) } } }),
+              signal: AbortSignal.timeout(8000),
+            });
+            // Dispatch the real-chain author (async; do not await its completion here).
+            void fetch("http://127.0.0.1:8210/run-goal", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `ApiKey ${process.env.METABOB_API_KEY ?? ""}` },
+              body: JSON.stringify({
+                goal: `author runtime activity for operator goal: ${goal.slice(0, 80)}`,
+                targetTemplateId: "development-vessel:draft-activity-from-pattern",
+                variables: { pattern_id: patternId, patterns_dir: "/workspace/patterns", source: "operator_goal_unservable" },
+              }),
+            }).catch(() => { /* best-effort */ });
+            console.log(`[goal-host-vessel] operator_goal_unservable → real-chain author dispatched (pattern ${patternId})`);
+          } catch (routeErr) {
+            console.warn("[goal-host-vessel] operator_goal_unservable author-route failed:",
+              routeErr instanceof Error ? routeErr.message : routeErr);
+          }
+        }
+      } catch (gapErr) {
+        console.warn("[goal-host-vessel] operator_goal_unservable gap emit failed:",
+          gapErr instanceof Error ? gapErr.message : gapErr);
+      }
     }
   })();
 
@@ -1797,6 +2060,7 @@ console.log(
 
 registerBuiltinResolvers();
 await registerDevVesselProxies();
+await registerDiscoveryProxies();
 // Iteration 8 of the OOM hunt — WS subscriber ablation experiment.
 //
 // The leak signature from iter-5 (concept_s9ye5GKLw2L8): goal-host RSS grew

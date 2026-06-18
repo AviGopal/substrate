@@ -49,6 +49,10 @@ export interface NoteWriter {
    * already exists.
    */
   write(path: string, content: string): Promise<void>;
+  /** List vault-relative .md paths under a folder prefix. */
+  list(dirPrefix: string): Promise<string[]>;
+  /** Delete (trash) a note. */
+  delete(path: string): Promise<void>;
 }
 
 export interface ConceptSyncStatus {
@@ -118,6 +122,12 @@ function shouldRefresh(
 
 export class ConceptSyncService {
   private timer: ReturnType<typeof setInterval> | null = null;
+  /** When the current pull started; used to self-heal a stuck `running` flag. */
+  private pullStartedAt: number | null = null;
+  /** A pull stuck longer than this is presumed hung; the next tick reclaims it. */
+  private static readonly STALE_PULL_MS = 4 * 60_000;
+  /** Per-pull wall-clock budget so a slow pass can't exceed the interval. */
+  private static readonly PULL_BUDGET_MS = 90_000;
   private status: ConceptSyncStatus = {
     syncedCount: 0,
     lastPullAt: null,
@@ -178,11 +188,22 @@ export class ConceptSyncService {
    * copy is stale.
    */
   async pullAll(): Promise<number> {
-    if (this.status.running) {
+    if (
+      this.status.running &&
+      this.pullStartedAt !== null &&
+      Date.now() - this.pullStartedAt < ConceptSyncService.STALE_PULL_MS
+    ) {
       this.logger('warn', 'pull already running, skipping');
       return 0;
     }
+    if (this.status.running) {
+      // Prior pull is stale (hung or overran). Reclaim rather than block forever.
+      this.logger('warn', 'reclaiming stale pull flag', {
+        ageMs: this.pullStartedAt ? Date.now() - this.pullStartedAt : null,
+      });
+    }
     this.status.running = true;
+    this.pullStartedAt = Date.now();
     this.status.lastError = null;
     let pulled = 0;
     try {
@@ -216,8 +237,17 @@ export class ConceptSyncService {
       const collisions = buildCollisionMap(collected);
 
       // Write phase: materialize each collected concept with the
-      // collision-aware path resolver.
+      // collision-aware path resolver. Bounded by PULL_BUDGET_MS so a large
+      // stale backlog is drained incrementally across ticks instead of
+      // overrunning the interval and wedging the running flag.
+      const deadline = (this.pullStartedAt ?? Date.now()) + ConceptSyncService.PULL_BUDGET_MS;
       for (const concept of collected) {
+        if (Date.now() > deadline) {
+          this.logger('info', 'pull budget reached; remaining concepts deferred to next tick', {
+            processed: pulled,
+          });
+          break;
+        }
         try {
           const wrote = await this.materializeConcept(concept, collisions);
           if (wrote) pulled += 1;
@@ -228,6 +258,43 @@ export class ConceptSyncService {
           });
         }
       }
+      // Orphan sweep: a concept whose canonical path changed (title later
+      // collided → disambiguator added) leaves a stale note at the old path
+      // that never refreshes. Remove any note whose concept_id maps to a
+      // collected concept but sits at a non-canonical path. Bounded + skips
+      // pending_sync (local edits) + respects the pull budget.
+      try {
+        const normId = (id: string): string =>
+          id.replace(/^concept:/, '').replace(/[⟨⟩]/g, '').trim();
+        const canonicalByConcept = new Map<string, string>();
+        for (const c of collected) {
+          canonicalByConcept.set(
+            normId(c.id),
+            conceptNotePath(c, this.settings.conceptDbSyncRoot, collisions),
+          );
+        }
+        const allNotes = await this.writer.list(this.settings.conceptDbSyncRoot);
+        let orphansRemoved = 0;
+        for (const notePath of allNotes) {
+          if (orphansRemoved >= 1000 || Date.now() > deadline) break;
+          const content = await this.writer.read(notePath);
+          if (!content) continue;
+          if (/^pending_sync:\s*true\s*$/m.test(content)) continue;
+          const idMatch = /^concept_id:\s*(\S+)\s*$/m.exec(content);
+          if (!idMatch) continue;
+          const canonical = canonicalByConcept.get(normId(idMatch[1]!));
+          if (!canonical || canonical === notePath) continue;
+          // Same concept_id, different path → stale duplicate. Remove it.
+          await this.writer.delete(notePath);
+          orphansRemoved += 1;
+        }
+        if (orphansRemoved > 0) {
+          this.logger('info', 'orphan sweep removed duplicate concept notes', { orphansRemoved });
+        }
+      } catch (err) {
+        this.logger('warn', 'orphan sweep failed', { error: String(err) });
+      }
+
       this.status.syncedCount += pulled;
       this.status.lastPullAt = new Date().toISOString();
       this.logger('info', 'pull complete', { pulled, syncedTotal: this.status.syncedCount });
@@ -236,6 +303,7 @@ export class ConceptSyncService {
       this.logger('error', 'pull failed', { error: this.status.lastError });
     } finally {
       this.status.running = false;
+      this.pullStartedAt = null;
     }
     return pulled;
   }
@@ -349,6 +417,17 @@ export function makeObsidianNoteWriter(app: App): NoteWriter {
         await app.vault.create(path, content);
       }
     },
+    async list(dirPrefix: string): Promise<string[]> {
+      const prefix = dirPrefix.endsWith('/') ? dirPrefix : `${dirPrefix}/`;
+      return app.vault
+        .getMarkdownFiles()
+        .map((f: TFile) => f.path)
+        .filter((p: string) => p.startsWith(prefix));
+    },
+    async delete(path: string): Promise<void> {
+      const file = app.vault.getAbstractFileByPath(path);
+      if (file) await app.vault.trash(file, false); // false = move to vault .trash (recoverable)
+    },
   };
 }
 
@@ -378,6 +457,25 @@ export function makeFsNoteWriter(rootDir: string): NoteWriter {
       const abs = resolve(p);
       await fs.promises.mkdir(path.dirname(abs), { recursive: true });
       await fs.promises.writeFile(abs, content, 'utf8');
+    },
+    async list(dirPrefix: string): Promise<string[]> {
+      const absDir = resolve(dirPrefix);
+      const out: string[] = [];
+      const walk = (dir: string): void => {
+        let entries: import('fs').Dirent[] = [];
+        try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+        for (const e of entries) {
+          const abs = path.join(dir, e.name);
+          if (e.isDirectory()) walk(abs);
+          else if (e.name.endsWith('.md')) out.push(path.relative(rootDir, abs));
+        }
+      };
+      walk(absDir);
+      return out;
+    },
+    async delete(p: string): Promise<void> {
+      const abs = resolve(p);
+      try { await fs.promises.rm(abs, { force: true }); } catch { /* ignore */ }
     },
   };
 }
