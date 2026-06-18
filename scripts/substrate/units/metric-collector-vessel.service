@@ -6,7 +6,11 @@ Requires=activity-api.service
 [Service]
 Type=simple
 EnvironmentFile=/etc/substrate/env
-Environment=PORT=8280
+# NOTE: was PORT=8280 which collides with light-dispatch-vessel (EADDRINUSE crash
+# loop). 8280 is light-dispatch's; 8290 is the obsidian-vessel resolver bridge.
+# Use 8300. This vessel is NOT enabled in Dockerfile pending end-to-end
+# verification (non-load-bearing metrics collector).
+Environment=PORT=8300
 Environment=HOST=127.0.0.1
 Environment=VESSEL_ID=metric-collector-vessel
 WorkingDirectory=/vessels/metric-collector-vessel

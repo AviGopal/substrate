@@ -1,16 +1,25 @@
 [Unit]
 Description=development-vessel
-After=activity-api.service
+After=activity-api.service git-push-setup.service
 Requires=activity-api.service
 
 [Service]
 Type=simple
 EnvironmentFile=/etc/substrate/env
+EnvironmentFile=-/workspace/.substrate-secrets
 Environment=PORT=8090
 Environment=HOST=0.0.0.0
 Environment=WORKSPACE_ROOT=/workspace
 Environment=VESSEL_ID=development-vessel-local
 Environment=VESSEL_ENDPOINT=http://127.0.0.1:8090
+# Self-development through repositories (container-side direct push). The cutover
+# commits+pushes to MITOSIS_PUSH_CLONE_DIR/<vessel> (writable AviGopal clone set
+# up by git-push-setup.service) and mirrors into MITOSIS_RUNTIME_DIR/<vessel>
+# (live runtime). Replaces the host-sync poller. SUBSTRATE_GIT_PAT comes from
+# the secrets EnvironmentFile above.
+Environment=MITOSIS_DIRECT_PUSH=1
+Environment=MITOSIS_RUNTIME_DIR=/vessels
+Environment=MITOSIS_PUSH_CLONE_DIR=/workspace/git/vessels
 WorkingDirectory=/vessels/development-vessel
 ExecStart=/root/.bun/bin/bun /vessels/development-vessel/src/index.ts
 ExecStartPost=/bin/bash -c 'for i in $(seq 1 15); do curl -sf http://127.0.0.1:8080/health >/dev/null 2>&1 && break || sleep 3; done && /root/.bun/bin/bun /vessels/development-vessel/src/cli.ts seed-templates'

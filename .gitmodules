@@ -1,6 +1,6 @@
 [submodule "repos/concept-db"]
 	path = repos/concept-db
-	url = git@github.com:MetabobProject/concept-db.git
+	url = git@github.com:AviGopal/concept-db.git
 	branch = dev
 
 [submodule "repos/conversation-vessel"]
@@ -15,17 +15,17 @@
 
 [submodule "repos/discovery-vessel"]
 	path = repos/discovery-vessel
-	url = git@github.com:MetabobProject/discovery-vessel.git
+	url = git@github.com:AviGopal/discovery-vessel.git
 	branch = dev
 
 [submodule "repos/identity-vessel"]
 	path = repos/identity-vessel
-	url = git@github.com:MetabobProject/identity-vessel.git
+	url = git@github.com:AviGopal/identity-vessel.git
 	branch = dev
 
-[submodule "repos/metabob-activity-api"]
-	path = repos/metabob-activity-api
-	url = git@github.com:MetabobProject/metabob-activity-api.git
+[submodule "repos/activity-api"]
+	path = repos/activity-api
+	url = git@github.com:AviGopal/activity-api.git
 	branch = dev
 
 [submodule "repos/metabob-cloud-dashboard"]
@@ -63,7 +63,7 @@
 	branch = dev
 [submodule "repos/cpg-inference-ts"]
 	path = repos/cpg-inference-ts
-	url = git@github.com:MetabobProject/cpg-inference-ts.git
+	url = git@github.com:AviGopal/cpg-inference-ts.git
 	branch = main
 [submodule "repos/development-vessel"]
 	path = repos/development-vessel

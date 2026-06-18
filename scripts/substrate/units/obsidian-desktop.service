@@ -1,0 +1,24 @@
+[Unit]
+Description=obsidian-desktop — in-container Obsidian GUI (substrate-obsidian flavour only)
+# Needs the display up, plus the fleet so the plugin can register + resolve over
+# localhost. Restarting THIS unit reloads the obsidian-vessel plugin without
+# touching the persistent display (obsidian-xorg) or the noVNC session.
+After=obsidian-xorg.service development-vessel.service concept-db.service activity-api.service discovery-vessel.service
+Requires=obsidian-xorg.service
+Wants=development-vessel.service concept-db.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=OBSIDIAN_VAULT=/vaults/substrate-vault
+Environment=OBSIDIAN_DISPLAY=:0
+# HOME must resolve for Obsidian's per-user config (/root/.config/obsidian).
+Environment=HOME=/root
+ExecStart=/usr/bin/bash /usr/local/bin/obsidian-desktop-launch
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

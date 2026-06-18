@@ -42,6 +42,18 @@ Enable learning:
 | `pattern` | Pattern matching from history | PreValidationResolver |
 | `llm` | LLM reasoning required | LLMResolver with tool calling |
 
+> **Canonical reframe (2026-06).** These three tiers are **coarse bins of one
+> continuous quantity** — the resolver's *directional certainty*: the (inverse)
+> expected uncertainty that its output lies along the goal-coplanar tangent of the
+> shape hypersurface. `deterministic` = sharp on-manifold direction; `llm` = high
+> directional uncertainty. The operative quantity is learnable per-`(resolver,
+> signature)` (the forward arm already estimates it), so a resolver's effective
+> tier is signature-dependent, not a fixed label. Full treatment:
+> [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md) §4. Note: the
+> `LOCAL / CUSTOM / DISCOVERY / MCP / FALLBACK / ERROR` set recorded elsewhere in
+> this doc is the **dispatch pathway** (which leg of resolution served the
+> impulse), a different field from `resolver_tier` — do not conflate them.
+
 ### Per-model LLM sub-resolvers
 
 LLM-tier resolvers are moving toward per-model sub-resolver identifiers stored in the `resolver_id` field: `llmText@haiku`, `llmText@sonnet`, `llmText@opus` (and equivalent per-provider variants when multiple providers are configured). Each sub-resolver accrues its own α/β posterior, cost distribution, and resolver-tier metadata. Traces already record which model was invoked; the sub-resolver identifier promotes that fact to a first-class Thompson key so the substrate can learn which model suffices for which `(resolver, problem-class)` combination.

@@ -14,9 +14,10 @@
 > document consolidates them so a subsequent run of `extract-concepts-from-docs`
 > against this file populates `concept-db` with idiom-typed concepts.
 >
-> **Scope**: 12 idioms. The list is closed against the current foundation model
-> and the active 2026-05-23 spec wave; new idioms enter via spec proposals, not
-> via this file.
+> **Scope**: 13 idioms (idiom 13, "Neutral emitter", is an S2→S3 extension
+> appended to the original 12). The list is closed against the current foundation
+> model and the active 2026-05-23 spec wave; new idioms enter via spec proposals,
+> not via this file.
 
 ---
 

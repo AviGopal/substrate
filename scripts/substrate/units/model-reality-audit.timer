@@ -1,0 +1,15 @@
+[Unit]
+Description=Model-reality audit timer
+
+[Timer]
+# Fire 12 minutes after activation, then hourly. Aggregate full-store checks are
+# heavier than the windowed detectors, so hourly cadence is plenty to catch
+# forward/backward-model drift while staying cheap. Type=oneshot — no overlap.
+OnActiveSec=12min
+OnUnitActiveSec=1h
+Persistent=true
+AccuracySec=1min
+Unit=model-reality-audit.service
+
+[Install]
+WantedBy=timers.target

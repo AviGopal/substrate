@@ -7,6 +7,29 @@
 > trace store + Thompson layer + composition-chain credit + scope
 > hierarchy form a single coherent Bayesian RL system whose object of
 > learning is the underlying MDP itself.
+>
+> **One object, four lenses.** This doc is the *learning-rule* chart. The same
+> running system is read as a geometric object — a weighted directed cell complex
+> and its Hodge operators — in [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md); as a
+> flow in time — a slow–fast dynamical system whose self-expansion is
+> conditionally stable — in [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md);
+> and as software organized by durability — what persists, what is ephemeral, and
+> which parts are implementation detail — in
+> [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md). The shared dictionary
+> mapping each quantity across the charts is the table in
+> `SUBSTRATE_AS_DYNAMICS.md` §0 (math) extended in `SUBSTRATE_AS_SOFTWARE.md` §0
+> (engineering). Where this doc makes sample complexity and regret legible, DEC
+> makes locality and the gluing obstruction `H¹` legible, the dynamics chart makes
+> *when the learning stops keeping up with the growth* legible, and the software
+> chart makes *what it is made of and how durable it is* legible. Two further
+> companions carry the durability lens across containers:
+> [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md) reads the same system as a
+> multi-container fleet (what may cross the substrate boundary, per durability
+> group), and [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md) supplies the
+> protocol/engineering layer (identity, transport, verification, self-propagation)
+> that realizes those crossings. The non-constructibility ceiling of §11 is the
+> limit both inherit: more peers enlarge the pool of observation but never complete
+> the model.
 
 ## 1. The MDP, in the substrate's own primitives
 
@@ -223,7 +246,9 @@ different effective rates: the forward arm fires per task-completion
 (impulseRelevance writes), the reverse arm per Thompson recommendation
 (slot-binding writes). This is exactly the **two-timescale stochastic
 approximation (TTSA)** setup of Borkar (*Stochastic Approximation:
-A Dynamical Systems Viewpoint*, 2008).
+A Dynamical Systems Viewpoint*, 2008). (The full slow–fast / slow-manifold
+treatment built on this — including the stability threshold for runtime growth —
+is `SUBSTRATE_AS_DYNAMICS.md` §1–§3; this section is its base law.)
 
 Borkar's theorem: when one process updates faster than the other, the
 slower process sees the faster as already at its quasi-stationary
@@ -563,7 +588,9 @@ addition addresses three structurally distinct classes:
    Combinatorial Hodge Theory', Math. Programming, arXiv:0811.1067. Note:
    a global circulation/livelock is the *harmonic* component, locally
    acyclic but globally cyclic; *curl* is local triangular inconsistency
-   only — use 'cyclic/harmonic residual' for global livelock.)
+   only — use 'cyclic/harmonic residual' for global livelock. The full
+   Helmholtz/Hodge treatment of this — orphaned shape = divergence, livelock
+   = harmonic `ker L₁` — is `SUBSTRATE_AS_DEC.md` §1.4.)
 
 2. **Bridge horizon.** Two previously-disconnected subgraphs of S × A.
    A vessel whose input is shape A (reachable in one subgraph) and

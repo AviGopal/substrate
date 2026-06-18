@@ -11,6 +11,20 @@
 > that convergence, scaling, and self-optimization rates read off as spectral
 > properties of a single discrete Laplacian.
 >
+> **One object, four lenses.** This is the *structure* chart. The MDP doc is the
+> *learning-rule* chart; [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md) is
+> the *flow-in-time* chart, which takes the spectral master inequality of §4.4 and
+> reads it as a normal-hyperbolicity / stability threshold for runtime growth; and
+> [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md) is the *engineering* chart,
+> reading the system as software sorted by durability. The dictionary mapping each
+> quantity across the charts is `SUBSTRATE_AS_DYNAMICS.md` §0. Two later companions
+> take the durability lens across the container line:
+> [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md) (durability across a multi-container
+> fleet — what may cross the boundary) and
+> [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md) (the protocol/engineering layer
+> that realizes the crossings). The sparsity-of-`L` argument of §2 is what FLEET §3
+> invokes to forbid a dense global posterior merge across substrates.
+>
 > The MDP doc disowns continuous/Riemannian structure (`SUBSTRATE_AS_MDP.md`
 > §8.3) and already leans on combinatorial Hodge theory (§8.4). This document is
 > the load-bearing version of that lean. The reconciliation it depends on — that
@@ -301,7 +315,9 @@ can be trusted.
 "The transient state is the steady state" gets a sharp reading in §4: because
 the complex itself grows (`L = L(t)`), the system never reaches the harmonic
 steady state of a *fixed* `L`. It tracks the *moving* harmonic subspace — and it
-can only track it while the spectral gap outpaces growth (§4.4).
+can only track it while the spectral gap outpaces growth (§4.4). The dual reading
+— slow-manifold tracking under two-timescale stochastic approximation, "walking
+the manifold, not a fixed point" — is `SUBSTRATE_AS_DYNAMICS.md` §2.
 
 ## 4. Convergence, scaling, and self-optimization rates — and their bottlenecks
 
@@ -434,7 +450,10 @@ manifold — which is the timescale-separation / Fenichel picture of
 
 (Status: this inequality is a *conjecture assembled from established pieces* —
 Hodge heat-flow mixing at rate `λ₁` is standard; the growth term and the
-threshold are a reasonable synthesis, not a proved bound. See §5.)
+threshold are a reasonable synthesis, not a proved bound. See §5. The
+dynamical-systems reading — why the threshold is hard to promote to a theorem,
+namely that minting a cell is a dimension-changing event outside classical
+geometric singular perturbation theory — is `SUBSTRATE_AS_DYNAMICS.md` §3.)
 
 ### 4.5 What DEC sharpens about the federation contradiction
 

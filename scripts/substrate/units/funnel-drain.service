@@ -1,0 +1,25 @@
+[Unit]
+Description=Self-alteration funnel drain — fire apply_proposal_as_patch (decoupled from the boredom selector)
+# apply-proposal-as-patch is the funnel entry (proposal -> staged mitosis ->
+# self-propelled cutover -> push). It ranks ~69th in the boredom selector and is
+# starved, so the funnel never drains autonomously despite the drafter producing
+# fresh proposals. This oneshot guarantees the entry runs on a cadence. The
+# patch_with_tools verifier (~50%) and the FAVORABLE-typecheck cutover gate still
+# decide what lands — a bad proposal is rejected, not landed.
+After=development-vessel.service activity-api.service
+Requires=development-vessel.service
+
+# Smoke test:
+#   docker exec substrate-live systemctl start funnel-drain.service
+#   docker exec substrate-live journalctl -u funnel-drain.service --no-pager -n 3
+#   # last line is JSON: {dispatched, mitosis_version_id, skipped_count, reason, ...}
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/substrate/env
+ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/funnel-drain.ts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=obsidian-xorg — persistent virtual display + VNC for the in-container Obsidian (substrate-obsidian flavour only)
+# Independent of the fleet; just the GUI substrate. Kept separate from
+# obsidian-desktop.service so plugin reloads don't tear down the display.
+
+[Service]
+Type=simple
+Environment=OBSIDIAN_DISPLAY=:0
+Environment=OBSIDIAN_GEOMETRY=1600x900x24
+ExecStart=/usr/bin/bash /usr/local/bin/obsidian-xorg-launch
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

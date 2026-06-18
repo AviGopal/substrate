@@ -6,6 +6,7 @@ Requires=activity-api.service
 [Service]
 Type=simple
 EnvironmentFile=/etc/substrate/env
+Environment=LLM_DEFAULT_MODEL=claude-sonnet-4-6
 Environment=PORT=8220
 Environment=HOST=127.0.0.1
 Environment=LLM_RESOLVER_VESSEL_ID=llm-resolver-vessel

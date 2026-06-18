@@ -1,0 +1,321 @@
+# The substrate as a fleet: durability across containers, and what may cross the boundary
+
+> Fifth companion to the formal-lens docs. The first three read the substrate
+> as mathematics — [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md) (the learning
+> *rule*), [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md) (the *structure*),
+> [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md) (the *flow in time*).
+> The fourth, [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md), reads one
+> running substrate as software, organized by **durability** — what persists,
+> what is ephemeral, what is appended, and who may change each. This doc takes
+> the *same durability classification* and asks the one question a single
+> substrate cannot pose: **when there is more than one container, for each
+> durability group, what is its cross-container algebra — what does it cost to
+> share, merge, or move that group between two substrates?**
+>
+> It introduces no new primitives. It introduces one *classification refinement*
+> (§2: the Informational/learned-durable group is not homogeneous across
+> containers) and shows that this refinement is the durability-theoretic
+> explanation of where the existing federation specs already draw their lines.
+>
+> This doc answers **what** crosses the boundary, per durability group. Its
+> engineering counterpart, [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md)
+> (the sixth companion), answers **how** — the wire protocols, identity,
+> verification, and self-propagation that realize each crossing named here.
+
+## 0. Altitude: this lens is deliberately at the deployment plane
+
+`2026-05-23-vessel-federation` is emphatic that **"substrate" is deployment
+vocabulary**: there is no `substrate_id` field, no substrate type, and no
+substrate-routing primitive in any vessel above discovery. From inside the
+system there are only vessels and shapes; whether a vessel lives in this
+container or a peer is invisible upstream, computed (if ever needed) from
+reachability annotations, not from a label.
+
+This doc does not violate that. It operates at the **same altitude as
+`SUBSTRATE_AS_SOFTWARE`** — the operator/software plane, where "substrate
+(deployment sense)" and "container" are the correct words (`SOFTWARE` §3.1,
+vessel-as-code vs vessel-as-instance). The fleet is a fact visible to the
+*operator who deploys, backs up, and migrates*; it is not a primitive visible
+to activities. Everything below treats "substrate" strictly in the deployment
+sense.
+
+## 1. The four cross-container algebras
+
+`SOFTWARE` §2 sorts one substrate into four durability groups and observes that
+the loop crosses them in a fixed pattern (recall reads Informational → runs
+Ephemeral → writes Recorded; learning reads Recorded → writes learned-durable;
+nothing in the normal loop writes authored-durable). The fleet question is the
+same chart applied across the container line: **which crossings now go *between*
+containers, and what is the merge operator for each group?** The four answers
+are different, and that difference is the entire design.
+
+| Durability group | Cross-container algebra | Operator / transport | Trust gate | Where specced |
+|---|---|---|---|---|
+| **Authored-durable** | **Shareable by reference.** Identical-by-construction pre-lift; *diverges* post-lift once substrates author their own code. Merge = git merge, review-gated. | container-side authenticated `git push` to a shared remote; peers pull + redeploy | code review / CI (the operator-or-substrate-authored boundary) | self-persistence Phase 1 (keystone); cutover path |
+| **Recorded** | **Union.** Append-only ⇒ commutative, associative. Trivial to combine, *hard to trust*. | substrate-state JSONL/LFS bundle (migration/backup); signed traces returned by peer-aware `/resolve` (live) | **H1** two-sided signatures + `foreign_provenance` tag | fleet-federation R2; self-persistence Phase 0 |
+| **Ephemeral** | **Never crosses.** A cross-container dispatch runs the Transient execution *in the remote container*; only a Recorded result returns. | n/a — reconstructable only from the trace | n/a (nothing in-flight is shipped) | peer-aware `/resolve` (vessel-federation §3) |
+| **Learned-durable** | **No single merge operator** — it is not homogeneous (see §2). Splits into a *structural* sublayer that merges and a *quantitative* sublayer that does not. | content-addressed keys (structural); signed evidence folded locally (quantitative) | H2/content-hash (keys); **H1** (evidence) | vessel-federation §1–2; fleet-federation R2 |
+
+Three of the four groups have clean, already-specced cross-container behavior:
+
+- **Authored-durable** is the *common substrate of all substrates* — pre-lift
+  every container runs the same images, which is the "operates identically on
+  any substrate" property (`../../CLAUDE.md`, Substrate-Aware Development). It
+  diverges only *after* the S1→S2 lift, when a substrate authors its own code;
+  the propagation channel is then git (`2026-06-16-substrate-self-persistence-
+  and-direct-push` Phase 1's container-side push to `dev`), and the merge
+  discipline is review/CI. The fleet analog of `SOFTWARE` §2's "nothing in the
+  loop writes authored-durable": **nothing in the cross-container *loop* writes
+  a peer's authored-durable** — that only happens through git, review-gated.
+
+- **Recorded** is append-only, so its merge is set-union: commutative and
+  associative, the easiest algebra in the table. The hard part is not combining
+  it but *trusting* it — a trace produced in B and consumed in A is meaningless
+  unless both endpoints signed it (**H1**), which is exactly why fleet-federation
+  promotes H1 from "forward-looking" to critical-path.
+
+- **Ephemeral** never crosses *by construction*. This is why the fleet has no
+  distributed-transaction problem on in-flight state: a cross-container dispatch
+  is a recall request going out and a Recorded result coming back; the
+  trajectory, the slot bindings, the resolver call stack all stay in whichever
+  container runs the execution. The boundary is crossed by recall and by record,
+  **never by shipping a live execution.**
+
+The fourth group is the whole frontier, and it is the rest of this doc.
+
+## 2. Learned-durable is not homogeneous across containers
+
+`SOFTWARE` §2 lists the learned-durable group as a single bucket: "Thompson
+posteriors (α/β), the shape lattice, composition-edge weights, goal-paths,
+impulse-relevance scores." Within one substrate that lumping is harmless — it is
+all one SurrealDB snapshot. **Across containers it is the load-bearing
+distinction**, because the bucket contains two things with opposite
+cross-container algebra:
+
+| Sublayer | What it is | Cross-container algebra | Why |
+|---|---|---|---|
+| **Structural** learned-durable | *which* shapes exist, *which* templates exist, *which* composition edges and goal-paths exist — the topology, identified by its keys | **Mergeable** (graph union) once the keys are made comparable | keys can be made identical *by construction* via content-addressing |
+| **Quantitative** learned-durable | the α/β magnitudes on those edges, impulse-relevance counts — the evidence accumulated *on* the structure | **Not mergeable** as state; moves only as signed evidence folded locally | a count means "what *this* learner observed"; combining counts double-counts priors and requires aligned keys |
+
+The structural sublayer federates closer to *authored*-durable than to
+posteriors, and the mechanism is **already specced**: `2026-05-23-vessel-
+federation` content-addresses the keys.
+
+- `vessel_id = base32(multihash(SHA-256, pubkey))` (H2): two registrations of
+  the same pubkey describe the same vessel, regardless of which discovery-vessel
+  saw it first.
+- `template_id = "activity:" + sha256(canonical_json(template))`, reusing the
+  live canonical-JSON+SHA-256 keying from `2026-05-17-state-space-signature-
+  thompson-keying`: two substrates that minted the same template independently
+  produce the same id.
+
+Content-addressing **is** the alignment of the structural sublayer: it makes
+"the same shape," "the same template," "the same composition edge" mean the same
+thing in two containers without a shared registry. This is precisely the line
+vessel-federation draws — *"this spec only fixes the key, not the merge"* and
+*"the key is comparable; merging α/β is out of scope."* Read through durability,
+that sentence is: **content-addressing federates the structural sublayer; the
+quantitative sublayer is a separate problem with a different algebra.**
+
+> **Canonical refinement (this doc's authority):** the learned-durable group of
+> `SOFTWARE` §2 splits, *across containers*, into a **structural** sublayer
+> (topology, made comparable by content-addressed identity — H2 + content-hash)
+> and a **quantitative** sublayer (counts, learner-local until signed evidence
+> can move them — H1). Structure must align before weights can move, because the
+> weights are indexed by the keys the structure defines.
+
+## 3. Share evidence, not weights — and why the foundation forces it
+
+The quantitative sublayer is where the temptation lives: *just ship the
+posteriors to a central place and combine α/β.* The foundation forbids it, and
+the durability lens explains why the prohibition is correct rather than
+conservative.
+
+**The foundation principle is a statement against centralizing learned state.**
+"Resolvers live where data lives" is, in the DEC lens, the *sparsity of the
+Hodge Laplacian* — bounded-support update ⇒ sparse operator ⇒ message-passing
+locality (`SUBSTRATE_AS_DEC.md` §2; `SUBSTRATE_AS_DYNAMICS.md` §5 is explicit
+that the Lenia-locality phrasing is metaphor and the defensible claim is this
+sparsity one). A merged global posterior is a *dense* operator: it couples every
+learner to every other learner's counts. So "merge the weights" is not a missing
+feature; it is the thing the architecture is built to avoid.
+
+**The merge is also lossy and ill-defined.** A Beta posterior starts at a prior
+`(α₀, β₀)` and becomes `(α₀ + s, β₀ + f)` after `s` successes and `f` failures.
+The honest "as if one learner saw all evidence" merge of substrate A and B is
+
+```
+α_merged = α_A + α_B − α₀ ,   β_merged = β_A + β_B − β₀
+```
+
+— the naive `α_A + α_B` **double-counts the shared prior**. Worse, the merge is
+only meaningful if the `(resolver, signature)` key denotes the same object in
+both substrates — which two independently-grown shape lattices do **not**
+guarantee unless §2's structural alignment has already happened. So even the
+quantitative merge, where it is wanted, is *blocked on structure first*.
+
+**The correct cross-container move is therefore federated-learning-by-evidence,
+not by weights:** a foreign trace is admitted *only if both endpoints signed it*
+(**H1**), tagged `foreign_provenance`, and folded into the **local** substrate's
+*own* posterior under a **separate, more conservative confidence prior** — the
+update is recomputed locally, never imported as state. This is exactly
+fleet-federation Requirement 2. The durability reading reframes that
+requirement's companion non-goal — *"no cross-substrate Thompson sharing… merging
+α/β across peers is out of scope"* — as **a consequence of the foundation, not a
+gap to be closed later.** The system shares the Recorded group (evidence,
+union-mergeable, trust-gated) and lets each learner re-derive its own
+quantitative learned-durable from it. It never ships the quantitative
+learned-durable directly.
+
+## 4. The two motions, across the boundary
+
+`SOFTWARE` §1.1 names the two motions within a substrate — **recall**
+(Informational → Transient → Observational) and **learning** (Observational →
+Transient → Informational). At fleet scale each acquires a cross-container form,
+and naming both is what makes "what may cross the boundary" precise:
+
+- **Cross-container recall** = peer-aware `/resolve`. After exhausting local
+  registrations, a discovery-vessel forwards the query to peers under a depth
+  limit and merges responses (vessel-federation §3). The *Transient* execution
+  then runs in whichever container hosts the chosen vessel; only a *Recorded*
+  result returns. Reads Informational (the peer's authored + structural
+  learned-durable, reached by content-addressed identity), runs Ephemeral
+  *remotely*, returns Recorded. Ephemeral never crosses.
+
+- **Cross-container learning** = a peer's signed, foreign-provenance Recorded
+  trace folded into the local quantitative learned-durable under a conservative
+  prior (§3). Reads (foreign, H1-verified) Recorded → writes local
+  learned-durable. The peer's Recorded becomes *evidence for* the local
+  Informational of the next cycle — the loop, extended one container outward.
+
+- **No motion in the normal cross-container loop writes a peer's
+  authored-durable.** That is the fleet analog of `SOFTWARE` §2's
+  operator-authored boundary. A substrate changes a *peer's* code only through
+  git + review (self-persistence Phase 1), exactly as, within one substrate, the
+  authored-durable boundary is crossed only by the lift. **Self-installation
+  onto a fresh host** (fleet-federation R3 — image pull, identity generation,
+  presentation to N peers for quorum ratification) is the one case where a
+  substrate writes authored-durable *to a new container*, and it is fenced
+  behind H4 quorum precisely because it crosses that boundary.
+
+## 5. The degenerate fleet: N = 1 is migration (self-persistence)
+
+The smallest fleet has one member that moves. A substrate migrating from host A
+to host B is the cross-container question with the peer set to *its own future
+self*, and it exercises exactly the same algebra:
+
+- **Authored-durable** travels as the image + git remote (already shareable by
+  reference).
+- **Recorded + quantitative learned-durable** travel as the **substrate-state
+  bundle** — SurrealDB posteriors/traces + concept graph + memoryNotes exported
+  to a versioned, verified JSONL/LFS bundle in `AviGopal/substrate-state`, with
+  restore-on-bootstrap so a fresh container resumes as the prior one
+  (`2026-06-16-substrate-self-persistence-and-direct-push` Phase 0).
+- **Ephemeral** does not travel — a migrated substrate reconstructs nothing
+  in-flight; it resumes from the restored Recorded + learned-durable.
+
+This is the continuity requirement the math docs state directly: *the carrier of
+learning must survive a move from host A to host B* — `SUBSTRATE_AS_DEC.md` §4.4
+(the learned content is `⋆`, the persisted posterior precision);
+`SUBSTRATE_AS_MDP.md` §4.6 ("the transient state is the steady state"). The N=1
+case is where the **transport** for the durable groups is built and tested; the
+N>1 case (§3) adds only the *trust gate and the conservative-prior fold* on top
+of the same transport. Migration is federation with a trusted peer of one — which
+is why self-persistence is the operator-anchored S1 increment that the fleet work
+builds on, not a separate track.
+
+## 6. Trust = which durability group a peer may write to in your substrate
+
+The fleet-federation adversary-model progression (a)/(b)/(c) is the fleet-scale
+restatement of the S1/S2/S3 lift, and durability makes its meaning concrete:
+**a peer's trust level is exactly the set of your durability groups it is allowed
+to influence.**
+
+| Adversary model | Peer may influence | Gate | Lift analog |
+|---|---|---|---|
+| **(a) trusted-peer audit** — all operator-controlled | your Recorded (as H1-signed evidence → your quantitative learned-durable, conservative prior); scoped audit probes | H1 + H2 + H3 (scoped attestations) + H5 (baseline immune to audit-poisoning) | S1→S2: operator-supervised |
+| **(b) semi-trusted federation** — mutually untrusted code | same, plus admission of the peer *vessel* into your reachable structural layer | + **H4** quorum ratification (k-of-n authority signatures) before the registry trusts the peer | S2: supervised federation with technical untrust |
+| **(c) open federation** — anyone may peer | same, under sustained adversarial exposure | gated on §27.S.6 **push-away** evidence (`interventionRefused` with cited rationale) — no mechanical gate | S3: operator non-load-bearing, at inter-substrate scale |
+
+The invariant across all three rows: **no adversary model ever lets a peer write
+your authored-durable or your quantitative learned-durable directly.** The most a
+peer can do, even when fully trusted, is supply *Recorded evidence* (H1-signed)
+that *you* fold into *your* posteriors under *your* conservative prior, and — once
+ratified (H4) — be *reachable* in your structural layer by content-addressed
+identity. Trust escalates *what a peer may offer*, never *what it may overwrite*.
+That is the durability statement of "push-away": the operator (and, at S3, the
+substrate itself) becomes non-load-bearing precisely because the boundary
+between offered-evidence and owned-state is structural, not procedural.
+
+## 7. Scorecard — decision vs. established vs. frontier
+
+Following the companion docs.
+
+**Canonical decisions (this doc's authority):**
+
+- The fleet lens is at the *deployment plane*; it introduces no in-system
+  substrate primitive, consistent with vessel-federation's non-goal. → §0
+- The learned-durable group splits, across containers, into a **structural**
+  sublayer (content-addressed, mergeable) and a **quantitative** sublayer
+  (counts, learner-local; movable only as signed evidence). Structure aligns
+  before weights move. → §2
+- Cross-container learning is **share-evidence-not-weights**: H1-signed
+  foreign-provenance Recorded folded into the *local* posterior under a
+  conservative prior; the quantitative learned-durable is never shipped as
+  state. → §3
+
+**Established (rests on results/specs already cited by the companions):**
+
+- Content-addressed vessel and template identity (H2; canonical-JSON+SHA-256
+  keying) is the structural-alignment mechanism — specced in vessel-federation,
+  building on live keying. → §2
+- Append-only Recorded merges by union; H1 two-sided signatures are the trust
+  gate — fleet-federation R2. → §1, §3
+- Ephemeral never crosses; cross-container dispatch is recall-out / record-back —
+  peer-aware `/resolve`. → §1, §4
+- The Beta-merge double-counting (`α_A+α_B−α₀`) and the foundation's
+  sparsity-of-`L` argument against dense global posteriors. → §3
+  (`SUBSTRATE_AS_DEC.md` §2)
+
+**Frontier (named, not asserted):**
+
+- The *mechanism* that folds a foreign signed trace into the local posterior
+  under a conservative prior (the exact prior, the down-weighting rule, the
+  decay) is described, not implemented. → §3
+- **Cross-substrate concept-graph merge** (identity collisions, edge-weight
+  reconciliation) is deferred even with content-addressed keys; §2 says
+  *structure can merge*, not that the merge code exists. → §2
+- A **content-addressed composition-edge / goal-path identity** that makes the
+  structural sublayer mergeable end-to-end (beyond vessel + template ids) is
+  implied by §2 but not separately specified. → §2
+
+**Honest limit (carried):**
+
+- Federation does not touch the non-constructibility ceiling
+  (`SUBSTRATE_AS_MDP.md` §11). Sharing evidence across containers enlarges the
+  pool of observations; it does not make the Informational state complete. More
+  peers ≠ a complete model. → inherited from `SOFTWARE` §5.
+
+## 8. Recap
+
+The fleet is the single-substrate durability chart applied across the container
+line, one merge operator per group. **Authored-durable** is shareable by
+reference (git, review-gated; diverges only post-lift). **Recorded** merges by
+union and is trust-gated by H1 two-sided signatures. **Ephemeral** never crosses
+— a cross-container dispatch runs the execution remotely and returns only a
+trace, so the fleet has no in-flight distributed state to reconcile. And
+**learned-durable**, the one group with no single operator, splits into a
+*structural* sublayer that content-addressing makes mergeable and a
+*quantitative* sublayer that the foundation forbids merging as state — so it
+moves only as signed evidence folded locally under a conservative prior. Trust
+between substrates is exactly *which durability group a peer may influence*, and
+no trust level ever lets a peer overwrite your authored or quantitative-learned
+state; it only lets it *offer evidence* and *be reachable*. Migration is the N=1
+case that builds the transport; federation adds the trust gate on top.
+
+None of this is new machinery, and none of it re-decides the federation specs —
+it is the durability-theoretic account of **why** vessel-federation stops at "the
+key is comparable" and fleet-federation R2 stops at "fold signed evidence, don't
+merge weights." Those are not the unfinished halves of cross-container learning;
+they are its correct shape, and the line they draw is the line between the
+structural and quantitative sublayers of the Informational state.
