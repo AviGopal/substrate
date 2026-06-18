@@ -262,11 +262,40 @@ try {
   };
 } catch { /* leave null */ }
 
+// ── CAPABILITY EXPLORATION + CROSS-VESSEL SPANNING ──
+// "Is the system exploring/developing uses of its capabilities, and do activities
+// span vessels?" exploration_breadth = distinct activities exercised (24h) ÷ total
+// (are we using the catalogue or stuck on a few?). cross_vessel_frac = composition
+// edges whose parent and child activities belong to DIFFERENT vessels ÷ total edges
+// (real cross-vessel capability composition vs single-vessel chains + lifecycle hooks).
+const vesselOf = (id: string): string => {
+  let a = String(id ?? "");
+  const m = a.match(/^activity:⟨?(.+?)⟩?$/);
+  if (m) a = m[1];
+  return a.includes(":") ? a.split(":")[0] : "core"; // bare = shared/lifecycle (validator-dispatch, slot-binding, goal_execution)
+};
+let capability: any = { distinct_exercised_24h: null, total_activities: totalActivities, exploration_breadth: null, cross_vessel_edges: null, total_edges: comp_edges, cross_vessel_frac: null, proposed_templates: null };
+try {
+  const distinct = await tryNum(() => count("SELECT count() AS count FROM (SELECT activity_id FROM activity_execution_traces WHERE created_at > type::datetime(time::now() - 24h) GROUP BY activity_id) GROUP ALL;"));
+  const proposed = await tryNum(() => count("SELECT count() AS count FROM activity WHERE proposed = true GROUP ALL;"));
+  const edges = await sql<{ parent_activity_id: string; child_activity_id: string }>("SELECT parent_activity_id, child_activity_id FROM activity_composition_graph LIMIT 500;");
+  const xv = edges.filter((e) => vesselOf(e.parent_activity_id) !== vesselOf(e.child_activity_id)).length;
+  capability = {
+    distinct_exercised_24h: distinct,
+    total_activities: totalActivities,
+    exploration_breadth: (distinct != null && totalActivities) ? Math.round((distinct / totalActivities) * 1000) / 1000 : null,
+    cross_vessel_edges: xv,
+    total_edges: edges.length,
+    cross_vessel_frac: edges.length ? Math.round((xv / edges.length) * 1000) / 1000 : null,
+    proposed_templates: proposed,
+  };
+} catch { /* leave null */ }
+
 const record = {
   at: new Date().toISOString(),
   lift, forward_model, backward_model, self_alteration, gaps, dec_limiters,
   push_away: { intervention_refused },
-  posterior_convergence, topology, posterior_uncertainty, vessel_population,
+  posterior_convergence, topology, posterior_uncertainty, vessel_population, capability,
 };
 
 try { const { mkdirSync } = await import("node:fs"); mkdirSync(OUT.replace(/\/[^/]+$/, ""), { recursive: true }); } catch { /* */ }

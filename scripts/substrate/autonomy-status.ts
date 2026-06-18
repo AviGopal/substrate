@@ -99,7 +99,11 @@ console.log(fmt("topology visible", last.topology?.edge_visibility, delta("topol
 console.log(fmt("#6 uncertainty", last.posterior_uncertainty?.mean_variance, delta("posterior_uncertainty.mean_variance"),
   arrow("posterior_uncertainty.mean_variance", "down"), `mean Beta variance over ${last.posterior_uncertainty?.managed_cells ?? "·"} managed cells — DOWN = uncertainty decreasing`));
 console.log(fmt("#5 vessel-attrib", last.vessel_population?.attribution_coverage, delta("vessel_population.attribution_coverage"),
-  arrow("vessel_population.attribution_coverage", "up"), `traces w/ vessel_id+tier (${last.vessel_population?.active_vessels ?? "·"} active vessels) — per-vessel learning data`));
+  arrow("vessel_population.attribution_coverage", "up"), `traces w/ vessel_id (${last.vessel_population?.active_vessels ?? "·"} active vessels) — per-vessel learning data`));
+console.log(fmt("explore breadth", last.capability?.exploration_breadth, delta("capability.exploration_breadth"),
+  arrow("capability.exploration_breadth", "up"), `distinct activities run 24h ÷ total (${last.capability?.distinct_exercised_24h ?? "·"}/${last.capability?.total_activities ?? "·"}, ${last.capability?.proposed_templates ?? "·"} proposed)`));
+console.log(fmt("cross-vessel comp", last.capability?.cross_vessel_frac, delta("capability.cross_vessel_frac"),
+  arrow("capability.cross_vessel_frac", "up"), `edges spanning vessels ÷ total (${last.capability?.cross_vessel_edges ?? "·"}/${last.capability?.total_edges ?? "·"}) — activities spanning vessels`));
 
 // ── scarcest DEC limiter (R_conv ~ λ₁ · ρ_sample · κ⁻¹) ──────────────────────
 console.log(`  ${"─".repeat(64)}`);
