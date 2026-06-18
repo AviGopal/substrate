@@ -1,0 +1,17 @@
+[Unit]
+Description=Substrate git-push setup (system git identity + credential helper + writable vessel clones)
+After=network-online.target
+Wants=network-online.target
+Before=development-vessel.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/etc/substrate/env
+EnvironmentFile=-/workspace/.substrate-secrets
+ExecStart=/usr/local/bin/setup-git-push
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

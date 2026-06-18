@@ -1,0 +1,10 @@
+[Unit]
+Description=goal-host-behavior trigger (every 30 min, side loop)
+
+[Timer]
+OnActiveSec=3min
+OnUnitActiveSec=30min
+Unit=goal-host-behavior.service
+
+[Install]
+WantedBy=timers.target
