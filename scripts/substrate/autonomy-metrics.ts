@@ -287,7 +287,7 @@ try {
   // activities that feed the discovery loop, not dead-ends. Low closure explains a
   // sparse composition graph (few shape-flow edges).
   let shape_closure: number | null = null, orphaned_shapes: number | null = null, produced_shapes: number | null = null;
-  let orphan_terminal: number | null = null, orphan_auto_artifact: number | null = null, orphan_genuine: number | null = null, effective_closure: number | null = null;
+  let orphan_terminal: number | null = null, orphan_auto_artifact: number | null = null, orphan_genuine: number | null = null, effective_closure: number | null = null, real_closure: number | null = null;
   try {
     const shp = await sql<{ output_shapes: string[]; input_shapes: string[] }>("SELECT output_shapes, input_shapes FROM activity WHERE output_shapes != NONE OR input_shapes != NONE LIMIT 3000;");
     const produced = new Set<string>(), consumed = new Set<string>();
@@ -311,6 +311,13 @@ try {
     orphan_genuine = orphans.length - orphan_terminal - orphan_auto_artifact;
     // effective closure = composed (input_shapes) + terminal (observer-consumed) ÷ produced
     effective_closure = produced.size ? Math.round(((closed + orphan_terminal) / produced.size) * 1000) / 1000 : null;
+    // real closure = effective over the REAL shape space, excluding autoDraftedOutput_*
+    // LLM wrapper-key artifacts (454 legacy gap-closing:auto-* activities from early
+    // drafter runs, before shape conventions). They are dead cruft, not capabilities,
+    // and structurally uncomposable — counting them in the denominator deflates the
+    // signal. real_closure reflects the closure of the substrate's actual capabilities.
+    const realProduced = produced.size - (orphan_auto_artifact ?? 0);
+    real_closure = realProduced > 0 ? Math.round(((closed + orphan_terminal) / realProduced) * 1000) / 1000 : null;
   } catch { /* leave null */ }
   capability = {
     distinct_exercised_24h: distinct,
@@ -321,7 +328,7 @@ try {
     cross_vessel_frac: edges.length ? Math.round((xv / edges.length) * 1000) / 1000 : null,
     proposed_templates: proposed,
     shape_closure, orphaned_shapes, produced_shapes,
-    effective_closure, orphan_terminal, orphan_auto_artifact, orphan_genuine,
+    effective_closure, real_closure, orphan_terminal, orphan_auto_artifact, orphan_genuine,
   };
 } catch { /* leave null */ }
 
