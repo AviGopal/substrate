@@ -142,19 +142,30 @@ const series = win.map((r) => ({
   proposed: r.capability?.proposed_templates,
   concepts_total: r.forward_model?.total_activities,
 }));
-const rateBetween = (a: any, b: any, k: string): number | null => {
-  if (a?.[k] == null || b?.[k] == null) return null;
-  const hrs = (b.t - a.t) / 3.6e6;
-  return hrs > 0 ? (b[k] - a[k]) / hrs : null;
+// Least-squares slope (units/hr) over a set of {t(ms), value} points — robust to
+// the single-point noise that a first/last endpoint diff suffers on BURSTY
+// cumulative signals (e.g. self-alteration lands ~1/40min, so an endpoint split
+// can read 0 even while the trend is clearly positive).
+const slopePerHr = (pts: any[], k: string): number | null => {
+  const xs = pts.map((p) => p.t / 3.6e6), ys = pts.map((p) => p[k]);
+  const n = xs.length; if (n < 3) return null;
+  const mx = xs.reduce((a, b) => a + b, 0) / n, my = ys.reduce((a, b) => a + b, 0) / n;
+  let num = 0, den = 0;
+  for (let i = 0; i < n; i++) { num += (xs[i] - mx) * (ys[i] - my); den += (xs[i] - mx) ** 2; }
+  return den > 0 ? num / den : null;
 };
 const growth = (k: string, label: string) => {
   const pts = series.filter((s) => s[k as keyof typeof s] != null);
   if (pts.length < 4) { console.log(`    ${label.padEnd(16)} (insufficient points)`); return; }
-  const a = pts[0], m = pts[Math.floor(pts.length / 2)], b = pts[pts.length - 1];
-  const r1 = rateBetween(a, m, k), r2 = rateBetween(m, b, k);
-  if (r1 == null || r2 == null) { console.log(`    ${label.padEnd(16)} (gaps)`); return; }
-  const mark = r2 > r1 + 1e-6 ? "⤴ accelerating" : r2 < r1 - 1e-6 ? "⤵ decelerating" : "→ steady";
-  console.log(`    ${label.padEnd(16)} ${r1.toFixed(2).padStart(8)} → ${r2.toFixed(2).padStart(8)} /hr   ${mark}`);
+  // Robust trend over the whole window, plus older-half vs newer-half slope for
+  // acceleration (regression on each half — far less jittery than endpoint diff).
+  const half = Math.floor(pts.length / 2);
+  const overall = slopePerHr(pts, k);
+  const s1 = slopePerHr(pts.slice(0, half + 1), k), s2 = slopePerHr(pts.slice(half), k);
+  if (overall == null) { console.log(`    ${label.padEnd(16)} (gaps)`); return; }
+  let mark = "→ steady";
+  if (s1 != null && s2 != null) mark = s2 > s1 + 0.05 ? "⤴ accelerating" : s2 < s1 - 0.05 ? "⤵ decelerating" : "→ steady";
+  console.log(`    ${label.padEnd(16)} ${overall.toFixed(2).padStart(7)}/hr trend   (${(s1 ?? 0).toFixed(2)}→${(s2 ?? 0).toFixed(2)})  ${mark}`);
 };
 growth("edges", "edges (λ₁)");
 growth("landed", "self-alteration");
