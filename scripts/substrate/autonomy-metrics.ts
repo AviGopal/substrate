@@ -339,10 +339,20 @@ try {
 //   information (concept-db) — track its growth. Resource-efficiency (resolver-tier mix,
 //   cost) is BLOCKED by the same trace-attribution gap as #5 (detector-tick traces carry
 //   no tasks[].resolver_tier / cost_usd) — flagged, not silently null.
-let substrate_self: any = { manipulation_activities: null, concepts: null, scripts_sync_mechanism: true };
+let substrate_self: any = { manipulation_activities: null, concepts: null, scripts_sync_mechanism: true, llm_task_fraction: null, sampled_tasks: null };
 try {
   substrate_self.manipulation_activities = await tryNum(() => count("SELECT count() AS count FROM activity WHERE string::contains(type::string(id),'vessel') OR string::contains(type::string(id),'mitosis') OR string::contains(type::string(id),'scaffold') OR string::contains(type::string(id),'substrate') GROUP ALL;"));
   substrate_self.concepts = await tryNum(() => count("SELECT count() AS count FROM concept GROUP ALL;"));
+  // #12 RESOURCE EFFICIENCY: per-task data lives in execution_trace_content (NOT
+  // activity_execution_traces). resolver_tier is null there (engine only stamps tier
+  // for local-registry resolvers), but resolver_id IS recorded — classify it read-side.
+  // llm_task_fraction LOW = efficient (substrate reserves costly LLM for few tasks,
+  // uses deterministic/pattern resolvers for the rest).
+  const tc = await sql<{ tasks: Array<{ resolver_id?: string }> }>("SELECT tasks FROM execution_trace_content WHERE array::len(tasks ?? []) > 0 LIMIT 500;");
+  let llm = 0, ntasks = 0;
+  for (const r of tc) for (const t of (r.tasks ?? [])) { ntasks++; if (/llm/i.test(t.resolver_id ?? "")) llm++; }
+  substrate_self.sampled_tasks = ntasks;
+  substrate_self.llm_task_fraction = ntasks ? Math.round((llm / ntasks) * 1000) / 1000 : null;
 } catch { /* */ }
 
 const record = {
