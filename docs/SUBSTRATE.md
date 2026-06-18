@@ -71,7 +71,8 @@ bun run validation/scripts/failure-mode-harness.ts
 # Full stratified harness (longer; run before canary promotion)
 bun run validation/scripts/stratified-harness.ts
 
-# Single MiniBob goal to produce a trace
+# Single goal to produce a trace (deprecated — agents dispatch via the
+# metabob-mcp `mcp__metabob__run_goal` tool; the minibob CLI is being retired)
 minibob --single "list files in current directory"
 
 # Check the trace appeared
@@ -130,6 +131,8 @@ git push origin dev          # CI/CD deploys to canary automatically
 ```
 
 Then use `/deploy <vessel>` to promote canary → production after canary health checks pass.
+
+> **Suspended (2026-05-23):** kubectl/Helm deployment and the `/deploy` skill are suspended for economic reasons. All development runs against the local substrate container; the canary→production path above is retained for when cloud deployment resumes.
 
 ## Development-vessel specifics
 

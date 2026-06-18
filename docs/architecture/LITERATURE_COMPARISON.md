@@ -177,6 +177,30 @@ templates. Whether per-cell counts ever accumulate enough to be
 informative at substrate scale is precisely the Heaps'-saturation
 question.
 
+**Companion citations (added 2026-06-09 for substrate-internal docs).**
+Three results outside the immediate LLM-Bayesian literature ground
+specific MDP-doc claims:
+
+- Vamplew et al., *Scalar reward is not enough* (arXiv:2112.15422) —
+  Pareto-coverage limitation theorem; relevant to MDP §1.1
+  (vector-reward residual structure vs. scalar success bit).
+- Borkar, *Stochastic Approximation: A Dynamical Systems Viewpoint*
+  (Cambridge, 2008) — two-timescale stochastic approximation framework;
+  relevant to MDP §4.6 (forward/reverse dual-arm equilibrium on the
+  invariant manifold).
+- Amari, *Methods of Information Geometry* (AMS, 2000) — conjugate-
+  prior-as-natural-gradient identification for exponential families;
+  relevant to MDP §2.1 (Beta-Bernoulli update as Fisher-efficient
+  natural gradient).
+- *A Theory of Machine Understanding via the Minimum Description
+  Length Principle* (arXiv:2504.00395) and *Learning Tangent Bundles
+  and Characteristic Classes with Autoencoder Atlases*
+  (arXiv:2602.22873) — MDL representation learning + multi-chart
+  atlas autoencoders; relevant to Foundation doc §"Variant System"
+  (per-activity MDL-minimum manifold reframing). Author attributions
+  omitted pending verification (ids post-date the 2026-06 survey's
+  verified set).
+
 ## 5. Scaling laws and capability emergence
 
 **Loss scaling.** Chinchilla (Hoffmann et al., arXiv:2203.15556)
@@ -436,8 +460,12 @@ arXiv:2307.13269, 2211.03831, 2306.01708, 2212.04089, 2311.03099,
 2302.06692, 2310.01361, 2410.03645, 2304.03442, 2402.07867,
 2512.16962, 2604.05480, 2601.18699, 2504.01241, 2603.14465,
 1911.01547, 2603.24621, 2311.12983, 2310.06770, 2308.03688,
-2302.12526, 2505.17621, 2510.16614.
+2302.12526, 2505.17621, 2510.16614, 2112.15422, 2504.00395,
+2602.22873, 2209.11895, 2211.00593, 2301.05217.
 
 Plus: METR blog (metr.org/blog/2025-03-19, 2026-1-29); USENIX Security
 2020 (Fang et al.); NeurIPS 2024 (BLoB); the Galileo failure-mode
-catalog (galileo.ai/blog/multi-agent-llm-systems-fail).
+catalog (galileo.ai/blog/multi-agent-llm-systems-fail); Borkar,
+*Stochastic Approximation: A Dynamical Systems Viewpoint* (Cambridge,
+2008); Amari, *Methods of Information Geometry* (AMS, 2000); Anthropic
+Circuit Tracing (transformer-circuits.pub/2025/attribution-graphs/methods.html).

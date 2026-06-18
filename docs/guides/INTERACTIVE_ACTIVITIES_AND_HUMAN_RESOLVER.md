@@ -40,9 +40,11 @@ The output impulse is a `memo` with metadata `shape: "clarification"` — so dow
 
 `HumanResolver.enabled` is a boolean set at construction. The default reads `process.stdin.isTTY`, so:
 
-- **REPL** (`minibob` with no args) — TTY, resolver is enabled, questions prompt interactively.
+- **REPL** (`minibob` with no args) — TTY, resolver is enabled, questions prompt interactively. *(deprecated — agents dispatch via the metabob-mcp `mcp__metabob__run_goal` tool; the minibob CLI is being retired.)*
 - **`minibob --single "..."`** when invoked from a terminal — TTY, resolver is enabled.
 - **`minibob --daemon`** or CI invocations — no TTY, resolver is disabled. Activities that include `resolver: "human"` tasks still run, but `askUser` falls back to the configured `default` or the first option in `options` so execution stays scriptable.
+
+The TTY examples above are minibob-specific, but the human-resolver mechanism is **surface-agnostic**: any interaction surface that yields a human-attributed impulse — metabob-mcp, obsidian-vessel, the deprecated minibob CLI, future vessels — resolves through the same `human` resolver into the same `clarification` shape. TTY-vs-non-TTY is just one surface's enablement signal.
 
 The practical rule: a well-authored interactive activity always provides a `default` so it can degrade gracefully in non-TTY contexts. Don't assume a human is there.
 
@@ -101,6 +103,7 @@ All three templates tag themselves with `human.resolver` and `interactive` (per 
 Embedded activity templates used to only be reachable via the recommender picking them up for some goal. The `-t <template-id>` flag (commit `d935064`, v0.8.0) makes them first-class CLI entry points:
 
 ```bash
+# (deprecated — agents dispatch via the metabob-mcp `mcp__metabob__run_goal` tool; the minibob CLI is being retired)
 minibob -t build-and-execute --var goal="activity that audits route handlers for hardcoded URLs"
 minibob -t human-guided-orchestrator --var goal="refactor auth middleware"
 ```

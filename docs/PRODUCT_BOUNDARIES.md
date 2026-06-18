@@ -430,9 +430,11 @@ Exit code is `max(rubric_exit, audit_run_exit, rubric_spec_07_exit)`.
 | `E2E_STANDALONE_MODE` | (set to `true` by dev-loop) | Tells `e2e/global-setup.ts` to skip the activity-api wait and seed. Always set by the script. |
 | `BASE_URL` | `http://localhost:3000` | Dashboard URL the loop probes and Playwright targets. |
 
-### MiniBob phrasing
+### Goal phrasing
 
 ```bash
+# deprecated — agents dispatch via the metabob-mcp `mcp__metabob__run_goal`
+# tool; the minibob CLI is being retired
 minibob --single "run the team-lead rubric against the local dashboard"
 ```
 

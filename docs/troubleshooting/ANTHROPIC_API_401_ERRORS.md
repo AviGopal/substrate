@@ -2,6 +2,11 @@
 
 **Problem:** Getting 401 Unauthorized errors when using MiniBob or MiniBob-TUI
 
+> **Note (deprecation):** the minibob CLI is being retired in favor of the
+> metabob-mcp `mcp__metabob__run_goal` tool (the agent-IDE dispatch surface).
+> The `minibob --single` / `minibob /config` commands below still work and are
+> retained for diagnosing the CLI itself.
+
 ---
 
 ## Quick Diagnosis

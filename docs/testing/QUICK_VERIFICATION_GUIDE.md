@@ -146,7 +146,8 @@ TEMPLATE_ID="your-template-id"
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
   "$ACTIVITY_API_URL/v2/activities/templates/$TEMPLATE_ID" | jq '.thompson'
 
-# 2. Execute it via minibob
+# 2. Execute it (deprecated — agents dispatch via the metabob-mcp
+#    `mcp__metabob__run_goal` tool; the minibob CLI is being retired)
 minibob --single "run $TEMPLATE_ID"
 
 # 3. Verify α increased (success) or β increased (failure)

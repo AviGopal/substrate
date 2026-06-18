@@ -2,21 +2,24 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Development Philosophy: MiniBob First, Substrate-Aware
+## Development Philosophy: Substrate First (dispatch via metabob-mcp)
 
-> **CRITICAL**: Use MiniBob for development tasks. Validate changes against the active substrate endpoint configured in `~/.metabob/config.json`.
+> **CRITICAL**: Dispatch development tasks through the substrate. Validate changes against the active substrate endpoint configured in `~/.metabob/config.json`.
 
-> **Hook-enforced (2026-06-16).** Direct `Write`/`Edit`/`MultiEdit` on vessel source under `repos/<vessel>/src/**` is gated by the `substrate-vessel-edit-gate` PreToolUse hook. The default path for code changes is to **dispatch through the substrate** — `minibob --single "<goal>"` (delegates to `goal-host-vessel` on `:8210`) — so the work produces a trace and feeds the learning loop, rather than an untraced manual edit. The gate **fails open** when the substrate is unreachable (you can't route through a dead substrate). Conscious one-off direct edits set `SUBSTRATE_ALLOW_DIRECT_EDIT=1` in the environment to bypass. Edits to `docs/`, `scripts/`, `openspec/`, `.claude/`, tests, and config are never gated — only vessel runtime source.
+> **Dispatch surface (2026-06).** The agent-facing way to dispatch a goal is the **metabob-mcp** tool **`mcp__metabob__run_goal`**. metabob-mcp is the **agent-IDE interaction surface** — how Claude Code (and other MCP clients) drive the running system; it is the IDE analogue of obsidian-vessel and is **not** an internal substrate component. **`minibob` is deprecated** and being retired: it was the CLI entry point and still works (forwarding to `goal-host-vessel`), but prefer `mcp__metabob__run_goal`. The substrate's execution path is unchanged — goal-host-vessel (`:8210`) does the work either way; only the entry point moved off the CLI.
 
-### Why MiniBob First
+> **Hook-enforced (2026-06-16).** Direct `Write`/`Edit`/`MultiEdit` on vessel source under `repos/<vessel>/src/**` is gated by the `substrate-vessel-edit-gate` PreToolUse hook. The default path for code changes is to **dispatch through the substrate** — `mcp__metabob__run_goal` with `"<goal>"` (reaches `goal-host-vessel` on `:8210`) — so the work produces a trace and feeds the learning loop, rather than an untraced manual edit. The gate **fails open** when the substrate is unreachable (you can't route through a dead substrate). Conscious one-off direct edits set `SUBSTRATE_ALLOW_DIRECT_EDIT=1` in the environment to bypass. Edits to `docs/`, `scripts/`, `openspec/`, `.claude/`, tests, and config are never gated — only vessel runtime source.
 
-MiniBob is not just a tool we're building - it's how we build. Every development task should go through MiniBob when possible:
+### Why Substrate First
 
-```bash
-# Use MiniBob for development goals
-minibob --single "fix the failing tests in metabob-activity-api"
-minibob --single "add input validation to the impulse endpoint"
-minibob --single "refactor the Thompson Sampling implementation"
+Dispatching through the substrate is not just using a tool — it's how we build. Every development task should route through the substrate when possible, so it leaves a trace:
+
+```
+# Dispatch development goals via the metabob-mcp tool mcp__metabob__run_goal, e.g.:
+mcp__metabob__run_goal  goal="fix the failing tests in metabob-activity-api"
+mcp__metabob__run_goal  goal="add input validation to the impulse endpoint"
+mcp__metabob__run_goal  goal="refactor the Thompson Sampling implementation"
+# (deprecated CLI equivalent, still functional: minibob --single "<goal>")
 ```
 
 **Benefits:**
@@ -27,7 +30,7 @@ minibob --single "refactor the Thompson Sampling implementation"
 
 ### Substrate-Aware Development
 
-The system is designed to operate identically on any substrate. A **substrate** is one full deployment of the vessel fleet (discovery-vessel + activity-api + identity-vessel + minibob + supporting infrastructure). Substrate examples: local Kubernetes cluster, canary cloud deployment, production cloud deployment. Each substrate:
+The system is designed to operate identically on any substrate. A **substrate** is one full deployment of the vessel fleet (discovery-vessel + activity-api + identity-vessel + goal-host-vessel + supporting infrastructure). Substrate examples: local Kubernetes cluster, canary cloud deployment, production cloud deployment. Each substrate:
 
 - Has its own discovery-vessel as a fixed point (all vessel-to-vessel routing is dynamic via it)
 - Builds its own Thompson learning state from its own execution traces (by design — "resolvers live where data lives")
@@ -71,7 +74,7 @@ Replace `endpoint` with your substrate's activity-api URL. All validation harnes
 1. Edit vessel source in repos/<vessel>/
 2. make -C scripts/substrate substrate-restart-<vessel>   ← hot-reloads vessel in container
 3. bun run validation/scripts/failure-mode-harness.ts    ← validates against localhost:18080
-   minibob --single "<goal>"                             ← verify trace lands
+   mcp__metabob__run_goal  goal="<goal>"                 ← verify trace lands (deprecated: minibob --single)
 4. Commit + push to dev → CI/CD deploys to canary for integration validation
 5. Promote canary → production via /deploy skill
 ```
@@ -764,15 +767,16 @@ execution {
 curl -s http://localhost:18080/health   # activity-api (trace store + learner)
 curl -s http://localhost:18210/health   # goal-host-vessel (goal dispatch)
 
-# 1. Dispatch development goals through the substrate. minibob is the entry
-#    point; it POSTs to goal-host-vessel and the work is traced.
-minibob --single "fix the failing tests in metabob-activity-api"
-minibob --single "add input validation to the impulse endpoint"
+# 1. Dispatch development goals through the substrate via the metabob-mcp tool
+#    mcp__metabob__run_goal; it reaches goal-host-vessel and the work is traced.
+#    (minibob --single is the deprecated CLI equivalent, still functional.)
+mcp__metabob__run_goal  goal="fix the failing tests in metabob-activity-api"
+mcp__metabob__run_goal  goal="add input validation to the impulse endpoint"
 
 # 2. Hot-reload the edited vessel inside the container and re-validate.
 make -C scripts/substrate substrate-restart-<vessel>
 bun run validation/scripts/failure-mode-harness.ts   # validates against :18080
-minibob --single "verify the change works"            # confirms a trace lands
+mcp__metabob__run_goal  goal="verify the change works"   # confirms a trace lands
 
 # 3. Conscious one-off direct edits (rare) bypass the edit-gate explicitly:
 SUBSTRATE_ALLOW_DIRECT_EDIT=1   # set in env for a deliberate manual edit
@@ -1069,7 +1073,7 @@ substrate-first validation path is the failure-mode harness plus a confirming di
 ```bash
 # Validate vessel behavior against the local substrate
 bun run validation/scripts/failure-mode-harness.ts        # targets localhost:18080
-minibob --single "verify <the change> works"              # confirms a trace lands
+mcp__metabob__run_goal  goal="verify <the change> works"  # confirms a trace lands (deprecated: minibob --single)
 
 # Direct learning-system integration (point MCP_ENDPOINT at the local substrate)
 MCP_ENDPOINT=http://localhost:18080 bun run test-learning-system-integration.ts
