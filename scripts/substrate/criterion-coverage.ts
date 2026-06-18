@@ -38,6 +38,17 @@ async function unitActive(unit: string): Promise<boolean> {
   } catch { return false; }
 }
 
+/** Run a scalar-count SurrealQL against the in-container DB. Returns NaN on error. */
+async function sqlCount(whereClause: string): Promise<number> {
+  try {
+    const sql = `SELECT count() AS c FROM activity_execution_traces WHERE ${whereClause} GROUP ALL;`;
+    const script = `const env=await Bun.file("/etc/substrate/env").text();const PASS=(env.match(/SURREAL_PASS=(\\S+)/)||[])[1];const r=await(await fetch("http://127.0.0.1:8000/sql",{method:"POST",headers:{"Content-Type":"text/plain",Accept:"application/json","surreal-ns":"activity-system","surreal-db":"learning_loop",Authorization:"Basic "+btoa("root:"+PASS)},body:${JSON.stringify(sql)}})).json();console.log(r[0]?.result?.[0]?.c??0);`;
+    const p = Bun.spawn(["docker", "exec", "substrate-live", "bun", "-e", script], { stdout: "pipe", stderr: "pipe" });
+    const out = (await new Response(p.stdout).text()).trim();
+    return Number(out);
+  } catch { return NaN; }
+}
+
 type Verdict = "PASS" | "PARTIAL" | "GAP";
 interface Row { id: string; criterion: string; verdict: Verdict; metric: string; evidence: string; }
 
@@ -130,11 +141,18 @@ add("idiomatic_self_dev", "Self-develops via idiomatic components; dynamic graph
   "drafter→apply→patch→cutover funnel is idiomatic; feature-authoring is the honest S1→S2 residual");
 
 // 15. Continuity of executions + continuous state signature
+// state_signature is a TAG (`state_signature:<hash>`) on the trace, NOT a column —
+// computed by dev-vessel's compute_state_signature, threaded onto trace tags by
+// goal-host at dispatch, and used to key boredom's per-(signature, goal_idx)
+// Thompson cells. Measure the tag, not a column (the column never existed).
 const traceRate = num(m.dec_limiters?.rho_sample_traces_per_hour);
+const sigRecent = await sqlCount("created_at > time::now() - 60m AND string::contains(string::join(',', tags), 'state_signature:')");
+const totRecent = await sqlCount("created_at > time::now() - 60m");
+const sigCoverage = Number.isFinite(sigRecent) && Number.isFinite(totRecent) && totRecent > 0 ? sigRecent / totRecent : NaN;
 add("state_signature", "Traces continuity of executions; continuous state signature",
-  "GAP",
-  `${Number.isFinite(traceRate) ? traceRate : "n/a"} traces/hr; state_signature on 0/128k traces`,
-  "executions traced continuously, BUT state_signature (MDP state S) is designed in SUBSTRATE_AS_MDP yet unimplemented — model-reality gap");
+  Number.isFinite(sigCoverage) && sigCoverage >= 0.4 ? "PASS" : Number.isFinite(sigCoverage) && sigCoverage > 0 ? "PARTIAL" : "GAP",
+  `${Number.isFinite(traceRate) ? traceRate : "n/a"} traces/hr; state_signature tag on ${Number.isFinite(sigCoverage) ? pct(sigCoverage) : "n/a"} of last-60m traces (${Number.isFinite(sigRecent) ? sigRecent : "?"}/${Number.isFinite(totRecent) ? totRecent : "?"})`,
+  "goal-host tags each /run-goal trace state_signature:<hash> (live, current); untagged remainder are direct pool/shape dev-vessel execs that bypass goal-host; boredom keys Thompson cells on (signature, goal_idx)");
 
 // --- emit -------------------------------------------------------------------
 const counts = rows.reduce((a, r) => ((a[r.verdict] = (a[r.verdict] ?? 0) + 1), a), {} as Record<string, number>);
