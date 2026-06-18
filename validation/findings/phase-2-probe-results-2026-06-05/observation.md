@@ -53,3 +53,85 @@ The chain is HTTP-green and semantically broken end-to-end. 5/7 stages return 20
 The hook condition (3 consecutive clean windows with autonomous commits) is **unmeasurable** until the drafter→applier seam is fixed. The probe surfaced 6 distinct idiom violations that are individually actionable. The probe also surfaced a new regression: gap-closing template count went 8 → 0 during the probe run — likely related to one of the above but not isolated from this data.
 
 Recommended next moves: (a) fix the drafter goal-completion path so `selectedTemplateId` is real, not `"?"`; (b) add idempotency guard to gap_to_scenario_bridge; (c) audit the proposal JSON schema mismatch between drafter and apply_proposal_as_patch; (d) add required-field validation to vessel_mitosis_cutover before the protected-vessel check.
+
+---
+
+# Addendum — second-agent run (TypeScript harness, 10× per stage + 60-min observation)
+
+A parallel agent ran a second harness: `validation/scripts/probe-chain-stages.ts` (229 LOC, bun), 10 dispatches per stage with `goal-host /run-goal` + 120s polling + workspace inspection. Results corroborate the bash-harness findings above and add three new signals.
+
+## Pass-rate (10× per stage)
+
+| Stage | Wire Pass | Operational Pass | Notes |
+|---|---|---|---|
+| S1 Detection (orthogonality) | 5/10 | 5/10 | Alternating PASS/FAIL; each PASS produced exactly 2 gap files (gap_count variation = 0%) |
+| S2 Bridge | 9/10 | 9/10 | One 394s cold-start timeout; scenarios stable at 6 across all runs (this agent's runs saw idempotent behavior, contradicting the bash agent's V1) |
+| S3 Draft | 0/10 | 0/10 | Every dispatch → status=failed; trace `exec_c2src560` shows execution dies after task 1 (fs_read OK), 6 downstream tasks never run, no failure_mode recorded |
+| S4 Apply | 0/10 | 0/10 | Confirms parse_failed dominance — proposals in `/workspace/proposals/` predominantly carry analytic shape (`vessel_shape_coverage`/`trace_family_distribution`) not patch shape (`required_code_modifications[]`) |
+| S5 Evaluate | 10/10 | 10/10 | All verdicts INSUFFICIENT_DATA, deterministic per (vessel_name, mitosis_version_id) tuple |
+| S6 Cutover | 10/10 wire | **0/10 operational** | See V1 below |
+| S7 Host-sync | 10/10 | 10/10 | All 10 runs noop (no pending intents); poller behavior correct |
+
+**Aggregate: 44/70 wire (63%), 14/70 operational (20%).**
+
+## Three additional idiom violations
+
+### V1 (this run) — `success: true` returned alongside `shape: structuredError` (CRITICAL)
+
+Direct repro against dev-vessel:
+```
+POST /v2/impulses/resolve  (vessel_mitosis_cutover, valid pointer, missing evaluation_evidence)
+→ {"success": true, "shape": "structuredError",
+   "body": {"resolver":"vessel_mitosis_cutover","detail":"evaluation_evidence is required"}}
+```
+
+10/10 probe runs reported wire-PASS based on `body.success === true` AND `intent_emitted=false` simultaneously. The boolean lies. Any caller (substrate-side gate or external probe) that trusts `success` will record "cutover succeeded" while no cutover happened. This is the **silent-success-on-validation-failure** shape — uncaught by Phase 1's intent-queue observer because the cutover never touches the queue.
+
+**Fix**: every resolver returning `shape: structuredError` MUST return `success: false`. Likely a one-line guard at the dev-vessel resolver dispatcher.
+
+### V2 (this run) — Bus drops 945 publishes during 70-dispatch probe
+
+`goal-host-vessel` journald: `[BusForwardingEventSink] dropped 945 publishes (in-flight cap 32 reached; activity-api slow or unreachable)` during the probe window. Phase 1's observer family does not include a bus-drop observer — these drops are invisible to substrate self-correction. Any failure mode whose only signal is a dropped event will not surface.
+
+### V3 (this run) — Host-sync rejection distribution is dominated by `rejected_base_sha`
+
+Observation sample 1 baseline (42 historical results): pushed=12 (29%), rejected_base_sha=18 (43%), rejected_commit_failed=9 (21%), rejected_scope_creep=3 (7%). **Only 28% of cutover intents become commits.** Phase 1's host-sync observer reads the queue, not the rejection-class breakdown — substrate cannot see *why* 72% of authored work never lands.
+
+## 60-min observation window (this run)
+
+Fresh boredom-vessel restart, then 5 samples at 15-min intervals. **No operator dispatch during the window** (pure observation).
+
+| Metric | t=0 | t=15 | t=30 | t=45 | t=60 | Δ |
+|---|---|---|---|---|---|---|
+| proposals | 190 | 191 | 193 | 193 | 193 | **+3** |
+| scenarios | 6 | 6 | 6 | 6 | 6 | 0 |
+| mitosis_dirs | 196 | 196 | 196 | 196 | 196 | 0 |
+| intents | 39 | 39 | 39 | 39 | 39 | 0 |
+| results | 42 | 42 | 42 | 42 | 42 | 0 |
+| commits last hour | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Substrate authored 3 proposals in the first 30 min then stalled completely for 30 min. No new mitosis, no new intents, no new commits, no new host-sync attempts. Result distribution frozen.
+
+### Mission questions (answered)
+
+- **Natural-chain (non-manual-replay) commit?** No. 0 commits in window.
+- **Substrate-authored new resolver file?** No. 0 new mitosis dirs.
+- **Substrate-authored new principle?** No (no new concept emissions visible at observed layer).
+- **Did substrate detect the host↔container drift cluster?** Not visibly — no `host-container-drift` gap → scenario → proposal chain appeared. Phase 1's drift observer presumably fired (cadence-based) but the bridge from detector signal → boredom-pool dispatch for this observer family is unwired or stalled at S3.
+
+## Reconciliation between the two harnesses
+
+Both agents independently surfaced: (a) S3 draft fails operationally; (b) S4 apply has no eligible proposals; (c) S5 evaluate is reliable; (d) detection-stage producer pipeline is functioning but downstream commit pipeline is frozen. They disagree on S2 idempotency (bash: NOT idempotent, 50 files added across 5 runs; TS: idempotent, scenarios stable at 6 across 10 runs) — likely because the TS harness ran *after* the bash harness flooded the scenarios dir, and the bridge then short-circuited on duplicate detection. **S2's behavior is therefore dependent on prior state — neither "idempotent" nor "non-idempotent" is the right framing; the contract is unstable.** Add this as V8.
+
+## Final gate verdict
+
+The "10/10 across all stages" gate is not close. Phase 3 disturbance injection is premature. Priority order before Phase 3:
+
+1. **V1 cutover success-on-structuredError** — five-line fix, unblocks meaningful S6 measurement.
+2. **V2 drafter chain truncation regression** — S3 0/10 means substrate cannot author closing activities. Memory says fixed in d6ec0aa; reality says regression.
+3. **V3 (bash V3) proposal schema discriminator** — S4 needs to ignore legacy analytic artifacts cleanly.
+4. **V2/V3 (this run) instrumentation gaps** — add bus-drop observer + host-sync-rejection-class observer.
+5. **S8 (this run) S2 contract** — define whether bridge is idempotent or state-dependent; harden whichever direction.
+6. **V3 (bash) detection noise** — non-deterministic orthogonality-audit-tick.
+
+The substrate has eyes (Phase 1) and a brain (S3 authored 3 proposals from observed gaps). Its hands are paralyzed: drafter writes the wrong format, applier refuses to read it, cutover lies about doing work, host-sync rejects most attempts. The single highest-leverage fix is V1 (this run) — without honest boolean returns, no measurement of S6 is real, and no closure of the loop can be verified.

@@ -1,5 +1,5 @@
 {
-  "ts": "2026-06-06T00:39:00.271Z",
+  "ts": "2026-06-06T01:39:02.597Z",
   "samples": [
     {
       "idx": 0,
@@ -20,6 +20,94 @@
         "rejected_base_sha": 18
       },
       "commits_last_hour": 0
+    },
+    {
+      "idx": 1,
+      "ts": "2026-06-06T00:54:01.111Z",
+      "proposals": 191,
+      "scenarios": 6,
+      "gap_files": [
+        "audit-findings-batch.json",
+        "gaps.json"
+      ],
+      "mitosis_dirs": 196,
+      "intents": 39,
+      "results": 42,
+      "results_by_status": {
+        "rejected_commit_failed": 9,
+        "pushed": 12,
+        "rejected_scope_creep": 3,
+        "rejected_base_sha": 18
+      },
+      "commits_last_hour": 0
+    },
+    {
+      "idx": 2,
+      "ts": "2026-06-06T01:09:01.427Z",
+      "proposals": 193,
+      "scenarios": 6,
+      "gap_files": [
+        "audit-findings-batch.json",
+        "gaps.json"
+      ],
+      "mitosis_dirs": 196,
+      "intents": 39,
+      "results": 42,
+      "results_by_status": {
+        "rejected_commit_failed": 9,
+        "pushed": 12,
+        "rejected_scope_creep": 3,
+        "rejected_base_sha": 18
+      },
+      "commits_last_hour": 0
+    },
+    {
+      "idx": 3,
+      "ts": "2026-06-06T01:24:01.898Z",
+      "proposals": 193,
+      "scenarios": 6,
+      "gap_files": [
+        "audit-findings-batch.json",
+        "gaps.json"
+      ],
+      "mitosis_dirs": 196,
+      "intents": 39,
+      "results": 42,
+      "results_by_status": {
+        "rejected_commit_failed": 9,
+        "pushed": 12,
+        "rejected_scope_creep": 3,
+        "rejected_base_sha": 18
+      },
+      "commits_last_hour": 0
+    },
+    {
+      "idx": 4,
+      "ts": "2026-06-06T01:39:02.297Z",
+      "proposals": 193,
+      "scenarios": 6,
+      "gap_files": [
+        "audit-findings-batch.json",
+        "gaps.json"
+      ],
+      "mitosis_dirs": 196,
+      "intents": 39,
+      "results": 42,
+      "results_by_status": {
+        "rejected_commit_failed": 9,
+        "pushed": 12,
+        "rejected_scope_creep": 3,
+        "rejected_base_sha": 18
+      },
+      "commits_last_hour": 0
     }
-  ]
+  ],
+  "delta": {
+    "proposals": 3,
+    "scenarios": 0,
+    "mitosis_dirs": 0,
+    "intents": 0,
+    "results": 0,
+    "commits_last_hour_at_end": 0
+  }
 }
