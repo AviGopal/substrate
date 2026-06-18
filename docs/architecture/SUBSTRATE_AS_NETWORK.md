@@ -13,7 +13,8 @@
 > It rests on a survey of how established distributed systems solve these problems
 > (libp2p/IPFS, Tailscale/WireGuard, Bluesky/AT-proto, Kademlia, BitTorrent,
 > PBFT/HotStuff, CRDT/gossip, Ethereum rollups + PoS, zk-SNARK/STARK). External
-> claims are cited inline; the load-bearing ones are listed in §11.
+> claims are cited inline; the load-bearing ones are listed in the External
+> grounding footer.
 >
 > **Status discipline.** Almost everything here is *recommended* or *specced*, not
 > *built*. The doc marks each: **LIVE** (running today), **SPECCED** (a draft
@@ -358,7 +359,81 @@ returns the *same* execution, not a new one. A dropped link is a re-fetch, not a
 distributed-transaction rollback — the boundary only ever carried a request and a
 validatable, content-addressed result.
 
-## 10. Scorecard — decision vs. established vs. frontier
+## 10. Scaling ceilings and topology growth
+
+Everything above scales, but not on one clock. Three planes have independent
+growth laws, and conflating them is how a "fully distributed" claim quietly
+acquires a bottleneck. Separate them first:
+
+| Plane | Growth law | Ceiling |
+|---|---|---|
+| **Data / learning** (§5) | folds evidence into local posteriors; well-behaved, O(own structure), value sublinear in N | per-node trace-store / compute — **vertical, biting today** |
+| **Transport / routing** (§3) | O(log N) when structured; a relay-bound residual for the un-punchable NAT fraction | relay capacity for the symmetric-NAT periphery |
+| **Control / admission** (§6) | ratifying trusted membership does **not** scale with N — a fixed authority set ratifies any number | admission throughput + authority centralization |
+
+### The ceilings, ranked by how soon they bite
+
+1. **Per-node trace-store / compute (vertical, biting now).** Fold-and-forget (§5)
+   keeps each member's state O(own structure + retained evidence window),
+   *independent of fleet volume* — so the fleet never imposes a storage cost on a
+   node. The cheapest ceiling to hit is the one you reach by neglecting retention:
+   an unbounded local store. This is a single-node discipline, not a distributed
+   problem.
+2. **Admission throughput + authority centralization (the binding global ceiling).**
+   3f+1 BFT (§6) scales to ~hundreds of signers, no further. The escape is a
+   *fixed-size* authority set (Tailnet-Lock-weighted keys, H4) that ratifies any
+   number of members — so there is **no membership ceiling**. But two costs replace
+   it: (a) admission *throughput* caps how fast the trusted fleet can grow, and (b)
+   the authority set is the centralization SPOF and the single highest-value attack
+   target. This is the chief structural tension with "fully distributed," and it is
+   load-bearing by design (§7's operator brake), not an oversight.
+3. **Relay capacity for the un-punchable NAT fraction (§3).** The ~30% symmetric-NAT
+   residual never punches through and shares relay bandwidth. It scales by adding
+   relays; the periphery's aggregate throughput is relay-bound, not peer-bound.
+4. **Discovery reachability radius.** Depth-limited flooding reaches F^D nodes
+   (fan-out F, depth D); past that radius a peer is invisible. Converting discovery
+   to a Kademlia DHT would make reach O(log N) — at the eventual-consistency,
+   latency-variable cost §3 already declined for the contract-aware control plane.
+5. **Trusted-membership growth rate under open federation.** The trusted subgraph
+   grows only at the admission rate while the *observed* periphery branches far
+   faster; that gap is not a defect — it **is** the security buffer (§5, §6).
+   Byzantine tolerance caps the adversarial fraction at f < N/3.
+6. **Soft ceiling: intelligence does not scale with N.** Learning convergence is
+   sublinear in N — interest-overlap is bounded by Hodge sparsity — and beneath it
+   sits the non-constructibility floor (`SUBSTRATE_AS_MDP.md` §11). More nodes add
+   reach and resilience, not proportional intelligence.
+
+### Expected topology growth
+
+**Shape — core-periphery + scale-free + small-world.** Edges are capability-driven
+and sparse: resolvers-live-where-data-lives makes the graph a consumer→producer-
+per-shape map, and Hodge sparsity *is* that topology. Degree is scale-free —
+Thompson selection plus content-addressed reuse is preferential attachment, so the
+degree distribution goes power-law, with hubs being the canonical resolvers for
+common shapes. Hubs are load- and SPOF-critical, though content-addressing softens
+half of it: a *template* hub failing degrades gracefully (any holder can serve the
+bytes), while live-resolution of a hot shape through one hub is a real bottleneck.
+The result is tiered by trust × capability (§7's ladder): a ratified always-on core,
+a partial edge ring, a churning resolver-shim fringe on relays — a core-periphery
+structure with low diameter (O(log N) small-world via hubs + gossip).
+
+**Rate — logistic, on two clocks.** Mitosis (§7) is branching, so spread has
+exponential *potential*, but it is bounded by available targets, the Thompson
+placement policy's selectivity, the cost-aware value-of-info throttle, and admission
+throughput — the product is a logistic S-curve. The two clocks differ: the *trusted*
+core grows ~linearly at the admission rate, while the *observed* periphery branches
+fast — a slowly-thickening trusted backbone wrapped in a fast-fluctuating, mostly-
+untrusted edge cloud. The edge is dynamic and the core stable: edge nodes are
+partition-tolerant, diverge offline, and reconcile via Merkle anti-entropy on
+reconnect (§6).
+
+**Takeaway.** Learning and transport scale gracefully (sublinear / log); the topology
+self-organizes into a scale-free small-world with a stable ratified core and a
+churning untrusted edge; growth is logistic and gated by admission — and the binding
+ceilings are per-node retention (now) and admission-authority centralization (at
+federation scale), not raw N.
+
+## 11. Scorecard — decision vs. established vs. frontier
 
 **Canonical decisions / recommendations (this doc's authority):**
 
@@ -399,7 +474,7 @@ observation*; they do not complete the Informational state. A fully distributed,
 openly-federated fleet is still an incomplete model — just a larger, more resilient
 one.
 
-## 11. Recap
+## 12. Recap
 
 FLEET said *what* crosses the substrate boundary, sorted by durability. This doc says
 *how*: identity is a pubkey-derived, rotatable genesis id proven on the wire (§1);

@@ -85,6 +85,13 @@ console.log(fmt("  └ orphan parents", last.backward_model?.orphan_parent_rate,
   arrow("backward_model.orphan_parent_rate", "down"), "dangling parent links — should fall"));
 console.log(fmt("S3 push-away", last.push_away?.intervention_refused, delta("push_away.intervention_refused"),
   arrow("push_away.intervention_refused", "up"), "interventionRefused — substrate refusing nudges w/ evidence"));
+console.log(`  ${"·".repeat(64)}`);
+console.log(fmt("learn-speed conv", last.posterior_convergence?.converged_frac, delta("posterior_convergence.converged_frac"),
+  arrow("posterior_convergence.converged_frac", "up"), `converged-variant fraction (${last.posterior_convergence?.cold ?? "·"} cold) — rising = faster learning`));
+console.log(fmt("topology depth2", last.topology?.depth2, delta("topology.depth2"),
+  arrow("topology.depth2", "up"), `depth-2 compositions (${last.topology?.depth3plus ?? "·"} deeper) — deeper = richer topology`));
+console.log(fmt("topology visible", last.topology?.edge_visibility, delta("topology.edge_visibility"),
+  arrow("topology.edge_visibility", "up"), "edges ÷ nested-execs — fraction of run topology that's learnable"));
 
 // ── scarcest DEC limiter (R_conv ~ λ₁ · ρ_sample · κ⁻¹) ──────────────────────
 console.log(`  ${"─".repeat(64)}`);

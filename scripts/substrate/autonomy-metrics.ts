@@ -160,10 +160,44 @@ const dec_limiters = {
 // ── push-away (S3) ──
 const intervention_refused = await tryNum(() => count("SELECT count() FROM impulse WHERE shape = 'interventionRefused' GROUP ALL;"));
 
+// ── LEARNING-SPEED KPI: posterior convergence ──
+// Fraction of variant cells whose Beta posterior has accumulated enough evidence
+// to be informative. n = α+β (prior is Beta(1,1) → n=2). converged ≥22 (~20 samples),
+// learning 7-21, cold ≤6. Rising converged-fraction over windows = learning speeding up.
+// (DEC §9.4 per-cell observable: Var[Beta] shrinks as α+β grows.)
+let posterior_convergence: any = { converged: null, learning: null, cold: null, converged_frac: null };
+try {
+  const rows = await sql<{ bucket: string; n: number }>(
+    `SELECT (IF (thompson_alpha + thompson_beta) >= 22 THEN "converged" ELSE (IF (thompson_alpha + thompson_beta) >= 7 THEN "learning" ELSE "cold" END) END) AS bucket, count() AS n FROM variant_performance_metrics WHERE thompson_alpha != NONE GROUP BY bucket;`,
+  );
+  const by: Record<string, number> = {};
+  for (const r of rows) by[r.bucket] = r.n;
+  const conv = by.converged ?? 0, learn = by.learning ?? 0, cold = by.cold ?? 0;
+  const tot = conv + learn + cold;
+  posterior_convergence = { converged: conv, learning: learn, cold, converged_frac: tot ? Math.round((conv / tot) * 1000) / 1000 : null };
+} catch { /* leave null */ }
+
+// ── TOPOLOGY-BUILDOUT KPI: composition depth + edge visibility ──
+// nested = traces carrying a composition_chain; depth distribution shows whether
+// the substrate composes DEEPER over time. edge_visibility = recorded distinct
+// edges / nested executions — how much of the topology it actually RUNS is
+// captured in the learnable graph (currently ~0 due to the parent-trace write gap).
+let topology: any = { nested: null, depth1: null, depth2: null, depth3plus: null, edge_visibility: null };
+try {
+  const d = await sql<{ depth: number; n: number }>(
+    `SELECT array::len(composition_chain) AS depth, count() AS n FROM activity_execution_traces WHERE composition_chain != NONE GROUP BY depth;`,
+  );
+  let d1 = 0, d2 = 0, d3 = 0, nested = 0;
+  for (const r of d) { nested += r.n; if (r.depth <= 1) d1 += r.n; else if (r.depth === 2) d2 += r.n; else d3 += r.n; }
+  topology = { nested, depth1: d1, depth2: d2, depth3plus: d3,
+    edge_visibility: (nested && comp_edges != null) ? Math.round((comp_edges / nested) * 100000) / 100000 : null };
+} catch { /* leave null */ }
+
 const record = {
   at: new Date().toISOString(),
   lift, forward_model, backward_model, self_alteration, gaps, dec_limiters,
   push_away: { intervention_refused },
+  posterior_convergence, topology,
 };
 
 try { const { mkdirSync } = await import("node:fs"); mkdirSync(OUT.replace(/\/[^/]+$/, ""), { recursive: true }); } catch { /* */ }
