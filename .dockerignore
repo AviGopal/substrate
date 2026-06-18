@@ -15,7 +15,7 @@ repos/activity-dashboard
 repos/workbench
 # repos/concept-db is needed by substrate (Phase 1b)
 repos/conversation-vessel
-repos/obsidian-vessel
+# repos/obsidian-vessel is built in-substrate (substrate-obsidian stage) — do NOT ignore
 repos/react-renderer
 repos/terminal
 repos/metabob-mcp
