@@ -169,3 +169,11 @@ scripts/substrate/workspace/git/
 /vault/.obsidian/cache
 /vault/.obsidian/graph.json
 /vault/.obsidian/plugins/metabob-vessel/data.json.local
+scripts/substrate/surreal-data/
+
+# Runtime /workspace volume (bind-mounted into substrate-live at /workspace).
+# Everything the substrate writes at runtime lands here — dispatch payloads,
+# enacted scenarios, proposals, snapshots, caches. NOT needed to build the
+# system; ignore wholesale. Already-tracked seed fixtures (e.g. the fm-51
+# scenario) stay tracked — .gitignore does not untrack them.
+scripts/substrate/workspace/
