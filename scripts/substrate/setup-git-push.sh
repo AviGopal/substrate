@@ -22,6 +22,11 @@ set -uo pipefail
 [ -f /workspace/.substrate-secrets ] && . /workspace/.substrate-secrets 2>/dev/null || true
 export SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT:-}"
 
+# Never block on an interactive credential/terminal prompt. With no (or an
+# invalid) PAT, HTTPS git ops against private repos would otherwise hang waiting
+# for a username — fail them fast so the host-sync (SSH) path is the durable one.
+export GIT_TERMINAL_PROMPT=0
+
 AUTHOR_NAME="${SUBSTRATE_GIT_AUTHOR_NAME:-Substrate Autonomous}"
 AUTHOR_EMAIL="${SUBSTRATE_GIT_AUTHOR_EMAIL:-substrate-autonomous@metabob.com}"
 CLONE_DIR="${MITOSIS_PUSH_CLONE_DIR:-/workspace/git/vessels}"
@@ -32,16 +37,60 @@ CLONE_DIR="${MITOSIS_PUSH_CLONE_DIR:-/workspace/git/vessels}"
 # at /vessels/<name> is still pushable; its mirror-to-live just no-ops safely.
 VESSELS="${SUBSTRATE_PUSH_VESSELS:-activity-api analysis-vessel boredom-vessel concept-db cpg-inference-ts development-vessel discovery-vessel goal-host-vessel ias-executor-ts identity-vessel light-dispatch-vessel llm-resolver-vessel local-tools-vessel obsidian-vessel ribosome-vessel stateful-ui-vessel}"
 
-# 1. System git identity + credential helper (reads PAT from env at push time;
-#    the token is never written into any git config file).
+# 1. System git identity (always). The credential helper is configured ONLY if
+#    the PAT validates — see below.
 git config --system user.name  "$AUTHOR_NAME"
 git config --system user.email "$AUTHOR_EMAIL"
-git config --system credential.helper '!f() { echo username=x-access-token; echo "password=$SUBSTRATE_GIT_PAT"; }; f'
-echo "[setup-git-push] system git identity + credential helper configured"
+echo "[setup-git-push] system git identity configured"
 
-if [ -z "$SUBSTRATE_GIT_PAT" ]; then
-  echo "[setup-git-push] no SUBSTRATE_GIT_PAT — skipping clones; self-push disabled (drafts won't land)"
-  exit 0
+# PAT validation (2026-06-19). The in-container push is an HTTPS PAT path. When
+# the PAT is invalid/missing, EVERY `git push` fails with "Invalid username or
+# token. Password authentication is not supported." — and the cutover used to
+# spew that auth error on every self-alteration and report a misleading
+# local_only. The DURABLE push path is the host-sync poller (host SSH key), which
+# does not depend on this PAT at all. So:
+#   - No PAT, or PAT fails a live GitHub API probe  → DO NOT configure the broken
+#     HTTPS credential helper. Log ONE clear warning. The cutover's push will
+#     simply fail fast and fall through to the host-sync intent (durable path).
+#   - PAT validates → configure the helper as a fast path (push direct from the
+#     container; host-sync still covers any residual failure).
+# This keeps a bad/expired operator PAT from being load-bearing and from
+# generating per-push noise, while the substrate keeps landing commits via SSH.
+# Credential helper: configured whenever a PAT is present. The helper reads
+# $SUBSTRATE_GIT_PAT from the git process env at push time (the dev-vessel unit
+# has it via its EnvironmentFile), so the token is never written into any config.
+#
+# PAT validation is ADVISORY, not gating (2026-06-19). The fine-grained PAT in
+# use authenticates git ops most of the time but exhibits INTERMITTENT
+# "Invalid username or token" failures (GitHub fine-grained-PAT flakiness /
+# rate-limiting). A hard startup probe that DISABLED the helper on a single
+# transient blip would wrongly kill a working fast path. So: configure the
+# helper unconditionally when a PAT exists, probe a few times for observability,
+# and only WARN (never disable) if the probe can't confirm auth — the cutover's
+# host-sync fallback (host SSH key) durably catches any push that does fail.
+PAT_PROBE_REPO="${SUBSTRATE_PAT_PROBE_REPO:-development-vessel}"
+if [ -n "$SUBSTRATE_GIT_PAT" ]; then
+  git config --system credential.helper '!f() { echo username=x-access-token; echo "password=$SUBSTRATE_GIT_PAT"; }; f'
+  echo "[setup-git-push] in-container HTTPS credential helper configured (fast path; reads PAT from env at push time)"
+
+  # Advisory probe with retries (tolerate transient flakiness before warning).
+  PAT_OK=0
+  for attempt in 1 2 3; do
+    if git -c credential.helper="!f() { echo username=x-access-token; echo \"password=$SUBSTRATE_GIT_PAT\"; }; f" \
+         ls-remote --heads "https://github.com/AviGopal/${PAT_PROBE_REPO}.git" dev >/dev/null 2>&1; then
+      PAT_OK=1; break
+    fi
+    sleep 2
+  done
+  if [ "$PAT_OK" = "1" ]; then
+    echo "[setup-git-push] PAT auth confirmed against AviGopal/${PAT_PROBE_REPO}"
+  else
+    echo "[setup-git-push] NOTE: PAT auth probe did not confirm after 3 tries (AviGopal/${PAT_PROBE_REPO}). This is often transient (GitHub fine-grained-PAT rate-limiting); the helper stays configured. If in-container pushes keep failing, the cutover falls back to the HOST-SYNC poller (SSH) — and the push_health_observer will emit a substrateGap. OPERATOR: if sustained, refresh SUBSTRATE_GIT_PAT (Contents: Read+Write)."
+  fi
+else
+  # No PAT: ensure no stale helper remains so pushes fail fast (host-sync covers).
+  git config --system --unset-all credential.helper 2>/dev/null || true
+  echo "[setup-git-push] no SUBSTRATE_GIT_PAT — in-container HTTPS push disabled; self-authored commits land via the HOST-SYNC poller (SSH). Clones refreshed read-only if reachable."
 fi
 
 # 2. Idempotent writable clones on dev.

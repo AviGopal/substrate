@@ -197,12 +197,16 @@ EOF
     return 0
   fi
 
-  if (cd "$host_vessel_root" && git push origin dev) >/dev/null 2>&1; then
+  # Push via origin (SSH on the host). Capture stderr into the result detail so a
+  # coverage failure (missing/unreachable origin for some vessel) is diagnosable
+  # and so the push-health detector can classify the cause (2026-06-19).
+  local push_err
+  if push_err=$( (cd "$host_vessel_root" && git push origin dev) 2>&1 ); then
     log "ok $intent_id: committed $git_sha and pushed origin dev"
     write_result "$intent_id" "$git_sha" "pushed" "origin dev"
   else
-    log "warn $intent_id: commit $git_sha created but push failed"
-    write_result "$intent_id" "$git_sha" "local_only" "push failed"
+    log "warn $intent_id: commit $git_sha created but push failed: ${push_err//$'\n'/ }"
+    write_result "$intent_id" "$git_sha" "local_only" "push failed: ${push_err//$'\n'/ }"
   fi
 
   # Clear the singleton pending-mitosis once THIS mitosis has landed (2026-06-18).
