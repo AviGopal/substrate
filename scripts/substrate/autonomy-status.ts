@@ -132,8 +132,12 @@ console.log(`  ${"─".repeat(64)}`);
 console.log(`  LIFT GATE        ${liftVerdict}${liftWin}   templates ${last.lift?.template_count ?? "?"}   vessels_down ${last.lift?.vessels_down ?? "?"}`);
 if (flapping) {
   const fc = last.lift?.flap_context;
+  // Stability gates on TEMPLATE-authoring burst only (2026-06-19, see
+  // substrate-health-tick.ts). Edges are desirable convergence (governed by the
+  // spectral-gap governor), so they are shown separately as growth, NOT as the
+  // stability driver — matching the authoritative gate after commit 6f1546e.
   const ctx = fc
-    ? `evidence ${fc.above_floor_1h}/${fc.distinct_run_1h} run-activities ≥8 execs (conc ${fc.concentration_ratio}; gate wants ≥0.25) · authoring ${(fc.new_templates_1h ?? 0) + (fc.new_edges_1h ?? 0)}/hr (gate wants ≤10)`
+    ? `evidence ${fc.above_floor_1h}/${fc.distinct_run_1h} run-activities ≥8 execs (conc ${fc.concentration_ratio}; gate wants ≥0.25) · authoring ${fc.new_templates_1h ?? 0} templates/hr (gate wants ≤10) · +${fc.new_edges_1h ?? 0} edges/hr (healthy growth, not gated)`
     : "(flap_context not yet recorded)";
   console.log(`  ⚠ LIFT FLAPPING  gate unstable across window — driven by: ${ctx}`);
 }
