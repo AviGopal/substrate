@@ -130,7 +130,13 @@ const liftWin = liftFrac == null ? "" : `  ${liftPass}/${liftMeasured.length} ti
 console.log(`\n  substrate autonomy  ·  ${last.at.replace("T", " ").slice(0, 16)}  ·  window ${win.length} snaps${freshFlag}`);
 console.log(`  ${"─".repeat(64)}`);
 console.log(`  LIFT GATE        ${liftVerdict}${liftWin}   templates ${last.lift?.template_count ?? "?"}   vessels_down ${last.lift?.vessels_down ?? "?"}`);
-if (flapping) console.log(`  ⚠ LIFT FLAPPING  gate unstable across window — see per-dimension verdicts (enrich heartbeat to localize)`);
+if (flapping) {
+  const fc = last.lift?.flap_context;
+  const ctx = fc
+    ? `evidence ${fc.above_floor_1h}/${fc.distinct_run_1h} run-activities ≥8 execs (conc ${fc.concentration_ratio}; gate wants ≥0.25) · authoring ${(fc.new_templates_1h ?? 0) + (fc.new_edges_1h ?? 0)}/hr (gate wants ≤10)`
+    : "(flap_context not yet recorded)";
+  console.log(`  ⚠ LIFT FLAPPING  gate unstable across window — driven by: ${ctx}`);
+}
 if (dark.length) console.log(`  ⚠ BLIND PROBES   ${dark.join(", ")} reading null — restore before trusting green`);
 console.log(`  ${"─".repeat(64)}`);
 

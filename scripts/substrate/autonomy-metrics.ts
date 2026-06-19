@@ -75,6 +75,36 @@ try {
   };
 } catch { /* heartbeat absent */ }
 
+// Lift-gate flap CONTEXT: the heartbeat records only overall_passing, not which
+// dimension drove a flap. We record the raw trailing-1h inputs that the two
+// flapping dimensions key on, READ-ONLY, so the series can SHOW the dynamics
+// (2026-06-19). These are OBSERVATIONAL — not the authoritative verdict. We do
+// NOT recompute confidence_passing/stability_passing here: the resolver filters
+// to active (non-proposed) templates and uses its own windows, so a naive
+// recompute drifts pessimistic (it once read fail while the gate read pass).
+// overall_passing from the heartbeat stays the single source of truth.
+//   confidence dynamics: of templates run this hour, how many have ≥8 execs
+//                        (evidence concentration; thin spread keeps the gate low)
+//   stability dynamics:  new templates + edges created this hour (authoring burst)
+try {
+  const since = new Date(Date.now() - 3600_000).toISOString();
+  const runRows = await sql<{ c: number }>(
+    `SELECT activity_id, count() AS c FROM activity_execution_traces WHERE created_at >= type::datetime("${since}") GROUP BY activity_id;`);
+  const distinctRun = runRows.length;
+  const aboveFloor = runRows.filter((r) => (r.c ?? 0) >= 8).length;
+  const newTemplates = await tryNum(() => count(
+    `SELECT count() FROM activity WHERE created_at >= type::datetime("${since}") GROUP ALL;`));
+  const newEdges = await tryNum(() => count(
+    `SELECT count() FROM activity_composition_graph WHERE created_at >= type::datetime("${since}") GROUP ALL;`));
+  lift.flap_context = {
+    distinct_run_1h: distinctRun,                 // breadth of exploration this hour
+    above_floor_1h: aboveFloor,                   // of those, how many have ≥8 execs
+    concentration_ratio: distinctRun ? Math.round((aboveFloor / distinctRun) * 1000) / 1000 : null,
+    new_templates_1h: newTemplates,               // authoring burst (stability input)
+    new_edges_1h: newEdges,
+  };
+} catch { /* flap-context probe failed — leave undefined */ }
+
 // ── forward model ──
 const totalActivities = await tryNum(() => count("SELECT count() FROM activity GROUP ALL;"));
 const embedded = await tryNum(() => count("SELECT count() FROM activity WHERE name_embedding != NONE GROUP ALL;"));
