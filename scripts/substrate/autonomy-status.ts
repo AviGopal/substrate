@@ -38,6 +38,20 @@ async function readHost(path: string): Promise<string> {
   try { return (await Bun.file(path).exists()) ? await Bun.file(path).text() : ""; } catch { return ""; }
 }
 async function readSubstrate(): Promise<string> {
+  // The authoritative copy is the collector's /workspace/metrics file inside the
+  // container. There are TWO ways this viewer is invoked, and each reaches it
+  // differently:
+  //   (a) INSIDE the container (how `make autonomy-status` runs it, via
+  //       `docker exec substrate-live bun autonomy-status.ts`) — /workspace is a
+  //       LOCAL path here, but `docker` is NOT installed in the container, so the
+  //       old docker-exec-only read always failed and silently fell back to the
+  //       stale host-relative cache (operator-blinding; the view froze at the
+  //       last host write while the collector kept appending into the volume).
+  //   (b) ON the host — /workspace is a docker volume the host fs can't see, so
+  //       we must shell into the container via `docker exec`.
+  // Try the direct local read first (case a), then docker exec (case b).
+  const direct = await readHost(CONTAINER_PATH);
+  if (direct) return direct;
   try {
     const p = Bun.spawn(["docker", "exec", CONTAINER, "cat", CONTAINER_PATH], { stdout: "pipe", stderr: "ignore" });
     const out = await new Response(p.stdout).text();

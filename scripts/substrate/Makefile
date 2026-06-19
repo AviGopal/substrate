@@ -19,11 +19,19 @@
 
 IMAGE        := metabob/substrate
 TAG          := dev
+# State now lives in DOCKER-MANAGED NAMED VOLUMES, not host bind mounts, so the
+# substrate's filesystem is detached from this host (container-independent;
+# self-persistence increment). The two volumes carry all learning state:
+#   substrate-surreal   -> /var/lib/surrealdb  (traces, Thompson posteriors, concept graph)
+#   substrate-workspace -> /workspace          (memoryNote store, git clones, .substrate-secrets, snapshots)
+# The image declares VOLUME ["/workspace","/var/lib/surrealdb"]; we name them so
+# they survive `docker rm` and can be backed up / moved off-host independently.
+SURREAL_VOLUME   := substrate-surreal
+WORKSPACE_VOLUME := substrate-workspace
+# Legacy HOST paths — retained only as the migration source / offline backup
+# (host-detach migrated their contents into the named volumes above). No longer
+# mounted into the live container.
 WORKSPACE    := $(shell pwd)/workspace
-# SurrealDB data dir. The image writes to file:/var/lib/surrealdb/data.db but
-# only declares VOLUME ["/workspace"], so without this explicit bind mount the
-# learning state (traces, Thompson posteriors, concept graph) lives in the
-# container's writable layer and is LOST on every recreate. Always mount it.
 SURREAL_DATA := $(shell pwd)/surreal-data
 LIVE_NAME    := substrate-live
 
@@ -58,7 +66,7 @@ ANALYSIS_VESSEL_SRC := $(REPO_ROOT)/repos/analysis-vessel
 STATEFUL_UI_VESSEL_SRC := $(REPO_ROOT)/repos/stateful-ui-vessel
 OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
 
-.PHONY: validate-build build build-obsidian run run-detach run-live run-live-obsidian seed-live import-memory health health-live \
+.PHONY: autonomy-status validate-build build build-obsidian run run-detach run-live run-live-obsidian migrate-state-to-volumes seed-live import-memory health health-live \
         logs-all logs-activity-api logs-development-vessel \
         logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
         logs-goal-host-vessel logs-boredom-vessel logs-ribosome-vessel logs-concept-db \
@@ -145,7 +153,8 @@ run-live:
 	  echo "  Or add to:    ~/.metabob/config.json .providers.anthropic.apiKey"; \
 	  exit 1; \
 	fi
-	@mkdir -p $(WORKSPACE) $(SURREAL_DATA)
+	@docker volume create $(SURREAL_VOLUME) >/dev/null
+	@docker volume create $(WORKSPACE_VOLUME) >/dev/null
 	docker run -d \
 	    --name $(LIVE_NAME) \
 	    --privileged \
@@ -159,13 +168,14 @@ run-live:
 	    -p 18250:8250 \
 	    -p 18260:8260 \
 	    -p 18270:8270 \
-	    -v $(WORKSPACE):/workspace \
-	    -v $(SURREAL_DATA):/var/lib/surrealdb \
+	    -v $(WORKSPACE_VOLUME):/workspace \
+	    -v $(SURREAL_VOLUME):/var/lib/surrealdb \
 	    -v $(REPO_ROOT):$(REPO_ROOT):ro \
 	    --tmpfs /run \
 	    --tmpfs /run/lock \
 	    $(IMAGE):$(TAG)
 	@echo "[run-live] substrate-live started — activity-api on :18080, development-vessel on :18090, discovery-vessel on :18100, goal-host-vessel on :18210, analysis-vessel on :18250, concept-db on :18260, stateful-ui-vessel on :18270"
+	@echo "[run-live] State on named volumes $(SURREAL_VOLUME) + $(WORKSPACE_VOLUME) (host-detached); only the repo is bind-mounted (ro) for sync-* hot-reload"
 	@echo "[run-live] Internal secrets auto-generated and persisted to workspace/.substrate-secrets"
 	@echo "[run-live] Wait ~15s for services to start, then: make -C scripts/substrate seed-live"
 
@@ -180,7 +190,8 @@ run-live-obsidian:
 	  echo "  Or add to:    ~/.metabob/config.json .providers.anthropic.apiKey"; \
 	  exit 1; \
 	fi
-	@mkdir -p $(WORKSPACE) $(SURREAL_DATA)
+	@docker volume create $(SURREAL_VOLUME) >/dev/null
+	@docker volume create $(WORKSPACE_VOLUME) >/dev/null
 	docker run -d \
 	    --name $(LIVE_NAME) \
 	    --privileged \
@@ -195,8 +206,8 @@ run-live-obsidian:
 	    -p 18260:8260 \
 	    -p 18270:8270 \
 	    -p 16080:6080 \
-	    -v $(WORKSPACE):/workspace \
-	    -v $(SURREAL_DATA):/var/lib/surrealdb \
+	    -v $(WORKSPACE_VOLUME):/workspace \
+	    -v $(SURREAL_VOLUME):/var/lib/surrealdb \
 	    -v $(REPO_ROOT):$(REPO_ROOT):ro \
 	    --tmpfs /run \
 	    --tmpfs /run/lock \
@@ -205,6 +216,27 @@ run-live-obsidian:
 	@echo "[run-live-obsidian] substrate-live (obsidian flavour) started."
 	@echo "[run-live-obsidian] Fleet ports as run-live; Obsidian GUI at http://localhost:16080/vnc.html"
 	@echo "[run-live-obsidian] Wait ~20s, then: make -C scripts/substrate seed-live"
+
+# One-time migration: copy legacy HOST state dirs into the named volumes. Run
+# this ONCE when moving an existing host-bind substrate onto detached volumes.
+# Stop the container first so SurrealDB has flushed; the host dirs are left
+# intact as a backup. Idempotent re-run wipes + recopies the volumes.
+migrate-state-to-volumes:
+	@docker volume create $(SURREAL_VOLUME) >/dev/null
+	@docker volume create $(WORKSPACE_VOLUME) >/dev/null
+	@if docker ps --filter name=$(LIVE_NAME) --filter status=running -q | grep -q .; then \
+	  echo "[migrate] ERROR: stop $(LIVE_NAME) first (docker stop -t 30 $(LIVE_NAME)) so SurrealDB flushes"; exit 1; \
+	fi
+	docker run --rm --entrypoint bash \
+	    -v $(SURREAL_DATA):/src-surreal:ro \
+	    -v $(WORKSPACE):/src-workspace:ro \
+	    -v $(SURREAL_VOLUME):/dst-surreal \
+	    -v $(WORKSPACE_VOLUME):/dst-workspace \
+	    $(IMAGE):$(TAG) -c 'set -e; \
+	      find /dst-surreal -mindepth 1 -delete; find /dst-workspace -mindepth 1 -delete; \
+	      cp -a /src-surreal/. /dst-surreal/; cp -a /src-workspace/. /dst-workspace/; \
+	      echo "[migrate] surreal CURRENT=$$(cat /dst-surreal/data.db/CURRENT 2>/dev/null)"; \
+	      echo "[migrate] done — host dirs left intact as backup"'
 
 # Seed identity and API keys into a freshly started substrate-live container.
 seed-live:
@@ -225,6 +257,18 @@ health-live:
 status-live:
 	docker exec $(LIVE_NAME) systemctl status --no-pager \
 	    surrealdb valkey discovery-vessel identity-vessel activity-api development-vessel local-tools-vessel llm-resolver-vessel goal-host-vessel bootstrap-seeder boredom-vessel.timer m1-trainer.timer ribosome-vessel concept-db analysis-vessel
+
+# Autonomy KPI view. MUST run ON THE HOST. The collector writes the metrics JSONL
+# into the /workspace docker VOLUME (host filesystem can't see it directly), so
+# the viewer reaches it via `docker exec <container> cat /workspace/...`. That
+# docker-exec read only works where `docker` exists — i.e. the HOST. Running it
+# IN-CONTAINER (the prior approach) silently failed: `docker` isn't installed in
+# the container, the volume read errored, and the viewer fell back to the STALE
+# host bind-mount cache — falsely reporting STALE / 850m-old data while the
+# collector was healthy (root-caused 2026-06-19). The viewer is a pure renderer
+# (no DB/API creds needed); SUBSTRATE_CONTAINER points it at the live volume.
+autonomy-status:
+	@SUBSTRATE_CONTAINER=$(LIVE_NAME) bun $(dir $(lastword $(MAKEFILE_LIST)))autonomy-status.ts
 
 shell-live:
 	docker exec -it $(LIVE_NAME) bash
