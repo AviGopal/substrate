@@ -221,7 +221,12 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         light-dispatch-vessel.service \
         light-dispatch-healthcheck.timer \
         journald-stdout-forwarder.service \
-        m1-trainer.timer
+        m1-trainer.timer \
+        funnel-drain.timer \
+        composition-edge-reconcile.timer \
+        model-reality-audit.timer \
+        observe-orthogonal-refresh.timer \
+        spectral-gap.timer
 
 # SurrealDB writes the learning state (traces, Thompson posteriors, concept
 # graph) to file:/var/lib/surrealdb/data.db. Declaring it a volume — like
