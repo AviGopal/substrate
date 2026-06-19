@@ -18,16 +18,49 @@
 const N = Number(process.env.N ?? 24);
 const STALE_MIN = Number(process.env.STALE_MIN ?? 45); // collector runs every 20m; >45m = timer trouble
 
-// Resolve the metrics file: explicit override wins, then the in-container path,
-// then the host-side bind-mount location. Run on the HOST the container path
-// (/workspace/...) does not exist, so without the host fallback the view falsely
-// reported "no metrics recorded yet" — an operator-blinding defect (2026-06-18).
+// Resolve the metrics series. The AUTHORITATIVE copy is the one the collector
+// writes inside the substrate, at /workspace/metrics/autonomy-metrics.jsonl —
+// but /workspace is a docker VOLUME (substrate-workspace), not the repo
+// bind-mount, so the host cannot see it via the filesystem. Reading only the
+// host-side path silently showed a stale series (last snapshot frozen while the
+// collector kept writing into the volume) — an operator-blinding defect
+// (re-fixed 2026-06-19: prefer the live substrate copy, fall back to host cache).
+//
+// Strategy: gather every reachable source (explicit override, the substrate
+// volume via `docker exec`, the host bind-mount cache), then pick whichever has
+// the FRESHEST last snapshot. That way the view tracks the live substrate when
+// the container is up and degrades to the host cache when it is not.
 const HOST_FALLBACK = `${import.meta.dir}/workspace/metrics/autonomy-metrics.jsonl`;
-const CANDIDATES = [process.env.METRICS_OUT, "/workspace/metrics/autonomy-metrics.jsonl", HOST_FALLBACK].filter(Boolean) as string[];
-let FILE = CANDIDATES[0]!;
-for (const c of CANDIDATES) { if (await Bun.file(c).exists()) { FILE = c; break; } }
+const CONTAINER = process.env.SUBSTRATE_CONTAINER ?? "substrate-live";
+const CONTAINER_PATH = "/workspace/metrics/autonomy-metrics.jsonl";
 
-const text = await Bun.file(FILE).exists() ? await Bun.file(FILE).text() : "";
+async function readHost(path: string): Promise<string> {
+  try { return (await Bun.file(path).exists()) ? await Bun.file(path).text() : ""; } catch { return ""; }
+}
+async function readSubstrate(): Promise<string> {
+  try {
+    const p = Bun.spawn(["docker", "exec", CONTAINER, "cat", CONTAINER_PATH], { stdout: "pipe", stderr: "ignore" });
+    const out = await new Response(p.stdout).text();
+    return (await p.exited) === 0 ? out : "";
+  } catch { return ""; }
+}
+function lastAt(text: string): number {
+  const lines = text.split("\n").filter((l) => l.trim());
+  for (let i = lines.length - 1; i >= 0; i--) {
+    try { const t = Date.parse(JSON.parse(lines[i]!).at); if (!Number.isNaN(t)) return t; } catch { /* skip */ }
+  }
+  return -Infinity;
+}
+
+const sources: Array<{ label: string; text: string }> = [];
+if (process.env.METRICS_OUT) sources.push({ label: process.env.METRICS_OUT, text: await readHost(process.env.METRICS_OUT) });
+sources.push({ label: `${CONTAINER}:${CONTAINER_PATH}`, text: await readSubstrate() });
+sources.push({ label: HOST_FALLBACK, text: await readHost(HOST_FALLBACK) });
+
+let best = sources[0]!;
+for (const s of sources) { if (s.text && lastAt(s.text) > lastAt(best.text)) best = s; }
+const FILE = best.label;
+const text = best.text;
 const rows = text.split("\n").filter((l) => l.trim())
   .map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean) as any[];
 if (rows.length === 0) { console.log("no autonomy metrics recorded yet — is the autonomy-metrics.timer active?"); process.exit(0); }
@@ -39,13 +72,21 @@ const first = win[0];
 // ── freshness / instrument-health guard ───────────────────────────────────
 const ageMin = (Date.now() - Date.parse(last.at)) / 60000;
 const freshFlag = ageMin > STALE_MIN ? `  ⚠ STALE (${ageMin.toFixed(0)}m old; collector may be down)` : "";
-// a metric reading null at the latest snapshot = that probe is dark (a blind
-// instrument, not a healthy zero) — call it out so green ≠ "we can't see".
+// a metric reading null = that probe is dark (a blind instrument, not a healthy
+// zero). But several probes FLAP — e.g. the recommend selector occasionally
+// times out under trace load and records null, then scores fine again next
+// tick. Flagging BLIND off a single null point cried wolf every few snapshots
+// (2026-06-19). A probe is genuinely dark only if it is null PERSISTENTLY, so
+// require the last 3 snapshots (or the whole window if shorter) to all be null.
+const PERSIST = Math.min(3, win.length);
+const recent = win.slice(-PERSIST);
+const persistentlyNull = (path: string) =>
+  recent.every((r) => path.split(".").reduce((o, k) => (o == null ? o : o[k]), r) == null);
 const dark: string[] = [];
-if (last.gaps?.model_reality_open == null) dark.push("gaps");
-if (last.dec_limiters?.rho_sample_traces_per_hour == null) dark.push("ρ_sample");
-if (last.backward_model?.composition_edges == null) dark.push("λ₁/edges");
-if (last.forward_model?.selector_scored_fraction == null) dark.push("selector");
+if (persistentlyNull("gaps.model_reality_open")) dark.push("gaps");
+if (persistentlyNull("dec_limiters.rho_sample_traces_per_hour")) dark.push("ρ_sample");
+if (persistentlyNull("backward_model.composition_edges")) dark.push("λ₁/edges");
+if (persistentlyNull("forward_model.selector_scored_fraction")) dark.push("selector");
 
 // ── helpers ────────────────────────────────────────────────────────────────
 const g = (r: any, path: string) => path.split(".").reduce((o, k) => (o == null ? o : o[k]), r);
@@ -68,12 +109,28 @@ const arrow = (path: string, good: "up" | "down"): string => {
   return isGood ? "✓" : "✗";
 };
 
+// The lift gate FLAPS: it flips passing↔failing every 20-40 min, partly from
+// genuine confidence/stability swings and partly from partial-corpus ticks that
+// read overall_passing=null. A single-point headline over a flapping signal is a
+// coin flip (2026-06-19). Report it as a WINDOWED verdict — the pass fraction
+// over measured ticks — and call out flapping so green ≠ "stably lifted".
+const liftMeasured = win.filter((r) => typeof r.lift?.overall_passing === "boolean");
+const liftPass = liftMeasured.filter((r) => r.lift.overall_passing === true).length;
+const liftFrac = liftMeasured.length ? liftPass / liftMeasured.length : null;
 const lift = last.lift?.overall_passing;
-const liftStr = lift === true ? "PASSING" : lift === false ? "FAILING" : "unknown";
+const liftNow = lift === true ? "PASSING" : lift === false ? "FAILING" : "unknown";
+// flapping = both states appear in the window and neither dominates strongly
+const flapping = liftFrac != null && liftFrac > 0.15 && liftFrac < 0.85;
+const liftVerdict = liftFrac == null ? "UNMEASURED"
+  : liftFrac >= 0.85 ? "PASSING"
+  : liftFrac <= 0.15 ? "FAILING"
+  : "FLAPPING";
+const liftWin = liftFrac == null ? "" : `  ${liftPass}/${liftMeasured.length} ticks pass (now ${liftNow})`;
 
 console.log(`\n  substrate autonomy  ·  ${last.at.replace("T", " ").slice(0, 16)}  ·  window ${win.length} snaps${freshFlag}`);
 console.log(`  ${"─".repeat(64)}`);
-console.log(`  LIFT GATE        ${liftStr}   templates ${last.lift?.template_count ?? "?"}   vessels_down ${last.lift?.vessels_down ?? "?"}`);
+console.log(`  LIFT GATE        ${liftVerdict}${liftWin}   templates ${last.lift?.template_count ?? "?"}   vessels_down ${last.lift?.vessels_down ?? "?"}`);
+if (flapping) console.log(`  ⚠ LIFT FLAPPING  gate unstable across window — see per-dimension verdicts (enrich heartbeat to localize)`);
 if (dark.length) console.log(`  ⚠ BLIND PROBES   ${dark.join(", ")} reading null — restore before trusting green`);
 console.log(`  ${"─".repeat(64)}`);
 

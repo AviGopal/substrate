@@ -79,15 +79,20 @@ try {
 const totalActivities = await tryNum(() => count("SELECT count() FROM activity GROUP ALL;"));
 const embedded = await tryNum(() => count("SELECT count() FROM activity WHERE name_embedding != NONE GROUP ALL;"));
 let selector_scored_fraction: number | null = null;
-try {
-  const rec = await (await fetch(`${API}/v2/activities/recommend`, {
-    method: "POST", headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
-    body: JSON.stringify({ task_description: "audit activity templates and report quality", limit: 20 }), signal: AbortSignal.timeout(20_000),
-  })).json();
-  const recs = rec.recommendations ?? [];
-  const scored = recs.filter((x: any) => typeof (x.selection_metadata?.score) === "number").length;
-  selector_scored_fraction = recs.length ? Math.round((scored / recs.length) * 1000) / 1000 : null;
-} catch { /* recommend unreachable */ }
+// The recommend selector probe flaps under trace load (transient timeouts), and
+// a single null reads as a "blind instrument" downstream. Retry once before
+// giving up so a transient miss does not masquerade as a dark probe (2026-06-19).
+for (let attempt = 0; attempt < 2 && selector_scored_fraction == null; attempt++) {
+  try {
+    const rec = await (await fetch(`${API}/v2/activities/recommend`, {
+      method: "POST", headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
+      body: JSON.stringify({ task_description: "audit activity templates and report quality", limit: 20 }), signal: AbortSignal.timeout(20_000),
+    })).json();
+    const recs = rec.recommendations ?? [];
+    const scored = recs.filter((x: any) => typeof (x.selection_metadata?.score) === "number").length;
+    selector_scored_fraction = recs.length ? Math.round((scored / recs.length) * 1000) / 1000 : null;
+  } catch { /* recommend unreachable — retry once, then record null */ }
+}
 const forward_model = {
   total_activities: totalActivities,
   embedding_coverage: totalActivities && embedded != null ? Math.round((embedded / totalActivities) * 1000) / 1000 : null,
@@ -211,7 +216,20 @@ const dec_limiters = {
 };
 
 // ── push-away (S3) ──
-const intervention_refused = await tryNum(() => count("SELECT count() FROM impulse WHERE shape = 'interventionRefused' GROUP ALL;"));
+// Count refusals from the dev-vessel interventionRefused store (where
+// intervention_evaluate actually persists them), symmetric with how `gaps`
+// reads substrateGap above. The previous query counted activity-api's `impulse`
+// table, where interventionRefused rows are never written — so push_away read 0
+// even when the substrate had refused operator interventions with evidence.
+const intervention_refused = await (async () => {
+  try {
+    const r = await devResolve({ type: "interventionRefused", limit: 500 });
+    const list = r?.body?.refusals ?? [];
+    return Array.isArray(list) ? list.length : 0;
+  } catch {
+    return null;
+  }
+})();
 
 // ── LEARNING-SPEED KPI: posterior convergence ──
 // Fraction of variant cells whose Beta posterior has accumulated enough evidence
