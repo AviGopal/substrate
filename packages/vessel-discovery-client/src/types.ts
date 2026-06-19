@@ -1,5 +1,5 @@
 /**
- * Type definitions for @metabob/vessel-discovery-client
+ * Type definitions for @avigopal/vessel-discovery-client
  */
 
 /**

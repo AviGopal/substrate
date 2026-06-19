@@ -1,5 +1,5 @@
 /**
- * @metabob/vessel-discovery-client
+ * @avigopal/vessel-discovery-client
  *
  * Shared TypeScript package for standardized vessel registration and discovery
  */

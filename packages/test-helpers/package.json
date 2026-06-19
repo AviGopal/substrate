@@ -1,5 +1,5 @@
 {
-  "name": "@metabob/test-helpers",
+  "name": "@avigopal/test-helpers",
   "version": "0.1.0",
   "type": "module",
   "main": "src/index.ts",

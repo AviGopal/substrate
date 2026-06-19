@@ -1,0 +1,178 @@
+#!/usr/bin/env bun
+/**
+ * validate-build.ts — preflight gate for substrate-container build validity.
+ *
+ * Why this exists
+ * ---------------
+ * The substrate image (`Dockerfile.substrate`) builds each vessel with an
+ * independent `COPY repos/<vessel>/package.json` + `bun install`. Several vessels
+ * depend on sibling packages via relative `file:` paths
+ * (`file:../ias-executor-ts`, `file:../../packages/vessel-discovery-client`),
+ * and the Dockerfile rewrites those paths to absolute `/vessels/...` paths with
+ * per-stanza `sed`. The namespace migration (dropping `metabob` from package
+ * names / dirs, moving shared libs to `@avigopal/*`) can silently break this in
+ * ways a normal `bun install` on the host does NOT surface:
+ *
+ *   1. Renaming a dependency KEY without regenerating bun.lock → the four
+ *      `bun install --frozen-lockfile` stanzas ABORT the image build.
+ *   2. Renaming a package DIRECTORY → the path-based `file:` deps dangle and the
+ *      Dockerfile `sed` rewrites silently no-op (they match on the old literal).
+ *   3. Import specifier (`from '@scope/x'`) drifting from the dependency key.
+ *
+ * This script reproduces those container invariants on the host in <1s, so the
+ * breakage is caught before `make build` (or a vessel `systemctl restart`) hits
+ * it. It is a fast preflight; the fully-faithful check remains `make build`.
+ *
+ * Usage:  bun scripts/substrate/validate-build.ts [--json]
+ * Exit:   0 = all containerized vessels build-valid; 1 = at least one error.
+ */
+import { readFileSync, existsSync } from "node:fs";
+import { join, resolve, dirname } from "node:path";
+
+const REPO_ROOT = resolve(import.meta.dir, "../..");
+const DOCKERFILE = join(REPO_ROOT, "Dockerfile.substrate");
+const JSON_OUT = process.argv.includes("--json");
+
+type Finding = { vessel: string; level: "error" | "warn"; msg: string };
+const findings: Finding[] = [];
+const err = (vessel: string, msg: string) => findings.push({ vessel, level: "error", msg });
+const warn = (vessel: string, msg: string) => findings.push({ vessel, level: "warn", msg });
+
+const dockerfile = readFileSync(DOCKERFILE, "utf8");
+const dfLines = dockerfile.split("\n");
+
+// --- derive, from the Dockerfile, the set of containerized vessels + their build flags ---
+// A vessel is "containerized" iff the Dockerfile does `COPY repos/<v>/package.json ... ./<v>/`.
+const containerized = new Map<string, { frozen: boolean; seds: Array<[string, string]> }>();
+for (let i = 0; i < dfLines.length; i++) {
+  const m = dfLines[i].match(/^COPY repos\/([a-z0-9-]+)\/package\.json/);
+  if (!m) continue;
+  const vessel = m[1];
+  // Scan the stanza (until the next COPY repos/ line) for the install command + seds.
+  let frozen = false;
+  const seds: Array<[string, string]> = [];
+  for (let j = i + 1; j < dfLines.length && !/^COPY repos\//.test(dfLines[j]); j++) {
+    if (/bun install/.test(dfLines[j]) && /frozen-lockfile/.test(dfLines[j])) frozen = true;
+    const s = dfLines[j].match(/sed -i 's\|file:([^|]+)\|file:([^|]+)\|g'/);
+    if (s) seds.push([s[1], s[2]]);
+  }
+  containerized.set(vessel, { frozen, seds });
+}
+
+// --- per-vessel checks ---
+const importSpecRe = /(?:from|import|require\()\s*['"]((?:@[a-z0-9-]+\/)?[a-z0-9-]+(?:\/[^'"]*)?)['"]/g;
+
+for (const [vessel, { frozen, seds }] of containerized) {
+  const vDir = join(REPO_ROOT, "repos", vessel);
+  const pkgPath = join(vDir, "package.json");
+  if (!existsSync(pkgPath)) { err(vessel, `package.json missing at repos/${vessel}/`); continue; }
+  let pkg: any;
+  try { pkg = JSON.parse(readFileSync(pkgPath, "utf8")); }
+  catch (e) { err(vessel, `package.json is not valid JSON: ${String(e).split("\n")[0]}`); continue; }
+
+  const deps: Record<string, string> = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
+  const depKeys = new Set(Object.keys(deps));
+
+  // (1) Every file: dep must resolve to a real directory with a package.json — both
+  //     as the host sees it (relative to the vessel dir) AND as the container will
+  //     see it after the Dockerfile sed rewrite.
+  for (const [key, spec] of Object.entries(deps)) {
+    if (!spec.startsWith("file:")) continue;
+    const rel = spec.slice("file:".length);
+    const hostTarget = resolve(vDir, rel);
+    if (!existsSync(join(hostTarget, "package.json"))) {
+      err(vessel, `file: dep "${key}" → "${spec}" does not resolve to a package on the host (looked at ${hostTarget})`);
+    }
+    // Container view: apply the matching Dockerfile sed, if any.
+    const sed = seds.find(([from]) => from === rel);
+    if (rel.startsWith("../") && !sed) {
+      // Relative path leaks into the container. It is only valid if the same
+      // relative resolution lands inside /vessels. /vessels/<v>/../x → /vessels/x (ok);
+      // /vessels/<v>/../../packages/x → /packages/x (NOT ok — packages live at /vessels/packages).
+      const containerResolved = resolve(`/vessels/${vessel}`, rel);
+      if (!containerResolved.startsWith("/vessels/")) {
+        err(vessel, `file: dep "${key}" uses "${spec}" but has NO Dockerfile sed rewrite; in-container it resolves to "${containerResolved}" (outside /vessels). Add a sed for this stanza.`);
+      }
+    }
+    if (sed) {
+      const [, to] = sed;
+      // The sed target is an absolute container path we cannot stat on the host,
+      // but we can assert it points under /vessels and the host source exists.
+      if (!to.startsWith("/vessels/")) warn(vessel, `sed rewrites "${rel}" to "${to}" which is not under /vessels`);
+    }
+  }
+
+  // (1b) Every Dockerfile sed for this vessel must still MATCH a path present in
+  //      package.json. A directory rename leaves a dead sed that silently no-ops.
+  for (const [from] of seds) {
+    const present = Object.values(deps).some((v) => v === `file:${from}`);
+    if (!present) {
+      err(vessel, `Dockerfile sed rewrites "file:${from}" but no dependency uses that path anymore — dead rewrite (likely a renamed dir). The relative path will leak into the container.`);
+    }
+  }
+
+  // (2) Frozen-lockfile vessels: every dependency key must appear in bun.lock,
+  //     else `bun install --frozen-lockfile` aborts the image build.
+  if (frozen) {
+    const lockPath = join(vDir, "bun.lock");
+    if (!existsSync(lockPath)) {
+      err(vessel, `installed with --frozen-lockfile but bun.lock is missing`);
+    } else {
+      const lock = readFileSync(lockPath, "utf8");
+      for (const key of depKeys) {
+        if (!lock.includes(`"${key}"`)) {
+          err(vessel, `--frozen-lockfile: dependency "${key}" is not in bun.lock — rename/regenerate desynced; the image build WILL fail. Run \`bun install\` in repos/${vessel} and commit bun.lock.`);
+        }
+      }
+    }
+  }
+
+  // (3) Every scoped import specifier in src/ must map to a declared dependency key.
+  const srcDir = join(vDir, "src");
+  if (existsSync(srcDir)) {
+    const files = [...new Bun.Glob("**/*.ts").scanSync({ cwd: srcDir })];
+    const seen = new Set<string>();
+    for (const f of files) {
+      const txt = readFileSync(join(srcDir, f), "utf8");
+      for (const mm of txt.matchAll(importSpecRe)) {
+        const spec = mm[1];
+        if (!spec.startsWith("@")) continue; // only scoped sibling-pkg imports
+        const pkgName = spec.split("/").slice(0, 2).join("/");
+        if (seen.has(pkgName)) continue;
+        seen.add(pkgName);
+        // A package may import its own name (self-reference) — always valid.
+        if (pkgName === pkg.name) continue;
+        // Ignore well-known external scopes that are real npm deps.
+        if (depKeys.has(pkgName)) continue;
+        if (pkgName.startsWith("@types/")) continue;
+        // Only flag intra-repo scopes we own (@metabob / @avigopal) to avoid noise.
+        if (/^@(metabob|avigopal)\//.test(pkgName)) {
+          err(vessel, `imports "${pkgName}" but it is not a dependency key in package.json (import↔dep drift)`);
+        }
+      }
+    }
+  }
+}
+
+// --- migration progress report (informational) ---
+let metabobNames = 0;
+for (const [vessel] of containerized) {
+  const pkg = JSON.parse(readFileSync(join(REPO_ROOT, "repos", vessel, "package.json"), "utf8"));
+  if (/metabob/.test(pkg.name ?? "")) metabobNames++;
+}
+
+if (JSON_OUT) {
+  console.log(JSON.stringify({ findings, containerizedVessels: [...containerized.keys()], metabobNamesRemaining: metabobNames }, null, 2));
+} else {
+  const errors = findings.filter((f) => f.level === "error");
+  const warns = findings.filter((f) => f.level === "warn");
+  console.log(`validate-build: ${containerized.size} containerized vessels checked\n`);
+  for (const f of findings) {
+    console.log(`  ${f.level === "error" ? "✗" : "⚠"} [${f.vessel}] ${f.msg}`);
+  }
+  if (!findings.length) console.log("  ✓ all containerized vessels are build-valid (file: deps resolve, lockfiles synced, imports match deps)");
+  console.log(`\n  migration: ${metabobNames} containerized vessel(s) still have a 'metabob' package name`);
+  console.log(`\n${errors.length} error(s), ${warns.length} warning(s)`);
+}
+
+process.exit(findings.some((f) => f.level === "error") ? 1 : 0);

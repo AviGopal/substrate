@@ -53,7 +53,7 @@ ANALYSIS_VESSEL_SRC := $(REPO_ROOT)/repos/analysis-vessel
 STATEFUL_UI_VESSEL_SRC := $(REPO_ROOT)/repos/stateful-ui-vessel
 OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
 
-.PHONY: build build-obsidian run run-detach run-live run-live-obsidian seed-live import-memory health health-live \
+.PHONY: validate-build build build-obsidian run run-detach run-live run-live-obsidian seed-live import-memory health health-live \
         logs-all logs-activity-api logs-development-vessel \
         logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
         logs-goal-host-vessel logs-boredom-vessel logs-ribosome-vessel logs-concept-db \
@@ -73,7 +73,13 @@ OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
         sync-ias-executor-ts \
         ui-bridge-up ui-bridge-down ui-bridge-status
 
-build:
+# Fast preflight: assert every containerized vessel is build-valid (file: deps
+# resolve, frozen lockfiles are in sync, imports match dependency keys). Catches
+# the namespace-migration breakages that only surface inside the image build.
+validate-build:
+	bun $(CURDIR)/validate-build.ts
+
+build: validate-build
 	docker build -f $(CURDIR)/../../Dockerfile.substrate \
 	    -t $(IMAGE):$(TAG) \
 	    $(CURDIR)/../..

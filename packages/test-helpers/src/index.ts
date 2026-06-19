@@ -1,4 +1,4 @@
-// @metabob/test-helpers — shared test utilities for vessel test suites
+// @avigopal/test-helpers — shared test utilities for vessel test suites
 // 0 self-tests (package is consumed by react-renderer: 29 pass, terminal: 12 pass)
 export { waitForHealth } from "./health.ts"
 export { spawnVessel } from "./spawn.ts"

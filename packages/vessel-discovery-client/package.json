@@ -1,5 +1,5 @@
 {
-  "name": "@metabob/vessel-discovery-client",
+  "name": "@avigopal/vessel-discovery-client",
   "version": "1.1.0",
   "description": "Shared TypeScript package for standardized vessel registration and discovery",
   "type": "module",

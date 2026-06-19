@@ -11,7 +11,7 @@ import type { VesselClient } from "../vessel-client.js"
  * @example
  * ```typescript
  * import { Hono } from "hono"
- * import { createHonoHealthMiddleware } from "@metabob/vessel-discovery-client/middleware"
+ * import { createHonoHealthMiddleware } from "@avigopal/vessel-discovery-client/middleware"
  *
  * const app = new Hono()
  * app.get("/health", createHonoHealthMiddleware(client))

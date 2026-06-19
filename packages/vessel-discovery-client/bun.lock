@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@metabob/vessel-discovery-client",
+      "name": "@avigopal/vessel-discovery-client",
       "devDependencies": {
         "@types/bun": "latest",
         "@types/express": "^4.17.21",

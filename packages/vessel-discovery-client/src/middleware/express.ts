@@ -11,7 +11,7 @@ import type { VesselClient } from "../vessel-client.js"
  * @example
  * ```typescript
  * import express from "express"
- * import { createExpressHealthMiddleware } from "@metabob/vessel-discovery-client/middleware"
+ * import { createExpressHealthMiddleware } from "@avigopal/vessel-discovery-client/middleware"
  *
  * const app = express()
  * app.get("/health", createExpressHealthMiddleware(client))
