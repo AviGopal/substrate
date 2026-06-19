@@ -444,11 +444,38 @@ try {
   substrate_self.llm_task_fraction = ntasks ? Math.round((llm / ntasks) * 1000) / 1000 : null;
 } catch { /* */ }
 
+// Spectral-gap structural metrics (SUBSTRATE_AS_DEC governor inputs): the REAL
+// spectral gap (Fiedler λ₂), star_ratio, components. Computed on its own timer by
+// spectral-gap.ts into the SAME in-container /workspace/metrics dir. Folding the
+// latest entry into each snapshot (a) tracks these autonomy-determining quantities
+// in ONE trendable series and (b) keeps them FRESH — previously the viewer read a
+// stale host mirror of spectral-gap.jsonl, overstating λ₁ (0.94 vs live 0.54) and
+// misidentifying the scarcest DEC limiter. Read-only, best-effort. (2026-06-19)
+let spectral: any = null;
+try {
+  const sgPath = OUT.replace(/[^/]+$/, "spectral-gap.jsonl");
+  const lines = (await Bun.file(sgPath).text()).trim().split("\n").filter(Boolean);
+  if (lines.length) {
+    const last = JSON.parse(lines[lines.length - 1]);
+    spectral = {
+      at: last.at ?? null,
+      fiedler_lambda2: last.fiedler_lambda2 ?? null,
+      star_ratio: last.star_ratio ?? null,
+      components: last.components ?? null,
+      nodes: last.nodes ?? null,
+      edges: last.edges ?? null,
+      largest_component_frac: last.largest_component_frac ?? null,
+      cheeger_upper: last.cheeger_upper ?? null,
+    };
+  }
+} catch { /* spectral-gap.jsonl absent or unreadable — leave null */ }
+
 const record = {
   at: new Date().toISOString(),
   lift, forward_model, backward_model, self_alteration, gaps, dec_limiters,
   push_away: { intervention_refused },
   posterior_convergence, topology, posterior_uncertainty, vessel_population, capability, substrate_self,
+  spectral,
 };
 
 try { const { mkdirSync } = await import("node:fs"); mkdirSync(OUT.replace(/\/[^/]+$/, ""), { recursive: true }); } catch { /* */ }

@@ -198,11 +198,32 @@ const ksp = kspread(last);
 // Real spectral gap (Fiedler λ₂) from spectral-gap.jsonl — replaces the crude
 // edge-COUNT proxy for λ₁. λ₂ ∈ [0,2]; normalize by /2 for the 0..1 health score.
 // star_ratio (max_degree/(n-1)) flags hub-and-spoke degeneracy the count hides.
+// Prefer the spectral snapshot FOLDED INTO the series by the collector (in-container,
+// fresh). The host spectral-gap.jsonl is a stale mirror (it was ~11.5h behind on
+// 2026-06-19, reading λ₂=0.94 while live was 0.54 — which mis-ranked the scarcest
+// DEC limiter). Fall back to the host file only for snapshots predating the ingest.
 let sg: { fiedler_lambda2?: number; star_ratio?: number; components?: number; nodes?: number } = {};
-try {
-  const lines = (await Bun.file(`${import.meta.dir}/workspace/metrics/spectral-gap.jsonl`).text()).trim().split("\n");
-  sg = JSON.parse(lines[lines.length - 1]!);
-} catch { /* fall back to edge-count proxy */ }
+const parseLastJsonl = (text: string): any => {
+  const lines = text.split("\n").filter((l) => l.trim());
+  try { return lines.length ? JSON.parse(lines[lines.length - 1]!) : {}; } catch { return {}; }
+};
+if (last.spectral?.fiedler_lambda2 != null) {
+  sg = last.spectral;                                   // folded into the series by the collector (freshest)
+} else {
+  // The collector ingest may not have landed yet (host→container bind can lag), so
+  // read the LIVE container spectral-gap.jsonl directly via docker exec before
+  // falling back to the host mirror (which can be hours stale).
+  let containerText = "";
+  try {
+    const p = Bun.spawn(["docker", "exec", CONTAINER, "cat", "/workspace/metrics/spectral-gap.jsonl"], { stdout: "pipe", stderr: "ignore" });
+    containerText = await new Response(p.stdout).text();
+    if ((await p.exited) !== 0) containerText = "";
+  } catch { /* docker unavailable */ }
+  sg = parseLastJsonl(containerText);
+  if (sg.fiedler_lambda2 == null) {
+    sg = parseLastJsonl(await readHost(`${import.meta.dir}/workspace/metrics/spectral-gap.jsonl`));
+  }
+}
 const lam2 = sg.fiedler_lambda2;
 // normalize each term to a 0..1 health score (thresholds are heuristic, documented):
 //   ρ_sample healthy by ~800 traces/hr · κ non-degeneracy is already 0..1 ·
