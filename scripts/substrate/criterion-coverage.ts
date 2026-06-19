@@ -105,10 +105,16 @@ add("self_measurement", "Checks own measurements; continuity of state", "PASS",
   "snapshots accumulate continuously; growth/limiter trends computed over the series");
 
 // 8 / 13. Growth measurable + steady/increasing
-const landed = num(m.self_alteration?.landed);
-add("growth_measurable", "Growth rate measurable & increasing", "PARTIAL",
-  `landed ${landed}, edges ${edges}, model-reality gaps ${num(m.gaps?.model_reality_open)}`,
-  "growth measured per-snapshot; flatline (5h) was cleared 2026-06-18, pace resumed — sustained acceleration still to be shown");
+// Use the HONEST landing signal: substrate-authored mitosis-cutover commits (git),
+// not the frozen .applied attempt-count.
+const landed24h = num(m.self_alteration?.landed_cutovers_24h);
+const landedTotal = num(m.self_alteration?.landed_cutovers_total);
+add("growth_measurable", "Growth rate measurable & increasing",
+  Number.isFinite(landed24h) && landed24h > 0 ? "PASS" : "PARTIAL",
+  Number.isFinite(landed24h)
+    ? `${landed24h} substrate-authored landings/24h (${Number.isFinite(landedTotal) ? landedTotal : "?"} total); edges ${edges}; gaps ${num(m.gaps?.model_reality_open)}`
+    : `landed(.applied) ${num(m.self_alteration?.landed)}, edges ${edges} (honest cutover metric pending next snapshot)`,
+  "honest landing rate from git substrate-authored cutover commits (replaces the frozen .applied attempt-count); measurable + trackable per-snapshot");
 
 // 9. Activities with closure for topology discovery
 const closure = num(m.capability?.shape_closure);

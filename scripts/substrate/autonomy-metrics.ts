@@ -144,6 +144,37 @@ try {
   const { readdirSync } = await import("node:fs");
   self_alteration.open_proposals = readdirSync("/workspace/proposals").filter((f) => f.endsWith(".json")).length;
 } catch { /* */ }
+// HONEST landing signal (2026-06-18): the `.applied/` count above conflates
+// apply-ATTEMPTS (written on every outcome, success or failure) with real landings
+// and freezes when apply finds "no eligible proposals". The ground truth for a
+// self-development LANDING is a substrate-authored mitosis-cutover commit pushed to
+// dev. Count those across the self-editable vessel repos (git, host-side) — total +
+// 24h rate so "is the rate increasing?" is answerable. mitosis-applied.jsonl
+// undercounts (host-sync cutovers bypass that resolver's appendFile).
+try {
+  const repoRoot = `${import.meta.dir}/../../repos`;
+  const VESSELS = [
+    "development-vessel", "goal-host-vessel", "llm-resolver-vessel", "ribosome-vessel",
+    "local-tools-vessel", "light-dispatch-vessel", "discovery-vessel", "boredom-vessel",
+    "ias-executor-ts", "concept-db", "metabob-activity-api", "analysis-vessel",
+    "stateful-ui-vessel", "obsidian-vessel", "identity-vessel",
+  ];
+  const gitCount = async (repo: string, sinceArgs: string[]): Promise<number> => {
+    try {
+      const p = Bun.spawn(["git", "-C", `${repoRoot}/${repo}`, "log", "--all", "--grep=substrate-authored: apply", "--oneline", ...sinceArgs], { stdout: "pipe", stderr: "pipe" });
+      const out = (await new Response(p.stdout).text()).trim();
+      await p.exited;
+      return out ? out.split("\n").length : 0;
+    } catch { return 0; }
+  };
+  let total = 0, last24h = 0;
+  for (const v of VESSELS) {
+    total += await gitCount(v, []);
+    last24h += await gitCount(v, ["--since=24.hours.ago"]);
+  }
+  self_alteration.landed_cutovers_total = total;
+  self_alteration.landed_cutovers_24h = last24h;
+} catch { /* git unavailable */ }
 
 // ── gaps by category (does the loop close model-reality gaps autonomously?) ──
 let gaps: any = { total: null, by_category: {}, model_reality_open: null };
