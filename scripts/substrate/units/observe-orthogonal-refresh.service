@@ -1,0 +1,29 @@
+[Unit]
+Description=Orthogonal-observation refresh — run observe-orthogonal-patterns on a cadence
+# observe-orthogonal-patterns synthesizes MODIFY / CREATE_DETECTOR / CREATE_CONSUMER
+# decisions from the substrate's own resolver/failure pattern reports. enact-orthogonal-
+# decisions (in the boredom rotation) reads /workspace/observations/orthogonal-latest.json
+# and authors CONSUMERS for orphan output shapes — the mechanism that deepens the
+# composition topology past depth-2. observe is NOT in the boredom rotation, so its
+# observations went stale 2026-06-02; this oneshot keeps them fresh. Empty/degraded
+# runs never clobber the prior observations (latest is only repointed on a non-empty
+# decision array).
+After=development-vessel.service activity-api.service llm-resolver-vessel.service
+Requires=development-vessel.service
+
+# Smoke test:
+#   docker exec substrate-live systemctl start observe-orthogonal-refresh.service
+#   docker exec substrate-live journalctl -u observe-orthogonal-refresh.service --no-pager -n 3
+#   # last line is JSON: {decision_count, latest_updated, kinds, ...}
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/substrate/env
+Environment=WORKSPACE_ROOT=/workspace
+ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/observe-orthogonal-refresh.ts
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=240
+
+[Install]
+WantedBy=multi-user.target
