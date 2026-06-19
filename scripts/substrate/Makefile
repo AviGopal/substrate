@@ -20,6 +20,11 @@
 IMAGE        := metabob/substrate
 TAG          := dev
 WORKSPACE    := $(shell pwd)/workspace
+# SurrealDB data dir. The image writes to file:/var/lib/surrealdb/data.db but
+# only declares VOLUME ["/workspace"], so without this explicit bind mount the
+# learning state (traces, Thompson posteriors, concept graph) lives in the
+# container's writable layer and is LOST on every recreate. Always mount it.
+SURREAL_DATA := $(shell pwd)/surreal-data
 LIVE_NAME    := substrate-live
 
 # Vessels with @avigopal/ias-executor-ts as a `file:` dep. Bun copies dist
@@ -140,7 +145,7 @@ run-live:
 	  echo "  Or add to:    ~/.metabob/config.json .providers.anthropic.apiKey"; \
 	  exit 1; \
 	fi
-	@mkdir -p $(WORKSPACE)
+	@mkdir -p $(WORKSPACE) $(SURREAL_DATA)
 	docker run -d \
 	    --name $(LIVE_NAME) \
 	    --privileged \
@@ -155,6 +160,7 @@ run-live:
 	    -p 18260:8260 \
 	    -p 18270:8270 \
 	    -v $(WORKSPACE):/workspace \
+	    -v $(SURREAL_DATA):/var/lib/surrealdb \
 	    -v $(REPO_ROOT):$(REPO_ROOT):ro \
 	    --tmpfs /run \
 	    --tmpfs /run/lock \
@@ -174,7 +180,7 @@ run-live-obsidian:
 	  echo "  Or add to:    ~/.metabob/config.json .providers.anthropic.apiKey"; \
 	  exit 1; \
 	fi
-	@mkdir -p $(WORKSPACE)
+	@mkdir -p $(WORKSPACE) $(SURREAL_DATA)
 	docker run -d \
 	    --name $(LIVE_NAME) \
 	    --privileged \
@@ -190,6 +196,7 @@ run-live-obsidian:
 	    -p 18270:8270 \
 	    -p 16080:6080 \
 	    -v $(WORKSPACE):/workspace \
+	    -v $(SURREAL_DATA):/var/lib/surrealdb \
 	    -v $(REPO_ROOT):$(REPO_ROOT):ro \
 	    --tmpfs /run \
 	    --tmpfs /run/lock \

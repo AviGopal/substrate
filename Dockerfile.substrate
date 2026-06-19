@@ -223,7 +223,11 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         journald-stdout-forwarder.service \
         m1-trainer.timer
 
-VOLUME ["/workspace"]
+# SurrealDB writes the learning state (traces, Thompson posteriors, concept
+# graph) to file:/var/lib/surrealdb/data.db. Declaring it a volume — like
+# /workspace — documents that it must be bind-mounted (see the Makefile run-live
+# targets); otherwise the state lands in the ephemeral container layer.
+VOLUME ["/workspace", "/var/lib/surrealdb"]
 
 STOPSIGNAL SIGRTMIN+3
 
