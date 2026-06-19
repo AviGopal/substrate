@@ -7,9 +7,29 @@
  *   bun scripts/substrate/autonomy-metrics-view.ts            # last 20 snapshots
  *   N=50 bun scripts/substrate/autonomy-metrics-view.ts       # last 50
  */
-const FILE = process.env.METRICS_OUT || "/workspace/metrics/autonomy-metrics.jsonl";
+// The authoritative series lives in the substrate-workspace docker VOLUME
+// (/workspace/metrics/...), which the host cannot see via the filesystem.
+// Reading only that path returned nothing on the host. Gather every reachable
+// source and pick the freshest, mirroring autonomy-status.ts (2026-06-19).
+const HOST_FALLBACK = `${import.meta.dir}/workspace/metrics/autonomy-metrics.jsonl`;
+const CONTAINER = process.env.SUBSTRATE_CONTAINER ?? "substrate-live";
 const N = Number(process.env.N ?? 20);
-const lines = (await Bun.file(FILE).text()).split("\n").filter((l) => l.trim());
+async function readHost(p: string) { try { return (await Bun.file(p).exists()) ? await Bun.file(p).text() : ""; } catch { return ""; } }
+async function readSubstrate() {
+  try {
+    const proc = Bun.spawn(["docker", "exec", CONTAINER, "cat", "/workspace/metrics/autonomy-metrics.jsonl"], { stdout: "pipe", stderr: "ignore" });
+    const out = await new Response(proc.stdout).text();
+    return (await proc.exited) === 0 ? out : "";
+  } catch { return ""; }
+}
+function lastAt(t: string) {
+  const ls = t.split("\n").filter((l) => l.trim());
+  for (let i = ls.length - 1; i >= 0; i--) { try { const v = Date.parse(JSON.parse(ls[i]!).at); if (!Number.isNaN(v)) return v; } catch {} }
+  return -Infinity;
+}
+const srcs = [process.env.METRICS_OUT ? await readHost(process.env.METRICS_OUT) : "", await readSubstrate(), await readHost(HOST_FALLBACK)];
+const text = srcs.reduce((best, s) => (s && lastAt(s) > lastAt(best) ? s : best), "");
+const lines = text.split("\n").filter((l) => l.trim());
 const rows = lines.map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean) as any[];
 if (rows.length === 0) { console.log("no metrics recorded yet"); process.exit(0); }
 const pick = (r: any) => ({
