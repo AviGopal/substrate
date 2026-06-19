@@ -1,0 +1,28 @@
+[Unit]
+Description=Composition teacher — substrate-native bootstrap of organic capability composition
+# The substrate's topology is a near-pure star: no real activity composes other real
+# activities, so organic composition edges never form and the native generative-frontier
+# generator stays deadlocked (it needs headroom = λ₂·(1−star_ratio) ≥ 0.35, which only
+# organic composition can raise). This oneshot teaches the substrate composition from
+# within: each fire it finds a reliably-succeeding chainable pair (or reinforces an
+# existing successful composite), ensures a composite that chains them exists, and
+# dispatches it via goal-host-vessel. The composition-edge-reconcile timer then records
+# the organic edges and spectral-gap tracks star_ratio/headroom falling. Retire once the
+# native generative frontier unlocks (headroom ≥ 0.35). Bounded: one composite per fire.
+#
+# Smoke test:
+#   docker exec substrate-live systemctl start compose-teacher.service
+#   docker exec substrate-live journalctl -u compose-teacher.service --no-pager -n 5
+#   # last line is JSON: {action, composite, execution_id, star_ratio, headroom, ...}
+After=activity-api.service surrealdb.service goal-host-vessel.service
+Requires=surrealdb.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/compose-teacher.ts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

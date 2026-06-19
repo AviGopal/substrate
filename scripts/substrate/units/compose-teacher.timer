@@ -1,0 +1,15 @@
+[Unit]
+Description=Composition teacher timer
+
+[Timer]
+# Fire 7 minutes after activation (let vessels warm up), then every 30 minutes.
+# Type=oneshot, so a still-running teach (one ~60-100s dispatch) blocks the next fire.
+# Offset from the boredom (10min) and reconcile (30min) timers so dispatch load spreads.
+OnActiveSec=7min
+OnUnitActiveSec=30min
+Persistent=true
+AccuracySec=30s
+Unit=compose-teacher.service
+
+[Install]
+WantedBy=timers.target
