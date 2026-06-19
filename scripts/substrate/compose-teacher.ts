@@ -76,17 +76,26 @@ const since = new Date(Date.now() - 24 * 3600_000).toISOString();
 const [succRows] = await sql(`SELECT activity_id, count() AS ok FROM activity_execution_traces WHERE created_at >= type::datetime("${since}") AND success = true GROUP BY activity_id;`);
 const succeeds = new Set<string>((succRows || []).filter((r: any) => (r.ok ?? 0) > 0).map((r: any) => r.activity_id));
 
-// 3) Chainable pairs: producer.output_shape ∈ consumer.input_shapes, BOTH reliably succeeding, distinct.
-type Pair = { producer: string; consumer: string; shape: string };
-const pairs: Pair[] = [];
-for (const p of real) {
-  if (!succeeds.has(p.id)) continue;
-  for (const c of real) {
-    if (c.id === p.id || !succeeds.has(c.id)) continue;
+// 3) Chainable pairs, BOTH reliably succeeding, distinct.
+//    STRICT: producer.output_shape ∈ consumer.input_shapes (pool-level continuity).
+//    RELAXED (operator principle "the system may not always have an ideal shape mapping
+//    — try with what it has"): a producer that emits SOME output paired with another
+//    reliable activity — they chain through ENVIRONMENT state (e.g. concept-usage writes
+//    usage records that concept-relevance reads via concept-db), not the impulse pool.
+//    Strict first (better signal); relaxed fills the long tail so exploration doesn't
+//    stall at zero — the substrate learns from the outcome which couplings are real.
+type Pair = { producer: string; consumer: string; shape: string; strict: boolean };
+const strict: Pair[] = [], relaxed: Pair[] = [];
+const reliable = real.filter((a: any) => succeeds.has(a.id));
+for (const p of reliable) {
+  for (const c of reliable) {
+    if (c.id === p.id) continue;
     const shared = (p.output_shapes || []).find((s: string) => (c.input_shapes || []).includes(s));
-    if (shared) pairs.push({ producer: p.id, consumer: c.id, shape: shared });
+    if (shared) strict.push({ producer: p.id, consumer: c.id, shape: shared, strict: true });
+    else if ((p.output_shapes || []).length) relaxed.push({ producer: p.id, consumer: c.id, shape: (p.output_shapes || [])[0], strict: false });
   }
 }
+const pairs: Pair[] = [...strict, ...relaxed];
 
 // 4) Existing composite ids, so we don't re-author. A composite is any activity whose
 //    tasks dispatch other activities via resolver "activity" (excluding the probe).
@@ -102,9 +111,22 @@ for (const a of existing || []) {
   }
 }
 
-// Prefer teaching a NEW chain (distinct organic edge); fall back to reinforcing an
-// existing successful composite (grows execution_count + Thompson credit).
-const fresh = pairs.find((p) => !composedTargets.has([p.producer, p.consumer].sort().join("|")));
+// Prefer teaching a NEW chain (distinct organic edge → lowers star_ratio, grows topology);
+// fall back to reinforcing an existing successful composite (grows execution_count +
+// Thompson credit + successful-organic-edge weight). Cap distinct composites so the
+// registry doesn't bloat — past the cap, exploration shifts to reinforcement.
+const MAX_COMPOSITES = Number(process.env.COMPOSE_TEACHER_MAX ?? 40);
+const underCap = existingCompositeIds.size < MAX_COMPOSITES;
+const uncomposed = (p: Pair) => !composedTargets.has([p.producer, p.consumer].sort().join("|"));
+// Target headroom: prefer cross-linking LEAF capabilities (neither endpoint is itself a
+// composite) — that converts degree-1 pendants (which pin λ₂ low) into cross-linked
+// nodes, and prefer STRICT (real shape) chains over relaxed. Only compose composites
+// once leaf pairs are exhausted. Ordering: strict-leaf → relaxed-leaf → strict → relaxed.
+const isComposite = (id: string) => existingCompositeIds.has(id);
+const leafPair = (p: Pair) => !isComposite(p.producer) && !isComposite(p.consumer);
+const rank = (p: Pair) => (leafPair(p) ? 0 : 2) + (p.strict ? 0 : 1);
+const ordered = underCap ? pairs.filter(uncomposed).sort((a, b) => rank(a) - rank(b)) : [];
+const fresh = ordered[0];
 
 async function dispatch(targetTemplateId: string, goal: string): Promise<any> {
   const r = await fetch(`${GOAL_HOST}/run-goal`, {

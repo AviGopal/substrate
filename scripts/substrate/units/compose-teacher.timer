@@ -2,11 +2,13 @@
 Description=Composition teacher timer
 
 [Timer]
-# Fire 7 minutes after activation (let vessels warm up), then every 30 minutes.
+# FALLBACK heartbeat only. The PRIMARY driver of topology exploration is the boredom
+# loop dispatching composition activities (rate scales with sample throughput, not a
+# clock); this timer just guarantees forward motion if boredom stalls. Fire 5 min after
+# activation, then every 8 minutes (was 30 — too slow vs the substrate's sample rate).
 # Type=oneshot, so a still-running teach (one ~60-100s dispatch) blocks the next fire.
-# Offset from the boredom (10min) and reconcile (30min) timers so dispatch load spreads.
-OnActiveSec=7min
-OnUnitActiveSec=30min
+OnActiveSec=5min
+OnUnitActiveSec=8min
 Persistent=true
 AccuracySec=30s
 Unit=compose-teacher.service
