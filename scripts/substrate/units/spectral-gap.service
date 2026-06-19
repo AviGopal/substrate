@@ -1,0 +1,21 @@
+[Unit]
+Description=Spectral-gap tracker — real λ₂ (Fiedler) + star-ratio of the composition graph
+# The DEC convergence rate is R ~ λ₁·ρ_sample·κ⁻¹ where λ₁ is the composition-graph
+# spectral gap (credit-mixing speed). autonomy-metrics tracked it as raw edge COUNT,
+# which hides topology degeneracy (the live graph is a near-pure STAR on
+# validator-dispatch: star_ratio ~0.96). This computes the REAL Fiedler λ₂ +
+# star_ratio + connected-components so the substrate can optimize its topology to
+# keep the spectral gap high AND escape the star (richer multi-path structure) as it
+# grows. Appends to workspace/metrics/spectral-gap.jsonl.
+After=activity-api.service
+Requires=activity-api.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/substrate/env
+ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/spectral-gap.ts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=Spectral-gap tracker timer
+
+[Timer]
+OnActiveSec=3min
+OnUnitActiveSec=20min
+Persistent=true
+AccuracySec=60s
+Unit=spectral-gap.service
+
+[Install]
+WantedBy=timers.target

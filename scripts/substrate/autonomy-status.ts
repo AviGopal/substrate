@@ -128,13 +128,28 @@ console.log(`  ${"─".repeat(64)}`);
 const tph = last.dec_limiters?.rho_sample_traces_per_hour;
 const edges = last.backward_model?.composition_edges;
 const ksp = kspread(last);
+// Real spectral gap (Fiedler λ₂) from spectral-gap.jsonl — replaces the crude
+// edge-COUNT proxy for λ₁. λ₂ ∈ [0,2]; normalize by /2 for the 0..1 health score.
+// star_ratio (max_degree/(n-1)) flags hub-and-spoke degeneracy the count hides.
+let sg: { fiedler_lambda2?: number; star_ratio?: number; components?: number; nodes?: number } = {};
+try {
+  const lines = (await Bun.file(`${import.meta.dir}/workspace/metrics/spectral-gap.jsonl`).text()).trim().split("\n");
+  sg = JSON.parse(lines[lines.length - 1]!);
+} catch { /* fall back to edge-count proxy */ }
+const lam2 = sg.fiedler_lambda2;
 // normalize each term to a 0..1 health score (thresholds are heuristic, documented):
 //   ρ_sample healthy by ~800 traces/hr · κ non-degeneracy is already 0..1 ·
-//   λ₁ proxied by edge count, healthy by ~30 (a well-connected capability graph)
+//   λ₁ = REAL spectral gap (Fiedler λ₂)/2 when available, else edge-count proxy /30
 const terms = [
   { name: "ρ_sample (throughput)", val: tph, unit: "tr/hr", score: tph == null ? null : Math.min(1, tph / 800), lever: "horizontal dispatch / trace-store hygiene" },
   { name: "κ⁻¹ (metric spread)", val: ksp, unit: "", score: ksp, lever: "graded-yield reward (avoid posterior saturation)" },
-  { name: "λ₁ (credit mixing)", val: edges, unit: "edges", score: edges == null ? null : Math.min(1, edges / 30), lever: "composition-edge population / chain-credit" },
+  // Health = min(1, λ₂): the normalized-Laplacian λ₂ sits near 1.0 for a well-mixed
+  // (or star) graph and →0 for a fragmented/bottlenecked one, so λ₂≈1 IS healthy.
+  // The spectral gap being high is necessary-not-sufficient — star_ratio (below)
+  // flags the structural degeneracy a high λ₂ alone cannot.
+  lam2 != null
+    ? { name: "λ₁ (spectral gap λ₂)", val: lam2, unit: "", score: Math.min(1, lam2), lever: "keep λ₂ high as graph grows (stay connected); escape star via real A→B→C edges" }
+    : { name: "λ₁ (credit mixing)", val: edges, unit: "edges", score: edges == null ? null : Math.min(1, edges / 30), lever: "composition-edge population / chain-credit" },
 ];
 const scored = terms.filter((t) => t.score != null) as Array<typeof terms[0] & { score: number }>;
 console.log(`  DEC convergence limiters (R ~ λ₁·ρ_sample·κ⁻¹ — slowest term sets the rate):`);
@@ -145,6 +160,12 @@ for (const t of scored.sort((a, b) => a.score - b.score)) {
 if (scored.length) {
   const scarce = scored.sort((a, b) => a.score - b.score)[0];
   console.log(`  ⟶ scarcest: ${scarce.name}  (lever: ${scarce.lever})`);
+}
+if (sg.fiedler_lambda2 != null) {
+  const starFlag = (sg.star_ratio ?? 0) > 0.8 ? "  ⚠ near-pure STAR (hub-and-spoke; depth stays shallow)" : "";
+  const fragFlag = (sg.components ?? 1) > 1 ? `  ⚠ ${sg.components} COMPONENTS (credit can't mix → λ₂ collapses)` : "";
+  console.log(`  topology: ${sg.nodes ?? "·"} nodes · ${sg.components ?? "·"} component(s) · star_ratio ${(sg.star_ratio ?? 0).toFixed(2)}${starFlag}${fragFlag}`);
+  console.log(`    keep λ₂ high AS the graph grows: new activities must CONNECT (no fragmentation) + escape the star (non-hub A→B→C edges)`);
 }
 
 // ── GROWTH RATE + ACCELERATION (is the pace increasing?) ────────────────────
