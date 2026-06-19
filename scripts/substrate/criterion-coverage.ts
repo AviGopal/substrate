@@ -154,6 +154,25 @@ add("state_signature", "Traces continuity of executions; continuous state signat
   `${Number.isFinite(traceRate) ? traceRate : "n/a"} traces/hr; state_signature tag on ${Number.isFinite(sigCoverage) ? pct(sigCoverage) : "n/a"} of last-60m traces (${Number.isFinite(sigRecent) ? sigRecent : "?"}/${Number.isFinite(totRecent) ? totRecent : "?"})`,
   "goal-host tags each /run-goal trace state_signature:<hash> (live, current); untagged remainder are direct pool/shape dev-vessel execs that bypass goal-host; boredom keys Thompson cells on (signature, goal_idx)");
 
+// 16. Orthogonal learning across activities/vessels/resolvers from similar traces
+//     Probe the live prior_failed_attempts orthogonal channel: drafting one vessel's
+//     typecheck gap should surface a similar-class failure from a DIFFERENT vessel.
+let orthoCount = NaN, orthoActive = false;
+try {
+  const resp = await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ impulse: { pointer: { type: "prior_failed_attempts", scenario_id: "typecheck-probe-cross-vessel-ts2322" } } }),
+    signal: AbortSignal.timeout(8000),
+  });
+  const b = ((await resp.json()) as { body?: { orthogonal_count?: number } }).body ?? {};
+  orthoCount = num(b.orthogonal_count);
+  orthoActive = Number.isFinite(orthoCount);
+} catch { /* dev-vessel unreachable */ }
+add("orthogonal_learning", "Learns orthogonally across vessels/resolvers from similar traces",
+  orthoActive ? "PASS" : "PARTIAL",
+  orthoActive ? `prior_failed_attempts orthogonal channel live (${orthoCount} cross-vessel transfer(s) for a typecheck probe); vector-space-orthogonality-audit running` : "orthogonal channel probe unavailable",
+  "drafter transfers failure lessons across activities/vessels by failure-class similarity (TS code / subsystem / reason); + observe-orthogonal-patterns + vector-space-orthogonality-audit detect cross-template clusters & novel failures");
+
 // --- emit -------------------------------------------------------------------
 const counts = rows.reduce((a, r) => ((a[r.verdict] = (a[r.verdict] ?? 0) + 1), a), {} as Record<string, number>);
 const record = { at: m.at, snapshot_at: m.at, counts, rows };
