@@ -177,6 +177,7 @@ console.log(`  GROWTH RATE (first-half → second-half per hour; ⤴ acceleratin
 const series = win.map((r) => ({
   t: Date.parse(r.at),
   edges: r.backward_model?.composition_edges,
+  genuine_edges: r.capability?.genuine_edges,   // honest λ₁ (non-hub capability edges)
   landed: r.self_alteration?.landed,
   proposed: r.capability?.proposed_templates,
   concepts_total: r.forward_model?.total_activities,
@@ -206,7 +207,34 @@ const growth = (k: string, label: string) => {
   if (s1 != null && s2 != null) mark = s2 > s1 + 0.05 ? "⤴ accelerating" : s2 < s1 - 0.05 ? "⤵ decelerating" : "→ steady";
   console.log(`    ${label.padEnd(16)} ${overall.toFixed(2).padStart(7)}/hr trend   (${(s1 ?? 0).toFixed(2)}→${(s2 ?? 0).toFixed(2)})  ${mark}`);
 };
-growth("edges", "edges (λ₁)");
+growth("edges", "edges (raw)");
+growth("genuine_edges", "genuine λ₁");
 growth("landed", "self-alteration");
 growth("proposed", "proposed tmpl");
 console.log("");
+
+// ── SPECTRAL-GAP GOVERNOR (the master inequality λ₁ ≳ ρ_grow) ────────────────
+// Coherent self-expansion requires credit-mixing (λ₁) to keep pace with capability
+// minting (ρ_grow); otherwise new cells pile up as isolated leaves and the system
+// drifts off the slow manifold into livelock (SUBSTRATE_AS_DYNAMICS.md §3-4). The
+// GENERATIVE source (Seam ①) and any capability-minting work must gate on this:
+//   ρ_grow      = slope(total_activities)/hr   — cells minted per hour
+//   λ₁          = slope(GENUINE non-hub edges)/hr — credit-mixing edges gained per hour
+//   structural  = star_ratio < 0.8 AND components == 1   (λ₂ alone lies for a star)
+// governor_ok ⇔ headroom_ratio ≥ 1 AND structural. When NOT ok: do not raise ρ_grow.
+{
+  const rhoGrow = slopePerHr(series.filter((s) => s.concepts_total != null), "concepts_total");
+  const lam1 = slopePerHr(series.filter((s) => s.genuine_edges != null), "genuine_edges");
+  const genNow = (last.capability && (last.capability as any).genuine_edges);
+  const starOk = (sg.star_ratio ?? 1) < 0.8;
+  const fragOk = (sg.components ?? 1) === 1;
+  const ratio = (rhoGrow != null && lam1 != null && rhoGrow > 0) ? lam1 / rhoGrow : (lam1 != null && (rhoGrow ?? 0) <= 0 ? Infinity : null);
+  const magOk = ratio != null && ratio >= 1;
+  const ok = magOk && starOk && fragOk;
+  const verdict = ok ? "✓ headroom — safe to mint" : "✗ NEGATIVE — do NOT raise ρ_grow (mint capability)";
+  console.log(`  ${"─".repeat(64)}`);
+  console.log(`  SPECTRAL-GAP GOVERNOR (λ₁ ≳ ρ_grow — gates capability minting):`);
+  console.log(`    ρ_grow ${rhoGrow == null ? "·" : (rhoGrow >= 0 ? "+" : "") + rhoGrow.toFixed(2)}/hr (cells)   λ₁ ${lam1 == null ? "·" : (lam1 >= 0 ? "+" : "") + lam1.toFixed(2)}/hr (genuine edges, now ${genNow ?? "·"})`);
+  console.log(`    headroom ratio ${ratio == null ? "·" : ratio === Infinity ? "∞" : ratio.toFixed(2)}   structural: star_ratio ${(sg.star_ratio ?? 0).toFixed(2)} ${starOk ? "✓" : "✗"} · ${sg.components ?? "·"} component(s) ${fragOk ? "✓" : "✗"}`);
+  console.log(`    ⟶ ${verdict}`);
+}

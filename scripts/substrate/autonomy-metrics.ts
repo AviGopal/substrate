@@ -311,6 +311,15 @@ try {
   const proposed = await tryNum(() => count("SELECT count() AS count FROM activity WHERE proposed = true GROUP ALL;"));
   const edges = await sql<{ parent_activity_id: string; child_activity_id: string }>("SELECT parent_activity_id, child_activity_id FROM activity_composition_graph LIMIT 500;");
   const xv = edges.filter((e) => vesselOf(e.parent_activity_id) !== vesselOf(e.child_activity_id)).length;
+  // GENUINE edges = the HONEST λ₁ (credit-mixing in capability space). The lifecycle
+  // hooks validator-dispatch / slot-binding nest under EVERY activity, so total_edges is
+  // dominated by activity→hook parentage carrying no capability→capability credit. A
+  // genuine edge touches NEITHER hook on either endpoint — one capability's output fed
+  // another's. genuine_edges ≈ 0 (near-pure star) ⇒ λ₁ ≈ 0 regardless of total_edges, so
+  // this is the number that gates raising ρ_grow (λ₁ ≳ ρ_grow). See SUBSTRATE_AS_DYNAMICS §3-4.
+  const _hub = ["validator-dispatch", "slot-binding"];
+  const _touchesHub = (s: string) => _hub.some((h) => (s || "").includes(h));
+  const genuine_edges = edges.filter((e) => !_touchesHub(e.parent_activity_id) && !_touchesHub(e.child_activity_id)).length;
   // SHAPE CLOSURE: fraction of PRODUCED output shapes that some activity CONSUMES as
   // input. Closed shapes form producer→consumer edges the substrate can traverse to
   // discover topology; orphaned shapes (produced, no consumer) are divergence points
@@ -356,6 +365,7 @@ try {
     exploration_breadth: (distinct != null && totalActivities) ? Math.round((distinct / totalActivities) * 1000) / 1000 : null,
     cross_vessel_edges: xv,
     total_edges: edges.length,
+    genuine_edges,  // honest λ₁ — non-lifecycle-hub capability→capability edges (gates ρ_grow)
     cross_vessel_frac: edges.length ? Math.round((xv / edges.length) * 1000) / 1000 : null,
     proposed_templates: proposed,
     shape_closure, orphaned_shapes, produced_shapes,
