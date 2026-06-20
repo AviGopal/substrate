@@ -100,6 +100,35 @@ function analyze(rowsIn: any[]) {
   const lambda2 = fiedler();
   const maxDeg = Math.max(0, ...A.map((row) => row.filter((w) => w > 0).length));
   const starRatio = n > 1 ? maxDeg / (n - 1) : 0;
+  // MULTI-SCALE / SMALL-WORLD metrics (2026-06-19): "credit traversal on DIFFERENT
+  // HORIZONS" = high LOCAL clustering (short-horizon, within-domain credit) + short
+  // GLOBAL paths (long-horizon, cross-domain). A naturally-modular capability graph is
+  // best measured as a SMALL-WORLD (connected + clustered + bridged), NOT by a single
+  // global λ₂ a modular graph never maximizes. σ>1 ⇒ small-world.
+  const nbr: Array<Set<number>> = Array.from({ length: n }, () => new Set<number>());
+  for (const [u, v] of E) { nbr[u].add(v); nbr[v].add(u); }
+  const avgDeg = n > 0 ? (2 * E.length) / n : 0;
+  let cSum = 0, cCount = 0;
+  for (let u = 0; u < n; u++) {
+    const ns = [...nbr[u]]; const k = ns.length;
+    if (k < 2) continue;
+    let links = 0;
+    for (let i = 0; i < k; i++) for (let j = i + 1; j < k; j++) if (nbr[ns[i]].has(ns[j])) links++;
+    cSum += links / ((k * (k - 1)) / 2); cCount++;
+  }
+  const clustering = cCount ? cSum / cCount : 0;
+  const big: number[] = [];
+  for (let i = 0; i < n; i++) if (compSizes[comp[i]] === largest) big.push(i);
+  let pathSum = 0, pathPairs = 0;
+  for (const s of big) {
+    const dist = new Array(n).fill(-1); dist[s] = 0; const q = [s];
+    for (let qi = 0; qi < q.length; qi++) { const u = q[qi]; for (const v of nbr[u]) if (dist[v] < 0) { dist[v] = dist[u] + 1; q.push(v); } }
+    for (const t of big) if (t !== s && dist[t] > 0) { pathSum += dist[t]; pathPairs++; }
+  }
+  const avgPath = pathPairs ? pathSum / pathPairs : 0;
+  const cRand = n > 0 ? avgDeg / n : 0;
+  const lRand = avgDeg > 1 ? Math.log(Math.max(2, largest)) / Math.log(avgDeg) : 0;
+  const sigma = cRand > 0 && avgPath > 0 && lRand > 0 ? (clustering / cRand) / (avgPath / lRand) : 0;
   return {
     nodes: n, edges: E.length, components: nc,
     largest_component_frac: n > 0 ? Math.round((largest / n) * 1000) / 1000 : 0,
@@ -107,6 +136,12 @@ function analyze(rowsIn: any[]) {
     star_ratio: Math.round(starRatio * 1e4) / 1e4,
     cheeger_upper: Math.round(Math.sqrt(2 * lambda2) * 1e4) / 1e4,
     headroom: Math.round(lambda2 * (1 - starRatio) * 1e4) / 1e4,
+    // multi-scale: avg_degree (density), clustering (short-horizon/local mixing),
+    // avg_path_length (long-horizon reach), small_world_sigma (>1 = small-world).
+    avg_degree: Math.round(avgDeg * 100) / 100,
+    clustering: Math.round(clustering * 1e4) / 1e4,
+    avg_path_length: Math.round(avgPath * 100) / 100,
+    small_world_sigma: Math.round(sigma * 100) / 100,
   };
 }
 
