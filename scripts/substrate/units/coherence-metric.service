@@ -1,0 +1,17 @@
+[Unit]
+Description=Coherence metric (READ-ONLY) — orthogonality health signal (MDP §12.7 dictionary coherence)
+# Measures the MUTUAL COHERENCE of the activity dictionary (pairwise cosine of activity-signature
+# embeddings via the concept-db `embed` primitive). Orthogonality = block-diagonal posterior = the
+# moat; rising coherence as the action space grows = orthogonality eroding. This is the honest
+# health metric the docs prescribe, NOT global λ₂ (mixing is anti-orthogonal).
+After=activity-api.service surrealdb.service concept-db.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/coherence-metric.ts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

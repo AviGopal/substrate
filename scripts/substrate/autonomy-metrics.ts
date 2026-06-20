@@ -475,12 +475,33 @@ try {
   }
 } catch { /* spectral-gap.jsonl absent or unreadable — leave null */ }
 
+// ORTHOGONALITY signal (SUBSTRATE_AS_MDP §12.7): mutual coherence of the activity dictionary
+// — the HONEST health metric (rising coherence as the action space grows = orthogonality
+// eroding, the moat dissolving), NOT global λ₂ (mixing = anti-orthogonal). Ingested from the
+// coherence-metric timer's coherence.jsonl. (2026-06-20)
+let coherence: any = null;
+try {
+  const cPath = OUT.replace(/[^/]+$/, "coherence.jsonl");
+  const lines = (await Bun.file(cPath).text()).trim().split("\n").filter(Boolean);
+  if (lines.length) {
+    const last = JSON.parse(lines[lines.length - 1]);
+    coherence = {
+      at: last.at ?? null,
+      mutual_coherence: last.mutual_coherence ?? null,   // max off-diag cosine (1 ⇒ exact dup exists)
+      mean_coherence: last.mean_coherence ?? null,        // avg overlap — the trend signal
+      high_coherence_frac: last.high_coherence_frac ?? null, // frac of near-duplicate pairs (>0.9)
+      n_sampled: last.n_sampled ?? null,
+      total_activities: last.total_activities ?? null,
+    };
+  }
+} catch { /* coherence.jsonl absent — leave null */ }
+
 const record = {
   at: new Date().toISOString(),
   lift, forward_model, backward_model, self_alteration, gaps, dec_limiters,
   push_away: { intervention_refused },
   posterior_convergence, topology, posterior_uncertainty, vessel_population, capability, substrate_self,
-  spectral,
+  spectral, coherence,
 };
 
 try { const { mkdirSync } = await import("node:fs"); mkdirSync(OUT.replace(/\/[^/]+$/, ""), { recursive: true }); } catch { /* */ }
