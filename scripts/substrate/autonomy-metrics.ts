@@ -466,6 +466,11 @@ try {
       edges: last.edges ?? null,
       largest_component_frac: last.largest_component_frac ?? null,
       cheeger_upper: last.cheeger_upper ?? null,
+      headroom: last.headroom ?? null,
+      // GENUINE capability subgraph (lifecycle hooks excluded) — the HONEST connectivity
+      // signal. The full-graph headroom above is perverse (grows the hub with activity);
+      // genuine.headroom is what the governor should track. (2026-06-19)
+      genuine: last.genuine ?? null,
     };
   }
 } catch { /* spectral-gap.jsonl absent or unreadable — leave null */ }
