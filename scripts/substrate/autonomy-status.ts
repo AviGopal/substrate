@@ -250,7 +250,7 @@ const terms = [
   // The spectral gap being high is necessary-not-sufficient — star_ratio (below)
   // flags the structural degeneracy a high λ₂ alone cannot.
   lam2 != null
-    ? { name: "λ₁ (spectral gap λ₂)", val: lam2, unit: "", score: Math.min(1, lam2), lever: "keep λ₂ high as graph grows (stay connected); escape star via real A→B→C edges" }
+    ? { name: "λ₁ (spectral gap λ₂)", val: lam2, unit: "", score: Math.min(1, lam2), lever: "WITHIN-block credit-mixing only; do NOT chase GLOBAL λ₂ (mixing=anti-orthogonal). Keep cells ORTHOGONAL — see coherence." }
     : { name: "λ₁ (credit mixing)", val: edges, unit: "edges", score: edges == null ? null : Math.min(1, edges / 30), lever: "composition-edge population / chain-credit" },
 ];
 const scored = terms.filter((t) => t.score != null) as Array<typeof terms[0] & { score: number }>;
@@ -266,8 +266,20 @@ if (scored.length) {
 if (sg.fiedler_lambda2 != null) {
   const starFlag = (sg.star_ratio ?? 0) > 0.8 ? "  ⚠ near-pure STAR (hub-and-spoke; depth stays shallow)" : "";
   const fragFlag = (sg.components ?? 1) > 1 ? `  ⚠ ${sg.components} COMPONENTS (credit can't mix → λ₂ collapses)` : "";
-  console.log(`  topology: ${sg.nodes ?? "·"} nodes · ${sg.components ?? "·"} component(s) · star_ratio ${(sg.star_ratio ?? 0).toFixed(2)}${starFlag}${fragFlag}`);
-  console.log(`    keep λ₂ high AS the graph grows: new activities must CONNECT (no fragmentation) + escape the star (non-hub A→B→C edges)`);
+  console.log(`  topology: ${sg.nodes ?? "·"} nodes · ${sg.components ?? "·"} component(s) · star_ratio ${(sg.star_ratio ?? 0).toFixed(2)}${fragFlag}`);
+  // REFRAME (2026-06-20, SUBSTRATE_AS_DEC/MDP §4 "orthogonality is the moat"): low global λ₂ /
+  // high star_ratio is EXPECTED + HEALTHY — orthogonality (block-diagonal L; "resolvers live where
+  // data lives" = SPARSE L) is what keeps learning tractable. Do NOT chase global λ₂ (mixing is
+  // ANTI-orthogonal). The honest learning-health signal is DICTIONARY COHERENCE (below), not λ₂.
+  console.log(`    NOTE: low global λ₂ is EXPECTED — orthogonality (sparse, modular) is the moat, not mixing`);
+}
+// ── ORTHOGONALITY / dictionary coherence (the honest learning-health signal, MDP §12.7) ──
+const coh = last.coherence;
+if (coh && coh.mean_coherence != null) {
+  const eroding = (coh.mean_coherence ?? 0) > 0.35 || (coh.high_coherence_frac ?? 0) > 0.05;
+  console.log(`  ${"─".repeat(64)}`);
+  console.log(`  ORTHOGONALITY  mean_coherence ${(coh.mean_coherence ?? 0).toFixed(3)} · near-dup-frac ${(coh.high_coherence_frac ?? 0).toFixed(3)} · n=${coh.total_activities ?? "·"}  ${eroding ? "⚠ coherence high — moat eroding (action-space redundancy)" : "✓"}`);
+  console.log(`    the REAL credit-traversal target: keep cells ORTHOGONAL (decorrelated). Rising coherence vs n = the moat dissolving; coherence-recover self-restores. (NOT global λ₂ — that's anti-orthogonal.)`);
 }
 
 // ── GROWTH RATE + ACCELERATION (is the pace increasing?) ────────────────────
