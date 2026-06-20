@@ -1,0 +1,20 @@
+[Unit]
+Description=Coherence recovery — self-restore orthogonality by collapsing byte-identical duplicate activities
+# The drafter re-authors byte-identical activities with new timestamped ids (e.g. the same
+# gap-closing:typecheck-* fix N times), splitting credit + inflating the action space →
+# orthogonality (the moat) erodes. This groups activities by FULL behavioral signature (shapes +
+# config + prompt), keeps the most-exercised member of each true-duplicate family, and demotes the
+# rest to proposed=true (out of the active action space; REVERSIBLE, no hard delete). Self-recovery
+# from MDP §12.7 coherence erosion. Conservative: only byte-identical behavior collapses; capped.
+After=activity-api.service surrealdb.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+Environment=RECOVER_CAP=120
+ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/coherence-recover.ts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
