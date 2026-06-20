@@ -39,16 +39,26 @@ const embeds: number[][] = ((await er.json()).content || []).map((c: any) => c.e
 const norm = (v: number[]) => { let s = 0; for (const x of v) s += x * x; const n = Math.sqrt(s) || 1; return v.map((x) => x / n); };
 const E = embeds.map(norm);
 let maxC = 0, sumC = 0, pairs = 0, high = 0;
+const redundant: Array<{ a: string; b: string; cosine: number }> = [];
 for (let i = 0; i < E.length; i++) for (let j = i + 1; j < E.length; j++) {
   let d = 0; for (let k = 0; k < E[i].length; k++) d += E[i][k] * E[j][k];
-  if (d > maxC) maxC = d; sumC += d; pairs++; if (d > 0.9) high++;
+  if (d > maxC) maxC = d; sumC += d; pairs++;
+  if (d > 0.9) { high++; redundant.push({ a: acts[i].id, b: acts[j].id, cosine: Math.round(d * 1e4) / 1e4 }); }
 }
+// The redundant pairs ARE the dedup targets — make coherence ACTIONABLE. The deprecation path
+// / a dedup activity can merge/prune the lower-value member of each, POOLING credit (more
+// samples per cell) + shrinking the action space = restoring orthogonality (the moat).
+redundant.sort((x, y) => y.cosine - x.cosine);
+const topRedundant = redundant.slice(0, 40);
 const out = {
   at: new Date().toISOString(),
   n_sampled: E.length, total_activities: totalN,
   mutual_coherence: Math.round(maxC * 1e4) / 1e4,
   mean_coherence: pairs ? Math.round((sumC / pairs) * 1e4) / 1e4 : 0,
   high_coherence_frac: pairs ? Math.round((high / pairs) * 1e4) / 1e4 : 0,
+  redundant_pair_count: redundant.length,
 };
-console.log(JSON.stringify(out, null, 2));
+console.log(JSON.stringify({ ...out, top_redundant: topRedundant.slice(0, 8) }, null, 2));
 try { const f = "/workspace/metrics/coherence.jsonl"; await Bun.write(Bun.file(f), (await Bun.file(f).exists() ? await Bun.file(f).text() : "") + JSON.stringify(out) + "\n"); } catch { /* tolerant */ }
+// Dedup-candidate list (read-only signal for the dedup loop). Overwritten each run.
+try { await Bun.write("/workspace/metrics/coherence-candidates.json", JSON.stringify({ at: out.at, candidates: topRedundant }, null, 2)); } catch { /* tolerant */ }
