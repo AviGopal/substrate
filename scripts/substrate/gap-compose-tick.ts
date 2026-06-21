@@ -8,12 +8,13 @@
  * are STAGED (typecheck-clean in the /vessels runtime); landing flows through the
  * cutover gate / operator.
  *
- * SAFETY: triage-only by default (dry_run = plan, no file mutation). Set
- * GAP_COMPOSE_APPLY=1 to enable LIVE authoring+staging. This env flag is the S2
- * governance toggle — autonomous code authoring is on by choice, not by accident.
+ * AUTONOMOUS by default: authors+verifies+stages a fix for an open gap every
+ * tick. No human switch. GAP_COMPOSE_TRIAGE=1 opts OUT (plan-only) if ever needed.
+ * Self-verification (feature_compose typecheck/rollback) + the self-recovery tick
+ * are the substrate-side gates that keep this safe.
  */
 const DEV_VESSEL = process.env.DEV_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";
-const APPLY = process.env.GAP_COMPOSE_APPLY === "1";
+const APPLY = process.env.GAP_COMPOSE_TRIAGE !== "1"; // autonomous author by default; GAP_COMPOSE_TRIAGE=1 to opt OUT
 const CATEGORY = process.env.GAP_COMPOSE_CATEGORY; // optional filter
 
 async function main(): Promise<void> {

@@ -1,0 +1,9 @@
+[Unit]
+Description=Substrate self-recovery timer
+[Timer]
+OnBootSec=120s
+OnUnitActiveSec=180s
+Persistent=true
+Unit=self-recovery.service
+[Install]
+WantedBy=timers.target
