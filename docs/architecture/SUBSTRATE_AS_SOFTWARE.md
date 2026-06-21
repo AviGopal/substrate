@@ -1,40 +1,52 @@
 # The substrate as software: three states, durability groups, and what is implementation detail
 
-> Fourth companion to the three formal-lens docs:
-> [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md) (the learning *rule*),
-> [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md) (the *structure*), and
-> [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md) (the *flow in time*). Those
-> three read the substrate as mathematics. This one reads the **same running
-> system as software** — organized by the one axis the math charts abstract away:
-> **durability**, i.e. *what persists, what is ephemeral, what is appended, and
-> who is allowed to change each.* It introduces no new primitives. Two further
-> companions extend this durability lens past the single-container boundary:
-> [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md) takes the four durability groups
-> of §2 across a multi-container fleet (the cross-container algebra of each group),
-> and [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md) supplies the
-> protocol/engineering layer that realizes those crossings.
+> Companion to the formal-lens documents, all reading one running system through
+> different coordinate charts:
+> [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md) — the learning *rule* (factored-MDP
+> Bayesian Q-learning);
+> [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md) — the *structure* (a weighted directed
+> cell complex and its Hodge operators);
+> [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md) — the *flow in time* (a
+> slow–fast dynamical system with a conditional-stability threshold);
+> **this chart, `SUBSTRATE_AS_SOFTWARE.md`** — the *engineering* (durability groups:
+> what persists, what is ephemeral, what is appended);
+> [`SUBSTRATE_AS_REPRESENTATION.md`](SUBSTRATE_AS_REPRESENTATION.md) — the
+> *representation* (an open basis of shape-axes; the momentum-space dual of the
+> transformer);
+> [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md) — the *fleet* (cross-container
+> durability; what may cross the boundary);
+> [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md) — the *network* (the protocol
+> layer; how the crossings are realized).
+>
+> The math charts read the substrate as mathematics. This one reads the **same
+> running system as software** — organized by the one axis the math charts abstract
+> away: **durability**, i.e. *what persists, what is ephemeral, what is appended, and
+> who is allowed to change each.* It introduces no new primitives. The fleet and
+> network charts extend this durability lens past the single-container boundary.
 >
 > This doc is also the **canonical home for two naming decisions** the rest of the
-> documentation should defer to: (1) the resolved three-state triad
-> (§1), and (2) the reframe of `resolver_tier` as a continuous directional
-> uncertainty (§4). Where earlier docs carry drifted names, those are *prior
-> spellings of these canonical terms*, not different concepts.
+> documentation defers to: (1) the resolved three-state triad (§1), and (2) the
+> reframe of `resolver_tier` as a continuous directional uncertainty (§4). Where a
+> sibling carries a drifted name, that is a *prior spelling of these canonical
+> terms*, not a different concept.
 
 ## 0. One object, four lenses
 
-The three math docs share a dictionary (the "one object, three lenses" table in
-`SUBSTRATE_AS_DYNAMICS.md` §0). This doc adds the engineering column: for each
+The math charts share a dictionary (the "one object, lenses" table in
+`SUBSTRATE_AS_DYNAMICS.md` §0). This doc adds the **engineering column**: for each
 quantity, **where does it live, and how durable is it?** The math lenses say
 *what is being learned* (MDP), *on what object* (DEC), and *how it moves in time*
 (Dynamics). The software lens says *what it is made of and how long it lasts* —
 which is the chart an operator actually deploys, backs up, and migrates.
+`SUBSTRATE_AS_REPRESENTATION.md` §0 adds the **representation column** — the same
+quantities read as directions in an open basis of shape-axes.
 
 The bridge between the math and the software is the **three-state triad**, which
 turns out to *be* a durability classification once its scope is understood (§1–§2).
 
 ## 1. The three states, canonized
 
-There is **one** three-state triad. Earlier docs name it two different ways; those
+There is **one** three-state triad. A sibling may name it two different ways; those
 are the same three states seen through a changing understanding of the system, not
 two ontologies. The canonical names are **Informational / Transient /
 Observational**.
@@ -77,10 +89,10 @@ the central engineering fact the math charts abstract away.
 
 | Durability group | State | Changes via | What lives here | Backup / migration unit |
 |---|---|---|---|---|
-| **Authored-durable** | Informational | deploy / commit (operator or substrate-authored) | vessel code, resolver *implementations*, activity-template *definitions*, shape *contracts* | git (`repos/*`), container images |
-| **Learned-durable** | Informational | the loop, continuously, every trace | Thompson posteriors (α/β), the shape lattice, composition-edge weights, goal-paths, impulse-relevance scores | SurrealDB snapshot (the learning state) |
+| **Authored-durable** | Informational | deploy / commit (operator or substrate-authored) | vessel code, resolver *implementations*, activity-template *definitions*, shape *contracts* | version control; container images |
+| **Learned-durable** | Informational | the loop, continuously, every trace | Thompson posteriors (α/β), the shape lattice, composition-edge weights, goal-paths, impulse-relevance scores | the trace-store database snapshot (the learning state) |
 | **Ephemeral** | Transient | per-execution, vanishes on completion | in-flight impulses, slot bindings, the executing trajectory, resolver call stack | (not persisted — reconstructable only from the Observational record) |
-| **Recorded** | Observational | append on execution | execution traces, validation results, failure modes, realized artifacts | SurrealDB trace store; external artifacts (files, commits) |
+| **Recorded** | Observational | append on execution | execution traces, validation results, failure modes, realized artifacts | the trace store; external artifacts (files, commits) |
 
 Two consequences fall out immediately:
 
@@ -88,16 +100,15 @@ Two consequences fall out immediately:
    Authored-durable changes by a deliberate, reviewable, version-controlled act and
    is the operator's lever. Learned-durable changes autonomously and continuously
    and is the *substrate's* lever — it is what a backup must capture and what a
-   fresh substrate lacks (see `docs/SUBSTRATE.md` on backing up learning state).
-   Conflating them is the source of the "is a vessel code or is it a running
-   service?" ambiguity (§3).
+   fresh substrate lacks. Conflating them is the source of the "is a vessel code or
+   is it a running service?" ambiguity (§3).
 
 2. **The loop crosses durability boundaries in a fixed pattern.** Recall reads
    Authored-durable + Learned-durable → runs Ephemeral → writes Recorded. Learning
    reads Recorded → writes Learned-durable. **Nothing in the normal loop writes
    Authored-durable** — that is precisely the operator-authored boundary, and the
-   S1→S2 lift is defined by the substrate beginning to write it too (CLAUDE.md
-   "After lift").
+   lift to substrate-authored development is defined by the substrate beginning to
+   write it too.
 
 ## 3. Which primitives are implementation details
 
@@ -197,6 +208,26 @@ honest object is **continuous and measured**.
   is *low and unknown a priori* and is learned per-signature, then routed around
   where it stays low.
 
+### 4.2 Read as a representation: the certainty scalar is a momentum component
+
+The directional-certainty scalar of §4 is what the representation chart reads as
+**mass**. In the Fisher (natural-gradient) metric an impulse is not a static value
+but a **momentum component along a shape-axis** — posterior precision `⋆₁` as mass
+times flow as velocity (`SUBSTRATE_AS_REPRESENTATION.md` §2). The same `⋆₁` precision
+this section measures as a resolver's directional certainty is, read dynamically, the
+mass that scales an impulse's motion along its shape-axis; a sharp tangent direction
+(high certainty) is a heavy, well-aimed momentum component, a high-variance normal
+direction (low certainty) a light, off-manifold one.
+
+This directional/representational reading is the basis of the **momentum-space dual
+of the transformer**: where a transformer fixes its dimensionality and snaps a
+continuous internal flow to a discrete output *position* (the next token), the
+substrate keeps its dimensionality open, takes discrete actions, and works in
+*directions* — modelling the topology of reachable motion toward a goal rather than
+committing to a sampled point. Position-versus-momentum is the inversion; the full
+treatment of the duality and of the impulse-as-momentum geometry is in
+`SUBSTRATE_AS_REPRESENTATION.md` §2 and §5.
+
 ## 5. Scorecard — decision vs. established
 
 Following the discipline of the companion docs.
@@ -217,12 +248,18 @@ Following the discipline of the companion docs.
   in both. → §4 (`SUBSTRATE_AS_DEC.md` §1.3; `SUBSTRATE_AS_MDP.md` §4.3)
 - The forward arm empirically estimates it (Beta-Bernoulli competence map). → §4
   (`SUBSTRATE_AS_MDP.md` §12.8)
+- The certainty scalar read as Fisher mass × flow is a momentum component along a
+  shape-axis — the natural-gradient velocity decomposition. → §4.2
+  ([Amari]; `SUBSTRATE_AS_REPRESENTATION.md` §2)
 
 **Frontier (named, not asserted):**
 
 - A goal-conditioned tangent/normal decomposition of resolver output as a *measured
-  runtime quantity* (vs. its current implicit form in the forward-arm posterior) is
-  not yet computed anywhere; §4 describes the object, not an implemented metric.
+  runtime quantity* (vs. its implicit form in the forward-arm posterior) is
+  described, not computed; §4 describes the object, not an implemented metric.
+- The momentum-space dual of the transformer as a stated framing is assembled from
+  established pieces, not an owned result; the full statement and its honesty bounds
+  live in `SUBSTRATE_AS_REPRESENTATION.md` §5. → §4.2
 
 **Honest limit (carried):**
 
@@ -244,10 +281,17 @@ scaffold, not the learning; the learning is the learned-durable group, and it
 should be engineered like the database it is. And `resolver_tier` is not three
 kinds of resolver but three coarse bands of one continuous, learnable scalar — the
 directional certainty that a resolver's output lies along the goal-aligned tangent
-of the shape hypersurface — which the forward arm already measures per signature.
+of the shape hypersurface — which the forward arm already measures per signature,
+and which the representation chart reads as the Fisher mass of an impulse's momentum
+component (§4.2).
 
 None of this is new machinery. It is the same trace store, the same Thompson layer,
 the same vessels and resolvers — sorted by how long they last and who is allowed to
 change them. The math lenses say what is being learned, on what object, and how it
 flows; this lens says **what it is made of, where it lives, and which parts are the
 learning versus the scaffolding the learning runs on.**
+
+## References
+
+- **[Amari]** Amari, S., *Natural Gradient Works Efficiently in Learning*, Neural Computation 10(2), 1998. — *verification: carried.*
+- **[Nielsen]** Nielsen, F., *An Elementary Introduction to Information Geometry*, Entropy 22(10), 2020. — *verification: carried.*

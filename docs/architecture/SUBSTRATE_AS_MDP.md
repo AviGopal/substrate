@@ -1,35 +1,35 @@
 # The substrate is a Bayesian Q-learning MDP
 
-> This document derives the math the substrate already implements,
-> in standard reinforcement-learning notation. It does **not** introduce
-> new primitives. Every quantity below is something the running system
-> already computes or stores. The point is to make explicit that the
-> trace store + Thompson layer + composition-chain credit + scope
-> hierarchy form a single coherent Bayesian RL system whose object of
-> learning is the underlying MDP itself.
+> This document derives the math the substrate implements, in standard
+> reinforcement-learning notation. It introduces **no new primitives**:
+> every quantity below is something the running system computes or
+> stores. The point is to make explicit that the trace store + Thompson
+> layer + composition-chain credit + scope hierarchy form a single
+> coherent Bayesian RL system whose object of learning is the underlying
+> MDP itself.
 >
-> **One object, four lenses.** This doc is the *learning-rule* chart. The same
-> running system is read as a geometric object — a weighted directed cell complex
-> and its Hodge operators — in [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md); as a
-> flow in time — a slow–fast dynamical system whose self-expansion is
-> conditionally stable — in [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md);
-> and as software organized by durability — what persists, what is ephemeral, and
-> which parts are implementation detail — in
-> [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md). The shared dictionary
-> mapping each quantity across the charts is the table in
-> `SUBSTRATE_AS_DYNAMICS.md` §0 (math) extended in `SUBSTRATE_AS_SOFTWARE.md` §0
-> (engineering). Where this doc makes sample complexity and regret legible, DEC
-> makes locality and the gluing obstruction `H¹` legible, the dynamics chart makes
-> *when the learning stops keeping up with the growth* legible, and the software
-> chart makes *what it is made of and how durable it is* legible. Two further
-> companions carry the durability lens across containers:
-> [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md) reads the same system as a
-> multi-container fleet (what may cross the substrate boundary, per durability
-> group), and [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md) supplies the
-> protocol/engineering layer (identity, transport, verification, self-propagation)
-> that realizes those crossings. The non-constructibility ceiling of §11 is the
-> limit both inherit: more peers enlarge the pool of observation but never complete
-> the model.
+> **One object, seven lenses.** This doc is the *learning-rule* chart. The same
+> running system is read through six companion coordinate charts:
+> - [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md) — the learning *rule* (factored-MDP Bayesian Q-learning) — this doc.
+> - [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md) — the *structure* (a weighted directed cell complex; Hodge operators).
+> - [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md) — the *flow in time* (a slow–fast dynamical system; conditional stability).
+> - [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md) — the *engineering* (durability groups; what persists / is ephemeral / is appended).
+> - [`SUBSTRATE_AS_REPRESENTATION.md`](SUBSTRATE_AS_REPRESENTATION.md) — the *representation* (an open basis of shape-axes; the momentum-space dual of the transformer).
+> - [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md) — the *fleet* (cross-container durability; what may cross the boundary).
+> - [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md) — the *network* (the protocol layer; how the crossings are realized).
+>
+> The shared dictionary mapping each quantity across the charts is the table in
+> `SUBSTRATE_AS_DYNAMICS.md` §0 (math), extended in `SUBSTRATE_AS_SOFTWARE.md` §0
+> (engineering) and `SUBSTRATE_AS_REPRESENTATION.md` §0 (representation). Where this
+> doc makes sample complexity and regret legible, DEC makes locality and the gluing
+> obstruction `H¹` legible, the dynamics chart makes *when the learning stops keeping
+> up with the growth* legible, and the software chart makes *what it is made of and how
+> durable it is* legible. `SUBSTRATE_AS_FLEET.md` reads the same system as a
+> multi-container fleet (what may cross the substrate boundary, per durability group),
+> and `SUBSTRATE_AS_NETWORK.md` supplies the protocol/engineering layer (identity,
+> transport, verification, self-propagation) that realizes those crossings. The
+> non-constructibility ceiling of §11 is the limit both inherit: more peers enlarge the
+> pool of observation but never complete the model.
 
 ## 1. The MDP, in the substrate's own primitives
 
@@ -38,20 +38,20 @@ Mapped to the substrate:
 
 | MDP element | Substrate primitive | Where it lives |
 |---|---|---|
-| **S** (state space) | `state_signature` ⊕ available-impulse-shape multiset | computed server-side in `execution-traces.ts` from a trace's input impulses |
-| **A(s)** (actions) | `applicable(s) = { template t : input_shapes(t) ⊆ shapes(s) }` | `/v2/activities/discover-by-shapes` already returns this set |
-| **P(s′ \| s, a)** (transitions) | empirical distribution of `output_impulse_shapes` grouped by `(signature, template)` | rows of `activity_execution_traces` |
-| **R(s, a) ∈ ℝᵈ** (vector reward) | projection residual `‖g − proj_{span(traces)} g‖` where g is the goal direction and traces are observed work vectors; the binary success bit currently written is the degenerate scalarization | `convergent-validity` produces the scalar projection today; vector residual is the structural form, currently collapsed at write-time. See §1.1 |
-| **γ** (discount) | implicit 1 along `composition_chain` | `propagateCreditAlongChain` writes |
-| **π(a \| s)** (policy) | Thompson sample-and-argmax over applicable a | template selector in `/v2/activities/recommend` |
+| **S** (state space) | `state_signature` ⊕ available-impulse-shape multiset | computed server-side from a trace's input impulses |
+| **A(s)** (actions) | `applicable(s) = { template t : input_shapes(t) ⊆ shapes(s) }` | the discover-by-shapes path returns this set |
+| **P(s′ \| s, a)** (transitions) | empirical distribution of `output_impulse_shapes` grouped by `(signature, template)` | rows of the execution-trace store |
+| **R(s, a) ∈ ℝᵈ** (vector reward) | projection residual `‖g − proj_{span(traces)} g‖` where g is the goal direction and traces are observed work vectors; the binary success bit is the degenerate scalarization of this vector residual | the validation back-half produces the scalar projection; the vector residual is the structural form. See §1.1 |
+| **γ** (discount) | implicit 1 along `composition_chain` | chain-credit propagation writes |
+| **π(a \| s)** (policy) | Thompson sample-and-argmax over applicable a | the template selector on the recommend path |
 
-Every column on the right is a thing the substrate already does at runtime.
+Every column on the right is a thing the substrate does at runtime.
 No new machinery is introduced.
 
 ### 1.1 Why vector reward, not scalar
 
 The binary R column above is a deliberate scalarization, not the
-structural form. The MDP this substrate is solving is multi-objective:
+structural form. The MDP this substrate solves is multi-objective:
 every goal is a direction `g` in some space of outcomes, and the work
 the substrate has done is a basis spanned by trace vectors `V_t`.
 The structural reward is the residual
@@ -61,27 +61,37 @@ r_t = \| g - \Pi_{\text{span}(V_t)}\, g \|
 $$
 
 the portion of the goal direction the work to date has not yet covered.
-The Beta-Bernoulli α/β update remains a valid projection of this signal
-onto a success axis; the substrate today writes only that projection.
-The directional residual is recoverable from existing trace metadata
-once a goal direction is supplied — it is structural form, currently
-collapsed at write-time.
+The Beta-Bernoulli α/β update is a valid projection of this signal onto
+a success axis; the binary success bit is the degenerate scalarization
+of the vector residual, and the directional residual is the structural
+form. The directional residual is recoverable from trace metadata once
+a goal direction is supplied — the binary bit collapses it, the
+directional form recovers it.
 
-Vamplew et al. (*Scalar reward is not enough*) motivate the move to
-vector reward: a single scalar reward is insufficient to express
-genuinely multi-objective goals. The Pareto-coverage limitation invoked
-here — linear scalarization of a vector reward recovers only policies on
-the **convex hull** of the Pareto front; non-convex regions are
-unreachable by any scalar reward — is the load-bearing theorem. (The
-convex-hull-coverage limitation is originally Das & Dennis 1997, 'A
-closer look at drawbacks of minimizing weighted sums of objectives…',
-Structural Optimization; carried into MORL by Roijers et al. 2013, 'A
-Survey of Multi-Objective Sequential Decision-Making', JAIR. Vamplew et
-al. 2021/22, arXiv:2112.15422, argue scalar reward is insufficient but
-do not themselves prove the convex-hull theorem.) This is why the IAL doc names
-the two-direction learning duality — forward arm `P(success|activity, shape)`
-and reverse arm `P(activity|pool-signature)` — as two components of the
-underlying vector signal, not redundant copies of a scalar.
+This residual is **intent-as-residual** read at the reward level: a goal
+is a target direction, and `‖g − Πg‖` is exactly the part of that
+direction the current basis does not yet span. Reality's consistent
+unexplained directional residual is, via the intentional stance, a
+modeling target — the geometry of that residual (its Hodge decomposition
+into recalibrate-the-weights versus mint-a-new-axis parts, and the
+learnability gate that admits it only when persistent) is developed in
+`SUBSTRATE_AS_REPRESENTATION.md` §4. Here it is simply the reward: the
+unmodelled component of the goal direction is what the next action is
+selected to reduce.
+
+[Vamplew] (*Scalar reward is not enough*) motivates the move to vector
+reward: a single scalar reward is insufficient to express genuinely
+multi-objective goals. The Pareto-coverage limitation invoked here —
+linear scalarization of a vector reward recovers only policies on the
+**convex hull** of the Pareto front; non-convex regions are unreachable
+by any scalar reward — is the load-bearing theorem. (The
+convex-hull-coverage limitation is originally [Das & Dennis], carried
+into multi-objective RL by [Roijers]; [Vamplew] argues scalar reward is
+insufficient but does not itself prove the convex-hull theorem.) This is
+why the two-direction learning duality — forward arm
+`P(success|activity, shape)` and reverse arm `P(activity|pool-signature)`
+— is two components of the underlying vector signal, not redundant copies
+of a scalar.
 
 ## 2. The policy and its update
 
@@ -120,39 +130,38 @@ i.e. Bayesian Q-learning with tabular Q-values keyed by signature.
 (Framing caveat: per-state Beta-Bernoulli Thompson sampling is,
 strictly, a *contextual bandit* — actions score immediate reward
 without a bootstrapped next-state value. The Bayesian Q-learning of
-Dearden, Friedman & Russell 1998 is a different algorithm: a
-Normal-Gamma posterior over Q-values updated by TD/Bellman bootstrap.
-The 'Q-learning / MDP' language here is structural-aspirational; the
-load-bearing mechanism is bandit-shaped. See §12.)
+[Dearden et al.] is a different algorithm: a Normal-Gamma posterior over
+Q-values updated by TD/Bellman bootstrap. The 'Q-learning / MDP'
+language here is structural-aspirational; the load-bearing mechanism is
+bandit-shaped. See §12.)
 
 ### 2.1 Conjugate update = natural gradient in Beta information geometry
 
 The α ← α + r, β ← β + (1 − r) update is not just a counting rule.
 Natural-gradient variational inference with unit step size recovers
 exact conjugate updates for exponential-family conjugate models
-(Khan & Lin 2017; Khan & Rue, *The Bayesian Learning Rule* — building
-on Amari's natural gradient and the Fisher–Rao metric). The
+([Khan & Lin]; [Khan & Rue], *The Bayesian Learning Rule* — building on
+Amari's natural gradient and the Fisher–Rao metric, [Amari]). The
 Beta-Bernoulli update step is Fisher-efficient by construction.
 
 The base posterior update therefore carries no learning-rate
 hyperparameter — the conjugate step *is* the natural-gradient step.
-(The chain-credit path is the exception: ancestor deltas are scaled —
-e.g. Δα = 0.30 on a raw 0.25 in integration test 18.4.7 — which is a
+(The chain-credit path is the exception: ancestor deltas are scaled by a
 discount/learning-rate factor on propagated credit, applied on top of
 the unit-step base update.)
 
 ## 3. Credit propagation = n-step TD backup
 
 When a trace ends with reward r at depth n along `composition_chain`,
-`propagateCreditAlongChain` writes deltas to ancestors. For ancestor
+chain-credit propagation writes deltas to ancestors. For ancestor
 k steps back along the chain:
 
 $$
 \alpha_{s_{t-k},\, a_{t-k}} \;\leftarrow\; \alpha_{s_{t-k},\, a_{t-k}} + \gamma^k \cdot r
 $$
 
-with γ currently 1 in the chain-credit code path. This is exactly **n-step
-TD update** in disguise:
+with γ = 1 in the chain-credit path. This is exactly **n-step TD update**
+in disguise:
 (Precision: with no bootstrapped value term and γ=1, this is the
 Monte-Carlo / full-return end of the TD(λ) spectrum, not n-step TD
 proper — n-step TD is defined by the appended γ^n·V(s_{t+n}) bootstrap.
@@ -167,9 +176,11 @@ where G_t^{(k)} is the n-step return. Beta-parameter update is the
 specific instantiation when V is parameterized as a Beta posterior and
 α_lr is implicit in the conjugate update.
 
-The F-V56 / F-V57 fixes (`concept_3G1M0gUWwVVL` lineage) corrected the
-chain-credit write path so this backup actually lands. Before those
-fixes the policy was learning from a biased one-step posterior.
+A chain-credit write path that does not land leaves the policy learning
+from a biased one-step posterior; the backup means the full return is
+attributed to the ancestors that produced it. This is the structural
+distinction between crediting the directly-executed arm and crediting
+its composition lineage.
 
 ## 4. Why the orthogonality matters mathematically
 
@@ -198,15 +209,14 @@ $$
 P_{\text{org}}(\text{success} \mid s, a) \;=\; \text{Beta}\big(\alpha_{s,a}^{\text{global}} + n_{\text{org,succ}},\ \beta_{s,a}^{\text{global}} + n_{\text{org,fail}}\big)
 $$
 
-The Thompson selector's "scope ordering" comment in the codebase is
-this exact partial-pooling rule. New orgs warm-start from the
-population posterior and refine on their own data. (This is a
-deliberate cascading-prior approximation, not the strict construction:
-a proper hierarchical/empirical-Bayes model estimates a population
-hyperprior from the marginal likelihood rather than reusing a posterior
-— which already absorbed the subgroup's data — as the subgroup's prior.
-The approximation behaves well when global counts ≫ org counts; it
-double-counts and over-pools otherwise.)
+The Thompson selector's scope ordering is this exact partial-pooling
+rule. New orgs warm-start from the population posterior and refine on
+their own data. (This is a deliberate cascading-prior approximation, not
+the strict construction: a proper hierarchical/empirical-Bayes model
+estimates a population hyperprior from the marginal likelihood rather
+than reusing a posterior — which already absorbed the subgroup's data —
+as the subgroup's prior. The approximation behaves well when global
+counts ≫ org counts; it double-counts and over-pools otherwise.)
 
 ### 4.3 Resolver-tier separation of P
 
@@ -223,16 +233,17 @@ $$
 |A(s)| \;\leq\; |\{ t : \text{input\_shapes}(t) \subseteq \text{shapes}(s) \}|
 $$
 
-This is small (5-50) compared to the full template catalog (~3000),
-so per-step Thompson is O(log|A(s)|) cells to update, not O(|catalog|).
+This is small (a handful to a few dozen) compared to the full template
+catalog (thousands), so per-step Thompson is O(log|A(s)|) cells to
+update, not O(|catalog|).
 
 ### 4.5 What you lose without orthogonality
 
 Flatten any of the four — drop scope, ignore shapes, mix tiers,
 correlate cells — and the posterior no longer factorizes. Sample
 complexity for a single (s, a) estimate grows from O(1/ε²) to
-O(|history|/ε²). On the substrate's actual trace volume this is the
-difference between converging in days and not converging at all.
+O(|history|/ε²). On realistic trace volume this is the difference
+between converging in a tractable horizon and not converging at all.
 
 This is the math behind the "orthogonality is the moat" claim: the
 factorization is what makes Bayesian Q-learning tractable on the
@@ -243,12 +254,13 @@ sample budget the substrate has.
 The forward arm `P(success | activity, shape)` and the reverse arm
 `P(activity | pool-signature)` update on the same traces but at
 different effective rates: the forward arm fires per task-completion
-(impulseRelevance writes), the reverse arm per Thompson recommendation
+(impulse-relevance writes), the reverse arm per Thompson recommendation
 (slot-binding writes). This is exactly the **two-timescale stochastic
-approximation (TTSA)** setup of Borkar (*Stochastic Approximation:
-A Dynamical Systems Viewpoint*, 2008). (The full slow–fast / slow-manifold
-treatment built on this — including the stability threshold for runtime growth —
-is `SUBSTRATE_AS_DYNAMICS.md` §1–§3; this section is its base law.)
+approximation (TTSA)** setup of [Borkar] (*Stochastic Approximation:
+A Dynamical Systems Viewpoint*). (The full slow–fast / slow-manifold
+treatment built on this — including the stability threshold for runtime
+growth — is `SUBSTRATE_AS_DYNAMICS.md` §1–§3; this section is its base
+law.)
 
 Borkar's theorem: when one process updates faster than the other, the
 slower process sees the faster as already at its quasi-stationary
@@ -256,29 +268,27 @@ equilibrium; trajectories converge to the **invariant manifold** along
 which the two arms agree. The manifold exists and is locally attracting
 under standard step-size conditions. (The attracting invariant/slow
 manifold from timescale separation is the object of geometric singular
-perturbation theory — Fenichel 1979 — rather than Carr's centre-manifold
+perturbation theory — [Fenichel] — rather than Carr's centre-manifold
 theorem, which addresses marginal-stability/bifurcation reduction and is
 a different mechanism.)
 
-The "symmetry invariant" the IAL doc names — "forward and reverse
-counts on each edge should be consistent" (`IMPULSE_ACTIVITY_FOUNDATION.md`
-lines 508–522) — is operationally the projection of trajectories onto
+The symmetry invariant — forward and reverse counts on each edge should
+be consistent — is operationally the projection of trajectories onto
 this invariant manifold. Drift between arms is the substrate-internal
-observable for off-manifold motion. F-39 (the resolver bug where
-`templateId` was missing on validator-dispatch traces, fixed in
-minibob commit `662b153`) is not just a correctness bug — it broke
-the TTSA condition by making one arm fail to update.
+observable for off-manifold motion. A resolver bug that stalls one arm
+(e.g. a missing `templateId` on validator-dispatch traces) is not just a
+correctness bug — it breaks the TTSA condition by making one arm fail to
+update, removing a timescale.
 
-The transient state being the steady state (the framing's recurring
-claim that the substrate is in process, not converged to a point) is
-this: the substrate sits on the invariant manifold and walks it,
-rather than converging to an isolated fixed point. (Precisely: after
-fast transients decay the joint process is approximately confined to
-the slow manifold while the slow variable still drifts along it toward
-its equilibrium — it tracks the manifold, it is not a fixed point.) The push-away
-mechanism (S2→S3) is the manifold's stability property under
-perturbation — refuse interventions that would project the system
-off the manifold.
+The transient state being the steady state (the substrate is in process,
+not converged to a point) is this: the substrate sits on the invariant
+manifold and walks it, rather than converging to an isolated fixed
+point. (Precisely: after fast transients decay the joint process is
+approximately confined to the slow manifold while the slow variable
+still drifts along it toward its equilibrium — it tracks the manifold,
+it is not a fixed point.) The push-away mechanism — refusing
+interventions that would project the system off the manifold — is the
+manifold's stability property under perturbation.
 
 ## 5. The "graph topology discovery" framing, rigorously
 
@@ -298,21 +308,34 @@ is what model-based RL does:
 
 The substrate's autonomous loop does steps 1-2; the selector closes
 the loop at step 3 by drawing fresh Thompson samples each dispatch.
-The drafter (`draft-gap-closing-activity`) extends the action space
-when a high-uncertainty edge is detected — this is **active model
-expansion**, which standard RL libraries don't ship because they
-assume a fixed action space. (The phenomenon is theorized, if
-under-engineered: Chandak et al. 2020, 'Lifelong Learning with a
-Changing Action Set', AAAI, arXiv:1906.01770; Farquhar et al. 2020,
-'Growing Action Spaces', ICML; and option/skill discovery,
-Sutton-Precup-Singh 1999. The genuinely thin part is narrower: a
-posterior-sampling agent that authors its own actions on
+The drafter extends the action space when a high-uncertainty edge is
+detected — this is **active model expansion**, which standard RL
+libraries don't ship because they assume a fixed action space. (The
+phenomenon is theorized, if under-engineered: lifelong learning with a
+changing action set [Chandak]; growing action spaces [Farquhar]; and
+option/skill discovery [Sutton et al.]. The genuinely thin part is
+narrower: a posterior-sampling agent that authors its own actions on
 high-uncertainty edges *with a regret guarantee* — that specific
 combination lacks a √T bound.)
 
 So the substrate is doing **open-world model-based Bayesian RL on a
-factored MDP** — every word of which describes existing behavior, not
+factored MDP** — every word of which describes structural behavior, not
 a future capability.
+
+This open-world action-space expansion is, read as a representation,
+**growing the representational basis**: a new action becomes available
+exactly when a new direction is opened in an *open-dimensional* basis of
+shape-axes rather than packed into a fixed-dimensional one. The action
+space is not a fixed vocabulary the agent searches within but a
+nonparametric object whose cardinality is itself a variable — the
+drafter mints a coordinate, not just a parameter. The geometry of this
+open/nonparametric basis (shapes-as-axes, dimensionality-as-variable,
+and the duality with the fixed-dimensional, superposed representation a
+transformer learns) is developed in `SUBSTRATE_AS_REPRESENTATION.md` §5.
+The MDP statement here is the operational face of it: `A(s)` has an
+unbounded support, new arms enter at the uninformed prior, and the
+posterior factorization (§4) is what keeps the open action space
+estimable.
 
 ## 6. The same as graph RL?
 
@@ -321,7 +344,7 @@ graph-structured environments where the policy is graph-aware
 (GNN policy, node-embedding state features). The substrate maps:
 (Terminology caveat: in the literature 'graph RL' denotes a GNN
 computing learned node/edge embeddings that drive the policy/value
-function. Here the dense MiniLM embeddings serve retrieval, not policy
+function. Here the dense embeddings serve retrieval, not policy
 function-approximation, so this is more precisely 'Thompson sampling
 over a typed-shape-compatibility DAG' than graph RL in the technical
 sense.)
@@ -329,11 +352,11 @@ sense.)
 | Graph RL term | Substrate primitive |
 |---|---|
 | State graph | shape DAG (input_shapes → output_shapes) |
-| State embedding | `all-MiniLM-L6-v2` dense vectors (384-dim INT8) in concept-db |
+| State embedding | dense concept vectors |
 | Trajectory | trace + composition_chain |
 | Bandit-style exploration | Thompson per (signature, template) |
-| Reward signal | binary trace success after convergent-validity check |
-| Model-based estimation | grouped `activity_execution_traces` view |
+| Reward signal | binary trace success after the validation back-half |
+| Model-based estimation | grouped execution-trace view |
 | Active model expansion | drafter authoring new templates on detected gaps |
 
 What's idiomatic relative to off-the-shelf graph RL:
@@ -347,18 +370,17 @@ What's idiomatic relative to off-the-shelf graph RL:
 - **Reward is binary and delayed** along `composition_chain`. Standard
   graph RL libraries assume dense scalar reward.
 - **State embedding is reused for retrieval**, not just policy
-  conditioning. concept-db's dense index serves both the selector
-  (recommend) and the drafter (priming), unifying value-function
-  approximation with retrieval-augmented generation.
+  conditioning. The dense index serves both the selector (recommend)
+  and the drafter (priming), unifying value-function approximation with
+  retrieval-augmented generation.
 
 ## 7. Horizontal compositionality
 
-Today the substrate composes **vertically**: one activity dispatches a
-child along `composition_chain`, the child runs, control returns. Each
+The substrate composes **vertically**: one activity dispatches a child
+along `composition_chain`, the child runs, control returns. Each
 trace is a single path through the state-action graph. The MDP is
-explored **depth-first, one trajectory at a time.**
-
-`composition_chain` is a `string[]` ordered root-first. Vertical-only.
+explored **depth-first, one trajectory at a time.** `composition_chain`
+is a `string[]` ordered root-first — vertical-only.
 
 ### What horizontal compositionality means
 
@@ -383,9 +405,9 @@ $$
 \text{shapes}(s_{\text{join}}) \;=\; \bigcup_{i=1}^{k} \text{shapes}(s_{\tau_i,\text{end}})
 $$
 
-This is already representable in the data model — `parent_execution_id`
-admits siblings under the same parent — but the dispatcher executes
-tasks one at a time. The gap is in the dispatcher, not the schema.
+This is representable in the data model — `parent_execution_id` admits
+siblings under the same parent — but a one-at-a-time task dispatcher
+forecloses it. The gap is in the dispatcher, not the schema.
 
 ### Why it's needed
 
@@ -422,19 +444,18 @@ horizontal it's O(1/ε²) — the constant in the state-coverage budget
 moves from |applicable| to 1.
 
 This is the difference between trace volume scaling linearly with
-useful information collected (current) vs scaling sub-linearly with
+useful information collected (sequential) vs scaling sub-linearly with
 the action space's width (horizontal).
 
 **4. Federation is horizontal at the substrate scale.**
 
 A federation of N peer substrates is, mathematically, an N-fold
 horizontal composition: each substrate is a trajectory bundle from a
-shared seed state. Cross-substrate posterior aggregation
-(per the federation-dynamics analysis) requires the same join primitive
-— union of output impulse shapes weighted by provenance. Without
-horizontal compositionality at the single-substrate scale, the math
-for cross-substrate aggregation doesn't have a local analogue to
-generalize from.
+shared seed state. Cross-substrate posterior aggregation requires the
+same join primitive — union of output impulse shapes weighted by
+provenance. Without horizontal compositionality at the single-substrate
+scale, the math for cross-substrate aggregation doesn't have a local
+analogue to generalize from.
 
 **5. Specialization-via-divergence requires parallel branches.**
 
@@ -468,12 +489,12 @@ $$
 $$
 
 — average over siblings, not sum — to avoid k-fold credit inflation
-at the shared ancestor. This is a small dispatcher change, not a
-schema change.
+at the shared ancestor. This is a dispatcher change, not a schema
+change.
 
 ### What it does **not** require
 
-- No new tier in any roadmap.
+- No new tier.
 - No new category of activity.
 - No new shape vocabulary.
 - No new resolver kind.
@@ -482,15 +503,13 @@ schema change.
 - The Thompson posterior already factorizes per-cell; the math is
   ready.
 - The only mechanical work is in the dispatcher's task-stepping loop
-  and in `propagateCreditAlongChain`'s averaging-vs-summing of
-  sibling deltas.
+  and in the averaging-vs-summing of sibling deltas in chain-credit.
 
-In the discipline of the previous turns: horizontal compositionality
-is not a new substrate primitive. It is the **breadth-first dual** of
-the vertical primitive `composition_chain` already exists in. The math
-demands it for sample-efficient topology discovery; the data model
-already accommodates it; the dispatcher is one well-scoped change away
-from supporting it.
+Horizontal compositionality is not a new substrate primitive. It is the
+**breadth-first dual** of the vertical primitive `composition_chain`
+already exists in. The math demands it for sample-efficient topology
+discovery; the data model already accommodates it; the dispatcher is one
+well-scoped change away from supporting it.
 
 ## 8. Vessel-level horizontal scaling
 
@@ -501,8 +520,8 @@ independent action subspace to the substrate's posterior.
 
 ### 8.1 What a new vessel contributes
 
-A vessel `v` joining via discovery-vessel adds three independent
-contributions to the state-action graph:
+A vessel `v` joining via discovery adds three independent contributions
+to the state-action graph:
 
 - **ΔS_v** — new shapes advertised. Adds coordinates to S that were
   previously absent.
@@ -514,11 +533,10 @@ contributions to the state-action graph:
   `deterministic`, freeing posterior capacity that was tied up
   estimating stochastic transitions.
 
-None of these are new mechanisms. Discovery-vessel is the registry,
+None of these are new mechanisms. Discovery is the registry,
 `applicable(s)` is computed at recommend-time, resolver-tier
-decomposition is per-task in `activity_execution_traces`. Vessel
-addition is the mechanism the substrate has always used to grow its
-action space.
+decomposition is per-task in the execution-trace store. Vessel addition
+is the mechanism the substrate uses to grow its action space.
 
 ### 8.2 Monotone capacity addition
 
@@ -584,31 +602,29 @@ addition addresses three structurally distinct classes:
    combinatorial Hodge theory: divergence is the incidence-matrix
    adjoint, a purely discrete operator needing no continuous limit. The
    edge-flow decomposes L²-orthogonally into gradient + curl + harmonic
-   components — Jiang, Lim, Yao, Ye 2011, 'Statistical Ranking and
-   Combinatorial Hodge Theory', Math. Programming, arXiv:0811.1067. Note:
-   a global circulation/livelock is the *harmonic* component, locally
-   acyclic but globally cyclic; *curl* is local triangular inconsistency
-   only — use 'cyclic/harmonic residual' for global livelock. The full
-   Helmholtz/Hodge treatment of this — orphaned shape = divergence, livelock
-   = harmonic `ker L₁` — is `SUBSTRATE_AS_DEC.md` §1.4.)
+   components [Jiang et al.]. Note: a global circulation/livelock is the
+   *harmonic* component, locally acyclic but globally cyclic; *curl* is
+   local triangular inconsistency only — use 'cyclic/harmonic residual'
+   for global livelock. The full Helmholtz/Hodge treatment of this —
+   orphaned shape = divergence, livelock = harmonic `ker L₁` — is
+   `SUBSTRATE_AS_DEC.md` §1.4.)
 
 2. **Bridge horizon.** Two previously-disconnected subgraphs of S × A.
    A vessel whose input is shape A (reachable in one subgraph) and
    output is shape B (consumed only in the other) creates a long-range
    edge. The substrate's reachable set grows discontinuously.
 
-3. **Tier-refinement horizon.** A transition currently estimable only
-   via `llm`-tier resolution (high stochasticity, high cost). A new
+3. **Tier-refinement horizon.** A transition estimable only via
+   `llm`-tier resolution (high stochasticity, high cost). A new
    vessel with a deterministic resolver collapses P(s′ | s, a) from a
    learned distribution to a delta. Posterior capacity is freed for
    higher-uncertainty cells elsewhere.
 
-The autonomous loop's existing topology-discovery goals
-(`reachable-unlearned-report`, `escalate-unknown-shape`) detect
-horizons within the existing vessel set. Vessel addition extends the
-substrate's ability to *act* on what it detects when the gap is
-"no resolver exists for this transition" rather than "no template
-exists for this resolver chain."
+The autonomous loop's topology-discovery goals (reachable-unlearned
+reporting, unknown-shape escalation) detect horizons within the existing
+vessel set. Vessel addition extends the substrate's ability to *act* on
+what it detects when the gap is "no resolver exists for this transition"
+rather than "no template exists for this resolver chain."
 
 ### 8.5 Why vessel-horizontal is needed
 
@@ -631,31 +647,29 @@ monotone capacity. The single-substrate vessel-addition primitive is
 the local analogue of the federation peer-addition operation. If
 vessel-addition isn't clean locally, federation can't build on it.
 
-**4. The drafter's recursive case.** `scaffold-new-vessel` already
-exists as a template. The substrate can author a new vessel via the
-same draft + variant promotion mechanism it uses for new activity
-templates. What's missing is the *detection*: a horizon report whose
-verdict is "this gap cannot be closed with existing vessels' resolvers;
-scaffold a new vessel that produces shape X." Today that detection is
-operator-side.
+**4. The drafter's recursive case.** A vessel-scaffolding template lets
+the substrate author a new vessel via the same draft + variant
+promotion mechanism it uses for new activity templates. What is harder
+is the *detection*: a horizon report whose verdict is "this gap cannot
+be closed with existing vessels' resolvers; scaffold a new vessel that
+produces shape X." That detection is the operator-side residual.
 
 ### 8.6 What's needed, mechanically
 
 1. **Horizon-classification step distinguishing "draft a new template"
-   from "scaffold a new vessel."** Boredom-vessel currently routes all
-   gap detection to `draft-gap-closing-activity`. Adding a tier check
-   — "does any existing resolver cover the missing transition?" — and
-   routing to `scaffold-new-vessel` when no, closes the recursive loop.
-   One classifier step, no new vocabulary.
+   from "scaffold a new vessel."** A gap-detection loop that routes all
+   gaps to template-drafting must add a tier check — "does any existing
+   resolver cover the missing transition?" — and route to
+   vessel-scaffolding when no, closing the recursive loop. One
+   classifier step, no new vocabulary.
 
 2. **Posterior-aware vessel-saturation signal.** When all (s, a) cells
    in an existing vessel's subspace have converged variance below
    threshold and reward bounded away from 1, the vessel has saturated
    its contribution to the current goal. The signal — "vessel posterior
    has converged; remaining uncertainty is outside its action subspace"
-   — should trigger horizon-escalation. Today implicit; making it
-   explicit needs a small aggregator over `concept_usage_stats` per
-   vessel.
+   — should trigger horizon-escalation. Making it explicit needs a small
+   aggregator over per-vessel usage statistics.
 
 3. **Sibling dispatch across vessels.** The §7 primitive applied at
    vessel scale: when multiple newly-added vessels produce the same
@@ -690,7 +704,7 @@ verbatim with the unit type rebound:
 | Contributes | extra samples per cell | (ΔS, ΔA, ΔR) per vessel | (ΔS, ΔA, ΔR) per peer |
 | Existing untouched | per-cell factorization | per-vessel subspace independence | per-substrate posterior independence |
 | New cells | shared parent's posterior | Beta(1,1) at new (s,a) | Beta(1,1) at new (s,a) under peer-scope |
-| Validation | local trace outcome | within-substrate convergent-validity | behavioral-continuation replay on local data |
+| Validation | local trace outcome | within-substrate validation | behavioral-continuation replay on local data |
 
 The math is **scale-invariant**: at every level, the same factorization
 makes estimation tractable, and the same Bayesian regret bound applies
@@ -708,8 +722,8 @@ coordinate.
 | Within-substrate | Federation analogue |
 |---|---|
 | Signature namespace | shared signature schema; provenance-tagged when minted in another peer |
-| Vessel inventory | substrate inventory (which peers exist; H4 quorum-ratified) |
-| Resolver tier | trust tier (`local-verified`, `peer-attested`, `unattested`) introduced by H1/H2/H3 |
+| Vessel inventory | substrate inventory (which peers exist; quorum-ratified) |
+| Resolver tier | trust tier (`local-verified`, `peer-attested`, `unattested`) |
 | Scope hierarchy (org/account/global) | gains a fourth level: `peer-scope` above `global` |
 
 The hierarchical partial-pooling rule from §4.2 extends one level up.
@@ -763,7 +777,7 @@ ideal factorization; the limits in §9.3 cut into it.
 The pattern doesn't scale infinitely. Eight concrete limits, ordered
 roughly by how hard they bite first.
 
-**1. Coordination overhead per signed event.** H3 attestations + H4
+**1. Coordination overhead per signed event.** Per-event attestations +
 quorum ratification → without aggregate signatures or batched
 attestations, per-impulse verification cost grows linearly with peer
 count. Practical ceiling at dozens of peers under naïve protocol.
@@ -771,16 +785,16 @@ count. Practical ceiling at dozens of peers under naïve protocol.
 **2. Heaps'-law vocabulary saturation.** Total novel-shape vocabulary
 across $N$ peers grows as $O(N^\beta)$ with $\beta < 1$ (empirically
 $\beta \approx 0.5$ for natural language; structural ontologies behave
-similarly). After ~10 peers, marginal vocabulary contribution becomes
-negligible. Capability gain is **sublinear** in peer count for the
-coverage-breadth term.
+similarly). Past a small number of peers, marginal vocabulary
+contribution becomes negligible. Capability gain is **sublinear** in peer
+count for the coverage-breadth term.
 
-**3. Posterior poisoning without H1/H2.** Naive aggregation amplifies
-hostile or low-quality peer contributions. Federation can be **net
-negative** versus single-substrate baseline if verification doesn't
-keep pace with aggregation. The existing single-substrate
-posterior-fidelity bugs (cascade attribution without witness; single-
-signal trace success) compound across peers.
+**3. Posterior poisoning without two-sided verification.** Naive
+aggregation amplifies hostile or low-quality peer contributions.
+Federation can be **net negative** versus single-substrate baseline if
+verification doesn't keep pace with aggregation. Single-substrate
+posterior-fidelity weaknesses (cascade attribution without witness;
+single-signal trace success) compound across peers.
 
 **4. Behavioral-continuation coverage limit.** Behavioral-continuation
 is the only universal cross-substrate validation. It works for
@@ -795,8 +809,7 @@ regardless of scale. Federation accelerates only **shared** signatures;
 novel signatures unique to one peer get zero acceleration. There's a
 long tail where federation does nothing.
 
-**6. Embedding-space drift.** The dense-search index (currently
-`all-MiniLM-L6-v2`, 384-dim INT8 in concept-db) works cross-substrate
+**6. Embedding-space drift.** The dense-search index works cross-substrate
 only while peers' concept-graphs share enough semantic density. Two
 substrates whose vocabularies diverge enough hit a threshold past which
 similarity queries return cross-substrate noise rather than signal.
@@ -808,11 +821,11 @@ peer's *local* posterior improves on its *local* objective while
 imported templates verify by behavioral-continuation.
 
 **8. Detection-authoring recursion truncation.** Each recursion level
-needs a corresponding detector to be operationally meaningful. Today
-the substrate detects template gaps (`reachable-unlearned-report`); it
-cannot yet detect "we need a whole new peer substrate." Capability
-authoring at level $N$ requires gap-detection at level $N$. The
-detection chain is currently truncated at the substrate boundary.
+needs a corresponding detector to be operationally meaningful. The
+substrate detects template gaps but cannot yet detect "we need a whole
+new peer substrate." Capability authoring at level $N$ requires
+gap-detection at level $N$. The detection chain truncates at the
+substrate boundary.
 
 ### 9.4 Measurement — what to observe
 
@@ -824,9 +837,9 @@ metrics; most are computable from existing data.
 |---|---|---|
 | Per-cell | $\mathrm{Var}[\mathrm{Beta}(\alpha, \beta)] = \frac{\alpha\beta}{(\alpha+\beta)^2(\alpha+\beta+1)}$ over time | gradient accuracy at that cell |
 | Per-vessel | fraction of vessel's $(s, a)$ cells with $\mathrm{Var}$ below threshold | vessel has saturated its capacity |
-| Per-substrate | fraction of $\mathrm{reachable}(S \times A)$ with non-prior posterior; `coverage_progress` flag | substrate is exploring effectively |
+| Per-substrate | fraction of $\mathrm{reachable}(S \times A)$ with non-prior posterior; coverage-progress flag | substrate is exploring effectively |
 | Per-federation | replay-success of imported templates on local behavioral-continuation; spectral rank of joint posterior over shared signatures | trust-free cross-substrate value |
-| Push-away | count of `interventionRefused` impulses per window with cited evidence | S3 readiness (already in IAL §27.S.6) |
+| Push-away | count of intervention-refused impulses per window with cited evidence | distributed-stability readiness |
 | Topology stability | spectral drift of empirical $(P, R)$ over time windows | learning has converged on the underlying topology, not chasing noise |
 | Vocabulary growth | new-shape mint rate per peer per window | Heaps'-law saturation curve; tells you whether federation is still adding coverage or just adding noise |
 | Detection coverage | fraction of detected horizons (orphaned-shape / bridge / tier-refinement) closed autonomously vs operator-escalated | recursion depth of the capability-authoring loop |
@@ -846,10 +859,9 @@ per-cell bounds. The federation is tractable in the sense that the
 joint regret bound is the sum of per-cell bounds **with no cross-cell
 interference term** — exactly because of the factorization.
 
-**Empirical.** The existing IAL lift criterion
-(`coverage_progress=true` AND
-`substrateHealthReport.health_verdict.overall_passing=true` for ≥ 3
-windows) is the operational analogue. Generalized to federation:
+**Empirical.** The lift criterion (coverage-progress true AND the
+substrate health verdict overall-passing for a sustained window) is the
+operational analogue. Generalized to federation:
 
   - for each peer, its local coverage and health pass;
   - collectively, the spectral rank of the joint posterior over shared
@@ -859,8 +871,8 @@ windows) is the operational analogue. Generalized to federation:
 
 All three are locally computable, trace-inspectable, and require no
 central oracle. Sustained for $k$ consecutive windows (mirroring the
-IAL $k = 3$ rule but at federation scope) constitutes the
-"federation-sustained" evidence.
+single-substrate sustained-window rule but at federation scope)
+constitutes the "federation-sustained" evidence.
 
 ### 9.6 Net statement
 
@@ -874,16 +886,17 @@ term). Convergence is per-cell, with $\sqrt{N_{\text{peers}}}$
 acceleration for shared signatures and no acceleration for unique ones.
 
 The proof is empirical, locally computable, and trace-inspectable —
-the same shape of evidence the IAL S2-sustained criterion already
+the same shape of evidence the single-substrate sustained criterion
 uses, applied recursively at each scale with the appropriate observable
 for that scale. There is no new math to invent. There is mechanical
-work to do at the federation boundary (H1/H2/H3/H4, batched signatures,
+work to do at the federation boundary (two-sided traces, vessel
+identity, signed attestations, quorum ratification, batched signatures,
 behavioral-continuation replay infrastructure) without which the
 recursion is unsafe rather than unsupported.
 
 ## 10. Recap
 
-Every quantity in this document already exists in the running substrate.
+Every quantity in this document exists in the running substrate.
 The contribution of this writeup is to **name them in standard RL
 notation** so the substrate's behavior reads, end-to-end, as
 factored-MDP Bayesian Q-learning with model-based estimation,
@@ -902,34 +915,32 @@ can do breadth-first what it already does depth-first.
 
 ## 11. Scorecard — what is theorem-grounded, what is frontier
 
-A 2026-06 audit checked the framing against conventional mathematics.
-Items split into three classes.
+An audit checked the framing against conventional mathematics. Items
+split into three classes.
 
 **Theorem-grounded (8) — citable formal results back the claim:**
 
 - Per-cell orthogonality is **measured**, not assumed (ICA / pPCA /
   conditional-independence tests). → §4
 - Position-error vs topology-error distinguishable via composition-graph
-  revisits (invariant causal prediction; Peters et al.). → §5
+  revisits (invariant causal prediction; [Peters et al.]). → §5
 - Vector reward is strictly more expressive than scalar (convex-hull
-  Pareto-coverage theorem: Das & Dennis 1997 / Roijers et al. 2013;
-  Vamplew 2021/22 motivates but does not prove it). → §1.1
+  Pareto-coverage theorem: [Das & Dennis] / [Roijers]; [Vamplew]
+  motivates but does not prove it). → §1.1
 - Beta-Bernoulli conjugate update = natural gradient in Beta
-  information geometry (Amari). → §2.1
+  information geometry ([Amari]). → §2.1
 - Transient state as steady state along dual-arm invariant manifold
-  (Borkar TTSA + geometric singular perturbation / Fenichel 1979; not
+  ([Borkar] TTSA + geometric singular perturbation / [Fenichel]; not
   Carr's centre-manifold theorem — see §4.6). → §4.6
 - Substrate is GNN-shaped: credit propagation = asynchronous
   message-passing on a directed cell graph (temporal-graph-network
   family). → §8.3
 - Manifold hypothesis applies per-activity at MDL-minimum
-  dimensionality (arXiv 2504.00395 — MDL representation learning;
-  arXiv 2602.22873 — autoencoder atlases; author attributions pending
-  verification, ids post-date local knowledge). → Foundation doc
-  §"Variant System"
+  dimensionality (MDL representation learning; autoencoder atlases). →
+  the substrate's variant system
 - Four-primitive closure is defensible as a Lawvere algebraic theory,
   bounded above by Tarski's undefinability theorem (full
-  self-interpretation impossible from within). → Foundation doc
+  self-interpretation impossible from within). → the foundational model
 
 **Frontier (6) — operating without formal guarantees:**
 
@@ -942,7 +953,7 @@ Items split into three classes.
 - Regret bounds under growing action sets (PSRL Õ(√T) assumes fixed
   action set; no comparable bound covers active expansion).
 - Bayesian-nonparametric PSRL with state-action space expansion (closest
-  is Xu's continuing-environment PSRL, arXiv RLC 2024).
+  is continuing-environment PSRL).
 - Authored-vs-trained vessel distinction (mech interp treats all
   circuits as trained-then-recovered; no academic counterpart to
   first-class authoring).
@@ -955,7 +966,7 @@ Items split into three classes.
   limit-statement that no single latent space captures all true
   relationships. The substrate represents this by never representing it
   as an object — only the fact that any chosen representation is
-  provably partial. → Foundation doc §"The Informational State"
+  provably partial. → the substrate's informational state
 
 The 8 theorem-grounded items cover the load-bearing math. The 6
 frontier items share a common shape — *runtime expansion of structured
@@ -980,7 +991,7 @@ Thompson-sampling bandit with heuristic chain-credit smearing; the
 MDP / Q-learning / n-step-TD vocabulary is structural-aspirational.
 Actions score immediate reward without a bootstrapped next-state value,
 so there is no Bellman backup in the strict sense. The
-O(√(T log T)) regret bound the doc cites (Agrawal & Goyal) is itself a
+O(√(T log T)) regret bound the doc cites ([Agrawal & Goyal]) is itself a
 *bandit* bound — there is no analogous closed-form regret for the
 sequential Q-learning the framing claims.
 
@@ -996,26 +1007,25 @@ non-stationary for the others) and heterogeneity — as the field's
 central unsolved problem, not a vanishing higher-order term. Any
 additive federation-scale bound must state its independence /
 homogeneity assumptions explicitly. (Refs: distributed-bandit
-√(KT/N) decomposition; MARL surveys arXiv:1810.05587,
-arXiv:2312.10256.)
+√(KT/N) decomposition; MARL surveys [Zhang et al.], [Gronauer & Diepold].)
 
 ### 12.3 OMP shape vs OMP guarantees
 
 Goal-seeking via residual projection (the §1.1 residual) is genuinely
-(Orthogonal) Matching Pursuit-shaped — Pati, Rezaiifar &
-Krishnaprasad 1993; the §1.1 residual *is* the OMP residual norm. But
-OMP's recovery theorems assume deterministic atoms and low dictionary
-coherence. Activities are *stochastic* maps (an activity might not
-fire → the object is really a bandit-over-an-OMP-dictionary), and real
-activity dictionaries are *high-coherence* (overlapping output shapes)
-— precisely the regime where greedy matching pursuit is suboptimal.
-Import OMP's shape, not its guarantees.
+(Orthogonal) Matching Pursuit-shaped ([Pati et al.]); the §1.1 residual
+*is* the OMP residual norm. But OMP's recovery theorems assume
+deterministic atoms and low dictionary coherence. Activities are
+*stochastic* maps (an activity might not fire → the object is really a
+bandit-over-an-OMP-dictionary), and real activity dictionaries are
+*high-coherence* (overlapping output shapes) — precisely the regime
+where greedy matching pursuit is suboptimal. Import OMP's shape, not its
+guarantees.
 
 ### 12.4 Selector is VoI-inspired, not Bayes-optimal
 
 Choosing the next activity to maximize expected residual-reduction per
 unit cost lives in the value-of-information / Bayesian-experimental-design
-/ active-learning family (Lindley 1956; Settles). But the
+/ active-learning family ([Lindley]; [Settles]). But the
 variance × residual-projection × (1/cost) *product* is a UCB-style
 scalarization heuristic, not a derived expected-information-gain (which
 is additive in log-space / entropy differences). Call it a VoI-inspired
@@ -1025,10 +1035,10 @@ cost-normalized acquisition function.
 
 Because the selector scalarizes the §1.1 vector residual into a single
 score, it recovers only policies on the convex hull of the
-multi-objective Pareto front (Das & Dennis 1997; Vamplew 2021/22) —
-non-convex goal regions are unreachable regardless of how much the
-selector learns. This is the same convex-hull limitation §1.1 invokes,
-now applied to the substrate's own acquisition function.
+multi-objective Pareto front ([Das & Dennis]; [Vamplew]) — non-convex
+goal regions are unreachable regardless of how much the selector learns.
+This is the same convex-hull limitation §1.1 invokes, now applied to the
+substrate's own acquisition function.
 
 ### 12.6 Validation integrity is the precondition
 
@@ -1036,10 +1046,25 @@ The reward signal is produced by a validation activity (the "back
 half"). If that activity can be fabricated or returns a constant, the
 loop is either open (constant reward → no learning) or poisoned
 (gameable reward → convergence onto the wrong objective: reward
-hacking / Goodhart / specification gaming — Amodei et al. 2016). The
-H1 two-sided-trace hardening is what makes the learning signal
-trustworthy — it is a precondition for the math above to mean anything,
-not optional polish.
+hacking / Goodhart / specification gaming, [Amodei et al.]). Two-sided
+trace hardening — counterparty signatures proving producer and consumer
+agreed on the trace contents — is what makes the learning signal
+trustworthy. It is a precondition for the math above to mean anything,
+not optional polish. This is the **grounding** condition stated at the
+reward level: validity is measurement against the un-authorable referent
+(reality, the resolver whose precision drives toward a delta), and
+measurement substitutes for proof because the informational state is
+non-constructible (§11) — no finite construction certifies a candidate,
+so the only available certificate is a verified measurement against the
+referent. Self-modelling and world-modelling are not separate problems
+here: the transition model P(s′|s,a) of §1 **is** the world-model, and
+it is learned by the same update as the forward arm
+P(success|activity, shape) — a single trace cannot separate
+self-evidence (how the substrate's own action performed) from
+world-evidence (how reality responded), so one factorization carries
+both, and an ungrounded world-model and an overconfident self-model fail
+together. (`SUBSTRATE_AS_REPRESENTATION.md` §6 states the same condition
+geometrically: candidate-genesis ⊂ grounded-genesis.)
 
 ### 12.7 Orthogonality ≠ independence; measure the right one
 
@@ -1062,11 +1087,11 @@ to pose the substrate *against* transformer/embedding models, as
 the substrate gives up interpolative generalization. That is a
 whole-vs-part confusion. The substrate is the **container**; a
 transformer or embedding model is a **resolver inside its capability
-set**, not a peer architecture. This is already instantiated twice:
-`llm-resolver-vessel` makes a transformer the `llm_completion` resolver,
-and `concept-db`'s MiniLM embedding already serves both the selector
-(dense recommend) and the drafter (priming). "Call a transformer" and
-"embed this state" are already members of `applicable(s)`.
+set**, not a peer architecture. This is instantiated twice: an
+LLM-resolver vessel makes a transformer the `llm_completion` resolver,
+and the concept-db embedding serves both the selector (dense recommend)
+and the drafter (priming). "Call a transformer" and "embed this state"
+are members of `applicable(s)`.
 
 Three consequences:
 
@@ -1074,7 +1099,7 @@ Three consequences:
    contributes ΔA (interpolating actions) + ΔR (an interpolating
    resolver); new cells start at Beta(1, 1); nothing existing is
    touched. The substrate loses no capability and no generality by
-   incorporating any technique — it is the foundation's "LLMs are one
+   incorporating any technique — it is the foundational "LLMs are one
    resolver among many," applied at the architecture level. (Where this
    document earlier implied a trade of auditability for generalization,
    that step does not exist; it is one more resolver.)
@@ -1108,3 +1133,27 @@ but it does not worsen the limit either; resolver quality is orthogonal
 to that ceiling. Net: the substrate is a thing that can hold any model
 at arm's length and learn its trust-boundary; it is not a thing any
 single model can hold.
+
+## References
+
+- **[Vamplew]** Vamplew, P. et al., *Scalar reward is not enough: a response to Silver, Singh, Precup and Sutton*, AAMAS / arXiv:2112.15422, 2022. https://arxiv.org/abs/2112.15422 — *verification: carried.*
+- **[Das & Dennis]** Das, I. & Dennis, J., *A closer look at drawbacks of minimizing weighted sums of objectives for Pareto set generation in multicriteria optimization problems*, Structural Optimization 14, 1997. — *verification: carried.*
+- **[Roijers]** Roijers, D. et al., *A Survey of Multi-Objective Sequential Decision-Making*, JAIR 48, 2013. https://www.jair.org/index.php/jair/article/view/10836 — *verification: carried.*
+- **[Dearden et al.]** Dearden, R., Friedman, N. & Russell, S., *Bayesian Q-learning*, AAAI 1998. — *verification: carried.*
+- **[Khan & Lin]** Khan, M. E. & Lin, W., *Conjugate-Computation Variational Inference*, AISTATS 2017; arXiv:1703.04265. https://arxiv.org/abs/1703.04265 — *verification: carried.*
+- **[Khan & Rue]** Khan, M. E. & Rue, H., *The Bayesian Learning Rule*, JMLR 24, 2023; arXiv:2107.04562. https://arxiv.org/abs/2107.04562 — *verification: carried.*
+- **[Amari]** Amari, S., *Natural Gradient Works Efficiently in Learning*, Neural Computation 10(2), 1998. — *verification: carried.*
+- **[Borkar]** Borkar, V. S., *Stochastic Approximation: A Dynamical Systems Viewpoint*, Cambridge University Press / Hindustan Book Agency, 2008. — *verification: carried.*
+- **[Fenichel]** Fenichel, N., *Geometric singular perturbation theory for ordinary differential equations*, J. Differential Equations 31, 1979. — *verification: carried.*
+- **[Jiang et al.]** Jiang, X., Lim, L.-H., Yao, Y. & Ye, Y., *Statistical Ranking and Combinatorial Hodge Theory*, Math. Programming 127, 2011; arXiv:0811.1067. https://arxiv.org/abs/0811.1067 — *verification: carried.*
+- **[Peters et al.]** Peters, J., Bühlmann, P. & Meinshausen, N., *Causal inference using invariant prediction*, J. Royal Statistical Society B, 2016; arXiv:1501.01332. https://arxiv.org/abs/1501.01332 — *verification: carried.*
+- **[Chandak]** Chandak, Y. et al., *Lifelong Learning with a Changing Action Set*, AAAI 2020; arXiv:1906.01770. https://arxiv.org/abs/1906.01770 — *verification: carried.*
+- **[Farquhar]** Farquhar, G. et al., *Growing Action Spaces*, ICML 2020; arXiv:1906.12266. https://arxiv.org/abs/1906.12266 — *verification: carried.*
+- **[Sutton et al.]** Sutton, R., Precup, D. & Singh, S., *Between MDPs and semi-MDPs: A framework for temporal abstraction in reinforcement learning*, Artificial Intelligence 112, 1999. — *verification: carried.*
+- **[Agrawal & Goyal]** Agrawal, S. & Goyal, N., *Analysis of Thompson Sampling for the Multi-armed Bandit Problem*, COLT 2012; arXiv:1111.1797. https://arxiv.org/abs/1111.1797 — *verification: carried.*
+- **[Pati et al.]** Pati, Y., Rezaiifar, R. & Krishnaprasad, P., *Orthogonal Matching Pursuit: recursive function approximation with applications to wavelet decomposition*, Asilomar 1993. — *verification: carried.*
+- **[Lindley]** Lindley, D. V., *On a Measure of the Information Provided by an Experiment*, Annals of Mathematical Statistics 27(4), 1956. — *verification: carried.*
+- **[Settles]** Settles, B., *Active Learning Literature Survey*, University of Wisconsin–Madison Technical Report 1648, 2009. — *verification: carried.*
+- **[Amodei et al.]** Amodei, D. et al., *Concrete Problems in AI Safety*, 2016; arXiv:1606.06565. https://arxiv.org/abs/1606.06565 — *verification: carried.*
+- **[Zhang et al.]** Zhang, K., Yang, Z. & Başar, T., *Multi-Agent Reinforcement Learning: A Selective Overview of Theories and Algorithms*, 2019; arXiv:1911.10635. https://arxiv.org/abs/1911.10635 — *verification: carried.*
+- **[Gronauer & Diepold]** Gronauer, S. & Diepold, K., *Multi-agent deep reinforcement learning: a survey*, Artificial Intelligence Review 55, 2022. — *verification: carried.*

@@ -1,35 +1,39 @@
 # The substrate is a weighted cell complex under discrete exterior calculus
 
-> Companion to [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md). Where that document
-> reads the substrate in reinforcement-learning notation (factored-MDP Bayesian
-> Q-learning), this one reads the *same running system* in discrete exterior
-> calculus (DEC) and combinatorial Hodge theory. It introduces **no new
+> Companion to the formal-lens documents, all reading one running system through
+> different coordinate charts:
+> - [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md) — the learning *rule* (factored-MDP
+>   Bayesian Q-learning).
+> - [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md) — the *structure* (a weighted directed
+>   cell complex and its Hodge operators). **This document.**
+> - [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md) — the *flow in time* (a
+>   slow–fast dynamical system with a conditional-stability threshold).
+> - [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md) — the *engineering* (durability
+>   groups: what persists / is ephemeral / is appended).
+> - [`SUBSTRATE_AS_REPRESENTATION.md`](SUBSTRATE_AS_REPRESENTATION.md) — the *representation*
+>   (an open basis of shape-axes; the momentum-space dual of the transformer).
+> - [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md) — the *fleet* (cross-container
+>   durability; what may cross the substrate boundary).
+> - [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md) — the *network* (the protocol
+>   layer; how the crossings are realized).
+>
+> This is the **structure** chart. It reads the *same running system* in discrete
+> exterior calculus (DEC) and combinatorial Hodge theory. It introduces **no new
 > primitives**. Every quantity below is something the substrate already computes
 > or stores; the contribution is to name the trace store, the Thompson layer, the
 > composition chain, the shape lattice, and vessel/federation growth as one
 > object — a **weighted directed cell complex** carrying cellular-sheaf data — so
 > that convergence, scaling, and self-optimization rates read off as spectral
-> properties of a single discrete Laplacian.
+> properties of a single discrete Laplacian. The dictionary mapping each quantity
+> across the charts is `SUBSTRATE_AS_DYNAMICS.md` §0; the representation column is
+> `SUBSTRATE_AS_REPRESENTATION.md` §0. The sparsity-of-`L` argument of §2 is what
+> `SUBSTRATE_AS_FLEET.md` §3 invokes to forbid a dense global posterior merge
+> across substrates.
 >
-> **One object, four lenses.** This is the *structure* chart. The MDP doc is the
-> *learning-rule* chart; [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md) is
-> the *flow-in-time* chart, which takes the spectral master inequality of §4.4 and
-> reads it as a normal-hyperbolicity / stability threshold for runtime growth; and
-> [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md) is the *engineering* chart,
-> reading the system as software sorted by durability. The dictionary mapping each
-> quantity across the charts is `SUBSTRATE_AS_DYNAMICS.md` §0. Two later companions
-> take the durability lens across the container line:
-> [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md) (durability across a multi-container
-> fleet — what may cross the boundary) and
-> [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md) (the protocol/engineering layer
-> that realizes the crossings). The sparsity-of-`L` argument of §2 is what FLEET §3
-> invokes to forbid a dense global posterior merge across substrates.
->
-> The MDP doc disowns continuous/Riemannian structure (`SUBSTRATE_AS_MDP.md`
-> §8.3) and already leans on combinatorial Hodge theory (§8.4). This document is
-> the load-bearing version of that lean. The reconciliation it depends on — that
-> a Hodge star is a *diagonal matrix of weights*, not a continuous metric — is
-> stated and cited in §1.3.
+> The MDP doc disowns continuous/Riemannian structure and already leans on
+> combinatorial Hodge theory; this document is the load-bearing version of that
+> lean. The reconciliation it depends on — that a Hodge star is a *diagonal matrix
+> of weights*, not a continuous metric — is stated and cited in §1.3.
 
 ## 0. One operation: a vessel is a subcomplex
 
@@ -42,7 +46,7 @@ cellular-sheaf data on its cells.
 | shape | 0-cell | shape DAG, `discover-by-shapes` |
 | impulse pool at a state | 0-cochain (stalk data on present 0-cells) | input impulses of a trace |
 | activity (`{in_shapes} → {out_shapes}`) | directed/chemical hyperedge | `activity_template`, `applicable(s)` |
-| trace count / credit on an edge | 1-cochain (edge flow) | `activity_execution_traces` |
+| trace count / credit on an edge | 1-cochain (edge flow) | execution traces |
 | Beta(α,β) posterior on `(signature, template)` | weight on the corresponding 1-cell | Thompson layer |
 | composition chain | 1-chain (directed path) | `composition_chain` |
 | resolver tier (det/pattern/llm) | sharpness of an edge's stalk map | per-task resolver fields |
@@ -59,21 +63,19 @@ under the Laplacian that `⋆` induces.
 
 An activity consumes a *set* of input shapes and produces a *set* of output
 shapes, so it is a **directed hyperedge**, not a simple edge. The faithful
-published formalism is the **chemical hypergraph** of Jost & Mulas (*Hypergraph
-Laplace Operators for Chemical Reaction Networks*, Advances in Mathematics 351,
-2019; arXiv:1804.01474): each hyperedge is a reaction; vertices carry input,
-output, or both (catalyst) roles; the Laplace operator computes differences
-between input and output vertices. This is an almost-exact structural match to
-"activity = `{input_shapes} → {output_shapes}`," with **catalyst = a shape that
-is required-but-preserved** (consumed and reproduced).
+published formalism is the **chemical hypergraph** of [Jost & Mulas]: each
+hyperedge is a reaction; vertices carry input, output, or both (catalyst)
+roles; the Laplace operator computes differences between input and output
+vertices. This is an almost-exact structural match to "activity =
+`{input_shapes} → {output_shapes}`," with **catalyst = a shape that is
+required-but-preserved** (consumed and reproduced).
 
 Caveat (honest): a *simplicial* complex requires downward closure (every face
 of a present cell is present) and symmetry. Activities satisfy neither — an
 activity does not imply that all sub-tuples of its inputs are also activities,
 and it is directed. So the honest combinatorial substrate is a
-**directed/chemical hypergraph** or a general **combinatorial complex** (Hajij
-et al., *Topological Deep Learning: Going Beyond Graph Data*, arXiv:2206.00606,
-2022), not a simplicial complex. The Hodge-Laplacian machinery still applies
+**directed/chemical hypergraph** or a general **combinatorial complex** ([Hajij
+et al.]), not a simplicial complex. The Hodge-Laplacian machinery still applies
 once incidence/boundary operators are fixed; we simply may not claim a
 simplicial complex where there is none.
 
@@ -91,8 +93,8 @@ A **vessel is a subcomplex.** A vessel `v` joining via discovery contributes:
 This is the only growth operation the substrate has. It is monotone-additive on
 the metric: new cells enter at the uninformed weight Beta(1,1); existing cells
 are untouched because `⋆` is block-diagonal across cells (§1.4). This is exactly
-the monotone-capacity property of `SUBSTRATE_AS_MDP.md` §8.2, now read as
-"extend `⋆` by zero-information on the new cells."
+the monotone-capacity property the MDP doc records — capacity only ever grows —
+now read as "extend `⋆` by zero-information on the new cells."
 
 The substrate's **explicit/implicit vessel** distinction is, in DEC, the
 question *are the restriction maps part of the data, or recovered from the
@@ -103,25 +105,23 @@ boundary?*
   gluing maps are handed to you.
 - An **implicit vessel** is a subcomplex whose cells and flows are *observed*
   but whose restriction maps are *latent* — inferred from boundary behavior, not
-  declared. The operator-as-vessel (sole producer of `goalIntent`; see the
-  operator-vessel card) is implicit. A peer substrate known only through
-  behavioral-continuation replay is implicit: you observe its boundary behavior
-  and infer its internal maps.
+  declared. The operator-as-vessel (sole producer of `goalIntent`) is implicit. A
+  peer substrate known only through behavioral-continuation replay is implicit:
+  you observe its boundary behavior and infer its internal maps.
 
-This recovers the federation trust tier of `SUBSTRATE_AS_MDP.md` §9.1
-(`local-verified` / `peer-attested` / `unattested`) as a *geometric* statement
-about whether the restriction maps are given or reconstructed.
+This recovers the federation trust tier (`local-verified` / `peer-attested` /
+`unattested`) as a *geometric* statement about whether the restriction maps are
+given or reconstructed.
 
 ### 0.3 Federation is vessel addition, not a separate scale
 
-The MDP doc's §7/§8/§9 ladder — within-dispatch, within-substrate,
-cross-substrate — is one operation seen three times. In DEC there is only one
-scale: **the complex and its subcomplexes.** Gluing any subcomplex (a resolver,
-a vessel, or a whole peer substrate) is the **pushout / colimit of cell
-complexes**, and the obstruction to coherent gluing is always the same
-cohomological object: **H¹ of the union**, with the Mayer–Vietoris connecting
-map `∂` measuring whether two locally-consistent pieces agree on their shared
-interface.
+The within-dispatch / within-substrate / cross-substrate ladder is one operation
+seen three times. In DEC there is only one scale: **the complex and its
+subcomplexes.** Gluing any subcomplex (a resolver, a vessel, or a whole peer
+substrate) is the **pushout / colimit of cell complexes**, and the obstruction
+to coherent gluing is always the same cohomological object: **H¹ of the union**,
+with the Mayer–Vietoris connecting map `∂` measuring whether two
+locally-consistent pieces agree on their shared interface.
 
 $$
 H^0(X \cup Y) \to H^0(X) \oplus H^0(Y) \to H^0(X \cap Y)
@@ -137,17 +137,11 @@ whose local consistencies don't glue."
 
 A federation of `N` peers is therefore not a new mathematical regime; it is an
 `N`-fold subcomplex gluing, governed by the same incidence structure, the same
-`⋆`, the same Laplacian, the same `H¹`. The §8.7 "three scales" table of the
-MDP doc collapses to a single row: *glue a subcomplex; the obstruction is `H¹`;
-the rate is set by the spectral gap (§3).*
+`⋆`, the same Laplacian, the same `H¹`. The "three scales" picture collapses to
+a single row: *glue a subcomplex; the obstruction is `H¹`; the rate is set by
+the spectral gap (§3).*
 
-Sources: Hansen & Ghrist, *Toward a Spectral Theory of Cellular Sheaves*, J.
-Applied & Computational Topology, 2019 (arXiv:1808.01513); Ghrist, *Elementary
-Applied Topology*, 2014; Riess & Ghrist, *Applied Sheaf Theory for Multi-Agent
-AI Systems: A Prospectus*, arXiv:2504.17700, 2025. (Provenance caveat: the
-1808.01513 sign/orientation conventions and the 2504.17700 framing were read
-through summarizers during research; verify against the primary PDFs before
-treating any exact formula here as canonical.)
+Sources: [Hansen & Ghrist 2019]; [Riess & Ghrist].
 
 ## 1. The discrete apparatus
 
@@ -172,8 +166,8 @@ state.
 
 ### 1.3 The discrete Hodge star is a diagonal weight matrix (the reconciliation)
 
-This is the crux for reconciling DEC with the MDP doc's disowning of Riemannian
-structure. In DEC the Hodge star `⋆_k` is realized as a (typically **diagonal**)
+This is the crux for reconciling DEC with the disowning of Riemannian structure.
+In DEC the Hodge star `⋆_k` is realized as a (typically **diagonal**)
 inner-product / mass matrix on `k`-cochains — a choice of **weights**, not a
 continuous metric. With circumcentric duality the entries are ratios of dual to
 primal cell measure; combinatorially they are simply per-cell positive weights.
@@ -181,14 +175,10 @@ There is **no continuous manifold and no Riemannian structure** anywhere in the
 construction.
 
 Therefore the substrate may use the entire Hodge apparatus while remaining a
-purely discrete object on the cells — exactly the stance of
-`SUBSTRATE_AS_MDP.md` §8.3. The weights are the learned content: set `⋆₁` on an
-edge to that edge's posterior precision.
+purely discrete object on the cells. The weights are the learned content: set
+`⋆₁` on an edge to that edge's posterior precision.
 
-Sources: Bell & Hirani, *PyDEC: Software and Algorithms for Discretization of
-Exterior Calculus*, arXiv:1103.3076, 2011; Kazhdan, DEC lecture notes (JHU);
-Desbrun, Hirani, Leok & Marsden, *Discrete Exterior Calculus*, arXiv:math/0508341,
-2005.
+Sources: [Bell & Hirani]; [Desbrun et al.].
 
 ### 1.4 The Hodge Laplacian and the Helmholtz decomposition
 
@@ -218,37 +208,31 @@ number). Read on the substrate's flow:
   **globally cyclic but locally acyclic** — circulation around a hole that no
   single triangle reveals. **This is the livelock.**
 
-Two precise consequences the MDP doc asserts but does not derive:
+Two precise consequences:
 
 - An **orphaned shape** (no producer or consumer) is a point of nonzero
-  divergence, `B₁ x ≠ 0`, living in the *gradient* component. (`SUBSTRATE_AS_MDP.md`
-  §8.4 horizon class 1.)
+  divergence, `B₁ x ≠ 0`, living in the *gradient* component.
 - A **global livelock** is the *harmonic* component, distinct from curl; a local
-  triangular inconsistency is *curl* only. The MDP doc's parenthetical at §8.4
-  ("use 'cyclic/harmonic residual' for global livelock; curl is local
-  triangular inconsistency only") is exactly the harmonic-vs-curl distinction,
-  now formal.
+  triangular inconsistency is *curl* only. "Cyclic/harmonic residual" is the
+  right name for a global livelock; curl names only a local triangular
+  inconsistency. This harmonic-vs-curl distinction is now formal.
 
 Which cycles count as curl (local) versus harmonic (global) depends on **which
 activity-triangles you fill** — a modeling decision, not an intrinsic fact. The
 substrate's choice of 2-skeleton (which composition triangles it materializes)
 determines what it can localize.
 
-Sources: Lim, *Hodge Laplacians on Graphs*, SIAM Review 2020 (arXiv:1507.05379);
-Jiang, Lim, Yao & Ye, *Statistical Ranking and Combinatorial Hodge Theory*,
-Math. Programming 2011 (arXiv:0811.1067); Schaub et al., *Signal Processing on
-Higher-Order Networks*, arXiv:2101.05510, 2021.
+Sources: [Lim]; [Jiang–Lim–Yao–Ye]; [Schaub et al.].
 
 ### 1.5 The typed-shape gate is lattice-theoretic, not linear
 
 One honesty correction the linear Hodge story glosses. The applicability
 predicate `input_shapes ⊆ available_shapes` is **order-theoretic (set
-containment), not linear**. Linear cellular-sheaf cohomology (Hansen & Ghrist
-2019) supplies the right *vocabulary* — `H⁰` = globally-consistent states, `H¹`
+containment), not linear**. Linear cellular-sheaf cohomology ([Hansen & Ghrist
+2019]) supplies the right *vocabulary* — `H⁰` = globally-consistent states, `H¹`
 = obstruction-to-gluing — but the *faithful algebra* for a containment predicate
-is the **Tarski Laplacian on lattice sheaves** (Ghrist et al., *Cellular Sheaves
-of Lattices and the Tarski Laplacian*, arXiv:2007.04099, 2020), where a global
-section is a fixed point rather than a kernel element.
+is the **Tarski Laplacian on lattice sheaves** ([Ghrist & Riess]), where a
+global section is a fixed point rather than a kernel element.
 
 Practical rule: **split the layer by stalk type.**
 
@@ -262,9 +246,19 @@ Practical rule: **split the layer by stalk type.**
 Do not conflate them. The linear apparatus carries the learning/credit layer;
 the lattice apparatus carries the gating layer.
 
+These two layers are not independent: the shape lattice stratifies the linear
+geometry, and a **direction that is normal (unreachable) at a fine stratum
+becomes tangent (reachable) at a coarser subset-stratum** on a subset of the
+shapes — so the lattice gate (Tarski) and the credit decomposition (Hodge) are
+coupled, not merely adjacent. This normal-at-fine = tangent-at-coarse coupling is
+the formal content of scope-escalation / partial-pooling as livelock-escape; its
+full treatment, including why the toplessness of the stratification makes it both
+the non-constructibility limit and the engine of progress, is
+`SUBSTRATE_AS_REPRESENTATION.md` §3.
+
 ## 2. The design principles, in DEC
 
-| Principle (CLAUDE.md) | DEC object |
+| Principle | DEC object |
 |---|---|
 | Impulses are universal data | k-cochains; **shape = which cell, content = stalk value** |
 | Metadata first, content later | **lazy stalk evaluation** — orientation/incidence known before the stalk is resolved |
@@ -285,22 +279,34 @@ costing `O(edges)` per step, not `O(cells²)`. This — not any clever algorithm
 is what makes the system scale. Centralizing resolution would densify `L` and
 destroy locality. "Don't centralize resolution" is, in DEC, "keep `L` sparse."
 
-**"Orthogonality is the moat" is block-diagonality of `⋆`.** The MDP doc's §4
-factorization (shape × signature × tier × scope) is exactly the statement that
+**"Orthogonality is the moat" is block-diagonality of `⋆`.** The
+shape × signature × tier × scope factorization is exactly the statement that
 `⋆` — and hence `L` — is block-diagonal across those blocks. Per-block sample
 complexity is `O(1/ε²)`; flatten any axis and `L` gains off-diagonal coupling,
 pushing it to `O(|history|/ε²)`. The moat is literally the sparsity pattern of
 the metric.
 
-This also re-states `SUBSTRATE_AS_MDP.md` §12.8 ("models are resolvers, not
-alternatives") cleanly: a transformer or embedding model is **one restriction
-map** — a high-coherence dictionary atom (high coherence because its outputs
-overlap many shapes; cf. §4.2 and the OMP-coherence caveat in the MDP doc
-§12.3). Its `⋆₁` weight is the substrate's *learned trust* in it per signature.
-The model's failure modes enter the trace store but are quarantined by the
-validation back-half and the forward arm rather than inherited — the substrate
-holds the model at arm's length and learns the empirical boundary of where it
-can be trusted.
+This is the **separability** pole of a **capacity↔separability trade**, not a
+free win. A frozen-dimension representation that superposes — packing many
+near-orthogonal, interfering features into a space too small to hold them
+orthogonally — buys exponential quasi-orthogonal packing (`~exp(d)` directions
+in `d` dimensions) and super-linear *computation through interference*; the
+substrate's block-diagonal `⋆` forgoes both in exchange for non-interfering,
+cleanly-transferable axes, paying `ρ_grow` (and the master-inequality constraint
+`λ₁ ≳ ρ_grow`, §4.4) for the dimensions superposition would otherwise share.
+It is a deliberate bet — separability over density — coherent because the
+substrate values clean grounding and clean transfer over raw representational
+density, not a dominance claim. The full treatment of the trade and its
+quantified bound is `SUBSTRATE_AS_REPRESENTATION.md` §5.1.
+
+This also states cleanly that **models are resolvers, not alternatives**: a
+transformer or embedding model is **one restriction map** — a high-coherence
+dictionary atom (high coherence because its outputs overlap many shapes). Its
+`⋆₁` weight is the substrate's *learned trust* in it per signature. The model's
+failure modes enter the trace store but are quarantined by the validation
+back-half and the forward arm rather than inherited — the substrate holds the
+model at arm's length and learns the empirical boundary of where it can be
+trusted.
 
 ## 3. The three states, in DEC
 
@@ -322,9 +328,9 @@ the manifold, not a fixed point" — is `SUBSTRATE_AS_DYNAMICS.md` §2.
 ## 4. Convergence, scaling, and self-optimization rates — and their bottlenecks
 
 This is the analytical payoff. Each rate is governed by a DEC quantity, and each
-bottleneck is a *named, measurable parameter*. They line up exactly with the
-rate-limiters the substrate has hit empirically — which is the strongest
-evidence the lens is the right one.
+bottleneck is a *named, measurable parameter*. The structural value of the lens
+is that each term, when it goes to zero, is a distinct failure mode the lens
+predicts and names.
 
 ### 4.1 Convergence rate (posterior/value over the existing complex)
 
@@ -340,15 +346,14 @@ $$
   A small gap means **bottleneck edges in the shape DAG** (a low Cheeger
   constant — a poorly-connected capability graph). *Topological bottleneck.*
 - **`ρ_sample` — per-cell sample arrival rate.** Throughput. It collapses when
-  dispatch is serialized — the **trace-store-bloat rate-limiter**
-  (`/execution-traces` GET blocking every dispatch drives `ρ → 0`). The
-  horizontal-dispatch lever of `SUBSTRATE_AS_MDP.md` §7 raises `ρ` by `√k`.
-  *Throughput bottleneck.*
+  dispatch is serialized — when reading the trace store blocks every dispatch,
+  `ρ → 0`. The horizontal-dispatch lever raises `ρ` by `√k`. *Throughput
+  bottleneck.*
 - **`κ(⋆)` — condition number of the metric.** A degenerate `⋆` (all weights
-  equal) is a *flat metric* = no gradient = the **reward-saturation
-  rate-limiter** (every template pinned at mean 1.0, uniform allocation). Wildly
+  equal) is a *flat metric* = no gradient: every template pinned at the same
+  posterior mean, uniform allocation, no signal to select on. Wildly
   heterogeneous precisions give ill-conditioned natural-gradient steps. *Metric
-  bottleneck.* The graded-information-yield reward fix was, in this language,
+  bottleneck.* A graded-information-yield reward is, in this language,
   **restoring a non-degenerate `⋆`.**
 
 ### 4.2 Scaling rate (coverage as vessels glue in)
@@ -360,16 +365,15 @@ bonds on) and the **`H¹` obstruction**:
   *bridge horizon* — divergence in the gradient component).
 - `H¹ ≠ 0` after gluing → the peers were each locally consistent but disagree on
   the interface = **posterior poisoning**; net-negative capacity if verification
-  lags. Validation integrity (the two-sided trace, `SUBSTRATE_AS_MDP.md` §12.6)
-  is the *precondition*, not polish — it keeps the glued `⋆` from corruption.
-  The literature is, if anything, stronger than "can be net negative": a single
-  Byzantine peer breaks standard federated-bandit aggregation outright; recovery
-  needs median-of-means-style defenses and a <50% malicious bound (Demirel et
-  al., *Federated Multi-armed Bandits Under Byzantine Attacks*, 2025).
+  lags. A two-sided (counterparty-signed) trace is the *precondition*, not
+  polish — it keeps the glued `⋆` from corruption. The literature is, if
+  anything, stronger than "can be net negative": a single Byzantine peer breaks
+  standard federated-bandit aggregation outright; recovery needs
+  median-of-means-style defenses and a <50% malicious bound ([Demirel et al.]).
 - **Heaps' law** (`V ~ N^β`, `β ≈ 0.5`): novel-signature coverage grows
-  sublinearly — the coverage term saturates (the MDP doc's "~10 peers" figure is
-  illustrative, not a bound, and holds only under peer homogeneity). *Coverage
-  bottleneck.*
+  sublinearly — the coverage term saturates, and any "~N peers" figure for
+  diminishing returns is illustrative, holding only under peer homogeneity.
+  *Coverage bottleneck.*
 - **Coordination overhead** per attested gluing grows ~linearly in vessel count
   without aggregate signatures. *Verification bottleneck.*
 
@@ -386,42 +390,38 @@ R_{\text{self}} \;\approx\;
 \lambda_1(L)\;\cdot\;\kappa(\star)^{-1}
 $$
 
-This is the substrate's lived experience — fix one rate-limiter, the next
-surfaces. The DEC observable for each stage tells you *which* is currently
-scarce:
+Because the rate is a `min` over stages, each stage has a distinct starvation
+mode: when that stage's term goes to zero the whole rate does, regardless of the
+others. The DEC observable for each stage tells you *which* is scarce at a given time:
 
-| Stage | DEC observable | Detector / mechanism | Empirical rate-limiter hit |
+| Stage | DEC observable | Detector / mechanism | Failure mode (when this stage starves) |
 |---|---|---|---|
-| detect | Morse critical-cell coverage; fraction of horizons found | discrete Morse theory (Forman 1998) | detector-authoring recursion |
-| select | is selection the steepest residual-reduction-per-cost direction? | natural-gradient acquisition | value-directed picker (was value-blind) |
-| author | drafter valid-emit rate | drafter | drafter emit-path fixes |
-| exercise | `ρ_sample` | dispatch throughput | trace-store bloat |
-| promote/prune | `⋆`-update / auto-promote latency | absorption loop | absorption-loop close |
-| propagate | `λ₁(L)` | chain credit | F-V56/F-V57 chain-credit fixes |
+| detect | Morse critical-cell coverage; fraction of horizons found | discrete Morse theory ([Forman]) | the detector cannot find missing structure → horizons go unseen |
+| select | is selection the steepest residual-reduction-per-cost direction? | natural-gradient acquisition | value-blind selection samples the wrong cell → no residual reduction |
+| author | drafter valid-emit rate | drafter | the drafter emits invalid cells → no candidate enters the pipeline |
+| exercise | `ρ_sample` | dispatch throughput | serialized dispatch starves sampling → `ρ → 0` |
+| promote/prune | `⋆`-update / auto-promote latency | absorption loop | absorption stalls → outcomes never reach `⋆` |
+| propagate | `λ₁(L)` | chain credit | broken chain-credit → ancestors mis-credited, `λ₁` term wasted |
 
-Every logged win is a `min`-stage fix. The framing predicts the next bottleneck
-is whichever stage's observable is currently smallest, and names the quantity to
-measure for each.
+The framing predicts the next bottleneck is whichever stage's observable is
+smallest at a given time, and names the quantity to measure for each.
 
 **Detection, made rigorous.** "Where is structure missing or changing" reduces
 to **which cells are critical** in the discrete gradient field induced by the
-value/credit function (Forman, *Morse Theory for Cell Complexes*, Advances in
-Mathematics 134, 1998). Critical 0-cells ↔ components / sources / sinks;
-critical 1-cells ↔ loop generators; critical 2-cells ↔ voids. A *change* in the
-critical-cell set is a change in homotopy type — a non-heuristic "a horizon
-opened here." (Minimizing the number of critical cells is NP-hard, but any valid
-discrete gradient field yields a correct critical set; you do not need the
-optimum.)
+value/credit function ([Forman]). Critical 0-cells ↔ components / sources /
+sinks; critical 1-cells ↔ loop generators; critical 2-cells ↔ voids. A *change*
+in the critical-cell set is a change in homotopy type — a non-heuristic "a
+horizon opened here." (Minimizing the number of critical cells is NP-hard, but
+any valid discrete gradient field yields a correct critical set; you do not need
+the optimum.)
 
 **"Converged vs. chasing noise," made rigorous.** Track persistence diagrams of
 the complex over a sliding time-window; the **bottleneck-stability theorem**
-(Cohen-Steiner, Edelsbrunner & Harer, *Stability of Persistence Diagrams*, 2007)
-bounds diagram movement by the input perturbation, so features that persist are
-genuine and features that jitter near the diagonal are noise. `d_B → 0` across
-windows ⇒ the learned topology has converged; persistent nonzero `d_B` ⇒ still
-chasing noise. This is a stronger observable than the MDP doc's §9.4 "spectral
-drift of `(P, R)`," and it comes with a stability guarantee. (Edelsbrunner &
-Harer, *Computational Topology*, 2010; Ghrist, *Barcodes*, BAMS 2008.)
+([Cohen-Steiner et al.]) bounds diagram movement by the input perturbation, so
+features that persist are genuine and features that jitter near the diagonal are
+noise. `d_B → 0` across windows ⇒ the learned topology has converged; persistent
+nonzero `d_B` ⇒ still chasing noise. This is a stronger observable than a bare
+"spectral drift of `(P, R)`," and it comes with a stability guarantee.
 
 ### 4.4 The master inequality: coherent growth requires mixing to outpace growth
 
@@ -440,13 +440,13 @@ signature is the harmonic component `ker L₁` filling up (global circulation wi
 no productive gradient) — i.e. livelock.
 
 The actionable corollary: **drafting or vessel-spawning without raising
-throughput is self-defeating.** This is *why* every real win has been a
-throughput, selection, or metric fix (`λ₁`, `ρ_sample`, `κ(⋆)`) rather than
-"draft more." It also gives "the transient state is the steady state" its
-precise form: the system tracks the moving harmonic subspace of `L(t)`, and can
-only track it while `λ₁ ≳ ρ_grow`; past that threshold it falls off the slow
-manifold — which is the timescale-separation / Fenichel picture of
-`SUBSTRATE_AS_MDP.md` §4.6, now with an explicit threshold on the gap.
+throughput is self-defeating.** A throughput, selection, or metric fix
+(`λ₁`, `ρ_sample`, `κ(⋆)`) raises the achievable rate; "draft more" alone moves
+the system toward the bifurcation. It also gives "the transient state is the
+steady state" its precise form: the system tracks the moving harmonic subspace of
+`L(t)`, and can only track it while `λ₁ ≳ ρ_grow`; past that threshold it falls
+off the slow manifold — which is the timescale-separation / Fenichel picture of
+`SUBSTRATE_AS_DYNAMICS.md`, now with an explicit threshold on the gap.
 
 (Status: this inequality is a *conjecture assembled from established pieces* —
 Hodge heat-flow mixing at rate `λ₁` is standard; the growth term and the
@@ -457,8 +457,8 @@ geometric singular perturbation theory — is `SUBSTRATE_AS_DYNAMICS.md` §3.)
 
 ### 4.5 What DEC sharpens about the federation contradiction
 
-The MDP doc's open tension (§12.2) — `√N` acceleration for *shared* signatures
-needs cross-cell *correlation*, while the cheap factorized regret bound needs
+The open federation tension — `√N` acceleration for *shared* signatures needs
+cross-cell *correlation*, while the cheap factorized regret bound needs
 *independence* — gets its crispest statement here.
 
 In DEC, **independence is block-diagonal `⋆`**; the `√N` speedup lives in
@@ -474,44 +474,39 @@ private (block-diagonal) modes you get nothing and pay full per-cell `O(1/ε²)`
 This is not a paradox to resolve but a *quantity to measure*: the spectral rank
 of the interface coupling tells you how much of the federation is genuinely
 shared versus private. (This is the same non-stationarity/heterogeneity problem
-the MARL literature names as central, not vanishing: surveys arXiv:1810.05587,
-arXiv:2312.10256; federated-bandit `√(KT/N)` speedup holds only under homogeneous
-peers + a communication protocol.)
+the multi-agent-RL literature names as central, not vanishing; the
+federated-bandit `√(KT/N)` speedup holds only under homogeneous peers + a
+communication protocol.)
 
 ## 5. Scorecard — established vs frontier
-
-Following the discipline of `SUBSTRATE_AS_MDP.md` §11.
 
 **Established (citable formal results back the claim):**
 
 - Discrete Hodge star = diagonal weight matrix; DEC needs no Riemannian
-  structure. → §1.3 (Bell & Hirani 2011; Desbrun et al. 2005)
+  structure. → §1.3 ([Bell & Hirani]; [Desbrun et al.])
 - `L₀` = graph Laplacian, `L₁` = graph Helmholtzian; `C¹` = gradient ⊕ harmonic
-  ⊕ curl, `ker L₁ ≅ H¹`. → §1.4 (Lim 2020; Jiang–Lim–Yao–Ye 2011)
+  ⊕ curl, `ker L₁ ≅ H¹`. → §1.4 ([Lim]; [Jiang–Lim–Yao–Ye])
 - Orphaned shape = divergence (gradient component); livelock = harmonic
   component, distinct from curl. → §1.4
-- Activity = directed/chemical hyperedge with catalyst roles. → §0.1 (Jost &
-  Mulas 2019)
+- Activity = directed/chemical hyperedge with catalyst roles. → §0.1 ([Jost &
+  Mulas])
 - Credit propagation = heat flow / resolvent of the Hodge Laplacian;
-  `(L+εI)⁻¹` = discounted infinite-horizon propagation. → §3, §4.1 (Lim 2020)
-- Gap/horizon detection = discrete Morse critical cells. → §4.3 (Forman 1998;
-  Mischaikow & Nanda 2013)
+  `(L+εI)⁻¹` = discounted infinite-horizon propagation. → §3, §4.1 ([Lim])
+- Gap/horizon detection = discrete Morse critical cells. → §4.3 ([Forman])
 - Converged-vs-noise = persistence + bottleneck stability. → §4.3
-  (Cohen-Steiner–Edelsbrunner–Harer 2007)
+  ([Cohen-Steiner et al.])
 - Federation gluing obstruction = `H¹` via Mayer–Vietoris over cellular sheaves.
-  → §0.3 (Hansen & Ghrist 2019)
+  → §0.3 ([Hansen & Ghrist 2019])
 - Natural gradient = Fisher–Rao steepest descent; Beta conjugate update is a
-  natural-parameter step. → §0, §2 (Amari; Nielsen 2020; carries
-  `SUBSTRATE_AS_MDP.md` §2.1)
+  natural-parameter step. → §0, §2 ([Amari])
 - The typed-shape gate is order-theoretic; the faithful operator is the Tarski
-  Laplacian on lattice sheaves. → §1.5 (Ghrist et al. 2020)
+  Laplacian on lattice sheaves. → §1.5 ([Ghrist & Riess])
 
 **Frontier (operating without formal guarantees — flag, do not assert):**
 
 - **`⋆₁` = Beta posterior precision** *exactly*. A linearized design choice. The
-  general information-geometry ↔ Hodge bridge is published (Kobayashi et al.,
-  *Information Geometry of Dynamics on Graphs and Hypergraphs*, arXiv:2211.14455,
-  2022, derive an IG-generalized Helmholtz–Hodge decomposition tied to natural
+  general information-geometry ↔ Hodge bridge is published ([Kobayashi et al.]
+  derive an IG-generalized Helmholtz–Hodge decomposition tied to natural
   gradient / mirror descent), but the IG metric there is generally non-diagonal
   and flow-dependent; a clean diagonal `⋆₁` is the linearized regime, not an
   equality. → §0, §1.3
@@ -523,15 +518,17 @@ Following the discipline of `SUBSTRATE_AS_MDP.md` §11.
   established object; its use as the gating operator *coupled to* a linear-sheaf
   credit layer is novel here. → §1.5
 - **Directed-hypergraph sheaves** (directed + multi-arity + sheaf, the exact
-  object the substrate wants) are 2025-era research (e.g. *Directional Sheaf
-  Hypergraph Networks*, arXiv:2510.04727), not settled theory. → §0.1
+  object the substrate wants) are recent research ([Mule et al.]; [Duta et al.]),
+  not settled theory. → §0.1
 
-**Honest limit-statement (carried from the MDP doc):**
+**Honest limit-statement (carried):**
 
 - The informational state remains non-constructible; a better resolver or a
   richer complex does not constitute a constructive completion. DEC changes the
   *representation* of the partiality (which cells/modes are uninformed), not the
-  Gödel-shaped limit itself. → `SUBSTRATE_AS_MDP.md` §11, §12.8
+  Gödel-shaped limit itself. The representation lens reads the same limit as the
+  topless stratification of the shape lattice — `SUBSTRATE_AS_REPRESENTATION.md`
+  §3.
 
 ## 6. Recap
 
@@ -544,20 +541,40 @@ an `H¹` obstruction — one operation at every scale, not three.
 
 The design principles read off as discrete-geometric facts: *resolvers live
 where data lives* is the sparsity of `L`; *orthogonality is the moat* is the
-block-diagonality of `⋆`; *activities constrain search* is the sparse dictionary
-versus the free module; *LLMs are tools* is "a model is one restriction map with
-a learned trust weight."
+block-diagonality of `⋆` — the separability pole of a capacity↔separability trade
+(`SUBSTRATE_AS_REPRESENTATION.md` §5.1); *activities constrain search* is the
+sparse dictionary versus the free module; *LLMs are tools* is "a model is one
+restriction map with a learned trust weight."
 
 Convergence is `λ₁(L) · ρ_sample · κ(⋆)⁻¹`; scaling is gated by interface rank
 and `H¹`; self-optimization is the scarcest pipeline stage; and all three are
 bound by the master inequality `λ₁(L(t)) ≳ ρ_grow` — coherent growth requires
-credit to mix faster than cells are minted. Every empirical rate-limiter the
-substrate has hit — trace-store bloat (`ρ_sample`), reward saturation (`κ(⋆)`),
-value-blind selection (wrong natural-gradient direction), chain-credit bugs
-(`λ₁`) — is one of these terms going to zero. The lens does not just describe the
-system; it predicts where the next bottleneck will be and names the quantity to
-measure for it.
+credit to mix faster than cells are minted. Every rate-limiter — trace-store
+serialization (`ρ_sample`), a flat reward metric (`κ(⋆)`), value-blind selection
+(wrong natural-gradient direction), broken chain-credit (`λ₁`) — is one of these
+terms going to zero. The lens does not just describe the system; it predicts
+where the next bottleneck will be and names the quantity to measure for it.
 
 None of these are renames of new machinery. They are the same trace store, the
 same Thompson layer, the same composition chain, the same shape lattice, the
 same vessel-and-federation growth — read as one discrete Laplacian.
+
+## References
+
+- **[Jost & Mulas]** Jost, J. & Mulas, R., *Hypergraph Laplace Operators for Chemical Reaction Networks*, Advances in Mathematics 351, 2019; arXiv:1804.01474. https://arxiv.org/abs/1804.01474 — *verification: carried.*
+- **[Hajij et al.]** Hajij, M. et al., *Topological Deep Learning: Going Beyond Graph Data*, arXiv:2206.00606, 2022. https://arxiv.org/abs/2206.00606 — *verification: carried.*
+- **[Bell & Hirani]** Bell, N. & Hirani, A., *PyDEC: Software and Algorithms for Discretization of Exterior Calculus*, ACM TOMS, 2012; arXiv:1103.3076. https://arxiv.org/abs/1103.3076 — *verification: carried.*
+- **[Desbrun et al.]** Desbrun, M., Hirani, A., Leok, M. & Marsden, J., *Discrete Exterior Calculus*, arXiv:math/0508341, 2005. https://arxiv.org/abs/math/0508341 — *verification: carried.*
+- **[Lim]** Lim, L.-H., *Hodge Laplacians on Graphs*, SIAM Review 62(3), 2020; arXiv:1507.05379. https://arxiv.org/abs/1507.05379 — *verification: carried.*
+- **[Jiang–Lim–Yao–Ye]** Jiang, X., Lim, L.-H., Yao, Y. & Ye, Y., *Statistical Ranking and Combinatorial Hodge Theory*, Mathematical Programming 127, 2011; arXiv:0811.1067. https://arxiv.org/abs/0811.1067 — *verification: carried.*
+- **[Schaub et al.]** Schaub, M. et al., *Signal Processing on Higher-Order Networks: Hodge Laplacians and Beyond*, arXiv:2101.05510, 2021. https://arxiv.org/abs/2101.05510 — *verification: carried.*
+- **[Forman]** Forman, R., *Morse Theory for Cell Complexes*, Advances in Mathematics 134, 1998. https://doi.org/10.1006/aima.1997.1650 — *verification: carried.*
+- **[Cohen-Steiner et al.]** Cohen-Steiner, D., Edelsbrunner, H. & Harer, J., *Stability of Persistence Diagrams*, Discrete & Computational Geometry 37, 2007. https://doi.org/10.1007/s00454-006-1276-5 — *verification: carried.*
+- **[Hansen & Ghrist 2019]** Hansen, J. & Ghrist, R., *Toward a Spectral Theory of Cellular Sheaves*, J. Applied & Computational Topology 3, 2019; arXiv:1808.01513. https://arxiv.org/abs/1808.01513 — *verification: verified.*
+- **[Ghrist & Riess]** Ghrist, R. & Riess, H., *Cellular Sheaves of Lattices and the Tarski Laplacian*, Homology, Homotopy and Applications, 2022; arXiv:2007.04099. https://arxiv.org/abs/2007.04099 — *verification: verified.*
+- **[Riess & Ghrist]** Riess, H. & Ghrist, R., *Applied Sheaf Theory for Multi-agent AI Systems: A Prospectus*, 2025; arXiv:2504.17700. https://arxiv.org/abs/2504.17700 — *verification: verified.*
+- **[Mule et al.]** Mule, et al., *Directional Sheaf Hypergraph Networks*, 2025; arXiv:2510.04727. https://arxiv.org/abs/2510.04727 — *verification: verified.*
+- **[Duta et al.]** Duta, I. et al., *Sheaf Hypergraph Networks*, NeurIPS 2023; arXiv:2309.17116. https://arxiv.org/abs/2309.17116 — *verification: verified.*
+- **[Kobayashi et al.]** Kobayashi, T. et al., *Information Geometry of Dynamics on Graphs and Hypergraphs*, arXiv:2211.14455, 2022. https://arxiv.org/abs/2211.14455 — *verification: carried.*
+- **[Amari]** Amari, S., *Natural Gradient Works Efficiently in Learning*, Neural Computation 10(2), 1998. https://doi.org/10.1162/089976698300017746 — *verification: carried.*
+- **[Demirel et al.]** Demirel, I. et al., *Federated Multi-armed Bandits Under Byzantine Attacks*, 2025; arXiv:2205.04134. https://arxiv.org/abs/2205.04134 — *verification: carried.*
