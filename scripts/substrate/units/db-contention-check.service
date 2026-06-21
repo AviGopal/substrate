@@ -1,0 +1,19 @@
+[Unit]
+Description=DB-contention monitor — fire db_contention_observer (reads /metrics/db, emits substrateGap on contention)
+# Closes the DB-contention blind spot from the 2026-06-20 SurrealDB write-storm.
+# Read-only monitor; safe to run continuously (part of observability, not the
+# autonomous self-development loop).
+After=activity-api.service development-vessel.service
+#
+# Smoke: docker exec substrate-live systemctl start db-contention-check.service
+#        docker exec substrate-live journalctl -u db-contention-check.service --no-pager -n 5
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/db-contention-check.ts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
