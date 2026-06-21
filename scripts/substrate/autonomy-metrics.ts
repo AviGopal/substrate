@@ -61,7 +61,14 @@ async function devResolve(impulse: Record<string, unknown>): Promise<any> {
 }
 const count = async (q: string): Promise<number | null> => {
   const r = await sql<{ count: number }>(q);
-  return (r && r[0] && typeof r[0].count === "number") ? r[0].count : 0;
+  // A malformed/empty result is NOT a genuine zero — it means the count probe
+  // is dark (query failed, timed out, or returned an unexpected shape). Return
+  // null so downstream renders it as UNKNOWN, never as a false "0". Conflating
+  // failure with zero is exactly what made throughput read 0/175 for 4h on
+  // 2026-06-21 while real throughput was ~1300/hr (the created_at full-scan
+  // timed out / mis-filtered). `count()` returns the genuine 0 only when the
+  // DB explicitly returns count:0.
+  return (r && r[0] && typeof r[0].count === "number") ? r[0].count : null;
 };
 
 // ── lift gate (from heartbeat — written by substrate-health-tick) ──
@@ -88,8 +95,9 @@ try {
 //   stability dynamics:  new templates + edges created this hour (authoring burst)
 try {
   const since = new Date(Date.now() - 3600_000).toISOString();
+  // executed_at (indexed) not created_at (full-scan) — see throughput note below.
   const runRows = await sql<{ c: number }>(
-    `SELECT activity_id, count() AS c FROM activity_execution_traces WHERE created_at >= type::datetime("${since}") GROUP BY activity_id;`);
+    `SELECT activity_id, count() AS c FROM activity_execution_traces WHERE executed_at >= type::datetime("${since}") GROUP BY activity_id;`);
   const distinctRun = runRows.length;
   const aboveFloor = runRows.filter((r) => (r.c ?? 0) >= 8).length;
   const newTemplates = await tryNum(() => count(
@@ -154,7 +162,7 @@ let recent_orphan_rate: number | null = null;
 let recent_composition_count: number | null = null;
 try {
   const rk = await sql<{ parent_execution_id: string }>(
-    "SELECT parent_execution_id FROM activity_execution_traces WHERE parent_execution_id != NONE AND created_at > type::datetime(time::now() - 60m) LIMIT 400;",
+    "SELECT parent_execution_id FROM activity_execution_traces WHERE parent_execution_id != NONE AND executed_at > type::datetime(time::now() - 60m) LIMIT 400;",
   );
   recent_composition_count = rk.length;
   if (rk.length) {
@@ -227,7 +235,13 @@ try {
 } catch { /* */ }
 
 // ── DEC rate-limiters ──
-const traces_per_hour = await tryNum(() => count("SELECT count() FROM activity_execution_traces WHERE created_at > (time::now() - 1h) GROUP ALL;"));
+// Filter on executed_at, NOT created_at: created_at is UNINDEXED on
+// activity_execution_traces (229k+ rows), so the range scan took 2-30s and
+// timed out / mis-counted under load — it read 0/175 tr/hr for 4h on
+// 2026-06-21 while real throughput was ~1300/hr. executed_at IS indexed
+// (idx_activity_executions_executed_at) and correctly populated on recent
+// traces: same window returns in ~195ms with the accurate count.
+const traces_per_hour = await tryNum(() => count("SELECT count() FROM activity_execution_traces WHERE executed_at > (time::now() - 1h) GROUP ALL;"));
 let kappa_posterior_spread: any = { min: null, max: null, mean: null, n: null };
 try {
   const tpl = await apiGet("/v2/activities/templates?limit=100&offset=0");
@@ -331,9 +345,9 @@ try {
   // vessel_id is trace-level (fixed in ias-executor-ts 4aa6ec4: the sink now stamps it
   // from VESSEL_ID). resolver_tier is per-TASK (tasks[].resolver_tier), not trace-level,
   // so attribution_coverage measures vessel_id presence — the per-vessel learning signal.
-  const tot = await tryNum(() => count("SELECT count() AS count FROM activity_execution_traces WHERE created_at > type::datetime(time::now() - 2h) GROUP ALL;"));
-  const attributed = await tryNum(() => count("SELECT count() AS count FROM activity_execution_traces WHERE created_at > type::datetime(time::now() - 2h) AND vessel_id != NONE GROUP ALL;"));
-  const vrows = await sql<{ vessel_id: string }>("SELECT vessel_id FROM activity_execution_traces WHERE created_at > type::datetime(time::now() - 2h) AND vessel_id != NONE GROUP BY vessel_id;");
+  const tot = await tryNum(() => count("SELECT count() AS count FROM activity_execution_traces WHERE executed_at > type::datetime(time::now() - 2h) GROUP ALL;"));
+  const attributed = await tryNum(() => count("SELECT count() AS count FROM activity_execution_traces WHERE executed_at > type::datetime(time::now() - 2h) AND vessel_id != NONE GROUP ALL;"));
+  const vrows = await sql<{ vessel_id: string }>("SELECT vessel_id FROM activity_execution_traces WHERE executed_at > type::datetime(time::now() - 2h) AND vessel_id != NONE GROUP BY vessel_id;");
   vessel_population = {
     active_vessels: vrows.length,
     attribution_coverage: (tot && attributed != null) ? Math.round((attributed / tot) * 1000) / 1000 : null,
@@ -355,7 +369,7 @@ const vesselOf = (id: string): string => {
 };
 let capability: any = { distinct_exercised_24h: null, total_activities: totalActivities, exploration_breadth: null, cross_vessel_edges: null, total_edges: comp_edges, cross_vessel_frac: null, proposed_templates: null };
 try {
-  const distinct = await tryNum(() => count("SELECT count() AS count FROM (SELECT activity_id FROM activity_execution_traces WHERE created_at > type::datetime(time::now() - 24h) GROUP BY activity_id) GROUP ALL;"));
+  const distinct = await tryNum(() => count("SELECT count() AS count FROM (SELECT activity_id FROM activity_execution_traces WHERE executed_at > type::datetime(time::now() - 24h) GROUP BY activity_id) GROUP ALL;"));
   const proposed = await tryNum(() => count("SELECT count() AS count FROM activity WHERE proposed = true GROUP ALL;"));
   const edges = await sql<{ parent_activity_id: string; child_activity_id: string }>("SELECT parent_activity_id, child_activity_id FROM activity_composition_graph LIMIT 500;");
   const xv = edges.filter((e) => vesselOf(e.parent_activity_id) !== vesselOf(e.child_activity_id)).length;
