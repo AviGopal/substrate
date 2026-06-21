@@ -1,0 +1,12 @@
+[Unit]
+Description=Gap-compose timer
+[Timer]
+# Slow cadence — composing a feature is an LLM call + typecheck. Every 20 min,
+# first run 8 min after activation.
+OnActiveSec=8min
+OnUnitActiveSec=20min
+Persistent=true
+AccuracySec=1min
+Unit=gap-compose.service
+[Install]
+WantedBy=timers.target
