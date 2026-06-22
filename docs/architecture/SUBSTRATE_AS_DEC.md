@@ -111,7 +111,10 @@ boundary?*
 
 This recovers the federation trust tier (`local-verified` / `peer-attested` /
 `unattested`) as a *geometric* statement about whether the restriction maps are
-given or reconstructed.
+given or reconstructed. The operator and a peer substrate are thus the same kind
+of object as an embedded model — a boundary entity whose interior is inferred,
+not declared; the four-step mechanism by which the substrate assesses such an
+entity's interaction characteristics is `SUBSTRATE_AS_REPRESENTATION.md` §6.1.
 
 ### 0.3 Federation is vessel addition, not a separate scale
 
@@ -267,6 +270,7 @@ the non-constructibility limit and the engine of progress, is
 | Record everything | each trace = one **sampled value of the flow 1-cochain** on its edges |
 | Learn from traces | posterior update = **natural gradient refining `⋆`** (the metric is the learned precision) |
 | Reserve improvisation | the drafter = **active complex growth**: add cells/hyperedges at Beta(1,1) = uninformed `⋆` weight |
+| Reuse before minting | route flow onto an **existing** producing hyperedge instead of minting a duplicate — sharpens that edge's `⋆₁` and adds an incidence that raises `λ₁`, vs. a new Beta(1,1) cell that raises `ρ_grow`. Helps both sides of `λ₁ ≳ ρ_grow` (§4.4); mint only for a true gap (no producer) or variant-first repair |
 | LLMs are tools, not controllers | a model = **one restriction map / one high-coherence dictionary atom**; its `⋆₁` weight (trust) is learned + validated per-signature |
 | Backend = store + learner, not universal resolver | backend holds the empirical cochain and estimates `⋆`; it is **not** the coboundary operator `d` |
 | Orthogonality is the moat | **block-diagonal `⋆`** → `L` decouples → local, cheap, parallel updates |
