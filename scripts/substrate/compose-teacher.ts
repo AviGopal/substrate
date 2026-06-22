@@ -73,7 +73,7 @@ const real = (acts || []).filter((a: any) => a.id && !isHub(a.id) && !isSyntheti
 
 // 2) Reliably-succeeding activities over the last 24h (≥1 success).
 const since = new Date(Date.now() - 24 * 3600_000).toISOString();
-const [succRows] = await sql(`SELECT activity_id, count() AS ok FROM activity_execution_traces WHERE created_at >= type::datetime("${since}") AND success = true GROUP BY activity_id;`);
+const [succRows] = await sql(`SELECT activity_id, count() AS ok FROM activity_execution_traces WHERE executed_at >= type::datetime("${since}") AND success = true GROUP BY activity_id;`);
 const succeeds = new Set<string>((succRows || []).filter((r: any) => (r.ok ?? 0) > 0).map((r: any) => r.activity_id));
 
 // 3) Chainable pairs, BOTH reliably succeeding, distinct.

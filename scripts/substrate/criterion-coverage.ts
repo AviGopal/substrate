@@ -152,8 +152,11 @@ add("idiomatic_self_dev", "Self-develops via idiomatic components; dynamic graph
 // goal-host at dispatch, and used to key boredom's per-(signature, goal_idx)
 // Thompson cells. Measure the tag, not a column (the column never existed).
 const traceRate = num(m.dec_limiters?.rho_sample_traces_per_hour);
-const sigRecent = await sqlCount("created_at > time::now() - 60m AND string::contains(string::join(',', tags), 'state_signature:')");
-const totRecent = await sqlCount("created_at > time::now() - 60m");
+// executed_at is INDEXED (idx_activity_executions_executed_at); created_at is not,
+// so filtering on it full-scanned all 160K+ traces. Both columns are 100% populated
+// on this corpus, so the recent-window state_signature ratio is unchanged.
+const sigRecent = await sqlCount("executed_at > time::now() - 60m AND string::contains(string::join(',', tags), 'state_signature:')");
+const totRecent = await sqlCount("executed_at > time::now() - 60m");
 const sigCoverage = Number.isFinite(sigRecent) && Number.isFinite(totRecent) && totRecent > 0 ? sigRecent / totRecent : NaN;
 add("state_signature", "Traces continuity of executions; continuous state signature",
   Number.isFinite(sigCoverage) && sigCoverage >= 0.4 ? "PASS" : Number.isFinite(sigCoverage) && sigCoverage > 0 ? "PARTIAL" : "GAP",

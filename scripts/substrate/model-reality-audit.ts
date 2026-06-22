@@ -63,9 +63,18 @@ function flag(check: string, severity: string, detail: string, gap?: Record<stri
 }
 
 // ── C1: forward-model artifacts ────────────────────────────────────────────
-console.log("C1 forward-model artifacts (success-rate pinned at extremes, high volume)…");
+// Rolling window (30d) keyed on the INDEXED `executed_at` column. `created_at`
+// is unindexed and an unbounded GROUP BY full-scanned all 160K+ traces every
+// hour; `executed_at` rides idx_activity_executions_executed_at. 30d is chosen
+// because effectively the entire current corpus falls within it (verified: 81/81
+// activities with ≥MIN_VOL traces are inside 30d, identical to all-time), so the
+// detection set is unchanged today while the scan stays index-bounded and
+// self-pruning as the store ages — which also matches C1's intent (catch forward-
+// model artifacts that are CURRENTLY poisoning Thompson, not historical ones).
+const C1_CUT = new Date(Date.now() - 30 * 24 * 3600_000).toISOString();
+console.log("C1 forward-model artifacts (success-rate pinned at extremes, high volume; last 30d)…");
 const byActStatus = await sql<{ activity_id: string; status: string; n: number }>(
-  "SELECT activity_id, status, count() AS n FROM activity_execution_traces GROUP BY activity_id, status;",
+  `SELECT activity_id, status, count() AS n FROM activity_execution_traces WHERE executed_at >= type::datetime("${C1_CUT}") GROUP BY activity_id, status;`,
 );
 const acts = new Map<string, { total: number; succ: number }>();
 for (const r of byActStatus) {

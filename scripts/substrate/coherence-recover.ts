@@ -38,7 +38,17 @@ const sig = (a: any): string => {
   return `${ins}|${outs}|${tasks}`;
 };
 // Execution counts (to keep the most-exercised canonical member).
-const [execs] = await sql(`SELECT activity_id, count() AS n FROM activity_execution_traces GROUP BY activity_id;`);
+// Rolling 30d window on the INDEXED `executed_at` column: the unbounded GROUP BY
+// full-scanned all 160K+ traces every 60min off an UNINDEXED scan; scoping to
+// executed_at rides idx_activity_executions_executed_at. This count is only a
+// RELATIVE ranking signal WITHIN each byte-identical duplicate family (pick the
+// member with the most accumulated exercise to keep its pooled credit), so a
+// recent window is acceptable; and with effectively the whole current corpus
+// inside 30d, recent-exercise ≈ all-time exercise — the canonical choice is
+// unchanged today while the scan stays index-bounded and self-prunes as the
+// store ages.
+const RECOVER_CUT = new Date(Date.now() - 30 * 24 * 3600_000).toISOString();
+const [execs] = await sql(`SELECT activity_id, count() AS n FROM activity_execution_traces WHERE executed_at >= type::datetime("${RECOVER_CUT}") GROUP BY activity_id;`);
 const execN = new Map<string, number>((execs || []).map((r: any) => [r.activity_id, r.n ?? 0]));
 const families = new Map<string, any[]>();
 for (const a of rows || []) {
