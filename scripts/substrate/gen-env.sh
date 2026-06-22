@@ -125,6 +125,16 @@ EMBEDDING_PRIOR_OBSERVER_ENABLED=false
 # (one-off sweep removed 108,564 rows: 265K->160K, CPU flat throughout).
 TRACE_RETENTION_ENABLED=true
 TRACE_RETENTION_DRY_RUN=false
+
+# Obsidian plugin endpoint (2026-06-22). The obsidian-vessel plugin runs IN the
+# single-container substrate (obsidian-desktop.service) and serves on
+# 127.0.0.1:27182. The obsidian resolvers (behavior-scan, reflect, deliver-assist,
+# verify-output, request-scan, feedback-scan) default to host.docker.internal:27183
+# — a leftover from when Obsidian ran on the operator's HOST — which is DOWN here,
+# so the operator-modeling + assist loop was silently starved (modeled:0). Point
+# them at the live in-container plugin so the feedback loop can actually read events
+# and write back.
+OBSIDIAN_PLUGIN_ENDPOINT=http://127.0.0.1:27182
 EOF
 
 chmod 600 /etc/substrate/env
