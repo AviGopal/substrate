@@ -1,0 +1,18 @@
+[Unit]
+Description=Compose-topology drain timer — drive the organic edge-former on a cadence
+
+[Timer]
+# Fire 2 minutes after activation, then every 4 minutes. Each fire authors one
+# composite (one genuine cross-link edge) while headroom exists, so ~15 edges/hr
+# off a flat baseline — a clear autonomous trend, bounded by the resolver's
+# 300-composite cap (at the cap it idles into reinforced_existing). Type=oneshot
+# so a still-running tick (author + dispatch) blocks the next fire; 4min is
+# comfortably above the per-tick cost.
+OnActiveSec=2min
+OnUnitActiveSec=4min
+Persistent=true
+AccuracySec=30s
+Unit=compose-topology.service
+
+[Install]
+WantedBy=timers.target
