@@ -30,7 +30,7 @@
 //   docker exec substrate-live systemctl start self-operational-health.service
 //   docker exec substrate-live journalctl -u self-operational-health.service -n 30 --no-pager
 
-import { statSync, readdirSync, existsSync } from "node:fs";
+import { statSync, readdirSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const KEY = process.env.METABOB_API_KEY ?? "";
@@ -185,7 +185,64 @@ if (newestSubstrateCommit === 0) {
   }
 }
 
+// ── Check 5: efficacy / progress (alive != advancing) ──────────────────────
+// Checks 1-4 verify the substrate is ALIVE (timers firing, streams fresh, push
+// works, a commit landed within 48h). They all stay green even if the substrate
+// makes ZERO forward progress for a full day — liveness != efficacy. "Alive but
+// not advancing" (boredom/gap-compose timers fire, but the reach gate rejects
+// every attempt as hollow → nothing reached → ribosome mints nothing → no new
+// composition observed → no cutover lands) is exactly the stall the operator can
+// see but the substrate currently cannot. Lift the EFFICACY expectation into the
+// same gap ontology, measured from the substrate's OWN canonical KPI series
+// (autonomy-metrics.jsonl, already freshness-checked above) — NOT an FTS query,
+// which ranks by relevance and silently misses recent mints. This is a
+// deliberately CONSERVATIVE frozen-engine backstop: it fires only when there is
+// zero forward delta over PROGRESS_STALL_HR on BOTH a self-development axis
+// (self_alteration.landed = code cutovers landed — the "manage its internal
+// code" axis) AND an execution-throughput axis (topology.nested = nested
+// executions produced). Either one advancing = the substrate is doing something,
+// so no flag. Both flat = timers fire but produce NOTHING (a wedged engine /
+// all-erroring dispatch) — a boundary fault distinct from Check 2 (timer active
+// can still produce nothing). GENUINE-connectivity quality (λ₁, genuine edges)
+// is already watched by the dedicated spectral-gap + composition-edge-reconcile
+// detectors; this check is the coarse "is anything advancing at all" expectation.
+// (Observe, don't nudge — closing it is the substrate's authoring frontier.)
+const PROGRESS_STALL_HR = Number(process.env.PROGRESS_STALL_HR ?? 24);
+const AUTONOMY_METRICS = "/workspace/metrics/autonomy-metrics.jsonl";
+try {
+  const lines = readFileSync(AUTONOMY_METRICS, "utf8").trim().split("\n").filter(Boolean);
+  type Rec = { atMs: number; landed: number; nested: number };
+  const recs: Rec[] = [];
+  for (const ln of lines) {
+    try {
+      const j = JSON.parse(ln) as { at?: string; self_alteration?: { landed?: number }; topology?: { nested?: number } };
+      const atMs = Date.parse(j.at ?? "");
+      if (!Number.isFinite(atMs)) continue;
+      recs.push({ atMs, landed: j.self_alteration?.landed ?? 0, nested: j.topology?.nested ?? 0 });
+    } catch { /* skip malformed line */ }
+  }
+  if (recs.length >= 2) {
+    const latest = recs[recs.length - 1]!;
+    const windowStart = now - PROGRESS_STALL_HR * 3600_000;
+    // Baseline = newest record at/just-before the window start; else the oldest
+    // record (file younger than the window) so we still measure the full span.
+    const before = recs.filter((r) => r.atMs <= windowStart);
+    const baseline = before.length ? before[before.length - 1]! : recs[0]!;
+    const dLanded = latest.landed - baseline.landed;
+    const dNested = latest.nested - baseline.nested;
+    if (dLanded <= 0 && dNested <= 0) {
+      flag("progress_stall", "MEDIUM",
+        `0 forward progress over ${PROGRESS_STALL_HR}h on BOTH axes — code-landing (self_alteration.landed Δ=${dLanded}) and topology (topology.nested Δ=${dNested}) — though measurement timers are live. Continuous operation is ALIVE but not ADVANCING: goals dispatch + the reach gate rejects them as hollow, so nothing reaches → nothing mints → no cutover lands → topology stays flat. Liveness checks 1-4 stay green through this; this makes the EFFICACY axis visible in S (the authoring-ceiling frontier).`,
+        "progress:stall", { d_landed: dLanded, d_nested: dNested, window_hr: PROGRESS_STALL_HR, baseline_age_hr: Math.round((now - baseline.atMs) / 3600_000) });
+    }
+  }
+  // <2 records → series too young to judge progress; Check 1 already flags a
+  // dark/missing stream, so stay silent here rather than false-flag.
+} catch (e) {
+  console.warn(`[self-operational-health] progress check skipped: ${(e as Error).message}`);
+}
+
 // ── Report ─────────────────────────────────────────────────────────────────
 const high = findings.filter((f) => f.severity === "HIGH").length;
 console.log(`[self-operational-health] DONE — ${findings.length} finding(s) (${high} HIGH). emit_gaps=${EMIT}`);
-console.log(JSON.stringify({ findings, emit_gaps: EMIT, thresholds: { FRESH_MAX_MIN, COMMIT_MAX_HR } }, null, 2));
+console.log(JSON.stringify({ findings, emit_gaps: EMIT, thresholds: { FRESH_MAX_MIN, COMMIT_MAX_HR, PROGRESS_STALL_HR } }, null, 2));
