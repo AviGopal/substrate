@@ -30,7 +30,7 @@
 //   docker exec substrate-live systemctl start self-operational-health.service
 //   docker exec substrate-live journalctl -u self-operational-health.service -n 30 --no-pager
 
-import { statSync, readdirSync, existsSync, readFileSync } from "node:fs";
+import { statSync, readdirSync, existsSync, readFileSync, accessSync, constants as fsConstants } from "node:fs";
 import { join } from "node:path";
 
 const KEY = process.env.METABOB_API_KEY ?? "";
@@ -240,6 +240,48 @@ try {
   // dark/missing stream, so stay silent here rather than false-flag.
 } catch (e) {
   console.warn(`[self-operational-health] progress check skipped: ${(e as Error).message}`);
+}
+
+// ── Check 6: workspace reachability ────────────────────────────────────────
+// The /workspace volume is the substrate's live working root (WORKSPACE_ROOT):
+// local-tools fs_* resolvers resolve here, and goal-host writes proposals,
+// patterns, validation scenarios, metrics, and the cutover git clones under it.
+// If the volume is unmounted (container-recreate race), read-only, or a required
+// subdir is missing, goals that touch it fail with ENOENT/EACCES — a fault the
+// operator reported but that was INVISIBLE to the substrate (no detector watched
+// it; only downstream symptoms — a dark metric stream, stale commits — tripped).
+// Lift workspace reachability into the gap ontology so the fault itself is seen
+// in S. DETECTION ONLY — repairing a mount/permission is explicitly operator-
+// boundary (self-repair-operational.ts never touches the filesystem); this gap
+// escalates, it does not self-act.
+const WORKSPACE_ROOT = (process.env.WORKSPACE_ROOT || "/workspace").replace(/\/$/, "");
+// Subdirs goal-host hardcodes fs_writes to (see goal-host index.ts) + the metric
+// + cutover-clone roots. Missing/RO any of these makes a class of goals fail.
+const REQUIRED_WORKSPACE_DIRS = [
+  "proposals", "patterns", "validation/failure-modes/scenarios",
+  "observations", "metrics", "git/vessels", "git/super-repo",
+].map((d) => join(WORKSPACE_ROOT, d));
+function writable(p: string): boolean {
+  try { accessSync(p, fsConstants.W_OK); return true; } catch { return false; }
+}
+if (!existsSync(WORKSPACE_ROOT)) {
+  flag("workspace_unreachable", "HIGH",
+    `Workspace root ${WORKSPACE_ROOT} does not exist → the live volume is unmounted (typical: container-recreate race before the volume attaches). Effectively ALL goals that read/write the workspace (fs_* resolvers, proposals, patterns, cutover clones, metrics) fail with ENOENT until it is mounted. Operator-boundary: remounting is not something the substrate can safely self-repair.`,
+    "workspace:root_missing", { root: WORKSPACE_ROOT });
+} else if (!writable(WORKSPACE_ROOT)) {
+  flag("workspace_readonly", "HIGH",
+    `Workspace root ${WORKSPACE_ROOT} exists but is NOT writable → fs_write goals, proposal/pattern emission, and cutover landing all fail with EACCES. Operator-boundary: a permission/remount fix is not in the self-repair allowlist.`,
+    "workspace:root_ro", { root: WORKSPACE_ROOT });
+} else {
+  const missing = REQUIRED_WORKSPACE_DIRS.filter((d) => !existsSync(d));
+  const readonly = REQUIRED_WORKSPACE_DIRS.filter((d) => existsSync(d) && !writable(d));
+  if (missing.length || readonly.length) {
+    flag("workspace_subdir_unavailable", "MEDIUM",
+      `${missing.length} required workspace subdir(s) missing${missing.length ? ` (${missing.map((d) => d.replace(WORKSPACE_ROOT + "/", "")).join(", ")})` : ""}` +
+      `${readonly.length ? ` and ${readonly.length} not writable (${readonly.map((d) => d.replace(WORKSPACE_ROOT + "/", "")).join(", ")})` : ""} → goals that fs_write to them fail with ENOENT/EACCES until created (an fs_write that does not mkdir -p its parent is the usual trigger). Lower-severity than a root fault: only that class of goal fails.`,
+      `workspace:subdirs:${[...missing, ...readonly].map((d) => d.replace(WORKSPACE_ROOT + "/", "")).sort().join("+")}`,
+      { missing, readonly });
+  }
 }
 
 // ── Report ─────────────────────────────────────────────────────────────────
