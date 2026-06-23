@@ -1,0 +1,25 @@
+[Unit]
+Description=Operational self-repair — re-enable inactive allowlisted self-correction/measurement timers
+# Corrective half of the operational-health loop (paired with
+# self-operational-health.service, the detector). Re-enables ONLY a hardcoded
+# allowlist of known-good measurement/self-correction timers that have gone
+# inactive at runtime — idempotent, reversible, never arbitrary units. Closes
+# the detect→repair loop so the substrate self-heals the timer-death class
+# (moving the operational axis from S1 operator-fix toward S2 self-repair).
+After=development-vessel.service
+Wants=development-vessel.service
+
+# Smoke test:
+#   docker exec substrate-live systemctl start self-repair-operational.service
+#   docker exec substrate-live journalctl -u self-repair-operational.service -n 30 --no-pager
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+Environment=REPAIR=1
+ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/self-repair-operational.ts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

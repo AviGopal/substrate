@@ -1,0 +1,26 @@
+[Unit]
+Description=Self-operational-health detector — substrate↔environment boundary invariants
+# Runs scripts/substrate/self-operational-health.ts: checks the substrate's own
+# deployment-boundary health (measurement-stream freshness, self-correction
+# timer liveness, autonomous-cutover recency, push-credential validity) that the
+# in-MDP detectors (model-reality-audit, composition-edge-reconcile) cannot see,
+# and emits substrateGaps (EMIT_GAPS=1) so these faults enter the SAME gap
+# ontology the self-alteration loop already tracks — lifting operational
+# self-repair from an operator-only concern (S1) into something visible in S.
+After=activity-api.service development-vessel.service surrealdb.service
+Wants=development-vessel.service
+
+# Smoke test:
+#   docker exec substrate-live systemctl start self-operational-health.service
+#   docker exec substrate-live journalctl -u self-operational-health.service -n 30 --no-pager
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+Environment=EMIT_GAPS=1
+ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/self-operational-health.ts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

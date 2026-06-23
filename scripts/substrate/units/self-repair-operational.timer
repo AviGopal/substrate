@@ -1,0 +1,14 @@
+[Unit]
+Description=Operational self-repair timer
+
+[Timer]
+# Runs a few minutes after the detector so a freshly-flagged timer-death is
+# healed within one cycle. Idempotent, so a frequent cadence is harmless.
+OnActiveSec=11min
+OnUnitActiveSec=15min
+Persistent=true
+AccuracySec=30s
+Unit=self-repair-operational.service
+
+[Install]
+WantedBy=timers.target

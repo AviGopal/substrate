@@ -1,0 +1,13 @@
+[Unit]
+Description=Self-operational-health detector timer
+
+[Timer]
+# First run shortly after boot (let the fleet + timers settle), then every 30m.
+OnActiveSec=8min
+OnUnitActiveSec=30min
+Persistent=true
+AccuracySec=30s
+Unit=self-operational-health.service
+
+[Install]
+WantedBy=timers.target
