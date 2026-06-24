@@ -95,9 +95,13 @@ COPY repos/ias-executor-ts/tsconfig*.json ./ias-executor-ts/
 RUN cd ias-executor-ts && bun install --frozen-lockfile
 
 # cpg-inference-ts (shared code analysis library for analysis-vessel)
+# tree-sitter runs via web-tree-sitter (WASM) so there is no node-gyp native
+# build here — works on arm64 and x86_64 alike. The vendored grammar `.wasm`
+# files must be copied in; the parser loads them from `../wasm/` at runtime.
 COPY repos/cpg-inference-ts/package.json repos/cpg-inference-ts/bun.lock* ./cpg-inference-ts/
 COPY repos/cpg-inference-ts/src ./cpg-inference-ts/src
 COPY repos/cpg-inference-ts/dist ./cpg-inference-ts/dist
+COPY repos/cpg-inference-ts/wasm ./cpg-inference-ts/wasm
 COPY repos/cpg-inference-ts/tsconfig*.json ./cpg-inference-ts/
 RUN cd cpg-inference-ts && bun install
 
@@ -226,7 +230,10 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         composition-edge-reconcile.timer \
         model-reality-audit.timer \
         observe-orthogonal-refresh.timer \
-        spectral-gap.timer
+        spectral-gap.timer \
+        autonomy-metrics.timer \
+        self-operational-health.timer \
+        self-repair-operational.timer
 
 # SurrealDB writes the learning state (traces, Thompson posteriors, concept
 # graph) to file:/var/lib/surrealdb/data.db. Declaring it a volume — like
