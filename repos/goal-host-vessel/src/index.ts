@@ -24,7 +24,12 @@ import {
   createLLMPort,
 } from "@avigopal/ias-executor-ts";
 import { BusForwardingEventSink } from "@avigopal/ias-executor-ts/adapters";
-import type { EventSink } from "@avigopal/ias-executor-ts";
+import type {
+  EventSink,
+  Impulse,
+  ActivityTemplate,
+  ExecutionTrace,
+} from "@avigopal/ias-executor-ts";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BoundedBusSink — L1 patch per openspec 2026-05-31-goal-host-oom-bounded-concurrency.
@@ -500,6 +505,924 @@ const LLM_VESSEL_ENDPOINT = process.env.LLM_VESSEL_ENDPOINT;
 const SHAPES = ["goal_execution", "activity_execution"] as const;
 const VERSION = "0.1.0";
 const DEV_VESSEL_ENDPOINT = process.env.DEVELOPMENT_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";
+
+// Goal-reaching verification (2026-06-22). status=completed only means the
+// selected template EXECUTED, not that the GOAL was reached — many completions
+// are hollow (an unrelated wrapper runs and "succeeds"), which gives α-credit to
+// goal-irrelevant templates and is WHY the substrate doesn't compose to reach
+// goals. We judge reach against the goal via the LLM resolver (NOT a declared
+// target shape — the operator's point: identify the shapes of the completion
+// STATE, emergently). On not-reached we downgrade status to failed and β-penalise
+// the selected template so Thompson stops reinforcing hollow completions.
+interface GoalReachVerdict { reached: boolean; reason?: string; completion_shapes?: string[]; missing?: string[]; }
+async function verifyGoalReached(goal: string, producedShapes: string[], taskSummary: string, contentDigest?: string): Promise<GoalReachVerdict | null> {
+  if (!LLM_VESSEL_ENDPOINT) return null;
+  const prompt = `You verify whether a substrate execution REACHED its goal. status=completed does NOT mean reached — many executions "complete" by running unrelated activities (hollow completion).
+
+GOAL: ${goal}
+
+Produced output impulse shapes: ${JSON.stringify(producedShapes)}
+Task summary: ${taskSummary}${contentDigest ? `\n\nProduced output CONTENT (truncated — judge reach from the ACTUAL content, not just shape names):\n${contentDigest}` : ""}
+
+Judge strictly: reached ONLY if the produced outputs genuinely correspond to what the goal asked for. A shape name alone is NOT evidence — when content is shown, require that the content substantively satisfies the goal (e.g. a problem_detection shape with actual problems + line numbers, not an empty list). Then identify the shape(s) characterising the COMPLETION STATE of this goal-direction (a subset of produced shapes, and/or shapes that SHOULD exist at completion but do not yet).
+
+Respond with ONLY JSON: {"reached": boolean, "reason": "<1 sentence>", "completion_shapes": ["<shape>"], "missing": ["<shape not produced but expected>"]}`;
+  try {
+    const r = await fetch(`${LLM_VESSEL_ENDPOINT.replace(/\/$/, "")}/resolve`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "llm_completion", prompt, model: "claude-haiku-4-5-20251001" }),
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (!r.ok) return null;
+    const j: any = await r.json();
+    const text = j?.body?.content ?? j?.content ?? j?.body?.text ?? "";
+    const m = String(text).match(/\{[\s\S]*\}/);
+    return m ? (JSON.parse(m[0]) as GoalReachVerdict) : null;
+  } catch { return null; }
+}
+async function penaliseHollowTemplate(activityId: string, reason: string): Promise<void> {
+  try {
+    await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+      body: JSON.stringify({ activity_id: activityId, direction: "negative", intensity: 2, reason: `hollow completion (goal not reached): ${reason}`.slice(0, 200) }),
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch { /* non-fatal */ }
+}
+// Per-goal learning (2026-06-22). Record goal -> path -> reach into
+// goal_execution_paths (keyed by goal_hash), so the SAME goal — whether from
+// here (MCP) or the human-facing obsidian-vessel — accumulates per-goal Thompson
+// α/β over subsequent attempts and the reaching path is attributable + reusable.
+// path_activities is the attribution unit (the composition that ran). reached is
+// the goal-reach verdict (NOT execution-status), so the per-goal posterior tracks
+// genuine goal achievement, not hollow completion.
+async function recordGoalPath(goalText: string, pathActivities: string[], reached: boolean, durationMs: number, costUsd: number): Promise<void> {
+  if (!goalText || pathActivities.length === 0) return;
+  try {
+    await fetch(`${ACTIVITY_API_ENDPOINT}/v2/goal-paths`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+      body: JSON.stringify({
+        goal_text: goalText,
+        goal_category: "meta",
+        path_activities: pathActivities,
+        success: reached,
+        duration_ms: Math.round(durationMs) || 0,
+        cost_usd: costUsd || 0,
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch { /* non-fatal */ }
+}
+// Consult per-goal learning before selection: if a prior attempt at THIS goal
+// reached it via a known path, prefer that path (improvement over subsequent
+// attempts). Returns a template id to target, or null to fall through to the
+// global template recommender.
+async function recommendReachingPath(goalText: string): Promise<string | null> {
+  if (!goalText) return null;
+  try {
+    const r = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/goal-paths/recommend`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+      body: JSON.stringify({ goal_text: goalText, goal_category: "meta" }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!r.ok) return null;
+    const j: any = await r.json();
+    const paths = j?.recommended_paths ?? j?.body?.recommended_paths ?? [];
+    // prefer a path that has genuinely reached this goal (success_rate>0) and is single-activity
+    const best = paths.find((p: any) => (p.success_rate ?? p.goal_achieved) && Array.isArray(p.path_activities) && p.path_activities.length >= 1);
+    return best?.path_activities?.[0] ?? null;
+  } catch { return null; }
+}
+// In-flight approach-alteration (self-recovery DURING goal-seeking): recommend a
+// DIFFERENT activity for the goal, excluding approaches that already failed to
+// reach it this run. Returns the next template id to target, or null when no
+// fresh candidate remains (exhausted = honest failure). Paired with the reach
+// gate this turns goal-seeking into try → check → alter → retry, so the trace of
+// the attempt that finally REACHES is what the ribosome mints into a new activity.
+async function recommendExcluding(goalText: string, exclude: string[]): Promise<string | null> {
+  if (!goalText) return null;
+  try {
+    const r = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/recommend`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+      body: JSON.stringify({ task_description: goalText, goal: goalText, exclude_activities: exclude, limit: 6, min_success_rate: 0 }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!r.ok) return null;
+    const j: any = await r.json();
+    const recs = j?.recommendations ?? j?.body?.recommendations ?? [];
+    // Normalise ids (strip the activity:⟨…⟩ wrapper) so exclusion matches across
+    // the wrapped/unwrapped forms the recommend + runGoal paths use.
+    const norm = (s: string) => s.replace(/^activity:/, "").replace(/[⟨⟩]/g, "").trim();
+    const excludedNorm = new Set(exclude.map(norm));
+    for (const x of (Array.isArray(recs) ? recs : [])) {
+      const id = String((x && (x.template_id || x.id || x.activity_id || x.variant_id)) || "");
+      if (id && !excludedNorm.has(norm(id))) return id;
+    }
+    return null;
+  } catch { return null; }
+}
+// Reach → mint (operator: "the traces of the working attempts will be minted as
+// the beginnings of new activities"). When a goal genuinely REACHES, dispatch the
+// ribosome-extract activity on its trace so the working trajectory is assembled
+// into a new reusable activity. This is a far more reliable mint trigger than the
+// ribosome-vessel's WS all-tasks-succeeded heuristic — which is starved by WS
+// instability + a strict gate and has NEVER fired (0 ribosome-extract executions).
+// ribosome-extract dedupes against existing templates, so re-runs of known
+// activities don't mint duplicates — only NOVEL reached trajectories become seeds.
+async function mintReachedTrace(trace: { id?: string; status?: string; templateId?: string; durationMs?: number; costUsd?: number; tasks?: Array<{ outputShapes?: string[] }>; compositionChain?: string[]; outputImpulseIds?: string[] }): Promise<void> {
+  const executionId = trace?.id;
+  if (!executionId) return;
+  try {
+    // Execute ribosome-extract via the LOCAL executor (host.runGoal), not by
+    // POSTing activityDispatch to activity-api /v2/impulses/resolve — activity-api
+    // is the trace store, NOT an executor, so that dispatch never runs the activity
+    // (why ribosome-extract had 0 executions despite the ribosome-vessel dispatching
+    // it for ages). Calling host.runGoal runs the engine and bypasses the HTTP reach
+    // gate (no goal text on the mint call → no recursion / re-mint).
+    // Supply the FULL lifecycle payload the template expects (normally set by the
+    // lifecycle dispatcher) so its LLM tasks (assess/synthesize/validate) have the
+    // trace metadata, not just executionId — otherwise placeholders are empty and
+    // synthesis produces garbage / fails.
+    const tasks = Array.isArray(trace.tasks) ? trace.tasks : [];
+    const outputShapes = [...new Set(tasks.flatMap((t) => t.outputShapes ?? []))];
+    const lifecycle = {
+      executionId,
+      status: trace.status === "failed" ? "failed" : "success",
+      taskCount: tasks.length,
+      durationMs: trace.durationMs ?? 0,
+      costUsd: trace.costUsd ?? 0,
+      templateId: trace.templateId ?? "",
+      templateName: trace.templateId ?? "",
+      templateAuthor: "",
+      outputShapes,
+      depth: Array.isArray(trace.compositionChain) ? trace.compositionChain.length : 0,
+      impulseCount: trace.outputImpulseIds?.length ?? 0,
+      hasGoalContext: true,
+    };
+    await host.runGoal(`extract reusable template from execution ${executionId}`, {
+      targetTemplateId: "activity:⟨ribosome-extract⟩",
+      variables: { executionId, lifecycle },
+    });
+    console.log(`[goal-host-vessel] reach→mint: ran ribosome-extract for ${executionId} (taskCount=${lifecycle.taskCount}, shapes=${JSON.stringify(outputShapes)})`);
+  } catch (e) { console.warn(`[goal-host-vessel] reach→mint failed for ${trace?.id}: ${(e as Error).message}`); }
+}
+
+interface GoalSeekResult {
+  result: Awaited<ReturnType<typeof host.runGoal>> | null;
+  status: "failed" | "completed";
+  selectedTemplateId?: string;
+  completionShapes: string[] | null;
+  attempts: number;
+  goalReachReason?: string;
+  reached: boolean;
+}
+
+// Normalise an activity id by stripping the `activity:⟨…⟩` wrapper the recommend +
+// runGoal paths use, so chain/exclusion membership matches across the wrapped and
+// unwrapped forms. Mirrors the `norm` helper in recommendExcluding.
+function normActivityId(s: string): string {
+  return s.replace(/^activity:/, "").replace(/[⟨⟩]/g, "").trim();
+}
+
+// A recommend/discover candidate normalised to the fields the walk reasons over.
+interface WalkCandidate {
+  id: string;            // raw id (used for fetch / chain record)
+  inputShapes: string[]; // declared input_shapes (bare names)
+  outputShapes: string[];// declared output_shapes (bare names)
+}
+
+function readCandidateShapes(x: any): WalkCandidate | null {
+  const id = String((x && (x.template_id || x.id || x.activity_id || x.variant_id)) || "");
+  if (!id) return null;
+  const norm = (arr: unknown): string[] =>
+    Array.isArray(arr) ? arr.map((s) => String(s)).filter(Boolean) : [];
+  // discover-by-shapes returns shapes under input_schema.required_shapes /
+  // output_schema.produces_shapes; recommend returns input_shapes/output_shapes.
+  // Read both so the walk sees a candidate's real input/output contract.
+  const inputShapes = norm(x.input_shapes ?? x.inputShapes ?? x.input_schema?.required_shapes);
+  const outputShapes = norm(x.output_shapes ?? x.outputShapes ?? x.output_schema?.produces_shapes);
+  return { id, inputShapes, outputShapes };
+}
+
+// MINT-AS-YOU-GO (the "Reserve Improvisation" slot at the WALK step level,
+// 2026-06-24). When the shape-graph walk needs a target shape that NO existing
+// activity produces (discover-by-shapes found no producer), but the substrate
+// HAS a live resolver for that shape (advertised by discovery at /registry/shapes),
+// mint a thin wrapper activity whose single task invokes that resolver. This
+// wraps the substrate's orphaned resolvers (live resolver shapes that no activity
+// invokes) on demand, so the walk can genuinely produce the shape and continue
+// instead of stopping at a phantom capability gap.
+//
+// Reuse-Before-Mint is already satisfied at the call site: we only reach the mint
+// after the backward-chain discover found no producer.
+async function mintResolverWrapper(shape: string): Promise<string | null> {
+  const template = {
+    id: `auto-mint-${shape}`,
+    name: `auto-mint:${shape}`,
+    description: `Auto-minted wrapper around the ${shape} resolver (Reserve-Improvisation): no existing activity produced this shape, so the walk wraps the live resolver on demand.`,
+    input_shapes: [] as string[],
+    inputShapes: [] as string[],
+    output_shapes: [shape],
+    outputShapes: [shape],
+    tags: ["auto_minted", "improvise", "horizon:walk"],
+    variables: [] as unknown[],
+    tasks: [
+      {
+        id: "produce",
+        description: `invoke ${shape} resolver`,
+        resolver: shape,
+        config: { type: shape },
+        output_shapes: [shape],
+        outputShapes: [shape],
+      },
+    ],
+    proposed: false,
+    org_id: "organizations:substrate",
+  };
+  try {
+    const r = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+      body: JSON.stringify({ impulse: { type: "activity_create_variant", pointer: { type: "activity_create_variant", template } } }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!r.ok) return null;
+    const j: any = await r.json();
+    const variantId = j?.body?.variantId ?? j?.variantId ?? null;
+    return typeof variantId === "string" && variantId ? variantId : null;
+  } catch {
+    return null;
+  }
+}
+
+// Shape-graph WALK (2026-06-23). The DEFAULT goal-execution strategy: instead of
+// picking ONE whole template by goal-text and treating its status as "reached",
+// walk the shape graph across MULTIPLE activities — at each step pick an activity
+// whose declared inputs are satisfied by the accumulated impulse POOL and whose
+// outputs add a NEW shape (forward progress), seed it with the pool, execute it,
+// merge its produced shapes back into the pool, and continue until the target
+// output shapes are all produced (or no shape-feasible step remains). The selected
+// activities form the composition `chain`; the threaded parent/composition ids make
+// the steps a RECORDED chain, and recordGoalPath stores the full multi-activity path.
+//
+// There is NO env flag / opt-in toggle (operator forbade flags). MAX_STEPS is a
+// tuning constant. When the walk cannot take even one shape-feasible step
+// (chain.length === 0), runGoalWithRecovery falls through to the single-template
+// recovery loop — graceful degradation, not a break.
+async function runGoalAsPoolWalk(
+  goal: string,
+  opts: {
+    variables: Record<string, unknown>;
+    tags?: string[];
+    parentExecutionId?: string;
+    compositionChain?: string[];
+    expectedOutputShapes?: string[];
+    surface: string;
+  },
+): Promise<GoalSeekResult> {
+  const MAX_STEPS = parseInt(process.env.GOAL_HOST_WALK_MAX_STEPS ?? "40", 10);
+
+  // Live resolver shapes advertised by discovery — a shape present here is
+  // RESOLVABLE (some vessel resolves it), so a wrapper activity invoking it as a
+  // resolver genuinely produces the impulse. Lazily fetched once and cached;
+  // tolerant of failure (empty Set ⇒ never mint, fall through to escalate).
+  let liveResolverShapes: Set<string> | null = null;
+  const liveShapes = async (): Promise<Set<string>> => {
+    if (liveResolverShapes) return liveResolverShapes;
+    try {
+      const r = await fetch("http://127.0.0.1:8100/registry/shapes", { signal: AbortSignal.timeout(10_000) });
+      if (r.ok) {
+        const j: any = await r.json();
+        const shapes = Array.isArray(j?.shapes) ? j.shapes.map((s: unknown) => String(s)).filter(Boolean) : [];
+        liveResolverShapes = new Set<string>(shapes);
+      } else {
+        liveResolverShapes = new Set<string>();
+      }
+    } catch {
+      liveResolverShapes = new Set<string>();
+    }
+    return liveResolverShapes;
+  };
+  const minted = new Set<string>(); // shapes we've already minted a producer for this walk
+
+  // ── 1. Seed the POOL ───────────────────────────────────────────────────────
+  // producedShapes is the set of shapes currently available to consume; poolImpulses
+  // are the concrete impulses (with content) we seed into each step's execution.
+  const producedShapes = new Set<string>();
+  const poolImpulses: Impulse[] = [];
+  let impulseSeq = 0;
+  const mkImpulse = (shape: string, content: unknown, summary?: string): Impulse => ({
+    id: `walk-${shape}-${++impulseSeq}`,
+    pointer: { type: "memo" },
+    metadata: { shape, summary: summary ?? `pool impulse (${shape})`, producedBy: "goal-host-walk" },
+    loaded: true,
+    content,
+  });
+  const addToPool = (shape: string, content: unknown, summary?: string): void => {
+    if (!shape || producedShapes.has(shape)) return;
+    producedShapes.add(shape);
+    poolImpulses.push(mkImpulse(shape, content, summary));
+  };
+  // DATA-FLOW BINDING: expose each pool impulse's CONTENT as a variable keyed by
+  // its shape, so a downstream task's `{{shape}}` placeholder interpolates from
+  // the UPSTREAM activity's output content. This is what turns activities from
+  // environmentally-grounded SOURCES into genuine LINKS (B consumes A's output).
+  const poolVars = (): Record<string, unknown> => {
+    // Seed the goal TEXT as the default `{{goal}}` (2026-06-24). The goal impulse's
+    // content is an object ({ goal }), so without this default `{{goal}}` interpolated
+    // to a stringified object — breaking tasks that bind from the goal text (e.g.
+    // author_producer's goal_file_extract entry step). Explicit opts.variables win.
+    const v: Record<string, unknown> = { goal, ...opts.variables };
+    for (const imp of poolImpulses) {
+      const sh = (imp.metadata as { shape?: string } | undefined)?.shape;
+      if (sh && !(sh in v)) v[sh] = imp.content;
+    }
+    return v;
+  };
+
+  // Goal impulse (shape "goal").
+  addToPool("goal", { goal }, goal.slice(0, 200));
+  // Seed any variable that looks like an impulse / carries a shape.
+  for (const [k, v] of Object.entries(opts.variables ?? {})) {
+    if (v && typeof v === "object") {
+      const o = v as Record<string, unknown>;
+      const shape =
+        (o.metadata && typeof (o.metadata as Record<string, unknown>).shape === "string"
+          ? ((o.metadata as Record<string, unknown>).shape as string)
+          : undefined) ??
+        (typeof o.shape === "string" ? (o.shape as string) : undefined);
+      if (shape) {
+        addToPool(shape, "content" in o ? o.content : o, `seed var ${k}`);
+        continue;
+      }
+    }
+    // Plain variable value — expose it as a named shape so a consumer declaring it can bind.
+    addToPool(k, v, `seed var ${k}`);
+  }
+
+  const target = new Set<string>(opts.expectedOutputShapes ?? []);
+  // With an explicit target, "met" = all target shapes produced. With NO target,
+  // never short-circuit here — walk opportunistically (progress-driven), stopping
+  // on MAX_STEPS or the consecutive-no-progress break below.
+  const targetMet = (): boolean => target.size > 0 && [...target].every((s) => producedShapes.has(s));
+
+  const chain: string[] = [];          // selected activity ids = the composition
+  const chainExecIds: string[] = [...(opts.compositionChain ?? [])]; // recorded composition chain (execution ids)
+  const exclude = new Set<string>();   // normalised activity ids already used / rejected
+  let lastTrace: ExecutionTrace | null = null;
+  let lastExecId: string | undefined = opts.parentExecutionId;
+  let lastPick = "";
+  let totalDurationMs = 0;
+  let totalCostUsd = 0;
+  let consecutiveNoProgress = 0;
+
+  // ── 2-3. Walk the shape graph ──────────────────────────────────────────────
+  while (chain.length < MAX_STEPS && !targetMet()) {
+    // (a) CANDIDATE GENERATION — shape-driven: consumers of the current pool.
+    let candidates: WalkCandidate[] = [];
+    try {
+      const r = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/discover-by-shapes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+        body: JSON.stringify({ required_shapes: [...producedShapes], mode: "backward", limit: 50 }),
+        signal: AbortSignal.timeout(20_000),
+      });
+      if (r.ok) {
+        const j: any = await r.json();
+        const rows = j?.activities ?? j?.matches ?? j?.body?.activities ?? j?.results ?? [];
+        candidates = (Array.isArray(rows) ? rows : [])
+          .map(readCandidateShapes)
+          .filter((c): c is WalkCandidate => c !== null && !exclude.has(normActivityId(c.id)) && !chain.includes(c.id));
+      }
+    } catch { /* discover failed — candidates stays empty */ }
+    // Secondary: if discover surfaced nothing, fall back to the recommend ranker.
+    if (candidates.length === 0) {
+      try {
+        const r = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/recommend`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+          body: JSON.stringify({ task_description: goal, goal, impulse_shapes: [...producedShapes], expected_output_shapes: [...target], exclude_activities: chain, limit: 12, min_success_rate: 0 }),
+          signal: AbortSignal.timeout(20_000),
+        });
+        if (r.ok) {
+          const j: any = await r.json();
+          const recs = j?.recommendations ?? j?.body?.recommendations ?? [];
+          candidates = (Array.isArray(recs) ? recs : [])
+            .map(readCandidateShapes)
+            .filter((c): c is WalkCandidate => c !== null && !exclude.has(normActivityId(c.id)) && !chain.includes(c.id));
+        }
+      } catch { /* recommend failed too */ }
+    }
+
+    // (b) SELECT BEST — goal-gap weighted. With a target, prefer candidates that
+    // advance TOWARD it; do NOT grab unrelated progress-makers (that wanders into
+    // junk and starves the backward-chain/mint path). Without a target, walk
+    // opportunistically (any forward progress).
+    const missingTargetsB = [...target].filter((s) => !producedShapes.has(s));
+    const makesProgress = (c: WalkCandidate): boolean =>
+      c.outputShapes.some((s) => s !== "activityExecutionSummary" && !producedShapes.has(s));
+    const advancesTarget = (c: WalkCandidate): boolean =>
+      c.outputShapes.some((s) => missingTargetsB.includes(s));
+    const inputsSatisfied = (c: WalkCandidate): boolean =>
+      c.inputShapes.length > 0 && c.inputShapes.every((s) => producedShapes.has(s));
+    const notScaffold = (c: WalkCandidate): boolean =>
+      !(c.outputShapes.length === 1 && c.outputShapes[0] === "activityExecutionSummary");
+
+    // Hollow-scaffold id families (compose wrappers, proposed-pattern autodrafts,
+    // learned-tick clones) shape-match a target but do no genuine work and get
+    // reach-gate-β-penalised. A target with a LIVE resolver can be bridge-authored
+    // fresh (genuine work), so we must NOT settle for a hollow scaffold of it.
+    const isHollowScaffold = (id: string): boolean =>
+      /^(compose-|proposed_pattern_authored_|learned-)/.test(normActivityId(id));
+    const liveSetB = target.size > 0 ? await liveShapes() : new Set<string>();
+    const bridgeableTarget = (c: WalkCandidate): boolean =>
+      c.outputShapes.some((s) => missingTargetsB.includes(s) && liveSetB.has(s));
+
+    // (b.horizontal) HORIZONTAL COMPOSITION — OR-edge / parallel-and-join
+    // (SUBSTRATE_AS_MDP §7). The single-pick path below composes VERTICALLY: one
+    // producer per step, depth-first, which lands on hollow scaffolds when many
+    // activities shape-match the same missing target. When >=2 currently-EXECUTABLE
+    // genuine producers of the SAME missing shape T exist (an OR-edge), dispatch
+    // them ALL in parallel as siblings under the shared parent, join their
+    // GENUINELY-produced output shapes into the pool by shape-union, and let the
+    // genuine producer win (hollow ones fail tasks / get reach-gate-β-penalised).
+    // Bonus: √k posterior speedup + OR-edge discovery for the composition graph.
+    // CREDIT CAVEAT: sibling credit should AVERAGE not sum at the shared ancestor
+    // (γ^k·(1/k)Σr_i) so a k-wide bundle doesn't k-fold-inflate the parent's
+    // posterior — that is an activity-api propagateCreditAlongChain change and is
+    // OUT OF SCOPE here (this branch only fans out execution + joins by shape).
+    if (target.size > 0) {
+      const missing = [...target].filter((s) => !producedShapes.has(s));
+      const T = missing[0];
+      // The OR-edge = the PRODUCERS of T (forward discovery), unioned with any
+      // backward candidates that also produce T. Filter to currently-executable
+      // (inputs ⊆ pool), non-scaffold producers.
+      let orEdge: WalkCandidate[] = [];
+      if (T) {
+        let forward: WalkCandidate[] = [];
+        try {
+          const r = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/discover-by-shapes`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+            body: JSON.stringify({ required_shapes: [T], mode: "forward", limit: 12 }),
+            signal: AbortSignal.timeout(20_000),
+          });
+          if (r.ok) {
+            const j: any = await r.json();
+            const rows = j?.activities ?? j?.matches ?? j?.body?.activities ?? j?.results ?? [];
+            forward = (Array.isArray(rows) ? rows : []).map(readCandidateShapes).filter((c): c is WalkCandidate => c !== null);
+          }
+        } catch { /* discover failed */ }
+        const seen = new Set<string>();
+        orEdge = [...candidates, ...forward].filter((c) => {
+          const id = normActivityId(c.id);
+          if (seen.has(id) || exclude.has(id) || chain.includes(c.id)) return false;
+          seen.add(id);
+          return notScaffold(c) && c.outputShapes.includes(T) && (c.inputShapes.length === 0 || c.inputShapes.every((s) => producedShapes.has(s)));
+        });
+      }
+      if (orEdge.length >= 2) {
+        const K = Math.min(orEdge.length, parseInt(process.env.GOAL_HOST_HORIZONTAL_K ?? "4", 10));
+        const bundle = orEdge.slice(0, K);
+        const bundleParentExecId = lastExecId;
+        // Fan out: run each producer of T as a sibling (SAME parent/chain). Per-branch
+        // try/catch so one failure (incl. unfetchable template) doesn't abort the bundle.
+        const branchResults = await Promise.all(
+          bundle.map(async (c): Promise<ExecutionTrace | null> => {
+            try {
+              const tmpl = await host.activityApi.getTemplate(c.id);
+              if (!tmpl) return null;
+              const bvars = poolVars();
+              return await host.runTemplate(tmpl, bvars, {
+                impulses: poolImpulses,
+                parentExecutionId: bundleParentExecId,
+                compositionChain: chainExecIds,
+                variables: bvars,
+                tags: opts.tags,
+                goalContext: { goal },
+              });
+            } catch (e) {
+              console.warn(`[goal-host-vessel] walk(${opts.surface}): HORIZONTAL branch ${c.id} threw: ${(e as Error).message}`);
+              return null;
+            }
+          }),
+        );
+        // JOIN by shape-union: pull genuinely-produced shapes from SUCCESSFUL tasks
+        // of every successful branch into the pool. Record every executed branch.
+        const beforeBundle = producedShapes.size;
+        let producedCount = 0;
+        let bestTrace: ExecutionTrace | null = null;
+        let bestExecId: string | undefined;
+        let bestPickId: string | undefined;
+        for (let i = 0; i < bundle.length; i++) {
+          const c = bundle[i];
+          const t = branchResults[i];
+          chain.push(c.id);
+          exclude.add(normActivityId(c.id));
+          if (!t) continue;
+          if (t.id) chainExecIds.push(t.id);
+          totalDurationMs += t.durationMs ?? 0;
+          totalCostUsd += t.costUsd ?? 0;
+          const branchShapes = [...new Set(
+            (t.tasks ?? [])
+              .filter((tk) => (tk as { success?: boolean }).success !== false)
+              .flatMap((tk) => tk.outputShapes ?? []),
+          )].filter((s) => s && s !== "activityExecutionSummary");
+          let branchProducedNew = false;
+          let branchProducedT = false;
+          for (const s of branchShapes) {
+            if (!producedShapes.has(s)) branchProducedNew = true;
+            if (s === T) branchProducedT = true;
+            addToPool(s, { producedBy: c.id, executionId: t.id }, `produced by ${c.id} (horizontal)`);
+          }
+          if (branchProducedNew) producedCount++;
+          // The genuine producer of T wins as the step's representative trace.
+          if (t.status !== "failed" && (bestTrace === null || branchProducedT)) {
+            bestTrace = t;
+            bestExecId = t.id;
+            bestPickId = c.id;
+          }
+        }
+        if (bestTrace) {
+          lastTrace = bestTrace;
+          lastExecId = bestExecId;
+          if (bestPickId) lastPick = bestPickId;
+        }
+        console.log(`[goal-host-vessel] walk(${opts.surface}): HORIZONTAL bundle for "${T}" — ran ${K} producers in parallel, ${producedCount} produced new shapes (OR-edge discovery)`);
+        const progressed = producedShapes.size > beforeBundle;
+        if (!progressed) {
+          consecutiveNoProgress++;
+          if (consecutiveNoProgress >= 2) {
+            console.log(`[goal-host-vessel] walk(${opts.surface}): 2 consecutive no-progress steps — stopping`);
+            break;
+          }
+        } else {
+          consecutiveNoProgress = 0;
+        }
+        continue; // the bundle WAS this step's progress; skip the single-pick path
+      }
+    }
+
+    let pick: WalkCandidate | undefined;
+    if (target.size > 0) {
+      const feasibleProducer = (c: WalkCandidate): boolean =>
+        notScaffold(c) && advancesTarget(c) && (c.inputShapes.length === 0 || c.inputShapes.every((s) => producedShapes.has(s)));
+      // 1. A GENUINE (non-hollow-scaffold) feasible producer of a target shape.
+      pick = candidates.find((c) => feasibleProducer(c) && !isHollowScaffold(c.id))
+        // 2. A scaffold producer is acceptable ONLY for a target with no live
+        //    resolver (not bridge-authorable) — otherwise prefer bridge-authoring.
+        ?? candidates.find((c) => feasibleProducer(c) && !bridgeableTarget(c));
+      // RECURSE: if the only target-producers have UNSATISFIED inputs, produce
+      // those inputs first (add as sub-targets) rather than executing the
+      // producer prematurely — this is how the chain is built backward.
+      if (!pick) {
+        const needsInputs = candidates.find((c) => notScaffold(c) && advancesTarget(c) && c.inputShapes.length > 0);
+        if (needsInputs) {
+          let added = false;
+          for (const s of needsInputs.inputShapes) if (!producedShapes.has(s) && !target.has(s)) { target.add(s); added = true; }
+          if (added) {
+            console.log(`[goal-host-vessel] walk(${opts.surface}): recurse — ${normActivityId(needsInputs.id)} needs [${needsInputs.inputShapes.join(",")}]; producing inputs first`);
+            continue; // loop to produce the sub-target inputs, then re-pick this producer
+          }
+        }
+      }
+    } else {
+      // Opportunistic: any genuine forward progress.
+      pick = candidates.find((c) => notScaffold(c) && inputsSatisfied(c) && makesProgress(c))
+        ?? candidates.find((c) => notScaffold(c) && makesProgress(c));
+    }
+
+    // (c) BACKWARD-CHAIN — find a producer of a missing target shape.
+    if (!pick) {
+      const missingTargets = [...target].filter((s) => !producedShapes.has(s));
+      if (missingTargets.length > 0) {
+        try {
+          const r = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/discover-by-shapes`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+            body: JSON.stringify({ required_shapes: missingTargets, mode: "forward" }),
+            signal: AbortSignal.timeout(20_000),
+          });
+          if (r.ok) {
+            const j: any = await r.json();
+            const rows = j?.activities ?? j?.matches ?? j?.body?.activities ?? j?.results ?? [];
+            const producers = (Array.isArray(rows) ? rows : [])
+              .map(readCandidateShapes)
+              .filter((c): c is WalkCandidate => c !== null && !exclude.has(normActivityId(c.id)) && !chain.includes(c.id))
+              // Drop hollow scaffolds for bridge-authorable targets so the walk
+              // bridge-authors a genuine producer instead of reusing a scaffold.
+              .filter((c) => !(isHollowScaffold(c.id) && bridgeableTarget(c)));
+            // Prefer a GENUINE producer whose inputs are already satisfied (executable now).
+            pick = producers.find((c) => !isHollowScaffold(c.id) && (c.inputShapes.length === 0 || c.inputShapes.every((s) => producedShapes.has(s))))
+              ?? producers.find((c) => c.inputShapes.length === 0 || c.inputShapes.every((s) => producedShapes.has(s)));
+            // BACKWARD-CHAIN RECURSION: no executable producer, but a producer with
+            // UNSATISFIED inputs exists → produce its inputs first (add as sub-
+            // targets), don't execute it prematurely. This turns the goal target
+            // into a backward-built chain of producers (link_b←link_a, etc.).
+            if (!pick) {
+              const needsInputs = producers.find((c) => c.inputShapes.length > 0);
+              if (needsInputs) {
+                let added = false;
+                for (const s of needsInputs.inputShapes) if (!producedShapes.has(s) && !target.has(s)) { target.add(s); added = true; }
+                if (added) {
+                  console.log(`[goal-host-vessel] walk(${opts.surface}): backward-chain — ${normActivityId(needsInputs.id)} needs [${needsInputs.inputShapes.join(",")}]; producing inputs first`);
+                  continue;
+                }
+              }
+            }
+          }
+        } catch { /* discover failed */ }
+      }
+    }
+
+    // (c.2) MINT-AS-YOU-GO — Reserve Improvisation. Backward-chain found no
+    //       producer for a missing target shape. If the substrate has a LIVE
+    //       resolver for that shape, mint a thin wrapper activity around it so
+    //       the walk can genuinely produce the shape this iteration. Only true
+    //       capability gaps (no live resolver) fall through to escalate/stop.
+    if (!pick && target.size > 0) {
+      const missingTargets = [...target].filter((s) => !producedShapes.has(s));
+      const live = await liveShapes();
+      const X = missingTargets.find((s) => live.has(s) && !minted.has(s));
+      if (X) {
+        minted.add(X);
+        // BRIDGE-AUTHOR: author a GENUINELY-PRODUCING invocation of X's resolver
+        // (author→validate→refine via the resolver's own errors), returning a
+        // validated producer + the input shapes it needs.
+        let authored: { id: string; inputShapes: string[] } | null = null;
+        try {
+          const r = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+            body: JSON.stringify({ impulse: { type: "author_producer", pointer: { type: "author_producer", shape: X, goal, available_shapes: [...producedShapes], max_attempts: 3 } } }),
+            signal: AbortSignal.timeout(180_000),
+          });
+          if (r.ok) {
+            const j: any = await r.json();
+            const b = j?.body ?? j;
+            if (b?.minted_activity_id && b?.validated) {
+              authored = { id: String(b.minted_activity_id), inputShapes: Array.isArray(b.input_shapes) ? b.input_shapes.map(String) : [] };
+            }
+          }
+        } catch { /* author failed → falls through to escalate/stop */ }
+        if (authored) {
+          console.log(`[goal-host-vessel] walk(${opts.surface}): BRIDGE-AUTHORED validated producer for "${X}" → ${authored.id} (inputs=[${authored.inputShapes.join(",")}])`);
+          // Recurse: add the producer's missing inputs as sub-targets so the walk
+          // produces them FIRST — mint-as-you-go builds the chain backward from
+          // the goal toward what the pool already has.
+          for (const s of authored.inputShapes) if (!producedShapes.has(s)) target.add(s);
+          if (authored.inputShapes.every((s) => producedShapes.has(s))) {
+            pick = { id: authored.id, inputShapes: authored.inputShapes, outputShapes: [X] };
+          } else {
+            continue; // produce the sub-target inputs first; re-discover this producer when ready
+          }
+        }
+      }
+    }
+
+    if (!pick) {
+      console.log(`[goal-host-vessel] walk(${opts.surface}): no shape-feasible step at chain.length=${chain.length} (producedShapes=${producedShapes.size}, missingTargets=${[...target].filter((s) => !producedShapes.has(s)).length}) — escalating (stop)`);
+      break;
+    }
+
+    // (d) EXECUTE the pick SEEDED WITH THE POOL — fetch the template by id, run it
+    //     with the accumulated pool impulses + thread parent/composition ids so the
+    //     steps form a recorded chain.
+    let template: ActivityTemplate | null = null;
+    try {
+      template = await host.activityApi.getTemplate(pick.id);
+    } catch (e) {
+      console.warn(`[goal-host-vessel] walk(${opts.surface}): getTemplate(${pick.id}) failed: ${(e as Error).message}`);
+    }
+    if (!template) {
+      // Can't fetch the template object — exclude and try another candidate.
+      exclude.add(normActivityId(pick.id));
+      console.log(`[goal-host-vessel] walk(${opts.surface}): template ${pick.id} unfetchable — excluding`);
+      continue;
+    }
+
+    let trace: ExecutionTrace;
+    try {
+      const bvars = poolVars();
+      trace = await host.runTemplate(template, bvars, {
+        impulses: poolImpulses,
+        parentExecutionId: lastExecId,
+        compositionChain: chainExecIds,
+        variables: bvars,
+        tags: opts.tags,
+        goalContext: { goal },
+      });
+    } catch (e) {
+      exclude.add(normActivityId(pick.id));
+      console.warn(`[goal-host-vessel] walk(${opts.surface}): runTemplate(${pick.id}) threw: ${(e as Error).message} — excluding`);
+      continue;
+    }
+    lastTrace = trace;
+    lastPick = pick.id;
+    lastExecId = trace.id;
+    if (trace.id) chainExecIds.push(trace.id);
+    totalDurationMs += trace.durationMs ?? 0;
+    totalCostUsd += trace.costUsd ?? 0;
+
+    // (e) MERGE OUTPUTS — pull genuinely-new shapes from the trace tasks into the pool.
+    const beforeSize = producedShapes.size;
+    // Advance the pool ONLY by shapes the activity GENUINELY produced — actual
+    // output shapes from SUCCESSFUL tasks of this execution. No optimistic
+    // declared-shape advancement: a composition step counts only if the data was
+    // really produced, so the reach-gate judges genuine artifacts, not promises.
+    const newShapes = [...new Set(
+      (trace.tasks ?? [])
+        .filter((t) => (t as { success?: boolean }).success !== false)
+        .flatMap((t) => t.outputShapes ?? []),
+    )];
+    for (const s of newShapes) {
+      if (s && s !== "activityExecutionSummary") addToPool(s, { producedBy: pick.id, executionId: trace.id }, `produced by ${pick.id}`);
+    }
+    chain.push(pick.id);
+    exclude.add(normActivityId(pick.id));
+    const progressed = producedShapes.size > beforeSize;
+    console.log(`[goal-host-vessel] walk(${opts.surface}): step ${chain.length} ran ${pick.id} status=${trace.status} new_shapes=${producedShapes.size - beforeSize} pool=${producedShapes.size} chain=${chainExecIds.length}`);
+    if (!progressed) {
+      consecutiveNoProgress++;
+      if (consecutiveNoProgress >= 2) {
+        console.log(`[goal-host-vessel] walk(${opts.surface}): 2 consecutive no-progress steps — stopping`);
+        break;
+      }
+    } else {
+      consecutiveNoProgress = 0;
+    }
+  }
+
+  // ── 4. Reach gate + per-goal record + reach→mint (reuse existing logic) ──────
+  let status: "failed" | "completed" = lastTrace && lastTrace.status !== "failed" ? "completed" : "failed";
+  let completionShapes: string[] | null = null;
+  let goalReachReason: string | undefined;
+  let reached = false;
+
+  if (lastTrace && chain.length > 0) {
+    const chainSummary = `walk(${chain.length} steps): ${chain.map(normActivityId).join(" → ")}`;
+    // Content digest: let the reach-gate judge from ACTUAL produced content, not
+    // just shape names (2026-06-24). Without this a genuine content-bearing output
+    // (e.g. problem_detection with real problems) is indistinguishable from a hollow
+    // shape-emitter, so the LLM verifier rejects genuine work non-deterministically.
+    const contentDigest = poolImpulses
+      .filter((imp) => { const s = (imp.metadata as { shape?: string } | undefined)?.shape; return s && s !== "goal"; })
+      .map((imp) => {
+        const s = (imp.metadata as { shape?: string } | undefined)?.shape ?? "?";
+        let c: string;
+        try { c = typeof imp.content === "string" ? imp.content : JSON.stringify(imp.content); } catch { c = String(imp.content); }
+        return `- ${s}: ${c.slice(0, 600)}`;
+      })
+      .join("\n")
+      .slice(0, 4000);
+    try {
+      const verdict = await verifyGoalReached(goal, [...producedShapes], chainSummary, contentDigest || undefined);
+      completionShapes = verdict?.completion_shapes ?? null;
+      reached = verdict?.reached !== false;
+      if (verdict && verdict.reached === false) {
+        status = "failed";
+        goalReachReason = verdict.reason;
+        await penaliseHollowTemplate(lastPick, verdict.reason ?? "goal not reached");
+        console.log(`[goal-host-vessel] walk(${opts.surface}): HOLLOW — ${verdict.reason}; β-penalised last pick ${lastPick}. completion_shapes=${JSON.stringify(verdict.completion_shapes)}`);
+      } else if (verdict && verdict.reached === true) {
+        console.log(`[goal-host-vessel] walk(${opts.surface}): REACHED via ${chain.length}-step chain. completion_shapes=${JSON.stringify(verdict.completion_shapes)}`);
+        void mintReachedTrace(lastTrace as any);
+      }
+    } catch (e) {
+      console.warn("[goal-host-vessel] walk goal-reach verify error (non-fatal):", (e as Error).message);
+    }
+    // Per-goal learning: record the FULL multi-activity path -> reach outcome.
+    void recordGoalPath(goal, chain, reached, totalDurationMs, totalCostUsd);
+  }
+
+  // Adapt the last ExecutionTrace into the GoalRunResult shape the callers read.
+  const result = lastTrace
+    ? ({ trace: lastTrace, selectedTemplateId: lastPick } as Awaited<ReturnType<typeof host.runGoal>>)
+    : null;
+  return {
+    result,
+    status,
+    selectedTemplateId: chain.length > 0 ? chain[chain.length - 1] : undefined,
+    completionShapes,
+    attempts: chain.length,
+    goalReachReason,
+    reached,
+  };
+}
+
+// SINGLE goal-seeking-with-recovery implementation shared by BOTH dispatch
+// surfaces (async /run-goal + sync /resolve) — there must be exactly one copy of
+// this logic, not a duplicate per surface that can drift. Recovery is part of
+// reaching the goal, not a separate offline repair: try an approach → check reach
+// (the gate) → on not-reached β-penalise + EXCLUDE that approach + re-recommend a
+// DIFFERENT one → retry, until reached or approaches exhausted. The attempt that
+// REACHES leaves a trace the ribosome mints into a new activity seed. Callers
+// differ only in maxAttempts (sync /resolve is bounded by the MCP ~290s timeout;
+// async /run-goal can recover more deeply) and in how they pass options. An
+// explicit caller-pinned target is respected verbatim (no alteration).
+async function runGoalWithRecovery(
+  goal: string | undefined,
+  opts: {
+    firstTarget?: string;
+    callerPinned?: boolean;
+    maxAttempts: number;
+    variables: Record<string, unknown>;
+    tags?: string[];
+    parentExecutionId?: string;
+    compositionChain?: string[];
+    expectedOutputShapes?: string[];
+    surface: string;
+  },
+): Promise<GoalSeekResult> {
+  // DEFAULT strategy (2026-06-23): when there's a goal, the caller did NOT pin a
+  // target, and no firstTarget is supplied, WALK THE SHAPE GRAPH across multiple
+  // activities instead of picking one whole template by goal-text. Automatic
+  // graceful fallback (NO flag): if the walk couldn't take even one shape-feasible
+  // step (chain.length === 0), fall through to the single-template recovery loop
+  // below. callerPinned / firstTarget / no-goal paths use the existing loop unchanged.
+  if (goal && !opts.callerPinned && !opts.firstTarget) {
+    try {
+      const walk = await runGoalAsPoolWalk(goal, {
+        variables: opts.variables,
+        tags: opts.tags,
+        parentExecutionId: opts.parentExecutionId,
+        compositionChain: opts.compositionChain,
+        expectedOutputShapes: opts.expectedOutputShapes,
+        surface: opts.surface,
+      });
+      if (walk.attempts > 0) return walk;
+      console.log(`[goal-host-vessel] ${opts.surface}: pool-walk took 0 shape-feasible steps — falling back to single-template recovery loop`);
+    } catch (e) {
+      console.warn(`[goal-host-vessel] ${opts.surface}: pool-walk error (${(e as Error).message}) — falling back to single-template recovery loop`);
+    }
+  }
+  const maxAttempts = opts.callerPinned || !goal ? 1 : opts.maxAttempts;
+  const excluded: string[] = [];
+  let nextTarget: string | undefined = opts.firstTarget;
+  if (!nextTarget && goal) {
+    const reaching = await recommendReachingPath(goal);
+    if (reaching) { nextTarget = reaching; console.log(`[goal-host-vessel] ${opts.surface}: reusing known-reaching path ${reaching}`); }
+  }
+  let result: Awaited<ReturnType<typeof host.runGoal>> | null = null;
+  let status: "failed" | "completed" = "failed";
+  let completionShapes: string[] | null = null;
+  let goalReachReason: string | undefined;
+  let reached = false;
+  let attempt = 0;
+  while (attempt < maxAttempts) {
+    attempt++;
+    result = await host.runGoal(goal ?? `execute template ${nextTarget}`, {
+      variables: opts.variables,
+      targetTemplateId: nextTarget,
+      tags: opts.tags,
+      parentExecutionId: opts.parentExecutionId,
+      compositionChain: opts.compositionChain,
+      expectedOutputShapes: opts.expectedOutputShapes,
+    });
+    status = result.trace.status === "failed" ? "failed" : "completed";
+    const selId = result.selectedTemplateId;
+    reached = false;
+    // Goal-reaching gate: a "completed" execution that didn't reach the goal is a
+    // hollow completion — downgrade + β-penalise so Thompson stops reinforcing
+    // goal-irrelevant gaming/wrapper templates. completion_shapes surface the
+    // (emergent) goal-shaped direction, not a goal-declared target.
+    if (goal && status === "completed" && selId) {
+      try {
+        const producedShapes = [...new Set(((result.trace as { tasks?: Array<{ outputShapes?: string[] }> }).tasks ?? []).flatMap((t) => t.outputShapes ?? []))];
+        const taskSummary = (((result.trace as { tasks?: Array<{ taskId?: string; resolverId?: string; success?: boolean }> }).tasks) ?? []).map((t) => `${t.taskId}(${t.resolverId},${t.success ? "ok" : "fail"})`).join(", ");
+        const verdict = await verifyGoalReached(goal, producedShapes, taskSummary);
+        completionShapes = verdict?.completion_shapes ?? null;
+        reached = verdict?.reached !== false;
+        if (verdict && verdict.reached === false) {
+          status = "failed";
+          goalReachReason = verdict.reason;
+          await penaliseHollowTemplate(selId, verdict.reason ?? "goal not reached");
+          console.log(`[goal-host-vessel] goal-reach(${opts.surface}) attempt ${attempt}/${maxAttempts}: HOLLOW via ${selId} — ${verdict.reason}; β-penalised. completion_shapes=${JSON.stringify(verdict.completion_shapes)}`);
+        } else if (verdict && verdict.reached === true) {
+          console.log(`[goal-host-vessel] goal-reach(${opts.surface}) attempt ${attempt}/${maxAttempts}: REACHED via ${selId}. completion_shapes=${JSON.stringify(verdict.completion_shapes)}`);
+          void mintReachedTrace(result.trace as any);  // reach → mint the working trace into a new activity seed
+        }
+      } catch (e) { console.warn("[goal-host-vessel] goal-reach verify error (non-fatal):", (e as Error).message); }
+    }
+    // Per-goal learning: record this attempt's goal -> path -> reach outcome.
+    const tr = result.trace as { durationMs?: number; costUsd?: number };
+    if (goal && selId) void recordGoalPath(goal, [selId], reached, tr.durationMs ?? 0, tr.costUsd ?? 0);
+    if (reached || !goal) break;  // reached (the trace is what the ribosome mints) — or no goal to recover toward
+    if (selId) excluded.push(selId);
+    // Alter the approach for the next attempt (engine-selected approaches only).
+    if (attempt < maxAttempts) {
+      const alt = await recommendExcluding(goal, excluded);
+      if (!alt) { console.log(`[goal-host-vessel] ${opts.surface}: no fresh approach after ${attempt} attempts — honest failure`); break; }
+      nextTarget = alt;
+      console.log(`[goal-host-vessel] ${opts.surface}: altering approach → ${alt} (attempt ${attempt + 1}, excluded ${excluded.length})`);
+    }
+  }
+  return { result, status, selectedTemplateId: result?.selectedTemplateId, completionShapes, attempts: attempt, goalReachReason, reached };
+}
 // Proxy resolver timeout (ms). Default 240s — must accommodate LLM-heavy
 // dispatches (sonnet on ~45K-token inputs can take 90-180s) while staying
 // under Bun's ~300s fetch cap. Override via GOAL_HOST_PROXY_TIMEOUT_MS.
@@ -616,7 +1539,7 @@ function registerBuiltinResolvers(): void {
   host.runtime.resolvers.register({
     id: "activity_recommendation",
     tier: "pattern" as const,
-    async resolve(context: Record<string, unknown>) {
+    async resolve(context: any): Promise<any> {
       const task = context.task as Record<string, unknown> | undefined;
       const config = (task?.config ?? {}) as Record<string, unknown>;
       const variables = (context.variables ?? {}) as Record<string, unknown>;
@@ -685,7 +1608,7 @@ function registerBuiltinResolvers(): void {
   host.runtime.resolvers.register({
     id: "impulse_cooccurrence",
     tier: "pattern" as const,
-    async resolve(context: Record<string, unknown>) {
+    async resolve(context: any): Promise<any> {
       const random = context.random as { id: (prefix: string) => string };
       const id = random.id("cooccurrence");
       return [{
@@ -703,6 +1626,28 @@ function registerBuiltinResolvers(): void {
   });
 
   console.log("[goal-host-vessel] registered built-in resolver: impulse_cooccurrence");
+
+  // noop — trivial pass-through. Several SHARED_TEMPLATES (ribosome-extract's
+  // dispatch_write_succeeded sentinel, etc.) declare resolver:"noop" expecting a
+  // no-op success, but goal-host only registered "lift_demo_noop" — so those tasks
+  // hit activities-as-resolvers (getTemplate("noop") → not found) and FAILED,
+  // failing the whole template (e.g. ribosome-extract minted nothing because its
+  // final sentinel task errored). Register a real noop.
+  host.runtime.resolvers.register({
+    id: "noop",
+    tier: "deterministic" as const,
+    async resolve(context: any) {
+      const random = context.random as { id: (p: string) => string };
+      return [{
+        id: random.id("noop"),
+        pointer: { type: "memo" },
+        metadata: { shape: "noop" },
+        loaded: true,
+        content: { ok: true },
+      }];
+    },
+  });
+  console.log("[goal-host-vessel] registered built-in resolver: noop");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -725,6 +1670,11 @@ function registerBuiltinResolvers(): void {
 // and qualified forms but the bare name is the canonical identity).
 const registeredProxyShapes = new Set<string>();
 
+// shape -> {endpoint, resolvePath} captured at registration time from the vessel
+// registry (which carries endpoints), because the per-resolve vesselCapability
+// lookup returns a null endpoint. The discovery-proxy uses this map first.
+const shapeEndpointMap = new Map<string, { endpoint: string; resolvePath: string }>();
+
 /**
  * Interpolate {{var}} and {{a.b}} placeholders in a value. Mirrors the
  * semantics in resolvers/llm-prompt.ts (the engine's llm path interpolates,
@@ -737,9 +1687,36 @@ const registeredProxyShapes = new Set<string>();
  * Handles strings, arrays, and plain objects recursively. Unresolved
  * placeholders remain literal (matches llm-prompt behavior).
  */
-function interpolateProxyValue(value: unknown, variables: Record<string, unknown>): unknown {
+// Build a named-slot map { <slot> -> impulse.content } from a task's resolved
+// input impulses. The engine pulls impulses stamped with metadata.outputImpulseKey
+// into context.inputImpulses (Idiom-6 named-input slots); this exposes them for
+// `{{impulse:<slot>}}` interpolation in proxy configs (e.g. ribosome-extract's
+// dispatch_write_attempt body `"templateData": {{impulse:extracted_template}}`).
+function buildImpulseSlots(impulses: unknown): Map<string, unknown> {
+  const slots = new Map<string, unknown>();
+  if (!Array.isArray(impulses)) return slots;
+  for (const imp of impulses) {
+    const meta = (imp as { metadata?: Record<string, unknown> })?.metadata;
+    const key = meta && typeof meta["outputImpulseKey"] === "string" ? (meta["outputImpulseKey"] as string) : undefined;
+    if (key) slots.set(key, (imp as { content?: unknown }).content);
+  }
+  return slots;
+}
+
+function interpolateProxyValue(value: unknown, variables: Record<string, unknown>, impulseSlots?: Map<string, unknown>): unknown {
   if (typeof value === "string") {
-    return value.replace(/\{\{([\w]+(?:\.[\w]+)*)\}\}/g, (match, path: string) => {
+    // Token grammar now allows a single `impulse:<slot>` prefix (the colon) in
+    // addition to dotted variable paths. Without the colon the old regex left
+    // `{{impulse:extracted_template}}` LITERAL, so the ribosome's write body was
+    // malformed and never persisted a template.
+    return value.replace(/\{\{\s*(impulse:[\w.-]+|[\w]+(?:\.[\w]+)*)\s*\}\}/g, (match, path: string) => {
+      if (path.startsWith("impulse:")) {
+        const slot = path.slice("impulse:".length);
+        const content = impulseSlots?.get(slot);
+        if (content === undefined || content === null) return match; // unresolved → literal
+        if (typeof content === "string") return content;
+        try { return JSON.stringify(content); } catch { return match; }
+      }
       const segs = path.split(".");
       let cur: unknown = variables;
       for (const seg of segs) {
@@ -755,11 +1732,11 @@ function interpolateProxyValue(value: unknown, variables: Record<string, unknown
       try { return JSON.stringify(cur); } catch { return match; }
     });
   }
-  if (Array.isArray(value)) return value.map((v) => interpolateProxyValue(v, variables));
+  if (Array.isArray(value)) return value.map((v) => interpolateProxyValue(v, variables, impulseSlots));
   if (value && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      out[k] = interpolateProxyValue(v, variables);
+      out[k] = interpolateProxyValue(v, variables, impulseSlots);
     }
     return out;
   }
@@ -779,7 +1756,8 @@ function buildProxyResolver(shape: string) {
       // so dev-vessel resolvers receive substituted values rather than literal
       // placeholder strings (which were causing silent failures in
       // register_variant — see comment on interpolateProxyValue).
-      const config = interpolateProxyValue(configRaw, variables) as Record<string, unknown>;
+      const impulseSlots = buildImpulseSlots(context.inputImpulses);
+      const config = interpolateProxyValue(configRaw, variables, impulseSlots) as Record<string, unknown>;
       // Spread variables BEFORE config so the interpolated config wins on key
       // conflicts. Templates intentionally use variable names that match
       // config-key meanings inside the activity layer (e.g. target_branch
@@ -934,7 +1912,8 @@ function buildDiscoveryProxyResolver(shape: string) {
       const configRaw = (task.config ?? {}) as Record<string, unknown>;
       const variables = (context.variables ?? {}) as Record<string, unknown>;
       const random = context.random as { id: (prefix: string) => string };
-      const config = interpolateProxyValue(configRaw, variables) as Record<string, unknown>;
+      const impulseSlots = buildImpulseSlots(context.inputImpulses);
+      const config = interpolateProxyValue(configRaw, variables, impulseSlots) as Record<string, unknown>;
       const pointer: Record<string, unknown> = { type: shape, ...variables, ...config };
 
       // 1. Resolve the producer endpoint via discovery (lazy → survives restarts).
@@ -942,20 +1921,27 @@ function buildDiscoveryProxyResolver(shape: string) {
       const discTimer = setTimeout(() => discCtrl.abort(), 5_000);
       let endpoint = "";
       let resolvePath = "/resolve";
-      try {
-        const dr = await fetch(`${DISCOVERY_ENDPOINT}/resolve`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
-          body: JSON.stringify({ pointer: { type: "vesselCapability", shape } }),
-          signal: discCtrl.signal,
-        });
-        const dj = await dr.json() as { content?: { vessels?: Array<{ endpoint?: string; resolve_endpoint?: string }> } };
-        const v = dj?.content?.vessels?.[0];
-        if (!v?.endpoint) throw new Error(`discovery: no vessel advertises ${shape}`);
-        endpoint = v.endpoint.replace(/\/+$/, "");
-        resolvePath = v.resolve_endpoint || "/resolve";
-      } finally {
+      const mapped = shapeEndpointMap.get(shape);
+      if (mapped?.endpoint) {
+        endpoint = mapped.endpoint;
+        resolvePath = mapped.resolvePath;
         clearTimeout(discTimer);
+      } else {
+        try {
+          const dr = await fetch(`${DISCOVERY_ENDPOINT}/resolve`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+            body: JSON.stringify({ pointer: { type: "vesselCapability", shape } }),
+            signal: discCtrl.signal,
+          });
+          const dj = await dr.json() as { content?: { vessels?: Array<{ endpoint?: string; resolve_endpoint?: string }> } };
+          const v = dj?.content?.vessels?.[0];
+          if (!v?.endpoint) throw new Error(`discovery: no vessel advertises ${shape}`);
+          endpoint = v.endpoint.replace(/\/+$/, "");
+          resolvePath = v.resolve_endpoint || "/resolve";
+        } finally {
+          clearTimeout(discTimer);
+        }
       }
 
       // 2. POST to the producer vessel (wrapped impulse-contract form; obsidian
@@ -1020,25 +2006,41 @@ async function registerDiscoveryProxies(): Promise<string[]> {
     } finally {
       clearTimeout(t);
     }
-    const j = await r.json() as { content?: { vessels?: Array<{ shapes?: string[] }> } };
+    const j = await r.json() as { content?: { vessels?: Array<{ shapes?: string[]; endpoint?: string; resolve_endpoint?: string }> } };
     const vessels = j?.content?.vessels ?? [];
-    const obs = new Set<string>();
+    // Register a discovery-routed proxy for EVERY cross-vessel shape (not just
+    // obsidian:) so the executor can dispatch any resolver the substrate
+    // advertises — analysis-vessel problem_detection, concept-db, etc. This is
+    // what lets a bridge-authored activity (auto-bridge-<X>) genuinely RUN: the
+    // proxy POSTs to the vessel's resolve_endpoint — the SAME path author_producer
+    // validates against, so execute-path matches validate-path. Capture each
+    // shape's endpoint HERE (the registry carries it; the per-resolve
+    // vesselCapability lookup returns null).
+    const all = new Set<string>();
     for (const v of vessels) {
+      const ep = typeof v.endpoint === "string" ? v.endpoint.replace(/\/+$/, "") : "";
+      const rp = v.resolve_endpoint || "/resolve";
       for (const s of (v.shapes ?? [])) {
-        if (typeof s === "string" && s.startsWith("obsidian:")) obs.add(s);
+        if (typeof s === "string" && s) {
+          all.add(s);
+          if (ep) shapeEndpointMap.set(s, { endpoint: ep, resolvePath: rp });
+        }
       }
     }
-    if (obs.size > 0) {
-      shapes = [...obs];
+    if (all.size > 0) {
+      shapes = [...all];
       discoveredProxyShapes = shapes;
-      console.log(`[goal-host-vessel] discovered obsidian capability surface from registry: ${shapes.length} shapes`);
+      console.log(`[goal-host-vessel] discovered cross-vessel capability surface from registry: ${shapes.length} shapes`);
     }
   } catch (err) {
-    console.warn(`[goal-host-vessel] obsidian shape discovery failed, using fallback (${DISCOVERY_PROXY_SHAPE_FALLBACK.length}): ${(err as Error).message}`);
+    console.warn(`[goal-host-vessel] cross-vessel shape discovery failed, using fallback (${DISCOVERY_PROXY_SHAPE_FALLBACK.length}): ${(err as Error).message}`);
   }
   const added: string[] = [];
   for (const shape of shapes) {
     if (registeredProxyShapes.has(shape)) continue;
+    // Only fill GENUINELY cross-vessel gaps — skip shapes goal-host already
+    // resolves locally (built-in or dev-vessel proxy) so we never shadow them.
+    try { if (host.runtime.resolvers.get(shape)) { registeredProxyShapes.add(shape); continue; } } catch { /* no get → proceed */ }
     const resolver = buildDiscoveryProxyResolver(shape);
     host.runtime.resolvers.register(resolver as unknown as Parameters<typeof host.runtime.resolvers.register>[0]);
     registeredProxyShapes.add(shape);
@@ -1348,22 +2350,28 @@ async function handleRunGoal(req: Request): Promise<Response> {
       const top = recommendations[0];
       const topScore = top?.score ?? 0;
       if (top && topScore >= threshold) return;
-      // Fix A: exploration picks (score < threshold but fallback_tier != "refused")
-      // should be executed by ias-executor directly — autoDraft only fires when
-      // fallback_tier=refused (genuinely nothing returned, no exploration picks).
+      // Exploration-floor routing (2026-06-18). Prior "Fix A" let any recommendation
+      // (even top_score=0.000) preempt autoDraft, firing autoDraft only on
+      // fallback_tier=refused — which almost never happens (fts_hybrid always returns
+      // SOME exploration pick). Net effect: a NOVEL goal the catalogue cannot service
+      // (e.g. a code-fix the substrate has no template for) ran an irrelevant
+      // high-Thompson template instead of routing to the drafter — so raw run_goal
+      // could never drive self-development. Restore the gap path with a floor: a pick
+      // at/above SUBSTRATE_AUTO_DRAFT_EXPLORE_FLOOR is a plausible exploration and runs
+      // via ias-executor; BELOW the floor there is no real fit, so fall through to
+      // autoDraft and author new capability from the goal.
       const fallbackTier = data.fallback_tier ?? "none";
-      if (top) {
-        // At least one recommendation exists (even with score=0, exploration=true).
-        // Let ias-executor handle selection; autoDraft would preempt a valid pick.
-        console.log(`[goal-host-vessel] auto-draft skipped: ${recommendations.length} exploration pick(s) available (top_score=${topScore.toFixed(3)}, fallback_tier=${fallbackTier})`);
+      const exploreFloor = parseFloat(process.env.SUBSTRATE_AUTO_DRAFT_EXPLORE_FLOOR ?? "0.1");
+      if (top && topScore >= exploreFloor) {
+        console.log(`[goal-host-vessel] auto-draft skipped: ${recommendations.length} exploration pick(s) available (top_score=${topScore.toFixed(3)} >= floor ${exploreFloor}, fallback_tier=${fallbackTier})`);
         return;
       }
-      if (fallbackTier !== "refused") {
-        // No top recommendation but fallback_tier indicates some tier returned
-        // something — still not a hard empty; skip autoDraft.
+      if (!top && fallbackTier !== "refused") {
+        // No top recommendation but some tier returned something — not a hard empty.
         console.log(`[goal-host-vessel] auto-draft skipped: fallback_tier=${fallbackTier} (not refused), no template selected but not a hard gap`);
         return;
       }
+      // top exists but top_score < floor (no real fit), OR no top and refused → autoDraft.
       console.log(`[goal-host-vessel] auto-draft trigger: goal="${(goal as string).slice(0, 80)}" fallback_tier=refused (top_score=${topScore})`);
       const triggerStart = Date.now();
       const candidatesConsidered = recommendations.slice(0, 5).map((r) => ({ id: r.template_id, score: r.score ?? 0 }));
@@ -1442,7 +2450,7 @@ async function handleRunGoal(req: Request): Promise<Response> {
                   console.log(`[goal-host-vessel] auto-draft REUSE (LLM): no candidate selected (raw="${(lr.content ?? "").trim().slice(0, 20)}"); proceeding to author`);
                   // v2 mitosis: drop candidate refs + sync GC to release retained closures.
                   topN.length = 0;
-                  try { (globalThis as { Bun?: { gc?: (b: boolean) => number } }).Bun?.gc?.(true); } catch {}
+                  try { (globalThis as unknown as { Bun?: { gc?: ((b: boolean) => number) | undefined; } | undefined; }).Bun?.gc?.(true); } catch {}
                 }
               } catch (llmErr) {
                 clearTimeout(timer);
@@ -1635,17 +2643,27 @@ async function handleRunGoal(req: Request): Promise<Response> {
             timestamp: new Date().toISOString(),
           });
       }
-      const result = await host.runGoal(goal ?? `execute template ${effectiveTargetId}`, {
+      // Async /run-goal is the agent (MCP) + boredom dispatch surface. It uses the
+      // SHARED runGoalWithRecovery (same loop as /resolve, no duplication) and can
+      // recover more deeply (maxAttempts 3) since it is polled, not timeout-bound.
+      const callerPinnedTarget = typeof targetTemplateId === "string" && targetTemplateId.length > 0;
+      const seek = await runGoalWithRecovery(goal, {
+        firstTarget: effectiveTargetId,
+        callerPinned: callerPinnedTarget,
+        maxAttempts: 3,
         variables,
-        targetTemplateId: effectiveTargetId,
         tags: effectiveTags,
         parentExecutionId,
         compositionChain,
         expectedOutputShapes,
+        surface: "/run-goal",
       });
-      record.status = result.trace.status === "failed" ? "failed" : "completed";
-      record.executionId = result.trace.id;
-      record.selectedTemplateId = result.selectedTemplateId;
+      record.status = seek.status;
+      record.executionId = seek.result?.trace?.id;
+      record.selectedTemplateId = seek.selectedTemplateId;
+      (record as { attempts?: number }).attempts = seek.attempts;
+      (record as { completionShapes?: string[] | null }).completionShapes = seek.completionShapes;
+      if (seek.goalReachReason) (record as { goalReachReason?: string }).goalReachReason = seek.goalReachReason;
     } catch (err) {
       record.status = "failed";
       record.error = (err as Error).message;
@@ -1809,18 +2827,28 @@ async function handleResolve(req: Request): Promise<Response> {
   }
 
   try {
-    const result = await host.runGoal(goal ?? `execute template ${targetTemplateId}`, {
+    // Sync /resolve uses the SHARED runGoalWithRecovery (same loop as /run-goal, no
+    // duplication). Bounded to maxAttempts 2 to stay under the MCP ~290s timeout;
+    // the async /run-goal path recovers more deeply.
+    const callerPinnedTarget = typeof targetTemplateId === "string" && targetTemplateId.length > 0;
+    const seek = await runGoalWithRecovery(goal, {
+      firstTarget: targetTemplateId,
+      callerPinned: callerPinnedTarget,
+      maxAttempts: 2,
       variables,
-      targetTemplateId,
       parentExecutionId,
       compositionChain,
+      surface: "/resolve",
     });
+
     return Response.json({
       resolved: true,
       shape: type === "goal_execution" ? "goalExecution" : "activityExecution",
-      executionId: result.trace.id,
-      status: result.trace.status,
-      selectedTemplateId: result.selectedTemplateId,
+      executionId: seek.result?.trace?.id,
+      status: seek.status,
+      selectedTemplateId: seek.selectedTemplateId,
+      completionShapes: seek.completionShapes,
+      attempts: seek.attempts,
     });
   } catch (err) {
     console.error("[goal-host-vessel] /resolve error:", err);
