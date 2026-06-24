@@ -16,18 +16,26 @@ A container is a valid substrate. The foundation doc defines a substrate by its 
 
 ```bash
 # 1. Build the substrate image
-make -C scripts/substrate substrate-build
+make -C scripts/substrate build
 
-# 2. Run it (all 7 vessels as systemd units, host ports 18080/18090/18100/18200)
-make -C scripts/substrate substrate-run
+# 2. Run it (full vessel fleet as systemd units on the persistent substrate-live
+#    container; host ports 18080/18090/18100/18210/18250/18260/18270). run-live
+#    needs your Anthropic key (also read from ~/.metabob/config.json).
+make -C scripts/substrate run-live ANTHROPIC_API_KEY=sk-ant-...
 
 # 3. Seed identity (creates org+user+API key; prints the key)
-docker exec substrate-live bun /vessels/seed-identity.ts
+make -C scripts/substrate seed-live
 # → [seed-identity] issued API key: mb-b3Jn...
 
 # 4. Configure your local tooling to point at it
 scripts/substrate/configure-local.sh
 ```
+
+> **Obsidian flavour.** For the same fleet plus an in-container Obsidian desktop
+> over noVNC (host `:16080`), run `make -C scripts/substrate build-obsidian` then
+> `make -C scripts/substrate run-live-obsidian ANTHROPIC_API_KEY=...`. It reuses
+> the `substrate-live` container name and the same volumes, so every `restart-*`
+> / `logs-*` / `health` target keeps working unchanged.
 
 After step 4, `~/.metabob/config.json` points to `http://localhost:18080` and all validation harnesses use it automatically.
 
@@ -45,22 +53,36 @@ When you change a vessel's source:
 
 ```bash
 # Edit the vessel
-vim repos/metabob-activity-api/src/routes/activities.ts
+vim repos/development-vessel/src/resolvers/...
 
 # Restart just that unit — no container restart, no rebuild
-make -C scripts/substrate substrate-restart-activity-api
+make -C scripts/substrate restart-development-vessel
 
 # Verify
-curl http://localhost:8080/health
+curl http://localhost:18090/health
 ```
 
-Units available for restart:
-- `substrate-restart-surrealdb`
-- `substrate-restart-identity-vessel`
-- `substrate-restart-discovery-vessel`
-- `substrate-restart-activity-api`
-- `substrate-restart-development-vessel`
-- `substrate-restart-minibob`
+Vessels with a `restart-<vessel>` target (copies `repos/<vessel>/src` into the
+container, then restarts the unit):
+- `restart-analysis-vessel`
+- `restart-concept-db`
+- `restart-development-vessel`
+- `restart-goal-host-vessel`
+- `restart-light-dispatch-vessel`
+- `restart-llm-resolver-vessel`
+- `restart-local-tools-vessel`
+- `restart-obsidian-vessel`
+- `restart-ribosome-vessel`
+- `restart-stateful-ui-vessel`
+
+The core vessels — `activity-api`, `identity-vessel`, `discovery-vessel`,
+`surrealdb` — have **no** make restart target. Iterate them by copying source in
+and restarting the unit directly (or rebuild for a clean deploy):
+
+```bash
+docker cp repos/activity-api/src substrate-live:/vessels/activity-api/
+docker exec substrate-live systemctl restart activity-api
+```
 
 ## Validating after a change
 
@@ -76,33 +98,44 @@ bun run validation/scripts/stratified-harness.ts
 minibob --single "list files in current directory"
 
 # Check the trace appeared
-curl -s "http://localhost:8080/v2/activities/execution-traces?limit=1" | jq .
+curl -s "http://localhost:18080/v2/activities/execution-traces?limit=1" | jq .
 ```
 
 ## Monitoring
 
 ```bash
 # All unit statuses
-make -C scripts/substrate substrate-status
+make -C scripts/substrate status
+
+# Aggregate fleet health (host-mapped HTTP probes)
+make -C scripts/substrate health
 
 # Follow a vessel's logs
-make -C scripts/substrate substrate-logs-activity-api
+make -C scripts/substrate logs-activity-api
 
 # Shell into the container
-make -C scripts/substrate substrate-shell
+make -C scripts/substrate shell
 ```
 
 ## Backing up and restoring learning state
 
-The SurrealDB data volume (`/data/` inside the container) holds all execution traces, Thompson posteriors, and template registry. Back it up before destructive operations:
+Learning state lives in the Docker **named volume** `substrate-surreal` (mounted
+at `/var/lib/surrealdb` inside the container) — all execution traces, Thompson
+posteriors, and the template registry. It is detached from the container, so it
+**survives `make clean` and a rebuild** (only `docker volume rm` destroys it).
+`substrate-workspace` (mounted at `/workspace`) holds generated secrets, git
+clones, and metrics. Back the surreal volume up before destructive operations:
 
 ```bash
-# Backup
-docker cp substrate:/data ./substrate-data-backup-$(date +%Y%m%d)
+# Backup (stop first so SurrealDB flushes)
+docker stop -t 30 substrate-live
+docker run --rm -v substrate-surreal:/src -v "$(pwd)":/bak alpine \
+  tar czf /bak/substrate-surreal-$(date +%Y%m%d).tgz -C /src .
 
-# Restore
-docker cp ./substrate-data-backup-YYYYMMDD/. substrate:/data
-make -C scripts/substrate substrate-restart-surrealdb
+# Restore into the volume, then bring the container back up
+docker run --rm -v substrate-surreal:/dst -v "$(pwd)":/bak alpine \
+  sh -c 'find /dst -mindepth 1 -delete && tar xzf /bak/substrate-surreal-YYYYMMDD.tgz -C /dst'
+make -C scripts/substrate run-live ANTHROPIC_API_KEY=...
 ```
 
 ## Switching between local and canary
@@ -112,7 +145,7 @@ Change one line in `~/.metabob/config.json`:
 ```json
 {
   "metabob": {
-    "endpoint": "http://localhost:8080"     ← local substrate
+    "endpoint": "http://localhost:18080"     ← local substrate
     // "endpoint": "https://activity.metabob.com"  ← canary
   }
 }
@@ -216,12 +249,12 @@ Vessel identity in a federated topology is derived from a public key (`vessel_id
 
 ## Troubleshooting
 
-**Units not starting within 60s**: check `make substrate-logs-<unit>` for the failing unit. Most common cause: port conflict (SurrealDB 8000, activity-api 8080) with a pre-existing process.
+**Units not starting within 60s**: check `make -C scripts/substrate logs-<unit>` for the failing unit. Most common cause: a host-port conflict on one of the published ports (e.g. another process already on `18270`) — `run-live` aborts with "Bind for 0.0.0.0:18270 failed: port is already allocated".
 
 **API key needed but lost**: if you ran `seed-identity.ts` but forgot the key, re-read it from the container env file: `docker exec substrate-live grep METABOB_API_KEY /etc/substrate/env`. Then re-run `configure-local.sh` to update your local config.
 
 **Harness connection errors**: confirm `~/.metabob/config.json` points to `http://localhost:18080`, not the canary endpoint. Run `scripts/substrate/configure-local.sh` to reset.
 
-**`make substrate-restart-<vessel>` fails**: the container must be running (`make substrate-run` first). Units restart in-place; the container itself is not restarted.
+**`make restart-<vessel>` fails**: the container must be running (`make -C scripts/substrate run-live` first). Units restart in-place; the container itself is not restarted. Note that only the vessels listed under "Iteration loop" have a `restart-<vessel>` target — core vessels (activity-api, identity-vessel, discovery-vessel, surrealdb) are restarted with `docker exec substrate-live systemctl restart <unit>`.
 
 **`minibob --single` connects to canary instead of local**: three env vars must be set to point at the local substrate. `configure-local.sh` sets them in `~/.metabob/config.json`. Inside the container, the systemd unit reads them from `/etc/substrate/env` — the required variables are `METABOB_API_KEY`, `ACTIVITY_API_ENDPOINT=http://127.0.0.1:8080`, and `IDENTITY_ENDPOINT=http://127.0.0.1:8101`. If you rebuilt the container without pulling the latest gen-env.sh, run `docker exec substrate-live bash /scripts/substrate/gen-env.sh` to regenerate the env file.

@@ -52,7 +52,7 @@ The system is designed to operate identically on any substrate. A **substrate** 
 Replace `endpoint` with your substrate's activity-api URL. All validation harnesses and tooling read this config; none hardcode a substrate URL.
 
 **Known substrate endpoints:**
-- `http://localhost:18080` — **local single-container substrate** (Phase 26, complete 2026-05-23). Primary development target. All inter-vessel calls are localhost; no Kubernetes required. Bootstrap: `make -C scripts/substrate substrate-run` → `docker exec substrate-live bun /vessels/seed-identity.ts` → `scripts/substrate/configure-local.sh`. See `docs/SUBSTRATE.md`.
+- `http://localhost:18080` — **local single-container substrate** (Phase 26, complete 2026-05-23). Primary development target. All inter-vessel calls are localhost; no Kubernetes required. Bootstrap: `make -C scripts/substrate run-live ANTHROPIC_API_KEY=...` → `make -C scripts/substrate seed-live` → `scripts/substrate/configure-local.sh`. See `docs/SUBSTRATE.md`.
 - `https://activity.metabob.com` — canary / pre-prod (current `kubectx metabob-production`). Used for canary validation and production promotion.
 - Local cluster — configure via `helmfile --environment local sync` + set endpoint to your in-cluster address (legacy; superseded by single-container substrate)
 
@@ -68,11 +68,11 @@ Replace `endpoint` with your substrate's activity-api URL. All validation harnes
 
 **Local substrate (Phase 26+, primary):**
 ```
-0. First time: make -C scripts/substrate substrate-run
-              docker exec substrate-live bun /vessels/seed-identity.ts
+0. First time: make -C scripts/substrate run-live ANTHROPIC_API_KEY=...
+              make -C scripts/substrate seed-live
               scripts/substrate/configure-local.sh
 1. Edit vessel source in repos/<vessel>/
-2. make -C scripts/substrate substrate-restart-<vessel>   ← hot-reloads vessel in container
+2. make -C scripts/substrate restart-<vessel>   ← hot-reloads vessel in container (see docs/SUBSTRATE.md for which vessels have a target)
 3. bun run validation/scripts/failure-mode-harness.ts    ← validates against localhost:18080
    mcp__metabob__run_goal  goal="<goal>"                 ← verify trace lands (deprecated: minibob --single)
 4. Commit + push to dev → CI/CD deploys to canary for integration validation
@@ -774,7 +774,7 @@ mcp__metabob__run_goal  goal="fix the failing tests in metabob-activity-api"
 mcp__metabob__run_goal  goal="add input validation to the impulse endpoint"
 
 # 2. Hot-reload the edited vessel inside the container and re-validate.
-make -C scripts/substrate substrate-restart-<vessel>
+make -C scripts/substrate restart-<vessel>
 bun run validation/scripts/failure-mode-harness.ts   # validates against :18080
 mcp__metabob__run_goal  goal="verify the change works"   # confirms a trace lands
 
@@ -905,7 +905,7 @@ activity-api on `:18080` exposes the full API surface (`/health`,
 `/v2/impulses/resolve`, `/v2/activities/execution-traces`, `discover-by-shapes`,
 `validate-composition`, `/ws` WebSocket events, …). LLM credentials are decoupled
 into `llm-resolver-vessel` (`:8220` in-container). Bootstrap and iteration:
-`make -C scripts/substrate substrate-run` / `substrate-restart-<vessel>`; full guide in
+`make -C scripts/substrate run-live` / `restart-<vessel>`; full guide in
 [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md).
 
 
@@ -1135,7 +1135,7 @@ Scopes: `activity-api`, `analysis-api`, `minibob`, `dashboard`, `helm`, `schema`
 ### Before Restarting the Substrate
 
 The local substrate restarts a single container, not a cluster. Before
-`make -C scripts/substrate substrate-restart` (or restarting a unit):
+`make -C scripts/substrate restart-<vessel>` (or restarting a unit directly):
 1. Check `git status` for uncommitted changes.
 2. Confirm no long-running activity is mid-flight (`curl -s http://localhost:18080/health`;
    inspect recent traces before pulling the rug). The learning state is persisted in
@@ -1162,8 +1162,8 @@ docker exec substrate-live systemctl status llm-resolver-vessel --no-pager
 docker exec substrate-live journalctl -u activity-api -n 100 --no-pager
 docker logs substrate-live --tail 100
 
-# Hot-reload a vessel after editing its source
-make -C scripts/substrate substrate-restart-<vessel>
+# Hot-reload a vessel after editing its source (vessels with a restart target; core vessels use docker exec systemctl restart)
+make -C scripts/substrate restart-<vessel>
 
 # Health probes (host-mapped ports)
 for p in 18080 18090 18210 18260; do curl -s -o /dev/null -w "$p %{http_code}\n" localhost:$p/health; done
