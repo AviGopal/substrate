@@ -2,9 +2,15 @@
 
 ## Overview
 
-Goal execution paths represent curated sequences of activities that achieve a user-specified goal. They combine explicit goal definition with an ordered activity chain, capturing both the "what" (goal) and the "how" (activity composition).
+Goal execution paths represent sequences of activities that achieve a user-specified goal. They combine explicit goal definition with an ordered activity chain, capturing both the "what" (goal) and the "how" (activity composition).
+
+The table serves **two** roles:
+1. **Curated / recommendation paths** — keyed by goal + `endpoint_output_shapes` for shape-driven discovery (the original 2026-04 purpose, described below).
+2. **Per-goal record & reuse** — keyed by `goal_hash`; each dispatched goal records the path it took and whether it *reached* its target, accumulating per-goal α/β so a later instance of the same goal can reuse the path that actually reached it (the 2026-06 goal-learning work). See **Per-goal record & reuse** below.
 
 **Related OpenSpec**: [2026-04-26-shape-provider-goal-creation](../../openspec/changes/2026-04-26-shape-provider-goal-creation)
+
+> **2026-06 update.** The per-goal record/reuse path and the goal-reaching gate are the current goal-learning mechanism (goal-host `5d0f741` + `07feff5`, activity-api `172ce84`). Before `172ce84`, the goal-paths insert endpoint **500'd on every insert** (it omitted required `execution_count` / `success_count` / `org_id`), so this table was effectively empty and the "health check / null endpoints" guidance below was moot during that window.
 
 ## Core Fields
 
@@ -40,6 +46,24 @@ goal_execution_paths {
   success_rate: number        // Cached success_rate (alpha / (alpha + beta))
 }
 ```
+
+### Per-Goal Record & Reuse (2026-06)
+
+Every goal dispatched through `goal-host-vessel` (`/run-goal` or `/resolve`) records the path it took, keyed by a hash of the goal text:
+
+```typescript
+goal_execution_paths {
+  goal_hash: string           // Stable hash of the goal text — the per-goal reuse key
+  // path_activities = attribution (which activities/templates ran for this goal)
+  // success = whether the goal was REACHED (reach-gated, see below), not exit status
+  // thompson_alpha / thompson_beta accumulate per goal_hash across attempts
+}
+```
+
+- **`recordGoalPath`** (goal-host) writes/updates the row after execution: the path is the attribution, `success` is whether the goal was *reached*, and α/β accumulate per `goal_hash`.
+- **`recommendReachingPath`** (goal-host) reuses the highest-α path previously recorded for the same `goal_hash` — so repeated goals converge onto the path that actually reached, not merely the path that "completed."
+
+**The goal-reaching gate.** Both dispatch paths now judge *reach* via an LLM verifier (`verifyGoalReached`, goal-host `07feff5`) **after** execution. A run whose activity returned `status=completed` but did not produce the goal's completion shapes is marked `reached=false`, the selected template is β-penalised, and the row's `success` reflects the gate — not the raw exit status. This closes the "completed ≠ reached" hollow-completion hole that previously α-credited wrappers/gaming. Verified live: hollow `audit→draft` runs recorded the wrapper path with α=1/β=2 (β penalty); accumulating genuine reaches drove n=3, α=4/β=1, rate=1.0.
 
 ### Terminal Output Shapes (Migration 092, 2026-04-26)
 
@@ -220,4 +244,5 @@ DEFINE INDEX idx_goal_paths_endpoint_shapes
 - `docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md` — Shapes and impulse metadata
 - `docs/impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md` — Write resolvers for goal paths
 - OpenSpec: `2026-04-26-shape-provider-goal-creation` — Shape provider activity proposal
-- `repos/metabob-activity-api/src/routes/goal-paths.ts` — Implementation
+- `repos/activity-api/src/routes/goal-paths.ts` — Implementation (activity-api side)
+- `repos/goal-host-vessel/` — `recordGoalPath` / `recommendReachingPath` / `verifyGoalReached` (goal-host side)

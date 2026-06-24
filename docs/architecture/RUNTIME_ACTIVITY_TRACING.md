@@ -2,7 +2,7 @@
 
 **Status:** Implemented (Phase 1–2 shipping)
 **Created:** 2026-04-20
-**Last updated:** 2026-04-22
+**Last updated:** 2026-06-24 (actor prose realigned: minibob → goal-host-vessel / substrate)
 **Supersedes:** N/A (new capability)
 
 > **Phase 8 migration note (2026-05-24):** The client-side tracer that previously lived at `repos/minibob/src/activity-tracer.ts` moved to the substrate vessels in Phase 8. `ActivityTracer` and the L1/L2 meta-trace emission now live in `goal-host-vessel` (wrapping `GoalHost` from `ias-executor-ts`). The architecture described in this document — L1/L2 meta-trace types, `RUNTIME_TRACING_ENABLED`, `ACTIVITY_TRACER_ENABLED`, and the sampling strategy — remains conceptually valid. The server-side middleware at `repos/metabob-activity-api/src/middleware/runtime-tracing.ts` is unchanged.
@@ -14,7 +14,7 @@
 
 ## Meta-Trace Types (L1/L2)
 
-The minibob-side `ActivityTracer` emits two meta-trace levels on top of per-resolver traces:
+The goal-host-vessel-side `ActivityTracer` emits two meta-trace levels on top of per-resolver traces:
 
 - **L1 `goal_resolve`** — one trace per user-facing goal. Wraps the entire goal-seeking flow, including template recommendation, activity selection, and execution. Lets the learning loop correlate cost/outcome with the originating goal without walking resolver-level detail.
 - **L2 `activity_execute`** — one trace per activity invocation. Wraps all task executions and their resolver calls, and carries the `composition_chain` so nested activity-of-activities flows remain reconstructable. The parent L1 trace is referenced via `parent_execution_id`.
@@ -23,13 +23,13 @@ Per-resolver `impulse_resolutions` entries remain the L3/leaf layer, as describe
 
 ## Overview
 
-Extend the activity/impulse model from **development-time** (MiniBob writing code) to **runtime** (applications executing code). Use the same trace storage and learning infrastructure to discover hot paths, performance bottlenecks, and optimization opportunities.
+Extend the activity/impulse model from **development-time** (the substrate writing code) to **runtime** (applications executing code). Use the same trace storage and learning infrastructure to discover hot paths, performance bottlenecks, and optimization opportunities.
 
 ## The Core Insight
 
 **Applications are vessels executing activities.**
 
-When MiniBob runs, it:
+When the substrate runs a goal, it:
 - Receives a goal (input impulse)
 - Executes an activity (sequence of resolvers)
 - Produces artifacts (output impulses)
@@ -47,7 +47,7 @@ Same model. Same infrastructure. Different timescale (milliseconds vs minutes).
 
 ### 1. Unified Observability
 One system for:
-- Development activities (MiniBob, OpenCode)
+- Development activities (goal-host-vessel, the autonomous self-dev loop)
 - Runtime activities (API requests, background jobs)
 - Infrastructure activities (deployments, health checks)
 
@@ -436,7 +436,7 @@ Result: "LLM-based resolvers cost $127/week but only used in 3% of activities �
 - [ ] Can compare traces before/after optimization
 
 ### Week 4 (Feedback Loop)
-- [ ] MiniBob creates optimization activities from runtime data
+- [ ] The substrate creates optimization activities from runtime data
 - [ ] Canary deployment shows improvement
 - [ ] Winning variants promoted to production
 
@@ -445,11 +445,11 @@ Result: "LLM-based resolvers cost $127/week but only used in 3% of activities �
 ### Cross-Vessel Tracing
 Track impulse flows **between vessels**:
 ```
-MiniBob (goal received)
-  └─> Activity-API (fetch templates)
+goal-host-vessel (goal received)
+  └─> activity-api (fetch templates)
        └─> SurrealDB (query)
-            └─> Activity-API (return templates)
-                 └─> MiniBob (execute activity)
+            └─> activity-api (return templates)
+                 └─> goal-host-vessel (execute activity)
 ```
 
 Distributed tracing = impulse lineage across vessel boundaries.
@@ -463,7 +463,7 @@ Use ML on runtime traces to predict:
 ### Self-Healing
 When runtime traces detect failures:
 1. Create activity: "Debug failure in resolver X"
-2. MiniBob investigates (reads traces, error logs)
+2. The substrate investigates (reads traces, error logs)
 3. Proposes fix
 4. Deploys to canary
 5. Runtime traces validate fix

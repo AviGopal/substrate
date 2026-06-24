@@ -118,8 +118,8 @@ S3 has no acceptance gate. It is emergent and operator-measured by **active push
 - `metabob-activity-api` 1.20.9 — chain-credit F-V56/F-V57 fixed, F-V58 ONNX path fix (dense search now active), migration tracking, stratified posteriors
 - `minibob` 0.14.11 — embedded meta-activities (slot-binding, validator-dispatch, shape-provider-goal), iteration resolver, make-activity, goal-impulse seeding, enrichment-gated verification; `GOAL_RUNTIME=ias-executor` gate wires `GoalHost` (ias-executor-ts) as the canonical execution path via `goal-host-bridge.ts` — default ActivityExecutor path unchanged
 - `workbench` 0.3.1 — trajectory editor, live execution overlay, weight-influence feedback, stagnation detection, oracle corpus wiring
-- `identity-vessel` 0.2.8 — HMAC API keys + JWT issuance (canonical auth resolver)
-- `discovery-vessel` 0.4.0 — vessel registry with resolver contracts and per-mutation auth
+- `identity-vessel` 0.2.10 — HMAC API keys + JWT issuance (canonical auth resolver); package renamed `@metabob/identity-vessel` → `@avigopal/identity-vessel`
+- `discovery-vessel` 0.4.1 — vessel registry with resolver contracts and per-mutation auth
 - `development-vessel` (local only, not in Helm) — meta-vessel for substrate self-development. 19 shapes, 7 seed templates (including `harness-check-scenario`, `draft-gap-closing-activity`), noop resolver, failure-mode harness. Runs as a systemd unit inside the single-container substrate (Phase 26). See `repos/development-vessel/`.
 
 **Recent stabilisation** (most-recent first):
@@ -406,6 +406,15 @@ Additional vessels tracked in this super-repo with less CLAUDE.md coverage — e
 - **boredom-vessel** (`repos/boredom-vessel`): systemd timer (`OnUnitActiveSec=5min`) that POSTs rotating topology-discovery goals to `goal-host-vessel:8210/run-goal`. Idle check queries activity-api for recent external traces. Goal rotation: measurement, probing, health, escalation, coverage. Replaces minibob's `boredom.ts`.
 - **concept-db** (`repos/concept-db`, port 8260): resolves concept-graph shapes (also substrate-hosted; see below).
 - **bootstrap-seeder** (`scripts/substrate/units/bootstrap-seeder.service`): `Type=oneshot` unit that POSTs `SHARED_TEMPLATES` from `@avigopal/ias-executor-ts` to `POST /v2/activities/templates` on startup. UPSERT semantics; idempotent.
+
+**Newer substrate-hosted vessels** (2026-06; mostly created when the fleet was split out of the super-repo into standalone repos):
+
+- **analysis-vessel** (`repos/analysis-vessel`, port 8250 → host `18250`): code-analysis resolver. Discovery-registered surface for `source_code`, `error_log`, `problem_detection`, `code_quality`, `code_annotation`, `cpg_query_result` shapes; uses `@avigopal/cpg-inference` (WASM tree-sitter), stateless, no SurrealDB. **Supersedes `metabob-analysis-api`** as the running code-analysis resolver.
+- **stateful-ui-vessel** (`repos/stateful-ui-vessel`, port 8270 → host `18270`): the substrate's UI panel server ("the substrate's face") — shape→renderer + pointer→fetcher registries over the dev-vessel discovery contract.
+- **relevance-sink-vessel** (`repos/relevance-sink-vessel`, port 8255, internal-only): stateless sink absorbing Thompson penalty writes (`POST /penalty`) **off the activity-api trace store** (the 2026-06-21 write-contention decoupling). ⚠️ As of 2026-06-24 this unit has been observed crash-looping (exits in ~4ms); when it is down, the penalty-write decoupling is inert — verify with `docker exec substrate-live systemctl is-active relevance-sink-vessel`.
+- **light-dispatch-vessel** (`repos/light-dispatch-vessel`, port 8280, internal-only): stateless oneshot dispatcher (Stage 2.B) — a deterministic explicit-template dispatch path that bypasses goal-host's full state-space/LLM-reuse machinery; persists task results to `/workspace`.
+- **metric-collector-vessel** (`repos/metric-collector-vessel`, port 8300, internal-only): substrate-authored sample collector (lift empirical test); shapes `metricSample` / `metricSample_write`. Currently `disabled`/inactive in the running substrate.
+- **clock-vessel** (`repos/clock-vessel`): minimal single-resolver vessel reading current time; the **first lift-test artifact** (substrate authoring a vessel end-to-end). Repo-only — not wired into the substrate (no unit file).
 
 - **concept-db** (`repos/concept-db`): resolves concept-graph shapes. As of `04157b1` (2026-04-23) registers with discovery-vessel and advertises five shapes — `concept`, `conceptGraph`, `relatedConcepts`, `conceptUsageStats`, `conceptSequence` — all routed through `POST /v2/impulses/resolve` by `pointer.type`. Legacy `VesselHeartbeat` targeting the deprecated activity-api `/v2/vessels/register` endpoint is no longer invoked from startup (removed in `faa7d8e`). As of `8399767`, an `ExecutionObserver` WebSocket client subscribes to activity-api's `/ws` broadcaster, listens for `task.completed` / `tool.call` events across all vessels (standardized in activity-api `ec493b8d`), and calls `recordUsage` locally when a concept-referencing `impulse_resolutions` entry appears — cross-vessel passive learning without explicit calls. Handshake: `{type:"authenticate", token:apiKey}` first, then optionally `{type:"catchup", lastSeenSequence:n}` on reconnect. Exponential backoff 1s→30s; all handlers swallow and log so the observer never throws into the WS loop or startup. **Deployment status:** Helm plumbing for the discovery client and observer landed in `deployment/6c8746e` (env-var surface + `METABOB_API_KEY` via `secretKeyRef` + `POD_NAME` via `fieldRef` for stable `VESSEL_ID` + `needs:` dependency on `activity-system/discovery-vessel`). **Pending before canary activation:** add a `conceptDb` block to `deployment/scripts/generate-secrets.sh`, sops-edit `canary.secrets.yaml` with `conceptDb.apiKey` (openssl rand -hex 32, prefix `mb_concept_canary_`), and register the key in identity-vessel seed.
 - **conversation-vessel** (`repos/conversation-vessel`): new lightweight vessel (v0.1.0, 2026-04-23) for LLM conversations using Vercel `ai-sdk` (`@ai-sdk/anthropic`, `@ai-sdk/openai`, `ai`, `zod`). Builds up impulse system, AI provider, tools, context management, and resolver server. As of `002144b`, resolver server exposes four endpoints: `POST /resolve/impulse` (resolve impulses), `POST /resolve/tool` (execute tools), `POST /resolve/llm` (LLM resolution with tool calling), `GET /resolve/health` (health check). Adds multi-LLM conversation support via `callLLM` tool for relaying messages between LLMs.
@@ -889,16 +898,29 @@ See `repos/metabob-activity-api/docs/API_PHASE1_ENDPOINTS.md` for comprehensive 
 ### Substrate endpoints (local development — USE THESE)
 
 The local single-container substrate (`substrate-live`, Phase 26+) is the primary
-development target. Vessels run as systemd units inside the container; each is
-host-mapped on port `18xxx → 8xxx`. Confirm with `docker ps --filter name=substrate`.
+development target. Vessels run as systemd units inside the container. **Most**
+vessels are host-mapped on port `18xxx → 8xxx`; several are **internal-only** (no
+host mapping — reach them only from inside the container or via discovery). Confirm
+the live set with `docker ps --filter name=substrate`.
 
-| Host port | Vessel | Role |
-|---|---|---|
-| `http://localhost:18080` | activity-api | trace store + Thompson learner + activity-shape resolver |
-| `http://localhost:18090` | development-vessel | `memoryNote` resolver (authoritative memory) + dev meta-activities |
-| `http://localhost:18210` | goal-host-vessel | `POST /run-goal` (goal dispatch), `POST /resolve` |
-| `http://localhost:18260` | concept-db | concept-graph shapes + dense (MiniLM) search |
-| `http://localhost:18100`, `18250` | (supporting units) | resolver / tooling units as wired in `scripts/substrate/units/` |
+**Host-mapped vessels:**
+
+| Host port | Internal | Vessel | Role |
+|---|---|---|---|
+| `http://localhost:18080` | `:8080` | activity-api | trace store + Thompson learner + activity-shape resolver |
+| `http://localhost:18090` | `:8090` | development-vessel | `memoryNote` resolver (authoritative memory) + dev meta-activities |
+| `http://localhost:18100` | `:8100` | discovery-vessel | vessel registry / routing fixed-point |
+| `http://localhost:18210` | `:8210` | goal-host-vessel | `POST /run-goal` (goal dispatch), `POST /resolve` |
+| `http://localhost:18250` | `:8250` | analysis-vessel | code-analysis resolver (`source_code`, `problem_detection`, `code_quality`, `cpg_query_result`, …) — supersedes the standalone analysis-api surface |
+| `http://localhost:18260` | `:8260` | concept-db | concept-graph shapes + dense (MiniLM) search |
+| `http://localhost:18270` | `:8270` | stateful-ui-vessel | substrate UI panel server ("the substrate's face") |
+| `http://localhost:16080` | `:6080` | (noVNC) | browser → VNC bridge for the in-container Obsidian vessel (see `docs/SUBSTRATE.md`) |
+
+**Internal-only vessels** (no host port; reach via discovery or in-container):
+`llm-resolver-vessel` (`:8220`), `local-tools-vessel` (`:8230`), `identity-vessel`,
+`relevance-sink-vessel` (`:8255`), `light-dispatch-vessel` (`:8280`),
+`metric-collector-vessel` (`:8300`). `ribosome-vessel` and `boredom-vessel` are
+WebSocket/timer clients with no inbound HTTP surface.
 
 activity-api on `:18080` exposes the full API surface (`/health`,
 `/v2/activities/recommend`, `/v2/activities/templates`, `/v2/goal-paths/recommend`,
