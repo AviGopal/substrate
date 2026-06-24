@@ -88,22 +88,25 @@ COPY repos/activity-api/scripts ./activity-api/scripts
 COPY repos/activity-api/tsconfig.json ./activity-api/
 
 # ias-executor-ts (shared executor library for goal-host, local-tools, llm-resolver vessels)
+# `dist/` is built in-container from `src/` — NOT copied from the host. The host
+# `dist/` is gitignored, so a fresh clone has none; copying it would make the
+# build depend on whatever a prior local build happened to leave behind (or fail
+# outright). Building here keeps the image reproducible on any device.
 COPY repos/ias-executor-ts/package.json repos/ias-executor-ts/bun.lock* ./ias-executor-ts/
 COPY repos/ias-executor-ts/src ./ias-executor-ts/src
-COPY repos/ias-executor-ts/dist ./ias-executor-ts/dist
 COPY repos/ias-executor-ts/tsconfig*.json ./ias-executor-ts/
-RUN cd ias-executor-ts && bun install --frozen-lockfile
+RUN cd ias-executor-ts && bun install --frozen-lockfile && bun run build
 
 # cpg-inference-ts (shared code analysis library for analysis-vessel)
 # tree-sitter runs via web-tree-sitter (WASM) so there is no node-gyp native
 # build here — works on arm64 and x86_64 alike. The vendored grammar `.wasm`
 # files must be copied in; the parser loads them from `../wasm/` at runtime.
+# `dist/` is built in-container (gitignored on the host — see ias-executor-ts).
 COPY repos/cpg-inference-ts/package.json repos/cpg-inference-ts/bun.lock* ./cpg-inference-ts/
 COPY repos/cpg-inference-ts/src ./cpg-inference-ts/src
-COPY repos/cpg-inference-ts/dist ./cpg-inference-ts/dist
 COPY repos/cpg-inference-ts/wasm ./cpg-inference-ts/wasm
 COPY repos/cpg-inference-ts/tsconfig*.json ./cpg-inference-ts/
-RUN cd cpg-inference-ts && bun install
+RUN cd cpg-inference-ts && bun install --frozen-lockfile && bun run build
 
 # development-vessel
 COPY repos/development-vessel/package.json repos/development-vessel/bun.lock* ./development-vessel/
