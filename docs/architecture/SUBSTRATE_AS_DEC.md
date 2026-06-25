@@ -320,7 +320,14 @@ trusted.
   `e^{−tL}`, the cochain in motion, credit propagating.
 - **Functional (instance)** — a *realized cochain*: a completed trace is a
   1-chain with concrete stalk values, which immediately folds into the empirical
-  `⋆` for the next flow.
+  `⋆` for the next flow. **Which way it folds is decided by the goal-reaching
+  gate** (live since 2026-06): the gate tests whether the realized chain actually
+  closes onto the goal 0-cochain — whether the produced shapes contain the goal's
+  `completion_shapes` — and a chain that *terminated* but did not *reach* folds as
+  a β (failure) sample on its edges, not an α. Without that test, a hollow
+  chain (one ending in a generic summary cell rather than the goal cell) would
+  fold as success and corrupt `⋆` — the structural form of the reward-poisoning
+  `SUBSTRATE_AS_MDP.md` §12.6 guards against. See `SUBSTRATE_AS_SOFTWARE.md` §3.2.
 
 "The transient state is the steady state" gets a sharp reading in §4: because
 the complex itself grows (`L = L(t)`), the system never reaches the harmonic

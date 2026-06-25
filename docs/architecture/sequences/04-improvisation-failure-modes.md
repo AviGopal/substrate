@@ -2,36 +2,40 @@
 
 > **STATUS (2026-04-28): Renamed from `04-improvisation-trailblazing.md`.** "Trailblazing" was class-(c) terminology — never implemented and pruned from the corrected foundation model. What older versions of this doc called trailblazing is now handled by the **failure-mode taxonomy** (`verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`) plus posterior variance. Read this file for the improvisation flow (which is real and current); treat any remaining trailblazing references as historical. See [`IMPULSE_ACTIVITY_FOUNDATION.md`](../IMPULSE_ACTIVITY_FOUNDATION.md#known-gaps-system-not-yet-self-stable) → "Class-(c) Terms Pruned".
 
-> **Status (2026-05-27):** The failure-mode taxonomy and improvisation-as-activity model are accurate. File refs (`goal-processor.ts`, `improviser.ts`, `rollback.ts`, `template-extractor.ts`) point to minibob source that has moved: improvisation and ribosome extraction now live in `goal-host-vessel` / `ias-executor-ts`; `ribosome-vessel` handles template extraction via the `lifecycle:execution:succeeded` WebSocket subscription. The `GoalProcessor` / `ActivityExecutor` participant labels should be read as `GoalHost (goal-host-vessel)`.
+> **Status (2026-06):** The failure-mode taxonomy and improvisation-as-activity model are accurate, but they run **inside goal-host-vessel, not minibob** (minibob is deprecated and no longer executes). Improvisation and the goal-reaching/recovery logic live in `goal-host-vessel` / `ias-executor-ts`; `ribosome-vessel` (`:8240`) handles template extraction via the `lifecycle:execution:succeeded` WebSocket subscription. Read the `GoalProcessor` / `ActivityExecutor` participant labels as `GoalHost (goal-host-vessel)`, and the `MCP Client` participant as `activity-api` (`:18080`) over HTTP.
+>
+> **New (June 2026) and central to this file: the in-flight recovery loop.** A goal no longer fails-and-stops on a single bad approach. After execution the **goal-reaching gate** (`verifyGoalReached`, goal-host `07feff5`) judges whether the asked output was produced; a `status=completed` run that did not produce the goal's completion shapes is `reached:false` — **a failure mode in its own right (hollow completion)**. On `reached:false` the `/resolve` loop performs in-flight recovery: **β-penalise the selected template, EXCLUDE the failed approach and `recommendExcluding` a *different* one, then retry — until reached or approaches are exhausted.** The trace that actually **reaches** the goal is what the ribosome mints. See the new "In-Flight Recovery Loop" section below and [`GOAL_EXECUTION_PATHS_SCHEMA.md`](../GOAL_EXECUTION_PATHS_SCHEMA.md).
 
 ## Overview
 
-This document maps the complete flow of how MiniBob handles situations when no activity template matches (improvisation), learns from failures (trailblazing), and manages execution safety (checkpoints and rollbacks). These mechanisms enable continuous learning and autonomous adaptation.
+This document maps the complete flow of how the substrate (goal-host-vessel) handles situations when no activity template matches (improvisation), recovers in-flight from approaches that fail to reach the goal, learns from failures (trailblazing), and manages execution safety (checkpoints and rollbacks). These mechanisms enable continuous learning and autonomous adaptation.
 
-**Key Insight:** Improvisation is not a fallback mode - it's an activity template like any other. The `improvise_solution` activity uses LLM-directed tool use to explore solutions, and the ribosome resolver extracts successful improvisations into reusable templates.
+**Key Insight:** Improvisation is not a fallback mode - it's an activity template like any other. The `improvise_solution` activity uses LLM-directed tool use to explore solutions, and the ribosome resolver extracts successful improvisations into reusable templates. **Recovery is part of reaching the goal, not offline repair** — the goal-reaching gate and the `recommendExcluding`-retry loop run within the same dispatch.
 
 ## Key Concepts
 
 1. **Improvisation as an Activity** - `improvise_solution` template with plan → execute → extract tasks
-2. **Trailblazing** - Creating variant templates from failed executions
-3. **Checkpoints** - Git state capture before execution for rollback capability
-4. **Rollbacks** - Restoring pre-execution state after failures
-5. **Ribosome Resolver** - Task 3 of `improvise_solution` that extracts successful patterns into templates
-6. **Thompson Sampling Learning** - Updating α/β scores based on execution outcomes
-7. **Stuck Detection** - Identifying when improvisation is making no progress
+2. **Goal-Reaching Gate (`verifyGoalReached`)** - Post-execution LLM judge; `reached:false` (hollow completion) is a failure mode even when `status=completed`
+3. **In-Flight Recovery Loop** - On `reached:false`: β-penalise + `recommendExcluding` the failed approach + retry a different approach until reached or exhausted
+4. **Trailblazing** - Creating variant templates from failed executions
+5. **Checkpoints** - Git state capture before execution for rollback capability
+6. **Rollbacks** - Restoring pre-execution state after failures
+7. **Ribosome Resolver** - extracts the **reached** trace into a reusable template
+8. **Thompson Sampling Learning** - Updating α/β scores based on execution outcomes (incl. reach-gated β-penalties) + per-goal `goal_execution_paths`
+9. **Stuck Detection** - Identifying when improvisation is making no progress
 
 ## Main Sequence Diagram: Goal Processing via Activity Composition
 
 ```mermaid
 sequenceDiagram
-    participant User as User/CLI
-    participant GP as GoalProcessor<br/>(goal-processor.ts)
-    participant BE as Backend<br/>(Thompson Sampling)
-    participant Exec as ActivityExecutor<br/>(activity.ts)
-    participant Ribosome as RibosomeResolver<br/>(resolvers/ribosome.ts)
-    participant MCP as MCP Client
+    participant User as Dispatch<br/>(mcp__metabob__run_goal)
+    participant GP as GoalHost<br/>(goal-host-vessel)
+    participant BE as Activity-API<br/>(Thompson Sampling, :18080)
+    participant Exec as ActivityExecutor<br/>(goal-host-vessel)
+    participant Ribosome as RibosomeResolver<br/>(ribosome-vessel)
+    participant MCP as Activity-API<br/>(:18080, HTTP)
 
-    User->>GP: processGoal(message)
+    User->>GP: POST /run-goal {goal} → processGoal(message)
     activate GP
 
     Note over GP: 1. ENRICHMENT PHASE
@@ -44,16 +48,21 @@ sequenceDiagram
     BE-->>GP: [ActivityRecommendation]
 
     alt Recommendations Found (score >= 0.7)
-        Note over GP: 3a. EXECUTE RECOMMENDED ACTIVITY
-        loop For each recommendation until success
+        Note over GP: 3a. EXECUTE RECOMMENDED ACTIVITY (with in-flight recovery)
+        loop For each approach until REACHED or exhausted
             GP->>Exec: execute(template)
-            Exec-->>GP: ActivityExecution
+            Exec-->>GP: ActivityExecution (status=completed|failed)
 
-            GP->>GP: verifyGoal()
-            alt Goal Achieved
-                Note over GP: ✓ SUCCESS
-            else Goal Not Achieved
-                Note over GP: Continue to next template
+            GP->>GP: verifyGoalReached(goal, trace)
+            Note over GP: LLM judge (llm-resolver-vessel):<br/>were completion_shapes produced?<br/>(reach ≠ exit status)
+            alt reached = true
+                Note over GP: ✓ SUCCESS (reached)
+                GP->>BE: recordGoalPath(goal_hash, path, success=true)
+            else reached = false (hollow completion)
+                GP->>BE: β-penalise template (POST /v2/activities/feedback, intensity 2)
+                GP->>BE: recordGoalPath(goal_hash, path, success=false)
+                GP->>BE: recommendExcluding(failed approach)
+                Note over GP: EXCLUDE the failed approach,<br/>retry a DIFFERENT approach
             end
         end
     else No Recommendations OR All Failed
@@ -85,7 +94,53 @@ sequenceDiagram
     deactivate GP
 ```
 
-**Implementation:** `repos/minibob/src/goal-processor.ts:650-6800+`
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` — `GoalHost` (was `minibob/src/goal-processor.ts`); goal-reaching gate + recovery loop in goal-host `07feff5` / `980240b`.
+
+## In-Flight Recovery Loop
+
+Recovery is **part of reaching the goal**, not a separate offline repair step. The same `/run-goal` or `/resolve` dispatch that ran an approach also gates it and, on a miss, tries again with a *different* approach.
+
+```mermaid
+sequenceDiagram
+    participant GP as GoalHost<br/>(goal-host-vessel)
+    participant Exec as ActivityExecutor
+    participant Judge as verifyGoalReached<br/>(llm-resolver-vessel)
+    participant BE as Activity-API
+    participant Ribosome as ribosome-vessel
+
+    Note over GP: /resolve loop — until reached or approaches exhausted
+
+    loop try-approach
+        GP->>Exec: execute(selected approach)
+        Exec-->>GP: trace (status=completed|failed)
+
+        GP->>Judge: verifyGoalReached(goal, trace)
+        Judge-->>GP: { reached, completion_shapes }
+
+        alt reached = true
+            Note over GP: ✓ REACHED — break
+            GP->>BE: recordGoalPath(goal_hash, path, success=true)
+            GP->>Ribosome: (bus) reached trace → assembleTemplateFromExecution → mint activity
+        else reached = false
+            GP->>BE: β-penalise selected template (feedback intensity 2)
+            GP->>BE: recordGoalPath(goal_hash, path, success=false)
+            GP->>BE: recommendExcluding(task_description, exclude=failed template)
+            Note over GP: EXCLUDE failed approach,<br/>pick a genuinely different draft, retry
+        end
+    end
+
+    alt approaches exhausted, none reached
+        Note over GP: honest failure (status=failed),<br/>surface completion_shapes for diagnosis
+    end
+```
+
+**Mechanics (verified live — goal-host `980240b`):**
+- The loop is: try-approach → reach-gate check → on miss, β-penalise + EXCLUDE + `recommendExcluding` a **different** approach → retry — until reached or exhausted.
+- `recommendExcluding` needs a `task_description` (not the raw goal), reads `template_id`, and normalises `activity:⟨…⟩` ids; it returns a genuinely different draft rather than re-selecting the just-failed one.
+- The **reached** trace is the ribosome's input — recovery feeds learning by minting the approach that actually worked, not the one that merely completed.
+- Observed: a code-analysis goal altered its approach across 2 attempts (genuinely different drafts, ~152s) before an honest failure when all available activities were broken.
+
+**`reached:false` as a failure mode.** Hollow completion (status=completed, asked output not produced) sits alongside the taxonomy in the status banner of this file (`verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`): it is detected by the goal-reaching gate, drives a β-penalty, and triggers the recovery loop above. Per-goal attribution accumulates in `goal_execution_paths` keyed by `goal_hash` (α on reach, β on miss).
 
 ## Improvisation as an Activity
 
@@ -356,10 +411,10 @@ sequenceDiagram
     Note over Exec: Execution complete<br/>Template may be available
 ```
 
-**Implementation:**
-- Activity executor: `repos/minibob/src/activity.ts`
-- Ribosome resolver: `repos/minibob/src/resolvers/ribosome.ts`
-- State tracking: `repos/minibob/src/improviser.ts:256-299`
+**Implementation (live equivalents):**
+- Activity executor: `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/activity.ts`)
+- Ribosome resolver: `repos/ribosome-vessel/` (bus subscriber; was `minibob/src/resolvers/ribosome.ts`)
+- State tracking: `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/improviser.ts:256-299`)
 
 ## Decomposition: Ribosome Resolver (Template Extraction)
 
@@ -496,7 +551,7 @@ sequenceDiagram
 }
 ```
 
-**Implementation:** `repos/minibob/src/template-extractor.ts:24-400+`, `repos/minibob/src/ribosome-quality.ts:103-142+`
+**Implementation:** `repos/ribosome-vessel/` (template assembly + quality criteria; `assembleTemplateFromExecution` shared via `ias-executor-ts`; was `minibob/src/template-extractor.ts` + `ribosome-quality.ts`)
 
 ## Decomposition: Checkpoint Creation Before Execution
 
@@ -548,7 +603,7 @@ sequenceDiagram
 }
 ```
 
-**Implementation:** `repos/minibob/src/rollback.ts:79-250+`
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (checkpoint/rollback; was `minibob/src/rollback.ts:79-250+`)
 
 ## Decomposition: Trailblazing (Failure → Variant Creation)
 
@@ -609,7 +664,7 @@ sequenceDiagram
 5. Variant becomes available for recommendation
 6. Thompson Sampling learns variant effectiveness over time
 
-**Implementation:** `repos/minibob/src/activity.ts` (trailblazing logic)
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (trailblazing logic; was `minibob/src/activity.ts`)
 
 ## Decomposition: Execution Rollback (Git Restore)
 
@@ -693,7 +748,7 @@ sequenceDiagram
 - **git_restore** (primary): `git checkout {commit} -- {file}`
 - **file_restore** (fallback): Direct file content restoration from captured state
 
-**Implementation:** `repos/minibob/src/rollback.ts:79-250+`
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/rollback.ts:79-250+`)
 
 ## Complete Learning Loop Diagram
 
@@ -711,14 +766,14 @@ graph TB
     D -->|Execute| F["4. Activity Loop<br/>(template tasks)"]
     E -->|Execute| G["4. Improvisation Tasks<br/>(LLM + tools)"]
 
-    F -->|Verify| H{"Goal Achieved?"}
-    G -->|Verify| H
+    F -->|Reach gate| H{"Goal Reached?<br/>(verifyGoalReached)"}
+    G -->|Reach gate| H
 
-    H -->|No| I{"Max Attempts?"}
-    H -->|Yes| J["5. SUCCESS"]
+    H -->|No| I{"Approaches<br/>exhausted?"}
+    H -->|Yes| J["5. SUCCESS (reached)"]
 
-    I -->|No| K["6. Retry Logic<br/>(try next template or variant)"]
-    I -->|Yes| L["5. FAILURE<br/>(max retries)"]
+    I -->|No| K["6. In-flight recovery<br/>(β-penalise + recommendExcluding<br/>+ retry a different approach)"]
+    I -->|Yes| L["5. FAILURE<br/>(approaches exhausted, honest)"]
 
     K -->|Loop| B
 
@@ -774,39 +829,35 @@ graph TB
 
 ## File References
 
-| Component | File | Lines | Purpose |
-|-----------|------|-------|---------|
-| Goal Processor | `repos/minibob/src/goal-processor.ts` | 650-6800+ | Complete goal processing flow |
-| Activity Executor | `repos/minibob/src/activity.ts` | 100-2000+ | Task execution and composition |
-| Improvisation Tasks | `repos/minibob/src/improviser.ts` | 125-1650+ | LLM tool use for execute_plan |
-| Ribosome Resolver | `repos/minibob/src/template-extractor.ts` | 24-400+ | Template extraction from traces |
-| Ribosome Quality | `repos/minibob/src/ribosome-quality.ts` | 103-142+ | Extraction criteria |
-| Rollback | `repos/minibob/src/rollback.ts` | 79-250+ | Checkpoint and restore |
-| Checkpoint | `repos/minibob/src/activity.ts` | 455-610+ | Git state capture |
+| Component | File (live equivalent) | Purpose |
+|-----------|------|---------|
+| Goal Host | `repos/goal-host-vessel/` + `ias-executor-ts` (was `goal-processor.ts`) | Complete goal processing flow + reach gate + recovery loop |
+| Activity Executor | `repos/goal-host-vessel/` + `ias-executor-ts` (was `activity.ts`) | Task execution and composition |
+| Improvisation Tasks | `repos/goal-host-vessel/` + `ias-executor-ts` (was `improviser.ts`) | LLM tool use for execute_plan (LLM via llm-resolver-vessel) |
+| Ribosome Resolver | `repos/ribosome-vessel/` (bus subscriber; was `template-extractor.ts`) | Template extraction from the reached trace |
+| Ribosome Quality | `repos/ribosome-vessel/` (was `ribosome-quality.ts`) | Extraction criteria |
+| Rollback / Checkpoint | `repos/goal-host-vessel/` + `ias-executor-ts` (was `rollback.ts` / `activity.ts`) | Git state capture and restore |
 
 ## Implementation Architecture
 
-This sequence spans **both MiniBob (execution) and activity-api (storage/learning)**.
+This sequence spans **goal-host-vessel (execution, incl. reach gate + recovery), ribosome-vessel (extraction), and activity-api (storage/learning)**.
 
-### MiniBob (Execution Environment)
+### goal-host-vessel (Execution Environment)
 
 **Responsibilities:**
 - Execute `improvise_solution` activity (plan → execute → extract tasks)
-- LLM-driven improvisation (tool use loop with stuck detection)
+- LLM-driven improvisation (tool use loop with stuck detection; LLM via llm-resolver-vessel)
+- **Goal-reaching gate (`verifyGoalReached`) + in-flight recovery (β-penalise + recommendExcluding + retry)**
 - Checkpoint creation (git state capture before execution)
 - Rollback execution (git restore to pre-execution state)
-- Ribosome extraction criteria evaluation
-- Template assembly from successful executions
 - Variant creation on failures (trailblazing)
+- (Ribosome extraction itself runs in `ribosome-vessel`, off the bus)
 
-**Key Files:**
-- `repos/minibob/src/goal-processor.ts` (650-6800+) - Meta-activity orchestration
-- `repos/minibob/src/improviser.ts` (125-1650+) - Improvisation activity implementation
-- `repos/minibob/src/template-extractor.ts` (24-400+) - Ribosome template assembly
-- `repos/minibob/src/ribosome-quality.ts` (103-142+) - Extraction criteria
-- `repos/minibob/src/rollback.ts` (79-250+) - Checkpoint and rollback logic
+**Key Files (live):**
+- `repos/goal-host-vessel/` + `@avigopal/ias-executor-ts` - meta-activity orchestration, improvisation, reach gate, recovery loop, checkpoint/rollback
+- `repos/ribosome-vessel/` - template assembly + extraction criteria (bus subscriber)
 
-**What MiniBob Does NOT Do:**
+**What goal-host-vessel Does NOT Do:**
 - Does NOT store templates (backend owns template registry)
 - Does NOT compute variant performance (backend tracks Thompson scores)
 - Does NOT aggregate extraction patterns (backend learns)
@@ -829,7 +880,8 @@ This sequence spans **both MiniBob (execution) and activity-api (storage/learnin
 - `POST /v2/activities/recommend` - Thompson Sampling (includes improvise_solution)
 
 **Key Files:**
-- `repos/metabob-activity-api/src/routes/activities.ts` - Template registration
+- `repos/metabob-activity-api/src/routes/activities.ts` - Template registration + `/v2/activities/feedback` (β-penalty target)
+- `repos/metabob-activity-api/src/routes/goal-paths.ts` - per-goal `goal_execution_paths` (recordGoalPath / recommendReachingPath)
 - `repos/metabob-activity-api/src/db/paradigm.ts` - Thompson Sampling (includes improvise_solution in pool)
 - `repos/metabob-activity-api/sql/seed/meta-activities/improvise_solution.json` - Template definition
 
@@ -847,13 +899,14 @@ This sequence spans **both MiniBob (execution) and activity-api (storage/learnin
 
 ### Correct Separation
 
-**MiniBob handles (execution-time):**
+**goal-host-vessel handles (execution-time):**
 - Improvisation activity execution (plan, execute, extract tasks)
-- LLM tool use loop with stuck detection
+- LLM tool use loop with stuck detection (LLM via llm-resolver-vessel)
+- Goal-reaching gate + in-flight recovery loop
 - Checkpoint creation (git state capture)
 - Rollback execution (git restore)
-- Ribosome extraction logic (template assembly)
 - Variant creation (modified template generation)
+- (Ribosome extraction logic runs in ribosome-vessel)
 
 **Activity-API handles (storage/learning):**
 - Template storage (improvise_solution, extracted, variants)
@@ -863,21 +916,22 @@ This sequence spans **both MiniBob (execution) and activity-api (storage/learnin
 - Extraction pattern learning
 
 **Why This Separation Matters:**
-- Improvisation runs locally (MiniBob can improvise offline)
-- Backend learns which improvisation strategies work (Thompson Sampling)
-- Extracted templates become first-class citizens (Thompson Sampling includes them)
+- Improvisation and recovery run in goal-host-vessel (within the same dispatch — recovery is part of reaching the goal)
+- Backend learns which improvisation strategies work (Thompson Sampling) and which paths reach a given goal (`goal_execution_paths`)
+- Extracted templates (minted from the **reached** trace) become first-class citizens (Thompson Sampling includes them)
 - Variants compete with originals (Thompson Sampling selects best)
 
 **Key Architectural Point:**
-Improvisation is an **activity**, not a fallback code path. It's stored in the backend as `improvise_solution.json` and selected via Thompson Sampling like any other template.
+Improvisation is an **activity**, not a fallback code path. It's stored in the backend as `improvise_solution.json` and selected via Thompson Sampling like any other template. And success is **reach**, not exit status — the goal-reaching gate, not a status check, decides whether to mint, recover, or stop.
 
 ## Related Documentation
 
 - [Activity Selection](./01-activity-selection.md) - How templates are recommended
 - [Impulse Resolution](./02-impulse-resolution.md) - Data loading during execution
 - [Resolver Processing](./03-resolver-processing.md) - Tool execution mechanics
+- [GOAL_EXECUTION_PATHS_SCHEMA.md](../GOAL_EXECUTION_PATHS_SCHEMA.md) - Goal-reaching gate + per-goal record/reuse
 - [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) - Foundational model
 
 ---
 
-**Last Updated:** 2026-04-16
+**Last Updated:** 2026-06 (re-narrated to goal-host-vessel; added goal-reaching gate + in-flight recovery loop as a failure-handling path)

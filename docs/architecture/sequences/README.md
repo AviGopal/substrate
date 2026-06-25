@@ -1,8 +1,10 @@
 # Substrate Execution Sequence Diagrams
 
-> **Status (2026-05-27):** File references throughout this directory point to `repos/minibob/src/goal-processor.ts`, `activity.ts` (ActivityExecutor), `improviser.ts`, `lifecycle-hooks.ts`, `vessel-hooks.ts`, `promotion-hooks.ts`, `impulse-verification-hooks.ts`, and `template-extractor.ts` — all of which moved to `goal-host-vessel` / `ias-executor-ts` in Phase 8 (2026-05-24). The conceptual flows (Thompson sampling, impulse resolution, resolver dispatch, lifecycle hooks) remain accurate; the per-file line-number citations and `GoalProcessor`/`ActivityExecutor` participant labels now refer to substrate-vessel internals rather than minibob source. Update participant labels to `GoalHostVessel` / `GoalHost (ias-executor-ts)` before using these diagrams for implementation navigation.
+> **Status (2026-06):** Execution has fully moved off minibob. **minibob is deprecated** — it is now a thin CLI wrapper that POSTs goals to `goal-host-vessel` and has no in-process execution engine; the agent-facing dispatch surface is the metabob-mcp tool `mcp__metabob__run_goal`. The work that these diagrams narrate (goal processing, activity selection, impulse resolution, resolver dispatch, improvisation, ribosome extraction) runs inside the **substrate vessels**: `goal-host-vessel` (`:8210`, `POST /run-goal` + `/resolve`) hosts the `GoalHost` / ActivityExecutor / goal-processor / resolvers from `ias-executor-ts`; `llm-resolver-vessel` (`:8220`) owns LLM calls; `local-tools-vessel` (`:8230`) owns filesystem/process resolvers; `ribosome-vessel` (`:8240`) owns template extraction; `boredom-vessel` owns the autonomous loop. The conceptual flows (Thompson sampling, impulse resolution, resolver dispatch, lifecycle hooks) remain accurate; wherever older text below says "MiniBob" as the **executor**, read **goal-host-vessel**, and wherever participant labels say `GoalProcessor`/`ActivityExecutor`, read `GoalHost (goal-host-vessel / ias-executor-ts)`. Per-file line-number citations are stale; navigate via `repos/goal-host-vessel/` and `@avigopal/ias-executor-ts`.
+>
+> **New (June 2026), reflected in `01` and `04`:** a goal no longer succeeds on exit status alone. After execution, the **goal-reaching gate** (`verifyGoalReached`, goal-host) runs an LLM judge that emits `completion_shapes` and decides `reached` vs not; a `status=completed` run that did not produce the asked output is `reached:false` and β-penalises the selected template. On `reached:false` the `/resolve` loop performs **in-flight recovery** — β-penalise + exclude the failed approach (`recommendExcluding`) and retry a *different* approach until reached or exhausted; the reached trace is what the ribosome mints. Per-goal learning is recorded in `goal_execution_paths` keyed by `goal_hash`. See [`GOAL_EXECUTION_PATHS_SCHEMA.md`](../GOAL_EXECUTION_PATHS_SCHEMA.md).
 
-This directory contains comprehensive sequence diagrams mapping the complete implementation of the substrate vessel execution workflows. All diagrams are implementation-based, with line numbers and file references from the actual codebase. Note: participant labels referencing `GoalProcessor`/`ActivityExecutor` in minibob source now refer to `GoalHostVessel` / `GoalHost (ias-executor-ts)` after Phase 8 (2026-05-24).
+This directory contains comprehensive sequence diagrams mapping the complete implementation of the substrate vessel execution workflows. All diagrams are implementation-based, with line numbers and file references that historically pointed at the actual codebase; after Phase 8 (2026-05-24) the live equivalents are the substrate vessels named above. Participant labels referencing `GoalProcessor`/`ActivityExecutor` in former minibob source now refer to `GoalHostVessel` / `GoalHost (ias-executor-ts)`.
 
 ## Overview
 
@@ -22,7 +24,7 @@ The system is built on five core workflows that work together to create a self-i
 
 ### Composition-Based Architecture
 
-MiniBob uses **composition edges** to orchestrate activities, not procedural control flow:
+The substrate (goal-host-vessel's `GoalHost`) uses **composition edges** to orchestrate activities, not procedural control flow:
 
 ```
 goal_processing_standard.json (meta-activity)
@@ -85,7 +87,7 @@ The **activity resolver** enables composition. The **ribosome resolver** enables
 ## Diagrams by Workflow
 
 Each diagram now includes an **Implementation Architecture** section that clarifies:
-- Which responsibilities belong to MiniBob (execution environment)
+- Which responsibilities belong to goal-host-vessel and its resolver vessels (execution environment)
 - Which responsibilities belong to activity-api (storage & learning backend)
 - What data structures are stored in SurrealDB
 - Why this separation matters
@@ -99,18 +101,19 @@ Maps the complete flow from user goal → Thompson Sampling recommendation → a
 - Activity selection activity (composition-based matching)
 - Impulse state space querying
 - Tiered fallback system (exact match → compatible → full-text search)
-- Thompson Sampling with 8-point heuristic boosts
+- Thompson Sampling with 8-point heuristic boosts (state-conditioned where a state signature is present)
 - Shape-conditioned scoring
 - Correlation tracking for learning loop
 - **Composition edges** for activity orchestration
+- **Goal-reaching gate** (`verifyGoalReached`) as the post-execution success determinant
 
-**Files Covered:**
-- `goal-processor.ts` (lines 2565-2625) - Now wraps meta-activity execution
-- `activities.ts` (lines 3080-3116, 3285-3340) - Activity resolver for composition
-- `paradigm.ts` (lines 2915-3049, 797-909) - Thompson Sampling logic
+**Files Covered (live equivalents in `goal-host-vessel` / `ias-executor-ts`):**
+- `goal-processor.ts` → GoalHost meta-activity execution
+- `activities.ts` (activity-api) - recommend + composition resolver
+- `paradigm.ts` (activity-api) - Thompson Sampling logic
 
 **Architecture Split:**
-- **MiniBob**: Meta-activity orchestration, trace capture
+- **goal-host-vessel**: Meta-activity orchestration, trace capture, goal-reaching gate
 - **Activity-API**: Thompson Sampling, template storage, learning
 
 ---
@@ -121,21 +124,21 @@ Shows the complete 11-phase flow from impulse filtering through resolution to co
 
 **Key Concepts:**
 - Relevance-based filtering with threshold logic
-- **6-step resolver dispatch chain (local → custom → discovery → MCP → fallback)** - THIS IS MINIBOB
+- **6-step resolver dispatch chain (local → custom → discovery → backend → fallback)** - lives in goal-host-vessel
 - Budget enforcement with truncation
 - Dual-mode formatting (pointer-mode vs content-mode)
 - Impulse evolution tracking (P3.2)
 - State capture (before/after/transition)
 
-**Files Covered:**
-- `impulse.ts` (complete, 1056 lines) - **Contains the 6-step dispatch**
+**Files Covered (live equivalents in `goal-host-vessel` / `ias-executor-ts`):**
+- `impulse.ts` - **Contains the 6-step dispatch**
 - `impulse-filter.ts`
-- `activity.ts` (lines 2920-3110)
+- `activity.ts`
 - `vessel-discovery.ts`
-- `mcp.ts`
+- backend client (formerly `mcp.ts`; now HTTP to activity-api via discovery contract)
 
 **Architecture Split:**
-- **MiniBob**: 6-step resolver dispatch (local → custom → discovery → MCP → fallback)
+- **goal-host-vessel**: 6-step resolver dispatch (local → custom → discovery → backend → fallback); `local-tools-vessel` owns the filesystem/process resolvers it dispatches to
 - **Activity-API**: Relevance scores, activity-related shape resolution
 - **Discovery-Vessel**: Capability-based routing (shape → vessels)
 
@@ -154,14 +157,14 @@ Documents how each resolver type processes impulses and creates output impulses,
 - Tool argument patterns
 - Output impulse creation
 
-**Files Covered:**
-- `llm.ts` (lines 360-448) - LLM resolver
-- `tools.ts` (lines 790-1722) - Deterministic resolvers
-- `activity.ts` (lines 3213-3273) - Activity resolver (composition)
-- `template-extractor.ts` - Ribosome resolver (learning)
+**Files Covered (live equivalents):**
+- `llm.ts` → `llm-resolver-vessel` (`:8220`) - LLM resolver
+- `tools.ts` → `local-tools-vessel` (`:8230`) - deterministic resolvers (bash/git/file/process)
+- `activity.ts` → `goal-host-vessel` - Activity resolver (composition)
+- `template-extractor.ts` → `ribosome-vessel` (`:8240`) - Ribosome resolver (learning)
 
 **Architecture Split:**
-- **MiniBob**: All resolvers (LLM, bash, git, activity, ribosome), tool execution
+- **goal-host-vessel + resolver vessels**: All resolvers (LLM via llm-resolver-vessel, bash/git/file via local-tools-vessel, activity, ribosome via ribosome-vessel), tool execution
 - **Activity-API**: Tool argument pattern storage, proven pattern recommendations
 
 ---
@@ -177,17 +180,18 @@ Shows how the system handles failures, creates variants, and extracts new templa
 - Execution rollback with verification (activity composition)
 - Trailblazing (failure → variant template via ribosome)
 - Ribosome pattern (success → template extraction via resolver)
+- **In-flight recovery loop** — on `reached:false`, β-penalise + `recommendExcluding` the failed approach + retry a different approach
 - **No special code paths** - improvisation uses same composition model
 
-**Files Covered:**
-- `goal-processor.ts` (lines 650-6800+) - Now wraps improvisation activity
-- `improviser.ts` (lines 125-1650+) - Improvisation activity implementation
-- `template-extractor.ts` (lines 24-400+) - Ribosome resolver
-- `rollback.ts` (lines 79-250+) - Rollback activity
+**Files Covered (live equivalents in `goal-host-vessel` / `ias-executor-ts`, plus `ribosome-vessel`):**
+- `goal-processor.ts` → GoalHost improvisation + goal-reaching gate + recovery loop
+- `improviser.ts` - Improvisation activity implementation
+- `template-extractor.ts` → `ribosome-vessel` - Ribosome resolver
+- `rollback.ts` - Rollback activity
 
 **Architecture Split:**
-- **MiniBob**: Improvisation execution, ribosome extraction, checkpoint/rollback
-- **Activity-API**: Template storage (improvise_solution + extracted + variants)
+- **goal-host-vessel**: Improvisation execution, goal-reaching gate, in-flight recovery, checkpoint/rollback (ribosome extraction in `ribosome-vessel`)
+- **Activity-API**: Template storage (improvise_solution + extracted + variants), per-goal `goal_execution_paths`
 
 ---
 
@@ -212,10 +216,10 @@ Maps the hook system for customizing and extending behavior at all lifecycle poi
 - `impulse-verification-hooks.ts`
 
 **Architecture Split:**
-- **MiniBob**: ALL hook logic (registration, execution, caching) - vessel-level
-- **Activity-API**: NONE - hooks are not backend data (vessel-specific, not portable)
+- **goal-host-vessel (and vessel subscribers)**: ALL hook logic — now event-driven; lifecycle events (`lifecycle:task:*`, `lifecycle:execution:*`, `lifecycle:gap:*`, `lifecycle:llm:*`) flow on the activity-api WebSocket bus and are handled by vessel subscribers rather than an in-process registry
+- **Activity-API**: hosts the broadcast bus, but hook *logic* is not backend data
 
-**Key Point:** Hooks customize **how this vessel executes** (instance-specific), while activities define **what work gets done** (portable templates).
+**Key Point:** Hooks customize **how the executing vessel behaves** (instance/subscriber-specific), while activities define **what work gets done** (portable templates).
 
 ---
 
@@ -223,13 +227,13 @@ Maps the hook system for customizing and extending behavior at all lifecycle poi
 
 ### Participants
 
-All diagrams use consistent naming for key participants:
-- **User/CLI** - User interaction layer
-- **GoalProcessor** - Meta-activity orchestrator (wraps goal_processing_standard.json)
-- **ActivityExecutor** - Activity/task execution engine (includes composition)
-- **ImpulseResolver** - Impulse pointer resolution
-- **LLM** - Large language model (Claude, OpenAI)
-- **Backend/MCP** - metabob-activity-api (learning backend)
+All diagrams use consistent naming for key participants. After Phase 8 these map to substrate vessels:
+- **User/CLI** - dispatch surface: the metabob-mcp tool `mcp__metabob__run_goal` (or the deprecated `minibob` CLI, which forwards to goal-host-vessel)
+- **GoalProcessor** - Meta-activity orchestrator (`GoalHost` in goal-host-vessel; wraps goal_processing_standard.json)
+- **ActivityExecutor** - Activity/task execution engine (in goal-host-vessel / ias-executor-ts; includes composition)
+- **ImpulseResolver** - Impulse pointer resolution (in goal-host-vessel)
+- **LLM** - Large language model, reached via `llm-resolver-vessel` (`:8220`)
+- **Backend/MCP** - metabob-activity-api (learning backend), reached over HTTP via the discovery resolver contract (not a local MCP client)
 - **DiscoveryVessel** - Vessel capability registry
 
 ### Notation
@@ -243,9 +247,9 @@ All diagrams use consistent naming for key participants:
 
 ### Line Number References
 
-All function calls include line number references in this format:
+All function calls include line number references in this historical format (paths are now stale — read them as the live equivalents in `goal-host-vessel` / `ias-executor-ts`):
 ```
-File: repos/minibob/src/activity.ts:2990-3020
+File: repos/goal-host-vessel/... (was repos/minibob/src/activity.ts:2990-3020)
 ```
 
 ## How to Use These Diagrams
@@ -302,23 +306,24 @@ These sequence diagrams complement:
 - [`IMPULSE_ACTIVITY_FOUNDATION.md`](../IMPULSE_ACTIVITY_FOUNDATION.md) - The foundational model; activity composition patterns and composition-based architecture
 - [`DEPLOYMENT_WORKFLOW.md`](../../../repos/deployment/DEPLOYMENT_WORKFLOW.md) - CI/CD and deployment
 
-## Architectural Clarity: MiniBob vs Activity-API
+## Architectural Clarity: goal-host-vessel vs Activity-API
 
-Each sequence document now includes an **Implementation Architecture** section that clarifies the separation of concerns. Here's the high-level split:
+Each sequence document now includes an **Implementation Architecture** section that clarifies the separation of concerns. Here's the high-level split. (Historically "MiniBob" was the execution environment; that role moved to **goal-host-vessel** and its resolver vessels in Phase 8, 2026-05-24.)
 
-### MiniBob (Execution Environment)
+### goal-host-vessel + resolver vessels (Execution Environment)
 
-**What MiniBob Does:**
-- Execute activities (meta-activities and domain-specific)
-- **6-step resolver dispatch** (local → custom → discovery → MCP → fallback)
-- Resolve LOCAL impulse types (memo, file, directoryTree, gitDiff)
-- Execute all resolvers (LLM, bash, git, activity, ribosome)
+**What the execution environment does:**
+- Execute activities (meta-activities and domain-specific) — `GoalHost` in goal-host-vessel
+- **6-step resolver dispatch** (local → custom → discovery → backend → fallback)
+- Resolve LOCAL impulse types (memo, file, directoryTree, gitDiff) — filesystem/process via `local-tools-vessel`
+- Execute all resolvers (LLM via `llm-resolver-vessel`, bash/git/file via `local-tools-vessel`, activity, ribosome via `ribosome-vessel`)
 - Capture execution traces (structure and state)
-- Register hooks (lifecycle, vessel, promotion) - **vessel configuration**
+- Run the **goal-reaching gate** (`verifyGoalReached`) and **in-flight recovery** after execution
+- React to lifecycle events on the activity-api bus (subscriber model; replaces in-process hook registries)
 - Create impulses (output, error, argument)
 - Checkpoints and rollbacks
 
-**What MiniBob Does NOT Do:**
+**What the execution environment does NOT do:**
 - Does NOT store templates (backend owns)
 - Does NOT compute Thompson Sampling (backend owns)
 - Does NOT aggregate metrics (backend owns)
@@ -337,22 +342,24 @@ Each sequence document now includes an **Implementation Architecture** section t
 - Register with discovery-vessel (advertises 7 activity shapes)
 
 **What Activity-API Does NOT Do:**
-- Does NOT execute activities (MiniBob does)
-- Does NOT resolve LOCAL impulses (MiniBob does)
+- Does NOT execute activities (goal-host-vessel does)
+- Does NOT resolve LOCAL impulses (goal-host-vessel / local-tools-vessel do)
 - Does NOT manage hooks (vessel configuration, not activity schema)
-- Does NOT own resolver dispatch (MiniBob does)
+- Does NOT own resolver dispatch (goal-host-vessel does)
 
 ### Key Architectural Points
 
-1. **Resolver Dispatch is MiniBob** - The 6-step chain (local → custom → discovery → MCP → fallback) lives in MiniBob, not the backend. The backend is one resolver among many.
+1. **Resolver Dispatch is goal-host-vessel** - The 6-step chain (local → custom → discovery → backend → fallback) lives in goal-host-vessel, not the backend. The backend is one resolver among many.
 
-2. **Hooks are Vessel Configuration** - Hooks live in MiniBob (per-instance customization), not the backend (portable templates). Hooks customize how a vessel executes; activities define what work gets done.
+2. **Hooks are subscriber behavior** - Lifecycle reactions live in the executing vessel and its bus subscribers (per-instance customization), not the backend (portable templates). They customize how a vessel executes; activities define what work gets done.
 
 3. **Improvisation is an Activity** - `improvise_solution.json` is stored in the backend and selected via Thompson Sampling. No special code paths.
 
-4. **Learning is Backend, Execution is MiniBob** - MiniBob executes and captures; backend aggregates and learns. This enables offline execution with optional online learning.
+4. **Success is reach, not exit status** - The goal-reaching gate (`verifyGoalReached`) judges whether the asked output was produced; `reached:false` drives β-penalty and in-flight recovery even when the activity returned `status=completed`.
 
-5. **Composition Edges Link Activities** - Parent→child activity relationships are stored in the backend for learning orchestration patterns.
+5. **Learning is Backend, Execution is goal-host-vessel** - goal-host-vessel executes and captures; backend aggregates and learns. Per-goal paths are recorded in `goal_execution_paths` keyed by `goal_hash`.
+
+6. **Composition Edges Link Activities** - Parent→child activity relationships are stored in the backend for learning orchestration patterns.
 
 ## Diagram Format
 
@@ -377,7 +384,7 @@ When adding new workflows or modifying existing ones:
 
 | Workflow | Main Entry Point | Primary Files | Learning Output | Composition |
 |----------|------------------|---------------|-----------------|-------------|
-| Activity Selection | `goal-processor.ts:processGoal()` | goal-processor, activities | Thompson α/β updates | Meta-activity: `goal_processing_standard.json` |
+| Activity Selection | `goal-host-vessel:/run-goal` → `GoalHost.processGoal()` | goal-processor, activities, goal-reaching gate | Thompson α/β updates + per-goal `goal_execution_paths` | Meta-activity: `goal_processing_standard.json` |
 | Impulse Resolution | `impulse.ts:load()` | impulse, impulse-filter | Relevance scores | No composition (resolver layer) |
 | Resolver Processing | `activity.ts:execute()` | llm, tools, activity | Tool argument patterns | Activity resolver enables composition |
 | Improvisation | `improviser.ts:improvise()` | improviser, template-extractor | New templates (ribosome) | Activity: `improvise_solution.json` |
@@ -388,6 +395,6 @@ When adding new workflows or modifying existing ones:
 
 ---
 
-**Last Updated:** 2026-04-16
-**MiniBob Version:** Latest (feature/autonomous-cicd branch)
+**Last Updated:** 2026-06 (re-narrated: execution moved minibob → goal-host-vessel + resolver vessels; added goal-reaching gate + in-flight recovery)
+**Execution surface:** goal-host-vessel (`:8210`) + llm-resolver-vessel (`:8220`) + local-tools-vessel (`:8230`) + ribosome-vessel (`:8240`); dispatch via `mcp__metabob__run_goal`
 **Architecture:** Composition-based (everything is an activity)

@@ -41,7 +41,7 @@ activities. Everything below treats "substrate" strictly in the deployment sense
 
 ## 1. The four cross-container algebras
 
-`SUBSTRATE_AS_SOFTWARE` §2 sorts one substrate into four durability groups and
+`SUBSTRATE_AS_SOFTWARE` §4 sorts one substrate into four durability groups and
 observes that the loop crosses them in a fixed pattern (recall reads Informational
 → runs Ephemeral → writes Recorded; learning reads Recorded → writes
 learned-durable; nothing in the normal loop writes authored-durable). The fleet
@@ -63,7 +63,7 @@ Three of the four groups have clean cross-container behavior:
   substrate." It diverges only once a substrate begins authoring its own code; the
   propagation channel is then git — a container-side, review-gated push to the
   shared branch — and the merge discipline is review/CI. The fleet analog of
-  `SUBSTRATE_AS_SOFTWARE` §2's "nothing in the loop writes authored-durable":
+  `SUBSTRATE_AS_SOFTWARE` §4's "nothing in the loop writes authored-durable":
   **nothing in the cross-container *loop* writes a peer's authored-durable** — that
   only happens through git, review-gated.
 
@@ -84,7 +84,7 @@ The fourth group is the whole frontier, and it is the rest of this doc.
 
 ## 2. Learned-durable is not homogeneous across containers
 
-`SUBSTRATE_AS_SOFTWARE` §2 lists the learned-durable group as a single bucket:
+`SUBSTRATE_AS_SOFTWARE` §4 lists the learned-durable group as a single bucket:
 Thompson posteriors (α/β), the shape lattice, composition-edge weights, goal-paths,
 impulse-relevance scores. Within one substrate that lumping is harmless — it is all
 one database snapshot. **Across containers it is the load-bearing distinction**,
@@ -117,7 +117,7 @@ addressing federates the structural sublayer; the quantitative sublayer is a
 separate problem with a different algebra.**
 
 > **Canonical refinement (this doc's authority):** the learned-durable group of
-> `SUBSTRATE_AS_SOFTWARE` §2 splits, *across containers*, into a **structural**
+> `SUBSTRATE_AS_SOFTWARE` §4 splits, *across containers*, into a **structural**
 > sublayer (topology, made comparable by content-addressed identity) and a
 > **quantitative** sublayer (counts, learner-local until signed evidence can move
 > them). Structure must align before weights can move, because the weights are
@@ -184,7 +184,7 @@ and naming both is what makes "what may cross the boundary" precise:
   the next cycle — the loop, extended one container outward.
 
 - **No motion in the normal cross-container loop writes a peer's authored-durable.**
-  That is the fleet analog of `SUBSTRATE_AS_SOFTWARE` §2's operator-authored
+  That is the fleet analog of `SUBSTRATE_AS_SOFTWARE` §4's operator-authored
   boundary. A substrate changes a *peer's* code only through git + review, exactly
   as, within one substrate, the authored-durable boundary is crossed only when the
   substrate begins authoring its own code. **Self-installation onto a fresh host**
@@ -288,7 +288,7 @@ Following the companion docs.
 - Federation does not touch the non-constructibility ceiling
   (`SUBSTRATE_AS_MDP.md` §11). Sharing evidence across containers enlarges the pool
   of observations; it does not make the Informational state complete. More peers ≠
-  a complete model. → inherited from `SUBSTRATE_AS_SOFTWARE` §5.
+  a complete model. → inherited from `SUBSTRATE_AS_SOFTWARE` §6.
 
 ## 8. Recap
 

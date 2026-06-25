@@ -1,10 +1,10 @@
 # Hook Registration and Behavior Injection
 
-> **Status (2026-05-27):** The hook/lifecycle-event model is partially stale. `lifecycle-hooks.ts`, `vessel-hooks.ts`, `promotion-hooks.ts`, and `impulse-verification-hooks.ts` no longer exist in `repos/minibob/src/`; lifecycle events are now emitted as substrate impulses (`lifecycle:task:preBinding`, `lifecycle:task:completed`, `lifecycle:execution:succeeded`, `lifecycle:gap:classified`, `lifecycle:llm:dispatched`) and handled by vessel subscribers, not in-process hook registries. The concepts of pre-task behavior injection and promotion hooks remain accurate in spirit; the implementation is event-driven across vessels rather than a per-session hook registry inside minibob.
+> **Status (2026-06):** The hook/lifecycle-event model is **partially stale by implementation, accurate in spirit** — and minibob is no longer where any of it runs (minibob is deprecated). `lifecycle-hooks.ts`, `vessel-hooks.ts`, `promotion-hooks.ts`, and `impulse-verification-hooks.ts` were minibob source; on the substrate, lifecycle events are emitted as impulses on the **activity-api WebSocket bus** (`lifecycle:task:preBinding`, `lifecycle:task:completed`, `lifecycle:execution:succeeded`, `lifecycle:gap:classified`, `lifecycle:llm:dispatched`) and handled by **vessel subscribers** (workbench, ribosome-vessel, concept-db, goal-host-vessel, …), not by an in-process per-session hook registry. Read the in-process "hook registration" diagrams below as **bus subscription** with the same payload contract; read "MiniBob" as "the executing vessel (goal-host-vessel) and the bus subscribers." Pre-task behavior injection and promotion remain real; only the wiring changed (direct callback → bus).
 
 ## Overview
 
-This document maps the complete hook system in MiniBob, showing how behavior can be customized and extended at all lifecycle points. Hooks enable behavior injection without modifying core code, making MiniBob highly extensible.
+This document maps the hook / lifecycle-event system, showing how behavior can be customized and extended at all lifecycle points. On the substrate this is **event-driven**: emitters publish lifecycle events to the activity-api bus and subscriber vessels react. The original in-process registry model (below) is preserved as the conceptual contract; substitute "subscribe to the bus" for "register a hook."
 
 ## Key Concepts
 
@@ -186,7 +186,7 @@ sequenceDiagram
     end
 ```
 
-**Implementation:** `repos/minibob/src/lifecycle-hooks.ts`
+**Implementation (live):** event emission/subscription on the activity-api WebSocket bus; emitters in `repos/goal-host-vessel/` + `ias-executor-ts`, subscribers in the consuming vessels (was `minibob/src/lifecycle-hooks.ts`).
 
 ## Decomposition: Activity Lifecycle Hooks
 
@@ -240,7 +240,7 @@ sequenceDiagram
     end
 ```
 
-**Implementation:** `repos/minibob/src/lifecycle-hooks.ts`
+**Implementation (live):** lifecycle events on the activity-api bus; emitted from `repos/goal-host-vessel/` + `ias-executor-ts`, consumed by subscriber vessels (was `minibob/src/lifecycle-hooks.ts`).
 
 ## Decomposition: Vessel Hooks (State-Based Injection)
 
@@ -314,7 +314,7 @@ sequenceDiagram
     end
 ```
 
-**Implementation:** `repos/minibob/src/vessel-hooks.ts`
+**Implementation (live):** state-based injection now expressed as bus subscriptions with condition filters; emitter side in `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/vessel-hooks.ts`).
 
 **Key Features:**
 - Priority-ordered execution (descending)
@@ -396,7 +396,7 @@ sequenceDiagram
     end
 ```
 
-**Implementation:** `repos/minibob/src/impulse-verification-hooks.ts`
+**Implementation (live):** impulse-verification reactions driven by `lifecycle:task:*` / `lifecycle:execution:*` events on the bus; emitter side in `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/impulse-verification-hooks.ts`).
 
 **Verification Checks:**
 - **Creation**: Impulse structure valid, pointer resolvable
@@ -545,7 +545,7 @@ sequenceDiagram
     end
 ```
 
-**Implementation:** `repos/minibob/src/vessel/promotion-hooks.ts`
+**Implementation (live):** template promotion is now driven by `ribosome-vessel` reacting to `lifecycle:execution:succeeded` and writing via the `activityTemplate_update` impulse (was `minibob/src/vessel/promotion-hooks.ts`).
 
 **Default Promotion Criteria:**
 - Minimum executions: 5
@@ -763,39 +763,38 @@ function cacheResult(hook: VesselHook, impulses: Impulse[]): void {
 
 ## File References
 
-| Component | File | Purpose |
+| Component | File (live equivalent) | Purpose |
 |-----------|------|---------|
-| Lifecycle Hooks | `repos/minibob/src/lifecycle-hooks.ts` | Activity/task lifecycle hooks |
-| Vessel Hooks | `repos/minibob/src/vessel-hooks.ts` | State-based impulse injection |
-| Promotion Hooks | `repos/minibob/src/vessel/promotion-hooks.ts` | Template promotion decisions |
-| Impulse Verification | `repos/minibob/src/impulse-verification-hooks.ts` | Impulse lifecycle verification |
-| Goal Processor | `repos/minibob/src/goal-processor.ts` | Hook invocation for pre-selection |
+| Lifecycle events | activity-api WebSocket bus; emitters in `repos/goal-host-vessel/` + `ias-executor-ts` (was `lifecycle-hooks.ts`) | Activity/task lifecycle events |
+| State-based injection | bus subscriptions w/ condition filters (was `vessel-hooks.ts`) | State-based impulse injection |
+| Promotion | `repos/ribosome-vessel/` (reacts to `lifecycle:execution:succeeded`; was `vessel/promotion-hooks.ts`) | Template promotion |
+| Impulse Verification | bus-driven reactions (was `impulse-verification-hooks.ts`) | Impulse lifecycle verification |
+| Event emitter | `repos/goal-host-vessel/` + `ias-executor-ts` (was `goal-processor.ts`) | Emits lifecycle events for pre-selection etc. |
 
 ## Implementation Architecture
 
-This sequence is **entirely MiniBob (vessel configuration)** with NO backend involvement.
+This sequence is **vessel-side (executing vessel + bus subscribers)** with activity-api hosting the broadcast bus but not the hook logic.
 
-### MiniBob (Execution Environment)
+### Executing vessel + bus subscribers (Execution Environment)
 
 **Responsibilities:**
-- Hook registration (lifecycle, vessel, promotion, impulse verification)
-- Hook execution at trigger points (priority-ordered)
-- Condition evaluation (requiredShapes, requiredAbsent, custom predicates)
-- Hook resolver invocation with state snapshots
-- Caching (TTL-based, default 1 minute)
-- Non-blocking error handling (log and continue)
-- Impulse injection from hook resolvers
+- Emit lifecycle events (goal-host-vessel) and subscribe to them (workbench, ribosome-vessel, concept-db, …)
+- React at trigger points (priority/filter-ordered subscription handlers)
+- Condition evaluation (requiredShapes, requiredAbsent, custom predicates) as subscription filters
+- Handler invocation with the event payload (state snapshot)
+- Caching (TTL-based, default 1 minute) where applicable
+- Non-blocking error handling (subscribers swallow + log so the bus loop never throws)
+- Impulse injection from handlers
 
-**Key Files:**
-- `repos/minibob/src/lifecycle-hooks.ts` - Activity/task lifecycle hooks
-- `repos/minibob/src/vessel-hooks.ts` - State-based impulse injection
-- `repos/minibob/src/vessel/promotion-hooks.ts` - Template promotion decisions
-- `repos/minibob/src/impulse-verification-hooks.ts` - Impulse lifecycle verification
+**Key Files (live):**
+- `repos/goal-host-vessel/` + `@avigopal/ias-executor-ts` - lifecycle event emission
+- `repos/ribosome-vessel/` - promotion/extraction on `lifecycle:execution:succeeded`
+- subscriber vessels (workbench, concept-db, …) - their own bus clients
 
-**What MiniBob Does NOT Do:**
-- Does NOT store hooks in backend (vessel configuration, not activity schema)
-- Does NOT query backend for hook definitions (registered locally)
-- Does NOT persist hook execution history (ephemeral, session-scoped)
+**What the executing vessel Does NOT Do:**
+- Does NOT store hook logic in backend (it's vessel/subscriber behavior, not activity schema)
+- Does NOT query backend for hook definitions (subscriptions are vessel-local)
+- Does NOT persist hook execution history in the activity schema (the bus carries events; only traces persist)
 
 ### Activity-API (Storage & Learning Backend)
 
@@ -803,14 +802,14 @@ This sequence is **entirely MiniBob (vessel configuration)** with NO backend inv
 - **NONE** - Hooks are vessel-level configuration, not backend data
 
 **Why Hooks Are NOT in Activity-API:**
-- Hooks are **vessel configuration** (how this MiniBob instance behaves)
+- Hooks are **vessel/subscriber configuration** (how a given vessel reacts to events)
 - Activities are **portable templates** (what work gets done)
 - Hooks customize execution environment (vessel-specific)
 - Activities define work to be done (vessel-independent)
 
 **Example:**
 - **Activity template** (backend): "fix_typescript_error" - portable, reusable
-- **Vessel hook** (MiniBob): "Before execution, verify impulses" - this instance's behavior
+- **Vessel hook** (subscriber, e.g. goal-host-vessel): "On `lifecycle:task:preBinding`, verify impulses" - this vessel's behavior
 
 ### SurrealDB Schema
 
@@ -819,49 +818,49 @@ This sequence is **entirely MiniBob (vessel configuration)** with NO backend inv
 
 **Why No Schema:**
 - Hooks are runtime configuration, not data
-- Different MiniBob instances may have different hooks
+- Different subscriber vessels may have different hooks
 - Hooks are registered programmatically (code), not declaratively (data)
 
 ### Correct Separation
 
-**MiniBob handles (vessel configuration):**
-- Hook registration and storage (in-memory, per-instance)
-- Hook execution (lifecycle, vessel, promotion, verification)
-- Condition evaluation (requiredShapes, custom predicates)
-- Impulse injection from hook resolvers
+**The executing vessel / subscribers handle (vessel configuration):**
+- Bus subscription and per-vessel handler state
+- Reactions at lifecycle events (lifecycle, vessel, promotion, verification)
+- Condition evaluation (requiredShapes, custom predicates) as subscription filters
+- Impulse injection from handlers
 - Caching and timeout management
 
-**Activity-API handles (portable templates):**
-- **NOTHING** - Hooks are not backend data
+**Activity-API handles (portable templates + bus transport):**
+- Hosts the broadcast bus, but **hook logic is not backend data**
 
 **Why This Separation Matters:**
-- Hooks are vessel-specific customizations (different MiniBob instances can have different hooks)
-- Activities are universal templates (same activity runs on any MiniBob)
-- Hooks enable per-instance behavior without polluting activity definitions
+- Hooks are vessel-specific customizations (different subscriber vessels can react differently)
+- Activities are universal templates (same activity runs on any vessel)
+- Hooks enable per-vessel behavior without polluting activity definitions
 - This keeps activity templates portable and vessel behavior flexible
 
 **Key Architectural Point:**
-Hooks are **vessel configuration**, not **activity schema**. They live in MiniBob's runtime, not the backend's database. Activities remain portable; vessels customize execution.
+Hooks are **vessel/subscriber behavior**, not **activity schema**. They live in the executing vessel and its bus subscribers, not the backend's database. Activities remain portable; vessels customize execution.
 
 **Contrast with Activity Composition:**
 - **Activity composition** (backend): "activity A composes activity B" → stored in backend, learned via Thompson Sampling
-- **Vessel hooks** (MiniBob): "before any activity, inject these impulses" → configured per instance, not stored
+- **Vessel hooks** (subscribers): "on this lifecycle event, inject these impulses" → bus subscription per vessel, not stored in the activity schema
 
 ### Vessel vs Activity
 
-| Aspect | Vessel (MiniBob) | Activity (Backend) |
+| Aspect | Vessel (executing vessel / subscriber) | Activity (Backend) |
 |--------|------------------|-------------------|
 | **Definition** | Execution environment | Work template |
-| **Scope** | This instance | Any instance |
-| **Configuration** | Hooks, resolvers, tools | Tasks, prompts, validation |
-| **Storage** | In-memory (session) | SurrealDB (persistent) |
-| **Portability** | Instance-specific | Cross-instance |
-| **Example** | "Before execution, verify impulses" | "Fix TypeScript errors" |
+| **Scope** | This vessel | Any vessel |
+| **Configuration** | Bus subscriptions, resolvers, tools | Tasks, prompts, validation |
+| **Storage** | Vessel-local (subscription state) | SurrealDB (persistent) |
+| **Portability** | Vessel-specific | Cross-vessel |
+| **Example** | "On task preBinding, verify impulses" | "Fix TypeScript errors" |
 
 **Why Hooks Are Vessel-Level:**
-- Different MiniBob instances may have different priorities (e.g., enterprise vs personal)
+- Different subscriber vessels may react differently to the same event
 - Hooks customize behavior without modifying activity templates
-- Allows A/B testing of hook strategies per instance
+- Allows A/B testing of subscriber strategies per vessel
 - Keeps activity definitions clean and portable
 
 ## Related Documentation

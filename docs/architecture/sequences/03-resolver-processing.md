@@ -1,6 +1,6 @@
 # Processing of Required Input Impulses by Resolvers
 
-> **Status (2026-05-27):** Resolver types (LLM, bash, git, activity, ribosome) and the impulse context-injection flow are still accurate. All file refs (`llm.ts`, `tools.ts`, `activity.ts`, `template-extractor.ts`) are for the old minibob copies; the live equivalents are `llm-resolver-vessel`, `local-tools-vessel`, `goal-host-vessel`, and `ribosome-vessel` respectively. The `MCP Backend (mcp.ts)` participant is now `activity-api` reached over HTTP via discovery routing.
+> **Status (2026-06):** Resolver types (LLM, bash, git, activity, ribosome) and the impulse context-injection flow are still accurate, but they run **across the substrate vessels, not minibob** (minibob is deprecated and no longer executes). The orchestration (tool-calling loop, activity composition, impulse creation) lives in `goal-host-vessel` / `ias-executor-ts`; the **LLM resolver** is `llm-resolver-vessel` (`:8220`); the **deterministic resolvers** (bash, git, read/write/edit, process) are `local-tools-vessel` (`:8230`); the **ribosome resolver** is `ribosome-vessel` (`:8240`), which subscribes to `task.completed` / `lifecycle:execution:succeeded` on the activity-api WebSocket bus rather than running inline. The `MCP Backend (mcp.ts)` participant is now `activity-api` (`:18080`) reached over HTTP via discovery routing. Map the file refs below (`llm.ts`, `tools.ts`, `activity.ts`, `template-extractor.ts`) to those vessels.
 
 ## Overview
 
@@ -21,17 +21,17 @@ This document maps how different resolver types (LLM, bash, git, file operations
 
 ```mermaid
 sequenceDiagram
-    participant TaskExec as Task Executor<br/>(activity.ts)
-    participant ImpStore as Impulse Store<br/>(impulse.ts)
-    participant ImpFormat as formatImpulsesForContext<br/>(impulse.ts)
-    participant LLMClient as LLM Client<br/>(llm.ts)
-    participant ToolWrap as Tool Wrapper<br/>(tools.ts)
-    participant Bash as Bash Resolver<br/>(bash tool)
-    participant Git as Git Resolver<br/>(git tool)
-    participant ActTool as Activity Resolver<br/>(activity tool)
-    participant Ribosome as Ribosome Resolver<br/>(template extraction)
-    participant ImpCreate as Impulse Creator<br/>(impulse.ts)
-    participant MCP as MCP Backend<br/>(mcp.ts)
+    participant TaskExec as Task Executor<br/>(goal-host-vessel)
+    participant ImpStore as Impulse Store<br/>(goal-host-vessel)
+    participant ImpFormat as formatImpulsesForContext<br/>(goal-host-vessel)
+    participant LLMClient as LLM Resolver<br/>(llm-resolver-vessel)
+    participant ToolWrap as Tool Wrapper<br/>(goal-host-vessel)
+    participant Bash as Bash Resolver<br/>(local-tools-vessel)
+    participant Git as Git Resolver<br/>(local-tools-vessel)
+    participant ActTool as Activity Resolver<br/>(goal-host-vessel)
+    participant Ribosome as Ribosome Resolver<br/>(ribosome-vessel)
+    participant ImpCreate as Impulse Creator<br/>(goal-host-vessel)
+    participant MCP as Activity-API<br/>(:18080, HTTP)
 
     Note over TaskExec,MCP: PHASE 1: LOAD & FORMAT INPUT IMPULSES
 
@@ -250,7 +250,7 @@ sequenceDiagram
     end
 ```
 
-**Implementation:** `repos/minibob/src/llm.ts:360-448`
+**Implementation:** `repos/llm-resolver-vessel/` (LLM tool-calling loop; was `minibob/src/llm.ts:360-448`)
 
 **Key Points:**
 - Impulse context injected at start of user message
@@ -336,9 +336,7 @@ sequenceDiagram
     ImpCreate-->>Task: Impulse stored
 ```
 
-**Implementation:**
-- Bash: `repos/minibob/src/tools.ts:790-835`
-- Git: `repos/minibob/src/tools.ts:1114-1168`
+**Implementation:** `repos/local-tools-vessel/` (was `minibob/src/tools.ts` — bash ~790-835, git ~1114-1168)
 
 **Security Features:**
 - Command whitelist (git, npm, bun, python, ls, cat, grep, make, etc.)
@@ -410,7 +408,7 @@ sequenceDiagram
     LLM-->>Parent: Final response
 ```
 
-**Implementation:** `repos/minibob/src/tools.ts:1214-1246`
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (activity-tool composition; was `minibob/src/tools.ts:1214-1246`)
 
 ### Activity Tool Definition
 
@@ -547,7 +545,7 @@ sequenceDiagram
     end
 ```
 
-**Implementation:** `repos/metabob-activity-api/src/services/ribosome.ts`
+**Implementation:** `repos/ribosome-vessel/` — subscribes to `task.completed` / `lifecycle:execution:succeeded` on the activity-api WebSocket bus and calls `assembleTemplateFromExecution`, writing via the `activityTemplate_update` impulse (replaces the inline minibob ribosome path; `assembleTemplateFromExecution` shared via `ias-executor-ts`).
 
 ### Extraction Criteria
 
@@ -738,7 +736,7 @@ ${recommendations.map(r =>
 `;
 ```
 
-**Implementation:** `repos/minibob/src/activity.ts` (tool argument extraction and injection)
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (tool argument extraction and injection; was `minibob/src/activity.ts`)
 
 ## Error Impulse Creation
 
@@ -787,7 +785,7 @@ ${task.prompt.template}
 `;
 ```
 
-**Implementation:** `repos/minibob/src/impulse.ts:881-961` (createErrorImpulse)
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (createErrorImpulse; was `minibob/src/impulse.ts:881-961`)
 
 ## Complete Data Flow Diagram
 
@@ -912,42 +910,42 @@ graph TD
 
 ## File References
 
-| Component | File | Lines | Purpose |
-|-----------|------|-------|---------|
-| LLM Client | `repos/minibob/src/llm.ts` | 360-448 | Tool calling loop |
-| Tool Definitions | `repos/minibob/src/tools.ts` | 790-1722 | All tool handlers |
-| Bash Resolver | `repos/minibob/src/tools.ts` | 790-835 | Command execution |
-| Git Resolver | `repos/minibob/src/tools.ts` | 1114-1168 | Git operations |
-| Activity Composition | `repos/minibob/src/tools.ts` | 1214-1246 | Nested execution |
-| Ribosome Extractor | `repos/metabob-activity-api/src/services/ribosome.ts` | Full file | Template extraction |
-| Impulse Creation | `repos/minibob/src/impulse.ts` | Full file | Store and lifecycle |
-| Output Impulses | `repos/minibob/src/activity.ts` | 3213-3273 | Tool result → impulse |
-| Error Impulses | `repos/minibob/src/impulse.ts` | 881-961 | Error context capture |
+| Component | File (live equivalent) | Purpose |
+|-----------|------|---------|
+| LLM Resolver | `repos/llm-resolver-vessel/` (`:8220`; was `minibob/src/llm.ts`) | Tool calling loop |
+| Tool Definitions | `repos/local-tools-vessel/` (`:8230`; was `minibob/src/tools.ts`) | All deterministic tool handlers |
+| Bash Resolver | `repos/local-tools-vessel/` (was `tools.ts:790-835`) | Command execution |
+| Git Resolver | `repos/local-tools-vessel/` (was `tools.ts:1114-1168`) | Git operations |
+| Activity Composition | `repos/goal-host-vessel/` + `ias-executor-ts` (was `tools.ts:1214-1246`) | Nested execution |
+| Ribosome Extractor | `repos/ribosome-vessel/` (bus subscriber; `assembleTemplateFromExecution` in ias-executor-ts) | Template extraction |
+| Impulse Creation | `repos/goal-host-vessel/` + `ias-executor-ts` (was `impulse.ts`) | Store and lifecycle |
+| Output Impulses | `repos/goal-host-vessel/` + `ias-executor-ts` (was `activity.ts:3213-3273`) | Tool result → impulse |
+| Error Impulses | `repos/goal-host-vessel/` + `ias-executor-ts` (was `impulse.ts:881-961`) | Error context capture |
 
 ## Implementation Architecture
 
-This sequence is **primarily MiniBob (execution)** with backend involvement for pattern storage and learning.
+This sequence runs **across the substrate vessels (execution)** with backend involvement for pattern storage and learning.
 
-### MiniBob (Execution Environment)
+### goal-host-vessel + resolver vessels (Execution Environment)
 
 **Responsibilities:**
-- LLM resolver with tool calling loop (max 20 iterations)
-- Deterministic resolvers (bash, git, read, write, edit)
-- Activity resolver (nested activity execution for composition)
-- Ribosome resolver (template extraction from successful executions)
-- Impulse context injection into LLM prompts
-- Tool argument pattern extraction
-- Output impulse creation from tool results
-- Error impulse creation on validation failures
-- State capture (input/output/transition)
+- LLM resolver with tool calling loop (max 20 iterations) — `llm-resolver-vessel`
+- Deterministic resolvers (bash, git, read, write, edit) — `local-tools-vessel`
+- Activity resolver (nested activity execution for composition) — `goal-host-vessel`
+- Ribosome resolver (template extraction from successful executions) — `ribosome-vessel` (bus subscriber)
+- Impulse context injection into LLM prompts — `goal-host-vessel`
+- Tool argument pattern extraction — `goal-host-vessel`
+- Output impulse creation from tool results — `goal-host-vessel`
+- Error impulse creation on validation failures — `goal-host-vessel`
+- State capture (input/output/transition) — `goal-host-vessel`
 
-**Key Files:**
-- `repos/minibob/src/llm.ts` (360-448) - LLM tool calling loop
-- `repos/minibob/src/tools.ts` (790-1722) - All tool handlers
-- `repos/minibob/src/activity.ts` (3213-3273) - Activity resolver (composition)
-- `repos/minibob/src/impulse.ts` - Impulse creation and storage
+**Key Files (live):**
+- `repos/llm-resolver-vessel/` (`:8220`) - LLM tool calling loop
+- `repos/local-tools-vessel/` (`:8230`) - all deterministic tool handlers
+- `repos/goal-host-vessel/` + `@avigopal/ias-executor-ts` - activity resolver (composition), impulse creation/storage, tool-arg extraction
+- `repos/ribosome-vessel/` (`:8240`) - template extraction on the bus
 
-**What MiniBob Does NOT Do:**
+**What the execution environment Does NOT Do:**
 - Does NOT compute tool argument success rates (backend aggregates)
 - Does NOT select "best" argument patterns (backend provides recommendations)
 - Does NOT persist patterns beyond session (backend stores)
@@ -972,8 +970,8 @@ This sequence is **primarily MiniBob (execution)** with backend involvement for 
 
 **Key Files:**
 - `repos/metabob-activity-api/src/routes/activities.ts` - Tool pattern endpoints
-- `repos/metabob-activity-api/src/services/ribosome.ts` - Template extraction service
 - `repos/metabob-activity-api/src/routes/composition-edges.ts` - Composition tracking
+- (Template extraction itself runs in `repos/ribosome-vessel/`, which writes via the `activityTemplate_update` impulse)
 
 ### SurrealDB Schema
 
@@ -991,13 +989,13 @@ This sequence is **primarily MiniBob (execution)** with backend involvement for 
 
 ### Correct Separation
 
-**MiniBob handles (execution-time):**
-- Tool execution (bash, git, file operations)
-- LLM tool calling loop (max 20 iterations)
-- Activity composition (nested execution)
-- Ribosome extraction logic (template assembly)
-- Impulse creation (output, error, argument impulses)
-- State transitions (before/after hashes)
+**The execution environment handles (execution-time):**
+- Tool execution (bash, git, file operations) — `local-tools-vessel`
+- LLM tool calling loop (max 20 iterations) — `llm-resolver-vessel`
+- Activity composition (nested execution) — `goal-host-vessel`
+- Ribosome extraction logic (template assembly) — `ribosome-vessel`
+- Impulse creation (output, error, argument impulses) — `goal-host-vessel`
+- State transitions (before/after hashes) — `goal-host-vessel`
 
 **Activity-API handles (storage/learning):**
 - Tool argument pattern storage
@@ -1008,22 +1006,22 @@ This sequence is **primarily MiniBob (execution)** with backend involvement for 
 - Template registration (from ribosome)
 
 **Why This Separation Matters:**
-- MiniBob executes tools synchronously (no backend latency)
+- The resolver vessels execute tools directly (no backend latency on the hot path)
 - Backend learns from tool usage patterns asynchronously
 - Tool recommendations improve over time (Thompson Sampling)
-- Ribosome extracts templates locally, backend stores for reuse
+- ribosome-vessel extracts templates from the event bus, backend stores for reuse
 - Composition tracking enables learning orchestration patterns
 
 **Key Architectural Point:**
-Resolvers execute in MiniBob (local), but their patterns are learned in the backend (aggregated). This allows offline execution with optional online learning.
+Resolvers execute in the substrate vessels (goal-host-vessel + llm-/local-tools-/ribosome-vessel), but their patterns are learned in the backend (aggregated). This separates execution from online learning.
 
 ## Related Documentation
 
 - [Impulse Resolution](./02-impulse-resolution.md) - How impulses are loaded
 - [Activity Selection](./01-activity-selection.md) - How activities are chosen
-- [Improvisation](./04-improvisation-failure-modes.md) - What happens on failure
+- [Improvisation](./04-improvisation-failure-modes.md) - What happens on failure (incl. in-flight recovery)
 - [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) - Foundational model
 
 ---
 
-**Last Updated:** 2026-04-16
+**Last Updated:** 2026-06 (re-narrated: resolvers split across llm-resolver-vessel / local-tools-vessel / goal-host-vessel / ribosome-vessel)

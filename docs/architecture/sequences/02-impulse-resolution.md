@@ -1,15 +1,15 @@
 # Impulse Resolution During Activity Execution
 
-> **Status (2026-05-27):** The 6-step resolver dispatch chain (local → custom → discovery → MCP → fallback) and the filtering/budget/context-injection flow are still conceptually accurate. The `impulse.ts` and `vessel-discovery.ts` file refs are for minibob's old copy; the live implementation lives in `goal-host-vessel` / `ias-executor-ts`. The `ActivityExecutor (activity.ts)` participant has moved to `GoalHost (goal-host-vessel)`; `MCPBackend (mcp.ts)` is now `activity-api` reached via HTTP discovery contract rather than a local MCP client.
+> **Status (2026-06):** The 6-step resolver dispatch chain (local → custom → discovery → backend → fallback) and the filtering/budget/context-injection flow are still conceptually accurate, but they run **inside goal-host-vessel, not minibob** (minibob is deprecated and no longer executes anything). The `impulse.ts` and `vessel-discovery.ts` file refs were minibob's old copy; the live implementation lives in `goal-host-vessel` / `ias-executor-ts`. The `ActivityExecutor (activity.ts)` participant is now `GoalHost (goal-host-vessel)`; the `MCPBackend (mcp.ts)` participant is now `activity-api` (`:18080`) reached over HTTP via the discovery resolver contract, not a local MCP client. The LOCAL filesystem/process resolvers (file, directoryTree, gitDiff, bash) are owned by `local-tools-vessel` (`:8230`); discovery routing is unchanged.
 
 ## Overview
 
-This document maps the complete lifecycle of impulse resolution during activity execution, from filtering through resolution to context injection into LLM prompts. The impulse resolution system is the core data access mechanism in MiniBob, enabling metadata-first reasoning and lazy-loaded content.
+This document maps the complete lifecycle of impulse resolution during activity execution, from filtering through resolution to context injection into LLM prompts. The impulse resolution system is the core data access mechanism of the executing vessel (goal-host-vessel), enabling metadata-first reasoning and lazy-loaded content.
 
 ## Key Concepts
 
 1. **Relevance Filtering** - Impulses filtered by learned relevance scores before loading
-2. **6-Step Resolver Dispatch** - Priority-ordered resolution chain (local → custom → discovery → MCP → fallback)
+2. **6-Step Resolver Dispatch** - Priority-ordered resolution chain (local → custom → discovery → backend → fallback), executed in goal-host-vessel
 3. **Budget Enforcement** - Content truncated to fit token budgets with metadata capture
 4. **Dual-Mode Formatting** - Pointer-mode (metadata only) vs content-mode (full content)
 5. **Impulse Evolution Tracking** - Before/after hashes track state transitions (P3.2)
@@ -21,13 +21,13 @@ This document maps the complete lifecycle of impulse resolution during activity 
 ```mermaid
 sequenceDiagram
     actor User as Task Executor
-    participant Act as ActivityExecutor<br/>(activity.ts)
-    participant IF as ImpulseFilter<br/>(impulse-filter.ts)
-    participant ImpStore as ImpulseStore<br/>(impulse.ts)
-    participant IR as ImpulseResolver<br/>(impulse.ts)
-    participant Local as LocalResolvers
+    participant Act as ActivityExecutor<br/>(goal-host-vessel)
+    participant IF as ImpulseFilter<br/>(goal-host-vessel)
+    participant ImpStore as ImpulseStore<br/>(goal-host-vessel)
+    participant IR as ImpulseResolver<br/>(goal-host-vessel)
+    participant Local as LocalResolvers<br/>(local-tools-vessel)
     participant Disc as DiscoveryVessel
-    participant MCP as MCPBackend<br/>(mcp.ts)
+    participant MCP as Activity-API<br/>(:18080, HTTP)
     participant Cache as DiscoveryCache
 
     User->>Act: executeTask()
@@ -283,7 +283,7 @@ sequenceDiagram
 - `cost_usd`: Resolution cost (budget optimization)
 
 **Implementation:**
-- Location: `repos/minibob/src/activity.ts:2915+` (executeWithResolver)
+- Location: `repos/goal-host-vessel/` + `ias-executor-ts` (executeWithResolver; was `minibob/src/activity.ts`)
 - Trace field: `execution.impulse_resolutions: [{...}]`
 - Backend storage: `execution` table with `resolved_by_vessel_id` field
 
@@ -342,7 +342,7 @@ sequenceDiagram
     Filter-->>Act: FilterResult {<br/>  toLoad: impulseId[],<br/>  toSkip: impulseId[],<br/>  reasoning: {<br/>    per_impulse_decisions,<br/>    tokens_saved,<br/>    cost_saved<br/>  }<br/>}
 ```
 
-**Implementation:** `repos/minibob/src/impulse-filter.ts`
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/impulse-filter.ts`)
 
 **Environment Variables:**
 - `IMPULSE_RELEVANCE_THRESHOLD` (default: 0.5)
@@ -454,7 +454,7 @@ sequenceDiagram
     end
 ```
 
-**Implementation:** `repos/minibob/src/vessel-discovery.ts`
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/vessel-discovery.ts`)
 
 **Configuration:**
 - Discovery cache TTL: 5 minutes
@@ -515,7 +515,7 @@ export function authenticate(user: User) {
 </impulse>
 ```
 
-**Implementation:** `repos/minibob/src/impulse.ts:742-755`
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/impulse.ts:742-755`)
 
 ## Budget Enforcement and Truncation
 
@@ -576,7 +576,7 @@ function enforceBudget(content: string, budget: number): {
 }
 ```
 
-**Implementation:** `repos/minibob/src/impulse.ts:151-181`
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/impulse.ts:151-181`)
 
 ## State Transition Tracking (P3.2)
 
@@ -683,48 +683,46 @@ const impulseEvolution = {
 
 ## File References
 
-| Component | File | Purpose |
+| Component | File (live equivalent) | Purpose |
 |-----------|------|---------|
-| Impulse Store | `repos/minibob/src/impulse.ts` | Core impulse lifecycle (1056 lines) |
-| Filtering | `repos/minibob/src/impulse-filter.ts` | Relevance-based filtering |
-| State Space Manager | `repos/minibob/src/state-space-manager.ts` | Shape querying, compatibility |
-| Discovery Integration | `repos/minibob/src/vessel-discovery.ts` | Vessel discovery client |
-| MCP Backend | `repos/minibob/src/mcp.ts` | Backend integration |
-| Activity Executor | `repos/minibob/src/activity.ts` | Lines 2920-3110 (impulse integration) |
+| Impulse Store | `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/impulse.ts`) | Core impulse lifecycle |
+| Filtering | `repos/goal-host-vessel/` + `ias-executor-ts` (was `impulse-filter.ts`) | Relevance-based filtering |
+| State Space Manager | `repos/goal-host-vessel/` + `ias-executor-ts` (was `state-space-manager.ts`) | Shape querying, compatibility |
+| Discovery Integration | `repos/goal-host-vessel/` + `ias-executor-ts` (was `vessel-discovery.ts`) | Vessel discovery client |
+| Backend client | HTTP to activity-api `:18080` via discovery contract (was `minibob/src/mcp.ts`) | Backend integration |
+| Activity Executor | `repos/goal-host-vessel/` + `ias-executor-ts` (was `activity.ts`) | Impulse integration |
+| Filesystem/process resolvers | `repos/local-tools-vessel/` (`:8230`) | file/directoryTree/gitDiff/bash resolution |
 
 ## Implementation Architecture
 
-This sequence is **entirely MiniBob-local** with optional backend integration for learning.
+This sequence runs in **goal-host-vessel** (dispatching filesystem/process to `local-tools-vessel`), with backend integration for learning.
 
-### MiniBob (Execution Environment)
+### goal-host-vessel (Execution Environment)
 
 **Responsibilities:**
-- **6-step resolver dispatch** (local → custom → discovery → MCP → fallback) - THIS IS THE KEY ARCHITECTURAL POINT
+- **6-step resolver dispatch** (local → custom → discovery → backend → fallback) - THIS IS THE KEY ARCHITECTURAL POINT
 - Relevance-based filtering (query backend for scores)
-- Pointer resolution for all LOCAL types (memo, file, directoryTree, gitDiff)
+- Pointer resolution for all LOCAL types (memo, file, directoryTree, gitDiff) — filesystem/process via `local-tools-vessel`
 - Custom resolver registration and invocation
 - Discovery-vessel queries for capability-based routing
-- MCP backend delegation as last resort
+- Backend delegation (HTTP to activity-api) as last resort
 - Budget enforcement and content truncation
 - Impulse state tracking (before/after hashes)
 - Context formatting (pointer-mode vs content-mode)
 
-**Key Files:**
-- `repos/minibob/src/impulse.ts` (1056 lines) - **Core resolver dispatch logic**
-- `repos/minibob/src/impulse-filter.ts` - Relevance filtering
-- `repos/minibob/src/state-space-manager.ts` - Shape compatibility
-- `repos/minibob/src/vessel-discovery.ts` - Discovery integration
-- `repos/minibob/src/mcp.ts` - Backend client (optional)
+**Key Files (live):**
+- `repos/goal-host-vessel/` + `@avigopal/ias-executor-ts` — **core resolver dispatch logic**, relevance filtering, shape compatibility, discovery integration, backend client
+- `repos/local-tools-vessel/` — filesystem/process resolvers dispatched to via discovery
 
-**The 6-Step Resolver Dispatch (MiniBob-Owned):**
+**The 6-Step Resolver Dispatch (goal-host-vessel-owned):**
 1. **LOCAL: memo** - Return embedded content directly
-2. **LOCAL: file/directoryTree/gitDiff** - Filesystem operations
+2. **LOCAL: file/directoryTree/gitDiff** - Filesystem operations (via `local-tools-vessel`)
 3. **CUSTOM: registered resolvers** - Plugin-style custom resolvers
 4. **DISCOVERY: vessel discovery** - Query discovery-vessel for capable vessels
-5. **BACKEND: MCP fallback** - Delegate to activity-api via MCP
+5. **BACKEND: activity-api fallback** - Delegate to activity-api over HTTP via discovery contract
 6. **FALLBACK: in-memory cache** - Activity output from current session
 
-**What MiniBob Does NOT Do:**
+**What goal-host-vessel Does NOT Do:**
 - Does NOT persist impulses beyond session (backend does this)
 - Does NOT aggregate relevance metrics (backend computes these)
 - Does NOT resolve activity-specific types without backend (activityExecutionTrace, activityTemplate, etc.)
@@ -779,9 +777,9 @@ This sequence is **entirely MiniBob-local** with optional backend integration fo
 
 ### Correct Separation
 
-**MiniBob handles (execution-time):**
+**goal-host-vessel handles (execution-time):**
 - Resolver dispatch (6-step chain) - **THIS IS CRITICAL**
-- Local resolution (memo, file, directoryTree, gitDiff)
+- Local resolution (memo, file, directoryTree, gitDiff — filesystem/process via local-tools-vessel)
 - Discovery queries (find vessels for shapes)
 - Budget enforcement (truncation)
 - Context formatting (pointer-mode vs content-mode)
@@ -800,13 +798,13 @@ This sequence is **entirely MiniBob-local** with optional backend integration fo
 - Health scoring and circuit breaking
 
 **Why This Separation Matters:**
-- MiniBob can resolve LOCAL impulses offline (no backend needed for file/memo/directoryTree)
+- goal-host-vessel can resolve LOCAL impulses without the backend (file/memo/directoryTree via local-tools-vessel)
 - Backend only queried for relevance filtering and activity-specific shapes
 - Discovery enables dynamic routing without hardcoded endpoints
-- Resolver dispatch stays in MiniBob (execution environment), not backend
+- Resolver dispatch stays in goal-host-vessel (execution environment), not backend
 
 **Key Architectural Point:**
-The 6-step resolver dispatch is **MiniBob's responsibility**, not the backend's. The backend is a resolver among many, not the universal resolution authority.
+The 6-step resolver dispatch is **goal-host-vessel's responsibility**, not the backend's. The backend is a resolver among many, not the universal resolution authority.
 
 ## Related Documentation
 
@@ -817,4 +815,4 @@ The 6-step resolver dispatch is **MiniBob's responsibility**, not the backend's.
 
 ---
 
-**Last Updated:** 2026-04-16
+**Last Updated:** 2026-06 (re-narrated: resolver dispatch runs in goal-host-vessel; LOCAL fs/process via local-tools-vessel; backend reached over HTTP)

@@ -1,8 +1,8 @@
 # TypeScript Vessel Template
 
-**Last updated:** 2026-05-27 (S2 context + async dispatch pattern; see also commit `ac0d75b5`)
+**Last updated:** 2026-06-24 (deployment-framing realignment — single-container substrate / systemd units are the primary path; Helm/K8s is downstream-only; analysis-vessel cited as the current exemplar)
 
-**Previous updates:** 2026-05-24 (Phase 0.6 — VesselDaemon as canonical starting point; `openspec/changes/2026-05-23-substrate-explicit-vessels/`); 2026-04-24 (distilled from `repos/concept-db` Wave 1-3 upgrade)
+**Previous updates:** 2026-05-27 (S2 context + async dispatch pattern; see also commit `ac0d75b5`); 2026-05-24 (Phase 0.6 — VesselDaemon as canonical starting point; `openspec/changes/2026-05-23-substrate-explicit-vessels/`); 2026-04-24 (distilled from `repos/concept-db` Wave 1-3 upgrade)
 
 > **S2 note (2026-05-27):** The system has entered S2 (substrate-authored, supervised). New vessel proposals now flow through the substrate's propose-spec pipeline rather than being operator-authored from scratch. The operator role is reviewer and anchor maintainer — rotating anchors when justified, approving H5 baselines, and running adversarial probes — not primary author. The construction mechanics in this doc remain valid; the change is in who initiates a new vessel spec.
 
@@ -61,6 +61,7 @@ for (let i = 0; i < 60; i++) {
 **When to use the manual approach instead:** if your vessel does not execute activities (e.g. it's a pure resolver like `local-tools-vessel`) or has no shapes to advertise (e.g. `ribosome-vessel` which is a pure WebSocket consumer), assemble `DiscoveryRegistrationLoop` directly and skip `ActivityExecutor`.
 
 **Live references:**
+- `repos/analysis-vessel/` — current stateless resolver exemplar (port 8250; 6 code-analysis shapes via `VesselDaemon` + `ActivityExecutor`; no SurrealDB). Read `src/index.ts` for the canonical localhost-default + `VesselDaemon.start()` shape. Sibling new-vessels built the same way: relevance-sink-vessel (8255), stateful-ui-vessel (8270), light-dispatch-vessel (8280), metric-collector-vessel (8300).
 - `repos/local-tools-vessel/` — minimal resolver vessel using `VesselDaemon` (≤100 LOC)
 - `repos/goal-host-vessel/` — HTTP wrapper for `GoalHost` using `DiscoveryRegistrationLoop`
 - `repos/ribosome-vessel/` — pure WebSocket consumer (no shapes); shows when NOT to use VesselDaemon
@@ -189,7 +190,13 @@ repos/<vessel>/
 └── Dockerfile                     # two-stage Bun build, HEALTHCHECK, non-root user
 ```
 
-And in the deployment repo:
+And for the **local single-container substrate** (the primary development target — see "Deployment wiring" below), a systemd unit file:
+
+```
+scripts/substrate/units/<vessel>.service   # Type=simple Bun unit; EnvironmentFile + PORT/VESSEL_ID/DISCOVERY env
+```
+
+The **downstream** Helm chart (canary/production only) lives in the deployment repo:
 
 ```
 repos/deployment/
@@ -232,7 +239,7 @@ interface Config {
   // Discovery-vessel client
   discovery: {
     enabled: boolean;
-    endpoint: string;              // http://discovery-vessel.activity-system.svc.cluster.local:8080
+    endpoint: string;              // local substrate: http://127.0.0.1:8100 (host: http://localhost:18100); canary: discovery-vessel .svc.cluster.local
     vesselId: string;              // generateVesselId() — reads VESSEL_ID then POD_NAME/HOSTNAME
     vesselName: string;
     heartbeatIntervalMs: number;   // 60000
@@ -261,15 +268,17 @@ Singleton class with `register()`, `heartbeat()`, `shutdown()`. Exponential back
 **Registration payload:**
 
 ```json
+// local substrate (systemd unit; endpoint is the in-container 127.0.0.1 port):
 {
-  "vesselId": "concept-db-<pod-name>",
+  "vesselId": "concept-db-local",
   "vesselName": "concept-db",
   "version": "0.1.0",
-  "endpoint": "http://concept-db.activity-system.svc.cluster.local:8081",
+  "endpoint": "http://127.0.0.1:8260",
   "shapes": ["concept", "conceptGraph", "relatedConcepts", "conceptUsageStats", "conceptSequence"],
   "protocol": "http",
-  "metadata": { "environment": "k8s-cluster", "podId": "...", "port": 8081 }
+  "metadata": { "environment": "substrate-live", "port": 8260 }
 }
+// downstream canary/production substitutes the .svc.cluster.local endpoint and a per-pod vesselId.
 ```
 
 **Auth:** `Authorization: ApiKey ${METABOB_API_KEY}`. Attach conditionally — if the env var is empty, log a warning and send unauthenticated (dev mode); production will reject and the warning tells you why.
@@ -331,7 +340,86 @@ Useful for: invalidating caches when records change, auto-linking related entiti
 
 ---
 
-## Deployment wiring (Helm)
+## Deployment wiring
+
+> **Local development runs on the single-container substrate (Phase 26+), not Helm.**
+> Vessels run as **systemd units** inside the `substrate-live` docker container;
+> there is no Kubernetes, no Istio, and no Helm in the local loop. Helm applies only
+> to the **downstream** canary/production substrates. Mirror the framing in
+> CLAUDE.md §7 and [`docs/SUBSTRATE.md`](../SUBSTRATE.md). When you build a new vessel,
+> wire it as a substrate unit first — that is where you iterate.
+
+### Primary path: register a new vessel as a substrate unit
+
+Each local vessel is a `Type=simple` Bun process launched by a systemd unit under
+`scripts/substrate/units/<vessel>.service`. The container maps each vessel's internal
+port to a host port with an **18000 offset** (`18xxx → 8xxx`) — activity-api
+`18080→8080`, goal-host `18210→8210`, analysis-vessel `18250→8250`. Internal
+vessel-to-vessel calls use `127.0.0.1:808x` directly inside the container; you reach a
+vessel from the host at `http://localhost:18xxx`.
+
+A minimal unit, copied from the real `scripts/substrate/units/analysis-vessel.service`
+(the current stateless-resolver exemplar — port 8250):
+
+```ini
+[Unit]
+Description=analysis-vessel
+After=discovery-vessel.service identity-vessel.service
+Wants=discovery-vessel.service identity-vessel.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env                       # shared substrate env (METABOB_API_KEY, ACTIVITY_API_URL, …)
+Environment=PORT=8250
+Environment=HOST=127.0.0.1
+Environment=VESSEL_ID=analysis-vessel-local
+Environment=VESSEL_ENDPOINT=http://127.0.0.1:8250
+Environment=DISCOVERY_VESSEL_ENDPOINT=http://127.0.0.1:8100
+WorkingDirectory=/vessels/analysis-vessel
+ExecStart=/root/.bun/bin/bun /vessels/analysis-vessel/src/index.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Notes:
+- **No secretKeyRef / no POD_NAME fieldRef.** Inside the container, `METABOB_API_KEY`
+  comes from the shared `EnvironmentFile=/etc/substrate/env`, and `VESSEL_ID` is a
+  fixed `<vessel>-local` literal (single replica — no per-pod ID needed).
+- **`After=`/`Wants=` discovery-vessel + identity-vessel** is the unit-level analogue
+  of the Helm `needs:` clause; it orders startup so discovery and auth are up first.
+- The vessel still resolves its peer endpoints from env (`DISCOVERY_VESSEL_ENDPOINT`,
+  `ACTIVITY_API_URL`/`ACTIVITY_API_ENDPOINT`), defaulting to localhost
+  (`http://127.0.0.1:8100`, `http://127.0.0.1:8080`) — see
+  `repos/analysis-vessel/src/index.ts` for the `process.env.… ?? "http://127.0.0.1:…"`
+  pattern.
+
+To activate the new unit, add it to `run-live`'s enabled-unit list and register a
+`restart-<vessel>` target in `scripts/substrate/Makefile` (copy the analysis-vessel
+block — `sync-<vessel>` `docker cp`s `repos/<vessel>/src` into
+`/vessels/<vessel>/src`, then `systemctl restart <vessel>.service`). The iteration
+loop is then:
+
+```bash
+# edit repos/<vessel>/src/** → hot-reload into the running container → validate
+make -C scripts/substrate restart-<vessel>          # docker cp src + systemctl restart
+curl -s http://localhost:18250/health | jq .         # vessel reachable on its host port
+curl -s http://localhost:18080/v2/activities/templates  # validate against the substrate
+```
+
+Core vessels without a `restart-*` target (activity-api, identity-vessel,
+discovery-vessel, surrealdb) are restarted directly:
+`docker exec substrate-live systemctl restart <unit>`.
+
+### Downstream path: Helm wiring (canary / production only)
+
+> Everything below applies to the **downstream** K8s substrates, not local work.
+> CI/CD deploys to canary on push to `dev`; the `/deploy` skill promotes
+> canary → production.
 
 The chart and helmfile must plumb:
 
@@ -446,9 +534,10 @@ Before cutting the first release:
 - [ ] Shutdown deregisters from discovery-vessel before exiting
 - [ ] `/health` returns 503 only on DB failure, not on discovery failure
 - [ ] WebSocket observer (if used) reconnects with backoff and never throws out of handlers
-- [ ] Helm chart mounts `METABOB_API_KEY` via `secretKeyRef` and `POD_NAME` via `fieldRef`
-- [ ] Helmfile `needs:` includes `activity-system/discovery-vessel`
-- [ ] Secret provisioning steps documented in the vessel's `CLAUDE.md` (no API keys in values.yaml)
+- [ ] **Substrate unit** at `scripts/substrate/units/<vessel>.service` (`After=`/`Wants=` discovery-vessel + identity-vessel; `EnvironmentFile=/etc/substrate/env`; fixed `PORT`/`VESSEL_ID`)
+- [ ] **Host-port mapping** added to `run-live` (and a `restart-<vessel>` target in `scripts/substrate/Makefile`); vessel reachable at `http://localhost:18xxx/health`
+- [ ] Validated against the local substrate (`http://localhost:18080`) via `make -C scripts/substrate restart-<vessel>` + a confirming dispatch
+- [ ] *(downstream only)* Helm chart mounts `METABOB_API_KEY` via `secretKeyRef` and `POD_NAME` via `fieldRef`; helmfile `needs:` includes `activity-system/discovery-vessel`; secret provisioning documented in the vessel's `CLAUDE.md` (no API keys in values.yaml)
 
 ---
 

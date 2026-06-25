@@ -317,7 +317,7 @@ VESSEL (MiniBob, OpenCode, hardware controller, etc.)
 
 Not every vessel advertises itself. **Implicit vessels** are bundles of resolvers that live inside executors but are not registered with the discovery-vessel and do not advertise shapes. They are vessels structurally — they bundle resolvers, dispatch by pointer shape, and serve content — but they are not addressable from the outside.
 
-Two implicit vessels currently exist in the system:
+Two *internal* implicit vessels currently exist in the system (the boundary sense — operator, peer — is covered below):
 
 1. **ActivityExecutor inside MiniBob** (`repos/minibob/src/activity.ts:1141`). Runs activity templates task-by-task. It is the dispatch engine for both top-level activities and lifecycle subscribers (slot-binding, validator-dispatch, create-shape-provider-goal). It is not registered with discovery; it does not advertise shapes. Top-level activity execution today is invoked via in-process call (`executor.execute(template)`) from `goal-processor.ts`; the **unified execution path** refactor (see "Unified Execution Path" below) is the confirmed direction — goal-shaped and activity-template-shaped pointers will resolve through the standard impulse → resolver dispatch, with the activity resolver running the activity to resolve the pointer.
 
@@ -333,7 +333,9 @@ Two implicit vessels currently exist in the system:
 
 2. **Thompson Sampling vessel inside activity-api**. Computes α/β/sample_count posteriors from execution traces; serves them via REST (`variantMetricsSummary`, `GET /v2/activities/:id/variant-scores`); does **not** emit `thompson_posterior` impulses. This is the structural blocker that prevents the system from reasoning about its own decision state via the impulse mechanism — see "Known Gaps".
 
-**Impulse-layer lifecycle events (environment-driven).** Beyond the task-layer and execution-layer events above, the system recognises a third layer of lifecycle events: changes to the impulse pool itself. These are emitted by `ImpulseStore` on pool mutations and are the substrate's interface to external environment changes — the mechanism through which the outside world drives the substrate without a human operator.
+Both of the above are *internal* implicit vessels — bundles of resolvers that live inside an executor. `SUBSTRATE_AS_DEC.md` §0.2 generalises the term to a third, **boundary** sense: an implicit vessel is any subcomplex whose cells and flows are *observed* but whose restriction maps are **latent — inferred from boundary behavior, not declared**. By that reading the **operator is itself an implicit vessel** — the canonical one, the producer of `goalIntent` — and so is a peer substrate known only through behavioral-continuation replay. The human is not outside the system giving it commands; the human is a **node in the topology** whose interior the substrate reconstructs from what crosses the boundary, and whose per-signature trust it learns exactly as it learns any resolver's. The mechanism by which the substrate assesses these boundary entities is `SUBSTRATE_AS_REPRESENTATION.md` §6.1.
+
+**Impulse-layer lifecycle events (environment-driven).** Beyond the task-layer and execution-layer events above, the system recognises a third layer of lifecycle events: changes to the impulse pool itself. These are emitted by `ImpulseStore` on pool mutations and are the substrate's interface to external environment changes — the mechanism through which the outside world drives the substrate without a *standing* human in the loop. (When the driver *is* a human, that human is not outside the system either: it enters as the operator-as-vessel boundary entity described above, modeled per `SUBSTRATE_AS_REPRESENTATION.md` §6.1.)
 
 | Event | When fired | Key payload fields |
 |---|---|---|
@@ -994,15 +996,24 @@ control mechanism.
 The impulse-activity loop is not a recipe executor. It is a **topology discovery engine**:
 
 1. **Goal arrives** → identify which shapes would constitute a goal-satisfying state
-2. **Search learned topology** → find activities that have reliably produced those shapes
+2. **Search learned topology** → find activities that have reliably produced those shapes. A goal that has been reached before short-circuits this: `recommendReachingPath` looks up the prior reaching path by `goal_hash` (per-goal α/β on `goal_execution_paths`) and replays it rather than re-searching (goal-host `5d0f741`).
 3. **Bind impulses** → establish which shapes are reachable from the current pool
 4. **Execute** → traverse the candidate path; observe whether it leads where predicted
-5. **Validate** → verify produced shapes satisfy the goal constraint
-6. **Escalate when needed** → probe unmapped topology via `create-shape-provider-goal`
-7. **Learn** → update posteriors on traversed edges and consumed impulses
-8. **Extract patterns** → ribosome converts successful explorations into reusable templates
+5. **Validate the reach, not just the status** → `status=completed` is not evidence the goal was reached. An LLM-judge (`verifyGoalReached`, goal-host `07feff5`) inspects the produced impulses against the goal *after* execution and emits the `completion_shapes` that would actually satisfy it. A **hollow completion** — an activity that ran cleanly but produced a wrapper/summary instead of the asked-for output — is judged `reached:false` and **β-penalised** on the selected template. This is the goal-reaching **gate**: reward attaches to reaching the goal, not to exiting without error, so gaming and wrapper-dispatch cannot accrue α-credit.
+6. **Recover in-flight** → on `reached:false`, the goal-host `/resolve` loop does not stop: it β-penalises and **excludes** the failed approach, asks for a *different* producer (`recommendExcluding`), and retries until the goal is reached or candidates are exhausted (goal-host `980240b`). Recovery is part of reaching the goal, not offline repair — the **reached** trace is what the ribosome mints into a new activity.
+7. **Escalate when needed** → probe unmapped topology via `create-shape-provider-goal`
+8. **Learn** → update posteriors on traversed edges and consumed impulses; `recordGoalPath` writes the reaching path (or the β-penalty) to `goal_execution_paths` keyed by `goal_hash`, so the per-goal posterior accumulates across attempts (path = attribution, success = *reached*).
+9. **Extract patterns** → ribosome converts successful explorations into reusable templates
 
 Each iteration reduces uncertainty about the composition graph in the vicinity of the goal. Convergence — reliably reaching goal-satisfying states — is evidence that enough topology has been learned, not that the graph is fully known.
+
+> **Schema and mechanism detail:** [`GOAL_EXECUTION_PATHS_SCHEMA.md`](GOAL_EXECUTION_PATHS_SCHEMA.md). The same gate fires whether a goal is dispatched via `mcp__metabob__run_goal` (MCP `/resolve` path) or the human obsidian-vessel surface — both route through goal-host `/run-goal`, both are reach-gated and recorded.
+
+### Reuse Before Mint
+
+When a goal needs an output shape, the substrate prefers an **existing producer** of that shape over minting a fresh activity. Find the producer via `discover-by-shapes` forward mode, then compose/route to it. Minting a duplicate creates a fresh `Beta(1,1)` cell that raises `ρ_grow` (the rate of new uninformed cells) and splits selection traffic across redundant cells; reusing routes flow onto an existing hyperedge, sharpens its posterior, and adds a composition edge that raises `λ₁` (the spectral gap / credit-mixing rate). The substrate's stability inequality is `λ₁(L(t)) ≳ ρ_grow` ([`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md) §3) — reuse pushes both sides the right way and keeps DB queries `O(edges)` rather than `O(cells)`.
+
+Minting is the **justified exception**, not the default: legitimate only when it expands reachable topology with closure (a true gap with no existing producer) or is variant-first repair of a measured weak family. The principle is enforced at the mint chokepoint (development-vessel `activity-create-variant`, `REUSE_BEFORE_MINT`) and at selection (the interposable selector preferring an existing producer over the improvise slot).
 
 ---
 

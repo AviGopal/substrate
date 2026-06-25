@@ -1066,6 +1066,33 @@ both, and an ungrounded world-model and an overconfident self-model fail
 together. (`SUBSTRATE_AS_REPRESENTATION.md` §6 states the same condition
 geometrically: candidate-genesis ⊂ grounded-genesis.)
 
+The deployed form of this validation back-half is the **goal-reaching
+gate** (live since 2026-06). Earlier, the success bit was the activity's
+*exit status* — and that was exactly the gameable reward this section
+warns of: a wrapper activity could exit cleanly having produced an
+`activityExecutionSummary` rather than the asked artifact, scoring `r=1`
+on a hollow completion (Goodhart, [Amodei et al.]). The gate closes the
+hole by making the reward **reach-gated**: `verifyGoalReached` runs an
+LLM-judge *after* execution, emits the `completion_shapes` the goal
+actually required, and returns `reached ∈ {true,false}`; `reached:false`
+drives the β-update, not the exit status. This is the binary success bit
+of §1.1 re-defined as the *degenerate scalarization of the reached
+residual* rather than of process completion — the same vector residual
+`‖g − Π g‖`, now measured against the produced shapes. Two refinements
+follow the same grounding logic: (i) **in-flight recovery** — on
+`reached:false` the resolve loop β-penalises and *excludes* the failed
+approach (`recommendExcluding`) and retries a genuinely different one
+until reached or exhausted, so recovery is part of reaching the goal, not
+offline repair; the *reached* trace is what the ribosome mints; and (ii)
+**per-goal credit** — `recordGoalPath` accumulates a per-goal Beta
+posterior keyed by `goal_hash` (path = attribution, success = reached),
+so a repeated goal reuses its reaching path. This is a concrete
+deployment of the grounding condition, not new theory; the reward it
+produces is still the §1.1 residual, and the gate is still the
+back-half whose integrity §12.6 requires. Schema and the verified-live
+α/β accumulation: `docs/architecture/GOAL_EXECUTION_PATHS_SCHEMA.md`;
+the execution-walk placement (step 6) is `SUBSTRATE_AS_SOFTWARE.md` §3.2.
+
 ### 12.7 Orthogonality ≠ independence; measure the right one
 
 Orthogonality (zero covariance, diagonal Gram matrix) is strictly
@@ -1132,7 +1159,10 @@ resolver is not a constructive completion of the informational state,
 but it does not worsen the limit either; resolver quality is orthogonal
 to that ceiling. Net: the substrate is a thing that can hold any model
 at arm's length and learn its trust-boundary; it is not a thing any
-single model can hold.
+single model can hold. The same per-signature competence map applies, unchanged,
+to *any* boundary entity — the human operator and a peer substrate included; that
+generalization (operator ≡ peer ≡ embedded model, all modeled boundary entities)
+is `SUBSTRATE_AS_REPRESENTATION.md` §6.1.
 
 ## References
 

@@ -23,26 +23,34 @@ DATA_JSON="${VAULT}/.obsidian/plugins/metabob-vessel/data.json"
 # shellcheck disable=SC1091
 [ -f /etc/substrate/env ] && set -a && . /etc/substrate/env && set +a
 
-# --- Re-point the seeded vault config from host-mapped ports to in-container ---
-# The committed vault/ seed targets the host-mapped ports (18080/18260) because
-# that is what the operator's host Obsidian uses. Inside the container the real
-# ports are 8080/8260, and the plugin must use the live api key. data.json is a
-# real file (not a symlink), so patching it does not touch the source tree.
-if [ -f "${DATA_JSON}" ]; then
-  tmp="$(mktemp)"
-  jq --arg key "${METABOB_API_KEY:-}" '
-        .activityApiUrl   = "http://127.0.0.1:8080"
-      | .websocketUrl     = "ws://127.0.0.1:8080/ws"
-      | .conceptDbEndpoint = "http://127.0.0.1:8260"
-      | .goalHostEndpoint = "http://127.0.0.1:8210"
-      | .discoveryVesselEndpoint = "http://127.0.0.1:8100"
-      | .advertisedHost   = "127.0.0.1"
-      | (if $key != "" then .apiKey = $key else . end)
-    ' "${DATA_JSON}" > "${tmp}" && mv "${tmp}" "${DATA_JSON}" \
-    || echo "[obsidian-desktop] WARN: could not patch ${DATA_JSON}" >&2
-else
-  echo "[obsidian-desktop] WARN: ${DATA_JSON} missing — plugin will be unconfigured" >&2
-fi
+# --- Point the vault config at the in-container fleet (create OR patch) -------
+# The plugin must talk to activity-api / concept-db / discovery / goal-host over
+# plain localhost on the REAL in-container ports (8080/8260/8100/8210), with the
+# live api key. data.json is a real file (not a symlink), so writing it does not
+# touch the source tree.
+#
+# CRITICAL: on a fresh boot the plugin has not created data.json yet, so a
+# patch-if-exists block silently skips and Obsidian loads the plugin with EMPTY
+# defaults (activityApiUrl="") — leaving the vessel unconfigured and unable to
+# register or resolve. We therefore CREATE the file when missing so the plugin
+# loads correct config on first start; jq merges onto an existing file otherwise.
+PLUGIN_DIR="${VAULT}/.obsidian/plugins/metabob-vessel"
+mkdir -p "${PLUGIN_DIR}"
+[ -f "${DATA_JSON}" ] || printf '%s\n' '{}' > "${DATA_JSON}"
+tmp="$(mktemp)"
+jq --arg key "${METABOB_API_KEY:-}" '
+      .activityApiUrl   = "http://127.0.0.1:8080"
+    | .websocketUrl     = "ws://127.0.0.1:8080/ws"
+    | .conceptDbEndpoint = "http://127.0.0.1:8260"
+    | .goalHostEndpoint = "http://127.0.0.1:8210"
+    | .discoveryVesselEndpoint = "http://127.0.0.1:8100"
+    | .advertisedHost   = "127.0.0.1"
+    | .vesselId         = (if (.vesselId // "") == "" then "obsidian-vessel" else .vesselId end)
+    | .vesselName       = (if (.vesselName // "") == "" then "Obsidian Knowledge Vessel" else .vesselName end)
+    | (if $key != "" then .apiKey = $key else . end)
+  ' "${DATA_JSON}" > "${tmp}" && mv "${tmp}" "${DATA_JSON}" \
+  && echo "[obsidian-desktop] wrote in-container config to ${DATA_JSON}" >&2 \
+  || echo "[obsidian-desktop] WARN: could not write ${DATA_JSON}" >&2
 
 # --- Register the vault with Obsidian so it opens without the vault picker ---
 mkdir -p /root/.config/obsidian

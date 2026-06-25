@@ -177,3 +177,22 @@ scripts/substrate/surreal-data/
 # system; ignore wholesale. Already-tracked seed fixtures (e.g. the fm-51
 # scenario) stay tracked — .gitignore does not untrack them.
 scripts/substrate/workspace/
+
+# ── Untracked heavy nested-git checkouts (kept on disk, out of git) ──
+# Multi-GB sibling repos that live under repos/ but are not super-repo
+# submodules. Committing them as plain files would bloat history irreversibly.
+/repos/activity-dashboard/
+/repos/metabob-analysis-api/
+/repos/metabob-dashboard/
+/repos/metabob-opencode/
+/repos/k8s-activity-executor/
+/repos/vessels/
+/validation/polyglot-benchmark/
+/validation/repos/
+
+# ── Ephemeral substrate runtime + benchmark outputs ──
+/workspace/
+/validation/results/*.json
+/validation/activity-reuse-benchmark-*.json
+# stray root scratch file
+/disrupt-application.md

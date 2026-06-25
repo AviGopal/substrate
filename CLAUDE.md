@@ -124,6 +124,22 @@ S3 has no acceptance gate. It is emergent and operator-measured by **active push
 
 **Recent stabilisation** (most-recent first):
 
+> Note: local substrate vessels run **from source** (edit → `docker cp`/restart, no
+> version bump), so the `package.json` numbers above lag the June work below. The
+> canonical home for the execution model these changes produced is
+> [`docs/architecture/SUBSTRATE_AS_SOFTWARE.md`](docs/architecture/SUBSTRATE_AS_SOFTWARE.md)
+> (the execution walk × durability) and
+> [`docs/architecture/GOAL_EXECUTION_PATHS_SCHEMA.md`](docs/architecture/GOAL_EXECUTION_PATHS_SCHEMA.md)
+> (the goal-reaching gate + per-goal learning).
+
+*June 2026 — shape-graph walk, goal-reaching, and the autonomous self-development loop*
+- **Shape-graph "walk" engine** (goal-host-vessel + activity-api): goal execution now *walks the impulse pool* — backward-chaining from goal shapes, forward-producer OR-edges, **mint-as-you-go bridge-authoring**, and data-flow `{{shape}}` binding — instead of a single-template Thompson pick. **State-conditioned Thompson (C6)** keys selection on a recorded state-space signature; **genuine composition edges (C7)** are derived from shape-flow provenance.
+- **Goal-reaching gate** (goal-host `07feff5`): `verifyGoalReached` is an LLM-judge run *after* execution that emits `completion_shapes`; hollow completion (`status=completed` but the asked output not produced) → `reached:false` → β-penalty on the selected template. Reward is now *reaching the goal*, not exit-status.
+- **In-flight goal-seeking recovery** (goal-host `980240b`): on `reached:false` the `/resolve` loop β-penalises + **excludes** the failed approach (`recommendExcluding`) and retries a genuinely different one, until reached or exhausted. The *reached* trace is what the ribosome mints.
+- **Unified per-goal learning** (goal-host `5d0f741`, activity-api `172ce84`): goals from `mcp__metabob__run_goal` and from the human Obsidian surface both dispatch through goal-host `/run-goal`+`/resolve`, both gated, both recorded to `goal_execution_paths` keyed by `goal_hash` (path = attribution, success = reached, per-goal α/β). The goal-paths insert path (which 500'd on every insert) was fixed.
+- **Write-contention fix** (2026-06-21): SurrealDB read/write conflicts were silently dropping learning writes; fixed with a posterior-delta **coalescing aggregator** (N concurrent +δ → 1 +Σδ/250 ms) + conflict-retry. Impulse-relevance **penalty writes were decoupled** onto a dedicated **relevance-sink-vessel** (port 8255), off the activity-api trace store.
+- **Autonomous self-development loop is live**: `gap-compose` → `feature_compose` (decompose spec → surgical ops → typecheck-verify → rollback-if-UNFAVORABLE) → **mitosis cutover** (commit → push `origin/dev` → restart with typecheck-evidence), plus a `self-recovery` immune system (detect broken vessel → restart → revert `/vessels` to last-good host source → escalate), `compose-teacher` (organic producer→consumer composition to break the star topology), and `composition-edge-reconcile`. The substrate authors and lands its own commits. Per-unit cadence and the canonical-owner mapping are in `SUBSTRATE_AS_SOFTWARE.md` §5.
+
 *Phase 18 — Learning loop measurement + dense search (2026-05-13)*
 - **Dense semantic search active**: `all-MiniLM-L6-v2` ONNX model (INT8, 22MB) bundled in the activity-api image at `src/assets/models/`. `POST /v2/activities/recommend` returns `fallback_tier: "fts_hybrid"` confirming `queryActivitiesByDense` + `mergeByRRF` are active. O(n) cosine-similarity scan (not HNSW — indexes were dropped in migration 110 due to pod CPU spikes; HNSW is gated on infra stabilization). **F-V58 fix (2026-05-18)**: `EMBEDDING_MODEL_DIR` env was missing from Dockerfile runtime stage, causing `embedding.status=disabled` on all pods since Phase 18.5; fixed in `1.20.9-66fb99c`.
 - **G5 embedding backfill complete**: 1640/3135 templates updated from 1536-dim OpenAI → 384-dim MiniLM vectors via `scripts/backfill-embeddings.ts`. 1495 double-prefix records (`activity:⟨activity:⟨…⟩⟩`) skipped (unreachable via `type::record()`; excluded from dense scan by `length === 384` guard). Post-backfill MRR: 0.1542 (FTS-only; dense was disabled). Post-F-V58-fix MRR: **0.2361** (+0.0819), `improvise_health.success_rate=1.0` (3/3). Report: `validation/results/2026-05-18-reuse-report.json`. Prior FTS-only report: `validation/results/2026-05-13-post-g5-backfill-reuse-report.json`.

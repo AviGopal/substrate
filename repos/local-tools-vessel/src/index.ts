@@ -1,10 +1,15 @@
 /**
+ * NOTE: All resolvers in this vessel are deterministic.
+ * Health endpoint: GET /health returns service status.
  * local-tools-vessel — deterministic shell/file/git resolver vessel.
+ * Maintained by the substrate loop.
+
  *
  * Spec: openspec/changes/2026-05-23-substrate-explicit-vessels Phase 1, task 1.1.
  * Port: 8230  |  Discovery: http://127.0.0.1:8100
  * Shapes: shellResult, fileContent, fileWriteResult, fileEditResult,
  *         gitStatus, gitDiff, gitCommitResult
+ * Runtime: Bun.
  */
 
 import { ActivityExecutor, ExecutionRuntime, VesselDaemon } from "@avigopal/ias-executor-ts";
@@ -49,7 +54,11 @@ const fsRead: ResolverHandler = async (ctx) => {
 };
 
 const fsWrite: ResolverHandler = async (ctx) => {
-  const path = str(ctx.body, "path"), content = str(ctx.body, "content");
+  // Read from impulse.pointer too — callers (patch_with_tools authoring a
+  // NET-NEW file) dispatch via the impulse envelope, so top-level-only reads
+  // made every such call fail with "required". Mirrors fsEdit / fsRead.
+  const path = str(ctx.body, "impulse", "pointer", "path") ?? str(ctx.body, "path");
+  const content = str(ctx.body, "impulse", "pointer", "content") ?? str(ctx.body, "content");
   if (!path || content === undefined) return { error: "path and content are required" };
   return Bun.write(path, content).then(() => ({ shape: "fileWriteResult", path, ok: true }))
     .catch(e => ({ error: (e as Error).message }));
@@ -281,7 +290,14 @@ const codeVerifyTypecheck: ResolverHandler = async (ctx) => {
   if (!cwd) return { error: "cwd is required" };
   try {
     const r = await sh(`${bunCmd} run ${script}`, cwd);
-    const tail = r.stderr.length > 4096 ? r.stderr.slice(-4096) : r.stderr;
+    // tsc (`bun run typecheck`) writes diagnostics to STDOUT, not stderr — the
+    // old code scanned only stderr, so error_count was ALWAYS 0 even on failure
+    // (the false-FAVORABLE root cause). Scan BOTH streams. exit_code is the
+    // authoritative pass/fail (tsc exits non-zero on any error); error_count +
+    // error_lines are diagnostics. ok REQUIRES a zero exit (fail-closed: a
+    // missing/failing typecheck script exits non-zero → ok=false).
+    const combined = `${r.stdout}\n${r.stderr}`;
+    const tail = combined.length > 8192 ? combined.slice(-8192) : combined;
     const errorLines = tail.split("\n").filter((l) => /error TS\d+:/.test(l)).slice(0, 20);
     return {
       shape: "codeTypecheckResult",
@@ -295,6 +311,30 @@ const codeVerifyTypecheck: ResolverHandler = async (ctx) => {
 
 // ── daemon ────────────────────────────────────────────────────────────────────
 
+// code_read_lines (2026-06-18): return the EXACT current content of a line range,
+// with line numbers. The patcher previously had to RECONSTRUCT a region's content
+// from (truncated) code_search matches to build a code_replace_lines call — it got
+// multi-line regions wrong, the replacement broke typecheck, and it exhausted the
+// turn budget on complex edits. With an exact read, the flow becomes:
+// code_read_lines(start,end) -> code_replace_lines(start,end, <edited copy of that
+// exact text>). This is the capability lever for non-trivial surgical edits.
+const codeReadLines: ResolverHandler = async (ctx) => {
+  const path = str(ctx.body, "impulse", "pointer", "path") ?? str(ctx.body, "path");
+  const ptr = ((ctx.body as Record<string, unknown>)?.["impulse"] as Record<string, unknown> | undefined)?.["pointer"] as Record<string, unknown> | undefined;
+  const startLine = Number((ctx.body as Record<string, unknown>)?.start_line ?? ptr?.["start_line"] ?? 0);
+  const endLineRaw = Number((ctx.body as Record<string, unknown>)?.end_line ?? ptr?.["end_line"] ?? 0);
+  if (!path || startLine < 1 || endLineRaw < startLine) return { error: "path, start_line, end_line are required (1-indexed, end >= start)" };
+  try {
+    const src = await Bun.file(path).text();
+    const lines = src.split("\n");
+    if (startLine > lines.length) return { error: `start_line ${startLine} exceeds file length ${lines.length}` };
+    const endLine = Math.min(endLineRaw, lines.length);
+    const slice = lines.slice(startLine - 1, endLine);
+    const numbered = slice.map((l, i) => `${startLine + i}: ${l}`).join("\n");
+    return { shape: "codeReadResult", path, start_line: startLine, end_line: endLine, total_lines: lines.length, content: slice.join("\n"), numbered };
+  } catch (e) { return { error: (e as Error).message }; }
+};
+
 const resolvers = new Map<string, ResolverHandler>([
   ["shell", shell], ["bash", shell],
   ["fs_read", fsRead], ["fs_write", fsWrite], ["fs_edit", fsEdit],
@@ -304,6 +344,7 @@ const resolvers = new Map<string, ResolverHandler>([
   ["code_find_import", codeFindImport],
   ["code_insert_after_line", codeInsertAfterLine],
   ["code_replace_lines", codeReplaceLines],
+  ["code_read_lines", codeReadLines],
   ["code_add_import", codeAddImport],
   ["code_verify_typecheck", codeVerifyTypecheck],
 ]);
@@ -320,7 +361,7 @@ await new VesselDaemon({
     "shellResult", "fileContent", "fileWriteResult", "fileEditResult",
     "gitStatus", "gitDiff", "gitCommitResult",
     "codeSearchResult", "codeFindFunctionResult", "codeFindImportResult",
-    "codeInsertResult", "codeReplaceResult", "codeAddImportResult", "codeTypecheckResult",
+    "codeInsertResult", "codeReplaceResult", "codeReadResult", "codeAddImportResult", "codeTypecheckResult",
   ],
   executor: new ActivityExecutor(runtime),
   resolvers,

@@ -266,7 +266,12 @@ path and the federation phasing of the companion designs.
   **(2) bounded perception** — environment probing (§8) is scoped to an authorized
   network, not unbounded internet scanning. This is the structural push-away boundary
   between supervised and adversarial-resistant operation, not a limitation to engineer
-  away.
+  away. The operator holding those keys is not outside the system: it is a **modeled
+  boundary entity** (the operator-as-vessel), and the substrate learns its
+  interaction characteristics by the same observe → infer → score → fold mechanism it
+  applies to any peer — see `SUBSTRATE_AS_REPRESENTATION.md` §6.1. "Operator
+  non-load-bearing" (§7's push-away limit) is the asymptote of that learned model, not
+  the operator's removal from the topology.
 
 ## 8. Environment discovery — the environment is impulses
 

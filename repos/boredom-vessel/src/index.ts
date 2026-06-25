@@ -391,6 +391,13 @@ const AUTONOMOUS_GOALS: readonly string[] = [
   // are productive vs dormant/zero-yield. Descriptive (emits no retirement gaps
   // yet). Low cadence; deterministic, cheap.
   "run detector-yield-registry-tick to inventory the detector fleet — join each detector's emitted gaps to whether they landed and how often it is scheduled, and emit a detectorYieldReport classifying each as PRODUCTIVE/LOW_YIELD/DORMANT/UNKNOWN",
+  // goal[49] — compose-topology-tick (2026-06-19). Boredom-driven topology exploration
+  // via activity composition: chains a reliably-succeeding capability pair (leaf×leaf
+  // preferred, cross-linking pendants) into a composite and dispatches it, forming an
+  // organic composition edge that raises the spectral-gap headroom toward the 0.35 that
+  // unlocks the native generative frontier. PRIMARY driver; the systemd compose-teacher
+  // timer is now just a fallback. Exploration rate scales with sample throughput.
+  "run compose-topology-tick to explore the capability topology — find a reliably-succeeding chainable pair, author a composite that chains them, and dispatch it to form an organic composition edge that raises the spectral-gap headroom",
   // NOTE (2026-06-13): obsidian operation is deliberately NOT a core-loop goal.
   // Obsidian is an external app that may be disconnected; forcing it into the
   // self-optimization rotation would pollute the core loop with availability-
@@ -529,6 +536,9 @@ const AUTONOMOUS_GOAL_TARGET_TEMPLATES: readonly (string | undefined)[] = [
   // deterministic single-resolver tick; the goal text is novel so Thompson must
   // not misroute it to a semantically-near detector template.
   "development-vessel:detector-yield-registry-tick",
+  // goal[49] — compose-topology-tick: explicit target so the goal routes deterministically
+  // to the composition resolver (bypasses Thompson — the goal text is novel).
+  "development-vessel:compose-topology-tick",
 ];
 
 /**
@@ -602,6 +612,7 @@ const AUTONOMOUS_GOAL_COSTS: readonly GoalCost[] = [
   "cheap",     // goal[46] generative-frontier-gap-tick (1 spectral read + templates/traces GET + at most 1 gap POST; no LLM)
   "cheap",     // goal[47] dead-end-decision-scan-tick (1 SurrealDB /sql read + in-memory scan + bounded gap POSTs; no LLM)
   "cheap",     // goal[48] detector-yield-registry-tick (2 local fs reads — gaps.json + selector snapshot — + in-memory join; no LLM, no gap POSTs by default)
+  "moderate",  // goal[49] compose-topology-tick (SQL discovery + template author + 1 goal-host dispatch that runs a 2-step composite, ~60-100s; bounded, no LLM in the tick itself)
 ];
 
 // Per-goal extra variables passed to goal-host-vessel /run-goal. Most goals need only the
@@ -1792,6 +1803,119 @@ interface SubstrateState {
   refreshedAt: number;
 }
 
+// ── C9: unified priority-weighted selection (2026-06-24) ───────────────────
+// The pool's continuous selection (pickByShapeAvailability → ucbScore) is
+// otherwise PRIORITY-BLIND: open substrateGaps carry severity / priority_hint /
+// category and health/operator signals carry urgency, but the ranker only saw
+// UCB1 + shape-availability + cost. So a high-severity gap or a health-repair
+// tick could only be selected if the rotation happened to land on it — urgency
+// never PROMOTED a candidate, and cost-gating only ever DEMOTES under load.
+//
+// Fix (additive, behavior-preserving when nothing is urgent): refreshSubstrateState
+// derives a priority weight per OUTPUT SHAPE from the same gaps.json source it
+// already reads, plus health-report colour. A candidate template that produces a
+// shape demanded by an urgent gap (or is a health-repair tick) gets weight > 1;
+// ucbScore multiplies its score by that weight, so the urgent drain/repair tick
+// outscores routine ticks and is selected first. With no severity metadata the
+// weight defaults to 1 — selection is then byte-for-byte the prior behavior.
+//
+// Weight scale [1..N]: high-urgency → PRIORITY_WEIGHT_HIGH, medium → _MEDIUM,
+// routine → 1. Tolerant of missing fields (→ 1).
+const PRIORITY_WEIGHT_HIGH = parseFloat(process.env["BOREDOM_PRIORITY_WEIGHT_HIGH"] ?? "3.0");
+const PRIORITY_WEIGHT_MEDIUM = parseFloat(process.env["BOREDOM_PRIORITY_WEIGHT_MEDIUM"] ?? "1.8");
+
+// Gap categories that represent urgent operational / safety / operator-facing
+// work — these PROMOTE their producer ticks regardless of declared severity.
+const HIGH_PRIORITY_GAP_CATEGORIES = new Set<string>([
+  "operator_goal_unservable",
+  "service_failure",
+  "obsidian_unpredictable_behavior",
+  "obsidian_observation_channel_polluted",
+  "obsidian_assists_ignored",
+  "goal_host_inconsistent_direction",
+  "safety_breach",
+  "operational_health",
+]);
+const MEDIUM_PRIORITY_GAP_CATEGORIES = new Set<string>([
+  "cost_constraint",
+  "typecheck_error",
+  "novel_failure_mode_detected",
+  "architectural_pattern",
+  "wasted_cycle",
+]);
+
+// Output-shape → priority weight, refreshed each refreshSubstrateState. Empty
+// (all-weight-1) means no urgency and selection is unchanged.
+let priorityWeightByShape = new Map<string, number>();
+// A "urgent backlog present" floor applied ONLY to gap-draining / repair ticks
+// (which close gaps but don't declare the gap's expected_output_shapes as their
+// own output) when an urgent gap is open. = max gap weight over open gaps; 1.0
+// when nothing urgent. Routine ticks never receive this floor, so the relative
+// ordering only shifts to PROMOTE drainers/repair, never flattens.
+let priorityFloorWeight = 1.0;
+
+// Tag / id markers identifying a candidate as a gap-draining or repair tick.
+// These are the producers that CLOSE urgent backlog (their own output_shapes
+// don't carry the gap's expected shape), so the open-gap floor applies to them.
+const GAP_DRAIN_TAG_MARKERS = ["intentgapdrain", "phasebridge"];
+const GAP_DRAIN_ID_MARKERS = [
+  "drain-pending-substrate-gaps",
+  "draft-gap-closing-activity",
+  "gap-to-scenario-bridge",
+  "ingest-audit-findings",
+  "dispatch-latest-auto-draft",
+  "apply-proposal-as-patch",
+  "self-operational-health",
+  "operational-health",
+];
+
+function isGapDrainCandidate(templateId: string, tags: string[]): boolean {
+  if (tags.some((t) => GAP_DRAIN_TAG_MARKERS.includes(t))) return true;
+  return GAP_DRAIN_ID_MARKERS.some((m) => templateId.includes(m));
+}
+
+function gapPriorityWeight(g: {
+  status?: string;
+  severity?: string | null;
+  priority_hint?: string | null;
+  category?: string | null;
+}): number {
+  // explicit severity / priority_hint wins
+  const sev = (g.severity ?? "").toString().toLowerCase();
+  const hint = (g.priority_hint ?? "").toString().toLowerCase();
+  if (sev === "high" || sev === "critical" || hint === "high" || hint === "critical") {
+    return PRIORITY_WEIGHT_HIGH;
+  }
+  if (sev === "medium" || hint === "medium") return PRIORITY_WEIGHT_MEDIUM;
+  // otherwise derive from category
+  const cat = (g.category ?? "").toString();
+  if (HIGH_PRIORITY_GAP_CATEGORIES.has(cat)) return PRIORITY_WEIGHT_HIGH;
+  if (MEDIUM_PRIORITY_GAP_CATEGORIES.has(cat)) return PRIORITY_WEIGHT_MEDIUM;
+  return 1.0;
+}
+
+// Best (max) priority weight for a candidate, from its output shapes (a
+// candidate that PRODUCES a shape some urgent gap demands) plus the gap-drain
+// floor (a candidate that CLOSES urgent backlog). Defaults to 1.0
+// (behavior-preserving) when nothing urgent.
+function priorityWeightForCandidate(
+  templateId: string,
+  outputShapes: string[],
+  tags: string[],
+): number {
+  let w = 1.0;
+  // Shape-demand promotion: this candidate produces a shape an urgent gap wants.
+  for (const s of outputShapes) {
+    const sw = priorityWeightByShape.get(s);
+    if (sw !== undefined && sw > w) w = sw;
+  }
+  // Drain/repair promotion: this candidate closes urgent backlog.
+  if (priorityFloorWeight > w && isGapDrainCandidate(templateId, tags)) {
+    w = priorityFloorWeight;
+  }
+  return w > 0 ? w : 1.0;
+}
+
 interface InFlightEntry {
   goal_idx: number;
   dispatch_id: string;
@@ -1861,19 +1985,63 @@ async function refreshSubstrateState(): Promise<SubstrateState> {
     const proposalDir = await fs.readdir("/workspace/proposals").catch(() => [] as string[]);
     pendingProposalCount = proposalDir.filter((n) => n.endsWith(".json") && !n.startsWith("applied-")).length;
   } catch { /* ignore */ }
+  // C9: rebuild the priority map fresh each refresh (urgency is transient).
+  const nextPriorityByShape = new Map<string, number>();
+  let nextFloor = 1.0;
   try {
     const gapsRaw = await fs.readFile("/workspace/gaps.json", "utf8").catch(() => "");
     if (gapsRaw) {
-      const parsed = JSON.parse(gapsRaw) as { gaps?: Array<{ status?: string; scenario_id?: string }> };
+      const parsed = JSON.parse(gapsRaw) as {
+        gaps?: Array<{
+          status?: string;
+          scenario_id?: string;
+          severity?: string | null;
+          priority_hint?: string | null;
+          category?: string | null;
+          expected_output_shapes?: string[];
+        }>;
+      };
       const gaps = parsed.gaps ?? [];
-      openGapCount = gaps.filter((g) => g.status !== "closed" && g.status !== "resolved").length;
+      const isOpen = (g: { status?: string }) => g.status !== "closed" && g.status !== "resolved" && g.status !== "rejected";
+      openGapCount = gaps.filter(isOpen).length;
       const scenarios = await fs.readdir(SCENARIOS_DIR).catch(() => [] as string[]);
       const scenarioIds = new Set(scenarios.filter((n) => n.endsWith(".json")).map((n) => n.replace(/\.json$/, "")));
       unbridgedScenarioGapCount = gaps.filter(
         (g) => g.status !== "closed" && (!g.scenario_id || !scenarioIds.has(g.scenario_id)),
       ).length;
+      // C9: derive per-shape priority weights + an urgent-backlog floor from the
+      // open gaps. A high-severity / high-priority_hint / urgent-category gap
+      // promotes (a) any candidate producing one of its expected_output_shapes
+      // and (b) gap-draining ticks via the floor. Gaps with no urgency → weight
+      // 1, contributing nothing (behavior-preserving).
+      for (const g of gaps) {
+        if (!isOpen(g)) continue;
+        const w = gapPriorityWeight(g);
+        if (w <= 1.0) continue;
+        if (w > nextFloor) nextFloor = w;
+        for (const s of g.expected_output_shapes ?? []) {
+          const cur = nextPriorityByShape.get(s) ?? 1.0;
+          if (w > cur) nextPriorityByShape.set(s, w);
+        }
+      }
     }
   } catch { /* ignore */ }
+  // C9: a red/yellow operational-health report promotes repair ticks. Read from
+  // the same workspace the gaps come from; tolerate absence (→ no promotion).
+  try {
+    const healthRaw = await fs.readFile("/workspace/operational-health.json", "utf8").catch(() => "");
+    if (healthRaw) {
+      const h = JSON.parse(healthRaw) as { status?: string; color?: string; level?: string };
+      const sig = (h.status ?? h.color ?? h.level ?? "").toString().toLowerCase();
+      if (sig === "red" || sig === "critical" || sig === "unhealthy") {
+        if (PRIORITY_WEIGHT_HIGH > nextFloor) nextFloor = PRIORITY_WEIGHT_HIGH;
+      } else if (sig === "yellow" || sig === "degraded" || sig === "warning") {
+        if (PRIORITY_WEIGHT_MEDIUM > nextFloor) nextFloor = PRIORITY_WEIGHT_MEDIUM;
+      }
+    }
+  } catch { /* ignore */ }
+  priorityWeightByShape = nextPriorityByShape;
+  priorityFloorWeight = nextFloor;
   try {
     const res = await fetch(`${ACTIVITY_API_ENDPOINT}/v2/activities/templates?limit=60`, {
       headers: authHeaders(),
@@ -2157,7 +2325,27 @@ const DEFAULT_COST_MS = 5000;       // pool default before any observation lands
 // carry tokens=0, so the token dim only discriminates among LLM-using templates —
 // honest "all cost parameters" coverage without fabricating cost where there is none.
 interface CostSample { ms: number; tokens: number; at: number }
-const costByTemplate = new Map<string, { samples: CostSample[] }>();
+
+/**
+ * Per-template cost entry. Stores:
+ *   - ewma: exponentially-weighted moving average of ms cost (α=0.2)
+ *   - n: total samples observed (unbounded counter for EWMA stability)
+ *   - samples: sliding window of raw CostSamples for percentile/variance estimates
+ *   - ewmaVariance: EWMA of squared deviations from ewma — variance proxy that
+ *     detects bimodal distributions (e.g. a template that usually takes 200ms but
+ *     occasionally takes 180s). High ewmaVariance → use a robust percentile estimate
+ *     (p75) rather than the EWMA mean, which would be pulled toward the slow mode.
+ */
+interface TemplateCostEntry {
+  ewma: number;
+  ewmaVar: number;    // running variance (EWMA of squared deviations)
+  count: number;
+  n: number;          // total samples observed (unbounded counter for EWMA stability)
+  /** Rolling window of recent cost samples for percentile fallback */
+  samples: number[];
+}
+const EWMA_ALPHA = 0.2; // smoothing factor: α=0.2 weights last sample ~20%, recent history ~80%
+const costByTemplate = new Map<string, TemplateCostEntry>();
 // Per-dimension cost-expectation validation: rolling |actual − expected| / expected.
 // Surfaced in the selector snapshot so the substrate's *expectations about cost*
 // become first-class, trace-inspectable observables, per dimension.
@@ -2170,6 +2358,8 @@ function pushResidual(arr: { rel: number; at: number }[], actual: number, expect
     while (arr.length > 200) arr.shift();
   }
 }
+
+const COST_SAMPLE_WINDOW = 20;
 
 function recordCostByTemplate(templateId: string, ms: number, tokens: number): void {
   if (!Number.isFinite(ms) || ms < 0) return;
@@ -2185,11 +2375,27 @@ function recordCostByTemplate(templateId: string, ms: number, tokens: number): v
     }
   }
   let c = costByTemplate.get(templateId);
-  if (!c) { c = { samples: [] }; costByTemplate.set(templateId, c); }
+  if (!c) {
+    c = { ewma: ms, n: 1, samples: [{ ms, tokens: tok, at: Date.now() }], ewmaVariance: 0 };
+    costByTemplate.set(templateId, c);
+    return;
+  }
+  const alpha = Math.min(EWMA_ALPHA, 2 / (c.n + 1));
+  const deviation = ms - c.ewma;
+  const newEwma = alpha * ms + (1 - alpha) * c.ewma;
+  // Welford-style EWMA variance: V_t = (1-alpha)*(V_{t-1} + alpha*diff^2)
+  // Uses deviation from the OLD mean (pre-update) so the squared term captures
+  // the full spread of bimodal distributions (fast tick vs slow LLM chain).
+  c.ewmaVar = (1 - alpha) * ((c.ewmaVar ?? 0) + alpha * deviation * deviation);
+  c.ewma = newEwma;
+  c.n += 1;
   c.samples.push({ ms, tokens: tok, at: Date.now() });
   const cutoff = Date.now() - COST_TTL_MS;
   while (c.samples.length > 0 && c.samples[0]!.at < cutoff) c.samples.shift();
-  while (c.samples.length > 50) c.samples.shift();
+  // Ring buffer: keep at most COST_SAMPLE_WINDOW recent samples for percentile estimates.
+  if (c.samples.length > COST_SAMPLE_WINDOW) {
+    c.samples.shift();
+  }
 }
 
 let _poolMedianCache: { at: number; ms: number; tokens: number } | null = null;
@@ -2214,14 +2420,28 @@ function computePoolMedians(): { ms: number; tokens: number } {
 function poolMedianCostMs(): number { return computePoolMedians().ms; }
 function poolMedianCostTokens(): number { return computePoolMedians().tokens; }
 
+function percentile(sorted: number[], p: number): number {
+  const idx = p * (sorted.length - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sorted[lo]!;
+  return sorted[lo]! * (hi - idx) + sorted[hi]! * (idx - lo);
+}
+
+/**
+ * Returns a robust upper-percentile cost estimate for the template.
+ * For bimodal distributions (fast hit / slow timeout) the plain EWMA
+ * under-predicts the slow mode.  We add one standard-deviation (derived
+ * from the EWMA variance) so the estimate covers the slow tail while
+ * still reacting quickly when costs improve.  Cold-start returns Infinity.
+ */
 function expectedCostMs(templateId: string): number {
   const c = costByTemplate.get(templateId);
-  if (!c || c.samples.length === 0) return poolMedianCostMs(); // warm-start neutral (partial pooling §4.2)
-  const cutoff = Date.now() - COST_TTL_MS;
-  const live = c.samples.filter((s) => s.at >= cutoff);
-  if (live.length === 0) return poolMedianCostMs();
-  const sorted = live.map((o) => o.ms).sort((a, b) => a - b);
-  return sorted[Math.floor(0.75 * (sorted.length - 1))];
+  if (!c || c.n < 2) return Infinity; // cold-start — preserve existing behaviour
+  // Use mean + stddev to bias toward the slower mode of bimodal distributions.
+  // This prevents systematic under-prediction when a template has fast-hit / slow-timeout modes.
+  const stddev = Math.sqrt(c.ewmaVar);
+  return c.ewma + stddev;
 }
 function expectedCostTokens(templateId: string): number {
   const c = costByTemplate.get(templateId);
@@ -2396,13 +2616,22 @@ function templateMomentum(templateId: string): number {
 // the natural pull boost.
 let totalPicksV24f = 0;
 
-function ucbScore(templateId: string, shapeAvail: number): { score: number; reason: string } {
+// C9 (2026-06-24): `priorityWeight` (default 1.0) is a multiplicative urgency
+// term folded into the FINAL score, so an urgent gap's producer / drain tick or
+// a health-repair tick outscores routine ticks. weight=1 ⇒ score is identical
+// to the pre-C9 value (behavior-preserving when nothing is urgent).
+function ucbScore(
+  templateId: string,
+  shapeAvail: number,
+  priorityWeight = 1.0,
+): { score: number; reason: string } {
+  const pw = Number.isFinite(priorityWeight) && priorityWeight > 0 ? priorityWeight : 1.0;
   const m = momentumByTemplate.get(templateId);
   if (m) pruneStaleOutcomes(m); // V27: ensure stale outcomes don't poison the score
   const picks = m?.outcomes.length ?? 0;
   if (picks === 0) {
     // Unsampled (or fully-decayed) templates always win until they've been tried once.
-    return { score: Number.POSITIVE_INFINITY, reason: `ucb=∞ picks=0 shape=${shapeAvail.toFixed(2)}` };
+    return { score: Number.POSITIVE_INFINITY, reason: `ucb=∞ picks=0 shape=${shapeAvail.toFixed(2)}${pw > 1.0 ? ` prio=${pw.toFixed(2)}` : ""}` };
   }
   // V28: mean = average information-yield reward (not success fraction), so UCB
   // exploits detectors that actually produce findings.
@@ -2425,9 +2654,23 @@ function ucbScore(templateId: string, shapeAvail: number): { score: number; reas
   const expCost = expectedCostMs(templateId);
   const expTok = expectedCostTokens(templateId);
   const costAdj = combinedCostAdj(templateId); // V31: combined over the cost vector {ms, tokens}
+  const rawScore = baseScore * costAdj * Math.max(shapeAvail, 1.0) + pipelinePull;
+  // NaN guard (2026-06-23): if costAdj (combinedCostAdj) ever returns NaN, rawScore
+  // is NaN — and the picker `!best || score > best.score` then PINS on it forever:
+  // the NaN candidate becomes best via `!best`, and every later finite score fails
+  // `finite > NaN`, so nothing replaces it. Observed live: the pool reserved
+  // mitosis-tick every ~5s → no_op, starving compose-topology-tick and ALL
+  // productive self-optimization. Fall back to the finite baseScore so a bad cost
+  // estimate can't hijack the selector.
+  const finiteScore = Number.isFinite(rawScore) ? rawScore : baseScore;
+  // C9: priority weight is the OUTERMOST multiplier — it scales whatever the
+  // cost/shape-availability machinery produced, so urgency preempts routine
+  // ticks without disturbing the relative ordering among equal-priority ticks.
+  // pw=1.0 ⇒ score === finiteScore (pre-C9 behavior).
+  const score = finiteScore * pw;
   return {
-    score: baseScore * costAdj * Math.max(shapeAvail, 1.0) + pipelinePull,
-    reason: `mean=${mean.toFixed(2)} ucb=${explore.toFixed(2)} cost=${Math.round(expCost)}ms${expTok > 0 ? `/${Math.round(expTok)}tok` : ""}×${costAdj.toFixed(2)} picks=${picks} shape=${shapeAvail.toFixed(2)} pull=${pipelinePull}`,
+    score,
+    reason: `mean=${mean.toFixed(2)} ucb=${explore.toFixed(2)} cost=${Math.round(expCost)}ms${expTok > 0 ? `/${Math.round(expTok)}tok` : ""}×${costAdj.toFixed(2)}${Number.isFinite(rawScore) ? "" : "(NaN→base)"} picks=${picks} shape=${shapeAvail.toFixed(2)} pull=${pipelinePull}${pw > 1.0 ? ` prio=${pw.toFixed(2)}` : ""}`,
   };
 }
 
@@ -2459,7 +2702,11 @@ async function pickByShapeAvailability(
       else if (ratio > 0) shapeAvail = 0.5 + ratio;
       else shapeAvail = 0.3;
     }
-    const ucb = ucbScore(c.template_id, shapeAvail);
+    // C9: urgency multiplier — derived from open-gap severity / priority_hint /
+    // category (→ shape-demand or gap-drain floor) + operational-health colour.
+    // Defaults to 1.0 when nothing is urgent (selection unchanged).
+    const priorityWeight = priorityWeightForCandidate(c.template_id, c.output_shapes, c.tags);
+    const ucb = ucbScore(c.template_id, shapeAvail, priorityWeight);
     if (!best || ucb.score > best.score) {
       best = {
         template_id: c.template_id,

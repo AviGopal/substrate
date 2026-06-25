@@ -1,0 +1,93 @@
+=== T3 2026-06-04T18:34:38Z ===
+--- open gaps by category ---
+320 trace_quality
+57 auto_draft_triggered
+50 architectural_pattern
+41 missing_concept
+35 auto_draft_fallback_recommend
+24 missing_capability
+18 resolver_distribution
+17 responsibility_misallocation
+15 activity_lifecycle
+8 auto_draft_authored
+8 auto_draft_reused
+4 missing_idiom
+4 other
+1 detector_output_shape_mismatch
+1 systematic_failure_pattern
+--- scenarios total ---
+235
+--- scenarios by prefix family ---
+    119 auto
+     52 phantom-success
+     11 dispatch-target-drift
+      2 precondition-rejection-activity-_development-vessel-ingest-doc-as-concepts_-2026
+      2 precondition-rejection-activity-_development-vessel-drain-pending-substrate-gaps_-2026
+      2 precondition-rejection-activity-_development-vessel-draft-gap-closing-activity_-2026
+      2 arch-pattern-single-dispatcher
+      2 arch-pattern-catalogue-bloat
+      1 vessel-heartbeat-starvation
+      1 validator-dispatch-task-count-zero-2026
+--- 15 most recent scenarios ---
+arch-pattern-catalogue-bloat-1780534570541.json
+arch-pattern-single-dispatcher-1780534570541.json
+arch-pattern-cost-output-1780533755510.json
+arch-pattern-catalogue-bloat-1780533755509.json
+arch-pattern-single-dispatcher-1780533755509.json
+enacted-20260604T174808Z.json
+auto-1780594268145-epmihz.json
+dispatch-target-drift-exec_bqqoed0c.json
+dispatch-target-drift-exec_lb64n60m.json
+dispatch-target-drift-exec_russstdn.json
+dispatch-target-drift-exec_gjgt6nea.json
+precondition-rejection-activity-_development-vessel-drain-pending-substrate-gaps_-2026-06-01.json
+precondition-rejection-activity-_development-vessel-probe-untraversed-edge_-2026-06-01.json
+precondition-rejection-activity-_development-vessel-draft-gap-closing-activity_-2026-06-01.json
+precondition-rejection-activity-_development-vessel-harness-check-scenario_-2026-06-01.json
+--- proposals total ---
+162
+--- 5 most recent proposals ---
+auto-1780375698497-1a8nc1-report.json
+auto-1780600000000-shape-mismatch-report.json
+auto-1780566826742-1p8ilj-report.json
+auto-1780366574551-lxltir-report.json
+proposal-auto-1780352357019-eelh0b.json
+--- mitosis dirs ---
+--- mitosis-pending ---
+--- recent dev-vessel commits (last 4 hr) ---
+74542cc DevBob Assistant 2026-06-04 11:19:28 -0700 fix(mitosis-tick): correct interpolation field names + soft-refuse on non-FAVORABLE verdict
+5e86277 DevBob Assistant 2026-06-04 10:55:17 -0700 feat(bridge): prioritise architecture-class gaps over trace_quality + incidental
+13f974a DevBob Assistant 2026-06-04 10:49:24 -0700 feat(dev-vessel): add 3 substrate-self-gate detector rows to mechanism-health-tick
+2bd15d4 DevBob Assistant 2026-06-04 10:46:37 -0700 fix(state-signature): bucket high-entropy inputs so Thompson posteriors accumulate
+4bd0bd8 DevBob Assistant 2026-06-04 10:46:23 -0700 feat(dev-vessel): lifecycle observer writes concept patterns from successful auto-* executions
+--- recent super-repo commits ---
+bfeea141 Devbob Agent (devbob) 2026-06-04 11:20:45 -0700 chore(substrate): boredom-vessel daemon unit + dev-vessel pointer bump (mitosis-tick fix)
+30938781 Devbob Agent (devbob) 2026-06-04 11:20:04 -0700 feat(boredom): throughput-paced concurrent dispatch pool daemon
+0596e7bd Devbob Agent (devbob) 2026-06-04 11:19:36 -0700 fix(light-dispatch): substitute whole objects for exact {{path}} placeholders
+edfb7668 Devbob Agent (devbob) 2026-06-04 11:17:30 -0700 fix: bump ias-executor-ts — engine populates inputShapes on TaskRecord
+7b743233 Devbob Agent (devbob) 2026-06-04 11:10:12 -0700 docs(vault): add topology coverage section — endpoint live, first v1 observation confirmed
+3b26b79c Devbob Agent (devbob) 2026-06-04 10:55:25 -0700 chore(submodule): development-vessel 5e86277 — gap bridge prioritises architecture-class gaps
+59cffec4 Devbob Agent (devbob) 2026-06-04 10:49:44 -0700 feat: bump dev-vessel — 3 substrate-self-gate detector rows in mechanism-health-tick
+177ab724 Devbob Agent (devbob) 2026-06-04 10:46:56 -0700 chore(submodule): development-vessel 2bd15d4 — autocomplete-concept observer + signature bucketing
+--- concept count total ---
+[{"count":965}]
+--- concept by source_type ---
+[{"count":2,"source_type":null},{"count":18,"source_type":"architectural_pattern_principle"},{"count":167,"source_type":"extracted"},{"count":8,"source_type":"human_input"},{"count":197,"source_type":"impulse_activity_pattern"},{"count":199,"source_type":"impulse_signature"},{"count":69,"source_type":"memo"},{"count":305,"source_type":"vessel_construction_pattern"}]
+--- concept times_succeeded sum ---
+[{"count":965,"ts_sum":22}]
+--- boredom recent log (12 min) ---
+--- dev-vessel recent log (12 min) ---
+--- goal-host recent commits to dev-vessel by DevBob (12 min) ---
+
+--- host-sync poller activity (12 min) ---
+Jun 04 11:29:27 aescepi host-sync-poller.sh[4018434]: [host-sync-poller 2026-06-04T11:29:27-07:00] skip already-processed 2e866a0f-6c7f-4fe5-97ff-ab2075cd7f97
+Jun 04 11:29:27 aescepi systemd[1039]: Finished Substrate host-sync poller — apply substrate-authored mitoses to host repos.
+Jun 04 11:31:27 aescepi systemd[1039]: Starting Substrate host-sync poller — apply substrate-authored mitoses to host repos...
+Jun 04 11:31:27 aescepi host-sync-poller.sh[4021188]: [host-sync-poller 2026-06-04T11:31:27-07:00] skip already-processed 17c3c7c7-eb42-46e6-a0f2-8962b9c8be17
+Jun 04 11:31:27 aescepi host-sync-poller.sh[4021188]: [host-sync-poller 2026-06-04T11:31:27-07:00] skip already-processed 2e866a0f-6c7f-4fe5-97ff-ab2075cd7f97
+Jun 04 11:31:27 aescepi systemd[1039]: Finished Substrate host-sync poller — apply substrate-authored mitoses to host repos.
+Jun 04 11:33:27 aescepi systemd[1039]: Starting Substrate host-sync poller — apply substrate-authored mitoses to host repos...
+Jun 04 11:33:27 aescepi host-sync-poller.sh[4024048]: [host-sync-poller 2026-06-04T11:33:27-07:00] skip already-processed 17c3c7c7-eb42-46e6-a0f2-8962b9c8be17
+Jun 04 11:33:27 aescepi host-sync-poller.sh[4024048]: [host-sync-poller 2026-06-04T11:33:27-07:00] skip already-processed 2e866a0f-6c7f-4fe5-97ff-ab2075cd7f97
+Jun 04 11:33:27 aescepi systemd[1039]: Finished Substrate host-sync poller — apply substrate-authored mitoses to host repos.
+=== end T3 ===

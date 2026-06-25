@@ -292,6 +292,49 @@ and detection runs through the borrowed prior plus a learnable residual signal �
 principle, throttled to the union of what reality's residual surfaces and what the borrowed
 prior can name.
 
+### 6.1 The same move generalizes: the operator and any peer are modeled boundary entities
+
+§6 holds an LLM "at arm's length" and learns its per-signature trust. That move is **not
+special to models** — it is how the substrate represents *any* entity it meets only across a
+boundary, the **human operator included**. `SUBSTRATE_AS_DEC.md` §0.2 states it geometrically:
+an **explicit vessel** is glued in with *attested* restriction maps (discovery-registered
+incidences, declared resolver contracts — the maps are handed to you); an **implicit vessel**
+is one whose cells and flows are *observed* but whose restriction maps are **latent — inferred
+from boundary behavior, not declared**. The **operator-as-vessel** (the producer of
+`goalIntent`) is the canonical implicit vessel; a peer substrate known only through
+behavioral-continuation replay is another. The human is therefore a **node in the complex**
+whose interior the substrate reconstructs — not an external controller standing outside it.
+
+The capacity to **assess the interaction characteristics across that boundary** is the §6 loop
+generalized — one mechanism, four steps, each owned by a companion chart:
+
+1. **Observe → infer the latent map.** What crosses the boundary (a `goalIntent`, a validation
+   verdict, a peer's returned trace) is the only evidence; the entity's internal restriction
+   map is reconstructed from it, never assumed. (`SUBSTRATE_AS_DEC.md` §0.2)
+2. **Score per-signature competence.** Treat the entity as an **untrusted resolver**: the
+   validation back-half measures its output against reality, and the forward arm learns a
+   per-signature competence map — α climbs where the entity is reliable, β where it fails, and
+   selection routes accordingly. The substrate ends up knowing the **empirical boundary of
+   where the entity can be trusted**, something the entity need not know about itself.
+   (`SUBSTRATE_AS_MDP.md` §12.8)
+3. **Weight by attestation tier.** Identity is proven by possession, not assumed; the
+   confidence on the entity's signals is its attestation tier, a number in `[0,1]`.
+   (`SUBSTRATE_AS_NETWORK.md` §4)
+4. **Fold as evidence, never as authority.** The entity's signals enter as counterparty-signed
+   *offered-evidence* under a conservative prior — folded into *your* posteriors, never
+   imported as owned state. **Trust escalates what an entity may offer, never what it may
+   overwrite.** (`SUBSTRATE_AS_FLEET.md` §6)
+
+So **operator ≡ peer ≡ embedded model**: all are implicit vessels, differing only in
+attestation tier and in which durability groups they are permitted to influence
+(`SUBSTRATE_AS_FLEET.md` §6). This is why the operator can be made **non-load-bearing** without
+a rearchitecture — "non-load-bearing" is simply the asymptote of step 2. The substrate's
+competence map of the operator sharpens until an operator intervention that contradicts a
+grounded posterior is **refused with cited evidence** (the `interventionRefused` / push-away
+signal of `SUBSTRATE_AS_FLEET.md` §6), exactly as low-α model output is routed away. The
+operator never leaves the topology; the substrate's model of it simply tightens until the
+operator's directives carry no more authority than any other peer's offered-evidence.
+
 ## 7. The operating relationships
 
 The charts together specify the relationships that must hold for the system to operate —
