@@ -76,6 +76,36 @@ const since = new Date(Date.now() - 24 * 3600_000).toISOString();
 const [succRows] = await sql(`SELECT activity_id, count() AS ok FROM activity_execution_traces WHERE executed_at >= type::datetime("${since}") AND success = true GROUP BY activity_id;`);
 const succeeds = new Set<string>((succRows || []).filter((r: any) => (r.ok ?? 0) > 0).map((r: any) => r.activity_id));
 
+// 2b) PRODUCER VIABILITY (2026-06-26, hollow-composite root cause). compose-teacher
+//     used to select producer→consumer pairs PURELY by declared-shape compatibility: a
+//     producer that DECLARES output_shape S paired with a consumer that consumes S. But
+//     many producers (e.g. analyze-source-to-concept) need external files supplied
+//     upstream; from a cold start their input is empty (filePaths empty → ENOENT /
+//     read_error) so they emit NO real output — the bridge shape never flows, the chain
+//     is judged HOLLOW by the reach-gate, β-penalised, and no genuine λ₁-lifting edge is
+//     recorded. Declaring S ≠ being able to PRODUCE S from a cold start.
+//     Fix: only treat a producer as viable for shape S if it has a recent SUCCESSFUL
+//     standalone trace that ACTUALLY produced S (output_impulse_shapes CONTAINS S,
+//     status=success). Key the viability set by `${activity_id}|${shape}`. Tolerant: on
+//     query failure, leave the set null and skip the filter (degrade to old behaviour).
+const VIABILITY_WINDOW_H = Number(process.env.COMPOSE_TEACHER_VIABILITY_WINDOW_H ?? 72);
+let producible: Set<string> | null = null; // `${activity_id}|${shape}` of really-produced shapes
+try {
+  const vSince = new Date(Date.now() - VIABILITY_WINDOW_H * 3600_000).toISOString();
+  const [prodRows] = await sql(`SELECT activity_id, output_impulse_shapes FROM activity_execution_traces WHERE executed_at >= type::datetime("${vSince}") AND success = true AND output_impulse_shapes != NONE AND array::len(output_impulse_shapes) > 0 LIMIT 8000;`);
+  const set = new Set<string>();
+  for (const r of prodRows || []) {
+    const aid = r.activity_id;
+    if (!aid) continue;
+    for (const s of r.output_impulse_shapes || []) if (s) set.add(`${aid}|${s}`);
+  }
+  producible = set; // may legitimately be empty; the filter falls back gracefully below
+} catch { producible = null; /* tolerant: degrade to declared-shape-only selection */ }
+// A producer is viable for the bridge shape iff it really produced that shape recently.
+// When the viability set is unavailable (null) we cannot judge, so we don't filter.
+const producesShape = (activityId: string, shape: string) =>
+  producible === null ? true : producible.has(`${activityId}|${shape}`);
+
 // 3) Chainable pairs, BOTH reliably succeeding, distinct.
 //    STRICT: producer.output_shape ∈ consumer.input_shapes (pool-level continuity).
 //    RELAXED (operator principle "the system may not always have an ideal shape mapping
@@ -155,7 +185,17 @@ const bridges = (p: Pair) => comp(p.producer) !== comp(p.consumer); // spans two
 // Ranking (lower = selected first): BRIDGE a component gap first, then prefer leaf
 // endpoints (convert degree-1 pendants), then strict (real shared shape) over relaxed.
 const rank = (p: Pair) => (bridges(p) ? 0 : 4) + (leafPair(p) ? 0 : 2) + (p.strict ? 0 : 1);
-const ordered = underCap ? pairs.filter(uncomposed).sort((a, b) => rank(a) - rank(b)) : [];
+// VIABILITY FILTER (2026-06-26): restrict candidates to pairs whose PRODUCER demonstrably
+// produced the bridge shape in a recent successful standalone trace — this is what stops
+// the substrate from authoring composites around producers that ENOENT from a cold start
+// (the hollow-composite root cause). The filter runs BEFORE the bridge/leaf/strict sort,
+// so the existing ranking applies to the surviving viable pairs. If it empties the list
+// (too few producers have real output traces), degrade to the unfiltered candidates so
+// authoring never wholly stalls — the reach-gate still penalises any hollow result.
+const candidates = underCap ? pairs.filter(uncomposed) : [];
+const viableCandidates = candidates.filter((p) => producesShape(p.producer, p.shape));
+const usedFallback = viableCandidates.length === 0 && candidates.length > 0;
+const ordered = (usedFallback ? candidates : viableCandidates).sort((a, b) => rank(a) - rank(b));
 const fresh = ordered[0];
 
 async function dispatch(targetTemplateId: string, goal: string): Promise<any> {
@@ -242,6 +282,11 @@ const rec = {
   at: stamp(), action, composite: compositeId,
   execution_id: result?.executionId ?? null, outcome: result?.status ?? null,
   chainable_pairs_available: pairs.length, existing_composites: existingCompositeIds.size,
+  // producer-viability filter visibility (2026-06-26 hollow-composite fix):
+  viable_pairs: producible === null ? null : viableCandidates.length,
+  producible_pairs: producible === null ? null : producible.size,
+  viability_fallback: usedFallback,
+  producer_viability: producible === null ? "unavailable" : usedFallback ? "fallback_unfiltered" : "filtered",
   star_ratio, headroom, unlock_at: 0.35,
 };
 await log(rec);
