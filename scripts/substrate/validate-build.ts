@@ -28,6 +28,24 @@
  */
 import { readFileSync, existsSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
+import { execSync } from "node:child_process";
+
+// Is <file> committed (tracked) in the git repo at <dir>? The Docker build context
+// for a cloned/CI checkout only contains committed files, so a lockfile that is
+// merely present on disk (untracked / gitignored) silently disappears on a fresh
+// clone — exactly the discovery-vessel case that a dirty dev tree masks. Fall back
+// to on-disk presence when <dir> is not its own git checkout.
+function isTracked(dir: string, file: string): boolean {
+  try {
+    const out = execSync(`git -C "${dir}" ls-files -- "${file}"`, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    return out.trim().length > 0;
+  } catch {
+    return existsSync(join(dir, file));
+  }
+}
 
 const REPO_ROOT = resolve(import.meta.dir, "../..");
 const DOCKERFILE = join(REPO_ROOT, "Dockerfile.substrate");
@@ -115,9 +133,18 @@ for (const [vessel, { frozen, seds }] of containerized) {
   //     else `bun install --frozen-lockfile` aborts the image build.
   if (frozen) {
     const lockPath = join(vDir, "bun.lock");
-    if (!existsSync(lockPath)) {
-      err(vessel, `installed with --frozen-lockfile but bun.lock is missing`);
-    } else {
+    const lockCommitted = isTracked(vDir, "bun.lock");
+    if (!lockCommitted) {
+      // Either truly absent, or present-on-disk-but-untracked (gitignored). Both
+      // mean a fresh clone has no lockfile and `bun install --frozen-lockfile`
+      // aborts the image build — even though a dirty dev tree builds fine.
+      err(
+        vessel,
+        existsSync(lockPath)
+          ? `installed with --frozen-lockfile and bun.lock exists on disk but is NOT committed in repos/${vessel} (check its .gitignore). A fresh clone / CI build has no lockfile and the image build aborts. Commit bun.lock (and drop any bun.lock entry from .gitignore).`
+          : `installed with --frozen-lockfile but bun.lock is missing`,
+      );
+    } else if (existsSync(lockPath)) {
       const lock = readFileSync(lockPath, "utf8");
       for (const key of depKeys) {
         if (!lock.includes(`"${key}"`)) {
