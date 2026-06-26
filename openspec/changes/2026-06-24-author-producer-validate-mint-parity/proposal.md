@@ -45,14 +45,35 @@ Verified in `goal-host-vessel/src/index.ts` interpolation (`interpolateProxyValu
 2. **Arrays/objects are `JSON.stringify`'d on substitution.** So `filePaths: "{{impulse:fp}}"` where the upstream content is `["/p"]` yields the literal string `'["/p"]'`, which analysis-vessel's `arr(pointer,"filePaths")` rejects. **Therefore:** `goal_file_extract` must expose the *primary path as a plain string* (and task 2 must wrap it: `filePaths: ["{{impulse:fp}}"]`), OR the produce-task field must be a string field — pick whichever the target resolver accepts. Validate per shape.
 3. **VERIFIED (ias-executor-ts `src/engine.ts`):** multi-task threading works. The engine runs `tasks[]` in `dependencies` order; after a task resolves it stamps each output impulse with `metadata.outputImpulseKey = <slot>` where `<slot>` is the string the task declares in its `outputImpulses: ["<slot>"]` array (L599-612); a downstream task declaring `inputImpulses: ["<slot>"]` receives those impulses in its resolve context (L293-313), and the goal-host proxy's `buildImpulseSlots` keys them so `{{impulse:<slot>}}` resolves to the impulse `content`. Real precedent: `src/templates/lifecycle/slot-binding.json` (5-task template; task `select_or_produce` declares `outputImpulses:["select_or_produce_result"]`, consumed downstream via `{{impulse:select_or_produce_result}}`).
 
-**Verified minted-template recipe** (2-task bridge for a file-consuming shape X):
+**Verified minted-template recipe** (2-task bridge for a file-consuming shape X).
+The cross-task SLOT name is an `outputImpulses[]` handle decoupled from the output
+SHAPE — any consistent name works. The implementation uses the slot `filePaths`
+(both sides agree, verified flowing end-to-end live in trace `exec_rbv3iaxt`);
+earlier draft text used `goal_files`, which is equally valid:
 ```
 task1 "extract": { resolver: "goal_file_extract", config:{ goal:"{{goal}}" },
-                   inputShapes:["goal"], outputImpulses:["goal_files"], outputShapes:["filePaths"] }
-task2 "produce": { resolver: "X", dependencies:["extract"], inputImpulses:["goal_files"],
-                   config:{ type:"X", filePaths:["{{impulse:goal_files}}"] }, outputShapes:["X"] }
+                   inputShapes:["goal"], outputImpulses:["filePaths"], outputShapes:["filePaths"] }
+task2 "produce": { resolver: "X", dependencies:["extract"], inputImpulses:["filePaths"],
+                   config:{ type:"X", filePaths:["{{impulse:filePaths}}"] }, outputShapes:["X"] }
 ```
-`goal_file_extract` must put the **primary path as a STRING** in its impulse `content` (constraint #2 — array would be JSON.stringify'd by the proxy); task2 wraps it `["{{impulse:goal_files}}"]` → a real `["/path"]` array. After implementation, restart **both** dev-vessel (new resolver) and goal-host (re-pull `/shapes` to register the `goal_file_extract` proxy).
+`goal_file_extract` must put the **primary path as a STRING** in its impulse `body`
+(constraint #2 — array would be JSON.stringify'd by the proxy); task2 wraps it
+`["{{impulse:filePaths}}"]` → a real `["/path"]` array. After implementation,
+restart **both** dev-vessel (new resolver) and goal-host (re-pull `/shapes`).
+
+**Path-normalization (DEV, 2026-06-25).** A residual validate↔mint gap remained
+after the 2-task bridge: `goal_file_extract` extracted the **relative** path from
+goal prose (`repos/discovery-vessel/src/index.ts`), but the file-reading resolvers
+run with CWD at their own unit dir, so a relative path ENOENTs → `read_error`
+"problem" → reach-gate HOLLOW. Validation tolerated the read_error as substance,
+masking it. Fix: `goal_file_extract` normalizes the emitted path to a
+container-openable form (`repos/` → `/vessels/`, bare-relative anchored under
+`VESSELS_ROOT`, absolute preserved). Verified live: the bridge now reads the real
+file and emits a genuine line-cited finding (`createServer is 233 lines (>80)` at
+`/vessels/discovery-vessel/src/index.ts:81`). The remaining HOLLOW for this
+specific goal is a downstream capability ceiling (analysis-vessel surfaces 1
+complexity issue, not a curated "top-3 risks") + reach-gate calibration — out of
+scope per "Out of scope / future".
 
 These constraints are why this lands as a test-gated DEV cycle (per-resolver test for `goal_file_extract` + an integration test asserting a minted bridge actually REACHES), not a hot edit. The design fork is now closed; implementation is unblocked.
 

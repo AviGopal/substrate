@@ -63,6 +63,12 @@ WORKDIR /vessels
 # Copy shared packages first (used by multiple vessels)
 COPY packages ./packages
 
+# vessel-discovery-client exposes its entry point via built dist/ (main/exports ->
+# ./dist/*), but dist/ is gitignored. A from-scratch build (no host bind-mount to
+# supply a locally-built dist/) must compile it here, or every vessel that consumes
+# it via `file:` fails at runtime with "Cannot find module @.../vessel-discovery-client".
+RUN cd packages/vessel-discovery-client && bun install && bun run build
+
 # discovery-vessel
 COPY repos/discovery-vessel/package.json repos/discovery-vessel/bun.lock* ./discovery-vessel/
 RUN cd discovery-vessel && bun install --frozen-lockfile
