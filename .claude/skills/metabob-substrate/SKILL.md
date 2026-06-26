@@ -33,6 +33,26 @@ Always available in vessel mode (substrate-local MCP). Tool descriptions are sel
 | `concept_link` | When you observe a relationship between two existing concepts. Always include a `description` so future readers know your rationale. |
 | `concept_create` | When you've surfaced knowledge that isn't yet in the graph. Pick `source_type` from the taxonomy below. |
 
+## Dispatching work to the substrate (and tracking it)
+
+Reading/writing the concept graph is half of citizenship; the other half is **doing work *through* the substrate** so it produces a trace and feeds the learning loop, instead of editing files untraced. Three MCP tools, picked by goal length and whether you need to watch:
+
+| Tool | Use when |
+|---|---|
+| `run_goal` | Short, one-shot goal you want answered inline. Blocks via goal-host `/resolve` (~290s cap). |
+| `run_goal_async` | Long goal (composition walk, drafter fallback, recovery) that would blow the sync cap, or when you want to keep working. Returns a `dispatchId` immediately. |
+| `goal_status` | Track a `dispatchId` → live `running\|completed\|failed`, then a hydrated trace: **state-space signature**, **produced shapes**, failure mode, Thompson α/β. |
+
+**Reading status correctly — `completed` is not `reached`.** A goal whose `status=completed` but whose **produced shapes are empty** is a *hollow completion*: the Thompson-selected template ran but didn't produce what the goal asked for. `goal_status` surfaces both, so judge reach from the **produced shapes / failure mode**, never the status string alone. (This is the same reach-gate distinction the substrate itself learns from — see `finding_2026_06_22_goal_reaching_gate_deployed`.)
+
+**Understanding the current state space.** The `state_signature:<hash>` line in a hydrated `goal_status` (or the trace tag at activity-api `GET /v2/activities/execution-traces/:executionId`) is the substrate's state-space signature *at dispatch time* — load, recent-trace aggregate, catalogue counts, computed by development-vessel's `compute_state_signature` resolver. Two dispatches with the same signature ran under the same conditions; a shifting signature means the pool/catalogue moved between runs. Use it to reason about *why* selection differed across otherwise-identical goals.
+
+**Routine: dispatch + track a non-trivial goal**
+1. `concept_search` the goal's keywords first (the start-of-task routine below) — warm-start on what the substrate already knows.
+2. `run_goal_async({ goal })` → keep the `dispatchId`.
+3. `goal_status({ dispatch_id })`, re-polling until status ≠ `running`.
+4. Inspect produced shapes vs. what the goal asked for. Hollow completion or a failure mode → that's a real signal worth a `concept_create` (see the close-task routine).
+
 ## The substrate's concept taxonomy (mapped to information streams the user named)
 
 | Stream | `source_type` | Examples |

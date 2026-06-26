@@ -11,13 +11,18 @@ metadata:
 # MiniBob CLI (deprecated — prefer metabob-mcp)
 
 > **DEPRECATED.** `minibob` is being retired. The agent-facing way to dispatch a goal
-> to the substrate is the **metabob-mcp** tool **`mcp__metabob__run_goal`** (metabob-mcp
-> is the agent-IDE interaction surface — the IDE analogue of obsidian-vessel; it is *not*
-> an internal substrate component). The substrate's execution path is unchanged
-> (goal-host-vessel does the work); only the entry point moved off the CLI. The minibob
-> CLI documented below still functions and forwards to goal-host-vessel, so this reference
-> is retained — but reach for `mcp__metabob__run_goal` first. Do not add new `minibob`
-> invocations.
+> to the substrate is the **metabob-mcp** tools (metabob-mcp is the agent-IDE interaction
+> surface — the IDE analogue of obsidian-vessel; it is *not* an internal substrate
+> component):
+>
+> - **`mcp__metabob__run_goal`** — synchronous dispatch (blocks ~290s). Short, one-shot goals.
+> - **`mcp__metabob__run_goal_async`** — async dispatch, returns a `dispatchId` immediately. Long goals / fire-and-forget. Replaces `minibob --single` for anything that runs more than a few minutes.
+> - **`mcp__metabob__goal_status`** — poll a `dispatchId` for live status + a hydrated trace (state-space signature, produced shapes, failure mode, Thompson α/β). Replaces watching `minibob` stdout. Note `status=completed` ≠ goal reached — read the produced shapes.
+>
+> The substrate's execution path is unchanged (goal-host-vessel does the work); only the
+> entry point moved off the CLI. The minibob CLI documented below still functions and
+> forwards to goal-host-vessel, so this reference is retained — but reach for the
+> `mcp__metabob__*` tools first. Do not add new `minibob` invocations.
 
 MiniBob is a thin **goal-first dispatch CLI**: all inputs are treated as goals. It does
 not execute in-process — it POSTs `{goal, variables}` to `goal-host-vessel`
