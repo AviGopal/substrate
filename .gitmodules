@@ -3,16 +3,6 @@
 	url = git@github.com:AviGopal/concept-db.git
 	branch = dev
 
-[submodule "repos/conversation-vessel"]
-	path = repos/conversation-vessel
-	url = git@github.com:MetabobProject/conversation-vessel.git
-	branch = dev
-
-[submodule "repos/deployment"]
-	path = repos/deployment
-	url = git@github.com:MetabobProject/deployment.git
-	branch = dev
-
 [submodule "repos/discovery-vessel"]
 	path = repos/discovery-vessel
 	url = git@github.com:AviGopal/discovery-vessel.git
@@ -28,35 +18,6 @@
 	url = git@github.com:AviGopal/activity-api.git
 	branch = dev
 
-[submodule "repos/metabob-cloud-dashboard"]
-	path = repos/metabob-cloud-dashboard
-	url = git@github.com:MetabobProject/metabob-cloud-dashboard.git
-	branch = dev
-
-[submodule "repos/minibob"]
-	path = repos/minibob
-	url = git@github.com:MetabobProject/minibob.git
-	branch = dev
-
-[submodule "repos/react-renderer"]
-	path = repos/react-renderer
-	url = git@github.com:MetabobProject/react-renderer.git
-	branch = dev
-
-[submodule "repos/terminal"]
-	path = repos/terminal
-	url = git@github.com:MetabobProject/terminal.git
-	branch = dev
-
-[submodule "repos/user-vessel"]
-	path = repos/user-vessel
-	url = git@github.com:MetabobProject/user-vessel.git
-	branch = dev
-
-[submodule "repos/workbench"]
-	path = repos/workbench
-	url = git@github.com:MetabobProject/workbench.git
-	branch = dev
 [submodule "repos/metabob-mcp"]
 	path = repos/metabob-mcp
 	url = git@github.com:MetabobProject/metabob-mcp.git

@@ -197,3 +197,16 @@ scripts/substrate/workspace/
 # stray root scratch file
 /disrupt-application.md
 /repos/metabob-internal-dashboard/
+
+# ── Dropped from the substrate submodule set (2026-06-26) ──
+# Product / UI / CLI / deploy repos not needed to build or run the
+# substrate container. Kept on disk (their .git still resolves) but
+# out of the super-repo; fresh clones do not include them.
+/repos/deployment/
+/repos/conversation-vessel/
+/repos/minibob/
+/repos/user-vessel/
+/repos/workbench/
+/repos/metabob-cloud-dashboard/
+/repos/terminal/
+/repos/react-renderer/
