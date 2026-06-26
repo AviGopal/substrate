@@ -42,7 +42,7 @@ async function unitActive(unit: string): Promise<boolean> {
 async function sqlCount(whereClause: string): Promise<number> {
   try {
     const sql = `SELECT count() AS c FROM activity_execution_traces WHERE ${whereClause} GROUP ALL;`;
-    const script = `const env=await Bun.file("/etc/substrate/env").text();const PASS=(env.match(/SURREAL_PASS=(\\S+)/)||[])[1];const r=await(await fetch("http://127.0.0.1:8000/sql",{method:"POST",headers:{"Content-Type":"text/plain",Accept:"application/json","surreal-ns":"activity-system","surreal-db":"learning_loop",Authorization:"Basic "+btoa("root:"+PASS)},body:${JSON.stringify(sql)}})).json();console.log(r[0]?.result?.[0]?.c??0);`;
+    const script = `const env=await Bun.file("/etc/substrate/env").text();const PASS=(env.match(/SURREAL_PASS="?([^"\\s]+)"?/)||[])[1];const r=await(await fetch("http://127.0.0.1:8000/sql",{method:"POST",headers:{"Content-Type":"text/plain",Accept:"application/json","surreal-ns":"activity-system","surreal-db":"learning_loop",Authorization:"Basic "+btoa("root:"+PASS)},body:${JSON.stringify(sql)}})).json();console.log(r[0]?.result?.[0]?.c??0);`;
     const p = Bun.spawn(["docker", "exec", "substrate-live", "bun", "-e", script], { stdout: "pipe", stderr: "pipe" });
     const out = (await new Response(p.stdout).text()).trim();
     return Number(out);

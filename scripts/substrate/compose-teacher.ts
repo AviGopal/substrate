@@ -104,7 +104,13 @@ const composedTargets = new Set<string>();
 const existingCompositeIds = new Set<string>();
 for (const a of existing || []) {
   const tasks = a.tasks || [];
-  const dispatched = tasks.filter((t: any) => t.resolver === "activity" && t.config?.templateId).map((t: any) => t.config.templateId);
+  // Recognise the genuine activities-as-resolver form (resolver = a template id, i.e.
+  // contains "activity:"/"⟨"), the resolver:"compose"+subActivityId form, and the legacy
+  // resolver:"activity"+config.templateId form, so we don't re-author. (2026-06-26)
+  const looksLikeTemplateId = (s: any) => typeof s === "string" && (s.includes("activity:") || s.includes("⟨"));
+  const dispatched = tasks
+    .filter((t: any) => looksLikeTemplateId(t.resolver) || (t.resolver === "compose" && t.subActivityId) || (t.resolver === "activity" && t.config?.templateId))
+    .map((t: any) => (looksLikeTemplateId(t.resolver) ? t.resolver : t.subActivityId ?? t.config?.templateId));
   if (dispatched.length && !isSynthetic(a.id)) {
     existingCompositeIds.add(a.id);
     composedTargets.add(dispatched.sort().join("|"));
@@ -150,9 +156,31 @@ if (fresh) {
     input_shapes: [],
     output_shapes: [fresh.shape],
     proposed: false,
+    // GENUINE producer→consumer composite (2026-06-26). Earlier this authored two
+    // SIBLING `resolver:"activity"` dispatches with NO data-flow link between them — the
+    // consumer never referenced the producer, so consumed_from_task_ids stayed empty and
+    // childActivityId was not reliably set, meaning composition-edge-reconcile derived only
+    // wrapper→child star spokes, NEVER a producer→consumer edge (the wrapper-scaffold trap).
+    // The correct form (per ias-executor engine.ts compose contract + the Option-B
+    // provenance path in composition-edge-reconcile §2b):
+    //   • resolver:"compose" + subActivityId  → records childActivityId = the dispatched template
+    //   • consumer config references {{dispatch_producer_<shape>}}  → the engine's placeholder
+    //     scan sets consumedFromTaskIds=["dispatch_producer"] (producer task projected that
+    //     shape key into producerTaskOf when it ran)
+    //   • declared input/output shapes  → ALSO lets the composition_chain shape-flow path fire
+    // Reconcile then emits the genuine edge fresh.producer → fresh.consumer.
+    // ACTIVITIES-AS-RESOLVER form (engine.ts:384-388): the sub-activity template id goes
+    // in the `resolver` field itself (a core, persisted task field). resolver:"compose" +
+    // subActivityId does NOT survive the activity-api template write (subActivityId is
+    // dropped → null → compose throws), but resolver:<templateId> persists and the engine
+    // dispatches it as compose, setting childActivityId = the dispatched template. The
+    // consumer references {{dispatch_producer_<shape>}} so the engine's placeholder scan
+    // sets consumedFromTaskIds=["dispatch_producer"] → reconcile §2b Option-B emits the
+    // genuine producer→consumer edge. Declared in/out shapes also enable the shape-flow
+    // path. (2026-06-26)
     tasks: [
-      { id: "dispatch_producer", description: `Run ${fresh.producer} to produce ${fresh.shape}.`, resolver: "activity", config: { reason: "composition step 1: produce " + fresh.shape, templateId: fresh.producer } },
-      { id: "dispatch_consumer", description: `Run ${fresh.consumer} consuming ${fresh.shape}.`, resolver: "activity", config: { reason: "composition step 2: consume " + fresh.shape, templateId: fresh.consumer } },
+      { id: "dispatch_producer", description: `Run ${fresh.producer} to produce ${fresh.shape}.`, resolver: fresh.producer, outputShapes: [fresh.shape], config: { reason: "composition step 1: produce " + fresh.shape } },
+      { id: "dispatch_consumer", description: `Run ${fresh.consumer} consuming ${fresh.shape} produced upstream.`, resolver: fresh.consumer, inputShapes: [fresh.shape], config: { reason: "composition step 2: consume " + fresh.shape, upstream: `{{dispatch_producer_${fresh.shape}}}` } },
     ],
   };
   const reg = await fetch(`${API}/v2/activities/templates`, {
