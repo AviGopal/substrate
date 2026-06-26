@@ -63,6 +63,15 @@ ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}"
 # and nothing in the units changes. Empty here means SUBSTRATE_ROOT was not
 # passed — units will fail loudly rather than read a stale hardcoded path.
 SUBSTRATE_ROOT="${SUBSTRATE_ROOT:-}"
+# Writable run-dir for the timer SCRIPTS (self-activation, 2026-06-26). The tick
+# units' run-dir.conf drop-ins reference their script as
+# \${SUBSTRATE_RUN_DIR}/<name>.ts. substrate-active-scripts-seed.service copies
+# the (boot-fresh, read-only) bind scripts into this writable volume dir at boot;
+# the development-vessel activate_substrate_script resolver then overwrites a copy
+# in place to make a substrate-authored new version live on the NEXT timer firing,
+# with NO container restart. Defaulted here so a recreate is self-activation-capable
+# even if the value wasn't passed in.
+SUBSTRATE_RUN_DIR="${SUBSTRATE_RUN_DIR:-/workspace/active-scripts}"
 GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT}"
 SUBSTRATE_GIT_AUTHOR_NAME="${SUBSTRATE_GIT_AUTHOR_NAME}"
