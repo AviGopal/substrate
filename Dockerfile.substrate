@@ -300,12 +300,14 @@ COPY repos/obsidian-vessel/esbuild.config.mjs \
      ./obsidian-vessel/
 RUN cd obsidian-vessel && bun esbuild.config.mjs production
 
-# Seed vault: the committed vault/ (notes + data.json) with the plugin's three
-# loadable files symlinked to the in-container build artifacts. Rebuilding the
-# plugin updates main.js in place; restarting obsidian-desktop reloads it.
-# data.json stays a real file — re-pointed from host ports (18080/18260) to
-# in-container ports at boot by obsidian-desktop-launch.
-COPY vault/ /vaults/substrate-vault/
+# Build the vault from scratch — NO host-directory dependency. The vault is
+# reproducible from the built plugin alone: the three loadable files are
+# symlinked to the in-container build artifacts, and data.json is created +
+# port-pointed at boot by obsidian-desktop-launch (it printf '{}'s a fresh
+# data.json when missing, then jq-merges the in-container fleet endpoints).
+# An empty notes set is the correct default; concept notes mirror in at runtime.
+# (Previously this COPYied the operator-side host vault/, which is gitignored
+# runtime state and absent from a fresh clone — that broke the build.)
 RUN PLUGIN_DIR=/vaults/substrate-vault/.obsidian/plugins/metabob-vessel \
     && mkdir -p "$PLUGIN_DIR" \
     && rm -f "$PLUGIN_DIR/main.js" "$PLUGIN_DIR/manifest.json" "$PLUGIN_DIR/styles.css" \

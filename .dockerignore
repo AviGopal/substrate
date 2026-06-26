@@ -39,3 +39,7 @@ docs/assets
 
 # Local workspace (mounted at runtime, not baked in)
 workspace
+
+# Operator-side Obsidian vault (gitignored runtime state). The obsidian
+# image builds its vault skeleton from the plugin at build time — no host dep.
+vault
