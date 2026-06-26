@@ -23,7 +23,12 @@
  * Pure JS power iteration (graph is small); no eigensolver dep. Deterministic start
  * vector (no Math.random, which is unavailable in some substrate runtimes).
  */
-const PASS = (await Bun.file("/etc/substrate/env").text()).match(/SURREAL_PASS=(\S+)/)?.[1] ?? "";
+// NB: /etc/substrate/env is written by gen-env.sh with the value QUOTED
+// (SURREAL_PASS="..."). systemd's EnvironmentFile strips the quotes, but a raw file
+// read does not — a bare `(\S+)` capture grabs the literal quotes and the password
+// fails to verify (401, non-JSON body → .json() throws, blinding this metric). Strip
+// surrounding quotes so the direct-SQL instrumentation survives the convention. (2026-06-26)
+const PASS = (await Bun.file("/etc/substrate/env").text()).match(/SURREAL_PASS="?([^"\s]+)"?/)?.[1] ?? "";
 const q = async (sql: string): Promise<any[]> =>
   (await (await fetch("http://127.0.0.1:8000/sql", {
     method: "POST",
@@ -31,7 +36,60 @@ const q = async (sql: string): Promise<any[]> =>
     body: sql,
   })).json());
 
-const rows = (await q("SELECT parent_activity_id, child_activity_id, execution_count FROM activity_composition_graph;"))[0]?.result ?? [];
+const rows = (await q("SELECT parent_activity_id, child_activity_id, execution_count, edge_kind, genuine FROM activity_composition_graph;"))[0]?.result ?? [];
+
+// ρ_grow — the MISSING half of the master stability inequality λ₁(L(t)) ≳ ρ_grow
+// (SUBSTRATE_AS_DYNAMICS.md §3). λ₁ above is the credit-MIXING rate; ρ_grow is the rate
+// at which fresh UNINFORMED Beta(1,1) cells are minted. When growth outruns mixing the
+// trajectory falls off the slow manifold into livelock. We only ever measured the LHS,
+// so the inequality could be observed but never gated. This computes the RHS. (2026-06-26)
+//
+// SOURCE: variant_performance_metrics — the canonical per-variant Thompson Beta-cell
+// store. Every newly-minted activity creates a vpm cell, initially at the uninformed
+// prior (thompson_alpha≈1, thompson_beta≈1). It carries `created_at`, so mint TIME is
+// directly queryable (activity_template is empty; the `activity` table also has created_at
+// but its scan is ~10x slower — vpm is the faster, equally-authoritative source).
+//
+// NORMALIZATION (so it is comparable to λ₁): λ₁∈[0,2] is a dimensionless per-step
+// FRACTIONAL credit-mixing rate. We make ρ_grow the dimensionless per-HOUR FRACTIONAL
+// growth rate of the cell complex: (new uninformed cells in the window) / (total live
+// cells) / (window hours). Both are then "fraction of the structure touched per unit
+// step", letting `lambda1 - rho_grow` (headroom) and `lambda1 / rho_grow` (ratio) be read
+// against the ≳ inequality. The raw mints/hour is also emitted for legibility.
+//
+// HONESTY (memory lessons): count() returns null on failure / empty window, NOT a false 0;
+// an empty `result` array means the windowed count was absent → treat as 0 mints only when
+// the population query itself succeeded, else null. created_at is what vpm records for mint
+// time (there is no indexed executed_at on this cell table — this is mint time, not trace
+// time, so the executed_at rule does not apply here).
+const RHO_WINDOW_HOURS = 6;
+async function countOrNull(sql: string): Promise<number | null> {
+  try {
+    const res = (await q(sql))[0];
+    if (!res || res.status !== "OK") return null;
+    const r = res.result;
+    if (!Array.isArray(r)) return null;
+    if (r.length === 0) return 0; // valid empty window ⇒ zero rows, not failure
+    const c = r[0]?.count;
+    return typeof c === "number" ? c : null;
+  } catch {
+    return null;
+  }
+}
+const vpmTotal = await countOrNull("SELECT count() FROM variant_performance_metrics GROUP ALL;");
+const vpmRecent = await countOrNull(
+  `SELECT count() FROM variant_performance_metrics WHERE created_at > time::now() - ${RHO_WINDOW_HOURS}h GROUP ALL;`,
+);
+const vpmUninformed = await countOrNull(
+  "SELECT count() FROM variant_performance_metrics WHERE thompson_alpha <= 1.05 AND thompson_beta <= 1.05 GROUP ALL;",
+);
+// raw mint rate (cells/hour) and dimensionless fractional rate (cells/hour ÷ population).
+const rhoMintsPerHour =
+  vpmRecent === null ? null : Math.round((vpmRecent / RHO_WINDOW_HOURS) * 1e4) / 1e4;
+const rhoGrow =
+  vpmRecent === null || vpmTotal === null || vpmTotal === 0
+    ? null
+    : Math.round((vpmRecent / RHO_WINDOW_HOURS / vpmTotal) * 1e6) / 1e6;
 
 // analyze(rowsIn) → spectral metrics over the (symmetrized, weighted) graph built from
 // the given edge rows. Factored so we can compute it on TWO graphs:
@@ -44,6 +102,19 @@ const rows = (await q("SELECT parent_activity_id, child_activity_id, execution_c
 //     HONEST connectivity signal (the governor / headroom should key on THIS). (2026-06-19)
 const HOOKS = ["validator-dispatch", "slot-binding"];
 const touchesHook = (s: string) => HOOKS.some((h) => (s || "").includes(h));
+
+// C7: PREFER the durable edge_kind/genuine column written by the composition-edge
+// writers (activity-api classifyCompositionEdge + composition-edge-reconcile). A row
+// is in the GENUINE capability subgraph iff it is tagged genuine; iff it is tagged
+// hub/scaffold it is excluded. ONLY legacy/untagged rows (edge_kind/genuine NONE)
+// fall back to the touchesHook node-name heuristic — keeping this backward-compatible
+// while the topology re-tags on the next reconcile/write. (2026-06-26)
+const isGenuineEdge = (r: any): boolean => {
+  if (r && typeof r.genuine === "boolean") return r.genuine;
+  if (r && typeof r.edge_kind === "string" && r.edge_kind.length > 0) return r.edge_kind === "genuine";
+  // legacy untagged → heuristic: genuine iff neither endpoint is a lifecycle hook.
+  return !touchesHook(r.parent_activity_id) && !touchesHook(r.child_activity_id);
+};
 
 function analyze(rowsIn: any[]) {
   const idx = new Map<string, number>();
@@ -146,7 +217,14 @@ function analyze(rowsIn: any[]) {
 }
 
 const full = analyze(rows);
-const genuine = analyze(rows.filter((r: any) => !touchesHook(r.parent_activity_id) && !touchesHook(r.child_activity_id)));
+const genuine = analyze(rows.filter((r: any) => isGenuineEdge(r)));
+// The master inequality keys on the credit-MIXING rate λ₁. Use the GENUINE (hook-excluded)
+// λ₂ as λ₁ — it is the honest capability-graph mixing signal (full-graph λ₂ is inflated by
+// the lifecycle hub). stability_headroom = λ₁ - ρ_grow; the inequality λ₁ ≳ ρ_grow HOLDS
+// when headroom ≥ 0 (mixing keeps pace with minting). ratio > 1 ⇒ holds. (2026-06-26)
+const lambda1 = genuine.fiedler_lambda2;
+const stabilityHeadroom = rhoGrow === null ? null : Math.round((lambda1 - rhoGrow) * 1e6) / 1e6;
+const stabilityRatio = rhoGrow === null || rhoGrow === 0 ? null : Math.round((lambda1 / rhoGrow) * 1e4) / 1e4;
 const out = {
   at: new Date().toISOString(),
   // FULL graph at top level for backward-compat (hook-dominated, perverse — see note above).
@@ -155,6 +233,20 @@ const out = {
   // here is what the governor should gate on; it is 0 while the capability graph is
   // fragmented (components>1), so BRIDGING components is the highest-value λ₂ move.
   genuine,
+  // ρ_grow — RHS of the master inequality (SUBSTRATE_AS_DYNAMICS.md §3). See block above for
+  // source/normalization. rho_grow is the dimensionless per-hour fractional mint rate (vs the
+  // dimensionless per-step λ₁); rho_grow_mints_per_hour is the raw rate for legibility;
+  // uninformed_cells is the standing count of Beta(1,1) cells. null ⇒ source unreachable.
+  rho_grow: rhoGrow,
+  rho_grow_mints_per_hour: rhoMintsPerHour,
+  rho_grow_window_hours: RHO_WINDOW_HOURS,
+  uninformed_cells: vpmUninformed,
+  cell_population: vpmTotal,
+  // The inequality made observable: λ₁ (genuine mixing) vs ρ_grow (minting).
+  lambda1_for_inequality: lambda1,
+  stability_headroom: stabilityHeadroom,           // λ₁ - ρ_grow ; ≥0 ⇒ inequality holds
+  stability_ratio: stabilityRatio,                 // λ₁ / ρ_grow ; >1 ⇒ inequality holds
+  inequality_holds: stabilityHeadroom === null ? null : stabilityHeadroom >= 0,
 };
 console.log(JSON.stringify(out, null, 2));
 
