@@ -130,7 +130,31 @@ const uncomposed = (p: Pair) => !composedTargets.has([p.producer, p.consumer].so
 // once leaf pairs are exhausted. Ordering: strict-leaf → relaxed-leaf → strict → relaxed.
 const isComposite = (id: string) => existingCompositeIds.has(id);
 const leafPair = (p: Pair) => !isComposite(p.producer) && !isComposite(p.consumer);
-const rank = (p: Pair) => (leafPair(p) ? 0 : 2) + (p.strict ? 0 : 1);
+
+// Component map over the GENUINE capability graph (union-find on non-hub, non-synthetic
+// edges), so we PREFER cross-component pairs. A fragmented genuine graph has λ₂=0 ⇒
+// stability_headroom NEGATIVE (sub-critical, SUBSTRATE_AS_DYNAMICS.md §3); BRIDGING two
+// components is the single highest-leverage move to lift λ₂ off zero. Within-component
+// edges only thicken an already-connected blob and don't change connectivity. (2026-06-26)
+const parent = new Map<string, string>();
+const find = (x: string): string => { let r = x; while (parent.get(r) && parent.get(r) !== r) r = parent.get(r)!; parent.set(x, r); return r; };
+const union = (a: string, b: string) => { parent.set(find(a), find(b)); };
+try {
+  const [gedges] = await sql(`SELECT parent_activity_id, child_activity_id FROM activity_composition_graph LIMIT 8000;`);
+  for (const e of gedges || []) {
+    const p = String(e.parent_activity_id), c = String(e.child_activity_id);
+    if (isHub(p) || isHub(c) || isSynthetic(p) || isSynthetic(c)) continue; // genuine subgraph only
+    if (!parent.has(p)) parent.set(p, p);
+    if (!parent.has(c)) parent.set(c, c);
+    union(p, c);
+  }
+} catch { /* tolerant: if the edge read fails, bridging degrades to leaf/strict ordering */ }
+const comp = (id: string): string => (parent.has(id) ? find(id) : `solo:${id}`);
+const bridges = (p: Pair) => comp(p.producer) !== comp(p.consumer); // spans two genuine components (or pulls in an isolated node)
+
+// Ranking (lower = selected first): BRIDGE a component gap first, then prefer leaf
+// endpoints (convert degree-1 pendants), then strict (real shared shape) over relaxed.
+const rank = (p: Pair) => (bridges(p) ? 0 : 4) + (leafPair(p) ? 0 : 2) + (p.strict ? 0 : 1);
 const ordered = underCap ? pairs.filter(uncomposed).sort((a, b) => rank(a) - rank(b)) : [];
 const fresh = ordered[0];
 
