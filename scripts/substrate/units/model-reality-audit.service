@@ -17,7 +17,7 @@ Requires=surrealdb.service
 Type=oneshot
 EnvironmentFile=/etc/substrate/env
 Environment=EMIT_GAPS=1
-ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/model-reality-audit.ts
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/model-reality-audit.ts
 StandardOutput=journal
 StandardError=journal
 

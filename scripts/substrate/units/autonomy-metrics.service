@@ -10,6 +10,6 @@ After=activity-api.service surrealdb.service development-vessel.service
 [Service]
 Type=oneshot
 EnvironmentFile=/etc/substrate/env
-ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/autonomy-metrics.ts
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/autonomy-metrics.ts
 StandardOutput=journal
 StandardError=journal

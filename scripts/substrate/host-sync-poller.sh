@@ -13,12 +13,10 @@
 # force-pushes; never pushes to main; never bypasses hooks. Idempotent via a
 # lock file tracking processed intent_ids.
 #
-# Operator install (one-time):
-#   ln -sf $(pwd)/scripts/substrate/host-sync-poller.service \
-#     ~/.config/systemd/user/host-sync-poller.service
-#   ln -sf $(pwd)/scripts/substrate/host-sync-poller.timer \
-#     ~/.config/systemd/user/host-sync-poller.timer
-#   systemctl --user daemon-reload
+# Operator install (one-time): the .service unit carries an absolute path, so it
+# is rendered from host-sync-poller.service.in at install time (systemd cannot
+# expand env vars in unit-file locations). Use the Makefile target:
+#   make -C scripts/substrate install-host-sync
 #   systemctl --user enable --now host-sync-poller.timer
 #
 # Direct invocation:

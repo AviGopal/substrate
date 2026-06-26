@@ -69,7 +69,7 @@ Execute these steps **exactly in order**, one at a time:
 The vessel code lives in a **git submodule** at `repos/deployment/vessels/<vessel-name>`. First, pull the latest from the actual vessel source repo (e.g., `repos/<vessel-name>`):
 
 ```bash
-cd /home/avi/documents/work/exp-repo/metabob-devbob/repos/<vessel-name>
+cd $CLAUDE_PROJECT_DIR/repos/<vessel-name>
 git fetch origin
 git checkout origin/main  # or origin/dev depending on vessel
 git rev-parse --short=7 HEAD
@@ -84,7 +84,7 @@ git show HEAD:package.json | jq -r '.version'
 Update the deployment repository's submodule pointer to match the vessel version you just fetched:
 
 ```bash
-cd /home/avi/documents/work/exp-repo/metabob-devbob/repos/deployment
+cd $CLAUDE_PROJECT_DIR/repos/deployment
 git checkout dev
 git submodule update --remote -- vessels/<vessel-name>
 git add vessels/<vessel-name>
@@ -99,14 +99,14 @@ git diff --cached vessels/<vessel-name>  # Verify the SHA matches
 Confirm the version from Step 0 is what you want:
 
 ```bash
-cd /home/avi/documents/work/exp-repo/metabob-devbob/repos/deployment/vessels/<vessel-name>
+cd $CLAUDE_PROJECT_DIR/repos/deployment/vessels/<vessel-name>
 git rev-parse --short=7 HEAD  # Should match SHA from Step 0
 cat package.json | jq -r '.version'  # Should match VERSION from Step 0
 ```
 
 ### Step 3: Update production.values.yaml
 
-Edit `/home/avi/documents/work/exp-repo/metabob-devbob/repos/deployment/environments/production.values.yaml`:
+Edit `$CLAUDE_PROJECT_DIR/repos/deployment/environments/production.values.yaml`:
 
 Find the vessel's image tag section:
 ```yaml
@@ -131,7 +131,7 @@ The build context and Dockerfile location depend on the vessel's structure:
 #### For Single-Service Vessels (discovery-vessel, concept-db, identity-vessel, user-vessel)
 
 ```bash
-cd /home/avi/documents/work/exp-repo/metabob-devbob/repos/deployment/vessels/<vessel-name>
+cd $CLAUDE_PROJECT_DIR/repos/deployment/vessels/<vessel-name>
 docker build -t metabobapp/<docker-image-name>:<VERSION>-<SHA> \
   --build-arg BUILD_SHA=<SHA> \
   --build-arg BUILD_VERSION=<VERSION> \
@@ -140,7 +140,7 @@ docker build -t metabobapp/<docker-image-name>:<VERSION>-<SHA> \
 
 **Example:**
 ```bash
-cd /home/avi/documents/work/exp-repo/metabob-devbob/repos/deployment/vessels/discovery-vessel
+cd $CLAUDE_PROJECT_DIR/repos/deployment/vessels/discovery-vessel
 docker build -t metabobapp/discovery-vessel:0.4.0-bb57b02 \
   --build-arg BUILD_SHA=bb57b02 \
   --build-arg BUILD_VERSION=0.4.0 \
@@ -150,7 +150,7 @@ docker build -t metabobapp/discovery-vessel:0.4.0-bb57b02 \
 #### For Multi-Service Vessels (metabob-activity-api, minibob, dashboards)
 
 ```bash
-cd /home/avi/documents/work/exp-repo/metabob-devbob/repos/deployment/vessels
+cd $CLAUDE_PROJECT_DIR/repos/deployment/vessels
 docker build -t metabobapp/<docker-image-name>:<VERSION>-<SHA> \
   -f <vessel-name>/Dockerfile \
   --build-arg BUILD_SHA=<SHA> \
@@ -160,7 +160,7 @@ docker build -t metabobapp/<docker-image-name>:<VERSION>-<SHA> \
 
 **Example:**
 ```bash
-cd /home/avi/documents/work/exp-repo/metabob-devbob/repos/deployment/vessels
+cd $CLAUDE_PROJECT_DIR/repos/deployment/vessels
 docker build -t metabobapp/metabob-activity-api:1.10.0-e6641e1 \
   -f metabob-activity-api/Dockerfile \
   --build-arg BUILD_SHA=e6641e1 \
@@ -203,7 +203,7 @@ Using helmfile ensures consistent configuration across canary and production wit
 #### Deploy to Canary First
 
 ```bash
-cd /home/avi/documents/work/exp-repo/metabob-devbob/repos/deployment
+cd $CLAUDE_PROJECT_DIR/repos/deployment
 helmfile --environment canary -l name=<vessel-name> sync
 ```
 
@@ -380,7 +380,7 @@ git push origin dev
    - Build all affected images
    - Deploy all together to canary, validate, then production
 
-6. **Working Directory** - Always execute from `/home/avi/documents/work/exp-repo/metabob-devbob/repos/deployment` for helmfile and docker build commands
+6. **Working Directory** - Always execute from `$CLAUDE_PROJECT_DIR/repos/deployment` for helmfile and docker build commands
 
 7. **Image Registry** - All images go to `metabobapp/` on Docker Hub
 

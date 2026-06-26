@@ -1,0 +1,8 @@
+[Unit]
+Description=Substrate host-pull sync — pull dev + re-sync changed vessels into substrate-live
+
+[Service]
+Type=oneshot
+Environment=APPLY=1
+ExecStart=@SUBSTRATE_ROOT@/scripts/substrate/host-pull-sync.sh --once
+WorkingDirectory=@SUBSTRATE_ROOT@

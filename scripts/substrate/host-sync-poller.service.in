@@ -1,0 +1,7 @@
+[Unit]
+Description=Substrate host-sync poller — apply substrate-authored mitoses to host repos
+
+[Service]
+Type=oneshot
+ExecStart=@SUBSTRATE_ROOT@/scripts/substrate/host-sync-poller.sh --once
+WorkingDirectory=@SUBSTRATE_ROOT@

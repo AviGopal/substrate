@@ -17,7 +17,7 @@ Wants=development-vessel.service
 Type=oneshot
 EnvironmentFile=/etc/substrate/env
 Environment=REPAIR=1
-ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/self-repair-operational.ts
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/self-repair-operational.ts
 StandardOutput=journal
 StandardError=journal
 

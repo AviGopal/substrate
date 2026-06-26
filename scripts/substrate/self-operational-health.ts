@@ -25,7 +25,7 @@
 // No writes except the gap emission (gated by EMIT_GAPS=1; dry-run otherwise).
 //
 // Run (in-container, where /workspace is the live volume and systemd is PID1):
-//   EMIT_GAPS=1 bun /home/avi/.../scripts/substrate/self-operational-health.ts
+//   EMIT_GAPS=1 bun "${SUBSTRATE_ROOT}/scripts/substrate/self-operational-health.ts"
 // Smoke test:
 //   docker exec substrate-live systemctl start self-operational-health.service
 //   docker exec substrate-live journalctl -u self-operational-health.service -n 30 --no-pager

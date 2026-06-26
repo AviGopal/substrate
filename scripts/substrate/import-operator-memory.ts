@@ -2,8 +2,11 @@
  * import-operator-memory.ts — one-time seed of operator-side memory files
  * into the substrate's memoryNote store.
  *
- * Reads ~/.claude/projects/-home-avi-documents-work-exp-repo-metabob-devbob/memory/*.md,
- * parses the YAML frontmatter, and writes each note to the development-vessel
+ * Reads ~/.claude/projects/<project-slug>/memory/*.md, where <project-slug> is
+ * the absolute repo path with every "/" replaced by "-" (the Claude Code
+ * convention). The slug is derived at runtime from CLAUDE_PROJECT_DIR (if set)
+ * or `git rev-parse --show-toplevel`, so it works regardless of clone location.
+ * The script parses the YAML frontmatter, and writes each note to the development-vessel
  * memoryNote_write resolver (or directly to the workspace file if the vessel
  * is not yet running).
  *
@@ -23,10 +26,21 @@
 import { readdir, readFile, writeFile, rename, mkdir } from "node:fs/promises";
 import { join, basename } from "node:path";
 import { homedir } from "node:os";
+import { execSync } from "node:child_process";
 
+// Resolve the absolute project dir, then turn it into the Claude Code project
+// slug: the absolute path with every "/" replaced by "-".
+const PROJECT_DIR =
+  process.env["CLAUDE_PROJECT_DIR"] ??
+  execSync("git rev-parse --show-toplevel", { cwd: import.meta.dir })
+    .toString()
+    .trim();
+const PROJECT_SLUG = PROJECT_DIR.replaceAll("/", "-");
 const MEMORY_DIR = join(
   homedir(),
-  ".claude/projects/-home-avi-documents-work-exp-repo-metabob-devbob/memory",
+  ".claude/projects",
+  PROJECT_SLUG,
+  "memory",
 );
 const WORKSPACE_DIR = process.env["WORKSPACE_DIR"] ?? join(import.meta.dir, "workspace");
 const NOTES_PATH = join(WORKSPACE_DIR, "memory", "notes.json");

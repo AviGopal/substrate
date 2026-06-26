@@ -56,6 +56,13 @@ JWT_SECRET="${JWT_SECRET}"
 SURREAL_PASS="${SURREAL_PASS}"
 METABOB_API_KEY="${METABOB_API_KEY}"
 ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}"
+# Substrate root inside the container = the bind-mounted host repo path
+# (docker run -v \$(REPO_ROOT):\$(REPO_ROOT):ro, passed in via -e SUBSTRATE_ROOT).
+# Every tick unit references its script as \${SUBSTRATE_ROOT}/scripts/substrate/...
+# so the fleet is relocatable: rename/move the repo and re-run \`make run-live\`
+# and nothing in the units changes. Empty here means SUBSTRATE_ROOT was not
+# passed — units will fail loudly rather than read a stale hardcoded path.
+SUBSTRATE_ROOT="${SUBSTRATE_ROOT:-}"
 GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT}"
 SUBSTRATE_GIT_AUTHOR_NAME="${SUBSTRATE_GIT_AUTHOR_NAME}"

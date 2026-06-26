@@ -8,8 +8,15 @@
 # must never block the tool result.
 set -uo pipefail
 
-MEM_DIR="$HOME/.claude/projects/-home-avi-documents-work-exp-repo-metabob-devbob/memory"
-MIRROR="/home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/mirror-memory-note.ts"
+# Anchor on the project root. Claude Code sets $CLAUDE_PROJECT_DIR when invoking
+# hooks; fall back to resolving it from this script's location (hooks live at
+# .claude/hooks/, two levels under the project root) when run standalone.
+: "${CLAUDE_PROJECT_DIR:=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+
+# Claude Code's project-memory slug is the project dir path with every "/" -> "-".
+MEM_SLUG="$(printf '%s' "$CLAUDE_PROJECT_DIR" | sed 's#/#-#g')"
+MEM_DIR="$HOME/.claude/projects/$MEM_SLUG/memory"
+MIRROR="$CLAUDE_PROJECT_DIR/scripts/substrate/mirror-memory-note.ts"
 LOG="$HOME/.claude/substrate-memory-mirror.log"
 
 input="$(cat)"

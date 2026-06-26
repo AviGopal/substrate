@@ -13,10 +13,11 @@
 # vessels that need an image rebuild are flagged, not silently skipped;
 # idempotent via a last-synced-SHA marker; dry-run by default (APPLY=1 to act).
 #
-# Operator install (one-time, mirrors host-sync-poller):
-#   ln -sf $(pwd)/scripts/substrate/host-pull-sync.service ~/.config/systemd/user/
-#   ln -sf $(pwd)/scripts/substrate/host-pull-sync.timer   ~/.config/systemd/user/
-#   systemctl --user daemon-reload && systemctl --user enable --now host-pull-sync.timer
+# Operator install (one-time, mirrors host-sync-poller): the .service unit
+# carries an absolute path, rendered from host-pull-sync.service.in at install
+# time (systemd cannot expand env vars in unit-file locations). Use:
+#   make -C scripts/substrate install-host-sync
+#   systemctl --user enable --now host-pull-sync.timer
 #
 # Direct: bash scripts/substrate/host-pull-sync.sh --once          # dry-run
 #         APPLY=1 bash scripts/substrate/host-pull-sync.sh --once  # act

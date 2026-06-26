@@ -66,7 +66,7 @@ ANALYSIS_VESSEL_SRC := $(REPO_ROOT)/repos/analysis-vessel
 STATEFUL_UI_VESSEL_SRC := $(REPO_ROOT)/repos/stateful-ui-vessel
 OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
 
-.PHONY: autonomy-status validate-build build build-obsidian run run-detach run-live run-live-obsidian migrate-state-to-volumes seed-live import-memory health health-live \
+.PHONY: autonomy-status validate-build build build-obsidian run run-detach run-live run-live-obsidian migrate-state-to-volumes seed-live import-memory install-host-sync health health-live \
         logs-all logs-activity-api logs-development-vessel \
         logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
         logs-goal-host-vessel logs-boredom-vessel logs-ribosome-vessel logs-concept-db \
@@ -161,6 +161,7 @@ run-live:
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
+	    -e SUBSTRATE_ROOT="$(REPO_ROOT)" \
 	    -p 18080:8080 \
 	    -p 18090:8090 \
 	    -p 18100:8100 \
@@ -198,6 +199,7 @@ run-live-obsidian:
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
+	    -e SUBSTRATE_ROOT="$(REPO_ROOT)" \
 	    -p 18080:8080 \
 	    -p 18090:8090 \
 	    -p 18100:8100 \
@@ -242,6 +244,21 @@ migrate-state-to-volumes:
 seed-live:
 	docker exec $(LIVE_NAME) bash -c 'set -a; source /etc/substrate/env; set +a; bun /vessels/seed-identity.ts'
 	@echo "[seed-live] Identity seeded. Run: scripts/substrate/configure-local.sh"
+
+# Render the host-side systemd unit templates (*.service.in) with the real repo
+# root and install them under ~/.config/systemd/user/, alongside the (path-free)
+# .timer units. systemd does not expand env vars or relative paths in unit-file
+# locations, so the absolute ExecStart/WorkingDirectory must be baked in here.
+USER_SYSTEMD_DIR := $(HOME)/.config/systemd/user
+install-host-sync:
+	@mkdir -p "$(USER_SYSTEMD_DIR)"
+	sed 's#@SUBSTRATE_ROOT@#$(REPO_ROOT)#g' $(CURDIR)/host-sync-poller.service.in > "$(USER_SYSTEMD_DIR)/host-sync-poller.service"
+	sed 's#@SUBSTRATE_ROOT@#$(REPO_ROOT)#g' $(CURDIR)/host-pull-sync.service.in   > "$(USER_SYSTEMD_DIR)/host-pull-sync.service"
+	ln -sf $(CURDIR)/host-sync-poller.timer "$(USER_SYSTEMD_DIR)/host-sync-poller.timer"
+	ln -sf $(CURDIR)/host-pull-sync.timer   "$(USER_SYSTEMD_DIR)/host-pull-sync.timer"
+	systemctl --user daemon-reload
+	@echo "[install-host-sync] Installed. Enable with:"
+	@echo "  systemctl --user enable --now host-sync-poller.timer host-pull-sync.timer"
 
 health-live:
 	@echo "=== activity-api ===" && curl -s http://localhost:18080/health | jq '{version,status}'

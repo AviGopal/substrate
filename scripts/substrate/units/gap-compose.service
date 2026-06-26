@@ -6,7 +6,7 @@ After=activity-api.service development-vessel.service llm-resolver-vessel.servic
 [Service]
 Type=oneshot
 EnvironmentFile=/etc/substrate/env
-ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/gap-compose-tick.ts
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/gap-compose-tick.ts
 StandardOutput=journal
 StandardError=journal
 [Install]

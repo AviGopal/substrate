@@ -16,7 +16,7 @@ This skill makes the agent loop a contributor, not just a consumer. When you rea
 - Reading or editing code, docs, or specs in `repos/`, `docs/`, `openspec/`, `validation/`, `scripts/`
 - Receiving user instructions that constrain future work (preferences, conventions, anti-patterns)
 - Discovering a non-obvious idiom, an environmental constraint, a deployment direction, a failure mode
-- Reviewing memory files in `~/.claude/projects/-home-avi-documents-work-exp-repo-metabob-devbob/memory/`
+- Reviewing memory files in `~/.claude/projects/<project-slug>/memory/` (the project-slug is the project dir path with every `/` replaced by `-`)
 - Working with the substrate's autonomous loop (boredom-vessel, draft-gap-closing-activity, ribosome-vessel)
 - Any time you'd otherwise file a note that only the current session will see
 

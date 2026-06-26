@@ -25,10 +25,17 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
+import { execSync } from "node:child_process";
 
 const CONCEPT_DB_URL = process.env.CONCEPT_DB_URL ?? "http://127.0.0.1:8260";
 const API_KEY = process.env.METABOB_API_KEY ?? "";
-const REPO_ROOT = process.env.REPO_ROOT ?? "/home/avi/documents/work/exp-repo/metabob-devbob";
+// This file lives at <root>/scripts/concept-seed/seed-claudemd.ts. Derive the
+// repo root from git (anchored at this file's directory) rather than a literal.
+const REPO_ROOT =
+  process.env.REPO_ROOT ??
+  execSync("git rev-parse --show-toplevel", { cwd: import.meta.dir })
+    .toString()
+    .trim();
 
 if (!API_KEY) {
   console.error("METABOB_API_KEY not set — concept-db will reject org-scoped writes.");

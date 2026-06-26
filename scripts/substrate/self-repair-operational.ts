@@ -20,7 +20,7 @@
 // resolve the corresponding substrateGap. Gated by REPAIR=1 (dry-run otherwise).
 //
 // Run (in-container; needs systemd PID1 + root):
-//   REPAIR=1 bun /home/avi/.../scripts/substrate/self-repair-operational.ts
+//   REPAIR=1 bun "${SUBSTRATE_ROOT}/scripts/substrate/self-repair-operational.ts"
 
 const KEY = process.env.METABOB_API_KEY ?? "";
 const DEV = (process.env.DEV_VESSEL_ENDPOINT || "http://127.0.0.1:8090").replace(/\/$/, "") + "/v2/impulses/resolve";

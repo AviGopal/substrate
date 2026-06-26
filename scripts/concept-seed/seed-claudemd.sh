@@ -8,7 +8,7 @@
 set -euo pipefail
 
 CONTAINER="${SUBSTRATE_CONTAINER:-substrate-live}"
-REPO_ROOT="${REPO_ROOT:-/home/avi/documents/work/exp-repo/metabob-devbob}"
+REPO_ROOT="${REPO_ROOT:-$(git -C "$(dirname "$0")" rev-parse --show-toplevel)}"
 SCRIPT_PATH="$REPO_ROOT/scripts/concept-seed/seed-claudemd.ts"
 
 # Repo is bind-mounted into the container read-only at the same absolute path

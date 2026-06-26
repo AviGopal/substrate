@@ -10,7 +10,7 @@
       "impulses": [
         {
           "key": "workspace",
-          "pointer": { "type": "memo", "content": "/home/avi/documents/work/exp-repo/metabob-devbob" },
+          "pointer": { "type": "memo", "content": "." },
           "required": true,
           "budget": 100
         }

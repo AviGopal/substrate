@@ -2,4 +2,5 @@
 Description=Substrate self-recovery — detect a broken vessel and revert it to last-good (the immune system)
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/env bash /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/self-recovery-tick.sh
+EnvironmentFile=/etc/substrate/env
+ExecStart=/usr/bin/env bash ${SUBSTRATE_ROOT}/scripts/substrate/self-recovery-tick.sh

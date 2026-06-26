@@ -196,3 +196,4 @@ scripts/substrate/workspace/
 /validation/activity-reuse-benchmark-*.json
 # stray root scratch file
 /disrupt-application.md
+/repos/metabob-internal-dashboard/

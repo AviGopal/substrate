@@ -20,7 +20,7 @@ Requires=development-vessel.service
 Type=oneshot
 EnvironmentFile=-/etc/substrate/env
 Environment=WORKSPACE_ROOT=/workspace
-ExecStart=/root/.bun/bin/bun /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/observe-orthogonal-refresh.ts
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/observe-orthogonal-refresh.ts
 StandardOutput=journal
 StandardError=journal
 TimeoutStartSec=240
