@@ -1,0 +1,33 @@
+[Unit]
+Description=Seed the writable run-dir for substrate timer scripts (self-activation)
+# SELF-ACTIVATION (2026-06-26). Substrate timer scripts historically ran directly
+# from the READ-ONLY host bind path (scripts/substrate/<name>.ts). The Docker-
+# Desktop bind is stale-after-mount: a substrate-AUTHORED new version of a timer
+# script can't take effect until a full container restart remounts the bind.
+#
+# Fix: a writable run-dir on the substrate-workspace VOLUME
+# (/workspace/active-scripts), seeded FRESH from the bind at every boot by THIS
+# oneshot, then mutated between boots by the `activate_substrate_script`
+# development-vessel resolver. Units repointed to run from the run-dir pick up the
+# new content on their next firing — no restart. The bind is fresh at boot (the
+# remount just happened), so each boot starts from the committed host source, and
+# substrate-authored deltas accumulate on the volume until the next boot reseeds.
+#
+# Ordered Before the script timers (After= on them references this) so the run-dir
+# exists before any repointed unit fires.
+DefaultDependencies=no
+After=local-fs.target
+Before=compose-teacher.service compose-teacher.timer
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/etc/substrate/env
+# Seed fresh from the (boot-fresh) read-only bind into the writable volume.
+# mkdir -p is idempotent; cp overwrites so each boot re-seeds the committed source.
+ExecStart=/bin/sh -c 'mkdir -p /workspace/active-scripts && cp -f /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/*.ts /workspace/active-scripts/ && echo "seeded $(ls /workspace/active-scripts/*.ts | wc -l) scripts into /workspace/active-scripts"'
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

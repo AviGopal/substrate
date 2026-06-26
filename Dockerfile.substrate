@@ -215,6 +215,7 @@ COPY scripts/bootstrap-seeder.ts /scripts/bootstrap-seeder.ts
 RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/local/bin/setup-git-push && \
     systemctl enable \
         git-push-setup.service \
+        substrate-active-scripts-seed.service \
         surrealdb.service \
         valkey.service \
         discovery-vessel.service \
