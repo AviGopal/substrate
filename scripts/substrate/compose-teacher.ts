@@ -68,8 +68,38 @@ async function log(rec: Record<string, unknown>) {
 const stamp = () => new Date().toISOString();
 
 // 1) Real (non-hub, non-probe, non-proposed) activities with declared shapes.
-const [acts] = await sql(`SELECT id, input_shapes, output_shapes FROM activity WHERE proposed != true LIMIT 3000;`);
+//    `tasks` is fetched too so we can detect GOAL-SEEDED head producers (2026-06-26):
+//    a producer whose input is extracted from the goal TEXT (goal_file_extract over
+//    {{goal}}, problem_detection / source_code / code_quality on goal-derived file
+//    paths) emits nothing real when dispatched cold with a goal that names no file —
+//    THE hollow-composite root cause. We seed those heads with a concrete repo file
+//    path at dispatch time so the head actually runs and real output flows downstream.
+const [acts] = await sql(`SELECT id, input_shapes, output_shapes, tasks FROM activity WHERE proposed != true LIMIT 3000;`);
 const real = (acts || []).filter((a: any) => a.id && !isHub(a.id) && !isSynthetic(a.id));
+const actById = new Map<string, any>((real || []).map((a: any) => [a.id, a]));
+
+// GOAL-SEEDED head detection (2026-06-26). A producer is "goal-seeded" if its work
+// derives from a file path embedded in the goal text — i.e. it has a goal_file_extract
+// task, or a task that reads file paths / source / quality from {{goal}} or
+// {{impulse:goal_files}}. Cold-dispatched with a path-less goal these ENOENT and emit
+// only "missing file" output → the reach-gate judges the chain HOLLOW. Detect by task
+// resolvers + config strings; tolerant of missing tasks (treated as not goal-seeded).
+const GOAL_FILE_RESOLVERS = ["goal_file_extract", "problem_detection", "source_code", "code_quality"];
+const isGoalSeededHead = (activityId: string): boolean => {
+  try {
+    const a = actById.get(activityId);
+    const tasks = (a?.tasks || []) as any[];
+    if ((a?.input_shapes || []).includes("goal")) {
+      // input is the goal itself + at least one file-deriving task ⇒ goal-seeded.
+      if (tasks.some((t) => GOAL_FILE_RESOLVERS.includes(String(t?.resolver || "")))) return true;
+    }
+    // Or any task binds a file path off the goal text directly.
+    return tasks.some((t) => {
+      const cfg = JSON.stringify(t?.config || {});
+      return /\{\{\s*(impulse:)?goal/.test(cfg) && /file|path|source/i.test(cfg);
+    });
+  } catch { return false; }
+};
 
 // 2) Reliably-succeeding activities over the last 24h (≥1 success).
 const since = new Date(Date.now() - 24 * 3600_000).toISOString();
@@ -170,10 +200,20 @@ const parent = new Map<string, string>();
 const find = (x: string): string => { let r = x; while (parent.get(r) && parent.get(r) !== r) r = parent.get(r)!; parent.set(x, r); return r; };
 const union = (a: string, b: string) => { parent.set(find(a), find(b)); };
 try {
-  const [gedges] = await sql(`SELECT parent_activity_id, child_activity_id FROM activity_composition_graph LIMIT 8000;`);
+  // CRITICAL (2026-06-27): union ONLY over edges tagged edge_kind="genuine" — the SAME
+  // definition spectral-gap.ts uses for its genuine-component count. Previously this
+  // unioned over ALL non-hub/non-synthetic edges, which INCLUDED the 333 `scaffold`
+  // wrapper-spoke edges (compose-* dispatch parentage). Those scaffold spokes
+  // artificially fuse every capability into one blob, so bridges() saw a fully-connected
+  // graph and NEVER fired (rank-0 bridge tier was empty) — compose-teacher kept authoring
+  // WITHIN the giant component and genuine.components stayed pinned at 5. Filtering to
+  // edge_kind="genuine" makes this union-find match the REAL fragmentation spectral-gap
+  // measures (1 giant comp + 4 small fragments), so bridges() now targets a producer in
+  // one genuine component and a consumer in another — the only move that drops components.
+  const [gedges] = await sql(`SELECT parent_activity_id, child_activity_id FROM activity_composition_graph WHERE edge_kind = "genuine" LIMIT 8000;`);
   for (const e of gedges || []) {
     const p = String(e.parent_activity_id), c = String(e.child_activity_id);
-    if (isHub(p) || isHub(c) || isSynthetic(p) || isSynthetic(c)) continue; // genuine subgraph only
+    if (isHub(p) || isHub(c) || isSynthetic(p) || isSynthetic(c)) continue; // belt-and-suspenders
     if (!parent.has(p)) parent.set(p, p);
     if (!parent.has(c)) parent.set(c, c);
     union(p, c);
@@ -182,9 +222,39 @@ try {
 const comp = (id: string): string => (parent.has(id) ? find(id) : `solo:${id}`);
 const bridges = (p: Pair) => comp(p.producer) !== comp(p.consumer); // spans two genuine components (or pulls in an isolated node)
 
-// Ranking (lower = selected first): BRIDGE a component gap first, then prefer leaf
-// endpoints (convert degree-1 pendants), then strict (real shared shape) over relaxed.
-const rank = (p: Pair) => (bridges(p) ? 0 : 4) + (leafPair(p) ? 0 : 2) + (p.strict ? 0 : 1);
+// COLD-RUNNABLE HEAD (2026-06-26, hollow-composite fix). A composite's head producer
+// runs at dispatch time with goal = the composite description (no caller-supplied
+// impulses). For the head to emit REAL output its work must NOT depend on external
+// files we don't provide. Two head classes run cold successfully:
+//   (a) SELF-SOURCING — input_shapes empty (or no file dependency): output derives from
+//       substrate-internal state (observers/ticks/state-readers). Runs cold as-is.
+//   (b) GOAL-SEEDED — derives a file path from the goal text; runs cold IFF we seed the
+//       dispatched goal with a concrete real repo file path (engine.ts:1040 makes the
+//       goal text the {{goal}} variable, propagated to the child via opts.variables at
+//       engine.ts:1119, so goal_file_extract picks it up). We CAN seed these.
+// A head we CANNOT make run cold (needs a caller-supplied impulse other than goal) is
+// the hollow trap. Pick a real seed file that exists in the container.
+const SEED_FILES = [
+  "/vessels/local-tools-vessel/src/index.ts",
+  "/vessels/discovery-vessel/src/index.ts",
+  "/vessels/goal-host-vessel/src/index.ts",
+];
+let SEED_FILE = SEED_FILES[0]!;
+for (const f of SEED_FILES) { try { if (await Bun.file(f).exists()) { SEED_FILE = f; break; } } catch { /* tolerant */ } }
+const isSelfSourcing = (activityId: string): boolean => {
+  const a = actById.get(activityId);
+  const ins = (a?.input_shapes || []) as string[];
+  // No declared inputs, or only goal — and NOT a file-deriving head ⇒ self-sourcing.
+  return (ins.length === 0 || (ins.length === 1 && ins[0] === "goal")) && !isGoalSeededHead(activityId);
+};
+// A head is cold-runnable iff it self-sources OR is a goal-seeded head we can seed.
+const coldRunnableHead = (p: Pair) => isSelfSourcing(p.producer) || isGoalSeededHead(p.producer);
+
+// Ranking (lower = selected first): BRIDGE a component gap first, then prefer a
+// COLD-RUNNABLE head (self-sourcing or seedable — this is what stops the head running
+// empty and the chain going hollow), then leaf endpoints, then strict over relaxed.
+const rank = (p: Pair) =>
+  (bridges(p) ? 0 : 8) + (coldRunnableHead(p) ? 0 : 4) + (leafPair(p) ? 0 : 2) + (p.strict ? 0 : 1);
 // VIABILITY FILTER (2026-06-26): restrict candidates to pairs whose PRODUCER demonstrably
 // produced the bridge shape in a recent successful standalone trace — this is what stops
 // the substrate from authoring composites around producers that ENOENT from a cold start
@@ -208,8 +278,10 @@ async function dispatch(targetTemplateId: string, goal: string): Promise<any> {
 }
 
 let action: string, compositeId: string, result: any;
+let head_seeded = false, head_cold_runnable: boolean | null = null, seed_file: string | null = null;
 
 if (fresh) {
+  head_cold_runnable = coldRunnableHead(fresh);
   // Author a new composite chaining the fresh pair (idempotent UPSERT).
   compositeId = `compose-${plainName(fresh.producer)}-to-${plainName(fresh.consumer)}`.slice(0, 80);
   const body = {
@@ -247,13 +319,25 @@ if (fresh) {
       { id: "dispatch_consumer", description: `Run ${fresh.consumer} consuming ${fresh.shape} produced upstream.`, resolver: fresh.consumer, inputShapes: [fresh.shape], config: { reason: "composition step 2: consume " + fresh.shape, upstream: `{{dispatch_producer_${fresh.shape}}}` } },
     ],
   };
+  // SEED the dispatched goal (2026-06-26). If the head producer is goal-seeded — it
+  // pulls a file path out of the goal text — embed a concrete real repo file path so
+  // goal_file_extract / problem_detection run on a REAL file and emit real output,
+  // which then flows producer→consumer (non-hollow). Self-sourcing heads need no seed.
+  // The seed is appended to the composite description so existing reach/recommend logic
+  // still sees what the composite is for. (engine.ts:1040 → {{goal}}; :1119 → child.)
+  const seedHead = isGoalSeededHead(fresh.producer);
+  head_seeded = seedHead;
+  seed_file = seedHead ? SEED_FILE : null;
+  const dispatchGoal = seedHead
+    ? `${body.description}\n\nAnalyze the source file ${SEED_FILE} and produce ${fresh.shape} from it, then feed that into ${fresh.consumer}.`
+    : body.description;
   const reg = await fetch(`${API}/v2/activities/templates`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `ApiKey ${KEY}` },
     body: JSON.stringify(body),
   });
   action = reg.ok ? "authored_and_dispatched_new_chain" : "author_failed";
-  if (reg.ok) result = await dispatch(`activity:⟨${compositeId}⟩`, body.description);
+  if (reg.ok) result = await dispatch(`activity:⟨${compositeId}⟩`, dispatchGoal);
   else result = { status: "author_failed", http: reg.status, detail: (await reg.text()).slice(0, 200) };
 } else if (existingCompositeIds.size) {
   // Reinforce: round-robin over existing composites by tick (deterministic via minute).
@@ -287,6 +371,8 @@ const rec = {
   producible_pairs: producible === null ? null : producible.size,
   viability_fallback: usedFallback,
   producer_viability: producible === null ? "unavailable" : usedFallback ? "fallback_unfiltered" : "filtered",
+  // cold-runnable / seed visibility (2026-06-26 hollow-composite fix):
+  head_cold_runnable, head_seeded, seed_file,
   star_ratio, headroom, unlock_at: 0.35,
 };
 await log(rec);
