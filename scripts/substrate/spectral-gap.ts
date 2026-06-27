@@ -225,6 +225,29 @@ const genuine = analyze(rows.filter((r: any) => isGenuineEdge(r)));
 const lambda1 = genuine.fiedler_lambda2;
 const stabilityHeadroom = rhoGrow === null ? null : Math.round((lambda1 - rhoGrow) * 1e6) / 1e6;
 const stabilityRatio = rhoGrow === null || rhoGrow === 0 ? null : Math.round((lambda1 / rhoGrow) * 1e4) / 1e4;
+
+// LIVE genuine subgraph: restrict the genuine capability graph to activities that
+// actually RAN successfully in the recent window (both endpoints carry a recent
+// success trace). The all-time genuine graph is inflated by GRAVEYARD fragments —
+// dead activities (no success in the window, no live consumer) that disconnect it and
+// pin λ₁=0 even though the WORKING capability graph is one connected component. This
+// measures the connectivity of the system that is actually operating, reported
+// ALONGSIDE all-time genuine (never replacing it) so the graveyard stays visible.
+// live_lambda1 is the honest credit-mixing rate of the working substrate. (2026-06-27)
+const LIVE_WINDOW_HOURS = 24;
+const normId = (s: string) => (s || "").replace(/^activity:/, "").replace(/[⟨⟩`]/g, "").trim();
+let liveSet: Set<string> | null = null;
+try {
+  const liveRows = (await q(
+    `SELECT VALUE activity_id FROM activity_execution_traces WHERE executed_at >= time::now() - ${LIVE_WINDOW_HOURS}h AND success = true LIMIT 60000;`,
+  ))[0]?.result ?? [];
+  liveSet = new Set((liveRows as string[]).map(normId));
+} catch { liveSet = null; }
+const bothLive = (r: any) =>
+  liveSet !== null && liveSet.has(normId(r.parent_activity_id)) && liveSet.has(normId(r.child_activity_id));
+const liveGenuine = liveSet === null ? null : analyze(rows.filter((r: any) => isGenuineEdge(r) && bothLive(r)));
+const liveLambda1 = liveGenuine ? liveGenuine.fiedler_lambda2 : null;
+
 const out = {
   at: new Date().toISOString(),
   // FULL graph at top level for backward-compat (hook-dominated, perverse — see note above).
@@ -233,6 +256,12 @@ const out = {
   // here is what the governor should gate on; it is 0 while the capability graph is
   // fragmented (components>1), so BRIDGING components is the highest-value λ₂ move.
   genuine,
+  // LIVE genuine subgraph (both endpoints succeeded in the last 24h) — connectivity of
+  // the WORKING system, excluding graveyard fragments. live_genuine.components==1 with
+  // live_lambda1>0 ⇒ the operating capability graph mixes credit even while all-time
+  // genuine λ₁=0 from dead fragments. null ⇒ live query unreachable. (2026-06-27)
+  live_genuine: liveGenuine,
+  live_lambda1: liveLambda1,
   // ρ_grow — RHS of the master inequality (SUBSTRATE_AS_DYNAMICS.md §3). See block above for
   // source/normalization. rho_grow is the dimensionless per-hour fractional mint rate (vs the
   // dimensionless per-step λ₁); rho_grow_mints_per_hour is the raw rate for legibility;
