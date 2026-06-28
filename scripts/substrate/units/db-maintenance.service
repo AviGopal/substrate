@@ -1,0 +1,7 @@
+[Unit]
+Description=DB maintenance — substrate manages its own SurrealDB (diagnose + safe auto-remediate)
+[Service]
+Type=oneshot
+Environment=DB_MAINTENANCE=1
+EnvironmentFile=-/etc/substrate/env
+ExecStart=/root/.bun/bin/bun /workspace/active-scripts/db-maintenance-tick.ts
