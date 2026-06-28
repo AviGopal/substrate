@@ -54,8 +54,15 @@ const remediations: any[] = Array.isArray(diag?.suggested_remediations) ? diag.s
 for (const rem of remediations.slice(0, 8)) {
   const op = rem?.operation;
   if (op === "create_index") {
-    const res = await dbAdmin("create_index", rem.params ?? rem);
-    actions.push({ op, params: rem.params ?? rem, result: res?.error ? "error" : "applied", detail: (res?.error ?? res?.status ?? "ok") });
+    const p = rem.params ?? rem;
+    // The diagnose deliberately suggests an index target WITHOUT picking concrete
+    // fields (placeholder `<choose>`) — auto-indexing a 275k+ row table can hang the
+    // /sql endpoint, so concrete index choice is left to an explicit goal/operator.
+    // Skip (surface) placeholder suggestions rather than erroring on them.
+    const hasPlaceholder = JSON.stringify(p).includes("<choose>") || !p?.name || !p?.fields;
+    if (hasPlaceholder) { actions.push({ op, result: "surfaced(placeholder — needs concrete fields)", suggestion: p }); continue; }
+    const res = await dbAdmin("create_index", p);
+    actions.push({ op, params: p, result: res?.error ? "error" : "applied", detail: (res?.error ?? res?.status ?? "ok") });
   } else if (op === "apply_migration") {
     const res = await dbAdmin("apply_migration", rem.params ?? rem);
     actions.push({ op, result: res?.error ? "error" : "applied" });
