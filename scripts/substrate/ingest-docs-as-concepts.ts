@@ -44,28 +44,21 @@ function sections(md: string): Array<{ heading: string; body: string }> {
 async function createConcept(doc: string, heading: string, body: string): Promise<boolean> {
   const sectionKey = `${doc}#${slug(heading)}`;
   try {
-    const res = await fetch(`${CONCEPT_DB}/v2/impulses/resolve`, {
+    // POST /concepts is the path that EMBEDS the content and respects the auth org
+    // (the concept_create_write impulse path did neither — it left concepts in the
+    // "default" org with dim=0, invisible to the substrate's dense search).
+    const res = await fetch(`${CONCEPT_DB}/concepts`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Send the substrate key so concepts land in the substrate's org (not the
-        // unauthenticated "default" org), where the substrate's search/priming reads.
         ...(process.env["METABOB_API_KEY"] ? { Authorization: `ApiKey ${process.env["METABOB_API_KEY"]}` } : {}),
       },
       body: JSON.stringify({
-        impulse: {
-          type: "concept_create_write",
-          pointer: {
-            type: "concept_create_write",
-            conceptData: {
-              source_type: "architecture_doc",
-              content: `${heading}\n\n${body}`,
-              shape: "architecturePrinciple",
-              summary: `${doc}: ${heading}`.slice(0, 160),
-              metadata: { doc, heading, section_key: sectionKey, source: "architecture-docs-ingest" },
-            },
-          },
-        },
+        source_type: "memo",
+        content: `${heading}\n\n${body}`,
+        shape: "architecturePrinciple",
+        summary: `${doc}: ${heading}`.slice(0, 160),
+        pointer: { type: "memo", path: `docs/architecture/${doc}`, section: heading, section_key: sectionKey, source: "architecture-docs-ingest" },
       }),
       signal: AbortSignal.timeout(30_000),
     });
