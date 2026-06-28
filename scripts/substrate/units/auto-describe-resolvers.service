@@ -1,0 +1,27 @@
+[Unit]
+Description=Auto-describe resolvers — the substrate DESCRIBES ITS OWN undescribed resolvers
+# Closes the last operator/owner-load-bearing item in the decomposition-planner path:
+# the planner can only match a goal to a resolver that has a one-line DESCRIPTION in
+# discovery's /registry/shape-descriptions. ~200 shapes are advertised but only a few
+# are described; the rest are id-only and NOT planner-matchable. Each fire this tick
+# picks up to 5 UNDESCRIBED data/report shapes (round-robin), gathers SAFE read-only
+# evidence (producer-activity name/description + a recent impulse pointer — NEVER invokes
+# the resolver), asks the canonical LLM resolver for one concrete line, and POSTs it as a
+# LEARNED description (source:auto). Advertised descriptions always win, so this only
+# fills gaps. Pausable via AUTO_DESCRIBE_RESOLVERS=0.
+#
+# Smoke: docker exec substrate-live systemctl start auto-describe-resolvers.service
+#        docker exec substrate-live tail -n 5 /workspace/metrics/auto-describe.jsonl
+After=activity-api.service surrealdb.service discovery-vessel.service llm-resolver-vessel.service
+Requires=surrealdb.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+Environment=AUTO_DESCRIBE_RESOLVERS=1
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/auto-describe-resolvers.ts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

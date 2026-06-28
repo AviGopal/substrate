@@ -1,0 +1,17 @@
+[Unit]
+Description=Auto-describe resolvers timer (substrate self-describes its resolvers)
+
+[Timer]
+# Modest cadence — each fire is up to 5 cheap LLM one-liners + a few read-only DB
+# queries. First run 10 min after activation, then every 20 min. Type=oneshot, so a
+# still-running tick blocks the next fire. The backlog drains over hours as the
+# round-robin cursor advances through the undescribed set.
+OnBootSec=10min
+OnActiveSec=10min
+OnUnitActiveSec=20min
+Persistent=true
+AccuracySec=1min
+Unit=auto-describe-resolvers.service
+
+[Install]
+WantedBy=timers.target

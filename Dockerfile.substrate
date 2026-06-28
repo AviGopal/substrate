@@ -244,7 +244,8 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         autonomy-metrics.timer \
         self-operational-health.timer \
         self-repair-operational.timer \
-        operator-goal-generator.timer
+        operator-goal-generator.timer \
+        auto-describe-resolvers.timer
 
 # SurrealDB writes the learning state (traces, Thompson posteriors, concept
 # graph) to file:/var/lib/surrealdb/data.db. Declaring it a volume — like
