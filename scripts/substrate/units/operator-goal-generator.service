@@ -1,0 +1,30 @@
+[Unit]
+Description=Operator-goal generator — the convergent enabler (exercise the learning machinery)
+# The substrate now HAS the learning apparatus (successor-features ψ, traced multi-step
+# deliberation, the post-execution reach-gate, decomposition-authoring) but is STARVED
+# of diverse, genuinely MULTI-STEP operator goals — day-to-day traffic is thin single-
+# task internal ticks. This oneshot turns "has the apparatus" into "exercises it": each
+# fire it picks ONE multi-step operator goal from a rotating, diverse catalogue (round-
+# robin, deterministic — selected for COVERAGE, never reachability, so it can't game the
+# reach-gate), grounds it in live substrate data, and dispatches it via goal-host
+# /run-goal. The completion shape of every class has no single producer, so reaching it
+# forces real composition — the signal ψ + the reach-gate + the composer need. Pausable
+# via OPERATOR_GOAL_GEN=0. Bounded: one goal per fire; dispatch failure logs + continues.
+#
+# Smoke test:
+#   docker exec substrate-live systemctl start operator-goal-generator.service
+#   docker exec substrate-live tail -n 1 /workspace/metrics/operator-goal-gen.jsonl
+#   docker exec substrate-live bun ${SUBSTRATE_RUN_DIR}/operator-goal-signal.ts  # enrichment signal
+After=activity-api.service surrealdb.service goal-host-vessel.service
+Requires=surrealdb.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+Environment=OPERATOR_GOAL_GEN=1
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/operator-goal-generator.ts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
