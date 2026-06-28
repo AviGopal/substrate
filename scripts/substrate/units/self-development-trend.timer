@@ -1,0 +1,7 @@
+[Unit]
+Description=Self-development trend recorder timer (every 30min)
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=30min
+[Install]
+WantedBy=timers.target
