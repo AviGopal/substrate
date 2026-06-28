@@ -1,0 +1,12 @@
+[Unit]
+Description=Autonomous detection cadence — efficiency_scan + trace_failure_pattern_report (emit gaps)
+After=development-vessel.service activity-api.service
+Wants=development-vessel.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/efficiency-failure-tick.ts
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the autonomous detection cadence (efficiency + failure gaps) periodically
+
+[Timer]
+OnBootSec=6min
+OnUnitActiveSec=20min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
