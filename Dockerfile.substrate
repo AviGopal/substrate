@@ -193,6 +193,15 @@ RUN cd metric-collector-vessel && bun install
 COPY repos/metric-collector-vessel/src ./metric-collector-vessel/src
 COPY repos/metric-collector-vessel/tsconfig.json ./metric-collector-vessel/
 
+# relevance-sink-vessel (impulse-relevance penalty writes, decoupled from the
+# activity-api trace store — port 8255). Self-contained single file, no runtime
+# deps, so no `bun install`. Added 2026-06-21 but was never baked into the image,
+# so every container recreate lost it and the unit crash-looped on a missing
+# /vessels/relevance-sink-vessel/src/index.ts (penalty-write decoupling inert).
+COPY repos/relevance-sink-vessel/package.json ./relevance-sink-vessel/
+COPY repos/relevance-sink-vessel/src ./relevance-sink-vessel/src
+COPY repos/relevance-sink-vessel/tsconfig.json ./relevance-sink-vessel/
+
 # --- Substrate runtime config ---
 RUN mkdir -p /etc/substrate /workspace /var/lib/surrealdb /scripts
 
@@ -205,9 +214,10 @@ COPY scripts/substrate/setup-git-push.sh /usr/local/bin/setup-git-push
 # how obsidian-learn + goal-host-behavior (two LEARNING loops) sat silently dead
 # after a container recreate. (Now also surfaced by systemd_unit_health_observer.)
 COPY scripts/substrate/obsidian-learn-tick.sh /usr/local/bin/obsidian-learn-tick.sh
+COPY scripts/substrate/obsidian-intake-tick.sh /usr/local/bin/obsidian-intake-tick.sh
 COPY scripts/substrate/goal-host-behavior-tick.sh /usr/local/bin/goal-host-behavior-tick.sh
 COPY scripts/substrate/light-dispatch-healthcheck.sh /usr/local/bin/light-dispatch-healthcheck
-RUN chmod +x /usr/local/bin/obsidian-learn-tick.sh /usr/local/bin/goal-host-behavior-tick.sh /usr/local/bin/light-dispatch-healthcheck
+RUN chmod +x /usr/local/bin/obsidian-learn-tick.sh /usr/local/bin/obsidian-intake-tick.sh /usr/local/bin/goal-host-behavior-tick.sh /usr/local/bin/light-dispatch-healthcheck
 COPY scripts/substrate/seed-identity.ts /vessels/seed-identity.ts
 COPY scripts/substrate/seed-concepts.ts /vessels/seed-concepts.ts
 COPY scripts/bootstrap-seeder.ts /scripts/bootstrap-seeder.ts
@@ -233,6 +243,7 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         analysis-vessel.service \
         stateful-ui-vessel.service \
         light-dispatch-vessel.service \
+        relevance-sink-vessel.service \
         light-dispatch-healthcheck.timer \
         journald-stdout-forwarder.service \
         m1-trainer.timer \
@@ -245,7 +256,14 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         self-operational-health.timer \
         self-repair-operational.timer \
         operator-goal-generator.timer \
-        auto-describe-resolvers.timer
+        auto-describe-resolvers.timer \
+        surgical-gap-scan.timer \
+        obsidian-intake.timer \
+        obsidian-learn.timer && \
+    : "Valkey is the cache; redis-server is a vestigial apt transitive that the" \
+      "package's postinst auto-enables. Mask it so it never starts or shows as a" \
+      "failed unit (the live substrate runs valkey.service, not redis)." && \
+    systemctl mask redis-server.service
 
 # SurrealDB writes the learning state (traces, Thompson posteriors, concept
 # graph) to file:/var/lib/surrealdb/data.db. Declaring it a volume — like

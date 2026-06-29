@@ -19,6 +19,11 @@ WorkingDirectory=/vessels/activity-api
 ExecStart=/root/.bun/bin/bun /vessels/activity-api/scripts/m1-train.ts
 StandardOutput=journal
 StandardError=journal
+# Exit 2 = "no training samples yet" (variants lack concept-db embeddings for
+# their signature) — a starvation no-op, not a fault. Treat it as success so the
+# unit doesn't sit in `failed` and mask genuine failures (exit 1). The starvation
+# is still visible in the journal (m1_train_data_collected with_embedding:0).
+SuccessExitStatus=2
 
 [Install]
 WantedBy=multi-user.target
