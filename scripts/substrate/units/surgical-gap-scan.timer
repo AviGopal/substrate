@@ -1,0 +1,14 @@
+[Unit]
+Description=Surgical-gap-scan timer
+[Timer]
+# LOW cadence — the scan is cheap (read-only grep), but the supply must stay
+# bounded so the gap store isn't flooded. Every 60 min, first run 12 min after
+# activation (after gap-compose's first 8-min tick, so the loop drains existing
+# surgical gaps before the scan tops them up).
+OnActiveSec=12min
+OnUnitActiveSec=60min
+Persistent=true
+AccuracySec=2min
+Unit=surgical-gap-scan.service
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,18 @@
+[Unit]
+Description=Surgical-gap-scan — emit localized single-edit substrateGaps to supply the autonomous gap-compose loop
+After=development-vessel.service
+# READ-ONLY scan of vessel src -> a few high-precision `systematic_failure` gaps
+# (hardcoded fetch-endpoint literals) with concrete edit-sites, so gap-compose has
+# a supply of LANDABLE surgical work. Idempotent (deterministic gap ids, upsert).
+# Smoke: docker exec substrate-live systemctl start surgical-gap-scan.service
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+# Bounded: at most a few gaps per run; the genuine-hit set is small and shrinks as
+# the loop lands fixes, so the supply is self-limiting (won't flood the gap store).
+Environment=SURGICAL_SCAN_CAP=3
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/surgical-gap-scan.ts
+StandardOutput=journal
+StandardError=journal
+[Install]
+WantedBy=multi-user.target

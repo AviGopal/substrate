@@ -37,6 +37,9 @@ async function main(): Promise<void> {
       verdict: b.verdict ?? null,
       op_count: c.op_count ?? null,
       touched: c.touched_vessels ?? null,
+      landed: b.landed ?? null,
+      landed_commit: b.landed_commit ?? null,
+      gap_closed: b.gap_closed ?? null,
       note: b.note ?? null,
     }));
   } catch (e) {

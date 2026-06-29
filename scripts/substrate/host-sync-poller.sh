@@ -80,6 +80,33 @@ process_intent() {
     return 0
   fi
 
+  # CLEAN-SLATE the host clone to origin/dev BEFORE applying staged files
+  # (ATOMICITY FIX, 2026-06-29). This is the authoritative atomic-commit path:
+  # SSH fetch works on the host (the in-container PAT does not), so we reset the
+  # host clone to the TRUE remote tip first. Without this, the host clone can be
+  # behind/divergent from origin/dev, and copying a (possibly stale) staged file
+  # over it + scoped-committing produced sweepy diffs — e.g. commit af61dee
+  # DELETED 655 legit lines while "only" touching one staged file, because the
+  # mitosis tree's copy of that file lagged origin/dev. Resetting to origin/dev
+  # guarantees the committed diff == only the staged fix. The host clone is a
+  # disposable push-staging tree; the container's /vessels runtime is mirrored
+  # separately at the end, so resetting here loses nothing load-bearing.
+  # Set HOST_SYNC_SKIP_RESET=1 to bypass (escape hatch).
+  if [[ "${HOST_SYNC_SKIP_RESET:-0}" != "1" ]]; then
+    if (cd "$host_vessel_root" && git fetch origin dev 2>/dev/null); then
+      if ! (cd "$host_vessel_root" && git reset --hard origin/dev && git clean -fd) >/dev/null 2>&1; then
+        log "reject $intent_id: clean-slate reset --hard origin/dev failed in $host_vessel_root"
+        write_result "$intent_id" "" "rejected_clone_reset_failed" "reset --hard origin/dev failed"
+        return 0
+      fi
+      log "clean-slate $intent_id: host clone reset to origin/dev before apply"
+    else
+      log "reject $intent_id: fetch origin dev failed; refusing to commit against an unverified clone tip"
+      write_result "$intent_id" "" "rejected_fetch_failed" "fetch origin dev failed"
+      return 0
+    fi
+  fi
+
   # Re-check base_sha freshness against current host source.
   # apply_proposal_as_patch computes base_sha from the FILE IT'S PATCHING
   # (the first staged file), not from src/index.ts. Using src/index.ts as
