@@ -1,0 +1,16 @@
+[Unit]
+Description=obsidian-intake — fast pickup of operator requests from Substrate/Inbox.md (human↔substrate async loop)
+After=development-vessel.service
+# Responsive intake is SEPARATE from the heavy 30-min obsidian-learn pass: the
+# human writes a request and should see "🔄 working on it" in Now.md within a
+# couple of minutes, not half an hour. This runs ONLY the request-scan (intake +
+# ack + dispatch), leaving the slow command-catalog / behavior-model / assist
+# passes to obsidian-learn.timer. Graceful idle if the plugin is unreachable.
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/usr/bin/bash /usr/local/bin/obsidian-intake-tick.sh
+
+[Install]
+WantedBy=multi-user.target

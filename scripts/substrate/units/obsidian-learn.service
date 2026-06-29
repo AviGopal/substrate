@@ -15,7 +15,12 @@ EnvironmentFile=/etc/substrate/env
 # OBSIDIAN_LEARN_MODE=probe + a probe-instance endpoint for execution-based
 # effect learning. Unreachable instance → {unreachable:true}, a graceful idle.
 Environment=OBSIDIAN_LEARN_MODE=catalog
-Environment=OBSIDIAN_LEARN_ENDPOINT=http://host.docker.internal:27183
+# The obsidian-vessel plugin runs IN this container (obsidian-desktop.service) on
+# 127.0.0.1:27182. The old host.docker.internal:27183 was a leftover from when
+# Obsidian ran on the operator's HOST — it is DOWN here, which silently idled the
+# intake (request-scan)/behavior-scan passes against a dead endpoint. Point at the
+# live in-container plugin so the human↔substrate async loop actually runs.
+Environment=OBSIDIAN_LEARN_ENDPOINT=http://127.0.0.1:27182
 Environment=OBSIDIAN_LEARN_GRANT=navigate
 Environment=OBSIDIAN_LEARN_MAX=10
 ExecStart=/usr/bin/bash /usr/local/bin/obsidian-learn-tick.sh
