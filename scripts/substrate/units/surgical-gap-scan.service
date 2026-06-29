@@ -11,6 +11,11 @@ EnvironmentFile=/etc/substrate/env
 # Bounded: at most a few gaps per run; the genuine-hit set is small and shrinks as
 # the loop lands fixes, so the supply is self-limiting (won't flood the gap store).
 Environment=SURGICAL_SCAN_CAP=3
+# Scan the in-container push CLONES (kept reset to origin/dev by the cutover), NOT
+# the host repos/ bind (which the cutover never updates → drifts stale → the scanner
+# re-detects already-fixed endpoints → the loop churns UNFAVORABLE on no-op gaps).
+# Clones track the LANDED truth, so only genuinely-unfixed issues are emitted.
+Environment=SURGICAL_SCAN_REPOS=/workspace/git/vessels
 ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/surgical-gap-scan.ts
 StandardOutput=journal
 StandardError=journal
