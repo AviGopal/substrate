@@ -29,22 +29,27 @@ LLM="${LLM_VESSEL_ENDPOINT:-http://127.0.0.1:8220/resolve}"
 GOALHOST="${GOAL_HOST_VESSEL_ENDPOINT:-http://127.0.0.1:8210}"
 CLASSIFY_MODEL="${OBSIDIAN_CLASSIFY_MODEL:-claude-haiku-4-5-20251001}"
 
-# classify_request <text> -> echoes ACTION or ANSWER (defaults ANSWER on any failure)
+# classify_request <text> -> echoes ACTION | ANSWER | DEVELOP (defaults ANSWER on any failure)
 classify_request() {
   local text="$1" prompt resp word
-  prompt="Classify the operator's vault request as exactly one word.
-ACTION = they want the substrate to DO something to the vault (create/write/modify/move/organize/delete a note or file).
+  prompt="Classify the operator's request as exactly one word.
+DEVELOP = they want the substrate to CHANGE or IMPROVE ITS OWN CODE — a vessel/resolver (fix a bug, optimize, refactor/extract, replace a hardcoded value, add/adjust logic in repos/<vessel>/src). Mentions of a vessel name, a resolver, a code file, 'fix/optimize/refactor/extract/hardcoded'.
+ACTION = they want the substrate to DO something to the VAULT (create/write/modify/move/organize/delete a note or file).
 ANSWER = they want information back (a question, briefing, summary, explanation: what/why/how/which/explain/tell me).
 Request: \"${text}\"
-Respond with ONLY the single word ACTION or ANSWER."
+Respond with ONLY the single word DEVELOP, ACTION, or ANSWER."
   resp=$(curl -s -m 20 -X POST "${LLM}" \
     -H "Content-Type: application/json" \
     -H "Authorization: ApiKey ${METABOB_API_KEY}" \
     -d "$(jq -nc --arg p "${prompt}" --arg m "${CLASSIFY_MODEL}" \
           '{type:"llm_completion",prompt:$p,model:$m,max_tokens:10}')" 2>/dev/null)
   word=$(printf '%s' "${resp}" | jq -r '.content // empty' 2>/dev/null \
-          | tr '[:lower:]' '[:upper:]' | grep -oE 'ACTION|ANSWER' | head -1)
-  if [ "${word}" = "ACTION" ]; then echo "ACTION"; else echo "ANSWER"; fi
+          | tr '[:lower:]' '[:upper:]' | grep -oE 'DEVELOP|ACTION|ANSWER' | head -1)
+  case "${word}" in
+    DEVELOP) echo "DEVELOP" ;;
+    ACTION)  echo "ACTION" ;;
+    *)       echo "ANSWER" ;;
+  esac
 }
 
 # 1. INTAKE
@@ -63,7 +68,27 @@ printf '%s' "${SCAN}" | jq -r '.body.requests[]? | select(.text != null) | .text
   KIND=$(classify_request "${TEXT}")
   printf 'classified [%s]: %s\n' "${KIND}" "${TEXT}"
 
-  if [ "${KIND}" = "ACTION" ]; then
+  if [ "${KIND}" = "DEVELOP" ]; then
+    # DEVELOP → route into the AUTONOMOUS self-development pipeline as a substrateGap.
+    # The human DIRECTS the improvement; the gap-compose → feature_compose → quality-gate
+    # → cutover loop authors it, gates it (typecheck + stub + semantic), and lands it on
+    # origin/dev (or rejects via the gates). We only CREATE the gap + ack; landing stays gated.
+    GAPID="human-request-${SLUG}"
+    VHINT=$(printf '%s' "${TEXT}" | grep -oiE 'goal-host-vessel|activity-api|development-vessel|discovery-vessel|identity-vessel|llm-resolver-vessel|local-tools-vessel|analysis-vessel|concept-db|boredom-vessel|ribosome-vessel|stateful-ui-vessel|relevance-sink-vessel' | head -1 | tr '[:upper:]' '[:lower:]')
+    META=$(jq -nc --arg v "${VHINT}" --arg pf "${TEXT}" \
+      '{proposed_fix:$pf} + (if $v != "" then {vessel:$v} else {} end)')
+    GAPBODY=$(jq -nc --arg id "${GAPID}" --arg s "${TEXT}" --argjson m "${META}" \
+      '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"systematic_failure",status:"open",summary:$s,classification_metadata:$m}}}}')
+    curl -s -m 20 -X POST "${DEV}/v2/impulses/resolve" \
+      -H "Content-Type: application/json" -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+      -d "${GAPBODY}" 2>/dev/null | head -c 200
+    NOTE_BODY="---\nsubstrate_develop: queued\ngenerated_at: $(date -u +%Y-%m-%dT%H:%M:%SZ)\n---\n\n# 🔧 queued for the development loop\n\nRouted into autonomous self-development (gap \`${GAPID}\`). I'll author a quality-gated change and land it on dev if it passes typecheck + the stub/semantic gates; otherwise it's rejected and stays open.\n\nRequest: ${TEXT}\n"
+    curl -s -m 15 -X POST "${OBS}/resolve" \
+      -H "Content-Type: application/json" -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+      -d "$(jq -nc --arg p "Substrate/Responses/${SLUG}-develop.md" --arg c "${NOTE_BODY}" \
+            '{type:"obsidian:write_note",pointer:{type:"obsidian:write_note",path:$p,content:$c}}')" 2>/dev/null | head -c 200
+    printf ' <- queued for dev loop (gap %s): %s\n' "${GAPID}" "${SLUG}"
+  elif [ "${KIND}" = "ACTION" ]; then
     # ACTION → let goal-host PERFORM it (the walk's vessel-resolve satisfier does the real action).
     DISP=$(curl -s -m 90 -X POST "${GOALHOST}/run-goal" \
       -H "Content-Type: application/json" \
