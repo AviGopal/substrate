@@ -227,10 +227,19 @@ try {
   const by: Record<string, number> = {};
   for (const x of list) by[x.category ?? "unknown"] = (by[x.category ?? "unknown"] ?? 0) + 1;
   const mrCats = ["forward_model_artifact", "reference_integrity", "detector_value_sanity_violation", "auto_draft_fallback_recommend", "posterior_consistency_drift", "composition_coverage"];
+  // Meta-shape gap classes (learning-to-learn as a shape; plan
+  // imperative-twirling-truffle.md). Pinned so the six surface as named rows in the
+  // time series even at count 0, and so meta_open tracks whether the loop is closing
+  // its OWN learning gaps. trace_quality predates the others (reused for #3).
+  const metaCats = ["meta_hyperparam_unconverged", "repair_not_failure_conditioned", "trace_quality", "exploration_collapse", "coarsenable_chain", "closure_demand"];
+  const meta_by_category: Record<string, number> = {};
+  for (const c of metaCats) meta_by_category[c] = by[c] ?? 0;
   gaps = {
     total: g?.body?.total ?? list.length,
     by_category: by,
     model_reality_open: mrCats.reduce((s, c) => s + (by[c] ?? 0), 0),
+    meta_by_category,
+    meta_open: metaCats.reduce((s, c) => s + (by[c] ?? 0), 0),
   };
 } catch { /* */ }
 
