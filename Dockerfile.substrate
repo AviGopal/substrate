@@ -215,9 +215,10 @@ COPY scripts/substrate/setup-git-push.sh /usr/local/bin/setup-git-push
 # after a container recreate. (Now also surfaced by systemd_unit_health_observer.)
 COPY scripts/substrate/obsidian-learn-tick.sh /usr/local/bin/obsidian-learn-tick.sh
 COPY scripts/substrate/obsidian-intake-tick.sh /usr/local/bin/obsidian-intake-tick.sh
+COPY scripts/substrate/obsidian-collaborate-tick.sh /usr/local/bin/obsidian-collaborate-tick.sh
 COPY scripts/substrate/goal-host-behavior-tick.sh /usr/local/bin/goal-host-behavior-tick.sh
 COPY scripts/substrate/light-dispatch-healthcheck.sh /usr/local/bin/light-dispatch-healthcheck
-RUN chmod +x /usr/local/bin/obsidian-learn-tick.sh /usr/local/bin/obsidian-intake-tick.sh /usr/local/bin/goal-host-behavior-tick.sh /usr/local/bin/light-dispatch-healthcheck
+RUN chmod +x /usr/local/bin/obsidian-learn-tick.sh /usr/local/bin/obsidian-intake-tick.sh /usr/local/bin/obsidian-collaborate-tick.sh /usr/local/bin/goal-host-behavior-tick.sh /usr/local/bin/light-dispatch-healthcheck
 COPY scripts/substrate/seed-identity.ts /vessels/seed-identity.ts
 COPY scripts/substrate/seed-concepts.ts /vessels/seed-concepts.ts
 COPY scripts/bootstrap-seeder.ts /scripts/bootstrap-seeder.ts
@@ -259,7 +260,8 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         auto-describe-resolvers.timer \
         surgical-gap-scan.timer \
         obsidian-intake.timer \
-        obsidian-learn.timer && \
+        obsidian-learn.timer \
+        obsidian-collaborate.timer && \
     : "Valkey is the cache; redis-server is a vestigial apt transitive that the" \
       "package's postinst auto-enables. Mask it so it never starts or shows as a" \
       "failed unit (the live substrate runs valkey.service, not redis)." && \

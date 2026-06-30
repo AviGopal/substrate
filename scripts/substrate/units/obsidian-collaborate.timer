@@ -1,0 +1,10 @@
+[Unit]
+Description=obsidian-collaborate trigger — proactive goal-advancing collaboration (every 45 min, side loop)
+
+[Timer]
+OnActiveSec=3min
+OnUnitActiveSec=45min
+Unit=obsidian-collaborate.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=obsidian-collaborate — proactive collaboration toward the operator's OWN goals (earns continued engagement; not Obsidian-usage tips)
+After=development-vessel.service
+# Reframed objective (2026-06-30): the substrate sustains its momentum-from-reality by keeping
+# the human (a general-purpose resolver) wanting to collaborate — achieved by genuinely helping
+# them reach their goals. This pass infers the operator's top goal and contributes one useful
+# step toward it. obsidian_assist_feedback_scan measures engagement (the reward). Graceful idle.
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/usr/bin/bash /usr/local/bin/obsidian-collaborate-tick.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
