@@ -2,12 +2,20 @@
 # gen-env.sh — write /etc/substrate/env from container environment variables.
 # Sourced by every systemd unit via EnvironmentFile=/etc/substrate/env.
 #
-# Only ANTHROPIC_API_KEY is required from the operator.
+# LLM provider — at least one key must be set:
+#   ANTHROPIC_API_KEY   — Anthropic Claude (default / preferred)
+#   OPENAI_API_KEY      — OpenAI-compatible (OpenAI, Ollama, Groq, Together, vLLM, …)
+#   OPENAI_BASE_URL     — override base URL for non-OpenAI endpoints (optional)
+#   LLM_DEFAULT_MODEL   — override default model (optional; defaults to claude-sonnet-4-6)
+#
 # JWT_SECRET and SURREAL_PASS are generated internally if not provided.
 # METABOB_API_KEY is a bootstrap value replaced by identity-vessel after seeding.
 set -euo pipefail
 
-: "${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY is required — the only operator-side credential}"
+if [[ -z "${ANTHROPIC_API_KEY:-}" && -z "${OPENAI_API_KEY:-}" ]]; then
+  echo "[gen-env] ERROR: No LLM provider key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY." >&2
+  exit 1
+fi
 
 # Internal secrets: auto-generate if not provided.
 # These are substrate-internal and never need to come from outside.
@@ -55,7 +63,11 @@ cat > /etc/substrate/env <<EOF
 JWT_SECRET="${JWT_SECRET}"
 SURREAL_PASS="${SURREAL_PASS}"
 METABOB_API_KEY="${METABOB_API_KEY}"
-ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}"
+# LLM provider credentials — at least one must be non-empty (validated above).
+ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
+OPENAI_API_KEY="${OPENAI_API_KEY:-}"
+OPENAI_BASE_URL="${OPENAI_BASE_URL:-}"
+LLM_DEFAULT_MODEL="${LLM_DEFAULT_MODEL:-}"
 # Substrate root inside the container = the bind-mounted host repo path
 # (docker run -v \$(REPO_ROOT):\$(REPO_ROOT):ro, passed in via -e SUBSTRATE_ROOT).
 # Every tick unit references its script as \${SUBSTRATE_ROOT}/scripts/substrate/...

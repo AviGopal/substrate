@@ -6,7 +6,8 @@ Requires=activity-api.service
 [Service]
 Type=simple
 EnvironmentFile=/etc/substrate/env
-Environment=LLM_DEFAULT_MODEL=claude-sonnet-4-6
+# LLM_DEFAULT_MODEL comes from /etc/substrate/env (operator-supplied via make run-live).
+# The vessel defaults to claude-sonnet-4-6 if the env var is empty — no override here.
 Environment=PORT=8220
 Environment=HOST=127.0.0.1
 Environment=LLM_RESOLVER_VESSEL_ID=llm-resolver-vessel

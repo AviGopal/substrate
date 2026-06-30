@@ -1,7 +1,21 @@
 # Makefile — substrate container lifecycle
 #
-# Only one credential is required from the operator:
-#   ANTHROPIC_API_KEY — LLM provider key for llm-resolver-vessel
+# LLM provider — supply ONE of the following (or both; Anthropic is preferred):
+#
+#   Anthropic (default):
+#     ANTHROPIC_API_KEY=sk-ant-...
+#     Auto-read from ~/.metabob/config.json (.providers.anthropic.apiKey) if set.
+#
+#   OpenAI-compatible (OpenAI, Ollama, Groq, Together AI, LM Studio, vLLM, …):
+#     OPENAI_API_KEY=sk-...          # or "ollama" / "lm-studio" / any placeholder
+#     OPENAI_BASE_URL=http://...     # omit for api.openai.com; required for local models
+#     LLM_DEFAULT_MODEL=gpt-4o      # optional — overrides claude-sonnet-4-6 default
+#     Auto-read from ~/.metabob/config.json (.providers.openai.{apiKey,baseUrl,model}).
+#
+#   Examples:
+#     make run-live ANTHROPIC_API_KEY=sk-ant-...
+#     make run-live OPENAI_API_KEY=ollama OPENAI_BASE_URL=http://localhost:11434/v1 LLM_DEFAULT_MODEL=llama3.2
+#     make run-live OPENAI_API_KEY=sk-... LLM_DEFAULT_MODEL=gpt-4o
 #
 # All other secrets (JWT_SECRET, SURREAL_PASS, METABOB_API_KEY) are generated
 # automatically on first run and persisted to workspace/.substrate-secrets so
@@ -41,8 +55,12 @@ LIVE_NAME    := substrate-live
 # dist into every consumer's node_modules path inside the container.
 IAS_CONSUMERS := goal-host-vessel ribosome-vessel boredom-vessel development-vessel local-tools-vessel llm-resolver-vessel analysis-vessel
 
-# ANTHROPIC_API_KEY — load from environment or existing ~/.metabob/config.json
+# LLM provider credentials — read from environment first, then ~/.metabob/config.json.
+# At least one of ANTHROPIC_API_KEY or OPENAI_API_KEY must be set.
 ANTHROPIC_API_KEY ?= $(shell jq -r '.providers.anthropic.apiKey // empty' $(HOME)/.metabob/config.json 2>/dev/null || true)
+OPENAI_API_KEY    ?= $(shell jq -r '.providers.openai.apiKey // empty'    $(HOME)/.metabob/config.json 2>/dev/null || true)
+OPENAI_BASE_URL   ?= $(shell jq -r '.providers.openai.baseUrl // empty'   $(HOME)/.metabob/config.json 2>/dev/null || true)
+LLM_DEFAULT_MODEL ?= $(shell jq -r '.providers.openai.model // empty'     $(HOME)/.metabob/config.json 2>/dev/null || true)
 
 # GITHUB_TOKEN — load from environment, fall back to gh CLI's cached auth.
 # Used by gh_repo_create resolver + gh_pr_create when authoring substrate-
@@ -107,8 +125,12 @@ build-obsidian:
 	    $(CURDIR)/../..
 
 run:
-	@if [ -z "$(ANTHROPIC_API_KEY)" ]; then \
-	  echo "[substrate] ERROR: ANTHROPIC_API_KEY is required. Pass it inline or add it to ~/.metabob/config.json"; \
+	@if [ -z "$(ANTHROPIC_API_KEY)" ] && [ -z "$(OPENAI_API_KEY)" ]; then \
+	  echo "[substrate] ERROR: No LLM provider key found."; \
+	  echo "  Anthropic:  make run ANTHROPIC_API_KEY=sk-ant-..."; \
+	  echo "  OpenAI:     make run OPENAI_API_KEY=sk-..."; \
+	  echo "  Ollama:     make run OPENAI_API_KEY=ollama OPENAI_BASE_URL=http://localhost:11434/v1 LLM_DEFAULT_MODEL=llama3.2"; \
+	  echo "  Or set .providers.anthropic.apiKey / .providers.openai.apiKey in ~/.metabob/config.json"; \
 	  exit 1; \
 	fi
 	@mkdir -p $(WORKSPACE)
@@ -116,6 +138,9 @@ run:
 	    --name substrate \
 	    --privileged \
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
+	    -e OPENAI_API_KEY="$(OPENAI_API_KEY)" \
+	    -e OPENAI_BASE_URL="$(OPENAI_BASE_URL)" \
+	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -p 8080:8080 \
 	    -p 8090:8090 \
@@ -125,8 +150,11 @@ run:
 	    $(IMAGE):$(TAG)
 
 run-detach:
-	@if [ -z "$(ANTHROPIC_API_KEY)" ]; then \
-	  echo "[substrate] ERROR: ANTHROPIC_API_KEY is required. Pass it inline or add it to ~/.metabob/config.json"; \
+	@if [ -z "$(ANTHROPIC_API_KEY)" ] && [ -z "$(OPENAI_API_KEY)" ]; then \
+	  echo "[substrate] ERROR: No LLM provider key found."; \
+	  echo "  Anthropic:  make run-detach ANTHROPIC_API_KEY=sk-ant-..."; \
+	  echo "  OpenAI:     make run-detach OPENAI_API_KEY=sk-..."; \
+	  echo "  Or set .providers.anthropic.apiKey / .providers.openai.apiKey in ~/.metabob/config.json"; \
 	  exit 1; \
 	fi
 	@mkdir -p $(WORKSPACE)
@@ -134,6 +162,9 @@ run-detach:
 	    --name substrate \
 	    --privileged \
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
+	    -e OPENAI_API_KEY="$(OPENAI_API_KEY)" \
+	    -e OPENAI_BASE_URL="$(OPENAI_BASE_URL)" \
+	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -p 8080:8080 \
 	    -p 8090:8090 \
@@ -147,10 +178,12 @@ run-detach:
 # Run once; use sync-*/restart-* targets to hot-reload vessels without rebuild.
 
 run-live:
-	@if [ -z "$(ANTHROPIC_API_KEY)" ]; then \
-	  echo "[substrate] ERROR: ANTHROPIC_API_KEY is required."; \
-	  echo "  Pass inline:  make run-live ANTHROPIC_API_KEY=sk-ant-..."; \
-	  echo "  Or add to:    ~/.metabob/config.json .providers.anthropic.apiKey"; \
+	@if [ -z "$(ANTHROPIC_API_KEY)" ] && [ -z "$(OPENAI_API_KEY)" ]; then \
+	  echo "[substrate] ERROR: No LLM provider key found. Provide at least one:"; \
+	  echo "  Anthropic:  make run-live ANTHROPIC_API_KEY=sk-ant-..."; \
+	  echo "  OpenAI:     make run-live OPENAI_API_KEY=sk-..."; \
+	  echo "  Ollama:     make run-live OPENAI_API_KEY=ollama OPENAI_BASE_URL=http://localhost:11434/v1 LLM_DEFAULT_MODEL=llama3.2"; \
+	  echo "  Or set .providers.anthropic.apiKey / .providers.openai.apiKey in ~/.metabob/config.json"; \
 	  exit 1; \
 	fi
 	@docker volume create $(SURREAL_VOLUME) >/dev/null
@@ -159,6 +192,9 @@ run-live:
 	    --name $(LIVE_NAME) \
 	    --privileged \
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
+	    -e OPENAI_API_KEY="$(OPENAI_API_KEY)" \
+	    -e OPENAI_BASE_URL="$(OPENAI_BASE_URL)" \
+	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
 	    -e SUBSTRATE_ROOT="$(REPO_ROOT)" \
@@ -185,10 +221,11 @@ run-live:
 # :16080. Reuses the substrate-live container name so every sync-/restart-/
 # health- target keeps working unchanged. Requires `make build-obsidian` first.
 run-live-obsidian:
-	@if [ -z "$(ANTHROPIC_API_KEY)" ]; then \
-	  echo "[substrate] ERROR: ANTHROPIC_API_KEY is required."; \
-	  echo "  Pass inline:  make run-live-obsidian ANTHROPIC_API_KEY=sk-ant-..."; \
-	  echo "  Or add to:    ~/.metabob/config.json .providers.anthropic.apiKey"; \
+	@if [ -z "$(ANTHROPIC_API_KEY)" ] && [ -z "$(OPENAI_API_KEY)" ]; then \
+	  echo "[substrate] ERROR: No LLM provider key found. Provide at least one:"; \
+	  echo "  Anthropic:  make run-live-obsidian ANTHROPIC_API_KEY=sk-ant-..."; \
+	  echo "  OpenAI:     make run-live-obsidian OPENAI_API_KEY=sk-..."; \
+	  echo "  Or set .providers.anthropic.apiKey / .providers.openai.apiKey in ~/.metabob/config.json"; \
 	  exit 1; \
 	fi
 	@docker volume create $(SURREAL_VOLUME) >/dev/null
@@ -197,6 +234,9 @@ run-live-obsidian:
 	    --name $(LIVE_NAME) \
 	    --privileged \
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
+	    -e OPENAI_API_KEY="$(OPENAI_API_KEY)" \
+	    -e OPENAI_BASE_URL="$(OPENAI_BASE_URL)" \
+	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
 	    -e SUBSTRATE_ROOT="$(REPO_ROOT)" \
