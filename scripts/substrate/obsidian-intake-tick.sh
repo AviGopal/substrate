@@ -59,6 +59,11 @@ SCAN=$(curl -s -m 60 -X POST "${DEV}/v2/impulses/resolve" \
   -d "{\"impulse\":{\"pointer\":{\"type\":\"obsidian_request_scan\",\"obsidianEndpoint\":\"${OBS}\"}}}")
 printf '%s\n' "${SCAN}" | head -c 500; echo
 
+# Mark genuine human activity (a NEW inbox request) so the proactive collaborate pass can tell
+# an engaged human from an idle one and back off rather than pile up un-engaged notes.
+RF=$(printf '%s' "${SCAN}" | jq -r '.body.requests_found // 0' 2>/dev/null)
+[ "${RF:-0}" -gt 0 ] 2>/dev/null && date -u +%s > /workspace/last-human-activity 2>/dev/null
+
 # OPERATOR INTERACTION GUIDANCE (human->substrate feedback channel): read the human's standing
 # preferences from Substrate/Feedback.md and inject them into every response, so the substrate
 # FOLLOWS the human's feedback on HOW to interact (e.g. "answer directly, don't give Obsidian

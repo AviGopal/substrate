@@ -27,6 +27,20 @@ if [ -f "${FB_FILE}" ]; then
   GUIDANCE=$(sed -n '/## My current guidance/,/^---/p' "${FB_FILE}" 2>/dev/null | grep -E '^- .' | sed 's/^- *//' | paste -sd '; ' -)
 fi
 
+# Engagement-aware back-off (closing the engagement->actuation loop): piling proactive
+# collaboration on a human who isn't engaging drives them AWAY — the opposite of the objective.
+# If the human has been idle (no new Inbox request) for a while AND we've already left several
+# un-engaged collaboration notes since their last activity, skip this pass. Respecting attention
+# is itself part of sustaining the collaboration.
+LAST=$(cat /workspace/last-human-activity 2>/dev/null || echo 0); LAST=${LAST:-0}
+NOW=$(date -u +%s)
+IDLE_H=$(( (NOW - LAST) / 3600 ))
+UNENGAGED=$(find /vaults/substrate-vault/Substrate/Collaboration -name '*.md' -newermt "@${LAST}" 2>/dev/null | wc -l)
+if [ "${IDLE_H}" -ge 3 ] && [ "${UNENGAGED}" -ge 2 ]; then
+  printf 'collaboration backing off: human idle %sh, %s un-engaged notes since last activity (avoid noise)\n' "${IDLE_H}" "${UNENGAGED}"
+  exit 0
+fi
+
 FOCUS="You are COLLABORATING with the operator to help them reach THEIR OWN goals — the aim is for them to find this worth their while and want to keep collaborating. Do NOT give Obsidian-usage tips. Steps: (1) infer the operator's single most active/important goal from their vault contents (their notes, Goals, and recent Inbox requests — what are THEY trying to achieve?); (2) contribute ONE concrete, genuinely-useful thing that advances that goal — a real next step you can take, a synthesis, a draft, a decision framing, or a question that unblocks them. Lead with 'Toward your goal: <the goal>' then the contribution. Be substantive and at the depth the goal warrants. OPERATOR INTERACTION GUIDANCE (follow strictly): ${GUIDANCE:-be direct and genuinely useful; match the depth the goal warrants}."
 
 TS=$(date -u +%Y%m%dT%H%M%SZ)
