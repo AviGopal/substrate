@@ -59,6 +59,18 @@ SCAN=$(curl -s -m 60 -X POST "${DEV}/v2/impulses/resolve" \
   -d "{\"impulse\":{\"pointer\":{\"type\":\"obsidian_request_scan\",\"obsidianEndpoint\":\"${OBS}\"}}}")
 printf '%s\n' "${SCAN}" | head -c 500; echo
 
+# OPERATOR INTERACTION GUIDANCE (human->substrate feedback channel): read the human's standing
+# preferences from Substrate/Feedback.md and inject them into every response, so the substrate
+# FOLLOWS the human's feedback on HOW to interact (e.g. "answer directly, don't give Obsidian
+# tips", "go deeper") instead of defaulting to generic workspace suggestions.
+FB_FILE="/vaults/substrate-vault/Substrate/Feedback.md"
+GUIDANCE=""
+if [ -f "${FB_FILE}" ]; then
+  GUIDANCE=$(sed -n '/## My current guidance/,/^---/p' "${FB_FILE}" 2>/dev/null | grep -E '^- .' | sed 's/^- *//' | paste -sd '; ' -)
+fi
+ANS_TOKENS=700; [ -n "${GUIDANCE}" ] && ANS_TOKENS=1300
+[ -n "${GUIDANCE}" ] && printf 'operator interaction guidance in effect: %s\n' "${GUIDANCE}"
+
 # 2. SERVE each picked-up request — model expectation (ACTION vs ANSWER), then route.
 printf '%s' "${SCAN}" | jq -r '.body.requests[]? | select(.text != null) | .text' 2>/dev/null | while IFS= read -r TEXT; do
   [ -z "${TEXT}" ] && continue
@@ -105,10 +117,11 @@ printf '%s' "${SCAN}" | jq -r '.body.requests[]? | select(.text != null) | .text
             '{type:"obsidian:write_note",pointer:{type:"obsidian:write_note",path:$p,content:$c}}')" 2>/dev/null | head -c 200
     printf ' <- performing (dispatch %s): %s\n' "${DISPID}" "${SLUG}"
   else
-    # ANSWER → compose a direct, grounded response note (the proven reliable path).
-    FOCUS="The operator wrote this request in their Obsidian Inbox: \"${TEXT}\". Respond directly and helpfully — answer the request itself as a concise, well-formatted note, grounded in the actual vault contents. This is a reply to the operator, not a generic suggestion."
-    REQ=$(jq -nc --arg p "Substrate/Responses/${SLUG}.md" --arg f "${FOCUS}" \
-      '{impulse:{pointer:{type:"obsidian_deliver_assist",assistPath:$p,promptFocus:$f,maxTokens:700}}}')
+    # ANSWER → compose a response that FOLLOWS the operator's interaction guidance and answers
+    # at the depth warranted (NOT a fixed-short Obsidian-usage tip — the inversion we are fixing).
+    FOCUS="OPERATOR INTERACTION GUIDANCE (follow strictly; overrides any default): ${GUIDANCE:-Answer directly and substantively; do NOT give generic Obsidian-usage tips; match the depth the question warrants.} --- The operator wrote this request: \"${TEXT}\". Answer the request itself, directly, at the depth it warrants. This is a reply to the operator, not a workspace suggestion."
+    REQ=$(jq -nc --arg p "Substrate/Responses/${SLUG}.md" --arg f "${FOCUS}" --argjson mt "${ANS_TOKENS}" \
+      '{impulse:{pointer:{type:"obsidian_deliver_assist",assistPath:$p,promptFocus:$f,maxTokens:$mt}}}')
     curl -s -m 90 -X POST "${DEV}/v2/impulses/resolve" \
       -H "Content-Type: application/json" \
       -H "Authorization: ApiKey ${METABOB_API_KEY}" \
