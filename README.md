@@ -93,6 +93,18 @@ mcp__metabob__run_goal  goal="verify the change works"
 
 Canary / production are **downstream** Kubernetes substrates (`activity.metabob.com`); CI/CD deploys to canary on push to `dev`. Full guide: [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md).
 
+## Distributing & federating
+
+The substrate is cloneable and runnable by anyone in **three steps**:
+
+1. **Clone** — `git clone --recurse-submodules https://github.com/AviGopal/substrate`
+2. **Secrets** — set `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`); optionally a GitHub PAT (`SUBSTRATE_GIT_PAT`) for the substrate's self-push and a shared `FEDERATION_SIGNING_SECRET` for peer trust.
+3. **Configure inventory & start** — pick a subset with `ENABLED_ROLES` (`full` | `hub` | `spoke`) or `ENABLED_VESSELS=…`; optionally point vessels at your fork with `SUBSTRATE_REPO_OWNER=<your-org>`; then `make -C scripts/substrate build && make -C scripts/substrate run-live` — or `docker pull ghcr.io/avigopal/substrate:dev`.
+
+**Run any subset.** One image is a full local substrate, a minimal **hub** (control plane + store + relay), or a compute-only **spoke**. Selection is declarative — `scripts/substrate/vessels.inventory.json` + `apply-inventory.sh` (run at boot); the default keeps every unit.
+
+**Federate.** A hub on a public IP shares a namespace with spokes (they register with a hub-issued key → same `org_id`); vessels behind NAT join over the libp2p relay via a sidecar. Deploy a hub with `scripts/substrate/deploy-hub.sh`. Full guide: [`docs/FEDERATION.md`](docs/FEDERATION.md).
+
 ## Core components
 
 - **activity-api** (`repos/activity-api`) — TypeScript/Bun/Hono backend. Execution-trace store, Thompson-Sampling learner, and resolver for the shapes it owns (traces, templates, metrics, goal paths, composition stats). Not a universal resolver.
