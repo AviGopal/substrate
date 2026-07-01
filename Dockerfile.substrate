@@ -209,6 +209,12 @@ COPY scripts/substrate/units/ /etc/systemd/system/
 COPY scripts/substrate/entrypoint.sh /usr/local/bin/substrate-entrypoint
 COPY scripts/substrate/gen-env.sh /usr/local/bin/gen-env
 COPY scripts/substrate/setup-git-push.sh /usr/local/bin/setup-git-push
+# Vessel-subset selection: the inventory + the boot-time enabler (entrypoint runs it
+# before systemd). Default (no ENABLED_* env) keeps every unit — identical to today.
+COPY scripts/substrate/apply-inventory.sh /usr/local/bin/apply-inventory
+RUN mkdir -p /usr/local/share/substrate
+COPY scripts/substrate/vessels.inventory.json /usr/local/share/substrate/vessels.inventory.json
+RUN chmod +x /usr/local/bin/apply-inventory
 # Side-loop tick scripts referenced by their .service units' ExecStart. Without
 # these baked in, the units exit 127 (command not found) on every fire — which is
 # how obsidian-learn + goal-host-behavior (two LEARNING loops) sat silently dead

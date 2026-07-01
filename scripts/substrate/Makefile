@@ -650,6 +650,8 @@ ui-bridge-status:
 # vessels that live directly in the super-repo (e.g. goal-host-vessel,
 # llm-resolver-vessel) are reached via /workspace/git/super-repo/repos/<v>/.
 # -----------------------------------------------------------------------------
+# Fork override: set SUBSTRATE_REPO_OWNER=<your-org> to clone vessels from your fork.
+SUBSTRATE_REPO_OWNER ?= AviGopal
 clone-vessel-repos:
 	@command -v gh >/dev/null 2>&1 || { echo "ERROR: gh CLI required"; exit 1; }
 	@mkdir -p $(WORKSPACE)/git/vessels
@@ -657,7 +659,7 @@ clone-vessel-repos:
 	if [ ! -d $(WORKSPACE)/git/vessels/development-vessel/.git ]; then \
 	  echo "[clone] development-vessel → $(WORKSPACE)/git/vessels/development-vessel"; \
 	  git clone --no-recurse-submodules \
-	    "https://x-access-token:$$GH_TOKEN_VAL@github.com/AviGopal/development-vessel.git" \
+	    "https://x-access-token:$$GH_TOKEN_VAL@github.com/$(SUBSTRATE_REPO_OWNER)/development-vessel.git" \
 	    $(WORKSPACE)/git/vessels/development-vessel; \
 	  git -C $(WORKSPACE)/git/vessels/development-vessel config user.email "substrate-live@substrate.local"; \
 	  git -C $(WORKSPACE)/git/vessels/development-vessel config user.name "substrate-live"; \
@@ -665,3 +667,18 @@ clone-vessel-repos:
 	  echo "[clone] development-vessel already present (skipping)"; \
 	fi
 	@echo "[clone] vessel-repo clones ready; substrate can publish via cwd=/workspace/git/vessels/<vessel>"
+
+# ── General vessel install / uninstall (driven by vessels.manifest.json) ──────
+# One method to add/remove a DYNAMIC vessel (federation, future) from the substrate
+# container, reusing the unit-install pattern + the single secrets place (secrets.env.sh).
+# Operator-runnable AND activity-dispatchable (the substrate calls vessel-ctl.sh via
+# local-tools-vessel's shell resolver). Works against any --container (basis for remote).
+.PHONY: list-vessels install-vessel uninstall-vessel
+list-vessels:
+	@$(CURDIR)/vessel-ctl.sh list --container $(LIVE_NAME)
+install-vessel:
+	@test -n "$(VESSEL)" || { echo "usage: make install-vessel VESSEL=<name>"; exit 1; }
+	@$(CURDIR)/vessel-ctl.sh install $(VESSEL) --container $(LIVE_NAME)
+uninstall-vessel:
+	@test -n "$(VESSEL)" || { echo "usage: make uninstall-vessel VESSEL=<name>"; exit 1; }
+	@$(CURDIR)/vessel-ctl.sh uninstall $(VESSEL) --container $(LIVE_NAME)

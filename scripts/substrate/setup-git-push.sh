@@ -95,9 +95,10 @@ fi
 
 # 2. Idempotent writable clones on dev.
 mkdir -p "$CLONE_DIR"
+REPO_OWNER="${SUBSTRATE_REPO_OWNER:-AviGopal}"   # fork override: set SUBSTRATE_REPO_OWNER to your GitHub org/user
 for v in $VESSELS; do
   d="$CLONE_DIR/$v"
-  url="https://github.com/AviGopal/$v.git"
+  url="https://github.com/${REPO_OWNER}/$v.git"
   if [ -d "$d/.git" ]; then
     git -C "$d" remote set-url origin "$url"
     if git -C "$d" fetch origin dev -q 2>/dev/null; then

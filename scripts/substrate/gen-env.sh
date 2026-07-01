@@ -168,6 +168,17 @@ EOF
 chmod 600 /etc/substrate/env
 echo "[gen-env] wrote /etc/substrate/env"
 
+# Pass through vessel-subset selection + fork owner so units (setup-git-push) and
+# apply-inventory read them from the EnvironmentFile. Absent vars stay absent
+# (apply-inventory defaults to "keep everything").
+{
+  echo "SUBSTRATE_REPO_OWNER=${SUBSTRATE_REPO_OWNER:-AviGopal}"
+  [ -n "${ENABLED_ROLES:-}" ]       && echo "ENABLED_ROLES=${ENABLED_ROLES}"
+  [ -n "${ENABLED_VESSELS:-}" ]     && echo "ENABLED_VESSELS=${ENABLED_VESSELS}"
+  [ -n "${DISABLED_VESSELS:-}" ]    && echo "DISABLED_VESSELS=${DISABLED_VESSELS}"
+  [ -n "${SUBSTRATE_BIND_HOST:-}" ] && echo "SUBSTRATE_BIND_HOST=${SUBSTRATE_BIND_HOST}"
+} >> /etc/substrate/env
+
 # Persist generated secrets to workspace so restarts reuse the same values.
 # This file is bind-mounted from the host at /workspace.
 cat > /workspace/.substrate-secrets <<SECRETS
