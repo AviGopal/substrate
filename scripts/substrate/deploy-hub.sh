@@ -34,9 +34,12 @@ echo "[deploy-hub] pulling $REPO@$BRANCH on $TARGET and building the hub there�
   'bash -s' <<'REMOTE'
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
-command -v git    >/dev/null || { apt-get update -qq && apt-get install -y -qq git; }
+apt-get update -qq || true
+command -v git    >/dev/null || apt-get install -y -qq git
+command -v make   >/dev/null || apt-get install -y -qq make          # fresh Ubuntu lacks make
+command -v jq     >/dev/null || apt-get install -y -qq jq
+command -v unzip  >/dev/null || apt-get install -y -qq unzip          # bun's installer needs unzip
 command -v docker >/dev/null || { curl -fsSL https://get.docker.com | sh; }
-command -v jq     >/dev/null || { apt-get install -y -qq jq; }
 
 # Token rewrite so SSH-form submodule URLs (git@github.com:...) clone over HTTPS+PAT.
 REW="url.https://x-access-token:${PAT}@github.com/.insteadOf"
@@ -48,12 +51,23 @@ if [ -d "$DIR/.git" ]; then
   git -C "$DIR" fetch origin "$BRANCH" -q
   git -C "$DIR" checkout -q "$BRANCH"
   git -C "$DIR" pull --ff-only -q origin "$BRANCH"
-  git -C "$DIR" submodule update --init --recursive -q
 else
-  git clone --branch "$BRANCH" --recurse-submodules -q \
+  git clone --branch "$BRANCH" -q \
     "https://x-access-token:${PAT}@github.com/${REPO}.git" "$DIR"
 fi
 cd "$DIR"
+# Init all submodules EXCEPT metabob-mcp (different org — MetabobProject — the PAT can't
+# reach it, and it's not needed for any hub/compute vessel). Recursive-init aborts the
+# whole run on that one failure, so we init the explicit path list instead.
+SUB_PATHS=$(git config -f .gitmodules --get-regexp '\.path$' | awk '{print $2}' | grep -v 'metabob-mcp')
+git submodule update --init $SUB_PATHS 2>/dev/null || true
+# Repair submodules whose working tree didn't materialize (checked-out commit but empty
+# tree — a checkout anomaly seen on fresh clones); reset --hard restores the files.
+git submodule foreach 'git reset --hard HEAD >/dev/null 2>&1 || true' >/dev/null 2>&1 || true
+
+# bun is needed by the Makefile's validate-build (host side); the image itself bundles bun.
+export PATH="$HOME/.bun/bin:$PATH"
+command -v bun >/dev/null || { curl -fsSL https://bun.sh/install | bash; export PATH="$HOME/.bun/bin:$PATH"; }
 
 echo "[vm] building the substrate image (first run: 20-30 min)…"
 make -C scripts/substrate build
