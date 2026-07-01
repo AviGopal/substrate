@@ -1,0 +1,13 @@
+[Unit]
+Description=ingest-docs timer — keep the doc-expectation surface current
+[Timer]
+# LOW cadence — docs change slowly and the run is idempotent (manifest skips unchanged
+# sections). First run 8 min after activation (before docs-align-scan's first tick, so the
+# expectation surface exists for the detector's dynamic tie), then every 6 h.
+OnActiveSec=8min
+OnUnitActiveSec=6h
+Persistent=true
+AccuracySec=2min
+Unit=ingest-docs.service
+[Install]
+WantedBy=timers.target

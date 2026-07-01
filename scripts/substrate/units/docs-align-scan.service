@@ -1,0 +1,23 @@
+[Unit]
+Description=docs-align-scan — closure detector: emit documentation_drift gaps when code falsifies a doc's claims
+After=development-vessel.service
+# READ-ONLY. A document is an expectation the substrate holds about itself; when a landed
+# code change FALSIFIES a specific doc claim, this emits a grounded documentation_drift
+# substrateGap (report-only in Phase 1 — the doc_drift_fix resolver authors/lands in Phase 2).
+# Trigger A: dense-search concept-db (source_type=doc_expectation) near the recent change.
+# Trigger B: staleness (git log N-commits-behind) for docs not yet ingested. Each candidate
+# is judged by an LLM reach-gate (the doc analogue of verifyGoalReached). Idempotent
+# (deterministic hex gap ids keyed on doc + doc-last-sha + HEAD; re-runs UPSERT, no thrash).
+# Smoke: docker exec substrate-live systemctl start docs-align-scan.service
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+# Bounded per run. Scan the in-container push CLONE (landed truth, kept at origin/dev by the
+# cutover), NOT the host bind (which drifts and would re-detect already-fixed drift).
+Environment=DOCS_ALIGN_CAP=5
+Environment=DOCS_ALIGN_ROOT=/workspace/git/super-repo
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/docs-align-scan.ts
+StandardOutput=journal
+StandardError=journal
+[Install]
+WantedBy=multi-user.target

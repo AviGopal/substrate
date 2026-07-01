@@ -46,6 +46,8 @@
     { "unit": "self-repair-operational.timer", "role": "autonomy" },
     { "unit": "operator-goal-generator.timer", "role": "autonomy" },
     { "unit": "auto-describe-resolvers.timer", "role": "autonomy" },
-    { "unit": "surgical-gap-scan.timer", "role": "autonomy" }
+    { "unit": "surgical-gap-scan.timer", "role": "autonomy" },
+    { "unit": "ingest-docs.timer", "role": "autonomy" },
+    { "unit": "docs-align-scan.timer", "role": "autonomy" }
   ]
 }
