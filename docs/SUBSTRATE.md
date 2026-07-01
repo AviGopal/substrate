@@ -12,6 +12,26 @@ The canary cluster (Phase 5+) requires H1 two-sided traces and cross-vessel auth
 
 A container is a valid substrate. The foundation doc defines a substrate by its fixed point (discovery-vessel) and its trust boundary, not by its infrastructure form. The same vessel code, the same seed templates, the same Thompson learning — just no pod scheduling.
 
+## One image, any subset
+
+The substrate has generalized from "one local container" to **one image that runs any subset of the fleet, deployable anywhere, and federatable**. The single image bakes every vessel; a declarative inventory selects which units run at boot, so the same image is a full local substrate, a minimal hub, or a compute-only spoke depending only on environment.
+
+### Topology selection
+
+`scripts/substrate/vessels.inventory.json` is the declarative vessel inventory: every baked-in unit maps to a **role** (`store`, `control`, `api`, `compute`, `ui`, `transport`, `seed`, `infra`, `autonomy`), and role-**group** aliases compose those into deployable shapes:
+
+- `hub` = `store`, `control`, `api`, `transport`, `seed`, `infra` (control plane + store + relay)
+- `spoke` = `compute`, `ui`, `seed`, `infra` (compute-only; points its control/store at a hub)
+- `full` = every role (the default local substrate)
+
+`scripts/substrate/apply-inventory.sh` reads the inventory at boot — run by the container entrypoint *after* `gen-env` and *before* `exec systemd` — and `systemctl disable`s the unwanted units (it just removes the `*.wants` symlinks the image baked in). Selection env, highest precedence first:
+
+- `ENABLED_VESSELS=unit,unit` — explicit exact-unit allow-list; overrides roles
+- `ENABLED_ROLES=role,role` — roles/role-groups to keep (`hub`/`spoke`/`full` expand via `inventory.roles`); everything else is disabled
+- `DISABLED_VESSELS=unit,unit` — always off, even if selected above
+
+**Default (none of the three set) = every unit enabled = the full local substrate, identical to today** (`apply-inventory.sh` is a no-op). Manifest-installed dynamic vessels (`"manifest": true`, i.e. the federation units) are never baked-enabled, so they are never touched here — they are installed on demand (see [Dynamic vessels](#dynamic-vessels)).
+
 ## Quick start (4 steps)
 
 ```bash
@@ -46,6 +66,24 @@ After step 4, `~/.metabob/config.json` points to `http://localhost:18080` and al
 docker exec substrate-live bash -c 'set -a; source /etc/substrate/env; set +a; cd /vessels/development-vessel && bun run cli seed-templates'
 ```
 Plain `source /etc/substrate/env` sets shell variables only — child processes won't see them. `set -a` auto-exports everything that follows.
+
+## Configuration and secrets
+
+Secrets have a **single declaration point**: `scripts/substrate/secrets.env.sh`. Every secret is a `VAR="${VAR:-<default-or-generated>}"` line — read from the environment first (compose/`run -e`, or an already-sourced persisted file), falling back to a generated or declared default. Adding a new secret is one line there.
+
+The flow at boot:
+
+```
+secrets.env.sh  ──sourced by──▶  gen-env.sh  ──renders──▶  /etc/substrate/env
+                                                              │  (every systemd unit reads it via
+                                                              │   EnvironmentFile=/etc/substrate/env)
+                                                              ▼
+                                              /workspace/.substrate-secrets  (persisted → survives restart)
+```
+
+`gen-env.sh` writes `/etc/substrate/env` from the container environment and persists the generated/internal secrets to `/workspace/.substrate-secrets` (on the `substrate-workspace` named volume), so a restart reuses the same `JWT_SECRET`, `SURREAL_PASS`, `METABOB_API_KEY`, `SUBSTRATE_GIT_PAT`, and `FEDERATION_SIGNING_SECRET` instead of regenerating and breaking auth. Operator-supplied LLM/git credentials come from the run environment each boot and are intentionally not baked in.
+
+`secrets.env.sh` is **safe to commit** — it declares *names and non-secret defaults only*, never real secret values (those come from the environment or the persisted file). `vessel-ctl.sh` sources the same file when installing a dynamic vessel, so a vessel's declared `secrets` are guaranteed present in `/etc/substrate/env` and persisted at install time.
 
 ## Iteration loop
 
@@ -153,6 +191,31 @@ Change one line in `~/.metabob/config.json`:
 
 All harnesses and `minibob` CLI read this file. No code changes needed.
 
+## Deploy paths
+
+The same image runs anywhere; the deploy scripts differ only in *how* the image and source reach the target. Runtime state always lives in the two named volumes (`substrate-surreal` at `/var/lib/surrealdb`, `substrate-workspace` at `/workspace`), which are host-detached and survive rebuilds — so any of these paths preserves learning state across updates.
+
+| Path | Command | What it does |
+|---|---|---|
+| **Local** | `make -C scripts/substrate run-live ANTHROPIC_API_KEY=…` | Builds/runs the full fleet locally as `substrate-live` (host ports `18080`/`18090`/`18100`/`18210`/`18250`/`18260`/`18270`). The everyday development target. |
+| **Hub (clone + build on a VM)** | `GITHUB_PAT=… ANTHROPIC_API_KEY=… SSH_KEY=… bash scripts/substrate/deploy-hub.sh root@<vm-ip> <public-ip>` | `deploy-hub.sh` clones the repo + submodules **on the VM** and builds there (no multi-GB image ship), runs `ENABLED_ROLES=hub`, seeds the single shared org (so spokes registering with a hub-issued key share its namespace), and stands up the libp2p relay. |
+| **Remote (ship prebuilt image over SSH)** | `ANTHROPIC_API_KEY=… bash scripts/substrate/deploy-remote.sh root@<vm-ip>` | `deploy-remote.sh` ships the locally-built image via `docker save \| ssh docker load` (**no registry**), runs + seeds it on the VM using the portable named volumes. Optional `PUBLIC_IP=… RUN_RELAY=1` also stands up the public relay; optional `PEER_DISCOVERY=<ip>:18100 FEDERATION_SIGNING_SECRET=<hex>` peers it to another substrate. |
+| **Fleet convergence** | `APPLY=1 CONTAINERS="substrate-live substrate-b" bash scripts/substrate/federation-pull-sync.sh --once` | `federation-pull-sync.sh` ff-only pulls `origin/dev`, diffs the changed `repos/<vessel>` trees, and `docker cp`s the whole `src/` (+`sql/`, `package.json`) into every peer container that runs that vessel, then restarts the unit — converging an entire fleet to upstream for **arbitrary multi-file changes, including the core vessels** (discovery-vessel, activity-api) that `restart-<vessel>` has no target for. Dry-run by default (`APPLY=1` to act); ff-only (refuses divergence). |
+
+Federation deploy details (hub vs. peers, the relay/sidecar, firewall ports) live in [`docs/FEDERATION.md`](FEDERATION.md).
+
+## Dynamic vessels
+
+Beyond the baked-in fleet, `scripts/substrate/vessels.manifest.json` declares **runtime-installable** vessels (currently the federation units `federation-relay` and `federation-transport-vessel`). `scripts/substrate/vessel-ctl.sh` is the one method to install/uninstall/list them, reusing the exact unit lifecycle the built-in vessels use: it renders a systemd unit (with `EnvironmentFile=/etc/substrate/env` for secrets + the manifest's static `Environment=` literals), copies it into the container, `daemon-reload`s, enables + starts it, and (un)registers it in `self-recovery-tick`.
+
+```bash
+make -C scripts/substrate list-vessels
+make -C scripts/substrate install-vessel   VESSEL=federation-relay
+make -C scripts/substrate uninstall-vessel VESSEL=federation-transport-vessel
+```
+
+`vessel-ctl.sh` is both **operator-runnable** (the make targets above) **and activity-dispatchable** — the substrate can invoke it through local-tools-vessel's `shell` resolver (clean JSON on stdout, idempotent, no prompts), and the `--container` flag lets it act on another container, which is the basis for installing vessels "elsewhere" in a fleet.
+
 ## Promoting to canary
 
 Once a change validates locally:
@@ -243,9 +306,9 @@ The substrate closes the deployment loop via substrate-resident git authorship. 
 
 ## Vessel federation (inter-substrate routing)
 
-Federation is the mechanism by which two substrate containers know about each other's vessels. Each substrate's discovery-vessel can peer with another discovery-vessel; peer registrations propagate into the local registry as `provisional` entries. From the perspective of any vessel above discovery, the routing is invisible — they call `POST /resolve` and receive a vessel record, whether that vessel lives in the same container or a peer container.
+Federation is **live and verified** (hub/spoke over a shared identity namespace, plus discovery peer fan-out, with a public libp2p Circuit Relay v2 for NAT traversal). A capability query with no local producer fans out to configured peers, and goal-host routes the result over the relay; from the perspective of any vessel above discovery the routing is invisible — they call `POST /resolve` and receive a vessel record, whether it lives in the same container or a peer. The federation transport primitives ship as **dynamic vessels** (`federation-relay`, `federation-transport-vessel` in `vessels.manifest.json`; the `transport` role in `vessels.inventory.json`).
 
-Vessel identity in a federated topology is derived from a public key (`vessel_id = multihash(pubkey)`), enabling cross-substrate verification without a shared trust root. A vessel that migrates from one substrate to another retains its identity; peer substrates can verify it independently. Federation is not yet active in the local single-container substrate — the peering mechanism and identity-by-pubkey are forward infrastructure for the S2→S3 distributed-stable phase.
+**[`docs/FEDERATION.md`](FEDERATION.md) is the authoritative reference** for the two topologies (shared-namespace hub+spokes vs. fan-out peers), the relay/sidecar for NATed vessels, and the verified end-to-end loop. This doc does not duplicate it — see there for the operator commands and identity-namespace mechanics.
 
 ## Troubleshooting
 
