@@ -544,9 +544,9 @@ restart-stateful-ui-vessel: sync-stateful-ui-vessel
 # `docker cp <src>/src <container>:/vessels/x/src` nests when the dest exists —
 # wipe first so the copy lands cleanly.
 sync-obsidian-vessel:
-	docker exec $(LIVE_NAME) rm -rf /vessels/obsidian-vessel/src /vessels/obsidian-vessel/styles
+	docker exec $(LIVE_NAME) rm -rf /vessels/obsidian-vessel/src
 	docker cp $(OBSIDIAN_VESSEL_SRC)/src $(LIVE_NAME):/vessels/obsidian-vessel/src
-	docker cp $(OBSIDIAN_VESSEL_SRC)/styles $(LIVE_NAME):/vessels/obsidian-vessel/styles
+	docker cp $(OBSIDIAN_VESSEL_SRC)/styles.css $(LIVE_NAME):/vessels/obsidian-vessel/styles.css
 	docker cp $(OBSIDIAN_VESSEL_SRC)/esbuild.config.mjs $(LIVE_NAME):/vessels/obsidian-vessel/esbuild.config.mjs
 	docker cp $(OBSIDIAN_VESSEL_SRC)/manifest.json $(LIVE_NAME):/vessels/obsidian-vessel/manifest.json
 	@echo "[sync] obsidian-vessel source synced to substrate-live"
