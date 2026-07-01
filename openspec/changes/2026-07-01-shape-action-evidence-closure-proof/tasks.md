@@ -40,15 +40,16 @@
 - [ ] B5 Seeding rate ≥0.8 over next ~20 organic dispatches (measure at F)
 
 ## E2/D1. Flag-OFF landings (parallel with B)
-- [ ] E2.1 `reputationFactor` in recommend blend, `CROSS_SIG_REPUTATION_PENALTY` flag, unit test gamed-vs-genuine
-- [ ] D1.1 `'1f'` repair-signature consumption in recommend path, `REPAIR_SIGNATURE_CONSUME` flag
-- [ ] D1.2 Thread `repair_signature` through goal-host `recommendExcluding` recovery call
+- [x] E2.1 Found already landed (`applyReputationFactor`, 8 tests pass, flag OFF)
+- [x] D1.1 SUBSTRATE-AUTHORED: activity-api `64fd66d` (attempt 4 of the gap-spec crispness ladder) + defect-fix `526a0eb` (operator review found consumed-never-populated map + inverted success predicate; substrate fixed both from the follow-up gap)
+- [x] D1.2 SUBSTRATE-AUTHORED: goal-host `0820eff` — picked up AUTONOMOUSLY from the filed gap (never operator-dispatched); repairKey computed + threaded into recommendExcluding; 9 tests pass
+- [ ] D1.3 (new) Retry-outcome stamp: version-2 rows are read but never written — gap `gap-repair-signature-retry-outcome-unrecorded` filed (metadata seam through runGoal/ExecuteOptions)
 
 ## G. Implicit human-interaction closure (day 2-4, parallel with B)
-- [ ] G1.1 obsidian-vessel: `solicitation_id` stamping on episodes touching substrate-written paths
+- [x] G1.1 SUBSTRATE-AUTHORED: obsidian-vessel `82099b4a` (registry + stamping + episode propagation; attempt 2) + call-site fix `febe74e` (imports landed without calls — second consumed-never-populated instance; substrate fixed from follow-up gap). Deployed: plugin rebuilt in-container 23:03 UTC, obsidian-desktop active. Also fixed `sync-obsidian-vessel` Makefile (styles path bug that half-synced stale source).
 - [ ] G1.2 dev-vessel: timer-driven episode collector → durable substrate records (privacy unchanged)
-- [ ] G2.1 `interactionExpectation` impulse emitted on soliciting vault writes
-- [ ] G2.2 dev-vessel expectation-verify detector (unmet→β, met-no-novelty→low yield, met+novel→full credit)
+- [x] G2.1 SUPERSEDED by design: expectations are implicit in solicitations (G1's registry) — no separate emission needed
+- [ ] G2.2 dev-vessel expectation-verify detector — gap `capability-gap-interaction-expectation-verify` filed with full v1 spec (met_novel/met_saturated/unmet/unscored_absent, verdict ledger, unmet→interaction_surface gaps); compose attempt 1 UNFAVORABLE (largest net-new resolver yet), retry next session
 - [ ] G2.3 Operator-presence guard (env-signature `op` bit set during horizon, else unscored)
 - [ ] G2.4 Calibration against `forward_model_strength` (deviation+met = information)
 - [ ] G4.1 `interaction_surface_gap` filing on repeated unmet/flat-novelty solicitation classes

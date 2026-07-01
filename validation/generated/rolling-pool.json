@@ -1,0 +1,1163 @@
+{
+  "version": "25.G7",
+  "updated_at": "2026-07-01T22:58:41.415Z",
+  "weeks": {
+    "2026-W27": {
+      "promoted_at": "2026-07-01T22:58:41.415Z",
+      "source_file": "2026-07-01-held-out-goals.json",
+      "goal_count": 50,
+      "goals": [
+        {
+          "id": "gen-16240768943570867107-001",
+          "cell_id": "rare|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Produce a fileEdit from file — this shape pair has been seen in only a few prior traces.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-002",
+          "cell_id": "rare|depth1|B",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Using file context, generate a fileEdit via a cold single-escalation path.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-003",
+          "cell_id": "novel|depth1|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Combine file with a sub-goal escalation to generate a fileEdit for the first time.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-004",
+          "cell_id": "novel|depth1|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Combine file with a sub-goal escalation to generate a fileEdit for the first time.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-005",
+          "cell_id": "seen|depth0|B",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Generate a fileEdit from file using a sparsely-tested activity path (cold Thompson posterior).",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-006",
+          "cell_id": "seen|depth1|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Starting from a file, resolve any missing intermediate shapes and deliver a fileEdit.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-007",
+          "cell_id": "seen|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Given a file as context, produce a fileEdit using the established pipeline.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-008",
+          "cell_id": "novel|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Produce a fileEdit from file — this exact shape combination has never appeared in prior execution traces.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-009",
+          "cell_id": "rare|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Produce a fileEdit from file — this shape pair has been seen in only a few prior traces.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-010",
+          "cell_id": "novel|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Produce a fileEdit from file — this exact shape combination has never appeared in prior execution traces.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-011",
+          "cell_id": "seen|depth0|B",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Generate a fileEdit from file using a sparsely-tested activity path (cold Thompson posterior).",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-012",
+          "cell_id": "seen|depth1|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Use the file to diagnose the issue and produce a fileEdit with at least one sub-task delegation.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-013",
+          "cell_id": "seen|depth1|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Starting from a file, resolve any missing intermediate shapes and deliver a fileEdit.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-014",
+          "cell_id": "novel|depth2+|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Using file as the origin, traverse two or more composition hops to produce a novel fileEdit.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-015",
+          "cell_id": "seen|depth1|C∪D",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Resolve file and escalate to create a fileEdit even though the shape has no matching activity template.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-016",
+          "cell_id": "rare|depth1|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Starting from file, derive a fileEdit via one composition layer; this shape signature is infrequent in the trace history.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-017",
+          "cell_id": "rare|depth1|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Starting from file, derive a fileEdit via one composition layer; this shape signature is infrequent in the trace history.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-018",
+          "cell_id": "seen|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Given a file as context, produce a fileEdit using the established pipeline.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-019",
+          "cell_id": "rare|depth0|C∪D",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Produce a fileEdit from file where the shape is registered in a vessel but not yet backed by an activity template.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-020",
+          "cell_id": "novel|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Produce a fileEdit from file — this exact shape combination has never appeared in prior execution traces.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-021",
+          "cell_id": "rare|depth0|B",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Rename the helper in file to produce a fileEdit, exercising a cold-posterior template with low execution count.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-022",
+          "cell_id": "novel|depth0|C∪D",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Forge a fileEdit from file — the shape has never been produced and may require a new activity or vessel.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-023",
+          "cell_id": "novel|depth2+|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Using file as the origin, traverse two or more composition hops to produce a novel fileEdit.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-024",
+          "cell_id": "novel|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Produce a fileEdit from file — this exact shape combination has never appeared in prior execution traces.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-025",
+          "cell_id": "rare|depth2+|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Produce a fileEdit from file through a rarely-observed multi-hop composition.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-026",
+          "cell_id": "rare|depth1|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Starting from file, derive a fileEdit via one composition layer; this shape signature is infrequent in the trace history.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-027",
+          "cell_id": "seen|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Given a file as context, produce a fileEdit using the established pipeline.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-028",
+          "cell_id": "seen|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Given a file as context, produce a fileEdit using the established pipeline.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-029",
+          "cell_id": "rare|depth0|C∪D",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Produce a fileEdit from file where the shape is registered in a vessel but not yet backed by an activity template.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-030",
+          "cell_id": "rare|depth1|B",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Using file context, generate a fileEdit via a cold single-escalation path.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-031",
+          "cell_id": "seen|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Given a file as context, produce a fileEdit using the established pipeline.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-032",
+          "cell_id": "novel|depth2+|C∪D",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Orchestrate a deep novel composition from file to fileEdit — gated on Phase 22 forge capability.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-033",
+          "cell_id": "seen|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Given a file as context, produce a fileEdit using the established pipeline.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-034",
+          "cell_id": "seen|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Given a file as context, produce a fileEdit using the established pipeline.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-035",
+          "cell_id": "seen|depth1|B",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Starting with file, produce fileEdit through a cold-start activity that has seen fewer than three executions.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-036",
+          "cell_id": "seen|depth1|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Starting from a file, resolve any missing intermediate shapes and deliver a fileEdit.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-037",
+          "cell_id": "seen|depth0|C∪D",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Attempt to produce a fileEdit from file where no existing template covers the target shape directly.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-038",
+          "cell_id": "rare|depth0|C∪D",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Produce a fileEdit from file where the shape is registered in a vessel but not yet backed by an activity template.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-039",
+          "cell_id": "rare|depth0|B",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Rename the helper in file to produce a fileEdit, exercising a cold-posterior template with low execution count.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-040",
+          "cell_id": "seen|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Given a file as context, produce a fileEdit using the established pipeline.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-041",
+          "cell_id": "novel|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Produce a fileEdit from file — this exact shape combination has never appeared in prior execution traces.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-042",
+          "cell_id": "novel|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Produce a fileEdit from file — this exact shape combination has never appeared in prior execution traces.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-043",
+          "cell_id": "seen|depth2+|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Orchestrate a multi-step workflow starting with file that eventually yields a fileEdit through two or more composition layers.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-044",
+          "cell_id": "rare|depth1|B",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Using file context, generate a fileEdit via a cold single-escalation path.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-045",
+          "cell_id": "seen|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Given a file as context, produce a fileEdit using the established pipeline.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-046",
+          "cell_id": "seen|depth0|B",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Generate a fileEdit from file using a sparsely-tested activity path (cold Thompson posterior).",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-047",
+          "cell_id": "rare|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Produce a fileEdit from file — this shape pair has been seen in only a few prior traces.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-048",
+          "cell_id": "rare|depth0|A",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Produce a fileEdit from file — this shape pair has been seen in only a few prior traces.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-049",
+          "cell_id": "rare|depth0|B",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Rename the helper in file to produce a fileEdit, exercising a cold-posterior template with low execution count.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "id": "gen-16240768943570867107-050",
+          "cell_id": "seen|depth2+|B",
+          "shape_signature": {
+            "input": [
+              "file"
+            ],
+            "output": [
+              "fileEdit"
+            ]
+          },
+          "goal_text": "Using file as the seed, construct a fileEdit through a rarely-exercised multi-hop composition.",
+          "expected_output_shapes": [
+            "fileEdit"
+          ],
+          "seed_impulse_pool": [
+            "file:seed"
+          ],
+          "adversarial": false,
+          "oracle_label_id": null,
+          "generator_seed": "16240768943570867107",
+          "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        }
+      ]
+    }
+  }
+}

@@ -77,6 +77,31 @@ unconfounded; G4 only after G2 produces measured interaction failures.
   is a `create_file` and anchored edits are minimal insertions at VERBATIM-quoted lines. Both
   attempts rolled back cleanly (no hollow landings — E1 doing its job).
 
+## The gate arc (2026-07-01 evening — the session's deepest result)
+
+The same defect class recurred THREE times in substrate-authored patches in one day:
+consumed-never-populated (activity-api `64fd66d`), imported-never-called (obsidian
+`82099b4a`), and then — on the very patch adding detection for the class — the wiring
+of `computeDataFlowFacts` itself dropped (`2aca7ab`). Each instance was caught by
+operator review, filed back as a gap, and fixed by the substrate. The arc completed as:
+
+1. `2aca7ab` — pure `computeDataFlowFacts` + `data_flow` interface field (wiring dropped)
+2. `bd94937` — all three wiring seams (call site, args pass, judge-prompt section)
+3. `0174b56` — regex fix: typed declarations (`new Map<string,number>(`) — the
+   operator's host test caught that the landed detector could not fire on the very
+   instances that motivated it
+4. super-repo `543e74e` — host-side test pin (28 gate tests green)
+
+The gate now deterministically surfaces dropped-wiring facts to its judge. The check
+the operator performed manually three times has migrated into the substrate — the
+exact "teach it to more reliably alter its behavior based on outcomes" pattern the
+proof is about, applied to the substrate's own verification machinery.
+
+Compose-hazard ladder additions (beyond the D1a ladder in the evidence log):
+never put `${` template-literal text in an old_string anchor; never instruct
+in-container composes to edit `test/**` (not shipped in the image — ENOENTs and
+rolls back the whole compose; tests are host-side operator work).
+
 ## Risk register
 
 - feature_compose one-shot unreliability (B, D3, G4): anchors + spec_ref; time-boxed fallback; E1 makes failures honest.
