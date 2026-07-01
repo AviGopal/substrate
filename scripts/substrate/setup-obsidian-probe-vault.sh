@@ -21,18 +21,18 @@ REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 PLUGIN_SRC="${REPO_ROOT}/repos/obsidian-vessel"
 PROBE_VAULT="${OBSIDIAN_PROBE_VAULT:-${HOME}/obsidian-probe-vault}"
 PROBE_PORT="${OBSIDIAN_PROBE_PORT:-27184}"
-REAL_DATA="${REPO_ROOT}/vault/.obsidian/plugins/metabob-vessel/data.json"
+REAL_DATA="${REPO_ROOT}/vault/.obsidian/plugins/obsidian-vessel/data.json"
 
-PDIR="${PROBE_VAULT}/.obsidian/plugins/metabob-vessel"
+PDIR="${PROBE_VAULT}/.obsidian/plugins/obsidian-vessel"
 mkdir -p "${PDIR}" "${PROBE_VAULT}/Scratch"
 
 # Plugin files — symlink the same build the real vault uses (stays current).
 ln -sf "${PLUGIN_SRC}/main.js"           "${PDIR}/main.js"
 ln -sf "${PLUGIN_SRC}/manifest.json"     "${PDIR}/manifest.json"
-ln -sf "${PLUGIN_SRC}/styles/styles.css" "${PDIR}/styles.css"
+ln -sf "${PLUGIN_SRC}/styles.css" "${PDIR}/styles.css"
 
 # Enable the plugin in this vault.
-printf '%s\n' '["metabob-vessel"]' > "${PROBE_VAULT}/.obsidian/community-plugins.json"
+printf '%s\n' '["obsidian-vessel"]' > "${PROBE_VAULT}/.obsidian/community-plugins.json"
 [ -f "${PROBE_VAULT}/.obsidian/app.json" ] || printf '%s\n' '{}' > "${PROBE_VAULT}/.obsidian/app.json"
 
 # data.json: clone the real vault's (reuses apiKey/activityApiUrl/advertisedHost/
