@@ -1,0 +1,113 @@
+# Federation
+
+How substrate instances share a namespace or federate as peers, and how a vessel
+(local or behind NAT) joins over the libp2p relay. This is verified live against the
+`syzygy.host` hub.
+
+## Two topologies
+
+### 1. Shared namespace (hub + spokes) — recommended
+
+One **hub** runs the control plane + store + relay; **spokes** register against it and
+land in the same namespace because they authenticate with keys issued by the **one**
+identity-vessel.
+
+```
+                 syzygy.host (public)  =  HUB
+        ┌──────────────────────────────────────────────┐
+        │  discovery + identity + activity-api + relay  │
+        │  ENABLED_ROLES=hub                            │
+        └──────▲───────────────▲──────────────▲─────────┘
+               │ register       │ register     │ relay reservation
+        ┌──────┴──────┐  ┌──────┴──────┐  ┌────┴─────────────┐
+        │ local subst.│  │ host obsidian│  │ any edge vessel  │
+        │  (spoke)    │  │ + sidecar    │  │  + sidecar       │
+        └─────────────┘  └──────────────┘  └──────────────────┘
+```
+
+Why a single hub makes the namespace automatic: `org_id` is generated per identity-vessel
+(`seed-identity.ts`), so two independently-seeded instances get **different** namespaces.
+A spoke that authenticates with a hub-issued key inherits the hub's `org_id` — same
+namespace, no reconciliation code (`discovery/src/registry.ts isAccessibleTo`).
+
+### 2. Federation peers — separate substrates that fan out
+
+Each instance runs its own full stack; a capability query with **no local producer**
+fans out to configured peers.
+
+```
+  substrate A  ⇄  substrate B     (each: PEER_DISCOVERY_ENDPOINTS points at the other)
+```
+
+Set `PEER_DISCOVERY_ENDPOINTS=http://<peer>:18100` (+ optional shared
+`FEDERATION_SIGNING_SECRET`). Discovery forwards unresolved `vesselCapability` queries,
+tags peer results `discoveredVia:"peer"`, and goal-host routes those over the relay.
+
+## The relay (NAT traversal)
+
+A vessel behind NAT can't be dialed directly. The **libp2p Circuit Relay v2** relay runs
+on a public IP (the hub) and brokers connections; DCUtR then tries a direct hole-punch,
+falling back to permanently-relayed for symmetric NAT. Noise encrypts end-to-end — the
+relay never sees plaintext. Run it with the VM's public IP:
+
+```
+PUBLIC_IP=<vm-ip> RELAY_KEY_FILE=~/relay-key.pb bun scripts/substrate/federation-relay/relay.ts
+# → prints RELAY_MULTIADDR=/ip4/<ip>/tcp/30333/p2p/<relay-peerid>
+```
+
+## Deploying a hub
+
+```
+GITHUB_PAT=<repo-scope>  ANTHROPIC_API_KEY=sk-ant-...  SSH_KEY=~/.ssh/<key> \
+  bash scripts/substrate/deploy-hub.sh root@<vm-ip> <vm-public-ip>
+```
+
+`deploy-hub.sh` **pulls the repo and builds on the VM** (no multi-GB image ship): clones
+`AviGopal/substrate` (+ submodules minus `metabob-mcp`), builds, runs `ENABLED_ROLES=hub`,
+seeds the shared org, and starts the relay. Bare-Ubuntu deps (make/bun/unzip) are
+auto-installed.
+
+**Open the firewall** on the hub VM: TCP `18080` (activity-api), `18100` (discovery),
+`18101` (identity), `18210` (goal-host), and `30333` (relay). On DigitalOcean this is the
+**cloud firewall** (the droplet's ufw/iptables are not the gate).
+
+## Running a spoke
+
+A **full local substrate** can join the hub namespace by pointing its control/store
+endpoints at the hub and using a hub-issued key (`DISCOVERY_VESSEL_ENDPOINT`,
+`IDENTITY_VESSEL_URL`, `ACTIVITY_API_URL`, `METABOB_API_KEY`). Or run only compute:
+`ENABLED_ROLES=spoke`.
+
+A vessel **behind NAT** (e.g. a host Obsidian plugin) that can't be dialed directly uses
+the **libp2p ingress sidecar** — the vessel stays plain HTTP, the sidecar carries libp2p:
+
+```
+FED_VESSEL_ID=my-vessel \
+RELAY_MULTIADDR=/ip4/<hub-ip>/tcp/30333/p2p/<relay-peerid> \
+DISCOVERY_URL=http://<hub-ip>:18100 \
+LOCAL_RESOLVE_URL=http://127.0.0.1:27182/resolve \
+FED_SHAPES=obsidian:note,obsidian:write_note \
+METABOB_API_KEY=<hub-issued-key> \
+bunx @avigopal/libp2p-federation-transport   # (or: bun src/sidecar.ts)
+```
+
+The sidecar reserves on the relay, serves resolves over libp2p (proxying to
+`LOCAL_RESOLVE_URL`), and registers `protocol:"libp2p"` with the hub discovery. The hub
+then resolves those shapes over the relay — the vessel never learns libp2p is involved.
+
+## Verified
+
+`repos/libp2p-federation-transport/federation-hub-e2e.ts` proves the full loop against a
+live hub: a NATed node reserves on the public relay → registers into the hub namespace →
+hub discovery echoes the circuit multiaddr → a second node resolves the shape **through
+the public relay**. Run it with `RELAY_MULTIADDR`, `DISCOVERY_URL`, `HUB_KEY` set.
+
+## Components
+
+| Piece | Where | Role |
+|---|---|---|
+| `@avigopal/libp2p-federation-transport` | `repos/libp2p-federation-transport` | the libp2p primitive + ingress sidecar |
+| relay | `scripts/substrate/federation-relay/relay.ts` | Circuit Relay v2 on a public IP |
+| discovery federation | `repos/discovery-vessel` | peer fan-out + libp2p multiaddr echo |
+| goal-host egress | `repos/goal-host-vessel` | routes `protocol:libp2p` resolves via the transport egress |
+| `deploy-hub.sh` | `scripts/substrate` | pull-the-repo hub deploy |
