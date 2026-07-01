@@ -322,7 +322,7 @@ RUN curl -fsSL -o /tmp/obsidian.AppImage \
 COPY repos/obsidian-vessel/package.json repos/obsidian-vessel/bun.lock* ./obsidian-vessel/
 RUN cd obsidian-vessel && bun install
 COPY repos/obsidian-vessel/src ./obsidian-vessel/src
-COPY repos/obsidian-vessel/styles ./obsidian-vessel/styles
+COPY repos/obsidian-vessel/styles.css ./obsidian-vessel/styles.css
 COPY repos/obsidian-vessel/esbuild.config.mjs \
      repos/obsidian-vessel/manifest.json \
      repos/obsidian-vessel/tsconfig.json \
@@ -337,13 +337,13 @@ RUN cd obsidian-vessel && bun esbuild.config.mjs production
 # An empty notes set is the correct default; concept notes mirror in at runtime.
 # (Previously this COPYied the operator-side host vault/, which is gitignored
 # runtime state and absent from a fresh clone — that broke the build.)
-RUN PLUGIN_DIR=/vaults/substrate-vault/.obsidian/plugins/metabob-vessel \
+RUN PLUGIN_DIR=/vaults/substrate-vault/.obsidian/plugins/obsidian-vessel \
     && mkdir -p "$PLUGIN_DIR" \
     && rm -f "$PLUGIN_DIR/main.js" "$PLUGIN_DIR/manifest.json" "$PLUGIN_DIR/styles.css" \
-    && ln -sf /vessels/obsidian-vessel/main.js           "$PLUGIN_DIR/main.js" \
-    && ln -sf /vessels/obsidian-vessel/manifest.json     "$PLUGIN_DIR/manifest.json" \
-    && ln -sf /vessels/obsidian-vessel/styles/styles.css "$PLUGIN_DIR/styles.css" \
-    && printf '%s\n' '["metabob-vessel"]' \
+    && ln -sf /vessels/obsidian-vessel/main.js       "$PLUGIN_DIR/main.js" \
+    && ln -sf /vessels/obsidian-vessel/manifest.json "$PLUGIN_DIR/manifest.json" \
+    && ln -sf /vessels/obsidian-vessel/styles.css    "$PLUGIN_DIR/styles.css" \
+    && printf '%s\n' '["obsidian-vessel"]' \
         > /vaults/substrate-vault/.obsidian/community-plugins.json
 
 COPY scripts/substrate/obsidian-xorg-launch.sh /usr/local/bin/obsidian-xorg-launch
