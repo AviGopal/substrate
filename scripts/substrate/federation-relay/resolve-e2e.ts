@@ -8,7 +8,7 @@ import { noise } from '@chainsafe/libp2p-noise'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { identify } from '@libp2p/identify'
 import { circuitRelayServer } from '@libp2p/circuit-relay-v2'
-import { createVesselLibp2p, serveResolve, resolveViaLibp2p } from './vessel-libp2p.ts'
+import { createVesselLibp2p, serveResolve, resolveViaLibp2p } from '@avigopal/libp2p-federation-transport'
 
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)) }
 

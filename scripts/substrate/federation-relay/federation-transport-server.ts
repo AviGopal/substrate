@@ -8,7 +8,7 @@
 // (4) registers with the local discovery-vessel — advertising its libp2p peer_id +
 // circuit multiaddr in `metadata` (a stopgap that needs no change to discovery's typed
 // contract; the proper libp2p_* contract fields are the operator-must-land follow-up).
-import { createVesselLibp2p, serveResolveHttp, resolveViaHttp, type VesselLibp2p } from './vessel-libp2p.ts'
+import { createVesselLibp2p, serveResolveHttp, resolveViaHttp, type VesselLibp2p } from '@avigopal/libp2p-federation-transport'
 
 const VESSEL_ID = process.env.FED_VESSEL_ID || 'federation-transport-vessel'
 const RELAY = process.env.RELAY_MULTIADDR || ''

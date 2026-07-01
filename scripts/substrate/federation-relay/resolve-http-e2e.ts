@@ -19,7 +19,7 @@ import { circuitRelayServer } from '@libp2p/circuit-relay-v2'
 import {
   createVesselLibp2p, serveResolve, resolveViaLibp2p,
   serveResolveHttp, resolveViaHttp,
-} from './vessel-libp2p.ts'
+} from '@avigopal/libp2p-federation-transport'
 
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)) }
 

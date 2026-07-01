@@ -74,3 +74,7 @@
 	path = repos/obsidian-vessel
 	url = git@github.com:AviGopal/obsidian-vessel.git
 	branch = dev
+[submodule "repos/libp2p-federation-transport"]
+	path = repos/libp2p-federation-transport
+	url = git@github.com:AviGopal/libp2p-federation-transport.git
+	branch = dev

@@ -10,7 +10,7 @@ import { identify } from '@libp2p/identify'
 import { circuitRelayServer } from '@libp2p/circuit-relay-v2'
 import { ping } from '@libp2p/ping'
 import { multiaddr } from '@multiformats/multiaddr'
-import { createVesselLibp2p, vesselKeyFromId } from './vessel-libp2p.ts'
+import { createVesselLibp2p, vesselKeyFromId } from '@avigopal/libp2p-federation-transport'
 
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)) }
 

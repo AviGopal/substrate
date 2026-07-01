@@ -27,7 +27,10 @@ import { autoNAT } from '@libp2p/autonat'
 import { generateKeyPair, privateKeyFromProtobuf, privateKeyToProtobuf } from '@libp2p/crypto/keys'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 
-const PUBLIC_IP = process.env.PUBLIC_IP || ''            // REQUIRED — the VM's public IPv4
+// REQUIRED — the VM's public IPv4. Accept FED_PUBLIC_IP too: vessels.manifest.json
+// declares the relay's env key as FED_PUBLIC_IP, so honor both to avoid a silent
+// "PUBLIC_IP unset -> exit" when the relay is installed via the manifest path.
+const PUBLIC_IP = process.env.PUBLIC_IP || process.env.FED_PUBLIC_IP || ''
 const TCP_PORT = parseInt(process.env.RELAY_TCP_PORT || '30333', 10)
 const WS_PORT = parseInt(process.env.RELAY_WS_PORT || '0', 10) // set e.g. 443 to also offer browser-reachable WSS
 const RELAY_KEY_FILE = process.env.RELAY_KEY_FILE || './relay-key.protobuf'

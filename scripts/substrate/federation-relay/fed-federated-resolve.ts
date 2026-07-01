@@ -3,7 +3,7 @@
 // (which peer-fans-out to B's discovery and returns B's libp2p_multiaddr through the new
 // contract field), then (2) RESOLVES the shape's content FROM B over libp2p, through the
 // relay. Proves discover-by-shape → libp2p address → resolve-over-overlay across substrates.
-import { createVesselLibp2p, resolveViaHttp } from './vessel-libp2p.ts'
+import { createVesselLibp2p, resolveViaHttp } from '@avigopal/libp2p-federation-transport'
 
 const DISCOVERY = 'http://127.0.0.1:8100'
 const API_KEY = process.env.METABOB_API_KEY || ''
