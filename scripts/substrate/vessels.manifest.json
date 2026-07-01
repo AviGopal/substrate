@@ -1,0 +1,31 @@
+{
+  "_comment": "Declarative manifest of INSTALLABLE (dynamic) vessels — the single source of truth for vessel-ctl.sh install/uninstall. Built-in vessels are baked into the image; this file is for vessels added/removed at runtime (federation, future). Each vessel: name (== systemd unit name), workdir (run dir; supports $REPO_ROOT), exec (bun entrypoint, relative to workdir), env (STATIC literal Environment= lines), secrets (keys from secrets.env.sh that must be in /etc/substrate/env — supplied to the unit via EnvironmentFile, NOT Environment=), restart, health_port (for /health + self-recovery), self_recovery (add to self-recovery-tick VESSELS), post_install (optional shell run after start, e.g. capture a dynamic relay multiaddr into /etc/substrate/env).",
+  "vessels": [
+    {
+      "name": "federation-relay",
+      "description": "Public libp2p Circuit Relay v2 — the from-anywhere reachability anchor.",
+      "workdir": "$REPO_ROOT/scripts/substrate/federation-relay",
+      "exec": "relay.ts",
+      "env": { "RELAY_KEY_FILE": "/workspace/fed-relay-key.pb" },
+      "env_from_file": [ "FED_PUBLIC_IP" ],
+      "secrets": [],
+      "restart": "always",
+      "health_port": null,
+      "self_recovery": false,
+      "post_install": "for i in $(seq 1 20); do m=$(grep -m1 'RELAY_MULTIADDR=' /workspace/fed-relay.log 2>/dev/null | sed 's/RELAY_MULTIADDR=//'); [ -n \"$m\" ] && { grep -v '^RELAY_MULTIADDR=' /etc/substrate/env > /etc/substrate/env.tmp && mv /etc/substrate/env.tmp /etc/substrate/env; echo \"RELAY_MULTIADDR=$m\" >> /etc/substrate/env; echo \"captured RELAY_MULTIADDR=$m\"; break; }; sleep 1; done"
+    },
+    {
+      "name": "federation-transport-vessel",
+      "description": "libp2p reachability + cross-substrate resolve-over-http + /health sensing surface.",
+      "workdir": "$REPO_ROOT/scripts/substrate/federation-relay",
+      "exec": "federation-transport-server.ts",
+      "env": { "FED_HEALTH_PORT": "8401", "DISCOVERY_URL": "http://127.0.0.1:8100" },
+      "env_from_file": [ "RELAY_MULTIADDR", "FED_VESSEL_ID", "FEDERATION_SIGNING_SECRET", "FEDERATION_PEER_AUTH_MODE" ],
+      "secrets": [ "FEDERATION_SIGNING_SECRET", "FEDERATION_PEER_AUTH_MODE" ],
+      "restart": "always",
+      "health_port": 8401,
+      "self_recovery": true,
+      "depends_on": [ "federation-relay" ]
+    }
+  ]
+}
