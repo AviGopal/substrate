@@ -42,6 +42,23 @@ const MIN_SECTION_CHARS = 200;
 const MAX_CONTENT_CHARS = 2400;
 
 const authHeaders = { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) };
+// concept-db embeds each POST synchronously (MiniLM) and runs its own background embed-
+// backfill; ~1600 un-paced POSTs overwhelm it (non-ok under load). Pace + retry so a run
+// converges instead of dropping most sections.
+const PACE_MS = Number(process.env["INGEST_PACE_MS"] ?? "25");
+const MAX_ATTEMPTS = Number(process.env["INGEST_MAX_ATTEMPTS"] ?? "3");
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+async function fetchRetry(url: string, init: RequestInit): Promise<Response | null> {
+  for (let a = 1; a <= MAX_ATTEMPTS; a++) {
+    try {
+      const res = await fetch(url, init);
+      if (res.ok) return res;
+      if (res.status < 500 && res.status !== 429) return res; // client error — no retry
+    } catch { /* network/timeout — retry */ }
+    if (a < MAX_ATTEMPTS) await sleep(250 * a);
+  }
+  return null;
+}
 
 function slug(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
@@ -109,7 +126,7 @@ function shapeFor(relpath: string): string {
 
 async function createConcept(relpath: string, heading: string, body: string, sectionKey: string): Promise<string | null> {
   try {
-    const res = await fetch(`${CONCEPT_DB}/concepts`, {
+    const res = await fetchRetry(`${CONCEPT_DB}/concepts`, {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({
@@ -121,7 +138,7 @@ async function createConcept(relpath: string, heading: string, body: string, sec
       }),
       signal: AbortSignal.timeout(30_000),
     });
-    if (!res.ok) return null;
+    if (!res || !res.ok) return null;
     const c = (await res.json()) as { id?: string };
     return typeof c.id === "string" ? c.id : null;
   } catch { return null; }
@@ -130,13 +147,13 @@ async function createConcept(relpath: string, heading: string, body: string, sec
 // PATCH content in place (one concept per section_key; no duplicate). Returns ok.
 async function patchConcept(id: string, relpath: string, heading: string, body: string): Promise<boolean> {
   try {
-    const res = await fetch(`${CONCEPT_DB}/concepts/${encodeURIComponent(id)}`, {
+    const res = await fetchRetry(`${CONCEPT_DB}/concepts/${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: authHeaders,
       body: JSON.stringify({ content: `${heading}\n\n${body}`, summary: `${relpath}: ${heading}`.slice(0, 160) }),
       signal: AbortSignal.timeout(30_000),
     });
-    return res.ok;
+    return !!res && res.ok;
   } catch { return false; }
 }
 
@@ -170,6 +187,7 @@ async function main(): Promise<void> {
       const id = await createConcept(relpath, s.heading, s.body, sectionKey);
       if (id) { manifest[sectionKey] = { hash: contentHash, id }; created++; }
       else failed++;
+      if (PACE_MS > 0) await sleep(PACE_MS); // don't overwhelm concept-db's synchronous embed
     }
   }
 
