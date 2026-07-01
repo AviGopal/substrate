@@ -12,6 +12,11 @@
 #   2. Idempotent writable clones of the self-developed vessel repos at
 #      MITOSIS_PUSH_CLONE_DIR/<vessel>, on dev. The cutover (direct-push mode)
 #      commits+pushes here, then mirrors into the live /vessels runtime.
+#   3. Idempotent super-repo clone at /workspace/git/super-repo, on dev, tracking
+#      the canonical AviGopal/substrate. The cutover diff-baseline + unit-file
+#      source and the landed-truth reads (docs-align-scan, self-operational-health)
+#      all read this tree, so it MUST track substrate.git/dev — not the stale
+#      metabob-devbob.git/snapshot-branch a persistent volume artifact used to leave it on.
 #
 # Fails open: no PAT → configure identity only, skip clones (drafts won't push,
 # but the substrate still runs and learns).
@@ -115,4 +120,31 @@ for v in $VESSELS; do
       || echo "[setup-git-push] WARN clone failed for $v"
   fi
 done
+
+# 3. Idempotent super-repo clone on dev (canonical AviGopal/substrate). Same
+#    clone-or-refresh pattern as the vessels above (reuse, not a new mechanism) so a
+#    from-repo container comes up with the super-repo tracking substrate.git/dev by
+#    construction — no divergence onto a fork/snapshot branch. --no-recurse-submodules:
+#    the reads that matter (docs/, scripts/, direct-tree vessels) live in the working
+#    tree; submodule vessels use their own $CLONE_DIR/<v> clones. Fork override:
+#    SUBSTRATE_SUPER_REPO (repo name) + SUBSTRATE_REPO_OWNER (owner).
+SUPER_REPO="${SUBSTRATE_SUPER_REPO:-substrate}"
+SUPER_REPO_DIR="${SUBSTRATE_SUPER_REPO_DIR:-$(dirname "$CLONE_DIR")/super-repo}"
+super_url="https://github.com/${REPO_OWNER}/${SUPER_REPO}.git"
+mkdir -p "$(dirname "$SUPER_REPO_DIR")"
+if [ -d "$SUPER_REPO_DIR/.git" ]; then
+  git -C "$SUPER_REPO_DIR" remote set-url origin "$super_url"
+  if git -C "$SUPER_REPO_DIR" fetch --no-recurse-submodules origin dev -q 2>/dev/null; then
+    git -C "$SUPER_REPO_DIR" checkout -q dev 2>/dev/null || git -C "$SUPER_REPO_DIR" checkout -q -b dev origin/dev 2>/dev/null || true
+    git -C "$SUPER_REPO_DIR" reset --hard origin/dev -q 2>/dev/null \
+      && echo "[setup-git-push] refreshed super-repo (${SUPER_REPO}) → $(git -C "$SUPER_REPO_DIR" rev-parse --short HEAD)" \
+      || echo "[setup-git-push] WARN refresh failed for super-repo"
+  else
+    echo "[setup-git-push] WARN fetch failed for super-repo (offline?); keeping existing clone"
+  fi
+else
+  git clone -q --no-recurse-submodules --branch dev "$super_url" "$SUPER_REPO_DIR" \
+    && echo "[setup-git-push] cloned super-repo (${SUPER_REPO})" \
+    || echo "[setup-git-push] WARN clone failed for super-repo"
+fi
 echo "[setup-git-push] done"
