@@ -367,6 +367,23 @@ $$
   bottleneck.* A graded-information-yield reward is, in this language,
   **restoring a non-degenerate `⋆`.**
 
+**Coarsening is now a live write path on the metric (2026-06): the
+signature-cluster posterior.** Signatures are embedded and clustered
+(`repos/activity-api/src/jobs/signature-cluster-tick.ts`), and the cluster is a
+**coarse cell whose 1-cochain accumulates the flows of its fibers**: every leaf
+`(signature, template)` posterior delta is write-through-applied to the shared
+`cluster:<id>` row (`repos/activity-api/src/lib/cluster-posterior.ts`,
+`applyClusterPosterior`), and a cold leaf (fewer than 5 observations) reads the
+coarse cell's `⋆₁` weight instead of the uninformed Beta(1,1). **Contamination
+is the disqualification of a coarse cell whose fibers disagree**: when member
+success rates spread by more than 0.4 the cluster is excluded from both the
+write and the read — the coarsening map is trusted only where the fibration is
+approximately flat. In the rate language of this section this is a `ρ_sample`
+lever for cold cells, and it shrinks the frontier of uninformed cells that
+`ρ_grow` mints (§4.4): coarse cells let new leaves enter the complex already
+partially informed. The learning-rule reading of the same mechanism (partial
+pooling, D4/D5) is `SUBSTRATE_AS_MDP.md` §4.2.
+
 ### 4.2 Scaling rate (coverage as vessels glue in)
 
 Governed by the **interface rank `r`** (how many shared shapes the new vessel

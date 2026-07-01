@@ -454,11 +454,14 @@ Following the discipline of the companion charts.
 - The momentum-space dual of the transformer is assembled from established pieces, not
   an owned result; full statement and honesty bounds in `SUBSTRATE_AS_REPRESENTATION.md`
   §5. → §4.1
-- The reach gate and per-goal `goal_execution_paths` (§3.2) are **live in code** but
-  **not yet folded into the MDP/DEC charts** — those charts have zero coverage of the
-  reach-gated reward signal as of this writing. The reward they model is still the
-  binary success bit; reconciling it with reach-gated success is an open doc-alignment
-  item. → §3.2 (decision currently owned by `GOAL_EXECUTION_PATHS_SCHEMA.md`)
+- *(Resolved 2026-07-01.)* The reach gate and per-goal `goal_execution_paths` (§3.2)
+  are live in code **and folded into the MDP/DEC charts**: the MDP chart now defines
+  the base reward bit as the reach verdict (`SUBSTRATE_AS_MDP.md` §2, developed in
+  §12.6), and the DEC chart folds a hollow chain as a β sample on its edges
+  (`SUBSTRATE_AS_DEC.md` §3). The successor-feature factorization Q = ⟨ψ, R⟩ and the
+  signature-cluster pooling axis are folded alongside (`SUBSTRATE_AS_MDP.md` §2.2 and
+  §4.2; `SUBSTRATE_AS_DEC.md` §4.1). Schema detail remains owned by
+  `GOAL_EXECUTION_PATHS_SCHEMA.md`. → §3.2
 - Several §2 components (`relevance-sink-vessel` health, the `metric-collector` /
   `light-dispatch` port-8280 collision, the lift-test micro-vessels `clock-vessel` /
   `metric-collector-vessel`) are operational facts of the current fleet, not settled

@@ -29,6 +29,20 @@ import {
 } from "./lib/decision-record-completeness.ts";
 import { outputsAgree, diffOutputs } from "./lib/output-normalizers.ts";
 import { computeContaminationDelta } from "./lib/contamination-delta.ts";
+import {
+  computeOptimalityTrend,
+  extractPriorOptimalityRatio,
+  classifyResolverTier,
+  computeTierDistribution,
+  detectTierDescent,
+  makeThompsonCiSnapshot,
+  detectCiNarrowing,
+  type OptimalityCellReport,
+  type TierDistribution,
+  type TierClassification,
+  type ThompsonCiSnapshot,
+} from "./lib/refinement-detectors.ts";
+import { isoWeekKey, promoteHeldOutToRollingPool, rollingPoolSize, type RollingPool } from "./lib/rolling-pool.ts";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -65,6 +79,8 @@ interface GeneratedGoal {
   seed_impulse_pool: string[];
   adversarial: boolean;
   oracle_label_id: string | null;
+  // G6.4.1: embedded verdict for oracle seed goals (see oracle-seeds.json)
+  oracle_verdict?: "pass" | "fail";
   generator_seed: string;
   shape_registry_snapshot_hash: string;
   novelty: string;
@@ -172,6 +188,14 @@ interface CellMetrics {
   oracle_disagreement_rate: number | null;
   // 25.6.1: unified multi-witness disagreement rate across all arms (diff-solve + trace + oracle)
   multi_witness_disagreement_rate: number | null;
+  // G4.1.2: per-cell resolver-tier distribution over tier-classified tasks
+  // (explicit resolver_tier when present; derived from resolver_id otherwise).
+  // Recorded every run so the NEXT run can pair against it via --baseline.
+  tier_distribution: TierDistribution | null;
+  // G4.1.3: Beta-posterior snapshot for the cell's dominant recommended
+  // activity (α/β from the recommend response's selection_metadata — the only
+  // read path carrying the real variant_performance_metrics posterior).
+  thompson_ci: ThompsonCiSnapshot | null;
   floor_pass: boolean;
   floor_status?: string;
   // Recommendation-quality sub-metrics (from recommend calls)
@@ -377,6 +401,40 @@ async function queryMatchingTraces(
 }
 
 // ---------------------------------------------------------------------------
+// G4.1.2: per-trace task hydration.
+//
+// The trace LIST endpoint returns slim rows (no tasks[]); per-task structure
+// (resolver_id / resolver_tier / cost) lives in the split
+// `execution_trace_content` table, which only the per-trace GET
+// (`GET /v2/activities/execution-traces/:executionId`) hydrates
+// (content_source: "split"). Fetch it on demand so tier classification and
+// task-based scoring (reuse_efficiency, DRC) see real tasks.
+// ---------------------------------------------------------------------------
+
+async function hydrateTraceTasks(
+  trace: ExecutionTrace,
+  endpoint: string,
+  authHeaders: Record<string, string>
+): Promise<TaskRecord[] | null> {
+  const execId = (trace as { execution_id?: string }).execution_id ?? trace.id;
+  if (!execId) return null;
+  try {
+    const resp = await fetch(
+      `${endpoint}/v2/activities/execution-traces/${encodeURIComponent(execId)}`,
+      { headers: authHeaders, signal: AbortSignal.timeout(15_000) }
+    );
+    if (!resp.ok) return null;
+    const body = (await resp.json()) as { tasks?: TaskRecord[] };
+    return Array.isArray(body.tasks) && body.tasks.length > 0 ? body.tasks : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Max per-trace GET hydrations per goal (bounds API cost within BUDGET_CAP). */
+const TASK_HYDRATION_PER_GOAL = 3;
+
+// ---------------------------------------------------------------------------
 // Per-trace scoring
 // ---------------------------------------------------------------------------
 
@@ -521,6 +579,8 @@ function emptyCell(): CellMetrics {
     validator_false_negative_rate: null,
     oracle_disagreement_rate: null,
     multi_witness_disagreement_rate: null,
+    tier_distribution: null,
+    thompson_ci: null,
     floor_pass: false,
     recommend_coverage: null,
     recommend_shape_match: null,
@@ -570,7 +630,8 @@ function finalizeCell(cell: CellMetrics, cellId: string): void {
 }
 
 // ---------------------------------------------------------------------------
-// Refinement event detection (Phase 25.4 — minimal E.1 implementation)
+// Refinement event detection (Phase 25.4 — E.1 compression inline; E.2
+// tier-descent + E.3 CI-narrowing delegated to lib/refinement-detectors.ts)
 // ---------------------------------------------------------------------------
 
 interface RefinementEvent {
@@ -579,10 +640,30 @@ interface RefinementEvent {
   description: string;
   prior_value: number | null;
   current_value: number | null;
+  // G4.1.2 tier-descent extras (tasks.md gating: low_confidence events do NOT
+  // count toward refinement_event_density until Phase 21 signatures land)
+  low_confidence?: boolean;
+  prior_tier_distribution?: { llm: number; pattern: number; deterministic: number };
+  current_tier_distribution?: { llm: number; pattern: number; deterministic: number };
+  // G4.1.3 CI-narrowing extras
+  activity_id?: string;
+  prior_ci_width?: number;
+  current_ci_width?: number;
+  execution_growth?: number;
+}
+
+interface PriorCell {
+  success_rate?: number | null;
+  sample_count?: number;
+  tier_distribution?: TierDistribution | null;
+  thompson_ci?: ThompsonCiSnapshot | null;
 }
 
 interface PriorReport {
-  coverage_matrix?: Record<string, { success_rate?: number | null; sample_count?: number }>;
+  coverage_matrix?: Record<string, PriorCell>;
+  // Legacy reports (harness ≤ 25.6) stored bare numbers; current reports
+  // store { optimality_ratio, trend } objects.
+  optimality_ratios?: Record<string, number | { optimality_ratio?: number | null } | null>;
 }
 
 function detectRefinementEvents(
@@ -594,40 +675,57 @@ function detectRefinementEvents(
 
   for (const [cellId, current] of Object.entries(currentMatrix)) {
     const prior = priorReport.coverage_matrix[cellId];
-    if (!prior || !current.success_rate || !prior.success_rate) continue;
+    if (!prior) continue;
 
-    // Compression event: success_rate improved by ≥ 0.10 and sample_count grew
-    const successDelta = current.success_rate - (prior.success_rate ?? 0);
-    if (successDelta >= 0.10 && current.sample_count > (prior.sample_count ?? 0)) {
-      events.push({
-        type: "compression",
-        cell_id: cellId,
-        description: `success_rate improved from ${prior.success_rate?.toFixed(3)} to ${current.success_rate.toFixed(3)}`,
-        prior_value: prior.success_rate ?? null,
-        current_value: current.success_rate,
-      });
+    // E.1 compression: success_rate improved by ≥ 0.10 and sample_count grew
+    if (current.success_rate && prior.success_rate) {
+      const successDelta = current.success_rate - (prior.success_rate ?? 0);
+      if (successDelta >= 0.10 && current.sample_count > (prior.sample_count ?? 0)) {
+        events.push({
+          type: "compression",
+          cell_id: cellId,
+          description: `success_rate improved from ${prior.success_rate?.toFixed(3)} to ${current.success_rate.toFixed(3)}`,
+          prior_value: prior.success_rate ?? null,
+          current_value: current.success_rate,
+        });
+      }
     }
+
+    // G4.1.2 / E.2 tier-descent (always low_confidence — see gating note)
+    const tierEvent = detectTierDescent(cellId, prior.tier_distribution, current.tier_distribution);
+    if (tierEvent) events.push(tierEvent);
+
+    // G4.1.3 / E.3 CI-narrowing for the cell's dominant activity
+    const ciEvent = detectCiNarrowing(cellId, prior.thompson_ci, current.thompson_ci);
+    if (ciEvent) events.push(ciEvent);
   }
   return events;
 }
 
 // ---------------------------------------------------------------------------
-// Optimality ratio per cell
+// Optimality ratio per cell (G3.3.1: + closing/stable/regressing trend flags
+// when a prior report is supplied via --baseline; schema matches
+// compare-reports.ts `optimality_ratios` expectations)
 // ---------------------------------------------------------------------------
 
 function computeOptimalityRatios(
   rawCellCosts: Record<string, number[]>,
-  cache: ShortestPathCache
-): Record<string, number | null> {
-  const ratios: Record<string, number | null> = {};
+  cache: ShortestPathCache,
+  priorReport: PriorReport | null
+): Record<string, OptimalityCellReport> {
+  const ratios: Record<string, OptimalityCellReport> = {};
   for (const [cellId, costs] of Object.entries(rawCellCosts)) {
     const entry = cache[cellId];
-    if (!entry || !costs.length) {
-      ratios[cellId] = null;
-      continue;
+    let ratio: number | null = null;
+    if (entry && costs.length && entry.shortest_cost_usd > 0) {
+      const meanCost = costs.reduce((s, v) => s + v, 0) / costs.length;
+      ratio = meanCost / entry.shortest_cost_usd;
     }
-    const meanCost = costs.reduce((s, v) => s + v, 0) / costs.length;
-    ratios[cellId] = meanCost / entry.shortest_cost_usd;
+    const priorRatio = extractPriorOptimalityRatio(priorReport?.optimality_ratios?.[cellId]);
+    ratios[cellId] = {
+      optimality_ratio: ratio,
+      trend: computeOptimalityTrend(ratio, priorRatio),
+    };
   }
   return ratios;
 }
@@ -680,7 +778,7 @@ interface LoopResult {
   rawCellCosts: Record<string, number[]>;
   perGoalResults: PerGoalResult[];
   refinementEvents: RefinementEvent[];
-  optimalityRatios: Record<string, number | null>;
+  optimalityRatios: Record<string, OptimalityCellReport>;
   apiCallCount: number;
   universality_pass: boolean | null;
 }
@@ -702,6 +800,10 @@ async function runGoalLoop(
   const matrix: CoverageMatrix = {};
   const rawCellCosts: Record<string, number[]> = {};
   const perGoalResults: PerGoalResult[] = [];
+  // G4.1.2: per-cell tier classifications accumulated across hydrated tasks
+  const cellTierSamples: Record<string, TierClassification[]> = {};
+  // G4.1.3: per-cell top-recommendation posteriors (id + α/β from selection_metadata)
+  const cellTopRecs: Record<string, Array<{ id: string; alpha: number; beta: number }>> = {};
   let apiCallCount = 0;
 
   console.log(`\n  Processing ${goals.length} goals...\n`);
@@ -713,6 +815,8 @@ async function runGoalLoop(
     if (!matrix[cellId]) {
       matrix[cellId] = emptyCell();
       rawCellCosts[cellId] = [];
+      cellTierSamples[cellId] = [];
+      cellTopRecs[cellId] = [];
     }
 
     const cell = matrix[cellId];
@@ -733,6 +837,17 @@ async function runGoalLoop(
       recommendationCoversOutputShapes(r, goal.expected_output_shapes)
     );
 
+    // G4.1.3: capture the top recommendation's live Thompson posterior
+    if (recs.length > 0) {
+      const top = recs[0];
+      const topId = top.id ?? top.template_id ?? top.activity_id;
+      const alpha = top.selection_metadata?.alpha;
+      const beta = top.selection_metadata?.beta;
+      if (topId && typeof alpha === "number" && typeof beta === "number") {
+        cellTopRecs[cellId].push({ id: topId, alpha, beta });
+      }
+    }
+
     // 2. Query matching traces
     const traces = await queryMatchingTraces(
       goal.expected_output_shapes,
@@ -741,6 +856,25 @@ async function runGoalLoop(
       5
     );
     apiCallCount++;
+
+    // G4.1.2: hydrate per-task structure (resolver_id / resolver_tier) from
+    // the per-trace GET for traces the list endpoint returned slim.
+    let hydrations = 0;
+    for (const trace of traces) {
+      if (trace.tasks?.length) continue;
+      if (hydrations >= TASK_HYDRATION_PER_GOAL || apiCallCount >= BUDGET_CAP) break;
+      const tasks = await hydrateTraceTasks(trace, endpoint, authHeaders);
+      apiCallCount++;
+      hydrations++;
+      if (tasks) trace.tasks = tasks;
+    }
+
+    // G4.1.2: accumulate tier classifications for this cell
+    for (const trace of traces) {
+      for (const t of trace.tasks ?? []) {
+        cellTierSamples[cellId].push(classifyResolverTier(t.resolver_tier, t.resolver_id));
+      }
+    }
 
     // 3. Score traces
     const traceScores: TraceScores[] = [];
@@ -903,11 +1037,24 @@ async function runGoalLoop(
     const totalPairs = goalResults.reduce((s, r) => s + r.witness_pair_count, 0);
     const totalDisagree = goalResults.reduce((s, r) => s + r.witness_disagree_count, 0);
     cell.multi_witness_disagreement_rate = totalPairs > 0 ? totalDisagree / totalPairs : null;
+    // G4.1.2: per-cell tier distribution (recorded even without a baseline so
+    // the next run can pair against it)
+    cell.tier_distribution = computeTierDistribution(cellTierSamples[cellId] ?? []);
+    // G4.1.3: dominant recommended activity's posterior snapshot
+    const topRecs = cellTopRecs[cellId] ?? [];
+    if (topRecs.length > 0) {
+      const freq = new Map<string, number>();
+      for (const r of topRecs) freq.set(r.id, (freq.get(r.id) ?? 0) + 1);
+      const dominantId = [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      // Latest observation of the dominant id carries the freshest α/β
+      const dominant = [...topRecs].reverse().find((r) => r.id === dominantId)!;
+      cell.thompson_ci = makeThompsonCiSnapshot(dominant.id, dominant.alpha, dominant.beta);
+    }
     finalizeCell(cell, cellId);
   }
 
   const refinementEvents = detectRefinementEvents(matrix, priorReport);
-  const optimalityRatios = computeOptimalityRatios(rawCellCosts, shortestPaths);
+  const optimalityRatios = computeOptimalityRatios(rawCellCosts, shortestPaths, priorReport);
 
   const passableCells = Object.entries(matrix).filter(
     ([, c]) => c.sample_count >= 3 && c.floor_status !== "gated_on_phase_22"
@@ -1038,9 +1185,12 @@ async function main() {
         coverage_matrix: heldOutMatrixOutput,
         optimality_ratios: heldOutLoopResult.optimalityRatios,
         refinement_event_count: heldOutLoopResult.refinementEvents.length,
+        // Gating note (tasks.md): low_confidence events (tier-descent until
+        // Phase 21 signatures) do NOT count toward the density criterion.
         refinement_event_density:
           heldOutLoopResult.perGoalResults.length > 0
-            ? heldOutLoopResult.refinementEvents.length / heldOutLoopResult.perGoalResults.length
+            ? heldOutLoopResult.refinementEvents.filter((e) => !e.low_confidence).length /
+              heldOutLoopResult.perGoalResults.length
             : 0,
         // G6.2.1 / 25.6.1: differential-solve + multi-witness summary for held-out suite
         differential_witness_count: heldOutLoopResult.perGoalResults.filter((r) => r.differential).length,
@@ -1060,6 +1210,35 @@ async function main() {
       const heldOutReportPath = join(resultsDir, `${dateStr}-held-out-report.json`);
       await writeFile(heldOutReportPath, JSON.stringify(heldOutReport, null, 2), "utf8");
       console.log(`  Held-out report written to: ${heldOutReportPath}`);
+
+      // G7.3.1: promote this week's held-out prompts into the rolling pool
+      // (keyed by ISO week; idempotent — re-running the same week is a no-op).
+      const rollingPoolPath = join(generatedDir, "rolling-pool.json");
+      let existingPool: RollingPool | null = null;
+      if (existsSync(rollingPoolPath)) {
+        try {
+          existingPool = JSON.parse(await readFile(rollingPoolPath, "utf8")) as RollingPool;
+        } catch {
+          console.warn(`  rolling-pool.json unreadable; starting a fresh pool`);
+        }
+      }
+      const generatedAt = heldOutFile.generated_at ? new Date(heldOutFile.generated_at) : new Date();
+      const weekKey = isoWeekKey(Number.isNaN(generatedAt.getTime()) ? new Date() : generatedAt);
+      const promotion = promoteHeldOutToRollingPool(
+        existingPool,
+        weekKey,
+        heldOutGoals,
+        heldOutFiles[0]
+      );
+      if (promotion.added > 0) {
+        await writeFile(rollingPoolPath, JSON.stringify(promotion.pool, null, 2), "utf8");
+        console.log(
+          `  Rolling pool: +${promotion.added} held-out goals promoted under ${weekKey} ` +
+          `(total ${rollingPoolSize(promotion.pool)}) → ${rollingPoolPath}`
+        );
+      } else {
+        console.log(`  Rolling pool: week ${weekKey} already promoted (no-op)`);
+      }
     }
   }
 
@@ -1093,8 +1272,12 @@ async function main() {
     coverage_matrix: matrixOutput,
     optimality_ratios: optimalityRatios,
     refinement_event_count: refinementEvents.length,
+    // Gating note (tasks.md): low_confidence events (tier-descent until
+    // Phase 21 signatures) do NOT count toward the density criterion.
     refinement_event_density:
-      perGoalResults.length > 0 ? refinementEvents.length / perGoalResults.length : 0,
+      perGoalResults.length > 0
+        ? refinementEvents.filter((e) => !e.low_confidence).length / perGoalResults.length
+        : 0,
     refinement_events: refinementEvents,
     // G6.2.1: differential-solve summary
     differential_witness_count: perGoalResults.filter((r) => r.differential).length,

@@ -41,7 +41,7 @@ Mapped to the substrate:
 | **S** (state space) | `state_signature` ⊕ available-impulse-shape multiset | computed server-side from a trace's input impulses |
 | **A(s)** (actions) | `applicable(s) = { template t : input_shapes(t) ⊆ shapes(s) }` | the discover-by-shapes path returns this set |
 | **P(s′ \| s, a)** (transitions) | empirical distribution of `output_impulse_shapes` grouped by `(signature, template)` | rows of the execution-trace store |
-| **R(s, a) ∈ ℝᵈ** (vector reward) | projection residual `‖g − proj_{span(traces)} g‖` where g is the goal direction and traces are observed work vectors; the binary success bit is the degenerate scalarization of this vector residual | the validation back-half produces the scalar projection; the vector residual is the structural form. See §1.1 |
+| **R(s, a) ∈ ℝᵈ** (vector reward) | projection residual `‖g − proj_{span(traces)} g‖` where g is the goal direction and traces are observed work vectors; the binary success bit is the degenerate scalarization of this vector residual | the validation back-half — deployed as the goal-reaching gate, §12.6 — produces the scalar projection; the vector residual is the structural form. See §1.1, §2 |
 | **γ** (discount) | implicit 1 along `composition_chain` | chain-credit propagation writes |
 | **π(a \| s)** (policy) | Thompson sample-and-argmax over applicable a | the template selector on the recommend path |
 
@@ -123,6 +123,19 @@ $$
 \alpha_{s,a} \leftarrow \alpha_{s,a} + r, \qquad \beta_{s,a} \leftarrow \beta_{s,a} + (1 - r)
 $$
 
+The outcome bit `r` is **reach-gated**, not an exit status: `r = 1` is
+the verdict of `verifyGoalReached` — an LLM judge run *after* execution
+that emits the `completion_shapes` the goal actually required and tests
+whether the produced shapes satisfy them (deployed on goal-host-vessel
+2026-06; `verifyGoalReached` in
+`repos/goal-host-vessel/src/index.ts`). A run that *completed* without
+producing the asked output — a hollow completion — scores `r = 0` and
+drives the β-update. The same bit accumulates a per-goal Beta posterior
+in `goal_execution_paths` keyed by `goal_hash`
+(`GOAL_EXECUTION_PATHS_SCHEMA.md`). §12.6 develops why this grounding is
+the precondition for everything below: the earlier exit-status reward was
+exactly the gameable signal the gate replaces.
+
 This is **Thompson sampling for Bernoulli bandits**, applied per-state.
 The "state" here is non-trivial — it's the `state_signature` —
 which is why the substrate is doing **contextual** Thompson sampling,
@@ -150,9 +163,74 @@ hyperparameter — the conjugate step *is* the natural-gradient step.
 discount/learning-rate factor on propagated credit, applied on top of
 the unit-step base update.)
 
+### 2.2 Successor features: Q(s, a) = ⟨ψ(s, a), R⟩ (live 2026-06)
+
+The Q-factorization of the successor-representation literature
+([Dayan]; [Barreto et al.]) now exists in code. Alongside the Beta
+posterior on the *reward* side, each `(signature, template, scope)` cell
+carries a **successor-feature vector ψ(s, a)** — the expected
+γ-discounted **output-shape occupancy** of the trace continuation rooted
+at that cell:
+
+$$
+\psi(s, a) \;=\; \mathbb{E}\Big[\ \sum_{t\ge 0} \gamma^{t}\, \phi_t \ \Big],
+\qquad \gamma = 0.9\ (\texttt{SF\_DISCOUNT}),
+$$
+
+where φ_t is the indicator vector of task t's `output_impulse_shapes`
+(features are **existing shape ids** — no new vocabulary is minted; the
+sparse map is bounded to the top-K = 32 shapes by occupancy). Each
+completed trace is one Monte-Carlo sample ψ̂_τ = Σ_t γ^t φ_t; the online
+estimator is the **Robbins-Monro running mean** with step 1/(n+1) (the
+empirical mean), applied fire-and-forget at trace ingest
+(`repos/activity-api/src/lib/successor-features.ts`;
+ingest hook `src/routes/execution-traces.ts` ~L2686; one row per cell in
+`successor_features`, migration `sql/migrations/149-successor-features.surql`).
+
+The readout is the sparse dot product
+
+$$
+Q_{\text{sf}}(s, a) \;=\; \langle \psi(s, a),\, R \rangle,
+$$
+
+where **R is the goal direction built from the reach gate's
+`completion_shapes`** (unit weight per wanted shape,
+`rewardFromCompletionShapes`) — the two mechanisms of this chapter meet
+here: the gate of §2/§12.6 defines what the goal wanted, and ψ reads out
+how much of it a cell's continuation is expected to produce. It enters
+selection in two places:
+
+- **`discover-by-shapes` `candidates_with_scores`** attaches a
+  `successor_value` per candidate whenever the caller supplies
+  `signature` + `completion_shapes` (+ optional `sf_scope`), alongside
+  the unchanged Thompson scores
+  (`src/services/discover-by-shapes.ts` ~L212-266).
+- **The recommend ranking** blends it additively onto the Thompson
+  sample: `_sf_blended = θ_{s,a} + w · v/(1+v)` with
+  `w = SF_BLEND_WEIGHT` (default 0.5) and `v = ⟨ψ, R⟩` squashed into
+  [0,1) so it can never dominate a Beta sample
+  (`src/routes/activities.ts` ~L6992-7064). Honesty on gating: the
+  ψ-*write* path defaults ON (`SUCCESSOR_FEATURES≠0`), the
+  discover-by-shapes readout defaults ON, but the recommend *blend* is
+  opt-in behind `SF_BLEND=1` — off, the ranking is byte-for-byte the
+  prior Thompson order.
+
+The payoff is the multi-horizon / transfer meaning: ψ is a property of
+**(π, P, φ, γ) only** — it factors the transition structure out of the
+value estimate, independent of reward weights. The same learned ψ
+surface therefore reads out **any** goal direction R, including one the
+cell was never Beta-rewarded on — zero-shot transfer across goals, which
+the scalar α/β cell cannot express (it has already collapsed the outcome
+onto one success axis). In the §1.1 vector-reward language, ψ retains
+the pre-scalarization structure of the outcome per cell; ⟨ψ, R⟩ is its
+projection onto a *chosen* goal direction at read time rather than at
+write time. Caveat (see §11): the additive Thompson-blend readout is a
+heuristic scalarization, not the GPI (generalized policy improvement)
+readout whose transfer bounds [Barreto et al.] prove.
+
 ## 3. Credit propagation = n-step TD backup
 
-When a trace ends with reward r at depth n along `composition_chain`,
+When a trace ends with reward r (the reach-gated bit of §2) at depth n along `composition_chain`,
 chain-credit propagation writes deltas to ancestors. For ancestor
 k steps back along the chain:
 
@@ -217,6 +295,41 @@ estimates a population hyperprior from the marginal likelihood rather
 than reusing a posterior — which already absorbed the subgroup's data —
 as the subgroup's prior. The approximation behaves well when global
 counts ≫ org counts; it double-counts and over-pools otherwise.)
+
+**A second pooling axis is live (2026-06): similarity-clustered
+signature pooling (D4/D5).** The scope axis pools across *who* (org →
+account → global); the cluster axis pools across *where in state space*.
+A periodic job embeds each `state_signature` (MiniLM, via concept-db),
+clusters the embeddings, and writes stable
+`signature_cluster_assignment` rows
+(`repos/activity-api/src/jobs/signature-cluster-tick.ts`). Two
+mechanisms ride on the assignment:
+
+- **Coarsening write (D4):** every leaf `(signature, template)`
+  posterior delta is also applied to the signature's *cluster* row — a
+  shared `cluster:<id>` bucket in the same `context_thompson_scores`
+  table — via an atomic id-keyed UPSERT
+  (`repos/activity-api/src/lib/cluster-posterior.ts`,
+  `applyClusterPosterior`; advisory/best-effort, never blocks the leaf
+  write). The cluster row accumulates the pooled outcomes of all member
+  signatures.
+- **Partial-pooling read (D5):** when a leaf is cold
+  (`n_signature < SIGNATURE_CLUSTER_N_MIN = 5`), the Thompson selector
+  samples from the cluster posterior instead of the uninformed
+  Beta(1,1); a well-sampled leaf is never overridden
+  (`repos/activity-api/src/routes/activities.ts`, the
+  `used_scope = signature | cluster | fallback` decision).
+
+The guard is a **contamination check**: per clustering pass, each
+member's empirical success rate p̂_s is aggregated from its leaf rows;
+if the spread `max p̂ − min p̂` across qualifying members (`n_s ≥ 5`)
+exceeds 0.4, the whole cluster is flagged `contaminated` and excluded
+from **both** the coarsening write and the pooling read. This is the
+hierarchical-model analogue of testing exchangeability before pooling: a
+cluster whose members demonstrably disagree is not a valid pooling unit.
+The same honesty caveat as the scope axis applies — a cascading-prior
+approximation with an empirical threshold test standing in for a fitted
+hyperprior, not the strict hierarchical construction.
 
 ### 4.3 Resolver-tier separation of P
 
@@ -918,7 +1031,7 @@ can do breadth-first what it already does depth-first.
 An audit checked the framing against conventional mathematics. Items
 split into three classes.
 
-**Theorem-grounded (8) — citable formal results back the claim:**
+**Theorem-grounded (9) — citable formal results back the claim:**
 
 - Per-cell orthogonality is **measured**, not assumed (ICA / pPCA /
   conditional-independence tests). → §4
@@ -929,6 +1042,9 @@ split into three classes.
   motivates but does not prove it). → §1.1
 - Beta-Bernoulli conjugate update = natural gradient in Beta
   information geometry ([Amari]). → §2.1
+- Successor-feature factorization Q = ⟨ψ, R⟩ with Monte-Carlo /
+  Robbins-Monro ψ estimation ([Dayan]; [Barreto et al.]) — live in code
+  since 2026-06. → §2.2
 - Transient state as steady state along dual-arm invariant manifold
   ([Borkar] TTSA + geometric singular perturbation / [Fenichel]; not
   Carr's centre-manifold theorem — see §4.6). → §4.6
@@ -942,7 +1058,7 @@ split into three classes.
   bounded above by Tarski's undefinability theorem (full
   self-interpretation impossible from within). → the foundational model
 
-**Frontier (6) — operating without formal guarantees:**
+**Frontier (7) — operating without formal guarantees:**
 
 - Graph momentum as a formal object (no published treatment matches
   exactly; closest is temporal GNN momentum optimizers, which target
@@ -959,6 +1075,12 @@ split into three classes.
   first-class authoring).
 - Minimum-primitive-set closure proof (categorical-deep-learning names
   the goal; no formalization exists).
+- The deployed SF readout — additive Thompson-blend
+  `θ + w·v/(1+v)` — is a heuristic scalarization; the SF transfer
+  bounds ([Barreto et al.]) cover GPI (max-over-policies) readout, not
+  additive blending. Likewise the cluster-pooling contamination
+  threshold (spread > 0.4) is an empirical exchangeability test with no
+  formal guarantee. → §2.2, §4.2
 
 **Honest limit-statement (1):**
 
@@ -968,7 +1090,7 @@ split into three classes.
   as an object — only the fact that any chosen representation is
   provably partial. → the substrate's informational state
 
-The 8 theorem-grounded items cover the load-bearing math. The 6
+The 9 theorem-grounded items cover the load-bearing math. The 7
 frontier items share a common shape — *runtime expansion of structured
 Bayesian objects* — which suggests a unified piece of theory yet to be
 developed. The substrate is implicitly betting that the per-cell
@@ -993,7 +1115,11 @@ Actions score immediate reward without a bootstrapped next-state value,
 so there is no Bellman backup in the strict sense. The
 O(√(T log T)) regret bound the doc cites ([Agrawal & Goyal]) is itself a
 *bandit* bound — there is no analogous closed-form regret for the
-sequential Q-learning the framing claims.
+sequential Q-learning the framing claims. One partial exception is live:
+the successor-feature cell ψ (§2.2) does model the discounted multi-step
+shape-occupancy of the continuation — Monte-Carlo, not bootstrapped — so
+the *transition* side now carries genuine multi-step structure even
+though the reward update remains immediate.
 
 ### 12.2 The federation contradiction (§9)
 
@@ -1170,6 +1296,8 @@ is `SUBSTRATE_AS_REPRESENTATION.md` §6.1.
 - **[Das & Dennis]** Das, I. & Dennis, J., *A closer look at drawbacks of minimizing weighted sums of objectives for Pareto set generation in multicriteria optimization problems*, Structural Optimization 14, 1997. — *verification: carried.*
 - **[Roijers]** Roijers, D. et al., *A Survey of Multi-Objective Sequential Decision-Making*, JAIR 48, 2013. https://www.jair.org/index.php/jair/article/view/10836 — *verification: carried.*
 - **[Dearden et al.]** Dearden, R., Friedman, N. & Russell, S., *Bayesian Q-learning*, AAAI 1998. — *verification: carried.*
+- **[Dayan]** Dayan, P., *Improving Generalization for Temporal Difference Learning: The Successor Representation*, Neural Computation 5(4), 1993. — *verification: carried.*
+- **[Barreto et al.]** Barreto, A. et al., *Successor Features for Transfer in Reinforcement Learning*, NeurIPS 2017; arXiv:1606.05312. https://arxiv.org/abs/1606.05312 — *verification: carried.*
 - **[Khan & Lin]** Khan, M. E. & Lin, W., *Conjugate-Computation Variational Inference*, AISTATS 2017; arXiv:1703.04265. https://arxiv.org/abs/1703.04265 — *verification: carried.*
 - **[Khan & Rue]** Khan, M. E. & Rue, H., *The Bayesian Learning Rule*, JMLR 24, 2023; arXiv:2107.04562. https://arxiv.org/abs/2107.04562 — *verification: carried.*
 - **[Amari]** Amari, S., *Natural Gradient Works Efficiently in Learning*, Neural Computation 10(2), 1998. — *verification: carried.*

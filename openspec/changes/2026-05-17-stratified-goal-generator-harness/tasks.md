@@ -100,7 +100,15 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
 
 ### G3.3 Optimality-ratio reporting
 
-- [ ] G3.3.1 (OPEN) `optimality_ratio` + `closing`/`stable`/`regressing` flags require 2+ consecutive runs. First run complete; flags will appear on run 2 (~2026-05-25).
+- [x] G3.3.1 ✅ **DONE** 2026-07-01. `optimality_ratios` in the report is now
+  `Record<cellId, { optimality_ratio, trend }>` (the shape `compare-reports.ts`
+  already consumed). Trend flags per design §D.4 (`closing` < 95% of prior,
+  `regressing` > 105%, `stable` within ±5%) computed by
+  `lib/refinement-detectors.ts:computeOptimalityTrend()` when `--baseline` is
+  supplied; `extractPriorOptimalityRatio()` accepts both the legacy bare-number
+  baseline form and the new object form. `trend: null` on first run / missing
+  prior. Unit tests green. Flags activate on the next two-run pair (baseline
+  run pending operator container restart).
 
 ---
 
@@ -109,8 +117,34 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
 ### G4.1 Three detectors
 
 - [x] G4.1.1 ✅ **DONE** 2026-05-19 (E.1 inline in 25.2.1). Compression detector: fires when `success_rate` improves ≥ 0.10 AND `sample_count` grew vs prior cell. Event type `"compression"`.
-- [ ] G4.1.2 (OPEN — deferred) E.2 tier-descent detector requires per-task `resolver_tier` from live traces. Not yet populated in trace list endpoint.
-- [ ] G4.1.3 (OPEN — deferred) E.3 CI-narrowing detector requires per-variant execution count growth. Deferred to Phase 26.
+- [x] G4.1.2 ✅ **DONE** 2026-07-01 (with derivation caveat). **resolver_tier
+  availability re-checked live:** the field is structurally supported end-to-end
+  (write path `normalizePersistedTask` persists it into
+  `execution_trace_content.tasks`; the per-trace GET
+  `/v2/activities/execution-traces/:executionId` returns content tasks raw when
+  `content_source: "split"`), but it is **null on 100% of sampled live rows**
+  (3000-row `execution_trace_content` sample + `impulse_resolutions`; the walk
+  engine never sets `resolverTier`). Per-task `resolver_id` IS populated.
+  Implementation: harness hydrates slim list-endpoint traces via the per-trace
+  GET (≤3 per goal, budget-counted), classifies tiers with
+  `lib/refinement-detectors.ts:classifyResolverTier()` (explicit `resolver_tier`
+  wins; else derived from `resolver_id` — llm/pattern hints, other ids
+  deterministic), records per-cell `tier_distribution` in every report, and
+  `detectTierDescent()` fires when the llm share drops ≥ 0.30 between runs
+  (n ≥ 3 both sides). All tier-descent events carry `low_confidence: true` per
+  the Phase-21 gating note and are excluded from `refinement_event_density`.
+- [x] G4.1.3 ✅ **DONE** 2026-07-01. E.3 CI-narrowing via
+  `lib/refinement-detectors.ts:detectCiNarrowing()`. α/β source: the recommend
+  response's `selection_metadata.alpha/beta` (verified live — the only read
+  path carrying the real `variant_performance_metrics` posterior;
+  `thompson_posterior` / `variantMetricsSummary` aggregate the sparse
+  `execution` table and return Beta(1,1), and `GET /templates/:id/metrics` is
+  broken on SurrealDB 3.x: `GROUP BY time::format` parse error). Harness
+  snapshots per-cell dominant top-recommended activity as
+  `thompson_ci: { activity_id, alpha, beta, ci_width, observed_executions }`
+  (95% normal-approx Beta CI width); event fires when the SAME activity's
+  ci_width shrank ≥ 0.05 across runs AND observed executions grew ≥ 5.
+  Unit tests green; activates on the next two-run pair.
 
 ### G4.2 Pairwise comparison wiring
 
@@ -216,9 +250,16 @@ style matches `2026-04-26-impulse-activity-loop/tasks.md`.
 
 ### G7.3 Promotion logic
 
-- [ ] G7.3.1 After one week, held-out prompts are appended to a `rolling-pool.json`
-  index and become eligible for re-use in subsequent runs. **Acceptance:** the
-  rolling pool grows by N entries per week, where N = held-out count.
+- [x] G7.3.1 ✅ **DONE** 2026-07-01. `lib/rolling-pool.ts`:
+  `promoteHeldOutToRollingPool()` (pure) + `isoWeekKey()` (same
+  Thursday-of-Jan-4 ISO-week algorithm as the held-out seed). After the
+  held-out loop, `stratified-harness.ts --held-out` appends that suite's goals
+  to `validation/generated/rolling-pool.json` keyed by ISO week of the goals
+  file's `generated_at` (`{ version, updated_at, weeks: { "YYYY-Www": {
+  promoted_at, source_file, goal_count, goals } } }`). Idempotent: an existing
+  week key is a no-op (`added: 0`), so re-running within a week does not
+  duplicate. Acceptance met by construction: pool grows by N = held-out count
+  once per week. 8 unit tests green.
 
 ---
 
