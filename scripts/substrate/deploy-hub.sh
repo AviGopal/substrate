@@ -80,7 +80,7 @@ docker run -d --name substrate-live --privileged \
   -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
   -e ENABLED_ROLES=hub -e SUBSTRATE_BIND_HOST=0.0.0.0 \
   -e PUBLIC_IP="$PUBLIC_IP" -e FED_PUBLIC_IP="$PUBLIC_IP" \
-  -p 18080:8080 -p 18100:8100 -p 18101:8101 -p 18210:8210 -p 30333:30333 \
+  -p 18080:8080 -p 18100:8100 -p 18101:8101 -p 18210:8210 \
   -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
   --tmpfs /run --tmpfs /run/lock metabob/substrate:dev
 
