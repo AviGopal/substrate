@@ -1,6 +1,6 @@
 ---
 name: metabob-substrate
-description: Operate the metabob substrate as a citizen, not a tourist — read the concept graph before deciding, write back what you learn, intercept information streams (codebase, docs, organization, environment, messages, history, memories, notes) and route the load-bearing signal into concept-db so the substrate accumulates instead of just churning.
+description: Operate the metabob substrate as a citizen, not a tourist. Drive it through the MCP cockpit — dispatch work (run_goal / run_goal_async), understand HOW it reasoned (goal_reasoning), record whether it worked (provide_feedback → oracle corpus), and inspect the running system (registry_query / execution_trace / resolve_impulse) without host access. Read `reached`, not `status`. Plain code-change goals that name a repos/<vessel>/src file route to feature_compose and land traced commits. And read the concept graph before deciding, writing back the load-bearing signal so the substrate accumulates instead of churning.
 ---
 
 # metabob-substrate
@@ -33,25 +33,64 @@ Always available in vessel mode (substrate-local MCP). Tool descriptions are sel
 | `concept_link` | When you observe a relationship between two existing concepts. Always include a `description` so future readers know your rationale. |
 | `concept_create` | When you've surfaced knowledge that isn't yet in the graph. Pick `source_type` from the taxonomy below. |
 
-## Dispatching work to the substrate (and tracking it)
+## Driving the substrate through MCP: dispatch → inspect → verify
 
-Reading/writing the concept graph is half of citizenship; the other half is **doing work *through* the substrate** so it produces a trace and feeds the learning loop, instead of editing files untraced. Three MCP tools, picked by goal length and whether you need to watch:
+Reading/writing the concept graph is half of citizenship; the other half is **doing work *through* the substrate** so it produces a trace and feeds the learning loop, instead of editing files untraced. The MCP surface is a **complete operator cockpit** — you can dispatch work, understand *how* the substrate reasoned, record whether it actually worked, and inspect the running system, all **without host access** (no `docker exec`, no `journalctl`, no raw `curl`). Reach for these before dropping to the shell.
+
+The tools group into **three planes** plus a coverage set:
+
+**ACT — dispatch work.**
 
 | Tool | Use when |
 |---|---|
 | `run_goal` | Short, one-shot goal you want answered inline. Blocks via goal-host `/resolve` (~290s cap). |
-| `run_goal_async` | Long goal (composition walk, drafter fallback, recovery) that would blow the sync cap, or when you want to keep working. Returns a `dispatchId` immediately. |
-| `goal_status` | Track a `dispatchId` → live `running\|completed\|failed`, then a hydrated trace: **state-space signature**, **produced shapes**, failure mode, Thompson α/β. |
+| `run_goal_async` | Long goal (composition walk, code change, drafter fallback, recovery) that would blow the sync cap, or when you want to keep working. Returns a `dispatchId` immediately. **Default for anything non-trivial.** |
+| `goal_status` | Track a `dispatchId` → the **honest `reached` verdict** (see below), the executionId/template, and a hydrated trace roll-up (state-space signature, produced shapes, failure mode, Thompson α/β). |
 
-**Reading status correctly — `completed` is not `reached`.** A goal whose `status=completed` but whose **produced shapes are empty** is a *hollow completion*: the Thompson-selected template ran but didn't produce what the goal asked for. `goal_status` surfaces both, so judge reach from the **produced shapes / failure mode**, never the status string alone. (This is the same reach-gate distinction the substrate itself learns from — see `finding_2026_06_22_goal_reaching_gate_deployed`.)
+**REASON — understand *how* it reasoned.**
 
-**Understanding the current state space.** The `state_signature:<hash>` line in a hydrated `goal_status` (or the trace tag at activity-api `GET /v2/activities/execution-traces/:executionId`) is the substrate's state-space signature *at dispatch time* — load, recent-trace aggregate, catalogue counts, computed by development-vessel's `compute_state_signature` resolver. Two dispatches with the same signature ran under the same conditions; a shifting signature means the pool/catalogue moved between runs. Use it to reason about *why* selection differed across otherwise-identical goals.
+| Tool | Use when |
+|---|---|
+| `goal_reasoning` | After a dispatch, to read the goal-host **walk decision-log** for that `dispatchId`: goal-target inference → satisfier/bridge/step decisions → reach verdict, plus the per-task walk sequence from the trace. This is *why* it reached (or didn't). Richer than `goal_status`. For satisfier-only reaches (no template ran) it renders the `walkLog` the trace can't. |
 
-**Routine: dispatch + track a non-trivial goal**
-1. `concept_search` the goal's keywords first (the start-of-task routine below) — warm-start on what the substrate already knows.
-2. `run_goal_async({ goal })` → keep the `dispatchId`.
-3. `goal_status({ dispatch_id })`, re-polling until status ≠ `running`.
-4. Inspect produced shapes vs. what the goal asked for. Hollow completion or a failure mode → that's a real signal worth a `concept_create` (see the close-task routine).
+**FEEDBACK — record whether it actually worked.**
+
+| Tool | Use when |
+|---|---|
+| `provide_feedback` | After inspecting a dispatch with `goal_reasoning`, record an operator verdict (`reached` / `not_reached` / `partial` + rationale + confidence). Writes a ground-truth label into the substrate's **oracle corpus** (`goal_verification_labels`) that calibrates the automated reach-gate. Measured feedback, not advice — your judgment becomes training signal. Auto-derives goal/executionId/template from the dispatch record. |
+
+**INSPECT — read the running substrate (no host access).**
+
+| Tool | Use when |
+|---|---|
+| `registry_query` | "What shapes exist?" (`mode:"shapes"`) or "who serves shape X?" (`mode:"vessels"`, requires `shape`) — reads discovery-vessel directly. Replaces `docker exec … curl discovery`. |
+| `execution_trace` | Read a durable trace by `execution_id` — status, template, composition chain, load-bearing tags, per-task sequence + failure_mode. The general reader `goal_reasoning` specialises. Replaces raw `/v2/activities/execution-traces/:id` curls. |
+| `resolve_impulse` | **Advanced escape hatch**: resolve/write ANY impulse shape (`memoryNote`, `feature_compose`, `*_write`, …) via MCP instead of raw `curl /v2/impulses/resolve`. Set `activity_api:true` for activity-api-owned shapes, or `vessel_shape` to route to the owning vessel via discovery. Prefer the dedicated tools when they fit. |
+
+### `reached`, not `status` — the honest signal
+
+`status` (`running`/`completed`/`failed`) is only the **template exit status**. The load-bearing signal is **`reached`** (`yes`/`no`), the goal-reach verdict — surfaced as the *primary* line by `goal_status` and `goal_reasoning`. A `status:"completed"` with `reached:false` (or `status:"failed"` with `reached:true`) is common and correct; **trusting `status` will make you wrongly retry a goal that succeeded or accept one that hollow-completed.** Always read `reached`; when the stakes are high, read the actual diff/output (a change can typecheck + pass the reach-gate yet not do what was asked — the one check the substrate can't make for itself).
+
+### Operator identity is auto-stamped
+
+Every dispatch from these tools carries an `operator:<id>` tag (default `claude-code-operator`, override via `MB_OPERATOR_ID`), threaded into the trace tags and folded into `provide_feedback` labels. Your dispatches are a **differentiable, attributable surface** the substrate can model — you don't do anything; it happens automatically.
+
+### Plain-language code changes route to `feature_compose`
+
+You do **not** need the byte-exact BEFORE/AFTER trick to land a code change. A plain goal that **names a real source file** — e.g. `run_goal_async({ goal: "edit repos/development-vessel/src/resolvers/gap-to-feature.ts: <describe the change>" })` — routes through the edit-intent path to `feature_compose`, which drafts + typecheck-verifies + lands a real commit via mitosis cutover, all traced. Requirements: **name the concrete `repos/<vessel>/src/…` file path in the goal text** (that's what triggers routing), and describe the change in prose. `reached:true` + a `feature_compose` `selectedTemplateId` + a landed commit means it worked — then verify the diff.
+
+### The canonical loop
+
+1. `concept_search` the goal's keywords (start-of-task routine below) — warm-start on prior knowledge.
+2. `run_goal_async({ goal })` → keep the `dispatchId`. (Name a real file path for code changes.)
+3. Poll `goal_status({ dispatch_id })` until `status ≠ running`; **read `reached`**, not `status`.
+4. `goal_reasoning({ dispatch_id })` to see the walk decision-log — *why* it reached or fell short (mis-routed? hollow? failed a gate?).
+5. `provide_feedback({ dispatch_id, verdict, rationale })` — record the verdict into the oracle corpus. A `not_reached` with a precise rationale is a negative training example, not just a note.
+6. A hollow completion / mis-route / failure mode is a real signal worth a `concept_create` (close-task routine).
+
+**Understanding the current state space.** The `state_signature:<hash>` line in a hydrated `goal_status` (or the trace tag via `execution_trace`) is the substrate's state-space signature *at dispatch time* — load, recent-trace aggregate, catalogue counts, computed by development-vessel's `compute_state_signature` resolver. Two dispatches with the same signature ran under the same conditions; a shifting signature means the pool/catalogue moved between runs. Use it to reason about *why* selection differed across otherwise-identical goals.
+
+> **New/changed tools not loading?** The MCP server runs the **compiled `dist/cli.js`**, not `src/`. After editing metabob-mcp source you must `bun run build` (then have the operator reconnect the MCP server) or the tools stay stale — a passing handler test proves the code, not that the tool is live.
 
 ## The substrate's concept taxonomy (mapped to information streams the user named)
 

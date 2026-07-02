@@ -8,12 +8,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **Dispatch surface (2026-06).** The agent-facing way to dispatch a goal is the **metabob-mcp** tool **`mcp__metabob__run_goal`**. metabob-mcp is the **agent-IDE interaction surface** — how Claude Code (and other MCP clients) drive the running system; it is the IDE analogue of obsidian-vessel and is **not** an internal substrate component. **`minibob` is deprecated** and being retired: it was the CLI entry point and still works (forwarding to `goal-host-vessel`), but prefer `mcp__metabob__run_goal`. The substrate's execution path is unchanged — goal-host-vessel (`:8210`) does the work either way; only the entry point moved off the CLI.
 >
-> **Three dispatch/track tools (2026-06-25).** Pick by how long the goal runs and whether you need to watch it:
-> - **`mcp__metabob__run_goal`** — *synchronous*. Blocks via goal-host `POST /resolve` until the goal finishes (~290s cap, ≤2 recovery attempts). Use for short, one-shot goals where you want the answer inline.
-> - **`mcp__metabob__run_goal_async`** — *fire-and-forget*. POSTs goal-host `POST /run-goal`, returns a `dispatchId` immediately. Use for long goals (composition walks, drafter fallback, recovery) that would blow the synchronous cap, or when you want to keep working while it runs.
-> - **`mcp__metabob__goal_status`** — *poll/track*. Given a `dispatchId`, returns live status (`running | completed | failed`) and, once the trace lands, a **hydrated view**: the **state-space signature** (`state_signature:<hash>`) the goal ran under, **produced output shapes**, failure mode, and Thompson α/β for the selected template. **`status=completed` ≠ goal reached** — a completed run that produced *no* shapes is a hollow completion; read the produced shapes / failure mode to judge actual reach. The durable trace also lives at activity-api `GET /v2/activities/execution-traces/:executionId`.
+> **The MCP surface is a complete operator cockpit (2026-07-02).** You can dispatch work, understand *how* the substrate reasoned, record whether it worked, and inspect the running system — **all through MCP, no host access** (`docker exec` / `journalctl` / raw `curl` are the fallback of last resort, not the default). The tools group into three planes plus a coverage set. Full workflow guidance: the **`metabob-substrate` skill** and `repos/metabob-mcp/docs/SPEC.md`.
 >
-> All three resolve goal-host **via discovery** (`vesselCapability` shape `goal_execution` → discovery-vessel `:18100`, host-port-remapped) — no hardcoded endpoints; they need only `metabob.endpoint=http://localhost:18080` and a valid `apiKey` in `~/.metabob/config.json`.
+> *ACT — dispatch:*
+> - **`mcp__metabob__run_goal`** — *synchronous*. Blocks via goal-host `POST /resolve` (~290s cap, ≤2 recovery attempts). Short, one-shot goals answered inline.
+> - **`mcp__metabob__run_goal_async`** — *async*. POSTs goal-host `POST /run-goal`, returns a `dispatchId` immediately. Default for anything non-trivial (composition walks, **code changes**, drafter fallback, recovery). **A plain goal that names a real `repos/<vessel>/src/…` file routes through the edit-intent path to `feature_compose`, which drafts + typecheck-verifies + lands a real traced commit** — the byte-exact BEFORE/AFTER trick is no longer required; just name the file path and describe the change.
+> - **`mcp__metabob__goal_status`** — *poll/track*. Given a `dispatchId`, returns the **honest `reached` verdict** as the primary line, plus executionId/template and a hydrated roll-up (state-space signature, produced shapes, failure mode, Thompson α/β).
+>
+> *REASON — understand it:*
+> - **`mcp__metabob__goal_reasoning`** — reconstructs the goal-host **walk decision-log** for a `dispatchId` (goal-target inference → satisfier/bridge/step decisions → reach verdict, plus the per-task trace sequence). *Why* it reached or fell short. Renders the `walkLog` for satisfier-only reaches that persist no template trace.
+>
+> *FEEDBACK — verify it:*
+> - **`mcp__metabob__provide_feedback`** — record an operator verdict (`reached`/`not_reached`/`partial` + rationale + confidence) on a `dispatchId` → writes a ground-truth label into the oracle corpus (`goal_verification_labels`) that calibrates the reach-gate. Measured feedback, not advice.
+>
+> *INSPECT — read the running substrate:*
+> - **`mcp__metabob__registry_query`** — discovery registry: `mode:"shapes"` (vocabulary) / `mode:"vessels"` (who serves shape X). Replaces `docker exec … curl discovery`.
+> - **`mcp__metabob__execution_trace`** — durable trace by `execution_id` (status, template, chain, tags, per-task sequence). Replaces raw trace curls.
+> - **`mcp__metabob__resolve_impulse`** — advanced escape hatch: resolve/write ANY impulse shape (`memoryNote`, `feature_compose`, `*_write`, …) via MCP. Prefer the dedicated tools when they fit.
+>
+> **`reached`, not `status`.** `status` (`running|completed|failed`) is only the template *exit status*; the load-bearing signal is **`reached`** (`yes|no`), the goal-reach verdict surfaced first by `goal_status`/`goal_reasoning`. `status:"completed"` + `reached:false` (hollow completion) and `status:"failed"` + `reached:true` (e.g. a satisfier reach) are both common — trusting `status` will make you wrongly retry a success or accept a hollow. When stakes are high, read the actual diff/output too (a change can typecheck + pass the reach-gate yet not do what was asked). Every dispatch auto-carries an `operator:<id>` tag (default `claude-code-operator`, override `MB_OPERATOR_ID`) into the trace tags — your dispatches are an attributable surface.
+>
+> **Canonical loop:** `run_goal_async` → `goal_status` (read `reached`) → `goal_reasoning` (why) → `provide_feedback` (verdict → corpus).
+>
+> All resolve goal-host **via discovery** (`vesselCapability` shape `goal_execution` → discovery-vessel `:18100`, host-port-remapped) — no hardcoded endpoints; they need only `metabob.endpoint=http://localhost:18080` and a valid `apiKey` in `~/.metabob/config.json`.
 
 > **Hook-enforced (2026-06-16).** Direct `Write`/`Edit`/`MultiEdit` on vessel source under `repos/<vessel>/src/**` is gated by the `substrate-vessel-edit-gate` PreToolUse hook. The default path for code changes is to **dispatch through the substrate** — `mcp__metabob__run_goal` with `"<goal>"` (reaches `goal-host-vessel` on `:8210`) — so the work produces a trace and feeds the learning loop, rather than an untraced manual edit. The gate **fails open** when the substrate is unreachable (you can't route through a dead substrate). Conscious one-off direct edits set `SUBSTRATE_ALLOW_DIRECT_EDIT=1` in the environment to bypass. Edits to `docs/`, `scripts/`, `openspec/`, `.claude/`, tests, and config are never gated — only vessel runtime source.
 
