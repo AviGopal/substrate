@@ -43,6 +43,13 @@ command -v docker >/dev/null || { curl -fsSL https://get.docker.com | sh; }
 
 # Token rewrite so SSH-form submodule URLs (git@github.com:...) clone over HTTPS+PAT.
 REW="url.https://x-access-token:${PAT}@github.com/.insteadOf"
+# Idempotency: a prior run that died before its scrub leaves multiple values;
+# plain `git config` then fails "cannot overwrite multiple values". Clear first
+# (also scrub any stale-token variant of the same key).
+git config --global --unset-all "$REW" 2>/dev/null || true
+for k in $(git config --global --list --name-only 2>/dev/null | grep -iE "^url\..*x-access-token.*\.insteadof$" | sort -u); do
+  git config --global --unset-all "$k" 2>/dev/null || true
+done
 git config --global "$REW" "git@github.com:"
 git config --global --add "$REW" "https://github.com/"
 
