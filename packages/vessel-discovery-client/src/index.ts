@@ -7,6 +7,8 @@
 // Core exports
 export { VesselClient } from "./vessel-client.js"
 export { register } from "./registration.js"
+export { DiscoveryRegistrationLoop } from "./registration-loop.js"
+export type { DiscoveryRegistrationLoopConfig } from "./registration-loop.js"
 
 // Discovery
 export { discoverByShape, discoverVessels, clearDiscoveryCache } from "./discovery.js"

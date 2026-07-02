@@ -24,6 +24,13 @@ const defaultLogger: Logger = {
   debug: () => {}, // Suppress debug by default
 }
 
+/**
+ * Manages vessel registration and heartbeat against discovery-vessel.
+ *
+ * For new vessels prefer DiscoveryRegistrationLoop (registration-loop.ts) —
+ * canonical heartbeat/re-register semantics; VesselClient remains for
+ * existing consumers.
+ */
 export class VesselClient {
   readonly config: DiscoveryConfig
   private logger: Logger
