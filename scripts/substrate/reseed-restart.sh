@@ -19,10 +19,19 @@ PRE_KEY="${METABOB_API_KEY:-}"
 
 log() { echo "[identity-seeder] $*"; }
 
-/root/.bun/bin/bun /vessels/seed-identity.ts || {
-  log "seed-identity failed (rc=$?) — leaving fleet as-is"
+# Retry loop: identity-vessel answers /health before its SurrealDB connection
+# is up (warm datastores open slowly), so early seed calls 500 with
+# PERSIST_FAILED (observed 2026-07-02 recreate). Transient by nature — retry.
+SEED_OK=0
+for attempt in $(seq 1 10); do
+  if /root/.bun/bin/bun /vessels/seed-identity.ts; then SEED_OK=1; break; fi
+  log "seed-identity attempt $attempt failed — retrying in 6s (identity-vessel DB likely still warming)"
+  sleep 6
+done
+if [ "$SEED_OK" != 1 ]; then
+  log "seed-identity failed after 10 attempts — leaving fleet as-is"
   exit 1
-}
+fi
 
 POST_KEY="$(grep -m1 '^METABOB_API_KEY=' "$ENV_FILE" | cut -d= -f2- | tr -d '"')"
 if [ -z "$POST_KEY" ] || [ "$POST_KEY" = "$PRE_KEY" ]; then

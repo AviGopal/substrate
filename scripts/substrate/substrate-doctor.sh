@@ -91,6 +91,7 @@ UNCOVERED="$(csh 'INV=/workspace/substrate/fleet/vessels.inventory.json; [ -f "$
   jq -r ".vessels[] | select((.unit | endswith(\".service\")) and .health_port == null and (.role != \"seed\") and ((.manifest // false) | not)) | .unit" "$INV" 2>/dev/null | while read -r u; do
     f="/etc/systemd/system/$u"
     [ -f "$f" ] || continue
+    grep -q "^Type=oneshot" "$f" && continue
     grep -q "^Restart=" "$f" || echo "$u"
   done' 2>/dev/null || true)"
 if [ -z "$UNCOVERED" ]; then
@@ -100,21 +101,40 @@ else
 fi
 
 if [ "$SMOKE" = 1 ]; then
-  echo "== 6. smoke: goal dispatch -> trace lands =="
+  echo "== 7. smoke: goal dispatch -> trace lands =="
   SMOKE_OUT="$(csh 'K=$(grep -m1 "^METABOB_API_KEY=" /etc/substrate/env | cut -d= -f2- | tr -d "\""); curl -s -m 60 -X POST http://127.0.0.1:8210/run-goal -H "Content-Type: application/json" -H "Authorization: ApiKey $K" -d "{\"goal\":\"substrate doctor smoke check: report the substrate is alive\"}"' 2>/dev/null || true)"
+  # /run-goal answers either synchronously ({executionId,...}) or async
+  # ({dispatchId, status:running} — poll GET /executions/:dispatchId).
   EXEC_ID="$(echo "$SMOKE_OUT" | jq -r '.executionId // empty' 2>/dev/null || true)"
-  if [ -z "$EXEC_ID" ]; then
-    bad "goal dispatch returned no executionId"
+  DISPATCH_ID="$(echo "$SMOKE_OUT" | jq -r '.dispatchId // empty' 2>/dev/null || true)"
+  if [ -z "$EXEC_ID" ] && [ -z "$DISPATCH_ID" ]; then
+    bad "goal dispatch returned neither executionId nor dispatchId"
     note "response: $(echo "$SMOKE_OUT" | head -c 200)"
   else
-    note "dispatched executionId=$EXEC_ID — waiting for trace"
-    TRACE_OK=0
-    for _ in $(seq 1 20); do
-      CODE="$(csh "K=\$(grep -m1 '^METABOB_API_KEY=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); curl -s -o /dev/null -w '%{http_code}' -m 8 -H \"Authorization: ApiKey \$K\" http://127.0.0.1:8080/v2/activities/execution-traces/$EXEC_ID" 2>/dev/null || true)"
-      [ "$CODE" = "200" ] && { TRACE_OK=1; break; }
-      sleep 3
-    done
-    if [ "$TRACE_OK" = 1 ]; then ok "execution trace landed ($EXEC_ID)"; else bad "trace for $EXEC_ID not readable within 60s"; fi
+    if [ -z "$EXEC_ID" ]; then
+      note "dispatched dispatchId=$DISPATCH_ID — polling for completion"
+      ST=""
+      for _ in $(seq 1 40); do
+        REC="$(csh "curl -s -m 8 http://127.0.0.1:8210/executions/$DISPATCH_ID" 2>/dev/null || true)"
+        ST="$(echo "$REC" | jq -r '.status // empty' 2>/dev/null || true)"
+        EXEC_ID="$(echo "$REC" | jq -r '.executionId // empty' 2>/dev/null || true)"
+        [ -n "$ST" ] && [ "$ST" != "running" ] && break
+        sleep 5
+      done
+      [ -n "$ST" ] && note "dispatch status: $ST"
+    fi
+    if [ -z "$EXEC_ID" ]; then
+      bad "no executionId materialized for the smoke goal"
+    else
+      note "executionId=$EXEC_ID — waiting for trace"
+      TRACE_OK=0
+      for _ in $(seq 1 20); do
+        CODE="$(csh "K=\$(grep -m1 '^METABOB_API_KEY=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); curl -s -o /dev/null -w '%{http_code}' -m 8 -H \"Authorization: ApiKey \$K\" http://127.0.0.1:8080/v2/activities/execution-traces/$EXEC_ID" 2>/dev/null || true)"
+        [ "$CODE" = "200" ] && { TRACE_OK=1; break; }
+        sleep 3
+      done
+      if [ "$TRACE_OK" = 1 ]; then ok "execution trace landed ($EXEC_ID)"; else bad "trace for $EXEC_ID not readable within 60s"; fi
+    fi
   fi
 fi
 

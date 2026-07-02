@@ -7,11 +7,16 @@
 #   - Dockerfile HEALTHCHECK (--quick): host-visible readiness via docker inspect
 #   - substrate-doctor.sh: the launch-verification matrix
 #
-# Usage: substrate-ready.sh [--timeout N] [--once] [--quick] [--json]
-#   --timeout N   poll until ready or N seconds (default 120)
-#   --once        single pass, no waiting
-#   --quick       core vessels only ("core": true in the inventory)
-#   --json        machine-readable result on stdout
+# Usage: substrate-ready.sh [--timeout N] [--once] [--quick] [--json] [--services-only]
+#   --timeout N       poll until ready or N seconds (default 120)
+#   --once            single pass, no waiting
+#   --quick           core vessels only ("core": true in the inventory)
+#   --json            machine-readable result on stdout
+#   --services-only   skip *.timer units — REQUIRED for the boot gate
+#                     (substrate-ready.service): the ready-gated timers are
+#                     After=substrate-ready, so counting them creates a
+#                     circular wait that burns the full poll timeout at every
+#                     boot (observed 2026-07-02 recreate)
 #
 # Readiness rules per enabled inventory unit:
 #   health_port present        -> curl 127.0.0.1:<port><health_path|/health> == 200
@@ -25,13 +30,14 @@
 set -uo pipefail
 
 CONTAINER="${CONTAINER:-substrate-live}"
-TIMEOUT=120; ONCE=0; QUICK=0; JSON=0
+TIMEOUT=120; ONCE=0; QUICK=0; JSON=0; SERVICES_ONLY=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --timeout) TIMEOUT="$2"; shift 2 ;;
     --once) ONCE=1; shift ;;
     --quick) QUICK=1; ONCE=1; shift ;;
     --json) JSON=1; shift ;;
+    --services-only) SERVICES_ONLY=1; shift ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
@@ -103,6 +109,7 @@ pass() { # -> sets RESULTS (unit|status lines), FAILING count
   RESULTS=""; FAILING=0
   while IFS='|' read -r unit role port path core; do
     [ "$unit" = "substrate-ready.service" ] && continue  # never gate on self
+    [ "$SERVICES_ONLY" = 1 ] && [ "${unit%.timer}" != "$unit" ] && continue
     [ "$QUICK" = 1 ] && [ "$core" != "true" ] && continue
     s="$(check_unit "$unit" "$role" "$port" "$path")"
     RESULTS="${RESULTS}${unit}|${s}

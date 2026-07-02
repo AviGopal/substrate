@@ -1,4 +1,6 @@
 [Unit]
+StartLimitIntervalSec=600
+StartLimitBurst=10
 Description=bootstrap-seeder (seed shared activity templates)
 # Run after activity-api is up so POST /v2/activities/templates is available
 After=identity-seeder.service activity-api.service
@@ -19,6 +21,11 @@ Type=oneshot
 EnvironmentFile=/etc/substrate/env
 WorkingDirectory=/vessels/ias-executor-ts
 ExecStart=/root/.bun/bin/bun /scripts/bootstrap-seeder.ts
+# Self-heal the boot race: the target vessel answers /health before its DB
+# connection is warm, so a too-early seed run fails. on-failure + generous
+# burst lets the oneshot converge without operator help (2026-07-02).
+Restart=on-failure
+RestartSec=20
 StandardOutput=journal
 StandardError=journal
 

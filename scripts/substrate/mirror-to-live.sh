@@ -24,22 +24,37 @@ log() { echo "[mirror-to-live] $*"; }
 [ -d "$SRC/.git" ] || { log "no clone at $SRC — nothing to mirror"; exit 1; }
 [ -d "$DST" ] || { log "no live runtime at $DST — vessel not baked/installed here; skipping"; exit 0; }
 
-# Detect dependency changes before overwriting.
+# Repo package.json declares workspace deps as RELATIVE file: paths
+# (file:../ias-executor-ts, file:../../packages/...). The runtime layout is
+# flat under /vessels, so rewrite to absolute paths — the same rewrite the
+# Dockerfile does at build time. Without it, bun install over the image's
+# physical copy produced a circular package.json symlink and the vessel
+# crash-looped on "Cannot find module" (analysis-vessel, 2026-07-02).
+# Change detection compares the REWRITTEN form so an unchanged dep set never
+# triggers a reinstall.
+NEWPKG=""
 DEPS_CHANGED=0
 if [ -f "$SRC/package.json" ]; then
-  if ! cmp -s "$SRC/package.json" "$DST/package.json" 2>/dev/null; then DEPS_CHANGED=1; fi
+  NEWPKG="$(sed "s|file:\.\./\.\./packages/|file:${RUNTIME_DIR}/packages/|g; s|file:\.\./|file:${RUNTIME_DIR}/|g" "$SRC/package.json")"
+  if [ "$NEWPKG" != "$(cat "$DST/package.json" 2>/dev/null)" ]; then DEPS_CHANGED=1; fi
 fi
 
 if [ -d "$SRC/src" ]; then
   rm -rf "$DST/src"
   cp -r "$SRC/src" "$DST/src"
 fi
-for f in package.json tsconfig.json bun.lock bun.lockb index.ts; do
+# NB: deliberately NOT bun.lock/bun.lockb — the clone's lockfile pins the
+# RELATIVE file: paths and poisons resolution in the runtime layout.
+for f in tsconfig.json index.ts; do
   [ -f "$SRC/$f" ] && cp "$SRC/$f" "$DST/$f"
 done
+[ -n "$NEWPKG" ] && printf '%s\n' "$NEWPKG" > "$DST/package.json"
 
 if [ "$DEPS_CHANGED" = 1 ]; then
-  log "$VESSEL: package.json changed — bun install"
+  log "$VESSEL: package.json changed — clean bun install"
+  # Clean install: mixing bun's symlink install into an image-time physical
+  # copy is what created the circular-symlink state.
+  rm -rf "$DST/node_modules" "$DST/bun.lock" "$DST/bun.lockb"
   (cd "$DST" && /root/.bun/bin/bun install --silent 2>&1 | tail -2) || log "WARN bun install failed for $VESSEL"
 fi
 
