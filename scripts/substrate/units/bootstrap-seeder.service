@@ -1,7 +1,9 @@
 [Unit]
 Description=bootstrap-seeder (seed shared activity templates)
 # Run after activity-api is up so POST /v2/activities/templates is available
-After=activity-api.service
+After=identity-seeder.service activity-api.service
+# identity-seeder first: seeding with the pre-mint bootstrap key writes org-less
+# rows that fail schema validation (observed 2026-07-02 first-boot test).
 Requires=activity-api.service
 
 # Smoke test (task 3.3):

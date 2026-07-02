@@ -1,0 +1,10 @@
+[Unit]
+Description=substrate pull-sync timer — periodic converge to origin/dev
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=10min
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,20 @@
+[Unit]
+Description=substrate pull-sync — converge live vessels to origin/dev from in-container clones
+# Boot run doubles as source-convergence: a stale image's /vessels runtime is
+# brought to the clones' origin/dev HEAD right after git-push-setup refreshes
+# them. Periodic runs (substrate-pull-sync.timer) pick up changes landed on
+# origin since — the git remote is the ONLY code channel; no host docker-cp
+# path is load-bearing.
+After=git-push-setup.service
+Wants=git-push-setup.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/usr/local/bin/substrate-pull-sync
+TimeoutStartSec=900
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

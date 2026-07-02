@@ -17,7 +17,10 @@
 # they are never disabled here — they're installed on demand via vessel-ctl.sh.
 set -euo pipefail
 
-INV="${VESSELS_INVENTORY:-/usr/local/share/substrate/vessels.inventory.json}"
+# Prefer the substrate-writable volume copy (seeded by entrypoint) so the
+# substrate's own edits to its fleet definition govern boot selection.
+INV="${VESSELS_INVENTORY:-/workspace/substrate/fleet/vessels.inventory.json}"
+[ -f "$INV" ] || INV=/usr/local/share/substrate/vessels.inventory.json
 DRY_RUN="${DRY_RUN:-0}"
 
 log() { echo "[apply-inventory] $*" >&2; }

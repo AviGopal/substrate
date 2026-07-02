@@ -43,6 +43,22 @@ Set `PEER_DISCOVERY_ENDPOINTS=http://<peer>:18100` (+ optional shared
 `FEDERATION_SIGNING_SECRET`). Discovery forwards unresolved `vesselCapability` queries,
 tags peer results `discoveredVia:"peer"`, and goal-host routes those over the relay.
 
+## Choosing a topology (decision rule)
+
+- **Hub-registration (spoke)** — one vessel or a small *trusted* set joining an
+  existing substrate: same org, same learning state, same trust domain, lowest
+  latency. `ENABLED_ROLES=spoke` + hub endpoints + a hub-issued
+  `METABOB_API_KEY`. The spoke's vessels must advertise endpoints the hub's
+  callers can reach (`VESSEL_ADVERTISE_ENDPOINT` / `SUBSTRATE_ADVERTISE_HOST`).
+- **Peer-substrate (federation)** — separate org, separate learning state, an
+  adversarial-tolerant boundary, or a whole fleet on a remote host: own
+  store/identity + `PEER_DISCOVERY_ENDPOINTS` + `FEDERATION_SIGNING_SECRET`
+  (+ the libp2p relay when NAT'd). Capability queries fan out; goal-host routes
+  via `peerEndpoint`/libp2p, never the peer vessel's loopback `endpoint`.
+
+Both remain supported; pick by trust domain and learning-state ownership, not
+by geography.
+
 ## The relay (NAT traversal)
 
 A vessel behind NAT can't be dialed directly. The **libp2p Circuit Relay v2** relay runs

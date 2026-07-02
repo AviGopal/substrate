@@ -59,7 +59,7 @@ The system is designed to operate identically on any substrate. A **substrate** 
 Replace `endpoint` with your substrate's activity-api URL. All validation harnesses and tooling read this config; none hardcode a substrate URL.
 
 **Known substrate endpoints:**
-- `http://localhost:18080` — **local single-container substrate** (Phase 26, complete 2026-05-23). Primary development target. All inter-vessel calls are localhost; no Kubernetes required. Bootstrap: `make -C scripts/substrate run-live ANTHROPIC_API_KEY=...` → `make -C scripts/substrate seed-live` → `scripts/substrate/configure-local.sh`. See `docs/SUBSTRATE.md`.
+- `http://localhost:18080` — **local single-container substrate** (Phase 26, complete 2026-05-23). Primary development target. All inter-vessel calls are localhost; no Kubernetes required. Bootstrap: `make -C scripts/substrate up ANTHROPIC_API_KEY=...` (one command — build/start/in-container seed/readiness/doctor; raw contract is a single `docker run`, see `docs/SUBSTRATE.md`).
 - `https://activity.metabob.com` — canary / pre-prod (current `kubectx metabob-production`). Used for canary validation and production promotion.
 - Local cluster — configure via `helmfile --environment local sync` + set endpoint to your in-cluster address (legacy; superseded by single-container substrate)
 
@@ -75,9 +75,9 @@ Replace `endpoint` with your substrate's activity-api URL. All validation harnes
 
 **Local substrate (Phase 26+, primary):**
 ```
-0. First time: make -C scripts/substrate run-live ANTHROPIC_API_KEY=...
-              make -C scripts/substrate seed-live
-              scripts/substrate/configure-local.sh
+0. First time: make -C scripts/substrate up ANTHROPIC_API_KEY=...
+              (one command; seeding + readiness run in-container — legacy
+              run-live/seed-live/configure-local.sh still work)
 1. Edit vessel source in repos/<vessel>/
 2. make -C scripts/substrate restart-<vessel>   ← hot-reloads vessel in container (see docs/SUBSTRATE.md for which vessels have a target)
 3. bun run validation/scripts/failure-mode-harness.ts    ← validates against localhost:18080

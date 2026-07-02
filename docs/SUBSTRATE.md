@@ -32,24 +32,45 @@ The substrate has generalized from "one local container" to **one image that run
 
 **Default (none of the three set) = every unit enabled = the full local substrate, identical to today** (`apply-inventory.sh` is a no-op). Manifest-installed dynamic vessels (`"manifest": true`, i.e. the federation units) are never baked-enabled, so they are never touched here — they are installed on demand (see [Dynamic vessels](#dynamic-vessels)).
 
-## Quick start (4 steps)
+## Quick start (one command)
 
 ```bash
-# 1. Build the substrate image
+make -C scripts/substrate up ANTHROPIC_API_KEY=sk-ant-...
+```
+
+`up` builds the image if missing, starts (or creates) `substrate-live`, waits on
+the fleet readiness gate, and runs the doctor. **No other host step is
+load-bearing**: identity seeding runs in-container (`identity-seeder.service`,
+idempotent, restarts key consumers only when a key is actually minted),
+readiness is a systemd fact (`substrate-ready.service`) surfaced to the host via
+the image `HEALTHCHECK` (`docker inspect --format '{{.State.Health.Status}}'`),
+and diagnosis is in-container too (`docker exec substrate-live substrate-doctor`).
+
+The system's raw launch contract on **any** docker host — no repo checkout, no
+make — is just:
+
+```bash
+docker run -d --privileged --name substrate-live \
+  -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
+  -e ANTHROPIC_API_KEY=sk-ant-... \
+  -p 18080:8080 -p 18090:8090 -p 18100:8100 -p 18210:8210 \
+  --tmpfs /run --tmpfs /run/lock metabob/substrate:dev
+```
+
+`scripts/substrate/configure-local.sh` (run by `up`) only updates
+`~/.metabob/config.json` so *operator tooling* points at the substrate — it is
+IDE convenience, not part of the system.
+
+<details><summary>Legacy 4-step launch (still works)</summary>
+
+```bash
 make -C scripts/substrate build
-
-# 2. Run it (full vessel fleet as systemd units on the persistent substrate-live
-#    container; host ports 18080/18090/18100/18210/18250/18260/18270). run-live
-#    needs your Anthropic key (also read from ~/.metabob/config.json).
 make -C scripts/substrate run-live ANTHROPIC_API_KEY=sk-ant-...
-
-# 3. Seed identity (creates org+user+API key; prints the key)
 make -C scripts/substrate seed-live
-# → [seed-identity] issued API key: mb-b3Jn...
-
-# 4. Configure your local tooling to point at it
 scripts/substrate/configure-local.sh
 ```
+
+</details>
 
 > **Obsidian flavour.** For the same fleet plus an in-container Obsidian desktop
 > over noVNC (host `:16080`), run `make -C scripts/substrate build-obsidian` then
@@ -204,17 +225,25 @@ The same image runs anywhere; the deploy scripts differ only in *how* the image 
 
 Federation deploy details (hub vs. peers, the relay/sidecar, firewall ports) live in [`docs/FEDERATION.md`](FEDERATION.md).
 
-## Dynamic vessels
+## Dynamic vessels (the canonical attach path)
 
-Beyond the baked-in fleet, `scripts/substrate/vessels.manifest.json` declares **runtime-installable** vessels (currently the federation units `federation-relay` and `federation-transport-vessel`). `scripts/substrate/vessel-ctl.sh` is the one method to install/uninstall/list them, reusing the exact unit lifecycle the built-in vessels use: it renders a systemd unit (with `EnvironmentFile=/etc/substrate/env` for secrets + the manifest's static `Environment=` literals), copies it into the container, `daemon-reload`s, enables + starts it, and (un)registers it in `self-recovery-tick`.
+Beyond the baked-in core, `vessels.manifest.json` declares **runtime-installable** vessels. The fleet definition files live ON THE VOLUME at `/workspace/substrate/fleet/` (seeded from image defaults at first boot, substrate-writable — the substrate can alter its own membership); readiness, doctor, self-recovery, pull-sync and vessel-ctl all read the volume copies.
+
+`vessel-ctl` ships **in the image** (`/usr/local/bin/vessel-ctl`) and is fully self-contained (2026-07-02): `install` clones the vessel's repo into `/workspace/git/vessels/<name>` on demand, mirrors it into the live `/vessels` runtime, renders the unit via the shared `render-unit` template, and enables it — no host checkout, no docker-cp from a host workspace. Rendered units carry an `ExecStopPost` discovery-deregister so any clean stop leaves the registry immediately (crash death falls back to the 5-min TTL). Self-recovery membership is **derived** from the fleet files at read time — install/uninstall no longer mutates any script.
 
 ```bash
-make -C scripts/substrate list-vessels
-make -C scripts/substrate install-vessel   VESSEL=federation-relay
-make -C scripts/substrate uninstall-vessel VESSEL=federation-transport-vessel
+make -C scripts/substrate list-vessels                       # host convenience
+make -C scripts/substrate install-vessel   VESSEL=metric-collector-vessel
+make -C scripts/substrate sync-vessel      VESSEL=metric-collector-vessel
+make -C scripts/substrate uninstall-vessel VESSEL=metric-collector-vessel
+docker exec substrate-live vessel-ctl install <name>         # same, in-container
 ```
 
-`vessel-ctl.sh` is both **operator-runnable** (the make targets above) **and activity-dispatchable** — the substrate can invoke it through local-tools-vessel's `shell` resolver (clean JSON on stdout, idempotent, no prompts), and the `--container` flag lets it act on another container, which is the basis for installing vessels "elsewhere" in a fleet.
+`vessel-ctl` is both **operator-runnable** and **activity-dispatchable** — the substrate can invoke it through local-tools-vessel's `shell` resolver (clean JSON on stdout, idempotent, no prompts), and the `--container` flag lets a host-context invocation act on another container.
+
+## Self-sync (git remotes are the only code channel)
+
+`substrate-pull-sync.timer` (10 min, plus a boot run after `git-push-setup`) converges the live `/vessels` runtime to each clone's `origin/dev`: ff-only pull → `mirror-to-live` → staggered, health-gated restart. A restart that goes unhealthy reverts to the last-good pin (`/workspace/.last-good/<v>`) and halts the run with a `substrateGap`; a diverged clone is refused (never forced). Runs skip while a mitosis cutover is in flight (`/workspace/mitosis-pending.json`). This is also how a *fleet* of substrates converges — each one pulls origin; no host mediates (it replaces `host-pull-sync.sh` / `federation-pull-sync.sh` as the load-bearing path). Self-recovery's revert source is the git clone too, never a host checkout. Without a `SUBSTRATE_GIT_PAT` the sync no-ops with a warning: the substrate is frozen-but-functional.
 
 ## Promoting to canary
 

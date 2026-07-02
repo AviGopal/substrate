@@ -1,6 +1,8 @@
 [Unit]
 Description=concept-db concept seeder (Phase-22.S2 seed concepts)
-After=concept-db.service
+After=identity-seeder.service concept-db.service
+# identity-seeder first: seeding with the pre-mint bootstrap key writes org-less
+# rows that fail schema validation (observed 2026-07-02 first-boot test).
 Requires=concept-db.service
 
 [Service]

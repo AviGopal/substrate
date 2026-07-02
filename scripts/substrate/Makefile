@@ -21,10 +21,11 @@
 # automatically on first run and persisted to workspace/.substrate-secrets so
 # restarts reuse the same values without operator input.
 #
-# Quick start:
-#   make -C scripts/substrate run-live ANTHROPIC_API_KEY=sk-ant-...
-#   make -C scripts/substrate seed-live
-#   scripts/substrate/configure-local.sh
+# Quick start (one command — build/start/seed/verify are all handled):
+#   make -C scripts/substrate up ANTHROPIC_API_KEY=sk-ant-...
+# The system itself needs only `docker run` (see the `up` target header for the
+# raw contract); seeding + readiness + diagnosis run in-container. The legacy
+# 3-step (run-live / seed-live / configure-local.sh) still works unchanged.
 #
 # Two container flavours:
 #   substrate       — interactive / ephemeral dev container (port 8080)
@@ -70,6 +71,41 @@ LLM_DEFAULT_MODEL ?= $(shell jq -r '.providers.openai.model // empty'     $(HOME
 # need this env var).
 GITHUB_TOKEN ?= $(shell gh auth token 2>/dev/null || true)
 
+# Vessel-subset topology + remote-endpoint overrides — durable support for
+# running any subset of vessels, within or between containers/hosts. Empty by
+# default: apply-inventory.sh treats unset/empty ENABLED_*/DISABLED_* as "keep
+# everything", and gen-env.sh treats unset/empty endpoint vars as "use this
+# container's own localhost vessel" — so nothing changes unless you set one.
+#   ENABLED_ROLES=hub|spoke|full (or a role-GROUP alias from vessels.inventory.json)
+#   ENABLED_VESSELS=unit,unit    explicit allow-list; overrides ENABLED_ROLES
+#   DISABLED_VESSELS=unit,unit   always off, even if selected above
+#   PEER_DISCOVERY_ENDPOINTS=http://host:18100[,http://host2:18100]  discovery peer fan-out
+#   DISCOVERY_ENDPOINT / ACTIVITY_API_ENDPOINT / IDENTITY_VESSEL_URL / IDENTITY_ENDPOINT
+#     point a compute-only spoke's control-plane calls at a remote hub instead
+#     of this container's own discovery-vessel/activity-api/identity-vessel
+#   SURREALDB_URL / REDIS_URL   point a compute-only spoke at a remote store
+#   METABOB_API_KEY             a hub-issued key so this substrate's vessels land
+#                                in the hub's org_id namespace instead of minting
+#                                their own bootstrap key (unset = auto-generated
+#                                locally, as before)
+#
+# Example — compute-only spoke joining a remote hub's namespace:
+#   make run-live ANTHROPIC_API_KEY=... ENABLED_ROLES=spoke \
+#     DISCOVERY_ENDPOINT=http://<hub-ip>:18100 ACTIVITY_API_ENDPOINT=http://<hub-ip>:18080 \
+#     IDENTITY_VESSEL_URL=http://<hub-ip>:18101 METABOB_API_KEY=<hub-issued-key>
+ENABLED_ROLES ?=
+ENABLED_VESSELS ?=
+DISABLED_VESSELS ?=
+PEER_DISCOVERY_ENDPOINTS ?=
+DISCOVERY_ENDPOINT ?=
+ACTIVITY_API_ENDPOINT ?=
+METABOB_ENDPOINT ?=
+METABOB_API_KEY ?=
+IDENTITY_VESSEL_URL ?=
+IDENTITY_ENDPOINT ?=
+SURREALDB_URL ?=
+REDIS_URL ?=
+
 # Vessel source roots (relative to repo root, two levels up)
 REPO_ROOT := $(CURDIR)/../..
 DEV_VESSEL_SRC := $(REPO_ROOT)/repos/development-vessel
@@ -84,7 +120,7 @@ ANALYSIS_VESSEL_SRC := $(REPO_ROOT)/repos/analysis-vessel
 STATEFUL_UI_VESSEL_SRC := $(REPO_ROOT)/repos/stateful-ui-vessel
 OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
 
-.PHONY: autonomy-status validate-build build build-obsidian run run-detach run-live run-live-obsidian migrate-state-to-volumes seed-live import-memory install-host-sync health health-live \
+.PHONY: up ready doctor autonomy-status validate-build build build-obsidian run run-detach run-live run-live-obsidian migrate-state-to-volumes seed-live import-memory install-host-sync health health-live \
         logs-all logs-activity-api logs-development-vessel \
         logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
         logs-goal-host-vessel logs-boredom-vessel logs-ribosome-vessel logs-concept-db \
@@ -173,6 +209,48 @@ run-detach:
 	    --tmpfs /run/lock \
 	    $(IMAGE):$(TAG)
 
+# ── One-command launch (convenience wrapper over the self-contained contract) ─
+# The SYSTEM's launch contract is just `docker run` — seeding
+# (identity-seeder.service), readiness (substrate-ready.service + image
+# HEALTHCHECK) and diagnosis (substrate-doctor) all run IN-CONTAINER; no host
+# step below is load-bearing. Equivalent raw contract on any docker host:
+#
+#   docker run -d --privileged --name substrate-live \
+#     -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
+#     -e ANTHROPIC_API_KEY=sk-ant-... \
+#     -p 18080:8080 -p 18090:8090 -p 18100:8100 -p 18210:8210 \
+#     --tmpfs /run --tmpfs /run/lock metabob/substrate:dev
+#
+# `make up` wraps that with: build-if-missing, start-or-create, readiness wait,
+# old-image seed fallback, IDE config, doctor. REBUILD=1 forces an image build.
+up:
+	@docker image inspect $(IMAGE):$(TAG) >/dev/null 2>&1 || $(MAKE) build
+	@if [ "$(REBUILD)" = "1" ]; then $(MAKE) build; fi
+	@if docker ps --format '{{.Names}}' | grep -qx "$(LIVE_NAME)"; then \
+	  echo "[up] $(LIVE_NAME) already running"; \
+	elif docker ps -a --format '{{.Names}}' | grep -qx "$(LIVE_NAME)"; then \
+	  echo "[up] starting existing container $(LIVE_NAME)"; docker start $(LIVE_NAME) >/dev/null; \
+	else \
+	  $(MAKE) run-live; \
+	fi
+	@echo "[up] waiting for fleet readiness (up to 240s)..."
+	@CONTAINER=$(LIVE_NAME) $(CURDIR)/substrate-ready.sh --timeout 240 || true
+	@if ! docker exec $(LIVE_NAME) test -x /usr/local/bin/reseed-restart 2>/dev/null; then \
+	  echo "[up] image predates identity-seeder — running seed-live fallback (idempotent)"; \
+	  $(MAKE) seed-live || true; \
+	fi
+	@$(CURDIR)/configure-local.sh >/dev/null 2>&1 && echo "[up] ~/.metabob/config.json updated (operator IDE convenience)" || echo "[up] configure-local skipped"
+	@CONTAINER=$(LIVE_NAME) $(CURDIR)/substrate-doctor.sh
+
+# Fleet readiness matrix (host wrapper; in-container: /usr/local/bin/substrate-ready)
+ready:
+	@CONTAINER=$(LIVE_NAME) $(CURDIR)/substrate-ready.sh --once
+
+# Deep diagnosis incl. surreal-auth drift, seeded-key validity, hollow registry,
+# failed units. `make doctor SMOKE=1` also dispatches a goal end-to-end.
+doctor:
+	@CONTAINER=$(LIVE_NAME) $(CURDIR)/substrate-doctor.sh $(if $(filter 1,$(SMOKE)),--smoke,)
+
 # ── substrate-live container (persistent, host ports 18080/18090/18100) ─────
 # Primary target for all local development iteration.
 # Run once; use sync-*/restart-* targets to hot-reload vessels without rebuild.
@@ -198,6 +276,18 @@ run-live:
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
 	    -e SUBSTRATE_ROOT="$(REPO_ROOT)" \
+	    -e ENABLED_ROLES="$(ENABLED_ROLES)" \
+	    -e ENABLED_VESSELS="$(ENABLED_VESSELS)" \
+	    -e DISABLED_VESSELS="$(DISABLED_VESSELS)" \
+	    -e PEER_DISCOVERY_ENDPOINTS="$(PEER_DISCOVERY_ENDPOINTS)" \
+	    -e DISCOVERY_ENDPOINT="$(DISCOVERY_ENDPOINT)" \
+	    -e ACTIVITY_API_ENDPOINT="$(ACTIVITY_API_ENDPOINT)" \
+	    -e METABOB_ENDPOINT="$(METABOB_ENDPOINT)" \
+	    -e IDENTITY_VESSEL_URL="$(IDENTITY_VESSEL_URL)" \
+	    -e IDENTITY_ENDPOINT="$(IDENTITY_ENDPOINT)" \
+	    -e SURREALDB_URL="$(SURREALDB_URL)" \
+	    -e REDIS_URL="$(REDIS_URL)" \
+	    -e METABOB_API_KEY="$(METABOB_API_KEY)" \
 	    -p 18080:8080 \
 	    -p 18090:8090 \
 	    -p 18100:8100 \
@@ -240,6 +330,18 @@ run-live-obsidian:
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
 	    -e SUBSTRATE_ROOT="$(REPO_ROOT)" \
+	    -e ENABLED_ROLES="$(ENABLED_ROLES)" \
+	    -e ENABLED_VESSELS="$(ENABLED_VESSELS)" \
+	    -e DISABLED_VESSELS="$(DISABLED_VESSELS)" \
+	    -e PEER_DISCOVERY_ENDPOINTS="$(PEER_DISCOVERY_ENDPOINTS)" \
+	    -e DISCOVERY_ENDPOINT="$(DISCOVERY_ENDPOINT)" \
+	    -e ACTIVITY_API_ENDPOINT="$(ACTIVITY_API_ENDPOINT)" \
+	    -e METABOB_ENDPOINT="$(METABOB_ENDPOINT)" \
+	    -e IDENTITY_VESSEL_URL="$(IDENTITY_VESSEL_URL)" \
+	    -e IDENTITY_ENDPOINT="$(IDENTITY_ENDPOINT)" \
+	    -e SURREALDB_URL="$(SURREALDB_URL)" \
+	    -e REDIS_URL="$(REDIS_URL)" \
+	    -e METABOB_API_KEY="$(METABOB_API_KEY)" \
 	    -p 18080:8080 \
 	    -p 18090:8090 \
 	    -p 18100:8100 \
@@ -682,3 +784,10 @@ install-vessel:
 uninstall-vessel:
 	@test -n "$(VESSEL)" || { echo "usage: make uninstall-vessel VESSEL=<name>"; exit 1; }
 	@$(CURDIR)/vessel-ctl.sh uninstall $(VESSEL) --container $(LIVE_NAME)
+
+# Sync a dynamic vessel: ff-pull its in-container clone, mirror into the live
+# runtime, restart (all in-container; no host source involved).
+.PHONY: sync-vessel
+sync-vessel:
+	@test -n "$(VESSEL)" || { echo "usage: make sync-vessel VESSEL=<name>"; exit 1; }
+	@$(CURDIR)/vessel-ctl.sh sync $(VESSEL) --container $(LIVE_NAME)

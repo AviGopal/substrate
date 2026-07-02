@@ -1,0 +1,19 @@
+[Unit]
+Description=substrate fleet readiness gate (boot-readiness as a systemd fact)
+# Oneshot that turns "the fleet is up" into a unit other units can order
+# After=. Exit-0-with-warning on timeout (a permanently-sick vessel must not
+# wedge boot — Restart=on-failure convergence continues regardless).
+After=identity-seeder.service goal-host-vessel.service development-vessel.service
+Wants=identity-seeder.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/etc/substrate/env
+ExecStart=/bin/sh -c '/usr/local/bin/substrate-ready --timeout 240 || echo "[substrate-ready] fleet not fully ready after 240s — continuing (Restart=on-failure converges)"'
+TimeoutStartSec=300
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

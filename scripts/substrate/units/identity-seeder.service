@@ -1,0 +1,21 @@
+[Unit]
+Description=identity seeder — mint org+keys on first boot, reseed env, restart key consumers
+# Self-bootstrap: replaces the operator-run `make seed-live` + manual vessel
+# restarts. Idempotent: seed-identity.ts 409-skips when the substrate org
+# exists, and reseed-restart.sh only restarts vessels when the key actually
+# changed (never on a warm boot).
+After=identity-vessel.service activity-api.service
+Requires=identity-vessel.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/etc/substrate/env
+ExecStartPre=/bin/sh -c 'until curl -sf http://127.0.0.1:8101/health > /dev/null; do sleep 2; done'
+ExecStart=/usr/local/bin/reseed-restart
+TimeoutStartSec=300
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

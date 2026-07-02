@@ -23,9 +23,12 @@ Before=compose-teacher.service compose-teacher.timer
 Type=oneshot
 RemainAfterExit=yes
 EnvironmentFile=/etc/substrate/env
-# Seed fresh from the (boot-fresh) read-only bind into the writable volume.
-# mkdir -p is idempotent; cp overwrites so each boot re-seeds the committed source.
-ExecStart=/bin/sh -c 'mkdir -p /workspace/active-scripts && cp -f /home/avi/documents/work/exp-repo/metabob-devbob/scripts/substrate/*.ts /workspace/active-scripts/ && echo "seeded $(ls /workspace/active-scripts/*.ts | wc -l) scripts into /workspace/active-scripts"'
+# Seed from the super-repo CLONE when present (last-known origin/dev state),
+# else the IMAGE-baked copy — never a host bind path (a baked host path made
+# this unit fail on any machine but the original operator's, 2026-07-02).
+# Substrate-authored deltas still accumulate on the volume between boots via
+# activate_substrate_script; each boot re-seeds from committed source.
+ExecStart=/bin/sh -c 'mkdir -p /workspace/active-scripts; SRC=/workspace/git/super-repo/scripts/substrate; ls "$SRC"/*.ts >/dev/null 2>&1 || SRC=/usr/local/share/substrate/active-scripts; cp -f "$SRC"/*.ts /workspace/active-scripts/ && echo "seeded $(ls /workspace/active-scripts/*.ts | wc -l) scripts from $SRC"'
 StandardOutput=journal
 StandardError=journal
 

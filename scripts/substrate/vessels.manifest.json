@@ -2,6 +2,18 @@
   "_comment": "Declarative manifest of INSTALLABLE (dynamic) vessels — the single source of truth for vessel-ctl.sh install/uninstall. Built-in vessels are baked into the image; this file is for vessels added/removed at runtime (federation, future). Each vessel: name (== systemd unit name), workdir (run dir; supports $REPO_ROOT), exec (bun entrypoint, relative to workdir), env (STATIC literal Environment= lines), secrets (keys from secrets.env.sh that must be in /etc/substrate/env — supplied to the unit via EnvironmentFile, NOT Environment=), restart, health_port (for /health + self-recovery), self_recovery (add to self-recovery-tick VESSELS), post_install (optional shell run after start, e.g. capture a dynamic relay multiaddr into /etc/substrate/env).",
   "vessels": [
     {
+      "name": "metric-collector-vessel",
+      "description": "Substrate-authored sample collector (metricSample shapes; lift empirical test).",
+      "repo": "metric-collector-vessel",
+      "workdir": "$RUNTIME",
+      "exec": "src/index.ts",
+      "env": { "PORT": "8300" },
+      "secrets": [],
+      "restart": "always",
+      "health_port": 8300,
+      "self_recovery": true
+    },
+    {
       "name": "federation-relay",
       "description": "Public libp2p Circuit Relay v2 — the from-anywhere reachability anchor.",
       "workdir": "$REPO_ROOT/scripts/substrate/federation-relay",

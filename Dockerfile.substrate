@@ -209,11 +209,38 @@ COPY scripts/substrate/units/ /etc/systemd/system/
 COPY scripts/substrate/entrypoint.sh /usr/local/bin/substrate-entrypoint
 COPY scripts/substrate/gen-env.sh /usr/local/bin/gen-env
 COPY scripts/substrate/setup-git-push.sh /usr/local/bin/setup-git-push
+# Self-bootstrap + self-diagnosis (2026-07-02): readiness gate, doctor, and the
+# identity-seeder wrapper. These make `docker run` the COMPLETE launch contract —
+# no host-side make seed-live / "wait ~15s" / configure step is load-bearing.
+COPY scripts/substrate/substrate-ready.sh /usr/local/bin/substrate-ready
+COPY scripts/substrate/substrate-doctor.sh /usr/local/bin/substrate-doctor
+COPY scripts/substrate/reseed-restart.sh /usr/local/bin/reseed-restart
+# In-container source-of-truth channel (2026-07-02): the substrate pulls its own
+# updates from origin/dev via the /workspace/git clones and mirrors them into
+# the live /vessels runtime — git remotes are the ONLY code channel; no host
+# docker-cp / bind-mount path is load-bearing.
+COPY scripts/substrate/substrate-pull-sync.sh /usr/local/bin/substrate-pull-sync
+COPY scripts/substrate/mirror-to-live.sh /usr/local/bin/mirror-to-live
+# Fleet-membership tooling ships IN the image (2026-07-02): install/uninstall/
+# sync a dynamic vessel from the in-container git clones — runnable natively
+# in-container (and dispatchable via local-tools' shell resolver), no host
+# checkout involved. self-recovery-tick is image-baked for the same reason.
+COPY scripts/substrate/vessel-ctl.sh /usr/local/bin/vessel-ctl
+COPY scripts/substrate/render-unit.sh /usr/local/bin/render-unit
+COPY scripts/substrate/discovery-deregister.sh /usr/local/bin/discovery-deregister
+COPY scripts/substrate/self-recovery-tick.sh /usr/local/bin/self-recovery-tick
+COPY scripts/substrate/secrets.env.sh /usr/local/share/substrate/secrets.env.sh
 # Vessel-subset selection: the inventory + the boot-time enabler (entrypoint runs it
 # before systemd). Default (no ENABLED_* env) keeps every unit — identical to today.
 COPY scripts/substrate/apply-inventory.sh /usr/local/bin/apply-inventory
 RUN mkdir -p /usr/local/share/substrate
 COPY scripts/substrate/vessels.inventory.json /usr/local/share/substrate/vessels.inventory.json
+COPY scripts/substrate/vessels.manifest.json /usr/local/share/substrate/vessels.manifest.json
+# Image-baked copy of the tick scripts: substrate-active-scripts-seed seeds the
+# writable run-dir from the super-repo clone when present, else from this bake —
+# never from a host bind path.
+RUN mkdir -p /usr/local/share/substrate/active-scripts
+COPY scripts/substrate/*.ts /usr/local/share/substrate/active-scripts/
 RUN chmod +x /usr/local/bin/apply-inventory
 # Side-loop tick scripts referenced by their .service units' ExecStart. Without
 # these baked in, the units exit 127 (command not found) on every fire — which is
@@ -229,9 +256,16 @@ COPY scripts/substrate/seed-identity.ts /vessels/seed-identity.ts
 COPY scripts/substrate/seed-concepts.ts /vessels/seed-concepts.ts
 COPY scripts/bootstrap-seeder.ts /scripts/bootstrap-seeder.ts
 
-RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/local/bin/setup-git-push && \
+RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/local/bin/setup-git-push \
+        /usr/local/bin/substrate-ready /usr/local/bin/substrate-doctor /usr/local/bin/reseed-restart \
+        /usr/local/bin/substrate-pull-sync /usr/local/bin/mirror-to-live \
+        /usr/local/bin/vessel-ctl /usr/local/bin/render-unit /usr/local/bin/discovery-deregister \
+        /usr/local/bin/self-recovery-tick && \
     systemctl enable \
         git-push-setup.service \
+        identity-seeder.service \
+        substrate-ready.service \
+        substrate-pull-sync.timer \
         substrate-active-scripts-seed.service \
         surrealdb.service \
         valkey.service \
@@ -252,6 +286,7 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         light-dispatch-vessel.service \
         relevance-sink-vessel.service \
         light-dispatch-healthcheck.timer \
+        self-recovery.timer \
         journald-stdout-forwarder.service \
         m1-trainer.timer \
         funnel-drain.timer \
@@ -280,6 +315,12 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
 VOLUME ["/workspace", "/var/lib/surrealdb"]
 
 STOPSIGNAL SIGRTMIN+3
+
+# Host-visible readiness: `docker inspect --format '{{.State.Health.Status}}'`
+# is the ONLY signal a host needs — the launch contract is just `docker run`.
+# --quick checks the core set (inventory "core": true) in-container.
+HEALTHCHECK --interval=30s --timeout=25s --start-period=240s --retries=3 \
+    CMD /usr/local/bin/substrate-ready --quick >/dev/null 2>&1 || exit 1
 
 ENTRYPOINT ["/usr/local/bin/substrate-entrypoint"]
 

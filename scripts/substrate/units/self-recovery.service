@@ -3,4 +3,6 @@ Description=Substrate self-recovery — detect a broken vessel and revert it to 
 [Service]
 Type=oneshot
 EnvironmentFile=/etc/substrate/env
-ExecStart=/usr/bin/env bash ${SUBSTRATE_ROOT}/scripts/substrate/self-recovery-tick.sh
+# Image-baked script (never a host bind path — the substrate's immune system
+# must work on any host from just the image + volumes).
+ExecStart=/usr/local/bin/self-recovery-tick

@@ -17,22 +17,49 @@ if [[ -z "${ANTHROPIC_API_KEY:-}" && -z "${OPENAI_API_KEY:-}" ]]; then
   exit 1
 fi
 
-# Internal secrets: auto-generate if not provided.
-# These are substrate-internal and never need to come from outside.
+# Internal secrets — per-field precedence: explicit env > persisted volume
+# secret > fresh random. Persisted values are grep-extracted field-by-field
+# (never `source`d — see the SUBSTRATE_GIT_PAT comment below for why).
+#
+# The old logic consulted /workspace/.substrate-secrets ONLY when
+# METABOB_API_KEY was absent from the environment. A container recreate that
+# passed -e METABOB_API_KEY therefore regenerated SURREAL_PASS at random while
+# the surreal datastore on the persisted volume kept the ORIGINAL root
+# password (SurrealDB 2.x ignores --user/--pass once a root user exists in the
+# datastore) — every vessel's DB auth then failed until manual recovery
+# (observed live 2026-07-02). Each secret now independently falls back to the
+# persisted value, so a warm volume always wins over a fresh random.
+SECRETS_FILE="/workspace/.substrate-secrets"
+persisted_secret() {
+  [[ -f "$SECRETS_FILE" ]] && grep -m1 "^$1=" "$SECRETS_FILE" | cut -d= -f2- || true
+}
+
+JWT_SECRET="${JWT_SECRET:-$(persisted_secret JWT_SECRET)}"
 JWT_SECRET="${JWT_SECRET:-$(openssl rand -hex 32)}"
-SURREAL_PASS="${SURREAL_PASS:-$(openssl rand -hex 16)}"
+
+SURREAL_PASS_SOURCE="provided"
+if [[ -z "${SURREAL_PASS:-}" ]]; then
+  SURREAL_PASS="$(persisted_secret SURREAL_PASS)"
+  if [[ -z "$SURREAL_PASS" ]]; then
+    SURREAL_PASS="$(openssl rand -hex 16)"
+    SURREAL_PASS_SOURCE="generated"
+  fi
+fi
+# Drift guard: a freshly-generated SURREAL_PASS against an EXISTING datastore
+# can never authenticate (the datastore keeps its original root user). Warn
+# loudly so the failure mode is diagnosable from the boot log, not from 980
+# downstream "problem with authentication" errors.
+if [[ "$SURREAL_PASS_SOURCE" == "generated" ]] && [[ -e /var/lib/surrealdb/data.db ]]; then
+  echo "[gen-env] WARNING: generated a fresh SURREAL_PASS but /var/lib/surrealdb/data.db already exists." >&2
+  echo "[gen-env] WARNING: SurrealDB ignores --pass once a root user exists — DB auth WILL fail." >&2
+  echo "[gen-env] WARNING: restore the original SURREAL_PASS (env or /workspace/.substrate-secrets) or reset the datastore root user." >&2
+fi
 
 # Bootstrap key: used only for the initial identity-vessel signup call.
 # After seed-identity.ts runs, vessels use the HMAC keys it issues.
 # Stored in /workspace/.substrate-secrets so restarts reuse the same value.
-if [[ -z "${METABOB_API_KEY:-}" ]]; then
-  SECRETS_FILE="/workspace/.substrate-secrets"
-  if [[ -f "$SECRETS_FILE" ]]; then
-    # shellcheck disable=SC1090
-    source "$SECRETS_FILE"
-  fi
-  METABOB_API_KEY="${METABOB_API_KEY:-$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 32)}"
-fi
+METABOB_API_KEY="${METABOB_API_KEY:-$(persisted_secret METABOB_API_KEY)}"
+METABOB_API_KEY="${METABOB_API_KEY:-$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 32)}"
 
 # Optional per-vessel keys — fall back to METABOB_API_KEY if unset (D4)
 LOCAL_TOOLS_VESSEL_API_KEY="${LOCAL_TOOLS_VESSEL_API_KEY:-${METABOB_API_KEY}}"
@@ -45,21 +72,45 @@ CONCEPT_DB_API_KEY="${CONCEPT_DB_API_KEY:-${METABOB_API_KEY}}"
 # the persisted secrets file; reused across restarts. Empty = self-push disabled.
 # NB: this block (and the persisted-secrets heredoc below) must round-trip the
 # PAT, else gen-env would wipe an operator-supplied PAT on the next restart.
-if [[ -z "${SUBSTRATE_GIT_PAT:-}" && -f /workspace/.substrate-secrets ]]; then
-  # shellcheck disable=SC1091
-  source /workspace/.substrate-secrets
-fi
+#
+# Extract ONLY the SUBSTRATE_GIT_PAT field rather than `source`ing the whole
+# file: sourcing re-imports every var the file declares (JWT_SECRET,
+# SURREAL_PASS, METABOB_API_KEY, ...), silently clobbering an operator-supplied
+# override (e.g. a hub-issued METABOB_API_KEY passed at `docker run` time) back
+# to whatever was last persisted on the volume — the two never diverge in the
+# common case, so this went unnoticed until an override actually needed to
+# stick. It also meant a stale/malformed line anywhere else in that file (e.g.
+# a historical unquoted SUBSTRATE_GIT_AUTHOR_NAME) would run as a command here.
+SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT:-$(persisted_secret SUBSTRATE_GIT_PAT)}"
 SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT:-}"
 SUBSTRATE_GIT_AUTHOR_NAME="${SUBSTRATE_GIT_AUTHOR_NAME:-Substrate Autonomous}"
 SUBSTRATE_GIT_AUTHOR_EMAIL="${SUBSTRATE_GIT_AUTHOR_EMAIL:-substrate-autonomous@metabob.com}"
+
+# Endpoint aliases — resolve BEFORE the heredoc so every inner reference is a
+# bound variable. Previously the alias defaults nested unguarded expansions
+# (e.g. \${DISCOVERY_VESSEL_ENDPOINT:-\${DISCOVERY_ENDPOINT}}) INSIDE the
+# heredoc: under `set -u` a bare `docker run` without the Makefile's dozen
+# empty -e passthroughs died with "DISCOVERY_ENDPOINT: unbound variable" —
+# a hidden host/Makefile coupling in what must be a pure docker-run contract
+# (surfaced 2026-07-02 by the first from-scratch container test).
+DISCOVERY_ENDPOINT="${DISCOVERY_ENDPOINT:-http://127.0.0.1:8100}"
+DISCOVERY_VESSEL_ENDPOINT="${DISCOVERY_VESSEL_ENDPOINT:-$DISCOVERY_ENDPOINT}"
+ACTIVITY_API_ENDPOINT="${ACTIVITY_API_ENDPOINT:-http://127.0.0.1:8080}"
+ACTIVITY_API_URL="${ACTIVITY_API_URL:-$ACTIVITY_API_ENDPOINT}"
+PRODUCER_DISCOVERY_ENDPOINT="${PRODUCER_DISCOVERY_ENDPOINT:-$ACTIVITY_API_ENDPOINT}"
+METABOB_ENDPOINT="${METABOB_ENDPOINT:-$ACTIVITY_API_ENDPOINT}"
+IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL:-http://127.0.0.1:8101}"
+IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT:-$IDENTITY_VESSEL_URL}"
 
 mkdir -p /workspace
 cat > /etc/substrate/env <<EOF
 # Generated by gen-env.sh — do not edit manually
 # Values are double-quoted so entries containing spaces (e.g. the git author
-# name "Substrate Autonomous") source cleanly via `set -a && . /etc/substrate/env`.
-# Unquoted, `SUBSTRATE_GIT_AUTHOR_NAME=Substrate Autonomous` runs `Autonomous`
+# name "Substrate Autonomous") source cleanly via 'set -a && . /etc/substrate/env'.
+# Unquoted, SUBSTRATE_GIT_AUTHOR_NAME=Substrate Autonomous runs 'Autonomous'
 # as a command ("command not found") and mis-sets the author to just "Substrate".
+# (NB backticks are FORBIDDEN in this heredoc — <<EOF is unquoted, so a backtick
+# span in a comment EXECUTES at generation time.)
 JWT_SECRET="${JWT_SECRET}"
 SURREAL_PASS="${SURREAL_PASS}"
 METABOB_API_KEY="${METABOB_API_KEY}"
@@ -112,20 +163,46 @@ CONCEPT_DB_API_KEY=${CONCEPT_DB_API_KEY}
 # Substrate internal: allow all localhost calls to bypass identity-vessel rate limiting
 RATE_LIMIT_ALLOWLIST_IPS=127.0.0.1,unknown
 
-# Infrastructure
-SURREALDB_URL=http://127.0.0.1:8000
+# Infrastructure. Overridable (default unchanged: in-container localhost) so a
+# compute-only vessel subset — no local "store" role, see vessels.inventory.json's
+# "spoke" role group — can point at a remote substrate's store instead of the
+# one baked into this container.
+SURREALDB_URL="${SURREALDB_URL:-http://127.0.0.1:8000}"
 SURREALDB_NAMESPACE=activity-system
 SURREALDB_DATABASE=learning_loop
 SURREALDB_USERNAME=root
 SURREALDB_PASSWORD=${SURREAL_PASS}
-REDIS_URL=redis://127.0.0.1:6379
+REDIS_URL="${REDIS_URL:-redis://127.0.0.1:6379}"
 
-# Vessel endpoints (all localhost)
-DISCOVERY_ENDPOINT=http://127.0.0.1:8100
-METABOB_ENDPOINT=http://127.0.0.1:8080
-ACTIVITY_API_ENDPOINT=http://127.0.0.1:8080
-IDENTITY_VESSEL_URL=http://127.0.0.1:8101
-IDENTITY_ENDPOINT=http://127.0.0.1:8101
+# Vessel endpoints. Overridable per-vessel (default unchanged: in-container
+# localhost) so a compute-only vessel subset can point its "control"/"api" roles
+# at a remote hub instead of localhost — the missing half of running "any subset
+# of vessels, within or between containers/hosts" (the shared-namespace spoke
+# pattern in docs/FEDERATION.md). Previously these were hardcoded literals that
+# silently ignored any operator-supplied override.
+#
+# Each concept below has drifted into TWO+ historical env-var names across the
+# fleet (confirmed by grepping every vessel's src/ for process.env.*DISCOVERY*
+# and process.env.*ACTIVITY_API* — 2026-07-02): local-tools-vessel/analysis-vessel
+# read DISCOVERY_ENDPOINT; goal-host/llm-resolver/ribosome/concept-db/analysis/
+# stateful-ui read DISCOVERY_VESSEL_ENDPOINT; concept-db/analysis-vessel also read
+# ACTIVITY_API_URL alongside ACTIVITY_API_ENDPOINT; goal-host additionally reads
+# PRODUCER_DISCOVERY_ENDPOINT for its forward-producer walk (defaults to the same
+# vessel as ACTIVITY_API_ENDPOINT unless deliberately split). All aliases for a
+# given concept are set to the SAME value here so one override reaches every
+# vessel regardless of which historical name it happens to read.
+# (Values resolved above the heredoc — bound-variable contract under set -u.)
+DISCOVERY_ENDPOINT="${DISCOVERY_ENDPOINT}"
+DISCOVERY_VESSEL_ENDPOINT="${DISCOVERY_VESSEL_ENDPOINT}"
+ACTIVITY_API_ENDPOINT="${ACTIVITY_API_ENDPOINT}"
+ACTIVITY_API_URL="${ACTIVITY_API_URL}"
+PRODUCER_DISCOVERY_ENDPOINT="${PRODUCER_DISCOVERY_ENDPOINT}"
+# METABOB_ENDPOINT and ACTIVITY_API_ENDPOINT name the same vessel (activity-api)
+# under two historical aliases; defaulted one from the other so overriding
+# ACTIVITY_API_ENDPOINT alone is sufficient.
+METABOB_ENDPOINT="${METABOB_ENDPOINT}"
+IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL}"
+IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT}"
 
 # Dense search (F-V58 fix — must point to directory containing model.onnx + vocab.txt)
 EMBEDDING_MODEL_DIR=/vessels/activity-api/src/assets/models/all-MiniLM-L6-v2

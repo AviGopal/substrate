@@ -91,6 +91,17 @@ A system is **self-stable** if it can describe and modify itself using only its 
 
 The minimum may include primitives in informational state that lack shapes; those gaps surface as forced REST endpoints, hardcoded routing, or non-impulse state shared between subsystems. We treat each such case as evidence about the minimum.
 
+**The data-plane invariant (2026-07-02).** Every vessel-to-vessel *data-plane*
+exchange is a typed impulse: the caller resolves the target by shape via
+discovery and POSTs the typed-pointer envelope
+`{ "impulse": { "pointer": { "type": "<shape>", … } } }` to the target's
+discovery-advertised `resolve_endpoint`. The endpoint *path* is per-vessel
+advertised data, not part of the contract. Control-plane exchanges (discovery
+register/heartbeat, identity auth, health probes) and a vessel accessing *its
+own* store are exempt. Known violations, per-seam migration decisions, and the
+dual-parse conformance prerequisite are tracked in
+[`IMPULSE_CONFORMANCE_LEDGER.md`](IMPULSE_CONFORMANCE_LEDGER.md).
+
 ---
 
 ## The Two Primitives
