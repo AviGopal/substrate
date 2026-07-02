@@ -140,35 +140,48 @@ function analyze(rowsIn: any[]) {
   for (const c of comp) compSizes[c] = (compSizes[c] ?? 0) + 1;
   const largest = Math.max(0, ...Object.values(compSizes));
   // Fiedler λ₂ of the normalized Laplacian via deflated power iteration on M=cI-L.
-  function fiedler(): number {
-    if (n < 2 || nc > 1) return 0; // disconnected ⇒ λ₂ = 0
-    const dsqrt = deg.map((d) => (d > 0 ? Math.sqrt(d) : 0));
+  // GIANT-COMPONENT FIX (2026-07-02): λ₂ of a disconnected graph is 0 by definition,
+  // so a single 2-node islet (observed: a repaired-of-repaired artifact pair) zeroed
+  // the governor's headroom while 99.5% of the mass was one well-connected component.
+  // Compute λ₂ on the GIANT component — the honest mixing rate of where the credit
+  // actually lives — and keep `components` / `largest_component_frac` / `islet_nodes`
+  // as the (separate, still-visible) disconnection signal.
+  const gcId = Number(Object.entries(compSizes).sort((a, b) => b[1] - a[1])[0]?.[0] ?? -1);
+  const gc: number[] = [];
+  for (let i = 0; i < n; i++) if (comp[i] === gcId) gc.push(i);
+  function fiedler(sub: number[]): number {
+    const m = sub.length;
+    if (m < 2) return 0;
+    const pos = new Map<number, number>(); sub.forEach((g, i) => pos.set(g, i));
+    const subDeg = sub.map((g) => sub.reduce((a, h) => a + (A[g][h] || 0), 0));
+    const dsqrt = subDeg.map((d) => (d > 0 ? Math.sqrt(d) : 0));
     const w0 = dsqrt.slice();
-    const w0n = Math.hypot(...w0); for (let i = 0; i < n; i++) w0[i] /= (w0n || 1);
+    const w0n = Math.hypot(...w0); for (let i = 0; i < m; i++) w0[i] /= (w0n || 1);
     const c = 2;
     const mul = (x: number[]): number[] => {
-      const y = new Array(n).fill(0);
-      for (let u = 0; u < n; u++) {
-        let acc = 0; const du = dsqrt[u] || 1;
-        for (let v = 0; v < n; v++) if (A[u][v]) acc += (A[u][v] / (du * (dsqrt[v] || 1))) * x[v];
-        y[u] = (c - 1) * x[u] + acc;
+      const y = new Array(m).fill(0);
+      for (let ui = 0; ui < m; ui++) {
+        let acc = 0; const du = dsqrt[ui] || 1;
+        const u = sub[ui];
+        for (let vi = 0; vi < m; vi++) { const v = sub[vi]; if (A[u][v]) acc += (A[u][v] / (du * (dsqrt[vi] || 1))) * x[vi]; }
+        y[ui] = (c - 1) * x[ui] + acc;
       }
       return y;
     };
-    let x = Array.from({ length: n }, (_, i) => Math.sin(i + 1) + 0.3 * Math.cos(2 * i + 1));
-    const deflate = (v: number[]): void => { let dot = 0; for (let i = 0; i < n; i++) dot += v[i] * w0[i]; for (let i = 0; i < n; i++) v[i] -= dot * w0[i]; };
+    let x = Array.from({ length: m }, (_, i) => Math.sin(i + 1) + 0.3 * Math.cos(2 * i + 1));
+    const deflate = (v: number[]): void => { let dot = 0; for (let i = 0; i < m; i++) dot += v[i] * w0[i]; for (let i = 0; i < m; i++) v[i] -= dot * w0[i]; };
     deflate(x); let nx = Math.hypot(...x) || 1; x = x.map((v) => v / nx);
     let lamM = 0;
     for (let it = 0; it < 400; it++) {
       let y = mul(x); deflate(y);
       nx = Math.hypot(...y); if (nx < 1e-12) break;
       y = y.map((v) => v / nx);
-      const My = mul(y); let num = 0; for (let i = 0; i < n; i++) num += y[i] * My[i];
+      const My = mul(y); let num = 0; for (let i = 0; i < m; i++) num += y[i] * My[i];
       lamM = num; x = y;
     }
     return Math.max(0, Math.min(2, c - lamM));
   }
-  const lambda2 = fiedler();
+  const lambda2 = fiedler(gc);
   const maxDeg = Math.max(0, ...A.map((row) => row.filter((w) => w > 0).length));
   const starRatio = n > 1 ? maxDeg / (n - 1) : 0;
   // MULTI-SCALE / SMALL-WORLD metrics (2026-06-19): "credit traversal on DIFFERENT
@@ -203,6 +216,7 @@ function analyze(rowsIn: any[]) {
   return {
     nodes: n, edges: E.length, components: nc,
     largest_component_frac: n > 0 ? Math.round((largest / n) * 1000) / 1000 : 0,
+    islet_nodes: n - largest, // nodes outside the giant component (λ₂ now excludes them)
     fiedler_lambda2: Math.round(lambda2 * 1e4) / 1e4,
     star_ratio: Math.round(starRatio * 1e4) / 1e4,
     cheeger_upper: Math.round(Math.sqrt(2 * lambda2) * 1e4) / 1e4,
