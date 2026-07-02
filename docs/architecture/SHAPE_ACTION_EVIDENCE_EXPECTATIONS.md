@@ -31,7 +31,9 @@ unmet interaction-expectations are real failures.
 **Source:** goal-host journal (`journalctl -u goal-host-vessel | grep inferred_target_shapes`)
 over the dispatch count in the same window; `goal_execution_paths` rows for the same goals.
 **Window:** 7 days after the goal-target-shape-inference change lands (workstream B).
-**Status:** expected — not yet measured (B not landed; structurally 0 before B).
+**Status:** window open — B landed (goal-host `f85a6d5`, 2026-06-30) and live-verified 2026-07-01
+(inference fired on both test dispatches, goal_hash cache hit on the second); rate measurement
+over ~20 organic dispatches pending at C2/F.
 
 ## Claim 2 — Reach rate rises, hollow completions decline
 
@@ -41,7 +43,9 @@ week-over-week.
 **Source:** `goal_execution_paths.success` grouping; hydrated `goal_status` produced-shape
 views; baseline recorded in the umbrella change's design.md evidence table.
 **Window:** 7 days post-B vs the pre-B baseline window.
-**Status:** expected — not yet measured (baseline pending C1).
+**Status:** baseline recorded (C1 run 1 committed 2026-07-01); post-window measurement pending at C2/F.
+Caveat: DEC-limiter telemetry is part-blind (ρ_sample null — "BLIND PROBES") as of 2026-07-01;
+restore before trusting the C2 reading.
 
 ## Claim 3 — Frontier closure velocity
 
@@ -71,7 +75,8 @@ development-vessel `selection-entropy` resolver per success-bucket.
 **Source:** `validation/baselines/2026-07-01-stratified.json` (run 1) vs the C2 re-run report;
 `compare-reports.ts --stratified`.
 **Window:** the C1 baseline → C2 re-run pair.
-**Status:** expected — not yet measured (baseline pending C1).
+**Status:** run 1 recorded — baseline committed 2026-07-01 (13 goals, 10 cells, 0 passable,
+refinement density 0); the pair completes at C2.
 
 ## Claim 6 — Substrate-authored improvement commits
 
@@ -82,7 +87,9 @@ enabling mechanism of the delta, verified by before/after measurement around its
 **Source:** `git log origin/dev` filtered by the substrate git author, cross-referenced to
 mitosis-cutover traces and the evidence table.
 **Window:** duration of the umbrella change.
-**Status:** expected — not yet measured.
+**Status:** landings recorded, causal delta pending — nine substrate-authored commits on
+`origin/dev` 2026-07-01 (incl. `c271bb7` 62s gap→landing, `0820eff` autonomously picked,
+and the gate arc `2aca7ab`/`bd94937`/`0174b56`); the measured-delta tie completes at C2/F.
 
 ## Claim 7 — Human-interaction closure (implicit channel)
 
@@ -99,7 +106,9 @@ signature `op`) was set during the horizon — an absent human is not a surface 
 `obsidian-behavior-scan` `forward_model_strength` trend; obsidian-vessel git history ×
 interaction metrics.
 **Window:** 14 days after G2 lands.
-**Status:** expected — not yet measured (G1/G2 not landed).
+**Status:** (a) landed — episodes carry `solicitation_id` and substrate vault writes register
+solicitations (obsidian-vessel `82099b4a` + `febe74e`, substrate-authored, deployed 2026-07-01);
+(b)–(d) expected — not yet measured (G2 verify detector not landed; window opens with it).
 
 ## Standing invariants (falsifiable now)
 

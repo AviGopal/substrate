@@ -12,12 +12,14 @@
 - [x] A3.7 docs-align-scan: DEC/SOFTWARE/EXPECTATIONS zero drift; MDP flagged twice with contradictory rationales (assessed judge noise from stale diff window — claim verified true at goal-host src/index.ts:555; residual recorded)
 
 ## C1. Proof instrument + baseline (operator, day 0 — MUST precede B)
-- [ ] C1.1 G3.3.1 `optimality_ratio` + closing/stable/regressing flags
-- [ ] C1.2 G4.1.2 tier-descent detector (re-check per-task `resolver_tier` hydration first)
-- [ ] C1.3 G4.1.3 CI-narrowing detector (`variant_performance_metrics` α+β growth)
-- [ ] C1.4 G7.3.1 held-out → `rolling-pool.json` weekly promotion
-- [ ] C1.5 Baseline run committed as `validation/baselines/2026-07-01-stratified.json`
-- [ ] C1.6 Pre-B seeding/reach/hollow numbers recorded in design.md evidence table
+> 2026-07-01: all six done (113 lib tests pass; resolver_tier found 100% null in a 1M-row
+> content sample → tier-descent uses resolver_id-derived fallback flagged low_confidence).
+- [x] C1.1 G3.3.1 `optimality_ratio` + closing/stable/regressing flags
+- [x] C1.2 G4.1.2 tier-descent detector (per-trace-GET hydration; low_confidence per spec gating note)
+- [x] C1.3 G4.1.3 CI-narrowing detector (recommend-response posteriors — `/templates/:id/metrics` broken on SurrealDB 3.x)
+- [x] C1.4 G7.3.1 held-out → `rolling-pool.json` weekly promotion (ISO-week idempotent)
+- [x] C1.5 Baseline run committed as `validation/baselines/2026-07-01-stratified.json` (13 goals, 10 cells, 0 passable — commit c60927aa)
+- [x] C1.6 Pre-B numbers recorded in design.md live evidence log
 
 ## E1. Semantic cutover gate (operator, day 0-1 — MUST precede B)
 > 2026-07-01: E1.1–E1.4 found ALREADY LANDED (prior work: feature-compose.ts gate + c1ab75c

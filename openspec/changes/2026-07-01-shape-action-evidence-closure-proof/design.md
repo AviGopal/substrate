@@ -102,6 +102,41 @@ never put `${` template-literal text in an old_string anchor; never instruct
 in-container composes to edit `test/**` (not shipped in the image — ENOENTs and
 rolls back the whole compose; tests are host-side operator work).
 
+## Autonomy-conditions alignment assessment (2026-07-02, agent-audited)
+
+Two read-only audits mapped this plan against the 26 authoritative autonomy conditions
+(IAL §27.S.1–S.6 + lift-hardening sub-gates 5a–5c + the 7 closure gaps + the self-* loop
+family) and the live substrate state. Verdict: **strong alignment on the behavioral loop
+(D.21–26 — today's nine substrate-authored commits are the live S1→S2 frontier), and
+Claim 7 extends the condition set (human-interaction closure appears in none of the 26).**
+Three misalignments absorbed as follows:
+
+1. **Lift gate currently FAILING (0/24 ticks)** — scarcest limiter λ₁=0 from a
+   **2-component composition topology** (412 nodes, star_ratio 0.60), and ρ_sample probes
+   reading null ("BLIND PROBES"). Claims 2/5 would be measured through part-blind telemetry.
+   → New pre-F prerequisites: diagnose the 2-component split (artifact vs real fracture) and
+   restore ρ_sample probes. Gap filed for the blind probe. The governor's ✗-do-not-mint
+   verdict validates this plan's reuse-heavy/systematic_failure-heavy approach.
+2. **Closure family (B.8–15) untouched by this plan** — closure-audit green ×3 (condition 7)
+   gates §27.S.1 and the replacement suite is 0/48. Deliberate scope call: this change proves
+   the substrate *does* the loop; the closure suite proves it doesn't *need* the operator.
+   Recorded as an explicit out-of-scope with a pointer, not silence. Note the closure
+   proposal's own record is stale (memory closure B.8 has been live since 2026-06-16).
+   Also: `tasks.md` §27.S boxes unticked vs `docs/SUBSTRATE.md` asserting lift complete
+   2026-05-26 — the IAL record itself is drifted; reconciliation queued as an operator task.
+3. **S3 push-away evidence stale and single-class** — all 5 `interventionRefused` records
+   are 2026-06-19, one file, one intervention class; hardening gates 5a/5b soft-pass only
+   because no operator-curated held-out/adversarial sets exist. Named here so the soft-pass
+   is explicit; adversarial curation remains post-lift operator agenda (§27.S.5).
+
+Also self-caught: this change's own expectations doc had drifted Status lines (Claim 1 said
+"B not landed" after B was landed and verified) and C1's checkboxes lagged committed work —
+both fixed 2026-07-02. The convention held: falsifiable Status lines get falsified.
+
+Backlog observation not in any claim: open-gap queue ≥250 (query-capped), dominated by
+`other` (123) + `orphaned_capability` (54) — gap-category composition/velocity is worth
+adding as an F-phase readout even though no expectation floors it yet.
+
 ## Risk register
 
 - feature_compose one-shot unreliability (B, D3, G4): anchors + spec_ref; time-boxed fallback; E1 makes failures honest.
