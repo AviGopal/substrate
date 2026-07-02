@@ -68,6 +68,15 @@ cd "$DIR"
 # whole run on that one failure, so we init the explicit path list instead.
 SUB_PATHS=$(git config -f .gitmodules --get-regexp '\.path$' | awk '{print $2}' | grep -v 'metabob-mcp')
 git submodule update --init $SUB_PATHS 2>/dev/null || true
+# LOUD staleness check: a masked submodule-update failure bakes STALE vessel
+# source into the image (the hub shipped a discovery-vessel from weeks ago and
+# silently dropped the libp2p contract fields, 2026-07-02). '+' = checked-out
+# commit differs from the pointer this super-repo commit records.
+STALE=$(git submodule status $SUB_PATHS 2>/dev/null | grep '^+' || true)
+if [ -n "$STALE" ]; then
+  echo "[vm] WARNING: submodules NOT at recorded pointers (stale source will be baked):"
+  echo "$STALE"
+fi
 # Repair submodules whose working tree didn't materialize (checked-out commit but empty
 # tree — a checkout anomaly seen on fresh clones); reset --hard restores the files.
 git submodule foreach 'git reset --hard HEAD >/dev/null 2>&1 || true' >/dev/null 2>&1 || true

@@ -59,6 +59,30 @@ tags peer results `discoveredVia:"peer"`, and goal-host routes those over the re
 Both remain supported; pick by trust domain and learning-state ownership, not
 by geography.
 
+## Three-location operational space (verified 2026-07-02)
+
+The full topology this repo demonstrates: **hub** (syzygy VM) runs the shared
+activity/learning surface (`ENABLED_ROLES=hub`: activity-api + discovery +
+identity + relay); the **spoke** (local `substrate-live`) runs goal-host and
+the compute fleet, with its discovery peer-fanning-out to the hub
+(`PEER_DISCOVERY_ENDPOINTS`) and goal-host's trace/learning writes pointed at
+the hub (`/etc/substrate/goal-host-hub.env` loaded via a unit drop-in
+`EnvironmentFile` — NOT `Environment=` lines, which `/etc/substrate/env` is
+read after and silently overrides); the **operator host** contributes its live
+Obsidian plugin as an implicit-vessel surface via
+`federation-relay/obsidian-passthrough.ts` — a sidecar that reserves on the
+hub relay, registers `obsidian_*` shapes into hub discovery
+(`protocol:"libp2p"` + circuit multiaddr), and proxies resolves to the plugin.
+
+A goal dispatched at the spoke then reaches the operator's vault with no
+pinning: goal-target inference picks `obsidian_status` from the peer-unioned
+shape vocabulary (goal-host `fetchPeerRegistryShapes`), the walk's
+vessel-resolve satisfier routes via peer fan-out → the local
+federation-transport egress → the relay circuit → the host sidecar → the
+plugin, and the execution trace lands on the HUB's activity-api — one
+operational space across three locations, spoking (shared org/learning) and
+peering (discovery fan-out) at once.
+
 ## The relay (NAT traversal)
 
 A vessel behind NAT can't be dialed directly. The **libp2p Circuit Relay v2** relay runs

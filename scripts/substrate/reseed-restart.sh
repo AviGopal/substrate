@@ -26,6 +26,17 @@ SEED_OK=0
 for attempt in $(seq 1 10); do
   if /root/.bun/bin/bun /vessels/seed-identity.ts; then SEED_OK=1; break; fi
   log "seed-identity attempt $attempt failed — retrying in 6s (identity-vessel DB likely still warming)"
+  # identity-vessel has NO reconnect logic: if its initial SurrealDB connect
+  # lost the race it stays disconnected forever (PERSIST_FAILED on every call)
+  # and no amount of seeder retries helps. Kick it once mid-retry — a fresh
+  # start connects fine once surrealdb is actually up (observed on both the
+  # local and hub recreates, 2026-07-02). Durable fix = reconnect logic in
+  # identity-vessel itself (queued substrate gap).
+  if [ "$attempt" = 5 ]; then
+    log "restarting identity-vessel (known no-reconnect defect) before further retries"
+    systemctl restart identity-vessel 2>/dev/null || true
+    sleep 8
+  fi
   sleep 6
 done
 if [ "$SEED_OK" != 1 ]; then
