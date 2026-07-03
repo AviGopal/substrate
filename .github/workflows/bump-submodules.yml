@@ -75,7 +75,10 @@ jobs:
           git config user.name "substrate-bot"
           git config user.email "substrate-bot@users.noreply.github.com"
           n=$(grep -c '^-' /tmp/bump-summary.txt || true)
-          git commit -m "chore(submodules): bump ${n} pointer(s) to latest dev
-
-$(cat /tmp/bump-summary.txt)"
+          {
+            echo "chore(submodules): bump ${n} pointer(s) to latest dev"
+            echo
+            cat /tmp/bump-summary.txt
+          } > /tmp/bump-commit-msg.txt
+          git commit -F /tmp/bump-commit-msg.txt
           git push origin HEAD:dev
