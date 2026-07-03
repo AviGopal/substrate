@@ -86,6 +86,20 @@ SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT:-}"
 SUBSTRATE_GIT_AUTHOR_NAME="${SUBSTRATE_GIT_AUTHOR_NAME:-Substrate Autonomous}"
 SUBSTRATE_GIT_AUTHOR_EMAIL="${SUBSTRATE_GIT_AUTHOR_EMAIL:-substrate-autonomous@metabob.com}"
 
+# LLM / provider credentials — durable pass-through secrets. Precedence matches
+# the internal secrets above: explicit env (docker run -e) > persisted volume
+# (/workspace/.substrate-secrets) > empty. Persisting them means a container
+# RECREATE that does NOT re-pass -e KEY keeps the provider working (the same
+# regression that bit SURREAL_PASS on 2026-07-02). To add a new provider (e.g. a
+# second OpenAI-wire service like chutes), add its *_API_KEY in the THREE marked
+# provider-secret spots: (1) here, (2) the /etc/substrate/env heredoc, (3) the
+# persisted-secrets heredoc — one line each, matching the explicit idiom this
+# file deliberately uses instead of sourcing/looping.
+ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-$(persisted_secret ANTHROPIC_API_KEY)}"
+OPENAI_API_KEY="${OPENAI_API_KEY:-$(persisted_secret OPENAI_API_KEY)}"
+OPENAI_BASE_URL="${OPENAI_BASE_URL:-$(persisted_secret OPENAI_BASE_URL)}"
+CHUTES_API_KEY="${CHUTES_API_KEY:-$(persisted_secret CHUTES_API_KEY)}"
+
 # Endpoint aliases — resolve BEFORE the heredoc so every inner reference is a
 # bound variable. Previously the alias defaults nested unguarded expansions
 # (e.g. \${DISCOVERY_VESSEL_ENDPOINT:-\${DISCOVERY_ENDPOINT}}) INSIDE the
@@ -115,9 +129,11 @@ JWT_SECRET="${JWT_SECRET}"
 SURREAL_PASS="${SURREAL_PASS}"
 METABOB_API_KEY="${METABOB_API_KEY}"
 # LLM provider credentials — at least one must be non-empty (validated above).
+# (2) provider-secret spot — resolved (env>persisted>empty) just above.
 ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
 OPENAI_API_KEY="${OPENAI_API_KEY:-}"
 OPENAI_BASE_URL="${OPENAI_BASE_URL:-}"
+CHUTES_API_KEY="${CHUTES_API_KEY:-}"
 LLM_DEFAULT_MODEL="${LLM_DEFAULT_MODEL:-}"
 # Substrate root inside the container = the bind-mounted host repo path
 # (docker run -v \$(REPO_ROOT):\$(REPO_ROOT):ro, passed in via -e SUBSTRATE_ROOT).
@@ -276,6 +292,13 @@ JWT_SECRET=${JWT_SECRET}
 SURREAL_PASS=${SURREAL_PASS}
 METABOB_API_KEY=${METABOB_API_KEY}
 SUBSTRATE_GIT_PAT=${SUBSTRATE_GIT_PAT}
+# (3) provider-secret spot — round-trip provider keys so a container recreate
+# without -e keeps them. NB: this heredoc OVERWRITES the file, so every durable
+# secret MUST be listed here or it is lost on the next gen-env run.
+ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+OPENAI_API_KEY=${OPENAI_API_KEY:-}
+OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
+CHUTES_API_KEY=${CHUTES_API_KEY:-}
 SECRETS
 chmod 600 /workspace/.substrate-secrets
 echo "[gen-env] persisted secrets to /workspace/.substrate-secrets"
