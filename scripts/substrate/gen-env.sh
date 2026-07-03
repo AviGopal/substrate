@@ -245,6 +245,17 @@ EOF
 chmod 600 /etc/substrate/env
 echo "[gen-env] wrote /etc/substrate/env"
 
+# Per-model llm-resolver siblings (llm-resolver-opus / -haiku) pin a distinct
+# model each. LLM_DEFAULT_MODEL lives in /etc/substrate/env (shared), which is
+# applied AFTER a unit's Environment= lines and silently overrides them — so the
+# per-vessel override MUST come from a LATER EnvironmentFile (a drop-in). These
+# files back the drop-ins in units/llm-resolver-{opus,haiku}.service.d/. The
+# vessel_id==model arm is what the goal-host LLM router learns over per task type.
+printf 'LLM_DEFAULT_MODEL=%s\n' "${LLM_OPUS_MODEL:-claude-opus-4-8}"          > /etc/substrate/llm-opus.env
+printf 'LLM_DEFAULT_MODEL=%s\n' "${LLM_HAIKU_MODEL:-claude-haiku-4-5-20251001}" > /etc/substrate/llm-haiku.env
+chmod 600 /etc/substrate/llm-opus.env /etc/substrate/llm-haiku.env
+echo "[gen-env] wrote per-model llm-resolver env files (opus, haiku)"
+
 # Pass through vessel-subset selection + fork owner so units (setup-git-push) and
 # apply-inventory read them from the EnvironmentFile. Absent vars stay absent
 # (apply-inventory defaults to "keep everything").

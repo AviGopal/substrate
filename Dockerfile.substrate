@@ -275,6 +275,8 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         development-vessel.service \
         local-tools-vessel.service \
         llm-resolver-vessel.service \
+        llm-resolver-opus.service \
+        llm-resolver-haiku.service \
         goal-host-vessel.service \
         bootstrap-seeder.service \
         boredom-vessel.timer \

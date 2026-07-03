@@ -1,0 +1,26 @@
+[Unit]
+Description=llm-resolver-haiku
+After=activity-api.service discovery-vessel.service identity-vessel.service
+Requires=activity-api.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+# Sibling llm-resolver instance pinned to a distinct model. Runs the SAME
+# in-image source as llm-resolver-vessel. NOTE: LLM_DEFAULT_MODEL is NOT set via
+# Environment= here — /etc/substrate/env (which sets a shared LLM_DEFAULT_MODEL)
+# is applied AFTER Environment= and would override it. The model pin comes from a
+# LATER EnvironmentFile via the drop-in llm-resolver-haiku.service.d/model.conf.
+# vessel_id == model is the learnable arm the goal-host LLM router selects over.
+Environment=PORT=8223
+Environment=HOST=127.0.0.1
+Environment=LLM_RESOLVER_VESSEL_ID=llm-resolver-haiku
+WorkingDirectory=/vessels/llm-resolver-vessel
+ExecStart=/root/.bun/bin/bun /vessels/llm-resolver-vessel/src/index.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
