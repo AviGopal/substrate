@@ -1,0 +1,81 @@
+name: Bump submodule pointers
+
+# Cheap currentness mechanism for this repo's submodule pointers. Each submodule
+# tracks a `branch` in .gitmodules (almost always `dev`); this job asks each
+# submodule's remote for the latest commit on that branch via `git ls-remote`
+# (no submodule checkout, no clone) and fast-forwards the gitlink if it moved.
+# Runs on a schedule so pointer staleness is bounded by the cron cadence, not by
+# an operator remembering to run `git submodule update --remote` on a laptop —
+# this workflow is the mechanism, not a doc describing one a human should run.
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: bump-submodules
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout super-repo (no submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 0
+
+      - name: Authenticate git for submodule remotes
+        env:
+          PAT: ${{ secrets.SUBSTRATE_GIT_PAT }}
+        run: |
+          git config --global "url.https://x-access-token:${PAT}@github.com/.insteadOf" "git@github.com:"
+          git config --global --add "url.https://x-access-token:${PAT}@github.com/.insteadOf" "https://github.com/"
+
+      - name: Resolve latest dev commit per submodule and update gitlinks
+        id: bump
+        run: |
+          set -euo pipefail
+          changed=0
+          summary=""
+          # One line per submodule: "<path> <url> <branch>"
+          paths=$(git config -f .gitmodules --get-regexp '\.path$' | awk '{print $2}')
+          for path in $paths; do
+            # Section names in .gitmodules are the submodule name, which is not
+            # always the trailing path segment; look it up properly instead.
+            name=$(git config -f .gitmodules --get-regexp "^submodule\..*\.path$" \
+              | awk -v p="$path" '$2==p {print $1}' | sed -E 's/^submodule\.(.*)\.path$/\1/')
+            url=$(git config -f .gitmodules --get "submodule.${name}.url")
+            branch=$(git config -f .gitmodules --get "submodule.${name}.branch" || echo "dev")
+
+            remote_sha=$(git ls-remote "$url" "refs/heads/${branch}" 2>/dev/null | cut -f1 || true)
+            if [ -z "$remote_sha" ]; then
+              echo "::warning::skip ${path}: could not resolve ${branch} on ${url} (cross-org PAT scope or transient network failure)"
+              continue
+            fi
+
+            local_sha=$(git ls-tree HEAD "$path" | awk '{print $3}')
+            if [ "$local_sha" != "$remote_sha" ]; then
+              git update-index --cacheinfo 160000,"$remote_sha","$path"
+              echo "  ${path}: ${local_sha:0:7} -> ${remote_sha:0:7} (${branch})"
+              summary="${summary}- ${path}: ${local_sha:0:7} -> ${remote_sha:0:7}\n"
+              changed=1
+            fi
+          done
+          echo "changed=${changed}" >> "$GITHUB_OUTPUT"
+          printf '%b' "$summary" > /tmp/bump-summary.txt
+
+      - name: Commit and push
+        if: steps.bump.outputs.changed == '1'
+        run: |
+          git config user.name "substrate-bot"
+          git config user.email "substrate-bot@users.noreply.github.com"
+          n=$(grep -c '^-' /tmp/bump-summary.txt || true)
+          git commit -m "chore(submodules): bump ${n} pointer(s) to latest dev
+
+$(cat /tmp/bump-summary.txt)"
+          git push origin HEAD:dev
