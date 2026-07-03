@@ -124,11 +124,10 @@ $$
 $$
 
 The outcome bit `r` is **reach-gated**, not an exit status: `r = 1` is
-the verdict of `verifyGoalReached` — an LLM judge run *after* execution
-that emits the `completion_shapes` the goal actually required and tests
-whether the produced shapes satisfy them (deployed on goal-host-vessel
-2026-06; `verifyGoalReached` in
-`repos/goal-host-vessel/src/index.ts`). A run that *completed* without
+the verdict of the goal-reaching gate (`verifyGoalReached`, owned by
+goal-host-vessel) — an LLM judge run *after* execution that emits the
+`completion_shapes` the goal actually required and tests whether the
+produced shapes satisfy them. A run that *completed* without
 producing the asked output — a hollow completion — scores `r = 0` and
 drives the β-update. The same bit accumulates a per-goal Beta posterior
 in `goal_execution_paths` keyed by `goal_hash`
@@ -163,10 +162,10 @@ hyperparameter — the conjugate step *is* the natural-gradient step.
 discount/learning-rate factor on propagated credit, applied on top of
 the unit-step base update.)
 
-### 2.2 Successor features: Q(s, a) = ⟨ψ(s, a), R⟩ (live 2026-06)
+### 2.2 Successor features: Q(s, a) = ⟨ψ(s, a), R⟩
 
 The Q-factorization of the successor-representation literature
-([Dayan]; [Barreto et al.]) now exists in code. Alongside the Beta
+([Dayan]; [Barreto et al.]) exists in code. Alongside the Beta
 posterior on the *reward* side, each `(signature, template, scope)` cell
 carries a **successor-feature vector ψ(s, a)** — the expected
 γ-discounted **output-shape occupancy** of the trace continuation rooted
@@ -174,18 +173,16 @@ at that cell:
 
 $$
 \psi(s, a) \;=\; \mathbb{E}\Big[\ \sum_{t\ge 0} \gamma^{t}\, \phi_t \ \Big],
-\qquad \gamma = 0.9\ (\texttt{SF\_DISCOUNT}),
+\qquad \gamma = 0.9,
 $$
 
 where φ_t is the indicator vector of task t's `output_impulse_shapes`
 (features are **existing shape ids** — no new vocabulary is minted; the
-sparse map is bounded to the top-K = 32 shapes by occupancy). Each
+sparse map is bounded to a fixed top-K of shapes by occupancy). Each
 completed trace is one Monte-Carlo sample ψ̂_τ = Σ_t γ^t φ_t; the online
 estimator is the **Robbins-Monro running mean** with step 1/(n+1) (the
-empirical mean), applied fire-and-forget at trace ingest
-(`repos/activity-api/src/lib/successor-features.ts`;
-ingest hook `src/routes/execution-traces.ts` ~L2686; one row per cell in
-`successor_features`, migration `sql/migrations/149-successor-features.surql`).
+empirical mean), applied fire-and-forget at trace ingest by activity-api
+(one `successor_features` row per cell).
 
 The readout is the sparse dot product
 
@@ -203,17 +200,15 @@ selection in two places:
 - **`discover-by-shapes` `candidates_with_scores`** attaches a
   `successor_value` per candidate whenever the caller supplies
   `signature` + `completion_shapes` (+ optional `sf_scope`), alongside
-  the unchanged Thompson scores
-  (`src/services/discover-by-shapes.ts` ~L212-266).
+  the unchanged Thompson scores.
 - **The recommend ranking** blends it additively onto the Thompson
-  sample: `_sf_blended = θ_{s,a} + w · v/(1+v)` with
-  `w = SF_BLEND_WEIGHT` (default 0.5) and `v = ⟨ψ, R⟩` squashed into
-  [0,1) so it can never dominate a Beta sample
-  (`src/routes/activities.ts` ~L6992-7064). Honesty on gating: the
-  ψ-*write* path defaults ON (`SUCCESSOR_FEATURES≠0`), the
-  discover-by-shapes readout defaults ON, but the recommend *blend* is
-  opt-in behind `SF_BLEND=1` — off, the ranking is byte-for-byte the
-  prior Thompson order.
+  sample: `θ_{s,a} + w · v/(1+v)` with configurable weight `w` and
+  `v = ⟨ψ, R⟩` squashed into [0,1) so it can never dominate a Beta
+  sample. Honesty on gating: the ψ-*write* path and the
+  discover-by-shapes readout are normal operation, but the recommend
+  *blend* is a gated selection-layer refinement whose default preserves
+  the pure Thompson order byte-for-byte — the blend must be
+  deliberately enabled to alter selection.
 
 The payoff is the multi-horizon / transfer meaning: ψ is a property of
 **(π, P, φ, γ) only** — it factors the transition structure out of the
@@ -296,29 +291,24 @@ than reusing a posterior — which already absorbed the subgroup's data —
 as the subgroup's prior. The approximation behaves well when global
 counts ≫ org counts; it double-counts and over-pools otherwise.)
 
-**A second pooling axis is live (2026-06): similarity-clustered
-signature pooling (D4/D5).** The scope axis pools across *who* (org →
-account → global); the cluster axis pools across *where in state space*.
-A periodic job embeds each `state_signature` (MiniLM, via concept-db),
-clusters the embeddings, and writes stable
-`signature_cluster_assignment` rows
-(`repos/activity-api/src/jobs/signature-cluster-tick.ts`). Two
-mechanisms ride on the assignment:
+**A second pooling axis: similarity-clustered signature pooling.** The
+scope axis pools across *who* (org → account → global); the cluster
+axis pools across *where in state space*. A periodic background job
+over the trace store embeds each `state_signature` (via the concept-db
+embedding resolver), clusters the embeddings, and writes stable
+cluster-assignment rows. Two mechanisms ride on the assignment:
 
-- **Coarsening write (D4):** every leaf `(signature, template)`
-  posterior delta is also applied to the signature's *cluster* row — a
-  shared `cluster:<id>` bucket in the same `context_thompson_scores`
-  table — via an atomic id-keyed UPSERT
-  (`repos/activity-api/src/lib/cluster-posterior.ts`,
-  `applyClusterPosterior`; advisory/best-effort, never blocks the leaf
-  write). The cluster row accumulates the pooled outcomes of all member
+- **Coarsening write:** every leaf `(signature, template)` posterior
+  delta is also applied to the signature's *cluster* row — a shared
+  cluster bucket in the same Thompson-score table — via an atomic
+  id-keyed UPSERT (advisory/best-effort, never blocks the leaf write).
+  The cluster row accumulates the pooled outcomes of all member
   signatures.
-- **Partial-pooling read (D5):** when a leaf is cold
-  (`n_signature < SIGNATURE_CLUSTER_N_MIN = 5`), the Thompson selector
-  samples from the cluster posterior instead of the uninformed
-  Beta(1,1); a well-sampled leaf is never overridden
-  (`repos/activity-api/src/routes/activities.ts`, the
-  `used_scope = signature | cluster | fallback` decision).
+- **Partial-pooling read:** when a leaf is cold (its sample count below
+  a small threshold), the Thompson selector samples from the cluster
+  posterior instead of the uninformed Beta(1,1); a well-sampled leaf is
+  never overridden (the selector records which level it used:
+  signature, cluster, or fallback).
 
 The guard is a **contamination check**: per clustering pass, each
 member's empirical success rate p̂_s is aggregated from its leaf rows;
@@ -1022,9 +1012,10 @@ typed-action gate. The scope hierarchy is the prior. The drafter is
 active model expansion. Federation is the next horizontal lift. None
 of these are renames.
 
-The next mechanical change supporting all of this is enabling parallel
-sibling dispatch under a shared `parent_execution_id` so the system
-can do breadth-first what it already does depth-first.
+The standing design demand supporting all of this is parallel sibling
+dispatch under a shared `parent_execution_id` — the dispatcher change
+§7 argues for — so the system can do breadth-first what it already
+does depth-first.
 
 ## 11. Scorecard — what is theorem-grounded, what is frontier
 
@@ -1043,8 +1034,8 @@ split into three classes.
 - Beta-Bernoulli conjugate update = natural gradient in Beta
   information geometry ([Amari]). → §2.1
 - Successor-feature factorization Q = ⟨ψ, R⟩ with Monte-Carlo /
-  Robbins-Monro ψ estimation ([Dayan]; [Barreto et al.]) — live in code
-  since 2026-06. → §2.2
+  Robbins-Monro ψ estimation ([Dayan]; [Barreto et al.]) — exists in
+  code. → §2.2
 - Transient state as steady state along dual-arm invariant manifold
   ([Borkar] TTSA + geometric singular perturbation / [Fenichel]; not
   Carr's centre-manifold theorem — see §4.6). → §4.6
@@ -1075,7 +1066,7 @@ split into three classes.
   first-class authoring).
 - Minimum-primitive-set closure proof (categorical-deep-learning names
   the goal; no formalization exists).
-- The deployed SF readout — additive Thompson-blend
+- The implemented SF readout — additive Thompson-blend
   `θ + w·v/(1+v)` — is a heuristic scalarization; the SF transfer
   bounds ([Barreto et al.]) cover GPI (max-over-policies) readout, not
   additive blending. Likewise the cluster-pooling contamination
@@ -1098,6 +1089,102 @@ factorization plus the Beta-Bernoulli efficiency carry across the
 expansion boundary; the bet is empirically reasonable but not formally
 proved.
 
+### Absorbable mechanisms — what the world already offers
+
+Several of the frontier gaps above do not need theory invented from
+scratch — the RL/learning literature already ships mechanisms that
+close the distance between the implemented mechanism and the
+aspiration. Each entry below is absorbable through **existing
+primitives** (a resolver, a selection-layer refinement, an
+evidence-fold rule, a dispatcher change, a background learning job
+over the trace store, a validator refinement) — no new tier, no new
+category. For each: what it offers, how it enters, what it does not
+solve.
+
+- **GPI (generalized policy improvement) readout for successor
+  features** ([Barreto et al.]). *Offers:* replaces the heuristic
+  additive Thompson-blend of §2.2 with the max-over-policies readout
+  `max_π ⟨ψ_π, R⟩` whose zero-shot-transfer bounds are actually
+  proven — the exact gap the frontier list names. *Enters as:* a
+  selection-layer refinement over the existing ψ cells — the readout
+  changes from a weighted sum to a max over the cells already stored;
+  no new state, no new writes. *Does not solve:* ψ estimation quality
+  on cold cells; the bounds assume the ψ estimates themselves have
+  converged, and reward-side exploration still belongs to Thompson.
+
+- **Neural-linear / embedding-feature Thompson sampling**
+  ([Riquelme et al.]). *Offers:* generalization of posterior
+  *confidence* across unvisited signatures — the tabular cell's
+  blind spot — by Bayesian linear regression on fixed embedding
+  features, keeping conjugate closed-form updates. *Enters as:* a
+  selection-layer refinement using the concept-db embedding, which is
+  already a resolver; the linear head is trained as a background job
+  over the trace store, and the tabular cells remain the ground truth
+  the head is calibrated against (a well-sampled leaf is never
+  overridden — the same guard the cluster-pooling read uses).
+  *Does not solve:* embedding-space drift (§9.3); if the embedding
+  stops separating signatures that behave differently, the linear head
+  pools what should not be pooled — the contamination-check discipline
+  of §4.2 still applies.
+
+- **Off-policy evaluation / doubly-robust estimators**
+  ([Dudík, Langford & Li]). *Offers:* every recorded trace evaluates
+  *counterfactual* templates, not just the one selected — the trace
+  store logs propensities implicitly, since Thompson selection
+  probabilities are computable from the recorded posteriors, and the
+  DR estimator combines them with a learned reward model for
+  low-variance unbiased estimates. *Enters as:* a background learning
+  job over the trace store — no new writes, no new dispatches; the
+  output sharpens existing posteriors per sample. *Does not solve:*
+  templates with near-zero selection propensity (importance weights
+  blow up) and genuinely novel arms with no logged support; horizontal
+  dispatch (§7) remains the way to buy real samples there.
+
+- **Options / temporal abstraction** ([Sutton et al.]). *Offers:* a
+  name for what activities already are — options: macro-actions with
+  initiation sets (`input_shapes` ⊆ pool) and termination (output
+  production). Naming this licenses importing **intra-option
+  learning**: credit to sub-steps of a template from a single trace,
+  since per-task outcomes are already recorded. *Enters as:* an
+  evidence-fold rule refining chain-credit — the per-task rows in the
+  trace store update per-task cells, not just the template-level cell.
+  *Does not solve:* the option-discovery problem (which templates
+  *should* exist) — that remains the drafter's frontier, and the
+  growing-action-set regret gap is untouched.
+
+- **Dyna-style model-based replay / prioritized sweeping**
+  ([Sutton (Dyna)]; [Moore & Atkeson]). *Offers:* the trace store
+  *is* the empirical model (§5); Dyna replays stored transitions to
+  update value estimates without new environment samples, and
+  prioritized sweeping orders the replay by surprise (posterior shift),
+  propagating updates to ancestors first where they matter most. This
+  raises the effective sample rate ρ_sample without new dispatches —
+  directly the stability margin of `SUBSTRATE_AS_DYNAMICS.md` §3.
+  *Enters as:* a background learning job over the trace store, writing
+  through the existing chain-credit path. *Does not solve:* model
+  error — replay amplifies whatever bias the empirical (P, R) already
+  has, so it sharpens convergence *given* grounded traces but cannot
+  substitute for the validation integrity of §12.6.
+
+- **Conformal prediction for the reach gate** ([Vovk et al.]).
+  *Offers:* the oracle corpus of operator verdicts
+  (`goal_verification_labels`) is exactly a calibration set; conformal
+  calibration turns the LLM-judge's reach verdicts into set-valued
+  predictions with finite-sample coverage guarantees — "reached, with
+  ≥1−ε coverage" or "abstain, escalate to operator verdict" — instead
+  of an uncalibrated binary. *Enters as:* a validator refinement of
+  the goal-reaching gate; the gate's integrity is §12.6's precondition
+  for the whole learning stack, and calibration strengthens exactly
+  that. *Does not solve:* adversarial fabrication of traces — coverage
+  guarantees assume exchangeability with the calibration set, so
+  two-sided trace verification remains a separate precondition; and
+  the guarantee is only as current as the operator-verdict corpus.
+
+None of these change what the substrate is. They are the standard
+moves of the field entering through the same doors everything else
+enters through — and each leaves at least one §12 caveat standing,
+which is why the scorecard discipline survives their absorption.
+
 ## 12. Limitations & literature-alignment
 
 This appendix records, in one place, the framing-level caveats the
@@ -1115,7 +1202,7 @@ Actions score immediate reward without a bootstrapped next-state value,
 so there is no Bellman backup in the strict sense. The
 O(√(T log T)) regret bound the doc cites ([Agrawal & Goyal]) is itself a
 *bandit* bound — there is no analogous closed-form regret for the
-sequential Q-learning the framing claims. One partial exception is live:
+sequential Q-learning the framing claims. One partial exception exists:
 the successor-feature cell ψ (§2.2) does model the discounted multi-step
 shape-occupancy of the continuation — Monte-Carlo, not bootstrapped — so
 the *transition* side now carries genuine multi-step structure even
@@ -1192,8 +1279,8 @@ both, and an ungrounded world-model and an overconfident self-model fail
 together. (`SUBSTRATE_AS_REPRESENTATION.md` §6 states the same condition
 geometrically: candidate-genesis ⊂ grounded-genesis.)
 
-The deployed form of this validation back-half is the **goal-reaching
-gate** (live since 2026-06). Earlier, the success bit was the activity's
+The implemented form of this validation back-half is the
+**goal-reaching gate**. Earlier, the success bit was the activity's
 *exit status* — and that was exactly the gameable reward this section
 warns of: a wrapper activity could exit cleanly having produced an
 `activityExecutionSummary` rather than the asked artifact, scoring `r=1`
@@ -1215,7 +1302,7 @@ posterior keyed by `goal_hash` (path = attribution, success = reached),
 so a repeated goal reuses its reaching path. This is a concrete
 deployment of the grounding condition, not new theory; the reward it
 produces is still the §1.1 residual, and the gate is still the
-back-half whose integrity §12.6 requires. Schema and the verified-live
+back-half whose integrity §12.6 requires. Schema and the per-goal
 α/β accumulation: `docs/architecture/GOAL_EXECUTION_PATHS_SCHEMA.md`;
 the execution-walk placement (step 6) is `SUBSTRATE_AS_SOFTWARE.md` §3.2.
 
@@ -1313,5 +1400,10 @@ is `SUBSTRATE_AS_REPRESENTATION.md` §6.1.
 - **[Lindley]** Lindley, D. V., *On a Measure of the Information Provided by an Experiment*, Annals of Mathematical Statistics 27(4), 1956. — *verification: carried.*
 - **[Settles]** Settles, B., *Active Learning Literature Survey*, University of Wisconsin–Madison Technical Report 1648, 2009. — *verification: carried.*
 - **[Amodei et al.]** Amodei, D. et al., *Concrete Problems in AI Safety*, 2016; arXiv:1606.06565. https://arxiv.org/abs/1606.06565 — *verification: carried.*
+- **[Riquelme et al.]** Riquelme, C., Tucker, G. & Snoek, J., *Deep Bayesian Bandits Showdown: An Empirical Comparison of Bayesian Deep Networks for Thompson Sampling*, ICLR 2018; arXiv:1802.09127. https://arxiv.org/abs/1802.09127 — *verification: carried.*
+- **[Dudík, Langford & Li]** Dudík, M., Langford, J. & Li, L., *Doubly Robust Policy Evaluation and Learning*, ICML 2011; arXiv:1103.4601. https://arxiv.org/abs/1103.4601 — *verification: carried.*
+- **[Sutton (Dyna)]** Sutton, R., *Dyna, an Integrated Architecture for Learning, Planning, and Reacting*, SIGART Bulletin 2(4), 1991. — *verification: carried.*
+- **[Moore & Atkeson]** Moore, A. & Atkeson, C., *Prioritized Sweeping: Reinforcement Learning with Less Data and Less Time*, Machine Learning 13, 1993. — *verification: carried.*
+- **[Vovk et al.]** Vovk, V., Gammerman, A. & Shafer, G., *Algorithmic Learning in a Random World*, Springer, 2005. — *verification: carried.*
 - **[Zhang et al.]** Zhang, K., Yang, Z. & Başar, T., *Multi-Agent Reinforcement Learning: A Selective Overview of Theories and Algorithms*, 2019; arXiv:1911.10635. https://arxiv.org/abs/1911.10635 — *verification: carried.*
 - **[Gronauer & Diepold]** Gronauer, S. & Diepold, K., *Multi-agent deep reinforcement learning: a survey*, Artificial Intelligence Review 55, 2022. — *verification: carried.*

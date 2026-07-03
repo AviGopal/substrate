@@ -218,7 +218,7 @@ Two precise consequences:
 - A **global livelock** is the *harmonic* component, distinct from curl; a local
   triangular inconsistency is *curl* only. "Cyclic/harmonic residual" is the
   right name for a global livelock; curl names only a local triangular
-  inconsistency. This harmonic-vs-curl distinction is now formal.
+  inconsistency. This harmonic-vs-curl distinction is formal.
 
 Which cycles count as curl (local) versus harmonic (global) depends on **which
 activity-triangles you fill** — a modeling decision, not an intrinsic fact. The
@@ -314,14 +314,14 @@ trusted.
 
 ## 3. The three states, in DEC
 
-- **Instructional (vessel)** — the complex's *topology*: cells, incidences,
-  restriction maps. Static structure.
+- **Informational (vessel)** — the complex's *topology and metric*: cells,
+  incidences, restriction maps, and the learned `⋆`. Durable structure.
 - **Transient (becoming)** — *flow on the complex*: the heat/diffusion
   `e^{−tL}`, the cochain in motion, credit propagating.
-- **Functional (instance)** — a *realized cochain*: a completed trace is a
+- **Observational (instance)** — a *realized cochain*: a completed trace is a
   1-chain with concrete stalk values, which immediately folds into the empirical
   `⋆` for the next flow. **Which way it folds is decided by the goal-reaching
-  gate** (live since 2026-06): the gate tests whether the realized chain actually
+  gate**: the gate tests whether the realized chain actually
   closes onto the goal 0-cochain — whether the produced shapes contain the goal's
   `completion_shapes` — and a chain that *terminated* but did not *reach* folds as
   a β (failure) sample on its edges, not an α. Without that test, a hollow
@@ -367,13 +367,12 @@ $$
   bottleneck.* A graded-information-yield reward is, in this language,
   **restoring a non-degenerate `⋆`.**
 
-**Coarsening is now a live write path on the metric (2026-06): the
-signature-cluster posterior.** Signatures are embedded and clustered
-(`repos/activity-api/src/jobs/signature-cluster-tick.ts`), and the cluster is a
+**Coarsening is a write path on the metric: the signature-cluster
+posterior.** Signatures are embedded and clustered by a background job on the
+trace store, and the cluster is a
 **coarse cell whose 1-cochain accumulates the flows of its fibers**: every leaf
 `(signature, template)` posterior delta is write-through-applied to the shared
-`cluster:<id>` row (`repos/activity-api/src/lib/cluster-posterior.ts`,
-`applyClusterPosterior`), and a cold leaf (fewer than 5 observations) reads the
+cluster cell, and a cold leaf (fewer than 5 observations) reads the
 coarse cell's `⋆₁` weight instead of the uninformed Beta(1,1). **Contamination
 is the disqualification of a coarse cell whose fibers disagree**: when member
 success rates spread by more than 0.4 the cluster is excluded from both the
@@ -381,8 +380,8 @@ write and the read — the coarsening map is trusted only where the fibration is
 approximately flat. In the rate language of this section this is a `ρ_sample`
 lever for cold cells, and it shrinks the frontier of uninformed cells that
 `ρ_grow` mints (§4.4): coarse cells let new leaves enter the complex already
-partially informed. The learning-rule reading of the same mechanism (partial
-pooling, D4/D5) is `SUBSTRATE_AS_MDP.md` §4.2.
+partially informed. The learning-rule reading of the same mechanism (the
+coarsening write and the partial-pooling read) is `SUBSTRATE_AS_MDP.md` §4.2.
 
 ### 4.2 Scaling rate (coverage as vessels glue in)
 
@@ -546,7 +545,7 @@ communication protocol.)
   established object; its use as the gating operator *coupled to* a linear-sheaf
   credit layer is novel here. → §1.5
 - **Directed-hypergraph sheaves** (directed + multi-arity + sheaf, the exact
-  object the substrate wants) are recent research ([Mule et al.]; [Duta et al.]),
+  object the substrate wants) are active research ([Mule et al.]; [Duta et al.]),
   not settled theory. → §0.1
 
 **Honest limit-statement (carried):**
@@ -557,6 +556,52 @@ communication protocol.)
   Gödel-shaped limit itself. The representation lens reads the same limit as the
   topless stratification of the shape lattice — `SUBSTRATE_AS_REPRESENTATION.md`
   §3.
+
+### Absorbable mechanisms — what the world already offers
+
+Several of the frontier items do not have to be built from scratch: published
+tooling already computes the relevant quantity. Each of these enters the
+substrate through an **existing primitive** — a resolver, a detector activity, a
+hygiene activity, or a retrieval refinement — never as a new tier or a new
+algebra. For each: what it offers toward the aspirations above, how it enters,
+and what it does *not* solve.
+
+- **Sheaf / hypergraph neural networks** ([Duta et al.]; [Mule et al.]).
+  *Offers:* learned restriction-map estimators for **implicit vessels** —
+  boundary entities (the operator, a peer substrate, an embedded model) whose
+  restriction maps are latent and must be inferred from boundary behavior
+  (§0.2). *Enters as:* one more resolver; its per-signature trust is a `⋆₁`
+  weight learned exactly like any other model's — the estimator is itself held
+  at arm's length by the validation back-half. *Does not solve:* it estimates
+  the maps; it does not become the gating algebra. The lattice-sheaf gating
+  layer (§1.5) stays order-theoretic regardless of how the linear-layer maps
+  are estimated.
+- **Persistent-homology tooling** ([Cohen-Steiner et al.]). *Offers:* the
+  converged-vs-chasing-noise test of §4.3 as a computation, with a stability
+  guarantee (bottleneck distance bounded by input perturbation). *Enters as:* a
+  detector activity running over the trace store on a sliding window, emitting
+  horizon/stability impulses that the select stage of the §4.3 pipeline
+  consumes. *Does not solve:* it tells you *whether* the learned topology has
+  stabilized, not *what* to author when it has not.
+- **Spectral sparsification** ([Spielman & Teng]). *Offers:* prune redundant
+  edges while preserving `λ₁` within `(1±ε)` — the principled form of registry
+  hygiene/dedup, keeping the complex sparse (the §2 cost lever) without
+  degrading credit mixing (§4.4). *Enters as:* a hygiene activity at the prune
+  chokepoint of the §4.3 pipeline. *Does not solve:* it identifies which edges
+  are *spectrally* redundant, not which *semantic* duplicates to collapse —
+  the reuse-before-mint judgment stays with the mint/prune chokepoints.
+- **Graph ANN indexes (HNSW-family)** ([Malkov & Yashunin]). *Offers:*
+  sublinear dense retrieval for the recommend/priming paths — a direct
+  `ρ_sample` lever where candidate retrieval is the serialized step (§4.1).
+  *Enters as:* a refinement of the retrieval resolver feeding selection. *Does
+  not solve:* it accelerates the *inputs* to selection; the posterior math —
+  Thompson sampling against `⋆` — is unchanged.
+- **Discrete Morse tooling** ([Forman]). *Offers:* critical-cell computation as
+  the formal core of gap/horizon detection — any valid discrete gradient field
+  yields a correct critical set without solving the NP-hard minimization
+  (§4.3). *Enters as:* the detect stage of the §4.3 pipeline. *Does not solve:*
+  criticality flags *where* structure is missing or changing; valuing and
+  closing the gap remain the select and author stages.
 
 ## 6. Recap
 
@@ -606,3 +651,5 @@ same vessel-and-federation growth — read as one discrete Laplacian.
 - **[Kobayashi et al.]** Kobayashi, T. et al., *Information Geometry of Dynamics on Graphs and Hypergraphs*, arXiv:2211.14455, 2022. https://arxiv.org/abs/2211.14455 — *verification: carried.*
 - **[Amari]** Amari, S., *Natural Gradient Works Efficiently in Learning*, Neural Computation 10(2), 1998. https://doi.org/10.1162/089976698300017746 — *verification: carried.*
 - **[Demirel et al.]** Demirel, I. et al., *Federated Multi-armed Bandits Under Byzantine Attacks*, 2025; arXiv:2205.04134. https://arxiv.org/abs/2205.04134 — *verification: carried.*
+- **[Spielman & Teng]** Spielman, D. & Teng, S.-H., *Spectral Sparsification of Graphs*, SIAM Journal on Computing 40(4), 2011; arXiv:0808.4134. https://arxiv.org/abs/0808.4134 — *verification: carried.*
+- **[Malkov & Yashunin]** Malkov, Y. & Yashunin, D., *Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs*, IEEE TPAMI 42(4), 2020; arXiv:1603.09320. https://arxiv.org/abs/1603.09320 — *verification: carried.*

@@ -212,11 +212,12 @@ This is the continuity requirement the math docs state directly: *the carrier of
 learning must survive a move from host A to host B* — `SUBSTRATE_AS_DEC.md` §4.4
 (the learned content is `⋆`, the persisted posterior precision);
 `SUBSTRATE_AS_MDP.md` §4.6 ("the transient state is the steady state"). The N=1
-case is where the **transport** for the durable groups is built and tested; the
-N>1 case (§3) adds only the *trust gate and the conservative-prior fold* on top of
-the same transport. Migration is federation with a trusted peer of one — which is
-why self-persistence is the operator-anchored increment that the fleet work builds
-on, not a separate track.
+case is where the **transport** for the durable groups is exercised; the N>1 case
+(§3) adds only the *trust gate and the conservative-prior fold* on top of the same
+transport. Migration is federation with a trusted peer of one — the **base case of
+the algebra**, not a preparatory step toward it. Single-substrate operation and
+this self-persistence case are the exercised path; the N>1 rows of the table are
+design, and the scorecard (§7) carries that distinction honestly.
 
 ## 6. Trust = which durability group a peer may write to in your substrate
 
@@ -290,6 +291,58 @@ Following the companion docs.
   of observations; it does not make the Informational state complete. More peers ≠
   a complete model. → inherited from `SUBSTRATE_AS_SOFTWARE` §6.
 
+### Absorbable mechanisms — what the world already offers
+
+The frontier items above do not all require invention. Several are standard,
+well-analyzed mechanisms that enter through the primitives this doc already names
+— the Recorded group's union-merge, content-addressed identity, the evidence-fold
+rules of §3, and the admission gates of §6 — as normal operation, not as new
+tiers. For each: what it offers, how it enters, and what it does not solve.
+
+- **Transparency logs / verifiable append-only structures** ([Laurie 2014]).
+  *Offers:* Merkle-tree logs with inclusion and consistency proofs make the
+  Recorded group's union-merge *auditable* across peers — a peer can prove a
+  trace was in its store before it signed it, and a consumer can prove the
+  peer's log has not been rewritten under it. *Enters as:* the storage
+  discipline of the existing trace store — the Recorded group is already
+  content-addressed and append-only; a Merkle overlay is a stronger way of
+  keeping the same store, not a new one. *Does not solve:* inclusion is not
+  truthfulness. A provably-logged trace can still be a lie about what executed;
+  two-sided counterparty signatures remain the trust gate (§1, §3).
+
+- **Merkle-CRDT anti-entropy** ([Sanjuán et al.]; the network chart leans on
+  the same mechanism). *Offers:* reconciliation of divergent Recorded stores
+  with transfer cost proportional to the divergence, not the store — two peers
+  exchange only the sub-DAGs the other lacks. *Enters as:* the transport for
+  the union algebra §1 already names; append-only set-union is exactly the
+  merge a Merkle-CRDT computes, so this is the wire realization of an operator
+  the table already commits to. *Does not solve:* it merges *records*. It never
+  merges quantitative learned state — the §2/§3 line is untouched, and a
+  reconciled foreign trace still passes the signature gate before it folds.
+
+- **Secure aggregation** ([Bonawitz et al. 2017]). *Offers:* where the evidence
+  itself is sensitive, peers can contribute *aggregate* evidence (summed
+  success/failure counts over a cohort) without revealing any individual trace.
+  *Enters as:* an optional evidence-fold transport under the same
+  conservative-prior fold of §3 — the local learner still recomputes its own
+  posterior; only the granularity of what it folds changes. *Does not solve:*
+  it protects the privacy of evidence at the cost of per-trace verifiability —
+  an aggregate cannot carry two-sided signatures on its constituent traces, so
+  it trades directly against the trust gate and must be scoped accordingly
+  (e.g., only among peers already at row (a)/(b) of §6, with a further-widened
+  conservative prior).
+
+- **Reputation-weighted evidence folding** (federated-bandit literature, e.g.
+  [Demirel et al.]). *Offers:* per-source trust weights learned from held-out
+  outcome agreement — a peer whose evidence historically predicts local
+  outcomes earns a larger fold weight. *Enters as:* the existing
+  attestation-weight `w` in the conservative-prior fold made *adaptive per
+  source* — same fold rule, learned coefficient. *Does not solve:*
+  verification. A weight anchored to consensus agreement re-imports the
+  poisoning attacks the network chart names (collude, agree, then defect);
+  reputation modulates *how much* signed evidence moves a posterior, never
+  *whether* unsigned evidence is admitted.
+
 ## 8. Recap
 
 The fleet is the single-substrate durability chart applied across the container
@@ -322,6 +375,9 @@ name and section) and on a small set of external results carried from the prior
 text:
 
 - **[Demirel et al.]** Demirel, I. et al., *Federated Multi-Armed Bandits Under Byzantine Attacks*, 2022. https://arxiv.org/abs/2205.04134 — *verification: carried.*
+- **[Laurie 2014]** Laurie, B., *Certificate Transparency*, ACM Queue 12(8), 2014. https://queue.acm.org/detail.cfm?id=2668154 — *verification: carried.* (Merkle-tree transparency logs; inclusion and consistency proofs for append-only stores)
+- **[Sanjuán et al.]** Sanjuán, H., Pöyhtäri, S., Teixeira, P. & Psaras, I., *Merkle-CRDTs: Merkle-DAGs meet CRDTs*, 2020. https://arxiv.org/abs/2004.00107 — *verification: carried.* (anti-entropy merge of append-only stores with divergence-proportional transfer; also cited by `SUBSTRATE_AS_NETWORK.md`)
+- **[Bonawitz et al. 2017]** Bonawitz, K. et al., *Practical Secure Aggregation for Privacy-Preserving Machine Learning*, ACM CCS 2017. https://dl.acm.org/doi/10.1145/3133956.3133982 — *verification: carried.* (aggregate contributions without revealing individual inputs)
 - **[MARL surveys]** Cooperative-MARL / federated-RL survey literature on sharing experience rather than parameters across agents. — *verification: carried.*
 - **[Heaps' law]** Heaps, H. S., *Information Retrieval: Computational and Theoretical Aspects*, Academic Press, 1978 (vocabulary-growth law for an open, growing symbol set). — *verification: carried.*
 - **[Hansen & Ghrist 2019]** Hansen, J. & Ghrist, R., *Toward a Spectral Theory of Cellular Sheaves*, J. Applied & Computational Topology, 2019; arXiv:1808.01513. https://arxiv.org/abs/1808.01513 — *verification: verified.* (via the sparsity-of-`L` cross-reference to `SUBSTRATE_AS_DEC.md` §2)

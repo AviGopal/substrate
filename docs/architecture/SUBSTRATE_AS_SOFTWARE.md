@@ -67,25 +67,22 @@ understood (§1, §4). The rest of the doc is the walk: §2 names the components
 walk moves through; §3 walks the steps and gives the assembled master table; §4
 states the durability physics the walk obeys (and lands the resolver-tier reframe at
 the step where it bites); §5 closes the walk into the self-* loop and ties each
-mechanism to the live substrate unit that runs it.
+mechanism to the substrate unit that runs it.
 
 ## 1. The frame: three states, two motions
 
-There is **one** three-state triad. A sibling may name it two ways; those are the
-same three states seen through a changing understanding of the system, not two
-ontologies. The canonical names are **Informational / Transient / Observational**.
+There is **one** three-state triad. The canonical names are **Informational /
+Transient / Observational**; the deprecated aliases `Instructional` / `Functional`
+(with Transient invariant) name the same states under an older build-software
+framing and are retained only for reading older docs.
 
-| Canonical state | Prior name (build-software framing) | What it is | Why the name drifted |
-|---|---|---|---|
-| **Informational** | *Instructional* (Vessel / blueprint) | the durable structure: vessel code **and** learned content — shapes, posteriors, composition topology, goal-paths | scope grew from "the instructions/code" to "all durable knowledge, including the learned weights" — for a learning system the weights are as load-bearing as the code |
-| **Transient** | *Process-of-Becoming* (the becoming) | the execution in flight: an impulse being resolved, a binding being chosen, a trajectory stepping | invariant — the only name that did not move |
-| **Observational** | *Functional* (Instance / artifact) | the recorded outcome: traces, validation results, realized artifacts | scope shifted from "the thing produced" to "the *observation* of it" — for a learning system the load-bearing aspect of an output is that it is observed and fed back |
+| Canonical state | Deprecated alias | What it is |
+|---|---|---|
+| **Informational** | *Instructional* (Vessel / blueprint) | the durable structure: vessel code **and** learned content — shapes, posteriors, composition topology, goal-paths; for a learning system the weights are as load-bearing as the code |
+| **Transient** | *Process-of-Becoming* (the becoming) | the execution in flight: an impulse being resolved, a binding being chosen, a trajectory stepping |
+| **Observational** | *Functional* (Instance / artifact) | the recorded outcome: traces, validation results, realized artifacts — load-bearing because it is *observed* and fed back, not merely produced |
 
-The drift tracks a reframe from *"we are building and running software"*
-(Instructional → Functional) to *"we are running a learning system"* (Informational
-→ Observational), with Transient as the invariant middle. **Use Informational /
-Transient / Observational everywhere.** `Instructional` / `Functional` are deprecated
-aliases retained only for reading older docs.
+**Use Informational / Transient / Observational everywhere.**
 
 ### 1.1 The two motions are the two halves of the walk
 
@@ -119,36 +116,33 @@ The four foundation primitives — **impulse, pointer, resolver, vessel** — ar
 through durability, **authored-durable software constructs**: the scaffold the
 learning runs *on*, not the learning itself (the load-bearing learning state is the
 *learned-durable* group, §4). Treat them like code — version, review, test them. The
-table below is the current fleet, each component tagged with the durability group it
-predominantly touches and the walk-step it owns; ports are the local single-container
-substrate's host-mapped ports.
+table below is the fleet, each component tagged with the durability group it
+predominantly touches and the walk-step it owns (deployment specifics — ports,
+mappings, which units run where — belong to [`docs/SUBSTRATE.md`](../SUBSTRATE.md),
+not this chart).
 
-| Component | Port | Owns / wants (intent) | Walk role | Durability touched |
-|---|---|---|---|---|
-| **discovery-vessel** | — | owns the registry; every vessel wants "who resolves shape X" | the fixed point all routing passes through | authored-durable (contracts) + ephemeral (TTL registry) |
-| **goal-host-vessel** | 18210 | wants a goal; owns `goal_execution`/`activity_execution`; runs the **shape-graph walk** (backward-chain, bridge-author, data-flow bind) | steps 0–6: dispatch, selection, binding, stepping, reach gate | reads Informational, runs Transient, writes Recorded |
-| **activity-api** | 18080 | owns traces, templates, posteriors, composition edges, goal-paths; wants nothing — it is the trace store + learner | step 1 selection inputs; step 7 trace write; step 8 learning | learned-durable + recorded (the database snapshot *is* the learning state) |
-| **llm-resolver-vessel** | 18220 | owns `llm_completion`; wanted by any task whose resolver tier is `llm` | step 2/4: the high-directional-uncertainty resolver (§4) | authored-durable (impl) / ephemeral (a call) |
-| **local-tools-vessel** | 18230 | owns filesystem/process resolvers + `code_verify_typecheck` | step 2/4: deterministic resolvers + verification | authored-durable / ephemeral |
-| **concept-db** | 18260 | owns concept-graph shapes + dense (MiniLM) search | step 1 recall priors; step 8 concept promotion | learned-durable (concepts) |
-| **analysis-vessel** | 18250 | owns `problem_detection`/`source_code`/`code_quality`/`cpg_query_result` (cpg-inference WASM, stateless) — **supersedes metabob-analysis-api** as the discovery-registered analyzer | step 2/4: code-analysis resolution | authored-durable (stateless) |
-| **ribosome-vessel** | — | wants successful traces (activity-api WS); owns template extraction | step 8c: mint a template from a reached trace | writes structural learned-durable |
-| **boredom-vessel** | — | wants idle time; owns the autonomous goal drive | step 0 generator — the substrate's heartbeat | drives Recall |
-| **development-vessel** | 18090 | owns `memoryNote` (authoritative memory) + dev meta-activities (gap→feature, feature-compose, cutover) | the self-* machinery (§5); memory across sessions | authored-durable (it authors code) + learned-durable (memory) |
-| **relevance-sink-vessel** | 18255 | owns impulse-relevance **penalty writes** — moved off the activity-api trace store to end write-contention | step 8a: the β-penalty path | writes learned-durable (decoupled) |
-| **stateful-ui-vessel** | 18270 | owns `uiPanel`/`uiQuestion`/`interactor*` — the substrate's "face" | human-in-the-loop crossing (NETWORK) | recorded (interactor observations) |
-| **light-dispatch-vessel** | 18280 | owns `light_dispatch_execution` — stateless oneshot dispatcher bypassing goal-host's full machinery for deterministic explicit-template chains | an alternate, low-machinery dispatch path | ephemeral (persists intermediates to disk) |
-| **metric-collector-vessel** | 18300 | owns `metricSample` — a substrate-authored lift-test vessel (moved off 8280 to resolve an `EADDRINUSE` collision with light-dispatch) | observability sample collection | recorded |
-| **clock-vessel** | — | owns `currentTimeReport` — the **first substrate-authored vessel end-to-end** (lift artifact) | proof-of-lift, not load-bearing | authored-durable (substrate-authored) |
-| **identity-vessel** | — | owns auth (HMAC keys + JWT) — single source of truth | every cross-vessel step's attestation | authored-durable |
+| Component | Owns / wants (intent) | Walk role | Durability touched |
+|---|---|---|---|
+| **discovery-vessel** | owns the registry; every vessel wants "who resolves shape X" | the fixed point all routing passes through | authored-durable (contracts) + ephemeral (TTL registry) |
+| **goal-host-vessel** | wants a goal; owns `goal_execution`/`activity_execution`; runs the **shape-graph walk** (backward-chain, bridge-author, data-flow bind) | steps 0–6: dispatch, selection, binding, stepping, reach gate | reads Informational, runs Transient, writes Recorded |
+| **activity-api** | owns traces, templates, posteriors, composition edges, goal-paths; wants nothing — it is the trace store + learner | step 1 selection inputs; step 7 trace write; step 8 learning | learned-durable + recorded (the database snapshot *is* the learning state) |
+| **llm-resolver-vessel** | owns `llm_completion`; wanted by any task whose resolver tier is `llm` | step 2/4: the high-directional-uncertainty resolver (§4) | authored-durable (impl) / ephemeral (a call) |
+| **local-tools-vessel** | owns filesystem/process resolvers + `code_verify_typecheck` | step 2/4: deterministic resolvers + verification | authored-durable / ephemeral |
+| **concept-db** | owns concept-graph shapes + dense semantic search | step 1 recall priors; step 8 concept promotion | learned-durable (concepts) |
+| **analysis-vessel** | owns `problem_detection`/`source_code`/`code_quality`/`cpg_query_result` (cpg-inference, stateless) — the discovery-registered analyzer | step 2/4: code-analysis resolution | authored-durable (stateless) |
+| **ribosome-vessel** | wants successful traces (activity-api WS); owns template extraction | step 8c: mint a template from a reached trace | writes structural learned-durable |
+| **boredom-vessel** | wants idle time; owns the autonomous goal drive | step 0 generator — the substrate's heartbeat | drives Recall |
+| **development-vessel** | owns `memoryNote` (authoritative memory) + dev meta-activities (gap→feature, feature-compose, cutover) | the self-* machinery (§5); memory across sessions | authored-durable (it authors code) + learned-durable (memory) |
+| **relevance-sink-vessel** | owns impulse-relevance **penalty writes** — decoupled from the activity-api trace store to avoid write-contention | step 8a: the β-penalty path | writes learned-durable (decoupled) |
+| **stateful-ui-vessel** | owns `uiPanel`/`uiQuestion`/`interactor*` — the substrate's "face" | human-in-the-loop crossing (NETWORK) | recorded (interactor observations) |
+| **light-dispatch-vessel** | owns `light_dispatch_execution` — stateless oneshot dispatcher bypassing goal-host's full machinery for deterministic explicit-template chains | an alternate, low-machinery dispatch path | ephemeral (persists intermediates to disk) |
+| **identity-vessel** | owns auth (HMAC keys + JWT) — single source of truth | every cross-vessel step's attestation | authored-durable |
 
-> **Operational notes (observed state, not asserted design):** `clock-vessel` and
-> `metric-collector-vessel` are lift-test artifacts (substrate-authored end-to-end)
-> rather than load-bearing fleet members — `metric-collector` was moved from 8280 to
-> 8300 to clear an `EADDRINUSE` collision with `light-dispatch-vessel`.
-> `relevance-sink-vessel` is load-bearing but was crash-looping in the audited
-> session — its penalty writes fall back to / are dropped by activity-api when it is
-> down.
+The fleet is open: the self-development loop (§5) can author whole net-new vessels
+through the same primitives (small single-resolver vessels such as a clock or a
+metric-sample collector are the canonical examples of this substrate-authored class).
+Which such vessels exist and run at any moment is an operational fact, not
+architecture.
 
 ### 2.1 Vessel has two senses; keep them apart
 
@@ -158,7 +152,7 @@ substrate's host-mapped ports.
   authored-durable code construct (the rows above, as code).
 - **Operational (deployment sense):** a *running service instance* (a systemd unit
   in the single-container substrate, or a pod downstream) with health, a `vessel_id`,
-  and quirks (the rows above, as the live `:18xxx` services).
+  and quirks (the rows above, as running services).
 
 A structural vessel is *instantiated as* an operational vessel. Where ambiguity
 matters, say "vessel (code)" vs "vessel (instance)."
@@ -168,8 +162,8 @@ matters, say "vessel (code)" vs "vessel (instance)."
 A goal threads the components of §2 in a fixed order. The Recall motion is steps 0–7;
 the Learning motion is step 8. The master table assembles every lens's name for each
 step (with section pointers so a reader can jump to the owning chart); the prose
-after it carries the durability crossings and the two steps that are newest and most
-load-bearing (the reach gate, step 6, and goal-path learning, step 8e).
+after it carries the durability crossings and spells out the reach gate (step 6)
+and goal-path learning (step 8e), the steps that define what "success" means.
 
 | Step | MDP (rule) | DEC (structure) | DYNAMICS (flow) | REPRESENTATION | NETWORK (protocol) | FLEET (boundary) |
 |---|---|---|---|---|---|---|
@@ -211,23 +205,23 @@ authored-durable half.** Concretely along the steps:
   templates. This is the only motion that *changes* durable state in the normal loop,
   and it changes only the learned half.
 
-### 3.2 The reach gate (step 6) and goal-path learning (step 8e): the newest load-bearing steps
+### 3.2 The reach gate (step 6) and goal-path learning (step 8e): what "success" means
 
-Two June-2026 additions changed what "success" means and are not yet reflected in the
-MDP/DEC charts (a known gap, §6 frontier):
+Three ordinary parts of the walk together define success as *reaching the goal*, not
+exiting cleanly:
 
-- **The reach gate.** `verifyGoalReached` (goal-host `07feff5`) is an LLM-judge run
-  **after** execution that emits `completion_shapes` and asks whether the goal was
-  actually reached, not merely whether the activity exited cleanly. Hollow completion
-  (e.g. a wrapper that produced an `activityExecutionSummary` instead of the asked
-  artifact) → `reached:false` → β-penalty on the selected template. This makes the
-  reward the residual-reduction of MDP §1.1 rather than exit-status — closing the
-  "status=completed ≠ goal reached" hole that previously α-credited gaming.
+- **The reach gate.** `verifyGoalReached` is an LLM-judge run **after** execution
+  that emits `completion_shapes` and asks whether the goal was actually reached, not
+  merely whether the activity exited cleanly. Hollow completion (e.g. a wrapper that
+  produced an `activityExecutionSummary` instead of the asked artifact) →
+  `reached:false` → β-penalty on the selected template. This makes the reward the
+  residual-reduction of MDP §1.1 rather than exit-status — closing the
+  "status=completed ≠ goal reached" hole that would otherwise α-credit gaming.
 - **In-flight recovery** (between steps 6 and 5, looping). On `reached:false` the
   `/resolve` loop β-penalises and **excludes** the failed approach
-  (`recommendExcluding`) and retries with a genuinely different approach (goal-host
-  `980240b`), until reached or exhausted. "Recovery is part of reaching the goal, not
-  offline repair." The *reached* trace is what the ribosome (8c) mints.
+  (`recommendExcluding`) and retries with a genuinely different approach, until
+  reached or exhausted. "Recovery is part of reaching the goal, not offline repair."
+  The *reached* trace is what the ribosome (8c) mints.
 - **Per-goal record & reuse** (step 8e). `recordGoalPath` writes to
   `goal_execution_paths` keyed by `goal_hash` (path = attribution, success = reached,
   per-goal α/β); `recommendReachingPath` reuses the reaching path for a repeated goal.
@@ -353,32 +347,30 @@ that is what they each are.
 When step 8's Learning output becomes step 0's Informational input for the next goal,
 the walk closes into a loop, and that loop is the substrate's autonomy. Each self-*
 property is a named feature of the closed walk; below, each is tied to its **canonical
-owner doc** (where the math lives) and to the **live substrate unit** that runs it
+owner doc** (where the math lives) and to the **substrate unit** that runs it
 (systemd units in the single-container substrate; see
 [`docs/SUBSTRATE.md`](../SUBSTRATE.md)).
 
 The loop's overall shape is **detect → author → verify → land → recover → measure →
-explore**. In a normal autonomous session all phases fire; in the audited session only
-the *observe + drain* half (measurement core + `funnel-drain`) was active — the
-authoring and immune timers were deliberately paused (they are outside the
-`self-repair-operational` allowlist, so they are not auto-revived). The mechanisms
-below exist regardless; what varies session-to-session is which are enabled.
+explore**. The mechanisms below are all part of the design; which units are enabled
+at any moment (an operator may pause authoring or immune timers, leaving only the
+observe-and-drain half firing) is an operational fact, not an architectural one.
 
 - **Self-development (the S1→S2 lift).** *Owner:* §4 (durability) — the lift is
   *defined* as the substrate beginning to write **authored-durable** state (MDP §5/§11
   reads it as active model expansion; FLEET §4/§6 as the cross-container form behind
-  quorum ratification). *Live units:* `gap-compose` (route an open `substrateGap`
+  quorum ratification). *Units:* `gap-compose` (route an open `substrateGap`
   through the feature composer: detect→spec→author→verify→stage), `feature_compose` +
   `apply_proposal_as_patch` (development-vessel), the **mitosis cutover**
   (commit→push origin/dev→restart with typecheck-evidence), `funnel-drain` (fires the
   funnel entry on a steady cadence so the boredom selector doesn't starve it). The
   honest residual boundary: the substrate can author *surgical* edits and whole
-  net-new vessels via feature-compose, but feature-authoring breadth is the live
+  net-new vessels via feature-compose, but feature-authoring breadth is the
   S1→S2 frontier.
 - **Self-assembly / composition / topology growth.** *Owner:* DEC §0.2–§0.3 — a
   vessel is a subcomplex; growth is subcomplex gluing (pushout/colimit), the only
   growth operation, with new cells at `Beta(1,1)`; MDP §7–§9 gives the three scales
-  (within-dispatch / within-substrate / cross-substrate). *Live units:*
+  (within-dispatch / within-substrate / cross-substrate). *Units:*
   `compose-teacher` (bootstraps organic producer→consumer composites to break the star
   topology, gated on headroom `λ₂·(1−star_ratio) ≥ 0.35`), `composition-edge-reconcile`
   (derives `activity_composition_graph` edges from traces so they become measurable).
@@ -386,14 +378,14 @@ below exist regardless; what varies session-to-session is which are enabled.
   [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md) "Adaptive Immune
   System" — IDS/IPS/SIEM/SOAR collapsed into one mechanism ("detection and resolution
   are activities"), four reversibility tiers, `resolutionRefused` = push-away applied
-  to self. *Live units:* `self-recovery` (per-vessel health-check → restart → revert
+  to self. *Units:* `self-recovery` (per-vessel health-check → restart → revert
   `/vessels` to last-good host source → escalate as a gap), `light-dispatch-healthcheck`
   (restart-if-hung), and the author-time typecheck **rollback** inside feature-compose.
   In-flight goal recovery (§3.2) is the per-goal form.
 - **Improvement (convergence).** *Owner:* MDP §2 (per-cell Beta-Bernoulli; conjugate
   update = natural gradient, §2.1; regret `O(√(T log T))`), DEC §4.1 (the master rate
   `R_conv ∼ λ₁(L)·ρ_sample·κ(⋆)⁻¹`), DYNAMICS §3.1 (inertial acceleration capped by
-  `λ₁`). *Live units:* `m1-trainer` (retrains the embedding prior for the recommender),
+  `λ₁`). *Units:* `m1-trainer` (retrains the embedding prior for the recommender),
   `autonomy-metrics` + `model-reality-audit` (track whether the rate factors are
   rising). The MRR / lift-gate instrumentation lives here.
 - **Topology exploration.** *Owner:* DYNAMICS §3–§4 (the master inequality
@@ -405,7 +397,7 @@ below exist regardless; what varies session-to-session is which are enabled.
   helps **both sides** of `λ₁ ≳ ρ_grow` and is simultaneously the DB-cost lever (a
   sparse complex keeps queries `O(edges)`, not `O(cells)`). Enforced at the mint
   chokepoint (dev-vessel `activity-create-variant`, `REUSE_BEFORE_MINT`) and at
-  selection. *Live units:* `spectral-gap` (tracks live `λ₂` + star-ratio — the
+  selection. *Units:* `spectral-gap` (tracks the measured `λ₂` + star-ratio — the
   governor `compose-teacher` gates on), `coherence-metric` / `coherence-recover`
   (orthogonality maintenance; collapse byte-identical duplicates).
 
@@ -445,6 +437,14 @@ Following the discipline of the companion charts.
 - The crossing pattern (Recall reads Informational → runs Transient → writes Recorded;
   Learning writes learned-durable; nothing normal writes authored-durable) is the
   durability statement of the two motions (§1.1). → §3.1, §4
+- The reach gate and per-goal `goal_execution_paths` (§3.2) are part of the design
+  **and folded into the MDP/DEC charts**: the MDP chart defines the base reward bit
+  as the reach verdict (`SUBSTRATE_AS_MDP.md` §2, developed in §12.6), and the DEC
+  chart folds a hollow chain as a β sample on its edges (`SUBSTRATE_AS_DEC.md` §3).
+  The successor-feature factorization Q = ⟨ψ, R⟩ and the signature-cluster pooling
+  axis are folded alongside (`SUBSTRATE_AS_MDP.md` §2.2 and §4.2;
+  `SUBSTRATE_AS_DEC.md` §4.1). Schema detail remains owned by
+  `GOAL_EXECUTION_PATHS_SCHEMA.md`. → §3.2
 
 **Frontier (named, not asserted):**
 
@@ -454,18 +454,15 @@ Following the discipline of the companion charts.
 - The momentum-space dual of the transformer is assembled from established pieces, not
   an owned result; full statement and honesty bounds in `SUBSTRATE_AS_REPRESENTATION.md`
   §5. → §4.1
-- *(Resolved 2026-07-01.)* The reach gate and per-goal `goal_execution_paths` (§3.2)
-  are live in code **and folded into the MDP/DEC charts**: the MDP chart now defines
-  the base reward bit as the reach verdict (`SUBSTRATE_AS_MDP.md` §2, developed in
-  §12.6), and the DEC chart folds a hollow chain as a β sample on its edges
-  (`SUBSTRATE_AS_DEC.md` §3). The successor-feature factorization Q = ⟨ψ, R⟩ and the
-  signature-cluster pooling axis are folded alongside (`SUBSTRATE_AS_MDP.md` §2.2 and
-  §4.2; `SUBSTRATE_AS_DEC.md` §4.1). Schema detail remains owned by
-  `GOAL_EXECUTION_PATHS_SCHEMA.md`. → §3.2
-- Several §2 components (`relevance-sink-vessel` health, the `metric-collector` /
-  `light-dispatch` port-8280 collision, the lift-test micro-vessels `clock-vessel` /
-  `metric-collector-vessel`) are operational facts of the current fleet, not settled
-  architecture; treated as observed state, not asserted design.
+- **Horizontal (parallel sibling) dispatch** at step 5 — the breadth-first dual of
+  the depth-first `composition_chain` — is named in the master table's MDP column
+  but not implemented; trajectory stepping is sequential. → §3
+- **Federation with two-sided counterparty-signed traces** (the FLEET/NETWORK trust
+  gate on folding foreign evidence) is design intent; until then foreign traces are
+  advisory-only. → §3 step 7
+- **Measured cost-aware selection grounding** (cost/duration entering the selection
+  posterior as a measured factor rather than a recorded-but-unread field) and the
+  **inertial credit flow** of the dynamics chart are described, not computed.
 
 **Honest limit (carried):**
 
@@ -474,6 +471,54 @@ Following the discipline of the companion charts.
   runs, *how durable* what it touches is, and *what every lens calls it* says nothing
   about whether the Informational state is complete — it is not, and no self-*
   mechanism in §5 closes that gap.
+
+### Absorbable mechanisms — what the world already offers
+
+Mechanisms mature in the wider software world that bear directly on this chart's
+lens — the walk's durability and engineering. Each is stated with what it offers,
+how it enters **through existing primitives** (a resolver, a dispatcher discipline,
+an evidence-fold rule — never a new tier), and what it does not solve.
+
+- **Durable-execution / journaled-workflow engines** ([Temporal]-style deterministic
+  replay). *Offers:* the Recorded group becoming sufficient to **resume** the
+  Transient state — an in-flight walk that dies mid-trajectory is replayed from its
+  journal instead of restarted from step 0, turning "ephemeral is reconstructable
+  only from Recorded" (§3.1) from a forensic property into an operational one.
+  *Enters as:* a goal-host **dispatcher discipline** — steps journaled to the
+  existing trace store before their effects, deterministic re-execution against the
+  journal on recovery; no new store, the trace store is already append-only.
+  *Does not solve:* non-deterministic resolvers (an `llm` resolver replayed is a new
+  sample, not a resumption); the journal makes the walk resumable, not the reasoning
+  repeatable.
+- **Content-addressed artifact and build stores** ([Nix]-style derivations,
+  [OCI]-digest images). *Offers:* authored-durable identity by content hash —
+  reproducible builds, byte-identical cutover verification, and rollback that is a
+  pointer flip rather than a rebuild; strengthens the mitosis cutover (§5) and the
+  frontier content-addressed edge/template identity (§3 steps 8d–8e).
+  *Enters as:* the existing content-addressed identity discipline (already the
+  Recorded group's Merkle framing, §3 step 7) applied to images and templates —
+  the deploy/commit path of the authored-durable group, no new primitive.
+  *Does not solve:* whether the content is *good* — identity ≠ validity; the reach
+  gate and posteriors still carry that.
+- **OpenTelemetry-style trace semantics** ([OTel]). *Offers:* interoperable naming
+  (span/trace/parent conventions, semantic attributes) for the Recorded group, so
+  external tooling can read the walk without bespoke adapters — the L1/L2/L3
+  meta-trace levels (§3.3) map naturally onto span trees.
+  *Enters as:* an **export resolver** — a vessel-owned shape that renders traces
+  outward in OTel form. It never replaces the trace store: the store is the learning
+  substrate (the empirical model), and exports are a projection of it, read-only.
+  *Does not solve:* learning — OTel spans carry no posteriors, no reach verdicts,
+  no fold semantics; interop is observability, not evidence.
+- **Object-capability security** ([Miller]-style capability-addressed, attenuated
+  authority). *Offers:* authority that travels as an unforgeable, attenuable
+  reference rather than an ambient role — the principled form of "resolution
+  crosses, work does not" (§3 step 4) and of scope-narrowed sub-goal dispatch.
+  *Enters as:* the **resolver-contract auth fields** already in the discovery
+  contract (auth scheme, token source, delegation mode) and the scope-attestation
+  direction of the hardening agenda — capability = an attested, attenuated pointer;
+  no new auth tier.
+  *Does not solve:* trust in the *content* of what a capability returns (that is
+  the two-sided-signature frontier), nor revocation cost at fleet scale.
 
 ## 7. Recap
 
@@ -511,5 +556,10 @@ topology.**
 
 - **[Amari]** Amari, S., *Natural Gradient Works Efficiently in Learning*, Neural Computation 10(2), 1998. — *verification: carried.*
 - **[Nielsen]** Nielsen, F., *An Elementary Introduction to Information Geometry*, Entropy 22(10), 2020. — *verification: carried.*
+- **[Temporal]** Temporal Technologies, *Temporal: Durable Execution* — deterministic workflow replay from an event-history journal (lineage: Cadence / AWS Simple Workflow). — *verification: carried.*
+- **[Nix]** Dolstra, E., *The Purely Functional Software Deployment Model*, PhD thesis, Utrecht University, 2006. — *verification: carried.*
+- **[OCI]** Open Container Initiative, *OCI Image Format Specification* — content-addressed (digest-identified) image manifests. — *verification: carried.*
+- **[OTel]** OpenTelemetry, *Trace Semantic Conventions* — span/trace model and semantic attributes for distributed tracing. — *verification: carried.*
+- **[Miller]** Miller, M. S., *Robust Composition: Towards a Unified Approach to Access Control and Concurrency Control*, PhD thesis, Johns Hopkins University, 2006. — *verification: carried.*
 - Companion charts: [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md), [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md), [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md), [`SUBSTRATE_AS_REPRESENTATION.md`](SUBSTRATE_AS_REPRESENTATION.md), [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md), [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md).
 - Execution detail: [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md), [`GOAL_EXECUTION_PATHS_SCHEMA.md`](GOAL_EXECUTION_PATHS_SCHEMA.md), [`RUNTIME_ACTIVITY_TRACING.md`](RUNTIME_ACTIVITY_TRACING.md), [`RESOLVER_TRACKING.md`](RESOLVER_TRACKING.md).

@@ -481,6 +481,46 @@ observation*; they do not complete the Informational state. A fully distributed,
 openly-federated fleet is still an incomplete model — just a larger, more resilient
 one.
 
+### Absorbable mechanisms — what the world already offers
+
+Several of the frontier items do not need to be invented — mature ecosystems
+already ship the mechanism, and each enters through an existing primitive
+(resolver contracts, discovery registration, attestation tiers, the admission
+gate) as normal operation, never as a new tier.
+
+- **Agent-interoperability protocols (MCP, A2A-style)** [[mcp]]. *Offers:* a
+  standardized boundary surface for external agents and tools — typed
+  capabilities, declared auth, negotiated limits. An MCP server/client is exactly
+  a **resolver contract seen from outside**: a typed capability with an auth
+  scheme and a budget. *Enters as:* a boundary-entity adapter at the discovery
+  contract — a foreign agent registers (or is wrapped) as an implicit vessel
+  whose per-signature trust is learned like any peer's. *Does not solve:* trust.
+  It standardizes the wire, not the honesty of what crosses it — attestation
+  tiers (§4) still apply in full.
+- **Verifiable credentials / DID ecosystems** [[w3c-vc]]. *Offers:*
+  interoperable, widely-implemented attestation formats for the
+  scope-attestation chain (§9) and the identity layer (§1) — a serialization the
+  rest of the world can verify. *Enters as:* the encoding of attestations
+  already designed; the org → user → vessel chain and the genesis-op identity
+  emit and consume VC/DID documents without changing their semantics. *Does not
+  solve:* authority. The format carries a claim; who may make it, and what a
+  quorum must ratify, is supplied by the admission design (§6), not the
+  envelope.
+- **Deterministic / reproducible execution sandboxes** (Wasm-based runtimes)
+  [[wasm]]. *Offers:* deterministic single-task replay — the named gap under the
+  optimistic-verification tier. A Wasm-sandboxed resolver class makes bisection
+  re-execution (§4) well-defined for deterministic-tier tasks: same inputs, same
+  bytes, same verdict. *Enters as:* a resolver-hosting discipline — a property a
+  resolver contract can declare, not a new execution path. *Does not solve:*
+  LLM-resolver nondeterminism; that residual stays on the frontier list.
+- **Gossip / epidemic broadcast libraries** [[plumtree]]. *Offers:* efficient,
+  battle-tested dissemination — spanning-tree push with gossip repair — for §5's
+  fold traffic and §2's artifact distribution. *Enters as:* the transport under
+  the existing content-addressed gossip operation (§0's "gossip an artifact");
+  no change to what is gossiped or how it is admitted. *Does not solve:*
+  idempotence. It moves bytes; dedupe-by-content-id (§6) remains what keeps the
+  fold a CRDT.
+
 ## 12. Recap
 
 FLEET says *what* crosses the substrate boundary, sorted by durability. This doc says
@@ -527,3 +567,7 @@ learning or collectivizing the control flow.
 - **[hotstuff]** Yin, M. et al., *HotStuff: BFT Consensus with Linearity and Responsiveness*, IACR eprint 2023/397. https://eprint.iacr.org/2023/397.pdf — *verification: carried.*
 - **[bls-aggregation]** Mysten Labs, *New BLS Aggregation for Proof of Stake*. https://www.mystenlabs.com/blog/new-bls-aggregation-for-proof-of-stake — *verification: carried.*
 - **[bls-multisig]** Boneh, D., Drijvers, M. & Neven, G., *Compact Multi-Signatures for Smaller Blockchains (BLS multi-signatures)*. https://crypto.stanford.edu/~dabo/pubs/papers/BLSmultisig.html — *verification: carried.*
+- **[mcp]** Anthropic, *Model Context Protocol*, modelcontextprotocol.io. https://modelcontextprotocol.io — *verification: carried.*
+- **[w3c-vc]** W3C, *Verifiable Credentials Data Model*. https://w3c.github.io/vc-data-model/ — *verification: carried.*
+- **[wasm]** Haas, A. et al., *Bringing the Web up to Speed with WebAssembly*, PLDI 2017. https://dl.acm.org/doi/10.1145/3062341.3062363 — *verification: carried.*
+- **[plumtree]** Leitão, J., Pereira, J. & Rodrigues, L., *Epidemic Broadcast Trees (Plumtree)*, SRDS 2007. https://asc.di.fct.unl.pt/~jleitao/pdf/srds07-leitao.pdf — *verification: carried.*

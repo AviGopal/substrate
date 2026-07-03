@@ -213,7 +213,7 @@ the substrate could buy is throttled by `λ₁`, and adding inertia while `λ₁
 near `ρ_grow` trades over-damped lag for under-damped instability rather than for
 genuine speedup.
 
-This is a **frontier proposal**, not a current property. It composes
+This is a **frontier proposal**, not a property the substrate has. It composes
 established results (`[Su, Boyd & Candès]`; `[Wibisono, Wilson & Jordan]`;
 `[Cheng et al.]`; `[Mou et al.]`; `[Tegling et al.]`), but no single result
 states the heat→telegraph interpolation *on a learning Hodge complex with an
@@ -348,6 +348,61 @@ Following the discipline of the companion charts.
   `SUBSTRATE_AS_DEC.md` §5). A faster-mixing flow or a richer manifold changes the
   *representation* of the partiality, not the Gödel-shaped limit.
 
+### Absorbable mechanisms — what the world already offers
+
+Not every frontier item waits on new mathematics. For several, the world already
+supplies an operational counterpart — a mechanism that can be absorbed **through
+existing primitives** (a detector activity over trace statistics, a governor
+gating an existing chokepoint, a change to an existing background job), with no
+new tiers and no new machinery. Absorbing one does not promote the corresponding
+frontier claim to a theorem; it makes the claim *instrumented* instead of merely
+stated.
+
+- **Early-warning signals for bifurcations** ([Scheffer et al.]). *(a)* The
+  bifurcation of §3 — loss of normal hyperbolicity as `λ₁ → ρ_grow` — is
+  preceded by **critical slowing down**: rising autocorrelation and rising
+  variance in the fast variable as transverse attraction weakens. These are
+  generic leading indicators of critical transitions, and both statistics are
+  computable from the trace store the substrate already keeps (per-cell posterior
+  update residuals over time). *(b)* Enters as a **detector activity** over
+  existing trace statistics whose output feeds the growth governor of §4 — an
+  operational leading indicator for the master inequality, watched as normal
+  operation rather than diagnosed post-hoc. *(c)* It does not prove the
+  inequality; it instruments it. A calm indicator is evidence of margin, not a
+  stability theorem.
+- **Control-theoretic growth governors** ([Åström & Murray]). *(a)*
+  Gain-scheduled and supervisory control is the standard discipline for exactly
+  the rule §4 states: gate a drive term (`ρ_grow` — drafting, minting,
+  vessel-spawning) on a measured margin (spectral headroom above the threshold).
+  *(b)* The design already gates at the compose/mint chokepoints; naming the
+  control loop licenses tuning it **as a controller** — setpoint = stability
+  margin, actuator = the existing mint/draft gates — rather than as a static
+  threshold. No new surface: the governor is the chokepoint it already has,
+  operated with feedback. *(c)* It does not remove the frontier status of the
+  threshold itself; a well-tuned controller regulating toward a conjectured
+  margin is still regulating toward a conjecture.
+- **Adaptive two-timescale step-size schedules** ([Borkar]). *(a)* The TTSA
+  hypothesis of §1 — the fast arm updates effectively faster than the slow arm —
+  is **monitorable**: the effective update rates of the forward and reverse arms
+  are readable from the same writes that drive them. *(b)* A watchdog **detector
+  activity** over those existing writes flags timescale-separation collapse (one
+  arm stalling, as in the resolver-bug failure §1 names) — turning a theorem's
+  *hypothesis* into a monitored invariant rather than an assumed one. *(c)*
+  Monitoring the hypothesis does not extend the theorem across the
+  dimension-changing minting events of §3's honest limit; it only tells you when
+  the hypothesis has failed.
+- **Graph-momentum / accelerated consensus implementations** ([Tegling et al.];
+  [Su, Boyd & Candès]). *(a)* The inertial extension of §3.1 has working
+  counterparts: momentum methods on graphs and accelerated consensus dynamics,
+  including the stability analysis that bounds the admissible momentum band by
+  the spectral gap. *(b)* If §3.1 is ever exercised, it enters as a change to
+  the **credit-propagation job only** — the same `e^{−tL}` transport, given a
+  velocity term — behind the same spectral-headroom governor, with the momentum
+  band `λ₁`-bounded as §3.1 requires. *(c)* It does not lift §3.1 out of the
+  frontier: no existing result states the heat→telegraph interpolation on a
+  learning Hodge complex with open, growing dimension, and the acceleration
+  remains capped by the same `λ₁` it would relieve.
+
 ## 8. Recap
 
 The substrate is a slow–fast dynamical system on a growing complex. The fast
@@ -392,3 +447,5 @@ and what it looks like when it stops.**
 - **[Cook]** Cook, M., *Universality in Elementary Cellular Automata*, Complex Systems 15, 2004. https://wpmedia.wolfram.com/sites/13/2018/02/15-1-1.pdf — *verification: carried.*
 - **[Chan]** Chan, B. W.-C., *Lenia — Biology of Artificial Life*, Complex Systems 28, 2019; arXiv:1812.05433. https://arxiv.org/abs/1812.05433 — *verification: carried.*
 - **[Hansen & Ghrist]** Hansen, J. & Ghrist, R., *Toward a Spectral Theory of Cellular Sheaves*, J. Applied & Computational Topology 3, 2019; arXiv:1808.01513. https://arxiv.org/abs/1808.01513 — *verification: carried.*
+- **[Scheffer et al.]** Scheffer, M., Bascompte, J., Brock, W. A., Brovkin, V., Carpenter, S. R., Dakos, V., Held, H., van Nes, E. H., Rietkerk, M. & Sugihara, G., *Early-warning signals for critical transitions*, Nature 461, 2009. https://www.nature.com/articles/nature08227 — *verification: carried.*
+- **[Åström & Murray]** Åström, K. J. & Murray, R. M., *Feedback Systems: An Introduction for Scientists and Engineers*, Princeton University Press, 2008. https://fbswiki.org/ — *verification: carried.*

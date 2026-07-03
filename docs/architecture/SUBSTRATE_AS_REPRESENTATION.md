@@ -108,7 +108,7 @@ Two honesty bounds, in the discipline of the companion charts:
   literal second-order momentum is therefore a *proposal* — to interpolate the dynamics
   toward a telegraph/wave regime — whose tradeoff and stability ceiling are stated in
   `SUBSTRATE_AS_DYNAMICS.md` (inertial credit flow). The intuition is rigorous as a velocity
-  decomposition; the inertia is a flagged frontier, not a current property.
+  decomposition; the inertia is a flagged frontier, not an established property.
 
 ## 3. The hypersurface and its stratification
 
@@ -426,7 +426,7 @@ Following the discipline of the companion charts.
 **Canonical decisions (this chart's authority):**
 - Shapes (and goals) are axes of one open basis; the signature is the local frame. → §1
 - An impulse is a momentum component in the Fisher metric (`⋆₁` as mass × flow as velocity);
-  the inertial extension is a flagged frontier, not a current property. → §2
+  the inertial extension is a flagged frontier, not an established property. → §2
 - The substrate is the momentum-space dual of the transformer: open dimensionality, discrete
   action, continuous reachable-topology output. → §5
 - Block-diagonal `⋆` is the separability pole of a capacity↔separability trade, not a free
@@ -472,6 +472,47 @@ Following the discipline of the companion charts.
   charted region but never cuts the realizable variety out of the space of all arrangements.
   More axes are a larger chart, not a complete one.
 
+### Absorbable mechanisms — what the world already offers
+
+The frontier items above are not all greenfield. Several established mechanisms map
+directly onto the aspirations of this chart, and each enters through an **existing
+primitive** — a resolver, a detector activity, the drafter's candidate-genesis path, or
+the learnability gate — as normal operation, not as a new tier. For each: what it
+offers, how it enters, and what it does not solve.
+
+- **Sparse autoencoders / dictionary learning as de-superposition resolvers**
+  ([Bricken 2023]; [Templeton 2024]). *Offers:* a working method for mining a frozen
+  embedded model's superposed features into monosemantic candidate directions — the
+  de-superposition move of §5.1, industrialized. *Enters as:* a resolver on the
+  candidate-genesis side of §6 — SAE features are *candidate* shape-axes, proposals from
+  the dense frozen basis, which still face the §4 learnability gate before a shape-axis
+  is minted. *Does not solve:* grounding. A monosemantic direction inside the frozen
+  model is still ungrounded until it is measured against reality; SAEs make proposing
+  cheap, not true.
+- **Nonparametric priors on axis-minting** ([Griffiths & Ghahramani 2005]). *Offers:*
+  the Indian-buffet-process is a principled prior on the rate at which new axes appear
+  as data arrive — a formal model of `ρ_grow`. *Enters as:* a calibration of the minting
+  gate — the drafter's threshold for opening a new dimension can be set against the IBP
+  rate rather than an ad-hoc constant — not a new mechanism. *Does not solve:* which
+  axes are real. The prior shapes *how many*; the learnability gate (§4) alone decides
+  *which*.
+- **Cross-embedding alignment** ([Lample 2018]). *Offers:* unsupervised alignment of two
+  embedding spaces without parallel data, mitigating the embedding-drift failure mode
+  when retrieval must span peers whose dense indexes were trained separately. *Enters
+  as:* a resolver refinement on the dense index used at selection/priming — the
+  retrieval geometry is aligned before nearest-neighbor lookup, inside the existing
+  resolver. *Does not solve:* posterior transfer. Aligning retrieval geometry does not
+  merge learned posteriors — which the fleet chart forbids as state
+  (`SUBSTRATE_AS_FLEET.md` §3): foreign influence enters only as evidence.
+- **Learning-progress curiosity as the exploration drive** ([Schmidhuber 2010];
+  [Pathak 2017]). *Offers:* derivative-of-compression / learning-progress signals over
+  the residual — a principled criterion for *which* residual is worth chasing, already
+  the gate's test in §4. *Enters as:* the goal-selection policy of the existing
+  autonomous-drive vessel — the idle loop ranks candidate goals by expected learning
+  progress on the residual rather than rotating blindly. *Does not solve:* grounding of
+  reward. Curiosity shapes *where* the substrate explores; what counts as success is
+  still measured against the un-authorable referent (Layer 5, §7).
+
 ## 9. Recap
 
 The substrate, as a representation, is an **open basis of shape-axes**: a shape is an axis, a
@@ -511,6 +552,7 @@ orthogonal basis, and set against the fixed, superposed basis a transformer lear
 - **[Griffiths & Ghahramani 2005]** Griffiths, T. & Ghahramani, Z., *Infinite Latent Feature Models and the Indian Buffet Process*, NIPS 2005. https://cocosci.princeton.edu/tom/papers/ibpnips.pdf — *verification: verified.*
 - **[Yan 2021]** Yan, S. et al., *DER: Dynamically Expandable Representation for Class-Incremental Learning*, CVPR 2021. https://openaccess.thecvf.com/content/CVPR2021/papers/Yan_DER_Dynamically_Expandable_Representation_for_Class_Incremental_Learning_CVPR_2021_paper.pdf — *verification: verified.*
 - **[Rusu 2016]** Rusu, A. et al., *Progressive Neural Networks*, 2016. https://arxiv.org/abs/1606.04671 — *verification: verified.*
+- **[Lample 2018]** Lample, G., Conneau, A., Ranzato, M., Denoyer, L. & Jégou, H., *Word Translation Without Parallel Data*, ICLR 2018; arXiv:1710.04087. https://arxiv.org/abs/1710.04087 — *verification: verified.*
 - **[Aubret et al.]** Aubret, A. et al., *DisTop: Discovering a Topological Representation to Learn Diverse and Rewarding Skills*, arXiv:2106.03853. https://arxiv.org/abs/2106.03853 — *verification: verified.*
 - **[Friston 2006]** Friston, K., Kilner, J. & Harrison, L., *A free energy principle for the brain*, J. Physiology-Paris 100, 2006. https://www.fil.ion.ucl.ac.uk/~karl/A%20free%20energy%20principle%20for%20the%20brain.pdf — *verification: verified.*
 - **[Friston 2012]** Friston, K. et al., *Free-energy minimization and the dark-room problem*, Frontiers in Psychology 3:130, 2012. https://www.frontiersin.org/articles/10.3389/fpsyg.2012.00130/full — *verification: verified.*
