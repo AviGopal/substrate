@@ -99,6 +99,7 @@ ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-$(persisted_secret ANTHROPIC_API_KEY)}"
 OPENAI_API_KEY="${OPENAI_API_KEY:-$(persisted_secret OPENAI_API_KEY)}"
 OPENAI_BASE_URL="${OPENAI_BASE_URL:-$(persisted_secret OPENAI_BASE_URL)}"
 CHUTES_API_KEY="${CHUTES_API_KEY:-$(persisted_secret CHUTES_API_KEY)}"
+OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-$(persisted_secret OPENROUTER_API_KEY)}"
 
 # Endpoint aliases — resolve BEFORE the heredoc so every inner reference is a
 # bound variable. Previously the alias defaults nested unguarded expansions
@@ -134,6 +135,7 @@ ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
 OPENAI_API_KEY="${OPENAI_API_KEY:-}"
 OPENAI_BASE_URL="${OPENAI_BASE_URL:-}"
 CHUTES_API_KEY="${CHUTES_API_KEY:-}"
+OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
 LLM_DEFAULT_MODEL="${LLM_DEFAULT_MODEL:-}"
 # Substrate root inside the container = the bind-mounted host repo path
 # (docker run -v \$(REPO_ROOT):\$(REPO_ROOT):ro, passed in via -e SUBSTRATE_ROOT).
@@ -299,6 +301,7 @@ ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
 OPENAI_API_KEY=${OPENAI_API_KEY:-}
 OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
 CHUTES_API_KEY=${CHUTES_API_KEY:-}
+OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
 SECRETS
 chmod 600 /workspace/.substrate-secrets
 echo "[gen-env] persisted secrets to /workspace/.substrate-secrets"
