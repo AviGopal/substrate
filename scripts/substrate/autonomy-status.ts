@@ -71,13 +71,110 @@ if (process.env.METRICS_OUT) sources.push({ label: process.env.METRICS_OUT, text
 sources.push({ label: `${CONTAINER}:${CONTAINER_PATH}`, text: await readSubstrate() });
 sources.push({ label: HOST_FALLBACK, text: await readHost(HOST_FALLBACK) });
 
+// ── DETECTOR SHAPES (live) ──────────────────────────────────────────────────
+// The collector's JSONL is derived aggregates; the detector FLEET on
+// development-vessel emits first-class shapes (learningTransferReport,
+// substrateGap, detectorYieldReport, selfInterferenceReport). Resolve them
+// DIRECTLY so this view reports what the detectors themselves are saying,
+// not a second-hand digest. Read-only (no emit_gap), fail-soft: an
+// unreachable resolver renders as "dark", never breaks the view.
+// Usefulness annotations come from the measured causal ledger
+// (validation/results/2026-07-03-learning-transfer-causal-ledger.md):
+// SF-coverage and genuine-edge density PREDICT per-goal reached-rate;
+// crystallization does not (bookkeeping dial); stalled-credit is a
+// zero-variance tripwire. A dial that predicts nothing is labelled so.
+const DEV_VESSEL_CANDIDATES = [
+  process.env.DEV_VESSEL_ENDPOINT,
+  "http://localhost:18090",   // host-mapped port (how `make autonomy-status` runs)
+  "http://127.0.0.1:8090",    // in-container fallback
+].filter(Boolean) as string[];
+
+async function resolveShape(type: string, extra: Record<string, unknown> = {}, timeoutMs = 20000): Promise<any | null> {
+  for (const ep of DEV_VESSEL_CANDIDATES) {
+    try {
+      const res = await fetch(`${ep}/v2/impulses/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ impulse: { type, ...extra } }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (!res.ok) continue;
+      const j = (await res.json()) as any;
+      if (j?.success && j?.body) return j.body;
+    } catch { /* try next endpoint */ }
+  }
+  return null;
+}
+
+async function printDetectorSection(): Promise<void> {
+  const [ltr, gaps, yieldRep, selfInt] = await Promise.all([
+    resolveShape("learning_transfer_report"),
+    resolveShape("substrateGap", { status: "open", limit: 500 }),
+    resolveShape("detector_yield_registry"),
+    resolveShape("self_interference_scan"),
+  ]);
+  const dline = (label: string, body: string) => console.log(`    ${label.padEnd(16)} ${body}`);
+  console.log(`  ${"─".repeat(64)}`);
+  console.log(`  DETECTOR SHAPES (live resolve from development-vessel — first-hand, not the collector digest):`);
+
+  if (ltr?.scanned) {
+    const sf = ltr.sf_coverage, ed = ltr.genuine_edge_density, cc = ltr.crystallized_cells, st = ltr.stalled_credit_chains;
+    const sfPct = sf ? (sf.coverage * 100).toFixed(1) : "·";
+    dline("transfer ψ", `sf_coverage ${sfPct}% (${sf?.sf_cells}/${sf?.variant_cells})  — PREDICTIVE: SF-covered paths reach +6–8pp (ledger 2026-07-03); growth beyond ~18.5% needs live re-execution (retention sweep destroyed old ψ evidence)`);
+    const ineqOk = ed?.inequality_ok === true;
+    const margin = ed ? (ed.density - ed.uninformed_fraction).toFixed(3) : "·";
+    dline("λ₁ ≳ ρ_grow", `${ineqOk ? "✓ holds" : "✗ VIOLATED"}  density ${ed?.density?.toFixed(3)} vs uninformed ${ed?.uninformed_fraction?.toFixed(3)} (margin ${margin}; ${ed?.genuine_edges} genuine edges) — edge participation is the STRONGEST reached-rate predictor (+26–35pp)`);
+    const stalled = st?.stalled_count ?? null;
+    dline("stalled credit", `${stalled === 0 ? "✓ 0" : `⚠ ${stalled}`} of ${st?.chains_examined ?? "·"} chains — tripwire (alarm on nonzero); zero variance, NOT an optimization dial`);
+    dline("crystallized", `${cc ? (cc.fraction * 100).toFixed(1) : "·"}% uninformed cells (${cc?.uninformed}/${cc?.total}) — bookkeeping only; measured NON-predictive of reached/cost/speed, do not optimize`);
+  } else {
+    dline("transfer ψ", `dark — learning_transfer_report unreachable${ltr?.error ? ` (${ltr.error})` : ""} ⚠ (this detector regressed to skeleton once on 2026-07-03; check the resolver is the implemented version)`);
+  }
+
+  if (gaps?.gaps) {
+    const open = gaps.gaps.filter((x: any) => (x.status ?? "open") === "open");
+    const byCat = new Map<string, number>();
+    for (const x of open) byCat.set(x.category ?? "?", (byCat.get(x.category ?? "?") ?? 0) + 1);
+    const top = [...byCat.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, n]) => `${c} ${n}`).join(" · ");
+    const capped = gaps.gaps.length >= 500 ? "≥" : "";   // hit the query limit — true count may be higher
+    dline("open gaps", `${capped}${open.length} open (${top || "none"}) — the loop's work queue; should FALL without operator fixes`);
+  } else {
+    dline("open gaps", "dark — substrateGap resolver unreachable");
+  }
+
+  if (yieldRep?.detectors) {
+    const ds = yieldRep.detectors as any[];
+    const byStatus = new Map<string, number>();
+    for (const d of ds) byStatus.set(d.status ?? "?", (byStatus.get(d.status ?? "?") ?? 0) + 1);
+    const landed = ds.reduce((a, d) => a + (d.gaps_landed ?? 0), 0);
+    const emitted = ds.reduce((a, d) => a + (d.gaps_emitted ?? 0), 0);
+    const dormant = ds.filter((d) => d.status === "DORMANT").map((d) => d.detector_id);
+    const statusStr = [...byStatus.entries()].map(([s, n]) => `${n} ${s}`).join(" / ");
+    const landRate = emitted > 0 ? ((landed / emitted) * 100).toFixed(0) : "·";
+    dline("detector fleet", `${ds.length} detectors: ${statusStr} · gap→land ${landed}/${emitted} (${landRate}%)${dormant.length ? `  ⚠ dormant: ${dormant.slice(0, 3).join(", ")}` : ""} — low land-rate = detectors filing work the loop can't consume`);
+  } else {
+    dline("detector fleet", "dark — detector_yield_registry unreachable");
+  }
+
+  if (selfInt) {
+    const inter = selfInt.interrupted_dispatches ?? 0, busy = selfInt.compose_busy_refusals ?? 0;
+    dline("self-interfere", `${inter === 0 ? "✓" : "⚠"} ${inter} interrupted dispatches · ${busy} BUSY refusals — cutover-vs-inflight collisions; rising = the dev-loop is stepping on its own work`);
+  } else {
+    dline("self-interfere", "dark — self_interference_scan unreachable");
+  }
+}
+
 let best = sources[0]!;
 for (const s of sources) { if (s.text && lastAt(s.text) > lastAt(best.text)) best = s; }
 const FILE = best.label;
 const text = best.text;
 const rows = text.split("\n").filter((l) => l.trim())
   .map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean) as any[];
-if (rows.length === 0) { console.log("no autonomy metrics recorded yet — is the autonomy-metrics.timer active?"); process.exit(0); }
+if (rows.length === 0) {
+  console.log("no autonomy metrics recorded yet — is the autonomy-metrics.timer active?");
+  await printDetectorSection();   // detector shapes are live-resolved; show them even with no series
+  process.exit(0);
+}
 
 const win = rows.slice(-N);
 const last = win[win.length - 1];
@@ -203,6 +300,9 @@ console.log(fmt("#12 info (concepts)", last.substrate_self?.concepts, delta("sub
   arrow("substrate_self.concepts", "up"), `concept-db size — accumulated information`));
 console.log(fmt("#12 resource-eff", last.substrate_self?.llm_task_fraction, delta("substrate_self.llm_task_fraction"),
   arrow("substrate_self.llm_task_fraction", "down"), `LLM-task fraction (${last.substrate_self?.sampled_tasks ?? "·"} sampled) — LOW = efficient (most tasks cheap/deterministic)`));
+
+// ── detector shapes (live, first-hand) ───────────────────────────────────────
+await printDetectorSection();
 
 // ── scarcest DEC limiter (R_conv ~ λ₁ · ρ_sample · κ⁻¹) ──────────────────────
 console.log(`  ${"─".repeat(64)}`);
