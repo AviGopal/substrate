@@ -74,6 +74,7 @@ Bun.serve({
         const pointer = body?.impulse?.pointer ?? body?.impulse ?? body?.pointer ?? body
         // resolveViaHttp returns the peer's { content, metadata } (serveResolveHttp wraps
         // it that way). Pass it through verbatim so the caller's resolve parsing applies.
+        console.log('[fed-transport] egress/resolve -> ' + String((pointer as any)?.type ?? '?') + ' via ' + String(target).slice(-20))
         const res = await resolveViaHttp(vl, String(target), pointer)
         return Response.json(res ?? { error: 'empty libp2p resolve' }, { status: 200 })
       } catch (e) {
