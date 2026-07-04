@@ -117,6 +117,10 @@ export class VesselClient {
         endpoint: this.config.endpoint,
         shapes: this.config.shapes,
         protocol: this.config.protocol,
+        // libp2p transport advertisement (federation reachability) — advisory
+        // pass-through; discovery-vessel already accepts + echoes these fields.
+        libp2p_peer_id: this.config.libp2p_peer_id,
+        libp2p_multiaddr: this.config.libp2p_multiaddr,
         orgId: this.config.orgId,
         metadata: this.config.metadata,
         resolve_endpoint: this.config.resolve_endpoint,

@@ -44,8 +44,20 @@ export interface DiscoveryConfig {
   /** Heartbeat interval in milliseconds (default: 120000) */
   heartbeatIntervalMs?: number
 
-  /** Communication protocol (default: "http") */
-  protocol?: "http" | "grpc" | "ws" | "unix"
+  /** Communication protocol (default: "http"). "libp2p" = the vessel is
+   *  reachable over the libp2p overlay (peerId/multiaddr below) rather than
+   *  a plain http endpoint — the overlay is the general transport; http on
+   *  the loopback is its degenerate co-located case. */
+  protocol?: "http" | "grpc" | "ws" | "unix" | "libp2p"
+
+  /** Stable libp2p PeerId (Ed25519 identity seeded from the vessel id).
+   *  Present when the vessel is reachable over the libp2p overlay. */
+  libp2p_peer_id?: string
+
+  /** libp2p multiaddr(s) the vessel is reachable at — typically a
+   *  relay-circuit address. Advisory: flows through to discovery so callers
+   *  can pick the overlay transport from the registration. */
+  libp2p_multiaddr?: string[]
 
   /** Organization ID for multi-tenant isolation */
   orgId?: string
@@ -119,7 +131,11 @@ export interface VesselRegistration {
   version: string
   endpoint: string
   shapes: string[]
-  protocol?: "http" | "grpc" | "ws" | "unix"
+  protocol?: "http" | "grpc" | "ws" | "unix" | "libp2p"
+  /** libp2p transport advertisement (federation reachability) — present when
+   *  the vessel advertised a peerId/multiaddr at registration. */
+  libp2p_peer_id?: string
+  libp2p_multiaddr?: string[]
   orgId?: string
   metadata?: Record<string, unknown>
   status?: "healthy" | "degraded" | "unhealthy" | "unknown"
