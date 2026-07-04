@@ -121,6 +121,7 @@ STATEFUL_UI_VESSEL_SRC := $(REPO_ROOT)/repos/stateful-ui-vessel
 OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
 
 .PHONY: up ready doctor autonomy-status validate-build build build-obsidian run run-detach run-live run-live-obsidian migrate-state-to-volumes seed-live import-memory install-host-sync health health-live \
+        ensure-key-tool show-key whoami issue-key issue-jwt list-keys revoke-key \
         logs-all logs-activity-api logs-development-vessel \
         logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
         logs-goal-host-vessel logs-boredom-vessel logs-ribosome-vessel logs-concept-db \
@@ -386,6 +387,49 @@ migrate-state-to-volumes:
 seed-live:
 	docker exec $(LIVE_NAME) bash -c 'set -a; source /etc/substrate/env; set +a; bun /vessels/seed-identity.ts'
 	@echo "[seed-live] Identity seeded. Run: scripts/substrate/configure-local.sh"
+
+# ── Key / token surface ─────────────────────────────────────────────────────
+# Human-friendly wrappers around the in-container `substrate-key` tool
+# (identity-vessel is internal-only, so issuance must run inside the container).
+# On images that predate the baked tool, the script is copied in first.
+#
+#   make show-key                                  print the operator API key
+#   make issue-key NAME=my-peer [SCOPES=read,write] [EXPIRES_DAYS=30]
+#   make issue-jwt [ROLE=admin] [EXPIRES_SECONDS=900]
+#   make list-keys
+#   make revoke-key KEY_ID=key_xxx
+NAME ?=
+SCOPES ?= read,write
+EXPIRES_DAYS ?=
+ROLE ?= admin
+EXPIRES_SECONDS ?= 900
+KEY_ID ?=
+
+ensure-key-tool:
+	@docker exec $(LIVE_NAME) test -x /usr/local/bin/substrate-key 2>/dev/null || \
+	  { echo "[keys] baking substrate-key into running container (image predates it)"; \
+	    docker cp $(CURDIR)/substrate-key.sh $(LIVE_NAME):/usr/local/bin/substrate-key; \
+	    docker exec $(LIVE_NAME) chmod +x /usr/local/bin/substrate-key; }
+
+show-key: ensure-key-tool
+	@docker exec $(LIVE_NAME) substrate-key show
+
+whoami: ensure-key-tool
+	@docker exec $(LIVE_NAME) substrate-key whoami
+
+issue-key: ensure-key-tool
+	@test -n "$(NAME)" || { echo "usage: make issue-key NAME=<key-name> [SCOPES=read,write] [EXPIRES_DAYS=30]"; exit 1; }
+	@docker exec $(LIVE_NAME) substrate-key issue "$(NAME)" "$(SCOPES)" "$(EXPIRES_DAYS)"
+
+issue-jwt: ensure-key-tool
+	@docker exec $(LIVE_NAME) substrate-key jwt "$(ROLE)" "$(EXPIRES_SECONDS)"
+
+list-keys: ensure-key-tool
+	@docker exec $(LIVE_NAME) substrate-key list
+
+revoke-key: ensure-key-tool
+	@test -n "$(KEY_ID)" || { echo "usage: make revoke-key KEY_ID=key_xxx (find ids via make list-keys)"; exit 1; }
+	@docker exec $(LIVE_NAME) substrate-key revoke "$(KEY_ID)"
 
 # Render the host-side systemd unit templates (*.service.in) with the real repo
 # root and install them under ~/.config/systemd/user/, alongside the (path-free)

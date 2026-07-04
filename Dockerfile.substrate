@@ -226,6 +226,9 @@ COPY scripts/substrate/mirror-to-live.sh /usr/local/bin/mirror-to-live
 # in-container (and dispatchable via local-tools' shell resolver), no host
 # checkout involved. self-recovery-tick is image-baked for the same reason.
 COPY scripts/substrate/vessel-ctl.sh /usr/local/bin/vessel-ctl
+# Key/token issuance surface: humans get keys via `substrate-key issue <name>`
+# (identity-vessel is internal-only, so the tool lives in-container).
+COPY scripts/substrate/substrate-key.sh /usr/local/bin/substrate-key
 COPY scripts/substrate/render-unit.sh /usr/local/bin/render-unit
 COPY scripts/substrate/discovery-deregister.sh /usr/local/bin/discovery-deregister
 COPY scripts/substrate/self-recovery-tick.sh /usr/local/bin/self-recovery-tick

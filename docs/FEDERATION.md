@@ -118,6 +118,18 @@ endpoints at the hub and using a hub-issued key (`DISCOVERY_VESSEL_ENDPOINT`,
 `IDENTITY_VESSEL_URL`, `ACTIVITY_API_URL`, `METABOB_API_KEY`). Or run only compute:
 `ENABLED_ROLES=spoke`.
 
+**Getting the hub-issued key** is one command on the hub — no raw API calls:
+
+```bash
+# on the hub host
+make -C scripts/substrate issue-key NAME=spoke-<location>
+# → prints the key once; hand it to the spoke as METABOB_API_KEY
+```
+
+(`substrate-key issue` in-container does the same; `make list-keys` /
+`make revoke-key KEY_ID=...` manage the fleet's keys. See
+`docs/SUBSTRATE.md` § "Keys and tokens".)
+
 A vessel **behind NAT** (e.g. a host Obsidian plugin) that can't be dialed directly uses
 the **libp2p ingress sidecar** — the vessel stays plain HTTP, the sidecar carries libp2p:
 

@@ -106,6 +106,32 @@ secrets.env.sh  ──sourced by──▶  gen-env.sh  ──renders──▶  /
 
 `secrets.env.sh` is **safe to commit** — it declares *names and non-secret defaults only*, never real secret values (those come from the environment or the persisted file). `vessel-ctl.sh` sources the same file when installing a dynamic vessel, so a vessel's declared `secrets` are guaranteed present in `/etc/substrate/env` and persisted at install time.
 
+### Keys and tokens (the human surface)
+
+Humans never call identity-vessel directly — it is internal-only (no host port). The
+in-container tool `substrate-key` (baked next to `vessel-ctl`) is the issuance
+surface, wrapped by Makefile targets so the whole flow is one command with no
+credentials beyond a running substrate:
+
+```bash
+make -C scripts/substrate show-key                 # print the operator API key (what configure-local writes)
+make -C scripts/substrate whoami                   # operator identity: org, user, scopes
+make -C scripts/substrate issue-key NAME=my-peer   # mint a new API key (external peer / spoke / new vessel)
+make -C scripts/substrate issue-key NAME=ci-bot SCOPES=read EXPIRES_DAYS=30
+make -C scripts/substrate issue-jwt ROLE=admin     # mint a Bearer JWT (dashboard / admin endpoints)
+make -C scripts/substrate list-keys
+make -C scripts/substrate revoke-key KEY_ID=key_xxx
+```
+
+The full key is printed **once** and never stored (only its hash is persisted).
+Auth model: the operator's `METABOB_API_KEY` resolves the substrate org, an admin
+JWT is minted in-container via identity-vessel's `/v1/jwt/generate` (unauthenticated
+by design — the container boundary is the trust boundary), and that JWT authorizes
+the admin-only `/v1/keys/*` endpoints. On images that predate the baked tool the
+Makefile copies `scripts/substrate/substrate-key.sh` into the running container
+first. This is the supported way to obtain the hub-issued key a spoke or external
+peer needs (see `docs/FEDERATION.md`).
+
 ## Iteration loop
 
 When you change a vessel's source:

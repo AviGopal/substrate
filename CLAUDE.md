@@ -144,7 +144,7 @@ S3 has no acceptance gate. It is emergent and operator-measured by **active push
 - `workbench` 0.3.1 — trajectory editor, live execution overlay, weight-influence feedback, stagnation detection, oracle corpus wiring
 - `identity-vessel` 0.2.10 — HMAC API keys + JWT issuance (canonical auth resolver); package renamed `@metabob/identity-vessel` → `@avigopal/identity-vessel`
 - `discovery-vessel` 0.4.1 — vessel registry with resolver contracts and per-mutation auth
-- `development-vessel` (local only, not in Helm) — meta-vessel for substrate self-development. 19 shapes, 7 seed templates (including `harness-check-scenario`, `draft-gap-closing-activity`), noop resolver, failure-mode harness. Runs as a systemd unit inside the single-container substrate (Phase 26). See `repos/development-vessel/`.
+- `development-vessel` (local only, not in Helm) — meta-vessel for substrate self-development. ~100+ seed templates in `src/seed/index.ts` (detectors, audit/observer ticks, mitosis/scaffold/release chains, `harness-check-scenario`, `draft-gap-closing-activity`, …; the authoritative count is `SEED_TEMPLATES.length` — seeding is cold-start-only, so live templates evolve past the seeds), noop resolver, failure-mode harness. Runs as a systemd unit inside the single-container substrate (Phase 26). See `repos/development-vessel/`.
 
 **Recent stabilisation** (most-recent first):
 
