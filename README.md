@@ -60,13 +60,24 @@ Conscious one-off direct edits to vessel source are gated by a PreToolUse hook a
 
 Local development runs on a **single container** (`substrate-live`) that runs the vessel fleet as systemd units — no Kubernetes, no Helm, no Istio. Each vessel is reached on a host-mapped port (`18xxx → 8xxx`); a few vessels are internal-only.
 
-**Bootstrap:**
+**Bootstrap — one command:**
 
 ```bash
-make -C scripts/substrate run-live ANTHROPIC_API_KEY=...
-make -C scripts/substrate seed-live
-scripts/substrate/configure-local.sh
+make -C scripts/substrate up ANTHROPIC_API_KEY=...
 ```
+
+`up` builds the image if needed, starts the container, seeds identity + templates in-container, waits for readiness, points `~/.metabob/config.json` at the local substrate, and runs a doctor check. `OPENAI_API_KEY` works in place of Anthropic; at least one LLM provider key is required. Everything load-bearing happens inside the container at boot — the make target is a convenience wrapper. (The lower-level `run-live` / `seed-live` / `configure-local.sh` steps still exist for manual control.)
+
+**Keys and tokens.** identity-vessel is internal-only, so a human obtains or mints credentials through the Makefile — no raw API calls:
+
+```bash
+make -C scripts/substrate show-key                 # the operator API key
+make -C scripts/substrate issue-key NAME=my-peer   # mint a key (spoke / external peer / new vessel)
+make -C scripts/substrate list-keys                # list issued keys
+make -C scripts/substrate revoke-key KEY_ID=key_x  # revoke one
+```
+
+The full key is printed once and never stored. See [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) § *Keys and tokens*.
 
 **Iterate:**
 
@@ -97,13 +108,15 @@ Canary / production are **downstream** Kubernetes substrates (`activity.metabob.
 
 The substrate is cloneable and runnable by anyone in **three steps**:
 
-1. **Clone** — `git clone --recurse-submodules https://github.com/AviGopal/substrate`
-2. **Secrets** — set `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`); optionally a GitHub PAT (`SUBSTRATE_GIT_PAT`) for the substrate's self-push and a shared `FEDERATION_SIGNING_SECRET` for peer trust.
-3. **Configure inventory & start** — pick a subset with `ENABLED_ROLES` (`full` | `hub` | `spoke`) or `ENABLED_VESSELS=…`; optionally point vessels at your fork with `SUBSTRATE_REPO_OWNER=<your-org>`; then `make -C scripts/substrate build && make -C scripts/substrate run-live` — or `docker pull ghcr.io/avigopal/substrate:dev`.
+1. **Clone** — `git clone --recurse-submodules https://github.com/AviGopal/substrate` (submodules are mandatory — the image build copies each vessel's source from `repos/<vessel>`).
+2. **Secrets** — set `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`); optionally a GitHub PAT (`SUBSTRATE_GIT_PAT`) for the substrate's self-push and a shared `FEDERATION_SIGNING_SECRET` for peer trust. All other secrets (JWT signing, datastore password, the bootstrap API key) are generated on first boot and persisted to the workspace volume.
+3. **Start** — `make -C scripts/substrate up ANTHROPIC_API_KEY=...`. Optionally pick a subset first with `ENABLED_ROLES` (`full` | `hub` | `spoke`) or `ENABLED_VESSELS=…`, and point vessels at your fork with `SUBSTRATE_REPO_OWNER=<your-org>`.
 
-**Run any subset.** One image is a full local substrate, a minimal **hub** (control plane + store + relay), or a compute-only **spoke**. Selection is declarative — `scripts/substrate/vessels.inventory.json` + `apply-inventory.sh` (run at boot); the default keeps every unit.
+The host contract is a single `docker run` — one privileged container, one LLM-provider env var, and two named volumes (workspace + datastore). The Makefile is a convenience wrapper over exactly that.
 
-**Federate.** A hub on a public IP shares a namespace with spokes (they register with a hub-issued key → same `org_id`); vessels behind NAT join over the libp2p relay via a sidecar. Deploy a hub with `scripts/substrate/deploy-hub.sh`. Full guide: [`docs/FEDERATION.md`](docs/FEDERATION.md).
+**Run any subset.** One image is a full local substrate, a minimal **hub** (control plane + store + relay), or a compute-only **spoke**. Selection is declarative — `scripts/substrate/vessels.inventory.json` + `apply-inventory.sh` (run at boot); the default keeps every unit. A fixed set of core units (discovery, identity, activity-api, goal-host, LLM + local-tools resolvers, datastore, cache) is always kept and health-gated.
+
+**Federate.** A hub on a public IP shares a namespace with spokes: each spoke registers with a hub-issued key (`make issue-key NAME=… ` on the hub) and inherits the hub's `org_id`; vessels behind NAT join over the libp2p relay via a sidecar. Deploy a hub with `scripts/substrate/deploy-hub.sh`. Full guide: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 
 ## Keeping submodule pointers current
 
