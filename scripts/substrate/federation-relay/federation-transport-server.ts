@@ -10,6 +10,18 @@
 // contract; the proper libp2p_* contract fields are the operator-must-land follow-up).
 import { createVesselLibp2p, serveResolveHttp, resolveViaHttp, type VesselLibp2p } from '@avigopal/libp2p-federation-transport'
 
+// RESILIENCE: libp2p internals emit 'error' events on streams/sockets that have no
+// listener (e.g. a relay/peer dial TimeoutError surfacing through internal:streams/
+// destroy → emitError). Without these guards that becomes ERR_UNHANDLED_ERROR and the
+// whole vessel exits 1, crash-looping under self-recovery. A peer being unreachable
+// must degrade gracefully — log and continue, never throw into the event loop.
+process.on('uncaughtException', (err) => {
+  console.error('[fed-transport] uncaughtException (continuing):', (err as Error)?.message ?? String(err))
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('[fed-transport] unhandledRejection (continuing):', (reason as Error)?.message ?? String(reason))
+})
+
 const VESSEL_ID = process.env.FED_VESSEL_ID || 'federation-transport-vessel'
 const RELAY = process.env.RELAY_MULTIADDR || ''
 const DISCOVERY = process.env.DISCOVERY_URL || 'http://127.0.0.1:8100'
