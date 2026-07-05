@@ -37,6 +37,16 @@ STAGGER_SECONDS="${STAGGER_SECONDS:-8}"
 DEV_VESSEL="${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}"
 MITOSIS_LOCK=/workspace/mitosis-pending.json
 MITOSIS_LOCK_TTL_MIN="${MITOSIS_LOCK_TTL_MIN:-30}"
+# Durable authoring-in-flight markers written by the working plane
+# (patch_with_tools / feature_compose); pull-sync is a lifecycle actor and must
+# consume them before converging a vessel. Deferral is FRESHNESS-only: the
+# marker pid is the vessel server process (it outlives runs), so pid-liveness
+# must not extend a deferral — a leaked marker would defer forever. A dead pid
+# does short-circuit (vessel process gone = run definitely not in flight; the
+# killed-run detector owns that marker).
+AUTHORING_MARKER_DIR="${AUTHORING_MARKER_DIR:-/workspace/authoring-inflight}"
+AUTHORING_MARKER_TTL_MIN="${AUTHORING_MARKER_TTL_MIN:-40}"
+DEFERRAL_LOG=/workspace/pull-sync-deferrals.jsonl
 
 mkdir -p "$MARKER_DIR" "$LAST_GOOD_DIR"
 log() { echo "[pull-sync $(date -Iseconds)] $*"; }
@@ -104,6 +114,29 @@ for d in "$CLONE_DIR"/*/; do
   LAST="$(cat "$MARKER" 2>/dev/null || true)"
   if [ "$HEAD" = "$LAST" ]; then continue; fi
   [ -d "$RUNTIME_DIR/$v" ] || { echo "$HEAD" > "$MARKER"; continue; }  # not part of this runtime
+
+  # 2b. Drain-awareness: never converge a vessel whose working plane shows a
+  # LIVE authoring run. Marker is live when its mtime is fresh (< TTL) OR its
+  # recorded pid still exists; defer mirror+restart to the next tick. A marker
+  # that is stale AND pid-dead is a KILLED run — ignored here, the killed-run
+  # detector (self_interference_scan) owns that case.
+  DEFER_MARKER=""
+  for mk in "$AUTHORING_MARKER_DIR"/*-"$v".json; do
+    [ -f "$mk" ] || continue
+    [ -n "$(find "$mk" -mmin "-$AUTHORING_MARKER_TTL_MIN" 2>/dev/null)" ] || continue
+    MPID="$(grep -o '"pid":[[:space:]]*[0-9][0-9]*' "$mk" 2>/dev/null | grep -o '[0-9]*$' | head -1)"
+    if [ -n "$MPID" ] && ! kill -0 "$MPID" 2>/dev/null; then
+      continue  # vessel process dead: not in flight; killed-run detector owns this marker
+    fi
+    DEFER_MARKER="$mk"; break
+  done
+  if [ -n "$DEFER_MARKER" ]; then
+    log "$v: authoring run in flight ($DEFER_MARKER) — deferring convergence to next tick"
+    printf '{"deferred_at":"%s","vessel":"%s","marker":"%s","head":"%s"}\n' \
+      "$(date -Iseconds)" "$v" "$DEFER_MARKER" "$HEAD" >> "$DEFERRAL_LOG" 2>/dev/null || true
+    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-deferred-$v\",\"category\":\"convergence_deferral\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync deferred converging $v to ${HEAD:0:10}: authoring marker $(basename "$DEFER_MARKER") is live (fresh or pid alive); retrying next tick instead of killing the in-flight run\",\"status\":\"open\"}}}}"
+    skipped=$((skipped+1)); continue
+  fi
 
   PREV_GOOD="$(cat "$LAST_GOOD_DIR/$v" 2>/dev/null || true)"
   log "$v: ${LAST:0:10} -> ${HEAD:0:10} — mirroring into $RUNTIME_DIR"
