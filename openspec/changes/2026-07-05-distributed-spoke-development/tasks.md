@@ -6,9 +6,10 @@
 
 ## PROPAGATION + OPERATING MODEL (hub = pull-only, don't develop on the hub)
 - [x] Force-propagated the stranded substrate change to origin/dev (`development-vessel` `e836774`) — replayed onto the REAL tip, not the hub's stale base (the hub committed `5381b04` on stale `0114038` because its in-container fetch failed). Content byte-identical + typecheck-clean; substrate-attributed.
-- [ ] **Root cause: the hub container's GitHub credential is INVALID** — even `git fetch` fails ("Invalid username or token; password auth not supported"). This blocks BOTH pull (stuck on stale `0114038`) and push. Provision a valid credential per docker-run contract: for a **pull-only hub, a READ deploy key / read token is sufficient** (lower-risk than write). Operator task — do not fabricate/hunt credentials.
-- [ ] **Policy: the hub does not develop; it converges by pulling `origin/dev` (or by remote cutover).** Development happens on dev-capable spokes → lands on origin/dev → hub pull-cutover converges. Requires the read credential above + the pull-from-upstream cutover mode below.
-- [ ] Reconcile the hub's clone drift once it can fetch: a valid `git fetch` will move local `origin/dev` from stale `0114038` to `e836774` and unstick future convergence (runtime already has the change content).
+- [x] **Credential is VALID (operator-confirmed); the failure was git wiring.** Plain `git fetch` in the container has no credential helper, but the substrate's own `git-push-setup.service` injects the valid token. Re-ran it → the dev-vessel clone pulled origin/dev (stale `0114038`/`5381b04` → HEAD+origin/dev = `e836774`). Hub CAN pull from dev via its own mechanism. Clone drift reconciled.
+- [x] **Policy set: the hub does not develop; it converges by pulling `origin/dev`.** Runtime already carries the change (IIFE present).
+- [ ] **Build the ongoing pull-cutover loop.** `git-push-setup` is boot-only (no timer). Add a periodic pull-cutover: run the setup fetch → reset clone to origin/dev → copy to `/vessels/<v>` → restart unit → `interface_deploy_reach_check`. This is the pull-from-upstream mode; it also converges the runtime's remaining base drift (`0114038..ad8d843`).
+- [ ] Minor: give ad-hoc container `git` a credential helper so plain `git fetch` works too (optional; setup-git-push path already works).
 
 ## Placement-by-data-locality invariant (substrate-authorable once unblocked)
 - [x] Extend `advertised_shape_coverage_scan` for locations advertising `feature_compose` (substrate-authored via feature_compose, commit `5381b04`, live in runtime): emits `feature_compose_locations_missing_local_toolbelt` with location-stateful (`shellResult`, `fs_*`, `patch_with_tools`) vs location-independent (`llm_completion`) classes.
