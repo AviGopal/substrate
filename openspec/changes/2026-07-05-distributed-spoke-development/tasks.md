@@ -4,9 +4,9 @@
 - [ ] Restore `local-tools-vessel` on the hub (`138.197.116.56`) so `shellResult` has a live producer co-located with `feature_compose`. Verify `vesselCapability shellResult` → 1 producer and an edit-intent dispatch passes endpoint discovery.
 - [ ] Re-run the 2026-07-05 four-capability tutoring set once unblocked (re-scope-on-repeated-failure, bind-lessons path gate, blast-radius blocked_count, audit-the-gates read case) and evaluate whether the substrate decomposes over-bundled edit goals unaided.
 
-## Spoke self-sufficiency invariant (substrate-authorable once unblocked)
-- [ ] Extend `advertised_shape_coverage_scan` consumer set: a spoke advertising `feature_compose` is checked for the self-edit bundle shapes (`shellResult`, `fs_read`, `fs_write`, `fs_edit`, `patch_with_tools`, `llm_completion`); a missing producer files a `substrateGap` naming the shape + spoke.
-- [ ] Document the self-edit spoke bundle (`goal-host + dev-vessel + local-tools + reachable llm-resolver`) as the composition a developing spoke enables.
+## Placement-by-data-locality invariant (substrate-authorable once unblocked)
+- [ ] Extend `advertised_shape_coverage_scan` for locations advertising `feature_compose`, with the class-correct test: **location-stateful** shapes (`shellResult`, `fs_read`, `fs_write`, `fs_edit`, `patch_with_tools`) need a **local** producer; **location-independent** shapes (`llm_completion`) need only a **reachable** one. File a `substrateGap` naming the shape + location on violation. Must NOT demand full replication — a location not advertising `feature_compose` is not checked for the tool belt.
+- [ ] Document the self-edit bundle as data-locality, not self-sufficiency: co-locate `local-tools` with `feature_compose` (both on one checkout); `llm_completion` reachable; the trace store / Thompson / oracle stay the hub singleton (never duplicated onto a location).
 
 ## Cross-location cutover
 - [ ] Add a pull-from-upstream convergence mode: a running location pulls `origin/dev` + restarts its own unit on a deploy signal, independent of a co-located editor (generalizes the existing best-effort `fetch origin/dev` in vessel-mitosis-cutover.ts).

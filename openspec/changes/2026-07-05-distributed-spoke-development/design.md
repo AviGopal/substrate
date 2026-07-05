@@ -26,7 +26,7 @@ Result: every edit-intent dispatch dies with `endpoint discovery failed (llm=tru
 
 So dev-vessel serving `shellResult` in its native envelope would still fail feature_compose's parser, and its fs resolvers already don't match. The correct, lowest-risk unblock is to **run local-tools-vessel** — the canonical flat shell+fs surface feature_compose was written against — co-located with feature_compose.
 
-**The self-edit spoke bundle:** `goal-host` (dispatch) + `dev-vessel` (feature_compose + gap loop) + `local-tools` (tool belt) + a reachable `llm_completion`. A spoke advertising `feature_compose` without this bundle is an incomplete composition.
+**The self-edit spoke bundle — and why these, not all:** `goal-host` (dispatch) + `dev-vessel` (feature_compose + gap loop) + `local-tools` **co-located** — because `local-tools` is *location-stateful*: it reads and edits the very repo checkout being developed, so it can only be the tool belt for a `feature_compose` sharing that checkout. `llm_completion` is *location-independent* (a pure function of the prompt), so it need only be **reachable via discovery**, not local — a development location does not carry its own llm-resolver. The trace store / Thompson / oracle are the *shared singleton* on the hub — never duplicated onto a spoke. So "self-sufficient" is the wrong test; the test is data locality: co-locate what edits local state, resolve the rest.
 
 ## Deploy / cutover deadlock
 
@@ -38,7 +38,11 @@ Pull-from-upstream mode closes both: the running location owns a "pull `origin/d
 
 ## Invariant, expressed as detection (no manifest)
 
-`advertised_shape_coverage_scan` already enumerates consumed shapes with no live producer on a machine. Extend its consumer set so that a spoke advertising `feature_compose` is checked for the self-edit bundle's shapes (`shellResult`, `fs_*`, `patch_with_tools`, `llm_completion`). A violation files a `substrateGap` naming the missing producer and the spoke — the same class that already drives the gap→feature loop. Differences between spokes stay expressed as advertised-shape differences a detector reads, never a per-host manifest an operator keeps.
+`advertised_shape_coverage_scan` already enumerates consumed shapes with no live producer on a machine. Extend its consumer set so that a location advertising `feature_compose` is checked against the two shape classes with the *right* test:
+- **location-stateful** (`shellResult`, `fs_*`, `patch_with_tools`) must have a **local** producer — a reachable-but-remote one is wrong, since it would edit the wrong machine's files. Missing → file a `substrateGap`.
+- **location-independent** (`llm_completion`) must be **reachable** (local or via discovery/federation) — a remote one is fine. Unreachable → file a gap.
+
+A violation names the missing producer and the location — the same class that drives the gap→feature loop. Placement differences between locations stay expressed as advertised-shape differences a detector reads, never a per-host manifest an operator keeps. The detector must NOT demand full replication: a location that does not advertise `feature_compose` is not development-capable and is not expected to carry the tool belt at all.
 
 ## Boundaries
 
