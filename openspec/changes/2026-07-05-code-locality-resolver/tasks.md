@@ -15,11 +15,20 @@ and every fallback ships with the detector that would have caught it.
       ias-executor-ts `134ddf0`)
 - [ ] 1.2b cleanup: `ad132ac` also left a stray copy of the three fields on
       `ActivityTask` (template type) in ontology.ts — remove
-- [ ] 1.3 activity-api: `materialsConsulted` accepted by
-      `ExecutedTaskSchema.outputState` (zod strips unknown keys otherwise)
-      — compose dispatched (gap `code-locality-slice1-schema-materials-consulted`)
-- [ ] 1.4 Verify: dispatch one edit-intent goal; its durable trace carries
-      non-empty consulted + changed sets (inspect via execution_trace)
+- [x] 1.3 activity-api: `materialsConsulted` accepted by
+      `ExecutedTaskSchema.outputState` (substrate-authored: activity-api
+      `99fccf6` — landed via the gap-retry loop after the original goal-host
+      dispatch was interrupted by a cutover restart; the later direct compose
+      correctly reported empty_diff)
+- [ ] 1.4 Verify: a fresh ENGINE-run trace (post-cutover, after 2026-07-05
+      ~20:07Z) carries non-empty `materialsConsulted`/`filesModified`.
+      Notes from first attempts: (a) goals naming a `repos/...` path route to
+      feature_compose (no engine trace); (b) plain read goals reach via
+      walk SATISFIERS (direct vessel resolve — also no engine trace); so the
+      natural verification vehicle is the autonomous ticks
+      (mitosis-tick / draft-gap-closing), which run through the engine. No
+      traces have landed since 18:45Z (pre-dating this work) — re-check when
+      the loop resumes landing traces.
 
 ## 2. Consolidation tick (mining)
 - [ ] 2.1 activity-api: `locality_associations` table (org-scoped PERMISSIONS)
