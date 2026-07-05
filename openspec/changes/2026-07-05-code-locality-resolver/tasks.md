@@ -6,13 +6,18 @@ feature_compose). Operator fallback only on structurally intractable blockers,
 and every fallback ships with the detector that would have caught it.
 
 ## 1. Attribution repair (traces record consulted + changed material)
-- [ ] 1.1 ias-executor-ts trace sink: populate `outputState.filesModified` /
-      `filesCreated` from applied compose ops (stop hardcoding `[]`)
-      (`src/adapters/activity-api-trace-sink.ts`)
-- [ ] 1.2 ias-executor-ts trace sink: emit `outputState.materialsConsulted`
-      (locator strings, `file:<path>`) hoisted from read-resolution outputs
-- [ ] 1.3 activity-api: additive migration + schema for `materialsConsulted`
-      on executed tasks (null-safe for legacy traces)
+- [x] 1.1 engine derives per-task `filesModified`/`filesCreated`/`materialsConsulted`
+      from resolved output impulse pointers at both taskRecords.push sites
+      (substrate-authored: ias-executor-ts `ad132ac` + `811e02a`; fields on
+      `ExecutionTaskRecord` in `ed96720`)
+- [x] 1.2 trace sink forwards per-task attribution + `materialsConsulted` into
+      the durable trace body, replacing hardcoded `[]` (substrate-authored:
+      ias-executor-ts `134ddf0`)
+- [ ] 1.2b cleanup: `ad132ac` also left a stray copy of the three fields on
+      `ActivityTask` (template type) in ontology.ts — remove
+- [ ] 1.3 activity-api: `materialsConsulted` accepted by
+      `ExecutedTaskSchema.outputState` (zod strips unknown keys otherwise)
+      — compose dispatched (gap `code-locality-slice1-schema-materials-consulted`)
 - [ ] 1.4 Verify: dispatch one edit-intent goal; its durable trace carries
       non-empty consulted + changed sets (inspect via execution_trace)
 
