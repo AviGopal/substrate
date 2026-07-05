@@ -36,18 +36,78 @@ const STALE_MIN = Number(process.env.STALE_MIN ?? 45); // collector runs every 2
 const DEEP = process.env.AUTONOMY_DEEP === "1";
 
 // ── shape resolution (the system's own view) ────────────────────────────────
+// DISCOVERY-FIRST (2026-07-05): each shape is routed to whichever vessel the
+// discovery registry says PRODUCES it (vesselCapability → resolve_endpoint),
+// instead of assuming development-vessel at a hardcoded port. The static
+// candidates below remain only as the fail-soft fallback when discovery is
+// dark — the view must never break just because routing is degraded.
 const DEV_VESSEL_CANDIDATES = [
   process.env.DEV_VESSEL_ENDPOINT,
   "http://localhost:18090",   // host-mapped port (how `make autonomy-status` runs)
   "http://127.0.0.1:8090",    // in-container fallback
 ].filter(Boolean) as string[];
 
+const DISCOVERY_CANDIDATES = [
+  process.env.DISCOVERY_ENDPOINT,
+  "http://localhost:18100",   // host-mapped
+  "http://127.0.0.1:8100",    // in-container
+].filter(Boolean) as string[];
+
+// Discovery mutations/queries require an API key; reuse the operator's key
+// (env first, then ~/.metabob/config.json) — read-only usage.
+const API_KEY = process.env.METABOB_API_KEY || await (async () => {
+  try {
+    const cfg = JSON.parse(await Bun.file(`${process.env.HOME}/.metabob/config.json`).text());
+    return cfg?.metabob?.apiKey ?? "";
+  } catch { return ""; }
+})();
+
+// Registered endpoints advertise in-container ports (e.g. localhost:8090); when
+// this script runs on the host those are reachable via the 8xxx→18xxx map. Try
+// both — whichever answers first wins.
+function hostRemap(ep: string): string | null {
+  const m = ep.match(/^(https?:\/\/)(localhost|127\.0\.0\.1):8(\d{3})(\/.*)?$/);
+  return m ? `${m[1]}${m[2]}:18${m[3]}${m[4] ?? ""}` : null;
+}
+
+const shapeEndpointCache = new Map<string, string[]>();
+async function discoverEndpoints(shape: string): Promise<string[]> {
+  const hit = shapeEndpointCache.get(shape);
+  if (hit) return hit;
+  for (const disc of DISCOVERY_CANDIDATES) {
+    try {
+      const res = await fetch(`${disc}/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+        body: JSON.stringify({ pointer: { type: "vesselCapability", shape } }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) continue;
+      const j = (await res.json()) as any;
+      const vessels: any[] = j?.content?.vessels ?? [];
+      if (!vessels.length) break; // registry answered: no producer — fall back, don't retry other discovery eps
+      const eps: string[] = [];
+      for (const v of vessels) {
+        if (!v?.endpoint) continue;
+        eps.push(v.endpoint);
+        const remapped = hostRemap(v.endpoint);
+        if (remapped) eps.push(remapped);
+      }
+      if (eps.length) { shapeEndpointCache.set(shape, eps); return eps; }
+    } catch { /* try next discovery endpoint */ }
+  }
+  return [];
+}
+
 async function resolveShape(type: string, extra: Record<string, unknown> = {}, timeoutMs = 20000): Promise<any | null> {
-  for (const ep of DEV_VESSEL_CANDIDATES) {
+  // discovery-routed producers first, static dev-vessel candidates as fallback
+  const discovered = await discoverEndpoints(type);
+  const candidates = [...new Set([...discovered, ...DEV_VESSEL_CANDIDATES])];
+  for (const ep of candidates) {
     try {
       const res = await fetch(`${ep}/v2/impulses/resolve`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
         body: JSON.stringify({ impulse: { type, ...extra } }),
         signal: AbortSignal.timeout(timeoutMs),
       });
