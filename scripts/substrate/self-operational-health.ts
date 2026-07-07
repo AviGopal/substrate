@@ -284,6 +284,49 @@ if (!existsSync(WORKSPACE_ROOT)) {
   }
 }
 
+// ── Check 7: trace-spool drainage ──────────────────────────────────────────
+// goal-host's TranslatingTraceSink spools traces that failed live delivery to
+// /workspace/trace-spool and replays them every 60s (delete on 2xx, delete on
+// deterministic 4xx, keep on 5xx/transport). A spool file older than a few
+// replay cycles therefore means delivery is PERMANENTLY failing for that trace
+// — the observed instance (2026-07-07): the hub store 500'd duplicate
+// execution_ids ("already contains" on idx_activity_executions_execution_id),
+// the sink classified 5xx as retryable, and 43 already-delivered traces
+// replayed 4,200+ times/day with no detector aware. Stale spool = either a
+// dead/misbehaving trace store or a permanent rejection misclassified as
+// transient; both mean the at-least-once delivery contract is silently broken.
+// DETECTION ONLY — the gap escalates; draining/fixing is a corrective activity.
+const SPOOL_MAX_MIN = Number(process.env.SPOOL_MAX_MIN ?? 30);
+const SPOOL_DIR = process.env.IAS_TRACE_SPOOL_DIR || join(WORKSPACE_ROOT, "trace-spool");
+try {
+  const spoolFiles = readdirSync(SPOOL_DIR).filter((f) => f.endsWith(".json"));
+  let oldestAgeMin = 0;
+  let staleCount = 0;
+  const staleSamples: string[] = [];
+  let sampleEndpoint = "";
+  for (const name of spoolFiles) {
+    const file = join(SPOOL_DIR, name);
+    try {
+      const ageMin = (now - statSync(file).mtimeMs) / 60000;
+      if (ageMin <= SPOOL_MAX_MIN) continue;
+      staleCount++;
+      if (ageMin > oldestAgeMin) oldestAgeMin = ageMin;
+      if (staleSamples.length < 5) {
+        try {
+          const rec = JSON.parse(readFileSync(file, "utf8")) as { trace_id?: string; endpoint?: string };
+          staleSamples.push(rec.trace_id ?? name);
+          if (!sampleEndpoint && rec.endpoint) sampleEndpoint = rec.endpoint;
+        } catch { staleSamples.push(name); }
+      }
+    } catch { /* file drained between readdir and stat — fine */ }
+  }
+  if (staleCount > 0) {
+    flag("trace_spool_stale", "HIGH",
+      `${staleCount} trace-spool file(s) older than ${SPOOL_MAX_MIN}m (oldest ${oldestAgeMin.toFixed(0)}m) in ${SPOOL_DIR}${sampleEndpoint ? `, target store ${sampleEndpoint}` : ""} → the 60s replay loop cannot deliver them, so trace forwarding is permanently failing for these executions (dead store, schema rejection, or a permanent 5xx like a duplicate-key rejection misclassified as retryable). Sample execution_ids: ${staleSamples.join(", ")}. Every replay cycle re-POSTs doomed requests against the store until root-caused.`,
+      "trace_spool:stale", { spool_dir: SPOOL_DIR, stale_count: staleCount, oldest_age_min: Math.round(oldestAgeMin), sample_trace_ids: staleSamples, endpoint: sampleEndpoint || undefined });
+  }
+} catch { /* spool dir absent = nothing ever spooled = healthy */ }
+
 // ── Report ─────────────────────────────────────────────────────────────────
 const high = findings.filter((f) => f.severity === "HIGH").length;
 console.log(`[self-operational-health] DONE — ${findings.length} finding(s) (${high} HIGH). emit_gaps=${EMIT}`);
