@@ -9,9 +9,28 @@
  * backward-chaining model) reads. Without this the edge table is empty (or, after
  * a one-shot backfill, drifts stale as new compositions accrue).
  *
- * This is the ONGOING reconciler: it re-derives the full edge set from the trace
- * store and UPSERTs it (idempotent, deterministic ids). Runs as a oneshot systemd
- * unit on a timer (see units/composition-edge-reconcile.{service,timer}).
+ * INCREMENTAL BY DEFAULT (2026-07-06). The original reconciler re-derived the
+ * full edge set from ALL traces every run — three keyset passes over the whole
+ * trace table (223k+ rows) plus a full pass over execution_trace_content, every
+ * 30 minutes. Under load this was the single largest source of SurrealDB
+ * saturation (all worker threads pinned, 20s+ queue delay on trivial queries,
+ * cascading auth timeouts). Now each run processes only traces newer than a
+ * persisted watermark (reconcile_state:`composition-edge`), fetches the few
+ * out-of-batch predecessor executions by indexed execution_id, and ADDS deltas
+ * onto the existing edge rows. Because a child/consumer always executes after
+ * its parent/producer, processing only new traces as children/consumers is
+ * complete — no edge is ever sourced from an old-child/new-parent pair.
+ *
+ * Exactness: the watermark is set to run-start minus a 10-minute insertion-lag
+ * overlap, and the execution_ids already processed inside that overlap are kept
+ * in the state record so the next run skips them (no double counting). Traces
+ * that land with >10min lag are picked up by the periodic FULL rebuild, which
+ * recomputes absolute counts from scratch (self-healing): forced with
+ * RECONCILE_FULL=1, and automatic when no watermark exists or the last full
+ * rebuild is older than FULL_EVERY_MS (7 days).
+ *
+ * Runs as a oneshot systemd unit on a timer (see
+ * units/composition-edge-reconcile.{service,timer}).
  *
  * Reads SURREAL_PASS / SURREALDB_* from /etc/substrate/env (EnvironmentFile).
  */
@@ -113,69 +132,146 @@ async function sql(q: string): Promise<any[]> {
 }
 
 const PAGE = 5000;
+const CHUNK = 200; // batch size for indexed execution_id INSIDE [...] lookups
+const OVERLAP_MS = 10 * 60 * 1000;        // insertion-lag window reprocessed (deduped) next run
+const FULL_EVERY_MS = 7 * 24 * 3600 * 1000; // self-healing full rebuild cadence
+const STATE_RID = "reconcile_state:`composition-edge`";
 
-// 1) execution_id -> activity_id for ALL traces.
-// ORDER BY id is REQUIRED: SurrealDB LIMIT/START over an UNORDERED select returns
-// storage-order rows that shift as the table grows, so deep pagination over a large
-// (165k+ row) table silently SKIPS rows — disproportionately the most RECENT ones.
-// Without it, recent parent traces were missing from idToAct, so recent children
-// (e.g. a just-run successful composite) orphaned and their edges were DROPPED — the
-// real source of the ~33% orphan rate AND why a SUCCESSFUL organic composition never
-// reached the topology. Ordering by the indexed primary key makes paging complete +
-// deterministic so the topology learns from recent successes/failures. (2026-06-19)
-// KEYSET pagination (WHERE id > lastId): a forward range-scan on the indexed primary
-// key. Unlike LIMIT/START on an UNORDERED select — which returns shifting storage-order
-// rows and silently SKIPS rows (disproportionately the most RECENT) as the 165k+ row
-// table grows — keyset is complete + deterministic. (A plain `ORDER BY id` with START
-// instead tries to full-sort the whole table per page and times out the /sql HTTP call.)
-// This is the real fix for the ~33% orphan rate: recent parent traces are no longer
-// missed, so recent children (e.g. a just-run SUCCESSFUL composite) keep their edges
-// and the topology learns from recent successes/failures. (2026-06-19)
-const idToAct = new Map<string, string>();
-let lastId = "";
-for (;;) {
-  // No ORDER BY: records are stored keyed by id, so a scan (and a `WHERE id > X` range
-  // scan) already returns rows in id order — and an explicit `ORDER BY id` instead
-  // full-sorts the 165k-row table per page and times out the /sql call. Keyset on the
-  // id range is the fast + complete pattern here.
-  const where = lastId ? `WHERE id > ${lastId}` : "";
-  const [rows] = await sql(`SELECT id, execution_id, activity_id FROM activity_execution_traces ${where} LIMIT ${PAGE};`);
-  if (!rows || rows.length === 0) break;
-  for (const r of rows) { if (r.execution_id && r.activity_id) idToAct.set(r.execution_id, r.activity_id); lastId = r.id; }
-  if (rows.length < PAGE) break;
+type ShapeRec = {
+  activity_id?: string;
+  input_impulse_shapes: string[];
+  output_impulse_shapes: string[];
+  parent_execution_id?: string;
+  composition_chain: string[];
+  success: boolean;
+};
+
+function toShapeRec(r: any): ShapeRec {
+  return {
+    activity_id: r.activity_id,
+    input_impulse_shapes: Array.isArray(r.input_impulse_shapes) ? r.input_impulse_shapes : [],
+    output_impulse_shapes: Array.isArray(r.output_impulse_shapes) ? r.output_impulse_shapes : [],
+    parent_execution_id: r.parent_execution_id && r.parent_execution_id !== "NONE" ? r.parent_execution_id : undefined,
+    composition_chain: Array.isArray(r.composition_chain) ? r.composition_chain : [],
+    success: r.success === true,
+  };
 }
 
-// 2) aggregate parent_activity_id -> child_activity_id edges from children.
-const edges = new Map<string, { count: number; success: number }>();
-let lastChildId = "", children = 0, orphan = 0, selfLoop = 0;
-for (;;) {
-  const idGuard = lastChildId ? `AND id > ${lastChildId}` : "";
-  const [rows] = await sql(`SELECT id, activity_id, parent_execution_id, success FROM activity_execution_traces WHERE parent_execution_id != NONE ${idGuard} LIMIT ${PAGE};`);
-  if (!rows || rows.length === 0) break;
-  for (const r of rows) {
-    lastChildId = r.id;
-    children++;
-    const childAct = r.activity_id;
-    const parentAct = idToAct.get(r.parent_execution_id);
-    if (!childAct || !parentAct) { orphan++; continue; }
-    if (parentAct === childAct) { selfLoop++; continue; }
-    const key = parentAct + " " + childAct;
-    const e = edges.get(key) ?? { count: 0, success: 0 };
-    e.count++; if (r.success === true) e.success++;
-    edges.set(key, e);
+// ---- mode selection: incremental (watermark) vs full rebuild --------------------------
+const runStartMs = Date.now();
+const [stateRows] = await sql(`SELECT watermark, recent_ids, last_full_at FROM ${STATE_RID};`);
+const state: { watermark?: string; recent_ids?: string[]; last_full_at?: string } =
+  (Array.isArray(stateRows) && stateRows[0]) || {};
+const lastFullMs = state.last_full_at ? Date.parse(state.last_full_at) : NaN;
+const fullMode =
+  process.env.RECONCILE_FULL === "1" ||
+  !state.watermark ||
+  !Number.isFinite(lastFullMs) ||
+  runStartMs - lastFullMs > FULL_EVERY_MS;
+const alreadyProcessed = new Set(fullMode ? [] : state.recent_ids ?? []);
+console.error(`[edge-reconcile] mode=${fullMode ? "full" : "incremental"} watermark=${state.watermark ?? "-"} recent_ids=${alreadyProcessed.size}`);
+
+const TRACE_FIELDS = "id, execution_id, activity_id, parent_execution_id, composition_chain, input_impulse_shapes, output_impulse_shapes, success, executed_at";
+
+// ---- 1) load the trace batch -----------------------------------------------------------
+// FULL: keyset over the whole table on the primary key. No ORDER BY: records are stored
+// keyed by id, so a `WHERE id > X` range scan already returns rows in id order — an
+// explicit `ORDER BY id` full-sorts the table per page and times out the /sql call.
+// LIMIT/START over an UNORDERED select is worse still: storage-order rows shift as the
+// table grows and deep pagination silently SKIPS rows, disproportionately the most
+// RECENT — the original source of the ~33% orphan rate. (2026-06-19)
+//
+// INCREMENTAL: index range scan on executed_at (idx_activity_execution_traces_executed_at,
+// verified Iterate Index via EXPLAIN), keyset-advanced on executed_at itself since the
+// index returns rows in executed_at order. Ties at a page boundary are handled by the
+// run-local `seenRowIds` set plus a `>=` cursor; the (impossible in practice) case of a
+// full page sharing one timestamp bumps the cursor by 1ms rather than looping forever.
+const batch: Array<{ execution_id: string; rec: ShapeRec; executed_at?: string }> = [];
+const execShapes = new Map<string, ShapeRec>(); // every execution this run can resolve lookups against
+if (fullMode) {
+  let lastId = "";
+  for (;;) {
+    const where = lastId ? `WHERE id > ${lastId}` : "";
+    const [rows] = await sql(`SELECT ${TRACE_FIELDS} FROM activity_execution_traces ${where} LIMIT ${PAGE};`);
+    if (!rows || rows.length === 0) break;
+    for (const r of rows) {
+      lastId = r.id;
+      if (!r.execution_id) continue;
+      const rec = toShapeRec(r);
+      execShapes.set(r.execution_id, rec);
+      batch.push({ execution_id: r.execution_id, rec, executed_at: r.executed_at });
+    }
+    if (rows.length < PAGE) break;
   }
-  if (rows.length < PAGE) break;
+} else {
+  const seenRowIds = new Set<string>();
+  let cursor = state.watermark as string;
+  for (;;) {
+    const [rows] = await sql(`SELECT ${TRACE_FIELDS} FROM activity_execution_traces WHERE executed_at >= type::datetime(${JSON.stringify(cursor)}) LIMIT ${PAGE};`);
+    if (!rows || rows.length === 0) break;
+    let progressed = false;
+    let maxSeen = cursor;
+    for (const r of rows) {
+      if (r.executed_at && r.executed_at > maxSeen) maxSeen = r.executed_at;
+      if (seenRowIds.has(r.id)) continue;
+      seenRowIds.add(r.id);
+      progressed = true;
+      if (!r.execution_id || alreadyProcessed.has(r.execution_id)) continue;
+      const rec = toShapeRec(r);
+      execShapes.set(r.execution_id, rec);
+      batch.push({ execution_id: r.execution_id, rec, executed_at: r.executed_at });
+    }
+    if (rows.length < PAGE) break;
+    cursor = progressed || maxSeen > cursor ? maxSeen : new Date(Date.parse(cursor) + 1).toISOString();
+  }
 }
 
-// 2b) GENUINE producer->consumer edges from SHAPE-FLOW (C7).
+// ---- 1b) resolve out-of-batch predecessors (incremental only in practice) -------------
+// A child/consumer references its parent/producer by execution_id; in incremental mode
+// that predecessor is usually OLDER than the watermark. Fetch exactly those executions
+// via the indexed execution_id (EXPLAIN: Iterate Index union) in CHUNK-sized batches.
+{
+  const needed = new Set<string>();
+  for (const { execution_id, rec } of batch) {
+    if (rec.parent_execution_id && !execShapes.has(rec.parent_execution_id)) needed.add(rec.parent_execution_id);
+    const chain = rec.composition_chain.filter((c) => c && c !== execution_id);
+    const tail = chain[chain.length - 1];
+    if (tail && !execShapes.has(tail)) needed.add(tail);
+  }
+  const ids = [...needed];
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const arr = JSON.stringify(ids.slice(i, i + CHUNK));
+    const [rows] = await sql(`SELECT ${TRACE_FIELDS} FROM activity_execution_traces WHERE execution_id INSIDE ${arr};`);
+    for (const r of rows ?? []) { if (r.execution_id) execShapes.set(r.execution_id, toShapeRec(r)); }
+  }
+}
+
+// ---- 2) parent-nesting edges from the batch's children ---------------------------------
+// (dispatch-nesting: wrapper -> child star spokes; genuine flow comes from §2b)
+const edges = new Map<string, { count: number; success: number }>();
+let children = 0, orphan = 0, selfLoop = 0;
+for (const { rec } of batch) {
+  if (!rec.parent_execution_id) continue;
+  children++;
+  const childAct = rec.activity_id;
+  const parentAct = execShapes.get(rec.parent_execution_id)?.activity_id;
+  if (!childAct || !parentAct) { orphan++; continue; }
+  if (parentAct === childAct) { selfLoop++; continue; }
+  const key = parentAct + " " + childAct;
+  const e = edges.get(key) ?? { count: 0, success: 0 };
+  e.count++; if (rec.success) e.success++;
+  edges.set(key, e);
+}
+
+// ---- 2b) GENUINE producer->consumer edges from SHAPE-FLOW (C7) --------------------------
 //
 // The parent-nesting derivation above (§2) only sees DISPATCH-NESTING: a child's
 // parent_execution_id points at the wrapper that dispatched it, so the edges it emits
 // are wrapper->child star spokes (compose-* wrappers + lifecycle hubs), NOT genuine
-// "A produced a shape that B consumed" links. genuine_edges stays ~0 (a near-pure star).
+// "A produced a shape that B consumed" links.
 //
 // This second derivation emits genuine producer->consumer edges from two signals that
-// are already CAPTURED in the trace store but were never read here:
+// are already CAPTURED in the trace store:
 //
 //   (1) Cross-execution composition_chain shape-flow. Traces linked by a composition
 //       chain are an ordered walk: chain[i] is the immediate predecessor of chain[i+1]
@@ -193,45 +289,12 @@ for (;;) {
 //
 // Both tolerate missing fields: a trace with no composition_chain / parent_execution_id,
 // or content with no task provenance, simply contributes nothing. Edges are merged into
-// the SAME `edges` map (summing count/success) so §3 UPSERTs one deduped set.
+// the SAME `edges` map (summing count/success) so §3 writes one deduped set.
+// Completeness under the incremental batch: B (the consumer) always executes after A
+// (its chain predecessor / task producer), so iterating only NEW traces as consumers —
+// with §1b resolving their older predecessors — covers every new edge occurrence.
 async function deriveShapeFlowEdges(): Promise<Array<{ from: string; to: string; success: boolean }>> {
   const out: Array<{ from: string; to: string; success: boolean }> = [];
-
-  // --- (1) composition_chain shape-flow -------------------------------------------------
-  // Build per-execution {activity_id, input_shapes, output_shapes, success, chain/parent}
-  // for every trace that has shape data OR a chain link. We page the same way as §1.
-  type ShapeRec = {
-    activity_id?: string;
-    input_impulse_shapes?: string[];
-    output_impulse_shapes?: string[];
-    parent_execution_id?: string;
-    composition_chain?: string[];
-    success?: boolean;
-  };
-  const execShapes = new Map<string, ShapeRec>();
-  {
-    let sfLastId = "";
-    for (;;) {
-      const idGuard = sfLastId ? `WHERE id > ${sfLastId}` : "";
-      const [rows] = await sql(
-        `SELECT id, execution_id, activity_id, input_impulse_shapes, output_impulse_shapes, parent_execution_id, composition_chain, success FROM activity_execution_traces ${idGuard} LIMIT ${PAGE};`,
-      );
-      if (!rows || rows.length === 0) break;
-      for (const r of rows) {
-        sfLastId = r.id;
-        if (!r.execution_id) continue;
-        execShapes.set(r.execution_id, {
-          activity_id: r.activity_id,
-          input_impulse_shapes: Array.isArray(r.input_impulse_shapes) ? r.input_impulse_shapes : [],
-          output_impulse_shapes: Array.isArray(r.output_impulse_shapes) ? r.output_impulse_shapes : [],
-          parent_execution_id: r.parent_execution_id && r.parent_execution_id !== "NONE" ? r.parent_execution_id : undefined,
-          composition_chain: Array.isArray(r.composition_chain) ? r.composition_chain : [],
-          success: r.success === true,
-        });
-      }
-      if (rows.length < PAGE) break;
-    }
-  }
 
   const intersects = (a: string[] = [], b: string[] = []): boolean => {
     if (!a.length || !b.length) return false;
@@ -240,14 +303,15 @@ async function deriveShapeFlowEdges(): Promise<Array<{ from: string; to: string;
     return false;
   };
 
-  for (const [eid, b] of execShapes) {
+  // --- (1) composition_chain shape-flow: batch traces are the consumers (B) -----------
+  for (const { execution_id, rec: b } of batch) {
     if (!b.activity_id) continue;
     // The immediate predecessor of B is its parent_execution_id; if absent, fall back to
     // the last element of composition_chain that is NOT B itself (root-first ordering, so
     // the nearest ancestor is the tail before B).
     const predIds = new Set<string>();
     if (b.parent_execution_id) predIds.add(b.parent_execution_id);
-    const chain = (b.composition_chain || []).filter((c) => c && c !== eid);
+    const chain = b.composition_chain.filter((c) => c && c !== execution_id);
     if (chain.length) predIds.add(chain[chain.length - 1]);
     for (const predId of predIds) {
       const a = execShapes.get(predId);
@@ -259,13 +323,43 @@ async function deriveShapeFlowEdges(): Promise<Array<{ from: string; to: string;
     }
   }
 
-  // --- (2) Option-B task-level placeholder provenance -----------------------------------
-  // Per-task data lives in execution_trace_content (split-write), keyed by execution_id.
-  // For each content row, map producer task_id -> child_activity_id, then for each consumer
-  // task with consumed_from_task_ids, emit producer_child_activity -> consumer_activity.
-  // The consumer's activity is the execution's activity_id (from execShapes) unless the
-  // consumer task itself dispatched a sub-activity (its own child_activity_id).
-  {
+  // --- (2) Option-B task-level placeholder provenance ----------------------------------
+  // Per-task data lives in execution_trace_content (split-write), keyed by execution_id
+  // (idx_etc_execution_id). FULL mode pages the whole table; incremental fetches only the
+  // content rows belonging to this run's batch executions.
+  const handleContentRow = (r: any) => {
+    const tasks: any[] = Array.isArray(r.tasks) ? r.tasks : [];
+    if (!tasks.length) return;
+    const ownerAct = execShapes.get(r.execution_id)?.activity_id;
+    // producer task id -> the activity that task produced (its dispatched sub-activity).
+    const producerActOf = new Map<string, string>();
+    for (const t of tasks) {
+      const tid = t.task_id ?? t.taskId;
+      const childAct = t.child_activity_id ?? t.childActivityId;
+      if (tid && childAct) producerActOf.set(String(tid), String(childAct));
+    }
+    for (const t of tasks) {
+      const consumedFrom: string[] = Array.isArray(t.consumed_from_task_ids)
+        ? t.consumed_from_task_ids
+        : Array.isArray(t.consumedFromTaskIds)
+          ? t.consumedFromTaskIds
+          : [];
+      if (!consumedFrom.length) continue;
+      // consumer activity: the consumer task's own dispatched activity if any, else the
+      // owning execution's activity.
+      const consumerAct = (t.child_activity_id ?? t.childActivityId ?? ownerAct) as string | undefined;
+      if (!consumerAct) continue;
+      for (const pid of consumedFrom) {
+        const producerAct = producerActOf.get(String(pid));
+        if (!producerAct || producerAct === consumerAct) continue;
+        // success of this consumer task (fall back to execution success).
+        const taskOk = t.success === true || t.status === "success";
+        out.push({ from: producerAct, to: consumerAct, success: taskOk });
+      }
+    }
+  };
+
+  if (fullMode) {
     let cLastId = "";
     for (;;) {
       const idGuard = cLastId ? `AND id > ${cLastId}` : "";
@@ -273,39 +367,17 @@ async function deriveShapeFlowEdges(): Promise<Array<{ from: string; to: string;
         `SELECT id, execution_id, tasks FROM execution_trace_content WHERE array::len(tasks ?? []) > 0 ${idGuard} LIMIT ${PAGE};`,
       );
       if (!rows || rows.length === 0) break;
-      for (const r of rows) {
-        cLastId = r.id;
-        const tasks: any[] = Array.isArray(r.tasks) ? r.tasks : [];
-        if (!tasks.length) continue;
-        const ownerAct = execShapes.get(r.execution_id)?.activity_id;
-        // producer task id -> the activity that task produced (its dispatched sub-activity).
-        const producerActOf = new Map<string, string>();
-        for (const t of tasks) {
-          const tid = t.task_id ?? t.taskId;
-          const childAct = t.child_activity_id ?? t.childActivityId;
-          if (tid && childAct) producerActOf.set(String(tid), String(childAct));
-        }
-        for (const t of tasks) {
-          const consumedFrom: string[] = Array.isArray(t.consumed_from_task_ids)
-            ? t.consumed_from_task_ids
-            : Array.isArray(t.consumedFromTaskIds)
-              ? t.consumedFromTaskIds
-              : [];
-          if (!consumedFrom.length) continue;
-          // consumer activity: the consumer task's own dispatched activity if any, else the
-          // owning execution's activity.
-          const consumerAct = (t.child_activity_id ?? t.childActivityId ?? ownerAct) as string | undefined;
-          if (!consumerAct) continue;
-          for (const pid of consumedFrom) {
-            const producerAct = producerActOf.get(String(pid));
-            if (!producerAct || producerAct === consumerAct) continue;
-            // success of this consumer task (fall back to execution success).
-            const taskOk = t.success === true || t.status === "success";
-            out.push({ from: producerAct, to: consumerAct, success: taskOk });
-          }
-        }
-      }
+      for (const r of rows) { cLastId = r.id; handleContentRow(r); }
       if (rows.length < PAGE) break;
+    }
+  } else {
+    const ids = batch.map((b) => b.execution_id);
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const arr = JSON.stringify(ids.slice(i, i + CHUNK));
+      const [rows] = await sql(
+        `SELECT id, execution_id, tasks FROM execution_trace_content WHERE execution_id INSIDE ${arr} AND array::len(tasks ?? []) > 0;`,
+      );
+      for (const r of rows ?? []) handleContentRow(r);
     }
   }
 
@@ -313,7 +385,7 @@ async function deriveShapeFlowEdges(): Promise<Array<{ from: string; to: string;
 }
 
 // Merge shape-flow edges into the SAME `edges` map the parent-nesting derivation built,
-// so §3 UPSERTs one deduped set (counts summed across both sources, success accumulated).
+// so §3 writes one deduped set (counts summed across both sources, success accumulated).
 // PROVENANCE-BACKED edges (2026-06-27). Edges from deriveShapeFlowEdges() are not
 // wrapper→child dispatch spokes — they are REAL consumption links: §1 = B's input
 // shapes actually intersected A's output shapes across a composition chain; §2 = a
@@ -331,12 +403,11 @@ const shapeFlowEdges = await deriveShapeFlowEdges();
 for (const sf of shapeFlowEdges) {
   if (!sf.from || !sf.to || sf.from === sf.to) continue;
   provenanceEdgeKeys.add(sf.from + " " + sf.to);
-  // MUST use the same \0 separator as the §2 parent-nesting join (line ~101) and the
-  // split below — joining with a space here meant every shape-flow (GENUINE
-  // producer→consumer) key split on \0 to [whole, undefined], writing child_activity_id
-  // NONE and aborting the entire reconcile on the first genuine edge. That single-char
-  // mismatch is why genuine_edges was frozen for weeks. (2026-06-26)
-  const key = sf.from + " " + sf.to;
+  // MUST use the same separator as the §2 parent-nesting join and the split below —
+  // a separator mismatch here once made every shape-flow key split to [whole, undefined],
+  // writing child_activity_id NONE and aborting the entire reconcile on the first genuine
+  // edge. That single-char mismatch is why genuine_edges was frozen for weeks. (2026-06-26)
+  const key = sf.from + " " + sf.to;
   const e = edges.get(key) ?? { count: 0, success: 0 };
   e.count++;
   if (sf.success) e.success++;
@@ -363,16 +434,39 @@ function classifyEdge(p: string, c: string, provenanceBacked = false): "genuine"
   return "genuine";
 }
 
-// 3) UPSERT each edge (idempotent, deterministic id from the pair hash).
+// ---- 3) write edges (idempotent, deterministic id from the pair hash) ------------------
+// FULL mode writes absolute counts (recomputed from all history — self-healing).
+// INCREMENTAL mode ADDS this run's deltas onto the existing row's counts: the touched
+// edge set is small, so read the current counts for exactly those records first, then
+// UPSERT the summed absolutes through the same guarded write path.
+const ridOf = (key: string) => Bun.hash(key).toString(16);
+const existingCounts = new Map<string, { count: number; success: number }>();
+if (!fullMode && edges.size > 0) {
+  const rids = [...edges.keys()].map((k) => `activity_composition_graph:\`${ridOf(k)}\``);
+  for (let i = 0; i < rids.length; i += CHUNK) {
+    const arr = rids.slice(i, i + CHUNK).join(", ");
+    const [rows] = await sql(`SELECT id, parent_activity_id, child_activity_id, execution_count, success_count FROM [${arr}];`);
+    for (const r of rows ?? []) {
+      if (!r || !r.parent_activity_id || !r.child_activity_id) continue;
+      existingCounts.set(r.parent_activity_id + " " + r.child_activity_id, {
+        count: typeof r.execution_count === "number" ? r.execution_count : 0,
+        success: typeof r.success_count === "number" ? r.success_count : 0,
+      });
+    }
+  }
+}
+
 let wrote = 0;
-for (const [key, e] of edges) {
-  const [p, c] = key.split(" ");
+for (const [key, delta] of edges) {
+  const [p, c] = key.split(" ");
   // Guard + diagnostic: a malformed pair (empty/undefined endpoint) writes a NONE into the
   // SCHEMAFULL child_activity_id/parent_activity_id and aborts the WHOLE reconcile (sql()
   // rethrows on status!=OK). Skip it and log the raw key bytes so the source can be found. (2026-06-26)
   if (!p || !c) { console.error("skip-malformed-edge keyJSON=" + JSON.stringify(key) + " p=" + JSON.stringify(p) + " c=" + JSON.stringify(c)); continue; }
+  const prior = fullMode ? { count: 0, success: 0 } : existingCounts.get(key) ?? { count: 0, success: 0 };
+  const e = { count: prior.count + delta.count, success: prior.success + delta.success };
   const weight = e.count > 0 ? e.success / e.count : 0;
-  const rid = Bun.hash(key).toString(16);
+  const rid = ridOf(key);
   const edgeKind = classifyEdge(p, c, provenanceEdgeKeys.has(key));
   // account_id_version is a SCHEMAFULL `TYPE int` field (migration 095). Its
   // schema DEFAULT 0 is NOT applied by `UPSERT ... CONTENT` (CONTENT replaces the
@@ -400,6 +494,30 @@ for (const [key, e] of edges) {
   }
 }
 
+// ---- 4) advance the watermark -----------------------------------------------------------
+// New watermark = run start minus the insertion-lag overlap; the execution_ids already
+// processed inside that overlap ride along in recent_ids so the next run skips them
+// (exact — no double counting). Traces landing with more lag than OVERLAP_MS are caught
+// by the periodic full rebuild.
+{
+  const newWatermark = new Date(runStartMs - OVERLAP_MS).toISOString();
+  const recent = batch
+    .filter((b) => b.executed_at && b.executed_at >= newWatermark)
+    .map((b) => b.execution_id);
+  // Carry forward previously-recorded overlap ids that are STILL inside the new window
+  // (a fast rerun narrows the window; ids that fell out are safely behind the watermark).
+  if (!fullMode) {
+    for (const id of alreadyProcessed) if (!recent.includes(id)) recent.push(id);
+  }
+  const lastFullAt = fullMode ? new Date(runStartMs).toISOString() : state.last_full_at!;
+  await sql(`UPSERT ${STATE_RID} CONTENT {
+    watermark: ${JSON.stringify(newWatermark)},
+    recent_ids: ${JSON.stringify(recent.slice(0, 10000))},
+    last_full_at: ${JSON.stringify(lastFullAt)},
+    updated_at: time::now()
+  };`);
+}
+
 const [cnt] = await sql(`SELECT count() FROM activity_composition_graph GROUP ALL;`);
 
 // GENUINE edge count = the HONEST λ₁ (credit-mixing) signal in capability space.
@@ -411,6 +529,8 @@ const [cnt] = await sql(`SELECT count() FROM activity_composition_graph GROUP AL
 // regardless of how large the raw count is; this is the number that must rise before
 // minting more capability (ρ_grow) stays sub-critical (λ₁ ≳ ρ_grow). See
 // docs/architecture/SUBSTRATE_AS_DYNAMICS.md §3-4 and SUBSTRATE_AS_DEC.md §4.4.
+// NOTE: in incremental mode these stats cover only edges TOUCHED this run — the
+// whole-graph numbers come from the weekly full rebuild (mode is in the output).
 const HUB = ["validator-dispatch", "slot-binding"];
 const touchesHub = (s: string) => HUB.some((h) => (s || "").includes(h));
 // SYNTHETIC scaffolding: the `genuine-edge-probe-*` orchestrator/producer/consumer
@@ -418,9 +538,7 @@ const touchesHub = (s: string) => HUB.some((h) => (s || "").includes(h));
 // Counting it as genuine λ₁ lets the substrate satisfy the spectral-gap governor's
 // master inequality (λ₁ ≳ ρ_grow) by GAMING rather than by composing real capability.
 // organic_genuine_edges = non-hub edges that are also not synthetic probe scaffolding;
-// this is the HONEST capability-composition signal. As of 2026-06-19 it is 0 (all
-// genuine edges are the probe) — i.e. the substrate does surgical fixes + synthetic
-// probes but ZERO organic capability composition. See SUBSTRATE_AS_DYNAMICS.md §3-4.
+// this is the HONEST capability-composition signal.
 const SYNTH = ["genuine-edge-probe", "edge-probe", "probe-producer", "probe-consumer", "probe-orchestrator"];
 const isSynthetic = (s: string) => SYNTH.some((k) => (s || "").includes(k));
 // Topology learns from BOTH failures and successes (operator direction 2026-06-19):
@@ -445,7 +563,9 @@ for (const [key, e] of edges) {
 }
 const organic_success_rate = organic_attempts > 0 ? +(organic_successes / organic_attempts).toFixed(3) : null;
 console.log(JSON.stringify({
-  indexed_executions: idToAct.size, children, orphan, selfLoop,
+  mode: fullMode ? "full" : "incremental",
+  batch_traces: batch.length,
+  indexed_executions: execShapes.size, children, orphan, selfLoop,
   shape_flow_contributions: shapeFlowContributions,
   distinct_edges: edges.size, genuine_edges, organic_genuine_edges,
   organic_successful_edges, organic_success_rate, upserted: wrote,
