@@ -8,7 +8,7 @@
 // (4) registers with the local discovery-vessel — advertising its libp2p peer_id +
 // circuit multiaddr in `metadata` (a stopgap that needs no change to discovery's typed
 // contract; the proper libp2p_* contract fields are the operator-must-land follow-up).
-import { createVesselLibp2p, serveResolveHttp, resolveViaHttp, type VesselLibp2p } from '@avigopal/libp2p-federation-transport'
+import { createVesselLibp2p, serveResolve, serveResolveHttp, resolveViaLibp2p, resolveViaHttp, type VesselLibp2p } from '@avigopal/libp2p-federation-transport'
 import { hostname } from 'node:os'
 
 // RESILIENCE: libp2p internals emit 'error' events on streams/sockets that have no
@@ -78,7 +78,7 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
     ) : undefined
     if (remote) {
       console.log('[fed-transport] ingress→libp2p forward ' + t + ' to ' + String(remote.libp2p_multiaddr[0]).slice(-20))
-      const res = await resolveViaHttp(vl, String(remote.libp2p_multiaddr[0]), { ...pointer, _fedHop: hop + 1 })
+      const res = await resolveOverLibp2p(String(remote.libp2p_multiaddr[0]), { ...pointer, _fedHop: hop + 1 })
       return (res && typeof res === 'object' && 'content' in (res as any)) ? (res as any).content : res
     }
     return { error: 'unknown shape: ' + t, note: 'no local or remote producer via ' + VESSEL_ID }
@@ -98,10 +98,14 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
   return { shape: t, produced_by: owner.vesselId + '@' + VESSEL_ID, ...((body && typeof body === 'object') ? { body } : { value: body }), note: 'proxied to the owning vessel on the peer substrate over libp2p' }
 }
 
-await serveResolveHttp(vl, async (pointer) => {
+// One handler, served over BOTH transports: serveResolve (lpStream — carries multi-KB
+// bodies reliably after the sendAll fix) and serveResolveHttp (legacy HTTP-over-libp2p,
+// kept so not-yet-migrated callers still resolve small payloads). New callers dial the
+// lpStream path (resolveViaLibp2p); large proxied responses only work over it.
+const resolveHandler = async (pointer: any): Promise<any> => {
   const t = pointer?.type
   if (t === 'federation_probe')
-    return { shape: 'federation_probe', produced_by: VESSEL_ID, value: 'hello-over-libp2p-http', note: 'resolved where the data lives, over libp2p HTTP' }
+    return { shape: 'federation_probe', produced_by: VESSEL_ID, value: 'hello-over-libp2p-http', note: 'resolved where the data lives, over libp2p' }
   if (EXTRA_SHAPE && t === EXTRA_SHAPE)
     return { shape: EXTRA_SHAPE, produced_by: VESSEL_ID, value: 'cross-substrate-resolve-ok', note: 'resolved on the PEER substrate over libp2p (genuine cross-substrate)' }
   try {
@@ -109,7 +113,17 @@ await serveResolveHttp(vl, async (pointer) => {
   } catch (e) {
     return { error: 'ingress proxy failed: ' + String((e as Error)?.message ?? e) }
   }
-})
+}
+await serveResolve(vl, resolveHandler)
+await serveResolveHttp(vl, resolveHandler)
+
+// Dial a peer over the lpStream path (reliable for large bodies); fall back to the
+// legacy HTTP path if the peer hasn't migrated yet (protocol not supported). Keeps
+// cross-substrate resolution working through a mixed-version rollout.
+async function resolveOverLibp2p(target: string, pointer: any): Promise<any> {
+  try { return await resolveViaLibp2p(vl, target, pointer) }
+  catch { return await resolveViaHttp(vl, target, pointer) }
+}
 
 // Wait for the relay reservation → our advertisable circuit multiaddr.
 let circuit = ''
@@ -151,7 +165,7 @@ Bun.serve({
         // resolveViaHttp returns the peer's { content, metadata } (serveResolveHttp wraps
         // it that way). Pass it through verbatim so the caller's resolve parsing applies.
         console.log('[fed-transport] egress/resolve -> ' + String((pointer as any)?.type ?? '?') + ' via ' + String(target).slice(-20))
-        const res = await resolveViaHttp(vl, String(target), pointer)
+        const res = await resolveOverLibp2p(String(target), pointer)
         return Response.json(res ?? { error: 'empty libp2p resolve' }, { status: 200 })
       } catch (e) {
         return Response.json({ error: 'libp2p egress failed: ' + String((e as Error)?.message ?? e) }, { status: 502 })
