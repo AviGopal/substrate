@@ -9,6 +9,7 @@
 // circuit multiaddr in `metadata` (a stopgap that needs no change to discovery's typed
 // contract; the proper libp2p_* contract fields are the operator-must-land follow-up).
 import { createVesselLibp2p, serveResolveHttp, resolveViaHttp, type VesselLibp2p } from '@avigopal/libp2p-federation-transport'
+import { hostname } from 'node:os'
 
 // RESILIENCE: libp2p internals emit 'error' events on streams/sockets that have no
 // listener (e.g. a relay/peer dial TimeoutError surfacing through internal:streams/
@@ -32,19 +33,63 @@ if (!RELAY) { console.error('[fed-transport] ERROR: set RELAY_MULTIADDR'); proce
 
 const vl: VesselLibp2p = await createVesselLibp2p({ vesselId: VESSEL_ID, relayMultiaddr: RELAY, enableHttp: true })
 
-// Resolve handler (where the data lives). A real vessel would proxy to its local
-// activity-api /v2/impulses/resolve; for the integration probe we resolve federation_probe.
+// Resolve handler (where the data lives). Probe shapes are answered inline; any OTHER
+// shape is proxied to the vessel that owns it on THIS substrate, found via the LOCAL
+// discovery (X-Discovery-Depth pinned high so the lookup can never fan back out to a
+// peer and loop A→hub→A). This is what makes the transport a genuine ingress for the
+// whole substrate: a remote peer that discovered us through the hub namespace can
+// resolve any locally-owned shape over the relay, not just federation_probe.
 // FED_EXTRA_SHAPE lets ONE substrate advertise a shape its peers do NOT — so a peer's
 // goal walk finds no LOCAL producer, fans out via discovery, and is forced down the
 // genuine cross-substrate libp2p route (proving remote resolve, not a self-dial).
 const EXTRA_SHAPE = process.env.FED_EXTRA_SHAPE || ''
-await serveResolveHttp(vl, (pointer) => {
+
+async function proxyToLocalOwner(pointer: any): Promise<any> {
+  const t = String(pointer?.type ?? '')
+  const dr = await fetch(DISCOVERY + '/resolve', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'ApiKey ' + API_KEY,
+      'X-Discovery-Depth': '99', // local-only: never peer-fan-out from an ingress lookup
+    },
+    body: JSON.stringify({ pointer: { type: 'vesselCapability', shape: t } }),
+    signal: AbortSignal.timeout(5000),
+  })
+  const dj = (await dr.json().catch(() => ({}))) as any
+  // Owner must be a plain-HTTP LOCAL vessel: never ourselves, never our own hub-mirror
+  // registration (vesselId-prefixed), never another libp2p-protocol entry — proxying
+  // to a libp2p entry from the ingress would loop instead of landing on the data.
+  const owner = (dj?.content?.vessels ?? []).find(
+    (v: any) => v?.vesselId && !String(v.vesselId).startsWith(VESSEL_ID) && v?.protocol !== 'libp2p',
+  )
+  if (!owner) return { error: 'unknown shape: ' + t, note: 'no local producer on ' + VESSEL_ID }
+  const base = String(owner.endpoint ?? '').replace(/\/$/, '')
+  const path = String(owner.resolve_endpoint ?? '/v2/impulses/resolve')
+  const rr = await fetch(base + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY },
+    body: JSON.stringify({ impulse: pointer }),
+    signal: AbortSignal.timeout(20000),
+  })
+  const rj = (await rr.json().catch(() => ({}))) as any
+  // Normalize the two local envelope styles ({success,shape,body} / {content}) into
+  // one content payload so the remote caller's resolve parsing stays uniform.
+  const body = rj?.body ?? rj?.content ?? rj
+  return { shape: t, produced_by: owner.vesselId + '@' + VESSEL_ID, ...((body && typeof body === 'object') ? { body } : { value: body }), note: 'proxied to the owning vessel on the peer substrate over libp2p' }
+}
+
+await serveResolveHttp(vl, async (pointer) => {
   const t = pointer?.type
   if (t === 'federation_probe')
     return { shape: 'federation_probe', produced_by: VESSEL_ID, value: 'hello-over-libp2p-http', note: 'resolved where the data lives, over libp2p HTTP' }
   if (EXTRA_SHAPE && t === EXTRA_SHAPE)
     return { shape: EXTRA_SHAPE, produced_by: VESSEL_ID, value: 'cross-substrate-resolve-ok', note: 'resolved on the PEER substrate over libp2p (genuine cross-substrate)' }
-  return { error: 'unknown shape: ' + t }
+  try {
+    return await proxyToLocalOwner(pointer)
+  } catch (e) {
+    return { error: 'ingress proxy failed: ' + String((e as Error)?.message ?? e) }
+  }
 })
 
 // Wait for the relay reservation → our advertisable circuit multiaddr.
@@ -116,7 +161,60 @@ async function register() {
     console.log('[fed-transport] register ->', r.status)
   } catch (e) { console.log('[fed-transport] register err', String(e)) }
 }
-await register()
-setInterval(register, 120_000) // refresh discovery TTL
+// HUB NAMESPACE MIRROR: when HUB_DISCOVERY_URL is set, this substrate's capability
+// surface is mirrored into the HUB discovery under a substrate-unique vesselId, with
+// the libp2p circuit multiaddr as the reachability contract. Peers whose discovery
+// fans out to the hub then see (and can resolve, via the ingress proxy above) every
+// shape this substrate owns — the "same discovery namespace" leg of federation.
+// The mirror excludes this transport's own probe shapes (already registered locally
+// on the peer side) and refreshes on the same TTL cadence as the local registration.
+const HUB_DISCOVERY = (process.env.HUB_DISCOVERY_URL || '').replace(/\/$/, '')
+const SUBSTRATE_ID = process.env.FED_SUBSTRATE_ID || hostname()
+const HUB_VESSEL_ID = `${VESSEL_ID}@${SUBSTRATE_ID}`
 
-console.log(`[fed-transport] up id=${VESSEL_ID} peer=${vl.peerId} health=:${HEALTH_PORT} circuit=${circuit || '(none yet)'}`)
+async function localShapeUnion(): Promise<string[]> {
+  const r = await fetch(DISCOVERY + '/resolve', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY, 'X-Discovery-Depth': '99' },
+    body: JSON.stringify({ pointer: { type: 'vesselRegistry' } }),
+    signal: AbortSignal.timeout(5000),
+  })
+  const j = (await r.json().catch(() => ({}))) as any
+  const shapes = new Set<string>()
+  for (const v of j?.content?.vessels ?? []) {
+    // Skip ourselves, our own mirror row, and any libp2p-protocol entry (another
+    // substrate's mirror) — re-exporting mirrored shapes would ping-pong namespaces.
+    if (String(v?.vesselId ?? '').startsWith(VESSEL_ID) || v?.protocol === 'libp2p') continue
+    for (const s of v?.shapes ?? []) if (typeof s === 'string' && s) shapes.add(s)
+  }
+  return [...shapes]
+}
+
+async function registerAtHub() {
+  if (!HUB_DISCOVERY || !circuit) return
+  try {
+    const shapes = await localShapeUnion()
+    if (shapes.length === 0) return // local registry mid-repopulation — keep the last hub TTL alive next tick
+    const r = await fetch(HUB_DISCOVERY + '/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY },
+      body: JSON.stringify({
+        vesselId: HUB_VESSEL_ID, vesselName: HUB_VESSEL_ID, version: '0.1.0',
+        endpoint: `http://127.0.0.1:${HEALTH_PORT}`, // local-only surface; reachability is the circuit below
+        shapes: ['federation_probe', ...shapes],
+        resolve_endpoint: '/v2/impulses/resolve', resolve_request_format: 'pointer', auth_scheme: 'none',
+        protocol: 'libp2p',
+        libp2p_peer_id: vl.peerId,
+        libp2p_multiaddr: [circuit],
+      }),
+    })
+    console.log(`[fed-transport] hub-register(${HUB_VESSEL_ID}, ${shapes.length} shapes) -> ${r.status}`)
+  } catch (e) { console.log('[fed-transport] hub-register err', String(e)) }
+}
+
+await register()
+await registerAtHub()
+setInterval(register, 120_000) // refresh discovery TTL
+setInterval(registerAtHub, 120_000)
+
+console.log(`[fed-transport] up id=${VESSEL_ID} peer=${vl.peerId} health=:${HEALTH_PORT} circuit=${circuit || '(none yet)'} hub=${HUB_DISCOVERY || '(no hub mirror)'}`)
