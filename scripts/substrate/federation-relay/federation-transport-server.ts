@@ -84,11 +84,21 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
     return { error: 'unknown shape: ' + t, note: 'no local or remote producer via ' + VESSEL_ID }
   }
   const base = String(owner.endpoint ?? '').replace(/\/$/, '')
-  const path = String(owner.resolve_endpoint ?? '/v2/impulses/resolve')
-  const rr = await fetch(base + path, {
+  // resolve_endpoint may be a PATH ("/v2/impulses/resolve", dev-vessel) or a full
+  // absolute URL ("http://127.0.0.1:8210/resolve", goal-host). Concatenating base +
+  // a full URL yields an invalid URL ("...8210http://...") → "fetch() URL is invalid".
+  // Use the absolute form as-is; otherwise hang the path off base.
+  const rawResolve = String(owner.resolve_endpoint ?? '/v2/impulses/resolve')
+  const url = /^https?:\/\//.test(rawResolve) ? rawResolve : base + (rawResolve.startsWith('/') ? rawResolve : '/' + rawResolve)
+  const rr = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY },
-    body: JSON.stringify({ impulse: pointer }),
+    // Envelope that satisfies every resolve reader in the fleet: top-level pointer
+    // fields (goal-host reads body.type), impulse=pointer (dev-vessel reads
+    // impulse.type), and impulse.pointer (goal-host's impulse-contract path). A
+    // single form kept them incompatible — goal-host got type:undefined from
+    // {impulse: pointer}.
+    body: JSON.stringify({ ...pointer, impulse: { ...pointer, pointer } }),
     signal: AbortSignal.timeout(20000),
   })
   const rj = (await rr.json().catch(() => ({}))) as any
