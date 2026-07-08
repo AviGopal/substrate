@@ -1,5 +1,13 @@
 # Deploy Vessel
 
+> **DEPRECATED (2026-07-04): canary/production Helm path.** The canary/production
+> Kubernetes substrates are retired; everything in this skill from "Deployment
+> Procedure" onward (submodule sync → Docker build/push → helmfile sync → promotion)
+> is reference-only and must not be run. The only live deployment paths are:
+> - **Local substrate**: `make -C scripts/substrate up` / `restart-<vessel>` (below)
+> - **Remote VM**: `scripts/substrate/deploy-remote.sh` (ship local image over SSH) or
+>   `scripts/substrate/deploy-hub.sh` (VM pulls repo, builds hub + federation relay)
+
 Deploy a vessel — either to the local single-container substrate (fast iteration) or to canary/production via Helm.
 
 ## Overview
@@ -7,7 +15,7 @@ Deploy a vessel — either to the local single-container substrate (fast iterati
 Two deployment targets:
 
 1. **Local substrate** (`--substrate`, Phase 26+) — restart a vessel inside the running container. No Docker build, no Helm. Use this for development iterations.
-2. **Canary / production** (default) — full Docker build → push → helmfile sync. Use this after local validation to promote changes.
+2. **Canary / production** (default) — ~~full Docker build → push → helmfile sync~~ **DEPRECATED, see banner above.**
 
 ## Input
 
@@ -58,9 +66,9 @@ curl http://localhost:8080/health
 bun run validation/scripts/failure-mode-harness.ts
 ```
 
-After local validation passes, proceed with the canary deploy below to promote the change.
+There is no downstream promotion step — the local (or remote-VM) substrate is the deployment.
 
-## Deployment Procedure
+## Deployment Procedure (DEPRECATED 2026-07-04 — reference only, do not run)
 
 Execute these steps **exactly in order**, one at a time:
 

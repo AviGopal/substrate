@@ -77,16 +77,9 @@ Replace `endpoint` with your substrate's activity-api URL. All validation harnes
 
 **Known substrate endpoints:**
 - `http://localhost:18080` — **local single-container substrate** (Phase 26, complete 2026-05-23). Primary development target. All inter-vessel calls are localhost; no Kubernetes required. Bootstrap: `make -C scripts/substrate up ANTHROPIC_API_KEY=...` (one command — build/start/in-container seed/readiness/doctor; raw contract is a single `docker run`, see `docs/SUBSTRATE.md`).
-- `https://activity.metabob.com` — canary / pre-prod (current `kubectx metabob-production`). Used for canary validation and production promotion.
-- Local cluster — configure via `helmfile --environment local sync` + set endpoint to your in-cluster address (legacy; superseded by single-container substrate)
+- Remote VMs — deploy with `scripts/substrate/deploy-remote.sh` (ships the local image over SSH, no registry) or `scripts/substrate/deploy-hub.sh` (VM pulls the repo and builds a shared-namespace hub + federation relay).
 
-**Helmfile environments** (in `repos/deployment/`):
-- `environments/local.values.yaml` — local cluster overrides
-- `environments/canary.overrides.yaml` — canary-specific image tags and replicas
-- `environments/production.values.yaml` — production image tags
-
-**SOPS secrets** (one set per substrate):
-- `secrets/local.secrets.yaml`, `secrets/canary.secrets.yaml`, `secrets/production.secrets.yaml`
+> **DEPRECATED (2026-07-04): canary/production Kubernetes.** `https://activity.metabob.com`, the Helmfile environments in `repos/deployment/`, the per-environment SOPS secrets, and the local K8s cluster path are no longer live deployment targets. The local/remote single-container substrate is the only live deployment. K8s material is retained reference-only.
 
 ### The Development Loop
 
@@ -99,18 +92,10 @@ Replace `endpoint` with your substrate's activity-api URL. All validation harnes
 2. make -C scripts/substrate restart-<vessel>   ← hot-reloads vessel in container (see docs/SUBSTRATE.md for which vessels have a target)
 3. bun run validation/scripts/failure-mode-harness.ts    ← validates against localhost:18080
    mcp__metabob__run_goal  goal="<goal>"                 ← verify trace lands (deprecated: minibob --single)
-4. Commit + push to dev → CI/CD deploys to canary for integration validation
-5. Promote canary → production via /deploy skill
+4. Commit + push to dev
 ```
 
-**Canary-first (pre-Phase 26, or when validating against live data):**
-```
-1. Describe goal → MiniBob executes activity (on configured substrate)
-2. Activity succeeds/fails → Trace stored in substrate backend
-3. Push code changes → CI/CD deploys to canary
-4. Validate via MiniBob → More traces, more learning
-5. Repeat
-```
+> **DEPRECATED (2026-07-04):** the former steps 4–5 (CI/CD → canary, promote canary → production via /deploy) and the pre-Phase-26 "canary-first" loop are retired. There is no downstream K8s promotion target; the local (or remote-VM) substrate is the deployment.
 
 After Phase 27 (lift), step 1 of the local loop is substrate-initiated: the topology-discovery activities measure, probe, and escalate without human input. Human developers intervene only when the substrate flags a gap it cannot resolve.
 
@@ -463,12 +448,13 @@ Additional vessels tracked in this super-repo with less CLAUDE.md coverage — e
 - **activity-monitor** (`repos/activity-monitor`): Real-time monitoring dashboard for MiniBob activity system. Polls activity-api every 3 seconds to display recent executions (last 50), activity templates with Thompson scores, and impulse resolution patterns. Single-page Bun application with clean UI; useful for observing MiniBob activity in development. Provides `/api/data` and `/api/health` endpoints. Configuration via `METABOB_API_KEY` and `ACTIVITY_API_URL` env vars. Complements the workbench (authoring) and activity-dashboard (canary observability) as a lightweight monitoring vessel.
 - **Other vessels under `repos/`** (`metabob-analysis-api`, `metabob-rpc-api`, `metabob-mcp`, `metabob-opencode`, `metabob-cli`, `metabob-cloud-dashboard`, `metabob-internal-dashboard`, `minibob-tui`, `obsidian-vessel`, `user-vessel`, `terminal`, `react-renderer`, `cpg-inference` / `cpg-inference-ts`, `k8s-activity-executor`, `platform`, `vessels`, `metabob-proto`): tracked in the super-repo (some as git submodules, some as direct file trees); consult each vessel's own docs.
 
-### 7. Helm Deployment (`repos/deployment/`) — canary/production only
+### 7. Helm Deployment (`repos/deployment/`) — DEPRECATED
 
-> **Legacy for local work.** Local development runs on the single-container substrate
-> (`substrate-live`), which has no Helm, no Istio, and no Kubernetes. Helmfile applies
-> only to the **downstream** canary/production substrates. Do not reach for `helm` /
-> `kubectl` in the local loop — use `make -C scripts/substrate ...` instead.
+> **DEPRECATED (2026-07-04).** The canary/production Kubernetes substrates are retired;
+> `repos/deployment/` (Helmfile, charts, Istio, SOPS environments) is reference-only.
+> Live deployment is the single-container substrate: `make -C scripts/substrate up`
+> locally, `scripts/substrate/deploy-remote.sh` / `deploy-hub.sh` for remote VMs.
+> Never reach for `helm` / `kubectl`.
 
 Kubernetes orchestration via Helmfile:
 
@@ -830,8 +816,8 @@ mcp__metabob__run_goal  goal="verify the change works"   # confirms a trace land
 # 3. Conscious one-off direct edits (rare) bypass the edit-gate explicitly:
 SUBSTRATE_ALLOW_DIRECT_EDIT=1   # set in env for a deliberate manual edit
 
-# 4. Commit + push to dev. CI/CD deploys to canary for integration validation;
-#    promote canary → production via the /deploy skill (both are K8s, downstream).
+# 4. Commit + push to dev. (Canary/production K8s promotion is DEPRECATED
+#    2026-07-04 — the local/remote substrate is the only live deployment.)
 git add . && git commit -m "feat(activity-api): ..."
 git push origin dev
 ```
@@ -861,11 +847,11 @@ If `pull --ff-only` fails, audit the divergence (`git log dev..origin/dev` and `
 
 ---
 
-> **Legacy: canary / production Kubernetes deployment.** Everything from here to the
-> end of this section concerns the **downstream** K8s substrates (canary, production),
-> not local development. You do not run these in the normal substrate-first loop —
-> CI/CD deploys to canary on push to `dev`, and the `/deploy` skill promotes canary →
-> production. Kept for reference when operating those environments.
+> **DEPRECATED (2026-07-04): canary / production Kubernetes deployment.** Everything
+> from here to the end of this section concerns the retired K8s substrates. The
+> canary/production environments are no longer live deployment targets and the CI/CD →
+> canary → production promotion path is inactive. Retained reference-only; never run
+> these against current work.
 
 **Deployment Repository Structure:**
 
@@ -923,7 +909,7 @@ The main deployment file is `helm/activity-system-minimal.yaml.gotmpl` which use
 
 ### Service Endpoints
 
-**Production/Canary (USE THESE):**
+**Production/Canary (DEPRECATED 2026-07-04 — reference only, do not target):**
 - **Activity API**: `https://activity.metabob.com`
 - **Identity API**: `https://identity.metabob.com`
 
@@ -1071,11 +1057,11 @@ MiniBob resolves configuration from multiple sources (highest to lowest priority
 }
 ```
 
-> **Important**: Use `http://localhost:18080` for local substrate development (Phase 26+, host-mapped port); use `https://activity.metabob.com` for canary validation. Never use `.local` (Kubernetes internal) endpoints from outside the cluster.
+> **Important**: Use `http://localhost:18080` for local substrate development (Phase 26+, host-mapped port). `https://activity.metabob.com` (canary) is DEPRECATED (2026-07-04) — do not target it. Never use `.local` (Kubernetes internal) endpoints.
 
-### Secrets Management (SOPS + Age)
+### Secrets Management (SOPS + Age) — DEPRECATED 2026-07-04 (K8s-only, reference)
 
-Secrets are managed via SOPS encryption with Age keys:
+The local substrate auto-generates and persists its own secrets (`workspace/.substrate-secrets`); SOPS applies only to the retired K8s environments. Secrets were managed via SOPS encryption with Age keys:
 
 ```
 repos/deployment/secrets/
