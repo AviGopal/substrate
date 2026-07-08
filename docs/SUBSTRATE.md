@@ -8,7 +8,7 @@
 
 ## Why a single container?
 
-The canary cluster (Phase 5+) requires H1 two-sided traces and cross-vessel auth hardening before it can be a safe primary development environment. A container gives a structurally equivalent trust boundary without the Kubernetes overhead: all inter-vessel calls are localhost, SurrealDB runs as a local file instance, and a `systemd-restart` is the equivalent of a helm rollout.
+A container gives a complete trust boundary without cluster overhead: all inter-vessel calls are localhost, SurrealDB runs as a local file instance, and a `systemctl restart` is the whole rollout. Multi-machine reach comes from running more containers (hub/spoke roles + the libp2p relay), not from an orchestrator.
 
 A container is a valid substrate. The foundation doc defines a substrate by its fixed point (discovery-vessel) and its trust boundary, not by its infrastructure form. The same vessel code, the same seed templates, the same Thompson learning — just no pod scheduling.
 
@@ -175,7 +175,7 @@ docker exec substrate-live systemctl restart activity-api
 # Failure-mode harness smoke test
 bun run validation/scripts/failure-mode-harness.ts
 
-# Full stratified harness (longer; run before canary promotion)
+# Full stratified harness (longer; run before pushing a substantial change)
 bun run validation/scripts/stratified-harness.ts
 
 # Single goal to produce a trace (deprecated — agents dispatch via the
@@ -223,20 +223,21 @@ docker run --rm -v substrate-surreal:/dst -v "$(pwd)":/bak alpine \
 make -C scripts/substrate run-live ANTHROPIC_API_KEY=...
 ```
 
-## Switching between local and canary
+## Pointing tools at a substrate
 
-Change one line in `~/.metabob/config.json`:
+Harnesses and clients read the target substrate from one line in `~/.metabob/config.json`:
 
 ```json
 {
   "metabob": {
-    "endpoint": "http://localhost:18080"     ← local substrate
-    // "endpoint": "https://activity.metabob.com"  ← canary
+    "endpoint": "http://localhost:18080"
   }
 }
 ```
 
-All harnesses and `minibob` CLI read this file. No code changes needed.
+Point `endpoint` at whichever substrate's activity-api you are targeting (the local
+container, or a remote hub such as `http://<hub>:18080`). No code changes needed;
+`make up` writes the local value for you.
 
 ## Deploy paths
 
@@ -271,23 +272,23 @@ docker exec substrate-live vessel-ctl install <name>         # same, in-containe
 
 `substrate-pull-sync.timer` (10 min, plus a boot run after `git-push-setup`) converges the live `/vessels` runtime to each clone's `origin/dev`: ff-only pull → `mirror-to-live` → staggered, health-gated restart. A restart that goes unhealthy reverts to the last-good pin (`/workspace/.last-good/<v>`) and halts the run with a `substrateGap`; a diverged clone is refused (never forced). Runs skip while a mitosis cutover is in flight (`/workspace/mitosis-pending.json`). This is also how a *fleet* of substrates converges — each one pulls origin; no host mediates (it replaces `host-pull-sync.sh` / `federation-pull-sync.sh` as the load-bearing path). Self-recovery's revert source is the git clone too, never a host checkout. Without a `SUBSTRATE_GIT_PAT` the sync no-ops with a warning: the substrate is frozen-but-functional.
 
-## Promoting to canary
+## Landing a change
 
-Once a change validates locally:
+Once a change validates locally, commit and push it to `dev` in the vessel's own repo:
 
 ```bash
 git add repos/<vessel>
 git commit -m "feat(<vessel>): <description>"
-git push origin dev          # CI/CD deploys to canary automatically
+git push origin dev
 ```
 
-Then use `/deploy <vessel>` to promote canary → production after canary health checks pass.
-
-> **Suspended (2026-05-23):** kubectl/Helm deployment and the `/deploy` skill are suspended for economic reasons. All development runs against the local substrate container; the canary→production path above is retained for when cloud deployment resumes.
+`origin/dev` is the convergence point: every substrate's `substrate-pull-sync.timer`
+(and any peer's) ff-only pulls it and health-gates the restart — pushing to `dev` *is*
+the deployment. There is no separate promotion environment.
 
 ## Development-vessel specifics
 
-`development-vessel` is substrate-only — it has no Helm chart and does not run on canary. It is the meta-vessel for substrate self-development: the failure-mode harness, topology-discovery activities, `coverage-tick`, and `substrate-health-tick` all run as activities inside it. The `development-vessel.service` unit runs `seed-templates` automatically via `ExecStartPost` on every start — seeds are idempotent UPSERTs so re-running is safe.
+`development-vessel` is the meta-vessel for substrate self-development: the failure-mode harness, topology-discovery activities, `coverage-tick`, and `substrate-health-tick` all run as activities inside it. The `development-vessel.service` unit runs `seed-templates` automatically via `ExecStartPost` on every start — seeds are idempotent UPSERTs so re-running is safe.
 
 **goal-host-vessel async dispatch (commit `ac0d75b5`).** `POST /run-goal` now returns HTTP 202 immediately; goal execution happens asynchronously. Callers (minibob CLI and boredom-vessel) must poll for execution status rather than waiting for a synchronous response. This means a 202 from `/run-goal` does not indicate goal success — check the execution trace in activity-api to confirm completion.
 

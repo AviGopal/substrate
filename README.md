@@ -56,19 +56,35 @@ mcp__metabob__run_goal  goal="add input validation to the impulse endpoint"
 
 Conscious one-off direct edits to vessel source are gated by a PreToolUse hook and require `SUBSTRATE_ALLOW_DIRECT_EDIT=1`; docs/scripts/tests/config are never gated. See CLAUDE.md → *Development Philosophy: Substrate First*.
 
-## The local substrate
+## Installation
 
-Local development runs on a **single container** (`substrate-live`) that runs the vessel fleet as systemd units — no Kubernetes, no Helm, no Istio. Each vessel is reached on a host-mapped port (`18xxx → 8xxx`); a few vessels are internal-only.
+The whole system runs as **one container** (`substrate-live`) hosting the vessel fleet as systemd units — no Kubernetes, no orchestration on the host. The host contract is a single `docker run`: one privileged container, one LLM-provider env var, two named volumes (workspace + datastore). Everything load-bearing — seeding, readiness, diagnosis — happens inside the container at boot; the Makefile is a convenience wrapper over exactly that contract.
 
-**Bootstrap — one command:**
+**Prerequisites:** Docker, GNU make, git. (For the Obsidian interface installer: `curl` + `jq`, and `bun` for its libp2p sidecar.)
+
+**1. Clone** — submodules are mandatory; the image build copies each vessel's source from `repos/<vessel>`:
 
 ```bash
-make -C scripts/substrate up ANTHROPIC_API_KEY=...
+git clone --recurse-submodules https://github.com/AviGopal/substrate
+cd substrate
 ```
 
-`up` builds the image if needed, starts the container, seeds identity + templates in-container, waits for readiness, points `~/.metabob/config.json` at the local substrate, and runs a doctor check. `OPENAI_API_KEY` works in place of Anthropic; at least one LLM provider key is required. Everything load-bearing happens inside the container at boot — the make target is a convenience wrapper. (The lower-level `run-live` / `seed-live` / `configure-local.sh` steps still exist for manual control.)
+**2. Start** — one command:
 
-**Keys and tokens.** identity-vessel is internal-only, so a human obtains or mints credentials through the Makefile — no raw API calls:
+```bash
+make -C scripts/substrate up ANTHROPIC_API_KEY=sk-ant-...
+```
+
+`up` builds the image if needed, starts the container, seeds identity + templates in-container, waits for fleet readiness, points `~/.metabob/config.json` at the substrate, and runs a doctor check. `OPENAI_API_KEY` (with optional `OPENAI_BASE_URL` for Ollama/local models and `LLM_DEFAULT_MODEL`) works in place of Anthropic; at least one LLM provider key is required. All other secrets (JWT signing, datastore password, the bootstrap API key) are generated on first boot and persisted to the workspace volume.
+
+**3. Verify:**
+
+```bash
+make -C scripts/substrate ready            # fleet readiness matrix
+make -C scripts/substrate doctor SMOKE=1   # deep diagnosis + end-to-end goal dispatch
+```
+
+**4. Get your credentials.** identity-vessel is internal-only, so a human obtains or mints keys through the Makefile — no raw API calls:
 
 ```bash
 make -C scripts/substrate show-key                 # the operator API key
@@ -78,6 +94,31 @@ make -C scripts/substrate revoke-key KEY_ID=key_x  # revoke one
 ```
 
 The full key is printed once and never stored. See [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) § *Keys and tokens*.
+
+**5. Install the human interface (Obsidian plugin)** — one command, into an existing or new vault:
+
+```bash
+bash repos/obsidian-vessel/install.sh --local            # same-machine substrate
+bash repos/obsidian-vessel/install.sh                    # interactive: vault → host → key
+```
+
+The installer selects or creates the vault, installs the plugin, and prefers the **libp2p** transport: it derives the relay multiaddr from your discovery host and enables the federation sidecar automatically, writing direct HTTP endpoints only as same-host fallback. See [`repos/obsidian-vessel/README.md`](repos/obsidian-vessel/README.md).
+
+### Joining an existing federation
+
+A **hub** on a public IP shares a namespace with **spokes**. Ask the hub operator for a key (`make issue-key NAME=…` on the hub), then start your container pointed at the hub:
+
+```bash
+make -C scripts/substrate run-live ANTHROPIC_API_KEY=... ENABLED_ROLES=spoke \
+  DISCOVERY_ENDPOINT=http://<hub>:18100 ACTIVITY_API_ENDPOINT=http://<hub>:18080 \
+  IDENTITY_VESSEL_URL=http://<hub>:18101 METABOB_API_KEY=<hub-issued-key>
+```
+
+One image serves every role: a full local substrate, a minimal hub (control plane + store + relay), or a compute-only spoke — selection is declarative via `ENABLED_ROLES` / `ENABLED_VESSELS` (`scripts/substrate/vessels.inventory.json`, applied at boot). Vessels behind NAT join over the libp2p relay via a sidecar. To stand up your own remote substrate or hub on a VM: `scripts/substrate/deploy-remote.sh` (ships the local image over SSH, no registry) or `scripts/substrate/deploy-hub.sh` (the VM pulls the repo, builds there, and runs the relay). Point vessel clones at your own fork with `SUBSTRATE_REPO_OWNER=<your-org>`. Full guide: [`docs/FEDERATION.md`](docs/FEDERATION.md).
+
+## Working with the substrate
+
+Each vessel is reached on a host-mapped port (`18xxx → 8xxx`); a few vessels are internal-only and reached via discovery.
 
 **Iterate:**
 
@@ -102,21 +143,7 @@ mcp__metabob__run_goal  goal="verify the change works"
 | `localhost:18260` | concept-db | concept-graph shapes + dense (MiniLM) search |
 | `localhost:18270` | stateful-ui-vessel | substrate UI panels |
 
-Canary / production are **downstream** Kubernetes substrates (`activity.metabob.com`); CI/CD deploys to canary on push to `dev`. Full guide: [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md).
-
-## Distributing & federating
-
-The substrate is cloneable and runnable by anyone in **three steps**:
-
-1. **Clone** — `git clone --recurse-submodules https://github.com/AviGopal/substrate` (submodules are mandatory — the image build copies each vessel's source from `repos/<vessel>`).
-2. **Secrets** — set `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`); optionally a GitHub PAT (`SUBSTRATE_GIT_PAT`) for the substrate's self-push and a shared `FEDERATION_SIGNING_SECRET` for peer trust. All other secrets (JWT signing, datastore password, the bootstrap API key) are generated on first boot and persisted to the workspace volume.
-3. **Start** — `make -C scripts/substrate up ANTHROPIC_API_KEY=...`. Optionally pick a subset first with `ENABLED_ROLES` (`full` | `hub` | `spoke`) or `ENABLED_VESSELS=…`, and point vessels at your fork with `SUBSTRATE_REPO_OWNER=<your-org>`.
-
-The host contract is a single `docker run` — one privileged container, one LLM-provider env var, and two named volumes (workspace + datastore). The Makefile is a convenience wrapper over exactly that.
-
-**Run any subset.** One image is a full local substrate, a minimal **hub** (control plane + store + relay), or a compute-only **spoke**. Selection is declarative — `scripts/substrate/vessels.inventory.json` + `apply-inventory.sh` (run at boot); the default keeps every unit. A fixed set of core units (discovery, identity, activity-api, goal-host, LLM + local-tools resolvers, datastore, cache) is always kept and health-gated.
-
-**Federate.** A hub on a public IP shares a namespace with spokes: each spoke registers with a hub-issued key (`make issue-key NAME=… ` on the hub) and inherits the hub's `org_id`; vessels behind NAT join over the libp2p relay via a sidecar. Deploy a hub with `scripts/substrate/deploy-hub.sh`. Full guide: [`docs/FEDERATION.md`](docs/FEDERATION.md).
+Optional environment for the substrate's self-development loop: a GitHub credential (`SUBSTRATE_GIT_PAT`, or the host's SSH key via the host-sync timers) lets the substrate land its own commits — without one it runs and learns but cannot push. Full guide: [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md).
 
 ## Keeping submodule pointers current
 
