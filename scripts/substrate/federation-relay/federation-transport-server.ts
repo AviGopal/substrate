@@ -57,13 +57,32 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
     signal: AbortSignal.timeout(5000),
   })
   const dj = (await dr.json().catch(() => ({}))) as any
-  // Owner must be a plain-HTTP LOCAL vessel: never ourselves, never our own hub-mirror
-  // registration (vesselId-prefixed), never another libp2p-protocol entry — proxying
-  // to a libp2p entry from the ingress would loop instead of landing on the data.
-  const owner = (dj?.content?.vessels ?? []).find(
+  const vessels = (dj?.content?.vessels ?? []) as any[]
+  // Prefer a plain-HTTP LOCAL vessel: never ourselves, never our own hub-mirror
+  // registration (vesselId-prefixed), never a libp2p-protocol entry.
+  const owner = vessels.find(
     (v: any) => v?.vesselId && !String(v.vesselId).startsWith(VESSEL_ID) && v?.protocol !== 'libp2p',
   )
-  if (!owner) return { error: 'unknown shape: ' + t, note: 'no local producer on ' + VESSEL_ID }
+  if (!owner) {
+    // No LOCAL owner — try a REMOTE one over libp2p. The hub namespace mirror
+    // advertises other substrates' shapes with protocol:'libp2p' + the OWNING
+    // transport's circuit multiaddr. Forwarding one hop there is what makes
+    // "connect to any relay → reach all vessels" true: the owning substrate's
+    // ingress then lands on its own local plain-HTTP vessel. A hop guard
+    // (pointer._fedHop) bounds this to a single cross-substrate hop so a
+    // mutual mirror (A↔B) can never ping-pong.
+    const hop = Number(pointer?._fedHop ?? 0)
+    const remote = hop < 1 ? vessels.find(
+      (v: any) => v?.vesselId && !String(v.vesselId).startsWith(VESSEL_ID)
+        && v?.protocol === 'libp2p' && Array.isArray(v?.libp2p_multiaddr) && v.libp2p_multiaddr[0],
+    ) : undefined
+    if (remote) {
+      console.log('[fed-transport] ingress→libp2p forward ' + t + ' to ' + String(remote.libp2p_multiaddr[0]).slice(-20))
+      const res = await resolveViaHttp(vl, String(remote.libp2p_multiaddr[0]), { ...pointer, _fedHop: hop + 1 })
+      return (res && typeof res === 'object' && 'content' in (res as any)) ? (res as any).content : res
+    }
+    return { error: 'unknown shape: ' + t, note: 'no local or remote producer via ' + VESSEL_ID }
+  }
   const base = String(owner.endpoint ?? '').replace(/\/$/, '')
   const path = String(owner.resolve_endpoint ?? '/v2/impulses/resolve')
   const rr = await fetch(base + path, {
