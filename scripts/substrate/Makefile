@@ -107,7 +107,7 @@ SURREALDB_URL ?=
 REDIS_URL ?=
 
 # Vessel source roots (relative to repo root, two levels up)
-REPO_ROOT := $(CURDIR)/../..
+REPO_ROOT := $(abspath $(CURDIR)/../..)
 DEV_VESSEL_SRC := $(REPO_ROOT)/repos/development-vessel
 LOCAL_TOOLS_SRC := $(REPO_ROOT)/repos/local-tools-vessel
 LLM_VESSEL_SRC := $(REPO_ROOT)/repos/llm-resolver-vessel

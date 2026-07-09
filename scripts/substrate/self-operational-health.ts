@@ -148,6 +148,21 @@ if (inactive.length) {
     `timers:${inactive.sort().join("+")}`, { inactive });
 }
 
+// ── Landed-truth freshness: refresh the super-repo mirror before reading ───
+// The super-repo clone is refreshed only at container start (git-push-setup
+// oneshot), so every landed-truth read below goes stale over container uptime
+// — a 3-day-old mirror produced false progress_stall/self_commit_stale gaps on
+// 2026-07-09. This is the one deliberate exception to "strictly read-only":
+// a bounded, best-effort ff-only refresh of our OWN mirror so the reads that
+// follow reflect reality. Never merges divergence; failure is non-fatal.
+{
+  const superRepo = "/workspace/git/super-repo";
+  if (CLONES.includes(superRepo)) {
+    const f = sh(["git", "-C", superRepo, "fetch", "origin", "dev", "--quiet"], 30000);
+    if (f.ok) sh(["git", "-C", superRepo, "merge", "--ff-only", "origin/dev", "--quiet"], 10000);
+  }
+}
+
 // ── Check 3: autonomous-cutover recency ────────────────────────────────────
 // The outer self-development loop: author → land → push. If no substrate-
 // authored commit landed recently, the loop is stalled (or its credential is
@@ -177,7 +192,16 @@ if (newestSubstrateCommit === 0) {
 // but cannot push, which presents as check-3 staleness with this as root cause.
 {
   const dir = CLONES[0];
-  const r = sh(["git", "-C", dir, "ls-remote", "--exit-code", "origin", "HEAD"], 20000);
+  // Fine-grained PATs flake intermittently against GitHub ("Invalid username
+  // or token." on an otherwise-valid token) — push-health-observer learned to
+  // retry 3× before classifying. A single un-retried probe here produced false
+  // push_credential_invalid gaps while cutovers were in fact landing. Only
+  // flag after repeated failure.
+  let r = { ok: false, out: "" };
+  for (let attempt = 0; attempt < 3 && !r.ok; attempt++) {
+    if (attempt > 0) Bun.sleepSync(2000);
+    r = sh(["git", "-C", dir, "ls-remote", "--exit-code", "origin", "HEAD"], 20000);
+  }
   if (!r.ok) {
     flag("push_credential_invalid", "HIGH",
       `git ls-remote origin failed in ${dir} → the push credential is invalid/expired or origin is unreachable; the substrate can author but cannot land changes. (Distinguish network vs credential at triage.)`,
