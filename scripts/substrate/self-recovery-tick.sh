@@ -29,6 +29,19 @@ set -uo pipefail
 CONTAINER="${CONTAINER:-substrate-live}"
 DEV_VESSEL="${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}"
 
+# Change-window (2026-07-09 contiguous-shape-flow §5): while a change-set holds
+# the change_window lease, a vessel mid-cutover is ALLOWED to look broken; a
+# restart/revert here would fight the cutover. Defer the whole recovery pass
+# (lease is TTL-bounded; next tick recovers normally after release/expiry).
+CW_HELD="$(curl -s --max-time 5 -X POST "$DEV_VESSEL/v2/impulses/resolve" \
+  -H 'Content-Type: application/json' \
+  -d '{"impulse":{"type":"maintenanceLease","name":"change_window"}}' 2>/dev/null \
+  | grep -o '"held":true' || true)"
+if [ -n "$CW_HELD" ]; then
+  echo "[self-recovery $(date -Iseconds)] change_window lease held — deferring recovery pass"
+  exit 0
+fi
+
 # Context detection: in-container iff there is no working docker CLI for $CONTAINER.
 if command -v docker >/dev/null 2>&1 && docker inspect "$CONTAINER" >/dev/null 2>&1; then
   IN_CONTAINER=0

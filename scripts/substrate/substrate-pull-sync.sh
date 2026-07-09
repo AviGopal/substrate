@@ -60,6 +60,19 @@ if [ -f "$MITOSIS_LOCK" ] && [ -n "$(find "$MITOSIS_LOCK" -mmin "-$MITOSIS_LOCK_
   exit 0
 fi
 
+# Change-window (2026-07-09 contiguous-shape-flow §5): a held change_window lease
+# means a change-set is landing; pull-sync defers rather than converging mid-swap.
+# TTL-bounded on the lease side, so a crashed holder cannot defer us forever.
+CW_HELD="$(curl -s --max-time 5 -X POST "$DEV_VESSEL/v2/impulses/resolve" \
+  -H 'Content-Type: application/json' \
+  -d '{"impulse":{"type":"maintenanceLease","name":"change_window"}}' 2>/dev/null \
+  | grep -o '"held":true' || true)"
+if [ -n "$CW_HELD" ]; then
+  log "change_window lease held — deferring this run"
+  echo "{\"at\":\"$(date -Iseconds)\",\"actor\":\"pull-sync\",\"action\":\"deferred_change_window\"}" >> "$DEFERRAL_LOG" 2>/dev/null || true
+  exit 0
+fi
+
 # Vessel -> unit map from the inventory (fallback: every clone dir, unit <v>.service).
 vessel_unit() { # vessel -> systemd unit or empty
   if command -v jq >/dev/null 2>&1 && [ -f "$INV" ]; then
