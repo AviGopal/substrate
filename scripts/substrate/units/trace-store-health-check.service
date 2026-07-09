@@ -1,0 +1,19 @@
+[Unit]
+Description=Trace-store size monitor — fire trace_store_health_observer (reads /metrics/db traceStore counters, emits substrateGap on cap overage)
+# Part of 2026-07-08-substrate-self-managed-db-reconciliation: the detect leg of
+# the autonomous reconcile cadence (observe -> gap -> gap-compose dispatch ->
+# lease-gated db_admin reconcile_trace_store -> release).
+After=activity-api.service development-vessel.service
+#
+# Smoke: docker exec substrate-live systemctl start trace-store-health-check.service
+#        docker exec substrate-live journalctl -u trace-store-health-check.service --no-pager -n 5
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/trace-store-health-check.ts
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
