@@ -292,17 +292,7 @@ the deployment. There is no separate promotion environment.
 
 **goal-host-vessel async dispatch (commit `ac0d75b5`).** `POST /run-goal` now returns HTTP 202 immediately; goal execution happens asynchronously. Callers (minibob CLI and boredom-vessel) must poll for execution status rather than waiting for a synchronous response. This means a 202 from `/run-goal` does not indicate goal success — check the execution trace in activity-api to confirm completion.
 
-The topology-discovery loop (Phase 26 → Phase 27) runs autonomously inside the substrate. In S2 the boredom-vessel rotates through the following goals (timer: 30min):
-
-1. `substrate-health-tick` — measurement
-2. `probe-reachable-unlearned` — probing newly-reachable but unlearned activities
-3. `probe-untraversed-edge` — probing untraversed composition edges
-4. health goal
-5. escalation goal
-6. coverage goal
-7. `draft-gap-closing-activity` — substrate authors a new activity to close an identified gap
-
-The prior 5-minute timer was slowed to 30 minutes (commit `536652a4`) to enable the temporal spread required for the S.4a measurement window.
+The topology-discovery loop (Phase 26 → Phase 27) runs autonomously inside the substrate. The boredom-vessel is a dispatch-pool daemon: each selection pass scores the pool of candidate templates (tagged `boredom_target_template`) on learned momentum, input-shape availability, and priority-weight folds derived from current conditions — open-gap demand, `timeShapedRhythm` due-state, learning-mode boosts — then dispatches winners concurrently up to a slot cap. Measurement (`substrate-health-tick`), probing (`probe-reachable-unlearned`, `probe-untraversed-edge`), health, escalation, coverage, and gap-closing (`draft-gap-closing-activity`) work all enters through this same pool; there is no fixed rotation. Selection passes are prompted by events (activity-api task completions, in-process prompts after cheap ticks); the systemd timer serves only as a backstop when no events arrive, and the dispatch interval acts as a cost governor rather than a cadence — deterministic zero-token ticks largely bypass it while token-costed work pays it in full. Selection momentum persists across restarts, so learned preferences survive cutovers.
 
 ```
 activityRegistryChange → learned-topology-snapshot → reachable-unlearned-report
