@@ -1,7 +1,7 @@
 [Unit]
 Description=goal-host-vessel
 After=activity-api.service discovery-vessel.service identity-vessel.service llm-resolver-vessel.service
-Requires=activity-api.service
+Wants=activity-api.service
 
 [Service]
 Type=simple

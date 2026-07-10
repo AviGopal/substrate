@@ -4,7 +4,7 @@ Description=M1 embedding-prior trainer (concept_KKwxHmPfEMSY)
 # concept-db embeddings. Writes one row per run into embedding_prior_weights;
 # posterior-update.ts consumes the latest row when EMBEDDING_PRIOR_ENABLED=true.
 After=activity-api.service
-Requires=activity-api.service
+Wants=activity-api.service
 
 # Smoke test:
 #   docker exec substrate-live systemctl start m1-trainer.service

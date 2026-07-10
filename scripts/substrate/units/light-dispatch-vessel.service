@@ -1,7 +1,7 @@
 [Unit]
 Description=light-dispatch-vessel — stateless oneshot dispatcher (Stage 2.B)
 After=activity-api.service discovery-vessel.service
-Requires=activity-api.service
+Wants=activity-api.service
 # Watchdog: never permanently give up. The whole boredom shape-pool dispatches
 # through this vessel on :8280; a silent death here livelocks the entire
 # autonomous self-dev loop (observed 2026-06-13). StartLimitIntervalSec=0

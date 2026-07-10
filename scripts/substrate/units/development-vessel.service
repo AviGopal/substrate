@@ -1,7 +1,7 @@
 [Unit]
 Description=development-vessel
 After=activity-api.service git-push-setup.service
-Requires=activity-api.service
+Wants=activity-api.service
 
 [Service]
 Type=simple

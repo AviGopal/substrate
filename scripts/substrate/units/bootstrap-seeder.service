@@ -6,7 +6,7 @@ Description=bootstrap-seeder (seed shared activity templates)
 After=identity-seeder.service activity-api.service
 # identity-seeder first: seeding with the pre-mint bootstrap key writes org-less
 # rows that fail schema validation (observed 2026-07-02 first-boot test).
-Requires=activity-api.service
+Wants=activity-api.service
 
 # Smoke test (task 3.3):
 #   docker exec substrate-live systemctl start bootstrap-seeder.service

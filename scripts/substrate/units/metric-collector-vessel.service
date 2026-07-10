@@ -1,7 +1,7 @@
 [Unit]
 Description=metric-collector-vessel
 After=activity-api.service discovery-vessel.service
-Requires=activity-api.service
+Wants=activity-api.service
 
 [Service]
 Type=simple

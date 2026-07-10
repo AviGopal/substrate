@@ -1,7 +1,7 @@
 [Unit]
 Description=local-tools-vessel
 After=activity-api.service discovery-vessel.service identity-vessel.service
-Requires=activity-api.service
+Wants=activity-api.service
 
 [Service]
 Type=simple
