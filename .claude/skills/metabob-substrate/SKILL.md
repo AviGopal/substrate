@@ -7,7 +7,7 @@ description: Operate the metabob substrate as a citizen, not a tourist. Drive it
 
 ## What this skill is for
 
-The substrate has a concept graph (concept-db, port 18260). It learns by accumulation: every analysis-vessel resolution mints a usage row via concept-bridge-observer; every autonomous draft (boredom-vessel → draft-gap-closing-activity) reads concept-db as priors. Today the graph holds ~4 concepts and a handful of edges — mostly bridge-minted, mostly shape-level. **The substrate's vocabulary is thin not because the wiring is broken but because the work hasn't been intercepted yet.**
+The substrate has a concept graph (concept-db, port 18260). It learns by accumulation: every analysis-vessel resolution mints a usage row via concept-bridge-observer; every autonomous draft (boredom-vessel → draft-gap-closing-activity) reads concept-db as priors. Much of the accumulated graph is bridge-minted and shape-level; typed, hand-authored knowledge — the abstractions the graph can reason *over* — accumulates only when the agent loop contributes it. **That gap, not broken wiring, is what this skill closes.**
 
 This skill makes the agent loop a contributor, not just a consumer. When you read a file, mint a concept. When you discover a constraint, link concepts. When the user corrects you, mint the correction. The substrate becomes the durable memory across sessions.
 
