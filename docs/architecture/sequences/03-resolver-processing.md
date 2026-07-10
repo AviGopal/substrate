@@ -969,8 +969,8 @@ This sequence runs **across the substrate vessels (execution)** with backend inv
 - `POST /v2/activities/templates` - Register extracted templates (ribosome output)
 
 **Key Files:**
-- `repos/metabob-activity-api/src/routes/activities.ts` - Tool pattern endpoints
-- `repos/metabob-activity-api/src/routes/composition-edges.ts` - Composition tracking
+- `repos/activity-api/src/routes/activities.ts` - Tool pattern endpoints
+- `repos/activity-api/src/routes/composition-edges.ts` - Composition tracking
 - (Template extraction itself runs in `repos/ribosome-vessel/`, which writes via the `activityTemplate_update` impulse)
 
 ### SurrealDB Schema

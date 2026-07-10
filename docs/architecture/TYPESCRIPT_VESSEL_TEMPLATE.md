@@ -65,7 +65,7 @@ for (let i = 0; i < 60; i++) {
 - `repos/local-tools-vessel/` — minimal resolver vessel using `VesselDaemon` (≤100 LOC)
 - `repos/goal-host-vessel/` — HTTP wrapper for `GoalHost` using `DiscoveryRegistrationLoop`
 - `repos/ribosome-vessel/` — pure WebSocket consumer (no shapes); shows when NOT to use VesselDaemon
-- `repos/metabob-activity-api/` — the north-star implementation (production, full feature set)
+- `repos/activity-api/` — the north-star implementation (production, full feature set)
 - `repos/concept-db/` — a minimal modern vessel (post-April-2026; mirrors the manual pattern at lower complexity)
 - `repos/discovery-vessel/` — the registry itself; also a useful minimal-vessel reference
 - `repos/ias-executor-ts/src/hosts/__example__/minimal-vessel.ts` — runnable ≤100 LOC VesselDaemon example
@@ -109,7 +109,7 @@ if (discoveryClient.isEnabled()) {
 }
 ```
 
-Compare `repos/metabob-activity-api/src/index.ts` and `repos/metabob-activity-api/src/services/discovery-client.ts` for the canonical implementation.
+Compare `repos/activity-api/src/index.ts` and `repos/activity-api/src/services/discovery-client.ts` for the canonical implementation.
 
 ### 2. Every advertised shape has a dispatch case
 
@@ -148,7 +148,7 @@ A single `// @shape-dispatch:private` annotation immediately above the first cas
 }
 ```
 
-See `repos/metabob-activity-api/src/config.ts` and `src/routes/impulses.ts` for the reference implementation.
+See `repos/activity-api/src/config.ts` and `src/routes/impulses.ts` for the reference implementation.
 
 ### 3. The WebSocket observer never throws into its reconnect loop
 
@@ -259,7 +259,7 @@ interface Config {
 }
 ```
 
-**Concrete example:** `repos/concept-db/src/config.ts` (pattern) and `repos/metabob-activity-api/src/config.ts` (full-feature, 15+ shapes).
+**Concrete example:** `repos/concept-db/src/config.ts` (pattern) and `repos/activity-api/src/config.ts` (full-feature, 15+ shapes).
 
 ### Discovery client
 
@@ -283,7 +283,7 @@ Singleton class with `register()`, `heartbeat()`, `shutdown()`. Exponential back
 
 **Auth:** `Authorization: ApiKey ${METABOB_API_KEY}`. Attach conditionally — if the env var is empty, log a warning and send unauthenticated (dev mode); production will reject and the warning tells you why.
 
-**Concrete implementation:** `repos/concept-db/src/services/discovery-client.ts` (~340 lines), adapted from `repos/metabob-activity-api/src/services/discovery-client.ts`.
+**Concrete implementation:** `repos/concept-db/src/services/discovery-client.ts` (~340 lines), adapted from `repos/activity-api/src/services/discovery-client.ts`.
 
 ### Shape advertisement and dispatch
 
@@ -328,7 +328,7 @@ Reconnect with exponential backoff: start at 1s, cap at 30s, reset on clean open
 
 Hang `{orgId, keyId, authType, jwtToken}` on the Hono context. All subsequent DB queries use `$auth.org_id` via SurrealDB `PERMISSIONS` clauses. No application-level filtering — the database enforces tenancy.
 
-**Concrete example:** `repos/metabob-activity-api/src/middleware/jwtAuth.ts` (~80 lines).
+**Concrete example:** `repos/activity-api/src/middleware/jwtAuth.ts` (~80 lines).
 
 ### Internal lifecycle hooks
 
@@ -518,7 +518,7 @@ The route is dispatch glue. Resolvers live in `src/resolvers/<shape>.ts`, get un
 
 ### Don't build your own heartbeat against a deprecated endpoint
 
-You will be tempted to "just copy" an older vessel's registration code. Check whether its registration target is discovery-vessel or activity-api's legacy path. If the latter, read this doc and `repos/metabob-activity-api/src/services/discovery-client.ts` before copying.
+You will be tempted to "just copy" an older vessel's registration code. Check whether its registration target is discovery-vessel or activity-api's legacy path. If the latter, read this doc and `repos/activity-api/src/services/discovery-client.ts` before copying.
 
 ---
 

@@ -35,11 +35,11 @@ Cost and usage metrics resolved by `activity-api` (has execution trace data).
 
 **Response format**: All resolvers return markdown-formatted content. Multi-tenant isolation is enforced via SurrealDB PERMISSIONS (`org_id = $token.org_id`) — no application-level org filter needed.
 
-**Implementation status**: Shapes are documented in CLAUDE.md and were implemented (2026-04-20) but are not visible in `repos/metabob-activity-api/src/config.ts` discovery advertisement as of 2026-05-27 — verify `discovery.shapes` before relying on dynamic routing for these shapes.
+**Implementation status**: Shapes are documented in CLAUDE.md and were implemented (2026-04-20) but are not visible in `repos/activity-api/src/config.ts` discovery advertisement as of 2026-05-27 — verify `discovery.shapes` before relying on dynamic routing for these shapes.
 
 ### Activity Learning Shapes
 
-Canonical source of truth for advertised shapes: [`repos/metabob-activity-api/src/config.ts`](../../repos/metabob-activity-api/src/config.ts) (`discovery.shapes`). Case handlers live in `repos/metabob-activity-api/src/routes/impulses.ts`. Do not advertise a shape here that has no `case` in that router.
+Canonical source of truth for advertised shapes: [`repos/activity-api/src/config.ts`](../../repos/activity-api/src/config.ts) (`discovery.shapes`). Case handlers live in `repos/activity-api/src/routes/impulses.ts`. Do not advertise a shape here that has no `case` in that router.
 
 **Read shapes** (v1.5.5):
 - `activityExecutionTrace` - Full execution trace with state transitions

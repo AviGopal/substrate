@@ -320,7 +320,7 @@ Vessel capability registry and resolver (~1,500 LOC TypeScript/Bun):
 
 **Deprecation path:** once boredom-vessel, goal-host-vessel, and ribosome-vessel cover the full execution surface, minibob's binary is retired. No rename (`repos/minibob` stays as-is until deletion).
 
-### 3. metabob-activity-api (`repos/metabob-activity-api`)
+### 3. metabob-activity-api (`repos/activity-api`)
 TypeScript / Bun / Hono backend. Trace store + Thompson-Sampling learner + activity-related impulse resolver. **Not a universal resolver** — only resolves shapes it owns (traces, templates, metrics, goal paths, composition stats); everything else routes through discovery.
 
 **Key Files:**
@@ -567,7 +567,7 @@ const unloaded = ImpulseResolver.unload(impulse)
 
 **Activity-API** (learning backend):
 
-Read resolvers (as advertised via discovery; see `repos/metabob-activity-api/src/config.ts`):
+Read resolvers (as advertised via discovery; see `repos/activity-api/src/config.ts`):
 - `activityExecutionTrace`: Full execution trace with state
 - `executionTraceWithSignatures`: Hydrated trace with per-impulse pointer/shape signatures; supports `since`, `limit`, `activity_template_id`, `success_only`, `min_duration_ms` filters; response carries `impulses_by_id` map and per-task `input_impulse_ids`/`output_impulse_ids` arrays. Enables deterministic impulse co-occurrence extraction without LLM reshaping (see minibob ImpulseCooccurrenceResolver).
 - `activityTemplate`: Template structure and metadata
@@ -914,7 +914,7 @@ The main deployment file is `helm/activity-system-minimal.yaml.gotmpl` which use
 - **Identity API**: `https://identity.metabob.com`
 
 **API Documentation:**
-See `repos/metabob-activity-api/docs/API_PHASE1_ENDPOINTS.md` for comprehensive Phase 1 API reference covering:
+See `repos/activity-api/docs/API_PHASE1_ENDPOINTS.md` for comprehensive Phase 1 API reference covering:
 - WebSocket real-time events (`wss://activity.metabob.com/ws`) with authentication and catchup protocol
 - Activity discovery by shapes (forward/backward chaining modes)
 - Goal-to-trajectory recommendations with endpoint prediction

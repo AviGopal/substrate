@@ -592,7 +592,7 @@ annotation, no behavior change. Apply to:
   20, registration line 92). PERMISSIONS clauses filter on
   `$auth.org_id` from the caller's token; service identity is correct
   as long as it's tenant-scoped.
-- `repos/metabob-activity-api/src/services/discovery-client.ts`
+- `repos/activity-api/src/services/discovery-client.ts`
   (interface line 12, registration line 106). Same rationale.
 
 ### 6.5 Future vessels

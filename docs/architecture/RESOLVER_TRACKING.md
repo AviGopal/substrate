@@ -398,7 +398,7 @@ DEFINE INDEX idx_execution_vessel ON TABLE execution COLUMNS resolved_by_vessel_
 - [ ] Add query endpoints for resolver stats
 - [ ] Test with canary deployment
 
-**Implementation**: `repos/metabob-activity-api/src/routes/execution-traces.ts`
+**Implementation**: `repos/activity-api/src/routes/execution-traces.ts`
 
 ### Phase 4: Learning Algorithms Use Data
 
@@ -411,7 +411,7 @@ DEFINE INDEX idx_execution_vessel ON TABLE execution COLUMNS resolved_by_vessel_
 - [ ] Enable pattern recognition
 
 **Implementation**:
-- `repos/metabob-activity-api/src/services/learning.ts`
+- `repos/activity-api/src/services/learning.ts`
 - `repos/minibob/src/resolver-selector.ts`
 
 ## Metrics

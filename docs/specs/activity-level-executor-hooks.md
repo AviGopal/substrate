@@ -194,7 +194,7 @@ When the executor emits a lifecycle impulse:
    exposes.
 3. **Thompson rank.** Hand survivors to the existing
    `ThompsonSampling.rank(...)` path
-   (`repos/metabob-activity-api/src/services/thompson-sampling.ts`),
+   (`repos/activity-api/src/services/thompson-sampling.ts`),
    weighted by per-template α/β (success rate) and per-impulse
    relevance from the `impulseRelevance` table.
 4. **Cost-aware top-K selection.** Take the top K. Tie-break by
@@ -445,7 +445,7 @@ relationships already round-trip via `parent_execution_id` and
 
 ### 5.3 WebSocket broadcaster
 
-`repos/metabob-activity-api/src/websocket/types.ts`: extend the
+`repos/activity-api/src/websocket/types.ts`: extend the
 `WebSocketMessage` type union with `lifecycle.event` (data:
 `{eventShape, executionId, payload, sequence}`). Dashboard,
 workbench flame graph, and concept-db's existing
@@ -566,8 +566,8 @@ In `repos/minibob/src/activity-graph-execution.test.ts`:
 - `repos/minibob/src/activity.ts:3352` — `finally` (execution:tick teardown)
 - `repos/minibob/src/types.ts:721-735` — `ActivityTemplate.impulses[]` (where `subscription?` and `must_fire?` are added)
 - `repos/concept-db/src/services/execution-observer.ts:299-396` — pre-existing precedent: WebSocket-based "hook as subscriber"; this spec generalizes it
-- `repos/metabob-activity-api/src/websocket/types.ts:6-11` — `WebSocketMessage` union (where `lifecycle.event` is added)
-- `repos/metabob-activity-api/src/services/thompson-sampling.ts` — Thompson primitives reused for subscriber ranking
+- `repos/activity-api/src/websocket/types.ts:6-11` — `WebSocketMessage` union (where `lifecycle.event` is added)
+- `repos/activity-api/src/services/thompson-sampling.ts` — Thompson primitives reused for subscriber ranking
 - `templates/concept/prime-context-for-task.json` — refactor target for §3.4
 - `templates/concept-learning/learn-impulse-relationships.json` — reframed from periodic to subscriber per §3.5
 - `docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md` — the foundation claim this spec finally fulfils

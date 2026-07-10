@@ -52,7 +52,7 @@ What activity-api shipped (and what this spec copies almost verbatim):
 
 ### The dispatch shape
 
-In `repos/metabob-activity-api/src/routes/impulses.ts:1740-1864` each write case looks like:
+In `repos/activity-api/src/routes/impulses.ts:1740-1864` each write case looks like:
 
 ```ts
 case 'activityExecutionTrace_write': {
@@ -103,7 +103,7 @@ Destructive operations in activity-api call `emitUpkeepAudit(...)` (`impulses.ts
 }
 ```
 
-Non-blocking — a failed audit does not roll back the operation. The audit returns the new impulse id to be embedded in the response under `auditImpulseId`. Activity-api's `impulse` table (defined in `repos/metabob-activity-api/sql/migrations/071-fix-paradigm-tables-root-access.surql:13`) is the destination. Concept-db will mirror this pattern with its own `impulse` table, not write into activity-api's.
+Non-blocking — a failed audit does not roll back the operation. The audit returns the new impulse id to be embedded in the response under `auditImpulseId`. Activity-api's `impulse` table (defined in `repos/activity-api/sql/migrations/071-fix-paradigm-tables-root-access.surql:13`) is the destination. Concept-db will mirror this pattern with its own `impulse` table, not write into activity-api's.
 
 ### Documentation surface
 

@@ -880,10 +880,10 @@ This sequence spans **goal-host-vessel (execution, incl. reach gate + recovery),
 - `POST /v2/activities/recommend` - Thompson Sampling (includes improvise_solution)
 
 **Key Files:**
-- `repos/metabob-activity-api/src/routes/activities.ts` - Template registration + `/v2/activities/feedback` (β-penalty target)
-- `repos/metabob-activity-api/src/routes/goal-paths.ts` - per-goal `goal_execution_paths` (recordGoalPath / recommendReachingPath)
-- `repos/metabob-activity-api/src/db/paradigm.ts` - Thompson Sampling (includes improvise_solution in pool)
-- `repos/metabob-activity-api/sql/seed/meta-activities/improvise_solution.json` - Template definition
+- `repos/activity-api/src/routes/activities.ts` - Template registration + `/v2/activities/feedback` (β-penalty target)
+- `repos/activity-api/src/routes/goal-paths.ts` - per-goal `goal_execution_paths` (recordGoalPath / recommendReachingPath)
+- `repos/activity-api/src/db/paradigm.ts` - Thompson Sampling (includes improvise_solution in pool)
+- `repos/activity-api/sql/seed/meta-activities/improvise_solution.json` - Template definition
 
 ### SurrealDB Schema
 

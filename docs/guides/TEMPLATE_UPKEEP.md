@@ -1,7 +1,7 @@
 # Template Upkeep Pipeline
 
 **Status:** All five layers landed 2026-04-22. The consuming activity (`audit-and-backfill-templates`) landed in `minibob` v0.8.0 (`22ec545`).
-**Sources:** `repos/metabob-activity-api`, `repos/minibob`
+**Sources:** `repos/activity-api`, `repos/minibob`
 
 Activity templates accumulate with use. Authors churn shape names (`gitDiff` vs `git_diff` vs `GitDiff`), skip `tags`, write one-line descriptions, hardcode URLs in prompts, or rely entirely on LLM tasks where a deterministic resolver would do. The system observes this drift and corrects it through the impulse-activity loop itself — no dedicated admin REST surface, no out-of-band scripts. Five layers:
 
@@ -26,7 +26,7 @@ activityTemplate_update / _deprecate (write)   ← the correction
 ## 1. `observed-shapes` utility — descriptive, not prescriptive
 
 **Landed:** activity-api commit `c373bb4` (2026-04-22).
-**Location:** `repos/metabob-activity-api/src/utils/observed-shapes.ts`.
+**Location:** `repos/activity-api/src/utils/observed-shapes.ts`.
 
 Shapes in this system are **learned** semantic types that emerge from template authorship and execution traces — not a fixed canonical vocabulary. The utility reports what's currently in use without enforcing an allow-list.
 
@@ -135,7 +135,7 @@ A dedicated REST API would have bypassed all four.
 
 ## Sibling upkeep flow: `cleanup-stale-traces-v1`
 
-**Landed:** activity-api commit `c4c95ba` (2026-04-22), registered via migration `078-register-cleanup-templates.surql`. Runbook lives in the activity-api submodule at [`repos/metabob-activity-api/docs/testing/CLEANUP_UPKEEP_RUNBOOK.md`](../../repos/metabob-activity-api/docs/testing/CLEANUP_UPKEEP_RUNBOOK.md).
+**Landed:** activity-api commit `c4c95ba` (2026-04-22), registered via migration `078-register-cleanup-templates.surql`. Runbook lives in the activity-api submodule at [`repos/activity-api/docs/testing/CLEANUP_UPKEEP_RUNBOOK.md`](../../repos/activity-api/docs/testing/CLEANUP_UPKEEP_RUNBOOK.md).
 
 A second concrete upkeep activity that exercises the same resolver surface as audit-and-backfill — but against execution traces rather than template metadata:
 

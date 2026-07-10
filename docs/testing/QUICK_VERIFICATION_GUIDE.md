@@ -33,7 +33,7 @@ bun run validation/scripts/stratified-harness.ts
 
 # Unit tests per repo
 cd repos/minibob && bun test
-cd repos/metabob-activity-api && bun test
+cd repos/activity-api && bun test
 cd repos/identity-vessel && bun test
 ```
 
@@ -46,7 +46,7 @@ Run this before every push:
 ```bash
 # 1. Unit tests
 cd repos/minibob && bun test --silent && cd ../..
-cd repos/metabob-activity-api && bun test --silent && cd ../..
+cd repos/activity-api && bun test --silent && cd ../..
 
 # 2. Health check
 curl -sf $ACTIVITY_API_URL/health || { echo "Backend unhealthy"; exit 1; }
@@ -57,7 +57,7 @@ curl -sf -H "Authorization: ApiKey ${METABOB_API_KEY}" \
 
 # 4. Type check
 cd repos/minibob && bun run typecheck --silent && cd ../..
-cd repos/metabob-activity-api && bun run typecheck --silent && cd ../..
+cd repos/activity-api && bun run typecheck --silent && cd ../..
 
 echo "All checks passed."
 ```
@@ -79,7 +79,7 @@ bun run index.ts --single "list available activities"
 ### Activity API code changed
 
 ```bash
-cd repos/metabob-activity-api
+cd repos/activity-api
 bun test
 bun run typecheck
 
@@ -94,7 +94,7 @@ kill %1
 ### Database schema / migration changed
 
 ```bash
-cd repos/metabob-activity-api
+cd repos/activity-api
 
 # Hot-reload in substrate:
 make -C scripts/substrate substrate-restart-activity-api

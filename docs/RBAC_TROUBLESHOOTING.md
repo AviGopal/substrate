@@ -341,7 +341,7 @@ cd repos/metabob-proto
 bun run surrealdb/lib/migrate.ts
 
 # Activity API schemas
-cd repos/metabob-activity-api
+cd repos/activity-api
 bun run sql/migrate.ts
 
 # Analysis vessel schemas (formerly metabob-analysis-api)

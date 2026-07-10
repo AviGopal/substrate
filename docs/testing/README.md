@@ -46,7 +46,7 @@ Both harnesses read `~/.metabob/config.json` for the substrate endpoint — no h
 | Component | Test Location | Run Command |
 |-----------|---------------|-------------|
 | MiniBob | `repos/minibob/test/` | `cd repos/minibob && bun test` |
-| Activity API | `repos/metabob-activity-api/test/` | `cd repos/metabob-activity-api && bun test` |
+| Activity API | `repos/activity-api/test/` | `cd repos/activity-api && bun test` |
 | Identity Vessel | `repos/identity-vessel/test/` | `cd repos/identity-vessel && bun test` |
 | Cloud Dashboard | `repos/metabob-cloud-dashboard/e2e/` | `cd repos/metabob-cloud-dashboard && bun test` |
 

@@ -247,8 +247,8 @@ graph TD
 - Improvisation is an activity, not a fallback
 
 **Implementation:**
-- Meta-activity templates: `repos/metabob-activity-api/sql/seed/meta-activities/`
-- Composition tracking: `repos/metabob-activity-api/src/routes/composition-edges.ts`
+- Meta-activity templates: `repos/activity-api/sql/seed/meta-activities/`
+- Composition tracking: `repos/activity-api/src/routes/composition-edges.ts`
 - Activity resolver: `repos/goal-host-vessel/` + `ias-executor-ts` (activity shape resolution; was `minibob/src/impulse.ts`)
 
 ## Decomposition: Shape-Conditioned Scoring
@@ -281,7 +281,7 @@ sequenceDiagram
     Scorer-->>Backend: Final score for Thompson Sampling
 ```
 
-**Implementation:** `repos/metabob-activity-api/src/db/paradigm.ts:797-909`
+**Implementation:** `repos/activity-api/src/db/paradigm.ts:797-909`
 
 ## Decomposition: Heuristic Boost Calculation
 
@@ -366,11 +366,11 @@ graph TD
     style FinalSum fill:#ffd54f
 ```
 
-**Implementation:** `repos/metabob-activity-api/src/routes/activities.ts:3285-3340` (boosts 1–8), `:3757-3779` (shape mismatch penalty + boost_breakdown logging)
+**Implementation:** `repos/activity-api/src/routes/activities.ts:3285-3340` (boosts 1–8), `:3757-3779` (shape mismatch penalty + boost_breakdown logging)
 
 ### How tags are extracted (Boost #1 input)
 
-Boost #1 (Tag Match Quality) compares template tags against **prefixes extracted deterministically from the goal description**, not against the LLM semantic analysis from Sub-Activity 1. The extraction lives in `repos/metabob-activity-api/src/utils/semantic-tags.ts`:
+Boost #1 (Tag Match Quality) compares template tags against **prefixes extracted deterministically from the goal description**, not against the LLM semantic analysis from Sub-Activity 1. The extraction lives in `repos/activity-api/src/utils/semantic-tags.ts`:
 
 - `KEYWORD_TO_TAGS` — a static keyword → tag-prefix map (hundreds of entries across `tool.*`, `bugfix.*`, `development.*`, `meta.*`, `feature.*`). Each keyword maps to an ordered list of prefixes (most specific first). Compound keys like `"dependency vulnerabilities"` and `"find security"` let multi-word phrases match in a single lookup.
 - `extractTagPrefixes(description)` — tokenises the description and returns the union of matched prefixes.
@@ -420,7 +420,7 @@ graph TD
     style EmptyList fill:#ce93d8
 ```
 
-**Implementation:** `repos/metabob-activity-api/src/db/paradigm.ts:2915-3049`
+**Implementation:** `repos/activity-api/src/db/paradigm.ts:2915-3049`
 
 ## Key Decision Points
 
@@ -602,13 +602,13 @@ At each stage, the following metrics are captured for learning:
 |-----------|------|-------|---------|
 | Goal Processing | `repos/goal-host-vessel/` + `ias-executor-ts` | (was `goal-processor.ts`) | `GoalHost` meta-activity orchestration + goal-reaching gate |
 | State Space Manager | `repos/goal-host-vessel/` + `ias-executor-ts` | (was `state-space-manager.ts`) | Shape querying, compatibility |
-| Backend Recommendation | `repos/metabob-activity-api/src/routes/activities.ts` | 3080-3116 | POST /recommend endpoint |
-| Thompson Sampling | `repos/metabob-activity-api/src/routes/activities.ts` | 3345 | Beta distribution sampling |
-| Heuristic Boosts | `repos/metabob-activity-api/src/routes/activities.ts` | 3285-3340, 3757-3779 | 8 boost components + shape mismatch penalty |
-| Tag Extraction | `repos/metabob-activity-api/src/utils/semantic-tags.ts` | Full file | Keyword→tag-prefix map + position-weighted match quality (input to Boost #1) |
-| Paradigm Queries | `repos/metabob-activity-api/src/db/paradigm.ts` | 2915-3049 | Tiered fallback queries |
-| Shape Scoring | `repos/metabob-activity-api/src/db/paradigm.ts` | 797-909 | Shape-conditioned scores |
-| Composition Tracking | `repos/metabob-activity-api/src/routes/composition-edges.ts` | Full file | Composition edge storage |
+| Backend Recommendation | `repos/activity-api/src/routes/activities.ts` | 3080-3116 | POST /recommend endpoint |
+| Thompson Sampling | `repos/activity-api/src/routes/activities.ts` | 3345 | Beta distribution sampling |
+| Heuristic Boosts | `repos/activity-api/src/routes/activities.ts` | 3285-3340, 3757-3779 | 8 boost components + shape mismatch penalty |
+| Tag Extraction | `repos/activity-api/src/utils/semantic-tags.ts` | Full file | Keyword→tag-prefix map + position-weighted match quality (input to Boost #1) |
+| Paradigm Queries | `repos/activity-api/src/db/paradigm.ts` | 2915-3049 | Tiered fallback queries |
+| Shape Scoring | `repos/activity-api/src/db/paradigm.ts` | 797-909 | Shape-conditioned scores |
+| Composition Tracking | `repos/activity-api/src/routes/composition-edges.ts` | Full file | Composition edge storage |
 | Activity Resolver | `repos/goal-host-vessel/` (was `minibob/src/impulse.ts`) | Activity shape | Activity→activity resolution |
 
 ## Implementation Architecture
@@ -655,8 +655,8 @@ This sequence spans **both goal-host-vessel (execution) and activity-api (storag
 - `POST /v2/activities/impulse-relevance` - Relevance score updates
 
 **Key Files:**
-- `repos/metabob-activity-api/src/routes/activities.ts` (3080-3116, 3285-3340) - Recommendation endpoint + boost logic
-- `repos/metabob-activity-api/src/db/paradigm.ts` (2915-3049, 797-909) - Thompson Sampling + tiered queries
+- `repos/activity-api/src/routes/activities.ts` (3080-3116, 3285-3340) - Recommendation endpoint + boost logic
+- `repos/activity-api/src/db/paradigm.ts` (2915-3049, 797-909) - Thompson Sampling + tiered queries
 
 ### SurrealDB Schema
 

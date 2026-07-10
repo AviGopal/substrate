@@ -744,8 +744,8 @@ This sequence runs in **goal-host-vessel** (dispatching filesystem/process to `l
 - Discovery advertisement: activityExecutionTrace, activityTemplate, activityMetrics, etc.
 
 **Key Files:**
-- `repos/metabob-activity-api/src/routes/impulses.ts` - Impulse resolution endpoint
-- `repos/metabob-activity-api/src/services/discovery-client.ts` - Discovery registration
+- `repos/activity-api/src/routes/impulses.ts` - Impulse resolution endpoint
+- `repos/activity-api/src/services/discovery-client.ts` - Discovery registration
 
 ### Discovery-Vessel (Capability Registry)
 

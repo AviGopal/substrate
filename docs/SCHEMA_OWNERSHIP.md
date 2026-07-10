@@ -146,7 +146,7 @@ Applies:
 ### Activity API Schema
 
 ```bash
-cd repos/metabob-activity-api
+cd repos/activity-api
 bun run sql/migrate.ts
 ```
 
@@ -179,7 +179,7 @@ Applies core schemas first, then:
 
 Example:
 ```surql
--- In repos/metabob-activity-api/sql/schemas/014-new-feature.surql
+-- In repos/activity-api/sql/schemas/014-new-feature.surql
 
 DEFINE TABLE new_feature SCHEMAFULL
   PERMISSIONS
