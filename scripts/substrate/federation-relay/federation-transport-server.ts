@@ -44,8 +44,7 @@ const vl: VesselLibp2p = await createVesselLibp2p({ vesselId: VESSEL_ID, relayMu
 // genuine cross-substrate libp2p route (proving remote resolve, not a self-dial).
 const EXTRA_SHAPE = process.env.FED_EXTRA_SHAPE || ''
 
-async function proxyToLocalOwner(pointer: any): Promise<any> {
-  const t = String(pointer?.type ?? '')
+async function localDiscoveryResolve(pointer: any): Promise<any[]> {
   const dr = await fetch(DISCOVERY + '/resolve', {
     method: 'POST',
     headers: {
@@ -53,11 +52,30 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
       Authorization: 'ApiKey ' + API_KEY,
       'X-Discovery-Depth': '99', // local-only: never peer-fan-out from an ingress lookup
     },
-    body: JSON.stringify({ pointer: { type: 'vesselCapability', shape: t } }),
+    body: JSON.stringify({ pointer }),
     signal: AbortSignal.timeout(5000),
   })
   const dj = (await dr.json().catch(() => ({}))) as any
-  const vessels = (dj?.content?.vessels ?? []) as any[]
+  return (dj?.content?.vessels ?? []) as any[]
+}
+
+async function proxyToLocalOwner(pointer: any): Promise<any> {
+  const t = String(pointer?.type ?? '')
+  // Per-vessel addressing: a caller that discovered `<vesselId>@<substrate>` through
+  // the hub namespace names its target via pointer._fedTargetVessel (either form —
+  // bare vesselId or the substrate-qualified mirror id). When set, route to exactly
+  // that vessel; shape-owner lookup is only the fallback. This is what makes
+  // DUPLICATE shapes across the fleet individually addressable (two goal-hosts, two
+  // activity-apis) instead of collapsing onto whichever vessel shape-lookup finds.
+  const wanted = String(pointer?._fedTargetVessel ?? '').split('@')[0]
+  if (wanted) {
+    const all = await localDiscoveryResolve({ type: 'vesselRegistry' })
+    const target = all.find(
+      (v: any) => String(v?.vesselId ?? '') === wanted && !String(v.vesselId).startsWith(VESSEL_ID) && v?.protocol !== 'libp2p',
+    )
+    if (target) return proxyToVessel(pointer, t, target)
+  }
+  const vessels = await localDiscoveryResolve({ type: 'vesselCapability', shape: t })
   // Prefer a plain-HTTP LOCAL vessel: never ourselves, never our own hub-mirror
   // registration (vesselId-prefixed), never a libp2p-protocol entry.
   const owner = vessels.find(
@@ -83,6 +101,10 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
     }
     return { error: 'unknown shape: ' + t, note: 'no local or remote producer via ' + VESSEL_ID }
   }
+  return proxyToVessel(pointer, t, owner)
+}
+
+async function proxyToVessel(pointer: any, t: string, owner: any): Promise<any> {
   const base = String(owner.endpoint ?? '').replace(/\/$/, '')
   // resolve_endpoint may be a PATH ("/v2/impulses/resolve", dev-vessel) or a full
   // absolute URL ("http://127.0.0.1:8210/resolve", goal-host). Concatenating base +
@@ -90,6 +112,10 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
   // Use the absolute form as-is; otherwise hang the path off base.
   const rawResolve = String(owner.resolve_endpoint ?? '/v2/impulses/resolve')
   const url = /^https?:\/\//.test(rawResolve) ? rawResolve : base + (rawResolve.startsWith('/') ? rawResolve : '/' + rawResolve)
+  // Transport-internal routing keys never leak to the owning vessel.
+  const fwd: any = { ...pointer }
+  delete fwd._fedTargetVessel
+  delete fwd._fedHop
   const rr = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY },
@@ -98,7 +124,7 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
     // impulse.type), and impulse.pointer (goal-host's impulse-contract path). A
     // single form kept them incompatible — goal-host got type:undefined from
     // {impulse: pointer}.
-    body: JSON.stringify({ ...pointer, impulse: { ...pointer, pointer } }),
+    body: JSON.stringify({ ...fwd, impulse: { ...fwd, pointer: fwd } }),
     signal: AbortSignal.timeout(20000),
   })
   const rj = (await rr.json().catch(() => ({}))) as any
@@ -171,7 +197,12 @@ Bun.serve({
         // body.target. Query param wins, then header, then body.
         const target = u.searchParams.get('target') || req.headers.get('x-libp2p-target') || body?.target || ''
         if (!target) return Response.json({ error: 'missing libp2p target (?target= query, X-Libp2p-Target header, or body.target)' }, { status: 400 })
-        const pointer = body?.impulse?.pointer ?? body?.impulse ?? body?.pointer ?? body
+        let pointer = body?.impulse?.pointer ?? body?.impulse ?? body?.pointer ?? body
+        // Per-vessel addressing: ?vessel=<vesselId[@substrate]> (or body.vessel) names
+        // the exact vessel on the target substrate — the remote ingress routes to it
+        // instead of shape-owner lookup, so duplicate shapes stay distinguishable.
+        const targetVessel = u.searchParams.get('vessel') || body?.vessel || ''
+        if (targetVessel) pointer = { ...pointer, _fedTargetVessel: targetVessel }
         // resolveViaHttp returns the peer's { content, metadata } (serveResolveHttp wraps
         // it that way). Pass it through verbatim so the caller's resolve parsing applies.
         console.log('[fed-transport] egress/resolve -> ' + String((pointer as any)?.type ?? '?') + ' via ' + String(target).slice(-20))
@@ -215,43 +246,59 @@ const HUB_DISCOVERY = (process.env.HUB_DISCOVERY_URL || '').replace(/\/$/, '')
 const SUBSTRATE_ID = process.env.FED_SUBSTRATE_ID || hostname()
 const HUB_VESSEL_ID = `${VESSEL_ID}@${SUBSTRATE_ID}`
 
-async function localShapeUnion(): Promise<string[]> {
-  const r = await fetch(DISCOVERY + '/resolve', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY, 'X-Discovery-Depth': '99' },
-    body: JSON.stringify({ pointer: { type: 'vesselRegistry' } }),
-    signal: AbortSignal.timeout(5000),
-  })
-  const j = (await r.json().catch(() => ({}))) as any
-  const shapes = new Set<string>()
-  for (const v of j?.content?.vessels ?? []) {
-    // Skip ourselves, our own mirror row, and any libp2p-protocol entry (another
-    // substrate's mirror) — re-exporting mirrored shapes would ping-pong namespaces.
-    if (String(v?.vesselId ?? '').startsWith(VESSEL_ID) || v?.protocol === 'libp2p') continue
-    for (const s of v?.shapes ?? []) if (typeof s === 'string' && s) shapes.add(s)
+// The mirror is PER-VESSEL (2026-07-11): each plain-HTTP local vessel gets its own
+// `<vesselId>@<substrate>` row in the hub namespace, carrying that vessel's shapes and
+// THIS transport's circuit multiaddr as the reachability contract. This is what makes
+// every vessel in the fleet individually addressable and health-scoreable from any
+// substrate (bidirectional vessel↔vessel via discovery + the libp2p sidecar), and it
+// lets DUPLICATE vessels (two activity-apis, two goal-hosts) coexist as distinct rows
+// instead of colliding on one blob mirror. A remote caller dials the circuit and names
+// its target via pointer._fedTargetVessel (the ingress proxy routes to that vessel).
+async function localVesselRows(): Promise<Array<{ vesselId: string; shapes: string[] }>> {
+  const vessels = await localDiscoveryResolve({ type: 'vesselRegistry' })
+  const rows: Array<{ vesselId: string; shapes: string[] }> = []
+  for (const v of vessels) {
+    const id = String(v?.vesselId ?? '')
+    // Skip ourselves, our own mirror row, any libp2p-protocol entry (another
+    // substrate's mirror — re-exporting mirrored shapes would ping-pong namespaces),
+    // and already-qualified rows (a `x@substrate` id is some substrate's mirror).
+    if (!id || id.startsWith(VESSEL_ID) || v?.protocol === 'libp2p' || id.includes('@')) continue
+    const shapes = (v?.shapes ?? []).filter((s: any) => typeof s === 'string' && s)
+    if (shapes.length === 0) continue
+    rows.push({ vesselId: id, shapes })
   }
-  return [...shapes]
+  return rows
 }
 
 async function registerAtHub() {
   if (!HUB_DISCOVERY || !circuit) return
   try {
-    const shapes = await localShapeUnion()
-    if (shapes.length === 0) return // local registry mid-repopulation — keep the last hub TTL alive next tick
-    const r = await fetch(HUB_DISCOVERY + '/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY },
-      body: JSON.stringify({
-        vesselId: HUB_VESSEL_ID, vesselName: HUB_VESSEL_ID, version: '0.1.0',
-        endpoint: `http://127.0.0.1:${HEALTH_PORT}`, // local-only surface; reachability is the circuit below
-        shapes: ['federation_probe', ...shapes],
-        resolve_endpoint: '/v2/impulses/resolve', resolve_request_format: 'pointer', auth_scheme: 'none',
-        protocol: 'libp2p',
-        libp2p_peer_id: vl.peerId,
-        libp2p_multiaddr: [circuit],
-      }),
-    })
-    console.log(`[fed-transport] hub-register(${HUB_VESSEL_ID}, ${shapes.length} shapes) -> ${r.status}`)
+    const rows = await localVesselRows()
+    if (rows.length === 0) return // local registry mid-repopulation — keep the last hub TTL alive next tick
+    // The transport's own row anchors the substrate ingress (probe shape only — shape
+    // traffic belongs to the per-vessel rows below).
+    const registrations = [
+      { vesselId: HUB_VESSEL_ID, shapes: ['federation_probe', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])] },
+      ...rows.map((r) => ({ vesselId: `${r.vesselId}@${SUBSTRATE_ID}`, shapes: r.shapes })),
+    ]
+    const results = await Promise.all(registrations.map(async (reg) => {
+      const r = await fetch(HUB_DISCOVERY + '/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY },
+        body: JSON.stringify({
+          vesselId: reg.vesselId, vesselName: reg.vesselId, version: '0.1.0',
+          endpoint: `http://127.0.0.1:${HEALTH_PORT}`, // local-only surface; reachability is the circuit below
+          shapes: reg.shapes,
+          resolve_endpoint: '/v2/impulses/resolve', resolve_request_format: 'pointer', auth_scheme: 'none',
+          protocol: 'libp2p',
+          libp2p_peer_id: vl.peerId,
+          libp2p_multiaddr: [circuit],
+        }),
+      }).catch((e) => ({ status: 'err:' + String((e as Error)?.message ?? e) } as any))
+      return `${reg.vesselId}:${r.status}`
+    }))
+    const failed = results.filter((s) => !/:(200|201)$/.test(s))
+    console.log(`[fed-transport] hub-register per-vessel (${results.length} rows) -> ${failed.length === 0 ? 'all ok' : 'FAILED ' + failed.join(', ')}`)
   } catch (e) { console.log('[fed-transport] hub-register err', String(e)) }
 }
 
