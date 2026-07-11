@@ -1,7 +1,10 @@
 [Unit]
 Description=boredom-vessel — concurrent dispatch pool daemon (2026-06-04)
 After=activity-api.service goal-host-vessel.service light-dispatch-vessel.service
-Requires=goal-host-vessel.service
+# Wants= (was Requires=): a goal-host cutover restart must not stop-propagate
+# to boredom — each bounce re-hydrates persisted momentum and resets selection
+# state. Boredom tolerates a briefly-absent goal-host (dispatches fail soft).
+Wants=goal-host-vessel.service
 
 [Service]
 # Type=simple (was oneshot): boredom now runs as a long-lived daemon that
