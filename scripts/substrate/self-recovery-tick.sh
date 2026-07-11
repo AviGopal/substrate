@@ -95,8 +95,19 @@ if [ "${#VESSELS[@]}" -eq 0 ]; then
 fi
 
 log() { echo "[self-recovery $(date -Iseconds)] $*" >&2; }
-healthy() { # vessel-name port -> 0 if /health returns 200
-  csh "curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:$2/health 2>/dev/null" 2>/dev/null | grep -q 200
+healthy() { # vessel-name port -> 0 if /health returns 200 within the probe budget.
+  # Require CONSECUTIVE probe failures before declaring a vessel dead: under DB
+  # thrash / load spikes a single 200-but-slow response used to time out and
+  # trigger a fleet-wide restart cascade (restarts interrupt dispatches, which
+  # requeue and amplify the very load that slowed the probe). Three probes,
+  # 10s budget each, 5s apart — a genuinely-down vessel still restarts within
+  # the same tick; a merely-slow one gets the benefit of the doubt.
+  local tries=3 i
+  for i in $(seq 1 $tries); do
+    if csh "curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:$2/health 2>/dev/null" 2>/dev/null | grep -q 200; then return 0; fi
+    [ "$i" -lt "$tries" ] && sleep 5
+  done
+  return 1
 }
 emit_gap() {
   csh "curl -s --max-time 8 -X POST $DEV_VESSEL/v2/impulses/resolve -H 'Content-Type: application/json' -d '$1'" >/dev/null 2>&1 || true
