@@ -1,5 +1,10 @@
 /**
- * db-maintenance-tick.ts — the substrate manages its OWN database, autonomously.
+ * db-maintenance-tick.ts — the substrate maintains its OWN database, autonomously.
+ *
+ * SCOPE: row-count / index / migration / integrity remediation against a
+ * RESPONSIVE SurrealDB. A wedged or pegged DB process with a dead HTTP endpoint
+ * is OUT OF SCOPE — this tick has no liveness probe and reaches the DB only
+ * through activity-api's db_admin, which is downstream of the same wedge.
  *
  * Closes the self-management loop: db_admin (activity-api resolver) gives the
  * substrate the CAPABILITY to diagnose/index/migrate/repair/prune its SurrealDB;

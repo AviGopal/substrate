@@ -1,5 +1,5 @@
 [Unit]
-Description=DB maintenance — substrate manages its own SurrealDB (diagnose + safe auto-remediate)
+Description=DB maintenance — row-count/index/integrity remediation against a LIVE SurrealDB (does not detect or recover a wedged/unresponsive DB process)
 [Service]
 Type=oneshot
 Environment=DB_MAINTENANCE=1
