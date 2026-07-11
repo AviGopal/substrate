@@ -131,20 +131,25 @@ make -C scripts/substrate issue-key NAME=spoke-<location>
 `docs/SUBSTRATE.md` § "Keys and tokens".)
 
 A vessel **behind NAT** (e.g. a host Obsidian plugin) that can't be dialed directly uses
-the **libp2p ingress sidecar** — the vessel stays plain HTTP, the sidecar carries libp2p:
+the **libp2p ingress sidecar** — the vessel stays plain HTTP, the sidecar carries libp2p.
+The complete federated config is **two values** — the API key and the libp2p peer
+location (Obsidian's `sidecar/federation-sidecar.ts` shown; the generic
+`@avigopal/libp2p-federation-transport` sidecar still takes the explicit envs):
 
 ```
-FED_VESSEL_ID=my-vessel \
-RELAY_MULTIADDR=/ip4/<hub-ip>/tcp/30333/p2p/<relay-peerid> \
-DISCOVERY_URL=http://<hub-ip>:18100 \
-LOCAL_RESOLVE_URL=http://127.0.0.1:27182/resolve \
-FED_SHAPES=obsidian:note,obsidian:write_note \
 METABOB_API_KEY=<hub-issued-key> \
-bunx @avigopal/libp2p-federation-transport   # (or: bun src/sidecar.ts)
+RELAY_MULTIADDR=/ip4/<hub-ip>/tcp/30333/p2p/<relay-peerid> \
+bun sidecar/federation-sidecar.ts
 ```
 
-The sidecar reserves on the relay, serves resolves over libp2p (proxying to
-`LOCAL_RESOLVE_URL`), and registers `protocol:"libp2p"` with the hub discovery. The hub
+Everything else derives (an explicit env always wins as an override): the discovery URL
+comes from the relay's host (`http://<relay-host>:18100`), the vessel id from the
+machine hostname (`obsidian-<hostname>-vessel` — host-unique, so libp2p identities never
+collide), the hub ingress circuit is auto-discovered from hub discovery
+(`federation_probe`), and the plugin URL / health port use their fixed defaults.
+
+The sidecar reserves on the relay, serves resolves over libp2p (proxying to the local
+vessel), and registers `protocol:"libp2p"` with the hub discovery. The hub
 then resolves those shapes over the relay — the vessel never learns libp2p is involved.
 
 ## Verified
