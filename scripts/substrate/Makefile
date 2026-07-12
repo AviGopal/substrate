@@ -328,7 +328,7 @@ run-live:
 	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
-	    -e SUBSTRATE_ROOT="$(REPO_ROOT)" \
+	    -e SUBSTRATE_ROOT="/workspace/git/super-repo" \
 	    -e ENABLED_ROLES="$(ENABLED_ROLES)" \
 	    -e ENABLED_VESSELS="$(ENABLED_VESSELS)" \
 	    -e DISABLED_VESSELS="$(DISABLED_VESSELS)" \
@@ -353,7 +353,6 @@ run-live:
 	    -p $(call hp,18270):8270 \
 	    -v $(WORKSPACE_VOLUME):/workspace \
 	    -v $(SURREAL_VOLUME):/var/lib/surrealdb \
-	    -v $(REPO_ROOT):$(REPO_ROOT):ro \
 	    --tmpfs /run \
 	    --tmpfs /run/lock \
 	    $(IMAGE):$(TAG)
@@ -385,7 +384,7 @@ run-live-obsidian:
 	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
-	    -e SUBSTRATE_ROOT="$(REPO_ROOT)" \
+	    -e SUBSTRATE_ROOT="/workspace/git/super-repo" \
 	    -e ENABLED_ROLES="$(ENABLED_ROLES)" \
 	    -e ENABLED_VESSELS="$(ENABLED_VESSELS)" \
 	    -e DISABLED_VESSELS="$(DISABLED_VESSELS)" \
@@ -411,7 +410,6 @@ run-live-obsidian:
 	    -p 16080:6080 \
 	    -v $(WORKSPACE_VOLUME):/workspace \
 	    -v $(SURREAL_VOLUME):/var/lib/surrealdb \
-	    -v $(REPO_ROOT):$(REPO_ROOT):ro \
 	    --tmpfs /run \
 	    --tmpfs /run/lock \
 	    --shm-size=512m \

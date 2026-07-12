@@ -145,12 +145,13 @@ OPENAI_BASE_URL="${OPENAI_BASE_URL:-}"
 CHUTES_API_KEY="${CHUTES_API_KEY:-}"
 OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
 LLM_DEFAULT_MODEL="${LLM_DEFAULT_MODEL:-}"
-# Substrate root inside the container = the bind-mounted host repo path
-# (docker run -v \$(REPO_ROOT):\$(REPO_ROOT):ro, passed in via -e SUBSTRATE_ROOT).
-# Every tick unit references its script as \${SUBSTRATE_ROOT}/scripts/substrate/...
-# so the fleet is relocatable: rename/move the repo and re-run \`make run-live\`
-# and nothing in the units changes. Empty here means SUBSTRATE_ROOT was not
-# passed — units will fail loudly rather than read a stale hardcoded path.
+# Substrate root inside the container = the container-native super-repo clone
+# (/workspace/git/super-repo, passed in via -e SUBSTRATE_ROOT). The container
+# is unmoored from the host filesystem: no host repo bind. Every tick unit
+# references its script as \${SUBSTRATE_ROOT}/scripts/substrate/... and the
+# substrate keeps the clone current by pulling origin/dev itself. Empty here
+# means SUBSTRATE_ROOT was not passed — units will fail loudly rather than
+# read a stale hardcoded path.
 SUBSTRATE_ROOT="${SUBSTRATE_ROOT:-}"
 # Writable run-dir for the timer SCRIPTS (self-activation, 2026-06-26). The tick
 # units' run-dir.conf drop-ins reference their script as
