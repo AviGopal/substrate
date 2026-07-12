@@ -212,6 +212,22 @@ Bun.serve({
         return Response.json({ error: 'libp2p egress failed: ' + String((e as Error)?.message ?? e) }, { status: 502 })
       }
     }
+    // Local resolve surface matching the resolve_endpoint this vessel (and every
+    // capability row mirrored under its endpoint) advertises in discovery. A
+    // mirrored row's URL — http://127.0.0.1:8401/v2/impulses/resolve — is thereby
+    // valid VERBATIM on any substrate: the local transport serves the local owner
+    // or hops once over libp2p to the owning substrate (proxyToLocalOwner).
+    if (u.pathname === '/v2/impulses/resolve' && req.method === 'POST') {
+      try {
+        const body = (await req.json().catch(() => ({}))) as any
+        const pointer = body?.impulse?.pointer ?? body?.impulse ?? body?.pointer ?? body
+        console.log('[fed-transport] local/resolve -> ' + String((pointer as any)?.type ?? '?'))
+        const res = await resolveHandler(pointer)
+        return Response.json({ content: res, metadata: { shape: String((pointer as any)?.type ?? '') } }, { status: 200 })
+      } catch (e) {
+        return Response.json({ error: 'local resolve failed: ' + String((e as Error)?.message ?? e) }, { status: 502 })
+      }
+    }
     return new Response('not found', { status: 404 })
   },
 })
