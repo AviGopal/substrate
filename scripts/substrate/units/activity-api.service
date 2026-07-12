@@ -1,5 +1,5 @@
 [Unit]
-Description=metabob-activity-api
+Description=activity-api
 After=identity-vessel.service discovery-vessel.service
 Requires=surrealdb.service valkey.service
 
