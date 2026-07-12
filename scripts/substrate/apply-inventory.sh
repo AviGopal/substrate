@@ -74,12 +74,27 @@ is_desired() { echo "$DESIRED" | grep -qx "$1" && ! echo "$DISABLED_EXPLICIT" | 
 
 disabled_count=0
 for u in $(manageable_units); do
-  if is_desired "$u"; then continue; fi
+  if is_desired "$u"; then
+    # clear a stale mask left by a previous role selection
+    if [ -L "/etc/systemd/system/$u" ] && [ "$(readlink "/etc/systemd/system/$u")" = "/dev/null" ]; then
+      rm -f "/etc/systemd/system/$u" && log "unmasked: $u"
+    fi
+    continue
+  fi
   if [ "$DRY_RUN" = "1" ]; then
     log "DRY-RUN would disable: $u"
   else
     systemctl disable "$u" >/dev/null 2>&1 || log "warn: could not disable $u"
-    log "disabled: $u"
+    # disable alone doesn't survive Wants= pulls from enabled units — mask the
+    # unit with an /etc-level /dev/null link (units are vendored in /usr/lib,
+    # which /etc outranks). /etc persists across container restarts, so the
+    # desired-units loop below unmasks anything re-enabled by a role change.
+    if [ -f "/etc/systemd/system/$u" ] && [ ! -L "/etc/systemd/system/$u" ]; then
+      log "warn: $u has a real unit file in /etc — cannot mask (dynamic vessel?)"
+    else
+      ln -sf /dev/null "/etc/systemd/system/$u" 2>/dev/null || log "warn: could not mask $u"
+    fi
+    log "disabled+masked: $u"
   fi
   disabled_count=$((disabled_count + 1))
 done

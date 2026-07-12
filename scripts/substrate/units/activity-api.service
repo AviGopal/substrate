@@ -11,7 +11,6 @@ Environment=HOST=127.0.0.1
 Environment=TASK_GENERATION_ENABLED=false
 Environment=VESSEL_ID=activity-api-local
 Environment=VESSEL_ENDPOINT=http://127.0.0.1:8080
-Environment=DISCOVERY_VESSEL_ENDPOINT=http://127.0.0.1:8100
 WorkingDirectory=/vessels/activity-api
 ExecStartPre=/root/.bun/bin/bun /vessels/activity-api/scripts/init-database.ts
 ExecStart=/root/.bun/bin/bun /vessels/activity-api/src/index.ts

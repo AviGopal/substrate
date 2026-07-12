@@ -16,7 +16,6 @@ Wants=goal-host-vessel.service
 # back to oneshot behaviour for rollback without touching the unit file.
 Type=simple
 EnvironmentFile=/etc/substrate/env
-Environment=ACTIVITY_API_ENDPOINT=http://127.0.0.1:8080
 Environment=GOAL_HOST_VESSEL_ENDPOINT=http://127.0.0.1:8210
 Environment=LIGHT_DISPATCH_ENDPOINT=http://127.0.0.1:8280
 Environment=DEV_VESSEL_ENDPOINT=http://127.0.0.1:8090

@@ -41,14 +41,23 @@ TAG          := dev
 #   substrate-workspace -> /workspace          (memoryNote store, git clones, .substrate-secrets, snapshots)
 # The image declares VOLUME ["/workspace","/var/lib/surrealdb"]; we name them so
 # they survive `docker rm` and can be backed up / moved off-host independently.
+# Volumes follow the container name so a second substrate (e.g. a spoke next
+# to substrate-live) gets its own state; the default name keeps the historical
+# volume names for existing installs. (LIVE_NAME is defined here, before the
+# conditional, because ifeq evaluates at parse time.)
+LIVE_NAME ?= substrate-live
+ifeq ($(LIVE_NAME),substrate-live)
 SURREAL_VOLUME   := substrate-surreal
 WORKSPACE_VOLUME := substrate-workspace
+else
+SURREAL_VOLUME   := $(LIVE_NAME)-surreal
+WORKSPACE_VOLUME := $(LIVE_NAME)-workspace
+endif
 # Legacy HOST paths — retained only as the migration source / offline backup
 # (host-detach migrated their contents into the named volumes above). No longer
 # mounted into the live container.
 WORKSPACE    := $(shell pwd)/workspace
 SURREAL_DATA := $(shell pwd)/surreal-data
-LIVE_NAME    := substrate-live
 
 # Vessels with @avigopal/ias-executor-ts as a `file:` dep. Bun copies dist
 # physically per-consumer rather than symlinking, so rebuilds of the
@@ -105,6 +114,42 @@ IDENTITY_VESSEL_URL ?=
 IDENTITY_ENDPOINT ?=
 SURREALDB_URL ?=
 REDIS_URL ?=
+
+# ── Two-command spoke UX ─────────────────────────────────────────────────────
+# 1) make up API_KEY=<hub-issued> ANTHROPIC_API_KEY=<key> DISCOVERY_ENDPOINT=http://<hub>:18100
+# 2) make vessel-ctl enable federation-transport-vessel FED_SUBSTRATE_ID=<unique-id> [RELAY_MULTIADDR=<addr>]
+#
+# API_KEY is the operator-facing alias for METABOB_API_KEY. A hub
+# DISCOVERY_ENDPOINT with NO explicit ENABLED_ROLES implies a FEDERATED SPOKE:
+# local registry + compute here, hub store/identity derived from the discovery
+# host (fleet port convention 18080/18101). The hub URL reaches the container
+# as HUB_DISCOVERY_URL — deliberately NOT as DISCOVERY_ENDPOINT, which would
+# repoint every vessel's own registration away from the spoke's local registry
+# (the federation-transport-vessel mirrors local capability to the hub instead).
+# Passing ENABLED_ROLES explicitly keeps the old thin-spoke passthrough intact.
+API_KEY ?=
+ifneq ($(strip $(API_KEY)),)
+METABOB_API_KEY := $(API_KEY)
+endif
+HUB_DISCOVERY_URL ?=
+FED_SUBSTRATE_ID ?=
+RELAY_MULTIADDR ?=
+CONTAINER_DISCOVERY_ENDPOINT := $(DISCOVERY_ENDPOINT)
+ifneq ($(strip $(DISCOVERY_ENDPOINT)),)
+ifeq ($(strip $(ENABLED_ROLES)),)
+ENABLED_ROLES := spoke
+DISCOVERY_HOST := $(shell echo '$(DISCOVERY_ENDPOINT)' | sed -E 's#^[a-z]+://##; s#[:/].*##')
+HUB_DISCOVERY_URL := http://$(DISCOVERY_HOST):18100
+ACTIVITY_API_ENDPOINT := $(if $(strip $(ACTIVITY_API_ENDPOINT)),$(ACTIVITY_API_ENDPOINT),http://$(DISCOVERY_HOST):18080)
+IDENTITY_VESSEL_URL := $(if $(strip $(IDENTITY_VESSEL_URL)),$(IDENTITY_VESSEL_URL),http://$(DISCOVERY_HOST):18101)
+CONTAINER_DISCOVERY_ENDPOINT :=
+endif
+endif
+
+# Host-port offset so a second substrate coexists with substrate-live
+# (e.g. PORT_OFFSET=10000 → 28080/28100/28210/…). 0 = historical defaults.
+PORT_OFFSET ?= 0
+hp = $(shell expr $(1) + $(PORT_OFFSET))
 
 # Vessel source roots (relative to repo root, two levels up)
 REPO_ROOT := $(abspath $(CURDIR)/../..)
@@ -243,7 +288,11 @@ up:
 	  echo "[up] image predates identity-seeder — running seed-live fallback (idempotent)"; \
 	  $(MAKE) seed-live || true; \
 	fi
-	@$(CURDIR)/configure-local.sh >/dev/null 2>&1 && echo "[up] ~/.metabob/config.json updated (operator IDE convenience)" || echo "[up] configure-local skipped"
+	@if [ "$(LIVE_NAME)" = "substrate-live" ]; then \
+	  $(CURDIR)/configure-local.sh >/dev/null 2>&1 && echo "[up] ~/.metabob/config.json updated (operator IDE convenience)" || echo "[up] configure-local skipped"; \
+	else \
+	  echo "[up] secondary container ($(LIVE_NAME)) — leaving ~/.metabob/config.json untouched"; \
+	fi
 	@CONTAINER=$(LIVE_NAME) $(CURDIR)/substrate-doctor.sh
 
 # Fleet readiness matrix (host wrapper; in-container: /usr/local/bin/substrate-ready)
@@ -284,7 +333,10 @@ run-live:
 	    -e ENABLED_VESSELS="$(ENABLED_VESSELS)" \
 	    -e DISABLED_VESSELS="$(DISABLED_VESSELS)" \
 	    -e PEER_DISCOVERY_ENDPOINTS="$(PEER_DISCOVERY_ENDPOINTS)" \
-	    -e DISCOVERY_ENDPOINT="$(DISCOVERY_ENDPOINT)" \
+	    -e DISCOVERY_ENDPOINT="$(CONTAINER_DISCOVERY_ENDPOINT)" \
+	    -e HUB_DISCOVERY_URL="$(HUB_DISCOVERY_URL)" \
+	    -e FED_SUBSTRATE_ID="$(FED_SUBSTRATE_ID)" \
+	    -e RELAY_MULTIADDR="$(RELAY_MULTIADDR)" \
 	    -e ACTIVITY_API_ENDPOINT="$(ACTIVITY_API_ENDPOINT)" \
 	    -e METABOB_ENDPOINT="$(METABOB_ENDPOINT)" \
 	    -e IDENTITY_VESSEL_URL="$(IDENTITY_VESSEL_URL)" \
@@ -292,13 +344,13 @@ run-live:
 	    -e SURREALDB_URL="$(SURREALDB_URL)" \
 	    -e REDIS_URL="$(REDIS_URL)" \
 	    -e METABOB_API_KEY="$(METABOB_API_KEY)" \
-	    -p 18080:8080 \
-	    -p 18090:8090 \
-	    -p 18100:8100 \
-	    -p 18210:8210 \
-	    -p 18250:8250 \
-	    -p 18260:8260 \
-	    -p 18270:8270 \
+	    -p $(call hp,18080):8080 \
+	    -p $(call hp,18090):8090 \
+	    -p $(call hp,18100):8100 \
+	    -p $(call hp,18210):8210 \
+	    -p $(call hp,18250):8250 \
+	    -p $(call hp,18260):8260 \
+	    -p $(call hp,18270):8270 \
 	    -v $(WORKSPACE_VOLUME):/workspace \
 	    -v $(SURREAL_VOLUME):/var/lib/surrealdb \
 	    -v $(REPO_ROOT):$(REPO_ROOT):ro \
@@ -338,7 +390,10 @@ run-live-obsidian:
 	    -e ENABLED_VESSELS="$(ENABLED_VESSELS)" \
 	    -e DISABLED_VESSELS="$(DISABLED_VESSELS)" \
 	    -e PEER_DISCOVERY_ENDPOINTS="$(PEER_DISCOVERY_ENDPOINTS)" \
-	    -e DISCOVERY_ENDPOINT="$(DISCOVERY_ENDPOINT)" \
+	    -e DISCOVERY_ENDPOINT="$(CONTAINER_DISCOVERY_ENDPOINT)" \
+	    -e HUB_DISCOVERY_URL="$(HUB_DISCOVERY_URL)" \
+	    -e FED_SUBSTRATE_ID="$(FED_SUBSTRATE_ID)" \
+	    -e RELAY_MULTIADDR="$(RELAY_MULTIADDR)" \
 	    -e ACTIVITY_API_ENDPOINT="$(ACTIVITY_API_ENDPOINT)" \
 	    -e METABOB_ENDPOINT="$(METABOB_ENDPOINT)" \
 	    -e IDENTITY_VESSEL_URL="$(IDENTITY_VESSEL_URL)" \
@@ -824,6 +879,29 @@ clone-vessel-repos:
 # container, reusing the unit-install pattern + the single secrets place (secrets.env.sh).
 # Operator-runnable AND activity-dispatchable (the substrate calls vessel-ctl.sh via
 # local-tools-vessel's shell resolver). Works against any --container (basis for remote).
+# Passthrough UX (two-command spoke setup, command 2):
+#   make vessel-ctl enable federation-transport-vessel FED_SUBSTRATE_ID=<unique-id> [RELAY_MULTIADDR=<addr>]
+#   make vessel-ctl enable|disable <any-manifest-vessel>
+# The extra words on the command line are absorbed by a no-op rule below.
+VC_ARGS := $(filter-out vessel-ctl,$(MAKECMDGOALS))
+.PHONY: vessel-ctl
+vessel-ctl:
+	@action="$(word 1,$(VC_ARGS))"; vessel="$(word 2,$(VC_ARGS))"; \
+	test -n "$$action" && test -n "$$vessel" || { echo "usage: make vessel-ctl enable|disable <vessel> [FED_SUBSTRATE_ID=<id>] [RELAY_MULTIADDR=<addr>]"; exit 2; }; \
+	case "$$action:$$vessel" in \
+	  enable:federation-transport-vessel) \
+	    test -n "$(FED_SUBSTRATE_ID)" || { echo "FED_SUBSTRATE_ID=<unique-id> required (unique per substrate; e.g. ben-windows-spoke)"; exit 2; }; \
+	    $(CURDIR)/spoke-federate.sh $(LIVE_NAME) "$(FED_SUBSTRATE_ID)" "$(RELAY_MULTIADDR)" ;; \
+	  enable:*)  $(CURDIR)/vessel-ctl.sh install "$$vessel" --container $(LIVE_NAME) ;; \
+	  disable:*) $(CURDIR)/vessel-ctl.sh uninstall "$$vessel" --container $(LIVE_NAME) ;; \
+	  *) echo "unknown vessel-ctl action '$$action' (enable|disable)"; exit 2 ;; \
+	esac
+ifneq ($(filter vessel-ctl,$(MAKECMDGOALS)),)
+.PHONY: $(VC_ARGS)
+$(VC_ARGS):
+	@:
+endif
+
 .PHONY: list-vessels install-vessel uninstall-vessel
 list-vessels:
 	@$(CURDIR)/vessel-ctl.sh list --container $(LIVE_NAME)

@@ -116,6 +116,14 @@ PRODUCER_DISCOVERY_ENDPOINT="${PRODUCER_DISCOVERY_ENDPOINT:-$ACTIVITY_API_ENDPOI
 METABOB_ENDPOINT="${METABOB_ENDPOINT:-$ACTIVITY_API_ENDPOINT}"
 IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL:-http://127.0.0.1:8101}"
 IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT:-$IDENTITY_VESSEL_URL}"
+# Federated-spoke identity (docs/FEDERATION.md): the hub discovery this
+# substrate mirrors its capability surface into, and the relay + unique
+# substrate id the federation-transport-vessel uses. Empty on a plain local
+# substrate; set by `make up DISCOVERY_ENDPOINT=<hub>` (spoke auto-derivation)
+# and consumed by vessel-ctl'd dynamic vessels via /etc/substrate/env.
+HUB_DISCOVERY_URL="${HUB_DISCOVERY_URL:-}"
+FED_SUBSTRATE_ID="${FED_SUBSTRATE_ID:-}"
+RELAY_MULTIADDR="${RELAY_MULTIADDR:-}"
 
 mkdir -p /workspace
 cat > /etc/substrate/env <<EOF
@@ -221,6 +229,11 @@ PRODUCER_DISCOVERY_ENDPOINT="${PRODUCER_DISCOVERY_ENDPOINT}"
 METABOB_ENDPOINT="${METABOB_ENDPOINT}"
 IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL}"
 IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT}"
+
+# Federation (empty unless this substrate is a spoke of a hub)
+HUB_DISCOVERY_URL="${HUB_DISCOVERY_URL}"
+FED_SUBSTRATE_ID="${FED_SUBSTRATE_ID}"
+RELAY_MULTIADDR="${RELAY_MULTIADDR}"
 
 # Dense search (F-V58 fix — must point to directory containing model.onnx + vocab.txt)
 EMBEDDING_MODEL_DIR=/vessels/activity-api/src/assets/models/all-MiniLM-L6-v2

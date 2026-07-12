@@ -50,7 +50,9 @@ for i in $(seq 1 10); do
 done
 
 # Read API key from container env file
-API_KEY=$(docker exec "$CONTAINER_NAME" bash -c 'grep "^METABOB_API_KEY=" /etc/substrate/env' | cut -d= -f2-)
+# NB: gen-env quotes values in /etc/substrate/env (METABOB_API_KEY="mb-...");
+# strip surrounding quotes or they end up doubled inside the JSON below.
+API_KEY=$(docker exec "$CONTAINER_NAME" bash -c 'grep "^METABOB_API_KEY=" /etc/substrate/env' | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//')
 if [[ -z "$API_KEY" ]]; then
   echo "[configure-local] ERROR: Could not read METABOB_API_KEY from container." >&2
   echo "  Run: docker exec $CONTAINER_NAME bun /vessels/seed-identity.ts" >&2

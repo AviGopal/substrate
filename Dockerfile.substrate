@@ -205,7 +205,12 @@ COPY repos/relevance-sink-vessel/tsconfig.json ./relevance-sink-vessel/
 # --- Substrate runtime config ---
 RUN mkdir -p /etc/substrate /workspace /var/lib/surrealdb /scripts
 
-COPY scripts/substrate/units/ /etc/systemd/system/
+# Vendor units in /usr/lib/systemd/system (not /etc): /etc outranks every other
+# unit dir, so units living there can never be masked — apply-inventory's role
+# subsetting writes /etc/systemd/system/<unit> -> /dev/null masks, which only
+# shadow units vendored at lower precedence. Dynamic (vessel-ctl) units still
+# install into /etc.
+COPY scripts/substrate/units/ /usr/lib/systemd/system/
 COPY scripts/substrate/entrypoint.sh /usr/local/bin/substrate-entrypoint
 COPY scripts/substrate/gen-env.sh /usr/local/bin/gen-env
 COPY scripts/substrate/setup-git-push.sh /usr/local/bin/setup-git-push

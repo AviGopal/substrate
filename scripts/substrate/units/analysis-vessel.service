@@ -10,7 +10,6 @@ Environment=PORT=8250
 Environment=HOST=127.0.0.1
 Environment=VESSEL_ID=analysis-vessel-local
 Environment=VESSEL_ENDPOINT=http://127.0.0.1:8250
-Environment=DISCOVERY_VESSEL_ENDPOINT=http://127.0.0.1:8100
 WorkingDirectory=/vessels/analysis-vessel
 ExecStart=/root/.bun/bin/bun /vessels/analysis-vessel/src/index.ts
 Restart=on-failure

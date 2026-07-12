@@ -3,55 +3,256 @@
   "repo_owner_default": "AviGopal",
   "branch_default": "dev",
   "roles": {
-    "hub": ["store", "control", "api", "transport", "seed", "infra"],
-    "spoke": ["compute", "ui", "seed", "infra"],
-    "full": ["store", "control", "api", "compute", "ui", "transport", "seed", "infra", "autonomy"]
+    "hub": [
+      "store",
+      "control",
+      "api",
+      "transport",
+      "seed",
+      "infra",
+      "registry"
+    ],
+    "spoke": [
+      "compute",
+      "ui",
+      "seed",
+      "infra",
+      "registry"
+    ],
+    "full": [
+      "store",
+      "control",
+      "api",
+      "compute",
+      "ui",
+      "transport",
+      "seed",
+      "infra",
+      "autonomy",
+      "registry"
+    ]
   },
   "vessels": [
-    { "unit": "surrealdb.service", "role": "store", "health_port": 8000, "core": true },
-    { "unit": "valkey.service", "role": "store", "core": true },
-    { "unit": "discovery-vessel.service", "role": "control", "repo": "discovery-vessel", "health_port": 8100, "core": true },
-    { "unit": "identity-vessel.service", "role": "control", "repo": "identity-vessel", "health_port": 8101, "core": true },
-    { "unit": "activity-api.service", "role": "api", "repo": "activity-api", "health_port": 8080, "core": true },
-    { "unit": "development-vessel.service", "role": "compute", "repo": "development-vessel", "health_port": 8090 },
-    { "unit": "local-tools-vessel.service", "role": "compute", "repo": "local-tools-vessel", "health_port": 8230, "core": true },
-    { "unit": "llm-resolver-vessel.service", "role": "compute", "repo": "llm-resolver-vessel", "health_port": 8220, "core": true },
-    { "unit": "goal-host-vessel.service", "role": "compute", "repo": "goal-host-vessel", "health_port": 8210, "core": true },
-    { "unit": "ribosome-vessel.service", "role": "compute", "repo": "ribosome-vessel", "health_port": 8240 },
-    { "unit": "concept-db.service", "role": "compute", "repo": "concept-db", "health_port": 8260 },
-    { "unit": "analysis-vessel.service", "role": "compute", "repo": "analysis-vessel", "health_port": 8250 },
-    { "unit": "light-dispatch-vessel.service", "role": "compute", "repo": "light-dispatch-vessel", "health_port": 8280 },
-    { "unit": "relevance-sink-vessel.service", "role": "compute", "repo": "relevance-sink-vessel", "health_port": 8255 },
-    { "unit": "boredom-vessel.timer", "role": "compute", "repo": "boredom-vessel" },
-    { "unit": "stateful-ui-vessel.service", "role": "ui", "repo": "stateful-ui-vessel", "health_port": 8270 },
-    { "unit": "obsidian-intake.timer", "role": "ui", "repo": "obsidian-vessel" },
-    { "unit": "obsidian-learn.timer", "role": "ui", "repo": "obsidian-vessel" },
-    { "unit": "obsidian-collaborate.timer", "role": "ui", "repo": "obsidian-vessel" },
-    { "unit": "federation-relay.service", "role": "transport", "manifest": true },
-    { "unit": "federation-transport-vessel.service", "role": "transport", "manifest": true },
-    { "unit": "bootstrap-seeder.service", "role": "seed" },
-    { "unit": "identity-seeder.service", "role": "seed" },
-    { "unit": "substrate-ready.service", "role": "infra" },
-    { "unit": "substrate-pull-sync.timer", "role": "infra" },
-    { "unit": "concept-db-seeder.service", "role": "seed" },
-    { "unit": "substrate-active-scripts-seed.service", "role": "seed" },
-    { "unit": "git-push-setup.service", "role": "seed" },
-    { "unit": "journald-stdout-forwarder.service", "role": "infra" },
-    { "unit": "light-dispatch-healthcheck.timer", "role": "infra" },
-    { "unit": "self-recovery.timer", "role": "infra" },
-    { "unit": "m1-trainer.timer", "role": "autonomy" },
-    { "unit": "funnel-drain.timer", "role": "autonomy" },
-    { "unit": "composition-edge-reconcile.timer", "role": "autonomy" },
-    { "unit": "model-reality-audit.timer", "role": "autonomy" },
-    { "unit": "observe-orthogonal-refresh.timer", "role": "autonomy" },
-    { "unit": "spectral-gap.timer", "role": "autonomy" },
-    { "unit": "autonomy-metrics.timer", "role": "autonomy" },
-    { "unit": "self-operational-health.timer", "role": "autonomy" },
-    { "unit": "self-repair-operational.timer", "role": "autonomy" },
-    { "unit": "operator-goal-generator.timer", "role": "autonomy" },
-    { "unit": "auto-describe-resolvers.timer", "role": "autonomy" },
-    { "unit": "surgical-gap-scan.timer", "role": "autonomy" },
-    { "unit": "ingest-docs.timer", "role": "autonomy" },
-    { "unit": "docs-align-scan.timer", "role": "autonomy" }
+    {
+      "unit": "surrealdb.service",
+      "role": "store",
+      "health_port": 8000,
+      "core": true
+    },
+    {
+      "unit": "valkey.service",
+      "role": "store",
+      "core": true
+    },
+    {
+      "unit": "discovery-vessel.service",
+      "role": "registry",
+      "repo": "discovery-vessel",
+      "health_port": 8100,
+      "core": true
+    },
+    {
+      "unit": "identity-vessel.service",
+      "role": "control",
+      "repo": "identity-vessel",
+      "health_port": 8101,
+      "core": true
+    },
+    {
+      "unit": "activity-api.service",
+      "role": "api",
+      "repo": "activity-api",
+      "health_port": 8080,
+      "core": true
+    },
+    {
+      "unit": "development-vessel.service",
+      "role": "compute",
+      "repo": "development-vessel",
+      "health_port": 8090
+    },
+    {
+      "unit": "local-tools-vessel.service",
+      "role": "compute",
+      "repo": "local-tools-vessel",
+      "health_port": 8230,
+      "core": true
+    },
+    {
+      "unit": "llm-resolver-vessel.service",
+      "role": "compute",
+      "repo": "llm-resolver-vessel",
+      "health_port": 8220,
+      "core": true
+    },
+    {
+      "unit": "goal-host-vessel.service",
+      "role": "compute",
+      "repo": "goal-host-vessel",
+      "health_port": 8210,
+      "core": true
+    },
+    {
+      "unit": "ribosome-vessel.service",
+      "role": "compute",
+      "repo": "ribosome-vessel",
+      "health_port": 8240
+    },
+    {
+      "unit": "concept-db.service",
+      "role": "compute",
+      "repo": "concept-db",
+      "health_port": 8260
+    },
+    {
+      "unit": "analysis-vessel.service",
+      "role": "compute",
+      "repo": "analysis-vessel",
+      "health_port": 8250
+    },
+    {
+      "unit": "light-dispatch-vessel.service",
+      "role": "compute",
+      "repo": "light-dispatch-vessel",
+      "health_port": 8280
+    },
+    {
+      "unit": "relevance-sink-vessel.service",
+      "role": "compute",
+      "repo": "relevance-sink-vessel",
+      "health_port": 8255
+    },
+    {
+      "unit": "boredom-vessel.timer",
+      "role": "compute",
+      "repo": "boredom-vessel"
+    },
+    {
+      "unit": "stateful-ui-vessel.service",
+      "role": "ui",
+      "repo": "stateful-ui-vessel",
+      "health_port": 8270
+    },
+    {
+      "unit": "obsidian-intake.timer",
+      "role": "ui",
+      "repo": "obsidian-vessel"
+    },
+    {
+      "unit": "obsidian-learn.timer",
+      "role": "ui",
+      "repo": "obsidian-vessel"
+    },
+    {
+      "unit": "obsidian-collaborate.timer",
+      "role": "ui",
+      "repo": "obsidian-vessel"
+    },
+    {
+      "unit": "federation-relay.service",
+      "role": "transport",
+      "manifest": true
+    },
+    {
+      "unit": "federation-transport-vessel.service",
+      "role": "transport",
+      "manifest": true
+    },
+    {
+      "unit": "bootstrap-seeder.service",
+      "role": "seed"
+    },
+    {
+      "unit": "identity-seeder.service",
+      "role": "seed"
+    },
+    {
+      "unit": "substrate-ready.service",
+      "role": "infra"
+    },
+    {
+      "unit": "substrate-pull-sync.timer",
+      "role": "infra"
+    },
+    {
+      "unit": "concept-db-seeder.service",
+      "role": "seed"
+    },
+    {
+      "unit": "substrate-active-scripts-seed.service",
+      "role": "seed"
+    },
+    {
+      "unit": "git-push-setup.service",
+      "role": "seed"
+    },
+    {
+      "unit": "journald-stdout-forwarder.service",
+      "role": "infra"
+    },
+    {
+      "unit": "light-dispatch-healthcheck.timer",
+      "role": "infra"
+    },
+    {
+      "unit": "self-recovery.timer",
+      "role": "infra"
+    },
+    {
+      "unit": "m1-trainer.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "funnel-drain.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "composition-edge-reconcile.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "model-reality-audit.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "observe-orthogonal-refresh.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "spectral-gap.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "autonomy-metrics.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "self-operational-health.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "self-repair-operational.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "operator-goal-generator.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "auto-describe-resolvers.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "surgical-gap-scan.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "ingest-docs.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "docs-align-scan.timer",
+      "role": "autonomy"
+    }
   ]
 }
