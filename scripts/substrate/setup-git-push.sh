@@ -75,8 +75,15 @@ echo "[setup-git-push] system git identity configured"
 # host-sync fallback (host SSH key) durably catches any push that does fail.
 PAT_PROBE_REPO="${SUBSTRATE_PAT_PROBE_REPO:-development-vessel}"
 if [ -n "$SUBSTRATE_GIT_PAT" ]; then
-  git config --system credential.helper '!f() { echo username=x-access-token; echo "password=$SUBSTRATE_GIT_PAT"; }; f'
-  echo "[setup-git-push] in-container HTTPS credential helper configured (fast path; reads PAT from env at push time)"
+  # Self-sufficient helper (2026-07-12): source /etc/substrate/env at use time so
+  # git authenticates from ANY process context (plain shells, tick units without
+  # the full EnvironmentFile), not only units that inherit SUBSTRATE_GIT_PAT.
+  # Falls back to the process env when the file is absent. The token is still
+  # never written into any config. An empty-env shell previously made this
+  # helper return an empty password, which (being first in the helper chain)
+  # produced the "intermittent Invalid username or token" failures.
+  git config --system credential.helper '!f() { [ -r /etc/substrate/env ] && . /etc/substrate/env 2>/dev/null; echo username=x-access-token; echo "password=${SUBSTRATE_GIT_PAT:-$GITHUB_TOKEN}"; }; f'
+  echo "[setup-git-push] in-container HTTPS credential helper configured (self-sourcing; reads PAT from /etc/substrate/env or process env at push time)"
 
   # Advisory probe with retries (tolerate transient flakiness before warning).
   PAT_OK=0
