@@ -60,6 +60,72 @@ Conscious one-off direct edits to vessel source are gated by a PreToolUse hook a
 
 The whole system runs as **one container** (`substrate-live`) hosting the vessel fleet as systemd units — no Kubernetes, no orchestration on the host. The host contract is a single `docker run`: one privileged container, one LLM-provider env var, two named volumes (workspace + datastore). Everything load-bearing — seeding, readiness, diagnosis — happens inside the container at boot; the Makefile is a convenience wrapper over exactly that contract.
 
+### Quick start from the published image (no repo checkout)
+
+The image is published as `avigopal/substrate:dev` (fleet) and
+`avigopal/substrate:obsidian` (fleet + in-container Obsidian over noVNC). A
+pulled image needs no submodules and no GitHub credentials. Requirements:
+Docker with Linux x86_64 semantics and `--privileged` (native Linux, or Docker
+Desktop with the WSL2 backend on Windows).
+
+**Standalone substrate** — one required env; every other secret auto-generates
+on first boot and persists to the volumes:
+
+```bash
+docker run -d --privileged --name substrate-live \
+  -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
+  -e ANTHROPIC_API_KEY=sk-ant-... \
+  -p 18080:8080 -p 18090:8090 -p 18100:8100 -p 18210:8210 \
+  --tmpfs /run --tmpfs /run/lock avigopal/substrate:dev
+```
+
+Wait for `docker inspect --format '{{.State.Health.Status}}' substrate-live`
+to report `healthy`, then dispatch goals against `http://localhost:18210/run-goal`
+(goal-host) and browse traces at `http://localhost:18080` (activity-api).
+
+**Connect to the syzygy.host federation (spoke)** — your machine contributes a
+local registry + compute; traces, identity, and learning state live on the
+hub. You need a hub-issued API key (ask the hub operator; minted on the hub
+with `make -C scripts/substrate issue-key NAME=<you>`):
+
+```bash
+# 1. Boot as a federated spoke of syzygy.host
+docker run -d --privileged --name substrate-live \
+  -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
+  -e ANTHROPIC_API_KEY=sk-ant-... \
+  -e METABOB_API_KEY=<hub-issued-key> \
+  -e ENABLED_ROLES=spoke \
+  -e HUB_DISCOVERY_URL=http://syzygy.host:18100 \
+  -e ACTIVITY_API_ENDPOINT=http://syzygy.host:18080 \
+  -e IDENTITY_VESSEL_URL=http://syzygy.host:18101 \
+  -p 18100:8100 -p 18210:8210 -p 18090:8090 \
+  --tmpfs /run --tmpfs /run/lock avigopal/substrate:dev
+
+# 2. Make the spoke hub-dialable (NAT return path): relay reservation +
+#    per-vessel capability mirror. The relay multiaddr auto-derives from the
+#    hub's ingress; the id must be unique in the hub namespace (checked).
+docker exec substrate-live spoke-federate substrate-live <unique-id>
+```
+
+Your vessels then appear in the hub registry as `<vessel>@<unique-id>`, and a
+local Obsidian plugin connects to the spoke with its normal two inputs (API
+key + `discoveryVesselEndpoint=http://127.0.0.1:18100`). With a repo checkout,
+the same two steps are:
+
+```bash
+make -C scripts/substrate up API_KEY=<hub-issued-key> ANTHROPIC_API_KEY=sk-ant-... \
+  DISCOVERY_ENDPOINT=http://syzygy.host:18100
+make -C scripts/substrate vessel-ctl enable federation-transport-vessel FED_SUBSTRATE_ID=<unique-id>
+```
+
+Optional for both modes: add `-e SUBSTRATE_GIT_PAT=<github-pat>` so the
+substrate can pull + push the source repos it is built from (self-alteration);
+without it, self-authored commits stay local. Full config matrix:
+[`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) § *Pulling the image instead of
+building*; federation details: [`docs/FEDERATION.md`](docs/FEDERATION.md).
+
+### Building from source
+
 **Prerequisites:** Docker, GNU make, git. (For the Obsidian interface installer: `curl` + `jq`, and `bun` for its libp2p sidecar.)
 
 **1. Clone** — submodules are mandatory; the image build copies each vessel's source from `repos/<vessel>`:
@@ -106,13 +172,7 @@ The installer selects or creates the vault, installs the plugin, and prefers the
 
 ### Joining an existing federation
 
-A **hub** on a public IP shares a namespace with **spokes**. Ask the hub operator for a key (`make issue-key NAME=…` on the hub), then start your container pointed at the hub:
-
-```bash
-make -C scripts/substrate run-live ANTHROPIC_API_KEY=... ENABLED_ROLES=spoke \
-  DISCOVERY_ENDPOINT=http://<hub>:18100 ACTIVITY_API_ENDPOINT=http://<hub>:18080 \
-  IDENTITY_VESSEL_URL=http://<hub>:18101 METABOB_API_KEY=<hub-issued-key>
-```
+The two-command spoke setup in the quick start above works against **any** hub, not just syzygy.host — substitute the hub's host for the `DISCOVERY_ENDPOINT` / `HUB_DISCOVERY_URL` values and use a key issued by that hub (`make issue-key NAME=…` on the hub).
 
 One image serves every role: a full local substrate, a minimal hub (control plane + store + relay), or a compute-only spoke — selection is declarative via `ENABLED_ROLES` / `ENABLED_VESSELS` (`scripts/substrate/vessels.inventory.json`, applied at boot). Vessels behind NAT join over the libp2p relay via a sidecar. To stand up your own remote substrate or hub on a VM: `scripts/substrate/deploy-remote.sh` (ships the local image over SSH, no registry) or `scripts/substrate/deploy-hub.sh` (the VM pulls the repo, builds there, and runs the relay). Point vessel clones at your own fork with `SUBSTRATE_REPO_OWNER=<your-org>`. Full guide: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 

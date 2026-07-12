@@ -92,7 +92,10 @@ docker pull avigopal/substrate:dev   # then the raw launch contract above
 ### Federated spoke — two commands
 
 To run this machine as a **spoke of an existing hub** (local registry + compute
-here; traces, identity, and learning state live on the hub):
+here; traces, identity, and learning state live on the hub). The reference
+public hub is `syzygy.host` (discovery `:18100`, activity-api `:18080`,
+identity `:18101`, libp2p relay `:30333`) — substitute it for `<hub-host>`
+below, with a key issued by that hub:
 
 ```bash
 # 1. Boot the spoke. A hub DISCOVERY_ENDPOINT with no explicit ENABLED_ROLES
