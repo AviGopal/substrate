@@ -147,8 +147,11 @@ OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
 validate-build:
 	bun $(CURDIR)/validate-build.ts
 
+# --target base is load-bearing: without it docker builds the LAST stage
+# (substrate-obsidian), silently making :dev and :obsidian the same image.
 build: validate-build
 	docker build -f $(CURDIR)/../../Dockerfile.substrate \
+	    --target base \
 	    -t $(IMAGE):$(TAG) \
 	    $(CURDIR)/../..
 
