@@ -367,6 +367,12 @@ RUN curl -fsSL -o /tmp/obsidian.AppImage \
 # uses esbuild as a library, so it runs under bun (the base image has no node).
 COPY repos/obsidian-vessel/package.json repos/obsidian-vessel/bun.lock* ./obsidian-vessel/
 RUN cd obsidian-vessel && bun install
+# Sidecar package: esbuild.config.mjs embeds its source (__SIDECAR_SOURCE__) and
+# pre-bundles it with deps vendored (__SIDECAR_BUNDLE__), so the sidecar sources
+# and node_modules must exist before the plugin build runs.
+COPY repos/obsidian-vessel/sidecar/package.json repos/obsidian-vessel/sidecar/bun.lock* ./obsidian-vessel/sidecar/
+RUN cd obsidian-vessel/sidecar && bun install
+COPY repos/obsidian-vessel/sidecar/federation-sidecar.ts ./obsidian-vessel/sidecar/
 COPY repos/obsidian-vessel/src ./obsidian-vessel/src
 COPY repos/obsidian-vessel/styles.css ./obsidian-vessel/styles.css
 COPY repos/obsidian-vessel/esbuild.config.mjs \
