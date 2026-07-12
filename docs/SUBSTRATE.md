@@ -72,6 +72,15 @@ credentials** — everything a fresh container consumes is baked in or generated
 - **Joining an existing federation** (spoke mode) additionally takes a
   hub-issued `METABOB_API_KEY` plus the hub location — see the federated-spoke
   contract below and `docs/FEDERATION.md` § "Running a spoke".
+- **Self-alteration (pull + push on the source repos):** pass
+  `-e SUBSTRATE_GIT_PAT=<github-pat>` (Contents: Read+Write on the
+  `AviGopal/*` repos; fork override via `SUBSTRATE_REPO_OWNER`). With it, the
+  container clones the super-repo and every self-developed vessel repo on
+  `dev` at boot and can land its own commits. Without it the substrate still
+  runs — it falls back to a read-only baked snapshot of the fleet scripts and
+  self-authored commits stay local. Adding the PAT to a running container
+  upgrades the snapshot to live clones in place:
+  `docker exec <name> systemctl restart git-push-setup`.
 - The docker requirements are Linux x86_64 semantics with `--privileged`
   (systemd inside): native Linux, or Docker Desktop with the **WSL2** backend
   on Windows.

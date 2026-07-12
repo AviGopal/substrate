@@ -132,15 +132,25 @@ SUPER_REPO="${SUBSTRATE_SUPER_REPO:-substrate}"
 SUPER_REPO_DIR="${SUBSTRATE_SUPER_REPO_DIR:-$(dirname "$CLONE_DIR")/super-repo}"
 super_url="https://github.com/${REPO_OWNER}/${SUPER_REPO}.git"
 mkdir -p "$(dirname "$SUPER_REPO_DIR")"
+if [ -d "$SUPER_REPO_DIR" ] && [ ! -d "$SUPER_REPO_DIR/.git" ] && [ -n "$(ls -A "$SUPER_REPO_DIR" 2>/dev/null)" ]; then
+  # Baked-seed upgrade: a pulled image that booted without credentials seeded
+  # this dir as a bare working tree (no .git). When credentials later exist,
+  # `git clone` into the non-empty dir would fail forever — so init-in-place
+  # and let the fetch+reset path below converge the tree onto origin/dev.
+  # Self-alteration (pull AND push) requires a real clone, not the seed.
+  if git -C "$SUPER_REPO_DIR" init -q 2>/dev/null && git -C "$SUPER_REPO_DIR" remote add origin "$super_url" 2>/dev/null; then
+    echo "[setup-git-push] upgrading baked super-repo seed to a live clone"
+  fi
+fi
 if [ -d "$SUPER_REPO_DIR/.git" ]; then
   git -C "$SUPER_REPO_DIR" remote set-url origin "$super_url"
   if git -C "$SUPER_REPO_DIR" fetch --no-recurse-submodules origin dev -q 2>/dev/null; then
-    git -C "$SUPER_REPO_DIR" checkout -q dev 2>/dev/null || git -C "$SUPER_REPO_DIR" checkout -q -b dev origin/dev 2>/dev/null || true
+    git -C "$SUPER_REPO_DIR" checkout -q dev 2>/dev/null || git -C "$SUPER_REPO_DIR" checkout -q -f -B dev origin/dev 2>/dev/null || true
     git -C "$SUPER_REPO_DIR" reset --hard origin/dev -q 2>/dev/null \
       && echo "[setup-git-push] refreshed super-repo (${SUPER_REPO}) → $(git -C "$SUPER_REPO_DIR" rev-parse --short HEAD)" \
       || echo "[setup-git-push] WARN refresh failed for super-repo"
   else
-    echo "[setup-git-push] WARN fetch failed for super-repo (offline?); keeping existing clone"
+    echo "[setup-git-push] WARN fetch failed for super-repo (offline?); keeping existing clone or seed"
   fi
 else
   if git clone -q --no-recurse-submodules --branch dev "$super_url" "$SUPER_REPO_DIR"; then
