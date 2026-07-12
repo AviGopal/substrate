@@ -1,5 +1,5 @@
 {
-  "name": "@metabob/clock-vessel",
+  "name": "@avigopal/clock-vessel",
   "type": "module",
   "version": "0.1.0",
   "description": "Minimal vessel exposing a single resolver that reads the current time. First lift-test artifact: substrate authors a vessel end-to-end.",
