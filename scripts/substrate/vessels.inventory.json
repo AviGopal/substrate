@@ -156,7 +156,9 @@
     {
       "unit": "federation-transport-vessel.service",
       "role": "transport",
-      "manifest": true
+      "manifest": true,
+      "repo": "libp2p-federation-transport",
+      "health_port": 8401
     },
     {
       "unit": "bootstrap-seeder.service",
