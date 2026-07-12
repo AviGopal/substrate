@@ -260,6 +260,26 @@ COPY scripts/substrate/obsidian-collaborate-tick.sh /usr/local/bin/obsidian-coll
 COPY scripts/substrate/goal-host-behavior-tick.sh /usr/local/bin/goal-host-behavior-tick.sh
 COPY scripts/substrate/light-dispatch-healthcheck.sh /usr/local/bin/light-dispatch-healthcheck
 RUN chmod +x /usr/local/bin/obsidian-learn-tick.sh /usr/local/bin/obsidian-intake-tick.sh /usr/local/bin/obsidian-collaborate-tick.sh /usr/local/bin/goal-host-behavior-tick.sh /usr/local/bin/light-dispatch-healthcheck
+# Offline super-repo fallback: dynamic vessels run from the in-container
+# super-repo working tree (/workspace/git/super-repo — e.g. the federation
+# transport's workdir is <super-repo>/scripts/substrate/federation-relay), but
+# the canonical repo is private, so a PULLED image with no GitHub credentials
+# can never clone it. Bake the fleet scripts and pre-install the relay deps;
+# setup-git-push seeds the working tree from this copy when the clone fails.
+COPY scripts/substrate /usr/local/share/substrate/super-repo/scripts/substrate
+# The relay depends on @avigopal/libp2p-federation-transport via a PRIVATE
+# github: URL — unfetchable during an image build. Vendor the submodule and
+# rewrite the dep to a file: path (same pattern as ias-executor-ts above).
+COPY repos/libp2p-federation-transport/package.json /vessels/libp2p-federation-transport/
+COPY repos/libp2p-federation-transport/src /vessels/libp2p-federation-transport/src
+COPY repos/libp2p-federation-transport/tsconfig.json /vessels/libp2p-federation-transport/
+RUN cd /vessels/libp2p-federation-transport && bun install
+RUN cd /usr/local/share/substrate/super-repo/scripts/substrate/federation-relay && \
+    sed -i 's|"@avigopal/libp2p-federation-transport": "[^"]*"|"@avigopal/libp2p-federation-transport": "file:/vessels/libp2p-federation-transport"|' package.json && \
+    rm -f bun.lock && bun install
+COPY scripts/substrate/spoke-federate.sh /usr/local/bin/spoke-federate
+RUN chmod +x /usr/local/bin/spoke-federate
+
 COPY scripts/substrate/seed-identity.ts /vessels/seed-identity.ts
 COPY scripts/substrate/seed-concepts.ts /vessels/seed-concepts.ts
 COPY scripts/bootstrap-seeder.ts /scripts/bootstrap-seeder.ts

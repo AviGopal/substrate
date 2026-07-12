@@ -143,8 +143,17 @@ if [ -d "$SUPER_REPO_DIR/.git" ]; then
     echo "[setup-git-push] WARN fetch failed for super-repo (offline?); keeping existing clone"
   fi
 else
-  git clone -q --no-recurse-submodules --branch dev "$super_url" "$SUPER_REPO_DIR" \
-    && echo "[setup-git-push] cloned super-repo (${SUPER_REPO})" \
-    || echo "[setup-git-push] WARN clone failed for super-repo"
+  if git clone -q --no-recurse-submodules --branch dev "$super_url" "$SUPER_REPO_DIR"; then
+    echo "[setup-git-push] cloned super-repo (${SUPER_REPO})"
+  elif [ -d /usr/local/share/substrate/super-repo ]; then
+    # Pulled image with no repo credentials: seed the working tree from the
+    # copy baked at image build so dynamic vessels (federation transport, …)
+    # have their workdir without any GitHub access.
+    mkdir -p "$SUPER_REPO_DIR"
+    cp -a /usr/local/share/substrate/super-repo/. "$SUPER_REPO_DIR/"
+    echo "[setup-git-push] clone unavailable — seeded super-repo working tree from baked image copy"
+  else
+    echo "[setup-git-push] WARN clone failed for super-repo"
+  fi
 fi
 echo "[setup-git-push] done"

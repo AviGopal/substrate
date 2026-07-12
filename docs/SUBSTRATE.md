@@ -57,6 +57,60 @@ docker run -d --privileged --name substrate-live \
   --tmpfs /run --tmpfs /run/lock metabob/substrate:dev
 ```
 
+### Pulling the image instead of building
+
+The image is published as `avigopal/substrate:dev` (fleet only; Obsidian runs as
+a host peer) and `avigopal/substrate:obsidian` (fleet + in-container Obsidian
+over noVNC). A pulled image needs **no repo checkout, no submodules, no GitHub
+credentials** — everything a fresh container consumes is baked in or generated:
+
+- **Required config:** one LLM provider key (`ANTHROPIC_API_KEY`, or
+  `OPENAI_API_KEY` + `OPENAI_BASE_URL` for OpenAI-compatible/local models).
+- **Everything else auto-generates** on first boot and persists to the
+  `substrate-workspace` volume (`.substrate-secrets`: `JWT_SECRET`,
+  `SURREAL_PASS`, a local `METABOB_API_KEY`).
+- **Joining an existing federation** (spoke mode) additionally takes a
+  hub-issued `METABOB_API_KEY` plus the hub location — see the federated-spoke
+  contract below and `docs/FEDERATION.md` § "Running a spoke".
+- The docker requirements are Linux x86_64 semantics with `--privileged`
+  (systemd inside): native Linux, or Docker Desktop with the **WSL2** backend
+  on Windows.
+
+```bash
+docker pull avigopal/substrate:dev   # then the raw launch contract above
+```
+
+### Federated spoke — two commands
+
+To run this machine as a **spoke of an existing hub** (local registry + compute
+here; traces, identity, and learning state live on the hub):
+
+```bash
+# 1. Boot the spoke. A hub DISCOVERY_ENDPOINT with no explicit ENABLED_ROLES
+#    implies the federated-spoke topology; the hub's activity-api/identity
+#    endpoints derive from the discovery host (fleet convention 18080/18101).
+make -C scripts/substrate up API_KEY=<hub-issued-key> ANTHROPIC_API_KEY=sk-ant-... \
+  DISCOVERY_ENDPOINT=http://<hub-host>:18100
+
+# 2. Make the spoke hub-dialable (NAT return path): relay reservation +
+#    per-vessel capability mirror. The relay multiaddr is auto-derived from
+#    the hub's own ingress advertisement; FED_SUBSTRATE_ID must be unique.
+make -C scripts/substrate vessel-ctl enable federation-transport-vessel \
+  FED_SUBSTRATE_ID=<unique-id>
+```
+
+Pulled-image equivalent (no make): add
+`-e ENABLED_ROLES=spoke -e HUB_DISCOVERY_URL=http://<hub>:18100 \
+-e ACTIVITY_API_ENDPOINT=http://<hub>:18080 -e IDENTITY_VESSEL_URL=http://<hub>:18101 \
+-e METABOB_API_KEY=<hub-issued-key>` to the raw `docker run`, then
+`docker exec substrate-live spoke-federate substrate-live <unique-id>`.
+
+A **local Obsidian plugin** (outside the container) connects to the spoke with
+its normal two inputs — the API key plus `discoveryVesselEndpoint=http://127.0.0.1:18100`
+(the spoke's local registry). Its sidecar routes all egress through the spoke,
+and the spoke's federation transport mirrors the plugin's shapes to the hub, so
+the vault is reachable fleet-wide without any direct exposure.
+
 `scripts/substrate/configure-local.sh` (run by `up`) only updates
 `~/.metabob/config.json` so *operator tooling* points at the substrate — it is
 IDE convenience, not part of the system.

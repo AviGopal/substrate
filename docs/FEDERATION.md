@@ -113,10 +113,30 @@ auto-installed.
 
 ## Running a spoke
 
-A **full local substrate** can join the hub namespace by pointing its control/store
-endpoints at the hub and using a hub-issued key (`DISCOVERY_VESSEL_ENDPOINT`,
-`IDENTITY_VESSEL_URL`, `ACTIVITY_API_URL`, `METABOB_API_KEY`). Or run only compute:
-`ENABLED_ROLES=spoke`.
+The supported spoke topology is the **federated spoke**: a local registry
+(discovery, role `registry`) + compute vessels here, with the hub supplying the
+trace store and identity. Vessels register **locally**; the
+federation-transport-vessel mirrors the local capability surface into the hub
+as `<vessel>@<substrate-id>` rows dialable over the relay. This is what keeps a
+NAT'd machine reachable and its Obsidian surface local-first. Setup is two
+commands:
+
+```bash
+make -C scripts/substrate up API_KEY=<hub-issued-key> ANTHROPIC_API_KEY=<key> \
+  DISCOVERY_ENDPOINT=http://<hub-host>:18100
+make -C scripts/substrate vessel-ctl enable federation-transport-vessel \
+  FED_SUBSTRATE_ID=<unique-id>          # relay multiaddr auto-derived from the hub
+```
+
+(`FED_SUBSTRATE_ID` must be unique per substrate: it names the mirror rows AND
+salts the transport's libp2p key — two substrates sharing an id derive the same
+peer id and fight over the relay reservation. The enable step refuses ids
+already present in the hub registry.)
+
+A **thin spoke** — all control-plane calls pointed straight at the hub, no
+local registry — remains available by passing the endpoints explicitly
+(`ENABLED_ROLES=spoke DISCOVERY_ENDPOINT=... ACTIVITY_API_ENDPOINT=...
+IDENTITY_VESSEL_URL=...`); outbound-only, since the hub cannot dial back.
 
 **Getting the hub-issued key** is one command on the hub — no raw API calls:
 

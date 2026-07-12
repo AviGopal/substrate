@@ -14,7 +14,16 @@ C="${1:?usage: spoke-federate.sh <container> <fed-substrate-id> [relay-multiaddr
 SID="${2:?FED_SUBSTRATE_ID required (unique per substrate in the hub namespace)}"
 RELAY="${3:-}"
 
-cexec() { docker exec "$C" bash -c "$1"; }
+# Dual context (same pattern as vessel-ctl): run from the host against a
+# container, or directly INSIDE the container (pulled image, no host repo:
+# docker exec <name> spoke-federate <name> <id>).
+if command -v docker >/dev/null 2>&1 && docker inspect "$C" >/dev/null 2>&1; then
+  cexec() { docker exec "$C" bash -c "$1"; }
+  VESSEL_CTL="$(dirname "$0")/vessel-ctl.sh"
+else
+  cexec() { bash -c "$1"; }
+  VESSEL_CTL="/usr/local/bin/vessel-ctl"
+fi
 
 HUB=$(cexec 'source /etc/substrate/env 2>/dev/null || true; echo "${HUB_DISCOVERY_URL:-}"')
 [ -n "$HUB" ] || {
@@ -54,7 +63,7 @@ cexec "
   upsert HUB_DISCOVERY_URL '$HUB'
 "
 
-"$(dirname "$0")/vessel-ctl.sh" install federation-transport-vessel --container "$C"
+"$VESSEL_CTL" install federation-transport-vessel --container "$C"
 cexec 'systemctl restart federation-transport-vessel.service' || true
 
 h=""
