@@ -1,5 +1,5 @@
 [Unit]
-Description=substrate pull-sync — converge live vessels to origin/dev from in-container clones
+Description=substrate pull-sync — converge live vessels and the super-repo glue layer to origin/dev from in-container clones
 # Boot run doubles as source-convergence: a stale image's /vessels runtime is
 # brought to the clones' origin/dev HEAD right after git-push-setup refreshes
 # them. Periodic runs (substrate-pull-sync.timer) pick up changes landed on
