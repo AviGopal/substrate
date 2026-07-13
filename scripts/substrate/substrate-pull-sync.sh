@@ -188,5 +188,82 @@ for d in "$CLONE_DIR"/*/; do
   synced=$((synced+1))
 done
 
+# 4. Super-repo convergence — the glue layer the vessel loop can't see: the
+# federation transport server wrapper (federation-transport-vessel's ExecStart
+# runs it FROM this clone), the boot-seeded active-scripts, and this updater
+# itself. Same discipline as vessels: ahead -> skip, diverged -> gap + skip,
+# behind -> ff-only pull. The marker records the last ATTEMPTED sha so an
+# unhealthy convergence (reverted below) is not re-attempted every tick — only
+# a fresh origin commit re-arms it. Runs after the vessel loop so a bad glue
+# change can never block vessel convergence. Gap: super-repo-not-in-self-update-set.
+SUPER_DIR="${SUPER_REPO_DIR:-/workspace/git/super-repo}"
+SUPER_MARKER="$MARKER_DIR/super-repo.sha"
+if [ -d "$SUPER_DIR/.git" ] && git -C "$SUPER_DIR" fetch -q origin "$BRANCH" 2>/dev/null; then
+  SHEAD="$(git -C "$SUPER_DIR" rev-parse HEAD 2>/dev/null || true)"
+  SREMOTE="$(git -C "$SUPER_DIR" rev-parse "origin/$BRANCH" 2>/dev/null || true)"
+  SLAST="$(cat "$SUPER_MARKER" 2>/dev/null || true)"
+  if [ -n "$SHEAD" ] && [ -n "$SREMOTE" ] && [ "$SREMOTE" != "$SLAST" ]; then
+    if [ "$SHEAD" != "$SREMOTE" ]; then
+      if git -C "$SUPER_DIR" merge-base --is-ancestor "origin/$BRANCH" HEAD 2>/dev/null; then
+        log "super-repo: clone ahead of origin (unpushed commits) — leaving for the push side"
+      elif git -C "$SUPER_DIR" merge-base --is-ancestor HEAD "origin/$BRANCH" 2>/dev/null; then
+        git -C "$SUPER_DIR" checkout -q "$BRANCH" 2>/dev/null || true
+        if git -C "$SUPER_DIR" pull --ff-only -q origin "$BRANCH" 2>/dev/null; then
+          SHEAD="$(git -C "$SUPER_DIR" rev-parse HEAD)"
+        else
+          log "super-repo: ff-only pull failed — skipping"
+        fi
+      else
+        log "super-repo: clone DIVERGED from origin/$BRANCH — refusing (substrateGap)"
+        emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-diverged-super-repo\",\"category\":\"source_divergence\",\"source\":\"substrate_detected\",\"summary\":\"super-repo clone at $SUPER_DIR diverged from origin/$BRANCH; pull-sync refuses to force — needs triage\",\"status\":\"open\"}}}}"
+        failed=$((failed+1))
+      fi
+    fi
+    if [ "$SHEAD" = "$SREMOTE" ] && [ "$SHEAD" != "$SLAST" ]; then
+      SPREV="$(cat "$LAST_GOOD_DIR/super-repo" 2>/dev/null || true)"
+      if [ -n "$SLAST" ]; then
+        CHANGED="$(git -C "$SUPER_DIR" diff --name-only "$SLAST..$SHEAD" 2>/dev/null || echo all)"
+      else
+        CHANGED="all"  # first convergence: no baseline, refresh everything
+      fi
+      echo "$SHEAD" > "$SUPER_MARKER"
+      log "super-repo: ${SLAST:-none} -> ${SHEAD:0:10} — refreshing glue layer"
+      # Updater self-refresh (atomic: the running bash keeps its old inode).
+      if [ -f "$SUPER_DIR/scripts/substrate/substrate-pull-sync.sh" ]; then
+        install -m 0755 "$SUPER_DIR/scripts/substrate/substrate-pull-sync.sh" /usr/local/bin/.substrate-pull-sync.new 2>/dev/null \
+          && mv -f /usr/local/bin/.substrate-pull-sync.new /usr/local/bin/substrate-pull-sync 2>/dev/null || true
+      fi
+      # Reseed the active-scripts run-dir (same source substrate-active-scripts-seed uses at boot).
+      cp -f "$SUPER_DIR"/scripts/substrate/*.ts /workspace/active-scripts/ 2>/dev/null || true
+      # The relay is restarted ONLY on a real relay.ts change (never on first
+      # convergence): bouncing it drops every peer's reservation at once.
+      if [ "$CHANGED" != "all" ] && echo "$CHANGED" | grep -q '^scripts/substrate/federation-relay/relay\.ts$' \
+         && systemctl is-active federation-relay.service >/dev/null 2>&1; then
+        systemctl restart federation-relay.service 2>/dev/null || true
+      fi
+      if { [ "$CHANGED" = "all" ] || echo "$CHANGED" | grep -q '^scripts/substrate/federation-relay/'; } \
+         && systemctl is-active federation-transport-vessel.service >/dev/null 2>&1; then
+        systemctl restart federation-transport-vessel.service 2>/dev/null || true
+        sleep "$STAGGER_SECONDS"
+        ok=0
+        for _ in 1 2 3 4 5; do healthy 8401 && { ok=1; break; }; sleep 4; done
+        if [ "$ok" = 0 ]; then
+          log "super-repo: federation-transport UNHEALTHY after convergence — reverting clone to ${SPREV:0:10} (marker keeps ${SHEAD:0:10}; substrateGap owns escalation)"
+          [ -n "$SPREV" ] && git -C "$SUPER_DIR" reset --hard -q "$SPREV" 2>/dev/null || true
+          systemctl restart federation-transport-vessel.service 2>/dev/null || true
+          emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-unhealthy-super-repo\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"federation-transport-vessel unhealthy after super-repo convergence to ${SHEAD:0:10}; clone reverted to ${SPREV:0:10}\",\"status\":\"open\"}}}}"
+          failed=$((failed+1))
+        else
+          echo "$SHEAD" > "$LAST_GOOD_DIR/super-repo"
+          synced=$((synced+1))
+        fi
+      else
+        echo "$SHEAD" > "$LAST_GOOD_DIR/super-repo"
+        synced=$((synced+1))
+      fi
+    fi
+  fi
+fi
+
 log "done — synced=$synced skipped=$skipped failed=$failed"
 exit 0
