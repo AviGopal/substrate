@@ -260,7 +260,9 @@ async function register() {
 // on the peer side) and refreshes on the same TTL cadence as the local registration.
 const HUB_DISCOVERY = (process.env.HUB_DISCOVERY_URL || '').replace(/\/$/, '')
 const SUBSTRATE_ID = process.env.FED_SUBSTRATE_ID || hostname()
-const HUB_VESSEL_ID = `${VESSEL_ID}@${SUBSTRATE_ID}`
+// Deployments set FED_VESSEL_ID already substrate-qualified (federation-transport-vessel@min-proof);
+// appending unconditionally minted doubled hub rows like …@min-proof@min-proof.
+const HUB_VESSEL_ID = VESSEL_ID.endsWith(`@${SUBSTRATE_ID}`) ? VESSEL_ID : `${VESSEL_ID}@${SUBSTRATE_ID}`
 
 // The mirror is PER-VESSEL (2026-07-11): each plain-HTTP local vessel gets its own
 // `<vesselId>@<substrate>` row in the hub namespace, carrying that vessel's shapes and
