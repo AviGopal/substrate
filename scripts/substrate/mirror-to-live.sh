@@ -24,6 +24,13 @@ log() { echo "[mirror-to-live] $*"; }
 [ -d "$SRC/.git" ] || { log "no clone at $SRC — nothing to mirror"; exit 1; }
 [ -d "$DST" ] || { log "no live runtime at $DST — vessel not baked/installed here; skipping"; exit 0; }
 
+# The cutover push leg leaves the clone's working tree with unstaged deletions
+# (src/ gone) after committing only its staged files; mirroring that state
+# severs the live runtime's source (observed obsidian-vessel, 2026-07-13).
+# These clones exist solely to push committed state — restore to HEAD first so
+# the mirror always reflects the commit, never push-leg working-tree damage.
+git -C "$SRC" checkout -f -- . 2>/dev/null || log "WARN could not restore $SRC working tree to HEAD"
+
 # Repo package.json declares workspace deps as RELATIVE file: paths
 # (file:../ias-executor-ts, file:../../packages/...). The runtime layout is
 # flat under /vessels, so rewrite to absolute paths — the same rewrite the

@@ -751,6 +751,8 @@ sync-obsidian-vessel:
 	docker cp $(OBSIDIAN_VESSEL_SRC)/styles.css $(LIVE_NAME):/vessels/obsidian-vessel/styles.css
 	docker cp $(OBSIDIAN_VESSEL_SRC)/esbuild.config.mjs $(LIVE_NAME):/vessels/obsidian-vessel/esbuild.config.mjs
 	docker cp $(OBSIDIAN_VESSEL_SRC)/manifest.json $(LIVE_NAME):/vessels/obsidian-vessel/manifest.json
+	docker cp $(OBSIDIAN_VESSEL_SRC)/package.json $(LIVE_NAME):/vessels/obsidian-vessel/package.json
+	docker cp $(OBSIDIAN_VESSEL_SRC)/tsconfig.json $(LIVE_NAME):/vessels/obsidian-vessel/tsconfig.json
 	docker exec $(LIVE_NAME) mkdir -p /vessels/obsidian-vessel/sidecar
 	docker cp $(OBSIDIAN_VESSEL_SRC)/sidecar/federation-sidecar.ts $(LIVE_NAME):/vessels/obsidian-vessel/sidecar/federation-sidecar.ts
 	@echo "[sync] obsidian-vessel source synced to substrate-live"

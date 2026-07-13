@@ -233,6 +233,12 @@ if [ -d "$SUPER_DIR/.git" ] && git -C "$SUPER_DIR" fetch -q origin "$BRANCH" 2>/
         install -m 0755 "$SUPER_DIR/scripts/substrate/substrate-pull-sync.sh" /usr/local/bin/.substrate-pull-sync.new 2>/dev/null \
           && mv -f /usr/local/bin/.substrate-pull-sync.new /usr/local/bin/substrate-pull-sync 2>/dev/null || true
       fi
+      # mirror-to-live is part of the same glue layer: converge it too, or a
+      # repo-side mirror fix never reaches the running container (the
+      # super-repo-not-in-self-update-set gap class).
+      if [ -f "$SUPER_DIR/scripts/substrate/mirror-to-live.sh" ]; then
+        install -m 0755 "$SUPER_DIR/scripts/substrate/mirror-to-live.sh" /usr/local/bin/mirror-to-live 2>/dev/null || true
+      fi
       # Reseed the active-scripts run-dir (same source substrate-active-scripts-seed uses at boot).
       cp -f "$SUPER_DIR"/scripts/substrate/*.ts /workspace/active-scripts/ 2>/dev/null || true
       # The relay is restarted ONLY on a real relay.ts change (never on first
