@@ -50,6 +50,22 @@ if [ -d "$SRC/src" ]; then
   rm -rf "$DST/src"
   cp -r "$SRC/src" "$DST/src"
 fi
+# sql/ (schemas + migrations) MUST mirror too: init-database.ts (the vessel's
+# ExecStartPre) applies sql/schemas + sql/migrations on every start, so a new
+# migration committed to origin/dev only takes effect if it reaches the runtime.
+# Without this, the runtime sql/ stayed frozen at the image-baked version and
+# schema changes (e.g. execution-table field additions) silently never applied
+# — the deploy carries the whole vessel, code AND schema, not just src/.
+if [ -d "$SRC/sql" ]; then
+  rm -rf "$DST/sql"
+  cp -r "$SRC/sql" "$DST/sql"
+fi
+# scripts/ carries init-database.ts + apply-migration helpers the runtime runs;
+# mirror so changes to the migration runner itself also deploy.
+if [ -d "$SRC/scripts" ]; then
+  rm -rf "$DST/scripts"
+  cp -r "$SRC/scripts" "$DST/scripts"
+fi
 # NB: deliberately NOT bun.lock/bun.lockb — the clone's lockfile pins the
 # RELATIVE file: paths and poisons resolution in the runtime layout.
 for f in tsconfig.json index.ts; do
