@@ -38,13 +38,22 @@ The substrate has generalized from "one local container" to **one image that run
 make -C scripts/substrate up ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-`up` builds the image if missing, starts (or creates) `substrate-live`, waits on
-the fleet readiness gate, and runs the doctor. **No other host step is
-load-bearing**: identity seeding runs in-container (`identity-seeder.service`,
+`up` builds the image **only if none exists**, starts (or creates)
+`substrate-live`, waits up to 240s on the fleet readiness matrix (best-effort —
+on timeout it still proceeds and lets the doctor report what failed), and runs
+the doctor. **No other host step is load-bearing**: identity seeding runs
+in-container (`identity-seeder.service`,
 idempotent, restarts key consumers only when a key is actually minted),
 readiness is a systemd fact (`substrate-ready.service`) surfaced to the host via
 the image `HEALTHCHECK` (`docker inspect --format '{{.State.Health.Status}}'`),
 and diagnosis is in-container too (`docker exec substrate-live substrate-doctor`).
+
+> **`up` never rebuilds from source on its own.** It builds only when no image
+> exists, and reuses an already-running `substrate-live` as-is. After editing
+> vessel source, rebuild explicitly (`make -C scripts/substrate build`, or
+> `up REBUILD=1`) *and* recreate the container so the fresh image is actually
+> booted (`docker rm -f substrate-live` then `up`) — for a single vessel prefer
+> the hot-reload `restart-<vessel>` targets under **Iteration loop**.
 
 The system's raw launch contract on **any** docker host — no repo checkout, no
 make — is just:
@@ -54,7 +63,8 @@ docker run -d --privileged --name substrate-live \
   -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
   -e ANTHROPIC_API_KEY=sk-ant-... \
   -p 18080:8080 -p 18090:8090 -p 18100:8100 -p 18210:8210 \
-  --tmpfs /run --tmpfs /run/lock metabob/substrate:dev
+  -p 18250:8250 -p 18260:8260 -p 18270:8270 \
+  --tmpfs /run --tmpfs /run/lock avigopal/substrate:dev
 ```
 
 ### Pulling the image instead of building
@@ -123,9 +133,44 @@ its normal two inputs — the API key plus `discoveryVesselEndpoint=http://127.0
 and the spoke's federation transport mirrors the plugin's shapes to the hub, so
 the vault is reachable fleet-wide without any direct exposure.
 
-`scripts/substrate/configure-local.sh` (run by `up`) only updates
-`~/.metabob/config.json` so *operator tooling* points at the substrate — it is
-IDE convenience, not part of the system.
+`scripts/substrate/configure-local.sh` only updates `~/.metabob/config.json` so
+*operator tooling* points at the substrate — IDE convenience, not part of the
+system. `up` runs it automatically **only for the default `substrate-live`**; a
+secondary container (`LIVE_NAME=<other>`) is left untouched, so `~/.metabob/config.json`
+keeps pointing at whatever it did before (point tooling at the secondary yourself,
+or use `LIVE_NAME=` on the make targets).
+
+## Second substrate on the same host (clean-room)
+
+Two `make` variables run a **fully-isolated** substrate alongside `substrate-live`
+without touching its learning state — the right way to test the setup, try a risky
+change, or stand up a throwaway fleet. This is **not** a spoke: a spoke shares a
+hub's identity namespace and points its control/store at the hub; a clean-room
+instance is a standalone, self-contained fleet with its own everything.
+
+- **`LIVE_NAME=<name>`** renames the container *and* its named volumes to
+  `<name>-surreal` (`/var/lib/surrealdb`) and `<name>-workspace` (`/workspace`),
+  so its traces, posteriors, concept graph, and secrets are entirely separate.
+- **`PORT_OFFSET=<n>`** shifts every published host port by `n` so the two fleets
+  don't collide (e.g. `PORT_OFFSET=20000` → activity-api `38080`, discovery
+  `38100`, goal-host `38210`, concept-db `38260`).
+
+```bash
+# Boot an isolated clean-room fleet (own volumes + own ports; substrate-live untouched)
+make -C scripts/substrate up LIVE_NAME=substrate-scratch PORT_OFFSET=20000 ANTHROPIC_API_KEY=sk-ant-...
+
+# Every management/inspection target needs the same LIVE_NAME (they default to substrate-live)
+make -C scripts/substrate doctor    LIVE_NAME=substrate-scratch
+make -C scripts/substrate show-key  LIVE_NAME=substrate-scratch
+
+# Tear it down (removes the container; add the volumes to wipe its state)
+docker rm -f substrate-scratch
+docker volume rm substrate-scratch-surreal substrate-scratch-workspace
+```
+
+For a secondary instance `up` deliberately **skips** `configure-local.sh`, so
+`~/.metabob/config.json` still points at whatever it did before — point operator
+tooling at the offset ports manually if you want it aimed at the clean-room fleet.
 
 <details><summary>Legacy 4-step launch (still works)</summary>
 
@@ -156,19 +201,22 @@ Plain `source /etc/substrate/env` sets shell variables only — child processes 
 
 ## Configuration and secrets
 
-Secrets have a **single declaration point**: `scripts/substrate/secrets.env.sh`. Every secret is a `VAR="${VAR:-<default-or-generated>}"` line — read from the environment first (compose/`run -e`, or an already-sourced persisted file), falling back to a generated or declared default. Adding a new secret is one line there.
+Secrets are resolved and persisted along **two independent paths** that must stay in sync:
 
-The flow at boot:
+- **Boot secrets** — `entrypoint.sh` runs `gen-env.sh`, which resolves each secret (explicit env `-e` first, else the value persisted on a prior boot, else generated) with its own inline `persisted_secret()` logic and renders `/etc/substrate/env`.
+- **Dynamic-vessel secrets** — `scripts/substrate/secrets.env.sh` is the declaration point for secrets a *dynamic* vessel needs at install time; `vessel-ctl` sources it. It is **safe to commit** (names + non-secret defaults only). Note that `gen-env.sh` does **not** source it — the two files are separate, so a secret needed at boot must be added to `gen-env.sh`, not only to `secrets.env.sh`.
+
+The boot flow:
 
 ```
-secrets.env.sh  ──sourced by──▶  gen-env.sh  ──renders──▶  /etc/substrate/env
-                                                              │  (every systemd unit reads it via
-                                                              │   EnvironmentFile=/etc/substrate/env)
-                                                              ▼
-                                              /workspace/.substrate-secrets  (persisted → survives restart)
+entrypoint.sh ──runs──▶ gen-env.sh ──renders──▶ /etc/substrate/env
+                             │                     (every systemd unit reads it via
+                             │                      EnvironmentFile=/etc/substrate/env)
+                             ▼
+             /workspace/.substrate-secrets  (persisted → survives restart)
 ```
 
-`gen-env.sh` writes `/etc/substrate/env` from the container environment and persists the generated/internal secrets to `/workspace/.substrate-secrets` (on the `substrate-workspace` named volume), so a restart reuses the same `JWT_SECRET`, `SURREAL_PASS`, `METABOB_API_KEY`, `SUBSTRATE_GIT_PAT`, and `FEDERATION_SIGNING_SECRET` instead of regenerating and breaking auth. Operator-supplied LLM/git credentials come from the run environment each boot and are intentionally not baked in.
+`gen-env.sh` writes `/etc/substrate/env` and persists its secrets to `/workspace/.substrate-secrets` (on the `substrate-workspace` named volume), so a restart reuses the same values instead of regenerating and breaking auth. The persisted set is `JWT_SECRET`, `SURREAL_PASS`, `METABOB_API_KEY`, `SUBSTRATE_GIT_PAT`, **and the operator-supplied provider keys** (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`/`OPENAI_BASE_URL`, `CHUTES_API_KEY`, `OPENROUTER_API_KEY`) — the provider keys are read from the run environment when present but are then round-tripped into `.substrate-secrets` too, so a `docker rm` + recreate *without* `-e` retains them. (`FEDERATION_SIGNING_SECRET` is **not** in the boot set — it is generated by `secrets.env.sh` on the dynamic-vessel path, when the federation transport is installed.)
 
 `secrets.env.sh` is **safe to commit** — it declares *names and non-secret defaults only*, never real secret values (those come from the environment or the persisted file). `vessel-ctl.sh` sources the same file when installing a dynamic vessel, so a vessel's declared `secrets` are guaranteed present in `/etc/substrate/env` and persisted at install time.
 
@@ -178,6 +226,15 @@ Humans never call identity-vessel directly — it is internal-only (no host port
 in-container tool `substrate-key` (baked next to `vessel-ctl`) is the issuance
 surface, wrapped by Makefile targets so the whole flow is one command with no
 credentials beyond a running substrate:
+
+> **Instance selector.** Every `make -C scripts/substrate` target — `show-key`,
+> `whoami`, `issue-key`, `list-keys`, `revoke-key`, `status`, `health`, `shell`,
+> `logs-<unit>`, `restart-<vessel>`, `sync-<vessel>` — runs `docker exec
+> $(LIVE_NAME) …` and defaults `LIVE_NAME=substrate-live`. Run bare against a
+> second or clean-room container they silently act on the live substrate; pass
+> `LIVE_NAME=<container>` on every command (e.g.
+> `make -C scripts/substrate show-key LIVE_NAME=substrate-scratch`). See
+> [Second substrate on the same host](#second-substrate-on-the-same-host-clean-room).
 
 ```bash
 make -C scripts/substrate show-key                 # print the operator API key (what configure-local writes)
@@ -303,7 +360,10 @@ Harnesses and clients read the target substrate from one line in `~/.metabob/con
 
 Point `endpoint` at whichever substrate's activity-api you are targeting (the local
 container, or a remote hub such as `http://<hub>:18080`). No code changes needed;
-`make up` writes the local value for you.
+`make up` writes the local value for you — but **only for the default
+`substrate-live`**. A secondary/clean-room instance (`LIVE_NAME=<other>`,
+`PORT_OFFSET=<n>`) leaves this file untouched; set `endpoint` to its offset
+activity-api port yourself (e.g. `http://localhost:38080`).
 
 ## Deploy paths
 

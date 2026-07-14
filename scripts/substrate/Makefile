@@ -268,7 +268,8 @@ run-detach:
 #     -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
 #     -e ANTHROPIC_API_KEY=sk-ant-... \
 #     -p 18080:8080 -p 18090:8090 -p 18100:8100 -p 18210:8210 \
-#     --tmpfs /run --tmpfs /run/lock metabob/substrate:dev
+#     -p 18250:8250 -p 18260:8260 -p 18270:8270 \
+#     --tmpfs /run --tmpfs /run/lock avigopal/substrate:dev
 #
 # `make up` wraps that with: build-if-missing, start-or-create, readiness wait,
 # old-image seed fallback, IDE config, doctor. REBUILD=1 forces an image build.

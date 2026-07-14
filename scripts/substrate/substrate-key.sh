@@ -91,7 +91,7 @@ case "$cmd" in
     mint_jwt admin 300
     curl -s "$IDENTITY/v1/keys" -H "Authorization: Bearer $JWT" \
       | jq -r '.data.keys[] | [.key_id, .status, (.scopes|join("+")), (.name // "-"), (.expires_at // "never")] | @tsv' \
-      | column -t -s $'\t' || die "key list failed"
+      | awk -F'\t' '{printf "%-26s %-10s %-16s %-20s %s\n",$1,$2,$3,$4,$5}' || die "key list failed"
     ;;
 
   revoke)
