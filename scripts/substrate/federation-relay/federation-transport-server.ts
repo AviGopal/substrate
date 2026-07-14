@@ -59,8 +59,33 @@ async function localDiscoveryResolve(pointer: any): Promise<any[]> {
   return (dj?.content?.vessels ?? []) as any[]
 }
 
+// A plain-HTTP owner row is only reachable from THIS transport if its endpoint is not
+// a cross-host artifact. `host.docker.internal` is a vault-/container-host loopback
+// alias that resolves ONLY on the machine that registered it; on any other substrate it
+// is dead. Such a row must never be chosen over — or shadow — a live libp2p circuit,
+// otherwise a remote resolve of a vessel that registered a host-local HTTP endpoint
+// (e.g. an Obsidian plugin) dies with "ingress proxy failed" instead of hopping to the
+// vessel's circuit. Genuine intra-container owners (127.0.0.1:<port> of a co-resident
+// vessel) stay reachable and are deliberately NOT excluded here.
+const HOST_LOCAL_UNREACHABLE = /(^|\/\/)host\.docker\.internal(:|\/|$)/i
+function reachableHttp(v: any): boolean {
+  return !HOST_LOCAL_UNREACHABLE.test(String(v?.endpoint ?? ''))
+}
+// Never dial our own circuit: a hub self-mirror row (`<id>@<substrate>`) carries THIS
+// transport's peer id, so forwarding to it loops the ingress back onto itself.
+function isSelfCircuit(v: any): boolean {
+  const ma = Array.isArray(v?.libp2p_multiaddr) ? String(v.libp2p_multiaddr[0] ?? '') : ''
+  return !!ma && ma.includes(vl.peerId)
+}
+
 async function proxyToLocalOwner(pointer: any): Promise<any> {
   const t = String(pointer?.type ?? '')
+  const hop = Number(pointer?._fedHop ?? 0)
+  const forwardLibp2p = async (v: any) => {
+    console.log('[fed-transport] ingress→libp2p forward ' + t + ' to ' + String(v.libp2p_multiaddr[0]).slice(-20))
+    const res = await resolveOverLibp2p(String(v.libp2p_multiaddr[0]), { ...pointer, _fedHop: hop + 1 })
+    return (res && typeof res === 'object' && 'content' in (res as any)) ? (res as any).content : res
+  }
   // Per-vessel addressing: a caller that discovered `<vesselId>@<substrate>` through
   // the hub namespace names its target via pointer._fedTargetVessel (either form —
   // bare vesselId or the substrate-qualified mirror id). When set, route to exactly
@@ -70,35 +95,40 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
   const wanted = String(pointer?._fedTargetVessel ?? '').split('@')[0]
   if (wanted) {
     const all = await localDiscoveryResolve({ type: 'vesselRegistry' })
-    const target = all.find(
-      (v: any) => String(v?.vesselId ?? '') === wanted && !String(v.vesselId).startsWith(VESSEL_ID) && v?.protocol !== 'libp2p',
-    )
-    if (target) return proxyToVessel(pointer, t, target)
+    const cand = all.find((v: any) => String(v?.vesselId ?? '') === wanted && !String(v.vesselId).startsWith(VESSEL_ID))
+    if (cand) {
+      // A libp2p target is reached over its circuit (the previous code required
+      // protocol!=='libp2p' here, so naming a libp2p vessel silently fell through and
+      // the shape then routed to a dead host-local HTTP row).
+      if (hop < 1 && cand.protocol === 'libp2p' && Array.isArray(cand.libp2p_multiaddr) && cand.libp2p_multiaddr[0] && !isSelfCircuit(cand))
+        return forwardLibp2p(cand)
+      if (cand.protocol !== 'libp2p' && reachableHttp(cand)) return proxyToVessel(pointer, t, cand)
+    }
   }
   const vessels = await localDiscoveryResolve({ type: 'vesselCapability', shape: t })
-  // Prefer a plain-HTTP LOCAL vessel: never ourselves, never our own hub-mirror
-  // registration (vesselId-prefixed), never a libp2p-protocol entry.
+  // Prefer a REACHABLE plain-HTTP LOCAL vessel: never ourselves, never our own
+  // hub-mirror registration (vesselId-prefixed), never a libp2p-protocol entry, and
+  // never a cross-host-dead host.docker.internal row (which would shadow the circuit).
   const owner = vessels.find(
-    (v: any) => v?.vesselId && !String(v.vesselId).startsWith(VESSEL_ID) && v?.protocol !== 'libp2p',
+    (v: any) => v?.vesselId && !String(v.vesselId).startsWith(VESSEL_ID) && v?.protocol !== 'libp2p' && reachableHttp(v),
   )
   if (!owner) {
-    // No LOCAL owner — try a REMOTE one over libp2p. The hub namespace mirror
+    // No reachable LOCAL owner — try a REMOTE one over libp2p. The hub namespace mirror
     // advertises other substrates' shapes with protocol:'libp2p' + the OWNING
     // transport's circuit multiaddr. Forwarding one hop there is what makes
     // "connect to any relay → reach all vessels" true: the owning substrate's
     // ingress then lands on its own local plain-HTTP vessel. A hop guard
     // (pointer._fedHop) bounds this to a single cross-substrate hop so a
-    // mutual mirror (A↔B) can never ping-pong.
-    const hop = Number(pointer?._fedHop ?? 0)
-    const remote = hop < 1 ? vessels.find(
+    // mutual mirror (A↔B) can never ping-pong. Skip self-mirror circuits, and prefer
+    // a DIRECT sidecar row (bare vesselId) over an `@substrate` mirror row — the direct
+    // row dials the vessel's own circuit, the mirror dials another transport that only
+    // re-proxies (and, for a host-local owner, would fail again).
+    const libp2pRows = hop < 1 ? vessels.filter(
       (v: any) => v?.vesselId && !String(v.vesselId).startsWith(VESSEL_ID)
-        && v?.protocol === 'libp2p' && Array.isArray(v?.libp2p_multiaddr) && v.libp2p_multiaddr[0],
-    ) : undefined
-    if (remote) {
-      console.log('[fed-transport] ingress→libp2p forward ' + t + ' to ' + String(remote.libp2p_multiaddr[0]).slice(-20))
-      const res = await resolveOverLibp2p(String(remote.libp2p_multiaddr[0]), { ...pointer, _fedHop: hop + 1 })
-      return (res && typeof res === 'object' && 'content' in (res as any)) ? (res as any).content : res
-    }
+        && v?.protocol === 'libp2p' && Array.isArray(v?.libp2p_multiaddr) && v.libp2p_multiaddr[0] && !isSelfCircuit(v),
+    ) : []
+    const remote = libp2pRows.find((v: any) => !String(v.vesselId).includes('@')) ?? libp2pRows[0]
+    if (remote) return forwardLibp2p(remote)
     return { error: 'unknown shape: ' + t, note: 'no local or remote producer via ' + VESSEL_ID }
   }
   return proxyToVessel(pointer, t, owner)
@@ -281,6 +311,11 @@ async function localVesselRows(): Promise<Array<{ vesselId: string; shapes: stri
     // substrate's mirror — re-exporting mirrored shapes would ping-pong namespaces),
     // and already-qualified rows (a `x@substrate` id is some substrate's mirror).
     if (!id || id.startsWith(VESSEL_ID) || v?.protocol === 'libp2p' || id.includes('@')) continue
+    // Liveness gate: never mirror a vessel whose only endpoint is cross-host-dead
+    // (host.docker.internal), else the hub namespace grows a `<id>@<substrate>` row
+    // whose circuit re-proxies to an unreachable HTTP owner — a poison producer that
+    // outlives discovery's TTL and shadows the vessel's real circuit row.
+    if (HOST_LOCAL_UNREACHABLE.test(String(v?.endpoint ?? ''))) continue
     const shapes = (v?.shapes ?? []).filter((s: any) => typeof s === 'string' && s)
     if (shapes.length === 0) continue
     rows.push({ vesselId: id, shapes })
