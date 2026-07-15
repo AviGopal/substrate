@@ -1,11 +1,11 @@
 {
   "version": "25.G7",
-  "updated_at": "2026-07-01T22:58:41.415Z",
+  "updated_at": "2026-07-15T22:58:00.000Z",
   "weeks": {
     "2026-W27": {
       "promoted_at": "2026-07-01T22:58:41.415Z",
       "source_file": "2026-07-01-held-out-goals.json",
-      "goal_count": 50,
+      "goal_count": 52,
       "goals": [
         {
           "id": "gen-16240768943570867107-001",
@@ -18,7 +18,7 @@
               "fileEdit"
             ]
           },
-          "goal_text": "Produce a fileEdit from file — this shape pair has been seen in only a few prior traces.",
+          "goal_text": "Produce a fileEdit from file \u2014 this shape pair has been seen in only a few prior traces.",
           "expected_output_shapes": [
             "fileEdit"
           ],
@@ -179,7 +179,7 @@
               "fileEdit"
             ]
           },
-          "goal_text": "Produce a fileEdit from file — this exact shape combination has never appeared in prior execution traces.",
+          "goal_text": "Produce a fileEdit from file \u2014 this exact shape combination has never appeared in prior execution traces.",
           "expected_output_shapes": [
             "fileEdit"
           ],
@@ -202,7 +202,7 @@
               "fileEdit"
             ]
           },
-          "goal_text": "Produce a fileEdit from file — this shape pair has been seen in only a few prior traces.",
+          "goal_text": "Produce a fileEdit from file \u2014 this shape pair has been seen in only a few prior traces.",
           "expected_output_shapes": [
             "fileEdit"
           ],
@@ -225,7 +225,7 @@
               "fileEdit"
             ]
           },
-          "goal_text": "Produce a fileEdit from file — this exact shape combination has never appeared in prior execution traces.",
+          "goal_text": "Produce a fileEdit from file \u2014 this exact shape combination has never appeared in prior execution traces.",
           "expected_output_shapes": [
             "fileEdit"
           ],
@@ -331,7 +331,7 @@
         },
         {
           "id": "gen-16240768943570867107-015",
-          "cell_id": "seen|depth1|C∪D",
+          "cell_id": "seen|depth1|C\u222aD",
           "shape_signature": {
             "input": [
               "file"
@@ -423,7 +423,7 @@
         },
         {
           "id": "gen-16240768943570867107-019",
-          "cell_id": "rare|depth0|C∪D",
+          "cell_id": "rare|depth0|C\u222aD",
           "shape_signature": {
             "input": [
               "file"
@@ -455,7 +455,7 @@
               "fileEdit"
             ]
           },
-          "goal_text": "Produce a fileEdit from file — this exact shape combination has never appeared in prior execution traces.",
+          "goal_text": "Produce a fileEdit from file \u2014 this exact shape combination has never appeared in prior execution traces.",
           "expected_output_shapes": [
             "fileEdit"
           ],
@@ -492,7 +492,7 @@
         },
         {
           "id": "gen-16240768943570867107-022",
-          "cell_id": "novel|depth0|C∪D",
+          "cell_id": "novel|depth0|C\u222aD",
           "shape_signature": {
             "input": [
               "file"
@@ -501,7 +501,7 @@
               "fileEdit"
             ]
           },
-          "goal_text": "Forge a fileEdit from file — the shape has never been produced and may require a new activity or vessel.",
+          "goal_text": "Forge a fileEdit from file \u2014 the shape has never been produced and may require a new activity or vessel.",
           "expected_output_shapes": [
             "fileEdit"
           ],
@@ -547,7 +547,7 @@
               "fileEdit"
             ]
           },
-          "goal_text": "Produce a fileEdit from file — this exact shape combination has never appeared in prior execution traces.",
+          "goal_text": "Produce a fileEdit from file \u2014 this exact shape combination has never appeared in prior execution traces.",
           "expected_output_shapes": [
             "fileEdit"
           ],
@@ -653,7 +653,7 @@
         },
         {
           "id": "gen-16240768943570867107-029",
-          "cell_id": "rare|depth0|C∪D",
+          "cell_id": "rare|depth0|C\u222aD",
           "shape_signature": {
             "input": [
               "file"
@@ -722,7 +722,7 @@
         },
         {
           "id": "gen-16240768943570867107-032",
-          "cell_id": "novel|depth2+|C∪D",
+          "cell_id": "novel|depth2+|C\u222aD",
           "shape_signature": {
             "input": [
               "file"
@@ -731,7 +731,7 @@
               "fileEdit"
             ]
           },
-          "goal_text": "Orchestrate a deep novel composition from file to fileEdit — gated on Phase 22 forge capability.",
+          "goal_text": "Orchestrate a deep novel composition from file to fileEdit \u2014 gated on Phase 22 forge capability.",
           "expected_output_shapes": [
             "fileEdit"
           ],
@@ -837,7 +837,7 @@
         },
         {
           "id": "gen-16240768943570867107-037",
-          "cell_id": "seen|depth0|C∪D",
+          "cell_id": "seen|depth0|C\u222aD",
           "shape_signature": {
             "input": [
               "file"
@@ -860,7 +860,7 @@
         },
         {
           "id": "gen-16240768943570867107-038",
-          "cell_id": "rare|depth0|C∪D",
+          "cell_id": "rare|depth0|C\u222aD",
           "shape_signature": {
             "input": [
               "file"
@@ -938,7 +938,7 @@
               "fileEdit"
             ]
           },
-          "goal_text": "Produce a fileEdit from file — this exact shape combination has never appeared in prior execution traces.",
+          "goal_text": "Produce a fileEdit from file \u2014 this exact shape combination has never appeared in prior execution traces.",
           "expected_output_shapes": [
             "fileEdit"
           ],
@@ -961,7 +961,7 @@
               "fileEdit"
             ]
           },
-          "goal_text": "Produce a fileEdit from file — this exact shape combination has never appeared in prior execution traces.",
+          "goal_text": "Produce a fileEdit from file \u2014 this exact shape combination has never appeared in prior execution traces.",
           "expected_output_shapes": [
             "fileEdit"
           ],
@@ -1076,7 +1076,7 @@
               "fileEdit"
             ]
           },
-          "goal_text": "Produce a fileEdit from file — this shape pair has been seen in only a few prior traces.",
+          "goal_text": "Produce a fileEdit from file \u2014 this shape pair has been seen in only a few prior traces.",
           "expected_output_shapes": [
             "fileEdit"
           ],
@@ -1099,7 +1099,7 @@
               "fileEdit"
             ]
           },
-          "goal_text": "Produce a fileEdit from file — this shape pair has been seen in only a few prior traces.",
+          "goal_text": "Produce a fileEdit from file \u2014 this shape pair has been seen in only a few prior traces.",
           "expected_output_shapes": [
             "fileEdit"
           ],
@@ -1156,6 +1156,16 @@
           "oracle_label_id": null,
           "generator_seed": "16240768943570867107",
           "shape_registry_snapshot_hash": "5c7ee2074b65853f71fc5a01ce194ff26deedf6daacdb715c6beefdfd3f31b35"
+        },
+        {
+          "goal": "Perform behavior-neutral seam extraction on an oversized substrate source file: pick a large file under repos/*/src (e.g. repos/activity-api/src/routes/activities.ts, repos/goal-host-vessel/src/index.ts, or repos/boredom-vessel/src/index.ts), extract a cohesive cluster of pure top-level helper declarations into a sibling module leaving import/re-export shims, and verify the change is parity-preserving (surface parity, tsc no new errors, tests unchanged, AST-equivalent).",
+          "source": "vessel-maintenance-seam-extraction",
+          "kind": "seam_extraction"
+        },
+        {
+          "goal": "Decompose the executor fossil: extract a cohesive cluster of pure top-level helper declarations from repos/goal-host-vessel/src/index.ts into a new sibling module repos/goal-host-vessel/src/index.helpers2.ts, leaving import/re-export shims, and confirm behavior-neutrality via the vessel-maintenance parity gate.",
+          "source": "vessel-maintenance-seam-extraction",
+          "kind": "seam_extraction"
         }
       ]
     }
