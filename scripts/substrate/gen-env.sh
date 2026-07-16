@@ -264,6 +264,23 @@ EMBEDDING_PRIOR_OBSERVER_ENABLED=false
 # (one-off sweep removed 108,564 rows: 265K->160K, CPU flat throughout).
 TRACE_RETENTION_ENABLED=true
 TRACE_RETENTION_DRY_RUN=false
+# Per-stratum caps for the continuous sweep. Defaults are 2000/2000; the store
+# had drifted to ~218K rows / ~13G (many auto-discovered strata x 2000), which
+# pushes SurrealDB's working set past the 22G MemoryHigh / 26G MemoryMax cgroup
+# budget and drives the ~hourly OOM-restart. Tighten successes hard (cheap,
+# redundant) but keep failures generous (rarer, higher debug value).
+TRACE_RETENTION_DEFAULT_SUCCESS_CAP=600
+TRACE_RETENTION_DEFAULT_FAILURE_CAP=2000
+# Episodic reconcile (reconcile_trace_store, fired condition-driven by
+# trace-store-health-check -> trace_store_health_observer on cap overage).
+# Global hard bound + a SHORT full-history window. 14d of full history at the
+# ~30s trace cadence is itself a bloat source; 3d keeps ample recent debugging
+# context. All Thompson posteriors (variant_performance_metrics /
+# context_thompson_scores / activity_metrics) are stored separately and updated
+# incrementally at ingest, so pruning cold traces loses NO learned state.
+TRACE_STORE_CAP=40000
+TRACE_STORE_HOT_WINDOW_DAYS=3
+TRACE_STORE_RESERVOIR_PER_ACTIVITY=25
 
 # Obsidian plugin endpoint (2026-06-22). The obsidian-vessel plugin runs IN the
 # single-container substrate (obsidian-desktop.service) and serves on
