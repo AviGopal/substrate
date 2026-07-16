@@ -5,6 +5,13 @@ After=network.target
 [Service]
 Type=simple
 EnvironmentFile=/etc/substrate/env
+# Cap RocksDB block cache explicitly. SurrealDB auto-sizes it to ~42% of the
+# memory limit by default (~11G against MemoryMax=26G), and RocksDB compaction
+# peaks 2-3x on top of that — which blows past the cgroup cap and triggers the
+# ~hourly OOM-restart loop (same F-V26 class the k8s chart already caps via
+# SURREAL_ROCKSDB_BLOCK_CACHE_SIZE; see repos/deployment/charts/surrealdb).
+# 4Gi cache + write buffers + runtime + compaction peak stays well under 26G.
+Environment=SURREAL_ROCKSDB_BLOCK_CACHE_SIZE=4294967296
 ExecStart=/usr/local/bin/surreal start \
     --bind 127.0.0.1:8000 \
     --user root \
