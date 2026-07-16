@@ -18,10 +18,6 @@
 	url = git@github.com:AviGopal/activity-api.git
 	branch = dev
 
-[submodule "repos/metabob-mcp"]
-	path = repos/metabob-mcp
-	url = git@github.com:MetabobProject/metabob-mcp.git
-	branch = dev
 [submodule "repos/cpg-inference-ts"]
 	path = repos/cpg-inference-ts
 	url = git@github.com:AviGopal/cpg-inference-ts.git

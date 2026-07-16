@@ -100,6 +100,7 @@ OPENAI_API_KEY="${OPENAI_API_KEY:-$(persisted_secret OPENAI_API_KEY)}"
 OPENAI_BASE_URL="${OPENAI_BASE_URL:-$(persisted_secret OPENAI_BASE_URL)}"
 CHUTES_API_KEY="${CHUTES_API_KEY:-$(persisted_secret CHUTES_API_KEY)}"
 OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-$(persisted_secret OPENROUTER_API_KEY)}"
+GOOGLE_API_KEY="${GOOGLE_API_KEY:-$(persisted_secret GOOGLE_API_KEY)}"
 
 # Endpoint aliases — resolve BEFORE the heredoc so every inner reference is a
 # bound variable. Previously the alias defaults nested unguarded expansions
@@ -144,6 +145,7 @@ OPENAI_API_KEY="${OPENAI_API_KEY:-}"
 OPENAI_BASE_URL="${OPENAI_BASE_URL:-}"
 CHUTES_API_KEY="${CHUTES_API_KEY:-}"
 OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
+GOOGLE_API_KEY="${GOOGLE_API_KEY:-}"
 LLM_DEFAULT_MODEL="${LLM_DEFAULT_MODEL:-}"
 # Substrate root inside the container = the container-native super-repo clone
 # (/workspace/git/super-repo, passed in via -e SUBSTRATE_ROOT). The container
@@ -285,8 +287,9 @@ echo "[gen-env] wrote /etc/substrate/env"
 # vessel_id==model arm is what the goal-host LLM router learns over per task type.
 printf 'LLM_DEFAULT_MODEL=%s\n' "${LLM_OPUS_MODEL:-claude-opus-4-8}"          > /etc/substrate/llm-opus.env
 printf 'LLM_DEFAULT_MODEL=%s\n' "${LLM_HAIKU_MODEL:-claude-haiku-4-5-20251001}" > /etc/substrate/llm-haiku.env
-chmod 600 /etc/substrate/llm-opus.env /etc/substrate/llm-haiku.env
-echo "[gen-env] wrote per-model llm-resolver env files (opus, haiku)"
+printf 'LLM_DEFAULT_MODEL=%s\n' "${LLM_GOOGLE_MODEL:-gemini-2.5-flash}"          > /etc/substrate/llm-google.env
+chmod 600 /etc/substrate/llm-opus.env /etc/substrate/llm-haiku.env /etc/substrate/llm-google.env
+echo "[gen-env] wrote per-model llm-resolver env files (opus, haiku, google)"
 
 # Pass through vessel-subset selection + fork owner so units (setup-git-push) and
 # apply-inventory read them from the EnvironmentFile. Absent vars stay absent
@@ -316,6 +319,7 @@ OPENAI_API_KEY=${OPENAI_API_KEY:-}
 OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
 CHUTES_API_KEY=${CHUTES_API_KEY:-}
 OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
 SECRETS
 chmod 600 /workspace/.substrate-secrets
 echo "[gen-env] persisted secrets to /workspace/.substrate-secrets"
