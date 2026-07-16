@@ -55,6 +55,27 @@ if [[ "$SURREAL_PASS_SOURCE" == "generated" ]] && [[ -e /var/lib/surrealdb/data.
   echo "[gen-env] WARNING: restore the original SURREAL_PASS (env or /workspace/.substrate-secrets) or reset the datastore root user." >&2
 fi
 
+# API key signing secret: the HMAC key identity-vessel uses to sign AND verify
+# every `mb-` API key. If unset, identity-vessel falls back to a PUBLIC hardcoded
+# default ('dev-secret-change-in-production') — anyone could forge keys, and two
+# substrates that both fall back share one trust space (the shared-API_KEY_SECRET
+# federation hazard). Give each substrate its own secret and round-trip it so
+# issued keys keep validating across restarts.
+API_KEY_SECRET="${API_KEY_SECRET:-$(persisted_secret API_KEY_SECRET)}"
+if [[ -z "$API_KEY_SECRET" ]]; then
+  if [[ -e /var/lib/surrealdb/data.db ]]; then
+    # Existing datastore, no persisted secret → its keys were signed with the
+    # legacy public default. Generating a fresh secret now would invalidate every
+    # already-issued key. Keep the legacy default so those keys still validate,
+    # but warn loudly: this substrate is insecure until the secret is rotated.
+    API_KEY_SECRET="dev-secret-change-in-production"
+    echo "[gen-env] WARNING: no persisted API_KEY_SECRET on an existing datastore — using the INSECURE legacy default." >&2
+    echo "[gen-env] WARNING: keys are forgeable until you set a strong API_KEY_SECRET and re-issue them." >&2
+  else
+    API_KEY_SECRET="$(openssl rand -hex 32)"
+  fi
+fi
+
 # Bootstrap key: used only for the initial identity-vessel signup call.
 # After seed-identity.ts runs, vessels use the HMAC keys it issues.
 # Stored in /workspace/.substrate-secrets so restarts reuse the same value.
@@ -66,6 +87,13 @@ LOCAL_TOOLS_VESSEL_API_KEY="${LOCAL_TOOLS_VESSEL_API_KEY:-${METABOB_API_KEY}}"
 GOAL_HOST_VESSEL_API_KEY="${GOAL_HOST_VESSEL_API_KEY:-${METABOB_API_KEY}}"
 RIBOSOME_VESSEL_API_KEY="${RIBOSOME_VESSEL_API_KEY:-${METABOB_API_KEY}}"
 CONCEPT_DB_API_KEY="${CONCEPT_DB_API_KEY:-${METABOB_API_KEY}}"
+
+# Self-admin key: the read/write/admin mint credential seed-identity.ts issues
+# after signup (the key operators and the keyctl CLI use to manage this keyspace
+# — issue/revoke/list). gen-env NEVER generates it (identity-vessel mints it),
+# but it MUST be round-tripped here so a container recreate — which rewrites
+# .substrate-secrets — does not wipe it. Empty on first boot; set after seeding.
+SUBSTRATE_ADMIN_KEY="${SUBSTRATE_ADMIN_KEY:-$(persisted_secret SUBSTRATE_ADMIN_KEY)}"
 
 # Self-development push credential (container-side direct push to AviGopal repos).
 # Fine-grained PAT (Contents:R/W). Comes from the environment (compose/run) or
@@ -137,7 +165,9 @@ cat > /etc/substrate/env <<EOF
 # span in a comment EXECUTES at generation time.)
 JWT_SECRET="${JWT_SECRET}"
 SURREAL_PASS="${SURREAL_PASS}"
+API_KEY_SECRET="${API_KEY_SECRET}"
 METABOB_API_KEY="${METABOB_API_KEY}"
+SUBSTRATE_ADMIN_KEY="${SUBSTRATE_ADMIN_KEY:-}"
 # LLM provider credentials — at least one must be non-empty (validated above).
 # (2) provider-secret spot — resolved (env>persisted>empty) just above.
 ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
@@ -326,7 +356,9 @@ cat > /workspace/.substrate-secrets <<SECRETS
 # DO NOT commit this file. Add workspace/.substrate-secrets to .gitignore.
 JWT_SECRET=${JWT_SECRET}
 SURREAL_PASS=${SURREAL_PASS}
+API_KEY_SECRET=${API_KEY_SECRET}
 METABOB_API_KEY=${METABOB_API_KEY}
+SUBSTRATE_ADMIN_KEY=${SUBSTRATE_ADMIN_KEY:-}
 SUBSTRATE_GIT_PAT=${SUBSTRATE_GIT_PAT}
 # (3) provider-secret spot — round-trip provider keys so a container recreate
 # without -e keeps them. NB: this heredoc OVERWRITES the file, so every durable
