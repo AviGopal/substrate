@@ -17,6 +17,23 @@ if (!SEED_KEY || !JWT_SECRET) {
   process.exit(1);
 }
 
+// Replace an existing `KEY=...` line or append it if absent. Used for keys that
+// are not present in the base env template (e.g. the admin key).
+function upsertEnvVar(path: string, key: string, value: string): void {
+  let content = "";
+  try {
+    content = readFileSync(path, "utf-8");
+  } catch {
+    return; // file absent (e.g. .substrate-secrets not yet created) — skip
+  }
+  const line = `${key}=${value}`;
+  const re = new RegExp(`^${key}=.*$`, "m");
+  const updated = re.test(content)
+    ? content.replace(re, line)
+    : content.replace(/\n?$/, `\n${line}\n`);
+  writeFileSync(path, updated, { mode: 0o600 });
+}
+
 async function waitForIdentity(maxMs = 30_000): Promise<void> {
   const deadline = Date.now() + maxMs;
   while (Date.now() < deadline) {
@@ -34,6 +51,7 @@ async function issueKey(
   user_id: string,
   org_id: string,
   name: string,
+  scopes: string[] = ["read", "write"],
 ): Promise<string> {
   const issueRes = await fetch(`${IDENTITY_URL}/v1/keys/issue`, {
     method: "POST",
@@ -41,7 +59,7 @@ async function issueKey(
       "Content-Type": "application/json",
       "Authorization": `Bearer ${token}`,
     },
-    body: JSON.stringify({ user_id, org_id, scopes: ["read", "write"], name }),
+    body: JSON.stringify({ user_id, org_id, scopes, name }),
   });
 
   if (!issueRes.ok) {
@@ -114,6 +132,17 @@ async function main() {
     console.warn(`[seed-identity] could not update env file: ${(e as Error).message}`);
     console.warn(`[seed-identity] manually set METABOB_API_KEY=${defaultKey}`);
   }
+
+  // Issue the substrate self-admin key — the mint credential for managing this
+  // keyspace (issue/revoke/list, create orgs). Unlike the read/write keys above,
+  // it carries the 'admin' scope so it satisfies the admin-only key endpoints
+  // directly. Persist it under SUBSTRATE_ADMIN_KEY so operators (and the keyctl
+  // CLI) can retrieve it as the keyspace's bootstrap credential.
+  const adminKey = await issueKey(token, user_id, org_id, "substrate-admin", ["read", "write", "admin"]);
+  upsertEnvVar("/etc/substrate/env", "SUBSTRATE_ADMIN_KEY", adminKey);
+  upsertEnvVar(SECRETS_FILE, "SUBSTRATE_ADMIN_KEY", adminKey);
+  console.log(`[seed-identity] issued self-admin key (substrate-admin): ${adminKey}`);
+  console.log("[seed-identity] set SUBSTRATE_ADMIN_KEY in /etc/substrate/env and .substrate-secrets");
 
   // Issue a dedicated key for local-tools-vessel (per D4 — per-vessel trace attribution)
   const localToolsKey = await issueKey(token, user_id, org_id, "local-tools-vessel");
