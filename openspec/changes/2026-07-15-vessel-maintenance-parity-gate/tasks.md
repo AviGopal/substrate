@@ -25,10 +25,10 @@ act (the capability cannot be drafted into the fossil it must fix); step 4+ is s
 
 ## Phase 2 — deterministic loose-bag extractor (bootstrap)
 
-- [ ] Implement `apply-seam-extraction` (ts-morph move + re-export shim + import fixup).
-- [ ] Implement `propose-seam-extraction` **deterministic tier**: group a loose-bag file's
+- [x] Implement `apply-seam-extraction` (ts-morph move + re-export shim + import fixup).
+- [x] Implement `propose-seam-extraction` **deterministic tier**: group a loose-bag file's
       top-level decls by existing route-prefix / call-cluster; emit one `seamExtraction`.
-- [ ] Dry-run on `activity-api/routes/activities.ts` (57 handlers): propose one handler group,
+- [x] Dry-run on `activity-api/routes/activities.ts` (57 handlers): propose one handler group,
       apply, run the gate. Inspect the `parityVerdict` — do NOT land yet.
 
 ## Phase 3 — earn the family on the easiest fossil (first real landing)
