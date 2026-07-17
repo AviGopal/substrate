@@ -46,6 +46,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Compute lowercase image owner
+        id: img
+        # ghcr rejects mixed-case repository names ("AviGopal" -> "avigopal").
+        # github.repository_owner preserves the account's original casing, so
+        # lowercase it here rather than in the tag interpolation (which can't).
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -56,7 +63,7 @@ jobs:
           file: Dockerfile.substrate
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/substrate:dev
-            ghcr.io/${{ github.repository_owner }}/substrate:${{ github.sha }}
+            ghcr.io/${{ steps.img.outputs.owner }}/substrate:dev
+            ghcr.io/${{ steps.img.outputs.owner }}/substrate:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
