@@ -1,0 +1,22 @@
+[Unit]
+Description=libp2p reachability + cross-substrate resolve-over-http + /health sensing surface.
+After=network.target discovery-vessel.service federation-relay.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+EnvironmentFile=-/workspace/.substrate-secrets
+Environment=FED_HEALTH_PORT=8401
+Environment=DISCOVERY_URL=http://127.0.0.1:8100
+WorkingDirectory=/workspace/git/super-repo/scripts/substrate/federation-relay
+ExecStart=/root/.bun/bin/bun /workspace/git/super-repo/scripts/substrate/federation-relay/federation-transport-server.ts
+# Graceful detach: any clean stop deregisters from discovery immediately
+# (best-effort; TTL expiry remains the crash backstop).
+ExecStopPost=-/usr/local/bin/discovery-deregister federation-transport-vessel
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -82,13 +82,37 @@ docker logout ghcr.io >/dev/null 2>&1 || true
 echo "[vm] waiting for the control plane…"
 for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:18100/health 2>/dev/null && break; sleep 3; done
 
-# 4b. Enable the federation egress. The unit ships in the image with role
-#     "transport" (in the hub role-group) but is marked manifest:true in
-#     vessels.inventory.json, so apply-inventory never enables it — without this
+# 4b. Install + enable the federation egress. The unit is referenced by
+#     vessels.inventory.json (role transport, manifest:true — so apply-inventory
+#     never manages it) and the image does NOT ship the unit file; without it
 #     the hub's discovery advertises federated rows at 127.0.0.1:8401 that
 #     nothing serves, and every cross-substrate resolve dies with forward_failed.
+#     The unit runs the transport server from the workspace super-repo clone.
 if [ -n "$RELAY_MULTIADDR" ]; then
-  echo "[vm] enabling federation-transport-vessel (hub egress on :8401)…"
+  echo "[vm] installing + enabling federation-transport-vessel (hub egress on :8401)…"
+  docker exec -i substrate-live sh -c 'cat > /etc/systemd/system/federation-transport-vessel.service' <<'UNIT'
+[Unit]
+Description=libp2p reachability + cross-substrate resolve-over-http + /health sensing surface.
+After=network.target discovery-vessel.service federation-relay.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+EnvironmentFile=-/workspace/.substrate-secrets
+Environment=FED_HEALTH_PORT=8401
+Environment=DISCOVERY_URL=http://127.0.0.1:8100
+WorkingDirectory=/workspace/git/super-repo/scripts/substrate/federation-relay
+ExecStart=/root/.bun/bin/bun /workspace/git/super-repo/scripts/substrate/federation-relay/federation-transport-server.ts
+ExecStopPost=-/usr/local/bin/discovery-deregister federation-transport-vessel
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+  docker exec substrate-live systemctl daemon-reload
   docker exec substrate-live systemctl enable --now federation-transport-vessel \
     || echo "[vm] WARNING: federation egress failed to start — cross-substrate resolves will forward_fail"
 else
