@@ -55,13 +55,17 @@ const vl: VesselLibp2p = await createVesselLibp2p({ vesselId: LIBP2P_IDENTITY, r
 // genuine cross-substrate libp2p route (proving remote resolve, not a self-dial).
 const EXTRA_SHAPE = process.env.FED_EXTRA_SHAPE || ''
 
-async function localDiscoveryResolve(pointer: any): Promise<any[]> {
+async function localDiscoveryResolve(pointer: any, allowFanout = false): Promise<any[]> {
   const dr = await fetch(DISCOVERY + '/resolve', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'ApiKey ' + API_KEY,
-      'X-Discovery-Depth': '99', // local-only: never peer-fan-out from an ingress lookup
+      // local-only by default: never peer-fan-out from an ingress lookup. A
+      // first-hop EGRESS lookup may fan out (allowFanout) — vessels that
+      // register only at the hub (e.g. host-side obsidian sidecars) are
+      // invisible in the local registry and reachable only via the union view.
+      'X-Discovery-Depth': allowFanout ? '0' : '99',
     },
     body: JSON.stringify({ pointer }),
     signal: AbortSignal.timeout(5000),
@@ -134,10 +138,16 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
     // a DIRECT sidecar row (bare vesselId) over an `@substrate` mirror row — the direct
     // row dials the vessel's own circuit, the mirror dials another transport that only
     // re-proxies (and, for a host-local owner, would fail again).
-    const libp2pRows = hop < 1 ? vessels.filter(
-      (v: any) => v?.vesselId && !String(v.vesselId).startsWith(VESSEL_ID)
-        && v?.protocol === 'libp2p' && Array.isArray(v?.libp2p_multiaddr) && v.libp2p_multiaddr[0] && !isSelfCircuit(v),
-    ) : []
+    const libp2pFilter = (v: any) => v?.vesselId && !String(v.vesselId).startsWith(VESSEL_ID)
+      && v?.protocol === 'libp2p' && Array.isArray(v?.libp2p_multiaddr) && v.libp2p_multiaddr[0] && !isSelfCircuit(v)
+    let libp2pRows = hop < 1 ? vessels.filter(libp2pFilter) : []
+    if (hop < 1 && libp2pRows.length === 0) {
+      // Nothing local — a hub-registered-only producer (host sidecars) is
+      // visible solely through discovery's union fan-out. One fan-out retry on
+      // first-hop lookups only; remote-originated resolves (hop>=1) stay
+      // local-only so a mutual mirror can never ping-pong.
+      libp2pRows = (await localDiscoveryResolve({ type: 'vesselCapability', shape: t }, true)).filter(libp2pFilter)
+    }
     const remote = libp2pRows.find((v: any) => !String(v.vesselId).includes('@')) ?? libp2pRows[0]
     if (remote) return forwardLibp2p(remote)
     return { error: 'unknown shape: ' + t, note: 'no local or remote producer via ' + VESSEL_ID }
