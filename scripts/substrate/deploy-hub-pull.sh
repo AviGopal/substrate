@@ -82,6 +82,19 @@ docker logout ghcr.io >/dev/null 2>&1 || true
 echo "[vm] waiting for the control plane…"
 for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:18100/health 2>/dev/null && break; sleep 3; done
 
+# 4b. Enable the federation egress. The unit ships in the image with role
+#     "transport" (in the hub role-group) but is marked manifest:true in
+#     vessels.inventory.json, so apply-inventory never enables it — without this
+#     the hub's discovery advertises federated rows at 127.0.0.1:8401 that
+#     nothing serves, and every cross-substrate resolve dies with forward_failed.
+if [ -n "$RELAY_MULTIADDR" ]; then
+  echo "[vm] enabling federation-transport-vessel (hub egress on :8401)…"
+  docker exec substrate-live systemctl enable --now federation-transport-vessel \
+    || echo "[vm] WARNING: federation egress failed to start — cross-substrate resolves will forward_fail"
+else
+  echo "[vm] WARNING: no RELAY_MULTIADDR — skipping federation egress; hub cannot dial spokes"
+fi
+
 echo "[vm] === HUB status ==="
 echo -n "[vm] discovery:    "; curl -s http://localhost:18100/health | head -c 140; echo
 echo -n "[vm] activity-api: "; curl -s http://localhost:18080/health | head -c 140; echo
