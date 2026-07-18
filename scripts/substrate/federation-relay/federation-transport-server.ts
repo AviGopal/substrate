@@ -212,13 +212,20 @@ async function resolveOverLibp2p(target: string, pointer: any): Promise<any> {
   catch { return await resolveViaHttp(vl, target, pointer) }
 }
 
-// Wait for the relay reservation → our advertisable circuit multiaddr.
-let circuit = ''
-for (let i = 0; i < 40; i++) {
-  const c = vl.advertiseMultiaddrs().find((m) => m.includes('p2p-circuit'))
-  if (c) { circuit = c; break }
+// The advertisable circuit multiaddr must be derived LIVE, never captured once:
+// a reservation that lands after a bounded startup wait (relay bounce, slow dial)
+// would otherwise leave `circuit` empty forever — local registrations then
+// advertise no multiaddr and registerAtHub() early-returns silently, so the
+// substrate's entire hub mirror disappears while local `register -> 201` keeps
+// logging success (observed on the spoke: reservations=1, circuit empty, all
+// @substrate rows gone from the hub). Same defect class as the obsidian
+// sidecar's stale capture (fixed in 480ac50).
+const currentCircuit = () => vl.advertiseMultiaddrs().find((m) => m.includes('p2p-circuit')) ?? ''
+// Bounded startup wait so first registrations usually carry the circuit already.
+for (let i = 0; i < 40 && !currentCircuit(); i++) {
   await new Promise((r) => setTimeout(r, 500))
 }
+const circuit = currentCircuit() // legacy snapshot for startup logging only
 
 // Plain HTTP surface the substrate senses + the libp2p EGRESS front door.
 //
@@ -237,7 +244,7 @@ Bun.serve({
   async fetch(req) {
     const u = new URL(req.url)
     if (u.pathname === '/health') {
-      return Response.json({ status: 'ok', service: VESSEL_ID, transport: vl.health(), libp2p_peer_id: vl.peerId, libp2p_multiaddr: circuit })
+      return Response.json({ status: 'ok', service: VESSEL_ID, transport: vl.health(), libp2p_peer_id: vl.peerId, libp2p_multiaddr: currentCircuit() })
     }
     if (u.pathname === '/egress/resolve' && req.method === 'POST') {
       try {
@@ -295,7 +302,7 @@ async function register() {
         resolve_endpoint: '/v2/impulses/resolve', resolve_request_format: 'pointer', auth_scheme: 'none',
         protocol: 'libp2p',                          // signals libp2p-overlay reachability
         libp2p_peer_id: vl.peerId,                   // proper discovery-contract fields (not metadata —
-        libp2p_multiaddr: [circuit],                 // discovery doesn't echo metadata in capability responses)
+        libp2p_multiaddr: [currentCircuit()].filter(Boolean), // discovery doesn't echo metadata in capability responses)
         shape_descriptions: { federation_probe: 'libp2p-reachable probe shape served by the federation transport vessel' },
       }),
     })
@@ -345,7 +352,8 @@ async function localVesselRows(): Promise<Array<{ vesselId: string; shapes: stri
 }
 
 async function registerAtHub() {
-  if (!HUB_DISCOVERY || !circuit) return
+  const liveCircuit = currentCircuit()
+  if (!HUB_DISCOVERY || !liveCircuit) return
   try {
     const rows = await localVesselRows()
     if (rows.length === 0) return // local registry mid-repopulation — keep the last hub TTL alive next tick
@@ -366,7 +374,7 @@ async function registerAtHub() {
           resolve_endpoint: '/v2/impulses/resolve', resolve_request_format: 'pointer', auth_scheme: 'none',
           protocol: 'libp2p',
           libp2p_peer_id: vl.peerId,
-          libp2p_multiaddr: [circuit],
+          libp2p_multiaddr: [liveCircuit],
         }),
       }).catch((e) => ({ status: 'err:' + String((e as Error)?.message ?? e) } as any))
       return `${reg.vesselId}:${r.status}`
