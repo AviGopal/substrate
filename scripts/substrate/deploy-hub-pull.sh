@@ -62,6 +62,20 @@ docker rm -f substrate-live >/dev/null 2>&1 || true
 # dial (forward_failed on every federated shape). The host-side relay's
 # multiaddr is stable across swaps; read it from the relay log and thread it
 # (plus a substrate id and the hub's own discovery) into the container.
+# The log can go stale (a relay restarted by hand with a different key file
+# leaves relay.log describing a dead peer id — observed: log said …PkEY… while
+# the live relay was …J9Jd…, so every circuit addr the hub advertised was
+# undialable). Restart the relay from the original clone with the PINNED key
+# file and a fresh log so identity, log, and process always agree; clients
+# (sidecars, spoke transports) re-reserve and re-register on their own loops.
+if [ -d "$HOME/substrate/scripts/substrate/federation-relay" ]; then
+  echo "[vm] restarting host relay (pinned key, fresh log)…"
+  export PATH="$HOME/.bun/bin:$PATH"
+  pkill -f 'bun relay.ts' 2>/dev/null || true; sleep 1
+  ( cd "$HOME/substrate/scripts/substrate/federation-relay" && \
+    PUBLIC_IP="$PUBLIC_IP" RELAY_KEY_FILE="$HOME/relay-key.pb" nohup bun relay.ts > "$HOME/relay.log" 2>&1 & )
+  sleep 6
+fi
 RELAY_MULTIADDR="${RELAY_MULTIADDR:-$(grep -oE '/ip4/[^ "]*p2p/[A-Za-z0-9]+' "$HOME/relay.log" 2>/dev/null | tail -1 || true)}"
 [ -n "$RELAY_MULTIADDR" ] && echo "[vm] relay multiaddr: $RELAY_MULTIADDR" \
   || echo "[vm] WARNING: no relay multiaddr found — federation egress will stay down (hub cannot dial spoke vessels)"
