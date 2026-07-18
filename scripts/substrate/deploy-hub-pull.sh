@@ -79,8 +79,21 @@ fi
 RELAY_MULTIADDR="${RELAY_MULTIADDR:-$(grep -oE '/ip4/[^ "]*p2p/[A-Za-z0-9]+' "$HOME/relay.log" 2>/dev/null | tail -1 || true)}"
 [ -n "$RELAY_MULTIADDR" ] && echo "[vm] relay multiaddr: $RELAY_MULTIADDR" \
   || echo "[vm] WARNING: no relay multiaddr found — federation egress will stay down (hub cannot dial spoke vessels)"
+# LLM provider keys live on the VM host's /etc/environment (never in the image).
+# Thread them into the container so gen-env round-trips them into
+# /etc/substrate/env — the llm-resolver siblings (google/chutes/openrouter arms)
+# ExecCondition on their key being present and silently skip otherwise, which is
+# how two container swaps quietly killed the hub's non-anthropic LLM capacity.
+LLM_KEY_ARGS=""
+for k in GOOGLE_API_KEY CHUTES_API_KEY OPENROUTER_API_KEY SUBSTRATE_GIT_PAT; do
+  v=$(grep -E "^${k}=" /etc/environment 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"' || true)
+  [ -n "$v" ] && LLM_KEY_ARGS="$LLM_KEY_ARGS -e ${k}=${v}"
+done
+[ -n "$LLM_KEY_ARGS" ] && echo "[vm] threading host LLM keys into the container: $(echo "$LLM_KEY_ARGS" | grep -oE '[A-Z_]+=' | tr -d = | tr '\n' ' ')"
+# shellcheck disable=SC2086
 docker run -d --name substrate-live --privileged \
   -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+  $LLM_KEY_ARGS \
   -e ENABLED_ROLES=hub -e SUBSTRATE_BIND_HOST=0.0.0.0 \
   -e PUBLIC_IP="$PUBLIC_IP" -e FED_PUBLIC_IP="$PUBLIC_IP" \
   -e RELAY_MULTIADDR="$RELAY_MULTIADDR" \
