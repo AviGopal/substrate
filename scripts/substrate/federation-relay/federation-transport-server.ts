@@ -31,7 +31,18 @@ const HEALTH_PORT = parseInt(process.env.FED_HEALTH_PORT || '8401', 10)
 
 if (!RELAY) { console.error('[fed-transport] ERROR: set RELAY_MULTIADDR'); process.exit(1) }
 
-const vl: VesselLibp2p = await createVesselLibp2p({ vesselId: VESSEL_ID, relayMultiaddr: RELAY, enableHttp: true })
+// The libp2p keypair is derived deterministically from this id (seed =
+// sha256(id)), so it MUST be substrate-scoped: every substrate runs a transport
+// named `federation-transport-vessel`, and a bare id gives them all the SAME
+// peer id — circuit dials through the relay become ambiguous between
+// substrates, and isSelfCircuit() filters every peer substrate's rows as
+// self-dials ("no local or remote producer" at the hub, hub↔spoke↔obsidian all
+// dark). FED_SUBSTRATE_ID keeps the peer id stable across container recreates;
+// the hostname fallback (container id) still guarantees uniqueness, at the cost
+// of a new peer id per recreate (heals via re-registration + row TTL).
+const LIBP2P_IDENTITY = `${VESSEL_ID}@${process.env.FED_SUBSTRATE_ID || hostname()}`
+
+const vl: VesselLibp2p = await createVesselLibp2p({ vesselId: LIBP2P_IDENTITY, relayMultiaddr: RELAY, enableHttp: true })
 
 // Resolve handler (where the data lives). Probe shapes are answered inline; any OTHER
 // shape is proxied to the vessel that owns it on THIS substrate, found via the LOCAL
