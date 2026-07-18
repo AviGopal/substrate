@@ -129,6 +129,8 @@ OPENAI_BASE_URL="${OPENAI_BASE_URL:-$(persisted_secret OPENAI_BASE_URL)}"
 CHUTES_API_KEY="${CHUTES_API_KEY:-$(persisted_secret CHUTES_API_KEY)}"
 OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-$(persisted_secret OPENROUTER_API_KEY)}"
 GOOGLE_API_KEY="${GOOGLE_API_KEY:-$(persisted_secret GOOGLE_API_KEY)}"
+GROQ_API_KEY="${GROQ_API_KEY:-$(persisted_secret GROQ_API_KEY)}"
+MISTRAL_API_KEY="${MISTRAL_API_KEY:-$(persisted_secret MISTRAL_API_KEY)}"
 
 # Endpoint aliases — resolve BEFORE the heredoc so every inner reference is a
 # bound variable. Previously the alias defaults nested unguarded expansions
@@ -183,6 +185,8 @@ OPENAI_BASE_URL="${OPENAI_BASE_URL:-}"
 CHUTES_API_KEY="${CHUTES_API_KEY:-}"
 OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
 GOOGLE_API_KEY="${GOOGLE_API_KEY:-}"
+GROQ_API_KEY="${GROQ_API_KEY:-}"
+MISTRAL_API_KEY="${MISTRAL_API_KEY:-}"
 LLM_DEFAULT_MODEL="${LLM_DEFAULT_MODEL:-}"
 # Substrate root inside the container = the container-native super-repo clone
 # (/workspace/git/super-repo, passed in via -e SUBSTRATE_ROOT). The container
@@ -378,6 +382,8 @@ OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
 CHUTES_API_KEY=${CHUTES_API_KEY:-}
 OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
 GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+GROQ_API_KEY=${GROQ_API_KEY:-}
+MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
 SECRETS
 chmod 600 /workspace/.substrate-secrets
 echo "[gen-env] persisted secrets to /workspace/.substrate-secrets"
