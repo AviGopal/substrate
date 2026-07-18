@@ -92,10 +92,21 @@ echo "[vm] starting the HUB subset (control plane + store + relay-ready)…"
 docker volume create substrate-surreal   >/dev/null 2>&1 || true
 docker volume create substrate-workspace >/dev/null 2>&1 || true
 docker rm -f substrate-live >/dev/null 2>&1 || true
+# Federation egress env: the hub role runs federation-transport-vessel (:8401),
+# which dies without RELAY_MULTIADDR and leaves hub discovery advertising spoke
+# rows it cannot dial. The relay key file keeps the multiaddr stable, so a prior
+# deploy's relay.log is authoritative; on the very first deploy (no relay yet)
+# this stays empty — re-run the deploy once the relay is up to enable egress.
+RELAY_MULTIADDR="${RELAY_MULTIADDR:-$(grep -oE '/ip4/[^ "]*p2p/[A-Za-z0-9]+' "$HOME/relay.log" 2>/dev/null | tail -1 || true)}"
+[ -n "$RELAY_MULTIADDR" ] && echo "[vm] relay multiaddr: $RELAY_MULTIADDR" \
+  || echo "[vm] WARNING: no relay.log yet — hub federation egress disabled until a re-deploy after the relay starts"
 docker run -d --name substrate-live --privileged \
   -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
   -e ENABLED_ROLES=hub -e SUBSTRATE_BIND_HOST=0.0.0.0 \
   -e PUBLIC_IP="$PUBLIC_IP" -e FED_PUBLIC_IP="$PUBLIC_IP" \
+  -e RELAY_MULTIADDR="$RELAY_MULTIADDR" \
+  -e FED_SUBSTRATE_ID="${FED_SUBSTRATE_ID:-syzygy-hub}" \
+  -e HUB_DISCOVERY_URL="http://localhost:8100" \
   -p 18080:8080 -p 18100:8100 -p 18101:8101 -p 18210:8210 \
   -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
   --tmpfs /run --tmpfs /run/lock metabob/substrate:dev

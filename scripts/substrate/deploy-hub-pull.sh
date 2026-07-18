@@ -56,10 +56,22 @@ echo "[vm] stopping old hub container (volumes preserved)…"
 docker rm -f substrate-live >/dev/null 2>&1 || true
 
 # 3. Re-run the HUB subset with the exact same flags deploy-hub.sh uses.
+# The hub role enables federation-transport-vessel (the data-plane egress on
+# 8401 that hub discovery forwards federated resolves to), but the vessel dies
+# without RELAY_MULTIADDR — leaving the hub advertising spoke rows it cannot
+# dial (forward_failed on every federated shape). The host-side relay's
+# multiaddr is stable across swaps; read it from the relay log and thread it
+# (plus a substrate id and the hub's own discovery) into the container.
+RELAY_MULTIADDR="${RELAY_MULTIADDR:-$(grep -oE '/ip4/[^ "]*p2p/[A-Za-z0-9]+' "$HOME/relay.log" 2>/dev/null | tail -1 || true)}"
+[ -n "$RELAY_MULTIADDR" ] && echo "[vm] relay multiaddr: $RELAY_MULTIADDR" \
+  || echo "[vm] WARNING: no relay multiaddr found — federation egress will stay down (hub cannot dial spoke vessels)"
 docker run -d --name substrate-live --privileged \
   -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
   -e ENABLED_ROLES=hub -e SUBSTRATE_BIND_HOST=0.0.0.0 \
   -e PUBLIC_IP="$PUBLIC_IP" -e FED_PUBLIC_IP="$PUBLIC_IP" \
+  -e RELAY_MULTIADDR="$RELAY_MULTIADDR" \
+  -e FED_SUBSTRATE_ID="${FED_SUBSTRATE_ID:-syzygy-hub}" \
+  -e HUB_DISCOVERY_URL="http://localhost:8100" \
   -p 18080:8080 -p 18100:8100 -p 18101:8101 -p 18210:8210 \
   -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
   --tmpfs /run --tmpfs /run/lock "$IMAGE"
