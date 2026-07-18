@@ -64,6 +64,22 @@ process_intent() {
     log "skip already-processed $intent_id"
     return 0
   fi
+  # TTL: a pending intent older than MAX_INTENT_AGE_H replays a snapshot of the
+  # host clone from a different era — that is how a day-stale tree got mirrored
+  # over a live vessel on 2026-07-17 (concept-db clobber loop). Expire it: mark
+  # processed, record the expiry, never replay.
+  local emitted_at age_s now_s max_age_s
+  emitted_at=$(jq -r '.emitted_at // ""' <<<"$line")
+  max_age_s=$(( ${MAX_INTENT_AGE_H:-48} * 3600 ))
+  if [[ -n "$emitted_at" ]]; then
+    now_s=$(date -u +%s)
+    age_s=$(( now_s - $(date -u -d "$emitted_at" +%s 2>/dev/null || echo "$now_s") ))
+    if (( age_s > max_age_s )); then
+      write_result "$intent_id" "" "expired" "pending intent exceeded TTL (${age_s}s > ${max_age_s}s); refusing stale replay"
+      log "expired stale pending intent $intent_id (age ${age_s}s)"
+      return 0
+    fi
+  fi
   vessel_name=$(jq -r '.vessel_name' <<<"$line")
   mitosis_root=$(jq -r '.mitosis_root' <<<"$line")
   base_sha=$(jq -r '.base_sha // ""' <<<"$line")
@@ -267,12 +283,22 @@ EOF
 }
 
 main_loop_once() {
+  # /workspace inside substrate-live is a NAMED VOLUME, not a bind mount of
+  # $WORKSPACE_DIR — the intent journal the cutover resolver writes never
+  # appears on the host by itself (23 intents sat pending with no poller
+  # result, gap substrate-self-push-poller_wedged). Bridge both directions:
+  # pull the journal before reading, push results back so the substrate can
+  # observe dispositions.
+  docker cp "$CONTAINER:/workspace/mitosis-applied-host-sync.jsonl" "$INTENT_FILE" 2>/dev/null \
+    || log "intent journal not present in container (nothing to bridge)"
   [[ -f "$INTENT_FILE" ]] || { log "no intent file yet at $INTENT_FILE"; return 0; }
   local line
   while IFS= read -r line; do
     [[ -z "$line" ]] && continue
     process_intent "$line" || log "intent processing errored, continuing"
   done < "$INTENT_FILE"
+  docker cp "$RESULTS_FILE" "$CONTAINER:/workspace/mitosis-applied-host-sync-results.jsonl" 2>/dev/null \
+    || log "results push-back failed (container unreachable?)"
 }
 
 main_loop_once
