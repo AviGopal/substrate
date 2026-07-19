@@ -28,5 +28,25 @@ if [ -x /usr/local/bin/apply-inventory ]; then
   /usr/local/bin/apply-inventory || echo "[substrate] apply-inventory failed (keeping all units)"
 fi
 
+# Point-and-go spoke federation (folds the former manual spoke-federate.sh into boot):
+# when this container is a spoke — HUB_DISCOVERY_URL is derived from DISCOVERY_ENDPOINT
+# by gen-env — render + boot-enable the federation-transport-vessel so ingress/egress
+# fall out of the discovery anchor alone. The transport self-derives its relay from
+# ${HUB_DISCOVERY_URL}/bootstrap and its peer id from FED_VESSEL_ID (both set by gen-env),
+# so no RELAY_MULTIADDR / FED_* need be supplied. Spoke-only: a plain root never starts
+# it (no crash loop), and a failed transport unit never blocks the rest of the boot.
+set -a; . /etc/substrate/env 2>/dev/null || true; set +a
+if [ -n "${HUB_DISCOVERY_URL:-}" ] && [ -x /usr/local/bin/vessel-ctl ]; then
+  echo "[substrate] spoke federation: enabling federation-transport-vessel (hub=${HUB_DISCOVERY_URL})"
+  /usr/local/bin/vessel-ctl install federation-transport-vessel >/dev/null 2>&1 || true
+  # vessel-ctl's `systemctl enable --now` no-ops pre-systemd; make boot-start deterministic
+  # with an offline wants-symlink (the unit is WantedBy=multi-user.target).
+  if [ -f /etc/systemd/system/federation-transport-vessel.service ]; then
+    mkdir -p /etc/systemd/system/multi-user.target.wants
+    ln -sf ../federation-transport-vessel.service \
+      /etc/systemd/system/multi-user.target.wants/federation-transport-vessel.service
+  fi
+fi
+
 echo "[substrate] handing off to systemd"
 exec /lib/systemd/systemd
