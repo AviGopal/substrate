@@ -157,8 +157,23 @@ else
   echo "[vm] WARNING: no RELAY_MULTIADDR — skipping federation egress; hub cannot dial spokes"
 fi
 
+# 4c. Enable the multi-provider LLM resolver ON THE HUB. It is a role=compute
+#     vessel, so ENABLED_ROLES=hub masks it — but the hub carries the provider
+#     keys (google/groq/mistral/chutes/openrouter, threaded above) and should
+#     serve them as resolver arms. Unmask + enable so the hub runs LLM compute
+#     from its own /etc/environment secrets (not only the anthropic haiku/opus
+#     arms). Idempotent; survives future rolls because this runs every deploy.
+if grep -qE '^(GOOGLE|GROQ|MISTRAL|CHUTES|OPENROUTER)_API_KEY=' /etc/environment 2>/dev/null; then
+  echo "[vm] enabling multi-provider llm-resolver-vessel on the hub…"
+  docker exec substrate-live systemctl unmask llm-resolver-vessel.service >/dev/null 2>&1 || true
+  docker exec substrate-live systemctl daemon-reload
+  docker exec substrate-live systemctl enable --now llm-resolver-vessel.service \
+    || echo "[vm] WARNING: llm-resolver-vessel failed to start — hub LLM compute stays anthropic-only"
+fi
+
 echo "[vm] === HUB status ==="
 echo -n "[vm] discovery:    "; curl -s http://localhost:18100/health | head -c 140; echo
+echo -n "[vm] llm-resolver: "; docker exec substrate-live systemctl is-active llm-resolver-vessel.service 2>/dev/null;
 echo -n "[vm] activity-api: "; curl -s http://localhost:18080/health | head -c 140; echo
 echo -n "[vm] trace store:  "; curl -s http://localhost:18080/metrics/db 2>/dev/null \
   | grep -oE '"traceStore":\{[^}]*\}' || echo '(metrics/db needs auth — check post-boot)'
