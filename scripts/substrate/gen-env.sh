@@ -36,6 +36,15 @@ persisted_secret() {
 
 JWT_SECRET="${JWT_SECRET:-$(persisted_secret JWT_SECRET)}"
 JWT_SECRET="${JWT_SECRET:-$(openssl rand -hex 32)}"
+# Federation substrate id — unique per substrate in the hub namespace, minted
+# once and persisted (a fresh id each boot would churn the hub registry). Only
+# load-bearing for a spoke; harmless on a root. Point-and-go: never an operator
+# input, so a raw `docker run -e DISCOVERY_ENDPOINT=<hub>` self-federates.
+FED_SUBSTRATE_ID="${FED_SUBSTRATE_ID:-$(persisted_secret FED_SUBSTRATE_ID)}"
+FED_SUBSTRATE_ID="${FED_SUBSTRATE_ID:-spoke-$(openssl rand -hex 4)}"
+# Transport peer identity — derived from the substrate id so the libp2p keypair is
+# substrate-unique (spoke-federate.sh set this by hand; now it falls out of boot).
+FED_VESSEL_ID="${FED_VESSEL_ID:-federation-transport-vessel@${FED_SUBSTRATE_ID}}"
 
 SURREAL_PASS_SOURCE="provided"
 if [[ -z "${SURREAL_PASS:-}" ]]; then
@@ -149,6 +158,33 @@ MISTRAL_API_KEY="${MISTRAL_API_KEY:-$(persisted_secret MISTRAL_API_KEY)}"
 # a hidden host/Makefile coupling in what must be a pure docker-run contract
 # (surfaced 2026-07-02 by the first from-scratch container test).
 DISCOVERY_ENDPOINT="${DISCOVERY_ENDPOINT:-http://127.0.0.1:8100}"
+# Point-and-go role inference (docs/FEDERATION.md, point-and-go join contract):
+# a container is handed exactly {DISCOVERY_ENDPOINT, API_KEY}. If DISCOVERY_ENDPOINT
+# names a REMOTE host (not loopback/self), THIS container is a SPOKE of that
+# network — derive the hub, activity-api, identity, and peering from the one
+# endpoint, and keep the spoke's OWN vessels registering into its LOCAL discovery
+# (federation-transport mirrors local capability to the hub; discovery peers back
+# for hub producers). Previously this derivation lived ONLY in the Makefile, so a
+# raw `docker run -e DISCOVERY_ENDPOINT=<hub>` never peered (the split-brain).
+# CRITIC-GUARD: remote => spoke; self/loopback => root. An UNREACHABLE remote is
+# still a spoke (federation retries), NEVER a self-promoted root (that would fork
+# identity/registry). Root election is self-referential discovery only.
+_disc_host="$(printf '%s' "$DISCOVERY_ENDPOINT" | sed -E 's#^[a-z]+://##; s#[:/].*##')"
+_self_host="$(hostname 2>/dev/null || true)"
+case "$_disc_host" in
+  ""|127.0.0.1|localhost|0.0.0.0|::1|"$_self_host")
+    : ;; # root / standalone — discovery is self/loopback; no hub, no peering
+  *)
+    # remote hub => spoke. Derive everything from the single endpoint host.
+    HUB_DISCOVERY_URL="${HUB_DISCOVERY_URL:-http://${_disc_host}:18100}"
+    ACTIVITY_API_ENDPOINT="${ACTIVITY_API_ENDPOINT:-http://${_disc_host}:18080}"
+    IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL:-http://${_disc_host}:18101}"
+    IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT:-$IDENTITY_VESSEL_URL}"
+    ENABLED_ROLES="${ENABLED_ROLES:-spoke}"
+    # the spoke's own vessels register into its LOCAL discovery, not the hub
+    DISCOVERY_ENDPOINT="http://127.0.0.1:8100"
+    ;;
+esac
 DISCOVERY_VESSEL_ENDPOINT="${DISCOVERY_VESSEL_ENDPOINT:-$DISCOVERY_ENDPOINT}"
 ACTIVITY_API_ENDPOINT="${ACTIVITY_API_ENDPOINT:-http://127.0.0.1:8080}"
 ACTIVITY_API_URL="${ACTIVITY_API_URL:-$ACTIVITY_API_ENDPOINT}"
@@ -286,6 +322,7 @@ IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT}"
 # Federation (empty unless this substrate is a spoke of a hub)
 HUB_DISCOVERY_URL="${HUB_DISCOVERY_URL}"
 FED_SUBSTRATE_ID="${FED_SUBSTRATE_ID}"
+FED_VESSEL_ID="${FED_VESSEL_ID}"
 RELAY_MULTIADDR="${RELAY_MULTIADDR}"
 PEER_DISCOVERY_ENDPOINTS="${PEER_DISCOVERY_ENDPOINTS}"
 PEER_FANOUT_MODE="${PEER_FANOUT_MODE}"
@@ -387,6 +424,7 @@ cat > /workspace/.substrate-secrets <<SECRETS
 JWT_SECRET=${JWT_SECRET}
 SURREAL_PASS=${SURREAL_PASS}
 API_KEY_SECRET=${API_KEY_SECRET}
+FED_SUBSTRATE_ID=${FED_SUBSTRATE_ID}
 METABOB_API_KEY=${METABOB_API_KEY}
 SUBSTRATE_ADMIN_KEY=${SUBSTRATE_ADMIN_KEY:-}
 SUBSTRATE_GIT_PAT=${SUBSTRATE_GIT_PAT}
