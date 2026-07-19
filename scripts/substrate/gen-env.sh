@@ -369,6 +369,14 @@ echo "[gen-env] wrote per-model llm-resolver env files (opus, haiku, google)"
   [ -n "${ENABLED_VESSELS:-}" ]     && echo "ENABLED_VESSELS=${ENABLED_VESSELS}"
   [ -n "${DISABLED_VESSELS:-}" ]    && echo "DISABLED_VESSELS=${DISABLED_VESSELS}"
   [ -n "${SUBSTRATE_BIND_HOST:-}" ] && echo "SUBSTRATE_BIND_HOST=${SUBSTRATE_BIND_HOST}"
+  # Public reachability, threaded through so discovery's GET /bootstrap can hand a
+  # client the PUBLIC identity + discovery URLs (not loopback) to point at.
+  PUB="${PUBLIC_IP:-${FED_PUBLIC_IP:-}}"
+  if [ -n "$PUB" ]; then
+    echo "PUBLIC_IP=${PUB}"
+    echo "DISCOVERY_PUBLIC_URL=${DISCOVERY_PUBLIC_URL:-http://${PUB}:${DISCOVERY_PUBLIC_PORT:-18100}}"
+    echo "IDENTITY_PUBLIC_URL=${IDENTITY_PUBLIC_URL:-http://${PUB}:${IDENTITY_PUBLIC_PORT:-18101}}"
+  fi
 } >> /etc/substrate/env
 
 # Persist generated secrets to workspace so restarts reuse the same values.
