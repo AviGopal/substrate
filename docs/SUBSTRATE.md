@@ -1,10 +1,6 @@
 # Local Single-Container Substrate
 
-**Phase 26 deliverable.** This document describes how to build, run, and iterate against the local substrate — the full vessel fleet collapsed into a single systemd-managed Docker container.
-
-**Phase 26 complete (2026-05-23).** The substrate is implemented and verified — 36+ traces stored, boredom loop active, `systemd_restart` confirmed, `minibob --single` producing visible traces.
-
-**S1→S2 lift completed (2026-05-26).** The operator approved the IAL S1→S2 transition (commits `07453944 feat(lift): approve IAL S1→S2 transition`, `4c60b0a1 chore(operator): authorize S2 lift 2026-05-26`). The substrate is now in S2 — substrate-authored, supervised. The active direction is S2→S3.
+This document describes how to build, run, and iterate against the local substrate — the full vessel fleet collapsed into a single systemd-managed Docker container.
 
 ## Why a single container?
 
@@ -113,7 +109,7 @@ ghcr.io`):
 docker run -d --privileged --name substrate-live \
   -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
   -e ANTHROPIC_API_KEY=sk-ant-... \
-  -p 18080:8080 -p 18090:8090 -p 18100:8100 -p 18210:8210 \
+  -p 18080:8080 -p 18090:8090 -p 18100:8100 -p 18101:8101 -p 18210:8210 \
   -p 18250:8250 -p 18260:8260 -p 18270:8270 \
   --tmpfs /run --tmpfs /run/lock ghcr.io/avigopal/substrate:dev
 ```
@@ -155,26 +151,29 @@ no submodules**; everything a fresh container consumes is baked in or generated:
 
 To attach a container to an **existing** hub's identity + discovery group — a
 spoke: local registry + compute here, while traces, identity, and learning
-state live on the hub — set the join vars below. All are optional and consumed
-by `gen-env.sh` / `make run-live`; the hub-issued `METABOB_API_KEY` is the
-credential that actually joins the group. The reference public hub is
-`syzygy.host` (discovery `:18100`, activity-api `:18080`, identity `:18101`,
-libp2p relay `:30333`).
+state live on the hub — the join reduces to **point-and-go**: point
+`DISCOVERY_ENDPOINT` (or `HUB_DISCOVERY_URL`) at the hub's discovery and present
+a hub-issued `METABOB_API_KEY`. Those two are the only required inputs; the
+identity endpoint, activity/trace store, and relay anchor are resolved from
+`<discovery-endpoint>/bootstrap`. All vars are consumed by `gen-env.sh` /
+`make run-live`.
 
 | Var | Role |
 |---|---|
-| `METABOB_API_KEY` | hub-issued credential — the key that joins the group |
+| `METABOB_API_KEY` | **required** — hub-issued credential; the key that joins the group |
+| `DISCOVERY_ENDPOINT=http://<hub-host>:18100` | **required** — point discovery at the hub |
+| `HUB_DISCOVERY_URL=http://<hub-host>:18100` | the discovery group to join (same value as above) |
 | `ENABLED_ROLES=spoke` | run as a spoke, not a standalone full substrate |
-| `HUB_DISCOVERY_URL=http://<hub>:18100` | the discovery group to join |
-| `DISCOVERY_ENDPOINT=http://<hub>:18100` | point discovery at the hub |
-| `ACTIVITY_API_ENDPOINT=http://<hub>:18080` | shared trace store |
-| `IDENTITY_VESSEL_URL=http://<hub>:18101` | identity validator = the identity group |
+| `ACTIVITY_API_ENDPOINT=http://<hub-host>:18080` | *optional override* — resolved from `/bootstrap` if unset |
+| `IDENTITY_VESSEL_URL=http://<hub-host>:18101` | *optional override* — resolved from `/bootstrap` if unset |
 
 Optional transport: `FED_SUBSTRATE_ID` (must be unique in the hub namespace),
-`RELAY_MULTIADDR`, `PEER_DISCOVERY_ENDPOINTS`. The copy-paste spoke commands —
-both the `make up … DISCOVERY_ENDPOINT=…` form and the raw `docker run` form,
-plus the NAT return-path step (`spoke-federate`) — live in
-[`README.md`](../README.md) § *Connect to the syzygy.host federation (spoke)*
+`RELAY_MULTIADDR` (an override — the relay anchor is otherwise taken from
+`/bootstrap`, so a hand-pinned multiaddr can go stale on a relay restart),
+`PEER_DISCOVERY_ENDPOINTS`. The copy-paste spoke commands — both the
+`make up … DISCOVERY_ENDPOINT=…` form and the raw `docker run` form, plus the NAT
+return-path step (`spoke-federate`) — live in
+[`README.md`](../README.md) § *Join an existing identity / discovery group (spoke)*
 and [`scripts/substrate/.env.example`](../scripts/substrate/.env.example);
 identity-namespace mechanics in [`docs/FEDERATION.md`](FEDERATION.md).
 
@@ -418,7 +417,7 @@ Harnesses and clients read the target substrate from one line in `~/.metabob/con
 ```
 
 Point `endpoint` at whichever substrate's activity-api you are targeting (the local
-container, or a remote hub such as `http://<hub>:18080`). No code changes needed;
+container, or a remote hub such as `http://<hub-host>:18080`). No code changes needed;
 `make up` writes the local value for you — but **only for the default
 `substrate-live`**. A secondary/clean-room instance (`LIVE_NAME=<other>`,
 `PORT_OFFSET=<n>`) leaves this file untouched; set `endpoint` to its offset
@@ -441,7 +440,7 @@ Federation deploy details (hub vs. peers, the relay/sidecar, firewall ports) liv
 
 Beyond the baked-in core, `vessels.manifest.json` declares **runtime-installable** vessels. The fleet definition files live ON THE VOLUME at `/workspace/substrate/fleet/` (seeded from image defaults at first boot, substrate-writable — the substrate can alter its own membership); readiness, doctor, self-recovery, pull-sync and vessel-ctl all read the volume copies.
 
-`vessel-ctl` ships **in the image** (`/usr/local/bin/vessel-ctl`) and is fully self-contained (2026-07-02): `install` clones the vessel's repo into `/workspace/git/vessels/<name>` on demand, mirrors it into the live `/vessels` runtime, renders the unit via the shared `render-unit` template, and enables it — no host checkout, no docker-cp from a host workspace. Rendered units carry an `ExecStopPost` discovery-deregister so any clean stop leaves the registry immediately (crash death falls back to the 5-min TTL). Self-recovery membership is **derived** from the fleet files at read time — install/uninstall no longer mutates any script.
+`vessel-ctl` ships **in the image** (`/usr/local/bin/vessel-ctl`) and is fully self-contained: `install` clones the vessel's repo into `/workspace/git/vessels/<name>` on demand, mirrors it into the live `/vessels` runtime, renders the unit via the shared `render-unit` template, and enables it — no host checkout, no docker-cp from a host workspace. Rendered units carry an `ExecStopPost` discovery-deregister so any clean stop leaves the registry immediately (crash death falls back to the 5-min TTL). Self-recovery membership is **derived** from the fleet files at read time — install/uninstall no longer mutates any script.
 
 ```bash
 make -C scripts/substrate list-vessels                       # host convenience
@@ -475,9 +474,9 @@ the deployment. There is no separate promotion environment.
 
 `development-vessel` is the meta-vessel for substrate self-development: the failure-mode harness, topology-discovery activities, `coverage-tick`, and `substrate-health-tick` all run as activities inside it. The `development-vessel.service` unit runs `seed-templates` automatically via `ExecStartPost` on every start — seeds are idempotent UPSERTs so re-running is safe.
 
-**goal-host-vessel async dispatch (commit `ac0d75b5`).** `POST /run-goal` now returns HTTP 202 immediately; goal execution happens asynchronously. Callers (minibob CLI and boredom-vessel) must poll for execution status rather than waiting for a synchronous response. This means a 202 from `/run-goal` does not indicate goal success — check the execution trace in activity-api to confirm completion.
+**goal-host-vessel async dispatch.** `POST /run-goal` returns HTTP 202 immediately; goal execution happens asynchronously. Callers (minibob CLI and boredom-vessel) must poll for execution status rather than waiting for a synchronous response. This means a 202 from `/run-goal` does not indicate goal success — check the execution trace in activity-api to confirm completion.
 
-The topology-discovery loop (Phase 26 → Phase 27) runs autonomously inside the substrate. The boredom-vessel is a dispatch-pool daemon: each selection pass scores the pool of candidate templates (tagged `boredom_target_template`) on learned momentum, input-shape availability, and priority-weight folds derived from current conditions — open-gap demand, `timeShapedRhythm` due-state, learning-mode boosts — then dispatches winners concurrently up to a slot cap. Measurement (`substrate-health-tick`), probing (`probe-reachable-unlearned`, `probe-untraversed-edge`), health, escalation, coverage, and gap-closing (`draft-gap-closing-activity`) work all enters through this same pool; there is no fixed rotation. Selection passes are prompted by events (activity-api task completions, in-process prompts after cheap ticks); the systemd timer serves only as a backstop when no events arrive, and the dispatch interval acts as a cost governor rather than a cadence — deterministic zero-token ticks largely bypass it while token-costed work pays it in full. Selection momentum persists across restarts, so learned preferences survive cutovers.
+The topology-discovery loop runs autonomously inside the substrate. The boredom-vessel is a dispatch-pool daemon: each selection pass scores the pool of candidate templates (tagged `boredom_target_template`) on learned momentum, input-shape availability, and priority-weight folds derived from current conditions — open-gap demand, `timeShapedRhythm` due-state, learning-mode boosts — then dispatches winners concurrently up to a slot cap. Measurement (`substrate-health-tick`), probing (`probe-reachable-unlearned`, `probe-untraversed-edge`), health, escalation, coverage, and gap-closing (`draft-gap-closing-activity`) work all enters through this same pool; there is no fixed rotation. Selection passes are prompted by events (activity-api task completions, in-process prompts after cheap ticks); the systemd timer serves only as a backstop when no events arrive, and the dispatch interval acts as a cost governor rather than a cadence — deterministic zero-token ticks largely bypass it while token-costed work pays it in full. Selection momentum persists across restarts, so learned preferences survive cutovers.
 
 ```
 activityRegistryChange → learned-topology-snapshot → reachable-unlearned-report
@@ -485,7 +484,7 @@ activityRegistryChange → learned-topology-snapshot → reachable-unlearned-rep
                        → draft-gap-closing-activity → new template in registry
 ```
 
-**S1 → S2 completed 2026-05-26.** The lift criteria (coverage progress + substrate health + operator hand-over) were met and the operator authorised the transition. The substrate now authors its own activities via the `draft-gap-closing-activity` goal and the `propose-spec` / `verify-merge-candidate` pipeline.
+**Substrate-authored development (S2).** Once the lift criteria (coverage progress + substrate health + operator hand-over) are met and the operator authorises the transition, the substrate authors its own activities via the `draft-gap-closing-activity` goal and the `propose-spec` / `verify-merge-candidate` pipeline.
 
 **S2 → S3 is the active direction.** S3 (distributed-stable, adversarial-resistant, operator non-load-bearing) is tracked in the post-lift agenda and S3 readiness criteria (measured by active push-away: substrate refusing operator interventions with cited evidence, not by passive intervention-absence). S3 has no operational gate in this document — it is emergent and operator-measured under sustained adversarial exposure.
 

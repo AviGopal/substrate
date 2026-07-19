@@ -93,7 +93,7 @@ docker login ghcr.io                       # PAT with read:packages
 docker run -d --privileged --name substrate-live \
   -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
   -e ANTHROPIC_API_KEY=sk-ant-... \
-  -p 18080:8080 -p 18090:8090 -p 18100:8100 -p 18210:8210 \
+  -p 18080:8080 -p 18090:8090 -p 18100:8100 -p 18101:8101 -p 18210:8210 \
   -p 18250:8250 -p 18260:8260 -p 18270:8270 \
   --tmpfs /run --tmpfs /run/lock ghcr.io/avigopal/substrate:dev
 ```
@@ -117,11 +117,15 @@ building*; federation details: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 ### Join an existing identity / discovery group (spoke)
 
 A spoke contributes a local registry + compute while identity, traces, and
-learning state live on the hub. `METABOB_API_KEY` is the credential the hub
-operator issues you (minted on the hub with
-`make -C scripts/substrate issue-key NAME=<you>`). The same variables attach a
-spoke however you launch — `docker compose`, `make up`, or the raw `docker run`
-above.
+learning state live on the hub. Joining is **point-and-go**: pointing
+`DISCOVERY_ENDPOINT` (or `HUB_DISCOVERY_URL`) at the hub's discovery and
+presenting a hub-issued `METABOB_API_KEY` is sufficient — the identity endpoint,
+trace store, and relay anchor are resolved from `<discovery-endpoint>/bootstrap`.
+`METABOB_API_KEY` is the credential the hub operator issues you (minted on the
+hub with `make -C scripts/substrate issue-key NAME=<you>`). The same variables
+attach a spoke however you launch — `docker compose`, `make up`, or the raw
+`docker run` above; `ACTIVITY_API_ENDPOINT` and `IDENTITY_VESSEL_URL` are
+optional explicit overrides for values `/bootstrap` otherwise supplies.
 
 **Docker Compose** — put the join vars in the root `.env` (the root
 `docker-compose.yml` and its [`scripts/substrate/docker-compose.yml`](scripts/substrate/docker-compose.yml)
@@ -130,12 +134,13 @@ symlink pull the same GHCR image), then bring it up:
 ```bash
 # .env
 ANTHROPIC_API_KEY=sk-ant-...
-METABOB_API_KEY=<hub-issued-key>
+METABOB_API_KEY=<hub-issued-key>          # required: the hub-issued credential
 ENABLED_ROLES=spoke
-HUB_DISCOVERY_URL=http://<hub>:18100
-DISCOVERY_ENDPOINT=http://<hub>:18100
-ACTIVITY_API_ENDPOINT=http://<hub>:18080
-IDENTITY_VESSEL_URL=http://<hub>:18101
+HUB_DISCOVERY_URL=http://<hub-host>:18100  # required: the discovery to point at
+DISCOVERY_ENDPOINT=http://<hub-host>:18100 # required: same value
+# optional overrides — otherwise resolved from <discovery-endpoint>/bootstrap:
+# ACTIVITY_API_ENDPOINT=http://<hub-host>:18080
+# IDENTITY_VESSEL_URL=http://<hub-host>:18101
 ```
 
 ```bash
@@ -218,7 +223,7 @@ bash repos/obsidian-vessel/install.sh --local            # same-machine substrat
 bash repos/obsidian-vessel/install.sh                    # interactive: vault → host → key
 ```
 
-The installer selects or creates the vault, installs the plugin, and prefers the **libp2p** transport: it derives the relay multiaddr from your discovery host and enables the federation sidecar automatically, writing direct HTTP endpoints only as same-host fallback. See [`repos/obsidian-vessel/README.md`](repos/obsidian-vessel/README.md).
+The installer selects or creates the vault, installs the plugin, and writes the two inputs the plugin needs — `{discoveryVesselEndpoint, apiKey}`. At start the federation sidecar fetches `<discovery-endpoint>/bootstrap` for the relay anchor (point-and-go) and reserves a libp2p circuit; the relay multiaddr is an optional advanced override, not something the installer derives or pins. See [`repos/obsidian-vessel/README.md`](repos/obsidian-vessel/README.md).
 
 ### Running your own hub or remote substrate
 

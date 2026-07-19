@@ -1,8 +1,37 @@
 # Federation
 
 How substrate instances share a namespace or federate as peers, and how a vessel
-(local or behind NAT) joins over the libp2p relay. This is verified live against the
-`syzygy.host` hub.
+(local or behind NAT) joins over the libp2p relay.
+
+## Point-and-go (the default join)
+
+A spoke or vessel joins by pointing at **one** endpoint — a **discovery
+endpoint** — and presenting **one** credential — an **API key**. Nothing else is
+required.
+
+Discovery serves a public, pre-auth `GET /bootstrap` that returns the routing
+anchors a fresh, keyless client needs before it holds anything else:
+
+```json
+{
+  "relay_multiaddrs": ["..."],
+  "identity_endpoint": "<identity-endpoint>",
+  "discovery_endpoint": "<discovery-endpoint>",
+  "prefer_transport": "libp2p"
+}
+```
+
+The federation transport (and the Obsidian sidecar), when no relay is
+configured, fetches `<discovery-endpoint>/bootstrap`, takes the relay anchor,
+reserves a p2p circuit (preferring the libp2p overlay), and registers itself. A
+valid API key is the **sole** gate.
+
+A hand-set relay multiaddr is now an **optional override**, not a requirement —
+useful only to pin a specific relay or when `/bootstrap` is unreachable. Pinning
+one by hand is what used to break: a relay peer id changes on every relay
+restart, so a pinned multiaddr goes stale; the `/bootstrap` fetch is what keeps
+it current. Discovery is the anchor an operator points at; the relay multiaddrs,
+identity endpoint, and preferred transport are returned *by* `/bootstrap`.
 
 ## Two topologies
 
@@ -13,7 +42,7 @@ land in the same namespace because they authenticate with keys issued by the **o
 identity-vessel.
 
 ```
-                 syzygy.host (public)  =  HUB
+                 <hub-host> (public)  =  HUB
         ┌──────────────────────────────────────────────┐
         │  discovery + identity + activity-api + relay  │
         │  ENABLED_ROLES=hub                            │
@@ -59,9 +88,9 @@ tags peer results `discoveredVia:"peer"`, and goal-host routes those over the re
 Both remain supported; pick by trust domain and learning-state ownership, not
 by geography.
 
-## Three-location operational space (verified 2026-07-02)
+## Three-location operational space
 
-The full topology this repo demonstrates: **hub** (syzygy VM) runs the shared
+The full topology this repo demonstrates: **hub** (a public VM) runs the shared
 activity/learning surface (`ENABLED_ROLES=hub`: activity-api + discovery +
 identity + relay); the **spoke** (local `substrate-live`) runs goal-host and
 the compute fleet, with its discovery peer-fanning-out to the hub
@@ -152,21 +181,23 @@ make -C scripts/substrate issue-key NAME=spoke-<location>
 
 A vessel **behind NAT** (e.g. a host Obsidian plugin) that can't be dialed directly uses
 the **libp2p ingress sidecar** — the vessel stays plain HTTP, the sidecar carries libp2p.
-The complete federated config is **two values** — the API key and the libp2p peer
-location (Obsidian's `sidecar/federation-sidecar.ts` shown; the generic
-`@avigopal/libp2p-federation-transport` sidecar still takes the explicit envs):
+The complete federated config is **two values** — a **discovery endpoint** and an
+**API key** (Obsidian's `sidecar/federation-sidecar.ts` shown; the generic
+`@avigopal/libp2p-federation-transport` sidecar takes the same inputs):
 
 ```
-METABOB_API_KEY=<hub-issued-key> \
-RELAY_MULTIADDR=/ip4/<hub-ip>/tcp/30333/p2p/<relay-peerid> \
+METABOB_API_KEY=<api-key> \
+DISCOVERY_ENDPOINT=<discovery-endpoint> \
 bun sidecar/federation-sidecar.ts
 ```
 
-Everything else derives (an explicit env always wins as an override): the discovery URL
-comes from the relay's host (`http://<relay-host>:18100`), the vessel id from the
-machine hostname (`obsidian-<hostname>-vessel` — host-unique, so libp2p identities never
-collide), the hub ingress circuit is auto-discovered from hub discovery
-(`federation_probe`), and the plugin URL / health port use their fixed defaults.
+Everything else is resolved from `<discovery-endpoint>/bootstrap` (an explicit env
+always wins as an override): the relay anchor and identity endpoint come from the
+bootstrap response, the vessel id from the machine hostname
+(`obsidian-<hostname>-vessel` — host-unique, so libp2p identities never collide),
+and the plugin URL / health port use their fixed defaults. A hand-set
+`RELAY_MULTIADDR` is an **optional override** that pins a specific relay — it can go
+stale on a relay restart, which is exactly what the `/bootstrap` fetch avoids.
 
 The sidecar reserves on the relay, serves resolves over libp2p (proxying to the local
 vessel), and registers `protocol:"libp2p"` with the hub discovery. The hub
