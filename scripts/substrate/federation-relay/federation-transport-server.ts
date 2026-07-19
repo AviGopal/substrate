@@ -24,12 +24,30 @@ process.on('unhandledRejection', (reason) => {
 })
 
 const VESSEL_ID = process.env.FED_VESSEL_ID || 'federation-transport-vessel'
-const RELAY = process.env.RELAY_MULTIADDR || ''
+let RELAY = process.env.RELAY_MULTIADDR || ''
 const DISCOVERY = process.env.DISCOVERY_URL || 'http://127.0.0.1:8100'
 const API_KEY = process.env.METABOB_API_KEY || ''
 const HEALTH_PORT = parseInt(process.env.FED_HEALTH_PORT || '8401', 10)
 
-if (!RELAY) { console.error('[fed-transport] ERROR: set RELAY_MULTIADDR'); process.exit(1) }
+// "Just point and go": if RELAY_MULTIADDR wasn't handed to us, derive the relay
+// anchor from the discovery we are pointed at via its public GET /bootstrap
+// (law 1 — read the relay at use time, never freeze a stale multiaddr in env).
+// Prefer the hub discovery (a spoke's pointer); fall back to local discovery.
+const BOOTSTRAP_URL = (process.env.BOOTSTRAP_URL || process.env.HUB_DISCOVERY_URL || DISCOVERY).replace(/\/$/, '')
+if (!RELAY && BOOTSTRAP_URL) {
+  try {
+    const r = await fetch(`${BOOTSTRAP_URL}/bootstrap`, { signal: AbortSignal.timeout(5000) })
+    if (r.ok) {
+      const b = await r.json() as { relay_multiaddrs?: string[] }
+      if (b.relay_multiaddrs?.length) {
+        RELAY = b.relay_multiaddrs[0]!
+        console.log(`[fed-transport] relay from ${BOOTSTRAP_URL}/bootstrap: ${RELAY}`)
+      }
+    }
+  } catch (e) { console.error(`[fed-transport] bootstrap fetch failed: ${(e as Error).message}`) }
+}
+
+if (!RELAY) { console.error('[fed-transport] ERROR: set RELAY_MULTIADDR or point BOOTSTRAP_URL/HUB_DISCOVERY_URL at a discovery serving /bootstrap'); process.exit(1) }
 
 // The libp2p keypair is derived deterministically from this id (seed =
 // sha256(id)), so it MUST be substrate-scoped: every substrate runs a transport
