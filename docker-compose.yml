@@ -1,0 +1,79 @@
+# Substrate — one pre-built image + this file + a .env is the ENTIRE surface.
+#
+# From the repo root:
+#   cp scripts/substrate/.env.example .env   # set ANTHROPIC_API_KEY (+ optional keys)
+#   docker login ghcr.io                     # the image is private; use a PAT with read:packages
+#   docker compose up -d
+#   docker exec substrate-live substrate-key show   # operator API key, post-launch
+#
+# The image is pulled from GHCR (the canonical registry — build-substrate-image.yml
+# publishes ghcr.io/avigopal/substrate:{dev,<sha>} on every push to dev). Override
+# the tag with SUBSTRATE_IMAGE. There is no host repos/ mount and no docker cp
+# hot-reload; the Makefile builds+runs the SAME artifact for local development.
+#
+# The image is a fat single container: surrealdb + valkey + every vessel run as
+# systemd units inside it (hence privileged + tmpfs /run). Both named volumes
+# persist state — /workspace (learning state, memoryNotes) and /var/lib/surrealdb
+# (the datastore); DROPPING EITHER loses learned state on recreate.
+#
+# A standalone container needs only an LLM key. Setting the optional
+# identity/discovery-group vars below joins an existing group as a spoke.
+
+services:
+  substrate:
+    image: ${SUBSTRATE_IMAGE:-ghcr.io/avigopal/substrate:dev}
+    container_name: ${SUBSTRATE_CONTAINER:-substrate-live}
+    privileged: true            # systemd as PID 1 inside the container
+    stop_signal: SIGRTMIN+3     # systemd graceful shutdown
+    stop_grace_period: 30s
+    restart: unless-stopped
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY is required}
+      # Optional: autonomous git push (parent change Phase 1). Unset = no self-push.
+      SUBSTRATE_GIT_PAT: ${SUBSTRATE_GIT_PAT:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      # Optional: join an existing identity/discovery group (spoke) + provider/self-dev overrides
+      METABOB_API_KEY: ${METABOB_API_KEY:-}
+      ENABLED_ROLES: ${ENABLED_ROLES:-}
+      HUB_DISCOVERY_URL: ${HUB_DISCOVERY_URL:-}
+      DISCOVERY_ENDPOINT: ${DISCOVERY_ENDPOINT:-}
+      ACTIVITY_API_ENDPOINT: ${ACTIVITY_API_ENDPOINT:-}
+      IDENTITY_VESSEL_URL: ${IDENTITY_VESSEL_URL:-}
+      FED_SUBSTRATE_ID: ${FED_SUBSTRATE_ID:-}
+      RELAY_MULTIADDR: ${RELAY_MULTIADDR:-}
+      PEER_DISCOVERY_ENDPOINTS: ${PEER_DISCOVERY_ENDPOINTS:-}
+      SUBSTRATE_REPO_OWNER: ${SUBSTRATE_REPO_OWNER:-}
+      # Optional extra LLM providers (also readable from the host /etc/environment on a VM)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      LLM_DEFAULT_MODEL: ${LLM_DEFAULT_MODEL:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      # Existing deployment on the legacy default signing secret? Set this to boot.
+      ALLOW_INSECURE_API_KEY_SECRET: ${ALLOW_INSECURE_API_KEY_SECRET:-}
+    ports:
+      - "${ACTIVITY_API_PORT:-18080}:8080"   # activity-api
+      - "${DEV_VESSEL_PORT:-18090}:8090"     # development-vessel
+      - "${DISCOVERY_PORT:-18100}:8100"      # discovery-vessel
+      - "${IDENTITY_PORT:-18101}:8101"       # identity-vessel
+      - "${GOAL_HOST_PORT:-18210}:8210"      # goal-host-vessel
+      - "${ANALYSIS_PORT:-18250}:8250"       # analysis-vessel
+      - "${CONCEPT_DB_PORT:-18260}:8260"     # concept-db
+      - "${STATEFUL_UI_PORT:-18270}:8270"    # stateful-ui-vessel
+    volumes:
+      - substrate-workspace:/workspace          # named volume — portable, not a host path
+      - substrate-surreal:/var/lib/surrealdb    # SurrealDB data — DROPPING THIS LOSES ALL LEARNING STATE
+    tmpfs:
+      - /run
+      - /run/lock
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  substrate-workspace:
+  substrate-surreal:

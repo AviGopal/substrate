@@ -32,7 +32,7 @@
 #   substrate-live  — persistent development substrate (port 18080)
 #                     All substrate-only iteration targets use substrate-live.
 
-IMAGE        := metabob/substrate
+IMAGE        := ghcr.io/avigopal/substrate
 TAG          := dev
 # State now lives in DOCKER-MANAGED NAMED VOLUMES, not host bind mounts, so the
 # substrate's filesystem is detached from this host (container-independent;
@@ -186,10 +186,22 @@ OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
         sync-ias-executor-ts \
         ui-bridge-up ui-bridge-down ui-bridge-status
 
+# Submodule preflight: the Dockerfile `COPY repos/...` stages fail minutes into
+# the build if the git submodules were never checked out. Fail fast (<1s) with
+# the exact remedy instead. Grounded on a real submodule file (discovery-vessel's
+# package.json); its absence means `git submodule update --init` was never run.
+.PHONY: preflight-submodules
+preflight-submodules:
+	@if [ ! -f $(REPO_ROOT)/repos/discovery-vessel/package.json ]; then \
+	  echo "[preflight] ERROR: git submodules not checked out (repos/discovery-vessel/package.json missing)."; \
+	  echo "[preflight] remedy: git submodule update --init --recursive"; \
+	  exit 1; \
+	fi
+
 # Fast preflight: assert every containerized vessel is build-valid (file: deps
 # resolve, frozen lockfiles are in sync, imports match dependency keys). Catches
 # the namespace-migration breakages that only surface inside the image build.
-validate-build:
+validate-build: preflight-submodules
 	bun $(CURDIR)/validate-build.ts
 
 # --target base is load-bearing: without it docker builds the LAST stage
@@ -201,7 +213,7 @@ build: validate-build
 	    $(CURDIR)/../..
 
 # substrate-obsidian flavour: base fleet + in-container Obsidian desktop served
-# over noVNC. Tagged metabob/substrate:obsidian.
+# over noVNC. Tagged ghcr.io/avigopal/substrate:obsidian.
 OBSIDIAN_TAG := obsidian
 build-obsidian:
 	docker build -f $(CURDIR)/../../Dockerfile.substrate \
@@ -269,7 +281,7 @@ run-detach:
 #     -e ANTHROPIC_API_KEY=sk-ant-... \
 #     -p 18080:8080 -p 18090:8090 -p 18100:8100 -p 18210:8210 \
 #     -p 18250:8250 -p 18260:8260 -p 18270:8270 \
-#     --tmpfs /run --tmpfs /run/lock avigopal/substrate:dev
+#     --tmpfs /run --tmpfs /run/lock ghcr.io/avigopal/substrate:dev
 #
 # `make up` wraps that with: build-if-missing, start-or-create, readiness wait,
 # old-image seed fallback, IDE config, doctor. REBUILD=1 forces an image build.
@@ -329,6 +341,9 @@ run-live:
 	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
+	    -e SUBSTRATE_REPO_OWNER="$(SUBSTRATE_REPO_OWNER)" \
+	    -e API_KEY_SECRET="$(API_KEY_SECRET)" \
+	    -e ALLOW_INSECURE_API_KEY_SECRET="$(ALLOW_INSECURE_API_KEY_SECRET)" \
 	    -e SUBSTRATE_ROOT="/workspace/git/super-repo" \
 	    -e ENABLED_ROLES="$(ENABLED_ROLES)" \
 	    -e ENABLED_VESSELS="$(ENABLED_VESSELS)" \

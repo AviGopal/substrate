@@ -3,6 +3,13 @@ name: Build & publish substrate image
 # Publishes ghcr.io/<owner>/substrate:dev so a human/hub can `docker pull` instead of a
 # 20-30 min clone+build. Requires a repo secret SUBSTRATE_GIT_PAT (repo:read) to fetch the
 # private submodules; ghcr push uses the built-in GITHUB_TOKEN (packages: write).
+#
+# ghcr images are PRIVATE (anonymous pull -> 401). To keep the PUBLIC Docker Hub tag
+# avigopal/substrate:dev current on every dev push, set two OPTIONAL repo secrets:
+#   DOCKERHUB_USERNAME  - Docker Hub account with push access to avigopal/substrate
+#   DOCKERHUB_TOKEN     - a Docker Hub access token (used as the login password)
+# When both are absent (e.g. external forks) the Docker Hub login + tags are skipped and
+# only ghcr is published, so the job never fails for lack of Docker Hub credentials.
 on:
   push:
     branches: [dev]
@@ -23,6 +30,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      # GitHub forbids secrets directly in step-level `if`, so mirror the presence of the
+      # Docker Hub token into a non-secret env flag and gate the DH steps on it.
+      HAS_DH: ${{ secrets.DOCKERHUB_TOKEN != '' }}
     steps:
       - name: Checkout super-repo (no submodules yet)
         uses: actions/checkout@v4
@@ -46,12 +57,37 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        # Skipped when DOCKERHUB_TOKEN is unset (external forks) — keeps ghcr-only publish working.
+        if: env.HAS_DH == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Compute lowercase image owner
         id: img
         # ghcr rejects mixed-case repository names ("AviGopal" -> "avigopal").
         # github.repository_owner preserves the account's original casing, so
         # lowercase it here rather than in the tag interpolation (which can't).
         run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Compute image tags (ghcr always; Docker Hub only when creds present)
+        id: tags
+        env:
+          OWNER: ${{ steps.img.outputs.owner }}
+          SHA: ${{ github.sha }}
+        run: |
+          {
+            echo 'tags<<EOF'
+            echo "ghcr.io/${OWNER}/substrate:dev"
+            echo "ghcr.io/${OWNER}/substrate:${SHA}"
+            if [ "${HAS_DH}" = "true" ]; then
+              echo "avigopal/substrate:dev"
+              echo "avigopal/substrate:${SHA}"
+            fi
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
@@ -62,8 +98,6 @@ jobs:
           context: .
           file: Dockerfile.substrate
           push: true
-          tags: |
-            ghcr.io/${{ steps.img.outputs.owner }}/substrate:dev
-            ghcr.io/${{ steps.img.outputs.owner }}/substrate:${{ github.sha }}
+          tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

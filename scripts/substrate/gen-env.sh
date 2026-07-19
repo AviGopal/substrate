@@ -66,11 +66,20 @@ if [[ -z "$API_KEY_SECRET" ]]; then
   if [[ -e /var/lib/surrealdb/data.db ]]; then
     # Existing datastore, no persisted secret → its keys were signed with the
     # legacy public default. Generating a fresh secret now would invalidate every
-    # already-issued key. Keep the legacy default so those keys still validate,
-    # but warn loudly: this substrate is insecure until the secret is rotated.
-    API_KEY_SECRET="dev-secret-change-in-production"
-    echo "[gen-env] WARNING: no persisted API_KEY_SECRET on an existing datastore — using the INSECURE legacy default." >&2
-    echo "[gen-env] WARNING: keys are forgeable until you set a strong API_KEY_SECRET and re-issue them." >&2
+    # already-issued key. Fall back to the legacy public default ONLY if the
+    # operator explicitly opts in; otherwise FAIL CLOSED — a forgeable trust space
+    # (and shared-secret federation hazard) must never come up silently.
+    if [[ "${ALLOW_INSECURE_API_KEY_SECRET:-}" == "1" ]]; then
+      API_KEY_SECRET="dev-secret-change-in-production"
+      echo "[gen-env] WARNING: no persisted API_KEY_SECRET on an existing datastore — using the INSECURE legacy default (ALLOW_INSECURE_API_KEY_SECRET=1)." >&2
+      echo "[gen-env] WARNING: keys are forgeable until you set a strong API_KEY_SECRET and re-issue them." >&2
+    else
+      echo "[gen-env] ERROR: no persisted API_KEY_SECRET on an existing datastore." >&2
+      echo "[gen-env] ERROR: falling back to the legacy public default ('dev-secret-change-in-production') would make every issued key forgeable, and two substrates that both fall back would share one trust space (the shared-API_KEY_SECRET federation hazard)." >&2
+      echo "[gen-env] ERROR: refusing to boot insecure. Fix: set a strong API_KEY_SECRET (e.g. 'openssl rand -hex 32'), persist it to /workspace/.substrate-secrets, and re-issue keys." >&2
+      echo "[gen-env] ERROR: to keep the legacy insecure behavior for an existing deployment, set ALLOW_INSECURE_API_KEY_SECRET=1." >&2
+      exit 1
+    fi
   else
     API_KEY_SECRET="$(openssl rand -hex 32)"
   fi

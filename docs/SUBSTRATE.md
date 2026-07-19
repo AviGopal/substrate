@@ -32,11 +32,43 @@ The substrate has generalized from "one local container" to **one image that run
 
 **Default (none of the three set) = every unit enabled = the full local substrate, identical to today** (`apply-inventory.sh` is a no-op). Manifest-installed dynamic vessels (`"manifest": true`, i.e. the federation units) are never baked-enabled, so they are never touched here — they are installed on demand (see [Dynamic vessels](#dynamic-vessels)).
 
-## Quick start (one command)
+## Launch: two canonical paths
+
+The same artifact runs either way — one image
+(`ghcr.io/avigopal/substrate:dev`, the canonical registry), one container
+(`substrate-live`), one required secret (an LLM key). **Container** (root-level
+compose) is the checkout-free path: a pulled image plus one env var. **Source**
+(`make up`) is the everyday development path: a checkout with submodules, one
+command, operator tooling auto-pointed. The image is published to GHCR by CI on
+every push to `dev`; it is **private** (it bakes vessel source), so pulling it
+needs `docker login ghcr.io` with a token that has `read:packages` scope. A
+Docker Hub `avigopal/substrate:dev` mirror may exist, but GHCR is the repo.
+
+### Source path — `make up`
+
+From the repo root, initialise submodules, then build and run:
 
 ```bash
+git submodule update --init --recursive
 make -C scripts/substrate up ANTHROPIC_API_KEY=sk-ant-...
 ```
+
+Prereqs: Docker (privileged-capable, x86_64), GNU make, git, bun, jq, curl.
+
+**Submodule credentials (HTTPS by default, SSH optional).** `.gitmodules` uses
+HTTPS remotes (`https://github.com/AviGopal/<vessel>.git`), which work for public
+repos and for token auth. The vessel repos may be private and then need a
+credential — supply it **without editing `.gitmodules`** via a global rewrite:
+
+```bash
+# SSH-key user — rewrite HTTPS to SSH transparently
+git config --global url."git@github.com:".insteadOf "https://github.com/"
+
+# token user — inject a PAT into the HTTPS URL
+git config --global url."https://<token>@github.com/".insteadOf "https://github.com/"
+```
+
+The scheme then adapts to whatever credentials the human has.
 
 `up` builds the image **only if none exists**, starts (or creates)
 `substrate-live`, waits up to 240s on the fleet readiness matrix (best-effort —
@@ -55,8 +87,27 @@ and diagnosis is in-container too (`docker exec substrate-live substrate-doctor`
 > booted (`docker rm -f substrate-live` then `up`) — for a single vessel prefer
 > the hot-reload `restart-<vessel>` targets under **Iteration loop**.
 
-The system's raw launch contract on **any** docker host — no repo checkout, no
-make — is just:
+### Container path — root-level compose
+
+No make, no submodules. A root-level `docker-compose.yml` is canonical
+(`scripts/substrate/docker-compose.yml` is a symlink to it), so the whole path is
+a few commands **from the repo root**:
+
+```bash
+cp scripts/substrate/.env.example .env      # set ANTHROPIC_API_KEY
+docker login ghcr.io                        # token with read:packages (private image)
+docker compose up -d                        # root compose is canonical
+docker exec substrate-live substrate-key show   # read the operator API key
+```
+
+`docker compose` pulls `ghcr.io/avigopal/substrate:dev`, mounts the two named
+volumes, and publishes the host-mapped ports. Wait for
+`docker inspect --format '{{.State.Health.Status}}' substrate-live` to report
+`healthy` before reading the key; `substrate-key` is baked into the image at
+`/usr/local/bin/substrate-key`, so no checkout is needed.
+
+The equivalent raw invocation on **any** docker host (after `docker login
+ghcr.io`):
 
 ```bash
 docker run -d --privileged --name substrate-live \
@@ -64,24 +115,26 @@ docker run -d --privileged --name substrate-live \
   -e ANTHROPIC_API_KEY=sk-ant-... \
   -p 18080:8080 -p 18090:8090 -p 18100:8100 -p 18210:8210 \
   -p 18250:8250 -p 18260:8260 -p 18270:8270 \
-  --tmpfs /run --tmpfs /run/lock avigopal/substrate:dev
+  --tmpfs /run --tmpfs /run/lock ghcr.io/avigopal/substrate:dev
 ```
 
-### Pulling the image instead of building
+### Container config matrix
 
-The image is published as `avigopal/substrate:dev` (fleet only; Obsidian runs as
-a host peer) and `avigopal/substrate:obsidian` (fleet + in-container Obsidian
-over noVNC). A pulled image needs **no repo checkout, no submodules, no GitHub
-credentials** — everything a fresh container consumes is baked in or generated:
+The image is published to GHCR as `ghcr.io/avigopal/substrate:dev` (fleet only;
+Obsidian runs as a host peer) and `ghcr.io/avigopal/substrate:obsidian` (fleet +
+in-container Obsidian over noVNC). The image is private, so a pull needs `docker
+login ghcr.io` with a `read:packages` token — but it needs **no repo checkout and
+no submodules**; everything a fresh container consumes is baked in or generated:
 
 - **Required config:** one LLM provider key (`ANTHROPIC_API_KEY`, or
   `OPENAI_API_KEY` + `OPENAI_BASE_URL` for OpenAI-compatible/local models).
 - **Everything else auto-generates** on first boot and persists to the
   `substrate-workspace` volume (`.substrate-secrets`: `JWT_SECRET`,
   `SURREAL_PASS`, a local `METABOB_API_KEY`).
-- **Joining an existing federation** (spoke mode) additionally takes a
-  hub-issued `METABOB_API_KEY` plus the hub location — see the federated-spoke
-  contract below and `docs/FEDERATION.md` § "Running a spoke".
+- **Joining an existing identity/discovery group** (spoke mode) additionally
+  takes a hub-issued `METABOB_API_KEY` plus the hub location — see
+  [Join an existing identity/discovery group](#join-an-existing-identitydiscovery-group)
+  below and `docs/FEDERATION.md` § "Running a spoke".
 - **Self-alteration (pull + push on the source repos):** pass
   `-e SUBSTRATE_GIT_PAT=<github-pat>` (Contents: Read+Write on the
   `AviGopal/*` repos; fork override via `SUBSTRATE_REPO_OWNER`). With it, the
@@ -91,41 +144,39 @@ credentials** — everything a fresh container consumes is baked in or generated
   self-authored commits stay local. Adding the PAT to a running container
   upgrades the snapshot to live clones in place:
   `docker exec <name> systemctl restart git-push-setup`.
+- **Secret hardening:** every non-provided secret auto-generates to a strong
+  random value; the legacy shared default is refused at boot unless you opt
+  back in with `-e ALLOW_INSECURE_API_KEY_SECRET=1`.
 - The docker requirements are Linux x86_64 semantics with `--privileged`
   (systemd inside): native Linux, or Docker Desktop with the **WSL2** backend
   on Windows.
 
-```bash
-docker pull avigopal/substrate:dev   # then the raw launch contract above
-```
+### Join an existing identity/discovery group
 
-### Federated spoke — two commands
+To attach a container to an **existing** hub's identity + discovery group — a
+spoke: local registry + compute here, while traces, identity, and learning
+state live on the hub — set the join vars below. All are optional and consumed
+by `gen-env.sh` / `make run-live`; the hub-issued `METABOB_API_KEY` is the
+credential that actually joins the group. The reference public hub is
+`syzygy.host` (discovery `:18100`, activity-api `:18080`, identity `:18101`,
+libp2p relay `:30333`).
 
-To run this machine as a **spoke of an existing hub** (local registry + compute
-here; traces, identity, and learning state live on the hub). The reference
-public hub is `syzygy.host` (discovery `:18100`, activity-api `:18080`,
-identity `:18101`, libp2p relay `:30333`) — substitute it for `<hub-host>`
-below, with a key issued by that hub:
+| Var | Role |
+|---|---|
+| `METABOB_API_KEY` | hub-issued credential — the key that joins the group |
+| `ENABLED_ROLES=spoke` | run as a spoke, not a standalone full substrate |
+| `HUB_DISCOVERY_URL=http://<hub>:18100` | the discovery group to join |
+| `DISCOVERY_ENDPOINT=http://<hub>:18100` | point discovery at the hub |
+| `ACTIVITY_API_ENDPOINT=http://<hub>:18080` | shared trace store |
+| `IDENTITY_VESSEL_URL=http://<hub>:18101` | identity validator = the identity group |
 
-```bash
-# 1. Boot the spoke. A hub DISCOVERY_ENDPOINT with no explicit ENABLED_ROLES
-#    implies the federated-spoke topology; the hub's activity-api/identity
-#    endpoints derive from the discovery host (fleet convention 18080/18101).
-make -C scripts/substrate up API_KEY=<hub-issued-key> ANTHROPIC_API_KEY=sk-ant-... \
-  DISCOVERY_ENDPOINT=http://<hub-host>:18100
-
-# 2. Make the spoke hub-dialable (NAT return path): relay reservation +
-#    per-vessel capability mirror. The relay multiaddr is auto-derived from
-#    the hub's own ingress advertisement; FED_SUBSTRATE_ID must be unique.
-make -C scripts/substrate vessel-ctl enable federation-transport-vessel \
-  FED_SUBSTRATE_ID=<unique-id>
-```
-
-Pulled-image equivalent (no make): add
-`-e ENABLED_ROLES=spoke -e HUB_DISCOVERY_URL=http://<hub>:18100 \
--e ACTIVITY_API_ENDPOINT=http://<hub>:18080 -e IDENTITY_VESSEL_URL=http://<hub>:18101 \
--e METABOB_API_KEY=<hub-issued-key>` to the raw `docker run`, then
-`docker exec substrate-live spoke-federate substrate-live <unique-id>`.
+Optional transport: `FED_SUBSTRATE_ID` (must be unique in the hub namespace),
+`RELAY_MULTIADDR`, `PEER_DISCOVERY_ENDPOINTS`. The copy-paste spoke commands —
+both the `make up … DISCOVERY_ENDPOINT=…` form and the raw `docker run` form,
+plus the NAT return-path step (`spoke-federate`) — live in
+[`README.md`](../README.md) § *Connect to the syzygy.host federation (spoke)*
+and [`scripts/substrate/.env.example`](../scripts/substrate/.env.example);
+identity-namespace mechanics in [`docs/FEDERATION.md`](FEDERATION.md).
 
 A **local Obsidian plugin** (outside the container) connects to the spoke with
 its normal two inputs — the API key plus `discoveryVesselEndpoint=http://127.0.0.1:18100`
@@ -327,20 +378,28 @@ make -C scripts/substrate shell
 
 ## Backing up and restoring learning state
 
-Learning state lives in the Docker **named volume** `substrate-surreal` (mounted
-at `/var/lib/surrealdb` inside the container) — all execution traces, Thompson
-posteriors, and the template registry. It is detached from the container, so it
-**survives `make clean` and a rebuild** (only `docker volume rm` destroys it).
-`substrate-workspace` (mounted at `/workspace`) holds generated secrets, git
-clones, and metrics. Back the surreal volume up before destructive operations:
+State lives in **two Docker named volumes**, both detached from the container, so
+they **survive `make clean` and a rebuild** (only `docker volume rm` destroys
+them):
+
+- `substrate-surreal` (`/var/lib/surrealdb`) — the SurrealDB datastore: all
+  execution traces, Thompson posteriors, the concept graph, and the template
+  registry. **Dropping this loses all learning state.**
+- `substrate-workspace` (`/workspace`) — generated secrets
+  (`.substrate-secrets`: `JWT_SECRET`, `SURREAL_PASS`, `METABOB_API_KEY`,
+  provider keys), git clones, fleet definition files, and metrics.
+
+Back up **both** before destructive operations:
 
 ```bash
 # Backup (stop first so SurrealDB flushes)
 docker stop -t 30 substrate-live
-docker run --rm -v substrate-surreal:/src -v "$(pwd)":/bak alpine \
-  tar czf /bak/substrate-surreal-$(date +%Y%m%d).tgz -C /src .
+for vol in substrate-surreal substrate-workspace; do
+  docker run --rm -v "$vol":/src -v "$(pwd)":/bak alpine \
+    tar czf "/bak/$vol-$(date +%Y%m%d).tgz" -C /src .
+done
 
-# Restore into the volume, then bring the container back up
+# Restore a volume, then bring the container back up (repeat per volume as needed)
 docker run --rm -v substrate-surreal:/dst -v "$(pwd)":/bak alpine \
   sh -c 'find /dst -mindepth 1 -delete && tar xzf /bak/substrate-surreal-YYYYMMDD.tgz -C /dst'
 make -C scripts/substrate run-live ANTHROPIC_API_KEY=...

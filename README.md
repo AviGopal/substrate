@@ -60,79 +60,129 @@ Conscious one-off direct edits to vessel source are gated by a PreToolUse hook a
 
 The whole system runs as **one container** (`substrate-live`) hosting the vessel fleet as systemd units — no Kubernetes, no orchestration on the host. The host contract is a single `docker run`: one privileged container, one LLM-provider env var, two named volumes (workspace + datastore). Everything load-bearing — seeding, readiness, diagnosis — happens inside the container at boot; the Makefile is a convenience wrapper over exactly that contract.
 
-### Quick start from the published image (no repo checkout)
+### Quick start from the published image (few commands, from repo root)
 
-The image is published as `avigopal/substrate:dev` (fleet) and
-`avigopal/substrate:obsidian` (fleet + in-container Obsidian over noVNC). A
-pulled image needs no submodules and no GitHub credentials. Requirements:
-Docker with Linux x86_64 semantics and `--privileged` (native Linux, or Docker
-Desktop with the WSL2 backend on Windows).
+The canonical image is `ghcr.io/avigopal/substrate:dev` (fleet), published by
+`.github/workflows/build-substrate-image.yml` on every push to `dev`. It is
+**private** — it bakes vessel source — so pulling needs a `docker login ghcr.io`
+with a PAT carrying `read:packages` scope. (`ghcr.io/avigopal/substrate:obsidian`
+adds an in-container Obsidian over noVNC.) A pulled image needs no submodules.
+Requirements: Docker with Linux x86_64 semantics and `--privileged` (native
+Linux, or Docker Desktop with the WSL2 backend on Windows).
 
-**Standalone substrate** — one required env; every other secret auto-generates
-on first boot and persists to the volumes:
+**Standalone substrate** — from the repo root, the canonical root-level
+`docker-compose.yml` reduces launch to a few commands; every secret but the one
+LLM key auto-generates on first boot and persists to the volumes:
 
 ```bash
+cp scripts/substrate/.env.example .env    # set ANTHROPIC_API_KEY (or OPENAI_API_KEY)
+docker login ghcr.io                       # PAT with read:packages
+docker compose up -d                       # run from repo root — root compose is canonical
+docker exec substrate-live substrate-key show
+```
+
+`scripts/substrate/docker-compose.yml` is now a symlink to the root file, so
+either directory works. `OPENAI_API_KEY` works in place of `ANTHROPIC_API_KEY` —
+exactly one LLM key is required; every other secret auto-generates on first boot
+to `/workspace/.substrate-secrets`.
+
+**Raw `docker run`** — the same image, without compose (log in first):
+
+```bash
+docker login ghcr.io                       # PAT with read:packages
 docker run -d --privileged --name substrate-live \
   -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
   -e ANTHROPIC_API_KEY=sk-ant-... \
   -p 18080:8080 -p 18090:8090 -p 18100:8100 -p 18210:8210 \
-  --tmpfs /run --tmpfs /run/lock avigopal/substrate:dev
+  -p 18250:8250 -p 18260:8260 -p 18270:8270 \
+  --tmpfs /run --tmpfs /run/lock ghcr.io/avigopal/substrate:dev
 ```
 
 Wait for `docker inspect --format '{{.State.Health.Status}}' substrate-live`
 to report `healthy`, then dispatch goals against `http://localhost:18210/run-goal`
-(goal-host) and browse traces at `http://localhost:18080` (activity-api).
-
-**Connect to the syzygy.host federation (spoke)** — your machine contributes a
-local registry + compute; traces, identity, and learning state live on the
-hub. You need a hub-issued API key (ask the hub operator; minted on the hub
-with `make -C scripts/substrate issue-key NAME=<you>`):
+(goal-host) and browse traces at `http://localhost:18080` (activity-api). Retrieve
+your operator API key straight from the running container (the tool is baked into
+the image — no repo checkout needed):
 
 ```bash
-# 1. Boot as a federated spoke of syzygy.host
-docker run -d --privileged --name substrate-live \
-  -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
-  -e ANTHROPIC_API_KEY=sk-ant-... \
-  -e METABOB_API_KEY=<hub-issued-key> \
-  -e ENABLED_ROLES=spoke \
-  -e HUB_DISCOVERY_URL=http://syzygy.host:18100 \
-  -e ACTIVITY_API_ENDPOINT=http://syzygy.host:18080 \
-  -e IDENTITY_VESSEL_URL=http://syzygy.host:18101 \
-  -p 18100:8100 -p 18210:8210 -p 18090:8090 \
-  --tmpfs /run --tmpfs /run/lock avigopal/substrate:dev
-
-# 2. Make the spoke hub-dialable (NAT return path): relay reservation +
-#    per-vessel capability mirror. The relay multiaddr auto-derives from the
-#    hub's ingress; the id must be unique in the hub namespace (checked).
-docker exec substrate-live spoke-federate substrate-live <unique-id>
+docker exec substrate-live substrate-key show
 ```
 
-Your vessels then appear in the hub registry as `<vessel>@<unique-id>`, and a
-local Obsidian plugin connects to the spoke with its normal two inputs (API
-key + `discoveryVesselEndpoint=http://127.0.0.1:18100`). With a repo checkout,
-the same two steps are:
-
-```bash
-make -C scripts/substrate up API_KEY=<hub-issued-key> ANTHROPIC_API_KEY=sk-ant-... \
-  DISCOVERY_ENDPOINT=http://syzygy.host:18100
-make -C scripts/substrate vessel-ctl enable federation-transport-vessel FED_SUBSTRATE_ID=<unique-id>
-```
-
-Optional for both modes: add `-e SUBSTRATE_GIT_PAT=<github-pat>` so the
+Optional: add `-e SUBSTRATE_GIT_PAT=<github-pat>` so the
 substrate can pull + push the source repos it is built from (self-alteration);
 without it, self-authored commits stay local. Full config matrix:
 [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) § *Pulling the image instead of
 building*; federation details: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 
+### Join an existing identity / discovery group (spoke)
+
+A spoke contributes a local registry + compute while identity, traces, and
+learning state live on the hub. `METABOB_API_KEY` is the credential the hub
+operator issues you (minted on the hub with
+`make -C scripts/substrate issue-key NAME=<you>`). The same variables attach a
+spoke however you launch — `docker compose`, `make up`, or the raw `docker run`
+above.
+
+**Docker Compose** — put the join vars in the root `.env` (the root
+`docker-compose.yml` and its [`scripts/substrate/docker-compose.yml`](scripts/substrate/docker-compose.yml)
+symlink pull the same GHCR image), then bring it up:
+
+```bash
+# .env
+ANTHROPIC_API_KEY=sk-ant-...
+METABOB_API_KEY=<hub-issued-key>
+ENABLED_ROLES=spoke
+HUB_DISCOVERY_URL=http://<hub>:18100
+DISCOVERY_ENDPOINT=http://<hub>:18100
+ACTIVITY_API_ENDPOINT=http://<hub>:18080
+IDENTITY_VESSEL_URL=http://<hub>:18101
+```
+
+```bash
+docker login ghcr.io                       # PAT with read:packages
+docker compose up -d                       # from repo root — compose auto-loads `.env`
+docker exec substrate-live substrate-key show
+```
+
+**`make up` / raw `docker run`** — the identical vars work as `-e VAR=value`
+flags on the standalone `docker run` above, or as `VAR=value` arguments to
+`make -C scripts/substrate up`. To make the spoke hub-dialable behind NAT
+(relay reservation + per-vessel capability mirror; the id must be unique in the
+hub namespace), run once after boot:
+
+```bash
+docker exec substrate-live spoke-federate substrate-live <unique-id>
+```
+
+Your vessels then appear in the hub registry as `<vessel>@<unique-id>`, and a
+local Obsidian plugin connects to the spoke with its normal two inputs (API key
++ `discoveryVesselEndpoint=http://127.0.0.1:18100`). Optional transport
+overrides (`FED_SUBSTRATE_ID`, `RELAY_MULTIADDR`, `PEER_DISCOVERY_ENDPOINTS`)
+are consumed the same way. Full guide: [`docs/FEDERATION.md`](docs/FEDERATION.md).
+
 ### Building from source
 
-**Prerequisites:** Docker, GNU make, git. (For the Obsidian interface installer: `curl` + `jq`, and `bun` for its libp2p sidecar.)
+**Prerequisites:** Docker (must allow `--privileged`; native Linux or WSL2), GNU make, git (submodule access), bun, jq, curl.
 
 **1. Clone** — submodules are mandatory; the image build copies each vessel's source from `repos/<vessel>`:
 
 ```bash
 git clone --recurse-submodules https://github.com/AviGopal/substrate
 cd substrate
+git submodule update --init --recursive     # if you cloned without --recurse-submodules
+```
+
+`.gitmodules` pins each vessel over HTTPS (`github.com/AviGopal/<vessel>.git`).
+Some vessel repos may be private, so submodule fetch needs a credential — an
+HTTPS PAT or an SSH key. The scheme adapts to whatever you have **without editing
+`.gitmodules`**, via a global rewrite rule:
+
+```bash
+# SSH key holders — rewrite HTTPS submodule URLs to SSH transparently:
+git config --global url."git@github.com:".insteadOf "https://github.com/"
+
+# PAT/token users — inject the token into the HTTPS URL:
+git config --global url."https://<token>@github.com/".insteadOf "https://github.com/"
 ```
 
 **2. Start** — one command:
@@ -170,9 +220,9 @@ bash repos/obsidian-vessel/install.sh                    # interactive: vault �
 
 The installer selects or creates the vault, installs the plugin, and prefers the **libp2p** transport: it derives the relay multiaddr from your discovery host and enables the federation sidecar automatically, writing direct HTTP endpoints only as same-host fallback. See [`repos/obsidian-vessel/README.md`](repos/obsidian-vessel/README.md).
 
-### Joining an existing federation
+### Running your own hub or remote substrate
 
-The two-command spoke setup in the quick start above works against **any** hub, not just syzygy.host — substitute the hub's host for the `DISCOVERY_ENDPOINT` / `HUB_DISCOVERY_URL` values and use a key issued by that hub (`make issue-key NAME=…` on the hub).
+The spoke join above works against **any** hub — substitute the hub's host for the `HUB_DISCOVERY_URL` / `DISCOVERY_ENDPOINT` / `ACTIVITY_API_ENDPOINT` / `IDENTITY_VESSEL_URL` values and use a key that hub issued (`make issue-key NAME=…` on the hub).
 
 One image serves every role: a full local substrate, a minimal hub (control plane + store + relay), or a compute-only spoke — selection is declarative via `ENABLED_ROLES` / `ENABLED_VESSELS` (`scripts/substrate/vessels.inventory.json`, applied at boot). Vessels behind NAT join over the libp2p relay via a sidecar. To stand up your own remote substrate or hub on a VM: `scripts/substrate/deploy-remote.sh` (ships the local image over SSH, no registry) or `scripts/substrate/deploy-hub.sh` (the VM pulls the repo, builds there, and runs the relay). Point vessel clones at your own fork with `SUBSTRATE_REPO_OWNER=<your-org>`. Full guide: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 

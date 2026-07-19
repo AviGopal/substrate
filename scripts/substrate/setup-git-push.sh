@@ -74,6 +74,7 @@ echo "[setup-git-push] system git identity configured"
 # and only WARN (never disable) if the probe can't confirm auth — the cutover's
 # host-sync fallback (host SSH key) durably catches any push that does fail.
 PAT_PROBE_REPO="${SUBSTRATE_PAT_PROBE_REPO:-development-vessel}"
+REPO_OWNER="${SUBSTRATE_REPO_OWNER:-AviGopal}"   # fork override: set SUBSTRATE_REPO_OWNER to your GitHub org/user
 if [ -n "$SUBSTRATE_GIT_PAT" ]; then
   # Self-sufficient helper (2026-07-12): source /etc/substrate/env at use time so
   # git authenticates from ANY process context (plain shells, tick units without
@@ -89,15 +90,15 @@ if [ -n "$SUBSTRATE_GIT_PAT" ]; then
   PAT_OK=0
   for attempt in 1 2 3; do
     if git -c credential.helper="!f() { echo username=x-access-token; echo \"password=$SUBSTRATE_GIT_PAT\"; }; f" \
-         ls-remote --heads "https://github.com/AviGopal/${PAT_PROBE_REPO}.git" dev >/dev/null 2>&1; then
+         ls-remote --heads "https://github.com/${REPO_OWNER}/${PAT_PROBE_REPO}.git" dev >/dev/null 2>&1; then
       PAT_OK=1; break
     fi
     sleep 2
   done
   if [ "$PAT_OK" = "1" ]; then
-    echo "[setup-git-push] PAT auth confirmed against AviGopal/${PAT_PROBE_REPO}"
+    echo "[setup-git-push] PAT auth confirmed against ${REPO_OWNER}/${PAT_PROBE_REPO}"
   else
-    echo "[setup-git-push] NOTE: PAT auth probe did not confirm after 3 tries (AviGopal/${PAT_PROBE_REPO}). This is often transient (GitHub fine-grained-PAT rate-limiting); the helper stays configured. If in-container pushes keep failing, the cutover falls back to the HOST-SYNC poller (SSH) — and the push_health_observer will emit a substrateGap. OPERATOR: if sustained, refresh SUBSTRATE_GIT_PAT (Contents: Read+Write)."
+    echo "[setup-git-push] NOTE: PAT auth probe did not confirm after 3 tries (${REPO_OWNER}/${PAT_PROBE_REPO}). This is often transient (GitHub fine-grained-PAT rate-limiting); the helper stays configured. If in-container pushes keep failing, the cutover falls back to the HOST-SYNC poller (SSH) — and the push_health_observer will emit a substrateGap. OPERATOR: if sustained, refresh SUBSTRATE_GIT_PAT (Contents: Read+Write)."
   fi
 else
   # No PAT: ensure no stale helper remains so pushes fail fast (host-sync covers).
@@ -107,7 +108,7 @@ fi
 
 # 2. Idempotent writable clones on dev.
 mkdir -p "$CLONE_DIR"
-REPO_OWNER="${SUBSTRATE_REPO_OWNER:-AviGopal}"   # fork override: set SUBSTRATE_REPO_OWNER to your GitHub org/user
+# REPO_OWNER already resolved above (SUBSTRATE_REPO_OWNER, default AviGopal).
 for v in $VESSELS; do
   d="$CLONE_DIR/$v"
   url="https://github.com/${REPO_OWNER}/$v.git"
