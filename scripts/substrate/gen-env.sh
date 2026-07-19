@@ -12,8 +12,18 @@
 # METABOB_API_KEY is a bootstrap value replaced by identity-vessel after seeding.
 set -euo pipefail
 
-if [[ -z "${ANTHROPIC_API_KEY:-}" && -z "${OPENAI_API_KEY:-}" ]]; then
-  echo "[gen-env] ERROR: No LLM provider key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY." >&2
+# A SPOKE (DISCOVERY_ENDPOINT names a REMOTE hub) inherits LLM capability from the
+# hub's arms through discovery — it needs NO local provider key. Only a root/standalone
+# (self/loopback/unset discovery) requires one. This makes the point-and-go contract
+# literal: {DISCOVERY_ENDPOINT, API_KEY} alone boots a spoke. (Detected here, before the
+# full role inference below, since this guard runs first.)
+_llmkey_disc_host="$(printf '%s' "${DISCOVERY_ENDPOINT:-}" | sed -E 's#^[a-z]+://##; s#[:/].*##')"
+case "$_llmkey_disc_host" in
+  ""|127.0.0.1|localhost|0.0.0.0|::1|"$(hostname 2>/dev/null)") _is_spoke=0 ;;  # root/standalone
+  *) _is_spoke=1 ;;                                                              # remote hub -> spoke
+esac
+if [[ "$_is_spoke" = "0" && -z "${ANTHROPIC_API_KEY:-}" && -z "${OPENAI_API_KEY:-}" ]]; then
+  echo "[gen-env] ERROR: No LLM provider key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY (a root/standalone needs one; a spoke inherits LLM from its hub)." >&2
   exit 1
 fi
 
