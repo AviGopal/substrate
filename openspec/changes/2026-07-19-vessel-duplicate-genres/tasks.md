@@ -9,10 +9,10 @@ Each task is a dispatchable goal (names a single `repos/<vessel>/src` file where
 - [ ] **T4** Make `findByShape` / `resolveVesselCapability` genre-aware in `repos/discovery-vessel/src/resolvers.ts` (return one for authoritative/data-owner-pin; full live set for interchangeable/stateless).
 - [ ] **T5** Stop unconditional `candidates[0]` in the `/resolve` gateway `repos/discovery-vessel/src/index.ts`; apply the policy; attach per-producer capacity state for interchangeable.
 
-## LLM interchangeable (operator ask #7)
-- [ ] **T6** [config] Declare the opus/haiku/google arms in `vessels.inventory.json` (role `compute`, genre `interchangeable`, health_port 8221/8223/8225) so role subsetting can enable/disable them and a spoke can drop local arms.  *(done separately — google already added to the Dockerfile enable list)*
-- [ ] **T7** [config] `scripts/substrate/gen-env.sh`: write each `llm-<arm>.env` to scope the unit to a single provider credential (set the pinned provider's key, clear the others) so its quota == its provider's quota.
-- [ ] **T8** `repos/llm-resolver-vessel/src/index.ts`: make `hasCompletionQuota` / `syncCompletionAdvertisement` reflect the unit's **pinned** model/provider, so a dead arm de-advertises instead of silently serving via an unpinned sibling provider.
+## LLM interchangeable (operator ask #7) — see companion `llm-arms-data-driven`
+- [ ] **T6** [config] Replace the hand-authored opus/haiku/google units with a **data-driven arm list** (`[{id, model, provider, port}]` in one config location) rendered at boot into one unit + one single-provider `llm-<id>.env` each, enabled iff the provider key is present (ExecCondition). Declare arms with genre `interchangeable` so role subsetting + discovery selection apply. Adding an arm = one config line, findable fleet-wide within the namespace.
+- [ ] **T7** [config] The rendered `llm-<id>.env` scopes the unit to a single provider credential (only that provider's key), so its quota == its provider's quota. No per-provider clearing hardcoded in gen-env — it falls out of the arm list.
+- [ ] **T8** `repos/llm-resolver-vessel/src/index.ts`: make `hasCompletionQuota` / `syncCompletionAdvertisement` reflect the unit's **pinned** provider, so a dead arm de-advertises instead of silently serving via another provider.
 - [ ] **T9** `repos/llm-resolver-vessel/src/index.ts` + `model-policy.ts`: remove the hardcoded `DEFAULT_MODEL='claude-sonnet-5'` and the `availableModels` literal; derive from keyed/uncooled providers + the shaped `llmModelPolicy`.
 - [ ] **T10** `repos/goal-host-vessel/src/llm-router.ts`: consult producers' advertised quota state so cooling-but-still-listed arms are excluded from Thompson candidacy (redundant once de-advertisement is per-arm, but defends against mirror TTL lag).
 

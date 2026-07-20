@@ -25,9 +25,14 @@ The invariant "dial in → found by all" is a **replication** guarantee, not a q
 3. **Honest `/bootstrap` (`discovery-vessel/src/index.ts`).** Refuse to emit loopback identity/discovery anchors; derive public anchors from the registered relay circuit / announced addrs, or return an explicit `not-a-join-door` marker so a dialing vessel never joins to an unreachable authority.
 4. **Hub-side peer wiring (`gen-env.sh`).** Give a hub/root a non-empty `PEER_DISCOVERY_ENDPOINTS` (spoke reflector) so hub-side resolve fan-out exists and cross-substrate findability does not depend solely on the push mirror.
 
-## Decision (flagged for ratification)
+## Decision (ratified by the operator 2026-07-19)
 
-**Co-located containers.** The invariant as stated — *"substrate containers co-located on syzygy.host communicate over the relay"* — is architecturally false for any co-located container that is Caddy-fronted and never joins the overlay (e.g. a corp-client). **Decide:** either (a) every co-located container that must be findable runs a federation transport pointed at the hub (making overlay-membership a deployment invariant), or (b) a host-local discovery/relay bridge is introduced so loopback siblings are findable without each running libp2p. Recommendation: (a) — it keeps one uniform join path (dial discovery ⇒ transport ⇒ registered), consistent with point-and-go; a host-local bridge is a second code path to maintain.
+**Findability must not be relay-gated — a direct connection is equivalent to a relay punchthrough.** The operator: *"the relay won't always be available due to networking conditions, so internally a direct connection should be equivalent to a punchthrough."* So the transport's reachability is: **prefer a direct dial when the peer is directly reachable** (co-located on a host, same LAN, public addr), and fall back to the hub relay **circuit** only when NAT/firewall blocks a direct path — with DCUtR hole-punching upgrading a relayed connection to direct when possible (standard libp2p). Consequences:
+
+- Every container that must be findable joins the overlay by running a federation transport and dialing discovery — one uniform join path (dial discovery ⇒ transport ⇒ registered), consistent with point-and-go. But its *reachability* is not "through the hub relay"; it is "directly if possible, relay-punchthrough if not, equivalent either way."
+- Co-located containers on one host reach each other over a **direct** (loopback/host-bridge) connection with **no relay dependency**; the relay is irrelevant to same-host findability and is only the NAT fallback for cross-host peers.
+- The registration-replication guarantee (above) is what makes a peer *findable*; direct-or-relay is how it is then *reached*. The two are separated: a relay outage degrades reachability for NATed cross-host peers only, never same-host findability, and never the registry.
+- A container that is Caddy-fronted and never runs a transport is deliberately outside the overlay (a client, not a peer) — reachable via its HTTP surface, not findable as a resolver. That is a role choice, not a gap.
 
 ## Non-goals
 

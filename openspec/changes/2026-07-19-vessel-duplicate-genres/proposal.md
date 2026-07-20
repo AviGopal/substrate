@@ -39,12 +39,15 @@ This single abstraction closes three separately-reported gaps at once:
 | `stateless` | **any** — pure function of input | analysis, ribosome, light-dispatch, relevance-sink | duplicates harmless; first-pick or balanced-pick both correct |
 | `stateful_data_owner` | **pin-to-owner** or **merge-by-anti-entropy** | concept-db, development-vessel (pin); activity-api (merge) | pin: resolve to the instance co-located with the data (law 11); merge: converge via upsert/anti-entropy |
 
-## Decisions resolved to law-grounded defaults (flagged for operator ratification)
+## Decisions (ratified by the operator 2026-07-19)
 
-1. **Identity duplicate policy → `standby-failover`** (not hard-reject). A second identity registers but is non-authoritative and promoted only on failure; auth validation resolves to the authority, never "any other resolver." Rationale: preserves availability without split-brain. *Ratify: standby-failover vs reject-second-registrant.*
-2. **Discovery replica policy → registry propagation** (the companion relay-replication change), so "any vessel dialing discovery is found by all" holds. The `unique_authoritative` genre applies to *authority*, not to the registry mirror — a mirrored remote identity must **not** become a second local authority. *Ratify.*
-3. **Stateful sub-genres split:** `stateful_data_owner_pin` (concept-db, development-vessel) vs `stateful_data_owner_merge` (activity-api, whose store is designed eventually-consistent). Two enum values because they behave differently on duplicates.
-4. **Human-target disambiguation → explicit `target_key`.** When multiple vaults are present for one org, `human_input` requires a named target rather than first-answer, so a solicitation reaches the intended human. *Ratify: explicit-target vs broadcast-first-answer.*
+1. **Identity is the namespace boundary — duplicate handling keys on secret-identity, not election.** identity-vessel *defines what is inside a discovery namespace vs outside*. So a second identity-vessel is disambiguated by whether it **shares the same secrets** (`API_KEY_SECRET` / signing keys) as the first:
+   - **Same secrets → replica** of one authority: interchangeable failover within the *same* namespace (merge/standby, never split-brain — they are the same authority).
+   - **Different secrets → a foreign federated namespace:** discovery registers it as a *separate* namespace (a peer network), not a competing authority in the local one. Its shapes are reachable only through the explicit federation boundary, and a mirrored remote identity **never** becomes a second local authority.
+   This makes `unique_authoritative` a property of *the namespace the secret defines* — and is the seam where per-vessel genre policy meets the full federated structure. (Supersedes the earlier standby-vs-reject framing: sameness-of-secret decides.)
+2. **Discovery replica policy → registry propagation** (companion relay-findability change) so "any vessel dialing discovery is found by all" holds — scoped to *within a namespace* (per decision 1). A propagated row carries its genre, so a mirrored remote row is typed correctly (a remote identity stays foreign, not local-authoritative).
+3. **Stateful sub-genres split:** `stateful_data_owner_pin` (concept-db, development-vessel) vs `stateful_data_owner_merge` (activity-api, eventually-consistent).
+4. **Human-target disambiguation → explicit `target_key`** when multiple vaults are present for one org.
 
 ## Approach
 

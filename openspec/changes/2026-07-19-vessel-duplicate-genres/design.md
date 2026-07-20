@@ -53,7 +53,9 @@ Add a `genre` field to each vessel in `scripts/substrate/vessels.inventory.json`
 
 ## 5. Interaction with LLM multi-arm (operator ask #7)
 
-The `interchangeable` genre is the mechanism for multi-key LLM: each `llm-resolver-*` unit is one arm; when its provider quota dies it de-advertises (already wired via `hasCompletionQuota`, made per-arm by the companion single-provider-scoping change to gen-env); discovery returns the live quota-having arms; selection is the learned posterior. "If only one has quota, it is used" falls out of de-advertisement; "best of the available subset" falls out of posterior ranking. See tasks T6–T8.
+The `interchangeable` genre is the *selection* mechanism for multi-key LLM: discovery returns the live quota-having arms and selection is the learned posterior. "If only one has quota, it is used" falls out of per-arm de-advertisement; "best of the available subset" falls out of posterior ranking.
+
+The *materialization* of the arms is **data-driven** (operator ratification 2026-07-19: "nothing hardcoded … in the hub setup we should be able to configure that multiple should start … adding new vessels [should be] simple regardless of where they are, so long as they are in the same discovery"). So the opus/haiku/google `.service` files stop being hand-authored: a single arm list — `[{id, model, provider, port}]` in one config location — is rendered at boot into one `llm-<id>` unit + one **single-provider-scoped** `llm-<id>.env` each (only that provider's key set), enabled iff its provider key is present (the existing `ExecCondition` pattern). Each arm's quota == its provider's quota, so it de-advertises cleanly; `vessel_id == model` holds for the router's arm learning. Adding an arm = one config line, and because it registers through discovery it is selectable fleet-wide within the namespace. This is the companion `llm-arms-data-driven` change; T6–T8 below track it.
 
 ## 6. Test / verification
 
