@@ -1,9 +1,0 @@
-{
-  "vessels": {
-    "terminal": {
-      "type": "http",
-      "endpoint": "http://localhost:9137",
-      "capabilities": ["terminalState", "terminalCommand", "terminalOutput"]
-    }
-  }
-}

@@ -210,3 +210,7 @@ scripts/substrate/workspace/
 /repos/metabob-cloud-dashboard/
 /repos/terminal/
 /repos/react-renderer/
+
+# machine-local MCP config (gitignored)
+.mcp.json
+.metabob/config.json
