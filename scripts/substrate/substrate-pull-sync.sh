@@ -92,6 +92,11 @@ healthy() { # port -> 0 if 200
   curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$1/health" 2>/dev/null | grep -q '^200$'
 }
 
+content_hash() { # dir -> md5 over the sorted .ts tree ("none" if dir missing)
+  [ -d "$1" ] || { echo none; return; }
+  (cd "$1" && find . -type f -name '*.ts' | sort | xargs -r md5sum | md5sum | cut -d' ' -f1)
+}
+
 synced=0; skipped=0; failed=0
 for d in "$CLONE_DIR"/*/; do
   [ -d "$d/.git" ] || continue
@@ -122,11 +127,22 @@ for d in "$CLONE_DIR"/*/; do
     fi
   fi
 
-  # 2. Mirror when the live runtime lags the clone.
+  # 2. Mirror when the live runtime's CONTENT lags the clone. A marker that
+  # records a git sha can lie about a tree it doesn't describe (marker == HEAD
+  # while /vessels never received the mirror -> stale runtime forever); so the
+  # skip decision compares the trees themselves, and the marker records the
+  # last ATTEMPTED content hash — its only remaining job is re-attempt
+  # suppression after an unhealthy revert (the substrateGap owns escalation).
   MARKER="$MARKER_DIR/$v.sha"
   LAST="$(cat "$MARKER" 2>/dev/null || true)"
-  if [ "$HEAD" = "$LAST" ]; then continue; fi
-  [ -d "$RUNTIME_DIR/$v" ] || { echo "$HEAD" > "$MARKER"; continue; }  # not part of this runtime
+  CLONE_HASH="$(content_hash "$d/src")"
+  [ -d "$RUNTIME_DIR/$v" ] || { echo "$CLONE_HASH" > "$MARKER"; continue; }  # not part of this runtime
+  RUNTIME_HASH="$(content_hash "$RUNTIME_DIR/$v/src")"
+  if [ "$CLONE_HASH" = "$RUNTIME_HASH" ]; then
+    [ "$LAST" = "$CLONE_HASH" ] || echo "$CLONE_HASH" > "$MARKER"
+    continue
+  fi
+  if [ "$LAST" = "$CLONE_HASH" ]; then continue; fi  # this exact content already attempted (unhealthy -> reverted); don't mirror/revert loop
 
   # 2b. Drain-awareness: never converge a vessel whose working plane shows a
   # LIVE authoring run. Marker is live when its mtime is fresh (< TTL) OR its
@@ -152,11 +168,11 @@ for d in "$CLONE_DIR"/*/; do
   fi
 
   PREV_GOOD="$(cat "$LAST_GOOD_DIR/$v" 2>/dev/null || true)"
-  log "$v: ${LAST:0:10} -> ${HEAD:0:10} — mirroring into $RUNTIME_DIR"
+  log "$v: content ${RUNTIME_HASH:0:10} -> ${CLONE_HASH:0:10} (git ${HEAD:0:10}) — mirroring into $RUNTIME_DIR"
   if ! /usr/local/bin/mirror-to-live "$v" "$CLONE_DIR"; then
     log "$v: mirror failed — skipping"; failed=$((failed+1)); continue
   fi
-  echo "$HEAD" > "$MARKER"
+  echo "$CLONE_HASH" > "$MARKER"
 
   # 3. Restart + health-gate (only for active long-running units).
   UNIT="$(vessel_unit "$v")"
@@ -175,7 +191,7 @@ for d in "$CLONE_DIR"/*/; do
           git -C "$d" reset --hard -q "$HEAD" 2>/dev/null || true
           systemctl restart "$UNIT" 2>/dev/null || true
         fi
-        # marker stays at $HEAD (last ATTEMPTED sha): live code is PREV_GOOD,
+        # marker stays at $CLONE_HASH (last ATTEMPTED content): live code is PREV_GOOD,
         # but re-attempting the same bad commit every tick would be a mirror/
         # revert loop — the substrateGap below owns the escalation instead.
         emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-unhealthy-$v\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$v unhealthy after pull-sync to ${HEAD:0:10}; reverted to ${PREV_GOOD:0:10} and halted the sync run\",\"status\":\"open\"}}}}"
