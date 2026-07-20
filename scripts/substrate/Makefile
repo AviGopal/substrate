@@ -115,9 +115,15 @@ IDENTITY_ENDPOINT ?=
 SURREALDB_URL ?=
 REDIS_URL ?=
 
-# ── Two-command spoke UX ─────────────────────────────────────────────────────
+# ── Point-and-go spoke UX ────────────────────────────────────────────────────
 # 1) make up API_KEY=<hub-issued> ANTHROPIC_API_KEY=<key> DISCOVERY_ENDPOINT=http://<hub>:18100
-# 2) make vessel-ctl enable federation-transport-vessel FED_SUBSTRATE_ID=<unique-id> [RELAY_MULTIADDR=<addr>]
+#    That is the WHOLE second-command step: a spoke boot with HUB_DISCOVERY_URL
+#    set now AUTO-enables federation-transport-vessel at boot (entrypoint.sh) and
+#    gen-env.sh auto-assigns a unique FED_SUBSTRATE_ID + FED_VESSEL_ID.
+# 2) (OPTIONAL override) make vessel-ctl enable federation-transport-vessel FED_SUBSTRATE_ID=<unique-id> [RELAY_MULTIADDR=<addr>]
+#    Only needed to PIN a specific substrate id or run the hub-side collision
+#    check (see spoke-federate.sh) — NOT a required step. The auto-enable at
+#    boot already stands the transport up.
 #
 # API_KEY is the operator-facing alias for METABOB_API_KEY. A hub
 # DISCOVERY_ENDPOINT with NO explicit ENABLED_ROLES implies a FEDERATED SPOKE:
@@ -363,6 +369,7 @@ run-live:
 	    -p $(call hp,18080):8080 \
 	    -p $(call hp,18090):8090 \
 	    -p $(call hp,18100):8100 \
+	    -p $(call hp,18101):8101 \
 	    -p $(call hp,18210):8210 \
 	    -p $(call hp,18250):8250 \
 	    -p $(call hp,18260):8260 \
@@ -419,6 +426,7 @@ run-live-obsidian:
 	    -p 18080:8080 \
 	    -p 18090:8090 \
 	    -p 18100:8100 \
+	    -p 18101:8101 \
 	    -p 18210:8210 \
 	    -p 18250:8250 \
 	    -p 18260:8260 \

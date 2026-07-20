@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 # spoke-federate.sh <container> <fed-substrate-id> [relay-multiaddr]
 #
-# Second half of the two-command spoke setup (see Makefile "Two-command spoke
-# UX"): enables the federation-transport-vessel on a running federated spoke —
+# OPTIONAL override, not a required step. A spoke boot with HUB_DISCOVERY_URL set
+# already AUTO-enables federation-transport-vessel at boot (entrypoint.sh) with a
+# gen-env-assigned FED_SUBSTRATE_ID, so `make up DISCOVERY_ENDPOINT=<hub>` is the
+# whole setup. Use this script only to PIN a specific fed-substrate-id or to run
+# the hub-side collision check before re-enabling the transport under that id.
+#
+# It enables the federation-transport-vessel on a running federated spoke —
 # upserts the federation identity into /etc/substrate/env, installs the dynamic
 # vessel from the manifest (vessel-ctl.sh), and waits for the transport health
 # surface. The relay multiaddr is auto-derived from the hub's own federation
