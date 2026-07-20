@@ -26,10 +26,14 @@ ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-$(jq -r '.providers.anthropic.apiKey // 
 [ -n "$ANTHROPIC_API_KEY" ] || { echo "ERROR: set ANTHROPIC_API_KEY"; exit 1; }
 SSH_KEY="${SSH_KEY:-}"
 SSH=(ssh -o StrictHostKeyChecking=accept-new); [ -n "$SSH_KEY" ] && SSH+=(-i "$SSH_KEY")
+# The image tag `make build` produces (Makefile: IMAGE:=ghcr.io/avigopal/substrate,
+# TAG:=dev). Build and run MUST reference the same tag, so it flows through to the
+# remote docker run below.
+IMAGE="${IMAGE:-ghcr.io/avigopal/substrate:dev}"
 
 echo "[deploy-hub] pulling $REPO@$BRANCH on $TARGET and building the hub there…"
 "${SSH[@]}" "$TARGET" \
-  PAT="$PAT" REPO="$REPO" BRANCH="$BRANCH" \
+  PAT="$PAT" REPO="$REPO" BRANCH="$BRANCH" IMAGE="$IMAGE" \
   ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" PUBLIC_IP="$PUBLIC_IP" \
   'bash -s' <<'REMOTE'
 set -euo pipefail
@@ -41,7 +45,8 @@ command -v jq     >/dev/null || apt-get install -y -qq jq
 command -v unzip  >/dev/null || apt-get install -y -qq unzip          # bun's installer needs unzip
 command -v docker >/dev/null || { curl -fsSL https://get.docker.com | sh; }
 
-# Token rewrite so SSH-form submodule URLs (git@github.com:...) clone over HTTPS+PAT.
+# Token rewrite so HTTPS-form submodule URLs (https://github.com/...) clone with the PAT.
+# (The git@github.com: rewrite is kept as a harmless fallback for any legacy SSH-form URL.)
 REW="url.https://x-access-token:${PAT}@github.com/.insteadOf"
 # Idempotency: a prior run that died before its scrub leaves multiple values;
 # plain `git config` then fails "cannot overwrite multiple values". Clear first
@@ -63,10 +68,9 @@ else
     "https://x-access-token:${PAT}@github.com/${REPO}.git" "$DIR"
 fi
 cd "$DIR"
-# Init all submodules EXCEPT metabob-mcp (different org — MetabobProject — the PAT can't
-# reach it, and it's not needed for any hub/compute vessel). Recursive-init aborts the
-# whole run on that one failure, so we init the explicit path list instead.
-SUB_PATHS=$(git config -f .gitmodules --get-regexp '\.path$' | awk '{print $2}' | grep -v 'metabob-mcp')
+# Init all submodules from the explicit path list (recursive-init aborts the whole run
+# on any single failure, so we init each recorded path independently).
+SUB_PATHS=$(git config -f .gitmodules --get-regexp '\.path$' | awk '{print $2}')
 git submodule update --init $SUB_PATHS 2>/dev/null || true
 # LOUD staleness check: a masked submodule-update failure bakes STALE vessel
 # source into the image (the hub shipped a discovery-vessel from weeks ago and
@@ -109,7 +113,7 @@ docker run -d --name substrate-live --privileged \
   -e HUB_DISCOVERY_URL="http://localhost:8100" \
   -p 18080:8080 -p 18100:8100 -p 18101:8101 -p 18210:8210 \
   -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
-  --tmpfs /run --tmpfs /run/lock metabob/substrate:dev
+  --tmpfs /run --tmpfs /run/lock "$IMAGE"
 
 # Scrub the token from persistent git config now that the clone/build is done.
 git config --global --unset-all "$REW" 2>/dev/null || true

@@ -9,7 +9,7 @@
 # needs to serve code scanning (analysis-vessel) and the how/why-of-code knowledge
 # graph (concept-db) to an agent, WITHOUT the substrate's self-development fleet.
 #
-# It reuses the same image the full substrate builds (metabob/substrate:dev); the
+# It reuses the same image the full substrate builds (ghcr.io/avigopal/substrate:dev); the
 # subset is selected at boot by ENABLED_VESSELS (see apply-inventory.sh). No new
 # image, no role-tag changes — existing hub/spoke/full deploys are unaffected.
 #
@@ -17,13 +17,13 @@
 #   ANTHROPIC_API_KEY=sk-ant-...  bash deploy-analysis-backend.sh
 #   NAME=analysis-backend  bash deploy-analysis-backend.sh      # custom container name
 #
-# Assumes `make -C scripts/substrate build` has produced metabob/substrate:dev.
+# Assumes `make -C scripts/substrate build` has produced ghcr.io/avigopal/substrate:dev.
 # Host ports follow the 18xxx→8xxx convention so an existing ~/.metabob/config.json
 # pointing at http://localhost:18080 keeps working.
 set -euo pipefail
 
 NAME="${NAME:-analysis-backend}"
-IMAGE="${IMAGE:-metabob/substrate:dev}"
+IMAGE="${IMAGE:-ghcr.io/avigopal/substrate:dev}"
 ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-$(jq -r '.providers.anthropic.apiKey // empty' "$HOME/.metabob/config.json" 2>/dev/null || true)}"
 
 # The exact unit allow-list. ENABLED_VESSELS masks every manageable unit NOT named

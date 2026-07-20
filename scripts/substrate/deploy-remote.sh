@@ -17,14 +17,14 @@
 # Also peer it to a substrate at <peer-ip>:18100 (shared HMAC secret):
 #   ... PEER_DISCOVERY=<peer-ip>:18100  FEDERATION_SIGNING_SECRET=<hex>  bash deploy-remote.sh root@<vm-ip>
 #
-# Operator host needs: docker, ssh/scp, a built image (defaults to metabob/substrate:dev,
-# builds it if missing). VM needs: ssh access (Docker + Bun auto-installed if absent).
+# Operator host needs: docker, ssh/scp, a built image (defaults to ghcr.io/avigopal/substrate:dev,
+# what `make build` produces; builds it if missing). VM needs: ssh access (Docker + Bun auto-installed if absent).
 # Open firewall: 18080-18270 (vessel APIs, as needed) + 30333/tcp (relay, if RUN_RELAY=1).
 set -euo pipefail
 
 TARGET="${1:?usage: deploy-remote.sh user@vm-ip   (set ANTHROPIC_API_KEY)}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-IMAGE="${IMAGE:-metabob/substrate:dev}"
+IMAGE="${IMAGE:-ghcr.io/avigopal/substrate:dev}"
 ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-$(jq -r '.providers.anthropic.apiKey // empty' "$HOME/.metabob/config.json" 2>/dev/null || true)}"
 PUBLIC_IP="${PUBLIC_IP:-}"                       # VM public IPv4 — required for RUN_RELAY
 RUN_RELAY="${RUN_RELAY:-0}"
