@@ -18,6 +18,8 @@ authoritative?: boolean      // for unique_authoritative: is THIS the authority 
 
 Default when absent: `stateless` (today's effective behavior for a non-llm shape is first-pick, which is the stateless policy — so absence is backward-compatible).
 
+**Declared vs learned (law 4 boundary):** `duplicate_policy` declares the *type* of choice, never the choice itself. Which interchangeable arm serves, which standby promotes, which present vault answers a broadcast — those dispositions remain learned (Thompson over traces). Declaring the genre is registration structure, like a shape name; it does not smuggle in a hand-written behavior the loop can't grade, because every resolution under a policy still lands in a trace and is graded.
+
 The field is **shape-visible** (law 1): it travels in the registration body, into the hub mirror rows, and is readable by any caller that resolves the shape — not an in-process constant.
 
 ## 2. Resolution algorithm (`registry.ts findByShape` → `resolvers.ts` → `index.ts /resolve`)

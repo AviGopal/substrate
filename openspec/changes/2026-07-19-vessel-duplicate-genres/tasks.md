@@ -14,7 +14,7 @@ Each task is a dispatchable goal (names a single `repos/<vessel>/src` file where
 - [ ] **T7** [config] The rendered `llm-<id>.env` scopes the unit to a single provider credential (only that provider's key), so its quota == its provider's quota. No per-provider clearing hardcoded in gen-env — it falls out of the arm list.
 - [ ] **T8** `repos/llm-resolver-vessel/src/index.ts`: make `hasCompletionQuota` / `syncCompletionAdvertisement` reflect the unit's **pinned** provider, so a dead arm de-advertises instead of silently serving via another provider.
 - [ ] **T9** `repos/llm-resolver-vessel/src/index.ts` + `model-policy.ts`: remove the hardcoded `DEFAULT_MODEL='claude-sonnet-5'` and the `availableModels` literal; derive from keyed/uncooled providers + the shaped `llmModelPolicy`.
-- [ ] **T10** `repos/goal-host-vessel/src/llm-router.ts`: consult producers' advertised quota state so cooling-but-still-listed arms are excluded from Thompson candidacy (redundant once de-advertisement is per-arm, but defends against mirror TTL lag).
+- [ ] ~~**T10**~~ DROPPED on law review: client-side quota filtering in goal-host is the per-caller-failover band-aid class the LAW forbids (resolve THROUGH discovery; de-advertise is the producer's job). Mirror-TTL lag is a discovery/replication defect and is fixed there (companion relay-findability change), not re-filtered in each caller.
 
 ## Identity authority
 - [ ] **T11** [decision] Ratify standby-failover vs reject-second-registrant.

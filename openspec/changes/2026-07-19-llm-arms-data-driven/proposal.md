@@ -24,6 +24,16 @@ Because each arm is one `(model, provider)` pinned instance registering through 
 
 The cutover is boot-critical and needs a container rebuild to validate end-to-end (`make -C scripts/substrate build` + a boot + a `registry_query llm_completion` showing the rendered arms), which is why it is staged behind the already-tested renderer rather than landed blind.
 
+## Law-1 boundary (added on self-review)
+
+The provider/model **pin** is bootstrap identity — it defines what the vessel *is* (which credential it holds), like `VESSEL_ID` and ports, and is legitimately env/unit-file material. Everything *behavioral* stays shaped: quota state is advertised (and withdrawn) through discovery at use time; selection across arms is the learned `interchangeable` genre policy; nothing routes on the pin directly. **Open gap filed with this change:** the arm *list* itself (`llm-arms.json` / `LLM_ARMS`) is boot-time config the substrate cannot observe as a shaped impulse — the fleet composition should additionally surface as a shape (e.g. an arm-inventory impulse emitted at render time) so the system can see, and eventually steer, its own arm fleet rather than only the operator editing config. Until then this change is materialization-only and must not grow behavioral switches.
+
+## Failure-mints-structure (law 6) — class detectors owed alongside the instance fixes
+
+- **Dead-arm-still-advertised:** an activity that cross-checks each advertised `llm_completion` producer against a probe completion (or its own quota report) and files a gap when an advertiser cannot serve — the class behind every credit-death recurrence.
+- **Enable-list omission:** an activity that diffs defined units (rendered arm set / units dir) against the enabled set at boot and files a gap for silently-never-started vessels (the google-arm class).
+- **Build/run tag drift:** an activity (or doctor check) that asserts every deploy script's run/save image reference matches the tag the build path produces (the metabob/ vs ghcr.io/ class).
+
 ## Non-goals
 
 Cross-provider routing *within* one arm (the whole point is one provider per arm). The `interchangeable` genre selection across arms is the companion genre change, not this one.
