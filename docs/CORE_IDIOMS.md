@@ -1,6 +1,6 @@
 # Core Idioms of the Substrate
 
-> **Status**: Consolidating reference. Names the recurring patterns the substrate
+> Names the recurring patterns the substrate
 > uses, defined in foundation-aligned vocabulary, with citations to the specs
 > that already use them. This document introduces no new primitives — every
 > idiom here is a composition of the four primitives named in
@@ -15,9 +15,8 @@
 > against this file populates `concept-db` with idiom-typed concepts.
 >
 > **Scope**: 13 idioms (idiom 13, "Neutral emitter", is an S2→S3 extension
-> appended to the original 12). The list is closed against the current foundation
-> model and the active 2026-05-23 spec wave; new idioms enter via spec proposals,
-> not via this file.
+> appended to the original 12). The list is closed against the foundation
+> model; new idioms enter via spec proposals, not via this file.
 
 ---
 
@@ -36,8 +35,8 @@ requires a minimum cohesive idiom set. Subsequent S2 → S3 motion (§27.S.5,
 | 5 | Validator-as-activity | **Yes** | Required for failure-mode detection. Foundation §61, `2026-04-26-validators-and-failure-modes`. |
 | 6 | Ribosome extraction | **Yes** | Required for topology growth. Foundation §62, §602–613. |
 | 7 | Closure-audit | **Yes** | Required for IAL §27.3.i. `2026-05-23-substrate-closure-properties` §"closure principle". |
-| 8 | Composition-chain credit propagation | **Yes** (shipped Phase 18.4) | Foundation §452–463; activity-api 1.20.9 chain-credit. |
-| 9 | State-space-signature conditional learning | **Yes** (shipped Phase 24) | Foundation §215–222 ("shape-conditioned"); activity-api 1.20.9 v1 conditional writes. |
+| 8 | Composition-chain credit propagation | **Yes** | Foundation §452–463; activity-api chain-credit. |
+| 9 | State-space-signature conditional learning | **Yes** | Foundation §215–222 ("shape-conditioned"); activity-api conditional writes. |
 | 10 | Forge variant testing | **Borderline** (S1→S2 named in §27.3.g.7) | Operator-dispatched pre-lift; substrate-dispatched post-lift. `2026-05-23-substrate-forge-vessel`. |
 | 11 | Push-away with cited rationale | **Borderline** (S2→S3 readiness measure per §27.S.6) | Data primitives needed pre-lift; rate-trend measured post-lift. `2026-05-23-intervention-tracking`. |
 | 12 | External-resolver-vesselization | **No — S2→S3 extension** | Post-lift acceleration; ribosome repointed at external calls. `2026-05-23-external-resolver-vesselization`. |
@@ -63,9 +62,8 @@ activity executes task-by-task; the full execution is recorded as a trace.
 This is the i → t → o **recall motion** of the foundation (§28–34).
 
 **Recurrence.** Every substrate execution. Foundation §353–457 ("The Execution
-Flow") gives the canonical decomposition. Implemented as
-`ActivityExecutor` (currently inside MiniBob, migrating to `ias-executor-ts`
-per `2026-05-19-ias-executor-as-canonical-host`).
+Flow") gives the canonical decomposition. The executor is the canonical
+IAS host (`ias-executor-as-canonical-host`).
 
 **Composability.** Composes pointer-as-shape (foundation §37–45), resolver
 dispatch (foundation §51–54), and trace recording. Output traces are consumed
@@ -94,10 +92,10 @@ and dispatch the impulse to that vessel's `POST /resolve` endpoint. The
 substrate carries no hardcoded vessel→shape map. Foundation §292–334
 ("Vessel Discovery", "Vessels Collaborate, Not Nest").
 
-**Recurrence.** Every cross-vessel resolution. activity-api advertises ~30
-read shapes and 14 `*_write` shapes (CLAUDE.md §"Discovery integration"); the
-unified `callVesselResolve()` in minibob (CLAUDE.md §"Core execution") honours
-the advertised contract.
+**Recurrence.** Every cross-vessel resolution. activity-api advertises read
+shapes and `*_write` shapes through the registry; the executor's unified
+vessel-resolve path honours the advertised contract rather than any hardcoded
+vessel→shape map.
 
 **Composability.** Composes pointer-as-shape (the dispatch key) and
 vessel-as-resolver-bundle (the dispatch target). Consumed by every idiom that
@@ -106,14 +104,14 @@ crosses a vessel boundary.
 **Lift-critical / S2→S3 extension.** Lift-critical. Without it the substrate
 cannot route between vessels without operator-pinned config.
 
-**Example invocation.** minibob has a `conceptGraph`-shaped impulse to resolve;
-queries discovery; discovery returns `concept-db` as the advertising vessel;
-minibob POSTs the impulse pointer to `concept-db /resolve`; concept-db
-resolves and returns the body.
+**Example invocation.** The executor has a `conceptGraph`-shaped impulse to
+resolve; queries discovery; discovery returns `concept-db` as the advertising
+vessel; the executor POSTs the impulse pointer to `concept-db /resolve`;
+concept-db resolves and returns the body.
 
 **Anti-pattern.** Hardcoded vessel URLs in any non-bootstrap code path. The
-super-repo's CLAUDE.md ("No per-vessel resolvers in minibob") forbids
-shape-specific vessel logic in the executor.
+substrate idiom forbids shape-specific vessel logic in the executor — no
+per-vessel resolvers baked into the host.
 
 ---
 
@@ -164,8 +162,7 @@ matching activities — without explicit wiring at the call site. Foundation
 **Recurrence.** Slot-binding, validator-dispatch, ribosome-extract,
 test-audit, intervention-detection (per
 `2026-05-23-intervention-tracking` §"Detection hooks") all attach via this
-idiom. Implemented in `repos/minibob/src/lifecycle-subscriptions.ts`
-(273 lines), migrating to `ias-executor-ts`.
+idiom. Implemented in the canonical IAS host's lifecycle-subscription layer.
 
 **Composability.** Composes Goal → Activity → Trace (idiom 1; lifecycle
 events are emitted by the executor mid-trace) and Discovery + Resolve (idiom 2;
@@ -324,8 +321,8 @@ posteriors). Sibling of state-space-signature conditional learning
 (idiom 9) — chain-credit conditions on the ancestor identity rather than
 on the pool signature.
 
-**Lift-critical / S2→S3 extension.** Lift-critical and shipped (activity-api
-1.20.9-dd83aa5).
+**Lift-critical / S2→S3 extension.** Lift-critical; implemented in activity-api's
+credit-propagation pass.
 
 **Example invocation.** `goal_processing_activity_driven` dispatches
 `recommend-activity`, which dispatches `debug-null-pointer`, which succeeds.
@@ -356,9 +353,9 @@ posterior) and trace recording (idiom 1; the signature is derived from
 trace inputs). Distinct from composition-chain credit (idiom 8): chain
 conditions on ancestor identity; this conditions on *pool composition*.
 
-**Lift-critical / S2→S3 extension.** Lift-critical and shipped. Memory
-note `percolation_2026_05_19_phase24_read_path`: v1 rows accumulate; sample
-size enables read path ~2026-05-26.
+**Lift-critical / S2→S3 extension.** Lift-critical. The conditional read path
+activates once accumulated conditional rows reach sufficient sample size per
+signature; below that it falls back to the marginal posterior.
 
 **Example invocation.** Activity `debug-null-pointer` has overall
 posterior `(α=45, β=3)`. Conditioned on signature `{error_log, source_code}`

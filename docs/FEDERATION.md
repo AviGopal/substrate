@@ -132,7 +132,7 @@ GITHUB_PAT=<repo-scope>  ANTHROPIC_API_KEY=sk-ant-...  SSH_KEY=~/.ssh/<key> \
 ```
 
 `deploy-hub.sh` **pulls the repo and builds on the VM** (no multi-GB image ship): clones
-`AviGopal/substrate` (+ submodules minus `metabob-mcp`), builds, runs `ENABLED_ROLES=hub`,
+`AviGopal/substrate` (+ submodules), builds, runs `ENABLED_ROLES=hub`,
 seeds the shared org, and starts the relay. Bare-Ubuntu deps (make/bun/unzip) are
 auto-installed.
 
@@ -147,20 +147,36 @@ The supported spoke topology is the **federated spoke**: a local registry
 trace store and identity. Vessels register **locally**; the
 federation-transport-vessel mirrors the local capability surface into the hub
 as `<vessel>@<substrate-id>` rows dialable over the relay. This is what keeps a
-NAT'd machine reachable and its Obsidian surface local-first. Setup is two
-commands:
+NAT'd machine reachable and its Obsidian surface local-first. Setup is **one
+command** — point-and-go:
 
 ```bash
-make -C scripts/substrate up API_KEY=<hub-issued-key> ANTHROPIC_API_KEY=<key> \
+make -C scripts/substrate up API_KEY=<hub-issued-key> \
   DISCOVERY_ENDPOINT=http://<hub-host>:18100
-make -C scripts/substrate vessel-ctl enable federation-transport-vessel \
-  FED_SUBSTRATE_ID=<unique-id>          # relay multiaddr auto-derived from the hub
 ```
 
-(`FED_SUBSTRATE_ID` must be unique per substrate: it names the mirror rows AND
-salts the transport's libp2p key — two substrates sharing an id derive the same
-peer id and fight over the relay reservation. The enable step refuses ids
-already present in the hub registry.)
+A remote `DISCOVERY_ENDPOINT` is what makes this container a spoke: `gen-env.sh`
+infers `role=spoke` from the remote host, derives the hub discovery, activity
+store, and identity endpoints from that one URL, and auto-generates + persists a
+unique `FED_SUBSTRATE_ID` / `FED_VESSEL_ID`. At boot, `entrypoint.sh`
+auto-enables the federation-transport-vessel whenever a hub is set, and the
+transport self-derives its relay from `<hub-discovery>/bootstrap` — so the
+ingress/egress fall out of the discovery anchor alone, with no relay multiaddr
+or federation id to supply. A spoke also needs **no local LLM key**: it inherits
+the hub's LLM arms through discovery.
+
+**Optional override — pin a specific id or relay.** The auto-generated
+`FED_SUBSTRATE_ID` is unique per substrate: it names the mirror rows AND salts
+the transport's libp2p key — two substrates sharing an id derive the same peer
+id and fight over the relay reservation. To pin a chosen id (or a specific
+relay), enable the transport explicitly instead of relying on the boot default:
+
+```bash
+make -C scripts/substrate vessel-ctl enable federation-transport-vessel \
+  FED_SUBSTRATE_ID=<unique-id> [RELAY_MULTIADDR=<addr>]
+```
+
+(The enable step refuses ids already present in the hub registry.)
 
 A **thin spoke** — all control-plane calls pointed straight at the hub, no
 local registry — remains available by passing the endpoints explicitly
@@ -203,12 +219,13 @@ The sidecar reserves on the relay, serves resolves over libp2p (proxying to the 
 vessel), and registers `protocol:"libp2p"` with the hub discovery. The hub
 then resolves those shapes over the relay — the vessel never learns libp2p is involved.
 
-## Verified
+## End-to-end harness
 
-`repos/libp2p-federation-transport/federation-hub-e2e.ts` proves the full loop against a
-live hub: a NATed node reserves on the public relay → registers into the hub namespace →
-hub discovery echoes the circuit multiaddr → a second node resolves the shape **through
-the public relay**. Run it with `RELAY_MULTIADDR`, `DISCOVERY_URL`, `HUB_KEY` set.
+`repos/libp2p-federation-transport/federation-hub-e2e.ts` exercises the full loop
+against a hub: a NATed node reserves on the public relay → registers into the hub
+namespace → hub discovery echoes the circuit multiaddr → a second node resolves the
+shape **through the public relay**. Run it with `RELAY_MULTIADDR`, `DISCOVERY_URL`,
+`HUB_KEY` set to confirm the mechanism against any live deployment.
 
 ## Components
 
