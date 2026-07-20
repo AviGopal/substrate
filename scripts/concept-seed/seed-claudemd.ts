@@ -65,7 +65,6 @@ const SOURCES: SourceFile[] = [
   { path: "repos/development-vessel/CLAUDE.md", source_type: "vessel_construction_pattern", max_level: 2 },
   { path: "repos/activity-api/CLAUDE.md", source_type: "vessel_construction_pattern", max_level: 2 },
   { path: "repos/concept-db/CLAUDE.md", source_type: "vessel_construction_pattern", max_level: 2 },
-  { path: "repos/metabob-mcp/CLAUDE.md", source_type: "vessel_construction_pattern", max_level: 2 },
   { path: "repos/discovery-vessel/CLAUDE.md", source_type: "vessel_construction_pattern", max_level: 2 },
   { path: "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md", source_type: "impulse_activity_pattern", max_level: 2 },
 ];
