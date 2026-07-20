@@ -31,5 +31,28 @@ ctx="$(echo "$resp" | jq -r --arg ep "$EP" '
 ')" || exit 0
 
 [ -z "$ctx" ] && exit 0
+
+# Concept priors: the substrate's relevance-ranked constitutional knowledge
+# (concept_select_for_prompt → conceptPromptPriors), resolved through the
+# discovery gateway. Same fail-open contract as the memory block above.
+GW="${DISCOVERY_ENDPOINT:-http://localhost:18100}"
+APIKEY="$(jq -r '.metabob.apiKey // .apiKey // empty' "$HOME/.metabob/config.json" 2>/dev/null)"
+if [ -n "$APIKEY" ]; then
+  priors="$(curl -s --max-time 8 -X POST "$GW/resolve" \
+    -H "Authorization: ApiKey $APIKEY" -H 'Content-Type: application/json' \
+    -d '{"pointer":{"type":"concept_select_for_prompt"}}' 2>/dev/null)"
+  if [ -n "$priors" ] && echo "$priors" | jq -e '.success and ((.body.selected | length) > 0)' >/dev/null 2>&1; then
+    cctx="$(echo "$priors" | jq -r '
+      .body as $b
+      | "\n\n## Concept priors (conceptPromptPriors — \($b.selected_count) of \($b.candidates_considered) candidates, relevance-selected by the substrate)\n"
+        + "Full bodies: resolve shape `concept` with pointer.concept_id via the discovery gateway.\n"
+        + ([.body.selected[0:15][]
+            | "- **\(.name // (.id | sub("^concept:";"")))** [\(.source_type)] — \((.content // "") | gsub("[\n\r]+";" ") | .[0:400])"
+          ] | join("\n"))
+    ' 2>/dev/null)"
+    [ -n "$cctx" ] && ctx="$ctx$cctx"
+  fi
+fi
+
 jq -nc --arg c "$ctx" '{hookSpecificOutput:{hookEventName:"SessionStart",additionalContext:$c}}'
 exit 0
