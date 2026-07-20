@@ -29,6 +29,7 @@ set -euo pipefail
 HUB="${HUB:-root@138.197.116.56}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/syzygy_deploy}"
 HUB_CONTAINER_IP="${HUB_CONTAINER_IP:-172.17.0.2}"
+HUB_PORT="${HUB_PORT:-8221}"  # llm-resolver-opus wrapper; full provider registry + cascade once the fixed image lands
 PORT=18225
 
 # The address containers use to reach this host. Rootless docker here has no
@@ -48,9 +49,9 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-echo "[bootstrap-google-arm] tunnel ${BIND_IP}:${PORT} → hub ${HUB_CONTAINER_IP}:8225"
+echo "[bootstrap-google-arm] tunnel ${BIND_IP}:${PORT} → hub ${HUB_CONTAINER_IP}:${HUB_PORT}"
 ssh -N -o StrictHostKeyChecking=accept-new -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 \
-    -i "$SSH_KEY" -L "${BIND_IP}:${PORT}:${HUB_CONTAINER_IP}:8225" "$HUB" &
+    -i "$SSH_KEY" -L "${BIND_IP}:${PORT}:${HUB_CONTAINER_IP}:${HUB_PORT}" "$HUB" &
 TUNNEL_PID=$!
 sleep 2
 kill -0 "$TUNNEL_PID" || { echo "tunnel failed"; exit 1; }
