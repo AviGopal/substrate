@@ -29,7 +29,13 @@ log() { echo "[mirror-to-live] $*"; }
 # severs the live runtime's source (observed obsidian-vessel, 2026-07-13).
 # These clones exist solely to push committed state — restore to HEAD first so
 # the mirror always reflects the commit, never push-leg working-tree damage.
-git -C "$SRC" checkout -f -- . 2>/dev/null || log "WARN could not restore $SRC working tree to HEAD"
+# NOTE: `checkout -f -- .` restores from the INDEX, which the cutover push leg leaves
+# STALE (committed HEAD ahead of a working tree/index that still reflects the pre-commit
+# state) — so the mirror shipped OLD code even when HEAD carried a freshly-landed commit.
+# That is a root cause of "landed on origin/dev but never went live" hollow landings
+# (self-authored AND operator commits). `reset --hard HEAD` forces BOTH the index and the
+# working tree to the committed HEAD — which is what "restore to HEAD" always intended.
+git -C "$SRC" reset --hard HEAD 2>/dev/null || log "WARN could not restore $SRC working tree to HEAD"
 
 # Repo package.json declares workspace deps as RELATIVE file: paths
 # (file:../ias-executor-ts, file:../../packages/...). The runtime layout is
