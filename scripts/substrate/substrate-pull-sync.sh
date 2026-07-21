@@ -174,6 +174,49 @@ for d in "$CLONE_DIR"/*/; do
   fi
   echo "$CLONE_HASH" > "$MARKER"
 
+  # 2c. Shared-package fan-out. A mirrored clone with NO unit of its own but a
+  # build step that OTHER runtime vessels file:-dep (e.g. @avigopal/ias-executor-ts,
+  # imported as its BUILT dist via absolute per-file symlinks in each consumer's
+  # node_modules). Mirroring src alone leaves consumers on a stale dist. Build to a
+  # STAGING dir and verify BEFORE any swap (a bad build touches no consumer), atomic-
+  # swap dist (consumer symlinks are absolute, so this propagates by reference), then
+  # restart each consumer staggered + health-gated; any consumer unhealthy restores the
+  # prior dist, restarts the already-bounced consumers, emits a gap and HALTS. Reuses
+  # vessel_unit/health_port/healthy/STAGGER_SECONDS/LAST_GOOD_DIR/emit_gap. Generic:
+  # consumers are discovered at use-time (no hardcoded package/consumer list).
+  SELF_UNIT="$(vessel_unit "$v")"
+  if { [ -z "$SELF_UNIT" ] || [ "${SELF_UNIT%.service}" = "$SELF_UNIT" ]; } \
+     && [ -d "$RUNTIME_DIR/$v/dist" ] \
+     && grep -q '"build"[[:space:]]*:' "$RUNTIME_DIR/$v/package.json" 2>/dev/null; then
+    CONSUMERS="$(grep -lE "file:[^\"]*/$v\"" "$RUNTIME_DIR"/*/package.json 2>/dev/null | xargs -r -n1 dirname | xargs -r -n1 basename | grep -vx "$v" || true)"
+    if [ -n "$CONSUMERS" ]; then
+      log "$v: shared package changed -- rebuilding dist for consumers: $(echo $CONSUMERS | tr '\n' ' ')"
+      STAGE="$RUNTIME_DIR/$v/.dist.stage"; rm -rf "$STAGE"
+      if ! (cd "$RUNTIME_DIR/$v" && /root/.bun/bin/bun run tsc --project tsconfig.build.json --outDir "$STAGE") || [ ! -s "$STAGE/index.js" ]; then
+        log "$v: BUILD FAILED -- keeping live dist, no consumer touched"; rm -rf "$STAGE"
+        emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-build-$v\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$v build failed at ${HEAD:0:10}; live dist kept, no consumer touched\",\"status\":\"open\"}}}}"
+        failed=$((failed+1)); continue
+      fi
+      rm -rf "$RUNTIME_DIR/$v/.dist.prev"; mv "$RUNTIME_DIR/$v/dist" "$RUNTIME_DIR/$v/.dist.prev"; mv "$STAGE" "$RUNTIME_DIR/$v/dist"
+      BOUNCED=""; bad=""
+      for c in $CONSUMERS; do
+        CU="$(vessel_unit "$c")"; CP="$(health_port "$c")"
+        [ -n "$CU" ] && [ "${CU%.service}" != "$CU" ] || continue
+        systemctl is-active "$CU" >/dev/null 2>&1 || continue
+        systemctl restart "$CU" 2>/dev/null || true; BOUNCED="$BOUNCED $c"; sleep "$STAGGER_SECONDS"
+        if [ -n "$CP" ]; then ok=0; for _ in 1 2 3 4 5; do healthy "$CP" && { ok=1; break; }; sleep 4; done; [ "$ok" = 1 ] || { bad="$c"; break; }; fi
+      done
+      if [ -n "$bad" ]; then
+        log "$v: consumer $bad UNHEALTHY after fan-out -- restoring prior dist, restarting bounced, HALTING"
+        rm -rf "$RUNTIME_DIR/$v/dist"; mv "$RUNTIME_DIR/$v/.dist.prev" "$RUNTIME_DIR/$v/dist"
+        for c in $BOUNCED; do systemctl restart "$(vessel_unit "$c")" 2>/dev/null || true; done
+        emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-fanout-$v\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$v fan-out to ${HEAD:0:10} left $bad unhealthy; dist reverted, run halted\",\"status\":\"open\"}}}}"
+        failed=$((failed+1)); break
+      fi
+      rm -rf "$RUNTIME_DIR/$v/.dist.prev"; echo "$HEAD" > "$LAST_GOOD_DIR/$v"; log "$v: fan-out healthy across$BOUNCED"; synced=$((synced+1)); continue
+    fi
+  fi
+
   # 3. Restart + health-gate (only for active long-running units).
   UNIT="$(vessel_unit "$v")"
   PORT="$(health_port "$v")"
