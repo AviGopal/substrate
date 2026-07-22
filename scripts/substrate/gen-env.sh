@@ -377,7 +377,17 @@ TRACE_RETENTION_DEFAULT_FAILURE_CAP=2000
 # context. All Thompson posteriors (variant_performance_metrics /
 # context_thompson_scores / activity_metrics) are stored separately and updated
 # incrementally at ingest, so pruning cold traces loses NO learned state.
-TRACE_STORE_CAP=40000
+# Raised 40000->150000 (operator decision 2026-07-22): the per-stratum sweep
+# legitimately retains ~108K across 1000+ activity_ids, so a 40K global cap
+# could never clear — the health observer alarmed on a global count the
+# per-stratum enforcer never bounded. The global-ceiling valve below now
+# enforces THIS number (globalCeiling defaults to TRACE_STORE_CAP), so SENSE ==
+# ENFORCE at 150K: keeps all current traces, bounds future growth.
+TRACE_STORE_CAP=150000
+# Global-ceiling reservoir valve (trace-retention.ts): after the per-stratum
+# sweep, prune oldest-beyond-ceiling so the store's TOTAL size is bounded to the
+# number the health observer senses. Defaults its ceiling to TRACE_STORE_CAP.
+TRACE_RETENTION_GLOBAL_CEILING_ENABLED=true
 TRACE_STORE_HOT_WINDOW_DAYS=3
 TRACE_STORE_RESERVOIR_PER_ACTIVITY=25
 

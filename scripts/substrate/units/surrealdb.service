@@ -12,6 +12,14 @@ EnvironmentFile=/etc/substrate/env
 # SURREAL_ROCKSDB_BLOCK_CACHE_SIZE; see repos/deployment/charts/surrealdb).
 # 4Gi cache + write buffers + runtime + compaction peak stays well under 26G.
 Environment=SURREAL_ROCKSDB_BLOCK_CACHE_SIZE=4294967296
+# cgroup memory cap (persisted from the live `systemctl set-property` applied
+# 2026-07-22): bound the RocksDB working set so an OOM kills ONLY surreal (which
+# self-restarts) instead of cascading the host. MemoryHigh throttles reclaim
+# before the hard MemoryMax OOM. Matches the 22G/26G the block-cache math above
+# assumes; previously live-only (set-property), so a redeploy lost it.
+MemoryAccounting=yes
+MemoryHigh=22G
+MemoryMax=26G
 ExecStart=/usr/local/bin/surreal start \
     --bind 127.0.0.1:8000 \
     --user root \
