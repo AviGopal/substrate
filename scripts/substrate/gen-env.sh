@@ -104,22 +104,20 @@ if [[ -z "$API_KEY_SECRET" ]]; then
   fi
 fi
 
-# Legacy-key acceptance bridge (dual-secret rotation — see identity-vessel
-# validation.ts). On some existing datastores a STRONG API_KEY_SECRET was
-# persisted AFTER the fleet keys had already been issued under the legacy public
-# default ('dev-secret-change-in-production'), and those keys were never
-# re-issued. A clean recreate then loads the strong persisted secret and every
-# pre-existing key fails signature (registry goes hollow, 401 storm). Accept the
-# legacy-signed keys via API_KEY_SECRET_PREVIOUS while all NEW keys are signed
-# with the strong current secret — this makes a clean boot from image+env+volumes
-# non-destructive to auth (law 11). Only bridge when the current secret is NOT
-# itself the legacy default (else there's nothing to bridge). Operator-extendable
-# (comma-separated retired secrets) and persisted so it survives recreates.
-# REMOVE this bridge once the fleet's keys are re-issued under the strong secret.
+# Dual-secret rotation window (identity-vessel validation.ts): a presented key is
+# accepted if it validates against API_KEY_SECRET *or* any comma-separated secret
+# in API_KEY_SECRET_PREVIOUS. EXPLICIT / persisted opt-in ONLY — never
+# auto-derived. (History: a transitional auto-bridge to 'dev-secret-change-in-
+# production' was added 2026-07-23 when a strong API_KEY_SECRET had been persisted
+# AFTER the fleet keys were issued under the legacy public default and never
+# re-issued — a clean recreate then failed every signature. That was resolved at
+# the ROOT by RE-SIGNING the fleet key under the strong secret (persisted
+# METABOB_API_KEY now matches the persisted strong API_KEY_SECRET, so a clean boot
+# validates with no bridge), and the legacy dev-default is now REJECTED. Auto-
+# deriving the bridge again would re-open acceptance of forgeable legacy keys, so
+# it is retired. Set API_KEY_SECRET_PREVIOUS explicitly only for a deliberate
+# secret rotation, and drop it once all keys are re-issued.)
 API_KEY_SECRET_PREVIOUS="${API_KEY_SECRET_PREVIOUS:-$(persisted_secret API_KEY_SECRET_PREVIOUS)}"
-if [[ -z "$API_KEY_SECRET_PREVIOUS" && "$API_KEY_SECRET" != "dev-secret-change-in-production" && -e /var/lib/surrealdb/data.db ]]; then
-  API_KEY_SECRET_PREVIOUS="dev-secret-change-in-production"
-fi
 
 # Bootstrap key: used only for the initial identity-vessel signup call.
 # After seed-identity.ts runs, vessels use the HMAC keys it issues.
