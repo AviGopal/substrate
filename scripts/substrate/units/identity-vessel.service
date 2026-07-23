@@ -1,7 +1,7 @@
 [Unit]
 Description=identity-vessel
 After=surrealdb.service valkey.service discovery-vessel.service
-Requires=surrealdb.service
+Wants=surrealdb.service
 
 [Service]
 Type=simple

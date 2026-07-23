@@ -1,7 +1,7 @@
 [Unit]
 Description=Typecheck-scenario generator — turn tsc errors into concrete patchable scenarios (funnel fuel)
 After=development-vessel.service activity-api.service
-Requires=development-vessel.service
+Wants=development-vessel.service
 
 # Smoke test:
 #   docker exec substrate-live systemctl start typecheck-scenario-gen.service

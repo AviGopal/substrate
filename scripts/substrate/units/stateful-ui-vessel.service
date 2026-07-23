@@ -1,7 +1,7 @@
 [Unit]
 Description=stateful-ui-vessel
 After=discovery-vessel.service development-vessel.service
-Requires=discovery-vessel.service
+Wants=discovery-vessel.service
 
 [Service]
 Type=simple

@@ -16,7 +16,7 @@ Description=Operator-goal generator — the convergent enabler (exercise the lea
 #   docker exec substrate-live tail -n 1 /workspace/metrics/operator-goal-gen.jsonl
 #   docker exec substrate-live bun ${SUBSTRATE_RUN_DIR}/operator-goal-signal.ts  # enrichment signal
 After=activity-api.service surrealdb.service goal-host-vessel.service
-Requires=surrealdb.service
+Wants=surrealdb.service
 
 [Service]
 Type=oneshot

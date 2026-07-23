@@ -13,7 +13,7 @@ Description=Auto-describe resolvers — the substrate DESCRIBES ITS OWN undescri
 # Smoke: docker exec substrate-live systemctl start auto-describe-resolvers.service
 #        docker exec substrate-live tail -n 5 /workspace/metrics/auto-describe.jsonl
 After=activity-api.service surrealdb.service discovery-vessel.service llm-resolver-vessel.service
-Requires=surrealdb.service
+Wants=surrealdb.service
 
 [Service]
 Type=oneshot

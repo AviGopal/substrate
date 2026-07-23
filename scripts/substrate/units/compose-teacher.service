@@ -15,7 +15,7 @@ Description=Composition teacher — substrate-native bootstrap of organic capabi
 #   docker exec substrate-live journalctl -u compose-teacher.service --no-pager -n 5
 #   # last line is JSON: {action, composite, execution_id, star_ratio, headroom, ...}
 After=activity-api.service surrealdb.service goal-host-vessel.service
-Requires=surrealdb.service
+Wants=surrealdb.service
 
 [Service]
 Type=oneshot

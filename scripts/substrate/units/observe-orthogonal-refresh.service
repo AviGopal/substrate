@@ -9,7 +9,7 @@ Description=Orthogonal-observation refresh — run observe-orthogonal-patterns o
 # runs never clobber the prior observations (latest is only repointed on a non-empty
 # decision array).
 After=development-vessel.service activity-api.service llm-resolver-vessel.service
-Requires=development-vessel.service
+Wants=development-vessel.service
 
 # Smoke test:
 #   docker exec substrate-live systemctl start observe-orthogonal-refresh.service

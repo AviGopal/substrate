@@ -7,7 +7,7 @@ Description=Self-alteration funnel drain — fire apply_proposal_as_patch (decou
 # patch_with_tools verifier (~50%) and the FAVORABLE-typecheck cutover gate still
 # decide what lands — a bad proposal is rejected, not landed.
 After=development-vessel.service activity-api.service
-Requires=development-vessel.service
+Wants=development-vessel.service
 
 # Smoke test:
 #   docker exec substrate-live systemctl start funnel-drain.service

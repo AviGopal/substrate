@@ -1,7 +1,12 @@
 [Unit]
 Description=activity-api
-After=identity-vessel.service discovery-vessel.service
-Requires=surrealdb.service valkey.service
+After=surrealdb.service valkey.service identity-vessel.service discovery-vessel.service
+# Soft deps (Wants, not Requires): activity-api boots listener-first, serves
+# /health, and registers with discovery regardless of SurrealDB/valkey state,
+# converging per-request. A hard Requires= would propagate SurrealDB's documented
+# OOM/self-restart loop into an activity-api restart cascade — the coupling this
+# severs. After= (added surrealdb/valkey, previously missing) keeps boot ordering.
+Wants=surrealdb.service valkey.service
 
 [Service]
 Type=simple
@@ -12,8 +17,14 @@ Environment=TASK_GENERATION_ENABLED=false
 Environment=VESSEL_ID=activity-api-local
 Environment=VESSEL_ENDPOINT=http://127.0.0.1:8080
 WorkingDirectory=/vessels/activity-api
-ExecStartPre=/root/.bun/bin/bun /vessels/activity-api/scripts/init-database.ts
+# `-` prefix: init-database's non-zero exit (e.g. SurrealDB unreachable) is
+# non-fatal — ExecStart runs anyway and the server converges. init-database
+# self-bounds its wait + per-statement fetch timeouts so it can't HANG the start.
+ExecStartPre=-/root/.bun/bin/bun /vessels/activity-api/scripts/init-database.ts
 ExecStart=/root/.bun/bin/bun /vessels/activity-api/src/index.ts
+# 300s (not the 90s default that was observed timing out under concurrent-restart
+# DB contention): headroom above the historical contention band.
+TimeoutStartSec=300
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

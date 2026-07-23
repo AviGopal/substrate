@@ -7,7 +7,7 @@ Description=Model-reality audit — aggregate forward/backward-model vs trace-re
 # traces. Emits substrateGaps for divergences (EMIT_GAPS=1) so model-reality
 # mismatches flow into the self-alteration loop instead of going undetected.
 After=activity-api.service surrealdb.service
-Requires=surrealdb.service
+Wants=surrealdb.service
 
 # Smoke test:
 #   docker exec substrate-live systemctl start model-reality-audit.service

@@ -6,7 +6,7 @@ Description=Composition-edge reconciler — derive activity_composition_graph fr
 # model) reads. This oneshot re-derives the full edge set from the trace store
 # and UPSERTs it (idempotent), keeping the backward-model substrate fresh.
 After=activity-api.service surrealdb.service
-Requires=surrealdb.service
+Wants=surrealdb.service
 
 # Smoke test:
 #   docker exec substrate-live systemctl start composition-edge-reconcile.service

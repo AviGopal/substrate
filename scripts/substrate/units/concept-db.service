@@ -12,7 +12,11 @@ Environment=VESSEL_ID=concept-db-local
 Environment=VESSEL_ENDPOINT=http://127.0.0.1:8260
 EnvironmentFile=-/etc/substrate/concept-db.env
 WorkingDirectory=/vessels/concept-db
-ExecStartPre=/root/.bun/bin/bun /vessels/concept-db/scripts/apply-schema.ts
+# `-` prefix: apply-schema's non-zero exit is non-fatal (ExecStart runs anyway).
+# apply-schema self-bounds its SurrealDB reachability wait so it can't HANG start.
+ExecStartPre=-/root/.bun/bin/bun /vessels/concept-db/scripts/apply-schema.ts
+# 300s headroom (default ~90s could SIGKILL under concurrent-restart DB contention).
+TimeoutStartSec=300
 ExecStart=/root/.bun/bin/bun /vessels/concept-db/src/index.ts
 Restart=on-failure
 RestartSec=5

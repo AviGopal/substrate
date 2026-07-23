@@ -5,7 +5,7 @@ Description=identity seeder — mint org+keys on first boot, reseed env, restart
 # exists, and reseed-restart.sh only restarts vessels when the key actually
 # changed (never on a warm boot).
 After=identity-vessel.service activity-api.service
-Requires=identity-vessel.service
+Wants=identity-vessel.service
 
 [Service]
 Type=oneshot

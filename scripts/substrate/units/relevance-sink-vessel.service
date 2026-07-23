@@ -1,7 +1,7 @@
 [Unit]
 Description=relevance-sink-vessel — owns impulse-relevance penalty writes (decoupled from activity-api trace store)
 After=surrealdb.service
-Requires=surrealdb.service
+Wants=surrealdb.service
 [Service]
 Type=simple
 EnvironmentFile=/etc/substrate/env
