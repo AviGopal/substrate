@@ -104,6 +104,23 @@ if [[ -z "$API_KEY_SECRET" ]]; then
   fi
 fi
 
+# Legacy-key acceptance bridge (dual-secret rotation — see identity-vessel
+# validation.ts). On some existing datastores a STRONG API_KEY_SECRET was
+# persisted AFTER the fleet keys had already been issued under the legacy public
+# default ('dev-secret-change-in-production'), and those keys were never
+# re-issued. A clean recreate then loads the strong persisted secret and every
+# pre-existing key fails signature (registry goes hollow, 401 storm). Accept the
+# legacy-signed keys via API_KEY_SECRET_PREVIOUS while all NEW keys are signed
+# with the strong current secret — this makes a clean boot from image+env+volumes
+# non-destructive to auth (law 11). Only bridge when the current secret is NOT
+# itself the legacy default (else there's nothing to bridge). Operator-extendable
+# (comma-separated retired secrets) and persisted so it survives recreates.
+# REMOVE this bridge once the fleet's keys are re-issued under the strong secret.
+API_KEY_SECRET_PREVIOUS="${API_KEY_SECRET_PREVIOUS:-$(persisted_secret API_KEY_SECRET_PREVIOUS)}"
+if [[ -z "$API_KEY_SECRET_PREVIOUS" && "$API_KEY_SECRET" != "dev-secret-change-in-production" && -e /var/lib/surrealdb/data.db ]]; then
+  API_KEY_SECRET_PREVIOUS="dev-secret-change-in-production"
+fi
+
 # Bootstrap key: used only for the initial identity-vessel signup call.
 # After seed-identity.ts runs, vessels use the HMAC keys it issues.
 # Stored in /workspace/.substrate-secrets so restarts reuse the same value.
@@ -230,6 +247,7 @@ cat > /etc/substrate/env <<EOF
 JWT_SECRET="${JWT_SECRET}"
 SURREAL_PASS="${SURREAL_PASS}"
 API_KEY_SECRET="${API_KEY_SECRET}"
+API_KEY_SECRET_PREVIOUS="${API_KEY_SECRET_PREVIOUS:-}"
 METABOB_API_KEY="${METABOB_API_KEY}"
 SUBSTRATE_ADMIN_KEY="${SUBSTRATE_ADMIN_KEY:-}"
 # LLM provider credentials — at least one must be non-empty (validated above).
