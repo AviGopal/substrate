@@ -28,6 +28,13 @@
 set -uo pipefail
 CONTAINER="${CONTAINER:-substrate-live}"
 DEV_VESSEL="${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}"
+# Shared-DB liveness probe target + budgets (see db_under_pressure below). The
+# whole fleet's DB-backed vessels share ONE SurrealDB; when it saturates, every
+# one of their /health checks times out at once — restarting them can't fix the
+# DB and only piles on startup load, so we detect DB pressure and back off.
+SURREAL_URL="${SURREALDB_URL:-http://127.0.0.1:8000}"
+DB_PROBE_TIMEOUT="${DB_PROBE_TIMEOUT:-5}"   # per-probe budget (s) for the cheap RETURN 1 liveness check
+DB_PROBE_GAP="${DB_PROBE_GAP:-3}"           # seconds between the two consecutive probes
 
 # Change-window (2026-07-09 contiguous-shape-flow §5): while a change-set holds
 # the change_window lease, a vessel mid-cutover is ALLOWED to look broken; a
@@ -113,10 +120,62 @@ emit_gap() {
   csh "curl -s --max-time 8 -X POST $DEV_VESSEL/v2/impulses/resolve -H 'Content-Type: application/json' -d '$1'" >/dev/null 2>&1 || true
 }
 
-recovered=0; reverted=0; escalated=0; healthy_n=0
+# Shared-DB pressure guard (2026-07-23 resource-cascade gap). Root: the fleet's
+# DB-backed vessels share ONE SurrealDB. When it saturates/throttles, activity-
+# api's /health (a SurrealDB round-trip) times out -> 503 -> this tick restarts
+# it -> init crash-loops on 'SurrealDB not ready, retrying N/40' against the
+# still-throttled DB, and while it is down every vessel ConnectionRefuses to
+# :8080 and retry-storms -> the restart AMPLIFIES the very pressure it can't fix.
+# So before restarting an unhealthy vessel, rule out "the shared DB is the
+# bottleneck": a cheap RETURN 1 (loads NO table — same idiom as substrate-
+# doctor.sh:46; proven live to time out during a real 28GiB saturation event
+# while healthy it answers in ~1s) probed twice. Two consecutive timeouts/5xx
+# => DB is the bottleneck, back off (no restart). A prompt answer — 2xx, OR even
+# a fast auth/4xx (HTTP server answered => DB process alive) — => NOT the
+# bottleneck, so a genuinely-dead vessel still restarts. Fail SAFE toward
+# "restart normally": a broken/empty-cred probe returns a fast 4xx and does NOT
+# suppress recovery.
+db_under_pressure() {
+  local i out
+  for i in 1 2; do
+    out=$(csh "P=\$(grep -m1 '^SURREALDB_PASSWORD=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); \
+NS=\$(grep -m1 '^SURREALDB_NAMESPACE=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); \
+DB=\$(grep -m1 '^SURREALDB_DATABASE=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); \
+curl -s -o /dev/null -w '%{http_code}' --max-time $DB_PROBE_TIMEOUT -u \"root:\$P\" \
+  -X POST $SURREAL_URL/sql -H 'Accept: application/json' \
+  -H \"surreal-ns: \${NS:-activity-system}\" -H \"surreal-db: \${DB:-learning_loop}\" \
+  -d 'RETURN 1;' 2>/dev/null" 2>/dev/null)
+    case "$out" in
+      2*|4*) return 1 ;;   # server answered promptly (2xx, or fast auth/4xx) -> DB alive, NOT the bottleneck
+    esac
+    [ "$i" -lt 2 ] && sleep "$DB_PROBE_GAP"
+  done
+  return 0                 # two consecutive timeouts / 000 / 5xx -> shared DB IS the bottleneck
+}
+# Memoize the verdict for the tick so we probe the DB at most once (and only
+# lazily, the first time a vessel is found unhealthy).
+DB_PRESSURE_CHECKED=0; DB_PRESSURE=0
+db_is_bottleneck() {
+  if [ "$DB_PRESSURE_CHECKED" = 0 ]; then
+    if db_under_pressure; then DB_PRESSURE=1; else DB_PRESSURE=0; fi
+    DB_PRESSURE_CHECKED=1
+  fi
+  [ "$DB_PRESSURE" = 1 ]
+}
+
+recovered=0; reverted=0; escalated=0; healthy_n=0; db_backoff=0
 for entry in "${VESSELS[@]}"; do
   name="${entry%%:*}"; port="${entry##*:}"
   if healthy "$name" "$port"; then healthy_n=$((healthy_n+1)); continue; fi
+  # Shared-DB pressure guard: if SurrealDB (the shared dependency) is the
+  # bottleneck, restarting this vessel can't fix it and amplifies the load —
+  # back off. Only reached AFTER a health failure, so a healthy DB with a
+  # genuinely-dead vessel still falls through to the restart path below.
+  if db_is_bottleneck; then
+    log "UNHEALTHY: $name (:$port) — shared SurrealDB is the bottleneck; BACKING OFF (no restart/revert this tick)"
+    db_backoff=$((db_backoff+1))
+    continue
+  fi
   log "UNHEALTHY: $name (:$port) — restarting"
   csys restart "$name.service" >/dev/null 2>&1 || true
   sleep 6
@@ -133,4 +192,13 @@ for entry in "${VESSELS[@]}"; do
   escalated=$((escalated+1))
   emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"self-recovery-failed-$name\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$name unhealthy and NOT recovered by restart+revert-from-git — needs deeper repair\",\"status\":\"open\"}}}}"
 done
-echo "{\"healthy\":$healthy_n,\"recovered_by_restart\":$recovered,\"reverted_from_git\":$reverted,\"escalated\":$escalated}"
+# When we backed off because the shared DB was the bottleneck, emit ONE
+# db_contention gap (not per-vessel service_failure gaps — those would be a
+# misdiagnosis: the vessels aren't broken, the DB is) so the real problem is
+# surfaced for repair. The next tick recovers vessels normally once the DB
+# probe answers promptly again.
+if [ "$db_backoff" -gt 0 ]; then
+  log "shared-DB pressure: deferred restart/revert of $db_backoff vessel(s) this tick — emitting db_contention gap"
+  emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"self-recovery-db-pressure-backoff\",\"category\":\"db_contention\",\"source\":\"substrate_detected\",\"summary\":\"self-recovery backed off restarting $db_backoff DB-backed vessel(s): shared SurrealDB was unresponsive to a cheap RETURN 1 liveness probe — the shared datastore is the bottleneck, not the vessels; restarting them would amplify load\",\"status\":\"open\"}}}}"
+fi
+echo "{\"healthy\":$healthy_n,\"recovered_by_restart\":$recovered,\"reverted_from_git\":$reverted,\"escalated\":$escalated,\"db_pressure_backoff\":$db_backoff}"
