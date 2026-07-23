@@ -239,6 +239,13 @@ async function resolveOverLibp2p(target: string, pointer: any): Promise<any> {
 // @substrate rows gone from the hub). Same defect class as the obsidian
 // sidecar's stale capture (fixed in 480ac50).
 const currentCircuit = () => vl.advertiseMultiaddrs().find((m) => m.includes('p2p-circuit')) ?? ''
+// Ratified decision "direct ≡ punchthrough": a direct connection is equivalent to a
+// relay punchthrough, so registration rows must announce the node's DIRECT listen
+// addrs alongside the relay circuit. Same-host / same-network peers can then dial
+// direct with no relay dependency; the circuit stays FIRST in the list so existing
+// consumers that blindly take libp2p_multiaddr[0] keep the remote-safe address.
+const currentDirectAddrs = () => vl.advertiseMultiaddrs().filter((m) => !m.includes('p2p-circuit'))
+const advertisedAddrs = () => [currentCircuit(), ...currentDirectAddrs()].filter(Boolean)
 // Bounded startup wait so first registrations usually carry the circuit already.
 for (let i = 0; i < 40 && !currentCircuit(); i++) {
   await new Promise((r) => setTimeout(r, 500))
@@ -272,18 +279,43 @@ Bun.serve({
         // threading needed, the goal-host path), an X-Libp2p-Target header, or
         // body.target. Query param wins, then header, then body.
         const target = u.searchParams.get('target') || req.headers.get('x-libp2p-target') || body?.target || ''
-        if (!target) return Response.json({ error: 'missing libp2p target (?target= query, X-Libp2p-Target header, or body.target)' }, { status: 400 })
         let pointer = body?.impulse?.pointer ?? body?.impulse ?? body?.pointer ?? body
         // Per-vessel addressing: ?vessel=<vesselId[@substrate]> (or body.vessel) names
         // the exact vessel on the target substrate — the remote ingress routes to it
         // instead of shape-owner lookup, so duplicate shapes stay distinguishable.
         const targetVessel = u.searchParams.get('vessel') || body?.vessel || ''
         if (targetVessel) pointer = { ...pointer, _fedTargetVessel: targetVessel }
+        // A target is normally required, but a caller that names ?vessel= can route
+        // WITHOUT one: the destination is reached over a LIVE hub circuit chosen from
+        // our own connection table (the repair branch below), and _fedTargetVessel
+        // selects the vessel on the far side. Only reject when we have NEITHER.
+        if (!target && !targetVessel) return Response.json({ error: 'missing libp2p target (?target= query, X-Libp2p-Target header, or body.target) or ?vessel=' }, { status: 400 })
         // resolveViaHttp returns the peer's { content, metadata } (serveResolveHttp wraps
         // it that way). Pass it through verbatim so the caller's resolve parsing applies.
-        console.log('[fed-transport] egress/resolve -> ' + String((pointer as any)?.type ?? '?') + ' via ' + String(target).slice(-20))
-        const res = await resolveOverLibp2p(String(target), pointer)
-        return Response.json(res ?? { error: 'empty libp2p resolve' }, { status: 200 })
+        const errOf = (e: any) => ({ error: String((e as Error)?.message ?? e) })
+        let res: any = null
+        if (target) {
+          console.log('[fed-transport] egress/resolve -> ' + String((pointer as any)?.type ?? '?') + ' via ' + String(target).slice(-20))
+          res = await resolveOverLibp2p(String(target), pointer).catch(errOf)
+        }
+        // Fail-open target repair: a relay-only circuit target (…/p2p-circuit with no
+        // trailing /p2p/<dest> — e.g. a truncated discovery advertisement) is undialable
+        // and errors above; a ?vessel=-only call arrives with no target at all. In both
+        // cases, when a vessel is named, retry against each LIVE full circuit from our own
+        // connection table (dialable addrs carrying /p2p-circuit/p2p/<dest>) and let
+        // _fedTargetVessel route on the far side. Healthy full-target resolves return
+        // above and never enter this branch. Reads live connections — hardcodes no peer
+        // (law 11: location independence).
+        if ((!res || res.error) && targetVessel) {
+          const conns = ((vl.health() as any)?.connections ?? []) as Array<{ addr: string }>
+          const circuits = [...new Set(conns.map((c) => String(c.addr)).filter((a) => a.includes('/p2p-circuit/p2p/') && !a.includes(vl.peerId)))]
+          for (const a of circuits) {
+            const alt = await resolveOverLibp2p(a, pointer).catch(errOf)
+            if (alt && !alt.error) { console.log('[fed-transport] egress repair -> ' + String((pointer as any)?.type ?? '?') + ' via live circuit …' + a.slice(-16)); res = alt; break }
+            res = res ?? alt
+          }
+        }
+        return Response.json(res ?? { error: 'empty libp2p resolve' }, { status: (res && !res.error) ? 200 : 502 })
       } catch (e) {
         return Response.json({ error: 'libp2p egress failed: ' + String((e as Error)?.message ?? e) }, { status: 502 })
       }
@@ -320,7 +352,8 @@ async function register() {
         resolve_endpoint: '/v2/impulses/resolve', resolve_request_format: 'pointer', auth_scheme: 'none',
         protocol: 'libp2p',                          // signals libp2p-overlay reachability
         libp2p_peer_id: vl.peerId,                   // proper discovery-contract fields (not metadata —
-        libp2p_multiaddr: [currentCircuit()].filter(Boolean), // discovery doesn't echo metadata in capability responses)
+        libp2p_multiaddr: advertisedAddrs(),         // discovery doesn't echo metadata in capability responses)
+                                                     // circuit first, then direct listen addrs (direct ≡ punchthrough)
         shape_descriptions: { federation_probe: 'libp2p-reachable probe shape served by the federation transport vessel' },
       }),
     })
@@ -369,9 +402,23 @@ async function localVesselRows(): Promise<Array<{ vesselId: string; shapes: stri
   return rows
 }
 
+// A lost reservation must degrade OBSERVABLY, not silently: warn loudly when the hub
+// mirror is skipped for want of a circuit, but throttled (once per window while the
+// outage persists — the tick fires every 120s and a warn-per-tick is log spam).
+let noCircuitWarnedAt = 0
+const NO_CIRCUIT_WARN_WINDOW_MS = 600_000
+
 async function registerAtHub() {
+  if (!HUB_DISCOVERY) return
   const liveCircuit = currentCircuit()
-  if (!HUB_DISCOVERY || !liveCircuit) return
+  if (!liveCircuit) {
+    if (Date.now() - noCircuitWarnedAt >= NO_CIRCUIT_WARN_WINDOW_MS) {
+      noCircuitWarnedAt = Date.now()
+      console.error('[federation] no relay reservation — remote visibility suspended (hub mirror skipped; refreshes immediately on reacquisition)')
+    }
+    return
+  }
+  noCircuitWarnedAt = 0 // circuit is back — the NEXT outage warns immediately again
   try {
     const rows = await localVesselRows()
     if (rows.length === 0) return // local registry mid-repopulation — keep the last hub TTL alive next tick
@@ -392,7 +439,9 @@ async function registerAtHub() {
           resolve_endpoint: '/v2/impulses/resolve', resolve_request_format: 'pointer', auth_scheme: 'none',
           protocol: 'libp2p',
           libp2p_peer_id: vl.peerId,
-          libp2p_multiaddr: [liveCircuit],
+          // Circuit first (remote-safe for [0]-consumers), then direct listen addrs —
+          // direct ≡ punchthrough: a same-host/same-net peer dials direct, no relay.
+          libp2p_multiaddr: [liveCircuit, ...currentDirectAddrs()],
         }),
       }).catch((e) => ({ status: 'err:' + String((e as Error)?.message ?? e) } as any))
       return `${reg.vesselId}:${r.status}`
@@ -406,5 +455,25 @@ await register()
 await registerAtHub()
 setInterval(register, 120_000) // refresh discovery TTL
 setInterval(registerAtHub, 120_000)
+
+// RESERVATION (RE)ACQUISITION HOOK: VesselLibp2p exposes no reservation event, so the
+// acquisition path is observed as currentCircuit() transitioning empty → non-empty
+// (the circuit-relay transport surfaces the /p2p-circuit addr the moment a
+// reservation lands). On that transition, refresh the local + hub registrations
+// IMMEDIATELY instead of leaving the substrate's remote presence blank for up to a
+// full 120s tick. The reverse transition logs the loss loudly (once — transition-
+// edged, not per-poll).
+let hadCircuit = !!currentCircuit()
+setInterval(() => {
+  const has = !!currentCircuit()
+  if (has && !hadCircuit) {
+    console.log('[federation] relay reservation (re)acquired — refreshing local + hub registrations immediately')
+    void register()
+    void registerAtHub()
+  } else if (!has && hadCircuit) {
+    console.error('[federation] relay reservation lost — remote visibility suspended until reacquired')
+  }
+  hadCircuit = has
+}, 5_000)
 
 console.log(`[fed-transport] up id=${VESSEL_ID} peer=${vl.peerId} health=:${HEALTH_PORT} circuit=${circuit || '(none yet)'} hub=${HUB_DISCOVERY || '(no hub mirror)'}`)
