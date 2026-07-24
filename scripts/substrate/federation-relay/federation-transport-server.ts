@@ -358,7 +358,25 @@ async function register() {
       }),
     })
     console.log('[fed-transport] register ->', r.status)
+    if (r.status === 401 || r.status === 403) void emitJoinHealth('auth_rejected', 'local /register -> ' + r.status)
   } catch (e) { console.log('[fed-transport] register err', String(e)) }
+}
+
+// Federation-join health detector (law 6): a stale-key / auth-rejected join must fail
+// LOUDLY as a queryable signal, not silently blank a downstream panel. Emits a shaped
+// federation_join_health observation to activity-api; guarded and never throws (must not
+// disturb the process guards). Emitted only on the failure path — silent success is unchanged.
+const ACTIVITY_API = (process.env.ACTIVITY_API_URL || process.env.ACTIVITY_API_ENDPOINT || 'http://127.0.0.1:8080').replace(/\/$/, '')
+async function emitJoinHealth(state: string, detail: string) {
+  if (!ACTIVITY_API) return
+  try {
+    await fetch(ACTIVITY_API + '/v2/impulses/resolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY },
+      body: JSON.stringify({ impulse: { type: 'federation_join_health', substrate: SUBSTRATE_ID, vessel: VESSEL_ID, state, detail, ts: Date.now() } }),
+      signal: AbortSignal.timeout(5000),
+    })
+  } catch (e) { console.error('[fed-transport] join-health emit failed', String(e)) }
 }
 // HUB NAMESPACE MIRROR: when HUB_DISCOVERY_URL is set, this substrate's capability
 // surface is mirrored into the HUB discovery under a substrate-unique vesselId, with
@@ -448,6 +466,7 @@ async function registerAtHub() {
     }))
     const failed = results.filter((s) => !/:(200|201)$/.test(s))
     console.log(`[fed-transport] hub-register per-vessel (${results.length} rows) -> ${failed.length === 0 ? 'all ok' : 'FAILED ' + failed.join(', ')}`)
+    if (failed.some((s) => /:40[13]$/.test(s))) void emitJoinHealth('auth_rejected', 'hub /register FAILED ' + failed.join(', '))
   } catch (e) { console.log('[fed-transport] hub-register err', String(e)) }
 }
 
