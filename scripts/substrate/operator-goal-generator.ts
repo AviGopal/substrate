@@ -176,11 +176,24 @@ const CATALOGUE: { class: string; build: () => Promise<Built> }[] = [
 // across catalogue classes; a secondary variant index (also off the counter) varies
 // within-class parameterization. NO Math.random — selection is purely positional, which
 // also makes "select by diversity not reachability" structurally true.
-async function dispatch(goal: string): Promise<any> {
+async function dispatch(goal: string, cls: string): Promise<any> {
+  // Stamp provenance so the WHY-NOW trigger derivation (goal-host handleRunGoal
+  // IIFE) can categorize these. Without it a bare { goal } body leaves
+  // operator/tags/variables empty → trigger:null → the obsidian panel falls
+  // back to TEXT-inferring the reason (and mislabels grounding-miss goals as
+  // "Recovery"). These are the substrate's own convergent enabler work on a
+  // cadence — neither a human operator dispatch nor idle boredom — so we mint a
+  // distinct "convergent-enabler" reason. The IIFE passes an unknown
+  // dispatcher_reason:<x> tag through verbatim, so no goal-host redeploy is
+  // needed; the class rides along as a second tag for the panel's detail line.
   const r = await fetch(`${GOAL_HOST}/run-goal`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `ApiKey ${KEY}` },
-    body: JSON.stringify({ goal }),
+    body: JSON.stringify({
+      goal,
+      tags: ["dispatcher_reason:convergent-enabler", `generator_class:${cls}`],
+      variables: { source: "operator-goal-generator", triggered_by: "operator-goal-generator", generator_class: cls },
+    }),
   });
   if (!r.ok) return { status: "dispatch_failed", http: r.status, body: (await r.text()).slice(0, 300) };
   try { return await r.json(); } catch { return { status: "dispatch_ok_nonjson" }; }
@@ -202,7 +215,7 @@ async function main() {
     built = { goal: `(${entry.class}) — grounding query failed; dispatching default class goal.`, params: { grounding_error: String(e).slice(0, 200) } };
   }
 
-  const result = await dispatch(built.goal);
+  const result = await dispatch(built.goal, entry.class);
   const dispatchId = result?.dispatchId || result?.executionId || result?.execution_id || result?.id || null;
   const ok = !!dispatchId || result?.status === "success" || result?.status === "completed" || result?.status === "running";
 
