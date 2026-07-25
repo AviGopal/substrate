@@ -141,11 +141,29 @@ for d in "$CLONE_DIR"/*/; do
   CLONE_HASH="$(content_hash "$d/src")"
   [ -d "$RUNTIME_DIR/$v" ] || { echo "$CLONE_HASH" > "$MARKER"; continue; }  # not part of this runtime
   RUNTIME_HASH="$(content_hash "$RUNTIME_DIR/$v/src")"
-  if [ "$CLONE_HASH" = "$RUNTIME_HASH" ]; then
-    [ "$LAST" = "$CLONE_HASH" ] || echo "$CLONE_HASH" > "$MARKER"
-    continue
+  # dist-freshness retry: a shared package whose src is already mirrored but whose
+  # last fan-out was rolled back (an unhealthy consumer) leaves dist STALE vs src
+  # with no retry — the src-only comparison below never re-enters 2c. Detect the
+  # skew (last successful fan-out HEAD != current HEAD) and force a re-fan-out,
+  # suppressed to once per HEAD via $v.fanout-fail so a persistently-unhealthy
+  # consumer cannot cause a rebuild/revert loop (a new src change clears it).
+  DIST_RETRY=""
+  SELF_UNIT="$(vessel_unit "$v")"
+  if { [ -z "$SELF_UNIT" ] || [ "${SELF_UNIT%.service}" = "$SELF_UNIT" ]; } \
+     && [ -d "$RUNTIME_DIR/$v/dist" ] \
+     && grep -q '"build"[[:space:]]*:' "$RUNTIME_DIR/$v/package.json" 2>/dev/null \
+     && [ "$(cat "$LAST_GOOD_DIR/$v" 2>/dev/null || true)" != "$HEAD" ] \
+     && [ "$(cat "$MARKER_DIR/$v.fanout-fail" 2>/dev/null || true)" != "$HEAD" ]; then
+    DIST_RETRY=1
   fi
-  if [ "$LAST" = "$CLONE_HASH" ]; then continue; fi  # this exact content already attempted (unhealthy -> reverted); don't mirror/revert loop
+  if [ "$CLONE_HASH" = "$RUNTIME_HASH" ]; then
+    if [ -z "$DIST_RETRY" ]; then
+      [ "$LAST" = "$CLONE_HASH" ] || echo "$CLONE_HASH" > "$MARKER"
+      continue
+    fi
+    log "$v: src converged but dist stale (last-good != ${HEAD:0:10}) — re-running fan-out"
+  fi
+  if [ -z "$DIST_RETRY" ] && [ "$LAST" = "$CLONE_HASH" ]; then continue; fi  # this exact content already attempted (unhealthy -> reverted); don't mirror/revert loop
 
   # 2b. Drain-awareness: never converge a vessel whose working plane shows a
   # LIVE authoring run. Marker is live when its mtime is fresh (< TTL) OR its
@@ -213,10 +231,11 @@ for d in "$CLONE_DIR"/*/; do
         log "$v: consumer $bad UNHEALTHY after fan-out -- restoring prior dist, restarting bounced, HALTING"
         rm -rf "$RUNTIME_DIR/$v/dist"; mv "$RUNTIME_DIR/$v/.dist.prev" "$RUNTIME_DIR/$v/dist"
         for c in $BOUNCED; do systemctl restart "$(vessel_unit "$c")" 2>/dev/null || true; done
+        echo "$HEAD" > "$MARKER_DIR/$v.fanout-fail"  # suppress fan-out retry for this HEAD; a new src change (new HEAD) clears it — prevents a rebuild/revert loop on a persistently-unhealthy consumer
         emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-fanout-$v\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$v fan-out to ${HEAD:0:10} left $bad unhealthy; dist reverted, run halted\",\"status\":\"open\"}}}}"
         failed=$((failed+1)); break
       fi
-      rm -rf "$RUNTIME_DIR/$v/.dist.prev"; echo "$HEAD" > "$LAST_GOOD_DIR/$v"; log "$v: fan-out healthy across$BOUNCED"; synced=$((synced+1)); continue
+      rm -rf "$RUNTIME_DIR/$v/.dist.prev"; echo "$HEAD" > "$LAST_GOOD_DIR/$v"; rm -f "$MARKER_DIR/$v.fanout-fail"; log "$v: fan-out healthy across$BOUNCED"; synced=$((synced+1)); continue
     fi
   fi
 
