@@ -100,7 +100,7 @@
     "category": "architectural_pattern",
     "source": "substrate_detected",
     "summary": "Gap store backlog unhealthy: 328/683 open gaps are stale (>48h untouched), 0 churned (drafted+failed+stale). Top stale categories: missing_capability=138, unreachable_producer=56, orphaned_capability=34, documentation_drift=23, poison_producer=11. Many gaps never close — needs auto-close + a gap-emission audit (are detectors emitting un-actionable gaps?).",
-    "detected_at": "2026-07-25T15:52:26.684Z",
+    "detected_at": "2026-07-25T15:52:49.149Z",
     "status": "open",
     "classification_metadata": {
       "gap_subtype": "gap_backlog_unhealthy",
@@ -117,7 +117,7 @@
       }
     },
     "created_at": "2026-07-24T21:05:20.442Z",
-    "updated_at": "2026-07-25T15:52:26.686Z"
+    "updated_at": "2026-07-25T15:52:49.150Z"
   },
   {
     "id": "orphaned-capability-activeDispatches",
