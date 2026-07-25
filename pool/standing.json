@@ -23,7 +23,7 @@
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T20:58:32.418Z",
-    "updated_at": "2026-07-25T16:29:21.387Z"
+    "updated_at": "2026-07-25T17:29:23.673Z"
   },
   {
     "id": "7b383f1b-a0c1-4275-8474-505a51bef4ad",
@@ -72,12 +72,12 @@
     "body": {
       "gap_id": "gap-backlog-unhealthy",
       "category": "architectural_pattern",
-      "summary": "Gap store backlog unhealthy: 335/683 open gaps are stale (>48h untouched), 0 churned (drafted+failed+stale). Top stale categories: missing_capability=145, unreachable_producer=56, orphaned_capability=34, documentation_drift=23, poison_producer=11. Many gaps never close — needs auto-close + a gap-emission audit (are detectors emitting un-actionable gaps?)."
+      "summary": "Gap store backlog unhealthy: 344/683 open gaps are stale (>48h untouched), 0 churned (drafted+failed+stale). Top stale categories: missing_capability=154, unreachable_producer=56, orphaned_capability=34, documentation_drift=23, poison_producer=11. Many gaps never close — needs auto-close + a gap-emission audit (are detectors emitting un-actionable gaps?)."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:20.445Z",
-    "updated_at": "2026-07-25T16:54:23.587Z"
+    "updated_at": "2026-07-25T17:46:46.753Z"
   },
   {
     "id": "gap:orphaned-capability-activeDispatches",
@@ -85,12 +85,12 @@
     "body": {
       "gap_id": "orphaned-capability-activeDispatches",
       "category": "orphaned_capability",
-      "summary": "Resolver \"activeDispatches\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"activeDispatches\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"activeDispatches\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"activeDispatches\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.702Z",
-    "updated_at": "2026-07-25T16:31:19.318Z"
+    "updated_at": "2026-07-25T17:31:19.929Z"
   },
   {
     "id": "gap:orphaned-capability-activity_template",
@@ -98,12 +98,12 @@
     "body": {
       "gap_id": "orphaned-capability-activity_template",
       "category": "orphaned_capability",
-      "summary": "Resolver \"activity_template\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"activity_template\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"activity_template\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"activity_template\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.704Z",
-    "updated_at": "2026-07-25T16:31:19.858Z"
+    "updated_at": "2026-07-25T17:31:19.942Z"
   },
   {
     "id": "gap:orphaned-capability-assessment_summary",
@@ -111,12 +111,12 @@
     "body": {
       "gap_id": "orphaned-capability-assessment_summary",
       "category": "orphaned_capability",
-      "summary": "Resolver \"assessment_summary\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"assessment_summary\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"assessment_summary\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"assessment_summary\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.705Z",
-    "updated_at": "2026-07-25T16:31:19.869Z"
+    "updated_at": "2026-07-25T17:31:19.952Z"
   },
   {
     "id": "gap:orphaned-capability-author_producer",
@@ -124,12 +124,12 @@
     "body": {
       "gap_id": "orphaned-capability-author_producer",
       "category": "orphaned_capability",
-      "summary": "Resolver \"author_producer\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"author_producer\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"author_producer\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"author_producer\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.707Z",
-    "updated_at": "2026-07-25T16:31:19.881Z"
+    "updated_at": "2026-07-25T17:31:19.965Z"
   },
   {
     "id": "gap:orphaned-capability-cluster",
@@ -137,12 +137,12 @@
     "body": {
       "gap_id": "orphaned-capability-cluster",
       "category": "orphaned_capability",
-      "summary": "Resolver \"cluster\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"cluster\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"cluster\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"cluster\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.708Z",
-    "updated_at": "2026-07-25T16:31:19.891Z"
+    "updated_at": "2026-07-25T17:31:19.977Z"
   },
   {
     "id": "gap:orphaned-capability-coarsenableChain",
@@ -150,12 +150,12 @@
     "body": {
       "gap_id": "orphaned-capability-coarsenableChain",
       "category": "orphaned_capability",
-      "summary": "Resolver \"coarsenableChain\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"coarsenableChain\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"coarsenableChain\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"coarsenableChain\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.710Z",
-    "updated_at": "2026-07-25T16:31:19.902Z"
+    "updated_at": "2026-07-25T17:31:19.988Z"
   },
   {
     "id": "gap:orphaned-capability-code_locality",
@@ -163,12 +163,12 @@
     "body": {
       "gap_id": "orphaned-capability-code_locality",
       "category": "orphaned_capability",
-      "summary": "Resolver \"code_locality\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"code_locality\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"code_locality\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"code_locality\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.712Z",
-    "updated_at": "2026-07-25T16:31:19.911Z"
+    "updated_at": "2026-07-25T17:31:20.178Z"
   },
   {
     "id": "gap:orphaned-capability-code_modification_proposal",
@@ -176,12 +176,12 @@
     "body": {
       "gap_id": "orphaned-capability-code_modification_proposal",
       "category": "orphaned_capability",
-      "summary": "Resolver \"code_modification_proposal\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"code_modification_proposal\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"code_modification_proposal\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"code_modification_proposal\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.714Z",
-    "updated_at": "2026-07-25T16:31:19.922Z"
+    "updated_at": "2026-07-25T17:31:20.262Z"
   },
   {
     "id": "gap:orphaned-capability-code_modification_proposal_write",
@@ -189,12 +189,12 @@
     "body": {
       "gap_id": "orphaned-capability-code_modification_proposal_write",
       "category": "orphaned_capability",
-      "summary": "Resolver \"code_modification_proposal_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"code_modification_proposal_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"code_modification_proposal_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"code_modification_proposal_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.717Z",
-    "updated_at": "2026-07-25T16:31:19.931Z"
+    "updated_at": "2026-07-25T17:31:20.289Z"
   },
   {
     "id": "gap:orphaned-capability-code_quality with substantive assessment content",
@@ -202,12 +202,12 @@
     "body": {
       "gap_id": "orphaned-capability-code_quality with substantive assessment content",
       "category": "orphaned_capability",
-      "summary": "Resolver \"code_quality with substantive assessment content\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"code_quality with substantive assessment content\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"code_quality with substantive assessment content\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"code_quality with substantive assessment content\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.719Z",
-    "updated_at": "2026-07-25T16:31:19.943Z"
+    "updated_at": "2026-07-25T17:31:20.301Z"
   },
   {
     "id": "gap:orphaned-capability-compositionGraph",
@@ -215,12 +215,12 @@
     "body": {
       "gap_id": "orphaned-capability-compositionGraph",
       "category": "orphaned_capability",
-      "summary": "Resolver \"compositionGraph\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"compositionGraph\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"compositionGraph\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"compositionGraph\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.720Z",
-    "updated_at": "2026-07-25T16:31:19.952Z"
+    "updated_at": "2026-07-25T17:31:20.312Z"
   },
   {
     "id": "gap:orphaned-capability-concept",
@@ -228,12 +228,12 @@
     "body": {
       "gap_id": "orphaned-capability-concept",
       "category": "orphaned_capability",
-      "summary": "Resolver \"concept\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"concept\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"concept\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"concept\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.722Z",
-    "updated_at": "2026-07-25T16:31:19.963Z"
+    "updated_at": "2026-07-25T17:31:20.324Z"
   },
   {
     "id": "gap:orphaned-capability-conceptCreditDecontaminate_write",
@@ -241,12 +241,12 @@
     "body": {
       "gap_id": "orphaned-capability-conceptCreditDecontaminate_write",
       "category": "orphaned_capability",
-      "summary": "Resolver \"conceptCreditDecontaminate_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptCreditDecontaminate_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"conceptCreditDecontaminate_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptCreditDecontaminate_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.724Z",
-    "updated_at": "2026-07-25T16:31:19.973Z"
+    "updated_at": "2026-07-25T17:31:20.343Z"
   },
   {
     "id": "gap:orphaned-capability-conceptLink_write",
@@ -254,12 +254,12 @@
     "body": {
       "gap_id": "orphaned-capability-conceptLink_write",
       "category": "orphaned_capability",
-      "summary": "Resolver \"conceptLink_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptLink_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"conceptLink_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptLink_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.725Z",
-    "updated_at": "2026-07-25T16:31:19.983Z"
+    "updated_at": "2026-07-25T17:31:20.360Z"
   },
   {
     "id": "gap:orphaned-capability-conceptSearch",
@@ -267,12 +267,12 @@
     "body": {
       "gap_id": "orphaned-capability-conceptSearch",
       "category": "orphaned_capability",
-      "summary": "Resolver \"conceptSearch\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptSearch\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"conceptSearch\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptSearch\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.726Z",
-    "updated_at": "2026-07-25T16:31:19.992Z"
+    "updated_at": "2026-07-25T17:31:20.373Z"
   },
   {
     "id": "gap:orphaned-capability-conceptSequence_write",
@@ -280,12 +280,12 @@
     "body": {
       "gap_id": "orphaned-capability-conceptSequence_write",
       "category": "orphaned_capability",
-      "summary": "Resolver \"conceptSequence_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptSequence_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"conceptSequence_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptSequence_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.728Z",
-    "updated_at": "2026-07-25T16:31:20.003Z"
+    "updated_at": "2026-07-25T17:31:20.384Z"
   },
   {
     "id": "gap:orphaned-capability-conceptSignatureUpsert_write",
@@ -293,12 +293,12 @@
     "body": {
       "gap_id": "orphaned-capability-conceptSignatureUpsert_write",
       "category": "orphaned_capability",
-      "summary": "Resolver \"conceptSignatureUpsert_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptSignatureUpsert_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"conceptSignatureUpsert_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptSignatureUpsert_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.730Z",
-    "updated_at": "2026-07-25T16:31:20.013Z"
+    "updated_at": "2026-07-25T17:31:20.398Z"
   },
   {
     "id": "gap:orphaned-capability-conceptUsage_write",
@@ -306,12 +306,12 @@
     "body": {
       "gap_id": "orphaned-capability-conceptUsage_write",
       "category": "orphaned_capability",
-      "summary": "Resolver \"conceptUsage_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptUsage_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"conceptUsage_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptUsage_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.733Z",
-    "updated_at": "2026-07-25T16:31:20.022Z"
+    "updated_at": "2026-07-25T17:31:20.411Z"
   },
   {
     "id": "gap:orphaned-capability-concept_truth_probe",
@@ -319,12 +319,12 @@
     "body": {
       "gap_id": "orphaned-capability-concept_truth_probe",
       "category": "orphaned_capability",
-      "summary": "Resolver \"concept_truth_probe\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"concept_truth_probe\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"concept_truth_probe\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"concept_truth_probe\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.735Z",
-    "updated_at": "2026-07-25T16:31:20.033Z"
+    "updated_at": "2026-07-25T17:31:20.422Z"
   },
   {
     "id": "gap:orphaned-capability-config_file",
@@ -332,12 +332,12 @@
     "body": {
       "gap_id": "orphaned-capability-config_file",
       "category": "orphaned_capability",
-      "summary": "Resolver \"config_file\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"config_file\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"config_file\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"config_file\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.736Z",
-    "updated_at": "2026-07-25T16:31:20.043Z"
+    "updated_at": "2026-07-25T17:31:20.436Z"
   },
   {
     "id": "gap:orphaned-capability-cpg_query_result",
@@ -345,12 +345,12 @@
     "body": {
       "gap_id": "orphaned-capability-cpg_query_result",
       "category": "orphaned_capability",
-      "summary": "Resolver \"cpg_query_result\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"cpg_query_result\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"cpg_query_result\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"cpg_query_result\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.738Z",
-    "updated_at": "2026-07-25T16:31:20.053Z"
+    "updated_at": "2026-07-25T17:31:20.449Z"
   },
   {
     "id": "gap:orphaned-capability-db_admin",
@@ -358,12 +358,12 @@
     "body": {
       "gap_id": "orphaned-capability-db_admin",
       "category": "orphaned_capability",
-      "summary": "Resolver \"db_admin\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"db_admin\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"db_admin\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"db_admin\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.740Z",
-    "updated_at": "2026-07-25T16:31:20.063Z"
+    "updated_at": "2026-07-25T17:31:20.462Z"
   },
   {
     "id": "gap:orphaned-capability-docFixPolicy",
@@ -371,12 +371,12 @@
     "body": {
       "gap_id": "orphaned-capability-docFixPolicy",
       "category": "orphaned_capability",
-      "summary": "Resolver \"docFixPolicy\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"docFixPolicy\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"docFixPolicy\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"docFixPolicy\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.742Z",
-    "updated_at": "2026-07-25T16:31:20.075Z"
+    "updated_at": "2026-07-25T17:31:20.473Z"
   },
   {
     "id": "gap:orphaned-capability-docFixPolicy_write",
@@ -384,12 +384,12 @@
     "body": {
       "gap_id": "orphaned-capability-docFixPolicy_write",
       "category": "orphaned_capability",
-      "summary": "Resolver \"docFixPolicy_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"docFixPolicy_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"docFixPolicy_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"docFixPolicy_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.743Z",
-    "updated_at": "2026-07-25T16:31:20.086Z"
+    "updated_at": "2026-07-25T17:31:20.486Z"
   },
   {
     "id": "gap:orphaned-capability-docs_align_bridge",
@@ -397,12 +397,12 @@
     "body": {
       "gap_id": "orphaned-capability-docs_align_bridge",
       "category": "orphaned_capability",
-      "summary": "Resolver \"docs_align_bridge\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"docs_align_bridge\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"docs_align_bridge\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"docs_align_bridge\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.745Z",
-    "updated_at": "2026-07-25T16:31:20.096Z"
+    "updated_at": "2026-07-25T17:31:20.498Z"
   },
   {
     "id": "gap:orphaned-capability-embed",
@@ -410,12 +410,12 @@
     "body": {
       "gap_id": "orphaned-capability-embed",
       "category": "orphaned_capability",
-      "summary": "Resolver \"embed\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"embed\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"embed\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"embed\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.747Z",
-    "updated_at": "2026-07-25T16:31:20.108Z"
+    "updated_at": "2026-07-25T17:31:20.509Z"
   },
   {
     "id": "gap:orphaned-capability-error_log",
@@ -423,12 +423,12 @@
     "body": {
       "gap_id": "orphaned-capability-error_log",
       "category": "orphaned_capability",
-      "summary": "Resolver \"error_log\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"error_log\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"error_log\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"error_log\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.750Z",
-    "updated_at": "2026-07-25T16:31:20.129Z"
+    "updated_at": "2026-07-25T17:31:20.532Z"
   },
   {
     "id": "gap:orphaned-capability-eventStream",
@@ -436,12 +436,12 @@
     "body": {
       "gap_id": "orphaned-capability-eventStream",
       "category": "orphaned_capability",
-      "summary": "Resolver \"eventStream\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"eventStream\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"eventStream\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"eventStream\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.752Z",
-    "updated_at": "2026-07-25T16:31:20.139Z"
+    "updated_at": "2026-07-25T17:31:20.543Z"
   },
   {
     "id": "gap:orphaned-capability-executionReplicationPull",
@@ -449,12 +449,12 @@
     "body": {
       "gap_id": "orphaned-capability-executionReplicationPull",
       "category": "orphaned_capability",
-      "summary": "Resolver \"executionReplicationPull\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"executionReplicationPull\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"executionReplicationPull\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"executionReplicationPull\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.754Z",
-    "updated_at": "2026-07-25T16:31:20.151Z"
+    "updated_at": "2026-07-25T17:31:20.555Z"
   },
   {
     "id": "gap:orphaned-capability-failureCountReport",
@@ -462,12 +462,12 @@
     "body": {
       "gap_id": "orphaned-capability-failureCountReport",
       "category": "orphaned_capability",
-      "summary": "Resolver \"failureCountReport\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"failureCountReport\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"failureCountReport\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"failureCountReport\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.755Z",
-    "updated_at": "2026-07-25T16:31:20.177Z"
+    "updated_at": "2026-07-25T17:31:20.576Z"
   },
   {
     "id": "gap:orphaned-capability-failure_mode_summary",
@@ -475,12 +475,12 @@
     "body": {
       "gap_id": "orphaned-capability-failure_mode_summary",
       "category": "orphaned_capability",
-      "summary": "Resolver \"failure_mode_summary\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"failure_mode_summary\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"failure_mode_summary\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"failure_mode_summary\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.759Z",
-    "updated_at": "2026-07-25T16:31:20.208Z"
+    "updated_at": "2026-07-25T17:31:20.585Z"
   },
   {
     "id": "gap:orphaned-capability-federation_probe",
@@ -488,12 +488,12 @@
     "body": {
       "gap_id": "orphaned-capability-federation_probe",
       "category": "orphaned_capability",
-      "summary": "Resolver \"federation_probe\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"federation_probe\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"federation_probe\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"federation_probe\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.761Z",
-    "updated_at": "2026-07-25T16:31:20.218Z"
+    "updated_at": "2026-07-25T17:31:20.597Z"
   },
   {
     "id": "gap:orphaned-capability-fossilRankReport",
@@ -501,12 +501,12 @@
     "body": {
       "gap_id": "orphaned-capability-fossilRankReport",
       "category": "orphaned_capability",
-      "summary": "Resolver \"fossilRankReport\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"fossilRankReport\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"fossilRankReport\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"fossilRankReport\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.762Z",
-    "updated_at": "2026-07-25T16:31:20.245Z"
+    "updated_at": "2026-07-25T17:31:20.619Z"
   },
   {
     "id": "gap:orphaned-capability-gap_compose",
@@ -514,12 +514,12 @@
     "body": {
       "gap_id": "orphaned-capability-gap_compose",
       "category": "orphaned_capability",
-      "summary": "Resolver \"gap_compose\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"gap_compose\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"gap_compose\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"gap_compose\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.764Z",
-    "updated_at": "2026-07-25T16:31:20.257Z"
+    "updated_at": "2026-07-25T17:31:20.628Z"
   },
   {
     "id": "gap:orphaned-capability-gh_pr_create",
@@ -527,12 +527,12 @@
     "body": {
       "gap_id": "orphaned-capability-gh_pr_create",
       "category": "orphaned_capability",
-      "summary": "Resolver \"gh_pr_create\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"gh_pr_create\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"gh_pr_create\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"gh_pr_create\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.767Z",
-    "updated_at": "2026-07-25T16:31:20.269Z"
+    "updated_at": "2026-07-25T17:31:20.641Z"
   },
   {
     "id": "gap:orphaned-capability-gh_pr_merge",
@@ -540,12 +540,12 @@
     "body": {
       "gap_id": "orphaned-capability-gh_pr_merge",
       "category": "orphaned_capability",
-      "summary": "Resolver \"gh_pr_merge\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"gh_pr_merge\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"gh_pr_merge\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"gh_pr_merge\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.769Z",
-    "updated_at": "2026-07-25T16:31:20.278Z"
+    "updated_at": "2026-07-25T17:31:20.652Z"
   },
   {
     "id": "gap:orphaned-capability-git_push",
@@ -553,12 +553,12 @@
     "body": {
       "gap_id": "orphaned-capability-git_push",
       "category": "orphaned_capability",
-      "summary": "Resolver \"git_push\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"git_push\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"git_push\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"git_push\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:05:35.771Z",
-    "updated_at": "2026-07-25T16:31:20.289Z"
+    "updated_at": "2026-07-25T17:31:20.662Z"
   },
   {
     "id": "gap:orphaned-capability-goalDispatchAsync",
@@ -1333,7 +1333,7 @@
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:29:20.250Z",
-    "updated_at": "2026-07-25T16:42:58.400Z"
+    "updated_at": "2026-07-25T17:43:02.377Z"
   },
   {
     "id": "289043b8-cb24-491b-9093-761f4155f461",
@@ -1609,7 +1609,7 @@
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:40:35.607Z",
-    "updated_at": "2026-07-25T16:40:54.214Z"
+    "updated_at": "2026-07-25T17:40:54.609Z"
   },
   {
     "id": "gap:model-reality-selector-unscored",
@@ -1622,7 +1622,7 @@
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T21:41:32.349Z",
-    "updated_at": "2026-07-25T16:41:06.980Z"
+    "updated_at": "2026-07-25T17:41:06.163Z"
   },
   {
     "id": "597759a6-370b-4eba-8916-fefae56c70d8",
@@ -2361,12 +2361,12 @@
     "body": {
       "gap_id": "orphaned-capability-error",
       "category": "orphaned_capability",
-      "summary": "Resolver \"error\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"error\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"error\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"error\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T22:19:18.261Z",
-    "updated_at": "2026-07-25T16:31:20.118Z"
+    "updated_at": "2026-07-25T17:31:20.521Z"
   },
   {
     "id": "gap:gap-dispatch-id",
@@ -2833,7 +2833,7 @@
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-24T22:54:47.205Z",
-    "updated_at": "2026-07-25T16:19:55.805Z"
+    "updated_at": "2026-07-25T17:07:21.048Z"
   },
   {
     "id": "gap:gap-failure-counts-per-template",
@@ -5049,12 +5049,12 @@
     "body": {
       "gap_id": "auto_draft_decision:3huzujb3qccit:auto_draft_triggered",
       "category": "auto_draft_triggered",
-      "summary": "[closed by dispatch completion] Report the 5 activity templates with the lowest failure counts over the last 24 hours. For each, give the template id an"
+      "summary": "top_score=0 < threshold=0.3 for goal: Report the 5 activity templates with the lowest failure counts over the last 24 hours. For each, give the template id an"
     },
     "source": "substrate-gap-mirror",
-    "status": "retired",
+    "status": "open",
     "injected_at": "2026-07-25T00:55:05.384Z",
-    "updated_at": "2026-07-25T14:16:26.423Z"
+    "updated_at": "2026-07-25T17:07:52.043Z"
   },
   {
     "id": "gap:auto_draft_decision:3huzujb3qccit:auto_draft_fallback_recommend",
@@ -5062,12 +5062,12 @@
     "body": {
       "gap_id": "auto_draft_decision:3huzujb3qccit:auto_draft_fallback_recommend",
       "category": "auto_draft_fallback_recommend",
-      "summary": "[closed by dispatch completion] Report the 5 activity templates with the lowest failure counts over the last 24 hours. For each, give the template id an"
+      "summary": "no targetTemplateId; falling through to /recommend for goal: Report the 5 activity templates with the lowest failure counts over the last 24 hours. For each, give the template id an"
     },
     "source": "substrate-gap-mirror",
-    "status": "retired",
+    "status": "open",
     "injected_at": "2026-07-25T00:55:08.606Z",
-    "updated_at": "2026-07-25T14:16:26.453Z"
+    "updated_at": "2026-07-25T17:07:55.031Z"
   },
   {
     "id": "gap:gap-filewriteresult",
@@ -5256,12 +5256,12 @@
     "body": {
       "gap_id": "orphaned-capability-execution_trace",
       "category": "orphaned_capability",
-      "summary": "Resolver \"execution_trace\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"execution_trace\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"execution_trace\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"execution_trace\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-25T01:09:45.389Z",
-    "updated_at": "2026-07-25T16:31:20.161Z"
+    "updated_at": "2026-07-25T17:31:20.565Z"
   },
   {
     "id": "a5b1f124-4d35-465a-915d-0274d183fb22",
@@ -6024,7 +6024,7 @@
     "source": "substrate-gap-mirror",
     "status": "retired",
     "injected_at": "2026-07-25T02:08:53.979Z",
-    "updated_at": "2026-07-25T16:20:16.370Z"
+    "updated_at": "2026-07-25T17:19:09.415Z"
   },
   {
     "id": "gap:auto_draft_decision:binvrtofgyal:auto_draft_fallback_recommend",
@@ -6037,7 +6037,7 @@
     "source": "substrate-gap-mirror",
     "status": "retired",
     "injected_at": "2026-07-25T02:08:57.588Z",
-    "updated_at": "2026-07-25T16:20:16.391Z"
+    "updated_at": "2026-07-25T17:19:09.446Z"
   },
   {
     "id": "0aa8aab9-4747-412f-a744-2bc2be193b03",
@@ -9060,7 +9060,7 @@
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-25T05:42:02.019Z",
-    "updated_at": "2026-07-25T16:54:10.332Z"
+    "updated_at": "2026-07-25T17:46:04.629Z"
   },
   {
     "id": "bcf46a20-2dc7-4d68-a876-2335e5e2f0a6",
@@ -9465,7 +9465,7 @@
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-25T06:08:39.294Z",
-    "updated_at": "2026-07-25T16:54:10.286Z"
+    "updated_at": "2026-07-25T17:46:04.605Z"
   },
   {
     "id": "4a55fe7b-9897-4965-ba52-214e21188bfc",
@@ -9562,7 +9562,7 @@
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-25T06:18:35.823Z",
-    "updated_at": "2026-07-25T16:43:27.779Z"
+    "updated_at": "2026-07-25T17:41:21.924Z"
   },
   {
     "id": "8c42a4d4-29db-467f-b7ef-df2c0572e9b9",
@@ -11534,12 +11534,12 @@
     "body": {
       "gap_id": "orphaned-capability-fileList",
       "category": "orphaned_capability",
-      "summary": "Resolver \"fileList\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"fileList\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
+      "summary": "Resolver \"fileList\" is a live registered capability but is invoked by 0 of the activity corpus (387/395 live resolvers are ever invoked). Author an activity that invokes resolver \"fileList\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises."
     },
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-25T08:19:16.112Z",
-    "updated_at": "2026-07-25T16:31:20.232Z"
+    "updated_at": "2026-07-25T17:31:20.607Z"
   },
   {
     "id": "00cdd21a-9985-4e3d-8023-ecd88221241c",
@@ -15790,7 +15790,7 @@
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-25T12:26:32.352Z",
-    "updated_at": "2026-07-25T16:54:09.006Z"
+    "updated_at": "2026-07-25T17:46:02.910Z"
   },
   {
     "id": "1f7bb336-9a9f-4f30-9dcb-fecca30ccbd5",
@@ -15831,7 +15831,7 @@
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-25T12:32:40.144Z",
-    "updated_at": "2026-07-25T16:54:03.824Z"
+    "updated_at": "2026-07-25T17:46:17.340Z"
   },
   {
     "id": "gap:gap-pull-sync-change-detect-blind-to-json-only-edits",
@@ -16453,7 +16453,7 @@
     "source": "substrate-gap-mirror",
     "status": "open",
     "injected_at": "2026-07-25T14:48:26.962Z",
-    "updated_at": "2026-07-25T16:54:25.995Z"
+    "updated_at": "2026-07-25T17:26:02.666Z"
   },
   {
     "id": "gap:gap-vesselmitosiscutoverapplied",
@@ -16842,5 +16842,145 @@
     "status": "open",
     "injected_at": "2026-07-25T16:53:43.662Z",
     "updated_at": "2026-07-25T16:53:43.662Z"
+  },
+  {
+    "id": "55f79366-1fe2-4460-b528-21f6023d50c5",
+    "shape": "boredomSelectionSnapshot",
+    "body": {
+      "tick_at": "2026-07-25T17:04:05.676Z",
+      "conditions": {
+        "open_gap_count": 0
+      },
+      "rhythms_consulted": [],
+      "candidates": [
+        {
+          "template_id": "development-vessel:gap-to-scenario-bridge-tick",
+          "score": 4.8,
+          "reason": "ucb=cold picks=0 shape=1.00 prio=3.00 coldCrowd=0 inputs=0/0"
+        }
+      ],
+      "selected": [
+        {
+          "template_id": "development-vessel:gap-to-scenario-bridge-tick",
+          "dispatch_id": "reserve-shape-1784999045669"
+        }
+      ]
+    },
+    "source": "boredom-vessel",
+    "status": "open",
+    "injected_at": "2026-07-25T17:04:05.679Z",
+    "updated_at": "2026-07-25T17:04:05.679Z"
+  },
+  {
+    "id": "b44c63af-920a-450b-b12c-afb3a8d8323f",
+    "shape": "boredomSelectionSnapshot",
+    "body": {
+      "tick_at": "2026-07-25T17:14:39.132Z",
+      "conditions": {
+        "open_gap_count": 0
+      },
+      "rhythms_consulted": [],
+      "candidates": [
+        {
+          "template_id": "development-vessel:dispatch-latest-auto-draft",
+          "score": 4.8,
+          "reason": "ucb=cold picks=0 shape=0.30 prio=3.00 coldCrowd=0 inputs=0/1"
+        }
+      ],
+      "selected": [
+        {
+          "template_id": "development-vessel:dispatch-latest-auto-draft",
+          "dispatch_id": "reserve-shape-1784999679126"
+        }
+      ]
+    },
+    "source": "boredom-vessel",
+    "status": "open",
+    "injected_at": "2026-07-25T17:14:39.134Z",
+    "updated_at": "2026-07-25T17:14:39.134Z"
+  },
+  {
+    "id": "7ebc33d7-5c17-468f-b033-68a9b1289450",
+    "shape": "boredomSelectionSnapshot",
+    "body": {
+      "tick_at": "2026-07-25T17:25:09.680Z",
+      "conditions": {
+        "open_gap_count": 0
+      },
+      "rhythms_consulted": [],
+      "candidates": [
+        {
+          "template_id": "concept-relevance-backfill-v2",
+          "score": 1.5999999999999999,
+          "reason": "ucb=cold picks=0 shape=1.00 coldCrowd=0 inputs=0/0"
+        }
+      ],
+      "selected": [
+        {
+          "template_id": "concept-relevance-backfill-v2",
+          "dispatch_id": "reserve-shape-1785000309672"
+        }
+      ]
+    },
+    "source": "boredom-vessel",
+    "status": "open",
+    "injected_at": "2026-07-25T17:25:09.682Z",
+    "updated_at": "2026-07-25T17:25:09.682Z"
+  },
+  {
+    "id": "420c79fd-09f4-4f7e-808f-0bdef0d47d24",
+    "shape": "boredomSelectionSnapshot",
+    "body": {
+      "tick_at": "2026-07-25T17:35:37.311Z",
+      "conditions": {
+        "open_gap_count": 0
+      },
+      "rhythms_consulted": [],
+      "candidates": [
+        {
+          "template_id": "docs-mgmt:docs-decision-answer-scan",
+          "score": 1.5999999999999999,
+          "reason": "ucb=cold picks=0 shape=1.00 coldCrowd=0 inputs=0/0"
+        }
+      ],
+      "selected": [
+        {
+          "template_id": "docs-mgmt:docs-decision-answer-scan",
+          "dispatch_id": "reserve-shape-1785000937303"
+        }
+      ]
+    },
+    "source": "boredom-vessel",
+    "status": "open",
+    "injected_at": "2026-07-25T17:35:37.314Z",
+    "updated_at": "2026-07-25T17:35:37.314Z"
+  },
+  {
+    "id": "430b3918-4f27-4312-a705-a3e50527d77d",
+    "shape": "boredomSelectionSnapshot",
+    "body": {
+      "tick_at": "2026-07-25T17:46:06.087Z",
+      "conditions": {
+        "open_gap_count": 0
+      },
+      "rhythms_consulted": [],
+      "candidates": [
+        {
+          "template_id": "docs-mgmt:docs-decision-deliver",
+          "score": 1.5999999999999999,
+          "reason": "ucb=cold picks=0 shape=1.00 coldCrowd=0 inputs=0/0"
+        }
+      ],
+      "selected": [
+        {
+          "template_id": "docs-mgmt:docs-decision-deliver",
+          "dispatch_id": "reserve-shape-1785001566080"
+        }
+      ]
+    },
+    "source": "boredom-vessel",
+    "status": "open",
+    "injected_at": "2026-07-25T17:46:06.090Z",
+    "updated_at": "2026-07-25T17:46:06.090Z"
   }
 ]
