@@ -1,0 +1,20 @@
+{
+  "id": "gap-grounding-query-failure-report",
+  "routing_class": "vessel_authoring",
+  "target_template_id": "development-vessel:scaffold-and-publish-vessel",
+  "mode_class": "missing_capability",
+  "stage": "vessel_authoring",
+  "outcome_class": "gap",
+  "title": "Capability gap: the goal-walk needs a producer for shape \"grounding_query_failure_report\" but no live resolver or activi",
+  "description": "Capability gap: the goal-walk needs a producer for shape \"grounding_query_failure_report\" but no live resolver or activity produces it. AUTHOR a resolver that produces ONLY the shape \"grounding_query_failure_report\" — do NOT expand scope, produce no other output shape. Put it in the vessel that should own this capability (if development-vessel: add the resolver in src/resolvers/, register the shape in src/config.ts AND the dispatch case in src/routes/impulses.ts per the three-place rule; otherwise the owning vessel's resolver surface). Keep it dependency-free (Bun built-ins) and make it typecheck.",
+  "goal_text": "Capability gap: the goal-walk needs a producer for shape \"grounding_query_failure_report\" but no live resolver or activity produces it. AUTHOR a resolver that produces ONLY the shape \"grounding_query_failure_report\" — do NOT expand scope, produce no other output shape. Put it in the vessel that should own this capability (if development-vessel: add the resolver in src/resolvers/, register the shape in src/config.ts AND the dispatch case in src/routes/impulses.ts per the three-place rule; otherwise the owning vessel's resolver surface). Keep it dependency-free (Bun built-ins) and make it typecheck.",
+  "capability_shape": null,
+  "demanding_template_count": null,
+  "sample_template_ids": [],
+  "gap_subtype": null,
+  "cite_principle": null,
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-grounding-query-failure-report",
+  "source_gap_source": "substrate_detected"
+}

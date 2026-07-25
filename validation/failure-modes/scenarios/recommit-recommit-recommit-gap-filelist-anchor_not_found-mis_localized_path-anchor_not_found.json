@@ -1,0 +1,19 @@
+{
+  "id": "recommit-recommit-recommit-gap-filelist-anchor_not_found-mis_localized_path-anchor_not_found",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap recommit-recommit-gap-filelist-anchor_not_found-mis_localized_path repeated already-recorded failure cla",
+  "description": "compose for gap recommit-recommit-gap-filelist-anchor_not_found-mis_localized_path repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file\",\"path\":\"/vessels/development-vessel/src/resolvers/file-list.ts\"}",
+  "goal_text": "compose for gap recommit-recommit-gap-filelist-anchor_not_found-mis_localized_path repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file\",\"path\":\"/vessels/development-vessel/src/resolvers/file-list.ts\"}",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-recommit-recommit-gap-filelist-anchor_not_found-mis_localized_path-anchor_not_found",
+  "source_gap_source": "substrate_detected"
+}

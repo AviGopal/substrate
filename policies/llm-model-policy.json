@@ -1,0 +1,80 @@
+{
+  "rev": 1,
+  "updated_at": "2026-07-25T15:51:43.181Z",
+  "cost_weight": 0.25,
+  "arms": [
+    {
+      "model": "claude-sonnet-5",
+      "cost_per_mtok": 3,
+      "alpha": 1,
+      "beta": 3,
+      "note": "premium anchor (anthropic)",
+      "task_alpha": {
+        "pointer_arg_extraction": 1
+      },
+      "task_beta": {
+        "pointer_arg_extraction": 3
+      }
+    },
+    {
+      "model": "claude-haiku-4-5-20251001",
+      "cost_per_mtok": 0.8,
+      "alpha": 7,
+      "beta": 13,
+      "note": "cheap anthropic",
+      "task_alpha": {
+        "pointer_arg_extraction": 7
+      },
+      "task_beta": {
+        "pointer_arg_extraction": 11
+      }
+    },
+    {
+      "model": "moonshotai/Kimi-K2.6-TEE",
+      "cost_per_mtok": 0.3,
+      "alpha": 8,
+      "beta": 17,
+      "note": "chutes",
+      "task_alpha": {
+        "feature_compose": 1,
+        "pointer_arg_extraction": 8,
+        "goal_target_inference": 8
+      },
+      "task_beta": {
+        "feature_compose": 4,
+        "pointer_arg_extraction": 10,
+        "goal_target_inference": 16
+      }
+    },
+    {
+      "model": "zai-org/GLM-5.2-TEE",
+      "cost_per_mtok": 0.25,
+      "alpha": 2,
+      "beta": 8,
+      "note": "chutes",
+      "task_alpha": {
+        "goal_target_inference": 1,
+        "pointer_arg_extraction": 1,
+        "feature_compose": 3
+      },
+      "task_beta": {
+        "goal_target_inference": 3,
+        "pointer_arg_extraction": 5,
+        "feature_compose": 8
+      }
+    },
+    {
+      "model": "tencent/hy3:free",
+      "cost_per_mtok": 0.01,
+      "alpha": 9,
+      "beta": 18,
+      "note": "openrouter free tier",
+      "task_alpha": {
+        "feature_compose": 6
+      },
+      "task_beta": {
+        "feature_compose": 11
+      }
+    }
+  ]
+}

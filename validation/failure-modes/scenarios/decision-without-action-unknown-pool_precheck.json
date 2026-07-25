@@ -1,0 +1,19 @@
+{
+  "id": "decision-without-action-unknown-pool_precheck",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "decision_without_action",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Decision task 'pool_precheck' (resolver iteration) in unknown produced a decision/selection impulse that NO downstream t",
+  "description": "Decision task 'pool_precheck' (resolver iteration) in unknown produced a decision/selection impulse that NO downstream task consumed in 100% of 92 occurrences — the decision is computed and discarded; the action it should drive never happens.",
+  "goal_text": "Decision task 'pool_precheck' (resolver iteration) in unknown produced a decision/selection impulse that NO downstream task consumed in 100% of 92 occurrences — the decision is computed and discarded; the action it should drive never happens.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "decision-without-action-unknown-pool_precheck",
+  "source_gap_source": "substrate_detected"
+}

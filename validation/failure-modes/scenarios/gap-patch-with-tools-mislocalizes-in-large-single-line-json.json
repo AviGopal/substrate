@@ -1,0 +1,19 @@
+{
+  "id": "gap-patch-with-tools-mislocalizes-in-large-single-line-json",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_localization",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "On a multi-part edit inside a large single-line JSON prompt string (repos/ias-executor-ts/src/templates/lifecycle/riboso",
+  "description": "On a multi-part edit inside a large single-line JSON prompt string (repos/ias-executor-ts/src/templates/lifecycle/ribosome-extract.json, dispatch c4dbd373), feature_compose went UNFAVORABLE ('old_string not found in file' — cannot anchor inside a 4KB JSON string), escalated to patch_with_tools, which (a) MISLOCALIZED — inserted the goalSignature bullet into the WRONG task (assess_quality payload, line 86) not synthesize_template (line 115) where metadata is emitted, (b) applied only 1 of 3 coordinated changes, (c) STAGED-NOT-LANDED (mitosis-2026-07-25T12-08-37, origin/dev unchanged). Honest reach gate correctly returned reached:no (no false green). Operator bootstrapped the correct edit (cee1a2a). REPAIR: byte-anchored tools need task/section-scoped anchoring inside large single-line JSON string values (anchor on enclosing task id + unique nearby substring); staged-not-landed cutover should land or clean its mitosis workspace (/vessels/ias-executor-ts-mitosis-* debris). Ties gap-feature-compose-complexity-ceiling-declines-multipart-edit.",
+  "goal_text": "On a multi-part edit inside a large single-line JSON prompt string (repos/ias-executor-ts/src/templates/lifecycle/ribosome-extract.json, dispatch c4dbd373), feature_compose went UNFAVORABLE ('old_string not found in file' — cannot anchor inside a 4KB JSON string), escalated to patch_with_tools, which (a) MISLOCALIZED — inserted the goalSignature bullet into the WRONG task (assess_quality payload, line 86) not synthesize_template (line 115) where metadata is emitted, (b) applied only 1 of 3 coordinated changes, (c) STAGED-NOT-LANDED (mitosis-2026-07-25T12-08-37, origin/dev unchanged). Honest reach gate correctly returned reached:no (no false green). Operator bootstrapped the correct edit (cee1a2a). REPAIR: byte-anchored tools need task/section-scoped anchoring inside large single-line JSON string values (anchor on enclosing task id + unique nearby substring); staged-not-landed cutover should land or clean its mitosis workspace (/vessels/ias-executor-ts-mitosis-* debris). Ties gap-feature-compose-complexity-ceiling-declines-multipart-edit.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-patch-with-tools-mislocalizes-in-large-single-line-json",
+  "source_gap_source": "substrate_detected"
+}

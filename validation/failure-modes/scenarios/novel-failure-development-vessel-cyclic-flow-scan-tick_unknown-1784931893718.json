@@ -1,0 +1,19 @@
+{
+  "id": "novel-failure-development-vessel-cyclic-flow-scan-tick_unknown-1784931893718",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "novel_failure_mode_detected",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "3 failure traces (development-vessel:cyclic-flow-scan-tick|unknown) orthogonal to all architectural principles (max sim=",
+  "description": "3 failure traces (development-vessel:cyclic-flow-scan-tick|unknown) orthogonal to all architectural principles (max sim=0.000 vs '<none>'). Centroid: development-vessel:cyclic-flow-scan-tick unknown_failure no_task",
+  "goal_text": "3 failure traces (development-vessel:cyclic-flow-scan-tick|unknown) orthogonal to all architectural principles (max sim=0.000 vs '<none>'). Centroid: development-vessel:cyclic-flow-scan-tick unknown_failure no_task",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "novel-failure-development-vessel:cyclic-flow-scan-tick|unknown-1784931893718",
+  "source_gap_source": "substrate_detected"
+}

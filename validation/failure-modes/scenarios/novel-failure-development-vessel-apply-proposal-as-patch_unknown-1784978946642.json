@@ -1,0 +1,19 @@
+{
+  "id": "novel-failure-development-vessel-apply-proposal-as-patch_unknown-1784978946642",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "novel_failure_mode_detected",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "5 failure traces (development-vessel:apply-proposal-as-patch|unknown) orthogonal to all architectural principles (max si",
+  "description": "5 failure traces (development-vessel:apply-proposal-as-patch|unknown) orthogonal to all architectural principles (max sim=0.000 vs '<none>'). Centroid: development-vessel:apply-proposal-as-patch unknown_failure no_task",
+  "goal_text": "5 failure traces (development-vessel:apply-proposal-as-patch|unknown) orthogonal to all architectural principles (max sim=0.000 vs '<none>'). Centroid: development-vessel:apply-proposal-as-patch unknown_failure no_task",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "novel-failure-development-vessel:apply-proposal-as-patch|unknown-1784978946642",
+  "source_gap_source": "substrate_detected"
+}

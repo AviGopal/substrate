@@ -1,0 +1,24 @@
+{
+  "id": "vessel-demand-executionTraceWithSignatures-2026-07-24",
+  "routing_class": "vessel_authoring",
+  "target_template_id": "development-vessel:scaffold-and-publish-vessel",
+  "mode_class": "missing_capability",
+  "stage": "vessel_authoring",
+  "outcome_class": "gap",
+  "title": "Shape 'executionTraceWithSignatures' required by 3 templates but no vessel advertises it. Candidate for substrate-author",
+  "description": "Shape 'executionTraceWithSignatures' required by 3 templates but no vessel advertises it. Candidate for substrate-authored vessel.",
+  "goal_text": "Shape 'executionTraceWithSignatures' required by 3 templates but no vessel advertises it. Candidate for substrate-authored vessel.",
+  "capability_shape": "executionTraceWithSignatures",
+  "demanding_template_count": 3,
+  "sample_template_ids": [
+    "composed-cap-substrate-pulse-vitals-v4-aggregator-aut",
+    "composed-cap-expo",
+    "composed-cap-wrap-resolver-x-as-a-composed-capability"
+  ],
+  "gap_subtype": "vessel_demand",
+  "cite_principle": null,
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "vessel-demand-executionTraceWithSignatures-2026-07-24",
+  "source_gap_source": "substrate_detected"
+}

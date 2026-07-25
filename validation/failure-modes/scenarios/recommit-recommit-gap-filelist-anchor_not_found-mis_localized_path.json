@@ -1,0 +1,19 @@
+{
+  "id": "recommit-recommit-gap-filelist-anchor_not_found-mis_localized_path",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap recommit-gap-filelist-anchor_not_found repeated already-recorded failure class mis_localized_path: The p",
+  "description": "compose for gap recommit-gap-filelist-anchor_not_found repeated already-recorded failure class mis_localized_path: The patch adds a private comment block and empty function stub without fixing the missing module import or the resolveFileList symbol usage in the liv",
+  "goal_text": "compose for gap recommit-gap-filelist-anchor_not_found repeated already-recorded failure class mis_localized_path: The patch adds a private comment block and empty function stub without fixing the missing module import or the resolveFileList symbol usage in the liv",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-recommit-gap-filelist-anchor_not_found-mis_localized_path",
+  "source_gap_source": "substrate_detected"
+}

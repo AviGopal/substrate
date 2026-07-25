@@ -1,0 +1,21 @@
+{
+  "id": "model-opportunity-mitosis_evaluate_verdict",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "architectural_pattern",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Forward-model opportunity: 'mitosis_evaluate_verdict' is acted on / observed but NOT predicted. Proposed model: P(vessel",
+  "description": "Forward-model opportunity: 'mitosis_evaluate_verdict' is acted on / observed but NOT predicted. Proposed model: P(vessel_mitosis_evaluate returns FAVORABLE | staged-change features: lines changed, typecheck-clean-on-stage, scope) — predict before staging/cutover dispatch. Payoff: verdict-miscalibration scan; lets the loop avoid staging changes predicted UNFAVORABLE. Adding it follows the predict→validate→residual template (like the live cost model) — every prediction becomes a free residual-detector, widening detectability.",
+  "goal_text": "Forward-model opportunity: 'mitosis_evaluate_verdict' is acted on / observed but NOT predicted. Proposed model: P(vessel_mitosis_evaluate returns FAVORABLE | staged-change features: lines changed, typecheck-clean-on-stage, scope) — predict before staging/cutover dispatch. Payoff: verdict-miscalibration scan; lets the loop avoid staging changes predicted UNFAVORABLE. Adding it follows the predict→validate→residual template (like the live cost model) — every prediction becomes a free residual-detector, widening detectability.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [
+    "repos/development-vessel/src/resolvers/vessel-mitosis-evaluate.ts"
+  ],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "model-opportunity-mitosis_evaluate_verdict",
+  "source_gap_source": "substrate_detected"
+}

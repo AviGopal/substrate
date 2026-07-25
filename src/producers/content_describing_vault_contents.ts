@@ -1,0 +1,1 @@
+// Basic producer for shape content_describing_vault_contents\nconst content_describing_vault_contents = () => {\n  return {\n    description: 'Describes the contents of a vault',\n    // Add more properties as needed\n  };\n};\n\nmodule.exports = content_describing_vault_contents;

@@ -1,0 +1,19 @@
+{
+  "id": "novel-failure-satisfier-source_code_unknown-1784942630052",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "novel_failure_mode_detected",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "3 failure traces (satisfier:source_code|unknown) orthogonal to all architectural principles (max sim=0.000 vs '<none>').",
+  "description": "3 failure traces (satisfier:source_code|unknown) orthogonal to all architectural principles (max sim=0.000 vs '<none>'). Centroid: satisfier:source_code unknown_failure no_task",
+  "goal_text": "3 failure traces (satisfier:source_code|unknown) orthogonal to all architectural principles (max sim=0.000 vs '<none>'). Centroid: satisfier:source_code unknown_failure no_task",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "novel-failure-satisfier:source_code|unknown-1784942630052",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "detector-coverage-gap-unclassified_failure_development_vessel_cyclic_flow_scan_tick",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "detector_coverage_gap",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Recurring problem class \"unclassified_failure_development_vessel_cyclic_flow_scan_tick\" observed 3× (0 cited by existing",
+  "description": "Recurring problem class \"unclassified_failure_development_vessel_cyclic_flow_scan_tick\" observed 3× (0 cited by existing detectors) — no detector covers it. Author detect-unclassified_failure_development_vessel_cyclic_flow_scan_tick.",
+  "goal_text": "Recurring problem class \"unclassified_failure_development_vessel_cyclic_flow_scan_tick\" observed 3× (0 cited by existing detectors) — no detector covers it. Author detect-unclassified_failure_development_vessel_cyclic_flow_scan_tick.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": "substrate_authors_detectors_for_uncovered_problem_classes",
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "detector-coverage-gap-unclassified_failure_development_vessel_cyclic_flow_scan_tick",
+  "source_gap_source": "substrate_detected"
+}

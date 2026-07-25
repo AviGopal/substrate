@@ -1,0 +1,19 @@
+{
+  "id": "self-recovery-db-pressure-backoff",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "db_contention",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "self-recovery backed off restarting 2 DB-backed vessel(s): shared SurrealDB was unresponsive to a cheap RETURN 1 livenes",
+  "description": "self-recovery backed off restarting 2 DB-backed vessel(s): shared SurrealDB was unresponsive to a cheap RETURN 1 liveness probe — the shared datastore is the bottleneck, not the vessels; restarting them would amplify load",
+  "goal_text": "self-recovery backed off restarting 2 DB-backed vessel(s): shared SurrealDB was unresponsive to a cheap RETURN 1 liveness probe — the shared datastore is the bottleneck, not the vessels; restarting them would amplify load",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "self-recovery-db-pressure-backoff",
+  "source_gap_source": "substrate_detected"
+}

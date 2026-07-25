@@ -1,0 +1,19 @@
+{
+  "id": "unclassified_failure_development_vessel_draft_gap_closing_activity-2026-07-24",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "unclassified_failure_development_vessel_draft_gap_closing_activity",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Observed 10× occurrences of problem class unclassified_failure_development_vessel_draft_gap_closing_activity.",
+  "description": "Observed 10× occurrences of problem class unclassified_failure_development_vessel_draft_gap_closing_activity.",
+  "goal_text": "Observed 10× occurrences of problem class unclassified_failure_development_vessel_draft_gap_closing_activity.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "unclassified_failure_development_vessel_draft_gap_closing_activity-2026-07-24",
+  "source_gap_source": "substrate_detected"
+}

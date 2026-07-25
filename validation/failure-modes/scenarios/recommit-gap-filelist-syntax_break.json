@@ -1,0 +1,19 @@
+{
+  "id": "recommit-gap-filelist-syntax_break",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap gap-filelist repeated already-recorded failure class syntax_break: == typecheck ==\n$ tsc --noEmit\nsrc/ro",
+  "description": "compose for gap gap-filelist repeated already-recorded failure class syntax_break: == typecheck ==\n$ tsc --noEmit\nsrc/routes/impulses.ts(58,5): error TS1128: Declaration or statement expected.\nsrc/routes/impulses.ts(58,20): error TS1",
+  "goal_text": "compose for gap gap-filelist repeated already-recorded failure class syntax_break: == typecheck ==\n$ tsc --noEmit\nsrc/routes/impulses.ts(58,5): error TS1128: Declaration or statement expected.\nsrc/routes/impulses.ts(58,20): error TS1",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-gap-filelist-syntax_break",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "model-reality-selector-unscored",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "forward_model_artifact",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "recommend returns candidates with null Thompson scores — the selector's forward model P(success|activity,shape) is not p",
+  "description": "recommend returns candidates with null Thompson scores — the selector's forward model P(success|activity,shape) is not producing usable scores, so goal routing falls back to exact-match and misroutes.",
+  "goal_text": "recommend returns candidates with null Thompson scores — the selector's forward model P(success|activity,shape) is not producing usable scores, so goal routing falls back to exact-match and misroutes.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "model-reality-selector-unscored",
+  "source_gap_source": "substrate_detected"
+}

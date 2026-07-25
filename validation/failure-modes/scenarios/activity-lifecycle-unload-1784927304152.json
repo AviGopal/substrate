@@ -1,0 +1,19 @@
+{
+  "id": "activity-lifecycle-unload-1784927304152",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "activity_lifecycle",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "6 templates have combined_score=0 over recent window — candidates for hot-set eviction.",
+  "description": "6 templates have combined_score=0 over recent window — candidates for hot-set eviction.",
+  "goal_text": "6 templates have combined_score=0 over recent window — candidates for hot-set eviction.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "activity-lifecycle-unload-1784927304152",
+  "source_gap_source": "substrate_detected"
+}

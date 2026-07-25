@@ -1,0 +1,19 @@
+{
+  "id": "baseline-typecheck-broken-repos-development-vessel",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "feature_compose found the UNTOUCHED baseline of repos/development-vessel failing typecheck BEFORE drafting (1 pre-existi",
+  "description": "feature_compose found the UNTOUCHED baseline of repos/development-vessel failing typecheck BEFORE drafting (1 pre-existing tsc errors, e.g. src/routes/impulses.ts: error TS2307: Cannot find module '../resolvers/file-list.js' or its corresponding type declarations.). Environment fault (stale runtime copy or missing module), not a drafter fault: re-sync this vessel source from its repo baseline. Draft verdicts on this vessel use baseline-delta blame until the baseline is clean.",
+  "goal_text": "feature_compose found the UNTOUCHED baseline of repos/development-vessel failing typecheck BEFORE drafting (1 pre-existing tsc errors, e.g. src/routes/impulses.ts: error TS2307: Cannot find module '../resolvers/file-list.js' or its corresponding type declarations.). Environment fault (stale runtime copy or missing module), not a drafter fault: re-sync this vessel source from its repo baseline. Draft verdicts on this vessel use baseline-delta blame until the baseline is clean.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "baseline-typecheck-broken-repos-development-vessel",
+  "source_gap_source": "substrate_detected"
+}

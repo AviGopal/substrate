@@ -1,0 +1,19 @@
+{
+  "id": "recommit-recommit-route-edit-31e3e3f8-semantic_reject-semantic_reject",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap recommit-route-edit-31e3e3f8-semantic_reject repeated already-recorded failure class semantic_reject: Pa",
+  "description": "compose for gap recommit-route-edit-31e3e3f8-semantic_reject repeated already-recorded failure class semantic_reject: Patch only changes a constant value without altering behavior or implementing the gap's intent",
+  "goal_text": "compose for gap recommit-route-edit-31e3e3f8-semantic_reject repeated already-recorded failure class semantic_reject: Patch only changes a constant value without altering behavior or implementing the gap's intent",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-recommit-route-edit-31e3e3f8-semantic_reject-semantic_reject",
+  "source_gap_source": "substrate_detected"
+}

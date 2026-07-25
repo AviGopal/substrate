@@ -1,0 +1,20 @@
+{
+  "id": "route-edit-39470a73",
+  "routing_class": "vessel_authoring",
+  "target_template_id": "development-vessel:scaffold-and-publish-vessel",
+  "mode_class": "missing_capability",
+  "stage": "vessel_authoring",
+  "outcome_class": "gap",
+  "title": "per-gap failure lessons updated",
+  "description": "per-gap failure lessons updated",
+  "goal_text": "per-gap failure lessons updated",
+  "capability_shape": null,
+  "demanding_template_count": null,
+  "sample_template_ids": [],
+  "gap_subtype": null,
+  "cite_principle": null,
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-39470a73",
+  "source_gap_source": "substrate_detected"
+}

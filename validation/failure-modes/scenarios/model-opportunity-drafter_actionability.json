@@ -1,0 +1,21 @@
+{
+  "id": "model-opportunity-drafter_actionability",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "architectural_pattern",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Forward-model opportunity: 'drafter_actionability' is acted on / observed but NOT predicted. Proposed model: P(draft-gap",
+  "description": "Forward-model opportunity: 'drafter_actionability' is acted on / observed but NOT predicted. Proposed model: P(draft-gap-closing-activity emits a non-empty patch_proposal | scenario features: target_file_paths present?, mode_class, category). Predict before dispatching the drafter on a scenario. Payoff: lets pick_priority skip scenarios predicted to yield empty/analytic proposals (the activity_lifecycle no-op case), concentrating drafter cycles on code-fix scenarios. Adding it follows the predict→validate→residual template (like the live cost model) — every prediction becomes a free residual-detector, widening detectability.",
+  "goal_text": "Forward-model opportunity: 'drafter_actionability' is acted on / observed but NOT predicted. Proposed model: P(draft-gap-closing-activity emits a non-empty patch_proposal | scenario features: target_file_paths present?, mode_class, category). Predict before dispatching the drafter on a scenario. Payoff: lets pick_priority skip scenarios predicted to yield empty/analytic proposals (the activity_lifecycle no-op case), concentrating drafter cycles on code-fix scenarios. Adding it follows the predict→validate→residual template (like the live cost model) — every prediction becomes a free residual-detector, widening detectability.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [
+    "repos/development-vessel/src/resolvers/pick-priority-scenario.ts"
+  ],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "model-opportunity-drafter_actionability",
+  "source_gap_source": "substrate_detected"
+}

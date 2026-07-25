@@ -1,0 +1,19 @@
+{
+  "id": "arch-pattern-catalogue-bloat-1784927349619",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "architectural_pattern",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "architectural_pattern catalogue_bloat (medium): discovery advertises 4 shapes but only 0 appeared in recent 100 traces (",
+  "description": "architectural_pattern catalogue_bloat (medium): discovery advertises 4 shapes but only 0 appeared in recent 100 traces (0.0%). Catalogue carries cost (memory, dispatch-setup) for shapes nothing uses.",
+  "goal_text": "architectural_pattern catalogue_bloat (medium): discovery advertises 4 shapes but only 0 appeared in recent 100 traces (0.0%). Catalogue carries cost (memory, dispatch-setup) for shapes nothing uses.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "arch-pattern-catalogue-bloat-1784927349619",
+  "source_gap_source": "substrate_detected"
+}
