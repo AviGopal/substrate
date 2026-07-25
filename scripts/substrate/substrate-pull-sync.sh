@@ -92,9 +92,12 @@ healthy() { # port -> 0 if 200
   curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$1/health" 2>/dev/null | grep -q '^200$'
 }
 
-content_hash() { # dir -> md5 over the sorted .ts tree ("none" if dir missing)
+content_hash() { # dir -> md5 over the sorted .ts + .json tree ("none" if dir missing)
   [ -d "$1" ] || { echo none; return; }
-  (cd "$1" && find . -type f -name '*.ts' | sort | xargs -r md5sum | md5sum | cut -d' ' -f1)
+  # .json included so pure-template/config edits (e.g. lifecycle *.json activity
+  # templates like ribosome-extract) are detected — a .ts-only hash left a
+  # .json-only change invisible to convergence, so it never mirrored/deployed.
+  (cd "$1" && find . -type f \( -name '*.ts' -o -name '*.json' \) | sort | xargs -r md5sum | md5sum | cut -d' ' -f1)
 }
 
 synced=0; skipped=0; failed=0
