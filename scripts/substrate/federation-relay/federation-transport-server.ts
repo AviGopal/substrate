@@ -10,6 +10,7 @@
 // contract; the proper libp2p_* contract fields are the operator-must-land follow-up).
 import { createVesselLibp2p, serveResolve, serveResolveHttp, resolveViaLibp2p, resolveViaHttp, type VesselLibp2p } from '@avigopal/libp2p-federation-transport'
 import { hostname } from 'node:os'
+import { multiaddr } from '@multiformats/multiaddr'
 
 // RESILIENCE: libp2p internals emit 'error' events on streams/sockets that have no
 // listener (e.g. a relay/peer dial TimeoutError surfacing through internal:streams/
@@ -298,6 +299,13 @@ Bun.serve({
           console.log('[fed-transport] egress/resolve -> ' + String((pointer as any)?.type ?? '?') + ' via ' + String(target).slice(-20))
           res = await resolveOverLibp2p(String(target), pointer).catch(errOf)
         }
+        // A NO_RESERVATION means OUR relay reservation lapsed under this egress: force a
+        // fresh reservation (close + re-dial) and retry once so this request can still
+        // succeed instead of waiting for the next watchdog tick.
+        if (target && res?.error && /NO_RESERVATION|failed to connect via relay/i.test(String(res.error))) {
+          await redialRelay('egress NO_RESERVATION')
+          res = await resolveOverLibp2p(String(target), pointer).catch(errOf)
+        }
         // Fail-open target repair: a relay-only circuit target (…/p2p-circuit with no
         // trailing /p2p/<dest> — e.g. a truncated discovery advertisement) is undialable
         // and errors above; a ?vessel=-only call arrives with no target at all. In both
@@ -494,5 +502,41 @@ setInterval(() => {
   }
   hadCircuit = has
 }, 5_000)
+
+// ── RELAY RESERVATION WATCHDOG ──────────────────────────────────────────────
+// createVesselLibp2p dials the relay ONCE at startup for a bounded (~1h) reservation
+// that nothing renews (a plain re-dial to a connected relay is a no-op). Force a fresh
+// reservation by CLOSE + RE-DIAL: reactively on circuit loss / observed NO_RESERVATION,
+// and proactively well inside the ~1h TTL, so the circuit never empties and hub egress
+// never sees NO_RESERVATION. Re-advertisement is handled by the transition watcher above.
+const RELAY_PEER = RELAY.match(/\/p2p\/([^/]+)/)?.[1] ?? ''
+const relayConnections = () =>
+  RELAY_PEER ? vl.node.getConnections().filter((c) => c.remotePeer.toString() === RELAY_PEER) : []
+let redialing = false
+let lastReserveAt = Date.now()
+async function redialRelay(reason: string): Promise<void> {
+  if (redialing) return
+  redialing = true
+  try {
+    // Close any LIVE relay connection first — a dial while connected returns the existing
+    // connection and does NOT re-reserve. If the relay connection is already gone this
+    // closes nothing and the dial re-establishes connection + reservation.
+    await Promise.allSettled(relayConnections().map((c) => c.close()))
+    await vl.node.dial(multiaddr(RELAY))
+    lastReserveAt = Date.now()
+    console.log(`[federation] relay re-dial (${reason}) — reservation refreshed; circuit=${currentCircuit() ? 'up' : '(pending)'}`)
+  } catch (e) {
+    console.error(`[federation] relay re-dial (${reason}) failed:`, (e as Error)?.message ?? String(e))
+  } finally {
+    redialing = false
+  }
+}
+const PROACTIVE_RERESERVE_MS = 40 * 60_000 // re-reserve well inside the relay's ~1h TTL
+setInterval(() => {
+  const circuitUp = !!currentCircuit()
+  const relayUp = relayConnections().length > 0
+  if (!circuitUp || !relayUp) void redialRelay(!circuitUp ? 'circuit empty' : 'relay connection gone')
+  else if (Date.now() - lastReserveAt > PROACTIVE_RERESERVE_MS) void redialRelay('proactive pre-expiry refresh')
+}, 600_000) // 10 min
 
 console.log(`[fed-transport] up id=${VESSEL_ID} peer=${vl.peerId} health=:${HEALTH_PORT} circuit=${circuit || '(none yet)'} hub=${HUB_DISCOVERY || '(no hub mirror)'}`)
