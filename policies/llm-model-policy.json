@@ -1,6 +1,6 @@
 {
   "rev": 1,
-  "updated_at": "2026-07-25T15:51:43.181Z",
+  "updated_at": "2026-07-25T16:53:56.207Z",
   "cost_weight": 0.25,
   "arms": [
     {
@@ -20,7 +20,7 @@
       "model": "claude-haiku-4-5-20251001",
       "cost_per_mtok": 0.8,
       "alpha": 7,
-      "beta": 13,
+      "beta": 14,
       "note": "cheap anthropic",
       "task_alpha": {
         "pointer_arg_extraction": 7
@@ -33,7 +33,7 @@
       "model": "moonshotai/Kimi-K2.6-TEE",
       "cost_per_mtok": 0.3,
       "alpha": 8,
-      "beta": 17,
+      "beta": 18,
       "note": "chutes",
       "task_alpha": {
         "feature_compose": 1,
@@ -67,13 +67,13 @@
       "model": "tencent/hy3:free",
       "cost_per_mtok": 0.01,
       "alpha": 9,
-      "beta": 18,
+      "beta": 19,
       "note": "openrouter free tier",
       "task_alpha": {
         "feature_compose": 6
       },
       "task_beta": {
-        "feature_compose": 11
+        "feature_compose": 12
       }
     }
   ]

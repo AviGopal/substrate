@@ -22,7 +22,7 @@
     "category": "operational_health",
     "source": "substrate_detected",
     "summary": "0 forward progress over 24h on BOTH axes — code-landing (self_alteration.landed Δ=0) and topology (topology.nested Δ=0) — though measurement timers are live. Continuous operation is ALIVE but not ADVANCING: goals dispatch + the reach gate rejects them as hollow, so nothing reaches → nothing mints → no cutover lands → topology stays flat. Liveness checks 1-4 stay green through this; this makes the EFFICACY axis visible in S (the authoring-ceiling frontier).",
-    "detected_at": "2026-07-25T15:29:19.210Z",
+    "detected_at": "2026-07-25T16:29:19.675Z",
     "status": "open",
     "classification_metadata": {
       "detector": "self_operational_health",
@@ -47,7 +47,7 @@
       "closed_at": "2026-07-24T20:58:32.781Z"
     },
     "created_at": "2026-07-24T20:58:32.411Z",
-    "updated_at": "2026-07-25T15:29:20.924Z"
+    "updated_at": "2026-07-25T16:29:21.357Z"
   },
   {
     "id": "cost-model-miscalibrated",
@@ -99,17 +99,17 @@
     "id": "gap-backlog-unhealthy",
     "category": "architectural_pattern",
     "source": "substrate_detected",
-    "summary": "Gap store backlog unhealthy: 328/683 open gaps are stale (>48h untouched), 0 churned (drafted+failed+stale). Top stale categories: missing_capability=138, unreachable_producer=56, orphaned_capability=34, documentation_drift=23, poison_producer=11. Many gaps never close — needs auto-close + a gap-emission audit (are detectors emitting un-actionable gaps?).",
-    "detected_at": "2026-07-25T15:52:49.149Z",
+    "summary": "Gap store backlog unhealthy: 335/683 open gaps are stale (>48h untouched), 0 churned (drafted+failed+stale). Top stale categories: missing_capability=145, unreachable_producer=56, orphaned_capability=34, documentation_drift=23, poison_producer=11. Many gaps never close — needs auto-close + a gap-emission audit (are detectors emitting un-actionable gaps?).",
+    "detected_at": "2026-07-25T16:54:23.577Z",
     "status": "open",
     "classification_metadata": {
       "gap_subtype": "gap_backlog_unhealthy",
       "open": 683,
-      "stale_open": 328,
+      "stale_open": 335,
       "churned": 0,
       "auto_closed_this_run": 0,
       "top_stale_categories": {
-        "missing_capability": 138,
+        "missing_capability": 145,
         "unreachable_producer": 56,
         "orphaned_capability": 34,
         "documentation_drift": 23,
@@ -117,7 +117,7 @@
       }
     },
     "created_at": "2026-07-24T21:05:20.442Z",
-    "updated_at": "2026-07-25T15:52:49.150Z"
+    "updated_at": "2026-07-25T16:54:23.578Z"
   },
   {
     "id": "orphaned-capability-activeDispatches",
@@ -159,8 +159,8 @@
     "id": "orphaned-capability-activity_template",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"activity_template\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"activity_template\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.168Z",
+    "summary": "Resolver \"activity_template\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"activity_template\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:19.322Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -189,14 +189,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.703Z",
-    "updated_at": "2026-07-25T15:31:12.168Z"
+    "updated_at": "2026-07-25T16:31:19.323Z"
   },
   {
     "id": "orphaned-capability-assessment_summary",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"assessment_summary\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"assessment_summary\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.181Z",
+    "summary": "Resolver \"assessment_summary\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"assessment_summary\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:19.862Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -225,14 +225,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.704Z",
-    "updated_at": "2026-07-25T15:31:12.182Z"
+    "updated_at": "2026-07-25T16:31:19.863Z"
   },
   {
     "id": "orphaned-capability-author_producer",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"author_producer\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"author_producer\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.193Z",
+    "summary": "Resolver \"author_producer\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"author_producer\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:19.874Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -261,14 +261,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.706Z",
-    "updated_at": "2026-07-25T15:31:12.193Z"
+    "updated_at": "2026-07-25T16:31:19.874Z"
   },
   {
     "id": "orphaned-capability-cluster",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"cluster\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"cluster\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.203Z",
+    "summary": "Resolver \"cluster\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"cluster\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:19.884Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -298,14 +298,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.707Z",
-    "updated_at": "2026-07-25T15:31:12.203Z"
+    "updated_at": "2026-07-25T16:31:19.884Z"
   },
   {
     "id": "orphaned-capability-coarsenableChain",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"coarsenableChain\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"coarsenableChain\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.214Z",
+    "summary": "Resolver \"coarsenableChain\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"coarsenableChain\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:19.896Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -334,14 +334,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.709Z",
-    "updated_at": "2026-07-25T15:31:12.214Z"
+    "updated_at": "2026-07-25T16:31:19.896Z"
   },
   {
     "id": "orphaned-capability-code_locality",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"code_locality\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"code_locality\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.223Z",
+    "summary": "Resolver \"code_locality\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"code_locality\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:19.905Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -370,14 +370,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.710Z",
-    "updated_at": "2026-07-25T15:31:12.224Z"
+    "updated_at": "2026-07-25T16:31:19.905Z"
   },
   {
     "id": "orphaned-capability-code_modification_proposal",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"code_modification_proposal\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"code_modification_proposal\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.234Z",
+    "summary": "Resolver \"code_modification_proposal\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"code_modification_proposal\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:19.915Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -406,14 +406,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.713Z",
-    "updated_at": "2026-07-25T15:31:12.234Z"
+    "updated_at": "2026-07-25T16:31:19.916Z"
   },
   {
     "id": "orphaned-capability-code_modification_proposal_write",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"code_modification_proposal_write\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"code_modification_proposal_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.243Z",
+    "summary": "Resolver \"code_modification_proposal_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"code_modification_proposal_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:19.925Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -442,14 +442,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.716Z",
-    "updated_at": "2026-07-25T15:31:12.243Z"
+    "updated_at": "2026-07-25T16:31:19.925Z"
   },
   {
     "id": "orphaned-capability-code_quality with substantive assessment content",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"code_quality with substantive assessment content\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"code_quality with substantive assessment content\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.253Z",
+    "summary": "Resolver \"code_quality with substantive assessment content\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"code_quality with substantive assessment content\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:19.936Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -478,14 +478,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.718Z",
-    "updated_at": "2026-07-25T15:31:12.253Z"
+    "updated_at": "2026-07-25T16:31:19.936Z"
   },
   {
     "id": "orphaned-capability-compositionGraph",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"compositionGraph\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"compositionGraph\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.263Z",
+    "summary": "Resolver \"compositionGraph\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"compositionGraph\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:19.946Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -514,14 +514,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.719Z",
-    "updated_at": "2026-07-25T15:31:12.263Z"
+    "updated_at": "2026-07-25T16:31:19.946Z"
   },
   {
     "id": "orphaned-capability-concept",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"concept\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"concept\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.273Z",
+    "summary": "Resolver \"concept\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"concept\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:19.956Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -550,14 +550,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.721Z",
-    "updated_at": "2026-07-25T15:31:12.273Z"
+    "updated_at": "2026-07-25T16:31:19.957Z"
   },
   {
     "id": "orphaned-capability-conceptCreditDecontaminate_write",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"conceptCreditDecontaminate_write\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptCreditDecontaminate_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.283Z",
+    "summary": "Resolver \"conceptCreditDecontaminate_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptCreditDecontaminate_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:19.967Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -587,14 +587,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.723Z",
-    "updated_at": "2026-07-25T15:31:12.283Z"
+    "updated_at": "2026-07-25T16:31:19.967Z"
   },
   {
     "id": "orphaned-capability-conceptLink_write",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"conceptLink_write\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptLink_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.293Z",
+    "summary": "Resolver \"conceptLink_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptLink_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:19.977Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -624,14 +624,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.724Z",
-    "updated_at": "2026-07-25T15:31:12.294Z"
+    "updated_at": "2026-07-25T16:31:19.977Z"
   },
   {
     "id": "orphaned-capability-conceptSearch",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"conceptSearch\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptSearch\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.302Z",
+    "summary": "Resolver \"conceptSearch\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptSearch\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:19.986Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -661,14 +661,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.726Z",
-    "updated_at": "2026-07-25T15:31:12.303Z"
+    "updated_at": "2026-07-25T16:31:19.986Z"
   },
   {
     "id": "orphaned-capability-conceptSequence_write",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"conceptSequence_write\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptSequence_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.313Z",
+    "summary": "Resolver \"conceptSequence_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptSequence_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:19.996Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -698,14 +698,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.727Z",
-    "updated_at": "2026-07-25T15:31:12.313Z"
+    "updated_at": "2026-07-25T16:31:19.996Z"
   },
   {
     "id": "orphaned-capability-conceptSignatureUpsert_write",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"conceptSignatureUpsert_write\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptSignatureUpsert_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.323Z",
+    "summary": "Resolver \"conceptSignatureUpsert_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptSignatureUpsert_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.007Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -735,14 +735,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.729Z",
-    "updated_at": "2026-07-25T15:31:12.323Z"
+    "updated_at": "2026-07-25T16:31:20.007Z"
   },
   {
     "id": "orphaned-capability-conceptUsage_write",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"conceptUsage_write\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptUsage_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.334Z",
+    "summary": "Resolver \"conceptUsage_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"conceptUsage_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.017Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -772,14 +772,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.732Z",
-    "updated_at": "2026-07-25T15:31:12.334Z"
+    "updated_at": "2026-07-25T16:31:20.017Z"
   },
   {
     "id": "orphaned-capability-concept_truth_probe",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"concept_truth_probe\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"concept_truth_probe\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.343Z",
+    "summary": "Resolver \"concept_truth_probe\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"concept_truth_probe\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.025Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -808,14 +808,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.734Z",
-    "updated_at": "2026-07-25T15:31:12.344Z"
+    "updated_at": "2026-07-25T16:31:20.025Z"
   },
   {
     "id": "orphaned-capability-config_file",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"config_file\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"config_file\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.353Z",
+    "summary": "Resolver \"config_file\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"config_file\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.036Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -844,14 +844,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.735Z",
-    "updated_at": "2026-07-25T15:31:12.354Z"
+    "updated_at": "2026-07-25T16:31:20.037Z"
   },
   {
     "id": "orphaned-capability-cpg_query_result",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"cpg_query_result\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"cpg_query_result\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.363Z",
+    "summary": "Resolver \"cpg_query_result\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"cpg_query_result\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.047Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -880,14 +880,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.737Z",
-    "updated_at": "2026-07-25T15:31:12.363Z"
+    "updated_at": "2026-07-25T16:31:20.047Z"
   },
   {
     "id": "orphaned-capability-db_admin",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"db_admin\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"db_admin\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.373Z",
+    "summary": "Resolver \"db_admin\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"db_admin\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.056Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -916,14 +916,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.739Z",
-    "updated_at": "2026-07-25T15:31:12.373Z"
+    "updated_at": "2026-07-25T16:31:20.056Z"
   },
   {
     "id": "orphaned-capability-docFixPolicy",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"docFixPolicy\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"docFixPolicy\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.384Z",
+    "summary": "Resolver \"docFixPolicy\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"docFixPolicy\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.069Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -952,14 +952,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.741Z",
-    "updated_at": "2026-07-25T15:31:12.384Z"
+    "updated_at": "2026-07-25T16:31:20.069Z"
   },
   {
     "id": "orphaned-capability-docFixPolicy_write",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"docFixPolicy_write\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"docFixPolicy_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.395Z",
+    "summary": "Resolver \"docFixPolicy_write\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"docFixPolicy_write\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.078Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -988,14 +988,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.742Z",
-    "updated_at": "2026-07-25T15:31:12.395Z"
+    "updated_at": "2026-07-25T16:31:20.079Z"
   },
   {
     "id": "orphaned-capability-docs_align_bridge",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"docs_align_bridge\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"docs_align_bridge\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.404Z",
+    "summary": "Resolver \"docs_align_bridge\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"docs_align_bridge\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.089Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -1024,14 +1024,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.744Z",
-    "updated_at": "2026-07-25T15:31:12.404Z"
+    "updated_at": "2026-07-25T16:31:20.089Z"
   },
   {
     "id": "orphaned-capability-embed",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"embed\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"embed\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.415Z",
+    "summary": "Resolver \"embed\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"embed\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.099Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -1061,14 +1061,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.746Z",
-    "updated_at": "2026-07-25T15:31:12.415Z"
+    "updated_at": "2026-07-25T16:31:20.099Z"
   },
   {
     "id": "orphaned-capability-error_log",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"error_log\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"error_log\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.438Z",
+    "summary": "Resolver \"error_log\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"error_log\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.122Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -1115,14 +1115,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.749Z",
-    "updated_at": "2026-07-25T15:31:12.438Z"
+    "updated_at": "2026-07-25T16:31:20.123Z"
   },
   {
     "id": "orphaned-capability-eventStream",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"eventStream\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"eventStream\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.449Z",
+    "summary": "Resolver \"eventStream\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"eventStream\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.132Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -1151,14 +1151,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.751Z",
-    "updated_at": "2026-07-25T15:31:12.449Z"
+    "updated_at": "2026-07-25T16:31:20.133Z"
   },
   {
     "id": "orphaned-capability-executionReplicationPull",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"executionReplicationPull\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"executionReplicationPull\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.461Z",
+    "summary": "Resolver \"executionReplicationPull\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"executionReplicationPull\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.144Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -1187,14 +1187,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.753Z",
-    "updated_at": "2026-07-25T15:31:12.462Z"
+    "updated_at": "2026-07-25T16:31:20.145Z"
   },
   {
     "id": "orphaned-capability-failureCountReport",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"failureCountReport\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"failureCountReport\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.488Z",
+    "summary": "Resolver \"failureCountReport\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"failureCountReport\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.165Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -1223,14 +1223,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.754Z",
-    "updated_at": "2026-07-25T15:31:12.488Z"
+    "updated_at": "2026-07-25T16:31:20.166Z"
   },
   {
     "id": "orphaned-capability-failure_mode_summary",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"failure_mode_summary\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"failure_mode_summary\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.499Z",
+    "summary": "Resolver \"failure_mode_summary\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"failure_mode_summary\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.191Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -1259,14 +1259,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.756Z",
-    "updated_at": "2026-07-25T15:31:12.499Z"
+    "updated_at": "2026-07-25T16:31:20.193Z"
   },
   {
     "id": "orphaned-capability-federation_probe",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"federation_probe\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"federation_probe\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.511Z",
+    "summary": "Resolver \"federation_probe\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"federation_probe\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.212Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -1295,14 +1295,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.760Z",
-    "updated_at": "2026-07-25T15:31:12.512Z"
+    "updated_at": "2026-07-25T16:31:20.212Z"
   },
   {
     "id": "orphaned-capability-fossilRankReport",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"fossilRankReport\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"fossilRankReport\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.540Z",
+    "summary": "Resolver \"fossilRankReport\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"fossilRankReport\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.236Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -1331,14 +1331,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.761Z",
-    "updated_at": "2026-07-25T15:31:12.540Z"
+    "updated_at": "2026-07-25T16:31:20.236Z"
   },
   {
     "id": "orphaned-capability-gap_compose",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"gap_compose\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"gap_compose\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.553Z",
+    "summary": "Resolver \"gap_compose\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"gap_compose\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.249Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -1376,14 +1376,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.763Z",
-    "updated_at": "2026-07-25T15:31:12.554Z"
+    "updated_at": "2026-07-25T16:31:20.249Z"
   },
   {
     "id": "orphaned-capability-gh_pr_create",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"gh_pr_create\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"gh_pr_create\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.567Z",
+    "summary": "Resolver \"gh_pr_create\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"gh_pr_create\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.262Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -1412,14 +1412,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.766Z",
-    "updated_at": "2026-07-25T15:31:12.567Z"
+    "updated_at": "2026-07-25T16:31:20.262Z"
   },
   {
     "id": "orphaned-capability-gh_pr_merge",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"gh_pr_merge\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"gh_pr_merge\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.578Z",
+    "summary": "Resolver \"gh_pr_merge\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"gh_pr_merge\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.272Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -1448,14 +1448,14 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.768Z",
-    "updated_at": "2026-07-25T15:31:12.579Z"
+    "updated_at": "2026-07-25T16:31:20.272Z"
   },
   {
     "id": "orphaned-capability-git_push",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"git_push\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"git_push\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.590Z",
+    "summary": "Resolver \"git_push\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"git_push\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.282Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -1484,7 +1484,7 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:05:35.770Z",
-    "updated_at": "2026-07-25T15:31:12.591Z"
+    "updated_at": "2026-07-25T16:31:20.283Z"
   },
   {
     "id": "orphaned-capability-goalDispatchAsync",
@@ -2170,7 +2170,7 @@
     "source": "substrate_detected",
     "status": "open",
     "summary": "Capability gap: the goal-walk needs a producer for shape \"resolver_tier_cost_summary\" but no live resolver or activity produces it. AUTHOR a resolver that produces ONLY the shape \"resolver_tier_cost_summary\" — do NOT expand scope, produce no other output shape. Put it in the vessel that should own this capability (if development-vessel: add the resolver in src/resolvers/, register the shape in src/config.ts AND the dispatch case in src/routes/impulses.ts per the three-place rule; otherwise the owning vessel's resolver surface). Keep it dependency-free (Bun built-ins) and make it typecheck.",
-    "detected_at": "2026-07-25T15:42:53.212Z",
+    "detected_at": "2026-07-25T16:42:58.393Z",
     "classification_metadata": {
       "kind": "capability_gap",
       "missing_shape": "resolver_tier_cost_summary",
@@ -2179,7 +2179,7 @@
       ],
       "goal": "Report the total resolution cost grouped by resolver_tier (deterministic, pattern, llm) over the last 24 hours, ordered by total cost highest first. Include the count of resolutions per tier alongside each total.",
       "goal_target_shapes": [
-        "resolver_tier_cost_summary with non-empty tiers containing cost totals and resolution counts per resolver_tier"
+        "resolver_tier_cost_summary with non-empty tiers data and counts"
       ],
       "scope_narrowed": true,
       "approach_decisions": [
@@ -2211,7 +2211,7 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T21:29:20.236Z",
-    "updated_at": "2026-07-25T15:42:53.212Z"
+    "updated_at": "2026-07-25T16:42:58.393Z"
   },
   {
     "id": "vessel-demand-discoverByShapesQuery-2026-07-24",
@@ -2304,7 +2304,7 @@
     "category": "forward_model_artifact",
     "source": "substrate_detected",
     "summary": "Forward-model artifact: create-shape-provider-goal recorded 0.0% success over 751 traces with ZERO real errors. Recording marks correct runs as failure, β-penalising the activity and detaching P(success|activity) from reality.",
-    "detected_at": "2026-07-25T15:40:54.137Z",
+    "detected_at": "2026-07-25T16:40:54.204Z",
     "status": "open",
     "classification_metadata": {
       "detector": "model_reality_consistency_audit",
@@ -2337,19 +2337,19 @@
       "localization_failed_at": "2026-07-24T21:40:36.215Z"
     },
     "created_at": "2026-07-24T21:40:35.592Z",
-    "updated_at": "2026-07-25T15:40:54.251Z"
+    "updated_at": "2026-07-25T16:40:54.205Z"
   },
   {
     "id": "model-reality-selector-unscored",
     "category": "forward_model_artifact",
     "source": "substrate_detected",
     "summary": "recommend returns candidates with null Thompson scores — the selector's forward model P(success|activity,shape) is not producing usable scores, so goal routing falls back to exact-match and misroutes.",
-    "detected_at": "2026-07-25T15:41:07.610Z",
+    "detected_at": "2026-07-25T16:41:06.970Z",
     "status": "open",
     "classification_metadata": {
       "detector": "model_reality_consistency_audit",
       "signature": "selector_unscored",
-      "top_template": "activity:⟨validation-dispatch-tick⟩",
+      "top_template": "activity:⟨development-vessel:detect-phantom-success-trace⟩",
       "approach_decisions": [
         {
           "at": "2026-07-24T21:42:49.910Z",
@@ -2381,7 +2381,7 @@
       "last_predicted_p": 0.65
     },
     "created_at": "2026-07-24T21:41:32.315Z",
-    "updated_at": "2026-07-25T15:41:07.612Z"
+    "updated_at": "2026-07-25T16:41:06.971Z"
   },
   {
     "id": "reach-gap-concept",
@@ -2762,8 +2762,8 @@
     "id": "orphaned-capability-error",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"error\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"error\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.426Z",
+    "summary": "Resolver \"error\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"error\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.111Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -2792,7 +2792,7 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-24T22:19:18.226Z",
-    "updated_at": "2026-07-25T15:31:12.426Z"
+    "updated_at": "2026-07-25T16:31:20.112Z"
   },
   {
     "id": "gap-dispatch-id",
@@ -3093,7 +3093,7 @@
     "source": "substrate_detected",
     "status": "open",
     "summary": "Reachability gap: shape \"failure_count_report\" is advertised by a producer, but the walk could not reach it from cold — the producer's required input_shapes are not producible from the goal pool. If the producer's resolver self-grounds (does not consume that input), declare the gating input as optional_input_shapes (non-gating) so it becomes cold-feasible; otherwise author a producer for the missing input. Do NOT expand scope.",
-    "detected_at": "2026-07-25T15:07:11.568Z",
+    "detected_at": "2026-07-25T16:19:55.796Z",
     "classification_metadata": {
       "kind": "reachability_gap",
       "unreachable_shape": "failure_count_report",
@@ -3104,7 +3104,7 @@
         "goal",
         "trace"
       ],
-      "goal": "Report the 8 activity templates with the highest failure counts over the last 24 hours. For each, give the template id and its failure count, sorted descending by that count.",
+      "goal": "Summarize the most common failure modes across execution traces from the last 24 hours. For each distinct failure_mode.type, report a count and one example execution_id, ordered by count descending.",
       "goal_target_shapes": [
         "failure_count_report",
         "error"
@@ -3112,7 +3112,7 @@
       "scope_narrowed": true
     },
     "created_at": "2026-07-24T22:54:47.191Z",
-    "updated_at": "2026-07-25T15:07:11.569Z"
+    "updated_at": "2026-07-25T16:19:55.797Z"
   },
   {
     "id": "gap-failure-counts-per-template",
@@ -3767,7 +3767,7 @@
     "source": "substrate_detected",
     "status": "open",
     "summary": "Capability gap: the goal-walk needs a producer for shape \"failure_mode_summary\" but no live resolver or activity produces it. AUTHOR a resolver that produces ONLY the shape \"failure_mode_summary\" — do NOT expand scope, produce no other output shape. Put it in the vessel that should own this capability (if development-vessel: add the resolver in src/resolvers/, register the shape in src/config.ts AND the dispatch case in src/routes/impulses.ts per the three-place rule; otherwise the owning vessel's resolver surface). Keep it dependency-free (Bun built-ins) and make it typecheck.",
-    "detected_at": "2026-07-25T15:19:00.034Z",
+    "detected_at": "2026-07-25T16:19:06.748Z",
     "classification_metadata": {
       "kind": "capability_gap",
       "missing_shape": "failure_mode_summary",
@@ -3776,7 +3776,7 @@
       ],
       "goal": "Summarize the most common failure modes across execution traces from the last 24 hours. For each distinct failure_mode.type, report a count and one example execution_id, ordered by count descending.",
       "goal_target_shapes": [
-        "failure_mode_summary with per-type counts and example execution_ids"
+        "failure_mode_summary with actual failure mode data (type, count, example execution_id)"
       ],
       "scope_narrowed": true,
       "approach_decisions": [
@@ -3803,7 +3803,7 @@
       "closed_at": "2026-07-25T03:07:53.253Z"
     },
     "created_at": "2026-07-25T00:05:36.136Z",
-    "updated_at": "2026-07-25T15:19:00.034Z"
+    "updated_at": "2026-07-25T16:19:06.748Z"
   },
   {
     "id": "gap-githeadcommit",
@@ -4667,8 +4667,8 @@
     "id": "orphaned-capability-execution_trace",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"execution_trace\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"execution_trace\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.474Z",
+    "summary": "Resolver \"execution_trace\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"execution_trace\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.154Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -4715,7 +4715,7 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-25T01:09:45.384Z",
-    "updated_at": "2026-07-25T15:31:12.474Z"
+    "updated_at": "2026-07-25T16:31:20.155Z"
   },
   {
     "id": "novel-failure-satisfier:source_code|unknown-1784942630052",
@@ -4748,7 +4748,7 @@
     "source": "substrate_detected",
     "status": "open",
     "summary": "Capability gap: the goal-walk needs a producer for shape \"trace\" but no live resolver or activity produces it. AUTHOR a resolver that produces ONLY the shape \"trace\" — do NOT expand scope, produce no other output shape. Put it in the vessel that should own this capability (if development-vessel: add the resolver in src/resolvers/, register the shape in src/config.ts AND the dispatch case in src/routes/impulses.ts per the three-place rule; otherwise the owning vessel's resolver surface). Keep it dependency-free (Bun built-ins) and make it typecheck.",
-    "detected_at": "2026-07-25T14:56:10.066Z",
+    "detected_at": "2026-07-25T15:58:00.280Z",
     "classification_metadata": {
       "kind": "capability_gap",
       "missing_shape": "trace",
@@ -4757,7 +4757,6 @@
       ],
       "goal": "Examine the most recent successful multi-task execution traces. Identify the recurring task pattern they share (the common sequence of resolver steps and shape flow), and produce a concept that summarizes that pattern with a name, description, and the activities it generalizes.",
       "goal_target_shapes": [
-        "executionTraceList",
         "execution_trace",
         "trace"
       ],
@@ -4791,7 +4790,7 @@
       "mispredicted_lands": 0
     },
     "created_at": "2026-07-25T01:45:41.767Z",
-    "updated_at": "2026-07-25T14:56:10.070Z"
+    "updated_at": "2026-07-25T15:58:00.281Z"
   },
   {
     "id": "gap-standing-pool-flat-unranked-no-momentum",
@@ -4926,10 +4925,10 @@
     "category": "auto_draft_triggered",
     "source": "goal_host_auto_draft",
     "summary": "[closed by dispatch completion] Summarize the most common failure modes across execution traces from the last 24 hours. For each distinct failure_mode.t",
-    "detected_at": "2026-07-25T15:19:49.021Z",
+    "detected_at": "2026-07-25T16:20:16.356Z",
     "status": "closed",
     "created_at": "2026-07-25T02:08:53.972Z",
-    "updated_at": "2026-07-25T15:19:49.021Z",
+    "updated_at": "2026-07-25T16:20:16.357Z",
     "classification_metadata": {
       "dispatchId": "bd6e620b-950a-4cf2-bb87-b2ef42e61382",
       "goal": "Summarize the most common failure modes across execution traces from the last 24 hours. For each distinct failure_mode.type, report a count and one example execution_id, ordered by count descending.",
@@ -4958,10 +4957,10 @@
     "category": "auto_draft_fallback_recommend",
     "source": "goal_host_auto_draft",
     "summary": "[closed by dispatch completion] Summarize the most common failure modes across execution traces from the last 24 hours. For each distinct failure_mode.t",
-    "detected_at": "2026-07-25T15:19:49.051Z",
+    "detected_at": "2026-07-25T16:20:16.383Z",
     "status": "closed",
     "created_at": "2026-07-25T02:08:57.576Z",
-    "updated_at": "2026-07-25T15:19:49.051Z",
+    "updated_at": "2026-07-25T16:20:16.383Z",
     "classification_metadata": {
       "dispatchId": "bd6e620b-950a-4cf2-bb87-b2ef42e61382",
       "goal": "Summarize the most common failure modes across execution traces from the last 24 hours. For each distinct failure_mode.type, report a count and one example execution_id, ordered by count descending.",
@@ -5479,7 +5478,7 @@
       "suspected_real_location": "src/resolvers/file-list.ts:resolveFileList",
       "approach_decisions": [
         {
-          "at": "2026-07-25T15:20:02.022Z",
+          "at": "2026-07-25T15:58:02.303Z",
           "predicted_p": 0.55,
           "predicted_land": true,
           "edit_site": "",
@@ -5488,11 +5487,11 @@
           ],
           "outcome": {
             "landed": false,
-            "joined_at": "2026-07-25T15:20:21.428Z"
+            "joined_at": "2026-07-25T15:58:16.055Z"
           }
         },
         {
-          "at": "2026-07-25T15:25:49.230Z",
+          "at": "2026-07-25T16:09:15.437Z",
           "predicted_p": 0.55,
           "predicted_land": true,
           "edit_site": "",
@@ -5501,11 +5500,11 @@
           ],
           "outcome": {
             "landed": false,
-            "joined_at": "2026-07-25T15:26:04.460Z"
+            "joined_at": "2026-07-25T16:09:28.147Z"
           }
         },
         {
-          "at": "2026-07-25T15:33:19.733Z",
+          "at": "2026-07-25T16:30:49.062Z",
           "predicted_p": 0.55,
           "predicted_land": true,
           "edit_site": "",
@@ -5514,11 +5513,11 @@
           ],
           "outcome": {
             "landed": false,
-            "joined_at": "2026-07-25T15:33:31.951Z"
+            "joined_at": "2026-07-25T16:31:12.299Z"
           }
         },
         {
-          "at": "2026-07-25T15:39:19.787Z",
+          "at": "2026-07-25T16:47:49.015Z",
           "predicted_p": 0.55,
           "predicted_land": true,
           "edit_site": "",
@@ -5527,11 +5526,11 @@
           ],
           "outcome": {
             "landed": false,
-            "joined_at": "2026-07-25T15:39:36.320Z"
+            "joined_at": "2026-07-25T16:48:03.489Z"
           }
         },
         {
-          "at": "2026-07-25T15:48:15.535Z",
+          "at": "2026-07-25T16:53:49.076Z",
           "predicted_p": 0.55,
           "predicted_land": true,
           "edit_site": "",
@@ -5540,41 +5539,11 @@
           ],
           "outcome": {
             "landed": false,
-            "joined_at": "2026-07-25T15:48:29.390Z"
+            "joined_at": "2026-07-25T16:54:10.321Z"
           }
         }
       ],
       "failure_lessons": [
-        {
-          "at": "2026-07-25T15:00:35.539Z",
-          "class": "mis_localized_path",
-          "reason": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}",
-          "raw_excerpt": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}"
-        },
-        {
-          "at": "2026-07-25T15:06:09.524Z",
-          "class": "mis_localized_path",
-          "reason": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}",
-          "raw_excerpt": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}"
-        },
-        {
-          "at": "2026-07-25T15:13:04.863Z",
-          "class": "mis_localized_path",
-          "reason": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}",
-          "raw_excerpt": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}"
-        },
-        {
-          "at": "2026-07-25T15:20:21.385Z",
-          "class": "mis_localized_path",
-          "reason": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}",
-          "raw_excerpt": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}"
-        },
-        {
-          "at": "2026-07-25T15:26:04.409Z",
-          "class": "mis_localized_path",
-          "reason": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}",
-          "raw_excerpt": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}"
-        },
         {
           "at": "2026-07-25T15:33:31.909Z",
           "class": "mis_localized_path",
@@ -5592,27 +5561,57 @@
           "class": "mis_localized_path",
           "reason": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}",
           "raw_excerpt": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}"
+        },
+        {
+          "at": "2026-07-25T15:58:16.020Z",
+          "class": "mis_localized_path",
+          "reason": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}",
+          "raw_excerpt": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}"
+        },
+        {
+          "at": "2026-07-25T16:09:28.106Z",
+          "class": "mis_localized_path",
+          "reason": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}",
+          "raw_excerpt": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}"
+        },
+        {
+          "at": "2026-07-25T16:31:12.250Z",
+          "class": "mis_localized_path",
+          "reason": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}",
+          "raw_excerpt": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}"
+        },
+        {
+          "at": "2026-07-25T16:48:03.445Z",
+          "class": "mis_localized_path",
+          "reason": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}",
+          "raw_excerpt": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}"
+        },
+        {
+          "at": "2026-07-25T16:54:10.261Z",
+          "class": "mis_localized_path",
+          "reason": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}",
+          "raw_excerpt": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}"
         }
       ],
       "localization_failed": true,
       "localization_failed_at": "2026-07-25T05:55:27.256Z",
       "verify_failure_reason": "src/routes/impulses.ts(477,14): error TS2552: Cannot find name 'resolveFileList'. Did you mean 'resolveFsList'?",
-      "failed_attempts": 110,
-      "last_failed_at": "2026-07-25T15:48:29.390Z",
-      "mispredicted_lands": 55,
+      "failed_attempts": 120,
+      "last_failed_at": "2026-07-25T16:54:10.321Z",
+      "mispredicted_lands": 60,
       "last_predicted_p": 0.55,
       "semantic_gate_reason": "The patch adds a private comment block and empty function stub without fixing the missing module import or the resolveFileList symbol usage in the live path."
     },
     "status": "open",
     "created_at": "2026-07-25T05:42:02.014Z",
-    "updated_at": "2026-07-25T15:48:29.390Z"
+    "updated_at": "2026-07-25T16:54:10.321Z"
   },
   {
     "id": "recommit-recommit-gap-filelist-anchor_not_found-mis_localized_path",
     "category": "systematic_failure",
     "source": "substrate_detected",
     "summary": "compose for gap recommit-gap-filelist-anchor_not_found repeated already-recorded failure class mis_localized_path: {\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}",
-    "detected_at": "2026-07-25T15:48:29.361Z",
+    "detected_at": "2026-07-25T16:54:10.277Z",
     "status": "open",
     "classification_metadata": {
       "re_commit": true,
@@ -5620,32 +5619,6 @@
       "failure_class": "mis_localized_path",
       "suspected_real_location": "src/resolvers/file-list.ts:resolveFileList",
       "approach_decisions": [
-        {
-          "at": "2026-07-25T14:58:33.935Z",
-          "predicted_p": 0.55,
-          "predicted_land": true,
-          "edit_site": "",
-          "alternatives": [
-            "full-scope-compose"
-          ],
-          "outcome": {
-            "landed": false,
-            "joined_at": "2026-07-25T14:58:55.473Z"
-          }
-        },
-        {
-          "at": "2026-07-25T15:04:37.449Z",
-          "predicted_p": 0.55,
-          "predicted_land": true,
-          "edit_site": "",
-          "alternatives": [
-            "full-scope-compose"
-          ],
-          "outcome": {
-            "landed": false,
-            "joined_at": "2026-07-25T15:04:56.680Z"
-          }
-        },
         {
           "at": "2026-07-25T15:10:41.379Z",
           "predicted_p": 0.55,
@@ -5684,21 +5657,35 @@
             "landed": false,
             "joined_at": "2026-07-25T15:35:00.677Z"
           }
+        },
+        {
+          "at": "2026-07-25T16:32:14.515Z",
+          "predicted_p": 0.55,
+          "predicted_land": true,
+          "edit_site": "",
+          "alternatives": [
+            "full-scope-compose"
+          ],
+          "outcome": {
+            "landed": false,
+            "joined_at": "2026-07-25T16:32:27.126Z"
+          }
+        },
+        {
+          "at": "2026-07-25T16:43:05.200Z",
+          "predicted_p": 0.55,
+          "predicted_land": true,
+          "edit_site": "",
+          "alternatives": [
+            "full-scope-compose"
+          ],
+          "outcome": {
+            "landed": false,
+            "joined_at": "2026-07-25T16:43:27.798Z"
+          }
         }
       ],
       "failure_lessons": [
-        {
-          "at": "2026-07-25T14:12:14.065Z",
-          "class": "mis_localized_path",
-          "reason": "== typecheck ==\n$ tsc --noEmit\nsrc/routes/impulses.ts(48,10): error TS2300: Duplicate identifier 'resolveFsList'.\nsrc/routes/impulses.ts(233,10): error TS2300: Duplicate identifier 'resolveFsList'.\nsr",
-          "raw_excerpt": "== typecheck ==\n$ tsc --noEmit\nsrc/routes/impulses.ts(48,10): error TS2300: Duplicate identifier 'resolveFsList'.\nsrc/routes/impulses.ts(233,10): error TS2300: Duplicate identifier 'resolveFsList'.\nsrc/routes/impulses.ts(233,48): error TS2307: Cannot find module '../resolvers/file-list.js' or its corresponding type declarations.\nTC_EXIT=2\n== shape-dispatch ==\nshape-dispatch-check: OK — 243 advertised shapes, 246 dispatch cases, all agree.\nSD_EXIT=0"
-        },
-        {
-          "at": "2026-07-25T14:39:09.152Z",
-          "class": "mis_localized_path",
-          "reason": "== typecheck ==\n$ tsc --noEmit\nsrc/routes/impulses.ts(48,10): error TS2300: Duplicate identifier 'resolveFsList'.\nsrc/routes/impulses.ts(233,10): error TS2300: Duplicate identifier 'resolveFsList'.\nsr",
-          "raw_excerpt": "== typecheck ==\n$ tsc --noEmit\nsrc/routes/impulses.ts(48,10): error TS2300: Duplicate identifier 'resolveFsList'.\nsrc/routes/impulses.ts(233,10): error TS2300: Duplicate identifier 'resolveFsList'.\nsrc/routes/impulses.ts(233,48): error TS2307: Cannot find module '../resolvers/file-list.js' or its corresponding type declarations.\nTC_EXIT=2\n== shape-dispatch ==\nshape-dispatch-check: 1 violation(s) found in /vessels/development-vessel\n\nORPHAN DISPATCH HANDLERS (1):\n  Case exists in routes/impulses.ts but shape is not advertised in config.ts.\n\n  [orphan] file_list\n    at /vessels/development-vessel/src/routes/impulses.ts:278\n    → Add 'file_list' to the shapes array in src/config.ts, or annotate with '// @shape-dispatch:private' above the case if it is intentionally internal.\n\n\nTo suppress an intentionally internal case, add '// @shape-dispatch:private' on the line immediately before it.\nTo map an advertised shape to different case label(s), create shape-dispatch.config.json with a \"mappings\" block.\nSD_EXIT=1"
-        },
         {
           "at": "2026-07-25T14:45:43.026Z",
           "class": "mis_localized_path",
@@ -5734,26 +5721,38 @@
           "class": "mis_localized_path",
           "reason": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}",
           "raw_excerpt": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}"
+        },
+        {
+          "at": "2026-07-25T16:32:27.088Z",
+          "class": "mis_localized_path",
+          "reason": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}",
+          "raw_excerpt": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}"
+        },
+        {
+          "at": "2026-07-25T16:43:27.760Z",
+          "class": "mis_localized_path",
+          "reason": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}",
+          "raw_excerpt": "{\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}"
         }
       ],
       "localization_failed": true,
       "localization_failed_at": "2026-07-25T13:43:45.786Z",
-      "failed_attempts": 76,
-      "last_failed_at": "2026-07-25T15:35:00.676Z",
-      "mispredicted_lands": 38,
+      "failed_attempts": 80,
+      "last_failed_at": "2026-07-25T16:43:27.798Z",
+      "mispredicted_lands": 40,
       "last_predicted_p": 0.55,
       "verify_failure_reason": "src/routes/impulses.ts(477,30): error TS2552: Cannot find name 'resolveFileList'. Did you mean 'resolveFsList'?",
       "semantic_gate_reason": "Patch only adds a type definition with no functional implementation or callers"
     },
     "created_at": "2026-07-25T06:08:39.286Z",
-    "updated_at": "2026-07-25T15:48:29.361Z"
+    "updated_at": "2026-07-25T16:54:10.277Z"
   },
   {
     "id": "recommit-recommit-recommit-gap-filelist-anchor_not_found-mis_localized_path-mis_localized_path",
     "category": "systematic_failure",
     "source": "substrate_detected",
     "summary": "compose for gap recommit-recommit-gap-filelist-anchor_not_found-mis_localized_path repeated already-recorded failure class mis_localized_path: {\"error\":\"ENOENT: no such file or directory, open '/vessels/development-vessel/src/resolvers/file-list.ts'\"}",
-    "detected_at": "2026-07-25T15:35:00.656Z",
+    "detected_at": "2026-07-25T16:43:27.772Z",
     "status": "open",
     "classification_metadata": {
       "re_commit": true,
@@ -5811,7 +5810,7 @@
       "last_predicted_p": 0.55
     },
     "created_at": "2026-07-25T06:18:35.817Z",
-    "updated_at": "2026-07-25T15:35:00.656Z"
+    "updated_at": "2026-07-25T16:43:27.772Z"
   },
   {
     "id": "recommit-recommit-recommit-recommit-gap-filelist-anchor_not_found-mis_localized_path-mis_localized_path-mis_localized_path",
@@ -6384,8 +6383,8 @@
     "id": "orphaned-capability-fileList",
     "category": "orphaned_capability",
     "source": "substrate_detected",
-    "summary": "Resolver \"fileList\" is a live registered capability but is invoked by 0 of the activity corpus (388/397 live resolvers are ever invoked). Author an activity that invokes resolver \"fileList\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
-    "detected_at": "2026-07-25T15:31:12.525Z",
+    "summary": "Resolver \"fileList\" is a live registered capability but is invoked by 0 of the activity corpus (387/397 live resolvers are ever invoked). Author an activity that invokes resolver \"fileList\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+    "detected_at": "2026-07-25T16:31:20.222Z",
     "status": "open",
     "classification_metadata": {
       "detector": "orphaned_capability_scan",
@@ -6396,7 +6395,7 @@
       "suggested_remediation": "Dispatch draft-gap-closing-activity / gap-compose against this gap to author a bridge activity whose task invokes this resolver directly. Prefer the deterministic resolver over an llm_completion_dispatch re-derivation of the same capability."
     },
     "created_at": "2026-07-25T08:19:16.053Z",
-    "updated_at": "2026-07-25T15:31:12.525Z"
+    "updated_at": "2026-07-25T16:31:20.222Z"
   },
   {
     "id": "gap-linecount",
@@ -7065,6 +7064,12 @@
           "class": "semantic_reject",
           "reason": "patch only changes a constant's value without altering behavior or implementing the gap's intent",
           "raw_excerpt": "patch only changes a constant's value without altering behavior or implementing the gap's intent"
+        },
+        {
+          "at": "2026-07-25T16:34:02.998Z",
+          "class": "semantic_reject",
+          "reason": "patch only changes a constant's value without altering behavior or implementing the gap's intent",
+          "raw_excerpt": "patch only changes a constant's value without altering behavior or implementing the gap's intent"
         }
       ],
       "semantic_gate_reason": "patch only adds comments without changing behavior or implementing the gap's intent",
@@ -7107,25 +7112,39 @@
             "landed": false,
             "joined_at": "2026-07-25T12:30:40.280Z"
           }
+        },
+        {
+          "at": "2026-07-25T16:33:38.542Z",
+          "predicted_p": 0.65,
+          "predicted_land": true,
+          "edit_site": "repos/development-vessel/src/resolvers/patch-with-tools.ts",
+          "alternatives": [
+            "full-scope-compose"
+          ],
+          "outcome": {
+            "landed": false,
+            "joined_at": "2026-07-25T16:34:03.137Z"
+          }
         }
       ],
       "localized": true,
       "localized_at": "2026-07-25T11:07:24.098Z",
-      "failed_attempts": 6,
-      "last_failed_at": "2026-07-25T12:30:40.280Z",
-      "mispredicted_lands": 3,
+      "failed_attempts": 8,
+      "last_failed_at": "2026-07-25T16:34:03.136Z",
+      "mispredicted_lands": 4,
       "last_predicted_p": 0.65
     },
     "status": "open",
     "created_at": "2026-07-25T11:04:34.519Z",
-    "updated_at": "2026-07-25T12:30:40.281Z"
+    "updated_at": "2026-07-25T16:34:03.137Z"
   },
   {
     "id": "recommit-route-edit-31e3e3f8-semantic_reject",
     "category": "systematic_failure",
     "source": "substrate_detected",
     "summary": "compose for gap route-edit-31e3e3f8 repeated already-recorded failure class semantic_reject: patch only changes a constant's value without altering behavior or implementing the gap's intent",
-    "detected_at": "2026-07-25T11:21:35.499Z",
+    "detected_at": "2026-07-25T16:34:03.047Z",
+    "status": "open",
     "classification_metadata": {
       "re_commit": true,
       "source_gap_id": "route-edit-31e3e3f8",
@@ -7181,9 +7200,8 @@
       "mispredicted_lands": 2,
       "last_predicted_p": 0.8500000000000001
     },
-    "status": "open",
     "created_at": "2026-07-25T11:07:52.074Z",
-    "updated_at": "2026-07-25T11:32:51.217Z"
+    "updated_at": "2026-07-25T16:34:03.047Z"
   },
   {
     "id": "gap-llm-resolver-flaps-on-persistent-credit-exhaustion",
@@ -7571,10 +7589,10 @@
     "category": "systematic_failure",
     "source": "substrate_detected",
     "summary": "feature_compose found the UNTOUCHED baseline of repos/development-vessel failing typecheck BEFORE drafting (1 pre-existing tsc errors, e.g. src/routes/impulses.ts: error TS2307: Cannot find module '../resolvers/file-list.js' or its corresponding type declarations.). Environment fault (stale runtime copy or missing module), not a drafter fault: re-sync this vessel source from its repo baseline. Draft verdicts on this vessel use baseline-delta blame until the baseline is clean.",
-    "detected_at": "2026-07-25T15:48:27.255Z",
+    "detected_at": "2026-07-25T16:54:08.996Z",
     "status": "open",
     "created_at": "2026-07-25T12:26:32.343Z",
-    "updated_at": "2026-07-25T15:48:27.256Z",
+    "updated_at": "2026-07-25T16:54:08.997Z",
     "classification_metadata": {}
   },
   {
@@ -7583,7 +7601,7 @@
     "source": "substrate_detected",
     "status": "open",
     "summary": "Capability gap: the goal-walk needs a producer for shape \"pullCutoverReport\" but no live resolver or activity produces it. AUTHOR a resolver that produces ONLY the shape \"pullCutoverReport\" — do NOT expand scope, produce no other output shape. Put it in the vessel that should own this capability (if development-vessel: add the resolver in src/resolvers/, register the shape in src/config.ts AND the dispatch case in src/routes/impulses.ts per the three-place rule; otherwise the owning vessel's resolver surface). Keep it dependency-free (Bun built-ins) and make it typecheck.",
-    "detected_at": "2026-07-25T15:51:37.899Z",
+    "detected_at": "2026-07-25T16:54:03.816Z",
     "classification_metadata": {
       "kind": "capability_gap",
       "missing_shape": "pullCutoverReport",
@@ -7597,7 +7615,7 @@
       "scope_narrowed": true
     },
     "created_at": "2026-07-25T12:32:40.133Z",
-    "updated_at": "2026-07-25T15:51:37.900Z"
+    "updated_at": "2026-07-25T16:54:03.816Z"
   },
   {
     "id": "gap-pull-sync-change-detect-blind-to-json-only-edits",
@@ -8118,7 +8136,7 @@
     "source": "substrate_detected",
     "status": "open",
     "summary": "Capability gap: the goal-walk needs a producer for shape \"pull_cutover\" but no live resolver or activity produces it. AUTHOR a resolver that produces ONLY the shape \"pull_cutover\" — do NOT expand scope, produce no other output shape. Put it in the vessel that should own this capability (if development-vessel: add the resolver in src/resolvers/, register the shape in src/config.ts AND the dispatch case in src/routes/impulses.ts per the three-place rule; otherwise the owning vessel's resolver surface). Keep it dependency-free (Bun built-ins) and make it typecheck.",
-    "detected_at": "2026-07-25T15:52:29.191Z",
+    "detected_at": "2026-07-25T16:54:25.987Z",
     "classification_metadata": {
       "kind": "capability_gap",
       "missing_shape": "pull_cutover",
@@ -8127,12 +8145,13 @@
       ],
       "goal": "run the pull_cutover activity for vessel development-vessel to converge it to the latest origin/dev",
       "goal_target_shapes": [
-        "pull_cutover_success"
+        "successful pull_cutover execution",
+        "pullCutoverReport"
       ],
       "scope_narrowed": true
     },
     "created_at": "2026-07-25T14:48:26.954Z",
-    "updated_at": "2026-07-25T15:52:29.191Z"
+    "updated_at": "2026-07-25T16:54:25.987Z"
   },
   {
     "id": "gap-vesselmitosiscutoverapplied",
@@ -8204,5 +8223,57 @@
     "status": "open",
     "created_at": "2026-07-25T14:50:31.420Z",
     "updated_at": "2026-07-25T15:08:11.788Z"
+  },
+  {
+    "id": "gap-pattern-description",
+    "category": "missing_capability",
+    "source": "substrate_detected",
+    "status": "open",
+    "summary": "Capability gap: the goal-walk needs a producer for shape \"pattern_description\" but no live resolver or activity produces it. AUTHOR a resolver that produces ONLY the shape \"pattern_description\" — do NOT expand scope, produce no other output shape. Put it in the vessel that should own this capability (if development-vessel: add the resolver in src/resolvers/, register the shape in src/config.ts AND the dispatch case in src/routes/impulses.ts per the three-place rule; otherwise the owning vessel's resolver surface). Keep it dependency-free (Bun built-ins) and make it typecheck.",
+    "detected_at": "2026-07-25T15:58:02.011Z",
+    "classification_metadata": {
+      "kind": "capability_gap",
+      "missing_shape": "pattern_description",
+      "allowed_output_shapes": [
+        "pattern_description"
+      ],
+      "goal": "Examine the most recent successful multi-task execution traces. Identify the recurring task pattern they share (the common sequence of resolver steps and shape flow), and produce a concept that summarizes that pattern with a name, description, and the activities it generalizes.",
+      "goal_target_shapes": [
+        "goal",
+        "concept",
+        "pattern_description",
+        "activity_generalization"
+      ],
+      "scope_narrowed": true
+    },
+    "created_at": "2026-07-25T15:58:02.012Z",
+    "updated_at": "2026-07-25T15:58:02.012Z"
+  },
+  {
+    "id": "gap-source",
+    "category": "missing_capability",
+    "source": "substrate_detected",
+    "status": "open",
+    "summary": "Capability gap: the goal-walk needs a producer for shape \"source\" but no live resolver or activity produces it. AUTHOR a resolver that produces ONLY the shape \"source\" — do NOT expand scope, produce no other output shape. Put it in the vessel that should own this capability (if development-vessel: add the resolver in src/resolvers/, register the shape in src/config.ts AND the dispatch case in src/routes/impulses.ts per the three-place rule; otherwise the owning vessel's resolver surface). Keep it dependency-free (Bun built-ins) and make it typecheck.",
+    "detected_at": "2026-07-25T15:58:15.581Z",
+    "classification_metadata": {
+      "kind": "capability_gap",
+      "missing_shape": "source",
+      "allowed_output_shapes": [
+        "source"
+      ],
+      "goal": "Examine the most recent successful multi-task execution traces. Identify the recurring task pattern they share (the common sequence of resolver steps and shape flow), and produce a concept that summarizes that pattern with a name, description, and the activities it generalizes.",
+      "goal_target_shapes": [
+        "goal",
+        "source",
+        "triggered_by",
+        "generator_class",
+        "dispatch_id",
+        "executionTraces"
+      ],
+      "scope_narrowed": true
+    },
+    "created_at": "2026-07-25T15:58:15.582Z",
+    "updated_at": "2026-07-25T15:58:15.582Z"
   }
 ]
