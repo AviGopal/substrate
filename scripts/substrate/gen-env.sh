@@ -230,7 +230,15 @@ RELAY_MULTIADDR="${RELAY_MULTIADDR:-}"
 # producers, or federation is one-way (spoke rows visible at the hub, hub rows
 # invisible at the spoke). Default the peer list to the hub discovery and union
 # the results; both stay overridable and empty on a plain local substrate.
-PEER_DISCOVERY_ENDPOINTS="${PEER_DISCOVERY_ENDPOINTS:-${HUB_DISCOVERY_URL}}"
+# Operator passthrough: an explicitly provided PEER_DISCOVERY_ENDPOINTS (comma-
+# separated) is honored AND persisted, so a HUB/root — whose HUB_DISCOVERY_URL
+# is empty and which therefore has no resolve-time fan-out by default — can be
+# pointed at its spokes' discoveries and survive a container recreate without
+# re-passing -e. Precedence: explicit env > persisted explicit > hub derivation
+# > empty. Only the EXPLICIT value is persisted (never the hub-derived one, so
+# re-pointing DISCOVERY_ENDPOINT at a new hub is never shadowed by a stale pin).
+PEER_DISCOVERY_ENDPOINTS_EXPLICIT="${PEER_DISCOVERY_ENDPOINTS:-$(persisted_secret PEER_DISCOVERY_ENDPOINTS)}"
+PEER_DISCOVERY_ENDPOINTS="${PEER_DISCOVERY_ENDPOINTS_EXPLICIT:-${HUB_DISCOVERY_URL}}"
 PEER_FANOUT_MODE="${PEER_FANOUT_MODE:-union}"
 
 mkdir -p /workspace
@@ -267,6 +275,13 @@ LLM_DEFAULT_MODEL="${LLM_DEFAULT_MODEL:-}"
 # means SUBSTRATE_ROOT was not passed — units will fail loudly rather than
 # read a stale hardcoded path.
 SUBSTRATE_ROOT="${SUBSTRATE_ROOT:-}"
+# Workspace root for file/dir resolvers (fs_list, fs_read, shell CWD) — law 11
+# (location independence): every vessel must resolve a relative path ("docs") to
+# the SAME place regardless of where its process runs. Anchor it to the container
+# super-repo clone (SUBSTRATE_ROOT). Previously WORKSPACE_ROOT was set ad-hoc
+# outside gen-env, so a regenerate silently dropped it and file-path resolution
+# fell back to each vessel's process.cwd() (the fs_list "0 files in docs" bug).
+WORKSPACE_ROOT="${WORKSPACE_ROOT:-${SUBSTRATE_ROOT}}"
 # Writable run-dir for the timer SCRIPTS (self-activation, 2026-06-26). The tick
 # units' run-dir.conf drop-ins reference their script as
 # \${SUBSTRATE_RUN_DIR}/<name>.ts. substrate-active-scripts-seed.service copies
@@ -475,6 +490,9 @@ OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
 GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
 GROQ_API_KEY=${GROQ_API_KEY:-}
 MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+# Operator-explicit discovery peer list (hub-side resolve fan-out). Only the
+# explicit value round-trips; a hub-derived spoke default is re-derived each run.
+PEER_DISCOVERY_ENDPOINTS=${PEER_DISCOVERY_ENDPOINTS_EXPLICIT:-}
 SECRETS
 chmod 600 /workspace/.substrate-secrets
 echo "[gen-env] persisted secrets to /workspace/.substrate-secrets"
