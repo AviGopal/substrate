@@ -92,12 +92,16 @@ healthy() { # port -> 0 if 200
   curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$1/health" 2>/dev/null | grep -q '^200$'
 }
 
-content_hash() { # dir -> md5 over the sorted .ts + .json tree ("none" if dir missing)
+content_hash() { # vessel-root -> md5 over sorted src/ + sql/ (.ts/.json/.surql); "none" if missing
   [ -d "$1" ] || { echo none; return; }
   # .json included so pure-template/config edits (e.g. lifecycle *.json activity
   # templates like ribosome-extract) are detected — a .ts-only hash left a
   # .json-only change invisible to convergence, so it never mirrored/deployed.
-  (cd "$1" && find . -type f \( -name '*.ts' -o -name '*.json' \) | sort | xargs -r md5sum | md5sum | cut -d' ' -f1)
+  # .surql (and the sql/ tree) included so a migration-only change (e.g. a new
+  # DEFINE FIELD on a SCHEMAFULL table) is detected — migrations live in sql/,
+  # outside src/, so a src-only hash left a migration-only commit invisible: it
+  # never mirrored and the unit never restarted to apply it. Scan src + sql.
+  (cd "$1" && find src sql -type f \( -name '*.ts' -o -name '*.json' -o -name '*.surql' \) 2>/dev/null | sort | xargs -r md5sum | md5sum | cut -d' ' -f1)
 }
 
 synced=0; skipped=0; failed=0
@@ -138,9 +142,9 @@ for d in "$CLONE_DIR"/*/; do
   # suppression after an unhealthy revert (the substrateGap owns escalation).
   MARKER="$MARKER_DIR/$v.sha"
   LAST="$(cat "$MARKER" 2>/dev/null || true)"
-  CLONE_HASH="$(content_hash "$d/src")"
+  CLONE_HASH="$(content_hash "$d")"
   [ -d "$RUNTIME_DIR/$v" ] || { echo "$CLONE_HASH" > "$MARKER"; continue; }  # not part of this runtime
-  RUNTIME_HASH="$(content_hash "$RUNTIME_DIR/$v/src")"
+  RUNTIME_HASH="$(content_hash "$RUNTIME_DIR/$v")"
   # dist-freshness retry: a shared package whose src is already mirrored but whose
   # last fan-out was rolled back (an unhealthy consumer) leaves dist STALE vs src
   # with no retry — the src-only comparison below never re-enters 2c. Detect the
