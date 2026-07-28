@@ -28,6 +28,15 @@ const VESSEL_ID = process.env.FED_VESSEL_ID || 'federation-transport-vessel'
 let RELAY = process.env.RELAY_MULTIADDR || ''
 const DISCOVERY = process.env.DISCOVERY_URL || 'http://127.0.0.1:8100'
 const API_KEY = process.env.METABOB_API_KEY || ''
+// Location independence (law 11): hub-facing calls authenticate to a DIFFERENT trust
+// domain than local calls. A spoke's METABOB_API_KEY is issued by the spoke's own
+// identity-vessel and is NOT valid on the hub (the hub validates a key claiming issuer
+// 127.0.0.1:8101 against ITS OWN HMAC secret, so a spoke-issued key fails) — reusing it
+// 401s every hub register, and the spoke's caps never reach the hub namespace. HUB_API_KEY
+// carries a HUB-ISSUED credential for hub-facing calls (the namespace-mirror register
+// below, and any future hub fan-out). It falls back to API_KEY so a same-domain / single-
+// substrate deployment (hub==local, or an unfederated node) is byte-for-byte unchanged.
+const HUB_API_KEY = process.env.HUB_API_KEY || API_KEY
 const HEALTH_PORT = parseInt(process.env.FED_HEALTH_PORT || '8401', 10)
 
 // "Just point and go": if RELAY_MULTIADDR wasn't handed to us, derive the relay
@@ -457,7 +466,7 @@ async function registerAtHub() {
     const results = await Promise.all(registrations.map(async (reg) => {
       const r = await fetch(HUB_DISCOVERY + '/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY },
+        headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + HUB_API_KEY },
         body: JSON.stringify({
           vesselId: reg.vesselId, vesselName: reg.vesselId, version: '0.1.0',
           endpoint: `http://127.0.0.1:${HEALTH_PORT}`, // local-only surface; reachability is the circuit below
