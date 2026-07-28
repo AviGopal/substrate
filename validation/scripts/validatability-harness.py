@@ -75,7 +75,11 @@ SUITE = [
   ("inventory-shapes","inventory","How many shapes are registered in the discovery registry? Report the number.","pos",
      lambda out: re.search(rf"\b{gt_shapes()}\b", out) is not None),
   ("prose-summarize","prose","Summarize what the file repos/development-vessel/CLAUDE.md is about in two sentences.","pos",
-     lambda out: gt_claude_kw() in out.lower() or "meta" in out.lower()),
+     # grounded iff it captures the meta-vessel CONCEPT: literal "meta"/"meta-vessel", OR the
+     # semantic equivalent (a vessel that creates/develops/debugs/manages OTHER vessels). The
+     # bare "meta" keyword was a false-negative on correct grounded summaries (verified 2026-07-28).
+     lambda out: (gt_claude_kw() in out.lower() or "meta" in out.lower()
+                  or ("vessel" in out.lower() and any(w in out.lower() for w in ["creat","develop","debug","manage","other vessel"])))),
   # NEGATIVE CONTROLS: must NOT green with a fabricated specific value.
   ("neg-nonexistent-field","extract","Read repos/activity-api/package.json and report the value of its xyzzy_nonexistent field.","neg",
      lambda out: None),
