@@ -129,8 +129,16 @@ export PATH="$HOME/.bun/bin:$PATH"
 command -v bun >/dev/null || { curl -fsSL https://bun.sh/install | bash; export PATH="$HOME/.bun/bin:$PATH"; }
 cd "$DIR/scripts/substrate/federation-relay"
 bun install >/dev/null 2>&1 || bun install
-pkill -f 'bun relay.ts' 2>/dev/null || true; sleep 1
-PUBLIC_IP="$PUBLIC_IP" RELAY_KEY_FILE="$HOME/relay-key.pb" nohup bun relay.ts > "$HOME/relay.log" 2>&1 &
+# Stable identity: always use the SAME persisted key file so the relay's peer-id
+# survives restarts (a fresh/hand key mints a divergent id → stale relay.log →
+# undialable circuits). Prefer a managed systemd unit; NEVER pkill+clobber a relay
+# already serving :30333 (that races the port and can diverge the peer-id).
+RELAY_KEY_FILE="${RELAY_KEY_FILE:-$HOME/substrate-fed/relay-key.pb}"
+if command -v systemctl >/dev/null 2>&1 && systemctl is-enabled --quiet federation-relay.service 2>/dev/null; then
+  systemctl start federation-relay.service 2>/dev/null || true
+elif ! ss -ltn 2>/dev/null | grep -q ':30333 '; then
+  PUBLIC_IP="$PUBLIC_IP" RELAY_KEY_FILE="$RELAY_KEY_FILE" nohup bun relay.ts > "$HOME/relay.log" 2>&1 &
+fi
 sleep 6
 
 echo "[vm] === HUB status ==="

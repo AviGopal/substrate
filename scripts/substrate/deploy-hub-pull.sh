@@ -69,12 +69,25 @@ docker rm -f substrate-live >/dev/null 2>&1 || true
 # undialable). Restart the relay from the original clone with the PINNED key
 # file and a fresh log so identity, log, and process always agree; clients
 # (sidecars, spoke transports) re-reserve and re-register on their own loops.
-if [ -d "$HOME/substrate/scripts/substrate/federation-relay" ]; then
-  echo "[vm] restarting host relay (pinned key, fresh log)…"
+# NEVER pkill + respawn a relay already serving :30333: a hand-restart with a
+# different key file mints a DIVERGENT peer-id (observed: relay.log/env pinned
+# …PkEY… while the live relay was …J9Jd…), leaving every advertised circuit addr
+# undialable — and it races the port with any systemd-managed relay. Instead:
+# prefer the managed unit; if a relay is already listening, LEAVE IT and read its
+# live multiaddr; only hand-start (with the PINNED key file it persisted) when
+# nothing serves the port. Clients re-reserve on their own loops.
+RELAY_KEY_FILE="${RELAY_KEY_FILE:-$HOME/substrate-fed/relay-key.pb}"
+if command -v systemctl >/dev/null 2>&1 && systemctl is-enabled --quiet federation-relay.service 2>/dev/null; then
+  echo "[vm] ensuring managed federation-relay.service is up (stable persistent key)…"
+  systemctl start federation-relay.service 2>/dev/null || true; sleep 3
+  RELAY_MULTIADDR="${RELAY_MULTIADDR:-$(journalctl -u federation-relay.service --no-pager 2>/dev/null | grep -oE '/ip4/[^ "]*p2p/[A-Za-z0-9]+' | tail -1)}"
+elif ss -ltn 2>/dev/null | grep -q ':30333 '; then
+  echo "[vm] a relay is already serving :30333 — leaving it untouched, reading its live multiaddr…"
+else
+  echo "[vm] no relay on :30333 — hand-starting once with the pinned key file…"
   export PATH="$HOME/.bun/bin:$PATH"
-  pkill -f 'bun relay.ts' 2>/dev/null || true; sleep 1
-  ( cd "$HOME/substrate/scripts/substrate/federation-relay" && \
-    PUBLIC_IP="$PUBLIC_IP" RELAY_KEY_FILE="$HOME/relay-key.pb" nohup bun relay.ts > "$HOME/relay.log" 2>&1 & )
+  RELAY_DIR="$HOME/substrate-fed/federation-relay"; [ -d "$RELAY_DIR" ] || RELAY_DIR="$HOME/substrate/scripts/substrate/federation-relay"
+  [ -d "$RELAY_DIR" ] && ( cd "$RELAY_DIR" && PUBLIC_IP="$PUBLIC_IP" RELAY_KEY_FILE="$RELAY_KEY_FILE" nohup bun relay.ts > "$HOME/relay.log" 2>&1 & )
   sleep 6
 fi
 RELAY_MULTIADDR="${RELAY_MULTIADDR:-$(grep -oE '/ip4/[^ "]*p2p/[A-Za-z0-9]+' "$HOME/relay.log" 2>/dev/null | tail -1 || true)}"
