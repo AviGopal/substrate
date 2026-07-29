@@ -279,7 +279,11 @@ Bun.serve({
   async fetch(req) {
     const u = new URL(req.url)
     if (u.pathname === '/health') {
-      return Response.json({ status: 'ok', service: VESSEL_ID, transport: vl.health(), libp2p_peer_id: vl.peerId, libp2p_multiaddr: currentCircuit() })
+      // The redial/egress-failure counters make the storm class OBSERVABLE as data a
+      // health consumer can rate-check (signature: redial rate >1/min sustained), instead
+      // of living only in journald where no shaped impulse can reach it.
+      const transport = { ...(vl.health() as Record<string, unknown>), redialCount, egressNoReservationCount, lastRedialReason }
+      return Response.json({ status: 'ok', service: VESSEL_ID, transport, libp2p_peer_id: vl.peerId, libp2p_multiaddr: currentCircuit() })
     }
     if (u.pathname === '/egress/resolve' && req.method === 'POST') {
       try {
@@ -322,6 +326,7 @@ Bun.serve({
         // OUR ingress reachability, spreading the flap to the peer substrate. Only
         // refresh when OUR side is demonstrably down, then retry once.
         if (target && res?.error && /NO_RESERVATION|failed to connect via relay/i.test(String(res.error))) {
+          egressNoReservationCount++
           if (!currentCircuit() || relayConnections().length === 0) await redialRelay('egress relay-side down')
           res = await resolveOverLibp2p(String(target), pointer).catch(errOf)
         }
@@ -342,7 +347,12 @@ Bun.serve({
             res = res ?? alt
           }
         }
-        return Response.json(res ?? { error: 'empty libp2p resolve' }, { status: (res && !res.error) ? 200 : 502 })
+        // A peer's ingress reports ITS failures inside content ({content:{error:...}}) —
+        // returning those as 200 lets genuine failures masquerade as reaches downstream
+        // (hollow-reach pollution). Treat content that is nothing but an error as a 502.
+        const contentErr = res?.content && typeof res.content === 'object' && (res.content as any).error
+          && !('shape' in res.content) && !('body' in res.content) && !('value' in res.content)
+        return Response.json(res ?? { error: 'empty libp2p resolve' }, { status: (res && !res.error && !contentErr) ? 200 : 502 })
       } catch (e) {
         return Response.json({ error: 'libp2p egress failed: ' + String((e as Error)?.message ?? e) }, { status: 502 })
       }
@@ -533,14 +543,23 @@ const relayConnections = () =>
   RELAY_PEER ? vl.node.getConnections().filter((c) => c.remotePeer.toString() === RELAY_PEER) : []
 let redialing = false
 let lastReserveAt = Date.now()
+let lastRedialAttemptAt = 0
+let redialCount = 0
+let egressNoReservationCount = 0
+let lastRedialReason = ''
 async function redialRelay(reason: string): Promise<void> {
   if (redialing) return
   // Reactive (egress-triggered) redials are rate-limited so a burst of failing egress
   // calls collapses into ONE teardown, never one per request: closing the relay
   // connection under concurrent traffic is what turned a single transient error into
   // a sustained reservation flap. The 10-min watchdog still covers a genuinely
-  // stuck-down state.
-  if (reason.startsWith('egress') && Date.now() - lastReserveAt < 30_000) return
+  // stuck-down state. The stamp covers FAILED attempts too — while the relay itself is
+  // unreachable, lastReserveAt never advances, and without the attempt stamp every
+  // failing egress would re-enter close+dial churn against the dead relay.
+  if (reason.startsWith('egress') && Date.now() - Math.max(lastReserveAt, lastRedialAttemptAt) < 30_000) return
+  lastRedialAttemptAt = Date.now()
+  redialCount++
+  lastRedialReason = reason
   redialing = true
   try {
     // Close any LIVE relay connection first — a dial while connected returns the existing
