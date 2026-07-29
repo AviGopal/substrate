@@ -282,7 +282,7 @@ Bun.serve({
       // The redial/egress-failure counters make the storm class OBSERVABLE as data a
       // health consumer can rate-check (signature: redial rate >1/min sustained), instead
       // of living only in journald where no shaped impulse can reach it.
-      const transport = { ...(vl.health() as Record<string, unknown>), redialCount, egressNoReservationCount, lastRedialReason }
+      const transport = { ...(vl.health() as unknown as Record<string, unknown>), redialCount, egressNoReservationCount, lastRedialReason }
       return Response.json({ status: 'ok', service: VESSEL_ID, transport, libp2p_peer_id: vl.peerId, libp2p_multiaddr: currentCircuit() })
     }
     if (u.pathname === '/egress/resolve' && req.method === 'POST') {
