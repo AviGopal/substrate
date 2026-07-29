@@ -575,12 +575,16 @@ async function redialRelay(reason: string): Promise<void> {
     redialing = false
   }
 }
-const PROACTIVE_RERESERVE_MS = 40 * 60_000 // re-reserve well inside the relay's ~1h TTL
 setInterval(() => {
   const circuitUp = !!currentCircuit()
   const relayUp = relayConnections().length > 0
   if (!circuitUp || !relayUp) void redialRelay(!circuitUp ? 'circuit empty' : 'relay connection gone')
-  else if (Date.now() - lastReserveAt > PROACTIVE_RERESERVE_MS) void redialRelay('proactive pre-expiry refresh')
+  // No proactive pre-expiry teardown: the circuit-relay client renews the reservation
+  // IN PLACE over the live connection (verified live on both substrates: TTL-remaining
+  // stays ~full, renewal cycle under 2 minutes), so a scheduled close+redial only
+  // manufactures the very reservation blip it was meant to prevent. The reactive
+  // branches above and the egress-triggered redial cover genuine drops; if in-place
+  // renewal ever ceased, the client library's TTL<50% re-reserve engages as backstop.
 }, 600_000) // 10 min
 
 console.log(`[fed-transport] up id=${VESSEL_ID} peer=${vl.peerId} health=:${HEALTH_PORT} circuit=${circuit || '(none yet)'} hub=${HUB_DISCOVERY || '(no hub mirror)'}`)
