@@ -178,6 +178,23 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
     }
     const remote = libp2pRows.find((v: any) => !String(v.vesselId).includes('@')) ?? libp2pRows[0]
     if (remote) return forwardLibp2p(remote)
+    // Host-local HTTP fallback (law 11 data-locality). A row in OUR OWN discovery whose
+    // endpoint is host.docker.internal is dead from every OTHER substrate — reachableHttp
+    // rightly excludes it above so it never shadows a live circuit — but on the substrate
+    // that OWNS the registration (this ingress: `vessels` is the local-only query, fan-out
+    // rows only ever enter libp2pRows) the alias resolves against the real container host.
+    // Serve it here instead of "no producer": this is the last hop that makes host-resident
+    // sidecars (e.g. the Obsidian vault plugin at host.docker.internal:27182) reachable
+    // through the federation, by shape or by ?vessel= hint.
+    const hostLocal = (wanted
+      ? vessels.filter((v: any) => String(v?.vesselId ?? '') === wanted)
+      : vessels
+    ).find((v: any) => v?.vesselId && !String(v.vesselId).startsWith(VESSEL_ID)
+      && v?.protocol !== 'libp2p' && String(v?.endpoint ?? '') && !reachableHttp(v))
+    if (hostLocal) {
+      console.log('[fed-transport] ingress→host-local HTTP fallback ' + t + ' via ' + String(hostLocal.vesselId))
+      return proxyToVessel(pointer, t, hostLocal)
+    }
     return { error: 'unknown shape: ' + t, note: 'no local or remote producer via ' + VESSEL_ID }
   }
   return proxyToVessel(pointer, t, owner)
@@ -575,32 +592,16 @@ async function redialRelay(reason: string): Promise<void> {
     redialing = false
   }
 }
-// PHANTOM-RESERVATION DETECTION: after a relay restart, this client can keep
-// "renewing" a reservation the new relay process refuses to honor for inbound HOPs
-// (observed live: TTL climbing client-side while every peer egress to us returned
-// NO_RESERVATION for ~90 min — a silent one-directional partition invisible to our
-// own health). The local tell is the circuit CONNECTIONS emptying while the
-// reservation still claims valid: relayed peers ride /p2p-circuit conns, and when
-// the relay stops honoring us those conns drain and never return. Two consecutive
-// 10-min ticks in that state force a fresh dial (close + re-dial re-reserves against
-// the relay's live state). Bounded cost: an idle node with genuinely no inbound
-// circuits redials at most every 20 min; a partitioned node self-heals within 20 min
-// instead of never.
-let phantomStrikes = 0
 setInterval(() => {
   const circuitUp = !!currentCircuit()
   const relayUp = relayConnections().length > 0
-  if (!circuitUp || !relayUp) { phantomStrikes = 0; void redialRelay(!circuitUp ? 'circuit empty' : 'relay connection gone'); return }
-  const circuitConns = vl.node.getConnections().filter((c) => c.remoteAddr?.toString().includes('p2p-circuit'))
-  if (circuitConns.length === 0) {
-    phantomStrikes++
-    if (phantomStrikes >= 2) { phantomStrikes = 0; void redialRelay('phantom-reservation suspicion: reservation claims valid but no circuit peers for 2 ticks') }
-  } else phantomStrikes = 0
-  // No scheduled pre-expiry teardown otherwise: the circuit-relay client renews the
-  // reservation IN PLACE over the live connection (verified: TTL stays ~full, renewal
-  // cycle under 2 min); a timed close+redial only manufactures reservation blips. The
-  // reactive branches above, the egress-triggered redial, and the client library's
-  // TTL<50% re-reserve remain the recovery paths for genuine drops.
+  if (!circuitUp || !relayUp) void redialRelay(!circuitUp ? 'circuit empty' : 'relay connection gone')
+  // No proactive pre-expiry teardown: the circuit-relay client renews the reservation
+  // IN PLACE over the live connection (verified live on both substrates: TTL-remaining
+  // stays ~full, renewal cycle under 2 minutes), so a scheduled close+redial only
+  // manufactures the very reservation blip it was meant to prevent. The reactive
+  // branches above and the egress-triggered redial cover genuine drops; if in-place
+  // renewal ever ceased, the client library's TTL<50% re-reserve engages as backstop.
 }, 600_000) // 10 min
 
 console.log(`[fed-transport] up id=${VESSEL_ID} peer=${vl.peerId} health=:${HEALTH_PORT} circuit=${circuit || '(none yet)'} hub=${HUB_DISCOVERY || '(no hub mirror)'}`)
