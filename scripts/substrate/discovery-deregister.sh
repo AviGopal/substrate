@@ -16,9 +16,21 @@ DISCOVERY="${DISCOVERY_ENDPOINT:-http://127.0.0.1:8100}"
 KEY="${METABOB_API_KEY:-$(grep -m1 '^METABOB_API_KEY=' /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d '"')}"
 [ -n "$KEY" ] || exit 0
 
+# Scope to THIS substrate's rows. A bare substring match also deletes PEER
+# substrates' mirror rows that share the vessel name (observed: stopping the
+# hub's federation-transport-vessel removed federation-transport-vessel@<spoke>
+# too, blanking the spoke's federated presence until its next re-register).
+# A row is ours iff it has no '@<substrate>' qualifier, or its qualifier equals
+# our FED_SUBSTRATE_ID; with no id configured, '@'-qualified rows are treated
+# as not-ours (TTL expiry remains their backstop).
+SUB="${FED_SUBSTRATE_ID:-$(grep -m1 '^FED_SUBSTRATE_ID=' /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d '"')}"
 IDS="$(curl -s -m 5 -X POST -H "Authorization: ApiKey $KEY" -H 'Content-Type: application/json' \
   -d '{"pointer":{"type":"vesselRegistry"}}' "$DISCOVERY/resolve" 2>/dev/null \
-  | jq -r --arg n "$NEEDLE" '.content.vessels[]? | select(((.vesselId // .id // "") + " " + (.name // "")) | contains($n)) | .vesselId // .id' 2>/dev/null || true)"
+  | jq -r --arg n "$NEEDLE" --arg sub "$SUB" '.content.vessels[]?
+      | (.vesselId // .id // "") as $vid
+      | select((($vid + " " + (.name // "")) | contains($n))
+          and (($vid | contains("@") | not) or (($sub != "") and ($vid | endswith("@" + $sub)))))
+      | $vid' 2>/dev/null || true)"
 
 for id in $IDS; do
   curl -s -m 5 -X DELETE -H "Authorization: ApiKey $KEY" "$DISCOVERY/vessels/$id" >/dev/null 2>&1 \
