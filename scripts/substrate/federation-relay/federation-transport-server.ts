@@ -304,15 +304,25 @@ Bun.serve({
         // it that way). Pass it through verbatim so the caller's resolve parsing applies.
         const errOf = (e: any) => ({ error: String((e as Error)?.message ?? e) })
         let res: any = null
-        if (target) {
+        if (target && String(target).includes(vl.peerId)) {
+          // Self-target: a hub-mirror discovery row for THIS substrate carries our own
+          // circuit. libp2p refuses the dial ("Can not dial self"), so serve it exactly
+          // as our own ingress would — locally — instead of erroring through the relay.
+          res = { content: await resolveHandler(pointer), metadata: { shape: String((pointer as any)?.type ?? '') } }
+        } else if (target) {
           console.log('[fed-transport] egress/resolve -> ' + String((pointer as any)?.type ?? '?') + ' via ' + String(target).slice(-20))
           res = await resolveOverLibp2p(String(target), pointer).catch(errOf)
         }
-        // A NO_RESERVATION means OUR relay reservation lapsed under this egress: force a
-        // fresh reservation (close + re-dial) and retry once so this request can still
-        // succeed instead of waiting for the next watchdog tick.
+        // Circuit Relay v2 returns NO_RESERVATION as the RELAY's verdict about the
+        // DESTINATION peer (no reservation, or no live relay↔destination connection) —
+        // it says nothing about OUR reservation. Tearing down our own healthy relay
+        // connection here cannot repair the far side; under continuous egress traffic it
+        // becomes a self-sustaining storm (each close fails the next in-flight egress
+        // with "failed to connect via relay" → another teardown → …) that also drops
+        // OUR ingress reachability, spreading the flap to the peer substrate. Only
+        // refresh when OUR side is demonstrably down, then retry once.
         if (target && res?.error && /NO_RESERVATION|failed to connect via relay/i.test(String(res.error))) {
-          await redialRelay('egress NO_RESERVATION')
+          if (!currentCircuit() || relayConnections().length === 0) await redialRelay('egress relay-side down')
           res = await resolveOverLibp2p(String(target), pointer).catch(errOf)
         }
         // Fail-open target repair: a relay-only circuit target (…/p2p-circuit with no
@@ -525,6 +535,12 @@ let redialing = false
 let lastReserveAt = Date.now()
 async function redialRelay(reason: string): Promise<void> {
   if (redialing) return
+  // Reactive (egress-triggered) redials are rate-limited so a burst of failing egress
+  // calls collapses into ONE teardown, never one per request: closing the relay
+  // connection under concurrent traffic is what turned a single transient error into
+  // a sustained reservation flap. The 10-min watchdog still covers a genuinely
+  // stuck-down state.
+  if (reason.startsWith('egress') && Date.now() - lastReserveAt < 30_000) return
   redialing = true
   try {
     // Close any LIVE relay connection first — a dial while connected returns the existing
