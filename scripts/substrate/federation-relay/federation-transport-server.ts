@@ -618,6 +618,10 @@ setInterval(() => {
   // cycle under 2 min); a timed close+redial only manufactures reservation blips. The
   // reactive branches above, the egress-triggered redial, and the client library's
   // TTL<50% re-reserve remain the recovery paths for genuine drops.
-}, 600_000) // 10 min
+  // 5-min tick: the relay drops circuits fleet-wide in shared events (~every 2.2h
+  // observed); with 2 strikes required, detection lag is the tick interval — at
+  // 10 min the peer-facing blind window ran 20+ min (872 failed hub egresses in one
+  // night). 5 min halves it; the idle-node worst case stays bounded (1 redial/10 min).
+}, 300_000) // 5 min
 
 console.log(`[fed-transport] up id=${VESSEL_ID} peer=${vl.peerId} health=:${HEALTH_PORT} circuit=${circuit || '(none yet)'} hub=${HUB_DISCOVERY || '(no hub mirror)'}`)
