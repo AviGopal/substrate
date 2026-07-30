@@ -159,9 +159,11 @@ drift even when the immediate result looks fine.
 6. **Don't rob the substrate's self-maintenance.** When its self-development
    fails, the failure is training signal: file it as a gap and let the system
    learn the repair. Hand-completing its work steals the lesson. Equally,
-   **failure mints structure** — every observed bug class gets two questions:
-   how do I patch this instance, and what activity would detect this class
-   without me?
+   **failure mints structure** — every observed bug class gets three questions:
+   how do I patch this instance, what activity would detect this class without
+   me, and what goal should the system have generated from this observation?
+   If the operator authored the goal by hand, the missing generator is itself
+   the gap.
 
 7. **Measure by the gap triple.** Progress is (1) gap close rate, (2) gap latency
    from detection to close, (3) solution durability — gaps don't reappear wearing
@@ -220,6 +222,16 @@ structurally non-load-bearing.
 - **Every intervention decomposes recursively**: patch the instance, then ask
   what substrate activity would have detected and repaired the class. This
   applies to the artifact you're writing about it, too.
+- **Teach through the channel that is read.** Before writing any lesson, name
+  its runtime reader; a lesson with no read-at-use-time path is an archive,
+  not teaching — and the missing reader is itself a gap. Drafter-facing
+  lessons are class-grain concepts recalled at prompt-build; operator memory
+  files teach no one but the operator.
+- **Wrongness is a goal seed.** A deterministic mismatch verdict carries its
+  own repair goal (fix the builder for the named class); a hollow cluster
+  over goals sharing surface form is the demand signal to construct a parse +
+  command + oracle for that class. The system should mint these goals from
+  its own observations; an operator writing them by hand is the gap.
 - **Autonomy has a hard success criterion**: a substrate-authored commit landing
   on the remote working branch with no operator hands. "It fired" is not success.
 - **Adversarial duty**: post-lift, the operator introduces probes, hostile peers,
