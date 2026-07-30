@@ -45,6 +45,11 @@ persisted_secret() {
 }
 
 JWT_SECRET="${JWT_SECRET:-$(persisted_secret JWT_SECRET)}"
+# Additive vessel selection (kept ON TOP of ENABLED_ROLES by apply-inventory) —
+# e.g. a hub deployed with ENABLED_ROLES=hub that should also run a single
+# compute-role vessel like development-vessel. Persisted in the secrets store so
+# it survives a bare restart/recreate without a redeploy.
+ENABLED_EXTRA_VESSELS="${ENABLED_EXTRA_VESSELS:-$(persisted_secret ENABLED_EXTRA_VESSELS)}"
 JWT_SECRET="${JWT_SECRET:-$(openssl rand -hex 32)}"
 # Federation substrate id — unique per substrate in the hub namespace, minted
 # once and persisted (a fresh id each boot would churn the hub registry). Only
@@ -454,6 +459,7 @@ echo "[gen-env] wrote per-model llm-resolver env files (opus, haiku, google)"
 {
   echo "SUBSTRATE_REPO_OWNER=${SUBSTRATE_REPO_OWNER:-AviGopal}"
   [ -n "${ENABLED_ROLES:-}" ]       && echo "ENABLED_ROLES=${ENABLED_ROLES}"
+  [ -n "${ENABLED_EXTRA_VESSELS:-}" ] && echo "ENABLED_EXTRA_VESSELS=${ENABLED_EXTRA_VESSELS}"
   [ -n "${ENABLED_VESSELS:-}" ]     && echo "ENABLED_VESSELS=${ENABLED_VESSELS}"
   [ -n "${DISABLED_VESSELS:-}" ]    && echo "DISABLED_VESSELS=${DISABLED_VESSELS}"
   [ -n "${SUBSTRATE_BIND_HOST:-}" ] && echo "SUBSTRATE_BIND_HOST=${SUBSTRATE_BIND_HOST}"
