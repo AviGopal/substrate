@@ -58,6 +58,12 @@ fi
 # Run a shell command in the container's context (directly in-container, else via docker).
 csh()  { if [ "$IN_CONTAINER" = 1 ]; then sh -c "$1"; else docker exec "$CONTAINER" sh -c "$1"; fi; }
 csys() { if [ "$IN_CONTAINER" = 1 ]; then systemctl "$@"; else docker exec "$CONTAINER" systemctl "$@"; fi; }
+# Role-awareness (2026-07-30): a unit is intentionally-disabled for the active
+# ENABLED_ROLES iff apply-inventory.sh masked it — an /etc-level symlink
+# /etc/systemd/system/<unit> -> /dev/null (apply-inventory.sh). Read that same
+# mask (the ground truth boot just wrote) in the container's context; more robust
+# than re-deriving ENABLED_ROLES here.
+masked() { [ "$(csh "readlink /etc/systemd/system/$1 2>/dev/null" 2>/dev/null)" = "/dev/null" ]; }
 # Revert a vessel's /vessels/<name>/src from the IN-CONTAINER git clone
 # (/workspace/git/vessels/<name>): the last-good pin recorded by pull-sync/
 # cutover at /workspace/.last-good/<name> when present, else the clone's
@@ -163,9 +169,13 @@ db_is_bottleneck() {
   [ "$DB_PRESSURE" = 1 ]
 }
 
-recovered=0; reverted=0; escalated=0; healthy_n=0; db_backoff=0
+recovered=0; reverted=0; escalated=0; healthy_n=0; db_backoff=0; masked_skipped=0
 for entry in "${VESSELS[@]}"; do
   name="${entry%%:*}"; port="${entry##*:}"
+  # Skip units apply-inventory masked for the active role: they are intentionally
+  # down, so probing fails, restart is a no-op (unit masked), revert rewrites
+  # /vessels/<v>/src every tick, and each pass escalates a bogus substrateGap.
+  if masked "$name.service"; then masked_skipped=$((masked_skipped+1)); continue; fi
   if healthy "$name" "$port"; then healthy_n=$((healthy_n+1)); continue; fi
   # Shared-DB pressure guard: if SurrealDB (the shared dependency) is the
   # bottleneck, restarting this vessel can't fix it and amplifies the load —
@@ -201,4 +211,4 @@ if [ "$db_backoff" -gt 0 ]; then
   log "shared-DB pressure: deferred restart/revert of $db_backoff vessel(s) this tick — emitting db_contention gap"
   emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"self-recovery-db-pressure-backoff\",\"category\":\"db_contention\",\"source\":\"substrate_detected\",\"summary\":\"self-recovery backed off restarting $db_backoff DB-backed vessel(s): shared SurrealDB was unresponsive to a cheap RETURN 1 liveness probe — the shared datastore is the bottleneck, not the vessels; restarting them would amplify load\",\"status\":\"open\"}}}}"
 fi
-echo "{\"healthy\":$healthy_n,\"recovered_by_restart\":$recovered,\"reverted_from_git\":$reverted,\"escalated\":$escalated,\"db_pressure_backoff\":$db_backoff}"
+echo "{\"healthy\":$healthy_n,\"recovered_by_restart\":$recovered,\"reverted_from_git\":$reverted,\"escalated\":$escalated,\"db_pressure_backoff\":$db_backoff,\"masked_skipped\":$masked_skipped}"

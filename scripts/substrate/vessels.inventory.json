@@ -100,7 +100,7 @@
     },
     {
       "unit": "concept-db.service",
-      "role": "compute",
+      "role": "infra",
       "repo": "concept-db",
       "health_port": 8260
     },
