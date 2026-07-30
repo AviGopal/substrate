@@ -106,7 +106,7 @@ RELAY_MULTIADDR="${RELAY_MULTIADDR:-$(grep -oE '/ip4/[^ "]*p2p/[A-Za-z0-9]+' "$H
   || echo "[vm] WARNING: no relay.log yet — hub federation egress disabled until a re-deploy after the relay starts"
 docker run -d --name substrate-live --privileged \
   -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
-  -e ENABLED_ROLES=hub -e SUBSTRATE_BIND_HOST=0.0.0.0 \
+  -e ENABLED_ROLES=hub -e ENABLED_EXTRA_VESSELS="${ENABLED_EXTRA_VESSELS:-development-vessel.service}" -e SUBSTRATE_BIND_HOST=0.0.0.0 \
   -e SUBSTRATE_ROOT="${SUBSTRATE_ROOT:-/workspace/git/super-repo}" \
   -e PUBLIC_IP="$PUBLIC_IP" -e FED_PUBLIC_IP="$PUBLIC_IP" \
   -e RELAY_MULTIADDR="$RELAY_MULTIADDR" \

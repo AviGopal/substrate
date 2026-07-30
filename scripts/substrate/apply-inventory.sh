@@ -67,6 +67,18 @@ else
   DESIRED="$(manageable_units)"   # only DISABLED_VESSELS set → start from all
 fi
 
+# Additive extra vessels: kept ON TOP of the ENABLED_ROLES/ENABLED_VESSELS
+# selection (unlike ENABLED_VESSELS, which overrides roles). Use case: a hub
+# deployed with ENABLED_ROLES=hub that should also run a single compute-role
+# vessel (e.g. development-vessel) without pulling in the whole compute fleet.
+# No-op when unset; runs before the DISABLED subtraction so DISABLED still wins.
+if [ -n "${ENABLED_EXTRA_VESSELS:-}" ]; then
+  EXTRA="$(csv "${ENABLED_EXTRA_VESSELS}")"
+  log "ENABLED_EXTRA_VESSELS (additive): $(echo $EXTRA | tr '\n' ' ')"
+  DESIRED="$DESIRED
+$EXTRA"
+fi
+
 # Subtract DISABLED_VESSELS.
 DISABLED_EXPLICIT="$(csv "${DISABLED_VESSELS:-}")"
 
