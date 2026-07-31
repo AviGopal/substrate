@@ -377,9 +377,20 @@ Bun.serve({
         if ((!res || res.error) && targetVessel) {
           const conns = ((vl.health() as any)?.connections ?? []) as Array<{ addr: string }>
           const circuits = [...new Set(conns.map((c) => String(c.addr)).filter((a) => a.includes('/p2p-circuit/p2p/') && !a.includes(vl.peerId)))]
+          // A ?vessel= call with no explicit target fans across every live circuit. A peer
+          // that does NOT own the named vessel answers with a nested content-error (e.g.
+          // the obsidian sidecar: {content:{error:'unknown obsidian shape: llm_completion'}})
+          // — that is NOT a hit. Accepting it lands the call on the wrong substrate: a hub
+          // llm arm has no dialable circuit of its own (loopback, no multiaddr), so a naive
+          // first-success loop settles on whichever peer replied FIRST (often obsidian).
+          // Skip nested content-errors and keep trying so the call reaches the circuit whose
+          // substrate actually owns _fedTargetVessel and proxies to it locally — this is what
+          // makes cross-substrate LLM spill ("any funded arm in the network suffices") work.
+          const isHollowErr = (r: any) => r?.content && typeof r.content === 'object' && (r.content as any).error
+            && !('shape' in r.content) && !('body' in r.content) && !('value' in r.content)
           for (const a of circuits) {
             const alt = await resolveOverLibp2p(a, pointer).catch(errOf)
-            if (alt && !alt.error) { console.log('[fed-transport] egress repair -> ' + String((pointer as any)?.type ?? '?') + ' via live circuit …' + a.slice(-16)); res = alt; break }
+            if (alt && !alt.error && !isHollowErr(alt)) { console.log('[fed-transport] egress repair -> ' + String((pointer as any)?.type ?? '?') + ' via live circuit …' + a.slice(-16)); res = alt; break }
             res = res ?? alt
           }
         }
