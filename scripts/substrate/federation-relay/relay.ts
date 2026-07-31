@@ -115,9 +115,13 @@ setInterval(() => {
         if (!pongedEver.has(pid)) { pongedEver.add(pid); console.log(`[relay] reserved peer …${pid.slice(-8)} answers pings — liveness tracking active`) }
         consecFails.set(pid, 0)
       })
-      .catch(() => {
+      .catch((err) => {
         const n = (consecFails.get(pid) ?? 0) + 1
         consecFails.set(pid, n)
+        // Diagnostic (rate-limited per peer): surface WHY a reserved peer isn't
+        // answering — 'unsupported protocol' = no responder; timeout/reset/limited =
+        // dead or non-pingable connection. First failure + every 10th thereafter.
+        if (n === 1 || n % 10 === 0) console.log(`[relay] keep-alive ping to …${pid.slice(-8)} failed (#${n}): ${String((err as Error)?.message ?? err).slice(0, 90)}`)
         if (pongedEver.has(pid) && n >= CLOSE_AFTER_FAILS) {
           consecFails.set(pid, 0)
           console.log(`[relay] reserved peer …${pid.slice(-8)} failed ${n} consecutive pings after prior success — closing dead connection to force re-dial`)
