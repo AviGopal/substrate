@@ -541,7 +541,7 @@ let noCircuitWarnedAt = 0
 const NO_CIRCUIT_WARN_WINDOW_MS = 600_000
 
 async function registerAtHub() {
-  if (!HUB_DISCOVERY || SELF_MIRROR) return
+  if (!HUB_DISCOVERY) return  // SELF_MIRROR (hub) now still runs: advertises hub-native vessels with the circuit for inbound peer dials (see per-vessel rows below; own anchor row skipped)
   const liveCircuit = currentCircuit()
   if (!liveCircuit) {
     if (Date.now() - noCircuitWarnedAt >= NO_CIRCUIT_WARN_WINDOW_MS) {
@@ -557,7 +557,7 @@ async function registerAtHub() {
     // The transport's own row anchors the substrate ingress (probe shape only — shape
     // traffic belongs to the per-vessel rows below).
     const registrations = [
-      { vesselId: HUB_VESSEL_ID, shapes: ['federation_probe', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])] },
+      ...(SELF_MIRROR ? [] : [{ vesselId: HUB_VESSEL_ID, shapes: ['federation_probe', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])] }]),
       ...rows.map((r) => ({ vesselId: `${r.vesselId}@${SUBSTRATE_ID}`, shapes: r.shapes })),
     ]
     const results = await Promise.all(registrations.map(async (reg) => {
