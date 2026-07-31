@@ -24,6 +24,7 @@ import { yamux } from '@chainsafe/libp2p-yamux'
 import { identify } from '@libp2p/identify'
 import { circuitRelayServer } from '@libp2p/circuit-relay-v2'
 import { autoNAT } from '@libp2p/autonat'
+import { ping } from '@libp2p/ping'
 import { generateKeyPair, privateKeyFromProtobuf, privateKeyToProtobuf } from '@libp2p/crypto/keys'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 
@@ -60,6 +61,7 @@ const node = await createLibp2p({
   services: {
     identify: identify(),
     autonat: autoNAT(),               // lets dialing vessels learn their own NAT status
+    ping: ping({ timeout: parseInt(process.env.RELAY_PING_TIMEOUT_MS || '10000', 10) }), // active liveness for the keep-alive loop below
     relay: circuitRelayServer({       // the actual relay service (resource-capped)
       // Raise the per-circuit data/duration caps. The library defaults
       // (DEFAULT_DATA_LIMIT=128KB, DEFAULT_DURATION_LIMIT=120s) reset large or
@@ -79,7 +81,38 @@ const node = await createLibp2p({
 })
 await node.start()
 
+// ── RESERVED-PEER KEEP-ALIVE ────────────────────────────────────────────────
+// A circuit-relay-v2 relay is PASSIVE: it never dials reserved peers, so if the
+// relay↔peer connection silently dies (a NAT-behind spoke whose idle mapping
+// expires with no FIN/RST — a half-open both sides still believe is live) the
+// relay can neither notice nor reconnect. HOP CONNECTs to that peer then fail
+// with NO_RESERVATION even though the peer's reservation TTL looks full — the
+// recurring hub→spoke storm (~74-min cadence, all fails targeting the NAT'd
+// spoke). js-libp2p's connectionManager has no keep-alive/liveness probe, so we
+// add one: every RELAY_KEEPALIVE_MS (< a ~30s NAT idle timeout) ping each
+// reserved peer over its DIRECT (non-limited) connection. The ping traffic keeps
+// the NAT mapping alive (prevents the half-open), and a ping FAILURE means the
+// connection is already dead — force-close it so the peer's own
+// connection:close handler fires an immediate re-dial + fresh RESERVE, instead
+// of the reservation rotting until its 1h TTL.
+const KEEPALIVE_MS = parseInt(process.env.RELAY_KEEPALIVE_MS || '20000', 10)
+const PING_TIMEOUT_MS = parseInt(process.env.RELAY_PING_TIMEOUT_MS || '10000', 10)
+setInterval(() => {
+  for (const peerId of node.services.relay.reservations.keys()) {
+    // Only probe the DIRECT reservation-holding connection (limits == null);
+    // relayed circuits carry non-null limits and must not be pinged/closed here.
+    const direct = node.getConnections(peerId).filter((c) => c.limits == null && c.status === 'open')
+    if (direct.length === 0) continue
+    void node.services.ping.ping(peerId, { signal: AbortSignal.timeout(PING_TIMEOUT_MS) })
+      .catch(() => {
+        console.log(`[relay] keep-alive ping failed for …${peerId.toString().slice(-8)} — closing dead reserved-peer connection to force re-dial`)
+        for (const c of direct) { c.close().catch(() => c.abort(new Error('keep-alive: dead connection'))) }
+      })
+  }
+}, KEEPALIVE_MS)
+
 console.log('[relay] started. peerId=', node.peerId.toString())
+console.log(`[relay] reserved-peer keep-alive: ping every ${KEEPALIVE_MS}ms (timeout ${PING_TIMEOUT_MS}ms)`)
 for (const ma of node.getMultiaddrs()) console.log('[relay] listening:', ma.toString())
 // The line vessels need: set this as RELAY_MULTIADDR in each substrate's /etc/substrate/env.
 const pub = node.getMultiaddrs().map(m => m.toString()).filter(m => m.includes(PUBLIC_IP))
