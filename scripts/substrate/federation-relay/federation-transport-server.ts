@@ -344,6 +344,13 @@ Bun.serve({
         // refresh when OUR side is demonstrably down, then retry once.
         if (target && res?.error && /NO_RESERVATION|failed to connect via relay/i.test(String(res.error))) {
           egressNoReservationCount++
+          // Counter deltas must be attributable from the journal (observed: +153
+          // on the health counter with ZERO correlatable log lines). Rate-limited:
+          // first event per minute logs; a burst raises only the counter.
+          if (Date.now() - lastEgressNoResLogAt >= 60_000) {
+            lastEgressNoResLogAt = Date.now()
+            console.log(`[fed-transport] egress NO_RESERVATION/relay-connect fail #${egressNoReservationCount} type=${String((pointer as any)?.type ?? '?')} target=…${String(target).slice(-20)}`)
+          }
           if (!currentCircuit() || relayConnections().length === 0) await redialRelay('egress relay-side down')
           res = await resolveOverLibp2p(String(target), pointer).catch(errOf)
         }
@@ -441,6 +448,25 @@ async function emitJoinHealth(state: string, detail: string) {
 // on the peer side) and refreshes on the same TTL cadence as the local registration.
 const HUB_DISCOVERY = (process.env.HUB_DISCOVERY_URL || '').replace(/\/$/, '')
 const SUBSTRATE_ID = process.env.FED_SUBSTRATE_ID || hostname()
+// Self-mirror guard: on the hub itself HUB_DISCOVERY_URL points at the LOCAL
+// discovery (localhost:8100), so the namespace mirror would re-register every
+// native vessel as `<vessel>@<substrate>` in its own registry — 8 observed
+// duplicate rows that split shape-selection traffic and route purely-local
+// resolves through this facade for nothing. Mirroring is only meaningful into
+// a DIFFERENT registry; loopback-host equality (localhost ≡ 127.0.0.1, same
+// port) identifies the self case.
+const SELF_MIRROR = (() => {
+  if (!HUB_DISCOVERY) return false
+  try {
+    const norm = (u: string) => {
+      const p = new URL(u)
+      const host = p.hostname === 'localhost' ? '127.0.0.1' : p.hostname
+      return `${host}:${p.port || (p.protocol === 'https:' ? '443' : '80')}`
+    }
+    return norm(HUB_DISCOVERY) === norm(DISCOVERY)
+  } catch { return false }
+})()
+if (SELF_MIRROR) console.log(`[fed-transport] hub mirror disabled: HUB_DISCOVERY_URL (${HUB_DISCOVERY}) is this substrate's own discovery — nothing to federate into`)
 // Deployments set FED_VESSEL_ID already substrate-qualified (federation-transport-vessel@min-proof);
 // appending unconditionally minted doubled hub rows like …@min-proof@min-proof.
 const HUB_VESSEL_ID = VESSEL_ID.endsWith(`@${SUBSTRATE_ID}`) ? VESSEL_ID : `${VESSEL_ID}@${SUBSTRATE_ID}`
@@ -481,7 +507,7 @@ let noCircuitWarnedAt = 0
 const NO_CIRCUIT_WARN_WINDOW_MS = 600_000
 
 async function registerAtHub() {
-  if (!HUB_DISCOVERY) return
+  if (!HUB_DISCOVERY || SELF_MIRROR) return
   const liveCircuit = currentCircuit()
   if (!liveCircuit) {
     if (Date.now() - noCircuitWarnedAt >= NO_CIRCUIT_WARN_WINDOW_MS) {
@@ -563,6 +589,7 @@ let lastReserveAt = Date.now()
 let lastRedialAttemptAt = 0
 let redialCount = 0
 let egressNoReservationCount = 0
+let lastEgressNoResLogAt = 0
 let lastRedialReason = ''
 async function redialRelay(reason: string): Promise<void> {
   if (redialing) return
