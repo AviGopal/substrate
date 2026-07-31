@@ -384,6 +384,13 @@ if [ -d "$SUPER_DIR/.git" ] && git -C "$SUPER_DIR" fetch -q origin "$BRANCH" 2>/
       fi
       echo "$SHEAD" > "$SUPER_MARKER"
       log "super-repo: ${SLAST:-none} -> ${SHEAD:0:10} — refreshing glue layer"
+      # Converge submodule worktrees onto the new gitlinks: repos/<v> under the
+      # super-repo are the reach-oracle enumeration source, and an ff-pull alone
+      # leaves those worktrees detached at the OLD pointers — the stale-oracle
+      # drift class behind the green-on-wrong denominator incident. Non-fatal:
+      # a lagging worktree is logged, not a sync failure.
+      git -C "$SUPER_DIR" submodule update --init --quiet 2>/dev/null \
+        || log "super-repo: submodule update failed — oracle worktrees may lag"
       # Updater self-refresh (atomic: the running bash keeps its old inode).
       if [ -f "$SUPER_DIR/scripts/substrate/substrate-pull-sync.sh" ]; then
         install -m 0755 "$SUPER_DIR/scripts/substrate/substrate-pull-sync.sh" /usr/local/bin/.substrate-pull-sync.new 2>/dev/null \
