@@ -61,7 +61,13 @@ const node = await createLibp2p({
   services: {
     identify: identify(),
     autonat: autoNAT(),               // lets dialing vessels learn their own NAT status
-    ping: ping({ timeout: parseInt(process.env.RELAY_PING_TIMEOUT_MS || '10000', 10) }), // liveness for the keep-alive loop below
+    // maxOutboundStreams defaults to 1; the keep-alive fires all reserved peers'
+    // pings concurrently, so raise it to the reservation ceiling or every peer past
+    // the first fails with "too many outbound protocol streams 2/1".
+    ping: ping({
+      timeout: parseInt(process.env.RELAY_PING_TIMEOUT_MS || '10000', 10),
+      maxOutboundStreams: parseInt(process.env.RELAY_MAX_RESERVATIONS || '128', 10),
+    }),
     relay: circuitRelayServer({       // the actual relay service (resource-capped)
       // Raise the per-circuit data/duration caps. The library defaults
       // (DEFAULT_DATA_LIMIT=128KB, DEFAULT_DURATION_LIMIT=120s) reset large or
