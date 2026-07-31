@@ -9,6 +9,7 @@
 // circuit multiaddr in `metadata` (a stopgap that needs no change to discovery's typed
 // contract; the proper libp2p_* contract fields are the operator-must-land follow-up).
 import { createVesselLibp2p, serveResolve, serveResolveHttp, resolveViaLibp2p, resolveViaHttp, type VesselLibp2p } from '@avigopal/libp2p-federation-transport'
+import { ping } from '@libp2p/ping'
 import { hostname } from 'node:os'
 import { multiaddr } from '@multiformats/multiaddr'
 
@@ -70,7 +71,12 @@ if (!RELAY) { console.error('[fed-transport] ERROR: set RELAY_MULTIADDR or point
 // of a new peer id per recreate (heals via re-registration + row TTL).
 const LIBP2P_IDENTITY = `${VESSEL_ID}@${process.env.FED_SUBSTRATE_ID || hostname()}`
 
-const vl: VesselLibp2p = await createVesselLibp2p({ vesselId: LIBP2P_IDENTITY, relayMultiaddr: RELAY, enableHttp: true })
+// The ping RESPONDER (extraServices) is the prerequisite for the relay's reserved-peer
+// keep-alive: the relay pings each reserved peer to keep the NAT mapping warm and detect
+// a silently-dead connection. Without this service every relay→vessel ping fails as
+// "unsupported protocol" (not "dead"), so the responder must be live on every vessel
+// BEFORE the relay keep-alive is enabled.
+const vl: VesselLibp2p = await createVesselLibp2p({ vesselId: LIBP2P_IDENTITY, relayMultiaddr: RELAY, enableHttp: true, extraServices: { ping: ping() } })
 
 // Resolve handler (where the data lives). Probe shapes are answered inline; any OTHER
 // shape is proxied to the vessel that owns it on THIS substrate, found via the LOCAL
