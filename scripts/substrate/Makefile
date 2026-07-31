@@ -171,7 +171,7 @@ ANALYSIS_VESSEL_SRC := $(REPO_ROOT)/repos/analysis-vessel
 STATEFUL_UI_VESSEL_SRC := $(REPO_ROOT)/repos/stateful-ui-vessel
 OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
 
-.PHONY: up ready doctor autonomy-status validate-build build build-obsidian run run-detach run-live run-live-obsidian migrate-state-to-volumes seed-live import-memory install-host-sync health health-live \
+.PHONY: up ready doctor autonomy-status performance perf validate-build build build-obsidian run run-detach run-live run-live-obsidian migrate-state-to-volumes seed-live import-memory install-host-sync health health-live \
         ensure-key-tool show-key whoami issue-key issue-jwt list-keys revoke-key \
         logs-all logs-activity-api logs-development-vessel \
         logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
@@ -552,6 +552,16 @@ status-live:
 # (no DB/API creds needed); SUBSTRATE_CONTAINER points it at the live volume.
 autonomy-status:
 	@SUBSTRATE_CONTAINER=$(LIVE_NAME) bun $(dir $(lastword $(MAKEFILE_LIST)))autonomy-status.ts
+
+# READ-ONLY performance view: honest reach (verification-label corpus) vs
+# self-reported reach (goal-host dispatches), the law-7 gap triple with the
+# expiry-vs-repair close decomposition, and a topology census (shapes, vessel
+# units, federated LLM arms, graded templates). Host-run: it curls the
+# host-mapped ports and shells into the container for the unit census.
+performance:
+	@CONTAINER=$(LIVE_NAME) bun $(dir $(lastword $(MAKEFILE_LIST)))performance-status.ts
+
+perf: performance
 
 shell-live:
 	docker exec -it $(LIVE_NAME) bash
