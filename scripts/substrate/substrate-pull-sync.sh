@@ -122,7 +122,18 @@ for d in "$CLONE_DIR"/*/; do
       log "$v: clone ahead of origin (unpushed cutover commits) — leaving for the push side"
       skipped=$((skipped+1)); continue
     elif git -C "$d" merge-base --is-ancestor HEAD "origin/$BRANCH" 2>/dev/null; then
-      git -C "$d" checkout -q "$BRANCH" 2>/dev/null || true
+      # These clones are READ-ONLY reach-oracle sources: the oracles enumerate
+      # /workspace/git/super-repo/repos/<v>/src to grade counts. A dirty tree
+      # (abandoned drafter files, mitosis-overlay leakage) BLOCKS `git checkout`
+      # (silently, via `|| true`), stranding the clone DETACHED + behind, and the
+      # untracked cruft INFLATES the oracle's file/line counts → deterministic
+      # reach graded green-on-wrong denominators. Discard cruft and land on the
+      # BRANCH (not detached) before pulling. No legitimate edit ever lives only
+      # in a clone — all real changes flow through /vessels + git commits.
+      git -C "$d" reset --hard -q HEAD 2>/dev/null || true
+      git -C "$d" clean -fd -q 2>/dev/null || true
+      git -C "$d" checkout -q "$BRANCH" 2>/dev/null \
+        || git -C "$d" checkout -qB "$BRANCH" "origin/$BRANCH" 2>/dev/null || true
       if ! git -C "$d" pull --ff-only -q origin "$BRANCH" 2>/dev/null; then
         log "$v: ff-only pull failed — skipping"; skipped=$((skipped+1)); continue
       fi
