@@ -377,14 +377,6 @@ Bun.serve({
         if ((!res || res.error) && targetVessel) {
           const conns = ((vl.health() as any)?.connections ?? []) as Array<{ addr: string }>
           const circuits = [...new Set(conns.map((c) => String(c.addr)).filter((a) => a.includes('/p2p-circuit/p2p/') && !a.includes(vl.peerId)))]
-          // DEMAND-DRIVEN RECOVERY (law 5): a ?vessel= call arrived but the circuit set
-          // has fully DRAINED (no live peer circuit to try) while our reservation still
-          // looks valid — a peer-side relay-GC/restart event. The phantom watchdog would
-          // not act for up to 2 ticks (~10 min), during which every spill returns "empty
-          // libp2p resolve". Kick a re-dial NOW so the NEXT request recovers in seconds.
-          // Storm-safe: the 'egress' prefix collapses a burst to one dial per 30s and the
-          // redialing guard serializes; costs nothing when circuits are present.
-          if (circuits.length === 0) void redialRelay('egress found no live circuit — draining detected')
           // A ?vessel= call with no explicit target fans across every live circuit. A peer
           // that does NOT own the named vessel answers with a nested content-error (e.g.
           // the obsidian sidecar: {content:{error:'unknown obsidian shape: llm_completion'}})
@@ -396,11 +388,22 @@ Bun.serve({
           // makes cross-substrate LLM spill ("any funded arm in the network suffices") work.
           const isHollowErr = (r: any) => r?.content && typeof r.content === 'object' && (r.content as any).error
             && !('shape' in r.content) && !('body' in r.content) && !('value' in r.content)
+          let reached = false
           for (const a of circuits) {
             const alt = await resolveOverLibp2p(a, pointer).catch(errOf)
-            if (alt && !alt.error && !isHollowErr(alt)) { console.log('[fed-transport] egress repair -> ' + String((pointer as any)?.type ?? '?') + ' via live circuit …' + a.slice(-16)); res = alt; break }
+            if (alt && !alt.error && !isHollowErr(alt)) { console.log('[fed-transport] egress repair -> ' + String((pointer as any)?.type ?? '?') + ' via live circuit …' + a.slice(-16)); res = alt; reached = true; break }
             res = res ?? alt
           }
+          // DEMAND-DRIVEN RECOVERY (law 5): the named vessel could not be reached over ANY
+          // live circuit — either the circuit set has DRAINED (0 peer circuits) or the only
+          // live peers are non-owning (they answer with the nested content-error skipped
+          // above). Both mean the path to the owning substrate is gone while our reservation
+          // still looks valid, and the phantom watchdog would not act for up to 2 ticks
+          // (~10 min). Kick a re-dial NOW so a fresh circuit forms and the NEXT request
+          // recovers in seconds. Storm-safe: the 'egress' prefix collapses a burst to one
+          // dial per 30s and the redialing guard serializes; futile-but-harmless when the
+          // peer substrate itself is down (rate-limited), fast recovery the moment it returns.
+          if (!reached) void redialRelay('egress could not reach ' + targetVessel + ' over any live circuit')
         }
         // A peer's ingress reports ITS failures inside content ({content:{error:...}}) —
         // returning those as 200 lets genuine failures masquerade as reaches downstream
