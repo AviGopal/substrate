@@ -38,6 +38,12 @@ const ALLOWLIST = [
   "spectral-gap.timer",
   "observe-orthogonal-refresh.timer",
   "self-operational-health.timer",
+  // The immune system's own timers (mirrors the detector's REQUIRED_TIMERS):
+  // re-enabling a dropped self-recovery/pull-sync/self-repair timer restores
+  // every downstream repair loop at once — same safe, idempotent action class.
+  "self-recovery.timer",
+  "self-repair-operational.timer",
+  "substrate-pull-sync.timer",
 ];
 
 function sh(cmd: string[], timeoutMs = 10000): { ok: boolean; out: string } {
@@ -59,7 +65,13 @@ async function emitGap(gap: Record<string, unknown>) {
 }
 
 const now = new Date().toISOString();
-const inactive = ALLOWLIST.filter((t) => sh(["systemctl", "is-active", t]).out !== "active");
+// Role-aware: a unit apply-inventory.sh masked for the active role (systemctl
+// reports "masked") is intentionally down — enabling it would fight the fleet
+// selection (and fail), so skip it rather than retry-warn every tick.
+const inactive = ALLOWLIST.filter((t) => {
+  if (sh(["systemctl", "is-enabled", t]).out === "masked") return false;
+  return sh(["systemctl", "is-active", t]).out !== "active";
+});
 
 const repaired: string[] = [];
 const failed: string[] = [];

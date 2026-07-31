@@ -42,10 +42,17 @@ MITOSIS_LOCK_TTL_MIN="${MITOSIS_LOCK_TTL_MIN:-30}"
 # consume them before converging a vessel. Deferral is FRESHNESS-only: the
 # marker pid is the vessel server process (it outlives runs), so pid-liveness
 # must not extend a deferral — a leaked marker would defer forever. A dead pid
-# does short-circuit (vessel process gone = run definitely not in flight; the
-# killed-run detector owns that marker).
+# does short-circuit (vessel process gone = run definitely not in flight) and
+# such markers are REAPED below (see STALE_AUTHORING_MARKER_MIN) rather than
+# left to wedge convergence until an operator deletes them.
 AUTHORING_MARKER_DIR="${AUTHORING_MARKER_DIR:-/workspace/authoring-inflight}"
 AUTHORING_MARKER_TTL_MIN="${AUTHORING_MARKER_TTL_MIN:-40}"
+# Reap threshold for LEAKED markers. Markers are (re)written at run START and a
+# live run defers convergence for at most AUTHORING_MARKER_TTL_MIN, so a marker
+# whose recorded pid is dead OR whose mtime is past this threshold cannot
+# describe an in-flight run — it is a leak (a run that exited without
+# clearAuthoringMarker). Reap it here instead of leaving it to an operator.
+STALE_AUTHORING_MARKER_MIN="${STALE_AUTHORING_MARKER_MIN:-90}"
 DEFERRAL_LOG=/workspace/pull-sync-deferrals.jsonl
 
 mkdir -p "$MARKER_DIR" "$LAST_GOOD_DIR"
@@ -139,9 +146,51 @@ for d in "$CLONE_DIR"/*/; do
       fi
       HEAD="$(git -C "$d" rev-parse HEAD)"
     else
-      log "$v: clone DIVERGED from origin/$BRANCH — refusing (substrateGap)"
-      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-diverged-$v\",\"category\":\"source_divergence\",\"source\":\"substrate_detected\",\"summary\":\"$v clone at $CLONE_DIR diverged from origin/$BRANCH; pull-sync refuses to force — needs triage\",\"status\":\"open\"}}}}"
-      failed=$((failed+1)); continue
+      # Divergence self-heal: origin advanced while the clone holds unpushed
+      # SUBSTRATE-AUTHORED landings (the stranded-cutover class — previously a
+      # forever-refiled pull-sync-diverged gap an operator resolved by hand).
+      # When EVERY local-only commit's author AND committer is the substrate's
+      # configured git identity, rebase onto origin and push. ANY operator-
+      # authored local commit, rebase conflict, or push rejection → abort the
+      # rebase cleanly and fall back to the gap (naming conflicting files).
+      # Never force, never touch operator work.
+      SELF_ID="${SUBSTRATE_GIT_AUTHOR_NAME:-Substrate Autonomous}"
+      SYS_ID="$(git -C "$d" config user.name 2>/dev/null || true)"  # setup-git-push.sh's --system identity
+      FOREIGN=""
+      while IFS= read -r ident; do
+        [ -n "$ident" ] || continue
+        [ "$ident" = "$SELF_ID" ] && continue
+        [ -n "$SYS_ID" ] && [ "$ident" = "$SYS_ID" ] && continue
+        FOREIGN="$ident"; break
+      done < <(git -C "$d" log --format='%an%n%cn' "origin/$BRANCH..HEAD" 2>/dev/null | sort -u)
+      REBASED=""
+      if [ -z "$FOREIGN" ]; then
+        # Discard clone CRUFT only (untracked/dirty files are never legitimate
+        # in these clones — same rationale as the behind branch above); local
+        # COMMITS are preserved by the rebase.
+        git -C "$d" reset --hard -q HEAD 2>/dev/null || true
+        git -C "$d" clean -fd -q 2>/dev/null || true
+        if git -C "$d" pull --rebase -q origin "$BRANCH" 2>/dev/null \
+           && git -C "$d" push -q origin "HEAD:$BRANCH" 2>/dev/null; then
+          REBASED=1
+          HEAD="$(git -C "$d" rev-parse HEAD)"
+          log "$v: DIVERGED with only substrate-authored local commits — rebased onto origin/$BRANCH and pushed (now ${HEAD:0:10})"
+        fi
+      fi
+      if [ -z "$REBASED" ]; then
+        CONFLICT_FILES="$(git -C "$d" diff --name-only --diff-filter=U 2>/dev/null | tr '\n' ' ' | sed 's/ $//')"
+        git -C "$d" rebase --abort >/dev/null 2>&1 || true
+        if [ -n "$FOREIGN" ]; then
+          REASON="local-only commits include non-substrate author/committer '$(echo "$FOREIGN" | tr -d '"\\')' — refusing to auto-rebase"
+        elif [ -n "$CONFLICT_FILES" ]; then
+          REASON="auto-rebase hit conflicts in: $CONFLICT_FILES — rebase aborted cleanly"
+        else
+          REASON="auto-rebase/push failed (push rejection or transport) — rebase aborted cleanly"
+        fi
+        log "$v: clone DIVERGED from origin/$BRANCH — $REASON (substrateGap)"
+        emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-diverged-$v\",\"category\":\"source_divergence\",\"source\":\"substrate_detected\",\"summary\":\"$v clone at $CLONE_DIR diverged from origin/$BRANCH; $REASON; pull-sync refuses to force — needs triage\",\"status\":\"open\"}}}}"
+        failed=$((failed+1)); continue
+      fi
     fi
   fi
 
@@ -181,18 +230,29 @@ for d in "$CLONE_DIR"/*/; do
   if [ -z "$DIST_RETRY" ] && [ "$LAST" = "$CLONE_HASH" ]; then continue; fi  # this exact content already attempted (unhealthy -> reverted); don't mirror/revert loop
 
   # 2b. Drain-awareness: never converge a vessel whose working plane shows a
-  # LIVE authoring run. Marker is live when its mtime is fresh (< TTL) OR its
-  # recorded pid still exists; defer mirror+restart to the next tick. A marker
-  # that is stale AND pid-dead is a KILLED run — ignored here, the killed-run
-  # detector (self_interference_scan) owns that case.
+  # LIVE authoring run — a marker that is fresh (< TTL) with its recorded pid
+  # alive (or unrecorded) defers mirror+restart to the next tick, exactly as
+  # before. Everything else is a LEAK: a dead pid means the authoring process is
+  # gone; an mtime past STALE_AUTHORING_MARKER_MIN means the run that wrote it
+  # is long over (markers are rewritten at run start, and deferral itself only
+  # ever lasts AUTHORING_MARKER_TTL_MIN) — either way no matching run is in
+  # flight, so REAP the marker loudly and proceed with the sync instead of
+  # skipping past it forever until an operator deletes it.
   DEFER_MARKER=""
   for mk in "$AUTHORING_MARKER_DIR"/*-"$v".json; do
     [ -f "$mk" ] || continue
-    [ -n "$(find "$mk" -mmin "-$AUTHORING_MARKER_TTL_MIN" 2>/dev/null)" ] || continue
     MPID="$(grep -o '"pid":[[:space:]]*[0-9][0-9]*' "$mk" 2>/dev/null | grep -o '[0-9]*$' | head -1)"
-    if [ -n "$MPID" ] && ! kill -0 "$MPID" 2>/dev/null; then
-      continue  # vessel process dead: not in flight; killed-run detector owns this marker
+    PID_DEAD=""
+    if [ -n "$MPID" ] && ! kill -0 "$MPID" 2>/dev/null; then PID_DEAD=1; fi
+    if [ -n "$PID_DEAD" ] || [ -z "$(find "$mk" -mmin "-$STALE_AUTHORING_MARKER_MIN" 2>/dev/null)" ]; then
+      log "$v: REAPING leaked authoring marker $(basename "$mk") (pid=${MPID:-none}${PID_DEAD:+ DEAD}, older-than-${STALE_AUTHORING_MARKER_MIN}m=$([ -z "$(find "$mk" -mmin "-$STALE_AUTHORING_MARKER_MIN" 2>/dev/null)" ] && echo yes || echo no)) — no matching run in flight; proceeding with sync"
+      printf '{"at":"%s","actor":"pull-sync","action":"reaped_marker","vessel":"%s","marker":"%s"}\n' \
+        "$(date -Iseconds)" "$v" "$(basename "$mk")" >> "$DEFERRAL_LOG" 2>/dev/null || true
+      rm -f "$mk" 2>/dev/null || true
+      continue
     fi
+    # Young live marker: keep the deferral exactly as before.
+    [ -n "$(find "$mk" -mmin "-$AUTHORING_MARKER_TTL_MIN" 2>/dev/null)" ] || continue
     DEFER_MARKER="$mk"; break
   done
   if [ -n "$DEFER_MARKER" ]; then

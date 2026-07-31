@@ -81,6 +81,14 @@ const REQUIRED_TIMERS = [
   "funnel-drain.timer",
   "spectral-gap.timer",
   "observe-orthogonal-refresh.timer",
+  // The immune system's OWN timers. Every check above watches the substrate's
+  // loops, but nothing watched the watchers: if self-recovery, self-repair, or
+  // pull-sync convergence dies on a recreate, every repair capability dies
+  // silently with it (the exact recreate-drop fault this detector exists for).
+  "self-recovery.timer",
+  "self-repair-operational.timer",
+  "self-operational-health.timer",
+  "substrate-pull-sync.timer",
 ];
 
 const now = Date.now();
@@ -140,12 +148,56 @@ for (const f of METRIC_FILES) {
 
 // ── Check 2: self-correction / measurement timers active ───────────────────
 // Catches the recreate-drop: a unit enabled only at runtime in a prior
-// container is silently inactive in a fresh one.
-const inactive = REQUIRED_TIMERS.filter((t) => sh(["systemctl", "is-active", t]).out !== "active");
+// container is silently inactive in a fresh one. Role-aware: a unit
+// apply-inventory.sh masked for the active role (/etc symlink → /dev/null,
+// surfaced by systemctl as "masked") is intentionally down — a fleet decision,
+// not drift — so it is skipped rather than false-flagged.
+const inactive = REQUIRED_TIMERS.filter((t) => {
+  if (sh(["systemctl", "is-enabled", t]).out === "masked") return false;
+  return sh(["systemctl", "is-active", t]).out !== "active";
+});
 if (inactive.length) {
   flag("self_correction_timer_inactive", "HIGH",
     `${inactive.length} required self-correction/measurement timer(s) inactive: ${inactive.join(", ")} → that self-correction loop is dead and the capability is silently lost until re-enabled (typical cause: runtime-only enablement not surviving a container recreate).`,
     `timers:${inactive.sort().join("+")}`, { inactive });
+}
+
+// ── Check 2b: built repair mechanisms that are loaded but DORMANT ──────────
+// Repair units can exist in the image (unit file present, e.g. db-maintenance,
+// coherence-recover, trace-store-health-check, gap-compose timers) while being
+// absent from the fleet inventory — so nothing enables them, nothing watches
+// them, and the capability is silently missing. Do NOT force-enable here:
+// absence from the inventory may be a deliberate fleet decision. Instead lift
+// the dormancy into the gap ontology so the gap loop must DISPOSITION each
+// unit (add it to the inventory/role selection, or retire the unit file)
+// rather than let it drift. Masked units are skipped (role decision already
+// made); units missing from the image are skipped (nothing to run).
+const REPAIR_UNIT_CANDIDATES = [
+  "db-maintenance.timer",
+  "coherence-recover.timer",
+  "trace-store-health-check.timer",
+  "gap-compose.timer",
+];
+function inventoryUnits(): Set<string> {
+  for (const f of ["/workspace/substrate/fleet/vessels.inventory.json", "/usr/local/share/substrate/vessels.inventory.json"]) {
+    try {
+      const j = JSON.parse(readFileSync(f, "utf8")) as { vessels?: Array<{ unit?: string }> };
+      return new Set((j.vessels ?? []).map((v) => v.unit).filter((u): u is string => !!u));
+    } catch { /* absent/unreadable → try next */ }
+  }
+  return new Set();
+}
+const invUnits = inventoryUnits();
+const dormant = REPAIR_UNIT_CANDIDATES.filter((t) => {
+  const enabledState = sh(["systemctl", "is-enabled", t]).out;
+  if (enabledState === "" || enabledState === "not-found" || enabledState === "masked") return false;
+  return sh(["systemctl", "is-active", t]).out !== "active";
+});
+if (dormant.length) {
+  const declared = dormant.filter((t) => invUnits.has(t));
+  flag("repair_unit_dormant", "MEDIUM",
+    `${dormant.length} built repair unit(s) loaded but disabled/inactive: ${dormant.join(", ")}${declared.length ? ` (inventory-declared: ${declared.join(", ")})` : " (none declared in the fleet inventory)"} → each is a repair mechanism that exists in the image yet never runs, with nothing else noticing. Not auto-enabled — dormancy needs a DISPOSITION: enable it (declare it in the fleet inventory / role selection) or retire the unit file; until then this repair capability is silently absent.`,
+    `repair_dormant:${[...dormant].sort().join("+")}`, { dormant, inventory_declared: declared });
 }
 
 // ── Landed-truth freshness: refresh the super-repo mirror before reading ───
