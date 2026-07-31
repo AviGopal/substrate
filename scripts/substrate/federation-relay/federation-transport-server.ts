@@ -152,9 +152,21 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
   // Prefer a REACHABLE plain-HTTP LOCAL vessel: never ourselves, never our own
   // hub-mirror registration (vesselId-prefixed), never a libp2p-protocol entry, and
   // never a cross-host-dead host.docker.internal row (which would shadow the circuit).
-  const owner = vessels.find(
+  const httpCandidates = vessels.filter(
     (v: any) => v?.vesselId && !String(v.vesselId).startsWith(VESSEL_ID) && v?.protocol !== 'libp2p' && reachableHttp(v),
   )
+  // Honor the producer's self-declared distribution rule on the cross-substrate
+  // path too, not only discovery's own /resolve pick: discovery echoes
+  // distribution_policy in capability rows since the policy data-path landed
+  // (discovery-vessel 6ab2e24). A unique_authoritative / stateful_data_owner_pin
+  // producer wins over interchangeable replicas; absent/stateless keeps the prior
+  // first-reachable behavior. (Capability rows do not echo `metadata`, so the
+  // first-class field is the only signal here — which is exactly why it exists.)
+  const policyOf = (v: any) => String(v?.distribution_policy ?? 'stateless')
+  const pinnedOwner = httpCandidates.find(
+    (v: any) => policyOf(v) === 'unique_authoritative' || policyOf(v) === 'stateful_data_owner_pin',
+  )
+  const owner = pinnedOwner ?? httpCandidates[0]
   if (!owner) {
     // No reachable LOCAL owner — try a REMOTE one over libp2p. The hub namespace mirror
     // advertises other substrates' shapes with protocol:'libp2p' + the OWNING
