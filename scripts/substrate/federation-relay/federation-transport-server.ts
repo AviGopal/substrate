@@ -377,6 +377,14 @@ Bun.serve({
         if ((!res || res.error) && targetVessel) {
           const conns = ((vl.health() as any)?.connections ?? []) as Array<{ addr: string }>
           const circuits = [...new Set(conns.map((c) => String(c.addr)).filter((a) => a.includes('/p2p-circuit/p2p/') && !a.includes(vl.peerId)))]
+          // DEMAND-DRIVEN RECOVERY (law 5): a ?vessel= call arrived but the circuit set
+          // has fully DRAINED (no live peer circuit to try) while our reservation still
+          // looks valid — a peer-side relay-GC/restart event. The phantom watchdog would
+          // not act for up to 2 ticks (~10 min), during which every spill returns "empty
+          // libp2p resolve". Kick a re-dial NOW so the NEXT request recovers in seconds.
+          // Storm-safe: the 'egress' prefix collapses a burst to one dial per 30s and the
+          // redialing guard serializes; costs nothing when circuits are present.
+          if (circuits.length === 0) void redialRelay('egress found no live circuit — draining detected')
           // A ?vessel= call with no explicit target fans across every live circuit. A peer
           // that does NOT own the named vessel answers with a nested content-error (e.g.
           // the obsidian sidecar: {content:{error:'unknown obsidian shape: llm_completion'}})
