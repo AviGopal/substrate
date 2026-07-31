@@ -24,6 +24,7 @@ import { yamux } from '@chainsafe/libp2p-yamux'
 import { identify } from '@libp2p/identify'
 import { circuitRelayServer } from '@libp2p/circuit-relay-v2'
 import { autoNAT } from '@libp2p/autonat'
+import { ping } from '@libp2p/ping'
 import { generateKeyPair, privateKeyFromProtobuf, privateKeyToProtobuf } from '@libp2p/crypto/keys'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 
@@ -60,6 +61,7 @@ const node = await createLibp2p({
   services: {
     identify: identify(),
     autonat: autoNAT(),               // lets dialing vessels learn their own NAT status
+    ping: ping({ timeout: parseInt(process.env.RELAY_PING_TIMEOUT_MS || '10000', 10) }), // liveness for the keep-alive loop below
     relay: circuitRelayServer({       // the actual relay service (resource-capped)
       // Raise the per-circuit data/duration caps. The library defaults
       // (DEFAULT_DATA_LIMIT=128KB, DEFAULT_DURATION_LIMIT=120s) reset large or
@@ -79,7 +81,54 @@ const node = await createLibp2p({
 })
 await node.start()
 
+// ── RESERVED-PEER KEEP-ALIVE ────────────────────────────────────────────────
+// A circuit-relay-v2 relay is PASSIVE: it never dials reserved peers, so if the
+// relay↔peer connection silently dies (a NAT-behind spoke whose idle mapping
+// expires with no FIN/RST — a half-open both sides still believe is live) the
+// relay can neither notice nor reconnect. HOP CONNECTs then fail with
+// NO_RESERVATION even though the reservation TTL reads full — the recurring
+// hub→spoke storm (~74-min cadence, all fails targeting the NAT'd spoke).
+// js-libp2p's connectionManager has no keep-alive, so add one: ping each reserved
+// peer over its DIRECT connection every RELAY_KEEPALIVE_MS (< a ~30s NAT idle
+// timeout). A SUCCESSFUL ping keeps the NAT mapping warm (prevents the half-open)
+// AND proves the peer supports the protocol.
+//
+// SAFETY (learned from the reverted 6ec65736 churn loop): a peer that never runs a
+// ping RESPONDER — e.g. a sidecar build without the service — would fail every ping
+// as "unsupported protocol", not "dead". So NEVER close on that: only close a peer
+// that has PONGED at least once (proving it CAN answer) AND then failed >=2 pings in
+// a row (proving the connection actually died). A never-ponging peer is left alone.
+const KEEPALIVE_MS = parseInt(process.env.RELAY_KEEPALIVE_MS || '20000', 10)
+const PING_TIMEOUT_MS = parseInt(process.env.RELAY_PING_TIMEOUT_MS || '10000', 10)
+const CLOSE_AFTER_FAILS = parseInt(process.env.RELAY_KEEPALIVE_CLOSE_AFTER || '2', 10)
+const pongedEver = new Set<string>()      // peers that have answered ≥1 ping (support the responder)
+const consecFails = new Map<string, number>()
+setInterval(() => {
+  for (const peerId of node.services.relay.reservations.keys()) {
+    const pid = peerId.toString()
+    // Only the DIRECT reservation-holding connection (limits == null); relayed
+    // circuits carry non-null limits and must never be pinged/closed here.
+    const direct = node.getConnections(peerId).filter((c) => c.limits == null && c.status === 'open')
+    if (direct.length === 0) { consecFails.delete(pid); continue }
+    void node.services.ping.ping(peerId, { signal: AbortSignal.timeout(PING_TIMEOUT_MS) })
+      .then(() => {
+        if (!pongedEver.has(pid)) { pongedEver.add(pid); console.log(`[relay] reserved peer …${pid.slice(-8)} answers pings — liveness tracking active`) }
+        consecFails.set(pid, 0)
+      })
+      .catch(() => {
+        const n = (consecFails.get(pid) ?? 0) + 1
+        consecFails.set(pid, n)
+        if (pongedEver.has(pid) && n >= CLOSE_AFTER_FAILS) {
+          consecFails.set(pid, 0)
+          console.log(`[relay] reserved peer …${pid.slice(-8)} failed ${n} consecutive pings after prior success — closing dead connection to force re-dial`)
+          for (const c of direct) { c.close().catch(() => c.abort(new Error('keep-alive: dead connection'))) }
+        }
+      })
+  }
+}, KEEPALIVE_MS)
+
 console.log('[relay] started. peerId=', node.peerId.toString())
+console.log(`[relay] reserved-peer keep-alive: ping every ${KEEPALIVE_MS}ms, close after ${CLOSE_AFTER_FAILS} consec fails (ponged peers only)`)
 for (const ma of node.getMultiaddrs()) console.log('[relay] listening:', ma.toString())
 // The line vessels need: set this as RELAY_MULTIADDR in each substrate's /etc/substrate/env.
 const pub = node.getMultiaddrs().map(m => m.toString()).filter(m => m.includes(PUBLIC_IP))
