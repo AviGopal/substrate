@@ -35,6 +35,18 @@ DEV_VESSEL="${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}"
 SURREAL_URL="${SURREALDB_URL:-http://127.0.0.1:8000}"
 DB_PROBE_TIMEOUT="${DB_PROBE_TIMEOUT:-5}"   # per-probe budget (s) for the cheap RETURN 1 liveness check
 DB_PROBE_GAP="${DB_PROBE_GAP:-3}"           # seconds between the two consecutive probes
+# Sustained-wedge escalation (2026-07-31 outage): the DB-pressure guard below
+# correctly BACKS OFF restarting vessels when SurrealDB is the bottleneck — but
+# nothing restarted SurrealDB itself, so a wedge persisted for hours. Root: the
+# unit's MemoryHigh=22G throttle/reclaim zone makes surreal unresponsive
+# (http=000, RocksDB "transaction dropped") WITHOUT ever hitting MemoryMax=26G,
+# so the intended "OOM-kill -> self-restart" safety never fires. Escalate: after
+# N CONSECUTIVE pressured ticks (a sustained wedge, not a transient heavy-query
+# spike), restart surrealdb — the same graceful restart an operator would do
+# (reloads the durable file: RocksDB WAL, no data loss). Streak persists in a
+# container-writable file (via csh, so it lands in-container from either context).
+SURREAL_RESTART_THRESHOLD="${SURREAL_RESTART_THRESHOLD:-2}"     # consecutive pressured ticks (×~3min timer) before restart
+PRESSURE_STREAK_FILE="${PRESSURE_STREAK_FILE:-/workspace/.surreal-pressure-streak}"
 
 # Change-window (2026-07-09 contiguous-shape-flow §5): while a change-set holds
 # the change_window lease, a vessel mid-cutover is ALLOWED to look broken; a
@@ -108,6 +120,10 @@ if [ "${#VESSELS[@]}" -eq 0 ]; then
 fi
 
 log() { echo "[self-recovery $(date -Iseconds)] $*" >&2; }
+# Consecutive-pressured-tick streak (see SURREAL_RESTART_THRESHOLD above). Read/
+# write via csh so the file lands in the container from host OR in-container.
+streak_get() { csh "cat $PRESSURE_STREAK_FILE 2>/dev/null || echo 0" 2>/dev/null | tr -dc '0-9' | head -c 6; }
+streak_set() { csh "printf '%s' '$1' > $PRESSURE_STREAK_FILE 2>/dev/null" 2>/dev/null || true; }
 healthy() { # vessel-name port -> 0 if /health returns 200 within the probe budget.
   # Require CONSECUTIVE probe failures before declaring a vessel dead: under DB
   # thrash / load spikes a single 200-but-slow response used to time out and
@@ -207,8 +223,29 @@ done
 # misdiagnosis: the vessels aren't broken, the DB is) so the real problem is
 # surfaced for repair. The next tick recovers vessels normally once the DB
 # probe answers promptly again.
+# When we backed off because the shared DB was the bottleneck, track a
+# consecutive-pressured-tick streak. A SUSTAINED wedge (>= threshold ticks) means
+# surreal is stuck in the MemoryHigh throttle zone and will NOT self-restart —
+# escalate to a graceful `systemctl restart surrealdb` (durable file: storage,
+# WAL crash-consistent, no data loss). A single pressured tick is left alone (a
+# transient heavy-query spike self-clears). Emit the db_contention gap either way
+# so the underlying cause (unbounded trace table -> RocksDB working set) is still
+# surfaced for a durable retention fix.
+surreal_restarted=0
 if [ "$db_backoff" -gt 0 ]; then
-  log "shared-DB pressure: deferred restart/revert of $db_backoff vessel(s) this tick — emitting db_contention gap"
-  emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"self-recovery-db-pressure-backoff\",\"category\":\"db_contention\",\"source\":\"substrate_detected\",\"summary\":\"self-recovery backed off restarting $db_backoff DB-backed vessel(s): shared SurrealDB was unresponsive to a cheap RETURN 1 liveness probe — the shared datastore is the bottleneck, not the vessels; restarting them would amplify load\",\"status\":\"open\"}}}}"
+  streak="$(streak_get)"; [ -n "$streak" ] || streak=0; streak=$((streak + 1))
+  if [ "$streak" -ge "$SURREAL_RESTART_THRESHOLD" ]; then
+    log "SURREAL WEDGE: DB bottlenecked for $streak consecutive ticks (>= $SURREAL_RESTART_THRESHOLD) — restarting surrealdb.service (throttle-zone wedge never self-restarts)"
+    csys restart surrealdb.service >/dev/null 2>&1 || true
+    surreal_restarted=1
+    streak_set 0
+    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"self-recovery-surreal-wedge-restart\",\"category\":\"db_contention\",\"source\":\"substrate_detected\",\"summary\":\"self-recovery RESTARTED surrealdb after $streak consecutive ticks of a cheap RETURN 1 liveness probe timing out — the shared datastore was wedged in the MemoryHigh throttle zone (unresponsive without an OOM-kill, so it never self-restarted). Durable fix needed: bound the activity_execution_traces working set (retention) so the RocksDB footprint stays under the block-cache cap.\",\"status\":\"open\"}}}}"
+  else
+    streak_set "$streak"
+    log "shared-DB pressure: deferred restart/revert of $db_backoff vessel(s) this tick (consecutive pressured ticks: $streak/$SURREAL_RESTART_THRESHOLD) — emitting db_contention gap"
+    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"self-recovery-db-pressure-backoff\",\"category\":\"db_contention\",\"source\":\"substrate_detected\",\"summary\":\"self-recovery backed off restarting $db_backoff DB-backed vessel(s): shared SurrealDB was unresponsive to a cheap RETURN 1 liveness probe — the shared datastore is the bottleneck, not the vessels; restarting them would amplify load\",\"status\":\"open\"}}}}"
+  fi
+else
+  streak_set 0
 fi
-echo "{\"healthy\":$healthy_n,\"recovered_by_restart\":$recovered,\"reverted_from_git\":$reverted,\"escalated\":$escalated,\"db_pressure_backoff\":$db_backoff,\"masked_skipped\":$masked_skipped}"
+echo "{\"healthy\":$healthy_n,\"recovered_by_restart\":$recovered,\"reverted_from_git\":$reverted,\"escalated\":$escalated,\"db_pressure_backoff\":$db_backoff,\"surreal_restarted\":$surreal_restarted,\"masked_skipped\":$masked_skipped}"

@@ -402,6 +402,16 @@ if [ -d "$SUPER_DIR/.git" ] && git -C "$SUPER_DIR" fetch -q origin "$BRANCH" 2>/
       if [ -f "$SUPER_DIR/scripts/substrate/mirror-to-live.sh" ]; then
         install -m 0755 "$SUPER_DIR/scripts/substrate/mirror-to-live.sh" /usr/local/bin/mirror-to-live 2>/dev/null || true
       fi
+      # self-recovery-tick is the immune-system tick installed to /usr/local/bin
+      # at boot but (until now) never re-converged — the SAME super-repo-not-in-
+      # self-update-set gap: a repo-side recovery fix (e.g. the 2026-07-31
+      # sustained-DB-wedge -> restart-surrealdb escalation) never reached the
+      # running unit. Converge it here so operator immune-system logic ships via
+      # git like everything else (running unit picks it up next timer fire).
+      if [ -f "$SUPER_DIR/scripts/substrate/self-recovery-tick.sh" ]; then
+        install -m 0755 "$SUPER_DIR/scripts/substrate/self-recovery-tick.sh" /usr/local/bin/.self-recovery-tick.new 2>/dev/null \
+          && mv -f /usr/local/bin/.self-recovery-tick.new /usr/local/bin/self-recovery-tick 2>/dev/null || true
+      fi
       # Reseed the active-scripts run-dir (same source substrate-active-scripts-seed uses at boot).
       cp -f "$SUPER_DIR"/scripts/substrate/*.ts /workspace/active-scripts/ 2>/dev/null || true
       # The relay is restarted ONLY on a real relay.ts change (never on first
