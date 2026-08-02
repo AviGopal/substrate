@@ -400,6 +400,23 @@ EOF
 
   # 3. Restart + health-gate (only for active long-running units).
   UNIT="$(vessel_unit "$v")"
+  # A vessel whose INVENTORY unit is a .timer can still run a long-lived
+  # <vessel>.service alongside it. The .service-only guard below tests
+  # "${UNIT%.service}" != "$UNIT", which is FALSE for a .timer, so the whole
+  # restart block was skipped: the source was mirrored and the running process
+  # never reloaded it. Observed on boredom-vessel — inventory unit
+  # boredom-vessel.timer, boredom-vessel.service active since the previous day
+  # with NRestarts=0, serving 25-hour-old code while pull-sync reported it
+  # synced. A landed fix that never executes is indistinguishable from no fix.
+  # Exactly one vessel in the current inventory matches (measured), so this
+  # prefers the active long-running service only where one genuinely exists.
+  case "$UNIT" in
+    *.service) ;;
+    *) if systemctl is-active "$v.service" >/dev/null 2>&1; then
+         log "$v: inventory unit $UNIT is not a service, but $v.service is active — restarting it so the mirrored source takes effect"
+         UNIT="$v.service"
+       fi ;;
+  esac
   PORT="$(health_port "$v")"
   if [ -n "$UNIT" ] && [ "${UNIT%.service}" != "$UNIT" ] && systemctl is-active "$UNIT" >/dev/null 2>&1; then
     systemctl restart "$UNIT" 2>/dev/null || true
