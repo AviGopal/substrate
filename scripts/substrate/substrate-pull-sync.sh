@@ -305,6 +305,30 @@ for d in "$CLONE_DIR"/*/; do
     done <<EOF
 $(find "$CLONE_DIR/src" -name '*.ts' -type f 2>/dev/null)
 EOF
+    # GENERALISED DRIFT HEAL. Truncation is only the catastrophic tail of the same
+    # class: patch_with_tools has no isolation and edits $RUNTIME_DIR directly, so a
+    # draft that is never rolled back leaves LIVE source differing from git while the
+    # vessel keeps serving its already-loaded module. Observed today: live
+    # feature-compose.ts carried `llmCall(\n  llmEndpoint,endpoint, prompt, model)`
+    # — an identifier not in scope there — while the clone and origin/dev were clean.
+    # Nothing detected it; an operator restored it by hand, and a restart would have
+    # taken the resolver down.
+    #
+    # Guarded HARDER than the deferral below: healed only when NO authoring marker
+    # exists for the vessel at all, so this can never yank source out from under a
+    # live drafter (a mid-run write is legitimate and often reverted). Corruption
+    # therefore persists until authoring stops, exactly as for the truncation case.
+    #
+    # Measured before landing: at steady state 17 of 18 vessels have ZERO
+    # live-vs-clone drift; the sole exception is concept-db, a separately-known
+    # silent mirror-to-live failure that re-mirroring also repairs. Quiet by
+    # construction.
+    if [ -z "$TRUNCATED" ] && [ -z "$(ls "$AUTHORING_MARKER_DIR"/*-"$v".json 2>/dev/null)" ]; then
+      RUNTIME_HASH="$(content_hash "$RUNTIME_DIR/$v")"
+      if [ "$RUNTIME_HASH" != none ] && [ "$CLONE_HASH" != none ] && [ "$RUNTIME_HASH" != "$CLONE_HASH" ]; then
+        TRUNCATED="content drift (live ${RUNTIME_HASH%"${RUNTIME_HASH#??????????}"} != clone ${CLONE_HASH%"${CLONE_HASH#??????????}"})"
+      fi
+    fi
     if [ -n "$TRUNCATED" ]; then
       SUPPRESS_REATTEMPT=""
       log "$v: RUNTIME SOURCE TRUNCATED — $TRUNCATED — overriding re-attempt suppression to restore it from the clone"
