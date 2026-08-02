@@ -1,6 +1,6 @@
 {
   "rev": 7,
-  "updated_at": "2026-08-02T07:34:28.908Z",
+  "updated_at": "2026-08-02T07:34:29.798Z",
   "cost_weight": 0.25,
   "arms": [
     {
@@ -111,7 +111,7 @@
         "action_shape_selection": 725.7523256381612,
         "pointer_arg_extraction": 22.54907909606459,
         "derivation_split_classification": 42,
-        "patch_with_tools": 7531.09311923794,
+        "patch_with_tools": 7533.075197308139,
         "feature_compose": 1489.2967802984813,
         "template_candidate_ranking": 206,
         "cheap": 211
@@ -123,12 +123,12 @@
         "action_shape_selection": 6.3473502324984254,
         "pointer_arg_extraction": 1,
         "derivation_split_classification": 24,
-        "patch_with_tools": 31.031591531388763,
+        "patch_with_tools": 31.03152005570774,
         "feature_compose": 32.32955844388802,
         "template_candidate_ranking": 61,
         "cheap": 62
       },
-      "last_updated_at": "2026-08-02T07:34:28.908Z"
+      "last_updated_at": "2026-08-02T07:34:29.798Z"
     },
     {
       "model": "moonshotai/kimi-k2-instruct",
