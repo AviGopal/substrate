@@ -62,10 +62,36 @@ emit_gap() {
 }
 
 # A cutover mid-flight owns /vessels mutation; never race it.
+#
+# STARVATION BOUND (2026-08-02). The freshness test alone is not enough: the
+# marker is REWRITTEN by every new cutover, and an autonomous authoring loop
+# stages cutovers far more often than this timer fires (observed: a new marker
+# every 2-15 min against a 10-min timer). The lock is then permanently "fresh",
+# every run exits here, and the vessel tree NEVER converges — the spoke was
+# found running goal-host and development-vessel source that predated four
+# landed fixes, so its autonomous work executed against stale logic and kept
+# re-deriving problems that were already fixed on origin/dev. Indefinite
+# staleness is a worse failure than a rare cutover race, and the cutover holds
+# its own change-window lease (checked immediately below) which protects the
+# genuine mid-swap window. So: defer, but only for a BOUNDED number of
+# consecutive runs, then converge anyway and say so loudly.
+MITOSIS_DEFER_COUNT_FILE=/workspace/pull-sync-mitosis-defers
+MITOSIS_MAX_CONSECUTIVE_DEFERS="${MITOSIS_MAX_CONSECUTIVE_DEFERS:-4}"
 if [ -f "$MITOSIS_LOCK" ] && [ -n "$(find "$MITOSIS_LOCK" -mmin "-$MITOSIS_LOCK_TTL_MIN" 2>/dev/null)" ]; then
-  log "mitosis cutover in flight ($MITOSIS_LOCK fresh) — skipping this run"
-  exit 0
+  _defers="$(cat "$MITOSIS_DEFER_COUNT_FILE" 2>/dev/null || echo 0)"
+  case "$_defers" in ''|*[!0-9]*) _defers=0 ;; esac
+  _defers=$((_defers + 1))
+  echo "$_defers" > "$MITOSIS_DEFER_COUNT_FILE" 2>/dev/null || true
+  if [ "$_defers" -le "$MITOSIS_MAX_CONSECUTIVE_DEFERS" ]; then
+    log "mitosis cutover in flight ($MITOSIS_LOCK fresh) — skipping this run ($_defers/$MITOSIS_MAX_CONSECUTIVE_DEFERS)"
+    echo "{\"at\":\"$(date -Iseconds)\",\"actor\":\"pull-sync\",\"action\":\"deferred_mitosis\",\"consecutive\":$_defers}" >> "$DEFERRAL_LOG" 2>/dev/null || true
+    exit 0
+  fi
+  log "STARVATION BREAK: mitosis marker has deferred $_defers consecutive runs (> $MITOSIS_MAX_CONSECUTIVE_DEFERS) — converging anyway; the change-window lease still guards a genuine mid-swap"
+  echo "{\"at\":\"$(date -Iseconds)\",\"actor\":\"pull-sync\",\"action\":\"starvation_break_mitosis\",\"consecutive\":$_defers}" >> "$DEFERRAL_LOG" 2>/dev/null || true
 fi
+# Converging (or no lock at all) — reset the consecutive-deferral counter.
+rm -f "$MITOSIS_DEFER_COUNT_FILE" 2>/dev/null || true
 
 # Change-window (2026-07-09 contiguous-shape-flow §5): a held change_window lease
 # means a change-set is landing; pull-sync defers rather than converging mid-swap.
