@@ -275,6 +275,42 @@ for d in "$CLONE_DIR"/*/; do
     SUPPRESS_REATTEMPT=""
     log "$v: content already attempted but $SELF_UNIT is not active — overriding re-attempt suppression to restore service"
   fi
+  # RUNTIME TRUNCATION OVERRIDE (2026-08-02). "unit is active" is a weak proxy for
+  # "healthy": bun holds the module it loaded at start, so a vessel keeps serving
+  # normally while its own source on disk is destroyed. Observed today —
+  # feature-compose.ts went from 190,111 bytes to 38 ("updated content to close
+  # substrate gap") three separate times while development-vessel stayed active, so
+  # the check above never fired, LAST still equalled CLONE_HASH, and pull-sync
+  # suppressed the very re-mirror that would have healed it. The vessel imports
+  # that resolver at top level, so the damage was one restart away from taking the
+  # whole vessel down.
+  #
+  # Discriminator: the suppression exists to stop a mirror/revert BOUNCE, which
+  # only happens when the runtime holds a deliberately reverted good tree. A
+  # runtime file that has collapsed to a small fraction of its clone counterpart is
+  # not a revert — nothing legitimately shrinks a source file by >90% — so treat it
+  # as corruption and re-mirror regardless. Measured before landing: across 17
+  # vessels at steady state, 16 had ZERO live-vs-clone drift of any kind, so this
+  # predicate is quiet by construction.
+  if [ -n "$SUPPRESS_REATTEMPT" ]; then
+    TRUNCATED=""
+    while IFS= read -r cf; do
+      rf="$RUNTIME_DIR/$v/${cf#"$CLONE_DIR/"}"
+      [ -f "$rf" ] || continue
+      cs=$(wc -c <"$cf" 2>/dev/null || echo 0)
+      rs=$(wc -c <"$rf" 2>/dev/null || echo 0)
+      if [ "$cs" -gt 1000 ] && [ $((rs * 10)) -lt "$cs" ]; then
+        TRUNCATED="${rf#"$RUNTIME_DIR/"} ($rs vs $cs bytes)"; break
+      fi
+    done <<EOF
+$(find "$CLONE_DIR/src" -name '*.ts' -type f 2>/dev/null)
+EOF
+    if [ -n "$TRUNCATED" ]; then
+      SUPPRESS_REATTEMPT=""
+      log "$v: RUNTIME SOURCE TRUNCATED — $TRUNCATED — overriding re-attempt suppression to restore it from the clone"
+      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"runtime-source-truncated-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync found live source under $RUNTIME_DIR/$v collapsed to a fraction of its git content ($TRUNCATED) while the unit was still active. A write tool truncated running vessel source; the vessel kept serving from its in-memory module, so nothing else noticed. Re-mirrored from the clone. Ops are applied against RUNTIME_ROOT (live source) rather than a scratch copy — that is the class to close.\",\"status\":\"open\"}}}}"
+    fi
+  fi
   if [ -z "$DIST_RETRY" ] && [ -n "$SUPPRESS_REATTEMPT" ] && [ "$LAST" = "$CLONE_HASH" ]; then continue; fi
 
   # 2b. Drain-awareness: never converge a vessel whose working plane shows a
