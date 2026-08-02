@@ -253,7 +253,29 @@ for d in "$CLONE_DIR"/*/; do
     fi
     log "$v: src converged but dist stale (last-good != ${HEAD:0:10}) — re-running fan-out"
   fi
-  if [ -z "$DIST_RETRY" ] && [ "$LAST" = "$CLONE_HASH" ]; then continue; fi  # this exact content already attempted (unhealthy -> reverted); don't mirror/revert loop
+  # Re-attempt suppression: this exact content was already attempted (unhealthy ->
+  # reverted), so don't mirror/revert loop. BUT the suppression is keyed on content
+  # hash alone, and that makes its worst case a permanent wedge: restoring a
+  # last-good tree produces content BYTE-IDENTICAL to a tree already attempted, so
+  # `LAST = CLONE_HASH` matches and the restore is suppressed forever. That is
+  # exactly the recovery path after a corrupt mirror — on 2026-08-02 a drafter
+  # self-edit wrote an unrendered `{{...}}` placeholder into byte 0 of
+  # feature-compose.ts, development-vessel crash-looped, and pull-sync then
+  # reported `synced=0 skipped=0 failed=0` on every tick while /vessels stayed
+  # broken, because the hand-pushed revert hashed to a previously-attempted value.
+  #
+  # The loop this guard prevents only exists when the live runtime is HEALTHY
+  # (already running the reverted-to good code, so re-mirroring the bad content
+  # would bounce it again). If the unit is down or failing, re-mirroring is
+  # unambiguously the right move — there is no healthy state to protect. So skip
+  # the suppression whenever this vessel owns a service unit that is not active.
+  SUPPRESS_REATTEMPT=1
+  if [ -n "$SELF_UNIT" ] && [ "${SELF_UNIT%.service}" != "$SELF_UNIT" ] \
+     && ! systemctl is-active "$SELF_UNIT" >/dev/null 2>&1; then
+    SUPPRESS_REATTEMPT=""
+    log "$v: content already attempted but $SELF_UNIT is not active — overriding re-attempt suppression to restore service"
+  fi
+  if [ -z "$DIST_RETRY" ] && [ -n "$SUPPRESS_REATTEMPT" ] && [ "$LAST" = "$CLONE_HASH" ]; then continue; fi
 
   # 2b. Drain-awareness: never converge a vessel whose working plane shows a
   # LIVE authoring run — a marker that is fresh (< TTL) with its recorded pid
