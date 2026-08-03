@@ -1,6 +1,6 @@
 # JWT Claims Structure
 
-This document describes the JWT token structure used for authentication in the Metabob ecosystem.
+This document describes the JWT token structure used for authenticated requests across the vessel fleet. Tokens are minted and verified by identity-vessel, the single validator; every other vessel checks credentials against it rather than decoding tokens itself.
 
 ## Overview
 
@@ -38,7 +38,6 @@ Three parts separated by dots:
   "org_id": "organizations:acme",
   "role": "admin",
   "user_id": "users:alice",
-  "auth_method": "password",
   "iat": 1711361400,
   "exp": 1711362300
 }
@@ -53,31 +52,18 @@ Three parts separated by dots:
   "user_id": "users:alice",
   "role": "member",
   "scopes": ["read", "write"],
-  "auth_method": "api_key",
   "api_key_id": "api_keys:xyz789",
   "iat": 1711361400,
   "exp": 1711362300
 }
 ```
 
-### MiniBob Instance Authentication — DEPRECATED
+### Instance authentication is retired
 
-> **Deprecated (2026-04-08, Migration 052):** MiniBob instances now use standard API-key authentication (see above). This format is kept for historical reference only.
-
-```json
-{
-  "sub": "minibob_instance:mb001",
-  "org_id": "organizations:acme",
-  "project_id": "projects:backend",
-  "instance_id": "mb001",
-  "vessel_id": "vessel:minibob-v2",
-  "auth_method": "record",
-  "iat": 1711361400,
-  "exp": 1711447800
-}
-```
-
-**Note:** MiniBob instances should now use API-key authentication (see §API Key Authentication above) instead of this instance-specific format.
+A per-instance record-auth token format existed for a retired CLI. Instances authenticate with an
+ordinary API key, exactly as in §API Key Authentication above. The signin routes for the old format
+remain mounted and answer `410 Gone`: a tombstone that names the removed method is a better signal
+than a bare `404`, and it stays until telemetry shows no callers.
 
 ## Claim Descriptions
 
@@ -145,41 +131,12 @@ Used in PERMISSIONS:
 WHERE 'write' IN $auth.scopes
 ```
 
-### auth_method
+### The claim set is what the generator emits
 
-How the token was obtained.
-
-| Value | Description |
-|-------|-------------|
-| `password` | User login with password |
-| `api_key` | API key exchange |
-| `record` | SurrealDB RECORD auth (MiniBob) |
-| `oauth` | OAuth provider (future) |
-
-Useful for audit logging:
-```typescript
-auditLog.create({
-  event: 'data_access',
-  auth_method: claims.auth_method,
-  user_id: claims.sub
-});
-```
-
-### instance_id (MiniBob only)
-
-MiniBob instance identifier.
-
-```json
-"instance_id": "mb001"
-```
-
-### vessel_id (MiniBob only)
-
-Vessel type/version for the instance.
-
-```json
-"vessel_id": "vessel:minibob-v2"
-```
+`POST /v1/jwt/generate` on identity-vessel accepts `user_id`, `org_id`, `role`, optional
+`project_ids[]`, and an optional lifetime; `POST /v1/jwt/verify` returns those plus `exp` and
+`iat`. Nothing outside that set is minted or read, so a claim documented here that the generator
+does not emit is a claim that will silently be `undefined` at the point of use.
 
 ## Token Lifetimes
 
@@ -187,7 +144,6 @@ Vessel type/version for the instance.
 |-------------|----------------|------------------|---------|
 | Password | 15 minutes | 12 hours | Manual |
 | API Key | 15 minutes | 1 hour | Auto (80%) |
-| MiniBob | 24 hours | 7 days | Auto |
 
 ## Validation
 
@@ -256,16 +212,19 @@ SELECT * FROM users WHERE id = $auth.id;
 2. **HTTPS only**: Never send tokens over unencrypted connections
 3. **Secure storage**: Store tokens securely (not in localStorage for web)
 4. **Validate on every request**: Don't cache validation results
-5. **Include auth_method**: Track how tokens were obtained for audit
-6. **Minimal claims**: Only include necessary data
+5. **Minimal claims**: Only include necessary data
+6. **Isolation is enforced in the database**: PERMISSIONS gate on `$token.org_id`, not application code
 
 ## Example: Full Token Flow
+
+Endpoints below are written against the host-mapped ports of a local substrate. Resolve the live
+address through discovery rather than pinning it; the port table is a convenience, not a contract.
 
 ### 1. API Key Validation (identity-vessel)
 
 Request:
 ```http
-POST http://identity.metabob.local/v1/auth/resolve
+POST http://localhost:18101/v1/auth/resolve
 Content-Type: application/json
 
 {
@@ -294,16 +253,17 @@ Response:
 }
 ```
 
-### 2. MiniBob Instance Authentication (identity-vessel)
+### 2. Token Generation (identity-vessel)
 
 Request:
 ```http
-POST http://identity.metabob.local/v1/auth/minibob/signin
+POST http://localhost:18101/v1/jwt/generate
 Content-Type: application/json
 
 {
-  "instance_id": "minibob-local-001",
-  "api_key": "minibob-local-dev-key"
+  "user_id": "usr_alice",
+  "org_id": "acme",
+  "role": "member"
 }
 ```
 
@@ -311,15 +271,14 @@ Response:
 ```json
 {
   "success": true,
-  "token": "eyJhbGci...",
-  "org_id": "metabob_internal"
+  "data": { "token": "eyJhbGci...", "issued_at": 1711361400, "expires_at": 1711362300 }
 }
 ```
 
 ### 3. Authenticated Request (activity-api)
 
 ```http
-GET http://activity.metabob.local/v2/activities/templates
+GET http://localhost:18080/v2/activities/templates
 Authorization: Bearer eyJhbGci...
 ```
 

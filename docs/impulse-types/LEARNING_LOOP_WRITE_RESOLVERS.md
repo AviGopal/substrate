@@ -87,7 +87,7 @@ Destructive operations additionally require authentication (401 when unauthentic
 
 Allowed update fields for `activityTemplate_update`: `name`, `description`, `tags`, `tasks`, `input_shapes`, `output_shapes`, `deprecated`. Any other key in `updates` returns 400 with the rejected list.
 
-For the full lifecycle story (why deprecate instead of delete, how `deprecated = true` is interpreted by the recommend path), see the archived note [`../archive/2026-04-27/guides/ACTIVITY_LIFECYCLE_DEPRECATION.md`](../archive/2026-04-27/guides/ACTIVITY_LIFECYCLE_DEPRECATION.md). For the end-to-end observe → audit → correct pipeline these writes slot into — including the `templateAuditReport` read companion and minibob's `impulse-resolve` dispatch primitive — see [`../guides/TEMPLATE_UPKEEP.md`](../guides/TEMPLATE_UPKEEP.md).
+For the full lifecycle story (why deprecate instead of delete, how `deprecated = true` is interpreted by the recommend path), see [`../guides/ACTIVITY_LIFECYCLE_DEPRECATION.md`](../guides/ACTIVITY_LIFECYCLE_DEPRECATION.md). For the end-to-end observe → audit → correct pipeline these writes slot into — including the `templateAuditReport` read companion and minibob's `impulse-resolve` dispatch primitive — see [`../guides/TEMPLATE_UPKEEP.md`](../guides/TEMPLATE_UPKEEP.md).
 
 ## Auth context for writes
 
@@ -141,6 +141,6 @@ Prefer the write resolver for anything driven by an activity template — the re
 
 ## Related
 
-- [`ACTIVITY_LIFECYCLE_DEPRECATION.md`](../archive/2026-04-27/guides/ACTIVITY_LIFECYCLE_DEPRECATION.md) — update/deprecate flow for templates (archived 2026-04-27)
+- [`ACTIVITY_LIFECYCLE_DEPRECATION.md`](../guides/ACTIVITY_LIFECYCLE_DEPRECATION.md) — update/deprecate flow for templates
 - [`../architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — why the backend stays a trace store and resolvers live where data lives
 - [`../shapes/README.md`](../shapes/README.md) — full shape index

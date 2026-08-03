@@ -77,17 +77,6 @@ describe('Feature', () => {
 
 ---
 
-## Archived Docs
-
-Four older testing documents (April 2026) were archived to `docs/archive/2026-05-27/` on 2026-05-27:
-
-- `VERIFICATION_AND_TESTING_INVENTORY.md` — April 2026 snapshot; superseded by the harnesses and this guide
-- `CRITICAL_INTEGRATION_TESTS.md` — StateSpaceManager / impulse-chaining test docs; minibob internals since refactored
-- `TEST_IMPLEMENTATION_SUMMARY.md` — duplicate of CRITICAL_INTEGRATION_TESTS content
-- `API_KEY_AUTH_TESTS.md` — auth test docs with stale patterns (direct SurrealDB fallback, `$auth.org_id` instead of `$token.org_id`); current auth model is in CLAUDE.md §Authentication
-
----
-
 ## Resources
 
 - **CLAUDE.md** (project root): Authentication model, substrate configuration, deployment workflow

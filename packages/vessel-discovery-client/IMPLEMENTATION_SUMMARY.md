@@ -227,4 +227,3 @@ $ node test-exports.mjs
 
 - **Specification**: `openspec/changes/vessel-integration-standardization/specs/vessel-discovery-client-package/spec.md`
 - **Discovery Vessel Types**: `repos/discovery-vessel/src/types.ts`
-- **Integration Plan**: `docs/archive/2026-04-11-jiggle-and-prune/VESSEL_INTEGRATION_PLAN_SUMMARY.md`

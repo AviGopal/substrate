@@ -1,7 +1,6 @@
 # Activity Template Lifecycle and Deprecation
 
-**Applies to:** `metabob-activity-api` v1.5.5+ (April 2026)
-**Related migration:** `sql/migrations/082-add-deprecated-field-to-activity.surql`
+Served by activity-api; the `deprecated` field is established by a schema migration in that vessel.
 
 Activity templates accumulate. Some underperform. Some are superseded by variants. Some were experimental and never promoted. This guide covers the resolver-based lifecycle for updating and deprecating templates without going around the API.
 
@@ -16,7 +15,7 @@ RBAC is enforced at the SurrealDB `PERMISSIONS` layer — `$token.role = 'admin'
 Mutates whitelisted fields on an existing activity. Allowed fields: `name`, `description`, `tags`, `tasks`, `input_shapes`, `output_shapes`, `deprecated`. Any other key in `updates` causes a 400 with the rejected list.
 
 ```bash
-curl -X POST https://activity.metabob.com/v2/impulses/resolve \
+curl -X POST http://localhost:18080/v2/impulses/resolve \
   -H "Authorization: ApiKey $METABOB_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -48,7 +47,7 @@ The `before`/`after` diff is persisted to `upkeep_audit_log` so the change is tr
 Soft-deletes a template by setting `deprecated = true` and bumping `updated_at`. Templates remain queryable (for historical trace correlation) but are marked for exclusion.
 
 ```bash
-curl -X POST https://activity.metabob.com/v2/impulses/resolve \
+curl -X POST http://localhost:18080/v2/impulses/resolve \
   -H "Authorization: ApiKey $METABOB_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -64,7 +63,7 @@ The `reason` string is stored on the audit log entry. Keep it informative — it
 
 ## The `deprecated` field
 
-Added by migration 082 (2026-04-22):
+Established by a schema migration in activity-api:
 
 ```surql
 DEFINE FIELD IF NOT EXISTS deprecated ON activity TYPE option<bool>
@@ -76,14 +75,17 @@ DEFINE INDEX IF NOT EXISTS idx_activity_deprecated ON activity FIELDS deprecated
 
 `option<bool>` so existing rows without the field stay valid. The index exists so filter queries stay cheap.
 
-### Current behavior in `/v2/activities/recommend`
+### Deprecation is a signal on the recommend path, not a guarantee
 
-As of v1.5.5, the Thompson Sampling recommendation path (`getActivitiesWithTieredFallback` in `src/routes/activities.ts`) does not yet carry an explicit `WHERE deprecated != true` filter. The field is authoritative on writes (deprecation is recorded, audited, and queryable), but callers that want hard exclusion today should either:
+The Thompson recommendation path (`getActivitiesWithTieredFallback`) carries no `deprecated`
+predicate, so a deprecated template can still be recommended. The field is authoritative on
+writes — deprecation is recorded, audited, and queryable — but a caller wanting hard exclusion
+must filter client-side on `rec.deprecated`, or pass an `exclude_activities` list.
 
-1. Filter client-side after receiving recommendations (`rec.deprecated === true`), or
-2. Provide an `exclude_activities` list in the recommend request for targeted exclusion.
-
-Server-side filter enforcement is a follow-up — track via migration 083 or the follow-on PR that wires the filter into the tiered fallback query. Until then, deprecation is a signal, not a guarantee.
+The asymmetry is worth knowing rather than assuming away: the proposed-template selection query
+*does* exclude both `retired` and `deprecated`, so two selection paths in the same vessel treat
+the flag differently. Closing that gap means adding the predicate to the tiered fallback query;
+until it is added, read a deprecation as advice to the selector, not a constraint on it.
 
 ## Use cases
 
@@ -104,6 +106,4 @@ Hard deletion, when truly needed, goes through `activityExecutionTrace_delete` a
 ## Related
 
 - [`../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`](../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md) — the full `*_write` / `*_update` / `*_delete` resolver contract, including auth paths and upkeepAuditLog emission
-- `IMPULSE_ACTIVITY_FOUNDATION.md` — why the backend is a trace store, not a universal resolver
-- `VARIANT_CREATION_DESIGN.md` — how variants are spawned (the other end of the lifecycle)
-- `sql/migrations/081-composition-chain-on-traces.surql` — sibling migration from the same batch
+- [`../architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — why the backend is a trace store, not a universal resolver
