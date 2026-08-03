@@ -308,8 +308,15 @@ dispatch whose trace you inspect.
   belong in the commit message, not the tree.
 - **Placement:** the super-repo is a thin coordinator — `repos/*` (submodules),
   `docs/` (timeless reference), `openspec/` (change proposals), `scripts/`
-  (operational tooling), `packages/` (shared TS). A pre-commit hook enforces
-  this; root-level additions outside a small allowlist are rejected. Tests live
+  (operational tooling), `packages/` (shared TS), `validation/` (harness and
+  fixtures), plus the tool directories `.claude/`, `.github/`, `.githooks/`.
+  The authoritative list is `ALLOWED_TOPLEVEL_DIRS` in
+  `scripts/git-hooks/pre-commit`; that hook rejects root-level additions
+  outside it, and it only enforces once installed — run
+  `scripts/git-hooks/install.sh` in every clone. Runtime state (the pool, the
+  gap store, memory, policies) belongs in the container volume and is
+  gitignored: a file the substrate rewrites is not a file git should carry.
+  Tests live
   in each vessel's repo, never in the super-repo.
 
 ## Alignment checklist
