@@ -219,9 +219,9 @@ Key properties:
 
 ## Sibling Concepts: Template-Dispatchable Resolvers
 
-These templates complement the resolver-extraction work documented in [`TEMPLATE_DISPATCHABLE_RESOLVERS.md`](./TEMPLATE_DISPATCHABLE_RESOLVERS.md):
+These templates complement resolver dispatch from template JSON:
 
-- **Resolvers** (extracted from `goal-processor.ts`) — Deterministic deciders callable from template JSON. Used for branching, filtering, and state tracking.
+- **Resolvers** — Deterministic deciders callable from template JSON. Used for branching, filtering, and state tracking.
 - **Concept shapes** (advertised by concept-db) — Universal data-access patterns. Used for enriching prompts with prior learnings.
 
 Together, they demonstrate the three core patterns:
@@ -234,7 +234,6 @@ Together, they demonstrate the three core patterns:
 
 ## Related
 
-- [`TEMPLATE_DISPATCHABLE_RESOLVERS.md`](./TEMPLATE_DISPATCHABLE_RESOLVERS.md) — Resolver extraction and registry pattern
 - [`../architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — Core impulse model
 - [`ACTIVITY_TASK_CONTEXT_PROPAGATION.md`](./ACTIVITY_TASK_CONTEXT_PROPAGATION.md) — Impulse pool propagation and shape-aware selection
 - [`../architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — Extended template-level impulse declaration patterns and the unified impulse-driven architecture
