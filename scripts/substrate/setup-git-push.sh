@@ -33,7 +33,7 @@ export SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT:-}"
 export GIT_TERMINAL_PROMPT=0
 
 AUTHOR_NAME="${SUBSTRATE_GIT_AUTHOR_NAME:-Substrate Autonomous}"
-AUTHOR_EMAIL="${SUBSTRATE_GIT_AUTHOR_EMAIL:-substrate-autonomous@metabob.com}"
+AUTHOR_EMAIL="${SUBSTRATE_GIT_AUTHOR_EMAIL:-substrate-autonomous@substrate.local}"
 CLONE_DIR="${MITOSIS_PUSH_CLONE_DIR:-/workspace/git/vessels}"
 # Everything mutable from all vessels: clone every substrate vessel repo so the
 # cutover can self-develop ANY of them (not just development-vessel). Each maps

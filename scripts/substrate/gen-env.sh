@@ -160,7 +160,7 @@ SUBSTRATE_ADMIN_KEY="${SUBSTRATE_ADMIN_KEY:-$(persisted_secret SUBSTRATE_ADMIN_K
 SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT:-$(persisted_secret SUBSTRATE_GIT_PAT)}"
 SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT:-}"
 SUBSTRATE_GIT_AUTHOR_NAME="${SUBSTRATE_GIT_AUTHOR_NAME:-Substrate Autonomous}"
-SUBSTRATE_GIT_AUTHOR_EMAIL="${SUBSTRATE_GIT_AUTHOR_EMAIL:-substrate-autonomous@metabob.com}"
+SUBSTRATE_GIT_AUTHOR_EMAIL="${SUBSTRATE_GIT_AUTHOR_EMAIL:-substrate-autonomous@substrate.local}"
 
 # LLM / provider credentials — durable pass-through secrets. Precedence matches
 # the internal secrets above: explicit env (docker run -e) > persisted volume

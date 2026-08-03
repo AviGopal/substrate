@@ -217,9 +217,9 @@ EOF
   # the host's global config is unaffected.
   if ! (cd "$host_vessel_root" && \
         GIT_AUTHOR_NAME="Substrate Autonomous" \
-        GIT_AUTHOR_EMAIL="substrate-autonomous@metabob.com" \
+        GIT_AUTHOR_EMAIL="substrate-autonomous@substrate.local" \
         GIT_COMMITTER_NAME="Substrate Autonomous" \
-        GIT_COMMITTER_EMAIL="substrate-autonomous@metabob.com" \
+        GIT_COMMITTER_EMAIL="substrate-autonomous@substrate.local" \
         git commit -m "$msg") >/dev/null 2>&1; then
     log "reject $intent_id: git commit failed (possibly nothing to commit)"
     write_result "$intent_id" "" "rejected_commit_failed" "see host repo $host_vessel_root"
