@@ -104,6 +104,13 @@ docker rm -f substrate-live >/dev/null 2>&1 || true
 RELAY_MULTIADDR="${RELAY_MULTIADDR:-$(grep -oE '/ip4/[^ "]*p2p/[A-Za-z0-9]+' "$HOME/relay.log" 2>/dev/null | tail -1 || true)}"
 [ -n "$RELAY_MULTIADDR" ] && echo "[vm] relay multiaddr: $RELAY_MULTIADDR" \
   || echo "[vm] WARNING: no relay.log yet — hub federation egress disabled until a re-deploy after the relay starts"
+# Published ports. 18080/18100/18101/18210 are the federation contract (trace
+# store, discovery, identity, goal dispatch). 18090 (development-vessel) and
+# 18260 (concept-db) are published because a SPOKE reaches them over the host
+# network: the spoke masks its own concept-db (DISABLED_VESSELS) and resolves
+# memoryNote/compose_lesson/reach_gate_lesson against the hub. Without these two
+# the spoke's drafter reads no lessons and its recipe goal-generator (which is
+# fail-open on concept-db) mints nothing — silently, with no error anywhere.
 docker run -d --name substrate-live --privileged \
   -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
   -e ENABLED_ROLES=hub -e ENABLED_EXTRA_VESSELS="${ENABLED_EXTRA_VESSELS:-development-vessel.service}" -e SUBSTRATE_BIND_HOST=0.0.0.0 \
@@ -113,6 +120,7 @@ docker run -d --name substrate-live --privileged \
   -e FED_SUBSTRATE_ID="${FED_SUBSTRATE_ID:-syzygy-hub}" \
   -e HUB_DISCOVERY_URL="http://localhost:8100" \
   -p 18080:8080 -p 18100:8100 -p 18101:8101 -p 18210:8210 \
+  -p 18090:8090 -p 18260:8260 \
   -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
   --tmpfs /run --tmpfs /run/lock "$IMAGE"
 

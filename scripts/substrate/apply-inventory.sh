@@ -111,3 +111,32 @@ for u in $(manageable_units); do
   disabled_count=$((disabled_count + 1))
 done
 log "done — $disabled_count unit(s) $( [ "$DRY_RUN" = "1" ] && echo 'would be' || echo '' ) disabled; the rest stay enabled"
+
+# Conformance: role selection can only govern units the inventory names, so any
+# shipped unit missing from it runs unconditionally in EVERY role. That is silent
+# by construction — the composition is simply wrong with nothing reporting it.
+# It has bitten once already: the inventory listed boredom-vessel.timer but not
+# boredom-vessel.service, so the selection loop ran on a hub whose role group
+# excludes compute, could not reach its (correctly masked) dispatch conduit, and
+# recorded a failure outcome per template — writing infrastructure absence into
+# the shared learning store as arm quality.
+# Warn only. Masking an unlisted unit here would let a packaging omission take a
+# vessel down at boot, which is strictly worse than running one too many.
+# Identify substrate units SEMANTICALLY — a unit whose ExecStart runs out of the
+# vessel or script trees is ours regardless of what it is called. Name patterns
+# were tried first and were far too narrow (they matched 19 of 364 unit files and
+# missed llm-resolver-*.service, which do not end in "-vessel"). Mitosis clones
+# are excluded: they are generated at runtime and cannot be pre-declared.
+# Corpus-tested against the live hub image: 5 true positives, 0 false positives,
+# and it does flag the boredom-vessel.service omission that motivated it.
+unmanaged="$(comm -13 \
+  <(manageable_units | sort -u) \
+  <(cd /usr/lib/systemd/system 2>/dev/null \
+      && grep -lE '/vessels/|/usr/local/share/substrate|/opt/substrate' -- *.service *.timer 2>/dev/null \
+      | grep -v -- '-mitosis-' | sort -u) 2>/dev/null || true)"
+if [ -n "$unmanaged" ]; then
+  log "warn: $(echo "$unmanaged" | wc -l) shipped unit(s) absent from the inventory — ungoverned by ENABLED_ROLES, they run in every role:"
+  for u in $unmanaged; do log "warn:   unmanaged: $u"; done
+else
+  log "inventory conformance: every shipped vessel unit is governed by role selection"
+fi

@@ -128,6 +128,12 @@
       "repo": "boredom-vessel"
     },
     {
+      "_comment": "The .service is the unit that actually runs the selection loop; the .timer above only pokes it. apply-inventory.sh masks by exact unit name, so listing only the .timer left boredom-vessel.service ungoverned by role selection — it ran on a hub whose role group excludes compute, where its only dispatch conduit (light-dispatch-vessel.service, compute, correctly masked) was absent. Every dispatch then failed to connect, and the connect-error path records a FAILURE OUTCOME per template, so infrastructure absence was written into the shared learning store as arm quality. Both units must carry the same role.",
+      "unit": "boredom-vessel.service",
+      "role": "compute",
+      "repo": "boredom-vessel"
+    },
+    {
       "unit": "stateful-ui-vessel.service",
       "role": "ui",
       "repo": "stateful-ui-vessel",
