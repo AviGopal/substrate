@@ -60,7 +60,10 @@ ensure_clone() { # vessel [repo] -> ensure /workspace/git/vessels/<v> exists (cl
 case "$ACTION" in
   list)
     manifest_json | jq -r '.vessels[].name' | while read -r n; do
-      active=$(csh "systemctl is-active '$n.service' 2>/dev/null" 2>/dev/null || echo unknown)
+      # systemctl exits non-zero for an inactive unit, so `|| echo unknown` used to
+      # append a second line and the two-line value broke the JSON below.
+      active=$(csh "systemctl is-active '$n.service' 2>/dev/null || true" 2>/dev/null | head -n1)
+      active=${active:-unknown}
       printf '{"name":"%s","active":"%s"}\n' "$n" "$active"
     done | jq -s '{vessels: .}'
     ;;
@@ -113,7 +116,8 @@ case "$ACTION" in
     post=$(echo "$e" | jq -r '.post_install // empty')
     [[ -n "$post" ]] && csh "$post" >/dev/null 2>&1 || true
 
-    active=$(csh "systemctl is-active '$VESSEL.service' 2>/dev/null" 2>/dev/null || echo unknown)
+    active=$(csh "systemctl is-active '$VESSEL.service' 2>/dev/null || true" 2>/dev/null | head -n1)
+    active=${active:-unknown}
     self_rec=$(echo "$e" | jq -r '.self_recovery // false')
     echo "{\"ok\":true,\"action\":\"installed\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\",\"active\":\"$active\",\"self_recovery\":$self_rec}"
     ;;
@@ -123,7 +127,8 @@ case "$ACTION" in
     csh "cd '$CLONE_DIR/$VESSEL' 2>/dev/null && GIT_TERMINAL_PROMPT=0 git pull --ff-only -q origin dev" || true
     csh "/usr/local/bin/mirror-to-live '$VESSEL' '$CLONE_DIR'" || { echo "{\"ok\":false,\"error\":\"mirror failed\"}"; exit 1; }
     csh "systemctl restart $VESSEL.service" >/dev/null 2>&1 || true
-    active=$(csh "systemctl is-active '$VESSEL.service' 2>/dev/null" 2>/dev/null || echo unknown)
+    active=$(csh "systemctl is-active '$VESSEL.service' 2>/dev/null || true" 2>/dev/null | head -n1)
+    active=${active:-unknown}
     echo "{\"ok\":true,\"action\":\"synced\",\"vessel\":\"$VESSEL\",\"active\":\"$active\"}"
     ;;
 
