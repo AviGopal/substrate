@@ -48,7 +48,7 @@ if [ "$(printf '%s' "$ie_resp" | jq -r '.body.verdict // empty' 2>/dev/null)" = 
   exit 0
 fi
 
-reason="Direct edit to vessel source ($fp) is gated by the substrate-vessel-edit-gate. The default path for code changes is to dispatch through the substrate so the change produces a trace and feeds the learning loop: use the metabob-mcp tool \`mcp__metabob__run_goal\` with \"<goal describing this change>\" (reaches goal-host-vessel on :8210). The deprecated \`minibob --single\` CLI still works as a fallback. For a deliberate one-off direct edit, set SUBSTRATE_ALLOW_DIRECT_EDIT=1 in the environment and retry. See CLAUDE.md §'Development Philosophy'."
+reason="Direct edit to vessel source ($fp) is gated by the substrate-vessel-edit-gate. The default path for a code change is to dispatch it so the change produces a trace and feeds the learning loop: use \`mcp__metabob__run_goal_async\` with a goal whose lead sentence names this exact file, then read \`reached\` (not \`status\`) with \`mcp__metabob__goal_status\`. Name ONE file per goal — multi-file asks drop parts silently. Quote the exact current line you want changed, verbatim; plans addressed by line number rather than by quoted content are the ones that fabricate. For a deliberate one-off direct edit, set SUBSTRATE_ALLOW_DIRECT_EDIT=1 and retry. See CLAUDE.md §'How work happens: dispatch, don't edit'."
 
 jq -nc --arg r "$reason" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$r}}'
 exit 0
