@@ -117,8 +117,22 @@ async function localDiscoveryResolve(pointer: any, allowFanout = false): Promise
 // vessel's circuit. Genuine intra-container owners (127.0.0.1:<port> of a co-resident
 // vessel) stay reachable and are deliberately NOT excluded here.
 const HOST_LOCAL_UNREACHABLE = /(^|\/\/)host\.docker\.internal(:|\/|$)/i
+// Loopback is only "co-resident" for a row THIS substrate registered. A row imported
+// from a peer namespace carries the endpoint as the ORIGINATING machine saw it, so its
+// 127.0.0.1 names that machine, not this one — dialling it reaches nothing here, and it
+// shadows the live circuit the same way a host.docker.internal row does. Foreign rows
+// are exactly those whose vesselId carries an `@<substrate>` suffix that is not ours.
+const LOOPBACK_ENDPOINT = /(^|\/\/)(127\.0\.0\.1|localhost|\[::1\])(:|\/|$)/i
+function isForeignRow(v: any): boolean {
+  const id = String(v?.vesselId ?? '')
+  const at = id.lastIndexOf('@')
+  return at !== -1 && id.slice(at + 1) !== SUBSTRATE_ID
+}
 function reachableHttp(v: any): boolean {
-  return !HOST_LOCAL_UNREACHABLE.test(String(v?.endpoint ?? ''))
+  const endpoint = String(v?.endpoint ?? '')
+  if (HOST_LOCAL_UNREACHABLE.test(endpoint)) return false
+  if (LOOPBACK_ENDPOINT.test(endpoint) && isForeignRow(v)) return false
+  return true
 }
 // Never dial our own circuit: a hub self-mirror row (`<id>@<substrate>`) carries THIS
 // transport's peer id, so forwarding to it loops the ingress back onto itself.
