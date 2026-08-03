@@ -2,7 +2,7 @@
 
 ## Overview
 
-MiniBob tracks which resolvers are used for each impulse to enable learning and optimization.
+The execution host records which resolver served each impulse, so selection can be learned rather than configured. The tier vocabulary below is the durable part: it is carried as `resolverTier` in the executor's ontology and advertised as `resolver_tier` by development-vessel.
 
 > **Foundation alignment:** Resolver-tracking is the data feed for the **forward arm of the two-direction learning duality** (`P(success | activity X resolves pointer of shape Y)`). It complements the reverse arm (slot-binding / Thompson recommendation writes). Both arms must update consistently — see [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md#two-direction-learning-duality).
 
@@ -185,9 +185,8 @@ Under cost-weighted selection, the distilled resolver dominates the LLM resolver
 
 ## Implementation
 
-### MiniBob
+### The execution host
 
-**File**: `repos/minibob/src/activity.ts`
 
 **Function**: `executeWithResolver()` (line 2915+)
 
@@ -348,72 +347,6 @@ async function getVesselPerformance(vesselId: string) {
 }
 ```
 
-## Rollout
-
-### Phase 1: Schema Migration (064)
-
-**Status**: Complete
-
-**Tasks**:
-- ✅ Add `impulse_resolutions` field to `execution` table
-- ✅ Add `resolved_by_vessel_id` field to `execution` table
-- ✅ Create index on `resolved_by_vessel_id`
-
-**Migration**:
-```sql
--- sql/064-add-resolver-tracking.surql
-DEFINE FIELD impulse_resolutions ON TABLE execution TYPE option<array<object>>;
-DEFINE FIELD resolved_by_vessel_id ON TABLE execution TYPE option<string>;
-DEFINE INDEX idx_execution_vessel ON TABLE execution COLUMNS resolved_by_vessel_id;
-```
-
-### Phase 2: MiniBob Resolver Tracking
-
-**Status**: Complete (2026-04-19)
-
-**Tasks**:
-- [x] Track resolver metadata in `executeWithResolver()`
-- [x] Aggregate resolver data in `execute()`
-- [x] Include in execution trace payload
-- [x] Test with local MiniBob runs
-- [x] Comprehensive impulse resolution tracking (LOCAL, CUSTOM, DISCOVERY, MCP, FALLBACK, ERROR)
-- [x] ResolutionTracker class implementation
-- [x] Instrumentation of all resolution pathways
-- [x] Unit tests (8 tests)
-- [x] Integration tests
-
-**Implementation**:
-- `repos/minibob/src/activity.ts` - Execution integration
-- `repos/minibob/src/impulse.ts` - Resolution instrumentation
-- `repos/minibob/src/resolution-tracker.ts` - Tracking class
-- `repos/minibob/src/types.ts` - Type definitions
-
-### Phase 3: Activity-API Receives Data
-
-**Status**: Pending
-
-**Tasks**:
-- [ ] Update trace schema validation
-- [ ] Store resolver data in database
-- [ ] Add query endpoints for resolver stats
-- [ ] Test with canary deployment
-
-**Implementation**: `repos/activity-api/src/routes/execution-traces.ts`
-
-### Phase 4: Learning Algorithms Use Data
-
-**Status**: Pending
-
-**Tasks**:
-- [ ] Implement Thompson Sampling for resolver selection
-- [ ] Add vessel performance tracking
-- [ ] Create cost optimization reports
-- [ ] Enable pattern recognition
-
-**Implementation**:
-- `repos/activity-api/src/services/learning.ts`
-- `repos/minibob/src/resolver-selector.ts`
-
 ## Metrics
 
 Track:
@@ -453,80 +386,3 @@ ORDER BY usage_count DESC;
 - [Impulse Resolution Sequence](./sequences/02-impulse-resolution.md)
 - [CLAUDE.md Trace Model](../../CLAUDE.md#execution-trace-model)
 - [Activity Execution Foundation](./IMPULSE_ACTIVITY_FOUNDATION.md)
-
-## Phase 1 Implementation Summary (2026-04-19)
-
-### What Was Implemented
-
-**ResolutionTracker class** (`repos/minibob/src/resolution-tracker.ts`):
-- Tracks every impulse resolution attempt through all tiers
-- Records success/failure, latency, vessel ID, resolver ID
-- Supports tier inference for legacy paths
-- 220 LOC with comprehensive error handling
-
-**Impulse resolution instrumentation** (`repos/minibob/src/impulse.ts`):
-- Instrumented all resolution paths in `resolvePointer()`:
-  - LOCAL (memo, file, directoryTree, gitDiff)
-  - CUSTOM (registered resolvers)
-  - DISCOVERY (vessel-based via discovery-vessel)
-  - MCP (backend fallback)
-  - FALLBACK (in-memory activityOutput)
-  - ERROR (all attempts failed)
-- Added optional `resolutionTracker` parameter to `load()` and `loadImpulses()`
-
-**Activity execution integration** (`repos/minibob/src/activity.ts`):
-- Created ResolutionTracker per task execution
-- Passed tracker to `loadImpulses()` in LLM path
-- Added `impulseResolutions` to `TaskResult.metadata`
-- Aggregated resolutions into `execution.executionTrace.impulse_resolutions`
-- Existing resolver path already populates resolution data
-
-**Type definitions** (`repos/minibob/src/types.ts`):
-- Added `impulseResolutions` array to `TaskResult.metadata`
-- Includes: impulse_id, resolver_id, resolver_tier, vessel_id, latency_ms, cost_usd, success, error_reason
-
-### Verification
-
-**Unit tests** (8 tests, 19 assertions):
-```bash
-bun test src/resolution-tracker.test.ts
-✓ Track successful resolution
-✓ Track failed resolution
-✓ Track multiple resolutions
-✓ Handle success without prior tracking
-✓ Infer tier from resolver ID
-✓ Reset tracker state
-✓ Calculate latency correctly
-✓ Track ERROR tier
-```
-
-**Integration test**:
-```bash
-bun run test-resolution-tracking-integration.ts
-✓ LOCAL resolution (memo)
-✓ LOCAL resolution (file)
-✓ Multiple impulses with tracking
-✓ Latency measurement
-✓ Resolution data structure
-```
-
-### Data Captured (Phase 1)
-
-For each impulse resolution:
-- **Which impulse** (`impulse_id`)
-- **Which resolver** (`resolver_id`: file, memo, VesselClient, MCP, etc.)
-- **Which tier** (`resolver_tier`: LOCAL, CUSTOM, DISCOVERY, MCP, FALLBACK, ERROR)
-- **Which vessel** (`vessel_id`)
-- **Latency** (`latency_ms`)
-- **Cost** (`cost_usd`)
-- **Success** (`success`: boolean)
-- **Failure reason** (`error_reason`)
-
-### Next Steps
-
-**Phase 2** - Backend storage and querying (see above)
-**Phase 3** - Shape gap analysis and dashboard visualization (see above)
-
----
-
-**Last Updated**: 2026-04-19
