@@ -5,11 +5,11 @@
 **Last updated:** 2026-06-24 (actor prose realigned: minibob → goal-host-vessel / substrate)
 **Supersedes:** N/A (new capability)
 
-> **Phase 8 migration note (2026-05-24):** The client-side tracer that previously lived at `repos/minibob/src/activity-tracer.ts` moved to the substrate vessels in Phase 8. `ActivityTracer` and the L1/L2 meta-trace emission now live in `goal-host-vessel` (wrapping `GoalHost` from `ias-executor-ts`). The architecture described in this document — L1/L2 meta-trace types, `RUNTIME_TRACING_ENABLED`, `ACTIVITY_TRACER_ENABLED`, and the sampling strategy — remains conceptually valid. The server-side middleware at `repos/activity-api/src/middleware/runtime-tracing.ts` is unchanged.
+> The client-side tracer now lives in goal-host-vessel. It previously lived in the retired CLI as `activity-tracer.ts` moved to the substrate vessels in Phase 8. `ActivityTracer` and the L1/L2 meta-trace emission now live in `goal-host-vessel` (wrapping `GoalHost` from `ias-executor-ts`). The architecture described in this document — L1/L2 meta-trace types, `RUNTIME_TRACING_ENABLED`, `ACTIVITY_TRACER_ENABLED`, and the sampling strategy — remains conceptually valid. The server-side middleware at `repos/activity-api/src/middleware/runtime-tracing.ts` is unchanged.
 
 **Implementation landing:**
 - `repos/activity-api/src/middleware/runtime-tracing.ts` — request/resolver-level HTTP middleware (server side). Exports `runtimeTracingMiddleware`, `withResolver`, `RuntimeTracingConfig`. Toggled by `RUNTIME_TRACING_ENABLED`.
-- `repos/goal-host-vessel/` — client-side tracer (moved from `repos/minibob/src/activity-tracer.ts` in Phase 8, 2026-05-24). Exports `ActivityTracer` interface via `GoalHost` from `ias-executor-ts`. Toggled by `ACTIVITY_TRACER_ENABLED`. L1 `goal_resolve` and L2 `activity_execute` meta-trace types emit alongside resolver traces.
+- `repos/goal-host-vessel/` — client-side tracer (Phase 8, 2026-05-24). Exports `ActivityTracer` interface via `GoalHost` from `ias-executor-ts`. Toggled by `ACTIVITY_TRACER_ENABLED`. L1 `goal_resolve` and L2 `activity_execute` meta-trace types emit alongside resolver traces.
 - See [`IMPULSE_ACTIVITY_FOUNDATION.md`](./IMPULSE_ACTIVITY_FOUNDATION.md) for the foundational tracing model.
 
 ## Meta-Trace Types (L1/L2)

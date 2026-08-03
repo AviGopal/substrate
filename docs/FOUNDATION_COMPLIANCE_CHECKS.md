@@ -176,7 +176,7 @@ Twenty checks total. Severity legend:
 **Title:** Task resolvers reference registered resolver ids
 **Foundation citation:** FND §147–§164 (Activity tasks); FND §692–§711 ("LLMs Are One Component Among Many").
 **Invariant:** Every task in a declared activity MUST reference a resolver by id (e.g. `bash`, `git`, `llm`, `validation`, or any registered resolver-id). Tasks MUST NOT contain inline LLM-call code, inline shell strings as the sole task body, or anonymous callbacks. The resolver-id MUST either be a known minibob/vessel resolver OR be declared elsewhere in the same proposal as a new resolver registration.
-**Substrate-evaluable predicate:** For each task block in design/specs, locate a `resolver:` field. Verify the value is a non-empty string. Cross-reference against a known-resolver allow-list (compiled from `repos/minibob/src/resolvers/`, `repos/ias-executor-ts/src/`, and any new-resolver registrations in the same proposal).
+**Substrate-evaluable predicate:** For each task block in design/specs, locate a `resolver:` field. Verify the value is a non-empty string. Cross-reference against a known-resolver allow-list (compiled from `repos/ias-executor-ts/src/`, and any new-resolver registrations in the same proposal).
 **Example violation:** Task `{ id: "summarise", code: "const out = await callClaude(...)" }`.
 **Example pass:** Task `{ id: "summarise", resolver: "llm", prompt: { template: "..." } }`.
 **Severity:** REQUIRED

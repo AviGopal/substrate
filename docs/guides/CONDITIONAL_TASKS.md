@@ -1,7 +1,7 @@
 # Conditional Tasks
 
 **Applies to:** `minibob` commit `6d66c5b` and later (2026-04-22); conditional expression syntax applies to any executor implementing `evaluateTaskCondition`.
-**Source (historical):** `repos/minibob/src/activity.ts` — `evaluateTaskCondition`. The expression syntax, pseudo-operators, and `{{impulse:id}}` semantics described here are authoritative for activity template authoring regardless of which executor runs them.
+**Source (historical):** `evaluateTaskCondition` in the retired CLI's executor. The expression syntax, pseudo-operators, and `{{impulse:id}}` semantics described here are authoritative for activity template authoring regardless of which executor runs them.
 
 A task can declare a condition that gates whether it runs this invocation. When the condition evaluates to truthy, the task executes; when falsy, the task is skipped (with status `skipped`, not `failed`) and the skip is recorded in the trace.
 
@@ -85,5 +85,5 @@ Everything else evaluates as JavaScript via `new Function`, so comparisons (`==`
 
 - [`./ACTIVITY_TASK_CONTEXT_PROPAGATION.md`](./ACTIVITY_TASK_CONTEXT_PROPAGATION.md) §4 — how `{{impulse:id}}` references become reliable via `materializeOutputImpulses`.
 - [`./INTERACTIVE_ACTIVITIES_AND_HUMAN_RESOLVER.md`](./INTERACTIVE_ACTIVITIES_AND_HUMAN_RESOLVER.md) — every built-in interactive template uses conditionals to branch on human answers.
-- `repos/minibob/src/embedded-templates/build-and-execute.json` — canonical multi-conditional template.
-- `repos/minibob/src/embedded-templates/human-guided-orchestrator.json` — the other heavy conditional user.
+- `build-and-execute` — canonical multi-conditional template.
+- `human-guided-orchestrator` — the other heavy conditional user.

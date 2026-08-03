@@ -330,7 +330,7 @@ Not every vessel advertises itself. **Implicit vessels** are bundles of resolver
 
 Two *internal* implicit vessels currently exist in the system (the boundary sense — operator, peer — is covered below):
 
-1. **ActivityExecutor inside MiniBob** (`repos/minibob/src/activity.ts:1141`). Runs activity templates task-by-task. It is the dispatch engine for both top-level activities and lifecycle subscribers (slot-binding, validator-dispatch, create-shape-provider-goal). It is not registered with discovery; it does not advertise shapes. Top-level activity execution today is invoked via in-process call (`executor.execute(template)`) from `goal-processor.ts`; the **unified execution path** refactor (see "Unified Execution Path" below) is the confirmed direction — goal-shaped and activity-template-shaped pointers will resolve through the standard impulse → resolver dispatch, with the activity resolver running the activity to resolve the pointer.
+1. **The ActivityExecutor on the execution host.** Runs activity templates task-by-task. It is the dispatch engine for both top-level activities and lifecycle subscribers (slot-binding, validator-dispatch, create-shape-provider-goal). It is not registered with discovery; it does not advertise shapes. Top-level activity execution today is invoked via in-process call (`executor.execute(template)`) from `goal-processor.ts`; the **unified execution path** refactor (see "Unified Execution Path" below) is the confirmed direction — goal-shaped and activity-template-shaped pointers will resolve through the standard impulse → resolver dispatch, with the activity resolver running the activity to resolve the pointer.
 
    **Shipped lifecycle events** emitted by the ActivityExecutor (all are `lifecycle:*`-shaped impulses routed to subscribed meta-activities):
 
@@ -1100,7 +1100,7 @@ The α/β/sample_count posterior data already exists in activity-api: it is comp
 
 ### Unified Execution Path
 
-Unified execution path is the chosen direction. MiniBob refactor pending. Goal-shaped and activity-template-shaped pointers will resolve through the standard impulse → resolver dispatch — the activity resolver runs the activity to resolve the pointer. Today, top-level activity execution is invoked via `executor.execute(template)` from `repos/minibob/src/goal-processor.ts`; this is current-state, not a "privileged path" in target architecture.
+Unified execution path is the chosen direction. Goal-shaped and activity-template-shaped pointers will resolve through the standard impulse → resolver dispatch — the activity resolver runs the activity to resolve the pointer. Today, top-level activity execution is invoked via `executor.execute(template)` from the execution host; this is current-state, not a "privileged path" in target architecture.
 
 When the refactor lands, the goal-processor emits a `goal`-shaped impulse (and downstream an `activity_template`-shaped impulse), and the executor is dispatched as the resolver for the resulting shape pair. This collapses the structural distinction between "top-level" and "nested" activity execution: both flow through the same impulse → resolver dispatch.
 
@@ -1110,7 +1110,7 @@ The 5 specs that already describe this unified surface (`minibob-goal-execution-
 
 ### Forward-Arm Breakage: F-39 (resolved)
 
-F-39 (resolved 2026-04-26, minibob commit `662b153`) — forward arm now writing correctly. The learning-signal writer previously failed on every validator-dispatch iteration because `lifecycle:task:completed` omitted `templateId` and the resolver's structural check rejected empty strings via truthiness. Both lifecycle emit sites in `repos/minibob/src/activity.ts` now populate `templateId: template.id`, and the resolver no-ops gracefully (emitting `metadata.skipped_reason: "missing_template_id"`) instead of throwing on malformed payloads. The two arms converge after the canary deploy that includes this fix; pre-deploy traces remain skewed and should be excluded from retroactive Thompson-posterior analysis.
+The forward arm writes correctly. The learning-signal writer previously failed on every validator-dispatch iteration because `lifecycle:task:completed` omitted `templateId` and the resolver's structural check rejected empty strings via truthiness. Both lifecycle emit sites in the execution host now populate `templateId: template.id`, and the resolver no-ops gracefully (emitting `metadata.skipped_reason: "missing_template_id"`) instead of throwing on malformed payloads. The two arms converge after the canary deploy that includes this fix; pre-deploy traces remain skewed and should be excluded from retroactive Thompson-posterior analysis.
 
 ### Class-(c) Terms Pruned
 

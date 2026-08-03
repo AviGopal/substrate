@@ -1,7 +1,7 @@
 # Template Upkeep Pipeline
 
 **Status:** All five layers landed 2026-04-22. The consuming activity (`audit-and-backfill-templates`) landed in `minibob` v0.8.0 (`22ec545`).
-**Sources:** `repos/activity-api`, `repos/minibob`
+**Source:** `repos/activity-api`
 
 Activity templates accumulate with use. Authors churn shape names (`gitDiff` vs `git_diff` vs `GitDiff`), skip `tags`, write one-line descriptions, hardcode URLs in prompts, or rely entirely on LLM tasks where a deterministic resolver would do. The system observes this drift and corrects it through the impulse-activity loop itself — no dedicated admin REST surface, no out-of-band scripts. Five layers:
 
@@ -62,7 +62,7 @@ This resolver is **read-only**. It writes nothing; it produces the evidence the 
 
 ### `impulse-resolve` — generic primitive
 
-**Location:** `repos/minibob/src/resolvers/impulse-resolve.ts` (new), registered in `activity.ts` alongside `RibosomeResolver`.
+**Location:** an `impulse-resolve` resolver on the execution host, registered alongside `RibosomeResolver`.
 
 A generic resolver that takes a pointer from task `config` and dispatches it through `MCPClient.resolveImpulse`, returning the backend content as a single **memo** impulse. Any shape the backend advertises becomes callable from an activity task's JSON without writing a bespoke resolver per shape.
 
@@ -79,14 +79,14 @@ This is the mechanism that makes "all communication through resolvers and shapes
 
 ### `template-upkeep` typed wrappers
 
-**Location:** `repos/minibob/src/clients/template-upkeep.ts`.
+**Location:** a template-upkeep client on the execution host.
 
 Thin TypeScript wrappers around `activityTemplate_update`, `activityTemplate_deprecate`, and `templateAuditReport` that go through `POST /v2/impulses/resolve` (never direct REST — per the [LEARNING_LOOP_WRITE_RESOLVERS](../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md) contract) and `JSON.parse` the returned memo content into typed results. Used by code paths that want compile-time types on these shapes without paying the generic-pointer serialization cost.
 
 ## 4. `audit-and-backfill-templates` activity
 
 **Landed:** minibob commits `22ec545` (activity JSON, 2026-04-22 19:17) and `a556338` (conditional-idiom fix, 19:21). Bundled into v0.8.0.
-**Location:** `repos/minibob/src/embedded-templates/audit-and-backfill-templates.json`.
+**Location:** the `audit-and-backfill-templates` embedded template.
 
 A **single-candidate-per-invocation** upkeep activity: it drains the template-metadata-deficiency queue one item at a time. Re-run until the deficient set converges. Each invocation is one execution trace — which is what Thompson Sampling needs to learn whether this variant is actually reducing deficiencies over time.
 

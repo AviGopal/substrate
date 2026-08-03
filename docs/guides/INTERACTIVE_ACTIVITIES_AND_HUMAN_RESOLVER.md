@@ -1,7 +1,7 @@
 # Interactive Activities and the Human Resolver
 
 **Applies to:** `minibob` with `HumanResolver` (April 2026 onward); the `human` resolver contract and non-TTY fallback semantics apply to any vessel implementing a human-gate resolver
-**Source (historical):** `repos/minibob/src/resolvers/human-resolver.ts`, `repos/minibob/src/embedded-templates/`
+**Source (historical):** the human-resolver and embedded templates of the retired CLI. `src/embedded-templates/`
 **Note (2026-05-27):** MiniBob is on a deprecation path. The resolver pattern, TTY-aware fallback semantics, and `clarification` impulse shape described here are still correct. File paths are minibob-historical; the same pattern applies wherever a `human` resolver is registered in a vessel's task registry.
 
 The human at the terminal is just another resolver. This guide explains how `HumanResolver` fits into the resolver hierarchy and how to author activities that ask the user a question at the right moment instead of burning LLM tokens on a guess.
@@ -90,7 +90,7 @@ Inside an activity template's `tasks[]`:
 
 ## Built-in interactive templates
 
-Ship in `repos/minibob/src/embedded-templates/`:
+Ship as embedded templates:
 
 - **`interactive-activity-selector.json`** — asks the user to pick from a ranked list of activity templates before committing to one. Useful when Thompson Sampling has several close candidates and the user wants a final say.
 - **`human-guided-orchestrator.json`** — the maximal human-in-loop template. A meta-activity that asks the user at every orchestration step: what to do, which activity to run next, whether the goal is complete. Useful for training the system on new domains where the learning loop hasn't yet converged.
@@ -152,6 +152,6 @@ Activities that truly require human input in production — not just development
 - `ADVANCED_IMPULSE_PATTERNS.md` — composition and gating patterns
 - [`./CONDITIONAL_TASKS.md`](./CONDITIONAL_TASKS.md) — authoring contract for `conditional.expression`
 - [`./ACTIVITY_TASK_CONTEXT_PROPAGATION.md`](./ACTIVITY_TASK_CONTEXT_PROPAGATION.md) — variable defaults, field graft, deterministic output impulses
-- `repos/minibob/src/embedded-templates/interactive-activity-selector.json` — canonical selector
-- `repos/minibob/src/embedded-templates/human-guided-orchestrator.json` — canonical meta-orchestrator
-- `repos/minibob/src/embedded-templates/build-and-execute.json` — interactive template authoring (entered via `minibob -t build-and-execute`)
+- `interactive-activity-selector` — canonical selector
+- `human-guided-orchestrator` — canonical meta-orchestrator
+- `build-and-execute` — interactive template authoring (entered via `minibob -t build-and-execute`)

@@ -422,11 +422,11 @@ Files to touch:
 
 ### minibob
 
-**No changes required.** The generic vessel resolver (`repos/minibob/src/vessel-direct-resolver.ts`) already speaks the impulse-resolve contract. New `_write` shapes flow through unchanged.
+**No changes required.** The generic vessel resolver already speaks the impulse-resolve contract. New `_write` shapes flow through unchanged.
 
 Optional ergonomics improvements (not required):
 
-- Helper in `repos/minibob/src/impulse.ts` that constructs a `_write` pointer given a shape name and payload, with type narrowing per shape.
+- A helper that constructs a `_write` pointer given a shape name and payload, with type narrowing per shape.
 - Update `learn-impulse-relationships.json` to use `concept_upsert_by_signature_write` and `conceptLink_write` resolution instead of MCP tool calls in task 3. This is a template change. Defer to a separate "modernize templates" pass.
 
 ### @metabob/vessel-discovery-client

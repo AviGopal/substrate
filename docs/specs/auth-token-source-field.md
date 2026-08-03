@@ -36,7 +36,7 @@ The current resolve contract on `VesselCapability` has `auth_scheme:
 "none" | "ApiKey" | "Bearer"` (see
 `packages/vessel-discovery-client/src/types.ts:176` and
 `repos/discovery-vessel/src/types.ts:26`). When minibob's
-`buildAuthHeader` (`repos/minibob/src/resolvers/vessel-resolve-call.ts:84`)
+`buildAuthHeader` (the vessel-resolve-call resolver)
 sees `auth_scheme: "ApiKey"`, it builds the header from
 `vesselConfig?.apiKey || process.env.METABOB_API_KEY ||
 AuthService.getToken()`. That chain resolves to one identity: **the
@@ -544,7 +544,7 @@ discovery's own endpoints that carries `X-User-JWT` or a JWT-shaped
 `Authorization` — discovery is `caller_identity` only. No new endpoints,
 no schema migration (registry is in-memory).
 
-### 6.3 `repos/minibob`
+### 6.3 The execution host
 
 `src/resolvers/vessel-resolve-call.ts`:
 
@@ -625,7 +625,7 @@ annotation, no behavior change. Apply to:
 
 ### 7.1 Unit: `buildAuthHeader` per token-source
 
-Extend `repos/minibob/src/resolvers/vessel-resolve-call.test.ts`
+Extend the vessel-resolve-call resolver's tests
 (existing tests at lines 173–202) with one case per cell of the table
 in §4.3 plus the dispatch-policy cases in §4.4. New cases beyond the
 three already-covered `caller_identity` paths:

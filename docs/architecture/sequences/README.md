@@ -249,7 +249,7 @@ All diagrams use consistent naming for key participants. After Phase 8 these map
 
 All function calls include line number references in this historical format (paths are now stale — read them as the live equivalents in `goal-host-vessel` / `ias-executor-ts`):
 ```
-File: repos/goal-host-vessel/... (was repos/minibob/src/activity.ts:2990-3020)
+File: repos/goal-host-vessel/...
 ```
 
 ## How to Use These Diagrams
