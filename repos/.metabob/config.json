@@ -1,9 +1,0 @@
-{
-  "metabob": {
-    "apiKey": "mb_ahm4jy57u4kgjzoXxp0xFhikPeWx5V8JIEgIgDL5ECU",
-    "endpoint": "http://ide.metabob.com:8080"
-  },
-  "defaults": {
-    "stateDirectory": ".metabob"
-  }
-}
