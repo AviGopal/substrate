@@ -1,0 +1,42 @@
+# Project secret-scanning rules, layered over the gitleaks defaults.
+#
+# The pre-commit hook's remediation text points here for extending the rule set.
+# The file did not exist, which mattered: the credential shapes this substrate
+# actually mints are project-specific and match none of the generic rules, so the
+# default set is silent on exactly the secrets most likely to be committed here.
+# Both rules below are regression rules — each matches a credential that reached
+# the tree and had to be rotated.
+
+title = "substrate"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "substrate-api-key"
+description = "Substrate API key (mb_ prefix) — minted by identity-vessel, accepted as `Authorization: ApiKey`"
+regex = '''\bmb_[A-Za-z0-9_-]{32,}'''
+tags = ["key", "substrate"]
+
+[[rules]]
+id = "substrate-session-token"
+description = "Session/bootstrap token — base64 of sessions:<uuid>:<org>:<user>"
+# Matches the decoded form directly, and the base64 form by its fixed prefix:
+# `sessions:` base64-encodes to `c2Vzc2lvbnM6`.
+regex = '''(?:\bsessions:[0-9a-fA-F-]{36}:|c2Vzc2lvbnM6)'''
+tags = ["token", "substrate"]
+
+[[rules]]
+id = "anthropic-key"
+description = "Anthropic API key"
+regex = '''\bsk-ant-[A-Za-z0-9_-]{20,}'''
+tags = ["key", "anthropic"]
+
+[allowlist]
+description = "Paths that legitimately carry credential-shaped example values"
+paths = [
+  # Example env templates ship placeholder values by design.
+  '''\.env\..*\.example$''',
+  # This rule file necessarily contains the patterns it matches.
+  '''scripts/git-hooks/\.gitleaks\.toml$''',
+]

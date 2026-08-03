@@ -328,7 +328,13 @@ if command -v gitleaks >/dev/null 2>&1; then
   #            terminal scrollback / hook log does not itself become a leak
   # --no-banner suppress the gitleaks ascii banner; we want the hook quiet
   #             on the success path
-  if ! gitleaks protect --staged --redact --no-banner 2>&1; then
+  # --config   the project rule set lives beside this hook, not at the repo
+  #            root, so gitleaks' auto-discovery does not find it. Without
+  #            this flag the substrate-specific credential shapes (mb_ API
+  #            keys, session tokens) fall back to generic heuristics that
+  #            miss the token form entirely.
+  if ! gitleaks protect --staged --redact --no-banner \
+        --config "$(dirname "${BASH_SOURCE[0]}")/.gitleaks.toml" 2>&1; then
     printf '\n%s\n' "${RED}━━━ gitleaks: secrets detected in staged diff ━━━${NC}"
     cat <<EOF
 ${DIM}What to do${NC}
