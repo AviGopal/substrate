@@ -1,6 +1,6 @@
 # Memory As Substrate
 
-**Status (updated 2026-06-16): LIVE and hook-enforced.** The `memoryNote` / `memoryNote_write` resolvers ship in `development-vessel` and are advertised at `http://localhost:18090/shapes`. The one-shot import has run (169 operator files → substrate; store holds 171 notes). The operator→substrate write direction and the substrate→context read direction are now enforced by **Claude Code harness hooks** (see §E), not by the substrate-resident cron activities this doc originally specced (those — `memory-sync-tick`, `memory-pending-flush` — were never built; the hooks supersede them). References specs accepted in `openspec/changes/2026-05-23-substrate-closure-properties/` (§1, Memory closure) and `openspec/changes/2026-05-23-closure-replacement-suite/` (§A, `memoryNote` + `extract-memory-note`). No new spec proposed here.
+**Status (updated 2026-06-16): LIVE and hook-enforced.** The `memoryNote` / `memoryNote_write` resolvers ship in `development-vessel` and are advertised at `http://localhost:18090/shapes`. The one-shot import has run (169 operator files → substrate; store holds 171 notes). The operator→substrate write direction and the substrate→context read direction are now enforced by **Claude Code harness hooks** (see §E), not by the substrate-resident cron activities this doc originally specced (those — `memory-sync-tick`, `memory-pending-flush` — were never built; the hooks supersede them). References specs accepted in the retired proposal (§1, Memory closure) and the retired proposal (§A, `memoryNote` + `extract-memory-note`). No new spec proposed here.
 
 **Audience:** Claude (the operator), and any other agent or human who reads or writes operator-side memory while working in this super-repo.
 
@@ -246,8 +246,6 @@ After migration is complete:
 
 ## References
 
-- `openspec/changes/2026-05-23-substrate-closure-properties/proposal.md` §1 — Memory closure principle
-- `openspec/changes/2026-05-23-closure-replacement-suite/design.md` §A — `memoryNote` shape contract, `extract-memory-note` activity, ribosome integration
 - `openspec/changes/2026-05-23-substrate-explicit-vessels/proposal.md` — `development-vessel` as the owning vessel
 - `docs/SUBSTRATE.md` — substrate operational context (single-container)
 - `~/.claude/projects/-home-avi-documents-work-exp-repo-metabob-devbob/memory/feedback_lift_three_state_model.md` — S2→S3 push-away framing that motivates substrate-as-source-of-truth

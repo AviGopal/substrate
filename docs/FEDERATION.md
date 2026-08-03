@@ -165,6 +165,15 @@ ingress/egress fall out of the discovery anchor alone, with no relay multiaddr
 or federation id to supply. A spoke also needs **no local LLM key**: it inherits
 the hub's LLM arms through discovery.
 
+`up` resumes a stopped container only when no launch settings are supplied. To
+change its hub, credential, role selection, or federation overrides, preserve
+the named volumes and recreate the container with the new inputs:
+
+```bash
+make -C scripts/substrate recreate API_KEY=<hub-issued-key> \
+  DISCOVERY_ENDPOINT=http://<hub-host>:18100
+```
+
 **Optional override — pin a specific id or relay.** The auto-generated
 `FED_SUBSTRATE_ID` is unique per substrate: it names the mirror rows AND salts
 the transport's libp2p key — two substrates sharing an id derive the same peer

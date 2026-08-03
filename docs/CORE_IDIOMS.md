@@ -202,9 +202,7 @@ not just "what did I do" but "what changed around me."
 `validation_result`-shaped impulse. It is dispatched as an activity, not as
 inline assertion code. Failures emit a `failure_mode` impulse with discriminated
 context (`verifier_negative | budget_exhausted | safety_breach | cascading |
-user_abort`) per the taxonomy in
-`openspec/changes/2026-04-26-validators-and-failure-modes/specs/failure-mode-taxonomy/spec.md`
-and CLAUDE.md §"Failure mode taxonomy".
+user_abort`) per the failure-mode taxonomy.
 
 **Recurrence.** Every gate check. The validator-dispatch meta-activity
 (CLAUDE.md §"Impulse-binding selection layer") routes per-rule resolvers
@@ -581,11 +579,6 @@ recursive application of a finite idiom set across an unbounded shape space.
 
 - [`architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — canonical model.
 - `openspec/changes/2026-04-26-impulse-activity-loop/tasks.md` — IAL §27.S.4 (S1→S2 lift), §27.S.5, §27.S.6.
-- `openspec/changes/2026-04-26-validators-and-failure-modes/` — failure-mode taxonomy.
 - `openspec/changes/2026-05-23-topology-discovery-loop/` — 4-cell measurement + probes.
-- `openspec/changes/2026-05-23-substrate-closure-properties/` — closure principle, seven gaps.
-- `openspec/changes/2026-05-23-substrate-forge-vessel/` — forge idiom, recursive forge.
 - `openspec/changes/2026-05-23-intervention-tracking/` — push-away data primitives.
-- `openspec/changes/2026-05-23-external-resolver-vesselization/` — ribosome-for-externals.
-- `openspec/changes/2026-05-23-llm-to-deterministic-distillation/` — ribosome-for-LLM-patterns.
 - `openspec/changes/2026-05-19-ias-executor-as-canonical-host/` — lifecycle-subscription dispatch home.

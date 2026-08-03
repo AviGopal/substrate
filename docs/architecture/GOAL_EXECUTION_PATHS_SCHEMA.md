@@ -8,7 +8,6 @@ The table serves **two** roles:
 1. **Curated / recommendation paths** — keyed by goal + `endpoint_output_shapes` for shape-driven discovery (the original 2026-04 purpose, described below).
 2. **Per-goal record & reuse** — keyed by `goal_hash`; each dispatched goal records the path it took and whether it *reached* its target, accumulating per-goal α/β so a later instance of the same goal can reuse the path that actually reached it (the 2026-06 goal-learning work). See **Per-goal record & reuse** below.
 
-**Related OpenSpec**: [2026-04-26-shape-provider-goal-creation](../../openspec/changes/2026-04-26-shape-provider-goal-creation)
 
 > **2026-06 update.** The per-goal record/reuse path and the goal-reaching gate are the current goal-learning mechanism (goal-host `5d0f741` + `07feff5`, activity-api `172ce84`). Before `172ce84`, the goal-paths insert endpoint **500'd on every insert** (it omitted required `execution_count` / `success_count` / `org_id`), so this table was effectively empty and the "health check / null endpoints" guidance below was moot during that window.
 

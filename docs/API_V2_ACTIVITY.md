@@ -1,9 +1,9 @@
 # HTTP API v2 Activity Contract
 
-**Version:** 1.0.0
-**Provider:** metabob-activity-api
-**Consumers:** minibob, metabob-cloud-dashboard
-**Status:** Operational (existing implementation)
+The HTTP surface activity-api serves on its own port. Every vessel and the
+agent-facing cockpit call it, which makes it the one contract in the fleet
+whose shape is felt everywhere; discovery resolves the address, so treat the
+paths below as the contract and the port as a convenience.
 
 ## Overview
 
@@ -19,8 +19,8 @@ The Activity API provides backend services for:
 
 ## Base URL
 
-- **Development:** `http://metabob-activity-api.activity-system.svc.cluster.local:8080`
-- **Ingress:** `http://api.minibob.local` (Istio gateway)
+- **Development:** `http://activity-api.activity-system.svc.cluster.local:8080`
+- **Ingress:** `http://localhost:18080` (host-mapped; resolve the live address through discovery)
 
 ## Authentication
 
@@ -31,7 +31,7 @@ All `/v2/*` endpoints require authentication via:
 Authorization: Bearer <session_token>
 ```
 
-**Option 2: Internal service API key (for minibob)**
+**Option 2: Internal service API key (vessel-to-vessel)**
 ```http
 X-Internal-Api-Key: <api_key>
 ```
@@ -50,7 +50,7 @@ Deep health check verifying Redis and SurrealDB connectivity.
 **Response 200:**
 ```json
 {
-  "service": "metabob-activity-api",
+  "service": "activity-api",
   "version": "1.0.0",
   "timestamp": "2026-03-23T17:30:00Z",
   "status": "healthy",
@@ -70,7 +70,7 @@ Deep health check verifying Redis and SurrealDB connectivity.
 **Response 503:** (Service Unavailable)
 ```json
 {
-  "service": "metabob-activity-api",
+  "service": "activity-api",
   "status": "unhealthy",
   "checks": {
     "redis": { "status": "unhealthy", "error": "Connection refused" },
@@ -108,7 +108,7 @@ List all activity templates with Thompson Sampling scores.
       "description": "Fix execution trace storage for boredom activities",
       "category": "bugfix",
       "scope": "project",
-      "org_id": "metabob-labs",
+      "org_id": "acme",
       "project_id": "devbob",
       "task_steps": [...],
       "genealogy": {
@@ -166,7 +166,7 @@ Create new activity template.
     }
   ],
   "scope": "project",
-  "org_id": "metabob-labs",
+  "org_id": "acme",
   "project_id": "devbob",
   "genealogy": {
     "parent_variant_id": null,
@@ -284,7 +284,7 @@ Resolve impulse pointer to actual content.
   "project_id": "devbob",
   "impulse_data": {
     "type": "file",
-    "path": "repos/minibob/src/tool/bash.ts",
+    "path": "repos/local-tools-vessel/src/index.ts",
     "offset": 40,
     "limit": 20
   }
@@ -300,7 +300,7 @@ Resolve impulse pointer to actual content.
   "tokens_used": 850,
   "budget_remaining": 1150,
   "metadata": {
-    "file_path": "repos/minibob/src/tool/bash.ts",
+    "file_path": "repos/local-tools-vessel/src/index.ts",
     "lines": "40-60",
     "size_bytes": 3200
   }
@@ -408,7 +408,7 @@ Store complete execution trace with state snapshots.
     "stateTransition": {
       "before": { "src/routes/boredom.ts": "hash-abc" },
       "after": { "src/routes/boredom.ts": "hash-def" },
-      "workingDirectory": "/repos/metabob-activity-api"
+      "workingDirectory": "/repos/activity-api"
     }
   },
   "component_changes": [
@@ -886,19 +886,19 @@ Register vessel in active vessels registry.
 **Request Body:**
 ```json
 {
-  "vessel_id": "minibob-pod-1",
-  "vessel_type": "minibob",
+  "vessel_id": "local-tools-vessel-1",
+  "vessel_type": "local-tools-vessel",
   "capabilities": ["activity-execution", "local-impulse-resolution"],
   "version": "1.0.0",
   "namespace": "activity-system",
-  "pod_name": "minibob-6bf55ff7d9-abc12"
+  "unit_name": "local-tools-vessel.service"
 }
 ```
 
 **Response 201:**
 ```json
 {
-  "vessel_id": "minibob-pod-1",
+  "vessel_id": "local-tools-vessel-1",
   "registered_at": "2026-03-23T17:30:00Z",
   "heartbeat_interval_seconds": 30
 }
@@ -913,7 +913,7 @@ Send heartbeat to maintain vessel liveness.
 **Request Body:**
 ```json
 {
-  "vessel_id": "minibob-pod-1",
+  "vessel_id": "local-tools-vessel-1",
   "status": "active",
   "current_activity": "fix-boredom-trace-storage",
   "metrics": {
@@ -927,7 +927,7 @@ Send heartbeat to maintain vessel liveness.
 **Response 200:**
 ```json
 {
-  "vessel_id": "minibob-pod-1",
+  "vessel_id": "local-tools-vessel-1",
   "acknowledged": true,
   "next_heartbeat_due": "2026-03-23T17:31:00Z"
 }
@@ -944,8 +944,8 @@ List active vessels and their status.
 {
   "vessels": [
     {
-      "vessel_id": "minibob-pod-1",
-      "vessel_type": "minibob",
+      "vessel_id": "local-tools-vessel-1",
+      "vessel_type": "local-tools-vessel",
       "status": "active",
       "last_heartbeat": "2026-03-23T17:30:00Z",
       "current_activity": "fix-boredom-trace-storage",
@@ -1107,7 +1107,7 @@ Get current session info.
 
 ## WebSocket Events
 
-**Connection:** `ws://api.minibob.local/ws`
+**Connection:** `ws://localhost:18080/ws`
 
 **Events Broadcast:**
 ```json
@@ -1153,7 +1153,7 @@ Get current session info.
 
 ## Deployment
 
-**Helm Chart:** `helm/charts/metabob-activity-api`
+**Helm Chart:** `helm/charts/activity-api`
 
 **Environment Variables:**
 ```bash

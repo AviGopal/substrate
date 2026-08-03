@@ -31,7 +31,7 @@ substrate behavior, and therefore highest-leverage to extract into
 substrate-queryable form.
 
 The protocol is the operator-vessel's observation channel
-(`openspec/changes/2026-05-23-operator-and-public-contracts/`) and feeds the
+and feeds the
 intervention-tracking gap-as-impulse pattern
 (`openspec/changes/2026-05-23-intervention-tracking/`). It is structurally a
 counterpart to `chainStallReport` / `interventionRateReport` —

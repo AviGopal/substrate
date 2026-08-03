@@ -1,8 +1,8 @@
 # Foundation Compliance Checks
 
-> **Status:** Authoritative check-list for the `foundation-compliance`
-> validator-as-activity named in
-> `openspec/changes/2026-05-23-closure-replacement-suite/specs/closure-replacement-suite/spec.md` §R6.
+> Authoritative check-list for the `foundation-compliance` validator-as-activity —
+> the gate standing between substrate-authored spec proposals and admission into
+> the change tree.
 >
 > **Companion to:** [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](architecture/IMPULSE_ACTIVITY_FOUNDATION.md)
 > (cited throughout as **FND §N**).
@@ -117,7 +117,7 @@ Twenty checks total. Severity legend:
 **Title:** Resolvers live where data lives
 **Foundation citation:** FND §226–§264 ("Vessels: Bundles of Capabilities"); design principle 3 (FND §920).
 **Invariant:** A new resolver introduced by the proposal MUST live in the vessel that owns the underlying data or capability. The backend (activity-api) may resolve only trace-store, template, and learning-posterior shapes; it MUST NOT acquire resolvers for arbitrary external data.
-**Substrate-evaluable predicate:** For each new resolver declared in the spec, locate its owning vessel (declared via `Owner` field in design-table or `config.discovery.shapes` block). If the owning vessel is `activity-api` or `metabob-activity-api`, the resolved shape MUST be in the allowed family: trace, template, posterior, metric, audit-report, goal-path, composition-edge, or another shape category named in FND §720–§756. Otherwise the check fails.
+**Substrate-evaluable predicate:** For each new resolver declared in the spec, locate its owning vessel (declared via `Owner` field in design-table or `config.discovery.shapes` block). If the owning vessel is `activity-api`, the resolved shape MUST be in the allowed family: trace, template, posterior, metric, audit-report, goal-path, composition-edge, or another shape category named in FND §720–§756. Otherwise the check fails.
 **Example violation:** "activity-api will own a new `weather_data` resolver that calls the OpenWeather API."
 **Example pass:** "A new `weather-vessel` will own the `weather_data` resolver; activity-api stores only the resulting traces."
 **Severity:** REQUIRED
@@ -491,5 +491,11 @@ The closure-audit script runs CC-001..CC-007 nightly and emits a `closureStatusR
 
 - [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — canonical foundation document; cited throughout.
 - [`docs/architecture/RESOLVER_TRACKING.md`](architecture/RESOLVER_TRACKING.md) — resolver-tier definitions used in FC-009.
-- [`docs/PRODUCT_BOUNDARIES.md`](PRODUCT_BOUNDARIES.md) — adapter-layer principle referenced in FC-004.
+- **The adapter-layer principle** behind FC-004, stated here rather than cited so
+  it outlives the product surface it was first written for: when a frozen
+  dependency does not expose what a caller needs, the missing functionality lands
+  in an adapter — a server-side composition of the endpoints that do exist, or a
+  small vessel that calls the dependency as a client — and never as a patch to
+  the frozen thing. Patching what you have declared frozen is how a boundary
+  stops being one.
 - [`CLAUDE.md`](../CLAUDE.md) — "Red flags" section feeding FC-001, FC-004, FC-016, FC-018.
