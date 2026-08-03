@@ -32,7 +32,6 @@ bun run validation/scripts/failure-mode-harness.ts
 bun run validation/scripts/stratified-harness.ts
 
 # Unit tests per repo
-cd repos/minibob && bun test
 cd repos/activity-api && bun test
 cd repos/identity-vessel && bun test
 ```
@@ -45,7 +44,7 @@ Run this before every push:
 
 ```bash
 # 1. Unit tests
-cd repos/minibob && bun test --silent && cd ../..
+cd repos/development-vessel && bun test --silent && cd ../..
 cd repos/activity-api && bun test --silent && cd ../..
 
 # 2. Health check
@@ -56,7 +55,7 @@ curl -sf -H "Authorization: ApiKey ${METABOB_API_KEY}" \
   $ACTIVITY_API_URL/v2/activities/templates > /dev/null || { echo "Auth failed"; exit 1; }
 
 # 4. Type check
-cd repos/minibob && bun run typecheck --silent && cd ../..
+cd repos/development-vessel && bun run typecheck --silent && cd ../..
 cd repos/activity-api && bun run typecheck --silent && cd ../..
 
 echo "All checks passed."
@@ -66,15 +65,16 @@ echo "All checks passed."
 
 ## Verify Changes by Component
 
-### MiniBob code changed
+### Goal-dispatch path changed
 
 ```bash
-cd repos/minibob
+cd repos/goal-host-vessel
 bun test
 bun run typecheck
-# Test goal dispatch against the local substrate:
-bun run index.ts --single "list available activities"
 ```
+
+Then dispatch against the running substrate through the cockpit
+(`mcp__metabob__run_goal_async`) and read `reached`, not `status`.
 
 ### Activity API code changed
 
@@ -97,7 +97,7 @@ kill %1
 cd repos/activity-api
 
 # Hot-reload in substrate:
-make -C scripts/substrate substrate-restart-activity-api
+make -C scripts/substrate restart-development-vessel   # per-vessel restart targets; there is none for activity-api
 
 # Verify migration applied:
 curl -sf $ACTIVITY_API_URL/health | jq .
@@ -146,9 +146,8 @@ TEMPLATE_ID="your-template-id"
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
   "$ACTIVITY_API_URL/v2/activities/templates/$TEMPLATE_ID" | jq '.thompson'
 
-# 2. Execute it (deprecated — agents dispatch via the metabob-mcp
-#    `mcp__metabob__run_goal` tool; the minibob CLI is being retired)
-minibob --single "run $TEMPLATE_ID"
+# 2. Execute it — dispatch through the cockpit:
+#    mcp__metabob__run_goal_async { goal: "run $TEMPLATE_ID" }
 
 # 3. Verify α increased (success) or β increased (failure)
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
@@ -186,8 +185,7 @@ curl -X POST $ACTIVITY_API_URL/v2/activities/templates \
   -H "Content-Type: application/json" \
   -d @new-activity.json
 
-# 2. Execute via minibob
-minibob --single "run my-new-activity"
+# 2. Execute it — mcp__metabob__run_goal_async { goal: "run my-new-activity" }
 
 # 3. Check execution trace
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
@@ -261,7 +259,7 @@ curl -H "Authorization: ApiKey $METABOB_API_KEY" \
   | jq '.traces[] | {id, status, created}'
 
 # End-to-end goal
-minibob --single "verify canary deployment is working"
+# mcp__metabob__run_goal_async { goal: "verify the deployment is working" }
 ```
 
 ### Promote canary to production
@@ -270,7 +268,7 @@ After canary validation passes:
 
 ```bash
 cd repos/deployment
-./scripts/promote-canary-to-production.sh
+scripts/substrate/deploy-remote.sh   # ship the built image to a remote host
 ```
 
 ---
@@ -282,13 +280,13 @@ cd repos/deployment
 ```bash
 # Local substrate
 docker ps | grep substrate-live
-make -C scripts/substrate substrate-run       # if not running
+make -C scripts/substrate up ANTHROPIC_API_KEY=...   # if not running
 docker logs substrate-live --tail=50
 
 # Canary
 curl https://activity.metabob.com/health
-# Or check pod status (if kubectl available):
-kubectl get pods -n activity-system
+# Or check unit status inside the container:
+docker exec substrate-live systemctl status activity-api
 ```
 
 ### "401 Unauthorized"
@@ -341,7 +339,7 @@ curl $ACTIVITY_API_URL/health
 curl -H "Authorization: ApiKey $METABOB_API_KEY" $ACTIVITY_API_URL/v2/activities/templates
 
 # Run goal
-minibob --single "your goal here"
+# mcp__metabob__run_goal_async { goal: "your goal here" }
 
 # Latest trace
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \

@@ -8,11 +8,11 @@ This guide helps diagnose and resolve common RBAC-related issues in the Metabob 
 
 ```bash
 # Test API health
-curl http://api.minibob.local/health
+curl http://localhost:18080/health
 
 # Test with JWT
 curl -H "Authorization: Bearer $JWT_TOKEN" \
-  http://api.minibob.local/v2/activities/templates
+  http://localhost:18080/v2/activities/templates
 
 # Verify JWT claims — decode locally (no dedicated verify endpoint)
 echo $JWT_TOKEN | cut -d'.' -f2 | base64 -d 2>/dev/null | jq .
@@ -142,10 +142,10 @@ INFO FOR TABLE activity_template;
 
 ---
 
-### 3. MiniBob / Goal-Host-Vessel Can't Execute Activities
+### 3. Goal-Host-Vessel Can't Execute Activities
 
 **Symptoms:**
-- MiniBob starts but can't fetch templates
+- The vessel starts but can't fetch templates
 - "Authentication failed" in logs
 - Boredom activities don't run
 
@@ -163,7 +163,7 @@ docker exec substrate-live journalctl -u boredom-vessel --lines=50
 
 #### A. METABOB_API_KEY Not Set or Invalid
 
-MiniBob (and all substrate vessels) authenticate to activity-api via an HMAC API key.
+Substrate vessels authenticate to activity-api via an HMAC API key.
 The key must be registered with identity-vessel.
 
 ```bash
@@ -171,7 +171,7 @@ The key must be registered with identity-vessel.
 cat ~/.metabob/config.json | jq .metabob.apiKey
 
 # Validate it against identity-vessel
-curl -X POST http://localhost:18080/v1/keys/validate \
+curl -X POST http://localhost:18101/v1/keys/validate   # identity-vessel is the validator; activity-api mounts only /v2/* \
   -H "Content-Type: application/json" \
   -d '{"api_key": "<your-key>"}'
 ```
@@ -439,7 +439,7 @@ echo "Org:   $(echo $VALIDATION | jq -r '.data.org_id')"
 
 # 2. Test data access with the API key directly
 curl -s -H "Authorization: ApiKey $API_KEY" \
-  http://api.minibob.local/v2/activities/templates | jq '.templates | length'
+  http://localhost:18080/v2/activities/templates | jq '.templates | length'
 ```
 
 > **Removed pattern:** activity-api no longer issues tokens via `/v2/auth/apikey`. Pass the HMAC API key directly as `Authorization: ApiKey <key>` to activity-api; identity-vessel validates it internally.
@@ -448,13 +448,13 @@ curl -s -H "Authorization: ApiKey $API_KEY" \
 
 ```bash
 # Activity API logs
-kubectl logs -n activity-system -l app.kubernetes.io/name=metabob-activity-api -f
+docker exec substrate-live journalctl -u activity-api -f
 
-# MiniBob logs
-kubectl logs -n activity-system -l app.kubernetes.io/name=minibob -f
+# development-vessel logs
+docker exec substrate-live journalctl -u development-vessel -f
 
 # SurrealDB logs
-kubectl logs -n activity-system -l app.kubernetes.io/name=surrealdb -f
+docker exec substrate-live journalctl -u surrealdb -f
 ```
 
 ---

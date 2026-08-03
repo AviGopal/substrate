@@ -12,7 +12,7 @@ This directory contains documentation for testing and verifying the metabob-devb
 - Substrate endpoint configuration
 - Primary validation harnesses (failure-mode and stratified)
 - Pre-push smoke test steps
-- Verification by component (minibob, activity-api, auth, schema)
+- Verification by component (activity-api, development-vessel, auth, schema)
 - Learning loop verification (Thompson α/β, dense search / MRR)
 - Common scenarios: new template, debug failure, A/B variant learning
 - Canary / production deployment verification
@@ -45,10 +45,9 @@ Both harnesses read `~/.metabob/config.json` for the substrate endpoint — no h
 
 | Component | Test Location | Run Command |
 |-----------|---------------|-------------|
-| MiniBob | `repos/minibob/test/` | `cd repos/minibob && bun test` |
+| development-vessel | `repos/development-vessel/test/` | `cd repos/development-vessel && bun test` |
 | Activity API | `repos/activity-api/test/` | `cd repos/activity-api && bun test` |
 | Identity Vessel | `repos/identity-vessel/test/` | `cd repos/identity-vessel && bun test` |
-| Cloud Dashboard | `repos/metabob-cloud-dashboard/e2e/` | `cd repos/metabob-cloud-dashboard && bun test` |
 
 ---
 
