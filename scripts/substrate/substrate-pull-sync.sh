@@ -57,8 +57,22 @@ DEFERRAL_LOG=/workspace/pull-sync-deferrals.jsonl
 
 mkdir -p "$MARKER_DIR" "$LAST_GOOD_DIR"
 log() { echo "[pull-sync $(date -Iseconds)] $*"; }
+# A gap that fails to file is worse than no detector: the condition is real, the
+# log line claims "(substrateGap)", and nothing is queryable afterwards. Observed
+# 2026-08-03: the hub super-repo clone sat DIVERGED for hours, refusing every
+# pull-sync run and freezing 25 commits out of the runtime, while the gap store
+# held ZERO pull-sync-diverged rows — development-vessel resolves regularly take
+# 8-9s under load, so the old --max-time 8 timed out and `|| true` erased it.
+# Keep it non-fatal (a detector must never break convergence) but never silent.
 emit_gap() {
-  curl -s --max-time 8 -X POST "$DEV_VESSEL/v2/impulses/resolve" -H 'Content-Type: application/json' -d "$1" >/dev/null 2>&1 || true
+  local body code
+  body="$(curl -s --max-time 30 -w '\n%{http_code}' -X POST "$DEV_VESSEL/v2/impulses/resolve" \
+    -H 'Content-Type: application/json' -d "$1" 2>/dev/null || printf '\n000')"
+  code="${body##*$'\n'}"
+  case "$code" in
+    2*) ;;
+    *) log "emit_gap FAILED http=${code:-000} — gap NOT filed (detector fired but nothing is queryable): $(printf '%s' "${body%$'\n'*}" | tr -d '\n' | cut -c1-200)" ;;
+  esac
 }
 
 # A cutover mid-flight owns /vessels mutation; never race it.
