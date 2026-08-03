@@ -192,7 +192,7 @@ With `--hot` and `buildHandler()`, the process never restarts, so the registrati
 
 ## WS Bus Subscription for Development
 
-The activity-api WebSocket broadcaster (`ws://localhost:18081/ws` in the local substrate) carries three event classes that are useful for development tooling:
+The activity-api WebSocket broadcaster (`ws://localhost:18080/ws` in the local substrate) carries three event classes that are useful for development tooling:
 
 - **Execution lifecycle events** (`task.started`, `task.completed`, `task.failed`, `tool.call`, `impulse.resolved`, `lifecycle:task:preBinding`, `lifecycle:gap:classified`, `lifecycle:llm:dispatched`) — the same events the workbench uses for its live execution overlay, now available to any subscriber. Subscribe to these to observe goal-host-vessel activity in real time.
 - **Vessel registration events** (`vessel.registered`, `vessel.heartbeat`, `vessel.deregistered`, `vessel.expired`) — fired by discovery-vessel whenever the registry changes. Subscribe to these instead of polling `/shapes` to detect topology changes reactively.
@@ -201,7 +201,7 @@ The activity-api WebSocket broadcaster (`ws://localhost:18081/ws` in the local s
 Connection pattern (same as the workbench):
 
 ```typescript
-const ws = new WebSocket("ws://localhost:18081/ws")
+const ws = new WebSocket("ws://localhost:18080/ws")
 ws.onopen = () => {
   ws.send(JSON.stringify({ type: "authenticate", token: METABOB_API_KEY }))
 }

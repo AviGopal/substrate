@@ -56,8 +56,7 @@ demonstrates self-similar reuse of an idiom (6) on a new input domain.
 **Definition.** The atomic unit of substrate work. A goal arrives as an
 impulse; the system extracts the shapes that would constitute a goal-satisfying
 state; shape-matching finds candidate activities; Thompson Sampling
-probabilistically selects one (this selection is the *emergent intent* per
-[`archive/2026-05-27/IDIOM_ANALYSIS.md`](archive/2026-05-27/IDIOM_ANALYSIS.md) §2.1 — archived 2026-05-27, vocabulary absorbed into foundation doc); the
+probabilistically selects one (this selection is the *emergent intent*); the
 activity executes task-by-task; the full execution is recorded as a trace.
 This is the i → t → o **recall motion** of the foundation (§28–34).
 
@@ -497,7 +496,7 @@ emitter was targeting that subscriber. Fix the emitter — it was not emitting
 neutrally.
 
 **Recurrence.** activity-api's WebSocket broadcaster is the canonical bus for
-all substrate events (`wss://localhost:18081/ws` externally; inside the
+all substrate events (`ws://localhost:18080/ws` externally; inside the
 container at the in-process port). Discovery-vessel emits `vessel.registered`,
 `vessel.heartbeat`, `vessel.deregistered`, and `vessel.expired` on this bus.
 goal-host-vessel subscribes to `vessel.registered` to register proxy resolvers
@@ -581,7 +580,6 @@ recursive application of a finite idiom set across an unbounded shape space.
 ## References
 
 - [`architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — canonical model.
-- [`archive/2026-05-27/IDIOM_ANALYSIS.md`](archive/2026-05-27/IDIOM_ANALYSIS.md) — terminology audit (archived 2026-05-27); vocabulary absorbed into foundation doc.
 - `openspec/changes/2026-04-26-impulse-activity-loop/tasks.md` — IAL §27.S.4 (S1→S2 lift), §27.S.5, §27.S.6.
 - `openspec/changes/2026-04-26-validators-and-failure-modes/` — failure-mode taxonomy.
 - `openspec/changes/2026-05-23-topology-discovery-loop/` — 4-cell measurement + probes.

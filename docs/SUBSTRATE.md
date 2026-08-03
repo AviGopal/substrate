@@ -185,6 +185,23 @@ return-path step (`spoke-federate`) — live in
 and [`scripts/substrate/.env.example`](../scripts/substrate/.env.example);
 identity-namespace mechanics in [`docs/FEDERATION.md`](FEDERATION.md).
 
+A federated spoke inherits the hub's LLM arms, so its launch command needs no
+local provider key:
+
+```bash
+make -C scripts/substrate up API_KEY=<hub-issued-key> \
+  DISCOVERY_ENDPOINT=http://<hub-host>:18100
+```
+
+`up` resumes an existing stopped container only when no launch settings are
+supplied. To apply changed hub, role, or federation settings, recreate the
+container while retaining its named workspace and datastore volumes:
+
+```bash
+make -C scripts/substrate recreate API_KEY=<hub-issued-key> \
+  DISCOVERY_ENDPOINT=http://<hub-host>:18100
+```
+
 A **local Obsidian plugin** (outside the container) connects to the spoke with
 its normal two inputs — the API key plus `discoveryVesselEndpoint=http://127.0.0.1:18100`
 (the spoke's local registry). Its sidecar routes all egress through the spoke,
@@ -516,7 +533,7 @@ The substrate cannot self-declare S3. Only the operator can observe sustained pu
 
 ## Event bus
 
-All lifecycle events — task binding, execution completion, gap classification, LLM dispatch — flow on the activity-api WebSocket broadcaster (`wss://localhost:18081/ws`) in addition to any in-process eventSink. Discovery-vessel emits four additional event types on the same bus: `vessel.registered`, `vessel.heartbeat`, `vessel.deregistered`, and `vessel.expired`. Any vessel subscribing to the bus receives all of these without any per-emitter configuration.
+All lifecycle events — task binding, execution completion, gap classification, LLM dispatch — flow on the activity-api WebSocket broadcaster (`ws://localhost:18080/ws`) in addition to any in-process eventSink. Discovery-vessel emits four additional event types on the same bus: `vessel.registered`, `vessel.heartbeat`, `vessel.deregistered`, and `vessel.expired`. Any vessel subscribing to the bus receives all of these without any per-emitter configuration.
 
 This has a practical consequence for vessel startup: goal-host-vessel subscribes to `vessel.registered` and uses those events to reactively register proxy resolvers for newly-appearing vessels. This replaces the race-prone one-shot registration that happened once at startup — a vessel that starts after goal-host-vessel now gets picked up automatically rather than being invisible until the next restart cycle.
 
