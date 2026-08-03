@@ -1,20 +1,65 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Shown to any agent authoring a change here — including the substrate itself, via
+# the gap -> spec path. An empty context means every proposal starts without the
+# ontology, which is how proposals drift from the system they describe.
+context: |
+  This repository is a SUBSTRATE: one deployment of a vessel fleet that develops itself.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Ontology. Impulses are data carried as lazy pointers with metadata; the metadata names a
+  SHAPE, which is a routing-and-reasoning key rather than a schema. Activities are constrained
+  state transitions that declare the shapes they consume and produce and dispatch tasks to
+  RESOLVERS (deterministic, pattern, or LLM — the LLM is one resolver among many, never the
+  controller). Vessels bundle activities and resolvers where their data lives and advertise
+  their shapes through a discovery registry, the only fixed point; all routing is dynamic.
+  Every execution is traced, and the traces are the learning substrate. Goal execution is a
+  walk: backward-chaining over the shape graph from the goal's target shapes, choosing
+  producers by learned posterior, and judging afterward whether the goal was REACHED — not
+  merely whether the process exited cleanly.
+
+  Standing laws a proposal must not violate. Runtime behavior is steered by shaped impulses
+  read at use time; env vars and in-process constants are bootstrap-only, because they are
+  invisible to traces and unlearnable. Every taught behavior is minted as an activity the
+  learning loop can grade, not as a bare resolver. Find an existing producer of the needed
+  output shape and compose with it before minting anything new — a wrong mint is negative
+  value, not zero. Cadence lives in the pool as time-shaped rhythm impulses the selector
+  reads; static intervals, timers and concurrency clamps are an antipattern because the
+  system cannot condition on them. Resolvers live where their data lives.
+
+  Placement. The super-repo is a thin coordinator: repos/ (submodules), docs/ (timeless
+  reference), openspec/ (change proposals), scripts/ (operational tooling), packages/
+  (shared TS). Tests live in each vessel's repo, never in the super-repo. Vessel source is
+  at repos/<vessel>/src/. A change that names a real repos/<vessel>/src file routes through
+  the edit-intent path; name ONE file per change, because multi-file asks drop parts silently.
+
+  Documentation is a runtime input, not prose. docs/** is ingested section-by-section into
+  concept-db and injected into the code-authoring prompt, so a stale doc actively degrades
+  code generation. Everything under docs/architecture/ is normative and drafter-visible;
+  everything under docs/operations/ is validated procedure that is watched but never injected.
+  A section key is permanent and there is no delete path, so headings are a frozen interface.
+
+rules:
+  proposal:
+    - >-
+      Write timelessly. No dates, no "as of", no "currently", no version stamps, no status
+      banners, no ticket ids, no instance or host names. State the behavior a reader can
+      expect. Dated status belongs in the commit message, the trace, or the gap store.
+    - >-
+      Cite code by symbol name, never by line number. This system rewrites its own source
+      daily, so a line number is stale before the proposal is read.
+    - >-
+      Verify every path you cite exists before citing it. A proposal that names a file or
+      repo that was removed is worse than one that names none.
+    - >-
+      State the shape contract explicitly — which shapes are consumed, which are produced,
+      and which existing producer was checked before proposing a new one.
+    - >-
+      Say what would falsify the change, meaning the observable that distinguishes "landed"
+      from "reached". "It fired" is not success.
+  tasks:
+    - >-
+      One decidable claim per checkbox. A task that asserts two things reports half-done.
+    - >-
+      Name the single file each task touches, by path, under repos/<vessel>/src/.
+    - >-
+      Include the verification that proves the task, not just the edit that performs it.
