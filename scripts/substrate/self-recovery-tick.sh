@@ -76,6 +76,14 @@ csys() { if [ "$IN_CONTAINER" = 1 ]; then systemctl "$@"; else docker exec "$CON
 # mask (the ground truth boot just wrote) in the container's context; more robust
 # than re-deriving ENABLED_ROLES here.
 masked() { [ "$(csh "readlink /etc/systemd/system/$1 2>/dev/null" 2>/dev/null)" = "/dev/null" ]; }
+# Still inside its own start phase (2026-08-03): a unit running ExecStartPre/
+# ExecStartPost — DB migrations, template seeding — is not yet serving /health,
+# so probing it reads as death. Restarting then aborts the start work and the
+# next tick finds it starting again: observed on the hub as activity-api
+# restarted mid-migration, each restart replaying ~2min of schema work with the
+# trace store down and every spoke spooling. systemd already bounds this with
+# TimeoutStartSec; let that bound apply instead of pre-empting it.
+starting() { [ "$(csys show "$1" -p ActiveState --value 2>/dev/null)" = "activating" ]; }
 # Revert a vessel's /vessels/<name>/src from the IN-CONTAINER git clone
 # (/workspace/git/vessels/<name>): the last-good pin recorded by pull-sync/
 # cutover at /workspace/.last-good/<name> when present, else the clone's
@@ -185,13 +193,18 @@ db_is_bottleneck() {
   [ "$DB_PRESSURE" = 1 ]
 }
 
-recovered=0; reverted=0; escalated=0; healthy_n=0; db_backoff=0; masked_skipped=0
+recovered=0; reverted=0; escalated=0; healthy_n=0; db_backoff=0; masked_skipped=0; starting_skipped=0
 for entry in "${VESSELS[@]}"; do
   name="${entry%%:*}"; port="${entry##*:}"
   # Skip units apply-inventory masked for the active role: they are intentionally
   # down, so probing fails, restart is a no-op (unit masked), revert rewrites
   # /vessels/<v>/src every tick, and each pass escalates a bogus substrateGap.
   if masked "$name.service"; then masked_skipped=$((masked_skipped+1)); continue; fi
+  # Give a unit its own start phase before judging it dead — see starting().
+  if starting "$name.service"; then
+    log "STARTING: $name (:$port) — still in its start phase; deferring to TimeoutStartSec (no restart this tick)"
+    starting_skipped=$((starting_skipped+1)); continue
+  fi
   if healthy "$name" "$port"; then healthy_n=$((healthy_n+1)); continue; fi
   # Shared-DB pressure guard: if SurrealDB (the shared dependency) is the
   # bottleneck, restarting this vessel can't fix it and amplifies the load —
@@ -248,4 +261,4 @@ if [ "$db_backoff" -gt 0 ]; then
 else
   streak_set 0
 fi
-echo "{\"healthy\":$healthy_n,\"recovered_by_restart\":$recovered,\"reverted_from_git\":$reverted,\"escalated\":$escalated,\"db_pressure_backoff\":$db_backoff,\"surreal_restarted\":$surreal_restarted,\"masked_skipped\":$masked_skipped}"
+echo "{\"healthy\":$healthy_n,\"recovered_by_restart\":$recovered,\"reverted_from_git\":$reverted,\"escalated\":$escalated,\"db_pressure_backoff\":$db_backoff,\"surreal_restarted\":$surreal_restarted,\"masked_skipped\":$masked_skipped,\"starting_skipped\":$starting_skipped}"
