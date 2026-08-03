@@ -115,7 +115,30 @@ Do not use in new docs; listed so older docs remain readable.
 | **"The Two Primitives"** | deprecated framing | the **four** primitives (activity is derived) |
 | **`resolver_tier` as a fixed kind** | deprecated reading | a binning of **directional certainty** (§5) |
 | table `execution` / `activity_execution_trace` | deprecated table aliases | **`activity_execution_traces`** |
-| **Minibob** | typo | **MiniBob** (prose) / **minibob** (code, CLI, paths) |
+
+### 7.1 Retired names
+
+Product-era names carried over from before the substrate had its own identity. They are
+supersessions, not synonyms: a new document, shape, repo, package, or identifier must never
+introduce one, and encountering one in older material means the surrounding claim is worth
+re-checking against the running system.
+
+| Retired name | Status | Use instead |
+|---|---|---|
+| `metabob-*` as a prefix | retired across the codebase | the vessel's own name — e.g. `metabob-activity-api` → **`activity-api`** |
+| `@metabob/*` packages | retired namespace | **`@avigopal/*`** — e.g. `@metabob/cpg-inference` → `@avigopal/cpg-inference` |
+| `metabob-devbob` (super-repo) | retired | **`substrate`** |
+| `minibob`, `MiniBob` | **removed, not renamed** | nothing — the CLI it named is gone. Its instance auth is retired; the signin routes answer `410 Gone` deliberately |
+| `devbob` | retired | **`substrate`** — the self-developing deployment, not a separate agent |
+
+**One surviving exception:** the **metabob MCP server** keeps its name. It is the agent-facing
+cockpit — the tool surface an operator's agent calls into — and its tool identifiers
+(`mcp__metabob__*`) are a published interface, not internal drift.
+
+**A tombstone outlives the thing it marks.** Where a retired name appears in a refusal path — a
+`410 Gone` body naming the removed method — that is a deliberate signal, not residue. Deleting it
+degrades an informative refusal into a bare `404`. Retire such a route on telemetry showing no
+callers, not on a name sweep.
 
 ## 8. The cross-lens dictionary (pointer)
 
