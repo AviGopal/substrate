@@ -133,7 +133,6 @@ symlink pull the same GHCR image), then bring it up:
 
 ```bash
 # .env
-ANTHROPIC_API_KEY=sk-ant-...
 METABOB_API_KEY=<hub-issued-key>          # required: the hub-issued credential
 ENABLED_ROLES=spoke
 HUB_DISCOVERY_URL=http://<hub-host>:18100  # required: the discovery to point at
@@ -151,7 +150,17 @@ docker exec substrate-live substrate-key show
 
 **`make up` / raw `docker run`** — the identical vars work as `-e VAR=value`
 flags on the standalone `docker run` above, or as `VAR=value` arguments to
-`make -C scripts/substrate up`. To make the spoke hub-dialable behind NAT
+`make -C scripts/substrate up`. A federated spoke inherits the hub's LLM arms,
+so it needs no local provider key:
+
+```bash
+make -C scripts/substrate up API_KEY=<hub-issued-key> \
+  DISCOVERY_ENDPOINT=http://<hub-host>:18100
+```
+
+To apply changed launch settings to a stopped or running spoke without removing
+its named volumes, use `make -C scripts/substrate recreate` with the same
+arguments. To make the spoke hub-dialable behind NAT
 (relay reservation + per-vessel capability mirror; the id must be unique in the
 hub namespace), run once after boot:
 
@@ -305,5 +314,3 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 - [`docs/architecture/`](docs/architecture/) — the `SUBSTRATE_AS_*` lenses (dynamics, MDP, network, representation, DEC, fleet, software) and supporting design docs.
 - [`docs/RBAC_GUIDE.md`](docs/RBAC_GUIDE.md), [`docs/AUTH_JWT_CLAIMS.md`](docs/AUTH_JWT_CLAIMS.md) — multi-tenant isolation and auth claims.
 - [`openspec/changes/`](openspec/changes/) — future-change proposals, designs, and tasks.
-</content>
-</invoke>
