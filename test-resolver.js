@@ -1,1 +1,0 @@
-import { resolveFailureModeSummary } from "/workspace/git/super-repo/repos/development-vessel/src/resolvers/failure-mode-summary.ts";\n\nasync function testResolver() {\n  try {\n    const result = await resolveFailureModeSummary({});\n    console.log(result);\n  } catch (error) {\n    console.error("Error:", error);\n  }\n}\n\ntestResolver();
