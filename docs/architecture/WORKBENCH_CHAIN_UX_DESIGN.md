@@ -1225,7 +1225,7 @@ interface UIWorkflowTrace extends ExecutionTrace {
 5. **AI Chain Optimization**: LLM suggests chain improvements
 6. **Cost Optimization Hints**: Replace expensive activities with cheaper variants
 7. **Chain Versioning**: Git-style branches and merges
-8. **Export to Code**: Generate a runnable dispatch artifact from chain — emit a `mcp__metabob__run_goal` invocation (metabob-mcp is the agent-IDE dispatch surface). The legacy "MiniBob script" form is deprecated as the minibob CLI is being retired.
+8. **Export to Code**: Generate a runnable dispatch artifact from chain — emit a `mcp__metabob__run_goal` invocation (metabob-mcp is the agent-IDE dispatch surface). The legacy per-CLI script form is retired. The old CLI is being retired.
 
 ---
 

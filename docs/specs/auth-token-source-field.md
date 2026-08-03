@@ -24,7 +24,7 @@ Status: **Partially Implemented (Wave A3, 2026-04-23; re-assessed 2026-05-27)**
 - ✅ Activity-API declares `auth_token_source: 'caller_identity'` and `auth_delegation_mode: 'forward'` on registration
 - ⏳ Delegation header surface (`X-Metabob-Delegation-Chain`, `X-Metabob-Delegation-Hop`) pending — no `user_identity` consumers exist yet
 - ⏳ Identity-vessel mint endpoint (`POST /v2/tokens/delegate`, §5.9) pending
-- NOTE: MiniBob is on a deprecation path (replaced by goal-host-vessel + substrate vessels); the minibob-side changes in §6.3 may target goal-host-vessel instead
+- NOTE: the caller role described here is carried by goal-host-vessel and the substrate vessels; the caller-side changes in §6.3 target goal-host-vessel instead
 
 Phased rollout: the credential-kind field now lands with `caller_identity` declared on existing vessels (no behavior change), delegation header surface to follow when first `user_identity` consumers come online.
 
@@ -35,7 +35,7 @@ Phased rollout: the credential-kind field now lands with `caller_identity` decla
 The current resolve contract on `VesselCapability` has `auth_scheme:
 "none" | "ApiKey" | "Bearer"` (see
 `packages/vessel-discovery-client/src/types.ts:176` and
-`repos/discovery-vessel/src/types.ts:26`). When minibob's
+`repos/discovery-vessel/src/types.ts:26`). When goal-host-vessel's
 `buildAuthHeader` (the vessel-resolve-call resolver)
 sees `auth_scheme: "ApiKey"`, it builds the header from
 `vesselConfig?.apiKey || process.env.METABOB_API_KEY ||
@@ -47,7 +47,7 @@ The gap appears as soon as a vessel needs a *different* credential:
 
 - **react-renderer** (when it lands) renders user-scoped UI state and
   needs the user's JWT so `$auth.user_id` in SurrealDB resolves to the
-  end user, not minibob.
+  end user, not goal-host-vessel.
 - **identity-vessel**, when called from a vessel acting on behalf of a
   user, may need the user JWT to mint a delegated token.
 - A future audit/billing vessel may want the original-user token,
@@ -76,7 +76,7 @@ call path uses service identity. The default-when-absent must reproduce
 today's behavior bit-for-bit.
 
 **No new vessels become reachable as a side effect.** Adding the field
-must not change which vessels minibob can talk to. If a vessel asks for a
+must not change which vessels goal-host-vessel can talk to. If a vessel asks for a
 token type the caller can't supply, the call fails — discoverable problem,
 not silent regression.
 
@@ -133,7 +133,7 @@ auth_token_source?: "env:METABOB_API_KEY" | "config:metabob.apiKey" | ...
 
 Brittle (each caller has different env vars), leaks caller-internal
 structure into the registration contract, makes vessels know about
-minibob's specific configuration.
+goal-host-vessel's specific configuration.
 
 ### 3.3 Token kinds tied to identity-vessel — rejected
 
@@ -183,7 +183,7 @@ both `packages/vessel-discovery-client/src/types.ts` and
  * service identity (preserves pre-rollout behavior).
  *
  * Values:
- *   "caller_identity"  — caller's own service token (e.g., minibob's
+ *   "caller_identity"  — caller's own service token (e.g., goal-host-vessel's
  *                        METABOB_API_KEY). Used by vessels that trust the
  *                        caller's federated identity for tenant scoping.
  *
@@ -217,11 +217,11 @@ export const DEFAULT_AUTH_TOKEN_SOURCE: AuthTokenSource = "caller_identity"
 
 ### 4.2 Per-token-source lookup table (caller-side)
 
-Each caller (today, only minibob) maintains a map from `AuthTokenSource`
+Each caller maintains a map from `AuthTokenSource`
 to a credential resolver. The resolver returns the raw token string or
 `undefined`. The Authorization header is then formatted per `auth_scheme`.
 
-For minibob (`buildAuthHeader` extension):
+For goal-host-vessel (`buildAuthHeader` extension):
 
 | `auth_token_source`  | Lookup chain                                                                                              | If undefined            |
 | -------------------- | --------------------------------------------------------------------------------------------------------- | ----------------------- |
@@ -285,8 +285,8 @@ the call hit the network with the wrong credential and getting a confusing
 ## 5. Cross-vessel delegation
 
 Once `user_identity` exists, vessel A holding a user JWT will inevitably
-need to call vessel B "as the user." The cases to design for: minibob →
-react-renderer (one hop, originator holds the JWT); minibob → vessel A
+need to call vessel B "as the user." The cases to design for: goal-host-vessel →
+react-renderer (one hop, originator holds the JWT); goal-host-vessel → vessel A
 → vessel B where A's resolver itself calls B (multi-hop); deeper chains
 of intermediates.
 
@@ -387,10 +387,10 @@ X-Metabob-Delegation-Hop: <integer, starting at 1>
 ```
 
 `X-Metabob-Delegation-Chain` is the ordered list of vessels through which
-the request has passed, root-first. The originating caller (minibob, the
+the request has passed, root-first. The originating caller (goal-host-vessel, the
 dashboard) sets it to its own vessel ID. Every vessel that forwards the
 user JWT must append its own vessel ID before sending. Receiving vessel B
-sees `X-Metabob-Delegation-Chain: minibob,vesselA` and now knows the
+sees `X-Metabob-Delegation-Chain: goal-host-vessel,vesselA` and now knows the
 provenance.
 
 `X-Metabob-Delegation-Hop` is the integer hop count, set to `1` by the
@@ -430,7 +430,7 @@ JWT, B verifies in this order:
    header must be present and non-empty (forward mode). Contradictions
    fail closed.
 6. **Policy.** The receiver may apply per-vessel allowlists ("react-
-   renderer accepts forwarded user JWTs only via minibob or the
+   renderer accepts forwarded user JWTs only via goal-host-vessel or the
    dashboard"). This lives in receiver config, not in the contract — the
    contract just guarantees the receiver can reconstruct who handed it
    the token.
@@ -450,7 +450,7 @@ Where forwarded or minted user JWTs might end up that they shouldn't:
   layer scrub `Authorization` from any error path before throw/log;
   `VesselAuthError` never includes the token.
 - **Broadcast / WebSocket events** to dashboards. Event serializer at
-  activity-api and minibob's HTTP server redacts known auth headers.
+  activity-api and goal-host-vessel's HTTP server redacts known auth headers.
   Use a serialization whitelist, not a blacklist.
 - **Resolver logs in HTTP-shaped tools** (e.g. a fetch resolver). The
   resolver redacts `Authorization` and `X-User-JWT` from its own
@@ -560,8 +560,8 @@ no schema migration (registry is in-memory).
   defaults appropriately, passes them through.
 - For `user_identity` + `forward`: attach the JWT and emit
   `X-Metabob-Delegation-Chain` and `X-Metabob-Delegation-Hop` per §5.5.
-  Chain is `[minibob-vessel-id]` for an originator, or
-  `[...upstream, minibob-vessel-id]` for a forwarder.
+  Chain is `[caller-vessel-id]` for an originator, or
+  `[...upstream, caller-vessel-id]` for a forwarder.
 - For `mint`: resolve via the identity-vessel delegate endpoint (§5.9).
   Until that endpoint exists, throw `VesselAuthError` with "mint mode
   requires identity-vessel delegate endpoint" — fail closed.
@@ -644,10 +644,10 @@ three already-covered `caller_identity` paths:
 ### 7.2 Unit: delegation header construction
 
 - Originator, `forward` mode →
-  `X-Metabob-Delegation-Chain: <minibob-vessel-id>`,
+  `X-Metabob-Delegation-Chain: <caller-vessel-id>`,
   `X-Metabob-Delegation-Hop: 1`.
 - Forwarder with inbound chain `[upstream]`, `forward` →
-  chain `[upstream, minibob]`, hop `2`.
+  chain `[upstream, goal-host-vessel]`, hop `2`.
 - `mint` mode without mint client wired → `VesselAuthError` matching
   `/mint mode not yet/`.
 
@@ -691,14 +691,14 @@ leakage classes that review will not catch.
 - **No vessel advertises either field today.** Every advertised
   registration in concept-db and activity-api lacks them.
 - **Default on read.** Discovery-vessel applies defaults
-  (`caller_identity`, `forward`) at write time; minibob's
+  (`caller_identity`, `forward`) at write time; goal-host-vessel's
   `buildAuthHeader` defaults its parameters; either way, callers behave
   as today.
-- **Caller without the user-JWT plumbing.** A minibob build that hasn't
+- **Caller without the user-JWT plumbing.** A caller build that hasn't
   picked up the §6.3 changes simply ignores both fields and runs the
   existing chain — every vessel today wants `caller_identity`, which is
   what that build produces. New vessels needing `user_identity` will
-  fail to authenticate against old minibobs, which is the right failure
+  fail to authenticate against older callers, which is the right failure
   mode (the new vessel is not yet supported by that caller).
 - **Receivers without delegation-chain awareness.** A vessel that
   doesn't yet read the delegation headers simply ignores them.
@@ -736,7 +736,7 @@ rules as §5.7.
 ### 9.3 Multiple service identities
 
 `"service_identity"` is reserved as an alias for `"caller_identity"`,
-anticipating a future where minibob carries multiple service tokens
+anticipating a future where a caller carries multiple service tokens
 (per-vessel keys, per-environment keys). When that materializes, the
 contract grows: either `service_identity` becomes parameterized
 (`"service_identity:concept-db"`) or we add a sibling field

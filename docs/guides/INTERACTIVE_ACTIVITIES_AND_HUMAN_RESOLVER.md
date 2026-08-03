@@ -1,8 +1,8 @@
 # Interactive Activities and the Human Resolver
 
-**Applies to:** `minibob` with `HumanResolver` (April 2026 onward); the `human` resolver contract and non-TTY fallback semantics apply to any vessel implementing a human-gate resolver
+**Applies to:** any surface implementing `HumanResolver`; the `human` resolver contract and non-TTY fallback semantics apply to any vessel implementing a human-gate resolver
 **Source (historical):** the human-resolver and embedded templates of the retired CLI. `src/embedded-templates/`
-**Note (2026-05-27):** MiniBob is on a deprecation path. The resolver pattern, TTY-aware fallback semantics, and `clarification` impulse shape described here are still correct. File paths are minibob-historical; the same pattern applies wherever a `human` resolver is registered in a vessel's task registry.
+**Note:** the CLI whose TTY behaviour these examples describe is retired. The resolver pattern, TTY-aware fallback semantics, and `clarification` impulse shape described here are still correct. File paths are historical; the same pattern applies wherever a `human` resolver is registered in a vessel's task registry.
 
 The human at the terminal is just another resolver. This guide explains how `HumanResolver` fits into the resolver hierarchy and how to author activities that ask the user a question at the right moment instead of burning LLM tokens on a guess.
 
@@ -40,11 +40,11 @@ The output impulse is a `memo` with metadata `shape: "clarification"` — so dow
 
 `HumanResolver.enabled` is a boolean set at construction. The default reads `process.stdin.isTTY`, so:
 
-- **REPL** (`minibob` with no args) — TTY, resolver is enabled, questions prompt interactively. *(deprecated — agents dispatch via the metabob-mcp `mcp__metabob__run_goal` tool; the minibob CLI is being retired.)*
-- **`minibob --single "..."`** when invoked from a terminal — TTY, resolver is enabled.
-- **`minibob --daemon`** or CI invocations — no TTY, resolver is disabled. Activities that include `resolver: "human"` tasks still run, but `askUser` falls back to the configured `default` or the first option in `options` so execution stays scriptable.
+- **REPL** (an interactive terminal session) — TTY, resolver is enabled, questions prompt interactively. *(agents dispatch via the metabob-mcp `mcp__metabob__run_goal` tool; the CLI form is retired.)*
+- **A one-shot invocation** from a terminal — TTY, resolver is enabled.
+- **Daemon or CI invocations** — no TTY, resolver is disabled. Activities that include `resolver: "human"` tasks still run, but `askUser` falls back to the configured `default` or the first option in `options` so execution stays scriptable.
 
-The TTY examples above are minibob-specific, but the human-resolver mechanism is **surface-agnostic**: any interaction surface that yields a human-attributed impulse — metabob-mcp, obsidian-vessel, the deprecated minibob CLI, future vessels — resolves through the same `human` resolver into the same `clarification` shape. TTY-vs-non-TTY is just one surface's enablement signal.
+The TTY examples above describe one surface, but the human-resolver mechanism is **surface-agnostic**: any interaction surface that yields a human-attributed impulse — metabob-mcp, obsidian-vessel, future vessels — resolves through the same `human` resolver into the same `clarification` shape. TTY-vs-non-TTY is just one surface's enablement signal.
 
 The practical rule: a well-authored interactive activity always provides a `default` so it can degrade gracefully in non-TTY contexts. Don't assume a human is there.
 
@@ -98,14 +98,14 @@ Ship as embedded templates:
 
 All three templates tag themselves with `human.resolver` and `interactive` (per the dot-separated tag hierarchy normalized in `3e20d8f`, 2026-04-22) so they can be filtered out of autonomous (`--daemon`, boredom) runs.
 
-## Entering an embedded template: `minibob -t`
+## Entering an embedded template
 
 Embedded activity templates used to only be reachable via the recommender picking them up for some goal. The `-t <template-id>` flag (commit `d935064`, v0.8.0) makes them first-class CLI entry points:
 
 ```bash
-# (deprecated — agents dispatch via the metabob-mcp `mcp__metabob__run_goal` tool; the minibob CLI is being retired)
-minibob -t build-and-execute --var goal="activity that audits route handlers for hardcoded URLs"
-minibob -t human-guided-orchestrator --var goal="refactor auth middleware"
+# (agents dispatch via the metabob-mcp `mcp__metabob__run_goal` tool; the CLI form below is retired)
+# build-and-execute --var goal="activity that audits route handlers for hardcoded URLs"
+# human-guided-orchestrator --var goal="refactor auth middleware"
 ```
 
 Semantics:
@@ -154,4 +154,4 @@ Activities that truly require human input in production — not just development
 - [`./ACTIVITY_TASK_CONTEXT_PROPAGATION.md`](./ACTIVITY_TASK_CONTEXT_PROPAGATION.md) — variable defaults, field graft, deterministic output impulses
 - `interactive-activity-selector` — canonical selector
 - `human-guided-orchestrator` — canonical meta-orchestrator
-- `build-and-execute` — interactive template authoring (entered via `minibob -t build-and-execute`)
+- `build-and-execute` — interactive template authoring

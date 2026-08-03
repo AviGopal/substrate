@@ -86,13 +86,13 @@ Canonical source of truth for advertised shapes: [`repos/activity-api/src/config
 
 (Not yet documented)
 
-**Shapes in use** (from MiniBob):
+**Shapes in use** (from the execution host):
 - `file` - File content from filesystem
 - `directoryTree` - Directory structure
 - `gitDiff` - Git diff output
 - `memo` - Embedded text content
 
-**Resolver**: Local vessel (MiniBob, OpenCode)
+**Resolver**: Local vessel
 
 **TODO**: Document these shapes in `FILESYSTEM_SHAPES.md`
 

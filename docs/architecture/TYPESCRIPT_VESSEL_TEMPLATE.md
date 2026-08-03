@@ -434,7 +434,7 @@ The chart and helmfile must plumb:
 1. Add a `<vessel>` block to `repos/deployment/scripts/generate-secrets.sh`
 2. `sops secrets/canary.secrets.yaml` (requires Age key), add `<vessel>.apiKey` — generate via `openssl rand -hex 32` prefixed `mb_<vessel>_canary_`
 3. Register the key in the identity-vessel seed so activity-api accepts it
-4. Either add `templates/secret.yaml` to the chart (mirroring `charts/minibob/templates/secrets.yaml`) or manually: `kubectl create secret generic <vessel>-api-keys --from-literal=api-key=<KEY> -n activity-system`
+4. Either add `templates/secret.yaml` to the chart (mirroring an existing vessel chart's `templates/secrets.yaml`) or manually: `kubectl create secret generic <vessel>-api-keys --from-literal=api-key=<KEY> -n activity-system`
 
 Without these the pod starts but registration stays unauthenticated (and the Secret reference may block pod start entirely if absent).
 

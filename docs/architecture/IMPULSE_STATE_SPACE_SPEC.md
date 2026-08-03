@@ -3,7 +3,7 @@
 > **Status**: Draft (some sections superseded by 2026-04-26 spec work; see notes)
 > **Created**: 2026-04-05
 > **Relates to**: IMPULSE_ACTIVITY_FOUNDATION.md
-> **Execution-model note (2026-06-09)**: §4's pseudocode assumes in-process `executeActivity()` calls. Since Phase 8/26 (2026-05-24), execution is substrate-hosted and async — minibob is a thin CLI delegating to goal-host-vessel (`POST /run-goal` returns `202 Accepted`; poll or subscribe for outcome). The state-space reasoning in §1–3 and §5–6 is unaffected; read §4's control flow as conceptual, not literal.
+> **Execution-model note (2026-06-09)**: §4's pseudocode assumes in-process `executeActivity()` calls. Execution is substrate-hosted and async, dispatched to goal-host-vessel (`POST /run-goal` returns `202 Accepted`; poll or subscribe for outcome). The state-space reasoning in §1–3 and §5–6 is unaffected; read §4's control flow as conceptual, not literal.
 
 > **Foundation alignment:** State-space reasoning is the **recall motion** (informational → transient → observational) made explicit. The state space is the available pool of impulses the system can recall against; transitions track what learning would mint. The "shape signature" defined here is keyed on the **pointer-as-shape** bootstrap principle. See [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md#three-states-two-motions).
 

@@ -1,6 +1,6 @@
 # Template Upkeep Pipeline
 
-**Status:** All five layers landed 2026-04-22. The consuming activity (`audit-and-backfill-templates`) landed in `minibob` v0.8.0 (`22ec545`).
+All five layers are in place, consumed by the `audit-and-backfill-templates` activity.
 **Source:** `repos/activity-api`
 
 Activity templates accumulate with use. Authors churn shape names (`gitDiff` vs `git_diff` vs `GitDiff`), skip `tags`, write one-line descriptions, hardcode URLs in prompts, or rely entirely on LLM tasks where a deterministic resolver would do. The system observes this drift and corrects it through the impulse-activity loop itself — no dedicated admin REST surface, no out-of-band scripts. Five layers:
@@ -14,7 +14,7 @@ observed-shapes (util)          ← what's in use
 templateAuditReport (read)      ← what's deficient
        │
        ▼
-impulse-resolve + template-upkeep wrappers (minibob)
+impulse-resolve + template-upkeep wrappers (execution host)
        │
        ▼
 audit-and-backfill-templates (activity)
@@ -56,9 +56,8 @@ Optional enrichment:
 
 This resolver is **read-only**. It writes nothing; it produces the evidence the correction layer acts on.
 
-## 3. Minibob dispatch: `impulse-resolve` + typed wrappers
+## 3. Host dispatch: `impulse-resolve` + typed wrappers
 
-**Landed:** minibob commits `13c84b2` (impulse-resolve, 2026-04-22 17:55) and `5725da9` (typed wrappers, 17:45).
 
 ### `impulse-resolve` — generic primitive
 
@@ -68,14 +67,14 @@ A generic resolver that takes a pointer from task `config` and dispatches it thr
 
 **Contract (two pointer-source variants, exactly one required):**
 - **`config.pointer`** — static pointer object literal in task JSON, validated before the network call. Use when the target shape and arguments are known at authoring time (e.g. `{ type: "templateAuditReport" }`).
-- **`config.pointerFromImpulse`** *(minibob `095f05c`, 2026-04-22)* — names an input impulse whose content is a JSON-encoded pointer object. The resolver parses it at runtime and forwards it to `MCPClient.resolveImpulse`. Use when a previous task produced the pointer (e.g. Task 2 of `audit-and-backfill-templates` emits `{ type: "activityTemplate_update", templateId, updates }` for Task 3 to execute). The referenced impulse is loaded through an injectable loader — defaults to module-level `loadImpulses`, same pattern as `git-resolver` — so tests stub loading without touching the global impulse store.
+- **`config.pointerFromImpulse`** — names an input impulse whose content is a JSON-encoded pointer object. The resolver parses it at runtime and forwards it to `MCPClient.resolveImpulse`. Use when a previous task produced the pointer (e.g. Task 2 of `audit-and-backfill-templates` emits `{ type: "activityTemplate_update", templateId, updates }` for Task 3 to execute). The referenced impulse is loaded through an injectable loader — defaults to module-level `loadImpulses`, same pattern as `git-resolver` — so tests stub loading without touching the global impulse store.
 - **Errors:** setting both variants or neither throws; missing-or-malformed JSON and missing `type` each throw descriptively naming the source impulse.
 - Pointer is forwarded to `MCPClient.resolveImpulse` unchanged — no variable interpolation (executor's job), no JSON parsing of the response (consumer's job).
 - Output: one `memo` impulse; metadata records `shape` (the pointer type) and `resolver: "impulse-resolve"` for learning-loop attribution.
 - Transport errors propagate with `impulse-resolve(<type>) failed: ...` prefix so trace analysis can attribute failures.
 - `enabled` tracks MCP client availability; registration gated on `isMCPEnabled()` + a live client (same pattern as `RibosomeResolver`).
 
-This is the mechanism that makes "all communication through resolvers and shapes" true at the task level. The shape vocabulary scales with the learning loop — no code change in minibob per new shape. `pointerFromImpulse` closes the loop: the pointer itself is data, so one task's LLM decision becomes the next task's write without the executor needing per-shape resolvers or string-template gymnastics over nested objects.
+This is the mechanism that makes "all communication through resolvers and shapes" true at the task level. The shape vocabulary scales with the learning loop — no code change in the host per new shape. `pointerFromImpulse` closes the loop: the pointer itself is data, so one task's LLM decision becomes the next task's write without the executor needing per-shape resolvers or string-template gymnastics over nested objects.
 
 ### `template-upkeep` typed wrappers
 
@@ -85,7 +84,6 @@ Thin TypeScript wrappers around `activityTemplate_update`, `activityTemplate_dep
 
 ## 4. `audit-and-backfill-templates` activity
 
-**Landed:** minibob commits `22ec545` (activity JSON, 2026-04-22 19:17) and `a556338` (conditional-idiom fix, 19:21). Bundled into v0.8.0.
 **Location:** the `audit-and-backfill-templates` embedded template.
 
 A **single-candidate-per-invocation** upkeep activity: it drains the template-metadata-deficiency queue one item at a time. Re-run until the deficient set converges. Each invocation is one execution trace — which is what Thompson Sampling needs to learn whether this variant is actually reducing deficiencies over time.
@@ -131,7 +129,7 @@ Already documented in [`../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`](../i
 
 A dedicated REST API would have bypassed all four.
 
-**Why `impulse-resolve` as a primitive?** It decouples minibob's resolver set from the backend's shape advertisement. New shape on the backend → usable in task JSON the next run. No redeploy of minibob, no code change per shape.
+**Why `impulse-resolve` as a primitive?** It decouples the host's resolver set from the backend's shape advertisement. New shape on the backend → usable in task JSON the next run. No redeploy of the host, no code change per shape.
 
 ## Sibling upkeep flow: `cleanup-stale-traces-v1`
 

@@ -34,7 +34,6 @@ These vessels run directly on the host and support `bun --hot` / `bun --watch` d
 | `react-renderer` | `bun --hot run src/index.ts` | 3000 | --hot | `buildHandler()` pattern |
 | `terminal` | `bun --hot src/index.ts` | 9090 (auto) | --hot | `buildHandler()` pattern; MCP stdio unaffected |
 | `workbench` | `vite` | 3000 | Vite HMR | Full Vite dev server |
-| `minibob` | `bun --watch run index.ts` | 8080 | --watch | CLI + HTTP |
 | `concept-db` | `bun run --watch src/index.ts` | 8080 | --watch | |
 | `metabob-mcp` | `bun --watch src/index.ts` | stdio | --watch | MCP stdio only |
 | `analysis-vessel` | `bun run --watch src/index.ts` | 8080 | --watch | Stateless VesselDaemon; replaced `metabob-analysis-api` (commit `06bd8c04`) |
@@ -52,7 +51,7 @@ make -C scripts/substrate substrate-restart-boredom-vessel
 
 | Vessel | Port (in-container) | Role | Notes |
 |---|---|---|---|
-| `goal-host-vessel` | 8210 | `POST /run-goal` — primary goal dispatch target | Async: returns 202 immediately (commit `ac0d75b5`); minibob + boredom-vessel both POST here |
+| `goal-host-vessel` | 8210 | `POST /run-goal` — primary goal dispatch target | Async: returns 202 immediately (commit `ac0d75b5`); calleob + boredom-vessel both POST here |
 | `llm-resolver-vessel` | 8220 | `llm_completion` resolver backed by Anthropic SDK | Decouples LLM credentials from other vessels |
 | `local-tools-vessel` | 8230 | Filesystem + process resolvers (`BunFileSystemAdapter`, `BunProcessAdapter`) | Lowest blast-radius vessel |
 | `ribosome-vessel` | 8240 | Template extraction from execution traces | WebSocket client to activity-api `/ws`; writes via `activityTemplate_update` impulse |

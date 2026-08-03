@@ -5,11 +5,11 @@
 
 This guide describes the analytics panels in the activity dashboard and how to read them. If you're debugging a learning-loop regression, this is where you look before digging into raw traces.
 
-> **Foundation alignment.** Two-direction learning duality: `impulseRelevance` (forward arm — P(success | activity X resolves pointer of shape Y)) and slot-binding/Thompson recommendations (reverse arm — P(success | activity X chosen given pool {A,B,C})) must stay symmetric. *(Updated 2026-06-09: F-39 was resolved 2026-04-26 — minibob commit `662b153` — and `thompson_posterior` is now a resolvable shape; see [`docs/impulse-types/thompson_posterior.md`](../impulse-types/thompson_posterior.md). Pre-fix traces remain skewed and should be excluded from retroactive analysis.)* Read the impulse-relevance and convergence panels with arm symmetry in mind: a stalled forward arm makes the reverse arm's "convergence" misleading. Note also migration 128 (2026-05): `times_failed` was silently dropped by the SCHEMAFULL table before that migration, so failure counts predating it undercount.
+> **Foundation alignment.** Two-direction learning duality: `impulseRelevance` (forward arm — P(success | activity X resolves pointer of shape Y)) and slot-binding/Thompson recommendations (reverse arm — P(success | activity X chosen given pool {A,B,C})) must stay symmetric. *(`thompson_posterior` is now a resolvable shape; see [`docs/impulse-types/thompson_posterior.md`](../impulse-types/thompson_posterior.md). Pre-fix traces remain skewed and should be excluded from retroactive analysis.)* Read the impulse-relevance and convergence panels with arm symmetry in mind: a stalled forward arm makes the reverse arm's "convergence" misleading. Note also migration 128 (2026-05): `times_failed` was silently dropped by the SCHEMAFULL table before that migration, so failure counts predating it undercount.
 
 ## Panels added in April 2026
 
-Four panels were added to turn execution traces into actionable signal. Each panel is a thin view over data already emitted by the executing vessel (historically MiniBob, now `goal-host-vessel`; MiniBob is deprecated) and recorded by `metabob-activity-api` — the dashboard doesn't compute new metrics, it surfaces existing ones.
+Four panels were added to turn execution traces into actionable signal. Each panel is a thin view over data already emitted by the executing vessel (`goal-host-vessel`; earlier by a CLI since retired), which is deprecated) and recorded by `metabob-activity-api` — the dashboard doesn't compute new metrics, it surfaces existing ones.
 
 ### ImpulseRelevanceDashboard
 

@@ -87,14 +87,14 @@ Destructive operations additionally require authentication (401 when unauthentic
 
 Allowed update fields for `activityTemplate_update`: `name`, `description`, `tags`, `tasks`, `input_shapes`, `output_shapes`, `deprecated`. Any other key in `updates` returns 400 with the rejected list.
 
-For the full lifecycle story (why deprecate instead of delete, how `deprecated = true` is interpreted by the recommend path), see [`../guides/ACTIVITY_LIFECYCLE_DEPRECATION.md`](../guides/ACTIVITY_LIFECYCLE_DEPRECATION.md). For the end-to-end observe → audit → correct pipeline these writes slot into — including the `templateAuditReport` read companion and minibob's `impulse-resolve` dispatch primitive — see [`../guides/TEMPLATE_UPKEEP.md`](../guides/TEMPLATE_UPKEEP.md).
+For the full lifecycle story (why deprecate instead of delete, how `deprecated = true` is interpreted by the recommend path), see [`../guides/ACTIVITY_LIFECYCLE_DEPRECATION.md`](../guides/ACTIVITY_LIFECYCLE_DEPRECATION.md). For the end-to-end observe → audit → correct pipeline these writes slot into — including the `templateAuditReport` read companion and the host's `impulse-resolve` dispatch primitive — see [`../guides/TEMPLATE_UPKEEP.md`](../guides/TEMPLATE_UPKEEP.md).
 
 ## Auth context for writes
 
 The router takes two auth paths depending on the caller:
 
 - **JWT auth** (dashboard users, SurrealDB `ACCESS` method): PERMISSIONS fire normally — the admin check on destructive resolvers is enforced at the DB layer.
-- **API-key auth** (MiniBob, IDE integrations): the self-signed JWT is not validatable against any SurrealDB ACCESS method, so `executeAsAuth` falls back to root credentials with manual `org_id = $orgId` filtering. This is safe because the key itself is scoped at the identity layer, but it means the caller is responsible for ensuring API keys carry the right authority. Destructive resolvers additionally short-circuit unauthenticated callers with 401 before the SQL runs.
+- **API-key auth** (vessels, IDE integrations): the self-signed JWT is not validatable against any SurrealDB ACCESS method, so `executeAsAuth` falls back to root credentials with manual `org_id = $orgId` filtering. This is safe because the key itself is scoped at the identity layer, but it means the caller is responsible for ensuring API keys carry the right authority. Destructive resolvers additionally short-circuit unauthenticated callers with 401 before the SQL runs.
 
 The pattern is documented inline in `requireAuthenticated` and `executeAsAuth` helpers in `routes/impulses.ts`.
 

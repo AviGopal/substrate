@@ -87,7 +87,7 @@ A system is **self-stable** if it can describe and modify itself using only its 
 - **Ribosome** = a resolver: trace-shaped → template-shaped.
 - **Thompson posterior** = *should be* a shape (`thompson_posterior`); currently REST-only. This is a known structural gap (see "Known Gaps").
 
-**Status:** This is a **hypothesis under test**, not a declaration. The system is not yet self-stable. We test the minimum by observing what breaks — places where one of the four primitives fails to express something the system needs (e.g., the missing `thompson_posterior` shape, the implicit vessels lacking discovery presence). Each break is data about whether the minimum is correct or whether something must be added. Top-level activity execution is no longer one of these breaks: the unified execution path is the chosen direction (see "Unified Execution Path" below). The MiniBob refactor that routes goal-shaped and activity-template-shaped pointers through the standard impulse → resolver dispatch is pending, not unresolved.
+**Status:** This is a **hypothesis under test**, not a declaration. The system is not yet self-stable. We test the minimum by observing what breaks — places where one of the four primitives fails to express something the system needs (e.g., the missing `thompson_posterior` shape, the implicit vessels lacking discovery presence). Each break is data about whether the minimum is correct or whether something must be added. Top-level activity execution is no longer one of these breaks: the unified execution path is the chosen direction (see "Unified Execution Path" below). The refactor that routes goal-shaped and activity-template-shaped pointers through the standard impulse → resolver dispatch is pending, not unresolved.
 
 The minimum may include primitives in informational state that lack shapes; those gaps surface as forced REST endpoints, hardcoded routing, or non-impulse state shared between subsystems. We treat each such case as evidence about the minimum.
 
@@ -290,7 +290,7 @@ A **vessel** is a collection of activities and impulse resolvers that, when bund
 > [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md) §3.1.
 
 ```
-VESSEL (MiniBob, OpenCode, hardware controller, etc.)
+VESSEL (an execution host, an editor integration, a hardware controller, etc.)
 │
 ├── IMPULSE RESOLVERS
 │   │
@@ -383,7 +383,7 @@ Vessels are NOT discovered through a registry. They are **introspected** at the 
 
 ### The Codebase as Vessel
 
-When MiniBob operates in a codebase, that codebase IS a vessel with its own resolvers:
+When an execution host operates in a codebase, that codebase IS a vessel with its own resolvers:
 
 | Source | Discovered Resolvers |
 |--------|---------------------|
@@ -411,7 +411,7 @@ for (const [name, command] of Object.entries(pkg.scripts || {})) {
 Vessels don't "contain" other vessels - they **collaborate**:
 
 ```
-MiniBob (vessel)  ←→  Codebase (vessel)
+Execution host (vessel)  ←→  Codebase (vessel)
    │                      │
    ├─ llm resolver        ├─ npm:test resolver
    ├─ git resolver        ├─ npm:build resolver
@@ -419,7 +419,7 @@ MiniBob (vessel)  ←→  Codebase (vessel)
    └─ mcp resolver        └─ [project-specific]
 ```
 
-Activities compose resolvers from BOTH vessels. The codebase provides local tools; MiniBob provides LLM reasoning and backend access.
+Activities compose resolvers from BOTH vessels. The codebase provides local tools; the host provides LLM reasoning and backend access.
 
 ### External Resolver Vesselization
 
@@ -575,7 +575,7 @@ Learning updates the same composition graph from two directions. The two arms mu
 
 **Forward arm — `P(success | activity X resolves pointer of shape Y)`**
 
-When activity X executes successfully with an impulse of shape Y in its input pool, the forward arm credits the (activity, shape) edge. Implementation: `impulseRelevance` writes from minibob to activity-api after execution. Used by impulse-pool selection (which impulses are worth loading for activity X).
+When activity X executes successfully with an impulse of shape Y in its input pool, the forward arm credits the (activity, shape) edge. Implementation: `impulseRelevance` writes from the execution host to activity-api after execution. Used by impulse-pool selection (which impulses are worth loading for activity X).
 
 **Reverse arm — `P(success | activity X chosen given pool has shapes {A, B, C})`**
 
@@ -583,7 +583,7 @@ When the binding layer selects activity X given a pool with shape signature {A, 
 
 **Symmetry invariant:** The two arms update the same edge from opposite directions. After N executions, the forward and reverse counts on each edge should be consistent. If they drift — e.g., forward arm records 100 successes but reverse arm records 80 — the recall side will sample inconsistently and the learning loop degrades.
 
-**F-39 (resolved 2026-04-26, minibob commit `662b153`)** — forward arm now writing correctly. Previously, the learning-signal writer failed on every validator-dispatch iteration because `lifecycle:task:completed` omitted `templateId` and the resolver's structural check rejected empty strings. Both emit sites in `activity.ts` now populate `templateId`, and the resolver no-ops gracefully on missing payload. After the canary deploy that includes this fix, the two arms converge; pre-deploy traces remain skewed and should be filtered out of any retroactive analysis.
+**The forward arm writes correctly.** Previously, the learning-signal writer failed on every validator-dispatch iteration because `lifecycle:task:completed` omitted `templateId` and the resolver's structural check rejected empty strings. Both emit sites in `activity.ts` now populate `templateId`, and the resolver no-ops gracefully on missing payload. After the canary deploy that includes this fix, the two arms converge; pre-deploy traces remain skewed and should be filtered out of any retroactive analysis.
 
 ### Reduce Search Space
 
@@ -1104,9 +1104,9 @@ Unified execution path is the chosen direction. Goal-shaped and activity-templat
 
 When the refactor lands, the goal-processor emits a `goal`-shaped impulse (and downstream an `activity_template`-shaped impulse), and the executor is dispatched as the resolver for the resulting shape pair. This collapses the structural distinction between "top-level" and "nested" activity execution: both flow through the same impulse → resolver dispatch.
 
-The 5 specs that already describe this unified surface (`minibob-goal-execution-resolver`, `trajectory-execution-resolver`, `goal-submission-panel`, `trajectory-submission-panel`, `vessel-wsurl-propagation`) describe target state.
+The 5 specs that already describe this unified surface (`goal-execution-resolver`, `trajectory-execution-resolver`, `goal-submission-panel`, `trajectory-submission-panel`, `vessel-wsurl-propagation`) describe target state.
 
-**Async dispatch (shipped `ac0d75b5`, 2026-05-27):** `POST /run-goal` on goal-host-vessel (port 8210) now returns `202 Accepted` immediately with `{ executionId, status: "accepted" }` and runs the execution asynchronously. Callers (minibob, boredom-vessel) must poll `GET /executions/:executionId` or subscribe to the activity-api WebSocket for `task.completed` / `execution:succeeded` events to observe the outcome. The synchronous response that previously blocked until completion is retired; any code that assumes a blocking `/run-goal` call must be updated to the poll/subscribe pattern.
+**Async dispatch (shipped `ac0d75b5`, 2026-05-27):** `POST /run-goal` on goal-host-vessel (port 8210) now returns `202 Accepted` immediately with `{ executionId, status: "accepted" }` and runs the execution asynchronously. Callers (goal-host-vessel clients, boredom-vessel) must poll `GET /executions/:executionId` or subscribe to the activity-api WebSocket for `task.completed` / `execution:succeeded` events to observe the outcome. The synchronous response that previously blocked until completion is retired; any code that assumes a blocking `/run-goal` call must be updated to the poll/subscribe pattern.
 
 ### Forward-Arm Breakage: F-39 (resolved)
 

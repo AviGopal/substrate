@@ -114,7 +114,7 @@ Non-blocking — a failed audit does not roll back the operation. The audit retu
 - No edits to `packages/vessel-discovery-client/src/types.ts` — `resolve_request_format` stayed at `"pointer" | "mcp-tool"`, no third value introduced.
 - No edits to the `VesselCapability` shape.
 - No new endpoint paths.
-- No client (minibob) changes — the existing generic resolver already speaks the impulse-resolve contract; new shapes flow through unchanged.
+- No client changes — the existing generic resolver already speaks the impulse-resolve contract; new shapes flow through unchanged.
 
 The pattern is purely additive at the vessel level.
 
@@ -420,7 +420,7 @@ Files to touch:
 
 10. **Shape index.** Add the new shapes to `docs/shapes/README.md`.
 
-### minibob
+### The execution host
 
 **No changes required.** The generic vessel resolver already speaks the impulse-resolve contract. New `_write` shapes flow through unchanged.
 

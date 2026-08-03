@@ -2,7 +2,6 @@
 
 **Status:** Implemented (Phase 1–2 shipping)
 **Created:** 2026-04-20
-**Last updated:** 2026-06-24 (actor prose realigned: minibob → goal-host-vessel / substrate)
 **Supersedes:** N/A (new capability)
 
 > The client-side tracer now lives in goal-host-vessel. It previously lived in the retired CLI as `activity-tracer.ts` moved to the substrate vessels in Phase 8. `ActivityTracer` and the L1/L2 meta-trace emission now live in `goal-host-vessel` (wrapping `GoalHost` from `ias-executor-ts`). The architecture described in this document — L1/L2 meta-trace types, `RUNTIME_TRACING_ENABLED`, `ACTIVITY_TRACER_ENABLED`, and the sampling strategy — remains conceptually valid. The server-side middleware at `repos/activity-api/src/middleware/runtime-tracing.ts` is unchanged.

@@ -58,7 +58,7 @@ These tables are shared infrastructure, managed by metabob-proto migrations.
 | `project_members` | Project membership | All services | Dashboard |
 | `subscriptions` | Billing/features | All services | Billing service |
 | `audit_logs` | Security audit | Admin only | All services (append) |
-| `minibob_instance` | Vessel instances | activity-api, MiniBob | Admin |
+| `minibob_instance` | Vessel instances (legacy table; the CLI it served is retired) | activity-api | Admin |
 | `schema_version` | Migration tracking | migrate.ts | migrate.ts |
 
 ## Activity API Tables
@@ -67,11 +67,11 @@ Owned by `metabob-activity-api`. Manages activity definitions, execution traces,
 
 | Table | Description | Readers | Writers |
 |-------|-------------|---------|---------|
-| `activity_template` | Activity definitions | mcp, dashboard, minibob | activity-api |
-| `activity_execution_traces` | Execution history | dashboard, minibob | activity-api |
+| `activity_template` | Activity definitions | mcp, dashboard, goal-host-vessel | activity-api |
+| `activity_execution_traces` | Execution history | dashboard, goal-host-vessel | activity-api |
 | `composition_graph` | Activity relationships | activity-api | activity-api |
 | `goal_execution_paths` | Goal→activity mappings | activity-api | activity-api |
-| `impulse_data` | Context data | minibob | activity-api |
+| `impulse_data` | Context data | goal-host-vessel | activity-api |
 | `tool_usage` | Tool call patterns | dashboard | activity-api |
 | `variant_performance_metrics` | Template performance | activity-api | activity-api |
 | `dataflows` | Data flow patterns | activity-api | activity-api |
