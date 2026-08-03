@@ -11,7 +11,12 @@ Wants=identity-vessel.service
 Type=oneshot
 RemainAfterExit=yes
 EnvironmentFile=/etc/substrate/env
-ExecStartPre=/bin/sh -c 'until curl -sf http://127.0.0.1:8101/health > /dev/null; do sleep 2; done'
+# A spoke federates identity to its hub and masks the local identity-vessel, so
+# there is nothing here to seed. Skip (ExecCondition -> unit goes inactive, not
+# failed) rather than waiting on a unit that by design never starts; the old
+# unbounded wait below left this unit `failed` on every spoke.
+ExecCondition=/bin/sh -c '[ "$(systemctl is-enabled identity-vessel.service 2>/dev/null)" != "masked" ]'
+ExecStartPre=/bin/sh -c 'i=0; until curl -sf http://127.0.0.1:8101/health > /dev/null; do i=$((i+1)); [ "$i" -ge 60 ] && { echo "identity-vessel not healthy after 120s — aborting seed"; exit 1; }; sleep 2; done'
 ExecStart=/usr/local/bin/reseed-restart
 TimeoutStartSec=300
 StandardOutput=journal
