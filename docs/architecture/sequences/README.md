@@ -1,10 +1,14 @@
 # Substrate Execution Sequence Diagrams
 
-> **Status (2026-06):** Execution has fully moved off minibob. **minibob is deprecated** — it is now a thin CLI wrapper that POSTs goals to `goal-host-vessel` and has no in-process execution engine; the agent-facing dispatch surface is the metabob-mcp tool `mcp__metabob__run_goal`. The work that these diagrams narrate (goal processing, activity selection, impulse resolution, resolver dispatch, improvisation, ribosome extraction) runs inside the **substrate vessels**: `goal-host-vessel` (`:8210`, `POST /run-goal` + `/resolve`) hosts the `GoalHost` / ActivityExecutor / goal-processor / resolvers from `ias-executor-ts`; `llm-resolver-vessel` (`:8220`) owns LLM calls; `local-tools-vessel` (`:8230`) owns filesystem/process resolvers; `ribosome-vessel` (`:8240`) owns template extraction; `boredom-vessel` owns the autonomous loop. The conceptual flows (Thompson sampling, impulse resolution, resolver dispatch, lifecycle hooks) remain accurate; wherever older text below says "MiniBob" as the **executor**, read **goal-host-vessel**, and wherever participant labels say `GoalProcessor`/`ActivityExecutor`, read `GoalHost (goal-host-vessel / ias-executor-ts)`. Per-file line-number citations are stale; navigate via `repos/goal-host-vessel/` and `@avigopal/ias-executor-ts`.
+> **How to read this.** Execution runs inside the substrate. Goals are
+> dispatched to `goal-host-vessel`, which selects and executes against
+> `activity-api` with the resolver vessels; the CLI that once executed
+> in-process is retired. The diagrams below predate that move, so read
+> their in-process participants as the corresponding vessels.
 >
 > **New (June 2026), reflected in `01` and `04`:** a goal no longer succeeds on exit status alone. After execution, the **goal-reaching gate** (`verifyGoalReached`, goal-host) runs an LLM judge that emits `completion_shapes` and decides `reached` vs not; a `status=completed` run that did not produce the asked output is `reached:false` and β-penalises the selected template. On `reached:false` the `/resolve` loop performs **in-flight recovery** — β-penalise + exclude the failed approach (`recommendExcluding`) and retry a *different* approach until reached or exhausted; the reached trace is what the ribosome mints. Per-goal learning is recorded in `goal_execution_paths` keyed by `goal_hash`. See [`GOAL_EXECUTION_PATHS_SCHEMA.md`](../GOAL_EXECUTION_PATHS_SCHEMA.md).
 
-This directory contains comprehensive sequence diagrams mapping the complete implementation of the substrate vessel execution workflows. All diagrams are implementation-based, with line numbers and file references that historically pointed at the actual codebase; after Phase 8 (2026-05-24) the live equivalents are the substrate vessels named above. Participant labels referencing `GoalProcessor`/`ActivityExecutor` in former minibob source now refer to `GoalHostVessel` / `GoalHost (ias-executor-ts)`.
+This directory contains comprehensive sequence diagrams mapping the complete implementation of the substrate vessel execution workflows. All diagrams are implementation-based, with line numbers and file references that historically pointed at the actual codebase; the live equivalents are the substrate vessels named above. Read participant labels of `GoalProcessor` and `ActivityExecutor` as `GoalHostVessel` / `GoalHost (ias-executor-ts)`.
 
 ## Overview
 
@@ -228,7 +232,7 @@ Maps the hook system for customizing and extending behavior at all lifecycle poi
 ### Participants
 
 All diagrams use consistent naming for key participants. After Phase 8 these map to substrate vessels:
-- **User/CLI** - dispatch surface: the metabob-mcp tool `mcp__metabob__run_goal` (or the deprecated `minibob` CLI, which forwards to goal-host-vessel)
+- **User/agent** - dispatch surface: the metabob-mcp tool `mcp__metabob__run_goal`, which reaches goal-host-vessel
 - **GoalProcessor** - Meta-activity orchestrator (`GoalHost` in goal-host-vessel; wraps goal_processing_standard.json)
 - **ActivityExecutor** - Activity/task execution engine (in goal-host-vessel / ias-executor-ts; includes composition)
 - **ImpulseResolver** - Impulse pointer resolution (in goal-host-vessel)
@@ -308,7 +312,7 @@ These sequence diagrams complement:
 
 ## Architectural Clarity: goal-host-vessel vs Activity-API
 
-Each sequence document now includes an **Implementation Architecture** section that clarifies the separation of concerns. Here's the high-level split. (Historically "MiniBob" was the execution environment; that role moved to **goal-host-vessel** and its resolver vessels in Phase 8, 2026-05-24.)
+Each sequence document now includes an **Implementation Architecture** section that clarifies the separation of concerns. Here's the high-level split. The execution environment is **goal-host-vessel** together with its resolver vessels.
 
 ### goal-host-vessel + resolver vessels (Execution Environment)
 
@@ -395,6 +399,5 @@ When adding new workflows or modifying existing ones:
 
 ---
 
-**Last Updated:** 2026-06 (re-narrated: execution moved minibob → goal-host-vessel + resolver vessels; added goal-reaching gate + in-flight recovery)
 **Execution surface:** goal-host-vessel (`:8210`) + llm-resolver-vessel (`:8220`) + local-tools-vessel (`:8230`) + ribosome-vessel (`:8240`); dispatch via `mcp__metabob__run_goal`
 **Architecture:** Composition-based (everything is an activity)

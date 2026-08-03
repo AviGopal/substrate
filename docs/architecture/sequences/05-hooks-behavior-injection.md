@@ -1,6 +1,18 @@
 # Hook Registration and Behavior Injection
 
-> **Status (2026-06):** The hook/lifecycle-event model is **partially stale by implementation, accurate in spirit** — and minibob is no longer where any of it runs (minibob is deprecated). `lifecycle-hooks.ts`, `vessel-hooks.ts`, `promotion-hooks.ts`, and `impulse-verification-hooks.ts` were minibob source; on the substrate, lifecycle events are emitted as impulses on the **activity-api WebSocket bus** (`lifecycle:task:preBinding`, `lifecycle:task:completed`, `lifecycle:execution:succeeded`, `lifecycle:gap:classified`, `lifecycle:llm:dispatched`) and handled by **vessel subscribers** (workbench, ribosome-vessel, concept-db, goal-host-vessel, …), not by an in-process per-session hook registry. Read the in-process "hook registration" diagrams below as **bus subscription** with the same payload contract; read "MiniBob" as "the executing vessel (goal-host-vessel) and the bus subscribers." Pre-task behavior injection and promotion remain real; only the wiring changed (direct callback → bus).
+> **How to read this.** The hook and lifecycle-event model is accurate in spirit
+> and stale in its wiring. Lifecycle events are emitted as impulses on the
+> activity-api WebSocket bus (`lifecycle:task:preBinding`,
+> `lifecycle:task:completed`, `lifecycle:execution:succeeded`,
+> `lifecycle:gap:classified`, `lifecycle:llm:dispatched`) and handled by vessel
+> subscribers — workbench, `ribosome-vessel`, `concept-db`, `goal-host-vessel` —
+> rather than by an in-process, per-session hook registry. Read the in-process
+> "hook registration" diagrams below as bus subscription with the same payload
+> contract, and the executing participant as goal-host-vessel together with those
+> subscribers. The `lifecycle-hooks.ts`, `vessel-hooks.ts`, `promotion-hooks.ts`
+> and `impulse-verification-hooks.ts` references predate the move. Pre-task
+> behaviour injection and promotion are real; only the wiring changed, from a
+> direct callback to the bus.
 
 ## Overview
 
@@ -186,7 +198,7 @@ sequenceDiagram
     end
 ```
 
-**Implementation (live):** event emission/subscription on the activity-api WebSocket bus; emitters in `repos/goal-host-vessel/` + `ias-executor-ts`, subscribers in the consuming vessels (was `minibob/src/lifecycle-hooks.ts`).
+**Implementation (live):** event emission/subscription on the activity-api WebSocket bus; emitters in `repos/goal-host-vessel/` + `ias-executor-ts`, subscribers in the consuming vessels.
 
 ## Decomposition: Activity Lifecycle Hooks
 
@@ -240,7 +252,7 @@ sequenceDiagram
     end
 ```
 
-**Implementation (live):** lifecycle events on the activity-api bus; emitted from `repos/goal-host-vessel/` + `ias-executor-ts`, consumed by subscriber vessels (was `minibob/src/lifecycle-hooks.ts`).
+**Implementation (live):** lifecycle events on the activity-api bus; emitted from `repos/goal-host-vessel/` + `ias-executor-ts`, consumed by subscriber vessels.
 
 ## Decomposition: Vessel Hooks (State-Based Injection)
 
@@ -314,7 +326,7 @@ sequenceDiagram
     end
 ```
 
-**Implementation (live):** state-based injection now expressed as bus subscriptions with condition filters; emitter side in `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/vessel-hooks.ts`).
+**Implementation (live):** state-based injection now expressed as bus subscriptions with condition filters; emitter side in `repos/goal-host-vessel/` + `ias-executor-ts`.
 
 **Key Features:**
 - Priority-ordered execution (descending)
@@ -396,7 +408,7 @@ sequenceDiagram
     end
 ```
 
-**Implementation (live):** impulse-verification reactions driven by `lifecycle:task:*` / `lifecycle:execution:*` events on the bus; emitter side in `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/impulse-verification-hooks.ts`).
+**Implementation (live):** impulse-verification reactions driven by `lifecycle:task:*` / `lifecycle:execution:*` events on the bus; emitter side in `repos/goal-host-vessel/` + `ias-executor-ts`.
 
 **Verification Checks:**
 - **Creation**: Impulse structure valid, pointer resolvable
@@ -545,7 +557,7 @@ sequenceDiagram
     end
 ```
 
-**Implementation (live):** template promotion is now driven by `ribosome-vessel` reacting to `lifecycle:execution:succeeded` and writing via the `activityTemplate_update` impulse (was `minibob/src/vessel/promotion-hooks.ts`).
+**Implementation (live):** template promotion is now driven by `ribosome-vessel` reacting to `lifecycle:execution:succeeded` and writing via the `activityTemplate_update` impulse.
 
 **Default Promotion Criteria:**
 - Minimum executions: 5

@@ -1,6 +1,16 @@
 # Impulse Resolution During Activity Execution
 
-> **Status (2026-06):** The 6-step resolver dispatch chain (local → custom → discovery → backend → fallback) and the filtering/budget/context-injection flow are still conceptually accurate, but they run **inside goal-host-vessel, not minibob** (minibob is deprecated and no longer executes anything). The `impulse.ts` and `vessel-discovery.ts` file refs were minibob's old copy; the live implementation lives in `goal-host-vessel` / `ias-executor-ts`. The `ActivityExecutor (activity.ts)` participant is now `GoalHost (goal-host-vessel)`; the `MCPBackend (mcp.ts)` participant is now `activity-api` (`:18080`) reached over HTTP via the discovery resolver contract, not a local MCP client. The LOCAL filesystem/process resolvers (file, directoryTree, gitDiff, bash) are owned by `local-tools-vessel` (`:8230`); discovery routing is unchanged.
+> **How to read this.** The six-step resolver dispatch chain (local → custom →
+> discovery → backend → fallback) and the filtering/budget/context-injection flow
+> are accurate. They run inside the substrate: the orchestration lives in
+> `goal-host-vessel` / `ias-executor-ts`, the LOCAL filesystem and process
+> resolvers (file, directoryTree, gitDiff, bash) are owned by
+> `local-tools-vessel` (`:8230`), and discovery routing is unchanged. Read the
+> `ActivityExecutor (activity.ts)` participant as `GoalHost (goal-host-vessel)`,
+> and the `MCPBackend (mcp.ts)` participant as `activity-api` (`:18080`) reached
+> over HTTP through the discovery resolver contract rather than a local MCP
+> client. The `impulse.ts` and `vessel-discovery.ts` file references predate the
+> move and no longer resolve.
 
 ## Overview
 
@@ -283,7 +293,7 @@ sequenceDiagram
 - `cost_usd`: Resolution cost (budget optimization)
 
 **Implementation:**
-- Location: `repos/goal-host-vessel/` + `ias-executor-ts` (executeWithResolver; was `minibob/src/activity.ts`)
+- Location: `repos/goal-host-vessel/` + `ias-executor-ts` (executeWithResolver)
 - Trace field: `execution.impulse_resolutions: [{...}]`
 - Backend storage: `execution` table with `resolved_by_vessel_id` field
 
@@ -342,7 +352,7 @@ sequenceDiagram
     Filter-->>Act: FilterResult {<br/>  toLoad: impulseId[],<br/>  toSkip: impulseId[],<br/>  reasoning: {<br/>    per_impulse_decisions,<br/>    tokens_saved,<br/>    cost_saved<br/>  }<br/>}
 ```
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/impulse-filter.ts`)
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts`
 
 **Environment Variables:**
 - `IMPULSE_RELEVANCE_THRESHOLD` (default: 0.5)
@@ -454,7 +464,7 @@ sequenceDiagram
     end
 ```
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/vessel-discovery.ts`)
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts`
 
 **Configuration:**
 - Discovery cache TTL: 5 minutes
@@ -515,7 +525,7 @@ export function authenticate(user: User) {
 </impulse>
 ```
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/impulse.ts:742-755`)
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts`
 
 ## Budget Enforcement and Truncation
 
@@ -576,7 +586,7 @@ function enforceBudget(content: string, budget: number): {
 }
 ```
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/impulse.ts:151-181`)
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts`
 
 ## State Transition Tracking (P3.2)
 
@@ -685,11 +695,11 @@ const impulseEvolution = {
 
 | Component | File (live equivalent) | Purpose |
 |-----------|------|---------|
-| Impulse Store | `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/impulse.ts`) | Core impulse lifecycle |
+| Impulse Store | `repos/goal-host-vessel/` + `ias-executor-ts` | Core impulse lifecycle |
 | Filtering | `repos/goal-host-vessel/` + `ias-executor-ts` (was `impulse-filter.ts`) | Relevance-based filtering |
 | State Space Manager | `repos/goal-host-vessel/` + `ias-executor-ts` (was `state-space-manager.ts`) | Shape querying, compatibility |
 | Discovery Integration | `repos/goal-host-vessel/` + `ias-executor-ts` (was `vessel-discovery.ts`) | Vessel discovery client |
-| Backend client | HTTP to activity-api `:18080` via discovery contract (was `minibob/src/mcp.ts`) | Backend integration |
+| Backend client | HTTP to activity-api `:18080` via discovery contract | Backend integration |
 | Activity Executor | `repos/goal-host-vessel/` + `ias-executor-ts` (was `activity.ts`) | Impulse integration |
 | Filesystem/process resolvers | `repos/local-tools-vessel/` (`:8230`) | file/directoryTree/gitDiff/bash resolution |
 

@@ -1,6 +1,17 @@
 # Processing of Required Input Impulses by Resolvers
 
-> **Status (2026-06):** Resolver types (LLM, bash, git, activity, ribosome) and the impulse context-injection flow are still accurate, but they run **across the substrate vessels, not minibob** (minibob is deprecated and no longer executes). The orchestration (tool-calling loop, activity composition, impulse creation) lives in `goal-host-vessel` / `ias-executor-ts`; the **LLM resolver** is `llm-resolver-vessel` (`:8220`); the **deterministic resolvers** (bash, git, read/write/edit, process) are `local-tools-vessel` (`:8230`); the **ribosome resolver** is `ribosome-vessel` (`:8240`), which subscribes to `task.completed` / `lifecycle:execution:succeeded` on the activity-api WebSocket bus rather than running inline. The `MCP Backend (mcp.ts)` participant is now `activity-api` (`:18080`) reached over HTTP via discovery routing. Map the file refs below (`llm.ts`, `tools.ts`, `activity.ts`, `template-extractor.ts`) to those vessels.
+> **How to read this.** The resolver types (LLM, bash, git, activity, ribosome)
+> and the impulse context-injection flow are accurate; they run across the
+> substrate's vessels rather than in one process. Orchestration — the tool-calling
+> loop, activity composition, impulse creation — lives in `goal-host-vessel` /
+> `ias-executor-ts`. The LLM resolver is `llm-resolver-vessel` (`:8220`); the
+> deterministic resolvers (bash, git, read/write/edit, process) are
+> `local-tools-vessel` (`:8230`); the ribosome resolver is `ribosome-vessel`
+> (`:8240`), which subscribes to `task.completed` and
+> `lifecycle:execution:succeeded` on the activity-api WebSocket bus rather than
+> running inline. Read the `MCP Backend (mcp.ts)` participant as `activity-api`
+> (`:18080`) over HTTP via discovery routing, and map the `llm.ts`, `tools.ts`,
+> `activity.ts` and `template-extractor.ts` references onto those vessels.
 
 ## Overview
 
@@ -250,7 +261,7 @@ sequenceDiagram
     end
 ```
 
-**Implementation:** `repos/llm-resolver-vessel/` (LLM tool-calling loop; was `minibob/src/llm.ts:360-448`)
+**Implementation:** `repos/llm-resolver-vessel/` (LLM tool-calling loop)
 
 **Key Points:**
 - Impulse context injected at start of user message
@@ -336,7 +347,7 @@ sequenceDiagram
     ImpCreate-->>Task: Impulse stored
 ```
 
-**Implementation:** `repos/local-tools-vessel/` (was `minibob/src/tools.ts` — bash ~790-835, git ~1114-1168)
+**Implementation:** `repos/local-tools-vessel/`
 
 **Security Features:**
 - Command whitelist (git, npm, bun, python, ls, cat, grep, make, etc.)
@@ -408,7 +419,7 @@ sequenceDiagram
     LLM-->>Parent: Final response
 ```
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (activity-tool composition; was `minibob/src/tools.ts:1214-1246`)
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (activity-tool composition)
 
 ### Activity Tool Definition
 
@@ -545,7 +556,7 @@ sequenceDiagram
     end
 ```
 
-**Implementation:** `repos/ribosome-vessel/` — subscribes to `task.completed` / `lifecycle:execution:succeeded` on the activity-api WebSocket bus and calls `assembleTemplateFromExecution`, writing via the `activityTemplate_update` impulse (replaces the inline minibob ribosome path; `assembleTemplateFromExecution` shared via `ias-executor-ts`).
+**Implementation:** `repos/ribosome-vessel/` — subscribes to `task.completed` / `lifecycle:execution:succeeded` on the activity-api WebSocket bus and calls `assembleTemplateFromExecution`, writing via the `activityTemplate_update` impulse.
 
 ### Extraction Criteria
 
@@ -736,7 +747,7 @@ ${recommendations.map(r =>
 `;
 ```
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (tool argument extraction and injection; was `minibob/src/activity.ts`)
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (tool argument extraction and injection)
 
 ## Error Impulse Creation
 
@@ -785,7 +796,7 @@ ${task.prompt.template}
 `;
 ```
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (createErrorImpulse; was `minibob/src/impulse.ts:881-961`)
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (createErrorImpulse)
 
 ## Complete Data Flow Diagram
 
@@ -912,8 +923,8 @@ graph TD
 
 | Component | File (live equivalent) | Purpose |
 |-----------|------|---------|
-| LLM Resolver | `repos/llm-resolver-vessel/` (`:8220`; was `minibob/src/llm.ts`) | Tool calling loop |
-| Tool Definitions | `repos/local-tools-vessel/` (`:8230`; was `minibob/src/tools.ts`) | All deterministic tool handlers |
+| LLM Resolver | `repos/llm-resolver-vessel/` (`:8220`) | Tool calling loop |
+| Tool Definitions | `repos/local-tools-vessel/` (`:8230`) | All deterministic tool handlers |
 | Bash Resolver | `repos/local-tools-vessel/` (was `tools.ts:790-835`) | Command execution |
 | Git Resolver | `repos/local-tools-vessel/` (was `tools.ts:1114-1168`) | Git operations |
 | Activity Composition | `repos/goal-host-vessel/` + `ias-executor-ts` (was `tools.ts:1214-1246`) | Nested execution |

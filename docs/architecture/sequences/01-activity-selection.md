@@ -1,6 +1,9 @@
 # Activity Selection from Impulse State Space
 
-> **Status (2026-06):** Conceptual flow (Thompson Sampling, tiered fallback, composition chain, impulse state space) is still accurate. **Selection and execution run inside the substrate, not minibob** — a goal is dispatched via the metabob-mcp tool `mcp__metabob__run_goal` (or the deprecated `minibob` CLI, which forwards) to `goal-host-vessel:/run-goal`; `GoalHost` (in goal-host-vessel / `ias-executor-ts`) does the orchestration and calls activity-api for the recommendation. All `GoalProcessor (goal-processor.ts)` and `ActivityExecutor (activity.ts)` participant labels map to `GoalHost` inside goal-host-vessel. Line-number citations are stale; navigate via `repos/goal-host-vessel/` and `@avigopal/ias-executor-ts`.
+> **How to read this.** The conceptual flow — Thompson Sampling, tiered fallback,
+> composition chain — is accurate. Selection and execution run inside the
+> substrate: a goal is dispatched through the metabob-mcp `mcp__metabob__run_goal`
+> tool to `goal-host-vessel`, which selects and executes against `activity-api`.
 >
 > **Two June-2026 additions reflected below:** (1) Thompson selection is **state-conditioned** where a state signature is present (the recommend path keys on shape signature, falling back to global posteriors when none is available); (2) a single Thompson template pick is no longer the whole story — a goal also runs as a **shape-graph walk** (backward-chaining from goal shapes, mint-as-you-go bridge-authoring, `{{shape}}` data-flow binding), and after execution the **goal-reaching gate** (`verifyGoalReached`) decides success by whether the asked output was actually produced, not by exit status. See the new "Goal-Reaching Gate" section and [`GOAL_EXECUTION_PATHS_SCHEMA.md`](../GOAL_EXECUTION_PATHS_SCHEMA.md).
 
@@ -249,7 +252,7 @@ graph TD
 **Implementation:**
 - Meta-activity templates: `repos/activity-api/sql/seed/meta-activities/`
 - Composition tracking: `repos/activity-api/src/routes/composition-edges.ts`
-- Activity resolver: `repos/goal-host-vessel/` + `ias-executor-ts` (activity shape resolution; was `minibob/src/impulse.ts`)
+- Activity resolver: `repos/goal-host-vessel/` + `ias-executor-ts` (activity shape resolution)
 
 ## Decomposition: Shape-Conditioned Scoring
 
@@ -609,7 +612,7 @@ At each stage, the following metrics are captured for learning:
 | Paradigm Queries | `repos/activity-api/src/db/paradigm.ts` | 2915-3049 | Tiered fallback queries |
 | Shape Scoring | `repos/activity-api/src/db/paradigm.ts` | 797-909 | Shape-conditioned scores |
 | Composition Tracking | `repos/activity-api/src/routes/composition-edges.ts` | Full file | Composition edge storage |
-| Activity Resolver | `repos/goal-host-vessel/` (was `minibob/src/impulse.ts`) | Activity shape | Activity→activity resolution |
+| Activity Resolver | `repos/goal-host-vessel/` | Activity shape | Activity→activity resolution |
 
 ## Implementation Architecture
 

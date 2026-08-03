@@ -2,7 +2,13 @@
 
 > **STATUS (2026-04-28): Renamed from `04-improvisation-trailblazing.md`.** "Trailblazing" was class-(c) terminology — never implemented and pruned from the corrected foundation model. What older versions of this doc called trailblazing is now handled by the **failure-mode taxonomy** (`verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`) plus posterior variance. Read this file for the improvisation flow (which is real and current); treat any remaining trailblazing references as historical. See [`IMPULSE_ACTIVITY_FOUNDATION.md`](../IMPULSE_ACTIVITY_FOUNDATION.md#known-gaps-system-not-yet-self-stable) → "Class-(c) Terms Pruned".
 
-> **Status (2026-06):** The failure-mode taxonomy and improvisation-as-activity model are accurate, but they run **inside goal-host-vessel, not minibob** (minibob is deprecated and no longer executes). Improvisation and the goal-reaching/recovery logic live in `goal-host-vessel` / `ias-executor-ts`; `ribosome-vessel` (`:8240`) handles template extraction via the `lifecycle:execution:succeeded` WebSocket subscription. Read the `GoalProcessor` / `ActivityExecutor` participant labels as `GoalHost (goal-host-vessel)`, and the `MCP Client` participant as `activity-api` (`:18080`) over HTTP.
+> **How to read this.** The failure-mode taxonomy and the
+> improvisation-as-activity model are accurate. Improvisation and the
+> goal-reaching and recovery logic live in `goal-host-vessel` /
+> `ias-executor-ts`; `ribosome-vessel` (`:8240`) handles template extraction via
+> its `lifecycle:execution:succeeded` subscription. Read the `GoalProcessor` and
+> `ActivityExecutor` participant labels as `GoalHost (goal-host-vessel)`, and the
+> `MCP Client` participant as `activity-api` (`:18080`) over HTTP.
 >
 > **New (June 2026) and central to this file: the in-flight recovery loop.** A goal no longer fails-and-stops on a single bad approach. After execution the **goal-reaching gate** (`verifyGoalReached`, goal-host `07feff5`) judges whether the asked output was produced; a `status=completed` run that did not produce the goal's completion shapes is `reached:false` — **a failure mode in its own right (hollow completion)**. On `reached:false` the `/resolve` loop performs in-flight recovery: **β-penalise the selected template, EXCLUDE the failed approach and `recommendExcluding` a *different* one, then retry — until reached or approaches are exhausted.** The trace that actually **reaches** the goal is what the ribosome mints. See the new "In-Flight Recovery Loop" section below and [`GOAL_EXECUTION_PATHS_SCHEMA.md`](../GOAL_EXECUTION_PATHS_SCHEMA.md).
 
@@ -94,7 +100,7 @@ sequenceDiagram
     deactivate GP
 ```
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` — `GoalHost` (was `minibob/src/goal-processor.ts`); goal-reaching gate + recovery loop in goal-host `07feff5` / `980240b`.
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` — `GoalHost`; goal-reaching gate + recovery loop in goal-host `07feff5` / `980240b`.
 
 ## In-Flight Recovery Loop
 
@@ -412,9 +418,9 @@ sequenceDiagram
 ```
 
 **Implementation (live equivalents):**
-- Activity executor: `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/activity.ts`)
-- Ribosome resolver: `repos/ribosome-vessel/` (bus subscriber; was `minibob/src/resolvers/ribosome.ts`)
-- State tracking: `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/improviser.ts:256-299`)
+- Activity executor: `repos/goal-host-vessel/` + `ias-executor-ts`
+- Ribosome resolver: `repos/ribosome-vessel/` (bus subscriber)
+- State tracking: `repos/goal-host-vessel/` + `ias-executor-ts`
 
 ## Decomposition: Ribosome Resolver (Template Extraction)
 
@@ -551,7 +557,7 @@ sequenceDiagram
 }
 ```
 
-**Implementation:** `repos/ribosome-vessel/` (template assembly + quality criteria; `assembleTemplateFromExecution` shared via `ias-executor-ts`; was `minibob/src/template-extractor.ts` + `ribosome-quality.ts`)
+**Implementation:** `repos/ribosome-vessel/` (template assembly + quality criteria; `assembleTemplateFromExecution` shared via `ias-executor-ts` + `ribosome-quality.ts`)
 
 ## Decomposition: Checkpoint Creation Before Execution
 
@@ -603,7 +609,7 @@ sequenceDiagram
 }
 ```
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (checkpoint/rollback; was `minibob/src/rollback.ts:79-250+`)
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (checkpoint/rollback)
 
 ## Decomposition: Trailblazing (Failure → Variant Creation)
 
@@ -664,7 +670,7 @@ sequenceDiagram
 5. Variant becomes available for recommendation
 6. Thompson Sampling learns variant effectiveness over time
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (trailblazing logic; was `minibob/src/activity.ts`)
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (trailblazing logic)
 
 ## Decomposition: Execution Rollback (Git Restore)
 
@@ -748,7 +754,7 @@ sequenceDiagram
 - **git_restore** (primary): `git checkout {commit} -- {file}`
 - **file_restore** (fallback): Direct file content restoration from captured state
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (was `minibob/src/rollback.ts:79-250+`)
+**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts`
 
 ## Complete Learning Loop Diagram
 
