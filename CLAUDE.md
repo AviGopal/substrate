@@ -316,8 +316,21 @@ dispatch whose trace you inspect.
   `scripts/git-hooks/install.sh` in every clone. Runtime state (the pool, the
   gap store, memory, policies) belongs in the container volume and is
   gitignored: a file the substrate rewrites is not a file git should carry.
-  Tests live
-  in each vessel's repo, never in the super-repo.
+  Tests live in each vessel's repo, never in the super-repo.
+- **Script retention:** a script stays only if an activity validates it and that
+  activity reaches consistently. A script nothing invokes cannot be observed
+  failing, so it can never be trusted when it passes — that is the same defect
+  as a verification gate with no call sites. Establish "nothing invokes it" by
+  resolving directory and glob references, not basenames: the image copies whole
+  script directories, so presence in the container proves nothing, and an
+  untracked worktree copy of a file reads as a caller of itself.
+  **The bootstrap tier is the stated exception**, not a silent carve-out: the
+  Makefile, `entrypoint.sh`, `gen-env.sh`, unit rendering, secrets and readiness
+  helpers, and the seeders — `bootstrap-seeder.ts` most of all, since it mints
+  the first activity templates — run before any substrate exists to host a
+  validating activity. Nothing there can be gated without circularity. The two
+  liveness watchdogs are exempt for the same reason: a check cannot be scheduled
+  by the mechanism it exists to recover.
 
 ## Alignment checklist
 
