@@ -81,6 +81,59 @@ log "changed vessels: $(echo "$CHANGED_VESSELS" | tr '\n' ' ')"
 IAS_CONSUMERS="goal-host-vessel ribosome-vessel boredom-vessel development-vessel local-tools-vessel llm-resolver-vessel analysis-vessel"
 IAS_CHANGED=0; echo "$CHANGED_VESSELS" | grep -qx "ias-executor-ts" && IAS_CHANGED=1
 
+# 2b. REGRESSION DETECTOR (out-of-band). Run each changed vessel's own test suite
+# against what just landed on origin/dev, BEFORE restarting it.
+#
+# Why here and nowhere else: this script runs as the operator's systemd --user
+# timer on the HOST. The container mounts only named volumes — it cannot read or
+# rewrite this file, cannot reach the host user's systemd, and has no credential
+# to disable the timer. An equivalent check placed inside the container, or in a
+# repo the substrate can author, is a file the substrate can edit; it is
+# documentation, not a detector.
+#
+# DETECTION ONLY — never blocks the restart. Prevention was declined deliberately,
+# and a blocking gate here could wedge the whole fleet on one red suite. The point
+# is that a red suite becomes VISIBLE within one timer tick instead of sitting
+# unnoticed: 4fa92b3 (substrate-authored) turned repairSignatureOf async on 07-30
+# and left goal-host at 135 pass / 9 fail for five days, because no vessel repo has
+# CI and `bun run lint` covers one of six test files. A full goal-host run costs
+# ~220ms, so this is effectively free.
+# It alerts on an INCREASE in failures, not on redness. Absolute redness is
+# useless here and would have shipped as permanent noise: measured on this host,
+# activity-api is 369 pass / 152 fail because most of its suite wants a live
+# SurrealDB that is inside the container, not on the host. A detector that fires
+# every run is a detector nobody reads. A regression is a DELTA, so the baseline
+# per vessel lives in .pullsync-testbaseline and only a rise is reported.
+BASELINE_FILE="${BASELINE_FILE:-$REPO_ROOT/.pullsync-testbaseline}"
+for v in $CHANGED_VESSELS; do
+  [[ -f "$REPO_ROOT/repos/$v/package.json" ]] || continue
+  TEST_OUT="$(cd "$REPO_ROOT/repos/$v" && timeout 300 bun test 2>&1 || true)"
+  FAILS="$(echo "$TEST_OUT" | grep -oE '^ *[0-9]+ fail' | grep -oE '[0-9]+' | tail -1)"
+  [[ -z "$FAILS" ]] && { log "TEST $v — no countable result (suite errored or absent); skipping delta"; continue; }
+  PREV_FAILS="$(grep -m1 "^$v=" "$BASELINE_FILE" 2>/dev/null | cut -d= -f2)"
+  if [[ -z "$PREV_FAILS" ]]; then
+    log "TEST $v — baseline recorded at $FAILS fail (no alert on first observation)"
+  elif (( FAILS > PREV_FAILS )); then
+    log "!!! TEST REGRESSION in $v: $PREV_FAILS -> $FAILS failing, after ${PREV:0:10} -> ${HEAD:0:10}"
+    echo "$TEST_OUT" | grep '(fail)' | head -20 | while IFS= read -r l; do log "!!!   $l"; done
+    # Attribute to the VESSEL's own tip, not the super-repo sha: repos/* are
+    # submodules, so $HEAD names a pointer bump whose author is whoever moved the
+    # pointer — not whoever wrote the code that just went red.
+    log "!!! vessel tip: $(cd "$REPO_ROOT/repos/$v" && git log -1 --format='%h %an — %s' 2>/dev/null | cut -c1-100)"
+    log "!!! restart proceeds anyway (detector, not gate) — triage manually"
+  elif (( FAILS < PREV_FAILS )); then
+    log "TEST $v improved: $PREV_FAILS -> $FAILS failing"
+  fi
+  # Record unconditionally: a ratcheted baseline would hide the SECOND regression
+  # behind the first, and an unrepaired rise must not re-alert on every later push.
+  if [[ "$APPLY" == "1" ]]; then
+    touch "$BASELINE_FILE"
+    grep -v "^$v=" "$BASELINE_FILE" > "$BASELINE_FILE.tmp" 2>/dev/null || true
+    echo "$v=$FAILS" >> "$BASELINE_FILE.tmp"
+    mv "$BASELINE_FILE.tmp" "$BASELINE_FILE"
+  fi
+done
+
 # 3. Re-sync the hot-syncable ones; ias-executor-ts fans out to all consumers.
 for v in $CHANGED_VESSELS; do
   if [[ "$v" == "ias-executor-ts" ]]; then

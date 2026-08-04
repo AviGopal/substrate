@@ -255,3 +255,6 @@ scripts/substrate/workspace/
 /test-resolver.js
 /src/
 /development-vessel/
+
+# host-pull-sync regression detector baseline (runtime state, rewritten each run)
+.pullsync-testbaseline
