@@ -168,7 +168,7 @@ scripts/substrate/workspace/git/
 /vault/.obsidian/workspace*
 /vault/.obsidian/cache
 /vault/.obsidian/graph.json
-/vault/.obsidian/plugins/metabob-vessel/data.json.local
+/vault/.obsidian/plugins/obsidian-vessel/data.json.local
 scripts/substrate/surreal-data/
 
 # Runtime /workspace volume (bind-mounted into substrate-live at /workspace).

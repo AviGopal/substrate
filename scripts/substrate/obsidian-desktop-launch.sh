@@ -16,7 +16,7 @@ set -uo pipefail
 
 VAULT="${OBSIDIAN_VAULT:-/vaults/substrate-vault}"
 DISPLAY_NUM="${OBSIDIAN_DISPLAY:-:0}"
-DATA_JSON="${VAULT}/.obsidian/plugins/metabob-vessel/data.json"
+DATA_JSON="${VAULT}/.obsidian/plugins/obsidian-vessel/data.json"
 
 # /etc/substrate/env carries the runtime-generated METABOB_API_KEY (every
 # in-container vessel authenticates with it; localhost is rate-limit-allowlisted).
@@ -34,7 +34,7 @@ DATA_JSON="${VAULT}/.obsidian/plugins/metabob-vessel/data.json"
 # defaults (activityApiUrl="") — leaving the vessel unconfigured and unable to
 # register or resolve. We therefore CREATE the file when missing so the plugin
 # loads correct config on first start; jq merges onto an existing file otherwise.
-PLUGIN_DIR="${VAULT}/.obsidian/plugins/metabob-vessel"
+PLUGIN_DIR="${VAULT}/.obsidian/plugins/obsidian-vessel"
 mkdir -p "${PLUGIN_DIR}"
 [ -f "${DATA_JSON}" ] || printf '%s\n' '{}' > "${DATA_JSON}"
 tmp="$(mktemp)"
@@ -98,10 +98,10 @@ fi
 CP_JSON="${VAULT}/.obsidian/community-plugins.json"
 mkdir -p "${VAULT}/.obsidian"
 if [ ! -f "${CP_JSON}" ]; then
-  printf '%s\n' '["metabob-vessel"]' > "${CP_JSON}"
-elif ! jq -e 'index("metabob-vessel")' "${CP_JSON}" >/dev/null 2>&1; then
+  printf '%s\n' '["obsidian-vessel"]' > "${CP_JSON}"
+elif ! jq -e 'index("obsidian-vessel")' "${CP_JSON}" >/dev/null 2>&1; then
   tmp="$(mktemp)"
-  jq '. + ["metabob-vessel"] | unique' "${CP_JSON}" > "${tmp}" && mv "${tmp}" "${CP_JSON}" \
+  jq '. + ["obsidian-vessel"] | unique' "${CP_JSON}" > "${tmp}" && mv "${tmp}" "${CP_JSON}" \
     || echo "[obsidian-desktop] WARN: could not patch ${CP_JSON}" >&2
 fi
 
