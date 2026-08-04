@@ -39,10 +39,28 @@ log() { echo "[host-pull-sync $(date -Iseconds)] $*" >&2; }
 # the run at status=2, and every vessel alphabetically AFTER concept-db was silently never
 # synced. An expected topology condition was aborting the entire host sync path. Failures are
 # now reported per-vessel and the loop continues; a masked unit is downgraded to a normal skip.
+# Every step is BOUNDED. Without the timeout, `docker cp` into a vessel directory that does not
+# exist inside the container hangs forever; with TimeoutStartUSec=infinity on this oneshot unit
+# that wedged the service in state "activating" for 56 minutes, and because OnUnitActiveSec
+# cannot re-fire while the service is active, the timer stopped entirely and NOTHING deployed.
+# Making `act` tolerant (so one failure no longer aborts the run) is only safe if no single step
+# can hang: tolerance without a bound converts a loud early failure into a silent permanent one.
+ACT_TIMEOUT="${ACT_TIMEOUT:-300}"
 act() {
   if [[ "$APPLY" != "1" ]]; then log "DRY-RUN would: $*"; return 0; fi
-  if ! "$@" 2>&1; then log "!!! step FAILED (continuing): $*"; return 0; fi
+  if ! timeout "$ACT_TIMEOUT" "$@" 2>&1; then
+    local rc=$?
+    [[ $rc -eq 124 ]] && log "!!! step TIMED OUT after ${ACT_TIMEOUT}s (continuing): $*" \
+                      || log "!!! step FAILED rc=$rc (continuing): $*"
+    return 0
+  fi
 }
+# True when this substrate does not host the vessel at all — the directory the sync would copy
+# into does not exist. HOT_VESSELS DECLARES a fleet; the container IS one. Reconcile against
+# reality rather than trusting the list (obsidian-vessel is declared but absent here, which is
+# what the unbounded docker cp hung on).
+vessel_absent() { ! docker exec "$CONTAINER" test -d "/vessels/$1" 2>/dev/null; }
+
 # True when the unit is masked — i.e. it belongs to the peer substrate, not this one.
 # NOTE: `systemctl is-enabled` PRINTS "masked" but EXITS 1. An `|| echo missing` fallback
 # therefore appends to the output rather than replacing it, yielding "masked\nmissing", which
@@ -188,6 +206,10 @@ for v in $CHANGED_VESSELS; do
   elif [[ "$IAS_CHANGED" == "1" ]] && echo " $IAS_CONSUMERS " | grep -q " $v "; then
     log "$v changed but is an ias-executor-ts consumer — sync-ias RESTART=1 already covers it; skipping double-restart"
   elif echo " $HOT_VESSELS " | grep -q " $v "; then
+    if [[ "$APPLY" == "1" ]] && vessel_absent "$v"; then
+      log "$v changed but /vessels/$v does not exist in $CONTAINER — not hosted here; skipping"
+      continue
+    fi
     if [[ "$APPLY" == "1" ]] && unit_masked "$v"; then
       log "$v changed but is MASKED here (runs on the peer substrate) — skipping restart, not an error"
       continue
