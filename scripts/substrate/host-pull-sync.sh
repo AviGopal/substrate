@@ -43,8 +43,16 @@ act() {
   if [[ "$APPLY" != "1" ]]; then log "DRY-RUN would: $*"; return 0; fi
   if ! "$@" 2>&1; then log "!!! step FAILED (continuing): $*"; return 0; fi
 }
-# True when the unit does not exist locally or is masked — i.e. it belongs to another substrate.
-unit_masked() { [[ "$(docker exec "$CONTAINER" systemctl is-enabled "$1.service" 2>/dev/null || echo missing)" == "masked" ]]; }
+# True when the unit is masked — i.e. it belongs to the peer substrate, not this one.
+# NOTE: `systemctl is-enabled` PRINTS "masked" but EXITS 1. An `|| echo missing` fallback
+# therefore appends to the output rather than replacing it, yielding "masked\nmissing", which
+# never compares equal to "masked" — the guard silently never fired. Capture the output and
+# ignore the exit status separately, and substring-match.
+unit_masked() {
+  local s
+  s="$(docker exec "$CONTAINER" systemctl is-enabled "$1.service" 2>/dev/null)" || true
+  [[ "$s" == *masked* ]]
+}
 
 cd "$REPO_ROOT"
 
