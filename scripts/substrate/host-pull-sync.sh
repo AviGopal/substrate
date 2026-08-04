@@ -46,14 +46,19 @@ log() { echo "[host-pull-sync $(date -Iseconds)] $*" >&2; }
 # Making `act` tolerant (so one failure no longer aborts the run) is only safe if no single step
 # can hang: tolerance without a bound converts a loud early failure into a silent permanent one.
 ACT_TIMEOUT="${ACT_TIMEOUT:-300}"
+ACT_FAILURES=0
 act() {
   if [[ "$APPLY" != "1" ]]; then log "DRY-RUN would: $*"; return 0; fi
-  if ! timeout "$ACT_TIMEOUT" "$@" 2>&1; then
-    local rc=$?
-    [[ $rc -eq 124 ]] && log "!!! step TIMED OUT after ${ACT_TIMEOUT}s (continuing): $*" \
-                      || log "!!! step FAILED rc=$rc (continuing): $*"
-    return 0
+  # Capture the status directly. Inside `if ! cmd; then ... $? ...` the $? belongs to the `if`
+  # evaluation, not to cmd, which is why the first version logged the impossible "step FAILED rc=0".
+  local rc=0
+  timeout "$ACT_TIMEOUT" "$@" 2>&1 || rc=$?
+  if (( rc != 0 )); then
+    ACT_FAILURES=$((ACT_FAILURES + 1))
+    if (( rc == 124 )); then log "!!! step TIMED OUT after ${ACT_TIMEOUT}s (continuing): $*"
+    else log "!!! step FAILED rc=$rc (continuing): $*"; fi
   fi
+  return 0
 }
 # True when this substrate does not host the vessel at all — the directory the sync would copy
 # into does not exist. HOT_VESSELS DECLARES a fleet; the container IS one. Reconcile against
@@ -159,13 +164,28 @@ fi
 for v in $CHANGED_VESSELS; do
   [[ -f "$REPO_ROOT/repos/$v/package.json" ]] || continue
   [[ -z "$BUN" ]] && continue
+  # Run TWICE and take the MINIMUM. Flaky suites fail intermittently, so noise is additive and the
+  # minimum approximates the deterministic failure count. Measured need: development-vessel
+  # reported 87 then 91 on consecutive timer runs of the SAME tree (and 82 stably from an
+  # interactive shell), which produced a "REGRESSION 87 -> 91" alert that no code change caused.
+  # A detector that cries wolf is one nobody reads — precisely the failure the delta design exists
+  # to avoid — so a single sample is not admissible evidence of a regression.
+  # `|| true` on the extraction is LOAD-BEARING: under `set -euo pipefail` a suite with no
+  # "N fail" line makes grep exit 1, pipefail promotes it through tail, the substitution inherits
+  # it, and set -e kills the script BEFORE the -z guard can run. Shipped without it, this detector
+  # failed 132/132 runs and completed zero — the guard for that case was unreachable code.
+  count_fails() { echo "$1" | grep -oE '^ *[0-9]+ fail' | grep -oE '[0-9]+' | tail -1 || true; }
   TEST_OUT="$(cd "$REPO_ROOT/repos/$v" && timeout 300 "$BUN" test 2>&1 || true)"
-  # `|| true` is LOAD-BEARING, not defensive noise. Under `set -euo pipefail` a suite with no
-  # "N fail" line makes the first grep exit 1; pipefail promotes that through tail, the command
-  # substitution inherits it, and `set -e` kills the whole script BEFORE the -z guard below can
-  # run. Shipped without it, this detector failed 132/132 runs and completed zero — the guard
-  # that was supposed to handle "no countable result" was unreachable code.
-  FAILS="$(echo "$TEST_OUT" | grep -oE '^ *[0-9]+ fail' | grep -oE '[0-9]+' | tail -1 || true)"
+  FAILS_A="$(count_fails "$TEST_OUT")"
+  FAILS="$FAILS_A"
+  if [[ -n "$FAILS_A" ]]; then
+    TEST_OUT_B="$(cd "$REPO_ROOT/repos/$v" && timeout 300 "$BUN" test 2>&1 || true)"
+    FAILS_B="$(count_fails "$TEST_OUT_B")"
+    if [[ -n "$FAILS_B" ]]; then
+      (( FAILS_B < FAILS_A )) && { FAILS="$FAILS_B"; TEST_OUT="$TEST_OUT_B"; }
+      (( FAILS_A != FAILS_B )) && log "TEST $v — FLAKY: $FAILS_A vs $FAILS_B on identical source; using $FAILS. Deltas on this vessel are only trustworthy beyond that spread."
+    fi
+  fi
   [[ -z "$FAILS" ]] && { log "TEST $v — no countable result (suite errored or absent); skipping delta"; continue; }
   # Third instance of the pipefail class in this block (see the two above). The FIRST run for any
   # vessel has no baseline line, so grep exits 1 and kills the script before it can record one —
@@ -222,4 +242,8 @@ for v in $CHANGED_VESSELS; do
 done
 
 [[ "$APPLY" == "1" ]] && echo "$HEAD" > "$MARKER" || log "DRY-RUN: marker NOT advanced (set APPLY=1 to act + record)"
-log "done"
+# The marker advances even after a failed step, deliberately: blocking it on a PERSISTENT failure
+# would retry forever and re-wedge the loop. But a partial sync must not report as a clean one —
+# say so on the line an operator actually reads.
+if (( ACT_FAILURES > 0 )); then log "done — PARTIAL: $ACT_FAILURES step(s) failed; marker advanced anyway (see !!! lines above)"
+else log "done"; fi
