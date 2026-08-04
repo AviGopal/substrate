@@ -66,11 +66,26 @@ SURREAL_DATA := $(shell pwd)/surreal-data
 IAS_CONSUMERS := goal-host-vessel ribosome-vessel boredom-vessel development-vessel local-tools-vessel llm-resolver-vessel analysis-vessel
 
 # LLM provider credentials — read from environment first, then ~/.metabob/config.json.
-# At least one of ANTHROPIC_API_KEY or OPENAI_API_KEY must be set.
+# A standalone or hub needs one local provider key. A federated spoke inherits
+# its hub's LLM capability and therefore needs no local provider key.
 ANTHROPIC_API_KEY ?= $(shell jq -r '.providers.anthropic.apiKey // empty' $(HOME)/.metabob/config.json 2>/dev/null || true)
 OPENAI_API_KEY    ?= $(shell jq -r '.providers.openai.apiKey // empty'    $(HOME)/.metabob/config.json 2>/dev/null || true)
 OPENAI_BASE_URL   ?= $(shell jq -r '.providers.openai.baseUrl // empty'   $(HOME)/.metabob/config.json 2>/dev/null || true)
 LLM_DEFAULT_MODEL ?= $(shell jq -r '.providers.openai.model // empty'     $(HOME)/.metabob/config.json 2>/dev/null || true)
+
+# OpenAI-wire completion providers (llm-resolver-vessel OPENAI_WIRE_PROVIDERS).
+# These are the failover ladder BELOW anthropic: when the anthropic key goes
+# credit-dead the resolver walks chutes -> groq -> mistral -> openrouter/gemini,
+# and de-advertises llm_completion entirely if every lane is cold. gen-env.sh
+# already resolves (:177-181), emits (:269-273) and persists (:494) all five —
+# the ONLY missing link was that the docker run recipes below never passed them,
+# so the ladder could never have a rung even when the operator supplied a key.
+# Declared with ?= so `make up GROQ_API_KEY=…` and a plain env var both work.
+CHUTES_API_KEY     ?=
+OPENROUTER_API_KEY ?=
+GOOGLE_API_KEY     ?=
+GROQ_API_KEY       ?=
+MISTRAL_API_KEY    ?=
 
 # GITHUB_TOKEN — load from environment, fall back to gh CLI's cached auth.
 # Used by gh_repo_create resolver + gh_pr_create when authoring substrate-
@@ -116,7 +131,7 @@ SURREALDB_URL ?=
 REDIS_URL ?=
 
 # ── Point-and-go spoke UX ────────────────────────────────────────────────────
-# 1) make up API_KEY=<hub-issued> ANTHROPIC_API_KEY=<key> DISCOVERY_ENDPOINT=http://<hub>:18100
+# 1) make up API_KEY=<hub-issued> DISCOVERY_ENDPOINT=http://<hub>:18100
 #    That is the WHOLE second-command step: a spoke boot with HUB_DISCOVERY_URL
 #    set now AUTO-enables federation-transport-vessel at boot (entrypoint.sh) and
 #    gen-env.sh auto-assigns a unique FED_SUBSTRATE_ID + FED_VESSEL_ID.
@@ -152,6 +167,13 @@ CONTAINER_DISCOVERY_ENDPOINT :=
 endif
 endif
 
+# A spoke inherits LLM capability from its hub, so it does not need a local
+# provider credential. Standalone containers retain the local-key requirement.
+FEDERATED_SPOKE := $(strip $(DISCOVERY_ENDPOINT) $(HUB_DISCOVERY_URL))
+# These inputs change a container's immutable Docker configuration. `up` may
+# safely resume a stopped container only when no such override was supplied.
+LAUNCH_OVERRIDES := $(strip $(API_KEY) $(METABOB_API_KEY) $(DISCOVERY_ENDPOINT) $(HUB_DISCOVERY_URL) $(FED_SUBSTRATE_ID) $(RELAY_MULTIADDR) $(ENABLED_ROLES) $(ENABLED_VESSELS) $(DISABLED_VESSELS) $(PEER_DISCOVERY_ENDPOINTS) $(ACTIVITY_API_ENDPOINT) $(IDENTITY_VESSEL_URL) $(IDENTITY_ENDPOINT) $(SURREALDB_URL) $(REDIS_URL))
+
 # Host-port offset so a second substrate coexists with substrate-live
 # (e.g. PORT_OFFSET=10000 → 28080/28100/28210/…). 0 = historical defaults.
 PORT_OFFSET ?= 0
@@ -171,7 +193,7 @@ ANALYSIS_VESSEL_SRC := $(REPO_ROOT)/repos/analysis-vessel
 STATEFUL_UI_VESSEL_SRC := $(REPO_ROOT)/repos/stateful-ui-vessel
 OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
 
-.PHONY: up ready doctor autonomy-status performance perf validate-build build build-obsidian run run-detach run-live run-live-obsidian migrate-state-to-volumes seed-live import-memory install-host-sync health health-live \
+.PHONY: up recreate ready doctor autonomy-status performance perf validate-build build build-obsidian run run-detach run-live run-live-obsidian migrate-state-to-volumes seed-live import-memory install-host-sync health health-live \
         ensure-key-tool show-key whoami issue-key issue-jwt list-keys revoke-key \
         logs-all logs-activity-api logs-development-vessel \
         logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
@@ -243,6 +265,11 @@ run:
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 	    -e OPENAI_API_KEY="$(OPENAI_API_KEY)" \
 	    -e OPENAI_BASE_URL="$(OPENAI_BASE_URL)" \
+	    -e CHUTES_API_KEY="$(CHUTES_API_KEY)" \
+	    -e OPENROUTER_API_KEY="$(OPENROUTER_API_KEY)" \
+	    -e GOOGLE_API_KEY="$(GOOGLE_API_KEY)" \
+	    -e GROQ_API_KEY="$(GROQ_API_KEY)" \
+	    -e MISTRAL_API_KEY="$(MISTRAL_API_KEY)" \
 	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -p 8080:8080 \
@@ -267,6 +294,11 @@ run-detach:
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 	    -e OPENAI_API_KEY="$(OPENAI_API_KEY)" \
 	    -e OPENAI_BASE_URL="$(OPENAI_BASE_URL)" \
+	    -e CHUTES_API_KEY="$(CHUTES_API_KEY)" \
+	    -e OPENROUTER_API_KEY="$(OPENROUTER_API_KEY)" \
+	    -e GOOGLE_API_KEY="$(GOOGLE_API_KEY)" \
+	    -e GROQ_API_KEY="$(GROQ_API_KEY)" \
+	    -e MISTRAL_API_KEY="$(MISTRAL_API_KEY)" \
 	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -p 8080:8080 \
@@ -290,13 +322,21 @@ run-detach:
 #     --tmpfs /run --tmpfs /run/lock ghcr.io/avigopal/substrate:dev
 #
 # `make up` wraps that with: build-if-missing, start-or-create, readiness wait,
-# old-image seed fallback, IDE config, doctor. REBUILD=1 forces an image build.
+# old-image seed fallback, IDE config, doctor. A stopped container can be resumed
+# only without new launch settings; use `make recreate` to apply changed settings
+# while retaining its named volumes. REBUILD=1 forces an image build.
 up:
 	@docker image inspect $(IMAGE):$(TAG) >/dev/null 2>&1 || $(MAKE) build
 	@if [ "$(REBUILD)" = "1" ]; then $(MAKE) build; fi
 	@if docker ps --format '{{.Names}}' | grep -qx "$(LIVE_NAME)"; then \
 	  echo "[up] $(LIVE_NAME) already running"; \
 	elif docker ps -a --format '{{.Names}}' | grep -qx "$(LIVE_NAME)"; then \
+	  if [ -n "$(LAUNCH_OVERRIDES)" ]; then \
+	    echo "[up] ERROR: $(LIVE_NAME) is stopped and supplied launch settings would be ignored."; \
+	    echo "[up] Recreate it without deleting named volumes:"; \
+	    echo "  make -C scripts/substrate recreate <the same settings>"; \
+	    exit 1; \
+	  fi; \
 	  echo "[up] starting existing container $(LIVE_NAME)"; docker start $(LIVE_NAME) >/dev/null; \
 	else \
 	  $(MAKE) run-live; \
@@ -314,6 +354,15 @@ up:
 	fi
 	@CONTAINER=$(LIVE_NAME) $(CURDIR)/substrate-doctor.sh
 
+# Replace the container while preserving its named workspace and datastore
+# volumes, so supplied Docker launch settings are applied deterministically.
+recreate:
+	@if docker ps -a --format '{{.Names}}' | grep -qx "$(LIVE_NAME)"; then \
+	  echo "[recreate] removing $(LIVE_NAME); named volumes are preserved"; \
+	  docker rm -f $(LIVE_NAME) >/dev/null; \
+	fi
+	@$(MAKE) up
+
 # Fleet readiness matrix (host wrapper; in-container: /usr/local/bin/substrate-ready)
 ready:
 	@CONTAINER=$(LIVE_NAME) $(CURDIR)/substrate-ready.sh --once
@@ -328,7 +377,7 @@ doctor:
 # Run once; use sync-*/restart-* targets to hot-reload vessels without rebuild.
 
 run-live:
-	@if [ -z "$(ANTHROPIC_API_KEY)" ] && [ -z "$(OPENAI_API_KEY)" ]; then \
+	@if [ -z "$(FEDERATED_SPOKE)" ] && [ -z "$(ANTHROPIC_API_KEY)" ] && [ -z "$(OPENAI_API_KEY)" ]; then \
 	  echo "[substrate] ERROR: No LLM provider key found. Provide at least one:"; \
 	  echo "  Anthropic:  make run-live ANTHROPIC_API_KEY=sk-ant-..."; \
 	  echo "  OpenAI:     make run-live OPENAI_API_KEY=sk-..."; \
@@ -344,6 +393,11 @@ run-live:
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 	    -e OPENAI_API_KEY="$(OPENAI_API_KEY)" \
 	    -e OPENAI_BASE_URL="$(OPENAI_BASE_URL)" \
+	    -e CHUTES_API_KEY="$(CHUTES_API_KEY)" \
+	    -e OPENROUTER_API_KEY="$(OPENROUTER_API_KEY)" \
+	    -e GOOGLE_API_KEY="$(GOOGLE_API_KEY)" \
+	    -e GROQ_API_KEY="$(GROQ_API_KEY)" \
+	    -e MISTRAL_API_KEY="$(MISTRAL_API_KEY)" \
 	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
@@ -389,7 +443,7 @@ run-live:
 # :16080. Reuses the substrate-live container name so every sync-/restart-/
 # health- target keeps working unchanged. Requires `make build-obsidian` first.
 run-live-obsidian:
-	@if [ -z "$(ANTHROPIC_API_KEY)" ] && [ -z "$(OPENAI_API_KEY)" ]; then \
+	@if [ -z "$(FEDERATED_SPOKE)" ] && [ -z "$(ANTHROPIC_API_KEY)" ] && [ -z "$(OPENAI_API_KEY)" ]; then \
 	  echo "[substrate] ERROR: No LLM provider key found. Provide at least one:"; \
 	  echo "  Anthropic:  make run-live-obsidian ANTHROPIC_API_KEY=sk-ant-..."; \
 	  echo "  OpenAI:     make run-live-obsidian OPENAI_API_KEY=sk-..."; \
@@ -404,6 +458,11 @@ run-live-obsidian:
 	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
 	    -e OPENAI_API_KEY="$(OPENAI_API_KEY)" \
 	    -e OPENAI_BASE_URL="$(OPENAI_BASE_URL)" \
+	    -e CHUTES_API_KEY="$(CHUTES_API_KEY)" \
+	    -e OPENROUTER_API_KEY="$(OPENROUTER_API_KEY)" \
+	    -e GOOGLE_API_KEY="$(GOOGLE_API_KEY)" \
+	    -e GROQ_API_KEY="$(GROQ_API_KEY)" \
+	    -e MISTRAL_API_KEY="$(MISTRAL_API_KEY)" \
 	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
