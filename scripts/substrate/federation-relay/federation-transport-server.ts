@@ -253,7 +253,17 @@ async function proxyToVessel(pointer: any, t: string, owner: any): Promise<any> 
     // single form kept them incompatible — goal-host got type:undefined from
     // {impulse: pointer}.
     body: JSON.stringify({ ...fwd, impulse: { ...fwd, pointer: fwd } }),
-    signal: AbortSignal.timeout(20000),
+    // 20_000 here silently killed the ReAct floor. `llm_completion` has NO local
+    // producer — it resolves only to llm-resolver-opus@syzygy-hub — so EVERY agentic
+    // tool loop crosses this proxy. A 5-tool universal-executor dispatch measures well
+    // past 20s (reproduced: HTTP 500 "ingress proxy failed: The operation timed out."
+    // at 20.45s, while the same call with one tool returns in 4.9s). goal-host caps a
+    // single floor iteration at 90s (ITER_TIMEOUT_MS), so this hop must sit above that
+    // or the caller can never observe its own timeout — it just sees a non-ok response,
+    // breaks the loop, and returns an empty result the floor reports as `empty_loop`.
+    // Same defect class as the ribosome's 15s replay budget against a 15.4-16.9s fetch:
+    // a hardcoded transport deadline set below the operation's real latency.
+    signal: AbortSignal.timeout(120000),
   })
   const rj = (await rr.json().catch(() => ({}))) as any
   // Normalize the two local envelope styles ({success,shape,body} / {content}) into
