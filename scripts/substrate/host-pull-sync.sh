@@ -34,7 +34,17 @@ BRANCH="${BRANCH:-dev}"
 HOT_VESSELS="analysis-vessel concept-db development-vessel goal-host-vessel light-dispatch-vessel llm-resolver-vessel local-tools-vessel obsidian-vessel ribosome-vessel stateful-ui-vessel"
 
 log() { echo "[host-pull-sync $(date -Iseconds)] $*" >&2; }
-act() { if [[ "$APPLY" == "1" ]]; then "$@"; else log "DRY-RUN would: $*"; fi; }
+# One vessel's restart failure must NOT abort the whole sync. Measured: concept-db is MASKED on
+# a spoke by design (it runs on the hub), so `make restart-concept-db` returned 1, set -e killed
+# the run at status=2, and every vessel alphabetically AFTER concept-db was silently never
+# synced. An expected topology condition was aborting the entire host sync path. Failures are
+# now reported per-vessel and the loop continues; a masked unit is downgraded to a normal skip.
+act() {
+  if [[ "$APPLY" != "1" ]]; then log "DRY-RUN would: $*"; return 0; fi
+  if ! "$@" 2>&1; then log "!!! step FAILED (continuing): $*"; return 0; fi
+}
+# True when the unit does not exist locally or is masked — i.e. it belongs to another substrate.
+unit_masked() { [[ "$(docker exec "$CONTAINER" systemctl is-enabled "$1.service" 2>/dev/null || echo missing)" == "masked" ]]; }
 
 cd "$REPO_ROOT"
 
@@ -105,9 +115,25 @@ IAS_CHANGED=0; echo "$CHANGED_VESSELS" | grep -qx "ias-executor-ts" && IAS_CHANG
 # every run is a detector nobody reads. A regression is a DELTA, so the baseline
 # per vessel lives in .pullsync-testbaseline and only a rise is reported.
 BASELINE_FILE="${BASELINE_FILE:-$REPO_ROOT/.pullsync-testbaseline}"
+
+# Resolve bun explicitly. systemd --user does NOT inherit the login shell PATH: the unit runs
+# with PATH=/usr/local/sbin:/usr/local/bin:/usr/bin:/home/$USER/.local/bin:... in which $USER is
+# literally unexpanded and bun is absent entirely. Measured consequence: every `bun test` failed
+# to launch, so all 45 vessels logged "no countable result" and the detector completed while
+# measuring NOTHING — the second time this detector shipped blind. The old message actively
+# misled, reading as "these vessels have no tests" when the truth was "I cannot run tests at all".
+BUN="$(command -v bun 2>/dev/null || true)"
+if [[ -z "$BUN" ]]; then
+  for c in "${HOME:-/home/avi}/.bun/bin/bun" /usr/local/bin/bun /opt/bun/bin/bun; do
+    [[ -x "$c" ]] && { BUN="$c"; break; }
+  done
+fi
+[[ -z "$BUN" ]] && log "!!! DETECTOR BLIND: bun not found (PATH=$PATH) — NO vessel suite can run; this is not 'no tests', it is no instrument"
+
 for v in $CHANGED_VESSELS; do
   [[ -f "$REPO_ROOT/repos/$v/package.json" ]] || continue
-  TEST_OUT="$(cd "$REPO_ROOT/repos/$v" && timeout 300 bun test 2>&1 || true)"
+  [[ -z "$BUN" ]] && continue
+  TEST_OUT="$(cd "$REPO_ROOT/repos/$v" && timeout 300 "$BUN" test 2>&1 || true)"
   # `|| true` is LOAD-BEARING, not defensive noise. Under `set -euo pipefail` a suite with no
   # "N fail" line makes the first grep exit 1; pipefail promotes that through tail, the command
   # substitution inherits it, and `set -e` kills the whole script BEFORE the -z guard below can
@@ -154,6 +180,10 @@ for v in $CHANGED_VESSELS; do
   elif [[ "$IAS_CHANGED" == "1" ]] && echo " $IAS_CONSUMERS " | grep -q " $v "; then
     log "$v changed but is an ias-executor-ts consumer — sync-ias RESTART=1 already covers it; skipping double-restart"
   elif echo " $HOT_VESSELS " | grep -q " $v "; then
+    if [[ "$APPLY" == "1" ]] && unit_masked "$v"; then
+      log "$v changed but is MASKED here (runs on the peer substrate) — skipping restart, not an error"
+      continue
+    fi
     log "$v changed -> restart-$v (sync source + restart unit)"
     act make -C "$MAKE_DIR" "restart-$v"
   else
