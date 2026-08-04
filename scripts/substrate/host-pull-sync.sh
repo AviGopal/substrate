@@ -182,8 +182,15 @@ for v in $CHANGED_VESSELS; do
     TEST_OUT_B="$(cd "$REPO_ROOT/repos/$v" && timeout 300 "$BUN" test 2>&1 || true)"
     FAILS_B="$(count_fails "$TEST_OUT_B")"
     if [[ -n "$FAILS_B" ]]; then
-      (( FAILS_B < FAILS_A )) && { FAILS="$FAILS_B"; TEST_OUT="$TEST_OUT_B"; }
-      (( FAILS_A != FAILS_B )) && log "TEST $v — FLAKY: $FAILS_A vs $FAILS_B on identical source; using $FAILS. Deltas on this vessel are only trustworthy beyond that spread."
+      # Use `if (( )); then`, not `(( )) && cmd`. A bare `(( expr ))` returns exit status 1 when the
+      # expression is FALSE, which under `set -e` is fatal as a standalone statement. Verified
+      # empirically: the `&&` form is EXEMPT (it is a non-final command in an && list) and survives,
+      # so this is defensive clarity rather than a bug fix — but the bare form one refactor away is
+      # fatal on exactly the common case (two runs agreeing), so the `if` form is the safe idiom.
+      if (( FAILS_B < FAILS_A )); then FAILS="$FAILS_B"; TEST_OUT="$TEST_OUT_B"; fi
+      if (( FAILS_A != FAILS_B )); then
+        log "TEST $v — FLAKY: $FAILS_A vs $FAILS_B on identical source; using $FAILS. Deltas on this vessel are only trustworthy beyond that spread."
+      fi
     fi
   fi
   [[ -z "$FAILS" ]] && { log "TEST $v — no countable result (suite errored or absent); skipping delta"; continue; }
