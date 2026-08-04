@@ -108,18 +108,30 @@ BASELINE_FILE="${BASELINE_FILE:-$REPO_ROOT/.pullsync-testbaseline}"
 for v in $CHANGED_VESSELS; do
   [[ -f "$REPO_ROOT/repos/$v/package.json" ]] || continue
   TEST_OUT="$(cd "$REPO_ROOT/repos/$v" && timeout 300 bun test 2>&1 || true)"
-  FAILS="$(echo "$TEST_OUT" | grep -oE '^ *[0-9]+ fail' | grep -oE '[0-9]+' | tail -1)"
+  # `|| true` is LOAD-BEARING, not defensive noise. Under `set -euo pipefail` a suite with no
+  # "N fail" line makes the first grep exit 1; pipefail promotes that through tail, the command
+  # substitution inherits it, and `set -e` kills the whole script BEFORE the -z guard below can
+  # run. Shipped without it, this detector failed 132/132 runs and completed zero — the guard
+  # that was supposed to handle "no countable result" was unreachable code.
+  FAILS="$(echo "$TEST_OUT" | grep -oE '^ *[0-9]+ fail' | grep -oE '[0-9]+' | tail -1 || true)"
   [[ -z "$FAILS" ]] && { log "TEST $v — no countable result (suite errored or absent); skipping delta"; continue; }
-  PREV_FAILS="$(grep -m1 "^$v=" "$BASELINE_FILE" 2>/dev/null | cut -d= -f2)"
+  # Third instance of the pipefail class in this block (see the two above). The FIRST run for any
+  # vessel has no baseline line, so grep exits 1 and kills the script before it can record one —
+  # the detector could therefore never bootstrap itself. 2>/dev/null hides grep's stderr, not its
+  # exit status. Sweep the whole block when touching any of these, not just the reported line.
+  PREV_FAILS="$(grep -m1 "^$v=" "$BASELINE_FILE" 2>/dev/null | cut -d= -f2 || true)"
   if [[ -z "$PREV_FAILS" ]]; then
     log "TEST $v — baseline recorded at $FAILS fail (no alert on first observation)"
   elif (( FAILS > PREV_FAILS )); then
     log "!!! TEST REGRESSION in $v: $PREV_FAILS -> $FAILS failing, after ${PREV:0:10} -> ${HEAD:0:10}"
-    echo "$TEST_OUT" | grep '(fail)' | head -20 | while IFS= read -r l; do log "!!!   $l"; done
+    # Same class as above: `head -20` closes the pipe early, grep takes SIGPIPE, pipefail makes
+    # the REPORTING branch itself fatal. A detector whose alert path kills the detector is worse
+    # than no detector — it fails exactly when it has something to say.
+    { echo "$TEST_OUT" | grep '(fail)' || true; } | head -20 | while IFS= read -r l; do log "!!!   $l"; done
     # Attribute to the VESSEL's own tip, not the super-repo sha: repos/* are
     # submodules, so $HEAD names a pointer bump whose author is whoever moved the
     # pointer — not whoever wrote the code that just went red.
-    log "!!! vessel tip: $(cd "$REPO_ROOT/repos/$v" && git log -1 --format='%h %an — %s' 2>/dev/null | cut -c1-100)"
+    log "!!! vessel tip: $(cd "$REPO_ROOT/repos/$v" && git log -1 --format='%h %an — %s' 2>/dev/null | cut -c1-100 || true)"
     log "!!! restart proceeds anyway (detector, not gate) — triage manually"
   elif (( FAILS < PREV_FAILS )); then
     log "TEST $v improved: $PREV_FAILS -> $FAILS failing"
