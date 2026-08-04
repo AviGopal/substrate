@@ -269,7 +269,21 @@ async function proxyToVessel(pointer: any, t: string, owner: any): Promise<any> 
   // Normalize the two local envelope styles ({success,shape,body} / {content}) into
   // one content payload so the remote caller's resolve parsing stays uniform.
   const body = rj?.body ?? rj?.content ?? rj
-  return { shape: t, produced_by: owner.vesselId + '@' + VESSEL_ID, ...((body && typeof body === 'object') ? { body } : { value: body }), note: 'proxied to the owning vessel on the peer substrate over libp2p' }
+  // Carry the SIBLING metadata through. llm-resolver is agentic by design: it executes
+  // tool_use itself and returns a `tool_calls` AUDIT array as a sibling of `content`
+  // (llm-resolver-vessel/src/index.ts:584), alongside usage/model/provider. Collapsing
+  // to `body` alone DESTROYED all of them at the wire, which is why a remote caller
+  // could not distinguish a grounded answer from a confabulated one and goal-host's
+  // groundedOk was permanently 0 across 72h. Additive-only: every known cross-repo
+  // reader consumes .value/.body/.content and none enumerate keys, so adding siblings
+  // cannot displace an existing field.
+  const carried: Record<string, unknown> = {}
+  if (rj && typeof rj === 'object') {
+    for (const k of ['tool_calls', 'iterations', 'usage', 'model', 'provider', 'stop_reason']) {
+      if ((rj as any)[k] !== undefined) carried[k] = (rj as any)[k]
+    }
+  }
+  return { shape: t, produced_by: owner.vesselId + '@' + VESSEL_ID, ...carried, ...((body && typeof body === 'object') ? { body } : { value: body }), note: 'proxied to the owning vessel on the peer substrate over libp2p' }
 }
 
 // One handler, served over BOTH transports: serveResolve (lpStream — carries multi-KB
