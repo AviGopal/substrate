@@ -331,6 +331,7 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         operator-goal-generator.timer \
         auto-describe-resolvers.timer \
         surgical-gap-scan.timer \
+        ingest-docs.timer \
         obsidian-intake.timer \
         obsidian-learn.timer \
         obsidian-collaborate.timer && \

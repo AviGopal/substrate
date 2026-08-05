@@ -20,13 +20,33 @@
  * repos/<vessel>/CLAUDE.md + README.md — the same watched set as docs-align-scan. Sections
  * split on level-2/3 headers; only sections >= MIN_SECTION_CHARS are ingested.
  *
+ * EVICTION (the reap pass): create/update/skip alone make the surface append-only. A section
+ * that is renamed, split, shrunk below MIN_SECTION_CHARS, or whose file is deleted or moved
+ * keeps its concept forever, because section_key is derived from `<relpath>#<slug(heading)>`
+ * and a changed key simply mints a new concept beside the old one. That is not merely untidy:
+ * architecture concepts are dense-searched into the code-authoring prompt (top 4), so a stale
+ * section competes with its own replacement for the drafter's attention indefinitely. After
+ * ingest, any manifest key not re-seen this run is DELETEd from concept-db and dropped from
+ * the manifest.
+ *
+ * The reap is deliberately timid, because deleting live expectations on a transient fault is
+ * far worse than carrying a stale one for another six hours. `walkMd` swallows readdir errors
+ * and returns what it has, so a partial filesystem read looks exactly like a mass deletion.
+ * Three guards, each of which ABORTS the reap and reports rather than proceeding:
+ *   - a forced run (INGEST_DOCS) reaps only within the files it was told to read, since it
+ *     never looked at the others;
+ *   - a file that could not be read this run keeps all of its sections;
+ *   - a reap set exceeding REAP_MAX_FRACTION of the manifest is refused wholesale, which is
+ *     what a truncated walk or an empty docs/ produces.
+ * A refusal is reported as reap:"refused" with the count, never as a clean run.
+ *
  * Env:
  *   INGEST_DOCS_ROOT   repo root to read docs from (default SUBSTRATE_ROOT | cwd)
  *   CONCEPT_DB_ENDPOINT concept-db (default http://127.0.0.1:8260)
  *   METABOB_API_KEY    auth (optional)
  *   INGEST_MANIFEST    upsert manifest path (default /workspace/.docs-ingest-manifest.json)
  *   INGEST_DOCS        comma list of doc relpaths to force (default: watched-set discovery)
- *   INGEST_DRYRUN      =1 -> print plan (create/update/skip counts), write nothing
+ *   INGEST_DRYRUN      =1 -> print plan (create/update/skip/reap counts), write nothing
  */
 import { readFile, readdir, stat } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
@@ -40,6 +60,10 @@ const MANIFEST_PATH = process.env["INGEST_MANIFEST"] ?? "/workspace/.docs-ingest
 const DRYRUN = process.env["INGEST_DRYRUN"] === "1";
 const MIN_SECTION_CHARS = 200;
 const MAX_CONTENT_CHARS = 2400;
+// Above this share of the manifest, a reap set is treated as evidence that discovery failed
+// rather than that the docs really changed that much. A genuine restructure lands in batches
+// well under this; a truncated walk lands far above it.
+const REAP_MAX_FRACTION = 0.25;
 
 const authHeaders = { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) };
 // concept-db embeds each POST synchronously (MiniLM) and runs its own background embed-
@@ -157,17 +181,42 @@ async function patchConcept(id: string, relpath: string, heading: string, body: 
   } catch { return false; }
 }
 
+// Retract a concept whose section no longer exists. A 404 counts as success: the goal is
+// "this concept is not in the store", and something else having removed it already satisfies
+// that just as well as our own delete does.
+async function deleteConcept(id: string): Promise<boolean> {
+  try {
+    const res = await fetchRetry(`${CONCEPT_DB}/concepts/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: authHeaders,
+      signal: AbortSignal.timeout(30_000),
+    });
+    return !!res && (res.ok || res.status === 404);
+  } catch { return false; }
+}
+
 async function main(): Promise<void> {
   const docs = await watchedDocs();
+  const forced = !!process.env["INGEST_DOCS"];
   const manifest = loadManifest();
+  // Sized before ingest: a reap candidate can only come from a key that already existed, so
+  // the pre-existing manifest is the population to take a fraction of. Measuring after the
+  // loop would let a run that adds many new sections license a correspondingly larger reap.
+  const priorSize = Object.keys(manifest).length;
   let created = 0, updated = 0, skipped = 0, failed = 0, scanned = 0;
+  // Section keys observed this run, and the files we actually managed to read. A file missing
+  // from `readOk` was never inspected, so its absence from `seenKeys` proves nothing.
+  const seenKeys = new Set<string>();
+  const readOk = new Set<string>();
 
   for (const relpath of docs) {
     let md: string;
     try { md = await readFile(join(ROOT, relpath), "utf8"); } catch { continue; }
+    readOk.add(relpath);
     for (const s of sections(md)) {
       scanned++;
       const sectionKey = `${relpath}#${slug(s.heading)}`;
+      seenKeys.add(sectionKey);
       const contentHash = hash(`${s.heading}\n\n${s.body}`);
       const prior = manifest[sectionKey];
 
@@ -191,6 +240,34 @@ async function main(): Promise<void> {
     }
   }
 
+  // ---- reap: retract concepts whose section no longer exists ----
+  // A key is a candidate only when we can prove we looked. On a forced run that means the
+  // file was named and read; on a full run it also covers a file that has left the watched
+  // set entirely (deleted, moved, or now under docs/archive/), which is the case that a
+  // rename or a restructure produces.
+  const candidates = Object.keys(manifest).filter((key) => {
+    if (seenKeys.has(key)) return false;
+    const relpath = key.slice(0, key.lastIndexOf("#"));
+    if (readOk.has(relpath)) return true;      // read it; this section is genuinely gone
+    if (forced) return false;                  // never inspected the rest of the corpus
+    return !docs.includes(relpath);            // dropped out of the watched set
+  });
+
+  const limit = Math.floor(priorSize * REAP_MAX_FRACTION);
+  // An empty docs list is a failed walk, not an emptied repo — refuse outright rather than
+  // reasoning about fractions of a manifest we could not verify against anything.
+  const refused = docs.length === 0 || candidates.length > limit;
+  let reaped = 0, reapFailed = 0;
+
+  if (!refused && !DRYRUN) {
+    for (const key of candidates) {
+      const entry = manifest[key];
+      if (entry?.id && await deleteConcept(entry.id)) { delete manifest[key]; reaped++; }
+      else reapFailed++;
+      if (PACE_MS > 0) await sleep(PACE_MS);
+    }
+  }
+
   if (!DRYRUN) { try { await Bun.write(MANIFEST_PATH, JSON.stringify(manifest, null, 0)); } catch { /* best-effort */ } }
 
   console.log(JSON.stringify({
@@ -199,6 +276,12 @@ async function main(): Promise<void> {
     docs: docs.length,
     scanned,
     created, updated, skipped, failed,
+    // "refused" is a distinct outcome from a run with nothing to reap: it means eviction was
+    // due and did not happen, which is a condition to act on rather than a clean result.
+    reap: refused ? "refused" : DRYRUN ? "dryrun" : "ok",
+    reapCandidates: candidates.length,
+    reapLimit: limit,
+    reaped, reapFailed,
     manifest: MANIFEST_PATH,
     dryrun: DRYRUN,
   }, null, 2));
