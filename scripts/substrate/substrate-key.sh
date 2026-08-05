@@ -1,8 +1,10 @@
 #!/bin/bash
 # substrate-key — operator surface for API keys and JWTs.
 #
-# Runs INSIDE the substrate container (identity-vessel is internal-only, no
-# host port). From the host, use the Makefile wrappers:
+# Runs INSIDE the substrate container, against the loopback address of the
+# local identity-vessel. Deployments that front a remote admin client publish
+# identity on a host port too; this script does not depend on that either way.
+# From the host, use the Makefile wrappers:
 #   make -C scripts/substrate show-key
 #   make -C scripts/substrate issue-key NAME=my-peer [SCOPES=read,write] [EXPIRES_DAYS=30]
 #   make -C scripts/substrate issue-jwt [ROLE=admin] [EXPIRES_SECONDS=900]
@@ -18,9 +20,10 @@
 #   revoke <key_id>                   revoke a key
 #
 # Auth model: the operator's METABOB_API_KEY (from /etc/substrate/env) resolves
-# to the substrate org; an admin JWT is minted in-container via /v1/jwt/generate
-# (unauthenticated by design — the container boundary is the trust boundary)
-# and presented to the admin-only /v1/keys/* endpoints.
+# to the substrate org and authenticates the mint request itself; /v1/jwt/generate
+# binds the minted token's org_id and user_id to that key's own identity, so the
+# key can only mint for itself. The resulting admin JWT is presented to the
+# admin-only /v1/keys/* endpoints.
 set -euo pipefail
 
 set -a; source /etc/substrate/env 2>/dev/null || true; set +a
@@ -43,6 +46,7 @@ resolve_identity() {
 mint_jwt() { # $1=role $2=expires_seconds
   local j
   j=$(curl -s "$IDENTITY/v1/jwt/generate" -H "Content-Type: application/json" \
+        -H "Authorization: ApiKey $METABOB_API_KEY" \
         -d "{\"user_id\":\"$USER_ID\",\"org_id\":\"$ORG_ID\",\"role\":\"${1:-admin}\",\"expires_in_seconds\":${2:-900}}")
   JWT=$(echo "$j" | jq -r '.data.token // empty')
   [[ -n "$JWT" ]] || die "JWT generation failed: $j"
