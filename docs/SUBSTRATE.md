@@ -297,10 +297,18 @@ entrypoint.sh ──runs──▶ gen-env.sh ──renders──▶ /etc/substra
 
 ### Keys and tokens (the human surface)
 
-Humans never call identity-vessel directly — it is internal-only (no host port). The
-in-container tool `substrate-key` (baked next to `vessel-ctl`) is the issuance
-surface, wrapped by Makefile targets so the whole flow is one command with no
-credentials beyond a running substrate:
+identity-vessel binds a vessel port like every other vessel and is published by the
+same `18xxx → 8xxx` host-mapping convention, so whether it answers off-box is a
+deployment choice rather than a property of the vessel. A substrate that fronts
+only local tooling can leave that mapping unpublished; a substrate that serves a
+remote admin CLI or federated peers publishes it, and the identity port is then one
+of the ports the host firewall must open (see [`docs/FEDERATION.md`](FEDERATION.md)).
+Assume identity is reachable and authenticate every call to it — do not rely on the
+container boundary to keep callers out.
+
+For a substrate you have shell on, the in-container tool `substrate-key` (baked next
+to `vessel-ctl`) is the issuance surface, wrapped by Makefile targets so the whole
+flow is one command with no credentials beyond a running substrate:
 
 > **Instance selector.** Every `make -C scripts/substrate` target — `show-key`,
 > `whoami`, `issue-key`, `list-keys`, `revoke-key`, `status`, `health`, `shell`,
@@ -321,14 +329,56 @@ make -C scripts/substrate list-keys
 make -C scripts/substrate revoke-key KEY_ID=key_xxx
 ```
 
-The full key is printed **once** and never stored (only its hash is persisted).
-Auth model: the operator's `METABOB_API_KEY` resolves the substrate org, an admin
-JWT is minted in-container via identity-vessel's `/v1/jwt/generate` (unauthenticated
-by design — the container boundary is the trust boundary), and that JWT authorizes
-the admin-only `/v1/keys/*` endpoints. On images that predate the baked tool the
-Makefile copies `scripts/substrate/substrate-key.sh` into the running container
-first. This is the supported way to obtain the hub-issued key a spoke or external
-peer needs (see `docs/FEDERATION.md`).
+The full key is printed **once** and never stored (only its hash is persisted). On
+images that predate the baked tool, the Makefile stages the script into the running
+container first. This is the supported way to obtain the hub-issued key a spoke or
+external peer needs (see [`docs/FEDERATION.md`](FEDERATION.md)).
+
+**Auth model.** The operator's `METABOB_API_KEY` identifies the caller and resolves
+the substrate org. Minting a token is itself an authenticated operation:
+`POST /v1/jwt/generate` on identity-vessel requires an `Authorization` header —
+either `ApiKey <key>` or `Bearer <jwt>` — and binds the minted token's claims to the
+identity behind that credential. A request whose body asks for an `org_id` or
+`user_id` other than the authenticating credential's own is refused: you mint a
+token for yourself, not for someone else.
+
+The mint deliberately does **not** require `admin` scope. An operator key
+legitimately carries only `read,write` and still needs to mint its own token, so
+scope is enforced where it actually matters — on the admin-only `/v1/keys/*`
+endpoints, which accept an `ApiKey` credential carrying `admin` scope or a `Bearer`
+token whose role is `admin` or `owner`. Read the mint as an identity-binding step
+rather than a privilege grant: it converts a credential you already hold into a
+short-lived token carrying that same identity, and it cannot hand you authority
+your credential did not already have.
+
+Nothing about the container boundary is load-bearing in this model. A remote admin
+CLI reaches the same endpoint over the network as in-container tooling does, so the
+credential — not the network position — is the trust boundary.
+
+### Issuing and administering keys: which surface
+
+Two surfaces administer the same keyspace, and the choice between them is about
+where you stand relative to the substrate, not about capability:
+
+- **`make -C scripts/substrate issue-key` (and its `whoami` / `list-keys` /
+  `revoke-key` / `issue-jwt` siblings)** — for a substrate you have **shell on**.
+  Each target runs `docker exec` against the container, so it needs no network
+  exposure, no client install, and no credential beyond a running substrate: the
+  operator key is already inside. This is the bootstrap surface — it is how the
+  *first* key comes into existence, including the hub-issued key a spoke needs
+  before it can authenticate to anything.
+- **`keyctl` (`@avigopal/keyctl-vessel`)** — for a keyspace you reach **over the
+  network**. It is a standalone client that authenticates with a key you already
+  hold and talks to identity-vessel's published port, so it administers a remote or
+  hub substrate from an operator workstation with no shell access. It cannot
+  bootstrap a keyspace it has no credential for.
+
+Reach for the in-container path when you have shell and need a key to exist at all;
+reach for `keyctl` for day-to-day administration of a substrate you hold a
+credential for but no shell on. Because both drive the same identity-vessel
+endpoints, the auth model above governs each of them identically — a remote client
+is not a privileged one. `keyctl` documents its own commands and flags; consult it
+there rather than mirroring them here.
 
 ## Iteration loop
 

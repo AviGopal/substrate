@@ -138,6 +138,15 @@ WHERE 'write' IN $auth.scopes
 `iat`. Nothing outside that set is minted or read, so a claim documented here that the generator
 does not emit is a claim that will silently be `undefined` at the point of use.
 
+The generator is authenticated. Every request carries an `Authorization` header —
+`ApiKey <key>` or `Bearer <jwt>` — and the claims it will mint are bound to the identity behind
+that credential: a body whose `org_id` or `user_id` differs from the authenticated credential's
+own is refused rather than honoured. The mint does **not** require `admin` scope, because an
+operator credential carrying only `read,write` still needs to mint its own token; nor does it
+constrain the requested `role`. Scope is enforced downstream, on the admin-only `/v1/keys/*`
+endpoints. Treat the mint as identity-binding rather than privilege-granting: it re-expresses a
+credential you already hold as a short-lived token with the same identity.
+
 ## Token Lifetimes
 
 | Auth Method | Token Duration | Session Duration | Refresh |
@@ -259,6 +268,7 @@ Request:
 ```http
 POST http://localhost:18101/v1/jwt/generate
 Content-Type: application/json
+Authorization: ApiKey <key>
 
 {
   "user_id": "usr_alice",
@@ -267,6 +277,9 @@ Content-Type: application/json
 }
 ```
 
+The `Authorization` header is required (`ApiKey <key>` or `Bearer <jwt>`), and the `user_id` /
+`org_id` in the body must be the authenticated credential's own.
+
 Response:
 ```json
 {
@@ -274,6 +287,21 @@ Response:
   "data": { "token": "eyJhbGci...", "issued_at": 1711361400, "expires_at": 1711362300 }
 }
 ```
+
+Rejections:
+
+| Status | Code | Condition |
+|---|---|---|
+| 401 | `MISSING_AUTH_HEADER` | No `Authorization` header on the request |
+| 401 | `INVALID_AUTH_SCHEME` | Header does not begin with `ApiKey ` or `Bearer ` |
+| 401 | `INVALID_API_KEY` | `ApiKey` credential fails validation |
+| 401 | `REVOKED_API_KEY` | `ApiKey` credential validates but has been revoked |
+| 401 | `INVALID_JWT` | `Bearer` token fails verification (bad signature, expired, malformed) |
+| 403 | `FORBIDDEN` | Body `org_id` or `user_id` does not match the authenticated credential |
+
+Note the split: a 401 means the caller was not identified, a 403 means the caller was identified
+and asked for claims that are not theirs to mint. Neither is a scope failure — the mint does not
+check for `admin`.
 
 ### 3. Authenticated Request (activity-api)
 
