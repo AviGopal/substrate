@@ -139,6 +139,57 @@ healthy() { # port -> 0 if 200
   curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$1/health" 2>/dev/null | grep -q '^200$'
 }
 
+# converge_units <super-repo-dir> — mirror scripts/substrate/units/ into the systemd
+# unit tree. Dockerfile.substrate:213 copies units into the IMAGE and nothing converged
+# them afterwards, so every systemd-level repair (TimeoutStopSec, drains, restart policy,
+# Environment=) silently no-opped until someone rebuilt, with nothing reporting that it
+# had not taken.
+#
+# Called UNCONDITIONALLY each tick, deliberately NOT from inside the marker-gated
+# super-repo refresh. That gate fires only when origin ADVANCES past the last-converged
+# sha, which means a glue capability can never apply to the commit that INTRODUCED it:
+# the old binary writes the marker, then installs the new binary, and by the next tick
+# the marker already says "done" (observed 2026-08-05 — unit convergence landed in
+# 23ee216e and did not run for 23ee216e; DropInPaths still showed the goal-host drain
+# drop-in absent and TimeoutStopUSec still 1min). Running it every tick is cheap and
+# self-limiting: cmp -s makes it a no-op when nothing differs, and it logs only on a
+# real change.
+#
+# Target /usr/lib, NOT /etc, deliberately: /etc outranks every other unit dir, so a unit
+# living there can never be masked — and masking is how apply-inventory keeps vessels off
+# a spoke (Dockerfile.substrate:208 vendors them low precisely so they stay maskable).
+# Writing units to /etc would silently un-maskable the whole fleet.
+converge_units() {
+  _cu_super="$1"
+  [ -d "$_cu_super/scripts/substrate/units" ] || return 0
+  UNITS_CHANGED=0
+  for uf in "$_cu_super"/scripts/substrate/units/*; do
+    [ -e "$uf" ] || continue
+    ubase="$(basename "$uf")"
+    if [ -d "$uf" ]; then
+      # drop-in directory: <unit>.service.d/*.conf
+      mkdir -p "/usr/lib/systemd/system/$ubase" 2>/dev/null || true
+      for cf in "$uf"/*; do
+        [ -f "$cf" ] || continue
+        dst="/usr/lib/systemd/system/$ubase/$(basename "$cf")"
+        if ! cmp -s "$cf" "$dst" 2>/dev/null; then
+          install -m 0644 "$cf" "$dst" 2>/dev/null && { log "units: converged $ubase/$(basename "$cf")"; UNITS_CHANGED=1; }
+        fi
+      done
+    else
+      dst="/usr/lib/systemd/system/$ubase"
+      if ! cmp -s "$uf" "$dst" 2>/dev/null; then
+        install -m 0644 "$uf" "$dst" 2>/dev/null && { log "units: converged $ubase"; UNITS_CHANGED=1; }
+      fi
+    fi
+  done
+  if [ "$UNITS_CHANGED" = "1" ]; then
+    systemctl daemon-reload 2>/dev/null \
+      && log "units: daemon-reload done — TimeoutStopSec/Restart apply at the next stop; Environment= needs the unit to restart (next convergence)" \
+      || log "units: !!! daemon-reload FAILED — unit changes are on disk but NOT active"
+  fi
+}
+
 content_hash() { # vessel-root -> md5 over sorted src/ + sql/ (.ts/.json/.surql); "none" if missing
   [ -d "$1" ] || { echo none; return; }
   # .json included so pure-template/config edits (e.g. lifecycle *.json activity
@@ -740,34 +791,9 @@ if [ -d "$SUPER_DIR/.git" ] && git -C "$SUPER_DIR" fetch -q origin "$BRANCH" 2>/
       # apply-inventory keeps vessels off a spoke (Dockerfile.substrate:208 vendors
       # them low precisely so they remain maskable). Writing units to /etc would
       # silently un-maskable the whole fleet.
-      if [ -d "$SUPER_DIR/scripts/substrate/units" ]; then
-        UNITS_CHANGED=0
-        for uf in "$SUPER_DIR"/scripts/substrate/units/*; do
-          [ -e "$uf" ] || continue
-          ubase="$(basename "$uf")"
-          if [ -d "$uf" ]; then
-            # drop-in directory: <unit>.service.d/*.conf
-            mkdir -p "/usr/lib/systemd/system/$ubase" 2>/dev/null || true
-            for cf in "$uf"/*; do
-              [ -f "$cf" ] || continue
-              dst="/usr/lib/systemd/system/$ubase/$(basename "$cf")"
-              if ! cmp -s "$cf" "$dst" 2>/dev/null; then
-                install -m 0644 "$cf" "$dst" 2>/dev/null && { log "units: converged $ubase/$(basename "$cf")"; UNITS_CHANGED=1; }
-              fi
-            done
-          else
-            dst="/usr/lib/systemd/system/$ubase"
-            if ! cmp -s "$uf" "$dst" 2>/dev/null; then
-              install -m 0644 "$uf" "$dst" 2>/dev/null && { log "units: converged $ubase"; UNITS_CHANGED=1; }
-            fi
-          fi
-        done
-        if [ "$UNITS_CHANGED" = "1" ]; then
-          systemctl daemon-reload 2>/dev/null \
-            && log "units: daemon-reload done — TimeoutStopSec/Restart apply at the next stop; Environment= needs the unit to restart (next convergence)" \
-            || log "units: !!! daemon-reload FAILED — unit changes are on disk but NOT active"
-        fi
-      fi
+      # Unit convergence itself now runs UNCONDITIONALLY each tick (converge_units,
+      # called after this whole block) rather than only when origin advances. See the
+      # rationale there — it is idempotent, so calling it here too would be redundant.
       # Reseed the active-scripts run-dir (same source substrate-active-scripts-seed uses at boot).
       cp -f "$SUPER_DIR"/scripts/substrate/*.ts /workspace/active-scripts/ 2>/dev/null || true
       # The relay is restarted ONLY on a real relay.ts change (never on first
@@ -799,6 +825,10 @@ if [ -d "$SUPER_DIR/.git" ] && git -C "$SUPER_DIR" fetch -q origin "$BRANCH" 2>/
     fi
   fi
 fi
+
+# Converge systemd units every tick, independent of whether the super-repo sha advanced.
+# See converge_units for why this must NOT sit inside the marker-gated refresh above.
+converge_units "${SUPER_REPO_DIR:-/workspace/git/super-repo}"
 
 log "done — synced=$synced skipped=$skipped failed=$failed"
 exit 0
