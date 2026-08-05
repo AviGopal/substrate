@@ -306,7 +306,19 @@ for d in "$CLONE_DIR"/*/; do
   # as corruption and re-mirror regardless. Measured before landing: across 17
   # vessels at steady state, 16 had ZERO live-vs-clone drift of any kind, so this
   # predicate is quiet by construction.
-  if [ -n "$SUPPRESS_REATTEMPT" ]; then
+  # DRIFT-MISLABEL GATE (2026-08-05). Everything in this block exists only to CLEAR
+  # SUPPRESS_REATTEMPT, and SUPPRESS_REATTEMPT is read at exactly one place: the
+  # `[ "$LAST" = "$CLONE_HASH" ]` short-circuit below. When the clone has ADVANCED
+  # (LAST != CLONE_HASH) the normal mirror+restart path already runs, so this block cannot
+  # change the outcome — it only logs "RUNTIME SOURCE TRUNCATED" and files a
+  # systematic_failure gap for ordinary deployment lag. Measured 2026-08-05: 18 such lines in
+  # 6h with the hashes CHASING each other (one tick's `clone` hash is the next tick's `live`
+  # hash — the signature of a successful mirror followed by a new commit), against ZERO real
+  # truncations (the "N vs M bytes" form) in 24h. Those false gaps feed goal generation, so a
+  # healthy deploy was manufacturing work items describing a corruption that never happened.
+  # Gating on the same condition the result is consumed under is behaviour-preserving: real
+  # truncation and real unexplained drift both occur with LAST = CLONE_HASH.
+  if [ -n "$SUPPRESS_REATTEMPT" ] && [ "$LAST" = "$CLONE_HASH" ]; then
     TRUNCATED=""
     while IFS= read -r cf; do
       rf="$RUNTIME_DIR/$v/${cf#"$CLONE_DIR/"}"
@@ -392,6 +404,44 @@ EOF
     [ -n "$(find "$mk" -mmin "-$AUTHORING_MARKER_TTL_MIN" 2>/dev/null)" ] || continue
     DEFER_MARKER="$mk"; break
   done
+  # WORK-IN-FLIGHT DEFERRAL (2026-08-05). The marker mechanism above knows two roles: the
+  # vessel being EDITED (its own glob) and the vessel HOSTING THE DRAFTER
+  # (AUTHORING_HOST_VESSEL). It is blind to the third: the vessel HOSTING THE DISPATCH.
+  # goal-host-vessel executes every walk and is almost never itself an edit target, so no
+  # marker ever named it and it was restarted on every convergence regardless of what it was
+  # running. Measured 2026-08-05: 16 restarts in 6h — every one from pull-sync, NRestarts=0 —
+  # while GET :8210/health reported in_flight=3 and callers logged "EARLY EDIT-INTENT routing
+  # failed (The operation timed out)" and "socket connection was closed unexpectedly".
+  # Edit-intent goals are excluded from auto-resume (goal-host index.ts:10315), so each one
+  # killed is PERMANENT loss of a 5-8 minute compose, not a delay.
+  #
+  # Do not mint a second deferral mechanism — ask the vessel itself. Any vessel whose /health
+  # reports in_flight > 0 is holding work a restart destroys; vessels that do not publish the
+  # field yield 0 and are untouched. This deliberately sets IS_AUTHORING_HOST so the
+  # STARVATION BOUND below applies unchanged: a permanently busy dispatch host must not freeze
+  # the deploy channel forever, so after AUTHORING_HOST_MAX_DEFERS consecutive ticks it
+  # converges anyway. NOTE this does NOT cover the shared-package fan-out restart, which
+  # restarts goal-host as a CONSUMER while iterating another vessel — same permanent loss,
+  # rarer trigger. That leg of the class is still open.
+  if [ -z "$DEFER_MARKER" ]; then
+    IFPORT="$(health_port "$v")"
+    if [ -n "$IFPORT" ]; then
+      INFLIGHT="$(curl -s --max-time 5 "http://127.0.0.1:$IFPORT/health" 2>/dev/null \
+        | grep -o '"in_flight"[[:space:]]*:[[:space:]]*[0-9][0-9]*' | grep -o '[0-9]*$' | head -1)"
+      case "${INFLIGHT:-0}" in ''|*[!0-9]*) INFLIGHT=0 ;; esac
+      if [ "$INFLIGHT" -gt 0 ]; then
+        DEFER_MARKER="in-flight:$INFLIGHT"
+        IS_AUTHORING_HOST=1
+        log "$v: $INFLIGHT unit(s) of work in flight — a restart would destroy them; deferring convergence"
+      else
+        # Reset the STARVATION BOUND counter here: the elif below that normally clears it only
+        # runs for the real authoring host, so without this the bound would count CUMULATIVE
+        # deferrals rather than CONSECUTIVE ones and stop protecting anything after six
+        # lifetime deferrals.
+        [ "$v" = "${AUTHORING_HOST_VESSEL:-development-vessel}" ] || rm -f "$MARKER_DIR/$v.authoring-host-defers" 2>/dev/null || true
+      fi
+    fi
+  fi
   # STARVATION BOUND for the authoring host only. Its glob matches EVERY live
   # marker, so a continuously busy authoring plane would defer its deploys
   # indefinitely — an unbounded deferral is how a deploy channel silently stops.
