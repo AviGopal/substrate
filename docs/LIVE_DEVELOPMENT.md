@@ -81,19 +81,20 @@ cadence off a clock is the antipattern the substrate's law on pace exists to
 forbid. boredom-vessel runs as a long-lived daemon (`Type=simple`), not a
 oneshot tick: each selection pass scores the pool of candidate templates on
 learned momentum, input-shape availability, and priority weights folded from
-current conditions — open-gap demand, `timeShapedRhythm` due-state, learning-mode
-signals — then dispatches winners concurrently up to a slot cap. Throughput is
-paced by the pool and by WebSocket completion events, and selection momentum
+current conditions, then dispatches winners concurrently up to a slot cap.
+Throughput is paced by the pool and by completion events, and selection momentum
 persists across restarts.
 
-**The static timer is a known gap.** `boredom-vessel.timer` still exists as a
-backstop, and the daemon still reads several fixed millisecond intervals from its
-unit (minimum dispatch spacing, pool loop period, idle window, exercise and
-autopromote periods). Those are clock values, not rhythm shapes: they are frozen
-at process start, invisible to traces, and therefore unlearnable. Treat whatever
-numbers you find there as a stopgap, read them from the unit rather than from
-this document, and express new cadence as a `timeShapedRhythm` impulse the
-selector already consumes.
+**Cadence is still driven by clocks, and that is the standing gap.** The law on
+pace expects cadence to live in the pool as time-shaped rhythm impulses a selector
+reads. No such shape is advertised by any vessel, and no selector consumes one:
+every recurring behaviour in the fleet is scheduled by a systemd timer, including
+boredom-vessel itself. The daemon additionally reads fixed millisecond intervals
+from its unit — minimum dispatch spacing, pool loop period, idle window. Those are
+clock values: frozen at process start, invisible to traces, and therefore
+unlearnable. Read whatever numbers are in force from the unit rather than from this
+document, and treat the absence of a rhythm shape as the gap to close, not as a
+mechanism to extend.
 
 ```bash
 docker exec substrate-live systemctl cat boredom-vessel.service boredom-vessel.timer
