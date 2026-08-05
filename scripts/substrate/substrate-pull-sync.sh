@@ -676,6 +676,48 @@ if [ -d "$SUPER_DIR/.git" ] && git -C "$SUPER_DIR" fetch -q origin "$BRANCH" 2>/
         install -m 0755 "$SUPER_DIR/scripts/substrate/self-recovery-tick.sh" /usr/local/bin/.self-recovery-tick.new 2>/dev/null \
           && mv -f /usr/local/bin/.self-recovery-tick.new /usr/local/bin/self-recovery-tick 2>/dev/null || true
       fi
+      # SYSTEMD UNITS are the same super-repo-not-in-self-update-set gap class, and
+      # were the last part of the glue layer still stuck at image-build time.
+      # Dockerfile.substrate:213 copies units/ into the image; nothing converged
+      # them afterwards. So EVERY systemd-level repair — TimeoutStopSec, drains,
+      # restart policy, Environment= — silently no-opped until someone rebuilt the
+      # image, and nothing reported that it had not taken. A whole repair class
+      # looked landed and was inert (observed 2026-08-05: a goal-host drain drop-in
+      # sat in git with DropInPaths showing it absent from the container).
+      #
+      # Target /usr/lib, NOT /etc, deliberately: /etc outranks every other unit dir,
+      # so a unit living there can never be masked — and masking is how
+      # apply-inventory keeps vessels off a spoke (Dockerfile.substrate:208 vendors
+      # them low precisely so they remain maskable). Writing units to /etc would
+      # silently un-maskable the whole fleet.
+      if [ -d "$SUPER_DIR/scripts/substrate/units" ]; then
+        UNITS_CHANGED=0
+        for uf in "$SUPER_DIR"/scripts/substrate/units/*; do
+          [ -e "$uf" ] || continue
+          ubase="$(basename "$uf")"
+          if [ -d "$uf" ]; then
+            # drop-in directory: <unit>.service.d/*.conf
+            mkdir -p "/usr/lib/systemd/system/$ubase" 2>/dev/null || true
+            for cf in "$uf"/*; do
+              [ -f "$cf" ] || continue
+              dst="/usr/lib/systemd/system/$ubase/$(basename "$cf")"
+              if ! cmp -s "$cf" "$dst" 2>/dev/null; then
+                install -m 0644 "$cf" "$dst" 2>/dev/null && { log "units: converged $ubase/$(basename "$cf")"; UNITS_CHANGED=1; }
+              fi
+            done
+          else
+            dst="/usr/lib/systemd/system/$ubase"
+            if ! cmp -s "$uf" "$dst" 2>/dev/null; then
+              install -m 0644 "$uf" "$dst" 2>/dev/null && { log "units: converged $ubase"; UNITS_CHANGED=1; }
+            fi
+          fi
+        done
+        if [ "$UNITS_CHANGED" = "1" ]; then
+          systemctl daemon-reload 2>/dev/null \
+            && log "units: daemon-reload done — TimeoutStopSec/Restart apply at the next stop; Environment= needs the unit to restart (next convergence)" \
+            || log "units: !!! daemon-reload FAILED — unit changes are on disk but NOT active"
+        fi
+      fi
       # Reseed the active-scripts run-dir (same source substrate-active-scripts-seed uses at boot).
       cp -f "$SUPER_DIR"/scripts/substrate/*.ts /workspace/active-scripts/ 2>/dev/null || true
       # The relay is restarted ONLY on a real relay.ts change (never on first
