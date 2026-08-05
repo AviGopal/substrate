@@ -360,8 +360,23 @@ EOF
   # ever lasts AUTHORING_MARKER_TTL_MIN) — either way no matching run is in
   # flight, so REAP the marker loudly and proceed with the sync instead of
   # skipping past it forever until an operator deletes it.
+  # A marker names the vessel being EDITED (feature_compose-activity-api.json),
+  # but the authoring RUN executes inside the vessel that HOSTS the resolver —
+  # development-vessel serves both feature_compose and patch_with_tools. So a
+  # compose targeting activity-api defers converging activity-api while leaving
+  # its own host free to be restarted out from under it. Observed 2026-08-05
+  # 06:56:55: development-vessel took SIGTERM mid-compose and killed an in-flight
+  # edit ("socket connection was closed unexpectedly" at the caller). The host has
+  # NO SIGTERM drain of its own, so the run is simply lost. For that vessel, ANY
+  # live marker defers — bounded below so a busy authoring plane cannot starve its
+  # deploys forever.
   DEFER_MARKER=""
-  for mk in "$AUTHORING_MARKER_DIR"/*-"$v".json; do
+  MARKER_GLOB="$AUTHORING_MARKER_DIR/*-$v.json"
+  IS_AUTHORING_HOST=""
+  if [ "$v" = "${AUTHORING_HOST_VESSEL:-development-vessel}" ]; then
+    MARKER_GLOB="$AUTHORING_MARKER_DIR/*.json"; IS_AUTHORING_HOST=1
+  fi
+  for mk in $MARKER_GLOB; do
     [ -f "$mk" ] || continue
     MPID="$(grep -o '"pid":[[:space:]]*[0-9][0-9]*' "$mk" 2>/dev/null | grep -o '[0-9]*$' | head -1)"
     PID_DEAD=""
@@ -377,6 +392,24 @@ EOF
     [ -n "$(find "$mk" -mmin "-$AUTHORING_MARKER_TTL_MIN" 2>/dev/null)" ] || continue
     DEFER_MARKER="$mk"; break
   done
+  # STARVATION BOUND for the authoring host only. Its glob matches EVERY live
+  # marker, so a continuously busy authoring plane would defer its deploys
+  # indefinitely — an unbounded deferral is how a deploy channel silently stops.
+  # The per-target deferral above keeps its original unbounded behaviour, which is
+  # safe because that glob only matches the one vessel being edited.
+  if [ -n "$DEFER_MARKER" ] && [ -n "$IS_AUTHORING_HOST" ]; then
+    AH_FILE="$MARKER_DIR/$v.authoring-host-defers"
+    AH="$(cat "$AH_FILE" 2>/dev/null || echo 0)"; case "$AH" in ''|*[!0-9]*) AH=0 ;; esac
+    AH=$((AH + 1)); echo "$AH" > "$AH_FILE" 2>/dev/null || true
+    if [ "$AH" -gt "${AUTHORING_HOST_MAX_DEFERS:-6}" ]; then
+      log "$v: authoring-host deferral STARVATION BREAK — deferred $AH consecutive ticks on live markers ($(basename "$DEFER_MARKER")); converging anyway, an in-flight authoring run may be lost"
+      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-authoring-host-starved-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync deferred converging the authoring host $v for $AH consecutive ticks because markers were always live; converged anyway to avoid an indefinitely stale deploy channel. An in-flight authoring run may have been killed. The durable fix is a SIGTERM drain in $v, which it does not have.\",\"status\":\"open\"}}}}"
+      DEFER_MARKER=""
+      rm -f "$AH_FILE" 2>/dev/null || true
+    fi
+  elif [ -n "$IS_AUTHORING_HOST" ]; then
+    rm -f "$MARKER_DIR/$v.authoring-host-defers" 2>/dev/null || true
+  fi
   if [ -n "$DEFER_MARKER" ]; then
     log "$v: authoring run in flight ($DEFER_MARKER) — deferring convergence to next tick"
     printf '{"deferred_at":"%s","vessel":"%s","marker":"%s","head":"%s"}\n' \
