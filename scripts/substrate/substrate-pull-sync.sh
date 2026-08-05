@@ -385,6 +385,98 @@ EOF
     skipped=$((skipped+1)); continue
   fi
 
+  # 3-pre. TEST GATE ON THE DEPLOYING CHANNEL. This script is the ONLY channel by
+  # which committed code reaches the running fleet, and until now it ran no test at
+  # all: the tsc gate below fires only in the shared-package fan-out branch, and the
+  # health gate only asks whether /health returns 200 — which a fully regressed vessel
+  # does. Run the CLONE's suite, not the runtime's (mirror-to-live omits test files).
+  # DELTA, not redness: a gate on absolute redness would refuse every convergence
+  # forever. An uncountable result is logged LOUDLY as a blind instrument and never
+  # silently counted as a pass. Bounded refusal (TEST_GATE_MAX_REFUSALS).
+  TEST_BASELINE_DIR="${TEST_BASELINE_DIR:-/workspace/.test-baseline}"
+  mkdir -p "$TEST_BASELINE_DIR"
+  BUN_BIN="${BUN_BIN:-/root/.bun/bin/bun}"
+  [ -x "$BUN_BIN" ] || BUN_BIN="$(command -v bun 2>/dev/null || true)"
+  # PER-TICK BUDGET. The unit is TimeoutStartSec=900 and this gate runs INSIDE the
+  # convergence loop, so N vessels converging in one tick cost N * (up to 2 *
+  # TEST_TIMEOUT_SECONDS). Exceeding 900s gets the unit SIGTERMed — and the kill
+  # would land between this gate and mirror-to-live, i.e. mid-convergence. An
+  # unbounded step has already wedged the sibling host loop for 56 minutes once;
+  # bound it. Past the budget the gate converges UNGATED and says so, because a
+  # stalled deploy channel is a worse failure than an unmeasured convergence.
+  : "${GATE_T0:=$(date +%s)}"
+  GATE_ELAPSED=$(( $(date +%s) - GATE_T0 ))
+  if [ "$GATE_ELAPSED" -ge "${GATE_BUDGET_SECONDS:-420}" ]; then
+    log "$v: !!! TEST GATE SKIPPED — per-tick budget ${GATE_BUDGET_SECONDS:-420}s exhausted (${GATE_ELAPSED}s elapsed); converging UNGATED rather than risk a SIGTERM mid-convergence"
+    BUN_BIN=""
+  fi
+  count_pf() { printf '%s' "$1" | grep -oE "^ *[0-9]+ $2" | grep -oE '[0-9]+' | tail -1 || true; }
+  run_suite() { (cd "$d" && timeout "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test 2>&1) || true; }
+  # D2 FIX. A pass-count DROP alone is not a regression: consolidating or deleting
+  # tests legitimately lowers it. Only count it when failures did not ALSO improve,
+  # otherwise a genuine repair that removes dead tests is refused as a regression AND
+  # the improvement-ratchet branch below becomes unreachable for that case.
+  is_reg() { [ -n "$1" ] && { [ "$1" -gt "$B_FAIL" ] || { [ "$1" -ge "$B_FAIL" ] && [ -n "$B_PASS" ] && [ -n "$2" ] && [ "$2" -lt "$B_PASS" ]; }; }; }
+  REG=""; REG_F=""; REG_P=""
+  if [ -z "$BUN_BIN" ]; then
+    log "$v: !!! TEST GATE BLIND — no test runner available (bun missing, or the per-tick budget line above disabled it); this is not 'no tests', it is no instrument. Converging ungated."
+  else
+    T_OUT="$(run_suite)"; T_FAIL="$(count_pf "$T_OUT" fail)"; T_PASS="$(count_pf "$T_OUT" pass)"
+    if [ -z "$T_FAIL" ]; then
+      log "$v: !!! TEST GATE BLIND — suite produced no countable result (errored or absent); converging ungated"
+    else
+      B_LINE="$(cat "$TEST_BASELINE_DIR/$v" 2>/dev/null || true)"
+      B_FAIL="${B_LINE%% *}"; B_PASS="${B_LINE##* }"
+      case "$B_FAIL" in ''|*[!0-9]*) B_FAIL="" ;; esac
+      case "$B_PASS" in ''|*[!0-9]*) B_PASS="" ;; esac
+      if [ -z "$B_FAIL" ]; then
+        log "$v: test baseline recorded at $T_FAIL fail / ${T_PASS:-?} pass (no gate on first observation)"
+        echo "$T_FAIL ${T_PASS:-0}" > "$TEST_BASELINE_DIR/$v"
+      elif is_reg "$T_FAIL" "$T_PASS"; then
+        # BEST OF TWO: these suites are measurably flaky (development-vessel reported
+        # 98 then 103 failures on an identical tree). Noise is additive, so the minimum
+        # failure count approximates the deterministic one; a single second sample
+        # would fire on that spread, the minimum does not.
+        T2_OUT="$(run_suite)"; F2="$(count_pf "$T2_OUT" fail)"; P2="$(count_pf "$T2_OUT" pass)"
+        BEST_F="$T_FAIL"; BEST_P="$T_PASS"
+        if [ -n "$F2" ] && [ "$F2" -lt "$BEST_F" ]; then BEST_F="$F2"; fi
+        if [ -n "$P2" ] && { [ -z "$BEST_P" ] || [ "$P2" -gt "$BEST_P" ]; }; then BEST_P="$P2"; fi
+        if [ -n "$F2" ] && [ "$F2" != "$T_FAIL" ]; then
+          log "$v: FLAKY suite — $T_FAIL then $F2 fail on identical source; using $BEST_F. Deltas narrower than that spread are not admissible evidence."
+        fi
+        if is_reg "$BEST_F" "$BEST_P"; then
+          REG="baseline $B_FAIL fail/${B_PASS:-?} pass -> $BEST_F fail/${BEST_P:-?} pass (best of 2)"
+          REG_F="$BEST_F"; REG_P="${BEST_P:-0}"
+        else
+          log "$v: test regression NOT confirmed on re-run ($T_FAIL then ${F2:-uncountable} fail) — treating as flake, converging"
+        fi
+      elif [ "$T_FAIL" -lt "$B_FAIL" ]; then
+        log "$v: tests improved $B_FAIL -> $T_FAIL fail — ratcheting baseline"
+        echo "$T_FAIL ${T_PASS:-0}" > "$TEST_BASELINE_DIR/$v"
+      fi
+    fi
+  fi
+  if [ -n "$REG" ]; then
+    RC_FILE="$MARKER_DIR/$v.testgate-refusals"
+    RC="$(cat "$RC_FILE" 2>/dev/null || echo 0)"; case "$RC" in ''|*[!0-9]*) RC=0 ;; esac
+    RC=$((RC + 1)); echo "$RC" > "$RC_FILE" 2>/dev/null || true
+    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. Refusal $RC of ${TEST_GATE_MAX_REFUSALS:-3}; the runtime stays on the code it is already running until this is repaired or the refusal bound is reached.\",\"status\":\"open\"}}}}"
+    if [ "$RC" -le "${TEST_GATE_MAX_REFUSALS:-3}" ]; then
+      log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge ($RC/${TEST_GATE_MAX_REFUSALS:-3}); runtime keeps running its current code"
+      skipped=$((skipped + 1)); continue
+    fi
+    # D1 FIX. Accept the observed numbers as the new baseline on the starvation break.
+    # Without this the old, better baseline persists forever, so EVERY later commit to
+    # this vessel is re-judged a regression and pays 3 refusals (~30min of deploy
+    # staleness) plus 6 full suite runs — permanently, until someone hand-edits the
+    # baseline file. Accepting a degraded baseline blinds the gate to THIS regression,
+    # so the acceptance itself is filed as its own gap rather than passing silently.
+    log "$v: TEST-GATE STARVATION BREAK — refused $RC consecutive runs at ${HEAD:0:10} ($REG); indefinite staleness is the worse failure, converging anyway and accepting $REG_F fail/$REG_P pass as the new baseline"
+    echo "$REG_F $REG_P" > "$TEST_BASELINE_DIR/$v"
+    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-testgate-baseline-degraded-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate accepted a DEGRADED baseline for $v ($REG) after $RC refusals. The gate is now blind to this regression until the suite is repaired and the baseline lowered.\",\"status\":\"open\"}}}}"
+  fi
+  rm -f "$MARKER_DIR/$v.testgate-refusals" 2>/dev/null || true
+
   PREV_GOOD="$(cat "$LAST_GOOD_DIR/$v" 2>/dev/null || true)"
   log "$v: content ${RUNTIME_HASH:0:10} -> ${CLONE_HASH:0:10} (git ${HEAD:0:10}) — mirroring into $RUNTIME_DIR"
   if ! /usr/local/bin/mirror-to-live "$v" "$CLONE_DIR"; then
