@@ -26,6 +26,7 @@ set -euo pipefail
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 MAKE_DIR="$REPO_ROOT/scripts/substrate"
 MARKER="${MARKER:-$HOME/.host-pull-sync.sha}"
+SUB_MARKER="${SUB_MARKER:-$HOME/.host-pull-sync.submodules}"
 CONTAINER="${CONTAINER:-substrate-live}"
 APPLY="${APPLY:-0}"
 BRANCH="${BRANCH:-dev}"
@@ -103,17 +104,79 @@ else
 fi
 HEAD="$(git rev-parse HEAD)"
 
-if [[ "$HEAD" == "$PREV" ]]; then
-  log "already current at ${HEAD:0:10} — nothing to sync"; exit 0
+# 1b. SUBMODULE DRIFT — the commits this script most needs to catch.
+#
+# Substrate-authored commits land INSIDE repos/<vessel> (pushed to that
+# submodule's own origin/dev) and do NOT move the super-repo gitlink until
+# someone separately commits the pointer bump. Detecting change by comparing
+# only the SUPER-REPO HEAD therefore made this script — and the regression
+# detector it carries, whose entire purpose is to catch bad autonomous
+# commits — structurally blind to exactly the commits it exists to catch.
+#
+# Measured before this fix: 62 consecutive "nothing to sync" ticks over ~6h
+# while FOUR substrate-authored commits landed in submodules; the last real
+# test measurement was 6 hours stale. The detector was not failing — it was
+# never being triggered. That is why an autonomous commit once broke the
+# tests and went undetected for 5 days.
+#
+# Per-vessel SHAs are recorded separately from the super-repo marker. First
+# observation SEEDS without alerting (same discipline as the test baseline):
+# a fresh marker must not stampede a full-fleet resync.
+DRIFTED=""
+SUB_SEEDING=0
+[[ -f "$SUB_MARKER" ]] || { SUB_SEEDING=1; log "submodule marker absent — seeding per-vessel SHAs (no sync on first observation)"; }
+SUB_STATE=""
+while IFS= read -r sm; do
+  [[ -z "$sm" ]] && continue
+  v="${sm#repos/}"
+  [[ -d "$REPO_ROOT/$sm/.git" || -f "$REPO_ROOT/$sm/.git" ]] || continue
+  git -C "$REPO_ROOT/$sm" fetch --quiet origin "$BRANCH" 2>/dev/null || { log "WARN $v: submodule fetch failed (skipping drift check)"; continue; }
+  sha="$(git -C "$REPO_ROOT/$sm" rev-parse "origin/$BRANCH" 2>/dev/null || true)"
+  [[ -z "$sha" ]] && continue
+  SUB_STATE="$SUB_STATE$v=$sha"$'\n'
+  prev_sha="$(grep -m1 "^$v=" "$SUB_MARKER" 2>/dev/null | cut -d= -f2 || true)"
+  [[ "$SUB_SEEDING" == "1" ]] && continue
+  [[ "$sha" == "$prev_sha" ]] && continue
+  # Advance the WORKTREE to what landed, so the detector tests the real tree and
+  # the sync step copies the real tree. If it cannot fast-forward, do NOT mark it
+  # changed — syncing a stale worktree would deploy code that is not what landed.
+  sub_branch="$(git -C "$REPO_ROOT/$sm" symbolic-ref --short HEAD 2>/dev/null || echo DETACHED)"
+  if [[ "$sub_branch" != "$BRANCH" ]]; then
+    log "!!! $v DRIFTED to ${sha:0:10} but its worktree is on '$sub_branch', not '$BRANCH' — NOT syncing (operator triage)"; continue
+  fi
+  if [[ "$APPLY" != "1" ]]; then
+    # NOTE: dry-run deliberately does NOT advance the worktree, so any TEST delta
+    # logged below for this vessel measures the OLD tree — it is NOT a verdict on
+    # the drifted commit. Only an APPLY=1 run tests what actually landed.
+    log "DRY-RUN: $v drifted ${prev_sha:0:10} -> ${sha:0:10} (would fast-forward worktree + sync; TEST delta below reflects the PRE-drift tree)"
+    DRIFTED="$DRIFTED$v"$'\n'; continue
+  fi
+  if ! git -C "$REPO_ROOT/$sm" merge --ff-only --quiet "origin/$BRANCH" 2>/dev/null; then
+    log "!!! $v DRIFTED to ${sha:0:10} but ff-only merge FAILED (diverged/dirty) — NOT syncing (operator triage)"; continue
+  fi
+  log "$v drifted ${prev_sha:0:10} -> ${sha:0:10} (substrate-authored commit; worktree fast-forwarded)"
+  DRIFTED="$DRIFTED$v"$'\n'
+done < <(git config -f "$REPO_ROOT/.gitmodules" --get-regexp '^submodule\..*\.path$' 2>/dev/null | awk '{print $2}' | grep '^repos/' || true)
+
+DRIFTED="$(echo "$DRIFTED" | sed '/^$/d')"
+
+if [[ "$HEAD" == "$PREV" && -z "$DRIFTED" ]]; then
+  log "already current at ${HEAD:0:10} — nothing to sync"
+  [[ "$APPLY" == "1" && -n "$SUB_STATE" ]] && printf '%s' "$SUB_STATE" > "$SUB_MARKER"
+  exit 0
 fi
-log "pulled $BRANCH ${PREV:0:10} -> ${HEAD:0:10}"
+[[ "$HEAD" != "$PREV" ]] && log "pulled $BRANCH ${PREV:0:10} -> ${HEAD:0:10}"
 
 # 2. Which top-level repos/<x> changed?
 CHANGED_PATHS="$(git diff --name-only "$PREV" "$HEAD" -- 'repos/' 2>/dev/null || true)"
 # Match both direct-tree files (repos/x/file) AND submodule gitlink changes
 # (repos/x with no trailing slash — e.g. an ias-executor-ts pointer bump).
-CHANGED_VESSELS="$(echo "$CHANGED_PATHS" | sed -nE 's#^repos/([^/]+)(/.*)?$#\1#p' | sort -u)"
-[[ -z "$CHANGED_VESSELS" ]] && { log "no vessel source changed; marker advanced"; echo "$HEAD" > "$MARKER"; exit 0; }
+CHANGED_VESSELS="$(printf '%s\n%s\n' "$(echo "$CHANGED_PATHS" | sed -nE 's#^repos/([^/]+)(/.*)?$#\1#p')" "$DRIFTED" | sed '/^$/d' | sort -u)"
+if [[ -z "$CHANGED_VESSELS" ]]; then
+  log "no vessel source changed; marker advanced"
+  if [[ "$APPLY" == "1" ]]; then echo "$HEAD" > "$MARKER"; [[ -n "$SUB_STATE" ]] && printf '%s' "$SUB_STATE" > "$SUB_MARKER"; fi
+  exit 0
+fi
 log "changed vessels: $(echo "$CHANGED_VESSELS" | tr '\n' ' ')"
 
 # Consumers that `sync-ias-executor-ts RESTART=1` already restarts — skip their
@@ -248,7 +311,13 @@ for v in $CHANGED_VESSELS; do
   fi
 done
 
-[[ "$APPLY" == "1" ]] && echo "$HEAD" > "$MARKER" || log "DRY-RUN: marker NOT advanced (set APPLY=1 to act + record)"
+if [[ "$APPLY" == "1" ]]; then
+  echo "$HEAD" > "$MARKER"
+  # Record per-vessel SHAs too, or every tick re-detects the same drift forever.
+  [[ -n "$SUB_STATE" ]] && printf '%s' "$SUB_STATE" > "$SUB_MARKER"
+else
+  log "DRY-RUN: marker NOT advanced (set APPLY=1 to act + record)"
+fi
 # The marker advances even after a failed step, deliberately: blocking it on a PERSISTENT failure
 # would retry forever and re-wedge the loop. But a partial sync must not report as a clean one —
 # say so on the line an operator actually reads.
