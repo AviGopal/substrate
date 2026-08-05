@@ -1,8 +1,10 @@
-# metabob-devbob — a self-improving development substrate
+# substrate — a self-improving development substrate
 
 **An autonomous AI development system built on the impulse–activity foundation, with Thompson Sampling for continuous learning. The system develops itself: goals are dispatched into a running substrate, every execution is traced, and successful patterns become reusable templates.**
 
-> **Start here:** [`CLAUDE.md`](CLAUDE.md) is the authoritative, continuously-maintained description of how to work in this repo. This README is a high-level orientation; when the two disagree, CLAUDE.md wins.
+> **Start here:** [`CLAUDE.md`](CLAUDE.md) is the authoritative, continuously-maintained description of how to work in this repo. This README is a high-level orientation; when the two disagree, CLAUDE.md wins. When either disagrees with the running substrate, the running substrate wins.
+>
+> **All documentation:** [`docs/README.md`](docs/README.md) is the index of everything under `docs/` — architecture lenses, operations guides, and reference material. This README links only a handful of them.
 
 ## Overview
 
@@ -11,7 +13,7 @@ The substrate demonstrates:
 - **Impulse–Activity architecture** — universal data (*impulses*) processed through constrained state transitions (*activities*).
 - **Learning loop** — Thompson Sampling for activity selection, Bayesian relevance scoring for impulses, ribosome extraction of templates from successful traces.
 - **Vessel pattern** — capabilities are provided by *vessels* (bundles of activities + resolvers + lifecycle hooks) that live where their data lives.
-- **Self-governance / autonomy** — the substrate detects its own operational gaps, proposes and verifies changes, and lands them through a self-alteration cutover loop, moving along the S1 → S2 → S3 autonomy trajectory (operator-authored → substrate-authored → distributed-stable).
+- **Self-governance / autonomy** — the substrate detects its own operational gaps, proposes and verifies changes, and lands them through a self-alteration cutover loop, moving along the S1 → S2 → S3 autonomy trajectory (operator-authored development → substrate-authored development under supervision → a system that resists harmful intervention with cited evidence).
 
 ## Architecture foundation
 
@@ -47,14 +49,14 @@ The substrate demonstrates:
 
 ## How development works: dispatch through the substrate
 
-The default development loop is **not** "hand-edit a file and run tests." It is to **dispatch the change as a goal** so it runs as a traced activity and feeds the learning loop. The agent-facing dispatch surface is the **metabob-mcp** tool `mcp__metabob__run_goal` (which reaches `goal-host-vessel`). The older `minibob` CLI is **deprecated** and being retired.
+The default development loop is **not** "hand-edit a file and run tests." It is to **dispatch the change as a goal** so it runs as a traced activity and feeds the learning loop. The agent-facing dispatch surface is the **metabob-mcp** cockpit — `mcp__metabob__run_goal` for short one-shot goals, `mcp__metabob__run_goal_async` for anything non-trivial (both reach `goal-host-vessel`). There is no supported command-line dispatch client: goals go through the MCP cockpit, or directly to `POST /run-goal` on goal-host if you are scripting against the HTTP surface.
 
 ```
 mcp__metabob__run_goal  goal="fix the failing tests in activity-api"
 mcp__metabob__run_goal  goal="add input validation to the impulse endpoint"
 ```
 
-Conscious one-off direct edits to vessel source are gated by a PreToolUse hook and require `SUBSTRATE_ALLOW_DIRECT_EDIT=1`; docs/scripts/tests/config are never gated. See CLAUDE.md → *Development Philosophy: Substrate First*.
+Conscious one-off direct edits to vessel source are gated by a PreToolUse hook and require `SUBSTRATE_ALLOW_DIRECT_EDIT=1`; docs/scripts/tests/config are never gated. See CLAUDE.md → *How work happens: dispatch, don't edit*.
 
 ## Installation
 
@@ -81,7 +83,7 @@ docker compose up -d                       # run from repo root — root compose
 docker exec substrate-live substrate-key show
 ```
 
-`scripts/substrate/docker-compose.yml` is now a symlink to the root file, so
+`scripts/substrate/docker-compose.yml` is a symlink to the root file, so
 either directory works. `OPENAI_API_KEY` works in place of `ANTHROPIC_API_KEY` —
 exactly one LLM key is required; every other secret auto-generates on first boot
 to `/workspace/.substrate-secrets`.
@@ -255,7 +257,7 @@ bun run validation/scripts/failure-mode-harness.ts
 mcp__metabob__run_goal  goal="verify the change works"
 ```
 
-**Key endpoints** (host-mapped; see CLAUDE.md → *Substrate endpoints* for the full table):
+**Key endpoints** (host-mapped on a full standalone substrate; see CLAUDE.md → *Reference: the running substrate*, and discover the live fleet rather than trusting any table — a spoke masks the units its hub serves):
 
 | Host port | Vessel | Role |
 |---|---|---|
@@ -283,7 +285,9 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 - **development-vessel** (`repos/development-vessel`) — meta-vessel for substrate self-development; owns the authoritative `memoryNote` store.
 - **identity-vessel** (`repos/identity-vessel`) — single source of truth for authentication (HMAC API keys + JWT issuance).
 - **analysis-vessel** (`repos/analysis-vessel`) — code-analysis resolver (supersedes the standalone analysis-api as the discovery-registered surface).
-- **activity-dashboard** / **workbench** — read-only observability and human-in-the-loop authoring surfaces over `activity-api`.
+- **workbench** (`repos/workbench`) — observability and human-in-the-loop authoring surface over `activity-api` (activities, executions, the learning loop).
+- **stateful-ui-vessel** (`repos/stateful-ui-vessel`) — the substrate's own UI: a pool of panels and interactor impulses served as a three-region view (pool / execution / decisions).
+- **obsidian-vessel** (`repos/obsidian-vessel`) — the human interface; each connected vault is a surface to a different human resolver, reached through the vessel's sidecar conduit.
 
 ## Learning loop
 
@@ -293,7 +297,7 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 4. **Learn** — α/β posteriors update for future selection; impulse-relevance and resolver metrics feed back.
 5. **Extract** — successful executions become reusable templates (ribosome).
 
-**Reuse before minting:** before minting a new activity/resolver, prefer an existing producer of the needed output shape. Reuse sharpens posteriors and raises the credit-mixing rate (λ₁); minting is the justified exception, not the default. See CLAUDE.md → *Key Design Principles*.
+**Reuse before minting:** before minting a new activity/resolver, prefer an existing producer of the needed output shape. Reuse sharpens posteriors and raises the credit-mixing rate (λ₁); minting is the justified exception, not the default. See CLAUDE.md → *The laws*, law 3.
 
 ## Key design principles
 
@@ -308,7 +312,9 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 
 ## Documentation
 
-- [`CLAUDE.md`](CLAUDE.md) — authoritative working guide (substrate-first loop, vessel inventory, auth, endpoints).
+**[`docs/README.md`](docs/README.md) is the full documentation index** — every guide under `docs/`, grouped by what it is for. The handful below are the entry points.
+
+- [`CLAUDE.md`](CLAUDE.md) — authoritative working guide (the laws, the dispatch loop, the operator role, fleet anchors).
 - [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — canonical system definition.
 - [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) — local single-container substrate: quick-start, iteration, backing up learning state.
 - [`docs/architecture/`](docs/architecture/) — the `SUBSTRATE_AS_*` lenses (dynamics, MDP, network, representation, DEC, fleet, software) and supporting design docs.

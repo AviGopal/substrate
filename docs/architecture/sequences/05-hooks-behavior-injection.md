@@ -1,887 +1,518 @@
 # Hook Registration and Behavior Injection
 
-> **How to read this.** The hook and lifecycle-event model is accurate in spirit
-> and stale in its wiring. Lifecycle events are emitted as impulses on the
-> activity-api WebSocket bus (`lifecycle:task:preBinding`,
-> `lifecycle:task:completed`, `lifecycle:execution:succeeded`,
-> `lifecycle:gap:classified`, `lifecycle:llm:dispatched`) and handled by vessel
-> subscribers — workbench, `ribosome-vessel`, `concept-db`, `goal-host-vessel` —
-> rather than by an in-process, per-session hook registry. Read the in-process
-> "hook registration" diagrams below as bus subscription with the same payload
-> contract, and the executing participant as goal-host-vessel together with those
-> subscribers. The `lifecycle-hooks.ts`, `vessel-hooks.ts`, `promotion-hooks.ts`
-> and `impulse-verification-hooks.ts` references predate the move. Pre-task
-> behaviour injection and promotion are real; only the wiring changed, from a
-> direct callback to the bus.
+> **How to read this.** "Hook" here means **lifecycle subscription**. The engine
+> emits lifecycle events, `BusForwardingEventSink` forwards them to
+> `activity-api`'s bus (`POST /v2/events/publish`, broadcast over `ws://…/ws`),
+> and any vessel can subscribe. The in-process form of the same mechanism is
+> `LifecycleSubscriberVessel`, which matches subscriber templates against events
+> and dispatches them. There is no per-session registry of callback functions —
+> a subscription is a declaration on an activity template. Cite by symbol, never
+> by line number.
 
 ## Overview
 
-This document maps the hook / lifecycle-event system, showing how behavior can be customized and extended at all lifecycle points. On the substrate this is **event-driven**: emitters publish lifecycle events to the activity-api bus and subscriber vessels react. The original in-process registry model (below) is preserved as the conceptual contract; substitute "subscribe to the bus" for "register a hook."
+This document maps how behaviour is attached to lifecycle points: what an activity template declares in order to be woken by an event, how an event is matched and filtered, how runaway self-triggering is prevented, and why none of this is stored as activity schema in the learning backend.
+
+The design decision underneath is that **reactive behaviour is an activity**. A subscriber is a template with a `subscription` block, so it is selectable, gradable, composable and retirable like any other activity. A callback registered at process start would be none of those things.
 
 ## Key Concepts
 
-1. **Lifecycle Hooks** - Activity and task lifecycle events (before/after prompt, complete/failed)
-2. **Vessel Hooks** - State-based impulse injection with condition evaluation
-3. **Impulse Verification Hooks** - Impulse creation and processing validation
-4. **Hook Chain Execution** - Multiple hooks for the same trigger (priority-ordered)
-5. **Promotion Hooks** - Template promotion decision logic
-6. **Non-Blocking Execution** - Hook failures don't stop activity execution
-7. **Caching Strategy** - Expensive hook resolvers cached (TTL-based)
+1. **Subscription block** — `ActivityTemplateSubscription { shape, filter?, must_fire?, dedupe_key? }` on an activity template.
+2. **Event emission** — `ActivityExecutor` emits `LifecycleEvent { type, timestamp, data }` to the runtime's `EventSink`.
+3. **Bus forwarding** — `BusForwardingEventSink` calls the inner sink first, then fire-and-forget-publishes to activity-api; engine progression never blocks on bus availability.
+4. **Name mapping** — `mapEventTypeToBusForm` converts colons to dots and camelCase to snake_case: `lifecycle:task:preBinding` → `lifecycle.task.pre_binding`.
+5. **Structural filters** — `matchesFilter` supports `<field>_contains` and `<field>_equals`, with snake_case → camelCase tolerance via `resolvePayloadField`.
+6. **Dedupe** — `resolveDedupeKey` renders a `{field}` / `{nested.field}` template against the payload; the cache window is five minutes.
+7. **Depth cap** — `refuseForDepthCap` refuses a dispatch at composition depth ≥ 2 (audit-tagged templates may raise it to at most 4).
+8. **Isolation** — dispatcher failures are logged and swallowed; a subscriber must never cascade into the emitting execution.
 
 ## Main Sequence Diagram: Complete Hook Lifecycle
 
 ```mermaid
 sequenceDiagram
-    participant App as Application<br/>(index.ts)
-    participant Session as Session<br/>Manager
-    participant HookReg as Hook<br/>Registry
-    participant LifecycleHooks as LifecycleHooks<br/>Namespace
-    participant VesselHooks as VesselHooks<br/>Registry
-    participant LLM as LLM<br/>Executor
-    participant Resolver as Hook<br/>Resolver
-    participant State as State<br/>Manager
+    participant Exec as ActivityExecutor
+    participant Sink as BusForwardingEventSink
+    participant Sub as LifecycleSubscriberVessel
+    participant API as activity-api /v2/events/publish
+    participant WS as WebSocket broadcaster (ws://…/ws)
+    participant Vessel as Subscriber vessel<br/>(ribosome, concept-db, workbench, …)
 
     rect rgb(200, 220, 255)
-    Note over App,State: PHASE 1: INITIALIZATION & HOOK REGISTRATION
-
-    App->>Session: Initialize session
-    Session->>HookReg: Get hook registry (singleton)
-
-    rect rgb(220, 240, 255)
-    Note over Session,HookReg: Register Lifecycle Hooks
-    Session->>LifecycleHooks: LifecycleHooks.register({<br/>  onBeforePrompt: handler,<br/>  onAfterPrompt: handler,<br/>  onActivityComplete: handler,<br/>  onActivityFailed: handler<br/>})
-    LifecycleHooks->>LifecycleHooks: Merge into registeredHooks
-    LifecycleHooks->>HookReg: Log: "Registered hooks"
-    end
-
-    rect rgb(220, 240, 255)
-    Note over Session,VesselHooks: Register Vessel Hooks (State-Based)
-    Session->>VesselHooks: registerVesselHook({<br/>  id: "hook-id",<br/>  trigger: "pre-execution",<br/>  priority: 100,<br/>  injection: { resolver }<br/>})
-    VesselHooks->>VesselHooks: Get hooks for trigger
-    VesselHooks->>VesselHooks: Insert in priority order
-    VesselHooks->>VesselHooks: Log: "Registered hook"
-    end
-
+    Note over Exec,Sub: DECLARATION (not registration)
+    Sub->>Sub: register(template) — indexed by subscription.shape
+    Note over Sub: the template itself declares<br/>{shape, filter?, must_fire?, dedupe_key?}
     end
 
     rect rgb(200, 255, 220)
-    Note over App,State: PHASE 2: ACTIVITY EXECUTION LIFECYCLE
-
-    App->>LLM: Begin activity execution
-
-    rect rgb(220, 255, 240)
-    Note over LLM,LifecycleHooks: PRE-TASK HOOKS
-    LLM->>LifecycleHooks: executeBeforePrompt(context)
-    alt Hook registered
-        LifecycleHooks->>LifecycleHooks: if !registeredHooks.onBeforePrompt return
-        LifecycleHooks->>LifecycleHooks: try/catch block
-        LifecycleHooks->>LifecycleHooks: await onBeforePrompt(context)
-    else No hook
-        LifecycleHooks->>LifecycleHooks: return early (no-op)
-    end
-    LifecycleHooks-->>LLM: Hook execution complete (or non-blocking error)
+    Note over Exec,Vessel: EMISSION
+    Exec->>Sink: emit(LifecycleEvent {type, timestamp, data})
+    Sink->>Sub: inner.emit(event) — SYNCHRONOUS, first
+    Sink-->>API: POST /v2/events/publish (fire-and-forget, timeout ~2s)
+    Note over Sink: no await, no retry; errors are warned only.<br/>Durable state lives in the trace store —<br/>the bus is a hot reactivity channel.
+    API->>WS: broadcaster.emit
+    WS-->>Vessel: event with sourceVesselId attribution
     end
 
     rect rgb(220, 255, 240)
-    Note over LLM,Resolver: VESSEL HOOK EXECUTION (Pre-Selection)
-    LLM->>VesselHooks: executeHooks("pre-selection", stateOverride)
-    VesselHooks->>State: Build state snapshot from manager
-    State-->>VesselHooks: ImpulseStateSpace {<br/>  shapes, impulseCounts,<br/>  budget, git, currentGoal<br/>}
-
-    loop For each hook (priority order)
-        VesselHooks->>VesselHooks: shouldExecuteHook(hook, state)?
-
-        alt Conditions met
-            VesselHooks->>VesselHooks: getCachedResult(hook)?
-
-            alt Result cached
-                VesselHooks->>VesselHooks: Return cached impulses
-                VesselHooks->>VesselHooks: logExecution(success, cached=true)
-            else Not cached
-                VesselHooks->>Resolver: resolver(state) [timeout 5s]
-                Resolver-->>VesselHooks: Impulse[] (produced)
-                VesselHooks->>VesselHooks: If cacheable: cacheResult(hook)
-                VesselHooks->>VesselHooks: logExecution(success)
+    Note over Sub: IN-PROCESS MATCHING
+    Sub->>Sub: registry lookup by event type
+    loop each candidate subscriber template
+        Sub->>Sub: matchesFilter(subscription.filter, payload)
+        alt filter fails
+            Note over Sub: skip
+        else matches
+            Sub->>Sub: refuseForDepthCap(template, payload)
+            alt at or beyond the cap
+                Note over Sub: refuse — recorded as safety_breach
+            else within the cap
+                Sub->>Sub: resolveDedupeKey(template, payload)
+                alt seen within the 5-minute window
+                    Note over Sub: suppress
+                else fresh
+                    Sub->>Sub: dispatcher(template, event, {lifecycleShape, payload})
+                    Note over Sub: fire-and-forget, bounded by<br/>IAS_SUBSCRIBER_MAX_INFLIGHT (default 64)
+                end
             end
-        else Conditions NOT met
-            VesselHooks->>VesselHooks: Skip hook (log debug)
         end
     end
-
-    VesselHooks-->>LLM: All impulses from hooks
-    LLM->>State: Inject impulses into state
-    end
-
-    rect rgb(220, 255, 240)
-    Note over LLM,LifecycleHooks: LLM TASK EXECUTION
-    LLM->>LLM: Process task with context
-    LLM->>LLM: Generate response
-    LLM->>LLM: Execute tool calls
-    end
-
-    rect rgb(220, 255, 240)
-    Note over LLM,LifecycleHooks: POST-TASK HOOKS
-    LLM->>LifecycleHooks: executeAfterPrompt(context, result)
-    alt Hook registered
-        LifecycleHooks->>LifecycleHooks: try/catch block
-        LifecycleHooks->>LifecycleHooks: await onAfterPrompt(context, result)
-    else No hook
-        LifecycleHooks-->>LLM: return early (no-op)
-    end
-    LifecycleHooks-->>LLM: Hook execution complete (non-blocking)
-    end
-
+    Sub->>Sub: downstreamSink?.emit(event) — after dispatch
     end
 
     rect rgb(255, 240, 220)
-    Note over App,State: PHASE 3: ACTIVITY COMPLETION HOOKS
-
-    LLM->>LifecycleHooks: executeActivityComplete(execution)
-    alt Success path
-        LifecycleHooks->>LifecycleHooks: try/catch
-        LifecycleHooks->>LifecycleHooks: await onActivityComplete(execution)
-    else Failure path
-        LLM->>LifecycleHooks: executeActivityFailed(execution, error)
-        LifecycleHooks->>LifecycleHooks: try/catch
-        LifecycleHooks->>LifecycleHooks: await onActivityFailed(execution, error)
-    end
-
-    rect rgb(255, 250, 240)
-    Note over LLM,VesselHooks: PROMOTION HOOKS (Post-Execution)
-    LLM->>VesselHooks: executePromotionCheck(context)
-    VesselHooks->>VesselHooks: checkPromotion(context)
-    alt Custom hook registered
-        VesselHooks->>Resolver: customPromotionHook(context)
-    else Use default
-        VesselHooks->>Resolver: defaultPromotionHook(context)
-    end
-    Resolver-->>VesselHooks: PromotionDecision
-    VesselHooks-->>LLM: shouldPromote: boolean
-    end
-
-    end
-
-    rect rgb(255, 220, 220)
-    Note over App,State: PHASE 4: HOOK CHAIN EXECUTION (Multiple Hooks)
-
-    Note over App,State: When multiple hooks register for same trigger:
-    Note over App,State: 1. Hooks sorted by priority (descending)
-    Note over App,State: 2. Execute in order
-    Note over App,State: 3. Non-blocking failures (continue on error)
-    Note over App,State: 4. Accumulate results from all hooks
-    Note over App,State: 5. Cache results if enabled
-
+    Note over Vessel: REACTION
+    Vessel->>Vessel: apply its own gate<br/>(e.g. ribosome: reached AND all tasks terminal-and-successful)
+    Vessel->>Vessel: dispatch work through the normal goal path
     end
 ```
 
 ## Decomposition: Hook Registration Flow
 
+Registration is a template declaration, not a function call at startup. A subscriber template carries a `subscription` block, and the vessel indexes it by `subscription.shape` for O(1) lookup when an event of that type arrives.
+
 ```mermaid
 sequenceDiagram
-    participant Caller as Caller
-    participant LifecycleHooks as LifecycleHooks
-    participant Registry as Hook Registry
-    participant Logger as Logger
+    participant Author as Template author / ribosome
+    participant Store as Template store
+    participant Sub as LifecycleSubscriberVessel
+    participant Reg as registry: Map<shape, ActivityTemplate[]>
 
-    Caller->>LifecycleHooks: register({ onBeforePrompt, onAfterPrompt, ... })
-
-    rect rgb(240, 240, 255)
-    Note over LifecycleHooks,Registry: MERGE PHASE
-    LifecycleHooks->>LifecycleHooks: registeredHooks = {<br/>  ...registeredHooks,<br/>  ...newHooks<br/>}
-    end
-
-    LifecycleHooks->>Logger: Log registered hook keys
-
-    alt Multiple hooks for same trigger
-        Note over LifecycleHooks: Each hook maintained separately
-        Note over LifecycleHooks: Executed in sequence with error handling
-    end
+    Author->>Store: template with subscription {shape, filter?, dedupe_key?}
+    Store-->>Sub: template loaded by the host
+    Sub->>Reg: register(template) under subscription.shape
+    Note over Reg: several templates may share a shape;<br/>each is matched independently at emit time
 ```
 
-**Implementation (live):** event emission/subscription on the activity-api WebSocket bus; emitters in `repos/goal-host-vessel/` + `ias-executor-ts`, subscribers in the consuming vessels.
+Because the subscription lives on the template, everything that applies to an activity applies to a subscriber: it can be selected, graded by its executions, superseded by a variant, or retired. A subscriber that never fires usefully loses its posterior the same way any other activity does.
+
+**Implementation:** `ActivityTemplateSubscription` in `repos/ias-executor-ts/src/ontology.ts`; `LifecycleSubscriberVessel.register` and its `registry` map in `src/lifecycle-subscriber.ts`.
 
 ## Decomposition: Activity Lifecycle Hooks
 
-```mermaid
-sequenceDiagram
-    participant Executor as Activity<br/>Executor
-    participant LifecycleHooks as LifecycleHooks
-    participant Hook as Hook<br/>Handler
-    participant Logger as Logger
+The engine's built-in event vocabulary is open-ended: `LifecycleEventType` names the built-ins and then widens to any string, so a template may subscribe to an event the engine did not enumerate.
 
-    rect rgb(220, 240, 255)
-    Note over Executor,Hook: BEFORE EACH TASK
+**Built-in types emitted by the engine:**
 
-    Executor->>LifecycleHooks: executeBeforePrompt(TaskContext)
-    alt Hook exists
-        LifecycleHooks->>LifecycleHooks: Check if onBeforePrompt registered
-        LifecycleHooks->>Hook: await hook(context)
-        Hook-->>LifecycleHooks: Promise resolves
-    else Hook missing
-        LifecycleHooks-->>Executor: return (no-op)
-    end
+| Event | Meaning |
+|---|---|
+| `activity.started` | An activity execution began |
+| `task.started` | A task began |
+| `task.completed` | A task finished (success carried in the payload) |
+| `activity.completed` | An activity execution finished successfully |
+| `activity.failed` | An activity execution failed |
+| `impulse.created` | An impulse was created |
+| `impulse.loaded` | An impulse was loaded |
+| `lifecycle.emitted` | A lifecycle event was emitted |
 
-    alt Hook throws error
-        LifecycleHooks->>Logger: warn "[LifecycleHooks] hook failed (non-blocking)"
-        LifecycleHooks-->>Executor: continue anyway
-    else Hook succeeds
-        LifecycleHooks-->>Executor: void
-    end
-    end
+**Colon-form shapes subscribers use**, forwarded to the bus in dotted snake_case:
 
-    rect rgb(220, 240, 255)
-    Note over Executor,Hook: AFTER EACH TASK
+| Subscription shape | Bus form |
+|---|---|
+| `lifecycle:task:preBinding` | `lifecycle.task.pre_binding` |
+| `lifecycle:task:started` | `lifecycle.task.started` |
+| `lifecycle:task:completed` | `lifecycle.task.completed` |
+| `lifecycle:execution:succeeded` | `lifecycle.execution.succeeded` |
+| `lifecycle:execution:tick` | `lifecycle.execution.tick` |
+| `lifecycle:activity:postExecution` | `lifecycle.activity.post_execution` |
+| `lifecycle:gap:classified` | `lifecycle.gap.classified` |
+| `lifecycle:llm:dispatched` | `lifecycle.llm.dispatched` |
 
-    Executor->>LifecycleHooks: executeAfterPrompt(context, result)
-    LifecycleHooks->>Hook: await hook(context, result)
-    Hook-->>LifecycleHooks: Promise resolves (could contain side effects)
-    LifecycleHooks-->>Executor: void
-    end
+`lifecycle:llm:dispatched` is emitted by the `llm-prompt` resolver *before* the model call, which is what lets an audit subscriber see the dispatch without log archaeology. `ribosome-extract` subscribes to `lifecycle:activity:postExecution`.
 
-    rect rgb(220, 240, 255)
-    Note over Executor,Hook: ON ACTIVITY COMPLETE
-
-    Executor->>LifecycleHooks: executeActivityComplete(execution)
-    alt Success
-        LifecycleHooks->>Hook: await onActivityComplete(execution)
-    else Failure
-        LifecycleHooks->>Hook: await onActivityFailed(execution, error)
-    end
-    Hook-->>LifecycleHooks: resolved
-    LifecycleHooks-->>Executor: void
-    end
-```
-
-**Implementation (live):** lifecycle events on the activity-api bus; emitted from `repos/goal-host-vessel/` + `ias-executor-ts`, consumed by subscriber vessels.
+**Implementation:** `LifecycleEventType` and `LifecycleEvent` in `repos/ias-executor-ts/src/ontology.ts`; `mapEventTypeToBusForm` and `BusForwardingEventSink` in `src/adapters/bus-forwarder.ts`.
 
 ## Decomposition: Vessel Hooks (State-Based Injection)
 
-```mermaid
-sequenceDiagram
-    participant Caller as Caller
-    participant Registry as VesselHookRegistry
-    participant State as State<br/>Manager
-    participant Conditions as Condition<br/>Evaluator
-    participant Cache as Cache<br/>Manager
-    participant Resolver as Hook<br/>Resolver
-    participant Logger as Logger
+Conditional reaction is expressed as a **structural filter on the event payload**, evaluated by `matchesFilter` before any dispatch. Two suffix predicates are supported and an unknown suffix falls through to plain deep equality on the literal key, so a filter the author intended as a key is never silently dropped.
 
-    rect rgb(240, 240, 255)
-    Note over Caller,Resolver: HOOK REGISTRATION
+```typescript
+// Fire only when the execution produced a test_report
+subscription: {
+  shape: "lifecycle:execution:succeeded",
+  filter: { output_shapes_contains: "test_report" }
+}
 
-    Caller->>Registry: register(VesselHook)
-    Registry->>Registry: Check duplicate ID
-    alt Duplicate found
-        Registry->>Registry: unregister old hook
-    end
-    Registry->>Registry: Insert in trigger bucket
-    Registry->>Registry: Sort by priority (desc)
-    Registry->>Logger: Log registration
-    end
-
-    rect rgb(240, 240, 255)
-    Note over Caller,Resolver: HOOK EXECUTION
-
-    Caller->>Registry: executeHooks(trigger, stateOverride?)
-
-    Registry->>Registry: getHooks(trigger)
-    Registry->>State: buildStateSnapshot(override)
-    State-->>Registry: ImpulseStateSpace
-
-    Registry->>Logger: Log: "Executing N hooks"
-
-    loop For each hook (sorted by priority)
-        Registry->>Conditions: shouldExecuteHook(hook, state)
-
-        alt RequiredShapes met AND RequiredAbsent clear AND Custom predicate true
-            Registry->>Cache: getCachedResult(hook)
-
-            alt Cache hit (not expired)
-                Cache-->>Registry: Impulse[]
-                Registry->>Logger: Log: "Using cached result"
-            else Cache miss or expired
-                Registry->>Resolver: Promise.race([<br/>  resolver(state),<br/>  timeout(5000ms)<br/>])
-                Resolver-->>Registry: Impulse[] (produced)
-
-                alt Hook.cacheable
-                    Registry->>Cache: cacheResult(hook, impulses)
-                end
-            end
-
-            Registry->>Registry: Accumulate impulses
-            Registry->>Logger: Log execution result
-        else Conditions not met
-            Registry->>Logger: Log: "Skipping hook"
-        end
-    end
-
-    Registry-->>Caller: All impulses from all hooks
-    end
-
-    rect rgb(240, 240, 255)
-    Note over Registry,Logger: HOOK RESULT LOGGING
-
-    Registry->>Logger: logExecution(HookExecutionResult)
-    Logger-->>Registry: void (maintains execution log)
-    end
+// Fire only on an exact field value
+subscription: {
+  shape: "lifecycle:gap:classified",
+  filter: { category_equals: "reachability" }
+}
 ```
 
-**Implementation (live):** state-based injection now expressed as bus subscriptions with condition filters; emitter side in `repos/goal-host-vessel/` + `ias-executor-ts`.
+| Predicate | Semantics |
+|---|---|
+| `<field>_contains` | The payload field must be an **array** containing an element that deep-equals the expected value |
+| `<field>_equals` | The payload field must deep-equal the expected value |
+| bare `<field>` | Plain deep equality against the field of that literal name |
 
-**Key Features:**
-- Priority-ordered execution (descending)
-- Condition evaluation (requiredShapes, requiredAbsent, custom predicate)
-- Caching with TTL (default: 1 minute)
-- Timeout protection (default: 5 seconds)
-- Non-blocking failures (log and continue)
+`resolvePayloadField` tolerates the naming mismatch between spec authors and emitters: it tries the literal key first, then a snake_case → camelCase fallback, so `output_shapes_contains` matches an emitted `outputShapes` array. This is why a filter written in the SQL/JSON convention works against a payload written in the JavaScript convention.
+
+**Implementation:** `matchesFilter`, `resolvePayloadField`, `deepEquals` in `repos/ias-executor-ts/src/lifecycle-subscriber.ts`.
 
 ## Decomposition: Impulse Lifecycle Hooks
 
-```mermaid
-sequenceDiagram
-    participant Activity as Activity
-    participant LifecycleHooks as LifecycleHooks
-    participant Verifier as Impulse<br/>Verifier
-    participant Store as Impulse<br/>Store
-    participant Logger as Logger
+Impulse-level reaction uses the same mechanism, subscribing to `impulse.created` or `impulse.loaded` and filtering on the payload. There is no separate verification-hook registry; a template that wants to check something about impulses subscribes and runs its checks as ordinary tasks.
 
-    rect rgb(240, 240, 255)
-    Note over Activity,Logger: ON TASK BEGIN (onBeforePrompt)
+The reason to express verification this way rather than as an inline callback is that a verification result then becomes a trace. A subscriber that emits a `verifier_negative` failure mode grades the posterior of whatever it verified; an inline callback that logged a warning would grade nothing.
 
-    Activity->>LifecycleHooks: executeBeforePrompt(context)
-    LifecycleHooks->>Store: getImpulseStore()
-    Store-->>LifecycleHooks: list of impulses
+Two related mechanisms are worth naming here because they carry impulse state without a hook:
 
-    loop For each impulse
-        LifecycleHooks->>Verifier: verifyCreation(impulseId)
-        Verifier-->>LifecycleHooks: {<br/>  valid: bool,<br/>  errors: string[],<br/>  warnings: string[]<br/>}
-        LifecycleHooks->>LifecycleHooks: Store verification state
-    end
+- **Shape lifecycle classification.** `classifyShape` labels a shape as `ephemeral`, `durable`, `terminal` or `stream`, which is what tells a consumer whether an impulse of that shape is worth persisting or reacting to at all.
+- **Task-level attribution.** `filesModified`, `filesCreated` and `materialsConsulted` on each `ExecutionTaskRecord` capture what an execution touched, so "what did this impulse cause" is answerable from the trace rather than from a hook that happened to be installed.
 
-    alt Any impulses failed creation
-        LifecycleHooks->>Logger: warn "Impulse failed creation verification"
-    end
-    end
-
-    rect rgb(240, 240, 255)
-    Note over Activity,Logger: ON TASK END (onAfterPrompt)
-
-    Activity->>LifecycleHooks: executeAfterPrompt(context, result)
-
-    loop For each impulse from creation
-        LifecycleHooks->>Verifier: verifyProcessing(impulseId)
-        Verifier-->>LifecycleHooks: verification result
-    end
-
-    alt Any impulses failed processing
-        LifecycleHooks->>Logger: warn "Impulse failed processing verification"
-    end
-    end
-
-    rect rgb(240, 240, 255)
-    Note over Activity,Logger: ON ACTIVITY COMPLETE
-
-    Activity->>LifecycleHooks: executeActivityComplete(execution)
-
-    loop For each tracked impulse
-        LifecycleHooks->>Verifier: verifyCompletion(impulseId)
-        Verifier-->>LifecycleHooks: verification result
-    end
-
-    LifecycleHooks->>Logger: Log verification summary
-    LifecycleHooks->>LifecycleHooks: Clean up verification state
-    end
-
-    rect rgb(240, 240, 255)
-    Note over Activity,Logger: ON ACTIVITY FAILED
-
-    Activity->>LifecycleHooks: executeActivityFailed(execution, error)
-
-    alt Impulse verification state exists
-        LifecycleHooks->>Logger: warn "Activity failed, checking impulse state"
-        loop For each impulse with errors
-            LifecycleHooks->>Logger: warn impulse errors
-        end
-    end
-
-    LifecycleHooks->>LifecycleHooks: Clean up verification state
-    end
-```
-
-**Implementation (live):** impulse-verification reactions driven by `lifecycle:task:*` / `lifecycle:execution:*` events on the bus; emitter side in `repos/goal-host-vessel/` + `ias-executor-ts`.
-
-**Verification Checks:**
-- **Creation**: Impulse structure valid, pointer resolvable
-- **Processing**: Budget honored, content loaded correctly
-- **Completion**: All referenced impulses resolved, no dangling references
+**Implementation:** `classifyShape` and `ShapeLifecycleClass` in `repos/ias-executor-ts/src/shape-lifecycle.ts`; `ExecutionTaskRecord` in `src/ontology.ts`.
 
 ## Decomposition: Hook Chain Execution (Multiple Hooks)
 
+Several templates may subscribe to the same shape. Each is matched and dispatched independently — there is no accumulation of results between them and no ordering guarantee they can rely on.
+
 ```mermaid
 sequenceDiagram
-    participant Trigger as Trigger<br/>Event
-    participant Registry as Hook<br/>Registry
-    participant Hook1 as Hook 1<br/>(priority 100)
-    participant Hook2 as Hook 2<br/>(priority 50)
-    participant Hook3 as Hook 3<br/>(priority 25)
+    participant Event as LifecycleEvent
+    participant Sub as LifecycleSubscriberVessel
+    participant A as Subscriber A
+    participant B as Subscriber B
+    participant C as Subscriber C
 
-    rect rgb(240, 240, 255)
-    Note over Trigger,Hook3: SCENARIO: 3 Hooks for Same Trigger
+    Event->>Sub: emit
+    Sub->>Sub: registry.get(event.type) → [A, B, C]
 
-    Trigger->>Registry: executeHooks(trigger, state)
-    Registry->>Registry: getHooks(trigger)
-    Note over Registry: hooks = [Hook1(p:100), Hook2(p:50), Hook3(p:25)]
-
-    rect rgb(250, 250, 255)
-    Note over Registry,Hook1: FIRST EXECUTION (Hook1, priority 100)
-
-    Registry->>Hook1: Conditions check
-    alt Conditions pass
-        Registry->>Hook1: resolver(state)
-        Hook1-->>Registry: [impulse_1a, impulse_1b]
-        Registry->>Registry: Cache if enabled
-    else Conditions fail
-        Registry->>Registry: Skip, log debug
-    end
+    par independent dispatches
+        Sub->>A: matchesFilter → depth cap → dedupe → dispatcher
+    and
+        Sub->>B: matchesFilter → depth cap → dedupe → dispatcher
+    and
+        Sub->>C: matchesFilter → depth cap → dedupe → dispatcher
     end
 
-    rect rgb(250, 250, 255)
-    Note over Registry,Hook2: SECOND EXECUTION (Hook2, priority 50)
+    Note over Sub: dispatches are fire-and-forget, bounded by<br/>IAS_SUBSCRIBER_MAX_INFLIGHT (default 64).<br/>Each in-flight dispatch closes over the event payload<br/>and triggers a full nested execution — without the cap,<br/>subscriber-amplified storms accumulate promises.
 
-    Registry->>Hook2: Conditions check
-    alt Conditions pass
-        Registry->>Hook2: resolver(state + accumulated impulses)
-        alt Error thrown
-            Hook2-->>Registry: Error (non-blocking)
-            Registry->>Registry: logExecution(failed)
-        else Success
-            Hook2-->>Registry: [impulse_2a]
-            Registry->>Registry: logExecution(success)
-        end
-    else Conditions fail
-        Registry->>Registry: Skip
-    end
-    end
-
-    rect rgb(250, 250, 255)
-    Note over Registry,Hook3: THIRD EXECUTION (Hook3, priority 25)
-
-    Registry->>Hook3: Conditions check
-    alt Conditions pass
-        Registry->>Hook3: resolver(state + impulses from 1,2)
-        Hook3-->>Registry: [impulse_3a, impulse_3b, impulse_3c]
-    else Conditions fail
-        Registry->>Registry: Skip
-    end
-    end
-
-    Registry-->>Trigger: [impulse_1a, impulse_1b, impulse_2a,<br/>impulse_3a, impulse_3b, impulse_3c]
-
-    Note over Registry,Trigger: Result: 6 total impulses from 3 hooks<br/>All executed (if conditions met), accumulated
-    end
+    A--xSub: throws
+    Note over Sub: logged and swallowed — B and C are unaffected,<br/>and the emitting execution never sees it
 ```
 
-**Key Points:**
-- Hooks executed in priority order (descending)
-- Each hook sees state + accumulated impulses from previous hooks
-- Errors are non-blocking (logged and execution continues)
-- Results accumulated and returned together
+**Winnowing.** `defaultTopKForShape` returns `HIGH_FREQUENCY_TOP_K` (1) for shapes in `HIGH_FREQUENCY_SHAPES` — `lifecycle:task:completed`, `lifecycle:task:started`, `lifecycle:execution:tick`, `task.completed`, `task.started` — and `ONE_SHOT_TOP_K` (3) otherwise. `must_fire` on a subscription declares an intent to bypass winnowing.
+
+**Isolation is a contract, not a courtesy.** Every matched, non-deduped, non-depth-capped subscriber must eventually be dispatched or suppressed, and a dispatcher error must not cascade to the emitting execution. That is what keeps a badly-written subscriber from taking down the run that woke it.
 
 ## Decomposition: Promotion Hooks
 
-```mermaid
-sequenceDiagram
-    participant Executor as Activity<br/>Executor
-    participant LifecycleHooks as LifecycleHooks
-    participant PromotionHook as Promotion<br/>Hook
-    participant Cache as Template<br/>Cache
-    participant MCP as MCP<br/>Backend
-    participant Logger as Logger
+There is no promotion-hook registry. Template promotion happens through two mechanisms, both driven by evidence rather than by a callback.
 
-    rect rgb(255, 240, 220)
-    Note over Executor,Logger: PROMOTION DECISION
+**Extraction promotion.** `ribosome-vessel` observes `execution_completed` on the bus, applies its gate — reached, every task terminal and successful, producer not in the ribosome family, not already dispatched — and dispatches the `ribosome-extract` activity. That activity assesses quality, synthesises, validates, and only then attempts the write. `mintReachedTrace` in goal-host-vessel is the direct trigger for the same activity on a reached walk.
 
-    Executor->>LifecycleHooks: executePromotionCheck(context)
-    LifecycleHooks->>PromotionHook: customPromotionHook?(context)
+**Performance promotion and retirement.** After an execution is recorded, activity-api runs `autoCreateVariantIfNeeded` and `checkAndRetireTemplate` against observed history: a variant is proposed after three consecutive failures, and a template is retired only after twenty executions at a success rate below 30%. `POST /v2/activities/templates/auto-promote` and `POST /v2/activities/templates/:templateId/promote` are the explicit promotion surfaces, with `GET /v2/activities/promote-gate/stats` reporting how the gate is behaving.
 
-    alt Custom hook registered
-        PromotionHook->>PromotionHook: Custom logic (e.g., >5 executions, >80% success)
-        PromotionHook-->>LifecycleHooks: PromotionDecision {<br/>  shouldPromote: bool,<br/>  reason: string<br/>}
-    else No custom hook
-        PromotionHook->>PromotionHook: defaultPromotionHook(context)
-        PromotionHook->>PromotionHook: Check minExecutions threshold
-        PromotionHook->>PromotionHook: Check minSuccessRate threshold
-        PromotionHook-->>LifecycleHooks: PromotionDecision
-    end
-    end
-
-    rect rgb(255, 240, 220)
-    Note over Executor,Logger: PROMOTION EXECUTION
-
-    alt shouldPromote = true
-        Executor->>PromotionHook: executePromotion(templateId, vesselId, cache, mcp)
-
-        PromotionHook->>Cache: load(vesselId, templateId)
-        Cache-->>PromotionHook: CachedTemplate
-
-        alt Template already registered
-            PromotionHook->>Logger: Log "Already registered, skipping"
-            PromotionHook-->>Executor: { success: true }
-        else New template
-            PromotionHook->>PromotionHook: validateTemplate(cached.template)
-
-            alt Validation fails
-                PromotionHook-->>Executor: { success: false, error: validation errors }
-            else Validation passes
-                PromotionHook->>MCP: registerTemplate(cached.template)
-
-                alt Registration succeeds
-                    PromotionHook->>Cache: markRegistered(vesselId, templateId)
-                    PromotionHook->>Logger: Log "Template registered to backend"
-                    PromotionHook-->>Executor: { success: true }
-                else Registration fails (409 Conflict)
-                    PromotionHook->>Cache: markRegistered(vesselId, templateId)
-                    PromotionHook->>Logger: Log "Already exists, marking registered"
-                    PromotionHook-->>Executor: { success: true }
-                else Registration fails (other error)
-                    PromotionHook-->>Executor: { success: false, error }
-                end
-            end
-        end
-
-        Executor->>LifecycleHooks: executeTemplateRegistered(templateId, vesselId)
-        LifecycleHooks->>Logger: Log template registration event
-    else shouldPromote = false
-        Executor->>Logger: Log "Not promoting: {reason}"
-    end
-    end
-```
-
-**Implementation (live):** template promotion is now driven by `ribosome-vessel` reacting to `lifecycle:execution:succeeded` and writing via the `activityTemplate_update` impulse.
-
-**Default Promotion Criteria:**
-- Minimum executions: 5
-- Minimum success rate: 0.8 (80%)
-- No recent failures (within last 24 hours)
+Neither path is a hook in the callback sense, and that is the point: promotion driven by a registered function would be invisible to the learning loop, whereas promotion driven by recorded outcomes is itself auditable.
 
 ## Behavior Modification Through Hooks
 
 ```mermaid
 graph TD
-    A["Hook Registered<br/>with Resolver"] -->|Register| B["Hook Registry"]
-    B -->|Store by Trigger| C["Hooks Map<br/>pre-execution<br/>post-execution<br/>on-failure<br/>etc."]
+    A["Activity template with a subscription block"] --> B["Indexed by subscription.shape"]
+    C["ActivityExecutor emits LifecycleEvent"] --> D["BusForwardingEventSink"]
 
-    D["Trigger Event<br/>e.g., pre-execution"] -->|Lookup| C
-    C -->|Get hooks for trigger| E["Hooks Array<br/>sorted by priority"]
+    D --> E["inner.emit — synchronous, in-process"]
+    D --> F["POST /v2/events/publish — fire-and-forget"]
 
-    E -->|For each hook| F{Conditions<br/>Met?}
-    F -->|No| G["Skip Hook<br/>Log debug"]
-    F -->|Yes| H["Check Cache"]
+    F --> G["broadcaster → ws://…/ws"]
+    G --> H["Subscriber vessels<br/>(ribosome, concept-db, workbench, goal-host)"]
 
-    H -->|Cached| I["Return<br/>Cached Impulses"]
-    H -->|Not cached| J["Execute Resolver<br/>with State Snapshot"]
+    E --> I["matchesFilter(subscription.filter, payload)"]
+    B --> I
+    I -->|"no match"| J["Skip"]
+    I -->|"match"| K["refuseForDepthCap"]
 
-    J -->|Produces| K["Impulses<br/>Created"]
-    K -->|Cache if enabled| L["Cache Result<br/>TTL-based"]
+    K -->|"depth ≥ cap"| L["Refuse — safety_breach"]
+    K -->|"within cap"| M["resolveDedupeKey"]
 
-    I --> M["Accumulate<br/>All Impulses"]
-    K --> M
+    M -->|"seen in 5-minute window"| N["Suppress"]
+    M -->|"fresh"| O["dispatcher(template, event, context)"]
 
-    M -->|Inject into State| N["State Space<br/>Modified"]
+    O --> P["A full nested execution —<br/>traced, graded, gradable like any activity"]
+    H --> P
 
-    N -->|Influences| O["Activity Selection<br/>Task Execution<br/>Goal Resolution"]
+    P --> Q["Its outcome updates the SUBSCRIBER's posterior"]
 
     style A fill:#e1f5ff
-    style B fill:#e1f5ff
-    style C fill:#b3e5fc
     style D fill:#fff9c4
-    style E fill:#fff9c4
-    style F fill:#fff9c4
-    style G fill:#ffccbc
-    style H fill:#e0f2f1
-    style J fill:#e0f2f1
-    style K fill:#c8e6c9
-    style L fill:#c8e6c9
-    style M fill:#f3e5f5
-    style N fill:#f3e5f5
-    style O fill:#ffd54f
+    style L fill:#ffcdd2
+    style N fill:#ffe0b2
+    style P fill:#c8e6c9
+    style Q fill:#ce93d8
 ```
+
+The bottom of that graph is the whole argument for this design. A subscriber dispatch is a real execution, so it produces a trace, a failure mode when it fails, and a posterior update — which means a reactive behaviour that stops earning its keep can be observed doing so.
 
 ## Hook Types and Trigger Points
 
-| Hook Type | Trigger | Purpose | Blocking | Example |
-|-----------|---------|---------|----------|---------|
-| **Lifecycle Hooks** | | | | |
-| `onBeforePrompt` | Before task sent to LLM | Prepare context, load impulses | No | Impulse verification setup |
-| `onAfterPrompt` | After task completes | Cleanup, logging, metrics | No | Impulse verification checking |
-| `onActivityComplete` | Activity succeeds | Final cleanup, reporting | No | Session archive, template registration |
-| `onActivityFailed` | Activity fails | Error handling, rollback | No | Cleanup, trace analysis |
-| `onPromotionCheck` | Before template promotion | Custom promotion decision | No | Success rate evaluation |
-| `onTemplateRegistered` | After registration to backend | Notifications, cleanup | No | Metrics update |
-| **Vessel Hooks** | | | | |
-| `pre-execution` | Before any activity | Inject context impulses | No | Thompson recommendations |
-| `post-execution` | After activity completes | Record patterns, cleanup | No | Composition learning |
-| `on-state-change` | Impulse state changes | Dynamic adaptation | No | Recompute priorities |
-| `pre-selection` | Before Thompson Sampling | Query for recommendations | No | Hook-injected impulses |
-| `post-selection` | After activity selected | Final setup | No | Metrics preparation |
-| `on-failure` | When activity fails | Recovery impulses | No | Error context injection |
-| `periodic` | On interval | Maintenance tasks | No | Health checks |
+| Subscription shape | Fires when | Typical reaction | Frequency class |
+|---|---|---|---|
+| `lifecycle:task:preBinding` | Before a task's inputs are bound | Slot binding — supply a missing shape | high |
+| `lifecycle:task:started` | A task begins | Observation, tracing | high (top-K 1) |
+| `lifecycle:task:completed` | A task finishes | Validator dispatch, progress tracking | high (top-K 1) |
+| `lifecycle:execution:tick` | Periodic progress signal | Liveness, long-run monitoring | high (top-K 1) |
+| `lifecycle:execution:succeeded` | An execution completed successfully | Audit of a produced report, extraction candidacy | one-shot (top-K 3) |
+| `lifecycle:activity:postExecution` | After an activity execution | `ribosome-extract` | one-shot |
+| `lifecycle:gap:classified` | A gap has been classified | Gap routing, repair goal generation | one-shot |
+| `lifecycle:llm:dispatched` | Immediately before a model call | Dispatch audit without log archaeology | one-shot |
+| `impulse.created` / `impulse.loaded` | Impulse lifecycle | Impulse-level checks | varies |
+| `activity.failed` | An execution failed | Failure analysis, gap filing | one-shot |
+
+Discovery-vessel publishes on the same bus — `vessel.registered`, `vessel.heartbeat`, `vessel.deregistered`, `vessel.expired` — which is how `startVesselRegistrationSubscriber` in goal-host-vessel adds a proxy resolver for a newly-appeared vessel without a restart.
 
 ## Hook Condition Evaluation
 
+Whether a subscriber fires is decided by three independent gates, evaluated in order at the reacting vessel: does this event structurally match what the subscriber asked for, would firing deepen a composition chain past its cap, and has this same logical event already been handled inside the dedupe window. Each gate answers a different question, and conflating them would make the wrong refusal indistinguishable from the right one.
+
+The gates are deliberately cheap and local. None of them consults the backend, so a subscriber's decision to fire never depends on a network round trip, and a backend outage cannot silently suppress reactions.
+
 ### VesselHook Conditions
 
+The condition surface is the subscription block. There is no separate hook object with `requiredShapes` and a custom predicate; the equivalent expressiveness lives in the filter.
+
 ```typescript
-interface VesselHook {
-  id: string
-  trigger: string
-  priority: number
-  conditions?: {
-    requiredShapes?: string[]        // Must have these shapes in state
-    requiredAbsent?: string[]        // Must NOT have these shapes
-    customPredicate?: (state) => boolean
-  }
-  injection: {
-    resolver: (state: ImpulseStateSpace) => Promise<Impulse[]>
-  }
-  cacheable?: boolean
-  cacheTTL?: number  // milliseconds
+interface ActivityTemplateSubscription {
+  /** Lifecycle event type to subscribe to, e.g. "lifecycle:task:preBinding". */
+  shape: string;
+  /** Structural filter; supports `_contains` / `_equals` suffix predicates. */
+  filter?: Record<string, unknown>;
+  /** Declares an intent to bypass top-K winnowing. */
+  must_fire?: boolean;
+  /** Dedupe-key template; `{field}` and `{nested.field}` resolve against the payload. */
+  dedupe_key?: string;
 }
 ```
+
+A dedupe key may also live on the template itself as `ActivityTemplate.dedupe_key`; `resolveDedupeKey` prefers the template-level key and falls back to the subscription-level one.
 
 ### Evaluation Flow
 
-```typescript
-function shouldExecuteHook(hook: VesselHook, state: ImpulseStateSpace): boolean {
-  // 1. Check required shapes
-  if (hook.conditions?.requiredShapes) {
-    const hasAllRequired = hook.conditions.requiredShapes.every(
-      shape => state.shapes.has(shape)
-    );
-    if (!hasAllRequired) return false;
-  }
+Three gates run in order, and each is a distinct kind of refusal:
 
-  // 2. Check required absent
-  if (hook.conditions?.requiredAbsent) {
-    const hasAnyForbidden = hook.conditions.requiredAbsent.some(
-      shape => state.shapes.has(shape)
-    );
-    if (hasAnyForbidden) return false;
-  }
-
-  // 3. Check custom predicate
-  if (hook.conditions?.customPredicate) {
-    return hook.conditions.customPredicate(state);
-  }
-
-  return true;
-}
 ```
+1. matchesFilter(subscription.filter, payload)
+     → structural mismatch: this event is not for this subscriber
+
+2. refuseForDepthCap(template, payload)
+     cap = min(metadata.auditDepthCap ?? 2, 4)
+     parentDepth = payload.parentDepth
+                ?? payload.compositionChain.length
+                ?? payload.composition_chain.length
+                ?? 0
+     → parentDepth >= cap: refuse, recorded as safety_breach
+
+3. resolveDedupeKey(template, payload)
+     key = "{templateId}::{renderedKey}"
+     → seen within 5 minutes: suppress
+```
+
+The depth cap applies to **all** subscriber templates, not only audit-tagged ones, and that generality is load-bearing. A self-subscription guard only catches same-template recursion; it does not catch mutual recursion across a subscriber pair — one template subscribing to `preBinding` and emitting more `preBinding` events, another subscribing to `completed` and emitting more `completed` events. A universal cap is the simplest correct guard against that cycle.
+
+A dedupe placeholder whose field is missing collapses to the **literal placeholder text**, deliberately, so two unrelated events do not merge onto an empty key.
 
 ## Caching Strategy
 
+There is exactly one cache in this mechanism, and it exists to suppress duplicate work rather than to reuse results. Deduplication keys a recent-dispatch record by template plus a rendered key drawn from the event payload, so a replayed or repeated event does not multiply downstream executions within a short window.
+
+Nothing else about subscriber behaviour is cached. Caching a subscriber's output would break attribution — the second occurrence would be credited with the first occurrence's work — and caching a filter decision would freeze a condition that is supposed to be evaluated against each event on its own terms.
+
 ### Cache Entry Structure
 
+The only cache in this mechanism is the dedupe cache, and it is per-process and keyed by template plus rendered key:
+
 ```typescript
-interface CacheEntry {
-  hookId: string
-  impulses: Impulse[]
-  cachedAt: number
-  expiresAt: number
-}
+// key: `${templateId}::${resolvedDedupeKey}`
+// value: timestamp of the last dispatch
+dedupeCache: Map<string, number>
 ```
+
+The window defaults to five minutes and is overridable through `dedupeWindowMs` on `LifecycleSubscriberVesselOptions`, which exists so tests can fast-forward it rather than sleep.
+
+There is no result cache for subscriber output. A subscriber's product is an execution and its trace, and caching a trace would break attribution: the second occurrence would be credited to the first occurrence's work.
 
 ### Cache Logic
 
-```typescript
-function getCachedResult(hook: VesselHook): Impulse[] | null {
-  const entry = cache.get(hook.id);
-
-  if (!entry) return null;
-  if (Date.now() > entry.expiresAt) {
-    cache.delete(hook.id);
-    return null;
-  }
-
-  return entry.impulses;
-}
-
-function cacheResult(hook: VesselHook, impulses: Impulse[]): void {
-  if (!hook.cacheable) return;
-
-  const ttl = hook.cacheTTL || 60000;  // Default: 1 minute
-  cache.set(hook.id, {
-    hookId: hook.id,
-    impulses,
-    cachedAt: Date.now(),
-    expiresAt: Date.now() + ttl
-  });
-}
 ```
+onEvent(template, payload):
+    key = resolveDedupeKey(template, payload)
+    if key is null:                    dispatch          # no dedupe declared
+    full = `${template.id}::${key}`
+    last = dedupeCache.get(full)
+    if last and now - last < dedupeWindowMs:  suppress
+    dedupeCache.set(full, now)
+    dispatch
+```
+
+Endpoint caching elsewhere in the fleet follows the same shape — `shapeEndpointMap` in goal-host-vessel caches a resolved producer endpoint so the steady state is one hop — but that is a routing cache, not a behavioural one, and it is invalidated by re-resolution rather than by TTL alone.
 
 ## Hook Behavior Modification Capabilities
 
+A subscriber changes system behaviour in four ways, and all four are mediated by impulses and executions rather than by direct access to the emitting run. It can add to the pool before a task binds its inputs, it can refuse a dispatch that would deepen a chain too far, it can produce its own outputs, and it can record state by emitting a shaped impulse.
+
+What it deliberately cannot do is reach into the execution that woke it — no cancelling, no rewriting outputs, no mutating in-process state invisibly. Every one of the four capabilities below leaves a trace, which is what keeps reactive behaviour gradable instead of merely present.
+
 ### 1. Input Modification
-- Load additional impulses before prompt
-- Inject verification context
-- Prepare session memory
+
+A `lifecycle:task:preBinding` subscriber runs before a task's inputs are bound, which is the point at which a missing shape can still be supplied. Slot binding is the canonical case: the subscriber synthesises or selects an impulse of the needed shape and puts it in the pool, and the waiting task then binds it normally. Because the subscriber is an activity, what it supplied is visible in its own trace rather than appearing from nowhere.
 
 ### 2. Execution Control
-- Skip activities via condition predicates
-- Select activities via pre-selection hooks
-- Inject recovery impulses on failure
+
+Control is exercised by refusal, not by interception. `refuseForDepthCap` refuses a dispatch that would deepen a composition chain past its cap, and the engine's own guards refuse a `compose` dispatch that would exceed the depth limit or close a cycle. Both are recorded as `safety_breach`, so a capped run is distinguishable from one that genuinely failed. A subscriber cannot cancel or rewrite the execution that woke it.
 
 ### 3. Output Modification
-- Log execution results
-- Record composition patterns
-- Trigger promotion decisions
+
+A subscriber does not edit the emitting execution's output; it produces its own. `ribosome-extract` reads a reached trace and emits `extractedTemplate`, `validation_result`, `writeAttempt`, `activityTemplate` and `learningSummary` — new impulses in the pool, attributable to the extraction run. Audit subscribers work the same way, emitting a report shape rather than annotating the thing they audited.
 
 ### 4. State Manipulation
-- Create new impulses based on execution state
-- Cache expensive resolutions
-- Update verification tracking
+
+State changes are impulses, and impulses come from executions. A subscriber that needs to record something emits a shaped impulse through the normal write path, which means the change is traced, gradable, and visible to anything else subscribing on that shape. There is no side-channel by which a subscriber mutates in-process state that the trace would not show.
 
 ## Implementation Patterns
 
+Five patterns recur across every subscriber in the fleet. They are worth reading as a checklist when adding one, because each encodes a failure that has to be designed out rather than handled after the fact: an unbounded dispatch fan-out, a blocking publish, a filter that silently never matches, a recursion cycle across a subscriber pair, and an event replay that multiplies work.
+
+None of the five requires backend support. A subscriber that follows them is correct on its own, which is what makes adding one a local change rather than a fleet-wide one.
+
 ### 1. Hook Registration (Setup)
-- **Singleton Pattern**: Global hook registry maintained per trigger type
-- **Priority Ordering**: Hooks sorted descending by priority
-- **Duplicate Prevention**: Unregister old hook if ID conflicts
-- **Merge Semantics**: New hooks merged into existing registry
+
+- **Declaration over registration.** A subscriber is an activity template with a `subscription` block; there is no imperative registration step at process start.
+- **Shape-indexed lookup.** The vessel keeps `Map<shape, ActivityTemplate[]>` so matching is O(1) in the number of distinct shapes.
+- **Many per shape.** Several templates may subscribe to the same shape; each is evaluated independently.
+- **Host-chosen execution.** The vessel takes a `SubscriberDispatcher` rather than running an executor itself, so a host can run subscribers in-process, queued, or remotely.
 
 ### 2. Hook Execution (Invocation)
-- **Non-Blocking by Default**: Hook failures don't stop activity execution
-- **Try-Catch Wrappers**: All hook calls wrapped with error handling
-- **Sequential Processing**: Hooks executed in order (priority → registration)
-- **State Snapshots**: Each execution receives immutable state snapshot
+
+- **Inner sink first, synchronously.** The in-process sink is called before any bus publish, so in-process subscribers are never behind the network.
+- **Fire-and-forget forwarding.** The bus publish is not awaited and not retried; a bus outage degrades reactivity, not execution.
+- **Bounded concurrency.** `IAS_SUBSCRIBER_MAX_INFLIGHT` (default 64) caps in-flight dispatches, because each closes over an event payload and triggers a full nested execution.
+- **Errors isolated.** Dispatcher failures are logged and swallowed by the vessel.
 
 ### 3. Behavior Injection
-- **Impulse Creation**: Hooks produce impulses that modify state space
-- **Condition Evaluation**: Hooks checked for required/absent shapes before execution
-- **Caching Strategy**: Expensive resolvers cached (default 1 minute TTL)
-- **Timeout Protection**: Hook resolvers have 5-second timeout by default
+
+- **Filters, not predicates.** Conditions are structural filters over the payload, evaluated by `matchesFilter` with `_contains` / `_equals` suffixes.
+- **Naming tolerance.** `resolvePayloadField` bridges snake_case filters and camelCase payloads.
+- **Injection is emission.** A subscriber influences the system by producing impulses, which is what makes the influence traceable.
 
 ### 4. Hook Chaining
-- **Accumulation**: Results from all hooks accumulated before injection
-- **State Flow**: Earlier hooks' impulses available to later hooks' resolvers
-- **Error Resilience**: Single hook failure doesn't prevent others from running
-- **Logging**: Each hook execution logged with duration, success status, cache status
+
+- **No result accumulation.** Subscribers do not see each other's output; chaining happens through the impulse pool and through further events, both of which are recorded.
+- **Depth-capped.** Chains of subscriber dispatches are capped universally, defending against mutual recursion across subscriber pairs.
+- **Deduped.** A rendered dedupe key suppresses a repeat within five minutes, so an event replay does not multiply work.
 
 ### 5. Lifecycle Coordination
-- **Activity Scope**: Hooks track state per activity execution
-- **Task Scope**: Hooks invoked for each task in activity
-- **Session Scope**: Can span multiple activities in single session
-- **Cleanup**: Verification states deleted after activity completion
+
+- **Downstream sink.** `downstreamSink` receives every event *after* subscriber dispatch, so a host can compose the subscriber vessel with a logger or forwarder without losing observability.
+- **Attribution.** Every published event carries `sourceVesselId`, so a subscriber can tell which vessel emitted what.
+- **Replay tolerance.** Subscribers that must act at most once per execution mark dispatch explicitly, as `ribosome-vessel` does, rather than relying on the bus to deliver exactly once.
 
 ## File References
 
-| Component | File (live equivalent) | Purpose |
-|-----------|------|---------|
-| Lifecycle events | activity-api WebSocket bus; emitters in `repos/goal-host-vessel/` + `ias-executor-ts` (was `lifecycle-hooks.ts`) | Activity/task lifecycle events |
-| State-based injection | bus subscriptions w/ condition filters (was `vessel-hooks.ts`) | State-based impulse injection |
-| Promotion | `repos/ribosome-vessel/` (reacts to `lifecycle:execution:succeeded`; was `vessel/promotion-hooks.ts`) | Template promotion |
-| Impulse Verification | bus-driven reactions (was `impulse-verification-hooks.ts`) | Impulse lifecycle verification |
-| Event emitter | `repos/goal-host-vessel/` + `ias-executor-ts` (was `goal-processor.ts`) | Emits lifecycle events for pre-selection etc. |
+| Component | Location | Entry symbols |
+|---|---|---|
+| Subscription contract | `repos/ias-executor-ts/src/ontology.ts` | `ActivityTemplateSubscription`, `LifecycleEvent`, `LifecycleEventType` |
+| Subscriber vessel | `repos/ias-executor-ts/src/lifecycle-subscriber.ts` | `LifecycleSubscriberVessel`, `SubscriberDispatcher`, `LifecycleSubscriberVesselOptions` |
+| Matching | `repos/ias-executor-ts/src/lifecycle-subscriber.ts` | `matchesFilter`, `resolvePayloadField`, `deepEquals` |
+| Winnowing | `repos/ias-executor-ts/src/lifecycle-subscriber.ts` | `HIGH_FREQUENCY_SHAPES`, `HIGH_FREQUENCY_TOP_K`, `ONE_SHOT_TOP_K`, `defaultTopKForShape` |
+| Dedupe and depth cap | `repos/ias-executor-ts/src/lifecycle-subscriber.ts` | `resolveDedupeKey`, `refuseForDepthCap` |
+| Bus forwarding | `repos/ias-executor-ts/src/adapters/bus-forwarder.ts` | `BusForwardingEventSink`, `mapEventTypeToBusForm` |
+| Shape lifecycle | `repos/ias-executor-ts/src/shape-lifecycle.ts` | `classifyShape`, `ShapeLifecycleClass` |
+| Event sink port | `repos/ias-executor-ts/src/ports.ts` | `EventSink` |
+| Bus endpoint | `repos/activity-api/src/routes/events.ts` | `POST /v2/events/publish` |
+| Broadcast | `repos/activity-api/src/websocket/broadcaster.ts`, `src/index.ts` | `broadcaster`, the `/ws` upgrade handler |
+| Extraction subscriber | `repos/ribosome-vessel/src/index.ts` | `onTaskCompleted`, the `execution_completed` handler, `dispatchRibosomeExtract` |
+| Registration subscriber | `repos/goal-host-vessel/src/index.ts` | `startVesselRegistrationSubscriber` |
+| Promotion and retirement | `repos/activity-api/src/services/variant-creator.ts`, `src/routes/activities.ts` | `autoCreateVariantIfNeeded`, `checkAndRetireTemplate`, `/templates/auto-promote`, `/templates/:templateId/promote` |
+| Example subscriber templates | `repos/ias-executor-ts/src/templates/lifecycle/` | `ribosome-extract.json`, `audit-test-report.json` |
 
 ## Implementation Architecture
 
-This sequence is **vessel-side (executing vessel + bus subscribers)** with activity-api hosting the broadcast bus but not the hook logic.
+Reactive behaviour lives with the vessel that reacts; the bus is transport and the backend is memory. Neither the transport nor the memory owns the behaviour.
+
+Drawing the line there has a specific consequence worth stating up front: adding a subscriber changes nothing in the emitter and nothing in the backend. A vessel loads a template that declares a subscription, connects to the bus, and starts reacting. Conversely, a misconfigured subscription can only harm the vessel that declared it, because filters, caps and dedupe are all evaluated where the reaction happens.
 
 ### Executing vessel + bus subscribers (Execution Environment)
 
 **Responsibilities:**
-- Emit lifecycle events (goal-host-vessel) and subscribe to them (workbench, ribosome-vessel, concept-db, …)
-- React at trigger points (priority/filter-ordered subscription handlers)
-- Condition evaluation (requiredShapes, requiredAbsent, custom predicates) as subscription filters
-- Handler invocation with the event payload (state snapshot)
-- Caching (TTL-based, default 1 minute) where applicable
-- Non-blocking error handling (subscribers swallow + log so the bus loop never throws)
-- Impulse injection from handlers
+- Emit lifecycle events from the engine to the runtime's `EventSink`.
+- Forward events to the bus fire-and-forget, after calling the in-process sink synchronously.
+- Match subscriber templates by shape and structural filter.
+- Enforce the depth cap and the dedupe window before dispatch.
+- Dispatch matched subscribers under a bounded in-flight cap, isolating dispatcher errors.
+- Apply subscriber-specific gates — the ribosome's reached-and-all-tasks-successful check is a vessel-side gate, not a bus concern.
+- Subscribe to fleet events (`vessel.registered`) to keep resolver registration current.
 
-**Key Files (live):**
-- `repos/goal-host-vessel/` + `@avigopal/ias-executor-ts` - lifecycle event emission
-- `repos/ribosome-vessel/` - promotion/extraction on `lifecycle:execution:succeeded`
-- subscriber vessels (workbench, concept-db, …) - their own bus clients
-
-**What the executing vessel Does NOT Do:**
-- Does NOT store hook logic in backend (it's vessel/subscriber behavior, not activity schema)
-- Does NOT query backend for hook definitions (subscriptions are vessel-local)
-- Does NOT persist hook execution history in the activity schema (the bus carries events; only traces persist)
+**What the execution environment does not do:** it does not persist subscriptions in the backend as configuration, and it does not rely on the bus for durability — durable state is the trace store.
 
 ### Activity-API (Storage & Learning Backend)
 
 **Responsibilities:**
-- **NONE** - Hooks are vessel-level configuration, not backend data
+- Host the bus: accept `POST /v2/events/publish` and broadcast over `ws://…/ws`.
+- Store the activity templates that carry subscription blocks, as ordinary templates.
+- Record the executions that subscriber dispatches produce, and update their posteriors like any other activity's.
 
-**Why Hooks Are NOT in Activity-API:**
-- Hooks are **vessel/subscriber configuration** (how a given vessel reacts to events)
-- Activities are **portable templates** (what work gets done)
-- Hooks customize execution environment (vessel-specific)
-- Activities define work to be done (vessel-independent)
-
-**Example:**
-- **Activity template** (backend): "fix_typescript_error" - portable, reusable
-- **Vessel hook** (subscriber, e.g. goal-host-vessel): "On `lifecycle:task:preBinding`, verify impulses" - this vessel's behavior
+**What it does not do:** it does not evaluate filters, does not enforce depth caps, does not dedupe, and does not decide which vessel reacts to what. A subscription is behaviour declared on a template, and the matching happens where the reaction happens.
 
 ### SurrealDB Schema
 
-**Tables:**
-- **NONE** - Hooks are not persisted
+There is no `hook` table. What persists is the template that carries the subscription and the traces its dispatches produce:
 
-**Why No Schema:**
-- Hooks are runtime configuration, not data
-- Different subscriber vessels may have different hooks
-- Hooks are registered programmatically (code), not declaratively (data)
+- `activity_template` — including the `subscription` block, `dedupe_key`, `tags` and `metadata.auditDepthCap`.
+- `activity_execution_traces` — the executions subscriber dispatches produce, with their failure modes.
+- `variant_performance_metrics` — posteriors for subscriber templates, exactly as for any other activity.
+
+The dedupe cache is per-process and in-memory by design: it bounds duplicate work within a window, and rebuilding it on restart is cheaper and safer than persisting a suppression list that could outlive its reason.
 
 ### Correct Separation
 
-**The executing vessel / subscribers handle (vessel configuration):**
-- Bus subscription and per-vessel handler state
-- Reactions at lifecycle events (lifecycle, vessel, promotion, verification)
-- Condition evaluation (requiredShapes, custom predicates) as subscription filters
-- Impulse injection from handlers
-- Caching and timeout management
+**The reacting vessel handles:** shape-indexed subscription lookup, filter evaluation, depth-cap refusal, dedupe suppression, dispatch under a concurrency bound, error isolation, and any vessel-specific gate.
 
-**Activity-API handles (portable templates + bus transport):**
-- Hosts the broadcast bus, but **hook logic is not backend data**
+**Activity-API handles:** transport (publish and broadcast), template storage, and the posterior consequences of subscriber executions.
 
-**Why This Separation Matters:**
-- Hooks are vessel-specific customizations (different subscriber vessels can react differently)
-- Activities are universal templates (same activity runs on any vessel)
-- Hooks enable per-vessel behavior without polluting activity definitions
-- This keeps activity templates portable and vessel behavior flexible
-
-**Key Architectural Point:**
-Hooks are **vessel/subscriber behavior**, not **activity schema**. They live in the executing vessel and its bus subscribers, not the backend's database. Activities remain portable; vessels customize execution.
-
-**Contrast with Activity Composition:**
-- **Activity composition** (backend): "activity A composes activity B" → stored in backend, learned via Thompson Sampling
-- **Vessel hooks** (subscribers): "on this lifecycle event, inject these impulses" → bus subscription per vessel, not stored in the activity schema
+**Why this separation matters:**
+- A new subscriber is a new template. Nothing in the emitter or the backend changes when a vessel starts observing the event stream.
+- Because a subscriber is an activity, its reactions are traced and graded — a reactive behaviour that stops earning its keep is visible as such.
+- Because the bus is fire-and-forget, a bus outage degrades reactivity while execution and durable state continue.
+- Because filters and caps are evaluated at the reacting vessel, one vessel's misconfigured subscription cannot amplify into another's.
 
 ### Vessel vs Activity
 
-| Aspect | Vessel (executing vessel / subscriber) | Activity (Backend) |
-|--------|------------------|-------------------|
-| **Definition** | Execution environment | Work template |
-| **Scope** | This vessel | Any vessel |
-| **Configuration** | Bus subscriptions, resolvers, tools | Tasks, prompts, validation |
-| **Storage** | Vessel-local (subscription state) | SurrealDB (persistent) |
-| **Portability** | Vessel-specific | Cross-vessel |
-| **Example** | "On task preBinding, verify impulses" | "Fix TypeScript errors" |
+| Aspect | Reacting vessel | Activity template |
+|---|---|---|
+| **What it is** | An execution environment that subscribes | A portable unit of work |
+| **Scope** | This deployment, this vessel's data | Any vessel that can resolve its shapes |
+| **Where the behaviour lives** | Subscription declared on a template it loads | Tasks, resolvers, declared input and output shapes |
+| **Persistence** | In-memory dedupe and routing state | `activity_template` in SurrealDB |
+| **Graded by** | The traces its dispatches produce | The traces its executions produce |
+| **Example** | ribosome-vessel gating on reached-and-all-successful | `ribosome-extract` assessing, synthesising and writing |
 
-**Why Hooks Are Vessel-Level:**
-- Different subscriber vessels may react differently to the same event
-- Hooks customize behavior without modifying activity templates
-- Allows A/B testing of subscriber strategies per vessel
-- Keeps activity definitions clean and portable
+The distinction that matters: a **gate** is vessel-local policy about when to react, and it can be tuned per deployment. The **reaction** is an activity, and it is portable. Collapsing the two — putting the gate inside the template, or the reaction inside the vessel — loses either the portability or the tunability.
+
+**Key architectural point:** hooks are subscriptions, subscriptions are declarations on activities, and dispatches are executions. There is no callback layer, no hook table, and no untraced reaction path.
 
 ## Related Documentation
 
-- [Activity Selection](./01-activity-selection.md) - How hooks influence selection
-- [Impulse Resolution](./02-impulse-resolution.md) - How hooks inject impulses
-- [Resolver Processing](./03-resolver-processing.md) - How resolvers use hook-injected impulses
-- [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) - Foundational model
-
----
-
-**Last Updated:** 2026-04-16
+- [Activity Selection](./01-activity-selection.md) — how activities, including subscribers, are ranked
+- [Impulse Resolution](./02-impulse-resolution.md) — how the impulses subscribers inject are resolved
+- [Resolver Processing](./03-resolver-processing.md) — how a dispatched subscriber does its work
+- [Improvisation & Failure Modes](./04-improvisation-failure-modes.md) — refusals, failure types, and their posterior consequences
+- [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) — the foundational model

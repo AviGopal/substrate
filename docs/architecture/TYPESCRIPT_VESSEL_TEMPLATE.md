@@ -1,18 +1,12 @@
 # TypeScript Vessel Template
 
-**Last updated:** 2026-06-24 (deployment-framing realignment — single-container substrate / systemd units are the primary path; Helm/K8s is downstream-only; analysis-vessel cited as the current exemplar)
-
-**Previous updates:** 2026-05-27 (S2 context + async dispatch pattern; see also commit `ac0d75b5`); 2026-05-24 (Phase 0.6 — VesselDaemon as canonical starting point; `openspec/changes/2026-05-23-substrate-explicit-vessels/`); 2026-04-24 (distilled from `repos/concept-db` Wave 1-3 upgrade)
-
-> **S2 note (2026-05-27):** The system has entered S2 (substrate-authored, supervised). New vessel proposals now flow through the substrate's propose-spec pipeline rather than being operator-authored from scratch. The operator role is reviewer and anchor maintainer — rotating anchors when justified, approving H5 baselines, and running adversarial probes — not primary author. The construction mechanics in this doc remain valid; the change is in who initiates a new vessel spec.
-
 A practical template for building a well-formed TypeScript vessel in this monorepo. Read [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md) first for the conceptual model; this doc is about the concrete mechanics.
 
 ## Quick-start: VesselDaemon (preferred)
 
-**For new substrate vessels, use `VesselDaemon` from `@avigopal/ias-executor-ts`** rather than wiring the pieces individually. VesselDaemon composes `ActivityExecutor` + `LifecycleSubscriberVessel` + `DiscoveryRegistrationLoop` + `ResolverServer` into a single launch point and handles startup, health, and graceful shutdown.
+**For new substrate vessels, use `VesselDaemon` from `@avigopal/ias-executor-ts`** rather than wiring the pieces individually. VesselDaemon composes `ActivityExecutor` + `DiscoveryRegistrationLoop` + `ResolverServer` behind a single `Bun.serve` and handles startup, health, and shutdown on SIGTERM.
 
-Minimal scaffold (see `repos/ias-executor-ts/src/hosts/__example__/minimal-vessel.ts` for a runnable ≤100 LOC example):
+Minimal scaffold (see `repos/ias-executor-ts/src/hosts/__example__/minimal-vessel.ts` for a runnable example under 100 lines):
 
 ```typescript
 import { VesselDaemon } from '@avigopal/ias-executor-ts';
@@ -34,45 +28,45 @@ await daemon.start();
 ```
 
 `VesselDaemon` handles all three invariants (non-blocking registration, shape-dispatch agreement, WS-observer safety) out of the box. It also:
-- Exposes `POST /resolve`, `POST /run-goal`, `GET /health`
+
+- Serves exactly three routes — `POST /resolve`, `POST /run-goal`, `GET /health` — and 404s everything else
 - Accepts `parent_execution_id` and `composition_chain` in request bodies
 - Threads them into `ExecuteOptions` for cross-vessel composition tracking
 
-**Async dispatch (as of commit `ac0d75b5`):** `POST /run-goal` returns **202 Accepted** immediately with `{ executionId, status: "accepted" }`. Execution is async. Callers must poll `GET /executions/:id` (or subscribe to the WebSocket) for the final `status: "completed" | "failed"`. Do not block the caller thread waiting for a synchronous response — the endpoint will never return one. Example caller pattern:
+**Its `/run-goal` is synchronous and template-keyed.** The body must name a `templateId` (400 without one, 404 if the template provider does not have it); the daemon executes it and returns `{ trace, executionId, status }` in one response. Do not model a VesselDaemon on the async dispatch contract below — that belongs to goal-host-vessel, not to the daemon.
+
+**Async dispatch is goal-host-vessel's contract.** `POST /run-goal` on goal-host returns **202 Accepted** with `{ dispatchId, status: "running" }` and runs the goal in the background; callers poll `GET /executions/:dispatchId` for `status` and — more importantly — for the honest `reached` verdict. The reason is a hard constraint, not a preference: Bun's `fetch` caps its connection timeout, so any goal outliving that cap would look like a connection failure to a synchronous caller while the goal was still running. Example caller pattern:
 
 ```typescript
-const { executionId } = await fetch(`${goalHostEndpoint}/run-goal`, {
+const { dispatchId } = await fetch(`${goalHostEndpoint}/run-goal`, {
   method: 'POST',
   headers: { Authorization: `ApiKey ${apiKey}`, 'Content-Type': 'application/json' },
   body: JSON.stringify({ goal, variables }),
-}).then(r => r.json()); // 202 — executionId only
+}).then(r => r.json()); // 202 — dispatchId only
 
 // poll until done (or use WebSocket task.completed events)
 let result;
 for (let i = 0; i < 60; i++) {
   await new Promise(r => setTimeout(r, 2000));
-  result = await fetch(`${goalHostEndpoint}/executions/${executionId}`, {
+  result = await fetch(`${goalHostEndpoint}/executions/${dispatchId}`, {
     headers: { Authorization: `ApiKey ${apiKey}` },
   }).then(r => r.json());
   if (result.status === 'completed' || result.status === 'failed') break;
 }
 ```
 
-**When to use the manual approach instead:** if your vessel does not execute activities (e.g. it's a pure resolver like `local-tools-vessel`) or has no shapes to advertise (e.g. `ribosome-vessel` which is a pure WebSocket consumer), assemble `DiscoveryRegistrationLoop` directly and skip `ActivityExecutor`.
+**When to use the manual approach instead:** if your vessel does not execute activities (a pure resolver) or has no shapes to advertise (a pure WebSocket consumer, like `ribosome-vessel`), assemble `DiscoveryRegistrationLoop` directly and skip `ActivityExecutor`.
 
 **Live references:**
-- `repos/analysis-vessel/` — current stateless resolver exemplar (port 8250; 6 code-analysis shapes via `VesselDaemon` + `ActivityExecutor`; no SurrealDB). Read `src/index.ts` for the canonical localhost-default + `VesselDaemon.start()` shape. Sibling new-vessels built the same way: relevance-sink-vessel (8255), stateful-ui-vessel (8270), light-dispatch-vessel (8280), metric-collector-vessel (8300).
-- `repos/local-tools-vessel/` — minimal resolver vessel using `VesselDaemon` (≤100 LOC)
-- `repos/goal-host-vessel/` — HTTP wrapper for `GoalHost` using `DiscoveryRegistrationLoop`
+
+- `repos/analysis-vessel/` — the stateless resolver exemplar (port 8250; six code-analysis shapes via `VesselDaemon` + `ActivityExecutor`; no SurrealDB). Read `src/index.ts` for the canonical localhost-default + `VesselDaemon.start()` shape.
+- `repos/local-tools-vessel/` — resolver vessel built on `VesselDaemon`
+- `repos/goal-host-vessel/` — the async goal-dispatch surface; `DiscoveryRegistrationLoop` without `VesselDaemon`
 - `repos/ribosome-vessel/` — pure WebSocket consumer (no shapes); shows when NOT to use VesselDaemon
-- `repos/activity-api/` — the north-star implementation (production, full feature set)
-- `repos/concept-db/` — a minimal modern vessel (post-April-2026; mirrors the manual pattern at lower complexity)
+- `repos/activity-api/` — the north-star implementation (full feature set)
+- `repos/concept-db/` — the manual pattern at lower complexity
 - `repos/discovery-vessel/` — the registry itself; also a useful minimal-vessel reference
-- `repos/ias-executor-ts/src/hosts/__example__/minimal-vessel.ts` — runnable ≤100 LOC VesselDaemon example
-
-**Superseded docs** (still in-tree but referencing the deprecated `POST /v2/vessels/register` on activity-api, which is in proxy mode until July 2026): `VESSEL_QUICK_START.md`, `VESSEL_WIRING_PRACTICAL.md`, `VESSEL_CREATION_GUIDE.md`. Prefer this doc for new work.
-
----
+- `repos/ias-executor-ts/src/hosts/__example__/minimal-vessel.ts` — runnable VesselDaemon example
 
 ---
 
@@ -93,14 +87,14 @@ That's it. Everything else is implementation detail.
 
 ## Three invariants
 
-These are load-bearing. Break them and the deployment falls over in subtle ways.
+These are load-bearing. Break them and the deployment falls over in subtle ways — not loudly at startup, but as a vessel that serves traffic while invisible to the registry, or one that advertises a shape it cannot resolve, or an observer that stopped consuming without ever logging why. Each invariant below is stated with the failure it prevents, because the failure is what makes it recognisable in the wild.
 
 ### 1. Registration is non-blocking
 
 The vessel MUST keep serving requests if discovery-vessel is unreachable. Fire-and-forget the initial `register()`, log on failure, let the heartbeat loop retry. Never throw out of startup because of a discovery failure.
 
 ```ts
-// repos/concept-db/src/index.ts:176-194
+// repos/concept-db/src/index.ts
 if (discoveryClient.isEnabled()) {
   discoveryClient.register()
     .then(success => logger.info('[Discovery] registered', { success }))
@@ -109,20 +103,23 @@ if (discoveryClient.isEnabled()) {
 }
 ```
 
-Compare `repos/activity-api/src/index.ts` and `repos/activity-api/src/services/discovery-client.ts` for the canonical implementation.
+The same file wraps its SurrealDB connect in a bounded retry loop and fires registration regardless of DB state, so a vessel whose database is still coming up is still discoverable. Compare `repos/activity-api/src/index.ts` and `repos/activity-api/src/services/discovery-client.ts` for the canonical implementation.
 
 ### 2. Every advertised shape has a dispatch case
 
-Don't advertise what you can't resolve. The `config.discovery.shapes` array and the `switch(pointer.type)` in `routes/impulses.ts` must agree exactly. The agreement is mechanically verified by `packages/shape-dispatch-check/`:
+Don't advertise what you can't resolve. The `config.discovery.shapes` array and the `switch(pointer.type)` in `routes/impulses.ts` must agree exactly. The agreement is mechanically verified by the checker in `packages/shape-dispatch-check/`:
 
 ```bash
-# Run from super-repo root:
+# Check one vessel (from super-repo root):
 bun packages/shape-dispatch-check/check.ts repos/<vessel-name>/
-# Or from inside the vessel repo:
-bun run scripts/check-shape-dispatch.ts
+
+# Sweep every vessel with the standard src/config.ts + src/routes/impulses.ts layout:
+scripts/check-shape-dispatch-all.sh
 ```
 
-The check is wired into each vessel's `lint` script, so `bun run lint` catches divergences before push.
+Both exit 0 clean, 1 on any unsuppressed violation. A vessel wires the check into its own `lint` script through a thin `repos/<vessel>/scripts/check-shape-dispatch.ts` shim that execs the shared checker with the vessel root — copy that shim rather than reimplementing the parse, so a single checker keeps every vessel honest. Add the vessel to the `VESSELS` array in `scripts/check-shape-dispatch-all.sh` so the workspace sweep covers it too; a vessel missing from that list is silently skipped rather than reported.
+
+The check also runs *inside* the discovery client at registration time in vessels that implement it: an advertised shape with no dispatch case is logged as a violation and **filtered out of the registration payload**, so the registry never learns about a shape the vessel cannot serve.
 
 **Suppressing intentional divergences:**
 
@@ -160,7 +157,7 @@ See `repos/concept-db/src/services/execution-observer.ts` for the reference.
 
 ## Directory layout
 
-Concrete skeleton, matching how `concept-db` and `metabob-activity-api` are organized:
+Concrete skeleton, matching how `concept-db` and `activity-api` are organized:
 
 ```
 repos/<vessel>/
@@ -174,7 +171,7 @@ repos/<vessel>/
 │   │   ├── impulses.ts            # POST /v2/impulses/resolve — switch(pointer.type)
 │   │   └── <feature>.ts           # domain-specific REST routes
 │   ├── services/
-│   │   ├── discovery-client.ts    # singleton: register/heartbeat/shutdown
+│   │   ├── discovery-client.ts    # singleton: register/heartbeat/deregister/shutdown
 │   │   └── execution-observer.ts  # (optional) passive WS listener on activity-api
 │   ├── resolvers/                 # one module per shape; no HTTP here, just business logic
 │   │   └── <shape>.ts
@@ -183,6 +180,7 @@ repos/<vessel>/
 │   │   └── hooks.ts
 │   ├── db/                        # SurrealDB + cache clients
 │   └── utils/logger.ts
+├── scripts/check-shape-dispatch.ts # shim execing packages/shape-dispatch-check/check.ts
 ├── tests/                         # bun:test; pure-unit where possible
 ├── sql/migrations/                # PERMISSIONS enforce multi-tenancy at the DB layer
 ├── package.json
@@ -193,7 +191,7 @@ repos/<vessel>/
 And for the **local single-container substrate** (the primary development target — see "Deployment wiring" below), a systemd unit file:
 
 ```
-scripts/substrate/units/<vessel>.service   # Type=simple Bun unit; EnvironmentFile + PORT/VESSEL_ID/DISCOVERY env
+scripts/substrate/units/<vessel>.service   # Type=simple Bun unit; EnvironmentFile + PORT/VESSEL_ID env
 ```
 
 The **downstream** Helm chart (canary/production only) lives in the deployment repo:
@@ -214,11 +212,13 @@ repos/deployment/
 
 ## The pieces
 
+Each subsection below is one file from that skeleton, described by the contract it must satisfy rather than by its current contents — read the cited source for the implementation. The order is the order you build them in: bootstrap and config first, then the discovery client that makes the vessel findable, then the resolve surface that makes it useful, then the optional observer, auth and lifecycle machinery.
+
 ### Bootstrap and graceful shutdown
 
-`src/index.ts` is small — a Hono app, route mounts, health, and `startup()` / `shutdown()` functions wired to signal handlers. Wait on DB connection, register lifecycle hooks, start schedulers, fire-and-forget discovery registration, start the observer, log, done. Shutdown reverses in the opposite order and calls `process.exit(0)` after cleanup.
+`src/index.ts` is small — a Hono app, route mounts, health, and `startup()` / `shutdown()` functions wired to signal handlers. Wait on the DB connection (with bounded retries), register lifecycle hooks, start schedulers, fire-and-forget discovery registration, start the observer, log, done. Shutdown reverses in the opposite order and calls `process.exit(0)` after cleanup.
 
-**Concrete example:** `repos/concept-db/src/index.ts` — 264 lines, covers the whole surface.
+**Concrete example:** `repos/concept-db/src/index.ts` — covers the whole surface end to end.
 
 Health endpoint at `GET /health` reports dependency status. Return 503 when the DB is disconnected; return 200 otherwise. Include discovery status in the response body for observability but don't let it fail the health check — discovery-vessel outages shouldn't cascade.
 
@@ -226,7 +226,7 @@ Health endpoint at `GET /health` reports dependency status. Return 503 when the 
 
 `src/config.ts` exports a singleton `Config` loaded from env vars via small parsing helpers (`parseEnvInt`, `parseEnvBool`). Every block is explicitly typed; environment drift surfaces as a type error rather than a runtime surprise.
 
-Current blocks every vessel should have:
+Blocks every vessel should have:
 
 ```ts
 interface Config {
@@ -259,31 +259,39 @@ interface Config {
 }
 ```
 
-**Concrete example:** `repos/concept-db/src/config.ts` (pattern) and `repos/activity-api/src/config.ts` (full-feature, 15+ shapes).
+**Concrete example:** `repos/concept-db/src/config.ts` (pattern) and `repos/activity-api/src/config.ts` (full-feature, many shapes).
 
 ### Discovery client
 
-Singleton class with `register()`, `heartbeat()`, `shutdown()`. Exponential backoff on registration retries. Starts a `setInterval` heartbeat at TTL/2 once registered. Graceful deregistration on shutdown via `DELETE /vessels/:vesselId`.
+Singleton class exposing `isEnabled()`, `register()`, `heartbeat()`, `deregister()`, `startHeartbeatManager()`, `stopHeartbeatManager()` and `shutdown()`. Registration retries with exponential backoff. `startHeartbeatManager()` opens a `setInterval` at `heartbeatIntervalMs` once registered; `shutdown()` stops it and deregisters via `DELETE /vessels/:vesselId` on discovery-vessel.
 
-**Registration payload:**
+**Registration payload** — the shapes list is the filtered-safe set from invariant 2, and the resolver-contract fields tell callers how to invoke this vessel without per-vessel hardcoded knowledge:
 
 ```json
 // local substrate (systemd unit; endpoint is the in-container 127.0.0.1 port):
 {
-  "vesselId": "concept-db-local",
-  "vesselName": "concept-db",
+  "vesselId": "<vessel>-local",
+  "vesselName": "<vessel>",
   "version": "0.1.0",
-  "endpoint": "http://127.0.0.1:8260",
-  "shapes": ["concept", "conceptGraph", "relatedConcepts", "conceptUsageStats", "conceptSequence"],
+  "endpoint": "http://127.0.0.1:<port>",
+  "shapes": ["<advertised shapes with a dispatch case>"],
   "protocol": "http",
-  "metadata": { "environment": "substrate-live", "port": 8260 }
+  "metadata": { "environment": "local", "podId": "<hostname>", "port": <port> },
+  "resolve_endpoint": "/v2/impulses/resolve",
+  "resolve_request_format": "pointer",
+  "auth_scheme": "ApiKey",
+  "resolve_timeout_ms": 30000
 }
 // downstream canary/production substitutes the .svc.cluster.local endpoint and a per-pod vesselId.
 ```
 
+`metadata.environment` is derived, not configured: the client's `detectEnvironment()` helper reports `k8s-cluster` when `KUBERNETES_SERVICE_HOST` is set and `docker` when `DOCKER_CONTAINER` is set, otherwise `local`. The single-container substrate sets neither, so its vessels register as `local`. `metadata.port` is the vessel's own `config.port` (from `PORT`); the registered `endpoint` is a separate value — `getEndpoint()` returns `VESSEL_ENDPOINT` when the unit sets it, and otherwise builds a cluster-DNS URL — so keep the unit's `PORT` and `VESSEL_ENDPOINT` in step, as the substrate units that set both do.
+
+Set `resolve_timeout_ms` from the vessel's own worst case, not from a habit: a resolver that does several sequential DB round-trips or an embedding call on a cold cache will exceed a 5–10s default and read to callers as a dead vessel.
+
 **Auth:** `Authorization: ApiKey ${METABOB_API_KEY}`. Attach conditionally — if the env var is empty, log a warning and send unauthenticated (dev mode); production will reject and the warning tells you why.
 
-**Concrete implementation:** `repos/concept-db/src/services/discovery-client.ts` (~340 lines), adapted from `repos/activity-api/src/services/discovery-client.ts`.
+**Concrete implementation:** `repos/concept-db/src/services/discovery-client.ts`, adapted from `repos/activity-api/src/services/discovery-client.ts`.
 
 ### Shape advertisement and dispatch
 
@@ -295,40 +303,41 @@ Two halves of one contract:
 The route file is thin glue — no business logic. It:
 
 - Parses `{pointer: {type, ...payload}}` from the request body
-- Validates required fields per shape (`concept_id` for most; `root_query` for graph walks; etc.)
+- Validates required fields per shape, accepting every key alias a caller might legitimately send — a handler that reads only one spelling of a field returns an empty result to callers using another, which reads as "no evidence" rather than as an error and can silently starve a whole family of goals
 - Calls the resolver
 - Returns `{content, metadata}` (string content for LLM injection, object metadata for the caller's reasoning)
-- Returns 400 with `supported_shapes` list for unknown types, 404 for not-found, 500 for resolver errors
+- Returns 400 with a `supported_shapes` list for unknown types, 404 for not-found, 500 for resolver errors
 
-**Concrete example:** `repos/concept-db/src/routes/impulses.ts` (~260 lines for 5 shapes).
+**Concrete example:** `repos/concept-db/src/routes/impulses.ts`.
 
 ### Passive execution observer (optional)
 
-New pattern as of 2026-04. Solves "how does my vessel learn from executions it wasn't called in?"
+Solves "how does my vessel learn from executions it wasn't called in?"
 
-Connect to `${activityApi.url}/ws` (upgrade `http`→`ws`, `https`→`wss`). Send `{type: "authenticate", token: apiKey}` as the first message. Server responds `{type: "authenticated"}` or closes with code 1008. On reconnect, send `{type: "catchup", lastSeenSequence: n}` to replay missed events (note: the server field is `lastSeenSequence`, not `fromSequence` — workbench's hook has a legacy bug here).
+Connect to `${activityApi.url}/ws` (upgrade `http`→`ws`, `https`→`wss`). Send `{type: "authenticate", token: apiKey}` as the first message. Server responds `{type: "authenticated"}` or closes with code 1008. On reconnect, send `{type: "catchup", lastSeenSequence: n}` to replay missed events — the server reads that exact field name and returns only events with a sequence greater than it.
 
 Events of interest:
 
-- `task.completed` — carries `input_impulse_ids` and `output_impulse_ids` (per-task impulse arrays as of 2026-04-25); scan for references to shapes this vessel owns; react locally
-- `tool.call` — phase 2: extract references from tool arguments
+- `task.completed` — carries `input_impulse_ids` and `output_impulse_ids`; scan for references to shapes this vessel owns, react locally
+- `tool.call` — carries `tool_name`, `resolver_tier` (`deterministic` | `pattern` | `llm`), `latency_ms` and `cost_usd` for a single tool invocation
+- `impulse.resolved` — one event per resolved impulse during trace ingestion, with the canonical fields flat on `data`
 
-Reconnect with exponential backoff: start at 1s, cap at 30s, reset on clean open. Every handler is try/catch-wrapped; errors log and continue.
+Reconnect with exponential backoff: start at 1s, cap at 30s, reset on clean open (`OBSERVER_RECONNECT_INITIAL_MS` / `OBSERVER_RECONNECT_MAX_MS`). Every handler is try/catch-wrapped; errors log and continue.
 
-`task.completed.data` now carries `input_impulse_ids: string[]` and `output_impulse_ids: string[]` (always present, possibly empty). These are the per-task impulse arrays; note that the richer `impulse_resolutions` (per-resolution metadata with resolver tier, latency, cost) is only on the persisted trace row. See `docs/specs/broadcaster-per-task-grouping.md` for implementation details.
+`task.completed.data` carries `input_impulse_ids: string[]` and `output_impulse_ids: string[]` — the per-task impulse arrays, always present and possibly empty. Treat them as identifiers, not as content: they tell you *which* impulses a task consumed and produced, and an observer that needs the impulse itself resolves it rather than expecting the payload on the frame.
 
-**Concrete implementation:** `repos/concept-db/src/services/execution-observer.ts` (~411 lines) + `tests/execution-observer.test.ts` (14 unit tests covering request building, dedup, failure swallowing, backoff schedule).
+**Concrete implementation:** `repos/concept-db/src/services/execution-observer.ts` plus `tests/execution-observer.test.ts`, whose unit tests cover request building, dedup, failure swallowing and the backoff schedule.
 
 ### Auth
 
 `src/middleware/jwtAuth.ts` extracts either `Authorization: Bearer <jwt>` or `Authorization: ApiKey <key>`:
 
-- **JWT**: validate via identity-vessel (primary) with direct-SurrealDB ACCESS fallback. Claims include `{org_id, project_id, role, exp, iat}`. 15-minute lifetime.
-- **API key**: validate via identity-vessel's impulse resolver. Scopes include `read` and `write`.
+- **JWT**: validate via identity-vessel (primary) with a direct-SurrealDB ACCESS fallback. Claims include `{org_id, project_id, role, exp, iat}`; the default lifetime issued by identity-vessel is 900 seconds.
+- **API key**: validate via identity-vessel. A validated key must carry a `keyId` — audit trails key on `api_key:${keyId}`, so a validation that succeeds without one is treated as a failure rather than passed through.
 
-Hang `{orgId, keyId, authType, jwtToken}` on the Hono context. All subsequent DB queries use `$auth.org_id` via SurrealDB `PERMISSIONS` clauses. No application-level filtering — the database enforces tenancy.
+Hang the resulting `{orgId, keyId, authType, jwtToken}` context on the Hono request (the `jwtAuth` context key). All subsequent DB queries scope by the caller's org claim via SurrealDB `PERMISSIONS` clauses. No application-level filtering — the database enforces tenancy.
 
-**Concrete example:** `repos/activity-api/src/middleware/jwtAuth.ts` (~80 lines).
+**Concrete example:** `repos/activity-api/src/middleware/jwtAuth.ts`.
 
 ### Internal lifecycle hooks
 
@@ -336,17 +345,17 @@ Own-CRUD events emit from `src/lifecycle/dispatcher.ts` (in-process EventEmitter
 
 Useful for: invalidating caches when records change, auto-linking related entities, audit logging. Handlers are async but `void`-returning; the emitter doesn't `await` them. Don't use hooks for anything that must complete synchronously.
 
-**Concrete example:** `repos/concept-db/src/lifecycle/dispatcher.ts` + `hooks.ts` (~170 lines combined).
+**Concrete example:** `repos/concept-db/src/lifecycle/dispatcher.ts` + `hooks.ts`.
 
 ---
 
 ## Deployment wiring
 
-> **Local development runs on the single-container substrate (Phase 26+), not Helm.**
+> **Local development runs on the single-container substrate, not Helm.**
 > Vessels run as **systemd units** inside the `substrate-live` docker container;
 > there is no Kubernetes, no Istio, and no Helm in the local loop. Helm applies only
 > to the **downstream** canary/production substrates. Mirror the framing in
-> CLAUDE.md §7 and [`docs/SUBSTRATE.md`](../SUBSTRATE.md). When you build a new vessel,
+> [`docs/SUBSTRATE.md`](../SUBSTRATE.md). When you build a new vessel,
 > wire it as a substrate unit first — that is where you iterate.
 
 ### Primary path: register a new vessel as a substrate unit
@@ -354,12 +363,13 @@ Useful for: invalidating caches when records change, auto-linking related entiti
 Each local vessel is a `Type=simple` Bun process launched by a systemd unit under
 `scripts/substrate/units/<vessel>.service`. The container maps each vessel's internal
 port to a host port with an **18000 offset** (`18xxx → 8xxx`) — activity-api
-`18080→8080`, goal-host `18210→8210`, analysis-vessel `18250→8250`. Internal
-vessel-to-vessel calls use `127.0.0.1:808x` directly inside the container; you reach a
-vessel from the host at `http://localhost:18xxx`.
+`18080→8080`, development-vessel `18090→8090`, discovery-vessel `18100→8100`,
+goal-host `18210→8210`, analysis-vessel `18250→8250`, concept-db `18260→8260`.
+Internal vessel-to-vessel calls use `127.0.0.1:8xxx` directly inside the container;
+you reach a vessel from the host at `http://localhost:18xxx`.
 
 A minimal unit, copied from the real `scripts/substrate/units/analysis-vessel.service`
-(the current stateless-resolver exemplar — port 8250):
+(the stateless-resolver exemplar — port 8250):
 
 ```ini
 [Unit]
@@ -369,12 +379,11 @@ Wants=discovery-vessel.service identity-vessel.service
 
 [Service]
 Type=simple
-EnvironmentFile=/etc/substrate/env                       # shared substrate env (METABOB_API_KEY, ACTIVITY_API_URL, …)
+EnvironmentFile=/etc/substrate/env                       # shared substrate env (METABOB_API_KEY, ACTIVITY_API_URL, DISCOVERY_VESSEL_ENDPOINT, …)
 Environment=PORT=8250
 Environment=HOST=127.0.0.1
 Environment=VESSEL_ID=analysis-vessel-local
 Environment=VESSEL_ENDPOINT=http://127.0.0.1:8250
-Environment=DISCOVERY_VESSEL_ENDPOINT=http://127.0.0.1:8100
 WorkingDirectory=/vessels/analysis-vessel
 ExecStart=/root/.bun/bin/bun /vessels/analysis-vessel/src/index.ts
 Restart=on-failure
@@ -387,22 +396,24 @@ WantedBy=multi-user.target
 ```
 
 Notes:
+
 - **No secretKeyRef / no POD_NAME fieldRef.** Inside the container, `METABOB_API_KEY`
   comes from the shared `EnvironmentFile=/etc/substrate/env`, and `VESSEL_ID` is a
   fixed `<vessel>-local` literal (single replica — no per-pod ID needed).
 - **`After=`/`Wants=` discovery-vessel + identity-vessel** is the unit-level analogue
   of the Helm `needs:` clause; it orders startup so discovery and auth are up first.
-- The vessel still resolves its peer endpoints from env (`DISCOVERY_VESSEL_ENDPOINT`,
-  `ACTIVITY_API_URL`/`ACTIVITY_API_ENDPOINT`), defaulting to localhost
-  (`http://127.0.0.1:8100`, `http://127.0.0.1:8080`) — see
-  `repos/analysis-vessel/src/index.ts` for the `process.env.… ?? "http://127.0.0.1:…"`
-  pattern.
+- **Only per-vessel values belong in the unit.** Peer endpoints are fleet-wide, so they
+  live in `/etc/substrate/env` (written by `scripts/substrate/gen-env.sh`) rather than
+  being repeated per unit. The vessel reads them from env — `DISCOVERY_VESSEL_ENDPOINT`,
+  `ACTIVITY_API_URL`/`ACTIVITY_API_ENDPOINT` — defaulting to in-container localhost
+  (`http://127.0.0.1:8100`, `http://127.0.0.1:8080`); see `repos/analysis-vessel/src/index.ts`
+  for the `process.env.… ?? "http://127.0.0.1:…"` pattern.
 
-To activate the new unit, add it to `run-live`'s enabled-unit list and register a
-`restart-<vessel>` target in `scripts/substrate/Makefile` (copy the analysis-vessel
-block — `sync-<vessel>` `docker cp`s `repos/<vessel>/src` into
-`/vessels/<vessel>/src`, then `systemctl restart <vessel>.service`). The iteration
-loop is then:
+To activate the new unit, add it to the `run-live` enabled-unit list and register
+`sync-<vessel>` / `restart-<vessel>` targets in `scripts/substrate/Makefile` (copy the
+analysis-vessel block — `sync-<vessel>` `docker cp`s `repos/<vessel>/src` into
+`/vessels/<vessel>/src`, and `restart-<vessel>` depends on it then restarts the unit).
+The iteration loop is then:
 
 ```bash
 # edit repos/<vessel>/src/** → hot-reload into the running container → validate
@@ -418,8 +429,6 @@ discovery-vessel, surrealdb) are restarted directly:
 ### Downstream path: Helm wiring (canary / production only)
 
 > Everything below applies to the **downstream** K8s substrates, not local work.
-> CI/CD deploys to canary on push to `dev`; the `/deploy` skill promotes
-> canary → production.
 
 The chart and helmfile must plumb:
 
@@ -429,88 +438,66 @@ The chart and helmfile must plumb:
 4. **`OBSERVER_ENABLED`** and the reconnect envs (if the vessel uses the observer).
 5. **`needs:`** includes `activity-system/discovery-vessel` so helmfile orders the deploy correctly.
 
-**Secret provisioning is intentionally out-of-tree.** Chart references the secret by name but doesn't create it. Steps to activate a new vessel:
+**Secret provisioning is intentionally out-of-tree.** The chart references the secret by name but doesn't create it. Steps to activate a new vessel:
 
 1. Add a `<vessel>` block to `repos/deployment/scripts/generate-secrets.sh`
-2. `sops secrets/canary.secrets.yaml` (requires Age key), add `<vessel>.apiKey` — generate via `openssl rand -hex 32` prefixed `mb_<vessel>_canary_`
+2. Edit the sops-encrypted canary secrets file (requires the Age key), adding `<vessel>.apiKey`
 3. Register the key in the identity-vessel seed so activity-api accepts it
-4. Either add `templates/secret.yaml` to the chart (mirroring an existing vessel chart's `templates/secrets.yaml`) or manually: `kubectl create secret generic <vessel>-api-keys --from-literal=api-key=<KEY> -n activity-system`
+4. Either add `templates/secret.yaml` to the chart (mirroring an existing vessel chart) or create the secret imperatively in the `activity-system` namespace
 
 Without these the pod starts but registration stays unauthenticated (and the Secret reference may block pod start entirely if absent).
 
-**Concrete example:** `repos/deployment/charts/concept-db/` + the concept-db release block in `helmfile.yaml.gotmpl` (see commit `6c8746e`).
+**Concrete example:** `repos/deployment/charts/concept-db/` plus its release block in `helmfile.yaml.gotmpl`.
 
 ---
 
 ## Substrate identity resolution
 
+A vessel must run identically wherever it is deployed, which means it cannot carry a map of where its peers live. The rule that follows is narrow: env supplies only bootstrap material — a credential, a port, an identity, and the endpoint of the one service that can name the others — and everything else is resolved at runtime. The subsections below give the pattern, its inverse, and the places in the tree that still violate it.
+
 ### The minimum-bootstrap-credential pattern
 
-Every vessel requires exactly two pieces of env-supplied material at boot:
+The bootstrap set is deliberately tiny: `METABOB_API_KEY` (the credential every vessel presents on outbound calls), `PORT`/`HOST`/`VESSEL_ID` (its own identity), and `DISCOVERY_VESSEL_ENDPOINT` (the one peer it is allowed to know by address). In the single-container substrate they arrive by two routes: the fleet-wide values (`METABOB_API_KEY`, `DISCOVERY_VESSEL_ENDPOINT`, peer endpoints) come from `/etc/substrate/env`, generated once per boot by `scripts/substrate/gen-env.sh` and shared by every unit through `EnvironmentFile=`; the per-vessel identity values (`PORT`, `HOST`, `VESSEL_ID`) come from `Environment=` lines in the vessel's own unit file, as in the unit shown above.
 
-- `SUBSTRATE_IDENTITY_URL` — the URL of the identity vessel that will resolve all other endpoints
-- `VESSEL_BOOTSTRAP_KEY` — a short-lived bootstrap credential used only to authenticate the initial identity resolution call
+From there, routing is dynamic. **Discovery-vessel is the fixed point** — the vessel registers its own shapes with it and queries it to find whoever serves the shapes it needs, so no vessel holds an address for another vessel. Authentication is centralized the same way: identity-vessel is the single validator, and every vessel checks presented credentials against it rather than trusting its own copy of anything.
 
-From those two inputs, the vessel calls `POST {SUBSTRATE_IDENTITY_URL}/v1/identity/resolve` at startup to receive: its own `vessel_id`, the substrate's JWT issuer URL, the activity-api endpoint, the discovery-vessel endpoint, and any other substrate-specific routing. No other env vars are required for cross-vessel routing.
-
-This makes the vessel deployment-agnostic: the same image boots correctly against the local single-container substrate (where `SUBSTRATE_IDENTITY_URL=http://localhost:8101`), a canary cluster, or a federated peer. The identity resolver is the single permitted hardcoded contact point.
-
-```typescript
-// Canonical startup pattern
-const identityUrl = process.env.SUBSTRATE_IDENTITY_URL ?? 'http://localhost:8101';
-const bootstrapKey = process.env.VESSEL_BOOTSTRAP_KEY ?? '';
-
-const { vesselId, activityApiEndpoint, discoveryEndpoint, jwtIssuerUrl } =
-  await fetch(`${identityUrl}/v1/identity/resolve`, {
-    method: 'POST',
-    headers: { Authorization: `ApiKey ${bootstrapKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ vessel: process.env.VESSEL_NAME }),
-  }).then(r => r.json());
-
-// All subsequent configuration flows from these resolved values
-const daemon = new VesselDaemon({
-  vesselId,
-  discoveryEndpoint,
-  activityApiEndpoint,
-  // ...
-});
-```
+Config keys are bootstrap-only in the strict sense of the ontology: they are frozen at process start, invisible to traces and to the walk, and therefore unlearnable. Anything that steers *behaviour* must be a shaped impulse read at use time, never an env var — a flag the substrate cannot observe is a flag it can never grade.
 
 ### Anti-pattern: hardcoded peer endpoints
 
-If a vessel has `http://metabob-activity-api.activity-system.svc.cluster.local:8080` or `https://identity.metabob.com` as a default in source, that default will silently fail outside the Kubernetes cluster it was written for. Kubernetes-internal DNS names (`.svc.cluster.local`) are unreachable from the local substrate container; public hostnames (`*.metabob.com`) are unreachable in air-gapped or offline environments. The substrate identity resolver is the one permitted hardcoded point — everything else must be resolved from it.
+If a vessel has `http://activity-api.activity-system.svc.cluster.local:8080` or a public `https://identity.<domain>` as a default in source, that default will silently fail outside the Kubernetes cluster it was written for. Kubernetes-internal DNS names (`.svc.cluster.local`) are unreachable from the local substrate container; public hostnames are unreachable in air-gapped or offline environments. Worse, both *resolve syntactically* and fail only at request time, so the vessel starts clean and appears healthy while every outbound call it makes is dead.
 
-The correct fallback, when `SUBSTRATE_IDENTITY_URL` is not set, is to fail loudly at startup with a clear error message, not to fall back to a Kubernetes service DNS name.
+The correct default, when the endpoint env var is unset, is the in-container loopback address of the peer (`http://127.0.0.1:8100` for discovery, `http://127.0.0.1:8080` for activity-api) or a loud startup failure — never a cluster DNS name inherited from someone else's deployment.
 
 ### Known gap
 
-Five vessels currently have hardcoded defaults that pre-date this pattern:
+Several vessels retain hardcoded cluster-DNS or public-hostname defaults that pre-date this pattern:
 
-- `identity-vessel/src/services/trace.ts`
-- `identity-vessel/src/services/jwt.ts`
-- `identity-vessel/src/services/keyGeneration.ts`
-- `discovery-vessel/src/middleware/auth.ts`
-- `identity-vessel/src/services/discovery-client.ts`
+- `repos/identity-vessel/src/services/trace.ts` — `.svc.cluster.local` activity-api default
+- `repos/identity-vessel/src/services/jwt.ts` — public issuer default
+- `repos/identity-vessel/src/services/keyGeneration.ts` — public issuer default
+- `repos/identity-vessel/src/services/discovery-client.ts` — constructs `.svc.cluster.local` endpoints
+- `repos/discovery-vessel/src/middleware/auth.ts` — public identity-vessel default
 
-These are overridden by env vars in the substrate container; the override is env-var discipline holding the system closed rather than the bootstrap pattern. New vessels MUST follow the bootstrap pattern. Existing vessels will migrate as they undergo their next significant revision.
+Each is overridden by an env var in the substrate container, so the system is held closed by env-var discipline rather than by the pattern itself — which is exactly the fragile arrangement the pattern exists to remove. New vessels MUST follow the pattern. These migrate as they undergo their next significant revision.
 
 ---
 
 ## What NOT to do
 
+Each of the following has cost real debugging time, and they share a shape: the vessel starts, passes its health check, and is wrong in a way that only shows up later or elsewhere. Read them as failure modes to recognise, not merely as style rules.
+
 ### Don't register against activity-api's `/v2/vessels/register`
 
-Deprecated. In proxy mode until July 2026. Register with discovery-vessel directly. The older docs (`VESSEL_QUICK_START.md`, `VESSEL_WIRING_PRACTICAL.md`, `VESSEL_CREATION_GUIDE.md`) still show this path — they're stale. Follow this doc instead.
+Deprecated, and served in proxy mode — it dual-writes to discovery-vessel and SurrealDB for backward compatibility, so it *appears* to work while leaving your vessel's registration owned by a path nobody maintains. Register with discovery-vessel directly.
 
 ### Don't gate registration behind an unprovisioned env var
 
-Common failure mode: the vessel checks `if (process.env.JWT_TOKEN)` and silently disables registration when unset. Helm chart doesn't plumb `JWT_TOKEN`, so in canary the vessel never registers and nobody notices. Use the config-driven `discoveryClient.isEnabled()` pattern (checks `DISCOVERY_ENABLED`, default `true`), and surface missing auth via a warning at register time — not a silent disable at startup.
-
-This was the concept-db pre-Wave-1 bug; see commit `faa7d8e` for the fix.
+Common failure mode: the vessel checks `if (process.env.JWT_TOKEN)` and silently disables registration when unset. The deployment doesn't plumb `JWT_TOKEN`, so the vessel never registers and nobody notices. Use the config-driven `discoveryClient.isEnabled()` pattern (checks `DISCOVERY_ENABLED`, default `true`), and surface missing auth via a warning at register time — not a silent disable at startup.
 
 ### Don't import across repo boundaries
 
-`tsconfig.json` has `rootDir: ./src`. Imports from `../../../other-repo/src/*` violate it and produce TS6059. `bun build` ignores TS errors and will cheerfully bundle broken code — so set up CI to run `bun run tsc --noEmit` and treat failures as blocking. If you need a type from another vessel, either duplicate it locally (small types) or extract a shared package (large contracts). Don't cross-import source trees.
+`tsconfig.json` has `rootDir: ./src`. Imports from `../../../other-repo/src/*` violate it and produce TS6059. `bun build` ignores TS errors and will cheerfully bundle broken code — so run `bun run tsc --noEmit` and treat failures as blocking. If you need a type from another vessel, either duplicate it locally (small types) or extract a shared package under `packages/` (large contracts). Don't cross-import source trees.
 
 ### Don't put business logic in `routes/impulses.ts`
 
@@ -528,6 +515,7 @@ Before cutting the first release:
 
 - [ ] `bun run tsc --noEmit` exits 0
 - [ ] `bun test` green with unit tests covering each resolver in isolation
+- [ ] `bun packages/shape-dispatch-check/check.ts repos/<vessel>/` exits 0
 - [ ] `POST /v2/impulses/resolve` dispatches for every shape in `config.discovery.shapes`
 - [ ] Unknown shapes return 400 with `supported_shapes` in the response body
 - [ ] Startup is non-blocking when discovery-vessel is down (test by pointing `DISCOVERY_VESSEL_ENDPOINT` at a dead URL)
@@ -535,7 +523,7 @@ Before cutting the first release:
 - [ ] `/health` returns 503 only on DB failure, not on discovery failure
 - [ ] WebSocket observer (if used) reconnects with backoff and never throws out of handlers
 - [ ] **Substrate unit** at `scripts/substrate/units/<vessel>.service` (`After=`/`Wants=` discovery-vessel + identity-vessel; `EnvironmentFile=/etc/substrate/env`; fixed `PORT`/`VESSEL_ID`)
-- [ ] **Host-port mapping** added to `run-live` (and a `restart-<vessel>` target in `scripts/substrate/Makefile`); vessel reachable at `http://localhost:18xxx/health`
+- [ ] **Host-port mapping** added to `run-live` (and `sync-`/`restart-<vessel>` targets in `scripts/substrate/Makefile`); vessel reachable at `http://localhost:18xxx/health`
 - [ ] Validated against the local substrate (`http://localhost:18080`) via `make -C scripts/substrate restart-<vessel>` + a confirming dispatch
 - [ ] *(downstream only)* Helm chart mounts `METABOB_API_KEY` via `secretKeyRef` and `POD_NAME` via `fieldRef`; helmfile `needs:` includes `activity-system/discovery-vessel`; secret provisioning documented in the vessel's `CLAUDE.md` (no API keys in values.yaml)
 
@@ -543,8 +531,9 @@ Before cutting the first release:
 
 ## Related
 
-- [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md) — The conceptual model. Read first.
-- [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md) — Discovery-vessel integration is covered in the foundational model.
-- `VESSEL_CONSTRUCTION_PATTERNS.md` (archived 2026-04-26) — Cross-vessel pattern analysis (2026-04-08). Idioms remain current; registration path superseded by discovery-vessel.
-- [`RESOLVER_TRACKING.md`](RESOLVER_TRACKING.md) — Per-impulse resolution tracking for learning.
-- [`../guides/CONCEPT_INTEGRATION_TEMPLATES.md`](../guides/CONCEPT_INTEGRATION_TEMPLATES.md) — Example activity templates that consume a vessel's shapes.
+- [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md) — the conceptual model, including discovery-vessel integration. Read first.
+- [`RESOLVER_TRACKING.md`](RESOLVER_TRACKING.md) — per-impulse resolution tracking for learning.
+- [`GOAL_EXECUTION_PATHS_SCHEMA.md`](GOAL_EXECUTION_PATHS_SCHEMA.md) — how a dispatched goal's path and reach verdict are recorded.
+- [`../SUBSTRATE.md`](../SUBSTRATE.md) — bootstrapping and operating the single-container substrate your vessel runs in.
+- [`../guides/CONCEPT_INTEGRATION_TEMPLATES.md`](../guides/CONCEPT_INTEGRATION_TEMPLATES.md) — example activity templates that consume a vessel's shapes.
+- `packages/shape-dispatch-check/README.md` — the shape-dispatch checker's own contract and suppression syntax.

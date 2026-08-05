@@ -14,13 +14,12 @@
 >
 > Prerequisite before migrating any seam: the **dual-parse conformance fix** —
 > goal-host, concept-db, and llm-resolver `/resolve` handlers accept
-> `body.impulse.pointer.*` (preferred) with legacy `body.*` fallback
-> (openspec `2026-05-30-vessel-resolve-contract-conformance`).
+> `body.impulse.pointer.*` (preferred) with legacy `body.*` fallback.
 
 This ledger tracks every known violation. Migration is decided **per-seam**
 (audit-first): each row becomes an individually-scoped goal/openspec change
-when its time comes. Audit date: 2026-07-02 (full inventory in the plan of
-record; biggest seams reproduced here).
+when its time comes. The ledger reproduces the biggest seams rather than the
+full inventory; a seam absent from the table is unaudited, not compliant.
 
 ## Seam template
 

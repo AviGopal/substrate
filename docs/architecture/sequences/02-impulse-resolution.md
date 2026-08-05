@@ -1,828 +1,468 @@
 # Impulse Resolution During Activity Execution
 
-> **How to read this.** The six-step resolver dispatch chain (local → custom →
-> discovery → backend → fallback) and the filtering/budget/context-injection flow
-> are accurate. They run inside the substrate: the orchestration lives in
-> `goal-host-vessel` / `ias-executor-ts`, the LOCAL filesystem and process
-> resolvers (file, directoryTree, gitDiff, bash) are owned by
-> `local-tools-vessel` (`:8230`), and discovery routing is unchanged. Read the
-> `ActivityExecutor (activity.ts)` participant as `GoalHost (goal-host-vessel)`,
-> and the `MCPBackend (mcp.ts)` participant as `activity-api` (`:18080`) reached
-> over HTTP through the discovery resolver contract rather than a local MCP
-> client. The `impulse.ts` and `vessel-discovery.ts` file references predate the
-> move and no longer resolve.
+> **How to read this.** Resolution is a dispatch chain owned by the executing
+> vessel, not by the trace store. `goal-host-vessel` (`:8210`) registers the
+> resolvers and runs the chain; `discovery-vessel` (`:8100`) answers "who serves
+> this shape"; `local-tools-vessel` (`:8230`) owns filesystem, process, git and
+> code-edit shapes; `activity-api` (`:8080`) resolves the activity-related shapes
+> it advertises and nothing else. Participants are named by symbol, never by line
+> number.
 
 ## Overview
 
-This document maps the complete lifecycle of impulse resolution during activity execution, from filtering through resolution to context injection into LLM prompts. The impulse resolution system is the core data access mechanism of the executing vessel (goal-host-vessel), enabling metadata-first reasoning and lazy-loaded content.
+This document maps how an impulse pointer becomes content during activity execution: how a resolver is chosen for a shape, how a shape nobody local serves is routed through discovery, and what the execution trace records about the resolution afterwards.
+
+The load-bearing claim is architectural: **resolver dispatch belongs to the executing vessel.** `ResolverRegistry` in `@avigopal/ias-executor-ts` is the lookup table, `goal-host-vessel` fills it at startup, and `activity-api` participates as one producer among many rather than as a universal resolution authority.
 
 ## Key Concepts
 
-1. **Relevance Filtering** - Impulses filtered by learned relevance scores before loading
-2. **6-Step Resolver Dispatch** - Priority-ordered resolution chain (local → custom → discovery → backend → fallback), executed in goal-host-vessel
-3. **Budget Enforcement** - Content truncated to fit token budgets with metadata capture
-4. **Dual-Mode Formatting** - Pointer-mode (metadata only) vs content-mode (full content)
-5. **Impulse Evolution Tracking** - Before/after hashes track state transitions (P3.2)
-6. **State Capture** - Input/output/transition states recorded for learning
-7. **Discovery Integration** - Dynamic vessel discovery for capability-based resolution
+1. **Impulse** — `{ id, pointer, metadata, loaded, content?, budget?, priority? }`; the shape is read via `getImpulseShape`, which prefers `metadata.shape` and falls back to `pointer.type`.
+2. **ResolverRegistry** — the per-runtime map of resolver id → `Resolver`, each carrying a `tier` of `deterministic`, `pattern`, `llm`, or `external`.
+3. **Registration order** — builtins, then discovery proxies, then development-vessel proxies, then reactive registration on `vessel.registered`.
+4. **Discovery routing** — `POST /resolve` on discovery-vessel both answers registry questions and forwards non-registry shapes to the vessel that advertises them.
+5. **Transport selection** — `endpointForShape` prefers a peer endpoint, then a libp2p candidate via the federation egress, then the advertised HTTP endpoint.
+6. **Execution budget** — enforced per execution as cost, duration and task count, not as a per-impulse token cap.
+7. **Attribution** — each `ExecutionTaskRecord` records `resolverId`, `resolverTier`, `inputShapes`, `outputShapes`, `filesModified`, `filesCreated`, `materialsConsulted`.
 
 ## Main Sequence Diagram: Complete Resolution Flow
 
 ```mermaid
 sequenceDiagram
-    actor User as Task Executor
-    participant Act as ActivityExecutor<br/>(goal-host-vessel)
-    participant IF as ImpulseFilter<br/>(goal-host-vessel)
-    participant ImpStore as ImpulseStore<br/>(goal-host-vessel)
-    participant IR as ImpulseResolver<br/>(goal-host-vessel)
-    participant Local as LocalResolvers<br/>(local-tools-vessel)
-    participant Disc as DiscoveryVessel
-    participant MCP as Activity-API<br/>(:18080, HTTP)
-    participant Cache as DiscoveryCache
+    participant Exec as ActivityExecutor<br/>(ias-executor-ts engine)
+    participant Reg as ResolverRegistry
+    participant Store as ImpulseStore
+    participant Proxy as buildDiscoveryProxyResolver<br/>(goal-host-vessel)
+    participant Disc as discovery-vessel<br/>(:8100)
+    participant Vessel as Producing vessel<br/>(local-tools / activity-api / peer)
+    participant Sink as TranslatingTraceSink<br/>→ activity-api
 
-    User->>Act: executeTask()
-    activate Act
+    Exec->>Store: collect input impulses for the task
+    Note over Store: formatForContext({shapes, includeContent})<br/>returns metadata-first entries; content only<br/>when the impulse is already loaded
 
-    rect rgb(200, 220, 255)
-    Note over Act,IF: PHASE 1: Impulse Filtering (Phase 1.8)<br/>Query relevance metrics if MCP enabled
-    Act->>IF: Query task impulses IDs<br/>(taskImpulseIds = task.impulseReferences || impulses)
-    IF->>MCP: queryImpulseRelevance(activityId, impulseIds)
-    activate MCP
-    MCP-->>IF: ImpulseRelevanceMetric[]
-    deactivate MCP
-
-    rect rgb(230, 245, 230)
-    Note over IF: Apply Decision Rules:<br/>1. score ≥ 0.8 → always load<br/>2. irrelevance > relevance → skip<br/>3. score ≥ threshold → load<br/>4. enforce maxImpulses limit (default: 5)
-    IF->>IF: filterImpulsesByRelevance(impulseIds, metrics)
-    IF-->>Act: FilterResult {toLoad, toSkip, reasoning}
+    Exec->>Reg: lookup resolver for task.resolver / shape
+    alt Resolver registered locally
+        Reg-->>Exec: Resolver (deterministic | pattern | llm | external)
+    else Not registered
+        Reg-->>Exec: resolver_not_registered
+        Note over Exec: the walk treats this as a missing producer<br/>and files a capability gap
     end
 
-    Note over Act: impulsesToLoad = filterResult.toLoad<br/>calculateSavings(skipped_tokens, cost)
-    end
+    Exec->>Proxy: resolve(context)
+    activate Proxy
+    Proxy->>Proxy: buildImpulseSlots(inputImpulses)<br/>interpolateProxyValue(config, variables, slots)
+    Note over Proxy: pointer = { type: shape, ...variables, ...config }
 
-    rect rgb(255, 245, 200)
-    Note over Act,ImpStore: PHASE 2: Sequential Impulse Loading<br/>Load filtered impulses with budget enforcement
-    Act->>Act: loadImpulses(impulsesToLoad)
-    activate Act as LoadLoop
-
-    loop For each impulseId in impulsesToLoad
-        Act->>ImpStore: load(impulseId)
-        activate ImpStore
-
-        rect rgb(255, 255, 220)
-        Note over ImpStore,IR: PHASE 3: Pointer Resolution Chain<br/>Try resolvers in priority order
-        ImpStore->>IR: resolvePointer(pointer)
-        activate IR
-
-        alt Step 1: LOCAL - memo (embedded content)
-        IR->>IR: Check pointer.type === "memo"
-        IR-->>IR: Return pointer.content
-
-        else Step 2: LOCAL - file/directoryTree/gitDiff
-        IR->>Local: Resolve file/tree/diff
-        activate Local
-
-        rect rgb(200, 255, 200)
-        Note over Local: - file: read from filesystem<br/>- directoryTree: Bun.Glob() scan<br/>- gitDiff: git diff --stat<br/>- packageConfig: parse package.json<br/>- toolList: return available tools
-        Local-->>IR: file_content | tree_structure | diff_output
-        deactivate Local
-
-        else Step 3: CUSTOM - registered resolvers
-        IR->>IR: Check customResolvers.has(type)
-        IR->>IR: resolver(pointer)
-        IR-->>IR: resolver_result
-
-        else Step 4: DISCOVERY - vessel discovery
-        IR->>Disc: discoverVesselsForShape(shape)
-        activate Disc
-
-        rect rgb(200, 240, 255)
-        Note over Cache: Cache TTL: 5 min<br/>Check cache first
-        Disc->>Cache: Check discovery cache
-        alt Cache HIT (< 5 min)
-        Cache-->>Disc: CacheEntry {shape, vessels}
-        else Cache MISS
-        Disc->>MCP: GET /v2/vessels/discover?shape=X
-        MCP-->>Disc: VesselCapability[]
-        Disc->>Cache: Store {shape, vessels, cachedAt, expiresAt}
-        end
-        end
-
-        Disc-->>IR: DiscoveryResult {found, vessels, shape}
-        deactivate Disc
-
-        rect rgb(240, 200, 240)
-        Note over IR: Iterate through discovered vessels<br/>until one succeeds
-        loop For each vessel in discovery.vessels
-            alt vessel.vesselId === "metabob-activity-api" && isMCPEnabled
-            IR->>MCP: mcp.resolveImpulse(pointer)
-            else General case: MCP tool interface
-            IR->>IR: POST {endpoint}/mcp/tools/call
-            IR->>MCP: Tool: {pointer.type}_resolve<br/>Arguments: pointer
-            end
-            MCP-->>IR: {result: {content, metadata?}}
-            Note over IR: Dynamic registration:<br/>registerResolver(type, cached_resolver)
-        end
-        end
-
-        else Step 5: BACKEND - MCP fallback
-        IR->>MCP: mcp.resolveImpulse(pointer)
-        MCP-->>IR: content | error
-
-        else Step 6: FALLBACK - in-memory cache
-        IR->>IR: Check activityOutput store
-        IR-->>IR: cached_output | throw error
-        end
-        end
-
-        deactivate IR
-
-        rect rgb(255, 230, 230)
-        Note over ImpStore: PHASE 4: Budget Enforcement<br/>Truncate if over budget
-        ImpStore->>ImpStore: estimateTokens(content)<br/>(4 chars ≈ 1 token)
-        ImpStore->>ImpStore: Calculate:<br/>- originalTokenCount<br/>- wasTruncated = tokenCount > budget<br/>- truncationRatio = originalTokenCount / budget
-
-        alt tokenCount > budget
-        ImpStore->>ImpStore: Truncate to (budget / originalTokenCount * 90%)
-        ImpStore->>ImpStore: Append "... (truncated to fit budget)"
-        end
-
-        ImpStore->>ImpStore: Store budget metadata:<br/>originalTokenCount, wasTruncated,<br/>truncationRatio, priorityLevel
-        end
-
-        rect rgb(240, 255, 240)
-        Note over ImpStore: PHASE 5: Content Hashing & Metadata<br/>P3.2 - Impulse Evolution Tracking
-        ImpStore->>ImpStore: captureImpulseHashes(impulsesToLoad)
-        ImpStore->>ImpStore: hashes[impulseId] = Bun.hash(content)
-        ImpStore->>ImpStore: Merge resolver metadata if provided<br/>(metadata.shape, metadata.rowCount, etc.)
-        end
-
-        ImpStore-->>Act: Impulse {loaded, content, tokenCount, metadata}
-        deactivate ImpStore
-    end
-    deactivate LoadLoop
-    end
-
-    rect rgb(245, 230, 255)
-    Note over Act: PHASE 6: State Capture<br/>Record input state BEFORE task execution
-    Act->>Act: captureInputState(workdir, impulses, variables)
-    Act->>Act: captureFileHashes(workdir, filesAvailable)
-    end
-
-    rect rgb(255, 245, 200)
-    Note over Act: PHASE 7: Context Formatting & Injection<br/>Dual-mode impulse formatting
-    Act->>Act: formatImpulsesForContext(loadedImpulses)
-    activate Act as Format
-
-    loop For each loadedImpulse
-        alt impulse.metadata (pointer-mode)
-        Note over Act: <impulse_ref id type shape<br/>row_count summary available_ops />
-        else impulse.loaded && impulse.content (content-mode)
-        Note over Act: <impulse id type tokens=X/Y>content</impulse>
-        else unloaded + no metadata
-        Note over Act: (skip - return null)
+    alt Endpoint already cached in shapeEndpointMap
+        Proxy->>Proxy: reuse endpoint + resolvePath
+    else Cold
+        Proxy->>Disc: POST /resolve<br/>{pointer: {type: "vesselCapability", shape}}
+        Disc-->>Proxy: content.vessels[] (endpoint, resolve_endpoint,<br/>protocol, libp2p_multiaddr, peerEndpoint)
+        alt protocol = libp2p
+            Proxy->>Proxy: route via federation egress<br/>/egress/resolve?target=<multiaddr>
+        else discoveredVia = peer
+            Proxy->>Proxy: use peerEndpoint + its resolve_endpoint
+        else direct
+            Proxy->>Proxy: use endpoint + resolve_endpoint<br/>(default /v2/impulses/resolve)
         end
     end
 
-    Act-->>Act: <impulse_context>...impulses...</impulse_context>
-    deactivate Format
+    Proxy->>Vessel: POST {endpoint}{resolvePath}<br/>{impulse: {pointer}}
+    Vessel-->>Proxy: {content, metadata?}
+    Proxy-->>Exec: output Impulse (loaded, metadata.shape set)
+    deactivate Proxy
+
+    Exec->>Store: put(outputImpulse)
+    Exec->>Exec: record ExecutionTaskRecord<br/>{resolverId, resolverTier, inputShapes,<br/>outputShapes, filesModified, filesCreated,<br/>materialsConsulted, costUsd, durationMs}
+
+    Exec->>Exec: budget check<br/>maxTaskCount / maxDurationMs / maxCostUsd
+    alt Budget exceeded
+        Exec->>Exec: throw BudgetExceededError<br/>→ failureMode {type: "budget_exhausted"}
     end
 
-    rect rgb(200, 245, 200)
-    Note over Act: PHASE 8: Build Prompt & Execute<br/>Inject impulse context into LLM prompt
-    Act->>Act: prompt = task.prompt.template
-    Act->>Act: substituteImpulses(template, impulseIds)
-    Act->>Act: interpolate(prompt, variables, taskResults)
-    Act->>Act: Add impulseContext to prompt head<br/>Add argumentRecommendations (Task 7.5)
-
-    rect rgb(240, 255, 240)
-    Note over Act: Tool argument recommendations<br/>(proven patterns from prior executions)
-    Act->>Act: Get argumentRecommendations<br/>from backend (top 5 by success rate)
-    Act->>Act: Format as context hints:<br/>- {toolName}: args (X% success, N uses)
-    Act->>Act: Inject into prompt
-    end
-
-    Note over Act: Tool Filtering<br/>(goal-execution-foundation-alignment)
-    Act->>Act: filterToolsForTask(allTools, task)
-    Note over Act: - Check resolverRequirements.excludeTools<br/>- Validate resolverRequirements.requiredTools
-
-    Act->>Act: llm.completeWithTools({<br/>  model: selectedModel,<br/>  messages: [system, user with impulse_context],<br/>  tools: filteredTools,<br/>  maxTokens: task.prompt.maxTokens<br/>})
-    end
-
-    rect rgb(255, 230, 230)
-    Note over Act: PHASE 9: Output Impulse Creation<br/>& Trace Storage
-    Act->>Act: For each tool call:<br/>- Create output impulse from result<br/>- Create argument impulse (Task 7.2/7.3)<br/>- Record tool execution data
-
-    Act->>ImpStore: createImpulse({<br/>  id: impulseId,<br/>  pointer: {type: "memo", content: output},<br/>  budget: min(length/4, 2000),<br/>  priority: "medium"<br/>})
-
-    Note over Act: Record metrics for learning:<br/>- impulseRelevance<br/>- toolArgumentPatterns<br/>- activityExecutionTrace
-    Act->>MCP: storeImpulse(impulse)<br/>(with retry & backoff)
-    Alt: Store succeeds
-    MCP-->>Act: stored = true
-    Else: Store fails (unavailable)
-    MCP-->>Act: stored = false (cached for sync)
-    end
-    end
-
-    rect rgb(230, 240, 255)
-    Note over Act: PHASE 10: Resolver Tracking<br/>Record which resolvers were used
-    Act->>Act: For each loaded impulse:<br/>- Extract resolver metadata<br/>- Calculate latency_ms<br/>- Calculate cost_usd
-
-    Act->>Act: Aggregate resolver data:<br/>{impulse_id, resolver_id,<br/>resolver_tier, vessel_id,<br/>latency_ms, cost_usd}
-
-    Note over Act: Store in taskResult.metadata.resolverData<br/>Include in execution trace
-
-    Act->>MCP: Include resolver tracking in trace:<br/>execution.impulse_resolutions[]<br/>execution.resolved_by_vessel_id
-
-    Note over Act: Enable learning:<br/>- Resolver success rates<br/>- Vessel performance<br/>- Cost optimization
-    end
-
-    deactivate Act
+    Exec->>Sink: ExecutionTrace (tasks, inputShapes, outputImpulseIds, failureMode)
+    Sink->>Sink: filter failureMode.type to the canonical set
+    Sink-->>Exec: POST /v2/activities/execution-traces
 ```
 
 ## Decomposition: Resolver Tracking (Phase 10)
 
+Resolution is recorded on the task record, not in a side channel. Every `ExecutionTaskRecord` the engine emits carries the identity and tier of the resolver that ran, the shapes that went in and came out, and the files the resolver touched.
+
 ```mermaid
 sequenceDiagram
-    participant Act as ActivityExecutor
-    participant Task as TaskResult
-    participant IR as ImpulseResolver
-    participant MCP as MCPBackend
+    participant Exec as ActivityExecutor
+    participant Rec as ExecutionTaskRecord
+    participant Trace as ExecutionTrace
+    participant Sink as TranslatingTraceSink
+    participant API as activity-api
 
-    Note over Act: After impulse resolution completes
+    Exec->>Rec: resolverId, resolverTier
+    Exec->>Rec: inputImpulseIds, inputShapes
+    Exec->>Rec: outputImpulseIds, outputShapes<br/>(read from impulse.metadata.shape)
+    Exec->>Rec: filesModified, filesCreated, materialsConsulted<br/>(derived from resolved pointers)
+    Exec->>Rec: costUsd, tokensInput, tokensOutput, durationMs
+    Exec->>Rec: consumedFromTaskIds, childActivityId, childExecutionId
 
-    loop For each loaded impulse
-        Act->>IR: Get resolver metadata
-        IR-->>Act: {<br/>  resolverId,<br/>  resolverTier,<br/>  vesselId,<br/>  startTime,<br/>  endTime<br/>}
-
-        Act->>Act: Calculate metrics:<br/>- latency_ms = endTime - startTime<br/>- cost_usd = calculateCost(tier)
-
-        Act->>Task: Store in metadata.resolverData:<br/>{<br/>  impulse_id,<br/>  resolver_id,<br/>  resolver_tier,<br/>  vessel_id,<br/>  latency_ms,<br/>  cost_usd<br/>}
-    end
-
-    Note over Act: Aggregate all resolver data
-
-    Act->>Act: Build trace payload:<br/>execution.impulse_resolutions[]<br/>execution.resolved_by_vessel_id
-
-    Act->>MCP: POST /v2/activities/execution-traces
-    activate MCP
-
-    Note over MCP: Store resolver tracking data<br/>for learning algorithms
-
-    MCP->>MCP: Update resolver success rates
-    MCP->>MCP: Update vessel performance metrics
-    MCP->>MCP: Track cost patterns
-
-    MCP-->>Act: 201 Created
-    deactivate MCP
-
-    Note over Act: Resolver tracking complete<br/>Learning data recorded
+    Exec->>Trace: tasks[] + trace.inputShapes (seeded pool shapes)
+    Trace->>Sink: emit
+    Sink->>API: POST /v2/activities/execution-traces
+    API->>API: union per-task inputShapes → input_impulse_shapes
+    API->>API: derive the state-space signature → context_thompson_scores
 ```
 
-**Purpose:**
-- Track which resolvers work best for which impulses
-- Measure vessel-level performance
-- Identify cost optimization opportunities
-- Enable Thompson Sampling for resolver selection
+**Why each field exists:**
+- `resolverId` / `resolverTier` — which resolver, and at which tier, so cost and reliability can be attributed per tier.
+- `inputShapes` — the union of these is what activity-api needs to compute a state signature; a trace with empty `input_impulse_shapes` makes selection state-blind.
+- `outputShapes` — what was genuinely produced, as opposed to what the template declared it might produce.
+- `consumedFromTaskIds` and `childActivityId` — the provenance pair that lets the composition-edge reconciler derive genuine producer→consumer edges from placeholder references.
+- `filesModified` / `filesCreated` / `materialsConsulted` — the attributed experience log used for locality learning.
+- `skipped` — a conditional gate that evaluated false ran no resolver; it is neither success nor failure signal, and consumers must read this flag rather than inferring from `success`.
 
-**Tracked Metrics:**
-- `resolver_id`: Which resolver was used (bash, git, llm, discovery, etc.)
-- `resolver_tier`: Tier classification (deterministic, pattern, llm)
-- `vessel_id`: Which vessel executed the resolver
-- `latency_ms`: Resolution duration (performance tracking)
-- `cost_usd`: Resolution cost (budget optimization)
-
-**Implementation:**
-- Location: `repos/goal-host-vessel/` + `ias-executor-ts` (executeWithResolver)
-- Trace field: `execution.impulse_resolutions: [{...}]`
-- Backend storage: `execution` table with `resolved_by_vessel_id` field
+**Implementation:** `ExecutionTaskRecord` and `ExecutionTrace` in `repos/ias-executor-ts/src/ontology.ts`; population in `ActivityExecutor.execute` (`src/engine.ts`); wire translation in `TranslatingTraceSink` (`src/adapters/activity-api-trace-sink.ts`).
 
 ## Decomposition: Relevance-Based Filtering
 
+Impulse relevance is a **learning signal**, not an execution-time gate. Relevance is scored on the backend from observed correlation between loaded impulses and reached executions, and is consumed at selection time as a boost to a candidate template's α — not as a pre-load filter that drops impulses from the pool.
+
 ```mermaid
 sequenceDiagram
-    participant Act as ActivityExecutor
-    participant Filter as ImpulseFilter
-    participant MCP as MCPBackend
-    participant Config as Environment<br/>Config
+    participant Walk as goal-host walk
+    participant API as activity-api
+    participant Sink as relevance-sink-vessel<br/>(:8255)
+    participant DB as impulse_relevance_metrics
 
-    Act->>Filter: filterImpulsesByRelevance(impulseIds, activityId)
+    Note over Walk,API: WRITE PATH (after execution)
+    Walk->>API: POST /v2/activities/impulse-relevance<br/>{activity_id, impulse_id, was_loaded, execution_succeeded}
+    API->>DB: upsert relevance / irrelevance counts
+    Sink->>DB: owns penalty writes, decoupled from the trace store
 
-    Filter->>Config: Get thresholds
-    Config-->>Filter: {<br/>  RELEVANCE_THRESHOLD: 0.5,<br/>  ALWAYS_LOAD_THRESHOLD: 0.8,<br/>  MAX_LOAD: 5<br/>}
-
-    Filter->>MCP: queryImpulseRelevance(activityId, impulseIds)
-    activate MCP
-
-    alt MCP Available
-        MCP-->>Filter: ImpulseRelevanceMetric[]<br/>{<br/>  impulseId,<br/>  relevance_score: 0.0-1.0,<br/>  irrelevance_score: 0.0-1.0,<br/>  contextual_factors<br/>}
-    else MCP Unavailable
-        MCP-->>Filter: null (fallback mode)
-    end
-    deactivate MCP
-
-    Filter->>Filter: For each impulse:<br/>applyDecisionRules()
-
-    rect rgb(240, 255, 240)
-    Note over Filter: DECISION RULES (sequential)
-
-    Filter->>Filter: Rule 1: relevance_score >= 0.8?
-    alt Yes
-        Filter->>Filter: → ALWAYS LOAD (high confidence)
-    else No
-        Filter->>Filter: Rule 2: irrelevance_score > relevance_score?
-        alt Yes
-            Filter->>Filter: → SKIP (better without it)
-        else No
-            Filter->>Filter: Rule 3: relevance_score >= threshold?
-            alt Yes
-                Filter->>Filter: → LOAD (meets threshold)
-            else No
-                Filter->>Filter: → SKIP (below threshold)
-            end
-        end
-    end
-    end
-
-    Filter->>Filter: Enforce maxImpulses limit<br/>(sort by relevance, take top N)
-
-    Filter->>Filter: calculateSavings(skippedImpulses)
-    Note over Filter: Estimate tokens saved:<br/>skipped_tokens * $0.003 / 1000
-
-    Filter-->>Act: FilterResult {<br/>  toLoad: impulseId[],<br/>  toSkip: impulseId[],<br/>  reasoning: {<br/>    per_impulse_decisions,<br/>    tokens_saved,<br/>    cost_saved<br/>  }<br/>}
+    Note over Walk,API: READ PATH (at selection)
+    Walk->>API: POST /v2/activities/recommend
+    API->>API: calculateImpulseRelevancyBoosts(candidates, pooledImpulses)
+    API->>API: alphaBoost added to totalBoost; betaPenalty tracked
+    API->>API: discoverMissingImpulses → pointer recommendations
+    API-->>Walk: recommendations with boost_breakdown
 ```
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts`
+This is a deliberate placement. Filtering impulses out before a task runs would hide them from the trace, and an impulse that never appears in a trace can never be scored — the signal would extinguish itself. Instead the pool stays whole, the trace records what was consumed, and the relevance the backend learns steers *which activity is selected* for a given pool rather than *which impulses that activity may see*.
 
-**Environment Variables:**
-- `IMPULSE_RELEVANCE_THRESHOLD` (default: 0.5)
-- `IMPULSE_ALWAYS_LOAD_THRESHOLD` (default: 0.8)
-- `IMPULSE_MAX_LOAD` (default: 5)
-- `IMPULSE_FALLBACK_BEHAVIOR` (default: "load-top-n")
+**Implementation:** `calculateImpulseRelevancyBoosts` and `discoverMissingImpulses` in `repos/activity-api/src/utils/impulse-relevancy.ts`; the `/v2/activities/impulse-relevance` handlers in `repos/activity-api/src/routes/activities.ts`; penalty writes in `repos/relevance-sink-vessel/`.
 
 ## Decomposition: Pointer Resolution by Type
 
+A pointer's `type` is the shape key. Resolution is a registry lookup first and a network call second — there is no hardcoded type switch in the executing vessel. What varies is *who* is registered for a shape and how far the request has to travel.
+
 ```mermaid
 graph TD
-    Start([Impulse with Pointer]) --> CheckType{pointer.type?}
+    Start(["Impulse pointer {type, ...}"]) --> Shape["shape = getImpulseShape(impulse)<br/>metadata.shape ?? pointer.type"]
 
-    CheckType -->|"memo"| Memo["LOCAL: Return embedded content<br/>latency: <1ms<br/>offline: yes"]
+    Shape --> Lookup{"ResolverRegistry<br/>has this id?"}
 
-    CheckType -->|"file"| File["LOCAL: Read filesystem<br/>with offset/limit support<br/>latency: 10-100ms<br/>offline: yes"]
+    Lookup -->|"builtin"| Builtin["registerBuiltinResolvers<br/>e.g. activity_recommendation<br/>tier: pattern"]
+    Lookup -->|"memo-style literal"| Memo["Pointer carries its own content;<br/>no network hop"]
+    Lookup -->|"discovery proxy"| Proxy["buildDiscoveryProxyResolver(shape)<br/>tier: pattern"]
+    Lookup -->|"dev-vessel proxy"| Dev["registerDevVesselProxies<br/>(development-vessel shapes)"]
+    Lookup -->|"none"| Gap["resolver_not_registered →<br/>fileCapabilityGap / mintResolverWrapper"]
 
-    CheckType -->|"directoryTree"| Tree["LOCAL: Bun.Glob() scan<br/>with depth limit + exclusions<br/>latency: 50-200ms<br/>offline: yes"]
+    Proxy --> Where{"Who advertises it?"}
+    Where -->|"local-tools-vessel"| LT["shellResult, fileContent, fileWriteResult,<br/>fileEditResult, gitStatus, gitDiff,<br/>gitCommitResult, codeSearchResult,<br/>codeTypecheckResult, webSearchResult, …"]
+    Where -->|"activity-api"| AA["activityExecutionTrace, activityTemplate,<br/>activityMetrics, compositionGraph,<br/>impulseRelevance, toolUsage_write,<br/>executionSequences_write, …"]
+    Where -->|"another vessel"| Other["development-vessel, concept-db,<br/>obsidian-vessel, analysis-vessel, …"]
+    Where -->|"a peer substrate"| Peer["forwardResolveToPeers →<br/>federation transport egress"]
 
-    CheckType -->|"gitDiff"| GitDiff["LOCAL: git diff --stat<br/>with time range<br/>latency: 100-500ms<br/>offline: yes"]
-
-    CheckType -->|"packageConfig"| Package["LOCAL: Parse package.json<br/>extract dependencies<br/>latency: 10-50ms<br/>offline: yes"]
-
-    CheckType -->|"toolList"| ToolList["LOCAL: Return available tools<br/>from tool registry<br/>latency: <1ms<br/>offline: yes"]
-
-    CheckType -->|"custom type"| Custom["CUSTOM: Registered resolver<br/>latency: variable<br/>offline: depends on resolver"]
-
-    CheckType -->|"activityExecutionTrace"<br/>"activityTemplate"<br/>"activityMetrics"| Discovery["DISCOVERY: Query vessel discovery<br/>shape mapping → vessels<br/>latency: 100-500ms<br/>offline: no"]
-
-    CheckType -->|"fallback"| MCPFallback["MCP BACKEND: mcp.resolveImpulse()<br/>latency: 100-300ms<br/>offline: no"]
-
-    CheckType -->|"activityOutput"| InMemory["IN-MEMORY: Check activityOutput map<br/>latency: <1ms<br/>offline: yes (limited)"]
-
-    Memo --> BudgetCheck
-    File --> BudgetCheck
-    Tree --> BudgetCheck
-    GitDiff --> BudgetCheck
-    Package --> BudgetCheck
-    ToolList --> BudgetCheck
-    Custom --> BudgetCheck
-    Discovery --> BudgetCheck
-    MCPFallback --> BudgetCheck
-    InMemory --> BudgetCheck
-
-    BudgetCheck{Content exceeds<br/>budget?} -->|Yes| Truncate["Truncate to budget * 0.9<br/>Store metadata:<br/>- originalTokenCount<br/>- wasTruncated<br/>- truncationRatio"]
-
-    BudgetCheck -->|No| NoTruncate["Use full content<br/>wasTruncated = false"]
-
-    Truncate --> Hash
-    NoTruncate --> Hash
-
-    Hash["Compute content hash<br/>for evolution tracking"] --> Return([Return loaded Impulse])
+    Builtin --> Out([Loaded impulse])
+    Memo --> Out
+    LT --> Out
+    AA --> Out
+    Other --> Out
+    Peer --> Out
+    Gap --> Escalate["Gap filed; the walk tries a bridge<br/>or the universal tool fallback"]
 
     style Start fill:#e1f5ff
-    style Memo fill:#c8e6c9
-    style File fill:#c8e6c9
-    style Tree fill:#c8e6c9
-    style Discovery fill:#fff9c4
-    style MCPFallback fill:#ffcc80
-    style Return fill:#b39ddb
+    style Gap fill:#ffccbc
+    style Out fill:#c8e6c9
 ```
+
+The consequence worth internalising: adding a capability means advertising a shape from a vessel, not adding a case to a resolver switch. A shape nobody advertises produces `resolver_not_registered`, which the walk treats as a missing producer and files as a capability gap rather than as an execution error.
+
+**Implementation:** `getImpulseShape` (`repos/ias-executor-ts/src/ontology.ts`), `ResolverRegistry` (`src/resolvers.ts`), and `registerBuiltinResolvers` / `buildProxyResolver` / `buildDiscoveryProxyResolver` / `registerDiscoveryProxies` / `registerDevVesselProxies` / `mintResolverWrapper` in `repos/goal-host-vessel/src/index.ts`.
 
 ## Decomposition: Discovery-Based Resolution
 
+Discovery-vessel plays two roles on one endpoint. For its own registry shapes it answers directly; for every other shape it acts as a resolving proxy, finding a healthy vessel that advertises the shape and forwarding the whole pointer to it.
+
 ```mermaid
 sequenceDiagram
-    participant IR as ImpulseResolver
-    participant Mapper as ShapeMapper
-    participant Disc as DiscoveryClient
-    participant Cache as DiscoveryCache
-    participant Vessel as DiscoveredVessel
-    participant MCP as MCPBackend
+    participant Caller as goal-host proxy resolver
+    participant Disc as discovery-vessel POST /resolve
+    participant Reg as registry (in-memory, TTL)
+    participant Target as Advertising vessel
+    participant Peer as Peer discovery instance
 
-    IR->>Mapper: mapPointerTypeToShape(pointer.type)
-    Note over Mapper: Shape mapping:<br/>- activityExecutionTrace → execution_trace<br/>- activityTemplate → template<br/>- activityMetrics → metrics<br/>- file → source_code
-    Mapper-->>IR: shape (e.g., "execution_trace")
+    Caller->>Disc: {pointer: {type: shape, ...}}
 
-    IR->>Disc: discoverVesselsForShape(shape)
-    activate Disc
-
-    Disc->>Cache: getCachedVessels(shape)
-    alt Cache HIT (< 5 min)
-        Cache-->>Disc: VesselCapability[]
-        Note over Disc: Use cached vessels
-    else Cache MISS or expired
-        Disc->>MCP: GET /v2/vessels/discover?shape={shape}
-        MCP-->>Disc: VesselCapability[] {<br/>  vesselId,<br/>  endpoint,<br/>  shapes: [{name, operations}]<br/>}
-        Disc->>Cache: storeInCache(shape, vessels, TTL=5min)
-    end
-    deactivate Disc
-
-    Disc-->>IR: DiscoveryResult {<br/>  found: boolean,<br/>  vessels: VesselCapability[],<br/>  shape<br/>}
-
-    alt Vessels discovered
-        loop For each vessel (until success)
-            IR->>Vessel: POST {endpoint}/mcp/tools/call
-            Note over IR: Tool: {pointer.type}_resolve<br/>Arguments: pointer<br/>Timeout: 30s
-
-            alt Success
-                Vessel-->>IR: {result: {content, metadata}}
-                IR->>IR: registerResolver(type, vessel_resolver)<br/>(dynamic registration for future use)
-                Note over IR: ✓ Content resolved
-            else Timeout or Error
-                Note over IR: Try next vessel
+    alt type ∈ {vesselCapability, vesselEndpoint, vesselHealth, vesselRegistry}
+        Disc->>Reg: answer from the registry directly
+        Reg-->>Caller: content.vessels[]
+    else any other shape
+        Disc->>Reg: findByShape(type), keep status = healthy
+        alt No local candidate
+            Disc->>Peer: forward with X-Discovery-Depth (depth-limited)
+            alt Peer serves it
+                Peer-->>Caller: forwarded response
+            else
+                Disc-->>Caller: 404 {error: "Not found", shape}
             end
+        else Candidates exist
+            Note over Disc: preference order —<br/>authoritative policy owner,<br/>then unique_authoritative / stateful_data_owner_pin,<br/>then first non-libp2p (direct) producer,<br/>then candidates[0]
+            Disc->>Target: POST {endpoint}{resolve_endpoint}<br/>{impulse: {pointer}}<br/>timeout = resolve_timeout_ms (default 10s)
+            Target-->>Disc: {content, metadata?}
+            Disc-->>Caller: forwarded body
         end
-    else No vessels found
-        IR->>MCP: Fallback to MCP direct
     end
 ```
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts`
+Registration is by `POST /register` with a heartbeat at `POST /heartbeat`; the registry is in-memory with TTL expiry, and the fleet's shape vocabulary is readable at `GET /shapes`, `GET /registry/shapes` and `GET /registry/shape-descriptions`. Registration and expiry are also broadcast as `vessel.registered`, `vessel.heartbeat`, `vessel.deregistered` and `vessel.expired`, which is how `startVesselRegistrationSubscriber` in goal-host-vessel adds a proxy resolver for a newly-appeared vessel without a restart.
 
-**Configuration:**
-- Discovery cache TTL: 5 minutes
-- Discovery query timeout: 10 seconds
-- Vessel resolution timeout: 30 seconds
+**Implementation:** the `/resolve`, `/register`, `/heartbeat`, `/shapes` and `/registry/*` handlers in `repos/discovery-vessel/src/index.ts`; the registry itself in `src/registry.ts`; transport selection in `endpointForShape` and `routeThroughEgress` (`repos/goal-host-vessel/src/index.ts`).
 
 ## Decomposition: Dual-Mode Content Formatting
 
+The pool is presented metadata-first. `ImpulseStore.formatForContext` returns one `ImpulseContextEntry` per impulse — `{ id, shape, summary, loaded }` — and attaches `content` only when the caller passes `includeContent: true` **and** the impulse is already loaded.
+
 ```mermaid
 graph TD
-    Start([Loaded Impulses]) --> Loop["For each impulse"]
+    Start(["ImpulseStore.formatForContext(options)"]) --> Filter{"options.shapes<br/>supplied?"}
+    Filter -->|Yes| Narrow["Keep impulses whose<br/>getImpulseShape ∈ shapes"]
+    Filter -->|No| All["Take the whole pool"]
 
-    Loop --> HasMetadata{Has metadata<br/>from resolver?}
+    Narrow --> Entry
+    All --> Entry
 
-    HasMetadata -->|Yes| PointerMode["POINTER MODE<br/>(metadata-first)"]
-    HasMetadata -->|No| CheckLoaded{Has loaded<br/>content?}
+    Entry["Per impulse build ImpulseContextEntry:<br/>id, shape, summary, loaded"] --> Content{"includeContent<br/>AND impulse.loaded?"}
 
-    PointerMode --> FormatPointer["Format as:<br/>&lt;impulse_ref<br/>  id='...'<br/>  type='...'<br/>  shape='...'<br/>  row_count='...'<br/>  summary='...'<br/>  available_ops='...'<br/>/&gt;"]
+    Content -->|Yes| WithBody["entry.content = impulse.content<br/>(content mode)"]
+    Content -->|No| MetaOnly["metadata only<br/>(pointer mode)"]
 
-    CheckLoaded -->|Yes| ContentMode["CONTENT MODE<br/>(backward compatible)"]
-    CheckLoaded -->|No| Skip["Skip impulse<br/>(not loaded)"]
-
-    ContentMode --> FormatContent["Format as:<br/>&lt;impulse<br/>  id='...'<br/>  type='...'<br/>  tokens='X/Y'&gt;<br/>[content here]<br/>&lt;/impulse&gt;"]
-
-    FormatPointer --> Accumulate
-    FormatContent --> Accumulate
-    Skip --> Accumulate
-
-    Accumulate["Accumulate formatted strings"] --> Wrap["Wrap in:<br/>&lt;impulse_context&gt;<br/>...all impulses...<br/>&lt;/impulse_context&gt;"]
-
-    Wrap --> Return([Return formatted context string])
+    WithBody --> Out(["ImpulseContextEntry[]"])
+    MetaOnly --> Out
 
     style Start fill:#e1f5ff
-    style PointerMode fill:#c8e6c9
-    style ContentMode fill:#fff9c4
-    style Return fill:#b39ddb
+    style MetaOnly fill:#c8e6c9
+    style WithBody fill:#fff9c4
+    style Out fill:#b39ddb
 ```
 
-**Pointer Mode Example:**
-```xml
-<impulse_ref
-  id="trace-123"
-  type="activityExecutionTrace"
-  shape="execution_trace"
-  row_count="42"
-  summary="Fix login bug execution, 3 tasks completed"
-  available_ops="debug,filter,aggregate"
-/>
-```
+The two modes are the point of the ontology: an impulse is a **lazy pointer with metadata**, so the default view of the pool is what shapes exist and what they summarise, and content is materialised only where a task actually needs it. `loadedSummaries` is the same idea narrowed to already-loaded impulses, and `findByShape` is the shape-keyed lookup a task uses to bind one declared input.
 
-**Content Mode Example:**
-```xml
-<impulse id="file-auth" type="file" tokens=247/2000>
-// src/auth.ts
-export function authenticate(user: User) {
-  // ... content here ...
-}
-</impulse>
-```
-
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts`
+**Implementation:** `ImpulseStore.formatForContext`, `loadedSummaries`, `findByShape` and the `FormatForContextOptions` / `ImpulseContextEntry` types in `repos/ias-executor-ts/src/impulses.ts`.
 
 ## Budget Enforcement and Truncation
 
+Budget is enforced **per execution**, not per impulse. `ExecuteOptions.budget` carries an `ExecutionBudget`, and the engine checks it at task boundaries; breaching it raises `BudgetExceededError`, which the engine converts into a `failureMode` of type `budget_exhausted` on the trace.
+
+`Impulse.budget` exists as an advisory number on the impulse itself, and `priority` (`critical` | `high` | `medium` | `low`) ranks impulses for callers that need to choose. Neither is a truncation mechanism — the executor does not silently cut content to fit a token ceiling, because a silently truncated impulse would make a downstream failure unattributable.
+
 ### Budget Metadata Structure
+
+The execution-level budget the engine enforces:
+
+```typescript
+interface ExecutionBudget {
+  maxCostUsd?: number;      // checked after cost accrues on a task
+  maxDurationMs?: number;   // checked against elapsed wall time
+  maxTaskCount?: number;    // checked against taskRecords.length
+}
+```
+
+The per-impulse advisory fields on `Impulse`:
 
 ```typescript
 {
-  originalTokenCount: number      // Tokens before truncation
-  wasTruncated: boolean           // Whether truncation occurred
-  truncationRatio: number         // originalTokenCount / budget
-  budgetRequested: number         // Original allocation
-  priorityLevel: string           // critical|high|medium|low
+  budget?: number;                                        // advisory allocation
+  priority?: "critical" | "high" | "medium" | "low";      // ranking hint
 }
 ```
+
+A breach of any execution-level ceiling is recorded as `FailureMode { type: "budget_exhausted", reason, context: { budget_type, consumed, allowed } }`, which the posterior update treats as a **half penalty** (β += 0.5) rather than a full one: the execution ran and hit a ceiling, which is not the same evidence as producing a wrong answer.
 
 ### Truncation Algorithm
 
-```typescript
-function enforceBudget(content: string, budget: number): {
-  finalContent: string
-  tokenCount: number
-  wasTruncated: boolean
-  metadata: BudgetMetadata
-} {
-  const estimatedTokens = Math.ceil(content.length / 4);
+There is no content-truncation step in the execution path. The engine's bounding is by refusal, not by silent shortening:
 
-  if (estimatedTokens <= budget) {
-    return {
-      finalContent: content,
-      tokenCount: estimatedTokens,
-      wasTruncated: false,
-      metadata: {
-        originalTokenCount: estimatedTokens,
-        wasTruncated: false,
-        truncationRatio: 1.0,
-        budgetRequested: budget,
-        priorityLevel: impulse.priority
-      }
-    };
-  }
-
-  // Truncate with 10% safety margin
-  const targetChars = Math.floor(content.length * budget / estimatedTokens * 0.9);
-  const truncated = content.substring(0, targetChars) + "\n... (truncated to fit budget)";
-
-  return {
-    finalContent: truncated,
-    tokenCount: Math.min(estimatedTokens, budget),
-    wasTruncated: true,
-    metadata: {
-      originalTokenCount: estimatedTokens,
-      wasTruncated: true,
-      truncationRatio: estimatedTokens / budget,
-      budgetRequested: budget,
-      priorityLevel: impulse.priority
-    }
-  };
-}
+```
+before each task:
+    if budget.maxTaskCount  and taskRecords.length >= maxTaskCount  → BudgetExceededError("task_count")
+    if budget.maxDurationMs and elapsed            >= maxDurationMs → BudgetExceededError("duration")
+after cost accrues:
+    if budget.maxCostUsd    and totalCostUsd       >= maxCostUsd    → BudgetExceededError("cost")
 ```
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts`
+Bounding of individual resolver payloads is the producing vessel's responsibility — a shell resolver bounds its own output, a search resolver bounds its own result set — so the bound is visible in the produced impulse rather than applied invisibly by the executor. Anything a consumer must know about a bound belongs in the impulse's metadata, which is exactly what the metadata-first formatting above surfaces.
 
 ## State Transition Tracking (P3.2)
 
+What the trace records is **attribution**, not a before/after filesystem diff. Each task reports the paths it wrote, the paths it created, and the material locators it read; the trace as a whole reports the shapes seeded into the pool and the shapes produced. Together these answer "what did this run touch, and what did it turn into" without requiring the executor to hash a working tree.
+
 ### Before/After Hashing
 
-```typescript
-// BEFORE task execution
-const impulseHashesBefore = {};
-for (const impulseId of taskImpulses) {
-  const impulse = impulseStore.get(impulseId);
-  if (impulse.loaded && impulse.content) {
-    impulseHashesBefore[impulseId] = Bun.hash(impulse.content);
-  }
-}
+The executor does not hash the working tree. Change is evidenced by three narrower, cheaper signals that survive across vessels:
 
-// AFTER task execution
-const impulseHashesAfter = {};
-for (const impulseId of taskImpulses) {
-  const impulse = impulseStore.get(impulseId);
-  if (impulse.loaded && impulse.content) {
-    impulseHashesAfter[impulseId] = Bun.hash(impulse.content);
-  }
-}
+- **Per-task file attribution** — `filesModified`, `filesCreated` and `materialsConsulted` are derived from the pointers the task actually resolved, so attribution is a by-product of resolution rather than a separate scan.
+- **Shape flow** — `inputShapes` and `outputShapes` on each task say which shapes were consumed and which were genuinely produced, which is what the composition-edge reconciler needs.
+- **Verified post-state on edit goals** — for code-change goals, `verifyEditPostState` and `symbolOnAddedLine` in goal-host-vessel check the landed commit for the expected symbol on an added line, which is a stronger claim than a hash comparison because it survives reformatting and is checked against origin rather than a local clone.
 
-// Calculate evolution
-const impulseEvolution = {
-  unchanged: impulseIds.filter(id =>
-    impulseHashesBefore[id] === impulseHashesAfter[id]
-  ),
-  modified: impulseIds.filter(id =>
-    impulseHashesBefore[id] && impulseHashesAfter[id] &&
-    impulseHashesBefore[id] !== impulseHashesAfter[id]
-  ),
-  created: impulseIds.filter(id =>
-    !impulseHashesBefore[id] && impulseHashesAfter[id]
-  ),
-  deleted: impulseIds.filter(id =>
-    impulseHashesBefore[id] && !impulseHashesAfter[id]
-  )
-};
-```
+The reach gate depends on this distinction. `verifyGoalReached` grades a `mitosisStaged` shape with no landing evidence as `deterministic:staged-not-landed`: a working-tree change that never reached origin is not a state transition anyone downstream can observe.
 
 ### State Transition Structure
 
+The fields the engine actually populates:
+
 ```typescript
-{
-  inputState: {
-    filesAvailable: string[]
-    environment: Record<string, string>
-    impulses: string[]               // Loaded impulse IDs
-    variables: Record<string, unknown>
-  },
-  outputState: {
-    filesModified: string[]
-    filesCreated: string[]
-    filesDeleted: string[]
-    exitCode?: number
-    stderr?: string
-  },
-  stateTransition: {
-    before: Record<string, string>   // File → hash
-    after: Record<string, string>    // File → hash
-    workingDirectory: string
-  },
-  impulseEvolution: {
-    unchanged: string[]
-    modified: string[]
-    created: string[]
-    deleted: string[]
-  }
+interface ExecutionTaskRecord {
+  taskId: string;
+  resolverId: string;
+  resolverTier?: "deterministic" | "pattern" | "llm" | "external";
+  inputImpulseIds: string[];
+  inputShapes?: string[];
+  outputImpulseIds: string[];
+  outputShapes?: string[];        // read from impulse.metadata.shape at run time
+  success: boolean;
+  skipped?: boolean;              // conditional gate false, or dependency skipped
+  error?: string;
+  costUsd?: number;
+  tokensInput?: number;
+  tokensOutput?: number;
+  durationMs?: number;
+  consumedFromTaskIds?: string[]; // placeholder-reference provenance
+  childActivityId?: string;       // sub-activity dispatched by this task
+  childExecutionId?: string;
+  filesModified?: string[];
+  filesCreated?: string[];
+  materialsConsulted?: string[];  // "file:<path>" locators read
 }
 ```
 
+At trace level: `inputShapes` records the seeded pool state that selection conditioned on, `compositionChain` records the parent chain, `failureMode` records the taxonomy verdict, and `metadata` is a free-form bag the activity-api trace sink stores verbatim so cross-vessel additions do not need a wire revision.
+
 ## Key Configuration Variables
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `IMPULSE_RELEVANCE_THRESHOLD` | 0.5 | Minimum relevance score to load |
-| `IMPULSE_ALWAYS_LOAD_THRESHOLD` | 0.8 | Always load above this score |
-| `IMPULSE_MAX_LOAD` | 5 | Maximum impulses to load per task |
-| `IMPULSE_FALLBACK_BEHAVIOR` | "load-top-n" | Behavior when no metrics available |
-| `DISCOVERY_ENABLED` | false | Enable vessel discovery |
-| `DISCOVERY_VESSEL_ENDPOINT` | (none) | Discovery service URL |
+Configuration here is bootstrap-only — ports, endpoints and identity frozen at process start. Behaviour that should be learnable is steered by shaped impulses, not by these.
 
-**Fallback Behaviors:**
-- `"load-all"` - Load all impulses (backward compatible)
-- `"load-none"` - Skip all impulses (conservative)
-- `"load-top-n"` - Load top N by priority (default)
+| Variable | Where it applies | Purpose |
+|----------|------------------|---------|
+| `PORT` | every vessel unit | In-container listen port (`8210` goal-host, `8100` discovery, `8230` local-tools, `8080` activity-api, `8260` concept-db) |
+| `DISCOVERY_ENABLED` | activity-api | Whether to register with discovery-vessel on startup |
+| `DISCOVERY_VESSEL_ENDPOINT` | vessel clients | Discovery service URL used for registration and resolution |
+| `DISCOVERY_HEARTBEAT_INTERVAL_MS` | vessel clients | Heartbeat cadence that keeps a registry entry alive |
+| `VESSEL_ID` | vessel clients | Registry identity for the vessel |
+| `IAS_SUBSCRIBER_MAX_INFLIGHT` | ias-executor-ts | Cap on concurrent fire-and-forget lifecycle-subscriber dispatches (default 64) |
+| `LOCAL_TOOLS_GC_INTERVAL_MS` | local-tools-vessel | Interval of the periodic forced full GC workaround |
+
+Per-vessel `resolve_timeout_ms` is a **registry** property rather than an environment variable: a vessel advertises it at registration and discovery honours it when forwarding, defaulting to ten seconds.
 
 ## Performance Characteristics
 
-| Resolution Type | Latency | Offline | Caching |
-|-----------------|---------|---------|---------|
-| memo (embedded) | <1ms | Yes | N/A (always instant) |
-| file (local) | 10-100ms | Yes | OS file cache |
-| directoryTree | 50-200ms | Yes | None |
-| gitDiff | 100-500ms | Yes | None |
-| packageConfig | 10-50ms | Yes | File cache |
-| toolList | <1ms | Yes | In-memory |
-| custom resolver | Variable | Depends | Resolver-specific |
-| discovery | 100-500ms | No | 5 min TTL |
-| MCP backend | 100-300ms | No | Backend-specific |
-| activityOutput | <1ms | Yes | In-memory (session) |
+Latency is dominated by hop count, not by pointer type. Three regimes exist, and the resolver tier on the task record is what lets them be told apart after the fact.
+
+| Regime | Path | Cost driver |
+|--------|------|-------------|
+| In-process | Pointer carries its own content, or a builtin resolver answers from memory | None beyond the resolver body |
+| One hop | `buildDiscoveryProxyResolver` with a warm `shapeEndpointMap` entry, POSTing straight to the advertising vessel | One HTTP round trip, bounded by the vessel's `resolve_timeout_ms` |
+| Two hops | Cold cache: a discovery lookup (5s abort) followed by the producer call | Two round trips; the endpoint is then cached for subsequent resolves |
+| Federated | libp2p or peer routing through the federation transport egress, or `forwardResolveToPeers` on discovery | Adds the relay leg; depth-limited to prevent loops |
+
+The `llm` tier is the outlier in cost rather than latency, and is the reason `resolverTier` and `costUsd` are recorded per task: the aggregate cost of a walk is attributable to the tier that spent it, which is what makes tier substitution a measurable optimisation rather than a guess.
 
 ## File References
 
-| Component | File (live equivalent) | Purpose |
-|-----------|------|---------|
-| Impulse Store | `repos/goal-host-vessel/` + `ias-executor-ts` | Core impulse lifecycle |
-| Filtering | `repos/goal-host-vessel/` + `ias-executor-ts` (was `impulse-filter.ts`) | Relevance-based filtering |
-| State Space Manager | `repos/goal-host-vessel/` + `ias-executor-ts` (was `state-space-manager.ts`) | Shape querying, compatibility |
-| Discovery Integration | `repos/goal-host-vessel/` + `ias-executor-ts` (was `vessel-discovery.ts`) | Vessel discovery client |
-| Backend client | HTTP to activity-api `:18080` via discovery contract | Backend integration |
-| Activity Executor | `repos/goal-host-vessel/` + `ias-executor-ts` (was `activity.ts`) | Impulse integration |
-| Filesystem/process resolvers | `repos/local-tools-vessel/` (`:8230`) | file/directoryTree/gitDiff/bash resolution |
+| Component | Location | Entry symbols |
+|-----------|----------|---------------|
+| Impulse pool | `repos/ias-executor-ts/src/impulses.ts` | `ImpulseStore`, `formatForContext`, `findByShape`, `loadedSummaries` |
+| Ontology | `repos/ias-executor-ts/src/ontology.ts` | `Impulse`, `ImpulsePointer`, `getImpulseShape`, `ExecutionTaskRecord`, `ExecutionTrace`, `FailureMode` |
+| Resolver contract | `repos/ias-executor-ts/src/resolvers.ts` | `Resolver`, `ResolverContext`, `ResolverRegistry` |
+| Ports | `repos/ias-executor-ts/src/ports.ts` | `FileSystemPort`, `ProcessPort`, `GitPort`, `LLMPort`, `DiscoveryPort`, `TraceSink` |
+| Execution + budget | `repos/ias-executor-ts/src/engine.ts` | `ActivityExecutor.execute`, `BudgetExceededError` |
+| Trace wire translation | `repos/ias-executor-ts/src/adapters/activity-api-trace-sink.ts` | `TranslatingTraceSink` |
+| Resolver registration | `repos/goal-host-vessel/src/index.ts` | `registerBuiltinResolvers`, `registerDiscoveryProxies`, `registerDevVesselProxies`, `startVesselRegistrationSubscriber` |
+| Proxy resolvers | `repos/goal-host-vessel/src/index.ts` | `buildProxyResolver`, `buildDiscoveryProxyResolver`, `buildImpulseSlots`, `interpolateProxyValue` |
+| Transport selection | `repos/goal-host-vessel/src/index.ts` | `endpointForShape`, `routeThroughEgress` |
+| Discovery | `repos/discovery-vessel/src/index.ts`, `src/registry.ts` | `/resolve`, `/register`, `/heartbeat`, `/shapes` |
+| Filesystem/process shapes | `repos/local-tools-vessel/src/index.ts` | advertised shape list + resolver map |
+| Activity-shape resolution | `repos/activity-api/src/routes/impulses.ts` | `/v2/impulses/resolve` |
+| Relevance | `repos/activity-api/src/utils/impulse-relevancy.ts` | `calculateImpulseRelevancyBoosts`, `discoverMissingImpulses` |
 
 ## Implementation Architecture
 
-This sequence runs in **goal-host-vessel** (dispatching filesystem/process to `local-tools-vessel`), with backend integration for learning.
+Resolution spans three vessels with one rule between them: the executing vessel dispatches, the registry routes, and the producer resolves. No participant is allowed to become a universal resolver, because that would collapse the shape vocabulary into one service's API surface.
 
 ### goal-host-vessel (Execution Environment)
 
 **Responsibilities:**
-- **6-step resolver dispatch** (local → custom → discovery → backend → fallback) - THIS IS THE KEY ARCHITECTURAL POINT
-- Relevance-based filtering (query backend for scores)
-- Pointer resolution for all LOCAL types (memo, file, directoryTree, gitDiff) — filesystem/process via `local-tools-vessel`
-- Custom resolver registration and invocation
-- Discovery-vessel queries for capability-based routing
-- Backend delegation (HTTP to activity-api) as last resort
-- Budget enforcement and content truncation
-- Impulse state tracking (before/after hashes)
-- Context formatting (pointer-mode vs content-mode)
+- Own the `ResolverRegistry` for the execution runtime and populate it: builtins via `registerBuiltinResolvers`, discovery-advertised shapes via `registerDiscoveryProxies`, development-vessel shapes via `registerDevVesselProxies`.
+- Keep it current reactively — `startVesselRegistrationSubscriber` adds a proxy when a `vessel.registered` event arrives, so a newly-started vessel is usable without restarting the host.
+- Build pointers from task config plus variables plus input-impulse slots (`buildImpulseSlots`, `interpolateProxyValue`) before any network call.
+- Choose transport per resolve (`endpointForShape`, `routeThroughEgress`), including the libp2p egress path for peer vessels.
+- Cache resolved endpoints in `shapeEndpointMap` so the steady state is one hop.
+- Treat an unresolvable shape as a capability gap (`fileCapabilityGap`, `fileReachabilityGap`, `mintResolverWrapper`), not as an execution error.
 
-**Key Files (live):**
-- `repos/goal-host-vessel/` + `@avigopal/ias-executor-ts` — **core resolver dispatch logic**, relevance filtering, shape compatibility, discovery integration, backend client
-- `repos/local-tools-vessel/` — filesystem/process resolvers dispatched to via discovery
-
-**The 6-Step Resolver Dispatch (goal-host-vessel-owned):**
-1. **LOCAL: memo** - Return embedded content directly
-2. **LOCAL: file/directoryTree/gitDiff** - Filesystem operations (via `local-tools-vessel`)
-3. **CUSTOM: registered resolvers** - Plugin-style custom resolvers
-4. **DISCOVERY: vessel discovery** - Query discovery-vessel for capable vessels
-5. **BACKEND: activity-api fallback** - Delegate to activity-api over HTTP via discovery contract
-6. **FALLBACK: in-memory cache** - Activity output from current session
-
-**What goal-host-vessel Does NOT Do:**
-- Does NOT persist impulses beyond session (backend does this)
-- Does NOT aggregate relevance metrics (backend computes these)
-- Does NOT resolve activity-specific types without backend (activityExecutionTrace, activityTemplate, etc.)
+**What it does not do:** it does not persist impulses, compute relevance, or hold the fleet registry.
 
 ### Activity-API (Storage & Learning Backend)
 
 **Responsibilities:**
-- Resolve activity-related impulse types (activityExecutionTrace, activityTemplate, activityMetrics)
-- Store impulses persistently
-- Compute impulse relevance scores (via Thompson Sampling)
-- Track which impulses correlate with success
-- Aggregate cross-execution impulse usage patterns
-- Register with discovery-vessel (advertises 7 activity-related shapes)
+- Resolve the activity-related shapes it advertises at `POST /v2/impulses/resolve` — among them `activityExecutionTrace`, `activityTemplate`, `activityMetrics`, `compositionGraph`, `impulseRelevance`, and mutation shapes such as `toolUsage_write` and `executionSequences_write`. The advertised set is far longer than this sample and is listed as `discovery.shapes` in `repos/activity-api/src/config.ts`; the vessel's own `scripts/check-shape-dispatch.ts` compares that list against the `case` labels in `repos/activity-api/src/routes/impulses.ts` and reports the disagreements. Read `discovery.shapes` — not this doc — as the name of record.
+- Persist execution traces at `POST /v2/activities/execution-traces` and derive the state-space signature from their unioned `input_impulse_shapes`.
+- Accumulate impulse relevance at `/v2/activities/impulse-relevance` and serve it back as selection boosts.
+- Host the WebSocket broadcast bus that other vessels subscribe to.
+- Register itself with discovery-vessel and heartbeat, so it is discovered like any other producer.
 
-**Key Endpoints:**
-- `POST /v2/impulses/resolve` - Resolve activity-related impulse pointers
-- `POST /v2/impulses` - Store impulse persistently
-- `GET /v2/activities/impulse-relevance` - Query relevance metrics
-- Discovery advertisement: activityExecutionTrace, activityTemplate, activityMetrics, etc.
-
-**Key Files:**
-- `repos/activity-api/src/routes/impulses.ts` - Impulse resolution endpoint
-- `repos/activity-api/src/services/discovery-client.ts` - Discovery registration
+**What it does not do:** it does not own resolver dispatch, does not resolve shapes it never advertised, and is not a fallback for arbitrary pointers. Its legacy `/v2/vessels/*` endpoints are deprecated in favour of discovery-vessel.
 
 ### Discovery-Vessel (Capability Registry)
 
 **Responsibilities:**
-- Register vessels with advertised shapes
-- Route shape queries to capable vessels
-- Maintain TTL-based registry (5 min expiration)
-- Provide health scoring and circuit breaking
-
-**Key Endpoints:**
-- `POST /register` - Vessel registration with shapes
-- `POST /resolve` - Query vessels by capability
-- `GET /shapes` - List available shapes
-
-**Key Files:**
-- `repos/discovery-vessel/src/registry.ts` - In-memory registry with TTL
+- Accept registrations (`POST /register`) and heartbeats (`POST /heartbeat`) into a TTL-bounded in-memory registry.
+- Answer capability questions for its own shapes — `vesselCapability`, `vesselEndpoint`, `vesselHealth`, `vesselRegistry`.
+- Forward every other pointer to a healthy advertising vessel, honouring that vessel's `resolve_endpoint` and `resolve_timeout_ms`.
+- Apply placement policy when several vessels serve a shape: an authoritative policy owner wins, then `unique_authoritative` / `stateful_data_owner_pin`, then a direct (non-libp2p) local producer, then the first candidate.
+- Forward to peer discovery instances when no local vessel serves the shape, depth-limited via `X-Discovery-Depth`.
+- Publish `vessel.registered`, `vessel.heartbeat`, `vessel.deregistered`, `vessel.expired`.
+- Expose the live shape vocabulary at `GET /shapes`, `/registry/shapes`, `/registry/shape-descriptions`, and health at `/registry/stats`, `/metrics`.
 
 ### SurrealDB Schema
 
-**Tables:**
-- `impulse` - Persistent impulse storage (pointer + metadata)
-- `impulse_relevance_metrics` - Activity→impulse relevance scores
-- `impulse_load_pattern` - Which impulses loaded together
-- `impulse_evolution` - Before/after state transitions
+Impulse-related persistence lives in activity-api's database. The tables that matter to this sequence:
 
-**Indexes:**
-- `impulse` by type, shape, tags
-- `impulse_relevance_metrics` by activity_id, impulse_id
+- `impulse` — persisted impulses (pointer plus metadata).
+- `impulse_relevance_metrics` — activity→impulse relevance and irrelevance counts.
+- `impulse_shape_activity_score`, `impulse_shape_statistics` — per-shape selection statistics.
+- `impulse_resolution_metrics`, `impulse_usage_history` — resolution outcomes and load history.
+- `activity_execution_traces` — the trace rows, from which `input_impulse_shapes` and the state signature are derived.
+- `context_thompson_scores` — the state-conditioned posteriors those signatures feed.
+
+Discovery-vessel's registry is deliberately **not** in this list: it is in-memory with TTL expiry, so a vessel that stops heartbeating stops being routable without anyone writing a tombstone.
 
 ### Correct Separation
 
-**goal-host-vessel handles (execution-time):**
-- Resolver dispatch (6-step chain) - **THIS IS CRITICAL**
-- Local resolution (memo, file, directoryTree, gitDiff — filesystem/process via local-tools-vessel)
-- Discovery queries (find vessels for shapes)
-- Budget enforcement (truncation)
-- Context formatting (pointer-mode vs content-mode)
-- State tracking (before/after hashes)
+**Execution-time (goal-host-vessel):** registry population, pointer construction, transport selection, endpoint caching, gap filing on unresolvable shapes, task-record attribution, execution-budget enforcement.
 
-**Activity-API handles (storage/learning):**
-- Persistent impulse storage
-- Relevance score computation
-- Activity-related shape resolution (activityExecutionTrace, etc.)
-- Cross-execution pattern aggregation
-- Discovery registration (advertises activity shapes)
+**Routing (discovery-vessel):** registration, TTL, health filtering, placement policy, forwarding, peer federation, shape-vocabulary publication.
 
-**Discovery-Vessel handles (routing):**
-- Vessel registration and TTL management
-- Capability-based routing (shape → vessels)
-- Health scoring and circuit breaking
+**Storage and learning (activity-api):** resolution of its own advertised shapes, trace persistence, relevance accumulation, state-signature derivation, the event bus.
 
-**Why This Separation Matters:**
-- goal-host-vessel can resolve LOCAL impulses without the backend (file/memo/directoryTree via local-tools-vessel)
-- Backend only queried for relevance filtering and activity-specific shapes
-- Discovery enables dynamic routing without hardcoded endpoints
-- Resolver dispatch stays in goal-host-vessel (execution environment), not backend
+**Why this separation matters:**
+- A vessel can be added, moved or removed and become reachable purely by advertising its shapes — no executor change, no hardcoded endpoint.
+- Local shapes resolve without the trace store being up; a backend outage degrades learning, not execution.
+- Data locality is enforceable: a resolver lives where its data lives, and discovery routes to it rather than the data being copied to a central resolver.
+- Federation is a routing concern, so a shape served on another substrate resolves through the same call the local one does.
 
-**Key Architectural Point:**
-The 6-step resolver dispatch is **goal-host-vessel's responsibility**, not the backend's. The backend is a resolver among many, not the universal resolution authority.
+**Key architectural point:** dispatch belongs to the executing vessel. The backend is one resolver among many, and treating the trace store as a universal resolver is the failure mode this split exists to prevent.
 
 ## Related Documentation
 
-- [Activity Selection](./01-activity-selection.md) - How activities are chosen
-- [Resolver Processing](./03-resolver-processing.md) - How resolvers use impulses
-- [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) - Foundational model
-- [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) - Vessel discovery system overview
-
----
-
-**Last Updated:** 2026-06 (re-narrated: resolver dispatch runs in goal-host-vessel; LOCAL fs/process via local-tools-vessel; backend reached over HTTP)
+- [Activity Selection](./01-activity-selection.md) — how activities are chosen and graded
+- [Resolver Processing](./03-resolver-processing.md) — how resolvers consume and produce impulses
+- [RESOLVER_TRACKING.md](../RESOLVER_TRACKING.md) — resolver attribution in traces
+- [IMPULSE_STATE_SPACE_SPEC.md](../IMPULSE_STATE_SPACE_SPEC.md) — the state-space model
+- [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) — the foundational model

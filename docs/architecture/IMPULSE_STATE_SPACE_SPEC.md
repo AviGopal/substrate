@@ -1,13 +1,12 @@
 # Impulse State Space Specification
 
-> **Status**: Draft (some sections superseded by 2026-04-26 spec work; see notes)
-> **Created**: 2026-04-05
 > **Relates to**: IMPULSE_ACTIVITY_FOUNDATION.md
-> **Execution-model note (2026-06-09)**: §4's pseudocode assumes in-process `executeActivity()` calls. Execution is substrate-hosted and async, dispatched to goal-host-vessel (`POST /run-goal` returns `202 Accepted`; poll or subscribe for outcome). The state-space reasoning in §1–3 and §5–6 is unaffected; read §4's control flow as conceptual, not literal.
 
 > **Foundation alignment:** State-space reasoning is the **recall motion** (informational → transient → observational) made explicit. The state space is the available pool of impulses the system can recall against; transitions track what learning would mint. The "shape signature" defined here is keyed on the **pointer-as-shape** bootstrap principle. See [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md#three-states-two-motions).
 
-This specification defines how the metabob-devbob system reasons about, predicts, and adapts to changes in the impulse state space during goal execution.
+This specification defines how the substrate reasons about, predicts, and adapts to changes in the impulse state space during goal execution.
+
+Execution is substrate-hosted and asynchronous: a goal is dispatched to goal-host-vessel (`POST /run-goal`) and its outcome is read back by polling the dispatch. The state-space reasoning in §1–3 and §5–6 is independent of where execution runs. §4 describes the decisions the goal walk makes as it moves through the state space; the TypeScript in §4 and §7 is a sketch of those decisions and of the interfaces they imply, not a transcript of in-process calls. Where §4.1 names a live mechanism, that mechanism is the walk's own bookkeeping inside goal-host-vessel.
 
 ---
 
@@ -177,41 +176,48 @@ interface MissingImpulseSuggestion {
 
 ### 4.1 Adaptation Triggers
 
-The execution path adapts when:
+Adaptation is not a separate precondition checker. It is the goal walk's own
+bookkeeping in goal-host-vessel: the set of shapes produced so far, the set of
+activity ids already used or rejected, a consecutive-no-progress counter, a
+bounded step budget, and the reach verdict computed after the walk. The
+execution path adapts when:
 
 | Trigger | Detection | Response |
 |---------|-----------|----------|
-| **New impulse available** | State space expanded | Re-recommend with new shapes |
-| **Required impulse missing** | canExecuteTask() fails | Fall back to LLM |
-| **Task failure** | status === 'failed' | Create error impulse, retry/variant |
-| **Goal not achieved** | isGoalComplete() false | Continue loop with accumulated state |
-| **Activity ineffective** | Repeated failures | Blacklist, select alternative |
+| **New shape available** | The produced-shape pool grew this step | The next step re-selects producers against the enlarged pool |
+| **No producer for a target shape** | Producer selection yields no pick, and no live resolver advertises the shape | File a capability gap so the authoring pipeline can mint the missing producer |
+| **Producer advertised but not cold-reachable** | Producer selection yields no pick although the shape is advertised | File a reachability gap rather than stopping silently |
+| **Picked producer's inputs are absent** | The producer's declared input shapes are not all in the pool | Add those inputs as sub-targets, defer the step, and re-discover the producer once the pool covers them |
+| **Activity already used or rejected** | Its id is in the walk's exclusion set | It is withheld from the candidate list for the remainder of this walk |
+| **Step made no progress** | The pool is unchanged for two consecutive steps | The walk stops and records the termination reason |
+| **Step budget exhausted** | The composition chain reaches the walk's maximum step count | The walk stops |
+| **Goal not reached** | The reach verdict is negative | The selected template takes a negative-feedback (β) penalty, and the tool-enabled universal fallback runs as the ReAct floor |
+| **Goal reached on substance** | The reach verdict is positive and substance-honest | The selected template takes an α credit |
+
+The last two rows are the load-bearing ones: the walk's exit status is not the
+adaptation signal. A walk can exit cleanly and still be graded not-reached, and
+the credit or penalty that moves the posterior follows the reach verdict, never
+the status field.
 
 ### 4.2 Task-Level Adaptation
 
-Within a single activity:
+Within a single walk step, adaptation is backward-chaining rather than a
+skip-or-fail branch. When the producer selected for an unmet target shape
+declares input shapes the pool does not yet hold, the walk does not abandon the
+producer and it does not execute it under-fed. It adds those input shapes to the
+target set as sub-targets, defers the step, and re-discovers the producer on a
+later step once the pool covers its inputs. The chain is therefore built backward
+from the goal toward what the pool already has.
 
-```typescript
-// Before task execution
-const { canExecute, missing } = canExecuteTask(task, impulses)
-
-if (!canExecute) {
-  if (task.prompt) {
-    // ADAPT: Fall back to LLM
-    return executeWithLLM(task, impulses)
-  } else {
-    // ADAPT: Skip task or fail
-    return { status: 'skipped', reason: `Missing: ${missing}` }
-  }
-}
-
-// Pre-validation check
-const preValidation = checkPreValidationRules(task)
-if (preValidation.canSkipLLM) {
-  // ADAPT: Skip expensive LLM call
-  return { status: 'completed', tokens: 0 }
-}
-```
+Bridge authoring is the same motion applied one level deeper. When a target shape
+is advertised by a live resolver but no activity produces it, the walk asks
+development-vessel to author and validate a producer for that shape against the
+shapes already in the pool. If authoring succeeds, the newly minted producer's
+own missing inputs are folded back in as sub-targets and the walk continues; if
+it fails, the step falls through to gap filing and escalation. The distinction
+that matters is between a shape no live resolver serves — a true capability gap —
+and a shape that is served but not reachable from the current pool, which is a
+routing problem the walk can still solve by producing intermediates.
 
 ### 4.3 Retry with Error Context
 
@@ -255,40 +261,38 @@ Failure occurs
 
 ### 4.4 Activity-Level Adaptation
 
-Across the goal execution loop:
+Across the goal walk, the loop runs while the composition chain is shorter than
+the walk's step budget and the target shapes are not all produced. Each iteration:
 
-```typescript
-for (let i = 0; i < maxActivities; i++) {
-  // 1. Get recommendations based on CURRENT state
-  const recommendations = await getRecommendations(
-    goal,
-    accumulatedImpulses.map(imp => imp.id),
-    limit,
-    failedActivities  // Blacklisted
-  )
+1. **Select.** Choose a producer for one unmet target shape, ranked by learned
+   posterior, skipping any activity id already in the exclusion set.
+2. **Execute.** Run the selected producer as a walk step.
+3. **Expand.** The shapes it produced join the pool; its id joins the composition
+   chain and the exclusion set, so the walk does not re-pick it.
+4. **Count progress.** If the pool did not grow, increment the consecutive
+   no-progress counter; two consecutive no-progress steps terminate the walk with
+   a recorded reason. Any progress resets the counter to zero.
 
-  // 2. Execute top recommendation
-  const execution = await executeActivity(recommendations[0])
+The loop has several exits, not one. Among them: all target shapes produced, the
+step budget, the consecutive-no-progress limit, an early reach verdict (a
+`verifyGoalReached` check can run after a step that made progress, and a positive
+verdict stops the walk before later steps pollute the pool), and a step for which
+no producer or constructible payload can be found for the missing shapes — which
+terminates the walk after filing a capability/reachability gap. The step budget is
+a ceiling on effort, not a success criterion: hitting it is a termination reason
+like any other.
 
-  // 3. ADAPT state space
-  if (execution.status === 'completed') {
-    // Expand: Add output impulses
-    accumulatedImpulses.push(...createImpulsesFromExecution(execution))
-  } else {
-    // Expand: Add error impulse
-    accumulatedImpulses.push(createErrorImpulse(execution))
-    // Contract: Blacklist failed activity
-    failedActivities.push(execution.templateId)
-  }
-
-  // 4. Check if goal achieved with new state
-  if (await isGoalComplete(executions, goal)) {
-    return { status: 'completed' }
-  }
-
-  // 5. Loop continues with UPDATED state space
-}
-```
+Credit and penalty are applied after the loop (`creditReachedTemplate` /
+`penaliseHollowTemplate`), and it is the reach verdict — not the loop's exit
+condition — that drives which of the two applies. A negative verdict penalises the
+last pick; a positive one credits it only when the reach is substance-honest
+(a deterministic landed result, or an in-chain producer→consumer edge or command
+evidence that is not an unapplied fs-write effect), and the credit is otherwise
+withheld rather than granted on the verdict alone. The verdict itself
+may have been reached incrementally: an early positive verdict is retained and
+reused after the loop rather than re-judging the end-state pool; otherwise the
+verdict is computed after the loop over the shapes actually produced and the
+chain summary.
 
 ### 4.5 Fallback Escalation
 

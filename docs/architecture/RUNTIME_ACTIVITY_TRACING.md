@@ -1,498 +1,319 @@
 # Runtime Activity Tracing
 
-**Status:** Implemented (Phase 1–2 shipping)
-**Created:** 2026-04-20
-**Supersedes:** N/A (new capability)
+Runtime tracing applies the impulse/activity/trace model to request-time execution: an HTTP
+request handled by a vessel is an activity, the functions it calls are resolvers, and the
+record it leaves is an execution trace in the same store the development loop learns from.
+This document states what such a trace must carry to be **learnable**, and what the substrate
+is entitled to conclude from one. Foundational model:
+[`IMPULSE_ACTIVITY_FOUNDATION.md`](./IMPULSE_ACTIVITY_FOUNDATION.md). Per-resolver
+attribution: [`RESOLVER_TRACKING.md`](./RESOLVER_TRACKING.md).
 
-> The client-side tracer now lives in goal-host-vessel. It previously lived in the retired CLI as `activity-tracer.ts` moved to the substrate vessels in Phase 8. `ActivityTracer` and the L1/L2 meta-trace emission now live in `goal-host-vessel` (wrapping `GoalHost` from `ias-executor-ts`). The architecture described in this document — L1/L2 meta-trace types, `RUNTIME_TRACING_ENABLED`, `ACTIVITY_TRACER_ENABLED`, and the sampling strategy — remains conceptually valid. The server-side middleware at `repos/activity-api/src/middleware/runtime-tracing.ts` is unchanged.
-
-**Implementation landing:**
-- `repos/activity-api/src/middleware/runtime-tracing.ts` — request/resolver-level HTTP middleware (server side). Exports `runtimeTracingMiddleware`, `withResolver`, `RuntimeTracingConfig`. Toggled by `RUNTIME_TRACING_ENABLED`.
-- `repos/goal-host-vessel/` — client-side tracer (Phase 8, 2026-05-24). Exports `ActivityTracer` interface via `GoalHost` from `ias-executor-ts`. Toggled by `ACTIVITY_TRACER_ENABLED`. L1 `goal_resolve` and L2 `activity_execute` meta-trace types emit alongside resolver traces.
-- See [`IMPULSE_ACTIVITY_FOUNDATION.md`](./IMPULSE_ACTIVITY_FOUNDATION.md) for the foundational tracing model.
+The request-time instrument lives at `repos/activity-api/src/middleware/runtime-tracing.ts`,
+which exports `RuntimeTracingConfig`, `RuntimeActivityContext`, `RuntimeExecutionTrace`,
+`runtimeTracingMiddleware`, `withResolver`, and `RUNTIME_QUERIES`. It is a library with no
+mounted call site — nothing installs the middleware on a route — so read what follows as the
+contract instrumentation must satisfy, not as a description of traffic already flowing. A
+module with no call sites cannot be observed failing, so it cannot be trusted when it passes;
+mounting it is the precondition for any claim made from its output.
 
 ## Meta-Trace Types (L1/L2)
 
-The goal-host-vessel-side `ActivityTracer` emits two meta-trace levels on top of per-resolver traces:
+A single goal leaves more than one row, and the rows are stratified so the learner can grade
+at the right altitude.
 
-- **L1 `goal_resolve`** — one trace per user-facing goal. Wraps the entire goal-seeking flow, including template recommendation, activity selection, and execution. Lets the learning loop correlate cost/outcome with the originating goal without walking resolver-level detail.
-- **L2 `activity_execute`** — one trace per activity invocation. Wraps all task executions and their resolver calls, and carries the `composition_chain` so nested activity-of-activities flows remain reconstructable. The parent L1 trace is referenced via `parent_execution_id`.
+- **L1 `goal_resolve`** — one row per user-facing goal, wrapping the whole goal-seeking flow
+  (recommendation, selection, execution). It lets cost and outcome be correlated with the
+  originating goal without walking resolver-level detail.
+- **L2 `activity_execute`** — one row per activity invocation, wrapping that activity's tasks
+  and their resolver calls.
+- **L3** — per-resolver entries in `impulse_resolutions`, the leaf layer described below.
 
-Per-resolver `impulse_resolutions` entries remain the L3/leaf layer, as described below.
+Nesting is reconstructable from `execution.parent_execution_id` plus `execution.composition_chain`,
+a denormalized root-first ancestor chain that makes a tree readable in one query.
+
+Meta-trace rows carry a *synthetic* variant id (`_goal_resolve`, `_activity_execute`) and name
+the real dispatched template in `metadata.template_id`. Trace ingest in activity-api resolves
+both ids and propagates the outcome to each, because grading only the synthetic bucket would
+mean a goal-level abort never moves the dispatched template's β — the system would learn from
+successes alone. Any new meta-level must preserve that property: **a wrapper row must never
+absorb a failure that belongs to the thing it wrapped.**
 
 ## Overview
 
-Extend the activity/impulse model from **development-time** (the substrate writing code) to **runtime** (applications executing code). Use the same trace storage and learning infrastructure to discover hot paths, performance bottlenecks, and optimization opportunities.
+The same machinery serves two timescales. Development-time activities (the substrate authoring
+and landing its own changes) and runtime activities (a vessel serving a request) write into one
+`execution` store, are selected by one Thompson learner, and are read back by one set of
+queries. Nothing about the learning loop is specialized to the minute-scale case; extending it
+to the millisecond-scale case is a matter of emitting conformant traces, not of building a
+second observability system alongside the first.
 
 ## The Core Insight
 
 **Applications are vessels executing activities.**
 
-When the substrate runs a goal, it:
-- Receives a goal (input impulse)
-- Executes an activity (sequence of resolvers)
-- Produces artifacts (output impulses)
-- Records a trace for learning
-
-When Activity-API handles a request, it:
-- Receives HTTP request (input impulse)
-- Executes route handler (sequence of resolvers: auth, DB query, serialization)
-- Returns HTTP response (output impulse)
-- **Could record a trace for learning** ← THIS IS NEW
-
-Same model. Same infrastructure. Different timescale (milliseconds vs minutes).
+A goal walk receives an input impulse, executes an activity as a sequence of resolvers,
+produces output impulses, and records a trace. A request handler receives an HTTP request
+(input impulse), executes a route handler as a sequence of resolvers (auth, DB query,
+serialization), returns a response (output impulse) — and can record a trace of exactly the
+same shape. Same model, same infrastructure, different timescale. The only thing the request
+path lacks by default is the last step.
 
 ## Why This Matters
 
-### 1. Unified Observability
-One system for:
-- Development activities (goal-host-vessel, the autonomous self-dev loop)
-- Runtime activities (API requests, background jobs)
-- Infrastructure activities (deployments, health checks)
+Three things follow from putting runtime execution into the learning store rather than into a
+separate metrics pipeline. Each is a claim about what the substrate can then *do*, not about
+what a dashboard can then display: a number nothing reads at decision time is an archive, and
+the point of unifying the stores is that the same reader already exists.
 
-All visible in the **same dashboard**. All feeding the **same learning loop**.
+### 1. Unified Observability
+
+Development activities, runtime request handling, and infrastructure operations resolve
+through one query surface and feed one learner. The expectation is that answering "what did
+this vessel spend its time on" requires no join across systems and no correlation by
+timestamp — the composition chain already ties a slow resolver to the activity that called it
+and the goal that dispatched that activity.
 
 ### 2. Continuous Optimization
-The system learns:
-- Which code paths are executed frequently (hot paths)
-- Which resolvers are slow (bottlenecks)
-- Which impulse shapes cause errors (failure patterns)
-- Which functions are reused across activities (refactoring targets)
 
-Then suggests:
-- "Cache fetch_templates (called in 87% of executions)"
-- "Optimize thompson_sampling (200ms avg, hot path)"
-- "Add validation for file impulses with path > 100 chars (15% failure rate)"
+From conformant traces the system can identify which code paths run most often, which
+resolvers dominate latency, which impulse shapes precede failures, and which resolvers are
+shared across many activities. Each of those is a query over fields the trace already carries,
+so the derived work — cache this, batch that, extract this shared resolver — is a goal the
+substrate can generate from its own observations rather than one an operator must author.
 
 ### 3. Evidence-Based Refactoring
-Instead of guessing what to optimize:
-```
-Query: "Which resolvers are slow AND frequently called?"
-Result: surrealdb_query (500ms avg, 60% of traces)
-Action: Add connection pooling, batch writes
-Measure: Latency drops to 50ms, trace volume confirms
-```
 
-The same Thompson Sampling that improves activity templates can **A/B test code optimizations**.
+The target of an optimization is chosen from recorded call counts and latencies, and the
+result is confirmed by the same measurement taken after the change. This is the same
+counterfactual discipline the walk applies to activity selection: change one thing, record
+that you changed it, and read the delta from traces that span the change — never from a
+before-and-after impression.
 
 ## Architecture
 
+Runtime tracing is three nested scopes (request, function, full) written through one context
+object into one trace row. The instrument is deliberately thin: a middleware that opens a
+context per sampled request, a wrapper that appends a resolution per instrumented function,
+and an asynchronous write at request end. Nothing in the hot path blocks on the trace store.
+
 ### Tracing Levels
 
-**Level 1: Request-Level (Low Overhead)**
-- Trace entire HTTP requests as single activities
-- Input: Request headers, body, params
-- Output: Response status, body
-- Resolvers: Route handler (black box)
+`RuntimeTracingConfig.level` selects the scope:
 
-**Level 2: Function-Level (Medium Overhead)**
-- Trace key functions as resolvers
-- Example: `parseRoute`, `validateAuth`, `queryDatabase`
-- Selective instrumentation of hot paths
-
-**Level 3: Full Instrumentation (High Overhead)**
-- Trace every function call
-- Build complete impulse transformation graph
-- Enable in dev/staging only
+- **`request`** — the whole HTTP request is one activity; the handler is a black box. Lowest
+  overhead, and enough to answer which endpoints carry the traffic.
+- **`function`** — key functions are wrapped as resolvers via `withResolver`, so latency is
+  attributed rather than aggregated. This is the level at which bottleneck claims become
+  defensible.
+- **`full`** — every call traced, producing a complete impulse-transformation graph. Its cost
+  is proportional to its detail; it belongs in development and staging.
 
 ### Sampling Strategy
 
-**Production:**
-- Sample 1% of requests for full tracing
-- Always trace errors
-- Always trace slow requests (>1s)
-- Batch writes to backend (async, non-blocking)
+`runtimeTracingMiddleware` short-circuits entirely when `config.enabled` is false, and
+otherwise skips any request where a uniform draw exceeds `config.sampleRate`. Errors and slow
+requests deserve to be sampled at a higher rate than the baseline, since they carry most of
+the information and occur least often.
 
-**Canary:**
-- Sample 10% of requests
-- Trace all error paths
-- Used for A/B testing optimizations
-
-**Local:**
-- Trace everything (low volume)
-- Immediate feedback for development
+A caveat that matters more than the numbers: a rate frozen at process start from configuration
+is bootstrap state, invisible to traces and to the walk, and therefore unlearnable. A sampling
+policy the substrate can actually tune must be a shaped impulse read at use time — the
+in-process constant is a floor, not the mechanism.
 
 ### Storage
 
-**Reuse existing schema:**
-```sql
--- Runtime traces use the same execution table
-INSERT INTO execution {
-  id: "req_abc123",
-  activity_template_id: "http_post_activities",  -- Runtime activity template
-  vessel_id: "activity-api-pod-7f8c9d",          -- Pod ID
-  impulse_resolutions: [
-    {
-      impulse_id: "http_request",
-      resolver_id: "parse_json_body",
-      resolver_tier: "deterministic",
-      latency_ms: 5,
-      cost_usd: 0
-    },
-    {
-      impulse_id: "auth_token",
-      resolver_id: "validate_jwt",
-      resolver_tier: "deterministic",
-      latency_ms: 12,
-      cost_usd: 0
-    },
-    {
-      impulse_id: "activity_query",
-      resolver_id: "surrealdb_query",
-      resolver_tier: "deterministic",
-      latency_ms: 487,  -- BOTTLENECK DETECTED
-      cost_usd: 0.0001
-    }
-  ],
-  duration_ms: 504,
-  success: true
-};
-```
+Runtime traces need **no new table**. They are `execution` rows, distinguished only by
+`metadata.runtime_trace = true`, and they use fields the table already defines:
+`activity_id`, `vessel_id` and `vessel_version`, `input_impulses`/`output_impulses` with their
+`input_impulse_shapes`/`output_impulse_shapes`, `success` and `error`, `duration_ms`,
+`cost_usd`, `tokens_in`/`tokens_out`, `state_signature` and `git_state`, `parent_execution_id`
+and `composition_chain`, and the honest verdict fields `reached` and `completion_shapes`.
+Per-resolver detail lands in `impulse_resolutions`.
 
-**No schema changes needed.** Runtime traces are just execution traces with:
-- `activity_template_id` = runtime activity type (e.g., "http_get_templates")
-- `vessel_id` = instance/pod ID
-- `impulse_resolutions` = function calls with timing
+Content-heavy payloads (`tasks`, `state_snapshot`, `execution_trace`, `impulse_resolutions`,
+`output_impulses`) split into `execution_trace_content`, joined on a unique `execution_id`, so
+that scanning traces for learning does not drag full payloads through every query.
+
+**What makes a trace learnable** is the subset that lets a later reader answer a
+counterfactual: which activity ran, under which state signature, producing which output
+shapes, and whether the goal was *reached* — not merely whether the process exited cleanly.
+A row missing `reached` or missing its output shapes is storage, not evidence.
 
 ### Learning Queries
 
-**Same queries that learn from development activities work for runtime:**
+`RUNTIME_QUERIES` in the tracing module carries four query strings, each scoped by
+`metadata.runtime_trace = true` over a recent window. What each is *intended* to report:
 
-```sql
--- Hot paths (most frequent activities)
-SELECT
-  activity_template_id,
-  COUNT() as execution_count,
-  AVG(duration_ms) as avg_duration
-FROM execution
-WHERE vessel_id LIKE 'activity-api-%'  -- Runtime vessel
-GROUP BY activity_template_id
-ORDER BY execution_count DESC;
+- **`hotPaths`** — execution count, mean and p95 duration, and failure count per activity.
+- **`resolverPerformance`** — call count, mean and p95 latency, and summed cost per resolver
+  and tier, ordered by total time so frequency and slowness are weighed together.
+- **`errorPatterns`** — failures grouped by activity and status code, with the failing
+  resolvers surfaced.
+- **`reuseOpportunities`** — resolvers used across many distinct activities, ranked by reuse
+  factor.
 
--- Resolver performance
-SELECT
-  resolver_id,
-  COUNT() as call_count,
-  AVG(latency_ms) as avg_latency,
-  PERCENTILE(latency_ms, 0.95) as p95_latency
-FROM (
-  SELECT
-    ->impulse_resolution->resolver_id as resolver_id,
-    ->impulse_resolution->latency_ms as latency_ms
-  FROM execution
-)
-GROUP BY resolver_id
-ORDER BY call_count * avg_latency DESC;  -- Highest total time
-
--- Error patterns by impulse shape
-SELECT
-  ->impulse_resolutions->impulse_id.metadata.shape as impulse_shape,
-  ->impulse_resolutions->resolver_id as resolver_id,
-  COUNT() as total_calls,
-  SUM(success = false) as failures,
-  (failures / total_calls * 100) as failure_rate
-FROM execution
-GROUP BY impulse_shape, resolver_id
-HAVING failures > 0
-ORDER BY failure_rate DESC;
-
--- Reuse opportunities (functions called from many activities)
-SELECT
-  resolver_id,
-  COUNT(DISTINCT activity_template_id) as used_in_activities,
-  COUNT() as total_calls,
-  total_calls / used_in_activities as reuse_factor
-FROM (
-  SELECT
-    id as execution_id,
-    activity_template_id,
-    ->impulse_resolutions->resolver_id as resolver_id
-  FROM execution
-)
-GROUP BY resolver_id
-HAVING used_in_activities > 5
-ORDER BY reuse_factor DESC;
-```
-
-## Implementation Plan
-
-### Phase 1: Request-Level Tracing (Week 1)
-**Goal:** Trace HTTP requests in Activity-API
-
-1. Add middleware to capture request/response
-2. Store as execution traces (existing schema)
-3. Create dashboard view for runtime activities
-4. Validate: "Can we see which endpoints are called most?"
-
-**Deliverable:** Dashboard shows runtime request patterns
-
-### Phase 2: Resolver-Level Tracing (Week 2)
-**Goal:** Track individual function calls within requests
-
-1. Create `withResolver()` wrapper (see example-runtime-activity-tracing.ts)
-2. Instrument key functions: auth, DB queries, serialization
-3. Build impulse transformation graph
-4. Validate: "Can we see which DB queries are slow?"
-
-**Deliverable:** Performance bottlenecks visible in dashboard
-
-### Phase 3: Learning Integration (Week 3)
-**Goal:** Use runtime traces to optimize code
-
-1. Add queries for hot path detection
-2. Add queries for bottleneck identification
-3. Create refactoring suggestions based on traces
-4. Validate: "Can Thompson Sampling A/B test code variants?"
-
-**Deliverable:** Automated optimization suggestions
-
-### Phase 4: Feedback Loop (Week 4)
-**Goal:** Runtime traces inform development activities
-
-1. Create activities that optimize based on runtime data
-   - "Optimize function X (hot path, slow)"
-   - "Add caching for resolver Y (called in 90% of requests)"
-2. Deploy optimizations to canary
-3. Compare runtime traces before/after
-4. Thompson Sampling selects winning variant
-
-**Deliverable:** Self-optimizing codebase
-
-## Dashboard Integration
-
-### New Views
-
-**Runtime Activity Stream**
-```
-POST /v2/activities/templates          487ms   [====        ] 60%
-GET  /v2/activities/recommend          234ms   [===         ] 30%
-POST /v2/impulses/resolve              156ms   [==          ] 10%
-```
-
-**Resolver Performance Heatmap**
-```
-Resolver                 Calls    Avg Latency   P95    Bottleneck?
-surrealdb_query          1,245    487ms        892ms   🔴 YES
-validate_jwt             2,103    12ms         18ms    ✅ OK
-parse_json_body          2,103    5ms          9ms     ✅ OK
-thompson_sampling        423      201ms        387ms   🟡 WATCH
-```
-
-**Impulse Transformation Graph**
-```
-http_request (JSON, 2KB)
-  └─> auth_token (JWT, 512B)
-       └─> user_record (DB row, 1KB)
-            └─> activity_query (SQL, 256B)
-                 └─> template_list (JSON[], 15KB)
-                      └─> http_response (JSON, 15KB)
-```
-
-**Reuse Opportunities**
-```
-Function               Used In   Total Calls   Reuse Factor   Suggestion
-fetchTemplates         23        1,847        80.3x          Cache (hot data)
-validateJWT            18        2,103        116.8x         Optimize (hot path)
-formatResponse         15        987          65.8x          Standardize signature
-```
+Read that list as intent rather than as results available today, because two defects sit
+between the strings and the store they claim to read. First, `hotPaths`, `errorPatterns` and
+`reuseOpportunities` each project or group on `activity_template_id`; the `execution` table is
+declared `SCHEMAFULL` and defines `activity_id` instead, and nothing under
+`repos/activity-api/sql/` defines the former field. Second, `errorPatterns` carries a subquery
+selecting `FROM impulse_resolutions` — that name is a *field* (defined on `execution` and on
+`execution_trace_content`), not a table anywhere under `repos/activity-api/sql/`.
+`resolverPerformance` is the one query of the four that avoids both defects: it traverses
+`execution.impulse_resolutions` as a field and groups by resolver and tier. A query naming a
+table or a column the schema does not define is not a learning query; it is a wish, and
+reconciling these strings against the schema is prerequisite work for anything this module
+claims to measure.
 
 ## Alignment with Foundation
 
-From `IMPULSE_ACTIVITY_FOUNDATION.md`:
+Runtime tracing introduces no new primitive. It reuses each foundational commitment as-is:
 
-| Principle | How Runtime Tracing Aligns |
-|-----------|---------------------------|
-| **Impulses are universal data** | ✅ HTTP requests, DB rows, function params are all impulses |
-| **Activities constrain search** | ✅ Runtime activities (request handlers) are constrained workflows |
-| **Resolvers live where data lives** | ✅ Functions in the codebase are resolvers |
-| **Metadata first, content later** | ✅ Track function signatures, types before tracing full payloads |
-| **Record everything** | ✅ Same execution trace schema, same storage |
-| **Learn from traces** | ✅ Thompson Sampling, pattern recognition work unchanged |
-| **LLMs are tools, not controllers** | ✅ Runtime analysis is deterministic (no LLM needed) |
+| Principle | How runtime tracing satisfies it |
+|-----------|----------------------------------|
+| Impulses are universal data | HTTP requests, DB rows, and function arguments are impulses |
+| Activities constrain search | A request handler is a constrained workflow with declared entry and exit |
+| Resolvers live where the data lives | The instrumented functions are already in the vessel that owns the data |
+| Metadata first, content later | Signatures and shapes are traced; payloads stay in the content table |
+| Record everything | The same `execution` schema, the same store |
+| Learn from traces | Thompson sampling and pattern recognition are unchanged |
+| LLMs are tools, not controllers | Runtime analysis is deterministic; no model is in this loop |
 
-**This is not a new system.** It's using the existing activity/impulse infrastructure for a new timescale.
+The corollary is a constraint on future work: a change that would require runtime traces to
+diverge from the development trace schema is a change that removes runtime tracing from the
+learning loop.
 
 ## Performance Considerations
 
+Instrumentation that degrades the thing it measures gets disabled, and a disabled instrument
+teaches nothing. The design therefore trades detail for predictability: metadata before
+content, sampling before completeness, asynchronous writes before synchronous accuracy. The
+budgets below are the expectations any instrumentation change must hold to.
+
 ### Overhead
 
-**Instrumentation:**
-- Function wrapper: ~0.5-1ms per resolver (timestamp capture)
-- Impulse creation: ~0.1ms per impulse (metadata only, content lazy)
-- Trace storage: Async, non-blocking (batched writes)
+Per-resolver wrapping costs a timestamp pair and an array append; impulse creation costs a
+metadata object, with content left unloaded. Trace storage is off the request path — the
+middleware fires the write and does not await it, with a bounded timeout so a slow or absent
+trace store degrades to a logged warning rather than a stalled request.
 
-**Total overhead:** <5% for Level 2 (function-level) tracing with sampling
+The standing expectation at function level with sampling is single-digit-percent overhead,
+established by comparing an instrumented deployment against an uninstrumented one. Overhead
+asserted from reasoning about the code rather than measured against a control is not an
+overhead figure.
 
 ### Mitigation Strategies
 
-1. **Sampling:** Trace 1% in production, 10% in canary
-2. **Async storage:** Non-blocking trace writes
-3. **Lazy impulse loading:** Metadata-only until content needed
-4. **Selective instrumentation:** Only hot paths, not every function
-5. **Retention policies:** Aggregate old traces, keep recent detailed
+1. **Sampling** — trace a fraction of ordinary requests; oversample errors and slow requests.
+2. **Asynchronous storage** — never block a response on a trace write.
+3. **Lazy impulses** — carry metadata and shape; load content only when something reads it.
+4. **Selective instrumentation** — wrap the paths under investigation, not every function.
+5. **Retention** — aggregate old traces, keep recent detail; retention is a policy the system
+   should be able to read and revise, not a constant compiled into a query.
 
 ### Memory
 
-**Per trace:**
-- Request-level (Level 1): ~2KB (request + response metadata)
-- Function-level (Level 2): ~10KB (5-10 resolvers with impulses)
-- Full instrumentation (Level 3): ~100KB (full call graph)
+Trace size scales with the level: request-level rows carry request and response metadata only,
+function-level rows add one entry per instrumented resolver, and full instrumentation carries
+the call graph. The content split into `execution_trace_content` is what keeps that growth off
+the learning path — scans read the `execution` row, and pay for payload only on an explicit
+join.
 
-**Daily volume (Activity-API, 10K req/day, 10% sampling):**
-- 1,000 traces/day × 10KB = 10MB/day = 300MB/month
-
-**Sustainable:** Current SurrealDB handles 10GB+ comfortably
+The expectation is that trace volume is governed by the sampling rate and the retention
+policy, both of which must be adjustable without a deployment. When the store grows faster
+than retention reclaims, the defect is in the policy, not in the schema.
 
 ## Use Cases
 
+These are the questions runtime traces exist to answer. Each is stated as an expectation about
+what the substrate should be able to conclude on its own, because a use case that only works
+when an operator runs the query by hand is a report, not a capability — and the missing
+generator is itself a gap worth filing.
+
 ### 1. Performance Regression Detection
-**Scenario:** New deployment slows down `/v2/activities/recommend`
 
-**Without runtime tracing:**
-- Users report slowness
-- Manual investigation with APM
-- Unclear which function changed
-
-**With runtime tracing:**
-- Dashboard alerts: "thompson_sampling latency increased 2x"
-- Trace diff shows new code path added DB query in loop
-- Automatic rollback or fix
+When a deployment slows a path, the expectation is that the trace record shows it before a
+user reports it: per-resolver latency shifts against the pre-deployment window, and the
+composition chain names the call that changed. `vessel_version` on every row is what makes the
+comparison attributable to a specific build rather than to a time range.
 
 ### 2. Refactoring Guidance
-**Scenario:** Want to improve code reuse
 
-**Without runtime tracing:**
-- Code review finds duplicated logic
-- Manual refactoring
-- Hope it works
-
-**With runtime tracing:**
-```sql
--- Find functions with high reuse factor
-SELECT resolver_id, used_in_activities, reuse_factor
-FROM runtime_reuse_metrics
-WHERE reuse_factor > 50
-ORDER BY total_calls DESC;
-```
-
-Result: "validateJWT is called 116× more than activities using it → extract to shared module"
+Resolvers shared across many activities are extraction candidates, and the evidence is the
+recorded reuse factor rather than a reviewer's impression of duplication.
+`RUNTIME_QUERIES.reuseOpportunities` is the draft of that query, but as written it counts
+distinct `execution.activity_template_id` — a field the table does not define — so it has to be
+reconciled against the schema before it yields a reuse factor at all. Once it does, a high
+reuse factor is a reason to look, and the trace of the resolver's own failures is what decides
+whether the shared version should be hardened before it is shared further.
 
 ### 3. A/B Testing Code Variants
-**Scenario:** Two implementations of Thompson Sampling
 
-**Strategy:**
-1. Deploy both variants (V1 and V2)
-2. Random 50/50 routing
-3. Runtime traces capture: latency, accuracy, cost
-4. Thompson Sampling learns which variant performs better
-5. Automatic rollout of winner
-
-**Same Thompson Sampling that optimizes activity templates now optimizes the code itself.**
+Two implementations of the same behavior can be deployed as distinct variants, traced
+identically, and separated by the same Thompson sampling that grades activity templates.
+This works only if the variants are distinguishable in the trace and the outcome is graded by
+reach rather than exit status — otherwise the arm that fails silently and quickly wins.
 
 ### 4. Cost Optimization
-**Scenario:** Want to reduce infrastructure costs
 
-**Query:**
-```sql
-SELECT
-  resolver_id,
-  SUM(cost_usd) as total_cost,
-  COUNT() as call_count,
-  AVG(latency_ms) as avg_latency
-FROM execution_resolutions
-WHERE timestamp > time::now() - 7d
-GROUP BY resolver_id
-ORDER BY total_cost DESC;
-```
-
-Result: "LLM-based resolvers cost $127/week but only used in 3% of activities → replace with pattern matching"
+Summing `cost_usd` per resolver over a window ranks spend against usage, and the expected
+action is to demote an expensive resolver where a cheaper tier suffices. One honest caveat
+about the current instrument: `withResolver` attributes a fixed placeholder cost to
+LLM-tier calls rather than a token-derived one, so per-resolver cost from that path ranks
+call frequency, not spend. Cost claims must come from token-derived figures until that
+placeholder is replaced.
 
 ## Risks and Mitigation
 
 | Risk | Impact | Mitigation |
 |------|--------|-----------|
-| **Performance overhead** | Slower requests | Sampling, async storage, selective instrumentation |
-| **Trace volume explosion** | Storage costs | Retention policies, aggregation, sampling |
-| **Privacy/security** | Sensitive data in traces | Metadata-only mode, PII filtering, hash-based IDs |
-| **False bottleneck detection** | Misleading optimization | Statistical significance checks, min sample size |
-| **Complexity** | Harder to debug | Tracing can be disabled per-environment |
+| Performance overhead | Slower requests | Sampling, asynchronous storage, selective instrumentation |
+| Trace volume growth | Storage cost | Retention policy, aggregation, content-table split |
+| Sensitive data in traces | Privacy and security exposure | Metadata-only mode, field filtering, hashed identifiers |
+| False bottleneck detection | Misdirected optimization | Minimum sample size and significance checks before acting |
+| Instrument left unmounted | Silent absence of evidence | Treat "no traces" as a failure signal, not as a healthy quiet |
 
-## Success Criteria
-
-### Week 1 (Request-Level)
-- [ ] Dashboard shows runtime activity patterns
-- [ ] Can identify most-called endpoints
-- [ ] Trace volume <10MB/day
-
-### Week 2 (Resolver-Level)
-- [ ] Dashboard shows resolver performance
-- [ ] Can identify bottlenecks (slow + frequent)
-- [ ] Overhead <5% (measured via canary comparison)
-
-### Week 3 (Learning)
-- [ ] Automated refactoring suggestions
-- [ ] Thompson Sampling for code variants works
-- [ ] Can compare traces before/after optimization
-
-### Week 4 (Feedback Loop)
-- [ ] The substrate creates optimization activities from runtime data
-- [ ] Canary deployment shows improvement
-- [ ] Winning variants promoted to production
+The last row is the one that bites hardest: an instrument that is present in the tree but
+wired to nothing produces the same empty result set as a system with nothing to report.
 
 ## Future Extensions
 
-### Cross-Vessel Tracing
-Track impulse flows **between vessels**:
-```
-goal-host-vessel (goal received)
-  └─> activity-api (fetch templates)
-       └─> SurrealDB (query)
-            └─> activity-api (return templates)
-                 └─> goal-host-vessel (execute activity)
-```
+The extensions below are directions, not commitments. Each becomes real only when an activity
+depends on it and grades it; until then it is a shape the architecture leaves room for. They
+are listed so that a change that would foreclose one is recognized as a cost rather than made
+by accident.
 
-Distributed tracing = impulse lineage across vessel boundaries.
+### Cross-Vessel Tracing
+
+Impulse lineage should survive a vessel boundary: a goal dispatched on one vessel, served by a
+second, and backed by a third should reconstruct as one tree. `parent_execution_id` and
+`composition_chain` already carry the structure; what a distributed case additionally needs is
+that the identifiers propagate across the transport rather than being minted afresh at each
+hop.
 
 ### Predictive Optimization
-Use ML on runtime traces to predict:
-- Which functions will become hot paths
-- Which impulse shapes will cause errors
-- Optimal cache sizes, connection pool limits
+
+With enough recorded runtime history, the system can anticipate rather than react: which paths
+are trending toward hot, which impulse shapes precede failures, what cache and pool sizes the
+observed distribution implies. This is ordinary learning over the trace store — its value
+depends on the traces being conformant, not on the sophistication of the model applied.
 
 ### Self-Healing
-When runtime traces detect failures:
-1. Create activity: "Debug failure in resolver X"
-2. The substrate investigates (reads traces, error logs)
-3. Proposes fix
-4. Deploys to canary
-5. Runtime traces validate fix
-6. Auto-promote if successful
 
-**The system debugs itself.**
+The end state is that a detected runtime failure becomes a goal without an operator in the
+loop: investigate the failing resolver from its own traces, propose a change, deploy it
+narrowly, and let the subsequent traces decide whether it is promoted or reverted. The
+verdict must be the reach gate on the confirming execution — a deployment that exits cleanly
+and fixes nothing must not be promotable.
 
 ## Conclusion
 
-Runtime activity tracing extends the process-of-becoming from **development activities** (writing code) to **runtime activities** (executing code).
+Runtime activity tracing extends the process of becoming from writing code to executing it,
+using the same store, the same schema, and the same learner. Its value is entirely a function
+of trace conformance: a row that names its activity, its state signature, its input and output
+shapes, its per-resolver attribution, and its honest `reached` verdict is evidence the
+substrate can compound. A row missing any of those is a log line.
 
-**Key benefits:**
-- Same infrastructure, new timescale
-- Unified observability (dev + runtime)
-- Evidence-based optimization
-- Self-improving codebase
-
-**Alignment with foundation:**
-- ✅ Treats runtime data as impulses
-- ✅ Uses activities for constrained workflows
-- ✅ Resolvers live in application code
-- ✅ Records traces for learning
-- ✅ No unnecessary LLM usage
-
-**The application becomes a vessel that learns how to optimize itself through continuous execution and trace analysis.**
-
----
-
-**Next Steps:**
-1. Review this proposal
-2. Implement Phase 1 (request-level tracing in Activity-API)
-3. Validate overhead and trace volume
-4. Proceed to resolver-level tracing if successful
+The application becomes a vessel that learns how to optimize itself — but only once the
+instrument is mounted, its output is graded, and something reads the result at the moment a
+decision is made.

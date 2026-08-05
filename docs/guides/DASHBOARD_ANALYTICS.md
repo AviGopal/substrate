@@ -1,7 +1,7 @@
 # Dashboard Analytics: Reading the Learning Loop
 
-**Applies to:** `activity-dashboard` (April 2026+)
-**Source:** `repos/activity-dashboard/src/components/`
+**Applies to:** the activity dashboard surface. Its source repository is not a submodule of this
+super-repo, so the component paths below are named by role rather than by path.
 
 This guide describes the analytics panels in the activity dashboard and how to read them. If you're debugging a learning-loop regression, this is where you look before digging into raw traces.
 

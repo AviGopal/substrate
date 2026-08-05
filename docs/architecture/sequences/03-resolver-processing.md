@@ -1,1038 +1,586 @@
 # Processing of Required Input Impulses by Resolvers
 
-> **How to read this.** The resolver types (LLM, bash, git, activity, ribosome)
-> and the impulse context-injection flow are accurate; they run across the
-> substrate's vessels rather than in one process. Orchestration — the tool-calling
-> loop, activity composition, impulse creation — lives in `goal-host-vessel` /
-> `ias-executor-ts`. The LLM resolver is `llm-resolver-vessel` (`:8220`); the
-> deterministic resolvers (bash, git, read/write/edit, process) are
-> `local-tools-vessel` (`:8230`); the ribosome resolver is `ribosome-vessel`
-> (`:8240`), which subscribes to `task.completed` and
-> `lifecycle:execution:succeeded` on the activity-api WebSocket bus rather than
-> running inline. Read the `MCP Backend (mcp.ts)` participant as `activity-api`
-> (`:18080`) over HTTP via discovery routing, and map the `llm.ts`, `tools.ts`,
-> `activity.ts` and `template-extractor.ts` references onto those vessels.
+> **How to read this.** Resolvers run in the vessel that owns their data. The
+> LLM tier is `llm-resolver-vessel` (`:8220`, with per-model siblings on `:8221`,
+> `:8223`, `:8225`); the deterministic tier — shell, filesystem, git, code edits,
+> web search — is `local-tools-vessel` (`:8230`); nested activity dispatch is the
+> engine's own `compose` / `compose_parallel` path in `@avigopal/ias-executor-ts`;
+> template extraction is the `ribosome-extract` activity, triggered by
+> `ribosome-vessel` (`:8240`). Cite by symbol, never by line number.
 
 ## Overview
 
-This document maps how different resolver types (LLM, bash, git, file operations, activities, ribosome) process required input impulses during task execution. It shows the complete flow from impulse context injection through tool execution to output impulse creation.
+This document maps how a resolver turns required input impulses into output impulses: what a resolver contract looks like, how the LLM tier runs a bounded tool loop, how the deterministic tier executes and bounds its own work, how one activity dispatches another, and how a reached execution becomes a reusable template.
+
+The unifying idea is that all four are the same contract. A resolver is `{ id, tier, resolve(context) }` where `tier` is one of `deterministic`, `pattern`, `llm`, `external`, and every one of them consumes impulses from the pool and returns impulses back into it. Nothing in the engine special-cases "the LLM" — it is one tier among four.
 
 ## Key Concepts
 
-1. **Impulse Context Injection** - How impulses are formatted and injected into resolver prompts
-2. **Tool Calling Loop** - LLM iterative execution with tool handlers (max 20 iterations)
-3. **Deterministic Resolvers** - bash, git, file operations that don't use LLM
-4. **Tool Argument Patterns** - Proven argument patterns from historical executions
-5. **Output Impulse Creation** - Tool results become new impulses for downstream tasks
-6. **Activity Composition** - Nested activity execution with composition tracking
-7. **Ribosome Pattern** - Successful executions extracted into reusable templates
-8. **Pattern Learning** - Tool usage and argument patterns recorded for Thompson Sampling
+1. **Resolver contract** — `Resolver { id, tier, resolve(ctx) }` from `repos/ias-executor-ts/src/resolvers.ts`; `ResolverContext` carries the task, variables, input impulses, and the ports.
+2. **Resolver tiers** — `deterministic`, `pattern`, `llm`, `external`; the tier is recorded on every `ExecutionTaskRecord`.
+3. **Bounded LLM tool loop** — `llm-resolver-vessel` iterates on `stop_reason === "tool_use"` up to `max_tool_iterations`, defaulting to 20 and hard-capped at 30.
+4. **Grounded floor loop** — `runGroundedToolLoop` in goal-host-vessel: at most 4 iterations, 8 calls per iteration, wall-clock deadline, deduplicated calls, and a strict separation of *grounding* (reads) from *side effects* (writes).
+5. **Nested dispatch** — `compose` and `compose_parallel` task resolvers, plus the `activity` resolver, run a child template on the same runtime with `parentExecutionId` and an extended `compositionChain`.
+6. **Composition provenance** — `consumedFromTaskIds` and `childActivityId` are what let producer→consumer activity edges be derived from placeholder references.
+7. **Ribosome** — a reached execution triggers the `ribosome-extract` activity, whose tasks assess quality, synthesise a template, validate it, and attempt the write.
 
 ## Main Sequence Diagram: Complete Resolver Flow
 
 ```mermaid
 sequenceDiagram
-    participant TaskExec as Task Executor<br/>(goal-host-vessel)
-    participant ImpStore as Impulse Store<br/>(goal-host-vessel)
-    participant ImpFormat as formatImpulsesForContext<br/>(goal-host-vessel)
-    participant LLMClient as LLM Resolver<br/>(llm-resolver-vessel)
-    participant ToolWrap as Tool Wrapper<br/>(goal-host-vessel)
-    participant Bash as Bash Resolver<br/>(local-tools-vessel)
-    participant Git as Git Resolver<br/>(local-tools-vessel)
-    participant ActTool as Activity Resolver<br/>(goal-host-vessel)
-    participant Ribosome as Ribosome Resolver<br/>(ribosome-vessel)
-    participant ImpCreate as Impulse Creator<br/>(goal-host-vessel)
-    participant MCP as Activity-API<br/>(:18080, HTTP)
+    participant Exec as ActivityExecutor<br/>(ias-executor-ts)
+    participant Pool as ImpulseStore
+    participant Reg as ResolverRegistry
+    participant LLM as llm-resolver-vessel<br/>(:8220)
+    participant Tools as local-tools-vessel<br/>(:8230)
+    participant Child as Child execution<br/>(compose)
+    participant API as activity-api<br/>(:8080)
+    participant Ribo as ribosome-vessel<br/>(:8240)
 
-    Note over TaskExec,MCP: PHASE 1: LOAD & FORMAT INPUT IMPULSES
+    Exec->>Pool: bind declared inputShapes from the pool
+    Pool-->>Exec: input impulses (metadata-first)
 
-    TaskExec->>ImpStore: loadImpulses(impulseIds)
-    ImpStore->>ImpStore: resolvePointer() [DISPATCH ORDER]
-    ImpStore->>ImpStore: 1. LOCAL: memo (embedded)
-    ImpStore->>ImpStore: 2. LOCAL: file (filesystem)
-    ImpStore->>ImpStore: 3. LOCAL: directoryTree, gitDiff
-    ImpStore->>ImpStore: 4. CUSTOM: registered resolvers
-    ImpStore->>ImpStore: 5. DISCOVERY: vessel discovery
-    ImpStore->>ImpStore: 6. BACKEND: MCP fallback
-    ImpStore->>ImpStore: Truncate to budget
-    ImpStore-->>TaskExec: Return loaded impulses
+    Exec->>Reg: resolver for task.resolver
+    Reg-->>Exec: {id, tier, resolve}
 
-    TaskExec->>ImpStore: captureImpulseHashes(impulseIds)
-    ImpStore-->>TaskExec: Record hash before execution
+    alt tier = llm
+        Exec->>LLM: POST resolve {pointer: {type: "llm_completion_dispatch",<br/>prompt, tools?, max_tokens, max_tool_iterations?}}
+        activate LLM
+        LLM->>LLM: selectArm(taskType, availableModels) → model
+        loop while stop_reason = "tool_use" (≤ max_tool_iterations, hard cap 30)
+            LLM->>LLM: provider call with tools
+            LLM->>Tools: execute each tool_use block
+            Tools-->>LLM: tool_result (is_error on failure)
+            LLM->>LLM: append assistant + tool_result turns
+        end
+        LLM->>LLM: recordArmOutcome(model, ok, taskType)
+        LLM-->>Exec: {shape: "llmCompletion", content, usage, cost}
+        deactivate LLM
 
-    Note over TaskExec,MCP: PHASE 2: INJECT IMPULSES INTO PROMPT
+    else tier = deterministic
+        Exec->>Tools: POST /v2/impulses/resolve {impulse: {pointer}}
+        activate Tools
+        Note over Tools: shell / bounded_shell / fs_read / fs_write / fs_edit /<br/>git_status / git_diff / git_commit / code_* / web_search<br/>each bounds its own timeout and output
+        Tools-->>Exec: {shellResult | fileContent | gitDiff | code*Result | …}
+        deactivate Tools
 
-    TaskExec->>TaskExec: substituteImpulses(template, ids)
-    TaskExec->>ImpStore: loadImpulses(referenced ids)
-    ImpStore-->>TaskExec: Return impulse content
-
-    TaskExec->>ImpFormat: formatImpulsesForContext(impulses)
-    ImpFormat->>ImpFormat: For each impulse:
-    ImpFormat->>ImpFormat: IF metadata present:<br/>USE pointer-mode<br/>(&lt;impulse_ref&gt; XML tags)
-    ImpFormat->>ImpFormat: ELSE loaded content:<br/>USE content-mode<br/>(&lt;impulse&gt; with content)
-    ImpFormat-->>TaskExec: Return formatted context string
-
-    TaskExec->>TaskExec: Prepend impulse context<br/>+ proven tool patterns<br/>+ error impulses (if retry)
-
-    Note over TaskExec,MCP: PHASE 3: BUILD LLM REQUEST
-
-    TaskExec->>TaskExec: Build messages array:<br/>1. System prompt<br/>2. Impulse context +<br/>formatted impulses +<br/>tool recommendations<br/>3. Task prompt
-
-    TaskExec->>TaskExec: Filter tools<br/>(based on task.resolverRequirements)
-
-    Note over TaskExec,MCP: PHASE 4: LLM RESOLVER - TOOL CALLING LOOP
-
-    TaskExec->>LLMClient: completeWithTools(options, handlers)
-
-    loop Tool Calling Loop [max 20 iterations]
-        LLMClient->>LLMClient: POST /messages to<br/>Anthropic API<br/>with system + messages +<br/>formatted tools
-
-        LLMClient-->>LLMClient: Parse response:<br/>extract text + tool_use blocks
-
-        LLMClient->>LLMClient: Tool calls<br/>from response?
-        alt No Tool Calls
-            LLMClient->>LLMClient: content = final response
-            LLMClient-->>TaskExec: Return {content, toolsUsed, usage}
-            break Done with tool calling
-        else Tool Calls Found
-            LLMClient->>LLMClient: For each tool call:
-            LLMClient->>ToolWrap: Wrap handler to<br/>capture tool execution
-
-            alt Bash Tool
-                ToolWrap->>Bash: bash resolver<br/>(validateCommand +<br/>spawn process)
-                Bash-->>ToolWrap: {success, output, error}
-            else Git Tool
-                ToolWrap->>Git: git resolver<br/>(git command with<br/>timeout + auth)
-                Git-->>ToolWrap: {success, output, error}
-            else Activity Tool
-                ToolWrap->>ActTool: activity resolver<br/>(nested execution)
-                ActTool-->>ToolWrap: {success, output, childExecId}
-            end
-
-            ToolWrap-->>LLMClient: Return tool result
-
-            LLMClient->>LLMClient: Record tool call:<br/>- name<br/>- arguments<br/>- result
-
-            LLMClient->>LLMClient: Append to messages:<br/>1. assistant message<br/>with tool_use content<br/>2. tool result message
+    else task.resolver = compose / compose_parallel
+        Exec->>Exec: depth + cycle check on compositionChain
+        alt refused
+            Exec->>Exec: throw "safety_breach: dispatch refused …"<br/>caught → failureMode {type: "execution_error"}
+        else allowed
+            Exec->>Child: run child template on the same runtime<br/>(parentExecutionId, compositionChain + 1)
+            Child-->>Exec: child trace; record childActivityId + childExecutionId
         end
     end
 
-    Note over TaskExec,MCP: PHASE 5: CREATE OUTPUT IMPULSES FROM TOOL CALLS
+    Exec->>Pool: put output impulses (metadata.shape set)
+    Exec->>Exec: ExecutionTaskRecord {resolverId, resolverTier,<br/>inputShapes, outputShapes, consumedFromTaskIds,<br/>filesModified, filesCreated, materialsConsulted, cost, tokens}
 
-    TaskExec->>TaskExec: For each tool call record:
-    TaskExec->>ImpCreate: Create output impulse<br/>if tool.result.success
+    Exec->>API: POST /v2/activities/execution-traces
+    API->>API: applyOutcomeToPosteriors (α/β by failure mode)
+    API-->>Ribo: execution_completed on the WebSocket bus
 
-    ImpCreate->>ImpCreate: Build impulse:<br/>id: tool:{name}:{taskId}:{timestamp}<br/>type: memo<br/>content: tool output<br/>budget: output.length / 4<br/>tags: [tool:{name}, activity:{id}]
-
-    ImpCreate->>MCP: storeImpulse(impulse)<br/>[BLOCKING with retries]
-    MCP-->>ImpCreate: Stored in backend
-
-    ImpCreate->>ImpStore: Store locally
-    ImpCreate-->>TaskExec: Impulse created
-
-    Note over TaskExec,MCP: PHASE 5.5: EXTRACT TOOL ARGUMENT IMPULSES
-
-    TaskExec->>TaskExec: For each tool call:<br/>extractToolArgumentImpulse()
-
-    TaskExec->>ImpCreate: Create argument impulse<br/>if extraction succeeds
-
-    ImpCreate->>ImpCreate: Build impulse:<br/>id: toolargs:{hash}<br/>type: memo or custom<br/>content: structured args<br/>metadata:<br/>  shape: tool_invocation<br/>  toolName<br/>  argumentsHash<br/>  successRate<br/>tags: [tool-args:{name}]
-
-    ImpCreate->>MCP: storeImpulse(impulse)
-    MCP-->>ImpCreate: Stored for pattern learning
-
-    ImpCreate-->>TaskExec: Argument impulse created
-
-    Note over TaskExec,MCP: PHASE 6: STATE TRANSITIONS & ACTIVITY OUTPUT
-
-    TaskExec->>TaskExec: Store activity output<br/>storeActivityOutput(activityId,<br/>taskId, result.content)
-
-    TaskExec->>TaskExec: Capture output state:<br/>- filesCreated<br/>- filesModified<br/>- toolCallRecords
-
-    TaskExec->>TaskExec: captureFileHashes()<br/>(after execution)
-
-    TaskExec->>TaskExec: calculateImpulseEvolution()<br/>(compare before/after hashes)
-
-    Note over TaskExec,MCP: PHASE 7: RECORD PATTERNS FOR LEARNING
-
-    TaskExec->>MCP: recordToolArgumentPattern()<br/>For each tool call:<br/>- activityId<br/>- toolName<br/>- argumentHash<br/>- executionSucceeded<br/>- failureType (if failed)
-
-    MCP-->>TaskExec: Pattern recorded<br/>(Thompson Sampling)
-
-    TaskExec->>MCP: recordImpulseRelevance()<br/>For each impulse:<br/>- impulseId<br/>- wasLoaded<br/>- executionSucceeded
-
-    MCP-->>TaskExec: Relevance recorded
-
-    Note over TaskExec,MCP: PHASE 8: VALIDATION & ERROR HANDLING
-
-    alt Validation Enabled
-        TaskExec->>TaskExec: runValidation(pattern)<br/>- requiredFiles<br/>- requiredPatterns<br/>- forbiddenPatterns
-
-        alt Validation Failed
-            TaskExec->>ImpCreate: createErrorImpulse()<br/>id: error:{taskId}:{activityId}:{ts}<br/>content: error message<br/>metadata:<br/>  shape: previous_attempt_error<br/>  attemptNumber<br/>  failureType<br/>  availableOps<br/>  suggestedOp
-
-            ImpCreate->>MCP: storeImpulse(errorImpulse)
-            MCP-->>ImpCreate: Error impulse stored<br/>(for retry context)
-
-            ImpCreate-->>TaskExec: Error impulse ready
-
-            TaskExec->>TaskExec: Return {status: failed,<br/>error, metadata:<br/>inputState, outputState,<br/>stateTransition, toolCalls}
-        else Validation Succeeded
-            TaskExec->>TaskExec: Continue to success path
-        end
+    Ribo->>Ribo: gate: reached AND every task terminal-and-successful<br/>AND producer is not the ribosome family
+    alt gate passes
+        Ribo->>Exec: POST /run-goal {targetTemplateId: "ribosome-extract",<br/>variables: {executionId, applyExtraction, lifecycle}}
     end
-
-    Note over TaskExec,MCP: PHASE 9: SUCCESS COMPLETION
-
-    TaskExec->>TaskExec: Return {status: completed,<br/>output: result.content,<br/>tokens: {input, output},<br/>metadata: {<br/>  inputState,<br/>  outputState,<br/>  stateTransition,<br/>  toolCalls,<br/>  impulseEvolution,<br/>  modelSelection<br/>}}
-
-    Note over TaskExec,MCP: PHASE 10: RIBOSOME EXTRACTION (ON SUCCESS)
-
-    alt Execution Succeeded & Criteria Met
-        TaskExec->>Ribosome: shouldExtractTemplate()<br/>- success = true<br/>- has state transitions<br/>- has tool calls<br/>- not already extracted
-
-        Ribosome->>Ribosome: Criteria passed
-
-        Ribosome->>Ribosome: assembleTemplateFromExecution()<br/>- Extract tasks from trace<br/>- Generalize prompts<br/>- Extract variables<br/>- Build validation rules
-
-        Ribosome->>MCP: registerTemplate()<br/>{<br/>  name: "extracted_{original}_{hash}",<br/>  category,<br/>  tasks,<br/>  extractedFrom: executionId<br/>}
-
-        MCP-->>Ribosome: Template registered<br/>(available for Thompson Sampling)
-    end
-
-    Note over TaskExec,MCP: FINAL: BATCH STORAGE & LEARNING
-
-    TaskExec->>MCP: storeExecutionTrace()<br/>{<br/>  executionId,<br/>  templateId,<br/>  tasks: [{<br/>    id, prompt, result,<br/>    tokens, metadata<br/>  }],<br/>  totalTokens,<br/>  costUSD,<br/>  success,<br/>  duration<br/>}
-
-    MCP-->>TaskExec: Trace stored
-
-    MCP->>MCP: Thompson Sampling update<br/>α/β for template variants
-
-    MCP-->>TaskExec: Learning updated<br/>(ready for next iteration)
 ```
 
 ## Decomposition: LLM Resolver with Impulse Context
 
-```mermaid
-sequenceDiagram
-    participant LLM as LLM Resolver
-    participant ImpCtx as Impulse Context<br/>Formatter
-    participant Prompt as Prompt Builder
-    participant APICall as Anthropic API
-    participant ToolLoop as Tool Loop
-    participant ToolHandler as Tool Handler
-    participant Result as Result Processing
-
-    Note over LLM,Result: LLM RESOLVER WITH IMPULSE CONTEXT INJECTION
-
-    LLM->>ImpCtx: formatImpulsesForContext(loaded[])
-    ImpCtx->>ImpCtx: For each impulse:
-    ImpCtx->>ImpCtx: IF metadata.shape exists:<br/>FORMAT: &lt;impulse_ref<br/>  id="{id}"<br/>  type="{type}"<br/>  shape="{shape}"<br/>  row_count="{count}"<br/>  summary="{text}"/&gt;
-
-    ImpCtx->>ImpCtx: ELSE IF loaded.content:<br/>FORMAT: &lt;impulse<br/>  id="{id}"<br/>  type="{type}"<br/>  tokens={actual}/{budget}&gt;<br/>{content}<br/>&lt;/impulse&gt;
-
-    ImpCtx-->>Prompt: &lt;impulse_context&gt;<br/>(formatted impulses)<br/>&lt;/impulse_context&gt;
-
-    Prompt->>Prompt: Build full prompt:<br/>1. Impulse context block<br/>2. Tool pattern hints<br/>(if arg recommendations)<br/>3. Error impulses (if retry)<br/>4. Task prompt
-
-    Prompt->>Prompt: Build messages:<br/>- system: config.systemPrompt<br/>- user: full prompt
-
-    Prompt->>APICall: POST /messages<br/>{<br/>  model,<br/>  system,<br/>  messages,<br/>  tools: [{<br/>    name,<br/>    description,<br/>    input_schema<br/>  }],<br/>  max_tokens<br/>}
-
-    APICall-->>LLM: {<br/>  content: [{<br/>    type: "text" | "tool_use",<br/>    text?: string,<br/>    id?: string,<br/>    name?: string,<br/>    input?: object<br/>  }],<br/>  stop_reason: "tool_use" | "end_turn"<br/>}
-
-    LLM->>ToolLoop: While maxIterations > 0:<br/>Extract toolCalls[] from response
-
-    alt NO Tool Calls (stop_reason="end_turn")
-        ToolLoop-->>Result: Return {content, toolsUsed, usage}
-    else Tool Calls Present
-        ToolLoop->>ToolLoop: For each toolCall:
-
-        ToolLoop->>ToolHandler: Call handler(toolCall.arguments)
-        ToolHandler->>ToolHandler: Validate arguments
-        ToolHandler->>ToolHandler: Execute operation
-        ToolHandler-->>ToolLoop: Return {success, output?, error?}
-
-        ToolLoop->>LLM: Record:<br/>- toolName<br/>- arguments<br/>- result<br/>(for output impulses)
-
-        ToolLoop->>LLM: Append messages:<br/>1. assistant:<br/>   content: text + tool_use blocks<br/>2. tool:<br/>   content: result<br/>   tool_call_id: id
-
-        ToolLoop->>APICall: Next API call<br/>with extended messages
-    end
-```
-
-**Implementation:** `repos/llm-resolver-vessel/` (LLM tool-calling loop)
-
-**Key Points:**
-- Impulse context injected at start of user message
-- Tool patterns provide proven argument examples
-- Max 20 iterations prevents infinite loops
-- Tool results appended to conversation for next iteration
-
-## Decomposition: Deterministic Resolvers (Bash & Git)
+The LLM tier is a vessel, reached through discovery like any other producer. It accepts a prompt plus an optional Anthropic-style tool array and returns an `llmCompletion` shape. When tools are present it owns the loop; when they are absent it is a single completion.
 
 ```mermaid
 sequenceDiagram
-    participant Task as Task Executor
-    participant Bash as Bash Resolver
-    participant Git as Git Resolver
-    participant Process as Bun Process
-    participant Result as Result Handler
-    participant ImpCreate as Impulse Creator
+    participant Task as Task (llm tier)
+    participant Vessel as llm-resolver-vessel
+    participant Policy as model-policy
+    participant Provider as Model provider
+    participant Tool as Client-side tool
 
-    Note over Task,ImpCreate: BASH RESOLVER (DETERMINISTIC, NO LLM)
+    Task->>Vessel: {prompt, tools?, max_tokens, max_tool_iterations?}
+    Vessel->>Policy: selectArm(taskType, availableModels)
+    Note over Policy: PolicyArm chosen from the learned model policy;<br/>drafting task types are held to capable arms
+    Policy-->>Vessel: ArmSelection {model}
 
-    Task->>Bash: Tool call:<br/>{toolName: "bash",<br/>arguments: {<br/>  command: "...",<br/>  cwd: "...",<br/>  timeout: 60000<br/>}}
-
-    Bash->>Bash: validateBashCommand(cmd)<br/>- Check blocked patterns<br/>  (rm -rf /, fork bombs)<br/>- Extract first command<br/>- Verify whitelist<br/>  (git, npm, bun, python,<br/>   ls, cat, grep, make, etc.)
-
-    alt Command Blocked
-        Bash-->>Task: {success: false,<br/>error: "Blocked pattern"}
-    else Command Allowed
-        Bash->>Bash: validatePath(cwd)<br/>- Resolve absolute<br/>- Check within workdir
-        Bash->>Process: Bun.spawn(["sh", "-c", cmd],<br/>{cwd, stdout: "pipe",<br/>stderr: "pipe"})
-
-        Note over Process: Command executing<br/>in subprocess
-
-        Bash->>Bash: Promise.race([<br/>  proc.exited,<br/>  timeout(60000)<br/>])
-
-        alt Timeout Exceeded
-            Bash->>Process: proc.kill()
-            Bash-->>Task: {success: false,<br/>error: "Timed out"}
-        else Process Completed
-            Bash->>Bash: exitCode = await proc.exited
-            Bash->>Bash: stdout = await proc.stdout.text()
-            Bash->>Bash: stderr = await proc.stderr.text()
-
-            alt Exit Code != 0
-                Bash-->>Task: {success: false,<br/>error: stderr,<br/>output: stdout}
-            else Exit Code = 0
-                Bash-->>Task: {success: true,<br/>output: stdout + stderr}
+    alt No tools
+        Vessel->>Provider: single completion (cacheable byte-prefix:<br/>tools → system → messages)
+        Provider-->>Vessel: content
+    else Tools present
+        Note over Vessel: maxIter = clamp(max_tool_iterations ?? 20, 1, 30)<br/>client-side tools require an API key
+        loop until stop_reason ≠ "tool_use" or maxIter
+            Vessel->>Provider: messages + tools
+            Provider-->>Vessel: content blocks
+            alt stop_reason ≠ "tool_use"
+                Note over Vessel: final answer — exit loop
+            else tool_use blocks present
+                loop each tool_use block
+                    Vessel->>Tool: execute(name, input)
+                    Tool-->>Vessel: result (is_error when it failed)
+                end
+                Vessel->>Vessel: append assistant turn + tool_result turn
             end
         end
     end
 
-    Note over Task,ImpCreate: GIT RESOLVER (DETERMINISTIC, NO LLM)
-
-    Task->>Git: Tool call:<br/>{toolName: "git",<br/>arguments: {<br/>  command: "status|add|commit",<br/>  args: [...],<br/>  cwd: "..."<br/>}}
-
-    Git->>Git: Build cmd:<br/>["git", command, ...args]
-
-    Git->>Git: Set environment:<br/>GIT_CONFIG_GLOBAL=<br/>/root/.gitconfig
-
-    Git->>Process: Bun.spawn(gitArgs,<br/>{cwd, env, stdout,<br/>stderr})
-
-    Git->>Git: Promise.race([<br/>  proc.exited,<br/>  timeout(60000)<br/>])
-
-    alt Timeout
-        Git->>Process: proc.kill()
-        Git-->>Task: {success: false,<br/>error: "git ... timed out"}
-    else Complete
-        Git->>Git: exitCode, stdout, stderr
-        alt exitCode != 0
-            Git-->>Task: {success: false,<br/>error: "git ... failed: " + stderr}
-        else Success
-            Git-->>Task: {success: true,<br/>output: stdout}
-        end
-    end
-
-    Note over Task,ImpCreate: OUTPUT IMPULSE FROM TOOL RESULT
-
-    Task->>ImpCreate: if tool.result.success<br/>&& tool.result.output:
-
-    ImpCreate->>ImpCreate: Build impulse:<br/>id: tool:{name}:{taskId}:{ts}<br/>pointer:<br/>  type: "memo"<br/>  content: output<br/>budget: min(len/4, 2000)<br/>priority: "medium"<br/>tags:<br/>  - tool:{name}<br/>  - activity:{id}<br/>  - task:{taskId}
-
-    ImpCreate->>ImpCreate: Async storage:<br/>- Store local<br/>- Post to MCP backend<br/>  (with 3x retries)<br/>- Broadcast to TUI
-
-    ImpCreate-->>Task: Impulse stored
+    Vessel->>Policy: recordArmOutcome(model, ok, taskType)
+    Vessel-->>Task: {shape: "llmCompletion", content, usage}
 ```
 
-**Implementation:** `repos/local-tools-vessel/`
+**Properties that matter downstream:**
+- The iteration cap is configurable per request and clamped by the vessel; `LLM_MAX_TOOL_ITERATIONS` sets the default and 30 is the ceiling regardless.
+- Model choice is a learned policy, not a literal: `selectArm` picks and `recordArmOutcome` grades, so a weak arm loses traffic on evidence rather than by being edited out.
+- Prompt caching is a byte-prefix match rendered in the order tools → system → messages, so anything that varies per call belongs at the end of the prompt.
+- The vessel advertises `llm_completion`, `llmCompletion`, `llmModelPolicy`, `llmModelPolicy_write` and `llmQuotaState`; the policy itself is therefore readable and writable as a shape.
 
-**Security Features:**
-- Command whitelist (git, npm, bun, python, ls, cat, grep, make, etc.)
-- Blocked patterns (rm -rf /, fork bombs, dangerous commands)
-- Path validation (must be within working directory)
-- Timeout protection (60 seconds default)
+**Implementation:** `repos/llm-resolver-vessel/src/index.ts` (dispatch, tool loop, cache prefix) and `src/model-policy.ts` (`loadPolicy`, `selectArm`, `recordArmOutcome`, `ensureArmsForModels`, `providerFor`).
+
+## Decomposition: Deterministic Resolvers (Bash & Git)
+
+`local-tools-vessel` owns everything that touches the filesystem, a process, or a repository. Each handler bounds its own execution and returns a shaped result; nothing is unbounded, and nothing is retried silently.
+
+```mermaid
+graph TD
+    Start(["POST /v2/impulses/resolve<br/>{impulse: {pointer}}"]) --> Route{"pointer.type"}
+
+    Route -->|"shell / bash / shellResult"| Shell["Bun.spawn(['bash','-c', cmd])<br/>bounded by an abort signal"]
+    Route -->|"bounded_shell"| Bounded["Explicit per-call timeout<br/>(positive number, seconds)"]
+    Route -->|"fs_read / fileContent"| Read["Read a path"]
+    Route -->|"fs_write / fileWriteResult"| Write["Write a path"]
+    Route -->|"fs_edit / fileEditResult"| Edit["Exact-match edit"]
+    Route -->|"git_status / git_diff / git_commit"| Git["Repository operations"]
+    Route -->|"code_search / code_find_function /<br/>code_find_import / code_read_lines"| Look["Read-only code navigation"]
+    Route -->|"code_insert_after_line / code_replace_lines /<br/>code_add_import"| Mutate["Anchored code mutation"]
+    Route -->|"code_verify_typecheck"| Check["Typecheck the touched project"]
+    Route -->|"web_search / webSearchResult"| Web["External search"]
+
+    Shell --> Out(["Shaped result impulse"])
+    Bounded --> Out
+    Read --> Out
+    Write --> Out
+    Edit --> Out
+    Git --> Out
+    Look --> Out
+    Mutate --> Out
+    Check --> Out
+    Web --> Out
+
+    style Start fill:#e1f5ff
+    style Out fill:#c8e6c9
+```
+
+Two conventions are worth stating explicitly. First, **advertised output shapes double as pointer types**: `shellResult` routes to the same handler as `shell`, `fileContent` to the same handler as `fs_read`, and so on, so a discovery-routed resolve whose pointer type is the *output* shape still lands correctly. Second, the tool names the code-edit route drives (`code_search`, `code_read_lines`, `code_replace_lines`, …) are advertised in their own right — a capability that exists but is not advertised is unreachable through discovery, which is indistinguishable from not existing.
+
+**Implementation:** the resolver map and advertised shape list in `repos/local-tools-vessel/src/index.ts`, hosted by `VesselDaemon` from `repos/ias-executor-ts/src/hosts/vessel-daemon.ts`.
 
 ## Activity Resolver (Composition)
 
-The activity resolver enables **nested activity execution** - activities calling other activities. This is a powerful composition mechanism that enables complex workflows to be built from simpler, reusable activities.
+Composition is how an activity gets work done that it does not itself know how to do. Three mechanisms exist and they differ in who chooses the child: the `compose` task resolver names a `subActivityId` in the template, `compose_parallel` names several, and the `activity` resolver takes an inline template or a `templateId` from config or from a prior task's output.
 
 ### How Activity Composition Works
 
 ```mermaid
 sequenceDiagram
-    participant Parent as Parent Activity<br/>Executor
-    participant LLM as LLM with<br/>Tool Calling
-    participant ActTool as activity<br/>Tool Handler
-    participant Child as Child Activity<br/>Executor
-    participant Trace as Trace Storage
-    participant Learning as Thompson<br/>Sampling
+    participant Parent as Parent execution
+    participant Guard as Depth + cycle guard
+    participant Child as Child execution
+    participant Rec as Parent task record
+    participant API as activity-api
 
-    Note over Parent,Learning: ACTIVITY COMPOSITION - NESTED EXECUTION
+    Parent->>Guard: dispatch requested<br/>(compositionChain, subActivityId)
+    alt Depth cap exceeded
+        Guard-->>Parent: throw "safety_breach: … refused"<br/>caught → failureMode {type: "execution_error"}
+    else Cycle detected in the chain
+        Guard-->>Parent: throw "safety_breach: … refused"<br/>caught → failureMode {type: "execution_error"}
+    else Allowed
+        Guard->>Child: execute on the SAME runtime<br/>(shared impulses, eventSink, traceSink)
+        Note over Child: parentExecutionId = caller's executionId<br/>compositionChain extended by one
+        Child-->>Parent: child trace
+    end
 
-    Parent->>Parent: Execute parent activity<br/>Load impulses +<br/>format context
+    Parent->>Rec: childActivityId = dispatched template id
+    Parent->>Rec: childExecutionId = child trace id
+    Parent->>Rec: consumedFromTaskIds = producer tasks whose<br/>outputs this task referenced via {{taskId}} / {{taskId_shape}}
+    Rec->>API: on the parent trace
 
-    Parent->>LLM: completeWithTools()<br/>with activity tool<br/>in available tools
-
-    LLM->>LLM: Tool calling loop...
-
-    LLM->>ActTool: Tool call:<br/>{toolName: "activity",<br/>arguments: {<br/>  templateId: "child-id",<br/>  variables: {...},<br/>  reason: "..."<br/>}}
-
-    ActTool->>ActTool: onActivityExecute callback
-
-    ActTool->>Child: Invoke executeActivity()<br/>{<br/>  template: load(childId),<br/>  variables,<br/>  parentActivityId: parentId,<br/>  parentExecutionId: parentExecId,<br/>  impulses: context<br/>}
-
-    Note over Child: CHILD ACTIVITY EXECUTION<br/>(same flow as parent)
-
-    Child->>Child: Load impulses<br/>(with parent context)
-
-    Child->>Child: formatImpulsesForContext()
-
-    Child->>Child: Build task prompt<br/>+ impulse context
-
-    Child->>Child: Execute tasks...<br/>(tool calling loop)
-
-    Child-->>Child: Task results[]
-
-    Child->>Child: Collect execution trace:<br/>{<br/>  executionId,<br/>  templateId: childId,<br/>  tasks,<br/>  parentActivityId,<br/>  parentExecutionId,<br/>  totalTokens,<br/>  success<br/>}
-
-    Child->>Trace: Store execution trace
-
-    Trace->>Learning: Update Thompson<br/>Sampling for child
-
-    Trace-->>Child: Trace stored
-
-    Child-->>ActTool: Return {<br/>  executionId,<br/>  tasks: [{result}],<br/>  success,<br/>  output: final<br/>}
-
-    ActTool->>ActTool: Record composition:<br/>parent → child
-
-    ActTool->>Trace: recordActivityComposition()<br/>{<br/>  parentId,<br/>  childId,<br/>  parentExecution,<br/>  childExecution,<br/>  context<br/>}
-
-    Trace-->>Learning: Composition edge<br/>recorded
-
-    ActTool-->>LLM: Return {<br/>  success: true,<br/>  output: child result<br/>}
-
-    LLM->>LLM: Continue tool loop<br/>(child result available<br/>for next tools/reasoning)
-
-    LLM-->>Parent: Final response
+    Note over API: the composition-edge reconciler maps<br/>consumed producer task → its producing activity<br/>to derive activity→activity edges
 ```
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (activity-tool composition)
+Sharing the runtime is the important detail: the child sees the same impulse pool and writes into it, so data flows shape-to-shape rather than through a serialised argument blob. The recursion guard is enforced **before** the child starts, so a refused dispatch surfaces immediately as a refusal — an error whose message is prefixed `safety_breach:` — rather than as a cascade of timeouts.
+
+Failures inside the `activity` resolver are caught and returned as an impulse with `shape: "activityExecutionError"`, which the calling template normally lists in its output shapes so a consumer can branch on it.
+
+**Implementation:** the `compose` / `compose_parallel` branches and their depth/cycle guards in `ActivityExecutor.execute` (`repos/ias-executor-ts/src/engine.ts`); the standalone `activity` resolver in `src/resolvers/activity.ts`.
 
 ### Activity Tool Definition
 
+Nested dispatch is declared on the task, not offered to the model as a free-form tool. The template names what it composes, which is what makes the composition auditable and the depth cap enforceable:
+
+```typescript
+// compose — one child
+{ id: "run_child", resolver: "compose", subActivityId: "child-template-id", ... }
+
+// compose_parallel — several children
+{ id: "fan_out",  resolver: "compose_parallel", subActivityIds: ["a", "b", "c"], ... }
+```
+
+The `activity` resolver is the dynamic form, used when the child is only known at run time — a validator chosen by a prior task, or an escalation target selected from a variant result:
+
 ```typescript
 {
-  name: "activity",
-  description: "Execute another activity as a subtask. Use this when the current task would benefit from a specialized activity that already exists.",
-  input_schema: {
-    type: "object",
-    properties: {
-      templateId: {
-        type: "string",
-        description: "ID of the activity template to execute"
-      },
-      variables: {
-        type: "object",
-        description: "Variables to pass to the activity"
-      },
-      reason: {
-        type: "string",
-        description: "Why you're calling this activity (for composition learning)"
-      }
-    },
-    required: ["templateId", "reason"]
-  }
+  template?:   ActivityTemplate,           // inline; wins over templateId
+  templateId?: string,                     // resolved via TemplateProvider
+  variables?:  Record<string, unknown>,    // merged with context.variables
 }
 ```
+
+A task using `compose` without `subActivityId`, or `compose_parallel` without `subActivityIds`, is rejected by the engine as a template error rather than being silently skipped.
 
 ### Composition Edge Recording
 
-When an activity calls another activity, a **composition edge** is recorded:
+Edges are **derived from traces**, not declared by the caller. The parent trace carries `consumedFromTaskIds` and `childActivityId` per task; a reconciler maps a consumed producer task to the activity that produced it and writes the resulting activity→activity edge.
 
-```typescript
-interface ActivityCompositionEdge {
-  parentActivityId: string;
-  childActivityId: string;
-  parentExecutionId: string;
-  childExecutionId: string;
-  context: {
-    reason: string;              // Why was child called?
-    variables: Record<string, unknown>;
-    impulsesPassed: string[];    // Which impulses were passed to child?
-  };
-  timestamp: Date;
-  success: boolean;              // Did child execution succeed?
-}
+```
+POST /v2/activities/composition
+  {parent_activity_id, child_activity_id, execution_id, success, ...}
+    → upsert into activity_composition_graph
 ```
 
-**Storage:** `POST /v2/activities/composition` endpoint in metabob-activity-api
+The write path refuses defensively: an edge with a missing or blank parent or child id is skipped with a warning rather than persisted, because a malformed edge aborts the reconcile run on first read. `classifyCompositionEdge` then labels the edge:
+
+- **`hub`** — either endpoint matches a hub marker (`validator-dispatch`, `slot-binding`).
+- **`scaffold`** — either endpoint matches a scaffold marker (`compose-`, `genuine-edge-probe`), or the pair is unproven.
+- **`genuine`** — only with empirical evidence: at least 5 executions with at least 3 successes, or a demonstrated shape flow from the parent's outputs into the child's inputs.
+
+Read-time callers that supply no evidence get the legacy node-name verdict, which is why the honest genuine-count comes from write-path callers that pass recurrence or shape-flow evidence.
+
+**Note on a retired table.** The older `composition_edge` table, its `fn::update_composition_edge` helper, its writer and reader routes, and the `compositionEdge_write` impulse shape were all removed. The live surface is the sibling table `activity_composition_graph`, served by `POST /v2/activities/composition` and read back at `/composition/graph`, `/composition/successors`, `/composition/state-transitions` and `/composition/impulse-success`.
 
 ### Recursive Execution Tracking
 
-Activities can be nested multiple levels deep. Each execution tracks:
+Every nested execution is reconstructable from three fields. `parentExecutionId` links a child trace to its caller, `compositionChain` records the full ancestry as an ordered list of activity ids, and `childExecutionId` on the parent's task record links the other way.
 
-- `parentActivityId` - Template ID of parent activity (if nested)
-- `parentExecutionId` - Execution ID of parent instance (if nested)
-- `depth` - Nesting depth (0 = top-level, 1 = child, 2 = grandchild, etc.)
+```
+compositionChain = ["goal-walk-root", "derive-findings", "emit-note"]
+                     depth 0            depth 1           depth 2
+```
 
-**Example hierarchy:**
-```
-goal_processing_standard (depth=0)
-  ├─ goal_analysis (depth=1)
-  ├─ activity_recommendation (depth=1)
-  ├─ execute_user_activity (depth=1)
-  │   └─ run_tests (depth=2, user's activity)
-  ├─ goal_verification (depth=1)
-  └─ improvise_solution (depth=1, if needed)
-```
+Depth is read from the chain length rather than tracked separately, which is why the guard can refuse a dispatch before the child starts and why a cycle — the same activity id already present in the chain — is detectable at dispatch time. Both refusals are raised as a thrown error whose message begins `safety_breach:`; the engine's catch turns any non-budget throw into `failureMode {type: "execution_error"}`, so a capped run is identified by that message rather than by a distinct failure-mode type on the trace.
+
+`tierOf` and `tierFromChain` in goal-host-vessel classify the resulting chain into a walk tier, which is what `recordGoalPath` stores as `walk_tier`: any reused learned or composed activity in the chain makes the whole walk a `learned_pathway`.
 
 ### Composition Learning Benefits
 
-By recording composition edges, the system learns:
+Recording edges as evidence rather than as declarations is what makes composition learnable rather than merely observable:
 
-1. **Which activities work well together** - Thompson Sampling on edges
-2. **Common composition patterns** - Frequent parent→child pairs
-3. **Context requirements** - What impulses child activities need
-4. **Failure modes** - Which compositions tend to fail
-
-This enables **automatic activity orchestration** where the system learns to compose activities without explicit programming.
+1. **Which activities genuinely work together** — the `genuine` label requires recurrence with success or demonstrated shape flow, so a one-shot pairing does not inflate the graph.
+2. **Reuse ceilings become visible** — a producer that covers two or more of a goal's missing target shapes is preferred over a single-shape satisfier, so the walk selects the composition rather than re-deriving each shape.
+3. **Successor lookup** — `/composition/successors` answers "given this activity, what has followed it successfully", which is what turns the graph into a forward-chaining aid rather than an audit artefact.
+4. **Failure attribution** — a `cascading` failure mode marks a victim of an upstream cause, and the posterior update deliberately assigns it no penalty so the cause is not double-counted.
 
 ## Ribosome Resolver (Template Extraction)
 
-The ribosome pattern is the **self-replication mechanism** - successful executions are extracted into reusable templates. This is how the system **learns by doing**.
+Extraction is an activity, not a library call. `ribosome-vessel` watches the event bus and decides *whether* to extract; the `ribosome-extract` activity template decides *what* the extracted template looks like. Splitting it this way means extraction is itself traced, graded and replaceable.
 
 ### How Ribosome Extraction Works
 
 ```mermaid
 sequenceDiagram
-    participant Exec as Execution Complete
-    participant Criteria as Extraction<br/>Criteria Check
-    participant Ribosome as assembleTemplateFromExecution
-    participant Template as Template Builder
-    participant Registry as Template Registry
-    participant Thompson as Thompson Sampling
+    participant API as activity-api WebSocket bus
+    participant Ribo as ribosome-vessel
+    participant Census as Durable task census
+    participant GH as goal-host-vessel
+    participant Tmpl as ribosome-extract activity
 
-    Note over Exec,Thompson: RIBOSOME PATTERN - TEMPLATE EXTRACTION
+    API-->>Ribo: task_completed events (per task)
+    API-->>Ribo: execution_completed {executionId, reached, meta}
 
-    Exec->>Criteria: Execution succeeded?
+    Ribo->>Census: prefer the durable census over in-memory counters
+    Census-->>Ribo: {taskCount, completedTaskCount, failedTaskCount}
 
-    Criteria->>Criteria: Check extraction criteria:<br/>✓ success = true<br/>✓ Has state transitions<br/>✓ Has tool calls<br/>✓ Not previously extracted<br/>✓ Unique execution pattern
+    Ribo->>Ribo: allSucceeded = failed = 0 AND completed > 0<br/>AND completed = taskCount
+    Ribo->>Ribo: recursion safety — skip when the producing<br/>activity id starts with "ribosome"
+    Ribo->>Ribo: markDispatched(executionId) — extract at most once
 
-    alt Criteria NOT Met
-        Criteria-->>Exec: Skip extraction
-    else Criteria Met
-        Criteria->>Ribosome: assembleTemplateFromExecution(trace)
-
-        Ribosome->>Ribosome: STEP 1: Extract tasks<br/>From execution trace
-
-        Ribosome->>Ribosome: For each task result:<br/>- Extract prompt template<br/>- Identify variable placeholders<br/>- Generalize tool arguments<br/>- Extract validation rules
-
-        Ribosome->>Template: STEP 2: Build template structure
-
-        Template->>Template: {<br/>  name: "extracted_{original}_{hash}",<br/>  category: inferCategory(),<br/>  description: summarize(),<br/>  tasks: [{<br/>    id, description,<br/>    prompt: {<br/>      template: generalized,<br/>      variables: extracted[]<br/>    },<br/>    validation: {<br/>      requiredFiles: inferred,<br/>      requiredPatterns: from success,<br/>      forbiddenPatterns: from failures<br/>    }<br/>  }],<br/>  metadata: {<br/>    extractedFrom: executionId,<br/>    extractedAt: timestamp,<br/>    sourceTemplate: originalId,<br/>    confidence: calculateConfidence()<br/>  }<br/>}
-
-        Template->>Template: STEP 3: Generalize variables
-
-        Template->>Template: Detect patterns:<br/>- File paths → {{filePath}}<br/>- Names → {{itemName}}<br/>- Counts → {{count}}<br/>- IDs → {{id}}
-
-        Template->>Template: Extract variable metadata:<br/>- type: string | number | boolean<br/>- required: true | false<br/>- default: value?<br/>- description: inferred
-
-        Template->>Registry: STEP 4: Register template
-
-        Registry->>Registry: Validate template structure
-
-        Registry->>Registry: Assign ID:<br/>"extracted_{hash}"
-
-        Registry->>Thompson: Initialize Thompson Sampling<br/>α = 1, β = 1<br/>(neutral prior)
-
-        Thompson-->>Registry: Template ready for selection
-
-        Registry-->>Ribosome: Template registered
-
-        Ribosome-->>Exec: Extraction complete:<br/>New template available
+    alt reached AND allSucceeded AND not ribosome-family
+        Ribo->>GH: POST /run-goal {targetTemplateId: "ribosome-extract",<br/>variables: {executionId, applyExtraction: true, lifecycle}}
+        GH->>Tmpl: run the extraction activity
+        Tmpl->>Tmpl: acquire_trace_signature → executionTraceWithSignatures
+        Tmpl->>Tmpl: assess_quality → qualityScore
+        Tmpl->>Tmpl: synthesize_template → extractedTemplate
+        Tmpl->>Tmpl: validate_proposal → validation_result
+        Tmpl->>Tmpl: dispatch_write_attempt → writeAttempt
+        Tmpl->>Tmpl: dispatch_write_succeeded → activityTemplate
+        Tmpl->>Tmpl: emit_summary → learningSummary
+    else gate fails
+        Ribo->>Ribo: drop the execution state
     end
 ```
 
-**Implementation:** `repos/ribosome-vessel/` — subscribes to `task.completed` / `lifecycle:execution:succeeded` on the activity-api WebSocket bus and calls `assembleTemplateFromExecution`, writing via the `activityTemplate_update` impulse.
+The bus subscription is not the only trigger. `mintReachedTrace` in goal-host-vessel dispatches the same `ribosome-extract` activity directly when a walk reaches, which is the more reliable path because it fires on the reach verdict rather than on an all-tasks-succeeded heuristic. `buildCompositeTraceFromChain` assembles a multi-hop reached walk into a single composite trace with a deterministic id, so re-running the same composition upserts one learned row instead of spawning duplicates.
+
+**Implementation:** `repos/ribosome-vessel/src/index.ts` (`dispatchRibosomeExtract`, `onTaskCompleted`, the `execution_completed` handler, `replay-observer.ts`); the activity itself at `repos/ias-executor-ts/src/templates/lifecycle/ribosome-extract.json`; the direct trigger `mintReachedTrace` and `buildCompositeTraceFromChain` in `repos/goal-host-vessel/src/index.ts`.
 
 ### Extraction Criteria
 
-Not all executions become templates. The ribosome only extracts when:
+The gate is deliberately strict, because a template extracted from a partial or hollow run poisons every posterior downstream of it. All of the following must hold before `ribosome-extract` is dispatched:
 
-```typescript
-function shouldExtractTemplate(trace: ExecutionTrace): boolean {
-  return (
-    trace.success === true &&                    // Must succeed
-    trace.tasks.length > 0 &&                    // Must have tasks
-    trace.tasks.some(t => t.toolCalls?.length > 0) &&  // Must use tools
-    hasStateTransitions(trace) &&                // Must change state
-    !alreadyExtracted(trace.executionId) &&      // Not already extracted
-    hasUniquePattern(trace)                      // Novel execution pattern
-  );
-}
-```
+- **Reached.** The execution's reach verdict is true. `status = completed` alone is not sufficient, which is the whole point of the gate in [01](./01-activity-selection.md).
+- **Every task terminal and successful.** `failedTaskCount = 0`, `completedTaskCount > 0`, and `completedTaskCount = taskCount`. Requiring the equality is what excludes a run abandoned mid-flight; `failed = 0` alone would score non-terminal tasks as fine.
+- **Durable census preferred.** Counts come from the durable per-execution census when it is present and non-empty, falling back to in-memory counters only when the trace store has not converged.
+- **Not the ribosome family.** A producing activity id beginning with `ribosome` is excluded at the source, because an extraction run is itself an execution that emits `execution_completed` — without this the ribosome extracts from its own extractions.
+- **Once per execution.** `markDispatched` makes the dispatch idempotent across bus replays.
 
-**Why these criteria?**
-- **Success required** - Only learn from working executions
-- **Tool usage required** - Pure reasoning tasks don't need extraction
-- **State transitions required** - Must actually do something
-- **Uniqueness required** - Don't create duplicate templates
-- **Not already extracted** - One template per execution
+Beyond this gate the activity applies its own quality assessment: `assess_quality` emits a `qualityScore` and the synthesis task is conditional on the `lifecycle.qualityEligible` gate the dispatcher supplies.
 
 ### Template Generalization
 
-The ribosome converts **specific executions** into **general templates**:
+Synthesis is a task inside the activity (`synthesize_template`, LLM tier), producing an impulse of shape `extractedTemplate`. Because it is a task rather than hardcoded logic, the generalisation strategy is a prompt that can be graded and revised like any other.
 
-**Before (specific execution):**
-```typescript
-{
-  prompt: "Fix the authentication bug in src/auth.ts by updating the token validation logic",
-  variables: {},
-  result: "Fixed token validation by adding expiry check"
-}
-```
+What it works from is `executionTraceWithSignatures` — the trace enriched with shape signatures — so the generalisation is anchored on the shapes that actually flowed rather than on prose in the prompt. The output is a proposed activity template: tasks with their resolvers, declared input and output shapes, and the variables the trace showed varying.
 
-**After (generalized template):**
-```typescript
-{
-  prompt: {
-    template: "Fix the {{bugType}} bug in {{filePath}} by {{fixStrategy}}",
-    variables: [
-      { name: "bugType", type: "string", required: true,
-        description: "Type of bug (e.g., authentication, validation)" },
-      { name: "filePath", type: "string", required: true,
-        description: "Path to file containing the bug" },
-      { name: "fixStrategy", type: "string", required: true,
-        description: "Strategy for fixing the bug" }
-    ]
-  }
-}
-```
+The extraction dedupes against existing templates, so re-running a known activity does not mint a near-duplicate; only a genuinely novel reached trajectory becomes a seed. This matters because a duplicate mint splits selection traffic across two uninformed posteriors and raises the growth rate the learning loop has to outpace.
 
 ### Validation Rule Extraction
 
-The ribosome also extracts validation rules from execution patterns:
+Validation is a separate task (`validate_proposal`) emitting a `validation_result` impulse, and it runs before any write is attempted. Separating proposal from validation is what allows a bad synthesis to be rejected without ever reaching the template store.
 
-**From successful execution:**
-```typescript
-// Observed: Modified src/auth.ts, created test file
-{
-  validation: {
-    requiredFiles: ["src/auth.ts"],           // From filesModified
-    requiredPatterns: [
-      "token.*expiry",                         // From diff content
-      "validateToken"                          // From tool outputs
-    ],
-    forbiddenPatterns: []                      // From known anti-patterns
-  }
-}
-```
+The write itself is also split: `dispatch_write_attempt` emits a `writeAttempt`, and only `dispatch_write_succeeded` emits the `activityTemplate` shape plus `goalEnd`. A failed write therefore leaves a recorded attempt rather than a silently missing template, which is the difference between a diagnosable failure and an invisible one.
 
-**From failed attempts:**
-```typescript
-// Observed: Previous attempts failed with missing imports
-{
-  validation: {
-    requiredPatterns: [
-      "import.*Token",                         // Must have imports
-    ],
-    forbiddenPatterns: [
-      "require\\(",                            // Don't use require()
-      "eval\\("                                // Never use eval
-    ]
-  }
-}
-```
+Beyond the ribosome, the same discipline appears in the standalone validation resolvers — `validation.ts` and `verify-three-invariants.ts` in `repos/ias-executor-ts/src/resolvers/` — which emit `verifier_negative` failure modes rather than throwing, so a failed check grades the posterior instead of aborting the run.
 
 ### Ribosome in the Learning Loop
 
 ```
-1. Developer runs activity → Execution traced
-2. Execution succeeds → Ribosome extracts template
-3. Template registered → Thompson Sampling initialized
-4. Next similar goal → Template recommended
-5. Template executes → More data for Thompson Sampling
-6. Template improves → Or new variant extracted
+1. A goal is walked and the reach gate grades it reached
+2. mintReachedTrace (direct) or ribosome-vessel (bus) dispatches ribosome-extract
+3. ribosome-extract assesses quality, synthesises, validates, writes
+4. The new template enters the candidate pool with a neutral prior
+5. A later similar goal retrieves it through the tiered fallback
+6. Its outcome updates α/β through applyOutcomeToPosteriors
+7. Repeated reuse promotes the chain to walk_tier = learned_pathway
 ```
 
-**Key insight:** The ribosome creates a **continuous improvement loop** where:
-- Successful work becomes templates
-- Templates compete via Thompson Sampling
-- Best templates get used more
-- Variations are tried and extracted
-- The system evolves toward better solutions
+The loop only compounds if step 1 is honest. A hollow completion admitted at step 1 mints a template that will be selected, will fail, and will take real traffic with it — which is why the reach gate, not the exit status, is the trigger, and why the extraction gate re-checks the reach verdict rather than trusting the event that woke it.
 
 ### Example: Ribosome Self-Development
 
-The ribosome can extract templates for **improving itself**:
+Extraction applies to the substrate's own development work, because a code-change goal is an ordinary goal. A walk that lands a commit reaches, its trace is extracted, and the resulting template is available to the next similar change.
 
-**Execution:** Developer improves ribosome extraction logic
-**Extracted template:** "improve_pattern_extraction"
-**Next time:** System uses this template to improve other extractors
-**Result:** Self-improving extraction capabilities
-
-This is the **process-of-becoming** in action - the system improving the mechanism by which it improves.
+The reach gate is what keeps this honest for the code-change family specifically. `deterministic:favorable-compose` requires a `FAVORABLE` verdict **and** landing evidence — `push_status: "pushed"` or a `new_git_sha` — and withholds strong credit unless the non-fail-open markers `verified: true` and a non-empty `reachable_symbols` are present. Its mirror image, `deterministic:staged-not-landed`, grades a typecheck-clean patch that never left the clone as not reached. Without both, the system would extract templates for producing changes that were never actually made.
 
 ## Tool Argument Pattern Learning
 
+Argument patterns are learned from what tools were actually called with and how those calls turned out. The learning is backend-side and aggregated; the execution path only reports what happened, which keeps the hot path free of the learner and keeps the learner's view honest — it sees the calls that were really made, not the calls a policy said should be made.
+
+Two grains of evidence accumulate. Tool-level usage answers "which tools does this template rely on"; argument-level patterns answer "which argument shapes have succeeded for this tool". The second is what makes a surfaced hint useful rather than merely descriptive.
+
 ### Pattern Extraction
 
-```typescript
-// After each tool call, extract argument pattern
-function extractToolArgumentImpulse(toolCall: ToolCall): Impulse | null {
-  const { name, arguments: args, result } = toolCall;
+Reporting happens on two surfaces. Tool usage is recorded at `POST /v2/activities/tool-usage`, and argument-level patterns at `POST /v2/activities/tool-argument-patterns`, both on activity-api. The engine supplies the raw material on the task record — `resolverId`, `resolverTier`, `costUsd`, `tokensInput`, `tokensOutput`, `durationMs`, `success` — so the aggregate is attributable per tool and per tier.
 
-  // Compute stable hash of argument structure
-  const argShape = JSON.stringify(
-    Object.keys(args).sort()
-  );
-  const argHash = Bun.hash(argShape);
-
-  return {
-    id: `toolargs:${name}:${argHash}`,
-    pointer: {
-      type: "memo",
-      content: JSON.stringify({
-        toolName: name,
-        arguments: args,
-        argumentShape: argShape,
-        result: {
-          success: result.success,
-          outputLength: result.output?.length || 0
-        }
-      })
-    },
-    metadata: {
-      shape: "tool_invocation",
-      toolName: name,
-      argumentsHash: argHash,
-      successRate: result.success ? 1.0 : 0.0
-    },
-    tags: [`tool-args:${name}`, `activity:${activityId}`, `task:${taskId}`],
-    budget: 2000,
-    priority: "low"
-  };
-}
-```
+The grounded floor loop adds a second kind of extraction. `runGroundedToolLoop` keys each call as `${toolName}:${JSON.stringify(args)}` in a `doneKeys` set, so an identical call is never re-executed within a walk, and it records the literal command a tool was run with (`command`, `cmd`, `script`, or `sql` from the arguments) into `commandEvidence`. That evidence is passed to `verifyGoalReached`, which is what allows a reach verdict to scrutinise whether the command that ran actually matches the goal's intent.
 
 ### Pattern Storage and Retrieval
 
-```typescript
-// Backend stores patterns with Thompson Sampling
-interface ToolArgumentPattern {
-  toolName: string
-  argumentHash: string
-  arguments: object
-  successCount: number
-  failureCount: number
-  successRate: number      // successCount / (successCount + failureCount)
-  timesUsed: number
-  avgExecutionMs: number
-  lastUsed: Date
-}
-
-// Query top patterns for task
-const recommendations = await mcp.getToolArgumentRecommendations(templateId);
-// Returns top 5 by success rate
-
-// Inject into prompt as hints
-const hintBlock = `
-## Proven Tool Argument Patterns
-${recommendations.map(r =>
-  `- ${r.toolName}: ${JSON.stringify(r.arguments)} (${r.successRate * 100}% success, used ${r.timesUsed} times)`
-).join('\n')}
-`;
+```
+POST /v2/activities/tool-usage               → tool_usage / tool_usage_patterns
+POST /v2/activities/tool-argument-patterns   → tool_argument_pattern
+GET  /v2/activities/tool-usage               → aggregated usage
+GET  /v2/activities/tool-argument-recommendations
+                                             → proven argument patterns for a template
 ```
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (tool argument extraction and injection)
+Retrieval is a recommendation surface, not a mandate: the caller receives patterns ranked by observed success and decides whether to use them. `tool_execution_stats` holds the per-tool aggregates and `tool_argument_pattern` the per-argument-hash rows.
+
+The same shape of learning drives command reuse in goal-host-vessel. A command that produced a reached answer is persisted by `persistReachedCommand` and replayed for a later instance of the same goal; `tryLexicalRebind` adapts a cached command to a lexically similar goal by diff-aligning the varying slots. Both are suppressible per dispatch through the `ablation` option so a floor arm can be measured against the reused arm rather than assumed better.
+
+## Proven Tool Argument Patterns
+
+When a template has accumulated argument-level evidence, that evidence is surfaced to the caller rather than applied invisibly. `GET /v2/activities/tool-argument-recommendations` returns the patterns a template's prior executions succeeded with, and the caller may inject them as hints into the prompt it builds.
+
+Keeping this advisory is deliberate. An argument pattern that is silently forced would make a failure unattributable — the trace would show a call the model never chose — and would freeze the tool surface at whatever shape happened to work first. Surfacing it as a hint keeps the choice in the trace, which keeps it gradable.
 
 ## Error Impulse Creation
 
+Errors are data, not control flow. A resolver that fails returns a shaped impulse describing the failure, and the engine records a `FailureMode` on the trace; neither path throws away the surrounding execution.
+
 ### Error Impulse Structure
+
+The nested-dispatch case is the clearest example. The `activity` resolver catches a child failure and returns an impulse carrying:
 
 ```typescript
 {
-  id: `error:${taskId}:${activityId}:${timestamp}`,
-  pointer: {
-    type: "memo",
-    content: errorMessage
-  },
-  budget: Math.min(errorMessage.length / 4, 2000),
-  priority: "high",
-  metadata: {
-    shape: "previous_attempt_error",
-    attemptNumber: 2,
-    maxAttempts: 3,
-    failureType: "validation" | "execution" | "tool_failure" | "timeout",
-    validationError?: string,
-    toolName?: string,
-    availableOps: ["retry", "variant", "debug", "skip", "escalate"],
-    suggestedOp: "retry" | "variant" | "debug" | "escalate",
-    suggestionConfidence: 0.0 - 1.0
-  },
-  tags: ["error", `activity:${activityId}`, `task:${taskId}`]
+  metadata: { shape: "activityExecutionError" },
+  // content describes the failure; the calling template normally
+  // lists this shape in its outputShapes so a consumer can branch on it
 }
 ```
 
-### Error Impulse Injection on Retry
+At trace level the engine records:
 
 ```typescript
-// On retry attempt, error impulses from previous attempts
-// are loaded and injected into prompt context
-
-const errorImpulses = impulseStore.getByShape("previous_attempt_error");
-const errorContext = formatImpulsesForContext(errorImpulses);
-
-const fullPrompt = `
-${impulseContext}
-
-${errorContext}
-<!-- Previous attempts failed. Review error impulses above. -->
-
-${task.prompt.template}
-`;
+interface FailureMode {
+  type: string;                        // canonical set below
+  reason: string;
+  context?: Record<string, unknown>;   // e.g. {budget_type, consumed, allowed}
+}
 ```
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (createErrorImpulse)
+`TranslatingTraceSink` normalises `failureMode.type` at the wire boundary against `CANONICAL_FAILURE_TYPES` — `verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`. A type outside that set (notably the engine's own `execution_error`, which its catch assigns to any non-budget throw) is not dropped: the field is replaced with `{ type: "execution_error" }`, losing the `reason` while the trace still lands. `computeDeltas` in `posterior-update.ts` has no `execution_error` case, so such a trace, whenever `applyOutcomeToPosteriors` grades it at all (an ungraded reach verdict skips the update entirely), falls to its default branch — a warning plus the full `verifier_negative` penalty.
+
+### Error Impulse Injection on Retry
+
+Failures are fed back rather than merely logged. In the grounded floor loop, a failed tool call is pushed into the observation list as `TOOL <name> ERROR: <reason>` and included in the next iteration's prompt alongside the successful observations, under an instruction to reason only over real results. A call that failed is not added to `doneKeys`, so it may be retried with different arguments; a call that succeeded is, so it cannot spin.
+
+The loop stops itself in three ways: the iteration cap, the wall-clock deadline enforced inside a turn as well as between turns, and a no-progress check — if an iteration executed nothing new, because every call was a duplicate, unauthorised, or failed, the loop breaks rather than spinning.
+
+At walk level the equivalent feedback is the recovery loop in [04](./04-improvisation-failure-modes.md): the reach verdict's `reason` and `completion_shapes` are what `recommendExcluding` uses to pick a genuinely different approach.
 
 ## Complete Data Flow Diagram
 
 ```mermaid
 graph TD
-    A["PHASE 1: LOAD IMPULSES<br/>impulse.ts:load()"] -->|"Dispatch: local → custom → discovery → MCP"| B["Resolve pointers<br/>by type"]
-    B -->|"memo: embedded"| C["Use content directly"]
-    B -->|"file: filesystem"| D["Read from disk<br/>with line slicing"]
-    B -->|"activityOutput"| E["Resolve from store<br/>or MCP"]
-    B -->|"other types"| F["Query discovery-vessel<br/>or fallback to MCP"]
+    A["Task with declared inputShapes"] --> B["Bind impulses from the pool<br/>(ImpulseStore.findByShape / formatForContext)"]
+    B --> C["ResolverRegistry lookup by task.resolver"]
 
-    C --> G["Truncate to budget<br/>if needed"]
-    D --> G
-    E --> G
-    F --> G
+    C -->|"llm"| D["llm-resolver-vessel<br/>selectArm → provider → bounded tool loop"]
+    C -->|"deterministic"| E["local-tools-vessel<br/>shell / fs / git / code_* / web_search"]
+    C -->|"pattern"| F["Proxy resolvers<br/>(discovery-routed producer vessels)"]
+    C -->|"compose"| G["Child execution on the same runtime<br/>(depth + cycle guarded)"]
 
-    G --> H["Return loaded impulses[]"]
+    D --> H["Output impulses (metadata.shape set)"]
+    E --> H
+    F --> H
+    G --> H
 
-    H --> I["PHASE 2: FORMAT CONTEXT<br/>impulse.ts:formatImpulsesForContext"]
+    H --> I["ExecutionTaskRecord<br/>resolverId, resolverTier, inputShapes, outputShapes,<br/>consumedFromTaskIds, childActivityId,<br/>filesModified, filesCreated, materialsConsulted"]
 
-    I -->|"Has metadata"| J["Use pointer-mode<br/>&lt;impulse_ref&gt; tags<br/>shape metadata only"]
-    I -->|"No metadata"| K["Use content-mode<br/>&lt;impulse&gt; tags<br/>with full content"]
+    I --> J{"Budget ceiling hit?"}
+    J -->|"Yes"| K["BudgetExceededError →<br/>failureMode budget_exhausted"]
+    J -->|"No"| L["Next task, or finalize"]
 
-    J --> L["Build impulse_context block"]
-    K --> L
+    K --> M["ExecutionTrace"]
+    L --> M
 
-    L --> M["PHASE 3: INJECT INTO PROMPT<br/>activity.ts:execute"]
+    M --> N["TranslatingTraceSink<br/>(failure type normalised at the wire boundary;<br/>non-canonical → execution_error)"]
+    N --> O["POST /v2/activities/execution-traces"]
 
-    M --> N["substituteImpulses()<br/>Replace {{impulse:id}}<br/>placeholders"]
-    N --> O["Prepend formatImpulsesForContext()<br/>+ tool patterns<br/>+ error impulses if retry"]
-    O --> P["Build messages<br/>system + user"]
+    O --> P["applyOutcomeToPosteriors<br/>α/β deltas per failure mode"]
+    O --> Q["Composition-edge reconcile<br/>→ activity_composition_graph"]
+    O --> R["execution_completed on the WebSocket bus"]
 
-    P --> Q["PHASE 4: LLM RESOLVER<br/>llm.ts:completeWithTools"]
+    R --> S{"reached AND all tasks terminal-and-successful<br/>AND not ribosome family?"}
+    S -->|"Yes"| T["ribosome-extract activity<br/>assess → synthesize → validate → write"]
+    S -->|"No"| U["Drop"]
 
-    Q --> R["POST /messages to API<br/>with system + messages +<br/>tools definitions"]
-    R --> S{Tool calls<br/>in response?}
-
-    S -->|"No"| T["Return final content"]
-    S -->|"Yes"| U["Execute each tool call"]
-
-    U --> V{Tool type?}
-    V -->|"bash"| W["Validate + spawn process<br/>tools.ts:bash"]
-    V -->|"git"| X["Git command<br/>tools.ts:git"]
-    V -->|"read/write/edit"| Y["File operations<br/>tools.ts"]
-    V -->|"activity"| Z["Nested execution<br/>activity.ts:execute"]
-
-    W --> AA["Record tool call:<br/>name, args, result"]
-    X --> AA
-    Y --> AA
-    Z --> AA
-
-    AA --> AB["Append to messages<br/>assistant + tool result"]
-    AB --> R
-
-    T --> AC["PHASE 5: CREATE OUTPUT IMPULSES<br/>impulse.ts:createImpulse"]
-
-    AC --> AD["For each tool call:<br/>Create impulse<br/>id: tool:{name}:{taskId}:{ts}"]
-    AD --> AE["Store locally +<br/>post to MCP backend<br/>with 3x retries"]
-    AE --> AF["Broadcast to TUI"]
-
-    AF --> AG["PHASE 6: EXTRACT ARGUMENT IMPULSES<br/>tool-argument-extractor.ts"]
-    AG --> AH["Create impulse for<br/>tool arguments<br/>for pattern learning"]
-    AH --> AI["Store with tags<br/>tool-args, activity, task"]
-
-    AI --> AJ["PHASE 7: RECORD PATTERNS<br/>mcp.ts"]
-
-    AJ --> AK["recordToolArgumentPattern()<br/>- toolName<br/>- argumentHash<br/>- successRate<br/>- failureType if failed"]
-    AJ --> AL["recordImpulseRelevance()<br/>- which impulses loaded<br/>- execution success"]
-
-    AK --> AM["PHASE 8: VALIDATION<br/>activity.ts:runValidation"]
-    AL --> AM
-
-    AM --> AN{Validation<br/>passes?}
-    AN -->|"No"| AO["Create error impulse<br/>shape: previous_attempt_error"]
-    AN -->|"Yes"| AP["Return success"]
-
-    AO --> AQ["Store error impulse<br/>for retry context"]
-    AQ --> AR["Return task failed"]
-
-    AP --> AS["PHASE 9: STORE EXECUTION TRACE<br/>mcp.ts:storeExecutionTrace"]
-
-    AS --> AT["Send to backend:<br/>- taskId, prompt, result<br/>- tokens, metadata<br/>- inputState, outputState<br/>- stateTransition<br/>- impulseEvolution<br/>- toolCalls"]
-
-    AT --> AU["PHASE 10: LEARNING UPDATE<br/>Backend"]
-
-    AU --> AV["Thompson Sampling:<br/>Update α/β for variants"]
-    AU --> AW["Ribosome extraction:<br/>successful executions →<br/>new templates"]
-    AU --> AX["Pattern learning:<br/>tool arguments,<br/>impulse relevance<br/>composition edges"]
-
-    AV --> AY["READY FOR NEXT EXECUTION"]
-    AW --> AY
-    AX --> AY
+    T --> V["New activityTemplate enters the candidate pool"]
+    P --> V
+    Q --> V
 
     style A fill:#e1f5ff
-    style Q fill:#fff9c4
-    style AC fill:#c8e6c9
-    style AU fill:#ffd54f
-    style AY fill:#c8e6c9
+    style D fill:#fff9c4
+    style H fill:#c8e6c9
+    style P fill:#ffd54f
+    style V fill:#c8e6c9
 ```
 
 ## Tool Resolver Comparison
 
-| Resolver Type | Uses LLM | Latency | Impulse Input | Output Type | Security | Learning |
-|---------------|----------|---------|---------------|-------------|----------|----------|
-| **LLM** | Yes | Variable (seconds) | Context injection | Text + tool calls | Prompt injection risk | Token usage patterns |
-| **bash** | No | Fast (ms-seconds) | None | stdout/stderr | Command whitelist | Argument patterns |
-| **git** | No | Fast (ms-seconds) | None | git output | Safe git commands | Argument patterns |
-| **read** | No | Fast (ms) | None | File content | Path validation | Access patterns |
-| **write** | No | Fast (ms) | File content | Success/error | Path validation | Write patterns |
-| **edit** | No | Fast (ms) | old/new strings | Success/error | Exact match only | Edit patterns |
-| **activity** | Yes (nested) | Variable (seconds) | Full context | Execution result | Template validation | Composition edges |
-| **ribosome** | No | Fast (ms) | Execution trace | Template | Structure validation | Template evolution |
-| **impulse_create** | No | Fast (ms) | Pointer spec | Impulse ID | Type validation | Relevance scores |
+| Resolver family | Tier | Vessel | Consumes | Produces | Bounding | Learning signal |
+|---|---|---|---|---|---|---|
+| `llm_completion_dispatch` | `llm` | llm-resolver-vessel | prompt + optional tools | `llmCompletion` | `max_tool_iterations` (default 20, cap 30), `max_tokens` | model-policy arm outcome, cost, tokens |
+| `shell` / `bounded_shell` | `deterministic` | local-tools-vessel | command, cwd | `shellResult` | abort signal / explicit per-call timeout | task success, duration |
+| `fs_read` / `fs_write` / `fs_edit` | `deterministic` | local-tools-vessel | path (+ content) | `fileContent`, `fileWriteResult`, `fileEditResult` | per-call | `filesModified`, `filesCreated` attribution |
+| `git_status` / `git_diff` / `git_commit` | `deterministic` | local-tools-vessel | repository args | `gitStatus`, `gitDiff`, `gitCommitResult` | per-call | landing evidence for the reach gate |
+| `code_*` | `deterministic` | local-tools-vessel | symbol / anchor / lines | `codeSearchResult`, `codeReplaceResult`, `codeTypecheckResult`, … | per-call | edit-family reach verdicts |
+| discovery proxies | `pattern` | goal-host-vessel → producer vessel | pointer built from config + variables + slots | the advertised shape | vessel `resolve_timeout_ms` | resolver attribution per tier |
+| `compose` / `compose_parallel` / `activity` | `deterministic` (dispatch) | ias-executor-ts engine | `subActivityId(s)` or template | child outputs, or `activityExecutionError` | depth cap + cycle check, refusing before the child starts | composition edges, chain-derived walk tier |
+| `ribosome-extract` (as an activity) | mixed | goal-host-vessel | `executionId` + lifecycle | `extractedTemplate`, `activityTemplate` | reach + all-tasks gate, once per execution | new templates entering the pool |
 
-**Key insights:**
-
-1. **LLM resolver is the orchestrator** - Calls other resolvers via tool calling
-2. **Deterministic resolvers are fast** - No LLM overhead, just execution
-3. **Activity resolver enables composition** - Activities can call activities
-4. **Ribosome resolver enables learning** - Successful patterns become templates
-5. **All resolvers feed learning** - Every execution improves Thompson Sampling
+**Reading the table:** the tier column is what appears on the task record, and it is the axis along which cost and reliability are attributable. Substituting a cheaper tier for an expensive one is a measurable change precisely because the tier is recorded.
 
 ## File References
 
-| Component | File (live equivalent) | Purpose |
-|-----------|------|---------|
-| LLM Resolver | `repos/llm-resolver-vessel/` (`:8220`) | Tool calling loop |
-| Tool Definitions | `repos/local-tools-vessel/` (`:8230`) | All deterministic tool handlers |
-| Bash Resolver | `repos/local-tools-vessel/` (was `tools.ts:790-835`) | Command execution |
-| Git Resolver | `repos/local-tools-vessel/` (was `tools.ts:1114-1168`) | Git operations |
-| Activity Composition | `repos/goal-host-vessel/` + `ias-executor-ts` (was `tools.ts:1214-1246`) | Nested execution |
-| Ribosome Extractor | `repos/ribosome-vessel/` (bus subscriber; `assembleTemplateFromExecution` in ias-executor-ts) | Template extraction |
-| Impulse Creation | `repos/goal-host-vessel/` + `ias-executor-ts` (was `impulse.ts`) | Store and lifecycle |
-| Output Impulses | `repos/goal-host-vessel/` + `ias-executor-ts` (was `activity.ts:3213-3273`) | Tool result → impulse |
-| Error Impulses | `repos/goal-host-vessel/` + `ias-executor-ts` (was `impulse.ts:881-961`) | Error context capture |
+| Component | Location | Entry symbols |
+|-----------|----------|---------------|
+| Resolver contract | `repos/ias-executor-ts/src/resolvers.ts` | `Resolver`, `ResolverContext`, `ResolverRegistry` |
+| Execution + composition guards | `repos/ias-executor-ts/src/engine.ts` | `ActivityExecutor.execute`, `BudgetExceededError`, `compose` / `compose_parallel` branches |
+| Nested dispatch resolver | `repos/ias-executor-ts/src/resolvers/activity.ts` | `activity` resolver, `activityExecutionError` |
+| LLM prompt resolver | `repos/ias-executor-ts/src/resolvers/llm-prompt.ts` | emits `lifecycle:llm:dispatched` before the call |
+| Validation resolvers | `repos/ias-executor-ts/src/resolvers/validation.ts`, `verify-three-invariants.ts` | `verifier_negative` emission |
+| Trace wire boundary | `repos/ias-executor-ts/src/adapters/activity-api-trace-sink.ts` | `TranslatingTraceSink`, `CANONICAL_FAILURE_TYPES` |
+| Ribosome activity | `repos/ias-executor-ts/src/templates/lifecycle/ribosome-extract.json` | `acquire_trace_signature` → `emit_summary` |
+| LLM tier | `repos/llm-resolver-vessel/src/index.ts`, `src/model-policy.ts` | tool loop, `selectArm`, `recordArmOutcome` |
+| Deterministic tier | `repos/local-tools-vessel/src/index.ts` | resolver map + advertised shapes |
+| Ribosome trigger | `repos/ribosome-vessel/src/index.ts` | `dispatchRibosomeExtract`, `onTaskCompleted` |
+| Grounded floor loop | `repos/goal-host-vessel/src/index.ts` | `runGroundedToolLoop`, `universalToolFallback`, `ufExecuteTool`, `ufBuildWriteTool` |
+| Reached-command reuse | `repos/goal-host-vessel/src/index.ts` | `persistReachedCommand`, `loadReachedCommandCache`, `tryLexicalRebind` |
+| Composition edges | `repos/activity-api/src/routes/activities.ts` (`/composition*`), `activities.composition.ts` | `classifyCompositionEdge` |
+| Posterior application | `repos/activity-api/src/lib/posterior-update.ts` | `applyOutcomeToPosteriors` |
+| Tool patterns | `repos/activity-api/src/routes/activities.ts` | `/tool-usage`, `/tool-argument-patterns`, `/tool-argument-recommendations` |
 
 ## Implementation Architecture
 
-This sequence runs **across the substrate vessels (execution)** with backend involvement for pattern storage and learning.
+Resolvers execute where their data is; patterns are learned centrally. That is the whole architecture, and every placement decision below follows from it.
+
+The reason the split is drawn there rather than anywhere else is latency and locality. Putting the learner on the hot path would make every tool call wait on an aggregate query, and moving a resolver away from its data would mean duplicating access to that data. Reporting outcomes asynchronously satisfies both: the resolver stays with its data, the learner sees every outcome, and neither blocks the other.
 
 ### goal-host-vessel + resolver vessels (Execution Environment)
 
 **Responsibilities:**
-- LLM resolver with tool calling loop (max 20 iterations) — `llm-resolver-vessel`
-- Deterministic resolvers (bash, git, read, write, edit) — `local-tools-vessel`
-- Activity resolver (nested activity execution for composition) — `goal-host-vessel`
-- Ribosome resolver (template extraction from successful executions) — `ribosome-vessel` (bus subscriber)
-- Impulse context injection into LLM prompts — `goal-host-vessel`
-- Tool argument pattern extraction — `goal-host-vessel`
-- Output impulse creation from tool results — `goal-host-vessel`
-- Error impulse creation on validation failures — `goal-host-vessel`
-- State capture (input/output/transition) — `goal-host-vessel`
+- Bind declared input shapes from the impulse pool and dispatch to the registered resolver.
+- Run the LLM tier in `llm-resolver-vessel`, including the bounded tool loop and learned model-arm selection.
+- Run the deterministic tier in `local-tools-vessel`, each handler bounding its own timeout and output.
+- Run nested dispatch in the engine with the depth and cycle guards, refusing before a child starts.
+- Run the grounded floor loop (`runGroundedToolLoop`) when no producer exists for a target shape, separating grounding reads from side-effect writes and recording literal command evidence.
+- Record per-task attribution and emit the trace through `TranslatingTraceSink`.
+- Trigger extraction on a reached walk via `mintReachedTrace`.
 
-**Key Files (live):**
-- `repos/llm-resolver-vessel/` (`:8220`) - LLM tool calling loop
-- `repos/local-tools-vessel/` (`:8230`) - all deterministic tool handlers
-- `repos/goal-host-vessel/` + `@avigopal/ias-executor-ts` - activity resolver (composition), impulse creation/storage, tool-arg extraction
-- `repos/ribosome-vessel/` (`:8240`) - template extraction on the bus
-
-**What the execution environment Does NOT Do:**
-- Does NOT compute tool argument success rates (backend aggregates)
-- Does NOT select "best" argument patterns (backend provides recommendations)
-- Does NOT persist patterns beyond session (backend stores)
+**What the execution environment does not do:** it does not aggregate success rates, does not rank argument patterns, and does not persist templates.
 
 ### Activity-API (Storage & Learning Backend)
 
 **Responsibilities:**
-- Store tool argument patterns with success/failure tracking
-- Compute tool argument success rates (Thompson Sampling)
-- Provide top argument recommendations for tasks
-- Store execution traces with tool call records
-- Track impulse relevance (which impulses loaded → success)
-- Aggregate composition edges (parent activity → child activity)
-- Ribosome template storage (new templates from extractions)
-
-**Key Endpoints:**
-- `POST /v2/activities/tool-usage` - Record tool argument patterns
-- `GET /v2/activities/tool-recommendations` - Get proven argument patterns (top 5)
-- `POST /v2/activities/execution-traces` - Store full execution trace
-- `POST /v2/activities/composition` - Record composition edges
-- `POST /v2/activities/templates` - Register extracted templates (ribosome output)
-
-**Key Files:**
-- `repos/activity-api/src/routes/activities.ts` - Tool pattern endpoints
-- `repos/activity-api/src/routes/composition-edges.ts` - Composition tracking
-- (Template extraction itself runs in `repos/ribosome-vessel/`, which writes via the `activityTemplate_update` impulse)
+- Persist traces at `POST /v2/activities/execution-traces`, including per-task resolver attribution and the canonical failure mode.
+- Apply posterior deltas with `applyOutcomeToPosteriors`, differentiating by failure mode rather than treating every failure alike.
+- Store and serve tool usage and argument patterns (`/tool-usage`, `/tool-argument-patterns`, `/tool-argument-recommendations`).
+- Record and serve composition edges over `activity_composition_graph`.
+- Register templates — including ribosome-extracted ones — at `POST /v2/activities/templates`.
+- Broadcast `execution_completed` and the other lifecycle events that subscriber vessels consume.
 
 ### SurrealDB Schema
 
-**Tables:**
-- `tool_argument_pattern` - Tool argument hashes with success/failure counts
-- `activity_execution_trace` - Full execution traces with tool call records
-- `composition_edges` - Parent activity → child activity relationships
-- `activity_template` - Templates (including ribosome-extracted ones)
-- `impulse_relevance_metrics` - Impulse→activity success correlation
+**Tables this sequence writes or reads:**
+- `activity_execution_traces` — traces with per-task records, failure mode and reach fields.
+- `activity_template` — templates, including extracted ones and variants.
+- `activity_composition_graph` — parent→child activity edges with their `genuine` / `scaffold` / `hub` classification.
+- `tool_argument_pattern`, `tool_usage`, `tool_usage_patterns`, `tool_execution_stats` — tool-level learning.
+- `variant_performance_metrics` — shape-conditioned α/β per variant.
+- `llm_resolution_log` — LLM dispatch records.
+- `code_variants` — code-variant rows for the edit family.
 
-**Indexes:**
-- `tool_argument_pattern` by tool_name, argument_hash
-- `composition_edges` by parent_id, child_id
-- `activity_template` by category, extracted_from
+**Retired:** `composition_edge` and its account-id back-compat view were removed with their routes and helper function. Composition learning reads and writes `activity_composition_graph`.
 
 ### Correct Separation
 
-**The execution environment handles (execution-time):**
-- Tool execution (bash, git, file operations) — `local-tools-vessel`
-- LLM tool calling loop (max 20 iterations) — `llm-resolver-vessel`
-- Activity composition (nested execution) — `goal-host-vessel`
-- Ribosome extraction logic (template assembly) — `ribosome-vessel`
-- Impulse creation (output, error, argument impulses) — `goal-host-vessel`
-- State transitions (before/after hashes) — `goal-host-vessel`
+**Execution-time:** tool execution and its bounding, the LLM tool loop, model-arm selection, nested dispatch and its guards, output-impulse creation, per-task attribution, and the reach-triggered extraction dispatch.
 
-**Activity-API handles (storage/learning):**
-- Tool argument pattern storage
-- Success rate computation (Thompson Sampling on arguments)
-- Proven pattern recommendations
-- Execution trace persistence
-- Composition edge tracking
-- Template registration (from ribosome)
+**Storage and learning:** trace persistence, failure-mode-differentiated posterior updates, tool and argument pattern aggregation, composition-edge classification and reconciliation, template registration.
 
-**Why This Separation Matters:**
-- The resolver vessels execute tools directly (no backend latency on the hot path)
-- Backend learns from tool usage patterns asynchronously
-- Tool recommendations improve over time (Thompson Sampling)
-- ribosome-vessel extracts templates from the event bus, backend stores for reuse
-- Composition tracking enables learning orchestration patterns
+**Why this separation matters:**
+- The hot path never waits on the learner; a backend outage degrades learning rather than blocking execution.
+- A resolver stays with its data, so adding a capability means advertising a shape from the vessel that owns it — not adding a case to a central switch.
+- Because tiers are recorded, substituting a cheaper tier is a measurable experiment rather than a guess.
+- Because extraction is an activity, the mechanism that creates templates is itself traced, graded, and replaceable by a better variant.
 
-**Key Architectural Point:**
-Resolvers execute in the substrate vessels (goal-host-vessel + llm-/local-tools-/ribosome-vessel), but their patterns are learned in the backend (aggregated). This separates execution from online learning.
+**Key architectural point:** the LLM is one resolver tier among four. Anything that makes the LLM the controller — routing every decision through it, or letting it process raw data instead of reasoning over metadata — collapses the tier distinction that the cost and reliability accounting depends on.
 
 ## Related Documentation
 
-- [Impulse Resolution](./02-impulse-resolution.md) - How impulses are loaded
-- [Activity Selection](./01-activity-selection.md) - How activities are chosen
-- [Improvisation](./04-improvisation-failure-modes.md) - What happens on failure (incl. in-flight recovery)
-- [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) - Foundational model
-
----
-
-**Last Updated:** 2026-06 (re-narrated: resolvers split across llm-resolver-vessel / local-tools-vessel / goal-host-vessel / ribosome-vessel)
+- [Impulse Resolution](./02-impulse-resolution.md) — how pointers become content
+- [Activity Selection](./01-activity-selection.md) — how activities are chosen and graded
+- [Improvisation & Failure Modes](./04-improvisation-failure-modes.md) — the failure taxonomy and recovery
+- [RESOLVER_TRACKING.md](../RESOLVER_TRACKING.md) — resolver attribution in traces
+- [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) — the foundational model

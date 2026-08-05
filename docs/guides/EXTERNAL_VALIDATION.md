@@ -701,6 +701,5 @@ The five stages map cleanly onto activities: `smoke-test-endpoint`, `probe-endpo
 
 ## Related Documentation
 
-- [Validation Resolver Design](/tmp/validation-resolver-design.md) - Complete design document
-- [IMPULSE_ACTIVITY_FOUNDATION.md](architecture/IMPULSE_ACTIVITY_FOUNDATION.md) - Core architecture
+- [IMPULSE_ACTIVITY_FOUNDATION.md](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) - Core architecture
 - [CLAUDE.md](../../CLAUDE.md) - Development philosophy

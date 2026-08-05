@@ -1,199 +1,295 @@
-# Impulse Shape Definitions
+# Impulse Shapes
 
-This directory contains shape definitions for the impulse system. Each document defines:
+A **shape** is the routing-and-reasoning key on an impulse: it names what kind
+of data the impulse carries, which vessel can resolve it, and what a reasoner
+can expect to find once it does. Shapes are not schemas. They are the vocabulary
+the walk binds along — a producer of shape X and a consumer of shape X compose
+because the names agree, not because a type checker proved it.
 
-- **Shape metadata structure**: What reasoners see before loading content
-- **Pointer structure**: How to reference this data type
-- **Data structure**: What the resolved content looks like
-- **Budget guidelines**: Resource limits for this shape
-- **Resolver assignment**: Which vessel resolves this shape
+This file is the index for that vocabulary. It says where the authoritative
+lists live, what invariant keeps them honest, and how to add a shape. It does
+not restate each shape's fields: a per-shape document goes stale the moment its
+vessel changes, and the vessel's advertisement is the thing routing actually
+reads. Where per-family prose detail exists, the relevant section links to it.
 
-## Shape Design Principles
+Grounding for the model these shapes implement:
+[IMPULSE_ACTIVITY_FOUNDATION.md](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md).
 
-Following [IMPULSE_ACTIVITY_FOUNDATION.md](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md):
+## Shape design principles
 
-1. **Metadata first, content later**: Shapes include `summary`, `sample`, and `availableOps` for reasoning
-2. **Resolvers live where data lives**: Shape definitions specify which vessel has the data
-3. **Shapes are universal**: Any vessel (dashboard, CLI, activities) can request these shapes
-4. **Resource budgets**: Every shape respects budget limits (row count, bytes, time)
+1. **Metadata first, content later.** An impulse carries metadata a reasoner can
+   act on before anything is loaded — `shape`, `summary`, `rowCount`, `columns`,
+   `sample`, `availableOps`, `producedBy` (the metadata schema is
+   `ImpulseMetadataObjectSchema` in `repos/activity-api/src/models/schemas.ts`).
+   The point is that a walk can decide whether an impulse is worth resolving
+   without paying to resolve it.
+2. **Resolvers live where the data lives.** A shape is advertised by the vessel
+   that holds its data. Moving the resolver is how you move the data, and
+   discovery re-routes without any caller changing.
+3. **Shapes are universal.** Any caller — an activity, a dashboard, another
+   vessel, the operator cockpit — asks for a shape the same way, through
+   `POST /v2/impulses/resolve` against whichever vessel discovery names.
+4. **Every resolution is budgeted.** Impulses carry a `budget`, and resolvers
+   are expected to return bounded results rather than everything they hold.
 
-## Shape Categories
+## The advertise-and-dispatch invariant
 
-### Cost and Metrics Shapes
+A vessel advertises shapes in one place and dispatches them in another, and the
+two must agree. For activity-api that is the `discovery.shapes` array in
+[`repos/activity-api/src/config.ts`](../../repos/activity-api/src/config.ts) and
+the `switch (pointer.type)` cases in
+[`repos/activity-api/src/routes/impulses.ts`](../../repos/activity-api/src/routes/impulses.ts).
+Advertising a shape with no case produces a shape the registry promises and the
+vessel then answers 404 `use_vessel_discovery` on, because the router's default
+branch treats any unrecognised pointer type as somebody else's data. A case with
+no advertisement is the mirror failure: a working resolver nothing can route to.
 
-Cost and usage metrics resolved by `activity-api` (has execution trace data).
+This is a checked invariant, not a convention. `packages/shape-dispatch-check/check.ts`
+extracts both sets from source and exits non-zero on either kind of mismatch.
+Vessels wire it in as `scripts/check-shape-dispatch.ts`; where the vessel's
+`lint` script invokes it, a mismatch fails lint rather than reaching discovery.
+Two escape hatches exist and both are explicit: a `// @shape-dispatch:private`
+comment above a case excludes it from the orphan-handler check (used for
+deprecated stubs that answer 410 Gone), and a `shape-dispatch.config.json` in
+the vessel root maps an advertised shape onto differently-named dispatch cases.
 
-> **Note (2026-05-27):** The live advertised shape names are camelCase (matching CLAUDE.md and `config.ts`). The snake_case names below were early design names; do not use them in pointer types.
+The practical consequence for this document: **do not list a shape here that the
+checker would not accept.** If it is not advertised and not dispatched, it does
+not exist, however plausible the name.
 
-**Shapes advertised by `activity-api`** (camelCase — use these in pointer types):
-- `executionCostSummary` — Aggregate cost metrics for executions (grouped by activity/vessel). Pointer fields: `activityId?`, `templateId?`, `vesselId?`, `since?`, `until?`, `groupBy?: 'day'|'week'|'month'|'activity'|'vessel'`.
-- `resolverCostAnalysis` — Cost breakdown by resolver tier and resolver ID. Pointer fields: `shape?`, `vesselId?`, `since?`, `limit?` (default 50).
-- `vesselPerformanceMetrics` — Performance and cost metrics for a specific vessel. Pointer fields: `vesselId` (required), `since?`, `includeResolutions?`.
-- `costByActivity` — Cost breakdown grouped by activity template. Pointer fields: `since?`, `until?`, `limit?` (default 50), `minCost?`.
-- `resolverPerformanceByShape` — Resolver performance metrics grouped by impulse shape. Pointer fields: `shape` (required), `since?`, `limit?` (default 20).
-- `costTrendOverTime` — Time-series cost data for trend analysis. Pointer fields: `activityId?`, `vesselId?`, `interval: 'hour'|'day'|'week'` (required), `since?`, `until?`.
+## Shape naming
 
-**Response format**: All resolvers return markdown-formatted content. Multi-tenant isolation is enforced via SurrealDB PERMISSIONS (`org_id = $token.org_id`) — no application-level org filter needed.
+Names are camelCase for the activity-api families (`activityExecutionTrace`,
+`executionTraceList`, `traceAggregateReport`). Snake_case names appear in the
+tree — `shape_gap_resolution`, `test_audit_report`, `goal_verification_label` —
+because families were added at different times, and they are correct exactly as
+advertised. The pointer type is the advertised string, verbatim; there is no
+normalisation step that would forgive a case difference.
 
-**Implementation status**: Shapes are documented in CLAUDE.md and were implemented (2026-04-20) but are not visible in `repos/activity-api/src/config.ts` discovery advertisement as of 2026-05-27 — verify `discovery.shapes` before relying on dynamic routing for these shapes.
+Beyond casing: name the data the shape returns, not the query that produced it.
+Indicate granularity where it matters (`Summary`, `List`, `Report`, `Metrics`).
+Suffix `_write` for a mutation shape and keep the read shape's name as the stem,
+so a reader can see the pair.
 
-### Activity Learning Shapes
+## Activity-api shapes
 
-Canonical source of truth for advertised shapes: [`repos/activity-api/src/config.ts`](../../repos/activity-api/src/config.ts) (`discovery.shapes`). Case handlers live in `repos/activity-api/src/routes/impulses.ts`. Do not advertise a shape here that has no `case` in that router.
+Resolver: `activity-api`. This is the largest shape family in the fleet because
+the vessel holds the largest store: the execution traces, the activity registry,
+the Thompson posteriors, and the composition graph all live here, so every shape
+over them is advertised here too. The subsections below group them by what they
+do to that store — read, search, write, or destroy — and the grouping matters
+more than it looks, because a caller that reaches for a write shape when a read
+would have answered the question has already changed the thing it was measuring.
+The authoritative list is always `discovery.shapes` in the vessel's `config.ts`.
 
-**Read shapes** (v1.5.5):
-- `activityExecutionTrace` - Full execution trace with state transitions
-- `activityTemplate` - Activity template definitions
-- `activityMetrics` - Thompson Sampling statistics
-- `executionTraceList` - Paginated execution list (browse/inspect)
-- `variantMetricsSummary` - Thompson Sampling summary per variant
-- `activityTemplateRecommendation` - Recommendation output of the recommend path
-- `activityTemplatesByMetrics` - Templates filtered/ordered by performance
-- `executionTraces` - Query-able slice of execution trace rows
-- `goal` - Goal records used by orchestrator / goal-seeking flows
-- `toolRiskProfile` - Per-tool risk signals extracted from traces
-- `compositionSuccess` - Composition-edge success stats (**renamed** from `activityCompositionGraph`)
-- `impulseRelevance` - Impulse relevance scores (**renamed** from `impulseRelevanceMetrics`)
-- `preValidationResult` - Pattern-based pre-validation verdicts for tool arguments
-- `templateAuditReport` - Per-template deficiency reports (missing shapes, weak descriptions, alias clusters); descriptive, writes nothing. See [`../guides/TEMPLATE_UPKEEP.md`](../guides/TEMPLATE_UPKEEP.md).
+### Activity-api read and query shapes
 
-**Write shapes** (v1.5.0+) — see [`../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`](../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md):
-- 14 `*_write` shapes (e.g. `activityExecutionTrace_write`, `activityFeedback_write`, `impulseRelevance_write`) that delegate to REST endpoints so activities can invoke learning-loop writes through `POST /v2/impulses/resolve` without hardcoding routes.
+`activity`, `activityTemplate`, `activityMetrics`,
+`activityExecutionTrace`, `executionTraceList`, `executionTraces`,
+`executionTraceWithSignatures`, `executionReplicationPull`, `goal`,
+`goalExecutionPath`, `goal_verification_label`, `variantMetricsSummary`,
+`thompson_posterior`, `contextThompsonScores`, `activityTemplateRecommendation`,
+`activityTemplatesByMetrics`, `compositionSuccess`, `compositionGraph`,
+`impulseRelevance`, `toolRiskProfile`, `preValidationResult`,
+`templateAuditReport`, `traceAggregateReport`, `groupedExecutionStats`,
+`topologyCoverage`, `shape_gap_resolution`, `shape_producer_inventory`,
+`eventStream`, `mcpTool`, `discoverByShapesQuery`,
+`test_registration`, `test_report`, `test_audit_report`,
+`sensitivity_evidence`, `code_modification_proposal`.
 
-**Destructive shapes** (admin-only, emit `upkeepAuditLog`):
-- `activityTemplate_update` / `activityTemplate_deprecate` — see [`../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`](../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md)
-- `activityExecutionTrace_delete` — hard delete, audited.
+`db_admin` is advertised alongside them but is not a read: it is the substrate's
+surface for managing its own datastore, and it requires an authenticated caller.
+The resolver — not the caller — enforces the operation and pattern allowlists,
+a dry-run default, a row bound, rejection of catastrophic operations, and an
+audit trail.
 
-**Resolver**: `activity-api`
+Three of these are worth calling out because they are the ones a report goal
+should reach for. `traceAggregateReport` computes counts and sums in the
+database and returns `{key, value}` rows — the answer, not the raw material.
+`groupedExecutionStats` returns per-activity count, success rate, and dominant
+failure mode in one row, which is how a livelocked family becomes visible.
+`activityTemplatesByMetrics` orders templates by learned performance. Each ships
+a one-line description in `discovery.shapeDescriptions`, merged across vessels
+and served at `GET /registry/shape-descriptions`, so a planner can match a
+resolver from its description without a hand-written hint.
 
-**Renamed shapes (2026-04)**: `activityCompositionGraph` → `compositionSuccess`; `impulseRelevanceMetrics` → `impulseRelevance`; `toolUsagePatterns` → (internal `toolUsage` table, no longer advertised as a read shape — use the `toolRiskProfile` aggregate or the `toolUsage_write` resolver). The legacy names remain defined in older migrations for back-compat but are not in the discovery advertisement.
+### Activity-api search shapes
 
-### Code Analysis Shapes
+`activity_search`, `trace_search`, `tool_pattern_search` offer permissive,
+non-exact search over the template registry, execution traces, and
+tool-argument patterns. They exist for the cold-start path, where a hard shape
+filter would return nothing useful: near-misses are surfaced deliberately and
+the consuming activity ranks them, with declared output shapes contributing a
+soft boost rather than acting as a gate. Reach for them when nothing in the
+registry matches exactly and the walk still needs somewhere to start.
 
-(Not yet documented)
+### Activity-api write shapes
 
-**Shapes in use** (from analysis-vessel):
-- `problem_detection` - Code quality issues
-- `error_log` - Error log analysis
-- `source_code` - Source code content
-- `code_quality` - Quality metrics
+Each delegates to the same handler as the corresponding REST
+endpoint, so an activity can perform a learning-loop write through
+`POST /v2/impulses/resolve` without hardcoding a route. The response envelope
+suffixes `metadata.shape` with `_result` so a write ack is distinguishable from
+a read payload. Advertised and dispatched:
+`activityExecutionTrace_write`, `activityFeedback_write`,
+`activityComposition_write`, `activityTemplate_write`, `activityVariant_write`,
+`impulseRelevance_write`, `toolUsage_write`, `toolArgumentPattern_write`,
+`executionSequences_write`, `shapeScore_write`, `shapeGapResolution_write`,
+`similarState_write`, `goalSeeking_write`, `execution_write`,
+`goal_verification_label_write`, `test_registration_write`,
+`test_report_write`, `test_audit_report_write`, `sensitivity_evidence_write`,
+`code_modification_proposal_write`. Field-by-field bodies:
+[`../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`](../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md).
+That document also lists `compositionEdge_write`, which is neither advertised
+nor dispatched — write composition edges through `activityComposition_write`.
 
-**Resolver**: `analysis-vessel`
+### Activity-api destructive and retired shapes
 
-**TODO**: Document these shapes in `CODE_ANALYSIS_SHAPES.md`
+Three shapes mutate or remove what the learner has already recorded, and all
+three require an authenticated caller at the route (`requireAuthenticated` in
+activity-api's impulse router) rather than leaving that to the caller:
+`activityTemplate_update`, `activityTemplate_deprecate`, and
+`activityExecutionTrace_delete`. Past authentication the gates differ. For an
+org-scoped template no admin role or scope is consulted: the caller must be in
+the owning org, and the write itself is scoped to the caller's own tenant rows.
+A global-scope template additionally needs either an admin role
+or `admin` scope, or auditable evidence that passes the lifecycle evidence gate
+(`validateEvidenceGate`), which answers 422 when the evidence is insufficient.
+The trace delete is a hard delete of rows within the caller's own tenant scope,
+bounded by a `limit`, and it defaults to a dry run — `dryRun: false` is what
+makes it actually delete. Deprecating a template
+is almost always the right move over editing one in place — an edited template
+carries a posterior earned by a body that no longer exists. See
+[`../guides/TEMPLATE_UPKEEP.md`](../guides/TEMPLATE_UPKEEP.md).
 
-### Local Filesystem Shapes
+`analysisResult`, `cochangeSuggestions`, `impactAnalysis`,
+`codebaseSearch`, and `problemCluster` still have cases in activity-api's
+router, but each answers 410 Gone with a pointer to the analysis resolver. They
+were a proxy path that violated "resolvers live where the data lives"; they are
+marked `@shape-dispatch:private` and are not advertised. Resolve code-analysis
+shapes against analysis-vessel directly.
 
-(Not yet documented)
+## Code analysis shapes
 
-**Shapes in use** (from the execution host):
-- `file` - File content from filesystem
-- `directoryTree` - Directory structure
-- `gitDiff` - Git diff output
-- `memo` - Embedded text content
+Resolver: `analysis-vessel`, which is stateless — it builds a code property
+graph per request through `@avigopal/cpg-inference` and holds no datastore.
+Advertised in `repos/analysis-vessel/src/index.ts`: `source_code`, `error_log`,
+`problem_detection`, `code_quality`, `code_annotation`, `cpg_query_result`.
 
-**Resolver**: Local vessel
+## Concept and memory shapes
 
-**TODO**: Document these shapes in `FILESYSTEM_SHAPES.md`
+Resolver: `concept-db` for the concept graph and prose knowledge —
+`concept`, `conceptGraph`, `relatedConcepts`, `conceptSearch`,
+`conceptSequence`, `conceptUsageStats`, `impulseSignatureConcept`,
+`impulseCooccurrenceEdges`, plus the write family (`concept_write`,
+`concept_create_write`, `conceptLink_write`, `conceptSignatureUpsert_write`,
+`conceptUsage_write`, `conceptSequence_write`,
+`conceptCreditDecontaminate_write`) and the `embed` / `cluster` primitives.
+This is the vessel whose lessons are read at prompt-build time, which is what
+makes a concept written here teach the system rather than only the operator.
 
-## Adding New Shapes
+Resolver: `development-vessel` for substrate-resident memory and gap state —
+`memoryNote` / `memoryNote_write`, `substrateGap` / `substrateGap_write`,
+`poolImpulse` / `poolImpulse_write`. The memory store is a JSON file under the
+workspace root written atomically, not a table; the shape is the interface and
+the storage is the vessel's business.
 
-When defining new impulse shapes:
+## Local tool shapes
 
-1. **Create shape document** in this directory (e.g., `NEW_CATEGORY_SHAPES.md`)
-2. **Follow the template**:
-   - Purpose and use cases
-   - Metadata structure with all fields
-   - Pointer structure with parameters
-   - Data structure when loaded
-   - Budget guidelines
-   - Resolver assignment
-   - Implementation examples
-3. **Specify resolver location**: Which vessel owns this data?
-4. **Provide metadata examples**: What does reasoning context look like?
-5. **Document budget considerations**: Row limits, byte limits, query time
-6. **Align with foundation**: Check against principles in IMPULSE_ACTIVITY_FOUNDATION.md
+Resolver: `local-tools-vessel`. Result shapes: `shellResult`, `fileContent`,
+`fileWriteResult`, `fileEditResult`, `gitStatus`, `gitDiff`,
+`gitCommitResult`, `codeSearchResult`, `codeFindFunctionResult`,
+`codeFindImportResult`, `codeInsertResult`, `codeReplaceResult`,
+`codeReadResult`, `codeAddImportResult`, `codeTypecheckResult`,
+`webSearchResult`.
 
-## Shape Naming Conventions
+The same resolvers are also advertised under their tool names — `shell`,
+`bash`, `bounded_shell`, `fs_read`, `fs_write`, `fs_edit`, `git_status`,
+`git_diff`, `git_commit`, `code_search`, `code_find_function`,
+`code_find_import`, `code_insert_after_line`, `code_replace_lines`,
+`code_read_lines`, `code_add_import`, `code_verify_typecheck`, `web_search` —
+because edit paths drive tools by name. An unadvertised alias makes discovery
+answer "no producer" for a resolver that was sitting right there, which is why
+both sets are advertised even though they reach the same handlers.
 
-> **Note (2026-05-27):** The live convention for activity-api shapes is **camelCase** (e.g. `executionCostSummary`, `activityExecutionTrace`). The snake_case convention below was an early proposal that was not adopted. Use camelCase for any new shapes advertised via discovery and resolved through `POST /v2/impulses/resolve`.
+## Inline pointers
 
-- Use camelCase for activity-api shapes: `executionCostSummary`, not `execution_cost_summary`
-- Be descriptive: name the data type it returns, not the query filter
-- Indicate data granularity: `Summary`, `Timeline`, `Breakdown`, `Metrics`, `List`
-- Avoid redundancy in the name
+Not every impulse is fetched. A resolver that has already computed its result
+emits it with `pointer: { type: "memo" }`, `loaded: true`, and the content
+inline; `metadata.shape` still names what the content *is*
+(`activityExecutionSummary`, `activityExecutionError`, and so on). So `memo` is
+a pointer type, not a shape — nothing advertises it, nothing resolves it, and
+asking discovery for a `memo` producer is a category error. Read the shape from
+the metadata.
 
-## Cross-Vessel Shapes
+## Discovery integration
 
-Some shapes require data from multiple vessels:
-
-**Example**: `cost_breakdown_by_user`
-- Cost data from `activity-api` (execution traces)
-- User email from `identity-vessel` (user records)
-
-**Resolution strategies**:
-1. **Primary resolver coordinates**: Activity-API queries identity-vessel for user data
-2. **Client-side join**: Dashboard requests two impulses and joins locally
-3. **Denormalization**: Store redundant data (not recommended)
-
-See CLAUDE.md (Cost & metrics shape family) and the pointer-field notes in the Cost and Metrics Shapes section above for implementation patterns.
-
-## Discovery Integration
-
-Vessels advertise shapes via discovery-vessel registration:
+A vessel registers with discovery at startup, posting its identity, its
+endpoint, and its shape list:
 
 ```typescript
-// activity-api registration
-{
-  vesselId: 'activity-api-pod-1',
-  shapes: [
-    'execution_cost_summary',
-    'token_consumption_timeline',
-    'cost_breakdown_by_activity',
-    'activityExecutionTrace',
-    'activityTemplate',
-    // ... etc
-  ]
-}
-```
-
-Clients discover shapes via discovery-vessel query:
-
-```typescript
-// Find vessels that can resolve cost summaries
-const vessels = await discovery.resolve({
-  requiredShapes: ['execution_cost_summary']
+await fetch(`${DISCOVERY}/register`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', Authorization: `ApiKey ${key}` },
+  body: JSON.stringify({
+    vesselId: 'activity-api-local',
+    endpoint: 'http://127.0.0.1:8080',
+    shapes: ['activityExecutionTrace', 'activityTemplate', 'traceAggregateReport'],
+    shape_descriptions: { traceAggregateReport: 'Already-aggregated {key,value} rows …' },
+  }),
 });
 ```
 
-## Implementation Checklist
+Callers do not need to know who serves what. `POST /resolve` on discovery takes
+a pointer, finds the healthy vessels advertising that pointer type, picks one
+(policy pins first, then a direct local producer over a federated facade), and
+forwards the pointer to that vessel's resolve endpoint — `/v2/impulses/resolve`
+unless the registration overrode it:
 
-When implementing a new shape:
+```typescript
+const res = await fetch(`${DISCOVERY}/resolve`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ pointer: { type: 'traceAggregateReport', group_by: 'status' } }),
+});
+```
 
-- [ ] Define shape in shape document with all required fields
-- [ ] Implement resolver in appropriate vessel
-- [ ] Register shape with discovery-vessel (if using discovery)
-- [ ] Add tests for resolver implementation
-- [ ] Update vessel CLAUDE.md with shape list
-- [ ] Document budget behavior and query performance
-- [ ] Provide usage examples for dashboard/CLI/activities
+With no local producer, discovery forwards to peer instances before answering
+404, so a shape served on another substrate resolves through the same call. To
+inspect the vocabulary rather than use it: `GET /registry/shapes` returns the
+shape names the registry holds, `GET /registry/shape-descriptions`
+returns the merged one-liners, and `GET /vessels/:vesselId` returns a single
+vessel's registration including the shapes it advertises. Both registry reads
+accept `?org_ids=` to scope to shapes reachable by those tenants.
 
-## Future Work
+## Adding a new shape
 
-### Planned Shape Categories
+1. **Find the producer first.** If some vessel already advertises a shape that
+   covers the need, compose with it. A second name for the same data splits
+   routing and teaches the learner nothing.
+2. **Put the resolver where the data is.** If the data lives in another
+   vessel's store, the shape belongs to that vessel, not to the one that
+   happens to want it.
+3. **Advertise and dispatch together.** Add the name to the vessel's
+   `shapes` array and the matching case to its impulse router in the same
+   change, then run the vessel's shape-dispatch check.
+4. **Write a description.** One line in `shapeDescriptions` saying what it
+   produces and when to use it. This is what a decomposition planner reads;
+   without it the shape is reachable only by a caller who already knows it.
+5. **Bound the result.** Respect the impulse budget and return a bounded,
+   empty-but-valid response rather than a timeout when there is nothing to say.
+6. **Return metadata worth reasoning over.** `summary` at minimum; `rowCount`,
+   `columns`, and `sample` where the shape is tabular.
+7. **Exercise it through a real dispatch** and read the trace. A shape that has
+   never been resolved by a walk is a declaration, not a capability.
 
-- **Identity shapes** (`user_profile`, `org_settings`, `api_key_metadata`)
-- **Infrastructure shapes** (`vessel_health`, `deployment_status`, `resource_utilization`)
-- **Learning shapes** (`thompson_sampling_state`, `pattern_recognition_results`)
-- **Workflow shapes** (`ci_pipeline_result`, `deployment_trace`, `validation_result`)
+## Shape evolution
 
-### Shape Evolution
+Shapes are living specifications. Fields get added as executions reveal what
+callers actually need, `summary` and `sample` get richer as resolvers learn what
+made reasoning work, `availableOps` grows as new operations become supported,
+and budget guidance tightens as real usage patterns show up in traces.
 
-Shapes evolve as the system learns:
-
-- New fields discovered through execution
-- Metadata becomes richer (better summaries, samples)
-- `availableOps` expands as resolvers learn new operations
-- Budget recommendations improve based on usage patterns
-
-This is expected and encouraged - shapes are living specifications, not rigid contracts.
+Renames are the expensive case, because the name *is* the routing key: a rename
+strands every stored pointer and every composition edge that referenced the old
+string. Prefer adding a new shape and letting the old one age out under the
+learner's selection, over renaming one in place.

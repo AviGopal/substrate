@@ -83,10 +83,11 @@ INFO FOR DB;
 -- are defined for backward compatibility but are no longer issued against)
 ```
 
-**Fix:** Run migrations:
+**Fix:** Schema changes are migrations applied when the owning vessel's unit starts, so the
+remedy is to restart that vessel rather than to run a migration tool by hand. See
+[SCHEMA_OWNERSHIP.md](SCHEMA_OWNERSHIP.md) for which vessel owns which tables.
 ```bash
-cd repos/metabob-proto
-bun run surrealdb/lib/migrate.ts
+make -C scripts/substrate restart-<vessel>
 ```
 
 ---
@@ -334,18 +335,16 @@ Re-copy the key from the dashboard (shown once at creation). Ensure no trailing 
 SELECT * FROM schema_version ORDER BY applied_at DESC;
 ```
 
-**Fix:** Run migrations:
+**Fix:** Most schemas are migrations applied when the owning vessel's unit starts, so restarting
+that vessel is the remedy; see [SCHEMA_OWNERSHIP.md](SCHEMA_OWNERSHIP.md) for which vessel owns
+which tables. activity-api additionally carries a migration runner that can be invoked directly.
+
 ```bash
-# Core schemas
-cd repos/metabob-proto
-bun run surrealdb/lib/migrate.ts
+# Apply on unit start
+make -C scripts/substrate restart-<vessel>
 
-# Activity API schemas
+# activity-api schemas, applied directly
 cd repos/activity-api
-bun run sql/migrate.ts
-
-# Analysis vessel schemas (formerly metabob-analysis-api)
-cd repos/analysis-vessel
 bun run sql/migrate.ts
 ```
 

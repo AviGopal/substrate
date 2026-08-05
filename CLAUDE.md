@@ -254,7 +254,18 @@ bind internal ports; the host maps them by convention `18xxx → 8xxx`. Discover
 the live fleet rather than trusting a table: `docker ps --filter name=substrate`,
 `registry_query`, or per-vessel `/health`.
 
-Stable anchors (host-mapped):
+These are **fleet-wide anchors**, not a promise about any one deployment. The
+port is where the vessel binds *when it runs locally*; whether it runs locally
+depends on the substrate's role. A standalone substrate serves all of them. A
+spoke's role group (`roles.spoke` in `scripts/substrate/vessels.inventory.json`)
+leaves out units the hub owns — the trace store (`activity-api`, role `api`) and
+identity (role `control`) among them — and resolves those shapes on the hub
+through discovery, so a local `:18080` may legitimately answer nothing. A
+deployment can also mask individual units by name on top of its role selection
+(`DISABLED_VESSELS`), so any port may be dark for that reason too. Route by shape
+through discovery and let it place the call; reach for a host port only when
+you are deliberately talking to one machine's copy, and confirm first that the
+unit is unmasked there.
 
 | Endpoint | Vessel | Role |
 |---|---|---|

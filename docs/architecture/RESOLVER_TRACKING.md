@@ -2,7 +2,7 @@
 
 ## Overview
 
-The execution host records which resolver served each impulse, so selection can be learned rather than configured. The tier vocabulary below is the durable part: it is carried as `resolverTier` in the executor's ontology and advertised as `resolver_tier` by development-vessel.
+The execution host records which resolver served each impulse, so selection can be learned rather than configured. The tier vocabulary below is the durable part: it is carried as `resolverTier` on the task record in the executor's ontology, written to traces as the `resolver_tier` field, and rolled up by development-vessel's advertised `resolver_tier_cost_summary` shape.
 
 > **Foundation alignment:** Resolver-tracking is the data feed for the **forward arm of the two-direction learning duality** (`P(success | activity X resolves pointer of shape Y)`). It complements the reverse arm (slot-binding / Thompson recommendation writes). Both arms must update consistently — see [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md#two-direction-learning-duality).
 
@@ -42,7 +42,7 @@ Enable learning:
 | `pattern` | Pattern matching from history | PreValidationResolver |
 | `llm` | LLM reasoning required | LLMResolver with tool calling |
 
-> **Canonical reframe (2026-06).** These three tiers are **coarse bins of one
+> **Canonical reframe.** These three tiers are **coarse bins of one
 > continuous quantity** — the resolver's *directional certainty*: the (inverse)
 > expected uncertainty that its output lies along the goal-coplanar tangent of the
 > shape hypersurface. `deterministic` = sharp on-manifold direction; `llm` = high
@@ -187,165 +187,68 @@ Under cost-weighted selection, the distilled resolver dominates the LLM resolver
 
 ### The execution host
 
+The executor's ontology (`repos/ias-executor-ts/src/ontology.ts`) carries
+`resolverId` and an optional `resolverTier` on each task record, so the identity
+and tier of whatever served a task are part of the task's own data rather than a
+side channel. Everything downstream is a mapping of those two fields.
 
-**Function**: `executeWithResolver()` (line 2915+)
+Two adapters do that mapping. The trace sink and the activity-api provider
+(`repos/ias-executor-ts/src/adapters/activity-api-trace-sink.ts` and
+`activity-api-provider.ts`) both project each task to the wire body with
+`resolver_id: t.resolverId` and `resolver_tier: t.resolverTier` at the *top* of
+the task object — not nested — because that is where activity-api's persisted-task
+reader looks. Nesting them stored rows with undefined ids, which broke
+learning-loop attribution; flat placement is a contract, not a style
+choice. The provider additionally stamps `vessel_id` and `resolved_by_vessel_id`
+from the executor's own vessel id and POSTs to
+`/v2/activities/execution-traces`, retrying a bounded number of times with
+exponential backoff when the request throws or the response is 429/5xx; other
+non-OK statuses are logged and the trace dropped rather than aborting execution.
+Discarding the parent trace on a transient failure while its
+already-posted children survive is what orphans compositions, so the retry is
+load-bearing for the composition graph.
 
-```typescript
-async function executeWithResolver(impulse: Impulse, resolver: Resolver): Promise<ResolverResult> {
-  const startTime = Date.now();
-
-  try {
-    const result = await resolver.resolve(impulse);
-    const endTime = Date.now();
-
-    // Track resolver metadata
-    const resolverData = {
-      name: resolver.id,
-      vesselId: resolver.vesselId || 'local',
-      tier: resolver.tier,
-      inputShapes: [impulse.pointer.type],
-      outputShapes: result.shapes || [],
-      duration: endTime - startTime,
-      config: resolver.config || {}
-    };
-
-    // Store in task result
-    taskResult.metadata.resolverData = taskResult.metadata.resolverData || [];
-    taskResult.metadata.resolverData.push(resolverData);
-
-    return result;
-  } catch (error) {
-    // Track failure
-    const endTime = Date.now();
-    // ... error handling ...
-  }
-}
-```
-
-**Function**: `execute()` - Aggregate and send to backend
-
-```typescript
-async function execute(activity: Activity): Promise<ExecutionResult> {
-  // ... execute tasks ...
-
-  // Aggregate resolver data from all tasks
-  const impulseResolutions = [];
-
-  for (const taskResult of taskResults) {
-    if (taskResult.metadata?.resolverData) {
-      for (const resolverData of taskResult.metadata.resolverData) {
-        impulseResolutions.push({
-          impulse_id: resolverData.inputShapes[0], // Simplified
-          resolver_id: resolverData.name,
-          resolver_tier: resolverData.tier,
-          vessel_id: resolverData.vesselId,
-          latency_ms: resolverData.duration,
-          cost_usd: calculateCost(resolverData.tier, resolverData.duration)
-        });
-      }
-    }
-  }
-
-  // Include in execution trace
-  const trace = {
-    // ... other trace fields ...
-    impulse_resolutions: impulseResolutions,
-    resolved_by_vessel_id: getPrimaryVesselId(impulseResolutions)
-  };
-
-  // Send to backend
-  await mcp.storeExecutionTrace(trace);
-
-  return result;
-}
-```
+Per-impulse resolution rows are emitted by the vessel daemon
+(`repos/ias-executor-ts/src/hosts/vessel-daemon.ts`), which publishes a
+`task.completed` event carrying an `impulse_resolutions` array whose entries hold
+`impulse_id`, `resolver_id`, `resolver_tier`, `vessel_id`, `shape`, `latency_ms`,
+and `cost_usd`. A daemon-served resolve is recorded at the `deterministic` tier
+with zero cost.
 
 ### Activity-API
 
-**Schema**: `sql/064-add-resolver-tracking.surql`
+**Schema**: `repos/activity-api/sql/migrations/067-add-resolver-tracking.surql`
+adds the two execution-level rollup fields and their indexes:
 
 ```sql
-DEFINE FIELD impulse_resolutions ON TABLE execution TYPE option<array<object>>;
-DEFINE FIELD resolved_by_vessel_id ON TABLE execution TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS resolved_by_vessel_id ON execution TYPE option<string>
+  COMMENT "Vessel ID that resolved impulses for this execution";
+DEFINE FIELD IF NOT EXISTS resolver_tier ON execution TYPE option<string>;
 
--- Index for querying by vessel
-DEFINE INDEX idx_execution_vessel ON TABLE execution COLUMNS resolved_by_vessel_id;
+DEFINE INDEX IF NOT EXISTS idx_execution_vessel ON execution FIELDS resolved_by_vessel_id;
+DEFINE INDEX IF NOT EXISTS idx_execution_tier ON execution FIELDS resolver_tier;
 ```
 
-**Storage**: `src/routes/execution-traces.ts`
+The per-impulse `impulse_resolutions` array needs no field definition of its own:
+it rides inside the execution's flexible trace content, so its row shape is a
+contract between writer and reader rather than a schema constraint. That is why
+the writers above must agree on field names exactly — SurrealDB will not reject a
+misspelled key.
 
-```typescript
-app.post('/v2/activities/execution-traces', async (c) => {
-  const trace = await c.req.json();
+**Storage**: `repos/activity-api/src/routes/execution-traces.ts` serves
+`POST /v2/activities/execution-traces` (the router is mounted at that path, so
+the handler itself is registered on `/`). The handler persists
+`impulse_resolutions` only when the incoming trace actually carries it — the
+field is appended to the insert conditionally rather than defaulted to an empty
+array, so a trace that never resolved an impulse is distinguishable from one
+whose resolver data was lost in transit. Trace content of any size (the
+multi-KB `tasks`, `impulse_resolutions`, and `composition_chain` arrays) is
+stored apart from the row that queries scan, and read back by execution id when a
+caller asks for the full trace.
 
-  // Store trace with resolver data
-  const result = await db.create('execution', {
-    ...trace,
-    impulse_resolutions: trace.impulse_resolutions || [],
-    resolved_by_vessel_id: trace.resolved_by_vessel_id || null
-  });
-
-  return c.json({ id: result.id }, 201);
-});
-```
-
-**Queries**: `src/db/paradigm.ts`
-
-```typescript
-// Get resolver performance by shape
-async function getResolverPerformance(shape: string) {
-  const query = `
-    SELECT
-      impulse_resolutions[WHERE impulse_id CONTAINS $shape] AS resolutions
-    FROM execution
-    WHERE impulse_resolutions IS NOT NULL
-  `;
-
-  const results = await db.query(query, { shape });
-
-  // Aggregate stats
-  const stats = {};
-  for (const result of results) {
-    for (const resolution of result.resolutions) {
-      if (!stats[resolution.resolver_id]) {
-        stats[resolution.resolver_id] = {
-          count: 0,
-          totalLatency: 0,
-          totalCost: 0
-        };
-      }
-      stats[resolution.resolver_id].count += 1;
-      stats[resolution.resolver_id].totalLatency += resolution.latency_ms;
-      stats[resolution.resolver_id].totalCost += resolution.cost_usd;
-    }
-  }
-
-  return stats;
-}
-
-// Get vessel performance
-async function getVesselPerformance(vesselId: string) {
-  const query = `
-    SELECT
-      impulse_resolutions[WHERE vessel_id = $vesselId] AS resolutions
-    FROM execution
-    WHERE resolved_by_vessel_id = $vesselId
-  `;
-
-  const results = await db.query(query, { vesselId });
-
-  // Calculate metrics
-  const latencies = results.flatMap(r => r.resolutions.map(res => res.latency_ms));
-
-  return {
-    count: latencies.length,
-    avgLatency: latencies.reduce((a, b) => a + b, 0) / latencies.length,
-    p50: percentile(latencies, 0.5),
-    p95: percentile(latencies, 0.95),
-    p99: percentile(latencies, 0.99)
-  };
-}
-```
+**Retrieval**: resolver and vessel performance are derived by aggregating over
+`impulse_resolutions` rather than stored pre-computed, so a new grouping (by
+resolver, by vessel, by tier, by shape) costs a query and not a migration.
 
 ## Metrics
 
@@ -384,5 +287,7 @@ ORDER BY usage_count DESC;
 ## Related Documentation
 
 - [Impulse Resolution Sequence](./sequences/02-impulse-resolution.md)
-- [CLAUDE.md Trace Model](../../CLAUDE.md#execution-trace-model)
+- [Resolver Processing Sequence](./sequences/03-resolver-processing.md)
 - [Activity Execution Foundation](./IMPULSE_ACTIVITY_FOUNDATION.md)
+- [The substrate as software](./SUBSTRATE_AS_SOFTWARE.md) — §4.1 reframes
+  `resolver_tier` as directional certainty; §3 walks the trace through every lens.

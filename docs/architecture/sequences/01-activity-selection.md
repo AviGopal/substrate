@@ -1,711 +1,482 @@
 # Activity Selection from Impulse State Space
 
-> **How to read this.** The conceptual flow — Thompson Sampling, tiered fallback,
-> composition chain — is accurate. Selection and execution run inside the
-> substrate: a goal is dispatched through the metabob-mcp `mcp__metabob__run_goal`
-> tool to `goal-host-vessel`, which selects and executes against `activity-api`.
->
-> **Two June-2026 additions reflected below:** (1) Thompson selection is **state-conditioned** where a state signature is present (the recommend path keys on shape signature, falling back to global posteriors when none is available); (2) a single Thompson template pick is no longer the whole story — a goal also runs as a **shape-graph walk** (backward-chaining from goal shapes, mint-as-you-go bridge-authoring, `{{shape}}` data-flow binding), and after execution the **goal-reaching gate** (`verifyGoalReached`) decides success by whether the asked output was actually produced, not by exit status. See the new "Goal-Reaching Gate" section and [`GOAL_EXECUTION_PATHS_SCHEMA.md`](../GOAL_EXECUTION_PATHS_SCHEMA.md).
+> **How to read this.** Dispatch enters `goal-host-vessel` (`:8210` in-container,
+> `:18210` host-mapped) at `POST /run-goal` or `POST /resolve`. Selection posteriors,
+> template storage and tiered candidate retrieval live in `activity-api`
+> (`:8080` / `:18080`). Participants below are named by the symbol that implements
+> them, never by line number — this system rewrites its own source, so line
+> citations rot within a day.
 
 ## Overview
 
-This document maps the complete flow from user goal to activity execution through Thompson Sampling recommendation. The activity selection process is the entry point for all substrate executions, determining which activity template (or composed shape-graph walk) should be used to achieve a given goal. It runs in `goal-host-vessel`.
+This document maps the flow from a dispatched goal to an executed activity: how candidate templates are retrieved, how Thompson Sampling ranks them, how a goal that has no single matching template is walked over the shape graph instead, and how the post-execution reach gate decides whether the run actually counted.
 
-**Key Architectural Shift:** Goal processing is itself a meta-activity that composes other activities. There is no branching between "activity execution" and "improvisation" - everything flows through the activity composition system. **Success is determined after the fact by the goal-reaching gate** — a `status=completed` activity that did not produce the goal's completion shapes is `reached:false` and β-penalises the selected template.
+The two halves are split across vessels. `goal-host-vessel` owns the walk (`runGoalAsPoolWalk`), the recovery wrapper (`runGoalWithRecovery`), and the reach gate (`verifyGoalReached`). `activity-api` owns the candidate pool and the posteriors: `getActivitiesWithTieredFallback` retrieves, `betaSample` ranks, `insertExecution` and the feedback route update.
+
+**Success is decided after execution, not by exit status.** A run whose template returns `status=completed` but whose output does not fulfil the goal is graded `reached:false` and β-penalised through `penaliseHollowTemplate`.
 
 ## Key Concepts
 
-1. **Composition-Based Architecture** - Goal processing is a meta-activity that orchestrates sub-activities
-2. **Impulse State Space** - Available shapes and impulses inform activity compatibility
-3. **Thompson Sampling** - Probabilistic template selection that learns which variants perform best
-4. **Tiered Fallback** - Three-tier query strategy (exact → compatible → full-text search)
-5. **Heuristic Boosts** - 8 boost components + 1 mismatch penalty influence exploration-exploitation balance
-6. **Shape-Conditioned Scoring** - Activities scored based on impulse state space compatibility
-7. **Correlation Tracking** - Links selection decisions to execution outcomes for learning
-8. **Recursive Composition** - Activities can invoke other activities as sub-tasks
+1. **Tiered candidate retrieval** — `getActivitiesWithTieredFallback` returns a pool plus a `tier` label of `exact`, `compatible`, `fts`, or `fts_hybrid`.
+2. **Thompson Sampling** — `betaSample(alpha, beta)` draws a score per candidate; heuristic boosts are added to α before the draw.
+3. **Heuristic boosts** — eight additive boosts plus one shape-mismatch penalty, surfaced on the response as `boost_breakdown`.
+4. **Shape-conditioned scoring** — `computeShapeSignature` and `getShapeConditionedScores` key posteriors on the sorted shape signature, falling back to global α/β.
+5. **Shape-graph walk** — when no single template covers the goal, `runGoalAsPoolWalk` backward-chains from the goal's target shapes, selecting producers and satisfiers.
+6. **Walk tier** — every recorded path carries one of `learned_pathway`, `satisfier`, `universal_tool_fallback`, `feature_compose`, `fresh_derivation`.
+7. **Reach gate** — `verifyGoalReached` returns a `GoalReachVerdict` with `reached`, `reason`, and `completion_shapes`.
+8. **Per-goal path memory** — `recordGoalPath` writes `goal_execution_paths`; `recommendReachingPath` reads it back for a repeat of the same goal.
 
 ## Main Sequence Diagram
 
 ```mermaid
 sequenceDiagram
     participant User as Dispatch<br/>(mcp__metabob__run_goal)
-    participant GP as GoalHost<br/>(goal-host-vessel)
-    participant SSM as StateSpaceManager<br/>(goal-host-vessel)
-    participant Backend as Activity API<br/>(:18080)
-    participant TS as Thompson Sampling<br/>(activity-api paradigm.ts)
-    participant Exec as ActivityExecutor<br/>(goal-host-vessel)
+    participant GH as goal-host-vessel<br/>handleRunGoal
+    participant Walk as runGoalWithRecovery<br/>→ runGoalAsPoolWalk
+    participant API as activity-api<br/>(:8080)
+    participant TS as Tiered retrieval<br/>+ betaSample
+    participant Tools as Resolver vessels<br/>(llm / local-tools / …)
 
-    User->>GP: POST /run-goal {goal} → processGoal(message)
-    activate GP
-
-    rect rgb(240, 248, 255)
-    Note over GP: META-ACTIVITY LOADING
-    GP->>Backend: Load goal_processing_standard template
-    Backend-->>GP: Meta-activity template with composition chain
-    Note over GP: Template defines sub-activities:<br/>1. goal_analysis<br/>2. activity_recommendation<br/>3. execute_primary<br/>4. goal_verification<br/>5. improvise_solution (if needed)
-    end
+    User->>GH: POST /run-goal {goal, tags, variables}
+    activate GH
+    GH->>Walk: dispatch record created, walk started
 
     rect rgb(255, 250, 240)
-    Note over GP,SSM: SUB-ACTIVITY 1: GOAL ANALYSIS
-    GP->>SSM: getAvailableShapes()
-    SSM-->>GP: Set<string> shapes
-    GP->>SSM: getShapeSignature()
-    Note over SSM: Return sorted, deduplicated<br/>shape list for matching
-    SSM-->>GP: string[] signature
-    GP->>Exec: Execute goal_analysis activity
-    Note over Exec: LLM semantic analysis:<br/>- Extract category<br/>- Identify intent<br/>- Detect capabilities needed<br/>- Parse constraints
-    Exec-->>GP: Analysis result impulse
+    Note over Walk: TARGET INFERENCE
+    Walk->>Walk: inferGoalTargetShapes(goal)
+    Note over Walk: goalHashOf(goal) keys the per-goal memory;<br/>target shapes drive backward chaining
+    Walk->>API: POST /v2/goal-paths/recommend<br/>(recommendReachingPath)
+    API-->>Walk: recommended_paths (highest-α reaching path, if any)
     end
 
     rect rgb(240, 255, 240)
-    Note over GP,Backend: SUB-ACTIVITY 2: ACTIVITY RECOMMENDATION
-    GP->>Backend: POST /v2/activities/recommend<br/>(activities.ts:3080-3116)
-    Note over Backend: Request:<br/>{<br/>  goal: enriched_description,<br/>  shapes: available_shapes,<br/>  category: detected_category,<br/>  limit: 3<br/>}
-
-    activate Backend
-
-    rect rgb(250, 250, 255)
-    Note over Backend,TS: TIER 1: Exact Shape Match
-    Backend->>TS: query(input_shapes ALLINSIDE shapes)<br/>(paradigm.ts:2915-3049)
-    TS-->>Backend: Templates with exact match
-
-    alt Exact matches found (score >= 0.5)
-        Note over Backend: ✓ Use exact matches
-    else No exact matches
-        Note over Backend,TS: TIER 2: Compatible Activities
-        Backend->>TS: query(all activities, no shape filter)
-        TS-->>Backend: All templates (compatibility scored)
-
-        alt Compatible found (score >= 0.5)
-            Note over Backend: ✓ Use compatible
-        else No compatible
-            Note over Backend,TS: TIER 3: Full-Text Search
-            Backend->>TS: fullTextSearch(goal.description)
-            TS-->>Backend: Text-matched templates
-        end
+    Note over Walk,API: CANDIDATE RETRIEVAL + RANKING
+    Walk->>API: POST /v2/activities/recommend<br/>{goal, task_description, expected_output_shapes, limit}
+    activate API
+    API->>TS: getActivitiesWithTieredFallback(shapes, category, goal, …)
+    Note over TS: Tier 1 queryActivitiesByShapes (exact)<br/>Tier 2 same query, no shape filter (compatible)<br/>Tier 3 queryActivitiesByFTS + queryActivitiesByDense,<br/>merged by mergeByRRF (fts / fts_hybrid)
+    TS-->>API: {activities, tier}
+    loop per candidate
+        API->>API: analyzeTaskSemantics → tag boost
+        API->>API: 8 boosts + shape-mismatch penalty → totalBoost
+        API->>API: alpha += totalBoost; betaSample(alpha, beta)
+        API->>API: getShapeConditionedScores / cluster posterior blend
     end
-    end
-
-    rect rgb(255, 245, 230)
-    Note over Backend,TS: THOMPSON SAMPLING WITH BOOSTS
-
-    loop For each candidate template
-        Backend->>TS: computeHeuristicBoosts(template, goal)<br/>(activities.ts:3285-3340)
-
-        Note over TS: 9 BOOST/PENALTY COMPONENTS:
-        Note over TS: 1. Tag Match Quality (+0 to +10)<br/>   - Exact: +10, Partial: +5, None: 0<br/>   (tagBoost = floor(quality * 10))
-        Note over TS: 2. Shape Compatibility (+3)<br/>   - All required shapes available
-        Note over TS: 3. Recency (+1)<br/>   - Recently used templates
-        Note over TS: 4. Execution History (+1 to +3)<br/>   - min(3, floor(executionCount / 20))<br/>   (rebalanced 2026-04-22 to favor semantic relevance)
-        Note over TS: 5. Scope Preference (+1)<br/>   - Local > file_write > read_only
-        Note over TS: 6. Impulse Relevancy (+variable)<br/>   - Computed from relevance metrics
-        Note over TS: 7. Category Match (+3)<br/>   - Exact category match
-        Note over TS: 8. Output Shape Coverage (+0 to +4)<br/>   - Produces expected shapes
-        Note over TS: 9. Shape Mismatch Penalty (−2 × missing)<br/>   - Only when effectiveShapes provided<br/>   - Penalizes templates that can't run with<br/>     the available context (added 2026-04-22)
-
-        TS->>TS: totalBoost = sum(boosts)
-        TS->>TS: alpha += totalBoost
-        TS->>TS: score = Beta(alpha, beta).sample()
-        Note over TS: Beta distribution:<br/>α = successes + boosts<br/>β = failures
-    end
-
-    Backend->>Backend: sortByScore(templates)
-    Backend->>Backend: selectTopN(limit=3)
-    end
-
-    Backend-->>GP: ActivityRecommendation[]<br/>{<br/>  template_id,<br/>  confidence: score,<br/>  thompson_metadata: {α, β},<br/>  boost_breakdown<br/>}
-    deactivate Backend
+    API-->>Walk: recommendations[] with confidence + boost_breakdown
+    deactivate API
     end
 
     rect rgb(255, 240, 245)
-    Note over GP,Exec: SUB-ACTIVITY 3: EXECUTE PRIMARY
-
-    alt Recommendations found
-        GP->>GP: selectBestTemplate(recommendations)
-        Note over GP: Select highest confidence<br/>(or user choice if interactive)
-
-        loop For each recommendation (until success)
-            GP->>Exec: executeActivity(template, impulses)
-            activate Exec
-
-            Exec->>Exec: Load impulses by shape
-            Exec->>Exec: Execute tasks with LLM
-            Note over Exec: Can recursively invoke<br/>other activities via<br/>activity resolver
-            Exec-->>GP: ActivityExecution<br/>{<br/>  status: completed|failed,<br/>  trace: full_execution_trace<br/>}
-            deactivate Exec
-
-            alt Execution succeeded
-                Note over GP: ✓ PRIMARY SUCCESS
-                break Primary activity completed
-            else Execution failed
-                Note over GP: Try next recommendation
-            end
-        end
-    else No recommendations
-        Note over GP: ✗ No templates found<br/>Proceed to improvisation
-    end
+    Note over Walk,Tools: EXECUTION
+    Walk->>Tools: execute selected producer / satisfier chain
+    Tools-->>Walk: produced shapes + content digest
     end
 
     rect rgb(255, 235, 238)
-    Note over GP,Backend: SUB-ACTIVITY 4: GOAL-REACHING GATE (verifyGoalReached)
-    GP->>GP: verifyGoalReached(goal, trace)
-    Note over GP: LLM judge (via llm-resolver-vessel)<br/>run AFTER execution:<br/>did the run produce the goal's<br/>completion_shapes? (reach ≠ exit status)
-    GP->>GP: → { reached: bool, completion_shapes }
-
-    alt reached = true
-        Note over GP: ✓ GOAL REACHED
-        GP->>Backend: recordGoalPath(goal_hash, path, success=true)<br/>+ ribosome mints the REACHED trace
-    else reached = false (hollow completion)
-        Note over GP,Backend: ✗ status=completed but asked output NOT produced
-        GP->>Backend: β-penalise selected template<br/>POST /v2/activities/feedback (intensity 2)
-        GP->>Backend: recordGoalPath(goal_hash, path, success=false)
-        Note over GP: → in-flight recovery (see 04):<br/>recommendExcluding the failed approach + retry
+    Note over Walk: REACH GATE
+    Walk->>Walk: verifyGoalReached(goal, producedShapes, taskSummary, digest, …)
+    Note over Walk: deterministic pre-checks first<br/>(no-output, error envelope, unfilled placeholder,<br/>staged-not-landed, favorable-compose),<br/>then an LLM judge for the residue
+    alt reached
+        Walk->>API: creditReachedTemplate (positive feedback)
+        Walk->>API: recordGoalPath(goal, chain, reached=true, walk_tier)
+        Walk->>Walk: mintReachedTrace → dispatch ribosome-extract
+    else not reached
+        Walk->>API: penaliseHollowTemplate (feedback, negative, intensity 2)
+        Walk->>API: recordGoalPath(goal, chain, reached=false, walk_tier)
+        Walk->>API: recommendExcluding(task_description, exclude=[failed ids])
+        Note over Walk: retry a genuinely different approach<br/>until reached or candidates exhausted
     end
     end
 
-    rect rgb(245, 255, 245)
-    Note over GP,Exec: SUB-ACTIVITY 5: IMPROVISE SOLUTION (IF NEEDED)
-
-    alt Goal not achieved
-        GP->>Backend: Load improvise_solution template
-        Backend-->>GP: Improvisation activity
-        GP->>Exec: Execute improvise_solution activity
-        Note over Exec: Improvisation is just another activity<br/>Not a special code path<br/>Uses activity resolver for composition
-        Exec-->>GP: Improvisation result
-    end
-    end
-
-    rect rgb(240, 240, 255)
-    Note over GP,Backend: LEARNING FEEDBACK (ALL SUB-ACTIVITIES)
-
-    loop For each sub-activity execution
-        GP->>Backend: storeExecutionTrace(trace)<br/>+ correlation_id: parent_activity_id<br/>+ composition_edge: parent→child
-        Note over Backend: Links parent activity → child activity<br/>for composition learning
-    end
-
-    GP->>Backend: storeExecutionTrace(meta_activity_trace)
-    Note over Backend: Store complete composition graph:<br/>- All sub-activity edges<br/>- Overall success/failure<br/>- Composition pattern effectiveness
-
-    Backend->>Backend: Update Thompson Sampling (α/β)
-    Backend->>Backend: Update composition_edges table
-    Backend->>Backend: Update variant_performance_metrics
-    end
-
-    GP-->>User: GoalResult
-    deactivate GP
+    GH-->>User: dispatch result {status, reached, walkTier, completionShapes}
+    deactivate GH
 ```
 
 ## Decomposition: Meta-Activity Composition
 
-This diagram shows how the `goal_processing_standard` meta-activity orchestrates sub-activities in a composition chain.
+A goal is not a single template call. `runGoalAsPoolWalk` maintains a pool of produced impulses and a set of still-missing target shapes, and repeatedly chooses how to close the gap. The chain of activity ids it accumulates is the composition, and `tierFromChain` classifies it after the fact.
 
 ```mermaid
 graph TD
-    Start([User Goal]) --> MetaActivity["Meta-Activity:<br/>goal_processing_standard"]
+    Start([Goal text]) --> Infer["inferGoalTargetShapes<br/>(target shapes + goalHashOf)"]
 
-    MetaActivity --> Sub1["Sub-Activity 1:<br/>goal_analysis"]
-    Sub1 --> Sub1Out["Output: analysis_result impulse"]
-    Sub1Out --> Sub2["Sub-Activity 2:<br/>activity_recommendation"]
+    Infer --> Reuse{"recommendReachingPath<br/>has a reaching path?"}
+    Reuse -->|Yes| Learned["Replay the learned pathway<br/>(walk_tier = learned_pathway)"]
+    Reuse -->|No| Missing["For each missing target shape"]
 
-    Sub2 --> Sub2Query["Query backend via<br/>activity resolver"]
-    Sub2Query --> Sub2Out["Output: recommendation_list impulse"]
-    Sub2Out --> Decision1{Recommendations<br/>found?}
+    Missing --> Producer["pickSatisfierProducer /<br/>producer-pick helpers"]
+    Producer --> Have{"A live producer<br/>for this shape?"}
 
-    Decision1 -->|Yes| Sub3A["Sub-Activity 3a:<br/>execute_primary"]
-    Decision1 -->|No| Sub3B["Sub-Activity 3b:<br/>improvise_solution"]
+    Have -->|Yes| Exec["Execute it; add outputs to the pool<br/>(walk_tier = satisfier)"]
+    Have -->|No| Bridge["Author a bridge: mintResolverWrapper /<br/>fileCapabilityGap / fileReachabilityGap"]
 
-    Sub3A --> Sub3AOut["Output: execution_trace impulse"]
-    Sub3B --> Sub3BOut["Output: improvisation_trace impulse"]
+    Bridge --> Fallback["universalToolFallback →<br/>runGroundedToolLoop<br/>(walk_tier = universal_tool_fallback)"]
 
-    Sub3AOut --> Sub4
-    Sub3BOut --> Sub4
+    Exec --> Cont["decideContinuation(walk-continuation.ts)"]
+    Learned --> Cont
+    Fallback --> Cont
 
-    Sub4["Sub-Activity 4:<br/>goal-reaching gate<br/>(verifyGoalReached)"]
-    Sub4 --> Sub4Check["LLM judge: did the run<br/>produce completion_shapes?<br/>(reach ≠ exit status)"]
-    Sub4Check --> Decision2{Goal<br/>reached?}
+    Cont --> Done{"All target shapes<br/>produced?"}
+    Done -->|No| Missing
+    Done -->|Yes| Gate["verifyGoalReached"]
 
-    Decision2 -->|Yes| Success["✓ Meta-Activity Success<br/>recordGoalPath success=true<br/>ribosome mints reached trace"]
-    Decision2 -->|No| Loop["β-penalise template +<br/>recommendExcluding approach +<br/>retry (in-flight recovery)"]
+    Gate --> Record["recordGoalPath(chain, reached, walk_tier,<br/>producedOutputShapes, expectedOutputShapes)"]
 
-    Loop --> Sub3A
-
-    Success --> Learning["Learning Update:<br/>- Thompson Sampling α/β<br/>- Composition edge weights<br/>- Shape-conditioned scores"]
-
-    style MetaActivity fill:#b39ddb
-    style Sub1 fill:#e1f5ff
-    style Sub2 fill:#fff9c4
-    style Sub3A fill:#c8e6c9
-    style Sub3B fill:#ffcc80
-    style Sub4 fill:#ffd54f
-    style Success fill:#a5d6a7
-    style Learning fill:#ce93d8
+    style Infer fill:#e1f5ff
+    style Learned fill:#c8e6c9
+    style Fallback fill:#ffcc80
+    style Gate fill:#ffd54f
+    style Record fill:#ce93d8
 ```
 
-**Key Points:**
-- Each box represents an activity (not a code path)
-- Activities communicate via impulses
-- Composition edges are recorded in the database
-- Meta-activities can recursively invoke other meta-activities
-- All activities use the same execution engine
-- Improvisation is an activity, not a fallback
+**Key points:**
+- The chain is discovered at run time from the shape graph, not declared in a stored meta-template.
+- `decideContinuation` decides whether to keep walking, terminalise, or stop.
+- Parent→child pairs observed in traces are reconciled into `activity_composition_graph` by the composition-edge reconciler; nothing is written to a per-goal declarative composition table.
+- Improvisation is not a separate branch — the fallback route is just another walk tier.
 
-**Implementation:**
-- Meta-activity templates: `repos/activity-api/sql/seed/meta-activities/`
-- Composition tracking: `repos/activity-api/src/routes/composition-edges.ts`
-- Activity resolver: `repos/goal-host-vessel/` + `ias-executor-ts` (activity shape resolution)
+**Implementation:** `runGoalAsPoolWalk`, `decideContinuation`, `tierFromChain`, `recordGoalPath` (all `repos/goal-host-vessel/src`), plus `pickSatisfierProducer` (`satisfier-pick.ts`) and `makeProducerPickHelpers` (`producer-pick.ts`).
 
 ## Decomposition: Shape-Conditioned Scoring
 
-The shape-conditioned scoring system enables activity templates to have different success rates depending on the impulse state space.
+A template's success rate is not a single number. The same template can be reliable when the impulse pool carries the shapes it wants and unreliable otherwise, so posteriors are keyed on a shape signature as well as globally.
 
 ```mermaid
 sequenceDiagram
-    participant Backend as Backend
-    participant ParadigmDB as Paradigm Table<br/>(SurrealDB)
-    participant Template as Template
-    participant Scorer as Shape Scorer
+    participant API as activity-api /recommend
+    participant Sig as computeShapeSignature
+    participant DB as variant_performance_metrics<br/>(SurrealDB)
+    participant Score as betaSample
 
-    Backend->>ParadigmDB: Query activity by shape signature
-    Note over ParadigmDB: Shape signature format:<br/>["error_log", "source_code"]<br/>(sorted, deduplicated)
+    API->>Sig: computeShapeSignature(availableShapes)
+    Note over Sig: sorted + deduplicated shape list
+    Sig-->>API: signature
 
-    alt Exact shape signature match
-        ParadigmDB-->>Backend: variant_performance_metrics<br/>WHERE shape_signature = signature
-        Backend->>Scorer: Use shape-conditioned score
-        Note over Scorer: score = shape_alpha / (shape_alpha + shape_beta)
-    else Subset match (available ⊂ required)
-        ParadigmDB-->>Backend: variant_performance_metrics<br/>WHERE signature SUBSET available
-        Backend->>Scorer: Use subset-conditioned score
-    else No shape match
-        ParadigmDB-->>Backend: template.success_rate (global)
-        Backend->>Scorer: Use global score
-        Note over Scorer: Fallback when no shape-specific data
+    API->>DB: getShapeConditionedScores(activityIds, signature)
+
+    alt Signature row exists
+        DB-->>API: {alpha, beta} for this signature
+        API->>Score: betaSample(alpha + totalBoost, beta)
+    else No signature row
+        DB-->>API: (none)
+        API->>API: lookupAssignment + readClusterPosterior
+        alt Cluster posterior exists
+            API->>Score: betaSample(clusterAlpha + totalBoost, clusterBeta)
+        else Fall back to global
+            API->>DB: getActivityScores(activityIds)
+            DB-->>API: global {alpha, beta}
+            API->>Score: betaSample(alpha + totalBoost, beta)
+        end
     end
 
-    Scorer-->>Backend: Final score for Thompson Sampling
+    Score-->>API: confidence for ranking
 ```
 
-**Implementation:** `repos/activity-api/src/db/paradigm.ts:797-909`
+The blend order is signature row → cluster posterior → global posterior, so a template with no history under the current shape signature still gets a draw rather than being dropped. `applyReputationFactor` and, when enabled, the successor-feature value from `successorValue` further adjust the draw.
+
+**Implementation:** `computeShapeSignature`, `getShapeConditionedScores`, `getActivityScores` in `repos/activity-api/src/db/paradigm.ts`; `betaSample`, `updateShapeScoresFromExecution`, `variantMetricsRecordId` in `repos/activity-api/src/routes/activities.scoring.ts`; `lookupAssignment` / `readClusterPosterior` in `repos/activity-api/src/lib/cluster-posterior.ts`.
 
 ## Decomposition: Heuristic Boost Calculation
 
+Boosts are added to α **before** the Beta draw, so they bias exploration without overwriting learned evidence. All nine components are reported back on the recommendation as `boost_breakdown`, which is what makes a selection auditable after the fact.
+
 ```mermaid
 graph TD
-    Start([Template Candidate]) --> TagMatch["1. Tag Match Quality<br/>(+0 to +10)"]
+    Start([Template candidate]) --> B1["1. Tag match<br/>floor(tagMatchQuality × 10) → +0…+10"]
+    B1 --> B2["2. Shape compatible<br/>+3 when every required shape is available"]
+    B2 --> B3["3. Recency<br/>+1 when created less than 30 days ago"]
+    B3 --> B4["4. Execution history<br/>min(3, floor(executionCount / 20)) → +0…+3"]
+    B4 --> B5["5. Scope preference<br/>+1 when scope is 'org' or 'project'"]
+    B5 --> B6["6. Impulse relevancy<br/>+alphaBoost from calculateImpulseRelevancyBoosts"]
+    B6 --> B7["7. Category match<br/>+3 on exact category equality"]
+    B7 --> B8["8. Output shape coverage<br/>floor(coverage × 4) → +0…+4"]
+    B8 --> P9["9. Shape mismatch penalty<br/>−2 × missing, only when effectiveShapes is non-empty"]
 
-    TagMatch --> TagExact{Exact match?}
-    TagExact -->|Yes| AddTen["+10"]
-    TagExact -->|No| TagPartial{Partial match?}
-    TagPartial -->|Yes| AddFive0["+5"]
-    TagPartial -->|No| AddZero["+0"]
-
-    AddTen --> ShapeCheck
-    AddFive0 --> ShapeCheck
-    AddZero --> ShapeCheck
-
-    ShapeCheck["2. Shape Compatibility<br/>(+3)"] --> ShapeMatch{All required<br/>shapes available?}
-    ShapeMatch -->|Yes| AddThree2["+3"]
-    ShapeMatch -->|No| Skip2["Skip"]
-
-    AddThree2 --> Recency
-    Skip2 --> Recency
-
-    Recency["3. Recency<br/>(+1)"] --> RecentCheck{Used recently?}
-    RecentCheck -->|Yes| AddOne["+1"]
-    RecentCheck -->|No| Skip3["Skip"]
-
-    AddOne --> History
-    Skip3 --> History
-
-    History["4. Execution History<br/>(+0 to +3)<br/>min(3, floor(count / 20))"] --> ExecCount{executionCount?}
-    ExecCount -->|">= 60"| AddThreeH["+3"]
-    ExecCount -->|"40–59"| AddTwoH["+2"]
-    ExecCount -->|"20–39"| AddOneH["+1"]
-    ExecCount -->|"< 20"| AddZeroH["+0"]
-
-    AddThreeH --> Scope
-    AddTwoH --> Scope
-    AddOneH --> Scope
-    AddZeroH --> Scope
-
-    Scope["5. Scope Preference<br/>(+1)"] --> ScopeCheck{Scope match?}
-    ScopeCheck -->|Local| AddOne3["+1"]
-    ScopeCheck -->|file_write| AddOne3
-    ScopeCheck -->|Other| Skip5["Skip"]
-
-    AddOne3 --> Impulse
-    Skip5 --> Impulse
-
-    Impulse["6. Impulse Relevancy<br/>(+variable)"] --> ImpulseCalc["Σ impulse_relevance_scores"]
-    ImpulseCalc --> Category
-
-    Category["7. Category Match<br/>(+3)"] --> CategoryCheck{Category match?}
-    CategoryCheck -->|Yes| AddThree4["+3"]
-    CategoryCheck -->|No| Skip7["Skip"]
-
-    AddThree4 --> Output
-    Skip7 --> Output
-
-    Output["8. Output Shape Coverage<br/>(+0 to +4)"] --> OutputCalc["Count matching output shapes"]
-    OutputCalc --> ShapePenalty["9. Shape Mismatch Penalty<br/>(−2 × missing)"]
-
-    ShapePenalty --> ShapeMissing{effectiveShapes<br/>provided?}
-    ShapeMissing -->|No| Skip9["Skip"]
-    ShapeMissing -->|Yes| CountMissing["missing = effectiveShapes<br/>− templateShapes"]
-    CountMissing --> ApplyPenalty["totalBoost += missing.length × −2"]
-
-    ApplyPenalty --> FinalSum["Total Boost = Σ boosts − penalties"]
-    Skip9 --> FinalSum
-
-    FinalSum --> ApplyBoost["α += totalBoost<br/>score = Beta(α, β).sample()"]
-
-    ApplyBoost --> End([Final Thompson Score])
+    P9 --> Sum["totalBoost = Σ boosts + penalty"]
+    Sum --> Draw["alpha += totalBoost<br/>score = betaSample(alpha, beta)"]
+    Draw --> End([Ranked recommendation])
 
     style Start fill:#e1f5ff
+    style P9 fill:#ffcdd2
+    style Sum fill:#ffd54f
     style End fill:#c8e6c9
-    style AddTen fill:#c8e6c9
-    style AddFive0 fill:#fff9c4
-    style AddThreeH fill:#c8e6c9
-    style ApplyPenalty fill:#ffcdd2
-    style FinalSum fill:#ffd54f
 ```
 
-**Implementation:** `repos/activity-api/src/routes/activities.ts:3285-3340` (boosts 1–8), `:3757-3779` (shape mismatch penalty + boost_breakdown logging)
+Two of these are easy to misread. **Recency** keys on the template's creation date, not on when it was last used. **Scope preference** rewards `org` and `project` scope; it is not a filesystem-permission ordering. The mismatch penalty only applies when the caller supplied an effective shape set, so a shape-blind recommend request is never penalised for shapes it never claimed.
+
+**Implementation:** the boost block and `boost_breakdown` assembly inside the `/recommend` handler in `repos/activity-api/src/routes/activities.ts`; coverage via `calculateOutputShapeCoverage` (`src/utils/outcome-to-shape.ts`); relevancy via `calculateImpulseRelevancyBoosts` (`src/utils/impulse-relevancy.ts`).
 
 ### How tags are extracted (Boost #1 input)
 
-Boost #1 (Tag Match Quality) compares template tags against **prefixes extracted deterministically from the goal description**, not against the LLM semantic analysis from Sub-Activity 1. The extraction lives in `repos/activity-api/src/utils/semantic-tags.ts`:
+Boost #1 compares template tags against prefixes extracted deterministically from the goal description, not against any LLM analysis. The extraction lives in `repos/activity-api/src/utils/semantic-tags.ts`:
 
-- `KEYWORD_TO_TAGS` — a static keyword → tag-prefix map (hundreds of entries across `tool.*`, `bugfix.*`, `development.*`, `meta.*`, `feature.*`). Each keyword maps to an ordered list of prefixes (most specific first). Compound keys like `"dependency vulnerabilities"` and `"find security"` let multi-word phrases match in a single lookup.
-- `extractTagPrefixes(description)` — tokenises the description and returns the union of matched prefixes.
-- `calculateTagMatchQuality(extractedPrefixes, templateTags)` — scores template-tag match with a position-weighted formula: first extracted prefix contributes weight `1.0`, second `0.5`, third `0.33`, etc. A template tag counts as a match when it `startsWith(prefix)`. Final quality is `totalScore / maxScore` in `[0, 1]`; the boost is `floor(quality * 10)`.
-- `analyzeTaskSemantics(description)` — the combined entry point called from `activities.ts:3533` during the recommend path.
+- `KEYWORD_TO_TAGS` — a module-private keyword → tag-prefix map spanning `tool.*`, `bugfix.*`, `development.*`, `meta.*` and `feature.*` families. Each keyword maps to an ordered prefix list, most specific first, and compound keys let multi-word phrases match in one lookup.
+- `extractTagPrefixes(taskDescription)` — tokenises the description and returns the union of matched prefixes.
+- `calculateTagMatchQuality(extractedPrefixes, templateTags)` — position-weighted scoring: the first extracted prefix contributes weight `1.0`, the second `0.5`, the third `0.33`, and so on. A template tag counts as a match when it `startsWith(prefix)`. The quality lands in `[0, 1]` and the boost is `floor(quality * 10)`.
+- `extractImpliedShapes(taskDescription)` — derives shape hints from the same vocabulary, which is why a shapeless dispatch can still satisfy Tier 1.
+- `analyzeTaskSemantics(taskDescription)` — the combined entry point the recommend path calls.
 
-The keyword map is evolved in-repo as new task vocabularies emerge (e.g. `23994d1` on 2026-04-22 added security-focused keys: `owasp`, `scan`, `audit`, `cve`, `resolve`, and the compound phrases above). This layer is deliberately deterministic — it exists so tag pre-filtering and Boost #1 do not depend on an LLM call. The Sub-Activity 1 LLM analysis (category/intent/capabilities) runs in parallel on the goal-host-vessel side (LLM via llm-resolver-vessel); the two extractions converge at the `/recommend` call.
+This layer is deliberately deterministic: tag pre-filtering and Boost #1 must not depend on an LLM call, so the ranking of a goal is reproducible from its text alone.
 
 ## Decomposition: Tiered Fallback Query Strategy
 
+Retrieval relaxes constraints in tiers until it has at least `minResults = ceil(limit / 2)` candidates. The tier that produced the pool is returned alongside it as `exact`, `compatible`, `fts`, or `fts_hybrid`.
+
 ```mermaid
 graph TD
-    Start([Goal + Available Shapes]) --> Tier1["TIER 1: Exact Shape Match<br/>input_shapes ALLINSIDE available"]
+    Start([shapes, category, goalDescription, limit]) --> T1{"shapes provided?"}
 
-    Tier1 --> T1Query["Query templates with<br/>exact shape requirements"]
-    T1Query --> T1Results{Results found?}
+    T1 -->|Yes| Q1["Tier 1: queryActivitiesByShapes<br/>(strict input_shapes filter)"]
+    T1 -->|No| QHead
 
-    T1Results -->|Yes, score >= 0.5| T1Success["✓ Return exact matches"]
-    T1Results -->|No or score < 0.5| Tier2["TIER 2: Compatible Activities<br/>All templates, no shape filter"]
+    Q1 --> C1{"count >= ceil(limit/2)?"}
+    C1 -->|Yes| Blend["Blend Tier 3 hits in front:<br/>queryActivitiesByFTS + queryActivitiesByDense<br/>merged by mergeByRRF, then<br/>filterBySatisfiableInputShapes"]
+    Blend --> R1["tier = 'exact'"]
+    C1 -->|No| QHead
 
-    Tier2 --> T2Query["Query all templates<br/>Score by compatibility"]
-    T2Query --> T2Results{Results found?}
+    QHead{"goalDescription present?"} -->|Yes| Q3F["Query-first Tier 3:<br/>FTS + dense, merged by RRF"]
+    QHead -->|No| Q2
 
-    T2Results -->|Yes, score >= 0.5| T2Success["✓ Return compatible"]
-    T2Results -->|No or score < 0.5| Tier3["TIER 3: Full-Text Search<br/>goal.description"]
+    Q3F --> C3F{"enough results?"}
+    C3F -->|Yes, merged| R3H["tier = 'fts_hybrid'"]
+    C3F -->|Yes, FTS only| R3["tier = 'fts'"]
+    C3F -->|No| Q2
 
-    Tier3 --> T3Query["Full-text search on<br/>name + description + tags"]
-    T3Query --> T3Results{Results found?}
+    Q2["Tier 2: queryActivitiesByShapes with no shape filter"] --> F2["filterBySatisfiableInputShapes"]
+    F2 --> C2{"enough satisfiable?"}
+    C2 -->|Yes| R2["tier = 'compatible'"]
+    C2 -->|No| Q3["Tier 3 again: FTS + dense"]
 
-    T3Results -->|Yes| T3Success["✓ Return text matches"]
-    T3Results -->|No| NoMatch["✗ No templates found<br/>→ Empty recommendation list"]
+    Q3 --> C3{"any results?"}
+    C3 -->|Yes| R3B["tier = 'fts_hybrid' or 'fts'"]
+    C3 -->|No| R2B["Return whatever Tier 2 found<br/>(tier = 'compatible'), else empty"]
 
-    T1Success --> ThompsonSampling["Apply Thompson Sampling<br/>+ Heuristic Boosts"]
-    T2Success --> ThompsonSampling
-    T3Success --> ThompsonSampling
-
-    ThompsonSampling --> Ranked["Ranked Recommendations<br/>(top 3)"]
-
-    NoMatch --> EmptyList["Empty list returned<br/>Meta-activity proceeds to<br/>improvise_solution sub-activity"]
+    R1 --> TS["Thompson Sampling + boosts"]
+    R2 --> TS
+    R2B --> TS
+    R3 --> TS
+    R3H --> TS
+    R3B --> TS
 
     style Start fill:#e1f5ff
-    style T1Success fill:#c8e6c9
-    style T2Success fill:#fff9c4
-    style T3Success fill:#ffcc80
-    style NoMatch fill:#ffccbc
-    style Ranked fill:#b39ddb
-    style EmptyList fill:#ce93d8
+    style R1 fill:#c8e6c9
+    style R2 fill:#fff9c4
+    style R3H fill:#ffcc80
+    style TS fill:#b39ddb
 ```
 
-**Implementation:** `repos/activity-api/src/db/paradigm.ts:2915-3049`
+Two properties are worth holding onto. First, `filterBySatisfiableInputShapes` keeps the recommender from proposing templates the engine would reject at pre-flight — an activity matches when it declares no `input_shapes` or when every declared input is present in the provided pool. Second, the filter is conservative: if applying it would underfill the tier, the unfiltered list is returned instead, so a goal never fails outright for want of a perfectly satisfiable candidate.
+
+**Implementation:** `getActivitiesWithTieredFallback` and `filterBySatisfiableInputShapes` in `repos/activity-api/src/routes/activities.get-activities-with-tiered-fallback.ts`; the underlying queries `queryActivitiesByShapes`, `queryActivitiesByFTS`, `queryActivitiesByDense` in `repos/activity-api/src/db/paradigm.ts`; rank fusion in `mergeByRRF` (`src/utils/rrf.ts`).
 
 ## Key Decision Points
 
-### 1. Activity Composition Chain
-**Location:** Meta-activity template definition (database)
+Three decisions determine what a dispatch does: which candidates enter the pool, which candidate is executed, and whether the result counted. The first two are ordinary ranking; the third is the one that is easy to get wrong, because a template can exit cleanly without producing what was asked. The subsections below cover each in turn, and each names the symbol that owns the decision so the behaviour can be read from source rather than inferred from this document.
 
-```json
-{
-  "id": "goal_processing_standard",
-  "name": "Standard Goal Processing",
-  "tasks": [
-    {
-      "id": "goal_analysis",
-      "activity_ref": "analyze_goal_structure"
-    },
-    {
-      "id": "activity_recommendation",
-      "activity_ref": "recommend_activities"
-    },
-    {
-      "id": "execute_primary",
-      "activity_ref": "execute_recommended_activity"
-    },
-    {
-      "id": "goal_verification",
-      "activity_ref": "verify_goal_completion"
-    },
-    {
-      "id": "improvise_solution",
-      "activity_ref": "improvise_until_complete",
-      "condition": "goal_not_achieved"
-    }
-  ]
-}
+### 1. Activity Composition Chain
+
+**Owner:** `runGoalAsPoolWalk` in `repos/goal-host-vessel/src/index.ts`.
+
+The composition is a runtime chain, not a declarative task list stored against a meta-template. The walk holds a pool of produced impulses and a set of unmet target shapes; each iteration picks a producer or satisfier for one unmet shape, executes it, folds its outputs into the pool, and asks `decideContinuation` whether to keep going.
+
+```
+chain = []
+target = inferGoalTargetShapes(goal)
+while target has unmet shapes and continuation allows:
+    shape    = next unmet target shape
+    producer = learned-pathway replay
+             ?? pickSatisfierProducer(shape)
+             ?? bridge mint (mintResolverWrapper / gap filing)
+             ?? universalToolFallback(goal, target)
+    outputs  = execute(producer)
+    pool    += outputs
+    chain   += producer.id
+walkTier = tierFromChain(chain)
 ```
 
-**Key Points:**
-- No code-level branching between execution and improvisation
-- Composition defined declaratively in database
-- Can be modified without code changes
-- Learning applies to composition patterns
+**Key points:**
+- There is no code-level branch between "normal execution" and "improvisation" — the fallback is a tier of the same walk.
+- `terminalOutputShapes` lets the walk defer a terminal write until intermediate shapes exist, so a derive→emit goal binds the emit's content from what was actually derived.
+- The chain, not a single template id, is what `recordGoalPath` attributes success to.
 
 ### 2. Recommendation Evaluation
-**Location:** `GoalHost` in goal-host-vessel (conceptual - actual logic in meta-activity; was `goal-processor.ts:906`)
+
+**Owner:** the `/v2/activities/recommend` handler in `repos/activity-api/src/routes/activities.ts`, called from `goal-host-vessel` via `recommendExcluding`, `recommendReachingPath`, and the `activity_recommendation` builtin resolver registered by `registerBuiltinResolvers`.
+
+Candidates are ranked by the Beta draw described above and returned newest-best-first with their `confidence` and `boost_breakdown`. The caller decides what to do with them; the backend does not execute anything.
 
 ```typescript
-// Meta-activity evaluates recommendations
-if (recommendations.length > 0 && recommendations[0].confidence >= 0.5) {
-  // Execute primary activity
-  return executeActivity(recommendations[0]);
-} else {
-  // Proceed to improvisation sub-activity
-  return executeActivity("improvise_solution");
-}
+// goal-host asks for a genuinely different approach after a miss
+const next = await recommendExcluding(
+  taskDescription,          // NOT the raw goal text
+  [...alreadyFailedIds],    // exclude_activities
+  repairSignature,          // optional repair_signature
+  targetShapes,             // optional expected_output_shapes
+);
+// null ⇒ no fresh candidate remains ⇒ honest failure
 ```
 
-**Criteria:**
-- Recommendation list not empty
-- Best recommendation confidence >= 0.5
-- If criteria not met, composition chain proceeds to improvisation
+`recommendExcluding` normalises ids by stripping the `activity:` prefix and any `⟨⟩` wrapper before comparing against the exclusion set, so a candidate cannot be re-selected under a differently-wrapped id. When target shapes are supplied and a candidate declares output shapes, candidates whose outputs overlap none of the targets are skipped.
 
 ### 3. Goal-Reaching Gate (`verifyGoalReached`)
-**Location:** goal-host-vessel, after execution on both `/run-goal` and `/resolve` paths (goal-host `07feff5`)
+
+**Owner:** `verifyGoalReached` in `repos/goal-host-vessel/src/index.ts`, invoked on both the `/run-goal` and `/resolve` paths after execution returns.
+
+The gate does not trust exit status. It runs deterministic checks first and only consults an LLM judge for what the deterministic checks cannot settle:
 
 ```typescript
-// goal-host runs an LLM judge AFTER the activity returns.
-// It does NOT trust exit status — it asks whether the goal's
-// completion shapes were actually produced.
-const gate = await verifyGoalReached(originalGoal, executionTrace);
-// → { reached: boolean, completion_shapes: string[] }
-
-if (gate.reached) {
-  await recordGoalPath(goalHash, path, /* success */ true);   // accumulates per-goal α
-  // ribosome mints the REACHED trace into a reusable activity
-  return { status: "success" };
-} else {
-  // Hollow completion: status=completed but asked output not produced.
-  await betaPenalise(selectedTemplateId);                     // POST /v2/activities/feedback, intensity 2
-  await recordGoalPath(goalHash, path, /* success */ false);  // accumulates per-goal β
-  // → in-flight recovery: recommendExcluding the failed approach + retry (see 04)
-}
+const verdict = await verifyGoalReached(
+  goal, producedShapes, taskSummary, contentDigest, commandEvidence, walkEvidence,
+);
+// → { reached, reason, completion_shapes, deterministic? } | null
 ```
 
-**Key Points:**
-- The gate is the success determinant — **reach, not exit status**. This closes the "completed ≠ reached" hollow-completion hole that previously α-credited wrappers/gaming.
-- The LLM judge runs via `llm-resolver-vessel` (`:8220`) and emits `completion_shapes` — the state shapes that constitute reaching the goal (identified emergently, not only from goal-declared shapes).
-- `reached:false` β-penalises the selected template and feeds in-flight recovery (04). The **reached** trace — not a merely-completed one — is what the ribosome mints.
-- Per-goal record/reuse: each dispatch writes `goal_execution_paths` keyed by `goal_hash` (path = attribution, `success` = reached, per-goal α/β); a later instance of the same goal reuses the highest-α reaching path via `recommendReachingPath`. Verified: a hollow `audit→draft` run recorded the wrapper path α=1/β=2; accumulating genuine reaches drove n=3, α=4/β=1, rate=1.0.
+Deterministic verdicts, in the order they are tried:
+
+- **`deterministic:no-output`** — empty digest and no meaningful produced shape.
+- **`deterministic:staged-not-landed`** — a `mitosisStaged` shape with no landing evidence. A typecheck-clean edit sitting in a clone is not a reach.
+- **`deterministic:error-envelope`** — every content-bearing digest line is an error envelope. Containment alone does not trigger it, so a report *about* failures still reaches the judge.
+- **`deterministic:placeholder`** — the output is an unfilled `{{placeholder}}`.
+- **`deterministic:favorable-compose`** — a `featureComposeReport` with verdict `FAVORABLE` **and** landing evidence (`push_status: "pushed"` or a `new_git_sha`). Strong credit additionally requires the non-fail-open markers `verified: true` and a non-empty `reachable_symbols`; without them the run still reaches but strong credit is withheld.
+
+Class-specific verifiers (`verifyDeterministicCompute`, `verifyCountFilesReach`, `verifyAggregateReach`, `verifyShapeProducersReach`, `verifyRegistryInventoryReach`, and siblings) recompute the answer independently and can reject a provably wrong output before the judge ever sees it.
+
+**Consequences of the verdict:**
+- `reached: true` → `creditReachedTemplate`, `recordGoalPath(..., true, walkTier)`, and `mintReachedTrace`, which dispatches `ribosome-extract` on the reached trace.
+- `reached: false` → `penaliseHollowTemplate` (a `POST /v2/activities/feedback` with `direction: "negative"`, `intensity: 2`, no α change), `recordGoalPath(..., false, walkTier)`, a class-grain lesson mirrored to concept-db, and the in-flight recovery retry described in [04](./04-improvisation-failure-modes.md).
+- `isSubstanceHonestReach` is true only when the code set `deterministic: true`; the LLM judge's parse is sanitised so a bare model "yes" can never claim it.
 
 ### Note: single-template pick vs shape-graph walk
 
-The tiered Thompson recommendation described above selects a single best template. In the June-2026 substrate a goal also runs as a **shape-graph walk**: backward-chaining from the goal's required output shapes, authoring bridge activities as needed (mint-as-you-go), and binding data flow through `{{shape}}` placeholders. The Thompson posteriors and the goal-reaching gate apply to the walk the same way they apply to a single template — selection is state/shape-conditioned, and the gate judges the walk's terminal output.
+The tiered recommendation ranks single templates. A goal that no single template covers is not rejected — it is walked. `runGoalAsPoolWalk` backward-chains from the inferred target shapes, picks a producer per missing shape, and binds data flow shape-to-shape through the impulse pool.
+
+The learning machinery is identical for both. The same posteriors rank the producers chosen at each hop, and the same reach gate judges the terminal output. What differs is only the recorded `walk_tier`: a single learned template replays as `learned_pathway`, a shape-by-shape derivation records as `satisfier` or `fresh_derivation`, and a goal closed by grounded tool use records as `universal_tool_fallback`.
 
 ## Data Flow Summary
 
 ```
-User Goal (text)
+Dispatch (mcp__metabob__run_goal → POST /run-goal, handleRunGoal)
   ↓
-Load Meta-Activity (goal_processing_standard)
+inferGoalTargetShapes(goal) + goalHashOf(goal)
   ↓
-Sub-Activity 1: Goal Analysis (LLM semantic extraction)
+recommendReachingPath → POST /v2/goal-paths/recommend
+  ├─ a reaching path exists → replay it (walk_tier = learned_pathway)
+  └─ none → walk
   ↓
-Sub-Activity 2: Activity Recommendation
-  ├─ Query impulse state space (available shapes)
-  ├─ Backend Thompson Sampling
-  │   ├─ Tier 1: Exact shape match
-  │   ├─ Tier 2: Compatible activities
-  │   └─ Tier 3: Full-text search
-  ├─ Heuristic Boosts Applied (8 components + shape mismatch penalty)
-  ├─ Shape-Conditioned Scoring
-  └─ Return ranked recommendations (or empty list)
+POST /v2/activities/recommend
+  ├─ getActivitiesWithTieredFallback → {activities, tier}
+  │   ├─ exact       (queryActivitiesByShapes)
+  │   ├─ compatible  (no shape filter + filterBySatisfiableInputShapes)
+  │   └─ fts / fts_hybrid (queryActivitiesByFTS ⊕ queryActivitiesByDense via mergeByRRF)
+  ├─ per candidate: 8 boosts + shape-mismatch penalty → totalBoost
+  ├─ posterior blend: shape signature → cluster → global
+  └─ betaSample(alpha + totalBoost, beta) → ranked recommendations
   ↓
-Sub-Activity 3: Execute Primary (if recommendations exist)
-  ├─ Execute highest-confidence activity
-  ├─ Recursive composition (activities can invoke activities)
-  └─ Return execution trace
+Execute the producer/satisfier chain (resolver vessels)
   ↓
-Sub-Activity 4: Goal-Reaching Gate (verifyGoalReached)
-  ├─ LLM judge: were the goal's completion_shapes produced? (reach ≠ exit status)
-  ├─ reached → recordGoalPath success=true; ribosome mints reached trace
-  └─ not reached → β-penalise template; recordGoalPath success=false; in-flight recovery
+verifyGoalReached → GoalReachVerdict {reached, reason, completion_shapes}
+  ├─ reached  → creditReachedTemplate + recordGoalPath(true) + mintReachedTrace
+  └─ not      → penaliseHollowTemplate + recordGoalPath(false) + recommendExcluding → retry
   ↓
-Sub-Activity 5: In-flight recovery / Improvise (if not reached)
-  ├─ recommendExcluding the failed approach + retry a different approach
-  └─ Return recovery/improvisation trace
-  ↓
-Learning Feedback
-  ├─ Store all sub-activity traces
-  ├─ Record composition edges (parent → child)
-  ├─ Update Thompson Sampling (α/β) — including reach-gated β-penalties
-  ├─ Record per-goal path (goal_execution_paths, keyed by goal_hash)
-  └─ Update composition pattern effectiveness
+Persisted learning
+  ├─ activity_execution_traces (via POST /v2/activities/execution-traces)
+  ├─ goal_execution_paths      (keyed by goal_hash, carries walk_tier)
+  ├─ variant_performance_metrics (shape-conditioned α/β)
+  └─ activity_composition_graph  (parent→child, reconciled from traces)
 ```
 
-**Key Difference from Linear Flow:**
-- No if/else branching at code level
-- Composition chain defined in database
-- All paths are activities (including improvisation)
-- Learning applies to composition patterns, not just individual activities
+**What this is not:** there is no if/else in the host between "run a template" and "improvise". Every route through the diagram above is a walk tier of one mechanism, and every route ends at the same gate.
 
 ## Metrics Captured
 
-At each stage, the following metrics are captured for learning:
+**Selection.** Returned on each recommendation and stored with the execution: the tier that produced the candidate pool, `heuristic_boost` with its per-component `boost_breakdown` (`tag_match`, `shape_compatible`, `recency`, `execution_history`, `scope_preference`, `category_match`, `output_shape_coverage`, plus the impulse relevancy contribution), the sampled `confidence`, and the selected template id.
 
-**Selection Metrics:**
-- `recommendation_id` - Unique ID for this selection
-- `goal_description` - Enriched goal text
-- `available_shapes` - Impulse state space
-- `candidates_considered` - Number of templates evaluated
-- `tier_used` - Which fallback tier matched (1, 2, or 3)
-- `boost_breakdown` - Contribution of each boost component
-- `selected_template_id` - Which template was chosen
-- `confidence_score` - Thompson Sampling score
+**Execution.** Written through `insertExecution` and `POST /v2/activities/execution-traces`: status, duration, cost, token usage, produced output shapes, and the composition chain.
 
-**Execution Metrics:**
-- `correlation_id` - Links to recommendation_id
-- `execution_status` - completed | failed
-- `goal_achieved` - Boolean verification result
-- `duration_ms` - Total execution time
-- `cost_usd` - LLM API costs
-- `tokens_used` - Input + output tokens
+**Reach.** The `GoalReachVerdict` fields — `reached`, `reason`, `completion_shapes`, and the `deterministic` flag that distinguishes a code-proved reach from a judged one. `recordDeterministicLabel` records deterministic verdicts as labels for the oracle corpus.
 
-**Learning Metrics:**
-- `alpha_before` / `alpha_after` - Thompson Sampling α
-- `beta_before` / `beta_after` - Thompson Sampling β
-- `success_rate_change` - How this execution affected rate
-- `shape_signature` - For shape-conditioned scoring
+**Per-goal.** `recordGoalPath` writes `goal_execution_paths` keyed by `goal_hash`: `path_activities`, `reached`, duration, cost, `walk_tier`, `produced_output_shapes`, `expected_output_shapes`. This is what `recommendReachingPath` reads back, and what makes "has this goal ever been reached, and how" answerable.
 
-**Composition Metrics (NEW):**
-- `composition_pattern_id` - Which meta-activity was used
-- `sub_activity_sequence` - Order of sub-activities executed
-- `composition_edge_weights` - Effectiveness of parent→child relationships
-- `composition_success_rate` - Success rate for this composition pattern
-- `recursive_depth` - How many levels of activity nesting
+**Composition.** Parent→child edges land in `activity_composition_graph` through `POST /v2/activities/composition`; `classifyCompositionEdge` labels each edge `genuine`, `scaffold`, or `hub`, and a write-path caller that supplies recurrence or shape-flow evidence only earns `genuine` with that evidence.
 
 ## File References
 
-| Component | File | Lines | Purpose |
-|-----------|------|-------|---------|
-| Goal Processing | `repos/goal-host-vessel/` + `ias-executor-ts` | (was `goal-processor.ts`) | `GoalHost` meta-activity orchestration + goal-reaching gate |
-| State Space Manager | `repos/goal-host-vessel/` + `ias-executor-ts` | (was `state-space-manager.ts`) | Shape querying, compatibility |
-| Backend Recommendation | `repos/activity-api/src/routes/activities.ts` | 3080-3116 | POST /recommend endpoint |
-| Thompson Sampling | `repos/activity-api/src/routes/activities.ts` | 3345 | Beta distribution sampling |
-| Heuristic Boosts | `repos/activity-api/src/routes/activities.ts` | 3285-3340, 3757-3779 | 8 boost components + shape mismatch penalty |
-| Tag Extraction | `repos/activity-api/src/utils/semantic-tags.ts` | Full file | Keyword→tag-prefix map + position-weighted match quality (input to Boost #1) |
-| Paradigm Queries | `repos/activity-api/src/db/paradigm.ts` | 2915-3049 | Tiered fallback queries |
-| Shape Scoring | `repos/activity-api/src/db/paradigm.ts` | 797-909 | Shape-conditioned scores |
-| Composition Tracking | `repos/activity-api/src/routes/composition-edges.ts` | Full file | Composition edge storage |
-| Activity Resolver | `repos/goal-host-vessel/` | Activity shape | Activity→activity resolution |
+| Component | Location | Entry symbols |
+|-----------|----------|---------------|
+| Dispatch surface | `repos/goal-host-vessel/src/index.ts` | `handleRunGoal`, `handleResolve` |
+| Walk | `repos/goal-host-vessel/src/index.ts` | `runGoalWithRecovery`, `runGoalAsPoolWalk` |
+| Target inference | `repos/goal-host-vessel/src/goal-target-inference.ts` | `inferGoalTargetShapes`, `inferGoalTargetDecision`, `goalHashOf` |
+| Producer / satisfier choice | `repos/goal-host-vessel/src/producer-pick.ts`, `satisfier-pick.ts` | `makeProducerPickHelpers`, `pickSatisfierProducer` |
+| Continuation | `repos/goal-host-vessel/src/walk-continuation.ts` | `decideContinuation` |
+| Reach gate | `repos/goal-host-vessel/src/index.ts` | `verifyGoalReached`, `isSubstanceHonestReach`, `recordDeterministicLabel` |
+| Posterior updates | `repos/goal-host-vessel/src/index.ts` | `creditReachedTemplate`, `penaliseHollowTemplate` |
+| Per-goal memory | `repos/goal-host-vessel/src/index.ts` | `recordGoalPath`, `recommendReachingPath`, `recommendExcluding` |
+| Recommendation endpoint | `repos/activity-api/src/routes/activities.ts` | `/recommend` handler, boost block |
+| Tiered retrieval | `repos/activity-api/src/routes/activities.get-activities-with-tiered-fallback.ts` | `getActivitiesWithTieredFallback`, `filterBySatisfiableInputShapes` |
+| Sampling | `repos/activity-api/src/routes/activities.scoring.ts` | `betaSample`, `updateShapeScoresFromExecution` |
+| Posterior storage | `repos/activity-api/src/db/paradigm.ts` | `getActivityScores`, `getShapeConditionedScores`, `computeShapeSignature` |
+| Tag extraction | `repos/activity-api/src/utils/semantic-tags.ts` | `analyzeTaskSemantics`, `extractTagPrefixes`, `calculateTagMatchQuality` |
+| Composition edges | `repos/activity-api/src/routes/activities.ts` (`/composition`, `/composition/graph`, `/composition/successors`) and `activities.composition.ts` | `classifyCompositionEdge` |
+| Per-goal paths endpoint | `repos/activity-api/src/routes/goal-paths.ts` | `/`, `/recommend`, `/stats` |
 
 ## Implementation Architecture
 
-This sequence spans **both goal-host-vessel (execution) and activity-api (storage/learning)** with clear separation of concerns.
+This sequence spans two vessels with a clean split: `goal-host-vessel` decides and executes, `activity-api` remembers and ranks. The split is what lets a goal-host be replaced or run in a second location without losing learned posteriors, and what lets the ranking algorithm change without redeploying the executor.
 
 ### goal-host-vessel (Execution Environment)
 
 **Responsibilities:**
-- Execute meta-activity templates (goal_processing_standard) — `GoalHost`
-- Query backend for Thompson Sampling recommendations
-- Load and format impulses for execution context
-- Execute activity tasks (LLM via `llm-resolver-vessel`, tools via `local-tools-vessel`)
-- Run the **goal-reaching gate** (`verifyGoalReached`) and record per-goal paths
-- Capture execution traces with state transitions
-- Store traces to backend (HTTP to activity-api via discovery contract)
+- Accept dispatches at `POST /run-goal` and `POST /resolve` (`handleRunGoal`, `handleResolve`), plus `GET /executions/:id` for dispatch state.
+- Infer target shapes and walk the shape graph (`inferGoalTargetShapes`, `runGoalAsPoolWalk`).
+- Register resolvers: builtins (`registerBuiltinResolvers`), discovery proxies (`registerDiscoveryProxies`, `buildDiscoveryProxyResolver`), and development-vessel proxies (`registerDevVesselProxies`).
+- React to `vessel.registered` so new vessels get proxy resolvers without a restart (`startVesselRegistrationSubscriber`).
+- Run the reach gate and drive in-flight recovery.
+- Emit the trace and per-goal path to activity-api.
 
-**Key Files (live):**
-- `repos/goal-host-vessel/` + `@avigopal/ias-executor-ts` — `GoalHost`, goal-processor, ActivityExecutor, state-space-manager, resolver dispatch, `verifyGoalReached` / `recordGoalPath` / `recommendReachingPath`
-
-**What goal-host-vessel Does NOT Do:**
-- Does NOT store templates (backend owns this)
-- Does NOT compute Thompson Sampling scores (backend owns this)
-- Does NOT aggregate metrics (backend owns this)
-- Does NOT persist execution traces beyond session (backend owns this)
+**What it does not do:** it does not store templates, compute Beta draws, or aggregate metrics. It reads recommendations and writes outcomes.
 
 ### Activity-API (Storage & Learning Backend)
 
 **Responsibilities:**
-- Store activity templates persistently
-- Implement Thompson Sampling algorithm (α/β scoring)
-- Execute tiered fallback queries (exact → compatible → full-text)
-- Compute heuristic boosts (8 boosts + shape mismatch penalty)
-- Track shape-conditioned performance metrics
-- Store execution traces for learning
-- Update composition edges
-- Return ranked recommendations to goal-host-vessel
+- Persist templates (`activity_template`) and executions (`activity_execution_traces`).
+- Retrieve candidates through the tiered strategy and rank them with `betaSample` plus the boost block.
+- Maintain shape-conditioned posteriors (`variant_performance_metrics`) and cluster posteriors.
+- Serve `POST /v2/activities/feedback` as the α/β update surface for credit and hollow penalties.
+- Serve per-goal paths at `/v2/goal-paths` (`POST /`, `GET /`, `POST /recommend`, `GET /stats`).
+- Record composition edges at `POST /v2/activities/composition` into `activity_composition_graph`, and serve them back at `/composition/graph`, `/composition/successors`, `/composition/state-transitions`, `/composition/impulse-success`.
+- Host the WebSocket broadcast bus that ribosome-vessel and other subscribers consume.
+- Register with discovery-vessel and advertise its activity shapes.
 
-**Key Endpoints:**
-- `POST /v2/activities/recommend` (activities.ts:3080-3116) - Thompson Sampling recommendations
-- `GET /v2/activities/templates` - Template listing
-- `POST /v2/activities/execution-traces` - Trace storage
-- `POST /v2/activities/composition` - Composition edge tracking
-- `POST /v2/activities/impulse-relevance` - Relevance score updates
-
-**Key Files:**
-- `repos/activity-api/src/routes/activities.ts` (3080-3116, 3285-3340) - Recommendation endpoint + boost logic
-- `repos/activity-api/src/db/paradigm.ts` (2915-3049, 797-909) - Thompson Sampling + tiered queries
+**What it does not do:** it does not execute activities, resolve local impulses, or own resolver dispatch.
 
 ### SurrealDB Schema
 
-**Tables:**
-- `activity_template` - Template definitions with Thompson params (α, β)
-- `activity_execution_trace` - Full execution traces with correlation IDs
-- `variant_performance_metrics` - Shape-conditioned success rates
-- `composition_edges` - Parent→child activity relationships
-- `impulse_relevance_metrics` - Impulse→activity relevance scores
+**Tables that carry selection and reach state:**
+- `activity_template` — template definitions.
+- `activity_execution_traces` — execution history with state, tasks, and reach fields.
+- `variant_performance_metrics` — shape-conditioned α/β per variant and signature.
+- `goal_execution_paths` — per-goal attribution keyed by `goal_hash`, carrying `walk_tier` and produced/expected output shapes.
+- `activity_composition_graph` — parent→child producer/consumer edges, the live composition surface.
+- `impulse_relevance_metrics` — impulse→activity relevance used by the relevancy boost.
+- `thompson_selection_log`, `context_thompson_scores` — selection audit and context-conditioned scores.
 
-**Indexes:**
-- `activity_template` by category, tags, input_shapes
-- `variant_performance_metrics` by shape_signature
-- `composition_edges` by parent_id, child_id
+**Retired:** the `composition_edge` table and its `fn::update_composition_edge` helper were removed along with their writer and reader routes. Anything describing composition learning should point at `activity_composition_graph`.
 
 ### Correct Separation
 
-**goal-host-vessel handles (execution-time):**
-- Activity orchestration (meta-activities)
-- Impulse loading and formatting
-- LLM tool calling loop (LLM via llm-resolver-vessel)
-- Goal-reaching gate + per-goal path recording
-- State capture (before/after/transition)
-- Trace creation (structure)
+**Execution-time (goal-host-vessel):** goal parsing and target inference, walk control, resolver dispatch, tool loops, the reach gate, trace construction, per-goal path writes, and the recovery retry.
 
-**Activity-API handles (storage/learning):**
-- Template storage and versioning
-- Thompson Sampling computation (Beta distribution)
-- Tiered fallback query strategy
-- Heuristic boost calculation
-- Shape-conditioned scoring
-- Composition pattern learning
+**Storage and learning (activity-api):** template persistence, candidate retrieval, Beta sampling, boost computation, shape-conditioned and cluster posteriors, feedback application, composition-graph reconciliation, and the event bus.
 
-**Why This Separation Matters:**
-- goal-host-vessel can execute against any substrate's activity-api endpoint
-- Backend can evolve learning algorithms without goal-host-vessel changes
-- Multiple substrate instances can share learning via a centralized backend
-- Backend can aggregate cross-instance patterns
+**Why the split matters:**
+- A goal-host can point at any substrate's activity-api; posteriors are not trapped in the executor.
+- The ranking algorithm can change without touching the executor, and the executor's walk can change without touching the ranker.
+- Multiple substrates can share one learning backend, and cross-instance patterns aggregate there rather than in a process that restarts.
+- The backend is one resolver among many, not the universal resolution authority.
 
 ## Related Documentation
 
-- [Impulse Resolution](./02-impulse-resolution.md) - How impulses are loaded for execution
-- [Improvisation & Failure Modes](./04-improvisation-failure-modes.md) - In-flight recovery + how improvisation works as an activity
-- [GOAL_EXECUTION_PATHS_SCHEMA.md](../GOAL_EXECUTION_PATHS_SCHEMA.md) - Per-goal record/reuse + goal-reaching gate
-- [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) - Foundational model + composition architecture
-
----
-
-**Last Updated:** 2026-06 (re-narrated to goal-host-vessel; added goal-reaching gate + per-goal paths)
+- [Impulse Resolution](./02-impulse-resolution.md) — how impulses are resolved and injected
+- [Improvisation & Failure Modes](./04-improvisation-failure-modes.md) — in-flight recovery and the failure taxonomy
+- [GOAL_EXECUTION_PATHS_SCHEMA.md](../GOAL_EXECUTION_PATHS_SCHEMA.md) — per-goal record and reuse
+- [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) — the foundational model

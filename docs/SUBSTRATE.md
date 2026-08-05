@@ -26,7 +26,48 @@ The substrate has generalized from "one local container" to **one image that run
 - `ENABLED_ROLES=role,role` — roles/role-groups to keep (`hub`/`spoke`/`full` expand via `inventory.roles`); everything else is disabled
 - `DISABLED_VESSELS=unit,unit` — always off, even if selected above
 
-**Default (none of the three set) = every unit enabled = the full local substrate, identical to today** (`apply-inventory.sh` is a no-op). Manifest-installed dynamic vessels (`"manifest": true`, i.e. the federation units) are never baked-enabled, so they are never touched here — they are installed on demand (see [Dynamic vessels](#dynamic-vessels)).
+**Default (none of the three set) = every unit enabled = the full local substrate** (`apply-inventory.sh` is a no-op). Manifest-installed dynamic vessels (`"manifest": true`, i.e. the federation units) are never baked-enabled, so they are never touched here — they are installed on demand (see [Dynamic vessels](#dynamic-vessels)).
+
+### The LLM arm fleet is rendered, not baked
+
+The set of LLM-resolver arms is **not** a fixed list of `.service` files. It is
+declared in [`scripts/substrate/llm-arms.json`](../scripts/substrate/llm-arms.json)
+and materialised at boot: `entrypoint.sh` locates `render-llm-arms.sh`, runs it,
+then enables the units it produced (offline `multi-user.target.wants` symlinks,
+because `systemctl enable --now` is a no-op before systemd is PID 1). If no
+renderer is found, or rendering fails, boot continues with whatever LLM units the
+image already carries — the step is fail-open, never a boot blocker.
+
+Each arm is one `{ id, model, provider, port }` entry, and rendering it produces
+two files:
+
+- `/etc/substrate/llm-<id>.env` — the single-provider pin (`LLM_DEFAULT_MODEL`,
+  `LLM_PINNED_PROVIDER`). It loads *after* `/etc/substrate/env`, so the arm's
+  model and provider win over the fleet-wide default.
+- `/etc/systemd/system/llm-<id>.service` — the unit, with `PORT` and
+  `LLM_RESOLVER_VESSEL_ID=llm-resolver-<id>` pinned, running the shared
+  llm-resolver-vessel runtime.
+
+Two properties follow from the pin, and both are the point of the design:
+
+- **Quota is per-arm.** Because an arm serves exactly one provider, its quota is
+  that provider's quota — so it de-advertises through discovery when that
+  provider cools, instead of silently failing over to a sibling provider and
+  hiding the exhaustion. Callers resolve to a live arm through discovery; nothing
+  addresses an arm by URL.
+- **Arms materialise only where their credential lives** (law 11). The unit
+  carries an `ExecCondition` that checks `/etc/substrate/env` for the provider's
+  key variable, so a host without that key **skips** the arm cleanly rather than
+  failing it. The same image therefore runs everywhere and grows the arms the
+  host can actually serve.
+
+`provider_key_env` in the same file maps each provider to its key variable; an
+arm naming a provider absent from that map is skipped with a warning. Adding an
+arm is one entry in the JSON — it registers through discovery and becomes
+selectable fleet-wide within the namespace, regardless of which host runs it. A
+hub or deploy can replace the whole list without editing a tracked file by
+setting `LLM_ARMS` to a JSON array of the same shape; the env var wins over the
+file.
 
 ## Launch: two canonical paths
 
@@ -167,7 +208,7 @@ from them (the endpoints from the discovery host, the rest resolved from
 | `METABOB_API_KEY` | **required** — hub-issued credential; the key that joins the group |
 | `DISCOVERY_ENDPOINT=http://<hub-host>:18100` | **required** — point discovery at the hub |
 | `HUB_DISCOVERY_URL=http://<hub-host>:18100` | the discovery group to join (same value as above) |
-| `ENABLED_ROLES=spoke` | *optional / auto-inferred* — `gen-env.sh` infers `spoke` from a remote `DISCOVERY_ENDPOINT`; set it explicitly only to force a thin-spoke passthrough |
+| `ENABLED_ROLES=spoke` | *redundant* — `gen-env.sh` already defaults `ENABLED_ROLES` to `spoke` whenever `DISCOVERY_ENDPOINT` names a remote host, so setting it explicitly changes nothing. Set `ENABLED_ROLES` only to select a role set *other* than the inferred one |
 | `ACTIVITY_API_ENDPOINT=http://<hub-host>:18080` | *optional override* — derived from the discovery host if unset |
 | `IDENTITY_VESSEL_URL=http://<hub-host>:18101` | *optional override* — derived from the discovery host if unset |
 
@@ -263,6 +304,10 @@ scripts/substrate/configure-local.sh
 > `make -C scripts/substrate run-live-obsidian ANTHROPIC_API_KEY=...`. It reuses
 > the `substrate-live` container name and the same volumes, so every `restart-*`
 > / `logs-*` / `health` target keeps working unchanged.
+>
+> Both `restart-*` and `logs-*` are **fixed enumerated target lists**, not
+> pattern rules — see [Iteration loop](#iteration-loop) and
+> [Monitoring](#monitoring) for the units each covers.
 
 After step 4, `~/.metabob/config.json` points to `http://localhost:18080` and all validation harnesses use it automatically.
 
@@ -312,7 +357,7 @@ flow is one command with no credentials beyond a running substrate:
 
 > **Instance selector.** Every `make -C scripts/substrate` target — `show-key`,
 > `whoami`, `issue-key`, `list-keys`, `revoke-key`, `status`, `health`, `shell`,
-> `logs-<unit>`, `restart-<vessel>`, `sync-<vessel>` — runs `docker exec
+> and each enumerated `logs-*` / `restart-*` / `sync-*` target — runs `docker exec
 > $(LIVE_NAME) …` and defaults `LIVE_NAME=substrate-live`. Run bare against a
 > second or clean-room container they silently act on the live substrate; pass
 > `LIVE_NAME=<container>` on every command (e.g.
@@ -450,6 +495,28 @@ make -C scripts/substrate logs-activity-api
 make -C scripts/substrate shell
 ```
 
+**`logs-*` is an enumerated set of targets, not a pattern rule.** There is no
+generic `logs-<unit>`: make has one explicit target per covered unit, and any
+other name fails with `No rule to make target`. The targets that exist are:
+
+`logs-all` (the whole journal, followed), `logs-activity-api`,
+`logs-analysis-vessel`, `logs-boredom-vessel`, `logs-bootstrap-seeder`,
+`logs-concept-db`, `logs-development-vessel`, `logs-goal-host-vessel`,
+`logs-llm-resolver-vessel`, `logs-local-tools-vessel`, `logs-m1-trainer`,
+`logs-ribosome-vessel`, `logs-surrealdb`.
+
+Most follow the unit (`journalctl -fu`); `logs-bootstrap-seeder`,
+`logs-boredom-vessel`, and `logs-m1-trainer` instead dump the unit's journal and
+exit (`--no-pager`), so those three return rather than blocking your terminal.
+For **any unit without a target** — every
+timer-driven tick, the rendered LLM arms, identity, discovery — read the journal
+directly, which works for all of them:
+
+```bash
+docker exec substrate-live journalctl -u <unit>.service -n 100 --no-pager
+docker exec substrate-live journalctl -fu <unit>.service        # follow
+```
+
 ## Backing up and restoring learning state
 
 State lives in **two Docker named volumes**, both detached from the container, so
@@ -478,6 +545,76 @@ docker run --rm -v substrate-surreal:/dst -v "$(pwd)":/bak alpine \
   sh -c 'find /dst -mindepth 1 -delete && tar xzf /bak/substrate-surreal-YYYYMMDD.tgz -C /dst'
 make -C scripts/substrate run-live ANTHROPIC_API_KEY=...
 ```
+
+## Trace-store retention and the maintenance lease
+
+The trace store (`activity_execution_traces`) is the learning substrate, and it
+grows with every execution. Left unbounded it wedges the learning loop: a global
+count over the table is a multi-second full scan, and every observer that reads
+traces pays that cost. The substrate therefore manages the table's size itself
+rather than waiting for an operator to notice.
+
+**Size accounting is O(1), never a scan.** Both insert paths increment a
+`trace_store_counters` row, so the current row count is a read of one record.
+Nothing in the retention path performs a global `GROUP BY` or an unbounded
+`ORDER BY`.
+
+**Retention config lives in activity-api** (`config.traceStore`), bootstrap-read
+from the environment because it bounds a destructive operation:
+
+| Variable | Meaning | Default |
+|---|---|---|
+| `TRACE_STORE_CAP` | row count above which the store is flagged for reconciliation | `50000` |
+| `TRACE_STORE_HOT_WINDOW_DAYS` | recency window kept in full | `14` |
+| `TRACE_STORE_RESERVOIR_PER_ACTIVITY` | stratified sample kept per activity outside the hot window | `25` |
+
+**The cadence is autonomous.** development-vessel's `trace_store_health_observer`
+reads the counters against the cap and emits a `substrateGap` in category
+`trace_store_reconciliation`; the gap routes into the drain/compose loop, which
+dispatches the seeded `trace-store-reconcile` activity through goal-host. The
+activity acquires a lease, invokes the reconcile, and releases — the whole
+sequence is one traced execution graded on `reached`, like any other work.
+
+**`maintenanceLease` is the coordination primitive.** It is a shape served by
+development-vessel, file-backed at `WORKSPACE_ROOT/leases/maintenance.json`
+(override `MAINTENANCE_LEASE_PATH`), holding a single
+`{ holder, token, acquired_at, expires_at }` object — no file means no lease. It
+is read through the `maintenanceLease` shape and mutated through
+`maintenanceLease_write` with `op: acquire | renew | release`, each returning a
+`maintenanceLeaseWriteResult`. `acquire` takes a `holder` and an optional
+`ttl_ms`; `renew` and `release` take the token `acquire` returned, so a caller
+cannot release someone else's lease. It is a **single global mutex** across the
+substrate, so a holder that acquires twice deadlocks itself — release before
+acquiring on a nested path.
+
+Two sides honour it:
+
+- **Readers pause.** development-vessel's shared observer fetch helper checks
+  the lease before each trace-store read and skips the cycle while one is held.
+  The check **fails open** — an unreadable or malformed lease file proceeds as
+  if no lease existed, so a corrupt lease can never wedge self-measurement.
+- **The writer is gated.** activity-api's `db_admin` operation
+  `reconcile_trace_store` validates a caller-supplied `lease_token` against the
+  same file and **fails closed** without a valid unexpired lease.
+
+**The reconcile is a copy-forward table swap**, which is why its rails matter.
+SurrealDB has no table rename, so it builds a `_next` table from the keep set
+(hot window plus per-activity reservoir), drops the views and the original,
+replays the schema, copies back, and redefines the views. Its rails:
+`dry_run` defaults **true** (a live run requires an explicit `dry_run:false`);
+every table name is a fixed constant, never caller-supplied; and every
+invocation — dry-run or live, refused or applied — writes an audit row to
+`db_admin_audit` including the captured DDL snapshot and, on failure, the step
+reached. There is no automatic rollback: recovery is from that DDL snapshot plus
+your volume backup.
+
+**Operationally this means: take the lease before you touch the store.** Before
+any destructive reset or manual DB work, back up both volumes *and* acquire a
+`maintenanceLease`, so observers pause and the reconcile op cannot fire
+underneath you. A vessel restart landing mid-window is what loses a swap, which
+is why the mitosis cutover path wraps its whole cutover in a lease too — anything
+that restarts vessels or rewrites the store is a maintenance window and should
+hold one.
 
 ## Pointing tools at a substrate
 
@@ -515,7 +652,17 @@ The same image runs anywhere; the deploy scripts differ only in *how* the image 
 | **Local** | `make -C scripts/substrate run-live ANTHROPIC_API_KEY=…` | Builds/runs the full fleet locally as `substrate-live` (host ports `18080`/`18090`/`18100`/`18210`/`18250`/`18260`/`18270`). The everyday development target. |
 | **Hub (clone + build on a VM)** | `GITHUB_PAT=… ANTHROPIC_API_KEY=… SSH_KEY=… bash scripts/substrate/deploy-hub.sh root@<vm-ip> <public-ip>` | `deploy-hub.sh` clones the repo + submodules **on the VM** and builds there (no multi-GB image ship), runs `ENABLED_ROLES=hub`, seeds the single shared org (so spokes registering with a hub-issued key share its namespace), and stands up the libp2p relay. |
 | **Remote (ship prebuilt image over SSH)** | `ANTHROPIC_API_KEY=… bash scripts/substrate/deploy-remote.sh root@<vm-ip>` | `deploy-remote.sh` ships the locally-built image via `docker save \| ssh docker load` (**no registry**), runs + seeds it on the VM using the portable named volumes. Optional `PUBLIC_IP=… RUN_RELAY=1` also stands up the public relay; optional `PEER_DISCOVERY=<ip>:18100 FEDERATION_SIGNING_SECRET=<hex>` peers it to another substrate. |
-| **Fleet convergence** | `APPLY=1 CONTAINERS="substrate-live substrate-b" bash scripts/substrate/federation-pull-sync.sh --once` | `federation-pull-sync.sh` ff-only pulls `origin/dev`, diffs the changed `repos/<vessel>` trees, and `docker cp`s the whole `src/` (+`sql/`, `package.json`) into every peer container that runs that vessel, then restarts the unit — converging an entire fleet to upstream for **arbitrary multi-file changes, including the core vessels** (discovery-vessel, activity-api) that `restart-<vessel>` has no target for. Dry-run by default (`APPLY=1` to act); ff-only (refuses divergence). |
+| **Fleet convergence** | *(no command — it is already running)* | Every substrate converges itself: `substrate-pull-sync.timer` runs in-container on each box and pulls `origin/dev` into that container's own clones. A fleet converges because each member pulls, not because a host pushes to all of them. See [Self-sync](#self-sync-git-remotes-are-the-only-code-channel). |
+
+**Do not reach for a host script to push source into containers.** The only unit
+in the substrate's own unit set that sits on the code channel is
+`substrate-pull-sync.service`, driven by `substrate-pull-sync.timer` and by a
+boot run ordered after `git-push-setup.service`. `federation-pull-sync.sh` is
+wired to no unit at all, and `host-pull-sync` exists only as an optional
+*host-side* user-systemd unit the operator installs and enables by hand — neither
+is load-bearing, and neither is what a peer substrate is waiting on. A change
+reaches the fleet by landing on `origin/dev`: that is the channel every substrate
+already watches.
 
 Federation deploy details (hub vs. peers, the relay/sidecar, firewall ports) live in [`docs/FEDERATION.md`](FEDERATION.md).
 
@@ -537,7 +684,7 @@ docker exec substrate-live vessel-ctl install <name>         # same, in-containe
 
 ## Self-sync (git remotes are the only code channel)
 
-`substrate-pull-sync.timer` (10 min, plus a boot run after `git-push-setup`) converges the live `/vessels` runtime to each clone's `origin/dev`: ff-only pull → `mirror-to-live` → staggered, health-gated restart. A restart that goes unhealthy reverts to the last-good pin (`/workspace/.last-good/<v>`) and halts the run with a `substrateGap`; a diverged clone is refused (never forced). Runs skip while a mitosis cutover is in flight (`/workspace/mitosis-pending.json`). This is also how a *fleet* of substrates converges — each one pulls origin; no host mediates (it replaces `host-pull-sync.sh` / `federation-pull-sync.sh` as the load-bearing path). Self-recovery's revert source is the git clone too, never a host checkout. Without a `SUBSTRATE_GIT_PAT` the sync no-ops with a warning: the substrate is frozen-but-functional.
+`substrate-pull-sync.timer` (10 min, plus a boot run after `git-push-setup`) converges the live `/vessels` runtime to each clone's `origin/dev`: ff-only pull → `mirror-to-live` → staggered, health-gated restart. A restart that goes unhealthy reverts to the last-good pin (`/workspace/.last-good/<v>`) and halts the run with a `substrateGap`; a diverged clone is refused (never forced). Runs skip while a mitosis cutover is in flight (`/workspace/mitosis-pending.json`). This is also how a *fleet* of substrates converges — each one pulls origin; no host mediates. It is the **only** unit-driven code channel: the older host-side push scripts are not wired to any unit and are not load-bearing. Self-recovery's revert source is the git clone too, never a host checkout. Without a `SUBSTRATE_GIT_PAT` the sync no-ops with a warning: the substrate is frozen-but-functional.
 
 ## Landing a change
 
@@ -585,24 +732,24 @@ The substrate cannot self-declare S3. Only the operator can observe sustained pu
 
 All lifecycle events — task binding, execution completion, gap classification, LLM dispatch — flow on the activity-api WebSocket broadcaster (`ws://localhost:18080/ws`) in addition to any in-process eventSink. Discovery-vessel emits four additional event types on the same bus: `vessel.registered`, `vessel.heartbeat`, `vessel.deregistered`, and `vessel.expired`. Any vessel subscribing to the bus receives all of these without any per-emitter configuration.
 
-This has a practical consequence for vessel startup: goal-host-vessel subscribes to `vessel.registered` and uses those events to reactively register proxy resolvers for newly-appearing vessels. This replaces the race-prone one-shot registration that happened once at startup — a vessel that starts after goal-host-vessel now gets picked up automatically rather than being invisible until the next restart cycle.
+This has a practical consequence for vessel startup: goal-host-vessel subscribes to `vessel.registered` and uses those events to reactively register proxy resolvers for newly-appearing vessels. This is what makes registration order irrelevant: a vessel that starts after goal-host-vessel is picked up automatically rather than staying invisible until the next restart cycle.
 
 ## Vessel self-replacement
 
 Vessels that accumulate idiom-purity gaps are candidates for substrate-driven self-replacement. Purity gaps include: serving legacy REST endpoints alongside the resolver contract, implementing built-in tools (bash, read, write, git) instead of routing through discovery-resolved ones, or maintaining internal state that belongs in the substrate's shared store. The substrate audits purity against the canonical idiom set, mints a replacement vessel via the forge, validates the replacement in shadow against live traffic, and promotes it on evidence. The original vessel is archived rather than modified in-place.
 
-A vessel carries a purity gap when it serves legacy REST endpoints that predate the resolver contract, or ships built-in tools (bash/read/write/edit/git) that bypass discovery instead of routing through discovery-resolved ones. Self-replacement for such a vessel is substrate-driven and not operator-led — the operator's role is adversarial testing of the replacement, not authoring it. Which vessels currently carry gaps is a live fact: query the purity audit rather than trusting a list here.
+A vessel carries a purity gap when it serves legacy REST endpoints that predate the resolver contract, or ships built-in tools (bash/read/write/edit/git) that bypass discovery instead of routing through discovery-resolved ones. Self-replacement for such a vessel is substrate-driven and not operator-led — the operator's role is adversarial testing of the replacement, not authoring it. Which vessels carry gaps is a live fact: query the purity audit rather than trusting a list here.
 
 ## Closure properties
 
-Lift requires not just what the substrate does autonomously, but what it does NOT depend on. Seven external stateful dependencies are the formal closure gaps — services and state structurally outside the substrate that currently load-bear on lift properties:
+Lift requires not just what the substrate does autonomously, but what it does NOT depend on. Seven external stateful dependencies are the formal closure gaps — services and state structurally outside the substrate that load-bear on lift properties until each is replaced:
 
 1. **Operator memory** (`~/.claude/.../memory/`) — cross-session recall that the substrate has no equivalent surface for. Replacement: `memoryNote` shapes owned by development-vessel, mirrored to the cache via `memory-sync-tick`.
 2. **Slash-command skills** (`/openspec-propose`, `/review`, `/deploy`, etc.) — stateful workflows bound to the Claude Code harness. Replacement: substrate-resident activity equivalents (`propose-spec`, `verify-merge-candidate`, `apply-spec`).
 3. **Subagent dispatch** (Plan, Explore, general-purpose) — research and multi-step work via operator-side invocation. Replacement: substrate activity dispatch with goal decomposition resolvers.
 4. **GitHub Actions CI** — merge gates and canary deploy triggers in GitHub infrastructure. Replacement: substrate harness as the merge-authority gate; substrate-resident CI criterion (`ciAgreementReport`).
 5. **Operator shell access** (`kubectl`, `helmfile`, `docker exec`) — operational commands outside the substrate's activity system. Replacement: substrate-dispatched restart and restore activities (`restart-vessel`, `restore-data`).
-6. **Operator spec-authoring** — new specs are currently authored by the operator. Replacement: substrate-authored proposals via `propose-spec` / `verify-merge-candidate` pipeline with operator as reviewer.
+6. **Operator spec-authoring** — new specs originate with the operator. Replacement: substrate-authored proposals via `propose-spec` / `verify-merge-candidate` pipeline with operator as reviewer.
 7. **Operator git access** — commits, PRs, and merges require operator git credentials. Replacement: substrate-resident git authorship, PR opening, and merging gated by the CI-closure verdict.
 
 Closure is measured by a substrate-resident closure-audit script that tests each `(property, external_tool)` pair against substrate-only resolvers and returns a verdict. Three consecutive nightly green closure-audit runs are a hard lift gate.
@@ -625,7 +772,7 @@ Federation routes capability queries across substrates: hub/spoke over a shared 
 
 ## Troubleshooting
 
-**Units not starting within 60s**: check `make -C scripts/substrate logs-<unit>` for the failing unit. Most common cause: a host-port conflict on one of the published ports (e.g. another process already on `18270`) — `run-live` aborts with "Bind for 0.0.0.0:18270 failed: port is already allocated".
+**Units not starting within 60s**: read the failing unit's journal — `docker exec substrate-live journalctl -u <unit>.service -n 100 --no-pager` (or the matching `logs-*` make target, if the unit has one). Most common cause: a host-port conflict on one of the published ports (e.g. another process already on `18270`) — `run-live` aborts with "Bind for 0.0.0.0:18270 failed: port is already allocated".
 
 **API key needed but lost**: if you ran `seed-identity.ts` but forgot the key, re-read it from the container env file: `docker exec substrate-live grep METABOB_API_KEY /etc/substrate/env`. Then re-run `configure-local.sh` to update your local config.
 

@@ -25,38 +25,80 @@ code change  →  bun --hot  →  handler swap (~50ms, zero downtime)
 
 These vessels run directly on the host and support `bun --hot` / `bun --watch` development:
 
-| Vessel | `dev` command | Default port | Hot-reload type | Notes |
+The **port** column is the port the vessel binds inside the substrate — the value
+its systemd unit pins via `PORT`. A bare `bun run dev` on the host with no `PORT`
+set falls back to whatever the repo's own default is, which is *not* always the
+fleet port; export `PORT` explicitly if anything else needs to find the vessel.
+UI vessels have no fleet unit, so their port is simply their dev-server port.
+
+| Vessel | `dev` command | Port | Hot-reload type | Notes |
 |---|---|---|---|---|
-| `metabob-activity-api` | `bun run --watch src/index.ts` | 8080 | --watch | SurrealDB + Redis required |
-| `discovery-vessel` | `bun --watch run index.ts` | 8080 | --watch | Singleton; restart gap ~1s |
-| `identity-vessel` | `bun --hot src/index.ts` | 8787 | --hot | Redis required |
-| `activity-dashboard` | `bun --hot src/index.ts` | 3000 | Bun HMR | Proxies to activity-api |
-| `react-renderer` | `bun --hot run src/index.ts` | 3000 | --hot | `buildHandler()` pattern |
+| `activity-api` | `bun run --watch src/index.ts` | 8080 | --watch | SurrealDB + Redis/Valkey required |
+| `discovery-vessel` | `bun --watch run index.ts` | 8100 | --watch | Singleton; restart gap ~1s. Entry point is `index.ts` at the repo root, not `src/` |
+| `identity-vessel` | `bun --hot src/index.ts` | 8101 | --hot | Redis/Valkey required |
+| `concept-db` | `bun run --watch src/index.ts` | 8260 | --watch | Concept graph + prose knowledge |
+| `analysis-vessel` | `bun --hot src/index.ts` | 8250 | --hot | Stateless VesselDaemon |
+| `react-renderer` | `bun run dev:server` | 3000 | --hot | `buildHandler()` pattern. Plain `dev` runs the server *and* a Vite client concurrently |
 | `terminal` | `bun --hot src/index.ts` | 9090 (auto) | --hot | `buildHandler()` pattern; MCP stdio unaffected |
 | `workbench` | `vite` | 3000 | Vite HMR | Full Vite dev server |
-| `concept-db` | `bun run --watch src/index.ts` | 8080 | --watch | |
-| `metabob-mcp` | `bun --watch src/index.ts` | stdio | --watch | MCP stdio only |
-| `analysis-vessel` | `bun run --watch src/index.ts` | 8080 | --watch | Stateless VesselDaemon; replaced `metabob-analysis-api` (commit `06bd8c04`) |
+
+The agent-facing MCP cockpit is **metabob-mcp**, an external MCP server rather
+than a vessel in this repo — it speaks stdio, has no port, and is not started or
+hot-reloaded by anything here. Drive it through its `mcp__metabob__*` tools.
 
 ### Substrate-hosted vessels
 
 These vessels run as systemd units **inside the substrate container** and are not started directly with `bun run dev`. Edit source in `repos/<vessel>/`, then hot-reload via:
 
 ```bash
-make -C scripts/substrate substrate-restart-<vessel>
+make -C scripts/substrate restart-<vessel>
 # e.g.:
-make -C scripts/substrate substrate-restart-goal-host-vessel
-make -C scripts/substrate substrate-restart-boredom-vessel
+make -C scripts/substrate restart-goal-host-vessel
+make -C scripts/substrate restart-development-vessel
 ```
+
+`restart-*` is a **fixed enumerated set of make targets**, not a pattern rule —
+each one copies `repos/<vessel>/src` into the container and restarts the unit.
+[`SUBSTRATE.md` § *Iteration loop*](SUBSTRATE.md#iteration-loop) lists which
+vessels have one. Vessels without a target (including boredom-vessel, which has
+`sync-boredom-vessel` and `trigger-boredom-vessel` instead) are restarted
+directly:
+`docker exec substrate-live systemctl restart <unit>.service`.
 
 | Vessel | Port (in-container) | Role | Notes |
 |---|---|---|---|
-| `goal-host-vessel` | 8210 | `POST /run-goal` — primary goal dispatch target | Async: returns 202 immediately (commit `ac0d75b5`); calleob + boredom-vessel both POST here |
-| `llm-resolver-vessel` | 8220 | `llm_completion` resolver backed by Anthropic SDK | Decouples LLM credentials from other vessels |
-| `local-tools-vessel` | 8230 | Filesystem + process resolvers (`BunFileSystemAdapter`, `BunProcessAdapter`) | Lowest blast-radius vessel |
-| `ribosome-vessel` | 8240 | Template extraction from execution traces | WebSocket client to activity-api `/ws`; writes via `activityTemplate_update` impulse |
-| `boredom-vessel` | — | Systemd timer; POSTs rotating topology-discovery goals to goal-host-vessel | Fires every 30min (commit `536652a4`; was 5min) |
-| `development-vessel` | — | Meta-vessel for substrate self-development; 19 shapes, 7 seed templates | Runs as systemd unit; see `repos/development-vessel/` |
+| `goal-host-vessel` | 8210 | `POST /run-goal` — primary goal dispatch target | Async: returns 202 with a `dispatchId` immediately, so a 202 says the walk *started*, not that it reached. Poll for the verdict. Both the MCP cockpit and boredom-vessel dispatch here |
+| `llm-resolver-vessel` | 8220 | `llm_completion` resolver | Decouples LLM credentials from every other vessel. Multi-provider with failover; the rendered per-provider arms (`llm-<id>.service`) run the same source on their own ports |
+| `local-tools-vessel` | 8230 | Filesystem, shell, git, and code-editing resolvers | Advertises both shape names (`shellResult`, `fileContent`, `gitDiff`, …) and the tool-name aliases (`shell`, `fs_read`, `code_search`, …) so tool-driven edit routes can resolve them. Lowest blast-radius vessel |
+| `ribosome-vessel` | 8240 | Template extraction from execution traces | Persistent auto-reconnecting WebSocket client to activity-api `/ws`; on an authoritative `execution_completed` that reached with all its tasks successful, it dispatches the `ribosome-extract` template through goal-host-vessel's `POST /run-goal` (see `dispatchRibosomeExtract`, gated in `onExecutionCompleted`). The module docblock still describes an older `POST /v2/impulses/resolve` route to activity-api — that path is retired; read the code, not the header |
+| `boredom-vessel` | — (no HTTP server) | Long-lived dispatch-pool daemon; selects and dispatches work when the substrate is idle | See *Boredom cadence* below |
+| `development-vessel` | 8090 | Meta-vessel for substrate self-development | Owns the `memoryNote` store, the `maintenanceLease`, the detector/tick seed templates, and the failure-mode harness. Shape and template counts are live facts — read them from `registry_query`, not from here |
+
+### Boredom cadence
+
+Boredom is **condition-driven selection, not a fixed interval** — reading a
+cadence off a clock is the antipattern the substrate's law on pace exists to
+forbid. boredom-vessel runs as a long-lived daemon (`Type=simple`), not a
+oneshot tick: each selection pass scores the pool of candidate templates on
+learned momentum, input-shape availability, and priority weights folded from
+current conditions — open-gap demand, `timeShapedRhythm` due-state, learning-mode
+signals — then dispatches winners concurrently up to a slot cap. Throughput is
+paced by the pool and by WebSocket completion events, and selection momentum
+persists across restarts.
+
+**The static timer is a known gap.** `boredom-vessel.timer` still exists as a
+backstop, and the daemon still reads several fixed millisecond intervals from its
+unit (minimum dispatch spacing, pool loop period, idle window, exercise and
+autopromote periods). Those are clock values, not rhythm shapes: they are frozen
+at process start, invisible to traces, and therefore unlearnable. Treat whatever
+numbers you find there as a stopgap, read them from the unit rather than from
+this document, and express new cadence as a `timeShapedRhythm` impulse the
+selector already consumes.
+
+```bash
+docker exec substrate-live systemctl cat boredom-vessel.service boredom-vessel.timer
+docker exec substrate-live journalctl -u boredom-vessel -f
+```
 
 Run `bun run dev:debug` (where available) to include ISO timestamps in hot-reload log lines:
 
@@ -105,7 +147,7 @@ All vessels share `packages/test-helpers`, a small package with four utilities:
 ### Example: integration test against a live vessel
 
 ```typescript
-import { spawnVessel, type VesselHandle } from "@metabob/test-helpers"
+import { spawnVessel, type VesselHandle } from "@avigopal/test-helpers"
 import { describe, test, expect, beforeAll, afterAll } from "bun:test"
 import { resolve } from "path"
 
@@ -193,7 +235,7 @@ With `--hot` and `buildHandler()`, the process never restarts, so the registrati
 
 The activity-api WebSocket broadcaster (`ws://localhost:18080/ws` in the local substrate) carries three event classes that are useful for development tooling:
 
-- **Execution lifecycle events** (`task.started`, `task.completed`, `task.failed`, `tool.call`, `impulse.resolved`, `lifecycle:task:preBinding`, `lifecycle:gap:classified`, `lifecycle:llm:dispatched`) — the same events the workbench uses for its live execution overlay, now available to any subscriber. Subscribe to these to observe goal-host-vessel activity in real time.
+- **Execution lifecycle events** (`task.started`, `task.completed`, `task.failed`, `tool.call`, `impulse.resolved`, `lifecycle:task:preBinding`, `lifecycle:gap:classified`, `lifecycle:llm:dispatched`) — the same events the workbench uses for its live execution overlay, available to any subscriber. Subscribe to these to observe goal-host-vessel activity in real time.
 - **Vessel registration events** (`vessel.registered`, `vessel.heartbeat`, `vessel.deregistered`, `vessel.expired`) — fired by discovery-vessel whenever the registry changes. Subscribe to these instead of polling `/shapes` to detect topology changes reactively.
 - **Concept-db internal events** (`concept:created`, `edge:created`) — forwarded onto the bus when concept-db records new knowledge.
 

@@ -1,16 +1,27 @@
 # Activity-Level Executor Hooks
 
-**Status**: partially superseded (2026-05-27). Basic lifecycle events (`lifecycle:task:preBinding`, `lifecycle:task:completed`, `lifecycle:execution:succeeded`, `lifecycle:gap:classified`, `lifecycle:llm:dispatched`) are live in the substrate. The broader subscriber architecture — `subscription: "subscriber"` impulse field, `POST /v2/activities/lifecycle-subscribers`, Thompson-ranked hook dispatch — is NOT yet shipped. This spec remains the design reference for that second half.
-**Audience**: a reviewer who wants to understand why the executor's foundation
-doc claims an "activity lifecycle with hooks" that the executor never
-fires, and how to wire it without inventing a parallel mechanism alongside
-the existing impulse–activity system.
-**Sibling specs**:
-- `docs/specs/impulse-relationship-signal-verification.md` — taxonomy of
-  impulses, traces, hooks across the system.
-- `docs/specs/discovery-to-tools-bridge.md` — vessel-tool advertisement
-  contract; the same advertisement path is reused here for vessels that
-  want to register cross-cutting hook activities.
+**What ships.** The subscriber architecture is implemented and running.
+`repos/ias-executor-ts/src/lifecycle-subscriber.ts` carries the
+`LifecycleSubscriberVessel`, the `subscription` declaration on
+`ActivityTemplate` (`src/ontology.ts`), filter matching, the dedupe window,
+the self-subscription guard and the depth cap. The engine emits five lifecycle
+shapes: `lifecycle:task:preBinding`, `lifecycle:task:completed`,
+`lifecycle:execution:succeeded`, `lifecycle:gap:classified` and
+`lifecycle:llm:dispatched`.
+
+**What is deferred.** Ranked dispatch. The vessel fires *every* matching
+subscriber that survives dedupe and the depth cap. Thompson / relevance
+ranking, the top-K cap and `must_fire` segregation are not wired: the
+`HIGH_FREQUENCY_SHAPES` / `HIGH_FREQUENCY_TOP_K` / `ONE_SHOT_TOP_K` constants
+and `defaultTopKForShape` are exported for parity but no code path consumes
+them, and there is no `POST /v2/activities/lifecycle-subscribers` ranker on
+activity-api. §3.3 below describes that ranked runtime as design, not as
+behaviour a reader can observe.
+
+**Audience**: a reviewer who wants to understand why an execution host's
+foundation doc can claim an "activity lifecycle with hooks" that the host
+never fires, and how to wire it without inventing a parallel mechanism
+alongside the existing impulse–activity system.
 
 ---
 
@@ -27,22 +38,21 @@ is split across three orphaned files:
 | A namespace-style hook system | `register()` and its before/after dispatchers were never called from non-test code. |
 | Verification hooks layered on that system | Exported and never invoked; the validation they re-implemented already lived elsewhere. |
 
-Verified by grep: `LifecycleHooks` and the four `execute*Prompt`/
-`execute*Complete` symbols have zero `activity.ts` callsites;
-`registerImpulseVerificationHooks` has zero callers outside its
-defining file; `getHookRegistry` has one live caller
-(`goal-processor.ts:1648`).
+The diagnostic that established this: the hook-registry symbols had no
+callsites in the execution path, the namespace-style dispatchers had no
+callers outside test code, and the verification hooks had none at all. A
+registry nothing dispatches into is indistinguishable from an absent one.
 
 The cost of this gap: every template that wants setup or teardown
-encodes it as the first or last task. `prime-context-for-task.json`
-spends tasks 1 and 3 on context-loading and relevance-recording that
-are conceptually `preExecution` and `postExecution` for task-2's
-actual work. This bundles cross-cutting concerns into the task DAG,
+encodes it as the first or last task. A context-priming template
+spends its first and last tasks on context-loading and
+relevance-recording that are cross-cutting concerns around the one task
+doing the actual work. That bundles them into the task DAG,
 makes the reusable middle hard to extract, and inflates Thompson
 Sampling's success-rate denominator with bookkeeping work.
 
-The naive fix is a `HookTrigger` enum, a `template.hooks` block, and
-dispatch points in `activity.ts` — a parallel mechanism alongside
+The naive fix is a trigger enum, a `template.hooks` block, and
+dispatch points in the execution loop — a parallel mechanism alongside
 impulses and activities. With 10000s of vessels potentially
 registering hook activities, that path leads to a centralized
 in-process registry the executor would have to enumerate at every dispatch
@@ -55,11 +65,11 @@ selection.
 ## 2. Constraints
 
 1. **Lean into existing idioms, don't add new ones.** Don't introduce
-   a new trigger taxonomy. Reuse impulses, activities, the trace, the
-   WebSocket broadcaster, and Thompson Sampling. A "hook" is an activity
-   whose input shapes are lifecycle impulses.
+   a new trigger taxonomy. Reuse impulses, activities, the trace and
+   Thompson Sampling. A "hook" is an activity that consumes a lifecycle
+   shape.
 2. **Backward compatibility.** Templates without lifecycle subscriptions
-   run identically to today. Adding lifecycle-impulse emission must not
+   run unchanged. Adding lifecycle emission must not
    change non-subscribing behavior — same trace shape, same Thompson
    Sampling denominator, same task ordering.
 3. **Foundation alignment.** Hook activities go through the same
@@ -70,67 +80,66 @@ selection.
    activities, the executor cannot fire all of them on every event. The
    ranking machinery (Thompson + relevance + cost) already winnows the
    primary-template candidate set; reuse it.
-5. **No new global state.** Subscription bookkeeping lives where
-   activity-template metadata already lives — in the template store
-   that activity-api already owns and the executor already queries.
+5. **No new global state.** Subscription bookkeeping lives on the
+   activity template itself, and the subscriber vessel owns its own
+   registry rather than a process-global singleton — so multiple
+   runtimes can coexist and tests need no global teardown.
 6. **Trace integration is automatic.** Hook activations show up in
    execution traces as nested activity invocations (composition
    pattern, already supported via `parent_execution_id` and
-   `composition_chain` per super-repo CLAUDE.md). No new trace field.
+   `composition_chain` — see
+   [`../architecture/RUNTIME_ACTIVITY_TRACING.md`](../architecture/RUNTIME_ACTIVITY_TRACING.md)).
+   No new trace field.
 7. **Failure semantics fall out naturally.** Hook activities are just
    activities — each has its own retry/failure handling. The executor
    that emitted the lifecycle impulse does not synchronously await
    subscriber completion (default), so subscriber failures do not
    cascade. Synchronous "blocking" subscriptions are an explicit
-   opt-in (see §6 open question 1).
+   opt-in (see §5 open question 1).
 
 ## 3. Design
 
-**Hooks are activities subscribing to lifecycle impulses, ranked by
+**Hooks are activities subscribing to lifecycle events, to be ranked by
 the same Thompson + relevance machinery used for primary selection.**
 
 ### 3.1 Lifecycle impulses
 
-The executor emits impulses at well-defined points in `activity.ts`.
-These are real impulses — written to the execution trace, broadcast over
-WebSocket, persisted by activity-api. Each lifecycle impulse has:
+The execution engine emits at well-defined points in its task loop. Each
+lifecycle event carries:
 
-- `pointer.type = "lifecycle"`
-- `pointer.event` ∈ a small open-ended set of named events
-- `pointer.executionId`, `pointer.templateId`, and event-specific fields
-- A shape (from `inferShape`) of the form `lifecycle:<event>`, so the
-  shape system the rest of the codebase already keys off of
-  (`shape-resolver.ts`, `impulse-cooccurrence.ts`) routes them correctly
+- a shape of the form `lifecycle:<domain>:<event>`, so the shape system the
+  rest of the codebase already keys off of routes them correctly
+- the execution and template identity, plus event-specific fields
+- the goal context, when the host forwarded one into the engine
 
-Five emit points, mapped from the previous spec's call-hook locations:
+Five emit points, named by what has just happened rather than by line
+number — this system rewrites its own source, so a line reference is stale
+before it is read:
 
-| Event shape | Emit point in `activity.ts` | Payload |
+| Event shape | Emit point | Payload |
 | --- | --- | --- |
-| `lifecycle:activity:preExecution` | between line 2079 (impulse merge) and 2099 (topological sort) | `{executionId, templateId, variables, impulseShapes, parentExecutionId}` |
-| `lifecycle:task:completed` | inside the per-task post-completion branch around line 2603, after `onTaskComplete?.(...)` | `{executionId, taskId, taskIndex, status, outputShapes, durationMs}` |
-| `lifecycle:activity:postExecution` | between line 2814 (status flip) and line 2862 (broadcast) | `{executionId, templateId, status, durationMs, costUsd, taskCount, outputShapes}` |
-| `lifecycle:activity:failure` | inside the existing `catch` block at lines 3320–3331, after `execution.status = "failed"` | `{executionId, templateId, error, lastTaskId, durationMs}` |
-| `lifecycle:execution:tick` | timer-driven, started after the `try` at line 2063, stopped in `finally` at line 3352 | `{executionId, templateId, elapsedMs, lastTaskId, tickIndex}` |
+| `lifecycle:task:preBinding` | immediately before a task's inputs are bound, ahead of the task-started event | task identity plus the impulses about to be bound |
+| `lifecycle:task:completed` | after a task finishes, on both the ordinary and the recovered path | task identity, status, produced shapes |
+| `lifecycle:execution:succeeded` | after the engine settles an execution as successful | execution identity, template, produced shapes |
+| `lifecycle:gap:classified` | wherever the engine classifies an unmet need as a gap | the gap classification and the task that raised it |
+| `lifecycle:llm:dispatched` | inside the LLM prompt resolver, *before* the model call, so audit subscribers see the dispatch without log archaeology | the prompt dispatch record |
 
-That's the same five locations the prior spec called out. The change is
-that the executor *emits an impulse* at each location instead of *calling
-hooks*. The impulse machinery is already wired (the executor already
-creates impulses, broadcasts them, persists them in
-`execution.executionTrace.impulsesCreated`). No new dispatch path.
+The engine *emits an event* at each location instead of *calling hooks*.
+The subscriber vessel implements `EventSink`, so emission travels the
+ordinary event path — no separate dispatch channel.
 
-The shape names (`lifecycle:activity:preExecution`, etc.) are the
-canonical event names. Vessels subscribe to these shapes; they are
+Vessels subscribe to these shapes; they are
 **learned types** in the same sense as every other shape — observe,
 don't pin a closed enum (per `shapes_are_learned_types` memory).
 A vessel can introduce a new lifecycle event `lifecycle:budget:warning`
 by emitting it from anywhere in the codebase, and any activity can
 subscribe to it. This spec proposes the initial five; growth is open.
 
-### 3.2 Activities subscribe via the existing `impulses[]` block
+### 3.2 Activities subscribe via a `subscription` declaration
 
-`ActivityTemplate.impulses[]` already exists
-(the `impulses[]` block of the activity-template type). A "post-execution hook" is an
-activity whose impulses block contains a lifecycle pointer:
+A hook is an ordinary activity template that carries a `subscription`
+block. `ActivityTemplateSubscription` in
+`repos/ias-executor-ts/src/ontology.ts` is the whole structural addition:
 
 ```jsonc
 {
@@ -139,242 +148,191 @@ activity whose impulses block contains a lifecycle pointer:
   "tasks": [
     { "id": "upsert-relevance",
       "resolver": "concept-db:recordConceptRelevance",
-      "config": { "executionId": "{{lifecycle.executionId}}",
-                  "taskId": "{{lifecycle.taskId}}" },
       "outputShapes": ["impulseRelevance"] }
   ],
-  "impulses": [
-    { "id": "trigger",
-      "pointer": {
-        "type": "lifecycle",
-        "event": "task:completed",
-        "filter": { "outputShapeAny": ["concept", "memo"] }
-      },
-      "budget": 200,
-      "priority": "high",
-      "subscription": "subscriber"
-    }
-  ]
+  "subscription": {
+    "shape": "lifecycle:task:completed",
+    "filter": { "outputShapes_contains": "concept" },
+    "dedupe_key": "{executionId}:{taskId}"
+  }
 }
 ```
 
-Two new fields are conventional, not structural:
+Its fields:
 
-- `pointer.event`: the lifecycle event shape suffix (e.g.
-  `task:completed`, mapping to shape `lifecycle:task:completed`).
-- `pointer.filter`: optional structural match against the lifecycle
-  payload. Format mirrors what `impulse-filter.ts` already supports
-  for filtering pools by shape/key. Omitted means "any matching event".
+- `shape` (required): the lifecycle event shape the activity fires on.
+  A template registered without one is rejected at registration.
+- `filter`: optional structural match against the event payload.
+  `matchesFilter` supports `_contains` and `_equals` suffix predicates
+  plus plain equality; omitted means "any event of that shape".
+  `resolvePayloadField` falls back between snake_case and camelCase so a
+  filter is not silently dead because two vessels spell a field differently.
+- `dedupe_key`: optional template string whose `{field}` and
+  `{nested.field}` placeholders resolve against the payload. Repeat firings
+  of the same subscription against the same resolved key collapse.
+  A `dedupe_key` on the template itself is accepted as an equivalent.
+- `must_fire`: declared but not load-bearing — nothing winnows, so nothing
+  is bypassed. It becomes meaningful only when ranking lands.
 
-One genuinely new field on the impulse declaration:
-
-- `subscription`: enum `"input" | "subscriber"`, default `"input"`.
-  - `"input"`: today's behavior — the impulse is a piece of context
-    the activity expects to be present at execution time.
-  - `"subscriber"`: the activity *runs* when an impulse matching the
-    pointer is emitted by another execution. The matching impulse
-    becomes the activity's first input impulse at run time.
-
-That single discriminator field is the entire structural addition.
-Everything else — registration, ranking, failure handling — already
-exists for the primary-activity path.
+Everything else — registration, execution, failure handling — reuses the
+primary-activity path.
 
 ### 3.3 The runtime: emit, rank, fire
 
-When the executor emits a lifecycle impulse:
+Steps 1, 2 and 5 are what the subscriber vessel does. Steps 3 and 4 are
+design — see the deferral note at the top of this spec.
 
-1. **Subscriber lookup.** activity-api runs a SurrealDB query
-   against `activity_template` indexed on
-   `(impulses[*].pointer.event, impulses[*].subscription)`. One
-   query per emit point, amortized against the trace storage
-   write that already happens there.
-2. **Filter match.** Evaluate each candidate's `pointer.filter`
-   against the emitted impulse's payload. Structural predicate
-   evaluation, no LLM, reusing what `impulse-filter.ts` already
-   exposes.
-3. **Thompson rank.** Hand survivors to the existing
-   `ThompsonSampling.rank(...)` path
-   (`repos/activity-api/src/services/thompson-sampling.ts`),
-   weighted by per-template α/β (success rate) and per-impulse
-   relevance from the `impulseRelevance` table.
-4. **Cost-aware top-K selection.** Take the top K. Tie-break by
-   resolver tier — prefer `deterministic` over `pattern` over
-   `llm`, the same ladder `classifyResolverTier` exposes
-   (`resolver-tiers.ts`). Default K=1 for high-frequency events
-   (`task:completed`, `execution:tick`); K=3 for one-shot events
-   (`activity:preExecution`, `activity:postExecution`,
-   `activity:failure`).
-5. **Fire as nested activities.** Each selected hook activity is
-   invoked through the same `executeNestedActivity` path the
-   composition system already uses, with `parent_execution_id`
-   set to the emitting execution. The matching lifecycle impulse
-   is merged into the hook's input impulse pool.
+1. **Subscriber lookup.** The vessel owns its registry and selects the
+   templates whose `subscription.shape` equals the emitted event's shape.
+2. **Filter match.** Evaluate each candidate's `subscription.filter`
+   against the payload. Structural predicate evaluation, no LLM.
+   Survivors then pass the dedupe window, the self-subscription guard
+   (a template never fires on an event it emitted) and the depth cap.
+3. **Thompson rank** *(design)*. Hand survivors to the same posterior
+   the primary-selection path samples, weighted by per-template α/β and
+   per-impulse relevance.
+4. **Cost-aware top-K selection** *(design)*. Take the top K, tie-broken
+   by resolver tier — prefer `deterministic` over `pattern` over `llm`.
+   `defaultTopKForShape` already encodes the intended asymmetry: shapes in
+   `HIGH_FREQUENCY_SHAPES` get `HIGH_FREQUENCY_TOP_K`, everything else
+   `ONE_SHOT_TOP_K`. A per-task shape that fanned out as widely as a
+   once-per-execution shape would multiply subscriber work by the task
+   count, so the cap tightens exactly where emission rate is highest.
+5. **Fire.** Each surviving subscriber is executed through
+   `SubscriberDispatcher`, the single injection point through which the
+   vessel runs a match. Keeping dispatch behind one port is what leaves
+   the vessel free of per-shape control flow.
 
-**Scalability — 1000 hooks subscribing to `task:completed`:** the
-indexed query returns 1000 rows; Thompson ranks; K=1 fires; **999
-are not fired**, the same way 999 candidate primary-templates are
-not selected for a single goal. Over many executions, succeeding
-variants fire more often, failing ones fire less — the standard
-Thompson Sampling guarantee, applied to hook activations.
+**Scalability.** Until step 4 lands, 1000 subscribers on
+`lifecycle:task:completed` means 1000 dispatches per task — the reason the
+ranker is the next piece of work and not an optimization. With ranking,
+the argument is the ordinary bandit one: K fire, the rest do not, and over
+many executions succeeding variants fire more often.
 
-**Always-fire escape hatch:** when a vessel needs its hook to fire
+**Always-fire escape hatch.** When a vessel needs its hook to fire
 unconditionally (e.g. its own metric-recorder), the hook declares
-`must_fire: true`. Must-fire hooks fire in addition to the K
-ranked picks. Same pattern as `must_use`/`avoid_use` tools in
-`filterToolsForTask` (`activity.ts:221-252`).
+`must_fire: true` so it fires in addition to the K ranked picks. With no
+ranking in place, every match already fires and the flag changes nothing.
 
-**10000-vessel scale:** Thompson ranking is O(K log N) with K≪N.
-If profiling shows the indexed query is hot, add a per-process LRU
-keyed by event shape. No new infrastructure needed up front.
+### 3.4 Worked example: splitting bookkeeping out of a template
 
-### 3.4 Worked example: `prime-context-for-task`
+Take a context-priming template with three tasks: load context
+(conceptually pre-execution), do the actual work, record relevance
+(conceptually post-execution). Under this design the template keeps only
+the middle task; the other two become separate hook activities.
 
-Today (`templates/concept/prime-context-for-task.json`) has 3 tasks:
-`load-context` (conceptually preExecution), `inject-into-task-prompt`
-(the actual work), `record-relevance` (conceptually postExecution).
+**Hook activity 1 — a context loader** subscribes to
+`lifecycle:task:preBinding`, filtered on the task it should prime, and
+produces the memo impulse the primed task binds.
 
-Under this design, the template keeps only task 2; tasks 1 and 3
-move into separate hook activities subscribing to lifecycle events.
-
-**Hook activity 1 — `load-concept-context-on-prime`** subscribes to
-`activity:preExecution` filtered on `templateId =
-"prime-context-for-task"`, runs `concept-db:loadPrimedContext`, and
-produces a memo impulse that becomes input to the parent's task 2.
-
-**Hook activity 2 — `record-concept-relevance-on-task-completion`**
-subscribes to `task:completed` filtered on
-`inputShapeAny: ["concept"]`, runs
-`concept-db:recordConceptRelevance` with `executionId` and `taskId`
-interpolated from the lifecycle payload.
+**Hook activity 2 — a relevance recorder** subscribes to
+`lifecycle:task:completed`, filtered on the shapes the completed task
+produced, and records relevance for the concepts that task consumed:
 
 ```jsonc
-// hook activity 1 trigger declaration:
-"impulses": [
-  { "id": "trigger",
-    "pointer": {
-      "type": "lifecycle", "event": "activity:preExecution",
-      "filter": { "templateId": "prime-context-for-task" }
-    },
-    "subscription": "subscriber", "budget": 100, "priority": "high" }
-]
+"subscription": {
+  "shape": "lifecycle:task:completed",
+  "filter": { "outputShapes_contains": "concept" },
+  "dedupe_key": "{executionId}:{taskId}"
+}
 ```
 
-**Impulse flow** when the executor runs `prime-context-for-task`:
+**Flow:** the engine emits `lifecycle:task:preBinding` before binding the
+work task's inputs; the loader matches and runs, producing the memo. The
+work task binds it and runs. On completion the engine emits
+`lifecycle:task:completed`; the relevance recorder matches its filter,
+passes dedupe, and runs.
 
-1. Executor reaches line 2079; emits
-   `lifecycle:activity:preExecution`.
-2. activity-api returns ranked subscribers; Thompson picks
-   `load-concept-context-on-prime` (K=1). It runs as a nested
-   activity (`parent_execution_id` set), produces the memo, writes
-   it back into the parent's impulse pool.
-3. Parent runs task 2 with the primed context loaded.
-4. Task 2 completes; executor emits `lifecycle:task:completed` with
-   `inputShapes=["concept", "memo"]`.
-5. `record-concept-relevance-on-task-completion` matches the filter;
-   Thompson picks it; it runs as a nested activity.
-6. Parent reaches line 2814; emits
-   `lifecycle:activity:postExecution`. Any subscribers for that
-   event are ranked and fired.
+What this buys: the parent template's posterior is graded on the actual
+work rather than on bookkeeping; the relevance recorder becomes learnable
+in its own right, since competing implementations can subscribe to the same
+shape; and cross-cutting hooks fall out for free — a vessel publishes a
+template with a `subscription` block and needs no separate registration
+channel.
 
-What this buys: parent template's Thompson denominator is now task 2
-alone (the actual work, not bookkeeping); the relevance-recorder is
-itself learnable (vessels can publish competing implementations and
-Thompson picks the best); concept-db's `execution-observer.ts`
-(WebSocket-based "hook as subscriber") becomes a precedent that this
-spec generalizes; vessel-registered cross-cutting hooks fall out for
-free — vessels publish activity templates with
-`subscription: "subscriber"`, no separate registration channel.
+### 3.5 Demand-driven learning activities
 
-### 3.5 `learn-impulse-relationships` as a hook
-
-`templates/concept-learning/learn-impulse-relationships.json` today
-runs on a schedule (Wave B3 in the task list, deferred). Under this
-design it can subscribe to a `lifecycle:traces:accumulated` impulse
-emitted by activity-api whenever the unprocessed-trace count crosses
-a threshold:
+An activity that would otherwise run on a schedule — say, mining
+relationships out of accumulated traces — can instead subscribe to a
+lifecycle shape emitted when there is something to learn from:
 
 ```jsonc
-"impulses": [
-  { "id": "trigger",
-    "pointer": {
-      "type": "lifecycle",
-      "event": "traces:accumulated",
-      "filter": { "minUnprocessed": 50 }
-    },
-    "subscription": "subscriber",
-    "budget": 50, "priority": "medium" }
-]
+"subscription": {
+  "shape": "lifecycle:traces:accumulated",
+  "filter": { "minUnprocessed_equals": 50 }
+}
 ```
 
-That replaces "schedule it periodically" with "fire when there's
-something to learn from" — exactly the pattern the user described
-("hook subscribing to enough-traces-accumulated impulse rather than
-scheduled"). activity-api emits the lifecycle impulse from its
-trace-ingestion path; the executor picks it up; the activity runs as a
-nested execution. No scheduler needed.
+That replaces "schedule it periodically" with "fire when the condition
+holds", which is the same posture as boredom-driven selection: read the
+condition, don't run a timer. It requires a vessel to emit that shape from
+its trace-ingestion path; shapes are learned, so introducing one is an
+emission, not a schema change.
 
 ### 3.6 Failure semantics
 
 Each hook activity has its own retry/failure handling because it's
-just an activity. The emitting executor does not synchronously
-await subscriber completion (default), so:
+just an activity. The emitter does not await subscriber completion, and
+subscriber failures are logged and swallowed rather than propagated, so:
 
-- A `lifecycle:activity:postExecution` subscriber failure does not
-  unwind the parent activity's success status. The parent's status
-  is already `completed` by the time the subscriber runs.
-- A `lifecycle:activity:preExecution` subscriber failure is more
-  delicate: the parent has *not* started its tasks yet, and the
-  subscriber may have been expected to produce a context impulse
-  the parent depends on. If the subscriber fails, the parent will
-  hit a missing-impulse error at task-dispatch time and fail
-  through its own existing error path. This is the right behavior:
-  the parent doesn't know "a hook was supposed to fire" — it just
-  knows "I expected a memo impulse and it isn't here". No special
-  case in the executor.
+- A post-completion subscriber failure does not unwind the parent's
+  success status. The parent has already settled by the time the
+  subscriber runs.
+- A pre-binding subscriber failure is more delicate: the subscriber may
+  have been expected to produce a context impulse the parent depends on.
+  If it fails, the parent hits a missing-impulse error at bind time and
+  fails through its own existing error path. This is the right behavior:
+  the parent doesn't know "a hook was supposed to fire" — it just knows
+  "I expected a memo impulse and it isn't here". No special case in the
+  engine.
 - Synchronous "blocking" subscription mode (where the parent waits
-  for subscribers before continuing) is deferred; see §6 open
+  for subscribers before continuing) is deferred; see §5 open
   question 1. The default is fire-and-record-and-continue.
 
-The trace records the parent–child relationship via
-`composition_chain` — the dashboard already renders nested
-executions, so a hook failure shows up as a failed child execution
-with its own `executionId`, `error`, and `parent_execution_id`
-pointing at the emitter. Operators looking at the dashboard see
-exactly the shape they expect.
+A refused dispatch names its reason — `refuseForDepthCap` logs the
+refusal rather than recursing silently, which is what makes the cap
+observable instead of merely protective.
 
 ## 4. Where this lives
 
-The design above is implemented. It is hosted by `ias-executor-ts`, not by the
-CLI the original plan targeted — that repository left the fleet, and the
-subscription machinery moved to the canonical execution host with it. Cite the
-symbols below rather than line numbers: this system rewrites its own source
-routinely, so a line reference is stale before it is read.
+Everything except ranked dispatch is implemented. It is hosted by
+`ias-executor-ts`, not by the CLI the original plan targeted — that
+repository left the fleet, and the subscription machinery moved to the
+canonical execution host with it. Cite the symbols below rather than line
+numbers: this system rewrites its own source routinely, so a line reference
+is stale before it is read.
 
 ### The subscriber vessel
 
-`LifecycleSubscriberVessel` in `ias-executor-ts/src/lifecycle-subscriber.ts` is
-the runtime for §3.3. It implements `EventSink`, so emission is the ordinary
-event path rather than a parallel hook channel — an activity subscribes by
-declaring a lifecycle-shaped input impulse, and nothing registers a closure.
-`SubscriberDispatcher` is the injection point through which a matched subscriber
-is executed, which keeps the vessel free of any per-shape control flow.
+`LifecycleSubscriberVessel` in
+`repos/ias-executor-ts/src/lifecycle-subscriber.ts` is the runtime for §3.3.
+It implements `EventSink`, so emission is the ordinary event path rather
+than a parallel hook channel — an activity subscribes by declaring a
+`subscription` block, and nothing registers a closure. `SubscriberDispatcher`
+is the injection point through which a matched subscriber is executed, which
+keeps the vessel free of any per-shape control flow.
 
 ### Which lifecycle shapes exist
 
-The emitted set is `lifecycle:task:started`, `lifecycle:task:completed`,
-`lifecycle:execution:tick`, `lifecycle:execution:succeeded` and
-`lifecycle:gap:classified`. Shapes are learned rather than closed, so this list
-is what the fleet emits today and not a bound on what it may emit — a
-subscriber filters by shape string, and an unknown shape simply matches nothing.
+The engine emits `lifecycle:task:preBinding`, `lifecycle:task:completed`,
+`lifecycle:execution:succeeded` and `lifecycle:gap:classified`; the LLM
+prompt resolver emits `lifecycle:llm:dispatched`. Shapes are learned rather
+than closed, so this list is what the fleet emits and not a bound on what it
+may emit — a subscriber filters by shape string, and an unknown shape simply
+matches nothing.
 
-### Fan-out is bounded by shape frequency
+`HIGH_FREQUENCY_SHAPES` additionally names `lifecycle:task:started` and
+`lifecycle:execution:tick`. Those are parity constants from the port, not
+emissions: nothing in the engine produces them, so a subscription to either
+never fires.
 
-`HIGH_FREQUENCY_SHAPES` names the shapes that fire many times per execution;
-`defaultTopKForShape` gives those a top-K of `HIGH_FREQUENCY_TOP_K` and
-everything else `ONE_SHOT_TOP_K`. The asymmetry is the point: a per-task shape
-that fanned out as widely as a once-per-execution shape would multiply
-subscriber work by the task count, so the ranking cap is tightened exactly where
-the emission rate is highest.
+### Ranking is the missing piece
+
+`defaultTopKForShape` and the `HIGH_FREQUENCY_TOP_K` / `ONE_SHOT_TOP_K`
+constants are exported but no code path calls them, and no posterior is
+consulted. The vessel dispatches every subscriber that matches, so fan-out
+is bounded by the guards below and by nothing else. Read §3.3 steps 3–4 as
+the design for closing this, not as a description of behaviour.
 
 ### Three guards stand between a subscription and a runaway
 
@@ -382,99 +340,91 @@ the emission rate is highest.
 payload, with `resolvePayloadField` tolerating a snake_case/camelCase mismatch
 so a filter is not silently dead because two vessels spell a field differently.
 `resolveDedupeKey` collapses repeat firings of the same subscription against the
-same event. `refuseForDepthCap` refuses rather than recurses when a subscriber
-chain would exceed its depth bound — a refusal that names its reason, which is
-what makes the cap observable instead of merely protective.
+same event, over a bounded per-process window. `refuseForDepthCap` refuses
+rather than recurses when a subscriber chain would exceed its depth bound.
+A fourth guard is narrower but load-bearing: a template never fires on an
+event it itself emitted.
 
 ### What was removed
 
 The parallel hook registry, the namespace-style before/after dispatchers, and
 the verification hooks that duplicated validation were all dropped rather than
-ported. None had a live caller. The subscription model replaces them completely:
-ranking happens through the ordinary template posterior, and execution through
-the ordinary nested-execution path, so a hook is an activity like any other and
-is graded like any other.
+ported. None had a live caller. The subscription model replaces them: a hook
+is an activity like any other, executed through the ordinary path — and once
+ranking lands, graded like any other.
 
 ## 5. Open questions
 
-1. **Blocking subscriptions.** Some preExecution hooks produce
+1. **Blocking subscriptions.** Some pre-binding hooks produce
    context the parent depends on. Default is fire-and-continue,
    with the parent's missing-impulse error path catching the
-   failure case. Add a `subscription: "blocking"` mode if a real
-   use case demonstrates need.
+   failure case. Add a blocking mode if a real use case
+   demonstrates need.
 
-2. **K tuning.** Defaults proposed in §3.3 (K=1 for
-   high-frequency, K=3 for one-shot) are hardcoded. Move to a
-   `lifecycle_event_config` table if profiling shows them wrong.
+2. **K tuning.** The proposed defaults in §3.3 (K=1 for
+   high-frequency shapes, K=3 for one-shot) live in constants.
+   Once ranking consumes them, move them into a shaped tuning
+   impulse rather than leaving them frozen in source.
 
 3. **Recursion guard.** A hook can emit the same lifecycle event
-   it subscribes to. Cap composition-chain depth at N=5 (already
-   tracked via `composition_chain`). Document and enforce.
+   it subscribes to. The self-subscription guard and the depth cap
+   cover the direct case; a longer cycle through two subscribers is
+   bounded only by the depth cap, so the bound wants a test.
 
-4. **Migrating `goal-processor.ts:1648`.** The current
-   `pre-selection` callsite becomes the first non-`activity.ts`
-   emit point: emit `lifecycle:goal:preSelection`, fold
-   subscriber outputs into the Thompson query. Small migration
-   commit so `pre-selection` is no longer a special case.
+4. **A goal-selection emit point.** The pre-selection step of goal
+   dispatch is a natural sixth emit point: emit
+   `lifecycle:goal:preSelection` and fold subscriber outputs into
+   the selection query, so pre-selection stops being a special case.
 
-5. **Trace interleaving.** Lifecycle and task impulses both
-   stream into `execution.executionTrace.impulsesCreated` in
-   time order. The broadcaster's `sequence` already provides
-   total order; document the ordering invariant for consumers.
+5. **Trace interleaving.** Lifecycle and task events stream into the
+   trace in time order. Document the ordering invariant for
+   consumers rather than letting each one infer it.
 
 6. **Cost accounting.** Hook costs accrue on the hook's own
-   trace; aggregate views join on `composition_chain` to
+   trace; aggregate views join on the composition chain to
    attribute back to the originating goal. Already how nested
    activities work; double-check the chain walk in queries.
 
 ## 6. Test plan
 
-### 7.1 Unit
+### 6.1 Unit
 
-In the executor's own test suite (or new
-`activity-lifecycle.test.ts`):
+In the execution host's own test suite:
 
-1. **preExecution emit + subscriber fires** — hook activity
-   subscribed to `lifecycle:activity:preExecution` runs as nested
-   execution with `parent_execution_id` set; output impulse lands
-   in parent's pool.
-2. **Filtered subscriber** — two parent tasks produce different
-   output shapes; one hook with `filter: { outputShapeAny:
-   ["source_code"] }` fires exactly once (after the matching task).
-3. **Thompson picks K=1 across competing subscribers** — two hooks
-   on the same event with different α/β; over 100 runs the higher-α
-   hook fires more often (with tolerance).
-4. **`must_fire` bypasses ranking** — must-fire hook always fires
-   *and* one ranked competitor fires.
-5. **Recursion guard** — hook that emits the event it subscribes
-   to; chain caps at depth 5 with logged abort.
-6. **Subscriber failure does not unwind parent** —
-   postExecution subscriber fails; parent stays `completed`;
-   subscriber's own trace is `failed`.
-7. **Backward-compat smoke** — template with no subscribers
-   present runs identically to today (lifecycle impulses emitted
-   into trace, no nested activities, no behavioral change).
+1. **Emit + subscriber fires** — an activity subscribed to
+   `lifecycle:task:preBinding` is dispatched, and its output impulse
+   is available to the task being bound.
+2. **Filtered subscriber** — two tasks produce different output
+   shapes; a subscriber filtered with `outputShapes_contains` fires
+   exactly once, after the matching task.
+3. **Field-name tolerance** — a filter written in snake_case matches
+   a camelCase payload field and vice versa.
+4. **Dedupe** — two events resolving to the same `dedupe_key` produce
+   one dispatch, and the collapse is logged.
+5. **Self-subscription guard** — a template that emits the shape it
+   subscribes to does not fire on its own event.
+6. **Depth cap** — a subscriber chain past the bound is refused, and
+   the refusal names its reason.
+7. **Subscriber failure does not unwind the parent** — a subscriber
+   throws; the parent's status is unaffected.
+8. **No-subscriber smoke** — a template with no subscribers present
+   runs identically, with lifecycle events emitted and nothing fired.
 
-### 7.2 Integration
+### 6.2 Integration
 
-In the executor's graph-execution tests:
+In the host's graph-execution tests:
 
-1. **`prime-context-for-task` end-to-end** with the refactored
-   single-task template plus the two §3.4 hook activities. Same
-   outcome as today's 3-task template.
-2. **Lifecycle impulse round-trip through activity-api** —
-   lifecycle impulses persist in `execution_trace.impulsesCreated`;
-   `/v2/activities/lifecycle-subscribers` returns expected
-   subscribers.
-3. **Budget interaction** — parent + nested hooks together exceed
-   `maxBudget`; abort happens via existing composition-chain
+1. **Bookkeeping split end-to-end** — the single-task template plus
+   the two §3.4 hook activities produce the same outcome as the
+   original three-task template.
+2. **Budget interaction** — parent plus subscribers together exceed
+   the budget; abort happens via the existing composition-chain
    budget propagation.
 
-### 7.3 Out of scope
+### 6.3 Out of scope
 
 - Blocking subscription mode (open question 1).
-- Per-event-shape K-tuning via config table (open question 2).
-- 10000-vessel scaling stress test; the §3.3 argument is
-  back-of-envelope until measured.
+- Ranked dispatch and its tests — those land with the ranker, and the
+  §3.3 scaling argument is back-of-envelope until then.
 
 ---

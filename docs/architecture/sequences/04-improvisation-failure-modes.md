@@ -1,943 +1,546 @@
 # Improvisation, Failure Modes, Checkpoints, and Rollbacks
 
-> **STATUS (2026-04-28): Renamed from `04-improvisation-trailblazing.md`.** "Trailblazing" was class-(c) terminology — never implemented and pruned from the corrected foundation model. What older versions of this doc called trailblazing is now handled by the **failure-mode taxonomy** (`verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`) plus posterior variance. Read this file for the improvisation flow (which is real and current); treat any remaining trailblazing references as historical. See [`IMPULSE_ACTIVITY_FOUNDATION.md`](../IMPULSE_ACTIVITY_FOUNDATION.md#known-gaps-system-not-yet-self-stable) → "Class-(c) Terms Pruned".
-
-> **How to read this.** The failure-mode taxonomy and the
-> improvisation-as-activity model are accurate. Improvisation and the
-> goal-reaching and recovery logic live in `goal-host-vessel` /
-> `ias-executor-ts`; `ribosome-vessel` (`:8240`) handles template extraction via
-> its `lifecycle:execution:succeeded` subscription. Read the `GoalProcessor` and
-> `ActivityExecutor` participant labels as `GoalHost (goal-host-vessel)`, and the
-> `MCP Client` participant as `activity-api` (`:18080`) over HTTP.
->
-> **New (June 2026) and central to this file: the in-flight recovery loop.** A goal no longer fails-and-stops on a single bad approach. After execution the **goal-reaching gate** (`verifyGoalReached`, goal-host `07feff5`) judges whether the asked output was produced; a `status=completed` run that did not produce the goal's completion shapes is `reached:false` — **a failure mode in its own right (hollow completion)**. On `reached:false` the `/resolve` loop performs in-flight recovery: **β-penalise the selected template, EXCLUDE the failed approach and `recommendExcluding` a *different* one, then retry — until reached or approaches are exhausted.** The trace that actually **reaches** the goal is what the ribosome mints. See the new "In-Flight Recovery Loop" section below and [`GOAL_EXECUTION_PATHS_SCHEMA.md`](../GOAL_EXECUTION_PATHS_SCHEMA.md).
+> **How to read this.** Failure handling is in-flight, not offline. The same
+> dispatch that ran an approach also grades it (`verifyGoalReached`) and, on a
+> miss, tries a different one (`recommendExcluding`) — all inside
+> `goal-host-vessel` (`:8210`). Posterior consequences are applied by
+> `activity-api` (`:8080`); extraction of the trajectory that finally worked is
+> the `ribosome-extract` activity, triggered by `ribosome-vessel` (`:8240`) or
+> directly by `mintReachedTrace`. Cite by symbol, never by line number.
 
 ## Overview
 
-This document maps the complete flow of how the substrate (goal-host-vessel) handles situations when no activity template matches (improvisation), recovers in-flight from approaches that fail to reach the goal, learns from failures (trailblazing), and manages execution safety (checkpoints and rollbacks). These mechanisms enable continuous learning and autonomous adaptation.
+This document maps what happens when a goal does not go well: the canonical failure taxonomy and the posterior consequence of each type, the in-flight recovery loop that retries with a genuinely different approach, the floor that keeps a goal reachable when no producer exists, and the staging-and-revert discipline that keeps a failed code change from becoming a broken vessel.
 
-**Key Insight:** Improvisation is not a fallback mode - it's an activity template like any other. The `improvise_solution` activity uses LLM-directed tool use to explore solutions, and the ribosome resolver extracts successful improvisations into reusable templates. **Recovery is part of reaching the goal, not offline repair** — the goal-reaching gate and the `recommendExcluding`-retry loop run within the same dispatch.
+The organising claim is that **failure is graded, not merely detected**. Every failure carries a canonical type, and each type has a defined α/β delta — a budget breach is a half penalty, a cascade victim carries none, a user abort is neutral. Treating all failures as one signal would make the posterior a measure of difficulty rather than of quality.
 
 ## Key Concepts
 
-1. **Improvisation as an Activity** - `improvise_solution` template with plan → execute → extract tasks
-2. **Goal-Reaching Gate (`verifyGoalReached`)** - Post-execution LLM judge; `reached:false` (hollow completion) is a failure mode even when `status=completed`
-3. **In-Flight Recovery Loop** - On `reached:false`: β-penalise + `recommendExcluding` the failed approach + retry a different approach until reached or exhausted
-4. **Trailblazing** - Creating variant templates from failed executions
-5. **Checkpoints** - Git state capture before execution for rollback capability
-6. **Rollbacks** - Restoring pre-execution state after failures
-7. **Ribosome Resolver** - extracts the **reached** trace into a reusable template
-8. **Thompson Sampling Learning** - Updating α/β scores based on execution outcomes (incl. reach-gated β-penalties) + per-goal `goal_execution_paths`
-9. **Stuck Detection** - Identifying when improvisation is making no progress
+1. **Canonical failure taxonomy** — `verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`; anything else is filtered at the wire boundary.
+2. **Hollow completion** — `status = completed` with the asked output absent. Detected by `verifyGoalReached`, penalised through `penaliseHollowTemplate`.
+3. **In-flight recovery** — on a miss: β-penalise, exclude the failed approach, `recommendExcluding` a different one, retry until reached or exhausted.
+4. **Floor** — `universalToolFallback` / `runGroundedToolLoop`: bounded, grounded tool use so no goal is structurally unreachable for want of a learned pathway.
+5. **Bridge minting** — `mintResolverWrapper`, `fileCapabilityGap`, `fileReachabilityGap`: a missing producer becomes a filed gap, not an exception.
+6. **Variant creation and retirement** — `shouldCreateVariant` on a consecutive-failure pattern, `checkAndRetireTemplate` on a sustained low success rate.
+7. **Staged-then-landed code changes** — a patch lives in a writable clone until a separate cutover lands it; `deterministic:staged-not-landed` refuses to grade the staged state as a reach.
+8. **Credit propagation** — `propagateCreditAlongChain` attributes an outcome along the composition chain rather than only to the leaf.
 
 ## Main Sequence Diagram: Goal Processing via Activity Composition
 
 ```mermaid
 sequenceDiagram
-    participant User as Dispatch<br/>(mcp__metabob__run_goal)
-    participant GP as GoalHost<br/>(goal-host-vessel)
-    participant BE as Activity-API<br/>(Thompson Sampling, :18080)
-    participant Exec as ActivityExecutor<br/>(goal-host-vessel)
-    participant Ribosome as RibosomeResolver<br/>(ribosome-vessel)
-    participant MCP as Activity-API<br/>(:18080, HTTP)
+    participant User as Dispatch
+    participant GH as handleRunGoal<br/>(goal-host-vessel)
+    participant Rec as runGoalWithRecovery
+    participant Walk as runGoalAsPoolWalk
+    participant API as activity-api
+    participant Ribo as ribosome-extract
 
-    User->>GP: POST /run-goal {goal} → processGoal(message)
-    activate GP
+    User->>GH: POST /run-goal {goal}
+    GH->>Rec: maxAttempts, expectedOutputShapes, surface
 
-    Note over GP: 1. ENRICHMENT PHASE
-    GP->>GP: enrichGoal(message)
-    Note over GP: LLM semantic analysis<br/>category, intent, capabilities
-
-    Note over GP: 2. ACTIVITY RECOMMENDATION
-    GP->>BE: recommendActivities(goal)
-    Note over BE: Thompson Sampling<br/>selects by α, β scores
-    BE-->>GP: [ActivityRecommendation]
-
-    alt Recommendations Found (score >= 0.7)
-        Note over GP: 3a. EXECUTE RECOMMENDED ACTIVITY (with in-flight recovery)
-        loop For each approach until REACHED or exhausted
-            GP->>Exec: execute(template)
-            Exec-->>GP: ActivityExecution (status=completed|failed)
-
-            GP->>GP: verifyGoalReached(goal, trace)
-            Note over GP: LLM judge (llm-resolver-vessel):<br/>were completion_shapes produced?<br/>(reach ≠ exit status)
-            alt reached = true
-                Note over GP: ✓ SUCCESS (reached)
-                GP->>BE: recordGoalPath(goal_hash, path, success=true)
-            else reached = false (hollow completion)
-                GP->>BE: β-penalise template (POST /v2/activities/feedback, intensity 2)
-                GP->>BE: recordGoalPath(goal_hash, path, success=false)
-                GP->>BE: recommendExcluding(failed approach)
-                Note over GP: EXCLUDE the failed approach,<br/>retry a DIFFERENT approach
-            end
+    alt Caller pinned a target, or no goal text
+        Rec->>Rec: single-template recovery loop
+    else Default
+        Rec->>Walk: walk the shape graph
+        Walk-->>Rec: chain (may be empty)
+        alt chain is empty (no shape-feasible step)
+            Rec->>Rec: authorFallback() → author a template, run that
         end
-    else No Recommendations OR All Failed
-        Note over GP: 3b. EXECUTE IMPROVISE_SOLUTION ACTIVITY
-        GP->>Exec: execute("improvise_solution", goal)
-
-        Note over Exec: Task 1: plan_approach
-        Exec->>Exec: LLM plans solution steps
-
-        Note over Exec: Task 2: execute_plan
-        Exec->>Exec: LLM + tools execute plan
-
-        alt Improvisation Succeeded
-            Note over Exec: Task 3: extract_template
-            Exec->>Ribosome: extract(execution_trace)
-            Ribosome->>Ribosome: shouldExtractTemplate()
-            alt Extraction Criteria Met
-                Ribosome->>Ribosome: assembleTemplate()
-                Ribosome->>MCP: registerTemplate()
-                Note over MCP: New template available<br/>for Thompson Sampling
-            end
-        end
-
-        Exec-->>GP: ActivityExecution
     end
 
-    Note over GP: 4. RETURN RESULT
-    GP-->>User: GoalResult
-    deactivate GP
-```
+    loop until reached or attempts exhausted
+        Rec->>Rec: execute the selected approach
+        Rec->>Rec: verifyGoalReached(goal, producedShapes, summary, digest, commandEvidence, walkEvidence)
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` — `GoalHost`; goal-reaching gate + recovery loop in goal-host `07feff5` / `980240b`.
+        alt reached
+            Rec->>API: creditReachedTemplate
+            Rec->>API: recordGoalPath(reached = true, walk_tier)
+            Rec->>Ribo: mintReachedTrace → dispatch ribosome-extract
+        else not reached
+            Rec->>API: penaliseHollowTemplate (negative, intensity 2)
+            Rec->>API: recordGoalPath(reached = false, walk_tier)
+            Rec->>API: recommendExcluding(task_description, exclude, repair_signature, target_shapes)
+            alt A different candidate exists
+                Note over Rec: retry with it
+            else None left
+                Note over Rec: honest failure — surface reason + completion_shapes
+            end
+        end
+    end
+
+    Rec-->>User: {status, reached, walkTier, goalReachReason, completionShapes}
+```
 
 ## In-Flight Recovery Loop
 
-Recovery is **part of reaching the goal**, not a separate offline repair step. The same `/run-goal` or `/resolve` dispatch that ran an approach also gates it and, on a miss, tries again with a *different* approach.
+Recovery is part of reaching the goal, not a repair pass afterwards. The same dispatch that ran an approach grades it and, on a miss, selects a different one.
 
 ```mermaid
 sequenceDiagram
-    participant GP as GoalHost<br/>(goal-host-vessel)
-    participant Exec as ActivityExecutor
-    participant Judge as verifyGoalReached<br/>(llm-resolver-vessel)
-    participant BE as Activity-API
-    participant Ribosome as ribosome-vessel
-
-    Note over GP: /resolve loop — until reached or approaches exhausted
+    participant Rec as runGoalWithRecovery
+    participant Exec as selected approach
+    participant Gate as verifyGoalReached
+    participant API as activity-api
+    participant Sig as repairSignatureOf
 
     loop try-approach
-        GP->>Exec: execute(selected approach)
-        Exec-->>GP: trace (status=completed|failed)
+        Rec->>Exec: execute
+        Exec-->>Rec: produced shapes + content digest + command evidence
 
-        GP->>Judge: verifyGoalReached(goal, trace)
-        Judge-->>GP: { reached, completion_shapes }
+        Rec->>Gate: verify
+        Gate-->>Rec: {reached, reason, completion_shapes, deterministic?}
 
-        alt reached = true
-            Note over GP: ✓ REACHED — break
-            GP->>BE: recordGoalPath(goal_hash, path, success=true)
-            GP->>Ribosome: (bus) reached trace → assembleTemplateFromExecution → mint activity
-        else reached = false
-            GP->>BE: β-penalise selected template (feedback intensity 2)
-            GP->>BE: recordGoalPath(goal_hash, path, success=false)
-            GP->>BE: recommendExcluding(task_description, exclude=failed template)
-            Note over GP: EXCLUDE failed approach,<br/>pick a genuinely different draft, retry
+        alt reached
+            Note over Rec: break — credit, record, mint
+        else miss
+            Rec->>API: POST /v2/activities/feedback<br/>{direction: "negative", intensity: 2, reason}
+            Rec->>Sig: classifyFailure(reason) → repair signature
+            Rec->>API: POST /v2/activities/recommend<br/>{task_description, exclude_activities, repair_signature,<br/>expected_output_shapes, limit: 6, min_success_rate: 0}
+            API-->>Rec: candidates
+            Rec->>Rec: normalise ids (strip "activity:" and ⟨⟩),<br/>drop excluded, drop candidates whose output shapes<br/>overlap none of the targets
+            alt A candidate remains
+                Note over Rec: retry with a genuinely different approach
+            else
+                Note over Rec: exhausted — honest failure
+            end
         end
-    end
-
-    alt approaches exhausted, none reached
-        Note over GP: honest failure (status=failed),<br/>surface completion_shapes for diagnosis
     end
 ```
 
-**Mechanics (verified live — goal-host `980240b`):**
-- The loop is: try-approach → reach-gate check → on miss, β-penalise + EXCLUDE + `recommendExcluding` a **different** approach → retry — until reached or exhausted.
-- `recommendExcluding` needs a `task_description` (not the raw goal), reads `template_id`, and normalises `activity:⟨…⟩` ids; it returns a genuinely different draft rather than re-selecting the just-failed one.
-- The **reached** trace is the ribosome's input — recovery feeds learning by minting the approach that actually worked, not the one that merely completed.
-- Observed: a code-analysis goal altered its approach across 2 attempts (genuinely different drafts, ~152s) before an honest failure when all available activities were broken.
+**Mechanics that make the loop honest:**
+- `recommendExcluding` takes a **task description**, not the raw goal text, and passes `exclude_activities`; id normalisation prevents the just-failed approach from being re-selected under a differently-wrapped id.
+- A `repair_signature` from `repairSignatureOf` / `classifyFailure` keys the retry on `(state, failure mode)` rather than collapsing distinct failures onto one posterior.
+- The β penalty is applied *before* the next selection, so the retry samples from an updated posterior rather than the one that just misled it.
+- Exhaustion is a real outcome. When no fresh candidate remains, the dispatch reports failure with the gate's `reason` and `completion_shapes` attached, which is what makes the failure diagnosable rather than merely red.
+- The trace that finally **reaches** is what gets minted. Recovery feeds learning by extracting the approach that worked, never the one that merely completed.
 
-**`reached:false` as a failure mode.** Hollow completion (status=completed, asked output not produced) sits alongside the taxonomy in the status banner of this file (`verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`): it is detected by the goal-reaching gate, drives a β-penalty, and triggers the recovery loop above. Per-goal attribution accumulates in `goal_execution_paths` keyed by `goal_hash` (α on reach, β on miss).
+**`reached: false` is itself a failure mode.** Hollow completion sits alongside the canonical taxonomy: it is detected by the gate, it drives a β penalty, it mirrors a class-grain lesson to concept-db (`reach_gate_lesson`, keyed by hollow class such as `deterministic_no_output`, `deterministic_error_envelope`, `deterministic_placeholder`, or `llm_judged_hollow`), and it triggers the loop above. Per-goal attribution accumulates in `goal_execution_paths` keyed by `goal_hash`.
 
 ## Improvisation as an Activity
 
-Improvisation is no longer a special "fallback mode" - it's a first-class activity template that gets composed like any other.
+There is no separate improvisation mode and no activity named for it. What older designs called improvisation is covered by two mechanisms in the walk, both ordinary walk tiers:
+
+- **Bridge minting.** When no producer exists for a needed shape, the walk mints a resolver wrapper (`mintResolverWrapper`), or files the shortfall as a capability or reachability gap (`fileCapabilityGap`, `fileReachabilityGap`) so the substrate can close it. A missing producer is a filed gap, not an exception.
+- **The floor.** `universalToolFallback` invokes `runGroundedToolLoop`, a bounded ReAct-style loop over the tools discovery can reach. It is the guarantee behind the execution expectation's floor: a goal with no learned pathway is still reachable, and every step of the attempt lands in a trace.
+
+Both record a walk tier (`fresh_derivation`, `satisfier`, `universal_tool_fallback`) so the route taken is visible in `goal_execution_paths` and can be compared against the learned-pathway route for the same goal.
 
 ### The `improvise_solution` Activity Template
 
-```typescript
-{
-  id: "improvise_solution",
-  name: "Improvise Solution via LLM Tool Use",
-  category: "tool",
-  tasks: [
-    {
-      id: "plan_approach",
-      description: "Analyze the goal and plan a solution approach",
-      prompt: {
-        template: `Given this goal: {{goalDescription}}
+**No such template exists in the fleet.** Nothing named `improvise_solution` is seeded, registered, or selectable, and no directory of hand-written meta-activity JSON is shipped. Any description of its tasks, step limits, or cost caps should be read as retracted.
 
-Analyze the requirements and create a step-by-step plan to achieve it.
-Consider available tools: bash, read, write, edit, glob, grep.
+The role the name suggests — "get this goal done when nothing matches" — is filled by the floor described above. Its bounds are real and enforced in `runGroundedToolLoop`:
 
-Identify:
-1. What information you need to gather
-2. What changes you need to make
-3. How to verify success`,
-        variables: [
-          { name: "goalDescription", type: "string", required: true }
-        ]
-      }
-    },
-    {
-      id: "execute_plan",
-      description: "Execute the planned solution using available tools",
-      prompt: {
-        template: `Execute your plan from the previous task.
+- at most 4 iterations,
+- at most 8 tool calls per iteration,
+- a wall-clock deadline checked *inside* a turn as well as between turns,
+- a `doneKeys` set that refuses to re-execute an identical `(tool, arguments)` pair,
+- a no-progress break when an iteration executed nothing new.
 
-Use available tools to:
-- Read files (read, grep)
-- Modify code (edit, write)
-- Run commands (bash)
-- Verify changes (bash tests)
-
-Track your progress after each step. If stuck, try a different approach.`,
-        variables: []
-      },
-      validation: {
-        maxSteps: 50,
-        maxCost: 5.00,
-        stuckDetection: true
-      }
-    },
-    {
-      id: "extract_template",
-      description: "Extract successful execution into reusable template",
-      resolver: "ribosome",
-      condition: "execution.status === 'completed' && execution.tasks.length >= 2"
-    }
-  ],
-  inputSchema: {
-    required: [
-      { shape: "goal_description", budget: 500 }
-    ],
-    optional: [
-      { shape: "context_files", budget: 2000 },
-      { shape: "previous_attempts", budget: 1000 }
-    ]
-  },
-  outputSchema: {
-    produces: [
-      { shape: "execution_trace" },
-      { shape: "activity_template", condition: "ribosome_extraction" }
-    ]
-  },
-  metadata: {
-    author: "system",
-    category: "improvisation",
-    thompsonParams: { alpha: 1, beta: 1 }
-  }
-}
-```
+The loop also distinguishes **grounding** from **side effects**: successful read and shell calls increment a grounding counter and are fed back as observations, while calls to write shapes are recorded as effects and explicitly do not count as grounding. A "grounded" answer therefore means the model reasoned over data it actually gathered, not that it wrote something.
 
 ### How It Works
 
-1. **Goal processor selects activity**: Thompson Sampling returns `improvise_solution` when no domain-specific template matches
-2. **Task 1 - Plan**: LLM analyzes the goal and creates a solution plan
-3. **Task 2 - Execute**: LLM uses tools (bash, read, write, edit) to execute the plan
-   - Step limit: 50 steps max
-   - Cost limit: $5.00 max
-   - Stuck detection: Break if same action repeated 3x
-4. **Task 3 - Extract**: Ribosome resolver checks if extraction criteria met
-   - If yes: Creates new activity template from execution
-   - If no: Execution completes without extraction
+1. **Target inference.** `inferGoalTargetShapes` derives the shapes that would constitute reaching the goal; `inferDerivationSplit` separates intermediate shapes from terminal emit targets.
+2. **Reuse first.** `recommendReachingPath` checks whether this goal has ever been reached and by what path; a reached path is replayed as `learned_pathway`.
+3. **Walk.** For each unmet target shape, pick a producer or satisfier; execute it; fold outputs into the pool; ask `decideContinuation` whether to continue.
+4. **Bridge or fall to the floor.** No producer for a shape means mint a wrapper or file a gap; if the walk cannot take a shape-feasible step at all, `authorFallback` authors a template, and failing that the grounded loop runs.
+5. **Grade.** `verifyGoalReached` returns the verdict; deterministic checks run before any judge.
+6. **Consequences.** Credit or penalty, path recorded, and on a reach, extraction dispatched.
 
 ### Key Difference from Old "Fallback" Model
 
-**Before (fallback improvisation):**
+**The retracted model:** a template fails, control leaves the activity system, an ad-hoc LLM loop runs untraced, and whatever it produced is reported.
+
+**What actually happens:** every route is a tier of the same walk, and every route ends at the same gate.
+
 ```
-Activity failed → Exit activity system → Enter improvisation mode → Ad-hoc LLM loop
+walk_tier ∈ { learned_pathway, satisfier, universal_tool_fallback,
+              feature_compose, fresh_derivation }
 ```
 
-**Now (activity composition):**
-```
-Activity failed → Execute improvise_solution activity → Tasks with validation
-```
-
-All workflows go through the activity composition system. Improvisation is just another activity.
+The consequences follow from that. There is no untraced escape hatch, so a floor run is as gradable as a learned-pathway run. The tier is recorded on the goal path, so "this goal only ever reaches via the floor" is a measurable statement and therefore a gap that can be filed. And because the floor is bounded and grounded, a run that gathered no data cannot present itself as an answer.
 
 ## Decomposition: Activity Matching → Improvisation Selection
 
+Selection does not branch into an improvisation mode. It retrieves candidates, ranks them, and — when the ranked pool cannot cover the goal's target shapes — the walk continues by other means.
+
 ```mermaid
-sequenceDiagram
-    participant GP as GoalProcessor
-    participant MCPc as MCP Client
-    participant BE as Backend
-    participant Exec as ActivityExecutor
-    participant LLM as LLM (Claude)
+graph TD
+    Goal([Goal + inferred target shapes]) --> Reuse{"recommendReachingPath:<br/>a reached path exists?"}
+    Reuse -->|Yes| Replay["Replay it<br/>walk_tier = learned_pathway"]
+    Reuse -->|No| Rec["POST /v2/activities/recommend<br/>getActivitiesWithTieredFallback + betaSample"]
 
-    Note over GP: Activity Recommendation Phase
+    Rec --> Cover{"Does a candidate produce<br/>an unmet target shape?"}
+    Cover -->|Yes| Run["Execute it<br/>walk_tier = satisfier / fresh_derivation"]
+    Cover -->|No| Prod{"Any live producer<br/>for the shape at all?"}
 
-    GP->>MCPc: recommendActivities(goal, category, limit=5)
-    Note over MCPc: Build request to backend
+    Prod -->|No| Gap["fileCapabilityGap /<br/>fileReachabilityGap /<br/>mintResolverWrapper"]
+    Prod -->|"Yes, unreachable"| Reach["fileReachabilityGap"]
 
-    MCPc->>BE: POST /v2/activities/recommend
-    activate BE
+    Gap --> Floor["universalToolFallback →<br/>runGroundedToolLoop<br/>walk_tier = universal_tool_fallback"]
+    Reach --> Floor
 
-    Note over BE: Thompson Sampling Engine
-    Note over BE: 1. Query similar templates<br/>2. Compute scores: score = beta(α, β)<br/>3. Sort by score<br/>4. Return top-N
+    Run --> Gate["verifyGoalReached"]
+    Replay --> Gate
+    Floor --> Gate
 
-    alt Domain-Specific Templates Found
-        Note over BE: Filter by category, keywords<br/>Check success rate
-        BE-->>MCPc: [template1, template2, ...] + improvise_solution
-        Note over MCPc: Sorted by Thompson score
-    else No Domain Templates
-        Note over BE: Only return improvise_solution
-        BE-->>MCPc: [improvise_solution]
-    end
-    deactivate BE
+    Gate -->|miss| Excl["penaliseHollowTemplate +<br/>recommendExcluding → retry"]
+    Excl --> Rec
 
-    MCPc-->>GP: recommendations
-
-    alt Recommendations Include Domain Template (score >= 0.7)
-        Note over GP: EXECUTE DOMAIN TEMPLATE
-        GP->>Exec: execute(domain_template)
-
-        Exec->>Exec: executeTaskSequence()
-        Exec-->>GP: result
-
-        alt Result Success
-            Note over GP: ✓ GOAL ACHIEVED
-        else Result Failed OR Verification Failed
-            Note over GP: Next recommendation<br/>(may be improvise_solution)
-            GP->>Exec: execute(next_template)
-        end
-    else Only improvise_solution Returned
-        Note over GP: EXECUTE IMPROVISATION ACTIVITY
-        GP->>Exec: execute(improvise_solution)
-        Note over Exec: Task sequence:<br/>1. plan_approach<br/>2. execute_plan<br/>3. extract_template
-    end
+    style Goal fill:#e1f5ff
+    style Replay fill:#c8e6c9
+    style Floor fill:#ffcc80
+    style Gate fill:#ffd54f
+    style Gap fill:#ffccbc
 ```
 
-**Selection Logic:**
-- Thompson Sampling ranks ALL templates (including `improvise_solution`)
-- Domain-specific templates rank higher if they have good success history
-- `improvise_solution` ranks higher when:
-  - No domain templates exist
-  - Domain templates have low success rates
-  - Goal is novel/exploratory
+A goal that repeatedly finds no producer is escalated rather than silently retried: `escalateNoProducerToInvestigation` self-dispatches an "investigate and decompose" goal tagged `escalated_from:no_producer`, so the shortfall becomes work the substrate does rather than a stuck dispatch.
 
 ## Decomposition: Improvise Solution Activity Execution
 
+Since no `improvise_solution` activity exists, what this section documents is the execution of the floor — the mechanism that occupies its place.
+
 ```mermaid
 sequenceDiagram
-    participant Exec as ActivityExecutor
-    participant LLM as LLM (Claude)
-    participant Tools as Tool Handlers<br/>(bash, read, write, etc)
-    participant State as State Tracker<br/>(impulses_loaded,<br/>impulses_created)
-    participant Ribosome as RibosomeResolver
+    participant Walk as runGoalAsPoolWalk
+    participant UF as universalToolFallback
+    participant Loop as runGroundedToolLoop
+    participant Disc as discovery (ufResolveUrl)
+    participant LLM as llm_completion_dispatch
+    participant Tool as ufExecuteTool
 
-    Note over Exec: EXECUTE: improvise_solution
+    Walk->>UF: goal, targetShapes
+    UF->>Disc: resolve llm_completion_dispatch
+    Note over UF: NOT gated on any env var — the loop<br/>returns null when dispatch is genuinely unavailable
+    UF->>UF: ufBuildWriteTool per target write shape
+    UF->>Loop: basePrompt, tools, writeShapeList
 
-    Note over Exec: TASK 1: plan_approach
-    Exec->>Exec: captureStateSnapshot()
-    Note over Exec: Pre-execution checkpoint
+    loop ≤ 4 iterations, while before the deadline
+        Loop->>LLM: prompt + accumulated real observations + tools
+        LLM-->>Loop: text and/or tool_calls
 
-    Exec->>LLM: executeTask("plan_approach", {goalDescription})
-    activate LLM
-    Note over LLM: Analyze goal<br/>Identify requirements<br/>Create step-by-step plan
-    LLM-->>Exec: Plan {steps, approach, tools_needed}
-    deactivate LLM
-
-    Note over Exec: TASK 2: execute_plan
-
-    loop For each planned step (max 50)
-        Exec->>LLM: sendMessage(goal, context, plan, tools_list)
-        Note over LLM: Available tools:<br/>- bash: Run commands<br/>- read: Read files<br/>- write: Create files<br/>- edit: Modify files<br/>- glob: Find files<br/>- grep: Search content
-
-        activate LLM
-        LLM->>LLM: reason(goal, plan, progress)
-        Note over LLM: Step {n}:<br/>Thought: "..."<br/>Action: tool_name<br/>Parameters: {...}
-        LLM-->>Exec: ToolCall
-        deactivate LLM
-
-        Exec->>Tools: execute(action, params)
-        activate Tools
-
-        alt action === "read"
-            Tools->>Tools: readFile(path)
-            Tools->>State: recordImpulseLoad(path, "source_code")
-            Note over State: Track shape + tokens
-        else action === "write"
-            Tools->>Tools: writeFile(path, content)
-            Tools->>State: recordImpulseCreate(path, inferred_shape)
-        else action === "bash"
-            Tools->>Tools: execSync(command)
-            Tools->>State: recordImpulseLoad(pattern, "bash_output")
-        end
-
-        Tools-->>Exec: ToolResult
-        deactivate Tools
-
-        Exec->>Exec: recordStep({<br/>  step: n<br/>  thought: "..."<br/>  action: "..."<br/>  result: {...}<br/>  duration_ms<br/>  cost_estimate<br/>})
-
-        Exec->>LLM: sendToolResult(result)
-
-        Exec->>Exec: verifyGoalAchieved()?
-        alt Goal Achieved
-            Note over Exec: ✓ Break loop
-            break Goal Complete
-        else Stuck Detection
-            Exec->>Exec: isStuck()
-            Note over Exec: Same action repeated 3x?
-            alt Stuck
-                Note over Exec: ✗ Break loop
-                break Exit: Stuck
+        alt tool_calls present
+            loop ≤ 8 calls, deadline checked per call
+                Loop->>Loop: skip if (tool, args) already in doneKeys
+                Loop->>Tool: execute within the allowlist
+                Tool-->>Loop: {ok, result} or {ok: false, error}
+                alt ok and the tool is a write shape
+                    Loop->>Loop: record as side effect (not grounding)
+                else ok
+                    Loop->>Loop: groundedOk++ ; push observation
+                else failed
+                    Loop->>Loop: push "TOOL … ERROR: …" observation<br/>(not added to doneKeys — retryable)
+                end
+                Loop->>Loop: record the literal command into commandEvidence
             end
-        else Max Steps/Cost Reached
-            alt steps >= 50 OR cost >= $5.00
-                Note over Exec: ✗ Break loop
-                break Exit: Limits
+            alt nothing new executed
+                Note over Loop: break — anti-spin
             end
+        else no tool_calls
+            Note over Loop: the model gave its final answer — break
         end
     end
 
-    Note over Exec: TASK 3: extract_template
-
-    Exec->>Ribosome: resolve("ribosome", execution_trace)
-    activate Ribosome
-
-    Ribosome->>Ribosome: shouldExtractTemplate(trace)
-    Note over Ribosome: Check criteria:<br/>1. status === "completed"<br/>2. tasks.length >= 2<br/>3. cost < $1.00<br/>4. impulses <= 10<br/>5. depth === 0
-
-    alt Criteria Met
-        Ribosome->>Ribosome: assembleTemplate(trace)
-        Note over Ribosome: Extract:<br/>- Input schema from impulses_loaded<br/>- Output schema from impulses_created<br/>- Tasks from step sequences<br/>- Variables from patterns
-
-        Ribosome->>Ribosome: registerTemplate(template)
-        Note over Ribosome: Store in backend<br/>Thompson params: α=1, β=1
-
-        Ribosome-->>Exec: {template_id, registered: true}
-    else Criteria Not Met
-        Note over Ribosome: Skip extraction
-        Ribosome-->>Exec: {registered: false}
-    end
-    deactivate Ribosome
-
-    Exec->>Exec: computeOutcome()
-    Note over Exec: Execution complete<br/>Template may be available
+    Loop-->>UF: {finalText, groundedOk, executedOk, observations,<br/>calledWriteShapes, commandEvidence}
+    UF-->>Walk: GoalSeekResult
 ```
 
-**Implementation (live equivalents):**
-- Activity executor: `repos/goal-host-vessel/` + `ias-executor-ts`
-- Ribosome resolver: `repos/ribosome-vessel/` (bus subscriber)
-- State tracking: `repos/goal-host-vessel/` + `ias-executor-ts`
+`commandEvidence` is then handed to `verifyGoalReached`, which is what lets the gate scrutinise whether the command that ran corresponds to what the goal asked for — a check no amount of prose in the answer can substitute for.
 
 ## Decomposition: Ribosome Resolver (Template Extraction)
 
-The ribosome resolver is invoked as Task 3 of the `improvise_solution` activity.
+Extraction is triggered on a reach, and it is an activity rather than a library call. Two triggers exist and both dispatch the same template.
 
 ```mermaid
 sequenceDiagram
-    participant Exec as ActivityExecutor
-    participant Ribosome as RibosomeResolver
-    participant Analyzer as Quality<br/>Analyzer
-    participant Extractor as Template<br/>Extractor
-    participant BE as Backend
+    participant Walk as runGoalAsPoolWalk
+    participant Bus as activity-api WebSocket bus
+    participant Ribo as ribosome-vessel
+    participant GH as goal-host /run-goal
+    participant T as ribosome-extract activity
 
-    Note over Exec: Task 3: extract_template
-
-    Exec->>Ribosome: resolve("ribosome", {execution_trace})
-    activate Ribosome
-
-    Note over Ribosome: PHASE 1: QUALITY CHECK
-
-    Ribosome->>Analyzer: shouldExtractTemplate(trace)
-    activate Analyzer
-
-    Note over Analyzer: Check criteria:<br/>1. status === "completed"<br/>2. tasks.length >= 2<br/>3. cost < $1.00<br/>4. impulses <= 10<br/>5. depth === 0 (top-level)<br/>6. No critical errors
-
-    alt Criteria Met
-        Analyzer-->>Ribosome: true
-    else Criteria Not Met
-        Analyzer-->>Ribosome: false
-        Note over Ribosome: ✗ Skip extraction
-        Ribosome-->>Exec: {registered: false}
+    alt Direct trigger (preferred)
+        Walk->>Walk: reach verdict true
+        Walk->>Walk: buildCompositeTraceFromChain<br/>(deterministic id per chain — re-runs upsert, never duplicate)
+        Walk->>GH: mintReachedTrace → targetTemplateId "ribosome-extract"
+    else Bus trigger
+        Bus-->>Ribo: execution_completed {executionId, reached, meta}
+        Ribo->>Ribo: gate — reached AND every task terminal-and-successful<br/>AND producer not in the ribosome family AND not already dispatched
+        Ribo->>GH: POST /run-goal {targetTemplateId: "ribosome-extract",<br/>variables: {executionId, applyExtraction, lifecycle}}
     end
-    deactivate Analyzer
 
-    alt Extract Template
-        Note over Ribosome: PHASE 2: TASK IDENTIFICATION
-
-        Ribosome->>Extractor: identifyTaskBoundaries(steps)
-        activate Extractor
-
-        Note over Extractor: Group steps into tasks:<br/>- Boundaries on action changes<br/>- Group size >= 5 steps<br/>- Logical phase transitions
-
-        Extractor-->>Ribosome: taskGroups[][]
-        deactivate Extractor
-
-        Note over Ribosome: PHASE 3: SCHEMA EXTRACTION
-
-        Ribosome->>Extractor: extractInputSchema(trace)
-        activate Extractor
-        Note over Extractor: From impulses_loaded:<br/>- Shape names<br/>- Format requirements<br/>- Budget estimates
-        Extractor-->>Ribosome: InputSchema {<br/>  required: [{shape}]<br/>  optional: [{shape}]<br/>}
-        deactivate Extractor
-
-        Ribosome->>Extractor: extractOutputSchema(trace)
-        activate Extractor
-        Note over Extractor: From impulses_created:<br/>- Produced shapes<br/>- Success indicators
-        Extractor-->>Ribosome: OutputSchema {<br/>  produces: [{shape}]<br/>}
-        deactivate Extractor
-
-        Note over Ribosome: PHASE 4: TEMPLATE ASSEMBLY
-
-        loop For each task group
-            Ribosome->>Extractor: summarizeTaskGroup(group)
-            activate Extractor
-            Note over Extractor: Create description<br/>from steps
-            Extractor-->>Ribosome: taskDescription
-            deactivate Extractor
-
-            Ribosome->>Extractor: extractPromptPattern(group)
-            activate Extractor
-            Note over Extractor: Convert to LLM prompt<br/>with {{variables}}
-            Extractor-->>Ribosome: promptTemplate
-            deactivate Extractor
-
-            Ribosome->>Extractor: identifyVariables(group)
-            activate Extractor
-            Note over Extractor: Find parameterizable:<br/>- File paths<br/>- Patterns<br/>- Thresholds
-            Extractor-->>Ribosome: Variable[]
-            deactivate Extractor
-        end
-
-        Ribosome->>Ribosome: assembleTemplate(tasks, schemas)
-        Note over Ribosome: Create ActivityTemplate:<br/>- name from goal<br/>- category from outcome<br/>- tasks with prompts<br/>- inputSchema<br/>- outputSchema<br/>- metadata
-
-        Note over Ribosome: PHASE 5: VALIDATION
-
-        Ribosome->>Ribosome: assertValidTemplate(template)
-        Note over Ribosome: Verify structure,<br/>camelCase, unique IDs
-
-        Note over Ribosome: PHASE 6: REGISTRATION
-
-        Ribosome->>BE: POST /v2/activities/templates
-        activate BE
-
-        Note over BE: 1. Validate template<br/>2. Generate template_id<br/>3. Store in SurrealDB<br/>4. Initialize Thompson:<br/>   alpha = 1<br/>   beta = 1
-
-        BE-->>Ribosome: registered_template_id
-        deactivate BE
-
-        Ribosome-->>Exec: {<br/>  template_id<br/>  registered: true<br/>  name<br/>}
-    end
-    deactivate Ribosome
-
-    Note over Exec: ✓ Template available<br/>for future recommendations
+    GH->>T: run
+    T->>T: acquire_trace_signature → executionTraceWithSignatures
+    T->>T: assess_quality → qualityScore (gates the rest)
+    T->>T: synthesize_template → extractedTemplate
+    T->>T: validate_proposal → validation_result
+    T->>T: dispatch_write_attempt → writeAttempt
+    T->>T: dispatch_write_succeeded → activityTemplate + goalEnd
+    T->>T: emit_summary → learningSummary + goalEnd
 ```
 
-**Ribosome Extraction Criteria:**
-- Status: `completed` (successful execution)
-- Minimum complexity: `tasks >= 2`
-- Maximum cost: `< $1.00`
-- Impulse count: `<= 10`
-- Depth: `0` (top-level, not nested)
-- No critical errors in execution
+The recursion guard matters more than it looks: an extraction run is itself an execution that emits `execution_completed`, so without excluding the ribosome family at the source the system would extract templates from its own extractions. The guard is applied before dispatch, not inside the template's own rubric, because a rubric that runs at task three never evaluates if task one fails.
 
-**Extracted Template Structure:**
-```typescript
-{
-  id: "tpl_{timestamp}_{randomId}"
-  name: Capitalized goal
-  category: Inferred from goal/outcome
-  tasks: [{ id, description, prompt, validation }]
-  inputSchema: { required, optional }
-  outputSchema: { produces }
-  metadata: {
-    generatedFrom: "execution"
-    sourceExecutionId: trace.execution_id
-    author: "ribosome"
-    inputSchemaInferredFrom: {
-      executionId
-      confidence
-      impulseCount
-    }
-  }
-}
-```
-
-**Implementation:** `repos/ribosome-vessel/` (template assembly + quality criteria; `assembleTemplateFromExecution` shared via `ias-executor-ts` + `ribosome-quality.ts`)
+The `lifecycle` payload must be sent in full. The template's first task is behind a conditional gate on `lifecycle.qualityEligible`; dispatching with only an `executionId` leaves that placeholder unresolvable and the whole chain fails at task one.
 
 ## Decomposition: Checkpoint Creation Before Execution
 
+There is no generic git-checkpoint engine in the executor. Safety for code changes comes from **staging in a writable clone**: a change is authored and verified against a clone rooted at the mitosis runtime directory, and landing it on origin is a separate downstream cutover.
+
 ```mermaid
-sequenceDiagram
-    participant Exec as ActivityExecutor
-    participant Git as Git
-    participant FS as Filesystem
-    participant State as RollbackState
-    participant Exec2 as Execution<br/>Engine
+graph TD
+    Start([Code-change goal]) --> Plan["Author the change<br/>(feature_compose / patch_with_tools)"]
+    Plan --> Snap["Snapshot the pre-edit content of every touched file<br/>(preEditContent), tracking created vs edited"]
+    Snap --> Apply["Apply the ops in the CLONE, not the live tree"]
+    Apply --> Verify{"Typecheck clean?"}
 
-    Note over Exec: PRE-EXECUTION PHASE
+    Verify -->|No| Revert["Restore from preEditContent<br/>(snapshot+restore, not git checkout —<br/>the clone is not always a git repo)"]
+    Verify -->|Yes| Sem{"Semantic gate:<br/>verifyPatchAddressesGap"}
 
-    Exec->>Git: captureGitState()
-    activate Git
-    Note over Git: Extract:<br/>- git rev-parse HEAD<br/>- git status<br/>- git diff HEAD
-    Git-->>Exec: GitState {<br/>  HEAD: "abc123"<br/>  isDirty: boolean<br/>  changes: string<br/>}
-    deactivate Git
+    Sem -->|No| Revert
+    Sem -->|Yes| Fav["FAVORABLE featureComposeReport<br/>(staged, NOT landed)"]
 
-    Exec->>FS: listTrackedFiles()
-    Note over FS: Find all relevant files:<br/>- src/**/*.ts<br/>- tests/**/*.ts<br/>- package.json<br/>- tsconfig.json
-    FS-->>Exec: trackedFiles[]
+    Fav --> Cut["Separate cutover: commit + push"]
+    Cut --> Landed{"push_status pushed /<br/>new_git_sha present?"}
 
-    Exec->>Exec: captureRollbackState(activityId, trackedFiles)
-    activate Exec
-    Note over Exec: For each tracked file:<br/>1. Read content<br/>2. Compute hash<br/>3. Store in RollbackState
-    Exec-->>Exec: RollbackState {<br/>  activityId<br/>  executionId<br/>  fileBefore: Map<path → hash><br/>  gitCommit: "abc123"<br/>  capturedAt: timestamp<br/>}
-    deactivate Exec
+    Landed -->|No| Staged["Reach gate:<br/>deterministic:staged-not-landed<br/>→ NOT reached"]
+    Landed -->|Yes| Reach["Reach gate:<br/>deterministic:favorable-compose<br/>→ reached"]
 
-    Exec->>State: saveCheckpoint(rollbackState)
-    Note over State: Persist checkpoint to:<br/>- Memory (for this session)<br/>- Backend (as impulse)<br/>- Local cache
+    Revert --> Fail["UNFAVORABLE — live tree untouched"]
 
-    Note over Exec: ✓ CHECKPOINT READY
-    Note over Exec: If execution fails,<br/>rollback can restore to<br/>this exact state
-
-    Exec->>Exec2: execute(template, impulses)
-    Note over Exec2: EXECUTION STARTS<br/>Checkpoint is active
+    style Start fill:#e1f5ff
+    style Revert fill:#ffcdd2
+    style Staged fill:#ffccbc
+    style Reach fill:#c8e6c9
 ```
 
-**Checkpoint Structure:**
-```typescript
-{
-  activityId: string
-  executionId: string
-  fileBefore: Map<string, string>  // path → hash
-  workingDirectory: string
-  gitCommit?: string
-  capturedAt: number
-}
-```
-
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (checkpoint/rollback)
+The critical property is that a staged change is never graded as done. `verifyGoalReached` refuses a `mitosisStaged` shape without landing evidence, because a typecheck-clean edit sitting in a clone is exactly what an operator would call "not done" — and grading it green would train every downstream posterior on a false outcome.
 
 ## Decomposition: Trailblazing (Failure → Variant Creation)
 
-Trailblazing works the same whether the failed activity is domain-specific or `improvise_solution`.
+Sustained failure produces a variant; sustained failure without improvement produces a retirement. Both are backend-side, driven by observed execution history rather than by a caller's request.
 
 ```mermaid
 sequenceDiagram
-    participant Exec as ActivityExecutor
-    participant Template as Template<br/>Manager
-    participant LLM as LLM
-    participant BE as Backend
-    participant Git as Git Rollback
+    participant API as activity-api (after recording an execution)
+    participant SCV as shouldCreateVariant
+    participant CV as createVariant
+    participant Ret as checkAndRetireTemplate
+    participant Pool as candidate pool
 
-    Note over Exec: EXECUTION COMPLETED (FAILED)
+    API->>SCV: autoCreateVariantIfNeeded(templateId, orgId, accountId)
+    SCV->>SCV: read the 10 most recent executions
+    SCV->>SCV: count consecutive failures from the most recent
+    alt fewer than 3 consecutive failures
+        SCV-->>API: null — no variant
+    else 3 or more
+        SCV->>SCV: aggregate total/success/failure counts,<br/>distinct error messages, failed task ids
+        SCV-->>CV: FailurePattern
+        CV->>Pool: register the variant in the same family
+        Note over Pool: it competes with the original under Thompson Sampling
+    end
 
-    Exec->>Exec: detectFailure(execution)
-    Note over Exec: Check:<br/>- status === "failed"<br/>- exitCode !== 0<br/>- stdout contains "error"<br/>- stderr non-empty
-
-    alt Failure Detected
-        Exec->>Exec: analyzeFailure()
-        Note over Exec: Extract:<br/>- errorType: "type_error"|"runtime"|"timeout"<br/>- errorLine: line number<br/>- context: surrounding code<br/>- attempted: what was tried
-
-        Exec->>Template: getOriginalTemplate(templateId)
-        Template-->>Exec: ActivityTemplate
-
-        Note over Exec: VARIANT CREATION
-        Note over Exec: Create variant of failed template<br/>with adjusted logic
-
-        Exec->>LLM: createVariant(template, failure)
-        activate LLM
-        Note over LLM: Analyze failure<br/>Suggest modifications:<br/>- Different approach<br/>- Better error handling<br/>- Additional checks<br/>- Alternative tools
-        LLM-->>Exec: VariantTemplate
-        deactivate LLM
-
-        Exec->>Template: generateVariantId(templateId)
-        Note over Template: variant_id format:<br/>"{templateId}:variant-{hashOfChanges}"<br/>Example: "improvise_solution:variant-7f4a9e"
-        Template-->>Exec: variantId
-
-        Note over Exec: VARIANT REGISTRATION
-        Exec->>BE: registerTemplate(variantTemplate)
-        Note over BE: Store variant with:<br/>- name: original_name + " (variant)"<br/>- family: original_id<br/>- tags: ["variant", "trailblazing"]<br/>- alpha: 1<br/>- beta: 1<br/>(Fresh start for Thompson Sampling)
-        BE-->>Exec: variant_template_id
-
-        Note over Exec: NEXT ITERATION
-        Note over Exec: Goal processor can now<br/>recommend variant on retry<br/>(Thompson Sampling will learn)
-
-        Exec-->>Exec: failureResult {<br/>  originalTemplate: template_id<br/>  variantCreated: variant_id<br/>  reason: "..."<br/>  suggestion: "Retry with variant"<br/>}
-    else Success (No failure)
-        Note over Exec: ✓ Proceed normally
+    API->>Ret: checkAndRetireTemplate(templateId, orgId, accountId)
+    Ret->>Ret: read the 20 most recent executions
+    alt fewer than 20 executions
+        Ret-->>API: false — not enough evidence
+    else success rate below 30%
+        Ret->>Pool: set retired, retired_at, retired_reason "poor_performance"
     end
 ```
 
-**Trailblazing Decision Flow:**
-1. Failed execution detected (any activity, including `improvise_solution`)
-2. Failure analysis performed
-3. LLM generates variant with modifications
-4. Variant registered with fresh Thompson scores
-5. Variant becomes available for recommendation
-6. Thompson Sampling learns variant effectiveness over time
+Two thresholds are worth remembering because they define how patient the system is: **three consecutive failures** before a variant is proposed, and **twenty executions with a success rate under 30%** before a template is retired. Retiring on thinner evidence removes working arms; the twenty-execution floor is what stops a sweep from deleting a template that simply had a bad afternoon.
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts` (trailblazing logic)
+Variant families are readable at `GET /v2/activities/:id/variants`, `GET /v2/activities/:id/variant-scores` and `GET /v2/activities/family/:baseId`; `buildVariantTree` and `getVariantScores` back those reads.
 
 ## Decomposition: Execution Rollback (Git Restore)
 
-```mermaid
-sequenceDiagram
-    participant Exec as ActivityExecutor
-    participant RB as Rollback Engine
-    participant Git as Git
-    participant FS as Filesystem
-    participant Verify as Verifier
+Rollback is scoped to the authoring path, and it is a **snapshot restore**, not a `git checkout`. The clone the ops are applied to is not always a git repository, so a `git checkout` rollback silently no-ops and leaves broken edits in the runtime — which is why the pre-edit content of each touched file is captured before the first op and restored on an unfavourable verdict.
 
-    Note over Exec: ROLLBACK TRIGGERED
-    Note over Exec: Previous execution failed<br/>State checkpoint exists
+```
+before applying ops:
+    preEditContent[path] = current content, for every file the plan touches
+    track which paths are CREATED vs EDITED
 
-    Exec->>RB: executeRollback(rollbackState, strategy="git_restore")
-    activate RB
-
-    Note over RB: PHASE 1: IDENTIFY FILES
-    RB->>RB: extractFilesToRestore(rollbackState)
-    Note over RB: Files from rollbackState.fileBefore:<br/>- src/index.ts<br/>- src/types.ts<br/>- tests/index.test.ts<br/>etc.
-    RB-->>RB: filesToRestore[]
-
-    Note over RB: PHASE 2: GIT RESTORE
-    RB->>Git: getGitCommit()
-    Note over Git: Read from rollbackState.gitCommit<br/>(e.g., "abc123def")
-    Git-->>RB: commitHash
-
-    loop For each file to restore
-        RB->>Git: git checkout {commit} -- {file}
-        activate Git
-        Note over Git: Restore file to exact<br/>pre-execution state
-        Git-->>RB: success | error
-        deactivate Git
-
-        alt Success
-            RB->>RB: filesRestored.push(file)
-        else Failure
-            RB->>RB: filesNotRestored.push(file)
-            Note over RB: Track failed restores<br/>for diagnosis
-        end
-    end
-
-    Note over RB: PHASE 3: VERIFICATION
-    RB->>Verify: verifyRestoration(filesRestored)
-    activate Verify
-
-    loop For each restored file
-        Verify->>FS: stat(file)
-        FS-->>Verify: fileStats
-
-        Verify->>RB: getOriginalHash(file)
-        Note over RB: From rollbackState.fileBefore
-        RB-->>Verify: expectedHash
-
-        Verify->>FS: computeHash(file)
-        FS-->>Verify: actualHash
-
-        alt Hash Matches
-            Note over Verify: ✓ File restored correctly
-        else Hash Mismatch
-            Note over Verify: ✗ Restoration incomplete
-            Verify->>Verify: verificationPassed = false
-        end
-    end
-
-    Verify-->>RB: verificationPassed
-    deactivate Verify
-
-    RB-->>Exec: RollbackResult {<br/>  success: boolean<br/>  filesRestored: string[]<br/>  filesNotRestored: string[]<br/>  verificationPassed: boolean<br/>  error?: string<br/>}
-    deactivate RB
-
-    Note over Exec: DECISION
-    alt Rollback Successful
-        Note over Exec: ✓ Workspace clean<br/>Ready for new attempt
-    else Rollback Failed
-        Note over Exec: ✗ WARNING: Manual cleanup needed<br/>Some files not restored
-    end
+on UNFAVORABLE (typecheck failure, semantic-gate rejection, or a hard-fail detector):
+    for each EDITED path:  write back preEditContent[path]
+    for each CREATED path: remove it
 ```
 
-**Rollback Strategies:**
-- **git_restore** (primary): `git checkout {commit} -- {file}`
-- **file_restore** (fallback): Direct file content restoration from captured state
+The hard-fail detectors that can trigger a revert are themselves symbols worth knowing, because each encodes a class of change that typechecks but does nothing: `detectZeroBehaviorDelta`, `detectNewCapabilityStub`, `detectEffectlessHeaderOnlyDiff`, `detectArchitectureViolation`, and `reachabilityHardFail` over the facts computed by `computeDataFlowFacts`. `verifyPatchAddressesGap` is the semantic gate that asks whether the diff actually addresses the stated intent.
 
-**Implementation:** `repos/goal-host-vessel/` + `ias-executor-ts`
+The gate fails **open** on a judge outage so a flaky LLM cannot wedge landing — and the reach gate compensates by withholding strong credit from a fail-open FAVORABLE, requiring `verified: true` plus a non-empty `reachable_symbols` before stamping `deterministic: true`.
 
 ## Complete Learning Loop Diagram
 
 ```mermaid
 graph TB
-    Start([User Goal]) -->|Enrich| A["1. Goal Enrichment<br/>(LLM semantic analysis)"]
+    Start([Goal]) --> Infer["inferGoalTargetShapes + goalHashOf"]
+    Infer --> Reuse{"recommendReachingPath?"}
 
-    A -->|Recommend| B["2. Thompson Sampling<br/>(all templates ranked)"]
+    Reuse -->|Hit| Replay["Replay learned pathway"]
+    Reuse -->|Miss| Rank["Tiered retrieval + Thompson Sampling"]
 
-    B -->|Select| C{"Best Template?"}
+    Rank --> Run["Execute the chosen producer / chain"]
+    Replay --> Run
+    Run --> Gate{"verifyGoalReached"}
 
-    C -->|Domain Template| D["3a. Execute Domain Activity<br/>(specialized template)"]
-    C -->|improvise_solution| E["3b. Execute Improvisation Activity<br/>(plan → execute → extract)"]
+    Gate -->|"reached"| Credit["creditReachedTemplate<br/>recordGoalPath(true, walk_tier)"]
+    Gate -->|"miss"| Pen["penaliseHollowTemplate (negative, intensity 2)<br/>recordGoalPath(false, walk_tier)<br/>reach_gate_lesson → concept-db"]
 
-    D -->|Execute| F["4. Activity Loop<br/>(template tasks)"]
-    E -->|Execute| G["4. Improvisation Tasks<br/>(LLM + tools)"]
+    Pen --> More{"recommendExcluding<br/>has a candidate?"}
+    More -->|Yes| Run
+    More -->|No| Honest["Honest failure —<br/>reason + completion_shapes surfaced"]
 
-    F -->|Reach gate| H{"Goal Reached?<br/>(verifyGoalReached)"}
-    G -->|Reach gate| H
+    Credit --> Mint["mintReachedTrace →<br/>ribosome-extract"]
+    Mint --> NewT["New activityTemplate<br/>in the candidate pool"]
 
-    H -->|No| I{"Approaches<br/>exhausted?"}
-    H -->|Yes| J["5. SUCCESS (reached)"]
+    Run --> Trace["ExecutionTrace + failureMode"]
+    Honest --> Trace
+    Trace --> Post["applyOutcomeToPosteriors<br/>deltas by failure mode"]
+    Post --> Chain["propagateCreditAlongChain"]
+    Post --> Var["autoCreateVariantIfNeeded /<br/>checkAndRetireTemplate"]
 
-    I -->|No| K["6. In-flight recovery<br/>(β-penalise + recommendExcluding<br/>+ retry a different approach)"]
-    I -->|Yes| L["5. FAILURE<br/>(approaches exhausted, honest)"]
-
-    K -->|Loop| B
-
-    J -->|Check| M{"Ribosome Criteria?<br/>(if improvise_solution)"}
-    M -->|Yes| N["7a. Template Extraction<br/>(ribosome resolver)"]
-    M -->|No| O["7a. Store Trace Only"]
-
-    L -->|Analyze| P["7b. Failure Analysis<br/>(create variant template)"]
-
-    N -->|Register| Q["8. Backend Learning<br/>(Thompson Sampling)"]
-    O -->|Store| Q
-    P -->|Register| Q
-
-    Q -->|Store| R["9. Trace + Pattern Storage<br/>(future recommendations)"]
-
-    R -->|Complete| S([Loop: Next Goal])
+    NewT --> Rank
+    Var --> Rank
+    Chain --> Rank
 
     style Start fill:#90EE90
-    style J fill:#87CEEB
-    style L fill:#FFB6C6
-    style Q fill:#FFD700
-    style S fill:#90EE90
+    style Credit fill:#87CEEB
+    style Honest fill:#FFB6C6
+    style Post fill:#FFD700
+    style NewT fill:#c8e6c9
 ```
+
+**Failure-mode deltas applied by `applyOutcomeToPosteriors`:**
+
+| Failure mode | α delta | β delta | Why |
+|---|---|---|---|
+| success | 1 (or a graded yield) | 0 (or 1 − yield) | Graded yield rewards partial production when enabled |
+| `verifier_negative` | 0 | 1 | A verifier said no — full penalty |
+| `budget_exhausted` | 0 | 0.5 | It ran and hit a ceiling; not evidence of a wrong answer |
+| `safety_breach` | 0 | 1 | A refused dispatch is a full negative |
+| `cascading` | 0 | 0 | Victim of an upstream cause; the cause carries the penalty |
+| `user_abort` | 0 | 0 | No signal — the run was cancelled |
+| null on a failed trace | 0 | 1 | Defaults to `verifier_negative` with a warning |
+
+Posterior counts decay with a half-life (`resolveThompsonDecayHalfLifeDays`, `decayedThompsonCounts`) so old evidence loses weight rather than permanently pinning an arm.
 
 ## The Unified Activity Pathway
 
-**All workflows go through activity composition. There is no separate "improvisation mode."**
+Every route through the system is a tier of one walk, graded by one gate, recorded on one path row.
 
-| Scenario | Template Selected | Tasks Executed | Extraction |
-|----------|-------------------|----------------|------------|
-| **Domain-specific goal with matching template** | `fix_typescript_error` | Domain-specific tasks | No (domain template already exists) |
-| **Novel goal, no matches** | `improvise_solution` | 1. plan_approach<br/>2. execute_plan<br/>3. extract_template | Yes (if criteria met) |
-| **Template failed, retry** | Variant of original template | Modified tasks | No (variant already exists) |
-| **Improvisation failed** | Variant of `improvise_solution` | Modified plan/execution | Yes (if variant succeeds) |
+| Situation | Route | Recorded tier |
+|---|---|---|
+| This goal has reached before | Replay the recorded path | `learned_pathway` |
+| A producer exists for each target shape | Pick and execute per shape | `satisfier` |
+| No single template covers it, producers exist | Backward-chain and compose | `fresh_derivation` |
+| A code change is asked for | Author, verify, stage, land | `feature_compose` |
+| No producer exists for a needed shape | Mint a bridge, file the gap, run the grounded loop | `universal_tool_fallback` |
+| An approach missed | β-penalise, exclude, retry a different approach | whatever the retry resolved to |
+| Nothing reached | Honest failure with reason and completion shapes | last attempted tier |
 
-**Key Points:**
-- No distinction between "activity execution" and "improvisation" in the execution engine
-- `improvise_solution` is ranked alongside other templates via Thompson Sampling
-- Ribosome extraction is a resolver task, not external post-processing
-- All executions (domain or improvisation) produce traces for learning
-- Variants can be created for any activity, including `improvise_solution`
+**Key points:**
+- No route escapes tracing, so no route escapes grading.
+- The tier is the measurable statement. "This goal only ever reaches via the floor" is a gap that can be filed; "the system improvised" is not.
+- Variants compete with originals in the same pool; nothing is promoted by declaration.
+- Exhaustion is reported honestly rather than dressed as a partial success.
 
 ## Key Configuration
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `RELEVANCE_THRESHOLD` | 0.7 | Minimum score to prefer domain template over improvise_solution |
-| `MAX_IMPROVISATION_STEPS` | 50 | Step limit for execute_plan task |
-| `MAX_IMPROVISATION_COST` | $5.00 | Cost limit for execute_plan task |
-| `RIBOSOME_MIN_TASKS` | 2 | Minimum tasks for template extraction |
-| `RIBOSOME_MAX_COST` | $1.00 | Maximum cost for template extraction |
-| `RIBOSOME_MAX_IMPULSES` | 10 | Maximum impulses for extraction |
+Configuration here is bootstrap-only. Behaviour that should be learnable — cadence, selection, model choice — is steered by shapes and posteriors, not by these values.
+
+| Setting | Where | Purpose |
+|---|---|---|
+| `LLM_MAX_TOOL_ITERATIONS` | llm-resolver-vessel | Default tool-loop iterations (20); the vessel clamps any request to a maximum of 30 |
+| `IAS_SUBSCRIBER_MAX_INFLIGHT` | ias-executor-ts | Bound on concurrent lifecycle-subscriber dispatches (64) |
+| `MITOSIS_RUNTIME_DIR` | development-vessel | Root of the writable vessel clones ops are applied against |
+| `MITOSIS_REPO_ROOT` | development-vessel | Repository root used for scope resolution |
+| `MITOSIS_PUSH_CLONE_DIR` | development-vessel | Push-clone root for host-resident vessels |
+| `PORT` | every vessel unit | In-container listen port |
+
+Values enforced in code rather than configuration: the floor's 4 iterations and 8 calls per iteration, the variant threshold of 3 consecutive failures, the retirement threshold of 20 executions below a 30% success rate, and the hollow-completion penalty intensity of 2.
 
 ## File References
 
-| Component | File (live equivalent) | Purpose |
-|-----------|------|---------|
-| Goal Host | `repos/goal-host-vessel/` + `ias-executor-ts` (was `goal-processor.ts`) | Complete goal processing flow + reach gate + recovery loop |
-| Activity Executor | `repos/goal-host-vessel/` + `ias-executor-ts` (was `activity.ts`) | Task execution and composition |
-| Improvisation Tasks | `repos/goal-host-vessel/` + `ias-executor-ts` (was `improviser.ts`) | LLM tool use for execute_plan (LLM via llm-resolver-vessel) |
-| Ribosome Resolver | `repos/ribosome-vessel/` (bus subscriber; was `template-extractor.ts`) | Template extraction from the reached trace |
-| Ribosome Quality | `repos/ribosome-vessel/` (was `ribosome-quality.ts`) | Extraction criteria |
-| Rollback / Checkpoint | `repos/goal-host-vessel/` + `ias-executor-ts` (was `rollback.ts` / `activity.ts`) | Git state capture and restore |
+| Component | Location | Entry symbols |
+|---|---|---|
+| Recovery loop | `repos/goal-host-vessel/src/index.ts` | `runGoalWithRecovery`, `recommendExcluding`, `recommendReachingPath` |
+| Reach gate | `repos/goal-host-vessel/src/index.ts` | `verifyGoalReached`, `isSubstanceHonestReach`, `isGroundedHonestReach`, `recordDeterministicLabel` |
+| Penalty and credit | `repos/goal-host-vessel/src/index.ts` | `penaliseHollowTemplate`, `creditReachedTemplate` |
+| Floor | `repos/goal-host-vessel/src/index.ts` | `universalToolFallback`, `runGroundedToolLoop`, `ufExecuteTool`, `ufBuildWriteTool`, `ufResolveUrl` |
+| Gap filing and escalation | `repos/goal-host-vessel/src/index.ts` | `fileCapabilityGap`, `fileReachabilityGap`, `mintResolverWrapper`, `escalateNoProducerToInvestigation`, `mintGovernorAllows` |
+| Repair signature | `repos/goal-host-vessel/src/repair-signature.ts` | `repairSignatureOf`, `classifyFailure` |
+| Continuation | `repos/goal-host-vessel/src/walk-continuation.ts` | `decideContinuation` |
+| Extraction trigger | `repos/goal-host-vessel/src/index.ts`, `repos/ribosome-vessel/src/index.ts` | `mintReachedTrace`, `buildCompositeTraceFromChain`, `dispatchRibosomeExtract` |
+| Extraction activity | `repos/ias-executor-ts/src/templates/lifecycle/ribosome-extract.json` | `assess_quality` → `emit_summary` |
+| Failure taxonomy | `repos/ias-executor-ts/src/ontology.ts`, `src/adapters/activity-api-trace-sink.ts` | `FailureMode`, `CANONICAL_FAILURE_TYPES` |
+| Composition guards | `repos/ias-executor-ts/src/engine.ts` | depth and cycle refusals as `safety_breach`, `BudgetExceededError` |
+| Posterior consequences | `repos/activity-api/src/lib/posterior-update.ts` | `applyOutcomeToPosteriors`, `computeDeltas`, `propagateCreditAlongChain`, `successYield`, `decayedThompsonCounts` |
+| Variants and retirement | `repos/activity-api/src/services/variant-creator.ts` | `shouldCreateVariant`, `createVariant`, `autoCreateVariantIfNeeded`, `checkAndRetireTemplate` |
+| Per-goal paths | `repos/activity-api/src/routes/goal-paths.ts` | `POST /`, `GET /`, `POST /recommend`, `GET /stats` |
+| Authoring, staging, revert | `repos/development-vessel/src/resolvers/feature-compose.ts`, `patch-with-tools.ts` | `verifyPatchAddressesGap`, `detectZeroBehaviorDelta`, `detectNewCapabilityStub`, `detectEffectlessHeaderOnlyDiff`, `detectArchitectureViolation`, `reachabilityHardFail`, `computeDataFlowFacts` |
 
 ## Implementation Architecture
 
-This sequence spans **goal-host-vessel (execution, incl. reach gate + recovery), ribosome-vessel (extraction), and activity-api (storage/learning)**.
+Detection and recovery run where execution runs; consequence and memory run where the posteriors live. Splitting them is what lets a recovery policy change without redeploying the learner, and lets the learner change without redeploying the executor.
 
 ### goal-host-vessel (Execution Environment)
 
 **Responsibilities:**
-- Execute `improvise_solution` activity (plan → execute → extract tasks)
-- LLM-driven improvisation (tool use loop with stuck detection; LLM via llm-resolver-vessel)
-- **Goal-reaching gate (`verifyGoalReached`) + in-flight recovery (β-penalise + recommendExcluding + retry)**
-- Checkpoint creation (git state capture before execution)
-- Rollback execution (git restore to pre-execution state)
-- Variant creation on failures (trailblazing)
-- (Ribosome extraction itself runs in `ribosome-vessel`, off the bus)
+- Run the walk and the recovery loop, including approach exclusion and repair-signature-keyed re-selection.
+- Grade every dispatch with `verifyGoalReached`, deterministic checks before any judge.
+- Apply the immediate consequence: credit on a reach, β penalty on a miss, class-grain lesson to concept-db.
+- Run the bounded grounded floor so no goal is structurally unreachable.
+- Mint bridges and file capability or reachability gaps when a producer is missing, and escalate a persistent no-producer to an investigation goal.
+- Record the per-goal path with its walk tier, and dispatch extraction on a reach.
+- Surface an honest failure — reason and completion shapes — when approaches are exhausted.
 
-**Key Files (live):**
-- `repos/goal-host-vessel/` + `@avigopal/ias-executor-ts` - meta-activity orchestration, improvisation, reach gate, recovery loop, checkpoint/rollback
-- `repos/ribosome-vessel/` - template assembly + extraction criteria (bus subscriber)
-
-**What goal-host-vessel Does NOT Do:**
-- Does NOT store templates (backend owns template registry)
-- Does NOT compute variant performance (backend tracks Thompson scores)
-- Does NOT aggregate extraction patterns (backend learns)
+**What it does not do:** it does not compute posterior deltas, create variants, retire templates, or store templates.
 
 ### Activity-API (Storage & Learning Backend)
 
 **Responsibilities:**
-- Store `improvise_solution` template and variants
-- Thompson Sampling for improvisation vs domain-specific selection
-- Register ribosome-extracted templates
-- Track variant performance (α/β scores for variants)
-- Store execution traces (success and failure)
-- Compute extraction success rates
-
-**Key Endpoints:**
-- `GET /v2/activities/templates?id=improvise_solution` - Get improvisation activity template
-- `POST /v2/activities/templates` - Register ribosome-extracted templates
-- `POST /v2/activities/templates` - Register variant templates (trailblazing)
-- `POST /v2/activities/execution-traces` - Store improvisation traces
-- `POST /v2/activities/recommend` - Thompson Sampling (includes improvise_solution)
-
-**Key Files:**
-- `repos/activity-api/src/routes/activities.ts` - Template registration + `/v2/activities/feedback` (β-penalty target)
-- `repos/activity-api/src/routes/goal-paths.ts` - per-goal `goal_execution_paths` (recordGoalPath / recommendReachingPath)
-- `repos/activity-api/src/db/paradigm.ts` - Thompson Sampling (includes improvise_solution in pool)
-- `repos/activity-api/sql/seed/meta-activities/improvise_solution.json` - Template definition
+- Apply outcomes to posteriors with per-failure-mode deltas, graded success yield, and time decay.
+- Propagate credit along the composition chain rather than only to the leaf.
+- Create variants on a consecutive-failure pattern and retire templates on sustained poor performance.
+- Persist traces with their canonical failure mode, and per-goal paths with their walk tier.
+- Serve `POST /v2/activities/feedback` as the α/β update surface for both credit and penalty.
+- Broadcast `execution_completed` so extraction subscribers can react.
 
 ### SurrealDB Schema
 
-**Tables:**
-- `activity_template` - All templates (domain + improvise_solution + variants + extracted)
-- `variant_performance_metrics` - Variant success rates
-- `activity_execution_trace` - Improvisation execution traces
-- `checkpoint` - Git state snapshots (optional persistence)
-
-**Indexes:**
-- `activity_template` by category, family (for variant tracking)
-- `variant_performance_metrics` by template_id, variant_id
+**Tables this sequence depends on:**
+- `activity_execution_traces` — traces with `failure_mode` (the taxonomy field) and reach fields.
+- `goal_execution_paths` — per-goal attribution keyed by `goal_hash`, carrying `walk_tier` and produced/expected shapes.
+- `activity_template` — templates, variants, and retirement state (`retired`, `retired_at`, `retired_reason`).
+- `variant_performance_metrics` — per-variant, shape-conditioned α/β.
+- `activity_composition_graph` — the edges credit is propagated along.
+- `code_variants` — code-variant rows for the edit family.
+- `impulse_relevance_metrics` — where relevance penalties land.
 
 ### Correct Separation
 
-**goal-host-vessel handles (execution-time):**
-- Improvisation activity execution (plan, execute, extract tasks)
-- LLM tool use loop with stuck detection (LLM via llm-resolver-vessel)
-- Goal-reaching gate + in-flight recovery loop
-- Checkpoint creation (git state capture)
-- Rollback execution (git restore)
-- Variant creation (modified template generation)
-- (Ribosome extraction logic runs in ribosome-vessel)
+**Execution-time (goal-host-vessel):** grading, recovery, the floor, bridge minting, gap filing, escalation, path recording, extraction dispatch, and honest failure reporting.
 
-**Activity-API handles (storage/learning):**
-- Template storage (improvise_solution, extracted, variants)
-- Thompson Sampling (ranks improvise_solution alongside domain templates)
-- Variant performance tracking
-- Execution trace persistence
-- Extraction pattern learning
+**Consequence and memory (activity-api):** posterior deltas differentiated by failure mode, credit propagation along the chain, variant creation, retirement, trace and path persistence.
 
-**Why This Separation Matters:**
-- Improvisation and recovery run in goal-host-vessel (within the same dispatch — recovery is part of reaching the goal)
-- Backend learns which improvisation strategies work (Thompson Sampling) and which paths reach a given goal (`goal_execution_paths`)
-- Extracted templates (minted from the **reached** trace) become first-class citizens (Thompson Sampling includes them)
-- Variants compete with originals (Thompson Sampling selects best)
+**Authoring safety (development-vessel):** staging in a clone, snapshot-and-restore revert, the hard-fail detectors, and the semantic gate — with landing as a separate cutover step.
 
-**Key Architectural Point:**
-Improvisation is an **activity**, not a fallback code path. It's stored in the backend as `improvise_solution.json` and selected via Thompson Sampling like any other template. And success is **reach**, not exit status — the goal-reaching gate, not a status check, decides whether to mint, recover, or stop.
+**Why this separation matters:**
+- Recovery happens inside the dispatch, so a goal is not left half-done waiting for an offline repair pass.
+- Differentiated deltas keep the posterior a measure of quality: a budget breach and a wrong answer are not the same evidence.
+- Staging separates "authored and verified" from "landed", which is what makes `deterministic:staged-not-landed` enforceable and stops a clone-local edit from being reported as done.
+- Because every route is traced and tiered, a persistent reliance on the floor is visible as a gap rather than invisible as improvisation.
+
+**Key architectural point:** success is **reach**, not exit status, and failure is **typed**, not binary. Those two decisions are what make the learning loop measure the right thing.
 
 ## Related Documentation
 
-- [Activity Selection](./01-activity-selection.md) - How templates are recommended
-- [Impulse Resolution](./02-impulse-resolution.md) - Data loading during execution
-- [Resolver Processing](./03-resolver-processing.md) - Tool execution mechanics
-- [GOAL_EXECUTION_PATHS_SCHEMA.md](../GOAL_EXECUTION_PATHS_SCHEMA.md) - Goal-reaching gate + per-goal record/reuse
-- [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) - Foundational model
-
----
-
-**Last Updated:** 2026-06 (re-narrated to goal-host-vessel; added goal-reaching gate + in-flight recovery loop as a failure-handling path)
+- [Activity Selection](./01-activity-selection.md) — retrieval, ranking, and the reach gate
+- [Impulse Resolution](./02-impulse-resolution.md) — how pointers become content
+- [Resolver Processing](./03-resolver-processing.md) — resolver tiers and extraction
+- [GOAL_EXECUTION_PATHS_SCHEMA.md](../GOAL_EXECUTION_PATHS_SCHEMA.md) — per-goal record and reuse
+- [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) — the foundational model
