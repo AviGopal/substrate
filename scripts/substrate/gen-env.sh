@@ -17,10 +17,26 @@ set -euo pipefail
 # (self/loopback/unset discovery) requires one. This makes the point-and-go contract
 # literal: {DISCOVERY_ENDPOINT, API_KEY} alone boots a spoke. (Detected here, before the
 # full role inference below, since this guard runs first.)
+# HUB_DISCOVERY_URL is consulted alongside DISCOVERY_ENDPOINT, and it has to be.
+# The Makefile's federated-spoke path DELIBERATELY blanks CONTAINER_DISCOVERY_ENDPOINT
+# so local vessels register with the spoke's own registry rather than being repointed
+# at the hub — the hub URL reaches the container as HUB_DISCOVERY_URL instead. Two
+# correct decisions then contradicted each other here: a spoke arrived with an EMPTY
+# DISCOVERY_ENDPOINT, was classified root/standalone, and was refused for having no
+# LLM key — the one thing a spoke is explicitly not required to carry. The container
+# died ~300ms in, before a single unit started.
+#
+# HUB_DISCOVERY_URL is the authoritative spoke signal on that path; this guard simply
+# never looked at it, while the same file reads it further down, after the exit.
 _llmkey_disc_host="$(printf '%s' "${DISCOVERY_ENDPOINT:-}" | sed -E 's#^[a-z]+://##; s#[:/].*##')"
+_llmkey_hub_host="$(printf '%s' "${HUB_DISCOVERY_URL:-}" | sed -E 's#^[a-z]+://##; s#[:/].*##')"
 case "$_llmkey_disc_host" in
   ""|127.0.0.1|localhost|0.0.0.0|::1|"$(hostname 2>/dev/null)") _is_spoke=0 ;;  # root/standalone
   *) _is_spoke=1 ;;                                                              # remote hub -> spoke
+esac
+case "$_llmkey_hub_host" in
+  ""|127.0.0.1|localhost|0.0.0.0|::1|"$(hostname 2>/dev/null)") : ;;
+  *) _is_spoke=1 ;;                                # a named hub is a spoke, whatever DISCOVERY_ENDPOINT says
 esac
 if [[ "$_is_spoke" = "0" && -z "${ANTHROPIC_API_KEY:-}" && -z "${OPENAI_API_KEY:-}" ]]; then
   echo "[gen-env] ERROR: No LLM provider key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY (a root/standalone needs one; a spoke inherits LLM from its hub)." >&2
