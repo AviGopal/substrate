@@ -7,17 +7,30 @@ leaving registry rot.
 This document describes behaviour a reader can expect. It names no host, no
 credential path, and no deployment.
 
-## Precondition: an SSH identity for the hub host
+## What standing one up actually requires
 
-Standing up a UI-only spoke against a hub requires SSH access to the hub host —
-to ship or start the hub image, to issue the spoke a hub key, and to open the
-relay and discovery ports. **That identity is not currently available.** Every
-procedure below is therefore specified but unexercised end to end: treat the
-verification section as the acceptance test to run the moment access exists, not
-as a record that it passed.
+A spoke joins a hub over **HTTP plus the relay**. It does not need shell access
+to the hub, and nothing here modifies the hub: the spoke registers itself by
+mirroring its own capability upward. Shell access to the hub host is required
+only to change the *hub* — to ship or start its image, to issue a key, or to
+open its ports. Those are hub-side tasks, and a spoke that already has a key and
+a reachable discovery endpoint needs none of them.
 
-Nothing in this document requires the operator to hold a credential inside the
-spoke. The spoke needs exactly one secret — a hub-issued API key — and one URL.
+Three inputs, and no more:
+
+1. **A hub discovery endpoint that answers over HTTP** from the spoke host.
+2. **A hub-issued API key.** See "Booting against a hub" for why a locally
+   minted one cannot work.
+3. **A read credential for the super-repo.** This one is easy to miss because it
+   has nothing to do with federation. The human surface is a *manifest* vessel
+   whose working directory is a path inside the in-container super-repo clone,
+   and that repository is private. The boot-time git setup arms its credential
+   helper only when the substrate git PAT is present — a generic GitHub token
+   does not engage it. Without the PAT the clone fails, the boot falls back to
+   the working tree baked into the image (which carries the scripts tier and no
+   vessel sources), and the surface has no working directory to be installed
+   into. The symptom is a missing workdir at install time, several minutes after
+   the real cause. Supply the credential, or expect that failure.
 
 ## What a UI-only spoke is
 
@@ -38,10 +51,46 @@ the goal host, or any autonomy timer. Those live on the hub, and the spoke
 resolves them there. This is law 11 in practice: a vessel belongs where its data
 lives, and none of that data lives on a UI box.
 
-`scripts/substrate/ui-only-up.sh` encodes this selection. It prints its plan
-before acting, refuses with usage when the hub endpoint or hub key is missing,
-supports `DRY_RUN=1`, and refuses outright if a container of the target name
-already exists — it never stops or recreates a running substrate.
+`scripts/substrate/ui-only-up.sh` encodes this selection. It prints its plan and
+the exact container-creation command before acting, with secret values redacted;
+supports `DRY_RUN=1`, which prints both and changes nothing; refuses with usage
+when the hub endpoint, the hub key, or the git credential is missing; and
+refuses outright if a container of the target name exists or if any host port it
+would publish is already listening — it never stops or recreates a running
+substrate. After boot it asserts, rather than reports: the container runs, the
+UI bundle was actually built, the surface answers from the **host** port, and
+the surface's shapes are present in the **hub's** registry. It ends in a
+PASS/FAIL verdict block and exits non-zero when any of those fail.
+
+## Reaching the surface from outside the container
+
+A UI-only spoke exists to be looked at, so the one topology detail that decides
+whether it works at all is the surface's **bind address**. Two facts compose
+into a trap:
+
+- a published host port delivers traffic to the container's bridge address, not
+  to its loopback address, so a process bound to loopback never sees it;
+- the vessel manifest's environment block is rendered into the unit *after* the
+  substrate-wide environment file, so whatever the manifest declares wins.
+
+A surface pinned to loopback therefore starts cleanly, answers `/health` from
+inside the container, registers with discovery normally, mirrors to the hub
+normally — and returns nothing at all on its published port. Every signal reads
+healthy except the only one that matters. The surface's manifest entry declares
+an all-interfaces bind for this reason, and the launcher additionally writes a
+unit drop-in asserting the same value, so a container built from an older image
+is corrected at install time rather than failing mysteriously.
+
+This does not affect registration. The vessel advertises a loopback self
+endpoint in its discovery payload regardless of what it binds, because peers
+reach it through the federation transport's ingress rather than by dialling that
+address directly.
+
+**Verify it on the host, never in the container.** An in-container health check
+passes in exactly the broken case, which makes it worse than no check: run the
+check against the published port from the host, and read a failure there
+together with the container's listening sockets — a loopback address in that
+listing names the cause immediately.
 
 ## Booting against a hub
 

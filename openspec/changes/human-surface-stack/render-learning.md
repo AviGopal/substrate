@@ -241,3 +241,94 @@ confidence. Fix the reporting first, then schedule.
 6. **Fix the reward before wiring it.** Grade on correct-and-cheap verdicts, never on dwell,
    engagement, or verdict count. This is the one item where getting it wrong is worse than not
    doing it at all.
+
+---
+
+## 8. The interactibility surface: seven channels, one closed loop
+
+The question "how does it learn the interactibility surface" has a precise
+answer, and the honest form of it is a distinction: **the surface can now be
+steered by feedback. It does not learn from it.** Those are different, and
+conflating them would be the same error as reading a status as an outcome.
+
+### What exists, and what each actually changes
+
+| Channel | Writes | Changes | Graded? |
+|---|---|---|---|
+| The box, as an **instruction** | `surfaceIntent` → `renderPolicy` | form and format, immediately, no reload | **no** |
+| The box, as a **goal** | `goal_dispatch_async` | a run appears on the board | reach-graded, but not about the interface |
+| **Complaint** control | `uiFeedback` → `substrateGap` | an open gap, `source: human_reported` | **no** |
+| **Grade** gesture | `goal_verification_label` | the oracle corpus on the hub | it *is* the grade — of the run, not the surface |
+| **Legibility detector** | `substrateGap` open/close | a gap opens, and closes on re-observation | deterministic rules, not learned |
+| `renderPolicy_write` | the policy impulse | the running page repaints | **no** |
+| `interactorObservation` / `Event` / `Assertion` / `Attachment` | the vessel's store | **nothing** | **no** |
+
+The last row is the finding. Four telemetry shapes exist for exactly this
+purpose — click, dwell, focus, structured events, operator assertions. The
+vessel accepts and stores all four. **Nothing reads any of them back.** Until
+this pass the surface did not even write to them, so they were an unused
+capability behind an unwritten channel.
+
+### The one loop that closes
+
+Only the legibility detector completes a cycle: it reads the live surface,
+files a finding, and closes that finding when re-observation no longer
+reproduces it — verified in both directions, including a reopen when the defect
+was reintroduced. That is a real feedback loop and it is worth having.
+
+It is not learning. The rules are fixed, the thresholds are constants, and no
+posterior moves. It is a thermostat, not a learner, and a thermostat is the
+right thing for a px floor.
+
+### Why nothing learns yet — two missing preconditions
+
+**There is no counterfactual.** Learning needs competing arms and a choice
+between them. Every render decision has exactly one implementation: one form
+heuristic, one policy, one layout. `renderPolicy` made the decision *steerable*,
+which is the precondition — a compiled constant cannot even be varied — but a
+single arm with an override is still a single arm. Nothing is being chosen
+between, so there is nothing to grade.
+
+**There is no reward.** The channels that carry the most signal about whether
+this interface works — dwell, focus, correction, hesitation — are precisely the
+parked ones. And the obvious rewards are the wrong ones: dwell optimises
+stickiness, complaint volume optimises for a surface that annoys, and frequency
+measures habit. The defensible signal is the one this surface is *for*: whether
+a human reached a correct verdict, cheaply. Time from terminal state to verdict,
+verdict stability, and agreement with later evidence are all computable from
+data the surface already holds — and none of them is computed.
+
+### What the complaint channel bought
+
+It is worth being precise about what was actually gained, because it is
+structural rather than cosmetic. A human complaint now files into the **same
+keyspace** as the substrate's own findings, `ui-feedback-<region>-<kind>`,
+differing only in `source`. That single shared key is what makes two questions
+computable that were not computable before:
+
+- the detector found it and no human ever complained — is the rule real?
+- humans complained and the detector was silent — what is it blind to?
+
+Neither is answered yet. But the funnel that would answer them exists, and both
+are now measurable rather than merely arguable. That is the actual precondition
+for learning which rules are worth having.
+
+One defect surfaced in the building: the complaint category was being coerced
+into the store's interaction enum (`answer | reaction | dismiss`), so every
+complaint about a region collided on `ui-feedback-<region>-answer` and the second
+silently overwrote the first. Category and interaction are now separate fields.
+Three distinct complaints about one region now produce three gaps; before the
+fix they produced one.
+
+### The ranked distance to actual learning
+
+1. **Give a render decision a second arm.** One shape, two renderers, selected by
+   posterior. Without an alternative there is no counterfactual and nothing to
+   learn — this is the item everything else waits on.
+2. **Compute the reward.** Time-to-verdict on terminal runs, from data already
+   held. Not dwell, not volume.
+3. **Read the parked telemetry.** `interactorObservation` has no consumer; a
+   signal with no reader is not instrumentation.
+4. **Make `surfaceIntent` an activity.** It is a resolver, so Thompson cannot
+   select it, no trace grades it, and the ribosome can never extract from it. It
+   is a good floor built as a ceiling.
