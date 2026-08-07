@@ -125,7 +125,46 @@ guess what someone meant and dispatch it for them. Taking a suggestion **replace
 the box's contents rather than appending, because the box still holds the instruction
 whose clause was refused.
 
-## 5. Still open
+## 5. The surface is the one vessel the substrate cannot author
+
+Dispatching a change to `repos/human-surface-vessel/src/routes/proxy.ts` routes
+correctly to the edit-intent path and is then **refused**, twice, with:
+
+> plan touches vessel repos/human-surface-vessel which does not exist in the
+> runtime or push-clone roots
+
+The reason is structural rather than incidental. The edit path looks for a
+vessel in the runtime root (`/vessels/<name>`) or the push-clone root
+(`/workspace/git/vessels/<name>`). That clone root holds eighteen vessels and
+**every one of them is a git submodule with its own clone**. `human-surface-vessel`
+is a plain committed directory in the super-repo — `040000 tree`, absent from
+`.gitmodules` — so no clone of it exists there and none ever will.
+
+Installing it at the runtime root does not help: `vessel-ctl` installs a manifest
+vessel by pointing its unit at the super-repo clone, so `/vessels/<name>` stays
+absent and the byte-anchored escalation fails the same way
+(`live source missing: /vessels/human-surface-vessel/src/routes/proxy.ts`).
+
+So the vessel whose entire purpose is to be reshaped by what a human notices is
+the one vessel the system cannot change on its own. Every other vessel can be
+self-developed; this one can only be edited by an operator. That inverts the
+trajectory the operator role is measured against, and it is invisible until a
+goal is dispatched, because nothing declares the submodule requirement.
+
+Two candidate closures, both structural: promote the vessel to a submodule so it
+gains a clone like every other, or teach the edit path to resolve a vessel inside
+the super-repo working tree when no dedicated clone exists. The second is the
+better fix — the first makes every future in-tree vessel repeat this discovery —
+but either is a change to the development path, not to this surface.
+
+Related, and found the same way: `substrate-live` runs an image whose baked
+`vessels.manifest.json` predates this vessel, so `vessel-ctl` reported
+`not in manifest`. The manifest has a volume copy that takes precedence, and
+seeding it from the push clone is the designed override; nothing about that is
+specific to this vessel and any manifest vessel added since an image was built
+hits it.
+
+## 6. Still open
 
 - **The deep link still does not scroll to its run** (failure 0). Filmed, not fixed —
   it is a routing concern rather than a rendering one.
