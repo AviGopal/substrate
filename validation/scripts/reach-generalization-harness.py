@@ -491,6 +491,15 @@ def main() -> int:
                     help="COLD families with no learned pathway — the only mode that can show a learning "
                          "curve, because the warm families already sit at their reach ceiling. Run with the "
                          "code FROZEN so corpus accumulation is the only variable.")
+    ap.add_argument("--repeat", action="store_true",
+                    help="REPEATED EXPOSURE — the ONLY design that can answer 'more reaches over time'. "
+                         "Every other mode samples vessels WITHOUT REPLACEMENT across batches, and vessel "
+                         "names are NOT elided by activity-api's class hash, so every goal in every batch "
+                         "is a brand-new goal CLASS that is never attempted twice. A curve is structurally "
+                         "unmeasurable there: the flat per-batch series `92,90,83,100,92,92,67,100,75,75` "
+                         "was a property of the instrument, not of the system. This mode builds ONE goal "
+                         "set and re-dispatches THE SAME classes each round, so round N vs round 1 is a "
+                         "real learning signal.")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
     if args.pilot:
@@ -510,11 +519,21 @@ def main() -> int:
         print(f"COLD mode: {len(cold)} vessels; families {COLD_FAMILIES}")
     rng = random.Random(args.seed)
     all_results = []
+    # Built ONCE and re-dispatched every round: identical text => identical class hash => the
+    # rounds are repeated attempts at the same classes, which is what a learning curve is about.
+    repeat_goals = None
+    if args.repeat:
+        repeat_goals = (build_compositional_goals(comp, oracles, 0, args.per_batch, rng) if args.compositional
+                        else build_cold_goals(cold, oracles, 0, args.per_batch, rng) if args.cold
+                        else build_goals(oracles, 0, args.per_batch, rng))
+        print(f"REPEAT mode: {len(repeat_goals)} goal classes, re-dispatched for {args.batches} rounds")
     for b in range(args.batches):
-        goals = (build_compositional_goals(comp, oracles, b, args.per_batch, rng) if args.compositional
+        goals = (repeat_goals if repeat_goals is not None
+                 else build_compositional_goals(comp, oracles, b, args.per_batch, rng) if args.compositional
                  else build_cold_goals(cold, oracles, b, args.per_batch, rng) if args.cold
                  else build_goals(oracles, b, args.per_batch, rng))
-        print(f"\n=== batch {b}: {len(goals)} novel goals ===")
+        print(f"\n=== {'round' if args.repeat else 'batch'} {b}: {len(goals)} "
+              f"{'REPEATED' if args.repeat else 'novel'} goals ===")
         res = run_batch(goals, args.deadline)
         for r in res:
             g = r["goal"]
