@@ -151,11 +151,43 @@ self-developed; this one can only be edited by an operator. That inverts the
 trajectory the operator role is measured against, and it is invisible until a
 goal is dispatched, because nothing declares the submodule requirement.
 
-Two candidate closures, both structural: promote the vessel to a submodule so it
-gains a clone like every other, or teach the edit path to resolve a vessel inside
-the super-repo working tree when no dedicated clone exists. The second is the
-better fix — the first makes every future in-tree vessel repeat this discovery —
-but either is a change to the development path, not to this surface.
+**Closed, up to the cutover.** `feature_compose` now counts a vessel at
+`<super-repo>/repos/<name>` as resident and symlinks it into the runtime root,
+so an in-tree vessel is materialized like any other non-resident one. The refresh
+is scoped to that vessel's own path — `checkout origin/dev -- repos/<vessel>`
+rather than `reset --hard`, whose blast radius here would be every other in-tree
+vessel plus `scripts/` and `docs/` — and the cleanliness test is scoped the same
+way, because the super-repo clone carries drifting submodule pointers and
+untracked operator files essentially always, so a whole-repo test reads dirty
+forever and would have silently stopped refreshing the vessel: a stale baseline
+wearing the costume of a safety feature.
+
+Measured end to end on the live substrate. A dispatched edit now materializes the
+vessel, drafts a patch, runs the baseline and post typecheck against real source,
+reports genuine TypeScript errors from it, and rolls the tree back cleanly when
+the draft is bad. Two rejections along the way were the gates working rather than
+failing, and are worth recording because both look like defects until read:
+
+- A patch that added an exported constant nothing imports was rejected by the
+  semantic gate. That is its job — a net-new symbol with zero callers compiles
+  fine and changes nothing, which is the hollow landing the gate exists to catch.
+  The rejection carried an affirmative rationale ("adds the required constant …
+  at the specified location"), which reads as a contradiction; the verdict was
+  right and only its explanation was misleading.
+- A two-site plan produced `error TS1109` and was rolled back. Multi-site plans
+  self-interfere on anchors; one site per goal is the standing rule.
+
+**Still open, one hop further: the cutover.** `vessel-mitosis-cutover` and
+`patch_with_tools` both commit from `MITOSIS_PUSH_CLONE_DIR/<vessel>`, which an
+in-tree vessel does not have. So a draft for one now stages a typecheck-verified
+mitosis and then cannot land it — `staged-not-landed`. The fix is the same shape
+as this one and belongs in those two resolvers: an in-tree vessel commits from
+the super-repo clone, which is where a git command inside its symlinked path
+already resolves to.
+
+The alternative closure — promoting the vessel to a submodule so it gains a clone
+like every other — would sidestep both hops at once, at the cost of making every
+future in-tree vessel repeat this discovery.
 
 Related, and found the same way: `substrate-live` runs an image whose baked
 `vessels.manifest.json` predates this vessel, so `vessel-ctl` reported
