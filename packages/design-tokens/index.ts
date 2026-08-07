@@ -80,11 +80,76 @@ export const STATE_TOKENS: Readonly<Record<RunState, StateTokens>> = {
  *
  * `text` is the DEFAULT branch and the designed common case, not an error
  * state: most shapes will never earn a bespoke renderer and do not need one.
+ *
+ * `terminal`, `record` and `scalar` are reached only on POSITIVE, unambiguous
+ * evidence — a full successful parse of a non-truncated preview. A form that
+ * fires on a guess is worse than verbatim, because verbatim is merely raw
+ * whereas a misidentified form is wrong while looking authoritative.
  */
-export const CONTENT_FORMS = ["prose", "text", "rows", "diff", "empty"] as const;
+export const CONTENT_FORMS = [
+  "prose",
+  "text",
+  "rows",
+  "diff",
+  "empty",
+  "terminal",
+  "record",
+  "scalar",
+  "stub",
+] as const;
 export type ContentForm = (typeof CONTENT_FORMS)[number];
 
 export const DEFAULT_CONTENT_FORM: ContentForm = "text";
+
+/**
+ * Forms a human may NOT pin onto a shape.
+ *
+ * Both of these are facts about the CONTENT rather than presentation
+ * preferences, and pinning one would hide the thing it describes: an `empty`
+ * pin on a shape that later carries content renders that content as an
+ * emptiness notice, and a `stub` pin claims "no content carried" over a payload
+ * that was carried. A pin has to be a preference to be honourable.
+ */
+export const NON_PINNABLE_FORMS = ["empty", "stub"] as const satisfies readonly ContentForm[];
+
+export const PINNABLE_FORMS: readonly ContentForm[] = CONTENT_FORMS.filter(
+  (f) => !(NON_PINNABLE_FORMS as readonly ContentForm[]).includes(f),
+);
+
+/**
+ * MIRROR ASSERTION.
+ *
+ * `repos/human-surface-vessel/src/surface-intent.ts` carries a byte-identical
+ * copy of the block above, because the vessel is a submodule that must not
+ * reach into the super-repo for a runtime import (law 11) — and neither of the
+ * two build graphs that compile these files can see the other's directory: the
+ * vessel typechecks with only its own repo mounted, the UI builds with only
+ * `ui/` and this package on the path. A shared import is therefore not
+ * available, and this assertion is honest about what it does and does not buy:
+ *
+ *   it PROVES  — this file's array and its written-out union agree, so the
+ *                half-edit that grows one without the other fails to compile
+ *                here AND, identically, over there;
+ *   it does NOT prove the two FILES agree. That is convention, and the
+ *                assertion text is duplicated verbatim so the two blocks diff
+ *                cleanly against each other.
+ */
+type MirroredForm =
+  | "prose"
+  | "text"
+  | "rows"
+  | "diff"
+  | "empty"
+  | "terminal"
+  | "record"
+  | "scalar"
+  | "stub";
+type FormsMirrorOk = [ContentForm] extends [MirroredForm]
+  ? [MirroredForm] extends [ContentForm]
+    ? true
+    : never
+  : never;
+export const CONTENT_FORMS_MIRRORED: FormsMirrorOk = true;
 
 /**
  * Verdict options offered when a human grades a terminal run.
