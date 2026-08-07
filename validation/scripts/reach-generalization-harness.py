@@ -95,6 +95,152 @@ done
     return table
 
 
+def cold_oracle_table() -> dict:
+    """Facts for the COLD families — goal shapes with no learned pathway in the corpus.
+
+    The warm families all sit at their reach ceiling, so they cannot show a learning
+    curve: there is no headroom to learn into. These are chosen to be answerable from the
+    filesystem (so an oracle exists) while having no deterministic verifier and no recorded
+    path, which is what makes a rising reach rate across batches attributable to corpus
+    accumulation rather than to a built-in shortcut.
+    """
+    script = r"""
+for d in /workspace/git/vessels/*/; do
+  n=$(basename "$d")
+  case "$n" in *mitosis*) continue;; esac
+  [ -d "$d/src" ] || continue
+  subdirs=$(find "$d/src" -mindepth 1 -type d | wc -l)
+  exts=$(find "$d/src" -type f -name '*.*' | sed 's/.*\.//' | sort -u | wc -l)
+  grepn=$(grep -rl 'async' "$d/src" --include='*.ts' 2>/dev/null | wc -l)
+  big=$(find "$d/src" -name '*.ts' -type f -exec wc -l {} + 2>/dev/null | sort -rn | awk 'NR==1 && $2!="total"{print $2; exit} NR==2{print $2; exit}')
+  echo "$n $subdirs $exts $grepn $(basename "${big:-none}")"
+done
+"""
+    out = subprocess.run(
+        ["docker", "exec", CONTAINER, "bash", "-c", script],
+        capture_output=True, text=True, timeout=300,
+    ).stdout
+    table = {}
+    for line in out.strip().splitlines():
+        p = line.split()
+        if len(p) == 5:
+            table[p[0]] = {"subdirs": int(p[1]), "exts": int(p[2]), "grep": int(p[3]), "largest": p[4]}
+    return table
+
+
+COLD_FAMILIES = ["grep_count", "largest_file", "subdir_count", "ext_variety"]
+
+# ---------------------------------------------------------------------------
+# COMPOSITIONAL families — the output of step 1 must BIND INTO step 2
+#
+# The warm and cold families are each one shellResult away, which tests retrieval rather
+# than composition, and they all live in one domain: counting files in a repo tree. The
+# claims are about reaching ARBITRARY goals by resequencing which impulse content routes
+# through which resolvers, so these are chosen so that no single command answers them, and
+# so they span different domains — repo trees, git history, the discovery registry.
+#
+# `chain_count_into_title` is the sharpest: the computed value becomes the ARTIFACT'S
+# IDENTITY, so the goal cannot be satisfied by narrating a number. The note has to exist
+# under a title nobody could know before the first step ran.
+# ---------------------------------------------------------------------------
+
+COMPOSITIONAL_FAMILIES = ["chain_winner_lines", "chain_count_into_title", "git_most_commits", "registry_shape_count"]
+
+
+def compositional_oracles(vessels: list) -> dict:
+    script = "".join(
+        f'echo "{v} $(cd /workspace/git/vessels/{v} && git log --oneline --since=\"30 days ago\" 2>/dev/null | wc -l)";'
+        for v in vessels
+    )
+    out = subprocess.run(["docker", "exec", CONTAINER, "bash", "-c", script],
+                         capture_output=True, text=True, timeout=300).stdout
+    commits = {}
+    for line in out.strip().splitlines():
+        parts = line.split()
+        if len(parts) == 2:
+            commits[parts[0]] = int(parts[1])
+    try:
+        shapes = [str(x) for x in get("http://localhost:18100/registry/shapes", timeout=60).get("shapes", [])]
+    except Exception:                                            # noqa: BLE001
+        shapes = []
+    return {"commits": commits, "shapes": shapes}
+
+
+def build_compositional_goals(comp: dict, warm: dict, batch: int, n: int, rng: random.Random) -> list:
+    goals = []
+    vessels = sorted(v for v in warm if warm[v]["ts"] >= 2)
+    pairs = [(a, b) for a in vessels for b in vessels if a < b and warm[a]["ts"] != warm[b]["ts"]]
+    rng.shuffle(vessels); rng.shuffle(pairs)
+    commits = comp.get("commits", {}); shapes = comp.get("shapes", [])
+    committed = sorted([v for v in commits if commits[v] > 0]); rng.shuffle(committed)
+    suffixes = ["_write", "Result", "report"]
+    pi = vi = ci = 0
+    for i in range(n):
+        fam = COMPOSITIONAL_FAMILIES[i % len(COMPOSITIONAL_FAMILIES)]
+        if fam == "chain_winner_lines" and pairs:
+            a, b = pairs[pi % len(pairs)]; pi += 1
+            winner = a if warm[a]["ts"] > warm[b]["ts"] else b
+            goals.append(dict(family=fam, title=None, expect=[warm[winner]["lines"]],
+                              text=f"Between repos/{a}/src and repos/{b}/src, whichever has more TypeScript "
+                                   f"modules \u2014 report the total number of lines in that one."))
+        elif fam == "chain_count_into_title" and vessels:
+            v = vessels[vi % len(vessels)]; vi += 1
+            cnt = warm[v]["ts"]
+            goals.append(dict(family=fam, title=f"harness-cc-{cnt}", expect=[cnt],
+                              text=f"Count the TypeScript modules under repos/{v}/src, then record a durable "
+                                   f"note titled harness-cc-N where N is that count."))
+        elif fam == "git_most_commits" and committed:
+            v = committed[ci % len(committed)]; ci += 1
+            goals.append(dict(family=fam, title=None, expect=[commits[v]],
+                              text=f"How many commits have landed in repos/{v} in the last 30 days?"))
+        else:
+            suf = suffixes[i % len(suffixes)]
+            if suf == "report":
+                cnt = sum(1 for x in shapes if "report" in x.lower())
+                txt = "How many shapes does the discovery registry currently advertise whose name contains report?"
+            else:
+                cnt = sum(1 for x in shapes if x.endswith(suf))
+                txt = f"How many shapes does the discovery registry currently advertise whose name ends with {suf}?"
+            goals.append(dict(family="registry_shape_count", title=None, expect=[cnt], text=txt))
+    return goals
+
+
+def build_cold_goals(cold: dict, warm: dict, batch: int, n: int, rng: random.Random) -> list:
+    """Cold goals. Vessels with >=2 subdirs / >=2 extensions only, so a correct answer is
+    not indistinguishable from noise on a one-digit oracle."""
+    goals = []
+    subdir_ok = sorted([v for v, f in cold.items() if f["subdirs"] >= 2])
+    ext_ok = sorted([v for v, f in cold.items() if f["exts"] >= 2])
+    grep_ok = sorted([v for v, f in cold.items() if f["grep"] >= 2])
+    # Exclude vessels whose largest module is index.ts: that filename appears in almost any
+    # tool output, so a "correct" grade on it would be indistinguishable from an incidental
+    # mention. The oracle has to discriminate, not just match.
+    big_ok = sorted([v for v, f in cold.items()
+                     if f["largest"] not in ("none", "index.ts") and warm.get(v, {}).get("ts", 0) >= 3])
+    for lst in (subdir_ok, ext_ok, grep_ok, big_ok):
+        rng.shuffle(lst)
+    idx = {"subdir_count": 0, "ext_variety": 0, "grep_count": 0, "largest_file": 0}
+    for i in range(n):
+        fam = COLD_FAMILIES[i % len(COLD_FAMILIES)]
+        if fam == "grep_count" and grep_ok:
+            v = grep_ok[idx[fam] % len(grep_ok)]; idx[fam] += 1
+            goals.append(dict(family=fam, title=None, expect=[cold[v]["grep"]],
+                              text=f"How many TypeScript modules under repos/{v}/src contain the text async?"))
+        elif fam == "largest_file" and big_ok:
+            v = big_ok[idx[fam] % len(big_ok)]; idx[fam] += 1
+            goals.append(dict(family=fam, title=None, expect=[], expect_text=cold[v]["largest"],
+                              text=f"Which TypeScript module under repos/{v}/src has the most lines? Give its filename."))
+        elif fam == "subdir_count" and subdir_ok:
+            v = subdir_ok[idx[fam] % len(subdir_ok)]; idx[fam] += 1
+            goals.append(dict(family=fam, title=None, expect=[cold[v]["subdirs"]],
+                              text=f"How many subdirectories are there under repos/{v}/src?"))
+        elif ext_ok:
+            v = ext_ok[idx["ext_variety"] % len(ext_ok)]; idx["ext_variety"] += 1
+            goals.append(dict(family="ext_variety", title=None, expect=[cold[v]["exts"]],
+                              text=f"How many distinct file extensions appear under repos/{v}/src?"))
+    return goals
+
+
 # ---------------------------------------------------------------------------
 # Goal families — the "different angles" axis
 # ---------------------------------------------------------------------------
@@ -211,6 +357,9 @@ def grade(goal: dict, rec: dict) -> dict:
     blob = "\n".join(surfaces)
 
     correct = all(has_number(blob, v) for v in goal["expect"])
+    if goal.get("expect_text"):
+        # A filename is a far stronger discriminator than a one-digit count.
+        correct = correct and goal["expect_text"] in blob
     if goal.get("expect_winner"):
         # The winner must be NAMED, and the loser must not be named as the winner.
         correct = correct and goal["expect_winner"] in blob
@@ -272,10 +421,36 @@ def path_signatures() -> dict:
 # ---------------------------------------------------------------------------
 
 def run_batch(goals: list, deadline_s: int) -> list:
-    ids = []
-    for g in goals:
-        ids.append(dispatch(g))
+    """Dispatch the batch, then poll ROUND-ROBIN so each goal's latency is its own.
+
+    Polling goals one at a time in order made every latency the sum of the ones before it,
+    which makes a cost curve unmeasurable — and cost is the only place learning CAN show up
+    on families whose reach is already at ceiling. Round-robin records a completion the
+    first time it is observed, so the number is that goal's wall time plus at most one poll
+    interval.
+    """
+    ids, t0 = [], {}
+    for i, g in enumerate(goals):
+        did = dispatch(g)
+        ids.append(did)
+        t0[i] = time.time()
         time.sleep(1.5)                                          # stagger, don't stampede
+
+    done: dict = {}
+    end = time.time() + deadline_s
+    while time.time() < end and len(done) < sum(1 for d in ids if d):
+        for i, did in enumerate(ids):
+            if did is None or i in done:
+                continue
+            try:
+                rec = get(f"{GOAL_HOST}/executions/{did}", timeout=60)
+                if rec.get("status") in ("completed", "failed"):
+                    done[i] = (rec, time.time() - t0[i])
+            except Exception:                                    # noqa: BLE001
+                pass
+        if len(done) < sum(1 for d in ids if d):
+            time.sleep(5)
+
     results = []
     for g, did in zip(goals, ids):
         # THREE OUTCOMES, NEVER COLLAPSED INTO ONE. `undispatched` means the substrate was
@@ -285,17 +460,19 @@ def run_batch(goals: list, deadline_s: int) -> list:
         # first run of this harness reported a 0% batch for goals nothing ever received.
         if did is None:
             results.append(dict(goal=g, reached=False, correct=False, template=None,
-                                note_len=0, timeout=False, undispatched=True))
+                                note_len=0, timeout=False, undispatched=True, secs=None))
             continue
-        rec = poll(did, deadline_s)
-        if rec is None:
+        idx = ids.index(did)
+        if idx not in done:
             results.append(dict(goal=g, reached=False, correct=False, template=None,
-                                note_len=0, timeout=True, undispatched=False))
+                                note_len=0, timeout=True, undispatched=False, secs=None))
             continue
+        rec, secs = done[idx]
         r = grade(g, rec)
         r["goal"] = g
         r["timeout"] = False
         r["undispatched"] = False
+        r["secs"] = round(secs, 1)
         results.append(r)
     return results
 
@@ -307,6 +484,13 @@ def main() -> int:
     ap.add_argument("--deadline", type=int, default=300)
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--pilot", action="store_true", help="one batch of 6, to validate the harness itself")
+    ap.add_argument("--compositional", action="store_true",
+                    help="COMPOSITIONAL, cross-domain families: step 1's output must bind into step 2, across "
+                         "repo trees, git history and the discovery registry. No single command answers these.")
+    ap.add_argument("--cold", action="store_true",
+                    help="COLD families with no learned pathway — the only mode that can show a learning "
+                         "curve, because the warm families already sit at their reach ceiling. Run with the "
+                         "code FROZEN so corpus accumulation is the only variable.")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
     if args.pilot:
@@ -316,10 +500,20 @@ def main() -> int:
     print(f"oracle table: {len(oracles)} vessels "
           f"(ts range {min(v['ts'] for v in oracles.values())}..{max(v['ts'] for v in oracles.values())})")
 
+    cold = cold_oracle_table() if args.cold else {}
+    comp = compositional_oracles(sorted(oracles)) if args.compositional else {}
+    if args.compositional:
+        print(f"COMPOSITIONAL mode: {len(comp.get('shapes', []))} registry shapes, "
+              f"{sum(1 for v in comp.get('commits', {}).values() if v)} vessels with recent commits; "
+              f"families {COMPOSITIONAL_FAMILIES}")
+    if args.cold:
+        print(f"COLD mode: {len(cold)} vessels; families {COLD_FAMILIES}")
     rng = random.Random(args.seed)
     all_results = []
     for b in range(args.batches):
-        goals = build_goals(oracles, b, args.per_batch, rng)
+        goals = (build_compositional_goals(comp, oracles, b, args.per_batch, rng) if args.compositional
+                 else build_cold_goals(cold, oracles, b, args.per_batch, rng) if args.cold
+                 else build_goals(oracles, b, args.per_batch, rng))
         print(f"\n=== batch {b}: {len(goals)} novel goals ===")
         res = run_batch(goals, args.deadline)
         for r in res:
@@ -346,6 +540,30 @@ def main() -> int:
         print(f"  batch {b}: reached {100*sum(r['reached'] for r in answered)/n:5.1f}%   "
               f"correct {100*sum(r['correct'] for r in answered)/n:5.1f}%   "
               f"answered={len(answered)}/{len(res)}   timeouts={sum(r['timeout'] for r in answered)}")
+
+    # ---- claim 1b: COST. On families already at their reach ceiling, learning cannot show
+    # up as a higher rate — it shows up as reaching the same goals for less work. ----
+    print("\n========= CLAIM 1b: cost per reached goal, over batches =========")
+    for b, res in enumerate(all_results):
+        secs = [r["secs"] for r in res if r.get("secs") is not None and r["reached"]]
+        if secs:
+            secs_sorted = sorted(secs)
+            med = secs_sorted[len(secs_sorted) // 2]
+            print(f"  batch {b}: median {med:6.1f}s   mean {sum(secs)/len(secs):6.1f}s   n={len(secs)}")
+        else:
+            print(f"  batch {b}: no reached goals with a timing")
+    fam_secs = defaultdict(list)
+    for b, res in enumerate(all_results):
+        for r in res:
+            if r.get("secs") is not None and r["reached"]:
+                fam_secs[r["goal"]["family"]].append((b, r["secs"]))
+    print("  first-exposure vs later, per family (median seconds):")
+    for fam, pts in sorted(fam_secs.items()):
+        early = sorted(s for b, s in pts if b == 0)
+        late = sorted(s for b, s in pts if b >= max(1, len(all_results) - 2))
+        if early and late:
+            print(f"    {fam:<15} batch0 {early[len(early)//2]:6.1f}s -> late {late[len(late)//2]:6.1f}s"
+                  f"   ({len(early)} vs {len(late)} samples)")
 
     # ---- claim 2: do similar goals share a pathway? ----
     print("\n========== CLAIM 2: similar goals -> similar pathways ==========")
