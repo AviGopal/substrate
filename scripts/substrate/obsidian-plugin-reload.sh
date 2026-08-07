@@ -16,7 +16,14 @@
 #   env overrides: REPO_DIR, OBSIDIAN_PLUGIN_DIR, OBSIDIAN_ENDPOINT
 set -euo pipefail
 
-REPO_DIR="${REPO_DIR:-/home/avi/documents/work/exp-repo/metabob-devbob/repos/obsidian-vessel}"
+# REPO_DIR defaults to THIS super-repo's obsidian-vessel, derived from the script's own
+# location rather than hardcoded. The previous default named a different checkout
+# (/home/avi/documents/work/exp-repo/metabob-devbob/...) which is 228 commits behind
+# origin/dev — so a run here would have built month-old source and installed it over the
+# vault, silently reverting every landed UI change. Deriving the path also satisfies law
+# 11: the script works wherever the super-repo is cloned, with no host-specific literal.
+SUPER_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO_DIR="${REPO_DIR:-$SUPER_REPO/repos/obsidian-vessel}"
 PLUGIN_DIR="${OBSIDIAN_PLUGIN_DIR:-/home/projects/vaults/syzygy/.obsidian/plugins/obsidian-vessel}"
 OBSIDIAN_ENDPOINT="${OBSIDIAN_ENDPOINT:-http://127.0.0.1:27182}"
 
