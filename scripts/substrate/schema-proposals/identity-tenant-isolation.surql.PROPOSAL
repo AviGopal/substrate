@@ -1,0 +1,83 @@
+-- =============================================================================
+-- PROPOSAL — NOT APPLIED. Operator sign-off REQUIRED before this runs.
+--
+-- Finding (B): tenant-isolation drift on the identity/auth tables.
+--
+-- LIVE STATE (learning_loop, verified read-only 2026-07-23):
+--   users                : DEFINE TABLE ... TYPE ANY SCHEMALESS PERMISSIONS NONE   (1 row)
+--   organizations        : DEFINE TABLE ... TYPE ANY SCHEMALESS PERMISSIONS NONE   (1 row)
+--   organization_members : DEFINE TABLE ... TYPE ANY SCHEMALESS PERMISSIONS NONE   (1 row)
+--
+-- ROOT: user-vessel's SCHEMAFULL + $token.org_id PERMISSIONS schema
+-- (repos/user-vessel/sql/001-init-schema.surql) was NEVER applied to this DB —
+-- user-vessel is NOT deployed in this substrate. identity-vessel owns these
+-- tables at runtime and creates them IMPLICITLY via INSERT (no DEFINE TABLE,
+-- hence SCHEMALESS PERMISSIONS NONE). Same shared DB (activity-system/
+-- learning_loop) — there is no separate identity DB.
+--
+-- Today this is a LATENT hole, not a live leak: exactly ONE tenant is seeded
+-- (organizations:substrate / substrate@substrate.local) and every vessel
+-- connects as SURREALDB root, which bypasses record PERMISSIONS (isolation is
+-- currently app-layer + single-tenant). The hole becomes a REAL cross-tenant
+-- leak the moment a second org is provisioned on this DB while any $token/JWT
+-- path can reach these tables.
+--
+-- WHY PERMISSIONS-ONLY / SCHEMALESS (not user-vessel's full SCHEMAFULL):
+--   Applying user-vessel's SCHEMAFULL definition would REJECT any field
+--   identity-vessel writes that is not in user-vessel's field list (the two
+--   repos are not co-deployed and their write shapes are not verified to match).
+--   These clauses ADD tenant isolation without changing schema strictness, so
+--   identity-vessel's existing inserts keep working. PERMISSIONS use
+--   $token.org_id (API-key auth path; JWT path gets the same field via
+--   identity-vessel's token shape) — matching user-vessel's documented pattern.
+--
+-- CRITICAL CAVEATS FOR THE OPERATOR:
+--   1. NO APPLY PATH EXISTS in this deployment. No running vessel applies an
+--      identity/users schema to learning_loop (activity-api applies only its own
+--      repos/activity-api/sql/**; concept-db applies only its sql/core+upkeep).
+--      Folding this into activity-api's migrations would make activity-api own
+--      identity's tables — a law-11 violation, the SAME anti-pattern as the
+--      concept-db/impulse schema-war. The durable home is identity-vessel
+--      applying its OWN schema on start. Decide the owner before wiring an
+--      apply path.
+--   2. Verify $token.org_id is populated for EVERY auth path that reads these
+--      tables (API key AND browser JWT). A PERMISSIONS clause that references a
+--      NONE field fails closed — it will DENY reads and can break login/console
+--      flows. Test against a scoped token in a scratch DB first.
+--   3. These are POPULATED auth tables. Apply the statements INDIVIDUALLY
+--      (never batched over stdin — batched REMOVE/DEFINE silently drops a
+--      subset), on a maintenance window, with the learning_loop volume backed
+--      up first.
+-- =============================================================================
+
+-- organizations: an org is visible to a token scoped to that org.
+DEFINE TABLE organizations SCHEMALESS
+  PERMISSIONS
+    FOR select
+      WHERE $token.org_id = string::concat("organizations:", meta::id(id))
+         OR $token.org_id = type::string(id)
+    FOR create
+      WHERE $token.role IN ["owner", "admin"] OR $token = NONE
+    FOR update
+      WHERE ($token.org_id = string::concat("organizations:", meta::id(id))
+             OR $token.org_id = type::string(id))
+        AND $token.role IN ["owner", "admin"]
+    FOR delete
+      WHERE ($token.org_id = string::concat("organizations:", meta::id(id))
+             OR $token.org_id = type::string(id))
+        AND $token.role = "owner";
+
+-- users: a user reads their own record, or same-org users (default_org_id match).
+DEFINE TABLE users SCHEMALESS
+  PERMISSIONS
+    FOR select WHERE $token.user_id = type::string(id) OR $token.org_id = default_org_id
+    FOR create WHERE $token != NONE
+    FOR update WHERE $token.user_id = type::string(id)
+    FOR delete WHERE $token.role = "owner";
+
+-- organization_members: membership rows are visible to tokens scoped to that org.
+DEFINE TABLE organization_members SCHEMALESS
+  PERMISSIONS
+    FOR select WHERE $token.org_id = org_id
+    FOR create, update WHERE $token.org_id = org_id AND $token.role IN ["owner", "admin"]
+    FOR delete WHERE $token.org_id = org_id AND $token.role = "owner";

@@ -50,6 +50,14 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      # Self-hosted vLLM on Vast.ai / RunPod (Cloudflare-tunnel stable hostname).
+      # Single instance: VLLM_BASE_URL + VLLM_MODELS (comma-separated served ids),
+      # VLLM_API_KEY optional (only if the instance runs vllm serve --api-key).
+      # Multiple: VLLM_ENDPOINTS='[{"id":..,"baseURL":..,"models":[..]}]'.
+      VLLM_BASE_URL: ${VLLM_BASE_URL:-}
+      VLLM_MODELS: ${VLLM_MODELS:-}
+      VLLM_API_KEY: ${VLLM_API_KEY:-}
+      VLLM_ENDPOINTS: ${VLLM_ENDPOINTS:-}
       # Existing deployment on the legacy default signing secret? Set this to boot.
       ALLOW_INSECURE_API_KEY_SECRET: ${ALLOW_INSECURE_API_KEY_SECRET:-}
     ports:
