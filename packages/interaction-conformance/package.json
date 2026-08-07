@@ -1,0 +1,16 @@
+{
+  "name": "@avigopal/interaction-conformance",
+  "version": "0.1.0",
+  "description": "Static conformance checker for the canonical interaction contract (human-surface-stack design.md §3.2).",
+  "type": "module",
+  "private": true,
+  "main": "check.ts",
+  "scripts": {
+    "check": "bun check.ts",
+    "prove-refusal": "bun prove-refusal.ts",
+    "emit-concepts": "bun check.ts --emit-concepts"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}
