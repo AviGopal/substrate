@@ -290,7 +290,32 @@ done
 
 # 3. Re-sync the hot-syncable ones; ias-executor-ts fans out to all consumers.
 for v in $CHANGED_VESSELS; do
-  if [[ "$v" == "ias-executor-ts" ]]; then
+  if [[ "$v" == "obsidian-vessel" ]]; then
+    # THE HUMAN SURFACE NEEDS A BUILD, NOT A RESTART.
+    #
+    # obsidian-vessel is listed in HOT_VESSELS but is not a container unit, so the
+    # branch below skipped it as "not hosted here" and nothing took its place. Obsidian
+    # loads a BUILT main.js; the TS source is never read at runtime. The vault's
+    # main.js / manifest.json / styles.css are SYMLINKS into repos/obsidian-vessel, so
+    # no install step is needed — but nothing rebuilt the bundle either.
+    #
+    # Measured 2026-08-07: the source had moved 228 commits ahead of a main.js last
+    # built on July 9. Every substrate-authored UI change for a month landed on
+    # origin/dev and was invisible in the running panel — the "declared != running"
+    # class applied to the entire human surface, and the reason a UI gap could not be
+    # observed closing no matter how well it routed.
+    #
+    # Build here so a landed UI change becomes a live UI change within one timer tick,
+    # which is what makes the behaviour casually observable rather than a manual
+    # ceremony. Non-fatal by design: a failed build must not wedge the rest of the
+    # sync, and the panel simply keeps running the previous bundle.
+    log "obsidian-vessel changed -> rebuilding plugin bundle (vault artifacts are symlinks into the repo)"
+    if act bash "$REPO_ROOT/scripts/substrate/obsidian-plugin-reload.sh"; then
+      log "obsidian-vessel bundle rebuilt — panel picks it up on next plugin load"
+    else
+      log "!!! obsidian-vessel build FAILED — panel still runs the previous bundle; UI changes are NOT live"
+    fi
+  elif [[ "$v" == "ias-executor-ts" ]]; then
     log "ias-executor-ts changed -> rebuild dist + push to all consumers + restart"
     act make -C "$MAKE_DIR" sync-ias-executor-ts RESTART=1
   elif [[ "$IAS_CHANGED" == "1" ]] && echo " $IAS_CONSUMERS " | grep -q " $v "; then
