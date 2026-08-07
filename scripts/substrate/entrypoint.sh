@@ -48,5 +48,33 @@ if [ -n "${HUB_DISCOVERY_URL:-}" ] && [ -x /usr/local/bin/vessel-ctl ]; then
   fi
 fi
 
+# LLM arm fleet: render one unit per declared arm (llm-arms.json / LLM_ARMS env)
+# via render-llm-arms.sh, then boot-enable the rendered llm-<id>.service units.
+# Fail-open: no renderer found => skip (the static opus/haiku/google units still
+# run — parallel-run migration; retiring them is a later change). Enable mirrors
+# the federation-transport pattern above: `systemctl enable --now` no-ops
+# pre-systemd, so boot-start is made deterministic with offline wants-symlinks
+# (the rendered units are WantedBy=multi-user.target).
+RENDER_LLM_ARMS=""
+for c in /usr/local/bin/render-llm-arms \
+         /usr/local/share/substrate/super-repo/scripts/substrate/render-llm-arms.sh \
+         "$(dirname "$0")/render-llm-arms.sh"; do
+  if [ -x "$c" ]; then RENDER_LLM_ARMS="$c"; break; fi
+done
+if [ -n "$RENDER_LLM_ARMS" ]; then
+  echo "[substrate] rendering LLM arm units ($RENDER_LLM_ARMS)"
+  if "$RENDER_LLM_ARMS"; then
+    mkdir -p /etc/systemd/system/multi-user.target.wants
+    for u in /etc/systemd/system/llm-*.service; do
+      [ -f "$u" ] || continue
+      ln -sf "../$(basename "$u")" \
+        "/etc/systemd/system/multi-user.target.wants/$(basename "$u")"
+      echo "[substrate] enabled rendered LLM arm unit $(basename "$u")"
+    done
+  else
+    echo "[substrate] render-llm-arms failed (keeping static LLM units only)"
+  fi
+fi
+
 echo "[substrate] handing off to systemd"
 exec /lib/systemd/systemd
