@@ -1,0 +1,21 @@
+[Unit]
+Description=human-surface-vessel
+After=discovery-vessel.service identity-vessel.service
+Wants=discovery-vessel.service identity-vessel.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8310
+Environment=HOST=127.0.0.1
+Environment=VESSEL_ID=human-surface-vessel
+Environment=VESSEL_ENDPOINT=http://127.0.0.1:8310
+WorkingDirectory=/vessels/human-surface-vessel
+ExecStart=/root/.bun/bin/bun /vessels/human-surface-vessel/src/index.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

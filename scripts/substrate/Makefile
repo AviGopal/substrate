@@ -191,6 +191,7 @@ RIBOSOME_VESSEL_SRC := $(REPO_ROOT)/repos/ribosome-vessel
 CONCEPT_DB_SRC := $(REPO_ROOT)/repos/concept-db
 ANALYSIS_VESSEL_SRC := $(REPO_ROOT)/repos/analysis-vessel
 STATEFUL_UI_VESSEL_SRC := $(REPO_ROOT)/repos/stateful-ui-vessel
+HUMAN_SURFACE_VESSEL_SRC := $(REPO_ROOT)/repos/human-surface-vessel
 OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
 
 .PHONY: up recreate ready doctor autonomy-status performance perf validate-build build build-obsidian run run-detach run-live run-live-obsidian migrate-state-to-volumes seed-live import-memory install-host-sync health health-live \
@@ -210,6 +211,7 @@ OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
         sync-concept-db restart-concept-db \
         sync-analysis-vessel restart-analysis-vessel \
         sync-stateful-ui-vessel restart-stateful-ui-vessel \
+        sync-human-surface-vessel restart-human-surface-vessel \
         sync-obsidian-vessel restart-obsidian-vessel \
         sync-ias-executor-ts \
         ui-bridge-up ui-bridge-down ui-bridge-status
@@ -428,6 +430,7 @@ run-live:
 	    -p $(call hp,18250):8250 \
 	    -p $(call hp,18260):8260 \
 	    -p $(call hp,18270):8270 \
+	    -p $(call hp,18310):8310 \
 	    -v $(WORKSPACE_VOLUME):/workspace \
 	    -v $(SURREAL_VOLUME):/var/lib/surrealdb \
 	    --tmpfs /run \
@@ -830,6 +833,52 @@ restart-stateful-ui-vessel: sync-stateful-ui-vessel
 	docker exec $(LIVE_NAME) systemctl restart stateful-ui-vessel.service
 	@sleep 3
 	@docker exec $(LIVE_NAME) systemctl is-active stateful-ui-vessel.service | grep -q active && echo "[restart] stateful-ui-vessel active" || echo "[restart] ERROR: stateful-ui-vessel not active"
+
+# human-surface-vessel — the human-facing surface, port 8310 (host 18310).
+#
+# !! CLOBBER WARNING — READ BEFORE USING sync-/restart-* ON ANY VESSEL !!
+# `sync-` docker-cp's from the OPERATOR'S working tree. It has been observed
+# DESTROYING substrate-authored commits: the substrate lands a commit in its own
+# in-container clone, the operator runs `make restart-<vessel>`, and the copy
+# from the host tree overwrites the vessel's source with the operator's older
+# state. The SAFE source is the container's own clone, /workspace/git/vessels/
+# (or /workspace/git/super-repo for $REPO_ROOT-workdir vessels — which is where
+# this vessel's manifest workdir points). For a vessel-ctl-installed instance the
+# safe refresh is an in-container ff-pull of that clone plus a unit restart, never
+# a docker cp:
+#     docker exec $(LIVE_NAME) git -C /workspace/git/super-repo pull --ff-only
+#     docker exec $(LIVE_NAME) systemctl restart human-surface-vessel.service
+# Use the targets below only for a host-side edit you know is newer, and
+# md5-compare against the container copy first.
+#
+# Modelled on stateful-ui-vessel (NOT analysis-vessel): human-surface-vessel is
+# not baked into the image, so /vessels/human-surface-vessel does not exist and
+# a src-only copy would leave the unit with no package.json and no deps.
+# The static unit is installed only if nothing already occupies
+# /etc/systemd/system — a vessel-ctl install renders its own unit there (pointing
+# at the super-repo clone per the manifest workdir), and overwriting it would
+# silently repoint the running vessel at the docker-cp'd tree instead.
+sync-human-surface-vessel:
+	docker exec $(LIVE_NAME) mkdir -p /vessels/human-surface-vessel/src
+	docker cp $(HUMAN_SURFACE_VESSEL_SRC)/package.json $(LIVE_NAME):/vessels/human-surface-vessel/package.json
+	docker cp $(HUMAN_SURFACE_VESSEL_SRC)/tsconfig.json $(LIVE_NAME):/vessels/human-surface-vessel/tsconfig.json
+	docker exec $(LIVE_NAME) rm -rf /vessels/human-surface-vessel/src
+	docker cp $(HUMAN_SURFACE_VESSEL_SRC)/src $(LIVE_NAME):/vessels/human-surface-vessel/src
+	@if docker exec $(LIVE_NAME) test -f /etc/systemd/system/human-surface-vessel.service; then \
+	  echo "[sync] human-surface-vessel: /etc unit already present (vessel-ctl-rendered?) — NOT overwriting"; \
+	else \
+	  docker cp $(REPO_ROOT)/scripts/substrate/units/human-surface-vessel.service $(LIVE_NAME):/etc/systemd/system/human-surface-vessel.service; \
+	  echo "[sync] human-surface-vessel: static unit installed"; \
+	fi
+	docker exec $(LIVE_NAME) bash -c 'cd /vessels/human-surface-vessel && bun install --silent 2>&1 | tail -3'
+	docker exec $(LIVE_NAME) systemctl daemon-reload
+	docker exec $(LIVE_NAME) systemctl enable human-surface-vessel.service 2>/dev/null || true
+	@echo "[sync] human-surface-vessel synced + unit enabled"
+
+restart-human-surface-vessel: sync-human-surface-vessel
+	docker exec $(LIVE_NAME) systemctl restart human-surface-vessel.service
+	@sleep 3
+	@docker exec $(LIVE_NAME) systemctl is-active human-surface-vessel.service | grep -q active && echo "[restart] human-surface-vessel active" || echo "[restart] ERROR: human-surface-vessel not active"
 
 # obsidian-vessel: the Obsidian plugin built IN the substrate (substrate-obsidian
 # flavour only). Dev loop is edit → sync → rebuild → reload Obsidian. The vault's

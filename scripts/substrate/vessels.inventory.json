@@ -140,6 +140,13 @@
       "health_port": 8270
     },
     {
+      "unit": "human-surface-vessel.service",
+      "role": "ui",
+      "repo": "human-surface-vessel",
+      "health_port": 8310,
+      "manifest": true
+    },
+    {
       "unit": "obsidian-intake.timer",
       "role": "ui",
       "repo": "obsidian-vessel"

@@ -14,6 +14,20 @@
       "self_recovery": true
     },
     {
+      "name": "human-surface-vessel",
+      "description": "Human-facing surface vessel — the UI a human resolver talks to; the only vessel a UI-only federated spoke needs to serve locally.",
+      "repo": "human-surface-vessel",
+      "workdir": "$REPO_ROOT/repos/human-surface-vessel",
+      "exec": "src/index.ts",
+      "env": { "PORT": "8310", "HOST": "127.0.0.1", "VESSEL_ID": "human-surface-vessel" },
+      "secrets": [],
+      "restart": "always",
+      "health_port": 8310,
+      "self_recovery": true,
+      "_post_install_comment": "vessel-ctl runs `bun install` ONLY in the rendered WorkingDirectory (the server), never a build. The server serves the surface from ui/dist, and ui/dist is gitignored — so without this hook a runtime-installed vessel boots, passes /health, and serves NO UI. Paths are LITERAL: post_install is handed to the container shell verbatim, so $REPO_ROOT/$RUNTIME are NOT expanded here (federation-relay's hook is literal for the same reason). HOME and the bun cache dir are pinned OUTSIDE the repo: a HOME redirected into the tree leaked a 146MB bun cache into it. vessel-ctl SWALLOWS this hook's stdout, stderr AND exit status (`csh \"$post\" >/dev/null 2>&1 || true`), so the hook writes its own log and a terminal OK/FAILED sentinel — that log is the only evidence a build failed, and callers should assert ui/dist exists rather than trust the install's ok:true.",
+      "post_install": "L=/workspace/human-surface-ui-build.log; { export HOME=/root; export BUN_INSTALL_CACHE_DIR=/root/.bun/install/cache; set -x; cd /workspace/git/super-repo/repos/human-surface-vessel/ui && /root/.bun/bin/bun install && /root/.bun/bin/bun run build && test -d dist; } > \"$L\" 2>&1 && echo UI_BUILD_OK >> \"$L\" || echo UI_BUILD_FAILED >> \"$L\""
+    },
+    {
       "name": "federation-relay",
       "description": "Public libp2p Circuit Relay v2 — the from-anywhere reachability anchor.",
       "workdir": "$REPO_ROOT/scripts/substrate/federation-relay",
