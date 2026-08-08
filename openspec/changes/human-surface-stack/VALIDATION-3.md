@@ -219,6 +219,16 @@ post-fix passes (42 runs):
 | the walk did not reach | 10% |
 | dispatcher unavailable | 5% |
 
+Those three passes ran while the substrate was restarting goal-host under its
+own pull-sync, which is honest about a busy day but mixes infrastructure churn
+into the number. On a quiet fleet — goal-host active and registered for five
+consecutive checks before dispatch — the same fourteen goals give **11/14**, and
+every goal KIND passes except one:
+
+    count 2/2 · list 2/2 · explain 2/2 · fleet 2/2 · history 1/1 · system 1/1
+    read-code 1/2  (the miss is the walk, not the render)
+    introspect 0/2 (the nested-envelope class below)
+
 What the passes found, in order of how much they cost:
 
 - **Truncation was the common case, not the tail.** The earlier decision to
