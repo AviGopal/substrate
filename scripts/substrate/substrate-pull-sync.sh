@@ -877,8 +877,29 @@ if [ -d "$SUPER_DIR/.git" ] && git -C "$SUPER_DIR" fetch -q origin "$BRANCH" 2>/
       # leaves those worktrees detached at the OLD pointers — the stale-oracle
       # drift class behind the green-on-wrong denominator incident. Non-fatal:
       # a lagging worktree is logged, not a sync failure.
-      git -C "$SUPER_DIR" submodule update --init --quiet 2>/dev/null \
-        || log "super-repo: submodule update failed — oracle worktrees may lag"
+      # PER-SUBMODULE, not one call over all of them. `git submodule update`
+      # ABORTS on the first worktree it cannot check out, so a single vessel
+      # carrying uncommitted substrate-authored work stopped the other
+      # seventeen from advancing — and the one-line failure said only "may
+      # lag", naming nothing. Observed 2026-08-08: development-vessel held
+      # modified src/seed/*.ts, and every submodule silently stayed at its old
+      # pointer for as long as that work sat there.
+      #
+      # Dirty worktrees are SKIPPED BY NAME, never forced. Forcing would
+      # discard work the substrate authored and has not yet landed — the same
+      # work that, on the hub, turned out to be a real in-progress activity.
+      # Lagging is recoverable; discarding is not.
+      _sm_lag=""
+      for _sm in $(git -C "$SUPER_DIR" config --file .gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null | awk '{print $2}'); do
+        [ -d "$SUPER_DIR/$_sm" ] || continue
+        if [ -n "$(git -C "$SUPER_DIR/$_sm" status --porcelain 2>/dev/null)" ]; then
+          _sm_lag="$_sm_lag $_sm"
+          continue
+        fi
+        git -C "$SUPER_DIR" submodule update --init --quiet -- "$_sm" 2>/dev/null \
+          || _sm_lag="$_sm_lag $_sm(checkout-failed)"
+      done
+      [ -n "$_sm_lag" ] && log "super-repo: submodule worktrees left at old pointers (uncommitted work — NOT discarded):$_sm_lag"
       # Updater self-refresh (atomic: the running bash keeps its old inode).
       if [ -f "$SUPER_DIR/scripts/substrate/substrate-pull-sync.sh" ]; then
         install -m 0755 "$SUPER_DIR/scripts/substrate/substrate-pull-sync.sh" /usr/local/bin/.substrate-pull-sync.new 2>/dev/null \
