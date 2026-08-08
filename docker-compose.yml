@@ -58,6 +58,16 @@ services:
       VLLM_MODELS: ${VLLM_MODELS:-}
       VLLM_API_KEY: ${VLLM_API_KEY:-}
       VLLM_ENDPOINTS: ${VLLM_ENDPOINTS:-}
+      # RunPod Serverless (queue endpoint, OpenAI-compatible route). Unlike the
+      # VLLM_* forms above this is a fixed vendor host, so only the endpoint id
+      # is needed — the resolver builds the URL. The lane SCALES TO ZERO and is
+      # offered to the policy only while a worker is already warm, so leaving it
+      # unset simply means no arm. RUNPOD_MODELS / RUNPOD_COST_PER_MTOK are
+      # optional overrides (served ids, and the warm per-Mtok price prior).
+      RUNPOD_ENDPOINT_ID: ${RUNPOD_ENDPOINT_ID:-}
+      RUNPOD_API_KEY: ${RUNPOD_API_KEY:-}
+      RUNPOD_MODELS: ${RUNPOD_MODELS:-}
+      RUNPOD_COST_PER_MTOK: ${RUNPOD_COST_PER_MTOK:-}
       # Existing deployment on the legacy default signing secret? Set this to boot.
       ALLOW_INSECURE_API_KEY_SECRET: ${ALLOW_INSECURE_API_KEY_SECRET:-}
     ports:

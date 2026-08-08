@@ -210,6 +210,14 @@ OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-$(persisted_secret OPENROUTER_API_KEY)
 GOOGLE_API_KEY="${GOOGLE_API_KEY:-$(persisted_secret GOOGLE_API_KEY)}"
 GROQ_API_KEY="${GROQ_API_KEY:-$(persisted_secret GROQ_API_KEY)}"
 MISTRAL_API_KEY="${MISTRAL_API_KEY:-$(persisted_secret MISTRAL_API_KEY)}"
+# RunPod Serverless. RUNPOD_ENDPOINT_ID is not a secret but must round-trip the
+# same way: llm-resolver-vessel registers the arm only when it is present, so
+# losing it on a container recreate silently un-registers the lane. MODELS and
+# COST_PER_MTOK are optional overrides — the vessel has defaults for both.
+RUNPOD_API_KEY="${RUNPOD_API_KEY:-$(persisted_secret RUNPOD_API_KEY)}"
+RUNPOD_ENDPOINT_ID="${RUNPOD_ENDPOINT_ID:-$(persisted_secret RUNPOD_ENDPOINT_ID)}"
+RUNPOD_MODELS="${RUNPOD_MODELS:-$(persisted_secret RUNPOD_MODELS)}"
+RUNPOD_COST_PER_MTOK="${RUNPOD_COST_PER_MTOK:-$(persisted_secret RUNPOD_COST_PER_MTOK)}"
 
 # Endpoint aliases — resolve BEFORE the heredoc so every inner reference is a
 # bound variable. Previously the alias defaults nested unguarded expansions
@@ -302,6 +310,10 @@ OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
 GOOGLE_API_KEY="${GOOGLE_API_KEY:-}"
 GROQ_API_KEY="${GROQ_API_KEY:-}"
 MISTRAL_API_KEY="${MISTRAL_API_KEY:-}"
+RUNPOD_API_KEY="${RUNPOD_API_KEY:-}"
+RUNPOD_ENDPOINT_ID="${RUNPOD_ENDPOINT_ID:-}"
+RUNPOD_MODELS="${RUNPOD_MODELS:-}"
+RUNPOD_COST_PER_MTOK="${RUNPOD_COST_PER_MTOK:-}"
 LLM_DEFAULT_MODEL="${LLM_DEFAULT_MODEL:-}"
 # Substrate root inside the container = the container-native super-repo clone.
 # The container is unmoored from the host filesystem: no host repo bind. Every
@@ -535,6 +547,10 @@ OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
 GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
 GROQ_API_KEY=${GROQ_API_KEY:-}
 MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+RUNPOD_API_KEY=${RUNPOD_API_KEY:-}
+RUNPOD_ENDPOINT_ID=${RUNPOD_ENDPOINT_ID:-}
+RUNPOD_MODELS=${RUNPOD_MODELS:-}
+RUNPOD_COST_PER_MTOK=${RUNPOD_COST_PER_MTOK:-}
 # Operator-explicit discovery peer list (hub-side resolve fan-out). Only the
 # explicit value round-trips; a hub-derived spoke default is re-derived each run.
 PEER_DISCOVERY_ENDPOINTS=${PEER_DISCOVERY_ENDPOINTS_EXPLICIT:-}
