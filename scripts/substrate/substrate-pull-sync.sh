@@ -691,6 +691,28 @@ EOF
       # to protect in-flight work was, in its most common path, not evaluating at all.
       INFLIGHT="${INFLIGHT:-0}"
       case "$INFLIGHT" in *[!0-9]*) INFLIGHT=0 ;; esac
+      # A VESSEL THAT DRAINS DOES NOT NEED PROTECTING FROM A RESTART. This guard's own
+      # rationale was "the durable fix is a SIGTERM drain in $v, which it does not
+      # have". goal-host HAS one — gracefulShutdown() 503s new dispatches,
+      # de-advertises, and waits for in-flight to reach zero under TimeoutStopSec — so
+      # the premise was stale, and the cost was not: the busiest dispatch host is
+      # almost never idle, so it deferred every tick and then took the
+      # AUTHORING_HOST_MAX_DEFERS starvation break, which converges anyway and warns
+      # that an in-flight run may be lost. Maximum delay AND the unsafe outcome.
+      #
+      # Vessels now advertise `drain_ms` on /health. A vessel that publishes a drain
+      # at least as long as our own patience is safe to restart with work in flight:
+      # systemd sends SIGTERM, the vessel finishes what it holds, nothing is lost.
+      # Absent or 0 means no drain, which stays the safe default — every vessel that
+      # has not opted in behaves exactly as before.
+      DRAINMS="$(curl -s --max-time 5 "http://127.0.0.1:$IFPORT/health" 2>/dev/null \
+        | grep -o '"drain_ms"[[:space:]]*:[[:space:]]*[0-9][0-9]*' | grep -o '[0-9]*$' | head -1)"
+      DRAINMS="${DRAINMS:-0}"
+      case "$DRAINMS" in *[!0-9]*) DRAINMS=0 ;; esac
+      if [ "$INFLIGHT" -gt 0 ] && [ "$DRAINMS" -ge "${MIN_TRUSTED_DRAIN_MS:-15000}" ]; then
+        log "$v: $INFLIGHT unit(s) in flight but the vessel advertises a ${DRAINMS}ms SIGTERM drain — converging; the restart will drain rather than destroy them"
+        INFLIGHT=0
+      fi
       if [ "$INFLIGHT" -gt 0 ]; then
         DEFER_MARKER="in-flight:$INFLIGHT"
         IS_AUTHORING_HOST=1
