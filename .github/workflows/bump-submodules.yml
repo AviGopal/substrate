@@ -42,6 +42,9 @@ jobs:
           set -euo pipefail
           changed=0
           summary=""
+          resolved=0
+          skipped=0
+          skiplist=""
           # One line per submodule: "<path> <url> <branch>"
           paths=$(git config -f .gitmodules --get-regexp '\.path$' | awk '{print $2}')
           for path in $paths; do
@@ -55,8 +58,11 @@ jobs:
             remote_sha=$(git ls-remote "$url" "refs/heads/${branch}" 2>/dev/null | cut -f1 || true)
             if [ -z "$remote_sha" ]; then
               echo "::warning::skip ${path}: could not resolve ${branch} on ${url} (cross-org PAT scope or transient network failure)"
+              skipped=$((skipped + 1))
+              skiplist="${skiplist}- ${path} (${branch} on ${url})\n"
               continue
             fi
+            resolved=$((resolved + 1))
 
             local_sha=$(git ls-tree HEAD "$path" | awk '{print $3}')
             if [ "$local_sha" != "$remote_sha" ]; then
@@ -68,6 +74,36 @@ jobs:
           done
           echo "changed=${changed}" >> "$GITHUB_OUTPUT"
           printf '%b' "$summary" > /tmp/bump-summary.txt
+
+          # A green run that resolved NOTHING is the worst outcome this workflow
+          # has: it is the only thing that moves submodule gitlinks, so when it
+          # no-ops the hub's submodule-deployed vessels freeze at whatever commit
+          # they were on — and the 6-hourly schedule keeps reporting success.
+          # Observed 2026-08-08: every submodule skipped on "could not resolve
+          # dev" for the PAT, the job went green, and the repo's history contains
+          # ZERO pointer-bump commits. development-vessel — which runs from the
+          # super-repo tree, not the image copy — had been frozen behind it.
+          #
+          # Skipping is legitimate per-repo (a cross-org submodule the PAT was
+          # never meant to reach). Skipping EVERYTHING is not a skip, it is an
+          # outage, and it must not be able to hide behind a warning.
+          {
+            echo "### Submodule bump"
+            echo ""
+            echo "- resolved: **${resolved}**"
+            echo "- skipped: **${skipped}**"
+            echo "- gitlinks changed: **${changed}**"
+            if [ "$skipped" -gt 0 ]; then
+              echo ""
+              echo "Unresolvable (check SUBSTRATE_GIT_PAT repo grants — fine-grained PATs need each repo added with Contents: Read):"
+              printf '%b' "$skiplist"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$resolved" -eq 0 ]; then
+            echo "::error::bump-submodules resolved 0 of $((resolved + skipped)) submodules — every gitlink is frozen. This is a credential failure, not a no-op: SUBSTRATE_GIT_PAT cannot read the submodule repos."
+            exit 1
+          fi
 
       - name: Commit and push
         if: steps.bump.outputs.changed == '1'
