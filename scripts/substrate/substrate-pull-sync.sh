@@ -220,11 +220,33 @@ converge_fleet_defs() {
   _cf_src="$_cf_super/scripts/substrate"
   [ -d "$_cf_src" ] || return 0
 
-  if [ -f "$_cf_src/apply-inventory.sh" ] && ! cmp -s "$_cf_src/apply-inventory.sh" /usr/local/bin/apply-inventory 2>/dev/null; then
-    install -m 0755 "$_cf_src/apply-inventory.sh" /usr/local/bin/.apply-inventory.new 2>/dev/null \
-      && mv -f /usr/local/bin/.apply-inventory.new /usr/local/bin/apply-inventory 2>/dev/null \
-      && log "fleet: converged apply-inventory (takes effect at next container start — selection runs pre-systemd)"
-  fi
+  # Bootstrap-tier scripts entrypoint.sh runs BEFORE systemd. All of them are
+  # image copies, so a repo-side fix reached nothing until now.
+  #
+  # gen-env and secrets.env.sh matter as much as apply-inventory: between them
+  # they decide whether the container can boot at all and what identity it boots
+  # with. A truncating write in secrets.env.sh destroyed FED_SUBSTRATE_ID, so
+  # every restart minted a NEW federation identity and orphaned the substrate's
+  # hub records — fixed in the repo, and the fix reached no container, so the
+  # identity kept churning across cycles (spoke-6e240fe0 -> 1e18b09e -> cfda39e7
+  # in three restarts, observed 2026-08-08).
+  # Destinations differ: apply-inventory and gen-env are installed as executables
+  # in /usr/local/bin (entrypoint invokes them by name); secrets.env.sh is SOURCED
+  # from /usr/local/share/substrate. Converging it to the wrong path would leave
+  # the real one stale while the log claimed success.
+  for _cf_pair in \
+    "apply-inventory.sh:/usr/local/bin/apply-inventory" \
+    "gen-env.sh:/usr/local/bin/gen-env" \
+    "secrets.env.sh:/usr/local/share/substrate/secrets.env.sh"; do
+    _cf_from="${_cf_pair%%:*}"
+    _cf_to="${_cf_pair#*:}"
+    [ -f "$_cf_src/$_cf_from" ] || continue
+    [ -e "$_cf_to" ] || continue   # not installed on this image; do not invent it
+    cmp -s "$_cf_src/$_cf_from" "$_cf_to" 2>/dev/null && continue
+    install -m 0755 "$_cf_src/$_cf_from" "$_cf_to.new" 2>/dev/null \
+      && mv -f "$_cf_to.new" "$_cf_to" 2>/dev/null \
+      && log "fleet: converged $(basename "$_cf_to") (takes effect at next container start — this runs pre-systemd)"
+  done
 
   # secrets.env.sh — sourced by vessel-ctl on every manifest-vessel install, so
   # it runs at BOOT and it WRITES /workspace/.substrate-secrets. The image copy

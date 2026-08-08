@@ -250,7 +250,30 @@ for (let cycle = 1; cycle <= CYCLES; cycle++) {
     }
     if (!running) console.log(`   !! container is NOT RUNNING — ${sh("docker", ["inspect", "-f", "{{.State.Status}} exit={{.State.ExitCode}}", c.name], { tolerant: true })}`);
 
-    const after = { units: runningUnits(c.name), head: headSha(c.name), shapes: last };
+    // Sample the roster only once systemd has FINISHED booting. Resync happens
+    // at ~130s but substrate-ready.service deliberately gates the boot target
+    // for up to 240s, so a roster read at resync time catches units that are
+    // still starting and reports them as lost. That is how development-vessel
+    // and stateful-ui showed up in a "lost:" line while they were mid-start.
+    //
+    // `offline` and `initializing` are transient early-boot states — only
+    // `running` and `degraded` mean finished. An earlier version of this check
+    // treated any non-"starting" value as done and returned instantly against a
+    // container that had not started a single unit.
+    const bootWaitStart = Date.now();
+    let bootState = "unreachable";
+    while (Date.now() - bootWaitStart < 420_000) {
+      bootState = dexec(c.name, "systemctl is-system-running 2>/dev/null") || "unreachable";
+      if (bootState === "running" || bootState === "degraded") break;
+      await new Promise((r) => setTimeout(r, 5000));
+    }
+    const bootMs = Date.now() - startedAt;
+    console.log(
+      `   systemd reached '${bootState}' ${Math.round(bootMs / 1000)}s after start` +
+        (bootState === "running" || bootState === "degraded" ? "" : " (did not finish booting)"),
+    );
+
+    const after = { units: runningUnits(c.name), head: headSha(c.name), shapes: last, bootState, bootMs };
     const rosterSame =
       before.units.length === after.units.length &&
       before.units.every((u) => after.units.includes(u));
