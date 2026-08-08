@@ -287,3 +287,55 @@ before the surface ever sees it, and no rendering decision can substitute for it
   `shellResult` it cites carries `stdout: "1"`. The prose contradicts its own
   evidence. That is a substrate correctness defect, not a rendering one — the
   rebuilt renderer makes it visible instead of hiding it inside a JSON blob.
+
+## Measured against the DEPLOYED surface
+
+Every number before this section came from a bind-mounted dev container on
+18310 that no longer exists. This is the first measurement against a deployment
+(`substrate-ui`, host 19310), and it is not comparable to the earlier 11/14 —
+both the instrument and the dispatch path changed.
+
+The dispatch path matters: `substrate-ui` runs no local goal-host, so all 14
+goals cross libp2p to the hub and back. A pass here exercises federation, not
+just the renderer.
+
+| pass | usable | note |
+|---|---|---|
+| deployed, before fix | **7/14** | 5 unreadable, 1 timeout |
+| deployed, after fix  | **9/14** | 3 unreadable, 0 timeouts |
+
+`list` 1/2 → 2/2, `fleet` 1/2 → 2/2, the 360s timeout gone.
+
+### What the instrument was getting wrong
+
+Two defects that make every earlier number softer than it looked:
+
+- **`networkidle` is structurally unreachable here.** The surface holds an SSE
+  stream open on `/api/stream`, so there is never a 500ms window with zero
+  connections. It settled once by luck and then hung a whole run.
+- **One goal could end the pass.** A `goto` timeout on goal 2 killed a 14-goal
+  run after one line of output. This fails in the flattering direction: a run
+  that stops early reports a smaller denominator, so a crash reads as a BETTER
+  result than a completed run.
+
+### The fix that moved it, and the one still open
+
+FIXED — a complete envelope one newline from prose. `segmentAnswer` splits on
+BLANK lines and asks whether the whole chunk starts with `{`. The answer builder
+writes heading, sentence, envelope separated by SINGLE newlines, so all of it
+was one chunk beginning with `#` and went to markdown, which draws the escape.
+The unwrap pre-pass had only ever covered TRUNCATED envelopes.
+
+OPEN — `count` remains 0/2, and it is NOT an envelope-unwrap gap. Located by
+walking the DOM for the offending text node: the escape lives in the
+`human_presentation` entry, a composed `{"headline":…,"blocks":[…]}` object.
+That is not a command envelope, so it correctly falls through to `record`, and
+one of its nested block strings *contains* a raw envelope with a literal `\n`.
+Fixing it means rendering `human_presentation` by its own block structure rather
+than as an anonymous record — a new branch, deliberately not written at the end
+of a long session.
+
+Worth noting for whoever picks it up: this shape is COMPOSED upstream for
+presentation, then flattened back into a string that the surface has to re-read.
+The question to ask first is why the surface is parsing prose that a producer
+already had in structured form.
