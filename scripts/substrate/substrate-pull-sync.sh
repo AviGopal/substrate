@@ -190,6 +190,71 @@ converge_units() {
   fi
 }
 
+# converge_fleet_defs <super-repo-dir> — the LAST members of the
+# super-repo-not-in-self-update-set class, and the ones that decide which
+# vessels a container runs at all.
+#
+# Two things were still stuck at image-build time:
+#
+#   /usr/local/bin/apply-inventory — the selector itself. entrypoint.sh runs
+#   THIS copy, not the git one, so a selection feature added in the repo (e.g.
+#   PROFILE=<name>) never reached any running container: the image copy had no
+#   PROFILE support while the git copy did, on the same box.
+#
+#   $FLEET_DIR/vessels.inventory.json — seeded from the image on FIRST boot and
+#   authoritative for every boot after. Deliberate: the substrate is allowed to
+#   alter its own membership. But nothing ever brought a repo-side inventory
+#   change to an existing container, so two substrates could not converge on a
+#   shared fleet definition even when both were pulling the same commit.
+#
+# The inventory is therefore converged CONDITIONALLY. A sidecar records the
+# content this updater last wrote; if the live file still matches it, no one has
+# customised it and git wins. If it differs, the substrate (or an operator)
+# changed it deliberately and we leave it alone and SAY SO — silently
+# overwriting a fleet's self-chosen membership would be the worse failure, and
+# an unexplained revert is exactly the kind of thing nobody traces back.
+#
+# apply-inventory is unconditional: it is code, not state.
+converge_fleet_defs() {
+  _cf_super="$1"
+  _cf_src="$_cf_super/scripts/substrate"
+  [ -d "$_cf_src" ] || return 0
+
+  if [ -f "$_cf_src/apply-inventory.sh" ] && ! cmp -s "$_cf_src/apply-inventory.sh" /usr/local/bin/apply-inventory 2>/dev/null; then
+    install -m 0755 "$_cf_src/apply-inventory.sh" /usr/local/bin/.apply-inventory.new 2>/dev/null \
+      && mv -f /usr/local/bin/.apply-inventory.new /usr/local/bin/apply-inventory 2>/dev/null \
+      && log "fleet: converged apply-inventory (takes effect at next container start — selection runs pre-systemd)"
+  fi
+
+  _cf_dir="${FLEET_DIR:-/workspace/substrate/fleet}"
+  [ -d "$_cf_dir" ] || return 0
+  for f in vessels.inventory.json vessels.manifest.json; do
+    _cf_git="$_cf_src/$f"
+    _cf_live="$_cf_dir/$f"
+    _cf_mark="$_cf_dir/.$f.converged"
+    [ -f "$_cf_git" ] || continue
+    if [ ! -f "$_cf_live" ]; then
+      install -m 0644 "$_cf_git" "$_cf_live" 2>/dev/null && cp -f "$_cf_git" "$_cf_mark" 2>/dev/null \
+        && log "fleet: installed $f from git (was absent)"
+      continue
+    fi
+    cmp -s "$_cf_git" "$_cf_live" 2>/dev/null && { cp -f "$_cf_git" "$_cf_mark" 2>/dev/null; continue; }
+    if [ -f "$_cf_mark" ] && cmp -s "$_cf_mark" "$_cf_live" 2>/dev/null; then
+      install -m 0644 "$_cf_git" "$_cf_live" 2>/dev/null && cp -f "$_cf_git" "$_cf_mark" 2>/dev/null \
+        && log "fleet: converged $f from git (local copy was unmodified)"
+    elif [ ! -f "$_cf_mark" ]; then
+      # First run after this feature shipped: no sidecar exists, so we cannot
+      # tell a customised file from an image-seeded one. Adopt the live copy as
+      # the baseline and converge from the NEXT tick onward. Never guess on the
+      # first observation.
+      cp -f "$_cf_live" "$_cf_mark" 2>/dev/null \
+        && log "fleet: $f differs from git; adopting the live copy as baseline (no sidecar yet) — will converge once it is unmodified"
+    else
+      log "fleet: $f was modified locally — leaving it alone (git version NOT applied; delete $_cf_mark to accept git)"
+    fi
+  done
+}
+
 content_hash() { # vessel-root -> md5 over sorted src/ + sql/ (.ts/.json/.surql); "none" if missing
   [ -d "$1" ] || { echo none; return; }
   # .json included so pure-template/config edits (e.g. lifecycle *.json activity
@@ -829,6 +894,12 @@ fi
 # Converge systemd units every tick, independent of whether the super-repo sha advanced.
 # See converge_units for why this must NOT sit inside the marker-gated refresh above.
 converge_units "${SUPER_REPO_DIR:-/workspace/git/super-repo}"
+
+# Same reasoning, same cadence: the selector and the fleet definition it reads
+# must converge on every tick, not only when the super-repo sha advances — a
+# container that boots on an already-current commit would otherwise never pick
+# them up at all.
+converge_fleet_defs "${SUPER_REPO_DIR:-/workspace/git/super-repo}"
 
 log "done — synced=$synced skipped=$skipped failed=$failed"
 exit 0
