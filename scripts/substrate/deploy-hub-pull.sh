@@ -99,7 +99,8 @@ RELAY_MULTIADDR="${RELAY_MULTIADDR:-$(grep -oE '/ip4/[^ "]*p2p/[A-Za-z0-9]+' "$H
 # ExecCondition on their key being present and silently skip otherwise, which is
 # how two container swaps quietly killed the hub's non-anthropic LLM capacity.
 LLM_KEY_ARGS=""
-for k in GOOGLE_API_KEY GROQ_API_KEY MISTRAL_API_KEY CHUTES_API_KEY OPENROUTER_API_KEY SUBSTRATE_GIT_PAT; do
+for k in GOOGLE_API_KEY GROQ_API_KEY MISTRAL_API_KEY CHUTES_API_KEY OPENROUTER_API_KEY SUBSTRATE_GIT_PAT \
+         RUNPOD_API_KEY RUNPOD_ENDPOINT_ID RUNPOD_MODELS RUNPOD_COST_PER_MTOK; do
   v=$(grep -E "^${k}=" /etc/environment 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"' || true)
   [ -n "$v" ] && LLM_KEY_ARGS="$LLM_KEY_ARGS -e ${k}=${v}"
 done

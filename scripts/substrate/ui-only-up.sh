@@ -269,6 +269,10 @@ MAKE_VARS=(
   "MISTRAL_API_KEY="
   "OPENROUTER_API_KEY="
   "CHUTES_API_KEY="
+  # Blanked like every other provider: a UI-only spoke must not inherit an LLM
+  # arm, and an inherited RUNPOD_ENDPOINT_ID would register one.
+  "RUNPOD_API_KEY="
+  "RUNPOD_ENDPOINT_ID="
 )
 [ -n "$PORT_OFFSET" ] && MAKE_VARS+=("PORT_OFFSET=$PORT_OFFSET")
 

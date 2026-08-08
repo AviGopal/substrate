@@ -86,6 +86,13 @@ OPENROUTER_API_KEY ?=
 GOOGLE_API_KEY     ?=
 GROQ_API_KEY       ?=
 MISTRAL_API_KEY    ?=
+# RunPod Serverless — same ladder, same failure mode if a recipe forgets to pass
+# them. ENDPOINT_ID is not a secret but is load-bearing: llm-resolver-vessel
+# registers the arm only when it is set, so dropping it silently removes the lane.
+RUNPOD_API_KEY        ?=
+RUNPOD_ENDPOINT_ID    ?=
+RUNPOD_MODELS         ?=
+RUNPOD_COST_PER_MTOK  ?=
 
 # GITHUB_TOKEN — load from environment, fall back to gh CLI's cached auth.
 # Used by gh_repo_create resolver + gh_pr_create when authoring substrate-
@@ -272,6 +279,10 @@ run:
 	    -e GOOGLE_API_KEY="$(GOOGLE_API_KEY)" \
 	    -e GROQ_API_KEY="$(GROQ_API_KEY)" \
 	    -e MISTRAL_API_KEY="$(MISTRAL_API_KEY)" \
+	    -e RUNPOD_API_KEY="$(RUNPOD_API_KEY)" \
+	    -e RUNPOD_ENDPOINT_ID="$(RUNPOD_ENDPOINT_ID)" \
+	    -e RUNPOD_MODELS="$(RUNPOD_MODELS)" \
+	    -e RUNPOD_COST_PER_MTOK="$(RUNPOD_COST_PER_MTOK)" \
 	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -p 8080:8080 \
@@ -301,6 +312,10 @@ run-detach:
 	    -e GOOGLE_API_KEY="$(GOOGLE_API_KEY)" \
 	    -e GROQ_API_KEY="$(GROQ_API_KEY)" \
 	    -e MISTRAL_API_KEY="$(MISTRAL_API_KEY)" \
+	    -e RUNPOD_API_KEY="$(RUNPOD_API_KEY)" \
+	    -e RUNPOD_ENDPOINT_ID="$(RUNPOD_ENDPOINT_ID)" \
+	    -e RUNPOD_MODELS="$(RUNPOD_MODELS)" \
+	    -e RUNPOD_COST_PER_MTOK="$(RUNPOD_COST_PER_MTOK)" \
 	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -p 8080:8080 \
@@ -400,6 +415,10 @@ run-live:
 	    -e GOOGLE_API_KEY="$(GOOGLE_API_KEY)" \
 	    -e GROQ_API_KEY="$(GROQ_API_KEY)" \
 	    -e MISTRAL_API_KEY="$(MISTRAL_API_KEY)" \
+	    -e RUNPOD_API_KEY="$(RUNPOD_API_KEY)" \
+	    -e RUNPOD_ENDPOINT_ID="$(RUNPOD_ENDPOINT_ID)" \
+	    -e RUNPOD_MODELS="$(RUNPOD_MODELS)" \
+	    -e RUNPOD_COST_PER_MTOK="$(RUNPOD_COST_PER_MTOK)" \
 	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
@@ -466,6 +485,10 @@ run-live-obsidian:
 	    -e GOOGLE_API_KEY="$(GOOGLE_API_KEY)" \
 	    -e GROQ_API_KEY="$(GROQ_API_KEY)" \
 	    -e MISTRAL_API_KEY="$(MISTRAL_API_KEY)" \
+	    -e RUNPOD_API_KEY="$(RUNPOD_API_KEY)" \
+	    -e RUNPOD_ENDPOINT_ID="$(RUNPOD_ENDPOINT_ID)" \
+	    -e RUNPOD_MODELS="$(RUNPOD_MODELS)" \
+	    -e RUNPOD_COST_PER_MTOK="$(RUNPOD_COST_PER_MTOK)" \
 	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
 	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
