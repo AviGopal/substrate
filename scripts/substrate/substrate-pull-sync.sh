@@ -226,6 +226,21 @@ converge_fleet_defs() {
       && log "fleet: converged apply-inventory (takes effect at next container start — selection runs pre-systemd)"
   fi
 
+  # secrets.env.sh — sourced by vessel-ctl on every manifest-vessel install, so
+  # it runs at BOOT and it WRITES /workspace/.substrate-secrets. The image copy
+  # truncated that file to the six keys it owns, deleting API_KEY_SECRET, which
+  # gen-env had persisted. A container in that state runs indefinitely and then
+  # refuses to boot when restarted. The repaired merge-version has to reach a
+  # running container or the container repairs itself back into the bug on the
+  # next boot — which is exactly what was observed: the file was restored by
+  # hand, and the old script deleted the key again at the next install.
+  _cf_img="/usr/local/share/substrate/super-repo/scripts/substrate/secrets.env.sh"
+  if [ -f "$_cf_src/secrets.env.sh" ] && [ -f "$_cf_img" ] && ! cmp -s "$_cf_src/secrets.env.sh" "$_cf_img" 2>/dev/null; then
+    install -m 0755 "$_cf_src/secrets.env.sh" "$_cf_img.new" 2>/dev/null \
+      && mv -f "$_cf_img.new" "$_cf_img" 2>/dev/null \
+      && log "fleet: converged secrets.env.sh (persisted-secret writer)"
+  fi
+
   _cf_dir="${FLEET_DIR:-/workspace/substrate/fleet}"
   [ -d "$_cf_dir" ] || return 0
   for f in vessels.inventory.json vessels.manifest.json; do

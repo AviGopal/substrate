@@ -27,10 +27,14 @@ them again.
 - **`jq`** — the launcher reads your config with it.
 - **A credential for the image**: `docker login ghcr.io` with a token carrying
   `read:packages`. The image bakes vessel source, so it is private.
-- **A credential for the repo**: `gh auth login`, or a PAT with read access to
-  the super-repo. The surface serves its UI from `ui/dist`, which is gitignored
-  and therefore built at install time from a clone — with no credential that
-  clone 401s and the install has nothing to build.
+- **A credential for the repo**, *while the super-repo is private*:
+  `gh auth login`, or a PAT with read access. The surface's workdir is a clone
+  of the super-repo — it runs its server straight out of it — so with no
+  credential the clone 401s and there is nothing to run. This is the one
+  prerequisite that disappears entirely if the repo is made public.
+
+  It is **no longer needed in order to build**. `ui/dist` is committed, so a
+  clone already carries a working bundle and the install skips the build.
 
 ## The five steps
 
@@ -141,37 +145,78 @@ usual `18xxx` range, but the units behind most of those ports are not running
 here. Route by shape through discovery; reach for a host port only when you mean
 to talk to one machine's copy.
 
-## The image carries the roster
+## The roster: where it comes from, and when it changes
 
-Which units a container runs is decided at boot from the vessel inventory
-**baked into the image**, not from your checkout. A container started from a
-published image runs that image's roster, however recent your working tree is.
+Which units a container runs is decided **before systemd starts**, from a fleet
+inventory kept in the container's volume. The image seeds that file on first
+boot; from then on the volume copy is authoritative, deliberately — a substrate
+is allowed to alter its own membership.
 
-So a surface deployed today can still be running units its roster does not name
-— LLM resolvers, a metric collector — simply because the image predates the
-inventory that would have masked them. They are harmless but they are not
-nothing: they consume the box, and they make `docker ps` a poor guide to what
-this deployment is supposed to be.
+A repo-side inventory change now reaches a running container on its own.
+`substrate-pull-sync` converges both the inventory and the selector that reads
+it, so you do not need an image rebuild to change a roster. Two things to hold
+about the timing:
 
-Two consequences worth holding:
+- **It lands one restart late.** Selection runs pre-systemd, so a converged
+  inventory changes nothing until the container next starts. The file is
+  current; the running units are not.
+- **It will not overwrite a customised inventory.** A sidecar records what the
+  updater last wrote. Match it, and git wins. Differ from it, and the file is
+  left alone and the sync log says so — because silently reverting a fleet's
+  self-chosen membership is worse than being out of date, and an unexplained
+  revert is exactly what nobody traces back. Delete the sidecar to accept git.
 
-- Changing the inventory does not change any running deployment. It takes an
-  image rebuild, then a fresh container.
-- Tooling run from a checkout reads the checkout's inventory while inspecting a
-  container built from the image's. When the two disagree, expect a readiness
-  report that names units the container has never heard of.
+Two things it still does not govern, so expect them in `docker ps` on a surface
+that should not have them:
+
+- **Manifest vessels**, which the selector skips entirely by design.
+- **LLM arm units rendered at boot** (`llm-opus`, `llm-haiku`, `llm-google`),
+  which never exist as files for an inventory to name.
+
+They are harmless but not nothing: they consume the box, and they make
+`docker ps` a poor guide to what a deployment is *supposed* to be.
 
 ## Updating a running surface
 
-New source does **not** reach a running surface on its own. `ui/dist` is
-gitignored, and the build hook runs at install time only — so a pull delivers
-source that nothing rebuilds, and the surface keeps serving the bundle it was
-installed with. Until that is fixed, an update is: pull inside the container,
-rebuild `ui/dist`, restart the unit.
+`ui/dist` is **committed**, so git is the delivery channel: a pull brings the
+built bundle along with the source, and the surface serves it after a unit
+restart. No toolchain on the box, no build step at boot that can fail, no
+credential needed merely to render a page.
 
-The reliable check is not the commit — it is the bundle. Compare the
-`assets/index-*.js` the page references against the one on disk, and confirm the
-bundle is newer than the source it claims to carry.
+This is why the surface is not rebuilt on the container. A rebuild does not
+reproduce the committed bundle byte-for-byte — vite content-hashes, and each
+machine's bun differs — so building over a tracked `dist` leaves *modified
+tracked files*, `git pull --ff-only` then refuses, and the deployment quietly
+stops converging. The install hook builds only when `dist` is absent.
+
+The cost lands on whoever changes UI source: a `ui/src` commit must carry its
+rebuilt bundle. The pre-commit hook refuses otherwise and prints the command.
+It cannot cover a commit path that skips hooks — substrate-authored commits
+included — so a substrate that edits `ui/src` today still lands source without a
+bundle.
+
+The reliable check is the bundle, not the commit: compare the
+`assets/index-*.js` the page references against what is on disk.
+
+## Stopping and starting one
+
+A surface container can be stopped and started; it re-registers with the hub and
+its shapes reappear in the registry without help. Two things make that true, and
+both were silently false until they were tested by actually doing it:
+
+- **The secrets must be persisted.** `/workspace/.substrate-secrets` had two
+  writers that each truncated it, so `API_KEY_SECRET` could vanish. A container
+  in that state runs indefinitely and refuses to boot the moment it is
+  restarted — it will not sign keys with a secret it cannot reproduce. Only a
+  substrate with a local datastore trips the check, which is why it hid.
+- **The substrate id must be persisted too.** `FED_SUBSTRATE_ID` regenerated on
+  each boot, so a restart appeared on the hub as a *new* substrate and left the
+  old identity behind as a record nothing would ever refresh.
+
+When judging whether a restart worked, do not ask whether the hub still lists
+the substrate's shapes. Registry records outlive the process that wrote them by
+the TTL, so that question answers yes for a box that is powered off. Ask whether
+the record was refreshed *after* the restart.
 
 ## When it does not work
 
