@@ -97,8 +97,23 @@ check_unit() { # unit role port path -> echo status: ok|down|skipped
   case "$unit" in
     *.timer) [ "$state" = "active" ] && echo ok || echo down; return ;;
   esac
-  if [ "$role" = "seed" ]; then
-    # oneshots: a completed run is inactive; only 'failed' is unhealthy
+  # Oneshots: a completed run is INACTIVE, and inactive is the healthy resting
+  # state — only 'failed' is unhealthy.
+  #
+  # ASK SYSTEMD, don't infer. The tempting rule is "the inventory names a
+  # sibling <unit>.timer, so it is timer-driven and may rest" — and it is wrong
+  # on the one case that matters: boredom-vessel.service is Type=simple with
+  # Restart=always AND has a timer, so that rule would have quietly stopped
+  # checking a long-running vessel. Type= is the actual property being relied
+  # on, so read it.
+  #
+  # This became load-bearing when the inventory grew the .service half of every
+  # timer pair (naming them is what lets a role govern them at all). Each one
+  # landed in a liveness check it can never pass, and a readiness gate that
+  # fails on healthy units gets ignored — worse than having no gate.
+  local utype
+  utype="$(csh "systemctl show '$unit' -p Type --value 2>/dev/null" 2>/dev/null || true)"
+  if [ "$role" = "seed" ] || [ "$utype" = "oneshot" ]; then
     if [ "$(csh "systemctl is-failed '$unit' 2>/dev/null" 2>/dev/null || true)" = "failed" ]; then echo down; else echo ok; fi
     return
   fi

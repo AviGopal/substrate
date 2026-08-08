@@ -122,12 +122,15 @@ the whole mechanism rather than merely skipping a check.
 
 **Purpose:** there are two kinds of interface, and they are not variants of each other. An
 agent works through the metabob-mcp cockpit: dispatch a goal, poll it, reconstruct the
-walk's reasoning, record a verdict. A human works through an Obsidian vessel, and each
-connected vault is a surface onto a *different* human resolver with its own local
-information. Both are resolvers to the substrate, never preprocessors for it — if a goal
+walk's reasoning, record a verdict. A human works through one of two: the web human
+surface, a page that takes plain language and draws what came back in the form the content
+calls for; or an Obsidian vessel, where each connected vault is a surface onto a
+*different* human resolver with its own local information. All are resolvers to the
+substrate, never preprocessors for it — if a goal
 only works after someone rewrites it into paths and shapes, that rewriting is a gap. The
 cockpit's tool surface is enumerated in the root `CLAUDE.md` linked at the top of this page.
 
+- [Running a human surface](HUMAN_SURFACE.md) — five steps to put a page in front of a person: config, image, launch, open, ask. What runs locally versus on the hub, and why a surface that loads but cannot dispatch is a hub-link problem.
 - [Workbench Chain-Based UX Design](architecture/WORKBENCH_CHAIN_UX_DESIGN.md) — the chain vocabulary of the workbench surface.
 - [Interactive Activities and the Human Resolver](guides/INTERACTIVE_ACTIVITIES_AND_HUMAN_RESOLVER.md) — dispatching a task to a human as a resolver and waiting on the answer.
 - [Substrate-Narration Protocol](SUBSTRATE_NARRATION_PROTOCOL.md) — the operator-side narration and gap-accumulation methodology.

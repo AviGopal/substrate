@@ -10,10 +10,18 @@
 #   openspec/changes/human-surface-stack/federation.md.
 #
 # USAGE
+#   ui-only-up.sh                                        # everything from config
 #   ui-only-up.sh --hub http://<hub-host>:18100 --api-key <hub-issued-key> \
 #                 [--name <container>] [--port-offset <n>] [--git-pat <pat>]
 #
-#   DRY_RUN=1 ui-only-up.sh --hub ... --api-key ...      # print the plan, touch nothing
+#   DRY_RUN=1 ui-only-up.sh                              # print the plan, touch nothing
+#
+#   With no flags, hub / api-key / git-pat are read from
+#   ~/.metabob/config.json (.metabob.hubDiscovery or .metabob.endpoint,
+#   .metabob.apiKey, .metabob.gitPat) and from `gh auth token`. Flags win over
+#   config. They were three REQUIRED flags, which made the shortest honest
+#   deployment a line nobody retypes correctly; none of the three is a fact the
+#   operator's config did not already hold.
 #
 #   --hub        the HUB's discovery endpoint. Supplying it with NO explicit
 #                ENABLED_ROLES is what flips the Makefile into the federated-spoke
@@ -80,17 +88,23 @@ usage() {
 ui-only-up.sh — boot a UI-ONLY federated spoke (one human surface + the minimum
 a substrate needs to hold its own registry; everything else resolves on the hub).
 
-  ui-only-up.sh --hub <url> --api-key <key> [--name <container>]
+  ui-only-up.sh [--hub <url>] [--api-key <key>] [--name <container>]
                 [--port-offset <n>] [--git-pat <pat>]
 
-  --hub <url>          REQUIRED. The HUB's discovery endpoint, e.g.
-                       http://<hub-host>:18100. Supplying it with no explicit
-                       ENABLED_ROLES is what engages the federated-spoke path.
-  --api-key <key>      REQUIRED. A HUB-ISSUED key. A locally minted key is not
-                       valid on the hub and every hub-facing call 401s.
-  --git-pat <pat>      REQUIRED (or SUBSTRATE_GIT_PAT in the environment).
-                       Read access to the private super-repo, whose clone is
-                       the human surface's manifest workdir.
+With no flags all three credentials come from ~/.metabob/config.json and
+`gh auth token`. Pass a flag only to override what config already says.
+
+  --hub <url>          The HUB's discovery endpoint, e.g. http://<host>:18100.
+                       Default: .metabob.hubDiscovery, else .metabob.endpoint.
+                       Supplying it with no explicit ENABLED_ROLES is what
+                       engages the federated-spoke path.
+  --api-key <key>      A HUB-ISSUED key. Default: .metabob.apiKey. A locally
+                       minted key is not valid on the hub and every hub-facing
+                       call 401s.
+  --git-pat <pat>      Read access to the private super-repo, whose clone is
+                       the human surface's manifest workdir. Default:
+                       $SUBSTRATE_GIT_PAT, else .metabob.gitPat, else
+                       `gh auth token`.
   --name <container>   Container name. Default: substrate-ui. Must NOT be an
                        existing container — this script refuses rather than
                        touch one.
@@ -120,8 +134,37 @@ done
 fail() { echo "[ui-only-up] ERROR: $*" >&2; echo >&2; usage 2; }
 die()  { echo "[ui-only-up] ERROR: $*" >&2; exit 1; }
 
-[ -n "$HUB" ]     || fail "--hub <hub discovery endpoint> is required."
-[ -n "$API_KEY" ] || fail "--api-key <hub-issued key> is required. A locally minted key is rejected by the hub."
+# ── Defaults from the config file every other tool already reads ─────────────
+# The three required values were three required flags, which made the shortest
+# real deployment a line nobody can retype. They are not new facts: the hub and
+# its key are exactly what ~/.metabob/config.json exists to hold, and the PAT is
+# what `gh auth token` already answers (the Makefile reads it the same way).
+# Flags still win — this only fills what was left blank.
+CONFIG_FILE="${METABOB_CONFIG:-$HOME/.metabob/config.json}"
+cfg() {
+  [ -r "$CONFIG_FILE" ] || return 0
+  command -v jq >/dev/null 2>&1 || return 0
+  jq -r "$1 // empty" "$CONFIG_FILE" 2>/dev/null || true
+}
+CFG_SOURCE=""
+if [ -z "$HUB" ]; then
+  HUB="$(cfg '.metabob.hubDiscovery')"
+  [ -z "$HUB" ] && HUB="$(cfg '.metabob.endpoint')"
+  [ -n "$HUB" ] && CFG_SOURCE="$CFG_SOURCE hub"
+fi
+if [ -z "$API_KEY" ]; then
+  API_KEY="$(cfg '.metabob.apiKey')"
+  [ -n "$API_KEY" ] && CFG_SOURCE="$CFG_SOURCE api-key"
+fi
+if [ -z "$GIT_PAT" ]; then
+  GIT_PAT="$(cfg '.metabob.gitPat')"
+  [ -z "$GIT_PAT" ] && GIT_PAT="$(gh auth token 2>/dev/null || true)"
+  [ -n "$GIT_PAT" ] && CFG_SOURCE="$CFG_SOURCE git-pat"
+fi
+[ -n "$CFG_SOURCE" ] && echo "[ui-only-up] filled from $CONFIG_FILE / gh:$CFG_SOURCE" >&2
+
+[ -n "$HUB" ]     || fail "no hub. Pass --hub <url>, or set .metabob.endpoint in $CONFIG_FILE."
+[ -n "$API_KEY" ] || fail "no api key. Pass --api-key <hub-issued key>, or set .metabob.apiKey in $CONFIG_FILE. A locally minted key is rejected by the hub."
 [ -n "$NAME" ]    || fail "--name must not be empty."
 case "$HUB" in http://*|https://*) : ;; *) fail "--hub must be a URL, e.g. http://<hub-host>:18100 (got '$HUB')." ;; esac
 if [ -n "$PORT_OFFSET" ]; then
@@ -131,7 +174,9 @@ OFFSET="${PORT_OFFSET:-0}"
 
 if [ -z "$GIT_PAT" ]; then
   cat >&2 <<'EOF'
-[ui-only-up] ERROR: no git credential. Pass --git-pat <pat> or export SUBSTRATE_GIT_PAT.
+[ui-only-up] ERROR: no git credential. Pass --git-pat <pat>, export SUBSTRATE_GIT_PAT,
+[ui-only-up] set .metabob.gitPat in the config file, or run `gh auth login` (this
+[ui-only-up] script reads `gh auth token` when nothing else supplies one).
 
 [ui-only-up] Why this is fatal and not a warning — the causal chain:
 [ui-only-up]   the human surface's manifest workdir is
