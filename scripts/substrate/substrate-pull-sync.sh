@@ -701,8 +701,14 @@ EOF
       # that an in-flight run may be lost. Maximum delay AND the unsafe outcome.
       #
       # Vessels now advertise `drain_ms` on /health. A vessel that publishes a drain
-      # at least as long as our own patience is safe to restart with work in flight:
-      # systemd sends SIGTERM, the vessel finishes what it holds, nothing is lost.
+      # at least as long as our own patience is safe ENOUGH to restart with work in
+      # flight: systemd sends SIGTERM and the vessel finishes what it holds — but the
+      # drain is BOUNDED, so a walk still running at the deadline is killed exactly as
+      # it would have been without it. Observed on the first live use: goal-host waited
+      # its full 240s and still logged "drain deadline with 1 in-flight". This trades a
+      # near-certain loss on every convergence for an occasional one on a long walk; it
+      # does not eliminate loss, and claiming it did would be the same overclaim as the
+      # stale comment this replaced.
       # Absent or 0 means no drain, which stays the safe default — every vessel that
       # has not opted in behaves exactly as before.
       DRAINMS="$(curl -s --max-time 5 "http://127.0.0.1:$IFPORT/health" 2>/dev/null \
@@ -710,7 +716,7 @@ EOF
       DRAINMS="${DRAINMS:-0}"
       case "$DRAINMS" in *[!0-9]*) DRAINMS=0 ;; esac
       if [ "$INFLIGHT" -gt 0 ] && [ "$DRAINMS" -ge "${MIN_TRUSTED_DRAIN_MS:-15000}" ]; then
-        log "$v: $INFLIGHT unit(s) in flight but the vessel advertises a ${DRAINMS}ms SIGTERM drain — converging; the restart will drain rather than destroy them"
+        log "$v: $INFLIGHT unit(s) in flight but the vessel advertises a ${DRAINMS}ms SIGTERM drain — converging; the restart drains for up to ${DRAINMS}ms, and work still running past that IS lost"
         INFLIGHT=0
       fi
       if [ "$INFLIGHT" -gt 0 ]; then
