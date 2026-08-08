@@ -41,12 +41,26 @@ for artifact in main.js manifest.json; do
   if [[ ! -f "$REPO_DIR/$artifact" ]]; then
     log "ERROR required artifact '$artifact' missing after build — aborting"; exit 1
   fi
-  cp "$REPO_DIR/$artifact" "$PLUGIN_DIR/$artifact"
+  # The vault artifacts are SYMLINKS into this repo in the standard setup — which
+  # this script's own header documents. `cp a b` where b resolves to a fails with
+  # "are the same file", and under `set -e` that aborted the script HERE, before the
+  # reload below. Net effect: the bundle was rebuilt and the plugin was never told,
+  # so Obsidian kept serving the previously-loaded bundle until it was restarted by
+  # hand. Measured 2026-08-07: Obsidian had been up 4h with a bundle built 4h after
+  # it started. Skip the copy when source and destination are the same file; a real
+  # (non-symlinked) install still copies exactly as before.
+  if [[ "$REPO_DIR/$artifact" -ef "$PLUGIN_DIR/$artifact" ]]; then
+    log "$artifact is a symlink to the repo — no copy needed"
+  else
+    cp "$REPO_DIR/$artifact" "$PLUGIN_DIR/$artifact"
+  fi
   copied=$((copied + $(wc -c < "$REPO_DIR/$artifact")))
 done
 # styles.css is optional — only copy it if the plugin ships one.
 if [[ -f "$REPO_DIR/styles.css" ]]; then
-  cp "$REPO_DIR/styles.css" "$PLUGIN_DIR/styles.css"
+  if [[ ! "$REPO_DIR/styles.css" -ef "$PLUGIN_DIR/styles.css" ]]; then
+    cp "$REPO_DIR/styles.css" "$PLUGIN_DIR/styles.css"
+  fi
   copied=$((copied + $(wc -c < "$REPO_DIR/styles.css")))
   log "copied styles.css"
 fi
