@@ -196,12 +196,22 @@ for (let cycle = 1; cycle <= CYCLES; cycle++) {
     let resyncMs = null;
     let last = [];
     let running = false;
+    let rec_rule = null;
     while (Date.now() - startedAt < RESYNC_TIMEOUT_MS) {
       running = isRunning(c.name);
       // Freshness gate: only records re-written AFTER the restart count. A stale
       // record from the dead process satisfies presence and proves nothing.
       last = running ? await fleetView(key, suffix, startedAt) : [];
-      if (running && before.shapes.length > 0 && before.shapes.every((s) => last.includes(s))) {
+      // `before.shapes` empty means the hub could not attribute ANY shape to
+      // this substrate before the cycle — usually because its federation id had
+      // just churned. Requiring a non-empty before made resync unreachable: the
+      // container came back, the hub saw six shapes, and it still scored FAIL
+      // after 480s. Fall back to "the hub sees anything fresh from it", and say
+      // which rule was used so the number is not read as stronger than it is.
+      const target = before.shapes.length > 0 ? before.shapes : null;
+      const met = target ? target.every((s) => last.includes(s)) : last.length > 0;
+      if (running && met) {
+        rec_rule = target ? "matched pre-cycle shape set" : "no pre-cycle baseline; any fresh shape";
         resyncMs = Date.now() - startedAt;
         break;
       }
@@ -224,6 +234,7 @@ for (let cycle = 1; cycle <= CYCLES; cycle++) {
       resyncMs,
       resynced: resyncMs !== null,
       operatorActionsDuringResync: 0,
+      resyncRule: rec_rule,
     };
     results.push(rec);
     console.log(
@@ -231,7 +242,7 @@ for (let cycle = 1; cycle <= CYCLES; cycle++) {
     );
     console.log(
       rec.resynced
-        ? `   RESYNCED on its own in ${Math.round(resyncMs / 1000)}s · roster preserved: ${rosterSame}`
+        ? `   RESYNCED on its own in ${Math.round(resyncMs / 1000)}s · roster preserved: ${rosterSame} · rule: ${rec_rule}`
         : `   DID NOT RESYNC within ${RESYNC_TIMEOUT_MS / 1000}s · roster preserved: ${rosterSame}`,
     );
     if (!rosterSame) {

@@ -234,12 +234,22 @@ converge_fleet_defs() {
   # running container or the container repairs itself back into the bug on the
   # next boot — which is exactly what was observed: the file was restored by
   # hand, and the old script deleted the key again at the next install.
-  _cf_img="/usr/local/share/substrate/super-repo/scripts/substrate/secrets.env.sh"
-  if [ -f "$_cf_src/secrets.env.sh" ] && [ -f "$_cf_img" ] && ! cmp -s "$_cf_src/secrets.env.sh" "$_cf_img" 2>/dev/null; then
+  # BOTH copies. vessel-ctl sources /usr/local/share/substrate/secrets.env.sh —
+  # NOT the super-repo path under it, which is a different file that happens to
+  # share a name. Converging only the super-repo copy looks correct, greps
+  # correct, and changes nothing: the writer that truncates the file is the
+  # other one. (Found by probing: a marker key survived sourcing the converged
+  # copy, and vanished at the next boot anyway.)
+  for _cf_img in \
+    /usr/local/share/substrate/secrets.env.sh \
+    /usr/local/share/substrate/super-repo/scripts/substrate/secrets.env.sh
+  do
+    [ -f "$_cf_src/secrets.env.sh" ] && [ -f "$_cf_img" ] || continue
+    cmp -s "$_cf_src/secrets.env.sh" "$_cf_img" 2>/dev/null && continue
     install -m 0755 "$_cf_src/secrets.env.sh" "$_cf_img.new" 2>/dev/null \
       && mv -f "$_cf_img.new" "$_cf_img" 2>/dev/null \
-      && log "fleet: converged secrets.env.sh (persisted-secret writer)"
-  fi
+      && log "fleet: converged $_cf_img (persisted-secret writer)"
+  done
 
   _cf_dir="${FLEET_DIR:-/workspace/substrate/fleet}"
   [ -d "$_cf_dir" ] || return 0
