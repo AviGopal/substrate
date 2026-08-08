@@ -450,6 +450,34 @@ for d in "$CLONE_DIR"/*/; do
   # consumer cannot cause a rebuild/revert loop (a new src change clears it).
   DIST_RETRY=""
   SELF_UNIT="$(vessel_unit "$v")"
+  # A MASKED VESSEL MUST NOT BE CONVERGED AT ALL — NOT EVEN TESTED.
+  #
+  # The re-attempt suppression below already refuses to re-mirror a masked vessel,
+  # but that only fires when the content is UNCHANGED. Give a masked vessel a NEW
+  # commit and it sails past, straight into the test gate at 3-pre, which runs the
+  # CLONE's suite before deciding anything.
+  #
+  # Measured 2026-08-08 on this spoke, one tick after the suppression fix landed:
+  #
+  #   11:52:22  activity-api: ... is MASKED — keeping suppression ...
+  #   [11 minutes of silence]
+  #   CGroup: ... timeout 240 /root/.bun/bin/bun test   (cwd /workspace/git/vessels/activity-api)
+  #           CPU: 5.2s across 11 minutes, 6 open sockets
+  #
+  # activity-api's suite blocks on services that do not run here — because the unit
+  # is masked — so the gate burns the whole per-tick budget on a vessel this
+  # deployment will never start, and the unit is SIGKILLed at TimeoutStartSec before
+  # the vessels that DO run are reached. Same starvation as before, one step earlier
+  # in the loop.
+  #
+  # Skipping is safe and complete: mirroring source for a unit that cannot start
+  # changes nothing observable, and if the role later unmasks it, the very next tick
+  # converges it normally because this test is evaluated fresh each pass.
+  if [ -n "$SELF_UNIT" ] && [ "${SELF_UNIT%.service}" != "$SELF_UNIT" ] \
+     && [ "$(systemctl is-enabled "$SELF_UNIT" 2>/dev/null)" = masked ]; then
+    log "$v: SKIPPED — $SELF_UNIT is MASKED on this deployment; not fetching, not testing, not mirroring (its suite would spend the tick budget on a vessel that cannot start)"
+    skipped=$((skipped+1)); continue
+  fi
   if { [ -z "$SELF_UNIT" ] || [ "${SELF_UNIT%.service}" = "$SELF_UNIT" ]; } \
      && [ -d "$RUNTIME_DIR/$v/dist" ] \
      && grep -q '"build"[[:space:]]*:' "$RUNTIME_DIR/$v/package.json" 2>/dev/null \
