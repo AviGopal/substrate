@@ -104,6 +104,33 @@ for u in $(manageable_units); do
     if [ -L "/etc/systemd/system/$u" ] && [ "$(readlink "/etc/systemd/system/$u")" = "/dev/null" ]; then
       rm -f "/etc/systemd/system/$u" && log "unmasked: $u"
     fi
+    # ENABLE a desired unit that has never been enabled.
+    #
+    # This loop only ever disabled. Enable symlinks are baked into the image at
+    # build time, so a unit ADDED to units/ afterwards was installed by
+    # pull-sync's converge_units and then sat `disabled` forever — it could not
+    # run on any existing container without an image rebuild, which is the
+    # opposite of a fleet that updates itself from git. Observed 2026-08-08:
+    # development-vessel-seed.service converged, showed `disabled; preset:
+    # enabled`, and never ran.
+    #
+    # NOT a blanket enable. A .service whose .timer is in the inventory is
+    # TIMER-TRIGGERED and must stay disabled — enabling it would fire it at boot
+    # instead of on its schedule, turning every periodic tick into a startup job.
+    #
+    # No [Install] probe: this runs BEFORE systemd is PID 1, where anything
+    # needing dbus (`systemctl cat`) is unreliable. `enable` and `is-enabled`
+    # only manipulate/read symlinks, so they work offline — and `enable` already
+    # fails harmlessly on a unit with no [Install]. Attempt it and log only on
+    # success, rather than asking a question we cannot reliably ask here.
+    if [ "$DRY_RUN" != "1" ] && [ "$(systemctl is-enabled "$u" 2>/dev/null)" = "disabled" ]; then
+      _timer="${u%.service}.timer"
+      if [ "$u" != "${u%.service}" ] && echo "$DESIRED" | grep -qx "$_timer"; then
+        :  # timer-triggered; its timer schedules it
+      else
+        systemctl enable "$u" >/dev/null 2>&1 && log "enabled: $u (was never enabled — new unit)"
+      fi
+    fi
     continue
   fi
   if [ "$DRY_RUN" = "1" ]; then
