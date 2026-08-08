@@ -188,6 +188,26 @@ emit_gap() {
 # bottleneck, so a genuinely-dead vessel still restarts. Fail SAFE toward
 # "restart normally": a broken/empty-cred probe returns a fast 4xx and does NOT
 # suppress recovery.
+# PROBE WITH REPRESENTATIVE WORK, NOT `RETURN 1;`.
+#
+# This probe used to send `RETURN 1;`, which the server answers instantly from the
+# query planner without touching storage. A saturated SurrealDB answers it just as
+# fast as an idle one, so the probe could only ever detect a DEAD database, never a
+# congested one — while congestion is the entire condition this guard exists to catch.
+#
+# The failure that exposed it, measured on the hub 2026-08-08: the `execution` table
+# had grown to 18GB, activity-api's /health (which does real reads) timed out, and
+# this probe returned 200 in milliseconds. Self-recovery therefore concluded "DB is
+# fine, the vessel is broken" and restarted activity-api — 16 times in 6 hours. Each
+# restart re-ran the full migration chain against the congested store, took minutes,
+# and killed the in-flight trace-retention sweep. Retention completed 0 of 12 sweeps,
+# so the table kept growing, so health kept failing: the immune system was killing the
+# one process that could have relieved the pressure.
+#
+# `SELECT VALUE execution_id FROM execution LIMIT 1;` is still trivial on a healthy
+# store (indexed, one row) but has to reach storage, so it degrades WITH the table the
+# vessels are actually blocked on. The two-consecutive-failures rule and the
+# timeout/000/5xx semantics below are unchanged — only the question being asked is.
 db_under_pressure() {
   local i out
   for i in 1 2; do
@@ -197,7 +217,7 @@ DB=\$(grep -m1 '^SURREALDB_DATABASE=' /etc/substrate/env | cut -d= -f2- | tr -d 
 curl -s -o /dev/null -w '%{http_code}' --max-time $DB_PROBE_TIMEOUT -u \"root:\$P\" \
   -X POST $SURREAL_URL/sql -H 'Accept: application/json' \
   -H \"surreal-ns: \${NS:-activity-system}\" -H \"surreal-db: \${DB:-learning_loop}\" \
-  -d 'RETURN 1;' 2>/dev/null" 2>/dev/null)
+  -d 'SELECT VALUE execution_id FROM execution LIMIT 1;' 2>/dev/null" 2>/dev/null)
     case "$out" in
       2*|4*) return 1 ;;   # server answered promptly (2xx, or fast auth/4xx) -> DB alive, NOT the bottleneck
     esac
