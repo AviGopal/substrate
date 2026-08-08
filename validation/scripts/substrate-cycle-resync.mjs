@@ -117,14 +117,29 @@ function headSha(c) {
   return dexec(c, "cd /workspace/git/super-repo && git rev-parse --short HEAD");
 }
 
-const SHAPES = [
+/**
+ * Shapes whose reappearance means the substrate is back in the fleet.
+ *
+ * `llm_completion` is deliberately NOT here. Its advertisement is quota-gated:
+ * when every provider lane is cooling, the resolver DROPS the shape from the
+ * registry so callers route to a producer that still works. That is the vessel
+ * obeying "never advertise a shape you cannot serve" — correct behaviour that
+ * this test would otherwise score as a failed resync. It cost a real FAIL:
+ * substrate-live came back with five of six shapes and was marked DID NOT
+ * RESYNC because the sixth was quota-gated, not missing.
+ *
+ * It is still polled, and reported alongside, as information about the LLM
+ * plane — just not as evidence about restart.
+ */
+const CORE_SHAPES = [
   "goal_execution",
   "uiPanel_write",
   "renderPolicy",
   "memoryNote",
   "light_dispatch_execution",
-  "llm_completion",
 ];
+const CONDITIONAL_SHAPES = ["llm_completion"];
+const SHAPES = [...CORE_SHAPES, ...CONDITIONAL_SHAPES];
 
 /**
  * Shapes the hub attributes to THIS substrate, optionally requiring the record
@@ -168,11 +183,26 @@ if (CONTAINERS.length === 2) {
 // ── cycle ─────────────────────────────────────────────────────────────────
 for (let cycle = 1; cycle <= CYCLES; cycle++) {
   for (const c of CONTAINERS) {
+    // A container that is already DOWN has no readable federation id, and an
+    // empty suffix silently matches nothing — the whole cycle then measures a
+    // question no producer can answer. Bring it up and let it settle FIRST, and
+    // say so, rather than reporting the artefact as a failed resync.
+    if (!isRunning(c.name)) {
+      console.log(`\n   ${c.name} was not running at cycle start — starting it and settling before measuring`);
+      sh("docker", ["start", c.name]);
+      for (let i = 0; i < 30 && !fedId(c.name); i++) await new Promise((r) => setTimeout(r, 5_000));
+      await new Promise((r) => setTimeout(r, 20_000));
+    }
     const suffix = fedId(c.name);
+    if (!suffix) {
+      console.log(`\n   !! ${c.name}: no FED_SUBSTRATE_ID readable — skipping, this cycle would measure nothing`);
+      continue;
+    }
     const before = {
       units: runningUnits(c.name),
       head: headSha(c.name),
       shapes: await fleetView(key, suffix),
+      core: (await fleetView(key, suffix)).filter((s) => CORE_SHAPES.includes(s)),
       running: isRunning(c.name),
     };
     console.log(
@@ -208,7 +238,8 @@ for (let cycle = 1; cycle <= CYCLES; cycle++) {
       // container came back, the hub saw six shapes, and it still scored FAIL
       // after 480s. Fall back to "the hub sees anything fresh from it", and say
       // which rule was used so the number is not read as stronger than it is.
-      const target = before.shapes.length > 0 ? before.shapes : null;
+      const beforeCore = before.shapes.filter((s) => CORE_SHAPES.includes(s));
+      const target = beforeCore.length > 0 ? beforeCore : null;
       const met = target ? target.every((s) => last.includes(s)) : last.length > 0;
       if (running && met) {
         rec_rule = target ? "matched pre-cycle shape set" : "no pre-cycle baseline; any fresh shape";
