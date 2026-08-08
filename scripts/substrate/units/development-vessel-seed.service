@@ -1,0 +1,47 @@
+[Unit]
+# Template seeding, moved OUT of development-vessel.service's start phase.
+#
+# WHY IT IS ITS OWN UNIT. Seeding ran as ExecStartPost with TimeoutStartSec=600.
+# The old comment argued that was harmless because "the HTTP server is up
+# immediately via ExecStart, so a long start-post does not block serving" — true
+# of this vessel's own socket, and false of everything else. systemd holds a
+# Type=simple unit in `activating` until ExecStartPost returns, so for up to ten
+# minutes multi-user.target could not be reached and every unit ordered into it
+# sat in `start waiting`. Measured on a restart 2026-08-08: stateful-ui-vessel,
+# boredom-vessel.timer, substrate-pull-sync.timer, self-recovery.timer,
+# obsidian-intake and substrate-ready were all queued behind one vessel
+# uploading ~98 templates. A substrate that takes ten minutes to finish booting
+# cannot be described as one you can bring up and down freely.
+#
+# Split out, the vessel is `active` as soon as its server is listening, the boot
+# target completes, and seeding proceeds alongside the running fleet. Nothing
+# about the seeding itself changes — same wait, same command, same timeout.
+Description=development-vessel template seed (out-of-band so it cannot hold the boot)
+After=development-vessel.service
+Requires=development-vessel.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/etc/substrate/env
+EnvironmentFile=-/workspace/.substrate-secrets
+Environment=WORKSPACE_ROOT=/workspace
+Environment=VESSEL_ID=development-vessel-local
+WorkingDirectory=/vessels/development-vessel
+# Wait on the CONFIGURED trace store, not a hardcoded localhost (law 11): on a
+# federated spoke activity-api.service is masked and 127.0.0.1:8080 never
+# answers, so this loop would burn its full 45s and then seed into a dead
+# endpoint. ${METABOB_ENDPOINT} resolves to the local activity-api on a hub and
+# to the hub's on a spoke. The loop body deliberately does not reference its
+# index so no shell variable survives systemd's expansion pass.
+ExecStart=/bin/bash -c 'for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do curl -sf ${METABOB_ENDPOINT}/health >/dev/null 2>&1 && break || sleep 3; done; /root/.bun/bin/bun /vessels/development-vessel/src/cli.ts seed-templates'
+# Same generous budget the start phase used to carry — the ~98 uploads are
+# genuinely slow. It is affordable here precisely because nothing waits on it.
+TimeoutStartSec=600
+# A failed seed must not take the vessel with it, and must not retry forever.
+Restart=no
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

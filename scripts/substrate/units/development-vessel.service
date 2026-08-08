@@ -23,21 +23,23 @@ Environment=EXTRA_WORKSPACE_ROOTS=/vessels/packages
 Environment=MITOSIS_PUSH_CLONE_DIR=/workspace/git/vessels
 WorkingDirectory=/vessels/development-vessel
 ExecStart=/root/.bun/bin/bun /vessels/development-vessel/src/index.ts
-# Wait on the CONFIGURED trace store, not a hardcoded localhost (law 11): on a
-# federated spoke activity-api.service is masked and 127.0.0.1:8080 never
-# answers, so this loop burned its full 45s on every start and then seeded into
-# a dead endpoint — the start phase overran TimeoutStartSec and systemd SIGTERM'd
-# the vessel in a ~10-minute loop, taking the authoring host down with it.
-# ${METABOB_ENDPOINT} resolves to the local activity-api on a hub and to the
-# hub's on a spoke. The loop body deliberately does not reference its index so
-# no shell variable survives systemd's expansion pass.
-ExecStartPost=/bin/bash -c 'for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do curl -sf ${METABOB_ENDPOINT}/health >/dev/null 2>&1 && break || sleep 3; done; /root/.bun/bin/bun /vessels/development-vessel/src/cli.ts seed-templates'
-# 2026-06-18: the default 90s start timeout was killing the whole cgroup when the
-# ExecStartPost seed (≤45s health-wait + ~98 template uploads) overran it — which
-# also SIGTERM'd in-flight patch_with_tools attempts mid-edit (long patches on large
-# files never completed → the autonomous self-alteration loop could never land).
-# Give the start phase room; the HTTP server is up immediately via ExecStart, so a
-# long start-post does not block serving.
+# Template seeding used to run here as ExecStartPost. It now lives in
+# development-vessel-seed.service.
+#
+# The reason is not that seeding was wrong, but that systemd holds a Type=simple
+# unit in `activating` until ExecStartPost returns — so a ≤45s health wait plus
+# ~98 template uploads kept multi-user.target unreachable for minutes, and every
+# unit ordered into it sat in `start waiting` behind this one. The old comment
+# here said a long start-post "does not block serving", which was true of this
+# vessel's own socket and false of the rest of the fleet. Measured on a restart
+# 2026-08-08: stateful-ui-vessel, boredom-vessel.timer, substrate-pull-sync.timer,
+# self-recovery.timer and substrate-ready were all queued behind it.
+#
+# 2026-06-18 (kept for the record): the default 90s start timeout used to kill
+# the whole cgroup when that seed overran it, which also SIGTERM'd in-flight
+# patch_with_tools attempts mid-edit. With the seed gone the start phase is just
+# the server coming up, so the generous budget below is no longer load-bearing —
+# it is left in place because lowering it buys nothing and risks re-opening that.
 TimeoutStartSec=600
 Restart=on-failure
 RestartSec=5

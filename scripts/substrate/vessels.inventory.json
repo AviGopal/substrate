@@ -95,6 +95,12 @@
       "health_port": 8090
     },
     {
+      "_comment": "Template seeding, split out of development-vessel's start phase so it cannot hold multi-user.target. Same role, so any selection that runs the vessel runs its seed — and any that masks the vessel masks the seed with it, which matters because the seed Requires= the vessel.",
+      "unit": "development-vessel-seed.service",
+      "role": "compute",
+      "repo": "development-vessel"
+    },
+    {
       "unit": "local-tools-vessel.service",
       "role": "compute",
       "repo": "local-tools-vessel",
