@@ -29,7 +29,7 @@ if [ ! -f "$INV" ]; then log "no inventory at $INV — keeping all units (no-op)
 if ! command -v jq >/dev/null 2>&1; then log "jq missing — keeping all units (no-op)"; exit 0; fi
 
 # No selection env → keep everything.
-if [ -z "${ENABLED_VESSELS:-}" ] && [ -z "${ENABLED_ROLES:-}" ] && [ -z "${DISABLED_VESSELS:-}" ]; then
+if [ -z "${PROFILE:-}" ] && [ -z "${ENABLED_VESSELS:-}" ] && [ -z "${ENABLED_ROLES:-}" ] && [ -z "${DISABLED_VESSELS:-}" ]; then
   log "no ENABLED_ROLES/ENABLED_VESSELS/DISABLED_VESSELS set — all units enabled (default)"
   exit 0
 fi
@@ -51,8 +51,21 @@ expand_roles() {
 manageable_units() { jq -r '.vessels[] | select((.manifest // false) | not) | .unit' "$INV"; }
 role_of() { jq -r --arg u "$1" '.vessels[] | select(.unit==$u) | .role' "$INV"; }
 
+# PROFILE names an explicit unit list in inventory.profiles. It outranks both
+# ENABLED_VESSELS and ENABLED_ROLES: a profile IS the hand-written allow-list
+# those deploy scripts used to carry inline, so nothing should be able to widen
+# it silently. An unknown name is FATAL rather than a fall-through — falling
+# through would boot the coarse role group, which is the whole failure a profile
+# exists to prevent, and it would do so looking like a success.
 DESIRED=""
-if [ -n "${ENABLED_VESSELS:-}" ]; then
+if [ -n "${PROFILE:-}" ]; then
+  DESIRED="$(jq -r --arg p "$PROFILE" '.profiles[$p] // empty | .[]?' "$INV" 2>/dev/null || true)"
+  if [ -z "$DESIRED" ]; then
+    log "FATAL: PROFILE='$PROFILE' names no entry in .profiles — known: $(jq -r '.profiles // {} | keys | join(", ")' "$INV" 2>/dev/null)"
+    exit 1
+  fi
+  log "explicit PROFILE '$PROFILE': $(echo $DESIRED | tr '\n' ' ')"
+elif [ -n "${ENABLED_VESSELS:-}" ]; then
   DESIRED="$(csv "${ENABLED_VESSELS}")"
   log "explicit ENABLED_VESSELS: $(echo $DESIRED | tr '\n' ' ')"
 elif [ -n "${ENABLED_ROLES:-}" ]; then

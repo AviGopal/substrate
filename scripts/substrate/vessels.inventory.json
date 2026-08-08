@@ -32,6 +32,29 @@
       "registry"
     ]
   },
+  "_profiles_comment": "Named per-container rosters as EXPLICIT unit lists. Roles are coarse — 'compute' names goal-host, development, light-dispatch, boredom, analysis, ribosome, relevance-sink, local-tools and the LLM resolvers together, so no role expression selects a subset of them. That is why ui-only-up.sh had to bypass roles with a hand-written ENABLED_VESSELS list. A profile is that list, named and kept next to the units it selects. PROFILE=<name> wins over ENABLED_VESSELS and ENABLED_ROLES; DISABLED_VESSELS still subtracts afterwards. human-surface-vessel is deliberately absent from surface_node: it is a manifest vessel, which apply-inventory never selects or masks, and vessel-ctl installs it after readiness. CAVEAT (the reason a profile is not yet a guarantee): apply-inventory can only govern units this file names, so a shipped unit absent from `vessels` below runs regardless of the profile — that is how a UI-only box ends up running LLM resolvers. See the ungoverned-units warning apply-inventory emits at boot.",
+  "profiles": {
+    "compute_node": [
+      "discovery-vessel.service",
+      "goal-host-vessel.service",
+      "development-vessel.service",
+      "light-dispatch-vessel.service",
+      "boredom-vessel.service",
+      "boredom-vessel.timer",
+      "federation-transport-vessel.service",
+      "substrate-ready.service",
+      "journald-stdout-forwarder.service",
+      "git-push-setup.service"
+    ],
+    "surface_node": [
+      "discovery-vessel.service",
+      "light-dispatch-vessel.service",
+      "federation-transport-vessel.service",
+      "substrate-ready.service",
+      "journald-stdout-forwarder.service",
+      "git-push-setup.service"
+    ]
+  },
   "vessels": [
     {
       "unit": "surrealdb.service",
