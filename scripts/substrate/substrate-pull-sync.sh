@@ -457,11 +457,36 @@ for d in "$CLONE_DIR"/*/; do
   # would bounce it again). If the unit is down or failing, re-mirroring is
   # unambiguously the right move — there is no healthy state to protect. So skip
   # the suppression whenever this vessel owns a service unit that is not active.
+  #
+  # ...EXCEPT A UNIT THIS DEPLOYMENT DELIBERATELY DOES NOT RUN. "not active" covers
+  # two opposite conditions: a unit that crashed (re-mirror it — that is this
+  # override's whole purpose) and a unit that role selection MASKED, which will never
+  # be active no matter how many times its content is restored. On a spoke that is
+  # activity-api and identity-vessel: `is-active` says inactive, so the override fired
+  # on every tick, and because it fires BEFORE the cheap up-to-date check it did the
+  # full mirror work each time.
+  #
+  # That is not merely wasteful — it is a DEPLOYMENT DEADLOCK, and it was live.
+  # Measured 2026-08-08 on this spoke: the 09:55:46 run spent its entire budget on
+  # activity-api and was SIGKILLed by the unit's own timeout at 10:12:15 ("Failed with
+  # result 'timeout'"), and the 10:12:16 run began the same way. goal-host-vessel sat
+  # at a commit two pushes stale across four consecutive runs and 20 minutes, and
+  # every vessel ordered after activity-api was starved out of the deploy path
+  # entirely.
+  #
+  # `is-enabled` distinguishes them where `is-active` cannot: apply-inventory MASKS
+  # what a role excludes, so masked means "this deployment does not run this", while a
+  # crashed unit stays `enabled`. Failing shut on an unreadable state keeps the
+  # crash-recovery behaviour this override exists for.
   SUPPRESS_REATTEMPT=1
   if [ -n "$SELF_UNIT" ] && [ "${SELF_UNIT%.service}" != "$SELF_UNIT" ] \
      && ! systemctl is-active "$SELF_UNIT" >/dev/null 2>&1; then
-    SUPPRESS_REATTEMPT=""
-    log "$v: content already attempted but $SELF_UNIT is not active — overriding re-attempt suppression to restore service"
+    if [ "$(systemctl is-enabled "$SELF_UNIT" 2>/dev/null)" = masked ]; then
+      log "$v: content already attempted and $SELF_UNIT is MASKED — this deployment does not run it; keeping suppression so it cannot starve the vessels that do"
+    else
+      SUPPRESS_REATTEMPT=""
+      log "$v: content already attempted but $SELF_UNIT is not active — overriding re-attempt suppression to restore service"
+    fi
   fi
   # RUNTIME TRUNCATION OVERRIDE (2026-08-02). "unit is active" is a weak proxy for
   # "healthy": bun holds the module it loaded at start, so a vessel keeps serving
