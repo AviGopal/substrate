@@ -472,7 +472,8 @@ for d in "$CLONE_DIR"/*/; do
   # result 'timeout'"), and the 10:12:16 run began the same way. goal-host-vessel sat
   # at a commit two pushes stale across four consecutive runs and 20 minutes, and
   # every vessel ordered after activity-api was starved out of the deploy path
-  # entirely.
+  # entirely. A masked vessel was consuming the whole convergence budget of the ones
+  # that actually run.
   #
   # `is-enabled` distinguishes them where `is-active` cannot: apply-inventory MASKS
   # what a role excludes, so masked means "this deployment does not run this", while a
@@ -627,7 +628,18 @@ EOF
     if [ -n "$IFPORT" ]; then
       INFLIGHT="$(curl -s --max-time 5 "http://127.0.0.1:$IFPORT/health" 2>/dev/null \
         | grep -o '"in_flight"[[:space:]]*:[[:space:]]*[0-9][0-9]*' | grep -o '[0-9]*$' | head -1)"
-      case "${INFLIGHT:-0}" in ''|*[!0-9]*) INFLIGHT=0 ;; esac
+      # The guard has to NORMALISE the value, not just inspect a defaulted copy of it.
+      # `case "${INFLIGHT:-0}"` substitutes 0 for the empty string only inside its own
+      # test, so an empty INFLIGHT — the common case, since the grep finds nothing
+      # whenever /health omits in_flight or the curl fails — matches neither ''
+      # (already substituted away) nor *[!0-9]* (0 is a digit), no branch assigns, and
+      # INFLIGHT reaches the comparison still empty:
+      #   substrate-pull-sync: line 632: [: : integer expression expected
+      # Logged on every run since the guard landed. Under `set -e` semantics the erroring
+      # test is false, so it happened to fail toward NOT deferring — i.e. the guard meant
+      # to protect in-flight work was, in its most common path, not evaluating at all.
+      INFLIGHT="${INFLIGHT:-0}"
+      case "$INFLIGHT" in *[!0-9]*) INFLIGHT=0 ;; esac
       if [ "$INFLIGHT" -gt 0 ]; then
         DEFER_MARKER="in-flight:$INFLIGHT"
         IS_AUTHORING_HOST=1
