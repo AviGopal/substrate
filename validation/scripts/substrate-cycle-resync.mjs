@@ -75,7 +75,16 @@ function apiKey() {
   );
 }
 
-/** Which vessel ids the HUB can currently see for a shape. Hub vantage only. */
+/**
+ * Producers the HUB lists for a shape, WITH their lastSeen.
+ *
+ * lastSeen is load-bearing, not decoration. The registry TTL is five minutes, so
+ * a record outlives the process that wrote it by minutes — "the hub still lists
+ * this shape" is true of a substrate that is powered off. The first version of
+ * this harness checked presence alone and reported a container that had FAILED
+ * TO BOOT (`Exited (1)`) as having resynced in 1 second. Presence is a claim
+ * about the registry; freshness is a claim about the vessel.
+ */
 async function hubProducers(key, shape) {
   try {
     const r = await fetch(`${HUB}/resolve`, {
@@ -85,10 +94,18 @@ async function hubProducers(key, shape) {
       signal: AbortSignal.timeout(10_000),
     });
     const j = await r.json();
-    return (j?.content?.vessels ?? []).map((v) => v.vesselId);
+    return (j?.content?.vessels ?? []).map((v) => ({
+      vesselId: v.vesselId,
+      lastSeen: v.lastSeen ? Date.parse(v.lastSeen) : 0,
+    }));
   } catch {
     return [];
   }
+}
+
+/** Is the container process actually up? A resync claim over a dead box is a lie. */
+function isRunning(c) {
+  return sh("docker", ["inspect", "-f", "{{.State.Running}}", c], { tolerant: true }) === "true";
 }
 
 /** The substrate id this container federates under — how the hub labels it. */
@@ -109,12 +126,17 @@ const SHAPES = [
   "llm_completion",
 ];
 
-/** Shapes the hub attributes to THIS substrate right now. */
-async function fleetView(key, suffix) {
+/**
+ * Shapes the hub attributes to THIS substrate, optionally requiring the record
+ * to have been refreshed since `freshAfter` — i.e. re-registered by a process
+ * that is alive now, not left behind by the one that died.
+ */
+async function fleetView(key, suffix, freshAfter = 0) {
   const seen = [];
   for (const s of SHAPES) {
     const producers = await hubProducers(key, s);
-    if (producers.some((p) => p.endsWith(`@${suffix}`))) seen.push(s);
+    if (producers.some((p) => p.vesselId.endsWith(`@${suffix}`) && p.lastSeen > freshAfter))
+      seen.push(s);
   }
   return seen.sort();
 }
@@ -151,28 +173,41 @@ for (let cycle = 1; cycle <= CYCLES; cycle++) {
       units: runningUnits(c.name),
       head: headSha(c.name),
       shapes: await fleetView(key, suffix),
+      running: isRunning(c.name),
     };
     console.log(
       `\n── cycle ${cycle} · ${c.name} (${suffix}) ──\n   before: ${before.units.length} units, HEAD ${before.head}, hub sees ${before.shapes.length} shape(s): ${before.shapes.join(", ") || "none"}`,
     );
 
-    sh("docker", ["stop", c.name]);
+    // Errors here are NOT tolerated: a failed `docker start` that is swallowed
+    // turns the whole measurement into a statement about a stopped container.
     const downAt = Date.now();
-    const t0 = Date.now();
-    sh("docker", ["start", c.name]);
+    const stopOut = sh("docker", ["stop", c.name]);
+    const stoppedAt = Date.now();
+    const startOut = sh("docker", ["start", c.name]);
     const startedAt = Date.now();
-    console.log(`   stopped+started in ${Math.round((startedAt - downAt) / 1000)}s — no further commands from here`);
+    if (stopOut.startsWith("ERR:") || startOut.startsWith("ERR:")) {
+      console.log(`   !! docker stop/start FAILED — stop=${stopOut} start=${startOut}`);
+    }
+    console.log(
+      `   stop took ${Math.round((stoppedAt - downAt) / 1000)}s, start returned in ${Math.round((startedAt - stoppedAt) / 1000)}s — no further commands from here`,
+    );
 
     let resyncMs = null;
     let last = [];
+    let running = false;
     while (Date.now() - startedAt < RESYNC_TIMEOUT_MS) {
-      last = await fleetView(key, suffix);
-      if (before.shapes.length > 0 && before.shapes.every((s) => last.includes(s))) {
+      running = isRunning(c.name);
+      // Freshness gate: only records re-written AFTER the restart count. A stale
+      // record from the dead process satisfies presence and proves nothing.
+      last = running ? await fleetView(key, suffix, startedAt) : [];
+      if (running && before.shapes.length > 0 && before.shapes.every((s) => last.includes(s))) {
         resyncMs = Date.now() - startedAt;
         break;
       }
       await new Promise((r) => setTimeout(r, 10_000));
     }
+    if (!running) console.log(`   !! container is NOT RUNNING — ${sh("docker", ["inspect", "-f", "{{.State.Status}} exit={{.State.ExitCode}}", c.name], { tolerant: true })}`);
 
     const after = { units: runningUnits(c.name), head: headSha(c.name), shapes: last };
     const rosterSame =
