@@ -274,9 +274,19 @@ for (let cycle = 1; cycle <= CYCLES; cycle++) {
     );
 
     const after = { units: runningUnits(c.name), head: headSha(c.name), shapes: last, bootState, bootMs };
+    // Compare only LONG-LIVED units. Seeders run to completion and exit, so
+    // whether one appears in `state=running` depends entirely on whether the
+    // sample caught it mid-run — bootstrap-seeder and development-vessel-seed
+    // showed up as "gained" in one cycle and "lost" in the next, from the same
+    // healthy container. That is sampling noise reported as roster drift, and
+    // it is the sort of noise that makes a real regression easy to dismiss.
+    // Excluding them, the roster was IDENTICAL across all four cycles.
+    const TRANSIENT =
+      /^(bootstrap-seeder|development-vessel-seed|identity-seeder|concept-db-seeder|substrate-active-scripts-seed|git-push-setup|substrate-ready)\.service$/;
+    const beforeLong = before.units.filter((u) => !TRANSIENT.test(u));
+    const afterLong = after.units.filter((u) => !TRANSIENT.test(u));
     const rosterSame =
-      before.units.length === after.units.length &&
-      before.units.every((u) => after.units.includes(u));
+      beforeLong.length === afterLong.length && beforeLong.every((u) => afterLong.includes(u));
 
     const rec = {
       cycle,
@@ -300,8 +310,10 @@ for (let cycle = 1; cycle <= CYCLES; cycle++) {
         : `   DID NOT RESYNC within ${RESYNC_TIMEOUT_MS / 1000}s · roster preserved: ${rosterSame}`,
     );
     if (!rosterSame) {
-      const lost = before.units.filter((u) => !after.units.includes(u));
-      const gained = after.units.filter((u) => !before.units.includes(u));
+      // Same filtered sets the verdict used — reporting the unfiltered diff
+      // here would print seeder churn under a verdict that ignored it.
+      const lost = beforeLong.filter((u) => !afterLong.includes(u));
+      const gained = afterLong.filter((u) => !beforeLong.includes(u));
       if (lost.length) console.log(`     lost: ${lost.join(", ")}`);
       if (gained.length) console.log(`     gained: ${gained.join(", ")}`);
     }
