@@ -21,8 +21,19 @@ After=development-vessel.service
 Requires=development-vessel.service
 
 [Service]
-Type=oneshot
-RemainAfterExit=yes
+# Type=simple, NOT oneshot — the same correction bootstrap-seeder needed, and I
+# got it wrong here first. systemd does not consider a `oneshot` started until
+# it EXITS, and multi-user.target waits for every unit that wants it. Splitting
+# the seed out of development-vessel's ExecStartPost moved the blocker into a
+# new unit rather than removing it: the vessel went active immediately and the
+# boot target still sat behind ~98 template uploads. Observed directly —
+# `development-vessel-seed.service  start running` in list-jobs with
+# multi-user.target still `start waiting`.
+#
+# Nothing orders after this unit, so the target gains no guarantee by waiting.
+# Type=simple marks it started as soon as it forks; the seeding runs to
+# completion alongside the fleet.
+Type=simple
 EnvironmentFile=/etc/substrate/env
 EnvironmentFile=-/workspace/.substrate-secrets
 Environment=WORKSPACE_ROOT=/workspace
