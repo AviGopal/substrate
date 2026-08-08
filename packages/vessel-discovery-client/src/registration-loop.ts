@@ -56,6 +56,22 @@ export interface DiscoveryRegistrationLoopConfig {
   logger?: Logger
 }
 
+/**
+ * Every call to discovery is bounded.
+ *
+ * All three of register, heartbeat and deregister used unbounded `fetch`. A
+ * discovery-vessel that accepts the connection and then never answers wedges
+ * whichever one is in flight: a hung heartbeat silently stops the interval from
+ * making progress, and a hung deregister blocks a graceful shutdown that has
+ * already stopped advertising — leaving a vessel that is unregistered, refusing
+ * new work, and still running. Observed on goal-host: deregistered, then
+ * serving 503s to every dispatch with no route back into the registry.
+ *
+ * Generous rather than tight. This bounds pathology, it does not police
+ * latency.
+ */
+const DISCOVERY_CALL_TIMEOUT_MS = 15_000
+
 export class DiscoveryRegistrationLoop {
   private heartbeatTimer?: ReturnType<typeof setInterval>
   private failureCount = 0
@@ -154,6 +170,7 @@ export class DiscoveryRegistrationLoop {
         method: "POST",
         headers: this.headers(),
         body: JSON.stringify(this.registrationPayload()),
+        signal: AbortSignal.timeout(DISCOVERY_CALL_TIMEOUT_MS),
       })
       if (!res.ok) {
         this.logger.warn(
@@ -176,6 +193,7 @@ export class DiscoveryRegistrationLoop {
         method: "POST",
         headers: this.headers(),
         body: JSON.stringify({ vesselId: this.config.vesselId }),
+        signal: AbortSignal.timeout(DISCOVERY_CALL_TIMEOUT_MS),
       })
       if (res.ok) {
         this.failureCount = 0
@@ -218,6 +236,7 @@ export class DiscoveryRegistrationLoop {
       await fetch(`${this.config.discoveryEndpoint}/vessels/${this.config.vesselId}`, {
         method: "DELETE",
         headers: this.headers(),
+        signal: AbortSignal.timeout(DISCOVERY_CALL_TIMEOUT_MS),
       })
       this.logger.info(`[DiscoveryRegistrationLoop] deregistered ${this.config.vesselId}`)
     } catch (err) {

@@ -135,11 +135,18 @@ async function runOne(page, entry, index) {
   const t0 = Date.now();
   const rec = { ...entry, index };
 
-  const disp = await post("/api/run-goal", {
-    goal: entry.goal,
-    operator: "human-surface",
-    tags: ["surface:do-anything", "operator:avi", "human-goal-flows"],
-  });
+  // Retry a dispatch refusal once. A person who gets an error retries; a
+  // harness that scores the first blip as a flow failure measures the weather.
+  let disp = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    disp = await post("/api/run-goal", {
+      goal: entry.goal,
+      operator: "human-surface",
+      tags: ["surface:do-anything", "operator:avi", "human-goal-flows"],
+    });
+    if (disp.json?.dispatchId) break;
+    if (attempt === 0) await sleep(5000);
+  }
 
   if (disp.status === 503 || disp.json?.draining) {
     return { ...rec, outcome: "infra", detail: "dispatcher draining", ms: Date.now() - t0 };
