@@ -196,7 +196,71 @@ seeding it from the push clone is the designed override; nothing about that is
 specific to this vessel and any manifest vessel added since an image was built
 hits it.
 
-## 6. Still open
+## 6. Measured: can a person get common things done?
+
+`validation/scripts/human-goal-flows.mjs` dispatches fourteen ordinary questions
+THROUGH the surface and judges the RENDERED PAGE — not the payload. That
+distinction mattered immediately: the first version scored raw `answerBody` and
+failed four goals for carrying literal `\n` that the renderer was already
+segmenting correctly, which would have sent me to fix something that worked.
+
+The corpus is deliberately not trivia — counting, listing, reading code,
+explaining, fleet health, introspection, history, disk. A high pass rate on
+"what is 2+2" would be a gamed number.
+
+Eight passes. Baseline **5/14**, then **3/14** once the judgement moved to the
+render and stopped flattering the system. After the fixes below, across three
+post-fix passes (42 runs):
+
+| | share |
+|---|---|
+| usable | **60%** |
+| unreadable — the SURFACE's fault | 26% |
+| the walk did not reach | 10% |
+| dispatcher unavailable | 5% |
+
+What the passes found, in order of how much they cost:
+
+- **Truncation was the common case, not the tail.** The earlier decision to
+  refuse prefix recovery was taken on a corpus where 14% of command envelopes
+  were cut. But useful questions have big answers: listing units and reading a
+  file both blow past the 2000-character cap, so the branch that skips JSON
+  analysis entirely was where the best goals landed. What was added is a MATCH,
+  not a parse — the envelope opening is recognised whole, so the payload
+  string's start is known rather than estimated, and it refuses the moment that
+  string closes.
+- **Command output was being classified as prose.** `systemctl list-units`
+  prints a DESCRIPTION column full of sentences, so `looksLikeProse` won and
+  reflowed a terminal listing. Provenance now outranks inference: `fromEnvelope`
+  is the fact that these bytes came out of a command; everything below it is a
+  guess from punctuation.
+- **The ledger and the answer card disagreed about the same bytes.** One drew a
+  terminal block while the other handed the identical content to markdown.
+- **A fallback was cached like an answer**, turning one transient registry miss
+  into thirty seconds of hard 502 — fourteen goals failed in about two seconds
+  from a blip that had already cleared.
+- **No discovery call had a timeout.** register, heartbeat and deregister all
+  used unbounded fetch, and a hung deregister leaves a vessel that has stopped
+  advertising, is 503-ing every dispatch, and is still running with no route
+  back into the registry. Observed twice on goal-host; each time it took the
+  measurement from 6/14 to 0/14 while the dispatcher was demonstrably alive.
+
+### The one surface failure that remains, and why it is not fixed
+
+Three goals — memory notes, the gap list, which vessels serve a shape — return a
+`{success, shape, body:{…}}` envelope whose payload is a nested OBJECT, cut off
+mid-structure at 2,000 of 66,000–96,000 characters. Prefix decoding cannot
+touch it: the string-payload case works because the payload's start is known and
+its content is fully determined up to the cut, and none of that is true of a
+fragment of nested structure. Laying it out would be the guess this component
+refuses to make, so it stays verbatim under a footer that says how much of it is
+showing.
+
+The real defect is upstream and belongs to the walk: `list the open gaps` should
+not hand a person 66KB of JSON. That is an aggregation the activity should do
+before the surface ever sees it, and no rendering decision can substitute for it.
+
+## 7. Still open
 
 - **The deep link still does not scroll to its run** (failure 0). Filmed, not fixed —
   it is a routing concern rather than a rendering one.
