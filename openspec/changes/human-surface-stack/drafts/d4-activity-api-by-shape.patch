@@ -1,0 +1,18 @@
+diff --git a/repos/human-surface-vessel/src/routes/proxy.ts b/repos/human-surface-vessel/src/routes/proxy.ts
+index 58eda5ec..10292c59 100644
+--- a/repos/human-surface-vessel/src/routes/proxy.ts
++++ b/repos/human-surface-vessel/src/routes/proxy.ts
+@@ -83,11 +83,10 @@ function upstreamHeaders(withJsonBody: boolean): Record<string, string> {
+  * resolving it by shape returns nothing. Going direct is the honest option;
+  * a shape lookup would fail closed and silently swallow every human verdict.
+  */
+-const ACTIVITY_API_ENDPOINT = (
++const ACTIVITY_API_ENDPOINT = (await candidateEndpointsFor("activityExecutionTrace"))[0] ??
+   process.env["ACTIVITY_API_ENDPOINT"] ??
+   process.env["ACTIVITY_API_URL"] ??
+-  "http://127.0.0.1:8080"
+-).replace(/\/+$/, "");
++  "http://127.0.0.1:8080";
+ 
+ const GOAL_HOST_CACHE_TTL_MS = 30_000;
+ /** Short on purpose: this runs per candidate, so a dead one must not stall the page. */
