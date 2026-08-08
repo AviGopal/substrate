@@ -323,9 +323,9 @@
     { "unit": "llm-resolver-google.service", "role": "compute", "repo": "llm-resolver-vessel" },
     { "unit": "llm-resolver-haiku.service", "role": "compute", "repo": "llm-resolver-vessel" },
     { "unit": "llm-resolver-opus.service", "role": "compute", "repo": "llm-resolver-vessel" },
-    { "unit": "novnc.service", "role": "ui" },
-    { "unit": "obsidian-desktop.service", "role": "ui", "repo": "obsidian-vessel" },
-    { "unit": "obsidian-xorg.service", "role": "ui", "repo": "obsidian-vessel" },
+    { "unit": "novnc.service", "role": "desktop" },
+    { "unit": "obsidian-desktop.service", "role": "desktop", "repo": "obsidian-vessel" },
+    { "unit": "obsidian-xorg.service", "role": "desktop", "repo": "obsidian-vessel" },
     {
       "_comment": "Below: the .service half of timer-driven units whose .timer was already listed. Governed in EFFECT today (mask the timer and nothing schedules them), but not by name — so a stray `systemctl start <unit>` reaches a unit no role selected. Roles here are copied from each unit's own timer, never guessed, so a role that selects the timer selects the service with it.",
       "unit": "auto-describe-resolvers.service",

@@ -180,6 +180,17 @@ converge_units() {
       dst="/usr/lib/systemd/system/$ubase"
       if ! cmp -s "$uf" "$dst" 2>/dev/null; then
         install -m 0644 "$uf" "$dst" 2>/dev/null && { log "units: converged $ubase"; UNITS_CHANGED=1; }
+        # A REAL file in /etc outranks /usr/lib, so the convergence above is
+        # inert for that unit — systemd keeps using the /etc copy and the log
+        # line still says "converged". vessel-ctl renders units into /etc, so
+        # every dynamically-installed vessel acquires such a shadow and freezes
+        # against every later systemd-level repair. Observed 2026-08-08:
+        # development-vessel kept its old ExecStartPost (and kept serializing
+        # the boot) while /usr/lib carried the fixed unit, with 8 units shadowed
+        # on one container. Say so rather than reporting a no-op as a success.
+        if [ -f "/etc/systemd/system/$ubase" ] && [ ! -L "/etc/systemd/system/$ubase" ]; then
+          log "units: !!! $ubase is SHADOWED by a real /etc/systemd/system/$ubase — the convergence above is INERT until that file is removed or re-rendered"
+        fi
       fi
     fi
   done
