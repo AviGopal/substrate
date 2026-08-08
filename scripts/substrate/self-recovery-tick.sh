@@ -76,6 +76,29 @@ csys() { if [ "$IN_CONTAINER" = 1 ]; then systemctl "$@"; else docker exec "$CON
 # mask (the ground truth boot just wrote) in the container's context; more robust
 # than re-deriving ENABLED_ROLES here.
 masked() { [ "$(csh "readlink /etc/systemd/system/$1 2>/dev/null" 2>/dev/null)" = "/dev/null" ]; }
+# Never installed (2026-08-08): a MANIFEST vessel's real unit is written to
+# /etc/systemd/system by `vessel-ctl install`, after readiness. Before that runs
+# the only unit by that name is the one baked into the image, whose
+# WorkingDirectory (/vessels/<v>) does not exist for a manifest vessel — it is
+# not shipped there. Starting it fails at CHDIR, forever.
+#
+# THIS WAS A BOOTSTRAP DEADLOCK, observed on a clean UI-only spoke: apply-
+# inventory does not mask manifest entries (by design — it never selects them
+# either), so nothing stopped this tick from "recovering" the baked unit. It
+# restart-looped it, readiness counted it down, `make up` exited non-zero, and
+# the launcher aborted BEFORE the install step that would have written the
+# correct unit. The immune system was holding the door shut on the cure.
+#
+# A manifest vessel with no rendered unit has not been installed yet. That is a
+# state to wait through, not a fault to repair.
+manifest_vessel() {
+  csh "for f in /workspace/substrate/fleet/vessels.manifest.json /usr/local/share/substrate/vessels.manifest.json; do
+         [ -f \"\$f\" ] || continue
+         jq -e --arg n '$1' 'any(.vessels[]; .name == \$n)' \"\$f\" >/dev/null 2>&1 && echo yes
+         break
+       done" 2>/dev/null | grep -q yes
+}
+not_installed() { ! csh "[ -f /etc/systemd/system/$1.service ]" 2>/dev/null; }
 # Still inside its own start phase (2026-08-03): a unit running ExecStartPre/
 # ExecStartPost — DB migrations, template seeding — is not yet serving /health,
 # so probing it reads as death. Restarting then aborts the start work and the
@@ -193,13 +216,18 @@ db_is_bottleneck() {
   [ "$DB_PRESSURE" = 1 ]
 }
 
-recovered=0; reverted=0; escalated=0; healthy_n=0; db_backoff=0; masked_skipped=0; starting_skipped=0
+recovered=0; reverted=0; escalated=0; healthy_n=0; db_backoff=0; masked_skipped=0; starting_skipped=0; uninstalled_skipped=0
 for entry in "${VESSELS[@]}"; do
   name="${entry%%:*}"; port="${entry##*:}"
   # Skip units apply-inventory masked for the active role: they are intentionally
   # down, so probing fails, restart is a no-op (unit masked), revert rewrites
   # /vessels/<v>/src every tick, and each pass escalates a bogus substrateGap.
   if masked "$name.service"; then masked_skipped=$((masked_skipped+1)); continue; fi
+  # A manifest vessel that has never been installed — see not_installed().
+  if manifest_vessel "$name" && not_installed "$name"; then
+    log "NOT INSTALLED: $name (:$port) — manifest vessel with no rendered unit; waiting for vessel-ctl install, not restarting the baked one"
+    uninstalled_skipped=$((uninstalled_skipped+1)); continue
+  fi
   # Give a unit its own start phase before judging it dead — see starting().
   if starting "$name.service"; then
     log "STARTING: $name (:$port) — still in its start phase; deferring to TimeoutStartSec (no restart this tick)"
@@ -261,4 +289,4 @@ if [ "$db_backoff" -gt 0 ]; then
 else
   streak_set 0
 fi
-echo "{\"healthy\":$healthy_n,\"recovered_by_restart\":$recovered,\"reverted_from_git\":$reverted,\"escalated\":$escalated,\"db_pressure_backoff\":$db_backoff,\"surreal_restarted\":$surreal_restarted,\"masked_skipped\":$masked_skipped,\"starting_skipped\":$starting_skipped}"
+echo "{\"healthy\":$healthy_n,\"recovered_by_restart\":$recovered,\"reverted_from_git\":$reverted,\"escalated\":$escalated,\"db_pressure_backoff\":$db_backoff,\"surreal_restarted\":$surreal_restarted,\"masked_skipped\":$masked_skipped,\"starting_skipped\":$starting_skipped,\"uninstalled_skipped\":$uninstalled_skipped}"
