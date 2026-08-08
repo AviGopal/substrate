@@ -259,6 +259,29 @@ converge_fleet_defs() {
       && log "fleet: converged $(basename "$_cf_to") (takes effect at next container start — this runs pre-systemd)"
   done
 
+  # THE CONVERGER MUST CONVERGE ITSELF. Every glue script above self-updates from git;
+  # substrate-pull-sync — the thing that performs all of it — did not appear in any
+  # list, so a repair to the deploy path could never deploy itself. Found the hard way:
+  # a fix for a starvation bug that was preventing four pushed commits from going live
+  # was itself unable to go live by the mechanism it repaired. That is a bootstrap
+  # deadlock, and the only two exits are an operator's hands or this block.
+  #
+  # Separate from the loop above only because that loop's message is accurate for
+  # pre-systemd scripts and wrong for this one: apply-inventory and gen-env are read by
+  # entrypoint at container start, while this file is exec'd fresh by systemd on every
+  # tick, so a converged copy is live on the NEXT TICK with no restart.
+  #
+  # Safe to replace while running: install-to-.new + atomic mv, so the executing
+  # process keeps its original inode and finishes on the code it started with. Never
+  # edited in place, which WOULD corrupt the running interpreter mid-read.
+  _ps_src="$_cf_src/substrate-pull-sync.sh"
+  _ps_dst="/usr/local/bin/substrate-pull-sync"
+  if [ -f "$_ps_src" ] && [ -e "$_ps_dst" ] && ! cmp -s "$_ps_src" "$_ps_dst" 2>/dev/null; then
+    install -m 0755 "$_ps_src" "$_ps_dst.new" 2>/dev/null \
+      && mv -f "$_ps_dst.new" "$_ps_dst" 2>/dev/null \
+      && log "fleet: converged substrate-pull-sync itself (takes effect on the NEXT tick — this run finishes on the old code)"
+  fi
+
   # secrets.env.sh — sourced by vessel-ctl on every manifest-vessel install, so
   # it runs at BOOT and it WRITES /workspace/.substrate-secrets. The image copy
   # truncated that file to the six keys it owns, deleting API_KEY_SECRET, which
