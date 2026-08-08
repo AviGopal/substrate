@@ -55,6 +55,21 @@ fi
 # datastore) — every vessel's DB auth then failed until manual recovery
 # (observed live 2026-07-02). Each secret now independently falls back to the
 # persisted value, so a warm volume always wins over a fresh random.
+# SUBSTRATE_ROOT is defaulted HERE, before anything expands it.
+#
+# It is referenced inside the /etc/substrate/env heredoc far below, and this
+# script runs under `set -u`. While its only assignment lived after that
+# heredoc, every launch that did not pass -e SUBSTRATE_ROOT aborted with
+# "SUBSTRATE_ROOT: unbound variable" before writing any env at all — the
+# container exited 1 within seconds.
+#
+# That was not a corner case. The Makefile's run targets pass it explicitly, so
+# the `make up` path always worked; the raw `docker run` path never did. The
+# raw path is the one the README presents as the canonical checkout-free quick
+# start, and it fails identically on the PUBLISHED image (verified 2026-08-08).
+# The value below is exactly what the Makefile passes, so both paths agree.
+SUBSTRATE_ROOT="${SUBSTRATE_ROOT:-/workspace/git/super-repo}"
+
 SECRETS_FILE="/workspace/.substrate-secrets"
 persisted_secret() {
   [[ -f "$SECRETS_FILE" ]] && grep -m1 "^$1=" "$SECRETS_FILE" | cut -d= -f2- || true
@@ -288,14 +303,22 @@ GOOGLE_API_KEY="${GOOGLE_API_KEY:-}"
 GROQ_API_KEY="${GROQ_API_KEY:-}"
 MISTRAL_API_KEY="${MISTRAL_API_KEY:-}"
 LLM_DEFAULT_MODEL="${LLM_DEFAULT_MODEL:-}"
-# Substrate root inside the container = the container-native super-repo clone
-# (/workspace/git/super-repo, passed in via -e SUBSTRATE_ROOT). The container
-# is unmoored from the host filesystem: no host repo bind. Every tick unit
-# references its script as \${SUBSTRATE_ROOT}/scripts/substrate/... and the
-# substrate keeps the clone current by pulling origin/dev itself. Empty here
-# means SUBSTRATE_ROOT was not passed — units will fail loudly rather than
-# read a stale hardcoded path.
-SUBSTRATE_ROOT="${SUBSTRATE_ROOT:-}"
+# Substrate root inside the container = the container-native super-repo clone.
+# The container is unmoored from the host filesystem: no host repo bind. Every
+# tick unit references its script as \${SUBSTRATE_ROOT}/scripts/substrate/...
+# and the substrate keeps the clone current by pulling origin/dev itself.
+#
+# DEFAULTED, not left empty, and defaulted EARLY — see the assignment near the
+# top of this file. This line is now only a no-op re-affirmation kept for
+# readability. It used to be the sole assignment, which made the documented
+# checkout-free launch impossible: the env heredoc above expands
+# ${SUBSTRATE_ROOT} roughly thirty lines BEFORE this point, and gen-env runs
+# under `set -u`, so any `docker run` that did not pass -e SUBSTRATE_ROOT died
+# with "SUBSTRATE_ROOT: unbound variable" before writing a single line of env.
+# The Makefile's run targets pass it explicitly, so the make path always worked
+# and the raw path never did — including the README's own quick-start command,
+# verified against the PUBLISHED image on 2026-08-08.
+SUBSTRATE_ROOT="${SUBSTRATE_ROOT:-/workspace/git/super-repo}"
 # Workspace root for file/dir resolvers (fs_list, fs_read, shell CWD) — law 11
 # (location independence): every vessel must resolve a relative path ("docs") to
 # the SAME place regardless of where its process runs. Anchor it to the container
