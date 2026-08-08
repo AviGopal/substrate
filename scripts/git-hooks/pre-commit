@@ -356,4 +356,49 @@ else
   printf '%s\n' "      install: ${DIM}brew install gitleaks${NC} | ${DIM}go install github.com/gitleaks/gitleaks/v8@latest${NC} | ${DIM}https://github.com/gitleaks/gitleaks/releases${NC}"
 fi
 
+# ── human-surface: a UI source change must carry its rebuilt bundle ──────────
+#
+# WHY THIS IS A GATE AND NOT A CONVENTION. repos/human-surface-vessel/ui/dist is
+# TRACKED because the substrate updates itself by pulling this repo and nothing
+# rebuilds on pull — git is the only channel that reaches a running surface. So
+# a commit that changes ui/src without its dist ships source the deployment
+# will never render, and fails SILENTLY: the vessel boots, /health is green,
+# and a person sees yesterday's page. That exact state ran on two deployments
+# for a full day (2026-08-08).
+#
+# Deliberately narrow: it only asks whether dist was rebuilt alongside src, not
+# whether the bundle is byte-correct. It cannot cover a commit path that skips
+# hooks — substrate-authored commits included — which is a real remaining hole
+# and is named as such rather than papered over.
+mapfile -t UI_SRC_STAGED < <(
+  git diff --cached --name-only --diff-filter=ACMR \
+    | grep -E '^repos/human-surface-vessel/ui/(src/|index\.html$|vite\.config|package\.json$)' || true
+)
+if [[ ${#UI_SRC_STAGED[@]} -gt 0 ]]; then
+  mapfile -t UI_DIST_STAGED < <(
+    git diff --cached --name-only --diff-filter=ACMRD \
+      | grep -E '^repos/human-surface-vessel/ui/dist/' || true
+  )
+  if [[ ${#UI_DIST_STAGED[@]} -eq 0 ]]; then
+    printf '\n%s\n' "${RED}━━━ human-surface: UI source staged without a rebuilt bundle ━━━${NC}"
+    printf '%s\n' "staged UI source:"
+    printf '  %s\n' "${UI_SRC_STAGED[@]}"
+    cat <<'EOF'
+
+ui/dist is tracked on purpose: the substrate pulls this repo to update itself
+and nothing rebuilds on pull, so an unbuilt change reaches no running surface.
+It fails silently — the vessel stays healthy and serves the previous bundle.
+
+Rebuild and stage it:
+  docker run --rm -v "$PWD":/w -w /w/repos/human-surface-vessel/ui \
+    -e HOME=/tmp oven/bun:1 sh -c 'bun install --silent && bun run build'
+  git add repos/human-surface-vessel/ui/dist
+
+Bypass (only when the change genuinely cannot affect the bundle):
+  git commit --no-verify
+EOF
+    exit 1
+  fi
+fi
+
 exit 0
