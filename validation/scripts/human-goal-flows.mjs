@@ -25,7 +25,12 @@ const arg = (name, fallback) => {
   return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 };
 
-const SURFACE = arg("--surface", "http://localhost:18310");
+// The DEPLOYED surface (substrate-ui publishes the vessel's 8310 on 19310), not
+// a dev container. An earlier default pointed at a bind-mounted scratch
+// container on 18310: it served the right source, so the numbers were real, but
+// they said nothing about any deployment — and the moment that container
+// stopped, the default aimed at nothing. Measure what is deployed.
+const SURFACE = arg("--surface", "http://localhost:19310");
 const ONLY = arg("--only", null);
 const OUT = arg("--out", "/tmp/human-goal-flows.json");
 const SETTLE_TIMEOUT_MS = 6 * 60 * 1000;
@@ -94,8 +99,20 @@ const ESCAPED_NL = /\\n/;
  * person can act on.
  */
 async function judgeRenderedEvidence(page, dispatchId) {
-  await page.goto(`${SURFACE}/run/${dispatchId}`, { waitUntil: "networkidle", timeout: 60_000 });
-  await page.waitForTimeout(3500);
+  // NOT networkidle. The surface holds an SSE stream open on /api/stream, so
+  // there is never a 500ms window with zero connections — networkidle is
+  // structurally unreachable here. It settled once by luck and then hung a
+  // whole run on the next goal. Wait for the thing being judged instead: the
+  // evidence heading, polled with a bound.
+  await page.goto(`${SURFACE}/run/${dispatchId}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page
+    .waitForFunction(
+      () => (document.body.innerText ?? "").toLowerCase().includes("what it produced"),
+      undefined,
+      { timeout: 60_000, polling: 500 },
+    )
+    .catch(() => {}); // absence is a judgeable outcome below, not a crash
+  await page.waitForTimeout(1500);
 
   const seen = await page.evaluate(() => {
     const all = document.body.innerText ?? "";
@@ -209,7 +226,23 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 
 const results = [];
 for (const [i, entry] of corpus.entries()) {
-  const r = await runOne(page, entry, i);
+  // One goal must never end the pass. A page.goto timeout on goal 2 previously
+  // killed a 14-goal run and left a single line of output — a measurement that
+  // stops early reports a smaller denominator, which reads as a better result.
+  // Record the crash AS the outcome and keep going.
+  let r;
+  try {
+    r = await runOne(page, entry, i);
+  } catch (err) {
+    r = {
+      ...entry,
+      i,
+      outcome: "unreadable",
+      detail: `harness error: ${err?.message?.split("\n")[0] ?? String(err)}`,
+      forms: [],
+      ms: 0,
+    };
+  }
   results.push(r);
   const flag =
     r.outcome === "usable" ? "OK  " : r.outcome === "reached-false-but-readable" ? "SOFT" : "FAIL";
