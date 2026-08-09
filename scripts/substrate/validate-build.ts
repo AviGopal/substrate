@@ -255,7 +255,17 @@ if (recordedPointers.size === 0) {
     // (b) the recorded pointer must exist on a remote, or `clone --recursive` fails
     //     outright for everyone except the machine that built it. Remote-tracking
     //     refs can be stale, hence the fetch hint rather than a bare accusation.
-    const onRemote = git(vDir, `branch -r --contains ${recorded}`);
+    //
+    //     Two cases make `--contains` answer "no" while the pointer is perfectly
+    //     fetchable, and both must be skipped or this check cries wolf:
+    //       - a SHALLOW clone has no history to walk, so --contains is empty for
+    //         every SHA including the one it just checked out. Verified: a
+    //         `--depth 1 --shallow-submodules` clone reported all 11 vessels
+    //         unfetchable moments after successfully fetching them.
+    //       - a repo with no remote-tracking refs at all has nothing to contain it.
+    const isShallow = git(vDir, "rev-parse --is-shallow-repository") === "true";
+    const hasRemoteRefs = (git(vDir, "branch -r") ?? "") !== "";
+    const onRemote = isShallow || !hasRemoteRefs ? null : git(vDir, `branch -r --contains ${recorded}`);
     if (onRemote !== null && onRemote === "") {
       repro(
         vessel,
