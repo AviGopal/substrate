@@ -181,6 +181,106 @@ for (const [vessel, { frozen, seds }] of containerized) {
   }
 }
 
+// --- reproducibility: would a fresh `clone --recursive` build THIS source? ---
+// The Docker build context is the super-repo working tree, so `COPY repos/<v>/src`
+// ships whatever each submodule happens to have checked out right now. A fresh
+// clone instead checks out the SHA the super-repo RECORDS. When those disagree,
+// the image built here is not the image git describes.
+//
+// This is the same trap as the untracked-lockfile check above, one level up: a
+// dirty dev tree masks what a clean checkout would produce. It is not theoretical
+// — on 2026-08-09 the recorded pointers were 30 commits behind six vessels whose
+// work was pushed, so `clone --recursive && make up` built a substrate missing the
+// mitosis test-delta fix and the pathless-goal resolution, with no signal anywhere.
+//
+// Drift is legitimate mid-change (you commit the vessel before bumping the
+// pointer), so these WARN by default and only fail under --strict-repro, which
+// release and CI builds should set.
+const STRICT_REPRO = process.argv.includes("--strict-repro");
+const repro = STRICT_REPRO ? err : warn;
+
+function git(dir: string, args: string): string | null {
+  try {
+    return execSync(`git -C "${dir}" ${args}`, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return null; // not a checkout, or git unavailable — callers treat null as "cannot tell"
+  }
+}
+
+// Recorded pointers, one call for the whole tree: "<mode> commit <sha>\trepos/<v>".
+const recordedPointers = new Map<string, string>();
+for (const line of (git(REPO_ROOT, "ls-tree HEAD repos/") ?? "").split("\n")) {
+  const m = line.match(/^\S+\s+commit\s+([0-9a-f]{40})\s+repos\/(\S+)$/);
+  if (m) recordedPointers.set(m[2], m[1]);
+}
+
+if (recordedPointers.size === 0) {
+  warn("(super-repo)", "could not read submodule pointers via git ls-tree — reproducibility unchecked");
+} else {
+  for (const [vessel] of containerized) {
+    const vDir = join(REPO_ROOT, "repos", vessel);
+    const recorded = recordedPointers.get(vessel);
+    const head = git(vDir, "rev-parse HEAD");
+    if (!recorded || !head) continue; // vendored in-tree, not a submodule — nothing to compare
+
+    // (a) checkout vs recorded pointer. Direction matters for the remedy: ahead
+    //     means the pointer needs bumping, behind means the checkout is stale and
+    //     a clone would ship NEWER code than this build. A bare count reads as
+    //     "+0" for the behind case, which is why this spells the direction out.
+    if (head !== recorded) {
+      const ahead = Number(git(vDir, `rev-list --count ${recorded}..HEAD`) ?? "-1");
+      const behind = Number(git(vDir, `rev-list --count HEAD..${recorded}`) ?? "-1");
+      const where =
+        ahead > 0 && behind > 0
+          ? `diverged (${ahead} ahead, ${behind} behind)`
+          : ahead > 0
+            ? `${ahead} commit(s) AHEAD of the pointer — the pointer needs bumping`
+            : behind > 0
+              ? `${behind} commit(s) BEHIND the pointer — a fresh clone ships NEWER code than this build`
+              : "differs";
+      const remedy =
+        behind > 0 && ahead === 0
+          ? `git submodule update --init repos/${vessel}`
+          : `git add repos/${vessel} && git commit`;
+      repro(
+        vessel,
+        `checkout ${head.slice(0, 8)} != super-repo pointer ${recorded.slice(0, 8)}: ${where}. ` +
+          `The image built here ships the checkout; a fresh clone ships the pointer. Remedy: ${remedy}`,
+      );
+    }
+
+    // (b) the recorded pointer must exist on a remote, or `clone --recursive` fails
+    //     outright for everyone except the machine that built it. Remote-tracking
+    //     refs can be stale, hence the fetch hint rather than a bare accusation.
+    const onRemote = git(vDir, `branch -r --contains ${recorded}`);
+    if (onRemote !== null && onRemote === "") {
+      repro(
+        vessel,
+        `super-repo pins ${recorded.slice(0, 8)}, which is on NO remote-tracking branch — ` +
+          `\`git clone --recursive\` cannot fetch it. Push the vessel, or run ` +
+          `\`git -C repos/${vessel} fetch\` if the refs are just stale.`,
+      );
+    }
+
+    // (c) uncommitted work never reaches a clone. Untracked files DO enter the
+    //     Docker build context (COPY reads the filesystem, not the index), so they
+    //     are the more deceptive half: they build here and vanish elsewhere.
+    const porcelain = git(vDir, "status --porcelain");
+    if (porcelain) {
+      const lines = porcelain.split("\n").filter(Boolean);
+      const untracked = lines.filter((l) => l.startsWith("??")).length;
+      const modified = lines.length - untracked;
+      const parts: string[] = [];
+      if (modified) parts.push(`${modified} uncommitted change(s)`);
+      if (untracked) parts.push(`${untracked} untracked path(s) — these DO enter the build context`);
+      repro(vessel, `working tree is dirty: ${parts.join(", ")}. None of it exists in a fresh clone.`);
+    }
+  }
+}
+
 // --- migration progress report (informational) ---
 let metabobNames = 0;
 for (const [vessel] of containerized) {
