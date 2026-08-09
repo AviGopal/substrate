@@ -125,7 +125,18 @@ else
     STATE="$(systemctl --user is-active "$U.timer" 2>/dev/null || true)"
     case "$STATE" in
       active)
-        ok "$U.timer active"
+        # An active timer proves scheduling, not work: the service can fail on
+        # every single firing while the timer stays green forever. Judge the
+        # service by its Result, NOT by is-active — these are oneshots, so
+        # "inactive" with ExecMainStatus 0 is the healthy steady state and
+        # treating it as down would report every working host as broken.
+        RESULT="$(systemctl --user show -p Result --value "$U.service" 2>/dev/null || true)"
+        if [ -n "$RESULT" ] && [ "$RESULT" != "success" ]; then
+          bad "$U.timer is active but its last run FAILED (Result=$RESULT)"
+          note "the timer will keep firing and keep failing; journalctl --user -u $U.service -n 50"
+        else
+          ok "$U.timer active, last run ${RESULT:-not yet run}"
+        fi
         ;;
       failed)
         bad "$U.timer is FAILED — host/substrate convergence is not running"
