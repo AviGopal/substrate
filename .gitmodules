@@ -1,76 +1,76 @@
 [submodule "repos/concept-db"]
 	path = repos/concept-db
-	url = https://github.com/AviGopal/concept-db.git
+	url = ../concept-db.git
 	branch = dev
 
 [submodule "repos/discovery-vessel"]
 	path = repos/discovery-vessel
-	url = https://github.com/AviGopal/discovery-vessel.git
+	url = ../discovery-vessel.git
 	branch = dev
 
 [submodule "repos/identity-vessel"]
 	path = repos/identity-vessel
-	url = https://github.com/AviGopal/identity-vessel.git
+	url = ../identity-vessel.git
 	branch = dev
 
 [submodule "repos/activity-api"]
 	path = repos/activity-api
-	url = https://github.com/AviGopal/activity-api.git
+	url = ../activity-api.git
 	branch = dev
 
 [submodule "repos/cpg-inference-ts"]
 	path = repos/cpg-inference-ts
-	url = https://github.com/AviGopal/cpg-inference-ts.git
+	url = ../cpg-inference-ts.git
 	branch = dev
 [submodule "repos/development-vessel"]
 	path = repos/development-vessel
-	url = https://github.com/AviGopal/development-vessel.git
+	url = ../development-vessel.git
 	branch = dev
 [submodule "repos/analysis-vessel"]
 	path = repos/analysis-vessel
-	url = https://github.com/AviGopal/analysis-vessel.git
+	url = ../analysis-vessel.git
 	branch = dev
 [submodule "repos/ias-executor-ts"]
 	path = repos/ias-executor-ts
-	url = https://github.com/AviGopal/ias-executor-ts.git
+	url = ../ias-executor-ts.git
 	branch = dev
 [submodule "repos/boredom-vessel"]
 	path = repos/boredom-vessel
-	url = https://github.com/AviGopal/boredom-vessel.git
+	url = ../boredom-vessel.git
 	branch = dev
 [submodule "repos/goal-host-vessel"]
 	path = repos/goal-host-vessel
-	url = https://github.com/AviGopal/goal-host-vessel.git
+	url = ../goal-host-vessel.git
 	branch = dev
 [submodule "repos/llm-resolver-vessel"]
 	path = repos/llm-resolver-vessel
-	url = https://github.com/AviGopal/llm-resolver-vessel.git
+	url = ../llm-resolver-vessel.git
 	branch = dev
 [submodule "repos/local-tools-vessel"]
 	path = repos/local-tools-vessel
-	url = https://github.com/AviGopal/local-tools-vessel.git
+	url = ../local-tools-vessel.git
 	branch = dev
 [submodule "repos/ribosome-vessel"]
 	path = repos/ribosome-vessel
-	url = https://github.com/AviGopal/ribosome-vessel.git
+	url = ../ribosome-vessel.git
 	branch = dev
 [submodule "repos/stateful-ui-vessel"]
 	path = repos/stateful-ui-vessel
-	url = https://github.com/AviGopal/stateful-ui-vessel.git
+	url = ../stateful-ui-vessel.git
 	branch = dev
 [submodule "repos/light-dispatch-vessel"]
 	path = repos/light-dispatch-vessel
-	url = https://github.com/AviGopal/light-dispatch-vessel.git
+	url = ../light-dispatch-vessel.git
 	branch = dev
 [submodule "repos/metric-collector-vessel"]
 	path = repos/metric-collector-vessel
-	url = https://github.com/AviGopal/metric-collector-vessel.git
+	url = ../metric-collector-vessel.git
 	branch = dev
 [submodule "repos/obsidian-vessel"]
 	path = repos/obsidian-vessel
-	url = https://github.com/AviGopal/obsidian-vessel.git
+	url = ../obsidian-vessel.git
 	branch = dev
 [submodule "repos/libp2p-federation-transport"]
 	path = repos/libp2p-federation-transport
-	url = https://github.com/AviGopal/libp2p-federation-transport.git
+	url = ../libp2p-federation-transport.git
 	branch = dev
