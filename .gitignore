@@ -267,3 +267,8 @@ scripts/substrate/workspace/
 
 # Recording artefacts — regenerable, never commit
 .video/
+
+# Extensionless copies make(1) creates from *.sh via its implicit rules when a
+# bad target name is passed. They are byte-identical duplicates that would enter
+# the Docker build context and shadow the real script.
+/scripts/substrate/mirror-to-live
