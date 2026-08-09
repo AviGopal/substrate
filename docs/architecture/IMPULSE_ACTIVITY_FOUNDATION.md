@@ -862,6 +862,26 @@ The system has access to two bounded subsets:
 
 **Reachable subgraph** — the shapes producible by resolvers across the vessels connected to the network. A shape is reachable if some connected vessel advertises a resolver contract for producing it. The reachable subgraph may span millions of vessels and trillions of resolvers; vessel registration with discovery-vessel makes resolver contracts visible without requiring any single vessel to enumerate all possibilities.
 
+> **Advertised is a claim; demonstrated is a fact. Do not conflate them.** Advertisement
+> is what a vessel says it can produce. It is the right basis for *routing* — the walk
+> must be able to try an edge before that edge has ever succeeded, or nothing new is ever
+> attempted. It is the wrong basis for *coverage*: an edge that has never once succeeded
+> is indistinguishable, under an advertisement-only definition, from one that succeeds
+> every time.
+>
+> An edge therefore carries two independent facts: whether it is advertised, and whether
+> it has ever been *demonstrated* — at least one traced execution that produced the shape
+> with substantive content. Three states are worth separating, because each names a
+> different repair: **never-attempted** (a coverage hole — go try it), **never-succeeded
+> despite attempts** (a build defect — the producer itself is broken, and this names a
+> file), and **succeeded-then-stopped** (a regression — bisect it against deploys).
+>
+> This distinction is not theoretical. A maintenance activity was advertised, selected,
+> and dispatched 36 times over weeks while its target metric never moved: five independent
+> defects stood between it and its resolver, and every one of them was invisible to a
+> coverage measure that asked only whether the shape was advertised. Anything that reports
+> coverage must say which of the three states it is counting.
+
 **Learned topology** — the sampled portion of the reachable subgraph. Every execution trace is a data point. Composition edges between activities carry α/β posteriors derived from trace outcomes. Thompson Sampling models the probability that a given path leads to a goal-satisfying state. The learned topology grows with each execution.
 
 ```
