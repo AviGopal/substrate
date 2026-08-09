@@ -210,9 +210,19 @@ fi
 #                                      and substrate-ready.sh poll.
 #   journald-stdout-forwarder          role infra — makes `docker logs` useful.
 #   self-recovery.timer                role infra — restarts the surface if it
-#                                      dies (the manifest sets self_recovery).
+#     + self-recovery.service          dies (the manifest sets self_recovery).
 #   substrate-pull-sync.timer          role infra — pulls substrate-authored
-#                                      commits into the in-container clones.
+#     + substrate-pull-sync.service    commits into the in-container clones.
+#
+# NAME THE .service WITH ITS .timer. ENABLED_VESSELS is an EXPLICIT list that
+# overrides role selection, so a unit it does not name is masked — including the
+# .service a listed .timer exists to trigger. systemd then refuses the timer
+# outright ("Refusing to start, unit X.service to trigger not loaded"), and the
+# result reads as a scheduler that is enabled and simply never due. Observed
+# 2026-08-08: both timers above were enabled and dead on a UI-only spoke, so the
+# box could neither converge to origin nor restart its own surface, and sat 13
+# commits behind with nothing reporting a fault. A timer without its service is
+# not a degraded schedule — it is no schedule at all.
 #
 # Deliberately EXCLUDED, with the reason:
 #   identity-vessel        role control — the hub is the single validator; the
@@ -231,7 +241,7 @@ fi
 # federation-transport-vessel is absent for the same reason as the human
 # surface: it is a manifest vessel, and entrypoint.sh auto-installs and
 # boot-enables it whenever HUB_DISCOVERY_URL is set — which the spoke path sets.
-UI_ONLY_VESSELS="surrealdb.service,valkey.service,discovery-vessel.service,git-push-setup.service,substrate-ready.service,journald-stdout-forwarder.service,self-recovery.timer,substrate-pull-sync.timer"
+UI_ONLY_VESSELS="surrealdb.service,valkey.service,discovery-vessel.service,git-push-setup.service,substrate-ready.service,journald-stdout-forwarder.service,self-recovery.timer,self-recovery.service,substrate-pull-sync.timer,substrate-pull-sync.service"
 
 SURFACE_PORT=$(( OFFSET + SURFACE_BASE_PORT ))
 SURFACE_URL="http://127.0.0.1:${SURFACE_PORT}"

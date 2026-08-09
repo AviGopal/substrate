@@ -92,6 +92,40 @@ if [ -n "${ENABLED_EXTRA_VESSELS:-}" ]; then
 $EXTRA"
 fi
 
+# A DESIRED .timer pulls in the .service it triggers.
+#
+# Every selection route above can name a .timer without its .service: an
+# explicit ENABLED_VESSELS or PROFILE list is the whole desired set, so a unit
+# it forgets is masked. systemd does not degrade gracefully here — it refuses
+# the timer outright ("Refusing to start, unit X.service to trigger not
+# loaded"), so the timer reads as enabled while no schedule exists at all.
+#
+# Observed 2026-08-08 on a UI-only spoke: ENABLED_VESSELS named
+# substrate-pull-sync.timer and self-recovery.timer but neither .service. Both
+# services were masked, both timers refused to start every boot, and the box
+# could neither converge to origin/dev nor restart its own surface — 13 commits
+# behind with nothing reporting a fault. The failure is silent by construction,
+# which is why this closes the set rather than only warning about it.
+#
+# Runs BEFORE the DISABLED subtraction, so an operator who deliberately masks a
+# .service still wins — this supplies an omission, it does not override intent.
+# Only pairs the inventory actually ships are added.
+_paired=""
+for _t in $DESIRED; do
+  case "$_t" in
+    *.timer) ;;
+    *) continue ;;
+  esac
+  _svc="${_t%.timer}.service"
+  if echo "$DESIRED" | grep -qx "$_svc"; then continue; fi
+  if manageable_units | grep -qx "$_svc"; then
+    _paired="$_paired $_svc"
+    DESIRED="$DESIRED
+$_svc"
+  fi
+done
+[ -n "$_paired" ] && log "paired with a desired .timer (would have been masked):$_paired"
+
 # Subtract DISABLED_VESSELS.
 DISABLED_EXPLICIT="$(csv "${DISABLED_VESSELS:-}")"
 
