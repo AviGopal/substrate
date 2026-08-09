@@ -734,6 +734,7 @@ sync-development-vessel:
 	@for f in $(DEV_VESSEL_SRC)/src/observers/*.ts; do \
 	    docker cp $$f $(LIVE_NAME):/vessels/development-vessel/src/observers/$$(basename $$f); \
 	done
+	@$(CURDIR)/warn-baseline-drift.sh development-vessel $(LIVE_NAME)
 	@echo "[sync] development-vessel source synced to substrate-live"
 
 restart-development-vessel: sync-development-vessel
@@ -744,6 +745,7 @@ restart-development-vessel: sync-development-vessel
 # Sync local-tools-vessel source into the running container then restart it.
 sync-local-tools-vessel:
 	docker cp $(LOCAL_TOOLS_SRC)/src/. $(LIVE_NAME):/vessels/local-tools-vessel/src/
+	@$(CURDIR)/warn-baseline-drift.sh local-tools-vessel $(LIVE_NAME)
 	@echo "[sync] local-tools-vessel source synced to substrate-live"
 
 restart-local-tools-vessel: sync-local-tools-vessel
@@ -754,6 +756,7 @@ restart-local-tools-vessel: sync-local-tools-vessel
 # Sync llm-resolver-vessel source into the running container then restart it.
 sync-llm-resolver-vessel:
 	docker cp $(LLM_VESSEL_SRC)/src/. $(LIVE_NAME):/vessels/llm-resolver-vessel/src/
+	@$(CURDIR)/warn-baseline-drift.sh llm-resolver-vessel $(LIVE_NAME)
 	@echo "[sync] llm-resolver-vessel source synced to substrate-live"
 
 restart-llm-resolver-vessel: sync-llm-resolver-vessel
@@ -771,6 +774,7 @@ restart-llm-resolver-vessel: sync-llm-resolver-vessel
 # existing ones are overwritten in place.
 sync-goal-host-vessel:
 	docker cp $(GOAL_HOST_SRC)/src/. $(LIVE_NAME):/vessels/goal-host-vessel/src/
+	@$(CURDIR)/warn-baseline-drift.sh goal-host-vessel $(LIVE_NAME)
 	@echo "[sync] goal-host-vessel source synced to substrate-live"
 
 restart-goal-host-vessel: sync-goal-host-vessel
@@ -803,6 +807,7 @@ restart-light-dispatch-vessel: sync-light-dispatch-vessel
 # Sync boredom-vessel source into the running container then trigger a manual run.
 sync-boredom-vessel:
 	docker cp $(BOREDOM_VESSEL_SRC)/src/. $(LIVE_NAME):/vessels/boredom-vessel/src/
+	@$(CURDIR)/warn-baseline-drift.sh boredom-vessel $(LIVE_NAME)
 	@echo "[sync] boredom-vessel source synced to substrate-live"
 
 trigger-boredom-vessel: sync-boredom-vessel
@@ -813,6 +818,7 @@ trigger-boredom-vessel: sync-boredom-vessel
 # Sync ribosome-vessel source into the running container then restart it.
 sync-ribosome-vessel:
 	docker cp $(RIBOSOME_VESSEL_SRC)/src/. $(LIVE_NAME):/vessels/ribosome-vessel/src/
+	@$(CURDIR)/warn-baseline-drift.sh ribosome-vessel $(LIVE_NAME)
 	@echo "[sync] ribosome-vessel source synced to substrate-live"
 
 restart-ribosome-vessel: sync-ribosome-vessel
