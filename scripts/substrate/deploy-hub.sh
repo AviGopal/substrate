@@ -111,9 +111,26 @@ RELAY_MULTIADDR="${RELAY_MULTIADDR:-$(grep -oE '/ip4/[^ "]*p2p/[A-Za-z0-9]+' "$H
 # memoryNote/compose_lesson/reach_gate_lesson against the hub. Without these two
 # the spoke's drafter reads no lessons and its recipe goal-generator (which is
 # fail-open on concept-db) mints nothing — silently, with no error anywhere.
+# Compute vessels the hub runs ON TOP of the `hub` role group. The hub role is
+# store/control/api/transport/seed/infra/registry and deliberately excludes
+# `compute` — but a hub still dispatches goals, so goal-host-vessel and its
+# neighbours have to be named here or they are masked.
+#
+# This list is what the hub was ACTUALLY running on 2026-08-08, recovered from
+# the live container. It had never been declared anywhere: the additive
+# ENABLED_EXTRA_VESSELS path did not exist in the deployed image, so these units
+# had been unmasked BY HAND inside the container. That state was invisible to
+# every config file and did not survive a recreate — the hub's own fleet was not
+# reproducible from its own deploy script, and nothing could detect that because
+# nothing ever recreated it.
+#
+# goal-host-vessel is the load-bearing entry: omit it and the hub answers no
+# dispatches at all, while still looking healthy on :18080/:18100.
+HUB_EXTRA_VESSELS="${HUB_EXTRA_VESSELS:-goal-host-vessel.service,development-vessel.service,local-tools-vessel.service,ribosome-vessel.service,analysis-vessel.service,light-dispatch-vessel.service}"
+
 docker run -d --name substrate-live --privileged \
   -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
-  -e ENABLED_ROLES=hub -e ENABLED_EXTRA_VESSELS="${ENABLED_EXTRA_VESSELS:-development-vessel.service,light-dispatch-vessel.service}" -e SUBSTRATE_BIND_HOST=0.0.0.0 \
+  -e ENABLED_ROLES=hub -e ENABLED_EXTRA_VESSELS="${ENABLED_EXTRA_VESSELS:-$HUB_EXTRA_VESSELS}" -e SUBSTRATE_BIND_HOST=0.0.0.0 \
   -e SUBSTRATE_ROOT="${SUBSTRATE_ROOT:-/workspace/git/super-repo}" \
   -e PUBLIC_IP="$PUBLIC_IP" -e FED_PUBLIC_IP="$PUBLIC_IP" \
   -e RELAY_MULTIADDR="$RELAY_MULTIADDR" \
