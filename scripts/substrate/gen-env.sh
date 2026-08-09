@@ -526,7 +526,25 @@ echo "[gen-env] wrote per-model llm-resolver env files (opus, haiku, google)"
 
 # Persist generated secrets to workspace so restarts reuse the same values.
 # This file is bind-mounted from the host at /workspace.
-cat > /workspace/.substrate-secrets <<SECRETS
+#
+# Written to a TEMP file and merged below — never straight over the real one.
+# The bare overwrite this replaces took the hub down on 2026-08-08: the live file
+# had been written by an older revision of the list, so it carried
+# FEDERATION_SIGNING_SECRET and FEDERATION_PEER_AUTH_MODE (absent here) while
+# LACKING API_KEY_SECRET (present here since). API_KEY_SECRET therefore existed
+# only in the running container's process env, and the hub had been unable to
+# boot from its own volumes for about a week — a latent failure that any
+# recreate, redeploy, or host reboot would have hit. Nothing detected it, because
+# nothing ever restarted the container (the same blind spot as the restart
+# breakage found earlier the same day).
+#
+# The list on this heredoc is a MOVING TARGET across revisions, so "list every
+# durable secret here" is a rule that cannot hold by inspection — it fails
+# silently and only at the next boot. Merge instead: keys this run knows about
+# win, and any key already persisted that this revision has never heard of is
+# carried through untouched.
+_SECRETS_TMP="$(mktemp)"
+cat > "$_SECRETS_TMP" <<SECRETS
 # Substrate internal secrets — auto-generated on first run, reused on restart.
 # DO NOT commit this file. Add workspace/.substrate-secrets to .gitignore.
 JWT_SECRET=${JWT_SECRET}
@@ -555,5 +573,35 @@ RUNPOD_COST_PER_MTOK=${RUNPOD_COST_PER_MTOK:-}
 # explicit value round-trips; a hub-derived spoke default is re-derived each run.
 PEER_DISCOVERY_ENDPOINTS=${PEER_DISCOVERY_ENDPOINTS_EXPLICIT:-}
 SECRETS
+
+# Merge: carry through any key the OLD file has that this revision never emits,
+# so a secret written by a different revision of the list above survives. Keys
+# this run does emit always win, including deliberate blanks. Comments and blank
+# lines come from the freshly generated side only.
+if [[ -f /workspace/.substrate-secrets ]]; then
+  _known="$(grep -oE '^[A-Za-z_][A-Za-z0-9_]*=' "$_SECRETS_TMP" | tr -d '=' || true)"
+  _carried=0
+  while IFS= read -r _line; do
+    case "$_line" in ''|'#'*) continue ;; esac
+    _k="${_line%%=*}"
+    [[ "$_k" == "$_line" ]] && continue                       # no '=' — not a field
+    [[ ! "$_k" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] && continue     # not a shell-safe name
+    if ! printf '%s\n' "$_known" | grep -qx "$_k"; then
+      printf '%s\n' "$_line" >> "$_SECRETS_TMP"
+      _carried=$((_carried + 1))
+      echo "[gen-env] carried over unrecognised persisted secret: $_k" >&2
+    fi
+  done < /workspace/.substrate-secrets
+  # Keep one generation of history: this is the only copy of anything the merge
+  # mishandles, and it costs nothing.
+  cp -p /workspace/.substrate-secrets /workspace/.substrate-secrets.prev 2>/dev/null || true
+  chmod 600 /workspace/.substrate-secrets.prev 2>/dev/null || true
+  [[ "$_carried" -gt 0 ]] && echo "[gen-env] merged $_carried secret(s) this revision does not emit" >&2
+fi
+
+# Install atomically, so an interrupted write cannot leave a truncated file that
+# the next boot reads as "this secret was never persisted".
+chmod 600 "$_SECRETS_TMP"
+mv -f "$_SECRETS_TMP" /workspace/.substrate-secrets
 chmod 600 /workspace/.substrate-secrets
 echo "[gen-env] persisted secrets to /workspace/.substrate-secrets"
