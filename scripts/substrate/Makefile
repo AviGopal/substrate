@@ -722,7 +722,7 @@ clean: clean-live
 # Sync development-vessel source into the running container then restart it.
 sync-development-vessel:
 	docker cp $(DEV_VESSEL_SRC)/src/config.ts $(LIVE_NAME):/vessels/development-vessel/src/config.ts
-	docker cp $(DEV_VESSEL_SRC)/src/index.ts $(LIVE_NAME):/vessels/development-vessel/src/index.ts
+	docker cp $(DEV_VESSEL_SRC)/src/. $(LIVE_NAME):/vessels/development-vessel/src/
 	docker cp $(DEV_VESSEL_SRC)/src/routes/impulses.ts $(LIVE_NAME):/vessels/development-vessel/src/routes/impulses.ts
 	@for f in $(DEV_VESSEL_SRC)/src/resolvers/*.ts; do \
 	    docker cp $$f $(LIVE_NAME):/vessels/development-vessel/src/resolvers/$$(basename $$f); \
@@ -743,7 +743,7 @@ restart-development-vessel: sync-development-vessel
 
 # Sync local-tools-vessel source into the running container then restart it.
 sync-local-tools-vessel:
-	docker cp $(LOCAL_TOOLS_SRC)/src/index.ts $(LIVE_NAME):/vessels/local-tools-vessel/src/index.ts
+	docker cp $(LOCAL_TOOLS_SRC)/src/. $(LIVE_NAME):/vessels/local-tools-vessel/src/
 	@echo "[sync] local-tools-vessel source synced to substrate-live"
 
 restart-local-tools-vessel: sync-local-tools-vessel
@@ -753,7 +753,7 @@ restart-local-tools-vessel: sync-local-tools-vessel
 
 # Sync llm-resolver-vessel source into the running container then restart it.
 sync-llm-resolver-vessel:
-	docker cp $(LLM_VESSEL_SRC)/src/index.ts $(LIVE_NAME):/vessels/llm-resolver-vessel/src/index.ts
+	docker cp $(LLM_VESSEL_SRC)/src/. $(LIVE_NAME):/vessels/llm-resolver-vessel/src/
 	@echo "[sync] llm-resolver-vessel source synced to substrate-live"
 
 restart-llm-resolver-vessel: sync-llm-resolver-vessel
@@ -762,8 +762,15 @@ restart-llm-resolver-vessel: sync-llm-resolver-vessel
 	@docker exec $(LIVE_NAME) systemctl is-active llm-resolver-vessel.service | grep -q active && echo "[restart] llm-resolver-vessel active" || echo "[restart] ERROR: llm-resolver-vessel not active"
 
 # Sync goal-host-vessel source into the running container then restart it.
+# Copies the whole src tree, not a single file. This target used to cp only
+# src/index.ts, so every module beside it was silently left at its old version
+# while the target still printed "source synced" and the restart reported
+# active. Measured 2026-08-09: a fix landed in src/goal-file-resolution.ts
+# deployed green and was verifiably absent from the live tree afterwards.
+# `docker cp <dir>/. <dest>` copies directory CONTENTS, so new files appear and
+# existing ones are overwritten in place.
 sync-goal-host-vessel:
-	docker cp $(GOAL_HOST_SRC)/src/index.ts $(LIVE_NAME):/vessels/goal-host-vessel/src/index.ts
+	docker cp $(GOAL_HOST_SRC)/src/. $(LIVE_NAME):/vessels/goal-host-vessel/src/
 	@echo "[sync] goal-host-vessel source synced to substrate-live"
 
 restart-goal-host-vessel: sync-goal-host-vessel
@@ -777,7 +784,7 @@ sync-light-dispatch-vessel:
 	docker exec $(LIVE_NAME) mkdir -p /vessels/light-dispatch-vessel/src
 	docker cp $(LIGHT_DISPATCH_SRC)/package.json $(LIVE_NAME):/vessels/light-dispatch-vessel/package.json
 	docker cp $(LIGHT_DISPATCH_SRC)/tsconfig.json $(LIVE_NAME):/vessels/light-dispatch-vessel/tsconfig.json
-	docker cp $(LIGHT_DISPATCH_SRC)/src/index.ts $(LIVE_NAME):/vessels/light-dispatch-vessel/src/index.ts
+	docker cp $(LIGHT_DISPATCH_SRC)/src/. $(LIVE_NAME):/vessels/light-dispatch-vessel/src/
 	docker cp $(CURDIR)/units/light-dispatch-vessel.service $(LIVE_NAME):/etc/systemd/system/light-dispatch-vessel.service
 	docker cp $(CURDIR)/light-dispatch-healthcheck.sh $(LIVE_NAME):/usr/local/bin/light-dispatch-healthcheck
 	docker exec $(LIVE_NAME) chmod +x /usr/local/bin/light-dispatch-healthcheck
@@ -795,7 +802,7 @@ restart-light-dispatch-vessel: sync-light-dispatch-vessel
 
 # Sync boredom-vessel source into the running container then trigger a manual run.
 sync-boredom-vessel:
-	docker cp $(BOREDOM_VESSEL_SRC)/src/index.ts $(LIVE_NAME):/vessels/boredom-vessel/src/index.ts
+	docker cp $(BOREDOM_VESSEL_SRC)/src/. $(LIVE_NAME):/vessels/boredom-vessel/src/
 	@echo "[sync] boredom-vessel source synced to substrate-live"
 
 trigger-boredom-vessel: sync-boredom-vessel
@@ -805,7 +812,7 @@ trigger-boredom-vessel: sync-boredom-vessel
 
 # Sync ribosome-vessel source into the running container then restart it.
 sync-ribosome-vessel:
-	docker cp $(RIBOSOME_VESSEL_SRC)/src/index.ts $(LIVE_NAME):/vessels/ribosome-vessel/src/index.ts
+	docker cp $(RIBOSOME_VESSEL_SRC)/src/. $(LIVE_NAME):/vessels/ribosome-vessel/src/
 	@echo "[sync] ribosome-vessel source synced to substrate-live"
 
 restart-ribosome-vessel: sync-ribosome-vessel
