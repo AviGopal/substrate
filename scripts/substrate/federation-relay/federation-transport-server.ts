@@ -27,7 +27,7 @@ process.on('unhandledRejection', (reason) => {
 
 const VESSEL_ID = process.env.FED_VESSEL_ID || 'federation-transport-vessel'
 let RELAY = process.env.RELAY_MULTIADDR || ''
-const DISCOVERY = process.env.DISCOVERY_URL || 'http://127.0.0.1:8100'
+const DISCOVERY = process.env.DISCOVERY_URL || 'http://0.0.0.0:8100'
 const API_KEY = process.env.METABOB_API_KEY || ''
 // Location independence (law 11): hub-facing calls authenticate to a DIFFERENT trust
 // domain than local calls. A spoke's METABOB_API_KEY is issued by the spoke's own
@@ -235,7 +235,7 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
 async function proxyToVessel(pointer: any, t: string, owner: any): Promise<any> {
   const base = String(owner.endpoint ?? '').replace(/\/$/, '')
   // resolve_endpoint may be a PATH ("/v2/impulses/resolve", dev-vessel) or a full
-  // absolute URL ("http://127.0.0.1:8210/resolve", goal-host). Concatenating base +
+  // absolute URL ("http://0.0.0.0:8210/resolve", goal-host). Concatenating base +
   // a full URL yields an invalid URL ("...8210http://...") → "fetch() URL is invalid".
   // Use the absolute form as-is; otherwise hang the path off base.
   const rawResolve = String(owner.resolve_endpoint ?? '/v2/impulses/resolve')
@@ -461,7 +461,7 @@ Bun.serve({
     }
     // Local resolve surface matching the resolve_endpoint this vessel (and every
     // capability row mirrored under its endpoint) advertises in discovery. A
-    // mirrored row's URL — http://127.0.0.1:8401/v2/impulses/resolve — is thereby
+    // mirrored row's URL — http://0.0.0.0:8401/v2/impulses/resolve — is thereby
     // valid VERBATIM on any substrate: the local transport serves the local owner
     // or hops once over libp2p to the owning substrate (proxyToLocalOwner).
     if (u.pathname === '/v2/impulses/resolve' && req.method === 'POST') {
@@ -486,7 +486,7 @@ async function register() {
       headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY },
       body: JSON.stringify({
         vesselId: VESSEL_ID, vesselName: VESSEL_ID, version: '0.1.0',
-        endpoint: `http://127.0.0.1:${HEALTH_PORT}`,           // HTTP surface (health + self-recovery probe)
+        endpoint: `http://0.0.0.0:${HEALTH_PORT}`,           // HTTP surface (health + self-recovery probe)
         shapes: ['federation_probe', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])],
         resolve_endpoint: '/v2/impulses/resolve', resolve_request_format: 'pointer', auth_scheme: 'none',
         protocol: 'libp2p',                          // signals libp2p-overlay reachability
@@ -505,7 +505,7 @@ async function register() {
 // LOUDLY as a queryable signal, not silently blank a downstream panel. Emits a shaped
 // federation_join_health observation to activity-api; guarded and never throws (must not
 // disturb the process guards). Emitted only on the failure path — silent success is unchanged.
-const ACTIVITY_API = (process.env.ACTIVITY_API_URL || process.env.ACTIVITY_API_ENDPOINT || 'http://127.0.0.1:8080').replace(/\/$/, '')
+const ACTIVITY_API = (process.env.ACTIVITY_API_URL || process.env.ACTIVITY_API_ENDPOINT || 'http://0.0.0.0:8080').replace(/\/$/, '')
 async function emitJoinHealth(state: string, detail: string) {
   if (!ACTIVITY_API) return
   try {
@@ -610,7 +610,7 @@ async function registerAtHub() {
         headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + HUB_API_KEY },
         body: JSON.stringify({
           vesselId: reg.vesselId, vesselName: reg.vesselId, version: '0.1.0',
-          endpoint: `http://127.0.0.1:${HEALTH_PORT}`, // local-only surface; reachability is the circuit below
+          endpoint: `http://0.0.0.0:${HEALTH_PORT}`, // local-only surface; reachability is the circuit below
           shapes: reg.shapes,
           resolve_endpoint: '/v2/impulses/resolve', resolve_request_format: 'pointer', auth_scheme: 'none',
           protocol: 'libp2p',
