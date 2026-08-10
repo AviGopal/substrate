@@ -774,11 +774,18 @@ authorization and was not performed.** Audited by reading. All verified:
 
 ### 7.10 Also observed
 
-- **`substrate-live`'s activity-api is down.** `HTTP 000` on `:18080/health` from
-  the host *and* on `127.0.0.1:8080` from inside the container, while
-  `docker ps` reports the container **healthy** (45h uptime). The compose
-  healthcheck targets that exact URL, so the reported health is stale rather than
-  current. Operator-relevant now, independent of this audit.
+- **`substrate-live`'s activity-api went unresponsive for a window, without
+  restarting — corrected from a stronger claim.** Two probes returned `HTTP 000`
+  on `:18080/health` from the host *and* on `127.0.0.1:8080` from inside the
+  container. I recorded that as "the trace store is down." **That was wrong.**
+  Re-probed after teardown it answers `200`, with `NRestarts=0` and
+  `ActiveState=active` — so the unit never died or restarted; it stopped
+  answering and later resumed. The probes fell inside the window when two extra
+  substrate containers were running on this host, which makes resource
+  contention the most likely cause and matches the prior compose-storm episode.
+  What survives: **a hang of this shape is invisible to the healthcheck**, which
+  reported `healthy` throughout and targets that exact URL. What does not
+  survive: any claim that the store was down or that its health was stale.
 - **The double-arm collision (Part 2) reproduces**: `llm-opus.service` and
   `llm-resolver-opus.service` both exist on the spoke; `llm-google`, `llm-haiku`,
   `llm-opus` and `federation-transport-vessel` sat in `auto-restart`.
