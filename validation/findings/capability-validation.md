@@ -42,7 +42,11 @@ Method point worth keeping: the index said waiting could not clear it, which
 would have justified never testing. **Re-probe standing blockers before planning
 around them.**
 
-### 1.2 Concept recall is structurally dead on this deployment
+### 1.2 Concept recall is severed by a 10× timeout mismatch, not by the mask
+
+> **Superseded by the experiment in §4.** The mask is real, but unmasking does
+> **not** restore recall. The actual cause is a timeout mismatch, diagnosed below
+> in Part 4. Read this section for the configuration state only.
 
 `concept-db` is `inactive`, `UnitFileState=disabled`, with **no journal entries
 at all** — it has never started here. The cause is explicit operator
@@ -363,3 +367,84 @@ not a capability gap.
 - Sample size is 7. This demonstrates capability on common assistant tasks; it is
   not a reach-rate estimate.
 
+
+---
+
+## Part 4 — the concept-recall blocker, diagnosed by intervention
+
+Every walk in this session logged
+`[walk-concepts] concept-db could not be asked — recall unavailable`. CLAUDE.md
+names concept-db `compose_lesson` → drafter prompt as **the** channel by which
+the system is taught, so this is the ceiling blocker. §1.2 assumed the cause was
+the `DISABLED_VESSELS=concept-db.service` mask. It is not.
+
+### 4.1 The intervention
+
+`systemctl start concept-db` — reversible, no env change, no container restart.
+It came up cleanly: `status: healthy`, database connected, embedding model
+loaded, and it immediately began upkeep (minting `compose_lesson` concepts,
+backfilling embeddings). Discovery picked it up: **13 → 14 vessels, 371 → 386
+shapes**, with `concept`, `concept_select_for_prompt` and friends advertised.
+
+Two goals dispatched afterwards **still** logged `concept-db could not be asked`.
+So the mask was not the blocker.
+
+### 4.2 The actual cause
+
+The recall path resolves correctly — `conceptDbUrl()` filters discovery results
+by `/concept-db/i`, so the fact that `development-vessel` also advertises shape
+`concept` (and is listed first) is correctly excluded. The resolved URL is right.
+
+The call itself is what fails:
+
+```
+GET  /health                    -> 200 in 0.02s
+POST /v2/impulses/resolve       -> 200 in 41.75s      <-- the recall call
+```
+
+and the caller allows four seconds:
+
+```js
+recallConceptRows(_q3, 5, 4_000)      // src/index.ts:9062
+```
+
+**A 4s budget against a ~42s provider.** `recallConceptRows` returns `null` on
+timeout, and `null` is correctly reported as "could not be asked" rather than
+"nothing found" — the code is scrupulous about that distinction. The result is
+that recall has never once succeeded here.
+
+concept-db's own logs name the reason it is slow:
+
+```
+WARN [searchConcepts] BM25 scores all zero (SurrealDB 3.0 IDF not persisted)
+     — applying term-frequency proxy ranking {"term":"substrate","matchCount":110}
+```
+
+The full-text index is not persisting IDF under SurrealDB 3.0, so every query
+degrades to a term-frequency proxy that scans the matched set. **The blocker is a
+search-index regression, surfacing as a timeout, masquerading as a masked
+vessel.**
+
+### 4.3 Why this matters more than it looks
+
+- **`/health` is green throughout.** The vessel answers liveness in 20ms while
+  its only load-bearing route takes 42s. This is the same lesson the
+  configuration audit recorded — *a health probe that asks "is my process up"
+  cannot detect that the thing it exists to do is broken.*
+- **Unmasking would have looked like a fix.** The vessel starts, registers, and
+  reports healthy. Anyone verifying by `systemctl is-active` and
+  `registry/stats` would have declared recall restored, and every walk would have
+  gone on silently failing open.
+- **Order of repair:** fixing the BM25/IDF persistence (or adding an index-backed
+  path) comes first; raising the 4s budget without it just moves a 42s stall into
+  every goal's critical path. Unmasking is last, not first.
+
+### 4.4 State restored
+
+`concept-db` was stopped again (`systemctl stop concept-db`) and is `inactive`;
+`DISABLED_VESSELS=concept-db.service` was never edited, and the registry is back
+to 13 vessels / 371 shapes. **Nothing about the deployment's configured state was
+changed by this experiment.** It was left off deliberately: until the search
+regression is fixed, recall cannot succeed within the caller's budget, and the
+vessel's upkeep loop competes for the same scarce provider quota that Part 2
+showed is the binding resource.
