@@ -460,3 +460,95 @@ docker compose -p substrate-cluster -f scripts/substrate/docker-compose.cluster.
 To reproduce F3, delete the `ACTIVITY_API_ENDPOINT` / `IDENTITY_VESSEL_URL` lines
 from the spoke service and watch `registeredVessels` stay at 1 while the
 container reports `healthy`.
+
+---
+
+## Part 6 — human surface: sequences 1–5 driven against the running surface
+
+**Target:** `human-surface-vessel` on the `substrate-ui` container (host `:19310`),
+a UI-only federated spoke pointed at `syzygy-hub`. Same-origin `/api/*` — the
+vessel holds the key, the browser never sees one.
+
+| # | Sequence | Result |
+|---|---|---|
+| 1 | **Ask** | **PASS.** Client tries the surface parser first: `POST /api/surface-intent` → **422** with the clause, `reason: "no rule in this parser reads this instruction"`, and a `suggested_goal` — a refusal, not an error. Instruction then went to the walk: `POST /api/run-goal` → **202** `{dispatchId}`. |
+| 2 | **Read the run** | **PASS.** `activeDispatches` listed it; `goalWalkState` → `status: completed`, `reached: true`, reason naming the computed value **60**. Independently checked: `find docs -name '*.md' \| wc -l` = **60**. Genuine reach, not wallpaper. |
+| 3 | **Grade** | **PASS (write).** `POST /api/grade` → 200 with a store receipt `goal_verification_labels:pn6e2rjiyocysrdg5f0y`, `verdict=achieved`, `labeler=human`. Caveat below. |
+| 4 | **Complain** | **PASS (write).** `POST /api/feedback` → 200, `uiFeedback` stored with `receivedAt`. Caveat below. |
+| 5 | **Answer a solicitation** | **PARTIAL — fails closed correctly, loop not completable.** Producer exists (`goal-host-vessel@spoke-cfda39e7`). Answering a fabricated id → **404 `no pending solicitation with that id`** — an answer into nowhere is not laundered into success. But no pending solicitation existed, and none can: see F26. |
+
+### F26 — the surface renders a solicitation panel it can never receive one for (major)
+
+`SolicitationPanel.tsx` exists and its answer route works. But
+`human-surface-vessel` does **not** advertise `human_input` — its served-shape
+list is `uiPanel_write, uiQuestion_write, uiFeedback, interactorObservation,
+interactorEvent, interactorAssertion, interactorAttachment, renderPolicy,
+renderPolicy_write, surfaceIntent`. From the surface's own discovery vantage,
+`human_input` resolves to **zero producers**, so goal-host's recovery loop has
+nothing to route a question to.
+
+The only vessel advertising `human_input` is the Obsidian vault — which is
+currently dark (timers firing, plugin unreachable). **The substrate→human
+direction is therefore unreachable from the web surface entirely.** The panel's
+own header documents a related limitation honestly (`goalWalkState` does not
+carry pending solicitations, so it detects them by scanning the walk log and
+refuses to guess an id) — but that is the second-order problem; the first-order
+one is that no question can arrive.
+
+### F27 — starter chips derive from a 16-shape list that contains no work shapes (major)
+
+`client.ts` states the design: "The fleet's shape vocabulary. Starters are
+derived from THIS, at render time. There is no hardcoded starter list anywhere
+in this surface: a fixed list goes stale silently." But
+`GET /api/discovery/shapes` on a UI-only spoke returns its **local** registry —
+16 shapes, all LLM/UI plumbing (`llm_completion`, `llmModelPolicy`,
+`federation_probe`, `uiPanel_write`, `renderPolicy`, `surfaceIntent`, …). None of
+the shapes a person would actually ask for (`shellResult`, `fileContent`,
+`gitDiff`, `codeSearchResult`) appear, though they resolve fine through the hub
+fan-out — `shellResult` → `local-tools-vessel@spoke-cfda39e7` over libp2p.
+
+So the mechanism that exists to stop starters going stale instead sources them
+from the one registry that cannot see the fleet's work capability. **Fix:** derive
+starters from the peer-unioned vocabulary, not the local registry.
+
+### F28 — `/api/gaps` is dead on this surface (minor)
+
+`GET /api/gaps` → **502** `{"gaps":[],"error":"no vessel serving substrateGap
+answered"}`. `GapStrip` therefore renders nothing. Honestly reported rather than
+shown as an empty list, which is the right failure — but sequence 7 is
+unavailable here.
+
+### F29 — write-only shapes are advertised as resolvable (minor)
+
+`GET /shapes` lists `uiFeedback` among the vessel's served shapes, but
+`POST /resolve` with that pointer answers `unsupported pointer 'uiFeedback' on
+/resolve`. The write path works; there is no read path. Consequence for
+sequence 4: **a person cannot see their own complaint again**, and the write
+receipt is the only evidence it persisted. A discovery-driven client that trusts
+`/shapes` will be refused.
+
+### F30 — a human grade attaches to a synthetic satisfier id (major, unverified)
+
+The run reached via the satisfier plane, so its `executionId` was
+`walk-satisfier-1-1786339773195` and `execution_id` was `null`. `client.ts`
+documents that `labeler: "human"` is load-bearing — "goal-host only lets a HUMAN
+verdict override `reached`, and only a human label burns the consumption latch."
+But the walk logs for satisfier reaches state the walk "persisted no execution
+row to patch." The label row was created; **whether anything can ever join it to
+an execution is untested**, and no read route for `goal_verification_label`
+exists through this surface to check.
+
+### What the surface does well
+
+Three independent honest-failure behaviours in five sequences: the parser refuses
+with the clause and a suggested goal rather than guessing; the solicitation route
+404s an unknown id rather than accepting into nowhere; `/api/gaps` names the
+missing vessel rather than rendering an empty list. The surface consistently
+declines to launder failure into green, which is the property the rest of the
+system is measured against.
+
+### Residue left in the running substrate
+
+- one dispatch, `097061c8-6198-4179-8b2b-e39518909c70`, tagged `operator:surface-audit`
+- one human grade, `goal_verification_labels:pn6e2rjiyocysrdg5f0y`
+- one `uiFeedback` on `panel_id: runs`, prefixed `SURFACE AUDIT (ignore)`
