@@ -215,7 +215,33 @@ top level and **60** recursively:
 Both readings are scored correct in any re-run. **A goal whose ground truth
 depends on an unstated convention cannot measure the system**, only my phrasing.
 
-### 2.4 The corrected protocol
+### 2.4 An aside that is also evidence: the substrate committed my file for me
+
+While writing this, `git add` staged this report and, before I could commit, the
+substrate's own `substrate-pull-sync` ran a commit and **swept my staged file
+into its commit** — `19b027ba feat(pull-sync): converge the selector and the
+fleet definition too`. My content is in the tree under a message about something
+else entirely.
+
+Two things follow.
+
+**A hazard.** An operator staging files in a repository the substrate
+self-commits has no safe window: `git add` publishes into a shared index that
+another writer may commit at any moment. Stage-then-commit is not atomic against
+a concurrent committer. The practical rule is to commit in one step, or to work
+outside the tree the substrate writes.
+
+**Evidence for the thing being validated.** `19b027ba`, `4e21e9f0` and
+`9c479776` all landed during this session with no operator hands, and the
+pull-sync commit body is a real diagnosis in its own right — it identifies that
+`/usr/local/bin/apply-inventory` is what `entrypoint.sh` executes rather than the
+git copy, so *"a selection feature added in the repo never reached any running
+container."* That is the same class of defect this session's configuration audit
+found by hand, found independently by the system, and committed autonomously.
+Against CLAUDE.md's hard criterion — *"a substrate-authored commit landing on the
+remote working branch with no operator hands"* — that criterion is met.
+
+### 2.5 The corrected protocol
 
 The re-run is **serial** — one goal at a time, after the cooldown expires. Serial
 is not merely gentler; it is the only way to attribute a failure to a goal rather
