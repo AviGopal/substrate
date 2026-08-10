@@ -25,7 +25,10 @@
 #   until [ "$(docker inspect -f '{{.State.Health.Status}}' substrate-hub)" = healthy ]; do sleep 5; done
 #
 #   # 2. spoke — inherits the hub's org, identity, trace store and LLM arms
-#   export CLUSTER_HUB_KEY="$(docker exec substrate-hub substrate-key show | tail -1)"
+#   # NO `| tail -1`. `substrate-key show` prints the key as its ONLY stdout line
+#   # (an `mb-…` token); piping through tail -1 previously yielded a 32-char
+#   # string that authenticates nowhere — every call 401s INVALID_API_KEY.
+#   export CLUSTER_HUB_KEY="$(docker exec substrate-hub substrate-key show)"
 #   docker compose -p substrate-cluster -f scripts/substrate/docker-compose.cluster.yml \
 #     --profile spoke up -d
 #

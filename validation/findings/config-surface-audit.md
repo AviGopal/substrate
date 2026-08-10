@@ -379,8 +379,8 @@ of every container's log and reads as a broken boot.
 | Path | Verdict | Notes |
 |---|---|---|
 | Quickstart from image (root compose, standalone) | **works with gaps** | Basis: cold-volume boot + secret auto-generation were validated through the cluster fixture with `ENABLED_ROLES=hub`, **not** the literal root-compose default (full fleet, no role selection). `docker login ghcr.io` untested — no fresh PAT; the image was already local. Gaps: F11, F13, F15, F16. |
-| `make up` (source path) | **not re-tested** | The running `substrate-live` was built this way; no clean-clone run performed here. |
-| Hub deploy (`deploy-hub.sh`) | **not tested** | Requires a remote VM. |
+| `make up` (source path) | **not re-tested; state claim refuted by reading** | The running `substrate-live` was built this way; no clean-clone run performed here. F55: it does **not** share volumes with the compose path, contrary to docs. |
+| Hub deploy (`deploy-hub.sh`) | **audited, not executed** | Requires a remote VM and operator authorization. 14 verified findings — see 7.6. |
 | **Spoke join (point-and-go)** | **broken as written** | F3. The two documented "required inputs" are insufficient on any hub not published on 18xxx; the result is a `healthy` container that joined nothing. |
 | Role/topology selection | **works, documented wrong** | Mechanism is sound and `DRY_RUN=1` makes it inspectable; the published role table is wrong (F8) and omits the highest-precedence knob (F9). |
 
@@ -389,8 +389,9 @@ of every container's log and reads as a broken boot.
 round-trips through `/workspace/.substrate-secrets`; `apply-inventory` correctly
 pairs a desired `.timer` with its `.service`; both nodes seeded 18/18 bootstrap
 templates (verified as 18 rows in `activity`, not a self-reported count); the
-corrected spoke registered 14 vessels and discovered 290 shapes across the hub
-boundary; zero failed systemd units on either node.
+corrected spoke registered 14 vessels and discovered 290 shapes — **on its own
+registry, not across the hub boundary; see 7.1, which corrects this sentence**;
+zero failed systemd units on either node.
 
 ---
 
@@ -552,3 +553,240 @@ system is measured against.
 - one dispatch, `097061c8-6198-4179-8b2b-e39518909c70`, tagged `operator:surface-audit`
 - one human grade, `goal_verification_labels:pn6e2rjiyocysrdg5f0y`
 - one `uiFeedback` on `panel_id: runs`, prefixed `SURFACE AUDIT (ignore)`
+
+---
+
+## Part 7 — closing the residue: the paths Part 3 left untested
+
+Part 3 named four untested items. This part closes what could be closed, states
+what is blocked and why, and reports one instrument failure that invalidates a
+measurement the report had been building toward.
+
+Method split: the stateful boot tests were run inline and serial (one docker
+daemon, contended host ports — parallel agents would collide). The read-only
+audits of the remote-deploy scripts, the quickstart wording, the documented
+variable set and the human-surface docs ran as a 45-agent workflow in which
+every finding was re-verified by an independent agent instructed to refute it.
+**28 of 40 candidate findings survived refutation; 12 were killed.** Only
+survivors are recorded below.
+
+### 7.1 A correction to Part 3 before anything else
+
+Part 3 says "the corrected spoke registered 14 vessels and discovered 290 shapes
+**across the hub boundary**." The second clause is wrong, and it mattered.
+
+Re-running the cluster, the hub's registry sat at 2–3 vessels and *fell* over six
+minutes (83 → 79 shapes) while the spoke was fully healthy. That looked like a
+regression. It is not. The spoke's **own** registry held 13 vessels / 315 shapes:
+
+```
+spoke  /registry/stats -> {"totalVessels":13,"totalShapes":315,"healthyCount":13}
+hub    /registry/stats -> {"totalVessels":2, "totalShapes":79, "healthyCount":2}
+```
+
+A spoke has role `registry` and runs its own discovery. `gen-env` **rewrites**
+the operator's `DISCOVERY_ENDPOINT` to loopback and routes hub reachability
+through a separate variable:
+
+```
+DISCOVERY_ENDPOINT="http://127.0.0.1:8100"     # operator passed http://hub:8100
+PEER_DISCOVERY_ENDPOINTS="http://hub:8100"
+ACTIVITY_API_ENDPOINT="http://hub:8080"
+IDENTITY_VESSEL_URL="http://hub:8101"
+```
+
+Federation is **peer fan-out at resolve time, not registration mirroring**. The
+hub is *supposed* to stay small. The "14 vessels" figure was always the spoke's
+own registry; the phrase "across the hub boundary" imported a mechanism that does
+not exist. **A registry count read on the wrong node measures the wrong thing** —
+and the number looks equally plausible either way, which is what made it durable.
+
+### 7.2 The instrument failed: a 201 write is not a readable execution
+
+The goal was to settle Part 4's open claim — *do traces from a spoke land on the
+hub's store?* The hub was a clean instrument: **0 executions at baseline**, so
+anything appearing was attributable.
+
+Nothing appeared. Before reporting that, the probe was validated with a control —
+write a row through the hub's own API, then read it back with the same credential.
+
+```
+POST /v2/activities/executions  -> 201  {"success":true,"execution_id":"exec_1786342164928_fzlcdzgyk8g", "metrics":{...}}
+GET  /v2/activities/executions?limit=100                          -> {"total":0}
+GET  /v2/activities/executions?variant_id=config-audit-control-probe -> {"total":0}
+GET  /v2/activities/metrics?activity_id=config-audit-control-probe   -> {"total_executions":0}
+```
+
+Stable at 0 after 90s, so not write batching. Two writes, same result. And the
+server's own logs rule out the obvious explanation — **write and read carry the
+identical org scope**:
+
+```
+POST /v2/activities/executions {"activity_id":"config-audit-control-probe", ... "orgId":"organizations:substrate"}  --> 201
+GET  /v2/activities/executions {"variant_id":null,"limit":100, "orgId":"organizations:substrate"}                   --> 200
+```
+
+**F39 (critical) — `POST /v2/activities/executions` returns 201 with a computed
+metrics body, and the execution is not retrievable through any read route on the
+same vessel under the same credential and the same org.** Not a tenancy mismatch
+(orgs match), not latency (stable at 90s), not the filter (unfiltered query also
+returns 0). The route the reader uses carries a standing admission in-source —
+`activities.ts:2515`, *"TEMPORARY: Query execution table directly (view not yet
+applied)"* — so the most likely mechanism is that the read targets a view or
+table that a **fresh** deployment never creates. That makes this specifically a
+new-deployment defect, which is exactly this audit's subject.
+
+This is the same class the report already carries at F36/F55 and the memory index
+records as *a step reporting its intention, not its result*: the write's `201` and
+its returned `metrics` object describe what the handler meant to do.
+
+**Consequence for the trace-placement claim: it remains UNTESTED, not refuted.**
+Two independent blockers, either of which alone is disqualifying — the dispatch
+never produced a successful activity execution (7.3), and the read path cannot
+observe executions that provably exist (F39). Recording "hub = 0 traces" as a
+federation finding would have been a fabricated negative.
+
+### 7.3 The spoke dispatch failed honestly
+
+Dispatched at the spoke (`:20210`), deterministic by design to keep the credit-dead
+LLM plane out of the result:
+
+> "Count the number of files in the /workspace directory using a shell command"
+
+```
+status: failed   reached: false   pendingTargets: ['shellResult']
+reason: no template produces the inferred target shapes [shellResult]; capability gap filed by the walk
+```
+
+The walk log is worth quoting, because three of its five lines are the system
+declining to launder a failure:
+
+```
+[walk-concepts] concept-db could not be asked (no producer or transport error)
+                — recall unavailable, NOT an empty result
+[goal-host-vessel] goal-target inference {"inferred_target_shapes":["shellResult"],"confidence":0.6}
+[goal-host-vessel] executor "shellResult" STILL a command FAILURE after 1 self-correction
+                attempt — refusing to satisfy with a failed/empty command
+[goal-host-vessel] walk: no pick — missing shapes [shellResult] have no producer; terminating
+```
+
+Target inference was **right** (`shellResult`, 0.6). `local-tools-vessel` was
+running on the spoke. The walk still found no producer, self-corrected once,
+refused to satisfy from an empty command, and **filed a capability gap**. Caveat
+stated plainly: the hub booted with a placeholder provider key (reading the live
+container's real key was denied, and every arm is credit-dead regardless), so a
+walk needing the LLM plane could not have succeeded here. That does not touch the
+`shellResult` finding, which failed on producer discovery, not on drafting.
+
+### 7.4 The API key embeds a loopback identity endpoint
+
+`PUBLIC_IP` worked exactly as the fixture's comment predicts — `GET /bootstrap`
+advertised `http://hub:8100` / `http://hub:8101` rather than loopback, and
+`/etc/substrate/env` carried `IDENTITY_PUBLIC_URL=http://hub:8101`.
+
+The minted operator key does not agree. Decoded:
+
+```
+organizations:substrate-users:t6li8clsc883sv2frj1y-key_wobEuwPM9VKykShk-http://127.0.0.1:8101
+```
+
+**F40 (major) — key minting embeds a validator endpoint of `http://127.0.0.1:8101`
+even when `IDENTITY_PUBLIC_URL` is set and correctly emitted.** Any consumer that
+trusts the endpoint *inside* the key rather than its own `IDENTITY_VESSEL_URL`
+resolves identity against its own loopback. Masked in this cluster because the
+fixture sets `IDENTITY_VESSEL_URL` explicitly — which is precisely the variable
+docs/SUBSTRATE.md calls an optional override.
+
+### 7.5 The fixture's own key-extraction command was wrong
+
+`docker-compose.cluster.yml`'s header said:
+
+```
+export CLUSTER_HUB_KEY="$(docker exec substrate-hub substrate-key show | tail -1)"
+```
+
+`tail -1` returned a 32-char string that authenticates nowhere (`401
+INVALID_API_KEY`). The real key is the single `mb-…` line on stdout. Fixed in the
+fixture. Filed against myself: **the instructions in the test fixture are part of
+what is under test.**
+
+### 7.6 Remote deploy paths — audited, deliberately not executed
+
+`deploy-hub.sh`, `deploy-hub-pull.sh`, `deploy-remote.sh` and `spoke-federate.sh`
+ship over SSH to the live hub, which holds ~312k executions of history. Running
+them is outward-facing and irreversible; **execution requires explicit operator
+authorization and was not performed.** Audited by reading. All verified:
+
+| # | Sev | Finding |
+|---|---|---|
+| F41 | critical | `deploy-remote.sh:71-75` writes peering config **into `/etc/substrate/env` after gen-env ran**. `entrypoint.sh:6-7` regenerates that file on every start and `gen-env.sh:289` truncates it; `/etc` is not a mounted volume. Any restart or reboot **silently un-peers** the substrate. The durable channel (`-e PEER_DISCOVERY_ENDPOINTS`, round-tripped via `.substrate-secrets` at `gen-env.sh:284,574`) exists and is unused. Refines F23: `FEDERATION_SIGNING_SECRET` *is* settable on one path — but only into the regenerated file, so F23's conclusion stands with the premise corrected to "no **durable** launch path". `MAX_PEER_DEPTH` and `FEDERATION_PEER_AUTH_MODE` have no emission site at all. |
+| F42 | critical | `deploy-hub-pull.sh:59-122` claims "the exact same flags deploy-hub.sh uses" and **drops `ENABLED_EXTRA_VESSELS`**, masking `goal-host-vessel` and every other `role=compute` unit. A redeployed hub answers no dispatches. |
+| F43 | critical | `gen-env.sh:79-83` comments that `ENABLED_EXTRA_VESSELS` "is persisted … so it survives a bare restart/recreate". **Nothing ever writes it** to the secrets store, so `persisted_secret` is unconditionally empty. |
+| F44 | critical | `spoke-federate.sh:59-69` pins `FED_SUBSTRATE_ID` / `FED_VESSEL_ID` / `RELAY_MULTIADDR` into the generated env — **erased on next start**, contradicting docs/SUBSTRATE.md:215-219's "auto-generate and persist". |
+| F45 | major | `spoke-federate.sh:55-57`'s id-collision guard **fails open**: `POST /resolve` needs auth, and a failed query is indistinguishable from "id free". FEDERATION.md:186 claims the step "refuses ids already present". |
+| F46 | major | `deploy-remote.sh:59-63` forwards **only `ANTHROPIC_API_KEY`** — no `ENABLED_ROLES`, no spoke-join variables, no `METABOB_API_KEY`, no other provider. It cannot stand up a hub, though README.md:243 offers it as an alternative for that job. |
+| F47 | major | `deploy-remote.sh:29` never passes `PUBLIC_IP`, so even the "recommended" `RUN_RELAY=1` deploy leaves the substrate advertising loopback behind a working relay. |
+| F48 | major | `deploy-remote.sh:65` — no step verifies the deploy. Readiness loop has no failure branch; "relay up" prints unconditionally. Success signal is process exit plus one curl on one port. |
+| F49 | major | `deploy-remote.sh:59` sets **no restart policy** and runs the relay under bare nohup: one VM reboot leaves a stopped container and no relay, despite the script billing itself as a standing deployment. |
+| F50 | major | `deploy-remote.sh:92` unconditionally `pkill`s a running relay — the exact action `deploy-hub.sh`'s own comment forbids as racing :30333 and diverging the peer id. The two scripts also disagree on the relay log path. |
+| F51 | major | `deploy-hub.sh:99-106` orders the container creation before the relay exists, so **federation egress is always dead on a first deploy**; the fix is an undocumented second 20-30-minute run. |
+| F52 | major | `deploy-hub-pull.sh:128` stops publishing **18090 and 18260** — the two ports `deploy-hub.sh` documents as load-bearing, without which "the spoke's drafter reads no lessons … silently, with no error". |
+| F53 | minor | `deploy-hub-pull.sh:191` — `systemctl is-active` under `set -euo pipefail` with no `|| true` aborts the remote heredoc in the **normal** case (hub carries only `ANTHROPIC_API_KEY`). |
+| F54 | major | **The "two commands" claim is in `CLAUDE.md:285`, not `docs/SUBSTRATE.md`** (which calls spoke-federate "the NAT return-path step"). Traced through the code it is not two. |
+
+### 7.7 Quickstart clarity
+
+| # | Sev | Finding |
+|---|---|---|
+| F55 | major | `docker-compose.yml:95` — compose creates **project-prefixed** volumes (`substrate_substrate-workspace`), while `make up` and raw `docker run` use `substrate-workspace`. docs/SUBSTRATE.md:146 and README.md:91 call the three launch paths equivalent; **they do not share state**, so switching paths silently starts from an empty brain. |
+| F56 | major | `README.md:83` — the canonical 4-command quickstart **cannot work as pasted**: `substrate-key show` sits on the line after `docker compose up -d`, which returns as soon as the container is created (`start_period: 60s`). |
+| F57 | major | `README.md:103` — the only verifier that checks **registration** rather than process liveness is `substrate-doctor`, documented only on the source path, though SUBSTRATE.md:118 confirms it is baked into the image. The container quickstart — the path most operators take — never mentions it. |
+
+### 7.8 Documented-but-dead configuration (extends Part 1)
+
+| # | Sev | Finding |
+|---|---|---|
+| F58 | major | `MAINTENANCE_LEASE_PATH` (docs/SUBSTRATE.md:580) is **DEAD** — emitted by nothing, set by no unit or drop-in. |
+| F59 | major | **Correction to Part 1.** Part 1 said only that the operator's value for the trace-store knobs is discarded. Stronger and unreported: because gen-env writes literals unconditionally, the **"Default" column in docs/SUBSTRATE.md:567-571 is never in force on any deployment** — the documented defaults are unreachable, not merely overridable. |
+| F60 | minor | `TRACE_STORE_RESERVOIR_PER_ACTIVITY` (`gen-env.sh:479`) is a third hardcoded knob of the same class. |
+| F61 | major | `SUBSTRATE_BIND_HOST` is passed by **both** hub deploy scripts and emitted by gen-env (`:516`) — and **read by nothing**. Its evident intent (bind all interfaces on a public hub) is unimplemented. |
+| F62 | minor | docs/SUBSTRATE.md:785's gen-env recovery command names `/scripts/substrate/gen-env.sh`, a path the image does not contain (it installs `/usr/local/bin/gen-env`). |
+
+### 7.9 Human surface docs
+
+| # | Sev | Finding |
+|---|---|---|
+| F63 | critical | `repos/human-surface-vessel/src/store.ts:17` — the surface's **entire state store is in-memory**. docs/HUMAN_SURFACE.md's "Stopping and starting one" names two things that must survive a restart and concludes a surface restarts cleanly; in fact every human-authored `renderPolicy`, every `uiFeedback`, and every panel is lost. Compounds F29: complaints are not merely unreadable, they are not durable. |
+| F64 | major | The doc never mentions the prose box / `renderPolicy` — the second thing the input surface does — and neither does any other doc. The doc presents "the answer comes back drawn" as a fixed property; the code implements it as **steerable**. |
+| F65 | major | `scripts/substrate/Makefile:170` — an explicitly supplied `--hub` port is **stripped by sed and rewritten to 18100**. Stricter than F3: F3 was a *derivation* on hardcoded ports; this discards a value the operator typed in full. |
+| F66 | minor | `vessels.inventory.json:49` — the `surface_node` profile is not the roster `ui-only-up.sh` uses: it drops surrealdb and valkey (which that script calls mandatory) and adds a compute unit the script excludes on purpose. |
+| F67 | minor | `GOAL_HOST_ENDPOINT`, documented in `proxy.ts:100-112` as the first-precedence operator override, is not emitted by gen-env — **unsettable on any supported deployment**. |
+| F68 | major | Comprehension: docs/HUMAN_SURFACE.md:148-167 instructs "Delete the sidecar to accept git" while naming neither the sidecar, the inventory file, the selector, nor the overriding variable. |
+
+### 7.10 Also observed
+
+- **`substrate-live`'s activity-api is down.** `HTTP 000` on `:18080/health` from
+  the host *and* on `127.0.0.1:8080` from inside the container, while
+  `docker ps` reports the container **healthy** (45h uptime). The compose
+  healthcheck targets that exact URL, so the reported health is stale rather than
+  current. Operator-relevant now, independent of this audit.
+- **The double-arm collision (Part 2) reproduces**: `llm-opus.service` and
+  `llm-resolver-opus.service` both exist on the spoke; `llm-google`, `llm-haiku`,
+  `llm-opus` and `federation-transport-vessel` sat in `auto-restart`.
+
+### 7.11 Status of Part 3's untested items
+
+| Item | Now |
+|---|---|
+| Traces land on the hub | **Still untested** — blocked by F39 (read path cannot observe executions that provably exist) and by the dispatch failing before any execution. Not refuted. |
+| `make up` from a clean clone | **Not run.** Superseded in value by F55, which shows the source path and the compose path do not share volumes at all — the state question the test was meant to answer is answered by reading, and answered worse than assumed. |
+| `deploy-hub.sh` / `deploy-remote.sh` | **Audited, not executed** (7.6). Execution needs operator authorization against live infrastructure. 14 verified findings, 4 of them critical. |
+| GHCR pull with a fresh PAT | **Blocked on a credential** the operator must mint. Not simulated. |
+
+### Residue
+
+The cluster (`substrate-cluster` project, its four `substrate-cluster_*` volumes,
+and network) was torn down with `down -v`. Two synthetic execution rows
+(`config-audit-control-probe`, `-2`) and one capability gap filed by the failed
+walk died with those volumes. **The real `substrate-workspace` /
+`substrate-surreal` volumes were never mounted by this fixture.**
