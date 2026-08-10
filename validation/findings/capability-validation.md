@@ -112,7 +112,30 @@ and widen the oracle's path matcher beyond `repos/|vessels/`. Both are in
 `repos/goal-host-vessel/src/**`, which is gated — they must be dispatched as
 goals, not hand-edited.
 
-### 1.4 The floor gap: a goal with no inferable target shape has no fallback
+### 1.4 RETRACTED — this was starvation, not a structural floor gap
+
+> **Retraction (added after the serial re-run).** Everything in this section was
+> measured while the LLM plane was exhausted (Part 2). Re-run serially on a
+> healthy plane, the *same goal text* behaves completely differently:
+>
+> ```
+> under contention:  inferred_target_shapes: []          confidence 0    -> HOLLOW
+> serial, healthy:   inferred_target_shapes: [shellResult] confidence 0.8 -> 5050, trial 1
+> ```
+>
+> Target inference maps "sum the integers 1 to 100" to `shellResult` correctly
+> and the walk reaches on the first trial. **There is no floor gap of the kind
+> described below.** The empty inference and the random activity sampling were
+> both downstream of a starved provider.
+>
+> The section is kept, struck, because the failure mode it describes is real and
+> worth recognising — *when the plane is starved, target inference silently
+> degrades to empty and the walk becomes indistinguishable from having no
+> capability at all.* That is a diagnosis-confounding property worth naming: the
+> observable signature of "no route exists" and "the LLM could not answer" are
+> identical in the walk log.
+
+~~The floor gap: a goal with no inferable target shape has no fallback~~
 
 CLAUDE.md's floor is parity with a ReAct agent: *"No goal should be structurally
 out of reach just because no learned pathway exists yet."*
@@ -246,4 +269,97 @@ remote working branch with no operator hands"* — that criterion is met.
 The re-run is **serial** — one goal at a time, after the cooldown expires. Serial
 is not merely gentler; it is the only way to attribute a failure to a goal rather
 than to contention with its nine siblings.
+
+---
+
+## Part 3 — the serial result
+
+**7 of 7 goals correct, all on the first trial, zero wallpaper.**
+
+Scoring rule: a goal passes only if a trial's **answer matches ground truth**.
+`reached` is recorded but is never the verdict — this session had already
+observed `reached:true` on an answer wrong by 6×.
+
+| goal | asked | answer | trials |
+|---|---|---|---|
+| count-sh | `.sh` scripts directly in `scripts/substrate` | **36** ✓ | 1 |
+| git-branch | current git branch | **fix/orphaned-capability-goalDispatchAsync** ✓ | 1 |
+| count-lines | lines in `CLAUDE.md` | **361** ✓ | 1 |
+| list-repos | every subdirectory of `repos` | all **22** names ✓ | 1 |
+| arithmetic | sum of integers 1–100 | **5050** ✓ | 1 |
+| oracle-path | `.ts` files in `repos/goal-host-vessel/src` | **47** ✓ | 1 |
+| summarize | two-sentence summary of `FEDERATION.md` | accurate ✓ | 1 |
+
+Every answer was checked by hand against a value computed independently, not by
+reading the reach verdict.
+
+### 3.1 How the successes actually happened
+
+Six of seven ran on the **satisfier plane** — `VESSEL-RESOLVE SATISFIER produced
+"shellResult" directly … REACHED via 1-step chain`. This is the ReAct-parity
+floor doing exactly what CLAUDE.md specifies, and it is fast: most reached in
+15-30 seconds.
+
+Three behaviours are worth calling out because they are the difference between a
+system that works and one that merely reports working:
+
+- **Self-correction fired and fixed a bad command.** `count-sh` logged
+  `executor "shellResult" cold-command self-correction attempt 1 — now produces a
+  value`, then returned the right answer.
+- **A hollow result was caught and recovered, not shipped.** `count-lines` first
+  logged `refusing to satisfy … HOLLOW — the goal asked for the number of lines in
+  CLAUDE.md, but the output does not contain this numerical value`, dropped to
+  `execution_path=universal_tool_fallback`, and came back with 361.
+- **The deterministic oracle fired where it applies.** `oracle-path` graded
+  `deterministic:verified-file-count — counted 47 .ts file(s) recursively`, i.e.
+  the grader recomputed the answer itself rather than asking an LLM whether the
+  output looked right.
+
+### 3.2 The oracle was right and my ground truth was wrong
+
+I scored `oracle-path` against **34**; the oracle answered **47**. The oracle won:
+
+| tree | `.ts` under `goal-host-vessel/src` |
+|---|---|
+| `/workspace/git/super-repo/repos/…` (where I measured) | 34 |
+| `/workspace/git/vessels/…` (pull-sync clone, what the oracle counts) | **47** |
+| `/vessels/…` (deployed) | **47** |
+
+The oracle documents in-source that it counts the clone the repos-relative path
+denotes. The super-repo submodule is simply behind. **Two of three trees agree
+with the system; my ground truth came from the stale one.** This is the
+three-trees hazard the memory index warns about, and I walked into it while
+building the instrument meant to catch it.
+
+### 3.3 The ceiling does not accumulate — the one real capability finding
+
+Every satisfier-plane success logged:
+
+```
+WITHHELD alpha-credit for satisfier:shellResult — no in-chain producer-to-consumer
+edge and no landed sha
+```
+
+So the system **solves these goals and banks nothing from them**. The floor is
+genuinely met; the ceiling (a learned pathway that makes the second instance
+cheaper) is not being built from this traffic, because a one-step satisfier reach
+has no producer-to-consumer edge to credit. This is consistent with the prior
+finding that reuse donors are 96% one shape — the traffic that succeeds is
+exactly the traffic that earns no posterior.
+
+That is the substantive gap this validation found, and it is a *learning* gap,
+not a capability gap.
+
+### 3.4 Conditions and honest caveats
+
+- `concept-db` was masked throughout, so **every** run logged
+  `concept-db could not be asked — recall unavailable`. All seven succeeded
+  without lesson recall; what recall would add is untested.
+- The substrate **restarted itself mid-run** (it landed `be14a118`, bumping
+  goal-host and llm-resolver). Four goals in run 1 were refused with
+  `{"draining":true}` — the vessel declined rather than swallowing them, which is
+  correct behaviour, but it consumed those goals' trials. They were re-run.
+- The two ambiguous goals (§2.3) were dropped rather than scored.
+- Sample size is 7. This demonstrates capability on common assistant tasks; it is
+  not a reach-rate estimate.
 
