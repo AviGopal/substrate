@@ -45,3 +45,9 @@ export { VesselMetrics, Metrics, DefaultMetricsEmitter } from "./metrics.js"
 // Utilities (for advanced usage)
 export { BackoffManager } from "./utils/backoff.js"
 export { HttpClient } from "./utils/http.js"
+
+// Loopback repair for discovery rows (task #60). Exported here so every consumer
+// of a discovery endpoint can adopt the fix instead of re-deriving it — it lived
+// in exactly one vessel's proxy for months while every other reader dialled the
+// raw, half-translated address.
+export { reachableFrom, LOOPBACK_HOSTS } from "./reachable-from.js";
