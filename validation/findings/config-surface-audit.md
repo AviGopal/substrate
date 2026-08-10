@@ -630,11 +630,20 @@ GET  /v2/activities/executions {"variant_id":null,"limit":100, "orgId":"organiza
 metrics body, and the execution is not retrievable through any read route on the
 same vessel under the same credential and the same org.** Not a tenancy mismatch
 (orgs match), not latency (stable at 90s), not the filter (unfiltered query also
-returns 0). The route the reader uses carries a standing admission in-source —
-`activities.ts:2515`, *"TEMPORARY: Query execution table directly (view not yet
-applied)"* — so the most likely mechanism is that the read targets a view or
-table that a **fresh** deployment never creates. That makes this specifically a
-new-deployment defect, which is exactly this audit's subject.
+returns 0).
+
+**The mechanism is a table mismatch, not a missing view.** The writer and the
+reader name different tables:
+
+- writer — `activities.ts` (POST handler): `INSERT INTO activity_execution_traces { … }`
+- reader — `activities.ts:2582` (GET handler): `… FROM execution WHERE 1=1`
+
+The reader's own in-source comment (`activities.ts:2515`, *"TEMPORARY: Query
+execution table directly (view not yet applied)"*) records that `execution` was
+meant to be a view over the real store. On a **fresh** deployment that view is
+never created, so the reader selects from a table that does not exist and returns
+an empty page rather than an error. Every write is durable in
+`activity_execution_traces` and invisible to the API that exists to read it.
 
 This is the same class the report already carries at F36/F55 and the memory index
 records as *a step reporting its intention, not its result*: the write's `201` and
@@ -756,7 +765,7 @@ authorization and was not performed.** Audited by reading. All verified:
 
 | # | Sev | Finding |
 |---|---|---|
-| F63 | critical | `repos/human-surface-vessel/src/store.ts:17` — the surface's **entire state store is in-memory**. docs/HUMAN_SURFACE.md's "Stopping and starting one" names two things that must survive a restart and concludes a surface restarts cleanly; in fact every human-authored `renderPolicy`, every `uiFeedback`, and every panel is lost. Compounds F29: complaints are not merely unreadable, they are not durable. |
+| F63 | critical | `repos/human-surface-vessel/src/store.ts:17` — the surface's **entire state store is in-memory**; the file says so outright: *"No persistence — a restart clears every store."* docs/HUMAN_SURFACE.md's "Stopping and starting one" names two things that must survive a restart and concludes a surface restarts cleanly. Every human-authored `renderPolicy` and every panel is lost. **Scope caveat, from a conflict between two of this audit's own agents:** `/api/feedback` (`proxy.ts:683`) does not write the array directly — it re-posts a `uiFeedback` impulse to the vessel's **own** `/resolve` on `127.0.0.1:${PORT}`. That round trip stays inside this vessel, so durability still depends on this store, but the claim "uiFeedback vanishes on restart" was **not** independently confirmed and is stated here as unresolved rather than as a finding. |
 | F64 | major | The doc never mentions the prose box / `renderPolicy` — the second thing the input surface does — and neither does any other doc. The doc presents "the answer comes back drawn" as a fixed property; the code implements it as **steerable**. |
 | F65 | major | `scripts/substrate/Makefile:170` — an explicitly supplied `--hub` port is **stripped by sed and rewritten to 18100**. Stricter than F3: F3 was a *derivation* on hardcoded ports; this discards a value the operator typed in full. |
 | F66 | minor | `vessels.inventory.json:49` — the `surface_node` profile is not the roster `ui-only-up.sh` uses: it drops surrealdb and valkey (which that script calls mandatory) and adds a compute unit the script excludes on purpose. |
@@ -779,7 +788,7 @@ authorization and was not performed.** Audited by reading. All verified:
 | Item | Now |
 |---|---|
 | Traces land on the hub | **Still untested** — blocked by F39 (read path cannot observe executions that provably exist) and by the dispatch failing before any execution. Not refuted. |
-| `make up` from a clean clone | **Not run.** Superseded in value by F55, which shows the source path and the compose path do not share volumes at all — the state question the test was meant to answer is answered by reading, and answered worse than assumed. |
+| `make up` from a clean clone | **Not run — deliberately skipped**, because it needs a full local image build on a host already running `substrate-live`. The question "does the documented source path boot from a clean clone?" is therefore still open. F55 answers a *different* question (the launch paths do not share volumes) and does **not** supersede this one. |
 | `deploy-hub.sh` / `deploy-remote.sh` | **Audited, not executed** (7.6). Execution needs operator authorization against live infrastructure. 14 verified findings, 4 of them critical. |
 | GHCR pull with a fresh PAT | **Blocked on a credential** the operator must mint. Not simulated. |
 
