@@ -922,6 +922,38 @@ EOF
   esac
   PORT="$(health_port "$v")"
   if [ -n "$UNIT" ] && [ "${UNIT%.service}" != "$UNIT" ] && systemctl is-active "$UNIT" >/dev/null 2>&1; then
+    # IN-FLIGHT WORK ON THE ORCHESTRATING VESSEL DEFERS ITS RESTART.
+    #
+    # The authoring markers above protect the vessel being EDITED. Nothing
+    # protected the vessel RUNNING the walk. goal-host publishes `in_flight` on
+    # /health, and pull-sync never read it: converging on a ~10 min timer while a
+    # feature_compose draft against a large file takes longer killed the dispatch
+    # outright. Measured repeatedly — correctly-routed edit goals died
+    # `interrupted:none` with nothing landed and no trace worth grading.
+    #
+    # BOUNDED, because a permanently-busy vessel must not freeze convergence:
+    # after RESTART_DEFER_MAX consecutive deferrals the restart proceeds and says
+    # so. The counter resets whenever the vessel is idle or is actually restarted.
+    RESTART_DEFER_MAX="${RESTART_DEFER_MAX:-3}"
+    DEFER_FILE="$MARKER_DIR/$v.restart-deferrals"
+    INFLIGHT=""
+    if [ -n "$PORT" ]; then
+      INFLIGHT="$(curl -s --max-time 5 "http://127.0.0.1:$PORT/health" 2>/dev/null \
+        | sed -n 's/.*"in_flight"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -1)"
+    fi
+    DEFERRED_N="$(cat "$DEFER_FILE" 2>/dev/null || echo 0)"
+    case "$DEFERRED_N" in ''|*[!0-9]*) DEFERRED_N=0 ;; esac
+    if [ -n "$INFLIGHT" ] && [ "$INFLIGHT" -gt 0 ] 2>/dev/null && [ "$DEFERRED_N" -lt "$RESTART_DEFER_MAX" ]; then
+      echo "$((DEFERRED_N + 1))" > "$DEFER_FILE" 2>/dev/null || true
+      log "$v: $INFLIGHT dispatch(es) in flight — DEFERRING restart ($((DEFERRED_N + 1))/$RESTART_DEFER_MAX); mirrored source takes effect on the next tick"
+      printf '{"at":"%s","actor":"pull-sync","action":"deferred_restart_inflight","vessel":"%s","in_flight":%s,"deferral":%s}\n' \
+        "$(date -Iseconds)" "$v" "$INFLIGHT" "$((DEFERRED_N + 1))" >> "$DEFERRAL_LOG" 2>/dev/null || true
+      continue
+    fi
+    if [ -n "$INFLIGHT" ] && [ "$INFLIGHT" -gt 0 ] 2>/dev/null; then
+      log "$v: $INFLIGHT dispatch(es) still in flight after $DEFERRED_N deferral(s) — restarting anyway so convergence cannot be starved"
+    fi
+    rm -f "$DEFER_FILE" 2>/dev/null || true
     systemctl restart "$UNIT" 2>/dev/null || true
     sleep "$STAGGER_SECONDS"
     if [ -n "$PORT" ]; then
