@@ -1,0 +1,195 @@
+# Sample cluster — one hub + one spoke, on one docker host.
+#
+# WHY THIS FILE EXISTS, given the root compose already runs a substrate:
+# the root `docker-compose.yml` describes ONE standalone container. It cannot
+# express the hub/spoke split, because a spoke needs (a) a different role
+# selection, (b) endpoints pointing at the hub, (c) a HUB-ISSUED credential that
+# does not exist until the hub has booted, and (d) a health probe on a port the
+# spoke actually binds. This file is the smallest deployment that exercises all
+# four, and it is the fixture the setup instructions are tested against.
+#
+# It is NOT a production topology. A real hub and a real spoke live on different
+# hosts (law 11 — a vessel belongs where its data lives); co-locating them here
+# is a test of the CONFIGURATION SURFACE, not of placement.
+#
+# ---------------------------------------------------------------------------
+# Launch — two steps, because the spoke's credential is minted BY the hub
+# ---------------------------------------------------------------------------
+#
+#   cd <repo root>
+#   export ANTHROPIC_API_KEY=sk-ant-...      # the hub needs a provider key
+#
+#   # 1. hub — control plane + store + relay
+#   docker compose -p substrate-cluster -f scripts/substrate/docker-compose.cluster.yml \
+#     --profile hub up -d
+#   until [ "$(docker inspect -f '{{.State.Health.Status}}' substrate-hub)" = healthy ]; do sleep 5; done
+#
+#   # 2. spoke — inherits the hub's org, identity, trace store and LLM arms
+#   export CLUSTER_HUB_KEY="$(docker exec substrate-hub substrate-key show | tail -1)"
+#   docker compose -p substrate-cluster -f scripts/substrate/docker-compose.cluster.yml \
+#     --profile spoke up -d
+#
+#   # teardown, INCLUDING the cluster's volumes (they hold nothing you want)
+#   docker compose -p substrate-cluster -f scripts/substrate/docker-compose.cluster.yml \
+#     --profile hub --profile spoke down -v
+#
+# ---------------------------------------------------------------------------
+# Isolation from a substrate you already run
+# ---------------------------------------------------------------------------
+#
+# The `-p substrate-cluster` project name is LOAD-BEARING, not cosmetic. Compose
+# prefixes volume names with the project, so it is what keeps this file away
+# from the `substrate-workspace` / `substrate-surreal` volumes the root compose
+# uses — those hold real learning state, and `down -v` on the wrong project
+# destroys it. Container names and host ports are likewise deliberately distinct
+# (20xxx here, 18xxx for the root compose).
+
+name: substrate-cluster
+
+x-substrate-common: &substrate-common
+  image: ${SUBSTRATE_IMAGE:-ghcr.io/avigopal/substrate:dev}
+  privileged: true            # systemd as PID 1 inside the container
+  stop_signal: SIGRTMIN+3     # systemd graceful shutdown
+  stop_grace_period: 30s
+  restart: unless-stopped
+  networks: [cluster]
+  tmpfs:
+    - /run
+    - /run/lock
+
+services:
+
+  # --- HUB: store + control + api + transport + seed + infra + registry -----
+  #
+  # Runs surrealdb, valkey, identity-vessel, activity-api, discovery-vessel and
+  # the seeders. It owns the org_id, so every key it issues lands in ONE
+  # namespace — that is the whole mechanism by which a spoke shares its
+  # learning state (docs/FEDERATION.md § "Shared namespace").
+  #
+  # It runs NO compute: no goal-host, no development-vessel, no LLM arms. Do not
+  # dispatch goals at the hub; dispatch at the spoke.
+  hub:
+    <<: *substrate-common
+    container_name: ${CLUSTER_HUB_CONTAINER:-substrate-hub}
+    profiles: [hub]
+    environment:
+      ENABLED_ROLES: hub
+      # A hub genuinely needs a provider key — but this is `:-`, not `:?`, for
+      # the same reason as the spoke's METABOB_API_KEY below: compose
+      # interpolates before it applies profiles, and `down` interpolates too. A
+      # `:?` here makes `docker compose … down -v` fail in a shell that no
+      # longer exports the key, i.e. it breaks teardown. (Caught by running the
+      # teardown in this file's own header.) The one-key rule is enforced where
+      # it belongs, at gen-env.sh:41-44, which fails the boot loudly.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Advertise under the compose service name: a spoke on this network dials
+      # `http://hub:8100`, NOT a host port. If the hub advertised 127.0.0.1 the
+      # spoke would resolve it to its OWN loopback and silently misroute.
+      #
+      # PUBLIC_IP is what actually unlocks this. gen-env.sh emits
+      # DISCOVERY_PUBLIC_URL / IDENTITY_PUBLIC_URL *only inside* an
+      # `if [ -n "$PUB" ]` guard fed by PUBLIC_IP/FED_PUBLIC_IP, so setting the
+      # two URLs alone is silently discarded — they never reach /etc/substrate/env
+      # and discovery's GET /bootstrap keeps handing out loopback.
+      PUBLIC_IP: ${CLUSTER_HUB_HOST:-hub}
+      DISCOVERY_PUBLIC_URL: http://${CLUSTER_HUB_HOST:-hub}:8100
+      IDENTITY_PUBLIC_URL: http://${CLUSTER_HUB_HOST:-hub}:8101
+    ports:
+      - "${CLUSTER_HUB_API_PORT:-20080}:8080"    # activity-api  (trace store)
+      - "${CLUSTER_HUB_DISCOVERY_PORT:-20100}:8100"  # discovery  (the fixed point)
+      - "${CLUSTER_HUB_IDENTITY_PORT:-20101}:8101"   # identity   (the validator)
+    volumes:
+      - hub-workspace:/workspace
+      - hub-surreal:/var/lib/surrealdb
+    healthcheck:
+      # activity-api IS present on a hub (role `api`), so :8080 is the right probe.
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+  # --- SPOKE: compute + ui + seed + infra + registry ------------------------
+  #
+  # Runs goal-host, development-vessel, the LLM resolver, ribosome, analysis,
+  # local-tools and its own discovery. It runs NO store and NO identity — those
+  # resolve on the hub. Consequently it has no :8080 and no :8101 to bind, which
+  # is why its health probe is goal-host (:8210) and not the root compose's
+  # :8080. Pointing a spoke at the root compose's health test marks it unhealthy
+  # forever, by design rather than by fault.
+  spoke:
+    <<: *substrate-common
+    container_name: ${CLUSTER_SPOKE_CONTAINER:-substrate-spoke}
+    profiles: [spoke]
+    depends_on:
+      hub:
+        condition: service_healthy
+        required: false   # allows `--profile spoke up` as a separate second step
+    environment:
+      # POINT-AND-GO: per docs/SUBSTRATE.md these two are the only REQUIRED
+      # inputs — the role, identity endpoint, trace store and relay anchor are
+      # all supposed to derive from them. Everything below the pair is either an
+      # assertion of that derivation or an explicit override; the test is which
+      # of them can be removed without breaking the join.
+      # NOT a `:?` required-variable guard, deliberately. Compose interpolates
+      # EVERY service in the file before it applies `--profile`, so a `:?` here
+      # aborts `--profile hub up` — the step whose whole purpose is to mint this
+      # value. (The root compose has the same shape: its `ANTHROPIC_API_KEY:?`
+      # fires even for a spoke, which docs/SUBSTRATE.md says needs no provider
+      # key at all.) Step 2 of the header sets this; empty means step 1 was
+      # skipped, and the spoke will fail to join rather than boot standalone.
+      METABOB_API_KEY: ${CLUSTER_HUB_KEY:-}
+      DISCOVERY_ENDPOINT: http://${CLUSTER_HUB_HOST:-hub}:8100
+      HUB_DISCOVERY_URL: http://${CLUSTER_HUB_HOST:-hub}:8100
+      # NOT optional here, despite docs/SUBSTRATE.md listing both as "optional
+      # override — derived from the discovery host if unset".
+      #
+      # The derivation keeps the HOST from DISCOVERY_ENDPOINT but hardcodes the
+      # HOST-MAPPED ports (gen-env.sh:249-250 → `http://<host>:18080` /
+      # `:18101`). Reaching the hub on any other port — a docker network, a k8s
+      # service, a reverse proxy — yields endpoints that do not exist. Verified:
+      # unset, this spoke derived `http://hub:18101`, which is CONNREFUSED, so
+      # every vessel's discovery heartbeat returned 401 and NOTHING registered
+      # — while the container still reported `healthy`, because the health probe
+      # only asks goal-host whether its own process is up.
+      ACTIVITY_API_ENDPOINT: http://${CLUSTER_HUB_HOST:-hub}:8080
+      IDENTITY_VESSEL_URL: http://${CLUSTER_HUB_HOST:-hub}:8101
+      # Documented as *redundant* (gen-env infers `spoke` from a remote
+      # DISCOVERY_ENDPOINT). Set explicitly so the cluster is legible; drop it to
+      # test the inference.
+      ENABLED_ROLES: spoke
+      # A spoke inherits the hub's LLM arms through discovery and is documented
+      # as needing NO provider key. Left unset on purpose — that claim is under
+      # test. The root compose's `:?` guard on ANTHROPIC_API_KEY would make this
+      # impossible to express there.
+      ANTHROPIC_API_KEY: ${CLUSTER_SPOKE_ANTHROPIC_API_KEY:-}
+      # The spoke must advertise an endpoint the HUB's callers can dial. On this
+      # network that is the compose service name. docs/FEDERATION.md names
+      # SUBSTRATE_ADVERTISE_HOST / VESSEL_ADVERTISE_ENDPOINT for exactly this —
+      # but gen-env.sh emits NEITHER, and vessels only ever see
+      # EnvironmentFile=/etc/substrate/env, so passing them here is a NO-OP.
+      # PUBLIC_IP is the one that survives, so it is what the cluster uses.
+      PUBLIC_IP: ${CLUSTER_SPOKE_HOST:-spoke}
+    ports:
+      - "${CLUSTER_SPOKE_GOAL_HOST_PORT:-20210}:8210"  # goal-host (dispatch here)
+      - "${CLUSTER_SPOKE_DEV_PORT:-20090}:8090"        # development-vessel
+      - "${CLUSTER_SPOKE_DISCOVERY_PORT:-20110}:8100"  # the spoke's own registry
+    volumes:
+      - spoke-workspace:/workspace
+      - spoke-surreal:/var/lib/surrealdb   # unused by role, mounted for parity
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8210/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+networks:
+  cluster:
+    name: ${CLUSTER_NETWORK:-substrate-cluster-net}
+
+volumes:
+  hub-workspace:
+  hub-surreal:
+  spoke-workspace:
+  spoke-surreal:
