@@ -22,6 +22,39 @@ DST="$RUNTIME_DIR/$VESSEL"
 log() { echo "[mirror-to-live] $*"; }
 
 [ -d "$SRC/.git" ] || { log "no clone at $SRC — nothing to mirror"; exit 1; }
+
+# EXPECTED SHA — the deploy's only defence against shipping the wrong commit.
+#
+# Everything below restores the clone to HEAD and copies it, then logs the SHA it
+# happened to find. That log line is a REPORT, not a CHECK: `reset --hard HEAD`
+# moves to whatever HEAD is, so a clone left on a stale commit (fetch failed, a
+# push leg raced, the wrong branch checked out) mirrors the wrong code and the
+# deploy still exits 0 saying "mirrored". Every caller then believes it shipped
+# what it asked for. That is task #51, and it is the same shape as the six sync
+# targets that copied one file while printing success (50f10bb9).
+#
+# Pass the SHA you MEANT to deploy — as $3 or MIRROR_EXPECT_SHA — and a mismatch
+# fails loudly BEFORE the live tree is touched. Omitted, behaviour is exactly as
+# before, so no existing caller changes; this is a check callers can opt into,
+# not a new requirement they must satisfy.
+EXPECT_SHA="${3:-${MIRROR_EXPECT_SHA:-}}"
+if [ -n "$EXPECT_SHA" ]; then
+  ACTUAL_SHA="$(git -C "$SRC" rev-parse HEAD 2>/dev/null || echo "")"
+  if [ -z "$ACTUAL_SHA" ]; then
+    log "ERROR cannot read HEAD of $SRC — refusing to mirror against an expected SHA"
+    exit 1
+  fi
+  # Prefix match so a caller may pass a short or full SHA.
+  case "$ACTUAL_SHA" in
+    "$EXPECT_SHA"*) : ;;
+    *)
+      log "ERROR $VESSEL clone is at ${ACTUAL_SHA%"${ACTUAL_SHA#???????}"}… but the deploy asked for $EXPECT_SHA"
+      log "      REFUSING to mirror — the live tree is untouched"
+      log "      likely: the clone never fetched the commit, or is on another branch"
+      exit 1
+      ;;
+  esac
+fi
 [ -d "$DST" ] || { log "no live runtime at $DST — vessel not baked/installed here; skipping"; exit 0; }
 
 # The cutover push leg leaves the clone's working tree with unstaged deletions
@@ -87,4 +120,29 @@ if [ "$DEPS_CHANGED" = 1 ]; then
   (cd "$DST" && /root/.bun/bin/bun install --silent 2>&1 | tail -2) || log "WARN bun install failed for $VESSEL"
 fi
 
-log "$VESSEL mirrored ($(git -C "$SRC" rev-parse --short HEAD 2>/dev/null || echo '?')) -> $DST"
+FINAL_SHA="$(git -C "$SRC" rev-parse HEAD 2>/dev/null || echo '?')"
+
+# POST-MIRROR CHECK. The pre-flight above proves the clone was right BEFORE the
+# copy; it cannot prove the copy happened. `reset --hard` runs between them, and
+# the copy itself can partially fail. Re-reading HEAD afterwards costs nothing
+# and closes the window — a deploy must verify the artifact, not its intention.
+if [ -n "$EXPECT_SHA" ]; then
+  case "$FINAL_SHA" in
+    "$EXPECT_SHA"*) : ;;
+    *)
+      log "ERROR $VESSEL clone moved to $FINAL_SHA during the mirror (expected $EXPECT_SHA)"
+      log "      the live tree may now hold code from neither commit — re-run this deploy"
+      exit 1
+      ;;
+  esac
+fi
+
+# Assert the copy actually produced a source tree. `cp` failing after the rm
+# leaves an EMPTY live dir, which starts a vessel that crash-loops on a missing
+# entrypoint — and until now that exited 0 as "mirrored".
+if [ -d "$SRC/src" ] && [ ! -d "$DST/src" ]; then
+  log "ERROR $DST/src is missing after the mirror — the copy did not land"
+  exit 1
+fi
+
+log "$VESSEL mirrored (${FINAL_SHA%"${FINAL_SHA#???????}"}${EXPECT_SHA:+ verified}) -> $DST"
