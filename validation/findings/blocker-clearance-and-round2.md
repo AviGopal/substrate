@@ -116,13 +116,43 @@ This failure is **invisible to every gate the system currently has**:
 - `exit_code` is 0, so the exit-code branch cannot fire;
 - `stderr` is empty, so the stderr branch cannot fire *even if defect A were
   fixed* — this case would survive that repair;
-- the deterministic file-count oracle **abstains**, because `verifyCountFilesReach`
-  only triggers on paths matching `(repos|vessels)/…`, and this goal names `docs`.
+- the deterministic oracle **abstains twice over** (below).
 
-So the only remaining grader was the LLM judge, which rubber-stamped it. The
-independent recompute that exists specifically to catch this class is switched
-off for exactly the family this goal belongs to. G9 is therefore not a stray bad
-roll — it is defect B, observed.
+So the only remaining grader was the LLM judge, which rubber-stamped it.
+
+### G9 abstains for two independent reasons, and only one of them is defect B
+
+I first recorded this as "defect B, observed." That is half right, and the half
+that is wrong matters, because it would have made repair B look like the fix.
+
+1. **Path family — defect B.** `verifyCountFilesReach` only triggers on paths
+   matching `(repos|vessels)/…`, and this goal names `docs`.
+2. **Unit family — a separate, previously unrecorded gap.** The guard
+   `countsSomeOtherUnit` declines the goal *before* the path regex is even
+   reached, because this oracle answers "how many **files**" and G9 counts
+   **directories**. Verified by executing the guard:
+
+   ```
+   DECLINED  How many directories are directly inside the docs directory?
+   accepted  How many markdown files are in the docs directory?
+   ```
+
+   That decline is correct behaviour — the comment above it records a real
+   incident where claiming a file count for a different unit produced 20/20
+   reached and 0/20 correct. The gap is that **nothing picks the goal up
+   afterwards**: of the sixteen `verify*Reach` oracles in this file (files, git
+   commits, aggregates, ranks, averages, two-source compare, gap ratios, shape
+   producers, deps), **none counts directories** — for any path, including
+   `repos/`.
+
+**Consequence: landing repair B would not fix G9.** It would fix the path
+abstention for *file*-count goals naming `docs`, `scripts/…`, `openspec`,
+`validation`, or `packages`. G9 would remain wallpaper until a directory-count
+oracle exists. The correct post-fix probe for B is therefore a **file**-count
+goal such as "How many markdown files are in the docs directory?", graded by the
+presence of the `deterministic:verified-file-count` marker in the walk log —
+not by a right answer, which a freshly synthesized command could produce on its
+own.
 
 G9's **second trial returned the same wrong answer**, so this is deterministic,
 not variance. Its reach reason is the sharper statement of the defect:
@@ -206,18 +236,84 @@ have typechecked, landed, deployed, and reported `reached:true`.
 
 ---
 
+## Part 6 — repair B landed green, fixed nothing, and introduced a regression
+
+Repair B was dispatched once, as a fresh goal (so the frozen-summary problem in
+Part 2 did not apply). It reported success on trial 1:
+
+```
+EARLY EDIT-INTENT ROUTED to feature_compose → verdict=FAVORABLE
+landed SHA c9faf50d41cc3dd4ecf686b2acf16ad090c83d03
+reached: true   execution_path=feature_compose   attempt_count=1
+```
+
+It typechecked, the semantic gate passed it, a real commit landed, and it
+deployed to `/vessels` within minutes. **The named function was never touched.**
+
+The goal text named `verifyCountFilesReach` explicitly, twice. The regex landed
+at line 1232, inside **`verifyRegistryInventoryReach`** — a different oracle.
+`verifyCountFilesReach` at line 1628 still carries the original pattern:
+
+```
+1232:  const dirM = goal.match(/(repos|vessels)\/...|\b(?:docs|scripts|...)/);   <- landed here
+1628:  const dirM = goal.match(/(repos|vessels)\/[\w.-]+\/[\w./-]+/);            <- the target, unchanged
+```
+
+The polarity is inverted too: the target site reads `if (!dirM) return null;`
+(abstain when no path is named); the landed site reads `if (dirM) return null;`
+(abstain when one is). The pattern was written for the first meaning.
+
+### The regression
+
+The line it replaced was a **broader** abstention test. Executing both against
+real goal strings:
+
+| goal | abstained before | abstains now |
+|---|---|---|
+| How many shapes does `src/foo` serve? | yes | **no** |
+| How many vessels advertise `a/b`? | yes | **no** |
+| How many shapes are in the registry for `my-tool/thing`? | yes | **no** |
+
+So `verifyRegistryInventoryReach` now **claims** goals it previously declined —
+the exact scope-misrepresentation the function's own comment exists to prevent
+("this oracle's parse cannot represent the goal's scope, so it must abstain").
+The change is live in `/vessels` and `in_flight` was 2 at the time of checking.
+
+**This is the session's strongest evidence for the reach-grading thesis.** For an
+edit goal, `reached:true` means *a commit landed*, not *the requested change was
+made*. It is the same failure as G9 one level up: G9's judge accepted a number
+for being shaped like a count; this judge accepted a commit for being shaped like
+a landing. Neither checked the thing it was supposed to check.
+
+Note also that the semantic gate is **inconsistent**: it caught repair A's
+wrong-block edit with a precise critique, and passed repair B's wrong-function
+edit. Whatever it checks, it is not "does this patch modify the function the goal
+named" — a check that is cheap, deterministic, and would have caught B.
+
+**Recommended and NOT performed:** revert `c9faf50d`. It is an unrequested
+behaviour change to a grading oracle, pushed to the shared `dev` branch and
+already deployed. Reverting means pushing to shared `dev`, which is outward-facing
+and was not part of the authorization to dispatch repairs, so it is left for an
+explicit decision rather than done unilaterally.
+
 ## Status
 
-**Fixed this session:** nothing in product code. Two repair attempts failed
-honestly and were not forced through by hand.
+**Fixed this session:** nothing. Repair A failed honestly (twice). Repair B
+reported success, edited the wrong function, and left a regression behind.
 
 **Newly established:**
 1. Corrected re-dispatches of edit goals are discarded — the gap summary is frozen
    at first filing (Part 2).
-2. The reach-grading defect reproduces organically, and the abstaining oracle is
-   why (Part 3, G9).
+2. The reach-grading defect reproduces organically; G9 abstains on **two**
+   independent grounds, only one of which is defect B, and no directory-count
+   oracle exists at all (Part 3).
 3. The concept-db cause is a missing match reference, not unpersisted IDF (Part 4).
 4. A pattern repair needs an execution harness, not a typecheck (Part 5).
+5. An edit goal's `reached` verdict tests that a commit landed, not that the named
+   function changed — and the semantic gate does not check it either (Part 6).
+
+**Regression introduced by this session:** `c9faf50d` narrows the abstention test
+in `verifyRegistryInventoryReach`. Live. Revert recommended, not performed.
 
 **Capability:** 7/8 within two trials, 6 on trial 1, one wallpaper — on a fresh,
 never-before-run goal set spanning counting, ranking, lookup, summarization,
