@@ -42,6 +42,35 @@ else
   CONTAINER="$CONTAINER" "$SCRIPT_DIR/substrate-ready.sh" --once || FAIL=1
 fi
 
+echo "== 1b. datastore disk headroom =="
+# A FULL DISK PRESENTS AS DATABASE-PERFORMANCE PATHOLOGY, AND NOTHING ELSE ALARMED.
+#
+# 2026-08-10: the hub sat at 76G/77G used — 1.1G free — and SurrealDB began timing
+# out on writes: 28 "query was not executed because it exceeded the timeout" on
+# INSERT INTO execution in a single 20-minute window, with the process never
+# restarting. Everything downstream stopped quietly: ribosome extraction skipped
+# every execution (verdict=ungraded), reaches went ungraded, and spoke traces were
+# dropped by TranslatingTraceSink. No check anywhere reported a problem, and the
+# investigation burned three plausible wrong causes (index count, request volume,
+# restart loop) before `df -h` answered it in one line.
+#
+# Thresholds are on FREE SPACE, not percentage: an 18G datastore on a 99%-full 77G
+# disk has 1.1G to work with regardless of what the ratio says.
+DISK_AVAIL_MB="$(csh 'df -Pm /var/lib/surrealdb 2>/dev/null || df -Pm /' | awk 'NR==2 {print $4}')"
+DISK_USE_PCT="$(csh 'df -P /var/lib/surrealdb 2>/dev/null || df -P /' | awk 'NR==2 {print $5}' | tr -d '%')"
+if [ -z "$DISK_AVAIL_MB" ]; then
+  note "could not read datastore filesystem usage — skipping headroom check"
+elif [ "$DISK_AVAIL_MB" -lt 2048 ]; then
+  bad "datastore disk has ${DISK_AVAIL_MB}MB free (${DISK_USE_PCT}% used) — SurrealDB WILL time out on writes"
+  note "grading, ribosome extraction and trace persistence stop silently at this level"
+  note "reclaim without touching data: docker builder prune -f ; journalctl --vacuum-size=200M"
+  note "do NOT prune docker local volumes — that is the substrate datastore"
+elif [ "$DISK_AVAIL_MB" -lt 8192 ]; then
+  note "WARN datastore disk has ${DISK_AVAIL_MB}MB free (${DISK_USE_PCT}% used) — below 8G, watch it"
+else
+  ok "datastore disk headroom ${DISK_AVAIL_MB}MB free (${DISK_USE_PCT}% used)"
+fi
+
 echo "== 2. SurrealDB root auth =="
 SURREAL_CHECK="$(csh 'P=$(grep -m1 "^SURREALDB_PASSWORD=" /etc/substrate/env | cut -d= -f2- | tr -d "\""); curl -s -m 5 -u "root:$P" -X POST http://127.0.0.1:8000/sql -H "Accept: application/json" -H "surreal-ns: activity-system" -H "surreal-db: learning_loop" -d "RETURN 1;"' 2>/dev/null || true)"
 if echo "$SURREAL_CHECK" | grep -q '"OK"'; then
