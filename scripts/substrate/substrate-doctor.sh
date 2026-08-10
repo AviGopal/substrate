@@ -160,8 +160,39 @@ remedy: make -C scripts/substrate install-host-sync && systemctl --user enable -
   done
 fi
 
+echo "== 8. llm arms answer a real call =="
+# Not /health. Measured 2026-08-10: every local arm reported 200 with
+# providers=[anthropic] and discovery listed nine servers for llm_completion,
+# while EVERY actual call returned "Your credit balance is too low". The account
+# was unfunded, so no compose could draft anything for hours, and each layer
+# reported something true but not causal — the compose verdict even quoted the
+# trailing federation-egress arm, which is the LAST candidate tried.
+#
+# A paid dependency is only provably alive if a real, minimal, paid call
+# succeeds. 16 tokens costs a fraction of a cent and buys the one fact that
+# matters: can this substrate draft at all.
+LLM_OK=0; LLM_TRIED=0; LLM_WHY=""
+for LP in 8221 8223 8225; do
+  csh "curl -s -o /dev/null -w '' -m 3 http://127.0.0.1:$LP/health" >/dev/null 2>&1 || continue
+  LLM_TRIED=$((LLM_TRIED + 1))
+  LR="$(csh "K=\$(grep -m1 '^METABOB_API_KEY=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); curl -s -m 45 -X POST http://127.0.0.1:$LP/resolve -H 'Content-Type: application/json' -H \"Authorization: ApiKey \$K\" -d '{\"type\":\"llm_completion\",\"prompt\":\"reply with the single word ok\",\"max_tokens\":16,\"task_type\":\"doctor_probe\"}'" 2>/dev/null || true)"
+  case "$LR" in
+    *'"resolved":true'*) LLM_OK=$((LLM_OK + 1)) ;;
+    *) [ -z "$LLM_WHY" ] && LLM_WHY="$(printf '%s' "$LR" | tr -d '\n' | head -c 160)" ;;
+  esac
+done
+if [ "$LLM_TRIED" = 0 ]; then
+  note "no local llm arm is listening (expected on a role-subset node that resolves LLM on a peer)"
+elif [ "$LLM_OK" -gt 0 ]; then
+  ok "$LLM_OK/$LLM_TRIED llm arm(s) answered a real completion"
+else
+  bad "all $LLM_TRIED local llm arm(s) are up but CANNOT COMPLETE — the substrate cannot draft"
+  note "first error: $LLM_WHY"
+  note "credit/quota or key problem, not a code problem; /health cannot see it"
+fi
+
 if [ "$SMOKE" = 1 ]; then
-  echo "== 8. smoke: goal dispatch -> trace lands =="
+  echo "== 9. smoke: goal dispatch -> trace lands =="
   SMOKE_OUT="$(csh 'K=$(grep -m1 "^METABOB_API_KEY=" /etc/substrate/env | cut -d= -f2- | tr -d "\""); curl -s -m 60 -X POST http://127.0.0.1:8210/run-goal -H "Content-Type: application/json" -H "Authorization: ApiKey $K" -d "{\"goal\":\"substrate doctor smoke check: report the substrate is alive\"}"' 2>/dev/null || true)"
   # /run-goal answers either synchronously ({executionId,...}) or async
   # ({dispatchId, status:running} — poll GET /executions/:dispatchId).
