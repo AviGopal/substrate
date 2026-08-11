@@ -202,6 +202,48 @@ function wanted(stage: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// --predict "<goal text>" — where would this goal route, and why?
+//
+// The fixtures answer "did a layer regress". This answers "what will happen to
+// THIS goal", before a dispatch is spent on it. Same ported search, same
+// production predicates, and it prints the localiser's own tap — so a wrong
+// prediction is debuggable rather than just wrong.
+//
+// A dispatch costs 10-25 minutes and, if it localises wrongly, puts a confident
+// edit into feature_compose. This costs a second.
+// ---------------------------------------------------------------------------
+
+const PREDICT = arg("predict");
+if (PREDICT) {
+  const log: string[] = [];
+  const admitted = isPathlessCodeChangeGoal(PREDICT);
+  const demandsLanding = isEditIntentGoal(PREDICT) || goalDemandsLandedEdit(PREDICT);
+  const restated = await resolvePathlessCodeChangeGoal(PREDICT, makeSearch(), (m) => log.push(m));
+  const target = restated.match(/repos\/[\w.-]+\/[\w./-]+\.\w+/)?.[0] ?? null;
+  console.log(`\npredict  root=${ROOT}`);
+  console.log(`  demands a landed edit : ${demandsLanding}`);
+  console.log(`  admitted for restating: ${admitted}`);
+  console.log(`  terms (specific first): ${JSON.stringify(extractSearchTerms(PREDICT).slice(0, 10))}`);
+  console.log(`  target                : ${target ?? "<unrestated — will walk, not compose>"}`);
+  for (const l of log) console.log(`    tap: ${l}`);
+  if (target) {
+    // The single most useful thing to know before dispatching: is the term that
+    // decided the file a real code identifier there, or English in a comment or
+    // string? That distinction is the open localisation gap.
+    const t = readFileSync(join(ROOT, target), "utf-8");
+    const stripped = t.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+    const term = log.join(" ").match(/unique hit for "([^"]+)"/)?.[1];
+    if (term) {
+      const inCode = stripped.includes(term);
+      const inString = new RegExp(`["'\`][^"'\`]*${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(stripped);
+      console.log(`  evidence kind         : ${!inCode ? "COMMENT-ONLY — do not dispatch" : inString ? "STRING LITERAL — likely wrong, check first" : "code"}`);
+    }
+    console.log(`  target has a test file: ${existsSync(join(ROOT, target).replace(/\.ts$/, ".test.ts"))}`);
+  }
+  process.exit(0);
+}
+
+// ---------------------------------------------------------------------------
 // S1 — intent. Does a goal that demands a code change read as one?
 // ---------------------------------------------------------------------------
 
@@ -336,7 +378,11 @@ function makeSearch(): FileSearch {
          // declines, so a fixture's answer would depend on which agent sessions
          // happened to run here. `worktree_copies_excluded` in the report says
          // how many files this dropped, so the deviation is never silent.
-         "--exclude-dir=.claude",
+         // Two families, not one: agent worktrees land under .claude/worktrees/
+         // AND as .wt-* siblings. Found the second only after the first was
+         // fixed — enumerate the other instances when patching your own
+         // breakage, which is the rule this very edit exists to obey.
+         "--exclude-dir=.claude", "--exclude-dir=.wt-reachrefactor",
          ...args, scope],
         { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 64 * 1024 * 1024, timeout: 20_000 },
       );
@@ -751,7 +797,7 @@ if (wanted("S7")) {
 function worktreeCopiesExcluded(): number {
   try {
     const out = execFileSync(
-      "find", [REPOS, "-maxdepth", "6", "-path", "*/.claude/worktrees/*", "-name", "*.ts"],
+      "find", [REPOS, "-maxdepth", "6", "(", "-path", "*/.claude/worktrees/*", "-o", "-path", "*/.wt-*/*", ")", "-name", "*.ts"],
       { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"], timeout: 30_000, maxBuffer: 32 * 1024 * 1024 },
     );
     return out.split("\n").filter(Boolean).length;
