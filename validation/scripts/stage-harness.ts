@@ -221,11 +221,17 @@ if (PREDICT) {
   const restated = await resolvePathlessCodeChangeGoal(PREDICT, makeSearch(), (m) => log.push(m));
   const target = restated.match(/repos\/[\w.-]+\/[\w./-]+\.\w+/)?.[0] ?? null;
   console.log(`\npredict  root=${ROOT}`);
-  console.log(`  demands a landed edit : ${demandsLanding}`);
+  // BEFORE and AFTER restatement, because they differ and only the second one
+  // predicts behaviour. Restating attaches a path, which is exactly what makes a
+  // goal an edit goal — so a pre-restatement `false` here reads as "this will not
+  // compose" and is wrong. Measured on dispatch 8f0264f7: false before, and the
+  // hub routed it straight to feature_compose anyway.
+  console.log(`  demands a landed edit : ${demandsLanding} (as written)`);
   console.log(`  admitted for restating: ${admitted}`);
   console.log(`  terms (specific first): ${JSON.stringify(extractSearchTerms(PREDICT).slice(0, 10))}`);
   console.log(`  target                : ${target ?? "<unrestated — will walk, not compose>"}`);
   for (const l of log) console.log(`    tap: ${l}`);
+  console.log(`  demands a landed edit : ${isEditIntentGoal(restated) || goalDemandsLandedEdit(restated)} (after restating — THIS is what decides whether it composes)`);
   if (target) {
     // The single most useful thing to know before dispatching: is the term that
     // decided the file a real code identifier there, or English in a comment or
