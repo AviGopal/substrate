@@ -288,7 +288,17 @@ if (PREDICT) {
     const term = log.join(" ").match(/unique hit for "([^"]+)"/)?.[1];
     if (term) {
       const inCode = stripped.includes(term);
-      const inString = new RegExp(`["'\`][^"'\`]*${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(stripped);
+      // LINE-SCOPED ON PURPOSE. The first version tested the whole file with
+      // `["'\`][^"'\`]*<term>`, and that character class matches NEWLINES — so a
+      // quote anywhere earlier in the file paired with the term and every hit
+      // read as a string literal. It reported STRING LITERAL for
+      // renderSafeAnchors, whose declaration is ordinary code. A false "likely
+      // wrong" is not the safe direction of error: it deters correct dispatches
+      // and makes the flag noise, which is how a warning stops being read.
+      const esc = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const perLine = new RegExp(`["'\`][^"'\`\n]*${esc}`);
+      const inString = stripped.split("\n").some((l) => perLine.test(l))
+        && !stripped.split("\n").some((l) => new RegExp(`^[\\t ]*(?:export[\\t ]+)?(?:async[\\t ]+)?(?:function|const|let|var|class|interface|type)[\\t ]+${esc}\\b`).test(l));
       console.log(`  evidence kind         : ${!inCode ? "COMMENT-ONLY — do not dispatch" : inString ? "STRING LITERAL — likely wrong, check first" : "code"}`);
     }
     console.log(`  target has a test file: ${existsSync(join(ROOT, target).replace(/\.ts$/, ".test.ts"))}`);
