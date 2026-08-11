@@ -740,6 +740,24 @@ if (wanted("S7")) {
   });
 }
 
+/**
+ * How many source files the .claude exclusion drops.
+ *
+ * The exclusion is this harness's one deviation from the ported original, so its
+ * effect is reported rather than assumed. A non-zero count means the host tree
+ * carries agent worktrees the container does not, and that fixtures would have
+ * measured that clutter without it.
+ */
+function worktreeCopiesExcluded(): number {
+  try {
+    const out = execFileSync(
+      "find", [REPOS, "-maxdepth", "6", "-path", "*/.claude/worktrees/*", "-name", "*.ts"],
+      { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"], timeout: 30_000, maxBuffer: 32 * 1024 * 1024 },
+    );
+    return out.split("\n").filter(Boolean).length;
+  } catch { return -1; }
+}
+
 // ---------------------------------------------------------------------------
 // S8 — does an operator dispatch reach the slot reserved for operator work?
 //
@@ -838,6 +856,8 @@ const report = {
    * before any S3 number is believed.
    */
   production_search_digest: productionSearchDigest(),
+  /** Files dropped by this harness's one deviation from the port. -1 = uncounted. */
+  worktree_copies_excluded: worktreeCopiesExcluded(),
   trees,
   counts,
   limitations: [
