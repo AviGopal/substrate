@@ -84,6 +84,7 @@ import {
   symbolsNeedingDeclaration,
   anchorOccurrences,
   uniqueAnchorLines,
+  renderSafeAnchors,
 } from "../../repos/development-vessel/src/cross-file-symbols.ts";
 
 // ---------------------------------------------------------------------------
@@ -690,6 +691,38 @@ if (wanted("S6")) {
       const bad = anchors.filter((a) => anchorOccurrences(text, a) !== 1);
       return bad.length === 0 ? "true" : `${bad.length}-of-${anchors.length}-not-unique`;
     });
+
+  // AN EMPTY REGION MATCHES EVERY LINE, SO IT ANCHORS AT LINE 0.
+  //
+  // Landed autonomously as d95bf13, which replaced `region ? findIndex(...) : -1`
+  // with an unconditional findIndex plus "not found -> return no anchors". The
+  // not-found half is an improvement: offering anchors from an unrelated part of
+  // the file is the same phantom-evidence class the localisation gap is about.
+  //
+  // But the sole caller passes `regionHint ?? ""`, and `"abc".includes("")` is
+  // TRUE for every line — so findIndex returns 0 and the drafter is handed
+  // anchors from the file HEADER, labelled "near the region". Verified on
+  // feature-compose.ts (4,601 lines): the first anchor offered is an import.
+  // Before the change the fallback was mid-file — also arbitrary, but not
+  // guaranteed to be imports.
+  //
+  // The fix is the empty case, not the not-found case: an absent region should
+  // take the same "return nothing" path the change already added.
+  const bigFile = join(REPOS, "development-vessel/src/resolvers/feature-compose.ts");
+  const bigText = existsSync(bigFile) ? readFileSync(bigFile, "utf-8") : "";
+  check(f, "S6.empty-region-anchors-at-line-0",
+    "d95bf13 — substrate-authored change to renderSafeAnchors, reviewed 2026-08-11",
+    "anchors-from-header",
+    () => {
+      if (bigText.length < 1000) return "<fixture-file-absent>";
+      const out = renderSafeAnchors(bigText, "", "feature-compose.ts");
+      if (out === "") return "no-anchors";
+      const head = bigText.split("\n").slice(0, 40).join("\n");
+      const first = out.split("\n").find((l) => l.startsWith("    "))?.trim() ?? "";
+      return first && head.includes(first) ? "anchors-from-header" : "anchors-elsewhere";
+    },
+    { known_open: true,
+      note: "OPEN. Not a catastrophic regression — composes still run — but every compose WITHOUT a region hint now gets header anchors presented as local ones, which is worse than the mid-file fallback it replaced. Filed rather than patched." });
 
   check(f, "S6.control-absent-anchor", "control: an anchor that is not there must count 0, not 1",
     "0", () => String(anchorOccurrences(text, "zzqqxx_this_line_does_not_exist")));
