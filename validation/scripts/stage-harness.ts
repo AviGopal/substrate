@@ -1053,6 +1053,33 @@ if (wanted("S9")) {
     { known_open: live !== sup,
       note: `Records the CURRENT wrong state; correct is "same" (or a coverage check that resolves against the tree being edited). live=${live} vs super-repo=${sup}. While these differ, every fc-coverage verdict for this vessel describes a checkout the compose is not editing.` });
 
+  // THE SAME WRONG ROOT DISABLES A SECOND, MORE CONSEQUENTIAL GATE.
+  //
+  // fc-vacuous Guard 2 ("consult the whole file before refusing") reads the
+  // target under the same root and fails open when it cannot:
+  //     if (!current) { referencedSomewhere = true; break; }
+  // So a plan vacuousEditReason has ALREADY called vacuous is admitted whenever
+  // the file is missing from that tree. Demonstrated by bff3347 (reverted).
+  //
+  // The distribution is what makes it serious: the files missing from that tree
+  // are the NEWEST ones, so the guard holds on stable code and opens on code
+  // under active development — the likeliest compose targets, least covered by
+  // tests.
+  const missingNewest = (): string => {
+    try {
+      return execFileSync("docker", ["exec", CONTAINER, "sh", "-c",
+        'n=0; for f in $(find /vessels/development-vessel/src -name "*.ts" ! -name "*.test.ts" | sed "s|/vessels/development-vessel/||"); do ' +
+        '[ -f "/workspace/git/super-repo/repos/development-vessel/$f" ] || n=$((n+1)); done; echo $n'],
+        { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"], timeout: 30_000 }).trim();
+    } catch { return "-1"; }
+  };
+  const missing = missingNewest();
+  check(f, "S9.vacuous-guard-can-read-its-targets",
+    "gap the-vacuous-plan-guard-fails-open-on-the-newest-files — demonstrated by bff3347, reverted 11587fd",
+    "some-unreadable", () => (missing === "-1" ? "<uncounted>" : missing === "0" ? "all-readable" : "some-unreadable"),
+    { known_open: missing !== "0" && missing !== "-1",
+      note: `Records the CURRENT wrong state; correct is "all-readable" (or a guard that resolves against the tree being edited). ${missing} development-vessel source file(s) are absent from the tree fc-vacuous Guard 2 reads, and for each of those the guard admits a plan already judged vacuous.` });
+
   stages.push({
     stage: "S9", title: "Compose-time checks vs the tree being edited",
     measures: "development-vessel/src/resolvers/feature-compose.ts: fc-coverage candidate resolution, compared across the two checkouts",
