@@ -117,20 +117,28 @@ The rhythm *conductor* is nonetheless stale — all four rhythms last updated
 
 | | before | after |
 |---|---|---|
-| host load (1 min) | 41–46 | **15.3** |
-| `substrate-live` CPU | 2075% | **353%** |
-| SurrealDB CPU | 1043% | **252%** |
 | failed units | 0 | **0** (15/15 vessels running) |
 | SurrealDB dir | 32 GB | **17 GB** |
+| `substrate-live` CPU | 2075% (n=1) | **511%–1989%**, 6 samples |
+| host load (1 min) | 41–46 | **27–48**, still `id=0` at peak |
+
+**Correction — I first reported this as "load 15.3, container 353%", a roughly 6×
+improvement. That was wrong**: both figures came from a *single* `docker stats`
+sample that happened to land in a trough. Six samples over 90 seconds give
+1589 / 1389 / 856 / 537 / 511 / 546 percent, and host load re-measured at 27–48 with
+`id=0` at peak. The load is **bursty, not reduced**. A single sample of a bursty
+signal is not a measurement — the same error this document criticises elsewhere.
+
+What *is* durably reclaimed: 15 GB of disk, and the ~1 core the runaway `awk` held.
 
 Earlier in the session: an orphaned runaway `awk` (8h27m of CPU, infinite by
 construction, reparented to init) was killed, a 15 GB stale `data.db.bak-reap` was
 deleted after confirming zero open file descriptors, and a reversible
 `StartLimitIntervalSec=0` drop-in was applied to `activity-api`.
 
-**I did not establish causation for the SurrealDB drop.** The awk accounts for about
-one core; query load varies independently and I never identified the query mix. The
-improvement is observed, not attributed.
+**There is no established SurrealDB improvement to attribute.** SurrealDB remains the
+dominant consumer and its load is bursty; I never identified the query mix. The awk
+accounts for about one core, and that is the only CPU claim this sweep supports.
 
 `activity-api` still restarts roughly every five minutes on external SIGTERMs
 (`Result=success`, `NRestarts=0`). The cause is gated code and belongs to the
