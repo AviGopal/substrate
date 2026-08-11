@@ -322,7 +322,22 @@ function makeSearch(): FileSearch {
         ["-rl", "--include=*.ts", "--include=*.sh", "--include=Makefile",
          "--include=*.mk", "--include=*.service", "--include=*.timer",
          "--exclude=*.test.ts", "--exclude-dir=node_modules", "--exclude-dir=.git",
-         "--exclude-dir=dist", ...args, scope],
+         "--exclude-dir=dist",
+         // DELIBERATE DEVIATION FROM THE ORIGINAL, and the only one.
+         //
+         // A host checkout accumulates agent worktrees under .claude/worktrees/,
+         // each a FULL second copy of the vessel source. Production does not
+         // exclude them and does not need to: the container's tree
+         // (/workspace/git/vessels) carries only .git/worktrees metadata, which
+         // --exclude-dir=.git already covers. Verified 2026-08-11.
+         //
+         // Without this the harness measures its own host clutter — a term
+         // present once in real source reads as three hits and the localiser
+         // declines, so a fixture's answer would depend on which agent sessions
+         // happened to run here. `worktree_copies_excluded` in the report says
+         // how many files this dropped, so the deviation is never silent.
+         "--exclude-dir=.claude",
+         ...args, scope],
         { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 64 * 1024 * 1024, timeout: 20_000 },
       );
     } catch (err) {
@@ -431,10 +446,11 @@ if (wanted("S3")) {
 
     // THE PHANTOM, MEASURED DIRECTLY.
     //
-    // "traffic across" is the goal's own English. It occurs in three files today
-    // and — verified 2026-08-11 — in ALL THREE it occurs only inside comments.
-    // The goal therefore declines, and it declines for a reason worth naming: the
-    // set is AMBIGUOUS (3 hits), not because the comment filter removed anything.
+    // "traffic across" is the goal's own English, and it occurs today only inside
+    // comments. But the term that actually decides this goal is the earlier,
+    // more specific one — and it lands on a src/seed prompt template, inside a
+    // string literal, uniquely. So the goal is restated with full confidence
+    // onto a file with no relation to the defect.
     //
     // ★ THAT DISTINCTION IS THE FINDING. The comment filter is fail-open by
     // design — "if the filter would eliminate EVERY hit, the original list is
@@ -446,16 +462,51 @@ if (wanted("S3")) {
     // coexists (narrowing an ambiguous set), which is a different job from the
     // one the phantom-match defect needs done.
     //
-    // This fixture pins the CURRENT safety, which rests on there being three
-    // hits. If two of them are ever reworded away, this goal silently becomes a
-    // confident restatement onto a comment.
+    // ★ src/seed/*.ts IS A SYSTEMATIC ATTRACTOR. Those files carry prompt
+    // templates: English describing substrate behaviour, in exactly the
+    // vocabulary a symptom goal uses. Three independent probes here land on one.
+    // The comment filter does not see them because the prose is in string
+    // literals, and the uniqueness gate reads a single literal hit as certainty.
     const a5 = await restate("S3.phrase-alone", "The re-mint gate splits its traffic across the copies. Fix it.");
     f.push({
       id: "S3.phrase-alone",
       provenance: "dispatch faac9a39, reduced so the prose phrase is the term that decides — the defect in isolation",
-      expected: "<unrestated>", actual: a5, known_open: false,
-      status: a5 === "<unrestated>" ? "pass" : "regression",
-      note: why("S3.phrase-alone") + " || Declines by AMBIGUITY (3 comment-only hits), not by the comment filter. The filter is fail-open, so a single comment-only hit would still be restated onto with full confidence. Safety here is incidental to hit count, not structural.",
+      expected: "<unrestated>", actual: a5, known_open: true,
+      status: a5 === "<unrestated>" ? "pass" : "known_open",
+      note: why("S3.phrase-alone") + " || OPEN, and it demonstrates the mechanism twice over. This fixture FIRST read as a safe decline — but only because untracked agent worktrees on the host tripled the hit count into ambiguity. With the corpus cleaned to match the container's, the winning term resolves to a UNIQUE hit inside a src/seed prompt template and is restated onto with full confidence. Ambiguity is not a safety property; it is a hit-count accident that any tidying reverses.",
+    });
+
+    // PROSE INSIDE A STRING LITERAL IS NOT CODE EITHER — and the filter only
+    // strips comments.
+    //
+    // OBSERVED 2026-08-11 on live hub dispatch f311d8e7, whose goal was ABOUT
+    // this very defect. The goal was restated onto
+    // development-vessel/src/seed/draft-gap-closing-activity.ts, region
+    // "prose-only", because that phrase occurs there — inside a prompt template
+    // string, `"prose-only mode."`. The comment filter passed it through as
+    // IN-CODE evidence and the uniqueness gate saw exactly one hit, so the
+    // restatement was made with full confidence onto a file that has nothing to
+    // do with the defect.
+    //
+    // Prompt-template and seed files are the same hazard as comments, for the
+    // same reason: they are English about the system's own behaviour, written in
+    // exactly the vocabulary a symptom goal uses. Stripping comments and not
+    // string literals covers one of the two prose corpora in this codebase.
+    const stripLikeProduction = (src: string): string =>
+      src.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+    const seed = join(REPOS, "development-vessel/src/seed/draft-gap-closing-activity.ts");
+    f.push({
+      id: "S3.string-literal-prose",
+      provenance: "live hub dispatch f311d8e7 — a goal about comment-only matches was itself misrouted by a string-literal match",
+      expected: "stripped (prose in a string literal is not code evidence)",
+      actual: existsSync(seed)
+        ? (stripLikeProduction(readFileSync(seed, "utf-8")).includes("prose-only") ? "survives-as-code" : "stripped")
+        : "<fixture-file-absent>",
+      known_open: true,
+      status: existsSync(seed)
+        ? (stripLikeProduction(readFileSync(seed, "utf-8")).includes("prose-only") ? "known_open" : "regression")
+        : "error",
+      note: "OPEN. Note the shape of the evidence: this was found because a goal about the defect was misrouted BY the defect. Stripping string literals is not obviously the right fix — a goal naming a real string constant would then lose its only true hit — so the durable form is probably to CARRY the evidence kind (code / comment / literal) alongside each hit and let the confidence bar depend on it, rather than to widen the stripper.",
     });
 
     // CONTROL 1 — nonsense must not localise. Without this a localiser that
