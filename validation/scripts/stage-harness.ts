@@ -794,7 +794,13 @@ if (wanted("S6")) {
   const bigText = existsSync(bigFile) ? readFileSync(bigFile, "utf-8") : "";
   check(f, "S6.empty-region-anchors-at-line-0",
     "d95bf13 — substrate-authored change to renderSafeAnchors, reviewed 2026-08-11",
-    "anchors-from-header",
+    // CLOSED 2026-08-11 by 6e63247 (a concurrent agent session, not the
+    // substrate): `region ? findIndex(...) : -1` restores the guard, so an
+    // absent region takes the no-anchors path instead of banding line 0 —
+    // exactly the repair the gap described, with tests. Expectation was
+    // "anchors-from-header" while open; the harness reported the flip as a
+    // stale expectation, which is this update.
+    "no-anchors",
     () => {
       if (bigText.length < 1000) return "<fixture-file-absent>";
       const out = renderSafeAnchors(bigText, "", "feature-compose.ts");
@@ -803,7 +809,7 @@ if (wanted("S6")) {
       const first = out.split("\n").find((l) => l.startsWith("    "))?.trim() ?? "";
       return first && head.includes(first) ? "anchors-from-header" : "anchors-elsewhere";
     },
-    { known_open: true,
+    { known_open: false,
       dependsOn: ["repos/development-vessel/src/cross-file-symbols.ts", "repos/development-vessel/src/resolvers/feature-compose.ts"],
       note: "OPEN. Not a catastrophic regression — composes still run — but every compose WITHOUT a region hint now gets header anchors presented as local ones, which is worse than the mid-file fallback it replaced. Filed rather than patched." });
 
