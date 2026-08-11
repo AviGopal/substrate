@@ -711,6 +711,32 @@ if (wanted("S5")) {
       "export function isFailoverError(err: unknown): boolean { return false; }\nif (reached) arm.alpha += 1;",
     ).includes("isFailoverError")));
 
+  // PARAMETERS ARE DECLARATIONS, AND METHODS ARE NOT SYMBOLS TO RESOLVE.
+  //
+  // Observed live 2026-08-11 on the compose against cross-file-symbols.ts:
+  //   [fc-symbols] 3 spec symbol(s) absent from the window and NOT declared:
+  //   fileText, maxAnchors, findIndex — drafter will have to infer them
+  // All three are wrong. fileText and maxAnchors are parameters of the very
+  // function in the window; findIndex is a JS builtin reached as `.findIndex`.
+  //
+  // `declarationVisible` recognises function/const/let/var/class/interface/type
+  // and nothing else, so a parameter list is invisible to it, and nothing strips
+  // member expressions before treating a name as a free symbol.
+  //
+  // The cost is not a stray log line: every false positive spends window budget
+  // on a declaration the drafter can already see, crowding out the ones it
+  // genuinely cannot — which inverts the purpose of the module (law 8).
+  check(f, "S5.params-and-methods-are-not-undeclared",
+    "live compose on cross-file-symbols.ts — fc-symbols named two parameters and a builtin",
+    '["fileText","findIndex","maxAnchors"]',
+    () => JSON.stringify(symbolsNeedingDeclaration(
+      "Fix the guard in renderSafeAnchors: fileText is scanned with findIndex and maxAnchors bounds the result.",
+      'export function renderSafeAnchors(\n  fileText: string,\n  region: string,\n  maxAnchors = 12,\n): string {\n  const lines = fileText.split("\\n");\n  const center = lines.findIndex((l) => l.includes(region));\n}',
+    ).sort()),
+    { known_open: true,
+      dependsOn: ["repos/development-vessel/src/cross-file-symbols.ts"],
+      note: "OPEN, and it is MY code. Records the current wrong answer; the correct one is []. Two fixes, both narrow: treat a parameter list as declaring its parameters, and drop names reached as `.member` before deciding they are free symbols." });
+
   check(f, "S5.control-prose", "control: ordinary English words are not symbols to resolve",
     "true",
     () => String(symbolsNeedingDeclaration("Fix the thing that is broken because it should work.", "").length === 0));
