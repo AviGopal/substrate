@@ -859,6 +859,13 @@ const REVERTED: Reverted[] = [
     expectCaught: false,
     note: "OPEN. Syntactically an ordinary loop; only knowing that staged_base_sha is a sentinel for one file makes it wrong. Correctly fixed later by per-file staged_base_shas (24060e3).",
   },
+  {
+    id: "S7.05aeaa3-rename-only", repo: "development-vessel", sha: "05aeaa3",
+    file: "src/resolvers/feature-compose.ts",
+    why: "renamed a lambda parameter, `focusHints.find((hint) => text.includes(hint))` -> `((h) => text.includes(h))`, and changed nothing else — semantically identical, and the semantic gate approved it by describing the code that was ALREADY there from the previous landing",
+    expectCaught: false,
+    note: "OPEN, and the cheapest of the uncaught classes to detect. vacuousEditReason asks whether an added binding is USED; `h` is used, so it passes. The question it does not ask is whether the edit CHANGED anything: normalise both sides by consistently alpha-renaming bindings declared inside the changed region, and a rename-only diff collapses to identity. Not cosmetic — this was the SECOND landing for gap route-edit-87cf869d:6, it was stamped as closing that gap, and it consumed a compose slot from a fleet that has exactly one producer.",
+  },
 ];
 
 if (wanted("S7")) {
