@@ -809,12 +809,13 @@ if (wanted("S8")) {
   const excluded = OPERATOR_DENOTING.filter((v) => produced.includes(v) && !accepted.includes(v));
   check(f, "S8.operator-lane-reachable",
     "gap the-operator-reserved-compose-slot-is-unreachable-from-the-operator-surface — substrate_detected, 2026-08-11",
-    // Records the CURRENT wrong value, like the S7 reverted-landing fixtures, so
-    // the day it is fixed this reads as "expectation is stale — update it
-    // deliberately" rather than silently going green. The correct state is [].
-    '["operator"]', () => JSON.stringify(excluded),
+    // CLOSED 2026-08-11 by db21c5f, which the substrate authored itself after
+    // filing the gap from its own refused dispatches. The expectation was
+    // '["operator"]' while it was open; the harness reported the flip as a stale
+    // expectation needing a deliberate update, which is this.
+    "[]", () => JSON.stringify(excluded),
     { known_open: excluded.length > 0,
-      note: 'OPEN while non-empty. Every listed value is a dispatch the classifier calls operator-directed and the reservation treats as autonomous: effectiveCap drops to cap-1, leaving only slot-0 — the slot the gap loop occupies continuously. CLAUDE.md states every cockpit dispatch carries an operator tag, so this covers the ONLY operator surface there is. Deliberately NOT patched here: the substrate filed this gap from its own observation, and hand-closing it steals the repair.' });
+      note: 'Non-empty means OPEN. Every listed value is a dispatch the classifier calls operator-directed and the reservation treats as autonomous: effectiveCap drops to cap-1, leaving only slot-0 — the slot the gap loop occupies continuously. CLAUDE.md states every cockpit dispatch carries an operator tag, so this covers the ONLY operator surface there is. Deliberately NOT patched here: the substrate filed this gap from its own observation, and hand-closing it steals the repair.' });
 
   stages.push({
     stage: "S8", title: "Operator lane — can a directed dispatch claim its reserved slot?",
