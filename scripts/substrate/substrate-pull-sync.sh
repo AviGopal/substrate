@@ -57,6 +57,28 @@ DEFERRAL_LOG=/workspace/pull-sync-deferrals.jsonl
 
 mkdir -p "$MARKER_DIR" "$LAST_GOOD_DIR"
 log() { echo "[pull-sync $(date -Iseconds)] $*"; }
+
+# DECLARE YOURSELF BEFORE RESTARTING SOMETHING.
+#
+# systemd records only `Stopping <unit>`, never who asked. At least three sources
+# restart a vessel — the mitosis cutover, this script, and a plain `systemctl
+# restart` — and development-vessel in particular hosts feature_compose for the
+# whole fleet, so every restart of it discards in-flight composes for OTHER
+# vessels. Measured 2026-08-11: six restarts in 2h20m and zero isolated-vessel
+# composes completing, with no way to attribute any of it.
+#
+# The vessel reads this at boot and logs the requester, or logs UNATTRIBUTED when
+# no fresh breadcrumb exists — which is how a source that does NOT declare itself
+# stays visible. Best-effort only; nothing here may block or delay a restart.
+restart_breadcrumb() { # vessel reason [in_flight]
+  _rb_dir="${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}"
+  mkdir -p "$_rb_dir" 2>/dev/null || return 0
+  _rb_if="${3:-null}"
+  case "$_rb_if" in ''|*[!0-9]*) _rb_if=null ;; esac
+  printf '{"requester":"pull-sync","reason":"%s","in_flight":%s,"at":"%s"}' \
+    "$2" "$_rb_if" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    > "$_rb_dir/$1.json" 2>/dev/null || true
+}
 # A gap that fails to file is worse than no detector: the condition is real, the
 # log line claims "(substrateGap)", and nothing is queryable afterwards. Observed
 # 2026-08-03: the hub super-repo clone sat DIVERGED for hours, refusing every
@@ -925,13 +947,13 @@ EOF
         CU="$(vessel_unit "$c")"; CP="$(health_port "$c")"
         [ -n "$CU" ] && [ "${CU%.service}" != "$CU" ] || continue
         systemctl is-active "$CU" >/dev/null 2>&1 || continue
-        systemctl restart "$CU" 2>/dev/null || true; BOUNCED="$BOUNCED $c"; sleep "$STAGGER_SECONDS"
+        restart_breadcrumb "$c" "dependency bounce after $v converged"; systemctl restart "$CU" 2>/dev/null || true; BOUNCED="$BOUNCED $c"; sleep "$STAGGER_SECONDS"
         if [ -n "$CP" ]; then ok=0; for _ in 1 2 3 4 5; do healthy "$CP" && { ok=1; break; }; sleep 4; done; [ "$ok" = 1 ] || { bad="$c"; break; }; fi
       done
       if [ -n "$bad" ]; then
         log "$v: consumer $bad UNHEALTHY after fan-out -- restoring prior dist, restarting bounced, HALTING"
         rm -rf "$RUNTIME_DIR/$v/dist"; mv "$RUNTIME_DIR/$v/.dist.prev" "$RUNTIME_DIR/$v/dist"
-        for c in $BOUNCED; do systemctl restart "$(vessel_unit "$c")" 2>/dev/null || true; done
+        for c in $BOUNCED; do restart_breadcrumb "$c" "dependency re-bounce after $v converged"; systemctl restart "$(vessel_unit "$c")" 2>/dev/null || true; done
         echo "$HEAD" > "$MARKER_DIR/$v.fanout-fail"  # suppress fan-out retry for this HEAD; a new src change (new HEAD) clears it — prevents a rebuild/revert loop on a persistently-unhealthy consumer
         emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-fanout-$v\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$v fan-out to ${HEAD:0:10} left $bad unhealthy; dist reverted, run halted\",\"status\":\"open\"}}}}"
         failed=$((failed+1)); break
@@ -993,6 +1015,7 @@ EOF
       log "$v: $INFLIGHT dispatch(es) still in flight after $DEFERRED_N deferral(s) — restarting anyway so convergence cannot be starved"
     fi
     rm -f "$DEFER_FILE" 2>/dev/null || true
+    restart_breadcrumb "$v" "converged to origin/dev" "$INFLIGHT"
     systemctl restart "$UNIT" 2>/dev/null || true
     sleep "$STAGGER_SECONDS"
     if [ -n "$PORT" ]; then

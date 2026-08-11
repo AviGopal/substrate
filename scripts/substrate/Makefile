@@ -738,6 +738,7 @@ sync-development-vessel:
 	@echo "[sync] development-vessel source synced to substrate-live"
 
 restart-development-vessel: sync-development-vessel
+	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-development-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/development-vessel.json"' 2>/dev/null || true
 	docker exec $(LIVE_NAME) systemctl restart development-vessel.service
 	@sleep 2
 	@docker exec $(LIVE_NAME) systemctl is-active development-vessel.service | grep -q active && echo "[restart] development-vessel active" || echo "[restart] ERROR: development-vessel not active"
@@ -749,6 +750,7 @@ sync-local-tools-vessel:
 	@echo "[sync] local-tools-vessel source synced to substrate-live"
 
 restart-local-tools-vessel: sync-local-tools-vessel
+	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-local-tools-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/local-tools-vessel.json"' 2>/dev/null || true
 	docker exec $(LIVE_NAME) systemctl restart local-tools-vessel.service
 	@sleep 2
 	@docker exec $(LIVE_NAME) systemctl is-active local-tools-vessel.service | grep -q active && echo "[restart] local-tools-vessel active" || echo "[restart] ERROR: local-tools-vessel not active"
@@ -760,6 +762,7 @@ sync-llm-resolver-vessel:
 	@echo "[sync] llm-resolver-vessel source synced to substrate-live"
 
 restart-llm-resolver-vessel: sync-llm-resolver-vessel
+	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-llm-resolver-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/llm-resolver-vessel.json"' 2>/dev/null || true
 	docker exec $(LIVE_NAME) systemctl restart llm-resolver-vessel.service
 	@sleep 2
 	@docker exec $(LIVE_NAME) systemctl is-active llm-resolver-vessel.service | grep -q active && echo "[restart] llm-resolver-vessel active" || echo "[restart] ERROR: llm-resolver-vessel not active"
@@ -778,6 +781,7 @@ sync-goal-host-vessel:
 	@echo "[sync] goal-host-vessel source synced to substrate-live"
 
 restart-goal-host-vessel: sync-goal-host-vessel
+	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-goal-host-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/goal-host-vessel.json"' 2>/dev/null || true
 	docker exec $(LIVE_NAME) systemctl restart goal-host-vessel.service
 	@sleep 2
 	@docker exec $(LIVE_NAME) systemctl is-active goal-host-vessel.service | grep -q active && echo "[restart] goal-host-vessel active" || echo "[restart] ERROR: goal-host-vessel not active"
@@ -800,6 +804,7 @@ sync-light-dispatch-vessel:
 	@echo "[sync] light-dispatch-vessel source + unit + liveness watchdog synced to substrate-live"
 
 restart-light-dispatch-vessel: sync-light-dispatch-vessel
+	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-light-dispatch-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/light-dispatch-vessel.json"' 2>/dev/null || true
 	docker exec $(LIVE_NAME) systemctl restart light-dispatch-vessel.service
 	@sleep 2
 	@docker exec $(LIVE_NAME) systemctl is-active light-dispatch-vessel.service | grep -q active && echo "[restart] light-dispatch-vessel active" || echo "[restart] ERROR: light-dispatch-vessel not active"
@@ -822,6 +827,7 @@ sync-ribosome-vessel:
 	@echo "[sync] ribosome-vessel source synced to substrate-live"
 
 restart-ribosome-vessel: sync-ribosome-vessel
+	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-ribosome-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/ribosome-vessel.json"' 2>/dev/null || true
 	docker exec $(LIVE_NAME) systemctl restart ribosome-vessel.service
 	@sleep 2
 	@docker exec $(LIVE_NAME) systemctl is-active ribosome-vessel.service | grep -q active && echo "[restart] ribosome-vessel active" || echo "[restart] ERROR: ribosome-vessel not active"
@@ -835,6 +841,7 @@ sync-concept-db:
 	@echo "[sync] concept-db source synced to substrate-live"
 
 restart-concept-db: sync-concept-db
+	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-concept-db target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/concept-db.json"' 2>/dev/null || true
 	docker exec $(LIVE_NAME) systemctl restart concept-db.service
 	@sleep 2
 	@docker exec $(LIVE_NAME) systemctl is-active concept-db.service | grep -q active && echo "[restart] concept-db active" || echo "[restart] ERROR: concept-db not active"
@@ -848,6 +855,7 @@ sync-analysis-vessel:
 	@echo "[sync] analysis-vessel source synced to substrate-live"
 
 restart-analysis-vessel: sync-analysis-vessel
+	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-analysis-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/analysis-vessel.json"' 2>/dev/null || true
 	docker exec $(LIVE_NAME) systemctl restart analysis-vessel.service
 	@sleep 2
 	@docker exec $(LIVE_NAME) systemctl is-active analysis-vessel.service | grep -q active && echo "[restart] analysis-vessel active" || echo "[restart] ERROR: analysis-vessel not active"
@@ -866,6 +874,7 @@ sync-stateful-ui-vessel:
 	@echo "[sync] stateful-ui-vessel synced + unit installed"
 
 restart-stateful-ui-vessel: sync-stateful-ui-vessel
+	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-stateful-ui-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/stateful-ui-vessel.json"' 2>/dev/null || true
 	docker exec $(LIVE_NAME) systemctl restart stateful-ui-vessel.service
 	@sleep 3
 	@docker exec $(LIVE_NAME) systemctl is-active stateful-ui-vessel.service | grep -q active && echo "[restart] stateful-ui-vessel active" || echo "[restart] ERROR: stateful-ui-vessel not active"
@@ -912,6 +921,7 @@ sync-human-surface-vessel:
 	@echo "[sync] human-surface-vessel synced + unit enabled"
 
 restart-human-surface-vessel: sync-human-surface-vessel
+	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-human-surface-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/human-surface-vessel.json"' 2>/dev/null || true
 	docker exec $(LIVE_NAME) systemctl restart human-surface-vessel.service
 	@sleep 3
 	@docker exec $(LIVE_NAME) systemctl is-active human-surface-vessel.service | grep -q active && echo "[restart] human-surface-vessel active" || echo "[restart] ERROR: human-surface-vessel not active"
@@ -937,6 +947,7 @@ sync-obsidian-vessel:
 
 restart-obsidian-vessel: sync-obsidian-vessel
 	docker exec $(LIVE_NAME) bash -c 'cd /vessels/obsidian-vessel && bun esbuild.config.mjs production'
+	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-obsidian-desktop target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/obsidian-desktop.json"' 2>/dev/null || true
 	docker exec $(LIVE_NAME) systemctl restart obsidian-desktop.service
 	@sleep 3
 	@docker exec $(LIVE_NAME) systemctl is-active obsidian-desktop.service | grep -q active && echo "[restart] obsidian-desktop active (plugin reloaded; refresh noVNC if needed)" || echo "[restart] ERROR: obsidian-desktop not active"
