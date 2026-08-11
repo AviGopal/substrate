@@ -1006,6 +1006,61 @@ if (wanted("S8")) {
 }
 
 // ---------------------------------------------------------------------------
+// S9 — do the compose-time checks read the tree the compose is editing?
+//
+// fc-coverage resolves its test-file candidates against REPO_ROOT/WORKSPACE_ROOT
+// (default /workspace/git/super-repo). The vessel RUNS from /vessels/<vessel>.
+// Those are different checkouts, and for development-vessel the super-repo copy
+// carries ZERO colocated *.test.ts files while the live tree carries six — so
+// the "TARGET HAS NO TEST FILE" warning fires for every module in the vessel,
+// whether or not a test exists.
+//
+// Both consequences matter, and the second is worse than the first: the check is
+// noise, and a warning that always fires stops being read, so it cannot flag the
+// genuine untested-target case it was built for.
+//
+// This is the reader/writer tree-mismatch class. I validated fc-coverage's
+// discrimination when I wrote it — against THIS host tree, not the one the code
+// reads. Measuring an instrument on a tree its subject never touches is how a
+// broken check passes its own review.
+// ---------------------------------------------------------------------------
+
+if (wanted("S9")) {
+  const f: FixtureResult[] = [];
+  const liveTests = (): number => {
+    try {
+      return execFileSync("docker", ["exec", CONTAINER, "sh", "-c",
+        "ls /vessels/development-vessel/src/*.test.ts 2>/dev/null | wc -l"],
+        { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"], timeout: 15_000 }).trim();
+    } catch { return -1; }
+  };
+  const superRepoTests = (): number => {
+    try {
+      return execFileSync("docker", ["exec", CONTAINER, "sh", "-c",
+        "ls /workspace/git/super-repo/repos/development-vessel/src/*.test.ts 2>/dev/null | wc -l"],
+        { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"], timeout: 15_000 }).trim();
+    } catch { return -1; }
+  };
+  const live = String(liveTests()), sup = String(superRepoTests());
+
+  check(f, "S9.container-reachable", "the stage is meaningless without the running container",
+    "true", () => String(live !== "-1" && sup !== "-1"),
+    { note: `live=/vessels: ${live} colocated tests; fc-coverage reads /workspace/git/super-repo: ${sup}` });
+
+  check(f, "S9.coverage-check-reads-the-live-tree",
+    "gap fc-coverage-reads-a-tree-with-no-colocated-tests-so-it-warns-on-everything — measured 2026-08-11",
+    "differs", () => (live === sup ? "same" : "differs"),
+    { known_open: live !== sup,
+      note: `Records the CURRENT wrong state; correct is "same" (or a coverage check that resolves against the tree being edited). live=${live} vs super-repo=${sup}. While these differ, every fc-coverage verdict for this vessel describes a checkout the compose is not editing.` });
+
+  stages.push({
+    stage: "S9", title: "Compose-time checks vs the tree being edited",
+    measures: "development-vessel/src/resolvers/feature-compose.ts: fc-coverage candidate resolution, compared across the two checkouts",
+    fixtures: f,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Report
 // ---------------------------------------------------------------------------
 
