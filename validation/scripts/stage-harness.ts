@@ -1061,6 +1061,59 @@ if (wanted("S9")) {
 }
 
 // ---------------------------------------------------------------------------
+// S10 — is a compose host's "retry me" signal honoured?
+//
+// development-vessel answers 503 + Retry-After: 30 + {"error":"draining"} when a
+// long-running body arrives during a graceful restart. That response exists to
+// make the failure RECOVERABLE: the caller is meant to wait and re-ask the fresh
+// instance.
+//
+// goal-host's compose path never reads resp.status. Its retry fires only on a
+// THROWN transport error, matched by regex on the exception message, and a 503
+// does not throw — fetch resolves, the drain JSON is parsed as a compose report,
+// body.verdict is undefined, and the dispatch terminates as verdict=unknown.
+//
+// Measured: two operator dispatches (35933522, ba08fbea) died exactly this way,
+// each after a correct localisation and a drafted plan. The lame-duck 503 and the
+// retry predicate were both written in the same session and never introduced to
+// each other — adding a signal without teaching its only reader is the same
+// mistake as a gate with no call sites.
+// ---------------------------------------------------------------------------
+
+if (wanted("S10")) {
+  const f: FixtureResult[] = [];
+  const gh = existsSync(join(REPOS, "goal-host-vessel/src/index.ts"))
+    ? readFileSync(join(REPOS, "goal-host-vessel/src/index.ts"), "utf-8") : "";
+  const dv = existsSync(join(REPOS, "development-vessel/src/index.ts"))
+    ? readFileSync(join(REPOS, "development-vessel/src/index.ts"), "utf-8") : "";
+
+  check(f, "S10.producer-emits-retry-signal",
+    "development-vessel returns 503 + Retry-After when draining, so the failure is meant to be recoverable",
+    "true", () => String(/"Retry-After"/.test(dv) && /error:\s*"draining"/.test(dv)),
+    { note: "If this ever goes false the signal was removed, and S10's other fixture stops meaning anything." });
+
+  // The compose fetch and its retry predicate, read from source. Fails loud if
+  // the anchors move rather than reporting a reassuring pass.
+  const idx = gh.indexOf("EDIT-INTENT transient compose failure");
+  const windowText = idx > 0 ? gh.slice(Math.max(0, idx - 1500), idx + 1500) : "";
+  check(f, "S10.anchor-found", "the check must fail loud rather than silently pass when the source moves",
+    "true", () => String(windowText.length > 0));
+
+  check(f, "S10.consumer-honours-it",
+    "gap: two operator dispatches died as verdict=unknown (draining) after correct localisation and a drafted plan",
+    "false",
+    () => String(/resp\.status/.test(windowText) || /draining/i.test(windowText) || /503/.test(windowText)),
+    { known_open: true,
+      note: 'Records the CURRENT wrong state; correct is "true". The retry predicate matches a THROWN message (/timeout|fetch failed|ECONNREFUSED|BUSY/) and a 503 does not throw, so the producer\'s explicit "retry shortly" is parsed as a compose report with no verdict. BUSY is handled one layer up because it arrives INSIDE a 200 body; draining arrives as a status code, and nothing reads status codes here.' });
+
+  stages.push({
+    stage: "S10", title: "Compose transport — is a 'retry me' honoured?",
+    measures: "development-vessel/src/index.ts (503 + Retry-After on drain) vs goal-host-vessel/src/index.ts (edit-intent compose retry predicate)",
+    fixtures: f,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Report
 // ---------------------------------------------------------------------------
 
