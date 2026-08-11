@@ -741,6 +741,71 @@ if (wanted("S7")) {
 }
 
 // ---------------------------------------------------------------------------
+// S8 — does an operator dispatch reach the slot reserved for operator work?
+//
+// THE CLASS, NOT THE INSTANCE. The substrate detected this one itself and filed
+// it (gap the-operator-reserved-compose-slot-is-unreachable-from-the-operator-
+// surface, source substrate_detected): the trigger classifier's FIRST rule is
+// `if (operator) return "operator"`, and the reservation test accepts only
+// `undefined` or `"run-goal"` — so attaching the operator tag is precisely what
+// disqualifies a dispatch from the operator lane. Measured: two identical
+// operator dispatches, both refused for capacity, competing for the one slot the
+// autonomous gap loop holds continuously.
+//
+// A fixture for that one string would be worthless — the class is "the classifier
+// grew a value that a consumer branching on it never learned about". So this
+// stage enumerates BOTH sides from source and reports the difference. Any new
+// trigger value is covered the day it is added.
+//
+// Source-shape dependent by necessity, so it fails LOUD: if either anchor cannot
+// be found the fixture reports `error`, never a silent pass. An absent check that
+// looks green is the failure mode this whole harness exists to avoid.
+// ---------------------------------------------------------------------------
+
+if (wanted("S8")) {
+  const f: FixtureResult[] = [];
+  const gh = join(REPOS, "goal-host-vessel/src/index.ts");
+  const src = existsSync(gh) ? readFileSync(gh, "utf-8") : "";
+
+  const classifierValues = (): string[] => {
+    const i = src.indexOf("const trigger: string | undefined = (() => {");
+    if (i < 0) return [];
+    const body = src.slice(i, i + 6000);
+    const end = body.indexOf("\n  })();");
+    return [...new Set([...(end > 0 ? body.slice(0, end) : body).matchAll(/return\s+"([a-z0-9-]+)"/g)].map((m) => m[1]))].sort();
+  };
+  const acceptedByReservation = (): string[] =>
+    [...new Set([...src.matchAll(/trigger\s*===\s*"([a-z0-9-]+)"/g)].map((m) => m[1]))].sort();
+
+  const produced = classifierValues();
+  const accepted = acceptedByReservation();
+
+  check(f, "S8.anchors-found", "the check must fail loud rather than silently pass when the source moves",
+    "true", () => String(produced.length > 0 && accepted.length > 0),
+    { note: `classifier returns [${produced.join(", ")}]; reservation accepts [${accepted.join(", ")}] + undefined` });
+
+  // "operator" and "run-goal" both denote a human/agent asking directly. Any
+  // value denoting directed work that the reservation does not accept lands in
+  // the autonomous bucket and loses its reserved slot.
+  const OPERATOR_DENOTING = ["operator", "run-goal"];
+  const excluded = OPERATOR_DENOTING.filter((v) => produced.includes(v) && !accepted.includes(v));
+  check(f, "S8.operator-lane-reachable",
+    "gap the-operator-reserved-compose-slot-is-unreachable-from-the-operator-surface — substrate_detected, 2026-08-11",
+    // Records the CURRENT wrong value, like the S7 reverted-landing fixtures, so
+    // the day it is fixed this reads as "expectation is stale — update it
+    // deliberately" rather than silently going green. The correct state is [].
+    '["operator"]', () => JSON.stringify(excluded),
+    { known_open: excluded.length > 0,
+      note: 'OPEN while non-empty. Every listed value is a dispatch the classifier calls operator-directed and the reservation treats as autonomous: effectiveCap drops to cap-1, leaving only slot-0 — the slot the gap loop occupies continuously. CLAUDE.md states every cockpit dispatch carries an operator tag, so this covers the ONLY operator surface there is. Deliberately NOT patched here: the substrate filed this gap from its own observation, and hand-closing it steals the repair.' });
+
+  stages.push({
+    stage: "S8", title: "Operator lane — can a directed dispatch claim its reserved slot?",
+    measures: "goal-host-vessel/src/index.ts: the trigger classifier's value set vs the reservation's accepted set (read from source)",
+    fixtures: f,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Report
 // ---------------------------------------------------------------------------
 
