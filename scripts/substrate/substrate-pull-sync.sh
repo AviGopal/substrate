@@ -715,9 +715,48 @@ EOF
         | grep -o '"drain_ms"[[:space:]]*:[[:space:]]*[0-9][0-9]*' | grep -o '[0-9]*$' | head -1)"
       DRAINMS="${DRAINMS:-0}"
       case "$DRAINMS" in *[!0-9]*) DRAINMS=0 ;; esac
+      # QUIESCE INSTEAD OF ACCEPTING THE LOSS.
+      #
+      # This branch used to converge on the strength of the vessel advertising a
+      # SIGTERM drain, and said so honestly: "work still running past that IS
+      # lost." The drain is BOUNDED, so a long compose died anyway.
+      #
+      # That loss is what stops the substrate measuring itself while it develops
+      # itself. The outcome of an in-flight change is the evidence that attributes
+      # credit to the decision that produced it; destroy the run and the dispatch
+      # ends `interrupted`, no verdict is recorded, and the loop cannot tell a good
+      # change from a bad one. Measured 2026-08-11: three consecutive trials died
+      # exactly here, and each pushed fix triggered the convergence that killed the
+      # next measurement.
+      #
+      # The drain is bounded only because work keeps ARRIVING. Closing admission
+      # first makes in-flight fall monotonically to zero, so this wait terminates
+      # on its own — bounded by the longest single compose, not unbounded — and
+      # nothing is lost. The vessel already refuses new long-running work while
+      # draining; the marker just lets a converger open that early.
       if [ "$INFLIGHT" -gt 0 ] && [ "$DRAINMS" -ge "${MIN_TRUSTED_DRAIN_MS:-15000}" ]; then
-        log "$v: $INFLIGHT unit(s) in flight but the vessel advertises a ${DRAINMS}ms SIGTERM drain — converging; the restart drains for up to ${DRAINMS}ms, and work still running past that IS lost"
-        INFLIGHT=0
+        QDIR="${QUIESCE_DIR:-/workspace/quiesce}"
+        mkdir -p "$QDIR" 2>/dev/null || true
+        : > "$QDIR/$v" 2>/dev/null || true
+        log "$v: $INFLIGHT unit(s) in flight — QUIESCED (admission closed); waiting for them to finish rather than restarting into them"
+        QWAIT="${QUIESCE_WAIT_S:-900}"; QSTEP=10; QSPENT=0
+        while [ "$QSPENT" -lt "$QWAIT" ]; do
+          sleep "$QSTEP"; QSPENT=$((QSPENT+QSTEP))
+          NOW="$(curl -s --max-time 5 "http://127.0.0.1:$IFPORT/health" 2>/dev/null \
+            | grep -o '"in_flight"[[:space:]]*:[[:space:]]*[0-9][0-9]*' | grep -o '[0-9]*$' | head -1)"
+          NOW="${NOW:-0}"; case "$NOW" in *[!0-9]*) NOW=0 ;; esac
+          [ "$NOW" -eq 0 ] && break
+        done
+        if [ "${NOW:-0}" -eq 0 ]; then
+          log "$v: drained to 0 in ${QSPENT}s under quiesce — converging with NOTHING in flight, so no run is lost and its outcome stays attributable"
+          INFLIGHT=0
+        else
+          # Bound exists so a wedged vessel cannot block deploys forever. Say what
+          # is being given up, in the same terms as the old branch.
+          log "$v: still $NOW in flight after ${QSPENT}s of quiesce (bound ${QWAIT}s) — converging anyway; that run IS lost and its outcome will not be attributable"
+          INFLIGHT=0
+        fi
+        rm -f "$QDIR/$v" 2>/dev/null || true
       fi
       if [ "$INFLIGHT" -gt 0 ]; then
         DEFER_MARKER="in-flight:$INFLIGHT"
