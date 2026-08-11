@@ -55,10 +55,19 @@
  *   --out     write the JSON report here (default: stdout only)
  *   --stage   run only the named stage(s), comma-separated
  *
- * Exit code is 0 whenever the harness itself ran. A fixture whose result changed
- * from its recorded expectation exits 1 — that is a REGRESSION (or a repair that
- * needs its expectation updated), which is different from a `known_open`
- * fixture failing as recorded.
+ * Exit codes. 0 means every fixture ran and answered as recorded. 1 means the run
+ * is not trustworthy as-is, for one of two reasons, and the report says which:
+ *
+ *   - `regression` — a fixture's answer changed from what a real trial
+ *     established. Either a break, or a repair whose expectation now needs a
+ *     deliberate update. Distinct from a `known_open` fixture failing AS
+ *     RECORDED, which exits 0.
+ *   - `error` — the fixture could not be measured honestly. Chiefly: a module it
+ *     imports has uncommitted tracked edits (a concurrent agent session), so any
+ *     verdict would describe work in progress rather than the committed tree.
+ *
+ * Both exit 1 on purpose. A number that cannot be attributed to a cause is not a
+ * result, and unattributed numbers are the problem this harness exists to fix.
  */
 
 import { execFileSync } from "node:child_process";
