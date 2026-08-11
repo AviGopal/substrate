@@ -169,6 +169,38 @@ interface StageReport {
   fixtures: FixtureResult[];
 }
 
+/**
+ * Tracked source files with UNCOMMITTED modifications, repo-relative.
+ *
+ * Not the same as "dirty". Untracked directories (agent worktrees, .claude) are
+ * excluded from the search and harmless; a MODIFIED TRACKED source is not — the
+ * harness imports these modules directly, so a concurrent editor's work in
+ * progress becomes the thing being measured.
+ *
+ * This is not hypothetical. A second agent session was mid-edit on
+ * cross-file-symbols.ts while this harness ran, and S6 duly reported that the
+ * anchor fixture had flipped. It had — because of their uncommitted guard, not
+ * because of the commit the fixture was checking. A reading like that is worse
+ * than no reading: it is confidently attributed to the wrong cause.
+ */
+function modifiedTrackedFiles(): Set<string> {
+  const out = new Set<string>();
+  for (const repo of ["goal-host-vessel", "development-vessel", "activity-api"]) {
+    for (const line of (git(repo, ["status", "--porcelain", "--untracked-files=no"]) ?? "").split("\n")) {
+      const rel = line.slice(3).trim();
+      if (rel) out.add(`repos/${repo}/${rel}`);
+    }
+  }
+  return out;
+}
+const MODIFIED = modifiedTrackedFiles();
+
+/** Fixtures depending on a file someone else is editing report `error`, never a verdict. */
+function contaminated(...files: string[]): string | null {
+  const hit = files.filter((f) => MODIFIED.has(f));
+  return hit.length === 0 ? null : `UNCOMMITTED LOCAL EDITS in ${hit.join(", ")} — this fixture would measure work in progress, not the committed tree`;
+}
+
 const stages: StageReport[] = [];
 
 function check(
@@ -177,8 +209,13 @@ function check(
   provenance: string,
   expected: string,
   produce: () => string,
-  opts: { known_open?: boolean; note?: string } = {},
+  opts: { known_open?: boolean; note?: string; dependsOn?: string[] } = {},
 ): void {
+  const dirty = opts.dependsOn ? contaminated(...opts.dependsOn) : null;
+  if (dirty !== null) {
+    into.push({ id, provenance, expected, actual: "<not measured>", known_open: false, status: "error", note: dirty });
+    return;
+  }
   let actual: string;
   try {
     actual = produce();
@@ -722,6 +759,7 @@ if (wanted("S6")) {
       return first && head.includes(first) ? "anchors-from-header" : "anchors-elsewhere";
     },
     { known_open: true,
+      dependsOn: ["repos/development-vessel/src/cross-file-symbols.ts", "repos/development-vessel/src/resolvers/feature-compose.ts"],
       note: "OPEN. Not a catastrophic regression — composes still run — but every compose WITHOUT a region hint now gets header anchors presented as local ones, which is worse than the mid-file fallback it replaced. Filed rather than patched." });
 
   check(f, "S6.control-absent-anchor", "control: an anchor that is not there must count 0, not 1",
