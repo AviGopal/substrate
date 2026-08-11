@@ -162,6 +162,68 @@ ten minutes.
 
 ---
 
+## 7. SurrealDB: the query mix, identified
+
+The dominant CPU consumer was previously undiagnosed. Read from the existing
+instrumentation (`GET /metrics/db`, backed by `DbStats`) rather than new tooling:
+
+```
+total_queries 1774   qps 3.25   errors 1 (0.06%)
+slow_queries  118  →  6.7% of all queries exceed 1000 ms
+latency_ms    p50 45.9 | p95 3346.1 | p99 6581.6 | max 12796.1
+
+by operation:  DELETE 795 (45%)   UPSERT 604 (34%)   SELECT 372 (21%)
+```
+
+**DELETE is the single most common operation.** The driver is the retention
+global-ceiling valve: the traces table sits *at* its 150,000-row ceiling, so the
+valve counts and deletes continuously to hold it there — logged totals of 150000,
+150597 and 152189 within one two-hour window. This is a table pinned at its cap with
+inflow exceeding it, not a one-off sweep.
+
+`sumMs` serialised as zero for every operation in this snapshot, so **time-per-op is
+not attributable from this endpoint** — the counts are, the cost split is not.
+
+### The counter that says there is headroom
+
+The same endpoint reports `traceStore.row_count 84567` against `cap 150000`, with
+`last_reconciled_at 2026-08-01` — **ten days stale**. The valve's real count says
+~150,000–152,189. The O(1) counter — documented in `index.ts` as "an O(1) read,
+NEVER a COUNT()" — **under-reports by ~66,000 rows, about 44%**, and reads as though
+44% headroom remains when the table is at or over its ceiling. Anything gating on it
+sees capacity that does not exist and will not act.
+
+Filed as `the-o1-trace-store-counter-is-stale-and-under-reports-by-44-percent`.
+
+---
+
+## 8. Hub exposure: re-verified with controls, and it needs an operator
+
+Not taken on trust from the prior note — re-probed against `syzygy.host`
+(104.236.0.175, a public address) from an ordinary host over plain HTTP:
+
+| probe | result |
+|---|---|
+| anon `POST :18210/run-goal` with `{}` | **400** `goal or targetTemplateId is required` |
+| anon `POST :18260/v2/impulses/resolve` | **400** `Missing or invalid pointer.type` |
+| anon `GET :18210/18260/18080 /health` | 200 (intentional — documented unauthenticated) |
+
+**The inference is the point:** both rejections are about *body content*, not
+credentials. The request reached request-handling logic without any authentication
+check. A well-formed anonymous `POST /run-goal` would therefore dispatch a goal into
+this substrate from anywhere on the internet.
+
+The probe was deliberately shaped so it *could not* succeed — an empty body cannot
+dispatch. Confirming this by sending a valid goal would have exploited the hole
+rather than measured it.
+
+**This is where the sweep stops.** Closing it means rotating the PAT held in most
+process environments and putting an auth gate or network policy in front of these
+ports — a credential decision on a remote host that no amount of local work can
+substitute for. It is the "intractable blocker" case: escalate, do not absorb.
+
+---
+
 ## Status
 
 **Fixed and verified:** the proposals path (functionally, at n=1 dry-run); the
@@ -175,6 +237,14 @@ duplicate trace-window gap, folded into the substrate's stronger version and clo
 
 **Blocked:** the clone reset, pending operator approval.
 
-**Out of scope for this sweep:** the standing hub-security blocker (unauthenticated
-`:18210` and `:18260`, container `uid=0`, PAT in most process environments). It
-predates this session and needs a credential rotation decision.
+**Diagnosed, not fixable here:** SurrealDB's query mix (§7 — DELETE-dominated,
+driven by a table pinned at its ceiling) and the hub's missing auth (§8 —
+re-verified with controls). The first is now a filed gap the substrate can act on;
+the second requires a credential rotation on a remote host and is an operator
+decision.
+
+**The system is not "nominal" and this document should not be read as saying it
+is.** Nominal, on the substrate side: 0 failed units, 15/15 vessels running,
+pull-sync converging, the applier draining. Not nominal: SurrealDB load is bursty
+into the 1900% range with 6.7% of queries over a second, and the hub answers
+unauthenticated requests from the public internet.
