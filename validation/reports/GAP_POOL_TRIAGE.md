@@ -228,21 +228,64 @@ Two of them are structural rather than merely noisy:
   (`meta0` = the passed gap object) rather than the stored row, so a caller that
   omits the field defeats it.
 
-### The gap triple is currently unmeasurable
+### ⚠ RETRACTED: "the gap triple is unmeasurable"
 
-Law 7 measures close rate, detection→close latency, and durability. Two defects
-make the last two unreadable:
+**That claim was wrong, and it was the loudest claim in this ledger.** An earlier
+revision said latency and durability were both unreadable, on two mechanisms taken
+from the fan-out and written up without probing the live store. Both are false as
+stated. Probed against the running resolver:
 
-- **`closeAuthoringDecisions` (`goal-host/index.ts:13600`) writes the close with
-  `detected_at: new Date().toISOString()`**, overwriting the stored detection time
-  with the close time — on ~390 rows. `detected_at` is the anchor for latency.
-- **`reopen_count` is only assigned in the update branch**
-  (`substrate-gap.ts:518-520`); the insert branch at 538-540 never seeds it, so
-  recurrence is not counted from a gap's first life.
+**Latency is measurable.** `detected_at` *is* overwritten by a close, but it was
+never the anchor. `first_detected_at` is, and it is explicitly preserved —
+`substrate-gap.ts:513-515` says so (*"first_detected_at anchors durability — never
+overwritten by a re-emission's detected_at"*) and the store agrees:
 
-Any claim that gap latency or durability is improving — including any claim made
-from this ledger — is unfalsifiable until those two are fixed. That is the first
-thing to repair, because it is what every other measurement here rests on.
+```
+open,  detected 2026-08-07 → detected_at=2026-08-07  first_detected_at=2026-08-07
+close, detected 2026-08-12 → detected_at=2026-08-12  first_detected_at=2026-08-07
+                                                      closed_at=2026-08-12T03:42:49Z
+```
+
+`closed_at − first_detected_at` computes correctly. Nothing is destroyed.
+
+**Recurrence is counted.** `reopen_count` increments on a closed→open re-emission:
+0 → 1, verified by round-trip. The insert branch leaving it absent is deliberate —
+a fresh row has never reopened, and the comment at :536-538 states that intent.
+
+### The real defect: recurrence is invisible for volatile-id detectors
+
+What survives is narrower and was not what either mechanism claimed. The class-key
+fallback at `substrate-gap.ts:460` excludes closed rows:
+
+```ts
+gaps.findIndex((g) => hasClassifiableId(g) && g.status !== "closed" && gapClassKey(g.id) === classKey)
+```
+
+So a re-emission carrying a *different* volatile id in the same class, after that
+class was closed, cannot find its closed sibling and creates a fresh row instead of
+incrementing it. Probed:
+
+```
+open   triage-probe-class-1786500000000  → created
+close  triage-probe-class-1786500000000  → updated (reopen_count=0)
+open   triage-probe-class-1786500000001  → created (reopen_count absent)
+```
+
+`gapClassKey` exists *precisely because* detectors mint volatile per-run ids. So
+recurrence is undercounted for exactly the detectors that motivated class dedup,
+and a durably-closed gap that comes back under a new id reads as a brand-new gap —
+inflating the apparent mint rate while hiding the recurrence. That is a real hit to
+law 7's durability leg, but a much smaller one than claimed, and the close-rate and
+latency legs are fine.
+
+### The method note this earns
+
+Three findings in this triage came from the fan-out and needed a probe before they
+could be trusted: the `missing_capability` set being "mixed" (over-stated), the
+`detected_at` overwrite (harmless), and `reopen_count` (working). **A finding from a
+subagent is a hypothesis with a citation attached, and a citation is not a
+measurement.** Every load-bearing claim here that could be probed against the live
+store now has been.
 
 ## Repairing the largest minter, and what the dispatches showed
 
@@ -332,16 +375,21 @@ Nothing here is a claim that the pool is healthy. It is a claim that every open 
 is now one of three things: a defect someone can act on, a close that survived an
 adversary, or a question with a stated blocker.
 
-## What must be repaired before any of this is measurable again
+## What must be repaired next
 
-The two instrumentation defects, restated because they gate everything else:
+1. **`fileCapabilityGap` gates on a deny-list over names**, so any noun the reach
+   gate writes becomes a capability gap — 174 rows, the largest single minter.
+   The sound gate is evidence of demand, and the precedent is already in the tree:
+   `inferGoalTargetDecision` filters its model's shape names against the known
+   vocabulary.
+2. **Class-key recurrence after a close is invisible** (`substrate-gap.ts:460`),
+   so durability is undercounted for volatile-id detectors.
+3. **The recommit minter omits `parent_gap_id`**, the exact field the
+   anti-grandchild guard at `gap-to-feature.ts:1771` reads.
+4. **`Retry-After: 30` outlives nothing** — the producer's own drain budget is
+   240s (`development-vessel/src/index.ts:248` vs `:309`).
 
-1. `closeAuthoringDecisions` overwrites `detected_at` with the close time — the
-   detection→close latency anchor, on ~390 rows.
-2. `reopen_count` is never seeded on the insert branch — recurrence is not counted
-   from a gap's first life.
-
-Until both are fixed, legs 2 and 3 of the gap triple cannot be read, and *any*
-claim of improvement — including the 635 → 287 above — is unfalsifiable on those
-axes. The close count is real; the latency and durability numbers that would tell
-you whether it mattered are not yet trustworthy.
+Close rate and detection→close latency are both readable — an earlier revision of
+this ledger claimed otherwise and has been retracted above. The 635 → 287 count is
+real; the durability leg is the one that stays partly blind, and only for
+volatile-id detectors.
