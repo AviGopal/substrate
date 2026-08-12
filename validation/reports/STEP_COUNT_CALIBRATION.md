@@ -101,3 +101,47 @@ The earlier ladder result (zero producer steps, rungs 1 and 3 sharing
 `path_signature 4502429f46`) was measured **inside** the 43-hour 401 window and
 remains contaminated. It must be re-run now the plane is live before any claim
 about differentiation in the live walk is repeated.
+
+---
+
+## Stability run — the lever is DISQUALIFIED as a signature key
+
+2 models × 2 phrasings × 4 rungs × 3 repetitions = 48 cells, 0 parse failures.
+
+| model | phrasing | r1 | r2 | r3 | r4 |
+|---|---|---|---|---|---|
+| sonnet | original | 1 | 2 | 3 | 4 |
+| sonnet | **rephrased** | 1 | 2 | **2** | **3** |
+| haiku | original | 1 | 2 | 3 | **4/5/4** |
+| haiku | **rephrased** | 1 | 2 | **2/2/3** | **3** |
+
+- exact match to expected: **36/48**
+- unstable across repetitions: **2/16 cells** — repeatability is fine
+- **strictly increasing across rungs: 2/4 model-phrasing combos**
+
+### Why it fails, and it is not randomness
+
+Both monotonicity failures are **rephrasings of identical work**. The prompt's
+worked example reads *"Compare X from S with Y from T and say which is larger →
+3"*. The original rung 3 nearly matches that sentence and scores 3; the
+rephrasing — *"Which is bigger right now: … Give both figures"* — scores 2. The
+model is not counting operations, it is **matching the examples**, and the
+examples were written from the original goals.
+
+That is disqualifying for the purpose. A `path_signature` keyed on this count
+would give two goals demanding **the same work but phrased differently** different
+signatures — splitting identical goals, where the system today collapses distinct
+ones. The mirror defect, not a repair. A differentiation key must be a function of
+the work; this is a function of the wording.
+
+### What survives
+
+The count is ~75% accurate and highly repeatable, so it remains usable as a
+*hint* — a prior, a log field, an input to selection. It is not usable as an
+**identity**. The distinction is the finding: the earlier result ("calibrated
+prompt gives 1,2,3,4") was true and insufficient, and only the rephrasing arm
+showed why.
+
+Had the lever shipped on the first calibration measurement, it would have produced
+four distinct signatures on the ladder — reading as success — while assigning
+different identities to identical work everywhere else.
