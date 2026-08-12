@@ -1,9 +1,18 @@
-# The differentiation lever is viable, but only with a calibrated prompt
+# Step count cannot key a signature — it is a function of the wording, not the work
 
 Measured 2026-08-12, immediately after the LLM plane was restored (OpenRouter
 failover; see the `isFailoverError` repair). This is the gating measurement for
 the proposed differentiation lever — **run before writing any of it**, because the
 lever's entire value depends on one assumption that had never been tested.
+
+**Read the sections in order; the conclusion reverses twice.** The naive prompt
+refutes the lever, a calibrated prompt appears to rescue it, and the stability run
+disqualifies it for good. Only the last section is the verdict.
+
+> This file was first titled *"the differentiation lever is viable, but only with a
+> calibrated prompt"* — true of §2 and false once §4 existed. Retitled rather than
+> appended to, because a heading is what gets quoted, and the intermediate result
+> is exactly the one that would have shipped the defect.
 
 ## The assumption under test
 
