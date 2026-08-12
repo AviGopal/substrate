@@ -1182,6 +1182,13 @@ if (wanted("S11")) {
 
   check(f, "S11.pool-not-dominated-by-unclosable-gaps",
     "gap the-walk-mints-a-capability-gap-per-scraped-noun — measured 2026-08-12, control: registry_query(httpStatus) = 0 of 391 advertised shapes",
+    // Counts by SUMMARY SHAPE, which is verified; it does NOT verify each one is
+    // unclosable. Sampled 4 against the registry: httpStatus 0/391,
+    // successConfirmation 0/391, detailed_code_modification 0/391 — but
+    // editResult matches the REAL shape fileEditResult. So roughly a quarter are
+    // NEAR-MISSES of advertised shapes, not nonsense, and those are signal: the
+    // walk inferred a name one step off what is advertised. Do NOT bulk-close
+    // this set; the near-misses are naming-mismatch bugs worth repairing.
     "over-10-percent",
     () => {
       if (st === null) return "<unreachable>";
@@ -1190,7 +1197,7 @@ if (wanted("S11")) {
     },
     { known_open: st !== null && (st.phantom / Math.max(1, st.total)) > 0.1,
       note: st
-        ? `Records the CURRENT wrong state; correct is "under-10-percent". ${st.phantom} of ${st.total} gaps (${((st.phantom / st.total) * 100).toFixed(0)}%) name a shape that was never advertised, so they can never close and permanently dilute selection. This is why reopened gap route-edit-e691e25e:3 sat unpicked for 45 minutes.`
+        ? `Records the CURRENT wrong state; correct is "under-10-percent". ${st.phantom} of ${st.total} gaps (${((st.phantom / st.total) * 100).toFixed(0)}%) match the walk-minted "needs a producer" pattern and permanently dilute selection. Sampled 4: three name shapes with no registry match, one (editResult) is a near-miss of the advertised fileEditResult. This is why reopened gap route-edit-e691e25e:3 sat unpicked for 45 minutes.`
         : "unmeasured" });
 
   stages.push({
