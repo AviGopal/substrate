@@ -537,3 +537,60 @@ one I edited, already doing the right thing.
 The repair is dispatched as a goal rather than hand-applied, since a gate that
 guards autonomous landings is exactly the kind of thing the substrate should be
 able to fix about itself.
+
+---
+
+## 8. Closing state
+
+**Gap pool 318 → 202.** Batch 03's 17 held-back removals were refuted
+independently and all 17 survived; applied and confirmed by read-back, zero
+silent no-ops. The two write-failed ids were retried and confirmed gone.
+
+That adversarial pass found a **second minter**, now filed:
+`orphaned-capability-scan` counts a resolver as invoked only when it appears in
+an activity template's task `resolver` field, so it is blind to two real
+invocation paths — direct code calls (`activeDispatches` is resolved by four
+vessels; `cluster` is POSTed every tick by activity-api's signature-cluster job;
+`code_locality` is called on the compose path) and **LLM tool-loop calls**
+(`code_add_import`, `code_find_function`, `code_find_import`,
+`code_insert_after_line` are `patch_with_tools` tools, advertised in discovery on
+purpose — `local-tools-vessel/src/index.ts:625-630` says so outright). Seven of
+fourteen rejects in a single 28-gap batch came from this one blind spot, and
+`orphaned_capability` was 52 of the original 303.
+
+It also confirmed a sharp one that stays **open**: the LLM-arm `ExecCondition` is
+`grep -Eq "^$key_var=.+"`, and the env file writes empty keys **quoted** —
+`GOOGLE_API_KEY=""`. Two quote characters satisfy `.+`, so an arm with no
+provider key starts anyway and dilutes failover. Verified by running the
+predicate directly, with both a passing and a failing control. That is the source
+of the `"No LLM provider configured"` federated errors in §4.
+
+**Gaps filed from this session's own measurements** — four, because a finding
+that lives only in an operator report is one the resolution loop can never read:
+the walk answering multi-transformation goals entirely with satisfiers; write-shaped
+goals graded on the write rather than the content; the orphan detector's blind
+spot; and the relay `NO_RESERVATION` kills (filed with the measurement that would
+settle its mechanism, explicitly labelled a hypothesis rather than a diagnosis).
+
+### One intervention, stated as an intervention
+
+The dead-store gate from §7 was repaired **by hand** and pushed (`06fabe9`).
+Three dispatches of that repair were killed by infrastructure before reaching the
+drafter — twice `NO_RESERVATION` on the relay, once compose `BUSY` — and it is a
+live safety gate: a harmful dead-store edit could land autonomously while it sat
+inert. The fix is at the call site, in the same loop where
+`nonTerminatingEditReason` already simulates against the tree.
+
+**The class gap stays open.** The substrate has not demonstrated it can make this
+repair, and a hand-landed fix is not evidence that it can.
+
+### The standing first-try condition: unmet
+
+Across this session's pathless edit dispatches, exactly **one** was a fair try —
+it localised correctly to `index.ts:4439`, inside the right function, and drafted
+a positive-evidence predicate before calling a helper it never defined
+(`TS2304`). Typecheck caught it and rolled it back. Every other attempt died in
+transport or capacity without reaching the drafter.
+
+One fair try, one mechanical failure. The condition is not met, and re-rolling
+phrasings until one lands would not meet it either.
