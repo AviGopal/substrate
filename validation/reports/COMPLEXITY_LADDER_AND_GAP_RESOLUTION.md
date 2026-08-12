@@ -1,9 +1,21 @@
-# Unmanaged work cleared, and the operator compose lane is still dead
+# The system reaches consistently and never composes
 
 Continuation of `GAP_POOL_TRIAGE.md`. Three tasks: clear unmanaged local work,
 resolve the gap pool, and demonstrate that the system reaches arbitrary unique
 goals of arbitrary complexity — where complexity is the number of data
 transformations.
+
+**The headline.** Across four unique goals asking for one to four data
+transformations, the substrate reached 3 of 4 and was externally correct on 1 —
+and performed **zero** producer steps at every rung. Complexity, as defined,
+never varied from zero. A one-transformation goal and a three-transformation goal
+recorded the *identical* path signature. §5 has the measurement, §6–8 the gap
+work, and §2, §3 and §5 each contain a claim I published and then retracted.
+
+> This document was first titled *"…and the operator compose lane is still dead."*
+> That claim is retracted in §2 and the title went with it. A heading is the part
+> that gets read and quoted; leaving a retracted claim in it would have
+> propagated the error past every correction underneath.
 
 ---
 
