@@ -375,6 +375,38 @@ Nothing here is a claim that the pool is healthy. It is a claim that every open 
 is now one of three things: a defect someone can act on, a close that survived an
 adversary, or a question with a stated blocker.
 
+## Dispatchability is not a property of the target
+
+The landing queue marks 8 of 79 rows `dispatchable`, judged on the target: single
+file, modest size, colocated test, and a distinctive anchor near the edit site.
+Rank 8 (`cross-file-symbols.ts`) satisfies every one of those — 403 lines, a
+17KB colocated test, host md5 == deployed md5, anchor verified to occur exactly
+once, two lines from the edit site.
+
+**It is still not dispatchable, and the criterion was wrong.** Three natural
+phrasings of the same symptom were pre-flighted:
+
+| phrasing keyed on | localiser's decision |
+|---|---|
+| "cross-file" | `feature-compose.ts` — wrong file |
+| "treats every" | `llm-router.ts` — wrong file |
+| "word-shaped" | no unique hit — unrestated, walks instead of composing |
+
+The anchor being good says nothing about whether the *goal prose* reaches the
+file. Those are two separate conditions and only the second decides whether a
+pathless goal composes at all.
+
+The counts underneath are the whole story: `"cross-file"` occurs in 6 files,
+`"treats every"` in exactly 1, `"word-shaped"` in 0. The localiser's decision
+procedure is *an English bigram that happens to occur in exactly one file* — so
+which file a symptom edits is decided by a coincidence of prose, not by meaning.
+That is ranks 5-7 of this same queue, measured live rather than argued.
+
+**And it is a law-13 finding about the operator, not only the system.** Getting
+those three phrasings took three rounds of hand-tuning prose to steer a substring
+match. A goal that only works after an operator rewrites it is a gap in the
+system, not a workflow to institutionalise — and the rewriting here was mine.
+
 ## What must be repaired next
 
 1. **`fileCapabilityGap` gates on a deny-list over names**, so any noun the reach
