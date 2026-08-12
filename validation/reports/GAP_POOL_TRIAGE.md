@@ -172,4 +172,82 @@ Round-tripped against the live store before use: a `rejected` write persists as
 
 ## Dispositions
 
-Populated by the triage run; see the tables appended below.
+Twelve verifiers assigned a verdict to every one of the 635 open rows, reading
+members and citing file:line. Every proposed close was then attacked by an agent
+told to break it and to default to refutation when uncertain.
+
+| verdict | n | applied as |
+|---|---|---|
+| never was a coherent gap | 394 | `rejected` (303 applied, 91 broken on refutation) |
+| defect gone from the live tree | 75 | `closed` (48 applied) |
+| duplicate of another open gap | 22 | `closed` (18 applied) |
+| **real defect, still true** | **129** | left open |
+| honestly undecidable | 15 | left open, each with the reason |
+
+**Refutation broke 121 of 491 proposed closes — 24.6%.** That is the number that
+justifies the pass: without it, roughly one close in four would have been wrong,
+and a wrong close deletes demand silently.
+
+**369 dispositions applied, every one read back and confirmed; zero write
+failures.** Open rows: **635 → 277**.
+
+The 277 reconcile exactly: 121 refutation survivors + 129 real defects +
+15 undecidable + 12 rows minted during the session.
+
+### A silent truncation in the first refutation pass
+
+The first pass batched proposed closes by category and sliced each batch at 60,
+so **172 of 491 closes were never shown to any refuter** — `missing_capability`
+(104 dropped) and `systematic_failure` (68). One refuter noticed and said so:
+*"the prompt says 164 closes but enumerates only ~60."*
+
+Nothing was applied from that unrefuted set. A second pass ran all 172 in six
+batches with no cap, required every id to be accounted for, and broke 30 more.
+The lesson is the one the harness already encodes about verification gates: a cap
+that is not logged reads as coverage. Here the cap was mine.
+
+## The generators
+
+Closing the backlog is the smaller half. Six minters produce it:
+
+| minter | site | rows |
+|---|---|---|
+| `fileCapabilityGap` | `goal-host/index.ts:4409` | 174 |
+| recommit gap minter | `feature-compose.ts:2202` | 69 |
+| synthetic `route-edit-<goalhash>` identity | `goal-host/index.ts:9538` | 58 |
+| orphaned-capability census | `orphaned-capability-scan.ts:242` | 55 |
+| narrowed-child minter | `gap-to-feature.ts:1781` | 49 |
+| `emitAuthoringDecision` | `goal-host/index.ts:13546` | 37 |
+
+Two of them are structural rather than merely noisy:
+
+- **The recommit minter omits `parent_gap_id`** from the metadata it writes, and
+  `gap-to-feature.ts:1771` gates narrowing on exactly that field — so the
+  anti-grandchild guard cannot see the children this minter creates.
+- **The narrowed-child guard reads caller-supplied in-memory metadata**
+  (`meta0` = the passed gap object) rather than the stored row, so a caller that
+  omits the field defeats it.
+
+### The gap triple is currently unmeasurable
+
+Law 7 measures close rate, detection→close latency, and durability. Two defects
+make the last two unreadable:
+
+- **`closeAuthoringDecisions` (`goal-host/index.ts:13600`) writes the close with
+  `detected_at: new Date().toISOString()`**, overwriting the stored detection time
+  with the close time — on ~390 rows. `detected_at` is the anchor for latency.
+- **`reopen_count` is only assigned in the update branch**
+  (`substrate-gap.ts:518-520`); the insert branch at 538-540 never seeds it, so
+  recurrence is not counted from a gap's first life.
+
+Any claim that gap latency or durability is improving — including any claim made
+from this ledger — is unfalsifiable until those two are fixed. That is the first
+thing to repair, because it is what every other measurement here rests on.
+
+### The amplifier, observed live
+
+Twelve rows were minted during the ~2.5h of this triage. Six are
+`missing_capability` from the same 503 goal — `gap-host-503-response`,
+`gap-goalhoststatusread`, `gap-analysis-of-503-cause`, `gap-bug-fix-report`,
+`gap-bug-fix-verification`, `gap-system-status-report` — all reach-gate prose,
+all minted while the analysis of that exact mechanism was being written.
