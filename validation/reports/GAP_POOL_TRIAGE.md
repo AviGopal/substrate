@@ -244,10 +244,104 @@ Any claim that gap latency or durability is improving — including any claim ma
 from this ledger — is unfalsifiable until those two are fixed. That is the first
 thing to repair, because it is what every other measurement here rests on.
 
+## Repairing the largest minter, and what the dispatches showed
+
+The 503 gap — `a-draining-compose-host-returns-503-and-goal-host-never-reads-the-status`
+— was repaired first because it is the parent of 77 of the 173 phantom capability
+rows. It was dispatched as a **non-specific goal**, twice, before any hand-editing.
+
+Both tries produced the same result: **right file, right region, syntactically
+invalid TypeScript, caught by `tsc` and rolled back** (TS1472/TS1005 at 9696-9706,
+then TS1005/TS1136/TS1128 at 9582-9609). Neither reached a landing.
+
+Two behaviours are worth crediting, because both are failure modes seen earlier:
+
+- It **refused the ungraded escape hatch**, twice: *"ESCALATION SUPPRESSED — the
+  byte-anchored route runs no semantic judge and lands ungraded; a region-named
+  gap stays on the judged compose path."*
+- It graded itself honestly throughout — two `deterministic:edit-intent-no-landed-edit`
+  hollow verdicts, and a satisfier refusal on the grounds that a filesystem write
+  with no landed sha is uncreditable.
+
+### The drafter's edit site was better than the operator's
+
+Both attempts anchored on `if (earlyComposeResp.ok) {` — the pre-walk EARLY
+compose route. That was recorded here, initially, as an adjacent-but-wrong site,
+because the defect had been located by reading code and the later compose call at
+:10026 is the one that parses a body without consulting the status.
+
+**Production traffic settled it against the reading.** Restarting the producer
+mid-dispatch put the 503 on the EARLY route:
+
+```
+EARLY EDIT-INTENT feature_compose HTTP 503 — falling through to walk
+```
+
+The later call never saw it. The drafter chose the site that fires; the operator
+chose the site that does not. Both holes were real and both are now closed
+(`eed0ccf`, `ee4622a`), but the localisation credit belongs to the system, and the
+two failures were **syntax, not localisation**.
+
+The generalisable form: *a defect site identified by reading is a hypothesis, and
+the traffic is the experiment.*
+
+### The fix is validated, and insufficient
+
+Forced 503s on two independent dispatches, 2/2:
+
+```
+03:34:18  EARLY EDIT-INTENT compose producer draining (503) — re-issuing in 30000ms
+03:36:01  EARLY EDIT-INTENT compose producer draining (503) — re-issuing in 30000ms
+```
+
+Both re-issues then received **503 again** and fell through. Cause, filed as
+`the-drain-503-advertises-a-retry-after-eight-times-shorter-than-its-own-drain-budget`:
+`development-vessel/src/index.ts:248` hardcodes `Retry-After: 30` while its drain
+deadline at `:309` is `VESSEL_DRAIN_MS` = **240000 ms**. The advertised callback is
+up to 8× shorter than the window in which it keeps answering 503, so a caller that
+honours the header correctly still re-issues into the same drain. A constant
+cannot be right here except by coincidence.
+
+So the caller-side change converts *silently discard* into *one bounded retry* —
+a strict improvement, validated — and the remaining half is a producer-side defect
+left for the substrate rather than hand-patched.
+
 ### The amplifier, observed live
 
-Twelve rows were minted during the ~2.5h of this triage. Six are
+Twenty-two rows were minted over the session. Twelve had appeared by mid-triage. Six are
 `missing_capability` from the same 503 goal — `gap-host-503-response`,
 `gap-goalhoststatusread`, `gap-analysis-of-503-cause`, `gap-bug-fix-report`,
 `gap-bug-fix-verification`, `gap-system-status-report` — all reach-gate prose,
 all minted while the analysis of that exact mechanism was being written.
+
+## Final state
+
+| measure | value |
+|---|---|
+| open at session start | 635 |
+| open at session end | 287 |
+| dispositions applied and read-back-verified | 369 |
+| `rejected` (never was a gap) | 301 total in store |
+| `closed` (was a gap, now resolved) | 238 total in store |
+| minted during the session | 22 |
+| real defects left open, each with file:line and a repair | 129 |
+| honestly undecidable, each with the reason | 15 |
+| refutation survivors, held open | 121 |
+
+Nothing here is a claim that the pool is healthy. It is a claim that every open row
+is now one of three things: a defect someone can act on, a close that survived an
+adversary, or a question with a stated blocker.
+
+## What must be repaired before any of this is measurable again
+
+The two instrumentation defects, restated because they gate everything else:
+
+1. `closeAuthoringDecisions` overwrites `detected_at` with the close time — the
+   detection→close latency anchor, on ~390 rows.
+2. `reopen_count` is never seeded on the insert branch — recurrence is not counted
+   from a gap's first life.
+
+Until both are fixed, legs 2 and 3 of the gap triple cannot be read, and *any*
+claim of improvement — including the 635 → 287 above — is unfalsifiable on those
+axes. The close count is real; the latency and durability numbers that would tell
+you whether it mattered are not yet trustworthy.
