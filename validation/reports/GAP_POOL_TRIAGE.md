@@ -407,6 +407,33 @@ those three phrasings took three rounds of hand-tuning prose to steer a substrin
 match. A goal that only works after an operator rewrites it is a gap in the
 system, not a workflow to institutionalise — and the rewriting here was mine.
 
+### The localiser cannot route a goal about the localiser
+
+Rank 6 is `symptom-to-file-localisation-depends-on-a-substring-coincidence`, in
+`goal-host-vessel/src/goal-file-resolution.ts` — 1021 lines, **two** colocated
+tests, host md5 == deployed md5, anchor verified unique. On target properties it
+is the best remaining candidate in the queue.
+
+No pathless goal reaches it. The phrases that describe what the localiser does
+are shared with the files that *call* it:
+
+| term | files containing it |
+|---|---|
+| `"unique hit"` | 4 |
+| `"left unrestated"` | 3 |
+| `"restated with target"` | 2 |
+| `"locator class"` | 0 |
+
+A symptom description of the localiser is written in the localiser's own
+vocabulary, and that vocabulary is exactly what its consumers quote. So the
+uniqueness test can never fire on the right file — the defect **prevents its own
+repair from being dispatched**.
+
+Across two targets and five pre-flighted phrasings, no non-specific goal became
+dispatchable. The two-try budget could not be spent, and that is a reach ceiling
+in the localiser rather than a failure of the drafter: nothing was ever asked to
+implement anything.
+
 ## What must be repaired next
 
 1. **`fileCapabilityGap` gates on a deny-list over names**, so any noun the reach
