@@ -866,6 +866,13 @@ const REVERTED: Reverted[] = [
     note: "OPEN. Syntactically an ordinary loop; only knowing that staged_base_sha is a sentinel for one file makes it wrong. Correctly fixed later by per-file staged_base_shas (24060e3).",
   },
   {
+    id: "S7.75427ea-self-call-via-assignment", repo: "development-vessel", sha: "75427eea",
+    file: "src/resolvers/gap-to-feature.ts",
+    why: "inserted `const conditionStatus = verifyGapCondition(gap)` INTO the body of verifyGapCondition — unconditional self-call, no base case; live in /vessels and unreverted for ~a day",
+    expectCaught: false,
+    note: "OPEN, and it is a hole in MY detector, not in the concept. nonTerminatingEditReason matches `^return\\s+NAME\\s*\\(`, so a DIRECT `return self(...)` is caught (verified) and this ASSIGN-THEN-RETURN form is not. The repair is to treat a self-call whose result reaches a return — through any number of local bindings — the same as a direct one. Note the provenance: this is one of only two surviving landings in seven days that came from a genuinely PATHLESS goal, and it recursed.",
+  },
+  {
     id: "S7.05aeaa3-rename-only", repo: "development-vessel", sha: "05aeaa3",
     file: "src/resolvers/feature-compose.ts",
     why: "renamed a lambda parameter, `focusHints.find((hint) => text.includes(hint))` -> `((h) => text.includes(h))`, and changed nothing else — semantically identical, and the semantic gate approved it by describing the code that was ALREADY there from the previous landing",
