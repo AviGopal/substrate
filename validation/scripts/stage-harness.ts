@@ -117,6 +117,50 @@ if (!existsSync(REPOS)) {
   process.exit(2);
 }
 
+/**
+ * The vessels PRODUCTION can see — and only those.
+ *
+ * Production greps `/workspace/git/vessels`, which the container populates from
+ * the super-repo's REGISTERED SUBMODULES: 18 directories, verified identical to
+ * `git submodule status` on 2026-08-12.
+ *
+ * A host checkout of `repos/` holds 28. The extra ten are plain tracked files
+ * (clock-vessel, human-surface-vessel, relevance-sink-vessel), unrelated
+ * projects (metabob-cloud-dashboard, react-renderer, terminal, workbench,
+ * user-vessel, conversation-vessel) and `deployment` — a separate repo with its
+ * own remote, explicitly gitignored at `.gitignore:204`.
+ *
+ * Searching them makes the pre-flight predict targets production cannot reach.
+ * Measured: the goal "…should not be reported as an unexpressed capability…"
+ * resolved to `repos/deployment/vessels/minibob/src/resolvers/…` on a unique hit
+ * for the phrase "calls directly" — a file the live localiser has never seen.
+ *
+ * This instrument exists so a wrong target costs a second instead of a
+ * twenty-minute dispatch. An instrument that searches a wider tree than the
+ * thing it predicts does not merely lose accuracy; it invents targets, which is
+ * the exact failure it was built to catch.
+ */
+function productionVesselScopes(): string[] {
+  let names: string[] = [];
+  try {
+    const out = execFileSync("git", ["-C", ROOT, "submodule", "status"], {
+      encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"], timeout: 20_000,
+    });
+    names = out.split("\n").map((l) => l.trim().split(/\s+/)[1] ?? "")
+      .filter((p) => p.startsWith("repos/")).map((p) => p.slice("repos/".length))
+      .filter(Boolean);
+  } catch { /* fall through to the fail-open below */ }
+  // FAIL OPEN, LOUDLY. A harness that silently searches nothing would report
+  // "no such file" for every term — the worst possible failure for an instrument
+  // whose whole job is telling absent from not-looked-at.
+  if (names.length === 0) {
+    console.error(`WARN: could not read submodules under ${ROOT}; searching all of repos/ — predictions may name files production cannot see`);
+    return [REPOS];
+  }
+  return names.map((n) => join(REPOS, n)).filter((p) => existsSync(p));
+}
+const VESSEL_SCOPES = productionVesselScopes();
+
 function git(repo: string, args: string[]): string | null {
   try {
     return execFileSync("git", ["-C", join(REPOS, repo), ...args], {
@@ -419,7 +463,10 @@ if (wanted("S2")) {
  * search broke" from "found nothing".
  */
 function makeSearch(): FileSearch {
-  const run = (args: readonly string[], scope: string, needle: string): readonly string[] => {
+  // `scope` is a LIST of roots, not one root: production searches the 18
+  // registered vessels, which on a host checkout are 18 sibling directories
+  // rather than one containing directory (see productionVesselScopes).
+  const run = (args: readonly string[], scope: readonly string[], needle: string): readonly string[] => {
     let out: string;
     try {
       out = execFileSync(
@@ -446,7 +493,7 @@ function makeSearch(): FileSearch {
          // fixed — enumerate the other instances when patching your own
          // breakage, which is the rule this very edit exists to obey.
          "--exclude-dir=.claude", "--exclude-dir=.wt-reachrefactor",
-         ...args, scope],
+         ...args, ...scope],
         { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 64 * 1024 * 1024, timeout: 20_000 },
       );
     } catch (err) {
@@ -477,7 +524,7 @@ function makeSearch(): FileSearch {
 
   return async (term: string, vessel?: string, preferCallSites?: boolean): Promise<readonly string[]> => {
     const scope = vessel && /^[a-z][a-z0-9-]+$/.test(vessel) && existsSync(join(REPOS, vessel, "package.json"))
-      ? join(REPOS, vessel) : REPOS;
+      ? [join(REPOS, vessel)] : VESSEL_SCOPES;
     const t = term.replace(/[.[\]{}()*+?^$|\\]/g, "\\$&");
     const S = "[[:space:]]+";
     const exported = run(["-E", "-e", `export${S}(async${S})?function${S}${t}([^[:alnum:]_]|$)`,
