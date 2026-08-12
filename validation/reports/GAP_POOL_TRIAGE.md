@@ -67,7 +67,38 @@ containment, fuzzy at 0.75) "found" a live shape for 24 of them — including
 near-miss for almost any English noun, so string distance cannot decide this
 class; only meaning and actual template demand can.
 
-### Two mechanisms proposed and refuted
+### Confirmed: the reach gate names the shape, and nothing checks the name
+
+`repos/goal-host-vessel/src/index.ts:8367`, on the HOLLOW branch:
+
+```ts
+const needed = [...new Set([...(verdict.missing ?? []),
+  ...((verdict.completion_shapes ?? []).filter((s) => !producedShapes.has(s)))])]
+const codeGap = needed.find((s) => !live.has(s));
+if (codeGap) { await fileCapabilityGap(codeGap, goal, needed); }
+```
+
+`verdict` is the **reach gate's LLM output**. When it judges a goal hollow it also
+names, in free text, the shapes the goal would have needed. Those names are not
+constrained to any vocabulary, so `codeGap` — "a name with no live resolver" — is
+satisfied by any noun the judge happened to write. `a-detailed-fix`,
+`success-message`, `evidence_of_503_fix` and `filePaths` are all reach-gate prose.
+
+The journal confirms the ordering directly: the `HOLLOW … completion_shapes=[…]`
+line immediately precedes `filed capability gap 'gap-a-detailed-fix'`.
+
+**So every hollow verdict on a hard goal can mint a capability gap**, and a goal
+that goes hollow 77 times mints up to 77 of them. That is the amplifier, and it
+explains why the pool grows fastest exactly where the system is failing most.
+
+**The asymmetry that makes this a one-line class defect.** The other LLM output
+path in this system — `inferGoalTargetDecision` in `goal-target-inference.ts` —
+already filters its model's shape names against the known vocabulary via
+`filterShape`, dropping hallucinations. The reach gate's output goes unfiltered
+into gap filing. The same defect class was fixed on one path and left on the
+other.
+
+### Three mechanisms proposed and refuted
 
 Recorded because a refuted mechanism is cheaper to leave written down than to
 re-derive:
@@ -78,6 +109,30 @@ re-derive:
 - **`inferGoalTargetDecision` skips the vocabulary filter that
   `inferGoalTargetShapes` applies.** Refuted: it filters, via `filterShape`
   against `known`.
+- **A registered template declares the invented names as inputs**, entering
+  `target` through the recurse path at `index.ts:7763`. Refuted with its own
+  control: 448 `recurse — … needs [...]` lines exist in 72h, so the tap works,
+  and not one of them names any of the invented shapes.
+
+This one mattered. The obvious repair for the deny-list problem is to gate
+`fileCapabilityGap` on *template demand*. Had that third mechanism been true,
+that gate would have admitted exactly the noise it was meant to block — the
+phantom template would itself be the demand. Confirming the real path first is
+what kept the repair from being a plausible mechanism attached to a fix.
+
+### An instrument-provenance correction
+
+The `~/.metabob/config.json` endpoint is `http://syzygy.host:18100`, and
+`syzygy.host` resolves to **104.236.0.175 — a remote droplet**. Every MCP tool
+call therefore reaches the *hub*, while the gap store being triaged is the
+*local* substrate on `localhost:18090`. The 391-shape vocabulary used for the
+matching table above is the hub's.
+
+This does not change the conclusion — `a-detailed-fix` and `evidence_of_503_fix`
+are not shape names under any vocabulary, and the local substrate's own
+`liveShapes()` check had already ruled every one of the 173 unserved locally —
+but the table's *provenance* is the hub's registry, not this substrate's, and
+anything read through an MCP tool in this session carries the same caveat.
 
 The filter chain in `fileCapabilityGap` also demonstrably works *for real names* —
 the journal shows `[fileCapabilityGap] already served: goal normalizes to goal`.

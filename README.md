@@ -269,7 +269,7 @@ mcp__metabob__run_goal  goal="verify the change works"
 | `localhost:18260` | concept-db | concept-graph shapes + dense (MiniLM) search |
 | `localhost:18270` | stateful-ui-vessel | substrate UI panels |
 
-Optional environment for the substrate's self-development loop: a GitHub credential (`SUBSTRATE_GIT_PAT`, or the host's SSH key via the host-sync timers) lets the substrate land its own commits — without one it runs and learns but cannot push. Full guide: [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md).
+Optional environment for the substrate's self-development loop: a GitHub credential (`SUBSTRATE_GIT_PAT`) lets the substrate land its own commits — without one it runs and learns but cannot push. Full guide: [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md).
 
 ## Keeping submodule pointers current
 

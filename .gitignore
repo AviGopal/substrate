@@ -262,9 +262,6 @@ scripts/substrate/workspace/
 /src/
 /development-vessel/
 
-# host-pull-sync regression detector baseline (runtime state, rewritten each run)
-.pullsync-testbaseline
-
 # Recording artefacts — regenerable, never commit
 .video/
 

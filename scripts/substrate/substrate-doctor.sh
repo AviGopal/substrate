@@ -129,67 +129,7 @@ else
   bad "no recovery path (no health_port, no Restart=): $(echo "$UNCOVERED" | tr '\n' ' ')"
 fi
 
-echo "== 7. host convergence loop =="
-# Checks 1-6 all run INSIDE the container (csh → docker exec), including the
-# failed-unit sweep. The host-side sync timers are therefore the one moving part
-# the substrate cannot see itself, and on 2026-08-07 that is exactly what broke:
-#
-#   host-pull-sync.timer: Unit to trigger vanished.
-#   host-pull-sync.timer: Failed with result 'resources'.
-#
-# Both generated unit files had been removed while the timer symlink survived.
-# The loop that pulls substrate-authored commits back to the host and re-syncs
-# changed vessels was dead for two days, and the only symptom anyone noticed was
-# the super-repo's submodule pointers silently falling 30 commits behind.
-#
-# Deliberately narrow: a machine that never installed these units is a normal
-# deployment (they are an operator dev-box convenience, installed by
-# `make install-host-sync`), so absence is a note, not a failure. A unit systemd
-# knows about and reports as failed, or a half-present installation, is real.
-if [ "$IN_CONTAINER" = 1 ] || ! command -v systemctl >/dev/null 2>&1; then
-  note "skipped (in-container, or no systemctl) — these units live on the host"
-else
-  USER_UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
-  for U in host-pull-sync host-sync-poller; do
-    STATE="$(systemctl --user is-active "$U.timer" 2>/dev/null || true)"
-    case "$STATE" in
-      active)
-        # An active timer proves scheduling, not work: the service can fail on
-        # every single firing while the timer stays green forever. Judge the
-        # service by its Result, NOT by is-active — these are oneshots, so
-        # "inactive" with ExecMainStatus 0 is the healthy steady state and
-        # treating it as down would report every working host as broken.
-        RESULT="$(systemctl --user show -p Result --value "$U.service" 2>/dev/null || true)"
-        if [ -n "$RESULT" ] && [ "$RESULT" != "success" ]; then
-          bad "$U.timer is active but its last run FAILED (Result=$RESULT)"
-          note "the timer will keep firing and keep failing; journalctl --user -u $U.service -n 50"
-        else
-          ok "$U.timer active, last run ${RESULT:-not yet run}"
-        fi
-        ;;
-      failed)
-        bad "$U.timer is FAILED — host/substrate convergence is not running"
-        note "why: $(systemctl --user show -p Result --value "$U.timer" 2>/dev/null || echo unknown); \
-remedy: make -C scripts/substrate install-host-sync && systemctl --user enable --now $U.timer"
-        ;;
-      *)
-        # Presence of a unit FILE proves nothing: `make install-host-sync` writes
-        # both units whether or not the operator wants both running, so keying on
-        # the file reports a healthy box as broken. Enablement is the intent
-        # signal — enabled-but-not-active is the contradiction worth reporting.
-        ENABLED="$(systemctl --user is-enabled "$U.timer" 2>/dev/null || true)"
-        if [ "$ENABLED" = "enabled" ]; then
-          bad "$U.timer is enabled but not running (state=${STATE:-unknown})"
-          note "remedy: systemctl --user start $U.timer  (or reinstall: make -C scripts/substrate install-host-sync)"
-        else
-          note "$U not enabled on this host (expected unless this is the operator dev box)"
-        fi
-        ;;
-    esac
-  done
-fi
-
-echo "== 8. llm arms answer a real call =="
+echo "== 7. llm arms answer a real call =="
 # Not /health. Measured 2026-08-10: every local arm reported 200 with
 # providers=[anthropic] and discovery listed nine servers for llm_completion,
 # while EVERY actual call returned "Your credit balance is too low". The account
@@ -221,7 +161,7 @@ else
 fi
 
 if [ "$SMOKE" = 1 ]; then
-  echo "== 9. smoke: goal dispatch -> trace lands =="
+  echo "== 8. smoke: goal dispatch -> trace lands =="
   SMOKE_OUT="$(csh 'K=$(grep -m1 "^METABOB_API_KEY=" /etc/substrate/env | cut -d= -f2- | tr -d "\""); curl -s -m 60 -X POST http://127.0.0.1:8210/run-goal -H "Content-Type: application/json" -H "Authorization: ApiKey $K" -d "{\"goal\":\"substrate doctor smoke check: report the substrate is alive\"}"' 2>/dev/null || true)"
   # /run-goal answers either synchronously ({executionId,...}) or async
   # ({dispatchId, status:running} — poll GET /executions/:dispatchId).

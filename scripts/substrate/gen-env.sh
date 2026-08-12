@@ -357,8 +357,8 @@ SUBSTRATE_GIT_AUTHOR_EMAIL="${SUBSTRATE_GIT_AUTHOR_EMAIL}"
 # vessel-mitosis-cutover resolver commits+pushes the authored change to
 # origin/dev of the vessel clone, then mirrors the staged files into the live
 # /vessels/<vessel> runtime and restarts the unit. Without these three knobs
-# the cutover falls back to host-sync-intent mode (which no-ops here, since the
-# host repo bind mount is read-only) — i.e. authored fixes never land.
+# the cutover only records an intent that nothing here consumes (the host repo
+# bind mount is read-only) — i.e. authored fixes never land.
 #   MITOSIS_DIRECT_PUSH=1        — enable commit+push+mirror instead of intent
 #   MITOSIS_RUNTIME_DIR=/vessels — live runtime: also the freshness-check root,
 #                                  so the gate hashes the same file apply-proposal

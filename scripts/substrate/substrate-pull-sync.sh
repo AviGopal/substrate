@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # substrate-pull-sync.sh — the substrate pulls its OWN source updates from git.
 #
-# Inverts host-pull-sync.sh / federation-pull-sync.sh: instead of a host pushing
-# source into containers (docker cp), each substrate converges itself to
+# Inverts federation-pull-sync.sh: instead of a host pushing source into
+# containers (docker cp), each substrate converges itself to
 # origin/dev. Code flows ONLY through git remotes — this is both the update
 # channel for a single substrate and how a fleet of substrates converges with no
 # host mediating. Runs in-container as substrate-pull-sync.service:

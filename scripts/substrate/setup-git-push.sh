@@ -29,7 +29,8 @@ export SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT:-}"
 
 # Never block on an interactive credential/terminal prompt. With no (or an
 # invalid) PAT, HTTPS git ops against private repos would otherwise hang waiting
-# for a username — fail them fast so the host-sync (SSH) path is the durable one.
+# for a username — fail them fast instead, so a push error is visible rather
+# than a wedged unit.
 export GIT_TERMINAL_PROMPT=0
 
 AUTHOR_NAME="${SUBSTRATE_GIT_AUTHOR_NAME:-Substrate Autonomous}"
@@ -50,17 +51,16 @@ echo "[setup-git-push] system git identity configured"
 
 # PAT validation (2026-06-19). The in-container push is an HTTPS PAT path. When
 # the PAT is invalid/missing, EVERY `git push` fails with "Invalid username or
-# token. Password authentication is not supported." — and the cutover used to
-# spew that auth error on every self-alteration and report a misleading
-# local_only. The DURABLE push path is the host-sync poller (host SSH key), which
-# does not depend on this PAT at all. So:
-#   - No PAT, or PAT fails a live GitHub API probe  → DO NOT configure the broken
-#     HTTPS credential helper. Log ONE clear warning. The cutover's push will
-#     simply fail fast and fall through to the host-sync intent (durable path).
-#   - PAT validates → configure the helper as a fast path (push direct from the
-#     container; host-sync still covers any residual failure).
-# This keeps a bad/expired operator PAT from being load-bearing and from
-# generating per-push noise, while the substrate keeps landing commits via SSH.
+# token. Password authentication is not supported." — and the cutover would spew
+# that auth error on every self-alteration and report a misleading
+# local_only. So:
+#   - No PAT → DO NOT configure a broken HTTPS credential helper. Log ONE clear
+#     warning. The cutover's push fails fast and the commit stays local until a
+#     credential is supplied.
+#   - PAT present → configure the helper so the cutover pushes direct from the
+#     container.
+# This keeps a bad/expired operator PAT from generating per-push noise, and keeps
+# the reason a commit did not land legible in one log line instead of many.
 # Credential helper: configured whenever a PAT is present. The helper reads
 # $SUBSTRATE_GIT_PAT from the git process env at push time (the dev-vessel unit
 # has it via its EnvironmentFile), so the token is never written into any config.
@@ -71,8 +71,9 @@ echo "[setup-git-push] system git identity configured"
 # rate-limiting). A hard startup probe that DISABLED the helper on a single
 # transient blip would wrongly kill a working fast path. So: configure the
 # helper unconditionally when a PAT exists, probe a few times for observability,
-# and only WARN (never disable) if the probe can't confirm auth — the cutover's
-# host-sync fallback (host SSH key) durably catches any push that does fail.
+# and only WARN (never disable) if the probe can't confirm auth — a push that
+# does fail leaves its commit in the clone and is surfaced by
+# push_health_observer.
 PAT_PROBE_REPO="${SUBSTRATE_PAT_PROBE_REPO:-development-vessel}"
 REPO_OWNER="${SUBSTRATE_REPO_OWNER:-AviGopal}"   # fork override: set SUBSTRATE_REPO_OWNER to your GitHub org/user
 if [ -n "$SUBSTRATE_GIT_PAT" ]; then
@@ -98,12 +99,12 @@ if [ -n "$SUBSTRATE_GIT_PAT" ]; then
   if [ "$PAT_OK" = "1" ]; then
     echo "[setup-git-push] PAT auth confirmed against ${REPO_OWNER}/${PAT_PROBE_REPO}"
   else
-    echo "[setup-git-push] NOTE: PAT auth probe did not confirm after 3 tries (${REPO_OWNER}/${PAT_PROBE_REPO}). This is often transient (GitHub fine-grained-PAT rate-limiting); the helper stays configured. If in-container pushes keep failing, the cutover falls back to the HOST-SYNC poller (SSH) — and the push_health_observer will emit a substrateGap. OPERATOR: if sustained, refresh SUBSTRATE_GIT_PAT (Contents: Read+Write)."
+    echo "[setup-git-push] NOTE: PAT auth probe did not confirm after 3 tries (${REPO_OWNER}/${PAT_PROBE_REPO}). This is often transient (GitHub fine-grained-PAT rate-limiting); the helper stays configured. If in-container pushes keep failing, self-authored commits stay local and the push_health_observer will emit a substrateGap. OPERATOR: if sustained, refresh SUBSTRATE_GIT_PAT (Contents: Read+Write)."
   fi
 else
-  # No PAT: ensure no stale helper remains so pushes fail fast (host-sync covers).
+  # No PAT: ensure no stale helper remains so pushes fail fast rather than hang.
   git config --system --unset-all credential.helper 2>/dev/null || true
-  echo "[setup-git-push] no SUBSTRATE_GIT_PAT — in-container HTTPS push disabled; self-authored commits land via the HOST-SYNC poller (SSH). Clones refreshed read-only if reachable."
+  echo "[setup-git-push] no SUBSTRATE_GIT_PAT — in-container HTTPS push disabled; self-authored commits are committed locally but cannot land until a credential is supplied. Clones refreshed read-only if reachable."
 fi
 
 # 2. Idempotent writable clones on dev.

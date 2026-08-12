@@ -193,7 +193,8 @@ try {
 // self-development LANDING is a substrate-authored mitosis-cutover commit pushed to
 // dev. Count those across the self-editable vessel repos (git, host-side) — total +
 // 24h rate so "is the rate increasing?" is answerable. mitosis-applied.jsonl
-// undercounts (host-sync cutovers bypass that resolver's appendFile).
+// undercounts: a cutover that lands without going through that resolver's
+// appendFile is a real landing the jsonl never records.
 try {
   const repoRoot = `${import.meta.dir}/../../repos`;
   const VESSELS = [

@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 # federation-pull-sync.sh — pull-side sync for a FEDERATION of substrate instances.
 #
-# WHY: host-pull-sync.sh self-syncs a single container (substrate-live) and only
-# re-copies the per-vessel files its `restart-<vessel>` make target knows about
-# (mostly src/index.ts), and it has no target for the "core" vessels
-# (discovery-vessel, activity-api). For a federation we need EVERY peer container
-# to converge to upstream `origin/<BRANCH>` for ARBITRARY substrate-authored
-# multi-file changes — including discovery-vessel + activity-api (peer-auth and
-# evidence-folding live there). This script:
+# WHY: a federation needs EVERY peer container to converge to upstream
+# `origin/<BRANCH>` for ARBITRARY substrate-authored multi-file changes —
+# including the "core" vessels discovery-vessel + activity-api (peer-auth and
+# evidence-folding live there), not just the per-vessel files a
+# `restart-<vessel>` make target knows about (mostly src/index.ts). This script:
 #   1. (host) git fetch + ff-only pull origin/<BRANCH> into the shared super-repo
 #      mirror (idempotent via a SHA marker; refuses divergence — fails loud).
 #   2. diffs PREV..HEAD to find changed repos/<vessel> trees.
@@ -47,7 +45,8 @@ act() { if [[ "$APPLY" == "1" ]]; then "$@"; else log "DRY-RUN would: $*"; fi; }
 
 cd "$REPO_ROOT"
 
-# 1. Fetch + ff-only pull (mirrors host-pull-sync's divergence guard).
+# 1. Fetch + ff-only pull. Divergence is never merged away: a genuinely diverged
+#    mirror is refused with a nonzero exit for triage, never reconciled silently.
 PREV="$(cat "$MARKER" 2>/dev/null || git rev-parse HEAD)"
 git fetch --quiet "$REMOTE" "$BRANCH" || { log "fetch failed — network? skipping"; exit 0; }
 CUR_BRANCH="$(git symbolic-ref --short HEAD 2>/dev/null || echo DETACHED)"

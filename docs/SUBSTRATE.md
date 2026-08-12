@@ -121,8 +121,11 @@ and diagnosis is in-container too (`docker exec substrate-live substrate-doctor`
 > exists, and reuses an already-running `substrate-live` as-is. After editing
 > vessel source, rebuild explicitly (`make -C scripts/substrate build`, or
 > `up REBUILD=1`) *and* recreate the container so the fresh image is actually
-> booted (`docker rm -f substrate-live` then `up`) — for a single vessel prefer
-> the hot-reload `restart-<vessel>` targets under **Iteration loop**.
+> booted (`docker rm -f substrate-live` then `up`) — though a pushed change
+> arrives on its own, since the container converges its `/vessels` runtime to
+> `origin/dev`. Rebuild when you need the *image* refreshed; for an uncommitted
+> single-vessel edit use the hot-reload `restart-<vessel>` targets under
+> **Iteration loop**.
 
 ### Container path — root-level compose
 
@@ -427,21 +430,46 @@ there rather than mirroring them here.
 
 ## Iteration loop
 
-When you change a vessel's source:
+**The channel is git.** A change reaches running vessels — here and on every
+other substrate — by being committed and pushed to `origin/dev`. Each
+substrate's own `substrate-pull-sync` converges its `/vessels` runtime on the
+next tick (and at boot), mirrors the new source in, and restarts the affected
+units behind a health gate. Nothing pushes source into a container from a host,
+so **an uncommitted or unpushed local edit does not propagate** — see
+[Landing a change](#landing-a-change).
 
 ```bash
-# Edit the vessel
 vim repos/development-vessel/src/resolvers/...
+git -C repos/development-vessel commit -am "fix(development-vessel): ..."
+git -C repos/development-vessel push origin dev
 
-# Restart just that unit — no container restart, no rebuild
-make -C scripts/substrate restart-development-vessel
-
-# Verify
+# Verify once the substrate has converged
 curl http://localhost:18090/health
 ```
 
-Vessels with a `restart-<vessel>` target (copies `repos/<vessel>/src` into the
-container, then restarts the unit):
+### Hot-reloading one local container (the escape hatch)
+
+The `sync-<vessel>` / `restart-<vessel>` targets copy `repos/<vessel>/src` from
+your working tree into the container and restart the unit. This is a
+**deliberate, single-machine** path, sanctioned for seeing an exceptional manual
+edit run before it is committed — it acts on one container on one Docker daemon
+and reaches no other substrate, so it is a local convenience, never the way a
+change is delivered.
+
+```bash
+make -C scripts/substrate restart-development-vessel
+curl http://localhost:18090/health
+```
+
+> **It can clobber substrate-authored work.** The copy source is *your* working
+> tree, and it overwrites whatever the container holds — including commits the
+> substrate landed in its own in-container clone that your tree does not have.
+> Use these targets only when you know the host tree is the newer one; compare
+> against the container copy first. The safe refresh for anything else is an
+> in-container ff-only pull of `/workspace/git/vessels/<vessel>` plus a unit
+> restart.
+
+Vessels with a `restart-<vessel>` target:
 - `restart-analysis-vessel`
 - `restart-concept-db`
 - `restart-development-vessel`
@@ -454,8 +482,10 @@ container, then restarts the unit):
 - `restart-stateful-ui-vessel`
 
 The core vessels — `activity-api`, `identity-vessel`, `discovery-vessel`,
-`surrealdb` — have **no** make restart target. Iterate them by copying source in
-and restarting the unit directly (or rebuild for a clean deploy):
+`surrealdb` — have **no** make restart target. Push reaches them like every
+other vessel. For the same deliberate single-machine hatch, copy source in and
+restart the unit directly (or rebuild for a clean deploy) — with the same
+clobber caveat, since the copy source is again your working tree:
 
 ```bash
 docker cp repos/activity-api/src substrate-live:/vessels/activity-api/
@@ -657,12 +687,14 @@ The same image runs anywhere; the deploy scripts differ only in *how* the image 
 **Do not reach for a host script to push source into containers.** The only unit
 in the substrate's own unit set that sits on the code channel is
 `substrate-pull-sync.service`, driven by `substrate-pull-sync.timer` and by a
-boot run ordered after `git-push-setup.service`. `federation-pull-sync.sh` is
-wired to no unit at all, and `host-pull-sync` exists only as an optional
-*host-side* user-systemd unit the operator installs and enables by hand — neither
-is load-bearing, and neither is what a peer substrate is waiting on. A change
-reaches the fleet by landing on `origin/dev`: that is the channel every substrate
-already watches.
+boot run ordered after `git-push-setup.service`. Any host-side script that
+`docker cp`s source names one container on one Docker daemon, so it can only
+ever converge the substrate the operator happens to be sitting next to, and it
+writes content that is on no branch — invisible to review and to every peer.
+A change reaches the fleet by landing on `origin/dev`: that is the channel every
+substrate already watches. The single-machine hot-reload targets under
+[Iteration loop](#hot-reloading-one-local-container-the-escape-hatch) remain
+available as a deliberate local convenience; they are not a delivery path.
 
 Federation deploy details (hub vs. peers, the relay/sidecar, firewall ports) live in [`docs/FEDERATION.md`](FEDERATION.md).
 
@@ -684,7 +716,7 @@ docker exec substrate-live vessel-ctl install <name>         # same, in-containe
 
 ## Self-sync (git remotes are the only code channel)
 
-`substrate-pull-sync.timer` (10 min, plus a boot run after `git-push-setup`) converges the live `/vessels` runtime to each clone's `origin/dev`: ff-only pull → `mirror-to-live` → staggered, health-gated restart. A restart that goes unhealthy reverts to the last-good pin (`/workspace/.last-good/<v>`) and halts the run with a `substrateGap`; a diverged clone is refused (never forced). Runs skip while a mitosis cutover is in flight (`/workspace/mitosis-pending.json`). This is also how a *fleet* of substrates converges — each one pulls origin; no host mediates. It is the **only** unit-driven code channel: the older host-side push scripts are not wired to any unit and are not load-bearing. Self-recovery's revert source is the git clone too, never a host checkout. Without a `SUBSTRATE_GIT_PAT` the sync no-ops with a warning: the substrate is frozen-but-functional.
+`substrate-pull-sync.timer` (10 min, plus a boot run after `git-push-setup`) converges the live `/vessels` runtime to each clone's `origin/dev`: ff-only pull → `mirror-to-live` → staggered, health-gated restart. A restart that goes unhealthy reverts to the last-good pin (`/workspace/.last-good/<v>`) and halts the run with a `substrateGap`; a diverged clone is refused (never forced). Runs skip while a mitosis cutover is in flight (`/workspace/mitosis-pending.json`). This is also how a *fleet* of substrates converges — each one pulls origin; no host mediates. It is the **only** unit-driven code channel: no host-side script is wired to a unit or is load-bearing on it. Self-recovery's revert source is the git clone too, never a host checkout. Without a `SUBSTRATE_GIT_PAT` the sync no-ops with a warning: the substrate is frozen-but-functional.
 
 ## Landing a change
 
@@ -699,6 +731,14 @@ git push origin dev
 `origin/dev` is the convergence point: every substrate's `substrate-pull-sync.timer`
 (and any peer's) ff-only pulls it and health-gates the restart — pushing to `dev` *is*
 the deployment. There is no separate promotion environment.
+
+The consequence to hold onto: **a change reaches the running vessels only once it
+is pushed.** A local edit that is uncommitted, or committed but unpushed, exists
+nowhere the substrate looks — no host mechanism carries it in. The exceptions are
+both explicit and local: the hot-reload targets under
+[Iteration loop](#hot-reloading-one-local-container-the-escape-hatch), and a
+substrate running without a `SUBSTRATE_GIT_PAT`, whose pull-sync no-ops and which
+therefore only ever changes by rebuild or by that same hatch.
 
 ## Development-vessel specifics
 

@@ -15,8 +15,7 @@ Environment=VESSEL_ENDPOINT=http://127.0.0.1:8090
 # Self-development through repositories (container-side direct push). The cutover
 # commits+pushes to MITOSIS_PUSH_CLONE_DIR/<vessel> (writable AviGopal clone set
 # up by git-push-setup.service) and mirrors into MITOSIS_RUNTIME_DIR/<vessel>
-# (live runtime). Replaces the host-sync poller. SUBSTRATE_GIT_PAT comes from
-# the secrets EnvironmentFile above.
+# (live runtime). SUBSTRATE_GIT_PAT comes from the secrets EnvironmentFile above.
 Environment=MITOSIS_DIRECT_PUSH=1
 Environment=MITOSIS_RUNTIME_DIR=/vessels
 Environment=EXTRA_WORKSPACE_ROOTS=/vessels/packages
