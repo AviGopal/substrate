@@ -47,7 +47,16 @@ const has = (n: string) => args.includes(`--${n}`);
 const GOAL_HOST = arg("endpoint", process.env.GOAL_HOST_ENDPOINT ?? "http://localhost:18210")!;
 const DEV_VESSEL = process.env.DEV_VESSEL_ENDPOINT ?? "http://localhost:18090";
 const DISCOVERY = process.env.DISCOVERY_ENDPOINT ?? "http://localhost:18100";
-const TRACE_STORE = process.env.METABOB_ENDPOINT ?? "http://localhost:18080";
+// THE TRACE STORE IS NOT NECESSARILY LOCAL.
+//
+// This substrate is a SPOKE (`spoke-cfda39e7`), and `roles.spoke` in
+// vessels.inventory.json does not include the `api` role — `activity-api` is
+// MASKED here by design and the trace store lives on the hub. Defaulting to
+// localhost:18080 makes every goal-path read come back empty, which reads
+// identically to "no pathway was recorded" and is how a whole ceiling
+// measurement gets reported as a null result. Confirm which copy the instrument
+// talks to; `~/.metabob/config.json` names the hub.
+const TRACE_STORE = process.env.METABOB_ENDPOINT ?? "http://syzygy.host:18080";
 const POLL_TIMEOUT_S = Number(arg("poll-timeout-s", "900"));
 const RUNGS = (arg("rungs", "1,2,3,4") ?? "").split(",").map(Number).filter(Boolean);
 const OUT = arg("out", `validation/results/${new Date().toISOString().slice(0, 10)}-complexity-ladder.json`)!;

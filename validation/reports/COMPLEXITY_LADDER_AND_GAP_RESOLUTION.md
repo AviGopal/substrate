@@ -347,10 +347,71 @@ Rung 4 is the honest one — the gate refused it. So the reach gate is *not*
 uniformly blind: it caught the 4-transformation failure and passed the 2- and
 3-transformation ones. Whatever is failing is not "the gate never checks."
 
-`steps` came back `null` on every rung: the `/v2/goal-paths` lookup returned
-empty. The transformation count the ladder is named for **could not be read from
-durable state at all** — which is the "no walk-length column" finding arriving as
-a practical obstruction rather than a code observation.
+### ⚠ The `steps=null` column was my instrument, not the system
+
+The harness printed `steps=null` on every rung and I first wrote that up as "the
+transformation count cannot be read from durable state." **That was wrong**, and
+it is the third wrong-copy error in this session.
+
+`TRACE_STORE` defaulted to `http://localhost:18080`. This substrate is a **spoke**
+(`spoke-cfda39e7`), and `roles.spoke` in `vessels.inventory.json` does not include
+the `api` role — `activity-api` is **masked here by design**, with the trace store
+on the hub. `systemctl start` says so outright:
+
+```
+Failed to start activity-api.service: Unit activity-api.service is masked.
+```
+
+An empty read through a masked unit is indistinguishable from "nothing was
+recorded." *A zero read through a filter measures the filter.* Re-queried against
+the hub named in `~/.metabob/config.json`, every row is there.
+
+### The real result: the ladder never composed
+
+| rung | producer steps | `path_activities` | `walk_tier` | total_exec | α, β |
+|---|---|---|---|---|---|
+| 1 | **0** | `[satisfier:shellResult]` | satisfier | 2 | 3, 1 |
+| 2 | **0** | `[satisfier:detector_yield_registry, satisfier:memoryNote_write, satisfier:shellResult]` | satisfier | 2 | 3, 1 |
+| 3 | **0** | `[satisfier:shellResult]` | satisfier | 2 | 3, 1 |
+| 4 | **0** | `[satisfier:memoryNote_write, satisfier:shellResult]` | satisfier | 2 | 2, 2 |
+
+**Not one producer activity ran, at any rung.** Every step is a `satisfier:*` — a
+shape asserted into the pool, not a transformation performed. The ladder was built
+to vary the number of data transformations from one to four; the system performed
+**zero** at every rung.
+
+**Rungs 1 and 3 recorded the identical `path_signature` (`4502429f46`)** — the
+same single `satisfier:shellResult`. A one-transformation goal and a
+three-transformation goal are, in durable state, indistinguishable.
+
+This reframes the correctness cliff in §5 entirely. Rung 1 was not *composition
+succeeding at depth 1*; it was a single shell command that happens to answer a
+single-shell-command question. Rungs 2–4 got the same treatment and produced wrong
+content because the goal needed composition and none occurred. Rung 2's
+`satisfier:detector_yield_registry` is an irrelevant shape asserted into the pool —
+a plausible source of the `3` it wrote where truth was 324.
+
+### Learning IS being recorded — of the wrong structure
+
+The one genuinely positive reading. Across the floor and ceiling arms every rung
+shows `total_executions: 2`, and the posterior moved off `Beta(1,1)`:
+
+- rungs 1–3: **α=3, β=1** — two successes credited
+- rung 4: **α=2, β=2** — one success, one failure, exactly matching floor
+  `reached=false` / ceiling `reached=true`
+
+The fast variable moves, and it moves *correctly*, tracking the honest verdict
+including the failure. The credit loop works.
+
+What it is learning is `satisfier:shellResult` — that asserting a shape is how you
+answer a goal. Posterior movement on a pathway that performs no transformation is
+the slow variable sharpening around the wrong structure.
+
+> Reach on the ceiling arm went 3/4 → **4/4** (rung 4 flipped false → true) with
+> latency ratios 1.17×, 1.54×, 1.17×, 2.45×. With `walk_tier` pinned at
+> `satisfier` on both arms and no shape-pathway reuse recordable at all, **none of
+> that is attributable to reuse** — it is consistent with load variation, and I am
+> not claiming it as a ceiling effect.
 
 **Rung 1 is a genuine reach with a genuine oracle.** The reach gate did not take
 the walk's word for it:
