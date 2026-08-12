@@ -470,12 +470,26 @@ async function main() {
 
   const cres = results.filter((r) => r.rung === 0);
   const floor = results.filter((r) => r.rung > 0 && r.arm === "floor");
-  const honest = cres.filter((r) => r.correct === true).length;
+  // A CONTROL THAT NEVER RESOLVED IS NOT A CONTROL THAT FAILED.
+  //
+  // The first version counted `correct === true` and reported the remainder as
+  // "did not abstain" — so a poll timeout was indistinguishable from the suite
+  // confabulating on a must-fail goal, which is the single most alarming result
+  // it can produce. Three states, not two: abstained (reached === false),
+  // REACHED a must-fail goal (reached === true), and never read (reached null).
+  const honest = cres.filter((r) => r.reached === false).length;
+  const confabulated = cres.filter((r) => r.reached === true).length;
+  const unread = cres.filter((r) => r.reached === null || r.reached === undefined).length;
   console.log(`\n=== SUMMARY ===`);
-  console.log(`  falsifiability: ${honest}/${cres.length} must-fail goals abstained`);
-  if (honest < cres.length) {
-    console.log(`  ⚠ THE REACH NUMBERS BELOW ARE NOT TRUSTWORTHY — a suite that reaches a`);
-    console.log(`    must-fail goal cannot distinguish reaching from confabulating.`);
+  console.log(`  falsifiability: ${honest}/${cres.length} must-fail goals abstained` +
+    (unread ? `, ${unread} never resolved (UNMEASURED, not failed)` : ""));
+  if (confabulated > 0) {
+    console.log(`  ⚠ THE REACH NUMBERS BELOW ARE NOT TRUSTWORTHY — ${confabulated} must-fail goal(s)`);
+    console.log(`    REACHED. A suite that reaches a must-fail goal cannot distinguish reaching`);
+    console.log(`    from confabulating.`);
+  } else if (unread > 0) {
+    console.log(`  ⚠ FALSIFIABILITY UNPROVEN — ${unread} control(s) never resolved, so this run`);
+    console.log(`    has not shown it can say no. That is a missing measurement, not a failure.`);
   }
   for (const r of floor) {
     const rg = rungs.find((x) => x.id === r.id)!;
@@ -486,6 +500,57 @@ async function main() {
   const undec = floor.filter((r) => r.correct === null).length;
   console.log(`  HOLLOW (reached, wrong): ${hollow}   SILENT (right, not reached): ${silent}   UNDECIDABLE: ${undec}`);
   console.log(`  gaming gap = ${floor.filter((r) => r.reached).length} self-reported reaches − ${floor.filter((r) => r.correct).length} externally correct`);
+
+  // ---- DIFFERENTIATION -----------------------------------------------------
+  //
+  // The question this suite exists to answer is not only "did it reach" but
+  // "can it tell these goals apart AT ALL". A system that answers every goal the
+  // same way can post a respectable reach rate and still have learned nothing,
+  // because the thing it learned applies to everything and therefore
+  // distinguishes nothing.
+  //
+  // The observable is `path_signature`: an md5 over the ordered path_activities.
+  // Rungs differ by design in how many transformations they demand, so distinct
+  // rungs demanding distinct work MUST record distinct signatures. When two do
+  // not, the walk did the same thing for both, whatever their reach says.
+  //
+  // Measured 2026-08-12: rungs 1 and 3 both recorded 4502429f46
+  // ([satisfier:shellResult]) — a one-transformation and a three-transformation
+  // goal, indistinguishable in durable state. That is the result this section
+  // was added to make impossible to overlook.
+  const sigs = floor.map((r) => r.pathSignature).filter((s): s is string => !!s);
+  const distinct = new Set(sigs);
+  console.log(`\n  --- DIFFERENTIATION ---`);
+  if (sigs.length === 0) {
+    console.log(`  UNMEASURED: no path_signature was readable for any rung.`);
+    console.log(`  This is NOT "no differentiation" — it is no reading. Check that TRACE_STORE`);
+    console.log(`  points at the instance that holds the traces (${TRACE_STORE}); a spoke masks`);
+    console.log(`  activity-api and an empty read there looks exactly like an empty table.`);
+  } else {
+    console.log(`  distinct path_signatures: ${distinct.size} across ${sigs.length} rungs`);
+    const collisions = new Map<string, number[]>();
+    for (const r of floor) {
+      if (!r.pathSignature) continue;
+      collisions.set(r.pathSignature, [...(collisions.get(r.pathSignature) ?? []), r.rung]);
+    }
+    for (const [sig, rs] of collisions) {
+      if (rs.length > 1) {
+        console.log(`  ⚠ COLLISION: rungs ${rs.join(", ")} share ${sig} — different transformation`);
+        console.log(`    counts, identical recorded pathway. The walk did the same thing for both.`);
+      }
+    }
+    const producerRungs = floor.filter((r) => (r.producerSteps ?? 0) > 0).length;
+    console.log(`  rungs that traversed ANY producer step: ${producerRungs}/${floor.length}`);
+    if (producerRungs === 0) {
+      console.log(`  ⚠ NO COMPOSITION OCCURRED ANYWHERE. Every rung was served by satisfiers —`);
+      console.log(`    shapes asserted into the pool, not transformations performed. The ladder`);
+      console.log(`    varied the requested transformation count and the system performed zero`);
+      console.log(`    every time, so the complexity axis was never actually exercised.`);
+    }
+    const verdict = distinct.size === sigs.length && producerRungs > 0;
+    console.log(`  DIFFERENTIATES: ${verdict ? "yes" : "NO"}` +
+      (verdict ? "" : ` — ${distinct.size < sigs.length ? "signatures collide" : "no producer steps"}`));
+  }
 
   const { writeFileSync, mkdirSync } = await import("node:fs");
   const { dirname } = await import("node:path");
@@ -499,6 +564,11 @@ async function main() {
       "data-transformation goals only — says nothing about the code-edit plane",
       "activeDispatches is a rolling ~50 window under live traffic; AGED_OUT_OF_WINDOW is a distinct outcome from a timeout",
     ],
+    differentiation: {
+      distinct_signatures: new Set(results.filter((r) => r.rung > 0 && r.arm === "floor").map((r) => r.pathSignature).filter(Boolean)).size,
+      rungs_with_producer_steps: results.filter((r) => r.rung > 0 && r.arm === "floor" && (r.producerSteps ?? 0) > 0).length,
+      note: "distinct signatures == rung count AND producer steps > 0 is the bar; a shared signature across rungs demanding different work means the walk did the same thing for both",
+    },
     rungs: rungs.map((r) => ({ rung: r.rung, id: r.id, transformations: r.transformations, nonCollapsible: r.nonCollapsible })),
     controls: ctls.map((c) => ({ id: c.id, why: c.nonCollapsible })),
     results,
