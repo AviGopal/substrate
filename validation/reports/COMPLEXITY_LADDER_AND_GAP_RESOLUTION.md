@@ -391,7 +391,13 @@ content because the goal needed composition and none occurred. Rung 2's
 `satisfier:detector_yield_registry` is an irrelevant shape asserted into the pool —
 a plausible source of the `3` it wrote where truth was 324.
 
-### Learning IS being recorded — of the wrong structure
+### The per-goal posterior IS learning — of the wrong structure
+
+> **Scope.** What follows is the posterior on the `goal_execution_paths` row,
+> keyed by `goal_hash`. The **activity-arm** table — the one an earlier finding
+> records as "the walk grades into a table nothing reads" — was not measured
+> here. This is one of two credit paths, and the claim does not generalize to the
+> other.
 
 The one genuinely positive reading. Across the floor and ceiling arms every rung
 shows `total_executions: 2`, and the posterior moved off `Beta(1,1)`:
