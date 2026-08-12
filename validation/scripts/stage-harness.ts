@@ -1141,6 +1141,66 @@ if (wanted("S10")) {
 }
 
 // ---------------------------------------------------------------------------
+// S11 — is the gap pool diluted by gaps that can never close?
+//
+// When a walk cannot resolve a shape it files "the goal-walk needs a producer for
+// shape X". X is frequently a noun scraped from the goal's PROSE, so no producer
+// can ever exist and the gap is unclosable by construction.
+//
+// Three harms, and the third is the one that cost this session real time:
+//   1. dilution — a real gap competes against these for selection;
+//   2. the mint is self-amplifying — every failed walk adds more, none close;
+//   3. the trigger is often not a missing capability at all. Dispatch 5394ae69
+//      was capacity-refused ("compose still BUSY after retry"), fell through to
+//      the walk, and the walk reported "no template produces [fileEditResult];
+//      capability gap filed". A CAPACITY refusal was recorded as a missing
+//      capability. BUSY is "ask again later", not "no producer exists".
+//
+// Measured against the live store, so it reports "<unreachable>" rather than a
+// verdict when the vessel is down — an absent measurement is not a passing one.
+// ---------------------------------------------------------------------------
+
+if (wanted("S11")) {
+  const f: FixtureResult[] = [];
+  const poolStats = (): { total: number; phantom: number } | null => {
+    try {
+      const out = execFileSync("curl", ["-s", "-m", "25", "-X", "POST",
+        "http://localhost:18090/v2/impulses/resolve", "-H", "Content-Type: application/json",
+        "-d", '{"impulse":{"type":"substrateGap","pointer":{"limit":400}}}'],
+        { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"], timeout: 30_000, maxBuffer: 64 * 1024 * 1024 });
+      const gaps = (JSON.parse(out)?.body?.gaps ?? []) as Array<{ summary?: string }>;
+      if (gaps.length === 0) return null;
+      const phantom = gaps.filter((g) => /apability gap/.test(g.summary ?? "") && /needs a producer/.test(g.summary ?? "")).length;
+      return { total: gaps.length, phantom };
+    } catch { return null; }
+  };
+  const st = poolStats();
+
+  check(f, "S11.store-reachable", "an absent measurement must not read as a healthy one",
+    "true", () => String(st !== null),
+    { note: st ? `pool=${st.total}, walk-minted capability gaps=${st.phantom}` : "gap store unreachable" });
+
+  check(f, "S11.pool-not-dominated-by-unclosable-gaps",
+    "gap the-walk-mints-a-capability-gap-per-scraped-noun — measured 2026-08-12, control: registry_query(httpStatus) = 0 of 391 advertised shapes",
+    "over-10-percent",
+    () => {
+      if (st === null) return "<unreachable>";
+      const pct = (st.phantom / Math.max(1, st.total)) * 100;
+      return pct > 10 ? "over-10-percent" : "under-10-percent";
+    },
+    { known_open: st !== null && (st.phantom / Math.max(1, st.total)) > 0.1,
+      note: st
+        ? `Records the CURRENT wrong state; correct is "under-10-percent". ${st.phantom} of ${st.total} gaps (${((st.phantom / st.total) * 100).toFixed(0)}%) name a shape that was never advertised, so they can never close and permanently dilute selection. This is why reopened gap route-edit-e691e25e:3 sat unpicked for 45 minutes.`
+        : "unmeasured" });
+
+  stages.push({
+    stage: "S11", title: "Gap pool — how much of it can never close?",
+    measures: "live substrateGap store via development-vessel; counts walk-minted 'needs a producer for shape X' gaps",
+    fixtures: f,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Report
 // ---------------------------------------------------------------------------
 
