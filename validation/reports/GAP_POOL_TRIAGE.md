@@ -141,6 +141,35 @@ deny-list entry, which is the structural problem: **the gate is a deny-list over
 names, when the only sound gate is evidence of demand.** The function's own comment
 asserts that genuine demand is "template-demanded"; nothing enforces it.
 
+## `closed` is a training label, not just a state
+
+Marking a never-was-a-gap row `closed` would corrupt the learning signal, because
+several consumers read `status === "closed"` as **landed / successfully repaired**:
+
+| consumer | line | what `closed` means there |
+|---|---|---|
+| `gap-landability-model.ts` | 69, 173 | the model's positive training set |
+| `gap-lifecycle-scan.ts` | 302 | `landed = status === "closed" && !failedSentinel` |
+| `detector-coverage-scan.ts` | 119 | increments `detector_coverage_gaps_closed` |
+| `detector-yield-registry.ts` | 261 | per-detector yield accounting |
+
+Closing 394 phantom rows would therefore have taught the landability model that
+394 phantom gaps were successfully landed, and inflated every detector's apparent
+yield. The close would have looked like progress *by construction* — the gap
+triple (law 7) measured against a corpus the closing itself poisoned.
+
+So dispositions split by what actually happened:
+
+- **`invalid-close` → `status: "rejected"`.** The row was never a coherent gap.
+  `rejected` keeps it in the store for audit and is excluded from every
+  closed-means-landed consumer above, since all of them test strict equality.
+- **`stale-close` / `duplicate-close` → `status: "closed"`.** These genuinely were
+  gaps; one is fixed, the other is covered elsewhere. Counting them as closed is
+  accurate.
+
+Round-tripped against the live store before use: a `rejected` write persists as
+`rejected` and, unlike a close, does **not** stamp `closed_at`.
+
 ## Dispositions
 
 Populated by the triage run; see the tables appended below.
