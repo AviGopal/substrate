@@ -329,8 +329,28 @@ function containsNumber(haystack: string, value: string): boolean {
   return new RegExp(`(?<!\\d)${value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?!\\d)`).test(haystack);
 }
 
-async function runOne(r: Rung, arm: "floor" | "ceiling", g: GroundTruth): Promise<Result> {
-  const t0 = Date.now();
+/**
+ * Dispatch every goal of an arm FIRST, then poll them together.
+ *
+ * Sequential runs cost ~40 minutes per dispatch and, worse, spread the arm's
+ * reads of the live pool across hours — so rung 3 and rung 4 would be scored
+ * against an `openGapCount` measured before either ran, while the substrate's
+ * own autonomous traffic moves it underneath them. Dispatching together makes
+ * the single ground-truth snapshot coherent and shrinks exposure to the rolling
+ * activeDispatches window. Goal texts within an arm are distinct, so there is no
+ * coalescing risk; the ceiling arm is deliberately run AFTER its floor twin.
+ */
+async function runArm(rungs: Rung[], arm: "floor" | "ceiling", g: GroundTruth): Promise<Result[]> {
+  const started = rungs.map((r) => ({ r, t0: Date.now(), p: dispatch(r.goal) }));
+  const dispatched = await Promise.all(started.map(async (s) => ({ ...s, d: await s.p })));
+  for (const s of dispatched) console.log(`  dispatched ${s.r.id} -> ${s.d.dispatchId?.slice(0, 8) ?? "FAILED"}${s.d.coalesced ? " (COALESCED)" : ""}`);
+  return Promise.all(dispatched.map((s) => scoreOne(s.r, arm, g, s.d, s.t0)));
+}
+
+async function scoreOne(
+  r: Rung, arm: "floor" | "ceiling", g: GroundTruth,
+  d: { dispatchId: string | null; coalesced: boolean; err?: string }, t0: number,
+): Promise<Result> {
   const out: Result = {
     id: r.id, rung: r.rung, arm, goal: r.goal, dispatchId: null, coalesced: false,
     reached: null, status: null, executionId: null, trigger: null, operator: null,
@@ -338,7 +358,6 @@ async function runOne(r: Rung, arm: "floor" | "ceiling", g: GroundTruth): Promis
     walkTier: null, totalExecutions: null, thompsonAlpha: null, thompsonBeta: null,
     answerText: "", correct: null, correctnessNote: "", sideEffectFound: null, error: null,
   };
-  const d = await dispatch(r.goal);
   out.dispatchId = d.dispatchId; out.coalesced = d.coalesced;
   if (d.err) { out.error = d.err; return out; }
   if (!d.dispatchId) { out.error = "no dispatchId returned"; return out; }
@@ -409,17 +428,17 @@ async function main() {
   const ctls = controls();
   const results: Result[] = [];
 
-  console.log(`\n=== CONTROLS (must-fail) — ${ctls.length} ===`);
-  for (const c of ctls) {
-    const r = await runOne(c, "floor", g);
-    results.push(r);
-    console.log(`  ${r.correct ? "OK  " : "FAIL"} ${c.id}  reached=${r.reached}  ${r.correctnessNote}`);
+  // Controls and floor rungs go out together: they are all distinct texts, and a
+  // single simultaneous dispatch is what makes one ground-truth snapshot honest
+  // for all of them.
+  console.log(`\n=== CONTROLS (${ctls.length} must-fail) + FLOOR ARM (${rungs.length} unique goals) — dispatched together ===`);
+  const firstArm = await runArm([...ctls, ...rungs], "floor", g);
+  results.push(...firstArm);
+  for (const r of firstArm.filter((x) => x.rung === 0)) {
+    console.log(`  ${r.correct ? "OK  " : "FAIL"} ${r.id}  reached=${r.reached}  ${r.correctnessNote}`);
   }
-
-  console.log(`\n=== FLOOR ARM — ${rungs.length} unique goals, no prior goal_hash ===`);
-  for (const rg of rungs) {
-    const r = await runOne(rg, "floor", g);
-    results.push(r);
+  for (const r of firstArm.filter((x) => x.rung > 0)) {
+    const rg = rungs.find((x) => x.id === r.id)!;
     console.log(`  rung ${rg.rung} (expect ${rg.transformations})  reached=${r.reached}  status=${r.status}  steps=${r.producerSteps}  correct=${r.correct}`);
     console.log(`        ${r.correctnessNote}${r.error ? `  [${r.error}]` : ""}`);
   }
@@ -428,13 +447,15 @@ async function main() {
     console.log(`\n=== CEILING ARM — identical goal text, same goal_hash ===`);
     console.log(`  Detects Tier-1/2 COMMAND reuse ONLY. tierOf has no reuse branch, so an`);
     console.log(`  absent learned_pathway is not evidence that shape-pathway reuse did not fire.`);
-    for (const rg of rungs) {
-      const r = await runOne(rg, "ceiling", g);
-      results.push(r);
-      const f = results.find((x) => x.id === rg.id && x.arm === "floor");
+    console.log(`  Rungs 3-4 read a pool the substrate's own traffic moves, so ceiling`);
+    console.log(`  CORRECTNESS there is soft; reach, tier and signature are the hard readings.`);
+    const ceil = await runArm(rungs, "ceiling", g);
+    results.push(...ceil);
+    for (const r of ceil) {
+      const f = results.find((x) => x.id === r.id && x.arm === "floor");
       const sp = f?.latencyMs && r.latencyMs ? (f.latencyMs / r.latencyMs).toFixed(2) : "n/a";
       const sig = f?.pathSignature && r.pathSignature ? String(f.pathSignature === r.pathSignature) : "n/a";
-      console.log(`  rung ${rg.rung}  reached=${r.reached}  walk_tier=${r.walkTier}  total_exec=${r.totalExecutions}  latency x${sp}  same_signature=${sig}`);
+      console.log(`  rung ${r.rung}  reached=${r.reached}  walk_tier=${r.walkTier}  total_exec=${r.totalExecutions}  latency x${sp}  same_signature=${sig}`);
     }
   }
 
