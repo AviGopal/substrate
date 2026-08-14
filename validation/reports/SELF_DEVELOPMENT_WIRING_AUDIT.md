@@ -386,3 +386,36 @@ below the cheap `disk-space-observer-tick`, so boredom never autonomously select
 them — a chicken-and-egg (they can't clear the debit without a success they can't get
 without being selected). That debit-decay is the next lever for fully-autonomous
 selection.
+
+## 2026-08-13 — the bottleneck is now DRAFTER QUALITY, and the gates correctly guard it
+
+After clearing the infrastructure cascade (dev-vessel down → immune timer dead →
+gap-hydration routing → compose silent-death observability `4282791`), the loop now
+runs end-to-end and TWO autonomous composes reached a semantic-gate verdict. Both
+were REJECTED for the same reason — the drafter produced a superficial/adjacent
+edit that does not address the gap:
+- `gap-env-gated-dense-backfill-enabled` (seeded): drafter added the env var to the
+  `/health` response; gate `addresses:false`, real site was line 273 gating logic.
+- `route-edit-0cd58a38:1 / uniqueness-is-no-longer-evidence` (autonomous, fc-mssdffyf):
+  drafter added a duplicate-push guard (`push(t)`); gate `addresses:false` —
+  "does not alter the uniqueness-gated localisation heuristic that returns confident
+  WRONG files."
+
+**This is the honest frontier.** It is NOT an infrastructure blocker an operator can
+patch: the compose machinery works, connects, drafts, typechecks, and gates. The
+semantic-gate is doing its job — it refuses edits that don't address the gap, so
+NOTHING hollow or harmful lands (no hollow-green, correct fail-safe). What the system
+cannot yet do is DRAFT A CORRECT FIX for these gap classes. Two contributing factors:
+1. **Grounding centering** — `fc-scope` centred fc-mssdffyf's window on "read-only",
+   not the real localisation heuristic; the gate's `suspected_real_location` shows the
+   drafter edited a site adjacent to, not at, the defect (the L8 "information
+   starvation presenting as drafter fault" the code comments already name).
+2. **Drafter competence on semantic refactors** — shaping an env var, or changing a
+   uniqueness heuristic, is a non-trivial change the drafter approximates with a
+   nearby cosmetic edit.
+
+**What would move it (research-grade, not a patch):** better grounding that centres on
+the gate's `suspected_real_location`; a stronger drafter model/prompt with a worked
+example; or targeting mechanically-simpler gap classes the drafter can land. None of
+these is a one-line operator fix. The infrastructure lane is done; the generative
+lane is the frontier, and the safety gates correctly hold the line until it improves.
