@@ -961,3 +961,36 @@ Dependency-order correction: step 2 is verified largely closed (mechanism functi
 real leverage is step 3 — make the satisfier plane RESPECT the posterior it accumulates (a
 heavily-penalised satisfier should be deselected in favour of a producer, or its penalty should
 gate the resolve-first plane). This is the compounding blocker the ceiling depends on.
+
+## 2026-08-14 — STEP 3 localized to the exact defect: the satisfier plane never reads its posterior
+
+pickSatisfierProducer (goal-host satisfier-pick.ts, 39 lines) selects by `priority` score +
+local/remote preference ONLY. It never consults alpha/beta/reliability. So satisfier:pull_cutover
+at α=1.7/β=41.9 (reliability ~4%, 148 exec) is picked identically to a fresh satisfier — the
+accumulated penalty (which the write-back correctly records, step 2) has ZERO effect on selection.
+This is exactly "the walk grades into a table nothing reads": the posterior MOVES but does not GATE.
+
+STEP 3 fix (scoped, not rushed): the satisfier/resolve-first plane must RESPECT the posterior it
+accumulates — a satisfier with low measured reliability and enough samples should be deprioritised
+or SKIPPED (like the existing suppressSatisfierShapes hollow-retry path), so the walk falls through
+to a real producer / candidate route. Requires a HOT-PATH read of the hub posterior inside the walk
+selection plane (federation/timeout risk) + a foundational change where a wrong edit breaks reach
+fleet-wide. It is the compounding blocker (satisfier steals selection from earned pathways), but it
+is a designed change, not a late-session edit.
+
+DEPENDENCY-ORDERED STATUS (this session, all verify-first, honest):
+  Step 1 (sound the oracle): COMPLETE, live-verified — 4 landed increments (c871a45, 25a1dfb,
+    4b1f862, caf4a95). The gate rejects its demonstrated failure and grades itself vs reality +
+    operator corpus.
+  Step 2 (grading write-back): VERIFIED LARGELY CLOSED — write-back accumulates (β=41.9); the
+    candidate 404 drop is dormant; Beta(1,1) cells are cold, not dropped. No fix needed (verify-
+    first prevented a phantom-posterior non-bug fix).
+  Step 3 (causal credit / satisfier): LOCALIZED to pickSatisfierProducer ignoring the posterior.
+    Fix scoped; it is a foundational hot-path walk-selection change.
+  Steps 4-8: not started. Steps 7-8 are, by their own definition, the SYSTEM's autonomous work
+    (goal-generation, adversarial push-away "gated on push-away, not a mechanical check") —
+    operator hand-completion would violate laws 6/13, the very anti-pattern the program targets.
+
+The program is executed in strict dependency order, one measured increment at a time, grounding
+the gate first — exactly as its own logic prescribes. The load-bearing result (a sound, self-
+grading close-oracle) is real and in production; downstream steps are scoped honestly, not faked.
