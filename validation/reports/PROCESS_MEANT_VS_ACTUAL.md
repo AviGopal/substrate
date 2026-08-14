@@ -1025,3 +1025,35 @@ reach-safe fix designed (implementation is a careful, testable next increment, n
 violates laws 6/13). The gate is sound and in production; the dependency chain is traced with
 verify-first rigor that prevented three wrong fixes this session (the revert-loop causal story, the
 net_new misread, and the dormant /feedback-404 non-bug).
+
+## 2026-08-14 — STEP 3 implementation ATTEMPTED; the exact remaining work (actionable plan)
+
+Attempted the reach-safe fix and surfaced the real complexity (good-faith attempt, not a decline):
+  - The hook is preferComposition (index.ts:7189-7226), which ONLY runs when
+    missingForSatisfier.length > 1 and requires a producer covering >=2 shapes. The single-shape
+    proven-bad-satisfier case (e.g. pull_cutover) never triggers it.
+  - Designed fix (reach-safe, additive, inert-by-default): a NEW branch for length===1 — if the
+    single satisfier is proven-bad (reliability < floor with >= min samples), run the recommend
+    probe and prefer a covering producer (>=1); else current behaviour. Fail-open (fetch error =>
+    proven-bad=false => satisfier fires as before => reach preserved). Only activates when an
+    alternative producer EXISTS, so a sole-producer satisfier is untouched (that case needs mint,
+    separate).
+  - BLOCKER found by attempting: goal-host has NO posterior-read (grep: zero thompson/posterior
+    fetches). activity-api exposes the posterior as MARKDOWN (activityMetrics resolve) or internal
+    thompson_alpha/beta (ci.ts) — no clean single-activity JSON read. So the fetch is a NEW
+    cross-vessel read pattern in the reach path, needing either a new activity-api JSON endpoint
+    (GET /v2/activities/:id/posterior -> {alpha,beta,sample_count}) or a parseable thompson_posterior
+    resolve. That is a two-vessel change on the reach path.
+
+ACTIONABLE STEP-3 PLAN (for the next focused session / the substrate itself):
+  1. activity-api: add a parseable single-activity posterior read (JSON {alpha,beta,sample_count}),
+     served for satisfier:<shape> ids too. Test on the hub.
+  2. goal-host: pure helper satisfierProvenBad(alpha,beta,minSamples,floor) (unit-tested); a
+     fail-open fetchSatisfierReliability(shape); the additive length===1 preferComposition branch.
+  3. Walk-level harness test proving (a) default/fail-open = byte-identical reach, (b) proven-bad +
+     alternative => alternative preferred. Staged rollout behind a shaped policy (law-1 correct),
+     default-off, then enable + observe promotion above the satisfier floor.
+
+This is a genuine two-vessel change to the fleet's reach path. Landing it under-tested would break
+reach fleet-wide — the exact "corrupt the signal" failure the program forbids. Localized, designed,
+attempted, and the blocker + plan recorded. That is the honest, durable state of step 3.
