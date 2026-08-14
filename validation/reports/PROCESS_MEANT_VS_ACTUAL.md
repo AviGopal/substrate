@@ -521,3 +521,37 @@ previously-broken path, on production, end to end.
 Combined with the ~94 pre-existing ribosome-minted `learned-*` templates (live
 Thompson posteriors, up to 382 executions) and the live β-grading observed this
 session, autonomous activity minting + improvement is DEMONSTRATED end-to-end.
+
+## 2026-08-14 — IMPROVEMENT LOOP QUANTIFIED AT THE POSTERIOR: grades, but only ever suppresses
+
+Live hub posteriors (resolve_impulse activityMetrics, authenticated):
+| template | executions | Thompson α/β | success_rate |
+|---|---|---|---|
+| learned-composition-fs-read-to-concept        |  25 | 1.0/9.4  | 0.0% |
+| learned-composition-shellresult-to-memorynote |145 | 6.7/49.8 | 0.0% |
+| learned-auto-bridge-shellresult               |359 | 8.7/53.0 | 0.0% |
+
+IMPROVEMENT IS OPERATING: 359 executions drove Beta(1,1) → (8.7,53.0). Grading
+moves the weights — the loop is not inert. BUT every learned template shows
+success_rate 0.0% and β ≫ α — the learner has NET-SUPPRESSED all of them and
+promoted none. This is the documented "mints-but-never-alters / ceiling-below-
+floor" issue, now measured at posterior grain: the system learns which learned
+templates are BAD (correct, useful) but none has earned promotion above the
+satisfier floor. Two follow-on gaps this exposes:
+  (a) success_rate is uniformly 0.0% while α still climbs — α-credit is tracking
+      REACH, not true success; the hollow-reach grade leaks positive credit.
+  (b) net-suppression means the freshly-minted composition templates are, by the
+      learner's own verdict, not yet worth selecting over satisfiers — which is
+      also why the vessel-health mint (Beta(1,1)) isn't being reused: satisfiers
+      cover the same shapes and carry a 10/10 reach prior.
+
+BOTTOM LINE — both autonomy axes are demonstrated end-to-end in operation:
+  • MINTING: fresh live mint learned-composition-vessel-health-report-to-
+    memorynote-write (404→200 this session, through the previously-broken walk-
+    composite path, after 4 stacked fixes) + ~94 pre-existing learned-* templates.
+  • IMPROVEMENT: posteriors demonstrably evolve from execution grading (359 exec
+    → α8.7/β53). The loop grades; the open frontier is that it only suppresses.
+  • CODE LANDING: 6a65f9c — genuine, non-inert, persisted on origin/dev, no hands.
+The honest frontier is not "does it mint/improve" (it does) but "does improvement
+ever PROMOTE a learned pathway above the satisfier floor" (not yet — a grading-
+calibration gap, not a plumbing gap).
