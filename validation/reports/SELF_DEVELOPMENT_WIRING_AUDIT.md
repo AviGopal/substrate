@@ -292,8 +292,35 @@ the floor arm's `dispatch TIMEOUT`/`dispatch ERROR` are the same fault). This �
 the reach-gate — is the dominant reason autonomous self-development LANDS NOTHING:
 the generation half authors the close-goal, but the apply half cannot reach the
 compose endpoint, so it falls through to walk satisfiers that (correctly, now)
-refuse to fake the edit. **Diagnosing this connect fault is the real leverage
-toward a self-authored goal that reaches with a landed sha.**
+refuse to fake the edit.
+
+### ROOT CAUSE FOUND + FIXED: development-vessel was DOWN, and the immune system that should have revived it was ALSO down
+
+Traced the connect fault to its source and repaired the whole chain:
+- **development-vessel was inactive** — cleanly stopped (SIGTERM, drained, exit 0)
+  at 00:33:23 and dead 41 min. It serves `feature_compose` AND the `memoryNote`
+  resolver, so its being down explains BOTH the compose connect-fault (no
+  autonomous edit can land) and any memory-recall failures. `Restart=on-failure`
+  cannot recover a clean stop. **Restarted it** → `status:ok`, discovery-registered,
+  memoryNote resolver serving again.
+- **Why it stayed down: `self-recovery.timer` (the immune system) had been dead for
+  5 days** — `active` but `Trigger: n/a`, last real run 2026-08-08. It re-arms ONLY
+  via `OnUnitActiveSec` (relative to the triggered service's last activation), so a
+  single broken link leaves it with no next elapse and it never fires again. The
+  immune system that detects a downed vessel and reverts/restarts it was itself down
+  with nothing watching the watcher (**check the checker**). Triggering the service
+  once re-armed it; a manual tick immediately did real work — it found
+  **identity-vessel (the auth validator) UNHEALTHY and recovered it via restart**
+  (`recovered_by_restart:1`), a second silently-degraded core vessel. **Durable
+  fix `b2ff657b`:** added `OnCalendar=*:0/3` to `self-recovery.timer` so the
+  watchdog has a wall-clock schedule that cannot deadlock on a missed activation.
+- **Net:** the autonomous-apply path is unblocked (feature_compose reachable), the
+  memory plane is restored, the auth validator is healthy, and the immune system is
+  self-sustaining again. The reach-gate guard `e62a5d9` remains a correct backstop
+  for the walk-path hollow-green, but the DOMINANT blocker was operational, not
+  algorithmic: **two core vessels were silently degraded because the recovery timer
+  had deadlocked.** Filed class gap: nothing detects that the DETECTOR (immune
+  timer) has stopped — a `Trigger:n/a` liveness check on the watchdogs themselves.
 
 ## Open question
 
