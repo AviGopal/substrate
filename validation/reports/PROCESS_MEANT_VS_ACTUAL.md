@@ -844,3 +844,43 @@ Three landed increments (c871a45, 25a1dfb, 4b1f862), all tested; #1 and #2 verif
 #3 converging. The gate the whole program amplifies is now sound against the demonstrated
 failure AND grades its own reliability. Remaining: step-1 full activity-api integration
 (scoped) + steps 2–8.
+
+## 2026-08-14 — STEP 1(b) traced to its blocker: the operator-verdict read-back is a STUB
+
+"Calibrate against the operator-verdict corpus" for the close-oracle is blocked, and the
+blocker is precise:
+  1. The corpus (goal_verification_labels, activity-api) is keyed by
+     (goal, execution_id, activity_id, verdict, confidence, labeler) — GOAL/EXECUTION grain.
+     The close-oracle is GAP grain. Bridging needs the close's execution_id + a federated
+     read to the MASKED hub activity-api (the same 8s-timeout federation risk hit earlier).
+  2. The correct-grain path — the oracle's OWN escalations (uiQuestion_write) answered by a
+     human — has NO working read-back: solicitation-outcome-scan.ts is a STUB ("TODO:
+     implement. Stub returns an empty, well-formed result"), a substrate-authored resolver
+     (Seam ③) minted but never filled in. Without it, a human's answer to a reland escalation
+     never returns to update the posterior.
+
+So (b) is NOT a wiring task — it is a real feature (implement the solicitation-outcome
+read-back: obsidian interaction_episode -> match solicitation_id -> extract verdict ->
+recordCloseVerdict). Faking it with a grain-mismatched federated write onto the validator
+would be the exact inert/wrong change step 1 exists to prevent.
+
+LAW 6 note: the system minted solicitation_outcome_scan as a scaffold and never generated a
+gap for its own unimplemented state — the missing generator (a detector for minted-but-empty
+resolvers) is itself a gap (this is the "declared but never walked" hollowness, law 4).
+
+STEP 1 honest status:
+  demonstrated hole (inert re-land closes green): CLOSED, live-verified (c871a45).
+  (c) abstain->escalate: DONE, live (25a1dfb).
+  (a) graded with a per-class Beta posterior: DONE, live (4b1f862) — calibrated against the
+      UN-AUTHORABLE REFERENT (reality's re-detection), which the MDP holds ABOVE opinion.
+  (b) operator-verdict-corpus calibration: BLOCKED on the read-back stub above — a scoped
+      feature, not a hack. The reality-calibration already in place is the stronger signal;
+      the operator half awaits the read-back implementation.
+  auto-feeding threshold: the behavioral loop is ALREADY closed at the right point —
+      re-land (false-close signal) -> refuse close + escalate + posterior update. A separate
+      threshold auto-feed on single-landing closes would either be redundant or flood
+      (0/30 landing closures are surgically checkable), so it is not added.
+
+The three landed increments ground the gate against its demonstrated failure and make it
+self-grading against reality. The operator-corpus read-back is the one genuine remaining
+step-1 feature, now precisely scoped.
