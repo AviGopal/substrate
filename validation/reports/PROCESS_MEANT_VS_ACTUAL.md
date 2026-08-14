@@ -675,3 +675,40 @@ axes. "Does it do so RELIABLY and EFFECTIVELY?" — not yet: the open work is
 quality/durability (inert-diff closure detection, learned-pathway promotion above
 satisfiers, revert-loop disposition), not plumbing. The mechanisms are wired and
 observably firing; the learning frontier is making their OUTPUT durably correct.
+
+## 2026-08-14 — LEARNED DISPOSITION observed live (law 7), and a net_new misread caught pre-commit
+
+Two things from the development-vessel journal, live:
+
+1. LAW 7 (learned disposition) is OPERATING autonomously. The loop does not just
+   compose-and-land — it JUDGES which gaps are worth closing:
+   • post-land verification RAN and caught real breakage: after bafd83d,
+     "post-land suite ... ran=true pass=1591 fail=95" — the loop knows its own
+     suite is red (95 fails) and filed post-land-suite-red-development-vessel.
+   • HOPELESS-gap escalation: "[gap-escalation] uiQuestion_write accepted for
+     hopeless gap" ×3 (orphaned-capability-code_verify_typecheck,
+     every-typecheck-failure-collapses-to-one-inert-lesson-label,
+     the-untried-arm-prior-is-reverted-and-its-test-deleted). The system decides
+     these are NOT worth auto-closing and escalates them to the HUMAN surface
+     instead of thrashing. That is exactly law 7's stated goal ("learns which gaps
+     to close now, which need more information, which aren't worth closing").
+   • The coverage gate warns when a target has no test file (goal-host index.ts):
+     "a FAVORABLE verdict here means the change was reviewed, never executed" —
+     the loop knows the difference between reviewed and executed.
+
+2. METHOD: I nearly claimed the cutover's `net_new=false` was the missing inert-diff
+   detector. Reading vessel-mitosis-cutover.ts:739 — `netNewFreshnessOK` means
+   "staged base is empty AND no live sha" (a brand-new FILE), NOT behavioral
+   inertness. bafd83d's net_new=false just means "edit, not new file." The inert-
+   diff detector genuinely does NOT exist; that frontier is unsolved. Second wrong
+   causal story caught by reading the code this session.
+
+FLAG (not yet diagnosed): the meta-vessel's own test suite is 95-red post-land.
+Since development-vessel composes every fix, its own red suite is material to
+compose reliability and deserves a dedicated look (is it pre-existing, or did an
+autonomous land redden it?).
+
+Net: the autonomy demonstration now includes JUDGMENT, not just mechanism — the
+loop files, composes, lands, verifies post-land, and escalates the hopeless. The
+frontier remains OUTPUT QUALITY (inert-diff closure, promotion above satisfiers),
+which is genuine multi-session research, not a demonstration gap.
