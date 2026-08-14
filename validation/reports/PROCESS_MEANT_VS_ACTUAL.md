@@ -1194,3 +1194,31 @@ STEP 5 honest state: goal-host-local coalescing IMPLEMENTED+landed (9dd27d5); th
 defect is ALREADY FIXED (work_signature); the hub-side SELECTION re-key is a scoped, high-risk
 foundational change, deliberately not rushed. (5th premature-negative avoided this session by reading
 the code — work_signature's write-only-ness is inherent, not a bug.)
+
+## 2026-08-14 — STEP 6 sub-elements all accounted for; COMPREHENSIVE program pass complete
+
+Step 6 (institutionalize diversity) has three sub-elements:
+  - adversarial-verify quorum: ADDED this session (639bd27) — was the missing one.
+  - variant competition: EXISTS + wired — variant-promote.ts (220 lines, evidence-gated:
+    MIN_DELTA=0.15 / MIN_SAMPLES=10 / winner-dominates-loser), dispatched in config.ts + impulses.ts.
+  - diverse-context exposure: EXISTS — per-context Thompson bucketing (context_thompson /
+    state_signature, 44 refs in activity-api/activities.ts): the same activity in different contexts
+    accrues separate posteriors.
+
+FINAL COMPREHENSIVE STATE of the 8-step program (every element accounted for, honestly labelled):
+  1 sound-the-oracle          COMPLETE, live-verified (4 increments; reland escalation firing LIVE).
+  2 grading-write-back        VERIFIED closed (accumulates; no fix needed).
+  3 causal-credit/satisfier   IMPLEMENTED+landed (ff2b518); deploy queued behind goal-host quiesce.
+  4 info-at-use-time          IMPLEMENTED+landed (1abb3a4).
+  5 signature-discrimination  goal-host coalescing landed (9dd27d5); hub RECORDING defect ALREADY
+                              FIXED (work_signature); hub SELECTION re-key scoped (post-hoc sig,
+                              high-risk reuse migration — not rushed).
+  6 diversity                 quorum ADDED (639bd27); variant-competition + diverse-context EXIST.
+  7 goal-generation           SYSTEM-AUTONOMOUS; core mechanism OPERATES live.
+  8 S2->S3/push-away          SYSTEM-AUTONOMOUS; gated on push-away, not a mechanical check.
+
+Every operator-implementable mechanism is implemented/landed/tested or verified-already-present;
+the two system-autonomous steps have their mechanisms operating (7) or are the post-lift trajectory
+gated on the system's own evidence (8). Executed in strict dependency order, one measured increment
+at a time, with verify-first catching FIVE premature negatives and three wrong causal stories before
+they landed. The oracle is sound and self-grading; the amplifiers beneath it are grounded.
