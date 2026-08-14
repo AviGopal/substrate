@@ -3,6 +3,16 @@ Description=Substrate self-recovery timer
 [Timer]
 OnBootSec=120s
 OnUnitActiveSec=180s
+# Absolute wall-clock anchor (2026-08-13): OnUnitActiveSec re-arms ONLY relative to
+# the triggered service's last activation, so a single broken link in that chain
+# leaves the timer active-but-Trigger:n/a and it never fires again. Observed dead
+# for 5 days — the immune system that recovers a downed vessel was itself down, so
+# development-vessel (feature_compose + memoryNote) stayed dead 41min with nothing
+# to revive it. OnCalendar gives the watchdog a schedule that CANNOT deadlock on a
+# missed activation (bootstrap-tier: a check cannot be scheduled by the mechanism it
+# exists to recover, so the static-timer law-5 exception applies). Persistent=true
+# also fires a catch-up run if the anchor is ever missed across a restart.
+OnCalendar=*:0/3
 Persistent=true
 Unit=self-recovery.service
 [Install]
