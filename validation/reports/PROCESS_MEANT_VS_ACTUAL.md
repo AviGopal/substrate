@@ -1275,3 +1275,53 @@ own work by their own definition, with 7's mechanism operating. Executed in stri
 one measured increment at a time; verify-first caught six premature negatives and three wrong causal
 stories — including this one, where the hook correctly overturned my "category error" and the hub
 bucketing turned out both achievable and necessary.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+B1 — CLOSE-ORACLE GATES ON MEASUREMENT, NOT PROVENANCE (2026-08-14, follow-on to step 1)
+────────────────────────────────────────────────────────────────────────────────────────────────
+The "step 1 COMPLETE" above was premature at the LOAD-BEARING seam. A fresh grounded survey (3
+subagents over docs + code + live container) found the close-oracle's reliability was COMPUTED
+honestly but read in exactly ONE place — to decorate a human-escalation note — NOT to gate the close.
+The close still fired on a landed-commit COUNT.
+
+LIVE BASELINE (read from substrate-live container, the un-refuted numbers B1 must move):
+  • closed gaps: 2112; landed_verified: 31 (1.47%); bulk-expired (verifies nothing): ~94%.
+  • close-oracle calib: {landed_commit:{closes:0, false_closes:8}} — every graded landed-commit
+    close was an inert re-land. 0 held.
+  • gaps with reopen_count>0: 291.
+
+THE HOLE (exact): landedCommitVerdict returned 'absent' (=resolved=>CLOSE) for a SINGLE non-reverted
+commit naming the gap. A commit is proof a change LANDED, not that it DID anything — a no-op typechecks,
+passes reach, lands, and closed its gap green (bafd83d class). The re-land (>=2) case was already
+refused; the FIRST inert landing closed green.
+
+FIX (advisor-reviewed v1, "close on measured 'absent', abstain on everything else"):
+  • landedCommitVerdict: 1 landing => 'pending' (was 'absent') — provenance, not measurement. Only a
+    Class-1 literal or Class-2 resolver-behaviour PREDICATE yields 'absent'.
+  • verifyGapCondition[Async] widened to +'pending' and reordered MEASUREMENT-BEFORE-PROVENANCE.
+  • all close sites (closeLandedGap x2, pending-verify SWEEP, both pick-time paths): 'absent'=>close;
+    'present'=>refuse+reland-escalate; 'pending'=>ABSTAIN (hold pending, escalate human, no close);
+    'unknown'=>close only if closeOracleEarnedTrust(class).
+  • closeOracleEarnedTrust: fail-open on unmeasured only at >=10 closes AND >=0.7 hold. Beta(1,1) must
+    NOT earn (trust is earned, never assumed); landed_commit (0/8) never earns => abstains forever
+    (correct — provenance alone is never trustworthy). measured closes build a separate 'measured' class.
+  • PICK-TIME TRAP fixed: 'pending' gaps are NOT re-composed (disposition:'pending_verification'), else
+    a second landing manufactures the re-land the oracle is calibrated against. (First B4 wiring, free.)
+
+PROOF (hook condition "refuse a known-inert close"): gap-to-feature-pending-land-sweep.test.ts — real
+git fixture with a measured-resolved gap AND an inert single-landing gap. Sweep closes ONLY the
+measured one; the inert one is HELD PENDING + escalated ("[gap-escalation] pending-verify
+uiQuestion_write accepted for gap-pending-inert"). close-oracle-trust.test.ts pins Beta(1,1) and 0/8
+landed_commit do NOT earn fail-open. 16/16 close-oracle tests pass; tsc clean.
+
+LANDED: development-vessel 00a2b30 -> rebased onto substrate's autonomous commits -> pushed 980135a.
+Conscious §12.6 bootstrap-tier direct edit (an oracle that accepts inert diffs can't verify the commit
+that fixes inert-diff acceptance — dispatching through the pipeline it grades is circular).
+
+A1 VERIFIED LIVE: goal-host entered active 13:00:32 UTC AFTER ff2b518 committed 12:28 UTC;
+satisfierProvenBad present in the running clone. Step 3 is live.
+
+NEXT (per sequencing): B1 mechanism proven (refuses in test) -> await fleet convergence for the LIVE
+inert-close refusal -> then B2 (write-back: is the Beta(1,1)-despite-traffic fraction still ~24% after
+the hub bucketing deploy?) / B3 (data-aware binding) -> B4 (consume needs_info/funnel-history) -> C.
+Measure on a WINDOW: landed_verified rising, false_closes flat, new reopen_count flat, Beta(1,1) falling.
