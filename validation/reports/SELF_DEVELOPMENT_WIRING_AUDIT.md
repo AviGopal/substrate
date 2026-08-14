@@ -287,8 +287,11 @@ converged into the runtime (goal-host restarted 00:47:22).
 **The bigger blocker this exposed — feature_compose cannot connect.** Every
 edit-intent / close-goal that routes to feature_compose fails with **"Unable to
 connect. Is the computer able to access the url?"** (observed repeatedly:
-`EARLY EDIT-INTENT routing failed`, `EDIT-INTENT feature_compose call failed`, and
-the floor arm's `dispatch TIMEOUT`/`dispatch ERROR` are the same fault). This — not
+`EARLY EDIT-INTENT routing failed`, `EDIT-INTENT feature_compose call failed`). The
+floor arm's `dispatch TIMEOUT`/`dispatch ERROR` MAY be the same fault but is NOT
+established as such — the earliest floor timeout (00:22:45) predates the dev-vessel
+stop (00:33:23), and the floor's dispatch target URL was never identified, so do
+not fold it into this cause. This — not
 the reach-gate — is the dominant reason autonomous self-development LANDS NOTHING:
 the generation half authors the close-goal, but the apply half cannot reach the
 compose endpoint, so it falls through to walk satisfiers that (correctly, now)
@@ -321,6 +324,24 @@ Traced the connect fault to its source and repaired the whole chain:
   algorithmic: **two core vessels were silently degraded because the recovery timer
   had deadlocked.** Filed class gap: nothing detects that the DETECTOR (immune
   timer) has stopped — a `Trigger:n/a` liveness check on the watchdogs themselves.
+
+**Open residuals (unresolved, flagged honestly):**
+- **The live timer re-arm may not survive a container restart.** The running fix
+  was a manual `self-recovery.service` trigger that re-anchored `OnUnitActiveSec`;
+  the durable `OnCalendar` change is in the repo (`b2ff657b`) but the image is baked
+  at build, so the running container only gets it on rebuild/redeploy. Until then a
+  restart could re-enter the deadlock. Verify after next deploy.
+- **A separate stuck retry loop:** `TranslatingTraceSink` retries `exec_test_1` at
+  `https://activity.test` (RFC-2606 reserved `.test` TLD) ~every 7s — a wedged
+  test-fixture execution burning cycles, distinct from the real goal-path sink
+  (`recordGoalPath`, which works). Triage: what detects a trace-sink retry loop
+  wedged on an unroutable URL? Not chased this session.
+- **The SIGTERM that stopped development-vessel at 00:33 was not attributed** — a
+  clean stop with no logged sender. Whatever issues these stops is the upstream
+  cause the immune system was meant to backstop; identifying it is a follow-up.
+- **Autonomy is NOT yet demonstrated.** The apply path is now unblocked, but no
+  substrate-authored goal has been observed landing a sha post-restart. That is the
+  next observation, and the honest bar remains: read the DIFF, not `reached`.
 
 ## Open question
 
