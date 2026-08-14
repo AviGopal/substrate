@@ -608,3 +608,36 @@ TOP OPERATOR-ACTIONABLE BLOCKER right now: this thrash saturates compose. Until 
 backoff exists, the operator lane cannot get a slot. The clean fix is a code change
 to gap-sweep (add reverted-land backoff); the instance patch is abandoning
 route-edit-e691e25e:3.
+
+## 2026-08-14 — RETRACTION: I attached the compose saturation to the wrong cause
+
+DEFECT (mine): the prior section claimed the e691e25e:3 revert-loop "saturates the
+single compose slot, starving the operator lane." That causal story is WRONG. I
+read the code and the journal after writing it:
+  • `sweepPendingLandVerifications` (gap-to-feature.ts:1642) is READ-ONLY — on a
+    reverted pending sha it logs and `continue`s (line 1667). It never composes.
+  • e691e25e:3 appears in 60 min ONLY as sweep/"NOT closed" (18×), NEVER as
+    "gap-compose unit started". It consumes ZERO compose.
+  • The compose slot is actually held by LEGITIMATE autonomous gap composes:
+    route-edit-468c52e6:1(-narrowed), gap-api-panels, post-land-suite-red-
+    development-vessel — the loop composing its OWN filed gaps, back to back.
+This is the memory law firing: "a plausible mechanism attached to a working
+observation is how a wrong causal story survives." The 16× revert log was real;
+my inference that it caused the saturation was not.
+
+TWO CORRECTED, DISTINCT findings:
+  A. STUCK-PENDING gap (durability, CHEAP): e691e25e:3 sits in
+     pending_outcome_verification with a sha that was REVERTED. The sweep re-checks
+     it every tick forever — never clears the pending sha, never increments
+     failed_attempts, never abandons. It can't close (sha reverted) and won't
+     re-compose (pending flag set) → limbo. Real bug, but read-only/cheap. Fix: on
+     a reverted pending sha, CLEAR pending_outcome_verification + bump
+     failed_attempts so the gap re-enters compose fresh or abandons after N.
+  B. OPERATOR-LANE STARVATION (the real "why my dispatches didn't land"): the
+     single compose slot is continuously occupied by LEGITIMATE autonomous gap
+     composes. Operator dispatches lose the race → capacity-refused. This is the
+     KNOWN COMPOSE_MAX_CONCURRENT operator-lane issue — and it is autonomy WORKING:
+     the loop is saturated with its OWN self-authored gap work. Not a thrash.
+
+Net: finding A is a small durability patch; finding B is not a defect at all but
+evidence the autonomous compose loop is running at capacity on its own gaps.
