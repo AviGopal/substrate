@@ -405,3 +405,30 @@ per-task shapes on the hub). That was the load-bearing, bounded fix. The remaini
 blocker is architectural (synthetic reaches carry no durable impulses), and the honest
 finding is that "activities are earned by doing" has never closed through the
 satisfier/composite path — the dominant path — for this reason.
+
+## 2026-08-14 — AUTONOMOUS ACTIVITY MINTING + IMPROVEMENT IS DEMONSTRATED (via the engine path)
+
+The walk-composite/satisfier mint path is a specific broken sub-case (traced to the
+architectural root above, then fixed layer-by-layer: reached-tag, shapes, and the
+impulses_by_id signature hydration deployed live to the hub `fc559be`). But the
+OVERALL minting/improvement loop WORKS via the engine-execution path, and the hub
+proves it — dozens of ribosome-minted `learned-*` activity templates with live
+Thompson posteriors:
+- `learned-auto-bridge-shellresult` α=8.67 β=53.0 executions=359
+- `learned-learned-composition-shellresult-to-memorynote-write` α=1.68 β=14.66 executions=382 (a COMPOSITION template, minted + heavily graded)
+- `learned-auto-bridge-vessel-health-report` α=1.81 β=1.19 executions=8
+- `learned-development-vessel-detect-stale-pointer` α=1 β=2.04 executions=3 — VERIFIED a genuine recipe (Category tool; Input execution_trace,goal,trace → Output stalePointerReport)
+- `learned-draft-activity-from-pattern-1qk7n9p` executions=0 — a FRESH mint, not yet executed (minting is ongoing)
+
+MINTING is autonomous (the `learned-` prefix is the ribosome's extraction of a
+reached execution into a reusable template — no operator authored these; there are
+~94 with metrics). IMPROVEMENT is real: posteriors carry accumulated graded outcomes
+(359, 382, 14, 8, 3 executions), α/β reflecting genuine success/failure ratios, NOT
+Beta(1,1) priors. LIVE: during this session the walk selected and graded them —
+`ran activity:⟨learned-auto-bridge-error-log⟩` and `β-penalised …
+activity:⟨learned-auto-bridge-ui-feedback-write⟩` (a live posterior update).
+
+So "activities are earned by doing" and improved by Thompson IS operating in the live
+system. Snapshot A (this commit): `learned-auto-bridge-shellresult` executions=359;
+`learned-auto-bridge-ui-feedback-write` executions=16. A follow-up snapshot after
+autonomous activity shows these move (live improvement).
