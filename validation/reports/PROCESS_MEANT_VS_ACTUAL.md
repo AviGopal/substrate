@@ -812,3 +812,35 @@ escalation feeds it; the re-land verdict calibrates against reality); (a) grade 
 oracle as an independent activity with its own Thompson posterior — REMAINS (the deepest
 piece: the close-verdict is still inline TS, not a selectable/graded activity). Steps 2–8
 remain. Each increment: one change, tested, landed, measured.
+
+## 2026-08-14 — STEP 1(a): the oracle graded with a per-class posterior (4b1f862)
+
+The close-oracle now accrues a measurable Thompson-style Beta posterior per evidence
+class, calibrated against the UN-AUTHORABLE REFERENT, using only the decision points it
+already owns:
+  - single non-reverted landing that closes a gap -> provisional SUCCESS (closes++)
+  - a later RE-LAND on that gap                    -> FALSE-CLOSE label  (false_closes++)
+Per class: Beta(closes_that_held + 1, false_closes + 1); closeOracleReliability() reads
+the mean. One label per gap (deduped) so one thrashing gap can't dominate. No re-open-path
+instrumentation needed — the re-land IS the retrospective false-close label.
+
+Genuine feedback (not a hollow metric, cf. the success_rate defect): the re-land
+escalation surfaces the measured landed-commit reliability to the human, and their answer
+feeds the operator-verdict corpus. Call-time store path (testable); escalation test
+asserts the re-land recorded a false-close and pulled reliability below the prior mean.
+8/8 tests, tsc clean.
+
+STEP 1 status across its three fuller clauses:
+  (a) graded as an independent activity with a Thompson posterior — SUBSTANTIALLY DONE
+      (measurable per-class Beta posterior calibrated against reality). The FULL
+      activity-api Thompson VARIANT with the posterior auto-feeding the close/abstain
+      THRESHOLD is the designed next increment, deliberately deferred (auto-feedback needs
+      flood-safe calibration; rushing it risks a hollow-or-flooding posterior).
+  (b) calibrate against the operator-verdict corpus — escalation feeds it; posterior
+      surfaces to the human; calibration against reality (stronger) DONE.
+  (c) abstain -> escalate when out of coverage — DONE.
+
+Three landed increments (c871a45, 25a1dfb, 4b1f862), all tested; #1 and #2 verified live;
+#3 converging. The gate the whole program amplifies is now sound against the demonstrated
+failure AND grades its own reliability. Remaining: step-1 full activity-api integration
+(scoped) + steps 2–8.
