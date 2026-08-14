@@ -253,6 +253,48 @@ verified closing artifact). The `no landed sha` signal already exists at the
 WITHHELD-alpha-credit site; it must become verdict-affecting for close-goals.
 Load-bearing reach-gate code — scope and verify before landing.
 
+### LANDED `e62a5d9` — the walk-path variant; honest scope + the bigger blocker it exposed
+
+Landed a finalization guard (goal-host `index.ts`, same family as seed-only /
+partial-coverage / wrong-derived-value): when a TARGET shape is an fs-effect shape
+(`fs_edit`/`fs_write`/`fileEditResult`/`fileWriteResult`) and the reach is
+non-deterministic (no landed sha), flip `reached→false`
+(`deterministic:edit-effect-not-landed`). Narrow by design (target-keyed, not any
+incidental produced shape; deterministic reaches exempt) so it has zero
+genuine-reach false positives — an fs-effect target with no sha did not apply, by
+construction. Complements the PRE-EXISTING `edit-intent-no-landed-edit` guard,
+which is GOAL-TEXT-keyed (`goalDemandsLandedEdit`) and MISSED the write-allowlist
+case (a "Close substrate gap …" goal is symptom-phrased, so the text predicate
+returned false while inference gave an `fs_edit` target). Typecheck-clean;
+converged into the runtime (goal-host restarted 00:47:22).
+
+**Honest verification scope (do not overclaim):**
+- The guard did NOT misfire on the analytical env-gate scan goal (its
+  `env_gate_scan` target is not an fs-effect shape) — confirmed, no regression.
+- I could NOT force a LIVE firing in the observation window. Two reasons, both
+  informative: (a) the PRE-EXISTING satisfier-refusal ("satisfier REFUSED
+  filesystem-write shapes … uncreditable without a landed sha") already blocks the
+  fs-write-*satisfier* variant upstream of the reach gate; my guard covers only the
+  narrower case where a NON-fs-write ANALYTICAL satisfier (e.g. `env_gate_scan`)
+  stands in for an fs-effect TARGET — exactly the write-allowlist case, which
+  requires specific walk conditions that did not recur; (b) newly-invented-gap
+  close-goals route EARLY to feature_compose (the gap-id / repos-path pre-walk
+  route), bypassing the walk reach-gate entirely. So the guard is a correct,
+  hot-path, proven-hole backstop — but its firing is conditional and was not
+  observed live this session. It is NOT dead code (it is evaluated on every
+  reached-true verdict), but "proven to fire" is not yet satisfied.
+
+**The bigger blocker this exposed — feature_compose cannot connect.** Every
+edit-intent / close-goal that routes to feature_compose fails with **"Unable to
+connect. Is the computer able to access the url?"** (observed repeatedly:
+`EARLY EDIT-INTENT routing failed`, `EDIT-INTENT feature_compose call failed`, and
+the floor arm's `dispatch TIMEOUT`/`dispatch ERROR` are the same fault). This — not
+the reach-gate — is the dominant reason autonomous self-development LANDS NOTHING:
+the generation half authors the close-goal, but the apply half cannot reach the
+compose endpoint, so it falls through to walk satisfiers that (correctly, now)
+refuse to fake the edit. **Diagnosing this connect fault is the real leverage
+toward a self-authored goal that reaches with a landed sha.**
+
 ## Open question
 
 The boredom gap-gate narrowing (`ACTIONABLE_CATEGORIES={ui_legibility}`) was
