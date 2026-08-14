@@ -907,3 +907,32 @@ reality + the operator corpus.
 
 Moving to STEP 2 (close the grading write-back) in dependency order — now safe because the
 gate beneath it is sound.
+
+## 2026-08-14 — STEP 2 localized (candidate drop) + the load-bearing question before any fix
+
+Step 2 (close the grading write-back). Candidate drop found: goal-host penaliseHollowTemplate
+posts to activity-api /v2/activities/feedback; the handler (activities.ts:5159-5170) admits+seeds
+a Beta(1,1) posterior for `satisfier:`-prefixed ids but 404s every OTHER unknown id ("Activity
+not found") — so a hollow-reach beta-penalty for a walk-composite / pathway pick that has no
+`activity` row is REJECTED and "not applied" (goal-host index.ts:4658).
+
+BUT — before fixing, the load-bearing question (per the check-the-checker / name-the-positive
+discipline that caught two wrong causal stories this session): is that 404 a REAL lost signal, or
+BENIGN? Composites and pathways are graded via goal_execution_paths (the per-goal posterior,
+recordGoalPath at index.ts:8918/8954), a DIFFERENT store than the per-activity /feedback metrics.
+If the cell that actually drives selection for that pick is graded via goal_execution_paths, the
+/feedback 404 is noise, and "fixing" it by seeding a shapeless posterior would create PHANTOM
+rows for a non-bug — and the handler deliberately refuses to create an activity row for an unknown
+id (5173-5176: "a row with tasks:[] would become a selectable producer that executes nothing").
+
+So step 2 requires: (1) determine which posterior store drives selection for the picks whose
+penalties 404, (2) confirm whether those cells are graded elsewhere, (3) only if genuinely
+ungraded, record the signal WITHOUT creating a phantom producer. This is a HUB-side change to the
+fleet-wide learning-signal write path — a rushed wrong change corrupts every posterior, the exact
+opposite of step 2's intent. It is scoped, not rushed.
+
+STATUS: step 1 materially complete (4 landed increments, live-verified). Step 2 localized to its
+candidate drop with the verify-first question named. Steps 3–8 remain. The program is a
+multi-session engineering + system-development roadmap (steps 7–8 are, by their own definition,
+the SYSTEM's autonomous work — operator hand-completion would violate laws 6/13); it is being
+executed in dependency order, one measured increment at a time, grounding the gate first.
