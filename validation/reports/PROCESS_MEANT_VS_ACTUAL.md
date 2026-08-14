@@ -1098,3 +1098,19 @@ moment it converges (a reach-path change must be verified live: reach still occu
 for a bad-satisfier-with-alternative, no error spike; revert if any breakage).
 
 STATUS: steps 1 (complete/live), 2 (verified closed), 3 (IMPLEMENTED+landed, queued for deploy).
+
+## 2026-08-14 — STEP 4 IMPLEMENTED + landed (1abb3a4): drafter gets the closure criterion at draft time
+
+Step 4 (law 8): the drafter (feature-compose decomposePrompt) received spec + principles + current
+file, but NOT the gap's CLOSURE CRITERION — so it authored blind to what "closed" means and a
+post-draft judge rejected inert results AFTER the fact (the bafd83d rename). Added a CLOSURE
+CRITERION section carrying the SAME rules the semantic judge applies (surface-satisfying / dead-code
+/ destroy-to-satisfy rejected; env-gate => shaped impulse; inline-LLM => llm-prompt resolver), with
+the bafd83d rename as the worked example. Raises the CEILING (author reaching outputs) vs steps 1-3
+policing the FLOOR. Low-risk prompt enrichment (advisory, cannot break reach); tsc clean.
+Verification is behavioural (inert-diff rate over a horizon).
+
+STATUS: step 1 complete/live; step 2 verified closed; step 3 implemented+landed (ff2b518, deploy
+queued behind goal-host quiesce — NOT yet executing live, ActiveEnterTimestamp still old); step 4
+implemented+landed (1abb3a4, dev-vessel converges reliably). Moving to step 5 (signature
+discrimination) in dependency order.
