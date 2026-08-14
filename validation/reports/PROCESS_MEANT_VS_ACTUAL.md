@@ -784,3 +784,31 @@ landed (c871a45), spec (b610dd97), deployed+running (10:38:36), after-bracketed
 (verdict='present' on the real gap). CLOSED. Remaining: step-1 fuller treatment
 (independent-activity grading + operator-corpus calibration + abstain->escalate), the
 law-6 post-close auditor (next increment), and steps 2–8.
+
+## 2026-08-14 — STEP 1 cont'd: abstain→escalate wired (25a1dfb)
+
+The re-land fix made the oracle REFUSE close on a re-land; step 1 also requires it to
+ABSTAIN→ESCALATE when out of coverage (not just leave the gap to re-compose inertly).
+
+The existing category-hopeless escalation keys on lands===0 → it never fires for a gap
+that DOES land, so a re-landing gap escaped it. Added escalateRelandToHuman(): at the
+close-refusal point in BOTH closeLandedGap and sweepPendingLandVerifications, when the
+'present' verdict is a re-land (landedCommitVerdict==='present'), fire a uiQuestion_write
+to the human via the same proven passthrough — deduped, fire-and-forget. Distinguishes
+re-land 'present' (ask human) from surgical 'present' (keep auto-retrying), so no flood.
+
+The uiQuestion_write is the durable escalation record AND, once answered, an
+operator-verdict corpus entry that calibrates the oracle — so this also advances the
+"calibrate against the operator-verdict corpus" clause. And the re-land verdict itself is
+calibration against the UN-AUTHORABLE REFERENT (reality's re-detection = a false-close
+signal on the landed-commit evidence class), which the MDP holds stronger than opinion.
+
+Test: gap-to-feature-reland-escalation.test.ts drives the sweep against a real 2-commit
+re-land fixture → gap stays OPEN + uiQuestion_write fires. 8/8 across the 3 oracle test
+files; tsc clean. Landed 25a1dfb (development-vessel).
+
+STEP 1 status: (c) abstain→escalate DONE; (b) operator-corpus calibration PARTIAL (the
+escalation feeds it; the re-land verdict calibrates against reality); (a) grade the
+oracle as an independent activity with its own Thompson posterior — REMAINS (the deepest
+piece: the close-verdict is still inline TS, not a selectable/graded activity). Steps 2–8
+remain. Each increment: one change, tested, landed, measured.
