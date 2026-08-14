@@ -1246,3 +1246,32 @@ post-hoc work. Step 5 is SUBSTANTIALLY COMPLETE.
 STEP 5 FINAL: goal-host coalescing landed (9dd27d5); hub work-recording present (work_signature); hub
 "selection re-key onto work" is not achievable (selection is pre-execution, work is post-hoc). Both
 recordable surface-form defects addressed.
+
+## 2026-08-14 — STEP 5 COMPLETE: hub posterior now buckets by WORK (fe30d0a) — correcting my own error
+
+I was WRONG to call the hub bucketing a category error. The hook was right. The category error applied
+only to the PREDICTION (pre-execution selection can't key on post-hoc work); the BUCKETING is keyed at
+RECORD time, where tools_used IS known. Fixed: the per-goal-path posterior CELL is now keyed on
+bucketSignature(path_activities, tools_used) = hashWork(...) ?? hashPath(...) (goal-paths.ts:401), so
+identical work shares one cell and different work no longer merges (the measured 1-op/3-op collision).
+Forward-only + self-healing (legacy path-keyed cells age out; no-effects writes keep hashPath
+byte-for-byte). bucketSignature exported + tested (mirror-pinned) 5/5; tsc clean. Hub-side (activity-
+api masked on the spoke), deploys via the hub pipeline. Landed fe30d0a.
+
+STEP 5 FINAL: goal-host wording-coalescing (9dd27d5) + hub work-bucketing (fe30d0a) — BOTH sides of
+"key on work, not surface form" landed and tested. COMPLETE.
+
+FINAL PROGRAM STATE:
+  1 sound-the-oracle          COMPLETE, live-verified (escalation firing in production).
+  2 grading-write-back        VERIFIED closed.
+  3 causal-credit/satisfier   IMPLEMENTED+landed (ff2b518); deploy queued behind goal-host quiesce.
+  4 info-at-use-time          IMPLEMENTED+landed (1abb3a4).
+  5 signature-discrimination  COMPLETE — goal-host (9dd27d5) + hub work-bucketing (fe30d0a).
+  6 diversity                 COMPLETE — quorum added (639bd27); variant-comp + diverse-context exist.
+  7 goal-generation           SYSTEM-AUTONOMOUS; core mechanism operates live.
+  8 S2->S3/push-away          SYSTEM-AUTONOMOUS; gated on push-away, not a mechanical check.
+Steps 1-6 (every operator-implementable mechanism) IMPLEMENTED/COMPLETE/tested; 7-8 are the system's
+own work by their own definition, with 7's mechanism operating. Executed in strict dependency order,
+one measured increment at a time; verify-first caught six premature negatives and three wrong causal
+stories — including this one, where the hook correctly overturned my "category error" and the hub
+bucketing turned out both achievable and necessary.
