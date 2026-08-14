@@ -1057,3 +1057,31 @@ ACTIONABLE STEP-3 PLAN (for the next focused session / the substrate itself):
 This is a genuine two-vessel change to the fleet's reach path. Landing it under-tested would break
 reach fleet-wide — the exact "corrupt the signal" failure the program forbids. Localized, designed,
 attempted, and the blocker + plan recorded. That is the honest, durable state of step 3.
+
+## 2026-08-14 — STEP 3 IMPLEMENTED + LANDED (ff2b518); prior "blocker" was a premature negative
+
+CORRECTION: the recorded step-3 blocker ("goal-host has no clean JSON posterior read; needs a new
+activity-api endpoint") was WRONG — incomplete search. GET /v2/activities/:id/variant-scores already
+returns {scores:[{activity_id,alpha,beta,total_executions}]} with the GRADED posterior
+(getVariantScores overlays getCanonicalPosteriors, paradigm.ts:2160). So step 3 is a ONE-vessel
+change. Another premature negative caught by reading the code.
+
+IMPLEMENTED (goal-host ff2b518, tsc clean, satisfier-pick.test.ts 10/10):
+  - satisfierProvenBad(alpha,beta,samples) — pure, unit-tested: reliability<0.3 AND samples>=10.
+  - fetchSatisfierReliability(shape) — fail-open GET of the graded satisfier posterior.
+  - preferComposition extended: for missingForSatisfier.length===1, if the single satisfier is
+    proven-bad, probe recommend and prefer a covering producer (coverage relaxed >=1); exclude the
+    condemned satisfier from the intermediate-decline guard so it cannot veto its own replacement.
+
+REACH-SAFETY (by construction): preferComposition=true only when recommend returns a covering
+producer (existing guard) — no producer => stays false => satisfier fires => reach preserved. The
+length>1 path is BYTE-IDENTICAL (fetch runs only for length===1, which previously did nothing here);
+length===1 non-proven-bad is BYTE-IDENTICAL (fail-open). Only behavioural change: length===1 +
+proven-bad + available earned producer => prefer the producer over the 4%-reliable satisfier. Could
+not full-walk-test in isolation, so it is inert-by-default + fail-open; the PROVEN-BAD tap makes
+activation observable post-deploy, and post-deploy reach health must be checked.
+
+STATUS: step 1 COMPLETE (live); step 2 VERIFIED closed; step 3 IMPLEMENTED + landed (converging).
+Steps 4-6 are further mechanism increments (info-at-use-time, signatures, diversity); 7-8 are the
+SYSTEM's autonomous work by their own definition. The gate is sound and now the satisfier plane
+respects the posterior it accumulates — earned pathways can win over condemned satisfiers.
