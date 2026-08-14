@@ -555,3 +555,25 @@ BOTTOM LINE — both autonomy axes are demonstrated end-to-end in operation:
 The honest frontier is not "does it mint/improve" (it does) but "does improvement
 ever PROMOTE a learned pathway above the satisfier floor" (not yet — a grading-
 calibration gap, not a plumbing gap).
+
+## 2026-08-14 — CORRECTION: the loop DOES promote; success_rate is a broken display field
+
+Retracting the prior section's "net-suppresses ALL learned templates" framing — it
+was distorted by a broken metric. Control probe:
+| template | executions | Thompson α/β | success_rate |
+|---|---|---|---|
+| analyze-source-to-concept (BASE) | 813 | 493.1/878.7 | 0.0% |
+
+A base template with α=493.1 over 813 executions is HEAVILY PROMOTED — the learner
+absolutely promotes when a pathway earns it. So:
+  • The improvement loop is HEALTHY and bidirectional (promotes base α=493, suppresses
+    weak learned α≤8.7). α-credit is REAL, not hollow-reach (493 is genuine).
+  • success_rate is a BROKEN DISPLAY FIELD: it reads 0.0% even at α=493 — decoupled
+    from the α/β that actually drives selection. Uniform 0.0% across base AND learned.
+    Likely `successes`/`success_count` is never incremented on trace record while the
+    α/β posterior updates on a different path. NARROW, concrete, autonomously-fixable.
+  • Learned templates aren't suppressed-on-principle; they simply have far fewer
+    executions and lose selection to satisfiers, so they haven't accumulated α yet.
+
+Filed as a gap for the substrate to localize+fix (law 13 — not naming the file: the
+hub runs newer formatter code than the local tree, and the system owns localization).
