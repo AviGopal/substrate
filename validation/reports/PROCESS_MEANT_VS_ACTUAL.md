@@ -712,3 +712,52 @@ Net: the autonomy demonstration now includes JUDGMENT, not just mechanism — th
 loop files, composes, lands, verifies post-land, and escalates the hopeless. The
 frontier remains OUTPUT QUALITY (inert-diff closure, promotion above satisfiers),
 which is genuine multi-session research, not a demonstration gap.
+
+## 2026-08-14 — STEP 1 (sound the oracle) — the re-land hole CLOSED, landed & running
+
+Program step 1 (validation integrity, §12.6): certify closure against the referent,
+not a landed sha. Executed with full discipline (measurement → spec → test → fix →
+land → converge → after-bracket).
+
+ROOT (revised twice by reading code — not unknown-fail-open as first thought):
+verifyGapCondition **Class 3** returned 'absent' whenever ONE non-reverted commit
+*referenced the gap id* (`git log --grep <gapId> -1`) — certifying closure on a
+producer-authored string. gap-env-gated-write-allowlist closed_reason=landed_verified
+on bafd83d (an inert rename leaving process.env["WRITE_ALLOWLIST"] intact); it had
+been re-detected and re-landed once (69d680b→bafd83d = 2 non-reverted commits).
+
+BEFORE-BRACKET (rejected abstain-on-unknown): 0/30 landed_verified closures carry a
+surgical condition Class 1/2 can positively check → abstain-on-unknown would flip
+~every landing-closure to human escalation and break autonomous closure.
+
+FIX (landed development-vessel c871a45, spec super-repo b610dd97): centralized the
+three duplicated Class-3 blocks into landedCommitVerdict() — count non-reverted
+commits: 0→null, 1→'absent' (first landing, no flood), ≥2→'present' (re-land ⇒ prior
+landing didn't resolve it ⇒ refuse close; both callers already refuse on 'present').
+Uses vesselsCloneRoot() so it is testable (inline copies hardcoded the path, untested);
+per-resolver regression test 5/5; tsc clean; net −8 lines (de-dup).
+
+DEPLOYED & RUNNING: /vessels/development-vessel restarted 10:38:36 UTC on c871a45;
+running file contains landedCommitVerdict + `nonReverted >= 2`. The /workspace clone
+the git-grep reads is at c871a45 with both gap commits present.
+
+AFTER-BRACKET (horizon measurement, to watch): landed_verified-on-a-re-land events/day
+→ 0; gap-env-gated-write-allowlist, when re-detected, no longer re-closes inertly (it
+now has ≥2 non-reverted commits → verdict 'present' → refuse close). A spike in
+re-composition churn (the gap staying open and re-composing) = the NEXT increment
+signal, not evidence this one is wrong.
+
+LAW 6 decomposition:
+  (1) instance patched — landedCommitVerdict.
+  (2) detector for the class without me — a post-close AUDITOR that re-checks closed
+      gaps whose closing commit is a re-land or behaviorally inert, and re-opens +
+      escalates them (uiQuestion_write). NOT built here (scope: one change). Filed as
+      the next increment.
+  (3) goal the system should have generated — "gap X closed on a re-landed inert
+      commit; reopen and require positive condition evidence." The system accepted the
+      close instead; the missing generator (the auditor of (2)) is itself the gap.
+
+This is step 1 of 8; it is the GATE the rest amplify. Steps 2–8 remain. The full
+step-1 treatment (grade the oracle as an independent activity, calibrate against the
+operator-verdict corpus, abstain→escalate) are further increments; this closes the
+demonstrated inert-re-land-closes-green failure that bafd83d exhibited.
