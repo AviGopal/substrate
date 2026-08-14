@@ -368,3 +368,40 @@ chain (open). Each fix removed one layer and exposed the next. Two fixes are now
 the hub + spoke; a `learned-*` template still does not appear because the extract chain
 does not run to synthesis. The remaining work is the extract-execution path and impulse
 hydration — not the shape serialization, which is done and verified.
+
+## 2026-08-14 — minting's architectural root: synthetic reaches persist no impulse rows
+
+Traced the mint loop to the bottom and confirmed the root with the hub's own SQL.
+The ribosome's `synthesize_template` reads `executionTraceWithSignatures`, whose
+`impulses_by_id` is built by `queryImpulseSignatures` —
+`SELECT id, pointer, shape, summary FROM impulse WHERE id IN $ids`
+(activity-api/src/routes/execution-trace-with-signatures.ts:647-650). It reads
+impulse **rows** by id.
+
+The walk-composite trace references the walk's **satisfier-produced** impulses
+(`walk-vessel_health_report-3`, …). But satisfier/composite reaches are SYNTHETIC —
+they never run through the engine, so their impulses are pool entries, NEVER
+persisted as `impulse` rows on the hub. So the query matches nothing →
+`impulses_by_id:{}` → the ribosome has no per-impulse signatures → `synthesize_template`
+produces no valid proposal → no `activityTemplate` → no `learned-*` template.
+
+**This is the architectural root, and it is why the walk-composite mint path has
+NEVER produced a template.** It is not the reached tag (fixed), the ∅→∅ shapes
+(fixed+deployed+verified), or the sink omitting impulse content — those were real
+and are fixed. Underneath them is that the substrate's DOMINANT execution mode
+(satisfier reaches — the code's own comment records 57/57 walk credits over 72h are
+`satisfier:*`) produces traces the ribosome structurally cannot extract from,
+because their impulses were never durably written.
+
+**Closing minting therefore requires one of two redesign-level changes, not a bounded
+patch:** (a) persist synthetic-reach impulses as `impulse` rows (id/pointer/shape) so
+signatures hydrate, OR (b) redesign `synthesize_template` to build the recipe from the
+per-task SHAPE sequence (now present, my fix) instead of per-impulse signatures. Both
+are substantial; neither is the "one more layer" I kept hoping for.
+
+**Verified production progress this session:** the shape-serialization fix is deployed
+to the live hub + spoke and confirmed working (composite traces now carry real
+per-task shapes on the hub). That was the load-bearing, bounded fix. The remaining
+blocker is architectural (synthetic reaches carry no durable impulses), and the honest
+finding is that "activities are earned by doing" has never closed through the
+satisfier/composite path — the dominant path — for this reason.
