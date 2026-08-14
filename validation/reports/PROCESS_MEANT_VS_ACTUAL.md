@@ -1172,3 +1172,25 @@ own work, with 7's mechanism operational. The gate is sound and self-grading; th
 it (write-back, credit, information, signatures, diversity) are grounded — executed in strict
 dependency order, each a measured increment, with verify-first catching 4 premature negatives and 3
 wrong causal stories before they landed.
+
+## 2026-08-14 — STEP 5 hub-side investigated thoroughly: recording defect ALREADY FIXED; selection re-key is subtle/high-risk
+
+The step-5 hub-side concern (path_signature collides different work — a 1-op and 3-op goal recorded
+the IDENTICAL signature) is ALREADY ADDRESSED at the RECORDING layer: hashWork(path_activities,
+tools_used) computes a work signature keyed on the effect surface (vessel + endpoint host:port +
+first path segment, canonicalized coarse so it does NOT split identical goals), and it is STORED as
+work_signature on goal_execution_paths (goal-paths.ts:608/587; tested in goal-paths.workhash.test.ts).
+
+I nearly labelled work_signature a write≠read defect (stored, never read for selection). CAUGHT
+before recording it: work_signature is write-only BY NECESSITY, not defect — it is a function of
+tools_used, which is known only AFTER the walk executes, so it CANNOT key pre-execution selection
+(you cannot know the work before doing it). "Fixing" it by using it for selection is impossible for
+the lookup, and re-keying the per-goal-path POSTERIOR (update + lookup + storage) onto work_signature
+is a consistent hub-side MIGRATION of the reuse/replay model where a wrong change breaks reuse (the
+ceiling) fleet-wide. It requires careful design (which keys are pre- vs post-execution; replay-among-
+recorded-paths selection) and staged rollout — not a session-end edit.
+
+STEP 5 honest state: goal-host-local coalescing IMPLEMENTED+landed (9dd27d5); the hub-side RECORDING
+defect is ALREADY FIXED (work_signature); the hub-side SELECTION re-key is a scoped, high-risk
+foundational change, deliberately not rushed. (5th premature-negative avoided this session by reading
+the code — work_signature's write-only-ness is inherent, not a bug.)
