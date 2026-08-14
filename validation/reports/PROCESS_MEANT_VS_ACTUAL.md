@@ -994,3 +994,34 @@ DEPENDENCY-ORDERED STATUS (this session, all verify-first, honest):
 The program is executed in strict dependency order, one measured increment at a time, grounding
 the gate first — exactly as its own logic prescribes. The load-bearing result (a sound, self-
 grading close-oracle) is real and in production; downstream steps are scoped honestly, not faked.
+
+## 2026-08-14 — STEP 3 localized to the EXACT reach-safe hook (preferComposition), design set
+
+Corrected locus: NOT pickSatisfierProducer (that picks among vessels serving ONE shape, which
+share the same satisfier posterior). The real plane-ordering is the `preferComposition` logic
+(goal-host index.ts:7202-7223): it already SUPPRESSES a single-shape satisfier in favor of a
+composition when a producer covers >=2 missing target shapes AND its inputs are available — WITH
+reach-safe guards (a directly-satisfiable intermediate declines the preference, 7213; a budget,
+7217; and it only suppresses when a composition EXISTS, so it falls back to the satisfier => reach
+cannot break). It NEVER consults the satisfier activity's Thompson posterior (the β=41.9).
+
+REACH-SAFE STEP-3 FIX (designed): extend the preferComposition predicate (7207) so it ALSO
+prefers a covering composition when the satisfier for the missing shape is proven-bad (reliability
+below a floor with >= min samples), relaxing the >=2-cover threshold toward >=1 for those shapes.
+This reuses the EXISTING suppression path and its reach-safety (no composition -> fall back to the
+satisfier -> reach preserved), and makes an earned pathway/composition win over a satisfier the
+learner has already penalised — "credit the pathway, not the leaf" / "the satisfier stops stealing
+selection." Needs a walk-ENTRY posterior read (once per walk, fail-open) feeding a proven-bad-shape
+set the predicate consults; NOT a hot-inner-loop federated read.
+
+Why not landed this session: this is the FLEET'S CORE REACH PREDICATE. A wrong edit breaks reach
+for every goal fleet-wide, and a walk-plane-ordering change cannot be adequately unit-tested in
+isolation. Responsible implementation = careful integration + a walk-level harness test + staged
+rollout, not a rushed edit. The fix is precisely localized and designed; that is the honest state.
+
+STATUS: step 1 COMPLETE (live-verified); step 2 VERIFIED closed; step 3 precisely localized +
+reach-safe fix designed (implementation is a careful, testable next increment, not a rush). Steps
+4-8 remain; 7-8 are the SYSTEM's autonomous work by their own definition (operator hand-completion
+violates laws 6/13). The gate is sound and in production; the dependency chain is traced with
+verify-first rigor that prevented three wrong fixes this session (the revert-loop causal story, the
+net_new misread, and the dormant /feedback-404 non-bug).
