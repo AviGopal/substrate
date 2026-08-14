@@ -350,3 +350,39 @@ The boredom gap-gate narrowing (`ACTIONABLE_CATEGORIES={ui_legibility}`) was
 admitting substrate-authored detector gaps without re-opening that autocatalysis —
 is unresolved, and may need dispositioning before the detector recursion is worth
 reconnecting.
+
+## 2026-08-13 — the routing fix, exercised end-to-end (seeded verify)
+
+Seeded one real env-gate close-goal (operator-triggered SELECTION — the autonomous
+selector is starved, see below — but generation, routing, compose, and gating are
+the substrate's). Full chain, dispatch a15a3ef3:
+
+- ✅ **Routing fix `4ed5046` works:** `gap-hydration: injected record
+  gap-env-gated-dense-backfill-enabled (cited file: repos/concept-db/src/index.ts)`
+  (was "none"), then `EARLY EDIT-INTENT DETECTED (names repos/concept-db/src/index.ts)
+  — routing to feature_compose`. The blocker is cleared.
+- ✅ **Apply path functional:** feature_compose connected (dev-vessel up), found the
+  file (`fc-anchors 62 candidates`), drafted an `fc-plan` edit op, ran the gates.
+- ✅ **Gates fail SAFE (no hollow-green, no harmful land):** the drafter produced a
+  WRONG edit — it only added `DENSE_BACKFILL_ENABLED` to the `/health` response
+  instead of changing the gating logic at line 273 — and the **semantic-gate caught
+  it** (`addresses:false`, `suspected_real_location: …:273`). Nothing landed;
+  concept-db HEAD unchanged.
+- ⚠ **Residual reach-gate issue:** while the compose ran, the goal-host walk fell
+  through (slow synchronous compose call) and returned `reached=true` via a
+  `concept_write` standin (a concept SUMMARISING the gap, `WITHHELD alpha-credit …
+  no landed sha`). So the honest `reached` verdict was hollow relative to the real
+  (rejected) compose — a close-goal graded reached on a concept-write while the
+  actual fix attempt failed the semantic gate.
+
+**Net:** the routing blocker is fixed and the apply path works and fails safe. The
+remaining barrier to an autonomous LANDING is drafter quality on this gap class —
+shaping an env-var read is a non-trivial refactor the drafter did not get right, and
+the semantic gate correctly refused it (the intended behaviour). The env-gate gaps
+are a hard demonstration target for that reason; a mechanically simpler gap class
+would land more readily. Selection is separately starved: the env-gate gap-goals
+carry `fail×4-5` debits (from the now-fixed routing bug) that drop their cold score
+below the cheap `disk-space-observer-tick`, so boredom never autonomously selects
+them — a chicken-and-egg (they can't clear the debit without a success they can't get
+without being selected). That debit-decay is the next lever for fully-autonomous
+selection.
