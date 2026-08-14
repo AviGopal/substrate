@@ -936,3 +936,28 @@ candidate drop with the verify-first question named. Steps 3–8 remain. The pro
 multi-session engineering + system-development roadmap (steps 7–8 are, by their own definition,
 the SYSTEM's autonomous work — operator hand-completion would violate laws 6/13); it is being
 executed in dependency order, one measured increment at a time, grounding the gate first.
+
+## 2026-08-14 — STEP 2 VERIFIED LARGELY CLOSED; the leverage is STEP 3 (satisfier ignores its posterior)
+
+Verify-first result (read-only, live):
+  - /feedback beta-penalty REJECTED events in 3h: 0 (the candidate 404 drop is DORMANT).
+  - hollow reaches in 3h: 97 (the penalty path IS heavily exercised).
+  - satisfier:pull_cutover posterior: 148 executions, α=1.7/β=41.9 — the beta-penalty
+    ACCUMULATES correctly. The write-back WORKS.
+  - learned-* templates (checked earlier) likewise carry evolved posteriors.
+=> Step 2's premise ("trials that never post a verdict; cells stuck at Beta(1,1)") is largely
+FALSE in practice. Verdicts post and accumulate. The Beta(1,1) cells are COLD (never selected
+= coverage / possibly signature-splitting = step 5), NOT dropped verdicts. Step 2 is
+substantially already-closed; there is no write-back fix to make (and "fixing" the dormant 404
+would have created phantom posteriors — verify-first prevented a non-bug fix).
+
+THE REAL LIVE ISSUE (re-scoped to STEP 3): satisfier:pull_cutover is penalised to β=41.9
+(reliability ~4%) yet is STILL PICKED 97 times in 3h. The satisfier plane selects it regardless
+of its accumulated posterior — the posterior moves but does NOT gate selection. This is exactly
+step 3 (the satisfier steals/bypasses the pathway's credit; promotion/deselection blocked). The
+write-back is not the bottleneck; SELECTION IGNORING THE WRITTEN-BACK POSTERIOR is.
+
+Dependency-order correction: step 2 is verified largely closed (mechanism functional). The next
+real leverage is step 3 — make the satisfier plane RESPECT the posterior it accumulates (a
+heavily-penalised satisfier should be deselected in favour of a producer, or its penalty should
+gate the resolve-first plane). This is the compounding blocker the ceiling depends on.
