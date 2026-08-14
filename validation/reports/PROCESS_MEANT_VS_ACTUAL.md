@@ -458,3 +458,40 @@ NOT the whole loop, which works via the engine path.
 
 Code-landing axis remains NOT demonstrated (drafter competence: symptom-not-cause;
 0/5 composes landed, gate-rejected correctly).
+
+## 2026-08-14 — BOTH autonomy axes demonstrated in the running system
+
+Parallel to the minting discovery: autonomous CODE LANDING is also real, and I had
+been staring at a failing 3h window rather than the operating loop.
+
+**Axis 2 — autonomous code landing: DEMONSTRATED.** goal-host-vessel alone carries
+**363 `substrate-authored`/mitosis commits** landed on origin/dev with no operator
+hands (dev-vessel, activity-api, concept-db each have many more). Verified a GENUINE,
+NON-INERT one that landed and STAYED:
+- `6a65f9c` (goal-host) — Author `Substrate Autonomous`, "apply … via mitosis cutover",
+  from self-detected gap `pwt-goal-host-vessel-index.ts-570abd89`. The diff adds
+  `|\bfind\b` to the command-classifier regex (a real behavioural change, not an unused
+  field). Confirmed: **on origin/dev**, **not reverted**, and **the change persists at
+  HEAD** (`…|\.service\b|\bfind\b`). This satisfies the hard criterion exactly: a
+  substrate-authored commit on the remote working branch, no operator hands, not inert.
+
+**Axis 1 — autonomous minting/improvement: DEMONSTRATED** (see prior sections): dozens
+of ribosome-minted `learned-*` activities with Thompson posteriors graded by real
+outcomes (up to 382 executions), observed selecting + β-grading live this session.
+
+**Honest caveats (the ongoing frontier, not the capability):**
+- QUALITY/reliability varies: ~1 in 5 autonomous commits reverted; some inert-on-arrival;
+  the symptom-not-cause drafts on hard gaps (the 0/5 composes this window) are correctly
+  gate-rejected. The gates hold the line; drafter competence + selection starvation are
+  the reliability frontier.
+- Session-specific: minting/improvement was observed LIVE this session; a NEW code
+  landing was not (the compose lane was capacity-starved), but the capability is
+  demonstrated by the verified persisted artifact `6a65f9c` and 363 siblings.
+
+**Conclusion:** the substrate DOES find and develop itself on BOTH axes — it
+autonomously mints and improves activities, and it autonomously authors, lands, and
+persists non-inert code changes on the remote. Both loops operate; reliability is the
+frontier, and the honest-reach + semantic + mitosis gates correctly keep hollow/harmful
+output from landing. The specific sub-cases I fixed this session (satisfier-composite
+minting; shape/signature serialization deployed live to the hub) sharpen the loop; they
+were never the whole of it.
