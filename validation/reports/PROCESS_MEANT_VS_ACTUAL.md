@@ -172,3 +172,31 @@ grounding, selection, and orchestration are improved.
 - **Learning** (feed satisfier/pathway credit; real Beta draws): make the loop compound.
 - **Edge safety** (semantic gate fail-*closed* on outage; judge `patch_with_tools`;
   make `fc-coverage` blocking or synthesize a firing input): close the land-unjudged holes.
+
+## 2026-08-13 — DEMONSTRATED: autonomous activity minting + reuse (composition class)
+
+Two composition goals dispatched (`0ff7117b`, `c4d80750`: "Produce a vessel health
+report for the fleet, then persist a summary as a memory note"). Both, with no
+operator hands beyond the dispatch:
+- **Reached a real 2-step chain** — `vessel_health_report` (803 chars real health
+  data) → `memoryNote_write` (a real summary note persisted). `recordGoalPath …
+  chain=2 … reached=true` both times.
+- **Reused a learned pathway** — `pathway reuse: accepted 2-step pathway via
+  shape_signature (10/10 reached)` — an earned, compounded pathway (10 prior
+  successes, 0 failures).
+- **Minted via the ribosome** — `composite constructed id=walk-composite-vessel-
+  health-report-to-memorynote-write-<runsuffix>` → `composite recorded — sink
+  accepted` → `reach→mint: ran ribosome-extract (taskCount=2)`. The trace id varies
+  per run (correct — traces are unique), but the **templateId is deterministic**
+  (`composition:vessel-health-report-to-memorynote-write`, index.ts:5161), so the
+  ribosome **upserts into ONE template** — minting compounds at the template grain,
+  not proliferates.
+
+**So the mint→reuse→compound loop is autonomous and working for the composition
+class.** Honest caveat: leaf α-credit for `satisfier:memoryNote_write` is WITHHELD
+(the satisfier-reach signal-gap the general audit flagged) — the terminal leaf is a
+resolver satisfier, already reusable, so it earns no novel-activity credit; the
+composite template and pathway DO earn credit (reached=true, ribosome upsert). This
+is minting+improvement demonstrated at the composition grain; the general
+non-compounding finding is specific to satisfier-heavy single-shape walks that never
+produce a multi-step template to extract.
