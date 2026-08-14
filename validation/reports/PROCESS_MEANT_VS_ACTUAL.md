@@ -495,3 +495,29 @@ frontier, and the honest-reach + semantic + mitosis gates correctly keep hollow/
 output from landing. The specific sub-cases I fixed this session (satisfier-composite
 minting; shape/signature serialization deployed live to the hub) sharpen the loop; they
 were never the whole of it.
+
+## 2026-08-14 — WALK-COMPOSITE MINT CLOSED END-TO-END: a NEW learned-* template minted live
+
+`learned-composition-vessel-health-report-to-memorynote-write` NOW EXISTS on the hub
+(activity:⟨…⟩, Category tool, 2 tasks compose-step-1/compose-step-2, output shapes
+vessel_health_report + memoryNote_write) — 404 for the entire session (adversarially
+verified) and across 5 prior dispatches, now minted LIVE from dispatch ba1b5a55.
+
+The walk-composite reach→mint path was a STACK of four independent defects; all four
+diagnosed, fixed, and deployed to live infra this session:
+1. composite tagged reached:false → ribosome skipped — `8d960a8` (goal-host)
+2. per-task shapes dropped ∅→∅ — sink `f3c7028` + reader `62acd51` (hub+spoke)
+3. impulses_by_id empty (no signatures) — `fc559be`, deployed live to the hub reader
+4. task-1 (acquire_trace_signature) 8s IMPULSE_RESOLVE_TIMEOUT_MS timeout — on the
+   spoke the fetch federates to the masked hub and blew 8s; raised to 30000 (ops env,
+   no rebuild) → task 1 completed → the full 7-task chain ran (~55s: assess →
+   synthesize → validate → dispatch_write_attempt) → activityTemplate_write PERSISTED.
+
+Evidence: the successful extract ran ~55s (06:51:31→06:52:26) vs the ~12s abort of
+every prior attempt, with NO `missing activityTemplate` HOLLOW after it, and the
+template resolves 200 on the hub. This is a fresh autonomous mint through a
+previously-broken path, on production, end to end.
+
+Combined with the ~94 pre-existing ribosome-minted `learned-*` templates (live
+Thompson posteriors, up to 382 executions) and the live β-grading observed this
+session, autonomous activity minting + improvement is DEMONSTRATED end-to-end.
