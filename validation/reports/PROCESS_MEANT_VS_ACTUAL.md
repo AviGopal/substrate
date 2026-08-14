@@ -884,3 +884,26 @@ STEP 1 honest status:
 The three landed increments ground the gate against its demonstrated failure and make it
 self-grading against reality. The operator-corpus read-back is the one genuine remaining
 step-1 feature, now precisely scoped.
+
+## 2026-08-14 — STEP 1(b) read-back IMPLEMENTED (caf4a95); step 1 materially complete
+
+solicitation_outcome_scan (the operator-verdict read-back, previously a stub) now reads
+obsidian interaction episodes, matches the oracle's re-land escalation ids, reports
+answered/pending, and folds an ANSWERED escalation into the oracle's operator-engagement
+calibration (recordOperatorEngagement). The oracle now calibrates against BOTH reality
+(re-detection) AND the operator corpus (answered escalations). Honest scope: met/unmet has
+no polarity, so engagement is tracked as operator_engaged, not faked as a polar verdict.
+10/10 tests across the 4 oracle files; tsc clean.
+
+STEP 1 (sound the oracle) — materially complete across all clauses, 4 landed increments:
+  c871a45  re-land verdict (demonstrated hole)      — live-verified
+  25a1dfb  abstain->escalate (c)                     — live
+  4b1f862  per-class Beta posterior (a)              — live, calibrated vs reality
+  caf4a95  operator-verdict read-back (b)            — tested; the corpus is now readable
+Remaining step-1 tail (deferred, honestly): the periodic caller feeding the scan the
+oracle's outstanding escalations, and the polar operator-verdict fold once answer-content
+data exists. The GATE is sound against its demonstrated failure and grades itself against
+reality + the operator corpus.
+
+Moving to STEP 2 (close the grading write-back) in dependency order — now safe because the
+gate beneath it is sound.
