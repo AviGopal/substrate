@@ -577,3 +577,34 @@ absolutely promotes when a pathway earns it. So:
 
 Filed as a gap for the substrate to localize+fix (law 13 — not naming the file: the
 hub runs newer formatter code than the local tree, and the system owns localization).
+
+## 2026-08-14 — LIVE THRASH: gap-sweep re-attempts an un-closeable gap 16×/hour, starving both compose lanes
+
+Observed live on the running spoke (development-vessel journal, 60-min window):
+  gap route-edit-e691e25e:3 NOT closed: landed sha bff334719e0a was REVERTED  ×16
+The reverted sha is substrate-authored, editing `src/vacuous-edit.ts` (+2 lines) —
+a PROBE file the vacuous-edit gate is DESIGNED to always revert. So the loop:
+  compose fix → land sha → vacuous gate reverts → gap-sweep sees unresolved →
+  re-compose IDENTICALLY → revert → … (16× in one hour, no backoff)
+This gap CANNOT close by construction, yet nothing abandons it. It occupies the
+single compose slot continuously, so:
+  • autonomous CAPACITY is burned on an un-closeable gap;
+  • the OPERATOR lane is starved — 3 operator dispatches this session
+    (f27ef3d4, d37735b7, and the success_rate retries) all capacity-refused.
+
+EVERYTHING ELSE IS WORKING (this is a durability defect, not a capability gap):
+  • autonomous compose runs continuously (route-edit-*, gap-api-panels);
+  • autonomous LANDING works (lands real shas with no operator);
+  • the GATES work — semantic-gate caught a wired stub live ("adds route /api/panels
+    but returns an empty array … a wired stub, not a functional implementation",
+    addresses:false); the vacuous/inert-check reverts vacuous edits.
+The failure is gap-triple #3 (durability): a gap whose landed fix is reverted must
+NOT be re-attempted identically. Missing mechanism: gap-sweep backoff — after N
+reverted lands on the same gap, mark it needs-different-approach / abandon, don't
+re-compose the identical patch. Law 7 (learned disposition: which gaps aren't worth
+closing) and law 6 (the missing detector/generator is itself the gap).
+
+TOP OPERATOR-ACTIONABLE BLOCKER right now: this thrash saturates compose. Until a
+backoff exists, the operator lane cannot get a slot. The clean fix is a code change
+to gap-sweep (add reverted-land backoff); the instance patch is abandoning
+route-edit-e691e25e:3.
