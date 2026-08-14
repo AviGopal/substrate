@@ -1114,3 +1114,23 @@ STATUS: step 1 complete/live; step 2 verified closed; step 3 implemented+landed 
 queued behind goal-host quiesce — NOT yet executing live, ActiveEnterTimestamp still old); step 4
 implemented+landed (1abb3a4, dev-vessel converges reliably). Moving to step 5 (signature
 discrimination) in dependency order.
+
+## 2026-08-14 — STEP 5 (goal-host-local half) IMPLEMENTED + landed (9dd27d5)
+
+goalHashOf hashed RAW text + suffixed LINE COUNT (surface form) — "Produce a report" vs
+"produce  a\nreport" keyed different cells for identical work. Fixed: NFC + lowercase + collapse
+whitespace + trim, drop the line-count suffix → trivial rephrasings coalesce; different work
+separates (goal-hash.test.ts 3/3). Scope: goal-host-LOCAL (cache/rebind); goal-host sends goal_TEXT
+to activity-api which keys persistent posteriors independently, so no stored-learning re-key. The
+DEEPER half (activity-api persistent goal_hash + path_signature-keyed-on-step-count) is a hub-side
+re-key, scoped separately.
+
+SESSION PROGRESS (all landed with tests where the change admits them):
+  Step 1 sound-the-oracle: COMPLETE, live-verified (c871a45, 25a1dfb, 4b1f862, caf4a95).
+  Step 2 grading-write-back: VERIFIED closed (write-back accumulates; no fix needed).
+  Step 3 causal-credit/satisfier: IMPLEMENTED+landed (ff2b518) — satisfier plane reads its
+    posterior; reach-safe/inert-by-default. Deploy queued behind goal-host quiesce.
+  Step 4 info-at-use-time: IMPLEMENTED+landed (1abb3a4) — drafter gets the closure criterion.
+  Step 5 signature-discrimination: goal-host-local half IMPLEMENTED+landed (9dd27d5); hub half scoped.
+Steps 6-8 remain: 6 (diversity — adversarial-verify quorum / variant competition); 7-8 are the
+SYSTEM's autonomous work by their own definition (mint its own goals; push-away).
