@@ -297,3 +297,41 @@ consistency (`8d960a8`). Each removed a real blocker and exposed the next; the
 honest-reach and semantic gates correctly hold the line so nothing hollow/harmful
 lands. The remaining frontier is generative competence (code) and a hub-side
 serialization+deploy (minting) — neither closable by another local point-fix.
+
+## 2026-08-13 — minting fix COMPLETE and landed, but cannot take effect on this running spoke
+
+Both halves of the per-task-shape serialization fix are landed to origin/dev,
+typecheck-clean:
+- **Sink** `f3c7028` (ias-executor-ts): the trace sink now SENDS per-task
+  `input_shapes`/`output_shapes`.
+- **Reader** `62acd51` (activity-api): `normalizePersistedTask` now PRESERVES them.
+
+**But neither can converge on the running spoke, so minting still cannot be
+demonstrated HERE:**
+- goal-host bundles ias-executor-ts as a **built `dist/` copy in
+  `node_modules/@avigopal/ias-executor-ts`** — not a source symlink — so the sink
+  change needs a package rebuild; the live pull-sync (which mirrors vessel `/src`)
+  does not rebuild bundled packages.
+- **activity-api is masked/inactive on this spoke**; the reader runs on the remote
+  HUB (syzygy). The spoke's ribosome-extract fetches the composite trace FROM that
+  hub, which stored it shapeless under the OLD reader. So the reader fix only takes
+  effect after a HUB redeploy — a separate deployment.
+
+**Net: the minting blocker is fully diagnosed and the correct, complete fix is
+landed — but demonstrating it requires a full image rebuild (spoke, for the bundled
+sink) AND a hub redeploy (for the reader). Those are infra actions beyond a running
+spoke; a `make up` rebuild would not run activity-api locally (masked) and could not
+touch the hub.**
+
+### Final honest status of the autonomy goal (both axes)
+- **Activity minting/improvement:** NOT demonstrable on this deployment. Chain fully
+  traced; every fixable-here layer fixed and hub-verified (mint-tag `8d960a8` →
+  composite `reached:true`); the last layer (shape persistence) is landed but needs
+  rebuild + hub redeploy. No `learned-*` template can appear on the running spoke.
+- **Code landing:** NOT demonstrated. Blocker is drafter competence (symptom-not-
+  cause) + large-file grounding — research-grade, not a point-fix.
+
+The loop runs and fails safe (gates correctly refuse hollow/wrong work). The
+autonomy demonstrations are blocked by infrastructure boundaries (masked hub,
+bundled package) and generative competence — not by any remaining un-diagnosed
+local defect. Everything fixable from this spoke has been fixed and pushed.
