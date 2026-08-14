@@ -305,7 +305,13 @@ MAKE_VARS=(
 # sharing an identity-vessel are one group and can resolve each other's shapes;
 # pointing at a different identity is leaving the group, however reachable the
 # registry is. Pass these when the registry you peer with is not the issuer.
-for passthru in IDENTITY_VESSEL_URL IDENTITY_ENDPOINT ACTIVITY_API_ENDPOINT; do
+#
+# PEER_DISCOVERY_ENDPOINTS rides along because the registry you peer with for
+# ROUTING and the one that issues identity can also differ from each other: the
+# fan-out is a comma-separated union, so a spoke can peer with the hub that
+# minted its key AND with a nearer substrate that actually runs the vessel it
+# needs. Nothing in the Makefile's spoke branch derives it.
+for passthru in IDENTITY_VESSEL_URL IDENTITY_ENDPOINT ACTIVITY_API_ENDPOINT PEER_DISCOVERY_ENDPOINTS; do
   [ -n "${!passthru:-}" ] && MAKE_VARS+=("$passthru=${!passthru}")
 done
 
