@@ -761,3 +761,26 @@ This is step 1 of 8; it is the GATE the rest amplify. Steps 2–8 remain. The fu
 step-1 treatment (grade the oracle as an independent activity, calibrate against the
 operator-verdict corpus, abstain→escalate) are further increments; this closes the
 demonstrated inert-re-land-closes-green failure that bafd83d exhibited.
+
+## 2026-08-14 — STEP 1 after-bracket: DECISIVE live proof against the referent
+
+The deployed landedCommitVerdict, invoked against the REAL gap that motivated the
+change:
+  landedCommitVerdict("gap-env-gated-write-allowlist",
+                      "repos/development-vessel/src/resolvers/fs-write.ts")  ->  "present"
+The gap has 2 non-reverted commits (69d680b, bafd83d) in the live /workspace clone, so
+the re-land count is >=2 -> 'present' -> BOTH callers refuse close. Before the fix,
+Class 3 returned 'absent' and it closed landed_verified on the inert rename.
+
+This is the before->after delta measured on the UN-AUTHORABLE REFERENT (the actual git
+history of the actual gap), bracketed around the landing — the §12.6 / Claim 6
+discipline the change itself encodes, applied to the change. 30-min journal window
+showed zero landed_verified-on-re-land closures (nothing regressed). The natural
+re-detect+refuse path will confirm over a longer horizon; the direct invocation already
+proves the deployed oracle refuses the demonstrated failure.
+
+STEP 1 (demonstrated hole) status: root-caused, before-bracketed, fixed, tested (5/5),
+landed (c871a45), spec (b610dd97), deployed+running (10:38:36), after-bracketed
+(verdict='present' on the real gap). CLOSED. Remaining: step-1 fuller treatment
+(independent-activity grading + operator-corpus calibration + abstain->escalate), the
+law-6 post-close auditor (next increment), and steps 2–8.
