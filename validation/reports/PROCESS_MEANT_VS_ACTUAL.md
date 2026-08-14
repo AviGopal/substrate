@@ -257,3 +257,43 @@ mint-tag `8d960a8`), but the loop is inert at a further layer (task shapes lost 
 transit → extraction synthesizes nothing → no persisted template). The compounding
 claim remains refuted; no `learned-*` template has been produced. Next concrete
 blocker: make the composite task shapes survive persistence to the hub trace store.
+
+## 2026-08-13 — minting inertness fully localized: a two-sided per-task-shape serialization gap
+
+Traced the `∅ → ∅` to its exact cause. The composite's per-task input/output SHAPES
+are populated in memory (mintReachedTrace logged `shapes=["vessel_health_report",
+"memoryNote_write"]`) but are lost on the way to the hub trace store:
+- **Sink side** — `repos/ias-executor-ts/src/adapters/activity-api-trace-sink.ts:95-121`
+  serializes each task with `input_impulse_ids`/`output_impulse_ids` but **omits
+  `input_shapes`/`output_shapes`**. (It does send a TRACE-LEVEL `output_impulse_shapes`
+  aggregate at :181, but not the per-task arrays.)
+- **Hub reader side** — `normalizePersistedTask` (`repos/activity-api/src/routes/
+  execution-traces.ts:191-203`) builds the normalized task with **no shape fields**,
+  so per-task shapes would be dropped even if sent.
+
+Result: the hub stores composite tasks shapeless; `acquire_trace_signature` reads
+`∅ → ∅`; `synthesize_template` produces nothing; no `learned-*` template (404).
+
+**Why this can't be closed from this spoke:** the reader half lives in **activity-api,
+which is MASKED on this spoke and runs on the remote HUB (syzygy)** — a separate
+deployment. A full fix is two files across two repos AND a hub redeploy; the spoke
+can only converge the sink half. So autonomous activity minting is not demonstrable
+from this deployment without a hub-side change.
+
+## HONEST STATUS: neither autonomy axis is demonstrated; both blockers are localized
+
+- **Autonomous code landing:** NOT demonstrated. 0/5 composes landed; the two that
+  reached the semantic gate were correctly rejected for patching symptom-not-cause.
+  Blocker = drafter competence (+ grounding on large files). The gates are sound.
+- **Autonomous activity minting/improvement:** NOT demonstrated. The mint-tag fix
+  (`8d960a8`, hub-verified `reached:true`) un-skipped the ribosome, but minting stays
+  inert on the per-task-shape serialization gap above, whose reader half is on the
+  masked hub.
+
+Real, verified fixes this session (all pushed): dev-vessel restart + immune-timer
+revival; gap-hydration bare-path routing (`4ed5046`); reach-gate edit-effect guard
+(`e62a5d9`); compose decompose-throw observability (`4282791`); composite mint-tag
+consistency (`8d960a8`). Each removed a real blocker and exposed the next; the
+honest-reach and semantic gates correctly hold the line so nothing hollow/harmful
+lands. The remaining frontier is generative competence (code) and a hub-side
+serialization+deploy (minting) — neither closable by another local point-fix.
