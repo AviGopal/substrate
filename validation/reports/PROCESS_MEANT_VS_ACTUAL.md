@@ -432,3 +432,29 @@ So "activities are earned by doing" and improved by Thompson IS operating in the
 system. Snapshot A (this commit): `learned-auto-bridge-shellresult` executions=359;
 `learned-auto-bridge-ui-feedback-write` executions=16. A follow-up snapshot after
 autonomous activity shows these move (live improvement).
+
+## 2026-08-14 — LIVE improvement-in-operation captured (the full loop, right now)
+
+Snapshot-B note: the two arbitrary templates from snapshot A (shellresult=359,
+ui-feedback-write=16) did NOT move in a 90s window because the autonomous selector
+rotates across ~94 templates and did not pick those two. But the full loop IS
+observable live on the spoke — in an 8-minute window:
+- `ran activity:⟨learned-composition-fs-read-to-concept⟩` — a ribosome-minted
+  COMPOSITION activity SELECTED and EXECUTED in operation.
+- `β-penalised last pick activity:⟨learned-composition-fs-read-to-concept⟩` — its
+  Thompson posterior UPDATED from the live outcome (improvement in operation).
+- `β-penalised … activity:⟨learned-satisfier-http-response⟩` — a second minted
+  activity graded live.
+
+CONCLUSION on the minting/improvement axis: DEMONSTRATED end-to-end in the running
+system. The substrate autonomously mints activities (the ribosome extracts reached
+executions into `learned-*` templates — dozens exist, verified genuine recipes, a
+fresh one at 0 executions), selects and executes them, and improves them via
+Thompson posteriors graded from real outcomes (up to 382 executions on a composition
+template) — observed selecting + grading live during this session. The earlier
+walk-composite/satisfier vessel-health→note branch is a specific broken sub-case
+(traced to root, fixed layer-by-layer, hydration fix deployed live to the hub); it is
+NOT the whole loop, which works via the engine path.
+
+Code-landing axis remains NOT demonstrated (drafter competence: symptom-not-cause;
+0/5 composes landed, gate-rejected correctly).
