@@ -174,15 +174,52 @@ self-dev meta-goals returned `inferred_target_shapes:[]` and fell to hollow.
     `concept-db/src/index.ts:272 DENSE_BACKFILL_ENABLED`,
     `development-vessel/src/resolvers/fs-write.ts:27 WRITE_ALLOWLIST`;
   - the parallel FLOOR arm (`universal-tool-fallback-b1f8c280:1-…`) got the SAME
-    target but **`reached=false`** (685 chars) — the generic tool-fallback could
-    not reconstruct the report the `env_gate_scan` activity produces. **Ceiling >
-    floor on a self-development goal**, a genuine capability delta, not a relabel.
+    target but **`reached=false`** with **`tools=0/0`**.
+- **Correction to the floor comparison (do NOT read this as a capability delta):**
+  the floor arm made ZERO tool calls because its tool dispatch **timed out**
+  (`floor: dispatch TIMEOUT after 29943ms` in the floor window) — a channel fault,
+  not "the generic fallback could not reconstruct the report." So the floor arm is
+  not a clean ReAct baseline here; the walk's reach stands on its own evidence
+  (real `env_gate_scan` output), but the ceiling>floor framing is confounded. **A
+  floor run that emits 685 chars with 0 tool calls on a filesystem-scan goal is
+  itself a gap** under the execution-expectation contract (what detects a
+  zero-tool floor run without an operator?) — filed alongside this.
 - **Honest caveat:** this is a 1-step SATISFIER reach (no composition chain;
   `WITHHELD alpha-credit — no in-chain producer-to-consumer edge`), i.e. a direct
-  resolution of one real self-analysis activity, not a composed pathway. It proves
-  self-dev goals now ROUTE and REACH with genuine self-analysis; it does not yet
-  exercise multi-step self-dev composition. The hub-severed organs
-  (`failure_mode_summary` 404, `trace_*_report` hub-starved) remain the next seam.
+  resolution of one real self-analysis activity, not a composed pathway.
+
+## 2026-08-13 — the autonomous self-detection→self-goal chain FIRES but does not REACH
+
+The env-gate demonstration surfaced the real autonomy signal, one step past the
+operator-dispatched scan:
+
+- **The generation half WORKS with no operator.** My scan's finding
+  (`DENSE_BACKFILL_ENABLED`) was auto-converted into a gap record
+  (`gap-hydration: injected record gap-env-gated-dense-backfill-enabled`, 00:22:45)
+  and the substrate then **authored a close-goal for it** —
+  `goal="Close substrate gap gap-env-gated-dense-backfill-enabled: …"`
+  (`381e4220:1`, 00:22:48), inference `[env_gate_scan, concept_write]`. A second,
+  wholly-unrelated autonomous close-goal fired the same window
+  (`Close substrate gap pull-sync-testgate-baseline-degraded-dev`), confirming the
+  `Close substrate gap …` prefix is the gap-compose authoring format, not my text.
+  **self-scan → self-filed gap → self-authored goal is real.**
+- **The reach half FAILS.** `381e4220:1` walked 6 steps, hit `code_annotation`
+  with **no producer** (`no shape-feasible step … missing [code_annotation]`),
+  picked `auto-bridge-code_quality`, went **HOLLOW** ("materially incomplete …
+  does not close the gap"), `capability-gap REFUSED bespoke shape name`, and the
+  floor arm died on a channel fault (`Unable to connect. Is the computer able to
+  access the url?`). `reached=false`. This is audit finding #5 (detected classes
+  route to no fix) made concrete: the close-goal routes to a code-annotation/
+  code-quality target that has NO producer instead of composing the
+  `env_gate_scan → concept_write` analysis its own inference named as primary.
+- **The remaining confound to full autonomy:** the FIND step was still seeded by
+  an operator-dispatched scan. Fully autonomous requires the scan itself on a
+  rhythm/boredom tick (the orphaned-capability / detector-coverage tick rotation),
+  not an operator dispatch. That, plus routing the close-goal to its named
+  `concept_write` terminal instead of the producerless `code_annotation`, are the
+  two seams between here and a self-authored self-dev goal that reaches.
+- The hub-severed organs (`failure_mode_summary` 404, `trace_*_report` hub-starved)
+  remain the deeper next seam.
 
 ## Open question
 
