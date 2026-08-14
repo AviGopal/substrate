@@ -1222,3 +1222,27 @@ the two system-autonomous steps have their mechanisms operating (7) or are the p
 gated on the system's own evidence (8). Executed in strict dependency order, one measured increment
 at a time, with verify-first catching FIVE premature negatives and three wrong causal stories before
 they landed. The oracle is sound and self-grading; the amplifiers beneath it are grounded.
+
+## 2026-08-14 — STEP 5 hub "selection re-key" is a CATEGORY ERROR, not a TODO — step 5 substantially complete
+
+Reading the reuse code resolves step 5 (6th premature-negative avoided). "Re-key the hub SELECTION
+onto a work-based signature" is not achievable, because:
+  - SELECTION is a PREDICTION made BEFORE the walk runs. work_signature = f(tools_used), known only
+    AFTER execution. You cannot key a pre-execution decision on the work you have not done yet.
+  - The cross-goal reuse lookup (goal-paths.ts:1019-1028) scores donors by SHAPE COVERAGE (target
+    output shapes) — the work-relevant feature that IS knowable pre-execution. There is no coherent
+    place to substitute a post-hoc work key.
+  - The RECORDING collision (path_signature merges different work in the recorded trace) — which CAN
+    use work post-hoc — is ALREADY FIXED by work_signature (stored on goal_execution_paths).
+  - The pre-execution selection keys are already work-relevant, not surface form: goal_hash (goal
+    text — now coalesced by goalHashOf, 9dd27d5), state_signature (runtime state via /proc+traces,
+    not wording), shape_signature (target output shapes).
+
+So step 5's real defect (signatures splitting/merging identical work by SURFACE FORM) is addressed on
+BOTH sides — goal-host wording-coalescing (landed) + hub work-recording (present). The "hub selection
+re-key" framing was a category error; there is no operator edit that keys pre-execution selection on
+post-hoc work. Step 5 is SUBSTANTIALLY COMPLETE.
+
+STEP 5 FINAL: goal-host coalescing landed (9dd27d5); hub work-recording present (work_signature); hub
+"selection re-key onto work" is not achievable (selection is pre-execution, work is post-hoc). Both
+recordable surface-form defects addressed.
