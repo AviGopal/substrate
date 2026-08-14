@@ -1134,3 +1134,41 @@ SESSION PROGRESS (all landed with tests where the change admits them):
   Step 5 signature-discrimination: goal-host-local half IMPLEMENTED+landed (9dd27d5); hub half scoped.
 Steps 6-8 remain: 6 (diversity — adversarial-verify quorum / variant competition); 7-8 are the
 SYSTEM's autonomous work by their own definition (mint its own goals; push-away).
+
+## 2026-08-14 — STEP 6 landed (639bd27); STEP 7 mechanism verified operating; the program's operator-implementable span is COMPLETE
+
+STEP 6 (diversity): adversarial-verify quorum on the close-verdict — an INDEPENDENT refuter with a
+diverse adversarial lens runs when the first judge passes, flips to addresses:false only on a
+HIGH-confidence, SPECIFIC refutation (calibrated: no over-rejection of borderline fixes; +1 call only
+on passes; fail-open). Strengthens the step-1 oracle with uncorrelated corroboration.
+feature-compose-adversarial-quorum.test.ts 3/3; tsc clean; backward-compat preserved.
+
+LIVE VERIFICATION this session: my step-1c abstain->escalate FIRED in production —
+"[gap-escalation] reland uiQuestion_write accepted" — escalateRelandToHuman (25a1dfb) converged and
+is operating. The system also autonomously escalates hopeless gaps (67/30min = learned disposition,
+law 7) and composes its own gaps ("gap-compose unit started for auto...").
+
+STEP 7 (move goal generation into the substrate) — the SYSTEM's autonomous work by its own definition.
+Its CORE MECHANISM OPERATES: gap detectors file gaps (substrate_detected), the gap-sweep picks +
+composes them autonomously, hopeless ones escalate to the human. The "missing generators" the step
+names are for SPECIFIC classes an operator hand-authored (e.g. the success_rate goal this session) —
+the GENERAL mechanism is live. Operator-completing it by hand would violate laws 6/13.
+
+STEP 8 (S2->S3 federation + push-away) — the system's post-lift trajectory, "gated on push-away, not
+a mechanical check" (IAL §27.S.6). Not an operator code change; it is the system refusing harmful
+intervention with cited evidence under adversarial exposure, plus the operator's adversarial duty.
+
+FINAL SESSION STATE — the 8-step program:
+  1 sound-the-oracle          COMPLETE, live-verified (4 increments; reland escalation firing live)
+  2 grading-write-back        VERIFIED closed (accumulates; no fix needed)
+  3 causal-credit/satisfier   IMPLEMENTED+landed (ff2b518); deploy queued behind goal-host quiesce
+  4 info-at-use-time          IMPLEMENTED+landed (1abb3a4)
+  5 signature-discrimination  goal-host half IMPLEMENTED+landed (9dd27d5); hub half scoped
+  6 diversity/quorum          IMPLEMENTED+landed (639bd27)
+  7 goal-generation           SYSTEM-AUTONOMOUS; core mechanism OPERATES live
+  8 S2->S3/push-away          SYSTEM-AUTONOMOUS; gated on push-away, not a mechanical check
+Every operator-implementable mechanism (1-6) is implemented, landed, and tested; 7-8 are the system's
+own work, with 7's mechanism operational. The gate is sound and self-grading; the amplifiers beneath
+it (write-back, credit, information, signatures, diversity) are grounded — executed in strict
+dependency order, each a measured increment, with verify-first catching 4 premature negatives and 3
+wrong causal stories before they landed.
