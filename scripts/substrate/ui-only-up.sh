@@ -286,6 +286,29 @@ MAKE_VARS=(
 )
 [ -n "$PORT_OFFSET" ] && MAKE_VARS+=("PORT_OFFSET=$PORT_OFFSET")
 
+# Identity and trace store are SEPARABLE from the registry host.
+#
+# The Makefile derives HUB_DISCOVERY_URL, ACTIVITY_API_ENDPOINT and
+# IDENTITY_VESSEL_URL from a single DISCOVERY_HOST, which is right only when the
+# peer discovery is a full hub. It is wrong when the peer is ITSELF a spoke: a
+# spoke masks activity-api (role api) and does not issue identity (role control),
+# so the derivation points this container at a trace store that is not there and
+# at an identity-vessel whose API_KEY_SECRET signed nothing. Measured: every
+# register/heartbeat/resolve against the local discovery returned 401
+# ("Untrusted key issuer"), the registry sat at 0 vessels, and the surface never
+# advertised its shapes — while the very same key validated 200 against the hub
+# that actually minted it.
+#
+# A key is only valid at the identity-vessel that signed it (validation.ts
+# delegates on `iss` and gates delegation on TRUSTED_ISSUERS), so "which identity
+# vessel" is what decides group membership, not "which discovery". Substrates
+# sharing an identity-vessel are one group and can resolve each other's shapes;
+# pointing at a different identity is leaving the group, however reachable the
+# registry is. Pass these when the registry you peer with is not the issuer.
+for passthru in IDENTITY_VESSEL_URL IDENTITY_ENDPOINT ACTIVITY_API_ENDPOINT; do
+  [ -n "${!passthru:-}" ] && MAKE_VARS+=("$passthru=${!passthru}")
+done
+
 REDACTED_KEY="${API_KEY:0:4}…(${#API_KEY} chars)"
 REDACTED_PAT="${GIT_PAT:0:4}…(${#GIT_PAT} chars)"
 
