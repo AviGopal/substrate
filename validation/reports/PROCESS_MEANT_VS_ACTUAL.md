@@ -335,3 +335,36 @@ The loop runs and fails safe (gates correctly refuse hollow/wrong work). The
 autonomy demonstrations are blocked by infrastructure boundaries (masked hub,
 bundled package) and generative competence — not by any remaining un-diagnosed
 local defect. Everything fixable from this spoke has been fixed and pushed.
+
+## 2026-08-14 — DEPLOYED to hub + spoke; shapes fix VERIFIED live; minting has deeper stacked layers
+
+With operator clearance, deployed the fixes to live infrastructure:
+- **Hub (syzygy.host)**: `deploy-hub-pull.sh` pulled the CI-built `:dev` image (submodule
+  bump `ced15bfe`) and swapped the container (volumes preserved) → **activity-api reader
+  fix live** (v1.20.9).
+- **Spoke (substrate-live)**: installed the compiled sink fix into goal-host's bundled
+  ias-executor-ts and restarted goal-host.
+
+**VERIFIED on the hub (real, not a claim):** a fresh composition's composite trace now
+persists with **per-task shapes populated** — `executionTraceWithSignatures` for
+`walk-composite-…-31pysd` shows task1 `output_shapes:["vessel_health_report"]`, task2
+`input_shapes:["vessel_health_report"] → output_shapes:["memoryNote_write"]` (was `∅→∅`).
+The diagnosed root blocker (shape serialization sink+reader) is FIXED end-to-end on
+production, and the mint-tag fix is confirmed (`reached:true` on the hub).
+
+**But autonomous minting is STILL not demonstrated — two deeper layers surfaced:**
+1. **Impulses not hydrated:** the same hub trace shows `impulses_by_id:{}`,
+   `output_impulses:[]` — the task `output_impulse_ids` reference impulses that carry no
+   content/signature on the hub. `acquire_trace_signature` gets shapes but no signatures.
+2. **The ribosome-extract chain no-ops via reach→mint:** it returns in ~2s with zero LLM
+   calls and no task logs, producing no `activityTemplate` — `host.runGoal(targetTemplateId:
+   "ribosome-extract")` is not executing the real 7-task chain (the catalogue-miss /
+   walk-instead-of-template failure the code flags at index.ts:5289). LLM plane is healthy
+   (0 errors) and shapes are present, so neither is the cause.
+
+Net: the minting loop is defective in a STACK — reached:false tag (fixed), ∅→∅ shapes
+(fixed+deployed+verified), empty impulse signatures (open), and a non-executing extract
+chain (open). Each fix removed one layer and exposed the next. Two fixes are now live on
+the hub + spoke; a `learned-*` template still does not appear because the extract chain
+does not run to synthesis. The remaining work is the extract-execution path and impulse
+hydration — not the shape serialization, which is done and verified.
