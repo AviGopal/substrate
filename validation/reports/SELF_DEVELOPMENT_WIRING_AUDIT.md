@@ -221,6 +221,38 @@ operator-dispatched scan:
 - The hub-severed organs (`failure_mode_summary` 404, `trace_*_report` hub-starved)
   remain the deeper next seam.
 
+### The decisive finding: every autonomous close-goal reaches HOLLOWLY (no sha lands)
+
+Checked all substrate-authored `Close substrate gap …` goals that reached in a 3h
+window. **Generation is autonomous and real; every reach is hollow.** Two cases,
+one mechanism:
+- `gap-env-gated-write-allowlist` (`bcef08ae:1`, reached=true, PERSISTED): the walk
+  targeted `fs_edit` to close the gap; `fs_edit` returned **HTTP 500
+  `path outside workspace root: gap-env-gated-write-allowlist`** — it fed the GAP ID
+  as the edit path. The reach gate then credited the upstream `env_gate_scan`
+  satisfier (whose REACH-CONTENT is byte-identical to the failed `fs_edit`'s) as
+  reaching. `WITHHELD alpha-credit … no landed sha`. **Green, nothing closed —
+  and persisted, so it trains Thompson that this pathway closes gaps.**
+- `reach-gap-orphaned-capability-scan` (reached=true, UNGRADED): re-ran
+  `orphaned_capability_scan` then `shellResult` `echo 40` (the emitted-gap count).
+  `WITHHELD alpha-credit … no landed sha`; `reach-patch MATCHED NO ROW … verdict
+  NOT persisted`. Re-scan + echo, nothing closed.
+
+**Root:** for a close/edit-shaped goal the reach gate accepts an upstream
+ANALYTICAL satisfier (scan/shell) in place of the missing close artifact, and the
+honest tell — `WITHHELD alpha-credit … no landed sha` — is logged but does NOT
+gate the reach verdict. So the loop's self-reported successes are false, which is
+why generation-without-reach reads as "0 real landings" despite green verdicts.
+This is the grading mechanism failing to distinguish a real closure from a scan
+that re-lists the problem (compounds audit #3, inert commits land favorable).
+
+**Fix locus (next):** a reach-gate predicate — a goal whose primary target is a
+write/edit/close artifact (`fs_edit`, `code_*`, a "Close substrate gap …" goal)
+does NOT reach on an analytical-satisfier standin; it requires a landed sha (or a
+verified closing artifact). The `no landed sha` signal already exists at the
+WITHHELD-alpha-credit site; it must become verdict-affecting for close-goals.
+Load-bearing reach-gate code — scope and verify before landing.
+
 ## Open question
 
 The boredom gap-gate narrowing (`ACTIONABLE_CATEGORIES={ui_legibility}`) was
