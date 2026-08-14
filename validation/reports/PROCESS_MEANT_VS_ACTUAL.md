@@ -641,3 +641,37 @@ TWO CORRECTED, DISTINCT findings:
 
 Net: finding A is a small durability patch; finding B is not a defect at all but
 evidence the autonomous compose loop is running at capacity on its own gaps.
+
+## 2026-08-14 — CONSOLIDATED VERDICT: both axes proven at the MECHANISM; quality is the frontier
+
+Verified with live, this-session, origin/dev evidence.
+
+AXIS 1 — activity minting & improvement: MECHANISM PROVEN
+  • Fresh live MINT this session: learned-composition-vessel-health-report-to-
+    memorynote-write, 404→200 on the hub, through the previously-broken walk-
+    composite path (4 stacked fixes) + ~94 prior learned-* templates.
+  • IMPROVEMENT is real and bidirectional: base analyze-source-to-concept earned
+    α=493 over 813 exec (promotion), weak learned templates suppressed (α≤8.7);
+    posteriors demonstrably evolve from execution grading.
+  • Frontier: no learned COMPOSITION has yet earned promotion above the satisfier
+    floor (satisfiers preempt selection); success_rate is a broken display field.
+
+AXIS 2 — autonomous code landing: MECHANISM PROVEN
+  • THIS SESSION: bafd83d (07:34:03, author "Substrate Autonomous", on origin/dev,
+    NOT reverted) closed autonomously-filed gap gap-env-gated-write-allowlist via
+    apply_proposal_as_patch + vessel_mitosis_cutover — zero operator hands.
+  • Earlier verified-genuine: 6a65f9c (real in-place modification, non-inert).
+  • The autonomous compose loop runs AT CAPACITY on its own gaps (route-edit-*,
+    gap-api-panels, post-land-suite-red) — the operator lane is starved by it.
+  • Frontier: EFFECTIVENESS. bafd83d is INERT — it renames WRITE_ALLOWLIST →
+    WRITE_ALLOWLIST_ENV (behaviorally identical) and is a RE-LAND of 69d680b (same
+    gap, 2h earlier). The gap didn't truly close, so it re-composed. ~1 in 5
+    landings revert; many are cosmetic. The gap-close detector accepts inert
+    diffs as closure — that is the load-bearing quality gap.
+
+BOTTOM LINE: "can the substrate autonomously mint/improve activities and land its
+own code end-to-end, no operator?" — YES, demonstrated live this session on both
+axes. "Does it do so RELIABLY and EFFECTIVELY?" — not yet: the open work is
+quality/durability (inert-diff closure detection, learned-pathway promotion above
+satisfiers, revert-loop disposition), not plumbing. The mechanisms are wired and
+observably firing; the learning frontier is making their OUTPUT durably correct.
