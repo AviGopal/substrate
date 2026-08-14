@@ -200,3 +200,31 @@ composite template and pathway DO earn credit (reached=true, ribosome upsert). T
 is minting+improvement demonstrated at the composition grain; the general
 non-compounding finding is specific to satisfier-heavy single-shape walks that never
 produce a multi-step template to extract.
+
+## 2026-08-13 — RETRACTION: the minting "demonstration" was inert; the mint tag killed it
+
+**Defect first:** the walk-composite mint was INERT — it logged `reach→mint: ran
+ribosome-extract` but persisted NO template. An adversarial hub check (activity-api
+is masked locally; the hub is `syzygy.host:18080`, queried via the cockpit) found
+`composition:vessel-health-report-to-memorynote-write` and its `learned-composition-*`
+form both **404** — no row exists to accrue a posterior into. Root cause: the
+composite trace was tagged `reached:false` (from the narrow `mintGrounded`, which a
+vessel-resolve-satisfier composition fails), and the ribosome's reach re-read
+`verdict=not-reached (tag:reached:false)` **SKIPPED extraction** — even though the
+code then called `mintReachedTrace` with the broader `compositeGrounded=true`. The
+tag and the mint decision disagreed; the ribosome believed the tag.
+
+**Therefore the earlier "DEMONSTRATED autonomous activity minting + reuse" claim is
+RETRACTED.** What actually happened: the mint/reuse MACHINERY ran (a real 2-step
+chain resolved, real content flowed), but (1) the reused `10/10` pathway was a
+FROZEN snapshot borrowed from an unrelated goal at cover 0.50 — replay, not accrual;
+(2) no template was minted; (3) leaf α-credit was withheld (satisfier) and the
+composite was `reached:false`, so no posterior provably changed value. Compounding
+was **not** demonstrated — it was refuted on hub-authoritative evidence.
+
+**Fix landed `8d960a8`:** tag the composite with `compositeGrounded` (the same
+predicate `mintReachedTrace` uses), so a genuine 2-step composition is tagged
+`reached:true` and the ribosome extracts it. Verification pending: re-run a
+composition and confirm the ribosome does NOT skip AND a `composition:*` /
+`learned-composition-*` template now EXISTS on the hub (the 404 becomes a hit). No
+claim of autonomous minting until that hub row is observed.
