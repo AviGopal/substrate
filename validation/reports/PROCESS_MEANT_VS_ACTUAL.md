@@ -1325,3 +1325,34 @@ NEXT (per sequencing): B1 mechanism proven (refuses in test) -> await fleet conv
 inert-close refusal -> then B2 (write-back: is the Beta(1,1)-despite-traffic fraction still ~24% after
 the hub bucketing deploy?) / B3 (data-aware binding) -> B4 (consume needs_info/funnel-history) -> C.
 Measure on a WINDOW: landed_verified rising, false_closes flat, new reopen_count flat, Beta(1,1) falling.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+A2 / B2 — MEASURED FROM THE HUB (2026-08-14): goal-path write-back is HEALTHY; refutes B2's premise
+────────────────────────────────────────────────────────────────────────────────────────────────
+Read the hub activity-api (syzygy.host:18080; masked on this spoke) directly.
+
+goal_execution_paths (the table step 5's bucketSignature keys):
+  • total path cells: 10083; ALL have total_executions>0 (a row is CREATED on execution).
+  • Beta(1,1)-despite-traffic: 0 (0%). min(alpha+beta)=3 — EVERY cell has at least one graded
+    outcome. 1739 cells at exec>=2; max exec 1865.
+  ⇒ The goal-path write-back REACHES THE CELL. B2's refutation condition ("if 24% Beta(1,1) holds
+    after A2, the write-back is the leak") does NOT reproduce for this table. Evidence lands.
+  ⇒ Structural reason: this table cannot show "Beta(1,1) despite traffic" — a row exists only after
+    an execution, which grades it. The 24% symptom was never about goal_execution_paths.
+
+context_thompson_scores (activity SELECTION posteriors — /v2/activities/topology-coverage):
+  • 1038 distinct pool signatures; 1,407,289 v1 observations; avg 2.31 templates/signature.
+  • busiest cell validator-dispatch: 1,113,511 observations, success_rate 0.0 (success_rate is the
+    KNOWN-BROKEN display field, decoupled from alpha/beta — prior finding); create-shape-provider-goal
+    153,322 obs, success_rate 0.0. These are the candidate "walk grades into a table nothing reads"
+    cells, BUT the aggregate endpoint does not expose per-cell alpha/beta, and hand-querying the DB is
+    forbidden (CLAUDE.md), so the Beta(1,1)-despite-observation fraction for this table is NOT
+    measurable from the operator surface. That readout is itself a gap (no per-cell posterior endpoint).
+
+CONCLUSION: B2 is REFUTED for the goal-path posterior (the step-5 target) — write-back is healthy. The
+open question (context_thompson selection posteriors ungraded despite observations) is real-suspected
+but BLOCKED on instrumentation: there is no operator-surface readout of per-cell selection alpha/beta.
+The missing readout is the gap to file (law 6: what detects this class without me?). Not hand-completing.
+
+A2 status: the fe30d0a bucketing is forward-only/self-healing; with the goal-path table already 0%
+Beta(1,1), its effect is concentration of NEW work-keyed evidence, not repair of an ungraded backlog.
