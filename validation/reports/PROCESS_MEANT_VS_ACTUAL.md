@@ -1356,3 +1356,17 @@ The missing readout is the gap to file (law 6: what detects this class without m
 
 A2 status: the fe30d0a bucketing is forward-only/self-healing; with the goal-path table already 0%
 Beta(1,1), its effect is concentration of NEW work-keyed evidence, not repair of an ungraded backlog.
+
+B2 INSTRUMENTATION LANDED (activity-api 623b6ea, on top of fe30d0a): /v2/activities/topology-coverage
+now returns total_cells / cells_with_observation / ungraded_despite_observation[_fraction] — the
+selection-posterior write-back health the operator surface lacked. Pure aggregation over rows the route
+already fetches (no new query, no write); mirror-pinned test 4/4; tsc clean. Deploys via hub pipeline.
+Once live, read ungraded_despite_observation_fraction: 0 => selection write-back reaches the cell (like
+goal-path); nonzero => the real 24%-class leak, now MEASURED instead of asserted. This closes the
+"no per-cell posterior readout" gap by exposing the signal (law 6: detect the class without me).
+
+CHECKPOINT (this session): B1 (the gate) LANDED+PROVEN — close-oracle refuses an inert single-landing
+(held pending + escalated, not closed green), proven in a real-git test; dev-vessel 980135a. A1 verified
+live. A2/B2 goal-path half MEASURED healthy (0/10083 Beta(1,1)); context_thompson half INSTRUMENTED
+(623b6ea) pending hub deploy. Remaining: B1 live-convergence proof (pull-sync + a live inert gap),
+B2 context_thompson reading (post-deploy), B3 data-aware binding, B4 consume-signals, C adversarial.
