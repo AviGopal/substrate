@@ -228,3 +228,32 @@ predicate `mintReachedTrace` uses), so a genuine 2-step composition is tagged
 composition and confirm the ribosome does NOT skip AND a `composition:*` /
 `learned-composition-*` template now EXISTS on the hub (the 404 becomes a hit). No
 claim of autonomous minting until that hub row is observed.
+
+## 2026-08-13 — mint-tag fix VERIFIED on hub, but minting still inert (task shapes dropped in transit)
+
+Hub-verified (activity-api on syzygy.host:18080, via cockpit) after fix `8d960a8`:
+- **The tag fix works.** The composite execution trace
+  `walk-composite-vessel-health-report-to-memorynote-write-1j4yk01` now persists on
+  the hub with **`reached:true`** (was `reached:false`) and
+  `activity_template_id: composition:vessel-health-report-to-memorynote-write`. The
+  ribosome no longer skips it on the tag.
+- **But minting is STILL inert, one layer deeper.** The same hub trace shows both
+  tasks as **`∅ → ∅`** (empty input/output shapes):
+  `#1 vessel_health_report/pattern ∅ → ∅`, `#2 memoryNote_write/pattern ∅ → ∅`.
+  So `acquire_trace_signature` has no shapes to extract, `synthesize_template`
+  produces nothing, the reach-judge grades the extract `HOLLOW (missing
+  activityTemplate,learningSummary)`, and **no template exists on the hub** —
+  `learned-*` / `composition:*` all 404 (3 candidate ids checked).
+
+**Root of the remaining inertness:** the composite trace's per-task `inputShapes`/
+`outputShapes` are dropped between construction (goal-host builds them at
+index.ts:5133-5141) and hub persistence — the *tags* survive the trip (reached:true
+did) but the task shape arrays do not, matching the documented drop-in-transit at
+index.ts:8798-8804. With empty task shapes the ribosome has nothing to extract.
+
+**Honest status: autonomous activity minting is NOT demonstrated.** The mint/reuse
+MACHINERY runs and my two fixes are real and hub-verified (routing `4ed5046`,
+mint-tag `8d960a8`), but the loop is inert at a further layer (task shapes lost in
+transit → extraction synthesizes nothing → no persisted template). The compounding
+claim remains refuted; no `learned-*` template has been produced. Next concrete
+blocker: make the composite task shapes survive persistence to the hub trace store.
