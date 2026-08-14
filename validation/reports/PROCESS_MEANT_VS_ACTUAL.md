@@ -1085,3 +1085,16 @@ STATUS: step 1 COMPLETE (live); step 2 VERIFIED closed; step 3 IMPLEMENTED + lan
 Steps 4-6 are further mechanism increments (info-at-use-time, signatures, diversity); 7-8 are the
 SYSTEM's autonomous work by their own definition. The gate is sound and now the satisfier plane
 respects the posterior it accumulates — earned pathways can win over condemned satisfiers.
+
+## 2026-08-14 — STEP 3 convergence DEFERRED (safe): goal-host quiesces, won't restart into in-flight walks
+
+Step 3 (ff2b518) is landed on origin/dev and pulled to the goal-host CLONE (/workspace/git/vessels
+at ff2b518), but the RUNNING /vessels code is still stale — the pull-sync correctly defers the
+restart: "goal-host-vessel: 2 unit(s) in flight — QUIESCED (admission closed); waiting for them to
+finish rather than restarting into them." goal-host is continuously busy, so convergence waits for
+an idle window (dev-vessel converged fine — the mechanism works). NOT forced: restarting into
+in-flight walks would lose them; the deferral is the safe behaviour. Reach-health check runs the
+moment it converges (a reach-path change must be verified live: reach still occurs, PROVEN-BAD fires
+for a bad-satisfier-with-alternative, no error spike; revert if any breakage).
+
+STATUS: steps 1 (complete/live), 2 (verified closed), 3 (IMPLEMENTED+landed, queued for deploy).
