@@ -3037,7 +3037,64 @@ change-class. The diagnosis is complete, the fix is pre-validated, the drafter f
 correctly, verify passed, the judge passed — and it cannot land. **The blocker is not capability,
 drafting, or correctness; it is a reviewer that cannot see the file it is reviewing.**
 
-## 15.20 ★★★ TERMINAL ROOT CAUSE — every goal-host-vessel cutover is blocked by a golden test that isn't in the overlay
+## 15.20-CORRECTED ★★★ TERMINAL ROOT CAUSE — failed composes accumulate residue in the SHARED CLONE until it breaks
+
+> ⚠️ **The "golden test missing from the overlay" diagnosis below is WRONG.** I inspected the
+> mitosis staging tree (`/vessels/goal-host-vessel-mitosis-*`) when the gate builds its overlay from
+> the **clone** (`/workspace/git/super-repo/repos/goal-host-vessel`), which has all 11 test files
+> including the golden one. Wrong copy, again — the fourth time this session.
+
+**The real cause, and it is self-inflicted.** The gate reported `pass=0 fail=1` because the golden
+test could not *load*:
+
+```
+3441 | async function ufBuildWriteTool(shape: string): Promise<any | null> {
+error: Expected "]" but found "async"
+```
+
+An **unterminated array**. `git status` in the clone showed ` M src/index.ts` — uncommitted
+modifications — and the diff was damning:
+
+```
+ src/index.ts | 18 +++++++++++++++++-      (17 insertions, 1 deletion)
++  { name: "web_search", … },     ← attempt 3
++  { name: "web_search", … },     ← attempt 4
++  { name: "web_search", … },     ← attempt 5
++  // CONSUMED AT LINE ~4061: …   ← my comment block, twice
++  { name: "web_search", … },     ← attempt 6
+-];                                ← the closing bracket, deleted
+```
+
+**Every failed compose appended its edit to the shared clone and none cleaned up.** Six attempts
+accumulated five duplicate entries and consumed the array's closing bracket, leaving the file
+syntactically invalid. That broke the golden test → the gate became permanently `inconclusive` →
+**every `goal-host-vessel` cutover was refused**, for any change by any author.
+
+**So my retries manufactured the blocker I then spent an hour diagnosing.** It also explains the
+`old_string not found` failure of attempt 5: by then the file already contained duplicates of the
+text being anchored on.
+
+**Recovery:** `git checkout -- src/index.ts` in the clone (broken copy preserved at
+`/workspace/repair-backups/gh-clone-index.ts.broken`). The golden test immediately returned to
+health:
+
+```
+96 pass   0 fail   232 expect() calls   [374ms]
+```
+
+The cutover gate is unblocked — for the whole vessel, not just this change.
+
+**The defect this exposes is §11.10's, compounding.** A compose that fails still mutates the shared
+clone, and the residue accumulates across attempts until it breaks the vessel for everyone. A
+single failure is invisible; six failures are fatal. The apply path needs to restore the clone on
+abort — the same missing rollback that left unverified code live in §11.10, now shown to have a
+cumulative, cross-attempt blast radius.
+
+**Operator lesson, plainly:** retrying a failing compose is not free. I treated each attempt as an
+independent trial; they were not independent, and the sixth one poisoned the well for every other
+change to that vessel.
+
+### (superseded) original diagnosis: golden test absent from the overlay
 
 Six attempts to add one array entry to `UNIVERSAL_READ_TOOLS` produced this chain, and the last
 link is decisive.
