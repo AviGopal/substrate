@@ -3300,6 +3300,85 @@ re-running the eBay goal as a negative control. If it fabricates again, the fix 
 **judge's input** — `taskSummary` already carries `tools=0/0` and the judge approved anyway — not
 the boolean.
 
+## 15.23 ★★★★★ The failure class evolved: from *fabricated-as-current* to *retrieved-stale-as-current*
+
+Three goals dispatched against the patched vessel — the Io goal in fresh wording, the eBay goal as
+a negative control, and an **unrehearsed** Earth–Mars goal as class evidence.
+
+| goal | graded | operator verdict |
+|---|---|---|
+| Earth–Io separation today | `reached=false` — "hollow completion" | correct |
+| eBay Pi 5 price range | `reached=false` — "error page response from eBay" | **correct, and honest** |
+| Earth–Mars distance now | **`reached=true`**, source cited | ❌ **FALSE REACH** |
+
+### The Mars reach is wrong by 11.3 million kilometres
+
+The walk's `webSearchResult` satisfier returned theskylive.com:
+
+> "The distance of Mars from Earth is **currently 300,914,229.99 Kilometers** … 2.011487386 AU"
+
+Operator oracle — JPL Horizons, queried twice from inside the container:
+
+```
+ 2026-Aug-15 00:00     1.93613411556585  -8.1222105
+ 2026-Aug-16 00:00     1.93142140659321  -8.1982458
+```
+
+**1.936 AU ≈ 289.6 M km**, closing at 8.12 km/s. The snippet's 2.0115 AU is 0.0754 AU further out;
+at that closing rate the gap is ≈ 16 days. **The snippet is a stale search-index entry whose own
+text says "currently."**
+
+Nothing in the pipeline could catch this. The source was real, the citation was real, the number
+was well-formed, and the retrieved text asserted its own currency. The reach judge is reading
+prose, and the prose lied about its date — not about its content. This is §15.21's class one layer
+subtler: not invented, **retrieved and stale**. A freshness check is not a nicety here; for any
+time-varying quantity, *retrieval without a timestamp is indistinguishable from fabrication.*
+
+Graded into the store: `POST /v2/activities/execution-traces/reach` on
+`walk-satisfier-2-1786806900950` → `{"reached":false,"updated":1}`. It matched a row, so the false
+positive will not be borrowed by reuse-before-derive. (α-credit was independently withheld —
+*"WITHHELD alpha-credit for satisfier:uiFeedback_write — no in-chain producer-to-consumer edge"* —
+so the posterior was never poisoned; only the reached tag was.)
+
+### Two corrections to §15.21 and §15.22
+
+1. **`web_search` was already served.** `registry_query` for `webSearchResult` returns
+   **local-tools-vessel** — the walk has had web search all along; only the floor's tool list
+   lacked it. §15.21's "adding `web_search` was necessary and is confirmed working" is **refuted**:
+   it was a duplicate of an existing producer (law 3, *reuse before mint*), and I came close to
+   landing it. The Mars reach came from that pre-existing satisfier, **not** from my change.
+2. **The eBay control passing does not vindicate the prompt fix.** The fabrication is gone because
+   the tool I added is gone. That control re-establishes the baseline; it does not test the fix.
+
+### What the one-line change actually did — read from `final_text`, not from `tools=0/0`
+
+`tools=0/0` is not evidence of no retrieval: the agentic wrapper runs its tool loop internally and
+surfaces no client-side `tool_calls`, so the client counter stays 0 for a genuinely grounded run.
+The floor's persisted `metadata.final_text` is the honest reader:
+
+> *"I was unable to retrieve the current distance between Earth and Mars **from the APIs I tried**."*
+
+> *"The attempt to **fetch data from the eBay API** failed due to an invalid access token."*
+
+Before the change the floor's outputs were *"I cannot browse eBay"* or an invented price. After it,
+the floor **attempts API retrieval and reports failure accurately**. So the change moved the floor
+from ignorance-or-fabrication to attempted-retrieval-with-honest-failure. That is a real gain in
+trustworthiness and **not yet a gain in capability** — it tried APIs and did not find Horizons.
+
+### Verdict on the session goal — NOT MET
+
+Io is still not derivable: hollow. Mars reached but wrong. eBay failed honestly. The one genuinely
+good outcome is that **all three failures are now honest**, which is the precondition for progress
+rather than progress itself.
+
+The sharper finding is *why* all three went the way they did: **for every one of them the walk
+chose SEARCH.** Target inference picked `webSearchResult` at 0.9 confidence, with `http_fetch`
+sitting in the alternatives at 0.8 and never taken. Search is the wrong instrument for a computed,
+time-varying quantity — an ephemeris API returns the exact value for the exact instant, and this
+container can reach one. The gap is not "no web access"; it is that the substrate equates *the
+outside world* with *search the web* rather than *call an authoritative API*, and search returns
+stale values that read as current.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
