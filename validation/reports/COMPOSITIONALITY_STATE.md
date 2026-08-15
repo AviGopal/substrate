@@ -2449,7 +2449,44 @@ unique anchor, and let a second goal do the second edit.* The compose pipeline's
 this ("One file per goal — multi-file asks drop parts silently"); the finding here is that it holds
 at **op** granularity within a single file, not just at file granularity.
 
-## 15.11 ★★★ BLOCKER 6 ROOT CAUSE — MEASURED — the shell tool kills verify at 30 s and the caller reads only stdout
+## 15.11 ~~★★★ BLOCKER 6 ROOT CAUSE — MEASURED~~ **PARTIALLY RETRACTED — the 30 s kill is real, the causal link to verify failures is NOT established**
+
+> ⚠️ **Retraction of the causal claim, not the measurements.** I published this as "the most
+> consequential finding of the session … measured end to end." The measurements below are sound.
+> **The link between them is not**, and a single check refutes it.
+>
+> **Fact A (measured):** the `shell` shape SIGKILLs at exactly 30 s —
+> `sleep 45` → `elapsed=30s, exit_code 137`, non-overridable.
+>
+> **Fact B (measured):** a compose verify **completed** with 295 KB of output, `ok: true`, whose own
+> log reads `Ran 1707 tests across 226 files. [53.16s]` — **53 seconds of tests alone**, through the
+> same `shellResult` producer (`local-tools-vessel:8230`, confirmed via discovery).
+>
+> **Both post-date the group-kill going live:** `b4766ff` (which introduced `groupBounded`) landed
+> 2026-08-12 06:23 UTC, local-tools-vessel restarted 2026-08-14 05:00 UTC, and the 53 s success is
+> from 2026-08-15 01:47 — after both. So a uniform 30 s kill on this path **cannot** be what
+> destroyed the 193-byte verifies, because a 53 s verify survived the same path hours earlier.
+>
+> **What remains established:**
+> - The 30 s group-kill exists and is non-overridable (Fact A).
+> - 5 of 12 recent composes produced a truncated (193 B) or absent (0 B) verify, and **all** of them
+>   were UNFAVORABLE, while both FAVORABLE verdicts had a complete verify. That correlation is real
+>   and matters regardless of cause.
+> - `feature_compose` reads only `sh.body.stdout` and ignores `exit_code`, so a killed verify is
+>   indistinguishable from a failed one. **That defect stands on its own** and is worth fixing:
+>   `exit_code: 137` is present and unread.
+>
+> **What is NOT established:** *why* some verifies truncate at 193 bytes and others complete. The
+> 30 s watchdog is one candidate; per-vessel differences, worktree cache state, and load are others.
+> I do not currently know, and the dispatched fix (`requestTimeoutSec 30 → 300`) targets a mechanism
+> I have not shown to be the operative one.
+>
+> **This is the same error I made three times earlier today** (LLM plane, α-credit, `fc-scope`):
+> two solid measurements, a plausible bridge between them asserted as cause, published before
+> testing the bridge. The refuting check — *did any verify ever exceed 30 s and survive?* — cost one
+> grep of an existing report.
+
+### Original section (measurements valid; causal conclusion retracted above)
 
 The single-op `org_id` goal (§15.10) produced the session's **first clean operator apply**:
 
