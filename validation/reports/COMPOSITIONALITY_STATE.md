@@ -2809,6 +2809,57 @@ the execution contract's floor is: **reachable but unreliable on arbitrary goals
 the contract expects, and the variance comes from the model's self-description, not from missing
 capability.
 
+## 15.15 ★★★ The adversarial refuter rejected a correct fix — with confident, false mechanism reasoning
+
+Until now every gate rejection observed this session was *correct*, and I said so repeatedly.
+**That claim is now falsified**, by a case where the gate stack refused an experimentally-validated
+fix.
+
+The watchdog patch (§15.13's real repair) was drafted correctly, applied cleanly at line 95, and
+**passed verify** (`ok: true`, 1082 bytes). It was then rejected:
+
+> *"adversarial refuter (diverse lens, conf 0.90): The patch introduced changes on line 96 by
+> moving the output redirection to `>/dev/null 2>&1` but this change does not effectively address
+> the underlying issue of the watchdog holding the caller's stdout open. … The fix simply obscures
+> the output of the `kill` command rather than addressing the socket hanging issue."*
+> **`[first judge had passed: The patch redirects stdout of the watchdog subshell, addressing the
+> substrate gap …]`**
+
+**The objection is factually false, and the test is four seconds long:**
+
+```
+( sleep 4 ) & echo FAST                    captured=FAST   4006 ms
+( sleep 4 ) >/dev/null 2>&1 & echo FAST    captured=FAST      5 ms
+```
+
+Redirecting the subshell's stdout is *precisely* what stops it holding the caller's pipe open. The
+refuter asserted the opposite at 0.90 confidence and **overrode a first judge that had passed the
+patch**.
+
+**Why this matters more than one blocked fix.** The refuter's failure mode is exactly the one this
+report has documented in *me* five times over: **confident causal reasoning about a mechanism,
+published without executing anything.** It reads a diff and argues about what will happen. It
+cannot run `( sleep 4 ) &` and look. So its reliability on mechanism claims is the same as an
+LLM's reasoning generally — which this session measured as poor, on both sides of the exchange.
+
+That reframes the quality picture in §11.8 and §14:
+
+- The gates are excellent at **evidence-based** rejections — inert diffs (the patch changes no
+  behaviour), spec deviations (the key is nested, not top-level), landing evidence. All verifiable
+  from the diff itself.
+- The gates are **unreliable at mechanism claims** — "this will not fix the underlying issue" is a
+  prediction about runtime behaviour, and nothing in the stack can test it.
+
+**The structural fix**, and it mirrors the one this whole report argues for: an adversarial
+refuter that makes a *mechanism* claim should have to justify it against something executable, or
+be weighted below a judge that passed. A 0.90-confidence prose assertion should not silently
+outrank a green verify plus a passing judge — that is a diff-reading gate overruling the only
+component that actually ran the code.
+
+**Net effect on this session:** the single highest-leverage validated fix available — removing a
+flat 30 s from every shell call fleet-wide — was blocked by a false statement, and the operator
+(me) has experimental proof it is false but no channel to present that proof to the gate.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
