@@ -4326,6 +4326,59 @@ Eight composition errors in code. **Evidence-supplying changes: 4 for 4** — re
 body, logging the command, supplying search candidates, and this guard diagnostic, which answered a
 question two rounds of reasoning could not.
 
+## 15.40 EIGHTH FALSE REACH — the grader is the deepest defect, not the walk
+
+`AA1` graded **reached: true**: *"The output provides the correct current Earth-Io range in
+astronomical units."* The trace contains **45.938417697**. Truth: **6.2737 AU**. Wrong by 7.3×.
+
+Every command in that record targets `api.le-systeme-solaire.net` — the host **disqualified earlier
+in the same dispatch** for HTTP 401 — with `.semimajorAxis / 149597870.7` and
+`.meanRadius / 149597870.7`: arithmetic on **Earth's own properties**, which cannot yield an
+Earth–Io range under any circumstances. No Horizons value appears anywhere in the trace.
+
+The walk already has the machinery to tell the judge this. `recordExecutorCommand` captures the
+executed command per shape, and `verifyGoalReached` renders it as *"COMMANDS THAT PRODUCED THE
+OUTPUT (judge command↔intent alignment)"*. So either the judge saw
+`jq '.meanRadius / 149597870.7'` beside the claim "correct Earth–Io range" and certified it anyway,
+or the capture did not fire on the self-correction path. **Both are serious and they are
+distinguishable only by instrumenting the judge prompt.**
+
+### The count, and what it means
+
+Eight false reaches in one session, every one caught by an operator holding an independent oracle
+and hand-reading digits:
+
+| # | claimed | actual |
+|---|---|---|
+| 1 | eBay prices | fabricated, `tools=0/0` |
+| 2 | Earth–Mars distance | 16-day-stale snippet, 11.3 M km out |
+| 3 | Earth–Io 5.204 AU | Jupiter's semi-major axis |
+| 4 | Earth–Io 4.1999 AU | a hardcoded literal |
+| 5 | Earth–Io 4.1999 AU | that literal, replayed from cache |
+| 6–7 | various | graded false at the time |
+| 8 | Earth–Io 45.938 AU | Earth's mean radius ÷ 1 AU |
+
+**A substrate whose grader certifies plausible floats cannot learn from its own traces.** Thompson
+posteriors, ribosome extraction and reuse-before-derive all consume `reached`. Feeding that signal
+eight wrong greens in a day does not merely fail to help — it actively trains the selector toward
+the paths that produced them, which is how §15.30's fabricated command became a cached recipe.
+
+### This reframes the whole investigation
+
+I spent the session treating the poisoned arm (§15.33) and the last-mile extraction (§15.36) as the
+blockers. They are real. But **fixing both would still leave a grader that credits wrong answers** —
+and the retirement bug, the cached false reach, the masked-but-running units and this grader are all
+the same disease: *a mechanism that reports success without checking anything*. Four instances, four
+stores, one shape.
+
+The ranked repair order that follows is therefore **not** the one I would have given eight hours
+ago:
+
+1. **The grader** — nothing downstream is trustworthy while it certifies unchecked numbers.
+2. **Retirement** (`f2857fc`) — so dead arms stop winning selection.
+3. **Recipe eviction on reach override** — so a false green cannot become durable.
+4. Last-mile extraction, concurrency cap, concept-db.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
