@@ -2124,6 +2124,63 @@ difference is not quality — it is that mine carried a correct `vessel`/edit-si
 set the `vessel` field, overriding any vessel inferred from surrounding prose. The information is
 already in the record.
 
+## 15.6 ★★★ BLOCKER 3 CLOSED — landed, running, and measurably effective (partially)
+
+`b10c3f2` — **`Substrate Autonomous`, 2026-08-15 03:25:15** — landed on `origin/dev`:
+
+```diff
+-          _q3 ? recallConceptRows(_q3, 5, 4_000) : …
+-          _q1 && _q1 !== _q3 ? recallConceptRows(_q1, 5, 4_000) : …
++          _q3 ? recallConceptRows(_q3, 5, 10_000) : …
++          _q1 && _q1 !== _q3 ? recallConceptRows(_q1, 5, 10_000) : …
+```
+
+Two lines, only the constants — surgical and exactly the specified change. Same provenance pattern
+as blocker 1: **my dispatch failed on capacity, the demand persisted as gap `route-edit-02183570`,
+and the autonomous lane drafted and landed it.**
+
+**Verified running, not merely landed** — the distinction §8.1 says the system cannot draw about
+itself:
+
+| Check | Result |
+|---|---|
+| `origin/dev` | `10_000` at both call sites |
+| **live tree** `/vessels/goal-host-vessel/src/index.ts` | `10_000` |
+| unit restarted | `ActiveEnterTimestamp 03:25:47` |
+| live test suite | **294 pass / 0 fail** |
+
+**Effect measured, and it is partial:**
+
+| Window | recall success | fail | rate |
+|---|---|---|---|
+| 3 h before the fix | **0** | 32 | **0 %** |
+| since restart | 1 | 2 | 33 % |
+
+```
+03:26:19 [walk-concepts] consulted concept-db via discovery: 5 concept(s) recalled …
+03:27:08 [walk-concepts] concept-db could not be asked …
+03:28:02 [walk-concepts] concept-db could not be asked …
+```
+
+**The first successful walk-time concept recall observed this session.** Target-shape selection now
+sometimes runs with knowledge context instead of never. But two of three still fail, so the honest
+verdict is: **the timeout was a real bottleneck and was not the only one.** Measured latency was
+5.8–7.9 s against the old 4 s cap; the new 10 s cap clears the typical case and not the tail.
+
+**So the durable fix is search performance, not the budget.** A semantic search over 55,525
+concepts taking ~7.7 s (and sometimes >10 s) is the underlying cost — an ANN index over the
+embeddings would move the whole distribution under the cap rather than chasing it upward. Raising
+the timeout further would trade walk latency for recall on every goal.
+
+*Confidence: n=3 post-fix samples over ~3 minutes. The 0/32 baseline is solid; the 33 % figure is
+indicative only and should be re-measured over a longer window.*
+
+**Also worth noting against the post-land suite:** the cutover reported `pass=495 fail=4`, which
+looked like a regression. Running the suite on the live tree gives **294 pass / 0 fail** — the
+post-land run executes in the mitosis worktree with a different test population, so its counts are
+not comparable to the vessel's own suite. A `fail=4` in that report is not evidence of a broken
+landing, which is worth knowing before someone reverts on it.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
