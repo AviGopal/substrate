@@ -3379,6 +3379,93 @@ container can reach one. The gap is not "no web access"; it is that the substrat
 outside world* with *search the web* rather than *call an authoritative API*, and search returns
 stale values that read as current.
 
+## 15.24 ★★★★★ The read-at-use-time teaching channel fails ~80 % of the time — concept-db search takes 7.5 s against a 10 s timeout
+
+Following §15.23's conclusion (the walk equates *outside world* with *search the web*), the
+substrate-native intervention is to teach the class through the channel that is read. That channel
+was identified and its reader proven to run:
+
+- `recallConceptRows` → concept-db, and the recalled text is injected as **"Recalled substrate
+  concepts relevant to this goal (consider them when choosing target shapes)"** — it feeds the very
+  inference that chose `webSearchResult` (0.9) over `http_fetch` (0.8).
+- The recall predicate was read rather than guessed: ≥4-letter non-stopwords, deduped, sorted
+  longest-first, AND-matched at width 3 and width 1.
+
+A class-grain lesson was written accordingly (no API named — deriving the source is the goal).
+Verified recallable **through the exact identity the walk uses**: `astronomical` → 2 hits,
+`kilometres` → 2 hits, both the new lesson.
+
+**Then two consecutive Io dispatches never read it:**
+
+```
+[walk-concepts] concept-db could not be asked (no producer or transport error)
+                — recall unavailable, NOT an empty result
+```
+
+### The channel is chronically, not intermittently, broken
+
+| window | consulted | could-not-ask | genuinely empty |
+|---|---|---|---|
+| last 3 h | 12 | 16 | 7 |
+| last 60 min | 4 | 13 | 2 |
+| last 20 min | **1** | **5** | 0 |
+
+### Root cause — measured, not inferred
+
+| hop | latency |
+|---|---|
+| discovery `vesselCapability` resolve | **0.084 s** (fast; not the problem) |
+| concept-db `/v2/impulses/resolve` | **7.66 s / 7.77 s** (two consecutive trials) |
+
+The client timeout is 10 s and the walk issues **two queries in parallel** (`_q3` and `_q1`). At a
+7.7 s floor, any concurrency pushes both past 10 s, both return null, and the walk logs
+*"could not be asked."* concept-db's own log gives the reason:
+
+```
+WARN [concept-db] [searchConcepts] BM25 scores all zero (SurrealDB 3.0 IDF not persisted)
+                  — applying term-frequency proxy ranking {"term":"astronomical","matchCount":2}
+```
+
+Full-text ranking has degraded to an application-side term-frequency scan. Against a store already
+fighting its size ceiling, that scan costs ~7.5 s per query. **This is not a flaky transport — it
+is a search that is one concurrency spike away from its own timeout, permanently.**
+
+This retires the long-standing "intermittent concept-db recall" note: it was never intermittent.
+And it means **law 8 currently has no working delivery mechanism for the walk.** Every lesson the
+operator or the substrate writes for read-at-use-time recall is, four times in five, an archive.
+The failure is silent by construction from the outside — which is exactly why the log line
+distinguishes *could not be asked* from *nothing there*, and why that distinction is the only
+reason this was findable.
+
+### Two hypotheses raised and killed on the way
+
+- **"The operator's lesson landed in the wrong tenant."** An unauthenticated probe returned 0 hits
+  on every one of the lesson's own words while returning 5 for `reach`; the recallable rows were
+  all `org=default` and the lesson was `organizations:substrate`. This was nearly filed as a
+  tenant-split defect. Reading the consumer killed it: `recallConceptRows` sends
+  `Authorization: ApiKey ${API_KEY}`, and under that identity the lesson recalls fine. **The probe
+  was in the wrong tenant, not the write.** (Fifth wrong-copy error of the session.)
+- **"A substrate-authored fix was lost."** `b10c3f2` — autonomous, via mitosis cutover — raises this
+  exact timeout 4 s → 10 s and is *not* an ancestor of local `HEAD`. It **is** on `origin/dev` and
+  **is** live in the container (verified in the running tree). Nothing was lost; the local branch
+  was simply stale. Worth stating plainly because the fix is real, deployed, and **still
+  insufficient** — the substrate correctly diagnosed its own recall timeout and raised it to a value
+  the 7.5 s search still defeats under load.
+
+### What the Io re-dispatches did show
+
+With no lesson read and the floor prompt unpatched, target inference returned **`["shellResult"]`**
+(0.6) — *not* `webSearchResult` — and the walk ran a command that failed with
+`parse error: Invalid numeric literal at line 1`, a jq error: it curled a network endpoint and the
+response was not JSON. The honesty machinery then held:
+
+> *"refusing to satisfy with a failed/empty command; grading reach honestly (no hollow green)"*
+
+So on this wording the substrate already **chooses to fetch rather than search**, and the residual
+gap is narrower than anything reported earlier today: **command construction** — building a working
+API call and parsing what comes back. That is a materially more tractable failure than "cannot
+reach the outside world."
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
