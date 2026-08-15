@@ -4191,6 +4191,56 @@ plainly: *a timestamp is not an identifier — attribute via dispatch-id-keyed r
 for anyone reading these logs: on a substrate that dispatches its own work concurrently, the shared
 journal is unusable for attribution. Read the dispatch's own `walkLog`.
 
+## 15.37 ★★★★★ The dump detector fires correctly, the data is in hand — and the model re-fetches instead of extracting
+
+Final state of the chain, from Y2's own dispatch record:
+
+```
+attempt 2 -> curl 'ssd.jpl.nasa.gov/api/horizons.api?COMMAND=Io&MAKE_EPHEM=YES&EPHEM_TYPE=VECTORS&…' | head -c 4000
+self-correction attempt 2 — still degenerate (the command returned 3547 characters of raw body
+  with no line that states a value — the DATA was fetched but the ANSWER was never extracted from
+  it. Do not re-fetch: the body is shown above. Emit a command that parses the value …)
+attempt 3 -> curl '…horizons.api?…' | head -c 4000        (re-fetched again)
+```
+
+**Everything up to extraction now works.** The walk finds JPL Horizons through its own search,
+issues a valid request, reads 4000 bytes rather than 400, and lands **3547 characters of real
+ephemeris data**. The new unmined-dump check correctly refuses to call that an answer and states
+plainly what to do instead. The model re-fetches with different parameters — twice.
+
+### Why this one instruction failed where the body-recovery succeeded
+
+Both fixes put the same body in front of the model. The difference is what each then required:
+
+| fix | supplies | asks for | outcome |
+|---|---|---|---|
+| body recovery (§15.29) | the response bytes | *nothing* — the model draws its own conclusion | worked on first contact |
+| unmined-dump (this) | the response bytes | a **behaviour change**: parse, do not re-fetch | ignored twice |
+
+That sharpens the session's rule rather than contradicting it. **Evidence supply works when the
+evidence alone changes the answer; it fails the moment it has to be paired with an instruction**,
+because the instruction is the part that competes with habit — and the corrector's entire frame is
+*"synthesize a corrected command"*, so a model asked for a command produces a fetch, since the last
+one was a fetch.
+
+### The structural fix, specified but not built
+
+On detecting an unmined dump, **stop asking for a command.** Extract the value from the body
+directly — one focused call whose only job is "return the number this goal asks for, from this
+text" — and use the result as the artefact. That removes the behaviour request entirely: nothing has
+to *decide* to parse, because parsing is the only thing the step can do.
+
+Not built here deliberately. It is a new mechanism on the walk's acceptance path at the end of a
+session that produced **eight** composition errors, the last two of them the `head -c 400` example
+defeating my own 800-character threshold. The specification is the deliverable; the code is not.
+
+### Scoreboard on this session's own engineering
+
+**Evidence supply: 3 for 3** — re-fetching the eaten body, logging the command, supplying search
+candidates. **Decision rules and behaviour requests: 0 for 8.** The asymmetry is not luck: a
+supplied fact cannot compose wrongly with anything, while every rule must be right about states it
+cannot see, and every instruction must beat a habit.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
