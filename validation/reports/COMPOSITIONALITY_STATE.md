@@ -2309,7 +2309,54 @@ and it refused all of them with specific reasons —
 `donor-is-shell-dependent×1`. Faced with pressure to reuse *something*, it declined and said
 exactly why. That is the discipline §14 found missing in the drafter, working correctly here.
 
-## 15.9 ★★★ BLOCKER 2 ROOT CAUSE — `inputShapes` is read through a cast and never assigned anywhere
+## 15.9 ~~★★★ BLOCKER 2 ROOT CAUSE — `inputShapes` … never assigned anywhere~~ **RETRACTED — it is declared and assigned; most templates assign it EMPTY**
+
+> ⚠️ **Retraction of a claim I published with "Confidence: high".** The section below asserts that
+> `inputShapes` is undeclared in the executor ontology and never assigned, on the strength of a
+> "580 vs 0" grep. **Both halves are wrong.**
+>
+> **It is declared** — `ias-executor-ts/src/ontology.ts:46`:
+>
+> ```ts
+> export interface ActivityTask {
+>   inputShapes?: (string | InputShapeRef)[];   // ← declared
+>   outputShapes?: string[];
+> }
+> ```
+>
+> The cast in the trace sink exists because the declared type is a **union**
+> (`(string | InputShapeRef)[]`) and the sink wants `string[]` — not because the field is missing.
+>
+> **It is assigned**, in seed templates:
+>
+> | assignment | count |
+> |---|---|
+> | `inputShapes: []` (empty) | **91** |
+> | `inputShapes: ["…"]` (populated) | **28** |
+> | `outputShapes:` (control) | 473 |
+>
+> **How I got it wrong:** the "0 assignments" came from a grep piped through `head -6`, whose first
+> six hits were all in activity-api. I concluded "none in the executor" from a **truncated list** —
+> the identical error to the unordered `LIMIT 200` that produced my wrong 0/200 edge measurement in
+> §4. Twice in one session, a conclusion drawn from the first rows a query happened to return.
+>
+> **What is actually true, and it is a real finding — just a smaller one.** ~76 % of template tasks
+> declare `inputShapes: []`. For those tasks the in-walk ledger has nothing to match, so
+> `consumedInChain` stays empty and α-credit is withheld (§11.2). But it is **not structurally
+> impossible** as I claimed: 28 populated declarations exist, and walks over those tasks *can*
+> accumulate credit. That is consistent with §11.2's measured 8-of-68 templates having α > 1 —
+> a minority earning credit rather than none.
+>
+> **So blocker 2 is an authoring/data problem, not a missing-writer problem.** The fix is to
+> populate task `inputShapes` in templates (or derive them from the resolver's declared inputs at
+> mint time), not to add a missing assignment. That is a much larger and less mechanical change
+> than "one declaration plus one assignment", and my earlier framing of it as the
+> "highest-value remaining fix … small enough to land" was wrong on both counts.
+>
+> The `∅ → ∅` symptom the ribosome comment describes is therefore explained by *templates not
+> declaring inputs*, not by the sink dropping them.
+
+### Original section (claim retracted above; the observations below still hold)
 
 §11.2 established that per-task `input_shapes` are empty on every live trace, which makes
 `consumedInChain` structurally empty and α-credit permanently withheld. The cause is now exact.
