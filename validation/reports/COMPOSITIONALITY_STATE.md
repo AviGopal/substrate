@@ -2486,6 +2486,32 @@ at **op** granularity within a single file, not just at file granularity.
 > testing the bridge. The refuting check — *did any verify ever exceed 30 s and survive?* — cost one
 > grep of an existing report.
 
+### 15.11.1 Why my verify-duration predictions were worthless: the live tree is not the worktree
+
+I twice predicted whether a compose could verify in time by timing `bun test` in the **live**
+`/vessels/<vessel>` tree. That measurement is meaningless for this purpose:
+
+| tree | tests | files | elapsed |
+|---|---|---|---|
+| live `/vessels/development-vessel` | 195 | 15 | **152 s** (15 failing) |
+| compose worktree (from a real verify log) | **1707** | **226** | **53 s** |
+
+The worktree runs **9× more tests in a third of the time**. The live tree is slow and partly red
+because its tests bind ports and reach services the *running* vessel already owns — the same
+`EADDRINUSE` class that makes local-tools-vessel's suite unpassable in place. The isolated worktree
+has none of that contention.
+
+**Consequences for this report:** my "local-tools-vessel verifies in 7 s, so the fix is
+self-verifiable" reasoning was unfounded, and so was the inference that activity-api's cold
+worktree must exceed the window. Neither number came from the environment the verify actually runs
+in. (The local-tools `EADDRINUSE` finding does survive — the live vessel holds the port whether or
+not the source is in a worktree.)
+
+**The general rule, which I broke twice in one section:** *time the operation in the environment it
+runs in, or do not time it at all.* Compose verifies happen in `${WS_ROOT}/<composeId>/<vessel>`;
+that is the only tree whose timing means anything, and its numbers are recoverable from the verify
+output of any completed compose — where I eventually found them.
+
 ### Original section (measurements valid; causal conclusion retracted above)
 
 The single-op `org_id` goal (§15.10) produced the session's **first clean operator apply**:
