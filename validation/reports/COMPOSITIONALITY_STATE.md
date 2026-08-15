@@ -2920,6 +2920,41 @@ it.
 but I dispatched it at a file where I had already *measured* mis-localisation twice, and the one
 protection that would have caught a wrong-region edit — verify — cannot see inside strings.
 
+## 15.17 The refuter blocks a correct fix twice, and embedded evidence cannot reach it
+
+Blocker 6's fix was re-dispatched with the disproving measurement written into the goal text
+(`( sleep 4 ) & echo FAST` → 4006 ms vs `( sleep 4 ) >/dev/null 2>&1 & echo FAST` → 5 ms). It was
+drafted correctly, applied at line 95, **passed verify** (`ok: true`), and was **rejected again**:
+
+> *"The patch introduces a surface-only change … it does not resolve the underlying issue that the
+> sleep command remains tied to the caller's stdout, as the original watchdog line concerning the
+> sleep command itself is unchanged."* — conf 0.90
+> `[first judge had passed: adding the necessary output redirection to prevent the subshell from
+> holding open the caller's stdout, which directly addresses the stated problem]`
+
+**The objection is a text-level reading of a semantic change.** `( sleep N; kill … ) >/dev/null 2>&1 &`
+redirects the *subshell that contains the sleep*; the sleep's own token being unchanged is
+irrelevant, because file descriptors are inherited from the subshell. The refuter treats "the line
+mentioning sleep didn't change" as "the sleep still holds stdout."
+
+**Two independent runs, same false objection, same 0.90 confidence, same override of a
+correct-reasoning judge.** This is systematic, not a one-off.
+
+**And the evidence channel does not exist.** I embedded the experiment in the goal specifically to
+give the refuter what it could not compute. It made no reference to it. The refuter reviews the
+**diff**; the goal's justification does not reach it. So there is *no operator path* to correct a
+refuter that is wrong about a mechanism — you cannot show it a measurement.
+
+**Consequence: blocker 6 is unclosable through the compose pipeline.** Every other stage agrees the
+fix is right — the drafter produced it, apply succeeded, verify passed, the first judge passed —
+and one diff-reading component with no execution capability vetoes it, repeatably.
+
+**The asymmetry worth naming:** the refuter is excellent at *evidence-based* rejections it can
+check against the diff (inert changes, nested-vs-top-level placement, missing landing evidence) and
+unreliable at *mechanism predictions* it cannot check at all. Weighting a 0.90-confidence prose
+prediction above a passing judge **and** a green verify inverts the reliability ordering: the only
+components that actually executed anything are outranked by the one that did not.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
