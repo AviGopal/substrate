@@ -4241,6 +4241,49 @@ candidates. **Decision rules and behaviour requests: 0 for 8.** The asymmetry is
 supplied fact cannot compose wrongly with anything, while every rule must be right about states it
 cannot see, and every instruction must beat a habit.
 
+## 15.38 RETRACTION + the extraction step is gated on a probe that did not run
+
+**Retracting §15.37's central claim.** I wrote that the model "re-fetches instead of extracting."
+Z1's own record shows it does both, alternating:
+
+```
+attempt 1 -> curl '…horizons.api?COMMAND=499…' | head -c 4000            (4000-char dump)
+attempt 2 -> curl '…' | grep -oP 'R_AU\s+\K[0-9.]+'                      (Exit 1 — no match)
+attempt 3 -> curl '…' | head -c 4000                                     (dump again)
+attempt 4 -> curl '…' | grep -Po '(?<=RANGE=A)[0-9.]+'                   (no match)
+```
+
+**It is genuinely trying to parse.** Its extractions fail because it *guesses* Horizons field names
+— `R_AU`, `RANGE=A` — instead of reading them out of the body it just fetched. That is a materially
+different defect from "won't extract", and it is exactly the one the extraction step addresses.
+
+(Also visible: `COMMAND=499` is **Mars**. This run was parsing the wrong body throughout.)
+
+**Why the extraction step never fired.** Z1 contains **zero** `re-fetched the eaten body` lines: the
+body probe did not run, so `_probeBody` was empty and the extraction guard correctly declined.
+The probe is reached only for a `_prevCmd` containing a pipe whose fetch prefix is a lone
+curl/wget — and this dispatch ran the **`shell`** executor rather than `shellResult`. Every prior
+run where the probe fired was `shellResult`. So the extraction step inherits the probe's scope, and
+that scope does not cover both executors.
+
+Stated as a gap rather than patched: **`shell` and `shellResult` are two executors on the same walk
+with different evidence available to their correctors**, and every repair built on `_probeBody`
+silently covers only one of them. That is the sibling-call-site problem again, in a fix written the
+same day the lesson was recorded.
+
+### Error ledger for this session's own work
+
+Five inference/attribution errors, one shape: **generalising from a log without first checking that
+the mechanism being described had actually executed.**
+
+1. `groupBounded`'s `set -m` blamed for job-control noise — refuted by reproduction
+2. jq-consumed-body blamed for a failure that was a stale tree — C1 ran unpatched code
+3. `edit-intent-no-landed-edit` attributed to my goal text — belonged to concurrent autonomous dispatches
+4. "the model only re-fetches" — it alternates fetch and parse (this section)
+5. R1 reported as a real result — pull-sync had swept the patch mid-run
+
+Plus eight composition errors in code. Against that: **evidence-supplying changes remain 3 for 3.**
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
