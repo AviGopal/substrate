@@ -4430,6 +4430,43 @@ of this walk: **`shell` and `bash` are second-class executors that instrumentati
 Any future feature touching executor output should be checked against all three shapes before it is
 believed.
 
+## 15.42 ★★★★★ The substrate reconstructed the oracle query exactly — and lost it to nested shell quotes
+
+`S1`, run against the fully repaired chain:
+
+```
+curl 'https://ssd.jpl.nasa.gov/api/horizons.api?format=json&EPHEM_TYPE=VECTORS
+      &CENTER='500@399'&COMMAND='501'&START_TIME='2026-08-15'&STOP_TIME='2026-08-16'…
+```
+
+`COMMAND=501` is **Io**. `CENTER=500@399` is **Earth**. With a bounded time window. That is,
+parameter for parameter, the **exact query used as this report's independent oracle** — derived by
+the substrate with no endpoint, no schema and no body code ever supplied by an operator.
+
+It fails on **nested single quotes**: the inner `'500@399'` closes the outer `'…'`, the shell
+re-splits the argument, and jq receives garbage. The judge described it accurately — *"stderr
+suggests an issue with the jq command or the data it's processing."*
+
+**The semantic derivation is complete. What defeats it is `'` inside `'…'`.**
+
+### What that means for the execution contract
+
+The walk now independently: refuses fabrication, disqualifies a credential-demanding host in code,
+finds the authoritative keyless provider through the substrate's own search, selects the correct
+target body and observer centre, bounds the time window, reads generously rather than truncating,
+detects an unmined dump, and attempts extraction. Every one measured. The residue is **shell
+quoting** — a defect of the same kind as `head -c 400`: mechanical, local, and nothing to do with
+whether the system can reason about the goal.
+
+### Why this is not patched here
+
+The obvious repair — rewrite single-quoted URLs, or switch to `--data-urlencode`, or double-quote
+the URL — is a decision rule about command syntax, and this session ran **0 for 9** on those against
+**4 for 4** on evidence supply. The evidence-shaped version exists and is stated for whoever takes
+it next: when a command fails *and* its text contains a quote nested inside a same-type quoted
+region, hand the corrector the shell's own re-split argv rather than the intended string, so the
+mismatch between what was written and what bash received is visible instead of inferred.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
