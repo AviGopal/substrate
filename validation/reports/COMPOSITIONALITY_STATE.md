@@ -2263,6 +2263,52 @@ first, then compares.
 *not deployed yet* and *a second defect downstream*. I nearly waited out the first without testing
 the second. Checking the schema cost one query and distinguished them.
 
+## 15.8 A busy compose makes an edit goal fail as a *capability* gap
+
+Dispatch `cc172d0a` (the `org_id` follow-up) failed with a reason that misdescribes what happened:
+
+```
+no template produces the inferred target shapes [shellResult]; capability gap filed by the walk
+```
+
+The journal shows the routing was **correct** and the failure is a capacity artefact:
+
+```
+03:55:22  goal-target inference {"inferred_target_shapes":["shellResult"],"confidence":0.6}
+03:55:22  EARLY EDIT-INTENT DETECTED (pre-walk, names repos/activity-api/src/routes/execution-traces.ts)
+          — routing to feature_compose
+03:55:22  EARLY EDIT-INTENT feature_compose verdict=BUSY — falling through to walk
+03:55:30  [rebind] NO ADAPTATION for "shellResult" — cache=723 same-shape-candidates=73
+```
+
+**Edit-intent admission worked**: it recognised the goal, named the exact file, and chose
+`feature_compose`. The compose was busy, and the goal then **fell through to a walk that cannot
+perform edits**. The walk did what it always does — inferred a target shape (`shellResult`, 0.6),
+found no producer, and reported a *capability* gap.
+
+**So a queueing condition is reported as a missing capability.** The operator-visible reason names
+a shape the goal never wanted, from a plane that could never have satisfied it. Anyone reading
+`goal_status` sees "no template produces [shellResult]" and would reasonably start looking for a
+missing producer that is not missing.
+
+**No false demand was actually created** — I checked, expecting gap-store pollution, and found
+none: zero gaps filed since 03:50, while 11 pre-existing gaps already mention `shellResult`, so the
+new one deduplicated. Dedup is doing its job. The defect is the *reason text and the fallback
+path*, not the gap store.
+
+**The right behaviour is to queue, not to fall through.** An edit-intent goal that has already been
+correctly routed has exactly one viable producer; when that producer is busy the goal should wait
+for capacity (as the `[edit-intent] compose BUSY — waiting 45 s before retry` path does elsewhere)
+or fail *as a capacity refusal* — which the system already knows how to say, and says accurately in
+other dispatches: *"refused for CAPACITY (BUSY) … no draft was produced, so there is nothing to
+judge."* Two paths, same condition, one honest message and one misleading one.
+
+**Credit to the rebind gate**, visible in the same trace: 723 cached pathways, 73 shape-compatible,
+and it refused all of them with specific reasons —
+`store-mismatch(goal=trace-store,donor=host-system)×425`, `scaffold-too-weak(0.02)×26`,
+`donor-is-shell-dependent×1`. Faced with pressure to reuse *something*, it declined and said
+exactly why. That is the discipline §14 found missing in the drafter, working correctly here.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
