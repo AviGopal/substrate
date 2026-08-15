@@ -3466,6 +3466,94 @@ gap is narrower than anything reported earlier today: **command construction** �
 API call and parsing what comes back. That is a materially more tractable failure than "cannot
 reach the outside world."
 
+## 15.25 ★★★★★ The lesson steers the walk — and the same goal fabricates Jupiter's semi-major axis and is graded reached
+
+Five Io dispatches, each after a specific fix. They separate cleanly into the two systems this
+substrate currently is.
+
+| run | recall | inferred target | outcome |
+|---|---|---|---|
+| IO2 | could-not-ask | `shellResult` (0.6) | jq `Invalid numeric literal`; honest refusal |
+| IO3 | could-not-ask | `llm_completion_dispatch` (0.7) | hollow |
+| **IO4** | **consulted, 2 concepts** | **`http_fetch` (0.8)**, webSearchResult demoted to 3rd | `invalid URL: undefined` |
+| IO5 | could-not-ask | `web_search` (0.9) | **`reached=true`, FABRICATED** |
+
+### The lesson works — that is the one real result
+
+IO4 is the only run where the teaching channel was up:
+
+```
+[walk-concepts] consulted concept-db via discovery: 2 concept(s) recalled at 3 term(s)
+                "astronomical together computed"
+goal-target inference {"inferred_target_shapes":["http_fetch","concept_write"],"confidence":0.8,
+                       "alternatives":[["shellResult",…],["webSearchResult",…]]}
+```
+
+`http_fetch` first at 0.8, `webSearchResult` demoted to third. On every run where recall failed,
+inference went back to search. **Recalled concepts → target-shape inference → instrument choice is
+now a demonstrated causal chain, not an asserted one** — and the lesson named no API, so what moved
+was the class judgement, exactly as intended.
+
+### IO5 is a false reach, and worse than the Mars one
+
+> *"Earth to Io distance: 5.204 AU (computed for the present epoch, J2000.0)."*
+
+**5.204 AU is Jupiter's semi-major axis** — a textbook constant. "Present epoch, J2000.0" is
+self-contradictory (J2000.0 is 2000-01-01T12:00 TT). Oracle: **6.2734 AU**. The walk log shows no
+retrieval of any kind: recall down, inference back to `web_search`, and the value arriving as
+`llm_completion_result`. Graded false in the store (`updated:1`).
+
+**The class has escalated across the session, not improved:**
+
+1. §15.21 — fabricated, no tool call (a plausible price)
+2. §15.23 — retrieved but 16 days stale (real source, real citation)
+3. §15.25 — **never retrieved, a famous constant in the right unit, wearing an epoch**
+
+Each scored at least as well as the last. The worst failure got the best grade.
+
+**My own goal wording made it easier, and that is a method error worth recording.** I asked the
+system to "report which epoch was used", intending it as a grounding check — a real ephemeris
+states its epoch. Instead it handed the model a template to fill, and the judge treated a filled
+template as evidence. *A field that accepts your data is not a field that means it*; I wrote a test
+whose form could be satisfied without doing the work.
+
+### Blocker ranking, revised
+
+The reach gate accepting an unverified numeric answer now ranks **above** the derivation work. A
+substrate that fabricates and grades itself reached is worse than one that cannot answer, because
+the failure is invisible to every consumer downstream and poisons reuse-before-derive. The evidence
+needed to catch it is already on the trace (`tools=0/0`, `groundedOk=0`, no fetch shape in
+`completion_shapes`) and is not consulted at the reach decision.
+
+### Why it is a coin flip: concept-db search latency, measured
+
+The teaching channel is up roughly one run in five (§15.24). The cause, timed end-to-end:
+
+| query | ladder rungs | latency |
+|---|---|---|
+| `astronomical` (matches 2) | 1 | **8.8 s** |
+| `zzzznotaword` (matches 0) | all | **13.0 s** |
+| `zzzznotaword qqqqnope wwwwnah` (matches 0) | all | **23.9 s** |
+| REST `/concepts/search?q=astronomical` | 1 | 7.9 s |
+
+Two independent facts. **The term ladder is multiplicative** — `searchConcepts` walks rungs
+*sequentially*, so a query that misses on the full term-set pays for every rung, and 24 s against a
+10 s client timeout is unreachable by construction. And **even the cheapest possible query, a
+single term that hits on the first rung, costs 8.8 s against that 10 s timeout** — a 15 % margin.
+The REST route costs the same, so the cost is in the shared search path (FTS ladder + the awaited
+dense HNSW search over ~39 K rows), not in the resolve envelope.
+
+That is why the substrate's own fix (`b10c3f2`, 4 s → 10 s) was correct and still insufficient, and
+why behaviour on any given dispatch is decided by a coin flip on database latency rather than by
+anything about the goal.
+
+**Deliberately not shipped:** parallelising the ladder is the obvious fix and would take the 24 s
+case to ~9 s, but it runs every rung on every query instead of stopping at the first hit —
+multiplying load ~4× on the component that is *already* the bottleneck. Against a store with a
+documented OOM history from exactly this table, that is a plausible fix that could make things
+worse under concurrency, and it cannot be load-tested from here. Recorded as the recommended change
+with its risk stated, not landed on a guess.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
