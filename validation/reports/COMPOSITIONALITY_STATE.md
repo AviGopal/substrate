@@ -2860,6 +2860,66 @@ component that actually ran the code.
 flat 30 s from every shell call fleet-wide — was blocked by a false statement, and the operator
 (me) has experimental proof it is false but no channel to present that proof to the gate.
 
+## 15.16 ★★★ A destructive change landed FAVORABLE — because the damage lives inside a SQL string
+
+`b4f9148` (Substrate Autonomous, 10:03:03) landed a change caused by my edge-CREATE goal. It is
+**destructive**:
+
+```diff
+  const variantMetricsInsert = `
+-       INSERT INTO variant_performance_metrics {
++       INSERT INTO activity_composition_graph {
++ execution_id = 'derive-from-parent',
++ org_id = 'organizations:substrate',
++ success = $success,
++ created_at = time::now(),
+          id: type::thing('variant_performance_metrics', $record_id_slug),
+```
+
+It redirects the **`variant_performance_metrics` INSERT — the Thompson α/β posterior write path** —
+to the wrong table, and mixes SurrealDB `SET` syntax (`=`) into an INSERT object literal (`{ … }`).
+Mis-localised ~1,600 lines from the target, the §14 pattern on the same file for the third time.
+
+**It passed every gate:**
+
+```
+[mitosis-cutover] verdict=FAVORABLE
+  cited_checks=["typecheck","shape-dispatch","bun test (baseline-delta, flake-confirmed)"]
+```
+
+**Why — and this is the finding.** The corruption is inside a **template literal**. `tsc` does not
+parse SQL in backticks, and no test exercises that query against a live database. So a change that
+breaks a production write path is **invisible to typecheck, invisible to the test suite, and
+invisible to the shape-dispatch check**. The verify stack validates the *TypeScript around* the
+query, never the query.
+
+This is the sharpest instance yet of §12.1's conclusion — *the gates establish that a change reads
+correct and compiles; none establishes that the system still works* — and it shows the blind spot
+has a specific, exploitable shape: **anything inside a string literal is unverified.** Every SQL
+query, every shell command built as a string, every prompt template. The compose pipeline edits
+those constantly.
+
+**Two intermediate claims of mine were wrong and are recorded rather than quietly dropped:**
+
+1. *"It landed from an UNFAVORABLE compose — a gate bypass."* Wrong: the report I read (09:48,
+   UNFAVORABLE, applied at 1728–1731 — the *correct* region) belongs to a **different** compose.
+   The one that landed (mitosis `10-00-33`) is a later run.
+2. *"It landed with no recorded judgment."* Also wrong: its verdict is in the cutover log, and it is
+   FAVORABLE.
+
+Both errors came from reasoning off the newest report on disk rather than the cutover record that
+actually governs the apply. The mitosis log is the authority for what landed; the proposals
+directory is not.
+
+**Recovery:** reverted locally (`cee3686`) and in the in-container clone (`fc64261`, verified —
+`INSERT INTO variant_performance_metrics` restored, zero occurrences of the wrong table).
+**`origin/dev` still carries the corruption and needs the push**; the hub will otherwise converge to
+it.
+
+**Operator responsibility:** my goal caused this. The goal text was correct and schema-validated,
+but I dispatched it at a file where I had already *measured* mis-localisation twice, and the one
+protection that would have caught a wrong-region edit — verify — cannot see inside strings.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
