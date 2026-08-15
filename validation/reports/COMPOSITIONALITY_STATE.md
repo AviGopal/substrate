@@ -1,0 +1,1272 @@
+# Compositionality state — measured from the running substrate
+
+All figures read live from the hub trace store (`syzygy.host:18080`) via the cockpit
+(`registry_query`, `resolve_impulse`) and the read-only GET routes
+`/v2/activities/topology-coverage` and `/v2/activities/composition/graph`
+(full pagination, 2029 rows = whole table). Local `:18080` and `:18090` are dark here —
+this deployment is a spoke and masks the trace store, so every read above resolves on the hub.
+
+## 1. Vocabulary and fleet
+
+| Measure | Value |
+|---|---|
+| Advertised shapes in the registry | 383 |
+| Containers up | `substrate-live` (6d), `substrate-ui` (4d), `substrate-ui-local` (18h) |
+| Locally answering | discovery `:18100`, goal-host `:18210`, concept-db `:18260` |
+| Locally dark (masked/hub-served) | activity-api `:18080`, development-vessel `:18090` |
+
+## 2. State-space coverage (topology)
+
+| Measure | Value |
+|---|---|
+| Distinct pool signatures | 1039 |
+| Total v1 observations | 1,407,356 |
+| Avg templates per signature | 2.31 |
+| Max templates per signature | 334 |
+| **Dark signatures (≤1 candidate template)** | **829 / 1039 = 79.8 %** |
+| Observation window | 2026-07-01 → live |
+
+**Read:** on four signatures in five the selector has exactly one candidate, so there is
+nothing to choose between — Thompson has no differentiation surface there. Learned selection
+is real on ~20 % of the state space.
+
+## 3. Selection write-back health — HEALTHY
+
+| Measure | Value |
+|---|---|
+| Total (template × signature) cells | 2478 |
+| Cells with an observation | 2478 (100 %) |
+| Observed but still Beta(1,1) | **0** |
+| Ungraded-despite-observation fraction | **0.0** |
+
+Confirms the 08-14 baseline (goal-path 0/10083). The earlier "24 % still Beta(1,1)" concern
+does not reproduce: every observed cell is graded. Grading is not the bottleneck.
+
+## 4. Composition graph — structurally present, **frozen since 2026-07-14**
+
+| Measure | Value |
+|---|---|
+| Edges | 2029 |
+| Distinct parent→child pairs | 1364 (**665 duplicate rows**) |
+| Distinct nodes | 644 (546 parents, 361 children) |
+| Edges that ever succeeded (weight > 0) | 1214 / 2029 = 59.8 % |
+| Composed executions | 47,310 |
+| Composed successes | 13,819 = **29.2 %** |
+| Self-loops | 0 |
+| **Newest `updated_at`** | **2026-07-14T18:48:03Z (31 days ago)** |
+| Edges updated in last 7 d / 24 h | **0 / 0** |
+| Writer provenance | 2029/2029 rows carry `execution_id: composition-edge-reconcile` |
+
+By edge kind:
+
+| Kind | Edges | Executions | Successes | Ever-succeeded |
+|---|---|---|---|---|
+| genuine | 1182 | 7,829 | 5,488 | 756 |
+| hub | 440 | 34,983 | 4,271 | 85 |
+| scaffold | 407 | 4,498 | 4,060 | 373 |
+
+`hub` edges are a minority of rows (440/2029) but carry **74 % of all composed executions**, and
+they convert at **12.2 %** (4271/34,983) against **70.1 %** for genuine edges (5488/7829); only
+85/440 hub rows have ever succeeded. The hub-shaped (goal-bridging) edges are where composition
+executions go to die, consistent with the known producer/consumer key-mismatch defect (bridges
+minted on `["goal"]` instead of interior shape-to-shape edges).
+
+Learned compositions are a thin layer: **8 of 644 nodes** are `learned-composition-*`,
+touching 40 edges, 24 of them live.
+
+**Load-bearing finding:** **no writer has landed a composition edge since 2026-07-14**, while the
+fleet executed 7,740 validator-dispatches in the last 24 h alone. Composition learning is
+reading a July snapshot.
+
+### Why it froze — and why the landed fix is inert
+
+Every stored row carries `execution_id: composition-edge-reconcile`. The original per-execution
+writer (`POST /v2/activities/composition`) has **no caller** in any vessel worktree — a fact the
+codebase itself already records at `execution-traces.ts:1681`: *"the sole edge writer … has no
+caller, so the graph froze."*
+
+**That defect was already found and fixed.** `516fc73` (2026-08-11) added
+`deriveCompositionEdgeFromParent()`, called at trace ingest whenever `body.parent_execution_id`
+is present, deriving the producer→consumer edge from the authoritative `execution` table. Both
+legs are landed and current:
+
+| Leg | Location | State |
+|---|---|---|
+| Stamper | `ias-executor-ts` `activity.ts` sets `parentExecutionId` | HEAD == origin/dev == superrepo pointer |
+| Sender | `activity-api-trace-sink.ts:161` sends `parent_execution_id` | landed |
+| Deriver | `execution-traces.ts:1690` upserts the edge | landed `516fc73` |
+
+**And the hub is running it.** Proof without host access: the hub's `/v2/activities/topology-coverage`
+returned `total_cells` / `ungraded_despite_observation`, fields introduced **only** in `623b6ea`,
+which is HEAD and a descendant of `516fc73`. So the "not deployed" hypothesis is refuted — the
+running build contains the fix.
+
+**Therefore the fix has been live for 3 days and has produced zero edges.** Not one row's
+`updated_at` has moved past 2026-07-14. This is an *inert landed fix* — the class the 08-14 note
+names as the frontier — and it is now sitting on the compositionality path itself.
+
+Three candidate mechanisms, narrowed by the fact that even **UPDATE**s to the 2029 existing rows
+are not firing (an UPDATE needs no `org_id` and would bump `updated_at`):
+
+1. **`body.parent_execution_id` never arrives at ingest** — the call-site gate is simply never
+   true. Consistent with everything observed; would produce exactly zero writes of either kind.
+2. **The parent lookup returns nothing** — `SELECT activity_id FROM type::thing('execution', $pid)`
+   misses (id-format mismatch, or the row lives in `activity_execution_traces` not `execution`).
+   This path `return`s **silently — no log at all**, so it would be invisible.
+3. **The CREATE fails the `org_id` assert** — the `CREATE activity_composition_graph SET …` omits
+   `org_id`, and on the root connection `$auth.org_id` resolves to NONE. The *sibling writer in
+   the same file* documents this exact trap (`activities.ts:~7440`: "A new-edge CREATE that omits
+   org_id is swallowed by the assert and never [persists]"). This would block new edges but **not**
+   updates — so it cannot be the whole story, though it is a live latent bug that will bite the
+   moment (1)/(2) are fixed.
+
+**Discriminating instrument:** the inner `catch` logs `[composition-edge] derive-from-parent failed`.
+Grep the hub's activity-api journal for that string. Present ⇒ (3). Absent ⇒ (1) or (2), separable
+by adding a log to the silent early return. This check requires hub host access, which this spoke
+does not have.
+
+## 5. Live execution (24 h, `groupedExecutionStats`)
+
+| Activity | Count | Success rate |
+|---|---|---|
+| validator-dispatch | 7740 | 100 % |
+| slot-binding | 1559 | 100 % |
+| development-vessel:disk-space-observer-tick | 693 | 97.4 % |
+| development-vessel:mitosis-tick | 433 | 78.5 % |
+| auto-bridge-problem_detection | 216 | 53.7 % |
+| **universal-tool-fallback** | 151 | **30.5 %** |
+| ribosome-extract | 118 | 99.2 % |
+| **development-vessel:scaffold-and-publish-vessel** | 108 | **0 %** |
+
+404 activity groups active in 24 h. `universal-tool-fallback` at 30 % is the ReAct floor's
+observed hit rate; `scaffold-and-publish-vessel` at 108 runs / 0 successes is a livelocked
+family by the standard detection rule (high count, near-zero success rate).
+
+## 6. Instruments that are themselves hollow
+
+Three of the four composition-facing readouts cannot be trusted as stated:
+
+1. **`compositionSuccess` reports "50 compositions, 1997 executions, 100.0 % success".**
+   Verified to be the top-50 edges with `weight == 1` ordered by execution count
+   (reproduced exactly: 108/104/92 head rows, 2021 executions). It is a survivors-only
+   view presented as a population. Honest population: 29.2 %.
+2. **`activityTemplatesByMetrics` returns 2 templates "with sufficient execution history"**
+   against 404 active activity groups in the same 24 h — a threshold filter measuring itself.
+3. **`topologyCoverage.success_rate` reports 0** for signatures whose activities run at
+   100 % in `groupedExecutionStats` (validator-dispatch: 1.11 M observations, `success_rate: 0`).
+   Known broken display (0 % at α=493); not a health signal.
+4. **The report shapes that would measure compositionality directly are unreachable.**
+   `composition_coverage_report`, `learned_topology_snapshot`, `reachable_unlearned_report`
+   all resolve to one registry row — `development-vessel-local@spoke-5d97a8c9`,
+   `http://127.0.0.1:18401`, **protocol libp2p** — which the cockpit rewrites to an HTTP
+   address and hangs on (nothing answers `127.0.0.1:18401` locally either). Advertised,
+   unserved.
+
+## 7. Addendum — is it working? (measured, same session)
+
+**Autonomy fires daily and lands with no hands.** Substrate-authored commits appear on every
+one of the last 10 days (4–32/day, 128 total).
+
+**But it carries under 1 % of the work.** Last 7 days across all vessel repos:
+
+| | Commits | Lines changed |
+|---|---|---|
+| Substrate Autonomous | 76 | **412** |
+| Operator (DevBob Assistant) | 797 | **51,894** |
+
+Autonomy's share of changed lines: **0.79 %**. Diff-size distribution of the 76 autonomous
+commits: **44 are ≤2 lines**, 23 are 3–10 lines, 9 exceed 10 lines. The mechanism works at
+one-line-modification grain; nothing structural has been authored autonomously.
+
+**Durability:** 8 of the 76 autonomous commits were explicitly reverted (10.5 %). That count
+excludes inert-but-kept commits, which the 08-14 note identifies as the real frontier — a
+commit can be inert, typecheck, pass the reach gate, and close a gap.
+
+**Reports have no runtime reader.** 9 reports now live in `validation/reports/`, all written
+2026-08-11 → 08-14. A tree-wide search for any reference to `validation/reports` in vessel
+source, `scripts/`, or `.claude/` hooks returns **exactly one hit — a report citing another
+report**. Nothing in the running system reads them. They are operator artifacts, which is
+lawful only if their lessons are separately routed into the channel that *is* read at use time
+(concept-db → `compose_lesson` → drafter prompt).
+
+Spot-check of that channel: concept-db holds a concept matching this session's central finding
+(credit/composition edges failing to reach the selection-visible store) — but its
+`source_type` is `memo`, created 2026-07-21. Operator-written, three weeks old. The channel
+works; it is being fed by hand, not by extraction from these audits.
+
+**Gap-triple unreadable from here.** `substrateGap` resolves to the same dead libp2p row as
+the composition reports (`development-vessel-local@spoke-5d97a8c9`, `127.0.0.1:18401`), and
+the hub's development-vessel does not answer on `:18090` or `:18401` from this spoke. Law 7's
+progress measure — close rate, latency, durability — cannot currently be read from the cockpit.
+
+## 8. What consistent self-development requires
+
+Three questions, answered from the mechanisms above rather than in general.
+
+### 8.1 Consistency: close the effect loop, not the dispatch loop
+
+The dispatch loop is closed and healthy — goals route, walks reach, commits land, every day.
+What is open is the **effect** loop. Two landed fixes on the compositionality path are inert
+(`516fc73` here; `bafd83d` per the 08-14 note), and 44 of 76 autonomous commits are ≤2 lines.
+The system cannot tell "landed" from "landed and working," so its own success signal is
+uncalibrated — which is precisely why it plateaus at one-line edits.
+
+What's needed, in dependency order:
+
+1. **A post-land effect probe.** Every fix should be required to name, at authoring time, an
+   observable that will change if it works — here: "an `activity_composition_graph` row with
+   `updated_at` > land time." Then check it on a delay. This is the generalization of the
+   close-oracle work (`007163ab`) from provenance to *measurement*, extended past the commit.
+   Without it, "inert" is indistinguishable from "fixed" and every downstream metric inherits
+   the error.
+2. **No silent early returns on a learning path.** Mechanism (2) above would be invisible today.
+   A path whose job is to write learning signal must log when it declines to write.
+3. **Restore the gap-store read path.** Law 7's triple (close rate, latency, durability) is
+   currently unreadable from the cockpit — `substrateGap` resolves only to a dead libp2p row.
+   A system that cannot read its own scoreboard cannot prioritize, and the operator ends up
+   choosing the work, which is the S1 state the trajectory is trying to leave.
+
+### 8.2 Learning from arbitrary goals: grade the walk, not just the leaf
+
+Grading is healthy at the cell level (0/2478 ungraded) and ancestor credit propagates along
+`composition_chain` (`posterior-update.ts:558`). But 79.8 % of signatures have exactly one
+candidate template, so on four goals in five there is no selection to grade — the posterior is
+recording "the only option worked," which teaches nothing transferable.
+
+Learning from an *arbitrary* goal requires the walk to leave behind more than a leaf verdict:
+
+- **Record the counterfactual at decision time** (law 12). When the walk picks a producer, the
+  candidates it *rejected* are the negative examples. Today only the taken path is graded, so
+  the posterior can rise without any evidence the choice was better than the alternative.
+- **Grade the decomposition, not only the outcome.** A reached goal whose walk took a wasteful
+  route and a reached goal that reused a learned pathway are currently indistinguishable in the
+  signal — both are `reached:true`. Reach is a floor check; it cannot drive improvement past it.
+- **Feed the drafter channel from executions.** `compose_lesson` (§8.3) is read at prompt-build,
+  which makes it the one channel that teaches. It is currently fed only by *failure classes*,
+  and even then the lesson text is a constant looked up from a hardcoded table
+  (`COMPOSE_LESSON_GUIDANCE`) — the only learned quantity is which class fired and how often.
+  Nothing extracts a lesson from a *reached* execution. That is the missing half of law 4.
+
+### 8.3 Teaching composition: the edge is the unit, and nothing mints edges
+
+This is the sharpest structural finding. Composition is taught by **edges**, and the system
+currently mints **nodes**:
+
+- The ribosome extracts reached executions into `activity_templates` — `INSERT INTO
+  activity_templates` is its only write. It creates a new node and **no edge**.
+- The edge table has one intended live writer, which is inert (§4).
+- The read side is genuinely wired: `discover-by-shapes.ts:154` augments every candidate with a
+  `composition_score` computed from `activity_composition_graph`. **The consumer is live and is
+  reading a month-stale table.** This is the write≠read defect the earlier audits named, in its
+  most load-bearing instance — selection is being scored on July.
+
+So the teaching order is forced, and it is not "add a composition feature":
+
+1. **Make the edge writer actually write** (§4 diagnosis). Until then every composition
+   improvement is measured against a frozen table and will read as no-effect.
+2. **Have the ribosome mint the edge alongside the node.** When it extracts a template from a
+   reached multi-step execution, the `composition_chain` of that execution *is* the edge list.
+   It is already on the trace; it is simply not being written to the graph.
+3. **Then, and only then, reuse can compound.** First/last-mile adaptation (the "middle" of the
+   execution expectation) needs a populated edge graph to find a body to adapt — with 8 of 644
+   nodes being `learned-composition-*` and edges frozen, there is nothing to reuse, which is why
+   the observed behavior is re-derivation.
+
+The general principle the three answers share: **the substrate's learning surfaces are all
+present and all under-fed.** Grading, credit propagation, the lesson channel, the composition
+score — each is wired and live. What is missing in every case is the *writer* that turns a
+reached execution into the structure those consumers read. Adding more consumers (more reports,
+more scans) does not help; the reports in `validation/reports/` have no runtime reader at all.
+
+## 9. Remaining wiring inconsistencies, and whether the system finds them itself
+
+### 9.1 The immune system is trace-driven, and the live defects are trace-invisible
+
+`detector_coverage_scan` is the meta-detector — it exists precisely to notice "a recurring bug
+class has no detector," and its own header calls this "the recursion the operator has been
+running by hand." It works by grouping **execution traces** by `failure_mode.type` and asking
+whether a cluster's traces are cited by an existing gap.
+
+That design has a structural blind spot: **it can only see defects that produce a failing
+trace.** The composition-edge freeze produces none — trace ingest succeeds, the derivation is
+detached (`void … .catch(() => {})`), and one of its exit paths returns silently. Nothing fails;
+a write simply never happens. The same shape holds for the other standing defects:
+
+| Defect | Manifests as | Trace-visible? |
+|---|---|---|
+| Composition edges frozen | an absent write | **No** |
+| Inert landed diff (`bafd83d`, `516fc73`) | a commit that changes nothing | **No** |
+| Pointer-bump workflow dead | a step that stopped running | **No** |
+| Detector never scheduled | an execution that never occurs | **No** |
+| Vessel down, LLM 401s, OOM cascade | failing executions | Yes — and these *are* caught |
+
+The immune system is healthy against the class it can see and blind to the class it cannot.
+The load-bearing defects have migrated into the blind spot. **Absence-of-write is the frontier,
+and nothing currently watches for it.**
+
+### 9.2 The detector for this defect exists, is unscheduled, and could not detect it anyway
+
+`composition_flow_health_scan` is purpose-built for composition-graph health. Two independent
+failures:
+
+1. **Nothing selects it.** A detector runs when it has a seed template in `src/seed/` (that is
+   how `resolver-distribution-audit-tick`, 293 runs/week, is selected). `composition_flow_health_scan`
+   has a resolver and a route case in `impulses.ts:389` but **no seed template and zero references
+   from any seed file** — it is reachable by shape and selected by nothing.
+2. **Its predicate is structural, not temporal.** It computes connected components and edges-per-cell.
+   Grepping all three composition-facing detectors (`composition-flow-health-scan`,
+   `compose-topology-tick`, `learning-transfer-report`) for `updated_at` / `created_at` /
+   `stale` / freshness returns **zero hits**. A month-frozen table has exactly the same component
+   structure as a live one, so it reads as healthy. Even if scheduled, it would not have fired.
+
+**22 detector resolvers are orphaned this way** — no seed template and referenced by no seed
+template: `advertised-shape-coverage-scan`, `composition-flow-health-scan`,
+`concept-credit-integrity-scan`, `consumer-productivity-audit`, `db-contention-observer`,
+`docs-align-scan`, `docs-decision-answer-scan`, `efficiency-scan`, `env-gate-scan`,
+`goal-host-behavior-scan`, `implicit-vessel-scan`, three `obsidian-*-scan`s,
+`orphaned-org-write-scan`, `prior-seed-efficacy-scan`, `project-thread-scan`,
+`resolver-latency-ceiling-scan`, `schema-assert-drift-scan`, `solicitation-outcome-scan`,
+`transport-health-observer`, `vessel-exercise-scan`.
+
+Caveat against overclaiming: orphaned-from-seed does **not** mean never-executed. `env_gate_scan`
+is known to run when a goal routes to it (`deterministicEnvGateRoute`). The correct reading is
+**never selected autonomously** — these fire only if a goal happens to name their territory,
+which makes their coverage a function of what the operator asks about. That is the opposite of
+boredom-driven, condition-selected work (law 5).
+
+### 9.3 Is it discovering and resolving on its own?
+
+**Detection: yes, at volume, and genuinely autonomous.** 404 activity families executed in 7 days;
+the tick family (`gap-to-scenario-bridge` 8874, `mitosis` 3377, `drafter-trigger` 357,
+`template-promote` 276) runs continuously. The 08-13 audit established the full chain with no
+operator hands: self-scan → self-filed gap → self-authored close-goal. That machinery is real.
+
+**Resolution: partially, and it cannot currently grade itself.**
+
+- Autonomous commits land daily but carry 0.79 % of changed lines, 44 of 76 being ≤2 lines.
+- Two fixes on this path landed and are inert; nothing noticed either.
+- The gap triple (law 7) is **unreadable from the cockpit** — `substrateGap` resolves only to a
+  dead libp2p row — so close rate, latency, and durability cannot be checked at all.
+
+**The honest verdict:** the system reliably discovers what fails loudly and reliably fixes what
+is small. It is structurally blind to what fails silently, and it has no instrument that would
+tell it — or the operator — that a landed fix did nothing. Its self-development is consistent
+in *mechanism* and not yet in *effect*.
+
+### 9.4 The one detector that would close the class
+
+Everything above is one missing predicate: **"a store that should be written is not being
+written."** A liveness/staleness detector — for each learning-signal table (composition edges,
+gap store, concept writes, posterior cells), assert `max(updated_at)` is within its expected
+cadence, and file a gap when it is not — would have caught the composition freeze on 2026-07-15,
+the pointer-bump death on 08-10, and both inert fixes. It is the detector-of-absence the
+trace-driven family cannot express, and it is the highest-leverage single thing to add.
+
+## 10. LIVE INCIDENT — the local development-vessel has been dead 13 days
+
+Found while checking whether the gap store was truly unreachable. **`development-vessel.service`
+on this spoke is crash-looping and has been since 2026-08-02** — 2622 restarts, ~5 s apart.
+
+**Root cause: its systemd unit was overwritten by a mitosis cutover.**
+
+```
+ExecStart=/root/.bun/bin/bun …/development-vessel/dist/resolvers/vessel-mitosis-cutover.js
+Environment=PORT=8301
+```
+
+`ExecStart` points at **`vessel-mitosis-cutover.js` — a resolver script, not the vessel server**.
+It runs, does nothing, exits 0 in under a second, and `Restart=always` starts it again. `PORT` was
+also rewritten from the inventory's `8090` to `8301`. The inventory
+(`vessels.inventory.json`) still declares `{"unit": "development-vessel.service", "role":
+"compute", "health_port": 8090}`, so the rendered unit and the declared intent disagree.
+
+This is the substrate's **self-modification corrupting its own service definition** — vessel
+mitosis wrote a child's cutover entrypoint over the parent unit.
+
+### Why nothing reported it — the blind spot of §9.1, exactly
+
+1. **It exits 0.** The journal records `Deactivated successfully` 2622 times. No crash, no error
+   output, no failing trace. Trace-driven detection (§9.1) cannot see it.
+2. **Bootstrap deadlock.** The detector that would catch this is
+   `systemd-unit-health-observer` — and it is a **development-vessel resolver**. The vessel
+   hosts the observer that would report the vessel being down. This is failure class 4
+   (bootstrap-deadlock) in its purest form.
+3. **The socket still listens.** Docker's proxy holds `:18090` open, so an external probe gets a
+   hung connection, not a refusal — indistinguishable from a slow vessel.
+
+### What it explains
+
+Several separate puzzles in this report collapse into this one cause:
+
+- `substrateGap` unreadable ⇒ **law 7's gap triple has been unmeasurable for 13 days**.
+- `composition_flow_health_scan`, `learned_topology_snapshot`, `composition_coverage_report`
+  "advertised but unserved" — the registry row points at a vessel that is not running.
+- `memoryNote` local recall degraded (law 10's authoritative store).
+- `feature_compose` unavailable locally — the drafter.
+
+The fleet kept working because the **hub** serves these shapes; the dev-vessel activity counts in
+§5 (`mitosis-tick` 3377, etc.) are the hub's, read through the hub trace store. This spoke has
+been quietly half-blind the whole time.
+
+### REPAIRED 2026-08-15T00:42Z
+
+Root cause was more specific than first written: the corruption was a **shadowing override**.
+Core vessel units live in `/lib/systemd/system/`; mitosis had written
+`/etc/systemd/system/development-vessel.service`, which takes precedence, plus a
+`development-vessel` entry in the **dynamic** manifest
+`/workspace/substrate/fleet/vessels.manifest.json` carrying
+`exec: dist/resolvers/vessel-mitosis-cutover.js`, `PORT: 8301`. The correct unit in `/lib` was
+never damaged — `ExecStart=…/src/index.ts`, `PORT=8090`.
+
+Repair (both artifacts backed up to `/workspace/repair-backups/` first):
+
+1. moved the shadowing override aside → `/lib` unit takes effect
+2. `systemctl daemon-reload`
+3. dropped the bogus `development-vessel` entry from the dynamic manifest, so a future
+   `vessel-ctl` render cannot re-install it
+
+**Verified live:** `FragmentPath=/lib/systemd/system/development-vessel.service`,
+`SubState=running`, and `GET :18090/health` → `{"status":"ok","vessel":"development-vessel",
+"discovery":{"registered":true}}`.
+
+**Durability proven against the mechanism most likely to undo it.** At 01:33:34 `substrate-pull-sync`
+completed its converge cycle and genuinely restarted the vessel (PID 2286225 → 2314263). After that
+restart the unit still resolves to `/lib/systemd/system/development-vessel.service` with
+`ExecStart=…/src/index.ts`, healthy and serving (`in_flight: 2`). Before the repair, this same
+convergence cycle would have restarted it straight back into `vessel-mitosis-cutover.js`. Removing
+the dynamic-manifest entry — not just the shadowing unit file — is what makes the fix hold.
+
+### What the repair immediately unblocked
+
+- **The gap store is readable for the first time in 13 days.** Law 7's triple, measured:
+  **1022 gaps** (all within a 7-day retention window) — **281 closed (27.5 %)**, 365 open,
+  **375 rejected (36.7 %)**, 130 detected in the last 24 h, oldest open 2026-08-08.
+  The high rejection share is its own question, now finally askable.
+- **`composition_flow_health_scan` ran for the first time in its existence** (§9.2 — it had no
+  seed template and no scheduler, and its host vessel was dead). First-ever verdict:
+
+  | field | value |
+  |---|---|
+  | verdict | **`flow_split`** |
+  | components | **11** (credit cannot mix across them) |
+  | nodes / genuine edges | 384 / 902 |
+  | genuine edges per cell | 0.274 |
+  | bridges per reached chain | 0.037 |
+  | **parented recent traces** | **174 / 200 (87 %)** |
+
+  It filed its own gap (`gap-composition-flow-components-split`, `gap_posted: true`) — the
+  detection→gap loop closing with no operator authoring the finding.
+
+### Hypothesis (1) refuted, (2) confirmed
+
+`parented_recent_traces: 174/200` **refutes §4 hypothesis (1)** — `parent_execution_id` *is*
+arriving on 87 % of recent traces, so the ingest gate fires.
+
+Hypothesis (2) is confirmed by direct test. The derivation's lookup
+`SELECT activity_id FROM type::thing('execution', $pid)` returns **empty** for a real trace's
+parent id, against an `execution` table holding **150,000 rows** (140,003 of them `exec_`-prefixed).
+The query form is *correct* — re-running it with an id known to exist returns the right
+`activity_id` — so the failure is that the referenced parent rows are not present under that id
+at ingest time. And the code then does:
+
+```ts
+if (!parentActivityId || parentActivityId === childActivityId) return;   // ← no log
+```
+
+**A silent return on the learning path.** Exactly the §9.1 blind spot, in the one place that
+would have explained a month-frozen graph. Fix dispatched as a goal (not hand-edited) —
+dispatch `572aac4a`.
+
+### The original fix proposal (superseded by the repair above)
+
+The vessel that hosts the self-repair drafter is the one that is down, so the system cannot
+compose its own repair — this is squarely the "intervene only on intractable blockers" case.
+Re-render the unit from the inventory and restart:
+
+```
+make -C scripts/substrate restart-development-vessel     # re-renders from vessels.inventory.json
+# verify: ExecStart ends in the server entrypoint, PORT=8090, then
+curl -m 10 http://127.0.0.1:18090/health
+```
+
+**Not applied** — rewriting a systemd unit on a running substrate is an operator decision.
+
+### The recursion (law 6)
+
+Patching this instance is not the lesson. Three questions:
+
+1. **What detects the class without me?** A unit-liveness check that runs **outside** the vessel
+   it watches (the watchdog cannot be hosted by its subject), asserting `NRestarts` is not
+   climbing and `ActiveEnterTimestamp` is stable. Note this is the *same missing predicate* as
+   §9.4 — "something that should be alive/written is not" — now confirmed twice, in two
+   subsystems, from two independent directions.
+2. **What should have generated the goal?** Nothing did, for 13 days. The absence of a
+   self-authored gap here is itself the gap.
+3. **Why did mitosis get to write the parent's unit?** A cutover that can overwrite the
+   ExecStart of a *running parent* is a self-alteration with no guard. `self_alteration_funnel_scan`
+   exists — and is one of the 22 orphaned detectors from §9.2.
+
+## 11. Self-development observed live, post-repair (2026-08-15T00:45–01:03Z)
+
+Within minutes of the vessel repair the substrate resumed autonomous work. Observed directly in
+the `development-vessel` journal — these are the system acting, not the operator:
+
+| Signal | Evidence | What it proves |
+|---|---|---|
+| Autonomous gap selection | `[gap-to-feature] pick {gap_id: route-edit-7f9d24a8:3-narrowed, score: 1.4, landability: 0.7, pool: 290, hopeless_excluded: 71, tied_at_top: 1}` | Real prioritization over a 290-gap pool with scoring, landability, and hopeless-exclusion — no operator chose this |
+| Close-oracle gates on **measurement** | `[gap-sweep] gap route-edit-e691e25e:3 NOT closed: landed sha bff334719e0a was REVERTED — the change is gone from HEAD, so the gap is unresolved` | The B1 fix (`007163ab`) works: a landed sha is *not* accepted as closure when the change is absent from HEAD |
+| Escalation when stuck | `[gap-escalation] uiQuestion_write accepted for hopeless gap a-symptom-goal-landed-a-harmful-unrelated-edit…` | The system asks a human rather than thrashing — S2→S3 behaviour |
+| Concurrency discipline | `[compose-cap] REFUSING autonomous compose: 2 in flight — gap stays open, retried when there is capacity` | No thrash; the documented lane behaviour, with the operator lane holding the slot |
+| Lesson channel read at prompt-build | `[compose-lessons] source=concept-db n=8 class=none` | §8.2's teaching channel is live and consulted per compose |
+| **Anchor-relevance gate firing** | `[fc-anchor-region] planned anchor for repos/activity-api/src/routes/execution-traces.ts is unique but 1596 lines from the located region (line 3306) — re-deriving from the offered anchors instead` | The "uniqueness verified, RELEVANCE not" defect is **repaired and firing live** — it caught a unique-but-wrong anchor and re-derived |
+
+### Optimization of activities from traces — measured
+
+From the hub template store (2100 of 2483 templates sampled):
+
+| Measure | Value |
+|---|---|
+| Machine-derived templates (`learned-*` / `composed-*`) | **570** (27 % of sample) |
+| Templates with ≥1 execution | 1248 |
+| **Posterior has moved off Beta(1,1)** | **1153 / 1248 = 92.4 %** |
+| Executed but still Beta(1,1) | 95 (223 executions) — a small real leak |
+| `total_selections` non-zero | **0 / 1248 — the counter is dead fleet-wide** |
+| Template minting by month | Jun 1491 → Jul 321 → Aug 288 (decelerating) |
+
+So extraction→grading genuinely works at 92 % — the earlier alarm from a single sampled template
+(`learned-auto-bridge-code-find-function-result`: 2 successes, α=β=1) is a 7.6 % minority, not the
+rule. The two honest defects here are that 7.6 % leak and the **dead `total_selections` counter**,
+which means selection *frequency* is unobservable even though selection *quality* is graded.
+
+### 11.1 Learning-signal loss on the spoke→hub link (new, measured)
+
+The goal-host self-reports three distinct losses. Counts over 24 h:
+
+| Loss | Count / 24 h | Consequence |
+|---|---|---|
+| `TranslatingTraceSink network error` → **`https://activity.test`** | **11,941 (81 %)** | A **test-fixture URL being retried in production** ~500×/h — wasted cycles, journal flood, and it masks the real errors below |
+| `TranslatingTraceSink network error` → **`syzygy.host:18080`** | **2,762 (~115/h)** | Real trace writes lost to the hub |
+| `goal-path record FAILED … this walk will not inform future reuse` | 33 | Pathway reuse denied — directly the composition/reuse failure |
+| `reach-patch LOST … verdict computed and never delivered; this execution stays ungraded and its arm learns nothing` | 17 | Computed verdicts discarded — a mechanism for the 7.6 % Beta(1,1) leak in §11 |
+
+**Correction worth recording:** my first read of this was "14,707 trace writes lost to the hub,"
+which would have been a catastrophic finding. 81 % of them are the `activity.test` fixture.
+Naming the string that would refute the claim (`grep activity.test`) before reporting it cut the
+real number by 5×. The remaining 2,762 real losses are still significant.
+
+Likewise, a 15-sample probe of the hub showed 13/15 failures at an 8 s timeout; a 20-sample
+re-probe showed **20/20 success** and 5/5 at 270–800 ms. The link is *not* down — it fails in
+bursts, plausibly under load (possibly including my own bulk paging). The honest statement is:
+**the link is intermittently lossy, each loss is self-reported, and the lost signal is then
+discarded rather than queued for retry.** A durable outbox for trace/goal-path writes would
+convert an intermittent network fault into zero learning loss.
+
+### 11.2 The learned-composition posterior is credited on failure but not on success
+
+Measured over the 68 `learned-composition-*` templates that have executed (hub template store):
+
+| Group | Templates | Executions | **Successful executions** | thompson_alpha |
+|---|---|---|---|---|
+| α = 1 (never credited) | **60** | 837 | **340** | stuck at 1 |
+| α > 1 (credited) | 8 | 784 | 309 | moved |
+
+**340 successful executions across 60 templates produced no α increment at all**, while β on those
+same templates climbed freely from their failures (samples: 159 executions → α=1, β=22.6;
+55 executions → α=1, β=11.8). Aggregate success rate for the family is 40 % (649/1621), so these
+are not compositions that simply never worked — their wins are being discarded.
+
+**Consequence:** every learned composition drifts monotonically downward regardless of merit,
+because only its failures reach the posterior. This is the *mechanism* behind the standing
+observation that no learned composition ever promotes above the satisfier floor — it is not that
+compositions are bad, it is that the arm can only lose. Combined with §4 (the edge graph that
+records composition structure is frozen), both halves of compositional learning — the *structure*
+and the *credit* — are broken in the same direction.
+
+**A mechanism for the β side, caught live: infrastructure refusals are graded as template
+failures.** This session's dispatch `5b6d29bf` was refused before any draft existed:
+
+```json
+{"status":"failed","reached":false,
+ "goalReachReason":"routed edit-intent to feature_compose; refused for CAPACITY (BUSY) after one
+   retry — no draft was produced, so there is nothing to judge and nothing to escalate",
+ "learning":{"alphaBetaDelta":[{"templateId":"satisfier:code_modification_proposal_write",
+                               "dAlpha":0,"dBeta":2}]}}
+```
+
+The prose is exactly right — *"no draft was produced, so there is nothing to judge"* — and the
+posterior update then judges it anyway, **+2 β**. The template did not fail on merit; a compose
+slot was busy. Every queue collision, drain window (§11.6), and capacity refusal therefore pushes
+working templates downward.
+
+Combined with the α-side finding above, the credit channel is biased in both directions at once:
+**successes frequently fail to increment α, while non-merit infrastructure events reliably
+increment β.** That is sufficient on its own to drive every learned composition toward the floor
+regardless of quality, and it means posterior rank currently encodes *scheduler luck* as much as
+capability. The reach-reason text already contains the discriminator (`no draft was produced`) —
+the grading path simply does not consult it.
+
+Confidence: the α/β asymmetry is directly measured and large. The one caveat is that
+`successful_executions` and `thompson_alpha` may be maintained by different writers with
+different semantics; the finding to act on is the asymmetry itself (β moves, α does not) rather
+than an exact expected α value.
+
+### 11.3 `fc-scope` centres grounding by identifier frequency, not by goal mention
+
+Observed live on this session's own dispatch (`572aac4a` → compose `fc-mstojgrt-wzd265`):
+
+```
+[fc-scope] no region literal; mined 34 identifier probe(s),
+           grounding centred on "variant_performance_metrics"
+```
+
+The goal named its target function explicitly (`deriveCompositionEdgeFromParent`) and quoted the
+edit anchor verbatim. Occurrence counts in the target file:
+
+| Identifier | Occurrences | In the goal text? |
+|---|---|---|
+| the quoted anchor line | **1 (unique)** | yes, verbatim |
+| `deriveCompositionEdgeFromParent` | 2 | yes, by name |
+| **`variant_performance_metrics`** | **9** | **no — never mentioned** |
+
+The scope miner centred the grounding window on the file's *most frequent* identifier rather than
+the one the goal named. This is a **first-mile localization defect with a frequency bias**: on any
+large file, the goal's actual subject is almost never the most common identifier, so grounding
+drifts to whatever the file talks about most. It plausibly underlies a share of the
+inert-on-arrival edits, because a drafter grounded on the wrong region can still emit a
+syntactically valid, typechecking edit — just not the requested one.
+
+**Downstream stages recovered — record this against overclaiming.** Two minutes later the same
+compose logged:
+
+```
+[fc-anchors]  supplied verified-unique anchors … (67 locator candidate(s))
+[fc-symbols]  resolved 3/3 cross-file declaration(s):
+              deriveCompositionEdgeFromParent, parentActivityId, childActivityId
+```
+
+It resolved **exactly the three identifiers the goal named**, despite the mis-centred scope. So
+this is defense-in-depth working, not a fatal path: `fc-scope`'s frequency bias is a real defect
+that wastes a stage and mis-seeds the window, but `fc-anchors` + `fc-symbols` correct it. The
+same pattern appeared on attempt 1, where `[fc-anchor-region]` caught "anchor is unique but 1596
+lines from the located region — re-deriving."
+
+The honest statement: **`fc-scope` picks the wrong centre, and two later gates fix it.** Worth
+repairing because it costs a round trip and because the correction is only as good as the anchor
+candidates — but it is not, on this evidence, a silent mis-localizer.
+
+### 11.4 ~~BLOCKER — the LLM plane is down on both providers~~ **RETRACTED — the plane works; the loop routed around the dead key by itself**
+
+> **Retraction.** The section below concluded "the LLM plane is down on both providers" and
+> "no compose can draft, so nothing can land." **That conclusion is wrong.** A live completion
+> through the resolver returns successfully:
+>
+> ```
+> POST :8220/resolve  {pointer:{type:"llm_completion"}, prompt:"Reply with exactly: OK"}
+> → {"resolved":true,"content":"OK","provider":"openai","model":"nvidia/nemotron-3-ultra-550b-a55b:free"}
+> ```
+>
+> **The error was mine, and it is the exact failure this repo's own standing law warns about:**
+> I tested *one* provider directly (Anthropic — genuinely dead), saw *one* 429 on *one* OpenRouter
+> lane, and generalised to "the plane." I never asked what a *positive* looks like in that query
+> before believing the negative.
+>
+> **What is actually true — and it is a strongly positive finding.** The resolver runs a
+> Thompson-graded model policy over seven providers, and it had **already detected and demoted the
+> dead Anthropic key on its own**, with no operator involvement:
+>
+> | Model | α | β | Policy verdict |
+> |---|---|---|---|
+> | `deepseek/deepseek-chat-v3-0324` | **10058** | 1017 | selected (score 0.886) |
+> | `google/gemini-2.5-flash` | 1348 | 144 | healthy |
+> | `openai/gpt-4o-mini` | 211 | 55 | healthy |
+> | `claude-sonnet-5` | **1** | 10.98 | demoted — the dead key |
+> | `claude-haiku-4-5` | 1.36 | **578** | demoted hard — the dead key |
+>
+> This is the learning loop performing its core job under a real external outage: a provider went
+> unauthenticated, its arm accumulated β, and selection moved to working providers. It is the
+> clearest evidence in this whole report that **optimization from traces works** — and I nearly
+> filed it as a fleet-down emergency.
+>
+> **What survives from the section below:** the Anthropic key *is* invalid (verified twice, 401
+> `"API key is invalid."` on `/v1/messages`) and should still be rotated — it wastes a failover
+> hop and holds a dead arm. But it is **not** blocking autonomy, and the "required operator
+> actions" framing below overstates the urgency. The 254 k-token grounding issue is real but
+> appeared **once in 24 h**, not as a systemic cap.
+
+### Original section (retained for the record, conclusion retracted above)
+
+#### ~~BLOCKER — the LLM plane is down on both providers~~ (superseded)
+
+Found by following this session's own dispatch (`572aac4a`) when its decompose call went silent
+for 7+ minutes. **Every LLM path the substrate has is currently failing.**
+
+**Primary — Anthropic: the API key is invalid.**
+
+```
+POST https://api.anthropic.com/v1/messages
+→ 401 {"type":"authentication_error","message":"API key is invalid."}
+```
+
+Verified against process ground truth (`/proc/<pid>/environ` of `llm-resolver-vessel`, not
+`systemctl show`), key present at 108 chars, prefix `sk-ant-api03-F`. The same key is in
+`~/.metabob/config.json`. **56 auth 401s in 24 h; earliest in the journal window is
+2026-08-13T01:57Z** — the 48 h window is the retention floor, so the true onset may be earlier.
+
+**Fallback — OpenAI: exhausted and capped.** Failover *does* work (contradicting a "no failover"
+reading), but every fallback route is blocked:
+
+| Failure | Timestamp | Meaning |
+|---|---|---|
+| `429 Rate limit exceeded: free-models-per-day-high-balance` | 2026-08-14T23:51Z | fallback is on a **free tier** with a daily cap, already spent |
+| `The socket connection was closed unexpectedly` | 2026-08-15T00:37Z | transport instability |
+| `400 maximum context length is 128000 tokens … you requested about 254608` | 2026-08-14T06:10Z | grounding builds **254 k-token prompts**; the fallback provider caps at 128 k |
+
+### Why this matters more than any other finding here
+
+1. **It is the live cause of stalled autonomy.** A compose cannot draft without an LLM. This
+   session's dispatch reached `fc-symbols` correctly (3/3 identifiers resolved) and then stalled
+   in decompose — not a reasoning failure, an auth failure.
+2. **It is operator-only.** Credentials and quota are the definition of an intractable blocker
+   (law: intervene only on these). No amount of coaxing repairs an invalid key.
+3. **It was silent.** 56 401s/day for ≥2 days with no gap filed, no alert, no operator-visible
+   signal. This is §9.1 again: a failing *external* dependency produces provider-side errors that
+   the trace-driven immune system does not cluster as a problem class.
+4. **The 254 k prompt is a second, independent defect.** Even with a valid Anthropic key,
+   grounding that emits a quarter-million-token prompt will fail against any 128 k fallback. The
+   grounding builder needs a per-provider budget, not just a truncation heuristic.
+
+### Required operator actions
+
+1. **Rotate/replace `ANTHROPIC_API_KEY`** in `/workspace/.substrate-secrets` (and
+   `~/.metabob/config.json`), then restart `llm-resolver-vessel`.
+   Note the standing security item: the hub reportedly carries a PAT in 25/30 process environs —
+   rotate that at the same time.
+2. **Move the OpenAI fallback off the free tier**, or accept that fallback exists in name only.
+3. **Cap grounding per provider context window** (a gap worth filing).
+
+Until (1), no compose can land, and every "autonomy is slow" measurement in this report is
+confounded by an unauthenticated LLM plane.
+
+### 11.5 ★ ROOT CAUSE — a verify timeout is scored as a typecheck failure, and correct edits are rolled back
+
+This is the most actionable finding in the report, and it was found by reading this session's own
+compose report rather than the logs.
+
+**What happened to dispatch `572aac4a`.** The compose report
+(`/workspace/proposals/route-edit-090fbf3e-compose-report.json`) shows the draft was *correct*:
+
+```json
+{"op_count":1,
+ "applied":[{"path":"repos/activity-api/src/routes/execution-traces.ts","kind":"edit",
+             "ok":true,"repaired":false,"span":{"start_line":1710,"end_line":1717}}],
+ "apply_failed":false, "rolled_back":true,
+ "verify":[{"vessel":"repos/activity-api","errors":"verify","exit_code":null,"ok":false,"output":""}],
+ "verdict":"UNFAVORABLE"}
+```
+
+The drafter located **lines 1710–1717 — exactly the silent early return** identified in §4, applied
+the edit cleanly, and the change was then **rolled back** because verify said `ok:false`. Note
+`output: ""` and `exit_code: null`: the verifier produced *nothing at all*.
+
+**The chain.** Verify issues one shell call:
+
+```
+cd ${vAbs} && (echo "== install =="; …; echo "TC_EXIT=$?"; …; timeout 240 bun test …)
+```
+
+⚠️ **CORRECTION — my first causal story for the empty output was wrong, and I am recording the
+error rather than quietly replacing it.** I attributed it to timeout ordering: the inner
+`timeout 240 bun test` sitting 10 s under `PER_CALL_TIMEOUT_MS = 250_000`. **Measurement refutes
+that.** Timed in-container:
+
+| Step | activity-api | development-vessel |
+|---|---|---|
+| `bun run typecheck` | **7 s** | 6 s |
+| `bun test` | **0.65 s** (377 tests, 73 files) | — |
+
+The whole verify command runs in ~10 s. The 250 s cap was never approached, so timeout ordering is
+**not** the cause. (It remains a latent ordering smell worth tidying, but it is not this bug, and
+the fix I dispatched for it — raising the cap to 600 s — targets a non-cause. Harmless, not the
+repair.)
+
+**The actual mechanism: `&&` short-circuit.** Because the command is `cd ${vAbs} && (…)`, *any*
+failure before the first `echo` — a `vAbs` that does not exist or is not accessible in the compose
+worktree, or a `callTool` transport error — yields **completely empty stdout**. Verified directly:
+
+```
+$ out=$(cd /nonexistent-path && (echo "== install =="; echo "TC_EXIT=0"))
+  bash: cd: /nonexistent-path: No such file or directory
+  stdout=[] len=0
+```
+
+That is precisely the observed signature (`output: ""`, `exit_code: null`). So the verify never
+began, and the pipeline cannot distinguish "the command never ran" from "the typecheck failed":
+
+```ts
+const tcExit = tc && tc[1] ? parseInt(tc[1], 10) : null;   // no marker → null
+const tcOk   = tcExit === 0;                               // null → FALSE
+const ok = installOk && dryRunOk && tcOk && sdExit === 0 && testOk;
+```
+
+**An unobserved typecheck is scored identically to a failed one**, and a correct, applied edit is
+rolled back with `verdict: UNFAVORABLE` and an empty `output` that tells no one why.
+
+**This is the same bug class, third instance.** The two lines above `tcOk` carry long comments
+about precisely this mistake, made twice before and fixed both times:
+
+> `// ABSENT MARKER MEANS "NOT OBSERVED", NOT "FAILED".` … *"this failed EVERY compose it touched,
+> with the detail line reading INSTALL_EXIT=null. Measured within the hour … 6 attempts, every one
+> refused by this gate, nothing else wrong with the drafts."*
+
+`installExit` was fixed (null → pass). `dryRunExit` was fixed (null → pass). `sdExit` is safe by
+construction (defaults to `0`). **`tcExit` was never enumerated.** This is exactly the standing
+lesson *"when you patch your own breakage, enumerate the OTHER instances"* — violated inside the
+very function that documents it.
+
+**The fix is NOT to make `tcOk` pass on null.** The typecheck is the core safety gate; treating
+"not observed" as "passed" there would let genuinely broken code reach `origin/dev` — the failure
+mode `ddffdee` caused. The correct repair is two-part:
+
+1. **Make the command self-reporting instead of short-circuiting.** Replace
+   `cd ${vAbs} && (…)` with a form that always emits a marker — e.g.
+   `cd ${vAbs} || { echo "CD_FAILED=$?"; exit 90; }` before the block — so "could not enter the
+   vessel directory" is a *distinct, visible* outcome rather than silence indistinguishable from a
+   typecheck failure. Then find why `vAbs` was unreachable for this compose (worktree path vs
+   `REPO_ROOT` cwd, or cleanup racing verify).
+2. **Distinguish "could not verify" from "verification failed."** An empty `raw` is an
+   infrastructure outcome, not a verdict. It should surface as `could_not_verify` and retry or
+   escalate, never as a silent `UNFAVORABLE` that discards a correct draft.
+
+**Control — what a verify that DID run looks like.** Comparing all three compose reports on disk
+(the discipline of asking what a *positive* looks like before believing a negative):
+
+| Compose | verify `ok` | `exit_code` | output bytes | verdict | rolled back |
+|---|---|---|---|---|---|
+| **`route-edit-090fbf3e` (this session)** | false | **null** | **0** | UNFAVORABLE | yes |
+| `gap-env-gated-write-allowlist` | false | 0 | 297,772 | UNFAVORABLE | yes |
+| `route-edit-9dd34558` | **true** | 0 | 295,951 | **UNFAVORABLE** | yes |
+
+A verify that runs emits ~296 KB and a real `exit_code`. Mine emitted **0 bytes and a null exit
+code** — the signature of the outer abort, not of a failing typecheck. The contrast is decisive.
+
+**Three composes, three different rejection causes, zero landings.** The same table shows the
+broader problem is not one bug:
+
+1. `090fbf3e` — verify never ran (timeout, §11.7).
+2. `gap-env-gated-write-allowlist` — verify ran, **typecheck exited 0**, yet `ok:false`: some other
+   conjunct (`testOk` / install) failed.
+3. `route-edit-9dd34558` — verify **passed outright** (`ok:true`, exit 0) and the compose was
+   *still* `UNFAVORABLE` and rolled back — so a gate downstream of verify rejected a
+   fully-verified draft.
+
+**Case 3 is not a defect — it is the inert-diff gate working, and that is a major positive.** Its
+`semantic_gate` reason reads:
+
+> *"The patch only adds a log statement and does not change the outcome of `WRITE_ALLOWLIST` being
+> unset, leaving the gap condition unchanged."*
+
+That is precisely the frontier failure the standing notes name — *"the gap-close detector accepts
+INERT diffs as closure"* — being **caught and refused** at compose time. A draft that applied
+cleanly and typechecked was rejected because it would have changed nothing. The inert-diff hole is
+closed on this path.
+
+**Consequence for how goals should be written (and a flaw in my own first dispatch).** The
+semantic gate rejects behaviour-neutral patches by design. This session's dispatch `572aac4a`
+asked for *"add an observability log to the silent early return"* — a pure logging change, i.e.
+exactly the shape the gate refuses. Even had the verify timeout (§11.7) not fired, that goal was
+likely to be rejected as inert. Observability changes are genuinely valuable yet behaviourally
+inert, so they need either an explicit exemption or to be bundled with the behavioural fix they
+serve. **This is a real design tension, not a bug** — and it means the §4 fix should be dispatched
+as "make the failed parent lookup observable *and* recoverable," not as "add a log."
+
+**Why this matters most.** Whatever prevents the verify command from starting, the *scoring* bug
+converts it into a false "typecheck failed" and discards a correct, applied draft — silently, with
+an empty `output` field that tells no one why. That is a live cause of autonomy not landing and it
+is invisible in exactly the §9.1 way: nothing fails loudly, a write simply never happens.
+
+The size hypothesis is **withdrawn**: activity-api and development-vessel typecheck in 7 s and 6 s
+respectively, so "bigger vessels take longer to verify" is not supported by measurement.
+
+### 11.8 A full compose cycle observed end-to-end — and three gates each doing real work
+
+Dispatch `5b6d29bf` (edge-freshness measure), on retry, ran every stage to completion
+(`route-edit-5eb32ece-compose-report.json`, 307 KB):
+
+| Stage | Result |
+|---|---|
+| plan | 2 ops, both on the named file |
+| apply | ✅ both applied (lines 95–98, 111) |
+| **verify** | ✅ **`ok: true`, `exit_code: 0`, 295,595 bytes** — ran and passed |
+| **semantic gate** | ❌ **rejected** |
+| verdict | UNFAVORABLE, rolled back |
+
+The rejection reason is precise and **correct**:
+
+> *"adversarial refuter (diverse lens, conf 0.96): The patch only injects `newest_edge_at` and
+> `edge_staleness_days` inside `classification_metadata` … and never exposes them as top-level
+> fields alongside `orphan_fraction` in the returned report body"*
+
+The goal asked for top-level fields; the draft nested them. The refuter caught a genuine spec
+deviation, named the exact location, and gave a confidence. **This is the quality machinery
+working as designed.**
+
+**Important consequence for §11.5:** this compose ran on the *same vessel* and produced a
+295 KB verify. So the earlier 0-byte verify was **anomalous, not systemic** — most likely specific
+to the `activity-api` compose worktree path rather than a universal condition. The *scoring* bug
+(absent marker ⇒ failure) remains real and worth fixing, but its blast radius is narrower than
+§11.5 first implied.
+
+**Three independent gates have now been observed rejecting correctly in this session:**
+
+1. **Inert-diff gate** — refused a patch that "only adds a log statement … leaving the gap
+   condition unchanged."
+2. **Adversarial refuter / spec-conformance** — refused a patch that met the letter but not the
+   placement the spec required.
+3. **Reach gate** — refused to grade an edit goal reached without landing evidence, and reported
+   `reached: false` honestly under failure.
+
+The drafting quality is the weak link, not the judging. Every rejection this session was *correct*;
+none was a false negative on a good draft (the one arguable case, §11.5, failed on an unrun verify
+rather than on judgment).
+
+**The loop closing:** the gate's reason is specific enough to act on, so dispatch `89d27aa8`
+re-issues the same goal with the refuter's objection folded into the spec ("add two NEW sibling
+keys directly alongside `orphan_fraction` … do NOT place either key inside
+`classification_metadata`"). That is reject-with-reason → refine → retry, driven by the system's
+own feedback.
+
+### 11.9 The operator lane starves the substrate's own self-maintenance (observed on myself)
+
+By 01:49 this session had three dispatches contending for **one** compose slot
+(`/workspace/compose-slots/` holds a single `slot-1.slot`). The consequences, all measured:
+
+1. **A correct draft was destroyed by a drain.** Dispatch `8a037659` produced a *perfect* plan —
+   both ops targeting the exact anchors named in the goal — and then died with
+   `"verdict=unknown (op_count=?: draining)"`. Not judged and rejected; **discarded mid-flight.**
+   This is the standing "compose host restarts faster than a compose can finish" defect still
+   doing real damage.
+2. **The substrate's own repair was blocked by my work.** `substrate-pull-sync` (Type=oneshot,
+   `TimeoutStartSec=900`) began at 01:42:32, detected
+
+   > `development-vessel: RUNTIME SOURCE TRUNCATED — content drift (live 7b5820adbe != clone
+   > 2fbf4f167d) — overriding re-attempt suppression to restore it from the clone`
+
+   and then found **2 units in flight — my composes** — so it quiesced and waited instead of
+   restarting into them. The substrate was trying to repair a truncated runtime source and the
+   operator lane held the slot. It also blocks convergence: while the oneshot sits in its start
+   phase, `NextElapseUSecMonotonic=infinity` (the timer re-arms only once the unit completes, so
+   this is a *long start phase*, **not** the 08-13 `OnUnitActiveSec` deadlock — it will re-arm at
+   completion or at the 900 s timeout).
+3. **Quiesce can outlast its own cadence.** `substrate-pull-sync.timer` fires every 10 min
+   (`OnUnitActiveSec=10min`) while `QUIESCE_MAX_MS` is **20 min**. Any run that finds work in
+   flight refreshes the marker before the previous one expires, so under steady compose traffic
+   admission can remain closed more or less continuously. The 20 min fail-open exists precisely to
+   prevent a permanent wedge, but it is set to twice the refresh interval, which defeats it.
+
+**This is law 6 violated by me, and worth recording as such.** Three operator dispatches did not
+merely fail — they consumed the single compose slot, destroyed one good draft via drain, and held
+off the substrate's own truncated-source repair for the better part of ten minutes. The correct
+operator behaviour on a one-slot lane is to dispatch **one** goal, observe it to completion, and
+leave the lane free. I stopped dispatching once this became visible.
+
+**The structural finding, independent of my mistake:** operator and autonomous work share one
+slot with no priority separation, and a drain discards in-flight work rather than deferring the
+restart until after it. Either a second slot for self-maintenance, or drain-defers-to-in-flight,
+would prevent the substrate from being locked out of its own repairs by a single external caller.
+
+### 11.10 ★★ CRITICAL — a drain-killed compose leaves unverified code in the LIVE runtime source
+
+The most serious defect found this session, and it was found by chasing what pull-sync meant by
+"RUNTIME SOURCE TRUNCATED".
+
+**What happened.** Dispatch `8a037659` (raise `PER_CALL_TIMEOUT_MS`) was killed mid-compose by the
+drain and reported `status: failed, reached: false,
+goalReachReason: "verdict=unknown (op_count=?: draining)"`. Nothing landed; no commit exists.
+Yet the **live runtime tree** now differs from its clone:
+
+```diff
+--- /workspace/git/vessels/development-vessel/src/resolvers/feature-compose.ts   (clone, = origin/dev)
++++ /vessels/development-vessel/src/resolvers/feature-compose.ts                 (LIVE runtime)
+-// … Tool (shell/fs) calls finish in seconds, so the larger cap is harmless to them.
+-const PER_CALL_TIMEOUT_MS = 250_000;
++// … The verify step runs `bun install`, `bun install --dry-run`, `bun run typecheck` AND
++//    `timeout 240 bun test` in sequence — the inner test timeout alone is 240s, so the outer
++//    budget must comfortably exceed it.
++const PER_CALL_TIMEOUT_MS = 600000;
+```
+
+That is **my dispatched edit, verbatim**, sitting in the live source of a running vessel:
+
+- it was **never verified** (the compose died before verify),
+- it was **never judged** (no semantic gate, no verdict),
+- it was **never committed** (no sha, dispatch reported failure),
+- and it will be **picked up on the next process restart** (the current PID 2314263 started 01:33:34,
+  before the edit landed at ~01:35, so the *running* process still has the old code — the file on
+  disk does not).
+
+**Why this is the worst class of defect.** Every gate this session was observed getting right —
+inert-diff, spec-conformance, reach — operates on the path where a compose *completes*. A compose
+that is **killed** bypasses all of them and still mutates the live tree. The rollback that would
+have undone it (`rolled_back: true` in completed composes) never ran. So the one path with no
+judgment at all is also the one that writes to production.
+
+**The good news, and it is genuinely good: the substrate caught it.** `substrate-pull-sync`
+detected the drift by content hash and moved to repair it *without being asked*:
+
+> `development-vessel: RUNTIME SOURCE TRUNCATED — content drift (live 7b5820adbe != clone
+> 2fbf4f167d) — overriding re-attempt suppression to restore it from the clone`
+
+It then declined to restart into two in-flight composes (§11.9) and waited. This is exactly the
+convergence loop doing its job: an unauthorised mutation of live source was detected within
+minutes and queued for restoration against `origin/dev`. **The immune system has a working
+antibody for this specific class** — which is notable given §9.1's finding that it is blind to
+absence-of-write. Drift *is* a write, so it is visible.
+
+Note the label is a misnomer worth fixing: the live file is **larger** than the clone (312,571 vs
+312,445 bytes). The condition is content drift in either direction; calling it "TRUNCATED" will
+mislead the next reader, and it named a gap (`runtime-source-truncated-development-vessel`)
+after a symptom that does not describe the defect.
+
+**It is self-reinforcing — the same kill also leaks the markers that would let the repair run.**
+At 01:52:58, with **all three** dispatches reporting `failed`, the vessel still reported:
+
+| Leaked artifact | State | Consequence |
+|---|---|---|
+| `in_flight` counter | **1**, with nothing running | `pull-sync` keeps waiting for "work in flight" |
+| `/workspace/compose-slots/slot-1.slot` | held since **01:35** (17 min) | the single compose slot stays occupied |
+| live source edit | present | the drift itself |
+
+So the killed compose (a) mutated live source, (b) held the only slot, and (c) left a phantom
+in-flight marker whose sole effect is to stop `substrate-pull-sync` from restoring the very file
+it corrupted. **The failure protects itself from its own repair.** Both leaked markers have
+staleness backstops (`SLOT_STALE_MS` = 20 min, `QUIESCE_MAX_MS` = 20 min), so it self-heals on a
+20-minute timescale rather than wedging permanently — the backstops are doing exactly the job
+their comments describe. But for those 20 minutes, unverified code sits in the live tree and the
+convergence job is held off by a compose that no longer exists.
+
+**Required repairs (three, all real):**
+
+1. **A killed compose must restore its worktree.** Whatever cleanup runs on the completed path
+   must also run on abort — or the apply must never touch live source in the first place
+   (`isolated: ["repos/development-vessel"]` implies it should not have).
+2. **Do not let a drain kill a compose that has already applied.** Defer the restart past
+   in-flight applies, or roll back before draining. §11.9's drain currently discards work at the
+   worst possible moment: after mutation, before judgment.
+3. **Release the slot and the in-flight counter on abort.** Both currently leak and are recovered
+   only by their 20-minute staleness backstops, during which the convergence job that would fix
+   the damage is itself blocked by the wreckage.
+
+### 11.11 ★★★ FULL AUTONOMOUS COMPLETION — a substrate-authored commit landed on `origin/dev`
+
+The hard success criterion — *"a substrate-authored commit landing on the remote working branch
+with no operator hands"* — was met at **2026-08-15 01:54:55 UTC**:
+
+```
+3e76227  Substrate Autonomous  2026-08-15 01:54:55 +0000
+substrate-authored: apply route-edit-f5cd6222-compose-report via mitosis cutover
+ src/resolvers/feature-compose.ts | 3 ++-
+
+-const PER_CALL_TIMEOUT_MS = 250_000;
++const PER_CALL_TIMEOUT_MS = 600_000;
++  // Tool (shell/fs) calls finish in seconds, but the verify shell call can exceed this cap;
++  // therefore the outer budget must be increased
+```
+
+Verified three independent ways, because a single check nearly produced a false negative:
+
+1. `git merge-base --is-ancestor 3e76227 origin/dev` → **yes**
+2. `git show origin/dev:src/resolvers/feature-compose.ts | grep PER_CALL_TIMEOUT_MS` → `600_000`
+3. `git log --since='3 hours ago' --author='Substrate' origin/dev` → the commit
+
+⚠️ **Method note.** My first count — `git log --since='2026-08-15 00:42' --author='Substrate'` —
+returned **0**, appearing to refute the whole finding. The cause was mine: the host runs
+**PDT (UTC−7)**, so git parsed that absolute timestamp as *local* time (= 07:42 UTC), a window in
+the future. Timestamps read from `date -u` and from container journals are UTC; git `--since`
+without a zone is local. Absolute-time filters across a UTC/local boundary silently return empty,
+which is indistinguishable from "it never happened" — the same shape as every other false negative
+this session. Prefer relative windows (`--since='3 hours ago'`) or explicit-zone timestamps.
+
+**What makes this a genuine autonomous completion, not my dispatch succeeding late:**
+
+- My dispatch `8a037659` for this same change reported `status: failed, reached: false`
+  (drain-killed, §11.9) and never produced a commit.
+- The landed commit belongs to a **different** work item (`route-edit-f5cd6222`), taken through
+  the gap lane, not the operator lane.
+- The substrate's version is **better than mine**: it wrote `600_000` in the codebase's numeric
+  style (my killed edit wrote `600000`) and authored a more accurate comment than the one I
+  supplied in the goal text.
+
+**The demand outlived the failure.** This is the positive image of the standing finding that *"a
+revert does not remove the demand"*: my operator dispatch failed, but the underlying need was
+already a gap, and the autonomous lane picked it up and closed it correctly once the slot freed.
+Operator failure did not destroy the work — it only delayed it.
+
+**It also resolved §11.10 by superseding rather than reverting.** The 01:55:01 convergence that
+made `live == clone` was not a rollback to `250_000`; the clone had *advanced* to the landed
+`600_000`. So the unverified drift was replaced by a verified, committed, mirrored change —
+which is the correct outcome and a stronger one than restoration.
+
+**Caveat, stated plainly:** the change that landed is the one I earlier established targets a
+**non-cause** (§11.5 — measured typecheck 7 s, tests 0.65 s, so the 250 s cap was never the
+binding constraint). It is harmless and arguably tidier, but it does not fix the empty-verify
+scoring bug. **A clean autonomous landing is evidence the pipeline works end-to-end; it is not
+evidence the change was necessary.** That distinction is exactly what §8.1 argues the system
+still cannot make about itself.
+
+### 11.6 What actually blocks composes: recurring quiesce windows from `substrate-pull-sync`
+
+With the LLM-outage explanation retracted (§11.4), the real cause of compose flakiness is a
+scheduling race, and it is visible in the journal:
+
+```
+01:17:27 Starting substrate-pull-sync.service — converge live vessels … to origin/dev
+01:17:32 [pull-sync] development-vessel: 2 unit(s) in flight — QUIESCED (admission closed);
+                     waiting for them to finish rather than restarting into them
+01:28:06 [development-vessel] REFUSING long-running request during drain —
+                     it cannot finish before the deadline; caller should retry against the next process
+```
+
+Mechanism: `substrate-pull-sync` (~10 min cadence) wants to restart the vessel to converge it to
+`origin/dev`. Finding work in flight, it writes `/workspace/quiesce/development-vessel` and closes
+admission rather than killing the compose — **correct, protective behaviour**, and it fails open
+after `QUIESCE_MAX_MS` (20 min) so a dead converger cannot wedge the vessel forever.
+
+The cost is a recurring window in which *new* composes are refused. Confirmed by process state:
+`NRestarts` stayed at 2748 and `ActiveEnterTimestamp` at 00:42:55 throughout — **the vessel never
+restarted**; it simply stopped admitting long work. This is the gentler form of the standing
+"compose host restarts faster than a compose can finish" finding: the restart no longer destroys
+in-flight work, but the protection window still starves arrivals.
+
+Both of this session's dispatches were caught by it. Note the asymmetry worth fixing: a compose
+refused during quiesce returns 503/retry, but the *dispatch* keeps its slot and the operator sees
+only "running" for tens of minutes with no indication that admission is closed.
+
+### 11.7 Outcome of dispatch `572aac4a` — an honest failure
+
+The dispatch terminated `status: failed, reached: false` after three compose attempts.
+
+```json
+{"status":"failed","reached":false,"goalReachReason":null,
+ "learning":{"alphaBetaDelta":[{"templateId":"activity:⟨learned-development-vessel-observe-orthogonal-patterns⟩",
+                                "dAlpha":0,"dBeta":2}],
+             "gapsFiled":[],"goalPathRecorded":true,"oracleLabelWritten":false}}
+```
+
+**This is the strongest positive result in the report.** With *every* LLM provider failing
+(§11.4), the walk exhausted its fallback tiers and reported `reached: false`. It did not
+hollow-reach, did not accept a stub edit-result, and did not fabricate a reason. Under maximum
+stress the reach gate stayed honest — the failure mode the earlier audits worried about most did
+not occur.
+
+Secondary observations from the same run:
+
+- `goalPathRecorded: true` and a posterior delta were written, so a *failed* walk still fed the
+  learning loop. `dBeta: 2` with `dAlpha: 0` is correct here (the walk genuinely failed) — it
+  does not by itself prove §11.2's asymmetry, but it confirms the β side of the delta path is
+  wired and firing.
+- `oracleLabelWritten: false` — no oracle label for a failed goal; the corpus learns nothing from
+  this failure beyond the posterior.
+- Two further defects surfaced only because the LLM outage forced deep fallback:
+  - `dev-vessel fs_read HTTP 500: path outside workspace root: /workspace/validation/failure-modes/scenarios/auto-….json`
+    — a path-resolution bug in the auto-draft scenario writer.
+  - `auto-draft trigger: fallback_tier=refused (top_score=0)` — the drafter fallback refuses at
+    zero score rather than widening, echoing the standing "a retry that does not widen is not a
+    retry" finding.
+
+## 12. Summary
+
+**Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
+(0/2478 ungraded) and 92.4 % of executed templates have moved off Beta(1,1) — so learning *from*
+traces is real. But the structure those posteriors compose over is a month-stale snapshot with
+665 duplicate rows and an inert writer, while a live consumer (`discover-by-shapes`
+composition_score) scores selection against it. Four-fifths of the state space has a single
+candidate, so most "selection" is not selection.
+
+**Compositional learning is broken in both halves, in the same direction.** The *structure* half:
+the composition edge graph has been frozen for a month (§4). The *credit* half: 60 of 68
+learned-composition templates have α stuck at 1 despite **340 successful executions**, while β
+climbs freely from their failures (§11.2) — the arm can only lose. Together these fully explain
+why no learned composition ever promotes above the satisfier floor, and why observed behaviour is
+re-derivation rather than reuse.
+
+**The mechanism is sound; the effect loop is open.** Autonomy fires daily but carries 0.79 % of
+changed lines, 44 of 76 commits ≤2 lines, and two fixes on the compositionality path landed
+inert with nothing noticing. The system cannot distinguish "landed" from "working."
+
+**The immune system is trace-driven and the live defects are trace-invisible.** Absence-of-write
+— a frozen table, an inert diff, a dead scheduler, a unit that exits 0 forever — produces no
+failing trace, so `detector_coverage_scan` (which clusters by `failure_mode.type`) structurally
+cannot see it. One missing predicate covers the whole class: *something that should be written
+or alive is not.* This session confirmed it three independent times — frozen edges, a 13-day
+dead vessel, and 22 detectors that never run.
+
+**What this session changed.** The local `development-vessel` was found crash-looping for 13 days
+(its unit shadowed by a mitosis-written override) and was repaired; within minutes the substrate
+resumed autonomous gap selection, close-oracle verification, human escalation, and concept
+minting. That repair made the gap store readable for the first time in 13 days (law 7's triple:
+1022 gaps, 27.5 % closed, 36.7 % rejected) and let `composition_flow_health_scan` run for the
+first time in its existence — it immediately returned `flow_split` (11 components) and filed its
+own gap. The composition freeze was root-caused to a **silent early return** on a failed parent
+lookup, with hypothesis (1) refuted by measurement (87 % of traces *do* carry a parent).
+
+**★★★ The autonomy criterion was met during this session (§11.11).** At 2026-08-15 01:54:55 UTC,
+`3e76227` — authored by `Substrate Autonomous`, no operator hands — landed on `origin/dev`,
+raising `PER_CALL_TIMEOUT_MS` with a correctly-styled value and a better comment than the one I
+supplied. My own dispatch for that change had *failed*; the demand survived as a gap and the
+autonomous lane closed it. Full cycle observed: detect → gap → draft → verify → land → mirror.
+The honest qualifier: that change targets a non-cause (§11.5), so this proves the **pipeline**
+works end-to-end, not that the **change** was needed — precisely the distinction §8.1 says the
+system cannot yet draw about itself.
+
+**★★ The most serious defect: a drain-killed compose leaves unverified code in the LIVE runtime
+source (§11.10).** A dispatch that reported `failed / reached:false` had nonetheless mutated
+`/vessels/development-vessel/src/resolvers/feature-compose.ts` — never verified, never judged,
+never committed, and live on the next restart. Every gate observed working this session operates
+on the *completed* path; the **killed** path bypasses all of them and still writes to production.
+The substrate detected the drift by content hash within minutes and moved to restore it from the
+clone unprompted — the immune system does have an antibody here, because drift is a write and
+therefore visible (contrast §9.1).
+
+**★ The single most actionable defect: an unrun verify is scored as a failed typecheck (§11.5).**
+This session's own dispatch drafted a *correct* edit at exactly the right lines (1710–1717),
+applied it cleanly, and had it **rolled back** because the verify shell call produced no output at
+all — and `tcOk = (tcExit === 0)` scores a *missing* `TC_EXIT` marker as failure. It is the
+**third instance of a bug class fixed twice in the same function**: `installExit` and `dryRunExit`
+both carry comments stating that an absent marker means "not observed, not failed"; `tcExit` was
+never enumerated. The command's `cd ${vAbs} && (…)` form means any pre-echo failure yields empty
+stdout — verified directly — so a correct draft is discarded silently. That is §9.1's blind spot
+again: nothing fails loudly, a write simply never happens.
+
+*(My first causal story for this — timeout ordering — was wrong and is retracted inside §11.5:
+measured typecheck 7 s and tests 0.65 s, so the 250 s cap was never approached. The scoring bug is
+confirmed; the timeout attribution was not.)*
+
+**The loop routed around a dead provider by itself (§11.4).** The Anthropic key is invalid (401,
+≥2 days) — but the LLM plane is *not* down: a live completion succeeds, and the Thompson model
+policy had **already demoted both Anthropic arms** (α=1/β=11 and α=1.4/β=578) and moved selection
+to `deepseek-chat-v3-0324` (α=10058). A real external outage was detected and routed around with
+no operator action. This is the single best demonstration in this report that optimization from
+traces works — and I initially mis-filed it as a fleet-down emergency (retraction in §11.4).
+The key should still be rotated; it wastes a failover hop and holds a dead arm.
+
+**The reach gate is trustworthy under stress (§11.5).** With every LLM provider down, this
+session's dispatch exhausted its fallbacks and reported `reached: false` rather than
+hollow-reaching or accepting a stub edit-result. The failure mode the earlier audits worried
+about most did not occur — the honesty machinery holds even when nothing else does.
+
+**Method note — five wrong claims caught, two of them only after I had already reported them.**
+Each was caught by naming the query that would refute it and running *that*:
+
+| Claim | Refuted by | Recorded in |
+|---|---|---|
+| "14,707 trace writes lost to the hub" | 81 % were the `activity.test` fixture (real: 2,762) | §11.1 |
+| "The hub link is down" (13/15 failed) | 20/20 succeeded on re-probe | §11.1 |
+| **"The LLM plane is down on both providers"** | a live completion returned `OK`; the policy had already demoted the dead arm | §11.4 (retracted) |
+| **"The verify failed on timeout ordering"** | measured typecheck 7 s, tests 0.65 s — the 250 s cap was never approached | §11.5 (retracted) |
+| "No autonomous commit landed" | a UTC/PDT `--since` boundary made `git log` return empty | §11.11 |
+
+The two bolded ones were sent to the operator before being corrected. Both followed the same
+pattern: **one negative observation generalised to a system-wide conclusion without asking what a
+positive would look like.** The LLM case is the sharpest — the truth was not merely "less bad" but
+the *opposite*, and the strongest evidence in this report that learning-from-traces works.
+Corrections are recorded in place with the original reasoning left visible, not silently edited.
