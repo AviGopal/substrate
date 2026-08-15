@@ -2486,7 +2486,42 @@ at **op** granularity within a single file, not just at file granularity.
 > testing the bridge. The refuting check — *did any verify ever exceed 30 s and survive?* — cost one
 > grep of an existing report.
 
-### 15.11.0 The 30 s theory is now definitively dead — and so is the timeout theory generally
+### 15.11.-1 ⚠️ CORRECTION OF THE CORRECTION — my "definitive refutation" measured the wrong build
+
+The 300 s experiment below is **invalid as evidence**, and the timing is unambiguous:
+
+| event | time (UTC) |
+|---|---|
+| `sleep 45` probe → SIGKILLed at 30 s | **~04:47** — old build, `requestTimeoutSec = 30` |
+| **`e1ffa50` lands `requestTimeoutSec = 300`; local-tools-vessel restarts** | **05:23:26 / 05:23:28** |
+| "definitive refutation" 300 s probe → completed | **~05:44** — new build, `requestTimeoutSec = 300` |
+
+I compared a **pre-fix** measurement against a **post-fix** measurement and read the difference as
+disproving the mechanism. It disproves nothing; it merely shows the fix I dispatched works. This is
+the "is-active ≠ new code running / confirm which copy your instrument talks to" failure — the
+exact class this report documents elsewhere — committed against my own instrument.
+
+**What genuinely survives as a counterexample** is the earlier one: the compose verify at
+**01:47** that ran `Ran 1707 tests across 226 files. [53.16s]` to completion with 295 KB, while
+local-tools-vessel had been running the 30 s watchdog since 2026-08-14 05:00. A 53 s command
+surviving a 30 s watchdog is a real inconsistency, and it is the *only* valid basis for saying the
+kill is command-dependent rather than uniform.
+
+**Net position on blocker 6, stated carefully:**
+
+- The 30 s group-kill was real and is now raised to 300 s by `e1ffa50` (landed autonomously,
+  verified in both `origin/dev` and the live tree).
+- Whether it *caused* the 193-byte truncations is **still open** — the 53 s counterexample argues
+  against a simple story, and I have no valid measurement either way.
+- My earlier retraction of the causal claim (§15.11) was right to retract, but for a reason I then
+  supported with bad evidence. The claim remains unproven, not disproven.
+
+**The fix enables a clean forward test**, which is the honest way to settle it: with the watchdog
+now at 300 s, **do 193-byte truncations still occur?** If they stop, the watchdog was the cause; if
+they continue, it was not. That experiment costs nothing but observation, and it is the one I
+should have set up instead of arguing from mismatched builds.
+
+### 15.11.0 ~~The 30 s theory is now definitively dead~~ — INVALID, see above
 
 The discriminating experiment I should have run first: send **the exact verify command** for
 activity-api through the same `shell` producer and time it.
