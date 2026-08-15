@@ -1688,11 +1688,62 @@ on a real `exit_code: 2` typecheck failure, one on semantic grounds. Nothing in 
 *good* draft being wrongly refused. The scarce resource is **drafts worth landing**, not gates.
 Adding gates, detectors, or lessons will not move the landing rate; improving anchor obedience will.
 
-**A narrower, concrete sub-finding:** the anchor supply mechanism (`fc-anchors`, 67 verified-unique
-candidates) is a mitigation that already exists for exactly this failure and is being **bypassed** —
-the drafter is not constrained to choose from the supplied set. Constraining `old_string` to the
-verified anchor list (reject at plan time, before apply) would convert this class from a wasted
-compose into an immediate re-draft.
+### ★★★ CORRECTION + root cause: the drafter is not shown the code it must anchor to
+
+I proposed here that "constraining `old_string` to the verified anchor list would convert this class
+from a wasted compose into an immediate re-draft." **That mitigation already exists, and it fired
+twice on this very compose:**
+
+```
+[fc-anchor-provenance] REFUSED re-derived edit … anchor_not_from_window
+  — re-derived anchor is not a substring of the window the model was shown —
+  "const parentActivityId = parentExecutionId ? (await db.query(`SELECT activity_id FROM …"
+[fc-anchor-provenance] REFUSED blind-edit repair … anchor_not_from_window
+  "  try {\n    const parentRows = await surrealDB.query<{ activity_id?: string }[]>\n      `SELECT …"
+```
+
+Note the second refusal: that anchor is **nearly** the real code — it has the right variable, the
+right API (`surrealDB.query`), the right query — and still fails, because it is not a literal
+substring of what the model was shown.
+
+**And that phrase is the root cause.** The window the model was shown did not contain the target.
+From the same compose:
+
+```
+[fc-scope] no region literal; mined 34 identifier probe(s),
+           grounding centred on "variant_performance_metrics"
+```
+
+`variant_performance_metrics` sits at ~line 3327; `deriveCompositionEdgeFromParent` is at ~line
+1690 in a 4,304-line file. **The grounding window was centred roughly 1,600 lines away from the
+code the goal named.** The drafter then did the only thing it could: reconstruct plausible code
+from the symbol names it had, which is indistinguishable from hallucination and is correctly
+refused downstream.
+
+**So the causal chain is (and this supersedes my softening of §11.3):**
+
+```
+fc-scope centres the window by identifier FREQUENCY, not by goal mention   (§11.3)
+        ↓
+the window excludes the function the goal named
+        ↓
+the drafter cannot quote code it was never shown → invents a plausible anchor   (§14)
+        ↓
+fc-anchor-provenance correctly refuses: "not a substring of the window shown"
+        ↓
+re-draft, same window, same failure → attempts burn until the compose ceiling
+```
+
+In §11.3 I concluded that downstream gates "correct" the scope bias. On a small file they do. **On
+a large file they cannot** — they can only refuse, because the information required to succeed was
+never in the prompt. That is why my three edit goals against 195 KB `execution-traces.ts` all
+failed while the autonomous goals against smaller targets reached apply and verify.
+
+**This is law 8, and it is the highest-leverage fix in the report:** make `fc-scope` centre on
+identifiers the goal actually names (it has them — `fc-symbols` resolved
+`deriveCompositionEdgeFromParent` correctly on every attempt) rather than the file's most frequent
+token. Everything downstream — anchor provenance, semantic gate, verify — is already correct and
+is doing its job; it is simply being fed a window that cannot contain a right answer.
 
 **Caveat, stated:** one observation. The pattern matches the standing "drafter invents anchors"
 finding, and the discrepancy noted in §11.8 (a semantic gate asserting *"introduces compile errors"*
