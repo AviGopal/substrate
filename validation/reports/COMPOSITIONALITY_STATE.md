@@ -2309,6 +2309,57 @@ and it refused all of them with specific reasons —
 `donor-is-shell-dependent×1`. Faced with pressure to reuse *something*, it declined and said
 exactly why. That is the discipline §14 found missing in the drafter, working correctly here.
 
+## 15.9 ★★★ BLOCKER 2 ROOT CAUSE — `inputShapes` is read through a cast and never assigned anywhere
+
+§11.2 established that per-task `input_shapes` are empty on every live trace, which makes
+`consumedInChain` structurally empty and α-credit permanently withheld. The cause is now exact.
+
+The trace sink serialises both fields — but not symmetrically:
+
+```ts
+// ias-executor-ts/src/adapters/activity-api-trace-sink.ts:124
+input_shapes:  (t as { inputShapes?: string[] }).inputShapes ?? [],   // ← type assertion
+output_shapes: t.outputShapes ?? [],                                  // ← direct property
+```
+
+`outputShapes` is a declared field (`ontology.ts:47,116,170`). **`inputShapes` is not declared
+anywhere in the executor's ontology**, which is precisely why the read needs a cast — and the cast
+silences the compile error that would otherwise have caught this. At runtime the property is
+`undefined`, `?? []` fires, and every task ships `input_shapes: []`.
+
+**Control measurement across all vessel source:**
+
+| Field | assignments |
+|---|---|
+| `outputShapes` | **580** |
+| `inputShapes` (in the executor that builds tasks) | **0** |
+
+Every `inputShapes` hit outside the sink is in activity-api — consumers, zod schemas, query
+filters — i.e. code that *reads* a field the producer never writes. This is the producer/consumer
+key-mismatch pattern the earlier audits named, in its purest form: **a whole consumer chain built
+on a field with no writer.**
+
+The sink's own comment (line 175) says *"Populating this is what un-starves the …"* — the need was
+known and the population was never implemented.
+
+**Why this is the highest-value remaining fix.** One missing assignment disables three things at
+once:
+
+1. **α-credit** — `consumedInChain` can never be non-empty, so every learned composition decays
+   (§11.2), which is the whole of "optimization from traces" for composed activities.
+2. **The ribosome's `acquire_trace_signature`** — its own comment says a composite trace that reads
+   `∅ → ∅` makes "every walk-composite mint synthesize nothing".
+3. **`coverage_tick`** — line 188 notes it "fell back to `template.output_shapes` (a proxy, not a
+   measurement)" precisely because per-task shapes were absent.
+
+**The fix** is to declare `inputShapes` on the task type in `ontology.ts` and assign it where tasks
+are constructed from their declared input shapes — the same place `outputShapes` is already set.
+Removing the cast then makes the compiler enforce it, which is what should have prevented this.
+
+*Confidence: high. The 580-vs-0 assignment control is decisive, the cast is a direct explanation for
+why it typechecks, and it predicts exactly the `input_shapes: []` / `output_shapes: [...]`
+asymmetry measured on live hub traces in §11.2.*
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
