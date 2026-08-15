@@ -3686,6 +3686,68 @@ That is an operator decision, and it is the one that gates everything else: **la
 delivery mechanism, the fix for it exists and is committed, and the only instance that could run
 the fix is administratively forbidden from restarting.**
 
+## 15.28 ★★★★★ The walk finds a real astronomy API unprompted, gets a 401, and tunes the jq filter forever
+
+Logging the command (`50448be`) ended four sections of guesswork in one dispatch.
+
+```
+attempt 1 WAS: "find /workspace/git/super-repo/astronomical units -maxdepth 1 -type f | wc -l"
+            -> NOW: "curl -s 'https://api.le-systeme-solaire.net/rest/bodies/earth' | jq '.semimajorAxis / 149597870.7'"
+attempt 2 WAS: "curl … | jq '.semimajorAxis / 149597870.7'"
+            -> NOW: "curl … | jq '.meanRadius / 149597870.7'"
+```
+
+And the missing fact, retrieved by hand:
+
+```
+$ curl -s https://api.le-systeme-solaire.net/rest/bodies/earth
+Unauthorized (API key is missing. Ask your API key on …)      HTTP 401
+```
+
+**The complete causal chain, every link now evidenced:**
+
+1. The walk picks `shellResult` and — with no planted URL anywhere — **finds a real solar-system
+   REST API on its own.** The capability to reach for the network is genuinely there.
+2. It first treats *"astronomical units"* as a **filesystem path** (`find /workspace/git/super-repo/astronomical units`).
+   The file-path bias was patched in the *corrector* and is still present in **first-pass command
+   synthesis** — a second instance of the same defect, in the sibling call site.
+3. The chosen API needs a key the substrate does not have → plain-text 401.
+4. `jq` dies on that text at column 13 → `Invalid numeric literal`.
+5. **The corrector never sees the body.** curl wrote it to stdout; jq consumed it; only jq's
+   complaint survives. So the retry tunes the *filter* — `.semimajorAxis` → `.meanRadius` — while
+   the request is being rejected outright.
+6. It also asks the wrong question: Earth's `semimajorAxis` is Earth's orbital radius, not an
+   Earth–Io distance. Right instrument, wrong quantity.
+
+### The corrector fix is deployed, read, and ineffective
+
+`07dbaa7` explicitly instructs: on a network fetch, print the raw response rather than re-pipe into
+the same parser. The model tweaked the filter anyway. That is a **stronger** result than "untested"
+— prompt guidance loses to the model's habit, so the repair for this class cannot be advisory. It
+has to be structural: the harness must surface the response body into the degeneracy reason, rather
+than asking the model to go and look.
+
+### What actually remains
+
+The walk can reach the network, construct a real API call, self-correct syntax, and refuse to fake
+success. What it lacks is knowing **which endpoint answers without a key** — a *knowledge* gap, and
+exactly what the read-at-use-time channel exists to supply. So §15.27 and this section are one
+blocker, not two: the substrate cannot be told the thing it does not know, because the only working
+concept store is masked, frozen 34 hours back, and un-restartable.
+
+### Two method failures worth keeping
+
+- **C1 tested nothing.** `substrate-pull-sync` wiped all five patches at **16:40:35** and restarted
+  goal-host at 16:40:41, before that dispatch. Its `[1]- Done` error was reported here as a new
+  failure mode produced by the new corrector; it was stock `origin/dev` code. Retracted. Every
+  dispatch is a race against a ~10-minute timer, and the fix is to verify markers *at dispatch
+  time*, not at deploy time.
+- **Two root causes proposed and refuted by reproduction** — a jq pipeline that had consumed its
+  body, then `groupBounded`'s `set -m` leaking job-control notices (my own earlier fix). Both
+  stories were plausible, both were wrong, and both were killed by a one-minute test. The reason
+  they were even possible is that the command was never logged: **the instrument, not the bug, was
+  the thing to fix first.**
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
