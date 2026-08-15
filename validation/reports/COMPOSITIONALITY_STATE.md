@@ -3748,6 +3748,64 @@ concept store is masked, frozen 34 hours back, and un-restartable.
   they were even possible is that the command was never logged: **the instrument, not the bug, was
   the thing to fix first.**
 
+## 15.29 ★★★★ Evidence at the point of use beat instruction at the point of use — and one executor ignored it anyway
+
+Two more fixes, and a clean A/B on the same instruction delivered two ways.
+
+**The structural fix works.** `32b5c04` re-runs the fetch alone when a failed command piped one into
+a parser, and hands the first 400 bytes to the corrector. It fired (`re-fetched the eaten body for
+the corrector (391 chars)`) and the corrector immediately stopped tuning the jq filter:
+
+```
+attempt 2 WAS: "curl … | jq '.meanRadius / 149597870.7'"  ->  NOW: "curl … | head -c 400"
+```
+
+The *advisory* form of that identical instruction — "print the raw response, do not re-pipe into the
+same parser" — had been in the prompt for three dispatches and was read and ignored every time. So
+for this class: **evidence in front of the model beats instruction to go and find it.** That is a
+transferable result, not a fact about ephemerides.
+
+**But it is not reliable.** In the same dispatch, with the same 401 body re-fetched and presented,
+the `shellResult` executor tuned the filter anyway:
+
+```
+attempt 2 WAS: "curl … | jq '.semimajorAxis / 149597870.7'"
+            -> NOW: "curl … | jq '.semimajorAxis / 149597870.7 | tostring'"
+```
+
+Same evidence, same prompt, two executors, opposite behaviour. Adding `| tostring` to a command
+whose response is `Unauthorized (API key is missing…)` is not a correction at all. So the repair
+raises the odds rather than closing the class, and the residual is a **fixation**: across five
+dispatches the walk returned to the *same keyed API* every time, never trying a second endpoint.
+
+**The synthesis fix half-landed.** `828bae4` taught first-pass synthesis that live values are not on
+disk and that no credentials exist here. The `shell` executor's first command is now a curl. The
+`shellResult` executor still opened with
+
+```
+find /workspace/git/super-repo/astronomical units -maxdepth 1 -type f | wc -l
+```
+
+Both go through the same guidance, so this is sampling variance, not a missed call site — checked:
+the command is not in the 1,609-entry reached-command cache, so it is freshly synthesised each time,
+not a learned artefact being replayed.
+
+**What did improve is the system's own account of its failure.** The reach verdict is now
+*"The output indicates an unauthorized error and does not provide the current Earth-Io range"* — the
+401 propagated all the way into the judge. Compare the start of the session, where the same
+underlying failure produced a confident fabricated number. The substrate now fails honestly **and
+explains itself correctly**, which is the precondition for it repairing itself rather than a
+substitute for it.
+
+### Where the Io goal actually stands
+
+Every stage now works except one, and each was verified by measurement rather than inference:
+reaches for the network, finds a real astronomy API unprompted, self-corrects syntax, recovers the
+response body, refuses to fake success, and reports the true cause. The single remaining step is
+**choosing an endpoint that serves the data without a key** — and the walk fixates on the first API
+it thought of. That is a knowledge gap, and the channel built to close knowledge gaps at the moment
+of use is the masked concept-db of §15.27.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
