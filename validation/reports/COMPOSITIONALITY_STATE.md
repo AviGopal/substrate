@@ -120,7 +120,58 @@ are not firing (an UPDATE needs no `org_id` and would bump `updated_at`):
    updates — so it cannot be the whole story, though it is a live latent bug that will bite the
    moment (1)/(2) are fixed.
 
-**Discriminating instrument:** the inner `catch` logs `[composition-edge] derive-from-parent failed`.
+### ★★★ ROOT CAUSE, MEASURED — the lookup queries the wrong table by the wrong key
+
+Hypothesis (2) is now resolved to an exact mechanism with numbers. The derivation runs:
+
+```ts
+`SELECT activity_id FROM type::thing('execution', $pid) LIMIT 1`   // execution-traces.ts:1704
+```
+
+That resolves the parent **by record id in the `execution` table**. Measured against live data,
+taking 200 real `parent_execution_id` values from `activity_execution_traces`:
+
+| Lookup | Hits / 200 |
+|---|---|
+| `execution` by record id (what the code does) | **0** |
+| `activity_execution_traces` by record id | 0 |
+| `execution` by `execution_id` field | 0 |
+| **`activity_execution_traces` by `execution_id` field** | **185 (92.5 %)** |
+
+`parent_execution_id` refers to the **`execution_id` field of `activity_execution_traces`**. It is
+neither a record id nor anything in the `execution` table. The record ids differ in form and
+confirm it: `execution` rows are `auth_1785767902983_5uoj707` / `exec_0000b3a6-208`,
+`activity_execution_traces` rows are `001g7zjp4az5w3ku7n7e`, while the parent references are
+`exec_smg8vo69`.
+
+**The comment above the query explains how it happened**, and it is the most instructive part:
+
+> *"…by reading the parent's `activity_id` from the AUTHORITATIVE `execution` table (NOT the frozen
+> `activity_execution_traces`)"*
+
+The author avoided `activity_execution_traces` **because they believed it was frozen** — and the
+parent ids exist only there. The belief that a table was dead caused the query that kept the graph
+dead. A correct-sounding rationale produced a lookup with a 0 % hit rate, and because the miss path
+`return`s silently (no log), it produced no evidence for a month.
+
+**The fix is one query:**
+
+```ts
+`SELECT activity_id FROM activity_execution_traces WHERE execution_id = $pid LIMIT 1`
+```
+
+Dispatched as goal `b7c2d118`. Expected effect: edge writes resume at ~92 % of parented ingests.
+
+⚠️ **Scope correction:** I initially claimed this would also unblock α-credit. **It will not** —
+the α gate is in-memory walk arithmetic and never reads this table (retraction in §11.2). The
+justification for this fix is narrower and still sound: the graph is a live input to
+`discover-by-shapes`'s `composition_score`, so selection is currently scored against a July
+snapshot, and the ribosome/topology views built on it are stale.
+
+**Superseded:** the timeout/`cd`-short-circuit discussion below concerns why *one compose's verify*
+produced no output; it is unrelated to the freeze. The freeze is this query.
+
+**Discriminating instrument (now historical):** the inner `catch` logs `[composition-edge] derive-from-parent failed`.
 Grep the hub's activity-api journal for that string. Present ⇒ (3). Absent ⇒ (1) or (2), separable
 by adding a log to the silent early return. This check requires hub host access, which this spoke
 does not have.
@@ -605,7 +656,94 @@ regardless of quality, and it means posterior rank currently encodes *scheduler 
 capability. The reach-reason text already contains the discriminator (`no draft was produced`) —
 the grading path simply does not consult it.
 
-### ★★★ The cause, found explicitly: α-credit is gated on a composition edge, and the edge table is frozen
+### ~~★★★ The cause, found explicitly: α-credit is gated on a composition edge, and the edge table is frozen~~ — **RETRACTED, and the behaviour is probably correct**
+
+> ⚠️ **This was my most confident claim of the session and it is wrong.** I read the log line
+> *"WITHHELD alpha-credit … no in-chain producer-to-consumer edge"*, matched the words
+> "producer-to-consumer edge" to `activity_composition_graph` (§4), and built a causal chain on it
+> without reading the code. **The gate never touches that table.**
+>
+> The actual gate (`index.ts:8539`) tests `consumedInChain.size === 0`, an **in-memory set built
+> during the walk itself** (`index.ts:7082`):
+>
+> ```ts
+> const ledgerStep = (inputShapes, newOutputs) => {
+>   for (const s of (inputShapes ?? [])) if (chainProduced.has(s)) consumedInChain.add(s);
+>   for (const s of newOutputs) if (s && s !== "activityExecutionSummary") chainProduced.add(s);
+> };
+> ```
+>
+> Its own comment states the design:
+>
+> > *"chainProduced accumulates shapes a strictly-earlier successful step emitted; consumedInChain
+> > gains a shape only when a LATER step's declared input equals one — a genuine, computed
+> > producer→consumer edge that carried an impulse en route to the reach. **Pure in-memory set
+> > arithmetic … unspoofable by goal text, fail-closed (empty ⇒ withhold).**"*
+>
+> **So α-credit requires demonstrated data flow *within the walk*: a later step consuming a shape an
+> earlier step produced.** It is deliberately fail-closed and deliberately independent of the
+> persisted graph. There is a separate retroactive path (`propagateCreditAlongChain`, via
+> `composition_chain`) that the comment names as its complement.
+>
+> **Two consequences I must state plainly:**
+>
+> 1. **Fixing §4 does not unblock α-credit.** My "one fix, two systems — §4 is the highest-leverage
+>    repair in this report" conclusion is **withdrawn**. The edge fix is still worth doing (the graph
+>    is genuinely frozen and `discover-by-shapes` reads it for `composition_score`), but on its own
+>    merits, not as a credit fix.
+> 2. **The withholding is probably correct behaviour, not a defect.** The eBay walk reached "via a
+>    4-step chain" yet credited nothing — because the answer came from
+>    `VESSEL-RESOLVE SATISFIER produced "webSearchResult" directly — no bridge needed`. A satisfier
+>    answering directly **is not a composition**, so declining to credit one is right. Much of the
+>    §11.2 α=1 population may be templates that never actually participated in a producer→consumer
+>    handoff.
+>
+> ### ★★ Resolution of the open question: traces record no input shapes, so composition is undetectable
+
+The retraction above left one question open: *are walks failing to declare matching input/output
+shapes (a plumbing defect), or are they genuinely satisfier-only (correct)?* **Measured on live hub
+traces: it is the plumbing defect.**
+
+`consumedInChain` grows only when a later step's **`input_shapes`** contains a shape an earlier
+step produced. Reading per-task shapes back from the hub:
+
+| Trace | per-task `input_shapes` | per-task `output_shapes` |
+|---|---|---|
+| `exec_vc8884p4` (the eBay walk that **reached**) | `[]`, `[]` | `["goal_file_extract"]`, `["uiFeedback_write"]` |
+| `exec_88m7mp4d` | `[]` | `[]` |
+
+**Input shapes are empty.** If no task ever declares an input, `consumedInChain` can never become
+non-empty, so the `consumedInChain.size === 0` branch is taken on **every** walk and α-credit is
+**structurally always withheld** — not because compositions didn't happen, but because the evidence
+of them is not recorded.
+
+This is the exact condition a comment in the same subsystem describes, in code that is present in
+the clone (`origin/dev`) and **missing from the live activity-api tree**:
+
+> *"Per-task SHAPES (2026-08-13): preserve the shape sequence into the stored task so a composite
+> trace does NOT read ∅ → ∅ back — the ribosome's `acquire_trace_signature` needs the shape→shape
+> sequence to extract a recipe, and dropping it here made every walk-composite mint synthesize
+> nothing (hub 404)."*
+
+So the same missing field breaks **two** consumers: α-credit (via `consumedInChain`) and the
+ribosome's recipe extraction. That is a single plumbing defect with two large downstream effects,
+and it — not the frozen edge table — is the credible root of the §11.2 asymmetry.
+
+**Corrections to my own corrections, stated plainly:** I first blamed the frozen edge table
+(wrong — the gate never reads it), then said the withholding was "probably correct behaviour"
+(also wrong — it is caused by unrecorded inputs). The measured asymmetry was real throughout; only
+my explanation kept moving. **Confidence: n=2 live traces plus the code path.** It should be
+confirmed across a larger sample before being treated as settled, and the specific question to
+answer next is whether the hub is running the `2026-08-13` per-task-shapes storage code at all.
+
+**What survives as a real finding:** the *measured* asymmetry stands — 60/68 templates at α=1
+> across 340 successful executions, while β increments on genuine failures **and on non-merit
+> capacity refusals** (the `dBeta:2` on a dispatch whose own reason says *"no draft was produced, so
+> there is nothing to judge"*). The β side crediting infrastructure events is still wrong. The α
+> side needs a different investigation: **are walks failing to declare matching input/output shapes
+> (a plumbing defect), or are they genuinely satisfier-only (correct)?** That question is open, and
+> the earlier commit *"fix(trace-sink): send per-task input_shapes/output_shapes so composite traces
+> are not shapeless"* suggests the plumbing has been suspect before.
 
 The eBay walk (§13) — a goal that **reached** — emitted this line:
 
@@ -1462,6 +1600,20 @@ Latency is ~2× the budget **every time**, so recall never lands and **every goa
 shapes with no knowledge context.** The cost is not hypothetical: with recall dark, this goal's
 target shapes came back `["env_gate_scan","fileEditResult"]` for a question about eBay prices.
 
+**The function's own default would have worked.** `recallConceptRows(query, limit, timeoutMs = 10_000)`
+defaults to **10 s** — comfortably above the measured 7.7 s. Three call sites override it downward:
+
+```
+index.ts:5754   recallConceptRows(`${shape} pointer payload`, 3, 4000)
+index.ts:9332   recallConceptRows(_q3, 5, 4_000)
+index.ts:9333   recallConceptRows(_q1, 5, 4_000)
+```
+
+So the safe value is already encoded in the signature and is discarded at every call. **The current
+setting is strictly worse than either alternative**: the walk pays the full 4 s latency on every
+goal *and* receives nothing. Waiting 8 s and getting knowledge would be better; not calling at all
+would at least be cheaper.
+
 The 4 s cap is deliberate — *"recall is an optimisation and the walk must never wait on it"* — and
 that reasoning is sound in isolation. Combined with a semantic search over 55,525 concepts that
 takes ~7.7 s, it silently disables the channel it was protecting. Note the latency is in the
@@ -1479,7 +1631,75 @@ be able to reach the tool shapes (`web_search`, `http_fetch`, `webSearchResult`)
 that name no file — but note the full walk *did* find them unaided, so this is an efficiency fix
 (4 attempts → 1), not a capability gap.
 
-## 14. Summary
+## 14. ★★ The drafter is the bottleneck — it invents anchors after being handed correct ones
+
+Observed on goal `b7c2d118` (the §4 edge fix), which is the best-instrumented dispatch of the
+session because I supplied the target line **verbatim** in the goal text.
+
+Everything upstream of the drafter worked:
+
+```
+[fc-anchors]  supplied verified-unique anchors for repos/activity-api/src/routes/execution-traces.ts
+              (67 locator candidate(s))
+[fc-symbols]  resolved 2/3 cross-file declaration(s): deriveCompositionEdgeFromParent, activity_id
+[compose-lessons] source=concept-db n=8
+```
+
+The plan it then produced:
+
+```json
+ops:[{"kind":"edit","old":"    // parent execution record to retrieve the activity_id for a composition_edge."},
+     {"kind":"edit","old":"    const parentActivityId = parentExecutionId ? (await db.query(`SELECT activity_id FROM "}]
+```
+
+Both anchors are **fiction**, verified by count against the live file:
+
+| Anchor the drafter chose | Occurrences in target file |
+|---|---|
+| `// parent execution record to retrieve the activity_id for a composition_edge.` | **0** |
+| `const parentActivityId = parentExecutionId ? (await db.query(` | **0** |
+| `db.query(` — the API it assumed | **0** (the file uses `surrealDB.query`) |
+
+The real code, which the goal quoted verbatim:
+
+```ts
+    const parentRows = await surrealDB.query<{ activity_id?: string }[]>(
+      `SELECT activity_id FROM type::thing('execution', $pid) LIMIT 1`,
+      { pid: bareParent },
+    );
+```
+
+**This is the clearest evidence in the report of where autonomy actually fails.** The pipeline
+located the right file, the right function, and offered 67 verified-unique anchors; the operator
+supplied the exact line; and the drafter still invented a plausible-looking API (`db.query`) that
+does not exist in the file. Grounding, symbol resolution, anchor supply, and lesson injection were
+all healthy — **information availability was not the constraint here.**
+
+That matters because it separates two diagnoses that look alike:
+
+- *Information starvation* (law 8) — real, and demonstrated elsewhere in this report (§13.1's recall
+  timeout, where target-shape selection ran blind).
+- *Generation failure* — the drafter given correct, sufficient, verbatim information and producing
+  something else. This is that case.
+
+**Implication for prioritisation.** The judging stack is consistently right: every rejection
+observed this session was correct (§11.8), including two autonomous ones in the same window — one
+on a real `exit_code: 2` typecheck failure, one on semantic grounds. Nothing in this session shows a
+*good* draft being wrongly refused. The scarce resource is **drafts worth landing**, not gates.
+Adding gates, detectors, or lessons will not move the landing rate; improving anchor obedience will.
+
+**A narrower, concrete sub-finding:** the anchor supply mechanism (`fc-anchors`, 67 verified-unique
+candidates) is a mitigation that already exists for exactly this failure and is being **bypassed** —
+the drafter is not constrained to choose from the supplied set. Constraining `old_string` to the
+verified anchor list (reject at plan time, before apply) would convert this class from a wasted
+compose into an immediate re-draft.
+
+**Caveat, stated:** one observation. The pattern matches the standing "drafter invents anchors"
+finding, and the discrepancy noted in §11.8 (a semantic gate asserting *"introduces compile errors"*
+on a draft whose verify returned `exit_code: 0`) suggests LLM-authored text is unreliable on both
+the drafting *and* the reviewing side — but the reviewing side still reached the correct verdict.
+
+## 15. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
 (0/2478 ungraded) and 92.4 % of executed templates have moved off Beta(1,1) — so learning *from*
