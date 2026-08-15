@@ -1997,6 +1997,86 @@ It carries the measured instance (1704 vs 3306, 1602 lines) so the next drafter 
 failure, not an abstraction. This is a mitigation, not the fix — it biases drafting without
 correcting the window.
 
+## 15.3 Blocker 7 reframed: the orphaned detectors are not merely unscheduled — several are blind where they run
+
+Four of the 22 never-selected detectors (§9.2) were run manually. The results reframe the fix.
+
+| Detector | Result | Reading |
+|---|---|---|
+| `concept_credit_integrity_scan` | **15 of 50 concepts degenerate** (`loaded: 235, succeeded: 235`) | **real defect found** — every load counted as a success, so those relevance scores carry no information |
+| `schema_assert_drift_scan` | `drift_count: 0` over 3 tables | genuine clean negative |
+| `detector_coverage_scan` | `traces_examined: 0`, `failures_examined: 0`, `information_yield: "idle"`, `authored_detector_count: 0` | **blind** — examined zero traces over 48 h on a fleet running 65,373 dispatches/week |
+| `orphaned_capability_scan` | `live_shape_count: 319`, `invoked_resolver_count: 0`, `capability_orphan_count: 132`, **`degraded: true`, `gaps_emitted: 0`** | **blind, and correctly says so** — with no invocation data every shape looks orphaned, and it refused to emit 319 false gaps |
+
+**The pattern is law 11, not scheduling.** The two blind detectors both need *trace/invocation*
+data, and this deployment is a spoke that masks `activity-api` — so they read a local store that
+holds no current traces. Seeding them here would not help: they would run on cadence and produce
+`idle` and `degraded` reports forever. **A vessel belongs where its data lives**; these detectors
+belong on the hub, or must resolve the trace store through discovery rather than locally.
+
+So blocker 7 splits in two:
+
+1. **Detectors that read local state** (`concept_credit_integrity_scan`, `schema_assert_drift_scan`)
+   — genuinely just unscheduled. Seeding them is correct and would have found the degenerate-credit
+   defect above without an operator.
+2. **Detectors that read traces** (`detector_coverage_scan`, `orphaned_capability_scan`, and by
+   inspection most of the `*_scan` family) — **misplaced**, not unscheduled. Scheduling them on a
+   spoke manufactures noise.
+
+**Credit where due:** `orphaned_capability_scan` sets `degraded: true` and emits nothing rather
+than filing 319 false gaps. That is precisely the "absent marker means NOT OBSERVED, not FAILED"
+discipline §11.5 found missing in the verify path — the same team, the same failure class,
+correctly handled here and incorrectly there.
+
+**And a caution about §9.4's proposed staleness detector:** I recommended one detector asserting
+"a store that should be written is not being written." On a spoke that reads masked stores, such a
+detector would fire constantly and correctly-but-uselessly. It must run where the data lives, or
+distinguish "not written" from "not visible from here" — which is exactly the distinction I got
+wrong myself when I measured the edge freeze on the spoke (§4).
+
+## 15.4 ★★★ BLOCKER 1 CLOSED — autonomously, and verified
+
+`fef173c` — **`Substrate Autonomous`, 2026-08-15 02:54:30, no operator hands** — landed on
+`origin/dev`:
+
+```diff
+-      `SELECT activity_id FROM type::thing('execution', $pid) LIMIT 1`,
++      `SELECT activity_id FROM activity_execution_traces WHERE execution_id = $pid LIMIT 1`,
+```
+
+**Provenance:** my dispatch `b7c2d118` for this change *failed* (applied at line 3306, §14). The
+demand persisted as gap `route-edit-5892936c`, the gap picker ranked it (score 0.9), and the
+autonomous lane drafted, verified and landed it correctly. This is the §11.11 pattern again, now on
+a load-bearing fix rather than a timeout constant: **operator failure delayed the work; it did not
+destroy it.**
+
+**Verified correct, on the current parent population:**
+
+| Query | Hits on 200 live `walk-*` parent ids |
+|---|---|
+| `execution` by record id (the old code) | **0 / 200** |
+| `activity_execution_traces` by `execution_id` (landed) | **200 / 200** |
+
+**A near-miss I nearly published as a harmful-change alarm.** On reading that
+`v_paradigm_execution_traces` is defined `FROM execution` with `execution_id = meta::id(id)`, and
+that the hub's trace-by-id route had resolved `walk-satisfier-1-…` through that view, I inferred
+the *original* query must have worked and the autonomous commit had broken it — and was about to
+recommend a revert. **Measuring instead of inferring reversed that**: on the current population the
+old query hits 0/200 and the new one 200/200. (`execution` does contain 5,369 `walk-*` record ids,
+but they are a different id family from the `walk-*` values traces reference — which is exactly the
+kind of near-coincidence that makes inference unsafe here.)
+
+That is the fifth time this session that a mechanism inferred from code-reading or log-wording was
+overturned by a one-command measurement, and the first where acting on the inference would have
+**reverted a correct fix**. The rule that keeps holding: *measure the population you actually care
+about, not the one the query happens to return first* — my original 0/200 result came from an
+unordered `LIMIT 200` that returned stale July `exec_*` rows.
+
+**Blocker 1 status: CLOSED.** Effect on the frozen graph is not yet observable — activity-api runs
+on the hub, which must converge to `origin/dev` before edges resume. That is the next thing to
+watch, and it is the honest remaining step: *landed and verified-by-query* is not yet
+*edges-are-flowing*.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
