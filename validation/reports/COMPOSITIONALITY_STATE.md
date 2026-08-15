@@ -3806,6 +3806,64 @@ response body, refuses to fake success, and reports the true cause. The single r
 it thought of. That is a knowledge gap, and the channel built to close knowledge gaps at the moment
 of use is the masked concept-db of §15.27.
 
+## 15.30 ★★★★★ A fabricated answer that passed the judge became a CACHED RECIPE, and the reach override does not evict it
+
+The single most consequential finding of the session, and it reframes everything before it.
+
+`J1` graded `reached=true`. Its output was **byte-identical** to `G1`'s:
+
+```
+stdout: 4.199926088921265
+cmd:    bun -e "const earthIoDistanceKm = 628300000; const auInKm = 149597870.7;
+                console.log(earthIoDistanceKm / auInKm);"
+```
+
+A hardcoded literal over a unit conversion — nothing fetched, nothing time-dependent, the same
+number forever. Oracle: **6.2737 AU**. Not re-derived: **replayed.**
+
+```
+/workspace/.goal-host-reached-commands.jsonl      1611 lines
+grep -c "628300000"                            →  2
+```
+
+**G1's false reach was persisted into the reached-command cache and served back as a learned
+recipe.** Marking G1 `reached=false` in the trace store did not evict it. The two stores disagree,
+and **the cache is the one the walk reads** — so the operator-facing correction is cosmetic while
+the system-facing artefact stays poisoned.
+
+Three consequences, in order:
+
+1. **Law 3, literally.** *A wrong mint is negative value, not zero.* A fabrication that survived the
+   judge became durable infrastructure, and every later dispatch of the class was short-circuited
+   before derivation could occur.
+2. **The feedback plane has a hole on its most important path.** `provide_feedback` and the reach
+   override write where the operator reads; nothing writes where the *walk* reads. A correction
+   that does not reach the consumer is not a correction — the same write-here/read-there defect the
+   wiring audits catalogued, now sitting on the path that makes bad answers permanent.
+3. **Nothing evicts a recipe.** There is no route from "this reach was wrong" to "stop replaying
+   this command", so a single false green is self-perpetuating. The missing detector is exact: **on
+   a reach override, evict any cached recipe minted by that execution.**
+
+### It invalidates the session's own experimental design
+
+From G1 onward the dispatches were not independent trials of successive fixes — the cache was
+answering. `J1` therefore tested nothing about the host-ban enforcement, exactly as `C1` tested
+nothing after pull-sync reverted the tree and `G1` tested nothing for the same reason. **Three of
+the last six dispatches measured something other than what they were built to measure**, and each
+was caught only by a marker or oracle check bolted on after the previous miss.
+
+### The five false reaches are one mechanism
+
+fabricated eBay price → 16-day-stale Mars snippet → 5.204 AU (Jupiter's semi-major axis) →
+4.1999 AU (hardcoded literal) → **replay of 4.1999 AU**. The judge cannot distinguish a computation
+over invented constants from a measurement, and the cache makes its worst mistake permanent. The
+grounding digest (§15.26) suppressed this on the *floor* path; the *walk* path has no equivalent,
+and that is where all five landed.
+
+**Repairs applied here:** the two poisoned entries were evicted (backup at `/tmp/reached-cache.bak`;
+the running process loaded the cache at boot, so eviction takes effect on its next restart), and
+both false reaches were graded `reached=false` in the store.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
