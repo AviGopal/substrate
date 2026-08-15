@@ -3864,6 +3864,66 @@ and that is where all five landed.
 the running process loaded the cache at boot, so eviction takes effect on its next restart), and
 both false reaches were graded `reached=false` in the store.
 
+## 15.31 ★★★★★ Enforcement holds; and my own classifier told the walk to keep a host that does not exist
+
+Two controlled dispatches on a de-poisoned cache, all fixes live, markers verified at completion.
+
+**The ban enforcement is verified working.** On both runs the `shellResult` executor was refused in
+code when it tried to return to the disqualified host, and then emitted the honest escape:
+
+```
+DISQUALIFIED host api.le-systeme-solaire.net — auth/quota refusal detected
+REJECTED re-synthesis #1 — it targeted BANNED host; not executing, re-synthesising
+REJECTED re-synthesis #2 — it targeted BANNED host; not executing, re-synthesising
+attempt 2 -> NOW: "echo UNKNOWN"
+```
+
+After five consecutive false reaches in this class, the failure mode is now *"I don't know"*. That
+is the correct answer when the only endpoint you can name refuses you, and it is the first fix this
+session verified end-to-end under controlled conditions rather than deployed and hoped. It also
+confirms the session's central lesson in its strongest form: **the identical constraint failed as
+prompt text and held as code.**
+
+### And I introduced a new defect, of exactly the kind I had just diagnosed
+
+The `shell` executor picked `api.leonardodario.com` — a hallucinated domain. Measured:
+
+```
+curl → http=000 exit=6      (could not resolve host)
+```
+
+And my own 4xx classifier fired on it:
+
+```
+BAD-REQUEST on api.leonardodario.com — instructed to KEEP the host and fix the query
+```
+
+**It told the walk to keep a host that does not exist.** The `_badRequest` predicate is a text match
+over the probe output and does not first establish that anything answered at all. A DNS failure is
+not a complaint about the query; it is the strongest possible statement that the host is wrong —
+the same category error as the original conflation of 401 with 400, committed a second time, in the
+same code block, two fixes later.
+
+The guard is obvious in hindsight and is **not applied here**: classify only when the probe shows a
+transport success. `exit_code != 0`, `http=000`, or an empty body means *no host answered*, and that
+belongs with disqualification, not with keep-and-fix.
+
+### The honest pattern in this session's own work
+
+Three of my fixes were correct for the case that motivated them and wrong for the neighbouring case:
+the endpoint-vs-filter advice that argued the walk off JPL Horizons, the host ban that read as
+guidance and was ignored, and now a request-error classifier that captures unreachable hosts. Each
+was caught only because an instrument added *earlier* made it visible — the command log, the
+completion-time marker check, the hand-read oracle. **Guidance that generalises past its evidence is
+how a fix becomes a defect**, and the rate at which I was producing them rose as the session went on.
+
+That is the reason to stop adding layers here rather than a fourth patch: the remaining gap is not
+in this code path. Blocked from the refusing host, the walk cannot name a real alternative — even
+though it named `ssd.jpl.nasa.gov` unprompted in an earlier dispatch. The knowledge is in the model
+and is not retrieved at the moment of use, and prompt restructuring (enumerate candidates by
+institution type, then choose) did not recover it. That is precisely the read-at-use-time channel of
+§15.27, and it is masked.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
