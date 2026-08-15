@@ -1866,7 +1866,71 @@ finding, and the discrepancy noted in §11.8 (a semantic gate asserting *"introd
 on a draft whose verify returned `exit_code: 0`) suggests LLM-authored text is unreliable on both
 the drafting *and* the reviewing side — but the reviewing side still reached the correct verdict.
 
-## 15. Summary
+## 15. State of the blockers, and the impasse
+
+### Operator dispatch record this session — 5 attempts, 0 landings
+
+| Dispatch | Target | Outcome |
+|---|---|---|
+| `572aac4a` | `execution-traces.ts` (195 KB) | applied correctly at 1710–1717, **verify empty** → UNFAVORABLE |
+| `5b6d29bf` | `composition-flow-health-scan.ts` (7 KB) | refused, **capacity BUSY** (no draft) |
+| `8a037659` | `feature-compose.ts` (312 KB) | **killed by drain** after apply → left unverified code live (§11.10) |
+| `b7c2d118` | `execution-traces.ts` (195 KB) | applied at **line 3306, target 1704** → UNFAVORABLE (§14) |
+| `81850906` | `composition-flow-health-scan.ts` (7 KB) | **killed by drain** (no drift this time — died before apply) |
+
+Meanwhile the **autonomous** lane landed `3e76227` on `origin/dev` unaided (§11.11), and produced
+three well-formed drafts that were correctly refused on merit. The difference is not
+operator-vs-autonomous privilege; it is **target size and lane timing**.
+
+Refinement to §11.10: the live-drift hazard is **conditional on the kill landing after apply**.
+`81850906` was drain-killed and left the tree clean; `8a037659` was killed post-apply and did not.
+So the defect is real but not universal — which also makes it harder to notice.
+
+### Every blocker is diagnosed; none is fixed
+
+| # | Blocker | Diagnosis | Fix known? | Landed? |
+|---|---|---|---|---|
+| 1 | Composition edges frozen 31 d | lookup uses wrong table+key; hub-verified id family `walk-satisfier-*` | ✅ one query, mirror the working route | ❌ |
+| 2 | α-credit always withheld | per-task `input_shapes` empty ⇒ `consumedInChain` structurally empty | ✅ restore per-task shapes storage | ❌ |
+| 3 | Concept recall dark on every goal | 4 s budget vs 7.7 s measured; safe 10 s default overridden at 3 call sites | ✅ one constant ×3 | ❌ |
+| 4 | Edits mis-localised on large files | `fc-scope` centres by frequency; 3 gates enforce that region | ✅ centre on goal-named symbol | ❌ |
+| 5 | Drain kills composes post-apply | no rollback on abort; slot + in-flight leak | ✅ rollback/defer on drain | ❌ |
+| 6 | Unrun verify scored as failure | `tcOk = (tcExit === 0)`, absent marker ⇒ fail | ✅ distinguish could-not-run | ❌ |
+| 7 | 22 detectors never selected | no seed template, referenced by none | ✅ seed them | ❌ |
+
+### The impasse, stated plainly
+
+**Blocker 4 is upstream of fixing blockers 1, 2, 5 and 6**, because all of those live in large
+files (`execution-traces.ts` 195 KB, `feature-compose.ts` 312 KB). And blocker 4's own fix lives in
+`feature-compose.ts` — the largest file of all. **The system cannot currently repair the thing that
+prevents it repairing things.**
+
+That is bootstrap-shaped, and it is the one shape CLAUDE.md already carves out: *"Nothing there can
+be gated without circularity."* By the operator-role test — *intervene only on intractable
+blockers, things structurally beyond the system's reach* — blocker 4 qualifies, and the others do
+not: once `fc-scope` centres correctly, 1/2/3/5/6 are ordinary single-file goals the substrate can
+plausibly land itself.
+
+**The minimal intervention is therefore one function, not seven fixes:** make `fc-scope` prefer
+identifiers the goal names over the file's most frequent token. `fc-symbols` already resolves the
+goal's identifiers correctly on every attempt, so the required information is present in the same
+prompt-build — this is a routing change inside `feature-compose.ts`, not new capability.
+
+**What I did instead of hand-editing**, since a direct `repos/*/src/**` edit is hook-gated and is
+the operator's call: taught the finding through the channel that is actually read at prompt-build
+(law: *teach through the channel that is read*). A `compose_lesson` concept was written to
+concept-db and verified retrievable by the drafter's own query:
+
+```
+conceptSearch {source_type: "compose_lesson", query: "anchor symbol the goal names"}
+→ "compose lesson: anchor to the symbol the goal names, not the file's most frequent one"
+```
+
+It carries the measured instance (1704 vs 3306, 1602 lines) so the next drafter sees the concrete
+failure, not an abstraction. This is a mitigation, not the fix — it biases drafting without
+correcting the window.
+
+## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
 (0/2478 ungraded) and 92.4 % of executed templates have moved off Beta(1,1) — so learning *from*
