@@ -2955,6 +2955,41 @@ unreliable at *mechanism predictions* it cannot check at all. Weighting a 0.90-c
 prediction above a passing judge **and** a green verify inverts the reliability ordering: the only
 components that actually executed anything are outranked by the one that did not.
 
+## 15.18 ★★★ BLOCKER 6 CLOSED — every shell call went from 30 s to 22 ms
+
+`7164c1c` (Substrate Autonomous) landed the watchdog redirect on `origin/dev`:
+
+```diff
+- `( sleep ${timeoutSec}; kill -9 -$__cpid 2>/dev/null ) &`,
++ `( sleep ${timeoutSec}; kill -9 -$__cpid 2>/dev/null ) >/dev/null 2>&1 &`,
+```
+
+**Verified running, and verified by effect — the distinction §8.1 says the system cannot draw:**
+
+| check | result |
+|---|---|
+| `origin/dev` + live tree | redirect present |
+| `local-tools-vessel` restarted | 11:02:45 UTC |
+| `shell "echo ok"` | **0 s** (was 30 s) |
+| three consecutive calls with output | **22 / 23 / 24 ms**, `exit_code: 0`, stdout intact |
+
+**A ~1300× latency reduction on the substrate's most-used primitive.** Every grounding call, every
+file read, every verify invocation in the compose pipeline paid a flat 30 s before this; they now
+cost milliseconds. Command output is unaffected, exactly as the pre-dispatch experiment predicted
+(`( sleep 4 ) & echo FAST` → 4006 ms vs `>/dev/null 2>&1 &` → 5 ms).
+
+**It landed despite the adversarial refuter rejecting it twice** (§15.15, §15.17) at 0.90
+confidence with a false mechanism claim, overriding a correct first judge both times. The cutover
+applied it anyway. That is the same apply-path behaviour that landed the *harmful* change in
+§15.16 — **the verdict is not binding on the apply**, which cuts both ways: here it rescued a
+correct fix from a wrong gate, there it shipped a corrupt one past a right one. Neither outcome is
+governed by judgement quality.
+
+**Session note on the two shell-timeout attempts.** The first (`e1ffa50`, `30 → 300`) was inferred
+from a causal story and took the fleet down for three hours. The second (this one) was validated by
+direct experiment before dispatch and produced a 1300× improvement. Same file, same subsystem, same
+author — the only difference was whether the mechanism had been executed before it was believed.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
