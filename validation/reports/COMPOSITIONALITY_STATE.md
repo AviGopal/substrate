@@ -4379,6 +4379,57 @@ ago:
 3. **Recipe eviction on reach override** — so a false green cannot become durable.
 4. Last-mile extraction, concurrency cap, concept-db.
 
+## 15.41 ★★★★★ The grader was BLIND, not lax — and giving it provenance fixed the false-reach class
+
+§15.40 called the reach judge "the deepest defect" and implied it might be certifying numbers
+*despite* seeing their provenance. **That was wrong, and one diagnostic settled it.** Printing the
+grader's own inputs showed:
+
+```
+reach-input: cmdEvidenceLen=0    shapes=goal,dispatch_id,bash,shell   cmdEvidence=""
+reach-input: cmdEvidenceLen=0    shapes=goal,dispatch_id,shell        cmdEvidence=""
+reach-input: cmdEvidenceLen=166  shapes=goal,dispatch_id,shellResult  cmdEvidence="- shellResult was produced by RUNNING: `curl …horizons.api?COMMAND=501…`"
+```
+
+**The judge grades `shell` and `bash` output with no provenance at all**, while `shellResult` on the
+same walk supplies its command normally. So `AA1` certified **45.938 AU** — Earth's own mean radius
+÷ 1 AU, from a host disqualified for 401 earlier in that dispatch — because the judge was handed a
+bare number and asked whether it looked like an answer. Its prompt asks for command↔intent
+alignment and then gives it no command.
+
+### The repair, and the miss on the way
+
+First attempt widened the ARG KEYS `recordExecutorCommand` recognises. The next live run showed that
+fallback firing for `code_modification_proposal` while `shell` stayed at **0** — proving the
+recogniser was never the problem on that path: **the function was not being called there at all.**
+A cause adjacent to the measured one. Corrected by recording at *every* content-returning path
+rather than guessing which one a shape exits through; provenance is additive, so total coverage is
+safer than a fifth single-path guess.
+
+### Verified working
+
+```
+reach-input: cmdEvidenceLen=123  shapes=…,shell  "- shell was produced by RUNNING: `curl …horizons.api?format=text&COMMAND=1` | head -c 4000"
+verdict: "The output from the shell command provides general physical data for MERCURY,
+          not the present Earth-Io range in astronomical units."
+```
+
+`COMMAND=1` is the Mercury barycentre. **The judge saw the command, identified the wrong target body,
+and refused** — the exact scrutiny it could not perform while blind. `shell` went 0 → 123 chars; the
+`(no command field; resolve args)` fallback fired correctly for `goalDispatchAsync`.
+
+**This is the anti-false-reach fix, verified by observation.** Eight false reaches this session all
+share the same enabling condition, and it is now closed on the walk path.
+
+### The architectural fact underneath
+
+**Four independent mechanisms today covered `shellResult` and silently skipped `shell`/`bash`:** the
+body-recovery probe, the extraction step, the judge's command evidence, and `recordExecutorCommand`
+itself. Each looked complete in isolation. That is not four bugs — it is one undocumented property
+of this walk: **`shell` and `bash` are second-class executors that instrumentation keeps forgetting.**
+Any future feature touching executor output should be checked against all three shapes before it is
+believed.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
