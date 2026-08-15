@@ -2668,6 +2668,44 @@ land. §15.10's one-op rule got the draft right; this destroyed it anyway. Block
 1, 2, 5 and 7 in the practical sense that *any* fix for them must survive verify — and on a cold
 worktree, none can.
 
+## 15.12 ★★★ The edge CREATE is missing THREE required fields — pre-validated against the live schema
+
+Before waiting on another compose, I ran the CREATE directly against the live database to check
+whether my dispatched `org_id` fix would actually work. **It would not.** Each attempt fails on the
+next missing field, so the schema reveals the full set only by probing:
+
+| CREATE contains | Result |
+|---|---|
+| the code's current fields (no additions) | `Found NONE for field **execution_id**, but expected a string` |
+| + `org_id` | `Found NONE for field **execution_id**` (unchanged — org_id was never the first blocker) |
+| + `execution_id`, no `org_id` | `Found NONE for field **org_id**, but expected a string` |
+| + `execution_id` + `org_id` | `Found NONE for field **success**, but expected a bool` |
+| **+ `execution_id` + `org_id` + `success`** | ✅ **row created** |
+
+So `deriveCompositionEdgeFromParent`'s CREATE is missing **three** required fields —
+`execution_id` (string), `org_id` (string), `success` (bool) — and can never persist an edge as
+written. The probe rows were deleted afterwards (verified `count: 0`).
+
+**This invalidates the goal I currently have in flight.** The dispatched fix adds only `org_id`,
+which the first row above shows was not even the blocking field. Had it landed, it would have
+produced a *green* compose, a *landed* commit, and **exactly zero new edges** — an inert fix that
+looks like a closure. That is the failure class this report has been tracking all session
+(§11.10's inert-diff, the gap-close detector accepting inert changes), and I nearly produced a
+textbook instance of it myself.
+
+**Why the earlier reasoning missed it:** I read the schema definition for `org_id`
+(`ASSERT $value != NONE`) and stopped, because it explained the symptom. I never asked *what else*
+the schema requires. Reading one field's definition is not reading the constraint set — and the
+database will tell you the whole set in four seconds if you ask it to.
+
+**The corrected fix is still a single op** (one insertion of three assignment lines before
+`created_at = time::now(),`), so it remains compatible with the one-op-one-anchor rule from §15.10.
+
+**Method note, and it is the session's most useful one:** *validate a fix against the live system
+before dispatching it, not after it lands.* This probe cost four queries and caught an inert fix
+that would otherwise have landed green, closed a gap, and left the graph frozen — indistinguishable
+from success by every gate the system has.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
