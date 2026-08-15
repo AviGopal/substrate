@@ -2706,6 +2706,64 @@ before dispatching it, not after it lands.* This probe cost four queries and cau
 that would otherwise have landed green, closed a gap, and left the graph frozen — indistinguishable
 from success by every gate the system has.
 
+## 15.13 ⚠️ INCIDENT — my landed fix hung every shell call and halted the compose pipeline for ~3 hours
+
+**I caused a fleet outage.** The `requestTimeoutSec 30 → 300` change I authored (§15.11), landed
+autonomously as `e1ffa50` at 05:23, **hung every shell call in the substrate**.
+
+**Mechanism.** `groupBounded` wraps each command with a watchdog:
+
+```sh
+( sleep ${timeoutSec}; kill -9 -$__cpid ) &
+```
+
+That background child **inherits stdout**. The caller reads the pipe to EOF, so it cannot return
+until the watchdog sleep exits — *regardless of how fast the command itself finishes*. Measured
+after the revert, with the value back at 30:
+
+```
+shell {command:"echo HELLO; ls /vessels | head -2"}
+→ elapsed = 30s   exit_code = 0   stdout = "HELLO\nactivity-api\n…"
+```
+
+**An instant command takes exactly `requestTimeoutSec` seconds.** At 30 that is a tax; at 300 it is
+an outage.
+
+**Blast radius.** Compose grounding is built from `shell` calls. With each one blocking ~300 s,
+grounding came back empty and every compose refused before drafting:
+
+```
+[fc-grounding] REFUSED blind decompose; grounding window (0 bytes) contains none of the
+target file(s) … planning would be blind and the drafter would invent anchors
+```
+
+**No compose report was written between 05:30 and 08:50** — four composes started (08:04, 08:28,
+08:32, 08:39) and all refused. Three hours of fleet self-development lost, and every operator
+dispatch in that window failed for a reason I had introduced.
+
+**Recovery performed:**
+
+1. Reverted the live tree `/vessels/local-tools-vessel/src/index.ts` to 30 (backup kept at
+   `/workspace/repair-backups/local-tools-index.ts.bak300`), restarted `local-tools-vessel`, and
+   confirmed the shell tool returns correct output again.
+2. Reverted the in-container clone and committed it (`09e863b`), which diverges that clone from
+   `origin/dev` so `substrate-pull-sync` (next run 08:57) cannot silently restore the bad value.
+3. Prepared a git revert of `e1ffa50` locally (`a699887`). **`origin/dev` still carries the harmful
+   value** — the push is gated and needs operator approval.
+
+**The pre-existing defect this exposed, which is the real finding:** the watchdog holding stdout
+means *every* shell call has always cost a flat 30 s. That is a fleet-wide latency floor on
+grounding, verify, and every file read the compose pipeline makes — and it is very likely a large
+part of why composes are slow and why verify budgets are so tight. The correct repair is to detach
+the watchdog from stdout (`>/dev/null 2>&1` on the subshell, or `setsid`), **not** to change the
+timeout value in either direction.
+
+**What I should have done.** §15.12 established the rule one section earlier — *validate a fix
+against the live system before dispatching it* — and I applied it to the edge CREATE and then did
+not apply it here. A single probe (`shell {command:"echo hi"}` before and after) would have caught
+this in seconds. I dispatched a change to a shared primitive on the strength of a causal story I
+had already retracted twice.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
