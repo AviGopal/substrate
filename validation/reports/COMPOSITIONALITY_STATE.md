@@ -2509,6 +2509,24 @@ process was killed**, and the evidence of the kill is discarded one field away.
 2. **Treat `exit_code: 137` as could-not-verify**, not as a failed typecheck — the honest
    distinction §11.5 asked for, now cheaply available.
 
+### It is fleet-wide, not an operator-lane problem — measured across 12 composes
+
+| verify output size | composes | verdicts |
+|---|---|---|
+| **193 bytes** (SIGKILLed mid-typecheck) | 3 | all UNFAVORABLE |
+| **0 bytes** (never started) | 2 | all UNFAVORABLE |
+| 66 KB – 480 KB (ran to completion) | 7 | includes **both** FAVORABLE verdicts |
+
+**5 of 12 (42 %) of recent composes never completed their verify**, and not one of those could land
+whatever the draft quality. Both FAVORABLE verdicts — including `route-edit-5892936c`, the one that
+became the landed `fef173c` — carry a full verify (480 KB, 295 KB).
+
+This reframes the autonomy numbers in §7. The autonomous lane runs through the *same* 30 s shell
+watchdog, so its 0.79 %-of-changed-lines figure is not only a drafting-quality result: **a
+large fraction of its correct drafts are being SIGKILLed before judgement.** The three landings
+observed today were all small, fast-verifying vessels; the failures cluster on `activity-api`,
+whose cold-worktree typecheck exceeds the window.
+
 **Why this is the most consequential finding of the session:** it is the reason correct fixes do not
 land. §15.10's one-op rule got the draft right; this destroyed it anyway. Blocker 6 is upstream of
 1, 2, 5 and 7 in the practical sense that *any* fix for them must survive verify — and on a cold
