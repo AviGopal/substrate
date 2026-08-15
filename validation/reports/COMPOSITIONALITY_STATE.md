@@ -2486,6 +2486,44 @@ at **op** granularity within a single file, not just at file granularity.
 > testing the bridge. The refuting check — *did any verify ever exceed 30 s and survive?* — cost one
 > grep of an existing report.
 
+### 15.11.0 The 30 s theory is now definitively dead — and so is the timeout theory generally
+
+The discriminating experiment I should have run first: send **the exact verify command** for
+activity-api through the same `shell` producer and time it.
+
+```
+elapsed = 300 s
+exit_code = 0
+stdout_len = 475,747
+… Ran 1287 tests across 117 files. [244.01s]
+```
+
+**It ran for 300 seconds and succeeded.** The 30 s group-kill did not fire — while a bare
+`sleep 45` through the identical endpoint *was* killed at exactly 30 s. So the watchdog is
+**command-dependent, not uniform**, and it is categorically not what truncates compose verifies.
+
+The obvious successor hypothesis dies too: the live development-vessel carries
+`PER_CALL_TIMEOUT_MS = 600_000` and has been running since 01:57:25 UTC — *before* every 193-byte
+failure (04:22, 04:33, 04:54, 05:08). A 300 s verify fits inside a 600 s budget with room to spare.
+
+**So the cause of the 193-byte truncation is unknown, and both timeout explanations are excluded by
+measurement.** What is established:
+
+- activity-api's verify legitimately needs ~300 s (244 s of it in `bun test`, which hits the inner
+  `timeout 240` cap) — it is genuinely the slowest vessel to verify, but it *can* complete.
+- The truncation point is always identical: immediately after `$ tsc --noEmit`, before any
+  typecheck output or `TC_EXIT`.
+- It is time-correlated, not vessel-inherent: activity-api verified completely at 02:59 (480 KB)
+  and truncated at 04:22, 04:33, 04:54, 05:08 — while goal-host-vessel still verified completely at
+  05:19.
+
+**The next experiment, named so it is not guessed at:** reproduce inside an actual compose worktree
+(`${WS_ROOT}/<composeId>/activity-api`, whose `node_modules` is a *symlink* to the shared clone)
+rather than in the clone itself. That symlink is the one environmental difference between my
+300 s success and the compose's 193-byte failure, and the source comments already flag it as a
+known hazard ("an install here writes THROUGH the symlink … bun PRUNES the dependency"). I have not
+tested it, so I am not claiming it.
+
 ### 15.11.1 Why my verify-duration predictions were worthless: the live tree is not the worktree
 
 I twice predicted whether a compose could verify in time by timing `bun test` in the **live**
