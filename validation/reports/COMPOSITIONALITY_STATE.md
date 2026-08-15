@@ -2449,6 +2449,71 @@ unique anchor, and let a second goal do the second edit.* The compose pipeline's
 this ("One file per goal — multi-file asks drop parts silently"); the finding here is that it holds
 at **op** granularity within a single file, not just at file granularity.
 
+## 15.11 ★★★ BLOCKER 6 ROOT CAUSE — MEASURED — the shell tool kills verify at 30 s and the caller reads only stdout
+
+The single-op `org_id` goal (§15.10) produced the session's **first clean operator apply**:
+
+```json
+{"op_count":1, "applied":[{"ok":true,"span":{"start_line":1728,"end_line":1729}}],
+ "apply_failed":false,                      ← first time all session
+ "verify":[{"ok":false,"exit_code":null,"len":193}]}
+```
+
+Correct edit, correct location, applied cleanly — then destroyed by verify. The 193-byte output
+ends exactly here:
+
+```
+== install ==
+== resolve ==   DRYRUN_EXIT=0 …
+== typecheck ==
+$ bun run check:types
+$ tsc --noEmit          ← output stops; TC_EXIT is never emitted
+```
+
+**Root cause, measured not inferred.** `feature_compose` calls the `shell` tool with only
+`{command, cwd}` — no timeout. `local-tools-vessel` maps `shell → sh()`, which hardcodes:
+
+```ts
+const requestTimeoutSec = 30;   // local-tools-vessel/src/index.ts:114 — no caller override
+```
+
+Probed directly:
+
+```
+POST shell {command:"echo START; sleep 45; echo DONE_AFTER_45"}
+→ elapsed=30s
+  stdout:    "START\n"
+  stderr:    "Killed ( … ) [2]+ Done ( sleep 30; kill -9 -$__cpid )"
+  exit_code: 137
+```
+
+**Exactly 30 s, SIGKILL, non-overridable.** Meanwhile the verify command it is asked to run
+contains `timeout 240 bun test` — its author budgeted four minutes. The sibling shape
+`bounded_shell` *does* accept a caller `timeout` (defaulting to 10 s); `shell` ignores one.
+
+**This explains the intermittency exactly.** A warm worktree finishes install+typecheck+tests inside
+30 s and returns the ~295 KB success seen on other composes; a cold worktree does not, is killed
+mid-typecheck, and emits 193 bytes with no `TC_EXIT`. Same code, same command, different cache
+state — which is why the failure looked random.
+
+**And the kill is visible — the consumer just doesn't look.** The response carries
+`exit_code: 137`. `feature_compose` reads `String(sh.body?.stdout ?? "")` and nothing else, so a
+SIGKILLed verify is indistinguishable from a verify that ran and failed. That is §11.5's
+"absent marker scored as failure" with its cause now identified: the marker is absent **because the
+process was killed**, and the evidence of the kill is discarded one field away.
+
+**Two independent single-op fixes, either of which unblocks landings:**
+
+1. **Let verify have the time it asks for** — call `bounded_shell` with an explicit `timeout`
+   (say 300), or accept a caller timeout in `sh()`. The 30 s constant is the binding constraint.
+2. **Treat `exit_code: 137` as could-not-verify**, not as a failed typecheck — the honest
+   distinction §11.5 asked for, now cheaply available.
+
+**Why this is the most consequential finding of the session:** it is the reason correct fixes do not
+land. §15.10's one-op rule got the draft right; this destroyed it anyway. Blocker 6 is upstream of
+1, 2, 5 and 7 in the practical sense that *any* fix for them must survive verify — and on a cold
+worktree, none can.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
