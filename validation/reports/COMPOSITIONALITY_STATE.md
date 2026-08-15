@@ -605,6 +605,43 @@ regardless of quality, and it means posterior rank currently encodes *scheduler 
 capability. The reach-reason text already contains the discriminator (`no draft was produced`) —
 the grading path simply does not consult it.
 
+### ★★★ The cause, found explicitly: α-credit is gated on a composition edge, and the edge table is frozen
+
+The eBay walk (§13) — a goal that **reached** — emitted this line:
+
+```
+walk: WITHHELD alpha-credit for activity:⟨learned-auto-bridge-ui-feedback-write⟩
+      — no in-chain producer-to-consumer edge and no landed sha
+```
+
+**α-credit requires an in-chain producer→consumer edge in `activity_composition_graph`.** That
+table has not been written since 2026-07-14 (§4). Therefore:
+
+```
+composition edges frozen (§4)
+        ↓
+no in-chain producer→consumer edge exists for any new chain
+        ↓
+α-credit WITHHELD on success  ────────────┐
+                                          ├──→  every learned composition decays monotonically
+β still increments on failure (§11.2)  ───┘      regardless of merit  (60/68 stuck at α=1
+and on non-merit capacity refusals                despite 340 successes)
+```
+
+This is the single causal story linking the two largest findings in this report, and it is
+confirmed by the system's own log rather than inferred. It also explains the shape of the §11.2
+data precisely: the 8 templates that *did* accumulate α are the ones whose edges predate the
+freeze; the 60 that did not are the ones minted after it.
+
+The same run shows it end-to-end: a goal that **reached** recorded
+`alphaBetaDelta: [{templateId:"satisfier:uiFeedback_write", dAlpha:0, dBeta:2}]` — zero α on a
+successful walk, +2 β.
+
+**Consequence for prioritisation.** Fixing the α-credit rule in isolation would be treating a
+symptom; the edge writer (§4) is upstream of it. Repair the edge derivation and the credit channel
+unblocks on its own — one fix, two systems. That makes §4 the highest-leverage repair in this
+report, above everything in §11.
+
 Confidence: the α/β asymmetry is directly measured and large. The one caveat is that
 `successful_executions` and `thompson_alpha` may be maintained by different writers with
 different semantics; the finding to act on is the asymmetry itself (β moves, α does not) rather
@@ -1290,7 +1327,42 @@ inside: it knows the mechanism, and cannot see the mechanism stop.
 blast-radius check on its own code before a change, no post-land behavioural probe outside the
 dormant perf canary. Congruence is established by *review plus compilation*, and hoped to hold.
 
-## 13. The floor test — an arbitrary, non-self-referential goal ("get eBay prices")
+## 13. The floor test — an arbitrary, non-self-referential goal ("get eBay prices") — **IT REACHED**
+
+> ⚠️ **RETRACTION (recorded before the analysis below, which was written mid-flight).** I concluded
+> from the first two minutes of this dispatch that *"the floor is not met."* **That is wrong.** The
+> goal **reached**, with real data:
+>
+> ```json
+> {"status":"completed","reached":true,
+>  "completionShapes":["webSearchResult"],
+>  "goalReachReason":"The web search results provide current pricing information for used
+>                     Raspberry Pi 5 boards on eBay, directly addressing the goal."}
+> ```
+>
+> ```
+> walk: hollow satisfier verdict — re-running with suppressSatisfierShapes
+> walk: VESSEL-RESOLVE SATISFIER produced "webSearchResult" directly — no bridge needed
+> REACHED via 4-step chain
+> REACH-CONTENT webSearchResult (2664 chars) = {"query":"used Raspberry Pi 5 eBay","results":[
+>   {"title":"Raspberry Pi 5 8GB | Custom Black Case | RGB Fans | OLED Display | 32GB SD",
+>    "url":"https://www.ebay.co.uk/itm/335397190034","snippet":"£175.00 …"}]}
+> execution_path=fresh_derivation attempt_count=4
+> ```
+>
+> **The substrate answered the question**, by `fresh_derivation` over 4 attempts, with no learned
+> pathway — which is precisely what the floor requires. It even self-corrected mid-walk: it
+> detected a **hollow satisfier verdict** and re-ran with `suppressSatisfierShapes` rather than
+> accepting it.
+>
+> **My error was declaring a verdict from the failing prefix of a multi-attempt process.** The
+> first path (floor reuse) failed exactly as described below; attempts 2–4 recovered. Everything in
+> the analysis below is accurate *about the first attempt* and is retained because the failure mode
+> is real and costly — but the headline conclusion it supported was false. This is the fourth time
+> this session I generalised from a negative prefix; here the discipline that would have caught it
+> is simply **waiting for the process to finish before judging it.**
+
+### What the first attempt got wrong (accurate, but not the whole run)
 
 The execution contract's **floor** is ReAct parity: *"Given any arbitrary task, the substrate must
 at worst match what a ReAct-style agent would do … No goal should be structurally out of reach
@@ -1361,10 +1433,51 @@ Three further observations from the same trace:
   had every opportunity to accept 302 characters of plausible LLM text about Pi pricing, refusing
   it is the correct and non-trivial outcome — consistent with §11.5/§11.7.
 
-**The one-line fix direction:** the goal→target-shape inference needs the tool shapes
-(`web_search`, `http_fetch`, `webSearchResult`, `web_resource`) reachable as targets for goals that
-name no file. This is law 8 exactly — the load-bearing fact (that a web tool exists) is not
-available at the moment of target-shape selection.
+### 13.1 ★ Why the first attempt was blind: concept recall times out on every goal
+
+The walk injects recalled concepts into target-shape selection with this literal instruction:
+
+```
+"Recalled substrate concepts relevant to this goal (consider them when choosing target shapes)"
+```
+
+During the eBay walk that lookup failed:
+
+```
+[walk-concepts] concept-db could not be asked (no producer or transport error)
+                — recall unavailable, NOT an empty result
+```
+
+**It is not a routing failure — it is a timeout, and it is deterministic.** Discovery *does* return
+a healthy producer (`concept-db-local`, protocol **http**, first in the list). The call succeeds.
+It is simply too slow for its own budget:
+
+| Measurement | Value |
+|---|---|
+| `recallConceptRows` timeout (hardcoded) | **4,000 ms** |
+| Actual latency, 4 consecutive runs | **5,792 / 7,903 / 7,736 / 7,760 ms** |
+| Result | HTTP 200 — the data is there |
+
+Latency is ~2× the budget **every time**, so recall never lands and **every goal chooses its target
+shapes with no knowledge context.** The cost is not hypothetical: with recall dark, this goal's
+target shapes came back `["env_gate_scan","fileEditResult"]` for a question about eBay prices.
+
+The 4 s cap is deliberate — *"recall is an optimisation and the walk must never wait on it"* — and
+that reasoning is sound in isolation. Combined with a semantic search over 55,525 concepts that
+takes ~7.7 s, it silently disables the channel it was protecting. Note the latency is in the
+**search**, not the payload: a query returning 55 bytes (no hits) still takes 7.7 s, so this is
+vector-search cost over the concept volume, not response bloat.
+
+This is **law 8 stated exactly**: the load-bearing fact — that web tools exist and are the right
+target for this goal — is present in the store and unavailable at the moment of use. It is also the
+single cheapest high-impact repair found this session: either raise the cap above measured latency,
+or make concept search fast enough to meet it (an ANN index over the 55 k embeddings). The first is
+one number; the second is the real fix.
+
+**Remaining direction for the first-attempt failure:** the goal→target-shape inference should also
+be able to reach the tool shapes (`web_search`, `http_fetch`, `webSearchResult`) directly for goals
+that name no file — but note the full walk *did* find them unaided, so this is an efficiency fix
+(4 attempts → 1), not a capability gap.
 
 ## 14. Summary
 
