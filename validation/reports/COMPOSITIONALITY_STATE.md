@@ -3924,6 +3924,64 @@ and is not retrieved at the moment of use, and prompt restructuring (enumerate c
 institution type, then choose) did not recover it. That is precisely the read-at-use-time channel of
 §15.27, and it is masked.
 
+## 15.32 ★★★★★ The chain reaches the right endpoint by mechanism — and my own budget fix made wandering free
+
+The final controlled runs (marker verified at completion, sync masked for the whole dispatch).
+
+**What works, verified in the journal on valid runs:**
+
+```
+supplied 2750 chars of web-search candidates after disqualifying api.le-systeme-solaire.net
+attempt 2 -> curl 'https://ssd.jpl.nasa.gov/api/horizons.api?COMMAND=501&MAKE_EPHEM=YES&EPHEM_TYPE=OBSERVER&RANGE_UNITS=AU'
+```
+
+Refused by a keyed API → disqualify the host **in code** → search with the substrate's own
+capability → select **JPL Horizons** from results it can see → build a request that genuinely
+returns Io's ephemeris centred on Earth. Fetched by hand, that query is **valid**: *"Target body
+name: Io (501) / Center body name: Earth (399)"*. **Endpoint derivation now happens by mechanism,
+not by luck**, and nothing in the chain is astronomy-specific.
+
+**What my last two fixes broke.** S1 oscillates:
+
+| attempt | target | effect |
+|---|---|---|
+| 2 | `ssd-api.jpl.nasa.gov` (wrong subdomain) | INSPECTION → budget 4 |
+| 3 | **`api.le-systeme-solaire.net`** — the BANNED host | **executed** |
+| 4 | `ssd.jpl.nasa.gov?COMMAND=8` (Neptune barycentre) | INSPECTION → budget 5 |
+
+1. **Credited inspections made wandering free.** The credit was meant to pay for the raw-body read
+   the corrector is *instructed* to perform. It also refunds aimless looking, so the walk drifts
+   between hosts instead of converging, and the budget rises faster than progress.
+2. **The ban is escapable.** The rejection loop breaks after two refusals and then executes the
+   command anyway — an anti-spin hatch that defeats the enforcement it guards. A banned host should
+   end the attempt, not be reached on the third try.
+
+### The honest tally on this session's own engineering
+
+**Seven structural errors, one shape:** correct for the case in front of me, wrong in composition
+with what was already there. The endpoint-vs-filter advice that argued the walk off Horizons; the
+host ban that read as guidance; the 4xx classifier that swallowed unreachable hosts; the candidate
+search placed on the else-branch of its own precondition; the inspection credit that funds
+wandering; the rejection hatch that voids the ban; and a 600-char evidence window that hid the
+payload and made a working request look malformed.
+
+Against that, **every evidence-supplying change worked on first contact**: re-fetching the body the
+parser ate, logging the command, supplying search candidates. The split is not luck — supplying a
+fact cannot compose wrongly with anything, while every decision rule must be right about the states
+it does not have in front of it.
+
+**Three dispatches were void** (C1, G1, R1) — two swept by pull-sync mid-run, one served from a
+poisoned cache. Each was caught only by a check added after the previous miss, and R1's sweep was my
+own sequencing error: I unmasked sync when the *watcher* died rather than when the *dispatch*
+finished, which is the same class as "stopping a timer does not stop a run in flight".
+
+### Where the Io goal stands
+
+Every stage is verified working except the last: reach the network, refuse fabrication, disqualify a
+refusing host, find the authoritative keyless endpoint by mechanism, build a valid request against
+it. What remains is parsing a response the widened window would finally show whole — and testing
+that requires a tree that survives longer than ten minutes.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
