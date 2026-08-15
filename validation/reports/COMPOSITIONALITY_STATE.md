@@ -3094,6 +3094,34 @@ cumulative, cross-attempt blast radius.
 independent trial; they were not independent, and the sixth one poisoned the well for every other
 change to that vessel.
 
+### 15.20.1 A SINGLE dispatch self-destructs — the apply path appends without cleaning between its own retries
+
+Attempt 7 ran against a freshly-restored clone (golden test verified healthy first: 96 pass / 0 fail).
+Within that one dispatch the clone was broken again:
+
+```
+web_search count: 3        <- three duplicates from ONE dispatch
+array closes:    0         <- the closing bracket consumed again
+golden test:     1 fail, 1 error
+```
+
+So the accumulation is **not** across my six attempts, as 15.20-CORRECTED concluded — it happens
+**inside a single dispatch**, whose internal re-drafts each append to the shared clone without
+reverting the previous one. Six attempts merely made the wreckage larger; one is already fatal.
+
+**Consequence: this change cannot be landed through the compose pipeline at all.** Every dispatch
+destroys the file it is editing before any gate can judge it, and destroys the vessel's golden test
+with it, which then blocks cutovers for every other change to that vessel until an operator restores
+the clone by hand. The pipeline is not merely failing to land this edit — **it actively damages the
+shared tree on each try.**
+
+The clone was restored a second time and re-verified (96 pass / 0 fail / 232 assertions). I stopped
+dispatching at that point: continuing would knowingly re-break a shared vessel for no expected gain.
+
+**This is the strongest form of the missing-rollback defect (11.10).** The apply path must restore
+the clone between internal retries and on abort. Until it does, any goal requiring more than one
+draft attempt on a given file is not just unlikely to land — it is guaranteed to corrupt the tree.
+
 ### (superseded) original diagnosis: golden test absent from the overlay
 
 Six attempts to add one array entry to `UNIVERSAL_READ_TOOLS` produced this chain, and the last
