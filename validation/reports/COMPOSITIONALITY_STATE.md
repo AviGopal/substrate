@@ -2077,6 +2077,53 @@ on the hub, which must converge to `origin/dev` before edges resume. That is the
 watch, and it is the honest remaining step: *landed and verified-by-query* is not yet
 *edges-are-flowing*.
 
+## 15.5 Blocker 3 stalled 21 hours on a wrong-vessel tag
+
+My dispatch for the recall-timeout fix failed on capacity (0 for 6 operator dispatches). Checking
+whether the demand survived as a gap — the mechanism that closed blocker 1 — turned up something
+better and worse: **the gap already existed, and has been open for 21 hours.**
+
+```
+id:        concept-recall-costs-more-than-the-walk-will-wait
+source:    human_reported          detected: 2026-08-14T06:20:00Z
+summary:   "Walk-time concept recall can never succeed: a concept search measured 7.3s inside the
+            container while the walk gives it 4s (goal-host-vessel/src/index.ts, walk-concepts consult)"
+```
+
+It is not a duplicate of my dispatch and it was not self-detected — a human filed it a day ago,
+with the correct measurement (7.3 s vs 4 s, matching my own 5.8–7.9 s) and the correct file named
+in the prose.
+
+**Why it has not been closed:**
+
+| field | value |
+|---|---|
+| `localized` | `true` (2026-08-14T06:19:14Z) |
+| `failed_attempts` | 2 |
+| `last_failed_at` | **2026-08-14T06:19:14Z — no attempt in 21 h** |
+| `last_predicted_p` / `mispredicted_lands` | 0.5 / 1 |
+| `measured_search_seconds` / `walk_timeout_seconds` | 7.3 / 4 |
+| **`vessel`** | **`concept-db`** |
+
+**The `vessel` field is wrong.** The fix is in `goal-host-vessel/src/index.ts` — which the gap's own
+summary states — but the gap is routed to `concept-db`, almost certainly because the prose says
+"a concept search". A compose dispatched against `concept-db` cannot find the call sites, which is
+consistent with `failed_attempts: 2` followed by 21 hours of silence.
+
+**This is a distinct defect class from anything else in this report:** not detection (the gap is
+excellent), not drafting (no draft was ever attempted against the right vessel), not judging — but
+**routing metadata derived from prose overriding a file path stated in the same prose.** It is the
+gap-store analogue of §14's anchor problem: the correct locator is present in the text and a
+derived field wins over it.
+
+It also explains a puzzle in §11: the fleet composes continuously and never touches this fix, while
+a *worse-specified* gap of mine (`route-edit-5892936c`) was picked and landed within the hour. The
+difference is not quality — it is that mine carried a correct `vessel`/edit-site tag.
+
+**Cheap, high-value repair:** when a gap's summary names a `repos/<vessel>/…` path, that path should
+set the `vessel` field, overriding any vessel inferred from surrounding prose. The information is
+already in the record.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
