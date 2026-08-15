@@ -2227,6 +2227,38 @@ Dispatched as a follow-up goal. Status: **blocker 1 is half-closed** — the loo
 verified 200/200, the persist path is not. I am not counting it as closed until an edge timestamp
 moves.
 
+### 15.7.1 The edge endpoint reports transient failure as an empty success — and it fooled my watch
+
+While waiting on the follow-up fix, three consecutive reads of
+`GET /v2/activities/composition/graph?limit=500` returned **`HTTP 200 {"edges":[]}`** — apparently
+"the table is empty", after it had returned 2029 edges an hour earlier. Local DB was intact
+(1999 rows), so the alarm was about the hub.
+
+It was transient. Re-probed minutes later across limits:
+
+| limit | edges | ms |
+|---|---|---|
+| 5 / 50 / 200 / 400 / 500 | 5 / 50 / 200 / 400 / 500 | 800–1442 |
+
+and a full page-through returned **2029 edges, newest `2026-07-14T18:48:03Z`** — unchanged. Same
+burst-degradation pattern as §11.1 (13/15 failures, then 20/20 success).
+
+**The defect:** the endpoint answers a failed/timed-out query with a **200 and an empty list**.
+Emptiness and failure are indistinguishable to every consumer — the same class as §11.5's unrun
+verify scored as a failed typecheck, and §9.1's absence-of-write blind spot, now in a read path.
+Anything built on this endpoint (including the composition-health detectors of §15.3) will read a
+degraded hub as "no composition activity" and cannot tell.
+
+**And my own instrument had the mirror-image bug**, which is worth recording rather than hiding:
+my watch tested `[ "$n" \> "2026-07-15" ]` where `$n` was the string `null` on failure. `"null"`
+sorts after `"2026-…"`, so **the watch reported "EDGES RESUMED at null"** — a false positive
+announcing exactly the result I was hoping for. Had I not re-checked, I would have reported blocker
+1 as closed on the strength of a failed HTTP call.
+
+That is the session's recurring lesson turned on my own tooling: *a comparison that has never been
+tested against the failure value is not a check.* The correct form tests for a valid timestamp
+first, then compares.
+
 **Method note that generalises:** "the fix landed and nothing changed" has two readings —
 *not deployed yet* and *a second defect downstream*. I nearly waited out the first without testing
 the second. Checking the schema cost one query and distinguished them.
