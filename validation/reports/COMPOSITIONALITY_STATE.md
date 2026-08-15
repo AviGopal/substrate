@@ -3615,6 +3615,77 @@ choice (§15.25, IO4) cannot be read when it matters, so the walk falls back to 
 and the grader has no reliable value to check against. Concept-db search performance is the single
 highest-leverage fix available, and it is upstream of every other finding in §§15.22–15.26.
 
+## 15.27 ★★★★★ The only working concept store is a masked orphan running 34-hour-old code, and it cannot be restarted
+
+Chasing the §15.26 latency to its source produced a root cause, and then something more important
+than the root cause.
+
+### The database was never the problem
+
+| measurement | value |
+|---|---|
+| FTS inside SurrealDB (`content @0@@ …` + `search::score` + `ORDER BY`) | **242 ms** |
+| `SELECT count() FROM concept GROUP ALL` (56,216 rows) | 952 ms |
+| the same search through concept-db's HTTP resolver | **8.8 s → 31.9 s** |
+
+Every index exists — both FTS indexes and both HNSW vector indexes are defined on the live table,
+so "the index was never built" is dead. The time is spent in `searchConceptsByDense`, which calls
+`embeddingService.embed()` — **local ONNX inference (all-MiniLM-L6-v2) over the query text, on
+every search** — and `await`s it before returning anything. It contends for CPU with surreal
+(161 % of one core by a 20 s delta, 5.2 GB RSS), which is why it degrades ~4× under substrate load
+and presents as flakiness rather than contention.
+
+**This retires the ladder-parallelisation repair** that looked obvious from the outside for two
+sections: the FTS ladder was never the bottleneck, and shipping it would have bought nothing while
+multiplying query load. The fix written instead bounds the dense leg and serves lexical-only when
+it misses its window (`c9f083e`) — a pure availability trade, since the ladder has already produced
+the matches and dense only re-ranks.
+
+### The fix cannot be applied — and that is the real finding
+
+```
+Failed to restart concept-db.service: Unit concept-db.service is masked.
+● concept-db.service
+     Loaded: masked (Reason: Unit concept-db.service is masked.)
+     Active: active (running) since Fri 2026-08-14 05:58:08 UTC; 1 day 10h ago
+```
+
+`DISABLED_VESSELS=concept-db.service` — the mask is **deliberate deployment config** (this is a
+spoke; concept resolution is meant to happen on the hub). But the unit is *masked **and** running*,
+and the consequences compound:
+
+1. **It is frozen at the code it booted with 34 hours ago.** `substrate-pull-sync` mirrors
+   `origin/dev` into `/vessels` and restarts the unit; for this unit that restart silently fails.
+   The tree has moved underneath it — including `071088f`, a substrate-authored mitosis cutover
+   from 11:16 today — and **none of it is running.** The substrate's own autonomous fixes to
+   concept-db have been landing in a tree that never boots.
+2. **No recovery path reaches it.** Masked means `self-recovery`, pull-sync and every watchdog
+   fail to restart it. If it dies it stays dead.
+3. **It shadows the intended topology.** It advertises the only **http** producer row for `concept`;
+   the hub rows are libp2p over the relay, and `conceptDbUrl()` explicitly prefers non-libp2p. So
+   goal-host always routes to the orphan.
+4. **It is nonetheless load-bearing.** Measured side by side:
+
+   | producer | result |
+   |---|---|
+   | hub `syzygy.host:18260` | **http=000, no response in 40 s** |
+   | local masked orphan | http=200 in 32.7 s |
+
+   The instance the deployment says should not exist is the *only* one answering. Removing it
+   moves the teaching channel from *slow* to *absent*.
+
+### Why this is not being unmasked from here
+
+Unmasking contradicts an explicit deployment declaration and would change what the next
+`apply-inventory` run does. Restarting boots 34 hours of unapplied drift plus an autonomous mitosis
+commit in one step, on the substrate's **only** working concept store, with no fallback — the hub
+cannot take over, as measured above. The blast radius of a failed boot is the entire knowledge
+channel, and it cannot be rehearsed from here.
+
+That is an operator decision, and it is the one that gates everything else: **law 8 has no working
+delivery mechanism, the fix for it exists and is committed, and the only instance that could run
+the fix is administratively forbidden from restarting.**
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
