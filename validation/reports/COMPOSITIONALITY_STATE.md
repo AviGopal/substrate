@@ -4284,6 +4284,48 @@ the mechanism being described had actually executed.**
 
 Plus eight composition errors in code. Against that: **evidence-supplying changes remain 3 for 3.**
 
+## 15.39 The guard answers for itself — and un-retracts a finding I had refuted
+
+Instrumenting the extraction guard (print its own inputs each turn) ended the guessing in one run:
+
+```
+extract-guard: degMatch=false dumpLen=1   deg="the command wrote to stdout but errored on stderr: find: '/workspace/…/astron"
+extract-guard: degMatch=false dumpLen=166 deg="the command produced only stderr: [1]-  Done  ( curl -s 'http://api.lead…"
+extract-guard: degMatch=false dumpLen=167 deg="the command produced only stderr: [1]-  Done  ( curl -s 'https://api.lea…"
+```
+
+**The extraction step is correct; this dispatch never produced a dump.** Every correction turn
+failed earlier in the chain, so `degMatch` was rightly false. Two prior guesses at why it declined —
+probe scope, then `direct` not carrying stdout — were both wrong, and one instrument settled it. The
+scope fix (reading the command's own stdout rather than the re-fetch probe) stands on its own merits
+regardless.
+
+### The job-control failure is real, and my earlier retraction was wrong
+
+Three of four turns died on `the command produced only stderr: [1]-  Done  ( curl -s …)` — bash
+job-control notices, with 166 bytes of output. Earlier today I hypothesised exactly this about
+`groupBounded`'s `set -m`, failed to reproduce it twice against a scratch script, and **recorded it
+as refuted**. The live walk shows it repeatedly.
+
+So the refutation was wrong: my reproduction did not match the real conditions — the model's own
+commands evidently carry background constructs that interact with `set -m`, which a hand-written
+`( echo HELLO ) &` did not. **Status: unresolved**, deliberately. Three layers now exist —
+hypothesis, refutation, refutation-of-the-refutation — and the honest record is that the mechanism
+is not established, rather than whichever version I tested most recently.
+
+The lesson is narrower than "reproduce your hypotheses": **a negative reproduction only refutes the
+conditions you actually recreated.** I treated "I could not make it happen" as "it does not happen",
+on a system whose inputs are model-generated and therefore not something I can enumerate by hand.
+
+### Error ledger, final
+
+Six inference errors, one shape — asserting a mechanism without confirming it executed:
+`groupBounded` blamed (refuted), the refutation itself wrong (this section), C1 read against a stale
+tree, edit-intent attributed to my goal text, "the model only re-fetches", R1 reported as real.
+Eight composition errors in code. **Evidence-supplying changes: 4 for 4** — re-fetching the eaten
+body, logging the command, supplying search candidates, and this guard diagnostic, which answered a
+question two rounds of reasoning could not.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
