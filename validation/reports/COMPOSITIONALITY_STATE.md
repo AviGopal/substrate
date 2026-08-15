@@ -3187,6 +3187,65 @@ It cannot reach `origin/dev` because a gate is asking a question whose evidence 
 to the machine that asks it. **The blocker is not capability, not drafting, not review quality —
 it is a missing file in a staging overlay.**
 
+## 15.21 ★★★ The floor reached a web goal with ZERO tool calls — a fabricated answer graded as success
+
+With `web_search` present in the live executor's tool array, the eBay goal returned:
+
+```json
+{"status":"completed","reached":true,
+ "goalReachReason":"The output successfully provided current prices for used Raspberry Pi 5 boards on eBay",
+ "completionShapes":["webSearchResult"]}
+```
+
+**It is a false positive.** The same run logged:
+
+```
+floor: persisted execution … reached=true  tools=0/0
+universal ReAct fallback REACHED goal (0 grounded read(s), 0/0 tool(s) OK)
+```
+
+and `local-tools-vessel` recorded **zero** `web_search` invocations in that window. **No search
+ran.** The model answered from memory, and the reach judge accepted invented prices as
+"current prices … as requested". `completionShapes: ["webSearchResult"]` is a *declared* shape, not
+evidence that a search executed — the same declared-vs-measured confusion this report has tracked
+all session, now at the outermost layer.
+
+**Why the grounding gate did not stop it.** `runGroundedToolLoop` counts `groundedOk` from
+**read/shell results only** (its comment: *"groundedOk counts read/shell results ONLY"*). A
+web-search answer therefore cannot register as grounded — but here the count was 0 because
+*nothing* was called, and the reach still passed. The gate that exists precisely to prevent
+"answering from memory" recorded `0 grounded read(s)` in the same line that declared success.
+
+**Contrast with the Io run minutes earlier, which behaved correctly:**
+
+```
+walk: VESSEL-RESOLVE SATISFIER produced "web_search" directly — no bridge needed
+walk: HOLLOW — The search results provide average distances … but do not give the current distance
+```
+
+There the tool *was* invoked, real results came back, and the gate correctly judged them
+insufficient (a search yields Io's mean distance, not an instantaneous ephemeris value). So the
+same substrate, minutes apart, **rejected a grounded-but-insufficient answer and accepted an
+ungrounded fabricated one.** The difference is not rigour; it is which path ran — the walk grounded
+its answer, the floor did not.
+
+**This is the most dangerous failure class in the report.** Every other defect fails visibly: a
+compose refuses, a verify truncates, a cutover is gated. This one *succeeds*. An operator reading
+`reached: true` with `completionShapes: ["webSearchResult"]` would reasonably conclude the substrate
+had searched eBay. It had not.
+
+**Required repair:** a reach on a goal whose target shapes include an external-data shape must
+require at least one executed tool call producing that shape — i.e. extend the grounding gate to
+count `web_search`/`http_fetch` results as grounding, and **fail closed when `tools=0/0`** on any
+goal the walk itself classified as needing external data. The evidence is already in the record
+(`tools=0/0`, `groundedOk=0`); nothing consults it at the reach decision.
+
+**Session-goal consequence.** Adding `web_search` was necessary and is confirmed working — the Io
+walk used it and got real results. But it is **not sufficient**, and the honest state is worse than
+"not yet derivable": on the floor path the substrate will now *claim* to have answered
+outside-world questions it never looked up. That is a regression in trustworthiness introduced by
+my own change, and it must be paired with the grounding fix before the tool is deployed durably.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
