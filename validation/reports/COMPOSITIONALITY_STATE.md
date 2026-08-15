@@ -3982,6 +3982,51 @@ refusing host, find the authoritative keyless endpoint by mechanism, build a val
 it. What remains is parsing a response the widened window would finally show whole — and testing
 that requires a tree that survives longer than ten minutes.
 
+## 15.33 ★★★★★ The terminal failure is a zero-success learned template that invokes the shell with no command
+
+The last several dispatches all die the same way, and it is not where I had been looking.
+
+```
+HOLLOW — "command is required" ; β-penalised last pick activity:⟨learned-satisfier-shell⟩
+```
+
+Not a bad command — **no command at all**. The shell resolver is invoked with an empty payload, so
+it rejects the call before anything runs. Five of the recent dispatches ended here, and the marker
+appears 28 times in three hours of journal.
+
+**This predates every fix I made today.** H1 failed with *"an error regarding a missing command"*
+long before the correction-loop changes, so the empty-command mode is not a regression of mine — I
+briefly suspected it was, on timing alone, which is the same reasoning error this report catalogues
+elsewhere.
+
+**What it actually is** is written in goal-host's own source, at the extraction-depth guard:
+
+> *53 learned-of-learned templates nesting up to SEVEN deep (e.g.
+> `learned-activity-learned-learned-learned-satisfier-shellresult`, **202 executions and 0
+> successes**), 1,646 executions between them. Each is a fresh Beta(1,1) cell that splits selection
+> traffic across near-duplicates.*
+
+`⟨learned-satisfier-shell⟩` is one of that family: a template extracted from a satisfier reach that
+carries **no executable payload**, competing in the selection plane against the executor path that
+actually synthesises commands. When it wins the last pick, the dispatch is over — the walk never
+reaches the corrector, so none of the machinery in §§15.28–15.32 (disqualification, candidate
+search, inspection credit, evidence window) gets a chance to run.
+
+**That reframes the Io result.** The chain converges to one parameter value from correct *when it
+runs*. A large share of dispatches never get there, because a zero-success template wins selection
+first. The variance I was reading as "the walk sometimes wanders" is substantially **which template
+won**, not how well the corrector reasoned.
+
+**Law 3, at scale and with a number.** *A wrong mint is negative value, not zero.* 202 executions
+and 0 successes is not a cell that has failed to learn — it is a cell that has learned nothing and
+keeps being paid for. The depth guard now prevents *new* instances; nothing retires the existing
+ones, which is the same eviction hole as §15.30 (a false reach cached as a recipe) in a different
+store: **the substrate has no path from "this thing has never worked" to "stop selecting it."**
+
+The detector is the same shape in both cases and is the single highest-value unbuilt thing on this
+list: **retire a template whose posterior is decisively negative, and evict a recipe whose reach was
+overridden.** Until one exists, bad mints accumulate and dilute selection permanently.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
