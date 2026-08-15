@@ -2181,6 +2181,56 @@ post-land run executes in the mitosis worktree with a different test population,
 not comparable to the vessel's own suite. A `fail=4` in that report is not evidence of a broken
 landing, which is worth knowing before someone reverts on it.
 
+## 15.7 Blocker 1 is landed but NOT yet effective — a second, independent defect in the same function
+
+Thirty minutes of watching the hub after `fef173c`: **`newest edge` is still
+`2026-07-14T13:15:56Z`**. The corrected lookup has produced no edges. Investigating rather than
+assuming hub-convergence lag found a **second defect in the same helper**, and it is sufficient on
+its own to keep the graph frozen.
+
+**The schema requires `org_id`; the CREATE never sets it.**
+
+```
+DEFINE FIELD org_id ON activity_composition_graph TYPE string
+  VALUE $value OR <string> $auth.org_id
+  ASSERT $value != NONE
+```
+
+`deriveCompositionEdgeFromParent` runs on the **root** connection (`surrealDB.query`) when no JWT is
+threaded, so `$auth.org_id` resolves to NONE. Its CREATE branch, on `origin/dev` today:
+
+```sql
+CREATE activity_composition_graph SET
+  parent_activity_id = $parent, child_activity_id = $child,
+  execution_count = 1, success_count = IF($success, 1, 0),
+  weight = IF($success, 1.0, 0.0),
+  created_at = time::now(), updated_at = time::now()
+```
+
+No `org_id` → assert fails → the write is rejected. Every existing row in the table carries
+`org_id: "organizations:substrate"`, confirming the field is populated in practice by writers that
+set it.
+
+**Why this hides so well, and why the UPDATE branch masks it:** the UPDATE path needs no `org_id`,
+so an edge that *already exists* still increments. Only **new** parent→child pairs fail — and after
+a month of freeze, essentially all current traffic is new pairs. The result is a helper that appears
+to run, logs nothing, and writes nothing.
+
+**This was foreseen and not enumerated.** §4 recorded it as candidate (3) — *"the CREATE fails the
+org_id assert … the sibling writer in the same file documents this exact trap"* — and I set it aside
+because it could not explain the absence of UPDATEs. That reasoning was wrong: with a broken lookup
+(the now-fixed defect), *no* branch ran at all, so the absence of UPDATEs was explained by the
+lookup, not by the CREATE. With the lookup fixed, the CREATE defect is now the binding one. **Two
+independent defects in one 40-line function, each individually sufficient to freeze the graph.**
+
+Dispatched as a follow-up goal. Status: **blocker 1 is half-closed** — the lookup is correct and
+verified 200/200, the persist path is not. I am not counting it as closed until an edge timestamp
+moves.
+
+**Method note that generalises:** "the fix landed and nothing changed" has two readings —
+*not deployed yet* and *a second defect downstream*. I nearly waited out the first without testing
+the second. Checking the schema cost one query and distinguished them.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
