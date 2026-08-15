@@ -1866,6 +1866,68 @@ finding, and the discrepancy noted in §11.8 (a semantic gate asserting *"introd
 on a draft whose verify returned `exit_code: 0`) suggests LLM-authored text is unreliable on both
 the drafting *and* the reviewing side — but the reviewing side still reached the correct verdict.
 
+## 14.9 ⚠️ RETRACTION — "fc-scope centres by identifier frequency" is REFUTED, and the recommended hand-fix would have been wrong
+
+I concluded across §11.3, §14 and §15 that the drafting failures were caused by `fc-scope`
+centring the grounding window on the file's most frequent identifier, and recommended hand-applying
+a fix to make it prefer goal-named identifiers. **Direct testing refutes that, and the recommended
+fix would have changed code that is already correct.**
+
+**Test — the probe miner run on this session's actual goal text:**
+
+```
+regionCandidatesFromText(spec) →
+  count=4
+  0: "deriveCompositionEdgeFromParent"      ← rank 0, the goal-named target
+  1: "execution-traces.ts"
+  2: "activity-api"
+  3: "activity_id"
+```
+
+The goal-named symbol is mined **first**. And `focusedSlice` accepts it: it occurs **2×** in the
+target file, under the `PROBE_MAX_OCCURRENCES = 8` ceiling, so the loop would `centerOn` its first
+occurrence at **line 1690 — the correct target.** The competing identifiers are all *rejected* by
+that same ceiling (`activity_execution_traces` 23×, `variant_performance_metrics` 9×,
+`execution_id` 198×). The tiering and the ceiling are doing exactly what their comments claim.
+
+The spec that reached `feature_compose` also contains the symbol (read from the compose report's
+own `spec` field), so it was not lost in restatement.
+
+**What misled me.** The log line I built the diagnosis on does not report what it appears to:
+
+```ts
+const hit = regionProbes.find((p) => grounding.includes(p));
+console.log(`[fc-scope] … grounding centred on ${hit ? `"${hit}"` : "none"}`);
+```
+
+`hit` is *the first probe that appears anywhere in the grounding text* — **not the probe the window
+was centred on**. I read "grounding centred on variant_performance_metrics" as a statement of the
+centring decision. It is not one. That is a genuine reporting defect worth fixing on its own (the
+message asserts a causal fact it never computes), but it is not the mis-localisation cause.
+
+**What remains established, and what does not:**
+
+| Claim | Status |
+|---|---|
+| The edit was applied at line 3306, target 1704 | ✅ measured (compose report `applied.span`) |
+| `anchor_not_from_window` fired twice | ✅ observed |
+| The window excluded the target | ⚠️ *probable* — inferred from the above, not directly measured |
+| **Cause is `fc-scope` frequency bias** | ❌ **REFUTED** — miner ranks the right probe first and the ceiling rejects the rivals |
+| Cause is elsewhere (apply/repair fuzzy-matching a non-existent anchor is the leading candidate) | ❓ **unidentified** |
+
+**The lesson for my own method, since it recurred all session:** I inferred a mechanism from log
+wording, published it as a root cause, and the code said otherwise on inspection — the same shape
+as the α-credit retraction (§11.2) and the LLM-plane retraction (§11.4). In each case the refuting
+test was cheap and available *before* publishing. **The correct discipline here was to run
+`regionCandidatesFromText` on the goal text before asserting anything about probe selection** — it
+took one command.
+
+**Consequence for the impasse below:** the "one function, not seven fixes" recommendation is
+**withdrawn**. There is no verified single upstream fix, so hand-editing `feature-compose.ts` on
+that basis would have modified working code to chase a refuted hypothesis — the exact failure mode
+the semantic gate exists to prevent, committed by the operator instead of the drafter. The
+mis-localisation is real and measured; its cause is open.
+
 ## 15. State of the blockers, and the impasse
 
 ### Operator dispatch record this session — 5 attempts, 0 landings
@@ -1911,10 +1973,15 @@ blockers, things structurally beyond the system's reach* — blocker 4 qualifies
 not: once `fc-scope` centres correctly, 1/2/3/5/6 are ordinary single-file goals the substrate can
 plausibly land itself.
 
-**The minimal intervention is therefore one function, not seven fixes:** make `fc-scope` prefer
-identifiers the goal names over the file's most frequent token. `fc-symbols` already resolves the
-goal's identifiers correctly on every attempt, so the required information is present in the same
-prompt-build — this is a routing change inside `feature-compose.ts`, not new capability.
+**~~The minimal intervention is one function~~ — WITHDRAWN (see §14.9).** `fc-scope` was tested
+directly and behaves correctly: it mines the goal-named symbol at rank 0 and its occurrence ceiling
+rejects the rival identifiers. Hand-editing it would have modified working code on a refuted
+hypothesis. **No verified single upstream fix is currently known**, so blocker 4's cause is open
+rather than solved, and with it the claim that 1/2/5/6 are merely downstream of it.
+
+What is still true: blockers 1, 2, 3, 5, 6 and 7 each have a *known, specific* fix (table 15.2),
+and each lives in a file the drafter has so far failed to edit correctly. Whether that failure is
+one cause or several is now the open question.
 
 **What I did instead of hand-editing**, since a direct `repos/*/src/**` edit is hook-gated and is
 the operator's call: taught the finding through the channel that is actually read at prompt-build
