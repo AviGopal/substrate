@@ -2764,6 +2764,51 @@ not apply it here. A single probe (`shell {command:"echo hi"}` before and after)
 this in seconds. I dispatched a change to a shared primitive on the strength of a causal story I
 had already retracted twice.
 
+## 15.14 The eBay floor test, re-run after the recall fix — routing improved, the model declined
+
+Re-dispatched the identical goal (§13) once concept recall was working, to see whether the fix
+changed the *first* attempt rather than only the eventual outcome.
+
+**Routing improved, measurably:**
+
+| | this morning | after the recall fix |
+|---|---|---|
+| `walk-concepts` | `could not be asked` (recall dark) | **`no concepts recalled … (terms tried: raspberry, current, selling)`** — asked, empty, honest |
+| inferred target shapes | `["env_gate_scan","fileEditResult"]` | **`["web_search","uiPanel_write"]`** |
+| tool calls | `tools=0/0` | `web_search` in `completionShapes` |
+
+Target-shape inference now lands on the *right* shape for an arbitrary web goal. That is the
+recall fix (§15.6) paying off exactly where §13.1 predicted it would.
+
+**But the run failed, and the reason is new:**
+
+```
+synth_content: "I cannot browse eBay to get current prices for used Raspberry Pi 5 boards.
+                My capabilities are limited to accessing files and running shell commands."
+→ HOLLOW — The output did not provide the current prices … β-penalised auto-bridge-uiPanel_write
+```
+
+**The model confabulated a capability refusal.** `web_search` is served by local-tools-vessel,
+advertised in discovery, and returns real eBay listings when called directly — I have the £105.39
+and £175.00 results to prove it. The model asserted it lacks a tool it has, and the walk had
+already selected that very tool as a target shape.
+
+**The reach gate caught it**, refused the hollow output, and β-penalised the pick. That is the
+honesty machinery working on a *false negative* — the failure mode is the model under-claiming, and
+the gate still judged the output on substance rather than on the model's own account of itself.
+
+**This is law 8 in its cleanest form.** The load-bearing fact — *which tools you actually have* —
+is not in the prompt at the moment of use, so the model reasons from a generic prior about its own
+capabilities ("files and shell") that is wrong for this substrate. The fix is not a better prompt
+in general; it is injecting the resolved tool inventory into the synthesis prompt, the same way
+`fc-symbols` injects resolved declarations into the drafter prompt.
+
+**And it makes the floor intermittent rather than solid.** The same goal reached this morning
+(4 attempts, `fresh_derivation`, real listings) and failed now. So the honest characterisation of
+the execution contract's floor is: **reachable but unreliable on arbitrary goals** — not the ~90 %
+the contract expects, and the variance comes from the model's self-description, not from missing
+capability.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
