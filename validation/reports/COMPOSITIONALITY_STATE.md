@@ -1173,7 +1173,124 @@ Secondary observations from the same run:
     zero score rather than widening, echoing the standing "a retry that does not widen is not a
     retry" finding.
 
-## 12. Summary
+## 12. Congruence and self-knowledge: how does it know a change fits, and what does it know about itself?
+
+### 12.1 Congruence — three layers, and the honest gap between them
+
+**Layer 1 — pre-land gates. All observed working this session (§11.8).**
+
+| Gate | Question it answers | Does it RUN the code? |
+|---|---|---|
+| `verify` (typecheck + `bun test`) | does it compile, do tests pass? | **only if a test file exists** |
+| semantic gate (inert-diff) | does the diff actually change behaviour? | no — reads the diff |
+| semantic gate (adversarial refuter) | does it match the spec, in the right place? | no — reads the diff |
+| reach gate | is there landing evidence (`push_status` / sha)? | no — reads the outcome |
+| `fc-coverage` | is there a test at all? | **advisory only** |
+
+**Layer 2 — post-land drift detection. Proven live (§11.10).** `substrate-pull-sync` content-hashes
+the live runtime tree against the clone and restores on drift. It caught an unverified mutation
+within minutes, unprompted. This answers *"is my source what git says it is?"* — integrity, not
+behaviour.
+
+**Layer 3 — measure-after-change. Exists, and has never run.** `perf_canary_resolve` is a genuine
+congruence loop: snapshot → stage → **canary cutover (restart, goes live)** → **re-measure the
+metric** (`performance_reach_gate`) → keep, or **revert + restart** and escalate to a different
+fix-class, then to the operator. That is the real thing — an intervention with a measured outcome
+and rollback.
+
+**Measured: `perf_canary_resolve` has 0 executions in 720 hours and has no seed template.** It is
+one of the orphaned resolvers (§9.2) — reachable by shape, selected by nothing. `performance_reach_gate`
+has no caller outside it.
+
+**So the answer to "how does it know a change is congruent" is:**
+
+- **It typechecks it** — always.
+- **It runs it** — only where a test file already exists.
+- **It reasons about the diff** — reliably and well; every rejection this session was correct.
+- **It re-measures the system afterward** — for performance gaps only, via a loop that has not
+  executed in a month.
+
+For a general change to a file with no test, **nothing ever executes the changed code** — not
+before landing, not after. The gates establish that the change *reads* correct and *compiles*;
+none establishes that the system still *works*.
+
+**The system says this itself, precisely, and proceeds anyway:**
+
+> `[fc-coverage] TARGET HAS NO TEST FILE: … — every gate below this point READS the diff; only a
+> test RUNS it. A FAVORABLE verdict here means the change was reviewed, never executed. This is the
+> exact condition under which d96e2ae (an unconditional self-call) landed and hung the vessel.`
+
+…and the enclosing block ends `} catch { /* advisory only */ }`. It names the failure mode, cites
+the incident that proves it, quantifies the exposure — and does not block. **That is the single
+most characteristic fact about this system's self-knowledge: its understanding of its own limits is
+accurate and articulate, and disconnected from its control flow.**
+
+### 12.2 What it knows about how it works
+
+The concept graph holds **55,525** concepts. By provenance:
+
+| Kind | count | share | what it encodes |
+|---|---|---|---|
+| `impulse_signature` | **47,890** | 86.2 % | statistical co-occurrence — *what goes with what* |
+| `extracted` | 3,797 | 6.8 % | patterns lifted from executions |
+| `doc_expectation` | 1,581 | 2.8 % | **its own architecture docs, clause by clause** |
+| `impulse_activity_pattern` | 502 | 0.9 % | ontology prose |
+| `architecture_doc` | 104 | 0.19 % | architecture docs |
+| `architectural_pattern_principle` | 19 | 0.03 % | design principles |
+| `compose_lesson` | 20 | 0.04 % | drafter failure classes |
+
+**~2,206 concepts (4 %) are genuine self-description**, and — tested, not assumed — they are
+retrievable. Running the drafter's own principles query against a real spec returns:
+
+```
+[doc_expectation]          docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md: The Composition Graph
+[doc_expectation]          docs/architecture/sequences/01-activity-selection.md: Meta-Activity Composition
+[impulse_activity_pattern] The composition graph is the graph of all activity templates connected by …
+```
+
+Embedding relevance beats the 400:1 volume ratio; architecture wins on architectural queries.
+
+**And it is wired to the point of use** (law 8). The decompose prompt is assembled from:
+`grounding` (live file tree, contents, symbols, shape contracts) + `principles`
+(`consultPrinciples` + `consultProducers` — the architecture channel) + `composeLessons` (failure
+classes) + `priorFeedback` (the previous semantic-gate rejection, including
+`suspected_real_location` and `semantic_gate_reason`). The reject→refine→retry loop I drove by hand
+in §11.8 is **already automated** through that last field.
+
+**A second, richer self-model lives in the source comments.** They encode incident history exactly
+where the decision is made — *"this is the exact condition under which d96e2ae … hung the vessel"*,
+*"landed f38f1a3, reverted b90d6c4"*, *"6 attempts, every one refused by this gate, nothing else
+wrong with the drafts"*. This is the densest causal self-knowledge in the system, and it is
+readable by the drafter because grounding ships file contents.
+
+### 12.3 The asymmetry that matters
+
+**It knows what it is. It knows much less about what it is currently doing.**
+
+*Design self-knowledge* — ontology, architecture, principles, past incidents — is rich, accurate,
+retrievable, and delivered at draft time.
+
+*Runtime self-knowledge* — is the loop actually turning? — is thin and was demonstrably wrong for
+a month:
+
+- Its model of "what composes with what" **is** the composition graph. That graph was **frozen for
+  31 days** while the system kept consulting it (`discover-by-shapes` composition_score, §4).
+- Its detectors measure **shape, not liveness**: `composition_flow_health_scan` computes components
+  and degree, and has **no freshness predicate** — a dead table reads healthy (§9.2).
+- Its credit signal is **biased in both directions**: 340 successes never incremented α, while
+  capacity refusals increment β (§11.2).
+
+So the honest formulation: **the system can tell you correctly how a composition graph is supposed
+to work, while its own composition graph is a month stale and nothing in it notices.** Descriptive
+self-knowledge is strong; reflexive self-knowledge — *is the thing I describe actually happening
+right now?* — is the gap. That is the same absence-of-write blind spot as §9.1, seen from the
+inside: it knows the mechanism, and cannot see the mechanism stop.
+
+**Nothing simulates consequence.** There is no "if I change X, what breaks?" — no dependency-aware
+blast-radius check on its own code before a change, no post-land behavioural probe outside the
+dormant perf canary. Congruence is established by *review plus compilation*, and hoped to hold.
+
+## 13. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
 (0/2478 ungraded) and 92.4 % of executed templates have moved off Beta(1,1) — so learning *from*
