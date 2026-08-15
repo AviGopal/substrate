@@ -2990,6 +2990,53 @@ from a causal story and took the fleet down for three hours. The second (this on
 direct experiment before dispatch and produced a 1300× improvement. Same file, same subsystem, same
 author — the only difference was whether the mechanism had been executed before it was believed.
 
+## 15.19 ★★★ The refuter's evidence is the diff alone — so "declare here, use there" changes are unlandable
+
+The fourth attempt at adding `web_search` to `UNIVERSAL_READ_TOOLS` **succeeded at every stage that
+executes anything**, and was rejected anyway:
+
+| stage | result |
+|---|---|
+| draft + apply | **correct** — lines 3391–3392, exactly the specified substitution |
+| verify | **`ok: true`**, 65,994 bytes |
+| first judge | **PASSED** — *"adds a web_search tool that extends the capabilities of the model to reach the network, directly addressing the gap"* |
+| adversarial refuter | **REJECTED at conf 1.00** |
+
+The refuter's stated reason is not a defect claim — it is an admission of missing context:
+
+> *"the patch itself is not sufficient … if the `UNIVERSAL_READ_TOOLS` array is not the one actually
+> used by the model for its tool access. **Without seeing where `UNIVERSAL_READ_TOOLS` is actually
+> used** … there is no explicit link provided in the prompt or diff showing this array is directly
+> consumed by the model."*
+
+**The link it wanted is 670 lines away in the same file:** `const tools: any[] = [...UNIVERSAL_READ_TOOLS]`
+at line 4061, feeding `runGroundedToolLoop`, whose allowlist is built from exactly that array. The
+refuter could not see it because **its evidence is the diff, not the file.**
+
+**This makes an entire change-class systematically unlandable.** Any edit whose correctness depends
+on code outside the diff — adding an entry to a constant consumed elsewhere, a config value read at
+another site, any *declare-here / use-there* pattern — can be rejected at maximum confidence for
+lack of context that was never offered. That class includes most small, safe, high-value changes.
+
+**And it is the exact error this codebase already fixed twice, in the same pipeline.** §11.5's
+verify code carries the comment *"ABSENT MARKER MEANS 'NOT OBSERVED', NOT 'FAILED'"* — written after
+an unobserved install marker refused six consecutive composes. The refuter commits the identical
+inversion at the judgement layer: **absence of evidence in the diff is treated as evidence of
+defect**, and at `conf 1.00` rather than as uncertainty.
+
+**Two concrete repairs, either sufficient:**
+
+1. **Give the refuter the usage context** — a grep for the symbols the diff touches, appended to its
+   input, the way `fc-symbols` already resolves declarations for the drafter. The information exists
+   and is one search away.
+2. **Forbid rejection on non-observation** — "I cannot verify from the diff" must not outrank a
+   passing verify plus a passing judge. It should lower confidence, not raise it to 1.00.
+
+**Consequence for the session's goal.** Making Io-calibre goals derivable requires exactly this
+change-class. The diagnosis is complete, the fix is pre-validated, the drafter finally produced it
+correctly, verify passed, the judge passed — and it cannot land. **The blocker is not capability,
+drafting, or correctness; it is a reviewer that cannot see the file it is reviewing.**
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
