@@ -3037,6 +3037,71 @@ change-class. The diagnosis is complete, the fix is pre-validated, the drafter f
 correctly, verify passed, the judge passed — and it cannot land. **The blocker is not capability,
 drafting, or correctness; it is a reviewer that cannot see the file it is reviewing.**
 
+## 15.20 ★★★ TERMINAL ROOT CAUSE — every goal-host-vessel cutover is blocked by a golden test that isn't in the overlay
+
+Six attempts to add one array entry to `UNIVERSAL_READ_TOOLS` produced this chain, and the last
+link is decisive.
+
+Attempt 6's fallback (`patch_with_tools`) **produced a correct, typecheck-verified change** — and
+so did the four before it. Five staged mitosis trees currently contain the fix:
+
+```
+/vessels/goal-host-vessel-mitosis-2026-08-15T14-14-11-824Z   web_search=1
+…T13-24-57-877Z  web_search=1     …T12-41-55-549Z  web_search=1
+…T11-52-50-380Z  web_search=1     …T11-06-53-724Z  web_search=1
+```
+
+Inspected: correctly formed, correctly placed as the last entry of `UNIVERSAL_READ_TOOLS`.
+**The drafting problem was solved five times over. Nothing landed.**
+
+**Why:**
+
+```
+[patch-with-tools] cutover gated OUT for goal-host-vessel:
+  golden_drift_inconclusive — golden test did not execute any assertions (pass=0 fail=1 exit=1)
+```
+
+And the reason it executed no assertions:
+
+```
+$ bun test test/reach-routes-golden.test.ts     (in the overlay)
+The following filters did not match any test files
+2 files were searched
+```
+
+| tree | `test/*.test.ts` | golden test |
+|---|---|---|
+| clone `/workspace/git/vessels/goal-host-vessel` | **11** | ✅ present (44 KB) |
+| **mitosis overlay** | **0** | ❌ **absent** |
+| live vessel `/vessels/goal-host-vessel` | **0** | ❌ absent |
+
+**The overlay is built from the live vessel tree, which ships only `src/`.** No test directory ever
+exists there, so the golden test can never run, so the gate is permanently "inconclusive", so
+**every `goal-host-vessel` cutover is refused — regardless of the change's quality.** The copy that
+should supply the file is wrapped in `catch { /* not present */ }` and silently no-ops when the
+source is missing.
+
+**This is the same inversion for the third time today, now at the deploy layer:**
+
+1. §11.5 verify — absent `TC_EXIT` marker scored as a failed typecheck (fixed twice before for
+   `INSTALL_EXIT` / `DRYRUN_EXIT`, never for `TC_EXIT`).
+2. §15.19 refuter — absence of usage evidence *in the diff* treated as evidence of defect, at
+   conf 1.00.
+3. **§15.20 cutover — a test file that does not exist treated as a failing test.**
+
+Each layer independently converts *"I could not observe this"* into *"this is bad"*, and each was
+built by an author who had written the correct principle down somewhere else in the same codebase.
+
+**The fix is small and local:** copy the golden test from the **clone** (which has it) rather than
+the live tree, or treat a genuinely-absent golden test as *not applicable* rather than
+*inconclusive* — the distinction the `INSTALL_EXIT` comment already articulates.
+
+**Consequence for the session goal.** Io-calibre goals need `web_search` in the executor's tool
+array. That change has now been authored correctly five times, typechecks, and sits staged on disk.
+It cannot reach `origin/dev` because a gate is asking a question whose evidence was never shipped
+to the machine that asks it. **The blocker is not capability, not drafting, not review quality —
+it is a missing file in a staging overlay.**
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
