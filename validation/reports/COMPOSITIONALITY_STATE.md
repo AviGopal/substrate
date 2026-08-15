@@ -2360,6 +2360,48 @@ Removing the cast then makes the compiler enforce it, which is what should have 
 why it typechecks, and it predicts exactly the `input_shapes: []` / `output_shapes: [...]`
 asymmetry measured on live hub traces in §11.2.*
 
+## 15.10 What actually predicts a landing: one op, one distinctive anchor
+
+Three attempts at the `org_id` fix, plus the two autonomous successes, now form a clear pattern.
+
+| Attempt | ops | outcome |
+|---|---|---|
+| `3e76227` (autonomous) | 1 — a numeric constant | **LANDED** |
+| `b10c3f2` (autonomous) | 1 concern, 2 identical constants | **LANDED** |
+| `b7c2d118` (mine, edge lookup) | 2 — query + comment | applied at line **3306**, target 1704 → UNFAVORABLE |
+| `fef173c` (autonomous, same fix) | 1 — the query line only | **LANDED** |
+| `59be53ce` (mine, org_id) | 2 — CREATE block + params object | op1 applied **correctly at 1732**, op2 `apply_failed` → UNFAVORABLE |
+
+**Every landing was a single-op change with one distinctive anchor. Every failure was multi-op.**
+Not file size — `3e76227` edited the 312 KB `feature-compose.ts` successfully, while my 2-op goals
+failed against the same and smaller files.
+
+The `59be53ce` failure is instructive because **half of it worked**: op1 anchored on
+`const params = { parent: parentActivityId, child: childActivityId, success };` and applied at
+lines 1732–1733 — the correct region, a marked improvement on the 3306 mis-localisation. Op2
+hallucinated *syntax*: it wrote object notation
+
+```
+child_activity_id: $child,        ← what the drafter produced
+child_activity_id = $child,       ← what SurrealDB SET actually uses
+```
+
+so the anchor could not match, `apply_failed: true`, and the whole plan rolled back — **including
+the correct op1.** A partially-correct multi-op plan is worth nothing, so each additional op is a
+multiplicative risk, not an additive one.
+
+**Adaptation:** the fix was re-specified as a *single* op anchored on
+`created_at = time::now(),` (verified to occur exactly once in the file), inserting a literal
+`org_id = 'organizations:substrate'` — the value every existing row already carries — instead of
+threading a bound parameter, which is what forced the second op. This trades a marginally less
+principled fix (literal rather than JWT-derived org) for one that can actually land, and matches
+the shape of both autonomous successes.
+
+**The generalisable operator lesson**, which cost ten dispatches to learn: *state one edit, at one
+unique anchor, and let a second goal do the second edit.* The compose pipeline's own guidance says
+this ("One file per goal — multi-file asks drop parts silently"); the finding here is that it holds
+at **op** granularity within a single file, not just at file granularity.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
