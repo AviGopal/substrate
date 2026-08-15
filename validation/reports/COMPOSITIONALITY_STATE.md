@@ -1774,6 +1774,36 @@ This closes the chain with physical evidence rather than inference:
 | second op cannot apply | `{"ok":false,"span":null}` |
 | verdict | UNFAVORABLE, rolled back |
 
+### The error compounds: a downstream gate enforces the wrong region against the right anchor
+
+The same compose emitted:
+
+```
+[fc-anchor-region] planned anchor for …/execution-traces.ts is unique but 1602 lines from
+                   the located region (line 3306) — re-deriving from the offered anchors instead
+```
+
+The gate computed **exactly the displacement measured above (1,602 lines)** and reached the
+opposite conclusion: it treats `fc-scope`'s region (3306) as the truth and the anchor as the
+error. Because the anchor it rejected was the *correct* one — the goal's verbatim target at 1704 —
+this gate **actively removes the right answer** whenever `fc-scope` is wrong.
+
+Then `fc-anchor-provenance` refused the re-derived replacement
+(`"SELECT id FROM variant_performance_metrics"` — an anchor drawn from the wrong region), and the
+cycle repeated.
+
+So the two anchor gates are not independent checks: both are anchored to `fc-scope`'s region
+choice, so a single upstream error is enforced rather than caught. **Three mechanisms designed to
+prevent mis-localised edits (`fc-anchor-region`, `fc-anchor-provenance`, `fc-order`) all operated
+correctly relative to a premise that was wrong**, and their combined effect was to discard the
+correct edit and apply an incorrect one at line 3306.
+
+This is worth stating as a general property: *a validation stack that derives its reference from
+the same source as the thing it validates cannot detect that source being wrong.* Every gate here
+asks "is this anchor consistent with the window?" and none asks "is the window consistent with the
+goal?" — which is the one question that would have caught it, and which `fc-symbols` already has
+the data to answer (it resolved `deriveCompositionEdgeFromParent` correctly on every attempt).
+
 **The near-miss is the important part.** `verify` failed with the §11.5 empty-output signature
 (`ok:false, exit_code:null`), so the change was rolled back. Had verify run and passed, a
 syntactically valid edit **inside an unrelated SQL template** would have been a landing candidate,
