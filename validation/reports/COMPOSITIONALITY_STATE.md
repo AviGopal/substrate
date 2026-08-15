@@ -4027,6 +4027,61 @@ The detector is the same shape in both cases and is the single highest-value unb
 list: **retire a template whose posterior is decisively negative, and evict a recipe whose reach was
 overridden.** Until one exists, bad mints accumulate and dilute selection permanently.
 
+## 15.34 ★★★★★ INCIDENT: SurrealDB died and could not restart — the third masked-but-load-bearing unit found today
+
+While tracing the zero-success template, the substrate's database went down.
+
+```
+loadavg 66.15 / 82.58 / 74.48      (14 cores; was 18 earlier, 9 before that)
+surreal: no process at all
+surrealdb.service: masked, failed, Result=signal 9, last active Wed 2026-08-12 06:34:56
+concept-db /health: {"status":"unhealthy","database":"disconnected"}
+```
+
+**The unit had been masked since 2026-08-12 after an OOM kill, while surreal itself kept running as
+an unmanaged process for three days.** So when it finally died under load, its own
+`Restart=on-failure` could not fire, `self-recovery` could not reach it, and the database stayed
+dead with 18 GB of data intact and nothing able to open it.
+
+The canonical unit in `/lib` is correct and even carries the protections that would have prevented
+this: `SURREAL_ROCKSDB_BLOCK_CACHE_SIZE=4G`, `MemoryHigh=22G`, `MemoryMax=26G`, `Restart=on-failure`
+— caps whose own comment describes the "~hourly OOM-restart loop" they exist to stop. **The mask was
+the only thing between an OOM and automatic recovery.** It was also not deployment intent:
+`DISABLED_VESSELS` names only `concept-db.service`.
+
+Repair: `systemctl unmask surrealdb && systemctl start surrealdb`. No competing process existed, so
+there was no two-writer risk to the store.
+
+| | before | after |
+|---|---|---|
+| surrealdb | masked, failed, no process | **active**, `/health: 200`, 2.5 GB RSS |
+| concept-db | unhealthy, database disconnected | **healthy**, database connected |
+| load (1 min) | 66.15 | **4.53** |
+
+### The pattern, now three for three
+
+| unit | condition | consequence |
+|---|---|---|
+| development-vessel | `/etc` override shadowing the real unit | dead 13 days; every edit-intent goal failed |
+| concept-db | masked, running unmanaged | frozen on 34-hour-old code; unrestartable |
+| surrealdb | masked, running unmanaged since an OOM | **unrecoverable database outage** |
+
+**A masked unit that is nonetheless running defeats every recovery mechanism at once, and looks
+perfectly healthy right up until it stops.** `systemctl is-active` says `active`, the port answers,
+and the fact that nothing *can* restart it is invisible until the moment it matters. The detector is
+cheap and does not exist: **for every running vessel, assert its unit is not masked** — a masked,
+running unit is a latent unrecoverable outage, and this deployment has at least three.
+
+### My own contribution
+
+~30 dispatches and a dozen vessel restarts over several hours drove concept-db's ONNX embedding path
+continuously — after §15.26 had already measured that component at 161 % of one core with 5.2 GB
+resident and named it the bottleneck. The resource risk was documented and then fed. The mask made
+the outage unrecoverable; the pressure was substantially mine.
+
+**Left for the operator:** surrealdb is `active` but `enabled=disabled`, so it will not start on
+boot. Something was starting it outside systemd; whether to enable the unit is a deployment decision.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
