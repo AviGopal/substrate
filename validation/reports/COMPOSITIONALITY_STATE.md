@@ -4082,6 +4082,70 @@ the outage unrecoverable; the pressure was substantially mine.
 **Left for the operator:** surrealdb is `active` but `enabled=disabled`, so it will not start on
 boot. Something was starting it outside systemd; whether to enable the unit is a deployment decision.
 
+## 15.35 ★★★★★ ROOT CAUSE: poor-performance retirement has never fired — the record id was never bound
+
+The terminal failure of §15.33 has a cause, and it is two characters of SurrealQL.
+
+`variant-creator.ts` retires a failing arm with:
+
+```js
+UPDATE activity:⟨$template_id⟩ SET retired = true, retired_reason = "poor_performance"
+```
+
+**SurrealQL parameters bind VALUES, not IDENTIFIERS.** `activity:⟨$template_id⟩` addresses a record
+whose id is the literal text `$template_id`. It matches nothing, changes nothing, and returns
+success. Proven against the live store, both forms side by side:
+
+```
+LET $tid = "testrec"; UPDATE zz_probe:⟨$tid⟩             SET retired = true;  ->  []  , retired stayed false
+LET $tid = "testrec"; UPDATE type::thing("zz_probe2",$tid) SET retired = true;  ->  retired: true
+```
+
+And confirmed by the store itself: across **3,849 activities — 1,210 of them retired by other
+paths — the count of `retired_reason = "poor_performance"` is ZERO.** The sweep has never once
+succeeded, though its criteria (≥20 executions, success rate <30%) are met several times over by
+arms sitting at **202 executions and 0 successes**.
+
+`retired` is the OPERATIVE flag that selection, shape-discovery and the template listing all filter
+on; `deprecated` is only the label. So every arm that earned retirement **stayed fully selectable**.
+
+### This is the missing half of law 3
+
+*Reuse before mint; a wrong mint is negative value, not zero.* The substrate mints cheaply by design
+and relies on selection to retire what does not work. **Retirement was inert for the entire life of
+the catalogue**, so bad arms could only accumulate: 53 learned-of-learned templates nesting seven
+deep, one at 202-and-0, all still drawing selection traffic against the paths that work.
+
+It is worse than a missing detector, because it *logs each non-retirement as a retirement* — the
+same shape as §15.30's cached false reach and §15.34's masked-but-running unit. Three stores, one
+defect: **an action that reports success while changing nothing.**
+
+The `CREATE activity:⟨$variant_id⟩` at line 299 carries the identical bug, so variant *minting* is
+broken on the same reasoning — the two ends of the variant lifecycle, both inert.
+
+Fixed in `f2857fc` (`type::thing("activity", $id)` at both sites). **Not test-verified:**
+`variant-creator.test.ts` fails in its own `beforeAll`, whose fixture CREATE omits the
+schema-required `created_at`, so it never reaches this code — the direct probe above is the
+evidence.
+
+### Why this closes the Io investigation rather than the Io goal
+
+goal-host reads recommendations from `ACTIVITY_API_ENDPOINT=http://syzygy.host:18080`; activity-api
+is masked on this spoke. So the poisoned arm and the fix both live on the **hub**, and nothing here
+can reach them:
+
+| route | result |
+|---|---|
+| activity-api HTTP | no endpoint accepts `retired` — only `/templates`, `/templates/auto-promote`, `/templates/:id/promote` |
+| hub SurrealDB | no credentials from this host |
+| `targetTemplateId` bypass | `template 'universal-tool-fallback' not found in shared catalogue` — the floor is a synthetic tier, not a catalogue entry |
+
+**The Io goal is underived, and the reason is now a two-character binding bug in a retirement sweep
+on another machine.** When the dead arm does not win selection, the walk reaches the network,
+refuses to fabricate, disqualifies a keyed host in code, finds JPL Horizons through its own search,
+and converges on `COMMAND=501&CENTER&START_TIME` — one parameter value from correct, with no
+endpoint or schema ever supplied by an operator.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
