@@ -1290,7 +1290,83 @@ inside: it knows the mechanism, and cannot see the mechanism stop.
 blast-radius check on its own code before a change, no post-land behavioural probe outside the
 dormant perf canary. Congruence is established by *review plus compilation*, and hoped to hold.
 
-## 13. Summary
+## 13. The floor test — an arbitrary, non-self-referential goal ("get eBay prices")
+
+The execution contract's **floor** is ReAct parity: *"Given any arbitrary task, the substrate must
+at worst match what a ReAct-style agent would do … No goal should be structurally out of reach
+just because no learned pathway exists yet."* This is the cleanest available test of that, because
+the task lies entirely outside the self-development domain.
+
+**Goal, phrased as a human would (law 13 — no shapes, no paths, no engineering):**
+
+> *"Get the current prices for used Raspberry Pi 5 boards on eBay and report what they are selling
+> for."*
+
+### The capability is present and works
+
+One direct call to the tool the substrate already serves:
+
+```
+POST :8230/resolve  {"impulse":{"pointer":{"type":"web_search","query":"used Raspberry Pi 5 ebay sold price"}}}
+→ {"shape":"webSearchResult","results":[
+     {"title":"Raspberry Pi 5 8GB SC1112",
+      "url":"https://www.ebay.co.uk/itm/364872516815",
+      "snippet":"£105.39 … Condition: Pre-owned …"}]}
+```
+
+Real listings, real prices, working egress. **The substrate can answer this question.**
+
+### The walk never asked
+
+Trace of the dispatch (`b622923b`), in order:
+
+| Step | What happened |
+|---|---|
+| 1 | `EARLY EDIT-INTENT feature_compose … verdict=BUSY — falling through to walk` — an eBay price query was first classified as a **code-edit intent** |
+| 2 | `REUSE-BEFORE-DERIVE — the store recommends the floor for this goal (3/7 reached)` |
+| 3 | `floor: ENTER universalToolFallback targetShapes=["env_gate_scan","fileEditResult"]` — **the inferred target shapes are env-gate scanning and file editing** |
+| 4 | `walk: vessel-resolver candidate found for shape fs_write — injecting vesselResolve step` |
+| 5 | `walk rawResolve fs_write: HTTP 500 "path outside workspace root: repos/development-vessel/src/vacuous-edit.ts"` — **it tried to write a file belonging to an unrelated gap** |
+| 6 | `[rebind] NO ADAPTATION for "fs_write" — cache=723 same-shape-candidates=0 refusals: shape-mismatch ×723` |
+| 7 | `[walk-concepts] concept-db could not be asked … recall unavailable, NOT an empty result` |
+| 8 | `floor: verdict reached=false groundedOk=0 finalTextLen=302` … **`tools=0/0`** |
+
+**`tools=0/0` is the finding.** The universal tool fallback — the component whose entire purpose is
+ReAct-style tool use — made **zero tool calls**. It emitted 302 characters of ungrounded text
+(`groundedOk=0`) and failed. `web_search` and `http_fetch` are both advertised, both served, both
+working, and neither was ever considered.
+
+### What this says
+
+**The floor is not met, and the reason is routing, not capability.** Every ingredient for a
+correct answer was present and healthy. What failed is the step from *goal text* → *target shapes*:
+it produced `env_gate_scan` and `fileEditResult` for a question about eBay prices. The goal
+vocabulary is domain-locked to self-development, so an arbitrary goal is coerced into the only
+ontology it knows — and then walked toward writing a source file.
+
+Step 5 is the sharpest symptom: `repos/development-vessel/src/vacuous-edit.ts` is the target of a
+*different, unrelated gap* the fleet had been composing minutes earlier. That is the standing
+`tryLexicalRebind` donor-contamination defect (donor chosen by goal-token overlap with no
+data-store gate) selecting a neighbour's file for a goal with no file at all.
+
+Three further observations from the same trace:
+
+- **Pathway reuse is inert here, and says so honestly:** 723 cached pathways, **0** shape-compatible.
+  The middle of the execution contract (first/last-mile adaptation) has nothing to adapt because
+  every learned pathway is in the wrong domain.
+- **The reuse heuristic actively hurt:** `REUSE-BEFORE-DERIVE … 3/7 reached` skipped the walk in
+  favour of a floor pathway learned from unrelated goals. A prior on "this kind of goal" that keys
+  on the wrong kind is worse than no prior.
+- **It failed honestly.** `reached=false`, `groundedOk=0`, no fabricated price. Given the reach gate
+  had every opportunity to accept 302 characters of plausible LLM text about Pi pricing, refusing
+  it is the correct and non-trivial outcome — consistent with §11.5/§11.7.
+
+**The one-line fix direction:** the goal→target-shape inference needs the tool shapes
+(`web_search`, `http_fetch`, `webSearchResult`, `web_resource`) reachable as targets for goals that
+name no file. This is law 8 exactly — the load-bearing fact (that a web tool exists) is not
+available at the moment of target-shape selection.
+
+## 14. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
 (0/2478 ungraded) and 92.4 % of executed templates have moved off Beta(1,1) — so learning *from*
