@@ -154,11 +154,38 @@ parent ids exist only there. The belief that a table was dead caused the query t
 dead. A correct-sounding rationale produced a lookup with a 0 % hit rate, and because the miss path
 `return`s silently (no log), it produced no evidence for a month.
 
-**The fix is one query:**
+**The fix is one query — but verify it against the HUB, not the spoke.** My 0/200 vs 185/200
+measurement was taken on the **local** database, and this deployment is a spoke whose local traces
+are July-era. Checked against live hub data, parent references have a *different shape* again:
+
+| Source | example `parent_execution_id` |
+|---|---|
+| local (July) | `exec_smg8vo69` |
+| **hub (live)** | **`walk-satisfier-1-1786760268981`** |
+
+So the local measurement identified the right *class* of defect but not the exact id family — the
+standing lesson (*"a correct control on the wrong copy proves nothing"*) applies to my own
+diagnosis. Re-verified directly against the hub: that id **does** resolve
+(`GET /v2/activities/execution-traces/walk-satisfier-1-1786760268981` → 200,
+`activity_id: satisfier:webSearchResult`), so the parent is retrievable — just not by the query
+the derivation uses.
+
+The path that demonstrably works on the hub is the trace-by-id route (`execution-traces.ts:1159`):
+
+```sql
+SELECT * FROM v_paradigm_execution_traces WHERE execution_id = $execution_id
+```
+
+**So the correct repair is to mirror that**, i.e.
 
 ```ts
-`SELECT activity_id FROM activity_execution_traces WHERE execution_id = $pid LIMIT 1`
+`SELECT activity_id FROM v_paradigm_execution_traces WHERE execution_id = $pid LIMIT 1`
 ```
+
+not the `activity_execution_traces` form I dispatched in goal `b7c2d118` (which is the underlying
+table and matched 92.5 % locally). Both fix the *class*; only the view form is confirmed against
+live hub ids. Note also that the working route keeps `type::thing('execution', $eid)` as a
+**secondary** lookup — the derivation kept only the fallback and dropped the primary.
 
 Dispatched as goal `b7c2d118`. Expected effect: edge writes resume at ~92 % of parented ingests.
 
