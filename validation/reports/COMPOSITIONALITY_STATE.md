@@ -1739,6 +1739,65 @@ a large file they cannot** — they can only refuse, because the information req
 never in the prompt. That is why my three edit goals against 195 KB `execution-traces.ts` all
 failed while the autonomous goals against smaller targets reached apply and verify.
 
+### ★★★ PROVEN WITH AN ARTIFACT — the edit was applied 1,602 lines from its target
+
+The `b7c2d118` compose completed. Its report
+(`/workspace/proposals/route-edit-5892936c-compose-report.json`) is the decisive evidence:
+
+```json
+{"summary":"Fix parent lookup in deriveCompositionEdgeFromParent by querying activity_execution_traces…",
+ "verdict":"UNFAVORABLE","rolled_back":true,"op_count":2,
+ "applied":[{"ok":true,"span":{"start_line":3306,"end_line":3306}},
+            {"ok":false,"span":null}],
+ "verify":[{"ok":false,"exit_code":null}]}
+```
+
+**Op 1 applied at line 3306. The target is line 1704.** What is at 3306:
+
+```ts
+      // (migration 100) on (variant_id, account_id) is the matching key.
+      const variantMetricsFindExisting = `
+        SELECT id FROM variant_performance_metrics
+```
+
+That is the `variant_performance_metrics` block — **precisely the symbol `fc-scope` centred the
+grounding window on**. The drafter edited the region it was shown, 1,602 lines away from the
+region the goal named, and op 2 (the real target line) failed to apply at all.
+
+This closes the chain with physical evidence rather than inference:
+
+| Stage | Evidence |
+|---|---|
+| scope centred by frequency | `[fc-scope] grounding centred on "variant_performance_metrics"` |
+| window excludes target | `anchor_not_from_window` ×2 |
+| edit lands in the window, not the target | **`applied span: line 3306`** vs target **1704** |
+| second op cannot apply | `{"ok":false,"span":null}` |
+| verdict | UNFAVORABLE, rolled back |
+
+**The near-miss is the important part.** `verify` failed with the §11.5 empty-output signature
+(`ok:false, exit_code:null`), so the change was rolled back. Had verify run and passed, a
+syntactically valid edit **inside an unrelated SQL template** would have been a landing candidate,
+judged by a semantic gate reading a diff that looks locally plausible. The protection here came
+from a *broken* verify, not from a gate that understood the edit was in the wrong place.
+
+**Partial self-correction observed — the retry loop does eventually widen.** After two
+`anchor_not_from_window` refusals, a later attempt on the same compose reached apply:
+
+```
+02:36:05 [fc-order] applying 2 same-plan edit(s) bottom-up so earlier edits cannot shift later anchors
+```
+
+So the loop is not strictly stuck: re-drafting with the `anchor_not_found` lesson injected can
+recover, at a cost of ~10 minutes and most of the compose ceiling. The claim to make precisely is
+therefore **not** "large files are impossible" but "large files consume nearly the whole compose
+budget on anchor recovery that a correctly-centred window would make unnecessary."
+
+**A lifecycle mismatch worth noting separately:** dispatch `b7c2d118` reported
+`failed — refused for CAPACITY (BUSY) … no draft was produced` while the compose it had already
+started was still running and went on to apply edits. The dispatch's verdict and its compose's
+actual fate are not the same thing, so an operator polling `goal_status` can be told "nothing was
+produced" while a draft from that goal is mid-apply.
+
 **This is law 8, and it is the highest-leverage fix in the report:** make `fc-scope` centre on
 identifiers the goal actually names (it has them — `fc-symbols` resolved
 `deriveCompositionEdgeFromParent` correctly on every attempt) rather than the file's most frequent
