@@ -4146,6 +4146,51 @@ refuses to fabricate, disqualifies a keyed host in code, finds JPL Horizons thro
 and converges on `COMMAND=501&CENTER&START_TIME` — one parameter value from correct, with no
 endpoint or schema ever supplied by an operator.
 
+## 15.36 ★★★★★ LAST MILE: the walk fetched the answer from Horizons and never extracted the number
+
+V1's own dispatch record — not the shared journal — shows how close the chain gets:
+
+```
+attempt 1  find /workspace/git/super-repo/astronomical units … | wc -l          (nonsense)
+        ->  curl le-systeme-solaire | bun -e '…process.stdin.readFileSync…'      TypeError
+attempt 2  ->  curl "https://ssd.jpl.nasa.gov/api/horizons.api?COMMAND='Io'&…"
+           self-correction attempt 2 — NOW PRODUCES A VALUE
+           VESSEL-RESOLVE SATISFIER produced "shellResult" directly
+HOLLOW — "contains raw information without presenting the required measurement"
+```
+
+`COMMAND='Io'` is valid Horizons syntax and the request returned real ephemeris text. **The data was
+in hand.** The correction loop exited because `_degenerateReason` is satisfied by any non-empty
+output, so a raw dump reads as success — and the reach judge then correctly refused it, because a
+dump is not a measurement.
+
+**The final gap is extraction, not retrieval.** Nothing in the loop says *you have the data, now
+pull the number out of it*. That is precisely the contract's middle tier — first/last-mile
+adaptation — failing at the last mile, and it is a LATER defect than §15.32's "converges one
+parameter short": both are real, at different points in the chain.
+
+**Deliberately not patched.** The repair is a decision rule about when raw output counts as an
+answer, and this session's own evidence is that such rules are where the work goes wrong: **0 for 7
+on decision rules, 3 for 3 on evidence supply.** An eighth rule on the walk's acceptance path, at
+this depth, would more likely subtract than add. The shape a future fix should take is
+evidence-supplying: when a goal asks for a single value and the produced artefact is a large raw
+body, hand that body back to the corrector with the goal restated, rather than encoding a new test
+for "is this an answer".
+
+### Attribution correction
+
+An earlier draft of this report claimed the goal text *"Execute a shell command that prints…"*
+tripped an edit-intent classifier (`deterministic:edit-intent-no-landed-edit`) and invalidated a run
+of dispatches. **That was wrong.** V1's own walkLog contains zero edit-intent lines and inferred
+`["shell"]` at 0.8; W1's inferred `["webSearchResult"]` at 0.9. The edit-intent verdicts belonged to
+the substrate's concurrent autonomous dispatches and were picked up out of the shared journal by
+timestamp.
+
+That is the **fourth** timestamp-attribution error of the session, against a standing rule that says
+plainly: *a timestamp is not an identifier — attribute via dispatch-id-keyed reasoning.* The lesson
+for anyone reading these logs: on a substrate that dispatches its own work concurrently, the shared
+journal is unusable for attribution. Read the dispatch's own `walkLog`.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
