@@ -3554,6 +3554,67 @@ documented OOM history from exactly this table, that is a plausible fix that cou
 worse under concurrency, and it cannot be load-tested from here. Recorded as the recommended change
 with its risk stated, not landed on a guess.
 
+## 15.26 ★★★★★ The judge now fabricates the correction, and concept-db degraded 8.8 s → 32 s under the session's own load
+
+Four more dispatches after the payload-recall and grounding-digest fixes (`e464acc`): three
+concurrent, then one alone.
+
+**No false reaches.** All four graded `reached=false`. Against the previous round — which produced
+a fabricated Jupiter constant graded green — the grounding digest is doing its job: an answer the
+floor never retrieved no longer carries false authority into the verdict.
+
+### But the fabrication moved into the grader
+
+B3's rejection reason:
+
+> *"The output provides an incorrect distance from Earth to Io (4.204 AU instead of **0.997 AU**)."*
+
+The judge rejected a fabricated answer **by comparing it against a number it also fabricated**.
+0.997 AU is approximately Earth's own heliocentric distance. Truth: **6.2737 AU**. Right verdict,
+entirely wrong reasoning.
+
+This is worse than it looks, because it is *directional*. A judge that "knows" Earth–Io is 0.997 AU
+will reject a **correct** 6.27 AU answer with exactly the same confidence — so the grader now sits
+in the path of the outcome being pursued, and at least one honest-looking failure in that batch may
+have been a correct answer discarded. The reason strings cannot distinguish the two cases.
+**Suppressing fabrication in the answer does nothing about fabrication in the oracle**, and the
+oracle's errors are invisible because nothing grades the grader.
+
+### Recall failure is contention, not luck
+
+All three concurrent dispatches lost the channel. §15.24 framed recall as ~1-in-5; that rate was
+measured over a six-hour window including quiet periods. The correct statement is that **recall
+success is a function of substrate load**, which means the walk consults its own learned knowledge
+*least* when it is working hardest — and lessons then appear nondeterministic rather than starved.
+Bursting dispatches to "catch a recall-up run" is self-defeating: the burst is the thing that
+closes the channel.
+
+### The latency is not stable — it degraded 4× within the session
+
+| measurement | earlier | now |
+|---|---|---|
+| single concept query | 8.8 s | **31.9 s** |
+| two in parallel (what the walk actually issues) | — | **34.2 s / 40.0 s (timeout)** |
+
+Host state: load average **18.6 / 12.7 / 9.0** (rising), SurrealDB at **161 % of one core** by a
+20-second delta (not a lifetime average) with **5.2 GB** RSS on a 14-core box. Load fell to 10.8
+once the dispatches drained, so the degradation tracks substrate activity directly.
+
+**This retires the timeout-raising line of repair.** At a 32 s floor no budget the walk can afford
+would help, and a 32 s recall would wreck walk latency for every goal. Concept-db is not slow — as
+a *runtime dependency it is effectively down*, and it fails silently in a way that is
+indistinguishable, from outside, from an empty knowledge store. The repair belongs at the store
+(index/query performance, and the ~39 K-row table's growth), and it is deliberately not attempted
+from here: the one obvious change multiplies query load on the component already saturating.
+
+### Standing verdict
+
+Law 8 — *information at the right time* — has **no working delivery mechanism** on this substrate
+right now. Everything downstream of that follows: the lesson that demonstrably flips instrument
+choice (§15.25, IO4) cannot be read when it matters, so the walk falls back to search-and-fabricate
+and the grader has no reliable value to check against. Concept-db search performance is the single
+highest-leverage fix available, and it is upstream of every other finding in §§15.22–15.26.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
