@@ -3246,6 +3246,60 @@ walk used it and got real results. But it is **not sufficient**, and the honest 
 outside-world questions it never looked up. That is a regression in trustworthiness introduced by
 my own change, and it must be paired with the grounding fix before the tool is deployed durably.
 
+## 15.22 ★★★★★ The container has internet egress — the Io goal was never blocked by capability, only by information
+
+Four probes, run before changing anything, overturn the framing of §15.21.
+
+| probe | result |
+|---|---|
+| `llm_completion_dispatch` envelope keys | `body.text`, `body.model`, `body.usage.*`, `shape`, `success` — **no grounding metadata of any kind** |
+| wrapper asked a filesystem question (`wc -l CLAUDE.md`) | answered **361** — ground truth **361**. Genuinely agentic and grounded |
+| wrapper asked the eBay question **directly** | *"I attempted to fetch … the command did not return any direct results"* — **honest failure**, no fabrication |
+| `curl` from inside `substrate-live` | JPL Horizons `200`; ebay.com `403` |
+
+And the decisive one — the Io answer, computed inside the container with tools it already had:
+
+```
+$$SOE
+ 2026-Aug-15 12:00:00.000     6.27307716765493   1.4903943
+$$EOE
+```
+
+**6.273 AU.** No new tool, no new resolver, no new activity: `shellResult` + `curl` against a public
+ephemeris API. **The goal was answerable all along.**
+
+Three corrections follow.
+
+1. **`web_search` was never the missing capability.** Outbound HTTPS already worked. eBay returns
+   403 to datacentre IPs — that is a *site* refusing a bot, not a substrate without a network. I
+   spent the tool-addition effort on a capability the system had.
+2. **The fabricator is not the wrapper.** Asked plainly, the wrapper declines honestly. The
+   fabrication in §15.21 appeared only inside the floor's own framing — so the defect is in what
+   the floor *tells* the model, not in the model or the dispatch layer.
+3. **The floor's prompt states environment facts, and states them incompletely.** It already
+   hardcodes "bash, jq, and bun ONLY" and "the repository root is /workspace/git/super-repo". It
+   never says the network is reachable. A model told only about a repository, then asked about the
+   outside world, has exactly two moves: refuse, or answer from memory. **Both observed failure
+   modes are the predicted output of an incomplete environment description.**
+
+This is law 8 in its purest observed form: *the fix for a wrong output is rarely a bigger prompt —
+it is making the load-bearing fact available at the moment of use.* The load-bearing fact was one
+sentence long.
+
+**The change:** one line, in the floor prompt only, stating that outbound access exists, that
+external facts must be retrieved through `shellResult`, and that stating such a value from memory
+is invalid. **The Horizons URL is deliberately NOT planted** — the /goal condition is that the
+system *derives* goals of this calibre; a planted recipe would answer the goal on its behalf and
+prove nothing about the class. `6.273 AU` is held back as the verification oracle.
+
+**Not bundled:** the reach gate (`groundedOk > 0 || finalText.trim().length > 0`) is left alone.
+The `||` is load-bearing — probe 2 shows a genuinely grounded wrapper answer arrives with
+`groundedOk = 0`, and tightening it would re-kill the wrapper path that a previous fix restored.
+Whether the fabrication class survives the prompt fix is an empirical question, settled by
+re-running the eBay goal as a negative control. If it fabricates again, the fix point is the reach
+**judge's input** — `taskSummary` already carries `tools=0/0` and the judge approved anyway — not
+the boolean.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
