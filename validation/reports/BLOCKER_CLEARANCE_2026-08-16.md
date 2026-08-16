@@ -1142,3 +1142,51 @@ Whichever occurs, the finding is about **arity in the shape graph**, not about w
 particular dispatch reached. Recording the prediction first because the alternative — reading the
 outcome and then explaining why it was expected — is precisely the retrofitted-mechanism error I
 made with the phase lock (§14) and had to retract.
+
+---
+
+## 30. `bodyHonestyPolicy` has had no producer since 2026-08-02, and the fix that caused it was correct
+
+§19 recorded that the policy files are erased by something that rewrites their directory. Chasing
+the `bodyHonestyPolicy` case specifically closes it, and the answer is different from the other two.
+
+There is **no seeder for it anywhere**: `grep -rl body-honesty-policy scripts/` returns nothing,
+and the file exists in git history only via `8f8e87e7` (2026-08-02), *"chore: untrack the
+substrate's runtime state from the tree"*:
+
+> *29 paths, all landed by an unscoped `git add -A`, and still being re-committed: five commits
+> authored "commit changes" by Substrate Autonomous touched policies/ in a single day. The tracked
+> copy of llm-model-policy.json had already diverged from the live one — different md5 — so the
+> tree was carrying a stale snapshot of a file the system actively maintains elsewhere.*
+
+**That commit was correct.** The diagnosis was right, the rule it applied is the one CLAUDE.md
+states, and leaving a diverged snapshot in the tree would have been worse. What it did not do — and
+what nobody did afterwards — is give the untracked file a *provider*. So since 2026-08-02 the walk
+has resolved `bodyHonestyPolicy`, got nothing, and fallen back to its literal denial-field list on
+**every single step**, logging it every time:
+
+```
+walk(/run-goal): bodyHonestyPolicy resolved to no usable body — FALLING BACK to the literal
+                 denial-field list (law-1 fallback, logged)
+```
+
+That line appears in essentially every walk log I read today, across every dispatch, for two weeks.
+**A loud failure nobody reads is a silent one.**
+
+### Three distinct ways a shaped policy dies, now all observed
+
+| shape | failure | cause |
+|---|---|---|
+| `walkBudget` | reader shipped, no producer | my miss (§3) — fixed, then storage erased |
+| `lessonExecutionPolicy` | reader shipped, no producer | same commit, same miss — fixed, then storage erased |
+| `bodyHonestyPolicy` | producer exists, **storage untracked with no replacement** | `8f8e87e7`, a *correct* fix that left no provider |
+
+The third is the most interesting because nothing was done wrong. The untracking was right; the
+gap is that "stop git from carrying this" and "make sure something still provides it" were treated
+as one task when they are two. That is the same shape as the session's headline defect — a channel
+whose two ends are each individually correct, failing in the middle.
+
+**This strengthens the `POLICY_ROOT` recommendation from §19** rather than replacing it: the fix is
+not to re-track these files (that was already tried and correctly reverted), it is to give them a
+volume location outside any git work tree *and* a seeder that provisions them there, so untracking
+from the tree and providing at runtime stop being in tension.
