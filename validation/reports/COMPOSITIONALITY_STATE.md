@@ -4855,6 +4855,70 @@ and the manual deploy is itself the evidence that the automatic one was not work
   the trace sink is timing out at 12 s and spooling to disk. Operator-gated — there is no SSH from
   here.
 
+## 15.48 ★★★★★ G1 AFTER THE FIXES — three failure modes, each further along, and the defect moved one layer up
+
+The headline goal was dispatched three times under distinct wording, against an oracle recomputed at
+each judging. It has still not been derived. What changed is *how* it fails, and the progression is
+the result worth keeping.
+
+| attempt | recall | inferred target shapes | outcome |
+|---|---|---|---|
+| 1 | dark | `llm_completion_dispatch` (0.7) | **false reach** — fabricated tool transcript, 4.2 AU |
+| 2 | dark | `[]` (0.0) | terminated honestly, no value offered |
+| 3 | live | **`http_fetch`, `uiPanel_write`** (0.8) | **false reach** — 4.2 AU *computed* by `llm_completion` |
+
+Attempt 1 is the fabrication the floor gate now refuses. Attempt 2 shows that path closed: the walk
+declined rather than confabulating. Attempt 3 is the interesting one, and it is not a regression —
+it is the same defect one layer up.
+
+### What attempt 3 got right
+
+With recall live, target inference chose **`http_fetch`** — the shape that can actually reach an
+ephemeris service — over the completion shape it had been guessing at. The walk then declared its
+own plan honestly: `derivation-intent intermediates {intermediate_shapes: ["http_fetch"],
+terminal_shapes: ["uiPanel_write"]}`. Two existing gates fired correctly along the way:
+
+- `satisfier "http_fetch" resolved a DISHONEST body — envelope declares failure: "ok": false —
+  refusing to satisfy` — the walk would not accept a failed fetch dressed as a success.
+- `write "uiPanel_write" claimed success but effect NOT independently readable — treating as
+  non-persistence` — and the resulting hollow verdict β-penalised the pick.
+
+### What it got wrong
+
+After the hollow verdict, the alternative-framing retry re-targeted to `llm_completion` — and the
+reach gate accepted **an LLM computing the answer from a recalled Jupiter distance** as satisfying a
+goal whose whole point is a live measured value. It produced 4.2 AU. The oracle at that hour was
+**6.27610558 AU**. Graded false (`updated: 1`); thirteenth false reach.
+
+**So the gate I added guards the floor, and this went through the walk.** The floor's
+`universalToolFallback` now refuses a narrated tool call with zero executed tools; the walk's
+satisfier path has no equivalent, and will accept `llm_completion` as a completion shape for a
+retrieval goal. Same defect, two code paths, one closed. That is worth stating plainly rather than
+counting the fix as a win: **I closed the instance I had evidence for, and the class outlived it.**
+
+The precise next defect, stated so it can be closed without me: *when the walk has itself inferred a
+retrieval shape as the intermediate for a goal, a reach whose completion shapes contain no retrieval
+shape — only an LLM completion — is hollow, however plausible the number.* The walk already records
+everything that predicate needs, in `derivation-intent intermediates`, at the moment it needs it.
+
+### One observability hole found in the process
+
+The `http_fetch` satisfier never logs the **URL it requested**. When the fetch returned `ok: false`
+there was no way to tell whether the walk had reconstructed a Horizons query and lost it to a
+parameter, or had never found the host at all — the same question that mattered for the earlier
+Horizons near-miss. `REACH-EVIDENCE` records what came *back*; nothing records what was *asked*.
+For retrieval goals the request is half the evidence.
+
+### Also cleared this session, none of which were the goal
+
+- **The deploy channel deadlock** — `QUIESCE_WAIT_S` 900 s inside `TimeoutStartSec=900` (`25aad2cc`).
+- **My own fix was inert** — it lived at `scripts/substrate/` while the unit runs
+  `/usr/local/bin/substrate-pull-sync`; hand-placed. Sixth inert-on-arrival fix of mine in this fleet.
+- **The super-repo clone had been wedged since Aug 14** with ~10 stray root-level files staged in its
+  index, failing every `ff-only` pull silently.
+- **A test fixture is retrying forever against a fake host** — `exec_test_1 at https://activity.test`
+  floods the goal-host journal on a 10 s loop, which is both noise and an unbounded retry nobody owns.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
