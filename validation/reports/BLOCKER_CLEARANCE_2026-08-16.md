@@ -502,3 +502,51 @@ radius; naming them is the deliverable, rewiring them is next-session work.
 
 **Fixed this session:** the silent-default subject (§13.2), the counterfeit Beta draw (§1), retirement's
 four-way inertness (§2), and two shapes with readers and no producers (§3).
+
+---
+
+## 17. Ladder rung 2, third run — A VALID COMPOSITIONAL REACH
+
+`2784ab60`, nonce `ladder2c-c34927`. Same two-shape goal shape as rung 2a, with a subject whose
+registry id actually binds.
+
+**First, the correction that made it possible.** I had blamed rung 2b's `unknown` on the resolver.
+Probing the predicate instead of inferring from it:
+
+```
+discovery-vessel          health= unknown  registered= False  probe= skipped
+discovery-vessel-local    health= unknown  registered= False  probe= skipped
+goal-host-vessel          health= healthy  registered= True   probe= HTTP 200
+development-vessel-local  health= healthy  registered= True   probe= HTTP 200
+```
+
+**The resolver is correct.** Neither `discovery-vessel` nor `discovery-vessel-local` is a registered
+id, so rung 2b's `unknown` was an *honest* report about a subject that does not exist. My "the
+resolver's probes 404 on this spoke" reading was wrong in attribution — the 404s are what a correct
+resolver returns for an unknown id.
+
+**Rung 2c, hand-graded against ground truth captured before dispatch:**
+
+| check | result |
+|---|---|
+| subject | note titled *"Health Report for goal-host-vessel"* — the vessel named in the goal |
+| substance | body: *"The vessel `goal-host-vessel` is `healthy`"*; live `/health` → `status=healthy` ✓ |
+| durable | persisted in the memoryNote store and read back out of it |
+| attributable | carries the dispatch nonce `ladder2c-c34927` |
+| compositional | two shapes inferred at confidence 0.9, split intermediate → terminal, both produced and chained |
+| verdict | `reached: true`, and I agree |
+
+This is the ladder's first clean rung: right subject, right substance, durable, attributable, and
+genuinely composed rather than answered by one satisfier.
+
+**Two blemishes worth naming rather than glossing.**
+
+1. The note body opens with the literal `memoryNote_write:` — a shape name leaking into human prose.
+   Cosmetic, but it is the write-shape surfacing in content a person reads.
+2. `WITHHELD alpha-credit for satisfier:memoryNote_write — no in-chain producer-to-consumer edge`
+   fired again, on a run that genuinely composed. So the composition **earned no credit**: the walk
+   produced both shapes and chained them, but did not record the producer→consumer edge that would
+   let the pathway compound. The credit gate is right to withhold on the evidence it has; the
+   defect is that a real composition is not producing that evidence. That is the next thing to
+   chase, and it is precisely the mechanism §"the ceiling" depends on — pathway reuse cannot
+   compound if valid compositions never bank an edge.
