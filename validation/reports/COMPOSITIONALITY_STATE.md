@@ -5475,6 +5475,57 @@ What remains is an operator decision, not a code change: **prune ~29,354 trace r
 `db-maintenance` has already identified and is deliberately not authorised to perform. Everything
 downstream — relay latency, recall, retirement, and the Io goal's last blocker — sits behind it.
 
+## 15.58 ★★★★★ A DATABASE RESTART FIXED THE WHOLE STACK, AND THE LAST LINK IS A DEAD ARM
+
+The hub's SurrealDB had been up 28.5 hours in a pathological state. Restarting it — no data touched,
+27 GB left on disk — changed everything downstream at once:
+
+| | before | after |
+|---|---|---|
+| surreal CPU | 607% | **0.0%** |
+| surreal RSS | 21 GB | **1.6 MB** |
+| query latency | 13,340 ms | **16 ms** |
+| federated recall (egress) | 40 s timeout | **0.79–1.14 s, HTTP 200** |
+| trace spool | 16,771 files | **3** |
+
+Three symptoms I had spent hours treating as separate problems — trace-write timeouts, the relay's
+40s/502s, and recall failing at every budget — were one degraded process. **Restarting it was worth
+more than every client-side fix I made against it**, and I reached for it only after exhausting
+budgets, caches, serialisation and quarantine. The ordering lesson is plain: when a dependency's
+latency is bimodal across orders of magnitude, suspect the dependency's *state* before tuning the
+caller.
+
+### What that unblocked, and what it revealed
+
+For the first time in the session the walk logged:
+
+```
+[walk-concepts] consulted concept-db via discovery: 1 concept(s) recalled …
+[goal-host-vessel] arg-synthesis lessons: chars=1687 via=opts shape=shellResult
+```
+
+**1,687 characters delivered through the explicit `opts` path** — recall live, lesson threaded, the
+1600-char budget carrying the whole working command. Every fix from §15.50–15.54 functioning together
+on one dispatch, which had never happened before.
+
+And the goal still did not derive, for a new and clearly-named reason. The walk selected
+`activity:⟨learned-auto-bridge-shellresult⟩` — a LEARNED arm — in preference to the fresh satisfier
+that had just been handed the command. That arm produced `webSearchResult` and `memoryNote`, no
+Horizons fetch at all, was correctly judged HOLLOW, and the dispatch fell through to the floor and
+honestly declined.
+
+### The last link closes the loop back to retirement
+
+Selection preferring a useless learned arm over a satisfier holding the right instructions is exactly
+what §15.56 predicted: `checkAndRetireTemplate` gates on twenty executions in the hub store, the arms
+that earn retirement run on the spoke, and the spoke's traces were not arriving. That is now fixed —
+the spool drained 16,771 → 3 and delivery holds — but retirement needs the arms to *re-accumulate*
+twenty executions before it can act.
+
+So the mechanism is in place and needs running time, not another code change. The honest statement of
+where the Earth-to-Io goal stands after 36 dispatches: **not derived, no fabrication, and the final
+obstacle is a bad arm that the now-working retirement path has not yet had the evidence to remove.**
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
