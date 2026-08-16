@@ -550,3 +550,56 @@ genuinely composed rather than answered by one satisfier.
    defect is that a real composition is not producing that evidence. That is the next thing to
    chase, and it is precisely the mechanism §"the ceiling" depends on — pathway reuse cannot
    compound if valid compositions never bank an edge.
+
+---
+
+## 18. Ladder rung 3 — a valid FOUR-shape compositional reach, and it earned credit
+
+`fd96b11d`, nonce `ladder3-aeb301`. Two independent facts from two different subsystems, joined
+into one durable artifact.
+
+The decomposition was the deepest of the session and the walk derived the extra shape itself:
+
+```
+inferred_target_shapes ["vessel_health_report","discovery_vessel_registry_observer","memoryNote_write"]
+countable goal — APPENDED shellResult to inferred targets so the measurement is composable
+intermediates [vessel_health_report, discovery_vessel_registry_observer, shellResult]
+terminal     [memoryNote_write]
+```
+
+Hand-graded against ground truth captured **before** dispatch:
+
+| check | result |
+|---|---|
+| fact 1 | *"Health status of goal-host-vessel: healthy"* — live `/health` → `healthy` ✓ |
+| fact 2 | *"Registered vessels in discovery registry: 11"* — live `/registry/stats` → `11` ✓ |
+| durable | persisted and read back by nonce id |
+| attributable | `ladder3-aeb301` |
+| compositional | 4 shapes, intermediate/terminal split, one derived by the walk unprompted |
+| verdict | `reached: true` — *"deterministic:verified-registry-count — independently queried … totalVessels=11; the produced output matches the authoritative registry"* |
+| credit | **alpha-credited**, not withheld: *"substance-honest reach"* |
+
+Both facts correct, from separate producers, in one artifact. The reach reason is a genuine
+independent verification rather than prose, and unlike rung 2c the walk banked credit for it —
+so this pathway can compound.
+
+**Blemish:** the stored note body is the raw envelope
+(`{"shape":"memoryNote_write","body":"…","nonce":"…"}`) rather than clean prose. The same
+write-shape leak as rung 2c's `memoryNote_write:` prefix, one layer worse. The content is correct;
+its packaging is machine-facing in a human-facing store.
+
+### The ladder, honestly graded
+
+| rung | shapes | verdict | my grade |
+|---|---|---|---|
+| 1 | 1 | reached | **PARTIAL** — asked for two numbers, returned one; judge graded the half it checked |
+| 2a | 2 | reached | **FALSE REACH** — right structure, invented subject, judge asserted content it never read |
+| 2b | 2 | reached | **HONEST-BUT-WRONG** — right subject binding restored; subject was an unregistered id, so `unknown` was the correct answer to a bad question |
+| 2c | 2 | reached | **VALID** — right subject, right substance, durable, attributable |
+| 3 | 4 | reached | **VALID** — two independent facts, both correct, credited |
+
+**Increasingly compositional reach is demonstrated at rungs 2c and 3.** What is *not* demonstrated
+is that it happens reliably regardless of phrasing: rung 2a and 2b were the same goal shape and
+failed for reasons that had nothing to do with composition — a resolver that invented its subject,
+and a subject id that did not exist. Both are now fixed or understood, but the sample is two clean
+runs, not a rate.
