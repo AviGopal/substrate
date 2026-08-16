@@ -5062,6 +5062,73 @@ machinery already derives GitHub stars, a NOAA tide, an FX rate and a moon's rad
 worthless is gone: across attempts four through eight, thirteen sub-attempts, the system did not once
 offer a number it had not retrieved.
 
+## 15.51 ★★★★★ THE LESSON DID LAND — and two of my own claims needed retracting
+
+Attempts nine through eleven. Still not reached, still never fabricated. Two corrections to what
+this report said earlier, both found by checking rather than by reasoning.
+
+### RETRACTION — "instruction at the point of use is 0 for 10" was too broad
+
+§15.50 concluded that the concept-db lesson changed nothing. That was true of the `http_fetch`
+argument path and **false** of the `shellResult` path. Attempt ten built, unaided:
+
+```
+curl -s 'https://ssd.jpl.nasa.gov/api/horizons.api?format=text
+  &COMMAND=%27501%27          Io — was '499', Mars, for nine attempts
+  &CENTER=%27500@399%27       Earth geocentre
+  &EPHEM_TYPE=OBSERVER&QUANTITIES=%271,20%27
+  &START_TIME=%272026-08-16%27&STOP_TIME=%272026-08-17%27   start < stop
+```
+
+**Every parameter correct, including the two that had been wrong since attempt five** — and each one
+is a line of the lesson written into concept-db. The lesson worked; the delivery fix (`c72ee75`)
+worked. I observed a failure on one path and generalised it to a law. The honest statement is
+narrower and more useful: *a recalled fact transfers as concrete values in the shape the lesson
+states them, and does not reliably transfer as procedure.* The same lesson's extraction sentence —
+"the third column of the first data row between the `$$SOE` and `$$EOE` markers" — did **not** land;
+the corrector kept grepping for `A.U.` instead.
+
+### RETRACTION — my own service-error routing was inert
+
+`ad61ae6` read `error` from the top level of what the resolver returns. That is the **envelope**:
+`{success, shape:"httpResponse", body:{url, status, bodyText, bodyJson}}`. A service's error lands at
+`body.bodyJson.error` while the envelope says `success:true`, so the check could never fire on the
+one case it was written for. Seventh inert-on-arrival fix of mine in this fleet; it typechecked, it
+read correctly, and it did nothing. Caught by querying the live service instead of trusting my
+picture of its response shape (`39325b3`).
+
+### The finding that miss led to: the corrector was parsing what it could not see
+
+Attempt ten had a completely correct URL and still failed three extraction attempts running. The
+reason is not reasoning quality. The body-recovery corrector re-fetches a failed command's response
+so the model can see what it is parsing, then elides the middle of a long body — keeping head and
+tail, on the stated assumption that *"THE DATA IS OFTEN BELOW THE PREAMBLE, so the tail follows."*
+
+Horizons puts usage notes **after** its ephemeris. Measured: the reply is 5739 chars, the data block
+begins at line 40, and **the last 1500 chars contain no data row at all**. So the corrector was
+handed a header and a footer of the very response it was asked to parse, and told to write a parser
+for numbers that had been elided out of its evidence. It failed three times — and still refused to
+invent a value.
+
+Fixed in `21314ec` by centring the window on the longest run of digit-leading lines: what a data row
+looks like in an ephemeris, a CSV, a table or a fixed-width report, with a head-and-tail fallback so
+prose and error pages are untouched. Verified against the live body — the old window contains no data
+row, the new one contains the `2026-Aug-16` row and the `$$SOE` marker.
+
+**This is the session's asymmetry restated more precisely than "evidence beats instruction".** Three
+times now the blocker has been that a load-bearing fact was *absent from the evidence at the moment
+of use*: the reach judge graded without provenance, the corrector diagnosed a 404 without the URL,
+and the parser wrote a filter without the data. Each time the model's reasoning was sound on what it
+could see. Law 8 is not a claim about prompting — it is a claim about what is in the window.
+
+### Standing after eleven attempts
+
+**Not reached.** Every failure honest; no fabricated value on any path since the walk-side guard
+landed. The chain now works end to end — recall live, inference choosing retrieval shapes at 0.9–1.0
+with retrieval-only alternatives, a correct Horizons URL built unaided, and refusal rather than
+invention when extraction fails. The one unclosed link is turning that fetched body into a number,
+and the fix for it has not yet had a dispatch route through the shell path to exercise it.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
