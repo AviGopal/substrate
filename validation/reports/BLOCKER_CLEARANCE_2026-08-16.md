@@ -1105,3 +1105,40 @@ Three distinct propagation paths, with different latencies, learned by watching 
 
 A change's real latency is whichever of these it rides. Conflating them is how "I fixed it" and
 "it is running" drift apart.
+
+---
+
+## 29. Rung 4 — a prediction recorded before the result
+
+`a61f2812`, nonce `rung4-6d573a`. Four facts from three sources: health of **two** named vessels,
+plus the registry's vessel count and shape count, into one note.
+
+Its decomposition, logged before the walk executed:
+
+```
+inferred_target_shapes ["vessel_health_report","discovery_vessel_registry_observer","memoryNote_write"]
+countable goal — APPENDED shellResult
+intermediates [vessel_health_report, discovery_vessel_registry_observer, shellResult]
+terminal     [memoryNote_write]
+```
+
+**Prediction, recorded now so it cannot be retrofitted:** this goal should expose a limit the
+earlier rungs could not. It names two vessels, but the walk inferred **one** `vessel_health_report`
+target, and `resolveVesselHealthReport` takes a single `vessel_id` per call — its own refusal
+message says so: *"one report per vessel; dispatch once per vessel for a multi-vessel goal."* The
+shape graph is keyed on shape *types*, not on shape *instances*, so "the same shape twice with
+different bindings" has no representation in the target set.
+
+So I expect one of three outcomes, and each is informative:
+
+1. **It reports one vessel and silently drops the other** — the multi-instance gap, and a
+   partial-answer false reach if the judge accepts it.
+2. **It reports one vessel and says so** — the honest version of the same limit, which is what
+   §13.2's fix is designed to produce.
+3. **It loops the health-report satisfier twice with different bindings** — genuine
+   multi-instance composition, which would be a stronger result than rung 3.
+
+Whichever occurs, the finding is about **arity in the shape graph**, not about whether this
+particular dispatch reached. Recording the prediction first because the alternative — reading the
+outcome and then explaining why it was expected — is precisely the retrofitted-mechanism error I
+made with the phase lock (§14) and had to retract.
