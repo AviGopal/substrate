@@ -1520,3 +1520,52 @@ killed it happened in one regex, before the first step of the walk.
 The general form is worth keeping: **when a goal fails identically across dozens of attempts and
 every fix targets the execution path, check whether execution was ever entered.** A classifier that
 runs before the machinery, and closes, is invisible to any instrument pointed at the machinery.
+
+---
+
+## 37. The restart-deferral backstop is not a backstop
+
+`RESTART_DEFER_MAX=3` reads as a bound: defer a restart while dispatches are in flight, up to three
+times, then converge anyway. Observed:
+
+```
+20:59:31  goal-host-vessel: 6 dispatch(es) in flight — DEFERRING restart (3/3)
+20:59:43  goal-host-vessel: 6 unit(s) in flight — QUIESCED (admission closed); waiting ...
+20:59:43  quiesce wait capped 900s -> 780s ...
+```
+
+It hit **3/3 and did not restart.** The next tick opened a fresh 780s quiesce window instead, and
+the cycle repeats — mirrored source had been sitting unconverged since 18:08, roughly three hours,
+across two full quiesce windows.
+
+**A correction to my own first read of this.** I called the six dispatches "wedged" because the
+count sat at exactly 6 for 25 minutes with admission closed. That was wrong, and checking the ages
+refuted it: 3.9 / 5.7 / 9.6 / 10.4 / 14.3 / 24.6 minutes — the newest under four minutes old, so
+work was still entering and completing throughout. Admission closes for the duration of a quiesce
+window and reopens on the next tick, so the fleet was at a *steady state* of six, not stalled.
+
+That distinction changes the diagnosis entirely. There is nothing to unstick: on a substrate doing
+continuous autonomous gap work, **the in-flight count is essentially never zero**, so a
+convergence gate that waits for idle waits forever. The deferral counter increments, reaches its
+maximum, and the code path that should force through instead re-enters the quiesce branch.
+
+Two defects, worth separating:
+
+1. **The counter does not do what its name says.** `DEFERRING restart (3/3)` should be the last
+   deferral, and it is not — nothing consumes the exhausted counter.
+2. **The gate's premise does not hold for this system.** "Wait for idle" is a reasonable policy for
+   a substrate that goes quiet. This one is designed never to: boredom-driven work fills idle
+   capacity by construction (law 5). The gate and the design are in direct tension, and the gate
+   loses silently — it reports `QUIESCED ... waiting` every tick, which reads like progress.
+
+I restarted the unit directly (authorized this session) to land four fixes that had been mirrored
+and unreachable: the reached-command tombstone, the `bodyHonestyPolicy` self-heal, the recall
+retry, and the live-measurement inference guard. The unit drained (`deactivating`) for its
+configured window rather than dropping work, which is the correct behaviour and the reason the
+restart is safe to force.
+
+**Filed, not fixed:** the honest fix is for the deferral counter to force through when exhausted,
+*and* for the quiesce window to be bounded across ticks rather than restarting its clock. Both sit
+in `substrate-pull-sync.sh` around the `RESTART_DEFER_MAX` block. I did not change it in the same
+pass as four vessel fixes — a convergence loop that force-restarts vessels is exactly the code
+where a wrong edit is most expensive, and it deserves its own change with its own evidence.
