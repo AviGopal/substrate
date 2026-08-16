@@ -5307,6 +5307,65 @@ value neither site controls. Either thread the lessons through the call chain, o
 id, which is stable across reframes. Not attempted here — late-session speculative changes are how
 the composition errors in §15.4 got made.
 
+## 15.55 ★★★★★ MOVING concept-db TO THE HUB EXPOSED A FEDERATION ROUTING LOOP
+
+Per the operator's ruling that concept-db belongs on the hub, the spoke's copy was stopped and
+masked and the hub's — healthy, 7ms, already carrying both dense-leg fixes — became the owner. The
+two Horizons lessons were migrated, because **the knowledge lived in the spoke's database, not the
+vessel's new home**: moving a vessel moves the resolver, not its data (law 11 in miniature).
+
+Federated recall then worked, intermittently, and finally not at all. Measured at load 5, with my own
+dispatch loop stopped: `egress http=000 time=40.0s`, `40.0s`, `502 after 34.3s`.
+
+### The cause is a shape collision crossing a substrate boundary
+
+The hub's registry for shape `concept` holds four rows:
+
+```
+concept-db-local@syzygy-hub
+development-vessel-local@spoke-cfda39e7   <- development-vessel also serves `concept`
+development-vessel-local@spoke-5d97a8c9
+concept-db-local
+```
+
+goal-host resolves concept-db **by name** — its own comment says a shape collision "cannot be
+resolved by preference order — pick the producer BY NAME". The federated ingress does not: it
+resolves by **shape**. So a `concept` request arriving at the hub can select a *spoke's*
+development-vessel and forward it back out over libp2p — `[fed-transport] ingress→libp2p forward
+concept to zsbjZQShHAe1ehrVVrWw` — looping toward the substrate that asked. That is the 40s hang and
+the 502.
+
+It also explains an earlier oddity: a manual egress probe returned pattern-mining prose
+("no recurring pattern found in recent successful traces") rather than a concept search. That was
+development-vessel answering a request meant for concept-db, exactly as the collision predicts.
+
+The caller already supplies the answer — goal-host sends `&vessel=concept-db-local@syzygy-hub` — so
+the fix is for the ingress to honour the vessel the caller named instead of re-resolving by shape.
+Not attempted here: it is a live federation component, untouched this session, and the session's own
+record shows what late speculative changes to unfamiliar code produce.
+
+### Consequence for the goal
+
+Recall on the spoke is dark while this stands, and the measured effect of dark recall is not subtle:
+target inference degrades from `http_fetch` at 0.9 to `llm_completion_dispatch` at 0.7, which is the
+shape that fabricates. The Earth-to-Io range is still not derived after 31 dispatches, and the
+blocking chain is now fully characterised end to end:
+
+1. federated ingress loops on a colliding shape → recall times out
+2. → `_dispatchLessons` stays empty → `arg-synthesis lessons: chars=0`
+3. → the drafter invents Horizons parameters instead of using the verified command in the store
+4. → the command returns nothing, and the walk honestly declines
+
+Every link is now instrumented and each was verified by measurement rather than inference. Two
+options for link 1, both the operator's call: teach the ingress to honour `vessel=`, or run a
+read-only concept-db on the spoke alongside the hub's authoritative copy.
+
+### And a note on method
+
+The three dispatches I fired to "catch a successful recall" were themselves part of the saturation —
+the relay degrades under exactly the load I was adding to measure it. That is the second time this
+session I have been the load I was diagnosing.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
