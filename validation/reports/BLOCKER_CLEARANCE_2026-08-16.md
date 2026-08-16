@@ -874,3 +874,45 @@ of inventing `analysis-vessel-local`; and the body-honesty gate caught the refus
 it as content. That is §13.2's fix and the honesty gate composing correctly, observed on live
 traffic rather than in a test — and it is exactly the path that produced rung 2a's false reach
 before today.
+
+---
+
+## 24. Establishing a rate — a batch of five varied compositional goals
+
+The standing objection to §18 was fair: two clean runs is not a rate. So a batch of five was
+dispatched together, deliberately varied across subject, fact-source and arity, with ground truth
+captured **before** any of them ran (`goal-host-vessel=healthy`, `development-vessel-local=ok`,
+`totalVessels=11`, `healthyCount=11`, `totalShapes=305`).
+
+| # | goal | shapes | verdict | my grade |
+|---|---|---|---|---|
+| A | health of `development-vessel-local` → note | 2 | reached | **VALID** — `overall_health: healthy`, `registered: true` ✓ |
+| C | health of `goal-host-vessel` + registry vessel count → one note | 4 | reached | **VALID** — `healthy` ✓ and `totalVessels=11` ✓, deterministically verified |
+| D | registry healthy-count + total shapes → one note | 3 | reached | **VALID** — persisted *"Healthy Vessels: 11, Total Shapes: 305"* ✓✓ |
+| B | distinct shape count → note | 2 | *(still running)* | — |
+| E | health of `development-vessel-local` + shape count → one note | 3 | *(still running)* | — |
+
+**Three graded, three valid**, on goals that differ in subject, in which subsystem supplies each
+fact, and in arity (2, 3 and 4 shapes). With rungs 2c and 3 that is **five valid compositional
+reaches**, hand-verified against independently captured ground truth, across five distinct goal
+phrasings.
+
+**A grading error of my own, corrected here because it is the session's own lesson.** I first
+marked D a FALSE REACH: the note I found contained the health-report resolver's *refusal*
+(`vessel_id is required`) plus a registry count the goal had not asked for. That was me reading the
+first artifact I found and concluding. D actually persisted a **second** note —
+`"Discovery Registry Stats": "Healthy Vessels: 11, Total Shapes: 305"` — from a real shell query of
+`healthyCount` and `totalShapes`, both exactly matching ground truth. The refusal envelope was a
+*discarded intermediate*, not the deliverable. D is valid. **Reading a partial artifact and
+concluding is the same failure mode this whole report documents, and I did it while grading the
+test for it.**
+
+Two incidental confirmations from these runs:
+
+- C's own output lists `goal-host-vessel`'s advertised shapes and they now include **`walkBudget`
+  and `lessonExecutionPolicy`** — the producers from §3, visible in live dispatch output rather
+  than in a registry query I ran myself.
+- D's trace shows the health-report resolver **refusing** rather than inventing a subject, and the
+  walk discarding that refusal and getting the answer another way. That is §13.2's fix working as
+  intended in a composition: the wrong path fails loudly instead of quietly returning something
+  plausible.
