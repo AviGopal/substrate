@@ -1385,3 +1385,39 @@ to a freely-writable shape here: this is a security boundary, and anything that 
 open an arbitrary egress path. The right fix is a shaped, operator-seeded policy with a self-heal
 default — the pattern `bodyHonestyPolicy` now uses — as its own reviewed change. Widening a trust
 surface while passing through on other business is how a trust gate quietly stops being one.
+
+---
+
+## 34. Ground truth for Io, captured independently
+
+Before re-dispatching the goal, the answer was established by hand so the result can be graded
+rather than believed. JPL Horizons, target `501` (Io), observer `500@399` (Earth geocentre),
+quantity `20` (observer range):
+
+```
+https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND='501'&CENTER='500@399'
+  &EPHEM_TYPE='OBSERVER'&QUANTITIES='20'&START_TIME='2026-08-16'&STOP_TIME='2026-08-17'&STEP_SIZE='1 d'
+
+$$SOE
+ 2026-Aug-16 00:00     6.27567194257039   8.2966040
+ 2026-Aug-17 00:00     6.26816854944633 -14.9844945
+$$EOE
+```
+
+**Earth–Io ≈ 6.2757 AU on 2026-08-16**, closing slightly through the 17th. HTTP 200, 5,238 bytes,
+under a second.
+
+Two things follow. First, the origin is genuinely reachable and the query genuinely works, so the
+allowlist entry buys a real capability rather than an admission with nothing behind it. Second —
+and this is the part that matters for grading — **every prior Io attempt had no oracle.** Rate E
+was caught confabulating because `totalVessels=11` could be independently queried; nothing on this
+spoke could check an AU figure, which is precisely the regime the source comment measured at
+20/20 reached and 0/20 correct. Having 6.2757 in hand converts the next dispatch from a prose
+judgement into a checkable one.
+
+Note the `$$SOE` marker in the response: the same token whose `$$` the walk's own repair path
+learned to escape (`index.ts` logs *"repaired \"$$\" -> \"\\$\\$\" in synthesized arg"* — inside
+double quotes bash expands `$$` to its pid, so a literal `$$SOE` silently matches nothing and the
+command exits 0 empty). That repair exists because this exact query burned a 3-attempt budget once
+before. The machinery for this goal class is all present; it was the fetch capability underneath
+that was fake.
