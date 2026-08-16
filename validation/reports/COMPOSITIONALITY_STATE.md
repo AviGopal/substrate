@@ -4582,6 +4582,71 @@ a satisfier that grounds a reach. Without it, a correct answer and a lucky one a
 after the fact — which is the same defect class as §15.30's cached false reach and §15.41's blind
 grader, in a third store.
 
+## 15.46 ★★★★★ PROVEN DERIVATION — G8, with the fetching command in the record
+
+Running the §15.45 gamut across three domains produced the first result that meets all four
+criteria at once.
+
+### G8 — reached ∧ correct ∧ grounded ∧ honest
+
+> *"How many stars does the Linux kernel repository have on GitHub?"*
+
+```
+REACH-CONTENT shellResult (184 chars) = {"shape":"shellResult",
+  "stdout":"242950\n",
+  "stderr":"[1]-  Done  ( curl -s 'https://api.github.com/repos/torvalds/linux' | jq -r .stargazers_count )",
+  "exit_code":0}
+```
+
+| criterion | evidence |
+|---|---|
+| reached | `reached: true` |
+| **correct** | **242950**, against an oracle probed independently before dispatch: **242950** |
+| **grounded** | the fetching command is *in the record* — endpoint never supplied by an operator |
+| honest | exit 0, no fabrication |
+
+Re-checking the oracle minutes later returned **242953** — the counter had drifted by 3, which
+confirms a *live* value was retrieved rather than recalled, and that the substrate's answer was
+right **at the moment it fetched**.
+
+**This is the claim the Io goal alone could never support: a non-astronomy domain.** Nothing in host
+disqualification, candidate search, dump detection, extraction or grader provenance is about
+ephemerides, but that was an argument until a different domain demonstrated it.
+
+A pleasing detail: the provenance arrives via the `[1]-  Done  ( curl … )` job-control notice — the
+same noise filtered out of *judgement* in §15.39. Filtered from the verdict, preserved in the record,
+and it is what makes the fetch auditable.
+
+### G6 — the tenth false reach, and a new variety
+
+> *"Give me the current bitcoin price in US dollars."* → `reached: true`,
+> *"The output provides search results that contain current Bitcoin prices in US dollars."*
+
+**No price was ever stated.** The record holds a `webSearchResult` envelope of snippets; the only
+numbers present are a timestamp and dispatch-id fragments. The live price was ~$63,011 and nothing
+near it appears anywhere. Graded false (`updated: 1`).
+
+This is a *new* failure mode, distinct from the previous nine. Those asserted a wrong value. This one
+asserts **no value at all** and is graded green for the *presence of search results* — retrieval
+attempted read as retrieval completed, a snippet bundle read as an answer. The grader-provenance fix
+(§15.41) closed "graded a number it could not check"; it does not close "graded a container of
+numbers as though it were a number".
+
+### G1 — honest failure
+
+> *"…the response gave only a general range and explanation instead of the current Earth-Io distance."*
+
+Not-reached ∧ honest — a good outcome under the gamut's scoring, not a failure.
+
+### What the batch establishes, and what it does not
+
+**Established:** the walk derives external live data end-to-end with auditable provenance, in a
+domain that is not astronomy, using an endpoint nobody supplied.
+
+**Not established:** that it does so *reliably* — one of three succeeded — or that the hardest case
+(an instantaneous ephemeris needing observer centre and a time window) is in reach. G1 still fails,
+and G6 shows the grader has a remaining blind spot in the opposite direction from the one just fixed.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
