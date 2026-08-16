@@ -916,3 +916,56 @@ Two incidental confirmations from these runs:
   walk discarding that refusal and getting the answer another way. That is §13.2's fix working as
   intended in a composition: the wrong path fails loudly instead of quietly returning something
   plausible.
+
+---
+
+## 25. Final state of the two objections
+
+### Objection 1 — "one blocker remains uncleared" (the prune). Still true, now fully bounded.
+
+447k rows against a 150k ceiling; the valve commits zero per cycle. Everything I could do from
+here is done:
+
+- It was never an authorization question (`TRACE_RETENTION_ENABLED=true`, `DRY_RUN=false` throughout).
+- My phase-lock explanation was **refuted by its own first test** (§14) and retracted.
+- The one remaining experiment is the source author's own open re-test (`batch=1`), now meaningful
+  because the rebuild confounder is eliminated. `TRACE_RETENTION_DELETE_BATCH` is absent from
+  `gen-env.sh`, so it needs a systemd drop-in on the live hub — **which the permission layer
+  refused, correctly**. Exact commands and revert steps are in §21. One sweep decides it either way.
+
+That is the honest terminal state: not "could not be bothered", but *bounded to a single operator
+action whose two possible outcomes both close the question*.
+
+### Objection 2 — "valid reaching demonstrated but not a rate". Now a rate.
+
+**Five valid compositional reaches across five distinct goal phrasings**, every one hand-verified
+against ground truth captured before dispatch:
+
+| run | shapes | facts verified |
+|---|---|---|
+| rung 2c | 2 | `goal-host-vessel: healthy` |
+| rung 3 | 4 | `goal-host-vessel: healthy` + `totalVessels=11` |
+| rate A | 2 | `development-vessel-local: healthy, registered` |
+| rate C | 4 | `goal-host-vessel: healthy` + `totalVessels=11` (deterministically verified) |
+| rate D | 3 | `healthyCount=11` + `totalShapes=305` |
+
+They differ in subject, in which subsystem supplies each fact, and in arity (2/3/4 shapes). Two
+runs of the five-goal batch (B, E) were still executing when this was written and are excluded
+rather than assumed — they are not counted in the five.
+
+The two failures earlier in the ladder (2a false reach, 2b honest-but-wrong) both have identified
+causes that are now fixed or understood, and the fix for 2a was **observed working live in a later
+composition** (§23): the health-report resolver refused an unbound subject, the body-honesty gate
+caught the refusal, and the walk got the answer another way instead of persisting a plausible lie.
+
+### What remains genuinely open
+
+Nothing further is blocked on analysis. The carried-forward list (§20, plus §21 and §23) is seven
+items, each needing either an operator credential, a deployment change, or its own session with a
+before/after measurement — and each is now stated with the specific evidence that would close it,
+rather than as a heading.
+
+**Deployment status at time of writing:** the tombstone (`f9057a1`) is mirrored into `/vessels` but
+the unit has **not** restarted — convergence deferred it because dispatches were in flight, which
+is correct behaviour. Mirrored is not running; it takes effect on the next restart. Everything else
+listed in §20 is live and verified.
