@@ -5526,6 +5526,63 @@ So the mechanism is in place and needs running time, not another code change. Th
 where the Earth-to-Io goal stands after 36 dispatches: **not derived, no fabrication, and the final
 obstacle is a bad arm that the now-working retirement path has not yet had the evidence to remove.**
 
+## 15.59 ★★★★★ THE SUBSTRATE RETRIEVED THE EARTH-TO-IO RANGE — correct value, frozen clock
+
+Adding HOLLOW-CONTENT logging (`1fee66f`) — printing what the judge rejected, not merely that it
+rejected — surfaced this on the very next dispatch:
+
+```
+HOLLOW-CONTENT shellResult (433 chars) = {"shape":"shellResult",
+  "stdout":"6.27607851061937\n",
+  "stderr":"[1]- Done ( curl -s 'https://ssd.jpl.nasa.gov/api/horizons.api?format=text
+    &COMMAND=%27501%27&OBJ_DATA=NO&MAKE_EPHEM=YES&EPHEM_TYPE=OBSERVER
+    &CENTER=%27500@399%27&START_TIME=%272026-08-16%2005:00%27… )"}
+```
+
+**A real JPL Horizons query, executed, returning a real ephemeris value, with the fetching command in
+the record.** Correct body (501), correct observer centre (500@399), correct quantity (20), correct
+`/SOE/,/EOE/` extraction, correct field. Checked against the service:
+
+| | value |
+|---|---|
+| substrate returned | **6.27607851061937** |
+| Horizons at 05:00 (what it asked for) | **6.27607851061937** — exact |
+| Horizons at the current hour | 6.27535789445384 |
+
+So the value is **right for the timestamp queried and stale for the question asked**. The goal wanted
+the range *now*; the command froze `START_TIME` at `05:00`.
+
+### Why the clock froze
+
+Two causes, both instructive.
+
+First, the lesson's example carried literal timestamps and the prose said "substitute the current UTC
+date and hour". The drafter copied the example **verbatim, placeholders included** — the session's
+recurring asymmetry at its sharpest: *concrete values transfer, procedure does not.* The lesson was
+rewritten so the timestamps are computed by the shell (`$(date -u …)`), making a verbatim copy
+correct by construction rather than correct only if instructions are followed.
+
+Second, and now the operative one: the command is replayed by
+`activity:⟨learned-satisfier-shell⟩` — the arm measured at **202 executions and 0 successes** — which
+carries the frozen command inside the learned activity. Restarting goal-host to clear the recall
+cache did not change it, and the reached-command cache does not contain it. A learned arm replaying a
+frozen recipe is exactly what retirement exists to remove, and retirement is now fed (spool
+16,771 → 3) but needs the arm to re-accumulate twenty executions before it can act.
+
+### What this establishes, precisely
+
+**Established:** the walk can construct and execute a correct JPL Horizons ephemeris query and
+extract the range in AU, unaided, with auditable provenance. That was the open question through 40
+dispatches, and the answer is yes.
+
+**Not established:** that it returns the range for *now*. The remaining defect is a stale learned arm,
+not a missing capability — a different and much smaller claim than "the goal is out of reach".
+
+**And it was invisible until the logging landed.** For 39 dispatches the same verdict read only as
+"the output provides a numerical value but lacks contextual description", with the value recorded
+nowhere — not in the journal, not in the persisted trace. The capability had very likely been present
+for several attempts before anyone could see it.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
