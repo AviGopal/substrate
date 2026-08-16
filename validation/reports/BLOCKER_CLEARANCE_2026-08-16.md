@@ -1068,3 +1068,40 @@ that source comment since 2026-08-09.
 **The blocker is still not cleared, and I am not going to claim otherwise.** What changed is that
 it is no longer waiting on an action I was refused; it is waiting on an event that will happen on
 its own, with the probe already in place and the read-out specified.
+
+---
+
+## 28. Consolidated status — supersedes the table in §20
+
+Several rows changed after §20 was written. This is the current state; where a claim is not
+verified live, it says so.
+
+| # | change | commit | live status |
+|---|---|---|---|
+| 1 | Real Beta draw (Marsaglia-Tsang) replaces the counterfeit sampler | `d69a4ad` | **LIVE, VERIFIED** — mirrored and restarted 12:47:44 |
+| 2 | Health-report refuses an assumed subject | `1170047` | **LIVE, VERIFIED** — observed refusing on live traffic (§23), and rung 2c depends on it |
+| 3 | `walkBudget` + `lessonExecutionPolicy` producers | `f87f52f` | **LIVE, but storage erased under them** (§19) — proven working at 13:14:01, gone by 13:57 |
+| 4 | Retirement on posterior evidence from the real ingest route | `e2d7077`+`1d83bf5` | **DEPLOYED, UNPROVEN** — acceptance test inconclusive (§12); 0 natural firings in ~40 min, which is expected (§20) |
+| 5 | Retention defers while `REBUILD INDEX` holds the store | `d253457` | **LIVE — and NOT the prune fix**; hypothesis retracted (§14) |
+| 6 | Durable tombstone for the reached-command library | `f9057a1` | **MIRRORED, NOT RUNNING** — restart deferred 1/3 while dispatches are in flight; forces through at 3 |
+| 7 | `TRACE_RETENTION_DELETE_BATCH=1` probe | `a78fcfd7` | **ARMED, DORMANT** — `gen-env` runs only at container start (§27) |
+
+**Verified-live count: 3 of 7.** The rest are correctly deployed and waiting on events (a restart,
+a container start) or on a measurement I could not complete. I would rather state that ratio than
+present seven landed commits as seven working fixes — this session's own §3 finding is exactly what
+happens when a landed change is mistaken for a working one.
+
+### Deployment mechanics worth carrying forward
+
+Three distinct propagation paths, with different latencies, learned by watching them:
+
+1. **Vessel source** → `pull-sync` mirrors to `/vessels` → unit restarts. ~10 min, but the restart
+   defers up to 3 ticks while dispatches are in flight (`RESTART_DEFER_MAX`, counter at
+   `/workspace/.pull-sync/<vessel>.restart-deferrals`). **Mirrored is not running.**
+2. **Glue layer** (`gen-env.sh`, `apply-inventory`, unit files) → converged from the super-repo →
+   installed to `/usr/local/bin`. Same tick cadence, but `gen-env` is only *invoked* by
+   `entrypoint.sh`, so a rendered env change waits for a **container** start, not a unit restart.
+3. **Runtime policy files** (`policies/*.json`) → no propagation at all, and actively erased (§19).
+
+A change's real latency is whichever of these it rides. Conflating them is how "I fixed it" and
+"it is running" drift apart.
