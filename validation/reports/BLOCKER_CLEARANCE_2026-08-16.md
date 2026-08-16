@@ -1190,3 +1190,60 @@ whose two ends are each individually correct, failing in the middle.
 not to re-track these files (that was already tried and correctly reverted), it is to give them a
 volume location outside any git work tree *and* a seeder that provisions them there, so untracking
 from the tree and providing at runtime stop being in tension.
+
+---
+
+## 31. Rung 4 — four facts, two vessels, VALID. The prediction in §29 was wrong.
+
+`a61f2812`, nonce `rung4-6d573a`. The persisted note:
+
+```
+Nonce rung4-6d573a:
+goal-host-vessel health: healthy
+development-vessel-local health: healthy
+Registered vessels in discovery registry: 11
+Total shapes advertised in discovery registry: 305
+```
+
+Against ground truth captured before dispatch (`goal-host: healthy`, `development-vessel-local: ok`,
+`totalVessels=11`, `totalShapes=305`): **all four correct.** Durable, nonce-attributable, and
+`alpha-credited` on a `deterministic:verified-registry-count` verdict — so unlike rung 2c this
+pathway banked credit and can compound.
+
+**§29 predicted this would expose the multi-instance limit and it did not.** I reasoned that the
+walk inferred one `vessel_health_report` target for a goal naming two vessels, that the resolver
+takes one `vessel_id` per call, and that the shape graph is keyed on types rather than instances —
+so "the same shape twice with different bindings" had no representation. I enumerated three
+outcomes; this is **outcome 3**, the one I flagged as the strongest and least expected.
+
+What actually happened: the health-report satisfier refused an unbound `vessel_id` (visible in the
+note's discarded intermediate — §13.2's fix firing again), and the walk then routed around the
+type-keyed target set entirely by composing a shell step that queried **both** vessels and both
+registry fields in one command, binding `VESSEL_HEALTH_REPORT_DEV_LOCAL` alongside the other. The
+arity limit I predicted is real in the *target inference*, but it is not binding on the *walk*,
+because a satisfier can carry multiple bindings in a single step.
+
+Recording this as a miss rather than quietly dropping it: I wrote the prediction down first
+specifically so it could be scored, and it scored wrong. The useful residue is that **type-keyed
+target inference under-describes what the walk can actually do** — the inferred target set is a
+lower bound on composition, not a ceiling.
+
+### The ladder and rate, final
+
+| run | shapes | facts | grade |
+|---|---|---|---|
+| rung 1 | 1 | 1 of 2 asked | PARTIAL |
+| rung 2a | 2 | wrong subject | FALSE REACH (cause fixed) |
+| rung 2b | 2 | honest answer to a bad question | HONEST-BUT-WRONG |
+| rung 2c | 2 | 1 | **VALID** |
+| rung 3 | 4 | 2 | **VALID + credited** |
+| rate A | 2 | 1 | **VALID** |
+| rate B | 2 | 1 | **VALID** |
+| rate C | 4 | 2 | **VALID** |
+| rate D | 3 | 2 | **VALID** |
+| rate E | 3 | — | **CORRECTLY REJECTED** (caught its own confabulation) |
+| rung 4 | 4 | **4** | **VALID + credited** |
+
+**Seven valid compositional reaches, one correct rejection, zero false reaches** since the fixes
+landed — across seven distinct phrasings, arities 2–4, one to four facts per goal, drawn from three
+different subsystems, every one hand-verified against ground truth captured before dispatch.
