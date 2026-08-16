@@ -501,7 +501,23 @@ TRACE_STORE_RESERVOIR_PER_ACTIVITY=25
 # storage engine's delete path for this table, which is a design question
 # (partitioning, a different retention substrate, or not storing this volume) and NOT
 # tunable here — in which case revert this line rather than keep tuning.
-TRACE_RETENTION_DELETE_BATCH=1
+# REVERTED to the code default after measuring BOTH halves (2026-08-16, same session).
+# batch=1 genuinely made each statement cheap — 239ms vs 3,155ms for a 25-id DELETE, and the
+# 25-id form timed out often enough to commit ZERO. That much is settled and vindicates the
+# threshold reading in trace-retention.ts.
+#
+# But cheap-per-statement is not cheap-in-aggregate. At batch=1 the sweep issues ~25x the
+# statements, and 19 minutes in, the hub had 320 queries in flight, mean latency 17.7s (from
+# 180ms), p50 33.7s, 8,469 of 10,484 queries slow, max back at the 300s timeout, load average
+# 13.4 — while the ceiling valve had still not been reached and the row count had not fallen.
+# The DELETE cost moved from the statement into the queue.
+#
+# So the honest result is: statement width is real, AND batch=1 is not the fix on a store this
+# size under live ingest. The remaining lever is the design question the note below already
+# names (partitioning, a different retention substrate, or not storing this volume), not a
+# batch number. Leaving the value unset so the code default (25) applies; the measurement is
+# preserved here so nobody re-runs it.
+# TRACE_RETENTION_DELETE_BATCH=1
 
 # Obsidian plugin endpoint (2026-06-22). The obsidian-vessel plugin runs IN the
 # single-container substrate (obsidian-desktop.service) and serves on
