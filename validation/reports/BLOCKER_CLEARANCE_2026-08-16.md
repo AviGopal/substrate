@@ -221,23 +221,63 @@ The Io-calibre rung tests whether a recalled lesson survives to execution. It ca
 this spoke: concept recall is dead here (§9), so no lesson reaches the drafter, and the verbatim
 lever has nothing to act on. Running it would have measured the transport outage, not the ladder.
 
-## 9. Concept recall on the spoke dials a stale peer — the real ceiling limiter
+## 9. Concept recall is intermittent over the relay — CORRECTED FROM MY FIRST READ
 
+**What I first wrote here was wrong and is retracted in place.** I claimed the spoke was dialing a
+stale peer, on the reasoning that the egress target `138.197.116.56` is not the hub
+(`syzygy.host` = `104.236.0.175`). The inference was bad: that address is the **relay**, not the
+hub, and the spoke holds a live circuit through it.
+
+Evidence that the transport is healthy:
 ```
-[walk-concepts] recall FAILED TimeoutError url=http://127.0.0.1:8401/egress/resolve
-                ?target=/ip4/138.197.116.56/tcp/30333/p2p/12D3KooWJ9Jdv... budget=25000ms
-[walk-concepts] concept-db could not be asked — recall unavailable, NOT an empty result
-[goal-host-vessel] arg-synthesis lessons: chars=0 via=hash-fallback
+federation-transport-vessel: active
+  activeReservations: 1   reservationTtlRemainingMs: 3,578,703
+  connections: [{peer: 12D3KooWJ9Jdv..., addr: /ip4/138...}]
+[fed-transport] egress/resolve -> concept via 6yz95okd7tjBHWkVAAdZ      (requests ARE forwarded)
+[fed-transport] hub-register per-vessel (10 rows) -> all ok             (hub registration works)
 ```
 
-**`138.197.116.56` is not the hub.** `syzygy.host` resolves to `104.236.0.175`. The spoke is
-dialing a stale peer address for every concept recall, timing out at 25s and again at 12s, and
-falling back to zero lessons. Law 8 — information at the right time — is structurally broken on
-this deployment, and it is a stale federation address, not a design problem.
+And the hub's concept-db is healthy and **fast**, answering my own dispatches' queries:
+```
+13:21:57.990Z [concept-db] [searchConcepts] lexical ladder matched — skipping the dense leg
+              entirely {"lexical_hits":4}   term: "shellResult pointer payload"
+```
 
-This is why enabling `lessonExecutionPolicy` changes nothing here yet: the verbatim path needs a
-recalled command, and `chars=0` means none arrives. The lever is now built, shaped, and revocable;
-the transport under it is down.
+So the request leaves the spoke, the hub answers in milliseconds, and the response does not return
+within budget. It is a **relay round-trip / queuing** problem, not a dead address and not a
+concept-db fault.
+
+It is also **intermittent, not total**, which my first write-up also got wrong. Both outcomes occur:
+```
+13:11:07  arg-synthesis lessons: chars=405 via=opts          shape=shellResult      (recall WORKED)
+13:13:13  recall FAILED TimeoutError ... budget=12000ms
+13:13:13  arg-synthesis lessons: chars=0 via=hash-fallback   shape=vessel_health_report
+13:13:41  arg-synthesis lessons: chars=0 via=hash-fallback   shape=memoryNote_write
+```
+This matches the standing "concept-db recall fails ~80% — contention, not flakiness" observation
+rather than an outage. Law 8 is degraded here, not severed, and the fix is latency/contention on
+the relay path, not a peer address.
+
+**A real defect found while chasing this, and it is not the one I expected.** `concept` is an
+**overloaded shape**. Three rows advertise it:
+```
+development-vessel-local          http://localhost:8090   (non-libp2p, LOCAL)
+development-vessel-local@spoke-…  libp2p
+concept-db-local@syzygy-hub       libp2p
+```
+`goal-host index.ts:1040` filters them by **vessel name** (`/concept-db/i`) before preferring a
+non-libp2p endpoint, which discards the only local HTTP producer and forces every recall over the
+relay. That looks like routing-by-name — an architecture violation — but it is **defensible and
+should not be "fixed" naively**: the two producers mean different things under one key. Asked
+directly, `development-vessel` returns
+`{"shape":"concept","body":{"concept_name":"multi_step_resolver_flow", …}}` — trace pattern-mining,
+not the prose-lesson recall the walk expects. Re-routing to it would silently feed the drafter
+wrong-typed content.
+
+The genuine defect is therefore **upstream of the routing**: a shape is a routing-and-reasoning key,
+and two incompatible meanings share this one, which is exactly what forces a consumer to
+discriminate by vessel name. The fix is to split the vocabulary (e.g. a distinct shape for
+trace-pattern concepts), not to change the picker.
 
 ## 10. The operator feedback channel is not reachable with the documented credential
 
