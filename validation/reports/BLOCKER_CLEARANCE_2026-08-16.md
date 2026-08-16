@@ -1569,3 +1569,43 @@ restart is safe to force.
 in `substrate-pull-sync.sh` around the `RESTART_DEFER_MAX` block. I did not change it in the same
 pass as four vessel fixes — a convergence loop that force-restarts vessels is exactly the code
 where a wrong edit is most expensive, and it deserves its own change with its own evidence.
+
+---
+
+## 38. Mirror-then-restart is ordered wrong when commits arrive during a quiesce
+
+The forced restart at 21:05:10 landed **three of four** fixes. Verified at the live tree:
+
+```
+RECALL_ATTEMPTS=4        ✓ recall retry
+tombstone=7              ✓ reached-command tombstone
+selfheal=3               ✓ bodyHonestyPolicy self-heal
+LIVE_MEASUREMENT_RE=0    ✗ the inference guard — the one Io needs
+```
+
+The tombstone is confirmed running by its own boot line, in the new format the rewrite introduced:
+
+```
+reached-command cache: loaded 755 persisted commands (1671 lines applied, 0 tombstone(s))
+```
+
+`0 tombstone(s)` is correct and expected: eviction is event-driven, so the file gains its first
+tombstone when a goal re-runs and grades false. The counter existing at all is the proof the new
+loader is the one executing.
+
+**Why the fourth was missing.** The clone was at `0223842` — which contains the guard — while
+`/vessels` was not. The mirror step had run earlier in the quiesce window, *before* that commit was
+fetched, and the restart at the end of the window shipped whatever the mirror had left. So a commit
+landing mid-quiesce is fetched but not mirrored, and the restart it was waiting for consumes the
+stale mirror. The vessel then reports "converged" at a commit whose code it is not running.
+
+That is a variant of the session's recurring theme, in the deploy path: **mirrored is not running,
+and now also fetched is not mirrored.** Three distinct states, and only the last one is behaviour.
+
+I copied the single file into the live tree and re-restarted, after diffing the rest of `src/` to
+confirm nothing else had drifted (`index.ts` and `body-honesty-policy.ts` both reported in sync, so
+the copy was the only gap).
+
+**Filed with §37**, since both live in the same block of `substrate-pull-sync.sh` and want one
+change: the restart step should re-run the mirror if the clone has advanced since the mirror ran,
+rather than assuming the mirror is current because it happened in the same tick.
