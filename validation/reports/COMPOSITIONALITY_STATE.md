@@ -4769,6 +4769,31 @@ part succeeded and a one-flag mechanical detail threw it away.** The body-recove
 precisely for this and did not fire on a jq parse error. Two of the batch's near-misses are now this
 shape, which makes it a class rather than an incident.
 
+### The deploy channel had been dead-locked, and only a stuck deploy revealed it
+
+Found because two goal-host fixes would not deploy. `substrate-pull-sync` closes admission and waits
+for in-flight work rather than restarting into it — correct, and the comment above it promises the
+wait "terminates on its own, bounded by the longest single compose." It cannot.
+
+`QUIESCE_WAIT_S` defaults to **900 s**. The unit is **`TimeoutStartSec=900`**. systemd starts counting
+at unit start; the wait begins only after fetch-and-skip work has already spent part of the tick. So
+the wait always outlives the budget. Measured: quiesce opened at `03:30:56`, systemd SIGTERMed the
+unit at `03:45:49` with `Result=timeout`. **The converge-anyway branch is unreachable** — not rarely
+taken, unreachable.
+
+The failure mode is the dangerous kind: **silent and self-perpetuating.** The timer fires again ten
+minutes later, quiesces again, and dies again. A vessel with continuous in-flight work never receives
+new code, and every tick reads in the log as ordinary caution. Nothing reports a stalled deploy
+channel, because from the outside each tick looks like a deliberate deferral.
+
+Two bounds, each independently well-reasoned, composing into a deadlock — and the rest of this script
+reasons about exactly this hazard, bounding its test gate to 420 s per tick for exactly this reason.
+The quiesce wait was the one step that did not bound itself against the clock it runs under. Fixed in
+`25aad2cc` by capping the wait to what remains of `TimeoutStartSec` less a margin.
+
+**This is why the fixes above had to be deployed by hand** — `mirror-to-live` plus a unit restart —
+and the manual deploy is itself the evidence that the automatic one was not working.
+
 ### Infrastructure found along the way
 
 - **concept-db was masked but running** — the fourth instance of that pattern in two days, and the
