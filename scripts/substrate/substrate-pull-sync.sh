@@ -761,7 +761,28 @@ EOF
         mkdir -p "$QDIR" 2>/dev/null || true
         : > "$QDIR/$v" 2>/dev/null || true
         log "$v: $INFLIGHT unit(s) in flight — QUIESCED (admission closed); waiting for them to finish rather than restarting into them"
+        # BOUND THE WAIT BY WHAT IS LEFT OF THE UNIT'S OWN START TIMEOUT, or the branch below
+        # that promises "this wait terminates on its own" is unreachable.
+        #
+        # QUIESCE_WAIT_S defaulted to 900 and the unit is TimeoutStartSec=900, but systemd starts
+        # counting when the unit starts and this wait begins after fetch/skip work has already
+        # spent part of the tick. So the 900s wait ALWAYS outlives the budget: measured
+        # 2026-08-16, quiesce opened at 03:30:56 and systemd SIGTERMed the unit at 03:45:49,
+        # `Result=timeout`, before a single iteration of the converge-anyway path could run.
+        #
+        # The failure is silent and self-perpetuating. The timer simply fires again ten minutes
+        # later, quiesces again, and dies again, so a vessel with continuous in-flight work never
+        # receives new code while every tick looks like ordinary caution in the log. The rest of
+        # this script already reasons this way — the test gate carries a 420s per-tick budget for
+        # exactly this reason — and this wait was the one step that did not.
         QWAIT="${QUIESCE_WAIT_S:-900}"; QSTEP=10; QSPENT=0
+        : "${GATE_T0:=$(date +%s)}"
+        _Q_LEFT=$(( ${UNIT_TIMEOUT_S:-900} - ( $(date +%s) - GATE_T0 ) - ${QUIESCE_MARGIN_S:-120} ))
+        [ "$_Q_LEFT" -lt 0 ] && _Q_LEFT=0
+        if [ "$QWAIT" -gt "$_Q_LEFT" ]; then
+          log "$v: quiesce wait capped ${QWAIT}s -> ${_Q_LEFT}s by what remains of TimeoutStartSec (${UNIT_TIMEOUT_S:-900}s) less a ${QUIESCE_MARGIN_S:-120}s margin — an uncapped wait outlives the unit and converges nothing"
+          QWAIT="$_Q_LEFT"
+        fi
         while [ "$QSPENT" -lt "$QWAIT" ]; do
           sleep "$QSTEP"; QSPENT=$((QSPENT+QSTEP))
           NOW="$(curl -s --max-time 5 "http://127.0.0.1:$IFPORT/health" 2>/dev/null \
