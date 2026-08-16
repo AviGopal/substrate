@@ -4919,6 +4919,67 @@ For retrieval goals the request is half the evidence.
 - **A test fixture is retrying forever against a fake host** — `exec_test_1 at https://activity.test`
   floods the goal-host journal on a 10 s loop, which is both noise and an unbounded retry nobody owns.
 
+## 15.49 ★★★★★ THE FABRICATION CLASS IS CLOSED ON THIS GOAL — it now fails honestly, five ways
+
+Attempt four, after the walk-side guard landed. **`reached: false`**, and the reason is true:
+*"The output does not provide the current Earth-Io range in astronomical units, and the http_fetch
+command resulted in an error."*
+
+Five sub-attempts inside one walk, every one graded hollow, correctly, with an accurate reason:
+
+| step | what happened | verdict |
+|---|---|---|
+| `http_fetch` | envelope declared `"ok": false` | refused — dishonest body |
+| `concept_write` | wrote a note containing no range | HOLLOW, *"404 error on the API call"* |
+| retry, suppressed | `http_fetch` dishonest again | refused again |
+| composed pathway | 3 learned activities, 2 failed, `[trace]` unproducible | no pick, terminated |
+| reframe → `shellResult` | rebound a verified command from a similar goal | HOLLOW — *"returns a count of files, which is unrelated"* |
+
+**Not one fabricated number anywhere.** Two dispatches earlier this same goal answered 4.2 AU twice —
+once from a narrated tool call that never ran, once "computed" from a remembered Jupiter distance.
+The floor gate closed the first door; the walk-side reframe guard closed the second; and with both
+shut the system declines instead of inventing. That is the fabrication class closed on every path
+observed for this goal, which is what the ~90 % reach expectation actually rests on — a reach that
+can be trusted is worth more than a reach that is merely frequent.
+
+**Reach is still not achieved, and the remaining blocker is now singular:** `http_fetch` returns 404.
+
+Three things are worth separating in that sentence, because they are different problems:
+
+1. **The 404 itself.** Whether the walk reconstructed a Horizons query and lost it to one parameter —
+   a near-miss worth building on, and precisely what happened to the earlier Horizons attempt — or
+   never found the host, was **unknowable**: nothing logged the URL. `REACH-EVIDENCE` records what
+   came back; the request went unrecorded. Fixed in `cb03dfc`: for a retrieval shape the request is
+   half the evidence, and a 404 with no URL is uninterpretable.
+2. **The rebind picked an unrelated donor.** Asked for the Earth-Io range, `tryLexicalRebind`
+   supplied a verified command that counts files, and logged it as *"REBOUND verified command from a
+   similar goal"*. This is the known donor-by-goal-token-LCS defect with no data-store gate, showing
+   up again on a goal that has nothing to do with the filesystem. The reach gate caught it; the
+   selection should never have offered it.
+3. **The learned pathway was tried first and failed.** `execution_path=learned_pathway
+   attempt_count=5` — three composed activities ran, two failed outright. The ceiling was reached for
+   and did not hold.
+
+### What actually moved the walk, and what only guarded it
+
+Worth stating because it cuts against where the effort went. The gates added here — the fabricated-
+transcript refusal, the widening retry, the planned-retrieval guard — only ever **refuse** a bad
+answer. Not one of them made the substrate attempt anything better.
+
+What changed its behaviour was restoring recall. Across four dispatches of the same goal:
+
+| recall | inferred target | confidence | alternatives |
+|---|---|---|---|
+| dark | `llm_completion_dispatch` | 0.7 | none |
+| dark | `[]` | 0.0 | none |
+| live | `http_fetch`, `uiPanel_write` | 0.8 | `llm_completion`, `shellResult` |
+| live | `http_fetch`, `concept_write` | **0.9** | **`shellResult`, `webSearchResult`** |
+
+By the fourth, every alternative is a retrieval shape — there is no LLM-completion door left for the
+walk to reach for, not because a gate forbids it but because the walk stopped proposing it. **Law 8
+changed what the system tried; the gates only changed what it was allowed to keep.** Of the two, the
+first is the one that raises the ceiling.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
