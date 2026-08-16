@@ -2100,3 +2100,39 @@ standing rule is explicit: **never hand-edit the database.** The correct fix is 
 valve — advance past a batch that fails rather than re-selecting it, so one poison row cannot hold
 the whole store hostage — and that belongs in `trace-retention.ts` with its own before/after, not
 appended to a session that has already changed four vessels.
+
+---
+
+## 46. Retraction: the `concept` shape overload is a vocabulary smell, not a live routing defect
+
+§16 row 5 filed the overloaded `concept` shape as an architecture violation — "routing by vessel
+name" — and §43 escalated it to "load-bearing on the ceiling". Checking the routing properly
+refutes the escalation and softens the original.
+
+What is true: two producers do advertise `concept` at runtime, and they mean different things.
+
+```
+development-vessel-local     http://localhost:8090      (trace pattern-mining)
+concept-db-local@syzygy-hub  http://127.0.0.1:8401      (prose recall, via libp2p)
+```
+
+What I got wrong: the walk **already discriminates correctly**. `conceptDbUrl()` at
+`goal-host/index.ts:1041` filters candidates by `/concept-db/i` and then prefers a non-libp2p
+endpoint, falling back to the relay. It never selects dev-vessel's trace-miner. So the name filter
+is not a routing-by-name defect that needs removing — it is the *only available disambiguator* for
+a genuinely overloaded key, and it is applied precisely.
+
+**That means my §43 diagnosis was wrong in its mechanism.** I wrote that "discovery routes `concept`
+to whichever producer answers, the walk gets a trace-mining stub, and logs '1 concept recalled' as
+though it consulted the knowledge base." The walk was not misrouted. It asked the right vessel over
+the relay; the relay leg is the intermittent one (§ recall retry), and when it fails the walk falls
+back — which is what produced the stub I saw when I probed dev-vessel directly by hand.
+
+The residual finding is real but much smaller: **`concept` names two incompatible things**, so any
+consumer must hardcode a vessel-name filter to tell them apart. That is a vocabulary defect worth
+splitting (a distinct shape for trace-pattern concepts) — it costs a hardcoded string in every
+future consumer — but nothing is currently mis-served by it, and the ceiling is not blocked on it.
+
+Recording the correction because the escalation was mine and it pointed a session's attention at
+the wrong layer: I inferred a routing failure from a symptom (a stub in a hand-issued probe) and
+did not read the selection code until now.
