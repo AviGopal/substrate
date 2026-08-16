@@ -1312,3 +1312,76 @@ Read §20 and §21 for the carried-forward list. The two that gate everything el
    `lessonExecutionPolicy` are erased on a cycle; `bodyHonestyPolicy` now self-heals, so it will
    survive, which is the pattern the other two should adopt once storage is stable.
 2. **PAT rotation** — a credential only a human can mint.
+
+---
+
+## 33. Why Io failed for 45 attempts: the fetch capability was a lie
+
+Asked for the Earth–Io distance, the walk inferred `llm_completion_dispatch` — "ask a model" —
+rather than "fetch an ephemeris". Chasing why exposed a defect chain, and the root of it is the
+same class as everything else this session.
+
+### The fake shape
+
+`development-vessel/src/resolvers/http-response.ts`, advertised in `config.ts` and dispatched in
+`impulses.ts`:
+
+```ts
+export async function resolveHttpResponse(pointer: { type: string }): Promise<ResolverResult> {
+  const url = 'https://httpbin.org/status/404';
+  const response = await fetch(url);
+  ... return the page <title>
+}
+```
+
+**It ignores the URL.** A walk needing an external fetch found `http_response` in the registry,
+resolved it, and got httpbin's 404 title back no matter what it asked for. The shape works, so no
+gate fires; only the content is wrong — exactly the vessel-health defect (§13.2) in a second
+resolver, and its test asserted the behaviour, exactly as that one's did.
+
+### What it cost, measured
+
+The in-container super-repo held **twelve orphaned files** drafting a *generic http response
+resolver*, written across three separate sessions **today** (16:10, 16:41, 17:18): patches, a
+resolver, config and dispatch edits, three authoring reports under `proposals/`. The substrate
+correctly identified its own missing capability and drafted a competent implementation — the
+patches were content-type aware and error-handled — and none landed, because the patch targets
+were absolute paths with no applier.
+
+**This is law 3 inverted by a lie.** "Reuse before mint" told it to compose with `http_response`;
+composing returned garbage; so it re-minted, repeatedly, and each attempt died on the applier.
+
+### And the record of it was empty
+
+Of 82 files in `validation/failure-modes/vessel-scenarios/`, **10 are the 4-byte string `null`** —
+and five of those ten are the `httpresponse` ones (`gap-httpresponse.json`,
+`gap-httpresponse-resolver-authored.json`, `gap-authored-resolver-for-httpresponse.json`, …). The
+valid files were written 13:23 by `gap_to_scenario_bridge`, which always constructs an object; the
+`null` ones at 16:16, in the drafting window, by a walk doing `fs_write` with a null resolver
+result serialised as content.
+
+So every time the substrate tried to record what went wrong with `http_response`, it wrote `null`
+and reported success. **A null serialised to disk is indistinguishable from a written record** —
+the observability layer failing the same way the capability did.
+
+### Fixed
+
+- `http_response` now **delegates to `web_resource`** (`5be029a`), which already existed and is
+  the right architecture: allowlist trust gate, size and time caps, content tagged
+  `trust:"external-evidence"`. Delegation rather than deletion because lint enforces
+  shape/dispatch agreement. No default URL — an unbound `url` returns `resolved:false`.
+- **`ssd.jpl.nasa.gov` added to the allowlist** (`a68e1ac`). The walk has derived JPL Horizons as
+  the right source unprompted, repeatedly, and been unable to reach it: the goal class was failing
+  for want of a trusted **origin**, not for want of reasoning. Same category as the
+  `api.open-meteo.com` and `wttr.in` entries already there — read-only, unauthenticated, public
+  scientific data.
+- Both old tests pinned their defects and were replaced. The suite went 83 fail → 80 fail
+  (1709 → 1714 tests): three pre-existing httpbin-dependent failures fixed, five tests added.
+
+### Filed, deliberately not fixed
+
+The allowlist is bootstrap-only (env var or constant) — a law-1 violation. It is **not** converted
+to a freely-writable shape here: this is a security boundary, and anything that can write it can
+open an arbitrary egress path. The right fix is a shaped, operator-seeded policy with a self-heal
+default — the pattern `bodyHonestyPolicy` now uses — as its own reviewed change. Widening a trust
+surface while passing through on other business is how a trust gate quietly stops being one.
