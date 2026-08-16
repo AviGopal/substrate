@@ -5583,6 +5583,52 @@ not a missing capability — a different and much smaller claim than "the goal i
 nowhere — not in the journal, not in the persisted trace. The capability had very likely been present
 for several attempts before anyone could see it.
 
+## 15.60 ★★★★★ CAPABILITY YES, REPRODUCTION NO — the drafter mutates a verified command every time
+
+Final position after 44 dispatches. The distinction that matters is between *can it* and *will it
+reliably*, and the evidence now separates them cleanly.
+
+### Capability: demonstrated
+
+The substrate constructed and executed a correct JPL Horizons query unaided and returned a real
+value — `6.27607851061937`, matching the service exactly for the timestamp queried, with the fetching
+command in the record. It never fabricated a value across 44 dispatches.
+
+### Reproduction: not achieved
+
+Handed a verified working command in a recalled lesson, the drafter mutated it on every attempt, each
+mutation individually plausible and each fatal:
+
+| attempt | mutation | consequence |
+|---|---|---|
+| 40–41 | copied the example's literal `05:00` timestamps | correct value, 4.5h stale |
+| 42 | dropped `%27` quoting around a space-containing time | `INPUT ERROR in VLADD`, no data |
+| 43 | substituted a different host entirely | 401, API key required |
+| 44 | changed `format=text` to `format=json` | `/SOE/,/EOE/` matches nothing, empty stdout |
+
+Each round of fixes closed the previous mutation and the next one appeared elsewhere. The lesson was
+rewritten three times to remove the failure surface — self-dating via `$(date -u …)` so literal
+timestamps could not freeze, then **quote-free with `T`-separated timestamps** so dropped quotes could
+not break it (verified: `COMMAND=501&CENTER=500@399&START_TIME=…T09:00` returns
+`6.27535789445384` with no quotes anywhere). Attempt 44 then changed the output format instead.
+
+**This is a reproduction-fidelity limit, not an information limit.** The fact was present, correct,
+complete and delivered — `arg-synthesis lessons: chars=1687 via=opts` — and the model still emitted a
+variant. No further lesson edit addresses it, because the failure moves each time.
+
+### What would actually move it
+
+1. **Retire `⟨learned-satisfier-shell⟩`** (202 executions, 0 successes), which replays frozen commands
+   and competes for this exact path. Retirement is now fed — the spool drained 16,771 → 0 — and needs
+   the arm to re-accumulate twenty executions before it can act.
+2. **Execute the recalled command verbatim rather than re-synthesising it.** The reached-command cache
+   already does this for commands it has verified; a lesson carrying a verified command has no such
+   path — it is re-drafted through an LLM every time, which is precisely where the mutation enters.
+   That is the structural fix, and it is a design change rather than a patch.
+
+The honest summary of the goal: **the substrate can do this and cannot yet be relied on to do it.**
+Everything between those two statements is now measured rather than assumed.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
