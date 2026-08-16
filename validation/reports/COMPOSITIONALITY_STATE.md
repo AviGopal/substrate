@@ -5366,6 +5366,56 @@ The three dispatches I fired to "catch a successful recall" were themselves part
 the relay degrades under exactly the load I was adding to measure it. That is the second time this
 session I have been the load I was diagnosing.
 
+## 15.56 ★★★★★ THE TRACE SPOOL STARVES RETIREMENT — three findings are one finding
+
+`f2857fc` fixed the SQL binding so poor-performance retirement could work. It is deployed on the hub
+(clone at `f2857fc`, three `type::thing` occurrences in the live tree, activity-api restarted 06:36),
+its caller is live — `activities.ts:2477`, fire-and-forget on every scoring request — and **still
+nothing retires**. The fix is correct and cannot fire, for a reason that has nothing to do with it.
+
+`checkAndRetireTemplate` gates on **twenty executions of that activity in the hub's `execution`
+table**. Sampling the hub's 100 most recent executions:
+
+| activity_id | execs | successes | meets the gate |
+|---|---|---|---|
+| `validator-dispatch` | 54 | 54 | yes — and correctly kept, 100% success |
+| `slot-binding` | 11 | 11 | no |
+| `development-vessel:mitosis-tick` | 8 | 8 | no |
+| everything else | ≤3 | — | no |
+
+`⟨learned-satisfier-shell⟩` — 202 executions, 0 successes, still winning selection — **does not
+appear at all.** It runs on the spoke, and the spoke's traces are in a spool of **16,754 files,
+123 MB, oldest 2026-08-05**, with 480 delivery failures observed in a single twenty-minute window.
+
+### One cause, three symptoms
+
+The spool is not a housekeeping problem. It is the reason three separate things fail:
+
+1. **Retirement is starved.** The arms that earn retirement run on the spoke; the evidence of their
+   failure never reaches the store that decides. The gate can only ever see hub-local arms, which is
+   why the only eligible one is a 54/54 success.
+2. **Capability measurement is partial.** `reach_cum 0.1216` and `reach_6h 0.0235` are computed on
+   the hub from the executions it actually holds — which excludes most of what the spoke does. The
+   baseline recorded in §15.53 is real but narrower than it looks.
+3. **The learning loop is fed a fraction of its own history.** Thompson posteriors, composition edges
+   and pathway reuse all read the same store.
+
+### What this corrects
+
+I reported "deploy `f2857fc` so dead arms retire" as a pending operator action for most of this
+session. It was already deployed, and deploying it was never going to be sufficient — a working
+retirement query behind a criterion that structurally cannot be met is inert in a way no amount of
+verification at the query level would reveal. The check that found it was asking **who actually has
+twenty executions**, not whether the SQL binds.
+
+That is the same lesson as everything else here, one level up: the mechanism was correct, reported no
+error, and the load-bearing fact — that the failing arms' executions never arrive — sat outside every
+window anyone was looking at.
+
+**Fixing trace delivery is therefore the highest-value single action available**, ahead of any
+further work on the walk: it unblocks retirement, corrects the capability baseline, and restores the
+learning loop's inputs, all at once.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
