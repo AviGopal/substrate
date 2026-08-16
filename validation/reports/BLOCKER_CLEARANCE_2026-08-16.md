@@ -1755,3 +1755,30 @@ for it is in this section. The remaining question is not batch size; it is wheth
 clears a 307k surplus before intake replaces it, and if not, whether the answer is a larger
 per-sweep budget or the design change the source comment names (partitioning, a different
 retention substrate, or not storing this volume).
+
+### 41.1 Correction: 282 DELETEs was startup work, not a sustained rate
+
+I read "282 DELETEs in 119s" as ~142 rows/min and said so. The next sample refutes it:
+
+```
+uptime 119s   DELETE count 282   row_count 457,235
+uptime 215s   DELETE count 284   row_count 457,237
+```
+
+**Two DELETEs in 96 seconds, and the row count went UP by two.** The 282 was front-loaded — the
+strata phase and aux-table reaps at job start — not a steady drain. The sweep has logged nothing
+since `21:16:19` and has not yet reached `global-ceiling valve: entering`, which is the phase that
+would actually attack the 307k surplus.
+
+So the honest reading of the batch=1 result is narrower than §41 first stated:
+
+- **Confirmed:** a single-id DELETE costs ~239ms where a 25-id DELETE cost ~3,155ms, and the 25-id
+  form timed out often enough to commit zero. Statement width is real and batch=1 is the right
+  setting. That comparison stands — it is measured on the same fresh-process condition either side.
+- **NOT confirmed:** any claim about sustained throughput or about the surplus shrinking. The valve
+  has not run a full cycle under batch=1 yet. `~142/min` was an extrapolation from a burst, and
+  extrapolating a rate from a startup burst is exactly the "lifetime average is not a live burn"
+  error this project has already paid for once.
+
+The measurement that settles it is one complete cycle's `sweep complete` line with its deleted
+count, on a store that is not simultaneously ingesting at speed. That has not happened yet.
