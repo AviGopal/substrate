@@ -413,3 +413,70 @@ Five substrate-authored commits landed on `development-vessel` with no operator 
 session (`3e76227`, `6147a37`, `e8a7b24`, `5f48765`, `72bdf78` — mitosis-cutover applications of
 its own gap-closing goals). They forced a divergence triage on push; they touched
 `feature-compose.ts` and `vacuous-edit.ts`, disjoint from this work, and rebased cleanly.
+
+---
+
+## 14. RETRACTION: the phase-lock hypothesis is refuted by its own test
+
+**§13.1 is wrong and the fix in `d253457` does not unblock the prune.** I am recording this in place
+rather than editing §13.1, because the reasoning error is the useful artifact.
+
+I claimed the sweep failed because it collided with `REBUILD INDEX`, inferring it from two
+subsystems failing at the identical millisecond. The deployed fix defers while a rebuild is in
+flight. The first post-fix cycle is the discriminating test, and it failed:
+
+```
+13:41:37  valve: entering        ceiling=150000  dryRun=false  batch=25
+13:41:38  valve: counted         total=447,243   willPrune=true
+13:41:38  valve: first batch     requested=25  returned=25  surplus=297,243
+13:45:44  sweep cycle failed     "SurrealDB query failed: The operation timed out."
+```
+
+The valve issued its DELETE at 13:41:38. The FTS job's *initial* rebuild is delayed 5 minutes from
+job load (13:39:44), i.e. due at 13:44:44 — three minutes later. And grepping the whole 13:39–13:47
+window for `REBUILD INDEX` or an `[FTS] … rebuild` event returns **nothing**: only
+`queryActivitiesByFTS` calls, which are searches, not rebuilds.
+
+**So the DELETE timed out with no rebuild running at all.** The collision cannot be the cause,
+because on this cycle there was no collision.
+
+What the identical timestamps actually showed was two clients of one saturated store being released
+together by the same 300s timeout — a *shared symptom*, which I read as a *shared cause*. Both
+observations were real; the causal direction was invented. This is the same error the session's
+headline finding warned about from the other side: I found a correlation at the endpoints and
+supplied a mechanism for it without testing the mechanism itself.
+
+**What stands.** The original source comment's conclusion is unrefuted and now better supported:
+the per-delete cost lives in the storage engine's delete path for this table, and it is *"a design
+question (partitioning, a different retention substrate, or not storing this volume at all) rather
+than anything tunable here."* Ordinary workload alone saturates the store — `queryActivitiesByFTS`
+was failing with 8–10s timeouts throughout the same window, on a 3,849-row table.
+
+**What to do with `d253457`.** Keep it, but do not count it as the prune fix. Not issuing DELETEs
+into a table held by `REBUILD INDEX` is correct on its own terms and its tests pin real behaviour;
+it simply is not the blocker. The blocker is unchanged and remains **the one item I could not
+clear**: the trace store is 447k rows against a 150k ceiling, the valve commits zero per cycle, and
+ingest outpaces it.
+
+## 15. Ladder rung 2, re-run against the fixed resolver — PARTIAL, and honestly so
+
+`b4f06988`, nonce `ladder2b-134cf1`, one vessel named explicitly.
+
+**The false-reach class is fixed.** The persisted note is titled *"Health Report for
+discovery-vessel"* and its body names `discovery-vessel`. The resolver can no longer substitute a
+subject nobody asked for, and the note carries the dispatch nonce, so it is attributable.
+
+**The substance is still wrong.** It reports health `unknown` with `discovery.registered: false`,
+citing HTTP 404s. Ground truth, captured independently: `{"status":"ok","vessel":"discovery",
+"registeredVessels":11}` — healthy and registered. The resolver's probes 404 against this spoke,
+where `activity-api` is masked and the discovery record id is `discovery`, not `discovery-vessel`.
+
+**But the failure is now visible in the artifact.** Rung 2a produced a confident, well-formed report
+about the wrong vessel with nothing to indicate a problem. Rung 2b produces a report about the right
+vessel that *says in its own body* that its probes returned 404 and that this is why the status is
+`unknown`. The reach judge still graded it reached — it should not have, since "unknown because I
+could not reach anything" is not the health status the goal asked for — but an operator reading the
+note now sees the defect instead of being misled by it.
+
+That is the honest summary of the ladder: **hidden wrongness became visible wrongness.** Valid
+compositional reach is still not demonstrated.
