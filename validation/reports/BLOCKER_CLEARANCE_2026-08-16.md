@@ -1247,3 +1247,68 @@ lower bound on composition, not a ceiling.
 **Seven valid compositional reaches, one correct rejection, zero false reaches** since the fixes
 landed — across seven distinct phrasings, arities 2–4, one to four facts per goal, drawn from three
 different subsystems, every one hand-verified against ground truth captured before dispatch.
+
+---
+
+## 32. Where this actually ends
+
+### Both stop conditions, stated plainly
+
+**"Demonstrate valid reaching of increasingly compositional patterns" — MET.** Seven valid
+compositional reaches, one correct rejection, zero false reaches since the fixes landed, across
+seven phrasings, arities 2–4, one to four facts, three subsystems, every one hand-verified against
+ground truth captured before dispatch (§31). The single rejection (rate E) is the strongest
+evidence in the set: the walk reported `8090` — a port number — as a vessel count, its own
+deterministic verifier caught it against `totalVessels=11`, rejected all four attempts, and
+persisted nothing.
+
+**"Clear ALL blockers" — NOT MET, one remains: the prune.** 447k rows against a 150k ceiling, zero
+deleted per cycle. What I could do is done: it was never an authorization question; my phase-lock
+explanation was refuted by its own first test and retracted (§14); and the last remaining
+experiment — the source author's own `batch=1` re-test — is now **committed and armed** on the
+sanctioned path (`a78fcfd7`, §27) rather than blocked on a refused hand-edit. It is dormant until
+the container next starts, because `gen-env` renders `/etc/substrate/env` only from
+`entrypoint.sh` — confirmed empirically: the script is converged on the hub and the env file is
+unchanged.
+
+I am not restarting a production container holding live learning state to accelerate an experiment,
+with no restore-grade backup. That is the line between finishing the work and taking a risk the
+work does not justify.
+
+### Eight changes, and their real status
+
+| change | commit | status |
+|---|---|---|
+| Real Beta draw | `d69a4ad` | **LIVE, VERIFIED** |
+| Health-report refuses an assumed subject | `1170047` | **LIVE, VERIFIED** — observed firing 3× on live traffic |
+| `walkBudget` / `lessonExecutionPolicy` producers | `f87f52f` | LIVE; storage erased under them (§19) |
+| Retirement on posterior evidence | `e2d7077`+`1d83bf5` | DEPLOYED, unproven (§12) |
+| Retention defers during `REBUILD INDEX` | `d253457` | LIVE — and not the prune fix (§14) |
+| Reached-command tombstone | `f9057a1` | MIRRORED, restart deferred |
+| `bodyHonestyPolicy` self-heal | `a848aee` | PUSHED, restart deferred |
+| `TRACE_RETENTION_DELETE_BATCH=1` probe | `a78fcfd7` | ARMED, needs a container start |
+
+Two verified live, six correctly deployed and waiting on events that happen on their own. Stating
+that ratio rather than counting commits is the whole lesson of §3.
+
+### What I got wrong today, in order
+
+The phase-lock root cause (refuted by its own test). The "stale peer" (the relay was live). The FTS
+index transposition (nothing). Rung 2b's resolver blame (`discovery-vessel` is not a registered id).
+Rate D's grade (read the first artifact, missed the real deliverable). The §29 arity prediction
+(the walk routed around it). And earlier: "blame never lands", "disk 99% full", "PAT expired",
+"retention disabled", "every arm has 0 successes".
+
+Nine corrections, each caught by running the check rather than by reasoning harder. The one that
+generalises: **I found a correlation at two endpoints and supplied a mechanism without testing the
+mechanism** — which is the same error, from the other side, as the counterfeit sampler that
+motivated this entire session.
+
+### For whoever picks this up
+
+Read §20 and §21 for the carried-forward list. The two that gate everything else:
+
+1. **`POLICY_ROOT` outside the git work tree.** Until then, `walkBudget` and
+   `lessonExecutionPolicy` are erased on a cycle; `bodyHonestyPolicy` now self-heals, so it will
+   survive, which is the pattern the other two should adopt once storage is stable.
+2. **PAT rotation** — a credential only a human can mint.
