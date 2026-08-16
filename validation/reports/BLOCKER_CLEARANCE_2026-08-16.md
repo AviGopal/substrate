@@ -347,3 +347,69 @@ execution count and its posterior can drift apart on ordinary ingest whenever te
 line up. `[learning] ... returned no results in either table` is logged at WARN and nothing acts on
 it. That is worth its own investigation: it is the write/read key-mismatch class, inside a single
 request path.
+
+---
+
+## 13. Both remaining blockers traced to a root cause and fixed
+
+### 13.1 The prune was phase-locked, not batch-limited
+
+The retention sweep and the FTS scorer rebuild are **both `setInterval(30 min)` armed at the same
+process boot** — so they fire together every period, forever. That is why two unrelated subsystems
+failed at the identical millisecond: both statements were issued together and both hit the same
+300s timeout. The valve selected 25 ids, issued its DELETE into a table held by
+`REBUILD INDEX`, and committed nothing, every cycle, while ingest outpaced it.
+
+This also answers the question the long measurement note in `trace-retention.ts` leaves open —
+*"re-test batch=1 on a QUIET table before drawing a conclusion"*. The table is **never** quiet when
+the sweep runs, by construction. Nothing about DELETE regressed; the contention did.
+
+Fixed in `d253457`: defer while `isFtsRebuildInProgress()` (an existing exported predicate the HTTP
+endpoint already uses), and re-arm a bounded retry on that specific reason. **The pair is the fix.**
+A guard alone would be worse than the bug — the collision is structural, so every cycle would skip
+and the logs would read like success. The retry walks the sweep into a rebuild-free window;
+rebuild occupies ~350s of every 1800s, so ~80% of the period is available. After 6 attempts it
+gives up loudly and names what that means.
+
+### 13.2 The false reach came from a resolver inventing its subject
+
+`resolveVesselHealthReport` defaulted `vessel_id` to the literal `"analysis-vessel-local"` whenever
+the caller failed to bind it, **and reported nothing about having done so**:
+
+```ts
+const vesselId = (typeof pointer.vessel_id === "string" && pointer.vessel_id.length > 0)
+  ? pointer.vessel_id
+  : "analysis-vessel-local";
+```
+
+That is the whole of rung 2's false reach. The walk decomposed correctly and simply never bound the
+argument; the resolver returned a well-formed healthy report about a vessel nobody asked for; the
+note persisted; and the judge, reading a valid report, asserted it covered both named vessels.
+
+**No gate could have caught it.** Once the report is built, a defaulted subject is
+indistinguishable from a requested one — every component did its job on the wrong subject. A wrong
+answer that looks right is strictly worse than no answer, because only one of the two is detectable.
+
+Fixed in `1170047`: return `resolved: false` with the reason when `vessel_id` is absent, empty,
+whitespace, or non-string, so an unbound argument surfaces as an unresolved impulse and the walk
+retries or fails honestly — the discipline `bodyHonestyPolicy` already follows by serving nothing
+rather than an empty policy.
+
+**The finding inside the finding.** The existing test asserted the defect:
+
+```ts
+it("defaults vessel_id to analysis-vessel-local when not provided", ...)
+expect(body["vessel_id"]).toBe("analysis-vessel-local");
+```
+
+The silent default was pinned by its own coverage, so removing it would have read as a regression.
+**A test that pins a silent default pins the confabulation with it.** That is worth generalising:
+the detector for this class is not "is it tested" but "does any test assert that an unbound
+argument is *refused* rather than filled in".
+
+### 13.3 Autonomy observed in passing
+
+Five substrate-authored commits landed on `development-vessel` with no operator hands during this
+session (`3e76227`, `6147a37`, `e8a7b24`, `5f48765`, `72bdf78` — mitosis-cutover applications of
+its own gap-closing goals). They forced a divergence triage on push; they touched
+`feature-compose.ts` and `vacuous-edit.ts`, disjoint from this work, and rebased cleanly.
