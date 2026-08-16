@@ -2136,3 +2136,68 @@ future consumer — but nothing is currently mis-served by it, and the ceiling i
 Recording the correction because the escalation was mine and it pointed a session's attention at
 the wrong layer: I inferred a routing failure from a symptom (a stub in a hand-issued probe) and
 did not read the selection code until now.
+
+---
+
+## 47. What the substrate builds, and what it cannot learn from — the session's architectural finding
+
+The operator direction that reframed this session: *"We shouldn't be building things. It should be
+building things."* Checking that against measurement changed what the blocker is.
+
+**The system does build things, correctly, and it escalates on its own.** Every compositional goal
+dispatched today produced a mint, with typed shapes and growing arity:
+
+```
+taskCount=2  [vessel_health_report, memoryNote_write]
+taskCount=3  [vessel_health_report, shellResult, memoryNote_write]
+taskCount=4  [vessel_health_report, obsidian:vessel_count, shellResult, memoryNote_write]
+taskCount=5  [substrateGap, …]
+```
+
+And its refusals are as good as its mints. Observed today:
+
+- `SKIP trivial single-template reach (taskCount=1)` — a one-step reach has no composition to
+  extract. This is why the four ephemeris goals minted nothing: I phrased them as single-fact
+  questions, so nothing learnable was ever offered.
+- `SKIP ungrounded reach — bare-LLM-yes / no executed-tool anchor` — refuses to mint a recipe from
+  a reach with no tool execution behind it.
+
+**The defect was that every mint was born unable to earn credit.** All 16 learned compositions
+carried `input_shapes: []`, and all 16 sat at `thompson_alpha = 1.00` across 1–43 executions —
+never credited, only blamed:
+
+```
+mint with input_shapes:[]  →  ledgerStep(pick.inputShapes) matches nothing in the pool
+  →  no producer→consumer edge  →  consumedInChain.size === 0
+    →  "WITHHELD alpha-credit"  →  α pinned at 1.00, β climbs  →  never selected again
+```
+
+The extraction contract had a meticulous rule for `output_shapes` ("TOP-LEVEL, REQUIRED … NEVER
+omit it … reuse depends on it") and **zero occurrences of top-level `input_shapes`**. Per-task
+inputs were preserved and even validated; nothing rolled them up. Fixed as rule 9a, in the
+contract — not as another hand-written resolver.
+
+### The distinction that matters
+
+Resolvers are thin primitives. **Activities are the adaptation layer** — they bind existing
+resolvers to new tasks and idealize the result by provenance and semantic purpose. Judged against
+that, the ephemeris oracle I wrote earlier in this session is the wrong artifact in the right
+place: a hardcoded function with a hardcoded twenty-body NAIF table. It cannot do Ceres. It cannot
+do Mercury-L2. Its failure mode is another operator writing another table.
+
+The generalization test made the cost concrete. Io→Europa failed to reuse because the slot gate
+correctly refused: the goal says "Io", the command says `COMMAND=501`, and no text alignment can
+carry that swap. **The missing thing was never retrieval or similarity — it was a typed parameter.**
+An activity declaring `ephemerisRequest{target, center, quantity, epoch} → ephemerisResult{value,
+unit, epoch, provenance}` turns Io→Europa→Ceres→Mercury-L2 into *binding one declared input*, with
+no LLM in the loop and no worse an answer, because the transform and the parse are identical across
+bodies. The whole rebind LCS machinery is a workaround for the absence of that parameter — it does
+string surgery because there is nothing to bind.
+
+Everything in this goal class produced `shellResult`: an untyped blob carrying no provenance and no
+semantics. That single fact explains the ribosome skipping it, the slot gate refusing it, and the
+oracle needing its own copy of the NAIF table.
+
+**So the operator's correct contribution here is vocabulary and contract, not implementations** —
+the bootstrap tier that cannot exist until someone provides it, after which the system composes.
+Rule 9a is that; the ephemeris oracle is not.
