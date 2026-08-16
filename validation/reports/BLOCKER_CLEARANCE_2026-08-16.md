@@ -2032,3 +2032,71 @@ The NAIF mapping was written to concept-db before this run and is retrievable by
 (`astronomical distance ganymede` → 0 hits). The search is conjunctive; the walk sends three terms.
 So the fact was in the store and unreachable at the point of use — law 8 again, one layer further
 in than §43.
+
+---
+
+## 45. The prune was never a batch-size problem: the valve dies on the same row every cycle
+
+The full batch dimension has now been swept, and all three points fail:
+
+| batch | behaviour |
+|---|---|
+| **25** (default) | enters, counts ~458k, first batch of 25, times out at ~5 min, **deletes zero** |
+| **1** | 239ms per DELETE — but ~25× the statements drove the hub to 320 in flight, 81% slow |
+| **5** | enters, first batch of 5, times out at **4m09s**, **deletes zero** — identical to 25 |
+
+batch=5 was run bounded in advance (one sweep, then revert regardless) and reverted, which is the
+discipline I failed to apply on the batch=1 run.
+
+**Then the failing statement gave it away.** The timed-out DELETE at batch=5:
+
+```
+DELETE $ids RETURN NONE
+  ids: ["execution:exec_4o2fxn66", "execution:exec_rc76dipc",
+        "execution:exec_jvblm7lg", "execution:exec_tj30in95", …]
+```
+
+Those are the **same four ids** the batch-25 sweeps have been failing on for hours. Grepping the
+journal: `"ids":["execution:exec_4o2fxn66"` appears **4 times**, once as the head of every failed
+sweep today — 20:19, 20:56, 21:09, 23:16 — across two different process lifetimes and three
+different batch sizes.
+
+**The valve selects oldest-first, always retrieves the same head row, and dies on it every cycle.**
+Batch size was never the variable. 1, 5 and 25 all begin with the same poison row; the only reason
+batch=1 looked different is that its 282 startup DELETEs came from the *strata* phase, which never
+touches this row — the ceiling valve never got past it either.
+
+`exec_4o2fxn66` appears in the journal **only** inside DELETE failures. Never an insert, never a
+read, never any other operation. It is inert data whose sole observable behaviour is killing the
+sweep that would remove it.
+
+### What this corrects
+
+Three of my own conclusions today, in order:
+
+1. **"Statement width is the lever"** (§41) — the 239ms-vs-3,155ms measurement was real, but it did
+   not explain the failure. A 5-id DELETE and a 25-id DELETE fail identically, which no width curve
+   predicts.
+2. **"The remaining lever is the design question — partitioning, a different retention substrate"**
+   (§41.2, §45 draft) — premature. That conclusion was reached by eliminating batch sizes, and the
+   elimination was measuring the wrong dimension entirely.
+3. **The source comment's own framing** — *"the per-delete cost is in the storage engine's delete
+   path for this table"* — is also not supported by this evidence. A general per-delete cost would
+   not concentrate on four specific ids while `trace_digest` reaps 563 rows in the same second.
+
+The honest statement is narrower and more actionable than any of them: **a small set of specific
+rows cannot be deleted, they sort to the head of the oldest-first scan, and the valve therefore
+never reaches the other 308,000.**
+
+### What to do next, and why not yet
+
+The obvious move is to identify why those rows resist deletion — a lock, a corrupt index entry, a
+constraint, a live reference — and either repair or skip them. A skip-list would unblock the other
+308k immediately; a repair would be better.
+
+I am not doing it in this pass. Every route runs through hand-editing rows in a production database
+whose writes are already timing out (`12 seeded, 6 failed` on the seeder run minutes ago), and the
+standing rule is explicit: **never hand-edit the database.** The correct fix is a change to the
+valve — advance past a batch that fails rather than re-selecting it, so one poison row cannot hold
+the whole store hostage — and that belongs in `trace-retention.ts` with its own before/after, not
+appended to a session that has already changed four vessels.
