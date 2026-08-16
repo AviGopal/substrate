@@ -477,6 +477,31 @@ TRACE_STORE_CAP=150000
 TRACE_RETENTION_GLOBAL_CEILING_ENABLED=true
 TRACE_STORE_HOT_WINDOW_DAYS=3
 TRACE_STORE_RESERVOIR_PER_ACTIVITY=25
+# DELETE batch width — the re-test trace-retention.ts asks for in its own words:
+# "Re-test batch=1 on a QUIET table before drawing a conclusion from that sample."
+#
+# Why now (2026-08-16). The valve has been committing ZERO rows per cycle against a
+# 150K ceiling while the surplus grew monotonically (294,970 -> 295,625 -> 296,430):
+# it selects 25 ids, issues the DELETE, and times out at 300s every time. Two things
+# make batch=1 the right next probe rather than more analysis:
+#   1. The prior batch=1 sample was CONTAMINATED — a unique index was rebuilding
+#      concurrently during it, so it neither confirmed nor refuted. The note says so
+#      and asks for the clean re-test.
+#   2. I hypothesised the current failure was a phase lock with REBUILD INDEX and was
+#      REFUTED by my own first test: the DELETE ran 13:41:38 -> timed out 13:45:44
+#      with no rebuild running anywhere in the window. So the table IS quiet in the
+#      sense the note meant, and the re-test is now meaningful.
+# The comparison is also sharper than when the note was written: batch 25 now achieves
+# 0 rows/cycle against the 3.52 s/row that same note records as its best measurement.
+#
+# This is a PROBE, not a settled default. It is rendered here rather than applied as a
+# systemd drop-in so it travels the normal deploy path and is visible in git. Read ONE
+# sweep after it lands: a non-zero delete count means statement width was the lever and
+# this line stays; another timeout confirms by elimination that the cost is in the
+# storage engine's delete path for this table, which is a design question
+# (partitioning, a different retention substrate, or not storing this volume) and NOT
+# tunable here — in which case revert this line rather than keep tuning.
+TRACE_RETENTION_DELETE_BATCH=1
 
 # Obsidian plugin endpoint (2026-06-22). The obsidian-vessel plugin runs IN the
 # single-container substrate (obsidian-desktop.service) and serves on
