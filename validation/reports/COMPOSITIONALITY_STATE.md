@@ -5254,6 +5254,59 @@ slow vessel, an absent vessel, and a federated route that resolved but refused. 
 recall meant reproducing the call by hand. It now reports SKIPPED / REFUSED (with status and body) /
 FAILED (with exception class and budget), each carrying the URL actually used (`4afc7ac`).
 
+## 15.54 ★★★★★ MY OWN LESSON-DELIVERY FIX NEVER FIRED — the two sites hash different goals
+
+Attempts 21-27, after concept-db moved to the hub. Still not derived, and the reason is now measured
+rather than inferred — including a defect in a fix I had been building on for six attempts.
+
+### The chain, each link measured
+
+1. **Recall over the relay is bimodal.** With concept-db owned by the hub, a spoke reaches it over
+   libp2p. Sampled three times back to back: **26.58s → HTTP 502**, then 1.16s, then 0.44s. Mostly
+   sub-second, with a fraction hanging half a minute and failing. A client budget cannot fix that;
+   raising it to 25s (`674a400`) and caching successes for ten minutes (`3faae36`) is mitigation.
+2. **The recalled lesson was truncated to 300 characters** before reaching the prompt (`3496df5`).
+   The working Horizons command spans characters 244-562 of that lesson, so the walk received its
+   first 56 characters and nothing else, while the log reported "1 concept(s) recalled".
+3. **And the handoff never worked at all.** This is the one that matters.
+
+### The measurement that killed the assumption
+
+Rather than keep tuning, I logged what the argument synthesiser actually receives:
+
+```
+[walk-concepts] consulted concept-db … recalled … for goal_hash=daad8c4e
+[goal-host-vessel] arg-synthesis lessons: goalHash=9e533f92 chars=0 shape=shellResult
+```
+
+Across twenty minutes the two sets of hashes are **disjoint**: lessons were stored under
+`b9454bb8`, `daad8c4e`; they were looked up under `17d1bf62`, `8b7d5234`, `9e533f92`, `d2510f82`.
+Never once the same key.
+
+`c72ee75` keyed the handoff by `goalHashOf(goal)` on the assumption that the recall site and the
+argument-synthesis site see the same goal string. They do not — the synthesiser runs under a
+reframed or sub-goal and hashes something else, so the lookup misses every time and the prompt gets
+`chars=0`.
+
+**Six attempts were interpreted through a mechanism that had never fired.** Every "the drafter
+ignored the lesson" conclusion in §15.50 and §15.51 has to be re-read: the drafter was never shown
+one. The retraction in §15.51 — that instruction *did* land on the shellResult path — stands, because
+that transfer happened via the goal-target inference prompt, which uses `walkConceptContext`
+directly and does not go through this map.
+
+### Why it went unnoticed
+
+The same reason as everything else today: **the mechanism reported success at every layer it could
+see.** Recall logged concepts recalled. The lesson existed, correct and complete, in the store. The
+prompt assembled without error. Nothing between them compared what was stored against what was read,
+and a `Map.get` that misses returns `undefined` silently — indistinguishable from "no lessons for
+this goal".
+
+The fix is not another key: it is to stop passing data through an implicit side-channel keyed on a
+value neither site controls. Either thread the lessons through the call chain, or key on the dispatch
+id, which is stable across reframes. Not attempted here — late-session speculative changes are how
+the composition errors in §15.4 got made.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
