@@ -1782,3 +1782,54 @@ So the honest reading of the batch=1 result is narrower than §41 first stated:
 
 The measurement that settles it is one complete cycle's `sweep complete` line with its deleted
 count, on a store that is not simultaneously ingesting at speed. That has not happened yet.
+
+---
+
+## 42. A rejected dispatch still persisted two false notes
+
+`0b50480d`, nonce `post-restart-2c340d`, dispatched after both restarts to check nothing had
+regressed. It was **correctly rejected**:
+
+```
+HOLLOW — deterministic:wrong-registry-count — independently queried registry totalVessels=11,
+         but the output reports 127 (the self-graded value does not match the authoritative registry)
+FINAL: failed | reached: false
+```
+
+The deterministic verifier caught a confabulated count and failed closed. That is the second
+self-caught confabulation of the session (rate E was the first) and it is the mechanism working.
+
+**But the durable store tells a different story.** Two notes carrying this dispatch's nonce were
+persisted anyway:
+
+```
+21:19:15  "Health report for goal-host-vessel created. Discovery registry advertises 137 shapes."
+21:30:20  "Vessel goal-host-vessel health report: Overall Health: degraded, Reachable: false,
+           HTTP Status: 0, Health Status: unreachable"
+```
+
+Ground truth at both moments: `goal-host-vessel: healthy`, `totalShapes: 305`. **Both notes are
+false, both are durable, and the dispatch that produced them is marked `reached: false`.**
+
+One has a partial excuse: 21:19:15 falls inside the goal-host restart window, so the walk really
+did observe an unreachable vessel and wrote what it saw. That is arguably honest reporting of a
+transient — though writing a transient as an unqualified durable fact is its own problem. The
+`137 shapes` figure has no such excuse, and neither does the 21:30:20 note, written fifteen
+minutes after the vessel came back healthy.
+
+**The finding is structural, not about these two notes.** A `reached: false` verdict stops the
+dispatch from claiming success; it does **not** roll back, retract, or tombstone the artifacts the
+walk already wrote. Terminal writes happen mid-walk, the verdict lands at the end, and nothing
+reconciles them. So the memory store accumulates confidently-worded false statements from
+dispatches the system itself judged hollow — and a later recall cannot tell them from graded-true
+ones, because the note carries no verdict.
+
+This is the same shape as the reached-command cache before today's tombstone (§ f9057a1): a
+durable store that only ever gains entries, with no path from "this was judged wrong" to "stop
+serving it". The tombstone fixed that for commands. **`memoryNote` has the identical hole and no
+tombstone.**
+
+Filed, not fixed — it wants the same treatment (a verdict-linked retraction on the terminal write
+path) and that is a change to how every walk persists, which deserves its own session and its own
+before/after. Recording it here because it was invisible until I checked the store instead of
+trusting the verdict: **the reach verdict describes the dispatch, not the world it left behind.**
