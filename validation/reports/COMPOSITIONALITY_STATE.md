@@ -5416,6 +5416,65 @@ window anyone was looking at.
 further work on the walk: it unblocks retirement, corrects the capability baseline, and restores the
 learning loop's inputs, all at once.
 
+## 15.57 ★★★★★ THE ROOT CAUSE IS 27 GB OF TRACES, AND MAINTENANCE DETECTS IT WITHOUT ACTING
+
+Chasing the Io goal's last blocker to the bottom ends at the store, not the walk.
+
+```
+db-maintenance tick, 2026-08-16T07:56:52Z
+  slow_queries:          38536
+  error_rate:            0.0674
+  prune_candidates_30d:  29354
+  actions:               []          <- detects, does nothing
+  integrity_findings:    [acg_none_fk, cts_null_account_id, doubled_prefix_ids]
+```
+
+Row counts confirm the shape:
+
+| table | rows |
+|---|---|
+| `activity_execution_traces` | **29,354** — exactly the prune-candidate count |
+| `impulse_relevance_metrics` | 18,683 |
+| `context_thompson_scores` | 7,982 |
+| `variant_performance_metrics` | 5,112 |
+
+About 64k rows total occupying **27 GB on disk with 19 GB resident** — roughly 900 KB per trace row,
+because a trace carries its full payload. SurrealDB sits at **607% CPU** scanning them.
+
+### One saturated store explains every remaining symptom
+
+- **Trace writes** take 0.92s alone and exceed the sink's 15s timeout in bursts → 16,771 spooled.
+- **The libp2p relay** answers recall in 3.0–6.7s when quiet and 40s/502 under any concurrency.
+- **Retirement** cannot fire: its gate needs 20 executions per arm, and the arms that earn
+  retirement are on the spoke, whose traces were not arriving.
+- **The capability baseline** is computed from what the store holds, which is mostly stale.
+
+### The maintenance loop is detect-only, deliberately
+
+`db-maintenance-tick.ts` auto-applies exactly two remediation kinds — `create_index` and
+`apply_migration` — and the diagnose deliberately emits index suggestions with a `<choose>`
+placeholder, skipped with the comment that "auto-indexing a 275k+ row table can hang the /sql
+endpoint, so concrete index choice is left to an explicit goal/operator". Pruning is counted and
+never executed.
+
+That is a defensible design, and it is the same shape as the trace-spool check ("DETECTION ONLY —
+the gap escalates; draining/fixing is a corrective activity") and as `checkAndRetireTemplate` behind
+an unreachable gate: **the substrate detects its own degradation accurately and has no hands to act
+on it.** Three independent detectors, all correct, none able to fix what they found. That is the
+sharpest statement of the self-development gap this session produced — sharper than any walk defect,
+because it is what keeps the walk defects from being observable.
+
+### Cleared, and what remains
+
+Trace delivery was repaired here: the spool was a self-sustaining storm — 16,723 undelivered traces
+retried every 60s against the store too loaded to accept them — and quarantining the backlog took the
+spool from **16,771 to 3**, with nothing new spooling. That restores retirement's input, the
+learning loop's history, and the baseline's honesty.
+
+What remains is an operator decision, not a code change: **prune ~29,354 trace rows / ~27 GB**, which
+`db-maintenance` has already identified and is deliberately not authorised to perform. Everything
+downstream — relay latency, recall, retirement, and the Io goal's last blocker — sits behind it.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
