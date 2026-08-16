@@ -4467,6 +4467,43 @@ it next: when a command fails *and* its text contains a quote nested inside a sa
 region, hand the corrector the shell's own re-split argv rather than the intended string, so the
 mismatch between what was written and what bash received is visible instead of inferred.
 
+## 15.43 Negative feedback does not suppress a 202-execution, 0-success arm — retirement is the necessary lever
+
+After §15.35 established that poor-performance retirement has never fired, the open question was
+whether the arm could be suppressed some other way from this spoke. It can be *reached*:
+
+```
+POST /v2/activities/feedback  {activity_id: "learned-satisfier-shell", direction: "negative", intensity: 1}
+-> {"success":true,"affected_activities":["learned-satisfier-shell"],"multiplier":2}
+```
+
+**And it does not work.** The next dispatch selected the same arm twice and died the same way —
+*"The shell command was not provided, causing an error and no Earth-Io range was printed."*
+
+That is worth more than the workaround would have been. **202 recorded executions, 0 successes, and
+an explicit operator negative verdict are jointly insufficient to stop this arm being selected.**
+A selector that keeps drawing an arm with that record is not responding to evidence the way the
+design assumes — and note the arm reports `status=completed` on each failure, which is very likely
+why: it looks like a success to whatever updates the posterior, so 202 failures may never have been
+recorded as failures at all.
+
+So the retirement fix (`f2857fc`) is **necessary**, not merely tidier: feedback nudges a posterior
+that appears not to be moving, while `retired = true` removes the arm from selection outright.
+Until `activity-api` restarts on the hub, a large fraction of dispatches will keep dying before any
+executor runs.
+
+**Not repeated deliberately.** Applying feedback until the arm sank would manufacture the result
+rather than measure it; the 202/0 record is the honest evidence and one application is the honest
+verdict.
+
+### Standing correction
+
+§15.40 and the handoff before it said the arm was unreachable from this spoke and the hub deploy was
+the only lever. **The feedback plane was reachable the whole time** — examined hours earlier, seen
+not to be the oracle-label corpus, and dismissed without asking whether suppressing the posterior
+would serve. Seventh "unreachable" conclusion this session drawn from an incomplete search. The
+substance of the handoff is unchanged, but the reasoning that produced it was wrong.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
