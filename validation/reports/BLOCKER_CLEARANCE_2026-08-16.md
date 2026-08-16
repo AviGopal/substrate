@@ -1464,3 +1464,59 @@ could not construct it, and stopped. Worth recording because the historical patt
 class was a confident wrong number: the source comment measures the no-oracle regime at 20/20
 reached and 0/20 correct. An honest failure is the strictly better failure, and it is what the
 session's honesty fixes are for.
+
+---
+
+## 36. The 45-dispatch Io failure was target inference, not reasoning
+
+Both post-fix Io dispatches (`622bd966`, `a8596c0e`) failed **honestly** — `reached: false`, no
+fabricated AU figure — and the second got far enough to name the obstacle exactly:
+
+```
+goal-target inference {"inferred_target_shapes":["llm_completion_dispatch"],"confidence":0.7}
+REUSE-BEFORE-DERIVE — the store recommends the floor for this goal (8/9 reached)
+reused floor pathway did NOT reach — falling through to the full walk
+walk: no pick — missing shapes [llm_completion_dispatch] have no producer or constructible payload
+```
+
+`goal-target-inference.ts:407` has a deliberate **prose-answer route**: an explanatory question
+("explain / describe / what is / how does X work") is sent straight to `llm_completion_dispatch`,
+deterministically, before any LLM inference — a good fix for a real problem, since those questions
+otherwise collide their subject word onto an internal shape and hollow-green a relevance table.
+
+Its guard, `NOT_PROSE_RE`, excludes compute, analysis, edit, persist and `fetch|download|curl|scrape`.
+It has **no term for a live external measurement.** So:
+
+> *"What is the distance from Earth to Io right now, in astronomical units?"*
+
+matched `what is`, matched nothing in the guard, and was classified **definitional**. The walk then
+looked for a producer of "ask a model", found the dispatch wrapper unconstructible, and terminated.
+
+**It never reached the fetch capability at all** — not because the fetcher was broken (§35 proves it
+works and returns the right number), and not because the walk reasoned badly, but because
+classification happened *before* walking and closed the question.
+
+### The fix, and its shape
+
+The discriminator is **temporal deixis, not subject matter**. "right now", "currently", "today",
+"at the moment", "as of now" all say the answer depends on *when* it is asked — which is exactly
+what weights cannot supply. Added `LIVE_MEASUREMENT_RE`, plus a measurement-noun-with-unit clause
+(`distance … in astronomical units`, `temperature … in celsius`) because that is how a request for
+a **number** announces itself.
+
+Deliberately narrow in the other direction, and tested both ways: *"Explain what an ephemeris is"*
+and *"What is an astronomical unit?"* still take the prose route deterministically with no LLM
+call. A guard that swallowed genuine prose questions would trade one failure class for another —
+which is precisely what the prose route was introduced to fix.
+
+### Why this took 45 attempts to find
+
+Every previous attempt read the *symptom* — a wrong or missing AU figure — and reached for the
+nearest plausible cause: prompt wording, lesson recall, command synthesis, `$$SOE` shell escaping.
+Each of those is a real defect and several were genuinely fixed along the way. None of them were
+load-bearing here, because **the goal never got far enough to use any of them.** The decision that
+killed it happened in one regex, before the first step of the walk.
+
+The general form is worth keeping: **when a goal fails identically across dozens of attempts and
+every fix targets the execution path, check whether execution was ever entered.** A classifier that
+runs before the machinery, and closes, is invisible to any instrument pointed at the machinery.
