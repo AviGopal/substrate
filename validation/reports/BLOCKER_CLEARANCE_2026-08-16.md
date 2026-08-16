@@ -480,3 +480,25 @@ note now sees the defect instead of being misled by it.
 
 That is the honest summary of the ladder: **hidden wrongness became visible wrongness.** Valid
 compositional reach is still not demonstrated.
+
+---
+
+## 16. Architecture violations found in code touched this session — filed, not all fixed
+
+The goal asked for a review of code interacted with. These are the violations found, each with the
+law it breaks and the evidence. Filed rather than fixed where fixing exceeds the session's blast
+radius; naming them is the deliverable, rewiring them is next-session work.
+
+| # | Site | Law | Evidence |
+|---|---|---|---|
+| 1 | `development-vessel/src/resolvers/vessel-health-report.ts:3-4` — `METABOB_ENDPOINT ?? "http://127.0.0.1:8080"`, `DISCOVERY_ENDPOINT ?? "http://127.0.0.1:8100"` | **1** (env-frozen behaviour) + **11** (data locality) | Hardcoded host ports, resolved at process start, invisible to traces. On any spoke `:8080` is `activity-api`, which is **masked** — so every trace/goal probe 404s and the report degrades to `unknown`. Measured live: `discovery-vessel → probe skipped, registered false`. Should route by shape through discovery. |
+| 2 | `activity-api/src/services/trace-retention.ts` — **19** `env.*` reads in one config loader | **1** | Enablement, dry-run, caps, batch size, ceilings and budgets are all bootstrap-frozen. A retention policy is behaviour the system should be able to observe and learn; none of it is visible to a trace or the walk. |
+| 3 | `activity-api/src/index.ts:632` — `FTS_REBUILD_INTERVAL_MS`, and `trace-retention` `intervalMs` | **5** (cadence is a rhythm impulse, not a static interval) | Two `setInterval`s armed at boot. Law 5 says cadence lives in the pool as time-shaped rhythm impulses the selector reads. Note: my phase-lock hypothesis built on these was **refuted** (§14) — the violation is real, the failure it was blamed for is not. |
+| 4 | `activity-api/src/routes/db-admin.ts` | script-retention / dead surface | Imported by nothing, mounted nowhere in `index.ts`, and contains no route declarations matching the app's patterns. A surface nothing invokes cannot be observed failing, so it can never be trusted when it passes. |
+| 5 | The `concept` shape — 3 producers, 2 incompatible meanings | **shape vocabulary** ("a shape is a routing-and-reasoning key") | `development-vessel` serves trace pattern-mining (`multi_step_resolver_flow`); `concept-db` serves prose recall. Because both answer one key, `goal-host:1040` must discriminate by **vessel name** (`/concept-db/i`) — routing by name, forced by the overload. Fix the vocabulary, not the picker. |
+| 6 | `variant_performance_metrics.success_rate` written int/int on two `TYPE int` columns | data integrity | Truncates to exactly 0 or 1; per the in-source note, 438 of 1,059 mixed-outcome rows carry a mathematically impossible value. It is read back and amplified by `composition-graph.ts`. **Never read it as a success signal — use α/β.** |
+| 7 | `activity-api/src/services/variant-creator.ts` — `checkAndRetireTemplate` still present | dead-but-live code | Superseded by `checkAndRetireByPosterior` and provably incapable of completing its own body (§2). Left in place with its four defects documented rather than deleted, because its one call site is a route an external caller may still use. Should be removed once that is confirmed. |
+| 8 | Split write inside one ingest handler | write/read key mismatch | One trace moved `total_executions` 202→203 while α/β did not move; `[learning] Thompson Sampling score update returned no results in either table` is logged at WARN and nothing consumes it. An arm's execution count and its posterior can silently diverge. |
+
+**Fixed this session:** the silent-default subject (§13.2), the counterfeit Beta draw (§1), retirement's
+four-way inertness (§2), and two shapes with readers and no producers (§3).
