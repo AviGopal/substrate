@@ -5129,6 +5129,59 @@ with retrieval-only alternatives, a correct Horizons URL built unaided, and refu
 invention when extraction fails. The one unclosed link is turning that fetched body into a number,
 and the fix for it has not yet had a dispatch route through the shell path to exercise it.
 
+## 15.52 ★★★★★ THE FLOOR DOES RUN TOOLS — and the ceiling is not the model
+
+Two beliefs I held for most of this session were wrong, and both died to a direct probe of the
+resolver rather than to more dispatches.
+
+### "The floor never executes tools" — false
+
+Every floor run in this session persisted `tools=0/0` — **11 of 11**. That reads as a parity floor
+with no parity: a ReAct tier that cannot act. It is an artefact of where the loop runs. Probed
+directly, `llm_completion_dispatch` was asked to shell out for the Linux kernel's star count and
+returned **242965**, against a live value of **242965** at that moment. The tools run inside the
+dispatch wrapper and never surface as client-side `tool_calls`, so the counter reads zero while real
+retrieval is happening. The code says as much three hundred lines away; the metric does not, and the
+metric is what an operator reads.
+
+Asked the Earth-to-Io question the same way, the wrapper ran several tool round-trips (2537–3397
+input tokens), failed, and **said so** — offering a browser URL rather than a number. Honest failure
+under its own steam, with no gate involved.
+
+### "A stronger model would get it" — also false, and worth the check before recommending a spend
+
+The LLM plane routes through OpenRouter with a pool that tops out at cheap paid models
+(`google/gemini-2.5-flash`, `openai/gpt-4o-mini`, `deepseek/deepseek-chat-v3-0324`) and `:free`
+models as last resort. Those free tiers are continuously exhausted —
+`429 Rate limit exceeded: free-models-per-day-high-balance`, three distinct models cooling down 600 s
+in a two-hour window — so almost everything lands on deepseek-chat-v3.
+
+A request for `anthropic/claude-3.7-sonnet` came back served by deepseek: models outside the routable
+pool are silently substituted, and the response says so honestly in `requested_model` vs `model`. A
+request for `google/gemini-2.5-flash`, which IS in the pool, was **honoured** — so the routing works
+and the earlier substitution was policy, not a bug.
+
+Given the same task, the same shell tool, and hand-written parameter notes, gemini-2.5-flash returned
+**5.90351990346449 AU**. The geocentric oracle at that instant was **6.27607851**; the heliocentric
+range was **5.29463061**. It matches neither, and no query I could construct produces it.
+
+**So the ceiling is not model tier.** Had I skipped this probe I would have recommended paying for
+frontier routing on the strength of a plausible story. The measurement refutes it: the best model in
+the pool, handed the contract explicitly, still produced a number that is not the answer to any
+version of the question.
+
+### What that leaves
+
+The task needs a precisely-constructed query *and* a correct extraction from a fixed-width table
+whose data block is bracketed by markers. Every component of that has now been observed working at
+least once — the correct URL built unaided (attempt 10), the `$$SOE` marker used deliberately
+(attempt 13), CSV output requested to make parsing tractable (attempt 13) — but never all of them in
+the same run, and each run gets three self-correction attempts before the executor gives up.
+
+That is a *budget* observation, not a capability one, and it is the first honest candidate for what
+actually blocks this goal: **three corrections is enough to fix one mistake and not enough to fix
+three.** It is also testable, which the model-tier story was not until it was tested.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
