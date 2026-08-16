@@ -1609,3 +1609,36 @@ the copy was the only gap).
 **Filed with §37**, since both live in the same block of `substrate-pull-sync.sh` and want one
 change: the restart step should re-run the mirror if the clone has advanced since the mirror ran,
 rather than assuming the mirror is current because it happened in the same tick.
+
+---
+
+## 39. After the hub restart, the valve deletes again — but is still losing
+
+`activity-api` restarted 21:02:58 carrying the retirement fix and the FTS deferral. The DB metrics
+moved substantially:
+
+| | before (20:21) | after (21:04) |
+|---|---|---|
+| DELETE ops | **0 completing** | **15 in 117s**, mean 3.2s |
+| mean latency | 6,620ms | 2,052ms |
+| p95 | 14,105ms | 7,212ms |
+| max | **300,007ms** (the timeout) | 82,725ms |
+
+The `max` no longer pinned at exactly 300s is the important one: DELETEs are **completing** rather
+than being killed by the query timeout, and the sweep no longer dies at its first batch.
+
+**It is still not winning.** Row count 457,033 against the 150,000 ceiling — surplus has grown from
+~297k to ~307k over the session. At ~5 deletes/minute against live intake, the valve sheds far less
+than arrives. So the blocker's *character* has changed — from "commits nothing" to "commits too
+little" — and that is a real improvement in diagnosis even though the number went the wrong way.
+
+**The batch=1 probe is still dormant, confirmed:** `grep TRACE_RETENTION_DELETE_BATCH
+/etc/substrate/env` returns nothing on the hub. `gen-env` renders that file only from
+`entrypoint.sh`, and this was a unit restart, not a container start — exactly as §27 predicted. The
+valve above is running at the code default of 25.
+
+So the honest state of the prune: **not cleared, improved, and the decisive experiment is still
+one container start away.** What the restart did establish is that the "zero deletes" symptom was
+not intrinsic — something about the pre-restart process state was making every DELETE time out, and
+a fresh process does not have it. That is worth knowing before anyone spends more time on batch
+tuning: the same batch size behaves completely differently either side of a restart.
