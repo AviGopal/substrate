@@ -820,3 +820,57 @@ the pattern cannot compound: every run of it either fails, or succeeds and banks
 **The next step is a measurement, not an edit**: capture one satisfier-only walk's step records
 live (before the dispatch ages out), confirm the consumed impulse ids are present and correct, and
 only then decide whether the ledger can read them without re-admitting the hollow class.
+
+---
+
+## 23. The §22 measurement, taken live: the consumption evidence does not exist
+
+§22 ended by saying the next step was a measurement, not an edit — capture a satisfier-only walk's
+step records before the dispatch ages out. Done, against an in-flight rate-batch dispatch
+(`d3e5248f`), via `goalWalkState`, which carries far more than the `/executions` view.
+
+What it records, per step (`steps[].{poolBefore, poolAfter, newShapes, selected, excluded,
+rationale}`), plus `poolEvents[].{shape, source}` and `poolProvenance[].{shape, producedBy,
+consumedBy}`:
+
+```
+poolProvenance:
+  shape=goal                    producedBy=goal-host-walk   consumedBy=None
+  shape=dispatch_id             producedBy=goal-host-walk   consumedBy=None
+  shape=vessel_health_report    producedBy=goal-host-walk   consumedBy=None
+  shape=obsidian:vessel_count   producedBy=goal-host-walk   consumedBy=None
+
+poolEvents:
+  shape=vessel_health_report   source="vessel-resolve satisfier (vessel_health_report)"
+  shape=obsidian:vessel_count  source="vessel-resolve satisfier (obsidian:vessel_count)"
+```
+
+**Every consumption field is empty.** `consumedBy` exists on the provenance record and nothing
+populates it; `poolEvents` records only a `source` (the producer); `steps[]` records `poolBefore`,
+`poolAfter` and `newShapes` — what a step *produced* and what the pool looked like around it, never
+what the step *consumed*.
+
+So the §22 framing was too optimistic. I described the ledger as "blind to satisfier steps", which
+implied the evidence was there and unread. It is not there. A satisfier records nothing about what
+it consumed at any layer — not in the ledger, not in the provenance record, not in the pool event.
+`ledgerStep(undefined, …)` is not an oversight at the call site; it is the honest reflection of a
+step type that never captured the input side at all.
+
+**This changes what the fix is.** Not "read the consumed ids into the ledger" — there are none to
+read. It is: make the satisfier path record which pool impulses it actually bound, then let the
+ledger and `consumedBy` read that. That is a real change to a hot path, in the one place where
+being wrong re-admits the 68%-hollow class, and it wants its own session with a before/after
+measurement rather than a tail-end edit here.
+
+**One more thing this run showed, and it is the session's fix working live.** The same walk logged:
+
+```
+satisfier "vessel_health_report" resolved a DISHONEST body — envelope carries error:
+  vessel_id is required — refusing to report on an assumed vessel
+```
+
+The walk tried to resolve a health report without binding `vessel_id`; the resolver refused instead
+of inventing `analysis-vessel-local`; and the body-honesty gate caught the refusal and did not treat
+it as content. That is §13.2's fix and the honesty gate composing correctly, observed on live
+traffic rather than in a test — and it is exactly the path that produced rung 2a's false reach
+before today.
