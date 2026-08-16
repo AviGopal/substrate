@@ -4504,6 +4504,41 @@ not to be the oracle-label corpus, and dismissed without asking whether suppress
 would serve. Seventh "unreachable" conclusion this session drawn from an incomplete search. The
 substance of the handoff is unchanged, but the reasoning that produced it was wrong.
 
+## 15.44 The β penalty IS credited — which refutes my own explanation and leaves retirement as the lever
+
+After feedback failed to suppress the arm (§15.43), the natural explanation was that its failures
+never reach the posterior: the walk logs `status=completed` for the step even though it produced
+nothing. **That is wrong**, and Q1's own learning block says so:
+
+```json
+{"templateId":"activity:⟨learned-satisfier-shell⟩","dAlpha":0,"dBeta":2}
+```
+
+α+0, β+2 for the failing dispatch. **Failures are being credited.** Checking this before acting
+mattered more than usual: the "fix" would have been an edit to the trace/credit path, which is the
+one code path where a change of mine has already corrupted data (`b4f9148`, a redirected
+`variant_performance_metrics` insert). A confident wrong hypothesis plus that blast radius is how
+learning state gets destroyed.
+
+**What remains unresolved, and is not observable from this spoke:** whether the credited delta
+*persists*. `GET /v2/activities/<arm>/variant-scores` returns `{"scores":[],"total":0}`, and the
+dispatch record carries deltas only — no stored α/β anywhere. A standing note in the operator
+memory says the walk "grades into a table nothing reads (24 % still Beta(1,1))", which would explain
+an arm that is penalised every dispatch and still selected: **if the delta never lands, the arm
+samples from Beta(1,1) forever no matter how often it fails.** Confirming that needs the hub's
+store, which this spoke cannot read.
+
+So the conclusion holds and the reasoning behind it is now correct: **retirement (`f2857fc`) is the
+lever.** It removes the arm from the candidate set outright rather than relying on a posterior whose
+persistence is unverified.
+
+### Three hypotheses, one method
+
+Within this thread: *feedback will suppress it* (tested, false), *status=completed hides the
+failures* (tested, false), *the delta may not persist* (untestable from here, stated as open). Two
+of three died on a check that cost a minute. The one surviving claim is labelled unproven rather
+than asserted — which is the only reason the first two are recorded as refuted instead of shipped.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
