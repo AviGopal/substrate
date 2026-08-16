@@ -169,3 +169,92 @@ the push. Observed end-to-end: `[pull-sync] goal-host-vessel: content ee90dc21 -
 - **`repairSignatureOf` returns a Promise its tests never await** (4 pre-existing failures in
   goal-host on a clean checkout). Found while establishing a regression baseline; not in scope, but
   a signature function whose tests are dead is worth its own fix.
+
+---
+
+## 8. The compositional ladder — run, graded by hand
+
+Each rung dispatched with a nonce for attribution, then graded against ground truth I captured
+independently. `reached` is reported alongside my own verdict, because they disagree.
+
+### Rung 1 — single shape, external fact. `d83905f9`, nonce `ladder1-105eb7`
+Goal: number of registered vessels **and** registry uptime.
+`reached: true` — "deterministic:verified-registry-count — independently queried
+`/registry/stats.totalVessels=11`; the produced output matches the authoritative registry."
+
+**My grade: PARTIAL.** `totalVessels: 11` matches the ground truth I captured before dispatch
+(`registeredVessels: 11`) — genuinely verified, not asserted. But the goal asked for *two* numbers
+and the output carries `"uptime": null`. It chose `/registry/stats` (no uptime) over `/health`
+(which has it), answered half, and the judge graded the half it checked. The verification was real;
+its *scope* was narrower than the goal.
+
+### Rung 2 — two shapes, chained. `45870e9e`, nonce `ladder2-95d19b`
+Goal: health of discovery-vessel **and** development-vessel, persisted as a memory note naming each.
+
+The decomposition was genuinely compositional and worth crediting:
+```
+inferred_target_shapes ["vessel_health_report","memoryNote_write"]  confidence 0.9
+derivation-intent  intermediate ["vessel_health_report"]  terminal ["memoryNote_write"]
+```
+Both shapes were produced and the note really persisted — I read it back out of the store, and it
+carries my nonce, so it is attributable.
+
+**My grade: FALSE REACH.** `reached: true`, with the judge stating *"The output successfully
+summarizes the health of both the discovery vessel and the development vessel."* The persisted note
+(`id: vessel-health-summary`) summarises **`analysis-vessel-local` only**. Neither named vessel
+appears anywhere in it. The judge asserted a fact about content it did not check.
+
+The mechanism worked and the binding failed: two shapes, correctly ordered, correctly chained, a
+real durable write — pointed at the wrong subject. This is the compositional analogue of the
+write-shaped-goal defect: *graded on the write, not the content.*
+
+One gate did behave correctly, and it is the one this session repaired the sibling of:
+```
+walk: WITHHELD alpha-credit for satisfier:memoryNote_write —
+      no in-chain producer-to-consumer edge and no landed sha
+```
+The credit path noticed the two steps were not really composed and refused to reward it, even
+while the reach judge was calling it a success. Credit discipline is ahead of reach discipline.
+
+### Rung 3 — not run, and why
+The Io-calibre rung tests whether a recalled lesson survives to execution. It cannot be tested on
+this spoke: concept recall is dead here (§9), so no lesson reaches the drafter, and the verbatim
+lever has nothing to act on. Running it would have measured the transport outage, not the ladder.
+
+## 9. Concept recall on the spoke dials a stale peer — the real ceiling limiter
+
+```
+[walk-concepts] recall FAILED TimeoutError url=http://127.0.0.1:8401/egress/resolve
+                ?target=/ip4/138.197.116.56/tcp/30333/p2p/12D3KooWJ9Jdv... budget=25000ms
+[walk-concepts] concept-db could not be asked — recall unavailable, NOT an empty result
+[goal-host-vessel] arg-synthesis lessons: chars=0 via=hash-fallback
+```
+
+**`138.197.116.56` is not the hub.** `syzygy.host` resolves to `104.236.0.175`. The spoke is
+dialing a stale peer address for every concept recall, timing out at 25s and again at 12s, and
+falling back to zero lessons. Law 8 — information at the right time — is structurally broken on
+this deployment, and it is a stale federation address, not a design problem.
+
+This is why enabling `lessonExecutionPolicy` changes nothing here yet: the verbatim path needs a
+recalled command, and `chars=0` means none arrives. The lever is now built, shaped, and revocable;
+the transport under it is down.
+
+## 10. The operator feedback channel is not reachable with the documented credential
+
+`POST /v2/activities/feedback` with the `~/.metabob/config.json` API key returns
+`{"error":"Unauthorized","message":"Missing organization context"}`, with or without an explicit
+`org_id` in the body or `X-Org-Id` / `X-Organization-Id` headers. The route wants JWT org context.
+So step 4 of the canonical loop — record an operator verdict into the corpus — has no working path
+from the documented client config. I could not record the rung-2 false reach through it; it is
+recorded here instead.
+
+## 11. What enabling verbatim lesson execution actually did
+
+`policies/lesson-execution-policy.json` on the spoke now contains `{"verbatimCommands": true}`, and
+the shape resolves:
+`{"resolved":true,"shape":"lessonExecutionPolicy","body":{"verbatimCommands":true}}`.
+
+**To revoke: delete that file.** No restart, no code change, no deploy. That revocability is the
+whole point of making it a shape rather than a constant. Its current practical effect is nil
+because concept recall is down (§9) — it will begin to matter the moment that transport is fixed,
+which is worth knowing before fixing it.
