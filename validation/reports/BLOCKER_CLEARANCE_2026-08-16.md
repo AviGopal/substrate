@@ -760,3 +760,63 @@ Read one sweep and stop: if the valve reports a non-zero delete count, batch siz
 after all and belongs in `gen-env.sh`; if it still times out, the storage-engine design question is
 confirmed by elimination and no further tuning is worth attempting. Either outcome closes the
 question — which is why it is worth one operator action rather than more analysis from here.
+
+---
+
+## 22. Why a valid composition banks no edge — diagnosed, deliberately not patched
+
+§20 item 7 left this as "noticed, not diagnosed". It is now diagnosed, statically, and the finding
+is that **the credit gate is right and the ledger feeding it is blind to one step type.**
+
+The gate (`index.ts:9384`) credits on either a deterministic verdict **or** a genuine in-chain
+producer→consumer edge. It is backed by the strongest measurement in this codebase: over 80 goals
+in four families with no deterministic verifier, **72/80 graded reached and only 23/80 were
+correct — 68% hollow** — and `ext_variety`, which no oracle owns, was 20/20 reached and 0/20
+correct. Every one of those false reaches had run a command. Dropping "a command ran" as substance
+is why the posterior records correctness rather than activity. **This gate must not be loosened.**
+
+The ledger it consults:
+
+```ts
+const ledgerStep = (inputShapes: string[] | undefined, newOutputs: string[]): void => {
+  for (const s of (inputShapes ?? [])) if (chainProduced.has(s)) consumedInChain.add(s);
+  for (const s of newOutputs) if (s && s !== "activityExecutionSummary") chainProduced.add(s);
+};
+```
+
+An edge is recorded only when a later step's **declared `inputShapes`** matches an earlier step's
+output. Of the five call sites, **three pass `undefined`**:
+
+```
+:8247  ledgerStep(undefined, [satisfiableNow])   ← the satisfier path
+:8823  ledgerStep(undefined, [missingShape])
+:8553  ledgerStep(undefined, bundleNew)
+:8552  ledgerStep(bc.inputShapes, [])            ← declared-input path
+:8928  ledgerStep(pick.inputShapes, _stepNew)    ← declared-input path
+```
+
+So a satisfier step can only ever **add to `chainProduced`, never to `consumedInChain`**. Satisfiers
+are selected by target shape and carry no declared inputs, so **a walk composed entirely of
+satisfiers records zero edges by construction**, however genuinely the data flowed. Rung 2c was
+exactly that: `vessel_health_report` produced by a vessel-resolve satisfier, then `memoryNote_write`
+by another, correct content in the note, and `consumedInChain.size === 0`.
+
+Rung 3 credited only because it had the *other* arm — a deterministic registry verdict. Take that
+away and a valid four-shape composition would also have banked nothing.
+
+**Why I am not patching it.** The obvious change — infer the edge from what a satisfier actually
+consumed from the pool rather than from a declaration — widens what counts as substance, and the
+68%-hollow measurement above is precisely a record of what happens when substance is widened on
+plausible reasoning. Doing it safely needs the satisfier's real consumed-impulse ids, which means
+reading a live walk's step records; the dispatch store is in-memory and rung 2c's record had already
+aged out (`404`) when I went back for it, so I could not verify the shape of the fix against real
+data. **A credit gate this well-evidenced should not be widened from a partial picture.**
+
+The corroborating number, from the live posterior table: the composition arm for exactly this
+pattern, `learned-composition-vessel-health-report-to-memorynote-write`, sits at **α=1, β=5.0 after
+8 executions** — only ever blamed, never credited. That is this defect's signature, and it is why
+the pattern cannot compound: every run of it either fails, or succeeds and banks nothing.
+
+**The next step is a measurement, not an edit**: capture one satisfier-only walk's step records
+live (before the dispatch ages out), confirm the consumed impulse ids are present and correct, and
+only then decide whether the ledger can read them without re-admitting the hollow class.
