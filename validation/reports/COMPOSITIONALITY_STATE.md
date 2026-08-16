@@ -4755,6 +4755,20 @@ floor answers — which is how a correctly-detected hollow verdict becomes a con
 retrieval shapes rather than keep an unproducible target.** A retry that does not widen is not a
 retry, and here it is in the hot path deciding the headline goal.
 
+### G5 — the right endpoint, the right extraction, lost to a missing `-L`
+
+Worth separating from the reach verdict, because the verdict hides it. The walk built
+`curl -s 'https://api.frankfurter.app/latest?from=USD&to=EUR' | jq -r '.rates.EUR'` — the correct
+host, the correct query, the correct jq path, none of it supplied — and got
+`parse error: Invalid numeric literal at line 1, column 7`, because frankfurter answers 301 and the
+command did not follow redirects. It then fell back to an xe.com search snippet, which happened to
+carry a correct rate, and reached.
+
+This is the same family as the reconstructed Horizons query lost to nested shell quotes: **the hard
+part succeeded and a one-flag mechanical detail threw it away.** The body-recovery corrector exists
+precisely for this and did not fire on a jq parse error. Two of the batch's near-misses are now this
+shape, which makes it a class rather than an incident.
+
 ### Infrastructure found along the way
 
 - **concept-db was masked but running** — the fourth instance of that pattern in two days, and the
