@@ -1698,3 +1698,60 @@ A single-step satisfier chain has no producer→consumer edge to bank, so the cr
 correctly, on the evidence it has, and consistent with §22/§23: the consumption evidence does not
 exist to be read. So this pathway reached but **banked nothing**, and the next identical goal will
 re-derive rather than reuse. The capability is fixed; compounding it is the open item.
+
+---
+
+## 41. The batch=1 re-test: statement width WAS the lever
+
+The experiment `trace-retention.ts` has been asking for since 2026-08-09 finally ran. Container
+restarted 21:13:24 (named volumes, learning state intact), `gen-env` rendered the probe, and
+`/proc/3987/environ` confirms the running process carries `TRACE_RETENTION_DELETE_BATCH=1`.
+
+**Measured over the first ~2 minutes of uptime, same table, same load, same code:**
+
+| | batch 25 (21:04) | batch 1 (21:17) |
+|---|---|---|
+| DELETE ops completed | 15 in 117s | **282 in 119s** |
+| mean per DELETE | 3,155ms | **239ms** |
+| effective rate | ~7.7/min | **~142/min** |
+
+**19× the throughput; 13× faster per statement.** And the shape of it matters: a 25-id DELETE cost
+3,155ms while a 1-id DELETE costs 239ms — so 25 rows cost *3.2 seconds as one statement* versus
+*6.0 seconds as 25 statements* at first glance, but the 25-id form **timed out entirely** often
+enough to commit zero, while the 1-id form never did. The per-statement cost is not linear in id
+count; it is a threshold, exactly as the source comment suspected and could not confirm:
+
+> *"One id is effectively free and two cost eleven seconds. That is not a per-row cost curve — it
+> is a threshold … 25 ids inherits the whole penalty and amortises nothing."*
+
+That reading was right. It was reverted only because the batch=1 sample available at the time was
+contaminated by a concurrent index rebuild, and the note says so and asks for the clean re-test.
+This is that re-test, and it vindicates the original analysis.
+
+### The wider DB picture also improved
+
+| | before restart | after |
+|---|---|---|
+| mean latency | 6,620ms | **180ms** |
+| p95 | 14,105ms | **316ms** |
+| slow queries | 65% | **2.5%** |
+| max | 300,007ms (the timeout) | 11,833ms |
+
+Two independent effects are tangled here — the fresh process and the smaller batch — and I am not
+claiming to have separated them. The batch comparison above (15 vs 282 DELETEs) is measured on the
+*same* fresh-process condition either side, so that one is clean; the latency table is not, and
+should be read as "the hub is much healthier now", not as an attribution.
+
+### Honest status of the blocker
+
+**Not cleared.** Row count is 457,235 against the 150,000 ceiling and has not started falling — the
+sweep was two minutes into its five-minute budget at the time of measurement. What has changed is
+that the mechanism now *works*: the valve deletes at ~142 rows/min instead of timing out at zero.
+Whether that outpaces live intake over a full cycle is the next measurement, not a conclusion I can
+draw yet.
+
+**Keep `a78fcfd7`** — the probe is no longer a probe, it is the correct setting, and the evidence
+for it is in this section. The remaining question is not batch size; it is whether ~142 rows/min
+clears a 307k surplus before intake replaces it, and if not, whether the answer is a larger
+per-sweep budget or the design change the source comment names (partitioning, a different
+retention substrate, or not storing this volume).
