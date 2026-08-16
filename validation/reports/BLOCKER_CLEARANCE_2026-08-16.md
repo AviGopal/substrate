@@ -1642,3 +1642,59 @@ one container start away.** What the restart did establish is that the "zero del
 not intrinsic — something about the pre-restart process state was making every DELETE time out, and
 a fresh process does not have it. That is worth knowing before anyone spends more time on batch
 tuning: the same batch size behaves completely differently either side of a restart.
+
+---
+
+## 40. Io is reached, and the answer is exact
+
+`1736a12f`, nonce `io3-2e436e`, dispatched at 21:11 with all four fixes live.
+
+```
+[walk-concepts] consulted concept-db via discovery: 1 concept(s) recalled at 3 term(s)
+goal-target inference {"inferred_target_shapes":["shellResult"],"confidence":0.9}
+VESSEL-RESOLVE SATISFIER produced "shellResult" directly
+REACHED via 1-step chain
+REACH-CONTENT shellResult = {"stdout":"6.26946016292196\n", ... curl "https://ssd.jpl.nasa.gov/api/...
+FINAL: completed | reached: true
+```
+
+**Graded by hand against an independent query.** Asking Horizons myself at hour resolution:
+
+```
+$$SOE
+ 2026-Aug-16 21:00     6.26946016292196
+ 2026-Aug-16 22:00     6.26898698948178
+$$EOE
+```
+
+The substrate's answer is `6.26946016292196` — **identical to all fifteen digits** for the 21:00
+UTC hour it was asked in. Not a memorised constant, not an interpolation: the correct live
+measurement for the moment of asking. (The day-resolution oracle in §34 brackets it —
+6.27567 at 00:00 on the 16th, 6.26817 at 00:00 on the 17th — and 6.26946 sits 82.8% through that
+interval, implying ~19.9h UTC, which agrees with the dispatch time.)
+
+### Every fix is visible in that one log
+
+| line | fix |
+|---|---|
+| `inferred_target_shapes: ["shellResult"] @0.9` | the live-measurement guard (`0223842`) — previously `llm_completion_dispatch` |
+| `1 concept(s) recalled` | the recall retry (`2dcfc12`) — previously `could not be asked` on every attempt |
+| `curl "https://ssd.jpl.nasa.gov/api/…"` | the allowlist entry (`a68e1ac`) |
+| the query runs at all | `http_response` no longer a hardcoded httpbin probe (`5be029a`) |
+
+Four independent defects, each of which alone was sufficient to fail the goal. That is why it
+survived 45 attempts: **fixing any one of them would have changed nothing observable.** Each
+previous session fixed a real defect and saw no improvement, because three others still blocked
+the path — which is exactly the shape that makes a failure look like a capability limit rather
+than a stack of bugs.
+
+### One blemish, correctly reported
+
+```
+walk: WITHHELD alpha-credit for satisfier:shellResult — no in-chain producer-to-consumer edge
+```
+
+A single-step satisfier chain has no producer→consumer edge to bank, so the credit gate withheld —
+correctly, on the evidence it has, and consistent with §22/§23: the consumption evidence does not
+exist to be read. So this pathway reached but **banked nothing**, and the next identical goal will
+re-derive rather than reuse. The capability is fixed; compounding it is the open item.
