@@ -298,3 +298,52 @@ the shape resolves:
 whole point of making it a shape rather than a constant. Its current practical effect is nil
 because concept recall is down (§9) — it will begin to matter the moment that transport is fixed,
 which is worth knowing before fixing it.
+
+---
+
+## 12. Retirement acceptance test — RAN, INCONCLUSIVE. The fix is not proven live.
+
+Both fixes are deployed and running: goal-host on the spoke carries `beta-sample.ts` and the
+`betaSample(alpha, beta)` call site (restarted 12:47:44); activity-api on the hub carries
+`checkAndRetireByPosterior` (MainPID 1175073, restarted 13:24:08 after its migration pass).
+
+I then tried to prove the repaired negative loop end to end on a live arm that has genuinely earned
+retirement — `learned-satisfier-http-response`, **202 executions, posterior mean 0.0951,
+`retired: false`** — by posting one failing trace through the real ingest route.
+
+Pre-state / post-state:
+
+| | executions | α | β | retired |
+|---|---|---|---|---|
+| before | 202 | 3.1737 | 30.1967 | false |
+| after | **203** | 3.1737 | 30.1967 | **false** |
+
+The trace stored (`{"success":true,"stored":true}`) and the execution counter incremented. **Nothing
+else moved, and retirement did not fire.** Two reasons, at least one of which is my test's fault:
+
+```
+[learning] Thompson Sampling score update returned no results in either table
+  {execution_id:"retire-probe-7d56de", activity_id:"learned-satisfier-http-response",
+   org_id:"public", org_id_alt:"organizations:public", alpha_delta:0, beta_delta:1}
+```
+
+1. **Wrong tenancy.** My synthetic trace defaulted to `org_id: "public"`; the arm's
+   `variant_performance_metrics` row lives under another org, so the α/β update matched nothing.
+   `checkAndRetireByPosterior` scopes its read the same way and would have found no row either.
+2. **No reach verdict.** My call site is gated on `!reachUngraded && !reachEffectiveSuccess`, and a
+   hand-posted trace with no reach tags very likely classifies `ungraded` — in which case the gate
+   declined it *by design*, since an ungraded outcome must neither credit nor blame.
+
+**So the claim "retirement now fires" is NOT established.** What is established: the code is live,
+11 unit tests pin its behaviour, and the four reasons the old path could never fire are each
+verified. Proving it end to end needs a trace that carries the arm's real org *and* a reach verdict
+— i.e. a genuine failing dispatch of that arm, not a synthetic POST. That is the next session's
+first task, and it is cheap once framed correctly.
+
+**A real secondary finding, and it is the session's recurring class again.** One ingest produced a
+*split outcome*: `total_executions` went 202 → 203 while α/β did not move. Two writes in the same
+handler, keyed differently, and one silently no-opped while the other succeeded — so an arm's
+execution count and its posterior can drift apart on ordinary ingest whenever tenancy does not
+line up. `[learning] ... returned no results in either table` is logged at WARN and nothing acts on
+it. That is worth its own investigation: it is the write/read key-mismatch class, inside a single
+request path.
