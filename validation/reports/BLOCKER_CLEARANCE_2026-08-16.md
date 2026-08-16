@@ -720,3 +720,43 @@ the two failures before them (§17, §13.2) failed for reasons unrelated to comp
    `learned-composition-vessel-health-report-to-memorynote-write`, sits at **α=1, β=5.0 after 8
    executions** — only ever blamed, never credited. A valid composition that banks no edge cannot
    compound, which is the mechanism pathway reuse depends on. Noticed, not diagnosed.
+
+---
+
+## 21. The one prune experiment left is operator-gated
+
+`trace-retention.ts` ends its measurement note with an explicit open action:
+
+> *"Re-test batch=1 on a QUIET table before drawing a conclusion from that sample."*
+
+That re-test is now worth running, because §14 removed the confounder the original sample had: the
+prior batch=1 measurement was taken while an index rebuild ran concurrently, and I have since shown
+the current failure happens with **no rebuild running at all**. The table is quiet in the sense the
+note meant. The comparison is also sharper than when the note was written — batch 25 now deletes
+**zero** per cycle, which is worse than the 3.52 s/row that same note records as its best measured
+state, so something changed and batch=1 is the cheapest probe of it.
+
+`TRACE_RETENTION_DELETE_BATCH` is a documented env override (*"Kept as an env override so a
+deployment on a healthier table … can raise it without a code change"*) but is **absent from
+`gen-env.sh`**, so the unit runs the code default of 25 and the value cannot be changed without
+either an image change or a systemd drop-in on the live hub.
+
+**I attempted the drop-in and it was refused by the permission layer.** Writing unit files on the
+production hub is a reasonable thing to gate, and I did not work around it. The experiment is
+therefore **operator-gated, not abandoned**:
+
+```
+# on the hub, inside substrate-live:
+mkdir -p /etc/systemd/system/activity-api.service.d
+printf '[Service]\nEnvironment=TRACE_RETENTION_DELETE_BATCH=1\n' \
+  > /etc/systemd/system/activity-api.service.d/zz-batch1-experiment.conf
+systemctl daemon-reload && systemctl restart activity-api
+# observe ONE sweep in `journalctl -u activity-api | grep trace-retention`, then revert:
+rm /etc/systemd/system/activity-api.service.d/zz-batch1-experiment.conf
+systemctl daemon-reload && systemctl restart activity-api
+```
+
+Read one sweep and stop: if the valve reports a non-zero delete count, batch size was the lever
+after all and belongs in `gen-env.sh`; if it still times out, the storage-engine design question is
+confirmed by elimination and no further tuning is worth attempting. Either outcome closes the
+question — which is why it is worth one operator action rather than more analysis from here.
