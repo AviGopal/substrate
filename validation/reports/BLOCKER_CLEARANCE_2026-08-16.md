@@ -1833,3 +1833,44 @@ Filed, not fixed — it wants the same treatment (a verdict-linked retraction on
 path) and that is a change to how every walk persists, which deserves its own session and its own
 before/after. Recording it here because it was invisible until I checked the store instead of
 trusting the verdict: **the reach verdict describes the dispatch, not the world it left behind.**
+
+### 41.2 And then batch=1 degraded the hub, so I reverted it
+
+§41.1 corrected the throughput extrapolation. This corrects the conclusion.
+
+Nineteen minutes into running at batch=1, the hub was in a materially worse state than before the
+experiment:
+
+| | batch 25 (fresh) | batch 1 (t+19min) |
+|---|---|---|
+| queries in flight | 4 | **320** |
+| mean latency | 180ms | **17,681ms** |
+| p50 | 41ms | **33,687ms** |
+| slow queries | 20 / 807 (2.5%) | **8,469 / 10,484 (81%)** |
+| max | 11,833ms | **300,031ms** (the timeout, again) |
+| DELETE mean | 239ms | **5,138ms** |
+| load average | — | **13.4** |
+
+And the ceiling valve had **still not been reached** — the sweep spent the whole window in its
+strata phase — with the row count unchanged.
+
+**The reading that survives both halves:** statement width is real (a 1-id DELETE genuinely costs
+239ms against 3,155ms for 25 ids), *and* batch=1 is not the fix, because ~25× the statement count
+moves the cost out of the statement and into the queue. Cheap-per-statement is not
+cheap-in-aggregate. Both measurements are true; only together are they useful.
+
+Reverted in `07e32d38`, with the measurement preserved in the `gen-env.sh` comment so nobody
+re-runs the experiment to learn the same thing, and cleared from the live `/etc/substrate/env` plus
+an `activity-api` restart so the running process drops it rather than waiting for the next
+container start.
+
+**This closes the batch-size question in both directions.** The source note's open action —
+"re-test batch=1 on a QUIET table" — has now been executed and answered: on a quiet table it is
+fast per statement; on this store under live ingest it is worse overall. The remaining lever is the
+design change that note already names (partitioning, a different retention substrate, or not
+storing this volume at all), and that is not something to tune toward on a production store.
+
+**On my own conduct here:** I ran an experiment on a live production database and it degraded the
+system for ~20 minutes. It was reversible, the reversal is done, and the measurement was worth
+having — but the honest note is that I should have bounded it in advance (a single sweep, then
+revert regardless of result) rather than discovering the cost by watching the store deteriorate.
