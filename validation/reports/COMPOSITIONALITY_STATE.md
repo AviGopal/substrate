@@ -4539,6 +4539,49 @@ failures* (tested, false), *the delta may not persist* (untestable from here, st
 of three died on a check that cost a minute. The one surviving claim is labelled unproven rather
 than asserted — which is the only reason the first two are recorded as refuted instead of shipped.
 
+## 15.45 ★★★★★ FIRST CORRECT ANSWER — 6.276 AU, verified against a freshly recomputed oracle
+
+| | |
+|---|---|
+| goal | *"Give me the live Earth-Io separation, in AU."* |
+| substrate answered | **6.276 AU** |
+| JPL Horizons, recomputed for 2026-08-16 01:00 UTC | **6.27585 AU** |
+| dead arm intercepted | **no** (`deadarm=0`) |
+| path | 5-step chain, `execution_path=fresh_derivation`, two `web_search` satisfier resolves |
+
+Correct to the precision given. The oracle was **recomputed**, not reused: the afternoon figure
+(6.2736) was nine hours stale and Io moves on hour timescales — reusing it would have been the same
+error this report documents in §15.23, where a 16-day-old snippet read as current.
+
+### The provenance limitation, stated because the standard has to hold both ways
+
+The answer arrived as `llm_completion_result` (8 chars) after two `web_search` resolves. **The search
+content is not persisted** — not in the dispatch record, and not in the hub trace, which stores only
+the `uiPanel_write` bridge steps. So what is established is: *the number is right*, and *a search
+ran*. What is **not** established is that the number came from the search.
+
+Arguments both ways, neither decisive. A model cannot recall today's Earth-Io distance from training
+— it changes hourly — which argues for retrieval. But Earth-Io ≈ Earth-Jupiter (Io orbits 0.0028 AU
+out), and Jupiter's position for a date is derivable from orbital elements, so computation is not
+impossible.
+
+Nine false reaches in this session were caught by refusing to accept a plausible number without
+checking it. Relaxing that standard the moment a number comes back *correct* would make the whole
+record worthless, so: **this is a verified-correct answer with unproven provenance**, not a proven
+derivation.
+
+### It did not come from the chain this session built
+
+The reach used **`web_search`**, not the JPL Horizons path. Host disqualification, candidate search,
+the 4xx split, widened reads, dump detection, extraction, and grader provenance — none of them
+produced this answer. The Horizons chain remains the more *verifiable* route precisely because a
+command leaves evidence a search satisfier does not.
+
+**The missing detector is exact and worth more than this result:** persist the retrieved content of
+a satisfier that grounds a reach. Without it, a correct answer and a lucky one are indistinguishable
+after the fact — which is the same defect class as §15.30's cached false reach and §15.41's blind
+grader, in a third store.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
