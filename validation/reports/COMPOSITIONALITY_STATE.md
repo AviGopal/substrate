@@ -4980,6 +4980,88 @@ walk to reach for, not because a gate forbids it but because the walk stopped pr
 changed what the system tried; the gates only changed what it was allowed to keep.** Of the two, the
 first is the one that raises the ceiling.
 
+## 15.50 ★★★★★ EIGHT ATTEMPTS AT ONE GOAL — the failure walked down a list, and instruction lost again
+
+Attempts five through eight, each under distinct wording, each judged against a freshly recomputed
+oracle. **None reached. None fabricated.** The value of the series is that the blocker moved, one
+named parameter at a time, and that two of the three fixes tried along the way can be graded against
+each other.
+
+| # | blocker | evidence |
+|---|---|---|
+| 5 | `http_fetch` 404 | *unknowable* — no request was logged |
+| 6 | `COMMAND='499'` — **Mars**, for a goal about Io | request logging, first use |
+| 7 | `START_TIME` == `STOP_TIME` | *"Bad dates -- start must be earlier than stop"* |
+| 8 | inference regressed to `llm_completion_dispatch` | floor returned `reached=false`, `tools=0/0` |
+
+### The request log paid for itself immediately
+
+Attempt five's 404 was uninterpretable. One commit later the same failure printed:
+
+```
+https://ssd.jpl.nasa.gov/api/horizons.api?format=json&EPHEM_TYPE=VECTORS
+  &CENTER='@399'&COMMAND='499'&START_TIME='2026-08-16'&STOP_TIME='2026-08-16'&VEC_APPN='AU'
+```
+
+**The walk reconstructed a JPL Horizons query with nobody supplying the host** — and asked it about
+Mars. That single line converts "the fetch fails" into three specific, fixable facts: wrong body id,
+degenerate time window, invented parameter. It also settles the older question the earlier Horizons
+near-miss left open: this is not a routing or capability failure, it is a **parameter-contract
+knowledge gap**, and the substrate has a store for exactly that.
+
+### And then the store was not enough — instruction lost, 0 for 10
+
+The contract was written into concept-db as a lesson: Io is `'501'`, `'499'` is Mars and returns a
+*wrong answer rather than an error*, `START_TIME` must be strictly earlier than `STOP_TIME`, plus a
+working example URL. Verified recallable at `"astronomical"` — the exact term the walk searches on.
+
+It changed nothing, and the reason is the point. `walkConceptContext` was consumed at **one** site,
+`goal_target_inference`, so the substrate read its lessons when choosing a *shape* and had forgotten
+them when writing the *request*. Fixed (`c72ee75`) by delivering them to the arg synthesiser too.
+
+Then attempt seven ran with the lesson **retrieved, injected, and explicitly prefaced** *"if one
+states a parameter contract, an id, or a required ordering, FOLLOW IT over your own recollection"* —
+and the builder emitted equal dates anyway.
+
+**That is instruction-at-the-point-of-use failing for the tenth time this session, against six for
+six for evidence supply.** The pattern has now survived a test designed to give instruction its best
+possible case: the right fact, in the right words, in the right prompt, at the right moment. It still
+lost. A supplied fact cannot compose wrongly; a stated rule can always be outvoted by what the model
+already believes.
+
+So the closing move was evidence-shaped instead (`ad61ae6`). The arg-correction loop only ran when
+the *envelope* declared failure, and Horizons answers **HTTP 200 with `{"error": "Bad dates …"}` in
+the body** — so a correction round never ran, on any of the three hollow verdicts that quoted that
+error verbatim. A service's own machine-readable error now routes the request back for correction,
+carrying the refusal and the URL that earned it. Verified to fire on the real body and on none of six
+that must pass, including the NOAA and GitHub payloads from the clean derivations.
+
+### Two fixes confirmed non-inert on live traffic
+
+Worth recording separately, because six of my fixes in this fleet have been inert on arrival and a
+passing test would not have caught any of them:
+
+```
+walk: retry WIDENED target shapes to [shellResult,httpResponse,webSearchResult] —
+  "http_fetch" was the only expected output and its producer is now suppressed
+```
+
+That is the exact path that previously dead-ended into the fabricating floor, now widening and
+picking a retrieval shape instead. And the fabrication gate held on attempt eight: inference
+regressed to `llm_completion_dispatch` with zero alternatives, the floor ran with `tools=0/0`, and it
+returned **`reached=false`** rather than a confident number.
+
+### What is actually left
+
+One parameter. The walk finds the right service, builds a structurally sound query, and cannot yet
+get the time window right without being handed the service's complaint. Everything else in the chain
+— recall, shape inference, retrieval preference, honesty on failure — now works, and the same
+machinery already derives GitHub stars, a NOAA tide, an FX rate and a moon's radius correctly.
+
+**Reach is still not achieved on this goal.** But the class of failure that made the earlier reaches
+worthless is gone: across attempts four through eight, thirteen sub-attempts, the system did not once
+offer a number it had not retrieved.
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
