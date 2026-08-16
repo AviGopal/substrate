@@ -657,3 +657,66 @@ nobody read it.
 The fix is to put policy files on the volume *outside* any git work tree and point `WORKSPACE_ROOT`
 — or a dedicated `POLICY_ROOT` — at that path. That is a deployment change, not a code change, and
 it is the fourth item on the carried-forward list.
+
+---
+
+## 20. Closing state, per the goal's five clauses
+
+### Fixes made — with live-verification status, not just "landed"
+
+| fix | commit | status |
+|---|---|---|
+| Counterfeit Beta draw → real Marsaglia-Tsang sample | `d69a4ad` | **LIVE, verified** — mirrored 12:47:44, unit restarted same second |
+| Retirement on posterior evidence, from the real ingest route | `e2d7077`+`1d83bf5` | **DEPLOYED, UNPROVEN LIVE** — code in the running tree; acceptance test inconclusive (§12) |
+| `walkBudget` + `lessonExecutionPolicy` producers | `f87f52f` | **BUILT AND CORRECT; storage erased under them** (§19) |
+| Health-report refuses an assumed subject | `1170047` | **LIVE, verified by rung 2c** (§17) |
+| Retention defers while `REBUILD INDEX` holds the store | `d253457` | **LIVE — but NOT the prune fix; hypothesis retracted** (§14) |
+| Durable tombstone for the reached-command library | `f9057a1` | **PUSHED, DEPLOY PENDING** — not yet mirrored at time of writing |
+
+Two notes so nobody over-reads these. **Retirement will not clear the existing backlog by design**:
+the sampler fix stops blamed arms being selected, so they stop earning fresh failures, so trickle
+retirement rarely touches them — they are neutralised by the draw instead. Zero retired rows next
+week is the expected outcome, not evidence of failure. And **the tombstone is event-driven, not
+retroactive**: rung 2a's poisoned entry evicts only when that goal re-runs and grades false. The
+JSONL will not shrink on its own.
+
+**The sampler's live consequence, measured.** `learned-satisfier-memorynote-write` — the arm the
+ladder's terminal step runs on — sits at α=2.73, β=43.40, **posterior mean 0.0592** over 181
+executions. Under the shipped expression an arm at that posterior cleared `producer-pick`'s `> 0.5`
+reuse gate roughly 85% of the time; under a real Beta it clears ~0%. That is the fix's effect on
+live selection. I did **not** capture that arm's α before rung 3, so I cannot attribute today's
+credit increment to it specifically, and I am not claiming to.
+
+### Code reviewed for architecture violations
+Eight filed with evidence (§16), four fixed. Plus §19: the shaped-policy storage sits inside a git
+work tree, which is a violation the checklist does not currently name.
+
+### Prune — attempted through the sanctioned mechanism, still blocked
+Never a policy question: `TRACE_RETENTION_ENABLED=true`, `DRY_RUN=false` all along. 447k rows
+against a 150k ceiling, zero deleted per cycle. My phase-lock explanation was **refuted by its own
+first test** (§14). The original source comment's conclusion stands: a storage-engine design
+question — partitioning, a different retention substrate, or not storing this volume — not
+something tunable from here. **This is the one blocker I could not clear.**
+
+### Ladder — demonstrated at rungs 2c and 3
+Graded table in §18. Right subject, right substance, durable, attributable, genuinely composed; the
+four-shape run derived a shape unprompted and earned credit. **Two clean runs is not a rate**, and
+the two failures before them (§17, §13.2) failed for reasons unrelated to composition.
+
+### Carried forward — each needs a decision no session can make
+1. **PAT rotation** — a credential only a human can mint.
+2. **`POLICY_ROOT` outside the git work tree** (§19). **Do not re-seed the policy files until this
+   moves** — they will be erased again, and every "verified live" claim about shaped policy on this
+   deployment has a TTL of one convergence cycle. My `walkBudget SHAPED iters=6 calls=12` proof at
+   13:14:01 was real and is already gone.
+3. **Trace-store design change** — the prune blocker above.
+4. **Retirement acceptance test** with a trace carrying the arm's real org *and* a reach verdict.
+5. **`POST /v2/activities/feedback` is unreachable** with the documented API key (§10), so step 4 of
+   the canonical loop has no working path from `~/.metabob/config.json`.
+6. **The split ingest write** (§12) — `total_executions` moved while α/β did not, logged at WARN
+   with no consumer.
+7. **Edge banking.** `WITHHELD alpha-credit — no in-chain producer-to-consumer edge` fires even on
+   valid compositions (rung 2c), and the composition arm for exactly that pattern,
+   `learned-composition-vessel-health-report-to-memorynote-write`, sits at **α=1, β=5.0 after 8
+   executions** — only ever blamed, never credited. A valid composition that banks no edge cannot
+   compound, which is the mechanism pathway reuse depends on. Noticed, not diagnosed.
