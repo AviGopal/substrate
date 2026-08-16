@@ -1874,3 +1874,93 @@ storing this volume at all), and that is not something to tune toward on a produ
 system for ~20 minutes. It was reversible, the reversal is done, and the measurement was worth
 having — but the honest note is that I should have bounded it in advance (a single sweep, then
 revert regardless of result) rather than discovering the cost by watching the store deteriorate.
+
+---
+
+## 43. The generalization test: the floor holds, the ceiling is inert, and the reason is a domain fact
+
+Io reached exactly (§40). The follow-up asks the question that actually matters: does a *second*
+goal of the same class **reuse** what the first learned, or re-derive it?
+
+**Test:** "distance from Earth to **Europa** right now, in AU" — one token different from the Io
+goal, against an oracle captured before dispatch (`6.26699189304474` at 22:00 UTC).
+
+**Result: reached, exact to fifteen digits, one step, first attempt.** And *re-derived from
+scratch*, not reused.
+
+### Where the reuse attempt actually died
+
+The rebind machinery ran and refused, and the tally names the gate:
+
+```
+[rebind] NO ADAPTATION for "shellResult" — cache=757 same-shape-candidates=695
+   refusals: scaffold-too-weak(…)×~600, slot-gate-rejected×88, shape-mismatch×61
+```
+
+Two of my own hypotheses died on the way to the answer, both worth recording:
+
+1. **"The shape gate rejected it"** — false. Rebind *was* called for `shellResult` (the shape both
+   Horizons donors carry), and reuse demonstrably works elsewhere in the same dispatch:
+   `REUSED verified command for "orphaned_capability_scan"`.
+2. **"The scaffold ratio is too strict"** — false, and I nearly lowered a threshold on it. Computing
+   the actual LCS for the Io/Europa goal pair: **0.87**, far above the 0.15 gate. Those ~600
+   scaffold refusals were *other* donors. The threshold has already been lowered twice (0.5 → 0.25
+   → 0.15) and is not the defect.
+
+The Io donor died at **`slot-gate-rejected`**, and the gate is *right to refuse*:
+
+```
+goal:   "...distance from Earth to Io right now, in astronomical units?"
+donor:  curl "...horizons.api?...&COMMAND=501&...&START_TIME=$(date -u +%Y-%m-%dT%H):00..."
+
+occurrences of "Io" in the donor command: 0
+occurrences of "501":                     1
+```
+
+The varying slot is `Io`→`Europa`. The literal gate requires the slot's content to appear **exactly
+once** in the donor command so a substitution can be verified. "Io" appears **zero** times — the
+command says `501`. There is no text alignment that could carry the swap, and guessing would be
+exactly the confabulation every other gate exists to prevent.
+
+**So the blocker is not retrieval, not similarity, and not a threshold. It is a missing domain
+fact: `Io→501`, `Europa→502`.** That is law 8 precisely — the load-bearing fact is not available at
+the point of use, and the symptom looks like a reasoning failure.
+
+### And the channel that should carry that fact is serving the wrong meaning
+
+The walk logged `consulted concept-db via discovery: 1 concept(s) recalled`. That reads like the
+lesson channel working. It was not:
+
+```
+{"concept_name":"multi_step_resolver_flow","label":"(no dominant pattern found)",
+ "description":"No dominant recurring pattern found in recent successful traces.",
+ "occurrence_count":0,"trace_count_analyzed":0}
+```
+
+The "1 concept" is **development-vessel's trace-pattern-mining stub with zero domain content**. The
+hub's concept-db — the prose store that would hold a NAIF-id mapping — returns `count: 0` for both
+`"astronomical distance earth"` and `"horizons COMMAND naif id moon"`. Nothing about ephemeris
+targets exists in it.
+
+This is the overloaded-`concept`-shape defect (§16 row 5) shown to be **load-bearing on the
+ceiling**, not cosmetic: discovery routes `concept` to whichever producer answers, the walk gets a
+trace-mining stub, logs "1 concept recalled", and proceeds as though it consulted the knowledge
+base. A recall that returns the wrong *kind* of answer is indistinguishable from one that worked.
+
+### What this makes measurable
+
+Against the CLAUDE.md contract:
+
+| tier | expectation | observed |
+|---|---|---|
+| **Floor** | ReAct parity — reach by walking | ✅ reached, exact, 1 step |
+| **Middle** | adapt the entry, walk the difference | ❌ re-derived; slot gate correctly refused |
+| **Ceiling** | run the learned pathway by earned posterior | ❌ `WITHHELD alpha-credit` on both runs |
+
+Two dispatches of one goal class produced **two isolated cache entries** (`COMMAND=501` and
+`COMMAND=502`, separate hashes) and **zero posterior**. A third would re-derive again.
+
+**The target is now concrete and testable:** seed the NAIF mapping as a concept in the store the
+walk actually reads, then re-run the Europa goal and check whether the tally moves from
+`slot-gate-rejected` to a reuse. That is a measurable generalization test with a pass/fail, not an
+argument.
