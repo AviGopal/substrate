@@ -264,7 +264,7 @@
     },
     {
       "unit": "spectral-gap.timer",
-      "role": "infra"
+      "role": "store"
     },
     {
       "unit": "autonomy-metrics.timer",
@@ -297,11 +297,11 @@
     {
       "_comment": "Below: 28 units that shipped in the image but were absent from this file, so apply-inventory could not disable them in ANY role — a UI-only container ran three LLM resolvers because of exactly this. Naming them here is what makes a role or profile mean something. Timer+service pairs list both: the service is what a stray `systemctl start` reaches.",
       "unit": "coherence-metric.timer",
-      "role": "infra"
+      "role": "store"
     },
-    { "unit": "coherence-metric.service", "role": "infra" },
-    { "unit": "coherence-recover.timer", "role": "infra" },
-    { "unit": "coherence-recover.service", "role": "infra" },
+    { "unit": "coherence-metric.service", "role": "store" },
+    { "unit": "coherence-recover.timer", "role": "store" },
+    { "unit": "coherence-recover.service", "role": "store" },
     { "unit": "compose-teacher.timer", "role": "autonomy" },
     { "unit": "compose-teacher.service", "role": "autonomy" },
     { "unit": "efficiency-failure-tick.timer", "role": "autonomy" },
@@ -346,7 +346,7 @@
     { "unit": "self-operational-health.service", "role": "infra" },
     { "unit": "self-recovery.service", "role": "infra" },
     { "unit": "self-repair-operational.service", "role": "infra" },
-    { "unit": "spectral-gap.service", "role": "infra" },
+    { "unit": "spectral-gap.service", "role": "store" },
     { "unit": "substrate-pull-sync.service", "role": "infra" },
     { "unit": "surgical-gap-scan.service", "role": "autonomy" }
   ]
