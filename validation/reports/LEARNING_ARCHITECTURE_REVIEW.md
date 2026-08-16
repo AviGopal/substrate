@@ -9,6 +9,11 @@ observed firing. Where a claim rests on a comment in source rather than a measur
 
 ## 0. The one-sentence finding
 
+> **SUPERSEDED 2026-08-16 by live measurement against the hub — see §10.** The headline below
+> is wrong in its mechanism and right in its consequence. Blame *does* land in the table
+> (78 of 91 sampled arms carry `thompson_beta > 1`, one at 113.59). It is annihilated one layer
+> later, at the draw, by a counterfeit Beta sampler. Read §10 before relying on anything in §0–§3.
+
 **The positive half of the learning loop is intact end to end; the negative half is severed for
 precisely the arm classes the walk actually picks.** The substrate can raise its estimate of an
 option and has no working path to lower it. Every other mechanism — decay, exploration bonuses,
@@ -342,3 +347,69 @@ question — what activity would detect this class without me — and the answer
   proper origin of every activity.
 - `metadata.goalSignature: "null"` (the four-character string) was observed on a real mint and not
   chased.
+
+---
+
+## 10. Addendum — the first live measurement, and what it overturns
+
+Everything in §0–§9 was static. This section is measured against the running hub
+(`http://syzygy.host:18080`, `GET /v2/activities/templates?limit=100`, the route's own cap).
+It overturns the report's headline mechanism and confirms its consequence by a different route.
+
+### 10.1 Three of my own claims, retracted
+
+- **"Blame never lands."** False. 78 of 91 sampled arms carry `thompson_beta > 1`; 33 carry
+  `thompson_alpha > 1`; only 13 remain exactly Beta(1,1). `auto-bridge-code_modification_proposal`
+  sits at α=1, β=113.59 after 395 executions. The stratified-delta path writes, and writes hard.
+- **"Hub disk is 99% full."** Never measured, and false: 42G of 619G, 7%, 578G free.
+- **"The pointer-bump workflow is dead on an expired PAT."** Not on the hub. `git ls-remote origin dev`
+  authenticates, and the hub clone HEAD equals `origin/dev` equals the super-repo submodule pointer.
+
+A fourth retraction is procedural: my first aggregation this session keyed on `successes` /
+`success_count`, which **do not exist** on the metrics object. The resulting "every arm has zero
+successes" was an artifact of my own query, not a property of the system.
+
+### 10.2 The actual mechanism: blame is annihilated at the draw
+
+`goal-host-vessel/src/index.ts:5636` computes the Thompson fallback as
+
+```ts
+(Math.random() ** (1 / alpha)) / (Math.random() ** (1 / beta))
+```
+
+This is not a Beta variate. As β grows, `Math.random() ** (1/β) → 1`, so the denominator — the
+entire blame term — drops out, and the draw collapses to approximately `Math.random() ** (1/α)`:
+**increasing in credit, blind to failure.** Measured against the arms' own posteriors
+(200,000 draws each):
+
+| arm | α | β | posterior mean | P(draw > 0.5), shipped | P(draw > 0.5), true Beta |
+|---|---|---|---|---|---|
+| `learned-auto-bridge-shellresult` | 8.95 | 53.96 | 0.142 | **99.8%** | 0.00% |
+| `learned-satisfier-http-response` | 3.17 | 30.20 | 0.095 | **89.9%** | 0.00% |
+| `auto-bridge-code_modification_proposal` | 1.00 | 113.59 | 0.0087 | **50.4%** | 0.00% |
+
+The consumer is `producer-pick.ts:34`: `sampledScore > 0.5` promotes a learned scaffold to rank −1,
+**ahead of fresh derivation**. So the more an arm has failed, the more reliably it is preferred over
+deriving anew — the exact inversion of "reuse before mint" that law 3 assumes. The report's
+consequence ("every downstream mechanism operates on a signal that does not fall") holds. Its stated
+cause did not.
+
+### 10.3 Confirmed by measurement, not by comment
+
+- **Retirement never fires.** `retired: true` on 0 of 100 rows; no row carries `retired_reason`.
+  An arm at posterior mean 0.0087 with 395 executions is still live. §3's finding stands, now
+  empirically: `checkAndRetireTemplate`'s only call site is a route the fleet never posts to.
+- **`total_selections` reads 0 on all 100 rows** while a writer exists at `activities.ts:6930`
+  (the `/recommend` path). New instance of the report's half-wired class — and it means these arms
+  are not being chosen through the official selection path at all; they are chosen in goal-host by
+  the sampler above.
+- **Two counters on one row contradict each other.** `learned-satisfier-shell`: 25 executions,
+  `success_rate` = 1, α=1, β=27.83 (mean 0.035). `failed_executions` is *absent* on all 31 rows whose
+  `success_rate` reads 1, so `success_rate` appears to default to 1 when the failure counter is
+  missing. It is not a trustworthy success signal, and it disagrees with the posterior on the same row.
+
+### 10.4 Caveat on the sample
+
+`limit` is capped at 100 server-side and the ordering was not established, so `78/91`,
+`13/91` and `0/100 retired` describe the returned page, not the full population. The sampler
+result does not depend on the sample: it is a property of the expression at any (α, β).
