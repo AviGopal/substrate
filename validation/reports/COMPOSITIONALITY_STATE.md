@@ -5182,6 +5182,78 @@ That is a *budget* observation, not a capability one, and it is the first honest
 actually blocks this goal: **three corrections is enough to fix one mistake and not enough to fix
 three.** It is also testable, which the model-tier story was not until it was tested.
 
+## 15.53 ★★★★★ THE SELF-OBSERVATION LAYER RAN NOWHERE — role `autonomy` is in no deployed role group
+
+Asked to make capability improvement observable over time, the first finding was that it could not
+be: the streams that would show it had been dark for 15 days (`autonomy-metrics.jsonl`, 21338m
+stale) and 3 days (`spectral-gap.jsonl`, 4528m stale), and nothing reported that, because the
+detector that would report it was itself not running.
+
+### The cause is a role taxonomy that only works standalone
+
+```
+full : [store, control, api, compute, ui, transport, seed, infra, autonomy]
+hub  : [store, control, api, transport, seed, infra, registry]
+spoke: [compute, ui, seed, infra, registry]
+```
+
+**`autonomy` appears only in `full`.** Federate a standalone substrate into hub + spoke and all 42
+units carrying that role — measurement, self-health, self-repair, gap-compose, goal generation —
+land on **no machine at all**. Each side's masking is individually correct; the union covers
+everything except this. `apply-inventory` was working exactly as designed, and the deployment lost
+its ability to watch itself the moment it federated.
+
+This is a class worth naming: **a partition of roles can be complete on each side and still lose a
+member.** Nothing checks that the deployed role groups cover the role vocabulary.
+
+### The fix follows existing precedent rather than inventing one
+
+`substrate-pull-sync` and `self-recovery` — code self-update and unit self-repair — are already
+`role: infra`, which both hub and spoke include. That is the established statement that *every
+container maintains itself*. Eight families were moved to join them (`6d9e611d`):
+autonomy-metrics, spectral-gap, self-development-trend, self-operational-health, coherence-metric,
+coherence-recover, self-repair-operational, model-reality-audit.
+
+Development proper — `gap-compose`, `operator-goal-generator`, `m1-trainer`, `compose-teacher`,
+`surgical-gap-scan` and the rest — stays `autonomy` and remains deliberately unassigned: placement is
+a credentials-and-capacity decision, not a default. Both containers were verified to hold valid
+GitHub credentials (`github auth: 200` on each), so credentials do not decide it.
+
+### Measured result
+
+Applied on both containers, timers started and confirmed scheduled. Streams that did not exist began
+writing within minutes, and the first baseline is:
+
+| metric | value |
+|---|---|
+| `reach_cum` | **0.1216** (2100 reached / 17263 attempts) |
+| `reach_6h` | **0.0235** |
+| composition edges | 2029, orphan parent rate 0.482 |
+| activities / templates | 3779 / 2283 |
+| self-alteration landed | 1, with 103 open proposals, 0 cutovers in 24h |
+
+That is the number to watch. It is also uncomfortable — a 2.35% six-hour reach rate against a stated
+expectation of ~90% — and it should be, because until today nothing computed it.
+
+### Two corrections to my own work in the same pass
+
+- I unmasked and ran `self-operational-health` on the spoke *before* checking role ownership. It runs
+  with `EMIT_GAPS=1` and wrote four gaps that are false on a spoke — it reported the hub's collectors
+  missing and its own correctly-masked timer as inactive. Re-masked, all four withdrawn, store
+  returned to its prior count.
+- `concept-db` belongs on the hub. Moving it there broke recall on the spoke until the federated
+  route took over; the route works (libp2p egress, HTTP 200 in 2.0s) and now serves recall, but the
+  two Horizons lessons had to be migrated because **the knowledge lived in the spoke's database, not
+  the vessel's new home** — law 11 in miniature, and a thing to plan for whenever a vessel moves.
+
+### The silence that made all of it expensive
+
+`recallConceptRows` returned a bare `null` on every failure, and the caller printed one sentence —
+*"concept-db could not be asked (no producer or transport error)"* — for three different causes: a
+slow vessel, an absent vessel, and a federated route that resolved but refused. Diagnosing a dark
+recall meant reproducing the call by hand. It now reports SKIPPED / REFUSED (with status and body) /
+FAILED (with exception class and budget), each carrying the URL actually used (`4afc7ac`).
+
 ## 16. Summary
 
 **Grading works; edge accumulation does not.** Per-cell posteriors are fully written back
