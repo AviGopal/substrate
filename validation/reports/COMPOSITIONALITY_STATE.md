@@ -4769,6 +4769,55 @@ part succeeded and a one-flag mechanical detail threw it away.** The body-recove
 precisely for this and did not fire on a jq parse error. Two of the batch's near-misses are now this
 shape, which makes it a class rather than an incident.
 
+### Law 8's channel was dark for a reason no one had measured, and closing it changed the walk
+
+Every walk in this session logged `[walk-concepts] concept-db could not be asked (no producer or
+transport error) — recall unavailable`. The vessel was healthy the whole time.
+
+Three wrong explanations died on the way to the real one, each to one command:
+
+1. **"concept-db is down."** Its `/health` returned an empty reply after 8–12 s — but it was
+   *masked while running* and its searches were logging normally. Unmasking and restarting took
+   health to 200 in 55 ms. Recall stayed dark.
+2. **"discovery isn't advertising it."** Discovery advertised `concept-db-local` at
+   `http://127.0.0.1:8260/v2/impulses/resolve`, `protocol: http`, freshly seen, and the resolution
+   code correctly prefers exactly that row over the libp2p egress.
+3. **"the dense-embedding fix didn't deploy."** It did, and it worked: the log says
+   `dense leg returned nothing within its budget {budget_ms: 2000}` on every search.
+
+Reproducing the walk's exact call gave the answer: **HTTP 200 in 11.97 s**, against a 10 s abort in
+`recallConceptRows`. concept-db was never unreachable — it was **late**, and the walk's message
+conflates the two. "Could not be asked (no producer or transport error)" reads as an absent vessel;
+it also fires on a slow one, and that conflation is what hid this for two days in a codebase whose
+own comment three lines up insists that `null` and `[]` "are different facts."
+
+The cause is that **`Promise.race` bounds the wait, not the work.** The dense budget resolves early
+and leaves `searchConceptsByDense` running, so its in-process ONNX embedding keeps burning CPU —
+competing with the FTS queries in the lexical ladder, which are the leg that actually answers. And in
+every logged case the lexical ladder *had* hits (3, 2, 1). Dense was not merely late; it was
+unnecessary work slowing down the thing that was succeeding.
+
+Starting the dense leg lazily — only when lexical finds nothing — took a resolve from **11.97 s to
+6.0–8.9 s**, inside the caller's budget (`dee1f90`). The next dispatch logged, for the first time in
+this session:
+
+```
+[walk-concepts] consulted concept-db via discovery: 2 concept(s) recalled at 1 term(s) "astronomical"
+```
+
+**And the walk immediately reasoned differently.** On the same goal, across three phrasings:
+
+| recall state | inferred target shapes | confidence |
+|---|---|---|
+| dark | `llm_completion_dispatch` | 0.7 → fabricated 4.2 AU |
+| dark | `[]` | 0.0 → terminated, no pick |
+| **live** | **`http_fetch`, `uiPanel_write`** (alts incl. `shellResult`) | **0.8** |
+
+`http_fetch` is the shape that can actually reach an ephemeris service. This is law 8 stated as a
+measurement rather than a principle: the same goal, the same code, and the load-bearing fact
+available at the moment of use — and the walk stops guessing at a completion shape and starts
+choosing a retrieval one.
+
 ### The deploy channel had been dead-locked, and only a stuck deploy revealed it
 
 Found because two goal-host fixes would not deploy. `substrate-pull-sync` closes admission and waits
