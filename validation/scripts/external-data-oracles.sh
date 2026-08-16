@@ -32,8 +32,14 @@ say "G2  Reykjavik air temperature (C) — Open-Meteo"
 say "G3  Most recent earthquake magnitude — USGS"
 "${RUN[@]}" 'curl -s -m 20 "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&orderby=time&limit=1" | grep -oE "\"mag\":[0-9.]+|\"place\":\"[^\"]{0,50}" | head -2'
 
-say "G4  ISS position (lat, lon) — Open Notify   [changes every second]"
-"${RUN[@]}" 'curl -s -m 20 "http://api.open-notify.org/iss-now.json"'
+say "G4  ISS position (lat, lon) — wheretheiss.at   [changes every second]"
+# NOT open-notify. It was the original oracle here and it is WRONG: at one instant it reported a
+# position 157 degrees of longitude from the truth, while moving at a plausible 7.4 km/s, so it
+# looks healthy and self-consistent and is simply somewhere else. Arbitrated by propagating the
+# published TLE with SGP4: wheretheiss.at agreed to 0.2 deg of latitude and 0.8 deg of longitude,
+# open-notify did not. An oracle that disagrees with a peer source is not an oracle until something
+# independent breaks the tie — check against a TLE before trusting either.
+"${RUN[@]}" 'curl -s -m 20 "https://api.wheretheiss.at/v1/satellites/25544" | grep -oE "\"latitude\":[-0-9.]+|\"longitude\":[-0-9.]+"'
 
 say "G5  USD->EUR — Frankfurter   [note the date field: may be older than today]"
 "${RUN[@]}" 'curl -sL -m 20 "https://api.frankfurter.app/latest?from=USD&to=EUR"'

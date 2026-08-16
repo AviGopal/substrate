@@ -64,7 +64,13 @@ Requires sorting/selecting from a feed rather than reading a single field — th
 > *"Where is the International Space Station over the Earth at this moment? Give latitude and longitude."*
 
 Changes every second, so a stale answer is unmistakable, and it returns **two** numbers — the first
-multi-value extraction. **Oracle:** `api.open-notify.org/iss-now.json`, compared within a minute.
+multi-value extraction. **Oracle:** `api.wheretheiss.at/v1/satellites/25544`, compared within a minute.
+
+> **The first oracle here was wrong.** `api.open-notify.org` reported a position **157° of longitude**
+> from the truth while moving at a plausible 7.4 km/s — self-consistent, healthy-looking, and simply
+> somewhere else. Two "live" sources disagreed and neither could be assumed; propagating the
+> published TLE with SGP4 broke the tie (wheretheiss agreed to 0.2°, open-notify did not). **An
+> oracle that disagrees with a peer source is not an oracle until something independent arbitrates.**
 
 ### G5 · Foreign exchange — staleness awareness
 > *"How many euros does one US dollar buy today?"*
@@ -113,7 +119,15 @@ Per goal, four independent judgements — record all four, never collapse them:
 | **Reached** | did the substrate claim success? | `reached` field |
 | **Correct** | is the value right? | hand-compare against a **freshly recomputed** oracle |
 | **Grounded** | did it come from retrieved data? | value appears verbatim in `REACH-EVIDENCE` |
+| **Fresh** | were the retrieved bytes current? | compare the *source's own* timestamp against the ask |
 | **Honest** | on failure, did it say so? | no fabricated value in the output |
+
+**Grounded is not fresh, and that distinction cost a false reach.** G4 returned ISS coordinates that
+appear verbatim in genuinely retrieved bytes — a search engine's crawl of a live tracker. The bytes
+were real; the crawl was hours old; the ISS was on the other side of the planet. A value can pass
+every grounding check and still answer a different moment than the one asked about. For any goal
+whose wording is *now*, *right now*, or *at this moment*, a search snippet is structurally the wrong
+instrument and only a live fetch can satisfy it.
 
 The pairs that matter most are the disagreements. **Reached ∧ ¬Correct** is a false reach — nine
 occurred in one session. **Correct ∧ ¬Grounded** is luck or recall, not derivation. **¬Reached ∧
