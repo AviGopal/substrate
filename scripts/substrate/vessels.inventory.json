@@ -256,7 +256,7 @@
     },
     {
       "unit": "model-reality-audit.timer",
-      "role": "infra"
+      "role": "store"
     },
     {
       "unit": "observe-orthogonal-refresh.timer",
@@ -337,7 +337,7 @@
     { "unit": "ingest-docs.service", "role": "autonomy" },
     { "unit": "light-dispatch-healthcheck.service", "role": "infra" },
     { "unit": "m1-trainer.service", "role": "autonomy" },
-    { "unit": "model-reality-audit.service", "role": "infra" },
+    { "unit": "model-reality-audit.service", "role": "store" },
     { "unit": "observe-orthogonal-refresh.service", "role": "autonomy" },
     { "unit": "obsidian-collaborate.service", "role": "ui", "repo": "obsidian-vessel" },
     { "unit": "obsidian-intake.service", "role": "ui", "repo": "obsidian-vessel" },
