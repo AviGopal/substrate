@@ -1421,3 +1421,46 @@ double quotes bash expands `$$` to its pid, so a literal `$$SOE` silently matche
 command exits 0 empty). That repair exists because this exact query burned a 3-attempt budget once
 before. The machinery for this goal class is all present; it was the fetch capability underneath
 that was fake.
+
+---
+
+## 35. The fetch capability, verified live through the substrate's own shape
+
+`development-vessel` restarted 20:36:22 carrying both fixes. Asking the vessel directly, which is
+the consumer's own path:
+
+**Unbound url — refuses instead of assuming:**
+```json
+{"shape":"http_response","body":{"ok":false,
+ "error":"url is required — refusing to fetch an assumed address", ...}}
+```
+
+**A real ephemeris query — fetches, trust-tagged:**
+```json
+{"trust":"external-evidence","ok":true,"domain":"ssd.jpl.nasa.gov","bytes":5238}
+content contains: 6.27567194257039
+```
+
+That value matches the ground truth captured independently in §34 to every digit. **The fetch that
+45 prior attempts could not make now works**, through a shape that refuses an unbound argument and
+tags its output as evidence rather than state.
+
+Both halves matter. Before today the same shape returned httpbin's 404 title for any input — a
+well-formed answer to a question nobody asked, which no gate could catch. Now it either fetches
+what was asked for or says why it will not.
+
+### The first Io dispatch, on pre-fix code, failed honestly
+
+Dispatched before the fixes landed (`622bd966`):
+
+```
+walk: no pick — missing shapes [llm_completion_dispatch] have no producer or constructible payload
+/run-goal: no fresh approach after 1 attempts — honest failure
+FINAL: failed | reached: false
+```
+
+No fabricated AU figure, no hollow reach — it inferred `llm_completion_dispatch` ("ask a model"),
+could not construct it, and stopped. Worth recording because the historical pattern for this goal
+class was a confident wrong number: the source comment measures the no-oracle regime at 20/20
+reached and 0/20 correct. An honest failure is the strictly better failure, and it is what the
+session's honesty fixes are for.
