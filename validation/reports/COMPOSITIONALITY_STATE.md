@@ -5578,6 +5578,21 @@ dispatches, and the answer is yes.
 **Not established:** that it returns the range for *now*. The remaining defect is a stale learned arm,
 not a missing capability — a different and much smaller claim than "the goal is out of reach".
 
+### CORRECTION: the judge was right, and its reason was merely imprecise
+
+§15.59 floated that this might be "a correct answer rejected on presentation". Checked, and it is
+not. The reach judge receives the full fetching command as provenance —
+
+```
+cmdEvidence="- shellResult was produced by RUNNING: `curl -s 'https://ssd.jpl.nasa.gov/api/…'`
+```
+
+— so on that dispatch it held both the value `6.27607851061937` and the command showing
+`START_TIME=…05:00`. The goal asked for the range NOW. **Rejecting it was correct.** The stated
+reason (missing labelling) was imprecise, but the verdict was right, and there is no judge defect to
+fix here. Recording this because the opposite reading would have justified loosening a gate that was
+working — the most expensive kind of mistake available in this codebase.
+
 **And it was invisible until the logging landed.** For 39 dispatches the same verdict read only as
 "the output provides a numerical value but lacks contextual description", with the value recorded
 nowhere — not in the journal, not in the persisted trace. The capability had very likely been present
