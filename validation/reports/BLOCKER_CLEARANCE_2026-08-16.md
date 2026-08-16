@@ -1964,3 +1964,71 @@ Two dispatches of one goal class produced **two isolated cache entries** (`COMMA
 walk actually reads, then re-run the Europa goal and check whether the tally moves from
 `slot-gate-rejected` to a reuse. That is a measurable generalization test with a pass/fail, not an
 argument.
+
+---
+
+## 44. Third body: a FALSE REACH, and the clearest evidence yet for oracles
+
+Ganymede, dispatched after seeding the NAIF concept, against an oracle captured first
+(`6.26429020392091` AU at 22:00 UTC).
+
+**`reached: true`. The answer is wrong, and no AU value appears in the trace at all.**
+
+```
+goal-target inference {"inferred_target_shapes":["web_search"],"confidence":0.9,
+                       "alternatives":[["shellResult"],["llm_completion"]]}
+VESSEL-RESOLVE SATISFIER produced "web_search" directly
+REACHED via 1-step chain
+REASON: "The web search successfully found information regarding the current distance between
+         Earth and Ganymede in astronomical units, with the first result directly answering the query."
+```
+
+What the "first result directly answering the query" actually contained:
+
+> *"…on average, Ganymede is approximately 1.49e+8 km (**0.993 AU**) away from Earth."*
+> — galaxycalc.com
+
+**0.993 AU against a true 6.264 AU — off by 6.3×, and physically impossible.** Ganymede orbits
+Jupiter at ~5.2 AU from the Sun; it can never be 1 AU from Earth. The page appears to have printed
+the Earth–Sun distance. A content farm, accepted as an answer, with a judge writing a confident
+sentence about it.
+
+### Why this run failed where Io and Europa succeeded
+
+Same goal class, same phrasing, third body — and **target inference chose a different shape**:
+
+| dispatch | inferred target | outcome |
+|---|---|---|
+| Io | `shellResult` @0.9 | ✅ exact to 15 digits |
+| Europa | `shellResult` @0.95 | ✅ exact to 15 digits |
+| Ganymede | **`web_search` @0.9** | ❌ false reach, 6.3× wrong |
+
+`shellResult` was present in the alternatives and not chosen. So the class is **not reliably
+routed** — the inference is unstable across bodies of the identical question, and when it picks
+`web_search` the goal is lost before the walk begins. That is the same *shape* of defect as the
+prose-route misclassification fixed earlier (§36): a classifier deciding the goal's fate ahead of
+any walking, and being wrong.
+
+### The oracle point, made concretely
+
+Io and Europa were graded exactly because I captured Horizons values before dispatching. Ganymede
+was graded `reached: true` by an LLM judge reading a plausible sentence. **The judge cannot tell
+0.993 from 6.264** — nothing in the substrate can, because no oracle exists for an AU figure.
+
+This is the measured instance of the regime the source comment records at **20/20 reached, 0/20
+correct**. Every deterministic catch this session (rate E's `8090`, the post-restart `127`) came
+from a registry query that could be independently re-run. There is no equivalent for an ephemeris.
+
+**So "validate correctness" has a concrete answer for this class:** a `web_search` result answering
+a *live measurement* question should be refused the way an unbound `vessel_id` now is — the
+resolver knows it cannot supply a time-varying quantity. And a deterministic checker for this
+family is buildable: re-issue the Horizons query and compare, exactly as `deterministic:verified-registry-count`
+re-queries the registry.
+
+### The seeded concept did not reach this dispatch
+
+The NAIF mapping was written to concept-db before this run and is retrievable by single terms
+(`ganymede` → 1 hit, `horizons` → 1 hit) but **not by the walk's own multi-term phrasing**
+(`astronomical distance ganymede` → 0 hits). The search is conjunctive; the walk sends three terms.
+So the fact was in the store and unreachable at the point of use — law 8 again, one layer further
+in than §43.
