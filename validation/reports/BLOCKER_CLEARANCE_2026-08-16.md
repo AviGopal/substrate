@@ -603,3 +603,57 @@ is that it happens reliably regardless of phrasing: rung 2a and 2b were the same
 failed for reasons that had nothing to do with composition — a resolver that invented its subject,
 and a subject id that did not exist. Both are now fixed or understood, but the sample is two clean
 runs, not a rate.
+
+---
+
+## 19. The shaped policies are erased by something that rewrites their directory
+
+Late in the session all three policy shapes began resolving `false` again:
+
+```
+walkBudget             {"resolved":false,"error":"no walk budget configured — consumer keeps its literal fallback"}
+lessonExecutionPolicy  {"resolved":false,"error":"verbatim lesson execution not enabled — consumer stays fail-closed"}
+bodyHonestyPolicy      {"resolved":false,"error":"no body-honesty policy configured — consumer keeps its literal fallback"}
+```
+
+and the walk was logging `bodyHonestyPolicy resolved to no usable body — FALLING BACK to the literal
+denial-field list` on every step. The directory:
+
+```
+/workspace/git/super-repo/policies/     (dir mtime 13:57)
+  llm-model-policy.json                 1,274 bytes   13:57   ← was 11,022 bytes at 12:58
+  (body-honesty-policy.json  — GONE, was 569 bytes, dated Aug 10)
+  (walk-budget.json          — GONE, seeded by me ~13:05)
+  (lesson-execution-policy.json — GONE, seeded by me ~13:05)
+```
+
+**The producers are fine.** They report "not configured" honestly, and the consumers fall back
+exactly as designed — `lessonExecutionPolicy` fails closed, so verbatim execution is OFF again with
+no exposure. The storage is the problem.
+
+`WORKSPACE_ROOT=/workspace/git/super-repo` (read from `/proc/<pid>/environ`) **is a git work tree**,
+and `policies/` is **gitignored** (`.gitignore:239:/policies/`). So every shaped policy this system
+has lives as an ignored file inside a clone the convergence loop treats as disposable, and
+`llm-model-policy.json` shrinking 11,022 → 1,274 bytes shows something actively *rewrites* the
+directory rather than merely deleting from it.
+
+**I did not identify the mechanism and will not guess it.** `reset --hard` (the only reset in
+pull-sync) does not remove ignored files, so it is not sufficient on its own; something else writes
+here. That is the next thing to find.
+
+**Why this matters more than the three files.** CLAUDE.md says runtime state *"belongs in the
+container volume and is gitignored: a file the substrate rewrites is not a file git should carry."*
+These files **are** gitignored — and being gitignored inside a clone that gets cleaned is precisely
+what destroys them. The rule was followed and the outcome is the opposite of the rule's intent.
+
+It also means the law-1 remediation has never actually taken effect in this deployment, for a third
+reason. First the shapes had no producer (§3, my miss). Then the producers existed and resolved
+(verified: `walkBudget SHAPED iters=6 calls=12` at 13:14:01, the seeded values steering the live
+walk). Now the storage under them is periodically erased. **Reader, producer, and storage each
+have to survive; two out of three still yields a frozen literal**, and `bodyHonestyPolicy` has
+evidently been in this state since well before today — its fallback was logging all session and
+nobody read it.
+
+The fix is to put policy files on the volume *outside* any git work tree and point `WORKSPACE_ROOT`
+— or a dedicated `POLICY_ROOT` — at that path. That is a deployment change, not a code change, and
+it is the fourth item on the carried-forward list.
