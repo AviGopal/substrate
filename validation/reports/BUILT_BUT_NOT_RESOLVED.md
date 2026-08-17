@@ -154,6 +154,31 @@ repository, present in the build, and absent from behavior is a propagation
 question, not a logic question.** Check what the running process resolves before
 re-reading the diff.
 
+## Compositional reach, as measured alongside this
+
+Four dispatches, each graded by hand against ground truth captured *before*
+dispatch:
+
+| shapes | subjects | verdict | grading |
+|---|---|---|---|
+| 4 | goal-host, dev-vessel, healthy count, shape count | reached | all four facts correct |
+| 2 | shape count, healthy count | reached | both correct, both with a producing step |
+| 2 | four facts asserted | reached | facts true, but **2 of 4 had no producing step** |
+| — | analysis-vessel, concept-db, + 2 counts | **failed, reached:false** | correct rejection — shell step errored, no reports produced |
+
+The correct rejection matters as much as the reaches: the judge refused a chain
+that produced nothing rather than narrating around it.
+
+The third row is the concerning one and is filed as a gap: the oracle verified
+`totalVessels=11` and the verdict credited four claims, two of which the chain
+never measured. They were true by coincidence. Nothing in the substrate could have
+distinguished that from fabrication — it was caught only because ground truth was
+held externally.
+
+Depth beyond four shapes was **not** demonstrated. The walk increasingly takes
+`REUSE-BEFORE-DERIVE` one-step pathways, which is the learned-pathway ceiling
+behaving correctly but yields no composite and therefore no extraction.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
