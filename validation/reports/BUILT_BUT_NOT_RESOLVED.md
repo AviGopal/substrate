@@ -1498,3 +1498,32 @@ raised bound did not.
 - A reach verdict credited four asserted facts while its oracle verified one
   (`totalVessels=11`); the two vessel-health claims had no producing step and were
   true only by coincidence. Filed as gap `reach-oracle-coverage-fraction`.
+
+## The plural-sink example moved decomposition; the depth ceiling did not move
+
+Pre-registered before/after on one goal class (health report · registry shape count ·
+record a concept · persist a note):
+
+| | before (n=16) | after (n=6) |
+|---|---|---|
+| shape-count distribution | `{1:×2, 2:×6, 3:×6, 4:×2}` | `{3:×3, 4:×3}` |
+| mean shapes | 2.50 | **3.50** |
+| samples inferring <3 shapes | 8 of 16 | **0 of 6** |
+| both sinks retained | 1 of 6 | **4 of 6** |
+
+The **floor** rose: nothing infers one or two shapes any more, where half the
+before-samples did. Concept retention went from 1-in-6 to 4-in-6.
+
+**The ceiling did not.** Max is still 4, exactly as before. So the worked example fixed
+the *dropping* and not the *depth limit* — those turn out to be separate properties,
+and only the first responded.
+
+This is the fourth data point for a rule this substrate keeps re-proving: **evidence
+supplied at the point of use moves behaviour; instructions do not.** Raising the cap
+`1-3`→`1-6` was an instruction — inference moved once and settled back to a mean of
+2.5. One worked two-destination example moved the mean a full shape and eliminated the
+sub-3 tail. Running record: evidence 4/4 on first contact, decision rules 0/7.
+
+Limits worth stating: n=6 against n=16, and 2 of 6 still drop the concept. The change
+is large relative to that noise on the floor metric and absent on the ceiling metric,
+which is the asymmetry worth carrying rather than the point estimates.
