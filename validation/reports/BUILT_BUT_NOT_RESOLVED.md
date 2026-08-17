@@ -1562,3 +1562,39 @@ argument.
 The sanitiser work is kept: message accuracy matters when a reason seeds repair goals,
 and this document already records a case where a reason blamed the wrong component. But
 it is diagnostic value, not a cleared blocker, and the gap ledger should read that way.
+
+## The learned-pathway tier closed a loop, on a verified reach
+
+    alpha-credited last pick
+      activity:⟨learned-composition-discovery-vessel-registry-observer-to-shellresult-to-memorynote-⟩
+      (substance-honest reach: deterministic:verified-registry-count — independently queried …)
+
+A composition previously **extracted** from a reached execution was **selected** for a
+new goal, **reached**, was **verified by an oracle that independently recomputes the
+answer**, and was **alpha-credited**. Extract → reuse → verify → credit, closing on a
+real dispatch rather than a synthetic probe.
+
+This is the ceiling tier described in `CLAUDE.md` doing its job, and it is the single
+strongest piece of evidence in this document that the learning loop functions. It also
+retires the framing earlier in this report that learned compositions cannot earn credit
+— they can, and here one did, on a substance-honest reach.
+
+## Why deeper valid reaches still do not follow
+
+Valid reaches are now routine at 3–4 shapes and reproducible. The deepest **valid**
+reach remains 5 steps. What stops depth is not the target cap, the walk budget, the
+caller, or oracle coverage — all measured and excluded — but **substitution**:
+
+- **shape substitution** — a target satisfied by an artifact about the wrong subject
+- **fact substitution** — a requested quantity satisfied by an adjacent number already
+  in hand (the registry total answered with the vessel's own 12 advertised shapes)
+
+Measured this round: only 1 of 6 walks dropped the `shellResult` target, yet 2 produced
+the substituted answer — so substitution happens at **answer composition**, not only at
+target selection. A walk that targeted the query still answered from the health report.
+
+That gives the real depth mechanism: each additional requested fact is another
+opportunity to substitute, and only facts with a deterministic oracle are caught. The
+registry count has one, which is why these failures are visible at all. Most facts do
+not. **Depth raises the number of unguarded substitution opportunities**, which is a
+different and more tractable statement than the coverage story retracted above.
