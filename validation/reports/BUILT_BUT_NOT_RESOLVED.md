@@ -2486,3 +2486,43 @@ one and certifies the answer to whichever the code implemented.
 AND ONE WAS INTRODUCED BY ME WHILE FIXING THE OTHER TWO.** Identical shape every time: a
 producer and its verifier agreeing on a question the goal did not ask. No `reached` field
 would have exposed any of them.
+
+### Fleet-wide unmounted-endpoint audit (2026-08-17)
+
+Instrument: activity-api's `app.route()` mount table, cross-checked live against a vessel that
+answers unauthenticated (`PATCH /v2/gaps/x` → 404 while `/health` → 200 on the same vessel).
+
+⚠ **AN HTTP PROBE CANNOT DETECT THIS CLASS ALONE** — activity-api's auth middleware answers
+401 before routing, so a mounted and an unmounted path return the SAME status. All three
+candidate paths returned 401 identically. The mount table is the only discriminator.
+
+**18 call sites target paths nothing in the fleet mounts** — 5 silent (404 reads as
+empty/absent), 6 loud, 7 string-only false positives.
+
+Fixed (target was determinable):
+- `concept.ts` → built concepts from ZERO traces and reported success, for as long as the
+  wrong URL existed
+- 5 further sites repointed to `/v2/activities/execution-traces`, **each also switched to read
+  `executions`** — the key that endpoint returns. Three parsed only `body.traces`, so fixing
+  the URL alone would have left them silently empty. **URL and response key are two
+  dimensions; fixing one is inert.**
+- `light-dispatch-vessel` ghost retirement: endpoint does not exist, so no template has ever
+  been retired; the identical loop also ran TWICE per boot (duplicate removed)
+
+Surfaced but NOT repointed (receiving contract unknown — a guessed endpoint 404s identically
+while looking deliberate): `/v2/gaps` (PATCH result never checked; `verified_age_boundaries`
+has never incremented), `/v2/notes`, `/v2/resolutions`, `/v2/goals`.
+
+⚠⚠ **THE DETECTOR I WROTE FOR THIS WAS ITSELF VACUOUS.** activity-api mounts
+`app.route('/', boredomRoutes)`, so the prefix list contained `/` and the check
+`path.startsWith(prefix + "/")` matched EVERY path. It reported clean while four dead paths
+were live. **A check that always passes, inside the detector written to catch checks that
+always pass.** Its guard asserted the prefix list was non-empty but never that the matcher
+could REJECT. Fixed with a NEGATIVE CONTROL: five known-dead paths must be flagged and the
+real one must not.
+
+★★★★★ **THE SESSION'S REPEATED SHAPE, stated once:** every false result today came from an
+instrument that could not distinguish failure from success — the registry oracle answering its
+own question, the mock scanner blinded by comments, this detector matching everything. The
+countermeasure is the same each time: **prove the check can fail before trusting that it
+passed.**
