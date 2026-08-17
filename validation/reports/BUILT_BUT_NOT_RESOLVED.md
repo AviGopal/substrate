@@ -2288,3 +2288,47 @@ My changes reached production without their tests running. The gate reports its 
 honestly — which is more than most of the gates in this document do — but a gate that
 disables itself under time pressure is a gate that is absent exactly when a tick is slow,
 which is when convergence is riskiest. Filed.
+
+### VALID COMPOSITIONAL REACH, hand-verified (2026-08-17, 13:26)
+
+The substrate self-deployed `1fd7bfd` (mirrored 13:26:01, new MainPID, restarted), and the
+goal that had produced a FALSE reach three hours earlier now reaches CORRECTLY:
+
+    DETERMINISTIC registry-RATIO command (totalShapes / totalVessels, shared with the verifier)
+    stdout: 28.307692307692307
+    oracle: independently queried registry/stats and computed 368/13 = 28.307692307692307
+    alpha-credited satisfier:shellResult   reached=true, dAlpha=2
+
+Ground truth captured BEFORE dispatch: `28.307692307692307`. **Exact, and it is the QUOTIENT
+— not an operand.** The oracle recomputed it from its own fetch, so the command did not grade
+itself.
+
+**The full arc on one goal, all hand-graded against pre-captured truth:**
+
+| run | behaviour | verdict | grade |
+|---|---|---|---|
+| 12:53 | fast path answered `totalShapes`=368 | reached=true, **alpha +2** | **FALSE REACH** |
+| 13:09 (abstention live) | no producer; walked, chose webSearchResult, hit credits | HOLLOW, beta-penalised | honest miss |
+| 13:26 (producer live) | `jq '.totalShapes / .totalVessels'` | reached=true, alpha +2 | **VALID REACH** |
+
+Two fixes were needed and neither sufficed alone: abstention removed the wrong answer,
+the producer supplied the right one. Removing a false reach without supplying a producer
+converts it into a guaranteed miss — better, but not reaching.
+
+**LADDER STATUS:** single-source facts ✓ · arithmetic over two counts from one body ✓ (NEW)
+· **two INDEPENDENT sources ✗** (honest miss — the walk produces one operand and declines).
+The remaining rung is a genuine capability gap, not a grading defect.
+
+⚠ **NEW DEFECT FOUND BY THE SUCCESS: the verdict did not persist.**
+
+    reach-patch MATCHED NO ROW (walk-complete) for walk-satisfier-1-1786973190772
+    (reached=true) — verdict NOT persisted; this execution stays ungraded
+
+**2 of 6** reach-patches in the preceding 30 minutes matched no row, and this dispatch
+reported `oracleLabelWritten:false`. The in-process posterior moved (`dAlpha:2`), but the
+durable verdict on the trace row did not — so a valid reach on a `walk-satisfier-*` execution
+id can be lost to the learning store. A ~33% loss rate on the honest-verdict channel is the
+same write-never-read family this document tracks, one layer further out. Filed.
+
+The goal-host code logs this loudly rather than swallowing it, which is why it was findable
+at all — the fix that made `updated:0` a visible failure instead of a silent success.
