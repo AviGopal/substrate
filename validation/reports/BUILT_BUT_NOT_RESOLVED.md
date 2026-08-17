@@ -2781,3 +2781,34 @@ span, then prove it fires on each.
 It was OOM-killed after 3h17m CPU, so restarting it without addressing memory pressure invites
 the same kill, and the fleet's traces go to the hub regardless. Recovering a store that died of
 memory exhaustion is not a step to take unattended.
+
+### Convergence restored, and the selection change verified non-regressive (2026-08-17 20:06)
+
+    20:05:57  wedged tick killed (900s, as predicted)
+    20:06:09  activity-api: SKIPPED — MASKED        <- the re-mask took effect
+    20:06:15  goal-host-vessel: content ... (git eda190f7bd) — mirroring
+    20:06:29  done — synced=1 skipped=3 failed=0    <- 20 SECONDS, vs 15-minute wedges
+
+Then, on the deployed selection change (ground truth captured before dispatch):
+
+    stdout: 67
+    oracle: verified-multi-source-combined — 59 + 2 + 6 = 67
+    reached: true
+
+**No regression**, which is precisely what the blend's no-op-at-zero property promises while the
+store half remains hub-gated and `include_scores` is an unknown field the hub ignores.
+
+⚠ **MY OWN PROCESS GAP, found here: 23 SUPER-REPO COMMITS WERE NEVER PUSHED.** Every script fix
+and report of this session sat local-only for hours — including the `--kill-after` repair for
+the very stall being diagnosed. I pushed each VESSEL repo as I went and never the super-repo, so
+the glue layer could not converge and the self-update kept copying an old script. Pushed
+(c23558d9..6f609bd1, fast-forward).
+
+★★★★★ **"COMMITTED" IS NOT "PUSHED" IS NOT "CONVERGED" IS NOT "RUNNING."** This session hit
+every one of those boundaries: a fix committed but unpushed (here), pushed but unconverged (the
+wedged ticks), converged but inert (the argument chain before the sink fix), and running but
+unexercised (the blend, hub-gated). Each looks like progress from the step behind it.
+
+⚠ Observed and NOT diagnosed: this reach returned `alphaBetaDelta dAlpha:0 dBeta:0` where
+earlier identical runs returned `dAlpha:2`. The reach is correct and the credit call shaped
+normally, so this is not the blend (which scores candidates, not credit). Filed, not explained.
