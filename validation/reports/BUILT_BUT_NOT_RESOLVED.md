@@ -1527,3 +1527,38 @@ sub-3 tail. Running record: evidence 4/4 on first contact, decision rules 0/7.
 Limits worth stating: n=6 against n=16, and 2 of 6 still drop the concept. The change
 is large relative to that noise on the floor metric and absent on the ceiling metric,
 which is the asymmetry worth carrying rather than the point estimates.
+
+## Retraction: the 127 sanitiser fixed diagnostics, not correctness
+
+Commit 72371d35 claimed "the 127-from-loopback blocker is cleared and the blocked goal
+class now reaches." **That causal claim is wrong.** The comparison is:
+
+    const claimed = [...new Set((digIds.match(/\b\d{1,7}\b/g) ?? []))];
+    if (claimed.includes(expected)) { return reached: true }
+    return { reached: false, reason: `... but the output reports ${claimed[0]}` }
+
+It is a **set-membership test**. A spurious `127` scraped from `http://127.0.0.1:8210`
+can never displace a correct value: if the true count appears anywhere in the scanned
+text, `includes` finds it and the dispatch passes. Extra candidates only affect
+`claimed[0]`, which appears in the failure *message*.
+
+So the sanitiser (ae39e6cf, 37f43aa) improves **diagnostics** — the verdict stops
+naming a phantom value — and unblocked nothing. Confirmed live: with the sanitiser
+running, a rejection now reports `200` rather than `127`, `200` being the `"HTTP 200"`
+in the health probe field. The next contaminant, same message-quality class.
+
+What actually unblocked the goal class was the **field-selection fix** (93b8feed).
+Before it, a goal asking about *shapes* was compared against `totalVessels=11`, and 11
+genuinely was not in the output — a correct-looking rejection of a correct answer, for
+the right reason applied to the wrong quantity.
+
+This is the exact failure mode already recorded on this substrate: *a plausible
+mechanism attached to a working fix is how a wrong causal story survives.* Two fixes
+landed close together, the goal class started reaching, and the reach was attributed to
+the more recent and more interesting of the two. The check that caught it was reading
+the comparison operator instead of trusting the narrative — `includes` is the whole
+argument.
+
+The sanitiser work is kept: message accuracy matters when a reason seeds repair goals,
+and this document already records a case where a reason blamed the wrong component. But
+it is diagnostic value, not a cleared blocker, and the gap ledger should read that way.
