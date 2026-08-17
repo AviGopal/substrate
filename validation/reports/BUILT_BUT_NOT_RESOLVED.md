@@ -1412,6 +1412,45 @@ to a producing step, or make the verdict **name the requested facts it did not c
 so the shortfall is visible in the trace instead of hidden behind one verified
 quantity.
 
+## Correction: the facts were never targeted, not merely unverified
+
+The section above attributes the two deep false reaches to oracle coverage falling
+with depth. **That mechanism is wrong**, and checking the target sets shows why:
+
+    92b45f37   inferred targets: ["vessel_health_report","memoryNote_write"]  conf 0.98
+               the GitHub fetch clause was NEVER TARGETED
+               both targets produced → shape coverage COMPLETE
+
+    53ac7dc1   inferred targets: ["vessel_health_report","concept","memoryNote_write","shellResult"]
+               all four produced → shape coverage COMPLETE
+               goal asked for TWO health reports; vessel_health_report is ONE shape
+
+Neither missing fact was attempted and left unverified. Both were **dropped at
+inference**, and everything downstream — the walk, the partial-coverage guard, the
+oracle — behaved correctly with respect to a target set that had already lost them.
+
+This matters because it relocates the fix. There is already a `partial-coverage`
+guard that flips a strict-subset reach to not-reached; it could not have fired here,
+because coverage of the *target set* was complete. Strengthening the oracle or
+narrowing its deterministic exemption would not have caught either case.
+
+The two real causes, both at inference and both upstream of every verifier:
+
+1. **Clause dropping** — the fetch clause vanished at confidence 0.98
+   (`router-drops-a-sink-when-a-goal-names-two`, fix dispatched).
+2. **Arity collapse** — target shapes are a **set**, so "two health reports" is one
+   `vessel_health_report`. The second vessel is unrepresentable in the target
+   vocabulary, so no downstream stage can notice it is missing.
+
+And it names the detector that would catch both, which no current check performs:
+**compare the produced artifact against the facts requested in the GOAL TEXT**, not
+against the target set. Every existing guard validates against the target set, which
+is precisely the artefact that has already lost the information.
+
+Recorded as a correction rather than an edit to the section above, because the wrong
+mechanism was committed and a reader following the history should see it withdrawn
+rather than silently replaced.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
