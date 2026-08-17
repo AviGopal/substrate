@@ -1989,3 +1989,44 @@ demonstration but a real one.
 demonstrated beyond it. The remaining gap is not any single mechanism I can name with
 evidence — five candidates are excluded — and I decline to offer a sixth with the same
 confidence the previous five carried.
+
+## Composition execution, split by cause
+
+Two hours of walk logs, every `step N ran activity:<learned-composition-…> status=…` line.
+
+**By depth:**
+
+    hops=2   4 completed / 16 failed     20%
+    hops=3   1 completed / 22 failed      4%
+    hops=4   1 completed /  5 failed     17%
+    hops=5   0 completed / 12 failed      0%
+
+**By whether the chain contains a concept shape:**
+
+    concept-free      8 completed / 21 failed    28%
+    concept-bearing   3 completed / 45 failed     6%
+
+Two causes, both now identified, neither complete on its own:
+
+1. **Activity ids written as output shapes** — root-caused by resolving the only five-hop
+   composition, which declares `out=[activity:<learned-composition-…>]` on four tasks and
+   then requires that string as the next task's input shape. Unexecutable at extraction.
+   6 of 26 compositions (23%) carry it, including the sole five-hop, which accounts for
+   `hops=5 → 0 of 12` completely. Now rejected at the template write boundary.
+
+2. **`concept_write` cannot resolve on this spoke** — concept-db is masked, and the two
+   most-failing three-hop compositions are
+   `vessel-health-report-to-shellresult-to-concept-write` and
+   `vessel-health-report-to-concept-write-to-shell`, 15 failures each. Concept-bearing
+   chains succeed at 6% against 28% concept-free, a 4.6× penalty.
+
+**Correction to the previous section.** It recorded that three-hop compositions were
+"structurally clean and still fail", implying availability did not explain them. That was
+wrong: clean of the *activity-id* defect is not the same as executable, and the dominant
+three-hop failures are concept-bearing. Availability explains most of the three-hop
+population.
+
+**What remains unexplained** is narrower and now measurable: concept-free compositions still
+fail 21 of 29. That residual is not attributable to either identified cause and is the next
+thing to root-cause — by the same method that worked twice here, which is to resolve one
+failing template and read its tasks rather than reason about the population.
