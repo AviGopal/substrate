@@ -2332,3 +2332,39 @@ same write-never-read family this document tracks, one layer further out. Filed.
 
 The goal-host code logs this loudly rather than swallowing it, which is why it was findable
 at all — the fix that made `updated:0` a visible failure instead of a silent success.
+
+### TWO-SOURCE COMPOSITION REACHES (2026-08-17, 13:42) — the ladder's top rung
+
+Deployed `e5727fb` (mirrored 13:41:01, after draining to 0 so no run was lost). The goal that
+produced one operand and declined at 12:57 now reaches:
+
+    echo $(( $(find /vessels/goal-host-vessel/src -maxdepth 1 -type f -name '*.ts' | wc -l)
+           + $(find /vessels/ribosome-vessel/src -maxdepth 1 -type f -name '*.ts' | wc -l) ))
+    stdout: 60          reached=true
+
+Ground truth captured BEFORE dispatch: 58 + 2 = **60. Exact.**
+
+★ **NO DETERMINISTIC PATH PRODUCED THIS.** No command was written for this goal class. The
+executor composed both operands itself after being given ONE computed fact about its own
+goal — that it names two distinct paths, and that a result from one of them answers a
+different question. Contrast the registry quotient, which needed a deterministic producer.
+This is the floor doing its job once the missing information was present at the point of use,
+which is what law 8 predicts and what the 3/3-vs-0/7 record (facts vs instructions) recommends.
+
+**THE LADDER, every rung hand-graded against pre-captured truth:**
+
+| rung | goal | result | truth | grade |
+|---|---|---|---|---|
+| 1 single fact | shapes in the registry | 368 | 368 | ✓ |
+| 2 arithmetic, one body | shapes ÷ vessels | 28.307692307692307 | 28.307692307692307 | ✓ |
+| 3 two INDEPENDENT sources | count dir A + count dir B | 60 | 60 | ✓ |
+
+Rung 2 was a FALSE REACH at 12:53 and rung 3 an honest miss at 12:57. Both are now correct,
+and each needed a different fix: rung 2 an abstention plus a producer, rung 3 a supplied fact.
+
+⚠ **THE SUCCESS EARNED NO CREDIT.** Rung 3 returned `alphaBetaDelta: []` and
+`oracleLabelWritten: false` — a correct, verified, compositional reach that moved NO posterior.
+Rung 2 credited `dAlpha:2` but its reach-patch matched no row. So the system's best results are
+not reliably reaching the learner: **it can now compose, and it is not yet learning that it
+can.** That is the next binding constraint, and it is the same write-never-read family this
+document has tracked all day, now sitting on the honest-verdict channel itself.
