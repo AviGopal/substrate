@@ -1057,6 +1057,55 @@ the ceiling did not cause them — it made them reachable, and therefore visible
 That is a real result, and it is not the result the standing goal asked for. The
 demonstrated ladder remains **two valid rungs**.
 
+## A valid composition, failed twice by regex precedence
+
+This is the closest the session came to a five-shape reach, and the composition was
+**correct**. Dispatch `bfccfee6`:
+
+    GOAL   health report for goal-host-vessel; how many SHAPES the registry advertises;
+           record a concept; persist ONE note stating both facts
+    NOTE   "The vessel 'goal-host-vessel' is healthy. Its discovery registry advertises
+            12 shapes. In total, the discovery registry advertises 305 shapes."
+    TRUTH  healthy ✓   305 ✓   (and the incidental 12 is also true)
+
+Every requested fact is right. The verdict was `reached: false`,
+`deterministic:wrong-registry-count — totalVessels=11, but the output reports 127`,
+and it fired **twice** — on the first attempt and again on the re-framed one — so it
+is deterministic and this goal family can never pass.
+
+The cause is one line:
+
+    const field = /\bvessels?\b/.test(g) ? "totalVessels"
+                : /\bshapes?\b/.test(g) ? "totalShapes"
+
+The vessel test runs first and matches the word **anywhere**, including where it names
+the subject of an unrelated clause — here, "a health report for **the vessel**
+goal-host-vessel". The counted entity is *shapes*; the oracle graded against *vessels*.
+
+### Sixth instance, and the guards kept encoding the symptom
+
+The file already documents five prior instances of this oracle failing correct work,
+and says so plainly:
+
+> 97 wrong-registry-count verdicts were recorded in 24h.
+
+> A false negative here is worse than a missed green: it teaches the learner that a
+> working composition failed, which is precisely how a ceiling gets held down.
+
+> The invariant is not "the path starts with `repos/`".
+
+Each earlier fix guarded the *shape of the observed failure* — first a literal `repos/`
+prefix, then any named filesystem tree. This instance names no tree, so every guard
+passes through. The invariant that covers all six: **the compared field must come from
+the noun attached to the counting clause** (`how many X` / `number of X` / `total X`),
+not from the presence of a noun anywhere in the goal; when both nouns carry counting
+clauses, abstain.
+
+That last sentence of the file's own comment — that a false negative is how a ceiling
+gets held down — is exactly what happened here, to the very ladder this session was
+built to climb. The fix is dispatched with the field-selection line as anchor, verified
+to occur once.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
