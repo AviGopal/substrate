@@ -1837,3 +1837,40 @@ Neither is a depth demonstration. Both operate on a two-fact goal, and the deepe
 reach is unchanged at five steps. What they establish is that fact delivery at fixed depth
 is now reliable where it was coin-flip, which is the precondition for testing whether depth
 itself is tractable.
+
+## The ceiling moved from inference to execution
+
+The required-producer rule was tested on the 5-clause goal that previously scored 0/4.
+Result: **0 correct / 0 wrong of 3** — unchanged. The omission theory is wrong, and joins
+the three mechanisms already excluded.
+
+But the inference did change, and it is the deepest of the session:
+
+    ["vessel_health_report","discoverByShapesQuery","concept_write","memoryNote_write","shellResult"]  ×3
+    ["vessel_health_report","shellResult","concept_write","memoryNote_write"]                          ×1
+
+`shellResult` is present in **every** target set, so the rule did its job. Yet the binding
+fired **zero** times across those dispatches, and exactly one shell output appeared in the
+window. The producer was **targeted and never executed**, and the note omitted the fact
+without remark.
+
+So the constraint chain now holds up to the point of execution:
+
+    field selection    fixed  — registryFieldFor, shared by producer/binding/verifier
+    field binding      fixed  — 5/5 fired on the 2-fact goal, 5/5 correct
+    target selection   fixed  — shellResult in 4 of 4 deep target sets
+    EXECUTION          ✗      — 5 targets inferred, the producer never runs
+
+That is a materially different statement from where this document started. The ceiling is
+no longer "the walk cannot express a deep goal" — it expresses five shapes now — but "the
+walk does not execute every shape it targeted, and the artifact is composed anyway."
+
+Two consequences worth separating. A shape targeted and unproduced should block the terminal
+write; the derivation-deferral guard exists for exactly that and did not fire here, which is
+the next thing to check. And a note composed while a target is unsatisfied is the
+composition defect already filed — the prose path does not verify against the pool, so an
+absent fact costs nothing.
+
+**Inference depth is solved and delivery is not.** Five target shapes is the demonstration
+this document has been chasing at the routing layer; it is not a valid reach, because the
+facts do not arrive.
