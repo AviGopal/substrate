@@ -565,6 +565,44 @@ the bound becomes caller-controllable and goal-host can supply it from the shape
 rather than duplicated (law 3). That is a genuine capability change rather than a
 rename, and it is the law-1-correct shape of the fix.
 
+## The denial pattern, fixed at the shaped policy — and a second wrong copy
+
+The rung-4 false reach was caused by one missing token in the `bodyHonestyPolicy`
+denial pattern. Fixing it needed no code change, which is the point: the bound is a
+shaped policy, and that is the law-1-correct surface.
+
+Locating the file first exposed the same defect class as everything else in this
+document. There are two copies:
+
+    /workspace/policies/body-honesty-policy.json              truthyDenialFields: ["deferred","unreachable"]
+    /workspace/git/super-repo/policies/body-honesty-policy.json   truthyDenialFields: []
+
+The **richer** copy is the dead one. goal-host's workspace root is
+`/workspace/git/super-repo`, so the leaner file is what the resolver serves —
+confirmed by diffing the served body against both files rather than assuming which
+was authoritative. Editing the maintained-looking copy would have changed nothing and
+looked like a fix.
+
+The served copy was widened, `not\s+found` → `not\s+(found|available|supported|permitted)`,
+and the resolver now returns it. Verified against the real strings, checking both
+that it catches the miss and that it does not start rejecting legitimate content:
+
+    old=False new=True   "The `node` command is not available in this environment"   ← the miss
+    old=True  new=True   "vessel_id is required — refusing to report…"
+    old=True  new=True   "command not found"   /   "resource unavailable"
+    old=False new=False  "the registry advertises 305 shapes"      ← real content, still passes
+    old=False new=False  "healthy_vessels: 11"                     ← real content, still passes
+
+A widened denial pattern that also swallows real answers would trade a false reach
+for a false refusal, so the negative cases matter as much as the positive one.
+
+**Caveat, and it is the real blocker:** the served copy lives inside
+`/workspace/git/super-repo`, a managed clone. The edit is live now and may not
+survive a convergence that cleans that tree. The durable fix is moving `POLICY_ROOT`
+out of the work tree — the standing operator-gated item — and that the *dead* copy
+sits in the safe location while the *live* one sits in the disposable one is
+precisely the wrong way round.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
