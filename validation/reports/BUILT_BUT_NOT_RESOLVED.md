@@ -1714,3 +1714,42 @@ Three attempts, two of them wrong, plus a retraction when the first "success" tu
 be a proxy measurement (`contains 12` rather than `states the correct total`). The
 prohibition-vs-example comparison remains untested — both failed, so nothing distinguishes
 them here.
+
+## Correcting the count, and what one extra clause costs
+
+The source+field batch was graded before it finished. Complete:
+
+    sf1 368 VALID   sf2 368 VALID   sf3 368 VALID   sf5 368 VALID   sf4 no count stated
+    → 4 correct / 0 wrong of 5
+
+Zero substitutions across five dispatches, against 1-wrong-of-1 in each prompt
+condition. The one miss omitted the count rather than inventing one.
+
+**Then one clause was added** — "obtain the discovery registry state" inserted between
+the health report and the count — and fact delivery collapsed:
+
+    dp1, dp2   no count stated
+    dp3        "…is healthy … and advertises 12 shapes"   the VESSEL's own 12, true but
+                                                          not the registry total asked for
+    dp4        "The health report could not be retrieved. The total number of shapes
+                could not be retrieved."                  honest, both facts
+    → 0 correct / 0 wrong of 4
+
+**Still zero substitutions** — the binding held; nothing claimed a wrong registry total.
+What changed is that the requested fact stopped arriving at all.
+
+That is the same pattern every intervention in this document has produced. The denial
+pattern, `missing:true`, the plural-sink example and now the field binding each converted
+a *wrong answer* into an *honest failure*, and none of them raised the rate at which a
+deep goal delivers what was asked. Five interventions, one direction of effect.
+
+The failure modes have moved in a consistent order: fabricated value → substituted
+adjacent value → omitted value → explicit "could not be retrieved". Each step is more
+honest than the last and none is more correct. dp4 is the endpoint of that progression —
+a note that accurately reports it obtained nothing.
+
+Which reframes the depth ceiling one more time. It is not verification (retracted), not
+substitution opportunity (fixed for this fact, delivery still fell), but **the walk's
+capacity to carry N requested facts through to the artifact**. The count of facts that
+survive is what degrades with each added clause, and every fix so far has improved the
+honesty of the survivors rather than their number.
