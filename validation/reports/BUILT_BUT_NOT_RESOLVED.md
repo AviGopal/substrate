@@ -2139,6 +2139,19 @@ synthesizer to copy `resolvedConfig` — a key the payload never contains, becau
 layer 3 surfaces it as `config`. Caught in review, fixed in `f71bb56`. A write-key/
 read-key mismatch is not a bug you fix once; it is a shape of mistake.
 
+⚠ **RETRACTION — THE CHAIN WAS FIVE LAYERS AND MY "CLOSED" CLAIM WAS INERT.** A fifth
+layer sits between 1 and 2: `activity-api-trace-sink.ts` builds its per-task payload
+**key by key**. `resolvedConfig` was recorded at five engine sites and dropped one
+function later, before the request was built. When I reported the chain closed, it
+moved no data at all. Fixed `9518d4e`.
+
+★ **An EXPLICIT PROJECTION is a silent dropper by construction.** Adding a field to a
+record type yields no error, no warning, no failing test — omitting an optional field
+is legal, so the type system cannot see it. That is why four rounds of checking, each
+honest, all missed it. Detector added: every ExecutionTaskRecord field must be
+forwarded or exempted with a reason, and every exemption is re-checked so it cannot
+go stale.
+
 **Status: committed and test-pinned, live effect operator-gated.** `ACTIVITY_API_ENDPOINT`
 on every vessel here is `http://syzygy.host:18080`. The local store logged **zero**
 trace writes in 6h (reads only). All traces land on the **hub**, which this session
