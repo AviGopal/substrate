@@ -78,6 +78,18 @@ produced by an earlier task in the same chain — gives:
     self-contained (`input_shapes: []` is CORRECT):   37
     genuinely consume an external shape:               1
 
+The obvious objection is that this measures a missing key rather than real
+topology. It does not: 67 of 115 learned-composition tasks (58%) declare a
+non-empty `inputShapes`, and the four-task chain resolves as a clean
+producer→consumer sequence —
+
+    task 0  in=[]                          out=[vessel_health_report]
+    task 1  in=[vessel_health_report]      out=[discovery_vessel_registry_observer]
+    task 2  in=[discovery_vessel_registry_observer] out=[shellResult]
+    task 3  in=[shellResult]               out=[memoryNote_write]
+
+— where task 0's empty input is a generator, not an omission.
+
 **37 of 38 are self-contained by construction.** They begin at a generator (a shell
 command, a fetch) and end at a sink, so they consume nothing from outside
 themselves and the empty field is the right answer. `input_shapes: []` was never
@@ -108,6 +120,14 @@ Two changes, both in the fan-out:
    marker, emit a gap, and let the next tick re-enter the fan-out.
 
 The gate now asks whether the bytes arrived.
+
+**Verified live, not merely committed.** The unit runs
+`/usr/local/bin/substrate-pull-sync`, which self-installs from the super-repo; that
+executed file carries the new `FAN-OUT UNPROPAGATED` path. This check was not
+optional — a propagation fix that reached the repository and not the running copy
+would have been an instance of the defect it fixes. (A stale `substrate-pull-sync.sh`
+sits beside it in `/usr/local/bin` and is *not* what executes; grepping the
+plausible-looking name returns 0 and would have read as "the fix never landed.")
 
 This was a direct edit rather than a dispatched goal, deliberately: the
 propagation path cannot repair itself through the propagation path it is broken
