@@ -2594,3 +2594,27 @@ positives came from treating textual shape as structural meaning. The verified f
 all came from reading the construction site; none survived from the scanner alone. **Three
 false positives and three real findings from the same instrument is a 50% precision tool — it
 is a search aid, never evidence.**
+
+### Review scope, stated precisely (2026-08-17)
+
+The self-development audit covers SIX subsystems — how capability is BORN, EXTRACTED,
+CREDITED, GENERATED, GATED and WATCHED — and its six ranked defects map one-to-one onto them.
+Its phrase "across five of six subsystems the same shape recurs" counts how many EXHIBITED the
+write≠read shape, not how many were left unexamined.
+
+| subsystem | ranked defect | state after review |
+|---|---|---|
+| BORN | authoring mints entry bridges, not interior edges | present; value factually correct; design call, stated not changed |
+| EXTRACTED | ribosome recursion gate bypassed | **FIXED** — author derived from the `learned-` id prefix |
+| CREDITED | `ancestor_signatures` has no populating caller | resolved earlier, by a fallback rather than by populating |
+| GENERATED | detected classes route to no fix | **FIXED on the producer** — the consuming gate is correct |
+| GATED | no gate EXECUTES the changed code | decided, not open — the executing gate was built and abandoned as more dangerous than the defect |
+| WATCHED | `/health` grades a boolean, not the latency | **FIXED** — thresholded to `degraded` without failing the endpoint |
+
+All six examined against current source. Three were live and are fixed; one was already
+resolved; two are decisions with reasoning recorded at the site.
+
+Separately, the write≠read class was checked at the payload level in boredom-vessel and
+ribosome-vessel (both clean), swept fleet-wide for unmounted endpoints (18 sites, triaged), and
+pinned by four new detectors — trace-boundary key agreement, sink forwarding, mock-factory
+completeness, and fleet endpoint paths — each carrying a guard that proves it can still fail.
