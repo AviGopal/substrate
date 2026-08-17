@@ -968,6 +968,58 @@ iteration budget, the fallback that collapses `how many` goals to one shape, and
 `.slice` that was never binding at all. Each was invisible behind the one in front of
 it.
 
+## Depth 5 with the budget raised: two new defects, neither of them depth
+
+Raising `max_iters` to 8 did **not** produce a valid five-shape reach. It produced a
+clearer failure, and the walk log names both causes.
+
+### An unrendered template placeholder ate two facts
+
+    HOLLOW-CONTENT shellResult (649 chars) =
+      {"shape":"shellResult","stdout":"Vessel health status: {{vessel_health_re…
+
+The synthesized shell command shipped with `{{vessel_health_report}}` never
+substituted, so it echoed template text instead of executing against data. Hence
+"Unknown (unable to retrieve)" for both local facts in the note.
+
+The data was **not** missing. The same walk logged
+`HOLLOW-CONTENT discovery_vessel_registry_observer (2306 chars)` of real content.
+Interpolation lost something the walk had already fetched — an
+information-at-point-of-use failure (law 8) in assembly, not retrieval. Same shape as
+the earlier "wrote Unavailable over a value it held with exit code 0", and a known
+class here: a drafter self-edit once wrote an unrendered `{{…}}` into byte 0 of
+`feature-compose.ts` and crash-looped development-vessel.
+
+The detector that generalises both is mechanical: **no synthesized command or written
+artifact may contain an unsubstituted `{{ }}` token.** It would have caught both at
+synthesis, before the value was lost. Filed as
+`unrendered-template-placeholder-in-synthesized-shell`.
+
+### The judge failed an exactly-correct value
+
+    HOLLOW-CONTENT shellResult (177 chars) = {"shape":"shellResult","stdout":"95432\n",…}
+    HOLLOW — "The execution failed to provide the correct stargazers count,
+              returning an incorrect value."; β-penalised
+
+Ground truth captured before dispatch: **95432**. The stdout is byte-identical.
+
+This is a **false rejection** — the mirror image of the false reaches this report
+documents, and worse for learning, because it punishes the behaviour we want. Two
+harms: the goal fails despite delivering the requested value, and the producing arm is
+β-penalised, so Thompson selection learns *against* a resolver that answered exactly
+right. It reproduces: dispatch `34e0c8f8` blamed the same component for the same
+non-failure.
+
+The correct verdict for this dispatch was still `reached:false` — two other facts were
+genuinely lost — but for the wrong reason and aimed at the wrong component. A reason
+derived mechanically from which requested facts appear in the artifact would have
+failed it correctly *and* credited the fetch. Filed as
+`judge-graded-an-exactly-correct-value-incorrect`.
+
+**Neither defect is about depth.** Both would fire at two targets. Raising the ceiling
+did not create them; it made them visible by giving the walk enough room to reach the
+assembly and grading steps where they live.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
