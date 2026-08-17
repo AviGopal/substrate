@@ -393,9 +393,40 @@ before each dispatch:
 
 Rung 3's `vessel_health_report` is a real 1171-char report, not the 444-char refusal
 envelope that contaminated the earlier depth-5 run. Composition increases across the
-rungs (3 → 4 steps) with content verified correct at each, which is the demonstration
-the standing goal asks for — bounded above by the `.slice(0, 3)` target cap
-documented earlier in this report.
+rungs (3 → 4 steps) with content verified correct at each — bounded above by the
+`.slice(0, 3)` target cap documented earlier in this report.
+
+**Rung 4 reached and should not have.** Four steps, `reached: true`, and:
+
+    REACH-CONTENT shellResult (1223 chars) = The `node` command is not available…
+    note facts: 11 ✓   healthy ✓   305 ✗ MISSING
+
+A failed shell was pooled as content, and the shape total — one of the four
+requested facts — was silently dropped. So the honest ladder is **2 valid rungs, not
+3**, and the fourth is a false reach of exactly the kind this report documents.
+
+### The cause is one missing token in a shaped policy
+
+`shellResult` *is* on the graded path, so this is not the coverage gap from earlier.
+The `bodyHonestyPolicy` denial pattern simply does not match the phrase. Tested
+directly against the live regex:
+
+    "The `node` command is not available in this environment"   → False   ← pooled
+    "vessel_id is required — refusing to report…"               → True
+    "command not found"                                         → True
+    "resource unavailable"                                      → True
+
+The pattern carries `unavailable` and `not\s+found` and misses `not available`. A
+one-token widening (`not\s+(found|available|supported|permitted)`) closes it, and
+**it needs no code change** — this is a shaped policy, which is the law-1-correct
+surface for a behavioural bound.
+
+Filed as `denial-pattern-misses-not-available`. Two notes for whoever applies it.
+Enumerating phrases is a treadmill; the substrate should be able to *learn* this
+class, since a denial phrase recurring in bodies that later fail their consumer is
+itself the signal that the pattern is missing a term. And shaped policy files
+currently live under a `POLICY_ROOT` inside a cleaned clone and are erased, so a
+write may not survive until that standing blocker moves.
 
 ## Carried, not fixed
 
