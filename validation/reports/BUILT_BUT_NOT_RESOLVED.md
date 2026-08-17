@@ -2650,3 +2650,51 @@ a genuinely unpropagated build.
 Trace writes go to the hub (`ACTIVITY_API_ENDPOINT=http://syzygy.host:18080`), which needs
 credentials this session does not have. Deployment is verified; the byte arriving in a stored
 row is not.
+
+## SELECTION MECHANISM REVIEW (2026-08-17) — the walk is a memoryless bandit
+
+Traced end to end: what the store computes at pick time, and what the walk actually consumes.
+
+**What the store computes.** `discover-by-shapes` ranks candidates by a real Beta draw
+(`betaSample`, seedable) over per-activity `thompson_alpha/beta`, with two documented
+refinements: an ADMISSION CAP of 200 so the `ORDER BY ev` truncation cannot cut a learned
+producer before the draw (sample-then-truncate, the correct order), and an untried prior of
+Beta(1, UNTRIED_PRIOR_BETA) rather than Beta(1,1) — measured, because with ~100 candidate arms
+at 97.1% under five observations, a uniform prior means the max of ~76 near-uniform draws lands
+near 0.99 and a genuinely learned arm cannot clear it (a .755 arm won 0.0% of draws).
+
+**It also computes two CHAIN-AWARE signals** — but only under `mode:"candidates_with_scores"`:
+- `composition_score`: a per-EDGE Beta from `activity_composition_graph`, i.e. how often THIS
+  candidate succeeded after THIS predecessor.
+- `successor_value`: ψ(s,a)·R, the transfer value, non-zero even where the Beta was never
+  rewarded on this goal direction.
+
+★★★★★ **NOTHING CONSUMES EITHER FOR A PICK.** Verified across every caller:
+
+| consumer | requests the scored mode? | uses the scores? |
+|---|---|---|
+| **the walk** (goal-host) | **NO** — sends `mode:"forward"` (4x) / `"backward"` (1x) | cannot: never sent |
+| `producer-selection.ts` | yes | **no** — "picks the first candidate (heuristic, not Thompson)" by its own comment |
+| `activity-create-variant.ts` | yes | no — uses the mode for its FORWARD query semantics, wants the activity list |
+
+The walk's candidate reader does contain `x.composition_score` in a `??` chain, but behind
+`numOr` (`typeof v === "number"`), and the producer emits an OBJECT
+`{alpha,beta,sample_count,predecessor_id}` — so even if the mode were switched, that read
+yields `undefined` and the mode change alone would be INERT. Both halves must move together;
+this is the same trap as the URL-without-response-key fixes earlier today.
+
+**THE ARCHITECTURAL CONSEQUENCE.** The walk scores each step by the candidate's OWN global
+posterior and never by how that candidate has performed *after the activity that just ran*. So
+a walk is a sequence of independent single-arm draws — **memoryless with respect to
+composition**. Per-edge credit accumulates in a table that the picking path never queries.
+
+This is the precise mechanism behind the 2026-08-13 audit's "nothing rewards a chain at
+selection time", and it is the same write≠read class as everything else in this document —
+expressed as a MODE mismatch rather than a key mismatch. The machinery is complete: SQL
+subquery, per-edge posteriors, ψ dot products, and an evidence-gated SF_BLEND auto-flip at
+≥200 successor_features rows. Only the consumption is missing.
+
+**NOT CHANGED HERE.** Wiring it alters what the substrate selects for every goal, and the blend
+(does per-edge evidence replace, gate, or weight the global draw?) is a design decision with no
+obviously correct answer — a naive replacement would starve every edge that has never been
+tried, which is the untried-prior problem one level up.
