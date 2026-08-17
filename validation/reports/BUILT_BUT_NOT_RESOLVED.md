@@ -1451,6 +1451,40 @@ Recorded as a correction rather than an edit to the section above, because the w
 mechanism was committed and a reader following the history should see it withdrawn
 rather than silently replaced.
 
+## Where the depth ceiling lives now, quantified
+
+With the instruction cap raised to `1-6`, the walk budget at 8, and the caller
+supplying `maxTargetShapes`, none of the three earlier ceilings is binding. Measuring
+what the router actually returns — 16 consecutive inferences over 40 minutes:
+
+    shape-count distribution   {1: ×2, 2: ×6, 3: ×6, 4: ×2}
+    mean 2.50 · max 4 · never 5 or 6
+
+**The model never uses the headroom it was given.** Four-clause goals are truncated to
+two or three shapes, and *which* clauses survive is arbitrary: one sample kept both
+sinks and dropped both producers (`["concept_write","memoryNote_write"]`, conf 0.95);
+several kept both producers and dropped the concept sink. So the earlier framing —
+that sinks specifically are dropped — is too narrow. The router under-decomposes
+generally and the surviving subset is unstable.
+
+Two consequences worth separating:
+
+- **The ceiling is now behavioural, not structural.** No bound, budget or caller
+  change can raise it further; the instruction has already been raised and ignored.
+- **Confidence does not detect it.** The lowest shape-counts carried the highest
+  confidence (0.98 for two shapes, 0.95 for a subset that dropped both producers),
+  so the omission cannot be caught by thresholding.
+
+This is why the intervention chosen was a **worked two-destination example** rather
+than a stronger instruction. The record on this substrate is explicit about which
+works: evidence supplied at the point of use has landed 3 of 3 on first contact,
+decision rules 0 of 7 — and raising `1-3` to `1-6` was an instruction that moved
+inference exactly once before the model settled back to a mean of 2.5.
+
+The distribution above is the **before** measurement. The same measurement after the
+example lands is the test of whether few-shot evidence moves decomposition where the
+raised bound did not.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
