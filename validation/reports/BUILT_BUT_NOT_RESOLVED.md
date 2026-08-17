@@ -428,6 +428,41 @@ itself the signal that the pattern is missing a term. And shaped policy files
 currently live under a `POLICY_ROOT` inside a cleaned clone and are erased, so a
 write may not survive until that standing blocker moves.
 
+## The propagation fix, confirmed by the thing it fixes
+
+After the fan-out change landed, the shared build and its consumers hash identically:
+
+    ribosome-vessel   d70cfb9ab969
+    goal-host-vessel  d70cfb9ab969
+    shared build      d70cfb9ab969
+
+Byte-identical across the copies that sat eleven days apart. This is the check the
+fan-out now performs before crediting itself, and it is the check whose absence let
+the staleness persist. Consumers are also visibly bouncing on convergence
+(`goal-host draining for restart`), which is the fan-out restarting them after a
+swap rather than silently leaving them on old bytes.
+
+## Dispatching a fix through the sanctioned channel
+
+With `body.operator` set, the edit goal reached feature_compose — no `BUSY`, and
+`trigger: operator` confirmed on the record. It then failed, correctly:
+
+    verdict: UNFAVORABLE, apply_failed, rolled_back
+    no_unique_anchor: refused fs_edit — planned anchor is non-unique and
+    re-derivation found no unique substring (would mislocate)
+
+**The refusal is right and the goal was wrong.** I asked it to change three
+*identical* `.slice(0, 3)` strings; those anchors are non-unique by construction,
+and the guard against mislocating an edit is exactly what should fire. It rolled
+back rather than writing to a guessed location — the failure mode that has
+previously produced harmful edits on this substrate.
+
+Re-posed against a verified-unique anchor: `).slice(0, 3) as string[];` occurs
+**exactly once** in the file (counted against the live tree, not assumed), so the
+single-site goal is anchorable. That is the standing lesson about giving a drafter
+verbatim anchor text proven to occur once, and it applies to goals an operator
+writes as much as to ones the substrate writes.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
