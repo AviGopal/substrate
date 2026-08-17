@@ -1949,3 +1949,43 @@ Two things this does **not** establish, stated because the temptation runs the o
 What it does establish is that the measurement was corrupted for hours by a one-line
 substrate-authored revert, and that every conclusion drawn from those batches — including
 two of my own relocations of "the ceiling" — was reasoning about an artefact.
+
+## Final measurement: removing the unservable clause did not unlock depth
+
+A 5-shape goal built entirely from locally-servable shapes — health report, registry state,
+shape count, HTTP fetch + extract, note — with no `concept_write`:
+
+    HOLLOW — "the goal required multiple specific outputs (vessel health report, discovery
+              registry state with…"
+    HOLLOW — "the memory note was rejected due to missing required fields, and GitHub
+              stargazers count was not…"
+    HOLLOW — deterministic:hollow_walklog_capped — all 1 logged walk step(s) produced 0 new shapes
+    1 note — 1 of 3 facts
+
+So vessel availability was a real constraint and **not the binding one**. That is the fifth
+mechanism demoted this session, after verification coverage, substitution opportunity,
+finding truncation and execution.
+
+### The measured envelope, stated plainly
+
+    2 facts, 3–4 shapes   →  reliable: 5 of 5 correct, 0 wrong, oracle-verified
+    3 facts, 5 shapes     →  1 of 4 partial, rest honest failures
+
+The system is reliable at two facts and unreliable at three. Every fix landed this session
+moved the failure mode toward honesty and none moved that boundary.
+
+### What improved, and it is not nothing
+
+The verdicts now name *which* outputs were missing — "vessel health report, discovery
+registry state with…", "stargazers count was not…" — where this session began with reaches
+that asserted facts the artifact did not contain. A system that fails specifically is one
+whose failures can be repaired; a system that greens them is not. That is the difference
+between the start and end of this session, and it is a smaller claim than a depth
+demonstration but a real one.
+
+### Honest closing position
+
+**Deepest valid reach: 5 steps**, unchanged. Increasingly compositional *reaching* was not
+demonstrated beyond it. The remaining gap is not any single mechanism I can name with
+evidence — five candidates are excluded — and I decline to offer a sixth with the same
+confidence the previous five carried.
