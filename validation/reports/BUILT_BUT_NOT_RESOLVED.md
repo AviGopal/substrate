@@ -707,6 +707,46 @@ sits on a path that is not the one deciding the outcome. Filed as
 The bound is now overridable on the LLM-parse path. No caller passes it yet, so the
 effective cap is still 3 until goal-host supplies it from `walkBudget`.
 
+## Retraction: the oracle is independent
+
+Earlier this document raised, as a question rather than a finding, whether
+`deterministic:verified-registry-count` might be reading the produced output rather
+than querying — which would have made it self-confirming and would have undermined
+every reach it blessed today. The question is now answered, by a failure:
+
+    RUNG 5 → reached: false
+    deterministic:wrong-registry-count — independently queried registry totalVessels=11,
+    but the output reports 1 (the self-graded value does not match the authoritative registry)
+
+The oracle queried, got **11** — matching ground truth captured independently — and
+**rejected** the dispatch. A self-confirming oracle cannot produce that outcome: it
+would have blessed whatever the walk produced. The suspicion is withdrawn, and the
+earlier rung-4B discrepancy (oracle citing 10 against a registry reading 11) is best
+explained as a transient rather than as a broken oracle.
+
+Recording this because the suspicion was committed to this document, and leaving a
+retracted doubt about a verification mechanism standing is worse than never raising
+it. The reason it was raised as a question rather than a finding is exactly why it
+cost nothing to withdraw.
+
+## Where compositional depth actually stands
+
+Two suppressors, and only one of them was the `.slice` cap.
+
+The landed change makes the bound overridable, but **no caller passes it**, so the
+effective ceiling is still 3. The single call site is
+`inferGoalTargetDecision(goal, knownShapes, {…})` in `index.ts`, which already takes
+`InferGoalTargetShapesOpts` and therefore already accepts `maxTargetShapes` — it just
+does not supply one. That is dispatched.
+
+Reading that function also surfaced a second mechanism worth tracing separately: its
+fallback decision collapses any goal matching
+`compute|calculate|how many|number of|count|…` to the single shape `["shellResult"]`
+at confidence 0.4 when `shellResult` is available. Several of this session's goals
+contain "how many". A fallback that reduces a multi-part goal to one target shape is
+a composition suppressor that looks, in the logs, like a low-confidence inference
+rather than a degraded path.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
