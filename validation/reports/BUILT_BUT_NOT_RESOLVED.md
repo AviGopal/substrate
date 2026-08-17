@@ -2443,3 +2443,46 @@ answer to whichever the code implemented.
 **LADDER, FINAL:** single fact ✓ · arithmetic over one body ✓ (28.307692307692307, credited)
 · two independent sources ✓ (60, credited). All three reach validly; the two with deterministic
 verifiers also learn.
+
+### THE LADDER, COMPLETE: four rungs, top three credited (2026-08-17, 14:28)
+
+    three-source sum
+    stdout: 66
+    oracle: deterministic:verified-multi-source-combined —
+            goal-host-vessel/src=58 + ribosome-vessel/src=2 + discovery-vessel/src=6 = 66
+    credit: alphaBetaDelta dAlpha=2
+
+Ground truth captured BEFORE dispatch: 58, 2, 6 → 66. Every root recomputed independently by
+the verifier, at the scope the goal specified.
+
+| rung | goal | answer | truth | credit |
+|---|---|---|---|---|
+| 1 single fact | registry shapes | 368 | 368 | ✓ |
+| 2 arithmetic over one body | shapes ÷ vessels | 28.307692307692307 | same | ✓ |
+| 3 two independent sources | count A + count B | 60 | 60 | ✓ |
+| 4 three independent sources | count A + B + C | 66 | 66 | ✓ |
+
+Each rung is strictly more compositional than the last. All four reach with the correct value;
+the top three also earn durable credit, because a complete verifier covers each.
+
+**WHAT IT TOOK, and the order matters:** supply the missing structural fact (the floor composes
+N operands itself) · extend the parse to deployed /vessels trees · represent SCOPE in parse,
+builder and verifier · generalise to N roots for sums only · grade at insert. Five changes,
+each necessary, none sufficient alone.
+
+★★★★★ **THE GOVERNING CONSTRAINT, learned by breaking it:** a verifier must represent EVERY
+dimension the goal can vary. At 14:04 one that omitted scope credited 72 against a true 60 —
+worse than the no-verifier state it replaced, because it converted an uncredited-correct answer
+into a credited-wrong one. Completeness is the precondition for adding a verifier at all; where
+completeness is not achievable, ABSTAIN (a three-path comparative still declines, since
+"which has more" is undefined over three operands).
+
+★★★★★ **THE FIX WAS NEVER "STOP SHARING THE PARSE."** Sharing is what keeps generator and
+grader consistent; six recurrences of the wrong-field verdict were paid for that. A shared
+parse must be COMPLETE. A missing field never fails loudly — it collapses two questions into
+one and certifies the answer to whichever the code implemented.
+
+★★★★★ **THREE FALSE REACHES WERE FOUND TODAY, ALL BY CAPTURING GROUND TRUTH BEFORE DISPATCH,
+AND ONE WAS INTRODUCED BY ME WHILE FIXING THE OTHER TWO.** Identical shape every time: a
+producer and its verifier agreeing on a question the goal did not ask. No `reached` field
+would have exposed any of them.
