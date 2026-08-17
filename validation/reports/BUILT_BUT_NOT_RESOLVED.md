@@ -343,6 +343,60 @@ artifact.
 
 Filed as `synthesis-discards-retrieved-evidence`.
 
+## Correction: I never claimed the reserved compose slot
+
+Operator-dispatched edit goals were being refused with
+`[compose-cap] REFUSING autonomous compose: 1 in flight`, and the obvious reading
+was lane starvation — the directed lane losing to autonomous work. That reading was
+wrong, and three checks killed it in order:
+
+- the compose slot directory was **empty** (zero slots held), so it was not slot
+  exhaustion;
+- `busy-refusals.jsonl` had **zero** entries for the day, so it was not the
+  per-vessel guard;
+- which left the in-flight cap, whose log line says `autonomous`.
+
+The classifier is `pointer.directed === true`, fed from `operatorOrigin`, fed from
+`trigger === "operator"`, fed from **`body.operator`** — a top-level request field:
+
+    const operator = typeof body.operator === "string" && body.operator.length > 0 ? body.operator : undefined;
+
+Every dispatch this session passed `tags: ["operator:avi", …]`. That tag is trace
+attribution; it is not the origin declaration. The substrate classified the
+dispatches as autonomous **correctly**, and correctly denied them the reserved
+slot. There is no lane-starvation defect. The gap I was one step from filing would
+have been fiction.
+
+The near-miss is the lesson: the refusal message named the classification
+(`autonomous`) rather than the reason, and I read a resource-contention story into
+it. Reading the classifier before filing cost two commands and avoided asserting a
+defect in a mechanism that was behaving exactly as designed.
+
+Also worth recording as a *correct* verdict: the undirected edit goal that fell
+through to the walk was graded
+
+    HOLLOW — deterministic:edit-intent-no-landed-edit — an edit goal is reached only by
+    an edit-result shape WITH landing evidence; β-penalised last pick
+
+which is the honest behaviour this document is otherwise short of: a stub proposal
+with no landed sha was refused rather than greened.
+
+## The compositional ladder, run deliberately
+
+With the axis corrected (distinct shapes, not facts) and ground truth captured
+before each dispatch:
+
+| rung | asked | chain | verdict | hand-grading |
+|---|---|---|---|---|
+| 2 | 1 fact | **3 steps** — `advertised_shape_coverage_scan` → `shellResult` → `memoryNote_write` | reached | `305` correct |
+| 3 | 2 facts | **4 steps** — `vessel_health_report` → `discovery_vessel_registry_observer` → `shellResult` → `memoryNote_write` | reached | `305` and `healthy` both correct |
+
+Rung 3's `vessel_health_report` is a real 1171-char report, not the 444-char refusal
+envelope that contaminated the earlier depth-5 run. Composition increases across the
+rungs (3 → 4 steps) with content verified correct at each, which is the demonstration
+the standing goal asks for — bounded above by the `.slice(0, 3)` target cap
+documented earlier in this report.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
