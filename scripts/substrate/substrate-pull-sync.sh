@@ -863,6 +863,13 @@ EOF
   GATE_ELAPSED=$(( $(date +%s) - GATE_T0 ))
   if [ "$GATE_ELAPSED" -ge "${GATE_BUDGET_SECONDS:-420}" ]; then
     log "$v: !!! TEST GATE SKIPPED — per-tick budget ${GATE_BUDGET_SECONDS:-420}s exhausted (${GATE_ELAPSED}s elapsed); converging UNGATED rather than risk a SIGTERM mid-convergence"
+    # FILE IT, do not merely log it. A test REGRESSION emits a gap (below); the gate
+    # DISABLING ITSELF did not — and that is the more serious condition, because a
+    # regression means the gate ran and objected while this means no gate ran at all.
+    # Reporting the worse condition through the weaker channel is how it stayed invisible:
+    # a loud line nobody queries is a silent failure. Measured 2026-08-17: several changes
+    # converged under this branch and the only trace was a log line.
+    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-testgate-skipped-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"Repair needed: pull-sync converged $v to ${HEAD:0:10} with NO test gate — the per-tick budget (${GATE_BUDGET_SECONDS:-420}s) was exhausted after ${GATE_ELAPSED}s, so the suite never ran. This is not a passing gate, it is an absent one, and it is absent precisely when a tick is slow, which is when convergence is riskiest. Repair the capability by raising the budget, sharding the gate across ticks, or running the suite before the tick's other work.\",\"status\":\"open\"}}}}"
     BUN_BIN=""
   fi
   count_pf() { printf '%s' "$1" | grep -oE "^ *[0-9]+ $2" | grep -oE '[0-9]+' | tail -1 || true; }
@@ -875,6 +882,12 @@ EOF
   REG=""; REG_F=""; REG_P=""
   if [ -z "$BUN_BIN" ]; then
     log "$v: !!! TEST GATE BLIND — no test runner available (bun missing, or the per-tick budget line above disabled it); this is not 'no tests', it is no instrument. Converging ungated."
+    # Only file when the runner is genuinely missing. When the budget branch above cleared
+    # BUN_BIN it already filed, and two gaps for one cause would double-count the demand
+    # the gap picker reads.
+    if [ "$GATE_ELAPSED" -lt "${GATE_BUDGET_SECONDS:-420}" ]; then
+      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-testgate-no-runner-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"Repair needed: pull-sync converged $v to ${HEAD:0:10} with no test runner present, so the gate could not execute a single test. This is no instrument rather than no tests — the vessel's suite was never consulted. Repair the capability by ensuring bun is on PATH in the convergence environment.\",\"status\":\"open\"}}}}"
+    fi
   else
     T_OUT="$(run_suite)"; T_FAIL="$(count_pf "$T_OUT" fail)"; T_PASS="$(count_pf "$T_OUT" pass)"
     if [ -z "$T_FAIL" ]; then
