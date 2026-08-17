@@ -603,6 +603,53 @@ out of the work tree — the standing operator-gated item — and that the *dead
 sits in the safe location while the *live* one sits in the disposable one is
 precisely the wrong way round.
 
+## Rung 4, re-run: the honesty check fires, and the other route still wins
+
+Re-running rung 4 against the widened pattern produced the cleanest evidence of the
+session, because it is a controlled comparison inside a single dispatch. The shape
+`vessel_health_report` was produced twice, by two routes:
+
+    route 1 (vessel-resolve satisfier)
+      → "satisfier vessel_health_report resolved a DISHONEST body —
+         envelope carries error: vessel_id is required"        REJECTED ✓
+
+    route 2 (activity)
+      → REACH-CONTENT vessel_health_report (98 chars), entire body:
+         {"producedBy":"activity:⟨learned-auto-bridge-vessel-health-report⟩",
+          "executionId":"exec_57lengjz"}                        ACCEPTED ✗
+
+The accepted body contains **no health data at all** — it is a pure provenance
+envelope. Same shape, same dispatch, graded on one route and ungraded on the other.
+That isolates the defect to route coverage and exonerates the honesty predicate,
+which is exactly what the earlier evidence could only infer.
+
+The honesty fix is working where it is wired. It is simply not wired everywhere, and
+the ungraded route is the one that decided the outcome.
+
+Consequences, hand-graded:
+
+    note facts:  healthy ✓   305 ✗ absent   vessel count = 10, registry = 11
+
+So **rung 4 is a false reach on the second attempt too**, for a different reason than
+the first. The valid ladder remains two rungs.
+
+### A second concern, recorded as a question rather than a finding
+
+The reach reason claims `independently queried …/registry/stats.totalVessels=10`.
+The live endpoint returned **11** on three samples spanning the dispatch, and the
+producing body reported **10** — so the oracle's "independent" value matches the
+produced output exactly and disagrees with the registry. That producing body is also
+self-inconsistent: `total_registered_vessels: 10` alongside `vessels: []` and
+`obsidian_vessel_count: 0`.
+
+Either a transient dip coincided precisely with the produced value, or the oracle is
+reading the produced output rather than querying — which would make it
+self-confirming, and would explain why `deterministic:verified-registry-count` has
+blessed so many of this session's dispatches. **This is not asserted.** Discriminating
+it needs a deliberate test: dispatch against a registry held still and compare the
+oracle's cited value with a snapshot captured independently. Recorded on the gap so
+the test gets run rather than the suspicion inherited.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
