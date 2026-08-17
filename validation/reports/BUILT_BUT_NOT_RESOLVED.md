@@ -650,6 +650,63 @@ it needs a deliberate test: dispatch against a registry held still and compare t
 oracle's cited value with a snapshot captured independently. Recorded on the gap so
 the test gets run rather than the suspicion inherited.
 
+## The substrate landed the fix autonomously — and two of my claims were wrong
+
+**A substrate-authored commit landed on the remote working branch with no operator
+hands.** `78dbcd6`, author `Substrate Autonomous`, applied by
+`apply_proposal_as_patch + vessel_mitosis_cutover`:
+
+```diff
++  maxTargetShapes?: number;
+-    ).slice(0, 3);
++    ).slice(0, opts.maxTargetShapes ?? 3);
+```
+
+Real, non-inert, typecheck clean (exit 0). That is the hard autonomy criterion from
+`CLAUDE.md`, met — not "it fired", but a landed commit that does what was asked.
+
+### Correction 1: I nearly reported a fabricated sha
+
+`git cat-file` said the sha did not exist, in every clone I checked. It existed on
+`origin/dev`; **my clone had not fetched**. The negative measured my own staleness,
+not the substrate's honesty — on the single most consequential claim of the session.
+Before believing a negative, run the query that would show a positive: here that was
+one `git fetch`.
+
+### Correction 2: the inert-diff detector fires, and does not block
+
+This retracts what was committed earlier in this document. The gate fired, but the
+sequence is:
+
+    02:19:51  semantic-gate  addresses: true
+    02:21:30  mitosis-cutover  pending-land stamp  gap=route-edit-1e3e1f90  sha=a73e9eb4ee12   ← LANDS
+    02:22:43  semantic-gate  addresses: false  "no behavioral change"  → rolled_back
+    02:25:37  reach graded false, reached-command cache evicted
+
+**The commit landed a minute before the gate rejected it.** The rollback reverted the
+worktree; `a73e9eb` is on `origin/dev`. So the inert change shipped *because the gate
+runs after the applier* — land-then-gate rather than gate-then-land.
+
+The consequence is visible in the landed file: `a73e9eb` inserted
+`const MAX_TARGET_SHAPES = 3;` **inside a JSDoc block comment** at line 16, where it
+is inert text corrupting the module's documentation, and a later commit added the
+real declaration at line 48. Typecheck passes, so nothing downstream catches it.
+
+This is the same family as everything else here — the check exists, is correct, and
+sits on a path that is not the one deciding the outcome. Filed as
+`semantic-gate-runs-after-the-commit-lands`.
+
+### Where the cap now stands
+
+    line  16  const MAX_TARGET_SHAPES = 3;        (inside a comment — inert)
+    line  48  const MAX_TARGET_SHAPES = 3;        (real)
+    line 193  .slice(0, MAX_TARGET_SHAPES)        ✓
+    line 600  .slice(0, opts.maxTargetShapes ?? 3) ✓ caller-controllable
+    line 616  .slice(0, 3)                         still hardcoded (alternatives)
+
+The bound is now overridable on the LLM-parse path. No caller passes it yet, so the
+effective cap is still 3 until goal-host supplies it from `walkBudget`.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
