@@ -1377,6 +1377,41 @@ The class gap (`three-oracles-duplicate-a-partial-numeric-sanitiser`) is filed r
 than fixed, deliberately: the instance was blocking a measurement, the refactor is
 not, and expanding scope mid-verification is how a fix stops being attributable.
 
+## Why depth and validity keep trading off: oracle coverage degrades with depth
+
+Two dispatches reached with **four real produced shapes** — the deepest of the session
+— and both delivered **2 of 3** requested facts:
+
+    92b45f37   asked  goal-host health · 368 shapes · 95432 stars
+               got    healthy ✓  368 ✓  95432 ✗ ABSENT
+               reason explicitly enumerates all three, including stargazers_count
+
+    53ac7dc1   asked  dev-vessel health · goal-host health · 368 shapes
+               got    368 ✓  dev-vessel healthy ✓  goal-host report ✗ MISSING
+               verdict deterministic:verified-registry-count on totalShapes=368
+
+`53ac7dc1` is the clean case. The oracle checked **one** quantity, correctly, and the
+verdict credited a goal that asked for **three**.
+
+That is the structural coupling this whole session kept running into without naming
+it: **a deterministic oracle verifies one quantity while the verdict credits the whole
+goal.** At one or two requested facts the oracle covers most of the goal and verdicts
+are trustworthy — which is exactly why the shallow rungs verified cleanly. At three or
+more it covers a third and rubber-stamps the rest.
+
+So depth and validity are not two independent problems. The verified *fraction* is the
+coupling term, and it falls as depth rises.
+
+The consequence for the learning loop is worse than a wrong answer: false reaches
+become **more likely as compositions get deeper**, so the posterior rewards depth
+precisely where verification is weakest, and the traces teach that under-delivering
+compositions succeeded.
+
+Fix shape (unchanged, now with a measured depth dependence): bind each asserted fact
+to a producing step, or make the verdict **name the requested facts it did not check**,
+so the shortfall is visible in the trace instead of hidden behind one verified
+quantity.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
