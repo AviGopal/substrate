@@ -831,6 +831,33 @@ first half of this report assumed: the prompt instructs the model to return 1-3
 shapes, so no code-level bound can raise the ceiling until that text changes. The
 `.slice` was never the binding constraint.
 
+## A unique anchor is not the same as the right anchor
+
+The prompt fix landed — `5e02d505`, on `origin/dev` — and did not move the ceiling.
+The prompt line contains two bounds, and the landed change hit the wrong one:
+
+    line 556:  "Return the 1-3 shapes"    ← primary instruction, UNCHANGED — this is what binds
+               "each 1-6 shapes"          ← alternatives clause, raised
+
+This is my error, and a transferable one. Both clauses read `1-3`, so
+`Return the 1-3 shapes` occurred **twice** in the file (lines 156 and 556) and would
+have been refused as non-unique — an earlier goal in this session was refused for
+exactly that. `each 1-3 shapes from the KNOWN list` occurred once, so I anchored
+there. **I chose the anchor that was easy to target rather than the one that
+mattered.**
+
+That is the same failure as a drafter picking an anchor far from the edit site, which
+this substrate has done before and which is recorded as a known class. The standing
+rule — give a drafter verbatim anchor text proven to occur once — turns out to be
+necessary and not sufficient. Uniqueness makes an edit *land*; it does nothing to
+make it land *where it changes behaviour*. The two properties have to be checked
+separately, and the cheap way is to construct a longer anchor spanning the binding
+site rather than accept a short one that happens to be unique.
+
+Re-posed with an anchor that is both: the full sentence
+`Return the 1-3 shapes … Also provide a confidence value`, which spans the primary
+clause and occurs exactly once because line 156 continues differently.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
