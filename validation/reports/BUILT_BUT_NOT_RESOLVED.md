@@ -1157,6 +1157,43 @@ It also means **ground truth for any registry-count goal must be captured while 
 fleet is settled**, and a dispatch that spans a restart can fail honestly through no
 fault of the walk.
 
+## A valid five-step reach, and the controlled comparison that produced it
+
+`shapes5-9f4e` (`c2673ea7`) — **`reached: true`**, five REACH-CONTENT steps:
+
+    vessel_health_report → shellResult → concept_write → memoryNote_write → activity_template
+
+Verdict: `deterministic:verified-registry-count — independently queried
+…/registry/stats.totalShapes=305`. **`totalShapes`**, not `totalVessels` — the field
+the fix changed.
+
+Hand-graded from the findings body, not the echoed reason preamble (the preamble
+repeats the verdict text, so a substring match on it proves nothing):
+
+    "overall_health":"healthy"                    ✓  ground truth: healthy
+    {"shape":"shellResult","stdout":"305\n"}      ✓  ground truth: 305
+
+This is the deepest valid reach of the session and it exceeds the previous best of
+four steps.
+
+### Why it counts as evidence rather than a lucky run
+
+It is a controlled comparison. Dispatch `bfccfee6`, earlier, used the **same goal
+shape and the same counted entity**, composed correctly, and was failed by the oracle
+grading `totalVessels`. One variable changed — the field-selection predicate — and the
+outcome inverted. The composition capability was present the whole time; the verifier
+was the blocker, and fixing the verifier converted a rejected-but-correct composition
+into a demonstrated reach.
+
+### Caveat, recorded
+
+The persisted note carries both facts as **raw produced artifacts** rather than a
+prose sentence. The goal said "stating both facts", and rung 3's note stated them in
+prose. The facts here are present and correct; the presentation is rawer. That is a
+weaker satisfaction of the wording than the shallower rungs achieved, and it is worth
+noting rather than smoothing over — a reader of the note gets the values, but has to
+read JSON to find them.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
