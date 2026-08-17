@@ -12,14 +12,38 @@ EnvironmentFile=/etc/substrate/env
 # SURREAL_ROCKSDB_BLOCK_CACHE_SIZE; see repos/deployment/charts/surrealdb).
 # 4Gi cache + write buffers + runtime + compaction peak stays well under 26G.
 Environment=SURREAL_ROCKSDB_BLOCK_CACHE_SIZE=4294967296
-# cgroup memory cap (persisted from the live `systemctl set-property` applied
-# 2026-07-22): bound the RocksDB working set so an OOM kills ONLY surreal (which
-# self-restarts) instead of cascading the host. MemoryHigh throttles reclaim
-# before the hard MemoryMax OOM. Matches the 22G/26G the block-cache math above
-# assumes; previously live-only (set-property), so a redeploy lost it.
+# cgroup memory cap: bound the RocksDB working set so an OOM kills ONLY surreal
+# (which self-restarts) instead of cascading the host. MemoryHigh throttles
+# reclaim before the hard MemoryMax OOM.
+#
+# LOWERED 22G/26G -> 10G/12G. The old numbers were sized for a DEDICATED box and
+# this unit does not run on one. Measured on the host that killed it:
+#
+#     host MemTotal            60.6G
+#     foreign tenants          31.5G qemu-system-x86 + 5.4G virtiofsd
+#     real headroom            23.7G
+#     surrealdb MemoryMax      26.0G   <-- ABOVE the headroom
+#     sum of all fleet caps    34.0G   <-- also above it
+#
+# A cap above the host's headroom is not a cap: the unit can never reach it, so
+# the kernel's OOM killer decides instead of the cgroup. That is exactly what
+# happened at 2026-08-17 14:19:58 ("A process of this unit has been killed by the
+# OOM killer", status=9/KILL) — the cgroup limit never engaged.
+#
+# The 12G ceiling keeps surreal's own cgroup as the binding constraint while
+# leaving room for the other 62 units, and it still clears the block-cache math
+# below (4G cache + write buffers + runtime + a 2-3x compaction peak).
+#
+# ⚠ THIS UNIT LIVES IN THE IMAGE. Editing this file changes nothing on a running
+# substrate until a redeploy; apply it live with
+#     systemctl set-property surrealdb.service MemoryHigh=10G MemoryMax=12G
+# and note that a live-only set-property is LOST on redeploy — which is why the
+# value belongs here as well as there. Both, or it silently reverts.
+#
+# scripts/substrate/memory-budget-check.sh checks this arithmetic on any host.
 MemoryAccounting=yes
-MemoryHigh=22G
-MemoryMax=26G
+MemoryHigh=10G
+MemoryMax=12G
 ExecStart=/usr/local/bin/surreal start \
     --bind 127.0.0.1:8000 \
     --user root \
