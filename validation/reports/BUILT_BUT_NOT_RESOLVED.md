@@ -1777,3 +1777,30 @@ The 800 is still a hardcoded behavioural constant of the same class catalogued i
 fact delivery, that is measured (4/5 → 0/4 for one added clause), and the cause is not
 verification coverage, not substitution opportunity, and not finding truncation — three
 candidates now excluded by evidence rather than by argument.
+
+### Scope correction: the binding constrains the producer, not the composer
+
+A later batch on the same goal class graded **1 correct / 1 wrong / 1 no-count**, and the
+wrong one stated **12** — the substitution the binding was built to remove.
+
+It is not a regression. The binding fires on `shape === "shellResult"`, so it only
+constrains the walk when the walk *selects that producer*. In the batch where it fired on
+all five dispatches the result was 4 correct / 0 wrong. In the dispatch that substituted,
+no shell step was taken at all, so nothing bound anything and the note was composed from
+prior findings — where a 12-entry `advertised_shapes` array sits waiting.
+
+So the earlier "zero substitutions across five dispatches" was a property of that batch,
+not a guarantee. Stated precisely:
+
+- **producer selected** → field bound by `registryFieldFor` → correct value
+- **producer not selected** → note composed from findings → substitution recurs
+
+The fix therefore needs a companion, and the companion is the target-selection defect
+already filed: when a goal names a source for a fact, the producer for that fact must be
+in the target set. Binding the field is useless if the step never runs, which is the same
+shape as every other finding here — a correct mechanism on a path the failure does not
+take.
+
+That also explains why the earlier deep batch showed omissions rather than substitutions:
+those walks *did* run the shell (the binding fired), so no wrong value could be composed —
+the fact was simply absent from the note instead.
