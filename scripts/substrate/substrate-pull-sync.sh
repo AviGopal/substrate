@@ -873,7 +873,24 @@ EOF
     BUN_BIN=""
   fi
   count_pf() { printf '%s' "$1" | grep -oE "^ *[0-9]+ $2" | grep -oE '[0-9]+' | tail -1 || true; }
-  run_suite() { (cd "$d" && timeout "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test 2>&1) || true; }
+  # --kill-after IS LOAD-BEARING, not belt-and-braces. Measured 2026-08-17 19:34: a
+  # convergence tick hung with pull-sync sleeping in pipe_read for 7+ minutes and no output
+  # after "Starting". The leaf was `bun test` in /workspace/git/vessels/activity-api,
+  # 7 minutes old, with NO `timeout` process left in the chain.
+  #
+  # That is the whole failure: plain `timeout N` sends SIGTERM and exits. A suite that does
+  # not die on SIGTERM keeps the write end of this command substitution's pipe OPEN, so
+  # `$(run_suite)` blocks forever — the timeout "expired" and bought nothing. The tick then
+  # stalls until systemd's TimeoutStartSec (900s) kills the whole service, so ONE unkillable
+  # suite costs the entire fleet a 15-minute convergence window, and it costs it silently:
+  # the last line in the journal is "Starting", which reads like a slow tick rather than a
+  # wedged one.
+  #
+  # --kill-after escalates to SIGKILL, which cannot be ignored, so the pipe closes and the
+  # substitution returns. The gate then treats it as an unreadable suite (T_FAIL empty ->
+  # TEST GATE BLIND) and converges ungated, which is the designed behaviour for "no
+  # instrument" and is now reachable instead of deadlocking before it.
+  run_suite() { (cd "$d" && timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test 2>&1) || true; }
   # D2 FIX. A pass-count DROP alone is not a regression: consolidating or deleting
   # tests legitimately lowers it. Only count it when failures did not ALSO improve,
   # otherwise a genuine repair that removes dead tests is refused as a regression AND
