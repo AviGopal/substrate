@@ -1923,3 +1923,29 @@ found a false one instead. A verification layer that mistakes noise for signal d
 merely fail to catch defects; it **spends the substrate's repair capacity manufacturing
 them**, and the repair it directs is itself unreviewed by anything that could tell the
 difference.
+
+### After the revert: the 5-clause goal delivers again
+
+    before the revert   0 correct / 0 wrong of 4,  then 0 of 3   (all no-count)
+    after the revert    1 correct / 0 wrong of 3
+
+The valid one carries both facts and an oracle verdict:
+
+    verdict  deterministic:verified-registry-count — independently queried …/registry/stats
+    facts    368 ✓   healthy ✓
+    chain    vessel_health_report → shellResult → memoryNote   (3 shapes)
+
+So the regression had been masking real capability: a goal I had written off as beyond the
+walk was delivering correctly at least part of the time, and the failures I attributed first
+to omission and then to execution were the oracle grading the wrong field.
+
+Two things this does **not** establish, stated because the temptation runs the other way:
+
+- **It is not a depth demonstration.** Three real shapes; the deepest valid reach is still
+  the five-step one, unchanged for the whole session.
+- **It is not reliable.** One of three. The other two stated no count — the honest failure
+  mode, not a wrong one, but a failure.
+
+What it does establish is that the measurement was corrupted for hours by a one-line
+substrate-authored revert, and that every conclusion drawn from those batches — including
+two of my own relocations of "the ceiling" — was reasoning about an artefact.
