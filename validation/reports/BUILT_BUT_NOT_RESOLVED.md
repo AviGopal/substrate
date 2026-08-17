@@ -2698,3 +2698,46 @@ subquery, per-edge posteriors, ψ dot products, and an evidence-gated SF_BLEND a
 (does per-edge evidence replace, gate, or weight the global draw?) is a design decision with no
 obviously correct answer — a naive replacement would starve every edge that has never been
 tried, which is the untried-prior problem one level up.
+
+### A suite that ignores SIGTERM wedges the whole convergence tick (2026-08-17 19:34, live)
+
+Found while diagnosing why a pushed commit had not converged. pull-sync sat in
+`activating/start` for 11+ minutes with nothing in the journal after "Starting". Walking the
+child chain:
+
+    pull-sync (bash)  sleeping in pipe_read
+      └─ bash  do_wait
+           └─ bash  do_wait
+                └─ bun test   cwd=/workspace/git/vessels/activity-api, 7+ min old
+
+★ **NO `timeout` PROCESS ANYWHERE IN THE CHAIN — that absence is the diagnosis.** Plain
+`timeout N` sends SIGTERM and exits. A suite that does not die on SIGTERM keeps the write end
+of the command substitution's pipe OPEN, so `$(run_suite)` blocks forever: the timeout
+"expired" and bought nothing. The tick then stalls until systemd's TimeoutStartSec (900s), so
+**one unkillable suite costs the fleet a 15-minute convergence window** — silently, because the
+last journal line is "Starting", which is indistinguishable from a slow tick.
+
+Demonstrated rather than argued, with a SIGTERM-ignoring child:
+
+    timeout 2 ./ignore_term.sh               -> returned after 60s
+    timeout --kill-after=1 2 ./ignore_term   -> returned after  3s
+
+Fixed with `--kill-after` (grace `TEST_KILL_GRACE_SECONDS`, default 30s).
+
+⚠ **AND IT IS A BOOTSTRAP DEADLOCK, in the class the script's own comment describes.** The
+hang is at line 909; the self-update that would deploy the repair is at line 1330 — 421 lines
+later, in the super-repo step. A tick that wedges never reaches the block that fixes wedging.
+
+**The ordering is NOT the bug, and swapping it would be a mistake.** Its comment states the
+reason: "Runs after the vessel loop so a bad glue change can never block vessel convergence."
+Glue-last protects vessels from a bad glue commit; glue-first would protect glue repair from a
+vessel hang. Both failures are real, so reordering trades one for the other. **The correct
+resolution is to make the loop incapable of hanging — fix the hang, do not reorder.** That is
+what `--kill-after` does, and it makes the existing ordering sound rather than merely lucky.
+
+The deadlock is therefore PROBABILISTIC, not permanent: earlier ticks completed (19:23:56
+`done — synced=0`), so the repair deploys on the first tick that does not wedge.
+
+⚠ I nearly filed a second, non-existent defect here: the 19:23 run's `synced=0` looked like a
+broken fetch until I checked the timeline — that run preceded the push. **A convergence "did
+nothing" is only a defect once you know there was something to do.**
