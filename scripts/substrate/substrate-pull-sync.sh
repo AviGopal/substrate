@@ -1076,6 +1076,34 @@ EOF
        fi ;;
   esac
   PORT="$(health_port "$v")"
+
+  # DETECTOR: MASKED **AND RUNNING** IS A LATENT UNRECOVERABLE OUTAGE.
+  #
+  # Masked-and-inactive is normal — apply-inventory masks what a role excludes, and the
+  # suppression above depends on it. Masked WHILE ACTIVE is the dangerous state: the unit
+  # serves traffic, `is-active` reports active, and yet it cannot be restarted, cannot be
+  # recovered by `Restart=on-failure`, and cannot receive new code. It looks healthiest
+  # precisely when it is least recoverable.
+  #
+  # Found by hand FOUR times (2026-08-15 x3, 2026-08-17 activity-api, MainPID 1094541,
+  # masked and up since 06:23). Each instance cost a manual diagnosis because nothing
+  # asserted the conjunction — every existing check reads one half or the other.
+  # This is the detector those four instances kept not producing.
+  #
+  # BOTH mask forms are matched. A NEGATIVE CONTROL run before committing this — masking a
+  # live unit with `--runtime` and re-checking — showed `is-enabled` returns
+  # `masked-runtime`, not `masked`, so a predicate testing only `= masked` would have
+  # reported clean on exactly the transient case an operator is most likely to create by
+  # hand. That is the vacuous-check class this session has hit four times; here the control
+  # caught it before the detector shipped rather than after it lied.
+  if [ -n "$UNIT" ] && [ "${UNIT%.service}" != "$UNIT" ] \
+     && systemctl is-active "$UNIT" >/dev/null 2>&1 \
+     && case "$(systemctl is-enabled "$UNIT" 2>/dev/null)" in masked|masked-runtime) true ;; *) false ;; esac; then
+    MP="$(systemctl show "$UNIT" -p MainPID --value 2>/dev/null || echo '?')"
+    log "$v: !!! MASKED WHILE ACTIVE — $UNIT is masked but running (MainPID $MP); it cannot be restarted, recovered, or updated"
+    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"unit-masked-while-active-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"Repair needed: $UNIT is MASKED yet ACTIVE (MainPID $MP). A masked unit cannot be restarted, cannot be recovered by Restart=on-failure, and cannot receive converged code, so this process is serving traffic that no mechanism can update or revive — while is-active reports it healthy. Repair the capability by unmasking it if this deployment should run it (the running process is untouched by unmask), or by stopping it if the role excludes it.\",\"status\":\"open\"}}}}"
+  fi
+
   if [ -n "$UNIT" ] && [ "${UNIT%.service}" != "$UNIT" ] && systemctl is-active "$UNIT" >/dev/null 2>&1; then
     # IN-FLIGHT WORK ON THE ORCHESTRATING VESSEL DEFERS ITS RESTART.
     #
