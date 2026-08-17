@@ -2201,3 +2201,56 @@ oracle needing its own copy of the NAIF table.
 **So the operator's correct contribution here is vocabulary and contract, not implementations** —
 the bootstrap tier that cannot exist until someone provides it, after which the system composes.
 Rule 9a is that; the ephemeris oracle is not.
+
+---
+
+## 48. The valve fix works — and it does not clear the surplus
+
+The quarantine valve deployed (activity-api restarted 23:31:36) and produced, for the first time
+today, both of the lines it was built for:
+
+```
+23:36:37  global-ceiling valve: batch FAILED — quarantining and advancing
+            {"iter":0,"batchSize":25,"quarantinedTotal":25,"firstId":"execution:exec_4o2fxn66"}
+00:07:51  global-ceiling valve: done
+            {"removed":25,"quarantined":25,"quarantineFailures":1,"target":20000,
+             "surplus":309871,"remaining":309846,"stoppedBy":"budget","elapsedMs":368220}
+```
+
+**`removed: 25`.** Every prior sweep today committed **zero** — 20:19, 20:56, 21:09, 23:16 — because
+one throw on `exec_4o2fxn66` aborted the cycle and the next cycle re-selected the same head page.
+The valve now quarantines that batch, advances past it, and completes. The head-of-scan deadlock is
+genuinely broken, and the fix is confirmed by the exact evidence it predicted.
+
+**And that is not enough to clear the blocker.** `stoppedBy: "budget"`, `elapsedMs: 368220` — six
+minutes to delete 25 rows and quarantine 25, against a 20,000-row target and a 5-minute budget. The
+store is unchanged in the direction that matters:
+
+| | before the fix | after one completed sweep |
+|---|---|---|
+| rows | 459,147 | 460,011 |
+| surplus | 309,147 | **310,011** |
+| DELETE mean | — | 2,586ms over 475 ops |
+
+Intake still exceeds drain by a wide margin. At ~25 rows per 30-minute cycle against a 310,000
+surplus, the valve would need years, and the surplus grew ~900 rows during the sweep itself.
+
+### What is now established, and what is not
+
+**Established:** the head-of-scan poison row was a real and complete blocker — nothing could be
+deleted while it led every page — and it is fixed. That was worth finding: three separate batch
+sizes had been tried against it, and the batch dimension was never the variable.
+
+**Not established, and I am not going to imply otherwise:** that the prune is solved. Removing the
+deadlock revealed the next constraint rather than eliminating it. A ~2.6s mean DELETE on this table
+means a 20,000-row target cannot fit in any reasonable per-sweep budget, and raising the budget
+trades directly against the DB contention that was measured at batch=1 (320 in flight, 81% slow).
+
+So the design question the source comment names — partitioning, a different retention substrate, or
+not storing this volume — is now supported by *better* evidence than when I first cited it
+prematurely in §41.2. It was premature then because I had reached it by eliminating batch sizes
+while the real blocker was a poison row. It is defensible now because the poison row is gone and
+the throughput ceiling is still two orders of magnitude short.
+
+**The honest status of this blocker: the mechanism is repaired and the capacity is not there.** The
+next lever is not in `trace-retention.ts`.
