@@ -2526,3 +2526,43 @@ instrument that could not distinguish failure from success — the registry orac
 own question, the mock scanner blinded by comments, this detector matching everything. The
 countermeasure is the same each time: **prove the check can fail before trusting that it
 passed.**
+
+### Review of the two 2026-08-13 wiring audits against current code (2026-08-17)
+
+Not an inventory — each ranked defect re-checked in the source, four days on.
+
+**SELF_DEVELOPMENT_WIRING_AUDIT (6 ranked):**
+
+| # | claim | state | action |
+|---|---|---|---|
+| 1 | bridge `input_shapes:["goal"]` → edgeless graph | present; **the value is factually correct** (the task does consume `goal`) | stated, not changed |
+| 2 | `ancestor_signatures` never written → chain credit dead | **resolved**, via a fallback to the ancestor's own recorded signature — not by populating the field | none |
+| 3 | no gate EXECUTES the changed code | **decided, not open**: the executing gate was built and abandoned because it would invoke vessel-mitosis cutover, which renames live directories and restarts units | none |
+| 4 | ribosome recursion gate bypassed (`templateAuthor:""`) | **live** → learned-of-learned nesting 7 deep, one family 202 execs / 0 successes | **FIXED** — author derived from the `learned-` id prefix |
+| 5 | detected classes route to no fix | **live** | **FIXED on the producer** — the gate is correct and deliberately narrow |
+| 6 | `/health` grades a boolean, not the latency | **live** — read `healthy` at 16.5s | **FIXED** — thresholded, reports `degraded` without failing the endpoint |
+
+**COMPOSITION_WIRING_AUDIT (6 ranked):** #4 is the same `ancestor_signatures` defect (resolved).
+#5's mechanism now EXISTS — `verifyGoalReached` takes `walkEvidence` and implements a
+hollow-walklog cap; the floor omits it because it has no walk log, and carries its own
+grounding gate instead. #6 is half-resolved: `SF_BLEND` now has an evidence-gated auto-flip at
+≥200 successor_features rows, but `composition-graph.ts` still has **zero callers** — unread at
+selection, as the audit said.
+
+★★★★★ **TODAY'S MEASUREMENTS REFINE BLOCKER #2, and the refinement matters.** The audit says
+target-inference flattening a broad class to `[shellResult]@0.6` is what stops composition. That
+flattening is still live — every compositional probe today inferred exactly `[shellResult]@0.6`.
+**But all three compositional rungs reached CORRECTLY through it**: 28.307692307692307, 60, and
+66, each verified by an independent oracle. The composition happened INSIDE the emitted command
+(`jq '.a / .b'`, `$((A+B))`, a three-way sum).
+
+So flattening to one shape is not the same as failing to compose. What the audit measured as
+"never composes" was, at least for shell-computable goals, "composes in one hop and records a
+one-element chain". The remaining cost is real but narrower than stated: the chain is short, so
+the ribosome extracts less structure and the composition graph stays sparse — not that the
+answer is wrong or absent.
+
+**Two defects are design calls I declined to change** (#1 here and the composition graph's
+selection wiring): both alter selection semantics for every goal, neither is verifiable without
+extended live measurement, and this session has already shown what an unverifiable change to
+that machinery costs — a deterministic verdict crediting a wrong answer.
