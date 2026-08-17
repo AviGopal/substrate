@@ -2401,3 +2401,45 @@ deterministic verifier, not by loosening the gate. Loosening it would manufactur
 ⚠ The graded-at-insert fix (`eca7c8a`) remains correct and deployed, but its EFFECT is still
 unobserved: on the verifying run the patch succeeded (`reach-patch ok … rows=1`), so the tag
 was belt-and-braces and never load-bearing. It is verified as deployed, not as exercised.
+
+### CLOSURE: a compositional goal that reaches correctly AND earns credit (2026-08-17, 14:11)
+
+The two-source rung now satisfies both halves — correct answer and durable learning:
+
+    command:  find … -maxdepth 1 -type f -name '*.ts'   (builder honours scope)
+    stdout:   60
+    oracle:   deterministic:verified-two-source-combined —
+              vessels/goal-host-vessel/src=58 + vessels/ribosome-vessel/src=2 = 60
+    credit:   alpha-credited satisfier:shellResult, dAlpha=2
+
+Ground truth captured BEFORE dispatch: 58 + 2 = 60. The false-reach answer this same goal
+produced 7 minutes earlier was 72. The oracle recomputed both operands from its own filesystem
+walk rather than trusting stdout.
+
+**THE FULL ARC OF ONE GOAL, every verdict hand-graded against pre-captured truth:**
+
+| time | behaviour | answer | verdict | grade |
+|---|---|---|---|---|
+| 12:57 | produced ONE operand, retry widened away from the shell producer | 57 | reached=false | honest miss |
+| 13:42 | executor composed both operands (supplied structural fact) | 60 ✓ | reached, NO credit | correct, unlearned |
+| 14:04 | two-source oracle enabled, counted RECURSIVELY | 72 ✗ | reached, **alpha +2** | **FALSE REACH** |
+| 14:11 | scope carried through parse + builder + verifier | 60 ✓ | reached, alpha +2 | **VALID + DURABLE** |
+
+Four fixes, each necessary and none sufficient: supply the missing fact (floor composes),
+extend the parse to /vessels trees (verifier applies), abstain then REPRESENT the scope
+dimension (verifier is correct), grade at insert (verdict survives).
+
+★★★★★ **THE 14:04 ROW IS THE MOST INSTRUCTIVE.** Adding a verifier to a class it could not
+fully represent was WORSE than having none: it converted an uncredited-but-correct answer into
+a credited wrong one. The withheld credit at 13:42 — which this document earlier called a gap —
+was the guard working. **A verifier must represent every dimension the goal can vary, or it
+manufactures the false reaches it was built to prevent.**
+
+★★★★★ **THE FIX WAS NOT "STOP SHARING THE PARSE."** Sharing keeps generator and grader
+consistent and six recurrences were paid to learn it. A shared parse must be COMPLETE. A
+missing field does not fail loudly — it collapses two questions into one and certifies the
+answer to whichever the code implemented.
+
+**LADDER, FINAL:** single fact ✓ · arithmetic over one body ✓ (28.307692307692307, credited)
+· two independent sources ✓ (60, credited). All three reach validly; the two with deterministic
+verifiers also learn.
