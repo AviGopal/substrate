@@ -1634,3 +1634,38 @@ plural-sink example, which raised the shape-count floor and left the ceiling at 
 Sample sizes are small (3 and 4). The substitution result is a categorical change (2/3 →
 0/4) rather than a shift in a noisy rate, which is why it is reported; the correctness
 figures are not separable from noise and are not claimed as movement.
+
+## Retraction: the worked example did not reduce substitution
+
+The section above reports "substitution 2/3 → 0/4" for the worked-example form. **That
+is wrong, and the error is mine in the measurement, not in the data.**
+
+The detector matched the literal string `12`. Re-graded on the actual question — *is the
+stated shape total correct?* — both conditions are identical:
+
+    prohibition     1 correct / 1 wrong   (stated 12)
+    worked example  1 correct / 1 wrong   (stated 13)
+
+The substitution did not stop. It **moved**: from `12`, the vessel's own advertised-shape
+count lifted from a prior finding, to `13`, the registry's *vessel* count. The walk now
+queries the right source and reads the wrong field of the response.
+
+So the running record correction: worked examples **4/6**, not 5/6. The anti-substitution
+intervention failed in *both* forms, and the prohibition-vs-example distinction is not
+supported by this experiment — that comparison should be treated as untested rather than
+confirmed.
+
+Two things worth carrying:
+
+**I measured a proxy for the property.** "Contains 12" is not "states the correct total",
+and the difference is exactly where the result lived. This is the same failure this
+document criticises elsewhere — a check that answers a nearby question and is read as
+answering the real one — committed by me, in a section arguing about measurement
+discipline.
+
+**The substitution is robust to prompt intervention.** Two forms, same rate, different
+wrong value each time. That is stronger evidence for the pre-registered conclusion than
+either form succeeding would have been: this defect is not addressable at the prompt, and
+the structural fix the gap specifies — bind a fact to a step traceable to the source *and
+field* the goal named — is required. Note the fix must now name the field, not just the
+source, because the walk demonstrably reaches the right source and reads the wrong column.
