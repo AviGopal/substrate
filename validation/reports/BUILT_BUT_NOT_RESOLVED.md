@@ -2101,3 +2101,73 @@ excluded by evidence over this session — verification coverage, substitution o
 finding truncation, execution-in-general, vessel availability as a sufficient explanation, and
 now template malformation as a sufficient explanation. Each was a real effect; none was the
 binding constraint. I decline to name a seventh without the same standard of evidence.
+
+---
+
+## The arguments were amputated at four layers in series (2026-08-17)
+
+**Symptom.** Learned compositions were extracted, stored, selected — and failed on
+replay. 6 of 61 runs completed. The engine's errors named the cause precisely:
+`paths[0] … got undefined` (fs_read, 18x), `invalid URL: undefined` (http_fetch, 8x),
+`undefined is not an object (path.split)` (json_path_extract).
+
+**Measurement that located it.** Every task of every stored composition carried
+`config == {"type": "<resolver>"}` — 98 of 98, no arguments anywhere. Not empty:
+*uniformly* `{type}`, which is a synthesized value, not a missing one. That
+uniformity is what pointed at a mechanism rather than a data problem.
+
+**The chain.** Four layers, in series, each individually plausible:
+
+| # | layer | defect |
+|---|---|---|
+| 1 | `ias-executor` `ExecutionTaskRecord` | no config field existed at all |
+| 2 | `normalizePersistedTask` | fixed-field whitelist dropped it at the WRITE |
+| 3 | `extractTasks` | read `tt.config`; the write lands `resolved_config` |
+| 4 | ribosome synthesize prompt | skeleton literally specified `"config":{}` |
+
+Fixing any one changes nothing observable. This is the failure signature already
+recorded in this document: **when every fix targets the path and nothing moves, the
+layers bind in series.** Layer 3's own comment anticipated the fix — *"Prefer a real
+persisted config if a future write carries one"* — and still read the wrong key.
+
+**Layer 2 is a repeat.** The per-task SHAPES fix of 2026-08-13 was the same whitelist
+dropping the same class of field, with the same consequence (ribosome starved).
+Second instance. The test therefore pins the whitelist, not the field.
+
+⚠ **The mismatch recurred inside its own fix.** My first prompt edit told the
+synthesizer to copy `resolvedConfig` — a key the payload never contains, because
+layer 3 surfaces it as `config`. Caught in review, fixed in `f71bb56`. A write-key/
+read-key mismatch is not a bug you fix once; it is a shape of mistake.
+
+**Status: committed and test-pinned, live effect operator-gated.** `ACTIVITY_API_ENDPOINT`
+on every vessel here is `http://syzygy.host:18080`. The local store logged **zero**
+trace writes in 6h (reads only). All traces land on the **hub**, which this session
+cannot deploy to. So the chain is correct in source and unexercised in production.
+
+### A masked-but-running trace store (same session)
+
+Local `activity-api` was `UnitFileState=masked` while `is-active=active`, MainPID
+1094541, up since 06:23 — the latent-unrecoverable-outage pattern recorded 2026-08-15,
+now a fourth instance. Masking is correct by spoke design (the hub owns the store);
+a masked unit that is *running* is not, because it cannot be restarted or recovered.
+**Unmasked** (`UnitFileState=disabled`); MainPID and ActiveEnterTimestamp unchanged,
+confirming the running process was untouched. Not restarted.
+
+### A green suite that skipped a third of its files
+
+`mock.module` replaces a module globally and outlives the file installing it. Six
+factories mocked `../db/redis` exporting only `RedisClient`; **53 files** then died at
+import — `Export named 'redis' not found` — before any assertion ran. Fixed: the suite
+went 509 pass/114 fail → **769 pass/136 fail**. The 22 new failures are pre-existing
+defects the import deaths were hiding (CircuitBreakerService, composition-chain
+backfill race, polymorphic `variant_id` comparison), not regressions.
+
+**A check that never runs cannot be trusted when it passes.**
+
+### Detectors still missing (filed, not built)
+
+- assert write-key/read-key agreement across the trace boundary — this chain is the
+  Nth producer/consumer key-mismatch instance; the 08-13 audit called it systemic in
+  5 of 6 subsystems, and it is still found by hand every time
+- assert no RUNNING vessel's unit is masked (still missing after four instances)
+- assert every `mock.module` factory exports every real export of its target
