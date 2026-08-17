@@ -2368,3 +2368,36 @@ Rung 2 credited `dAlpha:2` but its reach-patch matched no row. So the system's b
 not reliably reaching the learner: **it can now compose, and it is not yet learning that it
 can.** That is the next binding constraint, and it is the same write-never-read family this
 document has tracked all day, now sitting on the honest-verdict channel itself.
+
+### ⚠ RETRACTION: the withheld credit was correct behaviour, not a defect (2026-08-17)
+
+I wrote that the top rung "moved no posterior" and that "the system can compose and is not
+learning that it can". **That was wrong**, and the correction matters more than the claim did.
+
+`alphaBetaDelta: []` on the two-source reach is a DELIBERATE guard, gated on:
+
+    if (verdict.deterministic === true || (!editEffectReach && consumedInChain.size > 0))
+
+whose own comment carries the measurement that justifies it: over 80 goals in four classes
+with no deterministic verifier, **72/80 graded REACHED and 23/80 were correct — 68% hollow**;
+`ext_variety` was 20/20 reached and 0/20 correct. Every one of those ran a command and was
+alpha-credited under the older, looser gate.
+
+So the two rungs differ exactly as designed:
+
+| rung | verdict source | credit | correct? |
+|---|---|---|---|
+| registry ratio | `deterministic:true` (independent recompute) | alpha +2 | yes, by design |
+| two-source sum | LLM judge, no in-chain producer→consumer edge | WITHHELD | yes, by design |
+
+My reach was verified correct by hand — but the SYSTEM cannot verify that class, and it
+correctly declines to credit what it cannot check. Crediting it would make the posterior a
+record of activity rather than of correctness, which is the exact defect this session spent
+the day removing at the reach layer.
+
+**The real implication is a different piece of work:** that class earns credit by gaining a
+deterministic verifier, not by loosening the gate. Loosening it would manufacture the 68%.
+
+⚠ The graded-at-insert fix (`eca7c8a`) remains correct and deployed, but its EFFECT is still
+unobserved: on the verifying run the patch succeeded (`reach-patch ok … rows=1`), so the tag
+was belt-and-braces and never load-bearing. It is verified as deployed, not as exercised.
