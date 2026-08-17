@@ -1598,3 +1598,39 @@ opportunity to substitute, and only facts with a deterministic oracle are caught
 registry count has one, which is why these failures are visible at all. Most facts do
 not. **Depth raises the number of unguarded substitution opportunities**, which is a
 different and more tractable statement than the coverage story retracted above.
+
+## Prohibition vs worked example, measured on the same defect
+
+The substitution defect got two prompt interventions against the same goal class, which
+makes it a clean comparison of *form* rather than content.
+
+| | prohibition (665ffa6) | worked example (60e4df9) |
+|---|---|---|
+| substituted "12" | **2 of 3** | **0 of 4** |
+| correct (368) | 1 of 3 | 1 of 2 |
+| other | — | 2 rejections reporting `200`, `3` |
+
+Both carried the same measurement. The prohibition stated it as a rule — *"DO NOT use a
+prior finding as the ANSWER to a quantity the goal asks you to obtain FROM A NAMED
+SOURCE"* — and changed nothing: 2 of 3 still answered "the discovery registry advertises
+12 shapes". The worked example stated it as a wrong/right pair for the concrete case,
+and the substitution stopped.
+
+Delivery was identical in both cases — arg-synthesis ran 21 times in the prohibition
+window and the text was in the running source — so this is a difference in **form**, not
+in whether the drafter saw it.
+
+That refines the rule this substrate keeps re-proving, which had been stated too loosely
+as "evidence beats instruction". A prohibition *with a citation attached* is still a
+rule; the citation makes it feel like evidence without making it one. What lands is a
+worked example showing the **correct output for a concrete input**. Running record:
+worked examples 5/6, decision rules 0/8.
+
+**What did not change: correctness.** ~1 in 2 still fails to produce 368. The fix stopped
+the walk answering *wrongly*; it did not make it produce the right value more often — the
+failures moved from persisted-wrong-artifact to honest rejection. Same asymmetry as the
+plural-sink example, which raised the shape-count floor and left the ceiling at 4.
+
+Sample sizes are small (3 and 4). The substitution result is a categorical change (2/3 →
+0/4) rather than a shift in a noisy rate, which is why it is reported; the correctness
+figures are not separable from noise and are not claimed as movement.
