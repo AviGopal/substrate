@@ -1753,3 +1753,27 @@ substitution opportunity (fixed for this fact, delivery still fell), but **the w
 capacity to carry N requested facts through to the artifact**. The count of facts that
 survive is what degrades with each added clause, and every fix so far has improved the
 honesty of the survivors rather than their number.
+
+### Ruled out: prior-finding truncation is not the capacity limit
+
+Prior findings are truncated to 800 characters each
+(`` `- ${s}: ${c.slice(0, 800)}` ``), which looked like a plausible mechanism for facts
+failing to reach the artifact as goals lengthen. Measured against the real payloads:
+
+    vessel_health_report   1170 chars → 800 retained (68%)
+      overall_health  survives ✓    vessel_id survives ✓    healthy survives ✓
+    /health payload         434 chars → fits entirely
+
+So the health fact **was** visible to the note synthesis in the dispatch whose note said
+"The health report for the vessel goal-host-vessel could not be retrieved." Truncation
+does not explain it, and the hypothesis is withdrawn rather than left standing because it
+sounds right.
+
+The 800 is still a hardcoded behavioural constant of the same class catalogued in
+`reach-decision-constants-governed-three-different-ways` — invisible to traces, unlearnable
+— and would bind on larger findings. It is simply not what is happening here.
+
+**Honest state of the capacity question: the mechanism is unidentified.** Depth degrades
+fact delivery, that is measured (4/5 → 0/4 for one added clause), and the cause is not
+verification coverage, not substitution opportunity, and not finding truncation — three
+candidates now excluded by evidence rather than by argument.
