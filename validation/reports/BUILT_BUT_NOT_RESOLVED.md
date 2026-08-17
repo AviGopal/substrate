@@ -497,6 +497,36 @@ one more field before filing — the first being compose-lane starvation that tu
 out to be an undeclared `body.operator`. Both would have been filed as substrate
 defects. Both were artifacts of how I sampled.
 
+## The compose lane reservation is correct, and I saturated it myself
+
+The re-posed fix goal came back `reached: false`:
+
+    refused for CAPACITY (BUSY) after one retry — no draft was produced, so there is
+    nothing to judge and nothing to escalate; retry when a compose slot frees
+
+Reading the allocator before blaming it, for the second time on this same mechanism:
+
+    const effectiveCap = opts.directed === true ? cap : Math.max(1, cap - 1);
+    // autonomous fills at most cap-1; directed may use the full cap.
+    // At the default cap of 2 this is one slot each — neither lane can starve the other.
+
+Autonomous work can never take the last slot; a directed compose can always claim it
+**unless another directed compose holds it**. Several operator goals had been fired
+in quick succession, so the directed lane was contended by *my own* dispatches. The
+reservation did exactly what it was written to do.
+
+Worth noting what the verdict did *not* do: it did not green a goal that produced no
+draft. `no draft was produced, so there is nothing to judge` is the correct refusal,
+and it is the third honest verdict recorded in this document against a background of
+reach gates that were too generous elsewhere.
+
+**Status of the depth-cap fix: not landed.** `MAX_TARGET_SHAPES` does not appear in
+`goal-target-inference.ts`. It is dispatched, correctly routed
+(`trigger: operator` → `directed` → reserved slot), correctly anchored against a
+substring verified to occur exactly once, and waiting on capacity. It is not
+hand-applied, and should not be: the file is substrate source, and the gap
+`target-inference-caps-depth-at-three` carries the specification.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
