@@ -2071,3 +2071,33 @@ activity-api runs.
 The endpoint returns 404 on the hub because the hub has not yet pulled the commit, and there
 is no SSH from this spoke. The offender list above was computed locally against the live
 store, so the operator has the actionable content even before the route exists.
+
+## What the malformed templates actually cost: a 2× penalty, not the cause
+
+The causal question — does malformation explain the execution failures — is answerable
+without waiting for the sweep, by correlating 196 composition runs against whether the
+template they invoked carries either defect.
+
+    malformed     10 completed / 44 failed    18.5%
+    well-formed   54 completed / 88 failed    38.0%
+
+**Malformation roughly halves the success rate.** That is a real association and it justifies
+the two write-boundary guards and the sweep.
+
+It is also clearly not the dominant cause, and the same table says so:
+
+- malformed templates **do** complete, 10 times — the defects are not universally fatal, so a
+  composition can carry an activity-id output shape or a self-satisfied precondition and still
+  finish;
+- well-formed templates fail **88 times, 62% of their runs** — the majority of failure is in
+  templates with nothing structurally wrong that these predicates can see.
+
+So the honest accounting of the extraction work: it removes a factor worth roughly 2× on
+composition success, moving the overall rate from about 30% toward about 38% if the sweep runs
+and nothing else changes. Useful, bounded, and not the depth answer.
+
+The dominant failure cause remains unidentified. Six candidate mechanisms have now been
+excluded by evidence over this session — verification coverage, substitution opportunity,
+finding truncation, execution-in-general, vessel availability as a sufficient explanation, and
+now template malformation as a sufficient explanation. Each was a real effect; none was the
+binding constraint. I decline to name a seventh without the same standard of evidence.
