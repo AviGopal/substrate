@@ -858,6 +858,36 @@ Re-posed with an anchor that is both: the full sentence
 `Return the 1-3 shapes … Also provide a confidence value`, which spans the primary
 clause and occurs exactly once because line 156 continues differently.
 
+## The ceiling moved
+
+With the primary clause raised (`705f1eac`, mirrored 03:03:32, vessel restarted on
+the new code) a five-part goal inferred:
+
+    inferred_target_shapes: ["vessel_health_report","json_path_extract",
+                             "memoryNote_write","concept_write","shellResult"]
+    confidence: 0.9
+
+**Five target shapes.** The hard maximum for this entire session, across every
+phrasing tried, was three. This is the empirical confirmation that the prompt clause
+was the binding constraint — not the `.slice(0, 3)` that the first half of this
+report treated as the ceiling, and not the alternatives clause the first prompt fix
+happened to raise.
+
+The sequence is worth keeping intact, because each step looked like the answer:
+
+1. `.slice(0, 3)` — found, filed as a law-1 violation, autonomously fixed, **no
+   effect**: a redundant guard on an already-capped prompt.
+2. caller not passing the bound — found, fixed, **no effect**: the model still
+   obeyed the prompt.
+3. alternatives clause `each 1-3` — raised, **no effect**: not the primary
+   instruction.
+4. primary clause `Return the 1-3` — raised, **ceiling moved 3 → 5**.
+
+Three of the four changes were correct, landed, verified live, and behaviourally
+inert. Only the fourth bound. A stack of redundant limits means every fix but the
+last produces exactly the symptom of a broken deployment — and the deployment was
+fine each time.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
