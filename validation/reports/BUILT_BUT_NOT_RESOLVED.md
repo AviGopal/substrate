@@ -260,6 +260,45 @@ satisfier flattens chains, but it does so *after* shaped producers have been
 offered, which is the floor behaving as designed rather than competing with the
 ceiling.
 
+## A refusal was pooled as content, and the goal went green
+
+The depth-5 dispatch reached with a **three-step chain — exactly the inference
+cap** — which confirms the ceiling above empirically. It also produced the sharpest
+defect of the session.
+
+`vessel_health_report` resolved to:
+
+    {"resolved": false,
+     "error": "vessel_id is required — refusing to report on an assumed vessel"}
+
+That refusal is *correct*. It is a guard added earlier in this same session, after
+the resolver was found defaulting to a hardcoded vessel and producing valid-looking
+reports about a subject nobody asked for. It fired exactly as intended.
+
+The walk recorded it as `REACH-CONTENT vessel_health_report`, graded the dispatch
+`reached: true`, and persisted a note whose body contains the refusal text where
+three health statuses should be. **Zero of the three requested health facts were
+delivered and the verdict is green.**
+
+The mechanism that exists to prevent this — `_degenerateReason` graded against the
+shaped `bodyHonestyPolicy` — is healthy and would have caught it: the policy
+resolves 200, its `errorFields` include `error`, and its `denialTextPattern`
+matches both `required` and `refused`. The predicate is not the problem.
+
+**Coverage is.** The walk log carries `VESSEL-RESOLVE SATISFIER produced …` for
+`shellResult` and `memoryNote_write` — the path that calls the checker — and no
+such line for `vessel_health_report`, which entered the pool by another route that
+does not grade the body. The guard covers one path of two.
+
+A second, narrower hole: `resolved` appears in neither `flagFields` nor
+`truthyDenialFields`, so a bare `resolved:false` carrying no denial *text* would
+pass even on the guarded path. This envelope was caught-able only because it also
+carried prose.
+
+Filed as `body-honesty-guards-one-route-only`. This is the same family as
+everything else in this document — a mechanism that verifies what it can see on the
+route it sits on, and never learns that another route bypasses it.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
