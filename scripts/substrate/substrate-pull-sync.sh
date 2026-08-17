@@ -1237,10 +1237,25 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
         log "super-repo: clone ahead of origin (unpushed commits) — leaving for the push side"
       elif git -C "$SUPER_DIR" merge-base --is-ancestor HEAD "origin/$BRANCH" 2>/dev/null; then
         git -C "$SUPER_DIR" checkout -q "$BRANCH" 2>/dev/null || true
-        if git -C "$SUPER_DIR" pull --ff-only -q origin "$BRANCH" 2>/dev/null; then
+        # CAPTURE WHY. "ff-only pull failed — skipping" named a symptom and discarded the
+        # only evidence, so every occurrence needed a hand diagnosis to learn the same thing.
+        #
+        # Measured 2026-08-17: the clone sat 24 commits behind for hours while every tick
+        # reported "done". I first assumed the cause was structural — the incoming range
+        # modifies five submodule gitlinks and those paths are permanently dirty here, since
+        # pull-sync converges each vessel worktree independently — but running the pull by
+        # hand REFUTED that: it fast-forwarded cleanly through exactly those gitlinks. The
+        # remaining explanation is the bursty link (probed: one >20s connect failure and one
+        # 7.3s connect in three attempts, then 10/10 fast), which fails the FETCH and skips
+        # this whole block silently.
+        #
+        # Which is the point of printing git's own message: I could not tell those two
+        # causes apart from the journal, and one of them was wrong.
+        _sp_err="$(git -C "$SUPER_DIR" pull --ff-only origin "$BRANCH" 2>&1)"
+        if [ $? -eq 0 ]; then
           SHEAD="$(git -C "$SUPER_DIR" rev-parse HEAD)"
         else
-          log "super-repo: ff-only pull failed — skipping"
+          log "super-repo: ff-only pull FAILED — glue layer stays at $(git -C "$SUPER_DIR" rev-parse --short HEAD 2>/dev/null) while origin is ${SREMOTE:0:10}; git said: $(printf '%s' "$_sp_err" | tr '\n' ' ' | cut -c1-300)"
         fi
       else
         log "super-repo: clone DIVERGED from origin/$BRANCH — refusing (substrateGap)"
