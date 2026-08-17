@@ -1200,7 +1200,34 @@ done
 # change can never block vessel convergence. Gap: super-repo-not-in-self-update-set.
 SUPER_DIR="${SUPER_REPO_DIR:-/workspace/git/super-repo}"
 SUPER_MARKER="$MARKER_DIR/super-repo.sha"
-if [ -d "$SUPER_DIR/.git" ] && git -C "$SUPER_DIR" fetch -q origin "$BRANCH" 2>/dev/null; then
+# A FAILED FETCH SKIPPED THE ENTIRE GLUE LAYER IN SILENCE.
+#
+# This condition used to be `[ -d ... ] && git fetch ...` with no else: when the fetch
+# returned non-zero the whole super-repo block — glue scripts, the federation wrapper, and
+# pull-sync's own self-update — was skipped and NOTHING was logged. The tick reported
+# "done" and looked healthy.
+#
+# Measured 2026-08-17: the container's super-repo sat at c23558d9 while its own origin/dev
+# read 8501a021, 24 commits behind, across multiple "successful" ticks. The link to the
+# remote is BURSTY (probed: one >20s connect failure and one 7.3s connect within three
+# attempts, then 10/10 fast), so the fetch fails occasionally — and every occurrence was
+# invisible. The same burstiness silently lost an alpha-credit on the reach path.
+#
+# Non-fatal by design (a transient network fault should not fail the tick), but it must be
+# SAYABLE. Convergence that did not happen has to be distinguishable from convergence that
+# had nothing to do.
+# Fetch ONCE and branch on the result. An earlier draft of this fix ran the fetch twice —
+# once to test, once in the condition — which doubles the network call and lets the two
+# attempts disagree on a bursty link, reporting a failure that the second call then hides.
+SUPER_FETCH_OK=0
+if [ -d "$SUPER_DIR/.git" ]; then
+  if git -C "$SUPER_DIR" fetch -q origin "$BRANCH" 2>/dev/null; then
+    SUPER_FETCH_OK=1
+  else
+    log "super-repo: FETCH FAILED — glue layer NOT converged this tick (scripts, federation wrapper, and pull-sync's own self-update all skipped); the clone stays at $(git -C "$SUPER_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  fi
+fi
+if [ "$SUPER_FETCH_OK" = 1 ]; then
   SHEAD="$(git -C "$SUPER_DIR" rev-parse HEAD 2>/dev/null || true)"
   SREMOTE="$(git -C "$SUPER_DIR" rev-parse "origin/$BRANCH" 2>/dev/null || true)"
   SLAST="$(cat "$SUPER_MARKER" 2>/dev/null || true)"
