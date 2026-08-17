@@ -804,6 +804,33 @@ here: `MAX_TARGET_SHAPES` was landed **twice**, by `c632117` and `a73e9eb`, and 
 those insertions fell inside a JSDoc comment. **A false-negative verifier manufactures
 duplicate commits.** Filed as `inert-check-reads-a-clone-that-has-not-pulled`.
 
+## The compositional ladder, final state
+
+Every fact hand-graded against ground truth captured **before** dispatch.
+
+| goal | chain | verdict | grading |
+|---|---|---|---|
+| 1 fact | 3 steps | reached | `305` ✓ — **valid** |
+| 2 facts | 4 steps | reached | `305` ✓ `healthy` ✓ — **valid** |
+| 2 facts (repeat) | 3 steps | reached | `305` ✓ `healthy` ✓ — **valid, reproducible** |
+| 4 facts | 4 steps | reached | **FALSE REACH** — failed shell pooled as content, `305` dropped |
+| 4 facts (repeat) | 4 steps | reached | **FALSE REACH** — contentless stub via ungraded route |
+| 3 facts + compute | — | **failed** | correct: oracle queried 11, output said 1 |
+| 3 facts + fetch | — | **failed** | correct: two facts landed, `305` missing, refused |
+
+**Two valid rungs, and the second is reproducible.** Composition demonstrably
+increases from 3 to 4 steps with content verified correct.
+
+The trajectory across the session is the part worth keeping. Early deep attempts
+produced *false* reaches — incomplete work graded green. The last two produce *honest
+failures* on the same shape of incompleteness. That is the direction the reach gate
+should move, and the widened denial pattern is part of why.
+
+What still blocks a genuine fifth rung is now known precisely, and it is not what the
+first half of this report assumed: the prompt instructs the model to return 1-3
+shapes, so no code-level bound can raise the ceiling until that text changes. The
+`.slice` was never the binding constraint.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
