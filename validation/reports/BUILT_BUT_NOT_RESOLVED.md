@@ -2618,3 +2618,35 @@ Separately, the write≠read class was checked at the payload level in boredom-v
 ribosome-vessel (both clean), swept fleet-wide for unmounted endpoints (18 sites, triaged), and
 pinned by four new detectors — trace-boundary key agreement, sink forwarding, mock-factory
 completeness, and fleet endpoint paths — each carrying a guard that proves it can still fail.
+
+### The argument chain is deployed to all six consumers (2026-08-17, verified)
+
+    goal-host-vessel       engine-redactor=1  sink-forwards-redacted=1
+    ribosome-vessel        engine-redactor=1  sink-forwards-redacted=1
+    development-vessel     engine-redactor=1  sink-forwards-redacted=1
+    analysis-vessel        engine-redactor=1  sink-forwards-redacted=1
+    llm-resolver-vessel    engine-redactor=1  sink-forwards-redacted=1
+    local-tools-vessel     engine-redactor=1  sink-forwards-redacted=1
+
+Closes two items previously carried as unverified: the sink redaction is deployed, and the
+recording + forwarding chain is live in every consumer. It also confirms **yesterday's fan-out
+repair (`c6d2212a`) working in production** — the propagation that silently missed 5 of 6
+consumers for 11 days now reaches all six.
+
+⚠ **MY FIRST MEASUREMENT SAID ZERO ACROSS ALL SIX, AND IT WAS WRONG.** I grepped
+`dist/index.js` — a **1217-byte re-export stub** that cannot contain an engine. The code lives
+in `dist/engine.js` and `dist/adapters/activity-api-trace-sink.js`. A file size alone should
+have stopped the claim: 1.2 KB is not an executor.
+
+★★★★★ **FOURTH INSTRUMENT FAILURE OF THE DAY, and the first one I caught before reporting it.**
+The others — a fast-path oracle answering its own question, a mock scanner blinded by comments,
+a coverage check matching every path, a key extractor reading function parameters as payload
+keys — were each caught only after producing a false claim. The countermeasure is unchanged
+and now reflexive: **before believing a measurement, ask what a positive looks like in that
+exact query.** A grep returning 0 from a 1.2 KB stub looks identical to a grep returning 0 from
+a genuinely unpropagated build.
+
+**Still not verified end-to-end:** no live trace has been read carrying `resolved_config`.
+Trace writes go to the hub (`ACTIVITY_API_ENDPOINT=http://syzygy.host:18080`), which needs
+credentials this session does not have. Deployment is verified; the byte arriving in a stored
+row is not.
