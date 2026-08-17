@@ -1113,12 +1113,21 @@ EOF
   # reported clean on exactly the transient case an operator is most likely to create by
   # hand. That is the vacuous-check class this session has hit four times; here the control
   # caught it before the detector shipped rather than after it lied.
+  # MASKED + FAILED IS THE SAME PATHOLOGY, and my first version of this check missed it.
+  # Measured 2026-08-17: surrealdb.service was OOM-killed at 14:19:58 with NRestarts=0 and
+  # never came back, because a masked unit cannot be restarted by Restart=on-failure. The
+  # local store stayed dead for 5.5 hours; activity-api answered 503 the whole time and its
+  # test suite hung forever on connections to it, wedging every convergence tick.
+  # A check that only looked at masked+ACTIVE reported clean throughout. Masked is dangerous
+  # whenever the unit is not cleanly inactive — running (cannot be updated) or failed (cannot
+  # be revived) are both states nothing can get out of.
+  UNIT_ACTIVE_STATE="$(systemctl is-active "$UNIT" 2>/dev/null || true)"
   if [ -n "$UNIT" ] && [ "${UNIT%.service}" != "$UNIT" ] \
-     && systemctl is-active "$UNIT" >/dev/null 2>&1 \
+     && case "$UNIT_ACTIVE_STATE" in active|activating|failed) true ;; *) false ;; esac \
      && case "$(systemctl is-enabled "$UNIT" 2>/dev/null)" in masked|masked-runtime) true ;; *) false ;; esac; then
     MP="$(systemctl show "$UNIT" -p MainPID --value 2>/dev/null || echo '?')"
-    log "$v: !!! MASKED WHILE ACTIVE — $UNIT is masked but running (MainPID $MP); it cannot be restarted, recovered, or updated"
-    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"unit-masked-while-active-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"Repair needed: $UNIT is MASKED yet ACTIVE (MainPID $MP). A masked unit cannot be restarted, cannot be recovered by Restart=on-failure, and cannot receive converged code, so this process is serving traffic that no mechanism can update or revive — while is-active reports it healthy. Repair the capability by unmasking it if this deployment should run it (the running process is untouched by unmask), or by stopping it if the role excludes it.\",\"status\":\"open\"}}}}"
+    log "$v: !!! MASKED AND $UNIT_ACTIVE_STATE — $UNIT is masked (MainPID $MP); it cannot be restarted, recovered, or updated"
+    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"unit-masked-while-active-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"Repair needed: $UNIT is MASKED and in state ${UNIT_ACTIVE_STATE} (MainPID $MP). A masked unit cannot be restarted, cannot be recovered by Restart=on-failure, and cannot receive converged code, so this process is serving traffic that no mechanism can update or revive — while is-active reports it healthy. Repair the capability by unmasking it if this deployment should run it (the running process is untouched by unmask), or by stopping it if the role excludes it.\",\"status\":\"open\"}}}}"
   fi
 
   if [ -n "$UNIT" ] && [ "${UNIT%.service}" != "$UNIT" ] && systemctl is-active "$UNIT" >/dev/null 2>&1; then
