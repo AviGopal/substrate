@@ -2030,3 +2030,44 @@ population.
 fail 21 of 29. That residual is not attributable to either identified cause and is the next
 thing to root-cause — by the same method that worked twice here, which is to resolve one
 failing template and read its tasks rather than reason about the population.
+
+## The malformed-template population, measured
+
+Applying the two write-boundary predicates to the live store (100 templates scanned):
+
+    activity-id-as-output-shape     6
+    self-satisfied-precondition     8
+    ─────────────────────────────────
+    total offenders                14   (14% of the store)
+
+Two things this shows that the learned-composition sample did not.
+
+**The defect is not confined to learned compositions.** Three `composed-cap-*` templates
+carry self-satisfied preconditions, including
+`composed-cap-text-execute-template-ribosome-extract-v`, which declares
+`obsidian:execute_command` as an external requirement while producing it itself. That is the
+ribosome's own execution wrapper carrying the defect that corrupts what the ribosome
+extracts.
+
+**Activity-id shapes chain into each other.** Several offenders declare output shapes that
+are themselves other malformed compositions —
+`activity:⟨compose-auto-bridge-code_quality-to-compose-auto-bridge-code_quality-to-compose-⟩`
+is a composition whose declared output is a composition of compositions. Each is
+unexecutable, and each makes the next unexecutable too.
+
+At 14% of the store, and with learned compositions completing 6 of 61 runs, this is a
+plausible contributor to the execution failure rate at every depth rather than only at five
+hops. It is not proof — the causal test is running the sweep and re-measuring completion —
+and the sweep is written, dry-by-default, and awaiting deployment to the hub where
+activity-api runs.
+
+### Status of the fix chain
+
+    write boundary   activity-id guard        landed, tested
+    write boundary   precondition guard       landed, tested
+    store sweep      retire-malformed         landed, dry-by-default, NOT YET on the hub (404)
+    causal test      re-measure completion    blocked on the sweep running
+
+The endpoint returns 404 on the hub because the hub has not yet pulled the commit, and there
+is no SSH from this spoke. The offender list above was computed locally against the live
+store, so the operator has the actionable content even before the route exists.
