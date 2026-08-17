@@ -925,6 +925,49 @@ reach at that depth is not yet demonstrated. The two valid rungs stand at 3 and 
 steps. What changed is that deeper attempts now fail honestly and legibly instead of
 reaching falsely, which is the precondition for fixing them.
 
+## The fourth constraint: the walk could not afford five targets
+
+Raising the prompt let the walk *aim* at five shapes; it could not *execute* five.
+`walkBudget` resolved `false` — "no walk budget configured — consumer keeps its
+literal fallback" — and the literal is:
+
+    let MAX_ITERS = 4;
+
+Four iterations cannot satisfy five targets, which is exactly the observed result:
+one fact of three, and the failures were the two **local** retrievals while the
+**external** HTTP fetch succeeded. That asymmetry is backwards from difficulty and is
+the tell — it is a budget symptom, not a capability symptom.
+
+The fix required no code. `walk-budget.ts` documents both the mechanism and the trap:
+
+> Until a producer for `walkBudget` exists, ufResolveUrl returns null and the
+> fallback line is the standing demand signal for minting one.
+
+> ★ WORKSPACE_ROOT IS NOT /workspace. goal-host's unit carries
+> `WORKSPACE_ROOT="/workspace/git/super-repo"`. Seeding at `/workspace/policies/`
+> yields a perfectly honest 404 that looks exactly like a broken reader.
+
+That second warning is the same wrong-copy trap that the `bodyHonestyPolicy` fix hit
+earlier in this report — documented in advance, in the module, by whoever hit it
+before. Confirmed against the unit's actual environment rather than assumed, then
+seeded at `/workspace/git/super-repo/policies/walk-budget.json` with a single field:
+
+    {"max_iters": 8}
+
+Only `max_iters`, deliberately: the consumer keeps its literal for every absent field,
+so this changes one variable and leaves timeouts and call limits untouched (law 12).
+The walk now logs
+
+    floor: walkBudget SHAPED iters=8 calls=8 iterMs=90000 wallMs=210000
+
+instead of the fallback line — so "the budget was shaped" is an observable fact, which
+is what the reader was built to make possible.
+
+**Four constraints, in the order they bind:** the prompt's shape count, the walk's
+iteration budget, the fallback that collapses `how many` goals to one shape, and the
+`.slice` that was never binding at all. Each was invisible behind the one in front of
+it.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
