@@ -1194,6 +1194,104 @@ weaker satisfaction of the wording than the shallower rungs achieved, and it is 
 noting rather than smoothing over — a reader of the note gets the values, but has to
 read JSON to find them.
 
+## The substrate does not mine its own observations
+
+186 of 200 gaps are `substrate_detected`, so detection exists. But **170 of 186 (91%)
+are `missing_capability`** — all from one instantaneous event: the walk could not find
+a producer *right now*.
+
+Searching every gap for the defects sitting in the substrate's own logs today:
+
+    wrong-registry-count / registry-count   → 0     (97 such verdicts/day, per its own source)
+    walkBudget / max_iters / unshaped       → 0     (fallback logged on EVERY walk)
+    propagation / stale dist                → 0
+    unrendered placeholder / {{             → 0
+
+Zero. The system detects *"I cannot do X now"* and never *"I have done X wrong 97
+times."* The sharpest instance: `walk-budget.ts` states that the fallback log line
+**is the standing demand signal** for minting a producer. That line is emitted on
+every walk and read by nothing — the written-never-read class applied to the demand
+signal itself.
+
+Close rate, which is law 7's actual progress metric: **9 closed / 191 open**.
+
+The missing detector is not another one-off. It is the general form: **mine
+accumulated traces and logs for recurring defect signatures**, as distinct from the
+in-band, single-event detector that produces 91% of current gaps. Exactly one
+trace-derived detector exists (`pull-sync-test-regression`), which shows the shape is
+achievable and simply has not been generalised.
+
+## The regression gate cannot detect regressions
+
+That one trace-derived detector flagged commit `09b670144d`:
+`178 fail/1078 pass → 190 fail/1118 pass`.
+
+Checked rather than dismissed: the added tests pass 8/8 in isolation, and every
+failure in the touched directory is a single env-config class. Measuring the whole
+suite:
+
+    167 fail / 626 tests across 121 files    (27% baseline failure rate)
+    242 occurrences of "SURREALDB_NAMESPACE environment variable is required"
+    only 4 of 121 test files set that variable in-file
+
+The convention exists and four files follow it; 117 depend on the variable being
+exported ambiently — true on a developer shell, false in the gate.
+
+Two consequences. The gate **misattributed** a regression to a commit whose own tests
+pass, which teaches that a correct change regressed. And a genuine one-to-five test
+regression is **invisible** beneath 167 pre-existing failures, so the gate provably
+cannot do the job it exists for. Filed as
+`regression-gate-baseline-is-167-failures`; the fix shape is to compare per-test
+identity rather than aggregate counts.
+
+## 127 is an extraction defect, and the fix already exists in this codebase
+
+With field selection corrected, `rep5-2c8a` still failed:
+
+    deterministic:wrong-registry-count — totalShapes=368, but the output reports 127
+
+Correct field, wrong extraction — which **isolates** this as a scan defect rather than
+a selection one, something the earlier evidence could not separate. It reproduces:
+`bfccfee6` produced the identical 127 against a different expected value. Both chains
+contain a `vessel_health_report`, whose body always carries
+`"endpoint":"http://127.0.0.1:8210"`.
+
+So the claimed-value scan reads **127 out of the loopback address**. Because a health
+report *always* carries an endpoint, this deterministically blocks any composition
+that includes one — the exact goal family used to demonstrate compositional reach.
+
+**The sanitiser already exists here** (law 3): the ephemeris oracle strips UUID-shaped
+runs and ISO timestamps before scanning, with a test pinning that a dispatch id and a
+timestamp are not read as measurements. The registry oracle does none of it. Filed as
+`claimed-value-extractor-reads-numbers-out-of-addresses` — reuse the existing
+sanitiser, extended to dotted-quad addresses and `host:port`.
+
+## A false reach caught by reading the artifact, and closed at the policy
+
+The six-shape dispatch reached `true` on the judgement *"All required outputs were
+produced with meaningful content that fulfills the goal's intent."* The note was
+missing the star count entirely. The producer had been honest:
+
+    {"success":true,"shape":"json_extracted_value",
+     "body":{"value":"","path":"$.body.stargazers_count","missing":true,
+             "reason":"null/undefined encountered at segment: $"}}
+
+`missing: true`, empty value, an explicit reason — wrapped in `success:true` and
+recorded as REACH-CONTENT. The honesty checker let it through because `missing` was
+not in `truthyDenialFields` (the served copy held `[]`).
+
+Fixed at the shaped policy, no code change: `truthyDenialFields` now
+`["missing","deferred","unreachable"]`.
+
+Two things deliberately **not** done, both of which would have traded a false reach
+for a false refusal:
+
+- `reason` was **not** added to `errorFields`. It carries benign explanatory text
+  throughout this system — including the reach reason itself — so it would reject
+  valid content.
+- `truncated` was added speculatively and then **removed**, having no supporting
+  evidence and a plausible benign meaning.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
