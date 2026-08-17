@@ -1333,6 +1333,50 @@ non-fabricated because a real `vessel_health_report` for the correct vessel was
 independently produced in the same chain and agrees. A goal whose sole evidence was
 that echo would have been a fabrication that graded green.
 
+## The 127 blocker is cleared, and the blocked goal class now reaches
+
+`ae39e6cf` added two strip passes to the registry oracle's claimed-value scan:
+
+```diff
++    .replace(/\bhttps?:\/\/[^\s"'<>]+/gi, " ")
++    .replace(/\b\d{1,3}(?:\.\d{1,3}){3}\b/g, " ")
+```
+
+Verified before deploying, not after:
+
+    before: ['127','0','0','1','8210','368']    ← 127 first; this is what failed dispatches
+    after : ['368']                              ← only the real value survives
+    tsc --noEmit → exit 0
+    landed at the registry oracle (\d{1,7}); the git-commit sibling (\d{1,9}) untouched
+
+Result on the goal class that was deterministically impossible:
+
+    POST-SANITIZE  reached: true
+    deterministic:verified-registry-count — totalShapes=368; the produced output matches
+
+Hand-graded from the findings body — both facts **derived**, not incidental:
+
+    shellResult stdout        {"totalShapes": 368, …}        live query
+    vessel_health_report      goal-host-vessel, healthy      real report, correct vessel
+    note prose                "The vessel goal-host-vessel is healthy, and the discovery
+                               registry advertises a total of 368 shapes."
+
+Ground truth captured post-settle: 368 shapes, goal-host healthy. Both correct, and
+stated in **prose** rather than raw JSON — a stronger satisfaction of "stating both
+facts" than the deeper 5-step reach achieved.
+
+### What the whole 127 arc actually shows
+
+Three oracles carried three private copies of a partial sanitiser. Fixing the registry
+copy removed a deterministic false rejection that had been failing correct
+compositions whenever a `vessel_health_report` appeared in the chain — and a health
+report *always* carries an endpoint address, so the blocker was structural for the
+exact goal family used to demonstrate composition.
+
+The class gap (`three-oracles-duplicate-a-partial-numeric-sanitiser`) is filed rather
+than fixed, deliberately: the instance was blocking a measurement, the refactor is
+not, and expanding scope mid-verification is how a fix stops being attributable.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
