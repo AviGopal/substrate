@@ -527,6 +527,44 @@ substring verified to occur exactly once, and waiting on capacity. It is not
 hand-applied, and should not be: the file is substrate source, and the gap
 `target-inference-caps-depth-at-three` carries the specification.
 
+## Two recorded holes are closed, and the gate rejected my goal correctly
+
+The fix goal finally got a slot, produced a draft, and was **rolled back by the
+semantic gate**. Two evaluations of the same patch:
+
+    02:19:51  addresses: true   "successfully introduces the constant and replaces the
+                                 hardcoded literal, on an actively executing path"
+    02:22:43  addresses: false  "changes a numeric literal to a constant but the
+                                 constant's value equals the original value, resulting
+                                 in no behavioral change"           → rolled_back
+
+**The inert-diff detector fired and blocked.** This substrate's recorded history says
+the opposite: an autonomous commit added an unused interface field, typechecked,
+passed the reach gate, and closed a real gap. That hole is closed for this class — an
+inert diff no longer buys a green.
+
+Alongside it, in the same dispatch:
+
+    reached-command cache: EVICTED 1e3e1f90 (reach graded false) —
+      tombstone persisted so a prior boot's entry cannot resurrect
+
+Cache eviction on a false reach also previously did **not** happen, which is how a
+fabricated reach became a byte-identical replayed recipe. Both mechanisms now behave.
+
+The rejection is also substantively right, and the fault is mine. I asked for a
+behaviour-preserving rename — `MAX_TARGET_SHAPES = 3` used in place of `3`. That does
+not fix the law-1 violation at all: a bound that is still hardcoded and merely *named*
+is exactly as invisible to traces and as unlearnable as before. The gate declined a
+patch that would have looked like a fix and changed nothing, which is the behaviour
+this report has been asking for everywhere else.
+
+Re-posed as the real change: `maxTargetShapes?: number` on
+`InferGoalTargetShapesOpts`, with `opts.maxTargetShapes ?? 3` at each call site, so
+the bound becomes caller-controllable and goal-host can supply it from the shaped
+`walkBudget` policy — the same shape it already uses for other walk bounds, extended
+rather than duplicated (law 3). That is a genuine capability change rather than a
+rename, and it is the law-1-correct shape of the fix.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
