@@ -2741,3 +2741,43 @@ The deadlock is therefore PROBABILISTIC, not permanent: earlier ticks completed 
 ⚠ I nearly filed a second, non-existent defect here: the 19:23 run's `synced=0` looked like a
 broken fetch until I checked the timeline — that run preceded the push. **A convergence "did
 nothing" is only a defect once you know there was something to do.**
+
+### THE LOCAL STORE HAS BEEN DEAD FOR 5.5 HOURS, AND MASKING IS WHY (2026-08-17)
+
+    14:19:58  surrealdb.service: A process of this unit has been killed by the OOM killer
+    14:19:58  Failed with result 'signal'          NRestarts=0
+              UnitFileState=masked                 (up since 05:52, 3h17m CPU)
+
+**NRestarts=0 is the finding.** `Restart=on-failure` cannot restart a MASKED unit, so the
+store died and nothing revived it. This is the latent-unrecoverable-outage class — flagged four
+times previously — finally realized, and it stayed invisible for 5.5 hours.
+
+**The consequence chain, each link measured:**
+1. store dead -> local activity-api answers **503** ("Unable to connect")
+2. activity-api's test suite hangs forever on connections to it (`bun test` in `epoll_wait`)
+3. pull-sync's gate runs that suite inside `$(run_suite)` -> **blocks in pipe_read**
+4. `timeout 240` without `--kill-after` sends SIGTERM, waits forever, never escalates
+5. the tick wedges until systemd kills it at 900s — **every tick since 14:19, fleet-wide**
+
+⚠ **MY OWN UNMASK IS THE SECOND HALF OF THE CAUSE, AND I OWN IT.** pull-sync SKIPS masked
+vessels, and its skip message states the reason exactly: *"its suite would spend the tick budget
+on a vessel that cannot start"*. I unmasked activity-api at ~13:00 to fix a masked-while-active
+finding, which re-enrolled it in convergence testing. Before 14:19 that was harmless; after the
+OOM it wedged every tick. Neither condition alone did it. **Re-masked to break the deadlock** —
+the running process is untouched by masking, and this restores the state that was stable for
+months.
+
+⚠⚠ **THE DETECTOR I WROTE THIS MORNING WOULD NOT HAVE CAUGHT IT.** It asserted masked +
+ACTIVE. surrealdb is masked + **FAILED** — equally unrecoverable, arguably worse, and it
+reported clean throughout the outage. Widened to `active|activating|failed` and verified
+against the live instance (`state=failed enabled=masked` -> FIRES).
+
+★★★★★ **TWO DETECTORS OF MINE IN ONE DAY NEEDED A NEGATIVE CONTROL TO BE WORTH ANYTHING** —
+this one missed `masked-runtime`, then missed `masked+failed`. **A detector written from one
+remembered instance covers exactly one instance.** Enumerate the states the predicate must
+span, then prove it fires on each.
+
+**OPERATOR DECISION, deliberately not taken here:** whether to unmask and restart surrealdb.
+It was OOM-killed after 3h17m CPU, so restarting it without addressing memory pressure invites
+the same kill, and the fleet's traces go to the hub regardless. Recovering a store that died of
+memory exhaustion is not a step to take unattended.
