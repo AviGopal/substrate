@@ -199,6 +199,46 @@ sink — not N facts of one kind. And a "compositional pattern" claim should quo
 the inferred target shapes, since that set, not the sentence count, is what the
 walk will actually try to compose.
 
+### The ceiling is a constant: `.slice(0, 3)`
+
+Testing the corrected axis found the actual limit. A goal naming six distinct
+capabilities — fetch a URL, extract a JSON field, count its digits by shell,
+produce a vessel health report, read the registry shape total, persist a note —
+inferred:
+
+    inferred_target_shapes: ["shell","memoryNote_write"]   confidence 0.8, no alternatives
+
+Two shapes for six capabilities. Set against the previous goal (five facts of one
+kind → three shapes at 0.96), the relationship inverts: **the more distinct
+capabilities a goal requests, the fewer target shapes are inferred.**
+
+The cause is in `goal-target-inference.ts`, in both the cached path and the
+LLM-parse path, and again for alternatives:
+
+    ).slice(0, 3) as string[];   // :190
+    ).slice(0, 3);               // :597, :613
+
+**Inferred target shapes are hard-capped at three.** Chains of four steps were
+observed only because the walk inserts intermediates behind the declared targets;
+the declared target set itself cannot exceed three. Compositional depth is
+therefore bounded by a constant, and no goal phrasing can raise it. Every
+experiment above was measuring against a ceiling that no amount of goal authoring
+could move.
+
+This is also a **law 1 violation**. The cap is an in-process constant steering
+runtime behavior: invisible to traces, unobservable through any shaped impulse, and
+unlearnable — the loop cannot discover that a deeper target set would have reached
+where a truncated one did not, because the truncation leaves no trace. The
+`walkBudget` shaped policy already in `SHAPES` is the precedent for how a bound
+like this should be expressed.
+
+Filed as gap `target-inference-caps-depth-at-three`. The fix is to read the bound
+from a shaped policy defaulting to the current value, so behavior is unchanged on
+day one but becomes observable and tunable by the learning loop. It is deliberately
+left to the substrate rather than hand-applied: this file is under
+`repos/goal-host-vessel/src/`, code changes there are goals, and hand-completing it
+would steal exactly the lesson law 6 reserves for the system.
+
 Separately, the `REUSE-BEFORE-DERIVE` shortcut is **not** the depth suppressor it
 first appeared to be. Reading it: it fires only when the recommended pathway is
 *exactly* the floor, the goal is not an edit, and the goal does not request a
