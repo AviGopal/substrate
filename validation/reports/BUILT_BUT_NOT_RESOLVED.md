@@ -299,6 +299,50 @@ Filed as `body-honesty-guards-one-route-only`. This is the same family as
 everything else in this document — a mechanism that verifies what it can see on the
 route it sits on, and never learns that another route bypasses it.
 
+## The synthesis step discarded evidence it had already retrieved
+
+The six-distinct-shape goal — fetch a star count, count its digits, probe vessel
+health, read the registry shape total, persist one note — settled `reached: true`
+with **zero** reach-content steps and a `goalReachReason` that merely restates the
+goal ("The memory note containing the requested … was successfully written").
+
+Graded against ground truth captured before dispatch:
+
+| fact | truth | note | |
+|---|---|---|---|
+| star count | 95429 | 95429 | ✓ |
+| digit length | 5 | 5 | ✓ |
+| vessel health | healthy | "Unavailable (exit code 6)" | ✗ |
+| shape total | 305 | "Unavailable (exit code 6)" | ✗ |
+
+The digit length is quietly impressive: `wc -c` returns **6** because it counts the
+trailing newline, and the note reports 5.
+
+The two failures are the interesting part, because **the substrate had the
+answer**. Its own reasoning records:
+
+    shellResult: stdout "305\n"
+      command: curl -s http://127.0.0.1:8100/registry/stats | jq .totalShapes
+      exit_code: 0
+
+It retrieved 305 with `exit_code 0` and then wrote "Unavailable (exit code 6)".
+The `6` is the `wc -c` **output** of the *other* step, misread as an exit code —
+and that misreading suppressed a value already in hand.
+
+This is not a retrieval failure. Every fact was fetched successfully; two were
+discarded while composing the answer. It is an information-at-point-of-use failure
+(law 8) located in synthesis rather than in gathering, which is the harder place to
+see it: the traces show clean successful fetches right up to the step that threw
+them away.
+
+Two further defects in the same dispatch. Reach was granted on the write with no
+content grading — the write-shaped-goal class, again. And the goal said *persist
+ONE memory note*; **two** were written, the second being the raw reasoning
+scratchpad, so intermediate deliberation is leaking into the durable store as an
+artifact.
+
+Filed as `synthesis-discards-retrieved-evidence`.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
