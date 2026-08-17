@@ -1669,3 +1669,48 @@ either form succeeding would have been: this defect is not addressable at the pr
 the structural fix the gap specifies — bind a fact to a step traceable to the source *and
 field* the goal named — is required. Note the fix must now name the field, not just the
 source, because the walk demonstrably reaches the right source and reads the wrong column.
+
+## The structural fix worked where both prompt forms failed
+
+Same goal class, same grading question (*is the stated shape total correct?*), three
+interventions:
+
+| intervention | result |
+|---|---|
+| prohibition in the arg-synthesis prompt | 1 correct / 1 wrong — stated **12** |
+| worked wrong/right example | 1 correct / 1 wrong — stated **13** |
+| **source+field binding** | **3 correct / 0 wrong** |
+
+The binding fired on all five dispatches, every time logging
+`field=totalShapes, chosen by the same rule the verifier applies`, and two dispatches were
+`alpha-credited` on `deterministic:verified-registry-count` — oracle-verified reaches, not
+merely correct artifacts.
+
+One note stated **370** rather than 368. That is also correct: the registry moved from 368
+to 370 during the run, and the dispatch reported the live value — which is evidence the
+command executed rather than replaying a cached number.
+
+### What the three attempts establish
+
+The two prompt interventions did not fail for lack of delivery — arg-synthesis ran 21 times
+in the prohibition window with the text in the running source. They failed because the
+defect is not a knowledge gap. The walk **knew** the registry was the source; it reached
+`registry/stats` and read the wrong column, first `12` (a vessel's own advertised_shapes
+length), then `13` (the registry's vessel count). Told not to, it substituted a different
+wrong column.
+
+What removed it was making the column non-inferable: the field is now derived by
+`registryFieldFor`, the same function the verifier calls, so producer and oracle cannot
+disagree about what the goal asked for.
+
+That is the generalisable form. **Where a fact is machine-decidable from the goal, binding
+it beats instructing about it** — and the binding must cover every degree of freedom the
+error can move into. Binding the source alone would have left the field free, and the field
+is exactly where the second failure went.
+
+### Cost of learning that
+
+Three attempts, two of them wrong, plus a retraction when the first "success" turned out to
+be a proxy measurement (`contains 12` rather than `states the correct total`). The
+prohibition-vs-example comparison remains untested — both failed, so nothing distinguishes
+them here.
