@@ -2184,3 +2184,29 @@ backfill race, polymorphic `variant_id` comparison), not regressions.
   5 of 6 subsystems, and it is still found by hand every time
 - assert no RUNNING vessel's unit is masked (still missing after four instances)
 - assert every `mock.module` factory exports every real export of its target
+
+### Cross-subsystem sweep for the same class (2026-08-17)
+
+The projection/key-mismatch class was audited beyond activity-api and ias-executor:
+
+- **ribosome-vessel** — no task projection of its own; extraction runs through the
+  ias-executor template, already fixed. No sixth layer on the argument chain.
+- **analysis-vessel** — no POST sites at all. Nothing to audit.
+- **goal-host-vessel → `/reach`** — sender emits `execution_id`, `reached`,
+  `completion_shapes`; receiver additionally reads `body.missing`, which **no producer
+  sends**. The mirror image of the amputation class: a consumer expecting a field
+  nobody writes.
+
+⚠ **HYPOTHESIS RAISED AND REFUTED.** The receiver's UPDATE sets `missing = $missing`
+unconditionally, so an unsent field looked like it would overwrite the insert-path
+diagnostic with `[]` on every reach patch — data loss, not just dead weight. It does
+not. That UPDATE targets `activity_execution_traces` behind `isDualWriteEnabled()`,
+which **defaults false** against a decommissioned table, and the live paradigm path
+deliberately omits `missing` because the SCHEMAFULL `execution` table defines no such
+column. Cost of the unsent field: **zero**.
+
+Recorded because the refutation is the useful part. The reasoning that produced the
+hypothesis was sound and the conclusion was wrong; what separated them was reading
+the guard and the schema rather than the statement. **Name the string that would
+refute a finding and run THAT before reporting it** — an unverified mismatch reads
+exactly like a verified one in a report.
