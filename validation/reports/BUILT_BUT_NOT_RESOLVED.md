@@ -1020,6 +1020,43 @@ failed it correctly *and* credited the fetch. Filed as
 did not create them; it made them visible by giving the walk enough room to reach the
 assembly and grading steps where they live.
 
+## Raising the cap permits depth; it does not compel it
+
+With the prompt at `1-6` and the budget at 8 iterations, inference is now *variable*
+rather than *capped*. The same class of goal produced:
+
+    5 shapes: ["vessel_health_report","json_path_extract","memoryNote_write",
+               "concept_write","shellResult"]                        conf 0.9
+    3 shapes: ["vessel_health_report","concept_write","shellResult"]  conf 0.8
+              — dropping memoryNote_write despite the prompt's COMPOSITION RULE
+                requiring the write shape whenever the goal asks to persist
+
+That is a meaningful difference from the earlier state. Before, three was a ceiling no
+phrasing could exceed. Now the model chooses, and sometimes chooses fewer shapes than
+the goal requires — including dropping the persist clause the prompt explicitly tells
+it never to drop.
+
+A third defect surfaced in the same run, distinct from the two above:
+
+    REACH-CONTENT concept_write (1170 chars) = {"success":true,"shape":"vessel_health_report",…}
+
+`concept_write` was recorded as produced while its body is labelled
+`vessel_health_report`. The pool credits a shape whose payload is a different shape —
+a producer/label mismatch that would satisfy a target with content that does not match
+it. Same family as the contentless stub accepted earlier: what satisfies a target is
+not being checked against what the target means.
+
+**The honest summary of the depth work.** Four ceilings were found and cleared — the
+prompt's shape count, the walk's iteration budget, the caller not passing a bound, and
+a `.slice` that never bound. Behind them are not more ceilings but *correctness*
+defects: an unrendered template placeholder, a judge that fails exactly-correct values,
+a shape whose payload does not match its label, and inference that drops a required
+clause. None of these are depth problems; all of them would fire at two shapes. Raising
+the ceiling did not cause them — it made them reachable, and therefore visible.
+
+That is a real result, and it is not the result the standing goal asked for. The
+demonstrated ladder remains **two valid rungs**.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
