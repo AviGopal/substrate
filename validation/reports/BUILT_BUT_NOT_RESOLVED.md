@@ -1106,6 +1106,57 @@ gets held down — is exactly what happened here, to the very ladder this sessio
 built to climb. The fix is dispatched with the field-selection line as anchor, verified
 to occur once.
 
+## The oracle fix landed, and a transient hypothesis was vindicated
+
+`93b8feed` replaced the field selection with the invariant:
+
+```diff
+-  const field = /\bvessels?\b/.test(g) ? "totalVessels"
+-    : /\bshapes?\b/.test(g) ? "totalShapes"
++  const counted = /\b(?:how many|number of|total)\s+(\w+)/i.exec(g)?.[1]?.toLowerCase() ?? "";
++  const field = /^vessels?$/.test(counted) ? "totalVessels"
++    : /^shapes?$/.test(counted) ? "totalShapes"
+```
+
+The compared field now comes from the noun attached to the counting clause, and an
+absent counting clause yields `""`, no branch matches, `field` is `null`, and the
+oracle abstains — the safe default the file's own comments argue for. Typecheck
+exit 0.
+
+The first attempt at this edit produced `TS1128: Declaration or statement expected`
+and was **correctly rolled back** by the verify gate. Supplying the exact replacement
+text rather than a description is what made the second attempt land — a delicate
+multi-line ternary is not something to describe to a drafter.
+
+### A defect I introduced, recorded rather than buried
+
+My specified replacement contains an unreachable branch:
+
+    : /\bhealthy\b/.test(g) && /^vessels?$/.test(counted) ? "healthyCount"
+
+`counted === "vessels"` is already caught by the first branch, so `healthyCount` can
+never be selected. "How many vessels does the registry report as **healthy**" now
+grades against `totalVessels`. Both fields read 11 today, so it passes by coincidence —
+which is exactly the kind of latent wrong-field bug this whole section is about, now
+authored by me while fixing it.
+
+### The registry counts genuinely move
+
+Sampled during a goal-host restart:
+
+    totalVessels: 10   totalShapes: 294   healthyCount: 10
+
+goal-host deregisters while restarting, so the fleet counts drop. This **vindicates
+the transient explanation** offered earlier for the rung-4B discrepancy, where the
+oracle cited 10 against a registry reading 11 and self-confirmation was raised as a
+possible cause. A vessel restart moves these numbers by exactly that amount. The
+suspicion was withdrawn on other evidence; this is independent confirmation that
+withdrawing it was right.
+
+It also means **ground truth for any registry-count goal must be captured while the
+fleet is settled**, and a dispatch that spans a restart can fail honestly through no
+fault of the walk.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
