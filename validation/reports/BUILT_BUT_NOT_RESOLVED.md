@@ -747,6 +747,63 @@ contain "how many". A fallback that reduces a multi-part goal to one target shap
 a composition suppressor that looks, in the logs, like a low-confidence inference
 rather than a degraded path.
 
+## The depth cap was three redundant constraints, and the fix hit the wrong one
+
+The landed `maxTargetShapes` change is real, correct, and made **no observable
+difference**. With `maxTargetShapes: 6` live in the running process (mirror updated
+02:48:23, vessel restarted 02:51:57), a four-shape goal still inferred three:
+
+    inferred_target_shapes: ["vessel_health_report","memoryNote_write","shellResult"]
+
+Because the binding constraint is in the prompt, not the code:
+
+    Return the 1-3 shapes from the KNOWN list whose production best satisfies the goal.
+    … and up to 2 ALTERNATIVE framings, each 1-3 shapes from the KNOWN list.
+
+The model is *instructed* to return at most three. `.slice(0, 3)` was a redundant
+guard on an already-capped prompt, so raising it changed nothing the model would ever
+produce.
+
+Three suppressors, ordered by which actually binds:
+
+1. **the prompt's "1-3 shapes"** — binding
+2. the fallback decision collapsing `compute|calculate|how many|number of|count`
+   goals to a single `["shellResult"]` at confidence 0.4
+3. `.slice(0, 3)` — now overridable, and irrelevant while (1) holds
+
+This is a distinct failure class from the propagation defect that opens this report,
+and worth separating. There the fix was correct and never arrived. Here the fix
+arrived, is running, and targets a constraint that was never the one binding.
+**Redundant guards make a fix look inert when it is merely aimed at the wrong
+one** — and the observable symptom is identical, which is why the first instinct was
+to suspect propagation again.
+
+The prompt change is dispatched with an anchor verified unique
+(`each 1-3 shapes from the KNOWN list`, one occurrence — the shorter phrase
+`Return the 1-3 shapes` occurs twice and would have been refused, as an earlier goal
+in this session was).
+
+## Verification that reads a clone which has not pulled
+
+The caller change was graded `reached: false` — "landed 230e711… but the requested
+symbol is NOT observably present in `repos/goal-host-vessel/`" — and the change was
+**correct**: one file, one insertion, `+        maxTargetShapes: 6,` at
+`index.ts:10569`, inside the options object beginning at 10567.
+
+Copies at grading time:
+
+    /vessels/goal-host-vessel/src/index.ts                          contains the symbol
+    /workspace/git/super-repo/repos/goal-host-vessel/src/index.ts   does NOT
+
+The verdict names the super-repo layout, so the check read the staged clone, which
+was behind `origin/dev`. A correct change graded false by reading a stale copy.
+
+The consequence is not just a wrong label. The gap stays open, the arm that actually
+succeeded is β-penalised, and the work is re-attempted — which is directly observable
+here: `MAX_TARGET_SHAPES` was landed **twice**, by `c632117` and `a73e9eb`, and one of
+those insertions fell inside a JSDoc comment. **A false-negative verifier manufactures
+duplicate commits.** Filed as `inert-check-reads-a-clone-that-has-not-pulled`.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
