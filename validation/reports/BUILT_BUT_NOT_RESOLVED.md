@@ -463,6 +463,40 @@ single-site goal is anchorable. That is the standing lesson about giving a draft
 verbatim anchor text proven to occur once, and it applies to goals an operator
 writes as much as to ones the substrate writes.
 
+## Correction: `ActiveEnterTimestamp` is stale during a drain
+
+goal-host began refusing every dispatch with `{"draining": true}` while `/health`
+still returned `"status":"healthy"`. Sampled at that moment:
+
+    ActiveEnterTimestamp = 00:39:35   (55 minutes earlier)
+    NRestarts            = 0
+    in_flight            = 5, flat across three samples
+    drain_ms             = 240000, long since blown
+
+That reads unmistakably as a soft outage — a process wedged in drain, refusing all
+work, reporting healthy, invisible to every watchdog above `/health`. It is the
+exact shape of a failure class already recorded on this substrate, which is
+precisely why it was persuasive.
+
+It was wrong. `MainPID` had already moved to a new process, and re-reading after the
+transition settled gave `ActiveEnterTimestamp = 01:33:21`. The unit restarted
+normally; the drain was an ordinary SIGTERM → refuse-new-work → drain → exit →
+restart cycle.
+
+**During a stop, `ActiveEnterTimestamp` and `NRestarts` still describe the OLD
+activation.** They are not merely delayed — they actively describe a process that is
+on its way out, so sampling them mid-drain reports the previous life as though it
+were the current one. `MainPID` is the discriminator, and it costs one command.
+
+This refines a standing rule rather than adding one: `is-active` is not evidence
+that new code is running, and `ActiveEnterTimestamp` is not either unless the unit
+is settled when you read it.
+
+Recorded because this was the **second** fiction avoided in this session by checking
+one more field before filing — the first being compose-lane starvation that turned
+out to be an undeclared `body.operator`. Both would have been filed as substrate
+defects. Both were artifacts of how I sampled.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
