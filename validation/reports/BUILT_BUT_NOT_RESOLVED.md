@@ -2248,3 +2248,43 @@ contract; rung 2's reach is the system being taught that a dropped operand is su
 ⚠ Also observed on rung 3: `selectedTemplateId` =
 `activity:proposed_pattern_authored_http_response_backfill_chain` for a file-counting
 goal. Unexplained; filed rather than diagnosed.
+
+### The substrate deployed the fix itself, and the false reach is gone (2026-08-17)
+
+No operator, no SSH, no container edit. `substrate-pull-sync` (≈11-min timer) picked the
+pushed commits up on its own tick:
+
+    13:02:59  goal-host-vessel: content … (git 58376c1a84) — mirroring into /vessels
+    13:03:09  ias-executor-ts ff3df57 — rebuilding dist for 6 consumers
+    13:03:11  consumer goal-host-vessel holds a REAL-FILE dist — copying new build in
+    13:04:00  fan-out healthy AND propagated across all 6
+    13:03:27  goal-host restarted, new MainPID
+
+★ That `REAL-FILE dist — copying new build in` line is the fan-out repair landed the day
+before (`c6d2212a`) working in production — the defect that had left 5 of 6 consumers
+frozen for 11 days. It is the first confirmation that fix does what it claims.
+
+**BEFORE / AFTER on the identical goal** (shapes ÷ vessels; truth 368/13 = 28.31):
+
+| | before (`12:53`) | after (`13:09`) |
+|---|---|---|
+| fast path fired | YES — `DETERMINISTIC registry-count … field=totalShapes` | **NO — zero occurrences in the window** |
+| answer | `368` (one operand; division dropped) | none produced |
+| verdict | **reached=true, alpha +2** | **HOLLOW, beta-penalised** |
+| time to verdict | ~20s (short-circuit) | still walking at 100s+ |
+
+**A false reach became an honest hollow verdict.** The goal still does not reach — it now
+fails on `insufficient credits for webSearchResult`, a separate operator-gated blocker — but
+the learner is no longer taught that dropping an operand is success. That is an improvement
+in reach VALIDITY, which is the only kind that compounds.
+
+⚠ **THE CONVERGENCE THAT DEPLOYED MY CODE RAN ITS TESTS ON NOTHING:**
+
+    !!! TEST GATE SKIPPED — per-tick budget 420s exhausted (563s elapsed); converging UNGATED
+    !!! TEST GATE BLIND — no test runner available (bun missing …); this is not 'no tests',
+        it is no instrument. Converging ungated.
+
+My changes reached production without their tests running. The gate reports its own blindness
+honestly — which is more than most of the gates in this document do — but a gate that
+disables itself under time pressure is a gate that is absent exactly when a tick is slow,
+which is when convergence is riskiest. Filed.
