@@ -1,0 +1,16 @@
+{
+  "templateId": "invoke-interface-deploy-reach-check",
+  "name": "Invoke Interface Deploy Reach Check",
+  "description": "Invokes the interface_deploy_reach_check resolver to check deployment reachability.",
+  "inputShapes": [],
+  "parameters": {},
+  "tasks": [
+    {
+      "id": "invoke-resolver",
+      "type": "run_resolver",
+      "resolverName": "interface_deploy_reach_check",
+      "config": {}
+    }
+  ],
+  "outputShape": "interfaceDeployReachReport"
+}

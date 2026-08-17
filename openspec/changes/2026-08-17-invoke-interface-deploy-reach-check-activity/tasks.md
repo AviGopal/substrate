@@ -1,0 +1,4 @@
+- [x] Create the activity template `activity_templates/invoke-interface-deploy-reach-check.json`.
+- [ ] Ensure the activity is registered and discoverable by the substrate.
+- [ ] Monitor the invocation of `interface_deploy_reach_check` through this new activity.
+- [ ] Close the substrate gap `orphaned-capability-interface_deploy_reach_check`.
