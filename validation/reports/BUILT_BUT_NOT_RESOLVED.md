@@ -1804,3 +1804,36 @@ take.
 That also explains why the earlier deep batch showed omissions rather than substitutions:
 those walks *did* run the shell (the binding fired), so no wrong value could be composed —
 the fact was simply absent from the note instead.
+
+## Four interventions on one goal class, measured the same way
+
+| intervention | result |
+|---|---|
+| prohibition in the arg-synthesis prompt | 1 correct / 1 wrong (stated 12) |
+| worked wrong/right example | 1 correct / 1 wrong (stated 13) |
+| source+field binding | 4 correct / 0 wrong of 5 (1 stated no count) |
+| **binding + required producer** | **5 correct / 0 wrong of 5** |
+
+The binding fired on all five of the last batch. The required-producer rule closed the one
+remaining hole: a walk that never selected the fetching step, which had produced the
+"no count stated" outcome and — when the note was composed as prose rather than dumped —
+the substitution.
+
+Two prompt forms moved nothing. Two structural constraints moved it to 5/5, monotonically.
+That is the clearest evidence in this document for a rule it keeps re-proving in weaker
+forms: **where a fact is machine-decidable from the goal, constrain the mechanism; telling
+the model about it does not work.** The two prompt attempts here were not badly written —
+the second was a worked wrong/right example, the form that had previously landed on first
+contact — and they still did nothing, because the drafter was never missing the knowledge.
+
+What the two constraints do, precisely:
+
+- `registryFieldFor` decides which quantity the goal asked for, and the **producer, the
+  binding and the verifier all call it**, so none of them can disagree.
+- when it returns non-null, the producer is **added to the target set** rather than left to
+  inference, which dropped it a measured fraction of the time.
+
+Neither is a depth demonstration. Both operate on a two-fact goal, and the deepest **valid**
+reach is unchanged at five steps. What they establish is that fact delivery at fixed depth
+is now reliable where it was coin-flip, which is the precondition for testing whether depth
+itself is tractable.
