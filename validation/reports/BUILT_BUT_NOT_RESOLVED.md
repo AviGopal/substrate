@@ -2566,3 +2566,31 @@ answer is wrong or absent.
 selection wiring): both alter selection semantics for every goal, neither is verifiable without
 extended live measurement, and this session has already shown what an unverifiable change to
 that machinery costs — a deterministic verdict crediting a wrong answer.
+
+### boredom-vessel and ribosome-vessel: producer/consumer key review (2026-08-17)
+
+Both named as unreviewed for the write≠read class. Both come back **clean**, and the negative
+results are recorded because an unrecorded negative gets re-audited forever.
+
+**boredom-vessel** writes three shapes — `concept_create_write`, `loadAttribution_write`,
+`poolImpulse_write` — and all three have consumers outside the vessel (17, 4 and 9 files).
+Going a level deeper on `loadAttribution_write`, the field with the smallest surface: it sends
+12 keys (`cpu_usec_before/after`, `mem_bytes_before/after`, `dispatch_id`, `execution_id`,
+`dispatched_at`, `duration_ms`, `goal_idx`, `goal_status`, `sample_quality`, `template_id`) and
+the consumer reads **every one**. No drift.
+
+**ribosome-vessel** writes one shape, `impulseRelevance_write`, whose payload carries 8 keys
+(`impulse_id`, `activity_variant_id`, `execution_id`, `was_loaded`, `execution_succeeded`,
+`source`, `replay_trace_id`, `replay_weight`). All 8 are read by activity-api. No drift.
+
+⚠ **MY KEY-EXTRACTION HEURISTIC MIS-ATTRIBUTED FOR THE THIRD TIME TODAY.** It reported
+`judgement`, `template`, `trace` and `weight` as payload keys with no reader; they are FUNCTION
+PARAMETERS of `buildRelevancePayload`. Earlier it attributed a nearby `substrateGap_write` call
+to a flagged path, and earlier still it produced 621 "orphan keys" that were mostly DB columns
+and external API fields.
+
+★★★★★ **A GREP THAT FINDS `key:` FINDS DECLARATIONS, NOT PAYLOADS.** Every one of those false
+positives came from treating textual shape as structural meaning. The verified findings today
+all came from reading the construction site; none survived from the scanner alone. **Three
+false positives and three real findings from the same instrument is a 50% precision tool — it
+is a search aid, never evidence.**
