@@ -888,6 +888,43 @@ inert. Only the fourth bound. A stack of redundant limits means every fix but th
 last produces exactly the symptom of a broken deployment — and the deployment was
 fine each time.
 
+## Depth 5, executed: honest failure with a misattributed reason
+
+The five-shape goal inferred five targets and did **not** reach. The persisted note,
+verbatim:
+
+    Vessel health status: Retrieval failed;
+    Total advertised shapes: Retrieval failed;
+    Stargazers count: 95432.
+
+Against ground truth captured before dispatch (stars 95432, shapes 305, goal-host
+healthy):
+
+- the live HTTP fetch plus JSON field extraction — the hardest step — is **exact**;
+- the two local retrievals **abstained honestly** rather than inventing values;
+- `reached: false` is the **correct** verdict, since two of three facts were not
+  obtained.
+
+Three behaviours here are the ones this report has been asking for all along: no
+fabrication, no partial credit, and a refusal that names itself.
+
+The defect is in the explanation. `goalReachReason` says *"The stargazers_count
+extraction failed, resulting in an incorrect value being recorded in the memory
+note"* — blaming the one component that worked perfectly and exonerating the two that
+failed. That is not cosmetic: the reason seeds repair goals and grades which activity
+underperformed, so a misattributed reason points repair at a healthy component and
+leaves the broken ones uncredited. Filed as `reach-reason-blames-the-wrong-fact`.
+
+The check that would close it is mechanical rather than judgemental: derive the reason
+from which requested facts are present in the artifact, which is checkable, instead of
+from free text about what went wrong.
+
+**So the honest final position on depth:** the ceiling is demonstrably raised — five
+inferred target shapes where three was the hard maximum all session — and a *valid*
+reach at that depth is not yet demonstrated. The two valid rungs stand at 3 and 4
+steps. What changed is that deeper attempts now fail honestly and legibly instead of
+reaching falsely, which is the precondition for fixing them.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
