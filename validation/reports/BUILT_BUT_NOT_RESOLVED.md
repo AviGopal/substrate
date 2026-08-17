@@ -1874,3 +1874,52 @@ absent fact costs nothing.
 **Inference depth is solved and delivery is not.** Five target shapes is the demonstration
 this document has been chasing at the routing layer; it is not a valid reach, because the
 facts do not arrive.
+
+## A manufactured gap produced a real regression, and I chased its symptoms for hours
+
+The chain, end to end:
+
+    four pre-existing repairSignatureOf failures
+      → post-land gate blames the newest commit (no baseline)
+        → files gap post-land-suite-red-goal-host-vessel
+          → autonomous repair targets healthy code
+            → lands 31f1d67, reverting a verified fix in one line
+              → every "how many SHAPES" goal that also names a vessel regrades
+                against totalVessels
+                → deep batches fail
+                  → I diagnose "omission", then relocate the ceiling to "execution"
+
+Both diagnoses were wrong, and the tell was in a log line I quoted myself:
+`independently queried registry totalVessels=13` for a goal about shapes. I read the
+verdict's *outcome* and not the *field it cited*.
+
+The reverted line:
+
+    -  const field = registryFieldFor(g);
+    +  const field = /\bvessel\b/.test(g) ? "totalVessels" : registryFieldFor(g);
+
+Seventh recurrence of that class, first authored by the substrate, typecheck-clean and
+semantic-gate-green.
+
+### Three separate defects in one chain, each worth its own fix
+
+1. **The gate manufactures demand.** It attributed four pre-existing failures — verified by
+   stashing and re-running — to a commit that touched one unrelated line. Unlike the
+   pull-sync sibling this does not merely mislabel: it **files a gap**, which autonomous
+   work then acts on. Filed as
+   `post-land-gate-attributes-pre-existing-failures-to-the-landing-commit`.
+2. **The gates cannot see a semantic revert.** Re-adding a predicate in front of a shared
+   rule compiles and reads as a plausible improvement. Nothing compared the new behaviour
+   to the behaviour the fix established.
+3. **My tests pinned the rule, not its callers.** `registryFieldFor` was covered; nothing
+   asserted the oracle still *calls it unconditionally*. A shared rule is only shared while
+   every caller defers to it, and the defect was a caller **wrapping** the rule — invisible
+   to any test of the rule itself. Now pinned against the shipped source.
+
+### The uncomfortable part
+
+The gate had a genuine defect available to find — `31f1d67` really was a regression — and it
+found a false one instead. A verification layer that mistakes noise for signal does not
+merely fail to catch defects; it **spends the substrate's repair capacity manufacturing
+them**, and the repair it directs is itself unreviewed by anything that could tell the
+difference.
