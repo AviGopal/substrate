@@ -963,8 +963,46 @@ EOF
         failed=$((failed+1)); continue
       fi
       rm -rf "$RUNTIME_DIR/$v/.dist.prev"; mv "$RUNTIME_DIR/$v/dist" "$RUNTIME_DIR/$v/.dist.prev"; mv "$STAGE" "$RUNTIME_DIR/$v/dist"
-      BOUNCED=""; bad=""
+
+      # PROPAGATE BY CONTENT, NOT BY ASSUMPTION.
+      #
+      # The swap above is only visible to a consumer whose node_modules copy is a
+      # SYMLINK into this dist. That was assumed of every consumer and was true of
+      # exactly one. Measured 2026-08-16, @avigopal/ias-executor-ts:
+      #
+      #   development-vessel   realfiles=0    symlinks=164   <- propagated
+      #   ribosome-vessel      realfiles=164  symlinks=0     <- frozen at 08-05
+      #   goal-host-vessel / analysis-vessel / llm-resolver-vessel / local-tools-vessel
+      #                        realfiles=164  symlinks=0     <- frozen at 08-05
+      #
+      # For the five real-file consumers the swap was a no-op, the bounce restarted
+      # them onto identical bytes, and every health check passed — so the run logged
+      # "fan-out healthy", wrote LAST_GOOD=$HEAD, and thereby also disarmed the
+      # dist-freshness retry that exists to catch exactly this. Eleven days of
+      # ias-executor-ts changes were inert in the vessel that MINTS activity
+      # templates; a rule added to ribosome-extract.json never reached a single mint.
+      #
+      # Health cannot witness this: a consumer running stale code is perfectly
+      # healthy. So copy dist into any consumer that does not resolve to it, and
+      # verify by content below before crediting the fan-out.
       for c in $CONSUMERS; do
+        CPKG="$(grep -lE "file:[^\"]*/$v\"" "$RUNTIME_DIR/$c/package.json" 2>/dev/null >/dev/null \
+                && sed -nE 's/.*"([^"]+)"[[:space:]]*:[[:space:]]*"file:[^"]*\/'"$v"'".*/\1/p' "$RUNTIME_DIR/$c/package.json" | head -1)"
+        [ -n "$CPKG" ] || continue
+        CDIST="$RUNTIME_DIR/$c/node_modules/$CPKG/dist"
+        [ -d "$CDIST" ] || continue
+        # A symlinked consumer already sees the new dist by reference; leave its
+        # layout alone. A real-file consumer gets the new bytes copied in, matching
+        # the layout it already has rather than converting it.
+        if [ ! -L "$CDIST/index.js" ]; then
+          log "$v: consumer $c holds a REAL-FILE dist — copying new build in (swap alone is invisible to it)"
+          rm -rf "$CDIST" && cp -a "$RUNTIME_DIR/$v/dist" "$CDIST" || { bad="$c"; break; }
+        fi
+      done
+
+      BOUNCED=""; bad="${bad:-}"
+      for c in $CONSUMERS; do
+        [ -z "$bad" ] || break   # a failed dist copy goes straight to the revert path below
         CU="$(vessel_unit "$c")"; CP="$(health_port "$c")"
         [ -n "$CU" ] && [ "${CU%.service}" != "$CU" ] || continue
         systemctl is-active "$CU" >/dev/null 2>&1 || continue
@@ -979,7 +1017,29 @@ EOF
         emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-fanout-$v\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$v fan-out to ${HEAD:0:10} left $bad unhealthy; dist reverted, run halted\",\"status\":\"open\"}}}}"
         failed=$((failed+1)); break
       fi
-      rm -rf "$RUNTIME_DIR/$v/.dist.prev"; echo "$HEAD" > "$LAST_GOOD_DIR/$v"; rm -f "$MARKER_DIR/$v.fanout-fail"; log "$v: fan-out healthy across$BOUNCED"; synced=$((synced+1)); continue
+      # CREDIT THE FAN-OUT ONLY IF THE BYTES ACTUALLY ARRIVED.
+      #
+      # LAST_GOOD is what suppresses the dist-freshness retry, so writing it on a
+      # health pass alone is what made the eleven-day staleness self-sustaining:
+      # the one mechanism built to notice a stale dist was disarmed by the run that
+      # left it stale. Verify the shipped artifact at each consumer against the
+      # shared build and withhold the marker on any mismatch, so the next tick
+      # re-enters the fan-out instead of skipping it.
+      SHARED_SUM="$(md5sum "$RUNTIME_DIR/$v/dist/index.js" 2>/dev/null | cut -d' ' -f1)"
+      UNPROP=""
+      for c in $CONSUMERS; do
+        CPKG="$(sed -nE 's/.*"([^"]+)"[[:space:]]*:[[:space:]]*"file:[^"]*\/'"$v"'".*/\1/p' "$RUNTIME_DIR/$c/package.json" 2>/dev/null | head -1)"
+        [ -n "$CPKG" ] || continue
+        CIDX="$RUNTIME_DIR/$c/node_modules/$CPKG/dist/index.js"
+        [ -e "$CIDX" ] || continue
+        [ "$(md5sum "$CIDX" 2>/dev/null | cut -d' ' -f1)" = "$SHARED_SUM" ] || UNPROP="$UNPROP $c"
+      done
+      if [ -n "$UNPROP" ]; then
+        log "$v: FAN-OUT UNPROPAGATED to$UNPROP — healthy but running OLD code; withholding last-good so the next tick retries"
+        emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-unpropagated-$v\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$v fan-out at ${HEAD:0:10} left consumers$UNPROP resolving a stale dist while reporting healthy; a built artifact that no consumer resolves is inert, and health cannot witness it\",\"status\":\"open\"}}}}"
+        failed=$((failed+1)); continue
+      fi
+      rm -rf "$RUNTIME_DIR/$v/.dist.prev"; echo "$HEAD" > "$LAST_GOOD_DIR/$v"; rm -f "$MARKER_DIR/$v.fanout-fail"; log "$v: fan-out healthy AND propagated across$BOUNCED"; synced=$((synced+1)); continue
     fi
   fi
 
