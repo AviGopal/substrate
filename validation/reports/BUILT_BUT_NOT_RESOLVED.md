@@ -2210,3 +2210,41 @@ hypothesis was sound and the conclusion was wrong; what separated them was readi
 the guard and the schema rather than the statement. **Name the string that would
 refute a finding and run THAT before reporting it** — an unverified mismatch reads
 exactly like a verified one in a report.
+
+## The compositional ladder, hand-graded against ground truth (2026-08-17)
+
+Ground truth captured BEFORE each dispatch, verdicts graded by hand against it — not
+read off the `reached` field, which is the thing under test.
+
+| rung | goal | verdict | truth | grade |
+|---|---|---|---|---|
+| 1 — single fact | "how many shapes does the registry advertise" | reached | 368 ✓ | correct |
+| 2 — arithmetic over two counts | shapes ÷ vessels (≈28.5) | reached=true | answered `totalShapes`=368 only | **FALSE REACH** |
+| 3 — two independent sources | count .ts in dir A, count in dir B, report sum (59) | reached=**false** | never produced 59 | honest miss |
+
+**The finding is the contrast between rungs 2 and 3, not either alone.**
+
+Both goals hit the same failure: the walk produced ONE operand and stopped. On rung 3
+the general path caught it — `hollow satisfier verdict for "shellResult" — retrying
+walk once with that satisfier suppressed`, then a widened retry, then an honest
+decline. On rung 2 the identical error was graded REACHED with alpha +2, because the
+DETERMINISTIC registry fast path answers and verifies from the same function and
+never reaches the hollowness check that rung 3 passed through.
+
+★ **A deterministic fast path is not merely a shortcut past the walk — it is a
+shortcut past the walk's honesty gates.** The oracle was correct about its own
+question; nothing in that path asks whether its question was the goal's.
+
+Fixed at the routing layer (`58376c1`), not the oracle: goals naming two counted
+entities or carrying an arithmetic combinator now abstain, which returns them to the
+path that already rejects partial answers correctly. Not yet running — the live
+goal-host carries the old code.
+
+**Answer to "how compositional can it reach?", measured rather than asserted:
+single-source facts yes; two independent sources NO, and honestly so.** Rung 3's
+decline is the system working as designed at the floor and falling short of the
+contract; rung 2's reach is the system being taught that a dropped operand is success.
+
+⚠ Also observed on rung 3: `selectedTemplateId` =
+`activity:proposed_pattern_authored_http_response_backfill_chain` for a file-counting
+goal. Unexplained; filed rather than diagnosed.
