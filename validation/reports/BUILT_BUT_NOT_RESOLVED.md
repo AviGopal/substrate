@@ -1292,6 +1292,47 @@ for a false refusal:
 - `truncated` was added speculatively and then **removed**, having no supporting
   evidence and a plausible benign meaning.
 
+## The policy fix converted a false reach into a valid one
+
+Same goal, re-run against `truthyDenialFields: ["missing", …]`:
+
+| | before | after |
+|---|---|---|
+| verdict | reached (false reach) | reached |
+| star count in note | **absent** | **95432** — exact |
+| shapes total | 368 ✓ | 368 ✓ |
+| vessel health | claimed | `overall_health: healthy`, real 6429-char report |
+
+Ground truth captured before dispatch; live check confirms `development-vessel-local`
+returns `status: ok`. A `DISHONEST` rejection also fired mid-walk on a
+`vessel_health_report` carrying a `vessel_id` error, so the checker is now doing work
+on this path rather than waving envelopes through.
+
+That is a **valid reach carrying three facts**, one of them a live external API value
+matched to the digit — the most demanding by fact count in this session.
+
+### But depth did not increase, and the reason is worth stating
+
+Real produced shapes: `vessel_health_report → shellResult → memoryNote_write` — **3**.
+Two further REACH-CONTENT lines are `goal` and `dispatch_id`, which are pass-throughs
+and should not be counted as composition. The walk collapsed both HTTP fetches into a
+single shell:
+
+    curl .../registry/stats | jq .totalShapes;
+    curl -s https://api.github.com/repos/oven-sh/bun | jq .stargazers_count;
+    echo "Vessel development-vessel-local is healthy"
+
+**The walk optimises to the minimum sufficient chain.** That is correct behaviour —
+one shell doing two fetches is cheaper than two shaped producers — but it means
+*shape-count depth is a poor proxy for capability*. A goal with five clauses is
+satisfied by a three-shape chain because the shell is a universal executor.
+
+One caveat inside the win: the health line was `echo`-ed as a literal, so had the
+vessel been unhealthy the echo would have said "healthy" regardless. It is only
+non-fabricated because a real `vessel_health_report` for the correct vessel was
+independently produced in the same chain and agrees. A goal whose sole evidence was
+that echo would have been a fabrication that graded green.
+
 ## Carried, not fixed
 
 - The hub runs the same image and almost certainly carries the same stale
