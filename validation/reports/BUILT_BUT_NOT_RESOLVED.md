@@ -175,9 +175,50 @@ never measured. They were true by coincidence. Nothing in the substrate could ha
 distinguished that from fabrication — it was caught only because ground truth was
 held externally.
 
-Depth beyond four shapes was **not** demonstrated. The walk increasingly takes
-`REUSE-BEFORE-DERIVE` one-step pathways, which is the learned-pathway ceiling
-behaving correctly but yields no composite and therefore no extraction.
+### Depth is counted in distinct shapes, and I was testing the wrong axis
+
+Depth beyond four shapes was not demonstrated by the dispatches above, and the
+reason is a measurement error of mine rather than a substrate regression.
+
+A five-fact goal — three vessel health reports plus two registry numbers —
+inferred:
+
+    inferred_target_shapes: ["vessel_health_report","shellResult","memoryNote_write"]
+    confidence: 0.96
+
+**Target shapes are a set, not a multiset.** Three health reports collapse to one
+`vessel_health_report`. Adding more subjects of the same kind cannot increase
+composition depth; it increases arity, which the walk correctly handles with a
+single satisfier carrying multiple bindings. Three successive dispatches of mine
+varied arity while depth is a function of distinct shapes, so they could not have
+shown what they were built to show.
+
+Two things follow. Escalating depth requires goals that genuinely need N distinct
+shapes — a fetch, an extraction, a computation, a health probe, a registry read, a
+sink — not N facts of one kind. And a "compositional pattern" claim should quote
+the inferred target shapes, since that set, not the sentence count, is what the
+walk will actually try to compose.
+
+Separately, the `REUSE-BEFORE-DERIVE` shortcut is **not** the depth suppressor it
+first appeared to be. Reading it: it fires only when the recommended pathway is
+*exactly* the floor, the goal is not an edit, and the goal does not request a
+durable artifact — and it falls through to the full walk when the reused pathway
+fails to reach. That is a correctly-guarded shortcut, and the one-step reuses
+observed in the log belong to other dispatches, not to the multi-fact goals.
+
+### Reviewed and found sound
+
+The satisfier ordering was reviewed for architecture violations and is not one.
+Vessel-resolve satisfies a missing shape by a real resolve call against a live
+vessel *before* any candidate or bridge-authoring step, so the walk reaches a
+vessel's actual capability rather than authoring a hollow wrapper that produces the
+shape without doing the work. Derivation-deferral blocks a terminal emit while any
+intermediate is unproduced, which is what stops a note being written from goal text
+instead of from real findings. Compute-deferral orders `shellResult` behind the
+intermediates whose output is its operand. `shellResult` being a near-universal
+satisfier flattens chains, but it does so *after* shaped producers have been
+offered, which is the floor behaving as designed rather than competing with the
+ceiling.
 
 ## Carried, not fixed
 
