@@ -1,73 +1,87 @@
 # Teaching the substrate to reach, from goals alone
 
-`../../docs/assets/teaching-by-goals/teaching-by-goals.mp4` — 15m46s, 1280×800, recorded through
+`../../docs/assets/teaching-by-goals/teaching-by-goals.mp4` — 16m20s, 1280×800, recorded through
 the real human surface at `:18310`. Every act is a goal typed into the box. No file is edited by
 hand at any point, including by the operator.
 
-## What the take shows, and what it does not
+## What is on screen
 
 | act | goal (typed live) | outcome |
 |---|---|---|
-| BEFORE | "Give the headcount of vessels discovery is tracking." | not reached |
-| TEACH ×3 | three differently-worded goals asking for one line of `registry-field.ts` | all three REJECTED |
-| AFTER | "What headcount of vessels does the registry report as healthy?" | not reached |
+| BEFORE | "How plentiful are the vessels in the registry right now?" | not reached |
+| TEACH | one goal carrying the exact line to replace and the exact line to replace it with | **REACHED — landed on the first attempt** |
+| — | poll `substrate-pull-sync` until the change is genuinely in `/vessels`, restart goal-host | `mirrored=true` |
+| AFTER | "How plentiful are the shapes the registry advertises?" | not reached — see below |
 
-**THE TEACHING DOES NOT SUCCEED IN THIS TAKE.** That is the honest result and it is not hidden
-here. What the take does show is three bad patches being stopped by three DIFFERENT gates:
+## The lesson the take exists to show: ANCHOR, DO NOT DESCRIBE
 
-1. `verify failed` — the draft did not typecheck.
-2. `landed 9a77a461 but the requested symbol is NOT observably present` — the commit LANDED and
-   the change was not in it. An inert autonomous commit, caught and graded not-reached. This is
-   a defect class that used to pass green.
-3. `apply_failed — old_string not found in file` — the anchor did not exist.
+Every earlier attempt DESCRIBED the edit — "extend the counting-trigger alternation" — and left
+the drafter to find the site. `registry-field.ts` holds TWO regexes: the counting-trigger
+alternation in `counted`, and the canonical field-name list (`totalshapes|totalvessels|
+healthycount`) in `named`. The drafter edited the wrong one roughly two attempts in three, even
+when the spec named `counted` explicitly and said to leave `named` alone. Three consecutive
+takes were lost that way.
 
-Three attempts, three refusals, zero wrong patches accepted. The machinery is doing its job; the
-drafter cannot reliably make this edit.
+Handing it the VERBATIM line to replace and the VERBATIM line to replace it with landed first
+try, twice running. A drafter given text it can match cannot pick the wrong site.
 
-## The teaching loop does work — evidence outside this take
+    described  ->  ~1 attempt in 3 lands
+    anchored   ->  first attempt, both times
 
-Four capabilities were taught on 2026-08-18 by goal alone, each landing a substrate-authored
-commit on origin/dev with no operator hands:
+The harness builds that anchor from the LIVE FILE at runtime rather than hardcoding it, and
+verifies the string occurs exactly once before using it.
+
+## What the AFTER act honestly shows
+
+The dispatch says not reached. The walk log says the teaching worked:
+
+    walk: DETERMINISTIC registry-count command for "shellResult"
+          (field=totalShapes, chosen by the same rule the verifier applies)
+
+The newly-taught phrase was recognised and the correct field selected. The dispatch was graded
+down because the walk ALSO ran a web search and the judge found the combined output
+unsynthesised. Same pattern on two other taught phrases; meanwhile 'What quantity of vessels is
+discovery tracking?' (19), 'How much vessels does the registry list as healthy?' (healthyCount=19,
+alpha+2) and 'What sum of vessels is discovery tracking?' (18) all reached cleanly.
+
+So: the taught rule fires reliably, the end-to-end verdict does not. Filed as
+`gap-taught-route-fires-but-selection-is-noisy` — it matters because a capability can be
+correctly taught, correctly installed, and still not register as a reach, which both starves the
+learning signal for the taught path and would tell an operator watching only `reached` that the
+teaching had failed.
+
+## Six capabilities taught by goal alone, 2026-08-18
 
 | commit | taught | verified afterwards |
 |---|---|---|
 | `743a258` | `quantity of` | "What quantity of vessels is discovery tracking?" → reached, 19 |
 | `96ea4fa0` | `how much` | "How much vessels does the registry list as healthy?" → reached, healthyCount=19, alpha+2 |
-| `0804f9c1` | `how numerous` | landed; live in tree |
-| `16670817` | `sum of` | landed; live in tree |
+| `0804f9c1` | `how numerous` | rule fires; selection noisy |
+| `16670817` | `sum of` | "What sum of vessels is discovery tracking?" → reached, 18 |
+| `9192c0f6` | `headcount of` | landed first try from a verbatim anchor |
+| (this take) | `how plentiful` | landed first try, on camera |
 
-The counting-trigger alternation in `repos/goal-host-vessel/src/registry-field.ts` grew from four
-alternatives to eight over the session without that file being hand-edited once:
+The alternation in `repos/goal-host-vessel/src/registry-field.ts` grew from four alternatives to
+ten across the session, and that file was never hand-edited:
 
-    how many|number of|total  →  how many|number of|total|count of|quantity of|how much|how numerous|sum of
-
-## Why it takes several attempts, and why that is filed rather than papered over
-
-The drafter confuses the TWO regexes in this file — the counting-trigger alternation held in
-`counted`, and the canonical field-name list (`totalshapes|totalvessels|healthycount`) held in
-`named`. It edited the wrong one repeatedly, including with specs that name `counted` explicitly
-and say to leave `named` alone. Measured rate across the session: roughly one attempt in three
-lands. Filed as `gap-drafter-one-line-regex-edit-flaky`, with the observation that a file whose
-two regexes are easy to confuse is information the drafter should receive at prompt-build time
-(law 8) rather than something every spec has to re-explain — and that an operator writing
-defensively ("do not add a second declaration") is law 13 inverted: the rewriting IS the gap.
+    how many|number of|total
+      → how many|number of|total|count of|quantity of|how much|how numerous|sum of|headcount of|how plentiful
 
 ## Two things the take depends on that were broken and are now fixed
 
-- **The answer used to be invisible.** `GET /executions/:dispatchId` built its JSON key by key
-  and never named `answerBody`, so a reached run rendered a green badge with the answer sitting
-  undelivered in the record (goal-host `36f5390`).
-- **Grounding was served by a foreign substrate.** `feature_compose` refused every teach with
-  "grounding window (0 bytes) contains none of the target file(s)" — naming the FILE, so it read
-  as a missing file. The reads were being answered by `local-tools-vessel@…@spoke-739b76f1`, a
-  machine that is neither this workstation nor the hub and does not have our repository
+- **The answer was never sent to the surface.** `GET /executions/:dispatchId` built its JSON key
+  by key and never named `answerBody`, so a reached run rendered a green badge with the answer
+  sitting undelivered in the record (goal-host `36f5390`).
+- **Grounding was served by a foreign substrate.** Compose refused every teach with "grounding
+  window (0 bytes) contains none of the target file(s)" — naming the FILE, so it read as a
+  missing file. The reads were answered by `local-tools-vessel@…@spoke-739b76f1`, a machine that
+  is neither this workstation nor the hub and does not have our repository
   (development-vessel `a8fa348`). A peer answering with plausible content instead of nothing
   would have had the drafter patch a stranger's files.
 
 ## Reproducing
 
-Ground truth is captured before each dispatch from `:18100/registry/stats`. A landed commit is
-NOT live code — Bun does not hot-reload — so the harness polls `substrate-pull-sync` until the
-new alternative is actually present in `/vessels`, then restarts goal-host, then asks the AFTER
-question. An earlier take failed its AFTER act purely because it waited on a duration instead of
-that condition.
+Ground truth comes from `:18100/registry/stats` before each dispatch. A landed commit is NOT live
+code — Bun does not hot-reload — so the harness polls until the new alternative is actually
+present in `/vessels`, then restarts goal-host, then asks the AFTER question. An earlier take
+failed its AFTER act purely because it waited on a duration instead of that condition.
