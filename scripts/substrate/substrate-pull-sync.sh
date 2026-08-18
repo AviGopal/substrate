@@ -951,6 +951,13 @@ EOF
       # comparing across formats — which is the very mistake being fixed.
       B_NAMES_FILE="$TEST_BASELINE_DIR/$v.failnames"
       T_NAMES="$(fail_names "$T_OUT")"
+      # The gate compares NAME SETS; the old two-number baseline is no longer read. The old
+      # count variable was left behind in two log strings after that rewrite and, under
+      # `set -u`, an unbound variable ABORTS the whole converge — so a string that only
+      # DESCRIBED the result took the code channel down with it, and every fix landed on
+      # origin sat unconverged. Report the baseline's named-failure count instead, which is
+      # what this gate actually reasons about.
+      B_NAMED="$(grep -c . "$B_NAMES_FILE" 2>/dev/null || true)"; B_NAMED="${B_NAMED:-0}"
       if [ ! -s "$B_NAMES_FILE" ]; then
         log "$v: test baseline recorded — $T_FAIL fail / ${T_PASS:-?} pass, $(printf '%s' "$T_NAMES" | grep -c . || true) named failing tests (no gate on first observation)"
         printf '%s\n' "$T_NAMES" > "$B_NAMES_FILE"
@@ -977,7 +984,7 @@ EOF
         CONFIRMED="$(comm -12 <(printf '%s\n' "$NEW1" | sort -u) <(printf '%s\n' "$NEW2" | sort -u) 2>/dev/null | grep -c . || true)"
         if [ "${CONFIRMED:-0}" -gt 0 ]; then
           FIRST_NEW="$(comm -12 <(printf '%s\n' "$NEW1" | sort -u) <(printf '%s\n' "$NEW2" | sort -u) 2>/dev/null | head -1)"
-          REG="$CONFIRMED test(s) that passed at baseline now fail in BOTH runs, e.g. ${FIRST_NEW:-?} (counts: $B_FAIL -> $BEST_F fail)"
+          REG="$CONFIRMED test(s) that passed at baseline now fail in BOTH runs, e.g. ${FIRST_NEW:-?} (counts: $B_NAMED -> $BEST_F fail)"
           REG_F="$BEST_F"; REG_P="${BEST_P:-0}"
         else
           log "$v: newly-failing tests did not reproduce on re-run — flake, converging (run1 $(printf '%s' "$NEW1" | grep -c . || true) new, run2 $(printf '%s' "$NEW2" | grep -c . || true) new, intersection 0)"
@@ -987,7 +994,7 @@ EOF
         # grows or whose flakes settle does not carry a stale reference forward — the failure
         # mode that wedged this gate in the first place.
         if [ "$(printf '%s\n' "$T_NAMES")" != "$(cat "$B_NAMES_FILE" 2>/dev/null)" ]; then
-          log "$v: no newly-failing test; refreshing baseline ($B_FAIL -> $T_FAIL fail, $(printf '%s' "$T_NAMES" | grep -c . || true) named)"
+          log "$v: no newly-failing test; refreshing baseline ($B_NAMED -> $T_FAIL fail, $(printf '%s' "$T_NAMES" | grep -c . || true) named)"
           printf '%s\n' "$T_NAMES" > "$B_NAMES_FILE"
           echo "$T_FAIL ${T_PASS:-0}" > "$TEST_BASELINE_DIR/$v"
         fi
