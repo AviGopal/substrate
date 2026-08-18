@@ -35,6 +35,10 @@ DEV_VESSEL="${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}"
 SURREAL_URL="${SURREALDB_URL:-http://127.0.0.1:8000}"
 DB_PROBE_TIMEOUT="${DB_PROBE_TIMEOUT:-5}"   # per-probe budget (s) for the cheap RETURN 1 liveness check
 DB_PROBE_GAP="${DB_PROBE_GAP:-3}"           # seconds between the two consecutive probes
+# A trivial query that takes longer than this is evidence of a saturated store even when it
+# eventually succeeds. 2s is far above a healthy single-row fetch (milliseconds) and far below
+# the 30s latencies observed while the store was pinned, so it separates the two cleanly.
+DB_PROBE_SLOW_S="${DB_PROBE_SLOW_S:-2}"
 # Sustained-wedge escalation (2026-07-31 outage): the DB-pressure guard below
 # correctly BACKS OFF restarting vessels when SurrealDB is the bottleneck — but
 # nothing restarted SurrealDB itself, so a wedge persisted for hours. Root: the
@@ -214,12 +218,32 @@ db_under_pressure() {
     out=$(csh "P=\$(grep -m1 '^SURREALDB_PASSWORD=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); \
 NS=\$(grep -m1 '^SURREALDB_NAMESPACE=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); \
 DB=\$(grep -m1 '^SURREALDB_DATABASE=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); \
-curl -s -o /dev/null -w '%{http_code}' --max-time $DB_PROBE_TIMEOUT -u \"root:\$P\" \
+curl -s -o /dev/null -w '%{http_code} %{time_total}' --max-time $DB_PROBE_TIMEOUT -u \"root:\$P\" \
   -X POST $SURREAL_URL/sql -H 'Accept: application/json' \
   -H \"surreal-ns: \${NS:-activity-system}\" -H \"surreal-db: \${DB:-learning_loop}\" \
   -d 'SELECT VALUE execution_id FROM execution LIMIT 1;' 2>/dev/null" 2>/dev/null)
-    case "$out" in
-      2*|4*) return 1 ;;   # server answered promptly (2xx, or fast auth/4xx) -> DB alive, NOT the bottleneck
+    # A STATUS CODE WITHOUT A TIME CANNOT SEE SATURATION. The probe collected
+    # http_code and discarded time_total, so a 200 that took 4.9s read identically to
+    # one that took 5ms -> "DB alive, NOT the bottleneck" -> restart proceeds. That is
+    # the exact defect activity-api's own /health carried until 16edacd: a boolean
+    # sitting next to a number it ignored. It was here too, in the watchdog ABOVE it.
+    #
+    # And the query cannot carry the signal on its own. The comment above says this one
+    # "degrades WITH the table", but `LIMIT 1` with no ORDER BY short-circuits on the
+    # first row — it is O(1) at 473k rows exactly as it is at 100. Making the probe
+    # expensive instead is not an option: a probe that sorts the table joins the pileup
+    # it is meant to detect. So the signal has to come from LATENCY, which costs nothing
+    # extra to read: under a worker-saturated store even a trivial query queues.
+    code="${out%% *}"; secs="${out##* }"
+    slow=$(awk -v t="$secs" -v lim="$DB_PROBE_SLOW_S" 'BEGIN{print (t+0 > lim+0) ? 1 : 0}' 2>/dev/null || echo 0)
+    case "$code" in
+      2*|4*)
+        if [ "$slow" = 1 ]; then
+          echo "[self-recovery $(date -Iseconds)] DB PRESSURE: liveness probe returned $code but took ${secs}s (> ${DB_PROBE_SLOW_S}s) — a trivial query queueing means the store is saturated, not that a vessel is broken"
+        else
+          return 1   # answered promptly -> DB alive, NOT the bottleneck
+        fi
+        ;;
     esac
     [ "$i" -lt 2 ] && sleep "$DB_PROBE_GAP"
   done
