@@ -430,8 +430,37 @@ Bun.serve({
           // Skip nested content-errors and keep trying so the call reaches the circuit whose
           // substrate actually owns _fedTargetVessel and proxies to it locally — this is what
           // makes cross-substrate LLM spill ("any funded arm in the network suffices") work.
-          const isHollowErr = (r: any) => r?.content && typeof r.content === 'object' && (r.content as any).error
-            && !('shape' in r.content) && !('body' in r.content) && !('value' in r.content)
+          // A NON-SERVING OWNER IS NOT A HIT EITHER.
+          //
+          // This predicate used to look only at content.error, and only when the envelope had
+          // no shape/body/value. A peer that OWNS the named vessel but cannot serve answers
+          // with a fully-formed envelope whose failure sits one level DOWN:
+          //
+          //   {content:{shape:'llm_completion',produced_by:'…@spoke-739b76f1',
+          //             body:{resolved:false,error:'no llm arm is currently servable …'}}}
+          //
+          // content.error is undefined there, so isHollowErr was false, the loop took the
+          // FAILURE as its hit and stopped — never trying the remaining circuits. Measured
+          // 2026-08-18: a substrate on neither this host nor the hub had joined through the
+          // public relay advertising llm arms it could not serve. Every llm_completion in the
+          // fleet settled on it, the ReAct floor logged 'dispatch FAILED http=500' on all 8
+          // iterations, and ordinary human goals failed while three WORKING arms sat on the
+          // hub's circuit, later in the very list this loop was walking.
+          //
+          // Keeping the cross-substrate spill intact is the point ("any funded arm in the
+          // network suffices"); a spill that settles on an arm which just said it cannot serve
+          // is not spill, it is a stop. Recognising the nested refusal is what lets the loop
+          // walk PAST a non-serving owner to one that answers.
+          const nestedRefusal = (r: any) => {
+            const c = r?.content
+            if (!c || typeof c !== 'object') return false
+            const b = (c as any).body
+            if (!b || typeof b !== 'object') return false
+            return typeof b.error === 'string' || b.resolved === false
+          }
+          const isHollowErr = (r: any) => (r?.content && typeof r.content === 'object' && (r.content as any).error
+            && !('shape' in r.content) && !('body' in r.content) && !('value' in r.content))
+            || nestedRefusal(r)
           let reached = false
           for (const a of circuits) {
             const alt = await resolveOverLibp2p(a, pointer).catch(errOf)
