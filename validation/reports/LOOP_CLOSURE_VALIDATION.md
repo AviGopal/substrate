@@ -129,13 +129,40 @@ the chain runs end to end: edit-intent detected -> feature_compose -> draft prod
 -> adversarial semantic refuter -> rollback -> escalation. The system drafted a change and its
 own diverse-lens refuter rejected it at confidence 1.00 rather than landing a partial fix.
 
-UNRESOLVED, STATED AS SUCH. The refuter's reason — "the mapped return value for 'count of' is
-missing" — does not hold against the file: the field is derived from the NOUN (`counted[0]` ->
-totalVessels / healthyCount / totalShapes), not per trigger phrase, so adding the trigger to the
-alternation is the whole change. But the refuter also cited "the conditional check", the staged
-tree was rolled back, and the draft is therefore unreadable. Whether this was a FALSE REJECTION
-of a correct patch or a true rejection of a draft that added something extra is UNDETERMINED. It
-matters: a false rejection penalises an arm that was right.
+RESOLVED — AND I HAD IT BACKWARDS. I wrote that the refuter's reason ("the mapped return value
+for 'count of' is missing") did not hold against the file, because the field is derived from the
+NOUN (`counted[0]`), not per trigger phrase. That reasoning was sound about the FILE and wrong
+about the DRAFT, which is what the refuter was actually reviewing.
+
+The git history settles it. An earlier escalation landed `1268a11`:
+
+    + const named = [...g.matchAll(/\b(totalshapes|totalvessels|healthycount|count of)\b/g)]
+    +   if (only === "totalvessels" || only === "count of") return "totalVessels";
+
+It put `count of` in the CANONICAL FIELD-NAME regex — a list of things the registry publishes
+(`totalShapes`, `totalVessels`, `healthyCount`). "count of" is not a field name. That is exactly
+the incoherence the refuter named, at confidence 1.00, and it was RIGHT.
+
+★ I JUDGED A CRITIQUE AGAINST THE WRONG ARTEFACT. The draft was rolled back and unreadable, so I
+  reasoned about the file the draft would have edited instead — and concluded a correct gate had
+  false-rejected. A rejection I cannot read the subject of is not evidence the rejection was
+  wrong; it is absence of evidence. I should have said only that, and I nearly filed a
+  false-rejection finding against a gate that had just done its job.
+
+THE SUBSTRATE THEN CORRECTED ITSELF. `5d29f1f` removed the bad placement and made the real
+change, and this one reached:
+
+    - const counted = [...matchAll(/\b(?:how many|number of|total)\s+...
+    + const counted = [...matchAll(/\b(?:how many|number of|total|count of)\s+...
+    - const named = [...matchAll(/\b(totalshapes|totalvessels|healthycount|count of)\b/g)]
+    -   if (only === "totalvessels" || only === "count of") return "totalVessels";
+
+A natural-language goal entered through the human surface, edit-intent routed to
+feature_compose, the draft was produced over the repaired federation path against the hub's LLM,
+the semantic gate passed it, typecheck verified it, and it landed on origin/dev with no operator
+hands — repairing a defect the substrate itself had introduced one dispatch earlier. That is the
+hard success criterion, and the diff is NOT inert: the live tree's line 56 now carries the
+alternation, which is the behaviour the goal asked for.
 
 ## Still open
 
