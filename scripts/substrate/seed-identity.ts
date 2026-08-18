@@ -8,6 +8,8 @@
 import { writeFileSync, readFileSync, existsSync } from "node:fs";
 
 const IDENTITY_URL = process.env.IDENTITY_VESSEL_URL ?? "http://127.0.0.1:8101";
+// Fallback authed route for key validation when identity exposes no /v1/keys/validate.
+const DISCOVERY_URL = process.env.DISCOVERY_VESSEL_ENDPOINT ?? "http://127.0.0.1:8100";
 const SEED_KEY = process.env.METABOB_API_KEY ?? "";
 const JWT_SECRET = process.env.JWT_SECRET ?? "";
 const SECRETS_FILE = "/workspace/.substrate-secrets";
@@ -73,6 +75,64 @@ async function issueKey(
   return key;
 }
 
+/** The key the fleet is actually carrying, read from the file vessels are started with. */
+function currentFleetKey(): string | null {
+  try {
+    const m = readFileSync("/etc/substrate/env", "utf-8").match(/^METABOB_API_KEY=(.*)$/m);
+    const v = m?.[1]?.trim().replace(/^"|"$/g, "");
+    return v && v.length > 0 ? v : null;
+  } catch { return null; }
+}
+
+/**
+ * Does identity ACCEPT this key right now?
+ *
+ * This is the check whose absence caused the outage: the caller compared the key to its
+ * previous value and concluded "unchanged — no restarts needed", which was true while the key
+ * was being rejected by every vessel. Comparing a value to its own history cannot detect a
+ * signing secret rotating underneath it. Ask the authority instead.
+ *
+ * A transport failure returns FALSE — i.e. "assume it does not work". The opposite default
+ * would let an unreachable identity-vessel look like a passing check, which is how an
+ * instrument that cannot fail gets trusted.
+ */
+async function keyAuthenticates(key: string): Promise<boolean> {
+  try {
+    const r = await fetch(`${IDENTITY_URL}/v1/keys/validate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ api_key: key }),
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (r.status === 404) {
+      // No validate endpoint on this build — fall back to exercising a real authed route.
+      const probe = await fetch(`${DISCOVERY_URL}/registry/vessels`, {
+        headers: { Authorization: `ApiKey ${key}` },
+        signal: AbortSignal.timeout(8_000),
+      });
+      return probe.ok;
+    }
+    return r.ok;
+  } catch { return false; }
+}
+
+/** Persist an issued key to both files vessels read, so a restart picks it up. */
+function writeFleetKey(key: string): void {
+  for (const f of ["/etc/substrate/env", SECRETS_FILE]) {
+    try {
+      if (!existsSync(f)) continue;
+      const c = readFileSync(f, "utf-8");
+      writeFileSync(
+        f,
+        /^METABOB_API_KEY=/m.test(c) ? c.replace(/^METABOB_API_KEY=.*/m, `METABOB_API_KEY=${key}`) : `${c}\nMETABOB_API_KEY=${key}\n`,
+        { mode: 0o600 },
+      );
+    } catch (e) {
+      console.warn(`[seed-identity] could not update ${f}: ${(e as Error).message}`);
+    }
+  }
+}
+
 async function main() {
   await waitForIdentity();
 
@@ -87,8 +147,57 @@ async function main() {
     }),
   });
 
+  // A 409 MEANS THE ORG SURVIVED, NOT THAT THE KEYS DID — and this used to `return`.
+  //
+  // Measured 2026-08-18. `make recreate` keeps the named volumes, so identity's org row
+  // persists and signup answers 409 on every boot after the first. The old code returned
+  // there, having issued NO key. Whatever value gen-env had just written into
+  // /etc/substrate/env was therefore never minted through identity, and every vessel came up
+  // holding a credential nothing would accept:
+  //
+  //     [DiscoveryRegistrationLoop] heartbeat HTTP 401 (failure #1)
+  //     GET /registry/vessels -> 401     registry: 0 vessels, 0 shapes
+  //
+  // The whole fleet ran healthy, bound, and unable to register — for the same reason on
+  // every vessel at once.
+  //
+  // ★ THE RECOVERY PATH ONLY RAN IN THE STATE THAT DID NOT NEED IT. Keys were minted only
+  //   on genuine first boot (signup 200); the moment an org existed, the seeder stopped
+  //   being able to repair anything. And because API_KEY_SECRET_PREVIOUS is empty, a rotated
+  //   signing secret leaves no grace window — old keys do not merely age out, they are
+  //   invalid immediately, and nothing was left that could mint new ones.
+  //
+  // ★ "UNCHANGED" IS NOT "VALID". The caller logs `key unchanged — no restarts needed`,
+  //   which is true and useless: the key had not changed and had also never worked. A check
+  //   that compares a value to its previous self cannot see a secret rotating underneath it.
+  //
+  // So on 409: log in with the same seed credential, verify the key the fleet is actually
+  // carrying, and re-issue only if it does not authenticate. Re-issuing unconditionally
+  // would rotate a working key on every boot and invalidate every consumer that cached it.
   if (signupRes.status === 409) {
-    console.log("[seed-identity] substrate org already exists — skipping");
+    console.log("[seed-identity] substrate org already exists — verifying the fleet's key still authenticates");
+    const existing = currentFleetKey();
+    if (existing && await keyAuthenticates(existing)) {
+      console.log("[seed-identity] existing key authenticates — nothing to re-issue");
+      return;
+    }
+    console.log(
+      existing
+        ? "[seed-identity] existing key is REJECTED by identity — re-issuing (secret rotated or key never minted)"
+        : "[seed-identity] no key found in env — issuing",
+    );
+    const loginRes = await fetch(`${IDENTITY_URL}/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "substrate@substrate.local", password: SEED_KEY }),
+    });
+    if (!loginRes.ok) {
+      throw new Error(`login failed ${loginRes.status}: ${await loginRes.text()} — org exists but the seed credential no longer opens it; the keyspace needs manual recovery`);
+    }
+    const { token, user_id, org_id } = await loginRes.json() as { token: string; user_id: string; org_id: string };
+    const reissued = await issueKey(token, user_id, org_id, "substrate-default");
+    writeFleetKey(reissued);
+    console.log("[seed-identity] re-issued substrate-default and wrote it to env + secrets — key consumers must restart");
     return;
   }
 
