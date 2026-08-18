@@ -873,6 +873,17 @@ EOF
     BUN_BIN=""
   fi
   count_pf() { printf '%s' "$1" | grep -oE "^ *[0-9]+ $2" | grep -oE '[0-9]+' | tail -1 || true; }
+  # The SET of failing test names, sorted and stripped of timings/colour. A regression is a
+  # test that USED TO PASS AND NOW FAILS — which a count cannot express and this can. See the
+  # baseline block below for why the count comparison had to go.
+  fail_names() {
+    printf '%s' "$1" \
+      | sed 's/\x1b\[[0-9;]*m//g' \
+      | grep -E '^\(fail\)|^✗' \
+      | sed 's/ \[[0-9.]*m*s\]$//' \
+      | sed 's/[[:space:]]*$//' \
+      | sort -u || true
+  }
   # --kill-after IS LOAD-BEARING, not belt-and-braces. Measured 2026-08-17 19:34: a
   # convergence tick hung with pull-sync sleeping in pipe_read for 7+ minutes and no output
   # after "Starting". The leaf was `bun test` in /workspace/git/vessels/activity-api,
@@ -895,7 +906,11 @@ EOF
   # tests legitimately lowers it. Only count it when failures did not ALSO improve,
   # otherwise a genuine repair that removes dead tests is refused as a regression AND
   # the improvement-ratchet branch below becomes unreachable for that case.
-  is_reg() { [ -n "$1" ] && { [ "$1" -gt "$B_FAIL" ] || { [ "$1" -ge "$B_FAIL" ] && [ -n "$B_PASS" ] && [ -n "$2" ] && [ "$2" -lt "$B_PASS" ]; }; }; }
+  # is_reg() (count comparison) REMOVED 2026-08-18 — replaced by the set difference below.
+  # It defined regression as `fail_now > fail_baseline` against a baseline that only ratcheted
+  # DOWN, so a suite that grew could never converge again. Left as a comment rather than
+  # deleted silently because its absence is the point: no count of failures, however measured,
+  # can distinguish "a test broke" from "more tests exist".
   REG=""; REG_F=""; REG_P=""
   if [ -z "$BUN_BIN" ]; then
     log "$v: !!! TEST GATE BLIND — no test runner available (bun missing, or the per-tick budget line above disabled it); this is not 'no tests', it is no instrument. Converging ungated."
@@ -910,14 +925,37 @@ EOF
     if [ -z "$T_FAIL" ]; then
       log "$v: !!! TEST GATE BLIND — suite produced no countable result (errored or absent); converging ungated"
     else
-      B_LINE="$(cat "$TEST_BASELINE_DIR/$v" 2>/dev/null || true)"
-      B_FAIL="${B_LINE%% *}"; B_PASS="${B_LINE##* }"
-      case "$B_FAIL" in ''|*[!0-9]*) B_FAIL="" ;; esac
-      case "$B_PASS" in ''|*[!0-9]*) B_PASS="" ;; esac
-      if [ -z "$B_FAIL" ]; then
-        log "$v: test baseline recorded at $T_FAIL fail / ${T_PASS:-?} pass (no gate on first observation)"
+      # ── SET-BASED GATE ────────────────────────────────────────────────────────────────
+      # A COUNT CANNOT EXPRESS "REGRESSION", AND THE COUNT VERSION WEDGED CONVERGENCE.
+      #
+      # The old predicate was `fail_now > fail_baseline`, with a baseline that only ever
+      # RATCHETED DOWN. So any vessel that legitimately GREW its suite could never converge
+      # again: the stale absolute count stayed permanently exceeded, and every subsequent
+      # commit — correct or not — was refused for the same reason.
+      #
+      # Measured 2026-08-18: activity-api was refused three ticks running with
+      #   "baseline 177 fail/1136 pass -> 193 fail/1185 pass"
+      # Note the PASS count also rose, by 49. The suite had grown by ~65 tests; the baseline
+      # had been recorded when 1313 existed and the run had 1378. Comparing those two numbers
+      # is comparing different measurements. Reproduced locally with the same env the hub uses
+      # (SURREALDB_NAMESPACE set, so the DB-dependent files import): three runs at the
+      # candidate and three at its parent gave 194/193/194 fail on BOTH — identical. There was
+      # no regression to find, and the gate had blocked a fix for the outage it was protecting.
+      #
+      # A regression is a test that USED TO PASS AND NOW FAILS. That is a set difference, and
+      # it is stable under a growing suite: adding passing tests changes nothing, adding a
+      # BROKEN test is correctly caught, and removing a test cannot manufacture a pass.
+      #
+      # The baseline file now holds the sorted failing-test NAMES. A legacy two-number file is
+      # treated as absent so the next observation re-baselines into the new format rather than
+      # comparing across formats — which is the very mistake being fixed.
+      B_NAMES_FILE="$TEST_BASELINE_DIR/$v.failnames"
+      T_NAMES="$(fail_names "$T_OUT")"
+      if [ ! -s "$B_NAMES_FILE" ]; then
+        log "$v: test baseline recorded — $T_FAIL fail / ${T_PASS:-?} pass, $(printf '%s' "$T_NAMES" | grep -c . || true) named failing tests (no gate on first observation)"
+        printf '%s\n' "$T_NAMES" > "$B_NAMES_FILE"
         echo "$T_FAIL ${T_PASS:-0}" > "$TEST_BASELINE_DIR/$v"
-      elif is_reg "$T_FAIL" "$T_PASS"; then
+      elif [ -n "$(comm -23 <(printf '%s\n' "$T_NAMES") <(sort -u "$B_NAMES_FILE") 2>/dev/null | grep -c . | grep -v '^0$')" ]; then
         # BEST OF TWO: these suites are measurably flaky (development-vessel reported
         # 98 then 103 failures on an identical tree). Noise is additive, so the minimum
         # failure count approximates the deterministic one; a single second sample
@@ -929,15 +967,30 @@ EOF
         if [ -n "$F2" ] && [ "$F2" != "$T_FAIL" ]; then
           log "$v: FLAKY suite — $T_FAIL then $F2 fail on identical source; using $BEST_F. Deltas narrower than that spread are not admissible evidence."
         fi
-        if is_reg "$BEST_F" "$BEST_P"; then
-          REG="baseline $B_FAIL fail/${B_PASS:-?} pass -> $BEST_F fail/${BEST_P:-?} pass (best of 2)"
+        # CONFIRM ON THE SECOND RUN, AND ONLY ON TESTS THAT FAILED IN BOTH. These suites are
+        # measurably flaky, so a name appearing in one run and not the other is noise, not a
+        # regression. Intersecting the two runs' newly-failing sets is the set-valued analogue
+        # of the old best-of-two minimum.
+        T2_NAMES="$(fail_names "$T2_OUT")"
+        NEW1="$(comm -23 <(printf '%s\n' "$T_NAMES") <(sort -u "$B_NAMES_FILE") 2>/dev/null || true)"
+        NEW2="$(comm -23 <(printf '%s\n' "$T2_NAMES") <(sort -u "$B_NAMES_FILE") 2>/dev/null || true)"
+        CONFIRMED="$(comm -12 <(printf '%s\n' "$NEW1" | sort -u) <(printf '%s\n' "$NEW2" | sort -u) 2>/dev/null | grep -c . || true)"
+        if [ "${CONFIRMED:-0}" -gt 0 ]; then
+          FIRST_NEW="$(comm -12 <(printf '%s\n' "$NEW1" | sort -u) <(printf '%s\n' "$NEW2" | sort -u) 2>/dev/null | head -1)"
+          REG="$CONFIRMED test(s) that passed at baseline now fail in BOTH runs, e.g. ${FIRST_NEW:-?} (counts: $B_FAIL -> $BEST_F fail)"
           REG_F="$BEST_F"; REG_P="${BEST_P:-0}"
         else
-          log "$v: test regression NOT confirmed on re-run ($T_FAIL then ${F2:-uncountable} fail) — treating as flake, converging"
+          log "$v: newly-failing tests did not reproduce on re-run — flake, converging (run1 $(printf '%s' "$NEW1" | grep -c . || true) new, run2 $(printf '%s' "$NEW2" | grep -c . || true) new, intersection 0)"
         fi
-      elif [ "$T_FAIL" -lt "$B_FAIL" ]; then
-        log "$v: tests improved $B_FAIL -> $T_FAIL fail — ratcheting baseline"
-        echo "$T_FAIL ${T_PASS:-0}" > "$TEST_BASELINE_DIR/$v"
+      else
+        # No newly-failing test. Re-baseline whenever the SET changed at all, so a suite that
+        # grows or whose flakes settle does not carry a stale reference forward — the failure
+        # mode that wedged this gate in the first place.
+        if [ "$(printf '%s\n' "$T_NAMES")" != "$(cat "$B_NAMES_FILE" 2>/dev/null)" ]; then
+          log "$v: no newly-failing test; refreshing baseline ($B_FAIL -> $T_FAIL fail, $(printf '%s' "$T_NAMES" | grep -c . || true) named)"
+          printf '%s\n' "$T_NAMES" > "$B_NAMES_FILE"
+          echo "$T_FAIL ${T_PASS:-0}" > "$TEST_BASELINE_DIR/$v"
+        fi
       fi
     fi
   fi
