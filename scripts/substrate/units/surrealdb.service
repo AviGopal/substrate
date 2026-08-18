@@ -16,34 +16,48 @@ Environment=SURREAL_ROCKSDB_BLOCK_CACHE_SIZE=4294967296
 # (which self-restarts) instead of cascading the host. MemoryHigh throttles
 # reclaim before the hard MemoryMax OOM.
 #
-# LOWERED 22G/26G -> 10G/12G. The old numbers were sized for a DEDICATED box and
-# this unit does not run on one. Measured on the host that killed it:
+# ⚠⚠ REVERTED TO 22G/26G. The 10G/12G values I set on 2026-08-17 KILLED PRODUCTION.
 #
-#     host MemTotal            60.6G
-#     foreign tenants          31.5G qemu-system-x86 + 5.4G virtiofsd
-#     real headroom            23.7G
-#     surrealdb MemoryMax      26.0G   <-- ABOVE the headroom
-#     sum of all fleet caps    34.0G   <-- also above it
+# What happened, verbatim from the hub's journal:
 #
-# A cap above the host's headroom is not a cap: the unit can never reach it, so
-# the kernel's OOM killer decides instead of the cgroup. That is exactly what
-# happened at 2026-08-17 14:19:58 ("A process of this unit has been killed by the
-# OOM killer", status=9/KILL) — the cgroup limit never engaged.
+#     21:18:48  pull-sync: super-repo a0e3356217 -> e2ba1a6926 — refreshing glue layer
+#     21:18:50  units: converged surrealdb.service
+#     21:18:51  kernel: Memory cgroup out of memory: Killed process 4188580 (surreal)
+#               anon-rss:20651724kB  oom_memcg=.../surrealdb.service
 #
-# The 12G ceiling keeps surreal's own cgroup as the binding constraint while
-# leaving room for the other 62 units, and it still clears the block-cache math
-# below (4G cache + write buffers + runtime + a 2-3x compaction peak).
+# Convergence applied the new 12G ceiling to a live process holding 19.7 GiB — under the
+# old 26G cap, over the new one — and the kernel killed it inside the cap write. The cap
+# did not prevent an OOM; the cap WAS the OOM.
 #
-# ⚠ THIS UNIT LIVES IN THE IMAGE. Editing this file changes nothing on a running
-# substrate until a redeploy; apply it live with
-#     systemctl set-property surrealdb.service MemoryHigh=10G MemoryMax=12G
-# and note that a live-only set-property is LOST on redeploy — which is why the
-# value belongs here as well as there. Both, or it silently reverts.
+# THE ARITHMETIC I USED DESCRIBED A DIFFERENT MACHINE. The comment here previously read
+# "host MemTotal 60.6G, foreign tenants 31.5G qemu-system-x86 + 5.4G virtiofsd". Measured
+# on the host this unit actually runs on:
+#
+#     MemTotal:  32866108 kB   (32.8G, not 60.6G)
+#     qemu processes: 0        (there is no VM on this box)
+#
+# I measured ONE host — a local workstation with a VM on it — and wrote the conclusion into
+# a FLEET-WIDE unit file that deploys everywhere. The 14:19:58 OOM cited as the trigger was
+# the LOCAL surrealdb; `journalctl -u surrealdb -g oom` on the hub has no such entry.
+#
+# ★ A CAP IS A PROPERTY OF THE HOST, AND THIS FILE IS SHARED BY HOSTS THAT DIFFER. Any
+#   single number here is wrong somewhere. 22G/26G is restored because it is the value this
+#   host ran on for weeks with zero memcg OOMs — the only one in dmesg is the one I caused.
+#
+# ★ AND LOWERING A LIVE CAP IS NOT A SAFE EDIT. systemd applies it immediately on daemon-
+#   reload; a process already above the new ceiling is killed at once, mid-write. A cap may
+#   only be lowered when the process is known to be below it, or on a restart.
+#
+# NOT A FIX FOR THE CPU BURN, and it was never diagnosing one. surreal on the hub has run
+# at 576-703% CPU across four consecutive lifetimes. That is a browser dashboard polling
+# GET /v2/activities/execution-traces every 5s; SurrealDB 2.3.3 materialises all 473,176
+# matching rows into a sort BEFORE applying LIMIT 10. Memory caps are containment; the
+# durable fix is the narrow projection migration 162 named and never landed.
 #
 # scripts/substrate/memory-budget-check.sh checks this arithmetic on any host.
 MemoryAccounting=yes
-MemoryHigh=10G
-MemoryMax=12G
+MemoryHigh=22G
+MemoryMax=26G
 ExecStart=/usr/local/bin/surreal start \
     --bind 127.0.0.1:8000 \
     --user root \
