@@ -129,7 +129,7 @@
     },
     {
       "unit": "concept-db.service",
-      "role": "infra",
+      "role": "store",
       "repo": "concept-db",
       "health_port": 8260
     },
@@ -220,7 +220,7 @@
     },
     {
       "unit": "concept-db-seeder.service",
-      "role": "seed"
+      "role": "store"
     },
     {
       "unit": "substrate-active-scripts-seed.service",
