@@ -63,3 +63,83 @@ invisible until the drop counter was added; it is now countable.
 skips manifest entries entirely — so its `role: ui` membership in the spoke group is real
 but INERT. No boot path installs it; it exists only after a separate `vessel-ctl install`.
 The surface requires an undocumented manual step after every boot.
+
+---
+
+# The spoke could not reach the hub's LLMs: four defects in series
+
+The hub has five funded providers and answers completions (`PONG`, mistral-small-latest,
+Thompson-sampled across arms). The spoke has an invalid Anthropic key and an unfunded
+OpenRouter key. Everything below is why the spoke could not simply use the hub, and each
+defect alone was sufficient — which is why fixing any one of them changed nothing.
+
+## 1. The federation transport was never installed
+
+`libp2p-federation-transport.service: No such file or directory`. It is a MANIFEST vessel, and
+`apply-inventory`'s `manageable_units()` skips manifest entries entirely — so no boot path
+installs it. `docs/SUBSTRATE.md:218` states the transport "auto-starts at boot". It does not.
+Its clone also had no dependencies (`Cannot find package 'libp2p'`), so the first install
+crashlooped while `vessel-ctl install` reported `"active":"active"`.
+
+★ SAME CLASS, TWICE, BOTH LOAD-BEARING. human-surface-vessel is also `manifest: true` and also
+  absent from every boot. One gap: a spoke boot leaves load-bearing manifest vessels
+  uninstalled while the docs assert otherwise.
+
+## 2. The resolver advertised a shape it could not serve  (fixed: llm-resolver 3ea2136)
+
+`decideLastResort()` is pure. When it concluded nothing could serve, that conclusion died in a
+log line. `hasCompletionQuota()` is
+
+    [...modelClientMap.keys()].some((m) => !inModelCooldown(m)) ||
+    (anthropic !== null && !inCooldown("anthropic")) ||
+    (openaiClient !== null && !inCooldown("openai"))
+
+The OpenRouter models cooled on 402, so clause 1 went false. Clause 2 stayed true forever: the
+anthropic client is non-null whenever the KEY IS SET, validity unchecked, and a 401 is neither a
+quota error nor a reachability error, so it matches no cooling rule. The lane cools only on the
+resolve path, which a refusal never reaches. AN INVALID CREDENTIAL IS MORE DISQUALIFYING THAN
+EXHAUSTED QUOTA, AND IT WAS THE ONE FAILURE MODE THAT COULD NEVER CLOSE THE GATE.
+
+## 3. The hub-egress fallback looped back to the spoke  (fixed: development-vessel f8a2ede)
+
+Three siblings — feature-compose:2590, patch-with-tools:665, llm-completion-dispatch:182 — each
+POSTed `?vessel=llm-resolver-vessel`, all commented "the egress picks a LIVE hub circuit".
+Measured:
+
+    ?vessel=llm-resolver-vessel  -> produced_by ...@spoke-739b76f1
+    ?vessel=llm-resolver-google  -> produced_by ...@spoke-739b76f1
+    ?vessel=llm-resolver-haiku   -> produced_by ...@spoke-739b76f1
+    ?target=<multiaddr>&vessel=llm-resolver-google -> ...@syzygy-hub, "HUB"
+
+By-name lands LOCAL every time, even for a name present on both. And the hardcoded literal names
+no vessel on the hub at all (it advertises google/haiku/opus) — two independent defects on one
+line. Regression checked by failing-test SET: 81 before, 80 after, zero newly failing.
+
+## 4. concept-db cannot run on a spoke  (fixed: inventory 7886d3a5)
+
+role=infra (a spoke group) while surrealdb is role=store (hub-only). It crashlooped forever, so
+every spoke walk logged "concept-db could not be asked — recall unavailable" and ran with concept
+recall silently absent. Provable from the inventory file alone.
+
+## Where it ended
+
+With all four addressed and `operator` set on the dispatch (trigger=operator engages the
+reserved DIRECTED compose slot — without it an operator ask is classed autonomous and starved),
+the chain runs end to end: edit-intent detected -> feature_compose -> draft produced (op_count=2)
+-> adversarial semantic refuter -> rollback -> escalation. The system drafted a change and its
+own diverse-lens refuter rejected it at confidence 1.00 rather than landing a partial fix.
+
+UNRESOLVED, STATED AS SUCH. The refuter's reason — "the mapped return value for 'count of' is
+missing" — does not hold against the file: the field is derived from the NOUN (`counted[0]` ->
+totalVessels / healthyCount / totalShapes), not per trigger phrase, so adding the trigger to the
+alternation is the whole change. But the refuter also cited "the conditional check", the staged
+tree was rolled back, and the draft is therefore unreadable. Whether this was a FALSE REJECTION
+of a correct patch or a true rejection of a draft that added something extra is UNDETERMINED. It
+matters: a false rejection penalises an arm that was right.
+
+## Still open
+
+- 80 pre-existing test failures in development-vessel
+- substrate-pull-sync.timer is disabled/inactive on the spoke — the only code channel is unscheduled
+- 23 posterior deltas dropped in 6h (ribosome-extract, auth_resolve_v1)
+- the deterministic fast path's verifier shares the producer's field-choice rule
