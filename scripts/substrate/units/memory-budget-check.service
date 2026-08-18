@@ -1,0 +1,34 @@
+[Unit]
+Description=Memory-budget check — does the fleet's declared memory budget fit this machine, and can a capped unit recover?
+# WHY THIS UNIT EXISTS AT ALL (2026-08-17). The script was written, negative-controlled and
+# committed — and nothing ran it. A repo-wide grep for its name returned two hits, both
+# comments. An adversarial audit found the same true of validation/scripts/
+# argument-chain-check.test.ts. Two careful instruments, zero call sites.
+#
+# That is the failing half of detector work here: construction is not the bottleneck,
+# PLACEMENT is. A detector with no scheduler is indistinguishable from one that was never
+# written, except that it looks like coverage.
+#
+# Read-only: the script inspects /proc, the unit files and systemctl state and changes
+# nothing, so it is safe to run on a loaded box (part of observability, not the autonomous
+# self-development loop).
+#
+# Smoke: docker exec substrate-live systemctl start memory-budget-check.service
+#        docker exec substrate-live journalctl -u memory-budget-check.service --no-pager -n 30
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+# ENABLED_ROLES is read by the check itself to tell a role-masked unit (masked ON PURPOSE by
+# apply-inventory, nothing to recover) from a masked-and-therefore-unrecoverable one. Without
+# it the check's first output on a healthy spoke is a critical false alarm — which is how a
+# detector's real failure mode ("ignored") begins.
+ExecStart=/usr/bin/env bash ${SUBSTRATE_ROOT}/scripts/substrate/memory-budget-check.sh
+# A FAIL is a finding, not a crash. Exit 1 must not mark the unit failed, or the immune
+# system starts trying to "recover" a report.
+SuccessExitStatus=0 1
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

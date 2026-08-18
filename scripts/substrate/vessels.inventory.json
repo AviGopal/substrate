@@ -314,6 +314,8 @@
     { "unit": "self-development-trend.service", "role": "infra" },
     { "unit": "typecheck-scenario-gen.timer", "role": "autonomy" },
     { "unit": "typecheck-scenario-gen.service", "role": "autonomy" },
+    { "unit": "memory-budget-check.timer", "role": "infra" },
+    { "unit": "memory-budget-check.service", "role": "infra" },
     { "unit": "db-contention-check.timer", "role": "store" },
     { "unit": "db-contention-check.service", "role": "store" },
     { "unit": "db-maintenance.timer", "role": "store" },

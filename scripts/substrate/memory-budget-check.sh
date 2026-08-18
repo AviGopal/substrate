@@ -31,8 +31,40 @@
 set -uo pipefail
 
 CONTAINER="${SUBSTRATE_CONTAINER:-substrate-live}"
-UNIT_DIR="${SUBSTRATE_UNIT_DIR:-$(dirname "$0")/units}"
+# UNIT_DIR differs by context and getting it wrong makes this check measure the wrong fleet.
+# From the host the source-of-truth is the repo's units/ directory; INSIDE the container the
+# rendered units live in /usr/lib/systemd/system (161 units, 4 capped), while
+# /etc/systemd/system holds only the 43 enable/mask symlinks — pointing at the latter
+# reported "1.0G across 1 capped unit(s)" and would have graded a different fleet than the
+# one that exists. Explicit override still wins.
+UNIT_DIR="${SUBSTRATE_UNIT_DIR:-}"
 fails=0
+
+# CONTEXT DETECTION — the same shim self-recovery-tick.sh uses, for the same reason.
+#
+# This script was written to run from the HOST via `docker exec`. Scheduled INSIDE the
+# container (which is the only place anything schedules anything here) `docker` does not
+# exist, so checks 2 and 3 would take their SKIP branches and the detector would report a
+# clean two-line result while inspecting nothing. That is the precise failure this file
+# exists to catch, and placement is what would have introduced it: an instrument is not
+# wired until it is wired WHERE IT RUNS.
+#
+# self-recovery-tick.sh:64-72 already solved this and its comment records the same bite
+# ("The body previously used `docker exec` unconditionally, so when it..."). Reused rather
+# than reinvented (law 3) so the two cannot drift on what "in container" means.
+if command -v docker >/dev/null 2>&1 && docker inspect "$CONTAINER" >/dev/null 2>&1; then
+  IN_CONTAINER=0
+else
+  IN_CONTAINER=1
+fi
+csh()  { if [ "$IN_CONTAINER" = 1 ]; then sh -c "$1"; else docker exec "$CONTAINER" sh -c "$1"; fi; }
+csys() { if [ "$IN_CONTAINER" = 1 ]; then systemctl "$@"; else docker exec "$CONTAINER" systemctl "$@"; fi; }
+
+if [ -z "$UNIT_DIR" ]; then
+  if [ -d "$(dirname "$0")/units" ]; then UNIT_DIR="$(dirname "$0")/units"
+  elif [ -d /usr/lib/systemd/system ]; then UNIT_DIR=/usr/lib/systemd/system
+  else UNIT_DIR="$(dirname "$0")/units"; fi
+fi
 
 say()  { printf '%s\n' "$*"; }
 fail() { printf 'FAIL  %s\n' "$*"; fails=$((fails + 1)); }
@@ -48,6 +80,33 @@ to_bytes() { # 26G / 512M / 1024K / plain bytes -> bytes
     *) echo "$v" ;;
   esac
 }
+# Is this unit masked because its ROLE is not in the enabled set?
+#
+# Reads the same declarative source apply-inventory.sh uses at boot, so this check and the
+# thing that did the masking agree by construction rather than by a maintained list. Answers
+# "no" (i.e. the mask is NOT explained by role selection) whenever it cannot tell — an
+# unreadable inventory must not silently convert every real masked-and-broken unit into an
+# "ok", which would be this check's own vacuity failure.
+unit_role_disabled() {
+  local unit="$1" inv="${SUBSTRATE_UNIT_DIR:-$(dirname "$0")}/vessels.inventory.json"
+  [ -f "$inv" ] || inv="$(dirname "$0")/vessels.inventory.json"
+  [ -f "$inv" ] || return 1
+  command -v jq >/dev/null 2>&1 || return 1
+  # ENABLED_ROLES unset means "every unit enabled" (the inventory's documented default), so
+  # nothing is role-disabled and every mask is a real one.
+  local roles="${ENABLED_ROLES:-}"
+  [ -n "$roles" ] || return 1
+  local unit_role
+  unit_role="$(jq -r --arg u "${unit}.service" '.vessels[] | select(.unit==$u) | .role // empty' "$inv" 2>/dev/null | head -1)"
+  [ -n "$unit_role" ] || return 1
+  # DISABLED_VESSELS masks by name on top of role selection; that is also deliberate.
+  case ",${DISABLED_VESSELS:-}," in *",${unit}.service,"*) return 0 ;; esac
+  local enabled_roles
+  enabled_roles="$(jq -r --arg g "$roles" '[.roles[$g] // empty] | flatten | join(",")' "$inv" 2>/dev/null)"
+  [ -n "$enabled_roles" ] || return 1
+  case ",${enabled_roles}," in *",${unit_role},"*) return 1 ;; *) return 0 ;; esac
+}
+
 gb() { awk -v b="${1:-0}" 'BEGIN{ printf "%.1fG", b/1073741824 }'; }
 
 # ── 1. Does the sum of hard caps fit the machine? ────────────────────────────────────
@@ -105,10 +164,14 @@ fi
 # one absorbs every other unit's growth because the OOM killer selects on RSS.
 say ""
 say "== OOM victim ordering =="
-if ! command -v docker >/dev/null 2>&1 || ! docker inspect "$CONTAINER" >/dev/null 2>&1; then
-  say "SKIP  container '$CONTAINER' not inspectable — cannot rank live RSS from here"
-else
-  top="$(docker exec "$CONTAINER" sh -c "ps -eo rss,args --sort=-rss 2>/dev/null | awk 'NR>1' | head -1" 2>/dev/null)"
+{
+  # `ps` IS NOT INSTALLED IN THE CONTAINER, so the original probe returned nothing there and
+  # this check reported UNMEASURED forever — honest, but permanently blind exactly where it
+  # is scheduled. /proc is always present, so read VmRSS straight from it and fall back to ps
+  # only when /proc is not usable. An instrument that cannot measure in its own runtime is
+  # not an instrument.
+  top="$(csh 'for d in /proc/[0-9]*; do r=$(awk "/^VmRSS:/{print \$2}" $d/status 2>/dev/null); [ -n "$r" ] || continue; c=$(tr "\0" " " < $d/cmdline 2>/dev/null | cut -c1-90); echo "$r $c"; done | sort -rn | head -1' 2>/dev/null)"
+  [ -n "$top" ] || top="$(csh "ps -eo rss,args --sort=-rss 2>/dev/null | awk 'NR>1' | head -1" 2>/dev/null)"
   top_rss_kb="$(awk '{print $1+0}' <<<"$top")"
   # NEVER PRINT 0.0G FOR "COULD NOT MEASURE". A zero read through a broken probe is
   # indistinguishable from a genuinely idle fleet, and this file exists because a reading
@@ -135,27 +198,46 @@ else
   else
     ok "capped units are the majority"
   fi
-fi
+}
 
 # ── 3. Can a killed unit actually come back? ─────────────────────────────────────────
 # Restart=on-failure is void on a masked unit, and `is-active` still reads healthy. This is
 # what turned one OOM into a multi-hour outage.
 say ""
 say "== recoverability of capped units =="
-if docker inspect "$CONTAINER" >/dev/null 2>&1; then
+{
   for entry in "${capped[@]}"; do
     u="${entry%%:*}"
-    enabled="$(docker exec "$CONTAINER" systemctl is-enabled "$u" 2>&1 | tr -d '\r')"
-    state="$(docker exec "$CONTAINER" systemctl is-active "$u" 2>&1 | tr -d '\r')"
+    enabled="$(csys is-enabled "$u" 2>&1 | tr -d '\r')"
+    state="$(csys is-active "$u" 2>&1 | tr -d '\r')"
     case "$enabled" in
       masked|masked-runtime)
-        # `masked + active` is the latent form: it looks healthy until the day it dies.
-        fail "$u is $enabled (state=$state) — Restart=on-failure and self-recovery are BOTH disarmed; an OOM here is unrecoverable without a human"
+        # ROLE-MASKED IS NOT BROKEN, AND CONFLATING THEM MAKES THIS CHECK A LIAR.
+        #
+        # This deployment runs ENABLED_ROLES=spoke, and roles.spoke omits `store`, so
+        # apply-inventory masks surrealdb BY DESIGN — the spoke resolves store shapes on the
+        # hub through discovery. The first version of this check keyed on `is-enabled` alone
+        # and therefore reported the fleet's NORMAL configuration as a critical failure.
+        #
+        # That is the same defect this file exists to catch, committed by the file itself: an
+        # instrument that cannot distinguish two states reporting one of them as the other.
+        # Worse than a false negative here — a detector whose first output on a healthy
+        # system is a critical alarm is one nobody will keep running, which is how a
+        # detector's real failure mode is "ignored", not "wrong".
+        #
+        # The discriminator is the inventory, not systemd: a unit whose role is absent from
+        # the enabled role set is masked ON PURPOSE and has nothing to recover.
+        if unit_role_disabled "$u"; then
+          ok "$u is $enabled — role not in ENABLED_ROLES=${ENABLED_ROLES:-<unset>}; masked by design, nothing to recover"
+        else
+          # `masked + active` is the latent form: it looks healthy until the day it dies.
+          fail "$u is $enabled (state=$state) but its role IS enabled — Restart=on-failure and self-recovery are BOTH disarmed; an OOM here is unrecoverable without a human"
+        fi
         ;;
       *) ok "$u recoverable (is-enabled=$enabled, state=$state)" ;;
     esac
   done
-fi
+}
 
 say ""
 if [ "$fails" -gt 0 ]; then

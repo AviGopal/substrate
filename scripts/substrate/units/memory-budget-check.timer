@@ -1,0 +1,23 @@
+[Unit]
+Description=Memory-budget check timer
+
+[Timer]
+OnBootSec=300s
+# ABSOLUTE WALL-CLOCK ANCHOR, NOT OnUnitActiveSec. The immune-system timer deadlocked for
+# FIVE DAYS in this fleet because OnUnitActiveSec re-arms only relative to the triggered
+# service's last activation: one missed link leaves the timer `active` with `Trigger: n/a`
+# and it never fires again, while `is-active` keeps reporting healthy. self-recovery.timer
+# carries the same fix and the same reasoning.
+#
+# Hourly is deliberate. The conditions this checks — unit memory caps, the host's foreign
+# tenants, whether a capped unit is masked — change on the timescale of deploys and
+# reconfigurations, not seconds. A detector that fires more often than its subject changes
+# trains its readers to ignore it.
+OnCalendar=hourly
+# Fires a catch-up run if the anchor was missed across a restart, so a container that was
+# down at the top of the hour still gets checked rather than silently skipping a window.
+Persistent=true
+Unit=memory-budget-check.service
+
+[Install]
+WantedBy=timers.target
