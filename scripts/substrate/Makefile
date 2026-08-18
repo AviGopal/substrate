@@ -373,12 +373,45 @@ up:
 
 # Replace the container while preserving its named workspace and datastore
 # volumes, so supplied Docker launch settings are applied deterministically.
+# RECREATE MUST CARRY THE OLD CONTAINER'S IDENTITY FORWARD, OR IT CHANGES WHAT THE BOX IS.
+#
+# ENABLED_ROLES / DISABLED_VESSELS / PROFILE are launch-time arguments (`ENABLED_ROLES ?=`)
+# that nothing persists. They decide which units this deployment runs — i.e. whether it is a
+# hub, a spoke, or a full standalone. `recreate` removes the container and re-runs, so any of
+# them not re-supplied on the command line is silently dropped and the box comes back as the
+# documented default: every unit enabled.
+#
+# Measured 2026-08-18. A `make recreate` issued to add a port mapping converted a SPOKE into a
+# standalone substrate: ENABLED_ROLES went from "spoke" to empty, apply-inventory stopped
+# masking the store roles, surrealdb and activity-api un-masked, goal-host's endpoints moved
+# from the hub to 127.0.0.1, and federation-transport went inactive. The fleet looked HEALTHIER
+# afterwards — a local store answering in 8ms instead of a saturated hub — which is precisely
+# why the change went unnoticed. An unintended reconfiguration that improves the symptoms is
+# the hardest kind to catch.
+#
+# `up` already refuses to start a stopped container when LAUNCH_OVERRIDES would be ignored.
+# The same hazard on the recreate path had no guard at all: the settings were not ignored, they
+# were forgotten. So read them off the container BEFORE removing it and pass them back through.
+# Explicit values on the command line still win, so an intentional role change works as before.
 recreate:
 	@if docker ps -a --format '{{.Names}}' | grep -qx "$(LIVE_NAME)"; then \
+	  PREV_ROLES=$$(docker inspect $(LIVE_NAME) --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null | sed -n 's/^ENABLED_ROLES=//p' | head -1); \
+	  PREV_DISABLED=$$(docker inspect $(LIVE_NAME) --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null | sed -n 's/^DISABLED_VESSELS=//p' | head -1); \
+	  PREV_PROFILE=$$(docker inspect $(LIVE_NAME) --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null | sed -n 's/^PROFILE=//p' | head -1); \
+	  if [ -n "$$PREV_ROLES$$PREV_DISABLED$$PREV_PROFILE" ]; then \
+	    echo "[recreate] carrying forward launch identity: ENABLED_ROLES='$$PREV_ROLES' DISABLED_VESSELS='$$PREV_DISABLED' PROFILE='$$PREV_PROFILE'"; \
+	  else \
+	    echo "[recreate] previous container carried no role selection — recreating as the default (all units enabled)"; \
+	  fi; \
 	  echo "[recreate] removing $(LIVE_NAME); named volumes are preserved"; \
 	  docker rm -f $(LIVE_NAME) >/dev/null; \
+	  $(MAKE) up \
+	    ENABLED_ROLES="$${ENABLED_ROLES:-$$PREV_ROLES}" \
+	    DISABLED_VESSELS="$${DISABLED_VESSELS:-$$PREV_DISABLED}" \
+	    PROFILE="$${PROFILE:-$$PREV_PROFILE}"; \
+	else \
+	  $(MAKE) up; \
 	fi
-	@$(MAKE) up
 
 # Fleet readiness matrix (host wrapper; in-container: /usr/local/bin/substrate-ready)
 ready:
