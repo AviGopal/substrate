@@ -79,6 +79,13 @@ services:
       - "${ANALYSIS_PORT:-18250}:8250"       # analysis-vessel
       - "${CONCEPT_DB_PORT:-18260}:8260"     # concept-db
       - "${STATEFUL_UI_PORT:-18270}:8270"    # stateful-ui-vessel
+      # THE HUMAN SURFACE WAS THE ONE VESSEL NEVER PUBLISHED. The Makefile's docker-run
+      # path has carried `-p 18310:8310` all along; this compose file did not, so a fleet
+      # brought up through compose ran human-surface-vessel healthy, enabled, bound to
+      # 0.0.0.0 — and unreachable from the host. Two declarations of one fleet, differing
+      # by one line, is the same producer/consumer drift this repo keeps paying for, and
+      # the vessel it silently dropped is the ONLY one a human is meant to talk to.
+      - "${HUMAN_SURFACE_PORT:-18310}:8310"  # human-surface-vessel
     volumes:
       - substrate-workspace:/workspace          # named volume — portable, not a host path
       - substrate-surreal:/var/lib/surrealdb    # SurrealDB data — DROPPING THIS LOSES ALL LEARNING STATE
@@ -93,5 +100,21 @@ services:
       start_period: 60s
 
 volumes:
+  # ⚠⚠ THESE ARE NOT THE VOLUMES A RUNNING substrate-live IS USING, AND COMPOSE WILL NOT
+  # ATTACH TO THEM. Compose prefixes volume names with the project, so these become
+  # `substrate_substrate-workspace` / `substrate_substrate-surreal`. The live container is
+  # started by the Makefile's `docker run` path (make -C scripts/substrate up), which mounts
+  # the UNPREFIXED `substrate-workspace` / `substrate-surreal`.
+  #
+  # So `docker compose up` against an existing docker-run fleet does not migrate it — it
+  # creates EMPTY volumes and starts a container that looks perfectly healthy with an empty
+  # SurrealDB and an empty workspace. The old volumes are orphaned, not deleted, which is
+  # worse: nothing errors, and the loss is invisible until someone asks where the traces went.
+  # Verified 2026-08-18: `docker inspect substrate-live` shows no compose label and mounts
+  # `substrate-workspace`; `docker compose config` resolves these to `substrate_*`.
+  #
+  # If you need compose to adopt an existing fleet, declare these `external: true` with the
+  # unprefixed names FIRST. Do not "just bring it up with compose" — that is the one action
+  # in this repo that silently discards all learning state while reporting success.
   substrate-workspace:
   substrate-surreal:
