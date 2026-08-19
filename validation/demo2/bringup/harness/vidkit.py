@@ -493,7 +493,17 @@ def compose(tags: list[str], title: str, speed: float, fps: int, out_path: Path)
         # captions and exit lines. Applying it to every stdout line turned a 460s
         # segment into 240s+ of video and blew a 10-minute encode budget: ordinary
         # output should stream past, conclusions should linger.
-        key_t = {r["t"] for r in recs if r["kind"] in ("say", "rc")}
+        # Which records get a guaranteed minimum time on screen. Normally only the
+        # ones a viewer must READ — captions and exit lines — because applying the
+        # floor to ordinary stdout turned a 460s segment into 240s+ of video.
+        #
+        # DWELL_ALL exists for a segment whose EVIDENCE is the stdout: a posterior
+        # before/after, a computed delta, two source lines being compared. Letting
+        # those stream past at 0.16s each produces a film that asserts its findings
+        # rather than showing them, which is the failure this whole harness is
+        # built to avoid.
+        _dwell_kinds = ("say", "rc", "out") if os.environ.get("DWELL_ALL") else ("say", "rc")
+        key_t = {r["t"] for r in recs if r["kind"] in _dwell_kinds}
         # THE TIMELINE IS NOT ONLY THE LOG. Built from stdout records alone, a long
         # quiet stretch — `make up` waiting up to 240s for fleet readiness — is ONE
         # interval, so the whole pane and the wall-clock banner freeze for its entire
