@@ -8,21 +8,30 @@
  * reads as perfectly healthy at every checkpoint. It is: every delta it carries
  * arrives. It just never carries the other sign.
  *
- * `variant_performance_metrics` stores both, which is what makes the check
- * possible without a second source:
+ * `variant_performance_metrics` stores two numbers per arm:
  *
- *   successful_executions / total_executions  — the honest tally of outcomes
- *   thompson_alpha / thompson_beta            — what the sampler actually draws
+ *   successful_executions / total_executions  — did the STEP run cleanly
+ *                                               (validated.success on the
+ *                                                execution record)
+ *   thompson_alpha / thompson_beta            — was the step CREDITED with
+ *                                               reaching a goal with substance
  *
- * Those are two views of one history, so they should track. Where they don't,
- * the gap is the credit channel's bias, measured rather than argued.
+ * READ THIS BEFORE QUOTING THE OUTPUT: those are different quantities, not two
+ * views of one history. Reaching with substance is rarer than executing without
+ * error, so a posterior mean BELOW the execution-success rate is expected and is
+ * not by itself a defect. This script measures the gap between "works" and
+ * "gets somewhere" — a standing view, not a verdict.
  *
- * WHAT TO LOOK AT. Not the absolute deflation — a uniformly pessimistic posterior
- * still ranks arms correctly, and Thompson only cares about order. The number to
- * quote is the share of arm PAIRS the posterior orders against the evidence, and
- * its summary, Kendall's tau-b. tau near 1 means the sampler's preferences track
- * the record; tau near 0 means it is drawing from something unrelated to what
- * happened, however healthy each individual write looked on the way in.
+ * The reading that no benign story explains is `atPrior`: arms that have never
+ * been graded at all. Those are drawn at Beta(1,1) forever, and Thompson treats
+ * a coin it has never flipped exactly like one it has flipped and found fair.
+ *
+ * WHAT THE TAU MEANS. Kendall's tau-b summarises whether the posterior orders
+ * arm PAIRS the way execution reliability does. It is a proxy check, not a
+ * verdict: tau near 0 means execution reliability cannot be used to sanity-check
+ * the posterior, which is worth knowing precisely because it means a broken
+ * credit channel has nothing obvious to contradict it. Diagnose the channel from
+ * the walk's own credit decisions, not from this number.
  *
  * TWO WAYS THIS SCRIPT COULD LIE, both guarded:
  *   - Arms with one or two outcomes have empirical rates of exactly 0.000 or
@@ -202,9 +211,14 @@ if (AS_JSON) {
 // A one-directional channel is the signature to fail on: understating everywhere
 // with nothing overstating cannot be noise, and it is the shape that a live β with
 // a withheld α produces. Exit non-zero so this is usable as a gate, not just a view.
-if (graded.length > 0 && (under.length >= 3 * Math.max(1, over.length) || (Number.isFinite(tau) && tau < 0.5))) {
-  console.error("\nFAIL: the posterior does not track the record it summarises —");
-  console.error(`  ${under.length} arms understate vs ${over.length} overstating, tau=${tau.toFixed(3)}.`);
-  console.error("  Thompson is sampling from something other than what happened.");
+// GATE ON THE READING THAT HAS NO BENIGN EXPLANATION. Deflation does not qualify:
+// a posterior below the execution-success rate is what a working substance gate
+// produces. An arm that has NEVER been graded does — it means outcomes are being
+// produced and nothing is turning them into evidence, so Thompson keeps drawing
+// that arm at the prior no matter how often it runs.
+const priorShare = arms.length > 0 ? atPrior.length / arms.length : 0;
+if (priorShare > 0.25) {
+  console.error(`\nFAIL: ${atPrior.length}/${arms.length} arms (${(100 * priorShare).toFixed(0)}%) have never been graded.`);
+  console.error("  They are drawn at Beta(1,1) forever — Thompson cannot tell them from an arm proven fair.");
   process.exit(1);
 }

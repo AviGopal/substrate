@@ -15,10 +15,25 @@ pairs the evidence separates                16532
 Kendall tau-b (1 = agrees, 0 = unrelated)    0.064
 ```
 
-Every row of `variant_performance_metrics` carries two views of one history: the
-tally of what happened (`successful_executions` / `total_executions`) and the
-Beta the sampler draws from (`thompson_alpha` / `thompson_beta`). They should
-track. They don't:
+## First, what this measurement does NOT prove
+
+An earlier version of this report claimed the two columns are "two views of one
+history" and should therefore agree. **That premise is wrong, and it was the
+report's central claim.** `successful_executions` increments from
+`validated.success` on the execution record (`activities.ts:2239`) — whether the
+*step ran cleanly*. `thompson_alpha` is written separately by
+`applyOutcomeToPosteriors` from the *graded reach with substance*. Those are
+different quantities. Reaching a goal with substance is rarer than executing
+without error, so nearly every arm's posterior mean *should* sit below its
+execution-success rate, and the 159-vs-16 split is roughly what that alone would
+predict.
+
+So the table below is not, by itself, evidence of a broken channel. It measures
+the gap between "this step works" and "this step is credited with getting
+somewhere" — useful as a standing view, not sufficient as a verdict. The evidence
+that the channel is broken is the mechanism, in the section after it.
+
+Every row of `variant_performance_metrics` carries both numbers:
 
 | arm | succ | fail | empirical | posterior mean |
 |---|---:|---:|---:|---:|
@@ -30,19 +45,20 @@ track. They don't:
 | `satisfier:gap_compose` | 100 | 377 | 0.21 | 0.04 |
 | `universal-tool-fallback` | 1127 | 2593 | 0.30 | 0.18 |
 
-**tau = 0.064 is the number that matters.** A uniformly pessimistic posterior
-would be harmless — Thompson compares arms, so a constant factor cancels. This
-is not uniform. 47% of the arm pairs the evidence actually separates are ordered
-the wrong way round, which is a coin flip. The sampler's preferences carry
-almost no information about which arm works.
+tau = 0.064 says the posterior order and the execution-reliability order are
+almost unrelated. Read honestly, that is a weaker statement than it looks: an
+arm that always executes cleanly and never gets anywhere *should* rank low, so
+some of this decorrelation is the system working. What it does establish is that
+**execution reliability is not a usable proxy for the posterior** — nobody can
+sanity-check one against the other, which is why the actual defect below went
+unnoticed for so long.
 
-`satisfier:source_code` succeeds 89% of the time and is drawn as if it succeeds
-10% of the time. `satisfier:problem_detection` succeeds 80% of the time and is
-drawn at 2%. Meanwhile `gap_compose`, which genuinely fails four times out of
-five, sits at 0.04 — close enough to `source_code`'s 0.10 that the two are
-nearly indistinguishable at the draw.
+The one number here that no benign story explains is `atPrior`: **246 of 486 arms
+have never been graded at all.** Not deflated — untouched. Those arms are drawn
+at Beta(1,1) forever, and Thompson treats a coin it has never flipped exactly
+like a coin it has flipped and found fair.
 
-## Why
+## The actual defect
 
 The credit channel applies β and withholds α. From the walk logs of ten human
 goals dispatched this session:
