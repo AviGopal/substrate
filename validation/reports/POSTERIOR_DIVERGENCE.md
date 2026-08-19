@@ -138,3 +138,55 @@ Three ways the script could itself have lied, all guarded:
 - **The satisfier plane.** A template listing contains zero `satisfier:*` ids, so
   a catalogue-only arm list omits precisely the tier that answers human goals.
   The arms are derived from the live shape vocabulary instead.
+
+## Verification of the first repair
+
+`784ec45c` landed the corrected summary line; the substrate's own convergence
+restarted goal-host at 00:55:45, after the write. A fresh miss on a one-step arm
+now reports:
+
+```
+HOLLOW — …; β WITHHELD (α was structurally unreachable for satisfier:… —
+                        symmetric abstention, not a penalty)
+learning: { "alphaBetaDelta": [] }
+```
+
+The log and the sink now agree. Before the fix, that same dispatch printed
+`β-penalised last pick` while applying nothing.
+
+Two notes from the landing itself, both instances of classes already named here:
+
+- **The dispatch was graded `reached:false`** with "the requested symbol is NOT
+  observably present" — while the symbol *is* present on `origin/dev` and the
+  diff is byte-identical to what was asked for. A false rejection, which is worse
+  than a false reach: it penalises an arm that was right.
+- **Three gates refused this one-line log correction in series** before it
+  landed: the unused-declaration arm (false — `uf` is used six times, and the
+  gate was judging a file its own string-stripper had deleted 73% of), the
+  diagnostic-only arm (correct by its rule, wrong in substance — repaired in
+  `f969eb8` so that a log edge which *adds* a conditional branch is treated as
+  repair rather than quietening), and the semantic-symbol gate (false — it
+  expected the fix in `penaliseHollowTemplate`, but the penalty logic was already
+  correct and the defect was in the line that describes it).
+
+  Each gate is individually well-reasoned. In series they make one class of
+  repair — *the diagnostic is lying* — nearly unlandable, which is the class the
+  system most needs to be able to land.
+
+## Further loss channels, now legible
+
+Visible in goal-host's journal once the above was being watched closely:
+
+```
+beta-penalty REJECTED (404) for 'feature_compose' — no posterior row exists
+    for this pick; penalty not applied
+reach-patch MATCHED NO ROW (walk-complete) for feature_compose:784ec45c…
+    (reached=false) — verdict NOT persisted; this execution stays ungraded
+[oracle-label] NOT consumed exec=feature_compose:784ec45c… reason=no_labels
+```
+
+An arm with no posterior row cannot be graded through the penalty path, and
+nothing in that path creates one — so the row's absence is self-perpetuating.
+This is a partial explanation for the 245 arms sitting at Beta(1,1), and it is
+the same zero-row class already pinned for the posterior aggregator in
+`posterior-aggregator-drop-visibility.test.ts`, on a different writer.
