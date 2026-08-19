@@ -98,7 +98,32 @@ case "$ACTION" in
     fi
     # bun install where the unit will run
     wd=$(csh "MITOSIS_PUSH_CLONE_DIR=$CLONE_DIR /usr/local/bin/render-unit '$VESSEL' 2>/dev/null | sed -n 's/^WorkingDirectory=//p'")
-    [ -n "$wd" ] && csh "[ -f '$wd/package.json' ] && cd '$wd' && /root/.bun/bin/bun install --silent >/dev/null 2>&1 || true"
+    # THIS STEP USED TO BE UNCONDITIONALLY SILENT. `[ -f "$wd/package.json" ] && …
+    # || true` short-circuits to true when the workdir does not exist yet, so an
+    # install against an absent directory resolved nothing, left an empty
+    # node_modules beside a lockfile, and still returned ok:true. The vessel was
+    # then enabled and started with no dependencies, and because Restart= re-runs
+    # ExecStart and never the install, it crash-looped on a missing module for as
+    # long as the container lived — reported by systemd as `activating`, never
+    # `failed`. Observed on substrate-ui-local: 1681 restarts over five days.
+    #
+    # Nothing here is fatal to the install (a vessel with no package.json is
+    # normal), but every outcome is now SAID, and a workdir that does not exist is
+    # said loudly, because that one means the dependencies silently did not land.
+    install_note=""
+    if [ -z "$wd" ]; then
+      install_note="render-unit produced no WorkingDirectory"
+    elif ! csh "[ -d '$wd' ]"; then
+      install_note="WORKDIR ABSENT ($wd) — dependencies NOT installed; the unit will start with an empty node_modules"
+      echo "{\"warn\":\"$VESSEL: $install_note\"}" >&2
+    elif ! csh "[ -f '$wd/package.json' ]"; then
+      install_note="no package.json in $wd (nothing to install)"
+    elif csh "cd '$wd' && /root/.bun/bin/bun install --silent >/dev/null 2>&1"; then
+      install_note="dependencies installed"
+    else
+      install_note="BUN INSTALL FAILED in $wd"
+      echo "{\"warn\":\"$VESSEL: $install_note\"}" >&2
+    fi
 
     # 2. Ensure declared secrets exist in /etc/substrate/env (single place).
     secs=$(echo "$e" | jq -r '.secrets[]?' | tr '\n' ' ')
@@ -119,7 +144,7 @@ case "$ACTION" in
     active=$(csh "systemctl is-active '$VESSEL.service' 2>/dev/null || true" 2>/dev/null | head -n1)
     active=${active:-unknown}
     self_rec=$(echo "$e" | jq -r '.self_recovery // false')
-    echo "{\"ok\":true,\"action\":\"installed\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\",\"active\":\"$active\",\"self_recovery\":$self_rec}"
+    echo "{\"ok\":true,\"action\":\"installed\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\",\"active\":\"$active\",\"self_recovery\":$self_rec,\"deps\":\"$install_note\"}"
     ;;
 
   sync)

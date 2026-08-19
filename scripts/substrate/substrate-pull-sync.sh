@@ -267,9 +267,19 @@ converge_fleet_defs() {
   # in /usr/local/bin (entrypoint invokes them by name); secrets.env.sh is SOURCED
   # from /usr/local/share/substrate. Converging it to the wrong path would leave
   # the real one stale while the log claimed success.
+  # render-unit and vessel-ctl are the same gap class as the three below and were
+  # still stuck at image-build time. Together they decide what a dynamic vessel's
+  # unit SAYS and whether its dependencies get installed, so a repair to either —
+  # a missing After= ordering, an install step that silently resolved nothing —
+  # sat in git reaching no running container, and the next install reproduced the
+  # defect it was supposed to fix. Converging them is what makes such a repair
+  # take effect on the next `vessel-ctl install`, which is the only moment either
+  # script runs.
   for _cf_pair in \
     "apply-inventory.sh:/usr/local/bin/apply-inventory" \
     "gen-env.sh:/usr/local/bin/gen-env" \
+    "render-unit.sh:/usr/local/bin/render-unit" \
+    "vessel-ctl.sh:/usr/local/bin/vessel-ctl" \
     "secrets.env.sh:/usr/local/share/substrate/secrets.env.sh"; do
     _cf_from="${_cf_pair%%:*}"
     _cf_to="${_cf_pair#*:}"
