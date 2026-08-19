@@ -1400,6 +1400,56 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
       # rationale there — it is idempotent, so calling it here too would be redundant.
       # Reseed the active-scripts run-dir (same source substrate-active-scripts-seed uses at boot).
       cp -f "$SUPER_DIR"/scripts/substrate/*.ts /workspace/active-scripts/ 2>/dev/null || true
+      # SUPER-REPO-HOSTED VESSELS — the last thing a convergence changes on disk
+      # that nothing then restarts.
+      #
+      # A manifest vessel whose workdir is $REPO_ROOT/repos/<name> runs its code
+      # STRAIGHT OUT OF THIS CLONE. There is no mirror-to-live step for it, so the
+      # mirror+restart path that keeps /vessels/<name> current never applies to it
+      # at all. bun loads its module graph once at start and does not hot-reload,
+      # so a pulled fix sits on disk — fully converged, correct on inspection —
+      # while the process keeps serving the old code and EVERY instrument agrees
+      # it is fine: the unit is active, /health returns 200, and the clone's own
+      # `git log` shows the new commit. Nothing in that set is wrong; none of them
+      # observes the running module graph.
+      #
+      # Measured 2026-08-19 across three containers: the human surface was serving
+      # code from Aug-11 and Aug-14 against clones pulled minutes earlier. One had
+      # been stale for eight days. The discriminator is the unit's start time
+      # against the file mtime — not any health signal.
+      #
+      # Derived from the manifest, never a vessel list: the property that matters
+      # is "source lives in a repo inside this clone", so any future vessel with
+      # it is covered without being named. federation-relay and
+      # federation-transport-vessel are $REPO_ROOT vessels too, but under
+      # scripts/substrate/federation-relay rather than repos/, so this selector
+      # excludes them by construction — deliberately. Their restart policy below
+      # is narrower on purpose (bouncing the relay drops every peer's reservation
+      # at once) and must not be widened by accident.
+      _mf="${FLEET_DIR:-/workspace/substrate/fleet}/vessels.manifest.json"
+      [ -f "$_mf" ] || _mf=/usr/local/share/substrate/vessels.manifest.json
+      if [ -f "$_mf" ] && command -v jq >/dev/null 2>&1; then
+        for _sv in $(jq -r '.vessels[] | select((.workdir // "") | startswith("$REPO_ROOT/repos/")) | .name' "$_mf" 2>/dev/null); do
+          systemctl is-active "$_sv.service" >/dev/null 2>&1 || continue
+          _svdir="$(jq -r --arg n "$_sv" '.vessels[] | select(.name==$n) | .workdir' "$_mf" 2>/dev/null | head -1)"
+          _svdir="${_svdir##*/repos/}"
+          [ -n "$_svdir" ] || continue
+          # Only when THIS vessel's tree moved. "all" is the first-convergence
+          # case, where there is no baseline to diff against.
+          if [ "$CHANGED" != "all" ] && ! echo "$CHANGED" | grep -q "^repos/$_svdir/"; then continue; fi
+          restart_breadcrumb "$_sv" "super-repo convergence to ${SHEAD:0:10}" 2>/dev/null || true
+          systemctl restart "$_sv.service" 2>/dev/null || true
+          log "super-repo: restarted $_sv — it runs from repos/$_svdir in this clone and bun does not hot-reload a pulled change"
+          sleep "$STAGGER_SECONDS"
+          _svport="$(jq -r --arg n "$_sv" '.vessels[] | select(.name==$n) | .health_port // empty' "$_mf" 2>/dev/null | head -1)"
+          if [ -n "$_svport" ]; then
+            _ok=0
+            for _ in 1 2 3 4 5; do healthy "$_svport" && { _ok=1; break; }; sleep 4; done
+            [ "$_ok" = 0 ] && log "super-repo: $_sv did NOT return healthy on :$_svport after restart — left running; self-recovery owns escalation"
+          fi
+        done
+      fi
+
       # The relay is restarted ONLY on a real relay.ts change (never on first
       # convergence): bouncing it drops every peer's reservation at once.
       if [ "$CHANGED" != "all" ] && echo "$CHANGED" | grep -q '^scripts/substrate/federation-relay/relay\.ts$' \
