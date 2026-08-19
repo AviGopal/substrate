@@ -1,10 +1,9 @@
 # Learning is working. Every instrument that reports on it says otherwise.
 
 The standing question was whether the learning process is visible and reliable.
-It is substantially reliable and it is not visible, and I concluded the opposite
+It is substantially reliable and it was not visible, and I concluded the opposite
 twice before measuring it directly. Both wrong conclusions came from reading
-instruments instead of running an intervention, and all three instruments fail in
-the same direction.
+instruments instead of running an intervention.
 
 ## The measurement that settles it
 
@@ -32,36 +31,57 @@ While that was happening, the dispatch record for the very same goal reported:
 "learning": { "alphaBetaDelta": [], "goalPathRecorded": true, "oracleLabelWritten": false }
 ```
 
-Three separate readings, three separate lies, all under-reporting:
+I read all three as lies. **Only one was.** The other two are accurate within a
+scope their names do not convey, which is a different defect and needs a
+different fix.
 
-**1. `alphaBetaDelta` is empty on every dispatch, including ones that moved the
-posterior.** It captures only the walk's in-process `learningSink`. The credit
-that actually landed went through the trace-store and goal-path routes, which the
-field cannot see. A reader of this field concludes no learning occurred from a
-goal that demonstrably taught the system something.
+**1. `alphaBetaDelta` — accurate in scope, and it had one real lie inside it.**
+The type's own doc says it is "populated ONLY from paths that actually run at
+terminalization". The credit that moved the sourdough goal's posterior came
+through the execution-record route, which this field never claimed to cover, so
+`[]` was correct there. But when a terminalization β *was* attempted,
+`penaliseHollowTemplate` returned `dBeta: 2` **unconditionally** — including on
+the branch where it had just logged:
 
-**2. `oracleLabelWritten: false` on every dispatch, including ones whose label
-landed.** `recordDeterministicLabel` (`index.ts:3490`) is fire-and-forget: it does
-not await the response, does not check the status, and takes no sink to report
-into. Querying the hub corpus directly finds the rows it claims not to have
-written — `universal-tool-fallback | achieved` for the avocado goal, three rows
-for the Saturn goal. The write works; the receipt is never issued.
+```
+beta-penalty REJECTED (404) for 'patch_with_tools' — no posterior row exists
+    for this pick; penalty not applied
+```
 
-**3. The `β-penalised last pick` log line reports penalties that were never
-applied.** `index.ts:9677` correctly withholds β whenever α was structurally
-unreachable for the same verdict:
+So the field asserted a penalty the store had refused. That is the exact defect
+the α site fixed and documented — *"Report what HAPPENED, not what was attempted.
+This line used to fire unconditionally, so a credit that was rejected or lost
+still read as alpha-credited"* — applied to α and never to β. Repaired in
+`5be4cfa`: `dBeta: _betaApplied ? 2 : 0`, landed and live. Verified at code level
+in the running tree; I did not catch a rejected penalty flowing through a
+dispatch sink end to end, because the rejections observed came from the compose
+escalation path rather than walk terminalization.
+
+**2. `oracleLabelWritten` — not a lie; a misleading name.** I claimed it reports
+`false` while labels land. It does, and that is correct: the field is a *human
+verdict consumption latch*, not a record of label writes. `index.ts:14810` burns
+it only when `label?.labeler === "human"`, and the type's doc says so plainly —
+"goal-host writes no oracle label at terminalization, so oracleLabelWritten stays
+false here (that is the operator provide_feedback plane)". The machine labels I
+found in the corpus are written by a different call and were never in this
+field's scope. Nothing to fix in the code; the name invites the misreading I
+made.
+
+**3. The `β-penalised` log line — a genuine lie, now fixed.** `index.ts:9677`
+correctly withholds β whenever α was structurally unreachable for the same
+verdict:
 
 ```ts
 const _alphaWasReachable = verdict.deterministic === true || consumedInChain.size > 0;
 const _betaWithheldForSymmetry = !_noOracle && !_alphaWasReachable;
 ```
 
-but the summary line at `:9717` distinguishes only the `_noOracle` case, so every
-symmetry-withheld β prints as a penalty. Across ten dispatches that line claimed
-12 penalties; `alphaBetaDelta` recorded none, and the withhold branch is why.
+but the summary line at `:9717` distinguished only the `_noOracle` case, so every
+symmetry-withheld β printed as a penalty. Across ten dispatches that line claimed
+12 penalties; none were applied.
 
-The comment directly above that line records this exact defect being found and
-fixed once already, for the other branch:
+The comment directly above it records this exact defect being found and fixed
+once already, for the other branch:
 
 > This line printed "β-penalised last pick" unconditionally, including on the
 > branch immediately above that WITHHOLDS β — so every trace of a no-oracle
@@ -69,8 +89,9 @@ fixed once already, for the other branch:
 > log was wrong, which is the worse way round**: the log is what the reach-gate
 > lessons, the judge, and every after-the-fact analysis read.
 
-A second withholding branch was added afterwards and the line was never extended
-to cover it. **The class recurred one branch below its own fix.**
+A second withholding branch was added afterwards and the line was never extended.
+**The class recurred one branch below its own fix** — and then a third time, in
+`penaliseHollowTemplate`'s return value, which is defect 1 above.
 
 ## Two retractions, recorded rather than edited away
 
@@ -190,3 +211,38 @@ nothing in that path creates one — so the row's absence is self-perpetuating.
 This is a partial explanation for the 245 arms sitting at Beta(1,1), and it is
 the same zero-row class already pinned for the posterior aggregator in
 `posterior-aggregator-drop-visibility.test.ts`, on a different writer.
+
+## Where this leaves the ungraded half
+
+The gate still fails, correctly, on the reading that has no benign explanation:
+245 of 486 arms have never been graded. One mechanism is now legible in the
+journal and is the same zero-row class pinned for the posterior aggregator on a
+different writer:
+
+```
+beta-penalty REJECTED (404) for 'patch_with_tools' — no posterior row exists
+    for this pick; penalty not applied
+```
+
+An arm with no posterior row cannot be graded through the penalty path, and
+nothing in that path creates one, so the absence is self-perpetuating. Until
+`5be4cfa` the loss was also invisible in the dispatch record, which reported the
+refused penalty as a delta of 2.
+
+Filed as `gap-vacuous-edit-stripper-deletes-the-file-it-judges`: the repair for
+the reference-counting view is verified offline but has failed to land across
+three dispatches — two mangled by the drafter, one that never routed to compose
+at all. It is left with the substrate rather than hand-applied, because the
+inability to land it is itself the training signal.
+
+## Summary of state
+
+| | |
+|---|---|
+| Credit flows on a reached goal | **verified by intervention** (α +0.70 / +1.28) |
+| β withheld symmetrically when α is unreachable | already correct in code |
+| β withhold reported as a penalty | **fixed, live, behaviorally verified** (`784ec45c`) |
+| Refused β reported as an applied delta | **fixed, live** (`5be4cfa`), code-level verified |
+| `oracleLabelWritten` | not a defect — a human-verdict latch with a misleading name |
+| 245/486 arms never graded | **open**; one mechanism identified, gate fails on it |
+| Reference-counting view deletes 73% of the file | **open**, gap filed, 3 dispatches failed to land it |
