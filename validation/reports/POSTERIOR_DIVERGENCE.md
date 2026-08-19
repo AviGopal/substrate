@@ -212,28 +212,58 @@ This is a partial explanation for the 245 arms sitting at Beta(1,1), and it is
 the same zero-row class already pinned for the posterior aggregator in
 `posterior-aggregator-drop-visibility.test.ts`, on a different writer.
 
-## Where this leaves the ungraded half
+## Where this leaves the ungraded half — and a third correction, to my own instrument
 
-The gate still fails, correctly, on the reading that has no benign explanation:
-245 of 486 arms have never been graded. One mechanism is now legible in the
-journal and is the same zero-row class pinned for the posterior aggregator on a
-different writer:
+I reported "245 of 486 arms have never been graded." **That number was an
+artefact of how I built the arm list.** `thompson_posterior` synthesises
+`Beta(1,1)` with `loaded: true` for *any* activity_id, including ones that have
+never existed — verified against `satisfier:definitely_not_a_real_shape_xyzzy`.
+The satisfier arms are enumerated by pairing `satisfier:` with all ~385 registry
+shapes, and most of those pairs have never been picked by anything. The script
+was counting names I had invented.
+
+Existence is not observable from the response. The only evidence an arm exists is
+that it has **run**, so the script now restricts to arms with a non-zero outcome
+count, and gates on the sharp form: an arm with enough outcomes to have moved that
+has not moved at all.
+
+```
+arms queried            486   (ids probed; a nonexistent id also answers Beta(1,1))
+arms with any outcome   280   — the only observable evidence an arm exists
+RUN but still at (1,1)   39
+
+FAIL: 7 arm(s) with >= 5 outcomes are still at exactly Beta(1,1):
+  satisfier:composition_coverage_report   40 success /  3 failure, posterior untouched
+  satisfier:git_branch_create             19 success /  6 failure, posterior untouched
+  satisfier:shapeClosureDemand             8 success /  5 failure, posterior untouched
+  satisfier:docs_decision_answer_scan      0 success /  8 failure, posterior untouched
+  satisfier:rhythm_reality_sync            2 success /  6 failure, posterior untouched
+  satisfier:recurringPatternConcept        5 success /  4 failure, posterior untouched
+  satisfier:detector_coverage_scan         4 success /  4 failure, posterior untouched
+```
+
+**Seven arms, not 245.** `composition_coverage_report` has forty-three recorded
+outcomes and a posterior that has never moved. A low-sample arm at the prior is
+recency; this is not. These are the arms where outcomes are being produced and
+nothing is turning them into evidence, and they are consistent with the mechanism
+already legible in the journal:
 
 ```
 beta-penalty REJECTED (404) for 'patch_with_tools' — no posterior row exists
     for this pick; penalty not applied
 ```
 
-An arm with no posterior row cannot be graded through the penalty path, and
-nothing in that path creates one, so the absence is self-perpetuating. Until
-`5be4cfa` the loss was also invisible in the dispatch record, which reported the
-refused penalty as a delta of 2.
+The counter path upserts, so counts accumulate; the posterior path updates only,
+so with no row the write is refused and the Beta stays at the synthesised prior.
 
-Filed as `gap-vacuous-edit-stripper-deletes-the-file-it-judges`: the repair for
-the reference-counting view is verified offline but has failed to land across
-three dispatches — two mangled by the drafter, one that never routed to compose
-at all. It is left with the substrate rather than hand-applied, because the
-inability to land it is itself the training signal.
+**Not repaired here, deliberately.** The obvious fix — create the row in the
+posterior writer — is explicitly argued against in
+`posterior-aggregator-drop-visibility.test.ts`: rows are created through routes
+that own an account-slug-derived record id, and "creating rows here under a
+guessed identity would fragment the table across two id conventions — a worse
+failure than the drop, and one that would look like working code". Overriding a
+documented decision of that kind from the outside is how a fix becomes a defect.
+Filed with the seven arms named.
 
 ## Summary of state
 
@@ -244,5 +274,6 @@ inability to land it is itself the training signal.
 | β withhold reported as a penalty | **fixed, live, behaviorally verified** (`784ec45c`) |
 | Refused β reported as an applied delta | **fixed, live** (`5be4cfa`), code-level verified |
 | `oracleLabelWritten` | not a defect — a human-verdict latch with a misleading name |
-| 245/486 arms never graded | **open**; one mechanism identified, gate fails on it |
+| ~~245/486 arms never graded~~ | **retracted — my instrument's artefact**; a nonexistent id also answers Beta(1,1) |
+| 7 arms with 5+ outcomes frozen at Beta(1,1) | **open**, gap filed, gate fails on it by name |
 | Reference-counting view deletes 73% of the file | **open**, gap filed, 3 dispatches failed to land it |

@@ -137,7 +137,22 @@ for (const id of ids) {
   if (a) arms.push(a);
 }
 
-const atPrior = arms.filter((a) => Math.abs(a.alpha - 1) < 1e-9 && Math.abs(a.beta - 1) < 1e-9);
+// EXISTENCE IS NOT OBSERVABLE FROM THE RESPONSE, SO IT MUST BE INFERRED FROM OUTCOMES.
+// `thompson_posterior` SYNTHESISES Beta(1,1) with `loaded: true` for ANY activity_id,
+// including ids that have never existed — verified against
+// `satisfier:definitely_not_a_real_shape_xyzzy`. An earlier version of this script
+// counted every (1,1) as "an arm that has never been graded" and reported 245 of 486,
+// but the arm list is built by pairing `satisfier:` with all ~385 registry shapes, and
+// most of those pairs have never been picked by anything. It was counting names I had
+// invented, not arms the system is failing to grade.
+//
+// The only evidence of existence in this payload is that the arm has RUN: a non-zero
+// sample/success/failure count. So the reading that actually means something is an arm
+// that HAS executed and STILL sits at the untouched prior — outcomes are being produced
+// and nothing is turning them into evidence.
+const hasRun = (a: Arm) => a.samples > 0 || a.successes > 0 || a.failures > 0;
+const atPrior = arms.filter((a) => hasRun(a) && Math.abs(a.alpha - 1) < 1e-9 && Math.abs(a.beta - 1) < 1e-9);
+const existent = arms.filter(hasRun);
 const rate = (a: Arm) => a.successes / (a.successes + a.failures);
 const mean = (a: Arm) => a.alpha / (a.alpha + a.beta);
 
@@ -181,7 +196,9 @@ const separable = concordant + discordantPairs;
 if (AS_JSON) {
   console.log(JSON.stringify({
     armsQueried: arms.length,
-    atPrior: atPrior.length,
+    existent: existent.length,
+    ranButUngraded: atPrior.length,
+    ranEnoughButUngraded: graded.filter((a) => Math.abs(a.alpha - 1) < 1e-9 && Math.abs(a.beta - 1) < 1e-9).map((a) => a.id),
     graded: graded.length,
     understating: under.length,
     overstating: over.length,
@@ -192,8 +209,9 @@ if (AS_JSON) {
     arms: graded.map((a) => ({ id: a.id, successes: a.successes, failures: a.failures, empirical: rate(a), posteriorMean: mean(a), alpha: a.alpha, beta: a.beta })),
   }, null, 2));
 } else {
-  console.log(`arms queried            ${arms.length}`);
-  console.log(`still at exactly (1,1)  ${atPrior.length}  — never graded, drawn at the prior forever`);
+  console.log(`arms queried            ${arms.length}  (ids probed; a nonexistent id also answers Beta(1,1))`);
+  console.log(`arms with any outcome   ${existent.length}  — the only observable evidence an arm exists`);
+  console.log(`RUN but still at (1,1)  ${atPrior.length}  — executed, yet no outcome ever became evidence`);
   console.log(`graded with n >= ${MIN_N}       ${graded.length}  — arms with fewer outcomes tell you about sample size, not about the channel`);
   console.log();
   console.log(`${"arm".padEnd(52)} ${"succ".padStart(6)} ${"fail".padStart(6)} ${"empirical".padStart(10)} ${"posterior".padStart(10)}`);
@@ -211,14 +229,28 @@ if (AS_JSON) {
 // A one-directional channel is the signature to fail on: understating everywhere
 // with nothing overstating cannot be noise, and it is the shape that a live β with
 // a withheld α produces. Exit non-zero so this is usable as a gate, not just a view.
+// The sharpest form of the same reading: an arm with ENOUGH outcomes to have moved,
+// that has not moved at all. satisfier:composition_coverage_report has 40 successes
+// and 3 failures and sits at exactly Beta(1,1) — 43 outcomes, zero evidence. A
+// low-sample arm at the prior is just recency; this is not.
+const ranEnoughButUngraded = graded.filter((a) => Math.abs(a.alpha - 1) < 1e-9 && Math.abs(a.beta - 1) < 1e-9);
+if (ranEnoughButUngraded.length > 0) {
+  console.error(`\nFAIL: ${ranEnoughButUngraded.length} arm(s) with >= ${MIN_N} outcomes are still at exactly Beta(1,1):`);
+  for (const a of ranEnoughButUngraded.sort((x, y) => (y.successes + y.failures) - (x.successes + x.failures))) {
+    console.error(`  ${a.id.slice(0, 56).padEnd(56)} ${a.successes} success / ${a.failures} failure, posterior untouched`);
+  }
+  console.error("  Outcomes are being produced and nothing is turning them into evidence.");
+  process.exit(1);
+}
+
 // GATE ON THE READING THAT HAS NO BENIGN EXPLANATION. Deflation does not qualify:
 // a posterior below the execution-success rate is what a working substance gate
 // produces. An arm that has NEVER been graded does — it means outcomes are being
 // produced and nothing is turning them into evidence, so Thompson keeps drawing
 // that arm at the prior no matter how often it runs.
-const priorShare = arms.length > 0 ? atPrior.length / arms.length : 0;
+const priorShare = existent.length > 0 ? atPrior.length / existent.length : 0;
 if (priorShare > 0.25) {
-  console.error(`\nFAIL: ${atPrior.length}/${arms.length} arms (${(100 * priorShare).toFixed(0)}%) have never been graded.`);
+  console.error(`\nFAIL: ${atPrior.length}/${existent.length} arms that HAVE RUN (${(100 * priorShare).toFixed(0)}%) are still at the untouched prior.`);
   console.error("  They are drawn at Beta(1,1) forever — Thompson cannot tell them from an arm proven fair.");
   process.exit(1);
 }
