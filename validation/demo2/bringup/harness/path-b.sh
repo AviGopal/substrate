@@ -56,19 +56,48 @@ if [ "$RC" != 0 ] && docker ps --format '{{.Names}}' | grep -qx "$NAME"; then
   $V say $TAG "the masking argument covers checks 2 and 3 ONLY. surrealdb and activity-api are the hub's job here:"
   $V run $TAG -- bash -c "for u in identity-vessel activity-api surrealdb; do printf '  %-18s %s\n' \$u \"\$(timeout 30 docker exec $NAME systemctl is-enabled \$u.service 2>&1)\"; done"
   $V say $TAG "note the doctor blames a SURREAL_PASS mismatch — that is it mis-describing an ABSENT datastore, not a credential problem."
-  $V say $TAG "readiness is a DIFFERENT claim and masking does not excuse it. A masked unit is excluded from that count, so these are units this spoke really does run:"
+  # Conditional on the computed list — see vidkit cmd_ifcounted. Spoken flat, this
+  # asserted a readiness failure on any run, including runs where readiness passed.
+  $V ifcounted $TAG "readiness" \
+    "readiness is a DIFFERENT claim and masking does not excuse it. A masked unit is excluded from that count, so these are units this spoke really does run:" \
+    "readiness PASSED on this run, so there is nothing there for masking to excuse. The units still settling are listed anyway:"
   $V run $TAG -- bash -c "timeout 30 docker exec $NAME systemctl list-units --type=service --state=activating,failed --no-legend --no-pager 2>/dev/null | awk '{print \"  \" \$1 \"  \" \$3 \"/\" \$4}'; echo '  (activating = restarting; failed = gave up)'"
-  $V say $TAG "the seeder failure is NOT covered by that argument: path C's seeder ran clean, so this one is real and specific to this spoke."
+  # WAS A HARDCODED CLAIM THAT A SPECIFIC FAILURE EXISTS. "the seeder failure is NOT
+  # covered by that argument" fired unconditionally — and on a run whose computed list
+  # held four items and no seeder failure at all, it pointed at nothing on screen.
+  # Third variant of the same defect: not a wrong count, but an asserted FAILURE.
+  #
+  # What the list above always supports is stronger and needs no assumption: a unit in
+  # activating/auto-restart is crash-looping, and check 5 ("no failed units") is
+  # structurally blind to it, because a unit that keeps restarting never reaches
+  # `failed`. Say that only when such a unit is actually there.
+  $V run $TAG -- bash -c "N=\$(timeout 30 docker exec $NAME systemctl list-units --type=service --state=activating --no-legend --no-pager 2>/dev/null | grep -c auto-restart); \
+    if [ \"\${N:-0}\" -gt 0 ]; then \
+      echo \"\$N unit(s) above are in auto-restart — crash-looping right now.\"; \
+      echo \"check 5 reported PASS 'no failed units' in the same run: a unit that keeps restarting never reaches 'failed', so that check cannot see these.\"; \
+    else echo 'no unit is in auto-restart on this run; check 5 PASSing is unambiguous here.'; fi"
   # The 401 is well evidenced and my earlier wording described the wrong evidence for
   # it: "verified against the provider directly" implied a separate call to Anthropic
   # that no log in this film contains. What the film actually shows is better — the
   # arm's OWN completion carried the provider's verbatim refusal, which proves the
   # request reached Anthropic and was rejected there. Quote that, claim nothing else.
-  $V say $TAG "check 7 is the real one and is not about masking: the llm arms run HERE and cannot complete."
+  # Also conditional. This asserted that check 7 FAILED. True in every take so far,
+  # because these demo containers borrow a provider key that 401s — but "it always
+  # fails" is exactly the reasoning that produced the previous three variants of this
+  # defect. The line is only spoken when the computed list actually holds an arm item.
+  $V ifcounted $TAG "llm arm" \
+    "check 7 is the real one and is not about masking: the llm arms run HERE and cannot complete." \
+    "the llm arms answered on this run — check 7 is not among the failures above."
   # From the .jsonl, not the .console: vidkit closes the jsonl per record, while the
   # console is the runner's redirect and may still be sitting in a stdio buffer.
-  $V run $TAG -- bash -c "grep -h 'authentication_error' $HERE/../logs/$TAG.jsonl 2>/dev/null | head -1 | cut -c1-360"
-  $V say $TAG "that body is the PROVIDER's, returned to the arm's own call — the request reached Anthropic and was refused there. No substrate in this film can draft."
+  # NEVER LET A CAPTION STAND OVER AN EMPTY BLOCK. A grep with no match prints
+  # nothing, and the sentence below would then describe a body that is not there —
+  # which reads as "shown and unremarkable" rather than "absent".
+  $V run $TAG -- bash -c "L=\$(grep -h 'authentication_error' $HERE/../logs/$TAG.jsonl 2>/dev/null | head -1 | cut -c1-360); \
+    if [ -n \"\$L\" ]; then echo \"\$L\"; else echo '(no authentication_error in this run - the arms did not report a provider refusal)'; fi"
+  $V ifcounted $TAG "llm arm" \
+    "that body is the PROVIDER's, returned to the arm's own call — the request reached Anthropic and was refused there. No substrate in this film can draft." \
+    "no provider refusal to quote on this run."
   RC=0
 fi
 

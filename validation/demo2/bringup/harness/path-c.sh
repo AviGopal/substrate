@@ -112,11 +112,19 @@ $V verdict $TAG
 # failure the computed list above may not contain. On this run the fleet WAS ready
 # and the verdict printed ONE, so the caption would have contradicted the line
 # directly above it. Say only what is true of whatever the list holds.
-$V say $TAG "check 7 is the substantive one and it is not about masking: the llm arms run HERE and cannot complete."
+# Conditional: this asserted that check 7 FAILED. True in every take so far because
+# these demo containers borrow a provider key that 401s — but "it always fails" is the
+# reasoning that produced three earlier variants of this defect.
+$V ifcounted $TAG "llm arm" \
+  "check 7 is the substantive one and it is not about masking: the llm arms run HERE and cannot complete." \
+  "the llm arms answered on this run — check 7 is not among the failures above."
 # Was: "confirmed against the API itself" — which described a direct call to the
 # provider that no log in this film contains. The real evidence is stronger and is
 # already on screen: the arm's own completion carried the provider's verbatim body.
-$V run $TAG -- bash -c "grep -h 'authentication_error' $HERE/../logs/$TAG.jsonl 2>/dev/null | head -1 | cut -c1-360"
+# A grep with no match prints nothing, and the caption below would then describe a
+# body that is not there. Make the block state its own absence.
+$V run $TAG -- bash -c "L=\$(grep -h 'authentication_error' $HERE/../logs/$TAG.jsonl 2>/dev/null | head -1 | cut -c1-360); \
+  if [ -n \"\$L\" ]; then echo \"\$L\"; else echo '(no authentication_error in this run - the arms did not report a provider refusal)'; fi"
 $V say $TAG "that refusal is the PROVIDER's, returned to the arm's own call — so the request reached Anthropic and was rejected there, rather than failing inside the substrate."
 # The shape count is read back from the registry rather than typed. The previous cut
 # said "404 shapes"; it happened to be right on that run and would have been a false
@@ -130,9 +138,17 @@ $V run $TAG -- bash -c "curl -s -m 6 http://127.0.0.1:$((OFFSET+18100))/registry
 # this path never explains and never names — and on a path that has already said on
 # camera "nothing was masked", so B's excuse is unavailable here. Name them, then
 # close on what is actually true.
-$V say $TAG "the readiness item above is not excused by masking — this is a ROOT and nothing was masked. These are the units behind it:"
+# CONDITIONAL ON THE COMPUTED LIST. "the readiness item above" was spoken on a run
+# whose list held ONE item and no readiness failure at all — the fourth variant of
+# the same defect, committed inside the fix for the third. A sentence that reasons
+# about WHICH failures occurred has to read the list the viewer is reading.
+$V ifcounted $TAG "readiness" \
+  "the readiness item above is not excused by masking — this is a ROOT and nothing was masked. These are the units behind it:" \
+  "readiness PASSED on this run, so there is no readiness item to excuse. The units still settling are listed anyway, because a crash loop hides here:"
 $V run $TAG -- bash -c "timeout 30 docker exec $NAME systemctl list-units --type=service --state=activating,failed --no-legend --no-pager 2>/dev/null | awk '{print \"  \" \$1 \"  \" \$3 \"/\" \$4}'; echo '  (activating = restarting, i.e. a crash loop that PASS-no-failed-units cannot see)'"
-$V say $TAG "so: a real network with its own identity and the registry printed above, with the two counted failures named — the arms cannot draft without a working provider key, and the units listed here are still coming up or looping."
+# No number in the closer. It said "the two counted failures" over a list of one.
+$V countword $TAG
+$V say $TAG "so: a real network with its own identity and the registry printed above, with every counted failure named rather than summarised — the arms cannot draft without a working provider key, and the units listed here are still coming up or looping."
 
 $V say $TAG "PATH C exit code: $RC"
 exit $RC

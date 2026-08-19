@@ -146,9 +146,6 @@ def cmd_say(tag: str, text: str) -> None:
     print(f"## {text}", flush=True)
 
 
-_ANSI = re.compile(r"\x1b\[[0-9;]*m")
-
-
 def cmd_verdict(tag: str) -> None:
     """Emit a closing caption COMPUTED from this tag's own captured stdout.
 
@@ -169,6 +166,19 @@ def cmd_verdict(tag: str) -> None:
     neither PASS nor FAIL, so a grep for those two words cannot see it, which is
     the trap the path scripts already narrate.
     """
+    parts = _counted_failures(tag)
+    n = len(parts)
+    if n == 0:
+        cmd_say(tag, "counted from the output above: no doctor check reported FAIL.")
+        return
+    word = {1: "ONE", 2: "TWO", 3: "THREE", 4: "FOUR", 5: "FIVE", 6: "SIX", 7: "SEVEN"}.get(n, str(n))
+    cmd_say(tag, f"{word} check(s) failed. This list is counted from the output above, not written by hand:")
+    for i, p in enumerate(parts, 1):
+        cmd_say(tag, f"  {i}. {p}")
+
+
+def _counted_failures(tag: str) -> list[str]:
+    """The same list `cmd_verdict` prints — the single source of truth for narration."""
     path = LOGS / f"{tag}.jsonl"
     fails: list[str] = []
     ready: str | None = None
@@ -178,32 +188,49 @@ def cmd_verdict(tag: str) -> None:
                 rec = json.loads(ln)
             except Exception:
                 continue
-            # Only real command output. A `say` caption or the echoed `$ ...`
-            # command line can contain the word FAIL and is not a doctor verdict;
-            # counting those would let the narration inflate its own count.
             if rec.get("kind") != "out":
                 continue
             text = _ANSI.sub("", str(rec.get("text", ""))).strip()
-            if text.startswith("FAIL ") or text.startswith("FAIL\t"):
+            if text.startswith("FAIL "):
                 item = text[5:].strip()
                 if item not in fails:
                     fails.append(item)
             m = re.search(r"NOT ready: (\d+) unit\(s\) down", text)
             if m:
                 ready = m.group(1)
-
-    parts = []
+    out = []
     if ready:
-        parts.append(f"fleet readiness ({ready} unit(s) down)")
-    parts.extend(fails)
-    n = len(parts)
-    if n == 0:
-        cmd_say(tag, "counted from the output above: no doctor check reported FAIL.")
-        return
-    word = {1: "ONE", 2: "TWO", 3: "THREE", 4: "FOUR", 5: "FIVE", 6: "SIX", 7: "SEVEN"}.get(n, str(n))
-    cmd_say(tag, f"{word} check(s) failed. This list is counted from the output above, not written by hand:")
-    for i, p in enumerate(parts, 1):
-        cmd_say(tag, f"  {i}. {p}")
+        out.append(f"fleet readiness ({ready} unit(s) down)")
+    out.extend(fails)
+    return out
+
+
+def cmd_ifcounted(tag: str, needle: str, if_present: str, if_absent: str = "") -> None:
+    """Speak a line ONLY if the computed failure list actually contains `needle`.
+
+    THE CLASS FIX, after patching the same defect four times. `cmd_verdict` made the
+    COUNTS honest and left every other sentence free to assume which failures occurred.
+    So the bugs kept moving: a wrong count, then an asserted failure ("the seeder
+    failure is NOT covered by that argument" on a run with no seeder failure), then a
+    commentary on "the readiness item above" on a run where readiness passed, then a
+    closer saying "the two counted failures" over a list of one.
+
+    Every one of those was me writing a sentence about a PREVIOUS run's failure set.
+    A narration that reasons about which failures occurred must read the same list the
+    viewer is looking at, or it is a guess with good grammar.
+    """
+    items = _counted_failures(tag)
+    hit = any(needle.lower() in i.lower() for i in items)
+    text = if_present if hit else if_absent
+    if text:
+        cmd_say(tag, text)
+
+
+def cmd_countword(tag: str) -> None:
+    """Print the count as a word, for a sentence that needs to name it."""
+    n = len(_counted_failures(tag))
+    word = {0: "no", 1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six"}.get(n, str(n))
+    cmd_say(tag, f"({word} counted failure(s) above)")
 
 
 def cmd_ui(tag: str, url: str) -> None:
@@ -577,6 +604,12 @@ def main() -> int:
         return 0
     if sub == "verdict":
         cmd_verdict(sys.argv[2])
+        return 0
+    if sub == "ifcounted":
+        cmd_ifcounted(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5] if len(sys.argv) > 5 else "")
+        return 0
+    if sub == "countword":
+        cmd_countword(sys.argv[2])
         return 0
     if sub == "ui":
         cmd_ui(sys.argv[2], sys.argv[3])
