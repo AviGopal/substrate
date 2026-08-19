@@ -89,7 +89,11 @@ def redact(line: str) -> str:
     line = _NAME.sub(_name_sub, line)
     line = _AUTH.sub(lambda m: m.group(1) + "<redacted>", line)
     line = _USERINFO.sub(lambda m: m.group(1) + ":<redacted>@", line)
-    line = _VALUE.sub(lambda m: m.group(1)[:6] + "<redacted>", line)
+    # WHOLESALE, not prefix-preserving. This used to keep `m.group(1)[:6]`, which is
+    # harmless for a 7-char marker like `sk-ant-` and NOT harmless for `mb-`: it would
+    # publish three characters of a real key. Six characters of a secret is still
+    # secret material, and the name-rule next to it already replaces values outright.
+    line = _VALUE.sub("<redacted>", line)
     # Tabs have no glyph in the render font and draw as a missing-character box,
     # which turns `docker ps`'s columns into noise. Expand before anything stores it.
     return line.expandtabs(4)
@@ -191,6 +195,14 @@ def _counted_failures(tag: str) -> list[str]:
             if rec.get("kind") != "out":
                 continue
             text = _ANSI.sub("", str(rec.get("text", ""))).strip()
+            # A tag can contain SEVERAL doctor runs. Unioning their FAIL lines means a
+            # check that failed early and passed on the closing run is still narrated
+            # as failing "from the output above" — the caption would then describe a
+            # frame that says PASS. Restart the accumulation at each run boundary so
+            # membership is the LAST run's, which is the one the viewer is looking at.
+            if "substrate doctor" in text.lower() or text.startswith("== 1."):
+                fails.clear()
+                ready = None
             if text.startswith("FAIL "):
                 item = text[5:].strip()
                 if item not in fails:
@@ -203,6 +215,11 @@ def _counted_failures(tag: str) -> list[str]:
         out.append(f"fleet readiness ({ready} unit(s) down)")
     out.extend(fails)
     return out
+
+
+def _counted_failures_note() -> str:
+    """Why membership is per-run, not a union — see `_counted_failures`."""
+    return "the LAST doctor run in this tag, not every run it ever made"
 
 
 def cmd_ifcounted(tag: str, needle: str, if_present: str, if_absent: str = "") -> None:

@@ -166,7 +166,7 @@ JOINED=$(printf '%s' "${JOINED}" | head -1 | tr -cd '0-9')
 JOINED=${JOINED:-0}
 if [ "$JOINED" -eq 0 ] 2>/dev/null; then
   $V say $TAG "zero rows matching this spoke's id: it did NOT join. The config is right and the transport never carried it."
-  $V say $TAG "so this path does NOT get to exit 0. The container is healthy, the surface serves, and the thing the path is FOR did not happen."
+  $V say $TAG "so this path does NOT get to exit 0. The container is up and the surface serves — both measured above; note that is NOT the same as the fleet being well, which the crash-loop list already showed. The thing the path is FOR did not happen."
   RC=1
 else
   $V say $TAG "$JOINED row(s) in the hub carry this spoke's id — the join is real."
