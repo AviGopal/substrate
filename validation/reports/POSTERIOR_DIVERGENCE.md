@@ -1,130 +1,125 @@
-# Thompson is sampling from something unrelated to what happened
+# The learning channel abstains correctly and reports that it punished
 
 `bun run validation/scripts/posterior-divergence.ts` — measured against the hub
 store the sampler actually reads.
 
 ```
-arms queried            486
-still at exactly (1,1)  246   never graded; drawn at the prior forever
+arms queried            485
+still at exactly (1,1)  245   never graded; drawn at the prior forever  (51%)
 graded with n >= 5      183
 
-posterior UNDERSTATES its own success rate   159/183
-posterior OVERSTATES it                       16/183
-pairs the evidence separates                16532
-  of those, ordered AGAINST the evidence     7738 (47%)
-Kendall tau-b (1 = agrees, 0 = unrelated)    0.064
+posterior UNDERSTATES its own execution-success rate   159/183
+posterior OVERSTATES it                                 16/183
+pairs the evidence separates                          16539
+  of those, ordered against execution reliability      7743 (47%)
+Kendall tau-b                                           0.063
 ```
 
-## First, what this measurement does NOT prove
+## Two things this report previously got wrong
 
-An earlier version of this report claimed the two columns are "two views of one
-history" and should therefore agree. **That premise is wrong, and it was the
-report's central claim.** `successful_executions` increments from
+Both are recorded here rather than quietly edited, because each one was the
+report's headline when it was published and each changed the conclusion.
+
+**First retraction — the premise.** The report claimed
+`successful_executions` and `thompson_alpha` are "two views of one history" and
+should track. They are not. `successful_executions` increments from
 `validated.success` on the execution record (`activities.ts:2239`) — whether the
-*step ran cleanly*. `thompson_alpha` is written separately by
-`applyOutcomeToPosteriors` from the *graded reach with substance*. Those are
-different quantities. Reaching a goal with substance is rarer than executing
-without error, so nearly every arm's posterior mean *should* sit below its
-execution-success rate, and the 159-vs-16 split is roughly what that alone would
-predict.
+*step ran cleanly*. `thompson_alpha` is written separately from the *graded reach
+with substance*. Reaching with substance is rarer than executing without error,
+so nearly every arm's posterior *should* sit below its execution rate. The
+159-vs-16 split is roughly what that alone predicts and is not evidence of a
+defect.
 
-So the table below is not, by itself, evidence of a broken channel. It measures
-the gap between "this step works" and "this step is credited with getting
-somewhere" — useful as a standing view, not sufficient as a verdict. The evidence
-that the channel is broken is the mechanism, in the section after it.
+**Second retraction — the mechanism.** The report then claimed the surviving
+evidence was an asymmetric channel: 0 α credits against 12 β penalties across ten
+human goals. **There were no β penalties.** `alphaBetaDelta` on the authoritative
+per-dispatch record is `[]` on every one of those dispatches. The number 12 came
+from counting log lines.
 
-Every row of `variant_performance_metrics` carries both numbers:
+## What is actually true
 
-| arm | succ | fail | empirical | posterior mean |
-|---|---:|---:|---:|---:|
-| `satisfier:source_code` | 384 | 49 | **0.89** | **0.10** |
-| `satisfier:activity_template` | 356 | 86 | 0.81 | 0.11 |
-| `satisfier:problem_detection` | 506 | 127 | **0.80** | **0.02** |
-| `satisfier:memoryNote_write` | 647 | 267 | 0.71 | 0.19 |
-| `satisfier:shellResult` | 2035 | 1579 | 0.56 | 0.09 |
-| `satisfier:gap_compose` | 100 | 377 | 0.21 | 0.04 |
-| `universal-tool-fallback` | 1127 | 2593 | 0.30 | 0.18 |
-
-tau = 0.064 says the posterior order and the execution-reliability order are
-almost unrelated. Read honestly, that is a weaker statement than it looks: an
-arm that always executes cleanly and never gets anywhere *should* rank low, so
-some of this decorrelation is the system working. What it does establish is that
-**execution reliability is not a usable proxy for the posterior** — nobody can
-sanity-check one against the other, which is why the actual defect below went
-unnoticed for so long.
-
-The one number here that no benign story explains is `atPrior`: **246 of 486 arms
-have never been graded at all.** Not deflated — untouched. Those arms are drawn
-at Beta(1,1) forever, and Thompson treats a coin it has never flipped exactly
-like a coin it has flipped and found fair.
-
-## The actual defect
-
-The credit channel applies β and withholds α. From the walk logs of ten human
-goals dispatched this session:
-
-```
-alpha-credited last pick   0
-WITHHELD alpha-credit      5      ← one on every single reach
-β-penalised               12
-β WITHHELD                12
-```
-
-and from the dispatch records themselves — the authoritative per-goal view, not
-a log — five reached goals, `alphaBetaDelta: []` on every one.
-
-The gate is `index.ts:9818`:
+The symmetric withhold is **implemented and working**. `index.ts:9677`:
 
 ```ts
-if (verdict.deterministic === true || (!editEffectReach && consumedInChain.size > 0)) {
+const _alphaWasReachable = verdict.deterministic === true || consumedInChain.size > 0;
+const _betaWithheldForSymmetry = !_noOracle && !_alphaWasReachable;
 ```
 
-`consumedInChain` only grows when a later step declares an input shape an earlier
-step produced. **A one-step reach can never have such an edge**, and every reach
-on the floor or the satisfier plane is one step. So the entire tier that answers
-goals no learned pathway covers is structurally uncreditable, while the same
-tier's failures are penalised normally.
+When α is structurally unreachable for a verdict — which it always is for a
+one-step reach, since `consumedInChain` only grows when a later step consumes an
+earlier step's output — β is withheld too. The reasoning is sound and the code
+carries it out. On a miss the arm is not penalised; on a reach it is not
+credited. The channel does not punish a tier it cannot reward.
 
-The gate is not careless — the comment above it records that a looser version
-credited any reach that happened to shell out, and that 68% of those reaches were
-hollow (`ext_variety`: 20/20 reached, 0/20 correct). Tightening it was right. But
-the tightening removed the only arm that single-step reaches could ever satisfy,
-so the correction to over-crediting became a total withdrawal of credit for one
-whole tier.
+**But the summary line does not say so.** `index.ts:9717` distinguishes only the
+no-oracle case:
 
-The β side already understands this asymmetry. It refuses to penalise for the
-same reason, in these words:
+```ts
+${_noOracle ? "β WITHHELD (no oracle owns this class)" : `β-penalised last pick ${lastPick}`}
+```
 
-> α was structurally unreachable for this verdict (non-deterministic, and
-> consumedInChain=0, which every satisfier pick is), so penalising would let this
-> arm only ever lose
+so every symmetry-withheld β prints as a penalty that was applied. That is what
+produced the 12, and reading those lines is what produced a published, wrong
+conclusion about the system's learning dynamics.
 
-That reasoning is correct and it is applied in only one direction. β is withheld
-where α is impossible on a **miss**; on a **reach** the arm gets nothing at all.
-The result is an arm that can lose but cannot win — which is what 159 understating
-arms and 16 overstating ones look like from the outside.
+The comment immediately above that line records this exact defect being found and
+fixed once already, for the other branch:
 
-Decay is not the cause and was checked: `alpha: 1 + (alpha - 1) * d` shrinks both
-parameters toward the neutral prior, pulling the mean toward 0.5. It cannot
-produce means far below the empirical rate.
+> This line printed "β-penalised last pick" unconditionally, including on the
+> branch immediately above that WITHHOLDS β — so every trace of a no-oracle
+> refusal read as a penalty that was never applied. **The code was right and the
+> log was wrong, which is the worse way round**: the log is what the reach-gate
+> lessons, the judge, and every after-the-fact analysis read.
 
-## The instrument
+A second withholding branch was added afterwards and the line was not extended to
+cover it. The class recurred one branch down from its own fix.
+
+## The real gap: honest abstention forever is not learning
+
+With the log corrected, the picture is not a biased channel. It is a **silent**
+one. For every arm that only ever appears as a one-step pick:
+
+- reach → α withheld (no in-chain edge, non-deterministic verdict)
+- miss → β withheld (symmetry)
+- posterior → Beta(1,1), permanently
+
+**245 of 485 arms are in exactly that state.** They are not deflated; they are
+untouched. Thompson cannot distinguish an arm it has never graded from one it has
+graded and found fair, so the tier that answers goals no learned pathway
+covers — the floor and the satisfier plane, the only tier that answered any of
+the human goals in `HUMAN_GOALS_BATTERY.md` — accumulates no evidence at all, in
+either direction, no matter how many times it runs.
+
+The system is being honest. It abstains because it genuinely lacks the substance
+signal the gate requires, and inventing one is how the previous, looser gate came
+to credit reaches that were 68% hollow. The gap is not the gate's strictness. It
+is that **nothing supplies a substance signal for a single-step answer**, and
+until something does, half the fleet's arms are unlearnable by construction.
+
+That is the thing to build next, and it is the honest definition of "reliable"
+for this system: not that credit flows more freely, but that an arm which
+answered a goal well can be told apart from one that never answered anything.
+
+## About the instrument
 
 Existing learning instruments all report on the credit channel — deltas sent,
-deltas dropped, writes that threw. A channel that faithfully delivers only half
-the evidence passes every one of them, because every delta it carries does
-arrive. It just never carries the other sign. Comparing the end state against the
-outcomes it summarises is the check that catches that, and nothing was making it.
+deltas dropped, writes that threw. Every one of them passes here, correctly. The
+missing view was of the *end state*, and building it is what surfaced both that
+the channel abstains and that it says otherwise.
 
-Two ways this script could have lied, both now guarded:
+The script now gates only on the reading that has no benign explanation: the
+share of arms never graded. Deflation is explicitly *not* a failure condition —
+a posterior below the execution rate is what a working substance gate produces.
+
+Three ways it could have lied, all guarded:
 
 - **Tiny samples.** An arm with one outcome has an empirical rate of exactly
-  0.000 or 1.000. A first version included them and reported 279 of 280 arms
-  discordant — an artefact of breaking ties among identical 1.000s, not a
-  finding. Hence `--min-n` and pairwise comparison rather than positional.
+  0.000 or 1.000. The first version included them and reported 279 of 280 arms
+  discordant — an artefact of breaking ties among identical 1.000s. Hence
+  `--min-n` and pairwise comparison rather than positional.
 - **A silent 401.** An unauthenticated read returns an empty set, which is
   indistinguishable from "no arm has a posterior". The script refuses to run
-  without a key rather than report a zero it cannot defend.
-
-It exits non-zero when the posterior stops tracking the record, so it can gate
-rather than merely inform.
+  without a key.
+- **The satisfier plane.** A template listing contains zero `satisfier:*` ids, so
+  a catalogue-only arm list omits precisely the tier under discussion. The arms
+  are derived from the live shape vocabulary instead.
