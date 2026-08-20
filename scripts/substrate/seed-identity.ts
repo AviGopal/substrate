@@ -112,7 +112,28 @@ async function keyAuthenticates(key: string): Promise<boolean> {
       });
       return probe.ok;
     }
-    return r.ok;
+    // ★ A 200 FROM /v1/keys/validate IS NOT A VALID KEY.
+    //
+    // That endpoint reports its verdict in the BODY and answers 200 either way:
+    // a rejected key returns `{"success":true,"data":{"valid":false,"error":
+    // "Invalid API key signature"}}` — HTTP 200. `return r.ok` therefore read
+    // every rejection as a pass, which is the exact failure the docstring above
+    // says this function exists to prevent: it "asked the authority", got told
+    // no, and reported yes.
+    //
+    // Measured 2026-08-20 on a recreated substrate-live: the fleet key was
+    // rejected by BOTH identity endpoints, yet the seeder logged "existing key
+    // authenticates — nothing to re-issue" on every run while bootstrap-seeder
+    // failed 18/18 templates with 401 and never recovered. The re-issue branch
+    // below was correct and simply unreachable.
+    //
+    // Read the field that carries the verdict; fail closed on any shape we do
+    // not recognise, matching the transport-failure default.
+    if (!r.ok) return false;
+    const body = await r.json().catch(() => null) as
+      | { data?: { valid?: unknown } }
+      | null;
+    return body?.data?.valid === true;
   } catch { return false; }
 }
 
