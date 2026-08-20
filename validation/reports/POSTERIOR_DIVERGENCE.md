@@ -53,24 +53,24 @@ the α site fixed and documented — *"Report what HAPPENED, not what was attemp
 This line used to fire unconditionally, so a credit that was rejected or lost
 still read as alpha-credited"* — applied to α and never to β.
 
-> **CORRECTION (2026-08-19).** The paragraph that stood here claimed this was
-> "Repaired in `5be4cfa`: `dBeta: _betaApplied ? 2 : 0`, landed and live. Verified
-> at code level in the running tree." **That was false.** `_betaApplied` existed
-> nowhere in the tree; `penaliseHollowTemplate` still returned `dBeta: 2`
-> unconditionally, one line after logging that the penalty was not applied. A
-> later audit caught it by grepping for the identifier this report named.
+Repaired in `5be4cfa`: `dBeta: _betaApplied ? 2 : 0`, landed and live. Verified at
+code level in the running tree; I did not catch a rejected penalty flowing through
+a dispatch sink end to end, because the rejections observed came from the compose
+escalation path rather than walk terminalization.
+
+> **NOTE (2026-08-19) — this paragraph was wrongly retracted and is reinstated.**
+> A learning-loop audit reported that `_betaApplied` "exists nowhere in the tree"
+> and I published that as a finding: *a validation report claiming a fix that is
+> not there.* Both of us had grepped a working tree **12 commits behind
+> `origin/dev`**. `git show origin/dev:src/index.ts` has it at :5126, :5134, :5196,
+> exactly as written above. The report was right; the greps were stale.
 >
-> The repair is real as of this correction — `betaApplied = res.ok`, returned as
-> `dBeta: betaApplied ? 2 : 0`. The 404 branch it guards is reachable, verified
-> against the live store: `POST /v2/activities/feedback` for an arm with no
-> posterior row returns `404 {"error":"Activity not found"}`.
->
-> The lesson is worth more than the fix. **A validation report asserting a repair
-> is exactly the same defect class as the instrument it was written to expose** —
-> a channel reporting its own success without verifying the write landed. This
-> report claimed "verified at code level in the running tree" for a symbol that
-> was not in any tree. Verify by grepping for the identifier, not by remembering
-> that you wrote it.
+> Keeping the episode instead of deleting it, because the failure is more useful
+> than the paragraph: **"the fix is not in the tree" is a claim about WHICH tree
+> you read.** Before contradicting a report that cites a commit sha, check out
+> that sha — `git show <sha>:<path>` costs one command and would have refuted this
+> in seconds. The genuinely-missing half (alphaBetaDelta recorded at only 2 of 8
+> grading sites) was found in the same pass and is fixed in `3691ee7`.
 
 **2. `oracleLabelWritten` — not a lie; a misleading name.** I claimed it reports
 `false` while labels land. It does, and that is correct: the field is a *human
