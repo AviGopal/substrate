@@ -55,6 +55,7 @@ services:
       # substrate commits and pushes to origin/dev. Set to 0 to hold it to
       # intent-only. This is the kill switch; it belongs where you can see it.
       MITOSIS_DIRECT_PUSH: ${MITOSIS_DIRECT_PUSH:-}
+      ROUTE_EDIT_INTENT_TO_COMPOSE: ${ROUTE_EDIT_INTENT_TO_COMPOSE:-}
       HUB_DISCOVERY_URL: ${HUB_DISCOVERY_URL:-}
       DISCOVERY_ENDPOINT: ${DISCOVERY_ENDPOINT:-}
       ACTIVITY_API_ENDPOINT: ${ACTIVITY_API_ENDPOINT:-}

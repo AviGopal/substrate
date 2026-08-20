@@ -420,6 +420,11 @@ VLLM_BASE_URL="${VLLM_BASE_URL:-}"
 VLLM_MODELS="${VLLM_MODELS:-}"
 VLLM_API_KEY="${VLLM_API_KEY:-}"
 VLLM_ENDPOINTS="${VLLM_ENDPOINTS:-}"
+# The autonomous edit-landing kill switch. goal-host reads it (three call
+# sites), but nothing emitted it, so an operator setting it in .env or -e
+# changed nothing — a kill switch that cannot be pulled. Unset leaves
+# goal-host's own default in force; set 0 to route edit intent to intent-only.
+ROUTE_EDIT_INTENT_TO_COMPOSE="${ROUTE_EDIT_INTENT_TO_COMPOSE:-}"
 LLM_DEFAULT_MODEL="${LLM_DEFAULT_MODEL:-}"
 # Substrate root inside the container = the container-native super-repo clone.
 # The container is unmoored from the host filesystem: no host repo bind. Every
