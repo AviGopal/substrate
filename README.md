@@ -66,9 +66,14 @@ The whole system runs as **one container** (`substrate-live`) hosting the vessel
 
 The canonical image is `ghcr.io/avigopal/substrate:dev` (fleet), published by
 `.github/workflows/build-substrate-image.yml` on every push to `dev`. It is
-**private** — it bakes vessel source — so pulling needs a `docker login ghcr.io`
-with a PAT carrying `read:packages` scope. (`ghcr.io/avigopal/substrate:obsidian`
-adds an in-container Obsidian over noVNC.) A pulled image needs no submodules.
+**public** and pulls anonymously — no `docker login` and no PAT.
+(`ghcr.io/avigopal/substrate:obsidian` adds an in-container Obsidian over noVNC.)
+A pulled image needs no submodules. Verify the package's visibility rather than
+trusting either claim: `curl -s "https://ghcr.io/token?scope=repository:avigopal/substrate:pull"`
+returns a usable token with no credentials, and a manifest fetch with it returns
+`200`. (A bare manifest request answering `401` is not evidence of a private
+package — that is the first step of the standard anonymous OCI token flow, which
+`docker pull` performs for you.)
 Requirements: Docker with Linux x86_64 semantics and `--privileged` (native
 Linux, or Docker Desktop with the WSL2 backend on Windows).
 
@@ -78,7 +83,6 @@ LLM key auto-generates on first boot and persists to the volumes:
 
 ```bash
 cp scripts/substrate/.env.example .env    # set ANTHROPIC_API_KEY (or OPENAI_API_KEY)
-docker login ghcr.io                       # PAT with read:packages
 docker compose up -d                       # run from repo root — root compose is canonical
 docker exec substrate-live substrate-key show
 ```
@@ -88,17 +92,21 @@ either directory works. `OPENAI_API_KEY` works in place of `ANTHROPIC_API_KEY` �
 exactly one LLM key is required; every other secret auto-generates on first boot
 to `/workspace/.substrate-secrets`.
 
-**Raw `docker run`** — the same image, without compose (log in first):
+**Raw `docker run`** — the same image, without compose:
 
 ```bash
-docker login ghcr.io                       # PAT with read:packages
 docker run -d --privileged --name substrate-live \
   -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
   -e ANTHROPIC_API_KEY=sk-ant-... \
   -p 18080:8080 -p 18090:8090 -p 18100:8100 -p 18101:8101 -p 18210:8210 \
-  -p 18250:8250 -p 18260:8260 -p 18270:8270 \
+  -p 18250:8250 -p 18260:8260 -p 18270:8270 -p 18310:8310 \
   --tmpfs /run --tmpfs /run/lock ghcr.io/avigopal/substrate:dev
 ```
+
+(That is **nine** ports. `18310` is `human-surface-vessel` — the only vessel a
+human is meant to talk to. It was missing here while `docs/SUBSTRATE.md` and the
+root compose file both published it, so this command produced a fleet that looked
+healthy with the human surface bound inside the container and unreachable.)
 
 Wait for `docker inspect --format '{{.State.Health.Status}}' substrate-live`
 to report `healthy`, then dispatch goals against `http://localhost:18210/run-goal`
@@ -145,7 +153,6 @@ DISCOVERY_ENDPOINT=http://<hub-host>:18100 # required: same value
 ```
 
 ```bash
-docker login ghcr.io                       # PAT with read:packages
 docker compose up -d                       # from repo root — compose auto-loads `.env`
 docker exec substrate-live substrate-key show
 ```

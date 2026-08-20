@@ -14,11 +14,26 @@ The substrate has generalized from "one local container" to **one image that run
 
 ### Topology selection
 
-`scripts/substrate/vessels.inventory.json` is the declarative vessel inventory: every baked-in unit maps to a **role** (`store`, `control`, `api`, `compute`, `ui`, `transport`, `seed`, `infra`, `autonomy`), and role-**group** aliases compose those into deployable shapes:
+`scripts/substrate/vessels.inventory.json` is the declarative vessel inventory: every baked-in unit maps to a **role** (`store`, `control`, `api`, `compute`, `models`, `ui`, `transport`, `seed`, `infra`, `autonomy`, `registry`, `desktop`), and role-**group** aliases compose those into deployable shapes:
 
-- `hub` = `store`, `control`, `api`, `transport`, `seed`, `infra` (control plane + store + relay)
-- `spoke` = `compute`, `ui`, `seed`, `infra` (compute-only; points its control/store at a hub)
-- `full` = every role (the default local substrate)
+- `hub` = `store`, `control`, `api`, `transport`, `seed`, `infra`, `registry`, `models` (control plane + store + relay + the model arms)
+- `spoke` = `compute`, `ui`, `seed`, `infra`, `registry` (compute-only; points its control/store at a hub, and **resolves models on the hub** — `models` is excluded deliberately, which is what stops a spoke from starting local LLM arms)
+- `full` = every role except `desktop` (the default local substrate)
+
+`models` holds the LLM resolver arms; it is separate from `compute` precisely so a
+spoke can run work locally while resolving models on its hub. `desktop` (Obsidian,
+Xorg, noVNC) is in **no** group on purpose — those units exist only in the
+`substrate-obsidian` build stage, so the base image has nothing to select. Note the
+consequence: because they are inventory-named, any `ENABLED_ROLES` value masks them
+on an obsidian image.
+
+> ⚠ **Neither `hub` nor `spoke` includes `autonomy`.** A federated hub+spoke pair
+> therefore runs no gap-compose, no operator-goal-generator, no surgical-gap-scan —
+> no proactive self-development at all; only `full` has it. `deploy-hub.sh`
+> compensates with an explicit `ENABLED_EXTRA_VESSELS` list, but that list restores
+> six *compute* services and zero autonomy timers, and it is a snapshot of what one
+> hub happened to be running rather than a designed set. If you want a federated
+> deployment to develop itself, name the autonomy units explicitly.
 
 `scripts/substrate/apply-inventory.sh` reads the inventory at boot — run by the container entrypoint *after* `gen-env` and *before* `exec systemd` — and `systemctl disable`s the unwanted units (it just removes the `*.wants` symlinks the image baked in). Selection env, highest precedence first:
 
@@ -294,8 +309,42 @@ from them (the endpoints from the discovery host, the rest resolved from
 | `DISCOVERY_ENDPOINT=http://<hub-host>:18100` | **required** — point discovery at the hub |
 | `HUB_DISCOVERY_URL=http://<hub-host>:18100` | the discovery group to join (same value as above) |
 | `ENABLED_ROLES=spoke` | *redundant* — `gen-env.sh` already defaults `ENABLED_ROLES` to `spoke` whenever `DISCOVERY_ENDPOINT` names a remote host, so setting it explicitly changes nothing. Set `ENABLED_ROLES` only to select a role set *other* than the inferred one |
-| `ACTIVITY_API_ENDPOINT=http://<hub-host>:18080` | *optional override* — derived from the discovery host if unset |
-| `IDENTITY_VESSEL_URL=http://<hub-host>:18101` | *optional override* — derived from the discovery host if unset |
+| `ACTIVITY_API_ENDPOINT=http://<hub-host>:18080` | *optional override* — derived from the discovery host **and its port offset** if unset |
+| `IDENTITY_VESSEL_URL=http://<hub-host>:18101` | *optional override* — derived from the discovery host **and its port offset** if unset |
+
+The derivation keeps the port you supply. A hub reached on `:23100` yields
+activity-api `:23080` and identity `:23101`, because a deployment shifts the whole
+`18xxx` block by one `PORT_OFFSET`. A hub port *below* the block (a reverse proxy
+on `:443`, a tunnel on `:8443`) is not offset arithmetic: the hub URL keeps that
+port, the siblings fall back to the conventional `18080`/`18101`, and you should
+set the two overrides explicitly.
+
+> ⚠ **A hub is not merely a reachable discovery — it must serve a populated
+> `/bootstrap`.** `federation-transport-vessel` self-derives its relay from
+> `${HUB_DISCOVERY_URL}/bootstrap`. A **standalone** substrate answers that route
+> with `HTTP 200` and an *empty* body:
+>
+> ```json
+> {"relay_multiaddrs":[],"identity_endpoint":"http://127.0.0.1:8101","discovery_endpoint":""}
+> ```
+>
+> So "the hub is reachable" and "the hub can be joined" look identical from the
+> outside — both are `200` — and the spoke instead crash-loops with
+> `set RELAY_MULTIADDR or point BOOTSTRAP_URL/HUB_DISCOVERY_URL at a discovery
+> serving /bootstrap`, naming variables you have already set correctly. Note the
+> loopback `identity_endpoint`: a remote spoke following it resolves *itself*.
+>
+> Check before joining, and read the body rather than the status code:
+>
+> ```bash
+> curl -s http://<hub-host>:18100/bootstrap | jq '.relay_multiaddrs | length'
+> # 0  => not a hub yet: it has no relay. Deploy it with deploy-hub.sh
+> #       (ENABLED_ROLES=hub + the libp2p relay), or pass RELAY_MULTIADDR by hand.
+> ```
+>
+> The relay is `federation-relay.service` — role `transport`, and a **manifest**
+> vessel, so it is never baked-enabled; `hub` includes `transport` but the unit
+> still has to be installed. A `full`/standalone fleet has no relay at all.
 
 Because the role is inferred, the **federation transport auto-starts at boot**
 whenever a hub is set — `entrypoint.sh` enables the federation-transport-vessel
@@ -353,17 +402,55 @@ instance is a standalone, self-contained fleet with its own everything.
   `<name>-surreal` (`/var/lib/surrealdb`) and `<name>-workspace` (`/workspace`),
   so its traces, posteriors, concept graph, and secrets are entirely separate.
 - **`PORT_OFFSET=<n>`** shifts every port published by **`run-live`** by `n` so
-  the two fleets don't collide (e.g. `PORT_OFFSET=20000` → activity-api `38080`,
-  discovery `38100`, goal-host `38210`, concept-db `38260`). It does **not**
+  the two fleets don't collide (e.g. `PORT_OFFSET=5000` → activity-api `23080`,
+  discovery `23100`, goal-host `23210`, concept-db `23260`). It does **not**
   reach `run-live-obsidian`, which hardcodes its nine ports — two obsidian
   fleets collide however you set it.
 
-> **`PORT_OFFSET` is only applied when the container is CREATED.** It is not in
-> the Makefile's `LAUNCH_OVERRIDES` guard, so `make up LIVE_NAME=… PORT_OFFSET=…`
-> against a container that already exists but is *stopped* silently `docker
-> start`s it on the OLD mappings — port mappings are immutable Docker config.
-> To change the offset, remove the container first (`docker rm -f <name>`); the
-> volumes, and therefore the learning state, survive that.
+> ⚠ **Keep the shifted block BELOW the ephemeral port range.** On Linux
+> `/proc/sys/net/ipv4/ip_local_port_range` is typically `32768 60999`, and the
+> kernel hands those out to ordinary outbound connections. An offset that lands
+> the fleet inside that window (`PORT_OFFSET=20000` → `38080…38310`) works most
+> of the time and then fails at random with
+> `bind: address already in use` on a port nothing is listening on — a transient
+> outbound socket held it for the moment Docker tried to bind. This is not
+> theoretical: it is what `PORT_OFFSET=20000` did on the first attempt while
+> these docs were being verified, and the error names a "conflict" with a
+> process that no longer exists by the time you look.
+>
+> Offsets of `5000`–`12000` keep the block in the low 20000s–30000s, below the
+> range. Check yours before choosing:
+>
+> ```bash
+> cat /proc/sys/net/ipv4/ip_local_port_range
+> # and verify the target ports on ALL interfaces, not just loopback —
+> # Docker binds 0.0.0.0, so a 127.0.0.1-only probe answers the wrong question
+> ss -ltn | awk '{print $4}' | grep -E ':2[0-9]{4}$' | sort -u
+> ```
+
+> **Settings are only applied when the container is CREATED.** `make up` against
+> a container that already exists but is *stopped* just `docker start`s it, and
+> Docker's env and port mappings are immutable after creation.
+>
+> The Makefile's `LAUNCH_OVERRIDES` guard exists to catch exactly this — it
+> refuses to start a stopped container when you supply settings that would be
+> silently ignored. **It does not cover everything.** Verified against the
+> guard's actual variable list, these are silently dropped:
+>
+> | Silently ignored on a stopped container | Why it matters |
+> |---|---|
+> | `PORT_OFFSET` | port mappings are fixed at creation |
+> | `ANTHROPIC_API_KEY` (and every other provider key) | the guard watches `API_KEY`, a *different* and normally-unset variable, so a rotated key appears to apply and does not |
+> | `PROFILE` | one of the five documented selection levers |
+> | `ENABLED_EXTRA_VESSELS` | another of the five |
+>
+> `ENABLED_ROLES`, `ENABLED_VESSELS`, `DISABLED_VESSELS`, `METABOB_API_KEY` and
+> the endpoint overrides *are* guarded, and produce a clear error telling you to
+> use `recreate`.
+>
+> To change any of the unguarded ones, use `make recreate` (it carries settings
+> forward) or remove the container first (`docker rm -f <name>`); the volumes,
+> and therefore the learning state, survive both.
 
 ```bash
 # Boot an isolated clean-room fleet (own volumes + own ports; substrate-live untouched)

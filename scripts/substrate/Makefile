@@ -167,9 +167,29 @@ ifneq ($(strip $(DISCOVERY_ENDPOINT)),)
 ifeq ($(strip $(ENABLED_ROLES)),)
 ENABLED_ROLES := spoke
 DISCOVERY_HOST := $(shell echo '$(DISCOVERY_ENDPOINT)' | sed -E 's#^[a-z]+://##; s#[:/].*##')
-HUB_DISCOVERY_URL := http://$(DISCOVERY_HOST):18100
-ACTIVITY_API_ENDPOINT := $(if $(strip $(ACTIVITY_API_ENDPOINT)),$(ACTIVITY_API_ENDPOINT),http://$(DISCOVERY_HOST):18080)
-IDENTITY_VESSEL_URL := $(if $(strip $(IDENTITY_VESSEL_URL)),$(IDENTITY_VESSEL_URL),http://$(DISCOVERY_HOST):18101)
+# ★ KEEP THE PORT THE OPERATOR SUPPLIED. This block used to take only the HOST
+# and hardcode :18100/:18080/:18101, so a hub published on any other port was
+# unjoinable — and on a host running several substrates the spoke silently
+# joined whichever fleet occupied 18100, presenting later as an inexplicable
+# 401 from a key the "wrong" hub never issued. Measured: DISCOVERY_ENDPOINT
+# =http://172.17.0.1:23100 produced HUB_DISCOVERY_URL=http://172.17.0.1:18100.
+# A deployment shifts the whole 18xxx block by one PORT_OFFSET, so the offset is
+# recoverable from the discovery port: offset = port - 18100, applied to the
+# siblings. Below the block (a proxy on 443, a tunnel on 8443) is not offset
+# arithmetic — keep the supplied hub port, leave the siblings conventional, and
+# let the explicit ACTIVITY_API_ENDPOINT / IDENTITY_VESSEL_URL overrides win.
+# gen-env.sh carries the same rule for the raw `docker run` path; both layers
+# need it, because this one blanks CONTAINER_DISCOVERY_ENDPOINT and gen-env
+# therefore never sees the endpoint on the make path.
+# NOTE FOR EDITORS: keep `case`, `$$(( ))` and any bare `)` OUT of these $(shell)
+# bodies. Make parses parentheses before the shell ever sees them, so a `case`
+# arm silently truncates the command and the port comes out as fragments of the
+# case statement itself. Use sed | grep | expr with if/then/fi only.
+DISCOVERY_PORT := $(shell echo '$(DISCOVERY_ENDPOINT)' | sed -E 's#^[a-z]+://##; s#^[^:/]*##; s#^:##; s#/.*##' | grep -E '^[0-9]+$$' || echo 18100)
+PORT_BLOCK_OFF := $(shell if [ '$(DISCOVERY_PORT)' -ge 18100 ] && [ '$(DISCOVERY_PORT)' -le 47534 ]; then expr '$(DISCOVERY_PORT)' - 18100; else echo 0; fi)
+HUB_DISCOVERY_URL := http://$(DISCOVERY_HOST):$(DISCOVERY_PORT)
+ACTIVITY_API_ENDPOINT := $(if $(strip $(ACTIVITY_API_ENDPOINT)),$(ACTIVITY_API_ENDPOINT),http://$(DISCOVERY_HOST):$(shell expr 18080 + '$(PORT_BLOCK_OFF)'))
+IDENTITY_VESSEL_URL := $(if $(strip $(IDENTITY_VESSEL_URL)),$(IDENTITY_VESSEL_URL),http://$(DISCOVERY_HOST):$(shell expr 18101 + '$(PORT_BLOCK_OFF)'))
 CONTAINER_DISCOVERY_ENDPOINT :=
 endif
 endif

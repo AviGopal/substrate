@@ -358,9 +358,44 @@ case "$_disc_host" in
     : ;; # root / standalone — discovery is self/loopback; no hub, no peering
   *)
     # remote hub => spoke. Derive everything from the single endpoint host.
-    HUB_DISCOVERY_URL="${HUB_DISCOVERY_URL:-http://${_disc_host}:18100}"
-    ACTIVITY_API_ENDPOINT="${ACTIVITY_API_ENDPOINT:-http://${_disc_host}:18080}"
-    IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL:-http://${_disc_host}:18101}"
+    #
+    # ★ HONOUR THE PORT THE OPERATOR ACTUALLY SUPPLIED.
+    #
+    # This derivation used to keep only the HOST and hardcode :18100/:18080/:18101,
+    # silently discarding the port. So a hub published on anything but the
+    # conventional block was unjoinable — and the failure was far worse than a
+    # refusal: on a host running more than one substrate, the spoke pointed at
+    # whatever happened to be on 18100 and joined the WRONG fleet. Measured:
+    # DISCOVERY_ENDPOINT=http://172.17.0.1:23100 produced
+    # HUB_DISCOVERY_URL=http://172.17.0.1:18100, a different substrate entirely.
+    # That also falsifies the documented promise that the endpoint and the key
+    # are "the only required inputs" and the rest is derived.
+    #
+    # A deployment shifts the whole 18xxx block by one PORT_OFFSET (see the
+    # clean-room section of docs/SUBSTRATE.md), so the offset is recoverable from
+    # the discovery port alone: offset = port - 18100, applied to its siblings.
+    # A hub on the conventional port yields offset 0 and the previous behaviour.
+    # Anything that does not look like an offset 18xxx port (a reverse proxy on
+    # 443, a tunnel on 8443) is NOT offset arithmetic — fall back to the
+    # conventional siblings and let the documented explicit overrides win.
+    _disc_port="$(printf '%s' "$DISCOVERY_ENDPOINT" | sed -E 's#^[a-z]+://##; s#^[^:/]*##; s#^:##; s#/.*##')"
+    case "$_disc_port" in
+      ''|*[!0-9]*) _disc_port=18100 ;;
+    esac
+    # The hub itself always keeps the port supplied. The SIBLING arithmetic only
+    # applies to a genuine upward shift of the 18xxx block: a hub fronted by a
+    # reverse proxy on 443 or a tunnel on 8443 is not offset-encoded, and
+    # subtracting would derive absurd siblings (443 - 18100 => activity on :423).
+    # Below the block, fall back to the conventional ports and let the documented
+    # ACTIVITY_API_ENDPOINT / IDENTITY_VESSEL_URL overrides carry the real values.
+    if [ "$_disc_port" -ge 18100 ] && [ "$(( 18101 + _disc_port - 18100 ))" -le 65535 ]; then
+      _port_off=$(( _disc_port - 18100 ))
+    else
+      _port_off=0
+    fi
+    HUB_DISCOVERY_URL="${HUB_DISCOVERY_URL:-http://${_disc_host}:${_disc_port}}"
+    ACTIVITY_API_ENDPOINT="${ACTIVITY_API_ENDPOINT:-http://${_disc_host}:$(( 18080 + _port_off ))}"
+    IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL:-http://${_disc_host}:$(( 18101 + _port_off ))}"
     IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT:-$IDENTITY_VESSEL_URL}"
     ENABLED_ROLES="${ENABLED_ROLES:-spoke}"
     # the spoke's own vessels register into its LOCAL discovery, not the hub

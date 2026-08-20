@@ -1,0 +1,215 @@
+# Setup and join: what the docs promised, and what a clean environment did
+
+Two journeys were executed against the published `:dev` image on a host that had
+never run them — stand up a standalone substrate, and join it as a spoke — with
+the documentation followed as written. Twelve agents audited the vessel
+inventories and the setup surface in parallel, and every blocker/major finding was
+adversarially re-derived before it was believed.
+
+The headline is not a doc defect. It is that **the documented clean-room command
+failed on its first attempt, and following it end-to-end surfaced four live
+defects that no amount of reading would have found** — including two that had been
+"fixed" in a previous round and were still broken, and two more introduced by
+those same fixes.
+
+---
+
+## What was verified working
+
+These are promises the docs make that a clean environment actually honoured:
+
+| Promise | Result |
+|---|---|
+| `make up LIVE_NAME=… PORT_OFFSET=…` stands up an isolated fleet | **PASS** — own volumes, own ports, `substrate-live` untouched |
+| `up` refuses a stopped container when launch settings would be ignored | **PASS** — errors with the `recreate` instruction |
+| `make show-key LIVE_NAME=…` returns the operator key | **PASS** |
+| Point-and-go join: `DISCOVERY_ENDPOINT` alone infers the spoke role | **PASS** — `ENABLED_ROLES=spoke` derived with no explicit setting |
+| A spoke authenticates to the hub with a hub-issued key | **PASS** — HTTP 200 |
+| Doctor detects an LLM arm that is up but cannot complete | **PASS** — and said so precisely: *"credit/quota or key problem, not a code problem; /health cannot see it"* |
+| Identity seeding on a fresh fleet | **PASS** — which settles a standing question, see below |
+
+The last row matters beyond this run. `substrate-live` fails three doctor checks
+from an unrecoverable identity keyspace, and it was an open question whether that
+was a code/doc defect or corrupted state. A fresh fleet from the same image seeds
+identity cleanly and authenticates. **It is that one volume, not the product.**
+
+---
+
+## The four defects the journeys found
+
+### 1. Every LLM arm shipped twice, on the same port, and half crash-looped invisibly
+
+The rendered-arm migration shipped **both** unit sets and called it a parallel
+run. They are not parallel — they are duplicates on identical ports:
+`llm-resolver-{opus,haiku,google}` (8221/8223/8225) against rendered
+`llm-{opus,haiku,google}` (the same three). Exactly one of each pair wins the
+bind; the loser dies `EADDRINUSE` and `Restart=on-failure` retries forever.
+
+Measured on a fresh clean-room fleet: **`NRestarts=95` within 40 minutes**, two of
+three arms looping, and *which* unit won differed per arm — a boot race, not a
+fixed winner.
+
+It stayed invisible because a unit in a restart loop reports `activating`, never
+`failed`. `systemctl list-units --state=failed` is therefore empty and the
+doctor's "no failed units" check **passes** while the fleet burns a process every
+~25 seconds. That is the same signature as the one-shot-install crash-loop already
+on record — the class recurred somewhere new, which is law 7's durability measure
+failing rather than a fresh surprise.
+
+Fixed: the entrypoint retires the static unit each rendered arm supersedes, matched
+by id so `llm-resolver-vessel` (8220, the shared base resolver, not an arm) is left
+alone. After the fix, `llm-opus` and `llm-haiku` are **both** active for the first
+time, `NRestarts=0`, and readiness went from a permanent `NOT ready: 3 unit(s)
+down` to `fleet ready`.
+
+### 2. A typo'd vessel selection booted the FULL fleet instead of failing
+
+`apply-inventory` exits 1 on an unrecognised `PROFILE`/`ENABLED_ROLES` token — a
+guard added in the previous round precisely so a typo could not silently change
+the fleet. `entrypoint.sh` then swallowed that exit into *"keeping all units"*.
+
+`ENABLED_ROLES=spok` did not yield a spoke minus a typo. It yielded a full node
+running the LLM arms, the autonomy timers, and the trace store the operator had
+deliberately excluded — **the exact outcome the guard exists to prevent, defeated
+one layer above the guard.**
+
+Fixed: fail-open is now reserved for the case where nothing was asked for (a bare
+`docker run`, where "run everything" *is* the intent). If any selection knob is
+set and applying it fails, the boot aborts and prints the offending values.
+
+### 3. A spoke silently joined the WRONG substrate
+
+The join derivation kept only the *host* from `DISCOVERY_ENDPOINT` and hardcoded
+`:18100`/`:18080`/`:18101`, discarding the port. Measured:
+`DISCOVERY_ENDPOINT=http://172.17.0.1:23100` produced
+`HUB_DISCOVERY_URL=http://172.17.0.1:18100` — **a different substrate on the same
+host.** All three endpoints pointed at the wrong fleet, with a key that fleet had
+never issued, which would surface later as an inexplicable 401.
+
+This also falsifies the doc's explicit claim that the endpoint and the key are
+"the only required inputs" and everything else is derived.
+
+The fix had to land in **two** layers. The first attempt patched `gen-env.sh` and
+changed nothing on the documented path, because the Makefile pre-derives these and
+bakes them into `docker run -e` while blanking `DISCOVERY_ENDPOINT` — so gen-env's
+derivation never executes for `make up`. Both now recover the offset from the
+discovery port (`offset = port - 18100`, applied to the siblings), with ports below
+the block (a proxy on 443, a tunnel on 8443) treated as *not* offset arithmetic.
+
+Verified across five endpoint shapes at the layer that emits the `docker run`.
+
+### 4. `/bootstrap` answers 200 when there is nothing to join
+
+`federation-transport-vessel` self-derives its relay from
+`${HUB_DISCOVERY_URL}/bootstrap`. A **standalone** substrate answers that route
+with `HTTP 200` and an empty body:
+
+```json
+{"relay_multiaddrs":[],"identity_endpoint":"http://127.0.0.1:8101","discovery_endpoint":""}
+```
+
+So "the hub is reachable" and "the hub can be joined" are indistinguishable from
+the outside — both `200`. The spoke instead crash-loops (17 restarts, reported
+`activating`, invisible to the failed-unit check) with
+`set RELAY_MULTIADDR or point BOOTSTRAP_URL/HUB_DISCOVERY_URL at a discovery
+serving /bootstrap` — **naming variables the operator has already set correctly.**
+Note the loopback `identity_endpoint`: a remote spoke following it resolves itself.
+
+Not fixed — standing up a real relay is a hub deployment, not a doc change.
+Documented instead, with the pre-flight check that distinguishes the two cases
+(`curl -s <hub>/bootstrap | jq '.relay_multiaddrs | length'`).
+
+---
+
+## Documentation delta applied
+
+| File | Change |
+|---|---|
+| `docs/SUBSTRATE.md` | Role enumeration corrected — was missing `models`, `registry`, `desktop`; `hub`/`spoke` group lines were missing `registry` and `models` |
+| `docs/SUBSTRATE.md` | Why `models` is separate from `compute`, and why `desktop` is in no group (build-stage gated, not role gated) |
+| `docs/SUBSTRATE.md` | Warning: neither `hub` nor `spoke` includes `autonomy`, so a federated pair runs **zero** self-development |
+| `docs/SUBSTRATE.md` | `PORT_OFFSET` example changed `20000` → `5000`, with the ephemeral-range hazard explained |
+| `docs/SUBSTRATE.md` | `LAUNCH_OVERRIDES` table — what is *actually* guarded vs silently dropped |
+| `docs/SUBSTRATE.md` | Join section: port-preserving derivation, and the `/bootstrap` pre-flight check |
+| `README.md` | The image is **public**, not private — three unnecessary `docker login` steps removed |
+| `README.md` | Raw `docker run` publishes nine ports, not eight (`18310`, the human surface, was missing) |
+| `Dockerfile.substrate` | `substrate-config` now ships in the image |
+| `gen-env.sh` / `substrate-config.sh` | Provenance corrected (below) |
+
+### `PORT_OFFSET=20000` is a booby trap
+
+The doc's own example lands all nine ports inside the Linux ephemeral range
+(`/proc/sys/net/ipv4/ip_local_port_range` = `32768 60999`). The kernel hands those
+out to ordinary outbound connections, so a clean-room boot fails at random with
+`bind: address already in use` **on a port nothing is listening on** — a transient
+outbound socket held it for the moment Docker tried to bind.
+
+This is not theoretical. It is what happened on the first attempt to follow the
+documented command, and by the time the port was inspected the "conflicting"
+process no longer existed.
+
+---
+
+## Two defects in the previous round's own instrumentation
+
+Both were found by agents auditing work this author had done, and both are the
+same mistake as the defects above.
+
+**`substrate-config` was documented as `docker exec <container> substrate-config`
+while living only in the host checkout.** It was never `COPY`ed into the image, so
+every copy of that instruction was unrunnable. It had been reported as "working"
+because it was run from the host repo — authored at the host layer, documented as
+a container command.
+
+**It also reported the opposite of the truth about every generated secret.**
+`gen-env` attributed only two names, and `substrate-config` read an absent entry as
+proof of a hardcoded literal. So on a brand-new fleet, `JWT_SECRET`,
+`API_KEY_SECRET` and `METABOB_API_KEY` all reported **`hardcoded`** — alarming
+exactly where calm was warranted, on the one question the tool exists to answer.
+Two fleets were compared to settle it; their secrets differed, so they were
+generated. `gen-env` now records each mint, and absence is reported as
+`unrecorded` rather than answered.
+
+---
+
+## Not fixed, and why
+
+- **The identity keyspace in the `substrate-surreal` volume** remains
+  unrecoverable through supported paths. This run *narrows* it: a fresh fleet from
+  the same image seeds and authenticates cleanly, so it is corrupted state in that
+  one volume, not a defect in the product or the docs. It still needs an operator
+  decision — recover the keyspace, or accept a fresh identity namespace against the
+  existing traces. The datastore holds ~17 GB of learning state and hand-editing
+  the database is forbidden, so it is flagged rather than worked around.
+- **The two live UI spokes still run three keyless LLM arms each.** The fix is
+  landed and has even propagated into their volume inventories, but
+  `apply-inventory` and the `ExecCondition` only take effect at boot, and those
+  containers have been up since Aug 10 and Aug 14. The fix is present and inert;
+  applying it requires a restart, which is an operator call.
+- **`federation-relay`** is a manifest vessel and never baked-enabled, so no
+  standalone fleet can be joined. Documented, not changed.
+- **The Makefile prints a live `GITHUB_TOKEN` in plaintext** on every `make up`
+  (it echoes the full `docker run`). That token should be rotated, and the echo
+  should be masked. Flagged, not fixed — rotation is the operator's.
+
+---
+
+## The standing lesson, restated because it recurred four more times
+
+Every defect in this round — and every defect in the previous one — came from
+**verifying one parsing layer above where the artifact is consumed.**
+
+- A regex checked in bash, read by systemd.
+- A grep on stdout, where the source writes stderr.
+- A role applied to unit names a later render step replaces.
+- A guard that exits 1, called by a line that swallows it.
+- A port derivation fixed in `gen-env`, on a path the Makefile bypasses.
+- A `case` statement inside `$(shell …)`, silently truncated by Make's own
+  paren parsing before the shell ever saw it.
+- A free-port probe on `127.0.0.1`, for a bind Docker performs on `0.0.0.0`.
+
+The last three were caught *during this session*, by testing rather than reading —
+each had already been written, and two had already been believed correct.
+
+A passing check one layer up is not weak evidence. **It is evidence about a
+different system.**
