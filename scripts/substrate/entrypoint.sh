@@ -25,7 +25,30 @@ if [ -x /usr/local/bin/apply-inventory ]; then
   echo "[substrate] applying vessel inventory selection"
   # shellcheck disable=SC1091
   set -a; . /etc/substrate/env 2>/dev/null || true; set +a
-  /usr/local/bin/apply-inventory || echo "[substrate] apply-inventory failed (keeping all units)"
+  # ★ FAIL-OPEN IS ONLY SAFE WHEN NOTHING WAS ASKED FOR.
+  #
+  # apply-inventory exits 1 on an unrecognised PROFILE / ENABLED_ROLES token —
+  # a guard added precisely so a typo could not silently change the fleet. This
+  # line then swallowed it into "keeping all units", which is the WORST possible
+  # response: the operator asked for a subset, and the substrate answers by
+  # enabling EVERYTHING the image bakes in. `ENABLED_ROLES=spok` does not get you
+  # a spoke minus a typo; it gets you a full node running the LLM arms, the
+  # autonomy timers and the trace store you deliberately excluded — the exact
+  # outcome the guard exists to prevent, defeated one layer above it.
+  #
+  # So: fail-open ONLY when no selection was requested (a bare `docker run`,
+  # where "run everything" IS the intent). If any selection knob is set, a
+  # failure to apply it aborts the boot — a container that will not start is
+  # diagnosable; one silently running the wrong fleet is not.
+  if ! /usr/local/bin/apply-inventory; then
+    if [ -n "${PROFILE:-}${ENABLED_ROLES:-}${ENABLED_VESSELS:-}${ENABLED_EXTRA_VESSELS:-}${DISABLED_VESSELS:-}" ]; then
+      echo "[substrate] FATAL: apply-inventory failed while a vessel selection was requested." >&2
+      echo "[substrate] FATAL: PROFILE='${PROFILE:-}' ENABLED_ROLES='${ENABLED_ROLES:-}' ENABLED_VESSELS='${ENABLED_VESSELS:-}' ENABLED_EXTRA_VESSELS='${ENABLED_EXTRA_VESSELS:-}' DISABLED_VESSELS='${DISABLED_VESSELS:-}'" >&2
+      echo "[substrate] FATAL: refusing to boot the full baked fleet in place of the requested subset. Fix the selection (see the error above) and restart." >&2
+      exit 1
+    fi
+    echo "[substrate] apply-inventory failed; no selection was requested, so keeping all units (default topology)"
+  fi
 fi
 
 # Point-and-go spoke federation (folds the former manual spoke-federate.sh into boot):
