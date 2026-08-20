@@ -86,7 +86,7 @@ Type=simple
 # credential lives. ExecCondition (not ExecStartPre) makes an absent key a clean
 # SKIP, not a failure, so the same image runs everywhere and the arm appears
 # wherever $key_var is present — no per-role config, no dead arm in the pool.
-ExecCondition=/bin/sh -c 'grep -Eq "^$key_var=[\"'"'"']?[^\"'"'"']" /etc/substrate/env'
+ExecCondition=/bin/sh -c 'grep -Eq "^$key_var=[^=]*[A-Za-z0-9]" /etc/substrate/env'
 EnvironmentFile=/etc/substrate/env
 # The per-arm pin loads AFTER /etc/substrate/env (which sets a shared
 # LLM_DEFAULT_MODEL), so this arm's model/provider win. Leading dash = optional.

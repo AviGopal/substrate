@@ -64,12 +64,55 @@ done
 if [ -n "$RENDER_LLM_ARMS" ]; then
   echo "[substrate] rendering LLM arm units ($RENDER_LLM_ARMS)"
   if "$RENDER_LLM_ARMS"; then
+    # ★ THE RENDERED ARMS MUST HONOUR THE ROLE SELECTION THAT ALREADY RAN.
+    #
+    # These units are rendered AFTER apply-inventory, under names the inventory
+    # never contains (llm-opus / llm-haiku / llm-google, vs the inventory's
+    # llm-resolver-*), so NO selection lever reached them: not ENABLED_ROLES,
+    # not DISABLED_VESSELS (its mask loop iterates inventory-named units only),
+    # and not an operator's `systemctl disable` — this very loop re-created the
+    # wants-symlink on the next boot. Moving the llm-resolver-* units to role
+    # `models` therefore fixed the names nothing renders, while the arms that
+    # actually run stayed ungoverned.
+    #
+    # The arms serve models, so they belong to role `models`. If the selection
+    # in force excludes that role, do not enable them. `spoke` excludes it by
+    # design: a spoke resolves models on its hub.
+    _models_wanted=1
+    if [ -n "${ENABLED_ROLES:-}" ] && [ -x /usr/local/bin/apply-inventory ]; then
+      # Ask the same expander apply-inventory used, so the two cannot drift.
+      # 2>&1, NOT 2>/dev/null: apply-inventory logs to STDERR, so discarding it
+      # discards the very line being matched — the check would then read "models
+      # absent" for every selection, silently disabling the arms everywhere.
+      if ! DRY_RUN=1 ENABLED_ROLES="$ENABLED_ROLES" /usr/local/bin/apply-inventory 2>&1 \
+           | grep -Eq 'expands to:.*(^| )models( |$)'; then
+        _models_wanted=0
+      fi
+    fi
+    # An explicit PROFILE or ENABLED_VESSELS is a hand-written allow-list; the
+    # rendered arms are not on it unless named there.
+    if [ -n "${PROFILE:-}" ] || [ -n "${ENABLED_VESSELS:-}" ]; then
+      _models_wanted=0
+      case ",${ENABLED_VESSELS:-}," in *,llm-*) _models_wanted=1 ;; esac
+    fi
+
     mkdir -p /etc/systemd/system/multi-user.target.wants
     for u in /etc/systemd/system/llm-*.service; do
       [ -f "$u" ] || continue
-      ln -sf "../$(basename "$u")" \
-        "/etc/systemd/system/multi-user.target.wants/$(basename "$u")"
-      echo "[substrate] enabled rendered LLM arm unit $(basename "$u")"
+      _b="$(basename "$u")"
+      case ",${DISABLED_VESSELS:-}," in
+        *",$_b,"*)
+          rm -f "/etc/systemd/system/multi-user.target.wants/$_b"
+          echo "[substrate] rendered LLM arm $_b left DISABLED (DISABLED_VESSELS)"
+          continue ;;
+      esac
+      if [ "$_models_wanted" = 0 ]; then
+        rm -f "/etc/systemd/system/multi-user.target.wants/$_b"
+        echo "[substrate] rendered LLM arm $_b NOT enabled — role 'models' is not in this selection"
+        continue
+      fi
+      ln -sf "../$_b" "/etc/systemd/system/multi-user.target.wants/$_b"
+      echo "[substrate] enabled rendered LLM arm $_b"
     done
   else
     echo "[substrate] render-llm-arms failed (keeping static LLM units only)"
