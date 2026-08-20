@@ -208,18 +208,28 @@ Coverage, measured against the shipped unit set:
   `llm-haiku`, `llm-google` are created after `apply-inventory` runs, under names
   the inventory never contains. They are governed only by the entrypoint's own
   gate — which is why defect 1 above went unnoticed for so long.
-- **Role `desktop` in no group is correct**, not an omission: those units exist
-  only in the `substrate-obsidian` stage. But because they *are* inventory-named,
-  any `ENABLED_ROLES` value now masks them — and the Makefile sets
-  `ENABLED_ROLES=spoke` automatically whenever `DISCOVERY_ENDPOINT` is passed. A
-  federated obsidian image therefore loses its desktop silently.
-- **Neither `hub` nor `spoke` includes `autonomy`.** `deploy-hub.sh` compensates
-  with an explicit `ENABLED_EXTRA_VESSELS` list, but per its own comment that list
-  is a snapshot of what one hub happened to be running on a particular date,
-  recovered from units that had been unmasked *by hand inside the container*. It
-  restores six compute services and zero autonomy timers. A federated deployment
-  running no self-development is currently an accident recorded in a shell
-  variable, not a design.
+- **Role `desktop` in no group is correct**, not an omission. My first
+  explanation of *why* was wrong, and refuted: I claimed the units exist only in
+  the `substrate-obsidian` stage, having grepped `/etc/systemd/system`. Static
+  units live in **`/lib/systemd/system`**, where all three are present in the base
+  image. What the obsidian stage adds is the payload and the `systemctl enable`.
+  Wrong directory, right conclusion — the eighth instance of the layer mistake
+  below, committed while checking the others. Because they *are* inventory-named,
+  any `ENABLED_ROLES` value masks them, and the Makefile sets
+  `ENABLED_ROLES=spoke` automatically whenever `DISCOVERY_ENDPOINT` is passed, so
+  a federated obsidian fleet loses its desktop silently.
+- **Neither `hub` nor `spoke` includes `autonomy`** — all 26 units, confirmed
+  against the live spoke's masks. `deploy-hub.sh` compensates with an explicit
+  `ENABLED_EXTRA_VESSELS` list, but per its own comment that list is a snapshot of
+  what one hub happened to be running, recovered from units unmasked *by hand
+  inside the container*. It restores six compute services and zero autonomy timers.
+  **But "no self-development at all" was too strong and was refuted.**
+  `boredom-vessel` carries role `compute`, so it runs on a spoke — and it did:
+  `raw_gaps=4 admitted=4`, then a reserved and dispatched gap-drain goal, no
+  operator involved. A federated pair loses the *scheduled* autonomy surface, not
+  condition-driven work generation. The verifier rested that refutation on
+  execution evidence from `journalctl`, explicitly declining to count a timer in
+  `active (waiting)` as proof anything ran — scheduled is not executed.
 
 Two observability gaps make all of the above hard to see from the outside:
 
@@ -273,9 +283,19 @@ Every defect in this round — and every defect in the previous one — came fro
 - A `case` statement inside `$(shell …)`, silently truncated by Make's own
   paren parsing before the shell ever saw it.
 - A free-port probe on `127.0.0.1`, for a bind Docker performs on `0.0.0.0`.
+- A unit-file search in `/etc/systemd/system` for units that ship in
+  `/lib/systemd/system` — committed *while writing this list*, and caught only
+  because the doc edit it produced was sent for adversarial verification.
 
-The last three were caught *during this session*, by testing rather than reading —
-each had already been written, and two had already been believed correct.
+The last four were caught *during this session*, by testing rather than reading —
+each had already been written, and three had already been believed correct.
+
+The verification pass on these very doc edits returned **zero** verdicts of
+"correct as written": one refuted claim, one refuted sub-claim, and the rest
+downgraded to "true but stated more strongly than the evidence supports." Among
+them, an asserted hazard that does not exist — the loopback `identity_endpoint` in
+`/bootstrap`, which I described as something a remote spoke would follow to itself.
+No spoke code reads it. Writing a plausible mechanism is not observing one.
 
 A passing check one layer up is not weak evidence. **It is evidence about a
 different system.**

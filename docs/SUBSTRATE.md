@@ -37,19 +37,33 @@ The substrate has generalized from "one local container" to **one image that run
   the list.
 
 `models` holds the LLM resolver arms; it is separate from `compute` precisely so a
-spoke can run work locally while resolving models on its hub. `desktop` (Obsidian,
-Xorg, noVNC) is in **no** group on purpose — those units exist only in the
-`substrate-obsidian` build stage, so the base image has nothing to select. Note the
-consequence: because they are inventory-named, any `ENABLED_ROLES` value masks them
-on an obsidian image.
+spoke can run work locally while resolving models on its hub.
+
+`desktop` (Obsidian, Xorg, noVNC) is in **no** group on purpose. The unit *files*
+ship in the base image like every other unit — what the `substrate-obsidian` stage
+adds is the payload (Xvfb, noVNC, the Obsidian AppImage) and the `systemctl enable`
+that turns them on. On a base image they are present but never enabled, so there is
+nothing for a role to select. The consequence worth knowing: because they *are*
+inventory-named, any `ENABLED_ROLES` value masks them on an obsidian image — and
+the Makefile sets `ENABLED_ROLES=spoke` automatically whenever `DISCOVERY_ENDPOINT`
+is passed, so a federated obsidian fleet loses its desktop silently.
 
 > ⚠ **Neither `hub` nor `spoke` includes `autonomy`.** A federated hub+spoke pair
-> therefore runs no gap-compose, no operator-goal-generator, no surgical-gap-scan —
-> no proactive self-development at all; only `full` has it. `deploy-hub.sh`
-> compensates with an explicit `ENABLED_EXTRA_VESSELS` list, but that list restores
-> six *compute* services and zero autonomy timers, and it is a snapshot of what one
-> hub happened to be running rather than a designed set. If you want a federated
-> deployment to develop itself, name the autonomy units explicitly.
+> runs none of the 26 autonomy units — no `gap-compose`, no
+> `operator-goal-generator`, no `surgical-gap-scan`, no `m1-trainer`,
+> no `compose-teacher`, no `funnel-drain`. Only `full` has them.
+> `deploy-hub.sh` compensates with an explicit `ENABLED_EXTRA_VESSELS` list, but
+> that list restores six *compute* services and zero autonomy timers, and per its
+> own comment it is a snapshot of what one hub happened to be running rather than a
+> designed set. If you want the autonomy timers in a federated deployment, name
+> them explicitly.
+>
+> This does **not** mean a federated pair is inert. `boredom-vessel` is a `compute`
+> vessel, so it runs on a spoke, and it does condition-driven work selection —
+> observed on the spoke built while verifying this page: `raw_gaps=4 admitted=4`,
+> then a reserved and dispatched gap-drain goal, with no operator. What a
+> hub+spoke pair loses is the *scheduled* autonomy surface, not gap-driven work
+> generation.
 
 `scripts/substrate/apply-inventory.sh` reads the inventory at boot — run by the container entrypoint *after* `gen-env` and *before* `exec systemd` — and `systemctl disable`s the unwanted units (it just removes the `*.wants` symlinks the image baked in). Selection env, highest precedence first:
 
@@ -344,19 +358,36 @@ set the two overrides explicitly.
 > {"relay_multiaddrs":[],"identity_endpoint":"http://127.0.0.1:8101","discovery_endpoint":""}
 > ```
 >
-> So "the hub is reachable" and "the hub can be joined" look identical from the
-> outside — both are `200` — and the spoke instead crash-loops with
-> `set RELAY_MULTIADDR or point BOOTSTRAP_URL/HUB_DISCOVERY_URL at a discovery
-> serving /bootstrap`, naming variables you have already set correctly. Note the
-> loopback `identity_endpoint`: a remote spoke following it resolves *itself*.
+> So the `200` **status** does not distinguish reachable from joinable — and the
+> spoke instead crash-loops with `set RELAY_MULTIADDR or point
+> BOOTSTRAP_URL/HUB_DISCOVERY_URL at a discovery serving /bootstrap`, naming
+> variables you have already set correctly.
 >
-> Check before joining, and read the body rather than the status code:
+> The **body** of that same call does distinguish them; no second request needed:
 >
 > ```bash
 > curl -s http://<hub-host>:18100/bootstrap | jq '.relay_multiaddrs | length'
 > # 0  => not a hub yet: it has no relay. Deploy it with deploy-hub.sh
 > #       (ENABLED_ROLES=hub + the libp2p relay), or pass RELAY_MULTIADDR by hand.
 > ```
+>
+> Check `relay_multiaddrs` **specifically** — that is the field the transport
+> actually reads. The empty `discovery_endpoint` and loopback `identity_endpoint`
+> in the same payload only tell you `PUBLIC_IP` was never set, which a hub can
+> lack while still having a working relay, and can have while its relay is dead.
+>
+> The loopback `identity_endpoint` is **inert**, not a hazard: it echoes the hub's
+> own `IDENTITY_VESSEL_URL` and no spoke code follows it. A joining spoke derives
+> its identity endpoint from the discovery host and port offset instead — verified:
+> a spoke pointed at a standalone on `:23100` got `http://…:23101` while
+> `/bootstrap` was advertising `http://127.0.0.1:8101`. Read it as a sign the hub
+> has no public identity configured, nothing more.
+>
+> A non-empty `relay_multiaddrs` is **necessary but not sufficient**. The handler
+> builds that array from the `RELAY_MULTIADDR` env string or from registry circuit
+> addresses and never dials anything, so a stale or dead relay still advertises
+> cheerfully. For a real pre-flight, dial the advertised address (conventionally
+> `<hub>:30333`) before joining.
 >
 > The relay is `federation-relay.service` — role `transport`, and a **manifest**
 > vessel, so it is never baked-enabled; `hub` includes `transport` but the unit
