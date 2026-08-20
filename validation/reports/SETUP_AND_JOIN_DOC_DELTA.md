@@ -3,8 +3,16 @@
 Two journeys were executed against the published `:dev` image on a host that had
 never run them — stand up a standalone substrate, and join it as a spoke — with
 the documentation followed as written. Twelve agents audited the vessel
-inventories and the setup surface in parallel, and every blocker/major finding was
-adversarially re-derived before it was believed.
+inventories and the setup surface in parallel.
+
+**Coverage, stated exactly:** the audit reported **23** blocker/major findings;
+**8** of them went through the adversarial verify pass, because the harness capped
+that stage at eight. The remaining 15 are reported here as *unverified*, and
+anything acted on below was additionally re-derived by hand against a running
+fleet. Of the 8 verified, **none were refuted** — 1 confirmed outright and 7
+returned "partial", meaning true but stated too broadly. That ratio is the reason
+the unverified 15 are not simply assumed good: the failure mode in this batch was
+overstatement, not fabrication, and overstatement survives a casual read.
 
 The headline is not a doc defect. It is that **the documented clean-room command
 failed on its first attempt, and following it end-to-end surfaced four live
@@ -169,6 +177,64 @@ exactly where calm was warranted, on the one question the tool exists to answer.
 Two fleets were compared to settle it; their secrets differed, so they were
 generated. `gen-env` now records each mint, and absence is reported as
 `unrecorded` rather than answered.
+
+---
+
+## The vessel inventories: what the audit found
+
+The inventory exists in **three** places, and the runtime-authoritative one is the
+volume: repo → image (`/usr/local/share/substrate/`) → volume
+(`/workspace/substrate/fleet/`). `entrypoint.sh` seeds the volume copy from the
+image *only if it is absent*, so a fleet booted before an inventory change keeps
+its old copy.
+
+**The premise that nothing reconciles it was refuted.** `substrate-pull-sync`
+converges the fleet files from git, and it demonstrably works: both UI spokes'
+volume copies are *newer* than their images and already carry the `models` role
+split. The real gap is one step later — **nothing re-runs `apply-inventory` after
+convergence**, and it only executes pre-systemd at boot. So an inventory fix
+propagates and then sits inert until the container restarts. That is precisely why
+the two UI spokes still run keyless arms today.
+
+Coverage, measured against the shipped unit set:
+
+- **`metric-collector-vessel.service` is the one shipped unit absent from the
+  inventory entirely** — and it is defined *twice*, as a static unit and as a
+  manifest vessel. Nothing selects or masks it by role.
+- **`federation-relay.service` names a file that does not exist**, correctly: it
+  is `manifest: true` and rendered on demand by `vessel-ctl`. Not a dead entry, but
+  it means `hub` including role `transport` does **not** give you a relay.
+- **Rendered units are structurally invisible to the inventory.** `llm-opus`,
+  `llm-haiku`, `llm-google` are created after `apply-inventory` runs, under names
+  the inventory never contains. They are governed only by the entrypoint's own
+  gate — which is why defect 1 above went unnoticed for so long.
+- **Role `desktop` in no group is correct**, not an omission: those units exist
+  only in the `substrate-obsidian` stage. But because they *are* inventory-named,
+  any `ENABLED_ROLES` value now masks them — and the Makefile sets
+  `ENABLED_ROLES=spoke` automatically whenever `DISCOVERY_ENDPOINT` is passed. A
+  federated obsidian image therefore loses its desktop silently.
+- **Neither `hub` nor `spoke` includes `autonomy`.** `deploy-hub.sh` compensates
+  with an explicit `ENABLED_EXTRA_VESSELS` list, but per its own comment that list
+  is a snapshot of what one hub happened to be running on a particular date,
+  recovered from units that had been unmasked *by hand inside the container*. It
+  restores six compute services and zero autonomy timers. A federated deployment
+  running no self-development is currently an accident recorded in a shell
+  variable, not a design.
+
+Two observability gaps make all of the above hard to see from the outside:
+
+- **A drifted or frozen fleet definition is invisible to every operator command.**
+  The doctor reads the inventory but never compares it against git. `substrate-live`'s
+  `vessels.manifest.json` is frozen against the repo by a *whitespace-only*
+  reformat, and the log line reports that as a deliberate local customisation.
+- **The ungoverned-units detector never runs on the topology that has ungoverned
+  units.** It is skipped on default (no-selection) boots — the exact case where
+  everything is enabled — and false-positives on manifest vessels by construction.
+
+None of these were changed in this round. Reclassifying roles on the strength of an
+audit is how a wrong mint happens; `desktop` looked like an omission and was not.
+They are recorded here so the next round starts from evidence rather than from the
+same three re-derivations.
 
 ---
 
