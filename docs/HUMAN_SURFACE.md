@@ -25,8 +25,10 @@ them again.
 - **A checkout of the super-repo** (`git submodule update --init --recursive`).
   The launcher lives in it, and the surface's own workdir is a clone of it.
 - **`jq`** — the launcher reads your config with it.
-- **A credential for the image**: `docker login ghcr.io` with a token carrying
-  `read:packages`. The image bakes vessel source, so it is private.
+- **No credential for the image.** `ghcr.io/avigopal/substrate` is a **public**
+  package and pulls anonymously — no `docker login`, no `read:packages` PAT. This
+  page previously listed one as a hard prerequisite, which imposed a false blocker
+  on the entry doc for the one vessel a human is meant to talk to.
 - **A credential for the repo**, *while the super-repo is private*:
   `gh auth login`, or a PAT with read access. The surface's workdir is a clone
   of the super-repo — it runs its server straight out of it — so with no

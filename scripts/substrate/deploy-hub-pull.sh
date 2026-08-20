@@ -14,17 +14,23 @@
 #   GHCR_TOKEN=<pat-with-read:packages>  GHCR_USER=<gh-user>  SSH_KEY=~/.ssh/syzygy_deploy \
 #     ANTHROPIC_API_KEY=sk-ant-...  bash deploy-hub-pull.sh root@138.197.116.56 138.197.116.56
 #
-# GHCR_TOKEN needs the `read:packages` scope (the image is private — it bakes
-# vessel source). A classic PAT with only `repo` scope is NOT enough. Get one via
-# `gh auth refresh -s read:packages` then `gh auth token`, or a fine-grained PAT.
+# GHCR_TOKEN / GHCR_USER are OPTIONAL — the package is public and pulls
+# anonymously. Supply them only for a private fork or a rate-limit-exempt pull;
+# if you do, the token needs `read:packages` (a classic PAT with only `repo`
+# scope is NOT enough): `gh auth refresh -s read:packages` then `gh auth token`.
 set -euo pipefail
 
 TARGET="${1:?usage: deploy-hub-pull.sh user@vm-ip public-ip}"
 PUBLIC_IP="${2:?usage: deploy-hub-pull.sh user@vm-ip public-ip}"
 OWNER="${GHCR_OWNER:-avigopal}"                  # ghcr namespace (lowercase)
 IMAGE="${IMAGE:-ghcr.io/${OWNER}/substrate:dev}"
-GHCR_USER="${GHCR_USER:?set GHCR_USER (github username for ghcr login)}"
-GHCR_TOKEN="${GHCR_TOKEN:?set GHCR_TOKEN (PAT with read:packages)}"
+# The ghcr package is PUBLIC and pulls anonymously, so a credential is OPTIONAL.
+# These were `:?` guards, which made the anonymous path unreachable through this
+# script no matter what the docs said — a hard runtime blocker enforcing a
+# requirement that does not exist. Supplying both still works (a private package,
+# a rate-limit-exempt pull, or a fork with different visibility).
+GHCR_USER="${GHCR_USER:-}"
+GHCR_TOKEN="${GHCR_TOKEN:-}"
 ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-$(jq -r '.providers.anthropic.apiKey // empty' "$HOME/.metabob/config.json" 2>/dev/null || true)}"
 [ -n "$ANTHROPIC_API_KEY" ] || { echo "ERROR: set ANTHROPIC_API_KEY"; exit 1; }
 SSH_KEY="${SSH_KEY:-}"
@@ -39,9 +45,14 @@ echo "[deploy-hub-pull] pulling $IMAGE onto $TARGET and swapping the hub contain
 set -euo pipefail
 command -v docker >/dev/null || { echo "[vm] installing docker…"; curl -fsSL https://get.docker.com | sh; }
 
-# 1. Authenticate to ghcr (private package) and pull the new image.
-echo "[vm] docker login ghcr.io as $GHCR_USER…"
-echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+# 1. Pull the new image. The package is public, so log in only if a credential
+#    was actually supplied — an anonymous pull is the normal path.
+if [ -n "$GHCR_TOKEN" ] && [ -n "$GHCR_USER" ]; then
+  echo "[vm] docker login ghcr.io as $GHCR_USER…"
+  echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+else
+  echo "[vm] no GHCR credential supplied — pulling anonymously (the package is public)"
+fi
 echo "[vm] pulling $IMAGE…"
 OLD_ID=$(docker image inspect "$IMAGE" --format '{{.Id}}' 2>/dev/null || echo none)
 docker pull "$IMAGE"

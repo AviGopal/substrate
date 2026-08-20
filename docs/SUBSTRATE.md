@@ -17,8 +17,24 @@ The substrate has generalized from "one local container" to **one image that run
 `scripts/substrate/vessels.inventory.json` is the declarative vessel inventory: every baked-in unit maps to a **role** (`store`, `control`, `api`, `compute`, `models`, `ui`, `transport`, `seed`, `infra`, `autonomy`, `registry`, `desktop`), and role-**group** aliases compose those into deployable shapes:
 
 - `hub` = `store`, `control`, `api`, `transport`, `seed`, `infra`, `registry`, `models` (control plane + store + relay + the model arms)
-- `spoke` = `compute`, `ui`, `seed`, `infra`, `registry` (compute-only; points its control/store at a hub, and **resolves models on the hub** — `models` is excluded deliberately, which is what stops a spoke from starting local LLM arms)
-- `full` = every role except `desktop` (the default local substrate)
+- `spoke` = `compute`, `ui`, `seed`, `infra`, `registry` (compute-only; points its control/store at a hub, and **resolves models on the hub** — `models` is excluded deliberately, so no LLM arm starts at boot)
+
+> **How the spoke's arms are actually held off — two different strengths.** The
+> inventory-named units (`llm-resolver-vessel` and the legacy
+> `llm-resolver-{opus,haiku,google}`) are **disabled *and masked*** by
+> `apply-inventory`, because those names appear in the inventory under role
+> `models`. The units that actually serve models — the boot-rendered
+> `llm-{opus,haiku,google}` — are **rendered, present, and merely not enabled**:
+> their unit files exist as ordinary files and their `ExecCondition` passes
+> wherever a provider key is set, so a single `systemctl start llm-haiku` will
+> raise a local arm on a spoke. Those names appear nowhere in the inventory, so
+> `apply-inventory` cannot mask them. Boot-time behaviour is correct and verified;
+> do not describe it as "masked" or rely on it against a deliberate manual start.
+- `full` = every role except `desktop` — the intended shape of a local substrate,
+  and a hand-maintained enumeration. Note that `ENABLED_ROLES=full` is **not** the
+  same as leaving the selection env unset: unset is a total no-op that masks
+  nothing at all, `desktop` included, whereas `full` masks anything absent from
+  the list.
 
 `models` holds the LLM resolver arms; it is separate from `compute` precisely so a
 spoke can run work locally while resolving models on its hub. `desktop` (Obsidian,
