@@ -517,6 +517,37 @@ for d in "$CLONE_DIR"/*/; do
      && [ "$(cat "$MARKER_DIR/$v.fanout-fail" 2>/dev/null || true)" != "$HEAD" ]; then
     DIST_RETRY=1
   fi
+  # AN OWED RESTART OUTRANKS THE CONTENT SHORT-CIRCUIT. Content is already equal by
+  # the time a restart is owed (the mirror ran), so without this the vessel is skipped
+  # forever and mirrored code is never loaded. Bun does not hot-reload, and no health
+  # signal can see the difference: the discriminator is unit start time vs file mtime.
+  PENDING_FILE="$MARKER_DIR/$v.restart-pending"
+  if [ "$(cat "$PENDING_FILE" 2>/dev/null || true)" = "$CLONE_HASH" ]; then
+    P_UNIT="$(vessel_unit "$v")"; P_PORT="$(health_port "$v")"
+    P_INFLIGHT=""
+    if [ -n "$P_PORT" ]; then
+      P_INFLIGHT="$(curl -s --max-time 5 "http://127.0.0.1:$P_PORT/health" 2>/dev/null \
+        | sed -n 's/.*"in_flight"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -1)"
+    fi
+    P_DEFER_FILE="$MARKER_DIR/$v.restart-deferrals"
+    P_DEFERRED_N="$(cat "$P_DEFER_FILE" 2>/dev/null || echo 0)"
+    case "$P_DEFERRED_N" in ''|*[!0-9]*) P_DEFERRED_N=0 ;; esac
+    if [ -n "$P_INFLIGHT" ] && [ "$P_INFLIGHT" -gt 0 ] 2>/dev/null \
+       && [ "$P_DEFERRED_N" -lt "${RESTART_DEFER_MAX:-3}" ]; then
+      echo "$((P_DEFERRED_N + 1))" > "$P_DEFER_FILE" 2>/dev/null || true
+      log "$v: owed restart still deferred ($((P_DEFERRED_N + 1))/${RESTART_DEFER_MAX:-3}) — $P_INFLIGHT in flight"
+    else
+      [ -n "$P_INFLIGHT" ] && [ "$P_INFLIGHT" -gt 0 ] 2>/dev/null \
+        && log "$v: owed restart proceeding after $P_DEFERRED_N deferral(s) despite $P_INFLIGHT in flight — convergence must not be starved"
+      log "$v: taking OWED restart for already-mirrored content ${CLONE_HASH:0:10}"
+      rm -f "$P_DEFER_FILE" "$PENDING_FILE" 2>/dev/null || true
+      if [ -n "$P_UNIT" ] && systemctl is-active --quiet "$P_UNIT" 2>/dev/null; then
+        restart_breadcrumb "$v" "owed restart after deferral" "$P_INFLIGHT"
+        systemctl restart "$P_UNIT" 2>/dev/null || true
+        sleep "$STAGGER_SECONDS"
+      fi
+    fi
+  fi
   if [ "$CLONE_HASH" = "$RUNTIME_HASH" ]; then
     if [ -z "$DIST_RETRY" ]; then
       [ "$LAST" = "$CLONE_HASH" ] || echo "$CLONE_HASH" > "$MARKER"
@@ -1224,7 +1255,21 @@ EOF
     case "$DEFERRED_N" in ''|*[!0-9]*) DEFERRED_N=0 ;; esac
     if [ -n "$INFLIGHT" ] && [ "$INFLIGHT" -gt 0 ] 2>/dev/null && [ "$DEFERRED_N" -lt "$RESTART_DEFER_MAX" ]; then
       echo "$((DEFERRED_N + 1))" > "$DEFER_FILE" 2>/dev/null || true
-      log "$v: $INFLIGHT dispatch(es) in flight — DEFERRING restart ($((DEFERRED_N + 1))/$RESTART_DEFER_MAX); mirrored source takes effect on the next tick"
+      # RECORD THAT A RESTART IS OWED. Without this the deferral is permanent, and
+      # the log line below is a lie. The content marker was already written at the
+      # mirror step, and the top-of-loop short-circuit compares CLONE_HASH to
+      # RUNTIME_HASH — which are EQUAL the moment the mirror succeeds. So on every
+      # later tick this vessel is skipped before it can reach this block: the
+      # deferral counter never increments again, RESTART_DEFER_MAX is unreachable,
+      # and "takes effect on the next tick" never happens.
+      #
+      # Measured: goal-host-vessel served code from 2026-08-19 01:54:10 while the
+      # mirrored file on disk was 23 hours newer (2026-08-20 01:13:54), with
+      # NRestarts=0, ActiveState=active and /health 200 — every signal green while
+      # the fixes it was supposed to load sat unread. The deferral counter was
+      # frozen at 1 of 3 and three later ticks said nothing about the vessel.
+      echo "$CLONE_HASH" > "$MARKER_DIR/$v.restart-pending" 2>/dev/null || true
+      log "$v: $INFLIGHT dispatch(es) in flight — DEFERRING restart ($((DEFERRED_N + 1))/$RESTART_DEFER_MAX); restart recorded as PENDING and will be taken on a later tick"
       printf '{"at":"%s","actor":"pull-sync","action":"deferred_restart_inflight","vessel":"%s","in_flight":%s,"deferral":%s}\n' \
         "$(date -Iseconds)" "$v" "$INFLIGHT" "$((DEFERRED_N + 1))" >> "$DEFERRAL_LOG" 2>/dev/null || true
       continue
@@ -1233,6 +1278,7 @@ EOF
       log "$v: $INFLIGHT dispatch(es) still in flight after $DEFERRED_N deferral(s) — restarting anyway so convergence cannot be starved"
     fi
     rm -f "$DEFER_FILE" 2>/dev/null || true
+    rm -f "$MARKER_DIR/$v.restart-pending" 2>/dev/null || true
     restart_breadcrumb "$v" "converged to origin/dev" "$INFLIGHT"
     systemctl restart "$UNIT" 2>/dev/null || true
     sleep "$STAGGER_SECONDS"
