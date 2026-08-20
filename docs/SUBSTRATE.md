@@ -40,9 +40,21 @@ The substrate has generalized from "one local container" to **one image that run
 > curl -s -o /dev/null -w '%{http_code}\n' http://localhost:18310/health   # expect 200
 > ```
 >
-> The full manifest set is `human-surface-vessel`, `federation-relay` and
-> `federation-transport-vessel` — check with
-> `jq -r '.vessels[] | select(.manifest) | .unit' scripts/substrate/vessels.inventory.json`.
+> The manifest units flagged in the inventory are `human-surface-vessel`,
+> `federation-relay` and `federation-transport-vessel`. The set `vessel-ctl`
+> can install is read from a *different* file and is one larger — it also
+> includes `metric-collector-vessel`. Ask the source of truth for each:
+>
+> ```bash
+> # what a default boot leaves disabled (inventory flags)
+> jq -r '.vessels[] | select(.manifest) | .unit' scripts/substrate/vessels.inventory.json
+> # what vessel-ctl can install, by the NAME the install command takes
+> docker exec substrate-live jq -r '.vessels[].name' /workspace/substrate/fleet/vessels.manifest.json
+> ```
+>
+> Note the two emit different forms — the inventory lists units
+> (`human-surface-vessel.service`), while `vessel-ctl install` takes the bare
+> name (`human-surface-vessel`).
 
 ### The LLM arm fleet is rendered, not baked
 
@@ -94,7 +106,8 @@ compose) is the checkout-free path: a pulled image plus one env var. **Source**
 (`make up`) is the everyday development path: a checkout with submodules, one
 command, operator tooling auto-pointed. The image is published to GHCR by CI on
 pushes to `dev` that touch the image inputs (`Dockerfile.substrate`, `repos/**`,
-`scripts/substrate/**`); the package is **public**, so `docker pull` needs no
+`scripts/substrate/**`, or the workflow itself), and on demand via
+`workflow_dispatch`; the package is **public**, so `docker pull` needs no
 credentials. A Docker Hub `avigopal/substrate:dev` mirror may exist, but GHCR is
 the repo.
 
@@ -149,27 +162,45 @@ and diagnosis is in-container too (`docker exec substrate-live substrate-doctor`
 
 ### Container path — root-level compose
 
-No make, no submodules. A root-level `docker-compose.yml` is canonical
-(`scripts/substrate/docker-compose.yml` is a symlink to it), so the whole path is
-a few commands **from the repo root**:
+No make, no submodules — but this variant does need the two tracked files
+(`docker-compose.yml` and `scripts/substrate/.env.example`), so it runs **from
+the repo root** of a checkout. For a genuinely checkout-free start, on a host
+with nothing but Docker, skip to the [raw `docker run`](#the-equivalent-raw-invocation)
+below: it needs only the image and one env var.
+
+A root-level `docker-compose.yml` is canonical
+(`scripts/substrate/docker-compose.yml` is a symlink to it):
 
 > ⚠ **Never run `docker compose up` against an existing docker-run fleet.**
-> Compose prefixes volume names with the project, so the `substrate-workspace` /
-> `substrate-surreal` declared in `docker-compose.yml` become
-> `substrate_substrate-workspace` / `substrate_substrate-surreal`. A fleet
-> started by `make up` mounts the **unprefixed** names, so compose does not
-> adopt it — it creates EMPTY volumes and starts a container that looks
-> perfectly healthy with an empty SurrealDB and an empty workspace. The old
-> volumes are orphaned rather than deleted, which is worse: nothing errors, and
-> the loss is invisible until someone asks where the traces went.
+> Compose prefixes volume names with the **project name**, which defaults to the
+> directory you run from — so the `substrate-workspace` / `substrate-surreal`
+> declared in `docker-compose.yml` become `<project>_substrate-workspace` /
+> `<project>_substrate-surreal` (from a checkout named `substrate`, that is
+> `substrate_substrate-workspace`; rename the directory and the prefix changes
+> with it). A fleet started by `make up` mounts the **unprefixed** names, so
+> compose does not adopt it — it creates EMPTY volumes and starts a container
+> that looks perfectly healthy with an empty SurrealDB and an empty workspace.
+> The old volumes are orphaned rather than deleted, which is worse: nothing
+> errors, and the loss is invisible until someone asks where the traces went.
 >
 > Use compose on a **fresh host**, or for an existing fleet declare the volumes
-> `external: true` under their unprefixed names first. `docker inspect
-> substrate-live --format '{{range .Mounts}}{{.Name}} {{end}}'` tells you which
-> set a running container actually holds.
+> `external: true` under their unprefixed names first. To see which set a
+> running container actually holds:
+>
+> ```bash
+> docker inspect <container> --format '{{range .Mounts}}{{.Name}} {{end}}'
+> ```
+>
+> An unprefixed `substrate-workspace` means the make-up fleet; a prefixed
+> `<project>_substrate-workspace` means a compose fleet.
 
 ```bash
 cp scripts/substrate/.env.example .env      # set ANTHROPIC_API_KEY
+
+# CHECK FIRST — if this prints anything, a fleet already exists here and
+# `docker compose up` would strand its volumes. See the warning above.
+docker ps -a --filter name=substrate-live --format '{{.Names}}'
+
 docker compose up -d                        # root compose is canonical
 docker exec substrate-live substrate-key show   # read the operator API key
 ```
@@ -181,14 +212,21 @@ host-mapped ports. Wait for
 `healthy` before reading the key; `substrate-key` is baked into the image at
 `/usr/local/bin/substrate-key`, so no checkout is needed.
 
-> **`healthy` is a weaker signal than it looks.** The container healthcheck
-> probes `:8080/health` only, so it can report healthy while SurrealDB root auth
-> is broken and the fleet is unusable. `docker exec substrate-live
-> substrate-doctor` is the check that covers auth, the registry and failed
-> units — run it before trusting a boot.
+> **`healthy` is a weaker signal than it looks.** The container healthcheck runs
+> `substrate-ready --quick`, which covers the vessels marked `"core": true` in
+> the inventory — it is a *liveness* check, not a correctness one. It reports
+> healthy while SurrealDB root auth is broken and the fleet is unusable
+> (measured on a clean-room boot: healthy, 8 of 9 ports serving, and the doctor
+> failing on root auth). `docker exec substrate-live substrate-doctor` is the
+> check that covers auth, the registry and failed units — run it before trusting
+> a boot.
 
-The equivalent raw invocation on **any** docker host — same nine published ports
-as compose, including the human surface:
+<a id="the-equivalent-raw-invocation"></a>
+The equivalent raw invocation on **any** docker host, and the one path that needs
+**no checkout at all** — same nine published ports as compose, including the
+human surface. (Publishing `:18310` is not the same as
+serving it: the human surface is a manifest vessel and needs one install step
+before it answers — see [the manifest-vessel note](#topology-selection).)
 
 ```bash
 docker run -d --privileged --name substrate-live \
@@ -360,6 +398,12 @@ scripts/substrate/configure-local.sh
 > `make -C scripts/substrate run-live-obsidian ANTHROPIC_API_KEY=...`. It reuses
 > the `substrate-live` container name and the same volumes, so every `restart-*`
 > / `logs-*` / `health` target keeps working unchanged.
+>
+> ⚠ **It does not publish the same nine ports.** `run-live-obsidian` swaps
+> `18310:8310` (the human surface) for `16080:6080` (noVNC), so `:18310` is
+> simply unpublished on this flavour — a `curl localhost:18310/health` returns
+> connection-refused with no vessel at fault. It also hardcodes its ports and
+> ignores `PORT_OFFSET`.
 >
 > Both `restart-*` and `logs-*` are **fixed enumerated target lists**, not
 > pattern rules — see [Iteration loop](#iteration-loop) and

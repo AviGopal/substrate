@@ -2,7 +2,7 @@
 #
 # From the repo root:
 #   cp scripts/substrate/.env.example .env   # set ANTHROPIC_API_KEY (+ optional keys)
-#   docker login ghcr.io                     # the image is private; use a PAT with read:packages
+#   (no docker login needed — the ghcr package is public and pulls anonymously)
 #   docker compose up -d
 #   docker exec substrate-live substrate-key show   # operator API key, post-launch
 #
