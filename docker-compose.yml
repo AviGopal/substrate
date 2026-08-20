@@ -28,7 +28,12 @@ services:
     stop_grace_period: 30s
     restart: unless-stopped
     environment:
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY is required}
+      # NOT `:?` — that made compose REFUSE TO INTERPOLATE for a spoke, which
+      # three docs correctly promise needs no LLM key because it resolves models
+      # on its hub. A standalone/hub still needs one, but that requirement is
+      # role-dependent and compose cannot see the role; gen-env enforces it at
+      # boot, where the role is known.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       # Optional: autonomous git push (parent change Phase 1). Unset = no self-push.
       SUBSTRATE_GIT_PAT: ${SUBSTRATE_GIT_PAT:-}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
@@ -118,7 +123,13 @@ services:
       - /run
       - /run/lock
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      # Probe DISCOVERY, not activity-api. activity-api carries role `api`, which
+      # the `spoke` group excludes — so an activity-api probe can NEVER pass on a
+      # spoke, and the documented spoke launch reported `unhealthy` forever while
+      # the fleet was serving correctly. discovery-vessel carries role `registry`,
+      # which hub, spoke and full all include, so this probe is meaningful in
+      # every topology this file can launch.
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8100/health"]
       interval: 30s
       timeout: 5s
       retries: 5

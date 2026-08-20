@@ -383,9 +383,16 @@ from them (the endpoints from the discovery host, the rest resolved from
 | `METABOB_API_KEY` | **required** — hub-issued credential; the key that joins the group |
 | `DISCOVERY_ENDPOINT=http://<hub-host>:18100` | **required** — point discovery at the hub |
 | `HUB_DISCOVERY_URL=http://<hub-host>:18100` | the discovery group to join (same value as above) |
-| `ENABLED_ROLES=spoke` | *redundant* — `gen-env.sh` already defaults `ENABLED_ROLES` to `spoke` whenever `DISCOVERY_ENDPOINT` names a remote host, so setting it explicitly changes nothing. Set `ENABLED_ROLES` only to select a role set *other* than the inferred one |
+| `ENABLED_ROLES=spoke` | *usually redundant* — `gen-env.sh` already infers `spoke` whenever the endpoint names a remote host. On the `make up` lane, passing it explicitly also selects the thin-spoke passthrough, so it is not strictly inert; on the compose lane it changes nothing. Set it explicitly only when you want a role set *other* than the inferred one, or that passthrough |
 | `ACTIVITY_API_ENDPOINT=http://<hub-host>:18080` | *optional override* — derived from the discovery host **and its port offset** if unset |
 | `IDENTITY_VESSEL_URL=http://<hub-host>:18101` | *optional override* — derived from the discovery host **and its port offset** if unset |
+
+> **A joining spoke is not a read-only participant.** The `spoke` role group
+> includes `seed`, and the seeder targets the *derived hub* store — so a join
+> writes the shared activity templates into the **hub's** activity-api using the
+> issued key. They are idempotent upserts of templates a hub already has, but a
+> spoke you do not fully trust should be issued a read-scoped key or launched
+> with `DISABLED_VESSELS=bootstrap-seeder.service`.
 
 The derivation keeps the port you supply. A hub reached on `:23100` yields
 activity-api `:23080` and identity `:23101`, because a deployment shifts the whole

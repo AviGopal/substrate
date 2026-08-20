@@ -93,9 +93,10 @@ docker compose up -d                       # run from repo root — root compose
 
 # `healthy` means the container is live, NOT that identity is seeded. Until the
 # seeder finishes, `substrate-key show` prints a pre-seed placeholder that every
-# call rejects with 401 — and it prints it without any error. Gate on the check
-# that actually tests the key:
-until docker exec substrate-live substrate-doctor 2>&1 | grep -q "PASS.*authenticates"; do sleep 10; done
+# call rejects with 401 — and it prints it without any error. Gate on a check
+# that actually validates the key. `whoami` works on every topology, because it
+# asks whichever identity-vessel this fleet uses — its own, or its hub's:
+until docker exec substrate-live substrate-key whoami 2>/dev/null | grep -q '"valid": *true'; do sleep 10; done
 docker exec substrate-live substrate-key show
 ```
 
@@ -185,9 +186,28 @@ building*; federation details: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 
 A spoke contributes a local registry + compute while identity, traces, and
 learning state live on the hub. Joining is **point-and-go**: pointing
-`DISCOVERY_ENDPOINT` (or `HUB_DISCOVERY_URL`) at the hub's discovery and
-presenting a hub-issued `METABOB_API_KEY` is sufficient — the identity endpoint,
-trace store, and relay anchor are resolved from `<discovery-endpoint>/bootstrap`.
+`HUB_DISCOVERY_URL` at the hub's discovery and presenting a hub-issued
+`METABOB_API_KEY` is sufficient — the identity endpoint, trace store, and relay
+anchor are resolved from `<discovery-endpoint>/bootstrap`.
+
+**Check the target is joinable first.** A reachable discovery is not necessarily
+a hub: a standalone substrate answers `/bootstrap` with `200` and an empty body,
+so "reachable" and "joinable" look identical, and the spoke boots and then
+crash-loops its transport against a relay that was never advertised.
+
+```bash
+curl -s http://<hub-host>:18100/bootstrap | jq '.relay_multiaddrs | length'
+# 0  => not a hub: no relay. Deploy it with deploy-hub.sh, or pass RELAY_MULTIADDR.
+```
+
+See [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) § *Join an existing identity/discovery
+group* for why a non-empty answer is necessary but not sufficient.
+
+> **A joining spoke writes to the hub.** The `spoke` role group includes `seed`,
+> and the seeder targets the *derived hub* store — so a join registers the shared
+> activity templates into the hub's activity-api using your issued key. The writes
+> are idempotent upserts of templates a hub already has, but a spoke you do not
+> fully trust should get a read-scoped key or `DISABLED_VESSELS=bootstrap-seeder`.
 `METABOB_API_KEY` is the credential the hub operator issues you (minted on the
 hub with `make -C scripts/substrate issue-key NAME=<you>`). The same variables
 attach a spoke however you launch — `docker compose`, `make up`, or the raw
@@ -200,10 +220,13 @@ symlink pull the same GHCR image), then bring it up:
 
 ```bash
 # .env
-METABOB_API_KEY=<hub-issued-key>          # required: the hub-issued credential
-ENABLED_ROLES=spoke
+METABOB_API_KEY=<hub-issued-key>           # required: the hub-issued credential
 HUB_DISCOVERY_URL=http://<hub-host>:18100  # required: the discovery to point at
-DISCOVERY_ENDPOINT=http://<hub-host>:18100 # required: same value
+# Do NOT set DISCOVERY_ENDPOINT to the hub here. It names the registry this
+# fleet's own vessels register INTO, and pointing it at the hub repoints every
+# local registration away from the spoke's own registry. The hub is named by
+# HUB_DISCOVERY_URL alone.
+# ENABLED_ROLES is not needed: a remote HUB_DISCOVERY_URL already infers `spoke`.
 # optional overrides — otherwise resolved from <discovery-endpoint>/bootstrap:
 # ACTIVITY_API_ENDPOINT=http://<hub-host>:18080
 # IDENTITY_VESSEL_URL=http://<hub-host>:18101
@@ -234,8 +257,30 @@ hub namespace), run once after boot:
 docker exec substrate-live spoke-federate substrate-live <unique-id>
 ```
 
-Your vessels then appear in the hub registry as `<vessel>@<unique-id>`, and a
-local Obsidian plugin connects to the spoke with its normal two inputs (API key
+Your vessels then appear in the hub registry as `<vessel>@<unique-id>`.
+
+**Confirming the join** — most signals cannot tell "joined" from "running but
+isolated", so check the two that can:
+
+```bash
+# 1. Identity: a spoke runs no local identity-vessel, so a valid answer here can
+#    only have come from the hub. This is the discriminator.
+docker exec <spoke> substrate-key whoami          # "valid": true + the hub's org_id
+
+# 2. Transport: the plane that actually mirrors your vessels to the hub.
+docker exec <spoke> systemctl show federation-transport-vessel -p NRestarts --value
+```
+
+A climbing `NRestarts` means the transport is crash-looping and **nothing is
+being mirrored**, even though `systemctl is-active` intermittently reports
+`active` — it catches the gap between restarts. `make ready` names it honestly.
+
+What will *not* tell you: the container's `healthy` state, `substrate-key show`
+(prints a key whether or not the hub accepts it), and `substrate-doctor`'s
+registry check (it counts *local* vessels, so it passes identically on a spoke
+joined to nothing).
+
+A local Obsidian plugin connects to the spoke with its normal two inputs (API key
 + `discoveryVesselEndpoint=http://127.0.0.1:18100`). Optional transport
 overrides (`FED_SUBSTRATE_ID`, `RELAY_MULTIADDR`, `PEER_DISCOVERY_ENDPOINTS`)
 are consumed the same way. Full guide: [`docs/FEDERATION.md`](docs/FEDERATION.md).
