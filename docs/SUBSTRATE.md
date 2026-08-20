@@ -912,10 +912,14 @@ The same image runs anywhere; the deploy scripts differ only in *how* the image 
 > **No GHCR credential is needed to pull.** The published package is public, so
 > `ghcr.io/avigopal/substrate:dev` pulls anonymously — the container/compose
 > path and a raw `docker run` both work with no `docker login`. (Should the
-> package ever be flipped back to private, those paths would need a
-> `read:packages` token; the build-on-target paths below — `deploy-hub.sh`,
-> local `make build` — construct the image instead of pulling it and would be
-> unaffected.)
+> package ever be flipped back to private, the paths that would need a
+> `read:packages` token are the ones that **pull**: the container/compose path,
+> a raw `docker run`, and `deploy-hub-pull.sh` — which accepts optional
+> `GHCR_USER`/`GHCR_TOKEN` for exactly that case. The build-on-target paths —
+> `deploy-hub.sh`, local `make build` — construct the image instead of pulling
+> it and would be unaffected. An earlier version of this note listed only the
+> build-on-target exemption and omitted `deploy-hub-pull.sh` from either side,
+> which is how that script kept a mandatory credential guard nobody re-examined.)
 
 | Path | Command | What it does |
 |---|---|---|

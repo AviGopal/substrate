@@ -114,9 +114,12 @@ services:
 
   # --- SPOKE: compute + ui + seed + infra + registry ------------------------
   #
-  # Runs goal-host, development-vessel, the LLM resolver, ribosome, analysis,
-  # local-tools and its own discovery. It runs NO store and NO identity — those
-  # resolve on the hub. Consequently it has no :8080 and no :8101 to bind, which
+  # Runs goal-host, development-vessel, ribosome, analysis, local-tools and its
+  # own discovery. It runs NO store and NO identity — those resolve on the hub —
+  # and NO LLM arm: the llm-resolver units carry role `models`, which `spoke`
+  # excludes, so a spoke resolves llm_completion on the hub through discovery.
+  # (This comment used to list "the LLM resolver" among the spoke's vessels,
+  # which was true only while the arms were bundled under `compute`.) Consequently it has no :8080 and no :8101 to bind, which
   # is why its health probe is goal-host (:8210) and not the root compose's
   # :8080. Pointing a spoke at the root compose's health test marks it unhealthy
   # forever, by design rather than by fault.
