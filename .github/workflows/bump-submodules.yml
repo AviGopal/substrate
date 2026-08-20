@@ -11,6 +11,12 @@ on:
   schedule:
     - cron: '0 */6 * * *'
   workflow_dispatch: {}
+  # Callable so the nightly dev build can reconcile branch heads and then build
+  # the result IN ONE RUN. Chaining is not optional: this job pushes with the
+  # default GITHUB_TOKEN, and GitHub's recursion guard means a GITHUB_TOKEN push
+  # never triggers another workflow's `push:` trigger. Without an explicit call,
+  # a bump that moves pointers produces no image.
+  workflow_call: {}
 
 concurrency:
   group: bump-submodules
@@ -22,6 +28,14 @@ permissions:
 jobs:
   bump:
     runs-on: ubuntu-latest
+    outputs:
+      # Did any gitlink actually move? The nightly build reads this to decide
+      # whether there is anything new to build.
+      changed: ${{ steps.bump.outputs.changed }}
+      # The commit a caller should build. When this job pushes a bump, it is the
+      # bump commit — NOT the SHA the caller started from, which is already
+      # stale by then. Empty when nothing moved.
+      sha: ${{ steps.push.outputs.sha }}
     steps:
       - name: Checkout super-repo (no submodules)
         uses: actions/checkout@v4
@@ -55,7 +69,46 @@ jobs:
             url=$(git config -f .gitmodules --get "submodule.${name}.url")
             branch=$(git config -f .gitmodules --get "submodule.${name}.branch" || echo "dev")
 
-            remote_sha=$(git ls-remote "$url" "refs/heads/${branch}" 2>/dev/null | cut -f1 || true)
+            # RESOLVE RELATIVE URLS. Every submodule here is declared relative
+            # ("../concept-db.git") — the portable form, which git resolves
+            # against the SUPERPROJECT'S REMOTE during a clone. `git ls-remote`
+            # has no superproject context, so it resolved them against the
+            # working directory, failed with "does not appear to be a git
+            # repository", and `|| true` swallowed it. Every submodule then
+            # "skipped", the resolved==0 guard fired, and the job reported a
+            # CREDENTIAL failure for what was a URL-resolution bug — sending
+            # anyone who read it to check PAT grants that were never the cause.
+            #
+            # Measured 2026-08-19: 0 of 18 resolved on every scheduled run,
+            # while `git ls-remote https://github.com/AviGopal/concept-db.git`
+            # answered instantly and unauthenticated.
+            case "$url" in
+              ../*|./*)
+                # Resolve against this repo's own origin, which is what git
+                # itself would have done at clone time.
+                base=$(git config --get remote.origin.url)
+                base=${base%.git}
+                rel=$url
+                # Each leading "../" climbs one path segment off the base.
+                while :; do
+                  case "$rel" in
+                    ../*) base=${base%/*}; rel=${rel#../} ;;
+                    ./*)  rel=${rel#./} ;;
+                    *)    break ;;
+                  esac
+                done
+                url="${base}/${rel}"
+                ;;
+            esac
+
+            # Do NOT swallow the error: a failed lookup must be distinguishable
+            # from a repo that has no such branch. Capture stderr for the log.
+            if ! ls_out=$(git ls-remote "$url" "refs/heads/${branch}" 2>&1); then
+              echo "::warning::skip ${path}: ls-remote failed on ${url} — ${ls_out}"
+              remote_sha=""
+            else
+              remote_sha=$(printf '%s' "$ls_out" | cut -f1)
+            fi
             if [ -z "$remote_sha" ]; then
               echo "::warning::skip ${path}: could not resolve ${branch} on ${url} (cross-org PAT scope or transient network failure)"
               skipped=$((skipped + 1))
@@ -101,13 +154,23 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$resolved" -eq 0 ]; then
-            echo "::error::bump-submodules resolved 0 of $((resolved + skipped)) submodules — every gitlink is frozen. This is a credential failure, not a no-op: SUBSTRATE_GIT_PAT cannot read the submodule repos."
+            # Do NOT name a cause here. The previous version of this line
+            # asserted "This is a credential failure" and was wrong for eleven
+            # days: the real fault was that relative submodule URLs were never
+            # resolved, so ls-remote failed on every repo — all of them public
+            # and reachable with no credential at all. An error message that
+            # names the wrong cause is worse than one that names none, because
+            # it redirects the reader away from the evidence. The per-repo
+            # warnings above carry the actual ls-remote stderr; point at those.
+            echo "::error::bump-submodules resolved 0 of $((resolved + skipped)) submodules — every gitlink is frozen. Read the per-repo ls-remote warnings above for the cause (URL resolution, branch missing, or credential scope)."
             exit 1
           fi
 
       - name: Commit and push
+        id: push
         if: steps.bump.outputs.changed == '1'
         run: |
+          set -euo pipefail
           git config user.name "substrate-bot"
           git config user.email "substrate-bot@users.noreply.github.com"
           n=$(grep -c '^-' /tmp/bump-summary.txt || true)
@@ -118,3 +181,7 @@ jobs:
           } > /tmp/bump-commit-msg.txt
           git commit -F /tmp/bump-commit-msg.txt
           git push origin HEAD:dev
+          # Publish the commit a caller should build. The caller's own
+          # github.sha predates this push and would build the PRE-bump tree —
+          # the exact staleness this workflow exists to remove.
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"

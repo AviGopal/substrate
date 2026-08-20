@@ -19,10 +19,28 @@ on:
       - 'scripts/substrate/**'
       - '.github/workflows/build-substrate-image.yml'
   workflow_dispatch: {}
+  # Callable so the nightly build can reconcile branch heads first and then
+  # build the reconciled commit in the same run. `ref` is required because a
+  # bump pushed during that run is NEWER than the caller's github.sha; building
+  # the caller's SHA would rebuild the pre-bump tree.
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Commit-ish to build. Defaults to the caller ref.'
+        type: string
+        required: false
+      extra_tag:
+        description: 'Additional tag to publish alongside :dev and :<sha> (e.g. "nightly").'
+        type: string
+        required: false
 
 concurrency:
-  group: substrate-image-${{ github.ref }}
-  cancel-in-progress: true
+  # A nightly run reconciles then builds, so it must not be cancelled by the
+  # push event its own bump commit generates. Keyed on the run, not the ref,
+  # when called — `cancel-in-progress` on a shared ref group would let the
+  # push-triggered build kill the nightly mid-build.
+  group: substrate-image-${{ github.workflow }}-${{ github.event_name == 'workflow_call' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
 
 jobs:
   build:
@@ -39,6 +57,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: false
+          # Empty string is falsy in this expression, so an uncalled run keeps
+          # checkout's default (the triggering ref) exactly as before.
+          ref: ${{ inputs.ref || '' }}
 
       - name: Init submodules (minus metabob-mcp — different org, not baked)
         env:
@@ -46,8 +67,43 @@ jobs:
         run: |
           git config --global "url.https://x-access-token:${PAT}@github.com/.insteadOf" "git@github.com:"
           git config --global --add "url.https://x-access-token:${PAT}@github.com/.insteadOf" "https://github.com/"
+          set -uo pipefail
           paths=$(git config -f .gitmodules --get-regexp '\.path$' | awk '{print $2}' | grep -v 'metabob-mcp')
-          git submodule update --init $paths
+
+          # ★ AN UNPUSHED GITLINK MUST NAME ITSELF, not fail as "exit code 128".
+          #
+          # A super-repo commit can point a submodule at a commit that exists
+          # only on someone's laptop. `git submodule update --init` then dies
+          # with "not our ref <sha>" partway through the list, and the job
+          # reports a bare exit 128 — the reader cannot tell which submodule,
+          # which commit, or that the cause is unpushed work rather than a
+          # credential or network fault.
+          #
+          # Observed 2026-08-19: repos/identity-vessel pinned to 318a9b22,
+          # never pushed to its remote. EVERY image build failed here for days
+          # while the error said nothing about which repo or why.
+          #
+          # Init one at a time so a failure is attributable, and report all of
+          # them rather than stopping at the first.
+          failed=""
+          for p in $paths; do
+            if ! out=$(git submodule update --init "$p" 2>&1); then
+              want=$(git ls-tree HEAD "$p" | awk '{print $3}')
+              echo "::error::submodule ${p}: cannot fetch pinned commit ${want}. It is almost certainly UNPUSHED — the super-repo references a commit that exists on no remote. Push it from the clone that has it, or move the gitlink to a commit that is on the remote."
+              echo "$out" | sed 's/^/    /'
+              failed="${failed}${p} (${want:0:10})\n"
+            fi
+          done
+          if [ -n "$failed" ]; then
+            {
+              echo "### Submodule init failed"
+              echo ""
+              echo "These gitlinks point at commits no remote has:"
+              echo ""
+              printf '%b' "$failed"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
           git submodule foreach 'git reset --hard HEAD >/dev/null 2>&1 || true' || true
 
       - name: Log in to ghcr
@@ -76,15 +132,29 @@ jobs:
         id: tags
         env:
           OWNER: ${{ steps.img.outputs.owner }}
-          SHA: ${{ github.sha }}
+          EXTRA_TAG: ${{ inputs.extra_tag || '' }}
         run: |
+          set -euo pipefail
+          # Tag with the CHECKED-OUT commit, not github.sha. On a workflow_call
+          # github.sha is the CALLER's commit, which on a nightly run predates
+          # the bump this build exists to publish — so :<sha> would name a tree
+          # that was never built. Ask git what is actually in the working
+          # directory instead of trusting the event context.
+          SHA=$(git rev-parse HEAD)
+          echo "built_sha=${SHA}" >> "$GITHUB_OUTPUT"
           {
             echo 'tags<<EOF'
             echo "ghcr.io/${OWNER}/substrate:dev"
             echo "ghcr.io/${OWNER}/substrate:${SHA}"
+            if [ -n "${EXTRA_TAG}" ]; then
+              echo "ghcr.io/${OWNER}/substrate:${EXTRA_TAG}"
+            fi
             if [ "${HAS_DH}" = "true" ]; then
               echo "avigopal/substrate:dev"
               echo "avigopal/substrate:${SHA}"
+              if [ -n "${EXTRA_TAG}" ]; then
+                echo "avigopal/substrate:${EXTRA_TAG}"
+              fi
             fi
             echo EOF
           } >> "$GITHUB_OUTPUT"

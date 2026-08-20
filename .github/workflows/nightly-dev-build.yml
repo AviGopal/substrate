@@ -1,0 +1,124 @@
+name: Nightly dev build
+
+# Reconcile the branch heads, THEN build the reconciled tree — in one run.
+#
+# WHY THIS EXISTS AS A CHAIN AND NOT TWO SCHEDULES
+#
+# `bump-submodules` pushes with the default GITHUB_TOKEN, and GitHub does not
+# fire workflow triggers for pushes made with that token (the recursion guard).
+# So a bump that moves pointers produces NO image, and the two jobs cannot be
+# coupled by ordering their crons — a build scheduled "a bit after" the bump is
+# a race, and it races against a push that never notifies anything.
+#
+# Calling the two reusable workflows in sequence makes the dependency explicit:
+# the build receives the bump's commit SHA as an input and checks that out, so
+# it builds the reconciled tree rather than whatever HEAD was when the nightly
+# started.
+#
+# WHAT "RECONCILED" MEANS HERE
+#
+# Each submodule tracks a branch in .gitmodules (in practice `dev`). Bump asks
+# every submodule's remote for that branch head and fast-forwards the gitlink.
+# The nightly image is therefore "every vessel's dev head as of this run",
+# which is the thing an operator means by a nightly dev build — not "the
+# super-repo's tree as of whenever someone last pushed it".
+
+on:
+  schedule:
+    # 07:00 UTC. Deliberately NOT on the 6-hourly bump-submodules boundary
+    # (00/06/12/18): two jobs pushing to dev in the same minute is an avoidable
+    # non-fast-forward race, and this workflow reconciles for itself anyway.
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: 'Build even when no submodule pointer moved.'
+        type: boolean
+        default: false
+
+concurrency:
+  group: nightly-dev-build
+  # Never cancel a build in flight — a half-pushed image manifest is worse than
+  # a late one, and the next night's run will supersede it anyway.
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  # 1. Move every gitlink to its tracked branch head and push the result.
+  reconcile:
+    uses: ./.github/workflows/bump-submodules.yml
+    permissions:
+      contents: write
+    secrets: inherit
+
+  # 2. Build the reconciled commit.
+  #
+  # Runs when the reconcile moved something, or when an operator forced it.
+  # When nothing moved, the tree is identical to one :dev was already built
+  # from, so a build would republish a byte-identical image under a new tag —
+  # cost with no signal. `force_build` exists for the case where the image and
+  # the tree have drifted for a reason outside git (a base-image CVE rebuild).
+  build:
+    needs: reconcile
+    if: needs.reconcile.outputs.changed == '1' || inputs.force_build
+    uses: ./.github/workflows/build-substrate-image.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      # The bump commit, NOT this workflow's github.sha — that predates the
+      # push reconcile just made and would build the pre-bump tree, which is
+      # precisely the staleness this chain removes. Falls back to the caller
+      # ref for a forced build where nothing moved.
+      ref: ${{ needs.reconcile.outputs.sha || github.sha }}
+      extra_tag: nightly
+    secrets: inherit
+
+  # 3. Say what happened, including when nothing did.
+  #
+  # A skipped build is a legitimate outcome (nothing moved) and an invisible
+  # one — `if:` produces no output at all. Without this job the run reads as
+  # "nightly did nothing" whether it correctly no-opped or silently broke.
+  report:
+    needs: [reconcile, build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summarise
+        env:
+          CHANGED: ${{ needs.reconcile.outputs.changed }}
+          SHA: ${{ needs.reconcile.outputs.sha }}
+          RECONCILE_RESULT: ${{ needs.reconcile.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### Nightly dev build"
+            echo ""
+            echo "- reconcile: **${RECONCILE_RESULT}**"
+            echo "- pointers moved: **${CHANGED:-0}**"
+            echo "- build: **${BUILD_RESULT}**"
+            if [ -n "${SHA}" ]; then
+              echo "- built commit: \`${SHA}\`"
+            fi
+            if [ "${BUILD_RESULT}" = "skipped" ] && [ "${RECONCILE_RESULT}" = "success" ]; then
+              echo ""
+              echo "No submodule pointer moved, so the tree is identical to the last published image and no build ran. This is the expected quiet outcome, not a failure."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Fail the run when a stage genuinely failed. A skipped build after a
+          # successful reconcile is fine; anything else is not, and must not be
+          # reported green — a nightly that goes green while publishing nothing
+          # is the failure mode that let bump-submodules sit broken for days.
+          if [ "${RECONCILE_RESULT}" != "success" ]; then
+            echo "::error::reconcile did not succeed (${RECONCILE_RESULT}) — no image was built."
+            exit 1
+          fi
+          if [ "${BUILD_RESULT}" != "success" ] && [ "${BUILD_RESULT}" != "skipped" ]; then
+            echo "::error::build did not succeed (${BUILD_RESULT})."
+            exit 1
+          fi
