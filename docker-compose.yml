@@ -34,10 +34,9 @@ services:
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       # Optional: join an existing identity/discovery group (spoke) + provider/self-dev overrides
       METABOB_API_KEY: ${METABOB_API_KEY:-}
-      # VESSEL SELECTION — the whole family, not just roles. Only ENABLED_ROLES
-      # used to be forwarded here, so the other four knobs were documented in
-      # docs/SUBSTRATE.md as the operator's selection levers while being
-      # unreachable from the launch path that doc calls canonical.
+      # VESSEL SELECTION — the whole family, not just roles. All five knobs are
+      # forwarded here, so every selection lever docs/SUBSTRATE.md describes is
+      # reachable from this launch path.
       # Precedence (highest first): PROFILE > ENABLED_VESSELS > ENABLED_ROLES,
       # then + ENABLED_EXTRA_VESSELS, then - DISABLED_VESSELS.
       PROFILE: ${PROFILE:-}
@@ -136,8 +135,9 @@ volumes:
   # creates EMPTY volumes and starts a container that looks perfectly healthy with an empty
   # SurrealDB and an empty workspace. The old volumes are orphaned, not deleted, which is
   # worse: nothing errors, and the loss is invisible until someone asks where the traces went.
-  # Verified 2026-08-18: `docker inspect substrate-live` shows no compose label and mounts
-  # `substrate-workspace`; `docker compose config` resolves these to `substrate_*`.
+  # To see the mismatch for yourself: `docker inspect <container>` shows a Makefile-started
+  # fleet mounting the UNPREFIXED names with no compose label, while `docker compose config`
+  # resolves the same names here to `<project>_substrate-*`.
   #
   # If you need compose to adopt an existing fleet, declare these `external: true` with the
   # unprefixed names FIRST. Do not "just bring it up with compose" — that is the one action

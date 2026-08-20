@@ -26,8 +26,8 @@
 #
 #   # 2. spoke — inherits the hub's org, identity, trace store and LLM arms
 #   # NO `| tail -1`. `substrate-key show` prints the key as its ONLY stdout line
-#   # (an `mb-…` token); piping through tail -1 previously yielded a 32-char
-#   # string that authenticates nowhere — every call 401s INVALID_API_KEY.
+#   # (an `mb-…` token). Piping it through tail -1 yields a 32-char fragment that
+#   # authenticates nowhere — every call 401s INVALID_API_KEY.
 #   export CLUSTER_HUB_KEY="$(docker exec substrate-hub substrate-key show)"
 #   docker compose -p substrate-cluster -f scripts/substrate/docker-compose.cluster.yml \
 #     --profile spoke up -d
@@ -117,9 +117,7 @@ services:
   # Runs goal-host, development-vessel, ribosome, analysis, local-tools and its
   # own discovery. It runs NO store and NO identity — those resolve on the hub —
   # and NO LLM arm: the llm-resolver units carry role `models`, which `spoke`
-  # excludes, so a spoke resolves llm_completion on the hub through discovery.
-  # (This comment used to list "the LLM resolver" among the spoke's vessels,
-  # which was true only while the arms were bundled under `compute`.) Consequently it has no :8080 and no :8101 to bind, which
+  # excludes, so a spoke resolves llm_completion on the hub through discovery. Consequently it has no :8080 and no :8101 to bind, which
   # is why its health probe is goal-host (:8210) and not the root compose's
   # :8080. Pointing a spoke at the root compose's health test marks it unhealthy
   # forever, by design rather than by fault.
@@ -148,16 +146,21 @@ services:
       DISCOVERY_ENDPOINT: http://${CLUSTER_HUB_HOST:-hub}:8100
       HUB_DISCOVERY_URL: http://${CLUSTER_HUB_HOST:-hub}:8100
       # NOT optional here, despite docs/SUBSTRATE.md listing both as "optional
-      # override — derived from the discovery host if unset".
+      # override — derived from the discovery host and its port offset if unset".
       #
-      # The derivation keeps the HOST from DISCOVERY_ENDPOINT but hardcodes the
-      # HOST-MAPPED ports (gen-env.sh:249-250 → `http://<host>:18080` /
-      # `:18101`). Reaching the hub on any other port — a docker network, a k8s
-      # service, a reverse proxy — yields endpoints that do not exist. Verified:
-      # unset, this spoke derived `http://hub:18101`, which is CONNREFUSED, so
-      # every vessel's discovery heartbeat returned 401 and NOTHING registered
-      # — while the container still reported `healthy`, because the health probe
-      # only asks goal-host whether its own process is up.
+      # That derivation recovers a PORT_OFFSET applied to the host-mapped 18xxx
+      # block: a hub on `:23100` yields `:23080` / `:23101`. This cluster talks
+      # to the hub over the docker network on its CONTAINER-INTERNAL port 8100,
+      # which is below that block, so no offset is inferable and the siblings
+      # fall back to the conventional 18080/18101 — ports nothing serves here.
+      # The same applies to any non-offset front end: a k8s service, a reverse
+      # proxy, a tunnel. Set both explicitly whenever the hub is not reached on
+      # its host-mapped 18xxx port.
+      #
+      # Leaving them unset does not fail loudly. The spoke derives an endpoint
+      # nothing answers, every discovery heartbeat 401s, nothing registers — and
+      # the container still reports `healthy`, because the health probe only asks
+      # goal-host whether its own process is up.
       ACTIVITY_API_ENDPOINT: http://${CLUSTER_HUB_HOST:-hub}:8080
       IDENTITY_VESSEL_URL: http://${CLUSTER_HUB_HOST:-hub}:8101
       # Documented as *redundant* (gen-env infers `spoke` from a remote

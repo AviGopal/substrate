@@ -28,8 +28,8 @@ The substrate has generalized from "one local container" to **one image that run
 > their unit files exist as ordinary files and their `ExecCondition` passes
 > wherever a provider key is set, so a single `systemctl start llm-haiku` will
 > raise a local arm on a spoke. Those names appear nowhere in the inventory, so
-> `apply-inventory` cannot mask them. Boot-time behaviour is correct and verified;
-> do not describe it as "masked" or rely on it against a deliberate manual start.
+> `apply-inventory` cannot mask them. The role selection governs what starts **at
+> boot**; it is not a barrier against a deliberate manual start.
 - `full` = every role except `desktop` — the intended shape of a local substrate,
   and a hand-maintained enumeration. Note that `ENABLED_ROLES=full` is **not** the
   same as leaving the selection env unset: unset is a total no-op that masks
@@ -58,12 +58,12 @@ is passed, so a federated obsidian fleet loses its desktop silently.
 > designed set. If you want the autonomy timers in a federated deployment, name
 > them explicitly.
 >
-> This does **not** mean a federated pair is inert. `boredom-vessel` is a `compute`
-> vessel, so it runs on a spoke, and it does condition-driven work selection —
-> observed on the spoke built while verifying this page: `raw_gaps=4 admitted=4`,
-> then a reserved and dispatched gap-drain goal, with no operator. What a
-> hub+spoke pair loses is the *scheduled* autonomy surface, not gap-driven work
-> generation.
+> This does **not** mean a federated pair is inert. `boredom-vessel` carries role
+> `compute`, so it runs on a spoke and performs condition-driven work selection:
+> it admits open gaps as candidates, scores them, and dispatches without an
+> operator. What a hub+spoke pair loses is the *scheduled* autonomy surface, not
+> gap-driven work generation. To see it on a running spoke:
+> `docker exec <container> journalctl -u boredom-vessel -n 50`.
 
 `scripts/substrate/apply-inventory.sh` reads the inventory at boot — run by the container entrypoint *after* `gen-env` and *before* `exec systemd` — and `systemctl disable`s the unwanted units (it just removes the `*.wants` symlinks the image baked in). Selection env, highest precedence first:
 
@@ -72,6 +72,49 @@ is passed, so a federated obsidian fleet loses its desktop silently.
 - `DISABLED_VESSELS=unit,unit` — always off, even if selected above
 
 **Default (none of the three set) = every baked unit enabled = the full local substrate** (`apply-inventory.sh` is a no-op). Manifest-installed dynamic vessels (`"manifest": true`) are never baked-enabled, so they are never touched here — they are installed on demand (see [Dynamic vessels](#dynamic-vessels)).
+
+If a selection is set and cannot be applied — an unrecognised role or profile
+name — the container **refuses to boot** rather than starting the full baked
+fleet in place of the subset you asked for. The error names the offending values
+and lists the valid role groups and bare roles. With no selection set, a failure
+falls open to the default topology, because there "run everything" is the intent.
+
+### Where the inventory lives, and when it takes effect
+
+The inventory exists in **three** places, and they are not equivalent:
+
+| Location | Role |
+|---|---|
+| `scripts/substrate/vessels.inventory.json` (repo) | what you edit and commit |
+| `/usr/local/share/substrate/vessels.inventory.json` (image) | the default baked at build time; also the fallback every reader uses if the volume copy is missing |
+| `/workspace/substrate/fleet/vessels.inventory.json` (volume) | **authoritative at runtime** |
+
+First boot seeds the volume copy from the image. **Later boots do not** — the
+volume copy is the substrate's own, so it can alter its own membership. The
+in-container `substrate-pull-sync` converges the fleet files from git, so a
+committed inventory change does reach a running fleet's volume without a rebuild.
+
+> ⚠ **A propagated inventory change is not an applied one.** `apply-inventory`
+> runs exactly once per boot, before systemd starts, so a change that has landed
+> in the volume sits **inert until the container restarts**. A fleet can hold a
+> corrected inventory and go on running the old unit set indefinitely.
+>
+> The same is true of the boot-rendered LLM arm units and their `ExecCondition`
+> key guards: both are decided at boot. Restart the container to apply any of it
+> (`make -C scripts/substrate recreate LIVE_NAME=<name>` preserves the volumes,
+> and therefore the learning state).
+>
+> To see what a fleet is actually running versus what its inventory now says:
+>
+> ```bash
+> docker exec <container> diff \
+>   /workspace/substrate/fleet/vessels.inventory.json \
+>   /usr/local/share/substrate/vessels.inventory.json
+> docker exec <container> systemctl list-units --state=active --no-pager
+> ```
+>
+> No command reconciles or reports this drift for you; `substrate-doctor` reads
+> the inventory but does not compare it against git or against the running set.
 
 > ⚠ **The human surface is a manifest vessel, not just the federation units.**
 > `human-surface-vessel` (`:8310` → host `:18310`) is `"manifest": true`, so a
@@ -260,11 +303,10 @@ host-mapped ports. Wait for
 > **`healthy` is a weaker signal than it looks.** The container healthcheck runs
 > `substrate-ready --quick`, which covers the vessels marked `"core": true` in
 > the inventory — it is a *liveness* check, not a correctness one. It reports
-> healthy while SurrealDB root auth is broken and the fleet is unusable
-> (measured on a clean-room boot: healthy, 8 of 9 ports serving, and the doctor
-> failing on root auth). `docker exec substrate-live substrate-doctor` is the
-> check that covers auth, the registry and failed units — run it before trusting
-> a boot.
+> healthy while SurrealDB root auth is broken and the fleet is unusable: the
+> ports serve, the core vessels answer, and every request that needs the
+> datastore still fails. `docker exec <container> substrate-doctor` is the check
+> that covers auth, the registry and failed units — run it before trusting a boot.
 
 <a id="the-equivalent-raw-invocation"></a>
 The equivalent raw invocation on **any** docker host, and the one path that needs
@@ -378,10 +420,10 @@ set the two overrides explicitly.
 >
 > The loopback `identity_endpoint` is **inert**, not a hazard: it echoes the hub's
 > own `IDENTITY_VESSEL_URL` and no spoke code follows it. A joining spoke derives
-> its identity endpoint from the discovery host and port offset instead — verified:
-> a spoke pointed at a standalone on `:23100` got `http://…:23101` while
-> `/bootstrap` was advertising `http://127.0.0.1:8101`. Read it as a sign the hub
-> has no public identity configured, nothing more.
+> its identity endpoint from the discovery host and port offset instead, so a
+> spoke pointed at a hub on `:23100` uses `:23101` regardless of what `/bootstrap`
+> advertises. Read the loopback value as a sign the hub has no public identity
+> configured, nothing more.
 >
 > A non-empty `relay_multiaddrs` is **necessary but not sufficient**. The handler
 > builds that array from the `RELAY_MULTIADDR` env string or from registry circuit
@@ -460,10 +502,9 @@ instance is a standalone, self-contained fleet with its own everything.
 > the fleet inside that window (`PORT_OFFSET=20000` → `38080…38310`) works most
 > of the time and then fails at random with
 > `bind: address already in use` on a port nothing is listening on — a transient
-> outbound socket held it for the moment Docker tried to bind. This is not
-> theoretical: it is what `PORT_OFFSET=20000` did on the first attempt while
-> these docs were being verified, and the error names a "conflict" with a
-> process that no longer exists by the time you look.
+> outbound socket held it for the moment Docker tried to bind. The error names a
+> conflict with a process that no longer exists by the time you look, so the
+> failure is intermittent and the port always tests free afterwards.
 >
 > Offsets of `5000`–`12000` keep the block in the low 20000s–30000s, below the
 > range. Check yours before choosing:
@@ -917,9 +958,7 @@ The same image runs anywhere; the deploy scripts differ only in *how* the image 
 > a raw `docker run`, and `deploy-hub-pull.sh` — which accepts optional
 > `GHCR_USER`/`GHCR_TOKEN` for exactly that case. The build-on-target paths —
 > `deploy-hub.sh`, local `make build` — construct the image instead of pulling
-> it and would be unaffected. An earlier version of this note listed only the
-> build-on-target exemption and omitted `deploy-hub-pull.sh` from either side,
-> which is how that script kept a mandatory credential guard nobody re-examined.)
+> it and would be unaffected.)
 
 | Path | Command | What it does |
 |---|---|---|

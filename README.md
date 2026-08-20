@@ -68,24 +68,37 @@ The canonical image is `ghcr.io/avigopal/substrate:dev` (fleet), published by
 `.github/workflows/build-substrate-image.yml` on every push to `dev`. It is
 **public** and pulls anonymously — no `docker login` and no PAT.
 (`ghcr.io/avigopal/substrate:obsidian` adds an in-container Obsidian over noVNC.)
-A pulled image needs no submodules. Verify the package's visibility rather than
-trusting either claim: `curl -s "https://ghcr.io/token?scope=repository:avigopal/substrate:pull"`
-returns a usable token with no credentials, and a manifest fetch with it returns
-`200`. (A bare manifest request answering `401` is not evidence of a private
-package — that is the first step of the standard anonymous OCI token flow, which
-`docker pull` performs for you.)
+A pulled image needs no submodules.
+
+> To check the package's visibility yourself:
+> `curl -s "https://ghcr.io/token?scope=repository:avigopal/substrate:pull"`
+> returns a usable token with no credentials, and a manifest fetch with that
+> token returns `200`. A bare manifest request answering `401` is **not**
+> evidence of a private package — that is the first step of the standard
+> anonymous OCI token flow, which `docker pull` performs for you.
 Requirements: Docker with Linux x86_64 semantics and `--privileged` (native
 Linux, or Docker Desktop with the WSL2 backend on Windows).
 
-**Standalone substrate** — from the repo root, the canonical root-level
-`docker-compose.yml` reduces launch to a few commands; every secret but the one
-LLM key auto-generates on first boot and persists to the volumes:
+**Standalone substrate** — the canonical root-level `docker-compose.yml` reduces
+launch to a few commands; every secret but the one LLM key auto-generates on
+first boot and persists to the volumes.
+
+This path needs a **checkout** (for the compose file and `.env.example`), though
+not its submodules — a pulled image contains the vessel source already:
 
 ```bash
+git clone https://github.com/AviGopal/substrate.git && cd substrate
 cp scripts/substrate/.env.example .env    # set ANTHROPIC_API_KEY (or OPENAI_API_KEY)
 docker compose up -d                       # run from repo root — root compose is canonical
+
+# Wait for the fleet before asking it for anything. First boot seeds identity,
+# so the key does not exist until this reports healthy.
+until [ "$(docker inspect -f '{{.State.Health.Status}}' substrate-live)" = healthy ]; do sleep 5; done
 docker exec substrate-live substrate-key show
 ```
+
+To launch with **no checkout at all**, use the raw `docker run` below — it needs
+nothing from this repo.
 
 `scripts/substrate/docker-compose.yml` is a symlink to the root file, so
 either directory works. `OPENAI_API_KEY` works in place of `ANTHROPIC_API_KEY` —
@@ -103,10 +116,10 @@ docker run -d --privileged --name substrate-live \
   --tmpfs /run --tmpfs /run/lock ghcr.io/avigopal/substrate:dev
 ```
 
-(That is **nine** ports. `18310` is `human-surface-vessel` — the only vessel a
-human is meant to talk to. It was missing here while `docs/SUBSTRATE.md` and the
-root compose file both published it, so this command produced a fleet that looked
-healthy with the human surface bound inside the container and unreachable.)
+That is **nine** ports, matching `docs/SUBSTRATE.md` and the root compose file.
+`18310` is `human-surface-vessel` — the vessel a human talks to. Omit it and the
+fleet still reports healthy, with the human surface bound inside the container
+and unreachable from the host.
 
 Wait for `docker inspect --format '{{.State.Health.Status}}' substrate-live`
 to report `healthy`, then dispatch goals against `http://localhost:18210/run-goal`
@@ -116,6 +129,14 @@ the image — no repo checkout needed):
 
 ```bash
 docker exec substrate-live substrate-key show
+```
+
+`healthy` is a liveness signal, not a correctness one — it can report healthy
+while the datastore credentials are broken and every request that touches the
+store fails. Before trusting a boot, run the fuller check:
+
+```bash
+docker exec substrate-live substrate-doctor
 ```
 
 Optional: add `-e SUBSTRATE_GIT_PAT=<github-pat>` so the
