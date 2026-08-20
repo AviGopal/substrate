@@ -388,14 +388,24 @@ case "$_disc_host" in
     # subtracting would derive absurd siblings (443 - 18100 => activity on :423).
     # Below the block, fall back to the conventional ports and let the documented
     # ACTIVITY_API_ENDPOINT / IDENTITY_VESSEL_URL overrides carry the real values.
-    if [ "$_disc_port" -ge 18100 ] && [ "$(( 18101 + _disc_port - 18100 ))" -le 65535 ]; then
+    # Upper bound 47534 == 65535 - 18101, so the highest derived sibling still
+    # fits in a port. It MUST match the Makefile's bound exactly: the two layers
+    # implement the same rule for different launch paths, and when they disagreed
+    # (65535 here, 47534 there) a discovery port above 47534 derived different
+    # siblings depending on whether you used `make up` or a raw `docker run`.
+    if [ "$_disc_port" -ge 18100 ] && [ "$_disc_port" -le 47534 ]; then
       _port_off=$(( _disc_port - 18100 ))
     else
       _port_off=0
     fi
-    HUB_DISCOVERY_URL="${HUB_DISCOVERY_URL:-http://${_disc_host}:${_disc_port}}"
-    ACTIVITY_API_ENDPOINT="${ACTIVITY_API_ENDPOINT:-http://${_disc_host}:$(( 18080 + _port_off ))}"
-    IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL:-http://${_disc_host}:$(( 18101 + _port_off ))}"
+    # Preserve the SCHEME too. Hardcoding http:// silently downgraded a
+    # TLS-fronted hub — the port survived and the encryption did not, which is a
+    # worse failure than refusing outright because it looks like it worked.
+    _disc_scheme="$(printf '%s' "$DISCOVERY_ENDPOINT" | sed -nE 's#^([a-z]+)://.*#\1#p')"
+    [ -n "$_disc_scheme" ] || _disc_scheme=http
+    HUB_DISCOVERY_URL="${HUB_DISCOVERY_URL:-${_disc_scheme}://${_disc_host}:${_disc_port}}"
+    ACTIVITY_API_ENDPOINT="${ACTIVITY_API_ENDPOINT:-${_disc_scheme}://${_disc_host}:$(( 18080 + _port_off ))}"
+    IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL:-${_disc_scheme}://${_disc_host}:$(( 18101 + _port_off ))}"
     IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT:-$IDENTITY_VESSEL_URL}"
     ENABLED_ROLES="${ENABLED_ROLES:-spoke}"
     # the spoke's own vessels register into its LOCAL discovery, not the hub

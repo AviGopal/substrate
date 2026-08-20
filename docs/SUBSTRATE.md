@@ -481,23 +481,26 @@ instance is a standalone, self-contained fleet with its own everything.
 >
 > The Makefile's `LAUNCH_OVERRIDES` guard exists to catch exactly this — it
 > refuses to start a stopped container when you supply settings that would be
-> silently ignored. **It does not cover everything.** Verified against the
-> guard's actual variable list, these are silently dropped:
+> silently ignored. **It does not cover everything**, and the gaps have three
+> different causes, which need three different remedies:
 >
-> | Silently ignored on a stopped container | Why it matters |
-> |---|---|
-> | `PORT_OFFSET` | port mappings are fixed at creation |
-> | `ANTHROPIC_API_KEY` (and every other provider key) | the guard watches `API_KEY`, a *different* and normally-unset variable, so a rotated key appears to apply and does not |
-> | `PROFILE` | one of the five documented selection levers |
-> | `ENABLED_EXTRA_VESSELS` | another of the five |
+> | Setting | What actually happens | Remedy |
+> |---|---|---|
+> | `PORT_OFFSET` | unguarded; port mappings are fixed at creation | **`recreate` refuses** to change it (exits 1) — `docker rm -f <name>` first |
+> | `ANTHROPIC_API_KEY` and every other provider key | unguarded — the guard watches `API_KEY`, a *different* and normally-unset variable, so a rotated key appears to apply and does not | `recreate`, **supplying the key explicitly** — it is not read off the old container, and an unsupplied key silently falls back to `~/.metabob/config.json` |
+> | `PROFILE`, `ENABLED_EXTRA_VESSELS` | **never passed to `docker run` by the Makefile on ANY path**, including a fresh create — so `make up`/`recreate` cannot set them at all | raw `docker run -e PROFILE=…`, or `deploy-hub.sh`, which does pass `-e ENABLED_EXTRA_VESSELS` |
 >
-> `ENABLED_ROLES`, `ENABLED_VESSELS`, `DISABLED_VESSELS`, `METABOB_API_KEY` and
-> the endpoint overrides *are* guarded, and produce a clear error telling you to
-> use `recreate`.
+> Guarded, and producing a clear error telling you to use `recreate`:
+> `ENABLED_ROLES`, `ENABLED_VESSELS`, `DISABLED_VESSELS`, `METABOB_API_KEY`,
+> `API_KEY`, and the `DISCOVERY_ENDPOINT` / `ACTIVITY_API_ENDPOINT` /
+> `IDENTITY_VESSEL_URL` / `SURREALDB_URL` / `REDIS_URL` overrides.
 >
-> To change any of the unguarded ones, use `make recreate` (it carries settings
-> forward) or remove the container first (`docker rm -f <name>`); the volumes,
-> and therefore the learning state, survive both.
+> **Everything else `run-live` passes with `-e` is unguarded and silently dropped
+> on resume** — `METABOB_ENDPOINT` (an endpoint override, despite the
+> generalisation above), `OPENAI_BASE_URL`, `LLM_DEFAULT_MODEL`, `GITHUB_TOKEN`,
+> `SUBSTRATE_GIT_PAT`, `SUBSTRATE_REPO_OWNER`, `API_KEY_SECRET`,
+> `ALLOW_INSECURE_API_KEY_SECRET`, and the `RUNPOD_*` set. Treat the guard as a
+> partial safety net, not a contract: when in doubt, recreate.
 
 ```bash
 # Boot an isolated clean-room fleet (own volumes + own ports; substrate-live untouched)

@@ -186,10 +186,17 @@ DISCOVERY_HOST := $(shell echo '$(DISCOVERY_ENDPOINT)' | sed -E 's#^[a-z]+://##;
 # arm silently truncates the command and the port comes out as fragments of the
 # case statement itself. Use sed | grep | expr with if/then/fi only.
 DISCOVERY_PORT := $(shell echo '$(DISCOVERY_ENDPOINT)' | sed -E 's#^[a-z]+://##; s#^[^:/]*##; s#^:##; s#/.*##' | grep -E '^[0-9]+$$' || echo 18100)
+# 47534 == 65535 - 18101, so the highest derived sibling still fits in a port.
+# This bound MUST match gen-env.sh's exactly — same rule, two launch paths. They
+# briefly disagreed (65535 vs 47534) and a discovery port above 47534 then
+# derived different siblings depending on which path you launched through.
 PORT_BLOCK_OFF := $(shell if [ '$(DISCOVERY_PORT)' -ge 18100 ] && [ '$(DISCOVERY_PORT)' -le 47534 ]; then expr '$(DISCOVERY_PORT)' - 18100; else echo 0; fi)
-HUB_DISCOVERY_URL := http://$(DISCOVERY_HOST):$(DISCOVERY_PORT)
-ACTIVITY_API_ENDPOINT := $(if $(strip $(ACTIVITY_API_ENDPOINT)),$(ACTIVITY_API_ENDPOINT),http://$(DISCOVERY_HOST):$(shell expr 18080 + '$(PORT_BLOCK_OFF)'))
-IDENTITY_VESSEL_URL := $(if $(strip $(IDENTITY_VESSEL_URL)),$(IDENTITY_VESSEL_URL),http://$(DISCOVERY_HOST):$(shell expr 18101 + '$(PORT_BLOCK_OFF)'))
+# Preserve the scheme: hardcoding http:// silently downgraded a TLS-fronted hub,
+# keeping the port and losing the encryption — a failure that looks like success.
+DISCOVERY_SCHEME := $(shell echo '$(DISCOVERY_ENDPOINT)' | sed -nE 's#^([a-z]+)://.*#\1#p' | grep -E '^[a-z]+$$' || echo http)
+HUB_DISCOVERY_URL := $(DISCOVERY_SCHEME)://$(DISCOVERY_HOST):$(DISCOVERY_PORT)
+ACTIVITY_API_ENDPOINT := $(if $(strip $(ACTIVITY_API_ENDPOINT)),$(ACTIVITY_API_ENDPOINT),$(DISCOVERY_SCHEME)://$(DISCOVERY_HOST):$(shell expr 18080 + '$(PORT_BLOCK_OFF)'))
+IDENTITY_VESSEL_URL := $(if $(strip $(IDENTITY_VESSEL_URL)),$(IDENTITY_VESSEL_URL),$(DISCOVERY_SCHEME)://$(DISCOVERY_HOST):$(shell expr 18101 + '$(PORT_BLOCK_OFF)'))
 CONTAINER_DISCOVERY_ENDPOINT :=
 endif
 endif

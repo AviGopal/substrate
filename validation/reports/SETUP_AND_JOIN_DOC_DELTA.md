@@ -174,9 +174,24 @@ a container command.
 proof of a hardcoded literal. So on a brand-new fleet, `JWT_SECRET`,
 `API_KEY_SECRET` and `METABOB_API_KEY` all reported **`hardcoded`** — alarming
 exactly where calm was warranted, on the one question the tool exists to answer.
-Two fleets were compared to settle it; their secrets differed, so they were
-generated. `gen-env` now records each mint, and absence is reported as
-`unrecorded` rather than answered.
+
+Two fleets running the *same image ID* were compared to settle it: `JWT_SECRET`,
+`API_KEY_SECRET`, `SURREAL_PASS` and `FED_SUBSTRATE_ID` all differ, and a differing
+value cannot have come from a shared image, so they are genuinely generated. That
+is **four of five**, not five — `METABOB_API_KEY` *is* byte-identical across the
+two, because it is the hub-issued join credential handed to the spoke with `-e`,
+which the spoke's own provenance correctly records as `env`. The shared value is
+by design; stating it as five would have been the same overclaim in the opposite
+direction.
+
+`gen-env` now records each mint, absence is reported as `unrecorded` rather than
+answered, and the "a 'hardcoded' source means…" footer prints **only when a
+hardcoded row is actually on screen** — unconditionally it re-created the very
+alarm the fix removed. Both branches verified in-container: with no hardcoded row
+the footer is absent; under `ALLOW_INSECURE_API_KEY_SECRET=1` on an existing
+datastore, `API_KEY_SECRET` correctly renders `hardcoded  dev-se…` *with* the
+warning — the one case where it is the literal truth and the operator most needs
+to see it.
 
 ---
 
@@ -245,6 +260,26 @@ None of these were changed in this round. Reclassifying roles on the strength of
 audit is how a wrong mint happens; `desktop` looked like an omission and was not.
 They are recorded here so the next round starts from evidence rather than from the
 same three re-derivations.
+
+---
+
+## A caveat on where these fixes are, versus where they run
+
+Verification surfaced a distinction worth stating plainly, because it is the same
+propagation trap this repo keeps paying for. **Every fix here is committed and
+pushed, and CI has since rebuilt and published `:dev` from a commit after them.**
+But at the moment the two test fleets were graded, neither was *executing* the
+fixed `gen-env`: the clean room's good provenance file came from a one-shot manual
+run that the in-container mirror later overwrote with the image's older copy. The
+`provtest` container that validated the provenance fix across a first and second
+boot was a separate throwaway carrying the patched script deliberately.
+
+So the correct claim is: **fixed at source, verified by executing the fixed code in
+a container, and now published** — not "observed working on a long-running fleet."
+Those are different sentences and only the first two were earned at grading time.
+Any fleet still running an older image continues to exhibit the old behaviour until
+it is recreated; `substrate-live` still shows the duplicate `SURREAL_PASS` line,
+including the bogus `provided` token no reader parses.
 
 ---
 

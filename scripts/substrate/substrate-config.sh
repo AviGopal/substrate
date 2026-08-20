@@ -142,6 +142,7 @@ while IFS= read -r line; do
     [ -z "$val" ] && shown="(empty)" || shown="$val"
   fi
   rows=$((rows + 1))
+  [ "$src" = hardcoded ] && saw_hardcoded=1
   if [ "$FORMAT" = json ]; then
     [ "$first" = 0 ] && printf ',\n'; first=0
     printf '  "%s": {"source": "%s", "value": "%s"}' "$name" "$src" "$(printf '%s' "$shown" | sed 's/"/\\"/g')"
@@ -161,4 +162,11 @@ fi
 
 echo
 echo "$rows variable(s). Secrets masked; --unmask to reveal."
-echo "A 'hardcoded' source means gen-env.sh writes a literal — setting it has NO effect."
+# Print the hardcoded warning ONLY when a hardcoded row is actually on screen.
+# Unconditionally, it re-created the alarm this tool's provenance fix set out to
+# remove: a reader saw "a 'hardcoded' source means…" under a table containing no
+# such row and reasonably concluded something was hardcoded. Say nothing when
+# there is nothing to say.
+if [ "${saw_hardcoded:-0}" = 1 ]; then
+  echo "A 'hardcoded' source means gen-env.sh writes a literal — setting it has NO effect."
+fi
