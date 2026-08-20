@@ -298,3 +298,28 @@ try {
   const f = "/workspace/metrics/spectral-gap.jsonl";
   await Bun.write(Bun.file(f), (await Bun.file(f).exists() ? await Bun.file(f).text() : "") + JSON.stringify(out) + "\n");
 } catch { /* tolerant */ }
+
+// PUBLISH AS A SHAPE (law 1). The JSONL above is a file on ONE host: no shape, no
+// federation, and — grep-verified across repos/ and scripts/ — no programmatic
+// consumer anywhere. So the master inequality of SUBSTRATE_AS_DYNAMICS.md §3 was
+// computed correctly every 20 minutes and could not be read by anything that acts,
+// while two live governors that call themselves "λ₁ ≥ ρ_grow" compute two DIFFERENT
+// quantities. Until these numbers are resolvable through discovery, no claim about
+// the convergence rate λ₁·ρ_sample·κ⁻¹ is falsifiable.
+//
+// Fire-and-forget and non-fatal: this tracker's job is to MEASURE. If the store is
+// unreachable the JSONL still holds the reading, and a failed publish must never
+// cost the measurement.
+try {
+  const store = (process.env["ACTIVITY_API_ENDPOINT"] ?? process.env["ACTIVITY_API_URL"] ?? "http://127.0.0.1:8080").replace(/\/+$/, "");
+  const key = process.env["METABOB_API_KEY"] ?? process.env["API_KEY"] ?? "";
+  const res = await fetch(`${store}/v2/activities/observable`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(key ? { Authorization: `ApiKey ${key}` } : {}) },
+    body: JSON.stringify({ kind: "stability", body: out }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  console.log(`[spectral-gap] published substrateObservable(kind=stability) -> ${res.status}`);
+} catch (e) {
+  console.warn(`[spectral-gap] observable publish failed (non-fatal): ${(e as Error).message}`);
+}

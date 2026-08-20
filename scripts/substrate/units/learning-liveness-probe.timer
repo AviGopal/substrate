@@ -1,0 +1,16 @@
+[Unit]
+Description=Learning-liveness probe timer
+
+[Timer]
+# Every 6h, not every 20min. This probe DISPATCHES A REAL GOAL each run — a
+# high-frequency liveness check would itself become a meaningful share of the
+# substrate's traffic and bias the very posteriors it measures. Rare and honest
+# beats frequent and self-influencing.
+OnActiveSec=10min
+OnUnitActiveSec=6h
+Persistent=true
+AccuracySec=120s
+Unit=learning-liveness-probe.service
+
+[Install]
+WantedBy=timers.target

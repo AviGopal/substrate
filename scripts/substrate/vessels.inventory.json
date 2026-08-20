@@ -267,6 +267,10 @@
       "role": "store"
     },
     {
+      "unit": "learning-liveness-probe.timer",
+      "role": "compute"
+    },
+    {
       "unit": "autonomy-metrics.timer",
       "role": "infra"
     },
@@ -348,6 +352,7 @@
     { "unit": "self-operational-health.service", "role": "infra" },
     { "unit": "self-recovery.service", "role": "infra" },
     { "unit": "self-repair-operational.service", "role": "infra" },
+    { "unit": "learning-liveness-probe.service", "role": "compute" },
     { "unit": "spectral-gap.service", "role": "store" },
     { "unit": "substrate-pull-sync.service", "role": "infra" },
     { "unit": "surgical-gap-scan.service", "role": "autonomy" }
