@@ -4,7 +4,10 @@ name: Build & publish substrate image
 # 20-30 min clone+build. Requires a repo secret SUBSTRATE_GIT_PAT (repo:read) to fetch the
 # private submodules; ghcr push uses the built-in GITHUB_TOKEN (packages: write).
 #
-# ghcr images are PRIVATE (anonymous pull -> 401). To keep the PUBLIC Docker Hub tag
+# The ghcr package is PUBLIC — `docker pull ghcr.io/<owner>/substrate:dev` needs no
+# credentials (verified with an empty docker config: the manifest and layer blobs both
+# fetch anonymously). It was private once, and this comment said so long after it
+# stopped being true. To keep the PUBLIC Docker Hub tag
 # avigopal/substrate:dev current on every dev push, set two OPTIONAL repo secrets:
 #   DOCKERHUB_USERNAME  - Docker Hub account with push access to avigopal/substrate
 #   DOCKERHUB_TOKEN     - a Docker Hub access token (used as the login password)
@@ -167,7 +170,38 @@ jobs:
         with:
           context: .
           file: Dockerfile.substrate
+          # ★ `target` IS LOAD-BEARING. Dockerfile.substrate ends with
+          # `FROM base AS substrate-obsidian` (the noVNC/Xvfb desktop flavour),
+          # and buildkit builds the LAST stage when no target is named. This
+          # step carried no target, so EVERY image ever published as :dev was
+          # the obsidian build — shipping Xvfb, x11vnc, fluxbox, novnc and
+          # websockify in the tag documented as "fleet only". Verified on the
+          # published image: /usr/share/novnc exists in ghcr :dev.
+          #
+          # The Makefile's local build has always passed `--target base` and
+          # says why in a comment; CI and the Makefile disagreed, and CI is the
+          # one that publishes. Naming the stage explicitly also stops a future
+          # stage appended to the Dockerfile from silently becoming :dev.
+          target: base
           push: true
           tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The obsidian flavour, published as a SEPARATE tag rather than as a
+      # side effect of stage ordering. docs/SUBSTRATE.md has always described
+      # `:obsidian` as a published tag; until now it 404'd, because the stage
+      # it names was being published as `:dev` instead.
+      #
+      # Same cache, so this reuses every layer the base build just produced —
+      # substrate-obsidian is `FROM base`, so only its own layers are new.
+      - name: Build & push the obsidian flavour
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.substrate
+          target: substrate-obsidian
+          push: true
+          tags: ghcr.io/${{ steps.img.outputs.owner }}/substrate:obsidian
           cache-from: type=gha
           cache-to: type=gha,mode=max

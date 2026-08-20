@@ -26,7 +26,23 @@ The substrate has generalized from "one local container" to **one image that run
 - `ENABLED_ROLES=role,role` — roles/role-groups to keep (`hub`/`spoke`/`full` expand via `inventory.roles`); everything else is disabled
 - `DISABLED_VESSELS=unit,unit` — always off, even if selected above
 
-**Default (none of the three set) = every unit enabled = the full local substrate** (`apply-inventory.sh` is a no-op). Manifest-installed dynamic vessels (`"manifest": true`, i.e. the federation units) are never baked-enabled, so they are never touched here — they are installed on demand (see [Dynamic vessels](#dynamic-vessels)).
+**Default (none of the three set) = every baked unit enabled = the full local substrate** (`apply-inventory.sh` is a no-op). Manifest-installed dynamic vessels (`"manifest": true`) are never baked-enabled, so they are never touched here — they are installed on demand (see [Dynamic vessels](#dynamic-vessels)).
+
+> ⚠ **The human surface is a manifest vessel, not just the federation units.**
+> `human-surface-vessel` (`:8310` → host `:18310`) is `"manifest": true`, so a
+> default boot **publishes its port with nothing listening** — the port answers
+> connection-refused while every other health signal reads green. It is the one
+> vessel a human is meant to talk to, so a fleet that looks complete can have no
+> usable surface. Install it explicitly:
+>
+> ```bash
+> docker exec substrate-live vessel-ctl install human-surface-vessel
+> curl -s -o /dev/null -w '%{http_code}\n' http://localhost:18310/health   # expect 200
+> ```
+>
+> The full manifest set is `human-surface-vessel`, `federation-relay` and
+> `federation-transport-vessel` — check with
+> `jq -r '.vessels[] | select(.manifest) | .unit' scripts/substrate/vessels.inventory.json`.
 
 ### The LLM arm fleet is rendered, not baked
 
@@ -77,9 +93,10 @@ The same artifact runs either way — one image
 compose) is the checkout-free path: a pulled image plus one env var. **Source**
 (`make up`) is the everyday development path: a checkout with submodules, one
 command, operator tooling auto-pointed. The image is published to GHCR by CI on
-every push to `dev`; it is **private** (it bakes vessel source), so pulling it
-needs `docker login ghcr.io` with a token that has `read:packages` scope. A
-Docker Hub `avigopal/substrate:dev` mirror may exist, but GHCR is the repo.
+pushes to `dev` that touch the image inputs (`Dockerfile.substrate`, `repos/**`,
+`scripts/substrate/**`); the package is **public**, so `docker pull` needs no
+credentials. A Docker Hub `avigopal/substrate:dev` mirror may exist, but GHCR is
+the repo.
 
 ### Source path — `make up`
 
@@ -110,7 +127,10 @@ The scheme then adapts to whatever credentials the human has.
 `up` builds the image **only if none exists**, starts (or creates)
 `substrate-live`, waits up to 240s on the fleet readiness matrix (best-effort —
 on timeout it still proceeds and lets the doctor report what failed), and runs
-the doctor. **No other host step is load-bearing**: identity seeding runs
+the doctor. **`up` exits non-zero when the doctor finds failures**, including on
+a first boot — read the doctor block rather than the exit code alone, since the
+container can be running and serving most ports while a check like SurrealDB
+root auth fails. **No other host step is load-bearing**: identity seeding runs
 in-container (`identity-seeder.service`,
 idempotent, restarts key consumers only when a key is actually minted),
 readiness is a systemd fact (`substrate-ready.service`) surfaced to the host via
@@ -133,38 +153,62 @@ No make, no submodules. A root-level `docker-compose.yml` is canonical
 (`scripts/substrate/docker-compose.yml` is a symlink to it), so the whole path is
 a few commands **from the repo root**:
 
+> ⚠ **Never run `docker compose up` against an existing docker-run fleet.**
+> Compose prefixes volume names with the project, so the `substrate-workspace` /
+> `substrate-surreal` declared in `docker-compose.yml` become
+> `substrate_substrate-workspace` / `substrate_substrate-surreal`. A fleet
+> started by `make up` mounts the **unprefixed** names, so compose does not
+> adopt it — it creates EMPTY volumes and starts a container that looks
+> perfectly healthy with an empty SurrealDB and an empty workspace. The old
+> volumes are orphaned rather than deleted, which is worse: nothing errors, and
+> the loss is invisible until someone asks where the traces went.
+>
+> Use compose on a **fresh host**, or for an existing fleet declare the volumes
+> `external: true` under their unprefixed names first. `docker inspect
+> substrate-live --format '{{range .Mounts}}{{.Name}} {{end}}'` tells you which
+> set a running container actually holds.
+
 ```bash
 cp scripts/substrate/.env.example .env      # set ANTHROPIC_API_KEY
-docker login ghcr.io                        # token with read:packages (private image)
 docker compose up -d                        # root compose is canonical
 docker exec substrate-live substrate-key show   # read the operator API key
 ```
 
-`docker compose` pulls `ghcr.io/avigopal/substrate:dev`, mounts the two named
-volumes, and publishes the host-mapped ports. Wait for
+`docker compose` pulls `ghcr.io/avigopal/substrate:dev` (public — no
+`docker login` needed), mounts its two named volumes, and publishes the
+host-mapped ports. Wait for
 `docker inspect --format '{{.State.Health.Status}}' substrate-live` to report
 `healthy` before reading the key; `substrate-key` is baked into the image at
 `/usr/local/bin/substrate-key`, so no checkout is needed.
 
-The equivalent raw invocation on **any** docker host (after `docker login
-ghcr.io`):
+> **`healthy` is a weaker signal than it looks.** The container healthcheck
+> probes `:8080/health` only, so it can report healthy while SurrealDB root auth
+> is broken and the fleet is unusable. `docker exec substrate-live
+> substrate-doctor` is the check that covers auth, the registry and failed
+> units — run it before trusting a boot.
+
+The equivalent raw invocation on **any** docker host — same nine published ports
+as compose, including the human surface:
 
 ```bash
 docker run -d --privileged --name substrate-live \
   -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
   -e ANTHROPIC_API_KEY=sk-ant-... \
   -p 18080:8080 -p 18090:8090 -p 18100:8100 -p 18101:8101 -p 18210:8210 \
-  -p 18250:8250 -p 18260:8260 -p 18270:8270 \
+  -p 18250:8250 -p 18260:8260 -p 18270:8270 -p 18310:8310 \
   --tmpfs /run --tmpfs /run/lock ghcr.io/avigopal/substrate:dev
 ```
+
+Note the volume names above are the **unprefixed** ones — this invocation joins
+the `make up` fleet, not the compose one.
 
 ### Container config matrix
 
 The image is published to GHCR as `ghcr.io/avigopal/substrate:dev` (fleet only;
 Obsidian runs as a host peer) and `ghcr.io/avigopal/substrate:obsidian` (fleet +
-in-container Obsidian over noVNC). The image is private, so a pull needs `docker
-login ghcr.io` with a `read:packages` token — but it needs **no repo checkout and
-no submodules**; everything a fresh container consumes is baked in or generated:
+in-container Obsidian over noVNC). The package is **public** — a pull needs no
+credentials — and it needs **no repo checkout and no submodules**; everything a
+fresh container consumes is baked in or generated:
 
 - **Required config:** one LLM provider key (`ANTHROPIC_API_KEY`, or
   `OPENAI_API_KEY` + `OPENAI_BASE_URL` for OpenAI-compatible/local models) —
@@ -270,9 +314,18 @@ instance is a standalone, self-contained fleet with its own everything.
 - **`LIVE_NAME=<name>`** renames the container *and* its named volumes to
   `<name>-surreal` (`/var/lib/surrealdb`) and `<name>-workspace` (`/workspace`),
   so its traces, posteriors, concept graph, and secrets are entirely separate.
-- **`PORT_OFFSET=<n>`** shifts every published host port by `n` so the two fleets
-  don't collide (e.g. `PORT_OFFSET=20000` → activity-api `38080`, discovery
-  `38100`, goal-host `38210`, concept-db `38260`).
+- **`PORT_OFFSET=<n>`** shifts every port published by **`run-live`** by `n` so
+  the two fleets don't collide (e.g. `PORT_OFFSET=20000` → activity-api `38080`,
+  discovery `38100`, goal-host `38210`, concept-db `38260`). It does **not**
+  reach `run-live-obsidian`, which hardcodes its nine ports — two obsidian
+  fleets collide however you set it.
+
+> **`PORT_OFFSET` is only applied when the container is CREATED.** It is not in
+> the Makefile's `LAUNCH_OVERRIDES` guard, so `make up LIVE_NAME=… PORT_OFFSET=…`
+> against a container that already exists but is *stopped* silently `docker
+> start`s it on the OLD mappings — port mappings are immutable Docker config.
+> To change the offset, remove the container first (`docker rm -f <name>`); the
+> volumes, and therefore the learning state, survive that.
 
 ```bash
 # Boot an isolated clean-room fleet (own volumes + own ports; substrate-live untouched)
@@ -314,7 +367,7 @@ scripts/substrate/configure-local.sh
 
 After step 4, `~/.metabob/config.json` points to `http://localhost:18080` and all validation harnesses use it automatically.
 
-**Note on ports**: The container maps internal ports to host ports with an 18000 offset — activity-api is at `localhost:18080`, discovery-vessel at `localhost:18100`, etc. Internal vessel-to-vessel calls use `127.0.0.1:808x` directly inside the container.
+**Note on ports**: The container maps internal ports to host ports with a **+10000** offset — internal `8xxx` becomes host `18xxx`, so activity-api is at `localhost:18080`, discovery-vessel at `localhost:18100`, and the human surface at `localhost:18310`. Internal vessel-to-vessel calls use `127.0.0.1:8xxx` directly inside the container.
 
 **Running CLI commands inside the container**: always source the env file with auto-export so child processes (Bun) inherit the variables:
 ```bash
@@ -480,6 +533,8 @@ Vessels with a `restart-<vessel>` target:
 - `restart-obsidian-vessel`
 - `restart-ribosome-vessel`
 - `restart-stateful-ui-vessel`
+- `restart-human-surface-vessel` (its sync step also installs/enables the unit,
+  since the human surface is a manifest vessel — see below)
 
 The core vessels — `activity-api`, `identity-vessel`, `discovery-vessel`,
 `surrealdb` — have **no** make restart target. Push reaches them like every
@@ -506,7 +561,11 @@ bun run validation/scripts/stratified-harness.ts
 # traced execution. Agents drive validation through the cockpit, not a CLI.
 
 # Check the trace appeared
-curl -s "http://localhost:18080/v2/activities/execution-traces?limit=1" | jq .
+# The trace store requires auth — the key is in ~/.metabob/config.json
+# (or `docker exec substrate-live substrate-key show`).
+KEY=$(jq -r .metabob.apiKey ~/.metabob/config.json)
+curl -s -H "Authorization: ApiKey $KEY" \
+  "http://localhost:18080/v2/activities/execution-traces?limit=1" | jq .
 ```
 
 ## Monitoring
@@ -669,17 +728,17 @@ activity-api port yourself (e.g. `http://localhost:38080`).
 
 The same image runs anywhere; the deploy scripts differ only in *how* the image and source reach the target. Runtime state always lives in the two named volumes (`substrate-surreal` at `/var/lib/surrealdb`, `substrate-workspace` at `/workspace`), which are host-detached and survive rebuilds — so any of these paths preserves learning state across updates.
 
-> **GHCR prerequisite (for any path that *pulls* the prebuilt image).** The
-> published image is **private** (it bakes vessel source), so pulling
-> `ghcr.io/avigopal/substrate:dev` — the container/compose path, or a raw
-> `docker run` that hasn't built locally — first needs `docker login ghcr.io`
-> with a token granted `read:packages`. The build-on-target paths below
-> (`deploy-hub.sh`, local `make build`) construct the image instead of pulling
-> it, so they don't hit this gate.
+> **No GHCR credential is needed to pull.** The published package is public, so
+> `ghcr.io/avigopal/substrate:dev` pulls anonymously — the container/compose
+> path and a raw `docker run` both work with no `docker login`. (Should the
+> package ever be flipped back to private, those paths would need a
+> `read:packages` token; the build-on-target paths below — `deploy-hub.sh`,
+> local `make build` — construct the image instead of pulling it and would be
+> unaffected.)
 
 | Path | Command | What it does |
 |---|---|---|
-| **Local** | `make -C scripts/substrate run-live ANTHROPIC_API_KEY=…` | Builds/runs the full fleet locally as `substrate-live` (host ports `18080`/`18090`/`18100`/`18210`/`18250`/`18260`/`18270`). The everyday development target. |
+| **Local** | `make -C scripts/substrate run-live ANTHROPIC_API_KEY=…` | Builds/runs the full fleet locally as `substrate-live` (host ports `18080`/`18090`/`18100`/`18101`/`18210`/`18250`/`18260`/`18270`/`18310`). The everyday development target. |
 | **Hub (clone + build on a VM)** | `GITHUB_PAT=… ANTHROPIC_API_KEY=… SSH_KEY=… bash scripts/substrate/deploy-hub.sh root@<vm-ip> <public-ip>` | `deploy-hub.sh` clones the repo + submodules **on the VM** and builds there (no multi-GB image ship), runs `ENABLED_ROLES=hub`, seeds the single shared org (so spokes registering with a hub-issued key share its namespace), and stands up the libp2p relay. |
 | **Remote (ship prebuilt image over SSH)** | `ANTHROPIC_API_KEY=… bash scripts/substrate/deploy-remote.sh root@<vm-ip>` | `deploy-remote.sh` ships the locally-built image via `docker save \| ssh docker load` (**no registry**), runs + seeds it on the VM using the portable named volumes. Optional `PUBLIC_IP=… RUN_RELAY=1` also stands up the public relay; optional `PEER_DISCOVERY=<ip>:18100 FEDERATION_SIGNING_SECRET=<hex>` peers it to another substrate. |
 | **Fleet convergence** | *(no command — it is already running)* | Every substrate converges itself: `substrate-pull-sync.timer` runs in-container on each box and pulls `origin/dev` into that container's own clones. A fleet converges because each member pulls, not because a host pushes to all of them. See [Self-sync](#self-sync-git-remotes-are-the-only-code-channel). |
