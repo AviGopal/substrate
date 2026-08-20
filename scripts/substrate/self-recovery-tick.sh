@@ -110,7 +110,23 @@ not_installed() { ! csh "[ -f /etc/systemd/system/$1.service ]" 2>/dev/null; }
 # restarted mid-migration, each restart replaying ~2min of schema work with the
 # trace store down and every spoke spooling. systemd already bounds this with
 # TimeoutStartSec; let that bound apply instead of pre-empting it.
-starting() { [ "$(csys show "$1" -p ActiveState --value 2>/dev/null)" = "activating" ]; }
+#
+# BUT `activating` IS ALSO WHERE A CRASH-LOOP PARKS. With Restart=always a unit
+# that dies instantly spends its life alternating between `activating`
+# (SubState=auto-restart) and a sub-second run, so this guard — written for a
+# genuinely slow start — was excusing the one failure mode nothing else catches.
+# It is never `failed`, so no check above it fires either. Measured 2026-08-19:
+# federation-transport-vessel at NRestarts=1681 over five days on one container
+# and 61 within minutes on a fresh one, skipped by this function every tick.
+#
+# SubState is the discriminator, not ActiveState: a real start phase is
+# `start`/`start-pre`/`start-post`, while `auto-restart` is the gap BETWEEN
+# crashes and means the unit has already died at least once.
+starting() {
+  [ "$(csys show "$1" -p ActiveState --value 2>/dev/null)" = "activating" ] || return 1
+  [ "$(csys show "$1" -p SubState --value 2>/dev/null)" = "auto-restart" ] && return 1
+  return 0
+}
 # Revert a vessel's /vessels/<name>/src from the IN-CONTAINER git clone
 # (/workspace/git/vessels/<name>): the last-good pin recorded by pull-sync/
 # cutover at /workspace/.last-good/<name> when present, else the clone's

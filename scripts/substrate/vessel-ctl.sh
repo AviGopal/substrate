@@ -31,8 +31,21 @@ CONTAINER="substrate-live"
 while [[ $# -gt 0 ]]; do case "$1" in --container) CONTAINER="$2"; shift 2;; *) shift;; esac; done
 
 # Dual context: in-container iff no working docker CLI for $CONTAINER.
-if command -v docker >/dev/null 2>&1 && docker inspect "$CONTAINER" >/dev/null 2>&1; then
+#
+# `docker inspect` SUCCEEDS for a container that merely EXISTS, including a
+# stopped one — so a stopped target selected the docker-exec path, every csh()
+# failed, manifest_json() emitted nothing, and the caller was told
+# `vessel '<name>' not in manifest`. That names the wrong cause entirely: the
+# manifest is fine and the container is down. Observed 2026-08-19 against a
+# container another session had stopped seconds earlier; the misdiagnosis cost a
+# whole run. Ask whether it is RUNNING, which is the thing docker exec needs.
+if command -v docker >/dev/null 2>&1 \
+   && [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null)" = "true" ]; then
   IN_CONTAINER=0
+elif command -v docker >/dev/null 2>&1 && docker inspect "$CONTAINER" >/dev/null 2>&1; then
+  # It exists and is not running. Refusing beats every downstream symptom.
+  echo "{\"ok\":false,\"error\":\"container '$CONTAINER' exists but is NOT running — start it before installing vessels\"}"
+  exit 1
 else
   IN_CONTAINER=1
 fi

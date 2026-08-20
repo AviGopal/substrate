@@ -469,8 +469,17 @@ BOOT_RC=0
 # so a real boot printed the git credential and the API key in plaintext to any
 # log, tee, or CI capture. PIPESTATUS keeps make's exit code across the pipe —
 # `$?` after a pipeline reports redact's status, which is always 0.
+# `set -e` FIRES ON THE PIPELINE ITSELF, one line before the guard below can run.
+# The downgrade-to-warning logic was written and correct, and it was unreachable:
+# with `set -euo pipefail`, a doctor failure aborted the script here, so steps 3-10
+# — including the vessel-ctl install that puts the human surface on the box — never
+# executed. The symptom is a container that is up and healthy with no surface on it
+# and an exit code of 2, which reads like the boot failed rather than like the script
+# quit early. Suspend `-e` for exactly this pipeline so PIPESTATUS can be consulted.
+set +e
 make -C "$HERE" up "${MAKE_VARS[@]}" 2>&1 | redact
 BOOT_RC=${PIPESTATUS[0]}
+set -e
 
 if ! docker ps --format '{{.Names}}' | grep -qx "$NAME"; then
   echo "[ui-only-up] ERROR: '$NAME' is not running after boot (make up exit $BOOT_RC)." >&2

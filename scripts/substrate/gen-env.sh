@@ -38,10 +38,14 @@ case "$_llmkey_hub_host" in
   ""|127.0.0.1|localhost|0.0.0.0|::1|"$(hostname 2>/dev/null)") : ;;
   *) _is_spoke=1 ;;                                # a named hub is a spoke, whatever DISCOVERY_ENDPOINT says
 esac
-if [[ "$_is_spoke" = "0" && -z "${ANTHROPIC_API_KEY:-}" && -z "${OPENAI_API_KEY:-}" ]]; then
-  echo "[gen-env] ERROR: No LLM provider key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY (a root/standalone needs one; a spoke inherits LLM from its hub)." >&2
-  exit 1
-fi
+# NOTE: the guard itself now runs AFTER the persisted-secret fallback below —
+# see "_llm_key_guard" near the provider-secret resolution. Testing the raw
+# environment here declared a container dead while a perfectly good key sat in
+# /workspace/.substrate-secrets, which is exactly the round-trip the docs
+# promise ("a docker rm + recreate *without* -e retains them"). The spoke
+# discrimination is computed here because the values it reads are inputs, but
+# the decision is deferred until the effective key is known.
+_llm_guard_needed="$_is_spoke"
 
 # Internal secrets — per-field precedence: explicit env > persisted volume
 # secret > fresh random. Persisted values are grep-extracted field-by-field
@@ -71,8 +75,52 @@ fi
 SUBSTRATE_ROOT="${SUBSTRATE_ROOT:-/workspace/git/super-repo}"
 
 SECRETS_FILE="/workspace/.substrate-secrets"
+
+# ── PROVENANCE ───────────────────────────────────────────────────────────────
+# Record WHERE each value came from, so an operator can ask "did my -e win, and
+# if not, what beat it?" — the question nothing in this system could answer.
+#
+# Why it is needed at all: the entrypoint sources the generated env file into
+# its own environment, so /proc/1/environ (the obvious place to look) reports
+# THIS SCRIPT'S OUTPUT back as if it were the operator's input. A value that was
+# silently overridden is indistinguishable from one that was honoured. That
+# single blind spot is the shape of most configuration bugs found here:
+# supplied, discarded, no error.
+#
+# Generalises the SURREAL_PASS_SOURCE pattern already used below.
+PROVENANCE_FILE="/etc/substrate/env.provenance"
+# FILE-backed, not a shell variable. persisted_secret is always called as
+# $(persisted_secret X), and a subshell cannot write to its parent's variables —
+# an accumulator string would come back silently empty, which is precisely the
+# class of bug this instrument exists to expose. Appending to a file works from
+# any depth.
+PROV_TMP="${TMPDIR:-/tmp}/.gen-env-provenance.$$"
+: > "$PROV_TMP"
+prov() { # prov <NAME> <env|persisted|generated|derived|hardcoded>
+  printf '%s=%s\n' "$1" "$2" >> "$PROV_TMP"
+}
+
+# Snapshot which names arrived in the RUN environment, before any resolution
+# overwrites them. This is the only moment the distinction is observable.
+_ENV_SUPPLIED=""
+for _n in ANTHROPIC_API_KEY OPENAI_API_KEY OPENAI_BASE_URL GOOGLE_API_KEY GROQ_API_KEY \
+          MISTRAL_API_KEY CHUTES_API_KEY OPENROUTER_API_KEY RUNPOD_API_KEY \
+          VLLM_BASE_URL VLLM_MODELS VLLM_API_KEY VLLM_ENDPOINTS \
+          METABOB_API_KEY API_KEY_SECRET SURREAL_PASS JWT_SECRET SUBSTRATE_GIT_PAT \
+          DISCOVERY_ENDPOINT HUB_DISCOVERY_URL ACTIVITY_API_ENDPOINT IDENTITY_VESSEL_URL \
+          FED_SUBSTRATE_ID RELAY_MULTIADDR PEER_DISCOVERY_ENDPOINTS PUBLIC_IP \
+          ENABLED_ROLES ENABLED_VESSELS DISABLED_VESSELS ENABLED_EXTRA_VESSELS PROFILE \
+          LLM_ARMS LLM_DEFAULT_MODEL MITOSIS_DIRECT_PUSH; do
+  if [[ -n "${!_n:-}" ]]; then _ENV_SUPPLIED="${_ENV_SUPPLIED} ${_n}"; fi
+done
+
 persisted_secret() {
-  [[ -f "$SECRETS_FILE" ]] && grep -m1 "^$1=" "$SECRETS_FILE" | cut -d= -f2- || true
+  local _v=""
+  [[ -f "$SECRETS_FILE" ]] && _v="$(grep -m1 "^$1=" "$SECRETS_FILE" | cut -d= -f2- || true)"
+  # Attribute at the point of resolution: if this function is being consulted at
+  # all, the caller's ${VAR:-…} found the environment empty.
+  if [[ -n "$_v" ]]; then prov "$1" persisted; fi
+  printf '%s' "$_v"
 }
 
 JWT_SECRET="${JWT_SECRET:-$(persisted_secret JWT_SECRET)}"
@@ -159,6 +207,29 @@ API_KEY_SECRET_PREVIOUS="${API_KEY_SECRET_PREVIOUS:-$(persisted_secret API_KEY_S
 # After seed-identity.ts runs, vessels use the HMAC keys it issues.
 # Stored in /workspace/.substrate-secrets so restarts reuse the same value.
 METABOB_API_KEY="${METABOB_API_KEY:-$(persisted_secret METABOB_API_KEY)}"
+
+# ★ A SPOKE MUST NOT MINT ITS OWN JOIN CREDENTIAL.
+#
+# The generator below is correct for a root/standalone substrate: it is the
+# bootstrap value identity-vessel replaces after seeding, so a random one is
+# fine. For a SPOKE it is actively harmful — the whole point of
+# METABOB_API_KEY on a join is that the HUB issued it. Falling through to
+# openssl produced a spoke that booted green, passed every readiness check,
+# and then failed hub auth at first contact, with nothing at setup time saying
+# why. .env.example calls this variable "REQUIRED ... THIS is what joins the
+# group"; omitting it was silently survivable, which is the worst combination.
+#
+# Fail closed, and name the fix. `_is_spoke` is computed at the top of this
+# file from DISCOVERY_ENDPOINT / HUB_DISCOVERY_URL.
+if [[ "$_is_spoke" = "1" && -z "${METABOB_API_KEY:-}" ]]; then
+  echo "[gen-env] ERROR: this container is configured as a SPOKE (a remote hub is set) but no hub-issued credential was supplied." >&2
+  echo "[gen-env]   Set METABOB_API_KEY to the key the HUB issued for this spoke." >&2
+  echo "[gen-env]   Mint one on the hub with: make -C scripts/substrate issue-key NAME=<this-spoke>" >&2
+  echo "[gen-env]   Refusing to generate one locally: a self-minted key is not a member of the hub's identity group," >&2
+  echo "[gen-env]   so the spoke would boot healthy and then fail every federated call with 401." >&2
+  exit 1
+fi
+
 METABOB_API_KEY="${METABOB_API_KEY:-$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 32)}"
 
 # Optional per-vessel keys — fall back to METABOB_API_KEY if unset (D4)
@@ -210,6 +281,31 @@ OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-$(persisted_secret OPENROUTER_API_KEY)
 GOOGLE_API_KEY="${GOOGLE_API_KEY:-$(persisted_secret GOOGLE_API_KEY)}"
 GROQ_API_KEY="${GROQ_API_KEY:-$(persisted_secret GROQ_API_KEY)}"
 MISTRAL_API_KEY="${MISTRAL_API_KEY:-$(persisted_secret MISTRAL_API_KEY)}"
+VLLM_BASE_URL="${VLLM_BASE_URL:-$(persisted_secret VLLM_BASE_URL)}"
+VLLM_MODELS="${VLLM_MODELS:-$(persisted_secret VLLM_MODELS)}"
+VLLM_API_KEY="${VLLM_API_KEY:-$(persisted_secret VLLM_API_KEY)}"
+VLLM_ENDPOINTS="${VLLM_ENDPOINTS:-$(persisted_secret VLLM_ENDPOINTS)}"
+
+# ★ THE LLM-KEY GUARD, deferred to here so it tests the EFFECTIVE key.
+#
+# It used to sit ~165 lines above, before the persisted_secret fallbacks that
+# immediately precede it. The consequence: a container recreated without -e
+# died at boot — "No LLM provider key found" — while a valid key sat in
+# /workspace/.substrate-secrets and the docs advertised that exact round-trip
+# as a guarantee. The guard was reading the operator's input when the thing
+# that matters is what the resolution produced.
+#
+# `_llm_guard_needed` is computed above (0 = root/standalone, 1 = spoke),
+# because the spoke discrimination reads DISCOVERY_ENDPOINT / HUB_DISCOVERY_URL,
+# which are inputs. Only the DECISION is deferred.
+if [[ "$_llm_guard_needed" = "0" && -z "${ANTHROPIC_API_KEY:-}" && -z "${OPENAI_API_KEY:-}" ]]; then
+  echo "[gen-env] ERROR: No LLM provider key found." >&2
+  echo "[gen-env]   A root/standalone substrate needs one; a spoke inherits LLM arms from its hub." >&2
+  echo "[gen-env]   Set ANTHROPIC_API_KEY (or OPENAI_API_KEY + OPENAI_BASE_URL) via -e / compose / make." >&2
+  echo "[gen-env]   Checked: the run environment AND persisted values in /workspace/.substrate-secrets." >&2
+  echo "[gen-env]   To run as a spoke instead, set HUB_DISCOVERY_URL to your hub's discovery endpoint." >&2
+  exit 1
+fi
 # RunPod Serverless. RUNPOD_ENDPOINT_ID is not a secret but must round-trip the
 # same way: llm-resolver-vessel registers the arm only when it is present, so
 # losing it on a container recreate silently un-registers the lane. MODELS and
@@ -314,6 +410,16 @@ RUNPOD_API_KEY="${RUNPOD_API_KEY:-}"
 RUNPOD_ENDPOINT_ID="${RUNPOD_ENDPOINT_ID:-}"
 RUNPOD_MODELS="${RUNPOD_MODELS:-}"
 RUNPOD_COST_PER_MTOK="${RUNPOD_COST_PER_MTOK:-}"
+# Self-hosted vLLM. docker-compose.yml has declared these four under a six-line
+# explanatory comment since they were added, but this file never emitted them —
+# and systemd units inherit nothing from the container env (53 units carry
+# EnvironmentFile=/etc/substrate/env, none carries PassEnvironment). The
+# resolver reads process.env.VLLM_*, so the documented configuration produced
+# no arm and no error. Emitting them here is what makes the compose block real.
+VLLM_BASE_URL="${VLLM_BASE_URL:-}"
+VLLM_MODELS="${VLLM_MODELS:-}"
+VLLM_API_KEY="${VLLM_API_KEY:-}"
+VLLM_ENDPOINTS="${VLLM_ENDPOINTS:-}"
 LLM_DEFAULT_MODEL="${LLM_DEFAULT_MODEL:-}"
 # Substrate root inside the container = the container-native super-repo clone.
 # The container is unmoored from the host filesystem: no host repo bind. Every
@@ -610,6 +716,10 @@ RUNPOD_API_KEY=${RUNPOD_API_KEY:-}
 RUNPOD_ENDPOINT_ID=${RUNPOD_ENDPOINT_ID:-}
 RUNPOD_MODELS=${RUNPOD_MODELS:-}
 RUNPOD_COST_PER_MTOK=${RUNPOD_COST_PER_MTOK:-}
+VLLM_BASE_URL=${VLLM_BASE_URL:-}
+VLLM_MODELS=${VLLM_MODELS:-}
+VLLM_API_KEY=${VLLM_API_KEY:-}
+VLLM_ENDPOINTS=${VLLM_ENDPOINTS:-}
 # Operator-explicit discovery peer list (hub-side resolve fan-out). Only the
 # explicit value round-trips; a hub-derived spoke default is re-derived each run.
 PEER_DISCOVERY_ENDPOINTS=${PEER_DISCOVERY_ENDPOINTS_EXPLICIT:-}
@@ -646,3 +756,28 @@ chmod 600 "$_SECRETS_TMP"
 mv -f "$_SECRETS_TMP" /workspace/.substrate-secrets
 chmod 600 /workspace/.substrate-secrets
 echo "[gen-env] persisted secrets to /workspace/.substrate-secrets"
+
+# ── Emit the provenance record ───────────────────────────────────────────────
+# One line per variable: NAME=<source>. `substrate-config` renders this next to
+# the resolved values so "did my -e win?" is answerable in one command.
+#
+# Anything named in the run environment is attributed `env` and OVERWRITES a
+# `persisted` note: ${VAR:-…} only consults the fallback when the environment
+# was empty, so an env-supplied value provably won.
+{
+  echo "# Provenance of /etc/substrate/env, written by gen-env.sh at boot."
+  echo "# source: env=operator-supplied | persisted=/workspace/.substrate-secrets"
+  echo "#         generated=minted this boot | derived=computed from another value"
+  echo "# Absent from this file = a hardcoded literal in gen-env.sh."
+  {
+    sort -u "$PROV_TMP" 2>/dev/null || true
+    for _n in $_ENV_SUPPLIED; do printf '%s=env\n' "$_n"; done
+  } | awk -F= '
+      { src[$1] = ($2 == "env" ? "env" : (src[$1] == "env" ? "env" : $2)) }
+      END { for (k in src) print k "=" src[k] }
+    ' | sort
+  echo "SURREAL_PASS=${SURREAL_PASS_SOURCE:-unknown}"
+} > "$PROVENANCE_FILE" 2>/dev/null || true
+chmod 644 "$PROVENANCE_FILE" 2>/dev/null || true
+rm -f "$PROV_TMP" 2>/dev/null || true
+echo "[gen-env] wrote provenance to $PROVENANCE_FILE"

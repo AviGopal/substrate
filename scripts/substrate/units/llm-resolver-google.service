@@ -11,7 +11,14 @@ Type=simple
 # the arm appears wherever GOOGLE_API_KEY is present, with no per-role config.
 # Without this, a keyless host would start a resolver pinned to gemini-2.5-flash
 # it cannot serve, polluting the router's arm pool with a dead arm.
-ExecCondition=/bin/sh -c 'grep -Eq "^GOOGLE_API_KEY=.+" /etc/substrate/env'
+#
+# ★ The predicate must reject a QUOTED-EMPTY value. gen-env writes an unset key
+# as GOOGLE_API_KEY="" — and the previous pattern, `=.+`, matched the two quote
+# characters, so the guard passed on every host and did exactly what the
+# paragraph above says it prevents: measured on two keyless UI spokes, three
+# arms were active and answering /health with no credential anywhere. Test any
+# change to this line against all four shapes: ="" / ="real" / = / =real.
+ExecCondition=/bin/sh -c 'grep -Eq "^GOOGLE_API_KEY=[\"'"'"']?[^\"'"'"']" /etc/substrate/env'
 EnvironmentFile=/etc/substrate/env
 # Sibling llm-resolver instance pinned to a distinct model. Runs the SAME
 # in-image source as llm-resolver-vessel. NOTE: LLM_DEFAULT_MODEL is NOT set via

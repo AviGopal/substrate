@@ -38,12 +38,31 @@ csv() { echo "$1" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | gr
 
 # Expand ENABLED_ROLES: a token may be a role (e.g. "compute") or a role-GROUP alias
 # defined in inventory.roles (e.g. "hub" -> ["store","control",...]).
+# A token is either a role-GROUP alias (hub/spoke/full, expanded from .roles) or
+# a bare role name carried by at least one unit. Anything else is a typo, and a
+# typo must not be survivable: an unrecognised token used to pass straight
+# through as a role name, match no unit, and contribute nothing — so
+# ENABLED_ROLES=spok booted a container with almost every vessel masked and said
+# nothing. That is the same failure PROFILE guards against fatally two functions
+# below; roles were the gap in the same rule.
 expand_roles() {
-  local out=""
+  local out="" known_roles
+  known_roles="$(jq -r '[.vessels[].role] | unique | .[]' "$INV" 2>/dev/null)"
   for tok in $(csv "${ENABLED_ROLES:-}"); do
     local grp
     grp="$(jq -r --arg t "$tok" '.roles[$t] // empty | .[]?' "$INV" 2>/dev/null || true)"
-    if [ -n "$grp" ]; then out="$out $grp"; else out="$out $tok"; fi
+    if [ -n "$grp" ]; then
+      out="$out $grp"
+    elif echo "$known_roles" | grep -qx "$tok"; then
+      out="$out $tok"
+    else
+      # Reported, NOT exited: this function is always called as $(expand_roles),
+      # so an exit here would kill only the subshell and boot would continue
+      # with an empty role set — the very silence being fixed. The caller sees
+      # this sentinel on stdout and aborts in the parent shell.
+      echo "__INVALID_ROLE__:$tok"
+      return 0
+    fi
   done
   echo "$out" | tr ' ' '\n' | grep -v '^$' | sort -u
 }
@@ -70,6 +89,15 @@ elif [ -n "${ENABLED_VESSELS:-}" ]; then
   log "explicit ENABLED_VESSELS: $(echo $DESIRED | tr '\n' ' ')"
 elif [ -n "${ENABLED_ROLES:-}" ]; then
   ROLES="$(expand_roles)"
+  # Fatal in the PARENT shell — see the note in expand_roles about why the check
+  # cannot abort from inside a command substitution.
+  if echo "$ROLES" | grep -q '^__INVALID_ROLE__:'; then
+    _bad="$(echo "$ROLES" | sed -n 's/^__INVALID_ROLE__://p' | tr '\n' ' ')"
+    log "FATAL: ENABLED_ROLES contains unknown token(s): $_bad"
+    log "  role groups: $(jq -r '.roles // {} | keys | join(", ")' "$INV" 2>/dev/null)"
+    log "  bare roles:  $(jq -r '[.vessels[].role] | unique | join(", ")' "$INV" 2>/dev/null)"
+    exit 1
+  fi
   log "ENABLED_ROLES expands to: $(echo $ROLES | tr '\n' ' ')"
   for u in $(manageable_units); do
     r="$(role_of "$u")"

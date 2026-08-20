@@ -10,7 +10,8 @@
       "transport",
       "seed",
       "infra",
-      "registry"
+      "registry",
+      "models"
     ],
     "spoke": [
       "compute",
@@ -29,10 +30,11 @@
       "seed",
       "infra",
       "autonomy",
-      "registry"
+      "registry",
+      "models"
     ]
   },
-  "_profiles_comment": "Named per-container rosters as EXPLICIT unit lists. Roles are coarse — 'compute' names goal-host, development, light-dispatch, boredom, analysis, ribosome, relevance-sink, local-tools and the LLM resolvers together, so no role expression selects a subset of them. That is why ui-only-up.sh had to bypass roles with a hand-written ENABLED_VESSELS list. A profile is that list, named and kept next to the units it selects. PROFILE=<name> wins over ENABLED_VESSELS and ENABLED_ROLES; DISABLED_VESSELS still subtracts afterwards. human-surface-vessel is deliberately absent from surface_node: it is a manifest vessel, which apply-inventory never selects or masks, and vessel-ctl installs it after readiness. CAVEAT (the reason a profile is not yet a guarantee): apply-inventory can only govern units this file names, so a shipped unit absent from `vessels` below runs regardless of the profile — that is how a UI-only box ends up running LLM resolvers. See the ungoverned-units warning apply-inventory emits at boot.",
+  "_profiles_comment": "Named per-container rosters as EXPLICIT unit lists. Roles are coarse — 'compute' names goal-host, development, light-dispatch, boredom, analysis, ribosome, relevance-sink and local-tools together, so no role expression selects a subset of them. (The LLM resolvers used to be in that list too, which is why a spoke — whose whole premise is resolving models on its hub — enabled four local arms; they now carry role 'models', which 'spoke' excludes and 'hub'/'full' include.) That is why ui-only-up.sh had to bypass roles with a hand-written ENABLED_VESSELS list. A profile is that list, named and kept next to the units it selects. PROFILE=<name> wins over ENABLED_VESSELS and ENABLED_ROLES; DISABLED_VESSELS still subtracts afterwards. human-surface-vessel is deliberately absent from surface_node: it is a manifest vessel, which apply-inventory never selects or masks, and vessel-ctl installs it after readiness. CAVEAT (the reason a profile is not yet a guarantee): apply-inventory can only govern units this file names, so a shipped unit absent from `vessels` below runs regardless of the profile — that is how a UI-only box ends up running LLM resolvers. See the ungoverned-units warning apply-inventory emits at boot.",
   "profiles": {
     "compute_node": [
       "discovery-vessel.service",
@@ -108,8 +110,9 @@
       "core": true
     },
     {
+      "_comment": "Role 'models', not 'compute'. The four llm-* units SERVE models; everything else under compute CONSUMES them through discovery. Bundled together, no role expression could say 'run work here, resolve models on the hub' — which is precisely what a spoke is, so every spoke enabled its own arms and the arms ran wherever a provider key happened to be persisted. Still 'core': a substrate that serves models must have this answering, and substrate-ready reports a unit that is neither enabled nor active as SKIPPED rather than down, so a spoke without the models role stays green. Sibling arms (llm-resolver-{google,haiku,opus}) carry the same role deliberately — see the boredom-vessel comment below for what splitting a unit from its dependency cost last time.",
       "unit": "llm-resolver-vessel.service",
-      "role": "compute",
+      "role": "models",
       "repo": "llm-resolver-vessel",
       "health_port": 8220,
       "core": true
@@ -326,9 +329,9 @@
     { "unit": "db-maintenance.service", "role": "store" },
     { "unit": "trace-store-health-check.timer", "role": "api" },
     { "unit": "trace-store-health-check.service", "role": "api" },
-    { "unit": "llm-resolver-google.service", "role": "compute", "repo": "llm-resolver-vessel" },
-    { "unit": "llm-resolver-haiku.service", "role": "compute", "repo": "llm-resolver-vessel" },
-    { "unit": "llm-resolver-opus.service", "role": "compute", "repo": "llm-resolver-vessel" },
+    { "unit": "llm-resolver-google.service", "role": "models", "repo": "llm-resolver-vessel" },
+    { "unit": "llm-resolver-haiku.service", "role": "models", "repo": "llm-resolver-vessel" },
+    { "unit": "llm-resolver-opus.service", "role": "models", "repo": "llm-resolver-vessel" },
     { "unit": "novnc.service", "role": "desktop" },
     { "unit": "obsidian-desktop.service", "role": "desktop", "repo": "obsidian-vessel" },
     { "unit": "obsidian-xorg.service", "role": "desktop", "repo": "obsidian-vessel" },

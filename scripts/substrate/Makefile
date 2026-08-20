@@ -393,22 +393,48 @@ up:
 # The same hazard on the recreate path had no guard at all: the settings were not ignored, they
 # were forgotten. So read them off the container BEFORE removing it and pass them back through.
 # Explicit values on the command line still win, so an intentional role change works as before.
+# The names `recreate` must carry forward. DERIVED FROM ONE LIST, deliberately:
+# an earlier version hand-enumerated three of them while LAUNCH_OVERRIDES
+# declared fifteen, and the two drifted. What that cost: recreating a SPOKE kept
+# ENABLED_ROLES=spoke (which masks surrealdb and activity-api) while silently
+# resetting DISCOVERY_ENDPOINT to loopback — leaving the container with no local
+# trace store AND no hub, looking healthy. PORT_OFFSET is included because port
+# mappings are immutable container config that a bare `up` cannot restore.
+RECREATE_CARRY := API_KEY METABOB_API_KEY DISCOVERY_ENDPOINT HUB_DISCOVERY_URL \
+                  FED_SUBSTRATE_ID RELAY_MULTIADDR ENABLED_ROLES ENABLED_VESSELS \
+                  DISABLED_VESSELS ENABLED_EXTRA_VESSELS PROFILE \
+                  PEER_DISCOVERY_ENDPOINTS ACTIVITY_API_ENDPOINT \
+                  IDENTITY_VESSEL_URL IDENTITY_ENDPOINT SURREALDB_URL REDIS_URL
+
 recreate:
 	@if docker ps -a --format '{{.Names}}' | grep -qx "$(LIVE_NAME)"; then \
-	  PREV_ROLES=$$(docker inspect $(LIVE_NAME) --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null | sed -n 's/^ENABLED_ROLES=//p' | head -1); \
-	  PREV_DISABLED=$$(docker inspect $(LIVE_NAME) --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null | sed -n 's/^DISABLED_VESSELS=//p' | head -1); \
-	  PREV_PROFILE=$$(docker inspect $(LIVE_NAME) --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null | sed -n 's/^PROFILE=//p' | head -1); \
-	  if [ -n "$$PREV_ROLES$$PREV_DISABLED$$PREV_PROFILE" ]; then \
-	    echo "[recreate] carrying forward launch identity: ENABLED_ROLES='$$PREV_ROLES' DISABLED_VESSELS='$$PREV_DISABLED' PROFILE='$$PREV_PROFILE'"; \
-	  else \
-	    echo "[recreate] previous container carried no role selection — recreating as the default (all units enabled)"; \
+	  ENVDUMP=$$(docker inspect $(LIVE_NAME) --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null); \
+	  CARRY=""; SHOWN=""; \
+	  for _v in $(RECREATE_CARRY); do \
+	    _prev=$$(printf '%s\n' "$$ENVDUMP" | sed -n "s/^$$_v=//p" | head -1); \
+	    _cur=$$(eval printf '%s' "\$${$$_v}"); \
+	    _use="$${_cur:-$$_prev}"; \
+	    if [ -n "$$_use" ]; then \
+	      CARRY="$$CARRY $$_v=$$_use"; \
+	      case "$$_v" in *KEY*|*SECRET*|*PAT*) SHOWN="$$SHOWN $$_v=<set>";; *) SHOWN="$$SHOWN $$_v=$$_use";; esac; \
+	    fi; \
+	  done; \
+	  PREV_8080=$$(docker inspect $(LIVE_NAME) --format '{{range $$p, $$c := .HostConfig.PortBindings}}{{$$p}}={{range $$c}}{{.HostPort}}{{end}} {{end}}' 2>/dev/null | tr ' ' '\n' | sed -n 's#^8080/tcp=##p' | head -1); \
+	  PREV_OFFSET=""; \
+	  if [ -n "$$PREV_8080" ]; then PREV_OFFSET=$$(expr $$PREV_8080 - 8080 - 10000 2>/dev/null || echo ""); fi; \
+	  if [ -n "$(PORT_OFFSET)" ] && [ "$(PORT_OFFSET)" != "0" ] && [ -n "$$PREV_OFFSET" ] && [ "$(PORT_OFFSET)" != "$$PREV_OFFSET" ]; then \
+	    echo "[recreate] ERROR: PORT_OFFSET=$(PORT_OFFSET) conflicts with the existing container's mapping (offset $$PREV_OFFSET, host 8080 -> $$PREV_8080)."; \
+	    echo "[recreate]   Port mappings are immutable container config. To change the offset, remove the container first:"; \
+	    echo "[recreate]     docker rm -f $(LIVE_NAME)    # volumes, and therefore learning state, are preserved"; \
+	    exit 1; \
 	  fi; \
+	  USE_OFFSET="$(PORT_OFFSET)"; \
+	  if [ "$$USE_OFFSET" = "0" ] && [ -n "$$PREV_OFFSET" ]; then USE_OFFSET="$$PREV_OFFSET"; fi; \
+	  if [ -n "$$SHOWN" ]; then echo "[recreate] carrying forward launch identity:$$SHOWN PORT_OFFSET=$$USE_OFFSET"; \
+	  else echo "[recreate] previous container carried no launch identity — recreating as the default (all units enabled)"; fi; \
 	  echo "[recreate] removing $(LIVE_NAME); named volumes are preserved"; \
 	  docker rm -f $(LIVE_NAME) >/dev/null; \
-	  $(MAKE) up \
-	    ENABLED_ROLES="$${ENABLED_ROLES:-$$PREV_ROLES}" \
-	    DISABLED_VESSELS="$${DISABLED_VESSELS:-$$PREV_DISABLED}" \
-	    PROFILE="$${PROFILE:-$$PREV_PROFILE}"; \
+	  $(MAKE) up PORT_OFFSET="$$USE_OFFSET" $$CARRY; \
 	else \
 	  $(MAKE) up; \
 	fi

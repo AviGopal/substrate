@@ -73,6 +73,41 @@ EnvironmentFile=/etc/substrate/env
 EnvironmentFile=-/workspace/.substrate-secrets
 $env_lines
 WorkingDirectory=$workdir
+# A RESTART MUST BE ABLE TO REPAIR AN INCOMPLETE INSTALL.
+#
+# \`vessel-ctl install\` resolves dependencies exactly ONCE; Restart= re-runs
+# ExecStart only. So a vessel whose dependencies did not resolve crash-loops for
+# the life of the container, and because Restart=always parks it in
+# \`activating\` it is never \`failed\` and no ActiveState check above it fires.
+#
+# TWO DISTINCT CAUSES, and the second is the one that actually bites:
+#
+#   1. node_modules absent — the install ran before the workdir existed.
+#      79cfbe9a fixed the ordering so this stops happening; resolving here also
+#      REPAIRS a container that already has it.
+#
+#   2. A \`file:\` dependency that resolves to an EMPTY directory. The relay
+#      declares "@avigopal/libp2p-federation-transport":
+#      "file:../../../repos/libp2p-federation-transport", and the in-container
+#      super-repo clone has UNINITIALISED submodules — \`git submodule status\`
+#      shows every entry with a leading \`-\`, so that path is an empty directory.
+#      bun happily creates an empty node_modules/@avigopal/libp2p-federation-transport
+#      from it and reports success. node_modules is POPULATED (92 packages
+#      measured) and the one that matters is hollow, so any check that asks
+#      "did dependencies install" answers yes while the import fails forever.
+#      Re-running \`bun install\` cannot fix this — it re-resolves to the same
+#      empty directory. The image bakes a good copy at /vessels/<name>, and
+#      populating from it is what actually works: verified 2026-08-19 on a fresh
+#      spoke, unit went active/running and logged
+#      "register -> 201 / hub-register (6 rows) all ok / up ... p2p-circuit".
+#
+# That repair had been living as a hand-edit on ONE container's unit file and
+# had never reached this template, which is why every container built since
+# inherited the defect.
+#
+# \`-\` prefix on purpose: if this cannot run, degrade to today's behaviour
+# rather than turn a recoverable start into a hard failure.
+ExecStartPre=-/bin/sh -c 'cd $workdir 2>/dev/null || exit 0; [ -f package.json ] || exit 0; [ -n "\$(ls -A node_modules 2>/dev/null)" ] || { echo "[render-unit] node_modules absent in $workdir — resolving"; $BUN install --silent; }; for d in node_modules/@*/*; do [ -d "\$d" ] || continue; [ -f "\$d/package.json" ] && continue; b=/vessels/\$(basename "\$d"); [ -f "\$b/package.json" ] || continue; echo "[render-unit] \$d resolved EMPTY (file: dep into an uninitialised submodule) — populating from \$b"; cp -a "\$b/." "\$d/"; done'
 ExecStart=$BUN $workdir/$exec_ts
 # Graceful detach: any clean stop deregisters from discovery immediately
 # (best-effort; TTL expiry remains the crash backstop).
