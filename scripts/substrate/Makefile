@@ -682,16 +682,23 @@ revoke-key: ensure-key-tool
 	@test -n "$(KEY_ID)" || { echo "usage: make revoke-key KEY_ID=key_xxx (find ids via make list-keys)"; exit 1; }
 	@docker exec $(LIVE_NAME) substrate-key revoke "$(KEY_ID)"
 
+# Every probe must describe the instance named by LIVE_NAME. The four
+# host-port probes below hardcoded 18080/18100/18090/18250, honouring neither
+# LIVE_NAME nor PORT_OFFSET — so on a host running more than one substrate this
+# target reported whichever fleet happened to own 18080, mixed line-by-line with
+# `docker exec $(LIVE_NAME)` output from the correct one. A health report naming
+# the wrong instance is worse than no report. $(call hp,…) applies PORT_OFFSET
+# exactly as run-live does when it publishes these same ports.
 health-live:
-	@echo "=== activity-api ===" && curl -s http://localhost:18080/health | jq '{version,status}'
-	@echo "=== discovery-vessel ===" && curl -s http://localhost:18100/health | jq '{status}'
-	@echo "=== development-vessel ===" && curl -s http://localhost:18090/health | jq .
+	@echo "=== activity-api ===" && curl -s http://localhost:$(call hp,18080)/health | jq '{version,status}'
+	@echo "=== discovery-vessel ===" && curl -s http://localhost:$(call hp,18100)/health | jq '{status}'
+	@echo "=== development-vessel ===" && curl -s http://localhost:$(call hp,18090)/health | jq .
 	@echo "=== local-tools-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8230/health | jq .
 	@echo "=== llm-resolver-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8220/health | jq .
 	@echo "=== goal-host-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8210/health | jq .
 	@echo "=== ribosome-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8240/health | jq .
 	@echo "=== concept-db (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8260/health | jq '{status,service}'
-	@echo "=== analysis-vessel ===" && curl -s http://localhost:18250/health | jq .
+	@echo "=== analysis-vessel ===" && curl -s http://localhost:$(call hp,18250)/health | jq .
 
 status-live:
 	docker exec $(LIVE_NAME) systemctl status --no-pager \

@@ -202,7 +202,7 @@ curl -H "Authorization: ApiKey $METABOB_API_KEY" \
 # Get latest failure
 TRACE_ID=$(curl -H "Authorization: ApiKey $METABOB_API_KEY" \
   "$ACTIVITY_API_URL/v2/activities/execution-traces?status=failed&limit=1" \
-  | jq -r '.traces[0].id')
+  | jq -r '.executions[0].id')
 
 # Full trace
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
@@ -256,7 +256,7 @@ curl -f -H "Authorization: ApiKey $METABOB_API_KEY" \
 # Recent execution traces (confirms traces are landing)
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
   "https://activity.metabob.com/v2/activities/execution-traces?limit=5" \
-  | jq '.traces[] | {id, status, created}'
+  | jq '.executions[] | {id, status, created}'
 
 # End-to-end goal
 # mcp__metabob__run_goal_async { goal: "verify the deployment is working" }
@@ -293,7 +293,9 @@ docker exec substrate-live systemctl status activity-api
 
 ```bash
 echo $METABOB_API_KEY   # Must be set
-# Format should start with mb_ (e.g. mb_live_..., mb_inst_...)
+# Format is mb-<base64>-<hex>, ~160 chars. Compare against
+# `docker exec <container> substrate-key show`. A short value is a pre-seed
+# placeholder, not a key — it reads without error and 401s on every call.
 
 # Configure via file:
 cat ~/.metabob/config.json | jq .metabob
@@ -312,7 +314,7 @@ curl -H "Authorization: ApiKey $METABOB_API_KEY" \
 ```bash
 # 1. Confirm trace was stored
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
-  "$ACTIVITY_API_URL/v2/activities/execution-traces?limit=1" | jq '.traces[0].status'
+  "$ACTIVITY_API_URL/v2/activities/execution-traces?limit=1" | jq '.executions[0].status'
 
 # 2. Confirm Thompson write path is active (check activity-api logs)
 docker exec substrate-live bun /vessels/seed-identity.ts   # ensure auth seeded
@@ -362,7 +364,7 @@ bun run validation/scripts/stratified-harness.ts
 
 | Variable | Purpose | Example |
 |----------|---------|---------|
-| `METABOB_API_KEY` | Authentication | `mb_live_...` |
+| `METABOB_API_KEY` | Authentication | `mb-<base64>-<hex>` (~160 chars) |
 | `ACTIVITY_API_URL` | Backend endpoint | `http://localhost:18080` |
 | `ANTHROPIC_API_KEY` | LLM access | `sk-ant-...` |
 | `SURREALDB_URL` | Database | `ws://localhost:8000` |

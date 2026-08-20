@@ -91,11 +91,18 @@ git clone https://github.com/AviGopal/substrate.git && cd substrate
 cp scripts/substrate/.env.example .env    # set ANTHROPIC_API_KEY (or OPENAI_API_KEY)
 docker compose up -d                       # run from repo root — root compose is canonical
 
-# Wait for the fleet before asking it for anything. First boot seeds identity,
-# so the key does not exist until this reports healthy.
-until [ "$(docker inspect -f '{{.State.Health.Status}}' substrate-live)" = healthy ]; do sleep 5; done
+# `healthy` means the container is live, NOT that identity is seeded. Until the
+# seeder finishes, `substrate-key show` prints a pre-seed placeholder that every
+# call rejects with 401 — and it prints it without any error. Gate on the check
+# that actually tests the key:
+until docker exec substrate-live substrate-doctor 2>&1 | grep -q "PASS.*authenticates"; do sleep 10; done
 docker exec substrate-live substrate-key show
 ```
+
+First boot takes a few minutes to converge. Running `substrate-doctor` before
+then shows failures that clear on their own — a young substrate looks like a
+broken one. Confirm a key works before using it:
+`make -C scripts/substrate whoami` should report your `org_id` and scopes.
 
 To launch with **no checkout at all**, use the raw `docker run` below — it needs
 nothing from this repo.
@@ -117,15 +124,44 @@ docker run -d --privileged --name substrate-live \
 ```
 
 That is **nine** ports, matching `docs/SUBSTRATE.md` and the root compose file.
-`18310` is `human-surface-vessel` — the vessel a human talks to. Omit it and the
-fleet still reports healthy, with the human surface bound inside the container
-and unreachable from the host.
 
-Wait for `docker inspect --format '{{.State.Health.Status}}' substrate-live`
-to report `healthy`, then dispatch goals against `http://localhost:18210/run-goal`
-(goal-host) and browse traces at `http://localhost:18080` (activity-api). Retrieve
-your operator API key straight from the running container (the tool is baked into
-the image — no repo checkout needed):
+`18310` is `human-surface-vessel` — the vessel a human talks to — and
+**publishing the port is not the same as serving it.** The human surface is a
+*manifest* vessel, which a default boot leaves uninstalled, so `:18310` answers
+connection-refused while every other health signal is green. Install it once:
+
+```bash
+docker exec substrate-live vessel-ctl install human-surface-vessel
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:18310/health   # 200
+```
+
+Omit the port mapping instead and the vessel runs but binds only inside the
+container, which looks identical from the host.
+
+Once the fleet has converged (see the key gate above), dispatch a goal against
+goal-host and poll it:
+
+```bash
+curl -X POST http://localhost:18210/run-goal -H 'Content-Type: application/json' \
+  -d '{"goal":"list the running units"}'        # 202 {"dispatchId":"…","status":"running"}
+
+curl http://localhost:18210/executions/<dispatchId>
+```
+
+Read **`reached`**, not `status`: `status` is only the template's exit code, and a
+run can complete without reaching the goal. Identical goal text coalesces onto the
+existing dispatch rather than starting a second one.
+
+Traces live on activity-api at `http://localhost:18080` — an **authenticated JSON
+API, not a web page** (`GET /` returns 404):
+
+```bash
+curl -H "Authorization: ApiKey $(docker exec substrate-live substrate-key show)" \
+  'http://localhost:18080/v2/activities/execution-traces?limit=5'
+```
+
+Retrieve your operator API key straight from the running container (the tool is
+baked into the image — no repo checkout needed):
 
 ```bash
 docker exec substrate-live substrate-key show
@@ -255,12 +291,21 @@ make -C scripts/substrate revoke-key KEY_ID=key_x  # revoke one
 
 The full key is printed once and never stored. See [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) § *Keys and tokens*.
 
-**5. Install the human interface (Obsidian plugin)** — one command, into an existing or new vault:
+**5. Install the human interface (Obsidian plugin)** — one command, into an existing or new vault.
+
+The installer lives in a **submodule**, which the image-based quick start above
+does not initialise. Fetch just that one first (a full `--recursive` init is not
+needed):
 
 ```bash
+git submodule update --init repos/obsidian-vessel
+
 bash repos/obsidian-vessel/install.sh --local            # same-machine substrate
 bash repos/obsidian-vessel/install.sh                    # interactive: vault → host → key
 ```
+
+If you would rather not add a submodule, the fleet already ships a browser-based
+human surface on `:18310` — install it with `vessel-ctl` as shown above.
 
 The installer selects or creates the vault, installs the plugin, and writes the two inputs the plugin needs — `{discoveryVesselEndpoint, apiKey}`. At start the federation sidecar fetches `<discovery-endpoint>/bootstrap` for the relay anchor (point-and-go) and reserves a libp2p circuit; the relay multiaddr is an optional advanced override, not something the installer derives or pins. See [`repos/obsidian-vessel/README.md`](repos/obsidian-vessel/README.md).
 

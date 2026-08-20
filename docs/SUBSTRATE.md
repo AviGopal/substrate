@@ -300,9 +300,12 @@ host-mapped ports. Wait for
 `healthy` before reading the key; `substrate-key` is baked into the image at
 `/usr/local/bin/substrate-key`, so no checkout is needed.
 
-> **`healthy` is a weaker signal than it looks.** The container healthcheck runs
-> `substrate-ready --quick`, which covers the vessels marked `"core": true` in
-> the inventory — it is a *liveness* check, not a correctness one. It reports
+> **`healthy` is a weaker signal than it looks**, and it means different things
+> on the two launch paths. The **image's** healthcheck runs `substrate-ready
+> --quick`, covering the vessels marked `"core": true` in the inventory. The
+> **compose file overrides it** with a single `curl` against activity-api's
+> `/health`, so on the compose path `healthy` means one vessel answered. Either
+> way it is a *liveness* check, not a correctness one. It reports
 > healthy while SurrealDB root auth is broken and the fleet is unusable: the
 > ports serve, the core vessels answer, and every request that needs the
 > datastore still fails. `docker exec <container> substrate-doctor` is the check
@@ -641,6 +644,14 @@ flow is one command with no credentials beyond a running substrate:
 > `LIVE_NAME=<container>` on every command (e.g.
 > `make -C scripts/substrate show-key LIVE_NAME=substrate-scratch`). See
 > [Second substrate on the same host](#second-substrate-on-the-same-host-clean-room).
+>
+> `health` is the one target that also reaches **host** ports rather than only
+> `docker exec`, so it needs `PORT_OFFSET` as well as `LIVE_NAME` to describe a
+> second instance: `make health LIVE_NAME=<container> PORT_OFFSET=<n>`. Given
+> only `LIVE_NAME`, its host-port probes fall back to the default `18xxx` block —
+> which on a multi-instance host is a *different* fleet — while its `docker exec`
+> probes report the right one, in the same output. The lines marked `(internal)`
+> are the `docker exec` ones.
 
 ```bash
 make -C scripts/substrate show-key                 # print the operator API key (what configure-local writes)
@@ -1100,6 +1111,10 @@ Federation routes capability queries across substrates: hub/spoke over a shared 
 **Units not starting within 60s**: read the failing unit's journal — `docker exec substrate-live journalctl -u <unit>.service -n 100 --no-pager` (or the matching `logs-*` make target, if the unit has one). Most common cause: a host-port conflict on one of the published ports (e.g. another process already on `18270`) — `run-live` aborts with "Bind for 0.0.0.0:18270 failed: port is already allocated".
 
 **API key needed but lost**: if you ran `seed-identity.ts` but forgot the key, re-read it from the container env file: `docker exec substrate-live grep METABOB_API_KEY /etc/substrate/env`. Then re-run `configure-local.sh` to update your local config.
+
+**A key that reads fine and 401s everywhere**: `substrate-key show` prints whatever is in `/etc/substrate/env` and does not check it, so before `identity-seeder` completes it returns a pre-seed placeholder with no error. The value is short and lacks the `mb-<base64>-<hex>` shape of a real key (~160 chars). Confirm with `make -C scripts/substrate whoami`, which reports the org and scopes for a valid key and fails for an invalid one, or with `substrate-doctor`'s key check. A fresh fleet takes a few minutes to converge; a doctor run before then reports failures that clear themselves.
+
+**`substrate-doctor` reports `failed units: bootstrap-seeder.service`**: the seeder registers the shared activity templates and exits non-zero if *any* template is rejected, so one bad template exhausts its restart budget and leaves systemd `degraded`. See which failed with `docker exec <container> journalctl -u bootstrap-seeder | grep '✗'`. A rejection reading `the composition declares a precondition it produces itself` is a defect in that seed template, not in your deployment: the rest of the fleet is usable and those specific activities are absent. Re-run after a fix with `docker exec <container> systemctl start bootstrap-seeder`.
 
 **Harness connection errors**: confirm `~/.metabob/config.json` points to `http://localhost:18080`, not the canary endpoint. Run `scripts/substrate/configure-local.sh` to reset.
 
