@@ -96,6 +96,36 @@ if [ -n "$RENDER_LLM_ARMS" ]; then
       case ",${ENABLED_VESSELS:-}," in *,llm-*) _models_wanted=1 ;; esac
     fi
 
+    # ★ RETIRE THE STATIC ARM EACH RENDERED ARM SUPERSEDES.
+    #
+    # The migration to rendered arms shipped BOTH sets and called it a
+    # "parallel run". They are not parallel — they are duplicates on the SAME
+    # PORT: llm-resolver-{opus,haiku,google} (/lib/systemd/system, 8221/8223/
+    # 8225) against rendered llm-{opus,haiku,google} (/etc/systemd/system, the
+    # same three ports, from llm-arms.json). Exactly one of each pair wins the
+    # bind; the loser dies EADDRINUSE and Restart=on-failure retries it forever.
+    # Measured on a fresh clean-room fleet: NRestarts=95 within 40 minutes, two
+    # of three arms looping, and WHICH unit won differed per arm — a boot race.
+    #
+    # It stayed invisible because a unit in a restart loop reports `activating`,
+    # never `failed`, so `systemctl list-units --state=failed` is empty and the
+    # doctor's "no failed units" check PASSES while the fleet burns a process
+    # every ~25s. (Same signature as the one-shot-install crash-loop already on
+    # record — the class recurred in a new place.)
+    #
+    # llm-resolver-vessel (8220) is NOT superseded: it is the shared base
+    # resolver on its own port, not an arm. Only retire a static unit when the
+    # rendered arm of the same id actually exists.
+    for _r in /etc/systemd/system/llm-*.service; do
+      [ -f "$_r" ] || continue
+      _id="$(basename "$_r" .service)"; _id="${_id#llm-}"
+      _static="llm-resolver-${_id}.service"
+      if [ -f "/lib/systemd/system/$_static" ] || [ -f "/etc/systemd/system/$_static" ]; then
+        rm -f "/etc/systemd/system/multi-user.target.wants/$_static"
+        echo "[substrate] retired static $_static — superseded by rendered llm-${_id}.service (same port)"
+      fi
+    done
+
     mkdir -p /etc/systemd/system/multi-user.target.wants
     for u in /etc/systemd/system/llm-*.service; do
       [ -f "$u" ] || continue

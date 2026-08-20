@@ -45,6 +45,10 @@ Source column:
   generated  minted this boot
   derived    computed from another value
   hardcoded  a literal in gen-env.sh — NOT settable (see: it ignores your input)
+  unrecorded nothing attributed it: either a literal, or a mint gen-env does not
+             yet instrument. NOT evidence of a hardcoded secret — compare two
+             fleets if it matters (differing values mean each was generated)
+  unknown    no provenance file at all (an image predating gen-env attribution)
 
 Examples:
   substrate-config                    # everything
@@ -121,10 +125,18 @@ while IFS= read -r line; do
   esac
   src="$(prov_of "$name")"
   if [ -z "$src" ]; then
-    # No provenance ENTRY means a literal. No provenance FILE means we simply do
-    # not know — reporting that as "hardcoded" would be the same confident-wrong
-    # answer this tool exists to eliminate.
-    if [ -n "$PROV_TXT" ]; then src="hardcoded"; else src="unknown"; fi
+    # An absent entry does NOT prove a literal — it proves only that nothing
+    # attributed this name. gen-env instrumented just two names at first, so
+    # every freshly-MINTED secret (JWT_SECRET, API_KEY_SECRET, METABOB_API_KEY)
+    # was reported `hardcoded` on a brand-new fleet: the precise opposite of the
+    # truth, and alarming exactly where calm was warranted. Two fleets were
+    # compared to settle it — their secrets differed, so they were generated.
+    #
+    # Absence is now reported as absence. `unrecorded` covers both a genuine
+    # literal and an uninstrumented mint; only a positive `hardcoded` entry,
+    # written at the one site that really does assign a literal, asserts the
+    # forgeable-key case. Do not restore a default that answers what it cannot see.
+    if [ -n "$PROV_TXT" ]; then src="unrecorded"; else src="unknown"; fi
   fi
   if is_secret "$name" "$val"; then shown="$(mask "$val")"; else
     [ -z "$val" ] && shown="(empty)" || shown="$val"

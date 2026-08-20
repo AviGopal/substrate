@@ -220,6 +220,15 @@ COPY scripts/substrate/setup-git-push.sh /usr/local/bin/setup-git-push
 COPY scripts/substrate/substrate-ready.sh /usr/local/bin/substrate-ready
 COPY scripts/substrate/substrate-doctor.sh /usr/local/bin/substrate-doctor
 COPY scripts/substrate/reseed-restart.sh /usr/local/bin/reseed-restart
+# Config provenance (`substrate-config`) answers the one question no other tool
+# could: WHERE a resolved value came from — the operator's env, a PRIOR boot's
+# persisted secret, or a hardcoded default. It reads /etc/substrate/env, which
+# exists only INSIDE the container, so shipping it here is what makes the
+# documented `docker exec <container> substrate-config` real. It was written and
+# documented as an exec command while living only in the host checkout, so every
+# copy of that instruction was unrunnable — authored at the host layer, consumed
+# at the container layer, which is the same mistake this file keeps paying for.
+COPY scripts/substrate/substrate-config.sh /usr/local/bin/substrate-config
 # In-container source-of-truth channel (2026-07-02): the substrate pulls its own
 # updates from origin/dev via the /workspace/git clones and mirrors them into
 # the live /vessels runtime — git remotes are the ONLY code channel; no host
@@ -286,6 +295,7 @@ COPY scripts/bootstrap-seeder.ts /scripts/bootstrap-seeder.ts
 
 RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/local/bin/setup-git-push \
         /usr/local/bin/substrate-ready /usr/local/bin/substrate-doctor /usr/local/bin/reseed-restart \
+        /usr/local/bin/substrate-config \
         /usr/local/bin/substrate-pull-sync /usr/local/bin/mirror-to-live \
         /usr/local/bin/vessel-ctl /usr/local/bin/render-unit /usr/local/bin/discovery-deregister \
         /usr/local/bin/self-recovery-tick && \
