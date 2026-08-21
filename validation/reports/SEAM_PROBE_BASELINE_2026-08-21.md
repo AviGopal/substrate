@@ -303,3 +303,65 @@ measurement overturned the code reading:
 
 A counter at the consumer is worth more than any amount of reading, and it is
 the one thing every seam in this map was missing.
+
+---
+
+# Round 2 — re-validation at the consuming layer (13 agents, 0 errors)
+
+Round 1 claimed seven closures. Round 2 measured them at the consumer and
+**downgraded three**. The rule applied throughout: *a liveness cell without a
+number is not a result.*
+
+| fix | round-1 claim | **round-2 verdict** | the number |
+|---|---|---|---|
+| `R3-execute-04` hop 4 | CLOSED | **CONFIRMED-LIVE** | 9 real read-backs / **0 stubs** post-restart vs 29/8 pre-restart, at goal-host's own `poolEvents`. Decisive: dispatch `ceafcb16` step 1 — top-level, empty chain, the exact branch old code cleared. 14 tests fixed, 0 newly failing |
+| `L3-tuning-06` NULL≠NONE | CLOSED | **CONFIRMED-LIVE** | Ratchet fired **unassisted at 14:12:21**; `GET SF_BLEND` **null → 1**; ψ blend **0/58 recommends → 4/7**. Duplicate schedule gone |
+| shape-registry `org_id` | CLOSED | **CODE-ONLY** | zero registration traffic on this box, `shape_definition` = 0 rows. The 35×/48h was hub-side |
+| lint gate | CLOSED | **UNVERIFIED** | not re-measured this round |
+| `L2-structure` edges | deployed, unobserved | **INERT — and worse** | **206 `parent_miss` in 25 min, 0 of everything else.** Miss rate 88% → **100%** |
+| `L1-credit-10` credit key | partial | **INERT** | `matched:0` on **23/23**; `n_signature=0` on **390/390** |
+| `L3-psi-08` ψ refusal | CLOSED | **CONFIRMED-LIVE** | **9 blends** post-deploy carrying 4–6 real target shapes, vs 0 in the 98-min pre-deploy window |
+
+## My own regression, caught by my own counter
+
+`18c1490` retargeted the parent lookup onto `execution.execution_id`. **That
+column does not exist.** `execution` keys by record id; the compat view
+synthesizes the column with `meta::id(id) AS execution_id`
+(`sql/schemas/022-paradigm-compat-views.surql:63`) precisely because it is absent
+from the base table. A predicate on an absent column matches nothing, silently —
+so I moved the miss rate from 88% to **100%**.
+
+It is the nastier variant of inert: the code runs ~8×/min and emits **206
+plausible WARN lines reading "the data isn't there"** while the data is there.
+Three of the exact missed parents were fetched at the consumer — all HTTP 200,
+all carrying a distinct parent `activity_id`. Three real edges declined.
+
+**The counter I shipped in that same commit is what convicted it.** Fixed in
+`7b1071d`: address the row via `type::thing('execution', $pid)`, split
+`parent_miss` into `parent_not_persisted` (walk satisfiers, which miss forever
+and correctly) vs `parent_lookup_miss`, and normalize both endpoints to the
+prefixed form — all 1,998 existing edges carry `activity:⟨…⟩` on both sides, so a
+bare parent would have split the dedupe family and double-counted the posterior
+instead of sharpening it.
+
+## Measurement damaged the system it was measuring
+
+`IAS_TRACE_SPOOL_DIR` defaults to `/workspace/trace-spool` — production's retry
+queue. **81 of 83 spool files were `exec_test_1` debris** from test runs, and
+`drainSpool` takes the oldest 25 by name, so every run pushed the two genuine
+traces further back. They had fallen to ranks **64 and 73** and would never have
+been attempted — including one spooled today whose recorded endpoint is the live
+store that answers 200 and would have accepted it immediately.
+
+My own validation runs tonight caused this. Fixed in `fdc9100` (bunfig preload →
+temp dir), **verified by execution**: a full 371-test run left the live spool
+unchanged. The 81 debris files were removed; the 2 real traces now sit at ranks
+1 and 2.
+
+## The standing lesson
+
+Three of seven round-1 closures did not survive contact with a counter. The
+pattern is identical in every case and was named in round 1 before being
+under-applied: **a fix is not closed until a number at the consumer moves.**
+Deployment, typecheck, green tests and a correct-looking diff are all compatible
+with zero effect.
