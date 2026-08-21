@@ -165,3 +165,57 @@ Re-probe status:
 
 Both re-probes are blocked on the same thing: a **dispatch**. The read-only
 probes have given what they can; P4/P5/P2/P13 now need traffic through the walk.
+
+---
+
+# Re-evaluation round 1 — what the new counters revealed
+
+A two-hop goal was dispatched against the fixed stack (nonce
+`seamprobe-1787320349`, dispatch `846d8f8f`), using the composition-ask phrasing
+verified to reach on 08-13.
+
+**Routing is healthy and unflattened.** Target inference emitted BOTH shapes at
+**confidence 0.9** — `["orphaned_capability_scan","memoryNote_write"]` — and the
+derivation split computed correctly (`intermediate=[orphaned_capability_scan]`,
+`terminal=[memoryNote_write]`). The walk then accepted a **learned 1-step
+pathway** by shape-signature cover 0.50 borrowed from a prior reached goal
+(2/2 reached). Blocker #2 (target-inference flattening) does not fire for this
+phrasing, and pathway reuse is working.
+
+## ⚠ The credit fix is INSUFFICIENT — and its own counter proved it
+
+The `cts_lookup` counter added with the id-form fix immediately reported:
+
+```
+cts_lookup requested:72 matched:0 bucket=8b1b7ad9
+cts_lookup requested:48 matched:0 bucket=de248930
+```
+
+**Querying both id forms still matches nothing.** So `template_id` form was a
+real mismatch but not the only one. Two further causes, both located:
+
+1. **`account_id` is never written.** The read predicate is
+   `(account_id = $account_id OR (account_id IS NONE AND org_id = $org_id))`
+   (`activities.templates-db.ts:115`), but `posterior-update.ts` contains **zero
+   references to `account_id`**. The DB integrity check
+   (`cts_null_account_id`) reports 0 violations, meaning rows carry NONE — so
+   they can only match via the `org_id` branch, which requires `$org_id` to
+   agree exactly.
+2. **`context_bucket` is an 8-hex signature** (`8b1b7ad9`, `de248930`). This is
+   the same width the ψ investigation identified as the FOREIGN namespace — ψ
+   cells are keyed on 16-hex. Whether the credit write and this read agree on
+   bucket derivation is now the open question, and it is almost certainly where
+   the remaining mismatch lives.
+
+**The table is live:** `context_thompson_scores` grew 4,545 → 4,559 during this
+session, so credit is being written continuously and read zero times.
+
+This is the correct outcome for a measurement, not a setback: **the counter I
+added to make the seam observable is what falsified my own fix.** Before it,
+`matched:0` was indistinguishable from "the conditional agreed with the global".
+The id-form fix stands (it removed one real mismatch and is required for any
+match to ever occur); it is simply not sufficient alone.
+
+**Do not tune the `n_observations >= 5` read floor** until this is closed — the
+floor is unreachable while the predicate matches nothing, so any measurement of
+it today measures the predicate.
