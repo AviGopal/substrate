@@ -139,3 +139,68 @@ failed units: 0
 substrate-doctor: all checks PASS
 execution traces: 18135
 ```
+
+---
+
+## 7. The autonomous demonstration, and what it took to get an honest one
+
+Sections 1–4 are operator-executed. The condition also asks the substrate to
+demonstrate this itself, which took six dispatches and produced two graded
+verdicts — one false, one true. Both are in the oracle corpus.
+
+**The false one.** `fd259bc3`, goal: *"Validate that the documentation correctly
+describes how to set up and manage the substrate container."* Returned
+`reached=true` on a 6,177-character **summary of SUBSTRATE.md**. It read the
+document and described it; no command was run, no port probed, no documented
+output compared to a real one. Graded `not_achieved` by hand and filed as
+`gap-summarising-a-doc-grades-as-validating-it`.
+
+The mechanism is worth keeping: the deterministic `hollow_walklog_capped` gate had
+fired correctly on the *same goal* in an earlier dispatch and skipped the judge
+outright — *"it cannot out-testify the walk's own log"*. On the
+`universal-tool-fallback` path that gate does not fire, so the judge was free to
+grade prose. Same goal, same hollow walk, opposite verdict, decided only by which
+path produced the final artifact.
+
+**The true one.** `024fc7b8`, goal: *"How many documents does the docs_align_tick
+report say were scanned?"* — the same subject posed as a question with a
+**recomputable** answer. The walk resolved `docs_align_tick`, reported
+`docs_scanned: 63`, and carried the real `docsAlignTickReport` body as its basis.
+Independently recomputed by resolving the shape directly: **63**. Graded
+`achieved`.
+
+The discriminator is not phrasing luck. A goal whose answer can be recomputed can
+be checked; a goal whose answer is a judgement can only be narrated. That is why
+the first four attempts failed and why this one is worth trusting.
+
+### What the substrate says about its own docs
+
+Running its checker over README, SUBSTRATE.md, FEDERATION.md and HUMAN_SURFACE.md:
+
+```
+docs scanned : 4
+findings     : 0
+verdict      : CLEAN
+```
+
+Zero is only meaningful because non-zero is still reachable: a control doc
+carrying a dated status marker, a prose instance reference and a nonexistent
+script path is caught on all three. Before the checker's own four bugs were fixed
+it reported **40 findings on correct documentation** — a validator that fails on
+correct docs trains its readers to ignore it.
+
+### Still blocked, and filed rather than worked around
+
+Four of six dispatches failed to a single reproducible defect,
+`gap-inference-picks-shell-over-an-advertised-resolver`: goal-target inference
+selects `shellResult` over `docs_align_tick` even though that shape *is*
+advertised in the registry among 383 shapes, so the walk never reaches the
+producer holding the answer. One dispatch resolved the shape correctly, then
+appended `shellResult` for countability, ran the shape name as a shell command,
+and the resulting error sank an otherwise-correct verdict.
+
+The honest position: the docs are demonstrably correct by execution (sections 1–4)
+and by the substrate's own checker (0 findings, control-verified). The substrate
+can now reach a *recomputable* claim about them autonomously. It cannot yet reach
+the open-ended "validate the docs" formulation, and that is a filed defect rather
+than a phrasing to keep retrying until something goes green.
