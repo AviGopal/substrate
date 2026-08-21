@@ -97,3 +97,71 @@ LLM budget, so they are held pending scope confirmation.
 `P9` deserves care when it runs: it needs the stored `context_thompson_scores`
 `template_id` form compared against what `/recommend` binds, and its first job is
 to **confirm the zero** rather than to find a non-zero.
+
+---
+
+# Closure round 1 — six seams fixed, 2026-08-21
+
+Fixed against the baseline above, each with a test and a before/after suite
+comparison. All landed on `origin/dev` and converged into the running container
+by `substrate-pull-sync`.
+
+| seam | commit | what was actually wrong |
+|---|---|---|
+| `R3-execute-04` — the impulse body dies at hop 4 | `8676beb` (ias-executor-ts) | `evictExecutionScope` ran `store.impulses.clear()` on the top-level branch; a walk step IS top-level by that branch's own test, and the walk reads outputs back AFTER `execute()` returns. Now retains the execution's outputs and reaps them at the next top-level entry. **Suite 31 → 17 failures, zero newly failing: 15 pre-existing failures were this same defect**, including "resolved outputs are stored and retrievable by shape". |
+| `L3-tuning-06` — SF_BLEND never lands | `2a31d5a` (activity-api) | JS `null` bound into `option<string>`. **NULL is not NONE**: the UPDATE branch raises, the CREATE branch writes nothing and raises nothing. Now omits absent keys and **reads the row back, throwing on mismatch**. |
+| the same class, firing loudly | `2a31d5a` | `shape_definition.org_id` — every PUBLIC shape registration failing, 35×/48h on the hub. Same fix. `NONE` is also what the tenancy PERMISSIONS clauses test for. |
+| the lint gate | `1e30bbd` | `CLAUDE.md` documents `bun run lint` as enforcing the shape contract. **No `lint` script existed**; the checker's only reference was a shell script nothing invokes. Wired, and **verified by conviction**: an injected bad case exits non-zero, passes again on revert. |
+| `L2-structure-01..04` — no execution has ever minted an edge | `18c1490` | Four defects in series. The parent lookup read `activity_execution_traces` (**18,135 rows**) instead of `execution` (**150,003**) — a 12% shadow, so most lookups missed; the miss took a **bare return**, and the call site had `.catch(() => {})`, so the journal showed neither activity nor errors; the `CREATE` bound none of `execution_id`, `org_id`, `success`. |
+| `L1-credit-10(ii)` — credit addressable by nobody | `eee3074` | Credit writes `template_id` through `normalizeActivityId` (**bare**); `/recommend` binds ids from `normalizeRecordId` (**prefixed** `activity:⟨…⟩`, verified live). `IN` never matched — **4,545 rows** orphaned. Now queries and keys both forms, with a `cts_lookup` requested-vs-matched counter. |
+| `L3-psi-08` — ψ never blends | `cc99b98` (goal-host) | `psiInputs` refused the ENTIRE payload on a foreign signature, withholding `completion_shapes` — a conjunct of the server's ψ guard. Refusal narrowed to `signature` alone; the no-fabricated-signature invariant is preserved and now has its own test. **Suite 741 pass / 0 fail** (was 5 failing). |
+
+## What the measurement changed about the diagnosis
+
+**The static analysis said the composition-edge derive path was "never
+reached"** — zero log lines, zero assert failures. Measurement showed it fires
+on **66 of 100 ingests** and was giving up at a parent lookup against a 12%
+shadow table, silently. Both the bare `return` and the `.catch(() => {})` had to
+be counted before the truth was visible.
+
+This also settles the sequencing question the plan flagged: **fixing the `CREATE`
+alone would have landed green and minted nothing**, because the function returns
+before reaching it. The amputated-in-series pattern, caught by measurement
+rather than by an inert fix landing green.
+
+## Deployment
+
+`substrate-pull-sync` converged the container to these commits. It behaved
+correctly under observation, and is worth recording as a working instrument:
+it **quiesced goal-host** (waited for 1 in-flight unit to drain, 30s, rather
+than restarting into it), capped its own wait against `TimeoutStartSec`, and
+**refused to converge development-vessel** on a real test regression (3 tests
+that passed at baseline failing in both of two runs), explicitly discounting a
+flaky spread as inadmissible evidence.
+
+## Post-deployment re-evaluation (partial, honest)
+
+Deployment verified by content and by process identity, not by `is-active`:
+`activity-api` mirrored 13:41:15 and restarted 13:44:36 (MainPID 135537);
+`goal-host-vessel` mirrored 13:45:40 and restarted; all three fixes confirmed
+present in `/vessels/*` source.
+
+⚠ **A near-miss worth recording.** `ias-executor-ts` is a LIBRARY: its consumers
+resolve `./dist/index.js`, not `src`. At 13:46 the mirror had updated `src`
+while `dist/engine.js` still contained the old `impulses.clear()` — the hop-4
+fix was present and **inert**. `substrate-pull-sync` then rebuilt `dist` and
+fanned out to six consumers at 13:47:06 ("fan-out healthy AND propagated"). But
+goal-host had restarted at 13:46:33, i.e. **33 seconds BEFORE the rebuild**, so
+it was still running the old library and needed an explicit restart. *A mirrored
+source file is not a running fix when the package entry point is a build
+artifact.*
+
+Re-probe status:
+
+| # | seam | result |
+|---|---|---|
+| P13 | SF_BLEND | **PENDING** — still `null`, but the flag tick fires 10 min after start and had not yet run. Not a failed fix; an unripe measurement. |
+| P2 | execution-minted edges | **PENDING** — 0 new edges, and **zero `composition-edge` log lines** since restart, despite 32 trace ingests. The counters prove the path was not entered, which now means no nested child trace was ingested in that window rather than a silent miss. Needs a dispatched two-hop goal to settle. |
+
+Both re-probes are blocked on the same thing: a **dispatch**. The read-only
+probes have given what they can; P4/P5/P2/P13 now need traffic through the walk.
