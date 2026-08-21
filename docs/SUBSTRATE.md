@@ -786,8 +786,7 @@ docker exec <container> vessel-ctl apply    # make it so
 > human surface installed, `human-surface-vessel.service` is reported despite
 > being in the inventory (role `ui`, `manifest: true`). Confirm each name before
 > acting on it — `jq -r '.vessels[] | select(.unit=="<unit>")'` against the
-> inventory settles it. Tracked as
-> `gap-drift-mislabels-installed-manifest-vessels-as-ungoverned`.
+> inventory settles it.
 
 `drift` is **read-only** and safe to run at any time. It prints three sections —
 the volume inventory against the image default, the selection currently in force,
@@ -822,35 +821,17 @@ docker exec -e ENABLED_ROLES=full <container> vessel-ctl apply   # widen, then c
 docker exec <container> vessel-ctl apply                         # or: default = every baked unit
 ```
 
-**The selection is injected through `docker exec -e`** — but read the next
-paragraph before relying on it, because the injection loses to the env file.
+**The selection is injected through `docker exec -e`, and it outranks the env
+file.** `apply` and `drift` source `/etc/substrate/env` so `apply-inventory` sees
+what the boot saw, then re-export any of `PROFILE`, `ENABLED_VESSELS`,
+`ENABLED_ROLES`, `ENABLED_EXTRA_VESSELS` and `DISABLED_VESSELS` you supplied, so
+the injection wins over the file's own line. With nothing injected the file wins,
+because there is nothing to re-export. `drift` prints an `OVERRIDDEN for this
+run` line whenever an injected value differs from the file, so the selection it
+reports is always the one it would apply.
 
-> ⚠ **`-e` only wins when `/etc/substrate/env` carries no selection line.**
-> `vessel-ctl apply` sources that file (`set -a; . /etc/substrate/env`) before
-> calling `apply-inventory`, so any `ENABLED_ROLES=` line in it **overwrites**
-> what you injected. `gen-env` writes that line whenever a selection was set at
-> create time, and always sets it to `spoke` on a spoke — so:
->
-> ```
-> env file has no ENABLED_ROLES line  ->  apply-inventory sees your -e value
-> env file has ENABLED_ROLES=spoke    ->  apply-inventory sees spoke, not your -e value
-> ```
->
-> Applying a narrow selection is what masks units in the first place, so the
-> fleet that needs widening is usually the fleet whose env file pins the narrow
-> selection — and the widening `apply` re-applies that narrow selection and
-> reports success. Check before trusting it:
->
-> ```bash
-> docker exec <container> grep -E '^(PROFILE|ENABLED_ROLES|ENABLED_VESSELS)=' /etc/substrate/env
-> ```
->
-> If that prints nothing, the `-e` lever works. If it prints a selection, the
-> lever is inert and the way back is `recreate` with the wider selection, which
-> rewrites the env file. Tracked as
-> `gap-vessel-ctl-apply-overrides-the-injected-selection`.
-
-Recreating the container is the way to change the selection permanently.
+The injection lasts only for that command. Recreating the container is the way to
+change the selection permanently.
 
 The bare `apply` above is the default topology, and it now clears masks. It did
 not always: the no-selection branch returned early on the reasoning that "want

@@ -95,6 +95,40 @@ else
 fi
 csh() { if [ "$IN_CONTAINER" = 1 ]; then bash -c "$1"; else docker exec "$CONTAINER" bash -c "$1"; fi; }
 
+# A selection injected with `docker exec -e` must OUTRANK the one in the env file.
+#
+# `apply` and `drift` source /etc/substrate/env so apply-inventory sees the same
+# values the boot did. `set -a; . /etc/substrate/env` also OVERWRITES anything the
+# operator injected, and gen-env writes ENABLED_ROLES into that file whenever a
+# selection was set at create time — always, on a spoke. So the documented
+# mask-recovery lever
+#
+#   docker exec -e ENABLED_ROLES=full <container> vessel-ctl apply
+#
+# was silently reverted to the container's original selection, and applying a
+# NARROW selection is precisely what masks units: the lever was inert on exactly
+# the fleets that needed it, and the widening apply re-applied the narrow
+# selection and reported success. Measured both branches with this same idiom —
+# no line in the file: apply-inventory saw `full`; ENABLED_ROLES=spoke in the
+# file: it saw `spoke`.
+#
+# The fix is precedence, not order: capture the five selection names from THIS
+# process's environment (where `docker exec -e` put them) and re-export the
+# non-empty ones AFTER the source. Nothing wants file-over-injection — with no
+# injection the file still wins, because there is nothing to re-export.
+selection_override() {
+  _sel_out=""
+  for _sel_v in PROFILE ENABLED_VESSELS ENABLED_ROLES ENABLED_EXTRA_VESSELS DISABLED_VESSELS; do
+    eval "_sel_val=\${$_sel_v:-}"
+    [ -n "$_sel_val" ] || continue
+    # Single-quote the value and escape embedded quotes: these reach a nested
+    # shell as text, and a unit list is operator-supplied.
+    _sel_esc=$(printf '%s' "$_sel_val" | sed "s/'/'\\\\''/g")
+    _sel_out="$_sel_out $_sel_v='$_sel_esc'"
+  done
+  printf '%s' "$_sel_out"
+}
+
 # Running INSIDE a container, $CONTAINER is still the "substrate-live" default —
 # a name that is simply wrong when the caller is some other fleet. Every reply
 # echoed it, so an operator managing a second substrate got output confidently
@@ -391,7 +425,10 @@ case "$ACTION" in
     # by pull-sync, applied by nobody — until the container was restarted. This
     # makes that a one-command operation instead of a restart decision.
     echo "[apply] re-running vessel selection in $CONTAINER"
+    _sel="$(selection_override)"
+    [ -n "$_sel" ] && echo "[apply] injected selection overrides the env file:$_sel"
     csh "set -a; . /etc/substrate/env 2>/dev/null || true; set +a
+         ${_sel:+export$_sel}
          /usr/local/bin/apply-inventory" 2>&1 || {
       echo "{\"ok\":false,\"action\":\"apply\",\"container\":\"$CONTAINER\",\"error\":\"apply-inventory failed — selection unchanged\"}"; exit 1; }
     # The rendered LLM arms are governed by the same selection but are created
@@ -454,6 +491,11 @@ case "$ACTION" in
     echo
     echo "=== selection in force ==="
     csh "grep -E '^(PROFILE|ENABLED_ROLES|ENABLED_VESSELS|ENABLED_EXTRA_VESSELS|DISABLED_VESSELS)=' /etc/substrate/env || echo '(none set — default topology, every baked unit enabled)'"
+    # An injected selection outranks the file, so reporting only the file would
+    # describe a selection this very command is not going to apply.
+    if [ -n "$(selection_override)" ]; then
+      echo "OVERRIDDEN for this run by the injected selection:$(selection_override)"
+    fi
     echo
     echo "=== would applying that selection now change anything? ==="
     # DRY_RUN so this is a report, never an action. If it names units, the
@@ -464,7 +506,9 @@ case "$ACTION" in
     # "…N more" marker. Measured from a spoke-masked fleet: drift predicted 2
     # unmasks, apply performed 21 — and the two shown were exactly the last two
     # lines of the untruncated 73-line report.
+    _sel="$(selection_override)"
     csh "set -a; . /etc/substrate/env 2>/dev/null || true; set +a
+         ${_sel:+export$_sel}
          DRY_RUN=1 /usr/local/bin/apply-inventory 2>&1"
     ;;
 

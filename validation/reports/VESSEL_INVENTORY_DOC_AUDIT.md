@@ -146,7 +146,31 @@ reports success. The doc's own history records the previous version of this same
 failure — "58 units masked, 9 core vessels dead, `{"ok":true}` returned" — and
 the replacement lever has the same shape of silence.
 
-Filed as `gap-vessel-ctl-apply-overrides-the-injected-selection`.
+**Fixed**, rather than documented around: the doc stated the contract and the
+code violated it, and nobody wants file-over-injection (with no injection the
+file still wins, because there is nothing to re-export). `selection_override()`
+captures the five selection names from the calling process and re-exports the
+non-empty ones after the source, in both `apply` and `drift`; `drift` now prints
+an `OVERRIDDEN for this run` line so the selection it reports is the one it would
+apply.
+
+Verified through the real code path — only the env-file *path* was redirected so
+the quoting and re-export run verbatim:
+
+```
+file=spoke, no injection          -> compute infra registry seed ui          (file wins, unchanged)
+file=spoke, -e ENABLED_ROLES=full -> api autonomy compute control desktop …  (injection wins)
+file=spoke, -e spoke,autonomy     -> autonomy compute infra registry seed ui (multi-token survives)
+file=spoke, -e DISABLED_VESSELS=… -> carried, 52 units would be disabled     (second var carried)
+```
+
+A first attempt to verify this reported `FATAL: unknown token(s): 'full'` — the
+hand-written test did `export$_sel` on a shell *variable*, which word-splits
+without quote removal, so the literal quotes reached `apply-inventory`. In the
+script the same text is inside the command string the nested shell parses, so the
+quotes are syntax. The defect was in the probe, not the fix.
+
+Filed as `gap-vessel-ctl-apply-overrides-the-injected-selection`, now closable.
 
 ### 6. `drift` reports installed manifest vessels as ungoverned
 
