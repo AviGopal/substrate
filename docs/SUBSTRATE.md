@@ -29,11 +29,17 @@ The substrate has generalized from "one local container" to **one image that run
 > appear nowhere in the inventory, so `apply-inventory` cannot mask them; the
 > entrypoint's arm pass is what leaves them unenabled. The role selection governs
 > what starts **at boot**; it is not a barrier against a manual start.
-- `full` = every role except `desktop` — the intended shape of a local substrate,
-  and a hand-maintained enumeration. Note that `ENABLED_ROLES=full` is **not** the
-  same as leaving the selection env unset: unset is a total no-op that masks
-  nothing at all, `desktop` included, whereas `full` masks anything absent from
-  the list.
+- `full` = every role, `desktop` included — the intended shape of a local
+  substrate, and a hand-maintained enumeration. Because it currently enumerates
+  all twelve roles, `ENABLED_ROLES=full` masks nothing, which makes it
+  behaviourally equivalent to leaving the selection env unset. That equivalence
+  is a property of today's list, not a guarantee: `full` masks anything absent
+  from it, so a role added to the inventory and not added here would be masked
+  by `full` and left running by unset. Verify rather than assume:
+  ```bash
+  jq -r '([.vessels[].role]|unique) - .roles.full | join(", ")' \
+    scripts/substrate/vessels.inventory.json   # empty => full covers every role
+  ```
 
 `models` holds the LLM resolver arms; it is separate from `compute` precisely so a
 spoke can run work locally while resolving models on its hub.
@@ -43,9 +49,11 @@ ship in the base image like every other unit — what the `substrate-obsidian` s
 adds is the payload (Xvfb, noVNC, the Obsidian AppImage) and the `systemctl enable`
 that turns them on. On a base image they are present but never enabled, so there is
 nothing for a role to select. The consequence worth knowing: because they *are*
-inventory-named, any `ENABLED_ROLES` value masks them on an obsidian image — and
-the Makefile sets `ENABLED_ROLES=spoke` automatically whenever `DISCOVERY_ENDPOINT`
-is passed, so a federated obsidian fleet loses its desktop silently.
+inventory-named, any `ENABLED_ROLES` value that omits `desktop` masks them on an
+obsidian image — and the Makefile sets `ENABLED_ROLES=spoke` automatically
+whenever `DISCOVERY_ENDPOINT` is passed, so a federated obsidian fleet loses its
+desktop silently. `full` is the one group that carries `desktop`, so it is the
+selection to name when an obsidian image must keep its surface.
 
 > ⚠ **Neither `hub` nor `spoke` includes `autonomy`.** A federated hub+spoke pair
 > runs none of the 26 autonomy units — no `gap-compose`, no
@@ -66,11 +74,16 @@ is passed, so a federated obsidian fleet loses its desktop silently.
 
 `scripts/substrate/apply-inventory.sh` reads the inventory at boot — run by the container entrypoint *after* `gen-env` and *before* `exec systemd` — and `systemctl disable`s the unwanted units (it just removes the `*.wants` symlinks the image baked in). Selection env, highest precedence first:
 
+- `PROFILE=name` — a named exact-unit list from `inventory.profiles`; outranks everything below, and an unknown name is **fatal** rather than a fall-through to the coarser selection
 - `ENABLED_VESSELS=unit,unit` — explicit exact-unit allow-list; overrides roles
 - `ENABLED_ROLES=role,role` — roles/role-groups to keep (`hub`/`spoke`/`full` expand via `inventory.roles`); everything else is disabled
+- `ENABLED_EXTRA_VESSELS=unit,unit` — **additive**, applied on top of whichever selection won above
 - `DISABLED_VESSELS=unit,unit` — always off, even if selected above
 
-**Default (none of the three set) = every baked unit enabled = the full local substrate** (`apply-inventory.sh` is a no-op). Manifest-installed dynamic vessels (`"manifest": true`) are never baked-enabled, so they are never touched here — they are installed on demand (see [Dynamic vessels](#dynamic-vessels)).
+The full chain, including how these interact with the four config delivery
+channels, is in [`docs/operations/CONFIGURATION_SURFACE.md`](operations/CONFIGURATION_SURFACE.md).
+
+**Default (none of them set) = every baked unit enabled = the full local substrate.** This is *not* a no-op: the no-selection branch still runs the unmask and enable passes, so it clears masks left by a previous narrower selection and enables units that were added to the image after the enable symlinks were baked. "Want everything" is work, and skipping it once made the default the one selection that could not repair a fleet. Manifest-installed dynamic vessels (`"manifest": true`) are never baked-enabled, so they are never touched here — they are installed on demand (see [Dynamic vessels](#dynamic-vessels)).
 
 If a selection is set and cannot be applied — an unrecognised role or profile
 name — the container **refuses to boot** rather than starting the full baked
@@ -538,7 +551,7 @@ instance is a standalone, self-contained fleet with its own everything.
 > |---|---|---|
 > | `PORT_OFFSET` | unguarded; port mappings are fixed at creation | **`recreate` refuses** to change it (exits 1) — `docker rm -f <name>` first |
 > | `ANTHROPIC_API_KEY` and every other provider key | unguarded — the guard watches `API_KEY`, a *different* and normally-unset variable, so a rotated key appears to apply and does not | `recreate`, **supplying the key explicitly** — it is not read off the old container, and an unsupplied key silently falls back to `~/.metabob/config.json` |
-> | `PROFILE`, `ENABLED_EXTRA_VESSELS` | **never passed to `docker run` by the Makefile on ANY path**, including a fresh create — so `make up`/`recreate` cannot set them at all | raw `docker run -e PROFILE=…`, or `deploy-hub.sh`, which does pass `-e ENABLED_EXTRA_VESSELS` |
+> | `PROFILE`, `ENABLED_EXTRA_VESSELS` | passed with `-e` on both run lanes, so a **fresh create** honours them — but neither name is in `LAUNCH_OVERRIDES`, so supplying them to `make up` against a *stopped* container is silently ignored | `recreate`, supplying them explicitly |
 >
 > Guarded, and producing a clear error telling you to use `recreate`:
 > `ENABLED_ROLES`, `ENABLED_VESSELS`, `DISABLED_VESSELS`, `METABOB_API_KEY`,
@@ -735,6 +748,21 @@ docker exec <container> vessel-ctl apply               # re-apply the selection 
 `Restart=` loop reports `activating` forever and **never** `failed` — it is
 invisible to any states-only listing, and a climbing count is the cheap tell.
 
+> **Most of the `disabled` rows are expected.** On a default fleet roughly half
+> the units read `disabled`, and every one of them is the `.service` half of a
+> timer pair: the `.timer` is enabled and pulls the service when it fires, which
+> is ordinary systemd and not a selection problem. Separate the expected from a
+> real outage by asking whether a sibling timer exists:
+>
+> ```bash
+> docker exec <container> vessel-ctl status | awk '$3=="disabled"{print $1}' | while read u; do
+>   docker exec <container> systemctl cat "${u%.service}.timer" >/dev/null 2>&1 || echo "no timer: $u"
+> done
+> ```
+>
+> A unit named by that loop is disabled with nothing to start it — that is the
+> one worth investigating.
+
 ### `drift` and `apply`
 
 Vessel selection is read at boot by `apply-inventory`, so a corrected inventory
@@ -751,6 +779,15 @@ the LLM-arm pass, then starts and stops units to match.
 docker exec <container> vessel-ctl drift    # is this fleet running what it should?
 docker exec <container> vessel-ctl apply    # make it so
 ```
+
+> ⚠ **`drift`'s "absent from the inventory — ungoverned" warning over-reports.**
+> Its baseline excludes `manifest: true` entries, so every *installed* manifest
+> vessel is named as though it were a packaging omission. On a fleet with the
+> human surface installed, `human-surface-vessel.service` is reported despite
+> being in the inventory (role `ui`, `manifest: true`). Confirm each name before
+> acting on it — `jq -r '.vessels[] | select(.unit=="<unit>")'` against the
+> inventory settles it. Tracked as
+> `gap-drift-mislabels-installed-manifest-vessels-as-ungoverned`.
 
 `drift` is **read-only** and safe to run at any time. It prints three sections —
 the volume inventory against the image default, the selection currently in force,
@@ -785,10 +822,35 @@ docker exec -e ENABLED_ROLES=full <container> vessel-ctl apply   # widen, then c
 docker exec <container> vessel-ctl apply                         # or: default = every baked unit
 ```
 
-**The selection is injected through `docker exec -e`.** It is not persisted in
-`/etc/substrate/env`, so a bare `apply` uses whatever the container was created
-with — which is why the `-e` form is the in-place lever, and recreating the
-container is the way to change the selection permanently.
+**The selection is injected through `docker exec -e`** — but read the next
+paragraph before relying on it, because the injection loses to the env file.
+
+> ⚠ **`-e` only wins when `/etc/substrate/env` carries no selection line.**
+> `vessel-ctl apply` sources that file (`set -a; . /etc/substrate/env`) before
+> calling `apply-inventory`, so any `ENABLED_ROLES=` line in it **overwrites**
+> what you injected. `gen-env` writes that line whenever a selection was set at
+> create time, and always sets it to `spoke` on a spoke — so:
+>
+> ```
+> env file has no ENABLED_ROLES line  ->  apply-inventory sees your -e value
+> env file has ENABLED_ROLES=spoke    ->  apply-inventory sees spoke, not your -e value
+> ```
+>
+> Applying a narrow selection is what masks units in the first place, so the
+> fleet that needs widening is usually the fleet whose env file pins the narrow
+> selection — and the widening `apply` re-applies that narrow selection and
+> reports success. Check before trusting it:
+>
+> ```bash
+> docker exec <container> grep -E '^(PROFILE|ENABLED_ROLES|ENABLED_VESSELS)=' /etc/substrate/env
+> ```
+>
+> If that prints nothing, the `-e` lever works. If it prints a selection, the
+> lever is inert and the way back is `recreate` with the wider selection, which
+> rewrites the env file. Tracked as
+> `gap-vessel-ctl-apply-overrides-the-injected-selection`.
+
+Recreating the container is the way to change the selection permanently.
 
 The bare `apply` above is the default topology, and it now clears masks. It did
 not always: the no-selection branch returned early on the reasoning that "want
