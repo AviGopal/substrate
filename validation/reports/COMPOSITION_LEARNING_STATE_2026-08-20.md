@@ -1,5 +1,27 @@
 # Composition learning — verified state, 2026-08-20
 
+> ## ⚠ SUPERSEDED IN PART — read the corrections first
+>
+> A 13-agent adversarial validation on 2026-08-21 confirmed this report's two
+> headline findings but **overturned all three of its prescriptions**. See
+> [`COMPOSITION_LEARNING_ARCHITECTURE_2026-08-21.md`](COMPOSITION_LEARNING_ARCHITECTURE_2026-08-21.md).
+>
+> - **#4 credit — prescription WRONG.** Already fixed by `e19997f` (08-13). This
+>   report read the fix's own explanatory comment as evidence of the defect.
+> - **#5 grading — prescription NOT IMPLEMENTABLE** at `:4591`, and the rationale
+>   ("distinguishes composed from one-shot") is wrong: the cap only demotes. The
+>   load-bearing site is `:9471`, which this report missed.
+> - **#6 selection — diagnosis FALSE.** The composition graph *is* read, joined
+>   and blended at scoring. The real defects are an unsent
+>   `predecessor_activity_id` and a picker that does not order by the blend.
+> - **SF_BLEND root cause found**, and this report's supporting premise was wrong:
+>   the throwaway-name roundtrip succeeded only because it supplied non-null meta.
+> - **The "1644 sampled" figure** was not a sample bound but an endpoint ceiling —
+>   19% of rows are permanently unreachable through that route.
+>
+> The findings that stand: composition edges are a dead batch artifact, and the
+> autonomy plane was masked in one hand-applied batch at 2026-08-16 21:13.
+
 Live re-verification of the composition stack against the hub (`syzygy.host`,
 `substrate-live`) and current `dev` source. This is a **delta report**: it builds
 on `COMPOSITION_WIRING_AUDIT.md` (08-14) and `COMPOSITIONALITY_STATE.md` rather
