@@ -259,35 +259,27 @@ below: it needs only the image and one env var.
 A root-level `docker-compose.yml` is canonical
 (`scripts/substrate/docker-compose.yml` is a symlink to it):
 
-> ⚠ **Never run `docker compose up` against an existing docker-run fleet.**
-> Compose prefixes volume names with the **project name**, which defaults to the
-> directory you run from — so the `substrate-workspace` / `substrate-surreal`
-> declared in `docker-compose.yml` become `<project>_substrate-workspace` /
-> `<project>_substrate-surreal` (from a checkout named `substrate`, that is
-> `substrate_substrate-workspace`; rename the directory and the prefix changes
-> with it). A fleet started by `make up` mounts the **unprefixed** names, so
-> compose does not adopt it — it creates EMPTY volumes and starts a container
-> that looks perfectly healthy with an empty SurrealDB and an empty workspace.
-> The old volumes are orphaned rather than deleted, which is worse: nothing
-> errors, and the loss is invisible until someone asks where the traces went.
+> **Compose and `make up` share the same volumes.** `docker-compose.yml` names
+> its volumes explicitly (`name: ${WORKSPACE_VOLUME:-substrate-workspace}`), so
+> compose attaches to the same `substrate-workspace` / `substrate-surreal` every
+> other launch path uses, and running it against an existing fleet adopts that
+> fleet rather than replacing it.
 >
-> Use compose on a **fresh host**, or for an existing fleet declare the volumes
-> `external: true` under their unprefixed names first. To see which set a
-> running container actually holds:
+> Without that explicit `name:`, compose would prefix volumes with the project
+> (the directory you run from) and silently create EMPTY ones — a container that
+> looks perfectly healthy with an empty SurrealDB and an empty workspace, the
+> real volumes orphaned rather than deleted. If you fork this file, keep the
+> `name:` fields. To see which volumes a running container actually holds:
 >
 > ```bash
 > docker inspect <container> --format '{{range .Mounts}}{{.Name}} {{end}}'
 > ```
 >
-> An unprefixed `substrate-workspace` means the make-up fleet; a prefixed
-> `<project>_substrate-workspace` means a compose fleet.
+> A second fleet namespaces its state by setting `WORKSPACE_VOLUME` and
+> `SURREAL_VOLUME` alongside `SUBSTRATE_CONTAINER`.
 
 ```bash
 cp scripts/substrate/.env.example .env      # set ANTHROPIC_API_KEY
-
-# CHECK FIRST — if this prints anything, a fleet already exists here and
-# `docker compose up` would strand its volumes. See the warning above.
-docker ps -a --filter name=substrate-live --format '{{.Names}}'
 
 docker compose up -d                        # root compose is canonical
 docker exec substrate-live substrate-key show   # read the operator API key
