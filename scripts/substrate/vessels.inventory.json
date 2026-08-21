@@ -151,7 +151,8 @@
     },
     {
       "unit": "relevance-sink-vessel.service",
-      "role": "compute",
+      "_comment": "role=store, NOT compute: this vessel is After=surrealdb.service and writes impulse_relevance_metrics to SurrealDB directly (src/index.ts:19-38), unlike every other compute vessel which reaches its data through a resolver. Under role=compute it was selected by the spoke group, which includes compute and excludes store — so on a federated spoke it started, registered, reported healthy, and every write it made failed silently against a datastore that was not there.",
+      "role": "store",
       "repo": "relevance-sink-vessel",
       "health_port": 8255
     },
