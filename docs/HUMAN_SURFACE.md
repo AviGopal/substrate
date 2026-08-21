@@ -22,8 +22,22 @@ These are prerequisites, not steps — a machine that has them once never needs
 them again.
 
 - **Docker**, privileged-capable.
+- **A hub that actually serves federation.** Not merely a substrate with the
+  compute and the trace store: the surface joins over the relay, so the hub must
+  advertise one. Check before you start, because an unrelayed hub is
+  indistinguishable from a healthy one until the surface fails to register:
+
+  ```bash
+  curl -s http://<hub-host>:18100/bootstrap | jq '.relay_multiaddrs | length'   # must be > 0
+  ```
+
+  A container launched with `ENABLED_ROLES=hub` does **not** satisfy this on its
+  own — the relay is a manifest vessel and has to be installed and given a
+  `PUBLIC_IP`. See [`FEDERATION.md`](FEDERATION.md) § *A hub that is not on a VM*.
 - **A checkout of the super-repo** (`git submodule update --init --recursive`).
   The launcher lives in it, and the surface's own workdir is a clone of it.
+  Confirm the submodules are actually populated rather than trusting the exit
+  code — `git submodule status --recursive | grep '^-'` lists any that are not.
 - **`jq`** — the launcher reads your config with it.
 - **No credential for the image.** `ghcr.io/avigopal/substrate` is a **public**
   package and pulls anonymously — no `docker login`, no `read:packages` PAT.
@@ -55,9 +69,19 @@ values matter:
 Set **`hubDiscovery`**, not `endpoint`. The two are not interchangeable and the
 key is overloaded: `configure-local.sh` writes `metabob.endpoint` as the **trace
 store** (activity-api, `:18080`), which is what general tooling reads, while the
-surface launcher falls back to `endpoint` as a **hub discovery** URL (`:18100`)
-only when `hubDiscovery` is absent. Setting `hubDiscovery` explicitly states
-which you mean and survives anyone re-running `configure-local.sh`.
+surface launcher falls back to `endpoint` when `hubDiscovery` is absent.
+
+⚠ **That fallback is verbatim — port and all.** It does not rewrite `:18080` to
+`:18100`; it hands the trace-store URL to the surface as its hub discovery
+endpoint, and the only validation is a scheme check. The result is a surface
+pointed at the wrong vessel with nothing saying so. Setting `hubDiscovery`
+explicitly states which you mean and survives anyone re-running
+`configure-local.sh`.
+
+If the launcher refuses for want of a hub, its error text suggests setting
+`.metabob.endpoint` — ignore that and set `.metabob.hubDiscovery`, for the
+reason just given. To point at a different config file entirely without touching
+your own, set `METABOB_CONFIG=/path/to/config.json`.
 
 `apiKey` must be **issued by that hub**. A key minted locally is not valid there
 and every hub-facing call answers 401 — which surfaces later as a page that loads
@@ -145,6 +169,14 @@ so each goal travels to the hub and back. A surface that loads but cannot
 dispatch is nearly always the hub link — a key the hub did not issue, or a hub
 that is not reachable — not the page.
 
+**The hub URL must work from two positions.** The launcher's registration check
+runs `curl` on the *host*, while the container needs the same URL to resolve from
+*inside* the bridge network. On a same-host hub/surface pair those differ:
+`127.0.0.1` answers only from the host, the docker bridge gateway only from the
+container. Use the machine's LAN IP, which answers from both. A hub URL that is
+unreachable from the host reports `HTTP 000`, which reads like a federation
+failure and is not one.
+
 **A local port may legitimately answer nothing.** The container publishes the
 usual `18xxx` range, but the units behind most of those ports are not running
 here. Route by shape through discovery; reach for a host port only when you mean
@@ -210,6 +242,33 @@ bundle.
 
 The reliable check is the bundle, not the commit: compare the
 `assets/index-*.js` the page references against what is on disk.
+
+## Recreating one — what you lose
+
+A surface container survives `docker stop` / `docker start` cleanly (below). It
+does **not** survive `make recreate`, and the docs used to prescribe recreate
+without saying so.
+
+`ui/dist` survives, because it lives on the volume. What is destroyed is the
+*install*: the `human-surface-vessel.service` unit and the `HOST=0.0.0.0` drop-in
+that `ui-only-up.sh` writes so a published port answers at all. Both live in
+`/etc/systemd/system`, outside the volume. After a recreate the unit reports
+`loaded / inactive / disabled`, its files are gone, and the host port returns
+nothing. Re-running the launcher is the fix, but it refuses an existing container
+name — so remove the container first, or re-install by hand.
+
+Two related hazards on the same path, both measured:
+
+- **`recreate` re-injects the operator's provider key.** The ui-only lane
+  deliberately launches with `ANTHROPIC_API_KEY=""`; `recreate` refills it from
+  `~/.metabob/config.json` and it lands in the spoke's *persisted* secrets file,
+  where it outlives every later recreate. (Fixed by carrying provider keys
+  forward by presence rather than by value — but check `.substrate-secrets` on
+  any surface recreated before that landed.)
+- **A federation transport in a restart loop reports `activating`, never
+  `failed`.** It is invisible to `--state=failed` and to `substrate-doctor`'s
+  failed-unit check, which passed on a surface whose transport had restarted 222
+  times. Read `restarts=` in `vessel-ctl status`.
 
 ## Stopping and starting one
 

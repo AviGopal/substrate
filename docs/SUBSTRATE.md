@@ -332,8 +332,11 @@ fresh container consumes is baked in or generated:
 - **Required config:** one LLM provider key (`ANTHROPIC_API_KEY`, or
   `OPENAI_API_KEY` + `OPENAI_BASE_URL` for OpenAI-compatible/local models) —
   required only for a **root/standalone** substrate or a hub. A **spoke** (a
-  remote `DISCOVERY_ENDPOINT`) needs none: it inherits the hub's LLM arms
-  through discovery.
+  remote `DISCOVERY_ENDPOINT`) is *designed* to need none, inheriting the hub's
+  LLM arms through discovery — but measured against a live hub that inheritance
+  does not yet work (see the warning in
+  [`FEDERATION.md`](FEDERATION.md#joining-a-network)), so give a spoke a key if
+  it must resolve models.
 - **Everything else auto-generates** on first boot and persists to the
   `substrate-workspace` volume (`.substrate-secrets`: `JWT_SECRET`,
   `SURREAL_PASS`, a local `METABOB_API_KEY`).
@@ -450,8 +453,13 @@ return-path step (`spoke-federate`) — live in
 and [`scripts/substrate/.env.example`](../scripts/substrate/.env.example);
 identity-namespace mechanics in [`docs/FEDERATION.md`](FEDERATION.md).
 
-A federated spoke inherits the hub's LLM arms, so its launch command needs no
-local provider key:
+A federated spoke is meant to inherit the hub's LLM arms, so its launch command
+supplies no local provider key. Two measured caveats before you rely on that:
+the inheritance is currently one-directional and does not resolve (see
+[`FEDERATION.md`](FEDERATION.md)), and `make up` forwards the operator host's own
+`ANTHROPIC_API_KEY` from `~/.metabob/config.json` anyway — into the spoke's
+process environment *and* its persisted `.substrate-secrets`. Pass
+`ANTHROPIC_API_KEY=` explicitly to keep a spoke genuinely keyless.
 
 ```bash
 make -C scripts/substrate up API_KEY=<hub-issued-key> \
@@ -546,7 +554,7 @@ instance is a standalone, self-contained fleet with its own everything.
 
 ```bash
 # Boot an isolated clean-room fleet (own volumes + own ports; substrate-live untouched)
-make -C scripts/substrate up LIVE_NAME=substrate-scratch PORT_OFFSET=20000 ANTHROPIC_API_KEY=sk-ant-...
+make -C scripts/substrate up LIVE_NAME=substrate-scratch PORT_OFFSET=5000 ANTHROPIC_API_KEY=sk-ant-...
 
 # Every management/inspection target needs the same LIVE_NAME (they default to substrate-live)
 docker exec <container> substrate-doctor
@@ -575,18 +583,14 @@ scripts/substrate/configure-local.sh
 > **Obsidian flavour.** For the same fleet plus an in-container Obsidian desktop
 > over noVNC (host `:16080`), run `make -C scripts/substrate build-obsidian` then
 > `make -C scripts/substrate run-live-obsidian ANTHROPIC_API_KEY=...`. It reuses
-> the `substrate-live` container name and the same volumes, so every `restart-*`
-> / `logs-*` / `health` target keeps working unchanged.
+> the `substrate-live` container name and the same volumes, so `vessel-ctl` and
+> `substrate-doctor` behave identically on this flavour.
 >
 > ⚠ **It does not publish the same nine ports.** `run-live-obsidian` swaps
 > `18310:8310` (the human surface) for `16080:6080` (noVNC), so `:18310` is
 > simply unpublished on this flavour — a `curl localhost:18310/health` returns
 > connection-refused with no vessel at fault. It also hardcodes its ports and
 > ignores `PORT_OFFSET`.
->
-> Both `restart-*` and `logs-*` are **fixed enumerated target lists**, not
-> pattern rules — see [Iteration loop](#iteration-loop) and
-> [Monitoring](#monitoring) for the units each covers.
 
 After step 4, `~/.metabob/config.json` points to `http://localhost:18080` and all validation harnesses use it automatically.
 
@@ -681,8 +685,8 @@ credential — not the network position — is the trust boundary.
 Two surfaces administer the same keyspace, and the choice between them is about
 where you stand relative to the substrate, not about capability:
 
-- **`docker exec <container> substrate-key issue <name>` (and its `whoami` / `list-keys` /
-  `revoke-key` / `issue-jwt` siblings)** — for a substrate you have **shell on**.
+- **`docker exec <container> substrate-key issue <name>` (and its `whoami` / `list` /
+  `revoke` / `jwt` siblings)** — for a substrate you have **shell on**.
   Each target runs `docker exec` against the container, so it needs no network
   exposure, no client install, and no credential beyond a running substrate: the
   operator key is already inside. This is the bootstrap surface — it is how the
@@ -716,7 +720,7 @@ instance in the command:
 docker exec <container> vessel-ctl status              # the fleet: state, enabled, restarts
 docker exec <container> vessel-ctl status <vessel>     # one unit
 docker exec <container> vessel-ctl restart <vessel>
-docker exec <container> vessel-ctl start <vessel>      # after apply masked it, or after stop
+docker exec <container> vessel-ctl start <vessel>      # after stop (NOT after a mask — see below)
 docker exec <container> vessel-ctl stop <vessel>
 docker exec <container> vessel-ctl logs <vessel> -n 100
 docker exec <container> vessel-ctl sync <vessel>       # clone -> live runtime + restart
@@ -765,9 +769,45 @@ units are deliberately left for their timer rather than started immediately.
 Confirm with `vessel-ctl status`, and note that the container's `RestartCount`
 stays where it was: nothing here restarts the container.
 
-> A unit the selection has **masked** cannot be restarted — systemd refuses, and
-> `vessel-ctl restart` says so rather than reporting a success that did not
-> happen. Change the selection and `apply`, or `start` it deliberately.
+> A unit the selection has **masked** cannot be started or restarted — systemd
+> refuses, and `vessel-ctl` says so rather than reporting a success that did not
+> happen. `start` will not rescue it either. The only way back is to change the
+> selection and `apply`.
+
+### Recovering a fleet you masked
+
+Applying a narrower selection to a running fleet masks whatever it excludes, and
+the masks are on-disk state that outlives the selection that created them. To
+get those units back, apply a selection that *wants* them:
+
+```bash
+docker exec -e ENABLED_ROLES=full <container> vessel-ctl apply   # widen, then converge
+docker exec <container> vessel-ctl apply                         # or: default = every baked unit
+```
+
+**The selection is injected through `docker exec -e`.** It is not persisted in
+`/etc/substrate/env`, so a bare `apply` uses whatever the container was created
+with — which is why the `-e` form is the in-place lever, and recreating the
+container is the way to change the selection permanently.
+
+The bare `apply` above is the default topology, and it now clears masks. It did
+not always: the no-selection branch returned early on the reasoning that "want
+everything" needs no work, so the one selection that should have been able to
+restore anything was the only one that could not. Measured before the fix: 58
+units masked, 9 core vessels dead, `{"ok":true}` returned, and `drift` reporting
+a clean all-clear at that same moment.
+
+### Where the selection and the inventory actually live
+
+```bash
+docker exec <container> cat /workspace/substrate/fleet/vessels.inventory.json   # authoritative
+docker exec <container> cat /usr/local/share/substrate/vessels.inventory.json   # image default
+docker exec <container> grep -E '^(PROFILE|ENABLED_ROLES|ENABLED_VESSELS|DISABLED_VESSELS)=' /etc/substrate/env
+```
+
+The volume copy is what the fleet obeys; the image copy is the build default.
+`drift` compares them for you, but when you need to read or edit one, those are
+the paths.
 
 > Both boot and `apply` call the same `apply-llm-arms` for the rendered arms.
 > One copy on purpose: the arm-selection logic lived only in the entrypoint, and
@@ -897,22 +937,10 @@ docker exec <container> vessel-ctl logs activity-api
 docker exec -it <container> bash
 ```
 
-**`logs-*` is an enumerated set of targets, not a pattern rule.** There is no
-generic `logs-<unit>`: make has one explicit target per covered unit, and any
-other name fails with `No rule to make target`. The targets that exist are:
-
-`logs-all` (the whole journal, followed), `logs-activity-api`,
-`logs-analysis-vessel`, `logs-boredom-vessel`, `logs-bootstrap-seeder`,
-`logs-concept-db`, `logs-development-vessel`, `logs-goal-host-vessel`,
-`logs-llm-resolver-vessel`, `logs-local-tools-vessel`, `logs-m1-trainer`,
-`logs-ribosome-vessel`, `logs-surrealdb`.
-
-Most follow the unit (`journalctl -fu`); `logs-bootstrap-seeder`,
-`logs-boredom-vessel`, and `logs-m1-trainer` instead dump the unit's journal and
-exit (`--no-pager`), so those three return rather than blocking your terminal.
-For **any unit without a target** — every
-timer-driven tick, the rendered LLM arms, identity, discovery — read the journal
-directly, which works for all of them:
+**There are no `logs-*` make targets.** Read any unit's journal directly. This
+works for every unit, including the timer-driven ticks, the rendered LLM arms,
+identity and discovery — and `docker exec <container> vessel-ctl logs <vessel>`
+does the same thing by vessel name:
 
 ```bash
 docker exec substrate-live journalctl -u <unit>.service -n 100 --no-pager
@@ -1187,7 +1215,7 @@ Federation routes capability queries across substrates: hub/spoke over a shared 
 
 ## Troubleshooting
 
-**Units not starting within 60s**: read the failing unit's journal — `docker exec substrate-live journalctl -u <unit>.service -n 100 --no-pager` (or the matching `logs-*` make target, if the unit has one). Most common cause: a host-port conflict on one of the published ports (e.g. another process already on `18270`) — `run-live` aborts with "Bind for 0.0.0.0:18270 failed: port is already allocated".
+**Units not starting within 60s**: read the failing unit's journal — `docker exec substrate-live journalctl -u <unit>.service -n 100 --no-pager`. Most common cause: a host-port conflict on one of the published ports (e.g. another process already on `18270`) — `run-live` aborts with "Bind for 0.0.0.0:18270 failed: port is already allocated".
 
 **API key needed but lost**: if you ran `seed-identity.ts` but forgot the key, re-read it from the container env file: `docker exec substrate-live grep METABOB_API_KEY /etc/substrate/env`. Then re-run `configure-local.sh` to update your local config.
 

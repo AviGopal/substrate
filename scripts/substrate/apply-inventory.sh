@@ -28,10 +28,32 @@ log() { echo "[apply-inventory] $*" >&2; }
 if [ ! -f "$INV" ]; then log "no inventory at $INV — keeping all units (no-op)"; exit 0; fi
 if ! command -v jq >/dev/null 2>&1; then log "jq missing — keeping all units (no-op)"; exit 0; fi
 
-# No selection env → keep everything.
+# No selection env → every manageable unit is desired. FALL THROUGH; do not exit.
+#
+# This branch used to `exit 0` on the theory that "want everything" needs no
+# work. It needs two kinds of work, and skipping them made the default topology
+# the one selection that could never repair itself:
+#
+#   1. UNMASK. Masks are on-disk state left by a PREVIOUS selection, not by this
+#      one. After `vessel-ctl apply` with ENABLED_ROLES=spoke masked seven
+#      vessels, the documented recovery — a bare `vessel-ctl apply`, which both
+#      the inventory header and `drift` call "all units enabled" — returned here,
+#      printed that line, and exited without clearing a single mask. Measured on
+#      a live fleet: 58 units masked, 9 core vessels dead, `{"ok":true}`, and
+#      `drift` issuing a clean all-clear at that same moment. `start` refuses a
+#      masked unit, `restart` refuses it and advises "unmask it deliberately",
+#      and there is no `unmask` verb — so the fleet had no documented way back.
+#   2. ENABLE. Enable symlinks are baked at image build; a unit added to units/
+#      afterwards is installed by pull-sync and then sits `disabled` forever.
+#      The enable pass below is what fixes that, and it sat past this exit — so
+#      13 timers plus development-vessel-seed.service, all present in
+#      /lib/systemd/system, were enabled on NO default-topology container.
+#
+# Falling through costs one loop over the inventory and reaches both passes:
+# DESIRED becomes every manageable unit (the else-branch below), DISABLED_EXPLICIT
+# is empty, so nothing is disabled and everything masked is restored.
 if [ -z "${PROFILE:-}" ] && [ -z "${ENABLED_VESSELS:-}" ] && [ -z "${ENABLED_ROLES:-}" ] && [ -z "${DISABLED_VESSELS:-}" ]; then
   log "no ENABLED_ROLES/ENABLED_VESSELS/DISABLED_VESSELS set — all units enabled (default)"
-  exit 0
 fi
 
 csv() { echo "$1" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' || true; }

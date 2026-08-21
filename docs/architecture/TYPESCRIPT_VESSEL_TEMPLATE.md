@@ -417,14 +417,14 @@ The iteration loop is then:
 
 ```bash
 # edit repos/<vessel>/src/** → hot-reload into the running container → validate
-docker exec <container> vessel-ctl restart <vessel>          # docker cp src + systemctl restart
+docker exec <container> vessel-ctl sync <vessel>             # mirror the in-container clone + restart
 curl -s http://localhost:18250/health | jq .         # vessel reachable on its host port
 curl -s http://localhost:18080/v2/activities/templates  # validate against the substrate
 ```
 
-Core vessels without a `restart-*` target (activity-api, identity-vessel,
-discovery-vessel, surrealdb) are restarted directly:
-`docker exec substrate-live systemctl restart <unit>`.
+Every unit restarts the same way, core or dynamic — activity-api,
+identity-vessel, discovery-vessel and surrealdb included:
+`docker exec <container> vessel-ctl restart <vessel>`.
 
 ### Downstream path: Helm wiring (canary / production only)
 

@@ -163,7 +163,11 @@ if [ -z "$GIT_PAT" ]; then
 fi
 [ -n "$CFG_SOURCE" ] && echo "[ui-only-up] filled from $CONFIG_FILE / gh:$CFG_SOURCE" >&2
 
-[ -n "$HUB" ]     || fail "no hub. Pass --hub <url>, or set .metabob.endpoint in $CONFIG_FILE."
+# NOT .metabob.endpoint. That key is the TRACE STORE (:18080) and the fallback
+# below takes it VERBATIM, port and all — so following this hint produced a
+# surface pointed at activity-api and calling it a hub, with only a scheme check
+# in the way. Name the key that means what the operator wants.
+[ -n "$HUB" ]     || fail "no hub. Pass --hub <url>, or set .metabob.hubDiscovery (NOT .metabob.endpoint, which is the trace store) in $CONFIG_FILE."
 [ -n "$API_KEY" ] || fail "no api key. Pass --api-key <hub-issued key>, or set .metabob.apiKey in $CONFIG_FILE. A locally minted key is rejected by the hub."
 [ -n "$NAME" ]    || fail "--name must not be empty."
 case "$HUB" in http://*|https://*) : ;; *) fail "--hub must be a URL, e.g. http://<hub-host>:18100 (got '$HUB')." ;; esac
@@ -620,7 +624,10 @@ if [ -z "$FED_ID" ]; then
   echo "[ui-only-up] the container never entered the federated-spoke path." >&2
 else
   echo "[ui-only-up] federation substrate id: $FED_ID"
-  echo "[ui-only-up] polling the HUB registry for the surface (up to 120s — the mirror is not instant)…"
+  # 40 attempts x (curl -m 8 + sleep 3) is up to ~440s, not 120s. Stating a
+  # number four times short of the real one turns a working wait into an
+  # apparent hang against an unreachable hub.
+  echo "[ui-only-up] polling the HUB registry for the surface (40 attempts, up to ~7min worst case — the mirror is not instant)…"
   for _ in $(seq 1 40); do
     HUB_ROWS="$(curl -s -m 8 -X POST "${HUB%/}/resolve" \
       -H 'Content-Type: application/json' \
@@ -653,6 +660,14 @@ EOF
       -H 'Content-Type: application/json' -H "Authorization: ApiKey $API_KEY" \
       -d '{"pointer":{"type":"vesselRegistry"}}' 2>&1 | head -20 | sed 's/^/[ui-only-up]   /' >&2 || true
     echo "[ui-only-up]   A 401 here means the key is not hub-issued." >&2
+    # HTTP 000 is a CONNECT failure, not a federation failure, and the two read
+    # identically in this block. The check curls from the HOST while the
+    # container needs the same URL from inside the bridge network, so a
+    # same-host hub can be reachable from one position and not the other.
+    echo "[ui-only-up]   HTTP 000 means the hub URL is not reachable FROM THIS HOST —" >&2
+    echo "[ui-only-up]   the container may still reach it. A same-host hub needs an" >&2
+    echo "[ui-only-up]   address that answers from both: use the machine's LAN IP," >&2
+    echo "[ui-only-up]   not 127.0.0.1 and not the docker bridge gateway." >&2
   fi
   echo "[ui-only-up] federation transport journal:" >&2
   docker exec "$NAME" journalctl -u federation-transport-vessel -n 40 --no-pager 2>&1 \

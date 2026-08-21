@@ -4,7 +4,7 @@
 # Runs INSIDE the substrate container, against the loopback address of the
 # local identity-vessel. Deployments that front a remote admin client publish
 # identity on a host port too; this script does not depend on that either way.
-# From the host, use the Makefile wrappers:
+# From the host, run it through the container:
 #   docker exec <container> substrate-key show
 #   docker exec <container> substrate-key issue <name> [scopes] [expires_days]
 #   docker exec <container> substrate-key jwt [role] [expires_seconds]

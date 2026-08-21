@@ -238,7 +238,7 @@ METABOB_API_KEY="${METABOB_API_KEY:-$(persisted_secret METABOB_API_KEY)}"
 if [[ "$_is_spoke" = "1" && -z "${METABOB_API_KEY:-}" ]]; then
   echo "[gen-env] ERROR: this container is configured as a SPOKE (a remote hub is set) but no hub-issued credential was supplied." >&2
   echo "[gen-env]   Set METABOB_API_KEY to the key the HUB issued for this spoke." >&2
-  echo "[gen-env]   Mint one on the hub with: make -C scripts/substrate issue-key NAME=<this-spoke>" >&2
+  echo "[gen-env]   Mint one on the hub with: docker exec <hub-container> substrate-key issue <this-spoke>" >&2
   echo "[gen-env]   Refusing to generate one locally: a self-minted key is not a member of the hub's identity group," >&2
   echo "[gen-env]   so the spoke would boot healthy and then fail every federated call with 401." >&2
   exit 1
@@ -498,7 +498,7 @@ LLM_DEFAULT_MODEL="${LLM_DEFAULT_MODEL:-}"
 # readability. It used to be the sole assignment, which made the documented
 # checkout-free launch impossible: the env heredoc above expands
 # ${SUBSTRATE_ROOT} roughly thirty lines BEFORE this point, and gen-env runs
-# under `set -u`, so any `docker run` that did not pass -e SUBSTRATE_ROOT died
+# under 'set -u', so any 'docker run' that did not pass -e SUBSTRATE_ROOT died
 # with "SUBSTRATE_ROOT: unbound variable" before writing a single line of env.
 # The Makefile's run targets pass it explicitly, so the make path always worked
 # and the raw path never did — including the README's own quick-start command,

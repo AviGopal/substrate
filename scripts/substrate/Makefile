@@ -78,11 +78,6 @@ endif
 WORKSPACE    := $(shell pwd)/workspace
 SURREAL_DATA := $(shell pwd)/surreal-data
 
-# Vessels with @avigopal/ias-executor-ts as a `file:` dep. Bun copies dist
-# physically per-consumer rather than symlinking, so rebuilds of the
-# canonical package don't propagate. sync-ias-executor-ts pushes the new
-# dist into every consumer's node_modules path inside the container.
-IAS_CONSUMERS := goal-host-vessel ribosome-vessel boredom-vessel development-vessel local-tools-vessel llm-resolver-vessel analysis-vessel
 
 # LLM provider credentials — read from environment first, then ~/.metabob/config.json.
 # A standalone or hub needs one local provider key. A federated spoke inherits
@@ -161,7 +156,7 @@ REDIS_URL ?=
 #    That is the WHOLE second-command step: a spoke boot with HUB_DISCOVERY_URL
 #    set now AUTO-enables federation-transport-vessel at boot (entrypoint.sh) and
 #    gen-env.sh auto-assigns a unique FED_SUBSTRATE_ID + FED_VESSEL_ID.
-# 2) (OPTIONAL override) make vessel-ctl enable federation-transport-vessel FED_SUBSTRATE_ID=<unique-id> [RELAY_MULTIADDR=<addr>]
+# 2) (OPTIONAL override) docker exec <container> spoke-federate <container> <unique-id> [<relay-multiaddr>]
 #    Only needed to PIN a specific substrate id or run the hub-side collision
 #    check (see spoke-federate.sh) — NOT a required step. The auto-enable at
 #    boot already stands the transport up.
@@ -225,6 +220,18 @@ endif
 FEDERATED_SPOKE := $(strip $(DISCOVERY_ENDPOINT) $(HUB_DISCOVERY_URL))
 # These inputs change a container's immutable Docker configuration. `up` may
 # safely resume a stopped container only when no such override was supplied.
+# EXPORTED, NOT INTERPOLATED.
+#
+# Every recipe below passes these with a bare `-e VAR` (docker reads the value
+# from the recipe's environment) instead of `-e VAR="$(VAR)"`. The interpolated
+# form expanded the operator's real 108-char Anthropic key and 40-char GitHub
+# token into the recipe TEXT, so `make -n up` printed both in cleartext — and an
+# `@` prefix does NOT fix that, because `make -n` prints @-prefixed lines too.
+# `export` keeps the delivered value identical, including when it is empty.
+export ANTHROPIC_API_KEY OPENAI_API_KEY CHUTES_API_KEY OPENROUTER_API_KEY
+export GOOGLE_API_KEY GROQ_API_KEY MISTRAL_API_KEY RUNPOD_API_KEY
+export GITHUB_TOKEN SUBSTRATE_GIT_PAT API_KEY_SECRET METABOB_API_KEY
+
 LAUNCH_OVERRIDES := $(strip $(API_KEY) $(METABOB_API_KEY) $(DISCOVERY_ENDPOINT) $(HUB_DISCOVERY_URL) $(FED_SUBSTRATE_ID) $(RELAY_MULTIADDR) $(ENABLED_ROLES) $(ENABLED_VESSELS) $(DISABLED_VESSELS) $(PEER_DISCOVERY_ENDPOINTS) $(ACTIVITY_API_ENDPOINT) $(IDENTITY_VESSEL_URL) $(IDENTITY_ENDPOINT) $(SURREALDB_URL) $(REDIS_URL))
 
 # Host-port offset so a second substrate coexists with substrate-live
@@ -257,6 +264,16 @@ OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
 # command silently SUCCEEDS doing nothing. `make doctor` on a broken fleet
 # would print nothing and return 0, which reads as a pass. Deleted names
 # must fail loudly with "No rule to make target".
+# Disable make's built-in suffix rules.
+#
+# Without this, `make vessel-ctl` matches the built-in `%: %.sh` rule against
+# vessel-ctl.sh, runs `cat vessel-ctl.sh >vessel-ctl`, and EXITS 0 — a
+# documented-but-nonexistent target silently succeeding, which is the same
+# defect class as the .PHONY names that used to print "Nothing to be done".
+# Verified: deleting the passthrough absorber alone does NOT close it; the bare
+# form `make -n vessel-ctl` still copies the script and returns 0.
+.SUFFIXES:
+
 .PHONY: build build-obsidian clean clean-live clone-vessel-repos migrate-state-to-volumes preflight-submodules recreate run run-detach run-live run-live-obsidian stop stop-live ui-bridge-down ui-bridge-status ui-bridge-up up validate-build
 
 preflight-submodules:
@@ -290,7 +307,7 @@ build-obsidian:
 	    $(CURDIR)/../..
 
 run:
-	@if [ -z "$(ANTHROPIC_API_KEY)" ] && [ -z "$(OPENAI_API_KEY)" ]; then \
+	@if [ -z "$${ANTHROPIC_API_KEY}" ] && [ -z "$${OPENAI_API_KEY}" ]; then \
 	  echo "[substrate] ERROR: No LLM provider key found."; \
 	  echo "  Anthropic:  make run ANTHROPIC_API_KEY=sk-ant-..."; \
 	  echo "  OpenAI:     make run OPENAI_API_KEY=sk-..."; \
@@ -302,20 +319,20 @@ run:
 	docker run --rm -it \
 	    --name substrate \
 	    --privileged \
-	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
-	    -e OPENAI_API_KEY="$(OPENAI_API_KEY)" \
+	    -e ANTHROPIC_API_KEY \
+	    -e OPENAI_API_KEY \
 	    -e OPENAI_BASE_URL="$(OPENAI_BASE_URL)" \
-	    -e CHUTES_API_KEY="$(CHUTES_API_KEY)" \
-	    -e OPENROUTER_API_KEY="$(OPENROUTER_API_KEY)" \
-	    -e GOOGLE_API_KEY="$(GOOGLE_API_KEY)" \
-	    -e GROQ_API_KEY="$(GROQ_API_KEY)" \
-	    -e MISTRAL_API_KEY="$(MISTRAL_API_KEY)" \
-	    -e RUNPOD_API_KEY="$(RUNPOD_API_KEY)" \
+	    -e CHUTES_API_KEY \
+	    -e OPENROUTER_API_KEY \
+	    -e GOOGLE_API_KEY \
+	    -e GROQ_API_KEY \
+	    -e MISTRAL_API_KEY \
+	    -e RUNPOD_API_KEY \
 	    -e RUNPOD_ENDPOINT_ID="$(RUNPOD_ENDPOINT_ID)" \
 	    -e RUNPOD_MODELS="$(RUNPOD_MODELS)" \
 	    -e RUNPOD_COST_PER_MTOK="$(RUNPOD_COST_PER_MTOK)" \
 	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
-	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
+	    -e GITHUB_TOKEN \
 	    -p 8080:8080 \
 	    -p 8090:8090 \
 	    -v $(WORKSPACE):/workspace \
@@ -324,7 +341,7 @@ run:
 	    $(IMAGE):$(TAG)
 
 run-detach:
-	@if [ -z "$(ANTHROPIC_API_KEY)" ] && [ -z "$(OPENAI_API_KEY)" ]; then \
+	@if [ -z "$${ANTHROPIC_API_KEY}" ] && [ -z "$${OPENAI_API_KEY}" ]; then \
 	  echo "[substrate] ERROR: No LLM provider key found."; \
 	  echo "  Anthropic:  make run-detach ANTHROPIC_API_KEY=sk-ant-..."; \
 	  echo "  OpenAI:     make run-detach OPENAI_API_KEY=sk-..."; \
@@ -335,20 +352,20 @@ run-detach:
 	docker run -d \
 	    --name substrate \
 	    --privileged \
-	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
-	    -e OPENAI_API_KEY="$(OPENAI_API_KEY)" \
+	    -e ANTHROPIC_API_KEY \
+	    -e OPENAI_API_KEY \
 	    -e OPENAI_BASE_URL="$(OPENAI_BASE_URL)" \
-	    -e CHUTES_API_KEY="$(CHUTES_API_KEY)" \
-	    -e OPENROUTER_API_KEY="$(OPENROUTER_API_KEY)" \
-	    -e GOOGLE_API_KEY="$(GOOGLE_API_KEY)" \
-	    -e GROQ_API_KEY="$(GROQ_API_KEY)" \
-	    -e MISTRAL_API_KEY="$(MISTRAL_API_KEY)" \
-	    -e RUNPOD_API_KEY="$(RUNPOD_API_KEY)" \
+	    -e CHUTES_API_KEY \
+	    -e OPENROUTER_API_KEY \
+	    -e GOOGLE_API_KEY \
+	    -e GROQ_API_KEY \
+	    -e MISTRAL_API_KEY \
+	    -e RUNPOD_API_KEY \
 	    -e RUNPOD_ENDPOINT_ID="$(RUNPOD_ENDPOINT_ID)" \
 	    -e RUNPOD_MODELS="$(RUNPOD_MODELS)" \
 	    -e RUNPOD_COST_PER_MTOK="$(RUNPOD_COST_PER_MTOK)" \
 	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
-	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
+	    -e GITHUB_TOKEN \
 	    -p 8080:8080 \
 	    -p 8090:8090 \
 	    -v $(WORKSPACE):/workspace \
@@ -433,6 +450,23 @@ RECREATE_CARRY := API_KEY METABOB_API_KEY DISCOVERY_ENDPOINT HUB_DISCOVERY_URL \
                   PEER_DISCOVERY_ENDPOINTS ACTIVITY_API_ENDPOINT \
                   IDENTITY_VESSEL_URL IDENTITY_ENDPOINT SURREALDB_URL REDIS_URL
 
+# Carried SEPARATELY, because for these the EMPTY value is the meaningful one.
+#
+# A UI-only spoke is launched with ANTHROPIC_API_KEY="" on purpose — it resolves
+# models on its hub and is documented to need no provider key. `recreate` then
+# refilled it from the operator's own ~/.metabob/config.json (via the `?=` at the
+# top of this file) and the real 108-char key landed in the spoke's PERSISTED
+# secrets file, surviving every later recreate. Measured on a UI-only spoke:
+# ANTHROPIC_API_KEY len=0 before recreate, len=108 after.
+#
+# The loop above cannot carry these, because it skips empty values — so the
+# deliberate blank looks identical to "not set" and the fallback wins. These are
+# carried by PRESENCE instead: if the old container had the variable at all, its
+# value is carried forward verbatim, empty included.
+RECREATE_CARRY_PRESENT := ANTHROPIC_API_KEY OPENAI_API_KEY OPENAI_BASE_URL \
+                          LLM_DEFAULT_MODEL CHUTES_API_KEY OPENROUTER_API_KEY \
+                          GOOGLE_API_KEY GROQ_API_KEY MISTRAL_API_KEY RUNPOD_API_KEY
+
 recreate:
 	@if docker ps -a --format '{{.Names}}' | grep -qx "$(LIVE_NAME)"; then \
 	  ENVDUMP=$$(docker inspect $(LIVE_NAME) --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null); \
@@ -444,6 +478,16 @@ recreate:
 	    if [ -n "$$_use" ]; then \
 	      CARRY="$$CARRY $$_v=$$_use"; \
 	      case "$$_v" in *KEY*|*SECRET*|*PAT*) SHOWN="$$SHOWN $$_v=<set>";; *) SHOWN="$$SHOWN $$_v=$$_use";; esac; \
+	    fi; \
+	  done; \
+	  for _v in $(RECREATE_CARRY_PRESENT); do \
+	    _cur=$$(eval printf '%s' "\$${$$_v}"); \
+	    if [ -n "$$_cur" ]; then \
+	      CARRY="$$CARRY $$_v=$$_cur"; SHOWN="$$SHOWN $$_v=<set>"; \
+	    elif printf '%s\n' "$$ENVDUMP" | grep -q "^$$_v="; then \
+	      _prev=$$(printf '%s\n' "$$ENVDUMP" | sed -n "s/^$$_v=//p" | head -1); \
+	      CARRY="$$CARRY $$_v=$$_prev"; \
+	      if [ -n "$$_prev" ]; then SHOWN="$$SHOWN $$_v=<set>"; else SHOWN="$$SHOWN $$_v=<empty,carried>"; fi; \
 	    fi; \
 	  done; \
 	  PREV_8080=$$(docker inspect $(LIVE_NAME) --format '{{range $$p, $$c := .HostConfig.PortBindings}}{{$$p}}={{range $$c}}{{.HostPort}}{{end}} {{end}}' 2>/dev/null | tr ' ' '\n' | sed -n 's#^8080/tcp=##p' | head -1); \
@@ -468,13 +512,13 @@ recreate:
 
 # Fleet readiness matrix (host wrapper; in-container: /usr/local/bin/substrate-ready)
 # Deep diagnosis incl. surreal-auth drift, seeded-key validity, hollow registry,
-# failed units. `make doctor SMOKE=1` also dispatches a goal end-to-end.
+# failed units. `docker exec <container> substrate-doctor` also dispatches a goal end-to-end.
 # ── substrate-live container (persistent, host ports 18080/18090/18100) ─────
 # Primary target for all local development iteration.
-# Run once; use sync-*/restart-* targets to hot-reload vessels without rebuild.
+# Run once; use `vessel-ctl sync|restart <vessel>` to hot-reload vessels without rebuild.
 
 run-live:
-	@if [ -z "$(FEDERATED_SPOKE)" ] && [ -z "$(ANTHROPIC_API_KEY)" ] && [ -z "$(OPENAI_API_KEY)" ]; then \
+	@if [ -z "$(FEDERATED_SPOKE)" ] && [ -z "$${ANTHROPIC_API_KEY}" ] && [ -z "$${OPENAI_API_KEY}" ]; then \
 	  echo "[substrate] ERROR: No LLM provider key found. Provide at least one:"; \
 	  echo "  Anthropic:  make run-live ANTHROPIC_API_KEY=sk-ant-..."; \
 	  echo "  OpenAI:     make run-live OPENAI_API_KEY=sk-..."; \
@@ -487,23 +531,23 @@ run-live:
 	docker run -d \
 	    --name $(LIVE_NAME) \
 	    --privileged \
-	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
-	    -e OPENAI_API_KEY="$(OPENAI_API_KEY)" \
+	    -e ANTHROPIC_API_KEY \
+	    -e OPENAI_API_KEY \
 	    -e OPENAI_BASE_URL="$(OPENAI_BASE_URL)" \
-	    -e CHUTES_API_KEY="$(CHUTES_API_KEY)" \
-	    -e OPENROUTER_API_KEY="$(OPENROUTER_API_KEY)" \
-	    -e GOOGLE_API_KEY="$(GOOGLE_API_KEY)" \
-	    -e GROQ_API_KEY="$(GROQ_API_KEY)" \
-	    -e MISTRAL_API_KEY="$(MISTRAL_API_KEY)" \
-	    -e RUNPOD_API_KEY="$(RUNPOD_API_KEY)" \
+	    -e CHUTES_API_KEY \
+	    -e OPENROUTER_API_KEY \
+	    -e GOOGLE_API_KEY \
+	    -e GROQ_API_KEY \
+	    -e MISTRAL_API_KEY \
+	    -e RUNPOD_API_KEY \
 	    -e RUNPOD_ENDPOINT_ID="$(RUNPOD_ENDPOINT_ID)" \
 	    -e RUNPOD_MODELS="$(RUNPOD_MODELS)" \
 	    -e RUNPOD_COST_PER_MTOK="$(RUNPOD_COST_PER_MTOK)" \
 	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
-	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
-	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
+	    -e GITHUB_TOKEN \
+	    -e SUBSTRATE_GIT_PAT \
 	    -e SUBSTRATE_REPO_OWNER="$(SUBSTRATE_REPO_OWNER)" \
-	    -e API_KEY_SECRET="$(API_KEY_SECRET)" \
+	    -e API_KEY_SECRET \
 	    -e ALLOW_INSECURE_API_KEY_SECRET="$(ALLOW_INSECURE_API_KEY_SECRET)" \
 	    -e SUBSTRATE_ROOT="/workspace/git/super-repo" \
 	    -e ENABLED_ROLES="$(ENABLED_ROLES)" \
@@ -520,7 +564,7 @@ run-live:
 	    -e IDENTITY_ENDPOINT="$(IDENTITY_ENDPOINT)" \
 	    -e SURREALDB_URL="$(SURREALDB_URL)" \
 	    -e REDIS_URL="$(REDIS_URL)" \
-	    -e METABOB_API_KEY="$(METABOB_API_KEY)" \
+	    -e METABOB_API_KEY \
 	    -p $(call hp,18080):8080 \
 	    -p $(call hp,18090):8090 \
 	    -p $(call hp,18100):8100 \
@@ -545,7 +589,7 @@ run-live:
 # :16080. Reuses the substrate-live container name so every sync-/restart-/
 # health- target keeps working unchanged. Requires `make build-obsidian` first.
 run-live-obsidian:
-	@if [ -z "$(FEDERATED_SPOKE)" ] && [ -z "$(ANTHROPIC_API_KEY)" ] && [ -z "$(OPENAI_API_KEY)" ]; then \
+	@if [ -z "$(FEDERATED_SPOKE)" ] && [ -z "$${ANTHROPIC_API_KEY}" ] && [ -z "$${OPENAI_API_KEY}" ]; then \
 	  echo "[substrate] ERROR: No LLM provider key found. Provide at least one:"; \
 	  echo "  Anthropic:  make run-live-obsidian ANTHROPIC_API_KEY=sk-ant-..."; \
 	  echo "  OpenAI:     make run-live-obsidian OPENAI_API_KEY=sk-..."; \
@@ -557,21 +601,21 @@ run-live-obsidian:
 	docker run -d \
 	    --name $(LIVE_NAME) \
 	    --privileged \
-	    -e ANTHROPIC_API_KEY="$(ANTHROPIC_API_KEY)" \
-	    -e OPENAI_API_KEY="$(OPENAI_API_KEY)" \
+	    -e ANTHROPIC_API_KEY \
+	    -e OPENAI_API_KEY \
 	    -e OPENAI_BASE_URL="$(OPENAI_BASE_URL)" \
-	    -e CHUTES_API_KEY="$(CHUTES_API_KEY)" \
-	    -e OPENROUTER_API_KEY="$(OPENROUTER_API_KEY)" \
-	    -e GOOGLE_API_KEY="$(GOOGLE_API_KEY)" \
-	    -e GROQ_API_KEY="$(GROQ_API_KEY)" \
-	    -e MISTRAL_API_KEY="$(MISTRAL_API_KEY)" \
-	    -e RUNPOD_API_KEY="$(RUNPOD_API_KEY)" \
+	    -e CHUTES_API_KEY \
+	    -e OPENROUTER_API_KEY \
+	    -e GOOGLE_API_KEY \
+	    -e GROQ_API_KEY \
+	    -e MISTRAL_API_KEY \
+	    -e RUNPOD_API_KEY \
 	    -e RUNPOD_ENDPOINT_ID="$(RUNPOD_ENDPOINT_ID)" \
 	    -e RUNPOD_MODELS="$(RUNPOD_MODELS)" \
 	    -e RUNPOD_COST_PER_MTOK="$(RUNPOD_COST_PER_MTOK)" \
 	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
-	    -e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
-	    -e SUBSTRATE_GIT_PAT="$(SUBSTRATE_GIT_PAT)" \
+	    -e GITHUB_TOKEN \
+	    -e SUBSTRATE_GIT_PAT \
 	    -e SUBSTRATE_ROOT="/workspace/git/super-repo" \
 	    -e ENABLED_ROLES="$(ENABLED_ROLES)" \
 	    -e ENABLED_VESSELS="$(ENABLED_VESSELS)" \
@@ -587,7 +631,7 @@ run-live-obsidian:
 	    -e IDENTITY_ENDPOINT="$(IDENTITY_ENDPOINT)" \
 	    -e SURREALDB_URL="$(SURREALDB_URL)" \
 	    -e REDIS_URL="$(REDIS_URL)" \
-	    -e METABOB_API_KEY="$(METABOB_API_KEY)" \
+	    -e METABOB_API_KEY \
 	    -p 18080:8080 \
 	    -p 18090:8090 \
 	    -p 18100:8100 \
@@ -630,20 +674,15 @@ migrate-state-to-volumes:
 
 # Seed identity and API keys into a freshly started substrate-live container.
 # ── Key / token surface ─────────────────────────────────────────────────────
-# Human-friendly wrappers around the in-container `substrate-key` tool
-# (identity-vessel is internal-only, so issuance must run inside the container).
-# On images that predate the baked tool, the script is copied in first.
+# Key issuance runs INSIDE the container (identity-vessel is internal-only):
 #
-#   make show-key                                  print the operator API key
+#   docker exec <container> substrate-key show
 #   docker exec <container> substrate-key issue my-peer read,write 30
-#   make list-keys
-#   make revoke-key KEY_ID=key_xxx
-NAME ?=
-SCOPES ?= read,write
-EXPIRES_DAYS ?=
-ROLE ?= admin
-EXPIRES_SECONDS ?= 900
-KEY_ID ?=
+#   docker exec <container> substrate-key list
+#   docker exec <container> substrate-key revoke <key-id>
+#
+# The make wrappers these six variables fed were deleted; the variables were
+# read by nothing else.
 
 # Every probe must describe the instance named by LIVE_NAME. The four
 # host-port probes below hardcoded 18080/18100/18090/18250, honouring neither
@@ -736,18 +775,6 @@ clean: clean-live
 # `docker cp <src>/src <container>:/vessels/x/src` nests when the dest exists —
 # wipe first so the copy lands cleanly.
 # -----------------------------------------------------------------------------
-# ias-executor-ts: rebuild dist on host and push into every consumer vessel's
-# node_modules path inside the container. Bun's `file:` resolver makes a
-# physical copy of dist per consumer rather than a symlink, so a host rebuild
-# of ias-executor-ts does NOT propagate without this target.
-#
-# Usage:
-#   make -C scripts/substrate sync-ias-executor-ts                  # all consumers
-#   make -C scripts/substrate sync-ias-executor-ts RESTART=1        # restart each consumer's systemd unit too
-#
-# Consumers list lives at the top of this Makefile (IAS_CONSUMERS).
-# -----------------------------------------------------------------------------
-IAS_SRC := $(REPO_ROOT)/repos/ias-executor-ts
 
 # -----------------------------------------------------------------------------
 # UI bridge: alpine/socat sidecar that publishes host port 18270 to the
@@ -824,15 +851,12 @@ clone-vessel-repos:
 # container, reusing the unit-install pattern + the single secrets place (secrets.env.sh).
 # Operator-runnable AND activity-dispatchable (the substrate calls vessel-ctl.sh via
 # local-tools-vessel's shell resolver). Works against any --container (basis for remote).
-# Passthrough UX (two-command spoke setup, command 2):
-#   make vessel-ctl enable federation-transport-vessel FED_SUBSTRATE_ID=<unique-id> [RELAY_MULTIADDR=<addr>]
-#   make vessel-ctl enable|disable <any-manifest-vessel>
-# The extra words on the command line are absorbed by a no-op rule below.
-VC_ARGS := $(filter-out vessel-ctl,$(MAKECMDGOALS))
-ifneq ($(filter vessel-ctl,$(MAKECMDGOALS)),)
-$(VC_ARGS):
-	@:
-endif
+# There is NO `make vessel-ctl` passthrough. Run the tool in the container:
+#   docker exec <container> vessel-ctl <verb> [args]
+# The absorber that used to live here advertised `vessel-ctl enable`, a verb
+# vessel-ctl does not have — and the command never reached it anyway: make's
+# built-in `%: %.sh` rule matched vessel-ctl.sh, copied it, and exited 0. See
+# the .SUFFIXES: below, which is what actually closes that.
 
 # Sync a dynamic vessel: ff-pull its in-container clone, mirror into the live
 # runtime, restart (all in-container; no host source involved).

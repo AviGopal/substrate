@@ -140,6 +140,53 @@ auto-installed.
 `18101` (identity), `18210` (goal-host), and `30333` (relay). On DigitalOcean this is the
 **cloud firewall** (the droplet's ufw/iptables are not the gate).
 
+### A hub that is not on a VM
+
+`deploy-hub.sh` is the only *packaged* hub path, but it is not the only hub. A
+local container works, and `ENABLED_ROLES=hub` is a real selection — it is just
+not sufficient on its own, because the relay is a **manifest** vessel and is
+therefore never baked or auto-installed. A `roles=hub` container answers
+`/health` on every port and still serves an empty `/bootstrap`, which by this
+document's own pre-flight test means "not a hub".
+
+Four steps, in order. The first is what the role selection gives you; the other
+three the relay needs and nothing supplies automatically:
+
+```bash
+make -C scripts/substrate up LIVE_NAME=<hub> PORT_OFFSET=<n> ENABLED_ROLES=hub \
+     ANTHROPIC_API_KEY=sk-ant-...
+
+docker exec <hub> vessel-ctl install federation-relay
+
+# The relay hard-exits without PUBLIC_IP, under Restart=always — so it fails as a
+# permanent crash-loop reporting `activating`, never `failed`. No launch path
+# passes it, so set it on the container and restart the unit:
+docker exec <hub> sh -c 'echo PUBLIC_IP=<address-spokes-can-reach> >> /etc/substrate/env'
+docker exec <hub> systemctl restart federation-relay
+
+# The relay prints its RELAY_MULTIADDR to the journal. Discovery reads that value
+# from /etc/substrate/env, and the install hook that was meant to copy it across
+# reads a log file nothing writes — so carry it over by hand, then restart
+# discovery, which is the only thing that re-reads the env:
+docker exec <hub> journalctl -u federation-relay | grep -o 'RELAY_MULTIADDR=.*'
+docker exec <hub> sh -c 'echo RELAY_MULTIADDR=<that value> >> /etc/substrate/env'
+docker exec <hub> systemctl restart discovery-vessel
+```
+
+Verify before pointing a spoke at it — an empty array here is the whole failure,
+and it looks identical to a healthy hub from every other angle:
+
+```bash
+curl -s http://<hub>:<disc-port>/bootstrap | jq '.relay_multiaddrs | length'   # must be > 0
+```
+
+**Addressing, if hub and spoke are on the same host.** The endpoint has to be
+reachable from *inside* the spoke container, which `localhost` is not — that
+resolves to the spoke's own loopback and yields a container that boots, looks
+healthy, and is joined to nothing. Use an address that answers from both
+positions; on a single host that is usually the machine's LAN IP, not
+`127.0.0.1` and not the docker bridge gateway.
+
 ## Running a spoke
 
 The supported spoke topology is the **federated spoke**: a local registry
@@ -162,8 +209,25 @@ unique `FED_SUBSTRATE_ID` / `FED_VESSEL_ID`. At boot, `entrypoint.sh`
 auto-enables the federation-transport-vessel whenever a hub is set, and the
 transport self-derives its relay from `<hub-discovery>/bootstrap` — so the
 ingress/egress fall out of the discovery anchor alone, with no relay multiaddr
-or federation id to supply. A spoke also needs **no local LLM key**: it inherits
-the hub's LLM arms through discovery.
+or federation id to supply. A spoke is **designed** to need no local LLM key — it is meant to inherit the
+hub's LLM arms through discovery.
+
+> ⚠ **Measured, and it does not work yet.** On a live hub+spoke pair the
+> federation is one-directional: all nine of the spoke's vessels registered into
+> the hub and refreshed on the ~2-minute heartbeat, while the spoke resolving a
+> hub-owned shape returned `found:false` for both `llmCompletion` and
+> `activityTemplate`. The byte-identical query against the hub returned
+> `found:true`, so that is a real negative and not a query-form artifact.
+>
+> The cause is not the filter but what it filters. Discovery keeps only *dialable*
+> peer rows — a non-empty `libp2p_multiaddr`, or an endpoint that is not
+> loopback — and every hub vessel registers itself as `http://127.0.0.1:<port>`
+> with no multiaddr. `VESSEL_ADVERTISE_ENDPOINT` / `SUBSTRATE_ADVERTISE_HOST`
+> are the cure, but they are documented for the spoke direction only and are set
+> on no hub by default.
+>
+> Until a hub advertises reachable endpoints, **give a spoke its own provider
+> key** if it must resolve models.
 
 `up` resumes a stopped container only when no launch settings are supplied. To
 change its hub, credential, role selection, or federation overrides, preserve

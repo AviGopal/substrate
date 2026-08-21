@@ -144,14 +144,14 @@ Multi-tenant isolation: org A's key must not return org B's templates.
 # 1. Get baseline α/β for a template
 TEMPLATE_ID="your-template-id"
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
-  "$ACTIVITY_API_URL/v2/activities/templates/$TEMPLATE_ID" | jq '.thompson'
+  "$ACTIVITY_API_URL/v2/activities/templates/$TEMPLATE_ID" | jq '.metrics | {thompson_alpha, thompson_beta}'
 
 # 2. Execute it — dispatch through the cockpit:
 #    mcp__metabob__run_goal_async { goal: "run $TEMPLATE_ID" }
 
 # 3. Verify α increased (success) or β increased (failure)
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
-  "$ACTIVITY_API_URL/v2/activities/templates/$TEMPLATE_ID" | jq '.thompson'
+  "$ACTIVITY_API_URL/v2/activities/templates/$TEMPLATE_ID" | jq '.metrics | {thompson_alpha, thompson_beta}'
 ```
 
 **Checklist**:
@@ -193,7 +193,7 @@ curl -H "Authorization: ApiKey $METABOB_API_KEY" \
 
 # 4. Check Thompson α/β was seeded
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
-  "$ACTIVITY_API_URL/v2/activities/templates/my-new-activity" | jq '.thompson'
+  "$ACTIVITY_API_URL/v2/activities/templates/my-new-activity" | jq '.metrics | {thompson_alpha, thompson_beta}'
 ```
 
 ### Debug a failed activity
@@ -225,17 +225,17 @@ Failure mode types: `verifier_negative`, `budget_exhausted`, `safety_breach`, `c
 ```bash
 # Run both variants several times, then compare Thompson posteriors
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
-  "$ACTIVITY_API_URL/v2/activities/templates/variant-a" | jq '.thompson'
+  "$ACTIVITY_API_URL/v2/activities/templates/variant-a" | jq '.metrics | {thompson_alpha, thompson_beta}'
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
-  "$ACTIVITY_API_URL/v2/activities/templates/variant-b" | jq '.thompson'
+  "$ACTIVITY_API_URL/v2/activities/templates/variant-b" | jq '.metrics | {thompson_alpha, thompson_beta}'
 
 # Sample recommendations — better variant should dominate over time
 for i in {1..20}; do
   curl -s -X POST $ACTIVITY_API_URL/v2/activities/recommend \
     -H "Authorization: ApiKey $METABOB_API_KEY" \
     -H "Content-Type: application/json" \
-    -d '{"goal": "test goal", "availableShapes": ["test"]}' \
-    | jq -r '.recommendations[0].variantId'
+    -d '{"task_description": "test goal", "impulse_shapes": ["test"]}' \
+    | jq -r '.recommendations[0].template_id'
 done | sort | uniq -c
 ```
 
@@ -349,7 +349,7 @@ curl -H "Authorization: ApiKey $METABOB_API_KEY" \
 
 # Thompson check
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
-  "$ACTIVITY_API_URL/v2/activities/templates/TEMPLATE_ID" | jq '.thompson'
+  "$ACTIVITY_API_URL/v2/activities/templates/TEMPLATE_ID" | jq '.metrics | {thompson_alpha, thompson_beta}'
 
 # Failure-mode harness
 bun run validation/scripts/failure-mode-harness.ts

@@ -32,7 +32,7 @@ fi
 # Verify container is running
 if ! docker inspect "$CONTAINER_NAME" --format '{{.State.Running}}' 2>/dev/null | grep -q true; then
   echo "[configure-local] ERROR: Container '$CONTAINER_NAME' is not running." >&2
-  echo "  Start it with: make -C scripts/substrate substrate-run" >&2
+  echo "  Start it with: make -C scripts/substrate up ANTHROPIC_API_KEY=sk-ant-..." >&2
   exit 1
 fi
 

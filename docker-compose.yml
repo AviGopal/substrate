@@ -99,6 +99,13 @@ services:
       RUNPOD_MODELS: ${RUNPOD_MODELS:-}
       RUNPOD_COST_PER_MTOK: ${RUNPOD_COST_PER_MTOK:-}
       # Existing deployment on the legacy default signing secret? Set this to boot.
+      # The HMAC secret identity-vessel signs and verifies every mb- API key
+      # with. gen-env FAILS CLOSED without it on an existing datastore and names
+      # it in the error — but the compose lane forwarded only the insecure
+      # escape hatch below, so the remedy the error text prescribes was the one
+      # thing this lane could not deliver.
+      API_KEY_SECRET: ${API_KEY_SECRET:-}
+      API_KEY_SECRET_PREVIOUS: ${API_KEY_SECRET_PREVIOUS:-}
       ALLOW_INSECURE_API_KEY_SECRET: ${ALLOW_INSECURE_API_KEY_SECRET:-}
     ports:
       - "${ACTIVITY_API_PORT:-18080}:8080"   # activity-api

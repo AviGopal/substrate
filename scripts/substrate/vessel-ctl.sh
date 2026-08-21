@@ -11,7 +11,7 @@
 # render-unit.sh template; self-recovery derives membership from the fleet
 # files at read time (no script mutation on install/uninstall).
 #
-# OPERATOR-runnable (make install-vessel / uninstall-vessel) AND
+# OPERATOR-runnable (docker exec <container> vessel-ctl install/uninstall) AND
 # ACTIVITY-dispatchable through local-tools-vessel's `shell` resolver
 # (clean JSON on stdout, idempotent, no prompts) — the substrate manages its
 # own membership.
@@ -48,7 +48,16 @@
 # container. `drift` shows you that gap before you close it.
 set -uo pipefail
 
-ACTION="${1:?usage: vessel-ctl.sh <list|status|restart|logs|install|uninstall|sync|deregister|apply|drift> [vessel] [--container NAME] [-n LINES]}"
+# Bare invocation must print a usage line an operator can act on. `${1:?...}`
+# prefixed it with bash's own "line 51: 1:" noise and named the SOURCE file
+# (vessel-ctl.sh) rather than the installed tool (vessel-ctl) — and its verb list
+# omitted `start` and `stop`, the two verbs the docs prescribe for recovering a
+# unit that `apply` masked. Print it ourselves so the text is exactly what ships.
+if [ $# -eq 0 ]; then
+  echo "usage: vessel-ctl <list|status|restart|start|stop|logs|install|uninstall|sync|deregister|apply|drift> [vessel] [--container NAME] [-n LINES]" >&2
+  exit 1
+fi
+ACTION="$1"
 VESSEL="${2:-}"
 shift || true; shift || true
 CONTAINER="substrate-live"
@@ -221,7 +230,19 @@ case "$ACTION" in
     ;;
 
   deregister)
-    csh "/usr/local/bin/discovery-deregister '$VESSEL'" || true
+    # The last verb still faking success on a typo. `deregister nosuchvessel-xyz`
+    # printed {"ok":true,"action":"deregistered"} and exited 0 — measured against
+    # a positive control on the same fleet, where the real name emitted
+    # "[discovery-deregister] removed concept-db-local" and the typo emitted
+    # nothing, yet both reported ok:true. Two causes, both fixed here: no
+    # existence check, and `|| true` swallowing the tool's exit status.
+    [ -n "$VESSEL" ] || { echo "{\"ok\":false,\"error\":\"usage: vessel-ctl deregister <vessel>\"}"; exit 1; }
+    if ! csh "systemctl cat '$(unit_of "$VESSEL")' >/dev/null 2>&1" 2>/dev/null; then
+      echo "{\"ok\":false,\"error\":\"no such unit '$(unit_of "$VESSEL")' in this fleet — try: vessel-ctl status\"}"; exit 1
+    fi
+    if ! csh "/usr/local/bin/discovery-deregister '$VESSEL'"; then
+      echo "{\"ok\":false,\"action\":\"deregister\",\"vessel\":\"$VESSEL\",\"error\":\"discovery-deregister failed\"}"; exit 1
+    fi
     echo "{\"ok\":true,\"action\":\"deregistered\",\"vessel\":\"$VESSEL\"}"
     ;;
 
@@ -325,14 +346,37 @@ case "$ACTION" in
       # ('Invalid unit name "●"'). `static` filters out Debian's own units
       # (fstrim, rescue, apt-daily): a substrate vessel declares [Install]
       # WantedBy and so is enabled or disabled, never static.
-      csh "systemctl list-units --type=service --all --no-legend --no-pager 2>/dev/null \
+      # MASKED AND STATIC UNITS ARE PRINTED — they used to be dropped here, and
+      # the fleet view hid exactly the units an operator must act on.
+      #
+      #   masked: after `apply` masked seven vessels, `status` went 43 -> 25 lines
+      #     and activity-api/surrealdb/identity-vessel/concept-db/valkey/llm-opus/
+      #     llm-haiku VANISHED — no row, no count — while the doc's instruction
+      #     after an apply is "Confirm with `vessel-ctl status`". `status <name>`
+      #     showed the masked row all along, proving it was a filter and not a
+      #     vocabulary gap.
+      #   static: the comment here claimed a substrate vessel "declares [Install]
+      #     WantedBy and so is enabled or disabled, never static". Measured false —
+      #     self-recovery, autonomy-metrics and light-dispatch-healthcheck are
+      #     static (they are TIMER-triggered, so they carry no [Install]), and they
+      #     are the liveness watchdogs. They were armed, firing, and invisible.
+      #
+      # Debian's own statics are still excluded, by inventory membership rather
+      # than by state: a unit the fleet inventory names is ours and is shown.
+      csh "_inv=\$(jq -r '.vessels[].unit' /workspace/substrate/fleet/vessels.inventory.json 2>/dev/null \
+                   || jq -r '.vessels[].unit' /usr/local/share/substrate/vessels.inventory.json 2>/dev/null || true)
+           systemctl list-units --type=service --all --no-legend --no-pager 2>/dev/null \
            | sed 's/^[^a-zA-Z]*//' | awk '{print \$1}' \
            | grep -vE '^(systemd|dbus|getty|console-|user@|user-|modprobe|e2scrub|autovt|container-getty)' \
            | grep -v '@' | sort -u | while read -r u; do
                e=\$(systemctl is-enabled \"\$u\" 2>&1)
                # not-found units (systemd lists a referenced-but-absent unit like
                # auditd/syslog/connman) answer with an error sentence, not a state.
-               case \"\$e\" in static|masked|generated|transient|indirect|*'No such file'*|*Failed*) continue;; esac
+               case \"\$e\" in *'No such file'*|*Failed*) continue;; esac
+               case \"\$e\" in generated|transient|indirect) continue;; esac
+               # static is Debian's default for units with no [Install]; keep it
+               # only when the inventory names the unit as ours.
+               if [ \"\$e\" = static ] && ! echo \"\$_inv\" | grep -qx \"\$u\"; then continue; fi
                a=\$(systemctl is-active \"\$u\" 2>&1)
                printf '%-38s %-12s %-10s restarts=%s\n' \"\$u\" \"\$a\" \"\$e\" \"\$(systemctl show \"\$u\" -p NRestarts --value 2>/dev/null)\"
              done | sort -k2,2 -k1,1"
@@ -384,7 +428,12 @@ case "$ACTION" in
                 systemctl start \"\$u\" >/dev/null 2>&1 && echo \"[apply] started \$u (enabled by this selection)\"
               fi ;;
           esac
-        done" 2>&1 | head -40
+        done" 2>&1
+    # NO `| head -40`. The doc's promise is that "an apply that prints no action
+    # lines is a genuine no-op rather than a silent failure" — a head that
+    # amputates the action log breaks exactly that reading, and a large role
+    # switch (a spoke->full recovery touches 21+ units) is precisely when the
+    # tail matters most. Same class as the `tail -20` that made drift under-report.
     echo "{\"ok\":true,\"action\":\"apply\",\"container\":\"$CONTAINER\",\"note\":\"selection re-applied and running state converged; run 'vessel-ctl status' to confirm\"}"
     ;;
 
@@ -409,9 +458,15 @@ case "$ACTION" in
     echo "=== would applying that selection now change anything? ==="
     # DRY_RUN so this is a report, never an action. If it names units, the
     # running set has drifted from the selection and `vessel-ctl apply` closes it.
+    # NO `| tail -20`. The truncation was biased in the worst possible direction:
+    # unmask lines cluster EARLY (inventory order) and disable lines dominate the
+    # tail, so the preview systematically dropped the restorative half with no
+    # "…N more" marker. Measured from a spoke-masked fleet: drift predicted 2
+    # unmasks, apply performed 21 — and the two shown were exactly the last two
+    # lines of the untruncated 73-line report.
     csh "set -a; . /etc/substrate/env 2>/dev/null || true; set +a
-         DRY_RUN=1 /usr/local/bin/apply-inventory 2>&1 | tail -20"
+         DRY_RUN=1 /usr/local/bin/apply-inventory 2>&1"
     ;;
 
-  *) echo "{\"ok\":false,\"error\":\"unknown action '$ACTION' (list|status|restart|logs|install|uninstall|sync|deregister|apply|drift)\"}"; exit 1;;
+  *) echo "{\"ok\":false,\"error\":\"unknown action '$ACTION' (list|status|restart|start|stop|logs|install|uninstall|sync|deregister|apply|drift)\"}"; exit 1;;
 esac

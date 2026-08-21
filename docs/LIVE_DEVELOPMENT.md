@@ -57,13 +57,9 @@ docker exec <container> vessel-ctl restart goal-host-vessel
 docker exec <container> vessel-ctl restart development-vessel
 ```
 
-`restart-*` is a **fixed enumerated set of make targets**, not a pattern rule —
-each one copies `repos/<vessel>/src` into the container and restarts the unit.
-[`SUBSTRATE.md` § *Iteration loop*](SUBSTRATE.md#iteration-loop) lists which
-vessels have one. Vessels without a target (including boredom-vessel, which has
-`sync-boredom-vessel` and `trigger-boredom-vessel` instead) are restarted
-directly:
-`docker exec substrate-live systemctl restart <unit>.service`.
+`restart` works on any unit the fleet has — there is no per-vessel target list to
+consult, and no vessel that needs a different command. To pick up edited source
+as well as restart, use `vessel-ctl sync <vessel>`.
 
 | Vessel | Port (in-container) | Role | Notes |
 |---|---|---|---|

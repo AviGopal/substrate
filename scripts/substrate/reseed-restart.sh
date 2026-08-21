@@ -56,6 +56,19 @@ log "METABOB_API_KEY changed (seed minted a new key) — restarting key consumer
 # avoid a thundering herd (lesson 2026-06-21).
 if command -v jq >/dev/null 2>&1 && [ -f "$INV" ]; then
   UNITS="$(jq -r '.vessels[] | select(.repo != null and (.unit | endswith(".service")) and ((.manifest // false) | not)) | .unit' "$INV")"
+  # THE RENDERED LLM ARMS ARE NOT IN THE INVENTORY, BY DESIGN — so an
+  # inventory-driven target list silently excluded exactly the units that most
+  # need the new key. Measured on a live hub: llm-haiku held a 31-char pre-seed
+  # placeholder for the life of the container while llm-resolver-vessel held the
+  # real 160-char key; discovery answered 20 of 40 arm heartbeats with 401, and
+  # the arms still reported `active enabled restarts=0` with substrate-doctor
+  # PASSing "no failed units". A key consumer invisible to the key-rotation
+  # sweep is a permanent one. Add them by glob, which is how they exist.
+  for _a in /etc/systemd/system/llm-*.service; do
+    [ -f "$_a" ] || continue
+    UNITS="$UNITS
+$(basename "$_a")"
+  done
 else
   UNITS="discovery-vessel.service identity-vessel.service activity-api.service development-vessel.service local-tools-vessel.service llm-resolver-vessel.service goal-host-vessel.service ribosome-vessel.service concept-db.service analysis-vessel.service light-dispatch-vessel.service relevance-sink-vessel.service stateful-ui-vessel.service"
 fi

@@ -128,7 +128,7 @@ lesson with no reader is an archive, and the missing reader is itself a gap.
 ## Bulk import from an operator cache
 
 `scripts/substrate/import-operator-memory.ts`, wired as
-`make -C scripts/substrate import-memory`, reconciles a cache directory into the
+`bun run scripts/substrate/import-operator-memory.ts`, reconciles a cache directory into the
 store. Use it to seed a fresh substrate, or to replay cache-side writes that
 accumulated while the substrate was down.
 

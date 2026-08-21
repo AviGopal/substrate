@@ -31,7 +31,8 @@
       "infra",
       "autonomy",
       "registry",
-      "models"
+      "models",
+      "desktop"
     ]
   },
   "_profiles_comment": "Named per-container rosters as EXPLICIT unit lists. Roles are coarse — 'compute' names goal-host, development, light-dispatch, boredom, analysis, ribosome, relevance-sink and local-tools together, so no role expression selects a subset of them. (The LLM resolvers used to be in that list too, which is why a spoke — whose whole premise is resolving models on its hub — enabled four local arms; they now carry role 'models', which 'spoke' excludes and 'hub'/'full' include.) That is why ui-only-up.sh had to bypass roles with a hand-written ENABLED_VESSELS list. A profile is that list, named and kept next to the units it selects. PROFILE=<name> wins over ENABLED_VESSELS and ENABLED_ROLES; DISABLED_VESSELS still subtracts afterwards. human-surface-vessel is deliberately absent from surface_node: it is a manifest vessel, which apply-inventory never selects or masks, and vessel-ctl installs it after readiness. CAVEAT (the reason a profile is not yet a guarantee): apply-inventory can only govern units this file names, so a shipped unit absent from `vessels` below runs regardless of the profile — that is how a UI-only box ends up running LLM resolvers. See the ungoverned-units warning apply-inventory emits at boot.",
