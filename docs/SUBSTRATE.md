@@ -900,6 +900,29 @@ docker cp repos/activity-api/src substrate-live:/vessels/activity-api/
 docker exec substrate-live systemctl restart activity-api
 ```
 
+### How long an in-container edit lasts — three classes, one appearance
+
+Every hot patch looks identical while the container runs. They do not survive the
+same events, and the failure mode is silent: the original defect returns with no
+message, so a fix verified an hour ago is simply gone.
+
+| Path | Survives `restart` | Survives `stop`+`up` | Survives `recreate` |
+|---|---|---|---|
+| `/workspace/**`, `/var/lib/surrealdb/**` | yes | yes | **yes** — named volumes |
+| `/vessels/**`, `/usr/local/bin/**` | yes | yes | **no** — container writable layer |
+| `/usr/lib/systemd/system/**` | **no** | **no** | no — re-copied from the image each boot |
+
+Measured: three unit files were given `ExecCondition` guards and verified through
+real systemd (`inactive`, `restarts=0`); after one documented `make stop` +
+`make up` the guards were gone and the crash-loop had resumed at `restarts=8`,
+while `/vessels` and `/usr/local/bin` patches from the same session were still in
+place. Only the two named volumes appear in `docker inspect --format
+'{{range .Mounts}}…'` — everything else is the image plus a writable layer.
+
+**A unit-file change is therefore never a hot patch; it is an image change.** Edit
+`scripts/substrate/units/`, commit, and let CI rebuild — then verify against the
+published image rather than the running container.
+
 ## Validating after a change
 
 ```bash
