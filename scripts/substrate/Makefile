@@ -247,33 +247,18 @@ STATEFUL_UI_VESSEL_SRC := $(REPO_ROOT)/repos/stateful-ui-vessel
 HUMAN_SURFACE_VESSEL_SRC := $(REPO_ROOT)/repos/human-surface-vessel
 OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
 
-.PHONY: up recreate ready doctor autonomy-status performance perf validate-build build build-obsidian run run-detach run-live run-live-obsidian migrate-state-to-volumes seed-live import-memory health health-live \
-        \
-        logs-all logs-activity-api logs-development-vessel \
-        logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
-        logs-goal-host-vessel logs-boredom-vessel logs-ribosome-vessel logs-concept-db \
-        logs-analysis-vessel \
-        status status-live shell shell-live stop stop-live clean clean-live \
-        sync-development-vessel restart-development-vessel \
-        sync-local-tools-vessel restart-local-tools-vessel \
-        sync-llm-resolver-vessel restart-llm-resolver-vessel \
-        sync-goal-host-vessel restart-goal-host-vessel \
-        sync-light-dispatch-vessel restart-light-dispatch-vessel \
-        sync-boredom-vessel trigger-boredom-vessel \
-        sync-ribosome-vessel restart-ribosome-vessel \
-        sync-concept-db restart-concept-db \
-        sync-analysis-vessel restart-analysis-vessel \
-        sync-stateful-ui-vessel restart-stateful-ui-vessel \
-        sync-human-surface-vessel restart-human-surface-vessel \
-        sync-obsidian-vessel restart-obsidian-vessel \
-        sync-ias-executor-ts \
-        ui-bridge-up ui-bridge-down ui-bridge-status
 
 # Submodule preflight: the Dockerfile `COPY repos/...` stages fail minutes into
 # the build if the git submodules were never checked out. Fail fast (<1s) with
 # the exact remedy instead. Grounded on a real submodule file (discovery-vessel's
 # package.json); its absence means `git submodule update --init` was never run.
-.PHONY: preflight-submodules
+# Only REAL targets belong here. A deleted target left in .PHONY does not
+# error — make reports "Nothing to be done" and EXITS 0, so every removed
+# command silently SUCCEEDS doing nothing. `make doctor` on a broken fleet
+# would print nothing and return 0, which reads as a pass. Deleted names
+# must fail loudly with "No rule to make target".
+.PHONY: build build-obsidian clean clean-live clone-vessel-repos migrate-state-to-volumes preflight-submodules recreate run run-detach run-live run-live-obsidian stop stop-live ui-bridge-down ui-bridge-status ui-bridge-up up validate-build
+
 preflight-submodules:
 	@if [ ! -f $(REPO_ROOT)/repos/discovery-vessel/package.json ]; then \
 	  echo "[preflight] ERROR: git submodules not checked out (repos/discovery-vessel/package.json missing)."; \
@@ -650,7 +635,7 @@ migrate-state-to-volumes:
 # On images that predate the baked tool, the script is copied in first.
 #
 #   make show-key                                  print the operator API key
-#   make issue-key NAME=my-peer [SCOPES=read,write] [EXPIRES_DAYS=30]
+#   docker exec <container> substrate-key issue my-peer read,write 30
 #   make list-keys
 #   make revoke-key KEY_ID=key_xxx
 NAME ?=
@@ -777,7 +762,6 @@ IAS_SRC := $(REPO_ROOT)/repos/ias-executor-ts
 # Runs with --restart unless-stopped, so it survives docker daemon restarts.
 # Operator opens http://localhost:18270/ — the substrate's face.
 BRIDGE_NAME := stateful-ui-bridge
-.PHONY: ui-bridge-up ui-bridge-down ui-bridge-status
 
 ui-bridge-up:
 	@docker rm -f $(BRIDGE_NAME) >/dev/null 2>&1 || true
@@ -845,14 +829,10 @@ clone-vessel-repos:
 #   make vessel-ctl enable|disable <any-manifest-vessel>
 # The extra words on the command line are absorbed by a no-op rule below.
 VC_ARGS := $(filter-out vessel-ctl,$(MAKECMDGOALS))
-.PHONY: vessel-ctl
 ifneq ($(filter vessel-ctl,$(MAKECMDGOALS)),)
-.PHONY: $(VC_ARGS)
 $(VC_ARGS):
 	@:
 endif
 
-.PHONY: list-vessels install-vessel uninstall-vessel
 # Sync a dynamic vessel: ff-pull its in-container clone, mirror into the live
 # runtime, restart (all in-container; no host source involved).
-.PHONY: sync-vessel

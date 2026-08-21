@@ -220,17 +220,21 @@ symlink pull the same GHCR image), then bring it up:
 
 ```bash
 # .env
-METABOB_API_KEY=<hub-issued-key>           # required: the hub-issued credential
-HUB_DISCOVERY_URL=http://<hub-host>:18100  # required: the discovery to point at
-# Do NOT set DISCOVERY_ENDPOINT to the hub here. It names the registry this
-# fleet's own vessels register INTO, and pointing it at the hub repoints every
-# local registration away from the spoke's own registry. The hub is named by
-# HUB_DISCOVERY_URL alone.
-# ENABLED_ROLES is not needed: a remote HUB_DISCOVERY_URL already infers `spoke`.
-# optional overrides — otherwise resolved from <discovery-endpoint>/bootstrap:
+METABOB_API_KEY=<hub-issued-key>            # required: the hub-issued credential
+DISCOVERY_ENDPOINT=http://<hub-host>:18100  # required: this is what makes it a spoke
+# optional overrides — otherwise derived from the discovery host and its port offset:
 # ACTIVITY_API_ENDPOINT=http://<hub-host>:18080
 # IDENTITY_VESSEL_URL=http://<hub-host>:18101
 ```
+
+Those two are the whole join. `DISCOVERY_ENDPOINT` naming a **remote** host is the
+signal that this container is a spoke: `gen-env` infers `ENABLED_ROLES=spoke` from
+it, derives the hub, trace store and identity endpoints, and then **rewrites
+`DISCOVERY_ENDPOINT` itself to the spoke's own local registry** — a spoke's vessels
+register locally and the transport mirrors them to the hub. So the value you set
+is not the value the vessels end up using, and that is intended. Setting
+`HUB_DISCOVERY_URL` *instead* does not work: with `DISCOVERY_ENDPOINT` empty the
+inference never fires and you get a standalone with hub-shaped variables.
 
 ```bash
 docker compose up -d                       # from repo root — compose auto-loads `.env`

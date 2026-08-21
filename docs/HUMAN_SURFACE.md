@@ -46,20 +46,25 @@ values matter:
 ```json
 {
   "metabob": {
-    "endpoint": "http://<hub-host>:18100",
+    "hubDiscovery": "http://<hub-host>:18100",
     "apiKey": "<hub-issued key>"
   }
 }
 ```
 
-`endpoint` is the **hub's discovery endpoint**, and `apiKey` must be **issued by
-that hub**. A key minted locally is not valid there and every hub-facing call
-answers 401 — which surfaces later as a page that loads and then cannot dispatch
-anything.
+Set **`hubDiscovery`**, not `endpoint`. The two are not interchangeable and the
+key is overloaded: `configure-local.sh` writes `metabob.endpoint` as the **trace
+store** (activity-api, `:18080`), which is what general tooling reads, while the
+surface launcher falls back to `endpoint` as a **hub discovery** URL (`:18100`)
+only when `hubDiscovery` is absent. Setting `hubDiscovery` explicitly states
+which you mean and survives anyone re-running `configure-local.sh`.
 
-If you keep a separate hub for federation, set `metabob.hubDiscovery` and it
-wins over `endpoint`. To pin a git credential here instead of using
-`gh auth token`, add `metabob.gitPat`.
+`apiKey` must be **issued by that hub**. A key minted locally is not valid there
+and every hub-facing call answers 401 — which surfaces later as a page that loads
+and then cannot dispatch anything.
+
+To pin a git credential here instead of using `gh auth token`, add
+`metabob.gitPat`.
 
 ### 2. Get the image
 
@@ -157,9 +162,14 @@ A repo-side inventory change now reaches a running container on its own.
 it, so you do not need an image rebuild to change a roster. Two things to hold
 about the timing:
 
-- **It lands one restart late.** Selection runs pre-systemd, so a converged
-  inventory changes nothing until the container next starts. The file is
-  current; the running units are not.
+- **A converged inventory is not an applied one.** Selection runs pre-systemd, so
+  the file can be current while the running units are not. Close the gap without
+  restarting anything:
+
+  ```bash
+  docker exec <container> vessel-ctl drift    # what does this fleet actually run?
+  docker exec <container> vessel-ctl apply    # make it match the inventory
+  ```
 - **It will not overwrite a customised inventory.** A sidecar records what the
   updater last wrote. Match it, and git wins. Differ from it, and the file is
   left alone and the sync log says so — because silently reverting a fleet's
@@ -171,10 +181,13 @@ that should not have them:
 
 - **Manifest vessels**, which the selector skips entirely by design.
 - **LLM arm units rendered at boot** (`llm-opus`, `llm-haiku`, `llm-google`),
-  which never exist as files for an inventory to name.
+  which never exist as files for an inventory to name. They are governed instead
+  by the entrypoint's arm pass, which honours the same role selection — a
+  surface node excludes role `models`, so its arms are rendered but left
+  unenabled and will NOT be running.
 
-They are harmless but not nothing: they consume the box, and they make
-`docker ps` a poor guide to what a deployment is *supposed* to be.
+`docker ps` remains a poor guide to what a deployment is *supposed* to be; use
+`docker exec <container> vessel-ctl status`.
 
 ## Updating a running surface
 

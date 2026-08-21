@@ -19,17 +19,16 @@ The substrate has generalized from "one local container" to **one image that run
 - `hub` = `store`, `control`, `api`, `transport`, `seed`, `infra`, `registry`, `models` (control plane + store + relay + the model arms)
 - `spoke` = `compute`, `ui`, `seed`, `infra`, `registry` (compute-only; points its control/store at a hub, and **resolves models on the hub** — `models` is excluded deliberately, so no LLM arm starts at boot)
 
-> **How the spoke's arms are actually held off — two different strengths.** The
-> inventory-named units (`llm-resolver-vessel` and the legacy
-> `llm-resolver-{opus,haiku,google}`) are **disabled *and masked*** by
-> `apply-inventory`, because those names appear in the inventory under role
-> `models`. The units that actually serve models — the boot-rendered
-> `llm-{opus,haiku,google}` — are **rendered, present, and merely not enabled**:
-> their unit files exist as ordinary files and their `ExecCondition` passes
-> wherever a provider key is set, so a single `systemctl start llm-haiku` will
-> raise a local arm on a spoke. Those names appear nowhere in the inventory, so
-> `apply-inventory` cannot mask them. The role selection governs what starts **at
-> boot**; it is not a barrier against a deliberate manual start.
+> **How the spoke's arms are held off — two different strengths.**
+> `llm-resolver-vessel`, the shared base resolver, is inventory-named under role
+> `models`, so `apply-inventory` **disables and masks** it. The arms that serve
+> models — the boot-rendered `llm-{opus,haiku,google}` — are **rendered, present,
+> and merely not enabled**: their unit files exist as ordinary files and their
+> `ExecCondition` passes wherever a provider key is set, so a deliberate
+> `systemctl start llm-haiku` would raise a local arm on a spoke. Those names
+> appear nowhere in the inventory, so `apply-inventory` cannot mask them; the
+> entrypoint's arm pass is what leaves them unenabled. The role selection governs
+> what starts **at boot**; it is not a barrier against a manual start.
 - `full` = every role except `desktop` — the intended shape of a local substrate,
   and a hand-maintained enumeration. Note that `ENABLED_ROLES=full` is **not** the
   same as leaving the selection env unset: unset is a total no-op that masks
@@ -245,7 +244,7 @@ and diagnosis is in-container too (`docker exec substrate-live substrate-doctor`
 > booted (`docker rm -f substrate-live` then `up`) — though a pushed change
 > arrives on its own, since the container converges its `/vessels` runtime to
 > `origin/dev`. Rebuild when you need the *image* refreshed; for an uncommitted
-> single-vessel edit use the hot-reload `restart-<vessel>` targets under
+> single-vessel edit use `vessel-ctl sync` / `vessel-ctl restart`, described under
 > **Iteration loop**.
 
 ### Container path — root-level compose
@@ -751,6 +750,37 @@ docker exec <container> vessel-ctl apply    # make it so
 > One copy on purpose: the arm-selection logic lived only in the entrypoint, and
 > that is exactly why changing which arms run used to require a restart.
 
+`deregister` is the fifth vessel verb: it removes a vessel from discovery without
+touching its unit, for taking a vessel out of rotation while leaving it running.
+
+### The tools that ship in the image
+
+Everything below is on `PATH` inside the container, so `docker exec <container> …`
+reaches it on any host, with no checkout:
+
+| Tool | What it is for |
+|---|---|
+| `vessel-ctl` | the vessel surface — status, restart, logs, sync, install, uninstall, deregister, list, apply, drift |
+| `substrate-doctor` | correctness check: auth, registry, failed units, whether an LLM arm can actually complete |
+| `substrate-ready` | readiness matrix — per-unit `ok` / `down` / `skipped`, and the honest "not ready" count |
+| `substrate-key` | key and token surface — `show`, `whoami`, `issue`, `list`, `revoke`, `jwt` |
+| `substrate-config` | **where each resolved value came from** — operator env, a prior boot's persisted secret, minted this boot, or a literal |
+| `gen-env` | rewrites `/etc/substrate/env` from the container environment (runs at boot; re-runnable) |
+| `apply-inventory` | applies the vessel selection (runs at boot; `vessel-ctl apply` is the runtime entry point) |
+| `apply-llm-arms` | renders and enables the LLM arms for the current selection |
+| `substrate-pull-sync` | converges `/vessels` and the fleet files from git |
+| `reseed-restart` | re-runs identity seeding |
+
+`substrate-config` is the one to reach for when a value is not what you set:
+
+```bash
+docker exec <container> substrate-config          # every value + its provenance
+docker exec <container> substrate-config LLM      # filter
+```
+
+A value marked `persisted` came from a **previous** boot and is still in force —
+which is why an operator's freshly-supplied key can appear not to take.
+
 ## Iteration loop
 
 **The channel is git.** A change reaches running vessels — here and on every
@@ -772,10 +802,10 @@ curl http://localhost:18090/health
 
 ### Hot-reloading one local container (the escape hatch)
 
-The `sync-<vessel>` / `restart-<vessel>` targets copy `repos/<vessel>/src` from
-your working tree into the container and restart the unit. This is a
-**deliberate, single-machine** path, sanctioned for seeing an exceptional manual
-edit run before it is committed — it acts on one container on one Docker daemon
+`docker exec <container> vessel-ctl sync <vessel>` pulls the vessel's
+in-container clone, mirrors it into the live runtime and restarts the unit. This
+is a **deliberate, single-machine** path, sanctioned for seeing an exceptional
+manual edit run before it is committed — it acts on one container on one daemon
 and reaches no other substrate, so it is a local convenience, never the way a
 change is delivered.
 
@@ -792,19 +822,9 @@ curl http://localhost:18090/health
 > in-container ff-only pull of `/workspace/git/vessels/<vessel>` plus a unit
 > restart.
 
-Vessels with a `restart-<vessel>` target:
-- `restart-analysis-vessel`
-- `restart-concept-db`
-- `restart-development-vessel`
-- `restart-goal-host-vessel`
-- `restart-light-dispatch-vessel`
-- `restart-llm-resolver-vessel`
-- `restart-local-tools-vessel`
-- `restart-obsidian-vessel`
-- `restart-ribosome-vessel`
-- `restart-stateful-ui-vessel`
-- `restart-human-surface-vessel` (its sync step also installs/enables the unit,
-  since the human surface is a manifest vessel — see below)
+`vessel-ctl restart` works on **any** unit the fleet has — there is no list
+of blessed vessels. `docker exec <container> vessel-ctl status` shows what
+is there to act on.
 
 The core vessels — `activity-api`, `identity-vessel`, `discovery-vessel`,
 `surrealdb` — have **no** make restart target. Push reaches them like every
@@ -1036,11 +1056,10 @@ Beyond the baked-in core, `vessels.manifest.json` declares **runtime-installable
 `vessel-ctl` ships **in the image** (`/usr/local/bin/vessel-ctl`) and is fully self-contained: `install` clones the vessel's repo into `/workspace/git/vessels/<name>` on demand, mirrors it into the live `/vessels` runtime, renders the unit via the shared `render-unit` template, and enables it — no host checkout, no docker-cp from a host workspace. Rendered units carry an `ExecStopPost` discovery-deregister so any clean stop leaves the registry immediately (crash death falls back to the 5-min TTL). Self-recovery membership is **derived** from the fleet files at read time — install/uninstall no longer mutates any script.
 
 ```bash
-docker exec <container> vessel-ctl list                       # host convenience
-docker exec <container> vessel-ctl install <vessel>   VESSEL=metric-collector-vessel
-docker exec <container> vessel-ctl sync vessel      VESSEL=metric-collector-vessel
+docker exec <container> vessel-ctl list                            # installable vessels
+docker exec <container> vessel-ctl install metric-collector-vessel
+docker exec <container> vessel-ctl sync    metric-collector-vessel
 docker exec <container> vessel-ctl uninstall metric-collector-vessel
-docker exec substrate-live vessel-ctl install <name>         # same, in-container
 ```
 
 `vessel-ctl` is both **operator-runnable** and **activity-dispatchable** — the substrate can invoke it through local-tools-vessel's `shell` resolver (clean JSON on stdout, idempotent, no prompts), and the `--container` flag lets a host-context invocation act on another container.
@@ -1155,6 +1174,6 @@ Federation routes capability queries across substrates: hub/spoke over a shared 
 
 **Harness connection errors**: confirm `~/.metabob/config.json` points to `http://localhost:18080`, not the canary endpoint. Run `scripts/substrate/configure-local.sh` to reset.
 
-**`docker exec <container> vessel-ctl restart <vessel>` fails**: the container must be running (`make -C scripts/substrate run-live` first). Units restart in-place; the container itself is not restarted. Note that only the vessels listed under "Iteration loop" have a `restart-<vessel>` target — core vessels (activity-api, identity-vessel, discovery-vessel, surrealdb) are restarted with `docker exec substrate-live systemctl restart <unit>`.
+**`vessel-ctl restart <vessel>` fails**: the container must be running (`make -C scripts/substrate up` first). Units restart in-place; the container itself is not restarted. An unknown vessel is refused by name rather than reported as a success — run `vessel-ctl status` to see the units this fleet actually has. Every unit is restartable, including activity-api, identity-vessel, discovery-vessel and surrealdb.
 
-**Tooling connects to the wrong substrate**: client tooling reads its target from `~/.metabob/config.json`, and `configure-local.sh` points it at the local substrate. Inside the container, each systemd unit reads its endpoints from `/etc/substrate/env` — the load-bearing variables are `METABOB_API_KEY`, `ACTIVITY_API_ENDPOINT=http://127.0.0.1:8080`, and `IDENTITY_ENDPOINT=http://127.0.0.1:8101`. If you rebuilt the container without pulling the latest gen-env.sh, run `docker exec substrate-live bash /scripts/substrate/gen-env.sh` to regenerate the env file.
+**Tooling connects to the wrong substrate**: client tooling reads its target from `~/.metabob/config.json`, and `configure-local.sh` points it at the local substrate. Inside the container, each systemd unit reads its endpoints from `/etc/substrate/env` — the load-bearing variables are `METABOB_API_KEY`, `ACTIVITY_API_ENDPOINT=http://127.0.0.1:8080`, and `IDENTITY_ENDPOINT=http://127.0.0.1:8101`. If you rebuilt the container without pulling the latest gen-env.sh, run `docker exec <container> gen-env` to regenerate the env file (the tool ships on PATH in the image; there is no /scripts/substrate path inside a container).

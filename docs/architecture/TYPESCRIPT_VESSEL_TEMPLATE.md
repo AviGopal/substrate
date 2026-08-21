@@ -410,9 +410,9 @@ Notes:
   for the `process.env.… ?? "http://127.0.0.1:…"` pattern.
 
 To activate the new unit, add it to the `run-live` enabled-unit list and register
-`sync-<vessel>` / `restart-<vessel>` targets in `scripts/substrate/Makefile` (copy the
-analysis-vessel block — `sync-<vessel>` `docker cp`s `repos/<vessel>/src` into
-`/vessels/<vessel>/src`, and `restart-<vessel>` depends on it then restarts the unit).
+`vessel-ctl sync` / `vessel-ctl restart`, which ship in the image (mirror the
+analysis-vessel block — `vessel-ctl sync <vessel>` mirrors the vessel's
+in-container clone into `/vessels/<vessel>` and restarts the unit).
 The iteration loop is then:
 
 ```bash
@@ -523,7 +523,7 @@ Before cutting the first release:
 - [ ] `/health` returns 503 only on DB failure, not on discovery failure
 - [ ] WebSocket observer (if used) reconnects with backoff and never throws out of handlers
 - [ ] **Substrate unit** at `scripts/substrate/units/<vessel>.service` (`After=`/`Wants=` discovery-vessel + identity-vessel; `EnvironmentFile=/etc/substrate/env`; fixed `PORT`/`VESSEL_ID`)
-- [ ] **Host-port mapping** added to `run-live` (and `sync-`/`restart-<vessel>` targets in `scripts/substrate/Makefile`); vessel reachable at `http://localhost:18xxx/health`
+- [ ] **Host-port mapping** added to the fleet declaration (`docker-compose.yml` ports, and `run-live` in `scripts/substrate/Makefile`); vessel reachable at `http://localhost:18xxx/health`
 - [ ] Validated against the local substrate (`http://localhost:18080`) via `docker exec <container> vessel-ctl restart <vessel>` + a confirming dispatch
 - [ ] *(downstream only)* Helm chart mounts `METABOB_API_KEY` via `secretKeyRef` and `POD_NAME` via `fieldRef`; helmfile `needs:` includes `activity-system/discovery-vessel`; secret provisioning documented in the vessel's `CLAUDE.md` (no API keys in values.yaml)
 

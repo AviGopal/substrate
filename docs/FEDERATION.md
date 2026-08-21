@@ -181,8 +181,13 @@ id and fight over the relay reservation. To pin a chosen id (or a specific
 relay), enable the transport explicitly instead of relying on the boot default:
 
 ```bash
-make -C scripts/substrate vessel-ctl enable federation-transport-vessel \
-  FED_SUBSTRATE_ID=<unique-id> [RELAY_MULTIADDR=<addr>]
+# FED_SUBSTRATE_ID is generated and persisted on first boot, so a spoke needs
+# nothing here. To PIN it (a stable mirror-row name across recreates), supply it
+# at container creation — it is read by gen-env before systemd starts:
+#   docker run … -e FED_SUBSTRATE_ID=<unique-id> [-e RELAY_MULTIADDR=<addr>] …
+# or set FED_SUBSTRATE_ID / RELAY_MULTIADDR in the compose .env.
+# Read the value a running spoke settled on:
+docker exec <container> substrate-config | grep FED_SUBSTRATE_ID
 ```
 
 (The enable step refuses ids already present in the hub registry.)
@@ -200,7 +205,7 @@ docker exec <container> substrate-key issue spoke-<location>
 # → prints the key once; hand it to the spoke as METABOB_API_KEY
 ```
 
-(`substrate-key issue` in-container does the same; `docker exec <container> substrate-key list-keys` /
+(`substrate-key issue` in-container does the same; `docker exec <container> substrate-key list` /
 `docker exec <container> substrate-key revoke ...` manage the fleet's keys. See
 `docs/SUBSTRATE.md` § "Keys and tokens".)
 

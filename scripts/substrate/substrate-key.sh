@@ -5,11 +5,11 @@
 # local identity-vessel. Deployments that front a remote admin client publish
 # identity on a host port too; this script does not depend on that either way.
 # From the host, use the Makefile wrappers:
-#   make -C scripts/substrate show-key
-#   make -C scripts/substrate issue-key NAME=my-peer [SCOPES=read,write] [EXPIRES_DAYS=30]
-#   make -C scripts/substrate issue-jwt [ROLE=admin] [EXPIRES_SECONDS=900]
-#   make -C scripts/substrate list-keys
-#   make -C scripts/substrate revoke-key KEY_ID=key_xxx
+#   docker exec <container> substrate-key show
+#   docker exec <container> substrate-key issue <name> [scopes] [expires_days]
+#   docker exec <container> substrate-key jwt [role] [expires_seconds]
+#   docker exec <container> substrate-key list
+#   docker exec <container> substrate-key revoke <key-id>
 #
 # Subcommands:
 #   show                              print the substrate operator API key
