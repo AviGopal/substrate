@@ -116,9 +116,12 @@ Masked (autonomy-relevant subset): `goal-host-vessel`, `development-vessel`,
 `observe-orthogonal-refresh`, `goal-host-behavior`, `ingest-docs`, the
 `obsidian-*` set. 67 masked unit files in total.
 
-Note `llm-resolver-{google,haiku,opus}.service` are also masked — that subset is
-**deliberate deprecation**: they are superseded by the `llm-<id>.service` units
-rendered by `render-llm-arms.sh`, which are running. Not every mask is an outage.
+Note `llm-resolver-{google,haiku,opus,vessel}.service` are also masked, and they
+carry the **same 21:13 mtime** — so they were swept in the same batch rather than
+retired separately. Functionally this subset is harmless: they are superseded by
+the `llm-<id>.service` units rendered by `render-llm-arms.sh`, which are running.
+Not every mask in the batch is an outage — but the batch did not discriminate,
+which is itself evidence about how it was applied (one sweep, not a curated set).
 
 Consequences while this holds:
 - No goal dispatch (`goal-host-vessel`), hence ~20h of zero LLM traffic observed
