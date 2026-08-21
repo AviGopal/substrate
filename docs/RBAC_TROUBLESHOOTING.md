@@ -87,7 +87,7 @@ INFO FOR DB;
 remedy is to restart that vessel rather than to run a migration tool by hand. See
 [SCHEMA_OWNERSHIP.md](SCHEMA_OWNERSHIP.md) for which vessel owns which tables.
 ```bash
-make -C scripts/substrate restart-<vessel>
+docker exec <container> vessel-ctl restart <vessel>
 ```
 
 ---
@@ -341,7 +341,7 @@ which tables. activity-api additionally carries a migration runner that can be i
 
 ```bash
 # Apply on unit start
-make -C scripts/substrate restart-<vessel>
+docker exec <container> vessel-ctl restart <vessel>
 
 # activity-api schemas, applied directly
 cd repos/activity-api

@@ -97,7 +97,7 @@ kill %1
 cd repos/activity-api
 
 # Hot-reload in substrate:
-make -C scripts/substrate restart-development-vessel   # per-vessel restart targets; there is none for activity-api
+docker exec <container> vessel-ctl restart development-vessel   # per-vessel restart targets; there is none for activity-api
 
 # Verify migration applied:
 curl -sf $ACTIVITY_API_URL/health | jq .

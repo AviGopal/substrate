@@ -417,7 +417,7 @@ The iteration loop is then:
 
 ```bash
 # edit repos/<vessel>/src/** → hot-reload into the running container → validate
-make -C scripts/substrate restart-<vessel>          # docker cp src + systemctl restart
+docker exec <container> vessel-ctl restart <vessel>          # docker cp src + systemctl restart
 curl -s http://localhost:18250/health | jq .         # vessel reachable on its host port
 curl -s http://localhost:18080/v2/activities/templates  # validate against the substrate
 ```
@@ -524,7 +524,7 @@ Before cutting the first release:
 - [ ] WebSocket observer (if used) reconnects with backoff and never throws out of handlers
 - [ ] **Substrate unit** at `scripts/substrate/units/<vessel>.service` (`After=`/`Wants=` discovery-vessel + identity-vessel; `EnvironmentFile=/etc/substrate/env`; fixed `PORT`/`VESSEL_ID`)
 - [ ] **Host-port mapping** added to `run-live` (and `sync-`/`restart-<vessel>` targets in `scripts/substrate/Makefile`); vessel reachable at `http://localhost:18xxx/health`
-- [ ] Validated against the local substrate (`http://localhost:18080`) via `make -C scripts/substrate restart-<vessel>` + a confirming dispatch
+- [ ] Validated against the local substrate (`http://localhost:18080`) via `docker exec <container> vessel-ctl restart <vessel>` + a confirming dispatch
 - [ ] *(downstream only)* Helm chart mounts `METABOB_API_KEY` via `secretKeyRef` and `POD_NAME` via `fieldRef`; helmfile `needs:` includes `activity-system/discovery-vessel`; secret provisioning documented in the vessel's `CLAUDE.md` (no API keys in values.yaml)
 
 ---

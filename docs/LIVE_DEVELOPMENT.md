@@ -51,10 +51,10 @@ hot-reloaded by anything here. Drive it through its `mcp__metabob__*` tools.
 These vessels run as systemd units **inside the substrate container** and are not started directly with `bun run dev`. Edit source in `repos/<vessel>/`, then hot-reload via:
 
 ```bash
-make -C scripts/substrate restart-<vessel>
+docker exec <container> vessel-ctl restart <vessel>
 # e.g.:
-make -C scripts/substrate restart-goal-host-vessel
-make -C scripts/substrate restart-development-vessel
+docker exec <container> vessel-ctl restart goal-host-vessel
+docker exec <container> vessel-ctl restart development-vessel
 ```
 
 `restart-*` is a **fixed enumerated set of make targets**, not a pattern rule —

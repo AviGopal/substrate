@@ -78,98 +78,24 @@ fi
 # the federation-transport pattern above: `systemctl enable --now` no-ops
 # pre-systemd, so boot-start is made deterministic with offline wants-symlinks
 # (the rendered units are WantedBy=multi-user.target).
-RENDER_LLM_ARMS=""
-for c in /usr/local/bin/render-llm-arms \
-         /usr/local/share/substrate/super-repo/scripts/substrate/render-llm-arms.sh \
-         "$(dirname "$0")/render-llm-arms.sh"; do
-  if [ -x "$c" ]; then RENDER_LLM_ARMS="$c"; break; fi
+# LLM arm fleet: render the declarative arms, retire the static units they
+# supersede, and enable exactly the set this selection asks for. The logic lives
+# in apply-llm-arms.sh because `vessel-ctl apply` runs the SAME code at runtime —
+# two copies would drift, and the boot copy being the only one is precisely why
+# changing which arms run used to require a container restart.
+#
+# No RELOAD here: systemd is not running yet, so the wants-symlinks this writes
+# ARE the instruction. Fail-open — a renderer problem must not block the boot.
+APPLY_ARMS=""
+for c in /usr/local/bin/apply-llm-arms \
+         /usr/local/share/substrate/super-repo/scripts/substrate/apply-llm-arms.sh \
+         "$(dirname "$0")/apply-llm-arms.sh"; do
+  if [ -x "$c" ]; then APPLY_ARMS="$c"; break; fi
 done
-if [ -n "$RENDER_LLM_ARMS" ]; then
-  echo "[substrate] rendering LLM arm units ($RENDER_LLM_ARMS)"
-  if "$RENDER_LLM_ARMS"; then
-    # ★ THE RENDERED ARMS MUST HONOUR THE ROLE SELECTION THAT ALREADY RAN.
-    #
-    # These units are rendered AFTER apply-inventory, under names the inventory
-    # never contains (llm-opus / llm-haiku / llm-google, vs the inventory's
-    # llm-resolver-*), so NO selection lever reached them: not ENABLED_ROLES,
-    # not DISABLED_VESSELS (its mask loop iterates inventory-named units only),
-    # and not an operator's `systemctl disable` — this very loop re-created the
-    # wants-symlink on the next boot. Moving the llm-resolver-* units to role
-    # `models` therefore fixed the names nothing renders, while the arms that
-    # actually run stayed ungoverned.
-    #
-    # The arms serve models, so they belong to role `models`. If the selection
-    # in force excludes that role, do not enable them. `spoke` excludes it by
-    # design: a spoke resolves models on its hub.
-    _models_wanted=1
-    if [ -n "${ENABLED_ROLES:-}" ] && [ -x /usr/local/bin/apply-inventory ]; then
-      # Ask the same expander apply-inventory used, so the two cannot drift.
-      # 2>&1, NOT 2>/dev/null: apply-inventory logs to STDERR, so discarding it
-      # discards the very line being matched — the check would then read "models
-      # absent" for every selection, silently disabling the arms everywhere.
-      if ! DRY_RUN=1 ENABLED_ROLES="$ENABLED_ROLES" /usr/local/bin/apply-inventory 2>&1 \
-           | grep -Eq 'expands to:.*(^| )models( |$)'; then
-        _models_wanted=0
-      fi
-    fi
-    # An explicit PROFILE or ENABLED_VESSELS is a hand-written allow-list; the
-    # rendered arms are not on it unless named there.
-    if [ -n "${PROFILE:-}" ] || [ -n "${ENABLED_VESSELS:-}" ]; then
-      _models_wanted=0
-      case ",${ENABLED_VESSELS:-}," in *,llm-*) _models_wanted=1 ;; esac
-    fi
-
-    # ★ RETIRE THE STATIC ARM EACH RENDERED ARM SUPERSEDES.
-    #
-    # The migration to rendered arms shipped BOTH sets and called it a
-    # "parallel run". They are not parallel — they are duplicates on the SAME
-    # PORT: llm-resolver-{opus,haiku,google} (/lib/systemd/system, 8221/8223/
-    # 8225) against rendered llm-{opus,haiku,google} (/etc/systemd/system, the
-    # same three ports, from llm-arms.json). Exactly one of each pair wins the
-    # bind; the loser dies EADDRINUSE and Restart=on-failure retries it forever.
-    # Measured on a fresh clean-room fleet: NRestarts=95 within 40 minutes, two
-    # of three arms looping, and WHICH unit won differed per arm — a boot race.
-    #
-    # It stayed invisible because a unit in a restart loop reports `activating`,
-    # never `failed`, so `systemctl list-units --state=failed` is empty and the
-    # doctor's "no failed units" check PASSES while the fleet burns a process
-    # every ~25s. (Same signature as the one-shot-install crash-loop already on
-    # record — the class recurred in a new place.)
-    #
-    # llm-resolver-vessel (8220) is NOT superseded: it is the shared base
-    # resolver on its own port, not an arm. Only retire a static unit when the
-    # rendered arm of the same id actually exists.
-    for _r in /etc/systemd/system/llm-*.service; do
-      [ -f "$_r" ] || continue
-      _id="$(basename "$_r" .service)"; _id="${_id#llm-}"
-      _static="llm-resolver-${_id}.service"
-      if [ -f "/lib/systemd/system/$_static" ] || [ -f "/etc/systemd/system/$_static" ]; then
-        rm -f "/etc/systemd/system/multi-user.target.wants/$_static"
-        echo "[substrate] retired static $_static — superseded by rendered llm-${_id}.service (same port)"
-      fi
-    done
-
-    mkdir -p /etc/systemd/system/multi-user.target.wants
-    for u in /etc/systemd/system/llm-*.service; do
-      [ -f "$u" ] || continue
-      _b="$(basename "$u")"
-      case ",${DISABLED_VESSELS:-}," in
-        *",$_b,"*)
-          rm -f "/etc/systemd/system/multi-user.target.wants/$_b"
-          echo "[substrate] rendered LLM arm $_b left DISABLED (DISABLED_VESSELS)"
-          continue ;;
-      esac
-      if [ "$_models_wanted" = 0 ]; then
-        rm -f "/etc/systemd/system/multi-user.target.wants/$_b"
-        echo "[substrate] rendered LLM arm $_b NOT enabled — role 'models' is not in this selection"
-        continue
-      fi
-      ln -sf "../$_b" "/etc/systemd/system/multi-user.target.wants/$_b"
-      echo "[substrate] enabled rendered LLM arm $_b"
-    done
-  else
-    echo "[substrate] render-llm-arms failed (keeping static LLM units only)"
-  fi
+if [ -n "$APPLY_ARMS" ]; then
+  "$APPLY_ARMS" || echo "[substrate] apply-llm-arms failed (continuing boot)"
+else
+  echo "[substrate] apply-llm-arms not found — skipping LLM arm setup"
 fi
 
 echo "[substrate] handing off to systemd"

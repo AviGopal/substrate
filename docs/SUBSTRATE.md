@@ -558,8 +558,8 @@ instance is a standalone, self-contained fleet with its own everything.
 make -C scripts/substrate up LIVE_NAME=substrate-scratch PORT_OFFSET=20000 ANTHROPIC_API_KEY=sk-ant-...
 
 # Every management/inspection target needs the same LIVE_NAME (they default to substrate-live)
-make -C scripts/substrate doctor    LIVE_NAME=substrate-scratch
-make -C scripts/substrate show-key  LIVE_NAME=substrate-scratch
+docker exec <container> substrate-doctor
+docker exec <container> substrate-key show
 
 # Tear it down (removes the container; add the volumes to wipe its state)
 docker rm -f substrate-scratch
@@ -575,7 +575,7 @@ tooling at the offset ports manually if you want it aimed at the clean-room flee
 ```bash
 make -C scripts/substrate build
 make -C scripts/substrate run-live ANTHROPIC_API_KEY=sk-ant-...
-make -C scripts/substrate seed-live
+docker exec <container> reseed-restart
 scripts/substrate/configure-local.sh
 ```
 
@@ -640,34 +640,23 @@ Assume identity is reachable and authenticate every call to it — do not rely o
 container boundary to keep callers out.
 
 For a substrate you have shell on, the in-container tool `substrate-key` (baked next
-to `vessel-ctl`) is the issuance surface, wrapped by Makefile targets so the whole
+to `vessel-ctl`) is the issuance surface — it ships in the image, so the whole
 flow is one command with no credentials beyond a running substrate:
 
-> **Instance selector.** Every `make -C scripts/substrate` target — `show-key`,
-> `whoami`, `issue-key`, `list-keys`, `revoke-key`, `status`, `health`, `shell`,
-> and each enumerated `logs-*` / `restart-*` / `sync-*` target — runs `docker exec
-> $(LIVE_NAME) …` and defaults `LIVE_NAME=substrate-live`. Run bare against a
-> second or clean-room container they silently act on the live substrate; pass
-> `LIVE_NAME=<container>` on every command (e.g.
-> `make -C scripts/substrate show-key LIVE_NAME=substrate-scratch`). See
-> [Second substrate on the same host](#second-substrate-on-the-same-host-clean-room).
->
-> `health` is the one target that also reaches **host** ports rather than only
-> `docker exec`, so it needs `PORT_OFFSET` as well as `LIVE_NAME` to describe a
-> second instance: `make health LIVE_NAME=<container> PORT_OFFSET=<n>`. Given
-> only `LIVE_NAME`, its host-port probes fall back to the default `18xxx` block —
-> which on a multi-instance host is a *different* fleet — while its `docker exec`
-> probes report the right one, in the same output. The lines marked `(internal)`
-> are the `docker exec` ones.
+> **Naming the instance.** Every management command runs against a container you
+> name, so the instance is part of the command and cannot be defaulted wrongly:
+> `docker exec <container> …`. There is no separate selector variable to forget.
+> On a host running more than one substrate, the name you type is the fleet you
+> get. See [Second substrate on the same host](#second-substrate-on-the-same-host-clean-room).
 
 ```bash
-make -C scripts/substrate show-key                 # print the operator API key (what configure-local writes)
-make -C scripts/substrate whoami                   # operator identity: org, user, scopes
-make -C scripts/substrate issue-key NAME=my-peer   # mint a new API key (external peer / spoke / new vessel)
-make -C scripts/substrate issue-key NAME=ci-bot SCOPES=read EXPIRES_DAYS=30
-make -C scripts/substrate issue-jwt ROLE=admin     # mint a Bearer JWT (dashboard / admin endpoints)
-make -C scripts/substrate list-keys
-make -C scripts/substrate revoke-key KEY_ID=key_xxx
+docker exec <container> substrate-key show                 # print the operator API key (what configure-local writes)
+docker exec <container> substrate-key whoami                   # operator identity: org, user, scopes
+docker exec <container> substrate-key issue my-peer   # mint a new API key (external peer / spoke / new vessel)
+docker exec <container> substrate-key issue ci-bot read 30   # <name> [scopes] [expires_days]
+docker exec <container> substrate-key jwt admin     # mint a Bearer JWT (dashboard / admin endpoints)
+docker exec <container> substrate-key list
+docker exec <container> substrate-key revoke key_xxx
 ```
 
 The full key is printed **once** and never stored (only its hash is persisted). On
@@ -701,7 +690,7 @@ credential — not the network position — is the trust boundary.
 Two surfaces administer the same keyspace, and the choice between them is about
 where you stand relative to the substrate, not about capability:
 
-- **`make -C scripts/substrate issue-key` (and its `whoami` / `list-keys` /
+- **`docker exec <container> substrate-key issue <name>` (and its `whoami` / `list-keys` /
   `revoke-key` / `issue-jwt` siblings)** — for a substrate you have **shell on**.
   Each target runs `docker exec` against the container, so it needs no network
   exposure, no client install, and no credential beyond a running substrate: the
@@ -720,6 +709,55 @@ credential for but no shell on. Because both drive the same identity-vessel
 endpoints, the auth model above governs each of them identically — a remote client
 is not a privileged one. `keyctl` documents its own commands and flags; consult it
 there rather than mirroring them here.
+
+## Managing a running fleet: `vessel-ctl`
+
+**`vessel-ctl` is the vessel management surface, and there is no second one.** It
+ships in the image, so it works wherever the substrate runs — a laptop, a hub, a
+spoke reached over ssh — with no checkout and no host tooling. The Makefile is
+the *bootstrap* tier only (`build` / `up` / `recreate` / `stop` / `clean`): the
+things that must happen before a container exists to be talked to.
+
+Every verb works on **any** unit the fleet has, baked or manifest, and names its
+instance in the command:
+
+```bash
+docker exec <container> vessel-ctl status              # the fleet: state, enabled, restarts
+docker exec <container> vessel-ctl status <vessel>     # one unit
+docker exec <container> vessel-ctl restart <vessel>
+docker exec <container> vessel-ctl logs <vessel> -n 100
+docker exec <container> vessel-ctl sync <vessel>       # clone -> live runtime + restart
+docker exec <container> vessel-ctl install <vessel>    # manifest vessels
+docker exec <container> vessel-ctl uninstall <vessel>
+docker exec <container> vessel-ctl list                # installable manifest vessels
+docker exec <container> vessel-ctl drift               # inventory vs image vs running
+docker exec <container> vessel-ctl apply               # re-apply the selection NOW
+```
+
+`status` always prints `restarts=` next to the state, because a unit in a
+`Restart=` loop reports `activating` forever and **never** `failed` — it is
+invisible to any states-only listing, and a climbing count is the cheap tell.
+
+### `drift` and `apply`
+
+Vessel selection is read at boot by `apply-inventory`, so a corrected inventory
+that `substrate-pull-sync` has already converged into the volume **sits inert**
+until something applies it. That is why a fleet can hold the right inventory and
+go on running the wrong unit set indefinitely.
+
+`drift` reports the gap — the volume inventory against the image default, the
+selection in force, and what applying it now would change. `apply` closes it
+against a running fleet, with no container restart: it re-runs the selection and
+the LLM-arm pass, then starts and stops units to match.
+
+```bash
+docker exec <container> vessel-ctl drift    # is this fleet running what it should?
+docker exec <container> vessel-ctl apply    # make it so
+```
+
+> Both boot and `apply` call the same `apply-llm-arms` for the rendered arms.
+> One copy on purpose: the arm-selection logic lived only in the entrypoint, and
+> that is exactly why changing which arms run used to require a restart.
 
 ## Iteration loop
 
@@ -750,7 +788,7 @@ and reaches no other substrate, so it is a local convenience, never the way a
 change is delivered.
 
 ```bash
-make -C scripts/substrate restart-development-vessel
+docker exec <container> vessel-ctl restart development-vessel
 curl http://localhost:18090/health
 ```
 
@@ -812,16 +850,16 @@ curl -s -H "Authorization: ApiKey $KEY" \
 
 ```bash
 # All unit statuses
-make -C scripts/substrate status
+docker exec <container> vessel-ctl status
 
 # Aggregate fleet health (host-mapped HTTP probes)
-make -C scripts/substrate health
+docker exec <container> substrate-doctor
 
 # Follow a vessel's logs
-make -C scripts/substrate logs-activity-api
+docker exec <container> vessel-ctl logs activity-api
 
 # Shell into the container
-make -C scripts/substrate shell
+docker exec -it <container> bash
 ```
 
 **`logs-*` is an enumerated set of targets, not a pattern rule.** There is no
@@ -1006,10 +1044,10 @@ Beyond the baked-in core, `vessels.manifest.json` declares **runtime-installable
 `vessel-ctl` ships **in the image** (`/usr/local/bin/vessel-ctl`) and is fully self-contained: `install` clones the vessel's repo into `/workspace/git/vessels/<name>` on demand, mirrors it into the live `/vessels` runtime, renders the unit via the shared `render-unit` template, and enables it — no host checkout, no docker-cp from a host workspace. Rendered units carry an `ExecStopPost` discovery-deregister so any clean stop leaves the registry immediately (crash death falls back to the 5-min TTL). Self-recovery membership is **derived** from the fleet files at read time — install/uninstall no longer mutates any script.
 
 ```bash
-make -C scripts/substrate list-vessels                       # host convenience
-make -C scripts/substrate install-vessel   VESSEL=metric-collector-vessel
-make -C scripts/substrate sync-vessel      VESSEL=metric-collector-vessel
-make -C scripts/substrate uninstall-vessel VESSEL=metric-collector-vessel
+docker exec <container> vessel-ctl list                       # host convenience
+docker exec <container> vessel-ctl install <vessel>   VESSEL=metric-collector-vessel
+docker exec <container> vessel-ctl sync vessel      VESSEL=metric-collector-vessel
+docker exec <container> vessel-ctl uninstall metric-collector-vessel
 docker exec substrate-live vessel-ctl install <name>         # same, in-container
 ```
 
@@ -1119,12 +1157,12 @@ Federation routes capability queries across substrates: hub/spoke over a shared 
 
 **API key needed but lost**: if you ran `seed-identity.ts` but forgot the key, re-read it from the container env file: `docker exec substrate-live grep METABOB_API_KEY /etc/substrate/env`. Then re-run `configure-local.sh` to update your local config.
 
-**A key that reads fine and 401s everywhere**: `substrate-key show` prints whatever is in `/etc/substrate/env` and does not check it, so before `identity-seeder` completes it returns a pre-seed placeholder with no error. The value is short and lacks the `mb-<base64>-<hex>` shape of a real key (~160 chars). Confirm with `make -C scripts/substrate whoami`, which reports the org and scopes for a valid key and fails for an invalid one, or with `substrate-doctor`'s key check. A fresh fleet takes a few minutes to converge; a doctor run before then reports failures that clear themselves.
+**A key that reads fine and 401s everywhere**: `substrate-key show` prints whatever is in `/etc/substrate/env` and does not check it, so before `identity-seeder` completes it returns a pre-seed placeholder with no error. The value is short and lacks the `mb-<base64>-<hex>` shape of a real key (~160 chars). Confirm with `docker exec <container> substrate-key whoami`, which reports the org and scopes for a valid key and fails for an invalid one, or with `substrate-doctor`'s key check. A fresh fleet takes a few minutes to converge; a doctor run before then reports failures that clear themselves.
 
 **`substrate-doctor` reports `failed units: bootstrap-seeder.service`**: the seeder registers the shared activity templates and exits non-zero if *any* template is rejected, so one bad template exhausts its restart budget and leaves systemd `degraded`. See which failed with `docker exec <container> journalctl -u bootstrap-seeder | grep '✗'`. A rejection reading `the composition declares a precondition it produces itself` is a defect in that seed template, not in your deployment: the rest of the fleet is usable and those specific activities are absent. Re-run after a fix with `docker exec <container> systemctl start bootstrap-seeder`.
 
 **Harness connection errors**: confirm `~/.metabob/config.json` points to `http://localhost:18080`, not the canary endpoint. Run `scripts/substrate/configure-local.sh` to reset.
 
-**`make restart-<vessel>` fails**: the container must be running (`make -C scripts/substrate run-live` first). Units restart in-place; the container itself is not restarted. Note that only the vessels listed under "Iteration loop" have a `restart-<vessel>` target — core vessels (activity-api, identity-vessel, discovery-vessel, surrealdb) are restarted with `docker exec substrate-live systemctl restart <unit>`.
+**`docker exec <container> vessel-ctl restart <vessel>` fails**: the container must be running (`make -C scripts/substrate run-live` first). Units restart in-place; the container itself is not restarted. Note that only the vessels listed under "Iteration loop" have a `restart-<vessel>` target — core vessels (activity-api, identity-vessel, discovery-vessel, surrealdb) are restarted with `docker exec substrate-live systemctl restart <unit>`.
 
 **Tooling connects to the wrong substrate**: client tooling reads its target from `~/.metabob/config.json`, and `configure-local.sh` points it at the local substrate. Inside the container, each systemd unit reads its endpoints from `/etc/substrate/env` — the load-bearing variables are `METABOB_API_KEY`, `ACTIVITY_API_ENDPOINT=http://127.0.0.1:8080`, and `IDENTITY_ENDPOINT=http://127.0.0.1:8101`. If you rebuilt the container without pulling the latest gen-env.sh, run `docker exec substrate-live bash /scripts/substrate/gen-env.sh` to regenerate the env file.

@@ -196,12 +196,12 @@ IDENTITY_VESSEL_URL=...`); outbound-only, since the hub cannot dial back.
 
 ```bash
 # on the hub host
-make -C scripts/substrate issue-key NAME=spoke-<location>
+docker exec <container> substrate-key issue spoke-<location>
 # → prints the key once; hand it to the spoke as METABOB_API_KEY
 ```
 
-(`substrate-key issue` in-container does the same; `make list-keys` /
-`make revoke-key KEY_ID=...` manage the fleet's keys. See
+(`substrate-key issue` in-container does the same; `docker exec <container> substrate-key list-keys` /
+`docker exec <container> substrate-key revoke ...` manage the fleet's keys. See
 `docs/SUBSTRATE.md` § "Keys and tokens".)
 
 A vessel **behind NAT** (e.g. a host Obsidian plugin) that can't be dialed directly uses

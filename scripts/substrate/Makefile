@@ -24,13 +24,32 @@
 # Quick start (one command — build/start/seed/verify are all handled):
 #   make -C scripts/substrate up ANTHROPIC_API_KEY=sk-ant-...
 # The system itself needs only `docker run` (see the `up` target header for the
-# raw contract); seeding + readiness + diagnosis run in-container. The legacy
-# 3-step (run-live / seed-live / configure-local.sh) still works unchanged.
+# raw contract); seeding + readiness + diagnosis run in-container.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# THIS MAKEFILE IS THE BOOTSTRAP TIER ONLY: build, up, recreate, stop, clean —
+# the things that must happen BEFORE a container exists to be talked to.
+#
+# Everything a RUNNING fleet does is `vessel-ctl`, which ships in the image:
+#
+#   docker exec <container> vessel-ctl status | restart <v> | logs <v> | sync <v>
+#   docker exec <container> vessel-ctl install <v> | uninstall <v> | list
+#   docker exec <container> vessel-ctl apply | drift
+#   docker exec <container> substrate-doctor | substrate-ready | substrate-key …
+#
+# This Makefile used to carry ~40 hand-enumerated restart-/logs-/sync-<vessel>
+# targets covering 11 of 65 units, plus wrappers around every in-image tool.
+# Two surfaces for one job is how they drift: `health` probed hardcoded 18xxx
+# ports while claiming to honour LIVE_NAME, so on a multi-instance host it
+# reported a DIFFERENT fleet than the one you named. They are deleted, not
+# deprecated. Do not reintroduce a wrapper here for something the image ships —
+# the in-image tool works over ssh, on a hub, and in a container you did not
+# build, and it names its instance in the command itself.
+# ─────────────────────────────────────────────────────────────────────────────
 #
 # Two container flavours:
 #   substrate       — interactive / ephemeral dev container (port 8080)
 #   substrate-live  — persistent development substrate (port 18080)
-#                     All substrate-only iteration targets use substrate-live.
 
 IMAGE        := ghcr.io/avigopal/substrate
 TAG          := dev
@@ -229,7 +248,7 @@ HUMAN_SURFACE_VESSEL_SRC := $(REPO_ROOT)/repos/human-surface-vessel
 OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
 
 .PHONY: up recreate ready doctor autonomy-status performance perf validate-build build build-obsidian run run-detach run-live run-live-obsidian migrate-state-to-volumes seed-live import-memory health health-live \
-        ensure-key-tool show-key whoami issue-key issue-jwt list-keys revoke-key \
+        \
         logs-all logs-activity-api logs-development-vessel \
         logs-local-tools-vessel logs-llm-resolver-vessel logs-bootstrap-seeder \
         logs-goal-host-vessel logs-boredom-vessel logs-ribosome-vessel logs-concept-db \
@@ -387,10 +406,6 @@ up:
 	fi
 	@echo "[up] waiting for fleet readiness (up to 240s)..."
 	@CONTAINER=$(LIVE_NAME) $(CURDIR)/substrate-ready.sh --timeout 240 || true
-	@if ! docker exec $(LIVE_NAME) test -x /usr/local/bin/reseed-restart 2>/dev/null; then \
-	  echo "[up] image predates identity-seeder — running seed-live fallback (idempotent)"; \
-	  $(MAKE) seed-live || true; \
-	fi
 	@if [ "$(LIVE_NAME)" = "substrate-live" ]; then \
 	  $(CURDIR)/configure-local.sh >/dev/null 2>&1 && echo "[up] ~/.metabob/config.json updated (operator IDE convenience)" || echo "[up] configure-local skipped"; \
 	else \
@@ -467,14 +482,8 @@ recreate:
 	fi
 
 # Fleet readiness matrix (host wrapper; in-container: /usr/local/bin/substrate-ready)
-ready:
-	@CONTAINER=$(LIVE_NAME) $(CURDIR)/substrate-ready.sh --once
-
 # Deep diagnosis incl. surreal-auth drift, seeded-key validity, hollow registry,
 # failed units. `make doctor SMOKE=1` also dispatches a goal end-to-end.
-doctor:
-	@CONTAINER=$(LIVE_NAME) $(CURDIR)/substrate-doctor.sh $(if $(filter 1,$(SMOKE)),--smoke,)
-
 # ── substrate-live container (persistent, host ports 18080/18090/18100) ─────
 # Primary target for all local development iteration.
 # Run once; use sync-*/restart-* targets to hot-reload vessels without rebuild.
@@ -635,10 +644,6 @@ migrate-state-to-volumes:
 	      echo "[migrate] done — host dirs left intact as backup"'
 
 # Seed identity and API keys into a freshly started substrate-live container.
-seed-live:
-	docker exec $(LIVE_NAME) bash -c 'set -a; source /etc/substrate/env; set +a; bun /vessels/seed-identity.ts'
-	@echo "[seed-live] Identity seeded. Run: scripts/substrate/configure-local.sh"
-
 # ── Key / token surface ─────────────────────────────────────────────────────
 # Human-friendly wrappers around the in-container `substrate-key` tool
 # (identity-vessel is internal-only, so issuance must run inside the container).
@@ -646,7 +651,6 @@ seed-live:
 #
 #   make show-key                                  print the operator API key
 #   make issue-key NAME=my-peer [SCOPES=read,write] [EXPIRES_DAYS=30]
-#   make issue-jwt [ROLE=admin] [EXPIRES_SECONDS=900]
 #   make list-keys
 #   make revoke-key KEY_ID=key_xxx
 NAME ?=
@@ -656,32 +660,6 @@ ROLE ?= admin
 EXPIRES_SECONDS ?= 900
 KEY_ID ?=
 
-ensure-key-tool:
-	@docker exec $(LIVE_NAME) test -x /usr/local/bin/substrate-key 2>/dev/null || \
-	  { echo "[keys] baking substrate-key into running container (image predates it)"; \
-	    docker cp $(CURDIR)/substrate-key.sh $(LIVE_NAME):/usr/local/bin/substrate-key; \
-	    docker exec $(LIVE_NAME) chmod +x /usr/local/bin/substrate-key; }
-
-show-key: ensure-key-tool
-	@docker exec $(LIVE_NAME) substrate-key show
-
-whoami: ensure-key-tool
-	@docker exec $(LIVE_NAME) substrate-key whoami
-
-issue-key: ensure-key-tool
-	@test -n "$(NAME)" || { echo "usage: make issue-key NAME=<key-name> [SCOPES=read,write] [EXPIRES_DAYS=30]"; exit 1; }
-	@docker exec $(LIVE_NAME) substrate-key issue "$(NAME)" "$(SCOPES)" "$(EXPIRES_DAYS)"
-
-issue-jwt: ensure-key-tool
-	@docker exec $(LIVE_NAME) substrate-key jwt "$(ROLE)" "$(EXPIRES_SECONDS)"
-
-list-keys: ensure-key-tool
-	@docker exec $(LIVE_NAME) substrate-key list
-
-revoke-key: ensure-key-tool
-	@test -n "$(KEY_ID)" || { echo "usage: make revoke-key KEY_ID=key_xxx (find ids via make list-keys)"; exit 1; }
-	@docker exec $(LIVE_NAME) substrate-key revoke "$(KEY_ID)"
-
 # Every probe must describe the instance named by LIVE_NAME. The four
 # host-port probes below hardcoded 18080/18100/18090/18250, honouring neither
 # LIVE_NAME nor PORT_OFFSET — so on a host running more than one substrate this
@@ -689,21 +667,6 @@ revoke-key: ensure-key-tool
 # `docker exec $(LIVE_NAME)` output from the correct one. A health report naming
 # the wrong instance is worse than no report. $(call hp,…) applies PORT_OFFSET
 # exactly as run-live does when it publishes these same ports.
-health-live:
-	@echo "=== activity-api ===" && curl -s http://localhost:$(call hp,18080)/health | jq '{version,status}'
-	@echo "=== discovery-vessel ===" && curl -s http://localhost:$(call hp,18100)/health | jq '{status}'
-	@echo "=== development-vessel ===" && curl -s http://localhost:$(call hp,18090)/health | jq .
-	@echo "=== local-tools-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8230/health | jq .
-	@echo "=== llm-resolver-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8220/health | jq .
-	@echo "=== goal-host-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8210/health | jq .
-	@echo "=== ribosome-vessel (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8240/health | jq .
-	@echo "=== concept-db (internal) ===" && docker exec $(LIVE_NAME) curl -s http://localhost:8260/health | jq '{status,service}'
-	@echo "=== analysis-vessel ===" && curl -s http://localhost:$(call hp,18250)/health | jq .
-
-status-live:
-	docker exec $(LIVE_NAME) systemctl status --no-pager \
-	    surrealdb valkey discovery-vessel identity-vessel activity-api development-vessel local-tools-vessel llm-resolver-vessel goal-host-vessel bootstrap-seeder boredom-vessel.timer m1-trainer.timer ribosome-vessel concept-db analysis-vessel
-
 # Autonomy KPI view. MUST run ON THE HOST. The collector writes the metrics JSONL
 # into the /workspace docker VOLUME (host filesystem can't see it directly), so
 # the viewer reaches it via `docker exec <container> cat /workspace/...`. That
@@ -713,22 +676,11 @@ status-live:
 # host bind-mount cache — falsely reporting STALE / 850m-old data while the
 # collector was healthy (root-caused 2026-06-19). The viewer is a pure renderer
 # (no DB/API creds needed); SUBSTRATE_CONTAINER points it at the live volume.
-autonomy-status:
-	@SUBSTRATE_CONTAINER=$(LIVE_NAME) bun $(dir $(lastword $(MAKEFILE_LIST)))autonomy-status.ts
-
 # READ-ONLY performance view: honest reach (verification-label corpus) vs
 # self-reported reach (goal-host dispatches), the law-7 gap triple with the
 # expiry-vs-repair close decomposition, and a topology census (shapes, vessel
 # units, federated LLM arms, graded templates). Host-run: it curls the
 # host-mapped ports and shells into the container for the unit census.
-performance:
-	@CONTAINER=$(LIVE_NAME) bun $(dir $(lastword $(MAKEFILE_LIST)))performance-status.ts
-
-perf: performance
-
-shell-live:
-	docker exec -it $(LIVE_NAME) bash
-
 stop-live:
 	docker stop $(LIVE_NAME)
 
@@ -737,60 +689,10 @@ clean-live:
 
 # ── ephemeral dev container (port 8080) ─────────────────────────────────────
 
-logs-all:
-	docker exec $(LIVE_NAME) journalctl -f
-
-logs-activity-api:
-	docker exec $(LIVE_NAME) journalctl -fu activity-api.service
-
-logs-development-vessel:
-	docker exec $(LIVE_NAME) journalctl -fu development-vessel.service
-
-logs-local-tools-vessel:
-	docker exec $(LIVE_NAME) journalctl -fu local-tools-vessel.service
-
-logs-llm-resolver-vessel:
-	docker exec $(LIVE_NAME) journalctl -fu llm-resolver-vessel.service
-
-logs-bootstrap-seeder:
-	docker exec $(LIVE_NAME) journalctl -u bootstrap-seeder.service --no-pager
-
-logs-m1-trainer:
-	docker exec $(LIVE_NAME) journalctl -u m1-trainer.service --no-pager
-
-trigger-m1-trainer:
-	docker exec $(LIVE_NAME) systemctl start m1-trainer.service
-	@sleep 2
-	@docker exec $(LIVE_NAME) journalctl -u m1-trainer.service --no-pager -n 20
-
-logs-goal-host-vessel:
-	docker exec $(LIVE_NAME) journalctl -fu goal-host-vessel.service
-
-logs-boredom-vessel:
-	docker exec $(LIVE_NAME) journalctl -u boredom-vessel.service --no-pager
-
-logs-ribosome-vessel:
-	docker exec $(LIVE_NAME) journalctl -fu ribosome-vessel.service
-
-logs-concept-db:
-	docker exec $(LIVE_NAME) journalctl -fu concept-db.service
-
-logs-surrealdb:
-	docker exec $(LIVE_NAME) journalctl -fu surrealdb.service
-
-status: status-live
-
-shell: shell-live
-
 # Seed operator-side memory files into the substrate's memory store.
 # Run once after seed-live. Pass DEV_VESSEL_ENDPOINT to write via HTTP
 # (requires substrate running); omit to write directly to workspace/memory/.
-import-memory:
-	WORKSPACE_DIR=$(WORKSPACE) bun $(CURDIR)/import-operator-memory.ts
-
 # health targets the substrate-live container (18080 ports).
-health: health-live
-
 stop: stop-live
 
 clean: clean-live
@@ -798,53 +700,8 @@ clean: clean-live
 # ── Substrate-only iteration (substrate-live container) ──────────────────────
 
 # Sync development-vessel source into the running container then restart it.
-sync-development-vessel:
-	docker cp $(DEV_VESSEL_SRC)/src/config.ts $(LIVE_NAME):/vessels/development-vessel/src/config.ts
-	docker cp $(DEV_VESSEL_SRC)/src/. $(LIVE_NAME):/vessels/development-vessel/src/
-	docker cp $(DEV_VESSEL_SRC)/src/routes/impulses.ts $(LIVE_NAME):/vessels/development-vessel/src/routes/impulses.ts
-	@for f in $(DEV_VESSEL_SRC)/src/resolvers/*.ts; do \
-	    docker cp $$f $(LIVE_NAME):/vessels/development-vessel/src/resolvers/$$(basename $$f); \
-	done
-	@for f in $(DEV_VESSEL_SRC)/src/seed/*.ts; do \
-	    docker cp $$f $(LIVE_NAME):/vessels/development-vessel/src/seed/$$(basename $$f); \
-	done
-	@docker exec $(LIVE_NAME) mkdir -p /vessels/development-vessel/src/observers
-	@for f in $(DEV_VESSEL_SRC)/src/observers/*.ts; do \
-	    docker cp $$f $(LIVE_NAME):/vessels/development-vessel/src/observers/$$(basename $$f); \
-	done
-	@$(CURDIR)/warn-baseline-drift.sh development-vessel $(LIVE_NAME)
-	@echo "[sync] development-vessel source synced to substrate-live"
-
-restart-development-vessel: sync-development-vessel
-	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-development-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/development-vessel.json"' 2>/dev/null || true
-	docker exec $(LIVE_NAME) systemctl restart development-vessel.service
-	@sleep 2
-	@docker exec $(LIVE_NAME) systemctl is-active development-vessel.service | grep -q active && echo "[restart] development-vessel active" || echo "[restart] ERROR: development-vessel not active"
-
 # Sync local-tools-vessel source into the running container then restart it.
-sync-local-tools-vessel:
-	docker cp $(LOCAL_TOOLS_SRC)/src/. $(LIVE_NAME):/vessels/local-tools-vessel/src/
-	@$(CURDIR)/warn-baseline-drift.sh local-tools-vessel $(LIVE_NAME)
-	@echo "[sync] local-tools-vessel source synced to substrate-live"
-
-restart-local-tools-vessel: sync-local-tools-vessel
-	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-local-tools-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/local-tools-vessel.json"' 2>/dev/null || true
-	docker exec $(LIVE_NAME) systemctl restart local-tools-vessel.service
-	@sleep 2
-	@docker exec $(LIVE_NAME) systemctl is-active local-tools-vessel.service | grep -q active && echo "[restart] local-tools-vessel active" || echo "[restart] ERROR: local-tools-vessel not active"
-
 # Sync llm-resolver-vessel source into the running container then restart it.
-sync-llm-resolver-vessel:
-	docker cp $(LLM_VESSEL_SRC)/src/. $(LIVE_NAME):/vessels/llm-resolver-vessel/src/
-	@$(CURDIR)/warn-baseline-drift.sh llm-resolver-vessel $(LIVE_NAME)
-	@echo "[sync] llm-resolver-vessel source synced to substrate-live"
-
-restart-llm-resolver-vessel: sync-llm-resolver-vessel
-	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-llm-resolver-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/llm-resolver-vessel.json"' 2>/dev/null || true
-	docker exec $(LIVE_NAME) systemctl restart llm-resolver-vessel.service
-	@sleep 2
-	@docker exec $(LIVE_NAME) systemctl is-active llm-resolver-vessel.service | grep -q active && echo "[restart] llm-resolver-vessel active" || echo "[restart] ERROR: llm-resolver-vessel not active"
-
 # Sync goal-host-vessel source into the running container then restart it.
 # Copies the whole src tree, not a single file. This target used to cp only
 # src/index.ts, so every module beside it was silently left at its old version
@@ -853,110 +710,15 @@ restart-llm-resolver-vessel: sync-llm-resolver-vessel
 # deployed green and was verifiably absent from the live tree afterwards.
 # `docker cp <dir>/. <dest>` copies directory CONTENTS, so new files appear and
 # existing ones are overwritten in place.
-sync-goal-host-vessel:
-	docker cp $(GOAL_HOST_SRC)/src/. $(LIVE_NAME):/vessels/goal-host-vessel/src/
-	@$(CURDIR)/warn-baseline-drift.sh goal-host-vessel $(LIVE_NAME)
-	@echo "[sync] goal-host-vessel source synced to substrate-live"
-
-restart-goal-host-vessel: sync-goal-host-vessel
-	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-goal-host-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/goal-host-vessel.json"' 2>/dev/null || true
-	docker exec $(LIVE_NAME) systemctl restart goal-host-vessel.service
-	@sleep 2
-	@docker exec $(LIVE_NAME) systemctl is-active goal-host-vessel.service | grep -q active && echo "[restart] goal-host-vessel active" || echo "[restart] ERROR: goal-host-vessel not active"
-
 # Sync light-dispatch-vessel into the running container then restart it.
 # Stateless oneshot dispatcher (openspec 2026-06-03 Stage 2.B). Port 8250.
-sync-light-dispatch-vessel:
-	docker exec $(LIVE_NAME) mkdir -p /vessels/light-dispatch-vessel/src
-	docker cp $(LIGHT_DISPATCH_SRC)/package.json $(LIVE_NAME):/vessels/light-dispatch-vessel/package.json
-	docker cp $(LIGHT_DISPATCH_SRC)/tsconfig.json $(LIVE_NAME):/vessels/light-dispatch-vessel/tsconfig.json
-	docker cp $(LIGHT_DISPATCH_SRC)/src/. $(LIVE_NAME):/vessels/light-dispatch-vessel/src/
-	docker cp $(CURDIR)/units/light-dispatch-vessel.service $(LIVE_NAME):/etc/systemd/system/light-dispatch-vessel.service
-	docker cp $(CURDIR)/light-dispatch-healthcheck.sh $(LIVE_NAME):/usr/local/bin/light-dispatch-healthcheck
-	docker exec $(LIVE_NAME) chmod +x /usr/local/bin/light-dispatch-healthcheck
-	docker cp $(CURDIR)/units/light-dispatch-healthcheck.service $(LIVE_NAME):/etc/systemd/system/light-dispatch-healthcheck.service
-	docker cp $(CURDIR)/units/light-dispatch-healthcheck.timer $(LIVE_NAME):/etc/systemd/system/light-dispatch-healthcheck.timer
-	docker exec $(LIVE_NAME) systemctl daemon-reload
-	docker exec $(LIVE_NAME) systemctl enable light-dispatch-vessel.service 2>/dev/null || true
-	docker exec $(LIVE_NAME) systemctl enable --now light-dispatch-healthcheck.timer 2>/dev/null || true
-	@echo "[sync] light-dispatch-vessel source + unit + liveness watchdog synced to substrate-live"
-
-restart-light-dispatch-vessel: sync-light-dispatch-vessel
-	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-light-dispatch-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/light-dispatch-vessel.json"' 2>/dev/null || true
-	docker exec $(LIVE_NAME) systemctl restart light-dispatch-vessel.service
-	@sleep 2
-	@docker exec $(LIVE_NAME) systemctl is-active light-dispatch-vessel.service | grep -q active && echo "[restart] light-dispatch-vessel active" || echo "[restart] ERROR: light-dispatch-vessel not active"
-
 # Sync boredom-vessel source into the running container then trigger a manual run.
-sync-boredom-vessel:
-	docker cp $(BOREDOM_VESSEL_SRC)/src/. $(LIVE_NAME):/vessels/boredom-vessel/src/
-	@$(CURDIR)/warn-baseline-drift.sh boredom-vessel $(LIVE_NAME)
-	@echo "[sync] boredom-vessel source synced to substrate-live"
-
-trigger-boredom-vessel: sync-boredom-vessel
-	docker exec $(LIVE_NAME) systemctl start boredom-vessel.service
-	@sleep 3
-	@docker exec $(LIVE_NAME) journalctl -u boredom-vessel.service --no-pager -n 10
-
 # Sync ribosome-vessel source into the running container then restart it.
-sync-ribosome-vessel:
-	docker cp $(RIBOSOME_VESSEL_SRC)/src/. $(LIVE_NAME):/vessels/ribosome-vessel/src/
-	@$(CURDIR)/warn-baseline-drift.sh ribosome-vessel $(LIVE_NAME)
-	@echo "[sync] ribosome-vessel source synced to substrate-live"
-
-restart-ribosome-vessel: sync-ribosome-vessel
-	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-ribosome-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/ribosome-vessel.json"' 2>/dev/null || true
-	docker exec $(LIVE_NAME) systemctl restart ribosome-vessel.service
-	@sleep 2
-	@docker exec $(LIVE_NAME) systemctl is-active ribosome-vessel.service | grep -q active && echo "[restart] ribosome-vessel active" || echo "[restart] ERROR: ribosome-vessel not active"
-
 # Sync concept-db source into the running container then restart it.
 # `docker cp <src>/src <container>:/vessels/x/src` nests into x/src/src when
 # the destination exists. Wipe the target first so the copy lands cleanly.
-sync-concept-db:
-	docker exec $(LIVE_NAME) rm -rf /vessels/concept-db/src
-	docker cp $(CONCEPT_DB_SRC)/src $(LIVE_NAME):/vessels/concept-db/src
-	@echo "[sync] concept-db source synced to substrate-live"
-
-restart-concept-db: sync-concept-db
-	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-concept-db target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/concept-db.json"' 2>/dev/null || true
-	docker exec $(LIVE_NAME) systemctl restart concept-db.service
-	@sleep 2
-	@docker exec $(LIVE_NAME) systemctl is-active concept-db.service | grep -q active && echo "[restart] concept-db active" || echo "[restart] ERROR: concept-db not active"
-
-logs-analysis-vessel:
-	docker exec $(LIVE_NAME) journalctl -fu analysis-vessel.service
-
-sync-analysis-vessel:
-	docker exec $(LIVE_NAME) rm -rf /vessels/analysis-vessel/src
-	docker cp $(ANALYSIS_VESSEL_SRC)/src $(LIVE_NAME):/vessels/analysis-vessel/src
-	@echo "[sync] analysis-vessel source synced to substrate-live"
-
-restart-analysis-vessel: sync-analysis-vessel
-	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-analysis-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/analysis-vessel.json"' 2>/dev/null || true
-	docker exec $(LIVE_NAME) systemctl restart analysis-vessel.service
-	@sleep 2
-	@docker exec $(LIVE_NAME) systemctl is-active analysis-vessel.service | grep -q active && echo "[restart] analysis-vessel active" || echo "[restart] ERROR: analysis-vessel not active"
-
 # Sync stateful-ui-vessel source into the running container.
 # Also installs the systemd unit on first sync (idempotent).
-sync-stateful-ui-vessel:
-	docker exec $(LIVE_NAME) mkdir -p /vessels/stateful-ui-vessel/src
-	docker cp $(STATEFUL_UI_VESSEL_SRC)/package.json $(LIVE_NAME):/vessels/stateful-ui-vessel/package.json
-	docker cp $(STATEFUL_UI_VESSEL_SRC)/tsconfig.json $(LIVE_NAME):/vessels/stateful-ui-vessel/tsconfig.json
-	docker cp $(STATEFUL_UI_VESSEL_SRC)/src $(LIVE_NAME):/vessels/stateful-ui-vessel/
-	docker cp $(REPO_ROOT)/scripts/substrate/units/stateful-ui-vessel.service $(LIVE_NAME):/etc/systemd/system/stateful-ui-vessel.service
-	docker exec $(LIVE_NAME) bash -c 'cd /vessels/stateful-ui-vessel && bun install --silent 2>&1 | tail -3'
-	docker exec $(LIVE_NAME) systemctl daemon-reload
-	docker exec $(LIVE_NAME) systemctl enable stateful-ui-vessel.service 2>/dev/null || true
-	@echo "[sync] stateful-ui-vessel synced + unit installed"
-
-restart-stateful-ui-vessel: sync-stateful-ui-vessel
-	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-stateful-ui-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/stateful-ui-vessel.json"' 2>/dev/null || true
-	docker exec $(LIVE_NAME) systemctl restart stateful-ui-vessel.service
-	@sleep 3
-	@docker exec $(LIVE_NAME) systemctl is-active stateful-ui-vessel.service | grep -q active && echo "[restart] stateful-ui-vessel active" || echo "[restart] ERROR: stateful-ui-vessel not active"
-
 # human-surface-vessel — the human-facing surface, port 8310 (host 18310).
 #
 # !! CLOBBER WARNING — READ BEFORE USING sync-/restart-* ON ANY VESSEL !!
@@ -981,29 +743,6 @@ restart-stateful-ui-vessel: sync-stateful-ui-vessel
 # /etc/systemd/system — a vessel-ctl install renders its own unit there (pointing
 # at the super-repo clone per the manifest workdir), and overwriting it would
 # silently repoint the running vessel at the docker-cp'd tree instead.
-sync-human-surface-vessel:
-	docker exec $(LIVE_NAME) mkdir -p /vessels/human-surface-vessel/src
-	docker cp $(HUMAN_SURFACE_VESSEL_SRC)/package.json $(LIVE_NAME):/vessels/human-surface-vessel/package.json
-	docker cp $(HUMAN_SURFACE_VESSEL_SRC)/tsconfig.json $(LIVE_NAME):/vessels/human-surface-vessel/tsconfig.json
-	docker exec $(LIVE_NAME) rm -rf /vessels/human-surface-vessel/src
-	docker cp $(HUMAN_SURFACE_VESSEL_SRC)/src $(LIVE_NAME):/vessels/human-surface-vessel/src
-	@if docker exec $(LIVE_NAME) test -f /etc/systemd/system/human-surface-vessel.service; then \
-	  echo "[sync] human-surface-vessel: /etc unit already present (vessel-ctl-rendered?) — NOT overwriting"; \
-	else \
-	  docker cp $(REPO_ROOT)/scripts/substrate/units/human-surface-vessel.service $(LIVE_NAME):/etc/systemd/system/human-surface-vessel.service; \
-	  echo "[sync] human-surface-vessel: static unit installed"; \
-	fi
-	docker exec $(LIVE_NAME) bash -c 'cd /vessels/human-surface-vessel && bun install --silent 2>&1 | tail -3'
-	docker exec $(LIVE_NAME) systemctl daemon-reload
-	docker exec $(LIVE_NAME) systemctl enable human-surface-vessel.service 2>/dev/null || true
-	@echo "[sync] human-surface-vessel synced + unit enabled"
-
-restart-human-surface-vessel: sync-human-surface-vessel
-	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-human-surface-vessel target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/human-surface-vessel.json"' 2>/dev/null || true
-	docker exec $(LIVE_NAME) systemctl restart human-surface-vessel.service
-	@sleep 3
-	@docker exec $(LIVE_NAME) systemctl is-active human-surface-vessel.service | grep -q active && echo "[restart] human-surface-vessel active" || echo "[restart] ERROR: human-surface-vessel not active"
-
 # obsidian-vessel: the Obsidian plugin built IN the substrate (substrate-obsidian
 # flavour only). Dev loop is edit → sync → rebuild → reload Obsidian. The vault's
 # plugin files are symlinks to /vessels/obsidian-vessel build artifacts, so a
@@ -1011,25 +750,6 @@ restart-human-surface-vessel: sync-human-surface-vessel
 # WITHOUT tearing down the display (obsidian-xorg), so the noVNC session survives.
 # `docker cp <src>/src <container>:/vessels/x/src` nests when the dest exists —
 # wipe first so the copy lands cleanly.
-sync-obsidian-vessel:
-	docker exec $(LIVE_NAME) rm -rf /vessels/obsidian-vessel/src
-	docker cp $(OBSIDIAN_VESSEL_SRC)/src $(LIVE_NAME):/vessels/obsidian-vessel/src
-	docker cp $(OBSIDIAN_VESSEL_SRC)/styles.css $(LIVE_NAME):/vessels/obsidian-vessel/styles.css
-	docker cp $(OBSIDIAN_VESSEL_SRC)/esbuild.config.mjs $(LIVE_NAME):/vessels/obsidian-vessel/esbuild.config.mjs
-	docker cp $(OBSIDIAN_VESSEL_SRC)/manifest.json $(LIVE_NAME):/vessels/obsidian-vessel/manifest.json
-	docker cp $(OBSIDIAN_VESSEL_SRC)/package.json $(LIVE_NAME):/vessels/obsidian-vessel/package.json
-	docker cp $(OBSIDIAN_VESSEL_SRC)/tsconfig.json $(LIVE_NAME):/vessels/obsidian-vessel/tsconfig.json
-	docker exec $(LIVE_NAME) mkdir -p /vessels/obsidian-vessel/sidecar
-	docker cp $(OBSIDIAN_VESSEL_SRC)/sidecar/federation-sidecar.ts $(LIVE_NAME):/vessels/obsidian-vessel/sidecar/federation-sidecar.ts
-	@echo "[sync] obsidian-vessel source synced to substrate-live"
-
-restart-obsidian-vessel: sync-obsidian-vessel
-	docker exec $(LIVE_NAME) bash -c 'cd /vessels/obsidian-vessel && bun esbuild.config.mjs production'
-	@docker exec $(LIVE_NAME) sh -c 'mkdir -p "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}" 2>/dev/null; printf '"'"'{"requester":"make","reason":"restart-obsidian-desktop target","in_flight":null,"at":"%s"}'"'"' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$${RESTART_BREADCRUMB_DIR:-/workspace/restart-requests}/obsidian-desktop.json"' 2>/dev/null || true
-	docker exec $(LIVE_NAME) systemctl restart obsidian-desktop.service
-	@sleep 3
-	@docker exec $(LIVE_NAME) systemctl is-active obsidian-desktop.service | grep -q active && echo "[restart] obsidian-desktop active (plugin reloaded; refresh noVNC if needed)" || echo "[restart] ERROR: obsidian-desktop not active"
-
 # -----------------------------------------------------------------------------
 # ias-executor-ts: rebuild dist on host and push into every consumer vessel's
 # node_modules path inside the container. Bun's `file:` resolver makes a
@@ -1043,32 +763,6 @@ restart-obsidian-vessel: sync-obsidian-vessel
 # Consumers list lives at the top of this Makefile (IAS_CONSUMERS).
 # -----------------------------------------------------------------------------
 IAS_SRC := $(REPO_ROOT)/repos/ias-executor-ts
-
-sync-ias-executor-ts:
-	@echo "[ias] building dist on host…"
-	@cd $(IAS_SRC) && bun run build >/dev/null
-	@echo "[ias] pushing dist → /vessels/ias-executor-ts/dist"
-	docker exec $(LIVE_NAME) rm -rf /vessels/ias-executor-ts/dist
-	docker cp $(IAS_SRC)/dist $(LIVE_NAME):/vessels/ias-executor-ts/dist
-	@for v in $(IAS_CONSUMERS); do \
-	  target=/vessels/$$v/node_modules/@avigopal/ias-executor-ts/dist; \
-	  if docker exec $(LIVE_NAME) test -d /vessels/$$v/node_modules/@avigopal/ias-executor-ts; then \
-	    echo "[ias] pushing dist → $$target"; \
-	    docker exec $(LIVE_NAME) rm -rf $$target; \
-	    docker cp $(IAS_SRC)/dist $(LIVE_NAME):$$target; \
-	  else \
-	    echo "[ias] skip $$v (no @avigopal/ias-executor-ts in node_modules)"; \
-	  fi; \
-	done
-	@if [ "$(RESTART)" = "1" ]; then \
-	  for v in $(IAS_CONSUMERS); do \
-	    if docker exec $(LIVE_NAME) systemctl list-unit-files $$v.service >/dev/null 2>&1; then \
-	      echo "[ias] restarting $$v.service"; \
-	      docker exec $(LIVE_NAME) systemctl restart $$v.service || echo "[ias] WARN: $$v restart failed"; \
-	    fi; \
-	  done; \
-	fi
-	@echo "[ias] sync complete"
 
 # -----------------------------------------------------------------------------
 # UI bridge: alpine/socat sidecar that publishes host port 18270 to the
@@ -1152,17 +846,6 @@ clone-vessel-repos:
 # The extra words on the command line are absorbed by a no-op rule below.
 VC_ARGS := $(filter-out vessel-ctl,$(MAKECMDGOALS))
 .PHONY: vessel-ctl
-vessel-ctl:
-	@action="$(word 1,$(VC_ARGS))"; vessel="$(word 2,$(VC_ARGS))"; \
-	test -n "$$action" && test -n "$$vessel" || { echo "usage: make vessel-ctl enable|disable <vessel> [FED_SUBSTRATE_ID=<id>] [RELAY_MULTIADDR=<addr>]"; exit 2; }; \
-	case "$$action:$$vessel" in \
-	  enable:federation-transport-vessel) \
-	    test -n "$(FED_SUBSTRATE_ID)" || { echo "FED_SUBSTRATE_ID=<unique-id> required (unique per substrate; e.g. ben-windows-spoke)"; exit 2; }; \
-	    $(CURDIR)/spoke-federate.sh $(LIVE_NAME) "$(FED_SUBSTRATE_ID)" "$(RELAY_MULTIADDR)" ;; \
-	  enable:*)  $(CURDIR)/vessel-ctl.sh install "$$vessel" --container $(LIVE_NAME) ;; \
-	  disable:*) $(CURDIR)/vessel-ctl.sh uninstall "$$vessel" --container $(LIVE_NAME) ;; \
-	  *) echo "unknown vessel-ctl action '$$action' (enable|disable)"; exit 2 ;; \
-	esac
 ifneq ($(filter vessel-ctl,$(MAKECMDGOALS)),)
 .PHONY: $(VC_ARGS)
 $(VC_ARGS):
@@ -1170,18 +853,6 @@ $(VC_ARGS):
 endif
 
 .PHONY: list-vessels install-vessel uninstall-vessel
-list-vessels:
-	@$(CURDIR)/vessel-ctl.sh list --container $(LIVE_NAME)
-install-vessel:
-	@test -n "$(VESSEL)" || { echo "usage: make install-vessel VESSEL=<name>"; exit 1; }
-	@$(CURDIR)/vessel-ctl.sh install $(VESSEL) --container $(LIVE_NAME)
-uninstall-vessel:
-	@test -n "$(VESSEL)" || { echo "usage: make uninstall-vessel VESSEL=<name>"; exit 1; }
-	@$(CURDIR)/vessel-ctl.sh uninstall $(VESSEL) --container $(LIVE_NAME)
-
 # Sync a dynamic vessel: ff-pull its in-container clone, mirror into the live
 # runtime, restart (all in-container; no host source involved).
 .PHONY: sync-vessel
-sync-vessel:
-	@test -n "$(VESSEL)" || { echo "usage: make sync-vessel VESSEL=<name>"; exit 1; }
-	@$(CURDIR)/vessel-ctl.sh sync $(VESSEL) --container $(LIVE_NAME)

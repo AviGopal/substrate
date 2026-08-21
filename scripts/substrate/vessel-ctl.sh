@@ -16,19 +16,54 @@
 # (clean JSON on stdout, idempotent, no prompts) — the substrate manages its
 # own membership.
 #
+# THIS IS THE VESSEL MANAGEMENT SURFACE. There is no second one.
+#
+# It ships in the image, so it works wherever the substrate runs — a laptop, a
+# hub, a spoke you reached over ssh — with no checkout and no host tooling. The
+# Makefile is the BOOTSTRAP tier only (build / up / recreate): things that must
+# happen before a container exists to be talked to. Anything a RUNNING fleet
+# does is here.
+#
+# It replaced ~40 hand-enumerated `make restart-<vessel>` / `logs-<vessel>` /
+# `sync-<vessel>` targets that covered 11 of 65 units between them — so the
+# common operations were a hardcoded list while the rare ones were generic, and
+# `activity-api` (the trace store) had no restart target while `obsidian-vessel`
+# did. Every verb below works on ANY unit the fleet has, baked or manifest.
+#
 # Usage:
 #   vessel-ctl.sh list                    [--container NAME]
+#   vessel-ctl.sh status    [vessel]      [--container NAME]  # one unit, or the fleet
+#   vessel-ctl.sh restart   <vessel>      [--container NAME]
+#   vessel-ctl.sh logs      <vessel>      [--container NAME] [-n LINES]
 #   vessel-ctl.sh install   <vessel>      [--container NAME]
 #   vessel-ctl.sh uninstall <vessel>      [--container NAME]
-#   vessel-ctl.sh sync      <vessel>      [--container NAME]   # clone -> live runtime + restart
-#   vessel-ctl.sh deregister <vessel>     [--container NAME]   # discovery removal only
+#   vessel-ctl.sh sync      <vessel>      [--container NAME]  # clone -> live runtime + restart
+#   vessel-ctl.sh deregister <vessel>     [--container NAME]  # discovery removal only
+#   vessel-ctl.sh apply                   [--container NAME]  # re-apply vessel selection NOW
+#   vessel-ctl.sh drift                   [--container NAME]  # inventory vs image vs running
+#
+# `apply` is the one that closes a long-standing hole: vessel selection used to
+# be decided once per boot, so a corrected inventory sat inert in the volume
+# while the fleet went on running the old unit set until someone restarted the
+# container. `drift` shows you that gap before you close it.
 set -uo pipefail
 
-ACTION="${1:?usage: vessel-ctl.sh <install|uninstall|sync|deregister|list> [vessel] [--container NAME]}"
+ACTION="${1:?usage: vessel-ctl.sh <list|status|restart|logs|install|uninstall|sync|deregister|apply|drift> [vessel] [--container NAME] [-n LINES]}"
 VESSEL="${2:-}"
 shift || true; shift || true
 CONTAINER="substrate-live"
-while [[ $# -gt 0 ]]; do case "$1" in --container) CONTAINER="$2"; shift 2;; *) shift;; esac; done
+LINES=50
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --container) CONTAINER="$2"; shift 2;;
+    -n|--lines)  LINES="$2";     shift 2;;
+    *) shift;;
+  esac
+done
+
+# A vessel is addressed by its unit name; `.service` is implied so an operator
+# types what the docs call the vessel, not what systemd calls the file.
+unit_of() { case "$1" in *.service|*.timer|*.socket) printf '%s' "$1";; *) printf '%s.service' "$1";; esac; }
 
 # Dual context: in-container iff no working docker CLI for $CONTAINER.
 #
@@ -50,6 +85,14 @@ else
   IN_CONTAINER=1
 fi
 csh() { if [ "$IN_CONTAINER" = 1 ]; then bash -c "$1"; else docker exec "$CONTAINER" bash -c "$1"; fi; }
+
+# Running INSIDE a container, $CONTAINER is still the "substrate-live" default —
+# a name that is simply wrong when the caller is some other fleet. Every reply
+# echoed it, so an operator managing a second substrate got output confidently
+# naming the production one. Report where the work actually happened.
+if [ "$IN_CONTAINER" = 1 ]; then
+  CONTAINER="$(cat /etc/hostname 2>/dev/null || hostname 2>/dev/null || echo self)"
+fi
 
 # All manifest reads happen in the container's context (volume copy first).
 MANIFEST_PATHS='/workspace/substrate/fleet/vessels.manifest.json /usr/local/share/substrate/vessels.manifest.json'
@@ -182,5 +225,116 @@ case "$ACTION" in
     echo "{\"ok\":true,\"action\":\"uninstalled\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\"}"
     ;;
 
-  *) echo "{\"ok\":false,\"error\":\"unknown action '$ACTION' (install|uninstall|sync|deregister|list)\"}"; exit 1;;
+  restart)
+    [ -n "$VESSEL" ] || { echo '{"ok":false,"error":"usage: vessel-ctl restart <vessel>"}'; exit 1; }
+    U="$(unit_of "$VESSEL")"
+    # Refuse a unit the fleet does not have, rather than reporting a cheerful
+    # success for a typo — `systemctl restart` on an unknown unit is an error
+    # here, but the shape of the reply should say WHICH thing was wrong.
+    if ! csh "systemctl cat '$U' >/dev/null 2>&1"; then
+      echo "{\"ok\":false,\"action\":\"restart\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\",\"error\":\"no such unit '$U' in this fleet — try: vessel-ctl status\"}"; exit 1
+    fi
+    csh "systemctl restart '$U'" >/dev/null 2>&1
+    ST="$(csh "systemctl is-active '$U' 2>&1" | head -1)"
+    NR="$(csh "systemctl show '$U' -p NRestarts --value 2>/dev/null" | head -1)"
+    # `active` is not proof of health: a unit in a Restart= loop reports
+    # `activating` forever and NEVER `failed`, so NRestarts is reported next to
+    # it — a climbing count is the only cheap tell for that state.
+    OK=false; [ "$ST" = active ] && OK=true
+    echo "{\"ok\":$OK,\"action\":\"restart\",\"vessel\":\"$VESSEL\",\"unit\":\"$U\",\"container\":\"$CONTAINER\",\"active\":\"$ST\",\"nrestarts\":\"${NR:-0}\"}"
+    [ "$OK" = true ] || exit 1
+    ;;
+
+  logs)
+    [ -n "$VESSEL" ] || { echo '{"ok":false,"error":"usage: vessel-ctl logs <vessel> [-n LINES]"}'; exit 1; }
+    U="$(unit_of "$VESSEL")"
+    if ! csh "systemctl cat '$U' >/dev/null 2>&1"; then
+      echo "no such unit '$U' in this fleet — try: vessel-ctl status" >&2; exit 1
+    fi
+    # Plain text, not JSON: this output is for a human to read.
+    csh "journalctl -u '$U' -n '$LINES' --no-pager"
+    ;;
+
+  status)
+    if [ -n "$VESSEL" ]; then
+      U="$(unit_of "$VESSEL")"
+      csh "printf '%-38s %-12s %-10s restarts=%s\n' '$U' \"\$(systemctl is-active '$U' 2>&1)\" \"\$(systemctl is-enabled '$U' 2>&1)\" \"\$(systemctl show '$U' -p NRestarts --value)\""
+    else
+      # Fleet view.
+      #
+      # Ask SYSTEMD what units it has, not the filesystem what files exist:
+      # globbing unit files also returns TEMPLATES (`foo@.service`), which are
+      # not units at all and make `systemctl show` fail with "neither a valid
+      # invocation ID nor unit name" — one error line per template, drowning the
+      # report. list-units --all reports instantiated units only.
+      #
+      # NRestarts is always shown because a unit in a Restart= loop reports
+      # `activating` forever and NEVER `failed`, so it is invisible to any
+      # states-only listing. A climbing count is the cheap tell.
+      # sed strips systemd's leading '●' failure marker, which is part of the
+      # LINE, not the unit name — passed through it becomes its own bogus row
+      # ('Invalid unit name "●"'). `static` filters out Debian's own units
+      # (fstrim, rescue, apt-daily): a substrate vessel declares [Install]
+      # WantedBy and so is enabled or disabled, never static.
+      csh "systemctl list-units --type=service --all --no-legend --no-pager 2>/dev/null \
+           | sed 's/^[^a-zA-Z]*//' | awk '{print \$1}' \
+           | grep -vE '^(systemd|dbus|getty|console-|user@|user-|modprobe|e2scrub|autovt|container-getty)' \
+           | grep -v '@' | sort -u | while read -r u; do
+               e=\$(systemctl is-enabled \"\$u\" 2>&1)
+               # not-found units (systemd lists a referenced-but-absent unit like
+               # auditd/syslog/connman) answer with an error sentence, not a state.
+               case \"\$e\" in static|masked|generated|transient|indirect|*'No such file'*|*Failed*) continue;; esac
+               a=\$(systemctl is-active \"\$u\" 2>&1)
+               printf '%-38s %-12s %-10s restarts=%s\n' \"\$u\" \"\$a\" \"\$e\" \"\$(systemctl show \"\$u\" -p NRestarts --value 2>/dev/null)\"
+             done | sort -k2,2 -k1,1"
+    fi
+    ;;
+
+  apply)
+    # Re-apply the vessel selection to a RUNNING fleet.
+    #
+    # apply-inventory decides which units are enabled and runs pre-systemd at
+    # boot, so a corrected inventory used to sit inert in the volume — propagated
+    # by pull-sync, applied by nobody — until the container was restarted. This
+    # makes that a one-command operation instead of a restart decision.
+    echo "[apply] re-running vessel selection in $CONTAINER"
+    csh "set -a; . /etc/substrate/env 2>/dev/null || true; set +a
+         /usr/local/bin/apply-inventory" 2>&1 || {
+      echo "{\"ok\":false,\"action\":\"apply\",\"container\":\"$CONTAINER\",\"error\":\"apply-inventory failed — selection unchanged\"}"; exit 1; }
+    # The rendered LLM arms are governed by the same selection but are created
+    # after apply-inventory under names it never sees, so they need the shared
+    # arm pass too. RELOAD=1 because unlike boot, systemd is already up: symlinks
+    # alone would change nothing until the next restart, which is the very
+    # problem this verb exists to remove.
+    csh "RELOAD=1 /usr/local/bin/apply-llm-arms" 2>&1 || echo "[apply] arm pass reported a problem (see above)"
+    csh "systemctl daemon-reload" >/dev/null 2>&1
+    echo "{\"ok\":true,\"action\":\"apply\",\"container\":\"$CONTAINER\",\"note\":\"selection re-applied; run 'vessel-ctl status' to see the result\"}"
+    ;;
+
+  drift)
+    # The three copies of the fleet definition and the running set never had a
+    # single command that compared them. Volume is authoritative at runtime;
+    # image is the build-time default and the fallback when the volume copy is
+    # absent; the running set is what is ACTUALLY enabled right now.
+    echo "=== inventory: volume (authoritative) vs image (build default) ==="
+    csh "if diff -q /workspace/substrate/fleet/vessels.inventory.json \
+                    /usr/local/share/substrate/vessels.inventory.json >/dev/null 2>&1; then
+           echo 'identical'
+         else
+           echo 'DIFFERENT — the volume copy is what this fleet obeys:'
+           diff /usr/local/share/substrate/vessels.inventory.json \
+                /workspace/substrate/fleet/vessels.inventory.json | head -40
+         fi"
+    echo
+    echo "=== selection in force ==="
+    csh "grep -E '^(PROFILE|ENABLED_ROLES|ENABLED_VESSELS|ENABLED_EXTRA_VESSELS|DISABLED_VESSELS)=' /etc/substrate/env || echo '(none set — default topology, every baked unit enabled)'"
+    echo
+    echo "=== would applying that selection now change anything? ==="
+    # DRY_RUN so this is a report, never an action. If it names units, the
+    # running set has drifted from the selection and `vessel-ctl apply` closes it.
+    csh "set -a; . /etc/substrate/env 2>/dev/null || true; set +a
+         DRY_RUN=1 /usr/local/bin/apply-inventory 2>&1 | tail -20"
+    ;;
+
+  *) echo "{\"ok\":false,\"error\":\"unknown action '$ACTION' (list|status|restart|logs|install|uninstall|sync|deregister|apply|drift)\"}"; exit 1;;
 esac

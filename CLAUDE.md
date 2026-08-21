@@ -299,7 +299,7 @@ not in application code. Never bypass PERMISSIONS with root credentials.
 **Troubleshooting (fallback of last resort — prefer the cockpit):**
 `docker exec substrate-live systemctl status <unit>`,
 `docker exec substrate-live journalctl -u <unit> -n 100`. Hot-reload a vessel
-after an (exceptional) manual edit: `make -C scripts/substrate restart-<vessel>`.
+after an (exceptional) manual edit: `docker exec <container> vessel-ctl restart <vessel>`.
 Before restarting anything, check nothing is mid-flight and remember learning
 state persists in the container volume — back it up before destructive resets.
 Never hand-edit the database; schema changes are migrations applied on unit

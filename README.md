@@ -103,7 +103,7 @@ docker exec substrate-live substrate-key show
 First boot takes a few minutes to converge. Running `substrate-doctor` before
 then shows failures that clear on their own — a young substrate looks like a
 broken one. Confirm a key works before using it:
-`make -C scripts/substrate whoami` should report your `org_id` and scopes.
+`docker exec <container> substrate-key whoami` should report your `org_id` and scopes.
 
 To launch with **no checkout at all**, use the raw `docker run` below — it needs
 nothing from this repo.
@@ -209,7 +209,7 @@ group* for why a non-empty answer is necessary but not sufficient.
 > are idempotent upserts of templates a hub already has, but a spoke you do not
 > fully trust should get a read-scoped key or `DISABLED_VESSELS=bootstrap-seeder`.
 `METABOB_API_KEY` is the credential the hub operator issues you (minted on the
-hub with `make -C scripts/substrate issue-key NAME=<you>`). The same variables
+hub with `docker exec <container> substrate-key issue <you>`). The same variables
 attach a spoke however you launch — `docker compose`, `make up`, or the raw
 `docker run` above; `ACTIVITY_API_ENDPOINT` and `IDENTITY_VESSEL_URL` are
 optional explicit overrides for values `/bootstrap` otherwise supplies.
@@ -273,7 +273,7 @@ docker exec <spoke> systemctl show federation-transport-vessel -p NRestarts --va
 
 A climbing `NRestarts` means the transport is crash-looping and **nothing is
 being mirrored**, even though `systemctl is-active` intermittently reports
-`active` — it catches the gap between restarts. `make ready` names it honestly.
+`active` — it catches the gap between restarts. `docker exec <container> substrate-doctor` names it honestly.
 
 What will *not* tell you: the container's `healthy` state, `substrate-key show`
 (prints a key whether or not the hub accepts it), and `substrate-doctor`'s
@@ -321,17 +321,17 @@ make -C scripts/substrate up ANTHROPIC_API_KEY=sk-ant-...
 **3. Verify:**
 
 ```bash
-make -C scripts/substrate ready            # fleet readiness matrix
-make -C scripts/substrate doctor SMOKE=1   # deep diagnosis + end-to-end goal dispatch
+docker exec <container> substrate-ready            # fleet readiness matrix
+docker exec <container> substrate-doctor   # deep diagnosis + end-to-end goal dispatch
 ```
 
 **4. Get your credentials.** identity-vessel is internal-only, so a human obtains or mints keys through the Makefile — no raw API calls:
 
 ```bash
-make -C scripts/substrate show-key                 # the operator API key
-make -C scripts/substrate issue-key NAME=my-peer   # mint a key (spoke / external peer / new vessel)
-make -C scripts/substrate list-keys                # list issued keys
-make -C scripts/substrate revoke-key KEY_ID=key_x  # revoke one
+docker exec <container> substrate-key show                 # the operator API key
+docker exec <container> substrate-key issue my-peer   # mint a key (spoke / external peer / new vessel)
+docker exec <container> substrate-key list                # list issued keys
+docker exec <container> substrate-key revoke key_x  # revoke one
 ```
 
 The full key is printed once and never stored. See [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) § *Keys and tokens*.
@@ -356,7 +356,7 @@ The installer selects or creates the vault, installs the plugin, and writes the 
 
 ### Running your own hub or remote substrate
 
-The spoke join above works against **any** hub — substitute the hub's host for the `HUB_DISCOVERY_URL` / `DISCOVERY_ENDPOINT` / `ACTIVITY_API_ENDPOINT` / `IDENTITY_VESSEL_URL` values and use a key that hub issued (`make issue-key NAME=…` on the hub).
+The spoke join above works against **any** hub — substitute the hub's host for the `HUB_DISCOVERY_URL` / `DISCOVERY_ENDPOINT` / `ACTIVITY_API_ENDPOINT` / `IDENTITY_VESSEL_URL` values and use a key that hub issued (`docker exec <container> substrate-key issue …` on the hub).
 
 One image serves every role: a full local substrate, a minimal hub (control plane + store + relay), or a compute-only spoke — selection is declarative via `ENABLED_ROLES` / `ENABLED_VESSELS` (`scripts/substrate/vessels.inventory.json`, applied at boot). Vessels behind NAT join over the libp2p relay via a sidecar. To stand up your own remote substrate or hub on a VM: `scripts/substrate/deploy-remote.sh` (ships the local image over SSH, no registry) or `scripts/substrate/deploy-hub.sh` (the VM pulls the repo, builds there, and runs the relay). Point vessel clones at your own fork with `SUBSTRATE_REPO_OWNER=<your-org>`. Full guide: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 
@@ -368,7 +368,7 @@ Each vessel is reached on a host-mapped port (`18xxx → 8xxx`); a few vessels a
 
 ```bash
 # edit vessel source in repos/<vessel>/, then hot-reload it in the container:
-make -C scripts/substrate restart-<vessel>
+docker exec <container> vessel-ctl restart <vessel>
 
 # validate against the local substrate (localhost:18080):
 bun run validation/scripts/failure-mode-harness.ts
