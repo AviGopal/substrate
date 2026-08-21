@@ -219,3 +219,36 @@ match to ever occur); it is simply not sufficient alone.
 **Do not tune the `n_observations >= 5` read floor** until this is closed — the
 floor is unreachable while the predicate matches nothing, so any measurement of
 it today measures the predicate.
+
+---
+
+# Verified closures (by execution, on the running fleet)
+
+| # | seam | before | after | status |
+|---|---|---|---|---|
+| **P13** | `L3-tuning-06` NULL-vs-NONE silent write | `POST {name, value}` with no meta → `ok:true`, row absent, GET → `null` (4 fresh names, all vanished) | `POST PROBE_NULLNONE_FIXED value=3` with **no meta** → `ok:true`, **GET → `3`** | **CLOSED** |
+
+The probe is the exact failing pattern: absent `updated_by`/`evidence`, which is
+how `accelerator-flag-tick` calls it. Note the response still echoes
+`updated_by:null` — that is the HTTP echo of the request, not the bound value;
+the statement now omits the field entirely, so the row lands.
+
+SF_BLEND itself has not yet re-ratcheted: the flag tick's initial run is 10
+minutes after process start and activity-api restarted twice during
+convergence. Its next tick will write through the fixed path. **Do not
+hand-author SF_BLEND** — letting the ratchet fire is the evidence.
+
+## Still open after round 1
+
+| seam | state |
+|---|---|
+| `L1-credit-10` credit key | **Partially closed.** Both readers' id forms fixed (`eee3074`, `ea67d91`). The legacy `contextBucket` reader can never match: its key is `computeContextBucket()` (8-hex, task-semantics) while the writer stores `context_bucket = signature` (16-hex state-space). The correct reader ("Phase 24 §4") now has the right key AND the right id form, but was not observed matching during the probe — its branch needs `sigShapes.length > 0`. |
+| `L2-structure` edges | **Unobserved.** Zero `composition-edge` counter lines during the probe window; needs a nested child trace to fire. |
+| `R3-execute-04` hop 4 | **Deployed and running** (goal-host PID 146079 on the rebuilt dist), not yet observed via P4's stub fraction. |
+
+**One column, two subjects.** `context_bucket` carries an 8-hex task-semantics
+hash from one reader and a 16-hex state-space signature from the writer. That is
+the same class as every other seam here — the names agree, the values are from
+different namespaces — and it is worth a follow-up: the legacy reader should
+either be keyed correctly or removed, because today it silently contributes
+nothing while looking like a working conditional lookup.
