@@ -86,6 +86,22 @@ check_unit() { # unit role port path -> echo status: ok|down|skipped
       esac
       ;;
   esac
+  # A unit whose ExecCondition said "not here" was SKIPPED, not lost.
+  #
+  # ExecCondition is how one image serves several topologies: the rendered LLM
+  # arms skip when their provider key is absent, and the desktop units (novnc,
+  # obsidian-xorg, obsidian-desktop) skip on the base image, which ships none of
+  # Xvfb/websockify/obsidian. Such a unit rests `inactive` — indistinguishable
+  # from a dead vessel by is-active alone, so all three were reported `down` on a
+  # fleet that was working exactly as designed.
+  #
+  # Ask systemd what it decided rather than inferring from the resting state:
+  # ConditionResult=no is its own record that the unit was deliberately not run.
+  # The arms escaped this only by not being inventory-named, which is the very
+  # gap the inventory grew these entries to close.
+  if [ "$(csh "systemctl show '$unit' -p ConditionResult --value 2>/dev/null" 2>/dev/null || true)" = "no" ]; then
+    echo skipped; return
+  fi
   if [ -n "$port" ]; then
     if csh "curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:$port$path 2>/dev/null" 2>/dev/null | grep -q '^200$'; then
       echo ok
