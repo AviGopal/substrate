@@ -1,5 +1,15 @@
 # Configuration-surface audit — enumeration + live hub/spoke test
 
+> **Superseded by [`docs/operations/CONFIGURATION_SURFACE.md`](../../docs/operations/CONFIGURATION_SURFACE.md)
+> and `scripts/substrate/config-surface-probe.sh`.** Kept for the findings and
+> their evidence; do not read the counts as current.
+>
+> This document is *why* the probe exists. Its harness was a `docker run` pasted
+> into prose, so nothing re-ran it and it went stale in **both** directions
+> without reporting either: the `VLLM_*` finding (F1) was fixed, while the
+> advertise-variable finding (F2) is still live. A check nothing invokes cannot
+> be trusted when it passes, because it is never observed failing.
+
 **Fixture:** `scripts/substrate/docker-compose.cluster.yml` (hub + spoke, one docker host).
 **Image under test:** `ghcr.io/avigopal/substrate:dev` (local, `8f43b8e29261`).
 **Method:** enumerate every knob from the code that reads it, then boot the
