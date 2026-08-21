@@ -252,3 +252,54 @@ the same class as every other seam here — the names agree, the values are from
 different namespaces — and it is worth a follow-up: the legacy reader should
 either be keyed correctly or removed, because today it silently contributes
 nothing while looking like a working conditional lookup.
+
+---
+
+# Re-evaluation, final state of round 1
+
+**The probe goal REACHED.** Dispatch `846d8f8f`, nonce `seamprobe-1787320349`:
+`status: completed`, `reached: true`, with the terminal `memoryNote_write`
+carrying **2,350 characters of real scan content** — not a
+`{producedBy, executionId}` stub. The note was materialized to the Obsidian sink.
+
+Two honest qualifications on what that does and does not prove:
+
+1. It took `execution_path=satisfier` (attempt_count=2), **not** a two-step
+   producer chain. So it demonstrates content threading end-to-end through the
+   satisfier path; it does **not** exercise the hop-4 store read-back that the
+   `R3-execute-04` fix targets. That fix is verified by unit test (2/2) and
+   confirmed compiled into the deployed `dist/engine.js` — the artifact the
+   package actually resolves — and running under goal-host PID 146079.
+2. The walk **correctly withheld** alpha-credit: *"WITHHELD alpha-credit for
+   satisfier:memoryNote_write — no in-chain producer-to-consumer edge and no
+   landed sha."* That is the abstention working as designed, and it also
+   explains why no composition edge was minted by this dispatch: a satisfier
+   reach has no producer→consumer edge to record.
+
+## Round 1 scorecard
+
+| seam | verification | state |
+|---|---|---|
+| `L3-tuning-06` NULL≠NONE | meta-less write persists on the live fleet | **CLOSED (executed)** |
+| shape-registry `org_id` | same fix, same class | **CLOSED (code + lint)** |
+| lint gate had no caller | detector convicts on an injected violation, passes on revert | **CLOSED (executed)** |
+| `R3-execute-04` hop 4 | 2/2 unit tests; 15 pre-existing failures repaired; compiled into deployed dist | **CLOSED (tested + deployed)** |
+| `L3-psi-08` ψ refusal | 741/741 suite green; invariant retained under its own new test | **CLOSED (tested)** |
+| `L2-structure-01..04` edges | 4 defects in series fixed; counters added | **DEPLOYED, unobserved** — needs a nested child trace |
+| `L1-credit-10` credit key | both readers' id forms fixed | **PARTIAL** — see the two-subjects finding above |
+
+## The method that worked, stated plainly
+
+Every closure above came from **measuring at the consuming side**, and twice the
+measurement overturned the code reading:
+
+- The composition-edge path looked "never invoked" (zero logs, zero errors). It
+  fires on **66 of 100 ingests** and was silently returning on a parent lookup
+  against a 12%-populated shadow table. Fixing the `CREATE` alone — the obvious
+  reading — would have landed green and minted nothing.
+- The credit fix looked complete. **The counter I added with it reported
+  `matched:0`** and falsified it within minutes, exposing a second reader and a
+  column carrying two different subjects.
+
+A counter at the consumer is worth more than any amount of reading, and it is
+the one thing every seam in this map was missing.
