@@ -141,6 +141,13 @@ GITHUB_TOKEN ?= $(shell gh auth token 2>/dev/null || true)
 ENABLED_ROLES ?=
 ENABLED_VESSELS ?=
 DISABLED_VESSELS ?=
+# ENABLED_EXTRA_VESSELS and PROFILE were carried by RECREATE_CARRY and read by
+# apply-inventory, but declared nowhere and passed by no recipe — so the additive
+# selection knob had NO delivery path on the make lane at all, and `recreate`
+# carried them into a recipe that dropped them. Compose was the only lane that
+# ever delivered PROFILE. config-surface-probe.sh now reports both.
+ENABLED_EXTRA_VESSELS ?=
+PROFILE ?=
 PEER_DISCOVERY_ENDPOINTS ?=
 DISCOVERY_ENDPOINT ?=
 ACTIVITY_API_ENDPOINT ?=
@@ -553,6 +560,8 @@ run-live:
 	    -e ENABLED_ROLES="$(ENABLED_ROLES)" \
 	    -e ENABLED_VESSELS="$(ENABLED_VESSELS)" \
 	    -e DISABLED_VESSELS="$(DISABLED_VESSELS)" \
+	    -e ENABLED_EXTRA_VESSELS="$(ENABLED_EXTRA_VESSELS)" \
+	    -e PROFILE="$(PROFILE)" \
 	    -e PEER_DISCOVERY_ENDPOINTS="$(PEER_DISCOVERY_ENDPOINTS)" \
 	    -e DISCOVERY_ENDPOINT="$(CONTAINER_DISCOVERY_ENDPOINT)" \
 	    -e HUB_DISCOVERY_URL="$(HUB_DISCOVERY_URL)" \
@@ -616,10 +625,15 @@ run-live-obsidian:
 	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
 	    -e GITHUB_TOKEN \
 	    -e SUBSTRATE_GIT_PAT \
+	    -e SUBSTRATE_REPO_OWNER="$(SUBSTRATE_REPO_OWNER)" \
+	    -e API_KEY_SECRET \
+	    -e ALLOW_INSECURE_API_KEY_SECRET="$(ALLOW_INSECURE_API_KEY_SECRET)" \
 	    -e SUBSTRATE_ROOT="/workspace/git/super-repo" \
 	    -e ENABLED_ROLES="$(ENABLED_ROLES)" \
 	    -e ENABLED_VESSELS="$(ENABLED_VESSELS)" \
 	    -e DISABLED_VESSELS="$(DISABLED_VESSELS)" \
+	    -e ENABLED_EXTRA_VESSELS="$(ENABLED_EXTRA_VESSELS)" \
+	    -e PROFILE="$(PROFILE)" \
 	    -e PEER_DISCOVERY_ENDPOINTS="$(PEER_DISCOVERY_ENDPOINTS)" \
 	    -e DISCOVERY_ENDPOINT="$(CONTAINER_DISCOVERY_ENDPOINT)" \
 	    -e HUB_DISCOVERY_URL="$(HUB_DISCOVERY_URL)" \

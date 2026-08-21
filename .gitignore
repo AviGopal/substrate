@@ -269,3 +269,4 @@ scripts/substrate/workspace/
 # bad target name is passed. They are byte-identical duplicates that would enter
 # the Docker build context and shadow the real script.
 /scripts/substrate/mirror-to-live
+.config-probe.*

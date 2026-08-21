@@ -442,6 +442,26 @@ RELAY_MULTIADDR="${RELAY_MULTIADDR:-}"
 PEER_DISCOVERY_ENDPOINTS_EXPLICIT="${PEER_DISCOVERY_ENDPOINTS:-$(persisted_secret PEER_DISCOVERY_ENDPOINTS)}"
 PEER_DISCOVERY_ENDPOINTS="${PEER_DISCOVERY_ENDPOINTS_EXPLICIT:-${HUB_DISCOVERY_URL}}"
 PEER_FANOUT_MODE="${PEER_FANOUT_MODE:-union}"
+# Peering settings deploy-remote.sh appends to /etc/substrate/env AFTER boot, to
+# turn on discovery fan-out against a peer substrate. This file writes that env
+# with `cat >`, which TRUNCATES — and gen-env knew none of these three names, so
+# every one of them was destroyed on the next container restart. A substrate
+# deliberately peered by an operator silently un-peered itself, and the only
+# symptom was capability queries quietly resolving nothing from the peer.
+# Resolved and persisted here so the peering survives the restart that used to
+# erase it. MAX_PEER_DEPTH defaults empty: discovery carries its own default,
+# and an empty value must not overwrite it.
+#
+# KNOWN LIMIT, shared with every other persisted value in this file: `${VAR:-…}`
+# cannot distinguish "unset" from "explicitly emptied", so `-e MAX_PEER_DEPTH=`
+# does NOT un-peer a substrate — the persisted value comes back. Verified.
+# Un-peering means editing /workspace/.substrate-secrets. The Makefile solved the
+# same problem for provider keys with RECREATE_CARRY_PRESENT (carry by presence,
+# not by value); doing it here would need the same treatment applied to all ~20
+# persisted names at once, not three of them.
+MAX_PEER_DEPTH="${MAX_PEER_DEPTH:-$(persisted_secret MAX_PEER_DEPTH)}"
+FEDERATION_PEER_AUTH_MODE="${FEDERATION_PEER_AUTH_MODE:-$(persisted_secret FEDERATION_PEER_AUTH_MODE)}"
+FEDERATION_SIGNING_SECRET="${FEDERATION_SIGNING_SECRET:-$(persisted_secret FEDERATION_SIGNING_SECRET)}"
 
 mkdir -p /workspace
 cat > /etc/substrate/env <<EOF
@@ -487,7 +507,12 @@ VLLM_ENDPOINTS="${VLLM_ENDPOINTS:-}"
 # changed nothing — a kill switch that cannot be pulled. Unset leaves
 # goal-host's own default in force; set 0 to route edit intent to intent-only.
 ROUTE_EDIT_INTENT_TO_COMPOSE="${ROUTE_EDIT_INTENT_TO_COMPOSE:-}"
-LLM_DEFAULT_MODEL="${LLM_DEFAULT_MODEL:-}"
+# Read back from the persisted store, not just written to it. A write with no
+# matching read is not persistence — the value sits in the file and the next boot
+# resolves to empty anyway. This accompanies the provider keys, which have always
+# round-tripped; the model pin did not, so a recreate kept the key and dropped
+# the model it was meant to be used with.
+LLM_DEFAULT_MODEL="${LLM_DEFAULT_MODEL:-$(persisted_secret LLM_DEFAULT_MODEL)}"
 # Substrate root inside the container = the container-native super-repo clone.
 # The container is unmoored from the host filesystem: no host repo bind. Every
 # tick unit references its script as \${SUBSTRATE_ROOT}/scripts/substrate/...
@@ -520,7 +545,10 @@ WORKSPACE_ROOT="${WORKSPACE_ROOT:-${SUBSTRATE_ROOT}}"
 # with NO container restart. Defaulted here so a recreate is self-activation-capable
 # even if the value wasn't passed in.
 SUBSTRATE_RUN_DIR="${SUBSTRATE_RUN_DIR:-/workspace/active-scripts}"
-GITHUB_TOKEN="${GITHUB_TOKEN:-}"
+# Round-trips like SUBSTRATE_GIT_PAT beside it. These two are passed together by
+# every launch recipe and were treated differently by exactly one thing: this
+# file. A recreate kept the PAT and dropped the token.
+GITHUB_TOKEN="${GITHUB_TOKEN:-$(persisted_secret GITHUB_TOKEN)}"
 SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT}"
 SUBSTRATE_GIT_AUTHOR_NAME="${SUBSTRATE_GIT_AUTHOR_NAME}"
 SUBSTRATE_GIT_AUTHOR_EMAIL="${SUBSTRATE_GIT_AUTHOR_EMAIL}"
@@ -725,9 +753,20 @@ echo "[gen-env] wrote per-model llm-resolver env files (opus, haiku, google)"
   echo "SUBSTRATE_REPO_OWNER=${SUBSTRATE_REPO_OWNER:-AviGopal}"
   [ -n "${ENABLED_ROLES:-}" ]       && echo "ENABLED_ROLES=${ENABLED_ROLES}"
   [ -n "${ENABLED_EXTRA_VESSELS:-}" ] && echo "ENABLED_EXTRA_VESSELS=${ENABLED_EXTRA_VESSELS}"
+  # PROFILE outranks every other selection knob, and was the only one never
+  # emitted here. entrypoint.sh reads it from the CONTAINER env at boot, so the
+  # boot pass worked — but `vessel-ctl apply` sources this file, so a runtime
+  # re-apply could not see the profile the container booted with and silently
+  # converged to the coarse role group instead.
+  [ -n "${PROFILE:-}" ]             && echo "PROFILE=${PROFILE}"
   [ -n "${ENABLED_VESSELS:-}" ]     && echo "ENABLED_VESSELS=${ENABLED_VESSELS}"
   [ -n "${DISABLED_VESSELS:-}" ]    && echo "DISABLED_VESSELS=${DISABLED_VESSELS}"
   [ -n "${SUBSTRATE_BIND_HOST:-}" ] && echo "SUBSTRATE_BIND_HOST=${SUBSTRATE_BIND_HOST}"
+  # Peering (see the resolution block above). Conditional, so a substrate that
+  # was never peered stays unpeered and discovery keeps its own defaults.
+  [ -n "${MAX_PEER_DEPTH:-}" ]             && echo "MAX_PEER_DEPTH=${MAX_PEER_DEPTH}"
+  [ -n "${FEDERATION_PEER_AUTH_MODE:-}" ]  && echo "FEDERATION_PEER_AUTH_MODE=${FEDERATION_PEER_AUTH_MODE}"
+  [ -n "${FEDERATION_SIGNING_SECRET:-}" ]  && echo "FEDERATION_SIGNING_SECRET=${FEDERATION_SIGNING_SECRET}"
   # Public reachability, threaded through so discovery's GET /bootstrap can hand a
   # client the PUBLIC identity + discovery URLs (not loopback) to point at.
   PUB="${PUBLIC_IP:-${FED_PUBLIC_IP:-}}"
@@ -768,6 +807,23 @@ FED_SUBSTRATE_ID=${FED_SUBSTRATE_ID}
 METABOB_API_KEY=${METABOB_API_KEY}
 SUBSTRATE_ADMIN_KEY=${SUBSTRATE_ADMIN_KEY:-}
 SUBSTRATE_GIT_PAT=${SUBSTRATE_GIT_PAT}
+# The PREVIOUS signing secret is the key-rotation window: keys issued under it
+# stay valid until they are re-issued. It was READ here at boot
+# (persisted_secret API_KEY_SECRET_PREVIOUS) and never written, so the window
+# vanished on the first recreate without -e and every key minted under the old
+# secret began failing validation with no warning and no log line.
+API_KEY_SECRET_PREVIOUS=${API_KEY_SECRET_PREVIOUS:-}
+# GITHUB_TOKEN sat beside SUBSTRATE_GIT_PAT in every launch recipe but was in
+# neither this list nor RECREATE_CARRY, so a recreate kept the PAT and silently
+# dropped the token. LLM_DEFAULT_MODEL had the same asymmetry against the
+# provider keys it accompanies: the key survived, the model pin did not.
+GITHUB_TOKEN=${GITHUB_TOKEN:-}
+LLM_DEFAULT_MODEL=${LLM_DEFAULT_MODEL:-}
+# Additive vessel selection. gen-env has always READ this via persisted_secret,
+# and its own comment claimed it was "persisted in the secrets store so it
+# survives a bare restart/recreate" — nothing ever wrote it. Combined with no
+# make lane passing it, the knob had no working delivery path at all.
+ENABLED_EXTRA_VESSELS=${ENABLED_EXTRA_VESSELS:-}
 # (3) provider-secret spot — round-trip provider keys so a container recreate
 # without -e keeps them. NB: this heredoc OVERWRITES the file, so every durable
 # secret MUST be listed here or it is lost on the next gen-env run.
@@ -790,6 +846,13 @@ VLLM_ENDPOINTS=${VLLM_ENDPOINTS:-}
 # Operator-explicit discovery peer list (hub-side resolve fan-out). Only the
 # explicit value round-trips; a hub-derived spoke default is re-derived each run.
 PEER_DISCOVERY_ENDPOINTS=${PEER_DISCOVERY_ENDPOINTS_EXPLICIT:-}
+# Peer-federation settings applied post-boot by deploy-remote.sh. Persisted so
+# they survive the `cat >` truncation of /etc/substrate/env on the next boot.
+# Note the 2026-08-08 incident recorded above: these two names were in an OLDER
+# revision of this list, and dropping them was half of what took the hub down.
+MAX_PEER_DEPTH=${MAX_PEER_DEPTH:-}
+FEDERATION_PEER_AUTH_MODE=${FEDERATION_PEER_AUTH_MODE:-}
+FEDERATION_SIGNING_SECRET=${FEDERATION_SIGNING_SECRET:-}
 SECRETS
 
 # Merge: carry through any key the OLD file has that this revision never emits,
