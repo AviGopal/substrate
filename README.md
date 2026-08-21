@@ -56,7 +56,7 @@ mcp__metabob__run_goal  goal="fix the failing tests in activity-api"
 mcp__metabob__run_goal  goal="add input validation to the impulse endpoint"
 ```
 
-Conscious one-off direct edits to vessel source are gated by a PreToolUse hook and require `SUBSTRATE_ALLOW_DIRECT_EDIT=1`; docs/scripts/tests/config are never gated. See CLAUDE.md → *How work happens: dispatch, don't edit*.
+Conscious one-off direct edits to vessel source are gated by a PreToolUse hook and require `SUBSTRATE_ALLOW_DIRECT_EDIT=1`; docs, scripts, tests and config are never gated. See CLAUDE.md → *How work happens: dispatch, don't edit*.
 
 ## Installation
 
