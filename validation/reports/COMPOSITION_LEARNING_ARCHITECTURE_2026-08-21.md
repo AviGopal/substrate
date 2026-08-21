@@ -74,13 +74,13 @@ Minimal repair: bind NONE, not NULL (omit absent keys, or `?? NONE` in SurrealQL
 
 ---
 
-## 2. The diagnosis
+## 2. The diagnosis — one structural property behind all five severances
 
 Every one of the five severances is the same structural property: **the substrate's write paths degrade to a plausible-looking zero instead of an error, and no layer counts what it consumed.** A SCHEMAFULL `CREATE` that omits an `ASSERT $value != NONE` field writes nothing and logs nothing; an `UPSERT` that binds JS `null` into `option<string>` takes a silent create branch and returns `ok:true`; an optional positional argument omitted at one of four call sites amputates a grading input with no type error; a request that omits `predecessor_activity_id` silently downgrades a per-edge query to a child-global `GROUP ALL` aggregate; a helper that withholds one field because a *sibling* field failed a regex zeroes an entire feature; and `surrealDB.query<T>()` ends in `return firstResult as T[]`, so a row interface with four wrong column names typechecks exactly as cleanly as a right one. In every case the producer is correct, the consumer is correct, and the seam between them is observed by nobody — so a fix can land, typecheck, pass its reach gate, and be inert for ten days (the 2026-08-11 derive fix) or five weeks (the composition graph) without a single signal. The architecture is therefore not "add composition learning." It is: **bind what the schema requires, name what the query needs, and make every seam emit a counter at the layer that consumes it — so the next inert fix is visible in one tick instead of one month.**
 
 ---
 
-## 2. Target architecture, joint by joint
+## 3. Target architecture, joint by joint
 
 ### 2.0 Adjudications my own verification forced (all three architects were partly wrong)
 
@@ -146,7 +146,7 @@ A checker in `packages/`, derived from the deployed `DEFINE FIELD` set — the o
 
 ---
 
-## 3. Ranked, sequenced plan
+## 4. Ranked, sequenced plan
 
 **Step 0 — OPERATOR DECISION.** `goal-host-vessel`, `development-vessel` and `ribosome-vessel` are masked (single mtime 2026-08-16 21:13). That means no dispatch plane, no ribosome (law 4 has no runtime path), and `substrateGap_write` is served by the masked development-vessel — **the outage blocks filing a gap about itself.** This is CLAUDE.md's intractable-blocker carve-out. Additionally, tonight the ribosome API key that authenticated hours ago now returns `401 INVALID_API_KEY` on `127.0.0.1:8080` (keylen=160, so the value is present); identity-vessel is the single validator, so a masked/failed identity is a plausible mechanism — **UNVERIFIED**, discriminator in §5. Nothing in Lane B is validatable until the operator answers.
 
@@ -174,7 +174,7 @@ A checker in `packages/`, derived from the deployed `DEFINE FIELD` set — the o
 
 ---
 
-## 4. Validation protocol — by intervention, direction not amount
+## 5. Validation protocol — by intervention, direction not amount
 
 Precondition: confirm the plane by `MainPID` and `NRestarts`, never `is-active` — a restart loop reports `activating`, never `failed`.
 
@@ -194,7 +194,7 @@ Record each verdict through `provide_feedback` so it lands in the oracle corpus,
 
 ---
 
-## 5. What this does NOT fix — open questions
+## 6. What this does NOT fix — open questions
 
 1. **The credit key may still not meet.** Making the conditioned posterior readable does not make the write key and the read key coincide. Measurable (step 7), not fixable by edit. This is the single thing that could render the whole plan inert, and the plan is built to *report* that outcome rather than paper over it.
 2. **`child_activity_id = $parent.id` may be type-incomparable — UNVERIFIED.** `child_activity_id` is `TYPE string` and stored as `"activity:⟨…⟩"`; `$parent.id` is a record link. If SurrealDB does not equate them, `comp_row` is null on the **existing** `GROUP ALL` branch too, meaning `composition_score` has never been non-null and no caller-side threading can repair it. **Discriminator:** one read-only `POST /v2/activities/discover-by-shapes` with `include_scores:true` on shapes whose producers include a child of a known batch edge — `composition_score` null on *all* candidates confirms it. **I attempted this probe tonight and could not: the ribosome key returns 401.**
@@ -208,7 +208,7 @@ Record each verdict through `provide_feedback` so it lands in the oracle corpus,
 
 ---
 
-## 6. Substantive disagreements — real choices for the operator
+## 7. Substantive disagreements — real choices for the operator
 
 **(a) Edge semantics: adjacency-derive vs consumption-gated mint.** The reconciler's *genuine* edges are provenance-backed — it requires B's input shapes to intersect A's output shapes and requires `consumed_from_task_ids`. `deriveCompositionEdgeFromParent` applies **no such filter**: goal-host passes `parentExecutionId: lastExecId`, the previous walk step whether or not it was consumed. Repairing the derive path as-is therefore writes a *weaker relation* into the same table that downstream consumers (`edge_kind` classification, `composition_score`'s α/β) read as consumption evidence. **Recommendation: mint from the already-resolved `composition_chain` in the same handler and stamp a provenance field (`derived_from: 'ingest_chain'`), keeping the adjacency SELECT only as a fallback.** Cost: slightly more work in B7. Benefit: the graph keeps one meaning.
 
