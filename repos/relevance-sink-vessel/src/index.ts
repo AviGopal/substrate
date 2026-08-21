@@ -1,10 +1,15 @@
 const PORT = parseInt(process.env.PORT ?? "8255", 10);
 
 const SURREALDB_URL = process.env.SURREALDB_URL ?? "http://127.0.0.1:8000";
-const SURREALDB_NAMESPACE = process.env.SURREALDB_NAMESPACE ?? "";
-const SURREALDB_DATABASE = process.env.SURREALDB_DATABASE ?? "";
+const SURREALDB_NAMESPACE = process.env.SURREALDB_NAMESPACE ?? "activity-system";
+const SURREALDB_DATABASE = process.env.SURREALDB_DATABASE ?? "learning_loop";
 const SURREALDB_USERNAME = process.env.SURREALDB_USERNAME ?? "root";
-const SURREALDB_PASSWORD = process.env.SURREALDB_PASSWORD ?? "root";
+// Defaults must match every other client of this ONE datastore. activity-api
+// (src/config.ts:210) defaults to "changeme"; this vessel defaulted to "root",
+// so two vessels reached the same database with different default credentials
+// and only one of them could be right. Namespace and database defaulted to ""
+// here while every other client uses activity-system / learning_loop.
+const SURREALDB_PASSWORD = process.env.SURREALDB_PASSWORD ?? "changeme";
 const VESSEL_ID = process.env.VESSEL_ID ?? "relevance-sink-vessel";
 const DISCOVERY_ENDPOINT = process.env.DISCOVERY_VESSEL_ENDPOINT ?? "http://127.0.0.1:8100";
 const API_KEY = process.env.RELEVANCE_SINK_VESSEL_API_KEY ?? process.env.METABOB_API_KEY ?? "";
