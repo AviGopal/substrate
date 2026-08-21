@@ -7,6 +7,10 @@ Description=obsidian-xorg — persistent virtual display + VNC for the in-contai
 Type=simple
 Environment=OBSIDIAN_DISPLAY=:0
 Environment=OBSIDIAN_GEOMETRY=1600x900x24
+# Same reasoning as novnc.service: role=desktop is in the `full` group the base
+# image boots, but Xvfb/x11vnc ship only on :obsidian. Skip cleanly rather than
+# crash-loop invisibly.
+ExecCondition=/bin/sh -c 'command -v Xvfb >/dev/null'
 ExecStart=/usr/bin/bash /usr/local/bin/obsidian-xorg-launch
 Restart=on-failure
 RestartSec=5

@@ -55,6 +55,12 @@ set -euo pipefail
 command -v docker >/dev/null || { echo "[vm] installing docker…"; curl -fsSL https://get.docker.com | sh; }
 docker volume create substrate-surreal   >/dev/null 2>&1 || true
 docker volume create substrate-workspace >/dev/null 2>&1 || true
+# Drain before removing. `docker rm -f` sends SIGKILL with NO grace period, and a
+# redeploy lands on a machine where the previous fleet may be mid-execution: the
+# vessels drain for up to 240s and SurrealDB needs to flush RocksDB onto the very
+# volume this deploy is about to reuse. `docker stop -t` is a no-op when nothing
+# is running, so this is safe on a first deploy too.
+docker stop -t 300 substrate-live >/dev/null 2>&1 || true
 docker rm -f substrate-live >/dev/null 2>&1 || true
 docker run -d --name substrate-live --privileged \
   -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \

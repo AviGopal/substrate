@@ -964,7 +964,17 @@ Back up **both** before destructive operations:
 
 ```bash
 # Backup (stop first so SurrealDB flushes)
-docker stop -t 30 substrate-live
+#
+# `make -C scripts/substrate stop` is the supported path: it reports goal-host's
+# in-flight execution count, then drains with a timeout sized to the fleet.
+# Reaching for `docker stop` directly means supplying -t yourself — the DEFAULT
+# grace period is 10 seconds, and the vessels drain for up to 240s
+# (GOAL_HOST_DRAIN_MS / VESSEL_DRAIN_MS) while surrealdb.service declares no
+# TimeoutStopSec at all, inheriting systemd's 90s default to flush RocksDB.
+# A short -t kills mid-flight work and cuts the datastore off mid-write, which
+# is the opposite of what a backup wants.
+make -C scripts/substrate stop          # preferred
+# docker stop -t 300 substrate-live     # equivalent, if you are not using make
 for vol in substrate-surreal substrate-workspace; do
   docker run --rm -v "$vol":/src -v "$(pwd)":/bak alpine \
     tar czf "/bak/$vol-$(date +%Y%m%d).tgz" -C /src .

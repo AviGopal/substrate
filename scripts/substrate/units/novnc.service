@@ -7,6 +7,15 @@ Requires=obsidian-xorg.service
 Type=simple
 # websockify serves the bundled noVNC client and proxies it to x11vnc on :5900.
 # Operator opens http://localhost:16080/vnc.html (host-mapped from :6080).
+# THE DESKTOP UNITS ONLY EXIST ON THE :obsidian IMAGE.
+# They carry role=desktop, which is in the `full` role group — the group the
+# BASE image boots by default. websockify is absent there, so ExecStart failed
+# 203/EXEC every 5s forever: measured restarts=939 on a base-image fleet, and a
+# Restart= loop reports `activating`, never `failed`, so it is invisible to
+# `systemctl --state=failed` and to any check that asks is-active.
+# ExecCondition makes an absent binary a clean SKIP, exactly as the LLM arms do
+# for an absent provider key: one image, both topologies, no dead unit spinning.
+ExecCondition=/bin/sh -c 'command -v websockify >/dev/null'
 ExecStart=/usr/bin/websockify --web /usr/share/novnc 6080 localhost:5900
 Restart=on-failure
 RestartSec=5

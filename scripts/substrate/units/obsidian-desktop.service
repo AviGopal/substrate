@@ -14,6 +14,9 @@ Environment=OBSIDIAN_VAULT=/vaults/substrate-vault
 Environment=OBSIDIAN_DISPLAY=:0
 # HOME must resolve for Obsidian's per-user config (/root/.config/obsidian).
 Environment=HOME=/root
+# Same reasoning as novnc.service: role=desktop is in the `full` group the base
+# image boots, but the Obsidian binary ships only on :obsidian.
+ExecCondition=/bin/sh -c 'command -v obsidian >/dev/null'
 ExecStart=/usr/bin/bash /usr/local/bin/obsidian-desktop-launch
 Restart=on-failure
 RestartSec=5

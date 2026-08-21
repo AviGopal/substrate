@@ -95,6 +95,12 @@ make -C scripts/substrate build
 echo "[vm] starting the HUB subset (control plane + store + relay-ready)…"
 docker volume create substrate-surreal   >/dev/null 2>&1 || true
 docker volume create substrate-workspace >/dev/null 2>&1 || true
+# Drain before removing. `docker rm -f` sends SIGKILL with NO grace period, and a
+# redeploy lands on a machine where the previous fleet may be mid-execution: the
+# vessels drain for up to 240s and SurrealDB needs to flush RocksDB onto the very
+# volume this deploy is about to reuse. `docker stop -t` is a no-op when nothing
+# is running, so this is safe on a first deploy too.
+docker stop -t 300 substrate-live >/dev/null 2>&1 || true
 docker rm -f substrate-live >/dev/null 2>&1 || true
 # Federation egress env: the hub role runs federation-transport-vessel (:8401),
 # which dies without RELAY_MULTIADDR and leaves hub discovery advertising spoke
