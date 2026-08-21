@@ -719,11 +719,52 @@ migrate-state-to-volumes:
 # expiry-vs-repair close decomposition, and a topology census (shapes, vessel
 # units, federated LLM arms, graded templates). Host-run: it curls the
 # host-mapped ports and shells into the container for the unit census.
-stop-live:
-	docker stop $(LIVE_NAME)
+# SHUTDOWN IS A DRAIN, NOT A KILL.
+#
+# `docker stop` defaults to a 10-SECOND grace period, then SIGKILL. The fleet is
+# configured for far longer: goal-host and development-vessel drain for up to
+# 240s (GOAL_HOST_DRAIN_MS / VESSEL_DRAIN_MS), and surrealdb.service declares no
+# TimeoutStopSec at all, so it inherits systemd's 90s default to flush RocksDB.
+#
+# A bare `docker stop` therefore kills mid-flight work AND cuts the datastore off
+# before it flushes — on a volume that holds every trace, posterior, and gap the
+# system has ever learned. This file's own migrate-state-to-volumes target has
+# always said `docker stop -t 30`; the stop target it points operators at did not.
+#
+# STOP_TIMEOUT covers the longest drain (240s) plus systemd's own shutdown of the
+# remaining units. Lower it deliberately, never by forgetting.
+STOP_TIMEOUT ?= 300
 
+# "Before restarting anything, check nothing is mid-flight" was an instruction with
+# no way to carry it out: nothing reported in-flight work, so the operator guessed.
+# goal-host has advertised `in_flight` on /health all along — precisely so a
+# restarter does not have to. Report it; the drain below then does the waiting.
+# This is a REPORT, not a gate: a busy substrate must still be stoppable, and the
+# dispatch host is almost never idle under the autonomous loop.
+stop-live:
+	@_inflight=$$(curl -s --max-time 5 http://localhost:$(call hp,18210)/health 2>/dev/null \
+	    | sed -nE 's/.*"in_flight":([0-9]+).*/\1/p'); \
+	  if [ -n "$$_inflight" ] && [ "$$_inflight" -gt 0 ] 2>/dev/null; then \
+	    echo "[stop] $$_inflight execution(s) in flight — the drain below waits for them"; \
+	  elif [ -n "$$_inflight" ]; then \
+	    echo "[stop] nothing in flight"; \
+	  else \
+	    echo "[stop] could not read in-flight count (goal-host not answering) — proceeding"; \
+	  fi
+	@echo "[stop] draining $(LIVE_NAME) (up to $(STOP_TIMEOUT)s — vessels drain to 240s, SurrealDB flushes RocksDB)"
+	docker stop -t $(STOP_TIMEOUT) $(LIVE_NAME)
+	@echo "[stop] $(LIVE_NAME) stopped; named volumes retained"
+
+# Removes the CONTAINER, never the volumes. `docker rm -f` sends SIGKILL with no
+# grace period whatsoever, so a running container must be drained first rather
+# than force-removed — the -f is for a container that is already stopped.
 clean-live:
+	@if [ "$$(docker inspect -f '{{.State.Running}}' $(LIVE_NAME) 2>/dev/null)" = "true" ]; then \
+	  echo "[clean] $(LIVE_NAME) is running — draining first (docker rm -f would SIGKILL it)"; \
+	  $(MAKE) --no-print-directory stop-live; \
+	fi
 	docker rm -f $(LIVE_NAME) 2>/dev/null || true
+	@echo "[clean] container removed; volumes $(SURREAL_VOLUME) + $(WORKSPACE_VOLUME) retained"
 
 # ── ephemeral dev container (port 8080) ─────────────────────────────────────
 
