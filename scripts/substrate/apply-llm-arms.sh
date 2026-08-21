@@ -53,13 +53,26 @@ fi
 _models_wanted=1
 if [ -n "${ENABLED_ROLES:-}" ] && [ -x /usr/local/bin/apply-inventory ]; then
   # Ask the same expander apply-inventory uses, so the two cannot drift.
+  #
   # 2>&1, NOT 2>/dev/null: apply-inventory logs to STDERR, so discarding it
-  # discards the very line being matched — the check would then read "models
-  # absent" for every selection and silently disable the arms everywhere.
-  if ! DRY_RUN=1 ENABLED_ROLES="$ENABLED_ROLES" /usr/local/bin/apply-inventory 2>&1 \
-       | grep -Eq 'expands to:.*(^| )models( |$)'; then
-    _models_wanted=0
-  fi
+  # discards the very line being matched.
+  #
+  # ★ CAPTURE FIRST, THEN MATCH — do NOT pipe into `grep -q`.
+  # `grep -q` exits the moment it matches, closing the pipe; the still-writing
+  # apply-inventory then takes SIGPIPE, and under `set -o pipefail` the whole
+  # pipeline reports failure EVEN THOUGH THE MATCH SUCCEEDED. The `if !` branch
+  # therefore fired on success and set _models_wanted=0, disabling every arm
+  # under ANY explicit selection — including `full` and `hub`, which both
+  # contain `models`. It went unnoticed because the guard above skips this
+  # block entirely when ENABLED_ROLES is empty, which is the default topology
+  # everything gets tested on.
+  _expansion="$(DRY_RUN=1 ENABLED_ROLES="$ENABLED_ROLES" /usr/local/bin/apply-inventory 2>&1 || true)"
+  case "$_expansion" in
+    *"expands to:"*) printf '%s' "$_expansion" | grep -Eq 'expands to:.*(^| )models( |$)' || _models_wanted=0 ;;
+    # No expansion line at all means the expander could not tell us; leave the
+    # arms alone rather than silently disabling them on an unreadable answer.
+    *) : ;;
+  esac
 fi
 # An explicit PROFILE or ENABLED_VESSELS is a hand-written allow-list; the
 # rendered arms are not on it unless named there.

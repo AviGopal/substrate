@@ -204,7 +204,14 @@ case "$ACTION" in
     ;;
 
   sync)
-    entry >/dev/null 2>&1 || { echo "{\"ok\":false,\"error\":\"vessel '$VESSEL' not in manifest\"}"; exit 1; }
+    # A BAKED vessel is not in the manifest, but it still has a clone and a unit,
+    # so refusing it contradicted the surface's "any unit, baked or manifest"
+    # contract. Only refuse a name this fleet has neither an entry NOR a unit for.
+    if ! entry >/dev/null 2>&1; then
+      if ! csh "systemctl cat '$VESSEL.service' >/dev/null 2>&1"; then
+        echo "{\"ok\":false,\"action\":\"sync\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\",\"error\":\"no manifest entry and no unit '$VESSEL.service' in this fleet — try: vessel-ctl status\"}"; exit 1
+      fi
+    fi
     csh "cd '$CLONE_DIR/$VESSEL' 2>/dev/null && GIT_TERMINAL_PROMPT=0 git pull --ff-only -q origin dev" || true
     csh "/usr/local/bin/mirror-to-live '$VESSEL' '$CLONE_DIR'" || { echo "{\"ok\":false,\"error\":\"mirror failed\"}"; exit 1; }
     csh "systemctl restart $VESSEL.service" >/dev/null 2>&1 || true
@@ -219,7 +226,16 @@ case "$ACTION" in
     ;;
 
   uninstall)
-    entry >/dev/null 2>&1 || echo "{\"warn\":\"'$VESSEL' not in manifest; removing unit anyway\"}" >&2
+    [ -n "$VESSEL" ] || { echo "{\"ok\":false,\"error\":\"usage: vessel-ctl uninstall <vessel>\"}"; exit 1; }
+    # Reporting ok:true for a vessel that exists NOWHERE turned a typo into a
+    # silent no-op that read as a successful removal. Require the name to be
+    # real — a manifest entry or an installed unit — before claiming to remove it.
+    if ! entry >/dev/null 2>&1; then
+      if ! csh "test -f /etc/systemd/system/$VESSEL.service"; then
+        echo "{\"ok\":false,\"action\":\"uninstall\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\",\"error\":\"no manifest entry and no installed unit '$VESSEL.service' — nothing to uninstall\"}"; exit 1
+      fi
+      echo "{\"warn\":\"'$VESSEL' not in manifest; removing its installed unit anyway\"}" >&2
+    fi
     csh "systemctl disable --now $VESSEL.service 2>/dev/null || true; rm -f /etc/systemd/system/$VESSEL.service; systemctl daemon-reload" >/dev/null 2>&1 || true
     csh "/usr/local/bin/discovery-deregister '$VESSEL'" || true
     echo "{\"ok\":true,\"action\":\"uninstalled\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\"}"
@@ -234,14 +250,47 @@ case "$ACTION" in
     if ! csh "systemctl cat '$U' >/dev/null 2>&1"; then
       echo "{\"ok\":false,\"action\":\"restart\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\",\"error\":\"no such unit '$U' in this fleet — try: vessel-ctl status\"}"; exit 1
     fi
-    csh "systemctl restart '$U'" >/dev/null 2>&1
+    # A MASKED unit cannot be restarted: systemd refuses, the old process keeps
+    # running, and `is-active` still says `active` — so reporting on is-active
+    # alone returned ok:true for a restart that never happened. Refuse up front.
+    if [ "$(csh "systemctl is-enabled '$U' 2>&1" | head -1)" = masked ]; then
+      echo "{\"ok\":false,\"action\":\"restart\",\"vessel\":\"$VESSEL\",\"unit\":\"$U\",\"container\":\"$CONTAINER\",\"error\":\"unit is MASKED — the current vessel selection excludes it, so systemd will refuse. Change the selection and run 'vessel-ctl apply', or unmask it deliberately.\"}"; exit 1
+    fi
+    # MainPID is the discriminator, not is-active: an unchanged PID means the
+    # restart did not happen however healthy the state string looks.
+    PID0="$(csh "systemctl show '$U' -p MainPID --value 2>/dev/null" | head -1)"
+    RERR="$(csh "systemctl restart '$U' 2>&1" | head -3)"
     ST="$(csh "systemctl is-active '$U' 2>&1" | head -1)"
     NR="$(csh "systemctl show '$U' -p NRestarts --value 2>/dev/null" | head -1)"
+    PID1="$(csh "systemctl show '$U' -p MainPID --value 2>/dev/null" | head -1)"
     # `active` is not proof of health: a unit in a Restart= loop reports
     # `activating` forever and NEVER `failed`, so NRestarts is reported next to
     # it — a climbing count is the only cheap tell for that state.
-    OK=false; [ "$ST" = active ] && OK=true
-    echo "{\"ok\":$OK,\"action\":\"restart\",\"vessel\":\"$VESSEL\",\"unit\":\"$U\",\"container\":\"$CONTAINER\",\"active\":\"$ST\",\"nrestarts\":\"${NR:-0}\"}"
+    OK=false; [ "$ST" = active ] && [ "$PID1" != "$PID0" ] && OK=true
+    if [ "$OK" = true ]; then
+      echo "{\"ok\":true,\"action\":\"restart\",\"vessel\":\"$VESSEL\",\"unit\":\"$U\",\"container\":\"$CONTAINER\",\"active\":\"$ST\",\"mainpid\":\"$PID1\",\"nrestarts\":\"${NR:-0}\"}"
+    else
+      echo "{\"ok\":false,\"action\":\"restart\",\"vessel\":\"$VESSEL\",\"unit\":\"$U\",\"container\":\"$CONTAINER\",\"active\":\"$ST\",\"mainpid_before\":\"$PID0\",\"mainpid_after\":\"$PID1\",\"nrestarts\":\"${NR:-0}\",\"error\":\"$(printf '%s' "${RERR:-restart did not take: MainPID unchanged}" | tr -d '\"' | tr '\n' ' ')\"}"
+      exit 1
+    fi
+    ;;
+
+  start|stop)
+    # `apply` can mask a unit the selection no longer wants, and a masked unit
+    # cannot be restarted — without these verbs the documented surface could
+    # take a vessel out of service and then not act on it at all.
+    [ -n "$VESSEL" ] || { echo "{\"ok\":false,\"error\":\"usage: vessel-ctl $ACTION <vessel>\"}"; exit 1; }
+    U="$(unit_of "$VESSEL")"
+    if ! csh "systemctl cat '$U' >/dev/null 2>&1"; then
+      echo "{\"ok\":false,\"action\":\"$ACTION\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\",\"error\":\"no such unit '$U' in this fleet — try: vessel-ctl status\"}"; exit 1
+    fi
+    ERR="$(csh "systemctl $ACTION '$U' 2>&1" | head -3)"
+    ST="$(csh "systemctl is-active '$U' 2>&1" | head -1)"
+    case "$ACTION:$ST" in
+      start:active|stop:inactive|stop:failed) OK=true ;;
+      *) OK=false ;;
+    esac
+    echo "{\"ok\":$OK,\"action\":\"$ACTION\",\"vessel\":\"$VESSEL\",\"unit\":\"$U\",\"container\":\"$CONTAINER\",\"active\":\"$ST\"$( [ "$OK" = false ] && printf ',"error":"%s"' "$(printf '%s' "${ERR:-did not reach the expected state}" | tr -d '"' | tr '\n' ' ')" )}"
     [ "$OK" = true ] || exit 1
     ;;
 
@@ -308,7 +357,35 @@ case "$ACTION" in
     # problem this verb exists to remove.
     csh "RELOAD=1 /usr/local/bin/apply-llm-arms" 2>&1 || echo "[apply] arm pass reported a problem (see above)"
     csh "systemctl daemon-reload" >/dev/null 2>&1
-    echo "{\"ok\":true,\"action\":\"apply\",\"container\":\"$CONTAINER\",\"note\":\"selection re-applied; run 'vessel-ctl status' to see the result\"}"
+    # ★ CONVERGE THE RUNNING STATE, not just the symlinks.
+    #
+    # apply-inventory manipulates enable/mask symlinks; on a RUNNING fleet that
+    # changes nothing by itself — a unit it just masked keeps running, and one it
+    # just enabled stays down until the next boot. That left `apply` doing
+    # exactly half its job: `status` still showed the old world, which is the
+    # very "propagated but not applied" gap this verb exists to close.
+    echo "[apply] converging running state"
+    csh "
+      systemctl list-units --type=service --all --no-legend --no-pager 2>/dev/null \
+      | sed 's/^[^a-zA-Z]*//' | awk '{print \$1}' \
+      | grep -vE '^(systemd|dbus|getty|console-|user@|user-|modprobe|e2scrub|autovt|container-getty)' \
+      | grep -v '@' | sort -u | while read -r u; do
+          e=\$(systemctl is-enabled \"\$u\" 2>&1); a=\$(systemctl is-active \"\$u\" 2>&1)
+          case \"\$e\" in
+            masked)
+              [ \"\$a\" = active ] || [ \"\$a\" = activating ] && \
+                systemctl stop \"\$u\" >/dev/null 2>&1 && echo \"[apply] stopped \$u (masked by this selection)\" ;;
+            enabled)
+              # Only start plain services. A timer-triggered unit must fire on
+              # its schedule, and starting it here turns every periodic tick
+              # into a startup job.
+              if [ \"\$a\" = inactive ] && [ ! -f \"/etc/systemd/system/\${u%.service}.timer\" ] \
+                 && [ ! -f \"/lib/systemd/system/\${u%.service}.timer\" ]; then
+                systemctl start \"\$u\" >/dev/null 2>&1 && echo \"[apply] started \$u (enabled by this selection)\"
+              fi ;;
+          esac
+        done" 2>&1 | head -40
+    echo "{\"ok\":true,\"action\":\"apply\",\"container\":\"$CONTAINER\",\"note\":\"selection re-applied and running state converged; run 'vessel-ctl status' to confirm\"}"
     ;;
 
   drift)

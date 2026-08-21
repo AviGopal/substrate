@@ -716,6 +716,8 @@ instance in the command:
 docker exec <container> vessel-ctl status              # the fleet: state, enabled, restarts
 docker exec <container> vessel-ctl status <vessel>     # one unit
 docker exec <container> vessel-ctl restart <vessel>
+docker exec <container> vessel-ctl start <vessel>      # after apply masked it, or after stop
+docker exec <container> vessel-ctl stop <vessel>
 docker exec <container> vessel-ctl logs <vessel> -n 100
 docker exec <container> vessel-ctl sync <vessel>       # clone -> live runtime + restart
 docker exec <container> vessel-ctl install <vessel>    # manifest vessels
@@ -745,6 +747,27 @@ the LLM-arm pass, then starts and stops units to match.
 docker exec <container> vessel-ctl drift    # is this fleet running what it should?
 docker exec <container> vessel-ctl apply    # make it so
 ```
+
+`drift` is **read-only** and safe to run at any time. It prints three sections —
+the volume inventory against the image default, the selection currently in force,
+and what applying that selection would change. A `DRY-RUN would disable:` or
+`would unmask:` line names a unit whose running state has drifted from the
+selection; no such lines means the fleet already matches.
+
+`apply` is **idempotent**: running it on a converged fleet re-reads everything and
+changes nothing. It reports each action it takes (`stopped <unit> (masked by this
+selection)`, `started <unit> (enabled by this selection)`), so an apply that
+prints no action lines is a genuine no-op rather than a silent failure. It
+converges the *running* state, not just the enable symlinks — a unit the new
+selection excludes is stopped, and one it now includes is started. Timer-driven
+units are deliberately left for their timer rather than started immediately.
+
+Confirm with `vessel-ctl status`, and note that the container's `RestartCount`
+stays where it was: nothing here restarts the container.
+
+> A unit the selection has **masked** cannot be restarted — systemd refuses, and
+> `vessel-ctl restart` says so rather than reporting a success that did not
+> happen. Change the selection and `apply`, or `start` it deliberately.
 
 > Both boot and `apply` call the same `apply-llm-arms` for the rendered arms.
 > One copy on purpose: the arm-selection logic lived only in the entrypoint, and

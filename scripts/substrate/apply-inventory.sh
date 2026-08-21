@@ -163,8 +163,17 @@ disabled_count=0
 for u in $(manageable_units); do
   if is_desired "$u"; then
     # clear a stale mask left by a previous role selection
+    #
+    # DRY_RUN must mean DRY RUN. This branch was unguarded, so `DRY_RUN=1` still
+    # unmasked units on disk — and `vessel-ctl drift`, which exists to REPORT
+    # the gap without touching anything, mutated the fleet every time it ran
+    # (without a daemon-reload, so `status` then reported a stale state).
     if [ -L "/etc/systemd/system/$u" ] && [ "$(readlink "/etc/systemd/system/$u")" = "/dev/null" ]; then
-      rm -f "/etc/systemd/system/$u" && log "unmasked: $u"
+      if [ "$DRY_RUN" = "1" ]; then
+        log "DRY-RUN would unmask: $u"
+      else
+        rm -f "/etc/systemd/system/$u" && log "unmasked: $u"
+      fi
     fi
     # ENABLE a desired unit that has never been enabled.
     #
