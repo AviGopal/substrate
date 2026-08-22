@@ -68,11 +68,31 @@ async function seedTemplate(template: (typeof SHARED_TEMPLATES)[number]): Promis
 
   if (!response.ok) {
     const body = await response.text().catch(() => "(no body)");
+    // A LAW-3 REUSE REFUSAL IS NOT A SEEDING FAILURE.
+    //
+    // activity-api refuses a template whose output shape already has a producer
+    // ("refused duplicate mint: N existing producer(s) — route to … instead of
+    // minting a new Beta(1,1) cell"). That refusal is the learning loop working
+    // as designed, and the post-condition seeding actually cares about — a
+    // producer for this shape exists — is SATISFIED. Counting it as a failure
+    // made every clean first boot end with the unit `failed` and
+    // substrate-doctor red, on a substrate that was behaving correctly.
+    //
+    // Match on the refusal's own words rather than the status code, because the
+    // same code carries genuine validation errors that must still fail.
+    if (/duplicate mint|existing producer|already[ _-]?exists/i.test(body)) {
+      throw new AlreadyServedError(
+        `existing producer already serves '${template.id}' — reuse, not a failure`,
+      );
+    }
     throw new Error(
       `POST /v2/activities/templates returned ${response.status} for template '${template.id}': ${body}`,
     );
   }
 }
+
+/** Refusal that means the capability is already present. Not a seeding failure. */
+class AlreadyServedError extends Error {}
 
 async function main(): Promise<void> {
   log.info(`Waiting for activity-api at ${ENDPOINT}…`);
@@ -80,6 +100,7 @@ async function main(): Promise<void> {
   log.info(`activity-api ready. Seeding ${SHARED_TEMPLATES.length} shared templates…`);
 
   let seeded = 0;
+  let alreadyServed = 0;
   let failed = 0;
 
   for (const template of SHARED_TEMPLATES) {
@@ -88,18 +109,32 @@ async function main(): Promise<void> {
       seeded++;
       log.info(`  ✓ ${template.id}`);
     } catch (err) {
+      if (err instanceof AlreadyServedError) {
+        alreadyServed++;
+        log.info(`  = ${template.id}: ${err.message}`);
+        continue;
+      }
       failed++;
       log.warn(`  ✗ ${template.id}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
+  const present = seeded + alreadyServed;
   if (failed > 0) {
-    log.warn(`Seeding complete: ${seeded} seeded, ${failed} failed.`);
+    log.warn(
+      `Seeding complete: ${seeded} seeded, ${alreadyServed} already served, ${failed} FAILED.`,
+    );
     // Non-zero exit so systemd marks the unit as failed and journald captures it.
     process.exit(1);
   }
 
-  log.info(`Seeding complete: ${seeded}/${SHARED_TEMPLATES.length} templates seeded.`);
+  // Report reuse separately rather than folding it into either bucket: an
+  // operator reading this line needs to distinguish "nothing was there and I
+  // seeded it" from "it was already served", and neither is a failure.
+  log.info(
+    `Seeding complete: ${present}/${SHARED_TEMPLATES.length} templates present` +
+      (alreadyServed > 0 ? ` (${seeded} seeded, ${alreadyServed} already served)` : ""),
+  );
   process.exit(0);
 }
 
