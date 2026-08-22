@@ -436,6 +436,20 @@ and the answer was upstream of everything I had been fixing:
 
 **0 of 50 live traces carry a signature at all.**
 
+⚠ **CORRECTION (same session).** That number is wrong as stated, and the
+error is the one this whole investigation is about. The
+`/v2/activities/executions` LIST endpoint does not project the `signature`
+column at all — its field set is activity_id, cost_usd, created_at,
+duration_ms, executed_at, execution_id, execution_trace, impulses_*, org_id,
+status, stored_at, success, template_id, tokens_*, updated_at, variant_id.
+**I measured a projection and reported it as data.** The signature is
+selected explicitly elsewhere (`execution-traces.ts:4484`). The tier-2/3 key
+defect is real and independently confirmed by unit probe (P10: `[]` where
+`['goal']` was required, now 7/7 green), but the "0 of 50" figure does not
+support it and is withdrawn.
+
+**A field absent from a response is not a field absent from the row.**
+
 `deriveSignatureShapes` tier 2 read `input_impulse_shapes` / `inputShapes` off
 each task, while `normalizePersistedTask` writes **`input_shapes`**. Zero key
 intersection, so tier 2 could never fire on a stored row and every trace fell
