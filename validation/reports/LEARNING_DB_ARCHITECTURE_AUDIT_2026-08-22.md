@@ -18,14 +18,107 @@ blocked for embedding a key-extraction recipe, and that pattern was not rebuilt.
 
 ## The one-line finding
 
-**The system mints far faster than it executes, and nothing stops it.** 3,856
-activities exist; 817 have ever been selected and the durable trace corpus knows
-274 of them. The gate that is supposed to hold the line — the promote gate's
-k-nearest-neighbour quality projection — **fires on 0.56% of promotions**, and in
-the system's entire history exactly **one** template was ever refused on quality
-grounds. Everything else downstream (a posterior that will not concentrate, a
-pathway-reuse corpus of one, an extraction tier at zero rows) is a consequence of
-admitting nearly everything into a population that is never culled.
+**Nothing the system does ever becomes something it knows.** The ribosome — the
+only mechanism that converts a successful execution into reusable structure, and
+the origin law 4 reserves for activities — has produced, in its entire recorded
+history, **two empty templates**, both named `extracted-validator-dispatch`,
+written 22 seconds apart on 2026-07-22, extracted from two executions with
+`successRate: 0`, carrying `tasks: []` and `impulses: []`, into a table with
+**zero readers**.
+
+Meanwhile minting continues unchecked from the *other* direction: 3,856 activities
+exist, **1.2% carry execution provenance and 51% were minted by the gap-closing
+path**. So the corpus is not made of things that worked — it is made of things
+that were proposed. And because `activity.ev` is identically `0.5` on every row,
+the candidate prefilter that feeds Thompson orders by **pure recency**, showing
+the selector the newest unearned arms first.
+
+That is the growth trap, and it is a closed loop:
+
+```
+  extraction lands nothing  →  no earned pathways enter the corpus
+            ↑                                    ↓
+  posterior never concentrates  ←  prefilter shows newest-minted arms first
+            ↑                                    ↓
+     evidence splits 21 ways  ←  uncontrolled minting fills the gap
+```
+
+## The root cause, traced end to end
+
+Three sequential blockers. Each is independently verified with a positive
+control, and each alone is sufficient — so fixing only one changes nothing.
+
+**Blocker 1 — 69% of executions never receive a reach tag.** The ribosome
+correctly refuses to extract from an execution it cannot confirm was honestly
+reached (law 4). Over 6 hours of live logs it re-read 531 verdicts:
+
+```
+    364  verdict=ungraded      (no-reach-tag, after 5 attempts)
+    127  verdict=not-reached
+     40  verdict=reached
+    491  "extraction SKIPPED (not honestly reached)"   = 364 + 127 exactly
+```
+
+The gate is working as designed. It is starved because the reach verdict is not
+landing on the execution record, so `event_success=true` executions come back
+`ungraded` and are correctly refused.
+
+**Blocker 2 — 88% of the extractions that *are* attempted come back hollow.**
+The 40 that pass the gate get an `extraction ALLOWED` → `Dispatching
+ribosome-extract` → `dispatchId` chain. Those dispatches land in `execution` as:
+
+| status | reached | n |
+|---|---|---|
+| success | **false** | **90** |
+| success | true | 10 |
+| success | null | 1 |
+| failure | null | 1 |
+
+**101 of 102 carry a `failure_mode` while reporting `status: 'success'`** — the
+sampled row shows `failure_mode: {type: 'execution_error'}`, `status: 'success'`,
+`success: True`, `reached: False` on the same record. This is exactly the hollow
+completion CLAUDE.md warns about, and because dashboards grade on `status`, the
+substrate sees 101 successes.
+
+*Positive control:* `reached = true` occurs 113 times fleet-wide and 10 times for
+`ribosome-extract` itself, so `reached: false` is a real verdict, not an absent
+field.
+
+**Blocker 3 — even the 10 that reached minted nothing.** `ribosome-extract`
+declares `output_impulse_shapes: ['executionTraceWithSignatures']` — it emits a
+*description of the trace*, not a template. And the one table extraction output
+has ever reached, `activity_templates`, has exactly **one** code reference in the
+entire fleet (`ribosome.ts:608 INSERT INTO`) and **no reader at all**, while
+`activity_template` — singular, empty — has **six readers and no writer**. A
+one-character name difference splits the extraction path in half: output falls
+into a write-only table, and six consumers starve on a write-never one.
+
+That emptiness has a measured cost downstream: **6,928 of 6,928 posterior updates
+degrade to unweighted** because the shape-weighted credit path reads
+`activity_template`.
+
+**Supporting law-1 violation:** the ribosome logs `WARN extractionPolicy
+unresolved — falling back to maxExtractionDepth 1` and `WARN
+extractionEligibilityPolicy unresolved — falling back to literal
+[validator-dispatch, slot-binding]; three further lifecycle meta-templates exist
+unlisted`. Both policies are shapes that do not resolve, so extraction depth is
+hard-capped at 1 and eligibility is an in-process constant listing 2 of 5
+candidates — unobservable and unlearnable.
+
+**Highest-leverage fix, in order:** land the reach verdict on the execution record
+(unblocks 69% of candidates); make `ribosome-extract` produce a template shape
+rather than a trace description, and fail loudly when it does not reach; then
+reconcile `activity_templates` / `activity_template` onto one name.
+
+---
+
+## The secondary finding — nothing culls what minting produces
+
+3,856 activities exist; 817 have ever been selected and the durable trace corpus
+knows 274 of them. The gate that is supposed to hold that line — the promote
+gate's k-nearest-neighbour quality projection — **fires on 0.56% of promotions**,
+and in the system's entire history exactly **one** template was ever refused on
+quality grounds.
 
 ---
 
@@ -33,6 +126,12 @@ admitting nearly everything into a population that is never culled.
 
 | # | Finding | Plane | Impact | Confidence |
 |---|---|---|---|---|
+| 0a | Extraction lands nothing: 2 empty templates ever, from `successRate: 0` executions, into a reader-less table | trace + db | **blocks growth** | CONFIRMED |
+| 0b | 69% of executions never get a reach tag, so the ribosome's honesty gate correctly refuses them | trace | **blocks growth** | CONFIRMED |
+| 0c | 90 of 102 `ribosome-extract` runs are `status: success` + `reached: false` + `failure_mode` set | trace | **blocks growth** | CONFIRMED |
+| 0d | `activity_templates` (1 writer, 0 readers) vs `activity_template` (0 writers, 6 readers) — 6,928/6,928 credit updates degrade to unweighted | code + db | **blocks growth** | CONFIRMED |
+| 0e | `activity.ev` identically `0.5` on all 3,856 rows → candidate prefilter is pure recency before the Thompson draw | db + code | **blocks growth** | CONFIRMED |
+| 0f | Only 1.2% of activities carry execution provenance; 51% minted by the gap-closing path | db | **blocks growth** | CONFIRMED |
 | 1 | Promote gate is a rubber stamp: 83% `auto_promote`, quality projection fires 0.56% | db + code | **blocks growth** | CONFIRMED |
 | 2 | 79% of minted activities have never been selected; duplicates are semantic, not literal | db | **blocks growth** | CONFIRMED |
 | 3 | The drafter's teaching channel reads 21 concepts out of 58,066 | db + code | **degrades growth** | CONFIRMED |
