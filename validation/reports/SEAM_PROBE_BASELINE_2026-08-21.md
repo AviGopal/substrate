@@ -519,3 +519,60 @@ Each is a variant of one mistake: **treating the absence of a signal as evidence
 about the system, when it was evidence about the instrument.** That is precisely
 the defect class this seam map exists to catalogue, and I reproduced it three
 times while cataloguing it.
+
+---
+
+# Round 4 — the fourth cause, and why closure is still not demonstrable
+
+## `adc0c38` — the id form (fourth distinct cause on one lookup)
+
+Measured on the previous process: **18 `parent_lookup_miss`, 0 mints**, on
+parents that resolve on demand (`exec_28ljlzu6` →
+`development-vessel:gap-to-scenario-bridge-tick`).
+
+**Every ingest on this path is `authType=apikey` — 1,020 of 1,020.** There is
+never a JWT to borrow, so the code always takes the compat-view fallback, and
+that fallback bound the *normalized* `bareParent`. The sibling lookup in
+`backfillChildCompositionChains` (`:1463`) runs on the **same ingest path**
+against the **same view** and works — and the only difference is that it binds
+`parentExecutionId` **raw**.
+
+Now tries the raw form first (the one a working query proves correct), falling
+back to the normalized one. Both indexed, `LIMIT 1`.
+
+**Four causes, in series, on one nine-line lookup:** wrong table (12% shadow) →
+wrong column (`execution_id` does not exist on `execution`) → wrong auth context
+(root connection vs `PERMISSIONS FOR select`) → wrong id form.
+
+> **The cheaper method, learned late:** when a query fails against rows that
+> demonstrably exist, find a query that WORKS against the same table on the same
+> path and **diff them**. I reasoned forward from the schema four times; the diff
+> would have been one step.
+
+## Why closure is still not demonstrated
+
+The fix is deployed and running (PID 841110, mirrored `adc0c38` at 01:32:23), and
+the fleet is ingesting ~36 traces per 5 minutes. But:
+
+**0 of 20 recent executions carry a `parent_execution_id`.** Current traffic is
+entirely root-level ticks — `development-vessel:gap-to-scenario-bridge-tick`,
+`detect-ui-spacing-drift`, `auth_resolve_v1`, `gap-closing:*`. The derive call is
+gated on `body.parent_execution_id`, so it is **correctly** not firing. Zero
+outcomes is the right behaviour for this traffic, not evidence about the fix.
+
+A composing dispatch (`3e1feb18`, nonce `edgeprobe-1787362…`) was issued to force
+a nested child trace and was still walking at the time of writing.
+
+**Status: the seam is not closed.** What remains is not a code change — it is a
+measurement that needs a nested execution to exist. The probe is defined:
+
+```
+outcome:"derive_ok"           → the seam works
+outcome:"parent_lookup_miss"  → a FIFTH cause
+row count > 1999              → the first execution-minted edge in the graph's history
+```
+
+⚠ **A measurement error to avoid repeating:** `journalctl --since "01:32:23"`
+silently returned nothing while `--since "5 min ago"` returned 36 ingests over
+the same window — the journal is UTC and `--since` reads local time. I briefly
+concluded "no traffic" from that. **Prefer relative windows.**
