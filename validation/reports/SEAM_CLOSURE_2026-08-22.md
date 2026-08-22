@@ -18,12 +18,20 @@ the root is `/workspace/git/super-repo`. Every relative path therefore resolved
 somewhere the caller never named and was rejected.
 
 **Why it mattered.** `repos/<vessel>/src/…` is the exact form CLAUDE.md tells
-callers to use and the form `feature_compose` emits. The substrate could not
-write vessel source at all, which makes the stated autonomy criterion — a
-substrate-authored commit landing with no operator hands — structurally
-unreachable. Observed live as `fs_edit: HTTP 500 path outside workspace root:
-repos/identity-vessel/src/index.ts` against a file that exists, across four
-distinct vessel-source paths in six hours.
+callers to use and the form `feature_compose` emits. Observed live as `fs_edit:
+HTTP 500 path outside workspace root: repos/identity-vessel/src/index.ts` against
+a file that exists, across four distinct vessel-source paths in six hours.
+
+**Scope of the claim, corrected.** An earlier draft said this made the autonomy
+criterion "structurally unreachable". **It did not**, and the measurement says so:
+`git log --author='Substrate Autonomous'` shows **10 substrate-authored commits in
+the preceding 7 days** (08-15, 08-18 ×6, 08-20, 08-22). Autonomy was never at
+zero. What was blocked is the `fs_edit` route specifically — the walk's
+edit-intent path through goal-host. The commits that were landing came via
+`apply_proposal_as_patch + vessel_mitosis_cutover`, a different resolver that
+never touched this guard. The 09:18 substrate-authored commit observed during this
+session is consistent with the pre-existing rate and is **not** evidence that this
+fix enabled it.
 
 **The fix** (`development-vessel@89a7bf3`). Resolve a relative path against each
 candidate root, and *return* the resolved absolute path so callers stop operating
