@@ -32,8 +32,31 @@ IDS="$(curl -s -m 5 -X POST -H "Authorization: ApiKey $KEY" -H 'Content-Type: ap
           and (($vid | contains("@") | not) or (($sub != "") and ($vid | endswith("@" + $sub)))))
       | $vid' 2>/dev/null || true)"
 
+# REPORT WHETHER ANYTHING WAS ACTUALLY REMOVED.
+#
+# This ended in an unconditional `exit 0`, and the only difference between "I
+# removed the registry row" and "there was nothing here to remove" was whether a
+# log line happened to appear. `vessel-ctl deregister` reads the exit status, so
+# it answered `{"ok":true,"action":"deregistered"}` either way. Measured 2x2: a
+# registered vessel printed `removed <id>` and its row disappeared; an
+# unregistered one printed nothing, changed nothing, and reported the same
+# success.
+#
+# Exit 2 for "found nothing" rather than 1: the caller must be able to tell an
+# idempotent no-op apart from a transport or auth error, and treating a
+# no-op as a hard failure would make repeat deregistration look broken.
+_removed=0
 for id in $IDS; do
-  curl -s -m 5 -X DELETE -H "Authorization: ApiKey $KEY" "$DISCOVERY/vessels/$id" >/dev/null 2>&1 \
-    && echo "[discovery-deregister] removed $id"
+  if curl -s -m 5 -X DELETE -H "Authorization: ApiKey $KEY" "$DISCOVERY/vessels/$id" >/dev/null 2>&1; then
+    echo "[discovery-deregister] removed $id"
+    _removed=$((_removed+1))
+  else
+    echo "[discovery-deregister] DELETE failed for $id" >&2
+    exit 1
+  fi
 done
+if [ "$_removed" -eq 0 ]; then
+  echo "[discovery-deregister] no registry entry matched '$NEEDLE' — nothing to remove" >&2
+  exit 2
+fi
 exit 0

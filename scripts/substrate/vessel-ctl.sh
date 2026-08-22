@@ -274,10 +274,16 @@ case "$ACTION" in
     if ! csh "systemctl cat '$(unit_of "$VESSEL")' >/dev/null 2>&1" 2>/dev/null; then
       echo "{\"ok\":false,\"error\":\"no such unit '$(unit_of "$VESSEL")' in this fleet — try: vessel-ctl status\"}"; exit 1
     fi
-    if ! csh "/usr/local/bin/discovery-deregister '$VESSEL'"; then
-      echo "{\"ok\":false,\"action\":\"deregister\",\"vessel\":\"$VESSEL\",\"error\":\"discovery-deregister failed\"}"; exit 1
-    fi
-    echo "{\"ok\":true,\"action\":\"deregistered\",\"vessel\":\"$VESSEL\"}"
+    # Three outcomes, three replies. The unit existing is not the same as the
+    # unit being REGISTERED, so "deregistered" was reported for a vessel that had
+    # no registry row and nothing changed. discovery-deregister now exits 2 for
+    # that case, distinct from 1 for a transport or auth error.
+    csh "/usr/local/bin/discovery-deregister '$VESSEL'"; _dr=$?
+    case "$_dr" in
+      0) echo "{\"ok\":true,\"action\":\"deregistered\",\"vessel\":\"$VESSEL\"}" ;;
+      2) echo "{\"ok\":true,\"action\":\"noop\",\"vessel\":\"$VESSEL\",\"note\":\"no registry entry matched — nothing to remove\"}" ;;
+      *) echo "{\"ok\":false,\"action\":\"deregister\",\"vessel\":\"$VESSEL\",\"error\":\"discovery-deregister failed\"}"; exit 1 ;;
+    esac
     ;;
 
   uninstall)
