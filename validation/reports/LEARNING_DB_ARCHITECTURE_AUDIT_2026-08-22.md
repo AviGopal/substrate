@@ -189,14 +189,34 @@ refutations:
 | table | writers | readers | rows | verdict |
 |---|---|---|---|---|
 | `activity_templates` (plural) | 1 (`ribosome.ts:608`) | 0 | 2 | **legacy sink**, untouched since 2026-04-02; not the live path |
-| `activity_template` (singular) | 0 | 6 | 0 | empty, and the shape-weighted branch never fires — but **no posterior update was degraded by it** |
+| `activity_template` (singular) | 0 | 6 | 0 | empty; the shape-weighted credit branch it gates has **never executed** — 0 firings vs 7,261 control *(replicated)* |
 
-The **6,928/6,928 unweighted-posterior figure is REFUTED** and is withdrawn. Its
-observational legs reproduce (the table is empty; the branch logs zero times); its
-causal conclusion does not. What remains true and narrower: `paradigm.ts:902`
-reads `FROM activity_template` and hardcodes `input_shapes: []` with the comment
-"Legacy templates don't have shapes", so that path is shape-blind by construction
-— it just is not on the hot path for credit.
+**The shape-weighted credit branch has never executed.** I first published this as
+"6,928/6,928 posterior updates degraded", the verifier refuted the word
+*degraded*, and I over-corrected by withdrawing the finding entirely. Running the
+finder's own probe settles it — the observational fact is solid and worth keeping:
+
+```
+  shape-weighted branch fired:       0
+  POSITIVE CONTROL (same try-block): 7,261
+  activity_template counters:        0
+```
+
+`execution-traces.ts:3068` reads `SELECT output_shapes FROM activity_template`,
+and the shape-match-weighted α/β branch at `:3087` is gated on that result. The
+table has 0 rows, so the branch has **never once run**, while
+`applyOutcomeToPosteriors` in the same try-block has fired 7,261 times.
+
+The verifier was right that nothing was *degraded* — there was no working
+weighted path to fall from. The accurate statement is that a designed capability
+has never been reachable: **every Thompson credit update in this system's history
+has been unweighted**, and the shape-match weighting that was built for it is
+dead code behind an empty-table read. Same for the `activity_template` counter
+update at `:3135` — 0 firings.
+
+Related and narrower: `paradigm.ts:902` reads `FROM activity_template` and
+hardcodes `input_shapes: []` with the comment "Legacy templates don't have
+shapes", so that path is shape-blind by construction too.
 
 **Supporting law-1 violation.** The ribosome logs `WARN extractionPolicy
 unresolved — falling back to maxExtractionDepth 1` and `WARN
@@ -360,7 +380,7 @@ signature of an audit reaching for impact rather than measuring it.
 | claim | verdict |
 |---|---|
 | "extracted templates are never selectable, graded, or composed" | **REFUTED.** 427 `learned-*` activities, 100 with moved posteriors, 36 executed. Rewrote the headline. |
-| "`activity_template` emptiness degraded 6,928/6,928 posterior updates" | **REFUTED (causal).** Table empty and branch never fires, but no update was degraded. Figure withdrawn. |
+| "`activity_template` emptiness degraded 6,928/6,928 posterior updates" | **REFUTED on the word "degraded" only.** Nothing fell from a working state — but the shape-weighted branch has fired **0** times against a **7,261** positive control, so every credit update ever made was unweighted. Restated, not withdrawn *(replicated)*. |
 | "`routing_trace`'s dead writers make the health scorer silently credit full routing weight" | **REFUTED and inverted.** `vessel-health.ts:59` returns early at score 0. It under-credits, not over-credits. |
 | "`activity_metrics` is a phantom table read by the live scores endpoint" | **REFUTED.** `app.get('/scores')` is registered twice on the same Hono instance; the handler that reads it is shadowed dead code. |
 | "`circuit_breaker_trace` field mismatch gives vessels undeserved health credit" | **REFUTED and inverted.** `vessel` has 0 rows, so the scorer pins `circuitBreaker = 0`, status `unhealthy`. |
