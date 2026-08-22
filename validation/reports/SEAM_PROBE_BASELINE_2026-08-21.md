@@ -1033,7 +1033,29 @@ The signature-tier fix is working end to end:
 - `context_thompson_scores` holds **2,392** v1 rows
 - the reader's key is well-formed 16-hex and derived server-side
 
-But `cts_sig_lookup` still reports `hits: 0`, and a direct comparison shows why:
+⚠ **CORRECTION — my first reading of this was wrong.** I compared two unrelated
+`LIMIT 8` samples, saw no overlap, and called it a design question. Queried
+properly, **credit IS being written under the current trace signatures**:
+`c290727db0b9bf94` carries rows with **257,338 observations**, and v1 rows were
+updating seconds before the check. Two arbitrary samples not intersecting is not
+evidence that two key spaces do not intersect — the same
+absence-of-signal-as-evidence error this whole report catalogues, made once more
+at the very end.
+
+The real evidence, testing the reader's own keys against the table directly:
+
+```
+c290727db0b9bf94  (a live TRACE signature)   -> 1 row  ["validator-dispatch"]
+81833a50c983bc2a  (a READER-derived key)     -> 0 rows
+5061a2ff297c5346  (a READER-derived key)     -> 0 rows
+```
+
+The query mechanism is **sound** — the writer's key returns its row on the first
+try. The reader derives signatures the writer never produces. That is the
+semantic gap, now shown rather than assumed, and the id form is NOT involved:
+the v1 reader already binds both prefixed and bare variants.
+
+The original (weaker) comparison follows:
 
 ```
 cts buckets: 867524c1…  25859e96…  4d11f0ba…  47468ef5…
