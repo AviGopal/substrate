@@ -520,3 +520,111 @@ into dispatch. Closing it means returning the pair and threading it to the trace
 repos, and this session has twice been caught by moving fast on this codebase — once by a
 guard I had not read, once by an autonomous commit silently half-reverting a fix. The work
 is small and now fully specified; it deserves a fresh pass, not a tired one.
+
+
+---
+
+# Round 3 — the four remaining seams
+
+Prompted by a stop-gate correctly refusing round 2: three seams were listed open and one
+specified-but-deferred. All four are now resolved, though two resolved by being
+**re-measured out of existence** rather than repaired — which is the more useful outcome.
+
+## 1. `v_activity_score` missing — CLOSED
+
+`GET /v2/activities/corpus-summary` selected `FROM v_activity_score`, a view absent from
+the database. SurrealDB reports a missing table as an empty one, so the endpoint returned
+a healthy 200 with **every count at 0** and `avg_belief` at its 0.5 default.
+
+Fixed by pointing it at the surviving producer rather than resurrecting the view:
+
+| | before | after |
+|---|---|---|
+| total_activities | 0 | **3,275** |
+| total_executions | 0 | **1,560,649** |
+| total_successes | 0 | **637,961** |
+| avg_belief | 0.5 (default) | **0.435** |
+
+**Not restored deliberately.** It was a live aggregate `FROM execution` — the hot trace
+table — and migration 165 removed its sibling `v_activity_score_enhanced` for exactly that
+reason. Re-creating it would reintroduce write amplification on the busiest table in the
+system to serve one reporting endpoint. Its own header declared it a replacement for
+`variant_performance_metrics`, which is the table that actually won. Law 3: reuse the
+existing producer.
+
+*Self-inflicted trap worth recording:* the first version of the test matched
+`FROM v_activity_score` in the fix's **own explanatory comment** and reported the defect as
+live. The test now strips comment lines. Same "a comment describing a defect was written by
+whoever fixed it" class this codebase has hit before — caught by the test failing on
+correct code.
+
+## 2. "69% missing reach tags" — WITHDRAWN, it was measured over the wrong population
+
+The published claim was that 69% of executions never receive a reach tag, starving the
+ribosome's honesty gate. Re-measured against the population that *should* carry a verdict:
+
+| population | graded | ungraded | |
+|---|---|---|---|
+| **goal-shaped executions** | **285** | 76 | **79% graded** |
+| goal-host walks (incl. intermediate steps) | 373 | 1,700 | 18% |
+| everything else | 0 | 1,395 | 0% — correct, not goals |
+
+The 76 ungraded goal executions are all `auto-bridge-*` — **intermediate walk steps**.
+Reach is a property of a goal, not of each step, so they are correctly ungraded. The
+ribosome consumes `execution_completed` for *every* execution — non-goals and intermediate
+steps included — so the "69%" was measured over the firehose, not over the gradable set.
+
+**The reach gate is not the extraction bottleneck.** That remains downstream: 90 of 102
+`ribosome-extract` runs return `status: success` with `reached: false`.
+
+## 3. `correlation_id` — CLOSED in code, end-to-end observation pending
+
+Both ends of the join were already built; nothing carried the value between them because
+`recommendExcluding` returned the template id alone and discarded the rest of the
+recommendation. Measured before: `correlation_id` on **0 of 8,650** non-auth executions,
+and `v_selection_outcomes` holding 226 rows of which **not one carries an outcome field**.
+
+The id now rides the prefixed-tag provenance channel the walk already uses
+(`dispatcher_used:`, `state_signature:`, `edit_intent:`), so no schema change was needed.
+
+**Attribution correctness is the load-bearing property, not presence.** The id is captured
+*inside* the selection branch — after the exclusion and shape filters, in the block that
+returns the chosen id — so it belongs to the recommendation actually picked, and it is
+re-stamped per retry attempt. Reporting the first recommendation's id while executing a
+different arm would attribute an outcome to a decision never taken: worse than no link.
+Conviction covers both failure modes (dropping the tag fails 1 test, dropping the
+attribution fails 2).
+
+**Not yet observed live.** Deployed at `547383a`; since then exactly one execution has
+occurred and it took the **satisfier** path, which bypasses `recommendExcluding` entirely
+and therefore legitimately carries no correlation id. Verification needs a
+Thompson-selected execution. Recorded as pending rather than claimed.
+
+*Scope note surfaced by that probe:* satisfier picks never pass through recommend, so they
+will never carry a correlation id by construction. Any measure of "decisions graded as
+decisions" must exclude them or count them separately.
+
+## 4. Conditional-tier sparsity — CHARACTERIZED as structural, not a wiring defect
+
+Tier 2 (cluster) exists to absorb tier 1b's signature sparsity. It cannot, and the reason
+is structural rather than a broken join.
+
+The dependency chain is: **credit writes `context_thompson_scores` → the backfill writes
+`signature_embedding` → `signature-cluster-tick` clusters those embeddings → tier 2 can
+serve.** Every link is keyed on signatures the credit path already saw.
+
+Verified directly on three live selection signatures: the only one with an embedding
+(`0bcbfdf2c58a0ca2`) is exactly one of the two that already exist in the credit store. The
+other two have neither embedding nor cluster assignment.
+
+**So the fallback is only available where the primary already works.** A selection-time
+signature that has never been credited is not merely unclustered — it was never a candidate
+for clustering. Compounding it, 403 of 706 assignments (57%) are `contaminated: true`,
+which disables the tier by design.
+
+Closing this is a **design change, not a repair**: it needs an embedding computed for an
+unseen signature and a nearest-cluster lookup at selection time. `signature_embedding`
+exists and clustering is already embedding-based, so the machinery is present — but there
+is no `nearestCluster`/`assignCluster` entry point anywhere in the source, and adding
+embedding computation to the recommend hot path is a latency decision, not a wiring fix.
+Left for a deliberate design pass with the mechanism precisely located.
