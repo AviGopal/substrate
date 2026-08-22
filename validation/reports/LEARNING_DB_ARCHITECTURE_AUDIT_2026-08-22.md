@@ -40,6 +40,50 @@ are against `substrate-live` (booted 2026-08-21T12:24 UTC).
 > works, is selected, and is graded. The corrected finding below is narrower,
 > dated, and considerably more actionable.
 
+**The learning loop is severed on both sides of the selector.** The substrate
+computes a rich graded posterior, stores it, and then does not use it — and
+cannot connect any selection it makes to the outcome that follows.
+
+**Inbound — the graded posterior never reaches the sampler.** The credit path
+maintains genuinely deep evidence in `variant_performance_metrics`: fractional,
+credit-weighted values like `α=493.83, β=897.23` (≈1,391 observations on one arm),
+`α=13.17, β=169.60`, `α=89.38, β=122.55`. What the sampler actually logs at
+selection time, live today, are small integers:
+
+```
+  sampler logged          stored graded posterior
+  α=4.0  β=1.0            α=493.83  β=897.23
+  α=5.0  β=1.0            α=13.17   β=169.60
+  α=5.0  β=1.0            α=89.38   β=122.55
+```
+
+Different magnitudes and different value *types* — integer counts versus
+credit-weighted fractionals. The sampler is not reading the graded table.
+**5,979 of 26,529 selections (22.5%) logged the exact neutral prior α=1, β=1.**
+Every lesson the credit path learns is discarded at the moment of use.
+
+**Outbound — no selection can ever be joined to its outcome.**
+`thompson_selection_log.execution_id` is a placeholder minted at recommendation
+time, `recommend-<ts>-<idx>`:
+
+```
+  execution_id: 'recommend-1787376611094-19'
+  correlation_id: 'sel_1787376611094_y7jg4t_19'
+```
+
+**Zero `execution` rows carry an id beginning `recommend-`.** *Positive control:*
+6,970 rows begin `exec_`, so the predicate works. All **26,529** selections are
+structurally unjoinable to any result, and the `correlation_id` designed to close
+that link is never written back on the outcome side.
+
+So attribution is not *incorrect* — it is **impossible**. That is the direct
+answer to the audit's attribution question, and it sits upstream of every other
+finding here: an arm cannot be credited for an outcome the system cannot attribute
+to it, and a posterior the sampler never reads cannot influence a draw. *(Both
+legs replicated.)*
+
+---
+
 **Extraction has collapsed to a trickle.** The ribosome dispatches ~96 extractions
 a day and the learned corpus has grown by **two templates in three weeks**:
 
@@ -171,6 +215,13 @@ fail loudly when it does not reach; reconcile `activity_templates` /
 
 | Finding | Evidence |
 |---|---|
+| **The sampler does not read the graded posterior** — logs integer counts while the store holds credit-weighted fractionals | α=4/β=1 logged vs α=493.83/β=897.23 stored; 22.5% of selections at the neutral prior *(replicated)* |
+| **All 26,529 selections are unjoinable to their outcomes** — `execution_id` is a `recommend-<ts>-<idx>` placeholder | 0 execution rows match; 6,970 `exec_` rows as positive control *(replicated)* |
+| The `consumedInChain=0` abstention withholds **both** α and β, so the whole satisfier class is learning-inert | re-dated prior #4, still live |
+| `execution` is a 150,000-row FIFO ring **at cap**; an auth storm at ~20,000/hr wrote 143,042 rows and flushed ~2 months of history | `trace_store_counters` cap=150000, row_count=150022 |
+| Every composite index whose prefix ends in `success` returns zero rows, so the stratified retention sweep deletes nothing — the root enabler of the ring filling with auth noise | `WHERE activity_id = $x AND success = <bool>` → 0 rows in 1–3ms; each clause alone returns correct counts |
+| 5,378 refusals are read by nothing but an audit endpoint — the shape-gap demand signal vanishes | `refusal_events` consumed only by `GET /v2/activities/refusals/stats` |
+| The hook-subscriber exclusion guards the leaf credit path and is bypassed on the chain-credit path | `writeAncestorDelta` has no `HOOK_SUBSCRIBER_PATTERN` test |
 | Extraction yield has collapsed to ~0.1% — 2 mints in 3 weeks against ~96 dispatches/day | 427 learned activities exist, last two 2026-08-21 after a 21-day gap *(replicated)* |
 | `activity.ev` identically `0.5` on 3,856/3,856 rows → prefilter is pure recency | `discover-by-shapes.ts:235` `ORDER BY ev DESC, created_at DESC`, truncated **before** the Thompson draw |
 | Only 1.2% of activities carry execution provenance; 51% minted by gap-closing | law 4 inverted at the source |
