@@ -333,3 +333,107 @@ motivated the whole investigation are not yet explained end to end.
 
 That is the honest state: a real defect, really fixed, whose behavioural
 consequence remains unproven. It is recorded as open rather than closed.
+
+
+---
+
+# Round 2 — the decay, and why the open question closed differently than expected
+
+## The α=4.0/β=1.0 draw is explained. It was never a read failure.
+
+The previous round left one thing explicitly open: draws logged α=4.0/β=1.0 while the
+score fetch was demonstrably returning 36–60 rows. Both facts were true. The missing
+piece is **selection-time posterior decay**, applied *after* the fetch and *before* the
+draw:
+
+```
+alpha_decayed = 1 + (alpha - 1) * 0.5^(age_days / halfLife)      halfLife = 3
+```
+
+Reproduced exactly against the sampler's own log:
+
+| arm | stored | stale | decays to | + boost 3.0 | logged |
+|---|---|---|---|---|---|
+| `detect-vessel-code-drift` | 23.76 / 10.86 | 33.9d | 1.009 / 1.004 | **4.009 / 1.004** | 4.0 / 1.0 |
+| `operator-mcp-isomorphism-probe` | 21.62 / 18.22 | 25.8d | 1.054 / 1.045 | **4.054 / 1.045** | 4.0 / 1.0 |
+
+**β pinned at exactly 1.0 on every observation was the tell.** The posterior was fetched
+correctly, then decayed to the uniform prior before it could be sampled.
+
+## The cost, corpus-wide
+
+Over the 1,821 arms carrying real evidence (α+β > 4), at the in-force 3-day half-life:
+
+| staleness | arms | evidence retained |
+|---|---|---|
+| <1d | 81 | ~100% |
+| 3–7d | 3 | 20% → 0.4% |
+| 14–30d | 409 | 3.9% → 0.098% |
+| **>30d** | **1,328** | **<0.098%** |
+
+**95.4% retain under 5%. The median arm retains 0.0002%.**
+
+This is the mechanism behind "learning does not compound," stated precisely: the credit
+path accumulates evidence correctly, and the selector forgets it faster than arms
+re-execute. The corpus is bimodal — a small hot set runs constantly and never decays, a
+large cold set runs on a cycle of weeks and is erased between draws.
+
+**Origin:** the constant is documented as matching "the llm-resolver-vessel decayedCounts
+fix this mirrors." LLM resolver arms fire many times an hour; 3 days barely touches them.
+Activity templates fire on a cycle of weeks. **A constant calibrated for one population
+was applied to a population with a completely different cadence.**
+
+## Why the obvious fix is wrong — and how I found that out
+
+I raised the default to 30 days. `substrate-pull-sync` **refused to converge** and named
+the reason: `test/posterior-decay.test.ts` already pins that a posterior poisoned by a
+transient outage — α=1, β=81, i.e. 80 failures the arm did not earn — must heal to
+re-selectable within 30 days.
+
+That requirement is real, predates me, and raising the half-life silently overrides it.
+The gate was right; moving without reading it was my error, and it is the second time this
+session that a guard caught something my own checks missed.
+
+**One constant is doing two incompatible jobs:**
+
+- **R1** wants *fast* forgetting, so unearned blame heals.
+- **R2** wants *slow* forgetting, so earned credit compounds.
+
+A symmetric exponential toward (1,1) treats an earned 23.76/10.86 and an outage-poisoned
+1/81 identically, so satisfying either breaks the other. This is now proved rather than
+asserted: swept across 15 half-lives from 0.5 to 1,000 days, **the set satisfying both is
+empty**, with a monotonicity check (the requirements move in opposite directions) and a
+positive control (each is individually satisfiable, so the empty intersection is a real
+conflict rather than an impossible pair of asks).
+
+**Rejected on evidence, recorded so it is not re-derived:** decaying β faster than α. The
+asymmetry is tempting — blame is contaminated by outages, credit is earned — but it
+systematically inflates every arm's mean, and *"no failure evidence reaches the draw"* is
+the precise defect this whole investigation started from. It would deepen the failure it
+appears to fix.
+
+**Left at 3, deliberately.** The resolution is a design decision, and most likely belongs
+upstream: blame recorded during an infrastructure outage is not the arm's fault, and decay
+is a workaround for attributing it in the first place. Fixing attribution removes the need
+for aggressive forgetting, which dissolves the conflict instead of trading sides.
+
+The test file is a characterization: change the half-life and it fails, sending the next
+reader to the conflict rather than letting the change land silently.
+
+## Corrections to the previous round, from reading the code rather than inferring
+
+**The `correlation_id` seam is smaller than I published.** I wrote that the ingest schema
+strips the field and that the fix is "three coordinated changes." Both wrong:
+
+- The trace-store route reads `body.*` **directly** and deliberately does *not* apply
+  `StoreExecutionTraceRequestSchema` — there is a comment saying so, because enforcing it
+  would 400 the flat posters that currently work. So the schema strips nothing here.
+- The route **already passes the field through**:
+  `...(body.correlation_id ? { correlation_id: body.correlation_id } : {})`, commented
+  "Selection-to-execution correlation (from /recommend endpoint)".
+- `/recommend` **already returns** `rec.correlation_id` per recommendation.
+
+So six of seven stages are built and the storage side is complete. The single remaining
+gap: **goal-host never reads `correlation_id` off the recommendation** (zero occurrences
+in its source), so nothing downstream can send it. One producer chain, not three
+coordinated schema changes.
