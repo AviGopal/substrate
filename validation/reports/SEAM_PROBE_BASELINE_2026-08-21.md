@@ -762,3 +762,40 @@ SurrealQL console or a scoped debug route):
 ⚠ **The honest summary of this seam: I improved the instrument five times and
 the query four times, and the thing I never did was run the statement by hand.**
 Every deploy cycle was a guess dressed as a measurement.
+
+## Round 7 — unifying the auth context collapsed the false green
+
+Making the verification read use **the same connection as the write** settled the
+contradiction immediately:
+
+| instrument | derive_ok | derive_wrote_nothing |
+|---|---|---|
+| verify on **root**, write via JWT | 30 | 1 |
+| verify on **the write's own connection** | **0** | **23** |
+
+And the payload names the defect exactly:
+
+```
+row_present: true
+execution_count: 3782
+stale_updated_at: 2026-08-18T05:48:08Z
+```
+
+**The row exists, is found by the same connection that just wrote, has a large
+execution_count — and its `updated_at` is four days old.** So the `UPDATE …
+WHERE` matches nothing while the identical `SELECT … WHERE` matches. The
+remaining defect is in the UPDATE's predicate or its interaction with the
+disjunction, not in the lookup, the parse, the auth, or the id form.
+
+★ **The 30 `derive_ok` were an artifact of the instrument, not a property of the
+system.** Checking a write through a different auth context than the write used
+produced a green that meant nothing — a fabricated success indistinguishable
+from a real one, which is precisely the failure class this entire seam map
+exists to catalogue. I built it into my own detector twice: once asserting
+existence instead of mutation, once reading through the wrong connection.
+
+**Net for this round: the seam is still not closed, but it is no longer
+ambiguous.** Every prior reading was contaminated; this one is clean, and it
+isolates the defect to a single statement. `execution_count: 3782` also shows
+these pairs are heavily exercised — the edge weight this seam would learn is not
+marginal.
