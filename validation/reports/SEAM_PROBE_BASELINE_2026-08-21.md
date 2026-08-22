@@ -946,3 +946,80 @@ Run the exact `UPSERT` by hand against the database with the exact parameters an
 read the returned slots. Every hypothesis reachable from application code is
 exhausted; this is a five-minute operation with a console and unreachable
 without one.
+
+---
+
+# ✅ CLOSED — the composition seam mints edges
+
+```
+edges 1999 → 2004      49 derive_ok      0 derive_wrote_nothing
+activity:⟨slot-binding⟩ → activity:⟨validator-dispatch⟩
+  execution_id: exec_1pn635lk   execution_count: 48
+```
+
+**The first execution-minted composition edges in the system's history.** Every
+prior row in the table came from the batch reconciler; this one carries a real
+dispatch's execution id and its count is climbing on live traffic. (Probe rows
+written during diagnosis were deleted afterwards; the table settled at 2002,
+i.e. 3 genuine new edges above the 1999 baseline.)
+
+## What actually ended it
+
+**Running the function in isolation** — twenty minutes of work I could have done
+before any of the eleven deploy cycles:
+
+| probe | result |
+|---|---|
+| the UPSERT alone, root client | wrote the row, 1999 → 2000 |
+| the function, parent id from `SELECT execution_id FROM execution` | wrote nothing |
+| the function, parent id from `SELECT VALUE meta::id(id) FROM execution` | **wrote the edge, 2000 → 2001** |
+
+The third line named the defect in one shot. `execution` has no `execution_id`
+column, so the row came back without it, the parent argument was empty, and the
+function returned early — the same fact found at cause 2 and never fully
+applied, because I kept fixing the *lookup's* form instead of checking what the
+lookup actually returned.
+
+## The full causal chain — twelve causes on one function
+
+1. lookup on a 12% shadow table · 2. `execution_id` is not a column ·
+3. read on root vs `PERMISSIONS FOR select` · 4. over-normalized id ·
+5. wrong qualifier table · 6. **`IF(a,b,c)` never parsed** ·
+7. instrument asserted existence, not mutation · 8. instrument read on a
+different connection than the write · 9. bound params vs interpolated literals ·
+10. **`query()` never checks statement status — fleet-wide** ·
+11. write ran under a JWT the table's permission rejects ·
+12. **verification read a different record than the write wrote**
+
+**Three of the twelve (7, 8, 12) were defects in my own instrument**, and each
+produced a confident, precise, wrong reading — including 30 `derive_ok` that
+meant nothing at all.
+
+## The method lesson, earned the hard way
+
+I ran **eleven deploy cycles** (~10 min each) guessing at statement forms. What
+worked was **executing the code directly with controlled inputs**. The rule for
+next time:
+
+> When a call reports success and its effect is absent, do not iterate on the
+> statement. Run the function in isolation with known-good inputs, and bisect
+> the arguments. A wrong argument and a wrong statement look identical from
+> outside, and only one of them is visible from the logs.
+
+Cause 10 stands as the widest finding of the night and is **not** specific to
+this seam: `surrealDB.query()` returns `result[0]` and never inspects
+per-statement status, so **any** rejected write in the fleet reads as success.
+`queryRaw()` now exists for callers that must know.
+
+## Final state
+
+| seam | status |
+|---|---|
+| hop-4 content threading | ✅ closed — 9 real read-backs / 0 stubs |
+| NULL≠NONE | ✅ closed — SF_BLEND `null → 1` |
+| ψ refusal | ✅ closed — 11 blends / 10 min |
+| signature tiers | ✅ fixed — 7/7 regression suite |
+| trace-spool isolation | ✅ closed — verified |
+| lint gate | ✅ closed — convicts |
+| **composition edges** | ✅ **closed — 49 derive_ok, edges minting** |
+| credit conditional read | ⏳ open — `hits:0`, needs post-fix traces to accumulate signatures |
