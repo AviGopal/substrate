@@ -807,15 +807,17 @@ changes nothing. It reports each action it takes (`stopped <unit> (masked by thi
 selection)`, `started <unit> (enabled by this selection)`), so an apply that
 prints no action lines is a genuine no-op rather than a silent failure.
 
-> That contract was not honoured for units whose healthy resting state is
-> `inactive` — completed seeders, and anything systemd skipped via
-> `ExecCondition` (an LLM arm with no provider key, the desktop units on a base
-> image). `apply` started them, they went back to `inactive` seconds later, and
-> the next `apply` started them again: seven standing `started` lines on every
-> run of a converged default fleet, against which a real action line was
-> invisible. `apply` now asks systemd what it decided and reads the inventory
-> role, so those units are left alone. If you are on an older image, expect the
-> seven and do not read them as drift.
+Units whose healthy resting state is `inactive` are left alone: completed
+seeders, and anything systemd skipped via `ExecCondition` (an LLM arm with no
+provider key, the desktop units on a base image). `apply` asks systemd what it
+decided and reads the inventory role rather than treating "inactive" as "should
+be started".
+
+> **On an image older than this behaviour**, a converged default fleet prints
+> seven `started` lines on every run — the three seeders, `llm-google`, and the
+> three desktop units — each going back to `inactive` seconds later. They are
+> not drift. `substrate-pull-sync` converges `vessel-ctl` from git, and the new
+> copy governs the next `docker exec` with no restart.
 
 It
 converges the *running* state, not just the enable symlinks — a unit the new
@@ -1112,11 +1114,26 @@ Nothing in the retention path performs a global `GROUP BY` or an unbounded
 **Retention config lives in activity-api** (`config.traceStore`), bootstrap-read
 from the environment because it bounds a destructive operation:
 
-| Variable | Meaning | Default |
+| Variable | Meaning | Effective value |
 |---|---|---|
-| `TRACE_STORE_CAP` | row count above which the store is flagged for reconciliation | `50000` |
-| `TRACE_STORE_HOT_WINDOW_DAYS` | recency window kept in full | `14` |
+| `TRACE_STORE_CAP` | row count above which the store is flagged for reconciliation | **`150000`** |
+| `TRACE_STORE_HOT_WINDOW_DAYS` | recency window kept in full | `3` |
 | `TRACE_STORE_RESERVOIR_PER_ACTIVITY` | stratified sample kept per activity outside the hot window | `25` |
+
+> **These are what `gen-env` pins, not what the code falls back to.** The column
+> used to carry activity-api's in-code defaults — `TRACE_STORE_CAP` `50000` — and
+> no fleet has ever run that number, because `gen-env` writes `150000` into
+> `/etc/substrate/env` on every boot and the code default only applies when the
+> variable is absent. Documenting a fallback that is always shadowed reads as
+> current configuration and is off by 3×. Confirm on the fleet you actually have:
+>
+> ```bash
+> docker exec <container> grep -E '^TRACE_STORE_' /etc/substrate/env
+> ```
+>
+> They are also among the values `gen-env` writes as fixed literals, so passing
+> `-e TRACE_STORE_CAP=…` does not change them — `gen-env` now says so on stderr
+> when it discards a supplied value.
 
 **The cadence is autonomous.** development-vessel's `trace_store_health_observer`
 reads the counters against the cap and emits a `substrateGap` in category

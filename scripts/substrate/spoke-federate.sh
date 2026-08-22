@@ -46,8 +46,28 @@ hub_resolve() { # <pointer-json>
 if [ -z "$RELAY" ]; then
   RELAY=$(hub_resolve '{"pointer":{"type":"vesselCapability","shape":"federation_probe"}}' \
     | jq -r '.content.vessels[]?.libp2p_multiaddr[]? // empty' | head -1 | sed 's#/p2p-circuit.*##')
-  [ -n "$RELAY" ] || { echo "[spoke-federate] ERROR: could not auto-derive RELAY_MULTIADDR from $HUB — pass RELAY_MULTIADDR=<addr>"; exit 1; }
-  echo "[spoke-federate] derived relay from hub ingress: $RELAY"
+  # FALL BACK TO /bootstrap — the source the transport itself uses.
+  #
+  # Deriving only from a federation-ingress registry row meant this failed with
+  # "pass RELAY_MULTIADDR" on a hub that was advertising a relay the whole time:
+  # the reader had just run the documented pre-flight
+  # (`curl $HUB/bootstrap | jq '.relay_multiaddrs | length'`) and seen a non-zero
+  # answer, then been told the value could not be found. The ingress row only
+  # exists once some vessel has already federated, so on the first join — the
+  # only time this script is needed — it is empty by construction.
+  if [ -z "$RELAY" ]; then
+    RELAY=$(curl -sm 10 "$HUB/bootstrap" | jq -r '.relay_multiaddrs[0] // empty' | sed 's#/p2p-circuit.*##')
+    [ -n "$RELAY" ] && echo "[spoke-federate] derived relay from $HUB/bootstrap: $RELAY"
+  else
+    echo "[spoke-federate] derived relay from hub ingress: $RELAY"
+  fi
+  if [ -z "$RELAY" ]; then
+    echo "[spoke-federate] ERROR: no relay found for $HUB — neither a federation ingress row nor /bootstrap advertised one."
+    echo "[spoke-federate]   check what the hub is publishing: curl -s $HUB/bootstrap | jq .relay_multiaddrs"
+    echo "[spoke-federate]   an empty array means the hub runs no relay (deploy-hub.sh), not that this call failed."
+    echo "[spoke-federate]   to pin one by hand: RELAY_MULTIADDR=<addr> (it goes stale when the relay restarts)"
+    exit 1
+  fi
 fi
 
 # FED_SUBSTRATE_ID must be unique in the hub namespace — a collision would

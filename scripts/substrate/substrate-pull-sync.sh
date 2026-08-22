@@ -286,9 +286,27 @@ converge_fleet_defs() {
     [ -f "$_cf_src/$_cf_from" ] || continue
     [ -e "$_cf_to" ] || continue   # not installed on this image; do not invent it
     cmp -s "$_cf_src/$_cf_from" "$_cf_to" 2>/dev/null && continue
+    # SAY WHEN IT ACTUALLY TAKES EFFECT, and that differs per script.
+    #
+    # This message read "takes effect at next container start — this runs
+    # pre-systemd" for every entry, which is true only of the boot-time ones.
+    # vessel-ctl is re-executed from disk on every `docker exec`, so a converged
+    # copy governs the very next invocation with no restart — measured: a
+    # container ran a vessel-ctl lacking a documented flag for about an hour,
+    # pull-sync converged it, and the new behaviour appeared on the next exec.
+    # The wrong message told a maintainer their tool could not have changed under
+    # them, which is exactly what it had done.
+    case "$(basename "$_cf_to")" in
+      vessel-ctl|gen-env|render-unit)
+        _cf_when="takes effect on the NEXT INVOCATION — this is re-executed from disk each time" ;;
+      apply-inventory)
+        _cf_when="takes effect at next container start, or immediately via 'vessel-ctl apply'" ;;
+      *)
+        _cf_when="takes effect at next container start — this runs pre-systemd" ;;
+    esac
     install -m 0755 "$_cf_src/$_cf_from" "$_cf_to.new" 2>/dev/null \
       && mv -f "$_cf_to.new" "$_cf_to" 2>/dev/null \
-      && log "fleet: converged $(basename "$_cf_to") (takes effect at next container start — this runs pre-systemd)"
+      && log "fleet: converged $(basename "$_cf_to") ($_cf_when)"
   done
 
   # THE CONVERGER MUST CONVERGE ITSELF. Every glue script above self-updates from git;
