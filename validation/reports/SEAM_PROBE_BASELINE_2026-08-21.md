@@ -420,3 +420,41 @@ then 17 more on demand.
 
 Kept rather than deleted: its subject is live (2,120 rows, 246k observations,
 still written), so removing the reader would discard a real posterior.
+
+## The credit seam's actual root cause, found by the counter that had never reported
+
+Promoting the v1 lookup from `debug` to a counted `info` line produced its first
+measurement in the system's history:
+
+```
+cts_sig_lookup  sig=81833a50c983bc2a  requested=19  hits=0
+```
+
+A correctly-formed **16-hex** state-space key — right subject, right width — with
+**zero** matching rows. That turned an unanswerable question into a specific one,
+and the answer was upstream of everything I had been fixing:
+
+**0 of 50 live traces carry a signature at all.**
+
+`deriveSignatureShapes` tier 2 read `input_impulse_shapes` / `inputShapes` off
+each task, while `normalizePersistedTask` writes **`input_shapes`**. Zero key
+intersection, so tier 2 could never fire on a stored row and every trace fell
+through to tier 3 — which keys on the **produced** pool as a proxy for the
+**input** pool, a different state space than the one `/recommend` derives on
+read-back. Tier 3 had the mirror-image defect (`output_shapes` unread), so a
+trace carrying only persisted outputs produced nothing either.
+
+So the ordering of this whole seam was: no id-form fix could ever have worked,
+because there were no keys to match. Fixed in `8f5498c` with a regression test
+(7 assertions incl. a negative control).
+
+**What each attempt actually bought:**
+
+| commit | change | verdict |
+|---|---|---|
+| `eee3074`/`ea67d91` | widen id forms on both readers | necessary, not sufficient — the bucket predicate eliminated every row first |
+| `2851bac` | promote the payoff read to a counted line | **the one that found the cause** |
+| `8f5498c` | tier 2/3 read the persisted key | the actual repair |
+
+The lesson generalises past this seam: **I fixed the same seam three times
+before instrumenting it, and the instrument found the cause in one call.**
