@@ -1081,3 +1081,36 @@ different state spaces, and no amount of key-format work makes them meet.
 Everything mechanical that could be fixed is fixed; the remaining step is a
 deliberate choice about what a conditional posterior is conditioned on. That
 belongs with the operator, not in another deploy cycle.
+
+## Credit — the exact reason the keys miss
+
+Reproduced the stored signature from its own inputs:
+
+```
+stored signature      : c290727db0b9bf94
+input_impulse_shapes  : ["lifecycle:task:completed"]
+computeStateSpaceSignature({shapes:["lifecycle:task:completed"]}) = c290727db0b9bf94  ✓
+```
+
+**The tier fix works exactly as intended** — tier 1 reads
+`input_impulse_shapes` and the hash reproduces byte-for-byte. The reason
+`/recommend` never matches is neither a bug nor a format mismatch:
+
+> **The dominant traffic is lifecycle-event executions**, whose input pool is a
+> single internal shape (`lifecycle:task:completed`). `/recommend` derives its
+> key from the caller's goal shapes — e.g. `["goal","orphaned_capability_scan"]`
+> — a state no lifecycle trace ever realizes.
+
+Both sides are correct about their own state. They are simply *about different
+executions*: the conditional posterior is dense over internal event-driven work
+(257,338 observations on that one bucket) and empty over goal-driven work,
+because goal-driven walks are a small minority of what this fleet runs.
+
+**So the credit seam is mechanically closed and empirically starved.** No further
+code change makes `hits > 0` — that needs either goal-driven traffic volume, or
+a deliberate decision to condition on something coarser than the exact input
+pool (the cluster-signature path, `context_bucket: cluster:sigcl_…`, already
+exists in the table and is the designed answer to exactly this sparsity).
+
+That is a genuine finding rather than an open defect: the machinery is correct,
+and what it lacks is data of the right kind.
