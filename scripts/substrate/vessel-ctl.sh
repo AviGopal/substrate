@@ -362,6 +362,15 @@ case "$ACTION" in
   status)
     if [ -n "$VESSEL" ]; then
       U="$(unit_of "$VESSEL")"
+      # Refuse an unknown unit, like restart/start/deregister already do. This
+      # branch printed a row for any name at all — `no-such-vessel.service
+      # inactive  Failed to get unit file state...  restarts=0` — and exited 0,
+      # so a typo was indistinguishable from a stopped vessel, and a script
+      # gating on `status` could not tell them apart either. Same existence
+      # check the mutating verbs use, so the whole surface answers alike.
+      if ! csh "systemctl cat '$U' >/dev/null 2>&1" 2>/dev/null; then
+        echo "{\"ok\":false,\"action\":\"status\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\",\"error\":\"no such unit '$U' in this fleet — try: vessel-ctl status\"}"; exit 1
+      fi
       csh "printf '%-38s %-12s %-10s restarts=%s\n' '$U' \"\$(systemctl is-active '$U' 2>&1)\" \"\$(systemctl is-enabled '$U' 2>&1)\" \"\$(systemctl show '$U' -p NRestarts --value)\""
     else
       # Fleet view.

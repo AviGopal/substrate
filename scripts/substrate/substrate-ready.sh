@@ -70,6 +70,52 @@ rows() {
   jq -r '.vessels[] | [.unit, .role, (.health_port // ""), (.health_path // "/health"), (.core // false)] | join("|")' "$INV"
 }
 
+# Restart-loop detection, by DELTA against the previous poll pass.
+#
+# `is-active` and `is-failed` are both blind to a Restart= loop — the unit reports
+# `activating` or `active` forever and never `failed`. NRestarts is the tell, but
+# only as a change over time: the lifetime counter is non-zero on any fleet whose
+# vessel recovered once, and failing on that would make a healthy fleet unready.
+#
+# LOOP_PREV holds "unit=count" from the previous pass. A unit whose count MOVED
+# between passes is looping right now. On the first pass there is no baseline, so
+# nothing is reported — which is correct: one sample cannot distinguish a loop
+# from a unit that restarted an hour ago.
+# ONE round trip per pass, not one per unit. Asking systemd per unit added ~64
+# `docker exec`s to every pass and pushed a readiness check past two minutes —
+# a check slow enough to skip is a check nobody runs. Collect the whole table in
+# a single call and look units up in the local string.
+LOOP_PREV=""
+LOOP_CUR=""
+# NOT `--value` with two properties: it prints bare values with no key, and the
+# pairing does not survive `paste` — the first attempt produced rows like
+# "0<TAB>systemd-sysctl.service", so every lookup missed and the detection was
+# inert while looking implemented. Keep the KEY=VALUE form and pair on the keys.
+# ENUMERATE, DON'T GLOB. `systemctl show "*.service"` expands against loaded
+# units only and returned 25 rows on a fleet with 99 services — every unit it
+# omitted was undetectable, which is the silent-blind-spot shape this check
+# exists to remove. Feed it the list explicitly.
+# PARSE BY BLOCK, NOT BY ORDER. systemd prints `NRestarts=` BEFORE `Id=` in each
+# unit's block, so an awk that assumes Id-then-value pairs every unit's count
+# with the PREVIOUS unit's name — a silent off-by-one that reported the looping
+# vessel as 0 while `systemctl show` on it alone said 29. Blocks are separated by
+# a blank line; collect both keys and emit at the boundary, whatever the order.
+snapshot_restarts() {
+  csh 'systemctl list-units --type=service --all --no-legend --plain 2>/dev/null | awk "{print \$1}" | grep -v "^$" | tr "\n" " " | xargs -r systemctl show --property=Id,NRestarts --no-pager 2>/dev/null' 2>/dev/null \
+    | awk -F= '
+        /^Id=/{id=$2}
+        /^NRestarts=/{n=$2}
+        /^[[:space:]]*$/{ if(id!=""){print id "\t" n} ; id=""; n="" }
+        END{ if(id!=""){print id "\t" n} }'
+}
+restarting() { # unit -> 0 if its restart counter moved since the previous pass
+  local unit="$1" now prev
+  now="$(printf '%s' "$LOOP_CUR" | awk -F'\t' -v U="$unit" '$1==U {print $2}')"
+  prev="$(printf '%s' "$LOOP_PREV" | awk -F'\t' -v U="$unit" '$1==U {print $2}')"
+  [ -n "$now" ] && [ -n "$prev" ] || return 1
+  [ "$now" -gt "$prev" ] 2>/dev/null
+}
+
 check_unit() { # unit role port path -> echo status: ok|down|skipped
   local unit="$1" role="$2" port="$3" path="$4" enabled state
   enabled="$(csh "systemctl is-enabled '$unit' 2>/dev/null" 2>/dev/null || true)"
@@ -130,14 +176,30 @@ check_unit() { # unit role port path -> echo status: ok|down|skipped
   local utype
   utype="$(csh "systemctl show '$unit' -p Type --value 2>/dev/null" 2>/dev/null || true)"
   if [ "$role" = "seed" ] || [ "$utype" = "oneshot" ]; then
-    if [ "$(csh "systemctl is-failed '$unit' 2>/dev/null" 2>/dev/null || true)" = "failed" ]; then echo down; else echo ok; fi
+    # A RESTART LOOP IS NOT A HEALTHY REST. `is-failed` answers `active` or
+    # `activating` for a unit that is dying and being restarted, so a looping
+    # seeder was reported `ok` and the fleet `ready` while it cycled about once
+    # every 20 seconds. Measured on a spoke whose hub rejected its key:
+    # bootstrap-seeder NRestarts 2 -> 4 across a 41s window, `[ready] fleet ready`
+    # printed throughout.
+    #
+    # Compare against the PREVIOUS pass, never against zero: NRestarts is
+    # cumulative for the boot, so a unit that recovered once at startup would be
+    # condemned forever by an absolute test. LOOP_PREV is populated by the poll
+    # loop below; on the first pass there is no baseline and only `failed` counts.
+    if [ "$(csh "systemctl is-failed '$unit' 2>/dev/null" 2>/dev/null || true)" = "failed" ]; then echo down; return; fi
+    if restarting "$unit"; then echo down; return; fi
+    echo ok
     return
   fi
+  if [ "$state" = "active" ] && restarting "$unit"; then echo down; return; fi
   [ "$state" = "active" ] && echo ok || echo down
 }
 
 pass() { # -> sets RESULTS (unit|status lines), FAILING count
   RESULTS=""; FAILING=0
+  # Roll the previous pass's restart counters forward as this pass's baseline.
+  LOOP_PREV="$LOOP_CUR"; LOOP_CUR="$(snapshot_restarts)"
   while IFS='|' read -r unit role port path core; do
     [ "$unit" = "substrate-ready.service" ] && continue  # never gate on self
     [ "$SERVICES_ONLY" = 1 ] && [ "${unit%.timer}" != "$unit" ] && continue
@@ -150,6 +212,21 @@ pass() { # -> sets RESULTS (unit|status lines), FAILING count
 }
 
 deadline=$(( $(date +%s) + TIMEOUT ))
+# A SINGLE PASS CANNOT SEE A LOOP. Restart detection is a delta, so --once (which
+# the Dockerfile HEALTHCHECK and substrate-doctor both use) needs a baseline pass
+# before the pass whose verdict it reports. Two samples a few seconds apart cost
+# a few seconds and are the difference between "fleet ready" and the truth about
+# a unit cycling every twenty. --quick keeps its single pass: it gates container
+# health on core liveness and must stay fast.
+LOOP_WINDOW="${READY_LOOP_WINDOW:-25}"
+if [ "$ONCE" = 1 ] && [ "$QUICK" != 1 ]; then
+  pass                    # baseline — verdict discarded, restart counters retained
+  # The window must exceed one restart cycle or the delta is zero and the loop
+  # reads as healthy. A measured seeder loop cycled about every 20s, so a 5s
+  # window saw no change and reported `ok` — the very false green this detects.
+  # Overridable for tests; do not shorten it to make a check feel faster.
+  sleep "$LOOP_WINDOW"
+fi
 while :; do
   pass
   [ "$FAILING" = 0 ] && break

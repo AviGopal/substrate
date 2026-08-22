@@ -262,8 +262,23 @@ log "done — $disabled_count unit(s) $( [ "$DRY_RUN" = "1" ] && echo 'would be'
 # are excluded: they are generated at runtime and cannot be pre-declared.
 # Corpus-tested against the live hub image: 5 true positives, 0 false positives,
 # and it does flag the boredom-vessel.service omission that motivated it.
+# Compare against EVERY unit the inventory names, manifest ones included.
+#
+# The baseline was manageable_units(), which deliberately excludes
+# "manifest": true — correct for SELECTION (a manifest vessel must stay
+# unselectable), wrong for this warning. Any manifest vessel that had actually
+# been installed was therefore reported as "absent from the inventory —
+# ungoverned", i.e. as a packaging omission, when the inventory names it and
+# flags it on purpose. Measured: human-surface-vessel.service flagged on a fleet
+# where `jq` finds it at role `ui`, manifest true. The function's own comment
+# claimed zero false positives, corpus-tested — the corpus had no manifest
+# vessel installed.
+#
+# Widen the comparison set only; manageable_units() itself is untouched, so
+# selection semantics are unchanged.
+all_inventory_units() { jq -r '.vessels[].unit' "$INV"; }
 unmanaged="$(comm -13 \
-  <(manageable_units | sort -u) \
+  <(all_inventory_units | sort -u) \
   <(cd /usr/lib/systemd/system 2>/dev/null \
       && grep -lE '/vessels/|/usr/local/share/substrate|/opt/substrate' -- *.service *.timer 2>/dev/null \
       | grep -v -- '-mitosis-' | sort -u) 2>/dev/null || true)"
