@@ -271,10 +271,42 @@ writes the link; the execution side never does. This is a designed join with one
 end attached, not an impossible one — and `v_selection_outcomes` covering 226 of
 26,529 selections (<1%) is the visible consequence.
 
-**The fix is correspondingly small:** propagate `correlation_id` from the
-recommendation onto the execution record when the selected template runs. Nothing
-new needs designing — the column, the writer on one side, and the consuming view
-all already exist.
+### It is wired on the storage and read sides, and on neither producing side
+
+Tracing it end to end, the join is **more completely built than the audit
+assumed, and unattached at both producing ends**:
+
+| stage | state |
+|---|---|
+| selection writes `correlation_id` (`activities.ts:7210`) | ✅ populated, e.g. `sel_1785015944015_6nseg0_8` |
+| `execution` table declares the column | ✅ present in `INFO FOR TABLE execution` |
+| `paradigm.ts:374` projects `correlation_id` onto the execution row | ✅ explicitly listed |
+| `execution-traces.ts:1126` fetches traces **by** `correlation_id` | ✅ with an `activity_id` fallback for traces lacking one |
+| `v_selection_outcomes` consumes the join | ✅ exists, 226 rows |
+| **the trace-ingest schema accepts it** | ❌ `StoreExecutionTraceRequestSchema` is a plain `z.object` with no `correlation_id` and **no `.passthrough()`** — Zod strips unknown keys, so it is discarded at validation |
+| **any executor sends it** | ❌ `correlation_id` occurs **zero times** in goal-host-vessel's and ias-executor-ts's entire `src/` |
+
+So `paradigm.ts:374` names a field that validation removed a step earlier, and no
+producer supplies it in the first place. This is the *"an explicit projection is a
+silent dropper"* class: a key-by-key builder copies only what survived
+validation, and neither layer reports the loss.
+
+**The fix is three coordinated changes, not one line:**
+
+1. `StoreExecutionTraceRequestSchema` — declare `correlation_id: z.string().optional()`
+   (or add `.passthrough()`), so the field survives ingest.
+2. goal-host-vessel — thread the recommendation's `correlation_id` through
+   dispatch onto the execution it starts.
+3. ias-executor-ts — include it in the trace payload it posts.
+
+Fixing only (1) changes nothing, because nothing sends the field; fixing only
+(2)+(3) changes nothing, because validation strips it. That mutual invisibility
+is why a join with five of seven stages already built has produced zero joinable
+rows.
+
+Until all three land, law 12 (counterfactuals recorded at decision time) has no
+substrate: the system can say an arm succeeded, never that choosing it was
+right.
 
 This correction matters beyond the one finding: "the placeholder makes it
 impossible" would have sent a repair at `execution_id`, which is deliberately a
