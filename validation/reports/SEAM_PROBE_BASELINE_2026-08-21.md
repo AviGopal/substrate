@@ -799,3 +799,46 @@ ambiguous.** Every prior reading was contaminated; this one is clean, and it
 isolates the defect to a single statement. `execution_count: 3782` also shows
 these pairs are heavily exercised — the edge weight this seam would learn is not
 marginal.
+
+## Round 8 — the predicate is exonerated; the block itself is the defect
+
+Targeting the UPDATE at `$existing[0].id` — the record the SELECT in the same
+statement already found — **still writes nothing**: 44 `derive_wrote_nothing`,
+payload unchanged (`row_present: true`, `updated_at` stale since 2026-08-18).
+
+That is decisive by elimination. The write fails when addressed by a disjunctive
+predicate AND when addressed by primary key, on a row the same connection
+demonstrably reads in the same statement. **So the defect is not the predicate,
+the id form, the auth context, the parse, or the lookup — all of which are now
+fixed and verified.** It is the multi-statement `LET … ; IF … THEN … ELSE … END`
+block itself: either the `IF` branch is not executing, or its result is
+discarded, or `$existing` does not survive into the branch body in this
+SurrealDB version.
+
+**What is now definitively known about this seam:**
+
+| component | state |
+|---|---|
+| parent lookup | **fixed** — resolves, 6 causes removed |
+| SurrealQL parse | **fixed** — 0 parse errors since 01:54 |
+| auth context | **fixed** — write and check share a connection |
+| required columns | bound (`execution_id`, `org_id`, `success`) |
+| the UPSERT block | **BROKEN** — writes nothing by any addressing mode |
+| instrumentation | **honest** — `derive_wrote_nothing` reports the truth with a diagnostic payload |
+
+The instrument is the durable win here. It went from silently swallowing
+everything, to reporting a false green through a mismatched auth context, to
+correctly reporting failure with the row's actual state attached. **Whatever the
+ninth cause is, it can no longer hide.**
+
+**Recommended next step (one operator action, not another deploy cycle):** run
+the exact `LET … ; IF …` block by hand against the DB with real parameters and
+read *both* result slots. Every remaining hypothesis is a statement-semantics
+question that one manual execution answers definitively — and after eight
+deploy-cycle guesses, that is plainly the cheaper instrument.
+
+A likely one-line resolution worth trying first: replace the whole conditional
+block with a single unconditional `UPSERT activity_composition_graph:<derived-id>
+SET …`, keyed on a deterministic hash of (parent, child). That removes the
+LET/IF machinery entirely, is idempotent by construction, and is the form the
+codebase already uses successfully for `substrate_tuning_param`.
