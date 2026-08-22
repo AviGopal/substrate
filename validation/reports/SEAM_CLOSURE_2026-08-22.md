@@ -437,3 +437,86 @@ So six of seven stages are built and the storage side is complete. The single re
 gap: **goal-host never reads `correlation_id` off the recommendation** (zero occurrences
 in its source), so nothing downstream can send it. One producer chain, not three
 coordinated schema changes.
+
+
+---
+
+# Round 2 re-evaluation — measured after deploy
+
+Converged at `82255e6`, gate passing, all seven vessels `active` / `NRestarts=0`.
+
+## The retention repair worked, and it was precise
+
+The `success` predicate fix let the per-stratum sweep see its own work for the first
+time. The result is not a blunt drain — it targeted the noise and left the signal:
+
+| measure | before | after | |
+|---|---|---|---|
+| `execution` rows | 150,002 (at cap) | **5,669** | ring no longer saturated |
+| `auth_resolve_v1` | 142,951 (95.3%) | **2,202** (38.8%) | 140,749 removed |
+| non-auth traces | ~3,606 | **3,467** | **essentially untouched** |
+| distinct real activities | — | **233** | corpus intact |
+| reach verdicts | — | 136 true / 2,439 false | intact |
+
+**140,749 auth rows removed while 96% of real traces survived.** That is the sweep
+working as designed for the first time in its life.
+
+Predicate agreement confirmed on the drained corpus: `validator-dispatch AND success=true`
+= `AND success` = **911**. Equal, and bounded by the arm's own total.
+
+## Reach, recomputed on a clean corpus
+
+The drain removed the auth noise that made every prior reach figure unreliable, so this is
+the first measurement taken against a corpus that is mostly real work. It **reproduces the
+earlier figures almost exactly**, which is the useful result — the numbers were right, the
+denominator was just contaminated:
+
+| denominator | reach | earlier measurement |
+|---|---|---|
+| excluding `auth_resolve_v1` | **36.5%** (136 / 373) | 37.0% |
+| goal-shaped executions | **42.5%** (121 / 285) | 42.4% |
+
+Against a stated expectation of ~90%.
+
+**New defect surfaced by the clean corpus:** all 2,202 surviving `auth_resolve_v1` rows
+carry a `reached` verdict. An authentication check has no goal to reach, so grading it is
+meaningless — and it is exactly why the unfiltered reach rate read as 0.08%. Any reach
+metric computed without excluding auth is measuring the auth sampler.
+
+## Status of every seam
+
+| seam | state |
+|---|---|
+| fs guard rejecting all relative paths | **CLOSED**, verified live with three traversal controls |
+| `success` composite indexes serving zero | **CLOSED** after two documented reversals |
+| retention sweep deleting nothing | **CLOSED** — 140,749 rows drained, real traces preserved |
+| `org_id` posterior binding | **CLOSED** at the query (0 → 3,275 rows); draw effect still unproven |
+| α=4.0/β=1.0 draws (was OPEN) | **EXPLAINED** — selection-time decay, reproduced exactly |
+| decay half-life | **PROVEN UNFIXABLE BY TUNING** — left at 3, resolution is a design decision |
+| `correlation_id` / gradable decisions | **SPECIFIED, NOT DONE** — see below |
+| 69% missing reach tags | open |
+| conditional-tier sparsity | open |
+| `v_activity_score` absent | open, affects `corpus-summary` only |
+
+## The correlation seam, now fully specified
+
+Six of seven stages are built. Corrections to the previous round, from reading the code:
+the ingest route does **not** apply the schema (deliberately — enforcing it would 400 the
+flat posters), it **already** passes `correlation_id` through, and `/recommend`
+**already** returns it per recommendation.
+
+And the consumer is emptier than reported: `v_selection_outcomes` holds 226 rows and
+**not one carries any outcome field**. Every column is selection-side
+(`alpha_at_selection`, `selection_probability`, `expected_success_rate`). It is named for
+a join that was never built.
+
+The single gap: `recommendExcluding` (goal-host `index.ts:5630`) returns
+`Promise<string | null>` — the template id alone — discarding `correlation_id` from the
+recommendation it just read. Three call sites (`:12237`, `:12240`, `:12363`) feed that id
+into dispatch. Closing it means returning the pair and threading it to the trace payload
+`ias-executor-ts/src/adapters/activity-api-trace-sink.ts` posts.
+
+**Not attempted here, deliberately.** It is a refactor of the walk's hot path across two
+repos, and this session has twice been caught by moving fast on this codebase — once by a
+guard I had not read, once by an autonomous commit silently half-reverting a fix. The work
+is small and now fully specified; it deserves a fresh pass, not a tired one.
