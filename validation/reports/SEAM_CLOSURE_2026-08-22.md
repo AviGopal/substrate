@@ -258,3 +258,78 @@ place left unprobed.
 advance what to do if the rebuild failed, and it failed, and that instruction was
 followed. A fix that specifies its own falsification is worth more than a fix that
 is merely correct.
+
+
+---
+
+## Re-evaluation — measured after deploy
+
+### The `success` predicate: CLOSED and verified
+
+Migration 199's own four-query check, run after it applied:
+
+| | total | `AND success=true` | `AND success` |
+|---|---|---|---|
+| `ribosome-extract` | 123 | **122** | **122** ✅ |
+| `validator-dispatch` | 3,102 | **3,102** | **3,102** ✅ |
+
+All forms agree and every filtered count is bounded by its total — the first time
+that has been true on this table.
+
+### The retention sweep started working, and the ring is draining
+
+The predicate the per-stratum sweep filters on was returning zero rows, so it
+deleted nothing. With it fixed:
+
+| measure | before | after |
+|---|---|---|
+| `execution` rows | 150,002 (at cap) | **69,564** |
+| `auth_resolve_v1` rows | 142,951 | **65,958** |
+
+Roughly **80,000 rows drained**. Auth share is still ~95%, so the storm's
+composition is unchanged — what changed is that the valve now moves.
+
+*Side observation, not chased:* `trace_store_counters.row_count` reads 146,845
+against an actual 69,564. The counter lags the table by a wide margin and is its
+own defect.
+
+### The posterior fix: verified at the query, NOT at the draw
+
+Stated exactly, because the distinction is the whole point of this report.
+
+**Verified.** The fix is live (`3fb33b6`, converged 09:32:44 — and migration 199
+appearing in `init_migrations` independently proves activity-api restarted on that
+content, since migrations apply at `ExecStartPre`). That converge also passed the
+test gate, which confirms the source-based test survives the container's
+full-suite run — the thing two earlier versions failed. Against the live database
+the widened clause returns **3,275** rows where the narrow one returns **0**, and
+**1,624** of the newly-matchable rows carry `thompson_alpha > 1`. Both entry
+points are covered: `getCanonicalPosteriors` is called from the shape-conditioned
+path (`paradigm.ts:652`) as well as `:2190`, so the fix is not confined to one
+branch.
+
+**Not verified: any behavioural change at the draw.** The first post-deploy burst
+(09:37:37, 3 selections) logged β=1.0 on all three. That is *inconclusive rather
+than negative*: all three arms have `variant_performance_metrics` rows at
+α=1.0/β=1.0 with `total_executions` 0–1 — genuinely untried, for which β=1.0 is
+the **correct** draw. A conclusive test needs a burst containing an arm that has a
+moved posterior.
+
+**And a correction that cuts against the fix's headline.** Comparing
+`Activity scores fetched` counts either side of the deploy:
+
+```
+before 09:32   count:0 path:legacy ×10    count:36 path:new ×3    count:60 path:new ×2
+after  09:33   count:0 path:legacy ×8     count:36 path:new ×3    count:9  path:new ×1
+```
+
+The **`new` (paradigm) path was already returning 36–60 rows before the fix**.
+Only the `legacy` path returned 0, and it still does. So the claim "every Thompson
+selection was drawn from the uniform prior" is **not supported by this
+instrument** — some path was already fetching scores. The query-level defect is
+real and measured (0 vs 3,275 on the exact clause `getCanonicalPosteriors` emits),
+but its share of live draws is undetermined, and the α=4.0/β=1.0 observations that
+motivated the whole investigation are not yet explained end to end.
+
+That is the honest state: a real defect, really fixed, whose behavioural
+consequence remains unproven. It is recorded as open rather than closed.
