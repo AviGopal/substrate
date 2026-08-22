@@ -9,12 +9,12 @@ of it: *what is preventing growth?*
 the spine; every claim is anchored to a runnable read-only probe. Produced by an
 11-agent audit plus direct probing.
 
-> **STATUS — this revision is PRE-VERIFICATION.** The adversarial pass has not
-> run yet, and two of the eleven agents (including the one scoped to attribution)
-> have not reported. Findings below carry the confidence their originating agent
-> assigned, upgraded only where **I re-ran the probe myself** — those are marked
-> *(replicated)*. Treat everything else as single-source. A follow-up revision
-> will carry the verify verdicts and any retractions.
+> **STATUS — POST-VERIFICATION.** All eleven agents reported and the adversarial
+> pass ran over the growth-impacting findings; **six of seven came back partially
+> or fully refuted** and are recorded as such below, including one that forced the
+> headline to be rewritten. Findings marked *(replicated)* are ones I re-ran
+> myself. Anything still labelled single-source has not been independently
+> reproduced and should be treated accordingly.
 
 **Access.** Local container only. DB reads went through a helper that refuses any
 statement not beginning `SELECT`/`INFO`. No remote host was contacted, no
@@ -30,13 +30,31 @@ are against `substrate-live` (booted 2026-08-21T12:24 UTC).
 
 ## The one-line finding
 
-**Nothing the system does ever becomes something it knows.** The ribosome — the
-only mechanism that converts a successful execution into reusable structure, and
-the origin law 4 reserves for activities — is *running hard and landing nothing*.
-Its entire recorded output is **two empty templates**, both named
-`extracted-validator-dispatch`, written 22 seconds apart on 2026-07-22, extracted
-from executions with `successRate: 0`, carrying `tasks: []` and `impulses: []`,
-into a table with **zero readers**.
+> **CORRECTED.** An earlier revision of this report led with "nothing the system
+> does ever becomes something it knows," built on the two dead rows in
+> `activity_templates`. **That was wrong**, and the adversarial pass caught it.
+> `activity_templates` is a legacy sink on `POST /v2/ribosome/extract`, untouched
+> since 2026-04-02. The live extraction path mints `learned-*` rows into the real
+> `activity` table. I re-ran every number myself: **427 learned activities exist,
+> 100 of them carry moved posteriors, and 36 executed in the window.** Extraction
+> works, is selected, and is graded. The corrected finding below is narrower,
+> dated, and considerably more actionable.
+
+**Extraction has collapsed to a trickle.** The ribosome dispatches ~96 extractions
+a day and the learned corpus has grown by **two templates in three weeks**:
+
+```
+  2026-08-21T16:17   ← newest
+  2026-08-21T12:37
+  2026-07-31T22:02   ← previous, a 21-day gap
+  2026-07-31T08:25
+  ...
+```
+
+Two mints in the last 7 days against roughly two thousand dispatch attempts —
+a yield near **0.1%**. Blockers 1 and 2 below are the mechanism for that yield.
+The corpus is not empty; it has simply stopped growing, while the *other* source
+of activities has not.
 
 Minting continues unchecked from the other direction: **1.2% of activities carry
 execution provenance, 51% were minted by the gap-closing path**, and **76% of
@@ -48,12 +66,18 @@ candidate prefilter that feeds Thompson collapses to **pure recency**, showing t
 selector the newest unearned arms first.
 
 ```
-  extraction lands nothing  →  no earned pathways enter the corpus
+  extraction yields ~0.1%  →  earned pathways enter at 2 per 3 weeks
             ↑                                    ↓
   posterior never concentrates  ←  prefilter shows newest-minted arms first
             ↑                                    ↓
-     evidence splits 76% ways  ←  uncontrolled minting fills the gap
+     evidence splits 76% ways  ←  proposal-minting fills the gap daily
 ```
+
+The two sources of activities are running at wildly different rates: **earned**
+templates arrive at roughly 2 per 3 weeks, **proposed** ones daily. Since the
+prefilter orders by recency, the proposed ones are also the ones the selector
+sees first. That is the trap — not that learning is broken, but that it is
+out-competed for attention by its own backlog.
 
 ---
 
@@ -99,27 +123,28 @@ sampled row holds `failure_mode: {type: 'execution_error'}`, `status: 'success'`
 *Positive control:* `reached = true` occurs 113 times fleet-wide and 10 times for
 `ribosome-extract` itself, so `reached: false` is a real verdict, not an absence.
 
-### Blocker 3 — even the 10 that reached minted nothing
+### Blocker 3 — `ribosome-extract` emits a trace description, not a template
 
 `ribosome-extract` declares `output_impulse_shapes:
-['executionTraceWithSignatures']` — it emits a *description of the trace*, not a
-template.
+['executionTraceWithSignatures']` — a *description of the trace*. Combined with
+blocker 2, this is why 90 of 102 runs end `reached: false`: the walk produces
+something, it is simply not the thing that would constitute a mint.
 
-And a one-character name difference splits the extraction path in half:
+**Two dead tables, both cleared as non-causal.** An earlier revision made these
+load-bearing; the adversarial pass refuted both causal clauses and I accept the
+refutations:
 
-| table | writers | readers | rows |
-|---|---|---|---|
-| `activity_templates` (plural) | 1 (`ribosome.ts:608 INSERT INTO`) | **0** | 2 |
-| `activity_template` (singular) | **0** | 6 | 0 |
+| table | writers | readers | rows | verdict |
+|---|---|---|---|---|
+| `activity_templates` (plural) | 1 (`ribosome.ts:608`) | 0 | 2 | **legacy sink**, untouched since 2026-04-02; not the live path |
+| `activity_template` (singular) | 0 | 6 | 0 | empty, and the shape-weighted branch never fires — but **no posterior update was degraded by it** |
 
-Extraction output falls into a write-only table; six consumers starve on a
-write-never one. An agent reports a measured cost of **6,928 of 6,928 posterior
-updates degrading to unweighted** because the shape-weighted credit path reads
-`activity_template`. *Single-source — I have not replicated that count.* What I
-did confirm directly is the shape of the defect: `paradigm.ts:902` reads `FROM
-activity_template` and its transform hardcodes `input_shapes: []` with the comment
-"Legacy templates don't have shapes", so anything routed through that path is
-shape-blind by construction regardless of the table's emptiness.
+The **6,928/6,928 unweighted-posterior figure is REFUTED** and is withdrawn. Its
+observational legs reproduce (the table is empty; the branch logs zero times); its
+causal conclusion does not. What remains true and narrower: `paradigm.ts:902`
+reads `FROM activity_template` and hardcodes `input_shapes: []` with the comment
+"Legacy templates don't have shapes", so that path is shape-blind by construction
+— it just is not on the hot path for credit.
 
 **Supporting law-1 violation.** The ribosome logs `WARN extractionPolicy
 unresolved — falling back to maxExtractionDepth 1` and `WARN
@@ -146,7 +171,7 @@ fail loudly when it does not reach; reconcile `activity_templates` /
 
 | Finding | Evidence |
 |---|---|
-| Extraction lands nothing (blockers 1–3 above) | 2 empty templates ever; 90/102 hollow; 0 readers |
+| Extraction yield has collapsed to ~0.1% — 2 mints in 3 weeks against ~96 dispatches/day | 427 learned activities exist, last two 2026-08-21 after a 21-day gap *(replicated)* |
 | `activity.ev` identically `0.5` on 3,856/3,856 rows → prefilter is pure recency | `discover-by-shapes.ts:235` `ORDER BY ev DESC, created_at DESC`, truncated **before** the Thompson draw |
 | Only 1.2% of activities carry execution provenance; 51% minted by gap-closing | law 4 inverted at the source |
 | A credential-failure storm flushed the trace store | 142,882 failed auth rows, 133,622 older than 24h, against ~2-day retention |
@@ -260,6 +285,32 @@ unresolved rather than papered over.
   never been observed to fire.
 
 ---
+
+## What the adversarial pass killed
+
+Seven findings went to independent verifiers instructed to refute rather than
+confirm. **Six came back partially or fully refuted.** In every case the
+*observational* leg reproduced and the *causal* leg did not — which is the
+signature of an audit reaching for impact rather than measuring it.
+
+| claim | verdict |
+|---|---|
+| "extracted templates are never selectable, graded, or composed" | **REFUTED.** 427 `learned-*` activities, 100 with moved posteriors, 36 executed. Rewrote the headline. |
+| "`activity_template` emptiness degraded 6,928/6,928 posterior updates" | **REFUTED (causal).** Table empty and branch never fires, but no update was degraded. Figure withdrawn. |
+| "`routing_trace`'s dead writers make the health scorer silently credit full routing weight" | **REFUTED and inverted.** `vessel-health.ts:59` returns early at score 0. It under-credits, not over-credits. |
+| "`activity_metrics` is a phantom table read by the live scores endpoint" | **REFUTED.** `app.get('/scores')` is registered twice on the same Hono instance; the handler that reads it is shadowed dead code. |
+| "`circuit_breaker_trace` field mismatch gives vessels undeserved health credit" | **REFUTED and inverted.** `vessel` has 0 rows, so the scorer pins `circuitBreaker = 0`, status `unhealthy`. |
+| "`trace_digest`'s shallow floor is pinned to the activity-api restart" | **REFUTED (mechanism).** It is a rolling 2h retention reap in `trace-retention.ts`. |
+| "learning-track classifier's join is structurally impossible" | **NOT REFUTED — confirmed and stronger.** A SurrealDB `RecordId` is bound into `WHERE activity_id = $activity_id` against a column `DEFINED AS TYPE string`, so the join can never match any row, ever. |
+
+Two verifier notes worth keeping. One found that a citation supporting a claim was
+**misattributed**: `code-variants.ts:1-13` is a *deprecation header written by
+whoever retired that code* ("Phase B3b dead-code cleanup, 2026-04-28"), not
+evidence of a live defect — the same "a comment describing a defect was written by
+whoever fixed it" trap this codebase has hit before. Another flagged that three of
+these were **rediscoveries** already catalogued in `SEAM_MAP_2026-08-21.md:143`,
+`LEARNING_AUDIT_ROUND2.md:49`, and `COMPOSITIONALITY_STATE.md:333`, one of which
+had already reached the correct narrower verdict.
 
 ## Checked and cleared — things that look like defects and are not
 
