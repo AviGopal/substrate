@@ -95,9 +95,33 @@ for the other — dropping the bare form would orphan the rows the shim was writ
 for. Both call sites. **1,624 arms carrying moved posteriors become visible to
 selection.** Zero test regressions (96 unique failing names before and after).
 
-The test is written at the consuming layer deliberately: its mock filters rows by
-the bound parameters the way SurrealDB would, rather than asserting on query text
-— a text assertion would pass on any string containing `org_id`.
+**Deployment status, stated exactly.** The fix is live (`activity-api` converged
+to `3fb33b6` at 09:32:44, verified in the pull-sync log). What is verified is the
+*query*: run directly against the live database, the widened clause returns 3,275
+rows where the narrow one returns 0, and 1,624 of the newly-matchable rows carry
+`thompson_alpha > 1`. What is **not yet verified is the end-to-end draw** — the
+sampler writes `thompson_selection_log` only when `/recommend` is called, and the
+newest entry is 09:30:14, before the deploy. Selections arrive in bursts on goal
+traffic, and none has landed since. Until one does, the last β=1.0 draw on record
+predates the fix and must not be read as evidence either way.
+
+The test went through two rewrites, both forced by measurement rather than taste.
+It first drove `getActivityScores` through a `mock.module` of `../db/surreal`;
+that passed in isolation *both locally and inside the container* and failed only
+in a full-suite run, because `mock.module` is global and order-dependent — once an
+earlier file imports the real module, the cached binding wins. pull-sync refused
+to converge on it twice, blocking the fix the test existed to protect. It now
+asserts on source, deterministic under any ordering and the pattern this repo
+already uses (`execution-traces.sql-targets.test.ts`).
+
+**The autonomous half-revert.** Substrate-authored commit `3e58e73` consolidated
+this function, kept the widened clause at the first site, and narrowed the second
+back to a single form — **while leaving `params.org_id_prefix` bound there**. An
+unused parameter, which no placeholder/binding check catches, because the mismatch
+runs the harmless direction: I had verified placeholders ⊆ bindings and it passed.
+The check that was needed is whether every intended widening survived. The test now
+anchors on `$org_id_prefix` — unique to these two sites — and asserts the **count
+is 2**, proven by conviction on each site independently.
 
 ---
 
