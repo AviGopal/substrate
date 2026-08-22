@@ -896,3 +896,53 @@ connection that wrote, and it has convicted five separate wrong hypotheses
 including two of my own instruments. Whatever cause 9 turns out to be, it cannot
 hide, and the next person needs one manual statement execution rather than
 another night of deploy cycles.
+
+## Round 10 — the database ACCEPTS the write and does not persist it
+
+With `queryRaw` surfacing per-statement status: **0 `upsert_rejected`**. The
+database returns `status: OK` for a statement whose row never changes. Combined
+with the earlier eliminations, the position is now precise:
+
+| eliminated | how |
+|---|---|
+| parent lookup | resolves; 6 causes fixed |
+| statement parse | 0 parse errors since 01:54 |
+| statement form | LET/IF, id-targeted UPDATE, parameterised UPSERT, and the reconciler's exact interpolated `CONTENT` form all behave identically |
+| predicate | fails equally when addressed by primary key |
+| auth context | write and check share a connection |
+| DB rejection | `status: OK`, no error |
+| namespace/database | identical to the reconciler (`activity-system` / `learning_loop`) |
+| required columns | all bound, including the three `ASSERT != NONE` |
+
+**A write the database reports as OK, on a row it will show you, that does not
+change.** Every remaining explanation lives below the statement — transaction
+scope, the client's connection state, or a table-level constraint that discards
+silently — and none of them is testable from application code, which is why ten
+deploy cycles could not reach it.
+
+### The ten causes
+
+1. lookup on a 12% shadow table · 2. `execution_id` not a column · 3. read on
+root vs `PERMISSIONS FOR select` · 4. over-normalized id · 5. wrong qualifier
+table · 6. **`IF(a,b,c)` never parsed** · 7. instrument asserted existence, not
+mutation · 8. instrument read on a different connection than the write ·
+9. bound params vs interpolated literals · 10. **`query()` never checks
+statement status** — a rejected write reads as success fleet-wide.
+
+Causes 7 and 8 were defects in my own instrument. Cause 10 is in the shared DB
+wrapper and affects **every** write in the fleet, not just this seam — it is
+plausibly the single highest-value finding of the night, and it was only
+reachable because the instrument got honest enough to prove the write was not
+landing.
+
+### Verified closed (unchanged by this round)
+
+hop-4 content threading · NULL≠NONE (SF_BLEND `null → 1`) · ψ refusal (0 → 9
+blends) · signature tiers (7/7) · trace-spool isolation · lint gate
+
+### The one remaining step
+
+Run the exact `UPSERT` by hand against the database with the exact parameters and
+read the returned slots. Every hypothesis reachable from application code is
+exhausted; this is a five-minute operation with a console and unreachable
+without one.
