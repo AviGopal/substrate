@@ -472,3 +472,50 @@ because there were no keys to match. Fixed in `8f5498c` with a regression test
 
 The lesson generalises past this seam: **I fixed the same seam three times
 before instrumenting it, and the instrument found the cause in one call.**
+
+---
+
+# Round 3 close-out
+
+## What landed
+
+| commit | seam | change | verified |
+|---|---|---|---|
+| `7b1071d` | composition | address by record id (`type::thing`); split `parent_miss` by cause; normalize both edge endpoints to the prefixed form | lint + tests; counter discriminates |
+| `99284cf` | composition | widen `parent_not_persisted` to the id **namespace** (`exec_`+8), not one prefix | 40 misses reclassified correctly |
+| `d7963d1` | composition | **read through auth** — `execution` has `PERMISSIONS FOR select WHERE org_id = $auth.org_id` and the derive path used the root connection | deployed |
+| `2851bac` | credit | promote the payoff read from `debug` to a counted `info` line; document the legacy reader's structural zero | **produced its first measurement ever** |
+| `8f5498c` | signature | tier 2/3 read the persisted `input_shapes`/`output_shapes` keys | P10 4/4 → regression suite 7/7 |
+| `fdc9100` | tooling | stop the test suite writing into the LIVE trace-retry spool | full run leaves spool unchanged |
+
+## Honest state of the two INERT seams
+
+**Composition edges: still zero minted.** Three root causes found and fixed in
+series — wrong table, wrong key form, wrong auth context — and the counter now
+discriminates a real lookup failure from an id that can never resolve. The last
+fix (`d7963d1`) has not yet been exercised: zero trace ingests landed on the new
+process during the observation window. **Not closed. The probe is defined and
+cheap:** watch `outcome:"derive_ok"` on ambient traffic; the gate is open on ~66%
+of ingests, so no special dispatch is needed.
+
+**Credit: the real blocker is now identified and fixed, but unproven.** The
+sequence matters — I fixed this seam three times (`eee3074`, `ea67d91`, then the
+bucket analysis) before instrumenting it, and **the instrument found the cause on
+its first call**. `cts_sig_lookup sig=81833a50c983bc2a requested=19 hits=0`: a
+correctly formed 16-hex key with nothing to match. The tier-2 defect underneath
+it is confirmed by unit probe and fixed, but it only affects traces written after
+deploy, and `hits` is still 0. **Not closed.**
+
+## The three method errors I made this session, all the same shape
+
+1. **Counted an auth failure as an empty result** — gave a wrong edge total.
+2. **Read a "never invoked" verdict from silence** — the path was firing 8×/min
+   into a swallowed catch.
+3. **Measured a projection and reported it as data** — the executions list
+   endpoint does not return `signature`; its absence there says nothing about
+   the row.
+
+Each is a variant of one mistake: **treating the absence of a signal as evidence
+about the system, when it was evidence about the instrument.** That is precisely
+the defect class this seam map exists to catalogue, and I reproduced it three
+times while cataloguing it.
