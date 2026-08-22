@@ -114,98 +114,105 @@ is visible to an operator reading logs.
 Querying the latter returns `None` for every row and reads exactly like an empty
 column.)*
 
-### Tier 3 — fallback: reads a view that does not exist
+### Tier 3 — fallback: an org_id form mismatch returns zero rows
 
-`activities.ts:6492`:
+> **CORRECTED.** An earlier revision of this section said tier 3 "reads a view
+> that does not exist" (`v_activity_score`). **That mechanism was wrong.** I found
+> a `FROM v_activity_score` by grep and concluded it fed selection without
+> confirming the call path. It does not: that query is in
+> `GET /v2/activities/corpus-summary` (`activities.ts:4883`), an unrelated
+> reporting endpoint. The view really is absent and that endpoint really is
+> broken, but it is not the selection path. The measured symptom below is
+> unchanged; only the cause is.
 
-```ts
-let alpha   = scores?.alpha || template.metrics?.thompson_alpha || 1.0;
-let betaVal = scores?.beta  || template.metrics?.thompson_beta  || 1.0;
-```
-
-`scores` comes from `scoresMap`, populated by `SELECT … FROM v_activity_score`.
-
-**`v_activity_score` is not among the 96 tables in this database.**
-
-```
-SELECT * FROM v_activity_score LIMIT 1;   -->  {"result":[],"status":"OK"}
-```
-
-SurrealDB treats a missing table as an empty one: **`status: OK`, zero rows, no
-error.** *Positive controls:* `v_selection_outcomes` (a view that does exist)
-returns a row; `variant_performance_metrics` returns 3,349. So the empty result
-measures the missing view, not a broken query.
-
-`scores` is therefore always `undefined`, and the fallback resolves to `1.0/1.0`.
-With `alpha += totalBoost` applied at `:6602`, the observed α=4.0 / β=1.0 is
-exactly `Beta(1,1)` plus 3.0 of heuristic boost.
-
----
-
-## Why the view can never come back
-
-This is the failure class migration 174 documented for seven *other* views, and
-`v_activity_score` is an eighth that it missed.
-
-1. `sql/schemas/021-paradigm-computed-views-v3.surql:19` defines it —
-   `DEFINE TABLE IF NOT EXISTS v_activity_score AS …`
-2. `init_migrations` records **both** `021-paradigm-computed-views.surql` and
-   `021-paradigm-computed-views-v3.surql` as applied on 2026-06-28
-3. `scripts/init-database.ts` — the only schema applier — **skips any file whose
-   filename is recorded**
-4. the view is gone from the live volume (almost certainly a casualty of
-   migration 166's batched REMOVE-over-stdin, which migration 174 records as
-   having "silently dropped a subset of its statements")
-
-Recorded-as-applied plus absent-from-the-volume equals **permanently
-unrecoverable by the normal path**. Migration 174 established the remedy: a
-*fresh, unrecorded* migration, applied statement-by-statement rather than piped.
-
----
-
-## Why restoring the view is the wrong fix
-
-The view's own header says `Replaces: variant_performance_metrics`, and its body
-aggregates `FROM execution`:
+`scoresMap` (`activities.ts:6016`) is populated by `getShapeConditionedScores()`
+or `getActivityScores()`, which resolve through `getCanonicalPosteriors()` in
+`paradigm.ts:529`. That function reads **the correct table**:
 
 ```sql
-count(success = true) + 1 AS alpha,
-count(success = false) + 1 AS beta,
-...
-FROM execution GROUP BY activity_id, org_id
+SELECT variant_id, thompson_alpha, thompson_beta FROM variant_performance_metrics
+WHERE ((account_id = $account_id) OR (account_id IS NONE AND org_id = $org_id))
+  AND variant_id IN $activity_ids
 ```
 
-`execution` is a **150,000-row FIFO ring at cap** (`trace_store_counters:execution`
-cap=150000, row_count=150040) that a credential-failure storm filled with 142,951
-auth rows — 95.27% of the table, 133,622 of them older than 24h. Its retained
-history is roughly two days, and the stratified retention sweep that should have
-protected real traces deletes nothing because every composite index whose prefix
-ends in `success` returns zero rows:
+The defect is one line — how `$org_id` is bound (`paradigm.ts:547`, and
+identically at `:710` in the legacy fallback):
 
-```
-activity_id='validator-dispatch' AND success=true  -->  0
-activity_id='validator-dispatch'                   -->  4,796
-success=true                                       -->  7,123
+```ts
+org_id: orgId.startsWith('organizations:') ? orgId.replace('organizations:', '') : orgId,
 ```
 
-So resurrecting the view would restore a posterior computed over a two-day window
-that is 95% authentication telemetry — integer counts with no credit weighting,
-recomputed from scratch on every eviction.
+It **strips** the prefix. The rows carry it:
 
-**The correct target is `variant_performance_metrics`**: 3,349 rows, 1,638 with
-moved posteriors, credit-weighted fractionals (α=493.83/β=897.23 on the deepest
-arm), durable, and already the table every *other* reader in the codebase uses
-(`paradigm.ts:541`, `posterior-update.ts:902`, `discover-by-shapes.ts:261`,
-`variant-creator.ts:490`). Law 3 says reuse the existing producer rather than
-resurrect a duplicate.
+| org_id stored in `variant_performance_metrics` | rows |
+|---|---|
+| `organizations:substrate` | **3,275** |
+| `organizations:metabob` | 76 |
+| `public` | 17 |
+| `metabob_internal` | 1 |
+| `unknown` | 1 |
+
+So the selector binds `'substrate'` and matches nothing:
+
+```
+WHERE account_id IS NONE AND org_id = 'substrate'                 -->      0
+WHERE account_id IS NONE AND org_id = 'organizations:substrate'   -->  3,275
+```
+
+`getCanonicalPosteriors` returns an **empty map on every call**, and its own
+doc comment states the consequence exactly:
+
+> *"an empty map means every caller falls back to the uninformative prior, which
+> is the honest reading of 'we could not observe the evidence'."*
+
+That is the observed draw: `alpha = 1.0`, `betaVal = 1.0`, then `alpha +=
+totalBoost` at `:6602` yields **α=4.0, β=1.0**. β stays pinned at 1.0 because no
+failure evidence ever reaches it.
+
+**Why the shim exists, and why it inverted.** The comment at `:706-708` explains
+itself: *"Legacy table may have existing data with plain strings / TODO: After
+migrating existing data to record format, use orgId directly / For backward
+compatibility, strip organizations: prefix if present."* The premise was real —
+19 plain-string rows do exist. But the migration to record form happened, the
+shim was never removed, and it now matches the **19-row minority** while
+orphaning the **3,351-row majority**. A compatibility shim outlived the
+incompatibility and became the defect.
+
+**The fix is to match both forms**, not to swap one for the other: bind the raw
+and stripped values and accept either, so the 19 legacy rows keep matching and
+the 3,351 prefixed rows start.
+
+**Method note.** This correction is the session's own recurring error, committed
+by me: I traced a grep hit to a conclusion without confirming which call path
+reached it. The observable facts — the view is absent, the sampler drew
+α=4.0/β=1.0 against richer stored values, both conditional readers report 0 hits
+— were measured and all survive. Only the mechanism connecting them was invented,
+and it was invented in the one place I had not probed.
 
 ---
+
+## Aside — `v_activity_score` really is missing, and that is a separate bug
+
+The view is genuinely absent (`SELECT * FROM v_activity_score` returns
+`status: OK` with zero rows; SurrealDB treats a missing table as an empty one).
+It cannot come back on its own: `schemas/021-paradigm-computed-views-v3.surql`
+defines it with `IF NOT EXISTS`, `init_migrations` records that file as applied
+on 2026-06-28, and `init-database.ts` skips any recorded filename. This is the
+class migration 174 fixed for seven other views; `v_activity_score` is an eighth
+it missed.
+
+Its only consumer is `GET /v2/activities/corpus-summary`
+(`activities.ts:4883`), which therefore reports zeros for the whole corpus. Worth
+fixing, and **not** on the selection path — recorded here so the two are not
+conflated again.
 
 ## The fix, in dependency order
 
-1. **Point tier 3 at `variant_performance_metrics`** (`activities.ts:6492`).
-   Single highest-value change: it puts real, durable, credit-weighted evidence
-   into every draw that currently gets the uniform prior. This alone unpins β.
+1. **Match both `org_id` forms in `paradigm.ts:547` and `:710`.** Single
+   highest-value change, and a one-line one: it puts 3,351 rows of real, durable,
+   credit-weighted evidence into every draw that currently gets the uniform
+   prior. This alone unpins β. (Tier 3 already reads the right table — it just
+   cannot match a row.)
 2. **Make tier 1 read the subject the credit path writes** — the 16-hex
    state-space signature, not the 8-hex task-semantics bucket. The reader is
    otherwise correct and already keys the map under all three id forms.
