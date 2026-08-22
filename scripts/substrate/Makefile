@@ -591,7 +591,7 @@ run-live:
 	@echo "[run-live] $(LIVE_NAME) started — activity-api on :$(call hp,18080), development-vessel on :$(call hp,18090), discovery-vessel on :$(call hp,18100), goal-host-vessel on :$(call hp,18210), analysis-vessel on :$(call hp,18250), concept-db on :$(call hp,18260), stateful-ui-vessel on :$(call hp,18270), human-surface-vessel on :$(call hp,18310)"
 	@echo "[run-live] State on named volumes $(SURREAL_VOLUME) + $(WORKSPACE_VOLUME) (host-detached); only the repo is bind-mounted (ro) for sync-* hot-reload"
 	@echo "[run-live] Internal secrets auto-generated and persisted to workspace/.substrate-secrets"
-	@echo "[run-live] Wait ~15s for services to start, then: make -C scripts/substrate seed-live"
+	@echo "[run-live] Identity + templates seed in-container at boot; gate on: docker exec $(LIVE_NAME) substrate-key whoami"
 
 # Same as run-live but boots the substrate-obsidian image: the full fleet PLUS
 # an in-container Obsidian desktop, with the GUI exposed over noVNC on host
@@ -663,7 +663,7 @@ run-live-obsidian:
 	    $(IMAGE):$(OBSIDIAN_TAG)
 	@echo "[run-live-obsidian] substrate-live (obsidian flavour) started."
 	@echo "[run-live-obsidian] Fleet ports as run-live; Obsidian GUI at http://localhost:16080/vnc.html"
-	@echo "[run-live-obsidian] Wait ~20s, then: make -C scripts/substrate seed-live"
+	@echo "[run-live-obsidian] Identity + templates seed in-container at boot; gate on: docker exec $(LIVE_NAME) substrate-key whoami"
 
 # One-time migration: copy legacy HOST state dirs into the named volumes. Run
 # this ONCE when moving an existing host-bind substrate onto detached volumes.
@@ -769,7 +769,9 @@ clean-live:
 # ── ephemeral dev container (port 8080) ─────────────────────────────────────
 
 # Seed operator-side memory files into the substrate's memory store.
-# Run once after seed-live. Pass DEV_VESSEL_ENDPOINT to write via HTTP
+# Run once the fleet is seeded and ready (`substrate-key whoami` reports valid);
+# there is no `seed-live` target — seeding happens in-container at boot.
+# Pass DEV_VESSEL_ENDPOINT to write via HTTP
 # (requires substrate running); omit to write directly to workspace/memory/.
 # health targets the substrate-live container (18080 ports).
 stop: stop-live

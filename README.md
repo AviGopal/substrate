@@ -312,18 +312,27 @@ cd substrate
 git submodule update --init --recursive     # if you cloned without --recurse-submodules
 ```
 
-`.gitmodules` pins each vessel over HTTPS (`github.com/AviGopal/<vessel>.git`).
-Some vessel repos may be private, so submodule fetch needs a credential — an
-HTTPS PAT or an SSH key. The scheme adapts to whatever you have **without editing
-`.gitmodules`**, via a global rewrite rule:
+`.gitmodules` pins each vessel by a URL **relative** to the superproject
+(`../<vessel>.git`), so the submodules resolve against whatever origin you cloned
+from — a fork works with no rewrite rule and no edit to `.gitmodules`.
+
+All eighteen are public today, so the clone above needs no credential: verify
+rather than take it on trust, with
+`git config -f .gitmodules --get-regexp url`, and for any one of them
+`git ls-remote <url>`.
+
+If you fork into an org where some vessels are private, supply the credential
+through the URL you clone from, or configure a rewrite **scoped to that org**:
 
 ```bash
-# SSH key holders — rewrite HTTPS submodule URLs to SSH transparently:
-git config --global url."git@github.com:".insteadOf "https://github.com/"
-
-# PAT/token users — inject the token into the HTTPS URL:
-git config --global url."https://<token>@github.com/".insteadOf "https://github.com/"
+# scoped to one org — leaves anonymous cloning of every other GitHub repo intact
+git config --global url."git@github.com:your-org/".insteadOf "https://github.com/your-org/"
 ```
+
+> Avoid the unscoped form (`url."git@github.com:".insteadOf "https://github.com/"`).
+> It rewrites **every** GitHub HTTPS URL to SSH for your whole account, so a
+> reader with no SSH key — the newcomer most likely to reach for it — loses
+> anonymous cloning everywhere, including this repo.
 
 **2. Start** — one command:
 
@@ -331,7 +340,19 @@ git config --global url."https://<token>@github.com/".insteadOf "https://github.
 make -C scripts/substrate up ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-`up` builds the image if needed, starts the container, seeds identity + templates in-container, waits for fleet readiness, points `~/.metabob/config.json` at the substrate, and runs a doctor check. `OPENAI_API_KEY` (with optional `OPENAI_BASE_URL` for Ollama/local models and `LLM_DEFAULT_MODEL`) works in place of Anthropic; at least one LLM provider key is required. All other secrets (JWT signing, datastore password, the bootstrap API key) are generated on first boot and persisted to the workspace volume.
+`up` builds the image if needed, starts the container, seeds identity + templates in-container, waits for fleet readiness, points `~/.metabob/config.json` at the substrate, and runs a doctor check.
+
+> **"If needed" means the tag is absent, not that the source changed.** `up`
+> builds only when `docker image inspect $(IMAGE):$(TAG)` fails — so on a host
+> that already holds the published `ghcr.io/avigopal/substrate:dev`, this
+> command starts *that* image and your working tree is never compiled. To
+> actually build from source, force it with `REBUILD=1`, or build under your own
+> tag (`TAG=<name>`) so you do not overwrite the `:dev` tag other containers on
+> the host resolve.
+
+> **The command above puts a live secret in `argv`**, where any local user can
+> read it with `ps`. Prefer exporting the variable, or putting it in the repo
+> root `.env`, and let `make` pick it up from the environment. `OPENAI_API_KEY` (with optional `OPENAI_BASE_URL` for Ollama/local models and `LLM_DEFAULT_MODEL`) works in place of Anthropic; at least one LLM provider key is required. All other secrets (JWT signing, datastore password, the bootstrap API key) are generated on first boot and persisted to the workspace volume.
 
 **3. Verify:**
 
