@@ -66,17 +66,53 @@ nothing, 12 of 12:
 "event":"cts_sig_lookup","sig":"f81c27234d15a8cc","requested":98,"hits":0,"floor":5
 ```
 
-The signature computed at *selection* time (from the goal's expected shapes) never
-equals one computed at *credit* time (from an execution's realized shapes). This
-is the sparsity the cluster tier exists to absorb.
+The signature computed at *selection* time (from the goal's expected shapes)
+rarely equals one computed at *credit* time (from an execution's realized shapes).
 
-### Tier 2 — cluster: 7 rows, and no instrument
+**Measured, and NOT the "never" an earlier draft of this claimed:** of 15 distinct
+selection-time signatures taken from six hours of live logs, **2 (13%) do exist as
+a `context_bucket` in the credit store**, and their rows clear the observation
+floor comfortably — `satisfier:source_code` at n=107 (α=40, β=69),
+`understand-source-file-demo` at n=12. So the two populations overlap; they are
+not disjoint.
 
-`context_thompson_scores` holds **7** rows keyed `cluster:sigcl_…` out of 4,619.
-`clusterShadowDecisions` is accumulated in memory and never logged — greping the
-live journal for `cluster_shadow`, `used_scope`, `cluster_lookup` and `sigcl`
-returns **0** occurrences each. The tier designed to solve tier 1b's sparsity is
-both unpopulated and unobservable.
+What produces `hits:0` is therefore **joint** sparsity: the signature must match
+*and* the specific candidate must have a row under that signature. With 4,619
+conditional rows spread over ~3,856 activities and many signatures, that pair is
+rarely present for the ~98 candidates of any one call. This is exactly the
+sparsity the cluster tier exists to absorb — which makes tier 3, the fallback, the
+load-bearing repair rather than tier 1b.
+
+### Tier 2 — cluster: alive, but never reached at selection time
+
+`context_thompson_scores` holds **7** rows keyed `cluster:sigcl_…` out of 4,619,
+and an earlier draft called the tier "unpopulated". **That was wrong** — those
+rows are fresh and accumulating (written 06:34, 08:28 and 08:48 today) and carry
+real weight, up to `n_observations = 195`. The clustering machinery runs:
+`signature_cluster_run` 1,655 rows, `signature_cluster_assignment` 706.
+
+The tier is skipped for a different reason. Selection gates it on
+`clusterIdForSig` — the cluster assigned to the *current* signature — and the live
+selection signatures have no assignment at all:
+
+```
+signature = 'f81c27234d15a8cc'  -->  NO ASSIGNMENT
+signature = '5061a2ff297c5346'  -->  NO ASSIGNMENT
+```
+
+Clustering only ever sees signatures the credit path wrote, so a selection-time
+signature is not merely unclustered — it was never a candidate for clustering.
+A second gate compounds it: **403 of 706 assignments (57%) are
+`contaminated: true`**, and contamination disables the tier by design.
+
+It is also unobservable: `clusterShadowDecisions` is accumulated in memory and
+never logged. Grepping the live journal for `cluster_shadow`, `used_scope`,
+`cluster_lookup` and `sigcl` returns **0** occurrences each, so none of the above
+is visible to an operator reading logs.
+
+*(Note the column trap: the assignment key is `signature`, not `signature_hash`.
+Querying the latter returns `None` for every row and reads exactly like an empty
+column.)*
 
 ### Tier 3 — fallback: reads a view that does not exist
 
