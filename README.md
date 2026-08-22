@@ -207,12 +207,33 @@ so "reachable" and "joinable" look identical, and the spoke boots and then
 crash-loops its transport against a relay that was never advertised.
 
 ```bash
-curl -s http://<hub-host>:18100/bootstrap | jq '.relay_multiaddrs | length'
-# 0  => not a hub: no relay. Deploy it with deploy-hub.sh, or pass RELAY_MULTIADDR.
+curl -s http://<hub-host>:18100/bootstrap | jq '.relay_multiaddrs'
+# []  => not a hub: no relay. Deploy it with deploy-hub.sh, or pass RELAY_MULTIADDR.
 ```
 
+**Read the address, not just the count.** A non-empty answer means the hub is
+*advertising* a relay, not that the relay is alive: the handler builds that array
+from configuration and registry rows and never dials anything. Measured against a
+live hub — a populated array pointing at a host that had been decommissioned,
+whose HTTP plane was gone while its libp2p daemon still accepted TCP, and whose
+own advertised relay port was closed on the hub itself.
+
+So the count cannot distinguish dead from alive, and neither can a TCP dial — the
+dead host accepted the connection. There is no one-liner for this. The signal
+that actually settles it is the transport's own reservation, read after boot:
+
+```bash
+docker exec <spoke> journalctl -u federation-transport-vessel -n 30
+# look for a circuit reservation against the advertised relay, not just "up"
+```
+
+Two things worth checking in that same payload: an address on a *different host*
+than the hub you are joining is a sign the advertisement has outlived its relay,
+and a loopback `identity_endpoint` only means the hub has no `PUBLIC_IP` set — it
+is inert, since a spoke derives identity from the discovery host and port offset.
+
 See [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) § *Join an existing identity/discovery
-group* for why a non-empty answer is necessary but not sufficient.
+group* for the rest.
 
 > **A joining spoke writes to the hub.** The `spoke` role group includes `seed`,
 > and the seeder targets the *derived hub* store — so a join registers the shared
@@ -224,6 +245,17 @@ hub with `docker exec <container> substrate-key issue <you>`). The same variable
 attach a spoke however you launch — `docker compose`, `make up`, or the raw
 `docker run` above; `ACTIVITY_API_ENDPOINT` and `IDENTITY_VESSEL_URL` are
 optional explicit overrides for values `/bootstrap` otherwise supplies.
+
+> ⚠ **The two launch lanes name a second instance differently, and neither
+> translates the other.** `make up` takes `LIVE_NAME=<name>` (which also renames
+> both volumes) and `PORT_OFFSET=<n>` (which shifts the whole `18xxx` block at
+> once). **Compose has no `PORT_OFFSET` and no `LIVE_NAME`**: relocating there
+> means setting `SUBSTRATE_CONTAINER`, `WORKSPACE_VOLUME`, `SURREAL_VOLUME` and
+> the nine individual `*_PORT` variables. A reader who learned the make lane and
+> switches to compose gets a container named `substrate-live` on the unprefixed
+> production volumes — which, on a host already running one, either collides or
+> adopts the existing fleet. `scripts/substrate/.env.example` TIER 2b lists the
+> compose-side names.
 
 **Docker Compose** — put the join vars in the root `.env` (the root
 `docker-compose.yml` and its [`scripts/substrate/docker-compose.yml`](scripts/substrate/docker-compose.yml)
@@ -290,10 +322,17 @@ A climbing `NRestarts` means the transport is crash-looping and **nothing is
 being mirrored**, even though `systemctl is-active` intermittently reports
 `active` — it catches the gap between restarts. `docker exec <container> substrate-doctor` names it honestly.
 
-What will *not* tell you: the container's `healthy` state, `substrate-key show`
-(prints a key whether or not the hub accepts it), and `substrate-doctor`'s
-registry check (it counts *local* vessels, so it passes identically on a spoke
-joined to nothing).
+What will *not* tell you: the container's `healthy` state, and `substrate-key
+show` (prints a key whether or not the hub accepts it).
+
+`substrate-doctor` now names an unjoined spoke directly — it probes the hub
+rather than loopback, and reports `METABOB_API_KEY rejected by the hub's
+activity-api (401) — THIS SPOKE HAS NOT JOINED`, plus a separate check that
+validates the credential against the issuing identity. On an image predating
+that, doctor is not a reliable join signal: it reported four failures on a spoke
+that had not joined and named the credential in none of them. Its registry check
+in particular counts *local* vessels, so it says nothing about the hub either
+way.
 
 A local Obsidian plugin connects to the spoke with its normal two inputs (API key
 + `discoveryVesselEndpoint=http://127.0.0.1:18100`). Optional transport
@@ -394,7 +433,18 @@ The installer selects or creates the vault, installs the plugin, and writes the 
 
 The spoke join above works against **any** hub — substitute the hub's host for the `HUB_DISCOVERY_URL` / `DISCOVERY_ENDPOINT` / `ACTIVITY_API_ENDPOINT` / `IDENTITY_VESSEL_URL` values and use a key that hub issued (`docker exec <container> substrate-key issue …` on the hub).
 
-One image serves every role: a full local substrate, a minimal hub (control plane + store + relay), or a compute-only spoke — selection is declarative via `ENABLED_ROLES` / `ENABLED_VESSELS` (`scripts/substrate/vessels.inventory.json`, applied at boot). Vessels behind NAT join over the libp2p relay via a sidecar. To stand up your own remote substrate or hub on a VM: `scripts/substrate/deploy-remote.sh` (ships the local image over SSH, no registry) or `scripts/substrate/deploy-hub.sh` (the VM pulls the repo, builds there, and runs the relay). Point vessel clones at your own fork with `SUBSTRATE_REPO_OWNER=<your-org>`. Full guide: [`docs/FEDERATION.md`](docs/FEDERATION.md).
+One image serves every role: a full local substrate, a minimal hub (control plane + store + relay), or a compute-only spoke — selection is declarative via `ENABLED_ROLES` / `ENABLED_VESSELS` (`scripts/substrate/vessels.inventory.json`, applied at boot). Vessels behind NAT join over the libp2p relay via a sidecar. To stand up your own remote substrate or hub on a VM: `scripts/substrate/deploy-remote.sh` (ships the local image over SSH, no registry) or `scripts/substrate/deploy-hub.sh` (the VM pulls the repo, builds there, and runs the relay).
+
+`deploy-hub.sh` takes **two positional arguments and a PAT**, none of which were documented here:
+
+```bash
+GITHUB_PAT=<repo-scope-pat> ANTHROPIC_API_KEY=<key> \
+  scripts/substrate/deploy-hub.sh user@vm-ip <public-ip>
+```
+
+The public IP is not optional and is not derived — the federation relay hard-exits without it, under `Restart=always`, so the symptom is a permanent crash-loop reporting `activating` and never `failed`. `deploy-remote.sh` wants `PUBLIC_IP` plus `RUN_RELAY=1` for the relay case.
+
+`SUBSTRATE_REPO_OWNER=<your-org>` points a **running container's** vessel clones at your fork; it is read by `gen-env` and the Makefile. **Neither deploy script consumes it** — `deploy-hub.sh` clones `REPO`, which defaults to `AviGopal/substrate` and is overridden with `REPO=<owner>/substrate`. Full guide: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 
 ## Working with the substrate
 

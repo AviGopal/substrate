@@ -9,8 +9,17 @@
 # multi-GB `docker save | ssh` transfer, and lets the VM self-update with `git pull`.
 #
 # Usage:
-#   GITHUB_PAT=ghp_xxx  ANTHROPIC_API_KEY=sk-ant-xxx  SSH_KEY=~/.ssh/syzygy_deploy \
-#     bash deploy-hub.sh root@138.197.116.56 138.197.116.56
+#   GITHUB_PAT=ghp_xxx  ANTHROPIC_API_KEY=sk-ant-xxx  SSH_KEY=~/.ssh/your_deploy_key \
+#     bash deploy-hub.sh root@<vm-ip> <vm-public-ip>
+#
+# Use a PLACEHOLDER here, never a real address. This example named a specific
+# droplet that has since been decommissioned — its HTTP plane is gone while its
+# libp2p daemon still accepts TCP, so a reader who pasted it verbatim reached a
+# host that half-answers, which is far harder to diagnose than one that refuses.
+#
+# To point the clone at a fork: REPO=<owner>/substrate. SUBSTRATE_REPO_OWNER does
+# NOT reach this script — it is read by gen-env, the Makefile, vessel-ctl and
+# setup-git-push, and governs a RUNNING container's vessel clones.
 #
 # The PAT needs `repo` scope (to clone the private super-repo + submodules). It is used
 # transiently on the VM (insteadOf rewrite for the clone) and scrubbed from git config
