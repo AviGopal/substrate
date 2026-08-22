@@ -135,8 +135,10 @@ out-competed for attention by its own backlog.
 
 Three sequential blockers on the extraction path. Blockers 1 and 2 are verified
 with positive controls and are jointly sufficient to explain a ~0.1% yield.
-Blocker 3 is stated more narrowly than in earlier revisions: its two supporting
-table claims were refuted and are recorded as such.
+Blocker 3 is stated more narrowly than in earlier revisions: of its two
+supporting table claims, one was refuted (`activity_templates` is a legacy sink,
+not the live path) and one survives in restated form (the shape-weighted credit
+branch has never executed). Both verdicts are recorded below.
 
 ### Blocker 1 — 69% of executions never receive a reach tag
 
