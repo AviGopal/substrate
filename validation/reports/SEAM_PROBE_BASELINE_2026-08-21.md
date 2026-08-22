@@ -661,3 +661,63 @@ was built for: in the last window it separated **1** permanently-unresolvable
 satisfier parent from **31** genuine failures. Without it, those 31 would be
 invisible inside satisfier noise — which is how this seam stayed dead since
 2026-07-14.
+
+---
+
+# Round 6 — the parse error was real, and the seam is still not closed
+
+## What the parse fix bought (verified)
+
+The UPSERT had **never parsed**: `IF(cond, a, b)` is a function-call form
+SurrealDB rejects; the conditional is `IF cond THEN a ELSE b END`. Four
+occurrences across both branches. After `9fda916`:
+
+- **0 parse errors** since the 01:54:35 restart (was firing continuously)
+- **30 `derive_ok`** — the statement executes for the first time in its history
+- the lookup resolves: only 12 `parent_lookup_miss` remain, against traffic where
+  most parents are walk-internal ids that cannot resolve
+
+## But no edge has been written, and the new counter proves it
+
+Row count is **still 1999**, and the target row is unchanged:
+
+```
+parent: activity:⟨slot-binding⟩   child: validator-dispatch
+execution_count: 19   updated_at: 2026-07-02T14:12:04Z
+execution_id: composition-edge-reconcile
+```
+
+`derive_ok` fires 30 times; `updated_at` is seven weeks old. The UPDATE branch
+runs, reports success, and mutates nothing.
+
+⚠ **My verification read was itself insufficient.** I added a readback that
+confirms the pair EXISTS — and it does, so it logged `derive_ok`. But existence
+was never in question; **mutation** was. A readback must assert the thing the
+write was supposed to change (here: `execution_count` incremented, or
+`updated_at` advanced), not merely that a row is present. I built the same
+class of instrument I have spent this session cataloguing: one whose green
+state does not entail the outcome it is trusted to report.
+
+**Almost certainly the remaining cause:** the stored rows carry MIXED id forms
+(`activity:⟨slot-binding⟩` + bare `validator-dispatch` in the same row). The
+dual-form match finds them for SELECT, but `UPDATE … WHERE` under the same
+disjunction is evidently not matching — most likely a type or record-link
+comparison issue on one endpoint. That is a hypothesis, not a finding, and it
+needs the exact statement run with the exact parameters against the DB rather
+than another deploy cycle.
+
+## Honest close
+
+| seam | state |
+|---|---|
+| hop-4 content threading | **CLOSED**, confirmed live |
+| NULL≠NONE (tuning + shape registry) | **CLOSED**, SF_BLEND ratcheted `null → 1` |
+| ψ refusal | **CLOSED**, 0 → 9 blends |
+| signature tiers | fixed + 7-assertion regression suite |
+| trace spool eating production traces | **CLOSED**, verified |
+| lint gate had no caller | **CLOSED**, verified by conviction |
+| composition edges | **NOT CLOSED** — statement now executes, writes nothing |
+| credit conditional read | **NOT CLOSED** — `hits:0`, blocked upstream on signatures |
+
+Seven causes found and fixed on the composition seam; an eighth remains. Every
+one presented identically — success reported, nothing written.
