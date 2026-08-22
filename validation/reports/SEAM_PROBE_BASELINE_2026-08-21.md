@@ -595,7 +595,34 @@ concluded "no traffic" from that. **Prefer relative windows.**
 **Every one presented identically: a query returning nothing, silently.** That is
 the seam map's thesis demonstrated six times on nine lines of code.
 
-## Where it stands — NOT CLOSED
+## ⚠ SUPERSEDED — the lookup was never the blocker
+
+The section below was written before I read the `error` field of my own counter.
+**The parent lookup now resolves.** The real blocker is the UPSERT, which has
+never parsed:
+
+```
+Parse error: Unexpected token `,` expected delimiter `)`
+ --> [7:40]  success_count = IF($success, success_count + 1, success_count),
+```
+
+`IF(cond, a, b)` is a function-call form SurrealDB does not accept; the
+conditional is an EXPRESSION, `IF cond THEN a ELSE b END`. Four occurrences,
+across both the UPDATE and CREATE branches. **The statement could not execute on
+any path, for any parent, since it was written** — which is the actual reason
+every edge in the graph came from the batch reconciler.
+
+The six lookup causes were all real defects and all had to be fixed to get the
+error to surface. But the seam would still have been dead with all six fixed.
+
+★ **The lesson is not "add instruments" — it is READ WHAT THE INSTRUMENT SAYS.**
+The parse error was printed on the catch path added in `18c1490`, the very first
+composition commit of the night. I read the counter's `outcome` field on every
+cycle and never once read its `error` field, then ran five deploy cycles
+guessing at query forms while the exact answer sat in a WARN line I had authored
+myself. Fixed in `9fda916`.
+
+## Where it stood before that (six lookup causes) — NOT CLOSED
 
 Verified: the fix is in the running process (mirror 01:44:06, PID 861981 started
 01:44:07). A composing walk is producing nested traces — 31
