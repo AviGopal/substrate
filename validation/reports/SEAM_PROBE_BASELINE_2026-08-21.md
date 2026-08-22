@@ -1023,3 +1023,39 @@ per-statement status, so **any** rejected write in the fleet reads as success.
 | lint gate | ✅ closed — convicts |
 | **composition edges** | ✅ **closed — 49 derive_ok, edges minting** |
 | credit conditional read | ⏳ open — `hits:0`, needs post-fix traces to accumulate signatures |
+
+## Credit seam — wiring closed, semantics open
+
+The signature-tier fix is working end to end:
+
+- **18 of 20** recent executions now carry a 16-hex `signature` at
+  `signature_version: 1` (was: none carried one)
+- `context_thompson_scores` holds **2,392** v1 rows
+- the reader's key is well-formed 16-hex and derived server-side
+
+But `cts_sig_lookup` still reports `hits: 0`, and a direct comparison shows why:
+
+```
+cts buckets: 867524c1…  25859e96…  4d11f0ba…  47468ef5…
+trace sigs : c290727d…  c290727d…  c290727d…
+overlap    : []
+```
+
+Both sides are now the same *kind* of key and still name different states. This
+is no longer a wiring defect — it is the **semantic** one flagged at the start:
+credit is written under the signature of the trace's **realized** pool, while
+`/recommend` derives its key from the **goal's requested** shapes. Those are
+different state spaces, and no amount of key-format work makes them meet.
+
+**This is a design question, not a bug**, and it has two honest answers:
+
+1. **Key credit on the decision-time pool** — write the posterior under the
+   signature the selector used, so the read and write name the same state by
+   construction. Correct, and it changes what the posterior *means*.
+2. **Read on the realized pool** — have `/recommend` derive its key the way the
+   writer does. Cheaper, but the selector does not yet know the realized pool at
+   decision time, so it would need the prior trace's signature threaded through.
+
+Everything mechanical that could be fixed is fixed; the remaining step is a
+deliberate choice about what a conditional posterior is conditioned on. That
+belongs with the operator, not in another deploy cycle.
