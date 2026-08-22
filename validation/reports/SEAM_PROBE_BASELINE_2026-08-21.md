@@ -721,3 +721,44 @@ than another deploy cycle.
 
 Seven causes found and fixed on the composition seam; an eighth remains. Every
 one presented identically — success reported, nothing written.
+
+## Round 6 final state — the seam executes, and the evidence conflicts
+
+With the mutation-asserting readback live: **30 `derive_ok`, 1
+`derive_wrote_nothing`**. `derive_ok` now requires `updated_at >= issuedAt`, so
+by that instrument the writes ARE landing.
+
+But the graph disagrees: **0 of 400 sampled edges have an `updated_at` from
+today**, the target pair still reads `execution_count: 19, updated_at:
+2026-07-02`, and the row count holds at 1999.
+
+**The two readings are taken through different auth contexts**, which is the
+same trap that caused cause #3 on this seam:
+
+- the UPSERT runs through `queryWithAuth(jwtToken, …)` when a JWT is present
+- my verification SELECT always runs on the **root** connection (`:1844`)
+- the `/composition/graph` endpoint runs through the HTTP auth layer
+
+`activity_composition_graph` inherits tenancy PERMISSIONS, so these three can
+legitimately see three different row sets. Until the write and the check share
+one auth context, `derive_ok` and the graph endpoint are not comparable — and I
+should not claim either as evidence over the other.
+
+**Status: NOT CLOSED, and I am stopping the deploy-cycle loop.** Eight causes
+have been found and fixed on this one lookup; the ninth question is not "what is
+wrong with the query" but "which auth context is the truth", and answering it
+needs the statement run directly with known credentials rather than another
+guess-deploy-measure round (~10 min each, and I have now run seven).
+
+**What a competent next step looks like** (operator decision — it needs either a
+SurrealQL console or a scoped debug route):
+1. Run the exact UPSERT with the exact params under BOTH auth contexts and read
+   the returned result arrays, not just the absence of a throw.
+2. If the root path writes and the JWT path does not (or the reverse), that is
+   the answer and it is a one-line change.
+3. Make the verification read use the SAME connection as the write, so the
+   instrument can never again disagree with itself.
+
+⚠ **The honest summary of this seam: I improved the instrument five times and
+the query four times, and the thing I never did was run the statement by hand.**
+Every deploy cycle was a guess dressed as a measurement.
