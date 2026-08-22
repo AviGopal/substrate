@@ -200,3 +200,47 @@ numbers the whole time.
 **The check that finds this class:** for every `FROM <name>` in the codebase,
 assert `<name>` appears in `INFO FOR DB`. It is a single query and a grep, and it
 would have caught this on day one.
+
+
+---
+
+## Addendum — the selection/outcome join, corrected
+
+An earlier revision of the main audit called all 26,529 Thompson selections
+"structurally unjoinable to their outcomes," attributing it to
+`thompson_selection_log.execution_id` being a `recommend-<ts>-<idx>` placeholder.
+**That was directionally right about the effect and wrong about the cause**, and
+the corrected version is both smaller and fixable.
+
+`execution_id` is a placeholder *by design* — the code says so at
+`activities.ts:7211` (`// Placeholder until actual execution`) and names the real
+join key on the line above it: `correlation_id: rec.correlation_id, // Link to
+execution via correlation_id`.
+
+And the key exists on **both** sides:
+
+- `INFO FOR TABLE execution` defines a `correlation_id` field.
+- `thompson_selection_log` populates it faithfully (`sel_1785015944015_6nseg0_8`).
+- `v_selection_outcomes` — the view built for this join — exists and holds 226 rows.
+
+The defect is one measurement:
+
+```
+SELECT count() FROM execution WHERE correlation_id IS NOT NONE   -->  0 rows
+SELECT count() FROM execution WHERE activity_id != 'auth_resolve_v1' -->  8,650
+```
+
+**Zero of 8,650 non-auth executions carry a correlation_id.** The selection side
+writes the link; the execution side never does. This is a designed join with one
+end attached, not an impossible one — and `v_selection_outcomes` covering 226 of
+26,529 selections (<1%) is the visible consequence.
+
+**The fix is correspondingly small:** propagate `correlation_id` from the
+recommendation onto the execution record when the selected template runs. Nothing
+new needs designing — the column, the writer on one side, and the consuming view
+all already exist.
+
+This correction matters beyond the one finding: "the placeholder makes it
+impossible" would have sent a repair at `execution_id`, which is deliberately a
+placeholder and should stay one. The actual repair is on the execution side of a
+key that was already agreed.
