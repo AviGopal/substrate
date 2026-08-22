@@ -145,6 +145,7 @@ documents here cover standing the fleet up, iterating on a vessel against a runn
 substrate, and authoring a new vessel that satisfies the shape-dispatch contract.
 
 - [Local single-container substrate](SUBSTRATE.md) — bootstrap, the vessel fleet, port conventions, and troubleshooting.
+- [Configuration surface](operations/CONFIGURATION_SURFACE.md) — every variable by the channel that delivers it and the moment it is read; the precedence chain, and which values are bootstrap rather than shape-able.
 - [Live Development Guide](LIVE_DEVELOPMENT.md) — hot-reload iteration against a running vessel.
 - [TypeScript Vessel Template](architecture/TYPESCRIPT_VESSEL_TEMPLATE.md) — the invariants a new vessel must satisfy, including shape-dispatch agreement.
 
