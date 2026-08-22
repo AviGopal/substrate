@@ -113,7 +113,17 @@ restarting() { # unit -> 0 if its restart counter moved since the previous pass
   now="$(printf '%s' "$LOOP_CUR" | awk -F'\t' -v U="$unit" '$1==U {print $2}')"
   prev="$(printf '%s' "$LOOP_PREV" | awk -F'\t' -v U="$unit" '$1==U {print $2}')"
   [ -n "$now" ] && [ -n "$prev" ] || return 1
-  [ "$now" -gt "$prev" ] 2>/dev/null
+  [ "$now" -gt "$prev" ] 2>/dev/null || return 1
+  # A COUNTER THAT MOVED IS NOT YET A LOOP. A unit that retried during boot and
+  # then succeeded is resting at Result=success / inactive — measured on a fresh
+  # fleet, concept-db-seeder retried twice and settled — and reporting it down
+  # fails a fleet that came up correctly. A real loop is still cycling when the
+  # window closes.
+  local st rs
+  st="$(csh "systemctl show '$unit' -p ActiveState --value 2>/dev/null" 2>/dev/null || true)"
+  rs="$(csh "systemctl show '$unit' -p Result --value 2>/dev/null" 2>/dev/null || true)"
+  [ "$st" = "inactive" ] && [ "$rs" = "success" ] && return 1
+  return 0
 }
 
 check_unit() { # unit role port path -> echo status: ok|down|skipped

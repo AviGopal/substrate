@@ -212,7 +212,19 @@ while read -r u n2; do
   [ -n "$u" ] || continue
   n1="$(echo "$SNAP1" | awk -v U="$u" '$1==U {print $2}')"
   [ -n "$n1" ] && [ -n "$n2" ] || continue
-  [ "$n2" -gt "$n1" ] 2>/dev/null && LOOPING="$LOOPING $u(+$((n2-n1)) in ${DOCTOR_LOOP_WINDOW:-25}s, total $n2)"
+  [ "$n2" -gt "$n1" ] 2>/dev/null || continue
+  # A COUNTER THAT MOVED IS NOT YET A LOOP. During boot a unit may retry and
+  # then succeed — measured on a fresh fleet: concept-db-seeder went +1 inside
+  # the window and settled at Result=success / inactive / dead, and flagging it
+  # reported a FAILURE on a fleet that had come up correctly. That is the same
+  # "validator fails on correct state" defect this check exists to remove.
+  #
+  # A real loop is still CYCLING when the window closes. A settled retry is
+  # resting with a successful result. Ask for both before condemning.
+  _st="$(csh "systemctl show '$u' -p ActiveState --value 2>/dev/null" 2>/dev/null || true)"
+  _rs="$(csh "systemctl show '$u' -p Result --value 2>/dev/null" 2>/dev/null || true)"
+  if [ "$_st" = "inactive" ] && [ "$_rs" = "success" ]; then continue; fi
+  LOOPING="$LOOPING $u(+$((n2-n1)) in ${DOCTOR_LOOP_WINDOW:-25}s, total $n2, now $_st/$_rs)"
 done <<EOF
 $SNAP2
 EOF
