@@ -842,3 +842,57 @@ block with a single unconditional `UPSERT activity_composition_graph:<derived-id
 SET …`, keyed on a deterministic hash of (parent, child). That removes the
 LET/IF machinery entirely, is idempotent by construction, and is the form the
 codebase already uses successfully for `substrate_tuning_param`.
+
+## Round 9 — nine causes, and the honest stop
+
+Copying the reconciler's exact write form — backtick record-id literal, `CONTENT`
+not `SET`, plus the three columns it sets and mine omitted — **still writes
+nothing**: 39 `derive_wrote_nothing`, no error, row untouched, count 1999.
+
+**One difference remains, and it is the obvious suspect I cannot test blind:**
+the reconciler **interpolates literals** into the statement string
+(`${JSON.stringify(p)}`), while this path **binds `$params`**. If the bindings
+are not reaching a `CONTENT {}` body — or if `UPSERT <table>:\`${id}\`` with
+bound params behaves differently from the interpolated form — the write would
+silently no-op exactly as observed.
+
+That is testable in one manual execution and not in another deploy cycle. I have
+now run nine.
+
+### The nine causes, all on one nine-line function
+
+| # | cause | fixed |
+|---|---|---|
+| 1 | parent lookup on a 12% shadow table | ✅ |
+| 2 | `execution_id` is not a column on `execution` | ✅ |
+| 3 | read on root vs `PERMISSIONS FOR select` | ✅ |
+| 4 | over-normalized id form | ✅ |
+| 5 | wrong qualifier table (`activity_execution_traces:` vs `execution:`) | ✅ |
+| 6 | `IF(a,b,c)` is not SurrealQL — **the statement never parsed** | ✅ |
+| 7 | instrument asserted existence, not mutation | ✅ |
+| 8 | instrument read through a different auth context than the write | ✅ |
+| 9 | the write itself — bound params vs interpolated literals | ❌ **open** |
+
+Causes 7 and 8 were defects **in my own instrument**, and both produced false
+greens: 30 `derive_ok` that meant nothing. That is this session's headline
+failure class, reproduced twice by the person cataloguing it.
+
+### What is genuinely closed and verified
+
+| seam | evidence |
+|---|---|
+| hop-4 content threading | 9 real read-backs / 0 stubs; 14 tests fixed |
+| NULL≠NONE | SF_BLEND ratcheted `null → 1` unassisted |
+| ψ refusal | 0 → 9 blends carrying real target shapes |
+| signature tiers | P10 red → 7/7 green |
+| trace spool | full suite leaves the live spool untouched |
+| lint gate | convicts an injected violation |
+
+### The single most valuable artifact
+
+Not any fix — **the instrument**. `derive_wrote_nothing` now reports
+`row_present`, `execution_count` and `stale_updated_at` through the same
+connection that wrote, and it has convicted five separate wrong hypotheses
+including two of my own instruments. Whatever cause 9 turns out to be, it cannot
+hide, and the next person needs one manual statement execution rather than
+another night of deploy cycles.
