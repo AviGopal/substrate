@@ -365,3 +365,58 @@ pattern is identical in every case and was named in round 1 before being
 under-applied: **a fix is not closed until a number at the consumer moves.**
 Deployment, typecheck, green tests and a correct-looking diff are all compatible
 with zero effect.
+
+---
+
+# Round 3 — closing the two INERT seams
+
+## Composition edges: three corrections, and only the third names the cause
+
+| attempt | change | measured result |
+|---|---|---|
+| `18c1490` | retarget the parent lookup from the 12% shadow table to `execution` | **88% → 100% miss.** `execution` has no `execution_id` field — it keys by record id, and the compat view synthesizes that column precisely because it is absent |
+| `7b1071d` | address by record id via `type::thing('execution', $pid)` | still 100% miss — 40 `parent_lookup_miss` in 10 min |
+| `d7963d1` | **read it through auth** | pending measurement |
+
+The binding constraint was never the table or the column. `execution` carries
+`PERMISSIONS FOR select WHERE org_id = $auth.org_id`
+(`migrations/074:178-186`), and the derive path queried it on the **root
+connection**, where `$auth` is empty — so PERMISSIONS filtered out every row and
+the select returned nothing. Silently, and indistinguishably from an absent
+column or a genuinely missing row.
+
+**That also explains the entire history of the seam.** The shadow table
+`activity_execution_traces` has no PERMISSIONS clause — which is exactly why that
+query returned its 12% and the "better" one returned 0%. I read the 88%→100%
+jump as evidence about the column, fixed the column, and was still wrong.
+
+Proof the rows were always there: `exec_0gkibtpm` returns
+`activity_id: validator-dispatch` on demand through the authenticated API, while
+the derive path could not see it at the same moment.
+
+⚠ **Standing lesson: a permission clause is invisible in the query text.** Three
+readings of a nine-line function missed it, because the defect is not in the
+function — it is in the DB's view of who is asking. When a query returns nothing
+against a table whose rows demonstrably exist, check the auth context BEFORE the
+predicate.
+
+## Credit: the payoff read was never instrumented
+
+The v1 signature-keyed lookup — the read that decides whether a conditional
+posterior ever overrides the global — logged at `logger.debug`, and zero debug
+lines are emitted in 100k+ journal lines. **It has never once reported.** A seam
+whose only instrument is switched off is indistinguishable from a seam that
+works: `hits:0` and "the conditional agreed with the global" look identical from
+outside. Promoted to a counted `info` line (`cts_sig_lookup`) in `2851bac`.
+
+The legacy `contextBucket` reader is now documented as a **structural zero**
+rather than a failed lookup, with the measurement inline: it computes an 8-hex
+`computeContextBucket` (sha256 over task-semantics|org|goal_cluster,
+`.slice(0,4)`) while the credit path writes a 16-hex `computeStateSpaceSignature`
+(sha256 over shapes|provenance|missing, `.slice(0,8)`). Different algorithm,
+different inputs, **different width** — no width fix could make them meet.
+Measured live: bucket `b832569e` against 16-hex rows, `matched:0` on 23/23 and
+then 17 more on demand.
+
+Kept rather than deleted: its subject is live (2,120 rows, 246k observations,
+still written), so removing the reader would discard a real posterior.
