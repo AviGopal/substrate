@@ -7,8 +7,14 @@ of it: *what is preventing growth?*
 
 **Method.** A 96-table row census on the live local `substrate-live` container is
 the spine; every claim is anchored to a runnable read-only probe. Produced by an
-11-agent audit plus direct probing, with an adversarial pass over the
-growth-impacting survivors.
+11-agent audit plus direct probing.
+
+> **STATUS — this revision is PRE-VERIFICATION.** The adversarial pass has not
+> run yet, and two of the eleven agents (including the one scoped to attribution)
+> have not reported. Findings below carry the confidence their originating agent
+> assigned, upgraded only where **I re-ran the probe myself** — those are marked
+> *(replicated)*. Treat everything else as single-source. A follow-up revision
+> will carry the verify verdicts and any retractions.
 
 **Access.** Local container only. DB reads went through a helper that refuses any
 statement not beginning `SELECT`/`INFO`. No remote host was contacted, no
@@ -107,9 +113,13 @@ And a one-character name difference splits the extraction path in half:
 | `activity_template` (singular) | **0** | 6 | 0 |
 
 Extraction output falls into a write-only table; six consumers starve on a
-write-never one. That emptiness has a measured cost: **6,928 of 6,928 posterior
-updates degrade to unweighted** because the shape-weighted credit path reads
-`activity_template`.
+write-never one. An agent reports a measured cost of **6,928 of 6,928 posterior
+updates degrading to unweighted** because the shape-weighted credit path reads
+`activity_template`. *Single-source — I have not replicated that count.* What I
+did confirm directly is the shape of the defect: `paradigm.ts:902` reads `FROM
+activity_template` and its transform hardcodes `input_shapes: []` with the comment
+"Legacy templates don't have shapes", so anything routed through that path is
+shape-blind by construction regardless of the table's emptiness.
 
 **Supporting law-1 violation.** The ribosome logs `WARN extractionPolicy
 unresolved — falling back to maxExtractionDepth 1` and `WARN
@@ -141,7 +151,7 @@ fail loudly when it does not reach; reconcile `activity_templates` /
 | Only 1.2% of activities carry execution provenance; 51% minted by gap-closing | law 4 inverted at the source |
 | A credential-failure storm flushed the trace store | 142,882 failed auth rows, 133,622 older than 24h, against ~2-day retention |
 | Goal walks are a rounding error in the corpus | 283 of 150,056 executions (0.19%) carry a `goal` input shape |
-| `validator-dispatch`'s `learning_signal_write` skipped in 4,731/4,731 executions | all reported success |
+| **`validator-dispatch` is a 5-task template that runs one task** — see below | 4,796/4,796, positive control clean *(replicated)* |
 | Learning-track classifier reads `trace_digest` under a key its writers never use | `learning_track = 'unclassified'` on **3,856/3,856**; `execution_system_traces` can never receive a row |
 | Promote gate is a rubber stamp | 6,324/7,652 `auto_promote`; projection fires 0.56%; **one** quality refusal ever |
 | `shape_gap_resolution` has no writer; its one reader task is skipped ~94% | gap-resolution cache permanently cold |
@@ -149,6 +159,34 @@ fail loudly when it does not reach; reconcile `activity_templates` /
 | `queryWithAuth` pooled branch discards its own `sql` | **latent** — `DB_POOL_ENABLED` absent from `/proc/992491/environ` |
 | Law 7's gap triple is not computed anywhere | live: 92% of gaps open, 23% recurrence |
 | ≥8 behavioral env gates in goal-host unset and unreachable | law 1 |
+
+### `validator-dispatch` executes one of its five tasks — and it is what the ribosome extracts from
+
+An agent reported `learning_signal_write` skipped in 4,731/4,731 executions. That
+did not replicate from the journal (2 mentions in 24h, both shape names rather
+than skip events), so it was re-derived from the trace records instead — where it
+is confirmed and larger than reported.
+
+Every `validator-dispatch` execution carries five tasks. Across **all 4,796** in
+the window:
+
+| # | task | executions with `duration_ms > 0` |
+|---|---|---|
+| 1 | Find activities that can validate the just-completed work | 2,890 |
+| 2 | Reshape the discovery result | **0** |
+| 3 | **Execute the chosen validator activity** | **0** |
+| 4 | Handle the dispatched validator's emissions | **0** |
+| 5 | **Record per-task learning signals** | **0** |
+
+*Positive control:* task 1 shows 2,890 non-zero durations, so the `duration_ms >
+0` predicate works and the zeros are real absences, not a broken filter. Task 5
+is 4,796/4,796 at zero with no exceptions.
+
+So the template **never executes a validator and never records a learning
+signal** — it performs discovery and stops, and reports success. This matters
+doubly because `validator-dispatch` is one of only **two** templates on the
+ribosome's hardcoded eligibility list (blocker 3 above). The thing the extraction
+tier is permitted to learn from is a five-step behaviour that performs one step.
 
 ### Degrades growth
 
@@ -187,12 +225,26 @@ entirely on the denominator, and four defensible queries give four answers:
 | denominator | reach | note |
 |---|---|---|
 | all executions with a verdict | **0.08%** | 143,143 of them are failed-auth rows — meaningless |
-| (agent's cumulative measure) | 17.0% | |
-| excluding `auth_resolve_v1` | **37.0%** | 113 reached / 305 graded |
-| goal-shaped executions only | **42.4%** | 98 reached / 231 graded (52 ungraded) |
+| excluding `auth_resolve_v1` | **37.0%** | 113 reached / 305 graded *(replicated)* |
+| goal-shaped executions only | **42.4%** | 98 reached / 231 graded, 52 ungraded *(replicated)* |
 
-**37–42% is the honest figure** against a stated ~90%. Report the denominator
-whenever quoting it; the 0.08% and the 90% are not measuring the same thing.
+**37–42% is the honest figure** against a stated ~90%. Two caveats that must
+travel with it:
+
+1. **This is a ~2-day window, not a cumulative rate.** `execution` is
+   retention-pruned (oldest row 2026-08-20). Anyone quoting 37–42% as a lifetime
+   figure is making exactly the error this section warns about. A separate agent
+   reported 17.0% "cumulative"; its denominator is not stated in what it returned,
+   so that number is omitted here rather than reproduced — it is not reconcilable
+   with the windowed figures above without knowing what it divided by.
+2. **Report the denominator whenever quoting any of these.** The 0.08% and the
+   stated 90% are not measuring the same population.
+
+*Note on goal-walk volume:* this audit measures 283 goal-shaped executions by
+`'goal' IN input_impulse_shapes`; an agent reported 88 using a narrower
+definition it did not spell out. Both are a rounding error against 150,056, which
+is the load-bearing point; the discrepancy is a definitional one and is left
+unresolved rather than papered over.
 
 **Tier by tier:**
 
