@@ -628,3 +628,108 @@ exists and clustering is already embedding-based, so the machinery is present �
 is no `nearestCluster`/`assignCluster` entry point anywhere in the source, and adding
 embedding computation to the recommend hot path is a latency decision, not a wiring fix.
 Left for a deliberate design pass with the mechanism precisely located.
+
+
+---
+
+# Round 4 — blame attribution fixed, then the decay lengthened
+
+Directed: *"fix blame attribution during outages, then lengthen the decay."* Done in that
+order, because the second is only safe because of the first.
+
+## The blame defect was worse than "outages are mis-attributed"
+
+Tracing it produced a sharper finding: **98% of this system's failures carried no
+diagnostic information at all**, so blame could not be attributed even in principle.
+
+```
+execution_error   1,761      <- 98% of all recorded failures
+cascading            36
+verifier_negative      4
+```
+
+`execution_error` was absent from `computeDeltas`' switch, so it fell to `default:` and
+took a **full β=1 penalty** while warning *"unknown failure_mode.type"*. The overwhelming
+majority of all blame in this system was assigned by a branch that did not know what it
+was looking at.
+
+And the payload was empty — `{type: 'execution_error'}` with nothing else. Tracing why:
+
+| stage | state |
+|---|---|
+| engine emits `{type, reason}` (`engine.ts:1407`) | ✅ reason present |
+| trace sink forwards it | ❌ **collapsed to a bare type** |
+| activity-api route validates it | — no zod applied; reads `body.failure_mode?.type` |
+| DB column | `FLEXIBLE TYPE option<object>`, no ASSERT |
+
+The sink's own comment justified the strip on two grounds, **both false when measured**:
+`FailureModeSchema` is declared and applied on *no* ingest route, and the claim that
+"rich error info travels in the per-task error field instead" does not hold — sampling a
+failed execution's persisted tasks shows no error/reason/message key at all.
+
+So the reason was destroyed at the wire boundary to satisfy a contract nothing enforces,
+and nowhere recovered it. That is the *"explicit projection is a silent dropper"* class,
+and it is why an outage and a genuinely broken arm recorded identical failures.
+
+## The fix
+
+**Sink** (`ias-executor@acfd5c0`): `execution_error` forwarded intact. The guard is kept —
+an unrecognised type still flattens, but now to a bounded one-line description rather than
+nothing.
+
+**Attribution** (`activity-api@2ededef`): `computeDeltas` abstains (`β += 0`, the shape
+`cascading` already uses for a victim) when the reason matches a transport/availability
+signature. Deliberately **narrow** — anything unrecognised keeps the strict penalty, and
+an `execution_error` with *no* reason also keeps it, because historical rows have none and
+abstaining blind would forgive every unlabelled failure in the store.
+
+*Its own negative control caught the first version over-matching:* a bare `/\b50[234]\b/`
+matched `"returned 5031 rows, expected 502"` — an arm-fault message that would then have
+escaped blame. Status codes now require explicit `HTTP`/`status` context. **A false
+abstention costs one blame signal; a false blame condemns a working arm.**
+
+## Then the decay, which this made safe
+
+Raised **3 → 30 days**. Previously impossible: one constant served two incompatible jobs,
+and a sweep over 15 half-lives proved the set satisfying both is empty. Fixing attribution
+**dissolves** the conflict rather than trading sides — outage poison is no longer
+manufactured, so decay no longer has to erase real evidence to remove it.
+
+The sweep test is **kept, not deleted**. It is what proves the conflict could never have
+been tuned away; if anyone later proposes serving R1 with the half-life again, it still
+says no.
+
+**Residual, measured and stated rather than rounded:** 32 of 509 arms with real β already
+carry the historic poison signature. A β=81 row now crosses back to re-selectable at
+roughly **240 days** rather than 30 — at 180 days it is still suppressed at mean 0.308. My
+first draft said "two quarters" and the test caught that as wrong. The two worst are
+`auth_resolve_v1` (β=399,770 — the credential storm, environmental by definition and not a
+selectable activity) and a hook subscriber already excluded from the conditional
+posterior, so the slow fade lands where it costs least.
+
+## Deployment — verified, with one honest gap
+
+Converged 16:51. The `ias-executor` change is a **shared package**, so pull-sync rebuilt
+`dist` for six consumers and restarted them. Verified in the artifact consumers actually
+load:
+
+```
+/vessels/ias-executor-ts/dist/adapters/activity-api-trace-sink.js
+  execution_error occurrences: 7
+  describeUnknownFailure:      2
+  built: 2026-08-22 16:51:11
+```
+
+with `goal-host-vessel` (16:51:28), `development-vessel` (16:51:20) and `ribosome-vessel`
+(16:51:52) all restarted onto it.
+
+**Not yet observed end to end:** zero `execution_error` rows have been recorded since the
+deploy, so no natural failure has exercised the path. The mechanism is unit-proven (11
+tests, conviction-checked in both directions) and the deployed artifact is confirmed, but
+the first reason-carrying failure row is still pending. Recorded as pending rather than
+claimed — the same standard applied to the `org_id` and `correlation_id` fixes.
+
+**What to watch:** `SELECT count() FROM execution WHERE failure_mode.type='execution_error'
+AND failure_mode.reason IS NOT NONE` should become non-zero on the next failure. If it
+stays at zero while failures accumulate, the sink is not the only producer and the
+remaining one needs finding.
