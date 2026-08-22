@@ -40,47 +40,53 @@ are against `substrate-live` (booted 2026-08-21T12:24 UTC).
 > works, is selected, and is graded. The corrected finding below is narrower,
 > dated, and considerably more actionable.
 
-**The learning loop is severed on both sides of the selector.** The substrate
-computes a rich graded posterior, stores it, and then does not use it — and
-cannot connect any selection it makes to the outcome that follows.
+**The credit the substrate earns is not the credit it draws on.** Outcome→arm
+credit *does* land — that is settled, and the proof is in the store itself:
+`variant_performance_metrics` holds credit-weighted posteriors like `α=493.83,
+β=897.23`, roughly 1,391 observations accumulated on a single arm. The learning
+machinery works. Two specific joins are severed around it.
 
-**Inbound — the graded posterior never reaches the sampler.** The credit path
-maintains genuinely deep evidence in `variant_performance_metrics`: fractional,
-credit-weighted values like `α=493.83, β=897.23` (≈1,391 observations on one arm),
-`α=13.17, β=169.60`, `α=89.38, β=122.55`. What the sampler actually logs at
-selection time, live today, are small integers:
+**1. The sampler draws on numbers that disagree with the stored posterior for the
+same arm.** Compared on *matched* arms — not two arbitrary samples, which is how
+this was first measured and was wrong:
 
-```
-  sampler logged          stored graded posterior
-  α=4.0  β=1.0            α=493.83  β=897.23
-  α=5.0  β=1.0            α=13.17   β=169.60
-  α=5.0  β=1.0            α=89.38   β=122.55
-```
+| arm | sampler logged | stored in `variant_performance_metrics` |
+|---|---|---|
+| `detect-vessel-code-drift` | α=4.0, β=1.0 | **α=23.76, β=10.86** |
+| `operator-mcp-isomorphism-probe` | α=4.0, β=1.0 | **α=21.62, β=18.22** |
 
-Different magnitudes and different value *types* — integer counts versus
-credit-weighted fractionals. The sampler is not reading the graded table.
-**5,979 of 26,529 selections (22.5%) logged the exact neutral prior α=1, β=1.**
-Every lesson the credit path learns is discarded at the moment of use.
+The disagreement is systematic and **optimistic in one direction: β is pinned at
+1.0**, discarding accumulated failure evidence. An arm the store rates at 0.54
+(α=21.62/β=18.22) is drawn at 0.80. **5,979 of 26,529 selections (22.5%) logged
+the exact neutral prior α=1, β=1.**
 
-**Outbound — no selection can ever be joined to its outcome.**
+*Mechanism undetermined.* `discover-by-shapes.ts:261` **does** read
+`variant_performance_metrics` and **does** wire it into the draw
+(`thompson_alpha = score?.thompson_alpha ?? score?.alpha ?? 1`), so the simple
+explanation — "the sampler never reads the graded table" — is contradicted by the
+code. Either the sampler is a different path, or that read returns nothing at
+runtime. **The disagreement is replicated; the cause is not established**, and it
+is the single most valuable thing to chase next.
+
+**2. No selection can be joined to the outcome that followed it.**
 `thompson_selection_log.execution_id` is a placeholder minted at recommendation
-time, `recommend-<ts>-<idx>`:
+time:
 
 ```
-  execution_id: 'recommend-1787376611094-19'
-  correlation_id: 'sel_1787376611094_y7jg4t_19'
+  execution_id:    'recommend-1787376611094-19'
+  correlation_id:  'sel_1787376611094_y7jg4t_19'
 ```
 
 **Zero `execution` rows carry an id beginning `recommend-`.** *Positive control:*
 6,970 rows begin `exec_`, so the predicate works. All **26,529** selections are
-structurally unjoinable to any result, and the `correlation_id` designed to close
+structurally unjoinable to any result, and the `correlation_id` meant to close
 that link is never written back on the outcome side.
 
-So attribution is not *incorrect* — it is **impossible**. That is the direct
-answer to the audit's attribution question, and it sits upstream of every other
-finding here: an arm cannot be credited for an outcome the system cannot attribute
-to it, and a posterior the sampler never reads cannot influence a draw. *(Both
-legs replicated.)*
+The consequence is precise: credit reaches *arms* (via trace ingestion keyed on
+`activity_id`) but never reaches *decisions*. Thompson's own choices can never be
+graded as choices, so there is no counterfactual-at-decision-time record — which
+is exactly what law 12 asks for and the one thing that would distinguish "this arm
+succeeded" from "choosing this arm was right." *(Both legs replicated.)*
 
 ---
 
@@ -127,8 +133,10 @@ out-competed for attention by its own backlog.
 
 ## The root cause, traced end to end
 
-Three sequential blockers, each verified with a positive control, **each alone
-sufficient** — so fixing only one changes nothing.
+Three sequential blockers on the extraction path. Blockers 1 and 2 are verified
+with positive controls and are jointly sufficient to explain a ~0.1% yield.
+Blocker 3 is stated more narrowly than in earlier revisions: its two supporting
+table claims were refuted and are recorded as such.
 
 ### Blocker 1 — 69% of executions never receive a reach tag
 
@@ -218,8 +226,8 @@ fail loudly when it does not reach; reconcile `activity_templates` /
 | **The sampler does not read the graded posterior** — logs integer counts while the store holds credit-weighted fractionals | α=4/β=1 logged vs α=493.83/β=897.23 stored; 22.5% of selections at the neutral prior *(replicated)* |
 | **All 26,529 selections are unjoinable to their outcomes** — `execution_id` is a `recommend-<ts>-<idx>` placeholder | 0 execution rows match; 6,970 `exec_` rows as positive control *(replicated)* |
 | The `consumedInChain=0` abstention withholds **both** α and β, so the whole satisfier class is learning-inert | re-dated prior #4, still live |
-| `execution` is a 150,000-row FIFO ring **at cap**; an auth storm at ~20,000/hr wrote 143,042 rows and flushed ~2 months of history | `trace_store_counters` cap=150000, row_count=150022 |
-| Every composite index whose prefix ends in `success` returns zero rows, so the stratified retention sweep deletes nothing — the root enabler of the ring filling with auth noise | `WHERE activity_id = $x AND success = <bool>` → 0 rows in 1–3ms; each clause alone returns correct counts |
+| `execution` is a 150,000-row FIFO ring **at cap**; an auth storm at ~20,000/hr wrote 143,042 rows and flushed ~2 months of history | `trace_store_counters:execution` cap=150000, row_count=150040 *(replicated)* |
+| Every composite index whose prefix ends in `success` returns zero rows, so the stratified retention sweep deletes nothing — the root enabler of the ring filling with auth noise | `activity_id='validator-dispatch' AND success=true` → **0**; each clause alone → 4,796 and 7,123 *(replicated)* |
 | 5,378 refusals are read by nothing but an audit endpoint — the shape-gap demand signal vanishes | `refusal_events` consumed only by `GET /v2/activities/refusals/stats` |
 | The hook-subscriber exclusion guards the leaf credit path and is bypassed on the chain-credit path | `writeAncestorDelta` has no `HOOK_SUBSCRIBER_PATTERN` test |
 | Extraction yield has collapsed to ~0.1% — 2 mints in 3 weeks against ~96 dispatches/day | 427 learned activities exist, last two 2026-08-21 after a 21-day gap *(replicated)* |
@@ -266,21 +274,26 @@ tier is permitted to learn from is a five-step behaviour that performs one step.
 
 ### Degrades growth
 
-`routing_trace` — both writers unreachable, three readers consuming, and **the
-health scorer silently defaults to full routing credit** when it finds nothing: a
-dead channel that grades itself perfect. · **76% of non-retired activities (2,011
-of 2,639) sit in a duplicate input/output shape family** — the law-3 violation
-measured by signature rather than by name. · `tool_usage` / `tool_usage_patterns`
-/ `tool_argument_pattern` — a three-way write≠read split, plus a reader filtering
-on three fields the SCHEMAFULL table does not define. · `execution_exemplar` — a
-live reader with both writer triggers structurally unable to fire. ·
-`activity_metrics` is a phantom table read by the only Thompson-scores
-observability endpoint. · `circuit_breaker_trace` — writer and reader agree on the
-table and disagree on every field. · The `activity` posterior/counter columns are
-dead schema: `thompson_alpha/beta` 1.0/1.0, `total_executions` 0, on all 3,856
-rows (the live plane is `variant_performance_metrics`, 1,638 moved posteriors). ·
-Law 5: boredom is a genuine condition-driven selector, but its rhythm input is
-dead at the consumer, and ~14 substrate-work timers run on hardcoded cadences.
+**76% of non-retired activities (2,011 of 2,639) sit in a duplicate input/output
+shape family** — the law-3 violation measured by signature rather than by name;
+779 signatures cover 2,639 activities and the largest single group is **185
+identically-named** ones. · `tool_usage` / `tool_usage_patterns` /
+`tool_argument_pattern` — a three-way write≠read split, plus a reader filtering on
+three fields the SCHEMAFULL table does not define. · `execution_exemplar` — a live
+reader with both writer triggers structurally unable to fire. · The `activity`
+posterior/counter columns are dead schema: `thompson_alpha/beta` 1.0/1.0,
+`total_executions` 0, on all 3,856 rows (the live plane is
+`variant_performance_metrics`, 1,638 moved posteriors). · `activity_state_affinity`
+— four migrations invested in a computed `ev` field whose sole reader/writer sits
+in `tsconfig.json`'s `exclude` array as an orphan. · Law 5: boredom is a genuine
+condition-driven selector, but its rhythm input is dead at the consumer, and ~14
+substrate-work timers run on hardcoded cadences.
+
+*Three items previously listed here were removed by the adversarial pass —
+`routing_trace`'s "silent full routing credit", `activity_metrics`' "phantom
+read", and `circuit_breaker_trace`'s "undeserved health credit". All three had
+real observational legs and inverted or dead causal legs; see the refutation
+table below.*
 
 ### Wasted work (complete, unwired machinery)
 
