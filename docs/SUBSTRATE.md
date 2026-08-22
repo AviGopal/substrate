@@ -794,10 +794,30 @@ and what applying that selection would change. A `DRY-RUN would disable:` or
 `would unmask:` line names a unit whose running state has drifted from the
 selection; no such lines means the fleet already matches.
 
+> ⚠ **`drift` previews the symlink half of `apply`, not the whole of it.** The
+> dry run lives in `apply-inventory`, which manipulates enable and mask
+> symlinks. `apply`'s second half — the loop that stops masked units and starts
+> newly-included ones — has no dry-run counterpart, so `drift` will never print
+> a "would start" or "would stop" line no matter how far the running state has
+> drifted. Read a clean `drift` as "the selection is already applied", never as
+> "`apply` would do nothing".
+
 `apply` is **idempotent**: running it on a converged fleet re-reads everything and
 changes nothing. It reports each action it takes (`stopped <unit> (masked by this
 selection)`, `started <unit> (enabled by this selection)`), so an apply that
-prints no action lines is a genuine no-op rather than a silent failure. It
+prints no action lines is a genuine no-op rather than a silent failure.
+
+> That contract was not honoured for units whose healthy resting state is
+> `inactive` — completed seeders, and anything systemd skipped via
+> `ExecCondition` (an LLM arm with no provider key, the desktop units on a base
+> image). `apply` started them, they went back to `inactive` seconds later, and
+> the next `apply` started them again: seven standing `started` lines on every
+> run of a converged default fleet, against which a real action line was
+> invisible. `apply` now asks systemd what it decided and reads the inventory
+> role, so those units are left alone. If you are on an older image, expect the
+> seven and do not read them as drift.
+
+It
 converges the *running* state, not just the enable symlinks — a unit the new
 selection excludes is stopped, and one it now includes is started. Timer-driven
 units are deliberately left for their timer rather than started immediately.
@@ -1039,17 +1059,41 @@ Back up **both** before destructive operations:
 # TimeoutStopSec at all, inheriting systemd's 90s default to flush RocksDB.
 # A short -t kills mid-flight work and cuts the datastore off mid-write, which
 # is the opposite of what a backup wants.
-make -C scripts/substrate stop          # preferred
-# docker stop -t 300 substrate-live     # equivalent, if you are not using make
-for vol in substrate-surreal substrate-workspace; do
+# ⚠ NAME THE INSTANCE. Every command below hardcoded `substrate-live` and the
+# unprefixed volumes, so following it on a SECOND substrate drained production
+# and then restored production's volumes over the fleet you meant to touch.
+# Set these once and use them throughout; volumes follow LIVE_NAME.
+NAME=substrate-live                     # the fleet you actually mean
+SURREAL_VOL=substrate-surreal           # for any other NAME: ${NAME}-surreal
+WORKSPACE_VOL=substrate-workspace       # for any other NAME: ${NAME}-workspace
+
+make -C scripts/substrate stop LIVE_NAME="$NAME"   # preferred
+# docker stop -t 300 "$NAME"            # equivalent, if you are not using make
+for vol in "$SURREAL_VOL" "$WORKSPACE_VOL"; do
   docker run --rm -v "$vol":/src -v "$(pwd)":/bak alpine \
     tar czf "/bak/$vol-$(date +%Y%m%d).tgz" -C /src .
 done
 
 # Restore a volume, then bring the container back up (repeat per volume as needed)
-docker run --rm -v substrate-surreal:/dst -v "$(pwd)":/bak alpine \
-  sh -c 'find /dst -mindepth 1 -delete && tar xzf /bak/substrate-surreal-YYYYMMDD.tgz -C /dst'
-make -C scripts/substrate run-live ANTHROPIC_API_KEY=...
+docker run --rm -v "$SURREAL_VOL":/dst -v "$(pwd)":/bak alpine \
+  sh -c 'find /dst -mindepth 1 -delete && tar xzf /bak/'"$SURREAL_VOL"'-YYYYMMDD.tgz -C /dst'
+
+# `up`, NOT `run-live`. `stop` RETAINS the container, and `run-live` is an
+# unconditional `docker run` — against a stopped-but-present container it dies
+# with `Conflict. The container name "/<name>" is already in use`. `up` resumes
+# the existing container, which is what a restore wants. It also carries
+# PORT_OFFSET; `run-live` does not, so on a second substrate the recipe
+# republished the 18xxx block straight into production's ports.
+make -C scripts/substrate up LIVE_NAME="$NAME" PORT_OFFSET=<the offset it was created with>
+```
+
+Verify the restore landed rather than trusting the exit status — a tar that
+unpacked is not a datastore that mounted:
+
+```bash
+docker exec "$NAME" substrate-key whoami        # identity survived
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: ApiKey $(docker exec "$NAME" substrate-key show)" \
+  http://localhost:<activity-api port>/v2/activities/execution-traces?limit=1   # 200, and traces present
 ```
 
 ## Trace-store retention and the maintenance lease

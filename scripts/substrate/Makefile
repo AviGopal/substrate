@@ -588,7 +588,7 @@ run-live:
 	    --tmpfs /run \
 	    --tmpfs /run/lock \
 	    $(IMAGE):$(TAG)
-	@echo "[run-live] substrate-live started — activity-api on :18080, development-vessel on :18090, discovery-vessel on :18100, goal-host-vessel on :18210, analysis-vessel on :18250, concept-db on :18260, stateful-ui-vessel on :18270, human-surface-vessel on :18310"
+	@echo "[run-live] $(LIVE_NAME) started — activity-api on :$(call hp,18080), development-vessel on :$(call hp,18090), discovery-vessel on :$(call hp,18100), goal-host-vessel on :$(call hp,18210), analysis-vessel on :$(call hp,18250), concept-db on :$(call hp,18260), stateful-ui-vessel on :$(call hp,18270), human-surface-vessel on :$(call hp,18310)"
 	@echo "[run-live] State on named volumes $(SURREAL_VOLUME) + $(WORKSPACE_VOLUME) (host-detached); only the repo is bind-mounted (ro) for sync-* hot-reload"
 	@echo "[run-live] Internal secrets auto-generated and persisted to workspace/.substrate-secrets"
 	@echo "[run-live] Wait ~15s for services to start, then: make -C scripts/substrate seed-live"

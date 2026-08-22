@@ -447,6 +447,15 @@ case "$ACTION" in
     # very "propagated but not applied" gap this verb exists to close.
     echo "[apply] converging running state"
     csh "
+      # Units whose healthy resting state is inactive because they have already
+      # RUN. Type=oneshot catches most; the two seeders below are deliberately
+      # Type=simple (development-vessel-seed's unit file records that oneshot
+      # reintroduced a measured boot blocker), so type alone misses them. Take
+      # the same rule substrate-ready.sh uses and read the inventory ROLE.
+      _inv_seed=\$(jq -r '.vessels[] | select(.role==\"seed\") | .unit' \
+        /workspace/substrate/fleet/vessels.inventory.json 2>/dev/null \
+        || jq -r '.vessels[] | select(.role==\"seed\") | .unit' \
+             /usr/local/share/substrate/vessels.inventory.json 2>/dev/null)
       systemctl list-units --type=service --all --no-legend --no-pager 2>/dev/null \
       | sed 's/^[^a-zA-Z]*//' | awk '{print \$1}' \
       | grep -vE '^(systemd|dbus|getty|console-|user@|user-|modprobe|e2scrub|autovt|container-getty)' \
@@ -460,7 +469,33 @@ case "$ACTION" in
               # Only start plain services. A timer-triggered unit must fire on
               # its schedule, and starting it here turns every periodic tick
               # into a startup job.
-              if [ \"\$a\" = inactive ] && [ ! -f \"/etc/systemd/system/\${u%.service}.timer\" ] \
+              #
+              # INACTIVE IS NOT THE SAME AS SHOULD-BE-RUNNING. Three kinds of
+              # unit rest inactive as their HEALTHY state, and starting them is
+              # not convergence, it is churn:
+              #   - a completed oneshot (the seeders) — it ran, it exited 0
+              #   - a unit whose ExecCondition said 'not here' (an LLM arm with
+              #     no provider key, the desktop units on a base image)
+              #   - anything systemd already refused for the same reason
+              # Starting them printed a 'started' line, they went back to
+              # inactive seconds later, and the NEXT apply printed it again.
+              # Measured on a converged default fleet: SEVEN such lines on every
+              # single run — bootstrap-seeder, concept-db-seeder,
+              # development-vessel-seed, llm-google, novnc, obsidian-desktop,
+              # obsidian-xorg.
+              #
+              # That is not cosmetic. The documented contract, which the note
+              # below this loop depends on, is that 'an apply that prints no
+              # action lines is a genuine no-op' — so on the default topology
+              # the converged signal could never be observed, and a real action
+              # line was indistinguishable from the standing seven. Ask systemd
+              # what it decided, exactly as substrate-ready.sh does.
+              _cond=\$(systemctl show \"\$u\" -p ConditionResult --value 2>/dev/null)
+              _type=\$(systemctl show \"\$u\" -p Type --value 2>/dev/null)
+              _seed=no; echo \"\$_inv_seed\" | grep -qx \"\$u\" && _seed=yes
+              if [ \"\$a\" = inactive ] && [ \"\$_cond\" != no ] && [ \"\$_type\" != oneshot ] \
+                 && [ \"\$_seed\" != yes ] \
+                 && [ ! -f \"/etc/systemd/system/\${u%.service}.timer\" ] \
                  && [ ! -f \"/lib/systemd/system/\${u%.service}.timer\" ]; then
                 systemctl start \"\$u\" >/dev/null 2>&1 && echo \"[apply] started \$u (enabled by this selection)\"
               fi ;;
