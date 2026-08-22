@@ -576,3 +576,61 @@ row count > 1999              → the first execution-minted edge in the graph's
 silently returned nothing while `--since "5 min ago"` returned 36 ingests over
 the same window — the journal is UTC and `--since` reads local time. I briefly
 concluded "no traffic" from that. **Prefer relative windows.**
+
+---
+
+# Round 5 — six causes on one lookup, and an honest stop
+
+## The sequence
+
+| # | cause | how it presented |
+|---|---|---|
+| 1 | wrong table — `activity_execution_traces` is a 12% shadow of `execution` | 88% miss |
+| 2 | wrong column — **`execution_id` does not exist on `execution`**; the compat view synthesizes it via `meta::id(id)` | 100% miss |
+| 3 | wrong auth context — `execution` has `PERMISSIONS FOR select WHERE org_id = $auth.org_id`, queried on the root connection where `$auth` is empty | 100% miss |
+| 4 | wrong normalization — every ingest is `authType=apikey` (1,020/1,020), so the fallback always runs, and it bound the stripped id while the working sibling binds it raw | 18 misses |
+| 5 | wrong qualifier table — I copied `activity_execution_traces:<id>` from the sibling filter **without checking** | 6 misses |
+| 6 | right qualifier, measured — a stored row reads `execution:exec_rppwzhsx` | deployed, **still missing** |
+
+**Every one presented identically: a query returning nothing, silently.** That is
+the seam map's thesis demonstrated six times on nine lines of code.
+
+## Where it stands — NOT CLOSED
+
+Verified: the fix is in the running process (mirror 01:44:06, PID 861981 started
+01:44:07). A composing walk is producing nested traces — 31
+`parent_lookup_miss` against 1 correctly-classified `parent_not_persisted`. The
+missed parent `exec_w3ujhlff` resolves through the API at the same moment
+(HTTP 200, `total:1`, `development-vessel:detect-ui-spacing-drift`).
+
+So a **seventh cause** exists, and the graph is still at 1,999 edges — no
+execution-minted edge in the system's history.
+
+**I am stopping the guess-deploy-measure loop here rather than attempting a
+seventh fix.** Five of the six causes were found by changing the query and
+watching a counter; that loop costs a full pull-sync cycle (~10 min) per
+attempt and has now been wrong twice in a row about the id form. The cheap step
+I keep skipping: **run the exact failing statement against the DB with the exact
+bound parameters** and read the error, instead of inferring the form from
+neighbouring code.
+
+That requires either a SurrealQL console (blocked by the read-only mandate on
+root credentials) or a temporary debug endpoint — an operator decision, not
+something to bodge in.
+
+## What IS closed, and holds
+
+- `R3-execute-04` hop-4 content threading — **CONFIRMED-LIVE**
+- `L3-tuning-06` NULL≠NONE — **CONFIRMED-LIVE**, SF_BLEND ratcheted `null → 1`
+- `L3-psi-08` ψ refusal — **CONFIRMED-LIVE**, 0 → 9 blends
+- `L1-credit-03` signature tiers — fixed with a 7-assertion regression suite
+- the trace spool no longer eats production traces
+- the shape-contract lint gate now has a caller
+
+## The instrument counters, though
+
+The `parent_lookup_miss` / `parent_not_persisted` split is doing exactly what it
+was built for: in the last window it separated **1** permanently-unresolvable
+satisfier parent from **31** genuine failures. Without it, those 31 would be
+invisible inside satisfier noise — which is how this seam stayed dead since
+2026-07-14.
