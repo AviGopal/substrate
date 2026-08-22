@@ -320,7 +320,13 @@ if [[ "$_llm_guard_needed" = "0" && -z "${ANTHROPIC_API_KEY:-}" && -z "${OPENAI_
   echo "[gen-env]   A root/standalone substrate needs one; a spoke inherits LLM arms from its hub." >&2
   echo "[gen-env]   Set ANTHROPIC_API_KEY (or OPENAI_API_KEY + OPENAI_BASE_URL) via -e / compose / make." >&2
   echo "[gen-env]   Checked: the run environment AND persisted values in /workspace/.substrate-secrets." >&2
-  echo "[gen-env]   To run as a spoke instead, set HUB_DISCOVERY_URL to your hub's discovery endpoint." >&2
+  # Advise DISCOVERY_ENDPOINT, not HUB_DISCOVERY_URL. This guard waives the key
+  # on EITHER signal, but the derivation block below keys only on
+  # DISCOVERY_ENDPOINT — so an operator who followed the old advice got past this
+  # error into a STANDALONE with hub-shaped variables, no provider key and no
+  # local arms. The most confusing possible outcome, produced by this line.
+  echo "[gen-env]   To run as a spoke instead, set DISCOVERY_ENDPOINT to your hub's discovery endpoint" >&2
+  echo "[gen-env]   (HUB_DISCOVERY_URL alone is NOT enough — it does not trigger spoke derivation)." >&2
   exit 1
 fi
 # RunPod Serverless. RUNPOD_ENDPOINT_ID is not a secret but must round-trip the

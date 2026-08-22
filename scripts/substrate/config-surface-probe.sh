@@ -71,6 +71,15 @@ docker image inspect "$IMAGE" >/dev/null 2>&1 || {
 # a catastrophic regression rather than a broken harness. Default to a directory
 # beside the repo, which is shared by construction.
 WORK="${PROBE_WORKDIR:-$(mktemp -d "$HERE/../../.config-probe.XXXXXX")}"
+# mktemp -d creates the directory; an operator-supplied PROBE_WORKDIR does not.
+# Without this the HARDCODED judgment DISABLES ITSELF SILENTLY: the per-lane
+# `: > "$WORK/<lane>.unjudged"` fails, the `comm` against it fails, the count
+# comparison hits `[: : integer expected` — and the probe still prints
+# "matches baseline" and exits 0. A harness that cannot run must say so rather
+# than produce a number; that rule is stated in CONFIGURATION_SURFACE.md §6 and
+# this was the probe violating it. Fail loudly if the directory is unusable.
+mkdir -p "$WORK" 2>/dev/null || { echo "[probe] FATAL: cannot create workdir '$WORK'" >&2; exit 2; }
+[ -w "$WORK" ] || { echo "[probe] FATAL: workdir '$WORK' is not writable" >&2; exit 2; }
 trap 'rm -rf "$WORK"' EXIT
 
 # ── Sentinels ────────────────────────────────────────────────────────────────

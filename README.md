@@ -179,16 +179,27 @@ docker exec substrate-live substrate-doctor
 Optional: add `-e SUBSTRATE_GIT_PAT=<github-pat>` so the
 substrate can pull + push the source repos it is built from (self-alteration);
 without it, self-authored commits stay local. Full config matrix:
-[`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) § *Pulling the image instead of
-building*; federation details: [`docs/FEDERATION.md`](docs/FEDERATION.md).
+[`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) § *Container config matrix*; every
+variable by delivery channel and read point:
+[`docs/operations/CONFIGURATION_SURFACE.md`](docs/operations/CONFIGURATION_SURFACE.md);
+federation details: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 
 ### Join an existing identity / discovery group (spoke)
 
 A spoke contributes a local registry + compute while identity, traces, and
 learning state live on the hub. Joining is **point-and-go**: pointing
-`HUB_DISCOVERY_URL` at the hub's discovery and presenting a hub-issued
-`METABOB_API_KEY` is sufficient — the identity endpoint, trace store, and relay
-anchor are resolved from `<discovery-endpoint>/bootstrap`.
+`DISCOVERY_ENDPOINT` at the hub's discovery and presenting a hub-issued
+`METABOB_API_KEY` is sufficient — the role, identity endpoint, trace store, and
+relay anchor are all derived from those two, the last of them from
+`<discovery-endpoint>/bootstrap`.
+
+> **It must be `DISCOVERY_ENDPOINT`.** Setting `HUB_DISCOVERY_URL` instead looks
+> equivalent and is not: the derivation block keys on `DISCOVERY_ENDPOINT`, so
+> with it empty nothing is inferred and you get a standalone wearing hub-shaped
+> variables — no `ENABLED_ROLES=spoke`, endpoints left on loopback. The
+> provider-key guard *does* read `HUB_DISCOVERY_URL` and waives the local LLM key
+> on that signal, so the result is a standalone with no key and no local arms.
+> The same trap is described again under the compose example below.
 
 **Check the target is joinable first.** A reachable discovery is not necessarily
 a hub: a standalone substrate answers `/bootstrap` with `200` and an empty body,
