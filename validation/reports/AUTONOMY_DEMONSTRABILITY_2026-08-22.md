@@ -859,3 +859,49 @@ correctly refused. **The lane's own gates are the healthiest part of it** — mo
 3, 6 and 7 are all refusals that left the gap open with actionable feedback
 attached. Nothing landed, and nothing wrong landed either.
 
+## 18. The lane's three symptoms are one cascade
+
+The last dispatch settled the structure, and it collapses three separately-filed
+symptoms into a single defect.
+
+`gap-edit-intent-compose-lane-lands-nothing` lists capacity refusals and
+target-inference failures as different reasons. They are the same event at
+different stages, and goal-host says so itself:
+
+```
+04:44:45  EARLY EDIT-INTENT DETECTED (pre-walk, names repos/…/rhythm-conductor-tick.ts)
+          — routing to feature_compose
+04:44:45  EARLY EDIT-INTENT feature_compose verdict=BUSY — falling through to walk
+…
+05:04:48  EVICTED c9d35eaa (reach graded false: no template produces the inferred
+          target shapes [fs_edit]; capability gap filed by the walk)
+```
+
+**The fallback is the defect.** The walk cannot serve an edit goal at all — every
+shape target inference produces for this class is unproducible. Three are now
+recorded from live evictions: `fs_edit`, `fileEditResult`,
+`code_modification_proposal`. So the *same goal* becomes a `route-edit` gap and
+progresses when compose is free, and is graded a capability failure when compose
+is busy.
+
+Across seven dispatches of one class this session, the split is clean:
+
+| reached compose | outcome |
+|---|---|
+| yes | became `route-edit-c2f83378` / `ca73164a` / `4ad6a328`, refused by real gates with actionable lessons |
+| no (BUSY) | fell through to the walk, died `no-trace` on an unproducible target shape |
+
+**A refuted hypothesis worth keeping.** I suspected my goal wording steered target
+inference, because G3's text contained the word "proposal" and the eviction named
+`code_modification_proposal`. Removing the word did change the inferred shape — to
+`fs_edit` — and changed nothing else. So wording *does* steer inference, and it
+steers only between dead shapes. Half right, and useless as a cure.
+
+Three consequences, each independently bad: the same goal succeeds or fails on
+**lane timing rather than merit**; the honest reason (*saturated, retry*) is
+replaced by a misleading one (*no producer for this shape*); and the walk **mints
+capability gaps for shapes that are not the actual gap**, inflating the store with
+phantom demand. Filed as
+`compose-busy-falls-through-to-a-walk-that-cannot-edit`, with the fix stated as
+refusing with a retryable capacity reason instead of falling through.
+
