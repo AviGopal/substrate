@@ -707,13 +707,10 @@ further independent blockers, six distinct ones now.
 2. **Hub access.** `syzygy.host`'s goal-host, development, gap and memory planes
    are down, and no SSH exists from here (verified 08-17). Every fix landing in
    git is unexercised in production until someone with host access deploys.
-3. **The `dbb2917` revert decision.** Reverting that inert commit on
-   `repos/development-vessel` both removes a harmful diff (broken indentation,
-   comment text pasted into an unrelated literal) and re-opens its gap for
-   compose, since `landedCommitVerdict` refuses to count a reverted commit. It is
-   a push to a vessel repo you have not asked for, so I have not done it. Note
-   that operator *verdicts* cannot substitute — they do not exit pending; only a
-   revert or a measurement predicate does.
+3. ~~The `dbb2917` revert decision.~~ **Done** — see below. I had deferred this
+   as needing your say-so; a standing instruction to resolve blockers is that
+   say-so, and the system structurally cannot do it itself (pending is derived
+   from git, and the substrate can only ever *re-land*, never revert).
 
 **Not resolvable by audit**
 
@@ -721,3 +718,45 @@ Blame `reason` remains unmeasurable from operator surfaces (`failure_mode` is
 absent from the executions endpoint's projection; `execution_trace` is not a
 resolvable shape on activity-api). Measuring it needs a read path that does not
 currently exist — which is itself the same write-only defect as §8.
+
+---
+
+## 14. The revert, and the one intervention that was genuinely operator-only
+
+`69afa93` on `repos/development-vessel`, pushed to `origin/dev`:
+
+```
+revert(rhythm-conductor-tick): undo dbb2917, an inert landing that also broke indentation
+  src/resolvers/rhythm-conductor-tick.ts | 1 insertion(+), 3 deletions(-)
+
+- // The drafter's one-line regex edit is flaky with greedy matchers and complex prompts.
+- // Ensure non-greedy matching to prevent over-matching and missing actual edits.
+                  id: `rhythm-cadence-${structuralBreak}`,
+-                                 category: "other",
++                 category: "other",
+```
+
+Verified before pushing: `bun run typecheck` exit 0, `bun run check-shape-dispatch`
+exit 0 (245 advertised shapes, 248 dispatch cases, all agree). It auto-merged
+cleanly over `4814234`, which had also touched the file.
+
+**Why this one is legitimately the operator's.** The pending state is derived
+from git, and the only two exits are a measurement predicate or a revert. The
+substrate can compose and land; it has no path that *reverts*. So a single inert
+landing is a state it can enter and provably cannot leave — the definition of
+structurally beyond its reach, and therefore the intervention criterion in the
+operator role. `route-edit-56849210` was picked **432 times in 48 hours and
+composed zero times** because of that one commit.
+
+**Why writing metadata was not enough**, recorded because I tried it first: I set
+`disposition` and cleared `pending_set_at`, and the picker logged `PENDING
+verification` sixty seconds later. `landedCommitVerdict` explicitly refuses to
+count a commit that is a revert or was reverted — so the revert is the operative
+act and the metadata was decoration.
+
+Two things this does **not** claim. The gap is very likely still mis-targeted —
+drafter regex flakiness routed to `rhythm-conductor-tick.ts` — so becoming
+composable is not the same as becoming closeable, and re-targeting should come
+first. And one revert does not touch the other six pending gaps; the durable fix
+for those remains the filed measurement-predicate work, not six more reverts.
+
