@@ -1,7 +1,8 @@
 # Substrate — one pre-built image + this file + a .env is the ENTIRE surface.
 #
 # From the repo root:
-#   cp scripts/substrate/.env.example .env   # set ANTHROPIC_API_KEY (+ optional keys)
+#   cp -n scripts/substrate/.env.example .env   # -n: never clobber an existing .env
+#   $EDITOR .env                                # uncomment + set ANTHROPIC_API_KEY
 #   (no docker login needed — the ghcr package is public and pulls anonymously)
 #   docker compose up -d
 #   docker exec substrate-live substrate-key show   # operator API key, post-launch

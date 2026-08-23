@@ -768,8 +768,20 @@ STOP_TIMEOUT ?= 300
 # restarter does not have to. Report it; the drain below then does the waiting.
 # This is a REPORT, not a gate: a busy substrate must still be stoppable, and the
 # dispatch host is almost never idle under the autonomous loop.
+#
+# ASK DOCKER WHICH PORT THIS CONTAINER PUBLISHES; do not compute it. The probe
+# used $(call hp,18210), i.e. 18210 + PORT_OFFSET — correct only for a fleet this
+# Makefile launched. A COMPOSE fleet sets SUBSTRATE_CONTAINER and the nine *_PORT
+# variables and never sets PORT_OFFSET, so `make stop LIVE_NAME=<their-name>`
+# probed :18210 — ANOTHER fleet's goal-host, in the common case production's. It
+# then reported that fleet's in-flight count while draining this one: a number
+# that looks like an answer and describes a different machine. `docker port`
+# knows the true mapping regardless of which lane created it; the computed value
+# stays as the fallback for a container that is already gone.
 stop-live:
-	@_inflight=$$(curl -s --max-time 5 http://localhost:$(call hp,18210)/health 2>/dev/null \
+	@_gp=$$(docker port $(LIVE_NAME) 8210/tcp 2>/dev/null | head -1 | sed -nE 's/.*:([0-9]+)$$/\1/p'); \
+	  [ -n "$$_gp" ] || _gp=$(call hp,18210); \
+	  _inflight=$$(curl -s --max-time 5 http://localhost:$$_gp/health 2>/dev/null \
 	    | sed -nE 's/.*"in_flight":([0-9]+).*/\1/p'); \
 	  if [ -n "$$_inflight" ] && [ "$$_inflight" -gt 0 ] 2>/dev/null; then \
 	    echo "[stop] $$_inflight execution(s) in flight — the drain below waits for them"; \

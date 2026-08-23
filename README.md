@@ -87,26 +87,58 @@ first boot and persists to the volumes.
 This path needs a **checkout** (for the compose file and `.env.example`), though
 not its submodules — a pulled image contains the vessel source already:
 
+> **Already running a substrate on this host?** Read this *before* running the
+> block below, which uses the default names and the default `18xxx` ports.
+> `SUB=substrate-live` below is the container name; on the compose lane a second
+> fleet needs `SUBSTRATE_CONTAINER`, **both** of `WORKSPACE_VOLUME` /
+> `SURREAL_VOLUME`, and all nine `*_PORT` values (`.env.example` TIER 2b). On the
+> make lane it is `LIVE_NAME` + `PORT_OFFSET`. **The two lanes do not translate
+> each other.** Reusing the default volume names does not fail — it silently
+> attaches the new fleet to the first one's learning state, and two substrates
+> writing one datastore corrupts both.
+
 ```bash
 git clone https://github.com/AviGopal/substrate.git && cd substrate
+SUB=substrate-live                         # a second fleet: set this AND the vars above
+
 cp -n scripts/substrate/.env.example .env  # -n: never clobber an .env you already have
+                                           # (silent when it skips — check the file is yours)
 $EDITOR .env                               # uncomment ANTHROPIC_API_KEY (or OPENAI_API_KEY) and set it
-docker compose pull                        # compose does NOT re-pull a tag it already has locally
+docker compose pull                        # `up` alone reuses a local tag; this fetches the current one
 docker compose up -d                       # run from repo root — root compose is canonical
+
+# CHECK IT DID NOT CRASH-LOOP. `up -d` prints "Started" and exits 0 even when the
+# container dies immediately, because compose reports that it launched, not that
+# it lived — and `restart: unless-stopped` then retries forever. The commonest
+# cause is an unedited .env: gen-env refuses to boot without a provider key, which
+# is deliberate, but the refusal is only visible here.
+sleep 15; docker ps --filter "name=$SUB" --format '{{.Status}}'   # "Restarting" => read the logs:
+docker logs --tail 20 "$SUB"
 
 # `healthy` means the container is live, NOT that identity is seeded. Until the
 # seeder finishes, `substrate-key show` prints a pre-seed placeholder that every
 # call rejects with 401 — and it prints it without any error. Gate on a check
 # that actually validates the key. `whoami` works on every topology, because it
-# asks whichever identity-vessel this fleet uses — its own, or its hub's:
+# asks whichever identity-vessel this fleet uses — its own, or its hub's.
+#
 # Bounded on purpose: an unbounded `until` turns a genuine seed failure into a
 # silent forever-loop. The container's own identity-seeder gives up after 300s.
 for i in $(seq 1 30); do
-  docker exec substrate-live substrate-key whoami 2>/dev/null | grep -q '"valid": *true' && break
-  [ "$i" = 30 ] && { echo "identity never seeded — check: docker exec substrate-live journalctl -u identity-seeder -n 50"; break; }
+  docker exec "$SUB" substrate-key whoami 2>/dev/null | grep -q '"valid": *true' && break
+  [ "$i" = 30 ] && { echo "identity never seeded. Check BOTH — the container may never have started:"; \
+                     echo "  docker logs --tail 50 $SUB"; \
+                     echo "  docker exec $SUB journalctl -u identity-seeder -n 50"; }
   sleep 10
 done
-docker exec substrate-live substrate-key show
+docker exec "$SUB" substrate-key show
+```
+
+When you are done with it, tear it down — `docker rm` alone leaves the volumes,
+and a later "clean" install silently inherits them:
+
+```bash
+docker compose down          # stop and remove the container, KEEP the learning state
+docker compose down -v       # …and DESTROY both volumes: posteriors, traces, concept graph
 ```
 
 First boot takes a few minutes to converge. Running `substrate-doctor` before
@@ -122,13 +154,8 @@ broken one. Confirm a key works before using it:
 > real completion to each arm:
 > `docker exec substrate-live substrate-doctor` — look for the `llm arm` line.
 
-> **Already running a substrate on this host?** Every name and port below is
-> hardcoded to the first fleet — the container name, both volume names, and the
-> 18xxx block. Give a second fleet its own with `LIVE_NAME` and `PORT_OFFSET`
-> (or, on the compose lane, `SUBSTRATE_CONTAINER` **plus** `WORKSPACE_VOLUME`
-> and `SURREAL_VOLUME`). The two lanes do **not** translate each other — see the
-> relocation warning under *Installation → spoke*, and `.env.example` TIER 2b.
-> Reusing the defaults attaches the new fleet to the first one's learning state.
+The raw `docker run` below hardcodes the same default names and ports; a second
+fleet needs its own, per the callout above.
 
 To launch with **no checkout at all**, use the raw `docker run` below — it needs
 nothing from this repo.
@@ -587,9 +614,9 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 ## Core components
 
 - **activity-api** (`repos/activity-api`) — TypeScript/Bun/Hono backend. Execution-trace store, Thompson-Sampling learner, and resolver for the shapes it owns (traces, templates, metrics, goal paths, composition stats). Not a universal resolver.
-- **discovery-vessel** (`repos/discovery-vessel`) — vessel capability registry with resolver contracts and per-mutation auth; the routing fixed-point.
+- **discovery-vessel** (`repos/discovery-vessel`) — vessel capability registry with resolver contracts; the routing fixed-point. Auth is applied to every route, with `/bootstrap` deliberately carved out as pre-auth so a joining spoke can read the anchor before it has been accepted.
 - **goal-host-vessel** (`repos/goal-host-vessel`) — wraps `GoalHost` from `ias-executor-ts`; primary dispatch target for all goal execution, with in-flight goal-seeking + a goal-reaching gate.
-- **llm-resolver-vessel** / **local-tools-vessel** / **ribosome-vessel** / **boredom-vessel** — LLM completion, filesystem/process tools, template extraction from successful traces, and the autonomous idle/topology loop, respectively.
+- **llm-resolver-vessel** / **local-tools-vessel** / **ribosome-vessel** / **boredom-vessel** — LLM completion, filesystem/process tools, template extraction from successful traces (*proposal-only by default — see* Learning loop, *step 5*), and the autonomous idle/topology loop, respectively. llm-resolver-vessel also owns the LLM model policy.
 - **concept-db** (`repos/concept-db`) — concept-graph shapes + dense semantic search.
 - **development-vessel** (`repos/development-vessel`) — meta-vessel for substrate self-development; owns the authoritative `memoryNote` store.
 - **identity-vessel** (`repos/identity-vessel`) — single source of truth for authentication (HMAC API keys + JWT issuance).
@@ -604,25 +631,32 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 2. **Execute** — the activity runs, producing an execution trace.
 3. **Record** — the trace is stored with success/failure, cost, and duration.
 4. **Learn** — α/β posteriors update for future selection; impulse-relevance and resolver metrics feed back.
-5. **Extract** — successful executions become reusable templates. The path that
-   mints them today is `draft-activity-from-pattern`, which authors candidates
-   under a `proposed_pattern_authored_*` prefix. The **ribosome** is the intended
-   extractor and runs proposal-only: its `ribosome-extract` template defaults
-   `applyExtraction` to `false`, and in that mode it registers nothing in the
-   pool. Treat "the ribosome mints templates" as the design, not as current
-   behaviour — check `activityTemplate` provenance before assuming which path
-   produced a given template.
+5. **Extract** — successful executions become reusable templates. Several paths
+   mint them, and which one dominates changes over time, so **read the pool
+   rather than trusting any list here**:
 
-**Reuse before minting:** before minting a new activity/resolver, prefer an existing producer of the needed output shape. Reuse sharpens posteriors and raises the credit-mixing rate (λ₁); minting is the justified exception, not the default. See CLAUDE.md → *The laws*, law 3.
+   ```bash
+   curl -s "$ACTIVITY_API/v2/activities/templates?limit=100" \
+     -H "Authorization: ApiKey $KEY" | jq -r '.templates[] | "\(.created_at)  \(.id)"' | sort -r
+   ```
+
+   One thing worth knowing before you read that output: the **ribosome** is the
+   intended extractor and it is **not** currently what mints. Its
+   `ribosome-extract` template defaults `applyExtraction` to `false`, and its own
+   notes record that in that mode nothing is registered in the pool. So a
+   template you find was authored by some other path — treat "the ribosome mints
+   templates" as the design, not as a description of today.
+
+**Reuse before minting:** before minting a new activity/resolver, prefer an existing producer of the needed output shape. Reuse sharpens posteriors and adds a composition edge; minting is the justified exception, not the default. (The intended mechanism is a rise in the credit-mixing rate λ₁ — stated as design, not as a measurement: activity-api's own source notes that the two live governors calling themselves λ₁ compute different quantities, so no λ₁ claim is currently falsifiable.) See CLAUDE.md → *The laws*, law 3.
 
 ## Key design principles
 
 1. **Impulses are universal data** — everything is an impulse with metadata; resolvers access content.
 2. **Activities constrain search** — without activities, infinite options; with them, ranked finite options.
-3. **Resolvers live where data lives** — don't centralize resolution. `activity-api` is the trace store *and* the learner: it also serves the Thompson posteriors, the LLM model policy, and template writes. What it must not become is a general-purpose resolver for other vessels' data.
+3. **Resolvers live where data lives** — don't centralize resolution. `activity-api` is the trace store *and* the learner: it also serves the Thompson posteriors and template writes. What it must not become is a general-purpose resolver for other vessels' data. (The LLM model policy is the worked example of the rule: it is owned by llm-resolver-vessel, where the arms live, not by the learner.)
 4. **Metadata first, content later** — reasoners see metadata to decide; resolvers load content to execute.
 5. **Record everything** — every execution is traced; this is the raw material for learning.
-6. **Learn from traces** — Thompson Sampling, relevance scores, ribosome extraction.
+6. **Learn from traces** — Thompson Sampling, relevance scores, and template extraction (which path mints today: see *Learning loop*, step 5 — it is not the ribosome).
 7. **Reserve improvisation** — when nothing matches, try something new, but record it.
 8. **LLMs are tools, not controllers** — use LLMs for reasoning; deterministic resolvers for everything else.
 
