@@ -294,6 +294,15 @@ preflight-submodules:
 # resolve, frozen lockfiles are in sync, imports match dependency keys). Catches
 # the namespace-migration breakages that only surface inside the image build.
 validate-build: preflight-submodules
+	@command -v bun >/dev/null 2>&1 || { \
+	  echo "[preflight] ERROR: bun is not on PATH — 'make build' needs it on the HOST."; \
+	  echo "[preflight] This step runs before docker, so the image's own bun cannot serve it."; \
+	  echo "[preflight] remedy: install bun (curl -fsSL https://bun.sh/install | bash),"; \
+	  echo "[preflight]          or add an existing one to PATH, then re-run."; \
+	  echo "[preflight] Without this the build died as 'bun: No such file or directory' (exit 127),"; \
+	  echo "[preflight] which names the symptom and not the remedy."; \
+	  exit 1; \
+	}
 	bun $(CURDIR)/validate-build.ts
 
 # --target base is load-bearing: without it docker builds the LAST stage
