@@ -126,10 +126,53 @@ restarting() { # unit -> 0 if its restart counter moved since the previous pass
   return 0
 }
 
-check_unit() { # unit role port path -> echo status: ok|down|skipped
-  local unit="$1" role="$2" port="$3" path="$4" enabled state
+# Is this fleet a SPOKE? A spoke legitimately runs no local datastore, trace
+# store or identity — those units are masked on purpose and the shapes resolve
+# on the hub. On a standalone the same mask is an outage.
+#
+# Read the VALUE with quotes stripped, never `grep -E '^HUB_DISCOVERY_URL=.+'`:
+# `HUB_DISCOVERY_URL=""` matches that pattern, because the quote characters are
+# themselves content. That exact mistake labelled a production standalone a
+# spoke once already.
+IS_SPOKE=0
+_hub="$(csh 'grep -m1 "^HUB_DISCOVERY_URL=" /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d "\"'"'"'"' 2>/dev/null || true)"
+[ -n "$_hub" ] && IS_SPOKE=1
+if [ "$IS_SPOKE" = 0 ]; then
+  _roles="$(csh 'grep -m1 "^ENABLED_ROLES=" /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d "\"'"'"'"' 2>/dev/null || true)"
+  case ",$_roles," in *,spoke,*) IS_SPOKE=1 ;; esac
+fi
+
+check_unit() { # unit role port path core -> echo status: ok|down|skipped|masked
+  local unit="$1" role="$2" port="$3" path="$4" core="${5:-}" enabled state
   enabled="$(csh "systemctl is-enabled '$unit' 2>/dev/null" 2>/dev/null || true)"
   state="$(csh "systemctl is-active '$unit' 2>/dev/null" 2>/dev/null || true)"
+
+  # A MASK IS NOT A SKIP, AND ON A STANDALONE IT IS AN OUTAGE.
+  #
+  # A masked unit is `is-enabled: masked` / `is-active: inactive`, which fell
+  # through the membership case below into `skipped` — the same bucket as a unit
+  # whose ExecCondition legitimately declined to run. So the two cheapest health
+  # signals an operator has both went green through a dead data plane: measured,
+  # `--quick` printed `[ready] fleet ready` and exited 0 — and `docker ps` said
+  # `(healthy)`, because this IS the container HEALTHCHECK — with surrealdb,
+  # activity-api, identity-vessel and llm-resolver-vessel masked and dead, every
+  # port answering 000.
+  #
+  # This is the same class as the restart loop check 5b was grown for: a failure
+  # state that reports as a healthy resting state. The mask is the newer hiding
+  # place.
+  #
+  # Masking IS how a spoke is composed, so it cannot be failed unconditionally —
+  # that would fail every correctly-built spoke. The discriminator is topology:
+  # on a spoke a masked core unit is the design; on a standalone nothing in the
+  # inventory's core set should ever be masked, and if it is, the fleet is down
+  # however cheerful its resting state looks.
+  if [ "$enabled" = "masked" ] || [ "$enabled" = "masked-runtime" ]; then
+    if [ "$core" = "true" ] && [ "$IS_SPOKE" = 0 ]; then
+      echo down; return
+    fi
+    echo masked; return
+  fi
   # Membership: enabled units, OR units running/failed anyway (core units are
   # often 'disabled' by symlink yet pulled in via Requires= from dependents).
   # Skip only what is neither enabled nor present in the live boot.
@@ -206,18 +249,19 @@ check_unit() { # unit role port path -> echo status: ok|down|skipped
   [ "$state" = "active" ] && echo ok || echo down
 }
 
-pass() { # -> sets RESULTS (unit|status lines), FAILING count
-  RESULTS=""; FAILING=0
+pass() { # -> sets RESULTS (unit|status lines), FAILING count, MASKED count
+  RESULTS=""; FAILING=0; MASKED=0
   # Roll the previous pass's restart counters forward as this pass's baseline.
   LOOP_PREV="$LOOP_CUR"; LOOP_CUR="$(snapshot_restarts)"
   while IFS='|' read -r unit role port path core; do
     [ "$unit" = "substrate-ready.service" ] && continue  # never gate on self
     [ "$SERVICES_ONLY" = 1 ] && [ "${unit%.timer}" != "$unit" ] && continue
     [ "$QUICK" = 1 ] && [ "$core" != "true" ] && continue
-    s="$(check_unit "$unit" "$role" "$port" "$path")"
+    s="$(check_unit "$unit" "$role" "$port" "$path" "$core")"
     RESULTS="${RESULTS}${unit}|${s}
 "
     [ "$s" = "down" ] && FAILING=$((FAILING+1))
+    [ "$s" = "masked" ] && MASKED=$((MASKED+1))
   done < <(rows)
 }
 
@@ -254,6 +298,19 @@ else
     [ -n "$unit" ] || continue
     printf '%-45s %s\n' "$unit" "$s"
   done
+  # ALWAYS name the masked count, including on a clean pass. A mask is on-disk
+  # state a previous selection left behind; it survives restarts, and it is the
+  # one condition under which this tool can print "ready" about units that are
+  # not running at all. Saying "ready" and staying silent about it is how the
+  # healthcheck went green over a dead data plane.
+  if [ "${MASKED:-0}" -gt 0 ]; then
+    if [ "$IS_SPOKE" = 1 ]; then
+      echo "[ready] $MASKED unit(s) masked — expected on a spoke: the hub serves those shapes" >&2
+    else
+      echo "[ready] $MASKED unit(s) masked — NOT counted as down (not core). Masks persist across restarts; clear with 'vessel-ctl apply'" >&2
+    fi
+    printf '%s' "$RESULTS" | awk -F'|' '$2=="masked"{printf "[ready]   masked: %s\n", $1}' >&2
+  fi
   if [ "$FAILING" = 0 ]; then echo "[ready] fleet ready"; else echo "[ready] NOT ready: $FAILING unit(s) down" >&2; fi
 fi
 [ "$FAILING" = 0 ]

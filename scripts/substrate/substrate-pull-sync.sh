@@ -1565,4 +1565,23 @@ converge_units "${SUPER_REPO_DIR:-/workspace/git/super-repo}"
 converge_fleet_defs "${SUPER_REPO_DIR:-/workspace/git/super-repo}"
 
 log "done — synced=$synced skipped=$skipped failed=$failed"
+
+# EXIT NON-ZERO WHEN SOMETHING FAILED.
+#
+# This was an unconditional `exit 0`, so a converger that could not converge
+# reported success to everything downstream. Measured: `done — synced=3
+# skipped=0 failed=1` with `cpg-inference-ts: BUILD FAILED` — permanent, it
+# never converges — and EXIT=0 on every run. Anything gating on the status (the
+# timer's own result, a watchdog, an operator's `&&`) reads a permanently
+# failing converger as a healthy one, which is why the failure survived long
+# enough to be found by reading the log rather than by anything noticing.
+#
+# `skipped` deliberately does NOT fail the run: a skip is the documented
+# outcome for an unreachable remote or an absent PAT, which is a condition of
+# the environment rather than a fault in the sync — failing on it would make a
+# laptop that closed its lid look like a broken substrate.
+if [ "$failed" -gt 0 ]; then
+  log "exiting non-zero: $failed repo(s) did not converge"
+  exit 1
+fi
 exit 0

@@ -414,7 +414,15 @@ case "$ACTION" in
       # than by state: a unit the fleet inventory names is ours and is shown.
       csh "_inv=\$(jq -r '.vessels[].unit' /workspace/substrate/fleet/vessels.inventory.json 2>/dev/null \
                    || jq -r '.vessels[].unit' /usr/local/share/substrate/vessels.inventory.json 2>/dev/null || true)
-           systemctl list-units --type=service --all --no-legend --no-pager 2>/dev/null \
+           # SERVICES **AND** TIMERS. This listed --type=service only, so the
+           # timer half of the fleet had no row anywhere in the tool an operator
+           # is told to confirm with. Measured: after a mask/unmask cycle 15
+           # timers sat ActiveState=failed ('Unit to trigger vanished'),
+           # enabled, with no next elapse — and \`status\` showed a clean fleet
+           # because it could not see them at all. A timer that will never fire
+           # is exactly as dead as a service that will never start.
+           { systemctl list-units --type=service --all --no-legend --no-pager 2>/dev/null
+             systemctl list-units --type=timer   --all --no-legend --no-pager 2>/dev/null; } \
            | sed 's/^[^a-zA-Z]*//' | awk '{print \$1}' \
            | grep -vE '^(systemd|dbus|getty|console-|user@|user-|modprobe|e2scrub|autovt|container-getty)' \
            | grep -v '@' | sort -u | while read -r u; do
@@ -427,7 +435,42 @@ case "$ACTION" in
                # only when the inventory names the unit as ours.
                if [ \"\$e\" = static ] && ! echo \"\$_inv\" | grep -qx \"\$u\"; then continue; fi
                a=\$(systemctl is-active \"\$u\" 2>&1)
-               printf '%-38s %-12s %-10s restarts=%s\n' \"\$u\" \"\$a\" \"\$e\" \"\$(systemctl show \"\$u\" -p NRestarts --value 2>/dev/null)\"
+               case \"\$u\" in
+                 *.timer)
+                   # Timers are scoped to the inventory (its own .timer entry or
+                   # the timer of an inventory service): the host image ships
+                   # Debian's fstrim/apt-daily/e2scrub timers, which are not the
+                   # fleet's and would pad the fleet view with rows an operator
+                   # can do nothing about.
+                   if ! echo \"\$_inv\" | grep -qx \"\$u\" && ! echo \"\$_inv\" | grep -qx \"\${u%.timer}.service\"; then continue; fi
+                   # NRestarts is meaningless for a timer — it is never restarted,
+                   # it elapses. The failure that matters is a timer that is
+                   # enabled but will never fire again ('Unit to trigger
+                   # vanished'), and the tell for that is an EMPTY next elapse.
+                   # BOTH properties, not one. A CALENDAR timer (OnCalendar)
+                   # populates NextElapseUSecRealtime and leaves Monotonic at 0;
+                   # a MONOTONIC timer (OnUnitActiveSec — which is what the
+                   # fleet's rhythm timers use) does the reverse. Reading only
+                   # Realtime reported every fleet timer as dead, including ones
+                   # \`list-timers\` showed with 18 minutes left. A timer is dead
+                   # only when NEITHER is set.
+                   nr=\$(systemctl show \"\$u\" -p NextElapseUSecRealtime --value 2>/dev/null)
+                   nm=\$(systemctl show \"\$u\" -p NextElapseUSecMonotonic --value 2>/dev/null)
+                   # 'infinity' is systemd's third way of saying never, and it is
+                   # the one a real dead timer actually reports: masking the
+                   # service a timer triggers leaves the timer enabled with
+                   # NextElapseUSecMonotonic=infinity. Empty and 0 alone do not
+                   # catch it — measured.
+                   n=''
+                   case \"\$nr\" in ''|0|*infinity*) ;; *) n=\"\$nr\" ;; esac
+                   if [ -z \"\$n\" ]; then case \"\$nm\" in ''|0|*infinity*) ;; *) n=\"+\$nm\" ;; esac; fi
+                   [ -n \"\$n\" ] || n='NEVER — enabled but will not fire'
+                   printf '%-38s %-12s %-10s next=%s\n' \"\$u\" \"\$a\" \"\$e\" \"\$n\"
+                   ;;
+                 *)
+                   printf '%-38s %-12s %-10s restarts=%s\n' \"\$u\" \"\$a\" \"\$e\" \"\$(systemctl show \"\$u\" -p NRestarts --value 2>/dev/null)\"
+                   ;;
+               esac
              done | sort -k2,2 -k1,1"
     fi
     ;;
