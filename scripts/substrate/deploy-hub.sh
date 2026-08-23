@@ -30,7 +30,14 @@ TARGET="${1:?usage: deploy-hub.sh user@vm-ip public-ip}"
 PUBLIC_IP="${2:?usage: deploy-hub.sh user@vm-ip public-ip}"
 REPO="${REPO:-AviGopal/substrate}"
 BRANCH="${BRANCH:-dev}"
-PAT="${GITHUB_PAT:?set GITHUB_PAT (repo scope) — needed to clone the private repo + submodules}"
+# OPTIONAL. This was a hard `:?` stop justified as "needed to clone the private
+# repo", but the super-repo and every submodule are PUBLIC — verified with an
+# anonymous `git ls-remote`, and the README says so too. The gate turned a
+# public-repo deploy into a credential hunt for a credential it does not need.
+# Still honoured when supplied: a PAT raises the GitHub API rate limit and is
+# required if you point REPO at a fork that IS private.
+PAT="${GITHUB_PAT:-}"
+[ -n "$PAT" ] || echo "[deploy-hub] no GITHUB_PAT — cloning $REPO anonymously (it is public). Set GITHUB_PAT only for a private fork or to raise the rate limit."
 ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-$(jq -r '.providers.anthropic.apiKey // empty' "$HOME/.metabob/config.json" 2>/dev/null || true)}"
 [ -n "$ANTHROPIC_API_KEY" ] || { echo "ERROR: set ANTHROPIC_API_KEY"; exit 1; }
 SSH_KEY="${SSH_KEY:-}"
@@ -59,13 +66,20 @@ command -v docker >/dev/null || { curl -fsSL https://get.docker.com | sh; }
 REW="url.https://x-access-token:${PAT}@github.com/.insteadOf"
 # Idempotency: a prior run that died before its scrub leaves multiple values;
 # plain `git config` then fails "cannot overwrite multiple values". Clear first
-# (also scrub any stale-token variant of the same key).
+# (also scrub any stale-token variant of the same key). Runs unconditionally, so
+# a previous PAT-bearing deploy is scrubbed even on a PAT-less one.
 git config --global --unset-all "$REW" 2>/dev/null || true
 for k in $(git config --global --list --name-only 2>/dev/null | grep -iE "^url\..*x-access-token.*\.insteadof$" | sort -u); do
   git config --global --unset-all "$k" 2>/dev/null || true
 done
-git config --global "$REW" "git@github.com:"
-git config --global --add "$REW" "https://github.com/"
+# Only install the rewrite when a token exists. With PAT empty the key becomes
+# `x-access-token:@github.com`, which rewrites EVERY github URL to a
+# credential-shaped one carrying no credential — turning working anonymous
+# clones into authentication failures.
+if [ -n "${PAT:-}" ]; then
+  git config --global "$REW" "git@github.com:"
+  git config --global --add "$REW" "https://github.com/"
+fi
 
 DIR="$HOME/substrate"
 if [ -d "$DIR/.git" ]; then
@@ -73,8 +87,11 @@ if [ -d "$DIR/.git" ]; then
   git -C "$DIR" checkout -q "$BRANCH"
   git -C "$DIR" pull --ff-only -q origin "$BRANCH"
 else
-  git clone --branch "$BRANCH" -q \
-    "https://x-access-token:${PAT}@github.com/${REPO}.git" "$DIR"
+  if [ -n "${PAT:-}" ]; then
+    git clone --branch "$BRANCH" -q "https://x-access-token:${PAT}@github.com/${REPO}.git" "$DIR"
+  else
+    git clone --branch "$BRANCH" -q "https://github.com/${REPO}.git" "$DIR"
+  fi
 fi
 cd "$DIR"
 # Init all submodules from the explicit path list (recursive-init aborts the whole run
@@ -149,7 +166,7 @@ docker run -d --name substrate-live --privileged \
   -e SUBSTRATE_ROOT="${SUBSTRATE_ROOT:-/workspace/git/super-repo}" \
   -e PUBLIC_IP="$PUBLIC_IP" -e FED_PUBLIC_IP="$PUBLIC_IP" \
   -e RELAY_MULTIADDR="$RELAY_MULTIADDR" \
-  -e FED_SUBSTRATE_ID="${FED_SUBSTRATE_ID:-syzygy-hub}" \
+  -e FED_SUBSTRATE_ID="${FED_SUBSTRATE_ID:-hub-$PUBLIC_IP}" \
   -e HUB_DISCOVERY_URL="http://localhost:8100" \
   -p 18080:8080 -p 18100:8100 -p 18101:8101 -p 18210:8210 \
   -p 18090:8090 -p 18260:8260 \

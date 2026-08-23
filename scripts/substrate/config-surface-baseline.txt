@@ -1,4 +1,13 @@
-lane=run-live offered=36 emitted=77
-lane=run-live-obsidian offered=36 emitted=77
+lane=run-live offered=45 emitted=80
+lane=run-live dropped=
+lane=run-live hardcoded=
+lane=run-live unoffered=
+lane=run-live-obsidian offered=45 emitted=80
+lane=run-live-obsidian dropped=
+lane=run-live-obsidian hardcoded=
+lane=run-live-obsidian unoffered=
 lane=compose offered=40 emitted=80
+lane=compose dropped=
+lane=compose hardcoded=
+lane=compose unoffered=
 phantom=0

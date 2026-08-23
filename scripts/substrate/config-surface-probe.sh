@@ -233,6 +233,13 @@ report_lane() {
   # a reader to skim the section, which is how a real entry gets missed.
   dropped="$(comm -23 "$WORK/$lane.offered" "$WORK/$lane.env" \
              | grep -vxE 'LLM_ARMS|ALLOW_INSECURE_API_KEY_SECRET')"
+  # Persist for the baseline comparison, not just for the eye. These lists were
+  # printed and then discarded: the compared summary held counts only, so a
+  # value-replacement regression — a name that starts being overwritten by a
+  # literal — changed no count and the probe printed "matches baseline" and
+  # exited 0. A check that cannot fail on the defect it is looking at is not a
+  # check.
+  printf '%s\n' $dropped | grep -v '^$' | sort > "$WORK/$lane.dropped" || true
   if [ -n "$dropped" ]; then
     echo "   DROPPED (lane passes it, no vessel can read it):"
     printf '     %s\n' $dropped
@@ -250,12 +257,42 @@ report_lane() {
   judged="$(comm -23 <(comm -12 "$WORK/$lane.offered" "$WORK/$lane.env") \
                      "$WORK/$lane.unjudged")"
   discarded="$(comm -23 <(printf '%s\n' "$judged") <(printf '%s\n' "$accepted"))"
+  printf '%s\n' $discarded | grep -v '^$' | sort > "$WORK/$lane.hardcoded" || true
   if [ -n "$discarded" ]; then
     echo "   HARDCODED (emitted, but your value was replaced by a literal):"
     printf '     %s\n' $discarded
   fi
   local nunjudged; nunjudged="$(grep -c . "$WORK/$lane.unjudged" || true)"
   [ "$nunjudged" -gt 0 ] && echo "   (not judged — no sentinel supplied: $nunjudged names)"
+
+  # UNOFFERED: documented in .env.example, but this lane does not pass it.
+  #
+  # This is the axis the probe could not see, and it is the one that mattered.
+  # Every other check here starts from what a lane ALREADY passes, so a variable
+  # the lane never passes at all is outside the whole field of view — it drops
+  # out before DROPPED can consider it. Both documented safety switches
+  # (MITOSIS_DIRECT_PUSH, ROUTE_EDIT_INTENT_TO_COMPOSE) sat in that hole: the
+  # make lane silently discarded a `0` and both resolved to their permissive
+  # defaults, while this probe printed "matches baseline" and exited 0.
+  #
+  # Compare against the operator-facing contract (.env.example), because that is
+  # what a reader believes they can set. Compose-mechanics names are excluded:
+  # compose consumes them to build the run rather than forwarding them.
+  local envex unoffered
+  envex="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env.example"
+  if [ -f "$envex" ]; then
+    unoffered="$(comm -23 \
+      <(grep -oE '^#? ?[A-Z_][A-Z0-9_]*=' "$envex" | sed 's/^# *//;s/=$//' \
+        | grep -vxE '.*_PORT|SUBSTRATE_CONTAINER|SUBSTRATE_IMAGE|WORKSPACE_VOLUME|SURREAL_VOLUME' | sort -u) \
+      "$WORK/$lane.offered")"
+    printf '%s\n' $unoffered | grep -v '^$' | sort > "$WORK/$lane.unoffered" || true
+    if [ -n "$unoffered" ]; then
+      echo "   UNOFFERED (.env.example documents it; this lane never passes it):"
+      printf '     %s\n' $unoffered
+    fi
+  else
+    : > "$WORK/$lane.unoffered"
+  fi
   echo
 }
 
@@ -308,6 +345,13 @@ SUMMARY="$WORK/summary.txt"
 {
   for l in $LANES; do
     echo "lane=$l offered=$(wc -l < "$WORK/$l.offered" | tr -d ' ') emitted=$(wc -l < "$WORK/$l.env" | tr -d ' ')"
+    # NAMES, not counts. A regression that swaps one dropped name for another
+    # leaves the count identical, so counts alone cannot see it — and the two
+    # axes that describe how a value is LOST are exactly the ones worth
+    # regression-guarding.
+    echo "lane=$l dropped=$(tr '\n' ',' < "$WORK/$l.dropped" 2>/dev/null | sed 's/,$//')"
+    echo "lane=$l hardcoded=$(tr '\n' ',' < "$WORK/$l.hardcoded" 2>/dev/null | sed 's/,$//')"
+    echo "lane=$l unoffered=$(tr '\n' ',' < "$WORK/$l.unoffered" 2>/dev/null | sed 's/,$//')"
   done
   echo "phantom=$(printf '%s\n' "$phantom" | grep -c . || true)"
 } > "$SUMMARY"
