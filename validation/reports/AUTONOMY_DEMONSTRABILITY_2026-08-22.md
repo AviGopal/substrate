@@ -807,3 +807,55 @@ conventional subject — counted as a landing. Each attempt was verified against
 the layer *below* the one that decides, and only the third check found the layer
 that does.
 
+## 16. Verified: the revert unblocked the gap, at the consuming layer
+
+The measurement that matters, with the positive control that makes it a real
+negative rather than a quiet window:
+
+| window | `56849210 PENDING` logs | picker activity |
+|---|---|---|
+| 03:00–04:12 (before amend, 72 min) | **10** | — |
+| after 04:12 (amend) | **0** | **18 picks total, 4 of them this gap** |
+
+The picker selected the gap four times and stopped skipping it. What it did
+instead is the part worth keeping — a self-repair behaviour that could never fire
+while the gap was being skipped:
+
+```
+04:16  emitted narrowed child gap for chronically-stuck gap route-edit-56849210
+       → route-edit-56849210-narrowed
+04:30  picked again, narrowed again
+04:32  [patch-with-tools] editing rhythm-conductor-tick.ts,
+       old_string: "      dry_run: pointer.dry_run === true,"
+04:34  picking route-edit-56849210-narrowed
+```
+
+So the gap went from 432 dead picks in 48 hours to live composition within twenty
+minutes. **The `chronically-stuck → narrowed child` mechanism already existed and
+had simply never been reachable for this gap** — the pending skip returned before
+it. One inert commit was suppressing a working self-repair path.
+
+Two caveats that travel with this. The compose is still targeting
+`rhythm-conductor-tick.ts`, which is the law-13 mis-target recorded in §9, so
+composable is not closeable and it may well produce another wrong edit. And this
+is one gap: the other six want the filed measurement-predicate work, not six more
+reverts.
+
+## 17. Final tally — seven dispatches, seven modes, one clean progression
+
+| # | mode | reading |
+|---|---|---|
+| 1–2 | `feature_compose:busy` | my error — concurrent dispatch |
+| 3 | `feature_compose:rejected` (typecheck) | gate working |
+| 4 | `interrupted` | self-development restart killed it mid-flight |
+| 5 | `goal-seek:no-trace` | target inferred to the unproducible `code_modification_proposal` |
+| 6 | `anchor_not_found` | my error — I described the change instead of supplying verbatim anchors |
+| 7 | `syntax_break` — `TS1005: ';' expected` at 2330–2331 | gate working; the draft did not parse |
+
+Three of the seven were mine, and fixing each moved the dispatch one stage
+further: serial dispatch cleared capacity, verified anchors cleared
+`anchor_not_found`, and the run then reached a real draft that the typecheck gate
+correctly refused. **The lane's own gates are the healthiest part of it** — modes
+3, 6 and 7 are all refusals that left the gap open with actionable feedback
+attached. Nothing landed, and nothing wrong landed either.
+
