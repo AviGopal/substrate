@@ -326,7 +326,7 @@ concentrated on its best arm. A later sample of the same endpoint reads 28
 bridge-tick and 20 `validator-dispatch`. The first read was a window artifact;
 the concentration claim does not survive, and the hedge on it was warranted.
 
-## 8. The livelock: a 17-minute outage yesterday is still costing ~600 picks a day
+## 8. The livelock: the substrate asks a question nothing can read
 
 The single most concrete growth blocker found by working the list, and it was not
 in any prior report.
@@ -350,25 +350,59 @@ this state, and between them they account for the top of the pick distribution:
 | `gap-env-gated-substrate-auto-draft-enabled` | 65 |
 | `route-edit-1d843a2a` · `route-edit-f79ac530` · `route-edit-c770e288` | 138 |
 
-**Why they are stuck — and it is not what the stack traces first suggested.**
-`sweepPendingLandVerifications` appears in the journal only inside stack traces,
-56 times, all `ConnectionRefused` against `http://127.0.0.1:8080/v2/events/publish`
-— activity-api was down. That reads as a live broken sweep, and it is not: every
-one of those errors falls in a **17-minute window yesterday, 2026-08-22
-08:33–08:50**. In the last 6 hours the sweep throws zero times and there are zero
-`ConnectionRefused` anywhere in the vessel.
+**Why they are stuck.** I got this wrong twice before getting it right, and both
+wrong answers are instructive.
 
-So the sweep is healthy *now* and the gaps are still pending. The pending flag was
-set during that transient outage and **nothing ever un-sets it**. A 17-minute
-infrastructure blip on one day has permanently consumed the majority of the
-substrate's autonomous repair capacity, and will keep doing so indefinitely.
+*First wrong answer: a broken sweep.* `sweepPendingLandVerifications` appears in
+the journal only inside stack traces, 56 times, all `ConnectionRefused` against
+activity-api. But every one of those errors falls in a **17-minute window on
+2026-08-22, 08:33–08:50**; in the last 6 hours the sweep throws zero times.
 
-This is law 6's question in its cleanest form. The instance-fix is to clear seven
-flags. The class-fix is that **a pending-verification flag needs a TTL or a
-liveness check** — a state that can only ever be entered, never exited, is not a
-state machine. And the detector that should exist: *a gap picked N times without
-ever being composed is a livelock, and the picker is the one component positioned
-to notice.*
+*Second wrong answer: a stale flag from that outage.* This is what I committed,
+and it is refuted by the flag's own timestamp — `pending_set_at` on the affected
+gaps reads **`2026-08-23T02:33`, minutes before I looked**. The sweep is not
+failing to clear a stale flag; it is **actively re-stamping** it on every run,
+because the condition that sets it is still true.
+
+*What is actually happening.* `markPendingVerification` is deliberate and
+correct. When a gap has landed once but the close-oracle has **no way to measure**
+whether the change resolved the condition, the gap is held open with
+`disposition: 'pending_verification'` rather than closed green on the commit
+alone — the code names this precisely as avoiding "the inert-diff hole." The
+picker then skips it so a second landing cannot manufacture a false close. This
+is the substrate correctly refusing to mark its own unverifiable work as done.
+
+**The exit transition is a human, and the channel to reach one is half-built.**
+The escalation writes a `uiQuestion`: *"Gap landed but is unverified — did the
+change actually fix it? … did the landed change actually fix this, or is it
+inert/wrong?"* The journal shows `uiQuestion_write accepted` 1,000 times in 24h.
+But in the registry:
+
+```
+uiQuestion_write  ->  FOUND  stateful-ui-vessel, development-vessel-local, human-surface-vessel
+uiQuestion        ->  none
+uiFeedback        ->  FOUND  stateful-ui-vessel, human-surface-vessel     ← positive control
+```
+
+**The write shape has three producers. The read shape has none.** The sibling
+`uiFeedback` resolves, so this is a real absence and not a query artifact. The
+substrate has asked the operator the same question a thousand times through a
+channel with no reader on the other end — the write≠read defect this codebase has
+now hit in a dozen places, landing this time on the one transition that releases
+autonomous repair capacity.
+
+So the disposition is not "clear seven stale flags." It is:
+
+- **Instance:** answer the seven questions — a verdict per gap, which is exactly
+  the operator's job under law 13 and the one thing genuinely blocked on a human.
+- **Class 1:** advertise a `uiQuestion` read shape so pending questions can be
+  enumerated by any surface. Without it every escalation this system makes is
+  write-only.
+- **Class 2:** give the close-oracle a measurement predicate for the
+  `edit_intent_route` class, so the common case never needs a human at all.
+- **The missing detector:** *a gap picked N times and never composed is a
+  livelock* — the picker is the component positioned to notice, and it currently
+  logs the skip without ever counting it.
 
 It also explains a symptom already in the record. `route-edit-56849210` targets
 `rhythm-conductor-tick.ts` — the fix for the open gap
