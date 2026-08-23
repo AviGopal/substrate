@@ -2,12 +2,15 @@ lane=run-live offered=45 emitted=80
 lane=run-live dropped=
 lane=run-live hardcoded=
 lane=run-live unoffered=
+lane=run-live mangled=
 lane=run-live-obsidian offered=45 emitted=80
 lane=run-live-obsidian dropped=
 lane=run-live-obsidian hardcoded=
 lane=run-live-obsidian unoffered=
+lane=run-live-obsidian mangled=
 lane=compose offered=40 emitted=80
 lane=compose dropped=
 lane=compose hardcoded=
 lane=compose unoffered=
+lane=compose mangled=
 phantom=0

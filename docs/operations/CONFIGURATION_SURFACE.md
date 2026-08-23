@@ -160,7 +160,7 @@ documents why*.
 
 | Dimension | Count | How |
 |---|---|---|
-| Names emitted into `/etc/substrate/env` | **73–77 — conditional, not a constant** | `grep -cE '^[A-Z_]' /etc/substrate/env` after a boot. **Emission depends on what you supplied** (an absent provider key emits no arm), so this is a range and the command cannot reproduce a single number. A fixed count was carried here once and disagreed with `config-surface-baseline.txt` in the same repo. |
+| Names emitted into `/etc/substrate/env` | **72–80 — conditional, not a constant** | `grep -cE '^[A-Z_]' /etc/substrate/env` after a boot. **Emission depends on what you supplied** (an absent provider key emits no arm), so this is a range and the command cannot reproduce a single number. A fixed count was carried here once and disagreed with `config-surface-baseline.txt` in the same repo. |
 | Names offered by `run-live` / `run-live-obsidian` / compose | 45 / 45 / 40 | `config-surface-probe.sh` |
 | Distinct names read across vessels and packages | ~451 | dot + bracket + helper forms, `sort -u` |
 | Names in unit `Environment=` lines | 52 (48 unique to that channel) | §1 |
@@ -238,7 +238,15 @@ What it reports, and why each exists:
 | `DROPPED` | a lane passes a name gen-env never emits — delivered to nothing |
 | `HARDCODED` | the name is emitted but your value was replaced by a literal |
 | cross-lane differential | two lanes that claim to launch the same thing and do not |
+| `UNOFFERED` | `.env.example` documents the name and this lane never passes it — the axis the other rows cannot reach, because every one of them starts from what a lane *already* passes. Both autonomy kill switches hid here |
+| `MANGLED` | the name is emitted and the value still carries the sentinel marker, but is not byte-identical to what was supplied — a value CORRUPTED in transit. Scoped to names documented as JSON, because gen-env legitimately *derives* many values and an unscoped byte-comparison reports nine false positives |
 | `PHANTOM` | a persisted read with no matching write |
+
+Sentinels for names documented as JSON are **JSON**, quotes included. They were all
+alphanumeric, which made the probe structurally unable to observe a quoting defect — and
+one was live: values were emitted with a raw `NAME="${VAR}"` wrap and no escaping, so a
+documented JSON value reached its consumer as invalid JSON and was swallowed by a warning.
+A probe that only supplies easy inputs measures how the system handles easy inputs.
 
 **A probe that cannot run must say so, never produce a number.** Three ways this one lied
 before it was trusted, each now guarded in the script:

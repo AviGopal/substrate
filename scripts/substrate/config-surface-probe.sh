@@ -86,7 +86,25 @@ trap 'rm -rf "$WORK"' EXIT
 # Deliberately NOT secret-shaped. A value that looks like a key invites a future
 # reader to think this script handles credentials; it does not, and must not.
 SENTINEL_PREFIX="PROBEVAL"
-sentinel_for() { printf '%s_%s' "$SENTINEL_PREFIX" "$1"; }
+
+# QUOTE-BEARING SENTINELS FOR THE NAMES WHOSE VALUES CARRY QUOTES.
+#
+# Every sentinel here was alphanumeric, which made the probe structurally unable
+# to see a QUOTING defect — and there was one: gen-env emitted values with a raw
+# `NAME="${VAR}"` wrap and no escaping, so a documented JSON value arrived at its
+# consumer as invalid JSON, was swallowed by a console.warn, and produced a fleet
+# with zero endpoint arms. The probe ran clean throughout, because a value with
+# no quotes in it cannot demonstrate a quote bug.
+#
+# An instrument that only supplies easy inputs measures how the system handles
+# easy inputs. These names are documented as JSON, so JSON is the honest input.
+sentinel_for() {
+  case "$1" in
+    VLLM_ENDPOINTS) printf '[{"baseUrl":"http://PROBEVAL-%s.invalid/v1","models":["PROBEVAL-m1"]}]' "$1" ;;
+    LLM_ARMS)       printf '[{"id":"PROBEVAL-arm","model":"PROBEVAL-m","provider":"openai","port":9998}]' ;;
+    *)              printf '%s_%s' "$SENTINEL_PREFIX" "$1" ;;
+  esac
+}
 
 # The provider key is the one input gen-env fails closed without, so a standalone
 # probe must supply something. ASSEMBLED, never written literally: a literal
@@ -191,7 +209,13 @@ probe_lane() {  # $1 = lane name; writes $WORK/<lane>.{env,secrets,values}
       echo '===SECRETS==='
       grep -oE '^[A-Z_][A-Z0-9_]*=' /workspace/.substrate-secrets 2>/dev/null | tr -d '=' | sort -u
       echo '===VALUES==='
-      grep -E '^[A-Z_][A-Z0-9_]*=.*PROBEVAL' /etc/substrate/env 2>/dev/null | sort
+      # READ AT THE CONSUMING LAYER, not off the raw line. Grepping the file text
+      # judged the STORED form, so once gen-env began correctly escaping quotes
+      # (as it must for JSON values) a perfectly delivered value stopped matching
+      # its own sentinel and was reported HARDCODED. What a vessel sees is the
+      # SOURCED value; compare that. env -i so nothing is inherited.
+      env -i sh -c 'set -a; . /etc/substrate/env 2>/dev/null; set +a; env' 2>/dev/null \
+        | grep -E '^[A-Z_][A-Z0-9_]*=.*PROBEVAL' | sort
     " > "$WORK/$lane.raw" 2> "$WORK/$lane.err"
   local rc=$?
 
@@ -258,6 +282,43 @@ report_lane() {
                      "$WORK/$lane.unjudged")"
   discarded="$(comm -23 <(printf '%s\n' "$judged") <(printf '%s\n' "$accepted"))"
   printf '%s\n' $discarded | grep -v '^$' | sort > "$WORK/$lane.hardcoded" || true
+
+  # MANGLED: the name is emitted and the value still carries the marker, but it
+  # is not BYTE-IDENTICAL to what we supplied.
+  #
+  # "accepted" above asks whether the emitted value CONTAINS the sentinel marker.
+  # A quoting defect does not remove the marker — it removes the quotes around
+  # it — so a corrupted JSON value still contained PROBEVAL and passed. The probe
+  # reported clean against an image whose gen-env demonstrably destroyed the
+  # value. A contains-check cannot see damage that leaves the substring intact;
+  # compare the whole value.
+  # SCOPED to names whose value must arrive VERBATIM. gen-env legitimately
+  # DERIVES many values — CONCEPT_DB_API_KEY aliases the metabob key,
+  # DISCOVERY_PUBLIC_URL is built from PUBLIC_IP, FED_VESSEL_ID is composed — so
+  # an unscoped byte-comparison reports nine false positives and would be
+  # switched off within a week. The names below are documented as JSON: for them
+  # "transformed" and "corrupted" are the same thing, and there is no legitimate
+  # derivation to confuse it with.
+  local mangled=""
+  local _mn _mgot _mwant
+  while IFS= read -r _mn; do
+    [ -n "$_mn" ] || continue
+    case "$_mn" in VLLM_ENDPOINTS|LLM_ARMS) ;; *) continue ;; esac
+    _mgot="$(awk -F= -v n="$_mn" '$1==n{sub("^"n"=",""); print; exit}' "$WORK/$lane.values")"
+    [ -n "$_mgot" ] || continue
+    _mwant="$(sentinel_for "$_mn")"
+    [ "$_mgot" = "$_mwant" ] || mangled="$mangled $_mn"
+  done <<< "$(printf '%s\n' "$accepted")"
+  printf '%s\n' $mangled | grep -v '^$' | sort > "$WORK/$lane.mangled" || true
+  if [ -n "$mangled" ]; then
+    echo "   MANGLED (emitted, marker intact, but the value was CORRUPTED in transit):"
+    for _mn in $mangled; do
+      echo "     $_mn"
+      echo "       supplied: $(sentinel_for "$_mn")"
+      echo "       arrived : $(awk -F= -v n="$_mn" '$1==n{sub("^"n"=",""); print; exit}' "$WORK/$lane.values")"
+    done
+  fi
+
   if [ -n "$discarded" ]; then
     echo "   HARDCODED (emitted, but your value was replaced by a literal):"
     printf '     %s\n' $discarded
@@ -352,6 +413,7 @@ SUMMARY="$WORK/summary.txt"
     echo "lane=$l dropped=$(tr '\n' ',' < "$WORK/$l.dropped" 2>/dev/null | sed 's/,$//')"
     echo "lane=$l hardcoded=$(tr '\n' ',' < "$WORK/$l.hardcoded" 2>/dev/null | sed 's/,$//')"
     echo "lane=$l unoffered=$(tr '\n' ',' < "$WORK/$l.unoffered" 2>/dev/null | sed 's/,$//')"
+    echo "lane=$l mangled=$(tr '\n' ',' < "$WORK/$l.mangled" 2>/dev/null | sed 's/,$//')"
   done
   echo "phantom=$(printf '%s\n' "$phantom" | grep -c . || true)"
 } > "$SUMMARY"
