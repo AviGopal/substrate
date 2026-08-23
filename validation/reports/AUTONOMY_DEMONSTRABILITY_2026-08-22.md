@@ -414,7 +414,75 @@ enqueue are exactly the ones measured stale above** — `gap_lifecycle_scan` has
 run in 48h, which is why the gap-triple series stops on 08-18. One livelock,
 three symptoms.
 
-## 9. The named open question feeding all of this
+## 9. What the seven pending gaps turned out to be
+
+Answering them is the operator verdict the system has been waiting for since
+08-18. Reading the diffs settled two classes, and the second is the more
+important finding of the session.
+
+**One inert landing.** `route-edit-56849210` → `dbb2917`: two comment lines
+restating the gap text pasted into an unrelated `substrateGap_write` literal,
+plus a whitespace-only reindent of `category: "other"` that breaks the
+surrounding indentation. It does nothing about the drafter regex flakiness the
+gap names — which is also what the semantic gate said when it rejected an earlier
+attempt at the same gap. The gap is *also* mis-targeted: drafter flakiness routed
+to `rhythm-conductor-tick.ts`, a law-13 mis-target on top of an inert diff.
+**Verdict: inert, re-compose authorised.** The pending guard was right to fire.
+
+**Three landings that are individually valid and collectively a treadmill.**
+Between 12:48 and 14:42 on 2026-08-18, three distinct gaps produced three
+substrate-authored commits to **the same line** of
+`repos/goal-host-vessel/src/registry-field.ts`, each adding one more synonym to
+one regex alternation:
+
+| sha | gap | added to the alternation |
+|---|---|---|
+| `743a258f` | `route-edit-1d843a2a` | `quantity of` |
+| `0804f9c1` | `route-edit-c770e288` | `how much` · `how numerous` |
+| `16670817` | `route-edit-a95b959a` | `sum of` |
+
+Every one typechecks, lands, closes its gap, and counts toward the autonomy
+record. And the capability does not improve, because natural-language synonyms
+are unbounded and an alternation cannot enumerate them — every new phrasing of a
+counting question mints another gap and consumes another autonomous landing.
+
+**This is law 13 implemented as a regex.** The system is supposed to own
+decomposition and path inference from natural language; instead the goal
+vocabulary is a hand-grown word list growing at one word per commit. It is the
+sharpest example available of law 3's warning that *a wrong mint is negative
+value, not zero* — and of why "it fired" is not success: these four landings are
+four of the twelve that make the autonomy record look healthy.
+
+**Verdict: non-inert but do not re-compose.** Filed as
+`goal-vocabulary-is-a-synonym-treadmill` with the three shas as evidence.
+
+## 10. Two mistakes of my own, both predicted in advance
+
+**I dispatched three goals concurrently into a single-occupancy lane.** Two were
+refused `feature_compose:busy` and graded `reached:false`, and the learning record
+shows `dBeta: 2` applied to `activity:⟨audit-then-debug-tests⟩` — an arm
+penalised for a capacity refusal it had nothing to do with.
+
+None of that is new, and that is the point. The gap
+`gap-edit-intent-compose-lane-lands-nothing`, filed by the substrate at
+2026-08-22 08:52, already says it:
+
+> "Two of the capacity refusals were **operator-caused by dispatching three goals
+> concurrently into a lane that cannot serve them**, which is itself worth
+> surfacing: nothing told the operator the lane was saturated until the refusal."
+
+The substrate documented my mistake seventeen hours before I made it. The
+unconditional β-penalty is likewise already filed as `gap-mt0kcoyt`
+(`index.ts:5196` returns `{dAlpha: 0, dBeta: 2}` unconditionally). **Both were
+rediscoveries, and checking first is what kept them from being re-filed** — the
+third and fourth things this session that I nearly reported as new.
+
+The actionable residue is small and real: *nothing tells a dispatcher the lane is
+saturated before it accepts the goal*, so the correct operator behaviour is to
+dispatch edit-intent goals **serially**, which is what the remaining two are
+waiting on.
+
+## 11. The named open question feeding all of this
 
 **Minting stopped around 2026-08-01** — 79 mints in the week to 08-01, then 4 in
 the 21 days since, measured over 98.2% of the corpus (`AUDIT_EXPECTATIONS` §6).
@@ -423,3 +491,56 @@ is part of that same stall, then step 2 above is not merely a measurement
 prerequisite — it is the blocker, and the first two legs of §4(a) cannot be
 evidenced until it is understood. This is a separate investigation and is not
 resolved here.
+
+---
+
+## 12. Disposition — every blocker, and who owns it
+
+Nothing below is left implicit. Each item is resolved, dispatched, filed with its
+class question answered, or documented as intractable with an owner named.
+
+**Resolved this session**
+
+| item | how |
+|---|---|
+| Cockpit pointed at a hub with no self-development plane | Repointed to `localhost:18080`; original at `.metabob/config.json.hub-backup` |
+| Seven gaps parked on an unanswerable question | Verdicts rendered on four (1 inert, 3 treadmill); dispositions cleared |
+| "Gap triple computed nowhere" | Refuted — it exists; the defect is that `gap_lifecycle_scan` has not run in 48h |
+| "Per-test attribution missing" | Refuted — exists, and fired correctly on `3e58e73` |
+
+**Filed as gaps, class question answered (law 6)**
+
+`uiquestion-read-shape-has-no-producer` · `gap-picker-cannot-detect-its-own-livelock` ·
+`concept-db-saturated-on-walk-critical-path` · `goal-vocabulary-is-a-synonym-treadmill`
+
+**Already filed by the substrate — not re-filed**
+
+`gap-edit-intent-compose-lane-lands-nothing` · `gap-mt0kcoyt` (unconditional β) ·
+`rhythm-cadence-registry_unmappable` · `route-edit-3ca33bb6`
+
+**In flight**
+
+`c6c88cb0` (ribosome-extract output shape) is running and has already produced
+`route-edit-c2f83378`. G1 (pre-cutover gating) and G3 (evidence-deletion gate)
+were refused for capacity and must be re-dispatched **serially** — queued behind a
+lane-free watch.
+
+**Owned by the user — I cannot move these**
+
+1. **Reconnect the MCP server.** The cockpit tools still point at the hub for
+   this session; the config change takes effect on reconnect. Until then the ACT
+   plane of the canonical loop is unavailable through the documented interface.
+2. **Hub access.** `syzygy.host`'s goal-host, development, gap and memory planes
+   are down, and no SSH exists from here (verified 08-17). Every fix landing in
+   git is unexercised in production until someone with host access deploys.
+3. **The remaining three pending-verification verdicts**, if the substrate should
+   not simply re-derive them — though the better answer is the filed class-fix:
+   give the close-oracle a measurement predicate so the common case never needs a
+   human.
+
+**Not resolvable by audit**
+
+Blame `reason` remains unmeasurable from operator surfaces (`failure_mode` is
+absent from the executions endpoint's projection; `execution_trace` is not a
+resolvable shape on activity-api). Measuring it needs a read path that does not
+currently exist — which is itself the same write-only defect as §8.
