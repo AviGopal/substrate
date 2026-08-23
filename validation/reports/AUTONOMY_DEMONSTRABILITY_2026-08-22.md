@@ -498,6 +498,40 @@ four of the twelve that make the autonomy record look healthy.
 **Verdict: non-inert but do not re-compose.** Filed as
 `goal-vocabulary-is-a-synonym-treadmill` with the three shas as evidence.
 
+**A fourth instance landed while this report was being written**, which settles
+it as a live dynamic rather than a historical pattern:
+
+```
+81c6989  Substrate Autonomous  2026-08-23 02:53:05 +0000   ← origin/dev HEAD
+  substrate-authored: apply route-edit-c770e288-compose-report via mitosis cutover
+  src/registry-field.ts | 1 insertion(+), 1 deletion(-)
+
+- …|ratio|average|mean|per|headcount of)\b/
++ …|ratio|average|mean|per|headcount of|counted)\b/
+```
+
+One word, `counted`, added to a second alternation in the same file. Its
+post-land suite was clean (`pass=748 fail=0`) and it stamped
+`route-edit-c770e288` to close as `landed_verified` — because a **second**
+landing on a gap reads as `'present'` under `landedCommitVerdict`, i.e. a re-land
+is treated as verification. So the gap that produced `0804f9c1` in August now
+closes on a fourth synonym, and the autonomy record gains another green commit.
+
+Two things follow. First, it is independent confirmation that my metadata verdict
+changed nothing — I marked this exact gap "do not re-compose" roughly ten minutes
+before the substrate re-composed and landed it. Second, **a re-land closing a gap
+as verified is in tension with the pending guard's own stated purpose**, which is
+to refuse "the false-close the oracle is calibrated against." One landing is held
+pending as unmeasured; two landings are accepted as verified. Nothing measured the
+change in between.
+
+*Method note:* three separate clones reported this commit as non-existent — the
+container's super-repo submodule (head 2026-08-16), `/vessels/goal-host-vessel`
+(no `.git`), and my own host checkout (head `547383a`). It appeared only after
+`git fetch`. A positive control on a commit known to exist is what exposed the
+first search as broken rather than the commit as phantom. **A stale clone reports
+a real commit as absent, identically to a phantom one.**
+
 ## 10. Two mistakes of my own, both predicted in advance
 
 **I dispatched three goals concurrently into a single-occupancy lane.** Two were
