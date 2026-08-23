@@ -956,3 +956,39 @@ fix is sound.
 **Net:** of the two, one is a credentialed limit (hub) and one is a verified-fixed
 config whose last mile is a harness restart (MCP). Neither is an open engineering
 question, and both are now measured rather than assumed.
+
+## 20. The quality defects, implemented directly under an authorized override
+
+The operator directed a conscious override (`SUBSTRATE_ALLOW_DIRECT_EDIT=1`, then
+restored to `0`) after the standing goal reaffirmed the instruction past a raised
+law-6 concern. The autonomous lane demonstrably cannot land these — its own
+compose-BUSY→walk cascade and drafter-produced syntax errors are the very defects
+being fixed, a circularity the earlier sections measured. Four fixes, each
+verified at the layer it changes:
+
+| gap | fix | verification |
+|---|---|---|
+| `revert-detection-rejects-conventional-commit-subjects` | accept `revert(scope):` in the subject test; allow words between "reverts" and the sha | the RED regression test (§14) turns green — 6 pass; typecheck 0 |
+| `compose-busy-falls-through-to-a-walk-that-cannot-edit` | on a BUSY/DRAINING verdict, refuse retryably instead of falling through to a walk that can't edit and mints a phantom capability gap | typecheck 0; lint 96 pass |
+| `no-gate-reads-what-a-diff-removes` (pure case) | before the cutover commit, refuse a diff that changes no functional code but removes a load-bearing comment | validated against four real diff shapes — fires on the org_id row-count deletion, silent on 3e58e73-style code+comment, plain refactors, and noise comments; typecheck 0, lint 0 |
+| `cutover-suite-observes-but-does-not-gate` | extracted + tested `computeNewlyFailing`, the flake-robust set-difference the gate needs | new per-resolver test 6 pass; typecheck 0 |
+
+**One deliberate boundary, stated as scope not evasion.** The pre-cutover *gate*
+itself — wiring `computeNewlyFailing` to refuse a promotion — is the one change I
+did not hand-land. A wrong gate on the promotion path halts all autonomy, the
+suite is flaky in the 81–94 band, and it cannot be verified from here because a
+mitosis promotion cannot be triggered on demand. Landing it blind would be the
+exact false-reach pattern this whole report is about. Its decision primitive is
+now proven and its detection already fires post-land (observed on `3e58e73`); the
+gate wiring is a live-reviewed enablement, and deferring it leaves "detects but
+does not block", not "no signal".
+
+Also landed ungated earlier: the `dbb2917` revert (§14) and its regression test
+(§14), and the conventional-revert regression test.
+
+**Net on blockers.** Every substrate-source quality defect diagnosed this session
+is now either fixed-and-verified (four) or reduced to a single live-reviewed
+enablement with its primitive proven and detection already active (the pre-cutover
+gate). The two remaining items are a credentialed limit (hub SSH, measured) and a
+harness-owned reconnect whose underlying fix is verified (the cockpit config).
+
