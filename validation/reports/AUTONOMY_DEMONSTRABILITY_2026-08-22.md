@@ -652,7 +652,7 @@ firing again.
 `gap-edit-intent-compose-lane-lands-nothing` · `gap-mt0kcoyt` (unconditional β) ·
 `rhythm-cadence-registry_unmappable` · `route-edit-3ca33bb6`
 
-**Five dispatches, zero landings, five distinct failure modes**
+**Six dispatches, zero landings, six distinct failure modes**
 
 The clearest single measurement of the edit-intent lane this session produced.
 Each goal named one real `repos/<vessel>/src` file, as CLAUDE.md prescribes:
@@ -670,12 +670,20 @@ activity arm — and zero rows."* It is **advertised but unproducible**, so any 
 whose target inference lands on it is structurally unreachable. That is the third
 such shape recorded for this one lane, after `fs_edit` and `fileEditResult`.
 
+| 6 | `7e7219e9` | `anchor_not_found` | **G1 retried once** after its environmental death. It got further — composed, then the gate refused because the drafter's `old_string` did not match, *and returned the closest real text verbatim*. Targeting was correct (`vessel-mitosis-cutover.ts:2311`); only the anchor was wrong |
+
+Mode 6 is the healthiest failure of the six: the gap `route-edit-ca73164a` stays
+open with the lesson and the verbatim near-miss text attached, which is exactly
+the information a re-compose needs. It is also a known class — *give a drafter
+verbatim anchor text proven to occur once*.
+
 Mode 4 is the sharper one for autonomy: **the substrate's own self-development
 restarts kill in-flight operator goals**, because compose routinely outlives the
 drain window. Both are corroborated onto `gap-edit-intent-compose-lane-lands-nothing`
 rather than filed fresh.
 
-`oracleLabelWritten: false` on all five — so none of this taught the selector either.
+`oracleLabelWritten: false` on all of them — so none of this taught the selector
+either, though modes 3 and 6 did teach the *drafter* via their gap lessons.
 
 **In flight / attempted**
 
@@ -686,9 +694,10 @@ preserved in the lesson and no spurious β-penalty. That is the loop working —
 bad draft caught before landing — not a defect. The gap remains open with its
 lesson attached.
 
-G1 and G3 were both re-dispatched **serially** and both failed — modes 4 and 5
-above. Neither failure was capacity, so serial dispatch did fix the error I
-introduced; the lane simply has further independent blockers.
+G1 and G3 were re-dispatched **serially** and failed as modes 4 and 5; G1 was
+retried once more and reached mode 6. No failure after the first two was
+capacity, so serial dispatch did fix the error I introduced — the lane has
+further independent blockers, six distinct ones now.
 
 **Owned by the user — I cannot move these**
 
