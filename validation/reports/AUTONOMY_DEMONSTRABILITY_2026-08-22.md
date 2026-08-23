@@ -391,15 +391,57 @@ channel with no reader on the other end — the write≠read defect this codebas
 now hit in a dozen places, landing this time on the one transition that releases
 autonomous repair capacity.
 
+**Correction — and it invalidates my own first intervention.** I recorded operator
+verdicts on four gaps and cleared their `disposition` and `pending_set_at`, then
+checked the consuming layer. At 02:46:37, one minute after the write, the picker
+logged `PENDING verification at pick time — skipping re-compose` for
+`route-edit-56849210` — while the store showed `disposition:
+rejected_inert_recompose_authorised, pending_set_at: None`.
+
+The picker never reads those fields. `verifyGapCondition`
+(`gap-to-feature.ts:1149`) **re-derives the pending state from git on every
+pick**, via `landedCommitVerdict(gapId, editSite)`:
+
+> "a single non-reverted landing => `'pending'` (landed, UNVERIFIED — provenance,
+> not measurement), a RE-LAND (>=2) => `'present'`. Only runs when the gap has no
+> measurement predicate (else the async measurer owns the verdict)."
+
+So pending is not stored state that can be cleared — it is a *function of commit
+history*, recomputed every time. My write was a correct control on a field
+nothing consumes, which is the same error this report keeps documenting in
+others. The verdicts remain valuable as a record; they did not unblock anything.
+
+**The two real exits, both already in the design:**
+
+1. **A measurement predicate.** `hasClass2Predicate` — `evidence_resolve` or
+   `verify_shape` in `classification_metadata` — short-circuits the provenance
+   path entirely and hands the verdict to the async measurer. A gap that can be
+   *measured* never enters pending at all.
+2. **Reverting the inert landing.** `landedCommitVerdict` explicitly refuses to
+   count a commit that is a revert or was reverted. Reverting `dbb2917` — which
+   is inert and leaves broken indentation, so it deserves reverting anyway —
+   drops the landing count to zero and makes the gap composable again.
+
+That reframes the whole item. It is not a livelock caused by a broken flag; it is
+**the absence of measurement predicates on the `edit_intent_route` gap class**,
+with the human-escalation channel as the intended fallback and that channel
+unreadable (above). Seven gaps sit in the intersection of "cannot be measured"
+and "cannot be asked about."
+
 So the disposition is not "clear seven stale flags." It is:
 
-- **Instance:** answer the seven questions — a verdict per gap, which is exactly
-  the operator's job under law 13 and the one thing genuinely blocked on a human.
-- **Class 1:** advertise a `uiQuestion` read shape so pending questions can be
-  enumerated by any surface. Without it every escalation this system makes is
-  write-only.
-- **Class 2:** give the close-oracle a measurement predicate for the
-  `edit_intent_route` class, so the common case never needs a human at all.
+- **Class 1 — the real fix:** give the `edit_intent_route` gap class a
+  measurement predicate (`evidence_resolve` / `verify_shape`), so
+  `hasClass2Predicate` short-circuits provenance and the gaps never enter pending.
+  This is the design's own intended path and it removes the human from the common
+  case entirely.
+- **Class 2:** advertise a `uiQuestion` read shape, so the fallback escalation is
+  readable when a gap genuinely cannot be measured. Without it every escalation
+  this system makes is write-only.
+- **Instance:** revert the inert landing `dbb2917`, which both removes a harmful
+  diff and restores its gap to composable, since `landedCommitVerdict` refuses to
+  count a reverted commit. Deliberately left for the substrate to do through its
+  own path rather than hand-applied here.
 - **The missing detector:** *a gap picked N times and never composed is a
   livelock* — the picker is the component positioned to notice, and it currently
   logs the skip without ever counting it.
