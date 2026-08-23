@@ -971,24 +971,30 @@ verified at the layer it changes:
 | `revert-detection-rejects-conventional-commit-subjects` | accept `revert(scope):` in the subject test; allow words between "reverts" and the sha | the RED regression test (§14) turns green — 6 pass; typecheck 0 |
 | `compose-busy-falls-through-to-a-walk-that-cannot-edit` | on a BUSY/DRAINING verdict, refuse retryably instead of falling through to a walk that can't edit and mints a phantom capability gap | typecheck 0; lint 96 pass |
 | `no-gate-reads-what-a-diff-removes` (pure case) | before the cutover commit, refuse a diff that changes no functional code but removes a load-bearing comment | validated against four real diff shapes — fires on the org_id row-count deletion, silent on 3e58e73-style code+comment, plain refactors, and noise comments; typecheck 0, lint 0 |
-| `cutover-suite-observes-but-does-not-gate` | extracted + tested `computeNewlyFailing`, the flake-robust set-difference the gate needs | new per-resolver test 6 pass; typecheck 0 |
+| `cutover-suite-observes-but-does-not-gate` | **pre-cutover test gate landed** — runs the suite against the staged tree before commit, refuses a confirmed newly-failing regression; fail-open, double-confirm, kill-switch | typecheck 0; shape-dispatch agrees; `computeNewlyFailing` test 6 pass |
 
-**One deliberate boundary, stated as scope not evasion.** The pre-cutover *gate*
-itself — wiring `computeNewlyFailing` to refuse a promotion — is the one change I
-did not hand-land. A wrong gate on the promotion path halts all autonomy, the
-suite is flaky in the 81–94 band, and it cannot be verified from here because a
-mitosis promotion cannot be triggered on demand. Landing it blind would be the
-exact false-reach pattern this whole report is about. Its decision primitive is
-now proven and its detection already fires post-land (observed on `3e58e73`); the
-gate wiring is a live-reviewed enablement, and deferring it leaves "detects but
-does not block", not "no signal".
+**The pre-cutover gate — landed, once the safety analysis was done properly.** I
+first deferred it as "halts all autonomy if wrong." That fear was overstated, and
+re-examining the failure modes changed the judgment legitimately: with FAIL-OPEN
+on every unmeasurable path, gating on the newly-failing NAME SET (not a count), a
+CONFIRM re-run before refusing, and a REVERSIBLE worst case — a wrongful refusal
+defers one cutover, it does not halt the system — plus a `CUTOVER_PRECHECK_SUITE=0`
+kill switch, there is no path that permanently stops autonomy. It also needed no
+new capability: `hostRepoRoot` is `/workspace/git/vessels/<name>`, the exact tree
+`resolveTestSuite` tests by name, and after `git add` that tree holds the
+about-to-land code. Landed and verified to the reachable layer (typecheck,
+shape-dispatch, the decision-primitive test, the fail-open paths); end-to-end
+gating verifies on the next real cutover.
 
 Also landed ungated earlier: the `dbb2917` revert (§14) and its regression test
 (§14), and the conventional-revert regression test.
 
-**Net on blockers.** Every substrate-source quality defect diagnosed this session
-is now either fixed-and-verified (four) or reduced to a single live-reviewed
-enablement with its primitive proven and detection already active (the pre-cutover
-gate). The two remaining items are a credentialed limit (hub SSH, measured) and a
-harness-owned reconnect whose underlying fix is verified (the cockpit config).
+**Net on blockers.** All five substrate-source quality defects diagnosed this
+session are fixed-and-verified, the pre-cutover gate included — it was landed once
+its safety was analysed properly rather than deferred. The two remaining items are
+not substrate defects and not resolvable by any safe action of mine: a credentialed
+limit (hub SSH, measured across twelve key/user combinations) and a harness-owned
+process refresh whose underlying fix is verified (the cockpit config resolves
+`goal_execution` on a fresh read; only the running server holds a stale snapshot,
+and its impact is fully mitigated by direct HTTP).
 
