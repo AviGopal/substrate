@@ -203,3 +203,55 @@ survived:
   production hazard at :249-258 is documented accurately and prominently.
 - `docs/SUBSTRATE.md`'s backup and restore recipes worked verbatim, verification
   steps included.
+
+---
+
+# Round 2 — re-audit after the fixes
+
+The same five readers, the same cold-questions protocol, run against an image
+rebuilt from the fixed tree. Each was given its own prior findings to re-check
+and asked explicitly to hunt for **defects a fix introduced**. That instruction
+earned its keep: six of the round-2 findings are damage done by round-1 repairs.
+
+## What the fixes broke
+
+| Introduced by | Defect | Now |
+|---|---|---|
+| the `.env.example` fix | Commenting out the placeholder key made gen-env refuse to boot — correct — but `restart: unless-stopped` turns a one-shot fatal into a permanent crash loop while `up -d` prints `Started` and exits 0. The reader's next command was a gate blaming `identity-seeder`. The real error was only in `docker logs`, never mentioned. | crash-loop check + gate points at both logs |
+| the principle-3 fix | Asserted activity-api serves `llmModelPolicy`. **Zero** grep hits; `git log -S` empty. Fabricated — and placed inside "resolvers live where data lives", asserting the opposite of the rule it illustrates. | corrected; the policy is now the worked example of the rule |
+| the ribosome fix | Replaced one wrong minter with another. `draft-activity-from-pattern` last minted 2026-07-14. | gives the query that reads the pool — the durable answer to a question whose answer changes |
+| the Makefile `-e` fix | Delivering `VLLM_ENDPOINTS` exposed a latent corruption: gen-env wrapped values in raw quotes with no escaping, so documented JSON reached its consumer invalid and was swallowed by a `console.warn`. | both emit blocks escape; round-trip check; probe axis that catches it |
+| the timer-column fix | `next=NEVER` fired for any monotonic timer whose service was mid-run — 2 false alarms on healthy production, and a gap filed off the false reading. | discriminates on the target service's state; 0 false alarms |
+| the pull-sync exit fix | A `Type=oneshot` unit latches `failed`, so `substrate-ready` reports NOT ready forever while `docker ps` stays green. | `reset-failed` documented, with the point that clearing the latch is not fixing the cause |
+
+Three of my own verification attempts were also wrong before they were right —
+a round-trip check that compared against values gen-env legitimately normalises,
+one that read the file in a subshell inheriting the environment, and one placed
+before a later append block. Each looked correct and tested the wrong thing.
+
+## The finding that reframes the rest
+
+**`substrate-pull-sync` converges the fleet tooling — `vessel-ctl`,
+`apply-inventory`, and itself — from `origin/dev`, on a 10-minute timer.**
+
+Measured: production's `/usr/local/bin/vessel-ctl` is byte-identical to
+`origin/dev`'s copy and differs from the fixed tree. A fleet built from an
+unpushed tree loses these fixes within one tick of first boot, silently, and the
+log line says only `converged vessel-ctl`.
+
+So every script fix in this work is **real in the tree and absent from every
+running fleet** until the branch is pushed. That is not a defect in the fixes; it
+is the deployment contract, and it means "fixed" and "in effect" are different
+claims that this document must keep separate.
+
+## What held
+
+- No selection regression: full `DESIRED` sets — not just counts — byte-identical
+  to the pre-fix script across default, spoke, hub and `compute_node`.
+- The healthcheck 2×2 holds: standalone+masked → down/exit 1; spoke+masked →
+  ready/exit 0 with masks named; healthy → ready.
+- Both kill switches reach all three consuming processes; bare vessel names
+  resolve; unknown tokens are fatal with the offending token printed.
+- The spoke join completes end to end, and every previously-reported spoke
+  defect is fixed.
+- No case was found where the fixed `substrate-ready` reported a false failure.
