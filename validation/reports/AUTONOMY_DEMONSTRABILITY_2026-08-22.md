@@ -760,3 +760,50 @@ composable is not the same as becoming closeable, and re-targeting should come
 first. And one revert does not touch the other six pending gaps; the durable fix
 for those remains the filed measurement-predicate work, not six more reverts.
 
+## 15. The revert nearly caused the false close it was meant to prevent
+
+Recorded in full because the error was mine, it was invisible, and it inverted
+the meaning of the action.
+
+The first revert used a conventional-commits subject — `revert(rhythm-conductor-tick):
+undo dbb2917 …` — and the prose *"Reverts substrate-authored commit dbb2917."*
+Both of `gap-to-feature.ts`'s revert detectors missed it:
+
+| check | why it missed |
+|---|---|
+| `landedCommitVerdict` skips a matching commit when its subject matches `/^Revert[\s"']/i` | `revert(` has a parenthesis after `revert`, not whitespace or a quote |
+| `shaWasRevertedInAnyClone` greps `reverts (commit )?<sha>` | the words *substrate-authored* sat between "Reverts" and "commit" |
+
+So the revert was counted as a **second matching landing**. And
+`landedCommitVerdict` returns `'present'` at ≥2 non-reverted landings, with
+`'present'` closing the gap as `already_resolved`. **Reverting an inert commit
+would have moved the gap toward a false close** — precisely the outcome the
+pending guard exists to prevent, produced by the act intended to fix it.
+
+Amending to git's default subject `Revert "<original subject>"` plus the standard
+`This reverts commit <full sha>.` trailer made both detectors fire. Verified by
+running the resolver's own predicates against the live clone at
+`/workspace/git/vessels/development-vessel` — the clone `vesselsCloneRoot()`
+actually reads, which is **not** the super-repo submodule path I had fetched into
+on the first attempt:
+
+```
+4f6f466  SKIPPED (subject is a Revert)   ← my revert, no longer counted
+dbb2917  detected as reverted, by 4f6f466
+                                          ⇒ nonReverted = 0 ⇒ no longer pending
+```
+
+Filed as `revert-detection-rejects-conventional-commit-subjects`. The existing
+comment on `shaWasRevertedInAnyClone` already records an operator defeating a
+trailer-only grep by rewriting a revert message — this is the same class one
+level up, now in the subject test too, and it argues the detector should accept
+`revert(scope):` rather than that every future operator must know git's default
+form is load-bearing.
+
+**Three attempts, three different consuming layers.** Write the gap metadata —
+picker ignores it, state is derived from git. Fetch the super-repo submodule —
+wrong clone, the resolver reads `/workspace/git/vessels`. Revert with a
+conventional subject — counted as a landing. Each attempt was verified against
+the layer *below* the one that decides, and only the third check found the layer
+that does.
+
