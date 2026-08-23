@@ -482,7 +482,50 @@ saturated before it accepts the goal*, so the correct operator behaviour is to
 dispatch edit-intent goals **serially**, which is what the remaining two are
 waiting on.
 
-## 11. The named open question feeding all of this
+## 11. Checked and cleared — the lesson channel is not starving the drafter
+
+Recorded because it cost real probe time and would have been a confident,
+wrong filing.
+
+Re-dispatching the ribosome goal produced a clean end-to-end run of the intended
+loop — goal → gap `route-edit-c2f83378` → compose → draft → **typecheck refused**
+(`typecheck_dangling_reference`), lesson recorded, and this time no spurious
+β-penalty (`alphaBetaDelta: []`). The gate did its job.
+
+The lesson it wrote looked broken. Both sampled lessons are **exactly 200
+characters**, and in both the entire budget is consumed by package-install
+preamble, cutting off mid-path exactly where the compiler error starts:
+
+```
+… [11.00ms] done\n== typecheck ==\n$ bun run check:types\n$ tsc --noEmit\nsrc/se
+… [11.00ms] done\n== typecheck ==\n$ tsc --noEmit\nsrc/routes/impuls
+```
+
+The source confirms the truncation — `feature-compose.ts:2259` writes
+`reason: reason.slice(0, 200)`. That reads as the teaching channel for the single
+most common compose failure containing no error, which would neatly explain why
+`typecheck_dangling_reference` recurs at ~200 picks a day.
+
+**It is not a defect.** The same line also writes `raw_excerpt: reason.slice(0,
+1500)`, and the stored excerpt holds the complete diagnostic:
+
+```
+src/services/discovery-client.ts(148,9): error TS2322: Type 'Record<string, string |
+{ template: string; args: any; }> | undefined' is not assignable to …
+```
+
+And the *consumer* reads it. `feature-compose.ts:1442` emits `raw verify output
+(verbatim, from the prior failed attempt): …` into the drafter prompt, guarded on
+`raw_excerpt.length > reason.length` — which 1500 > 200 always satisfies. So the
+drafter does see the compiler error, verbatim, at prompt-build time. The 200-char
+`reason` is a display field, not the teaching path.
+
+Checking at the layer that *consumes* the artifact rather than the layer that
+writes it is what separated this from a filed finding — the fifth would-be false
+positive of the session, and the reason the base rate in §2 of the companion
+report is worth taking seriously.
+
+## 12. The named open question feeding all of this
 
 **Minting stopped around 2026-08-01** — 79 mints in the week to 08-01, then 4 in
 the 21 days since, measured over 98.2% of the corpus (`AUDIT_EXPECTATIONS` §6).
@@ -494,7 +537,7 @@ resolved here.
 
 ---
 
-## 12. Disposition — every blocker, and who owns it
+## 13. Disposition — every blocker, and who owns it
 
 Nothing below is left implicit. Each item is resolved, dispatched, filed with its
 class question answered, or documented as intractable with an owner named.
