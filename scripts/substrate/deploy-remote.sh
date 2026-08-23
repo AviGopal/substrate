@@ -26,6 +26,12 @@ TARGET="${1:?usage: deploy-remote.sh user@vm-ip   (set ANTHROPIC_API_KEY)}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 IMAGE="${IMAGE:-ghcr.io/avigopal/substrate:dev}"
 ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-$(jq -r '.providers.anthropic.apiKey // empty' "$HOME/.metabob/config.json" 2>/dev/null || true)}"
+# SSH_KEY, and the accept-new host policy, to match deploy-hub.sh. Both were
+# supported there and not here, while the README documented SSH_KEY in a
+# paragraph covering BOTH scripts — so a reader with a non-default deploy key got
+# a bare permission-denied from this one, naming nothing.
+SSH_KEY="${SSH_KEY:-}"
+SSH=(ssh -o StrictHostKeyChecking=accept-new); [ -n "$SSH_KEY" ] && SSH+=(-i "$SSH_KEY")
 PUBLIC_IP="${PUBLIC_IP:-}"                       # VM public IPv4 — required for RUN_RELAY
 RUN_RELAY="${RUN_RELAY:-0}"
 PEER_DISCOVERY="${PEER_DISCOVERY:-}"             # optional: a peer's discovery endpoint to federate with
@@ -42,12 +48,12 @@ fi
 
 # 1. Ship the image over SSH — no registry. ~4-6GB (gzip-streamed).
 log "shipping $IMAGE → $TARGET  (docker save | ssh docker load)…"
-docker save "$IMAGE" | gzip | ssh "$TARGET" 'gunzip | docker load'
+docker save "$IMAGE" | gzip | "${SSH[@]}" "$TARGET" 'gunzip | docker load'
 
 # 2. Run + seed on the VM. (Env vars are set on the remote command line, before bash -s,
 #    so the quoted heredoc below expands them on the REMOTE.)
 log "running + seeding the substrate on $TARGET…"
-ssh "$TARGET" \
+"${SSH[@]}" "$TARGET" \
     ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" IMAGE="$IMAGE" \
     PEER_DISCOVERY="$PEER_DISCOVERY" FED_SECRET="$FED_SECRET" \
     'bash -s' <<'REMOTE'
@@ -88,8 +94,8 @@ if [ "$RUN_RELAY" = "1" ]; then
   [ -n "$PUBLIC_IP" ] || { log "RUN_RELAY=1 needs PUBLIC_IP=<vm public ipv4>"; exit 1; }
   log "deploying the libp2p relay on $TARGET (PUBLIC_IP=$PUBLIC_IP, TCP 30333)…"
   tar czf - -C "$REPO_ROOT/scripts/substrate" federation-relay \
-    | ssh "$TARGET" 'mkdir -p ~/substrate-fed && tar xzf - -C ~/substrate-fed'
-  ssh "$TARGET" PUBLIC_IP="$PUBLIC_IP" 'bash -s' <<'RELAY'
+    | "${SSH[@]}" "$TARGET" 'mkdir -p ~/substrate-fed && tar xzf - -C ~/substrate-fed'
+  "${SSH[@]}" "$TARGET" PUBLIC_IP="$PUBLIC_IP" 'bash -s' <<'RELAY'
 set -euo pipefail
 export PATH="$HOME/.bun/bin:$PATH"
 command -v bun >/dev/null || { echo "[vm] installing bun…"; curl -fsSL https://bun.sh/install | bash; export PATH="$HOME/.bun/bin:$PATH"; }

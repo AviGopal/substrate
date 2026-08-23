@@ -80,8 +80,19 @@ SURREAL_DATA := $(shell pwd)/surreal-data
 
 
 # LLM provider credentials — read from environment first, then ~/.metabob/config.json.
-# A standalone or hub needs one local provider key. A federated spoke inherits
-# its hub's LLM capability and therefore needs no local provider key.
+# A standalone or hub needs one local provider key.
+#
+# ⚠ THIS FALLBACK APPLIES TO EVERY TOPOLOGY, SPOKE INCLUDED. `?=` means a spoke
+# launched with no key on the command line still receives the OPERATOR'S key from
+# ~/.metabob/config.json, and gen-env then persists it into that fleet's
+# .substrate-secrets. Measured on a keyless spoke join: a 108-char sk-ant- key
+# present in the container and written to the volume. If you are handing a spoke
+# to someone else, pass `ANTHROPIC_API_KEY=` explicitly to suppress it.
+#
+# A federated spoke is DESIGNED to inherit its hub's LLM capability and so need
+# no local key — but that inheritance rides the federation transport and does not
+# yet work: a spoke whose transport is down resolves no llm_completion at all.
+# Do not read the design intent as a statement that the spoke has no key.
 ANTHROPIC_API_KEY ?= $(shell jq -r '.providers.anthropic.apiKey // empty' $(HOME)/.metabob/config.json 2>/dev/null || true)
 OPENAI_API_KEY    ?= $(shell jq -r '.providers.openai.apiKey // empty'    $(HOME)/.metabob/config.json 2>/dev/null || true)
 OPENAI_BASE_URL   ?= $(shell jq -r '.providers.openai.baseUrl // empty'   $(HOME)/.metabob/config.json 2>/dev/null || true)

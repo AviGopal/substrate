@@ -828,6 +828,17 @@ echo "[gen-env] wrote per-model llm-resolver env files (opus, haiku, google)"
 # win, and any key already persisted that this revision has never heard of is
 # carried through untouched.
 _SECRETS_TMP="$(mktemp)"
+# NB backticks and $( ) are FORBIDDEN below, comments included — <<SECRETS is
+# unquoted (it has to be: the body interpolates ${VAR}), so bash expands the
+# whole body, and a backticked span in a COMMENT is still command substitution.
+# The identical warning has sat at the sibling heredoc above since it bit there;
+# it was not repeated here, and this heredoc then acquired
+# "the \`cat >\` truncation of ..." in a comment, which made every gen-env run on
+# every topology print:
+#   gen-env: command substitution: line 831: syntax error near unexpected token `newline'
+# bash -n does NOT catch this — parse-time is valid, the failure is at expansion
+# — so nothing in CI saw it. Harmless as it landed; a comment containing a
+# runnable backticked command would have executed as root at boot.
 cat > "$_SECRETS_TMP" <<SECRETS
 # Substrate internal secrets — auto-generated on first run, reused on restart.
 # DO NOT commit this file. Add workspace/.substrate-secrets to .gitignore.
@@ -878,7 +889,7 @@ VLLM_ENDPOINTS=${VLLM_ENDPOINTS:-}
 # explicit value round-trips; a hub-derived spoke default is re-derived each run.
 PEER_DISCOVERY_ENDPOINTS=${PEER_DISCOVERY_ENDPOINTS_EXPLICIT:-}
 # Peer-federation settings applied post-boot by deploy-remote.sh. Persisted so
-# they survive the `cat >` truncation of /etc/substrate/env on the next boot.
+# they survive the truncating rewrite of /etc/substrate/env on the next boot.
 # Note the 2026-08-08 incident recorded above: these two names were in an OLDER
 # revision of this list, and dropping them was half of what took the hub down.
 MAX_PEER_DEPTH=${MAX_PEER_DEPTH:-}

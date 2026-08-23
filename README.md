@@ -349,10 +349,29 @@ flags on the standalone `docker run` above, or as `VAR=value` arguments to
 > are reached by direct HTTP, which is why the fleet looks healthy. Until the
 > transport is confirmed carrying, give a spoke its own provider key.
 
+> ⚠ **On the `make` lane a spoke is never actually keyless — it gets *yours*.**
+> `ANTHROPIC_API_KEY` (and `OPENAI_API_KEY`) default from
+> `~/.metabob/config.json`, on every topology, so the command below with no key
+> argument still ships the operator's provider key into the container, and
+> `gen-env` persists it to that fleet's `/workspace/.substrate-secrets`. Measured
+> on a keyless join: a 108-character `sk-ant-…` key present in a spoke launched
+> without one. **If the spoke is for someone else, suppress it explicitly:**
+>
+> ```bash
+> make -C scripts/substrate up API_KEY=<hub-issued-key> \
+>   DISCOVERY_ENDPOINT=http://<hub-host>:18100 ANTHROPIC_API_KEY= OPENAI_API_KEY=
+> ```
+
 ```bash
 make -C scripts/substrate up API_KEY=<hub-issued-key> \
   DISCOVERY_ENDPOINT=http://<hub-host>:18100
 ```
+
+> `make up` exits non-zero when any doctor check fails, and a **correct** spoke
+> join against a hub that serves no relay fails one: the federation transport
+> crash-loops (`restart loop: federation-transport-vessel`). Identity, the trace
+> store and the key check all pass. Read the checks, not the exit code — and see
+> the transport note above for what a dead transport actually costs you.
 
 To apply changed launch settings to a stopped or running spoke without removing
 its named volumes, use `make -C scripts/substrate recreate` with the same
