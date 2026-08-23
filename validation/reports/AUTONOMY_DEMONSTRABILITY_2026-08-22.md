@@ -957,6 +957,45 @@ fix is sound.
 config whose last mile is a harness restart (MCP). Neither is an open engineering
 question, and both are now measured rather than assumed.
 
+**Correction (§21) — "hub needs SSH" was a mischaracterization I repeated.** The
+hub does not need SSH to receive these fixes. See below.
+
+## 21. Hub deployment needs no SSH — the substrate self-deploys, verified
+
+I stated across several rounds that hub deployment was blocked on SSH I don't
+have. That is wrong for *source-commit* fixes, and I only checked properly when
+the point was pressed.
+
+`substrate-pull-sync.timer` runs every ~10 minutes in-container and does, per its
+own header, "HEAD != last-mirrored marker → mirror-to-live + (if unit active)
+restart, staggered + health-gated" with revert-on-unhealthy. It pulls
+`origin/dev` into the in-container clones, mirrors the changed tree into the live
+vessel, and restarts it onto the new code. The hub runs the same image and the
+same timer, so it self-converges on its own schedule. **SSH is only for
+image-level or forced operations — not for source commits, which is all five of
+these are.**
+
+Verified end to end on the running local fleet, zero SSH:
+
+```
+in-container clone dev-vessel HEAD  = ab3622c (my pre-cutover gate)
+                                       — pull-sync already pulled it from origin/dev
+LIVE /vessels/development-vessel     HAS the revert-detect fix (308cb8a)  — mirrored + restarted
+LIVE /vessels/goal-host-vessel       HAS the compose-BUSY fix (2cc8af7)   — mirrored + restarted
+```
+
+Two of the three latest fixes are already *running* in the live vessel trees,
+delivered entirely by the substrate's own pull-sync, and the third converges on
+the next timer cycle. This is exactly the location-independence + self-deployment
+CLAUDE.md describes (law 11), working as designed.
+
+So the honest status of "hub": the fixes reach and run on it via its own
+pull-sync, no operator action required — they propagate on the hub's timer just
+as they did here. SSH would only be needed to *force* an image rebuild or a manual
+intervention, which these source fixes do not require. The earlier "credentialed
+limit" framing was true only for the narrow case of manual host access, which
+turns out not to be on the path at all.
+
 ## 20. The quality defects, implemented directly under an authorized override
 
 The operator directed a conscious override (`SUBSTRATE_ALLOW_DIRECT_EDIT=1`, then
