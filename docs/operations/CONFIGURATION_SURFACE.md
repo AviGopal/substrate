@@ -160,12 +160,12 @@ documents why*.
 
 | Dimension | Count | How |
 |---|---|---|
-| Names emitted into `/etc/substrate/env` | 72 | `grep -cE '^[A-Z_]' /etc/substrate/env` after a boot |
-| Names offered by `run-live` / `run-live-obsidian` / compose | 36 / 36 / 40 | `config-surface-probe.sh` |
+| Names emitted into `/etc/substrate/env` | **73–77 — conditional, not a constant** | `grep -cE '^[A-Z_]' /etc/substrate/env` after a boot. **Emission depends on what you supplied** (an absent provider key emits no arm), so this is a range and the command cannot reproduce a single number. A fixed count was carried here once and disagreed with `config-surface-baseline.txt` in the same repo. |
+| Names offered by `run-live` / `run-live-obsidian` / compose | 45 / 45 / 40 | `config-surface-probe.sh` |
 | Distinct names read across vessels and packages | ~451 | dot + bracket + helper forms, `sort -u` |
 | Names in unit `Environment=` lines | 52 (48 unique to that channel) | §1 |
 | `.service.d` drop-in files | 34 total, 10 carrying `Environment=` | `grep -l Environment= …/*.service.d/*.conf` |
-| Names documented in `.env.example` | 50 (3 uncommented) | `grep -oE '^#? ?[A-Z_][A-Z0-9_]*=' … \| sort -u` |
+| Names documented in `.env.example` | 50 (2 uncommented) | `grep -oE '^#? ?[A-Z_][A-Z0-9_]*=' … \| sort -u` |
 | `_ENV_SUPPLIED` provenance snapshot | 33 | `gen-env.sh` |
 
 **The scanner's own blind spots**, stated because a count presented without them invites
@@ -194,7 +194,7 @@ This is the most consequential category, because a default only applies when a v
 | Variable | Distinct defaults | Worst pair |
 |---|---|---|
 | `SURREALDB_URL` | 5 | `localhost:8000` vs a Kubernetes service DNS name vs `ws://…` |
-| `SURREALDB_PASSWORD` | 4 | **`changeme` (activity-api) vs `root` (relevance-sink)** — two vessels reaching the same database with different default credentials |
+| `SURREALDB_PASSWORD` | 4 | **`changeme` vs `root`** — two vessels reaching the same database with different default credentials. The originally-cited pair (activity-api vs relevance-sink) has since been repaired; `relevance-sink-vessel/src/index.ts` now defaults to `changeme`. The class is still live — e.g. `development-vessel/src/resolvers/orphaned-org-write-scan.ts` defaults to `root`. **Re-derive the instances before citing them; do not quote this row as current.** |
 | `DISCOVERY_ENDPOINT` | 4 | `discovery-vessel:8080` (wrong port for this fleet) and `localhost:8765` (a port used nowhere else) |
 | `ACTIVITY_API_ENDPOINT` | 4 | includes activity-api pointing at its **own** wrong port |
 | `GOAL_HOST_VESSEL_ENDPOINT` | 2 | `:8210` in 12 sites; `:8090` — the dev-vessel port — in one |

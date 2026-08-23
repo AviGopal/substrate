@@ -378,7 +378,7 @@ fresh container consumes is baked in or generated:
 To attach a container to an **existing** hub's identity + discovery group — a
 spoke: local registry + compute here, while traces, identity, and learning
 state live on the hub — the join reduces to **point-and-go**: point
-`DISCOVERY_ENDPOINT` (or `HUB_DISCOVERY_URL`) at the hub's discovery and present
+`DISCOVERY_ENDPOINT` at the hub's discovery and present
 a hub-issued `METABOB_API_KEY`. Those two are the only required inputs; the
 role, identity endpoint, activity/trace store, and relay anchor are all derived
 from them (the endpoints from the discovery host, the rest resolved from
@@ -389,7 +389,7 @@ from them (the endpoints from the discovery host, the rest resolved from
 |---|---|
 | `METABOB_API_KEY` | **required** — hub-issued credential; the key that joins the group |
 | `DISCOVERY_ENDPOINT=http://<hub-host>:18100` | **required** — point discovery at the hub |
-| `HUB_DISCOVERY_URL=http://<hub-host>:18100` | the discovery group to join (same value as above) |
+| `HUB_DISCOVERY_URL=http://<hub-host>:18100` | ⚠ **not a substitute for the row above.** Setting only this yields a STANDALONE, not a spoke: `gen-env` infers the spoke role from `DISCOVERY_ENDPOINT`, so with only `HUB_DISCOVERY_URL` set the fleet comes up with no `ENABLED_ROLES=spoke` and loopback (`127.0.0.1`) activity/identity endpoints — it boots clean and joins nothing. Set `DISCOVERY_ENDPOINT`; this one is read afterwards, for the relay anchor |
 | `ENABLED_ROLES=spoke` | *usually redundant* — `gen-env.sh` already infers `spoke` whenever the endpoint names a remote host. On the `make up` lane, passing it explicitly also selects the thin-spoke passthrough, so it is not strictly inert; on the compose lane it changes nothing. Set it explicitly only when you want a role set *other* than the inferred one, or that passthrough |
 | `ACTIVITY_API_ENDPOINT=http://<hub-host>:18080` | *optional override* — derived from the discovery host **and its port offset** if unset |
 | `IDENTITY_VESSEL_URL=http://<hub-host>:18101` | *optional override* — derived from the discovery host **and its port offset** if unset |
@@ -756,12 +756,22 @@ invisible to any states-only listing, and a climbing count is the cheap tell.
 >
 > ```bash
 > docker exec <container> vessel-ctl status | awk '$3=="disabled"{print $1}' | while read u; do
->   docker exec <container> systemctl cat "${u%.service}.timer" >/dev/null 2>&1 || echo "no timer: $u"
+>   t="${u%.service}.timer"
+>   docker exec <container> systemctl cat "$t" >/dev/null 2>&1 || { echo "no timer: $u"; continue; }
+>   # A TIMER THAT EXISTS IS NOT A TIMER THAT RUNS. Checking only for existence
+>   # cleared 15 timers that were sitting ActiveState=failed ("Unit to trigger
+>   # vanished") after a mask/unmask cycle — enabled, never elapsing, and
+>   # invisible to `drift`, to `apply`, and to `vessel-ctl status`, which shows
+>   # services only. Ask whether it is active and has a next elapse.
+>   st="$(docker exec <container> systemctl show "$t" -p ActiveState --value 2>/dev/null)"
+>   nx="$(docker exec <container> systemctl show "$t" -p NextElapseUSecRealtime --value 2>/dev/null)"
+>   [ "$st" = "active" ] && [ -n "$nx" ] && [ "$nx" != "0" ] || echo "dead timer: $t ($st)"
 > done
 > ```
 >
-> A unit named by that loop is disabled with nothing to start it — that is the
-> one worth investigating.
+> A unit named `no timer:` is disabled with nothing to start it. One named
+> `dead timer:` has a schedule that will never fire — usually the residue of a
+> mask/unmask cycle, and cleared by restarting the container.
 
 ### `drift` and `apply`
 
@@ -841,7 +851,15 @@ get those units back, apply a selection that *wants* them:
 ```bash
 docker exec -e ENABLED_ROLES=full <container> vessel-ctl apply   # widen, then converge
 docker exec <container> vessel-ctl apply                         # or: default = every baked unit
+docker restart <container>                                       # required — see below
 ```
+
+> **The restart is not optional.** Services come back, but the timers do not:
+> after a mask/unmask cycle a measured 15 timers were left `ActiveState=failed`
+> with `Unit to trigger vanished`, enabled but with no next elapse. Nothing in
+> the ordinary triage surface sees this — `drift` reports `identical`, `apply`
+> prints no actions, and `vessel-ctl status` lists services only. `substrate-ready`
+> catches it (non-zero exit); a container restart clears it.
 
 **The selection is injected through `docker exec -e`, and it outranks the env
 file.** `apply` and `drift` source `/etc/substrate/env` so `apply-inventory` sees
@@ -890,13 +908,13 @@ reaches it on any host, with no checkout:
 |---|---|
 | `vessel-ctl` | the vessel surface — status, restart, logs, sync, install, uninstall, deregister, list, apply, drift |
 | `substrate-doctor` | correctness check: auth, registry, failed units, whether an LLM arm can actually complete |
-| `substrate-ready` | readiness matrix — per-unit `ok` / `down` / `skipped`, and the honest "not ready" count |
+| `substrate-ready` | readiness matrix — per-unit `ok` / `down` / `masked` / `skipped`, and the "not ready" count. `masked` is reported separately and **named**, because a mask is on-disk state a previous selection left behind: on a spoke it is the design, on a standalone a masked *core* unit is counted `down`. `skipped` still means "systemd deliberately did not run this" (`ConditionResult=no`) and is not a fault. |
 | `substrate-key` | key and token surface — `show`, `whoami`, `issue`, `list`, `revoke`, `jwt` |
 | `substrate-config` | **where each resolved value came from** — operator env, a prior boot's persisted secret, minted this boot, or a literal |
 | `gen-env` | rewrites `/etc/substrate/env` from the container environment (runs at boot; re-runnable) |
 | `apply-inventory` | applies the vessel selection (runs at boot; `vessel-ctl apply` is the runtime entry point) |
 | `apply-llm-arms` | renders and enables the LLM arms for the current selection |
-| `substrate-pull-sync` | converges `/vessels` and the fleet files from git |
+| `substrate-pull-sync` | converges `/vessels` and the fleet files from git. **Exits non-zero when any repo failed to converge** (a `skipped` repo — unreachable remote, no PAT — is an environment condition and does not fail the run). Read the `done — synced=N skipped=N failed=N` line: a `failed` count that never clears is a permanent build break, not a transient. |
 | `reseed-restart` | re-runs identity seeding |
 
 `substrate-config` is the one to reach for when a value is not what you set:
@@ -942,13 +960,18 @@ docker exec <container> vessel-ctl restart development-vessel
 curl http://localhost:18090/health
 ```
 
-> **It can clobber substrate-authored work.** The copy source is *your* working
-> tree, and it overwrites whatever the container holds — including commits the
-> substrate landed in its own in-container clone that your tree does not have.
-> Use these targets only when you know the host tree is the newer one; compare
-> against the container copy first. The safe refresh for anything else is an
-> in-container ff-only pull of `/workspace/git/vessels/<vessel>` plus a unit
-> restart.
+> **`vessel-ctl sync <vessel>` does not read your working tree.** It runs
+> `git pull --ff-only origin dev` inside the container's *own* clone of the
+> vessel, mirrors the result into `/vessels`, and restarts the unit — so it can
+> never overwrite a commit the substrate landed and your tree lacks. It is the
+> safe refresh, and there is no separate "in-container ff-only pull" to prefer
+> over it.
+>
+> The clobber hazard belongs to `docker cp` (below), whose source *is* your
+> working tree. Use that only when you know the host tree is the newer one, and
+> compare against the container copy first. Note also that a `docker cp` is
+> erased by the next `substrate-pull-sync`, which is the correct behaviour: git
+> is the channel, and anything not in git is not a change the fleet can keep.
 
 `vessel-ctl restart` works on **any** unit the fleet has — there is no list
 of blessed vessels. `docker exec <container> vessel-ctl status` shows what
