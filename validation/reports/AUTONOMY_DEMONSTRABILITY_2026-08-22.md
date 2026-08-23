@@ -589,7 +589,7 @@ class question answered, or documented as intractable with an owner named.
 | item | how |
 |---|---|
 | Cockpit pointed at a hub with no self-development plane | Repointed to `localhost:18080`; original at `.metabob/config.json.hub-backup` |
-| Seven gaps parked on an unanswerable question | Verdicts rendered on four (1 inert, 3 treadmill); dispositions cleared |
+| Seven gaps parked pending | **Diagnosed, not resolved.** Verdicts rendered on four (1 inert, 3 treadmill) and they stand as a record — but clearing their dispositions unblocked nothing, because pending is re-derived from git on every pick (§8). Nothing about the livelock is fixed |
 | "Gap triple computed nowhere" | Refuted — it exists; the defect is that `gap_lifecycle_scan` has not run in 48h |
 | "Per-test attribution missing" | Refuted — exists, and fired correctly on `3e58e73` |
 
@@ -603,12 +603,18 @@ class question answered, or documented as intractable with an owner named.
 `gap-edit-intent-compose-lane-lands-nothing` · `gap-mt0kcoyt` (unconditional β) ·
 `rhythm-cadence-registry_unmappable` · `route-edit-3ca33bb6`
 
-**In flight**
+**In flight / attempted**
 
-`c6c88cb0` (ribosome-extract output shape) is running and has already produced
-`route-edit-c2f83378`. G1 (pre-cutover gating) and G3 (evidence-deletion gate)
-were refused for capacity and must be re-dispatched **serially** — queued behind a
-lane-free watch.
+`c6c88cb0` (ribosome-extract output shape) **failed**, and failed *well*: it
+became gap `route-edit-c2f83378`, composed, drafted, and was refused by its own
+typecheck gate (`typecheck_dangling_reference`) with the full compiler error
+preserved in the lesson and no spurious β-penalty. That is the loop working — a
+bad draft caught before landing — not a defect. The gap remains open with its
+lesson attached.
+
+G1 re-dispatched serially as `c9705549` (running). G3 (evidence-deletion gate)
+queued behind it; the compose lane is single-occupancy and dispatching
+concurrently is what caused the earlier capacity refusals.
 
 **Owned by the user — I cannot move these**
 
@@ -618,10 +624,13 @@ lane-free watch.
 2. **Hub access.** `syzygy.host`'s goal-host, development, gap and memory planes
    are down, and no SSH exists from here (verified 08-17). Every fix landing in
    git is unexercised in production until someone with host access deploys.
-3. **The remaining three pending-verification verdicts**, if the substrate should
-   not simply re-derive them — though the better answer is the filed class-fix:
-   give the close-oracle a measurement predicate so the common case never needs a
-   human.
+3. **The `dbb2917` revert decision.** Reverting that inert commit on
+   `repos/development-vessel` both removes a harmful diff (broken indentation,
+   comment text pasted into an unrelated literal) and re-opens its gap for
+   compose, since `landedCommitVerdict` refuses to count a reverted commit. It is
+   a push to a vessel repo you have not asked for, so I have not done it. Note
+   that operator *verdicts* cannot substitute — they do not exit pending; only a
+   revert or a measurement predicate does.
 
 **Not resolvable by audit**
 
