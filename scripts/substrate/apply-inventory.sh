@@ -91,6 +91,75 @@ expand_roles() {
 
 manageable_units() { jq -r '.vessels[] | select((.manifest // false) | not) | .unit' "$INV"; }
 role_of() { jq -r --arg u "$1" '.vessels[] | select(.unit==$u) | .role' "$INV"; }
+all_units() { jq -r '.vessels[].unit' "$INV"; }
+
+# Resolve an operator-supplied token to an inventory UNIT name.
+#
+# Every selection list below is matched against unit names with `grep -qx`, so a
+# bare vessel name silently matched nothing. That is not a cosmetic strictness —
+# it inverted three separate settings, each of which reported success:
+#
+#   ENABLED_VESSELS=activity-api          DISABLED activity-api (it matched no
+#                                         unit, so the allow-list was empty and
+#                                         every unit fell through to the mask)
+#   ENABLED_EXTRA_VESSELS=boredom-vessel  logged "(additive): boredom-vessel"
+#                                         and masked it two lines later
+#   DISABLED_VESSELS=bootstrap-seeder     disabled nothing — and that exact
+#                                         string is what the README hands the
+#                                         reader as the hardening step for a
+#                                         spoke you do not fully trust
+#
+# The grammar was stated only in this file's own header comment. An operator
+# writes the name they know; deriving the unit suffix is the system's job.
+# Accept `x`, `x.service` and `x.timer`; prefer an exact match, then .service,
+# then .timer.
+resolve_token() {
+  local t="$1"
+  if all_units | grep -qx "$t"; then echo "$t"; return 0; fi
+  if all_units | grep -qx "$t.service"; then echo "$t.service"; return 0; fi
+  if all_units | grep -qx "$t.timer"; then echo "$t.timer"; return 0; fi
+  return 1
+}
+
+# Resolve a whole CSV list, reporting unknown tokens through the OUTPUT.
+#
+# Unknown tokens are FATAL, matching the PROFILE and ENABLED_ROLES guards. A
+# typo here has always been survivable-but-wrong, which is the failure mode
+# those two guards exist to prevent; leaving the remaining three lists silent
+# meant .env.example's claim that an unknown name "is now a BOOT ERROR ... rather
+# than a container that silently comes up nearly empty" was true of two of the
+# five selection variables. Bare names now RESOLVE rather than erroring, so a
+# config that worked before still works — only genuine typos become loud.
+#
+# The sentinel goes on STDOUT for the same reason expand_roles' does, and this
+# was got wrong once first: an earlier draft accumulated unresolved tokens in a
+# shell variable, but every caller invokes this as $(resolve_list ...), so the
+# assignment happened in a SUBSHELL and the parent always saw it empty. The
+# guard was unreachable — a typo exited silently with no diagnostic at all.
+# Two independent failures in one function, in the exact shape the comment
+# fifty lines above warns about.
+#
+# `|| true` on the final pipe is also load-bearing: when every token is
+# unresolved $out is empty, `grep -v '^$'` exits 1, pipefail propagates, and
+# set -e would kill the script before the caller could read the sentinel.
+resolve_list() {
+  local out="" tok r
+  for tok in $(csv "$1"); do
+    if r="$(resolve_token "$tok")"; then out="$out $r"; else out="$out __UNRESOLVED__:$tok"; fi
+  done
+  echo "$out" | tr ' ' '\n' | grep -v '^$' || true
+}
+
+# Abort in the PARENT shell on any sentinel, and echo the list with sentinels
+# stripped so a caller can use it directly when nothing failed.
+fatal_if_unresolved() {
+  local what="$1" list="$2" bad
+  bad="$(echo "$list" | sed -n 's/^__UNRESOLVED__://p' | tr '\n' ' ')"
+  [ -n "$bad" ] || return 0
+  log "FATAL: $what names no unit in the inventory: $bad"
+  log "  known vessels: $(all_units | sed 's/\.\(service\|timer\)$//' | sort -u | tr '\n' ' ')"
+  exit 1
+}
 
 # PROFILE names an explicit unit list in inventory.profiles. It outranks both
 # ENABLED_VESSELS and ENABLED_ROLES: a profile IS the hand-written allow-list
@@ -107,7 +176,8 @@ if [ -n "${PROFILE:-}" ]; then
   fi
   log "explicit PROFILE '$PROFILE': $(echo $DESIRED | tr '\n' ' ')"
 elif [ -n "${ENABLED_VESSELS:-}" ]; then
-  DESIRED="$(csv "${ENABLED_VESSELS}")"
+  DESIRED="$(resolve_list "${ENABLED_VESSELS}")"
+  fatal_if_unresolved "ENABLED_VESSELS" "$DESIRED"
   log "explicit ENABLED_VESSELS: $(echo $DESIRED | tr '\n' ' ')"
 elif [ -n "${ENABLED_ROLES:-}" ]; then
   ROLES="$(expand_roles)"
@@ -136,7 +206,8 @@ fi
 # vessel (e.g. development-vessel) without pulling in the whole compute fleet.
 # No-op when unset; runs before the DISABLED subtraction so DISABLED still wins.
 if [ -n "${ENABLED_EXTRA_VESSELS:-}" ]; then
-  EXTRA="$(csv "${ENABLED_EXTRA_VESSELS}")"
+  EXTRA="$(resolve_list "${ENABLED_EXTRA_VESSELS}")"
+  fatal_if_unresolved "ENABLED_EXTRA_VESSELS" "$EXTRA"
   log "ENABLED_EXTRA_VESSELS (additive): $(echo $EXTRA | tr '\n' ' ')"
   DESIRED="$DESIRED
 $EXTRA"
@@ -176,8 +247,37 @@ $_svc"
 done
 [ -n "$_paired" ] && log "paired with a desired .timer (would have been masked):$_paired"
 
+# ...and the converse: a desired .service whose .timer the inventory ships.
+#
+# resolve_token maps a bare vessel name to `<name>.service`, so
+# ENABLED_EXTRA_VESSELS=boredom-vessel selects the service and leaves its timer
+# masked. The unit then survives — but the enable pass below only skips a
+# service when its timer IS desired, so it gets enabled outright and fires once
+# at boot instead of on its schedule. For a timer-driven vessel that turns a
+# periodic tick into a startup job and then never runs again.
+#
+# An operator naming a vessel means "let this vessel run", and for a
+# timer-driven vessel the timer IS how it runs. Same rule as above: supply the
+# omission, and run before the DISABLED subtraction so an explicit mask wins.
+_paired_t=""
+for _s in $DESIRED; do
+  case "$_s" in
+    *.service) ;;
+    *) continue ;;
+  esac
+  _tmr="${_s%.service}.timer"
+  if echo "$DESIRED" | grep -qx "$_tmr"; then continue; fi
+  if manageable_units | grep -qx "$_tmr"; then
+    _paired_t="$_paired_t $_tmr"
+    DESIRED="$DESIRED
+$_tmr"
+  fi
+done
+[ -n "$_paired_t" ] && log "paired with a desired .service (its schedule):$_paired_t"
+
 # Subtract DISABLED_VESSELS.
-DISABLED_EXPLICIT="$(csv "${DISABLED_VESSELS:-}")"
+DISABLED_EXPLICIT="$(resolve_list "${DISABLED_VESSELS:-}")"
+fatal_if_unresolved "DISABLED_VESSELS" "$DISABLED_EXPLICIT"
 
 is_desired() { echo "$DESIRED" | grep -qx "$1" && ! echo "$DISABLED_EXPLICIT" | grep -qx "$1"; }
 

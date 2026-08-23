@@ -574,6 +574,15 @@ run-live:
 	    -e SURREALDB_URL="$(SURREALDB_URL)" \
 	    -e REDIS_URL="$(REDIS_URL)" \
 	    -e METABOB_API_KEY \
+	    -e MITOSIS_DIRECT_PUSH="$(MITOSIS_DIRECT_PUSH)" \
+	    -e ROUTE_EDIT_INTENT_TO_COMPOSE="$(ROUTE_EDIT_INTENT_TO_COMPOSE)" \
+	    -e PUBLIC_IP="$(PUBLIC_IP)" \
+	    -e API_KEY_SECRET_PREVIOUS="$(API_KEY_SECRET_PREVIOUS)" \
+	    -e VLLM_BASE_URL="$(VLLM_BASE_URL)" \
+	    -e VLLM_MODELS="$(VLLM_MODELS)" \
+	    -e VLLM_API_KEY="$(VLLM_API_KEY)" \
+	    -e LLM_ARMS='$(LLM_ARMS)' \
+	    -e VLLM_ENDPOINTS='$(VLLM_ENDPOINTS)' \
 	    -p $(call hp,18080):8080 \
 	    -p $(call hp,18090):8090 \
 	    -p $(call hp,18100):8100 \
@@ -589,7 +598,7 @@ run-live:
 	    --tmpfs /run/lock \
 	    $(IMAGE):$(TAG)
 	@echo "[run-live] $(LIVE_NAME) started — activity-api on :$(call hp,18080), development-vessel on :$(call hp,18090), discovery-vessel on :$(call hp,18100), goal-host-vessel on :$(call hp,18210), analysis-vessel on :$(call hp,18250), concept-db on :$(call hp,18260), stateful-ui-vessel on :$(call hp,18270), human-surface-vessel on :$(call hp,18310)"
-	@echo "[run-live] State on named volumes $(SURREAL_VOLUME) + $(WORKSPACE_VOLUME) (host-detached); only the repo is bind-mounted (ro) for sync-* hot-reload"
+	@echo "[run-live] State on named volumes $(SURREAL_VOLUME) + $(WORKSPACE_VOLUME) (host-detached). NOTHING from the host is bind-mounted: an edit to repos/ on the host does not reach this container. Code arrives by git — see substrate-pull-sync and 'vessel-ctl sync <vessel>'."
 	@echo "[run-live] Internal secrets auto-generated and persisted to workspace/.substrate-secrets"
 	@echo "[run-live] Identity + templates seed in-container at boot; gate on: docker exec $(LIVE_NAME) substrate-key whoami"
 
@@ -646,6 +655,15 @@ run-live-obsidian:
 	    -e SURREALDB_URL="$(SURREALDB_URL)" \
 	    -e REDIS_URL="$(REDIS_URL)" \
 	    -e METABOB_API_KEY \
+	    -e MITOSIS_DIRECT_PUSH="$(MITOSIS_DIRECT_PUSH)" \
+	    -e ROUTE_EDIT_INTENT_TO_COMPOSE="$(ROUTE_EDIT_INTENT_TO_COMPOSE)" \
+	    -e PUBLIC_IP="$(PUBLIC_IP)" \
+	    -e API_KEY_SECRET_PREVIOUS="$(API_KEY_SECRET_PREVIOUS)" \
+	    -e VLLM_BASE_URL="$(VLLM_BASE_URL)" \
+	    -e VLLM_MODELS="$(VLLM_MODELS)" \
+	    -e VLLM_API_KEY="$(VLLM_API_KEY)" \
+	    -e LLM_ARMS='$(LLM_ARMS)' \
+	    -e VLLM_ENDPOINTS='$(VLLM_ENDPOINTS)' \
 	    -p 18080:8080 \
 	    -p 18090:8090 \
 	    -p 18100:8100 \
