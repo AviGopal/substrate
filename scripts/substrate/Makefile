@@ -250,7 +250,27 @@ export ANTHROPIC_API_KEY OPENAI_API_KEY CHUTES_API_KEY OPENROUTER_API_KEY
 export GOOGLE_API_KEY GROQ_API_KEY MISTRAL_API_KEY RUNPOD_API_KEY
 export GITHUB_TOKEN SUBSTRATE_GIT_PAT API_KEY_SECRET METABOB_API_KEY
 
-LAUNCH_OVERRIDES := $(strip $(API_KEY) $(METABOB_API_KEY) $(DISCOVERY_ENDPOINT) $(HUB_DISCOVERY_URL) $(FED_SUBSTRATE_ID) $(RELAY_MULTIADDR) $(ENABLED_ROLES) $(ENABLED_VESSELS) $(DISABLED_VESSELS) $(PEER_DISCOVERY_ENDPOINTS) $(ACTIVITY_API_ENDPOINT) $(IDENTITY_VESSEL_URL) $(IDENTITY_ENDPOINT) $(SURREALDB_URL) $(REDIS_URL))
+# Settings that only take effect when a container is CREATED. `up` refuses to
+# resume a stopped container when any of these was supplied, because `docker
+# start` reuses the original image, ports and env — the new value would be
+# silently ignored.
+#
+# PORT_OFFSET, TAG, ANTHROPIC_API_KEY, PROFILE and ENABLED_EXTRA_VESSELS were
+# missing from this list, so the guard never fired for them. The one that bites
+# is PORT_OFFSET, because docs/SUBSTRATE.md ends the RESTORE-FROM-BACKUP recipe
+# with `make up LIVE_NAME=… PORT_OFFSET=<the offset it was created with>` and
+# states that `up` carries it. Measured: created at offset 8000, stopped, then
+# resumed with PORT_OFFSET=9000 — no warning, ports stayed 26xxx. Harmless when
+# the values happen to match, silently wrong when they do not, on the single
+# command a restore ends with.
+#
+# The three with defaults must be counted ONLY when the operator supplied them:
+# `$(PORT_OFFSET)` is always non-empty (default 0) and `$(TAG)` is always `dev`,
+# so listing them plainly would make `up` refuse to resume ANY container.
+# `$(origin …)` distinguishes a command-line value from a default.
+_cli = $(if $(filter command line,$(origin $(1))),$($(1)),)
+
+LAUNCH_OVERRIDES := $(strip $(API_KEY) $(METABOB_API_KEY) $(DISCOVERY_ENDPOINT) $(HUB_DISCOVERY_URL) $(FED_SUBSTRATE_ID) $(RELAY_MULTIADDR) $(ENABLED_ROLES) $(ENABLED_VESSELS) $(DISABLED_VESSELS) $(PEER_DISCOVERY_ENDPOINTS) $(ACTIVITY_API_ENDPOINT) $(IDENTITY_VESSEL_URL) $(IDENTITY_ENDPOINT) $(SURREALDB_URL) $(REDIS_URL) $(PROFILE) $(ENABLED_EXTRA_VESSELS) $(call _cli,PORT_OFFSET) $(call _cli,TAG) $(call _cli,ANTHROPIC_API_KEY))
 
 # Host-port offset so a second substrate coexists with substrate-live
 # (e.g. PORT_OFFSET=10000 → 28080/28100/28210/…). 0 = historical defaults.

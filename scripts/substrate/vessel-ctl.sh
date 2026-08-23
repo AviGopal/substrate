@@ -464,14 +464,33 @@ case "$ACTION" in
                    n=''
                    case \"\$nr\" in ''|0|*infinity*) ;; *) n=\"\$nr\" ;; esac
                    if [ -z \"\$n\" ]; then case \"\$nm\" in ''|0|*infinity*) ;; *) n=\"+\$nm\" ;; esac; fi
-                   [ -n \"\$n\" ] || n='NEVER — enabled but will not fire'
+                   if [ -z \"\$n\" ]; then
+                     # NO NEXT ELAPSE IS NOT THE SAME AS DEAD. An OnUnitActiveSec
+                     # timer measures from its service's activation, so while that
+                     # service is RUNNING the next elapse is legitimately
+                     # 'infinity' — the timer is waiting for the run to finish,
+                     # exactly as designed. Flagging that reported healthy
+                     # short-cadence timers as permanently dead on every poll,
+                     # which teaches an operator to ignore the one alarm this
+                     # column exists to raise.
+                     #
+                     # The discriminator is the TARGET SERVICE's state, not the
+                     # timer's: dead means no next elapse AND nothing running to
+                     # produce one.
+                     _svc_st=\$(systemctl show \"\${u%.timer}.service\" -p ActiveState --value 2>/dev/null)
+                     if [ \"\$_svc_st\" = active ] || [ \"\$_svc_st\" = activating ]; then
+                       n='waiting (its service is running; re-arms when it finishes)'
+                     else
+                       n='NEVER — enabled but will not fire'
+                     fi
+                   fi
                    printf '%-38s %-12s %-10s next=%s\n' \"\$u\" \"\$a\" \"\$e\" \"\$n\"
                    ;;
                  *)
                    printf '%-38s %-12s %-10s restarts=%s\n' \"\$u\" \"\$a\" \"\$e\" \"\$(systemctl show \"\$u\" -p NRestarts --value 2>/dev/null)\"
                    ;;
                esac
-             done | sort -k2,2 -k1,1"
+             done | sort -b -k2,2 -k1,1"
     fi
     ;;
 

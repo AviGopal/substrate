@@ -755,20 +755,21 @@ invisible to any states-only listing, and a climbing count is the cheap tell.
 > real outage by asking whether a sibling timer exists:
 >
 > ```bash
-> docker exec <container> vessel-ctl status | awk '$3=="disabled"{print $1}' | while read u; do
->   t="${u%.service}.timer"
->   docker exec <container> systemctl cat "$t" >/dev/null 2>&1 || { echo "no timer: $u"; continue; }
->   # A TIMER THAT EXISTS IS NOT A TIMER THAT RUNS. Checking only for existence
->   # cleared 15 timers that were sitting ActiveState=failed ("Unit to trigger
->   # vanished") after a mask/unmask cycle — enabled, never elapsing, and
->   # invisible to `drift`, to `apply`, and to `vessel-ctl status`, which shows
->   # services only. Ask whether it is active and has a next elapse.
->   st="$(docker exec <container> systemctl show "$t" -p ActiveState --value 2>/dev/null)"
->   nx="$(docker exec <container> systemctl show "$t" -p NextElapseUSecRealtime --value 2>/dev/null)"
->   [ "$st" = "active" ] && [ -n "$nx" ] && [ "$nx" != "0" ] || echo "dead timer: $t ($st)"
-> done
-> ```
+> # `vessel-ctl status` now lists TIMERS as well as services, with a `next=`
+> # column, so the quickest check is simply to read it:
+> docker exec <container> vessel-ctl status | grep -E 'NEVER|failed'
 >
+> # What that column means, because "no next elapse" has TWO causes:
+> #   next=NEVER …            enabled, nothing running, no schedule -> a real fault
+> #   next=waiting (…)        an OnUnitActiveSec timer whose service is mid-run.
+> #                           It re-arms when the run finishes. NOT a fault, and
+> #                           reading only NextElapseUSecRealtime reports every
+> #                           monotonic timer this way — the rhythm timers are all
+> #                           monotonic, so that check flags a healthy fleet.
+> # A service disabled with no timer at all is the other case worth finding:
+> docker exec <container> vessel-ctl status | awk '$3=="disabled" && $1 ~ /\.service$/ {print $1}' | while read u; do
+>   docker exec <container> systemctl cat "${u%.service}.timer" >/dev/null 2>&1 || echo "no timer: $u"
+> done
 > A unit named `no timer:` is disabled with nothing to start it. One named
 > `dead timer:` has a schedule that will never fire — usually the residue of a
 > mask/unmask cycle, and cleared by restarting the container.
@@ -858,7 +859,7 @@ docker restart <container>                                       # required — 
 > after a mask/unmask cycle a measured 15 timers were left `ActiveState=failed`
 > with `Unit to trigger vanished`, enabled but with no next elapse. Nothing in
 > the ordinary triage surface sees this — `drift` reports `identical`, `apply`
-> prints no actions, and `vessel-ctl status` lists services only. `substrate-ready`
+> prints no actions. `substrate-ready`
 > catches it (non-zero exit); a container restart clears it.
 
 **The selection is injected through `docker exec -e`, and it outranks the env
@@ -914,8 +915,26 @@ reaches it on any host, with no checkout:
 | `gen-env` | rewrites `/etc/substrate/env` from the container environment (runs at boot; re-runnable) |
 | `apply-inventory` | applies the vessel selection (runs at boot; `vessel-ctl apply` is the runtime entry point) |
 | `apply-llm-arms` | renders and enables the LLM arms for the current selection |
-| `substrate-pull-sync` | converges `/vessels` and the fleet files from git. **Exits non-zero when any repo failed to converge** (a `skipped` repo — unreachable remote, no PAT — is an environment condition and does not fail the run). Read the `done — synced=N skipped=N failed=N` line: a `failed` count that never clears is a permanent build break, not a transient. |
+| `substrate-pull-sync` | converges `/vessels` and the fleet files from git. **Exits non-zero when any repo failed to converge**, which leaves the unit `failed` until you clear it — see below. It also converges the fleet TOOLING (`vessel-ctl`, `apply-inventory`, and itself) from `origin/dev`, so an image built from an unpushed tree loses those local changes within one tick (a `skipped` repo — unreachable remote, no PAT — is an environment condition and does not fail the run). Read the `done — synced=N skipped=N failed=N` line: a `failed` count that never clears is a permanent build break, not a transient. |
 | `reseed-restart` | re-runs identity seeding |
+
+**A failed oneshot stays failed.** `substrate-pull-sync` is `Type=oneshot`, so a
+non-zero exit leaves `substrate-pull-sync.service` in `ActiveState=failed`
+permanently — and `substrate-ready` counts a failed unit as `down`, so the fleet
+reports NOT ready indefinitely while `--quick` (and therefore `docker ps`) stays
+green. That is accurate the first time and useless by the tenth: a persistent
+build failure in one vessel latches the whole readiness signal.
+
+```bash
+docker exec <container> systemctl --failed --no-legend          # what is latched
+docker exec <container> journalctl -u substrate-pull-sync -n 30 # why (read failed=N)
+docker exec <container> systemctl reset-failed substrate-pull-sync.service
+```
+
+`reset-failed` clears the latch; it does not fix the cause, and the next tick
+re-latches if the failure persists. Fix the failing repo — the point of the
+non-zero exit is that a converger which cannot converge should not report
+success, not that you should silence it.
 
 `substrate-config` is the one to reach for when a value is not what you set:
 
@@ -1106,10 +1125,17 @@ docker run --rm -v "$SURREAL_VOL":/dst -v "$(pwd)":/bak alpine \
 # `up`, NOT `run-live`. `stop` RETAINS the container, and `run-live` is an
 # unconditional `docker run` — against a stopped-but-present container it dies
 # with `Conflict. The container name "/<name>" is already in use`. `up` resumes
-# the existing container, which is what a restore wants. It also carries
-# PORT_OFFSET; `run-live` does not, so on a second substrate the recipe
-# republished the 18xxx block straight into production's ports.
-make -C scripts/substrate up LIVE_NAME="$NAME" PORT_OFFSET=<the offset it was created with>
+# the existing container, which is what a restore wants.
+#
+# RESUME CARRIES NOTHING. A resumed container keeps the image, ports and env it
+# was CREATED with; `docker start` cannot change them. `up` refuses when a
+# create-time setting is supplied, rather than accepting it and ignoring it —
+# this recipe previously ended with `up … PORT_OFFSET=<n>` and claimed `up`
+# carried it, which it never did. If the ports are already right, resume:
+make -C scripts/substrate up LIVE_NAME="$NAME"
+# If you need DIFFERENT create-time settings, recreate — it keeps the volumes,
+# which is the whole point of a restore:
+#   make -C scripts/substrate recreate LIVE_NAME="$NAME" PORT_OFFSET=<n>
 ```
 
 Verify the restore landed rather than trusting the exit status — a tar that

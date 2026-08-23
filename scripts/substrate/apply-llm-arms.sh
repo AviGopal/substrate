@@ -122,8 +122,13 @@ for u in /etc/systemd/system/llm-*.service; do
     rm -f "/etc/systemd/system/multi-user.target.wants/$_b"; _drop="$_drop $_b"
     echo "[arms] $_b NOT enabled — role 'models' is not in this selection"; continue
   fi
+  # REPORT ONLY A CHANGE. This echoed unconditionally after `ln -sf`, which is a
+  # no-op when the symlink already points there — so a converged fleet printed
+  # three "enabled" lines on every run, and the documented converged signal
+  # ("an apply that prints no action lines is a genuine no-op") was unreachable.
+  if [ -L "/etc/systemd/system/multi-user.target.wants/$_b" ]; then _was_linked=1; else _was_linked=0; fi
   ln -sf "../$_b" "/etc/systemd/system/multi-user.target.wants/$_b"; _want="$_want $_b"
-  echo "[arms] enabled $_b"
+  [ "$_was_linked" = 1 ] || echo "[arms] enabled $_b"
 done
 
 # At boot there is no systemd to talk to yet — the wants-symlinks above ARE the
@@ -133,8 +138,29 @@ if [ "${RELOAD:-0}" = 1 ]; then
   systemctl daemon-reload >/dev/null 2>&1
   for b in $_drop; do systemctl stop "$b" >/dev/null 2>&1 && echo "[arms] stopped $b"; done
   for b in $_want; do
-    systemctl start "$b" >/dev/null 2>&1 \
-      && echo "[arms] started $b" \
-      || echo "[arms] $b not started (ExecCondition skip is normal for a keyless arm)"
+    # ASK WHAT HAPPENED, don't infer from the exit code. `systemctl start`
+    # returns 0 both for a unit it started and for one that was ALREADY running,
+    # and also for one systemd declined to run via ExecCondition — so this
+    # printed "started llm-google.service" about a unit sitting
+    # inactive/ConditionResult=no, and the honest fallback text below was
+    # unreachable. Compare state across the call.
+    _pre=$(systemctl show "$b" -p ActiveState --value 2>/dev/null)
+    systemctl start "$b" >/dev/null 2>&1 || true
+    _post=$(systemctl show "$b" -p ActiveState --value 2>/dev/null)
+    _cond=$(systemctl show "$b" -p ConditionResult --value 2>/dev/null)
+    if [ "$_pre" = "$_post" ]; then
+      # NO STATE CHANGE = NOT AN ACTION. Applies to an arm that was already
+      # running AND to one systemd keeps declining (a keyless arm, every tick
+      # forever). Both are steady state; printing either makes the documented
+      # converged signal ("no action lines") unreachable, and an operator cannot
+      # tell a standing condition from something that just happened.
+      :
+    elif [ "$_post" = active ] || [ "$_post" = activating ]; then
+      echo "[arms] started $b"
+    elif [ "$_cond" = no ]; then
+      echo "[arms] $b not started (ExecCondition skip — normal for a keyless arm)"
+    else
+      echo "[arms] $b FAILED to start (state=$_post)"
+    fi
   done
 fi
