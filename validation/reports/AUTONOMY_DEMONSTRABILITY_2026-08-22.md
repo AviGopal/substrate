@@ -630,7 +630,22 @@ class question answered, or documented as intractable with an owner named.
 **Filed as gaps, class question answered (law 6)**
 
 `uiquestion-read-shape-has-no-producer` · `gap-picker-cannot-detect-its-own-livelock` ·
-`concept-db-saturated-on-walk-critical-path` · `goal-vocabulary-is-a-synonym-treadmill`
+`concept-db-saturated-on-walk-critical-path` · `goal-vocabulary-is-a-synonym-treadmill` ·
+`cutover-suite-observes-but-does-not-gate` · `no-gate-reads-what-a-diff-removes`
+
+The last two are the asks from the dispatches that died (modes 4 and 5). Neither
+left a route-edit gap behind the way `c6c88cb0` did, so without filing they would
+have survived only as prose in this report — which is not a disposition.
+
+*On the second:* `code_modification_proposal` already carries **three**
+substrate-filed gaps — `reach-gap-code-modification-proposal` (08-19, *"advertised
+by a producer, but the walk could not reach it"*) and two
+`orphaned-capability-*` entries (08-22, *"a live registered capability invoked by
+0 of the activity corpus"*). The demand signal was filed by the system four days
+before my dispatch hit the same wall, so the new gap references them rather than
+duplicating. Worth noting on its own: the substrate detected and filed this
+reachability gap without an operator, which is the §4(a) self-detection leg
+firing again.
 
 **Already filed by the substrate — not re-filed**
 
