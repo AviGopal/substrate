@@ -563,3 +563,41 @@ but produced an **inert partial** on B1 (interface field, no logic) and was
 **gate-blocked** on B2 (no test file). Autonomy's mechanism works; landing correct
 multi-hunk logic is the open frontier — which is why B1/B2 needed a hand, and B3
 (higher blast radius, unverifiable here) was filed rather than forced.
+
+---
+
+## Addendum 3 — CORRECTION: B1 is severed at three joints; my fix closed only one (2026-08-24)
+
+Addendum 2 claimed B1 (selection→outcome join) "resolved" and "verified at the
+consuming layer." **That overstates it.** The synthetic verification was valid —
+a trace POSTed with a `correlation:<id>` tag now stores `correlation_id` populated
+— but an adversarial end-to-end check (prompted by the advisor) shows the join is
+severed at **three** joints, the same shape as the 08-20 composition-learning
+finding, and my fix closed only the middle one:
+
+1. **Producer (open).** goal-host emits the correlation tag only in a narrow
+   recommend-picked-arm branch that live walks do not exercise: **0 `correlationTag`
+   log lines since the 02:34 restart, and 0 of 9,614 post-restart `execution` rows
+   carry any `correlation:` tag.** The existing goal-host test pins tag *emission*,
+   never that it survives onto the stored trace — and empirically it does not.
+2. **Middle (closed by `755dca9`).** The ingest handler now lifts the tag into
+   `body.correlation_id`. Correct and unit-tested, but it has nothing to derive
+   from while joint 1 is open.
+3. **Reader (open).** The selection-outcomes endpoint joins
+   `activity_execution_traces` (execution-traces.ts:4212, 4261) — the table
+   decommissioned 07-14, `correlation_id != NONE` → 0 rows — not the live
+   `execution` where the key now lands. And `posterior-update.ts` has **zero**
+   `correlation_id` references, so no *credit* path consumes the join at all: the
+   law-12 gap ("credit reaches arms, never decisions") is unclosed.
+
+**Honest status:** my fix is a correct, necessary precondition, not a resolution.
+It is harmless to keep (tested, no behavior regression) but **inert in practice**
+until joints 1 and 3 close. B1 is downgraded from "resolved" to "1 of 3 joints
+closed"; the full chain is filed as a gap. This is the "verify at the CONSUMING
+layer, and a channel's own reporting is not evidence about the channel" lesson
+applied to my own fix — the synthetic POST tested the layer I edited, not the flow.
+
+**B2 stands, and is now verified live** (better than Addendum 2's hedge): the
+paradigm shape-fetch logs `count:680` and `count:822` since the restart, both far
+above the old `limit*3` = 150 ceiling — the admission widening is live at the
+consuming layer, `latency_ms` 788–1393 for ~822 rows.
