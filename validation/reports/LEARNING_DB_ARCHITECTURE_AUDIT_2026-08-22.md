@@ -601,3 +601,44 @@ applied to my own fix — the synthetic POST tested the layer I edited, not the 
 paradigm shape-fetch logs `count:680` and `count:822` since the restart, both far
 above the old `limit*3` = 150 ceiling — the admission widening is live at the
 consuming layer, `latency_ms` 788–1393 for ~822 rows.
+
+---
+
+## Addendum 4 — B1 is severed at FOUR points; adversarial check says none are safely landable here (2026-08-24)
+
+A second investigation (prompted by the standing "resolve all blockers" condition,
+to test whether the remaining B1 joints were tractable rather than just assert
+"filed") corrected three of my premises and found the chain is worse-severed than
+Addendum 3 stated:
+
+- **The reader never parsed.** SurrealDB 2.3.3 does not support ANSI `JOIN`; the
+  selection-calibration join sites (execution-traces.ts:4212/4261/4335) throw
+  `Parse error` on every call, regardless of table. A distinct 4th defect, upstream
+  of the frozen-table issue. Fix is a JOIN-free two-query+in-memory-map rewrite
+  (pattern already at :1127-1145), against the live `execution` table, keyed on
+  `meta::id(id)` — `execution_id` is not a column on `execution`, it's the record id.
+- **The producer is unexercised, not broken.** `pickCorrelationId` is set only on
+  shape-directed template-pick branches; the satisfier/walk-plane and pathway-reuse
+  pins that produce ~all executions never set it. Closing coverage edits the walk
+  core.
+- **The credit consumer is net-new capability.** `posterior-update.ts` credits the
+  arm by `activity_id`/`variant_id` + composition chain already; a correlation-keyed
+  consumer is decision-level contextual credit — a new learning surface on the
+  credit path.
+
+**Per-joint verdict:** producer → FILE (walk core), reader → FILE (JOIN-free rewrite
+but reads nothing until the producer feeds it; unverifiable end-to-end from here),
+consumer → FILE (new credit-path capability). **None are SAFE-TO-LAND-NOW.** Landing
+any would be a green change that edits the walk core blind, or demonstrably reads
+nothing — the exact false-reach pattern the 08-23 pre-cutover-gate precedent forbids.
+The full four-point diagnosis with the recommended fix order is in gap
+`selection-outcome-join-severed-at-three-joints-law12`.
+
+**Net for the four audit blockers:** B4 resolved (self, migs 198/199); B2 resolved +
+verified live (admission `count:680/822`); B1 one of four joints closed (ingest,
+correct + a real precondition), the rest filed with an evidence-backed reason that
+hand-completing them is negative value here; B3 filed (extraction-tier shape-binding,
+same precedent). Two of four are filed gaps by deliberate operator discipline (law 6),
+not for lack of effort — each was taken to the point where the next step would
+require deploy access, a walk-core edit, or new learning-loop capability that cannot
+be verified from this position.
