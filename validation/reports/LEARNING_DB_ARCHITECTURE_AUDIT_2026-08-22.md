@@ -691,3 +691,33 @@ bounded implementation was built; what remains needs new runtime machinery, a
 walk-semantics decision, or credit/extraction-tier verification that this position
 cannot provide, and shipping them blind would corrupt the learning loop rather than
 close the gap.
+
+---
+
+## Addendum 6 — real-selection end-to-end verification of B1 joints 2+3 (2026-08-24)
+
+Pressing past "unverifiable" (per the operator's push) produced a genuine result:
+the two closed joints of the selection→outcome chain were verified end-to-end on a
+**real Thompson selection**, not just a synthetic tag.
+
+1. `/recommend` minted real selections into `thompson_selection_log` (e.g.
+   `sel_1787541892933_fgr5k4_9`).
+2. An execution trace tagged only `correlation:sel_1787541892933_fgr5k4_9` was
+   posted. **Ingest (joint 2) lifted the tag** → the stored `execution` row carries
+   `correlation_id = sel_1787541892933_fgr5k4_9, success:true`.
+3. `/selection-calibration` (joint 3, the JOIN-free reader) then returned
+   **`joined activities: 1`** — the real selection joined to its real outcome,
+   grouped under the selection's own activity. Index-backed (`idx_thompson_selection_time`
+   on `selected_at`), 200 in 0.43s on a clean call; NRestarts stayed 0 throughout
+   (transient 000s were concurrent-load connection blips, not the endpoint).
+
+So joints 2+3 are proven to work together on real data. What remains open is **joint
+1 (producer)**: across 6+ forcing attempts with varied goal shapes, no organic walk
+hit the recommend-draw branch that mints a correlation — the dominant paths are
+satisfier picks (`consumedInChain=0`, not graded arms, semantically not
+correlatable). That is a walk-semantics decision, not a wiring bug, and it is
+unverifiable from the dispatch surface here — empirically, not by assertion.
+
+**Bottom line unchanged, evidence strengthened:** B1 is 2 of 4 joints closed AND
+now demonstrated to join real selections to real outcomes end-to-end; the producer
+and credit-consumer joints, and B3, remain filed for the reasons in Addenda 3–5.
