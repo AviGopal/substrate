@@ -478,3 +478,59 @@ more than either claim alone.
 tier was dark. It is not — the vessel is healthy and dispatching above its
 starvation floor. Only the *landing* is dark, which is a different defect with a
 different fix.
+
+---
+
+## Addendum — live re-confirmation, 2026-08-23 (23:xx UTC)
+
+Re-probed the four load-bearing claims against the same `substrate-live` container.
+Two headline defects **hold unchanged**; the extraction landing **has resumed**,
+which the body reported as halted. Corrections land here, not only in chat.
+
+**Still open, re-confirmed live:**
+
+- **Attribution — selections unjoinable to outcomes.** `thompson_selection_log`
+  now holds **29,452** rows whose `execution_id` begins `recommend-<ts>` (was
+  26,529 in the body). Selection is live (`selected_at` current to tonight). The
+  join-impossibility itself is cited from the body's verified control (0 matches
+  vs 6,970 `exec_`), not re-run tonight — `execution.id` is a `RecordId`, so the
+  string-prefix positive control type-errors rather than counting. Today confirms
+  only that placeholder-writing continues and has grown. **The law-12 gap is the
+  single largest attribution defect and is unremediated.**
+- **Prefilter is pure recency.** `activity.ev` is identically `0.5` on
+  **3,858/3,858** rows tonight (was 3,856). Unchanged. `discover-by-shapes.ts:235`
+  orders candidates by this constant before the Thompson draw, so the selector
+  still sees newest-minted arms first.
+
+**Changed since the body was written — extraction landing resumed:**
+
+- **Minting is live again.** 5 activities minted in the last 3 days, newest
+  **2026-08-23T15:43** — against the body's "2 in 3 weeks" and the expectations
+  report's "4 in 21 days / halted on both sides." That framing is now **stale**.
+- **The resumed mints are the *earned* path.** 4 of the 5 carry the `learned-`
+  prefix — `learned-composition-substrategap-to-substrategap-write` (today),
+  `learned-satisfier-shell-result`, two `learned-…-trace-store-reconcile`; the
+  fifth is `auto-bridge:execution_trace`. **Zero** gap/proposal-path mints in the
+  window. This is the first interventional signal on the expectations report's
+  named open question ("what happened ~2026-08-01"): the resumption is **concurrent
+  with restored operator goal traffic** to the local substrate this session (direct
+  HTTP after the dead-hub cockpit repoint). Consistent with the operator-traffic-
+  starvation hypothesis, **but uncontrolled** — this session changed many things at
+  once (a revert, five source fixes, heavy dispatch), so no single cause is
+  assignable (law 12). It is a lead for a one-variable follow-up, not a settled
+  cause.
+
+**Posterior movement, matched predicate.** Under the body's own predicate (α>1 OR
+β>1, i.e. "above the prior"): **2,903 of 3,464 (83.8%)** variant rows have moved,
+up from 1,638/3,349. (An interim probe tonight counted `thompson_beta>1` alone and
+got 2,432 — the same phantom/mismatched-predicate trap this report's Method notes
+warn against; recorded here as the correction, not the finding. The `beta`/`alpha`
+column names are `thompson_beta`/`thompson_alpha`; a bare `beta` reads as a phantom
+column and returns empty.) The credit machinery is accumulating, and faster than at
+audit time.
+
+**Net.** The two growth-blocking defects the audit ranks highest (unjoinable
+selections; recency-only prefilter) are **both live and unremediated tonight**. The
+one thing the body called dead — extraction landing — is **no longer dead**, and
+the resumed traffic is earned, not proposed. The corpus is beginning to grow from
+things that worked; it still cannot grade its own *choices*.

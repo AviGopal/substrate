@@ -206,3 +206,17 @@ cross-component read. Every defect in four rounds was an absent/empty/zero
 confusion, and the only two seams where a dead join was self-evident rather than
 requiring an audit (`cts_lookup`, `cts_sig_lookup`) are the two that already log
 it.
+
+---
+
+## Addendum, 2026-08-23 — §6's "minting halted on both sides" is now stale
+
+Re-probed live: **minting resumed** — 5 mints in the last 3 days, newest
+2026-08-23T15:43, **4 of 5 carrying the `learned-` prefix** (earned path), zero
+proposal-path. The "79 mints to 08-01, then 4 in 21 days, halted on both sides"
+framing described the window up to the probe date and no longer holds. The
+resumption is **concurrent with this session restoring operator goal traffic to the
+local substrate** (direct HTTP after the dead-hub cockpit repoint) — consistent
+with the §6 open question ("what happened ~2026-08-01" = operator-traffic
+starvation), **uncontrolled** (many changes this session), a lead not a cause.
+Full re-confirmation in `LEARNING_DB_ARCHITECTURE_AUDIT_2026-08-22.md` addendum.
