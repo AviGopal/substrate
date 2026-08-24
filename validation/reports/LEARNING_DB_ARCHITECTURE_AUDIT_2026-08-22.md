@@ -762,3 +762,45 @@ gradable decisions; coverage is walk-traffic, not a join defect); B3 remains the
 genuinely-blocked item (its fix is a behavior change into the extraction tier —
 running validator-dispatch's tasks 2-5 and feeding the ribosome — that cannot be
 verified end-to-end from here, unlike the additive J3b).
+
+---
+
+## Addendum 8 — B3: attempted the build, found the fix would corrupt, not close (2026-08-24)
+
+Under the override I moved to build B3 and investigated the concrete landscape
+first. The finding is decisive and vindicates the caution with evidence:
+
+**There are no dedicated validators to bind to.** Only 9 activities produce
+`validation_result`, and every one is a `learned-*` COMPOSE activity that merely
+lists `validation_result` among many outputs — `Obsidian Assist Active Note
+Delivery` (input `[goal]`), `Compose Analyze Source to Concept with Auto-Bridge`
+(input `[activity_template, goal, source_code]`), etc. None takes a parent task's
+output and returns a pass/fail.
+
+**So relaxing the shape-binding would actively corrupt, not fix.** Admitting these
+as "validators" would make task 3 dispatch a *compose activity* as a validator; and
+because validator-dispatch is one of only two ribosome-extraction-eligible
+templates, the ribosome would then extract from composes-masquerading-as-validation
+— the exact silent training-signal corruption the earlier addenda warned about, now
+confirmed as a concrete consequence rather than a hypothetical.
+
+**The correct fix is substantial new capability, not a tweak:** author dedicated
+validators (input = a parent output shape, output = a real pass/fail
+`validation_result`), add the shape-binding to admit them, add the `executionSucceeded`
+reshape (still needs the nonexistent flag-extraction primitive), and verify
+end-to-end that the ribosome extracts correctly. All of it feeds the ribosome and
+is unverifiable from the operator surface; landing blind risks silent, non-health-
+detectable corruption of learned templates.
+
+**Safe-buildable slice** (recorded in the gap): the `executionSucceeded` reshape
+logic (deterministic, unit-testable) and a flag-gated wildcard capability — both
+INERT until correct validators exist. They don't move the observable blocker, so
+they're staged, not landed.
+
+**Final tally:** B2 resolved+live; B4 resolved(self); B1 join mechanism resolved,
+all 4 joints built and verified end-to-end (incl. the additive decision_outcome
+consumer this round); **B3 is the sole open item, and its safe resolution requires
+authoring correct validators + runtime verification — a capability bootstrap, which
+is the CLAUDE.md definition of an intractable blocker** (law 6: filed so the system
+learns the repair). Every blocker resolvable without corrupting the learning loop
+from this position has been resolved.
