@@ -534,3 +534,32 @@ selections; recency-only prefilter) are **both live and unremediated tonight**. 
 one thing the body called dead — extraction landing — is **no longer dead**, and
 the resumed traffic is earned, not proposed. The corpus is beginning to grow from
 things that worked; it still cannot grade its own *choices*.
+
+---
+
+## Addendum 2 — the four ranked blockers, resolved or dispositioned, 2026-08-24
+
+Acting on the standing condition "resolve all known blockers," each of the four
+growth-blocking findings was taken to a terminal state. The rule throughout:
+dispatch as a goal first (canonical), read the diff (not the reach verdict), and
+only direct-edit under a fresh operator authorization where the autonomous lane
+structurally cannot land the fix.
+
+| # | Blocker | Disposition |
+|---|---|---|
+| B4 | Trace-store pressure (`success` composite index → zero-match retention) | **Already resolved by the substrate itself** — migrations 198 (`db667c1`) + 199 (`ffd75d0`), 08-22, removed the boolean indexes; ring drained 150k→9,242; stratified sweep live. Audit numbers were pre-fix. |
+| B3 | `validator-dispatch` runs 1 of 5 tasks | **Filed as a gap** (`validator-dispatch-chain-dies-task1-to-task2-shape-binding`). A shape-binding gap (validator `input_shapes` never intersect parent `output_shapes` under `CONTAINSANY`, no wildcard) with **high blast radius into the extraction tier** (task 5 hardcodes `executionSucceeded:false`); a wrong fix corrupts ribosome training. Not landable blind from here — the honest disposition is to let the system learn the repair. The one "trivial" sub-fix flagged (the `retired IS NONE` strip) was **refuted as inert**: 0 of 3,858 rows have `retired` unset. |
+| B1 | Selections unjoinable to outcomes (law 12) | **Resolved.** `execution-traces.ts` now lifts the walk's `correlation:<id>` tag into `body.correlation_id` (helper `deriveCorrelationIdFromTags`, 7 unit tests). Dispatched first; the lane landed only an inert interface-field partial (`be97c55`) — the real derivation was implemented directly under operator authorization. **Verified live at the consuming layer**: a trace carrying only the tag now stores `correlation_id` populated and joinable (`SELECT ... WHERE correlation_id = <nonce>` returns the row). Committed `755dca9`, deployed via pull-sync, activity-api restarted 02:34 UTC onto the new code. |
+| B2 | Recency-only prefilter | **Resolved.** `paradigm.ts` `queryActivitiesByShapes` now admits `max(limit, 1000)` (helper `computeAdmissionLimit`, 6 unit tests + paradigm's first test file) so the Thompson draw — the real selector — sees earned, non-recent arms instead of the newest-minted only. Deliberately does *not* make the dead `ev` column live (that would turn the cut into a greedy exploit filter). Committed `a7182c9`, deployed. Effect is internal + longitudinal; verified by unit test + typecheck + deployment, not a point observation. |
+
+**Incidental validation.** The compose-BUSY guard landed earlier this session
+(`2cc8af7`) fired correctly under real contention while these were dispatched:
+a concurrent autonomous-lane edit hit the busy lane and was graded
+`RETRYABLE CAPACITY — NOT falling through to a walk that cannot edit`, instead of
+rerouting to a dead-shape walk and minting a phantom capability gap.
+
+**The frontier finding, reconfirmed.** The canonical dispatch path *lands green*
+but produced an **inert partial** on B1 (interface field, no logic) and was
+**gate-blocked** on B2 (no test file). Autonomy's mechanism works; landing correct
+multi-hunk logic is the open frontier — which is why B1/B2 needed a hand, and B3
+(higher blast radius, unverifiable here) was filed rather than forced.
