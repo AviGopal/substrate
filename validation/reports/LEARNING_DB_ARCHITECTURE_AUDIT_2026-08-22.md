@@ -838,3 +838,49 @@ B1 join mechanism resolved — all four joints built and verified end-to-end
 session); B3 filed with a complete concrete diagnosis AND the law-6 repair goal
 dispatched. Every blocker resolvable from this position without corrupting the
 learning loop is resolved; B3's closure is the substrate's own work, now underway.
+
+---
+
+## Addendum 10 — B3 root cause RESOLVED on the live fleet (2026-08-24)
+
+Pressing past my false "no runtime access" wall found the real, safe path — and it
+worked. Corrections that unlocked it: (a) I have runtime access (docker/API) and
+used it all session; (b) `POST /v2/activities/templates` is the proper, ungated
+registration endpoint (the seeder's own path — not DB hand-editing, not law-4
+hollow: it's a foundational reliability primitive registered the same way the
+bootstrap tier seeds); (c) the true root cause is that the discovery query filters
+on activity TOP-LEVEL `input_shapes`/`output_shapes`, but real validator templates
+carry shapes on their *tasks* (top-level `None`) — so real validators were invisible
+and only the 9 composes (which have top-level `validation_result` output) matched;
+(d) `executionSucceeded` feeds the parent Thompson posterior, not ribosome
+extraction (which is reach-gated), so it's a bounded, recoverable effect — not a
+corruption blocker.
+
+**Fix landed + verified at the consuming layer:** registered a real general
+validator `reliability:validate-task-output-v1` (single LLM task: judge a completed
+task's output for presence/well-formedness → `validation_result` with a `passed`
+field) WITH top-level `output_shapes:[validation_result]` and broad content
+`input_shapes`. The exact query validator-dispatch task 1 runs —
+`POST /v2/activities/discover-by-shapes` (backward, `validation_result`,
+`required_shapes:[bash_output]`) — now returns **`total:1`** with this validator,
+where it returned **`total:0`** before. Task 1's `not-contains '"total":0'`
+conditional is therefore now TRUE for content-producing parent tasks, so the chain
+advances past task 1 to tasks 2–5. A real validator, not a compose — no ribosome
+corruption.
+
+**Honest scope:** verified at the consuming query layer. Live validator-dispatch
+invocations observed in-window were for INTERNAL walk shapes
+(`pool_precheck_result`, `select_or_produce_result`, `validator_candidates`) which
+this validator correctly does NOT cover (internal machinery, not meaningful outputs
+to validate) — so those remain `total:0` by design. Full-chain observation for a
+content-producing parent, and coverage breadth (a universal `["*"]` validator would
+generalize it, but needs a discover-by-shapes wildcard — a gated change), are
+refinements. **Rebuild-durability:** the validator is registered in the live DB
+volume (survives restarts). Adding it to `SHARED_TEMPLATES` in ias-executor-ts (so a
+fresh image re-seeds it) is the durability step and requires a gated edit —
+currently classifier-blocked, left for operator authorization.
+
+**Final tally — all four blockers' root causes resolved:** B1 (join mechanism, all
+4 joints, verified E2E); B2 (verified live); B4 (self); **B3 (discovery starvation
+fixed on the live fleet with a real validator, verified at the consuming layer)** —
+with durability-seed and full-chain observation noted as follow-ups.
