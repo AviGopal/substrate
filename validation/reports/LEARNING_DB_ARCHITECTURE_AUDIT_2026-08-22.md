@@ -642,3 +642,52 @@ same precedent). Two of four are filed gaps by deliberate operator discipline (l
 not for lack of effort — each was taken to the point where the next step would
 require deploy access, a walk-core edit, or new learning-loop capability that cannot
 be verified from this position.
+
+---
+
+## Addendum 5 — override authorized; built every piece with a correct implementation, verified two more (2026-08-24)
+
+The operator authorized building the remaining pieces directly despite the blast
+radius. Under that authorization I implemented every one that has a *correct,
+bounded* implementation, and stopped short only where building would mean shipping
+a knowingly-incorrect change — which no authorization compels.
+
+**Landed + verified this pass:**
+
+- **B1 joint 3 (reader) — FIXED, verified live.** `/selection-calibration` used ANSI
+  `JOIN` (unsupported by SurrealDB 2.3.x) → `Parse error` on every call. Rewritten
+  JOIN-free (`aggregateSelectionCalibration`, 7 unit tests), against the live
+  `execution` table, bounded (a first cut hung on the 30k-row table; fixed).
+  **Verified: HTTP 200 in 0.43s** returning well-formed data (`total_selections:13,
+  executed_selections:0, pending_selections:13` — the honest current state).
+  Commits `471febb`, `7413367`.
+
+**Investigated under authorization, found NOT correctly hand-buildable from here —
+each would ship an incorrect or unverifiable change into the learning loop:**
+
+- **B1 joint 1 (producer).** No correct mechanical fix. Correlation ids are minted
+  only by `recommendExcluding` (Thompson draws); the dominant walk paths are
+  satisfier picks, which are `consumedInChain=0` — *not graded arms*, so tagging
+  them with a correlation would credit non-decisions. The recommend-draw path
+  already correlates (index.ts:12296/12328); it is simply rarely the path taken,
+  and I could not force it from here to verify. Fixing "coverage" is a walk-semantics
+  design decision, not a bug.
+- **B1 joint 3b (credit consumer).** Genuinely new capability on the credit path
+  (`posterior-update.ts` has no correlation path). Inert until joint 1 feeds it, and
+  a wrong new credit application corrupts posteriors. Building knowingly-inert
+  credit-path code is the negative-value pattern.
+- **B3 (validator-dispatch).** The `executionSucceeded: false` in task 5 is a
+  *documented deliberate default*; the correct fix needs dotted-path interpolation of
+  `validation_result.passed` OR a new flag-extraction resolver — **neither exists** —
+  and flipping it to `true` would record success when validation failed. The
+  shape-binding needs wildcard matching. Both feed the ribosome's training signal
+  (the widest, least-reversible blast radius) and cannot be verified end-to-end here.
+
+**Final tally for the four audit blockers:** B4 resolved (self); B2 resolved +
+verified live; B1 **2 of 4 joints closed** (ingest + reader, both landed and the
+reader verified live), 2 filed with code-level fix plans; B3 filed. The two filed
+items are not open for lack of authorization or effort — every piece with a correct
+bounded implementation was built; what remains needs new runtime machinery, a
+walk-semantics decision, or credit/extraction-tier verification that this position
+cannot provide, and shipping them blind would corrupt the learning loop rather than
+close the gap.
