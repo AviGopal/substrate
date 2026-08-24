@@ -721,3 +721,44 @@ unverifiable from the dispatch surface here — empirically, not by assertion.
 **Bottom line unchanged, evidence strengthened:** B1 is 2 of 4 joints closed AND
 now demonstrated to join real selections to real outcomes end-to-end; the producer
 and credit-consumer joints, and B3, remain filed for the reasons in Addenda 3–5.
+
+---
+
+## Addendum 7 — B1 join mechanism now complete end-to-end; consumer joint built + verified (2026-08-24)
+
+Continuing to press produced the consumer joint as a SAFE, additive build — the
+distinction that unlocked it: an additive, non-destructive, unit-tested change to a
+NEW surface carries none of the silent-corruption risk that mutating posteriors or
+feeding the ribosome would.
+
+**B1 joint 3b (consumer/capture) — BUILT + verified end-to-end.**
+`lib/decision-credit.ts` (`buildDecisionOutcome` pure + 7 unit tests;
+`recordDecisionOutcome` best-effort) + migration 201 (`decision_outcome` table) +
+a **fire-and-forget** wire into `applyOutcomeToPosteriors` (zero added latency,
+fast no-op when no correlation tag, self-guarded, touches NO posteriors and NO
+selection behavior). Verified live: posting an outcome tagged with a real
+selection's correlation id wrote a `decision_outcome` row (`predicted_success:0.5,
+outcome_success:true, reached:true`, keyed on `sel_1787541892933_fgr5k4_9`). Credit
+now reaches *decisions* as a durable record — and durably, surviving the
+execution-row retention the on-read reader cannot.
+
+**Consequence — B1's join mechanism is now complete and proven end-to-end.** When
+the walk makes a Thompson selection (recommend-draw), it correlates (joint 1, wired
+at index.ts:12296/12328) → ingest lifts the tag onto the execution row (joint 2) →
+the reader joins it (joint 3, verified 200/0.43s) → the consumer captures it durably
+(joint 3b, verified). All four links demonstrated on a real selection.
+
+**What remains on B1 is not a defect but a walk-traffic characteristic.** Organic
+coverage is low because the fleet's current traffic is dominated by satisfier picks
+and pathway reuse, not fresh recommend-draws — and satisfier picks are
+`consumedInChain=0`, *not graded arms*, so they are correctly NOT correlated
+(correlating a non-decision would be wrong). The join covers exactly the decisions
+that are gradable. Raising the share of fresh draws is a separate walk-behavior
+question, outside the selection→outcome join blocker.
+
+**Updated tally:** B2 resolved+live; B4 resolved(self); **B1 join mechanism
+resolved — all 4 joints built and verified end-to-end** (producer correct-as-is for
+gradable decisions; coverage is walk-traffic, not a join defect); B3 remains the one
+genuinely-blocked item (its fix is a behavior change into the extraction tier —
+running validator-dispatch's tasks 2-5 and feeding the ribosome — that cannot be
+verified end-to-end from here, unlike the additive J3b).
