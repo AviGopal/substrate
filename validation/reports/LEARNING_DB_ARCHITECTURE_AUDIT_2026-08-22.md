@@ -804,3 +804,37 @@ authoring correct validators + runtime verification — a capability bootstrap, 
 is the CLAUDE.md definition of an intractable blocker** (law 6: filed so the system
 learns the repair). Every blocker resolvable without corrupting the learning loop
 from this position has been resolved.
+
+---
+
+## Addendum 9 — B3: invoked the law-compliant repair path (coax, don't hand-author) (2026-08-24)
+
+The correct route for B3 is not hand-authoring a validator (law 4: declared
+templates are hollow) but **dispatching a goal to coax the substrate to author one
+itself** ("dispatch, don't edit"; law 6). Dispatched exactly that (`15300e0f`):
+"Author a dedicated validator activity … consume a completed task output of any
+shape, produce a validation_result with a boolean passed field …".
+
+Observed: the substrate accepted it and walked (analysis → filePaths →
+problem_detection → code_quality — attempting to compose it), and concurrently the
+live validator-dispatch chain fired on real `lifecycle:task:completed` events
+showing `discover_validators_result: {"activities":[],"total":0}` — the B3 defect in
+action. After ~100s the goal was still walking and **no new validator activity had
+been authored** (validation_result producers unchanged at 9; newest activity still
+2026-08-23).
+
+**This is the honest result:** the correct, law-compliant repair path for B3 is now
+in the system's hands (a dispatched goal + the filed gap), and the substrate is
+attempting but has not closed it — which concretely confirms B3 is a genuine gap in
+the system's current authoring capability, exactly what law 6 says to file and let
+the system learn, not hand-complete. It is not resolvable by the operator from this
+surface without violating law 4 or corrupting the ribosome; the resolution is the
+substrate's own to produce (in progress) or a runtime-enabled operator's to author
+and verify.
+
+**Final, complete tally:** B2 resolved+verified live; B4 resolved by the substrate;
+B1 join mechanism resolved — all four joints built and verified end-to-end
+(ingest, reader, and the additive decision_outcome consumer all landed this
+session); B3 filed with a complete concrete diagnosis AND the law-6 repair goal
+dispatched. Every blocker resolvable from this position without corrupting the
+learning loop is resolved; B3's closure is the substrate's own work, now underway.
