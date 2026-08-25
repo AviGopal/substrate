@@ -241,10 +241,15 @@ echo "== 6. recovery-coverage lint =="
 # a health_port (self-recovery tick) or Restart= in its unit (systemd converge).
 UNCOVERED="$(csh 'INV=/workspace/substrate/fleet/vessels.inventory.json; [ -f "$INV" ] || INV=/usr/local/share/substrate/vessels.inventory.json;
   jq -r ".vessels[] | select((.unit | endswith(\".service\")) and .health_port == null and (.role != \"seed\") and ((.manifest // false) | not)) | .unit" "$INV" 2>/dev/null | while read -r u; do
-    f="/etc/systemd/system/$u"
-    [ -f "$f" ] || continue
-    grep -q "^Type=oneshot" "$f" && continue
-    grep -q "^Restart=" "$f" || echo "$u"
+    # Resolve the unit wherever it is vendored. The image installs units to
+    # /usr/lib/systemd/system (Dockerfile: /etc outranks and cannot be masked),
+    # so a `[ -f /etc/systemd/system/$u ]` test matched ZERO of the fleet and
+    # this check silently passed on every deployment. `systemctl cat` reads the
+    # effective unit from /etc, /usr/lib or /run alike.
+    uc="$(systemctl cat "$u" 2>/dev/null)"
+    [ -n "$uc" ] || continue
+    printf '%s\n' "$uc" | grep -q "^Type=oneshot" && continue
+    printf '%s\n' "$uc" | grep -q "^Restart=" || echo "$u"
   done' 2>/dev/null || true)"
 if [ -z "$UNCOVERED" ]; then
   ok "every long-running service has a health_port or Restart= policy"

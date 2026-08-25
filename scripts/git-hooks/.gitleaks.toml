@@ -15,7 +15,7 @@ useDefault = true
 [[rules]]
 id = "substrate-api-key"
 description = "Substrate API key (mb_ prefix) — minted by identity-vessel, accepted as `Authorization: ApiKey`"
-regex = '''\bmb_[A-Za-z0-9_-]{32,}'''
+regex = '''\bmb[-_][A-Za-z0-9_-]{32,}'''
 tags = ["key", "substrate"]
 
 [[rules]]

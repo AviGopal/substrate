@@ -85,12 +85,14 @@ ALLOWED_TOPLEVEL_DIRS=(
 # Image / artefact extensions that are never allowed at the super-repo level.
 ARTEFACT_EXTENSIONS='png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|mov|webm|pdf|zip|tar|gz|tgz'
 
-# Files to inspect: newly added (A) or renamed-to (R) entries in the index.
+# Files to inspect for PLACEMENT: newly added (A) or renamed-to (R) entries.
+# Placement only applies to new files — a modify-only commit has none to place.
+# Do NOT `exit 0` here: the secrets scans below (SOPS on ACMR, gitleaks on the
+# full --staged diff) MUST still run on modify-only commits, else a credential
+# embedded by EDITING a tracked file (the leak class the rules exist for) sails
+# through unscanned. When STAGED is empty the placement loop simply iterates zero
+# times and control falls through to those scans.
 mapfile -t STAGED < <(git diff --cached --name-only --diff-filter=AR)
-
-if [[ ${#STAGED[@]} -eq 0 ]]; then
-  exit 0
-fi
 
 violations=()
 
