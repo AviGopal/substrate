@@ -44,10 +44,16 @@ resolve_identity() {
 }
 
 mint_jwt() { # $1=role $2=expires_seconds
-  local j
+  local j role="${1:-admin}" key="$METABOB_API_KEY"
+  # An admin/owner-role JWT requires an admin-scoped credential once
+  # /v1/jwt/generate gates the requested role by caller entitlement (else any
+  # read/write key could mint itself an admin token). SUBSTRATE_ADMIN_KEY carries
+  # admin and shares this org/user with METABOB_API_KEY (read/write only), so the
+  # tenant-binding check still passes. Fall back to METABOB_API_KEY when unset.
+  case "$role" in admin|owner) key="${SUBSTRATE_ADMIN_KEY:-$METABOB_API_KEY}";; esac
   j=$(curl -s "$IDENTITY/v1/jwt/generate" -H "Content-Type: application/json" \
-        -H "Authorization: ApiKey $METABOB_API_KEY" \
-        -d "{\"user_id\":\"$USER_ID\",\"org_id\":\"$ORG_ID\",\"role\":\"${1:-admin}\",\"expires_in_seconds\":${2:-900}}")
+        -H "Authorization: ApiKey $key" \
+        -d "{\"user_id\":\"$USER_ID\",\"org_id\":\"$ORG_ID\",\"role\":\"$role\",\"expires_in_seconds\":${2:-900}}")
   JWT=$(echo "$j" | jq -r '.data.token // empty')
   [[ -n "$JWT" ]] || die "JWT generation failed: $j"
 }
