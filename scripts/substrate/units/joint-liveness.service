@@ -1,0 +1,15 @@
+[Unit]
+Description=Joint-liveness detector — flags write->read-severed joints (the frozen-table class)
+# For each (table, time column, max lag) binding that should co-advance with live
+# `execution`, asserts the table's newest write is within max-lag of the newest
+# execution row. A bound reader-table frozen while the fleet is active is the
+# frozen-table signature; each severed joint emits a substrateGap. Meta-guarded:
+# gaps on itself if it checks nothing. Read-only except gap emission.
+After=activity-api.service surrealdb.service development-vessel.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/joint-liveness-tick.ts
+StandardOutput=journal
+StandardError=journal
