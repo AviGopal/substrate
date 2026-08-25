@@ -1,11 +1,13 @@
 name: Deploy Activity API
 
+# RETIRED as an automatic trigger. This workflow deploys activity-api on push to
+# `main`, but the project develops on `dev` and the live fleet self-deploys from
+# origin/dev via substrate-pull-sync (source convergence + health-gated restart),
+# not a main-push image deploy. Nothing has pushed `main` since 2026-04, so the
+# only effect of the push trigger was a stale red history on a deploy model no
+# longer in use. Left as workflow_dispatch-only so it remains available for a
+# deliberate manual production deploy without producing dead scheduled/push runs.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'repos/activity-api/**'
-      - '.github/workflows/deploy-activity-api.yml'
   workflow_dispatch:
     inputs:
       deploy:
