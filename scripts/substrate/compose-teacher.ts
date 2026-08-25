@@ -103,7 +103,7 @@ const isGoalSeededHead = (activityId: string): boolean => {
 
 // 2) Reliably-succeeding activities over the last 24h (≥1 success).
 const since = new Date(Date.now() - 24 * 3600_000).toISOString();
-const [succRows] = await sql(`SELECT activity_id, count() AS ok FROM activity_execution_traces WHERE executed_at >= type::datetime("${since}") AND success = true GROUP BY activity_id;`);
+const [succRows] = await sql(`SELECT activity_id, count() AS ok FROM v_paradigm_execution_traces WHERE executed_at >= type::datetime("${since}") AND success = true GROUP BY activity_id;`);
 const succeeds = new Set<string>((succRows || []).filter((r: any) => (r.ok ?? 0) > 0).map((r: any) => r.activity_id));
 
 // 2b) PRODUCER VIABILITY (2026-06-26, hollow-composite root cause). compose-teacher
@@ -122,7 +122,7 @@ const VIABILITY_WINDOW_H = Number(process.env.COMPOSE_TEACHER_VIABILITY_WINDOW_H
 let producible: Set<string> | null = null; // `${activity_id}|${shape}` of really-produced shapes
 try {
   const vSince = new Date(Date.now() - VIABILITY_WINDOW_H * 3600_000).toISOString();
-  const [prodRows] = await sql(`SELECT activity_id, output_impulse_shapes FROM activity_execution_traces WHERE executed_at >= type::datetime("${vSince}") AND success = true AND output_impulse_shapes != NONE AND array::len(output_impulse_shapes) > 0 LIMIT 8000;`);
+  const [prodRows] = await sql(`SELECT activity_id, output_impulse_shapes FROM v_paradigm_execution_traces WHERE executed_at >= type::datetime("${vSince}") AND success = true AND output_impulse_shapes != NONE AND array::len(output_impulse_shapes) > 0 LIMIT 8000;`);
   const set = new Set<string>();
   for (const r of prodRows || []) {
     const aid = r.activity_id;

@@ -253,7 +253,7 @@ const normId = (s: string) => (s || "").replace(/^activity:/, "").replace(/[‚ü®‚
 let liveSet: Set<string> | null = null;
 try {
   const liveRows = (await q(
-    `SELECT VALUE activity_id FROM activity_execution_traces WHERE executed_at >= time::now() - ${LIVE_WINDOW_HOURS}h AND success = true LIMIT 60000;`,
+    `SELECT VALUE activity_id FROM v_paradigm_execution_traces WHERE executed_at >= time::now() - ${LIVE_WINDOW_HOURS}h AND success = true LIMIT 60000;`,
   ))[0]?.result ?? [];
   liveSet = new Set((liveRows as string[]).map(normId));
 } catch { liveSet = null; }

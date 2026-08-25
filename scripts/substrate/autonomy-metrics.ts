@@ -97,7 +97,7 @@ try {
   const since = new Date(Date.now() - 3600_000).toISOString();
   // executed_at (indexed) not created_at (full-scan) — see throughput note below.
   const runRows = await sql<{ c: number }>(
-    `SELECT activity_id, count() AS c FROM activity_execution_traces WHERE executed_at >= type::datetime("${since}") GROUP BY activity_id;`);
+    `SELECT activity_id, count() AS c FROM v_paradigm_execution_traces WHERE executed_at >= type::datetime("${since}") GROUP BY activity_id;`);
   const distinctRun = runRows.length;
   const aboveFloor = runRows.filter((r) => (r.c ?? 0) >= 8).length;
   const newTemplates = await tryNum(() => count(
@@ -142,11 +142,11 @@ const comp_edges = await tryNum(() => count("SELECT count() FROM activity_compos
 let orphan_parent_rate: number | null = null;
 try {
   // sample 500 children, resolve parent activity_id presence
-  const kids = await sql<{ parent_execution_id: string }>("SELECT parent_execution_id FROM activity_execution_traces WHERE parent_execution_id != NONE LIMIT 500;");
+  const kids = await sql<{ parent_execution_id: string }>("SELECT parent_execution_id FROM v_paradigm_execution_traces WHERE parent_execution_id != NONE LIMIT 500;");
   if (kids.length) {
     let resolved = 0;
     for (const k of kids) {
-      const p = await sql<{ c: number }>(`SELECT count() AS c FROM activity_execution_traces WHERE execution_id = ${JSON.stringify(k.parent_execution_id)} GROUP ALL;`);
+      const p = await sql<{ c: number }>(`SELECT count() AS c FROM v_paradigm_execution_traces WHERE execution_id = ${JSON.stringify(k.parent_execution_id)} GROUP ALL;`);
       if (p[0]?.c) resolved++;
     }
     orphan_parent_rate = Math.round((1 - resolved / kids.length) * 1000) / 1000;
@@ -162,13 +162,13 @@ let recent_orphan_rate: number | null = null;
 let recent_composition_count: number | null = null;
 try {
   const rk = await sql<{ parent_execution_id: string }>(
-    "SELECT parent_execution_id FROM activity_execution_traces WHERE parent_execution_id != NONE AND executed_at > type::datetime(time::now() - 60m) LIMIT 400;",
+    "SELECT parent_execution_id FROM v_paradigm_execution_traces WHERE parent_execution_id != NONE AND executed_at > type::datetime(time::now() - 60m) LIMIT 400;",
   );
   recent_composition_count = rk.length;
   if (rk.length) {
     let resolved = 0;
     for (const k of rk) {
-      const p = await sql<{ c: number }>(`SELECT count() AS c FROM activity_execution_traces WHERE execution_id = ${JSON.stringify(k.parent_execution_id)} GROUP ALL;`);
+      const p = await sql<{ c: number }>(`SELECT count() AS c FROM v_paradigm_execution_traces WHERE execution_id = ${JSON.stringify(k.parent_execution_id)} GROUP ALL;`);
       if (p[0]?.c) resolved++;
     }
     recent_orphan_rate = Math.round((1 - resolved / rk.length) * 1000) / 1000;
@@ -251,7 +251,7 @@ try {
 // 2026-06-21 while real throughput was ~1300/hr. executed_at IS indexed
 // (idx_activity_executions_executed_at) and correctly populated on recent
 // traces: same window returns in ~195ms with the accurate count.
-const traces_per_hour = await tryNum(() => count("SELECT count() FROM activity_execution_traces WHERE executed_at > (time::now() - 1h) GROUP ALL;"));
+const traces_per_hour = await tryNum(() => count("SELECT count() FROM v_paradigm_execution_traces WHERE executed_at > (time::now() - 1h) GROUP ALL;"));
 let kappa_posterior_spread: any = { min: null, max: null, mean: null, n: null };
 try {
   const tpl = await apiGet("/v2/activities/templates?limit=100&offset=0");
@@ -322,7 +322,7 @@ try {
 let topology: any = { nested: null, depth1: null, depth2: null, depth3plus: null, edge_visibility: null };
 try {
   const d = await sql<{ depth: number; n: number }>(
-    `SELECT array::len(composition_chain) AS depth, count() AS n FROM activity_execution_traces WHERE composition_chain != NONE GROUP BY depth;`,
+    `SELECT array::len(composition_chain) AS depth, count() AS n FROM v_paradigm_execution_traces WHERE composition_chain != NONE GROUP BY depth;`,
   );
   let d1 = 0, d2 = 0, d3 = 0, nested = 0;
   for (const r of d) { nested += r.n; if (r.depth <= 1) d1 += r.n; else if (r.depth === 2) d2 += r.n; else d3 += r.n; }
@@ -355,9 +355,9 @@ try {
   // vessel_id is trace-level (fixed in ias-executor-ts 4aa6ec4: the sink now stamps it
   // from VESSEL_ID). resolver_tier is per-TASK (tasks[].resolver_tier), not trace-level,
   // so attribution_coverage measures vessel_id presence — the per-vessel learning signal.
-  const tot = await tryNum(() => count("SELECT count() AS count FROM activity_execution_traces WHERE executed_at > type::datetime(time::now() - 2h) GROUP ALL;"));
-  const attributed = await tryNum(() => count("SELECT count() AS count FROM activity_execution_traces WHERE executed_at > type::datetime(time::now() - 2h) AND vessel_id != NONE GROUP ALL;"));
-  const vrows = await sql<{ vessel_id: string }>("SELECT vessel_id FROM activity_execution_traces WHERE executed_at > type::datetime(time::now() - 2h) AND vessel_id != NONE GROUP BY vessel_id;");
+  const tot = await tryNum(() => count("SELECT count() AS count FROM v_paradigm_execution_traces WHERE executed_at > type::datetime(time::now() - 2h) GROUP ALL;"));
+  const attributed = await tryNum(() => count("SELECT count() AS count FROM v_paradigm_execution_traces WHERE executed_at > type::datetime(time::now() - 2h) AND vessel_id != NONE GROUP ALL;"));
+  const vrows = await sql<{ vessel_id: string }>("SELECT vessel_id FROM v_paradigm_execution_traces WHERE executed_at > type::datetime(time::now() - 2h) AND vessel_id != NONE GROUP BY vessel_id;");
   vessel_population = {
     active_vessels: vrows.length,
     attribution_coverage: (tot && attributed != null) ? Math.round((attributed / tot) * 1000) / 1000 : null,
@@ -379,7 +379,7 @@ const vesselOf = (id: string): string => {
 };
 let capability: any = { distinct_exercised_24h: null, total_activities: totalActivities, exploration_breadth: null, cross_vessel_edges: null, total_edges: comp_edges, cross_vessel_frac: null, proposed_templates: null };
 try {
-  const distinct = await tryNum(() => count("SELECT count() AS count FROM (SELECT activity_id FROM activity_execution_traces WHERE executed_at > type::datetime(time::now() - 24h) GROUP BY activity_id) GROUP ALL;"));
+  const distinct = await tryNum(() => count("SELECT count() AS count FROM (SELECT activity_id FROM v_paradigm_execution_traces WHERE executed_at > type::datetime(time::now() - 24h) GROUP BY activity_id) GROUP ALL;"));
   const proposed = await tryNum(() => count("SELECT count() AS count FROM activity WHERE proposed = true GROUP ALL;"));
   const edges = await sql<{ parent_activity_id: string; child_activity_id: string }>("SELECT parent_activity_id, child_activity_id FROM activity_composition_graph LIMIT 500;");
   const xv = edges.filter((e) => vesselOf(e.parent_activity_id) !== vesselOf(e.child_activity_id)).length;

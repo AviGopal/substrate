@@ -102,7 +102,7 @@ const CATALOGUE: { class: string; build: () => Promise<Built> }[] = [
     // counter, grounded by confirming the table is non-empty.
     class: "registry_report",
     build: async () => {
-      const [rows] = await sql(`SELECT activity_id, count() AS n FROM activity_execution_traces WHERE executed_at >= type::datetime("${since24h()}") GROUP BY activity_id LIMIT 1;`);
+      const [rows] = await sql(`SELECT activity_id, count() AS n FROM v_paradigm_execution_traces WHERE executed_at >= type::datetime("${since24h()}") GROUP BY activity_id LIMIT 1;`);
       const live = (rows || []).length > 0;
       // Vary order/metric/N across ticks deterministically off the global counter.
       const variants = [
@@ -123,7 +123,7 @@ const CATALOGUE: { class: string; build: () => Promise<Built> }[] = [
     // pull one example execution_id per mode.
     class: "failure_analysis",
     build: async () => {
-      const [fm] = await sql(`SELECT failure_mode.type AS t, count() AS n FROM activity_execution_traces WHERE executed_at >= type::datetime("${since24h()}") AND success = false AND failure_mode.type != NONE GROUP BY failure_mode.type LIMIT 5;`);
+      const [fm] = await sql(`SELECT failure_mode.type AS t, count() AS n FROM v_paradigm_execution_traces WHERE executed_at >= type::datetime("${since24h()}") AND success = false AND failure_mode.type != NONE GROUP BY failure_mode.type LIMIT 5;`);
       const modes = (fm || []).map((r: any) => r.t).filter(Boolean);
       return {
         goal: `Summarize the most common failure modes across execution traces from the last 24 hours. For each distinct failure_mode.type, report a count and one example execution_id, ordered by count descending.`,
@@ -148,7 +148,7 @@ const CATALOGUE: { class: string; build: () => Promise<Built> }[] = [
     // cost/tier — aggregate cost grouped by resolver_tier over a window, ranked.
     class: "cost_by_tier",
     build: async () => {
-      const [c] = await sql(`SELECT math::sum(cost_usd) AS total, count() AS n FROM activity_execution_traces WHERE executed_at >= type::datetime("${since24h()}") GROUP ALL;`);
+      const [c] = await sql(`SELECT math::sum(cost_usd) AS total, count() AS n FROM v_paradigm_execution_traces WHERE executed_at >= type::datetime("${since24h()}") GROUP ALL;`);
       const total = c?.[0]?.total ?? null;
       return {
         goal: `Report the total resolution cost grouped by resolver_tier (deterministic, pattern, llm) over the last 24 hours, ordered by total cost highest first. Include the count of resolutions per tier alongside each total.`,
@@ -161,7 +161,7 @@ const CATALOGUE: { class: string; build: () => Promise<Built> }[] = [
     // recurring task-pattern, and produce a CONCEPT. Producer→consumer→consumer.
     class: "concept_synthesis",
     build: async () => {
-      const [ex] = await sql(`SELECT activity_id, count() AS n FROM activity_execution_traces WHERE executed_at >= type::datetime("${since24h()}") AND success = true GROUP BY activity_id LIMIT 5;`);
+      const [ex] = await sql(`SELECT activity_id, count() AS n FROM v_paradigm_execution_traces WHERE executed_at >= type::datetime("${since24h()}") AND success = true GROUP BY activity_id LIMIT 5;`);
       const top = (ex || []).map((r: any) => r.activity_id).filter(Boolean).slice(0, 5);
       return {
         goal: `Examine the most recent successful multi-task execution traces. Identify the recurring task pattern they share (the common sequence of resolver steps and shape flow), and produce a concept that summarizes that pattern with a name, description, and the activities it generalizes.`,

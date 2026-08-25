@@ -48,7 +48,7 @@ const sig = (a: any): string => {
 // unchanged today while the scan stays index-bounded and self-prunes as the
 // store ages.
 const RECOVER_CUT = new Date(Date.now() - 30 * 24 * 3600_000).toISOString();
-const [execs] = await sql(`SELECT activity_id, count() AS n FROM activity_execution_traces WHERE executed_at >= type::datetime("${RECOVER_CUT}") GROUP BY activity_id;`);
+const [execs] = await sql(`SELECT activity_id, count() AS n FROM v_paradigm_execution_traces WHERE executed_at >= type::datetime("${RECOVER_CUT}") GROUP BY activity_id;`);
 const execN = new Map<string, number>((execs || []).map((r: any) => [r.activity_id, r.n ?? 0]));
 const families = new Map<string, any[]>();
 for (const a of rows || []) {
