@@ -62,6 +62,17 @@ async function dispatch(goal: string): Promise<string> {
   return j.dispatchId;
 }
 
+function storeRecord(dispatchId: string): Record<string, unknown> | null {
+  // The dispatch store is authoritative and carries answerBody, which the /executions
+  // endpoint sometimes omits. Readable when the harness runs in-container.
+  const storePath = process.env.DISPATCH_STORE ?? "/workspace/goal-host-dispatches.json";
+  try {
+    const store = JSON.parse(readFileSync(storePath, "utf8"));
+    const recs: any[] = Array.isArray(store) ? store : (store.dispatches ?? Object.values(store));
+    return recs.find((r) => r && typeof r === "object" && r.dispatchId === dispatchId) ?? null;
+  } catch { return null; }
+}
+
 async function poll(dispatchId: string): Promise<DispatchOutcome> {
   const deadline = Date.now() + POLL_TIMEOUT_MS;
   let last: Record<string, unknown> = {};
@@ -73,7 +84,10 @@ async function poll(dispatchId: string): Promise<DispatchOutcome> {
     } catch { /* transient — keep polling */ }
     await new Promise((res) => setTimeout(res, POLL_INTERVAL_MS));
   }
-  const answer = String(last.answerBody ?? last.finalText ?? last.answer ?? last.goalReachReason ?? "");
+  // Merge in the authoritative store record (has answerBody + final reached).
+  const sr = storeRecord(dispatchId);
+  if (sr) last = { ...last, ...sr };
+  const answer = String(last.answerBody ?? last.finalText ?? last.answer ?? "");
   return {
     dispatchId,
     status: String(last.status ?? "timeout"),
@@ -86,9 +100,9 @@ async function poll(dispatchId: string): Promise<DispatchOutcome> {
   };
 }
 
-async function llmJudge(goal: string, rubric: string, answer: string): Promise<{ correct: boolean; detail: string }> {
+async function llmJudge(goal: string, rubric: string, answer: string): Promise<{ correct: boolean | null; detail: string }> {
   const key = anthropicKey();
-  if (!key) return { correct: false, detail: "llm_judge SKIPPED: no anthropic key" };
+  if (!key) return { correct: null, detail: "llm_judge UNSCORED: no anthropic key" };
   const prompt = `You are an independent grader. Judge ONLY correctness against the rubric — ignore fluency and length.\n\nGOAL: ${goal}\n\nRUBRIC: ${rubric}\n\nANSWER UNDER TEST:\n"""${answer.slice(0, 4000)}"""\n\nReply with a single JSON object: {"verdict":"CORRECT"|"INCORRECT","why":"<one sentence>"}. No prose, no fences.`;
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
@@ -103,11 +117,12 @@ async function llmJudge(goal: string, rubric: string, answer: string): Promise<{
     const correct = (parsed?.verdict ?? "").toUpperCase() === "CORRECT";
     return { correct, detail: `judge(${JUDGE_MODEL}): ${parsed?.verdict ?? "UNPARSED"} — ${parsed?.why ?? text.slice(0, 120)}` };
   } catch (e) {
-    return { correct: false, detail: `llm_judge error: ${(e as Error).message}` };
+    return { correct: null, detail: `llm_judge UNSCORED (error): ${(e as Error).message}` };
   }
 }
 
-async function runOracle(spec: GoalSpec, answer: string): Promise<{ correct: boolean; detail: string }> {
+async function runOracle(spec: GoalSpec, answer: string): Promise<{ correct: boolean | null; detail: string }> {
+  if (answer.trim() === "") return { correct: null, detail: "UNSCORED: no answer captured" };
   const o = spec.oracle;
   const lc = answer.toLowerCase();
   switch (o.type) {
@@ -134,7 +149,8 @@ async function runOracle(spec: GoalSpec, answer: string): Promise<{ correct: boo
       if (o.value_cmd) {
         try { truth = Number(execSync(o.value_cmd, { encoding: "utf8", shell: "/bin/bash" }).trim().split("\n").pop()); } catch { /* leave undefined */ }
       }
-      if (!Number.isFinite(got) || truth === undefined || !Number.isFinite(truth)) return { correct: false, detail: `got=${got} truth=${truth} (extract or ground-truth failed)` };
+      if (truth === undefined || !Number.isFinite(truth)) return { correct: null, detail: `UNSCORED: ground-truth failed (truth=${truth})` };
+      if (!Number.isFinite(got)) return { correct: false, detail: `no number extracted from answer (truth=${truth})` };
       const ok = o.op === "eq" ? got === truth : o.op === "ge" ? got >= truth : got <= truth;
       return { correct: ok, detail: `got=${got} ${o.op} truth=${truth} → ${ok}` };
     }
@@ -147,7 +163,8 @@ async function runOracle(spec: GoalSpec, answer: string): Promise<{ correct: boo
   }
 }
 
-function classify(reached: boolean | null, correct: boolean): string {
+function classify(reached: boolean | null, correct: boolean | null): string {
+  if (correct === null) return "UNSCORED";
   const r = reached === true;
   if (r && correct) return "TRUE_POSITIVE";
   if (r && !correct) return "CONFABULATION";
@@ -192,24 +209,27 @@ async function main() {
   }
 
   const done = results.filter((r) => r.classification);
-  const reached = done.filter((r) => r.reached === true).length;
-  const confab = done.filter((r) => r.classification === "CONFABULATION").length;
-  const tp = done.filter((r) => r.classification === "TRUE_POSITIVE").length;
-  const fr = done.filter((r) => r.classification === "FALSE_REJECT").length;
-  const correct = done.filter((r) => r.correct === true).length;
+  const scored = done.filter((r) => r.classification !== "UNSCORED");
+  const unscored = done.length - scored.length;
+  const reached = scored.filter((r) => r.reached === true).length;
+  const confab = scored.filter((r) => r.classification === "CONFABULATION").length;
+  const tp = scored.filter((r) => r.classification === "TRUE_POSITIVE").length;
+  const fr = scored.filter((r) => r.classification === "FALSE_REJECT").length;
+  const correct = scored.filter((r) => r.correct === true).length;
 
-  console.log("=== AGGREGATE ===");
-  console.log(`goals scored:        ${done.length}`);
-  console.log(`reached (system):    ${reached}/${done.length}`);
-  console.log(`correct (oracle):    ${correct}/${done.length}`);
+  console.log("=== AGGREGATE (rates over SCORED goals only) ===");
+  console.log(`dispatched:          ${done.length}`);
+  console.log(`scored:              ${scored.length}   (unscored: ${unscored} — judge/ground-truth/answer unavailable)`);
+  console.log(`reached (system):    ${reached}/${scored.length}`);
+  console.log(`correct (oracle):    ${correct}/${scored.length}`);
   console.log(`TRUE_POSITIVE:       ${tp}`);
   console.log(`CONFABULATION:       ${confab}   (reached but WRONG — the load-bearing failure)`);
   console.log(`FALSE_REJECT:        ${fr}`);
-  console.log(`CONFABULATION RATE:  ${reached ? ((confab / reached) * 100).toFixed(0) : "n/a"}%  (of reached goals, how many were actually wrong)`);
-  console.log(`REACH↔CORRECT AGREEMENT: ${done.length ? ((done.filter((r) => (r.reached === true) === (r.correct === true)).length / done.length) * 100).toFixed(0) : "n/a"}%`);
+  console.log(`CONFABULATION RATE:  ${reached ? ((confab / reached) * 100).toFixed(0) : "n/a"}%  (of reached-and-scored goals, how many were actually wrong)`);
+  console.log(`REACH↔CORRECT AGREEMENT: ${scored.length ? ((scored.filter((r) => (r.reached === true) === (r.correct === true)).length / scored.length) * 100).toFixed(0) : "n/a"}%`);
 
   if (jsonOut) {
-    writeFileSync(jsonOut, JSON.stringify({ generated_by: "goal-expectation-harness", goal_host: GOAL_HOST, aggregate: { scored: done.length, reached, correct, true_positive: tp, confabulation: confab, false_reject: fr, confabulation_rate: reached ? confab / reached : null }, results }, null, 2));
+    writeFileSync(jsonOut, JSON.stringify({ generated_by: "goal-expectation-harness", goal_host: GOAL_HOST, aggregate: { dispatched: done.length, scored: scored.length, unscored, reached, correct, true_positive: tp, confabulation: confab, false_reject: fr, confabulation_rate: reached ? confab / reached : null }, results }, null, 2));
     console.log(`\nreport written: ${jsonOut}`);
   }
   // Non-zero exit if any confabulation — the harness FAILS when the gate passes a wrong answer.
