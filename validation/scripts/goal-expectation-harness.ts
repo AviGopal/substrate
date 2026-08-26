@@ -100,22 +100,30 @@ async function poll(dispatchId: string): Promise<DispatchOutcome> {
   };
 }
 
+// Independent judge via the substrate's own llm-resolver (Thompson-selects a WORKING
+// provider — gemini/gpt/nemotron/etc. — so it does not depend on the operator's possibly-
+// invalid anthropic key, and is usually a different model than generated the answer).
+// Override the endpoint with LLM_RESOLVER; an anthropic path is kept only if ANTHROPIC_API_KEY
+// is explicitly set (for host runs with a real key).
+const LLM_RESOLVER = process.env.LLM_RESOLVER ?? "http://127.0.0.1:8220/resolve";
 async function llmJudge(goal: string, rubric: string, answer: string): Promise<{ correct: boolean | null; detail: string }> {
-  const key = anthropicKey();
-  if (!key) return { correct: null, detail: "llm_judge UNSCORED: no anthropic key" };
-  const prompt = `You are an independent grader. Judge ONLY correctness against the rubric — ignore fluency and length.\n\nGOAL: ${goal}\n\nRUBRIC: ${rubric}\n\nANSWER UNDER TEST:\n"""${answer.slice(0, 4000)}"""\n\nReply with a single JSON object: {"verdict":"CORRECT"|"INCORRECT","why":"<one sentence>"}. No prose, no fences.`;
+  const prompt = `You are an independent grader. Judge ONLY correctness against the rubric — ignore fluency and length.\n\nGOAL: ${goal}\n\nRUBRIC: ${rubric}\n\nANSWER UNDER TEST:\n"""${answer.slice(0, 4000)}"""\n\nReply with a single JSON object and nothing else: {"verdict":"CORRECT"|"INCORRECT","why":"<one sentence>"}. No prose, no fences.`;
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
+    const r = await fetch(LLM_RESOLVER, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: JUDGE_MODEL, max_tokens: 300, messages: [{ role: "user", content: prompt }] }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "llm_completion", prompt }),
     });
-    const j = (await r.json()) as { content?: Array<{ text?: string }> };
-    const text = j.content?.[0]?.text ?? "";
-    const m = text.match(/\{[\s\S]*\}/);
+    const j = (await r.json()) as { resolved?: boolean; content?: unknown; model?: string; error?: string };
+    if (!j.resolved || typeof j.content !== "string") {
+      // A broken judge must NEVER fabricate a verdict — UNSCORED with the real cause.
+      return { correct: null, detail: `llm_judge UNSCORED: ${j.error ?? "no content"}` };
+    }
+    const m = j.content.match(/\{[\s\S]*\}/);
     const parsed = m ? (JSON.parse(m[0]) as { verdict?: string; why?: string }) : null;
-    const correct = (parsed?.verdict ?? "").toUpperCase() === "CORRECT";
-    return { correct, detail: `judge(${JUDGE_MODEL}): ${parsed?.verdict ?? "UNPARSED"} — ${parsed?.why ?? text.slice(0, 120)}` };
+    const v = (parsed?.verdict ?? "").toUpperCase();
+    const correct = v === "CORRECT" ? true : v === "INCORRECT" ? false : null; // unparseable → UNSCORED, not INCORRECT
+    return { correct, detail: `judge(${j.model ?? "?"}): ${v || "UNPARSED"} — ${parsed?.why ?? j.content.slice(0, 120)}` };
   } catch (e) {
     return { correct: null, detail: `llm_judge UNSCORED (error): ${(e as Error).message}` };
   }
