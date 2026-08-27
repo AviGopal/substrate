@@ -155,6 +155,29 @@ else
   note "response: $(echo "$VALID" | head -c 120)"
 fi
 
+echo "== 3c. the substrate can still manage its own keyspace =="
+# SUBSTRATE_ADMIN_KEY is what /v1/jwt/generate's role gate (SEC-5, a9db360)
+# requires before it will mint the admin JWT that `substrate-key issue|list|revoke`
+# each present. Historically it was written by exactly ONE path —
+# seed-identity.ts's genuine-first-boot branch — so any substrate seeded before
+# that step shipped carries it EMPTY, and key management is unreachable with no
+# way back: the only credential that could mint a replacement is the missing one.
+#
+# Measured on a hub 2026-08-26: an ACTIVE `substrate-admin` row, minted
+# out-of-band through /v1/keys/issue (which returns the plaintext once over HTTP
+# and stores only a hash), with the variable empty in both /etc/substrate/env and
+# .substrate-secrets. The fleet was healthy and every other check passed. Nothing
+# noticed until an operator tried to issue a key — which is why this check exists
+# rather than being left to surface at the moment of need.
+ADMIN_LEN="$(csh "grep -m1 '^SUBSTRATE_ADMIN_KEY=' /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d '\"' | wc -c" 2>/dev/null || echo 0)"
+if [ "${ADMIN_LEN:-0}" -gt 1 ] 2>/dev/null; then
+  ok "SUBSTRATE_ADMIN_KEY present — key management reachable"
+else
+  bad "SUBSTRATE_ADMIN_KEY is EMPTY — this substrate cannot issue, list, or revoke API keys"
+  note "recover from inside the container: substrate-key bootstrap-admin"
+  note "an active admin key may still exist in the datastore; its plaintext is not recoverable"
+fi
+
 echo "== 4. discovery registry =="
 REG="$(csh 'curl -s -m 5 http://127.0.0.1:8100/registry/stats' 2>/dev/null || true)"
 REG_N="$(echo "$REG" | jq -r '.total_vessels // .totalVessels // .registered // empty' 2>/dev/null || true)"

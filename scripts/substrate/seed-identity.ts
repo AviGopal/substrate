@@ -36,6 +36,53 @@ function upsertEnvVar(path: string, key: string, value: string): void {
   writeFileSync(path, updated, { mode: 0o600 });
 }
 
+// Backfill SUBSTRATE_ADMIN_KEY on a substrate that predates it.
+//
+// The admin key is minted below on the GENUINE-FIRST-BOOT path only. A substrate
+// whose org already exists takes the 409 branch and never reaches that code, so
+// every fleet seeded before the admin-key step shipped carries an EMPTY
+// SUBSTRATE_ADMIN_KEY. Once /v1/jwt/generate began gating the requested role by
+// caller entitlement (SEC-5, a9db360), that emptiness became a hard lockout:
+// `substrate-key issue|list|revoke` all fail with "requires admin entitlement",
+// and the only credential that could mint a replacement is the missing one.
+//
+// Measured on syzygy.host 2026-08-26: an active `substrate-admin` row (read,
+// write,admin) minted 2026-07-16 — fifteen days after that substrate's first
+// boot, so not by this seeder — with both files empty. /v1/keys/issue returns the
+// plaintext once over HTTP and stores only a hash; nothing persisted it.
+//
+// Additive by construction: the bootstrap endpoint mints a NEW admin key and
+// revokes nothing, because an orphaned admin row whose plaintext was lost cannot
+// be distinguished from one an operator still holds.
+//
+// Fails OPEN — a substrate that cannot backfill must still finish booting.
+async function ensureAdminKey(fleetKey: string): Promise<void> {
+  if ((process.env.SUBSTRATE_ADMIN_KEY ?? "").length > 0) return;
+  const secret = process.env.API_KEY_SECRET ?? "";
+  if (!secret) {
+    console.warn("[seed-identity] SUBSTRATE_ADMIN_KEY empty and API_KEY_SECRET unset — cannot backfill admin");
+    return;
+  }
+  try {
+    const r = await fetch(`${IDENTITY_URL}/v1/keys/bootstrap-admin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `ApiKey ${fleetKey}` },
+      body: JSON.stringify({ bootstrap_secret: secret, name: "substrate-admin-backfill" }),
+    });
+    const j = (await r.json()) as any;
+    const key: string | undefined = j?.data?.key;
+    if (!r.ok || !key) {
+      console.warn(`[seed-identity] admin backfill failed ${r.status}: ${JSON.stringify(j?.error ?? j)}`);
+      return;
+    }
+    upsertEnvVar("/etc/substrate/env", "SUBSTRATE_ADMIN_KEY", key);
+    upsertEnvVar(SECRETS_FILE, "SUBSTRATE_ADMIN_KEY", key);
+    console.log("[seed-identity] backfilled SUBSTRATE_ADMIN_KEY — key management had been unreachable");
+  } catch (e) {
+    console.warn(`[seed-identity] admin backfill error: ${(e as Error).message}`);
+  }
+}
+
 async function waitForIdentity(maxMs = 30_000): Promise<void> {
   const deadline = Date.now() + maxMs;
   while (Date.now() < deadline) {
@@ -200,6 +247,11 @@ async function main() {
     const existing = currentFleetKey();
     if (existing && await keyAuthenticates(existing)) {
       console.log("[seed-identity] existing key authenticates — nothing to re-issue");
+      // The fleet key being healthy says NOTHING about the admin key: they are
+      // provisioned by different code paths. This is the common case on a
+      // long-lived substrate, so the backfill has to run here too, not only on
+      // the re-issue path below.
+      await ensureAdminKey(existing);
       return;
     }
     console.log(
@@ -219,6 +271,7 @@ async function main() {
     const reissued = await issueKey(token, user_id, org_id, "substrate-default");
     writeFleetKey(reissued);
     console.log("[seed-identity] re-issued substrate-default and wrote it to env + secrets — key consumers must restart");
+    await ensureAdminKey(reissued);
     return;
   }
 
