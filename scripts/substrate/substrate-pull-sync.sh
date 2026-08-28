@@ -961,6 +961,40 @@ EOF
   # TEST GATE BLIND) and converges ungated, which is the designed behaviour for "no
   # instrument" and is now reachable instead of deadlocking before it.
   run_suite() { (cd "$d" && timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test 2>&1) || true; }
+  # Run the suite at an arbitrary ref, NOW, under this tick's conditions.
+  #
+  # The stored baseline is a snapshot taken at some earlier tick; test outcomes here depend on
+  # the environment (the note above records DB-dependent files importing only when
+  # SURREALDB_NAMESPACE is set), so a name that fails under this tick's conditions but was
+  # recorded passing days ago reads as a regression belonging to whatever commit is in front of
+  # the gate. Measuring the PARENT right now removes that confound: parent and candidate are
+  # then compared under one set of conditions, which is what "a test that used to pass and now
+  # fails" actually means. Same correction 17aae9a made for the mitosis cutover gate.
+  #
+  # Isolated in a throwaway worktree so the live clone is never checked out from under a
+  # converge. node_modules is symlinked because a fresh worktree has none and `bun test`
+  # would otherwise fail wholesale — which would subtract everything and turn this into a
+  # fail-open. Callers must treat an implausible result as UNUSABLE, not as "parent was broken".
+  run_suite_at() {
+    local _rsa_ref="$1" _rsa_wt="" _rsa_out=""
+    # SWEEP FIRST. `git worktree remove` was observed failing transiently at the end of a run
+    # (test child processes still holding the directory) and then succeeding on a later retry,
+    # so a single best-effort removal leaks a registered worktree every time that happens.
+    # Reclaim stale ones from previous invocations before adding another; an hour is far longer
+    # than any suite run, so this can never touch a live one.
+    find "${TMPDIR:-/tmp}" -maxdepth 1 -name 'pullsync-base-*' -type d -mmin +60 -exec rm -rf {} + 2>/dev/null || true
+    git -C "$d" worktree prune >/dev/null 2>&1 || true
+    _rsa_wt="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-base-XXXXXX" 2>/dev/null || true)"
+    [ -n "$_rsa_wt" ] || return 1
+    if ! git -C "$d" worktree add --detach "$_rsa_wt" "$_rsa_ref" >/dev/null 2>&1; then
+      rm -rf "$_rsa_wt" 2>/dev/null || true; return 1
+    fi
+    [ -d "$d/node_modules" ] && ln -s "$d/node_modules" "$_rsa_wt/node_modules" 2>/dev/null || true
+    _rsa_out="$( (cd "$_rsa_wt" && timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test 2>&1) || true )"
+    git -C "$d" worktree remove --force "$_rsa_wt" >/dev/null 2>&1 || rm -rf "$_rsa_wt" 2>/dev/null || true
+    git -C "$d" worktree prune >/dev/null 2>&1 || true
+    printf '%s' "$_rsa_out"
+  }
   # D2 FIX. A pass-count DROP alone is not a regression: consolidating or deleting
   # tests legitimately lowers it. Only count it when failures did not ALSO improve,
   # otherwise a genuine repair that removes dead tests is refused as a regression AND
@@ -1042,11 +1076,63 @@ EOF
         NEW2="$(comm -23 <(printf '%s\n' "$T2_NAMES") <(sort -u "$B_NAMES_FILE") 2>/dev/null || true)"
         CONFIRMED="$(comm -12 <(printf '%s\n' "$NEW1" | sort -u) <(printf '%s\n' "$NEW2" | sort -u) 2>/dev/null | grep -c . || true)"
         if [ "${CONFIRMED:-0}" -gt 0 ]; then
-          FIRST_NEW="$(comm -12 <(printf '%s\n' "$NEW1" | sort -u) <(printf '%s\n' "$NEW2" | sort -u) 2>/dev/null | head -1)"
-          REG="$CONFIRMED test(s) that passed at baseline now fail in BOTH runs, e.g. ${FIRST_NEW:-?} (counts: $B_NAMED -> $BEST_F fail)"
+          # CONFIRM AGAINST A FRESHLY-MEASURED PARENT, NOT ONLY THE STORED SNAPSHOT.
+          #
+          # Both runs above are at the CANDIDATE, so intersecting them removes per-run flakes but
+          # cannot remove the confound between the candidate's conditions and the conditions the
+          # stored baseline was recorded under. Observed 2026-08-28: the baseline file was two
+          # days old and held 103 names while a fresh run at HEAD produced 97; the single
+          # genuinely-new failure belonged to 14e530e (which enabled the docs-align accuracy
+          # invariant), yet the gate charged it to e785d13 and refused a commit measured, at the
+          # same commit and its parent under identical conditions, to add zero failing tests.
+          # A name that already fails at the parent RIGHT NOW is not this commit's regression.
+          CONF_SET="$(comm -12 <(printf '%s\n' "$NEW1" | sort -u) <(printf '%s\n' "$NEW2" | sort -u) 2>/dev/null || true)"
+          PARENT_REF="$(git -C "$d" rev-parse --verify --quiet "${HEAD}^" 2>/dev/null || true)"
+          if [ -n "$PARENT_REF" ]; then
+            # BOTH SIDES IN A WORKTREE, NOT ONE OF EACH. Comparing candidate-in-clone against
+            # parent-in-worktree would reintroduce the confound in a new place: the two runs sit
+            # at different filesystem paths, so a path-dependent test failing only under the
+            # worktree would be subtracted from the candidate's set and mask a real regression —
+            # a fail-open, the one direction this gate must never take. Measuring both refs the
+            # same way is what makes the difference attributable to the commit and nothing else.
+            P_OUT="$(run_suite_at "$PARENT_REF" || true)"
+            C_OUT="$(run_suite_at "$HEAD" || true)"
+            P_PASS="$(count_pf "$P_OUT" pass)"; C_PASS="$(count_pf "$C_OUT" pass)"
+            if [ -n "${P_PASS:-}" ] && [ "${P_PASS:-0}" -gt 0 ] && [ -n "${C_PASS:-}" ] && [ "${C_PASS:-0}" -gt 0 ]; then
+              P_NAMES="$(fail_names "$P_OUT")"; C_NAMES="$(fail_names "$C_OUT")"
+              # INTERSECT with the two-run set, do not replace it. The overlay runs each ref
+              # once, so adopting its difference wholesale would discard the flake confirmation
+              # already earned above and let a single-run overlay flake read as attributable.
+              # A name must now clear BOTH filters: failing in both candidate runs against the
+              # stored baseline, AND failing at the candidate but not the parent under identical
+              # conditions. Strictly stronger than either test alone.
+              OVL_NEW="$(comm -23 <(printf '%s\n' "$C_NAMES" | sort -u) <(printf '%s\n' "$P_NAMES" | sort -u) 2>/dev/null || true)"
+              CONF_SET="$(comm -12 <(printf '%s\n' "$CONF_SET" | sort -u) <(printf '%s\n' "$OVL_NEW" | sort -u) 2>/dev/null || true)"
+              CONFIRMED="$(printf '%s' "$CONF_SET" | grep -c . || true)"
+              log "$v: overlay comparison ${PARENT_REF:0:10} -> ${HEAD:0:10} under identical conditions — $(printf '%s' "$P_NAMES" | grep -c . || true) failing at parent, $(printf '%s' "$C_NAMES" | grep -c . || true) at candidate, ${CONFIRMED:-0} attributable to this commit"
+            else
+              # UNUSABLE, NOT CLEAN. A run with no passing tests means the measurement failed
+              # (missing deps, timeout), not that the tree was healthy. Subtracting on that basis
+              # would wave every candidate through, so keep the stored-baseline refusal instead.
+              log "$v: overlay re-measure UNUSABLE (parent pass=${P_PASS:-none}, candidate pass=${C_PASS:-none}) — keeping the stored-baseline verdict rather than failing open"
+            fi
+          fi
+        fi
+        if [ "${CONFIRMED:-0}" -gt 0 ]; then
+          FIRST_NEW="$(printf '%s' "${CONF_SET:-}" | grep -m1 . || true)"
+          REG="$CONFIRMED test(s) newly failing in both candidate runs and attributable to this commit, e.g. ${FIRST_NEW:-?} (counts: $B_NAMED -> $BEST_F fail)"
           REG_F="$BEST_F"; REG_P="${BEST_P:-0}"
         else
           log "$v: newly-failing tests did not reproduce on re-run — flake, converging (run1 $(printf '%s' "$NEW1" | grep -c . || true) new, run2 $(printf '%s' "$NEW2" | grep -c . || true) new, intersection 0)"
+          # UNFREEZE THE BASELINE. The refresh used to live only in the no-newly-failing branch
+          # below, so any persistently newly-failing name pinned the stored baseline forever and
+          # every later commit was judged against an ever-staler reference. Observed 2026-08-28:
+          # the file was two days old (103 names vs 97 on a fresh run) because one docs-align
+          # accuracy test kept the gate on this path every tick. When the gate has decided to
+          # converge, the tree it converged is the new reference — otherwise the same drift is
+          # re-litigated, and re-charged to an innocent commit, on every subsequent tick.
+          printf '%s\n' "$T_NAMES" > "$B_NAMES_FILE"
+          echo "$T_FAIL ${T_PASS:-0}" > "$TEST_BASELINE_DIR/$v"
         fi
       else
         # No newly-failing test. Re-baseline whenever the SET changed at all, so a suite that
