@@ -46,7 +46,8 @@ Every row below locates itself on that chain. Work that does not is deferred.
 |---|---|---|---|---|
 | 1 | **Floor: parity with a ReAct agent.** "No goal should be structurally out of reach just because no learned pathway exists yet" (`CLAUDE.md`) | Dispatch goals; a family reaching 0% over a meaningful n falsifies parity | **FALSIFIED** for the edit-intent family | Edit-file goals: **0 reaches / 41 attempts / 16 distinct goals** (24h). Non-edit goals reach 52%, so the walk machinery is not the limiter |
 | 2 | **Reach ~90% regardless of priors** (`CLAUDE.md`, "Reach is mechanism correctness") | Reach rate over all dispatched goals | **FALSIFIED** | **10%** per attempt (20/196); **22%** per distinct goal (14/65). Both far below 90% |
-| 3 | **Ceiling: a repeated task runs over its learned pathway** | Dispatch an identical goal twice; second run must reuse the recorded path | **UNTESTABLE AS TRUE** | Reuse is computed but **never persisted**: `[goal-host] REUSE LINEAGE (not yet storable)`, `index.ts:5628`, whose own comment says "Emitted, not transmitted… must at least be greppable until the store can hold it." 8 occurrences in 24h. Nothing in the store can confirm or deny reuse |
+| 3a | **Ceiling — reuse OCCURRENCE: a repeated task runs over a learned pathway** | `walk_tier ≠ fresh_derivation` on the second run | **TESTABLE — experiment not yet run** | *Corrected 2026-08-29: this row originally read UNTESTABLE, which was overstated.* `walk_tier` **is** persisted and readable (`goal-paths.ts:605/627/677`, `schemas.ts:759/794`; migration 181). Occurrence was measurable all along |
+| 3b | **Ceiling — reuse ATTRIBUTION: *which* pathway was borrowed** | Store row carries the donor's goal hash | **WAS UNTESTABLE → repaired, awaiting first natural event** | Reuse was computed then discarded to a log line: `[goal-host] REUSE LINEAGE (not yet storable)`, `index.ts:5628`, ~8/day. Receiver landed `4e0d27a` (fields + migration 204 + read schema); sender pending deploy gate |
 | 4 | **Middle: a similar task reuses the pathway and walks only the difference** | Dispatch a near-miss variant; must reuse the body, walk only entry/exit | **NOT YET RUN** — blocked on row 3 | Cannot be measured while reuse is unstorable. Prior evidence is adverse: the autonomy boundary "rebinds on wording" (operator memory, 2026-08-12) |
 | 5 | **Law 4: activities are earned by extraction from reached executions, not declared** | Count ribosome extractions vs skips | **HOLDS, and is starved** | Ribosome skipped **942 of ~1698** in 6h, every one "not honestly reached". The mechanism is correct and refuses to mint from unreached work; it has nothing to eat. **0 new templates**, mutation rate 0/h |
 | 6 | **The reach gate is honest — it grades the goal, not the exit status** | Find a landed commit whose goal booked `reached=false`; check whether the commit did anything | **HOLDS** | `5c08dd6` landed for the fossil-rank gap; all 7 of that gap's verdicts were `reached=false`. The commit adds **only two import lines**, 3 insertions, no behaviour change; gap still open at `failed_attempts=6`. `reached=false` was correct |
@@ -62,10 +63,14 @@ Every row below locates itself on that chain. Work that does not is deferred.
 **Rows 1 and 2 are the architecture's headline claims, and both are falsified by direct
 measurement.** Not marginally: 0% against a parity claim, 10% against 90%.
 
-**Rows 3 and 4 are worse than falsified — they are untestable.** Pathway reuse, the mechanism
-by which the architecture claims learning compounds, is computed and then discarded to a log
-line. The ceiling claim currently cannot be evaluated in either direction, and that is a
-structural property of the system, not of the measurement.
+**Rows 3b and 4 were worse than falsified — untestable.** Reuse ATTRIBUTION, the mechanism by
+which the architecture claims learning compounds, was computed and then discarded to a log line.
+Repaired 2026-08-29 (`4e0d27a`); the first natural event is the confirmation.
+
+*Correction:* row 3 originally claimed reuse was wholly untestable. That was overstated —
+`walk_tier` has been persisted and readable since migration 181, so reuse **occurrence** was
+always measurable; only **attribution** was not. Split into 3a/3b. Recorded rather than edited
+away, because a matrix that quietly revises its own verdicts is not a falsification instrument.
 
 **Rows 5, 6 and 10 are the encouraging half, and they matter.** The honest mechanisms are
 honest: the ribosome refuses to extract from unreached work, the reach gate refuses to credit
@@ -83,7 +88,7 @@ compounds through pathway reuse — is not currently falsifiable at all.
 
 ## Rows not yet run
 
-- **Ceiling experiment (row 3/4).** Dispatch an identical goal twice, then a near-miss variant.
+- **Ceiling experiment (rows 3a/3b/4).** Dispatch an identical goal twice, then a near-miss variant.
   Criterion, declared now: the second dispatch must show a `walkTier` other than
   `fresh_derivation` **and** a lower cost. Blocked until reuse persists.
 - **Law-7 recheck (row 7).** Re-measure closure excluding `expired_not_redetected`, over the

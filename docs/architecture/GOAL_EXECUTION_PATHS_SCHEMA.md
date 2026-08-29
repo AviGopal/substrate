@@ -53,12 +53,20 @@ goal_execution_paths {
   avg_token_usage: number     // rolling mean, floored to int
   last_inference_confidence: number | null
   walk_tier: string | null    // learned_pathway | satisfier | universal_tool_fallback | feature_compose | fresh_derivation
+  reused_from_goal_hash: string | null       // WHICH pathway this walk borrowed
+  reused_from_path_signature: string | null  // ...and which of that goal's paths
 }
 ```
 
 `ev` is a computed field (`VALUE 1.0 * (thompson_alpha ?? 1) / ((thompson_alpha ?? 1) + (thompson_beta ?? 1))`) — the `1.0 *` is what keeps it out of integer division. Every counter, posterior and rolling mean is incremented **inside a single SQL `UPDATE`** against the row's pre-update state, not read-modify-written in application code: two executions of the same goal landing concurrently would otherwise lose one increment.
 
 `walk_tier` makes a goal's fresh-derivation → learned-reuse transition legible. It is worth its own note because it demonstrates the SCHEMAFULL hazard above: the producer sent it long before a `DEFINE FIELD` existed for it, so it read as null on every row until the field was defined.
+
+`reused_from_goal_hash` / `reused_from_path_signature` record **which** pathway a walk borrowed. `walk_tier` already said a walk reused *something*; without these, reuse **attribution** was unrecoverable, so the architecture's ceiling claim — that a repeated task runs over its learned pathway — could not be evaluated in either direction.
+
+They are deliberately **not** `parent_goal_hash` / `parent_path_signature`. That pair means SUB-GOAL lineage and carries the CC1 scope-narrowing assertion (`sql/migrations/100-cc1-scope-narrowing-assert.surql`): a child must produce a **subset** of the parent's `endpoint_output_shapes`. Borrowed-pathway reuse is the opposite relation — a donor is accepted at cover ≥ 0.5, so by construction up to half the reusing walk's shapes lie *outside* the donor's. Measured once on a REACHED 2-step reuse: sending `parent_*` did not add lineage, it **destroyed the record** with a 400. The reuse fields carry no scope assertion; CC1 is untouched and still applies to `parent_*`.
+
+The `UPDATE` writes them as `$x ?? x`, so a later non-reusing run of the same path cannot erase the evidence that the pathway was once borrowed.
 
 ### Per-Goal Record & Reuse (2026-06)
 
