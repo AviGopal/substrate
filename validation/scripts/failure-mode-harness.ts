@@ -443,13 +443,53 @@ async function main(): Promise<void> {
     `failure-mode-harness: ${scenarios.length} scenarios against ${endpoint}`,
   );
 
+  // SKIP AND REPORT, DO NOT FATAL (2026-08-29).
+  //
+  // A scenario without `expected_emergence.activity_signature` threw a TypeError inside
+  // runScenario and killed the whole process, so ONE malformed scenario silenced the entire
+  // harness. Measured: 118 of 125 scenarios in validation/failure-modes/scenarios/ have
+  // `expected_emergence: null`, and the first one alphabetically is one of them — so the
+  // harness had been dead on arrival for every invocation, which is consistent with the
+  // substrate's own health report carrying `optimality_measured: false` and a last harness
+  // run of 2026-08-19.
+  //
+  // The 7 usable scenarios are the hand-authored 63-mode matrix entries (fm-17, fm-43, fm-44,
+  // fp-11, fp-12, fp-15, loop-c-*). The 118 unusable ones are AUTO-GENERATED from gaps — they
+  // carry source_gap_id / source_gap_source and timestamped ids. The system has been
+  // generating validation scenarios that its own validator cannot consume.
+  //
+  // A harness that dies cannot report its own coverage; a harness that skips can. That is the
+  // whole point: "94 of 125 scenarios are unusable" is a MEASUREMENT, and silence is not.
+  // Unusable scenarios are counted and named in the report rather than being dropped
+  // silently, because a shrinking denominator that nobody can see is how a validation gate
+  // reads green while validating nothing.
   const outcomes: ScenarioOutcome[] = [];
+  const skipped: Array<{ id: string; reason: string }> = [];
   for (const s of scenarios) {
+    const sig = (s as { expected_emergence?: { activity_signature?: unknown } }).expected_emergence?.activity_signature;
+    if (!sig) {
+      skipped.push({ id: s.id, reason: "no expected_emergence.activity_signature — cannot score emergence" });
+      console.log(`  ${s.id} … SKIPPED (no expected_emergence.activity_signature)`);
+      continue;
+    }
     process.stdout.write(`  ${s.id} … `);
-    const o = await runScenario(endpoint, apiKey, s);
-    outcomes.push(o);
+    try {
+      const o = await runScenario(endpoint, apiKey, s);
+      outcomes.push(o);
+      console.log(
+        `${o.emergence_class}${o.matched_existing_activity_id ? ` (${o.matched_existing_activity_id})` : ""}`,
+      );
+    } catch (err) {
+      // One scenario's failure is a data point, not a reason to lose the other 124.
+      skipped.push({ id: s.id, reason: `threw: ${(err as Error).message.slice(0, 160)}` });
+      console.log(`THREW (${(err as Error).message.slice(0, 80)})`);
+    }
+  }
+  if (skipped.length) {
     console.log(
-      `${o.emergence_class}${o.matched_existing_activity_id ? ` (${o.matched_existing_activity_id})` : ""}`,
+      `\nfailure-mode-harness: ${outcomes.length}/${scenarios.length} scenarios SCORED, ${skipped.length} unusable — ` +
+      `the harness's effective coverage is ${((100 * outcomes.length) / Math.max(1, scenarios.length)).toFixed(0)}%, ` +
+      `not ${scenarios.length} scenarios.`,
     );
   }
 
@@ -478,7 +518,14 @@ async function main(): Promise<void> {
       gap: tally.gap,
       avg_self_heal_seconds: healCount > 0 ? totalHeal / healCount : null,
     },
-  };
+    // COVERAGE IS PART OF THE VERDICT, NOT A FOOTNOTE. Without these fields a report over 7
+    // scored scenarios is indistinguishable from a report over all 125 — the denominator
+    // disappears and a 94%-unusable harness reads as a clean run.
+    scenarios_offered: scenarios.length,
+    scenarios_skipped: skipped.length,
+    coverage_fraction: scenarios.length > 0 ? outcomes.length / scenarios.length : 0,
+    skipped: skipped.slice(0, 200),
+  } as HarnessReport;
 
   const outPath =
     values.out ??
