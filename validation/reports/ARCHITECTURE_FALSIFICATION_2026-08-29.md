@@ -48,7 +48,7 @@ Every row below locates itself on that chain. Work that does not is deferred.
 | 2 | **Reach ~90% regardless of priors** (`CLAUDE.md`, "Reach is mechanism correctness") | Reach rate over all dispatched goals | **FALSIFIED** | **10%** per attempt (20/196); **22%** per distinct goal (14/65). Both far below 90% |
 | 3a | **Ceiling — reuse OCCURRENCE: a repeated task runs over a learned pathway** | `walk_tier ≠ fresh_derivation` on the second run | **TESTABLE — experiment not yet run** | *Corrected 2026-08-29: this row originally read UNTESTABLE, which was overstated.* `walk_tier` **is** persisted and readable (`goal-paths.ts:605/627/677`, `schemas.ts:759/794`; migration 181). Occurrence was measurable all along |
 | 3b | **Ceiling — reuse ATTRIBUTION: *which* pathway was borrowed** | Store row carries the donor's goal hash | **WAS UNTESTABLE → repaired, awaiting first natural event** | Reuse was computed then discarded to a log line: `[goal-host] REUSE LINEAGE (not yet storable)`, `index.ts:5628`, ~8/day. Receiver landed `4e0d27a` (fields + migration 204 + read schema); sender pending deploy gate |
-| 4 | **Middle: a similar task reuses the pathway and walks only the difference** | Dispatch a near-miss variant; must reuse the body, walk only entry/exit | **NOT YET RUN** — blocked on row 3 | Cannot be measured while reuse is unstorable. Prior evidence is adverse: the autonomy boundary "rebinds on wording" (operator memory, 2026-08-12) |
+| 4 | **Middle / Ceiling: a similar task reuses the pathway and walks only the difference** | Dispatch a near-miss variant; must reuse the body, walk only entry/exit | **FALSIFIED BY CONSTRUCTION for the majority pathway class** (from code + counts, not from void E1) | `index.ts:12498` computes a reaching pathway, then **declines to pin satisfier-headed ones** because a `satisfier:<shape>` pseudo-id is not in the template catalogue and pinning it 404s the dispatch — so it "falls through to the ordinary shape-directed selection", i.e. re-derives. The same comment records **63.5% of accepted pathways are satisfier-only** and satisfier ids are ~40% of path steps. Corroborated: of 200 sampled rows, `walk_tier` = satisfier 70, learned_pathway **9**. The pathway is recommended, logged, and discarded |
 | 5 | **Law 4: activities are earned by extraction from reached executions, not declared** | Count ribosome extractions vs skips | **HOLDS, and is starved** | Ribosome skipped **942 of ~1698** in 6h, every one "not honestly reached". The mechanism is correct and refuses to mint from unreached work; it has nothing to eat. **0 new templates**, mutation rate 0/h |
 | 6 | **The reach gate is honest — it grades the goal, not the exit status** | Find a landed commit whose goal booked `reached=false`; check whether the commit did anything | **HOLDS** | `5c08dd6` landed for the fossil-rank gap; all 7 of that gap's verdicts were `reached=false`. The commit adds **only two import lines**, 3 insertions, no behaviour change; gap still open at `failed_attempts=6`. `reached=false` was correct |
 | 7 | **Law 7: gap closure is durable repair, not bookkeeping** | Closure rate excluding TTL expiry | **FALSIFIED (prior measurement, 2026-08-28)** | 1332 gaps / 914 closed: **631 (69%) `expired_not_redetected`**, only **17 (1.9%) repair-verified**. Excluding expiry is mandatory or the metric is an artifact |
@@ -80,9 +80,22 @@ is failing loudly rather than reading green — which is what makes rows 1–4 t
 **Row 8 is the meta-finding.** The instrument the architecture names as its validation path was
 inoperable, and could not report that it was inoperable. Its coverage is 1%.
 
-The single highest-leverage repair is **row 3**: make reuse storable. Until then the ceiling and
-middle claims cannot be tested, which means the architecture's central thesis — that learning
-compounds through pathway reuse — is not currently falsifiable at all.
+**Row 4 is now the sharpest result in the matrix, and it did not come from an experiment.** It
+came from reading why E1's near-miss failed to borrow: the system successfully *recommends* a
+pathway and then declines to *use* it whenever the pathway's head is a `satisfier:` pseudo-id,
+because pinning one 404s the dispatch. That is 63.5% of accepted pathways. The architecture's
+compounding mechanism is not weakly effective for the dominant class — it is bypassed.
+
+Note the shape of that finding: reuse was made *storable* (rows 3a/3b) and the very first
+attempt to use the instrument revealed that the thing being measured largely does not happen.
+That is the instrument working.
+
+**A trap worth recording:** the obvious "fix" — passing the recommended pathway as lineage at
+`recordGoalPath` — would be wrong and would manufacture the result. The function's own doc
+comment states law 12: "Only ever pass a parent when a pathway step was genuinely used.
+Recording the pathway the walk was OFFERED rather than the one it took would manufacture exactly
+the correlation that makes reuse look effective." The current `null` is correct. The repair
+belongs at the pinning site, not the recording site.
 
 ---
 
