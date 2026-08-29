@@ -134,3 +134,39 @@ nothing about reuse; re-run with a different A/B pair.
 **Known confounder, declared in advance.** Reuse fires ~8/day naturally, so a lineage row
 appearing during the window is not necessarily attributable to this experiment. Attribution is
 by A's specific `goal_hash`, not by "a lineage row appeared."
+
+### E1 result — INVALID BY ITS OWN RULE (criterion under-specified). Run 2026-08-29 03:13Z
+
+**A** = `produce a system_load_report` → `goal_hash 0441a5bee95b682a`, `walk_tier satisfier`,
+25 executions, success_rate 1.
+**B** = `produce a system_load_report for the current substrate host` → `goal_hash
+886234c90d28c9c6`, reached (success_rate 1), two rows: `walk_tier satisfier` and
+`walk_tier universal_tool_fallback`. **`reused_from_goal_hash: null`** on both. Zero
+`REUSE LINEAGE (transmitted)` lines in the window.
+
+**Against the declared arms:**
+
+| arm | required | observed | match |
+|---|---|---|---|
+| PASS 3b | lineage == A's hash | null | no |
+| PASS 4 | 3b **and** tier ≠ fresh_derivation | 3b failed | no |
+| FALSIFIED 4 | reached **and** tier == `fresh_derivation` **and** no lineage | reached, no lineage, but tier was `satisfier` / `universal_tool_fallback` | **no** |
+| INCONCLUSIVE | did not reach, or no row | reached, rows present | no |
+
+**The criterion set was not exhaustive.** I assumed the only alternative to reuse was
+`fresh_derivation`; the walk in fact reached via the *satisfier* and *tool-fallback* tiers,
+which are non-reuse routes my arms never enumerated. Per this document's own method rule, a
+criterion amended after seeing the result invalidates the run — so **E1 is void and is re-run
+below as E2**, rather than being reclassified into an arm it does not fit.
+
+**Substantively, and stated separately from the verdict:** B reached *without* borrowing A's
+pathway. That is consistent with the middle claim being false for this pair, but E1 cannot
+carry that conclusion, because a criterion written after the fact is exactly the Goodhart
+pattern this matrix exists to avoid.
+
+**New hypothesis raised by the result, to be tested before E2 is meaningful.** Both A and B
+reached via `satisfier`. If the satisfier route short-circuits *before* pathway matching is
+attempted, then reuse can never fire for satisfier-reachable goals — and 70 of 200 sampled rows
+are `satisfier`. That would be a structural explanation for reuse firing only ~8/day, and it
+would make E2 with a satisfier-reachable pair untestable by construction. **Test the
+pre-emption question first; choose the E2 pair accordingly.**
