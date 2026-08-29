@@ -132,3 +132,131 @@ the operator supplies facts and verdicts, not commits.
 **The order is not negotiable.** Unsealing (4) before fixing the prescription (2) mints poison
 producers. Trusting the worklist (1) before auditing the counts inherits a false one. And doing
 any of it before step 0 means measuring the result with instruments that cannot report failure.
+
+---
+
+# Execution: what is needed, what we expect, how we know
+
+Baselines measured 2026-08-29 06:40Z. **Every expectation below is written before the change
+lands.** A signal chosen after seeing the result proves nothing — that rule voided experiment E1
+earlier tonight and it applies here.
+
+**Baselines.** ungrounded refusals **32/3h** · empty-spec composes **28/3h** · compose-cap
+refusals **191/3h** · `hopeless_excluded` **83** · `learned_pathway` **14/400** · rows with reuse
+lineage **0** · orphan prescriptions saying "author" **114/114** · `invoked_resolver_count`
+**394** vs `live_shape_count` **389** · lift gate passing at **2/4 pairs**.
+
+**Who does each step.** The system implements; the operator supplies facts it cannot derive and
+verdicts it cannot self-issue. Direct intervention only after a step fails **twice** — counted
+per gap as exemption spends, not as `failed_attempts` (which is surprise-weighted ×2 and
+over-counts).
+
+---
+
+### Step −1 · Stop the lane starving itself · `feature-compose-entry-point-accepts-an-empty-pointer-and-claims-a-slot`
+
+**Needed.** Apply the `gap_compose` guard (`impulses.ts:450-460`) to the `feature_compose` case
+at `:462`: derive spec from `spec/goal/description/gap.summary/gap.title`, return the
+`missing_input` structuredError **before** claiming a slot.
+
+**Expect.** Empty-spec composes stop reaching the grounding gate. Because the compose cap is 1–2
+and each empty compose holds a slot, throughput for every other gap rises.
+
+**Know.** `spec_len: 0` composes → **0**; ungrounded refusals with `gap=none` → **near 0** (from
+32/3h); compose-cap refusals fall materially from **191/3h**. Counter-check: total composes
+should *not* fall by 28 — the slots should be taken by real work instead.
+
+**First, because** it is the cheapest change with the widest effect, and every later measurement
+is quieter once it lands.
+
+### Step 0 · Instruments that cannot fail honestly · `lift-gate-confidence-term-passes-when-activity-drops`
+
+**Needed.** A minimum-sample floor on `confidence_passing` returning **null**, not false
+(`substrate-health-tick.ts:351`). Operator has supplied the predicate, the file's own null-idiom,
+and the two anti-patterns, via the escalation channel.
+
+**Expect.** A quiet hour reports `overall_passing: null` ("couldn't measure") rather than `true`.
+
+**Know.** Re-read the health tick during low activity: `total_pairs < floor` yields
+`confidence_passing: null` and `overall_passing: null`. Decisive counter-check: the **2/4**
+reading that passes today must **not** pass at any denominator.
+
+**Status.** 1 attempt, failed. Exemption 2 of 3 remaining.
+
+### Step 1 · Trust the sensor before trusting its worklist · `orphan-scan-misses-resolver-to-resolver-consumers-...`
+
+**Needed.** Count consumption from both surfaces (activity-corpus *and* resolver→resolver), and
+reconcile the two populations being divided.
+
+**Expect.** Genuinely-consumed resolvers stop being reported as orphans; the count becomes
+coherent.
+
+**Know.** `orphaned-capability-uiQuestion` **stops being emitted** (it is consumed by
+`solicitation_outcome_scan` today and still flagged) — a single decisive test. And
+`invoked_resolver_count ≤ live_shape_count`, from **394 > 389**.
+
+**Before step 2's worklist is believable**, because a false worklist is the likeliest explanation
+of 346 attempts / 0 lands.
+
+### Step 2 · Rewire, don't mint · `orphan-gaps-prescribe-minting-a-consumer-...`
+
+**Needed.** Emitted `suggested_remediation` becomes rewire-first, and the gap carries what a
+rewire needs: the producer's actual write surface and the candidate consumers already referencing
+that shape.
+
+**Expect.** Orphan gaps become actionable as wiring repairs rather than as mint requests.
+
+**Know.** Newly emitted orphan gaps name ≥1 candidate consumer and a target surface — from
+**0/114** today. Share of orphan-derived commits that add a new activity falls.
+
+**Hard ordering constraint.** This must land **before** the category is unsealed. Unsealing first
+converts a blocked queue into **42 poison producers**, which is worse than the blockage.
+
+### Step 3 · The capability the composer lacks · openspec proposal, not code
+
+**Needed.** Specify the cross-vessel procedure executed by hand for reuse lineage: receiver →
+gate on the **running** copy (artifact in `/vessels` + `MainPID` moved) → sender carrying a
+degrade-on-old-receiver retry → verify at the consumer.
+
+**Expect.** A wiring repair spanning two vessels becomes landable at all. Today it is not: the
+composer is single-file by design and a wiring defect is inherently multi-surface.
+
+**Know.** One two-vessel repair lands through the system with the deploy gate observed between
+halves. Until then this is the best-supported explanation of 346/0 that is *not* yet proven.
+
+### Step 4 · Unseal per gap, on evidence · demonstrated 2026-08-29
+
+**Needed.** Nothing further — the mechanism exists and ran end to end tonight.
+
+**Know.** Already observed: sealed → escalated → answered → disposition applied → **picked by the
+selector**, with `hopeless_excluded` 79 → 78, exactly one. The category stayed sealed for
+everyone else, which is the property that makes it safe.
+
+**Blocked for other operators by** `escalation-disposition-parser-rejects-its-own-verb-names`: an
+answer beginning `PROVIDE_INFORMATION` is silently a no-op, and those underscored identifiers are
+what the system writes into every gap record.
+
+### Step 5 · Verification standard · already in force
+
+**Needed.** Every wiring repair verified **at the consumer**, round-trip, with both failure modes
+pinned separately: *accepted but not stored* (SCHEMAFULL drops undefined fields) and *stored but
+not returned* (response schema strips unknown keys).
+
+**Know.** The template exists and is green: `POST → 200 → GET → field present`, plus a negative
+control proving the neighbouring CC1 assertion still rejects.
+
+---
+
+## The end condition
+
+**Done is not "the five gaps closed."** Done is: **a wiring repair travels from detection to a
+landed, consequence-verified change without operator hands on the commit.** That is the loop
+closing, and it is the only outcome that distinguishes a repaired channel from five repaired
+instances.
+
+## What would falsify this plan
+
+If all five fail twice under the intervention rule, the loop is not repairable from inside, and
+the honest conclusion becomes that these specific changes must be operator-authored. That is a
+worse answer than the one this plan pursues — and it is exactly why the rule is set at two, and
+why the counter is exemption spends rather than a metric that can be inflated.
