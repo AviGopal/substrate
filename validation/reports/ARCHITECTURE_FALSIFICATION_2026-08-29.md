@@ -183,3 +183,47 @@ attempted, then reuse can never fire for satisfier-reachable goals — and 70 of
 are `satisfier`. That would be a structural explanation for reuse firing only ~8/day, and it
 would make E2 with a satisfier-reachable pair untestable by construction. **Test the
 pre-emption question first; choose the E2 pair accordingly.**
+
+---
+
+## Experiment E2 — the ceiling claim (row 3a). Criteria declared 2026-08-29 03:25Z, before dispatch
+
+**What E1 got wrong, and what changed.** E1's arms were not exhaustive: the FALSIFIED arm
+required `walk_tier == fresh_derivation`, assuming that was the only alternative to reuse. The
+walk in fact reached via `satisfier`. **E2's arms partition `walk_tier`'s complete enum**
+(`tierOf`, `index.ts:5578`: `learned_pathway | satisfier | universal_tool_fallback |
+feature_compose | fresh_derivation`), so every possible outcome lands in exactly one arm.
+
+**Subject, chosen from data rather than invented.** Row 4 established that satisfier-headed
+pathways are recommended and then discarded, so a satisfier-headed subject cannot test the
+ceiling — it is falsified by construction before the dispatch. Of 400 sampled rows, **335 (84%)
+are satisfier-headed, 13 universal-tool-fallback, only 52 template-headed.** The subject is one
+of the 52:
+
+> `run the coverage-tick activity to measure substrate topology coverage and emit a coverageReport`
+> `goal_hash 227c8f97d4d50fde` · `path_signature 7793c55c14d7e0c5`
+> `path_activities: ["development-vessel:coverage-tick"]` — a **real template head**
+> 2 executions, success_rate **1.0**, avg_duration **48903 ms**, avg_cost **0**
+
+A proven, non-satisfier pathway already exists for this exact goal text. This is the ceiling
+claim's most favourable case: if reuse does not fire here, it does not fire.
+
+**Procedure.** Dispatch the goal verbatim, once. Identical text coalesces, so serial by
+construction. Then re-read the row.
+
+**Arms — exhaustive, one outcome each:**
+
+| arm | condition | reading |
+|---|---|---|
+| **PASS** | new row `walk_tier == learned_pathway` | ceiling holds: the repeat ran over the learned pathway |
+| **FALSIFIED-a** | `walk_tier == fresh_derivation` | re-derived from scratch despite a proven pathway |
+| **FALSIFIED-b** | `walk_tier == satisfier` | bypassed its own template pathway for the satisfier plane |
+| **FALSIFIED-c** | `walk_tier == universal_tool_fallback` | fell to the ReAct floor despite a proven pathway |
+| **FALSIFIED-d** | `walk_tier == feature_compose` | routed to compose; not a reuse of this pathway |
+| **INCONCLUSIVE** | no new execution recorded (`total_executions` unchanged), or no reach | says nothing about reuse; re-run |
+
+**Secondary observations, recorded but NOT verdict-bearing** (they have no pre-declared
+threshold, so they cannot be used to argue a result): `total_executions` increments from 2;
+duration versus the 48903 ms baseline; whether `reused_from_goal_hash` is populated — this is a
+same-goal repeat, and lineage fires on CROSS-goal borrowing, so its absence here is expected and
+is **not** evidence against row 3b.
