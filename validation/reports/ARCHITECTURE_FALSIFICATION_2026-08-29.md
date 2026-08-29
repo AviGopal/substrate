@@ -227,3 +227,37 @@ threshold, so they cannot be used to argue a result): `total_executions` increme
 duration versus the 48903 ms baseline; whether `reused_from_goal_hash` is populated — this is a
 same-goal repeat, and lineage fires on CROSS-goal borrowing, so its absence here is expected and
 is **not** evidence against row 3b.
+
+### E2 result — **FALSIFIED-b**. Run 2026-08-29 04:53Z
+
+Dispatch `310defa1` reached (`reached: true`), via `selectedTemplateId: satisfier:coverage_tick`,
+`executionId walk-satisfier-1-1787979187730`.
+
+Store rows for the identical goal text afterwards:
+
+| path_signature | path_activities | walk_tier | execs | updated_at |
+|---|---|---|---|---|
+| `7793c55c14d7e0c5` | `["development-vessel:coverage-tick"]` | *(none)* | **2** | **2026-06-30** |
+| `c4d0dc60cbff6b95` | `["satisfier:coverage_tick"]` | **satisfier** | 1 | 2026-08-29 04:53:28 |
+| `7dae833af19b717d` | `["universal-tool-fallback"]` | universal_tool_fallback | 1 | 2026-08-29 04:53:48 |
+
+**The proven pathway was not touched.** Row `7793c55c14d7e0c5` — the real template head, 2
+executions, success_rate 1.0 — still reads 2 executions and is still stamped **2026-06-30**, two
+months stale. The repeat did not run over it. It minted two new paths instead.
+
+**Arm: FALSIFIED-b** (`walk_tier == satisfier` — bypassed its own template pathway for the
+satisfier plane). Unambiguous, and the arm was declared before dispatch.
+
+**This was the ceiling claim's most favourable case.** Identical goal text, a pathway that had
+already succeeded twice, a real template head — the one class of the 52/400 where reuse is even
+possible. It did not fire.
+
+**Row 3a verdict: FALSIFIED.** Together with row 4 (falsified by construction for the 84%
+satisfier-headed majority), the architecture's compounding mechanism does not engage: not for
+the dominant pathway class, and not for a proven pathway on an exact-match repeat.
+
+**Method note against myself.** The E2 watcher waited for `total_executions > 2` on a row for
+this goal, which could never fire — the satisfier route created a NEW row at 1 rather than
+incrementing the existing one. The verdict came from reading the store directly. The watcher
+condition assumed reuse in order to detect its absence, which is the same class of error as
+E1's non-exhaustive arms: an instrument that can only observe the outcome it expects.
