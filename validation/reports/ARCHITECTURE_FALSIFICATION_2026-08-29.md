@@ -261,3 +261,34 @@ this goal, which could never fire — the satisfier route created a NEW row at 1
 incrementing the existing one. The verdict came from reading the store directly. The watcher
 condition assumed reuse in order to detect its absence, which is the same class of error as
 E1's non-exhaustive arms: an instrument that can only observe the outcome it expects.
+
+---
+
+## Experiment E3 — where does a fully-grounded edit die? Criteria declared 2026-08-29 07:15Z
+
+**Question.** The edit-intent lane reaches 0/41. Two hypotheses remain and they imply opposite
+amounts of work:
+- **narrow** — the plan is correct and the APPLY step produces nothing (verified conclusively once:
+  `fc-mtdjmgy3-l02un3`, a correctly-planned 2-edit patch whose workspace came out byte-identical
+  to HEAD, no refusal logged);
+- **wide** — the drafter cannot make small edits to this codebase even fully grounded.
+
+**Method.** Inspect the compose workspace **before any gate sees it**. Gates are downstream; a
+workspace diff isolates plan-and-apply from verification. Subject is a real, tiny, single-file
+change whose correct answer is known in advance, so a wrong edit is distinguishable from no edit:
+widen `parseDisposition` to accept the underscored verb names it already uses
+(`escalation-disposition-apply.ts`), filed as
+`escalation-disposition-parser-rejects-its-own-verb-names`.
+
+**Arms — exhaustive:**
+
+| arm | observation in `/workspace/git/compose/<id>/` | reading |
+|---|---|---|
+| **A — APPLY** | workspace **byte-identical** to HEAD after a plan was logged | narrow bottleneck: plan correct, apply inert |
+| **B — DRAFTER** | workspace differs, but the edit is wrong/incomplete | wide bottleneck: drafting is the limiter |
+| **C — GATES** | workspace contains the correct edit | compose works; the 0/41 is downstream verification |
+| **D — UPSTREAM** | no workspace, or no `fc-plan` for the file | grounding/dispatch, not compose — a different problem |
+
+**Pre-declared reading of A vs C.** A means one narrow fix could unblock the lane and, through it,
+extraction and posterior accumulation. C means the lane is blocked by gates I have already been
+modifying tonight, and the honest next step is auditing my own changes rather than the drafter.
