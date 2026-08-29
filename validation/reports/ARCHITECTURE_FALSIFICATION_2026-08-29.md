@@ -101,3 +101,36 @@ Every falsified row files a gap and goes through the normal loop — file, give 
 chance, dispatch, hand-edit last. This matrix is the measurement layer. It is not a licence to
 absorb the repairs by hand, which is law 6, and it is what keeps "full potential" from becoming
 an unbounded manual to-do list.
+
+---
+
+## Experiment E1 — reuse attribution (rows 3b / 4), criteria declared 2026-08-29 03:05Z
+
+**Criteria are recorded here BEFORE the dispatch.** Any criterion adjusted after seeing the
+result invalidates the run and must be re-run under the amended criterion.
+
+**Design.** `reused_from_*` fires on CROSS-GOAL borrowing — `recordGoalPath`'s `parent` is a
+*donor* pathway accepted at cover ≥ 0.5, not the same goal's own history. So an identical-goal
+repeat tests row 3a (occurrence, via `walk_tier`) but cannot test 3b. Testing attribution
+requires a SIMILAR goal, which is the row-4 "middle" claim.
+
+1. Dispatch **A**, a goal known to reach (`produce a system_load_report`, 5/5 in the 24h window).
+2. Wait for A to complete. Serial by construction: identical/near text coalesces, so a
+   concurrent B could return A's own dispatch rather than walking.
+3. Dispatch **B**, a near-miss variant of A.
+4. Read both rows from `/v2/goal-paths`.
+
+**PASS (row 3b, attribution)** — B's row carries `reused_from_goal_hash` equal to A's
+`goal_hash`.
+**PASS (row 4, middle)** — additionally, B's `walk_tier` ≠ `fresh_derivation`.
+
+**FALSIFIED (row 4)** — B reaches but with `walk_tier = fresh_derivation` and no lineage: the
+system re-derived a pathway it already had. Prior evidence is adverse — the autonomy boundary
+"rebinds on wording" (operator memory, 2026-08-12) — so this outcome is expected as likely.
+
+**INCONCLUSIVE, not a pass** — B does not reach, or no row appears. A non-reaching B says
+nothing about reuse; re-run with a different A/B pair.
+
+**Known confounder, declared in advance.** Reuse fires ~8/day naturally, so a lineage row
+appearing during the window is not necessarily attributable to this experiment. Attribution is
+by A's specific `goal_hash`, not by "a lineage row appeared."
