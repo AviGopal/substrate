@@ -82,14 +82,33 @@ async function resolveStore(): Promise<string> {
 }
 
 async function readPosterior(store: string, armId: string): Promise<Posterior | null> {
-  const res = await fetch(`${store}/v2/impulses/resolve`, {
-    method: "POST",
-    headers: authHeaders(true),
-    body: JSON.stringify({ impulse: { pointer: { type: "thompson_posterior", activity_id: armId } } }),
-    signal: AbortSignal.timeout(20_000),
-  });
+  // A TRANSIENT STORE HICCUP MUST NOT READ AS "LEARNING IS BROKEN".
+  //
+  // This fetch had no catch, so an ECONNRESET threw straight out of the probe and exited 1 —
+  // and systemd reported the learning-liveness probe as FAILED. That is the loudest possible
+  // false alarm from the one detector whose job is to say whether credit still flows: "I could
+  // not reach the store for a moment" was rendered indistinguishable from "credit stopped".
+  // Observed 2026-08-29 23:26:45, ECONNRESET at this line, unit Failed with result 'exit-code'.
+  //
+  // `null` is already the file's word for "unreadable", and BOTH call sites map it to
+  // INCONCLUSIVE + exit 2 — which the unit declares as SuccessExitStatus. So catching here needs
+  // no new vocabulary: it routes an unreachable store to the verdict the probe already reserves
+  // for "I could not measure", matching publish()'s existing tolerance directly below.
+  let res: Response;
+  try {
+    res = await fetch(`${store}/v2/impulses/resolve`, {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify({ impulse: { pointer: { type: "thompson_posterior", activity_id: armId } } }),
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (e) {
+    console.log(`[probe] posterior read UNREACHABLE for ${armId} (${(e as Error).message}) — reporting INCONCLUSIVE, not failure`);
+    return null;
+  }
   if (!res.ok) return null;
-  const j = await res.json() as { content?: unknown };
+  const j = await res.json().catch(() => null) as { content?: unknown } | null;
+  if (!j) return null;
   const parsed = typeof j?.content === "string" ? JSON.parse(j.content) : j?.content;
   const b = (parsed as { content?: Record<string, unknown> } | undefined)?.content;
   if (!b) return null;
