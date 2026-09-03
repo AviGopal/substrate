@@ -293,6 +293,50 @@ Set `resolve_timeout_ms` from the vessel's own worst case, not from a habit: a r
 
 **Concrete implementation:** `repos/concept-db/src/services/discovery-client.ts`, adapted from `repos/activity-api/src/services/discovery-client.ts`.
 
+### Emitting an impulse (the CALLING side)
+
+The section below describes how a vessel **serves** impulses. This one describes how a
+vessel **sends** one — the half that was never written down, and the half a drafter must
+get right to make anything durable.
+
+**There is exactly one impulse endpoint in the fleet: `POST /v2/impulses/resolve`.** The
+shape goes in the **body**, never in the path. Every impulse — read or write — is the same
+call; a `*_write` shape is still a `resolve` POST.
+
+```ts
+const r = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+  body: JSON.stringify({ impulse: { pointer: { type: "<shape>_write", /* …shape fields… */ } } }),
+  signal: AbortSignal.timeout(5_000),
+});
+if (!r.ok) console.warn(`[<vessel>] <shape> emit failed: HTTP ${r.status}`);
+```
+
+Four rules, each of which has been violated in a landed commit:
+
+1. **The path is always `/v2/impulses/resolve`.** `/v2/impulses/<shape>` addresses no route
+   and returns 404. A bare 404 from `/resolve` means *shape-not-served* by that host, not
+   endpoint-missing — probe with a shape you know the host serves before concluding an
+   endpoint is absent.
+2. **The envelope is `{ impulse: { pointer: { type, … } } }`.** A flat body (`{id, category}`)
+   is accepted by nothing. Some callers additionally set `impulse.type`; the `pointer.type`
+   is the load-bearing one.
+3. **Send it to the host that SERVES the shape**, resolved through discovery — not to
+   whichever endpoint constant is nearest in the file. `substrateGap_write` is served by
+   development-vessel, not by activity-api.
+4. **`fetch` does not throw on HTTP errors.** A `try/catch` around it catches network
+   failures and aborts only; a 404 or 500 resolves with `ok:false`. An emitter wrapped in a
+   bare `catch {}` and no `!r.ok` branch fails **silently and forever**. Branch on `r.ok`.
+
+**Why this is stated here rather than left to example-following.** The substrate authored,
+gated, tested, landed and pushed two consecutive emitters that could never fire — first an
+invented `exports.<x>.emit(...)` API, then a POST to `/v2/impulses/<shape>` — while four
+correct call sites existed in the very file being edited. The information was present and
+did not arrive at the moment of use. Deterministic gates in feature-compose now refuse both
+classes, but a gate that refuses after the fact is a backstop; this section is the part that
+is supposed to arrive first.
+
 ### Shape advertisement and dispatch
 
 Two halves of one contract:
