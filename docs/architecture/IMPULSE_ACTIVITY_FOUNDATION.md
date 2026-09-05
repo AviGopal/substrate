@@ -1009,6 +1009,24 @@ ingest, detector activities classify, resolver activities (gated by
 the four tiers) act. No separate detection plane, no parallel
 control mechanism.
 
+> **Status: specified, not implemented.** The section above describes an
+> *unlanded proposal*, not running behavior. Of the ten shapes its four
+> families name, nine are absent from the discovery registry —
+> `securityFinding`, `anomalyFinding`, `resolutionProposal`,
+> `resolutionAction`, `resolutionRefused`, `auditEvent`, `fileBaseline`,
+> `behaviorBaseline`, `peerBaseline`; only `interventionRefused` is
+> advertised. The cited spec is a normative requirements document sitting
+> in `openspec/changes/`, and no proposal in that directory has ever been
+> archived.
+>
+> The load-bearing consequence for a reader is that **a detector has no
+> resolution channel to emit into**. Detect-without-remediate is therefore
+> structural here, not the designed proposal-only gate the four
+> reversibility tiers describe: a component that reports a finding and
+> takes no action is not waiting on Thompson promotion, it has nowhere to
+> send a proposal. Read this section as design intent and verify any
+> specific claim against `registry_query` before relying on it.
+
 ### Topology Discovery Is the Purpose
 
 The impulse-activity loop is not a recipe executor. It is a **topology discovery engine**:
