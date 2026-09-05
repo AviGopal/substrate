@@ -134,16 +134,35 @@ async function main(): Promise<void> {
   } else if (!RESTART_IMPULSE) {
     record["ok"] = false; record["error"] = "no WATCHDOG_RESTART_IMPULSE or WATCHDOG_RESTART_EXEC configured";
   } else {
-    try {
-      const res = await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ impulse: { type: RESTART_IMPULSE, triggered_by: "watchdog", flow: FLOW } }),
-        signal: AbortSignal.timeout(240_000),
-      });
-      record["ok"] = res.ok; record["http"] = res.status;
-    } catch (e) {
-      record["ok"] = false; record["error"] = e instanceof Error ? e.message : String(e);
+    // RETRY ACROSS A VESSEL RESTART. A single attempt loses the whole tick when the
+    // target restarts mid-request, and the next tick is STALL_MIN (20+) minutes away.
+    // Measured 2026-09-05: development-vessel restarted 7 times in 3 hours (mitosis
+    // cutover churn) and this restart fetch failed 6 times in the same window, every
+    // one with "The socket connection was closed unexpectedly" — the same error an
+    // operator resolve hit twice while a cutover was in flight. The composable-gap
+    // flow sat stalled up to 450 minutes with 314 open intents behind it, while the
+    // unit exited Result=success because the payload-level ok:false is invisible to
+    // systemd. A restart takes seconds; the cycle it costs takes twenty minutes.
+    const ATTEMPTS = 3;
+    for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+      record["attempts"] = attempt;
+      try {
+        const res = await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ impulse: { type: RESTART_IMPULSE, triggered_by: "watchdog", flow: FLOW } }),
+          signal: AbortSignal.timeout(240_000),
+        });
+        record["ok"] = res.ok; record["http"] = res.status;
+        delete record["error"];
+        if (res.ok) break;
+        record["error"] = `http ${res.status}`;
+      } catch (e) {
+        record["ok"] = false; record["error"] = e instanceof Error ? e.message : String(e);
+      }
+      // Only a transport-level failure is worth re-trying; a served non-2xx is a real answer.
+      if (record["http"] !== undefined) break;
+      if (attempt < ATTEMPTS) await new Promise((r) => setTimeout(r, 5_000 * attempt));
     }
   }
   appendFileSync(WATCHDOG_LOG, JSON.stringify(record) + "\n");
