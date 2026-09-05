@@ -80,7 +80,14 @@ const INTEGRITY_PATTERNS = ["delete_none_fk", "coerce_null_to_none"];
 const integrity: any[] = Array.isArray(diag?.integrity) ? diag.integrity : [];
 for (const finding of integrity) {
   const pattern = finding?.pattern ?? (finding?.id?.includes("none_fk") ? "delete_none_fk" : finding?.id?.includes("null") ? "coerce_null_to_none" : null);
-  const count = Number(finding?.count ?? finding?.violation_count ?? 0);
+  // RENAMED FIELD ACROSS A BOUNDARY. db_admin `diagnose` emits each integrity finding as
+  // {id, table, predicate, violating_rows} — the count lives under `violating_rows`, and
+  // neither `count` nor `violation_count` exists on the object. Reading only the latter two
+  // made `count` 0 for EVERY finding, so the `count <= 0` guard below skipped all of them.
+  // Masked until now because every finding genuinely reports violating_rows: 0, so skipping
+  // was also the correct outcome — the mismatch only bites when a real violation appears,
+  // and then it would silently skip a bounded repair this script exists to auto-apply.
+  const count = Number(finding?.violating_rows ?? finding?.count ?? finding?.violation_count ?? 0);
   if (!pattern || !INTEGRITY_PATTERNS.includes(pattern) || count <= 0) continue;
   const dry = await dbAdmin("repair", { pattern, ...(finding.params ?? {}) });
   const affected = Number(dry?.affected_count ?? dry?.impact_count ?? count);
