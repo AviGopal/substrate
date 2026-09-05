@@ -74,7 +74,17 @@ const count = async (q: string): Promise<number | null> => {
 // ── lift gate (from heartbeat — written by substrate-health-tick) ──
 let lift: any = { overall_passing: null, template_count: null, vessels_down: null, heartbeat_age_s: null };
 try {
-  const hb = JSON.parse(await Bun.file("/workspace/substrate-heartbeat.json").text());
+  // FOSSIL PATH. This read was hardcoded to /workspace/substrate-heartbeat.json while the
+  // WRITER, substrate-health-tick.ts, writes join(WORKSPACE_ROOT, "substrate-heartbeat.json")
+  // — and WORKSPACE_ROOT is /workspace/git/super-repo. Two different files. Measured
+  // 2026-09-05: the hardcoded path held an Aug 8 snapshot (overall_passing:false, naming three
+  // vessels down that were up), while the writer's path was current to the minute. The lift
+  // gate — the substrate's own "can this be left to develop itself" verdict, whose comment
+  // calls overall_passing "the single source of truth" — had been reading a 28-day-old file.
+  // Same fossil-vs-live-path class as the gaps.json defect. Resolve against WORKSPACE_ROOT so
+  // reader and writer cannot drift apart again; keep the literal only as a fallback.
+  const heartbeatPath = `${process.env["WORKSPACE_ROOT"] ?? "/workspace"}/substrate-heartbeat.json`;
+  const hb = JSON.parse(await Bun.file(heartbeatPath).text());
   lift = {
     overall_passing: hb.overall_passing ?? null,
     template_count: hb.template_count ?? null,
