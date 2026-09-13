@@ -26,10 +26,26 @@
  * WHAT IT DOES. Read-only except (a) a substrateGap per drifted vessel and (b) the
  * repair below. Silent and trace-free when nothing has drifted.
  *
- * REPAIR. `mirror-to-live <vessel>` is the canonical src->/vessels mirror and is already
- * the remedy named by patch_with_tools' poisoned-baseline refusal
- * ("restore it with mirror-to-live"); pull-cutover.ts drives it the same way. This tick
- * only invokes it when the evidence is unambiguous:
+ * REPAIR IS NOT THIS TICK'S JOB — IT IS pull-sync's, AND pull-sync ALREADY DOES IT.
+ * `substrate-pull-sync.sh:1198` calls `mirror-to-live "$v" "$CLONE_DIR"` on its own
+ * 10-minute timer, and patch-with-tools.ts:618 states the ownership outright: "Repair
+ * stays owned by pull-sync / mirror-to-live." Measured 2026-09-13: pull-sync restored a
+ * deliberately drifted metric-collector-vessel file at 23:53:31 with no help from this
+ * tick, whose own journal shows no repair. So RUNTIME_DRIFT_REPAIR defaults to OFF: a
+ * second writer converging the same trees on the same cadence is a race, not a safety net,
+ * and the one thing the class was NOT missing is a repairer.
+ *
+ * What this tick adds over pull-sync, which is why it still exists: pull-sync converges to
+ * origin/dev behind a test gate and has been exiting non-zero on 26 of its runs in 12h
+ * (including "TEST GATE BLIND — suite produced no countable result; converging ungated"),
+ * so its mirroring is neither guaranteed nor announced as drift. This one says plainly
+ * which files diverge, which of them DO NOT PARSE (the latent-outage case a green /health
+ * hides), and which live vessels have no clone and are therefore coverable by nobody —
+ * and it emits a substrateGap so the observation survives the journal.
+ *
+ * The repair path is retained, off by default, for a substrate where pull-sync is absent
+ * or wedged. When enabled it invokes the same `mirror-to-live` and only when the evidence
+ * is unambiguous:
  *
  *   drift  AND  no compose slot held  AND  the clone's git tree is clean
  *
@@ -41,8 +57,8 @@
  * Env (bootstrap tier only — paths and identity, no behavioural gating):
  *   RUNTIME_DRIFT_RUNTIME_ROOT  live vessel trees      (default /vessels)
  *   RUNTIME_DRIFT_CLONE_ROOT    staging clones         (default /workspace/git/vessels)
- *   RUNTIME_DRIFT_SLOT_DIR      compose slot directory (default /workspace/compose-slots)
- *   RUNTIME_DRIFT_REPAIR        "0" disables the mirror-to-live repair (default enabled)
+ *   RUNTIME_DRIFT_SLOT_DIR      compose slot dir (default: COMPOSE_SLOT_DIR, else $WORKSPACE_ROOT/compose-slots)
+ *   RUNTIME_DRIFT_REPAIR        "1" arms the mirror-to-live repair (default OFF — pull-sync owns repair)
  *   DEV_VESSEL_ENDPOINT         gap sink (default http://127.0.0.1:8090)
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -63,7 +79,9 @@ const SLOT_DIR =
   process.env.RUNTIME_DRIFT_SLOT_DIR ??
   process.env.COMPOSE_SLOT_DIR ??
   `${process.env.WORKSPACE_ROOT ?? "/workspace/git/super-repo"}/compose-slots`;
-const REPAIR_ENABLED = (process.env.RUNTIME_DRIFT_REPAIR ?? "1") !== "0";
+// OFF unless explicitly armed. pull-sync already mirrors on the same cadence; two writers
+// converging one tree is a race. See the REPAIR note in the header.
+const REPAIR_ENABLED = process.env.RUNTIME_DRIFT_REPAIR === "1";
 const DEV_VESSEL = process.env.DEV_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";
 
 type Drift = { vessel: string; files: string[]; runtimeOnly: string[]; cloneOnly: string[] };
@@ -293,7 +311,7 @@ async function main() {
     let repaired = false;
     let why = "";
     if (!REPAIR_ENABLED) {
-      why = "repair disabled by RUNTIME_DRIFT_REPAIR=0";
+      why = "repair not armed (pull-sync owns mirroring; set RUNTIME_DRIFT_REPAIR=1 to arm)";
     } else if (slotHeld) {
       why = "a compose holds a slot — in-place edits are expected right now";
     } else {
