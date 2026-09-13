@@ -1,0 +1,19 @@
+[Unit]
+Description=Runtime-drift watchdog — restores /vessels/<v>/src when it diverges from committed source
+# /vessels/<v>/src is a MIRROR of the committed source in /workspace/git/vessels/<v>/src.
+# feature_compose edits the live tree in place and rolls back on an unfavourable verdict,
+# but declines to roll back when it finds the file already changed — safe only if another
+# holder will revert it. When none does, the un-reverted edit persists, and a live file can
+# be left syntactically invalid while the COMMIT is clean. The unit stays active and
+# /health stays green because the module is already loaded; the next restart is what dies.
+# Detects that, repairs via mirror-to-live when the evidence is unambiguous (no compose
+# slot held AND the clone is git-clean), and emits a substrateGap either way.
+# Read-only except gap emission and that repair. Silent when nothing has drifted.
+After=development-vessel.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/runtime-drift-tick.ts
+StandardOutput=journal
+StandardError=journal
