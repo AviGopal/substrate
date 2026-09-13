@@ -966,16 +966,63 @@ async function main() {
       .map((id) => id.split('@')[1]!)
       .filter((sid) => sid && sid !== SUBSTRATE_ID),
   )]
-  for (const topo of ['hub+spoke', 'spoke<->spoke']) {
+  // I8, DECIDED BY OBSERVATION RATHER THAN BY ORCHESTRATION.
+  //
+  // This invariant sat `undecidable` forever because deciding it appeared to require
+  // STOPPING a live peer, which a read-only sweep must not do. But an invariant that can
+  // only be decided by perturbing production will never be decided in production — it is
+  // undecidable by construction, which is the same as absent while looking considered.
+  //
+  // Restated so observation suffices: NO FOREIGN ROW MAY BE ADVERTISED AS FRESH WHILE ITS
+  // PEER IS UNDIALABLE. That is the property cross-boundary de-advertise exists to deliver,
+  // and it is exactly what fails when a whole substrate departs — its rows keep their TTL
+  // and keep being handed out while nothing answers behind them. The probe already holds an
+  // overlay node, so it can simply try the circuit each foreign substrate advertises.
+  //
+  // Measured cost of getting this wrong, from a real departure: the hub kept advertising
+  // all 8 rows of a stopped peer, and resolving one returned HTTP 502 in 29ms. Bounded, but
+  // a goal walk selects a dead producer for up to the 5-minute TTL.
+  if (foreignSubstrates.length === 0) {
     record('I8_cross_boundary_deadvertise', 'undecidable', {
-      witness: 'cross-vantage',
-      reason: foreignSubstrates.length > 0 ? 'requires_orchestrated_departure' : 'no_peer_substrate',
-      config: { topology: topo },
-      evidence: { peer_substrates_present: foreignSubstrates,
-        note: foreignSubstrates.length > 0
-          ? 'a peer substrate IS federated here; deciding this invariant needs a controlled stop of that peer, which a read-only sweep must not perform against a live peer'
-          : 'no @-qualified foreign rows in this registry' },
+      witness: 'cross-vantage', reason: 'no_peer_substrate',
+      evidence: { note: 'no @-qualified foreign rows in this registry' },
     })
+  } else if (!probe) {
+    record('I8_cross_boundary_deadvertise', 'undecidable', {
+      witness: 'cross-vantage', reason: 'no_probe_node',
+      evidence: { peer_substrates_present: foreignSubstrates },
+    })
+  } else {
+    const stale: Array<Record<string, unknown>> = []
+    const live: string[] = []
+    for (const sid of foreignSubstrates) {
+      const rows = (registryRows ?? []).filter((v: any) => String(v.vesselId ?? '').endsWith('@' + sid))
+      const fresh = rows.filter((v: any) => {
+        const t = Date.parse(String(v.lastSeen ?? v.last_seen ?? ''))
+        return Number.isFinite(t) && Date.now() - t < 300_000
+      })
+      if (fresh.length === 0) continue // already decayed — nothing being handed out
+      const ma = fresh.flatMap((v: any) => (v.libp2p_multiaddr ?? []) as string[]).find((m) => m.includes('p2p-circuit'))
+      if (!ma) continue
+      try {
+        await withTimeout(resolveViaLibp2p(probe, ma, { type: 'federation_probe' }), 15_000, `I8 liveness dial ${sid}`)
+        live.push(sid)
+      } catch (e) {
+        stale.push({ substrate: sid, fresh_rows: fresh.length, dial_target: ma, error: String((e as Error)?.message ?? e).slice(0, 120) })
+      }
+    }
+    if (stale.length > 0) {
+      record('I8_cross_boundary_deadvertise', 'fail', {
+        witness: 'cross-vantage', cls: 'stale_foreign_rows_advertised',
+        evidence: { stale, live_peers: live,
+          note: 'these rows are inside their TTL and still being returned by discovery, but the peer behind them does not answer — a resolve routed here selects a dead producer' },
+      })
+    } else {
+      record('I8_cross_boundary_deadvertise', 'pass', {
+        witness: 'cross-vantage', clears: 'stale_foreign_rows_advertised',
+        evidence: { live_peers: live, note: 'every foreign substrate advertising fresh rows answered a dial on the circuit those rows carry' },
+      })
+    }
   }
 
   const nc = await negativeControls(probe)
@@ -1184,6 +1231,7 @@ async function main() {
     // is satisfiable by a unit that is still crash-looping. Closure requires NRestarts
     // and MainPID unchanged across two samples bracketing a full sweep.
     registry_lost_local_rows: 'across two consecutive sweeps, every registry row this substrate owns (bare vesselId, no @substrate qualifier) that was present in the earlier sweep is still present in the later one, regardless of how many foreign peers joined or left in between.',
+    stale_foreign_rows_advertised: 'no foreign <vessel>@<substrate> row is returned by discovery with a lastSeen inside the TTL while a dial to the circuit that row advertises fails.',
     federation_unit_flapping: 'every federation unit (relay, discovery, goal-host) shows NRestarts and MainPID unchanged across two samples bracketing a full sweep, and none sits in `activating` after a non-zero exit.',
     transport_unit_flapping: 'federation-transport-vessel.service shows NRestarts AND MainPID unchanged across two samples bracketing a full sweep interval (an instantaneous ActiveState=active / Result=success does NOT satisfy this — the unit reports exactly that during each up-phase of its crash loop).',
     join_door_host_dependent: 'GET /bootstrap returns a non-empty discovery_endpoint and a non-loopback identity_endpoint when queried under a foreign Host header.',
