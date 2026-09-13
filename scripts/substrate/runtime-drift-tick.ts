@@ -50,7 +50,19 @@ import { join, relative } from "node:path";
 
 const RUNTIME_ROOT = process.env.RUNTIME_DRIFT_RUNTIME_ROOT ?? "/vessels";
 const CLONE_ROOT = process.env.RUNTIME_DRIFT_CLONE_ROOT ?? "/workspace/git/vessels";
-const SLOT_DIR = process.env.RUNTIME_DRIFT_SLOT_DIR ?? "/workspace/compose-slots";
+// RESOLVE THE SLOT DIR THE WAY ITS OWNER DOES, NOT BY GUESSING THE PATH.
+// development-vessel/src/compose-slots.ts:30 is
+//   COMPOSE_SLOT_DIR ?? WORKSPACE_ROOT + "/compose-slots"
+// and WORKSPACE_ROOT is /workspace/git/super-repo, so the live directory is
+// /workspace/git/super-repo/compose-slots. A hardcoded /workspace/compose-slots also
+// EXISTS and is permanently EMPTY — the stale decoy that has now cost four separate
+// misreadings. Reading the decoy makes composeSlotHeld() always false, which would arm
+// the repair DURING a live compose and revert its in-progress edits: the watchdog would
+// become the corruption it exists to fix. Same env chain as the owner, no third opinion.
+const SLOT_DIR =
+  process.env.RUNTIME_DRIFT_SLOT_DIR ??
+  process.env.COMPOSE_SLOT_DIR ??
+  `${process.env.WORKSPACE_ROOT ?? "/workspace/git/super-repo"}/compose-slots`;
 const REPAIR_ENABLED = (process.env.RUNTIME_DRIFT_REPAIR ?? "1") !== "0";
 const DEV_VESSEL = process.env.DEV_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";
 
