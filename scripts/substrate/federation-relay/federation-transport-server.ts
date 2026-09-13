@@ -365,6 +365,75 @@ const resolveHandler = async (pointer: any): Promise<any> => {
   // exists for the nested-JSON class, where the point is to exercise the envelope parser
   // rather than the framing; it is echoed as its serialization, which the caller compares
   // against its own.
+  // THE SWEEP HAS TO BE A SHAPE, NOT A SCRIPT PATH IN PROSE.
+  //
+  // The federation-verification rhythm family fired correctly and its goal text named a
+  // raw file path — `execute … scripts/substrate/federation-relay/federation-probe-tick.ts`.
+  // goal-host has no capability that runs a script, so the walk reached for the nearest
+  // thing it did have and tried to FETCH the path as a URL:
+  //   "invalid URL: http://<peer>:18100/scripts/substrate/federation-relay/federation-probe-tick.ts"
+  // It then graded itself HOLLOW and reached:false, which is honest but useless. Every
+  // other entry in the rhythm registry names an activity; this one named a file, and law 2
+  // is explicit that a behaviour reachable only as an operator's command line is invisible
+  // to the learning loop. rhythm-conductor-tick's FAMILY_RESOLVERS exists for exactly this
+  // ("dispatch the resolver directly instead of enqueuing an NL goal that goal-host cannot
+  // walk into an invocation") but lives in a gated file, so the same end is reached here by
+  // making the sweep RESOLVABLE.
+  //
+  // WHY IT RETURNS A REPORT RATHER THAN BLOCKING ON A FRESH ONE. A sweep takes minutes;
+  // goal-host's per-iteration budget is 90s. A handler that blocked would time out and be
+  // graded hollow for a sweep that actually succeeded — the worst of both. So this reads
+  // the latest report the PROBE wrote, and starts a refresh when that report is stale. The
+  // caller always gets real measured content plus its age, and never a synthesised verdict.
+  //
+  // PROVENANCE: the transport serves this report; it does not author it. Every verdict
+  // inside was witnessed by the probe's own ephemeral peer. A transport summarising its own
+  // reachability would violate the rule this whole subsystem is built on — so the body is
+  // passed through untouched and carries its own witness fields.
+  if (t === 'federation_verification_report') {
+    const FRESH_MS = Number(process.env.FED_REPORT_FRESH_MS || 3_600_000)
+    let report: any = null
+    try {
+      const r = await fetch((process.env.DEVELOPMENT_VESSEL_URL || 'http://127.0.0.1:8090') + '/v2/impulses/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY },
+        body: JSON.stringify({ impulse: { pointer: { type: 'poolImpulse', shape: 'federationVerificationReport', limit: 200 } } }),
+        signal: AbortSignal.timeout(8000),
+      })
+      const j: any = await r.json()
+      const rows = (j?.body?.impulses ?? []).filter((i: any) => i?.shape === 'federationVerificationReport')
+      rows.sort((a: any, b: any) => String(a?.body?.sweep_id ?? '').localeCompare(String(b?.body?.sweep_id ?? '')))
+      report = rows.length ? rows[rows.length - 1].body : null
+    } catch { /* fall through to "no report" */ }
+
+    const ts = report?.ts ?? (report?.sweep_id ? Date.parse(String(report.sweep_id).replace('sweep-', '')) : 0)
+    const ageMs = ts ? Date.now() - ts : Number.MAX_SAFE_INTEGER
+    let refreshStarted = false
+    if (ageMs > FRESH_MS) {
+      try {
+        // Detached: the sweep outlives this request by design. It writes its own report to
+        // the pool, which is where the next resolve will read it from.
+        Bun.spawn({
+          cmd: [process.env.BUN_BIN || '/root/.bun/bin/bun', new URL('./federation-probe-tick.ts', import.meta.url).pathname],
+          cwd: new URL('.', import.meta.url).pathname,
+          env: process.env as Record<string, string>,
+          stdout: 'ignore', stderr: 'ignore',
+        }).unref()
+        refreshStarted = true
+      } catch (e) { console.error('[fed-transport] sweep spawn failed:', String((e as Error)?.message ?? e)) }
+    }
+    return {
+      shape: 'federation_verification_report',
+      produced_by: VESSEL_ID,
+      report_age_ms: ageMs === Number.MAX_SAFE_INTEGER ? null : ageMs,
+      report_is_fresh: ageMs <= FRESH_MS,
+      refresh_started: refreshStarted,
+      report,
+      note: report
+        ? 'measured by federation-probe-tick from an independent ephemeral libp2p peer; this vessel serves the report, it does not author it'
+        : 'no federation verification report exists yet; a sweep has been started if possible',
+    }
+  }
   if (t === 'federation_echo') {
     const hasObj = Object.prototype.hasOwnProperty.call(pointer ?? {}, 'payload_obj')
     const payload = hasObj ? JSON.stringify(pointer.payload_obj) : String(pointer?.payload ?? '')
@@ -603,7 +672,7 @@ async function register() {
       body: JSON.stringify({
         vesselId: VESSEL_ID, vesselName: VESSEL_ID, version: '0.1.0',
         endpoint: `http://127.0.0.1:${HEALTH_PORT}`,           // HTTP surface (health + self-recovery probe)
-        shapes: ['federation_probe', 'federation_echo', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])],
+        shapes: ['federation_probe', 'federation_echo', 'federation_verification_report', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])],
         resolve_endpoint: '/v2/impulses/resolve', resolve_request_format: 'pointer', auth_scheme: 'none',
         protocol: 'libp2p',                          // signals libp2p-overlay reachability
         libp2p_peer_id: vl.peerId,                   // proper discovery-contract fields (not metadata —
@@ -748,7 +817,7 @@ async function registerAtHub() {
     // The transport's own row anchors the substrate ingress (probe shape only — shape
     // traffic belongs to the per-vessel rows below).
     const registrations = [
-      ...(SELF_MIRROR ? [] : [{ vesselId: HUB_VESSEL_ID, shapes: ['federation_probe', 'federation_echo', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])] }]),
+      ...(SELF_MIRROR ? [] : [{ vesselId: HUB_VESSEL_ID, shapes: ['federation_probe', 'federation_echo', 'federation_verification_report', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])] }]),
       ...rows.map((r) => ({ vesselId: `${r.vesselId}@${SUBSTRATE_ID}`, shapes: r.shapes })),
     ]
     const results = await Promise.all(registrations.map(async (reg) => {

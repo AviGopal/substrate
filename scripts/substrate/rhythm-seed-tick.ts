@@ -264,7 +264,7 @@ const SEED = {
       "shape": "rhythmFamilyGoal",
       "body": {
         "family": "federation-verification",
-        "goal": "Run one federation verification sweep: execute the federation probe script at scripts/substrate/federation-relay/federation-probe-tick.ts inside the substrate container, with the substrate environment loaded, so an ephemeral libp2p peer dials the overlay from outside and grades the federation invariants. Then confirm that this sweep's federationVerificationReport was recorded, and report its coverage fraction, its blocking reason, and which invariants failed."
+        "goal": "Resolve the federation_verification_report shape and report the federation overlay's current state: its coverage fraction, its blocking reason, which invariants are failing, and whether the report is fresh. The shape is served by the federation transport vessel and returns the most recent report measured by an independent ephemeral libp2p peer, starting a new sweep when the last one is stale."
       }
     }
   ]
