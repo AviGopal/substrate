@@ -1,1 +1,2 @@
-# My Project\n\n- [ ] Task 1\n- [ ] Task 2
+# My Project\n\n- [x] Task 1\n- [x] Task 2
+- [x] Task 3 (Dispatched)

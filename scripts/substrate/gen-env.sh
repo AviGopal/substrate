@@ -8,6 +8,16 @@
 #   OPENAI_BASE_URL     — override base URL for non-OpenAI endpoints (optional)
 #   LLM_DEFAULT_MODEL   — override default model (optional; defaults to claude-sonnet-4-6)
 #
+probe_url() { # probe_url <URL> <DESCRIPTION>
+  local _url="$1"
+  local _desc="$2"
+  if ! curl -f -s "$_url" >/dev/null 2>&1; then
+    echo "[gen-env] ERROR: derived $_desc ($_url) is unreachable." >&2
+    echo "[gen-env]   This configuration silently emits an unreachable IDENTITY_VESSEL_URL, which is not a reachable state." >&2
+    echo "[gen-env]   Verify your DISCOVERY_ENDPOINT, or override IDENTITY_VESSEL_URL explicitly." >&2
+    exit 1
+  fi
+}
 # JWT_SECRET and SURREAL_PASS are generated internally if not provided.
 # METABOB_API_KEY is a bootstrap value replaced by identity-vessel after seeding.
 set -euo pipefail
@@ -421,6 +431,7 @@ case "$_disc_host" in
     HUB_DISCOVERY_URL="${HUB_DISCOVERY_URL:-${_disc_scheme}://${_disc_host}:${_disc_port}}"
     ACTIVITY_API_ENDPOINT="${ACTIVITY_API_ENDPOINT:-${_disc_scheme}://${_disc_host}:$(( 18080 + _port_off ))}"
     IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL:-${_disc_scheme}://${_disc_host}:$(( 18101 + _port_off ))}"
+    probe_url "$IDENTITY_VESSEL_URL" "IDENTITY_VESSEL_URL"
     IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT:-$IDENTITY_VESSEL_URL}"
     ENABLED_ROLES="${ENABLED_ROLES:-spoke}"
     # the spoke's own vessels register into its LOCAL discovery, not the hub
