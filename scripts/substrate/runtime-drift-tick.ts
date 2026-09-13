@@ -106,20 +106,58 @@ export function compareTrees(cloneSrc: string, runtimeSrc: string): Omit<Drift, 
 }
 
 /**
+ * The longest a slot may sit before it is not evidence of a live compose. Same env var and
+ * same 20-minute default as compose-slots.ts:41, which owns the value — not a second
+ * remembered number. That module's doc pins the invariant
+ * `drain(4m) < ceiling(15m) < quiesce(10m) < staleness(20m)` precisely because three
+ * timeouts were once written independently against a remembered number and disagreed.
+ */
+const SLOT_STALE_MS = Number(process.env.COMPOSE_SLOT_STALE_MS ?? 20 * 60_000);
+
+/**
  * True when a compose currently holds a slot. A held slot means divergence is expected
  * (a compose edits the live tree in place), so nothing may be repaired.
+ *
+ * A SLOT FILE IS NOT A HELD SLOT. compose-slots.ts reaps two kinds of non-holder:
+ * a slot whose holder pid is gone ("DEAD HOLDER = FREE SLOT") and one older than
+ * SLOT_STALE_MS — and its own header notes that "every restart of this vessel leaks a slot
+ * per in-flight" compose. Counting any file as a holder therefore lets ONE leaked slot
+ * suppress every future repair, permanently and silently: the failure mode is a watchdog
+ * that reports drift forever and never fixes it. Applying the owner's own two reaping
+ * rules keeps suppression correct during real composes without inheriting its leaks.
  *
  * ABSENT SLOT DIRECTORY MEANS "NO SLOT HELD", NOT "UNKNOWN". The directory is created by
  * the first slot acquisition; treating its absence as "a compose might be running" would
  * disable the repair permanently on any substrate that has not composed since boot.
+ *
+ * Unreadable or malformed slots count as HELD: a slot we cannot interpret is the one case
+ * where suppressing is the safe default.
  */
-export function composeSlotHeld(slotDir: string): boolean {
+export function composeSlotHeld(slotDir: string, now = Date.now()): boolean {
   if (!existsSync(slotDir)) return false;
+  let names: string[];
   try {
-    return readdirSync(slotDir).some((n) => !n.startsWith("."));
+    names = readdirSync(slotDir).filter((n) => !n.startsWith("."));
   } catch {
     return false;
   }
+  for (const n of names) {
+    const p = join(slotDir, n);
+    try {
+      if (now - statSync(p).mtimeMs > SLOT_STALE_MS) continue; // stale: not a live holder
+      const pid = Number((JSON.parse(readFileSync(p, "utf8")) as { pid?: unknown }).pid);
+      if (!Number.isInteger(pid) || pid <= 0) return true; // malformed → suppress
+      try {
+        process.kill(pid, 0); // signal 0 probes existence without delivering a signal
+        return true; // live holder
+      } catch {
+        continue; // dead holder = free slot
+      }
+    } catch {
+      return true; // unreadable → suppress
+    }
+  }
+  return false;
 }
 
 async function sh(args: string[], cwd?: string): Promise<{ ok: boolean; out: string }> {
