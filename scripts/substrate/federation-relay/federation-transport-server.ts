@@ -884,6 +884,41 @@ async function registerAtHub() {
   } catch (e) { console.log('[fed-transport] hub-register err', String(e)) }
 }
 
+
+// ── GRACEFUL DEPARTURE ───────────────────────────────────────────────────────────────
+// A whole substrate leaving used to take its hub rows with it only via the 5-minute TTL.
+// registerAtHub's de-advertise covers a VESSEL that stops while the transport keeps
+// running; it cannot cover the transport itself going away, because the code that would
+// withdraw is the code that is exiting. Measured on a real departure: the hub kept
+// advertising all 8 rows of a stopped peer, and resolving one returned HTTP 502 in 29ms —
+// bounded, but a goal walk selects a dead producer for up to the TTL.
+//
+// So withdraw on the way out. This covers a GRACEFUL stop (systemctl stop, docker stop,
+// a redeploy). A kill -9 or a host loss still decays on TTL, which is the correct fallback
+// and is why the TTL exists — this narrows the window, it does not remove the need for one.
+//
+// Bounded, because shutdown must not hang: systemd will SIGKILL after TimeoutStopSec and a
+// withdraw that blocks would simply become the kill it was trying to avoid.
+let shuttingDown = false
+async function withdrawAndExit(sig: string): Promise<void> {
+  if (shuttingDown) return
+  shuttingDown = true
+  const ids = [...mirroredVesselIds]
+  console.log(`[fed-transport] ${sig}: withdrawing ${ids.length} mirrored row(s) from the hub before exit`)
+  try {
+    await Promise.race([
+      deadvertiseAtHub(ids),
+      new Promise((res) => setTimeout(res, 5000)),
+    ])
+    console.log(`[fed-transport] ${sig}: withdrawal complete`)
+  } catch (e) {
+    console.error(`[fed-transport] ${sig}: withdrawal failed (rows will decay on the hub TTL):`, String((e as Error)?.message ?? e))
+  }
+  process.exit(0)
+}
+process.on('SIGTERM', () => { void withdrawAndExit('SIGTERM') })
+process.on('SIGINT', () => { void withdrawAndExit('SIGINT') })
+
 await register()
 await registerAtHub()
 setInterval(register, 120_000) // refresh discovery TTL
