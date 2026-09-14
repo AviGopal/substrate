@@ -198,6 +198,52 @@ function isSelfCircuit(v: any): boolean {
 async function proxyToLocalOwner(pointer: any): Promise<any> {
   const t = String(pointer?.type ?? '')
   const hop = Number(pointer?._fedHop ?? 0)
+
+  // ── DISCOVERY OVER THE OVERLAY ──────────────────────────────────────────────────
+  //
+  // The premise of a multiaddr-only join is that a substrate handed nothing but a peer
+  // multiaddr can find out where it has arrived. That requires asking the peer's DISCOVERY
+  // something, over libp2p, before it holds any HTTP endpoint at all.
+  //
+  // The generic passthrough below already forwards any shape to whichever local vessel owns
+  // it, so in principle discovery is already reachable this way. In practice it is not:
+  // DISCOVERY-VESSEL DOES NOT REGISTER ITSELF into its own registry (verified — there is no
+  // self-registration in repos/discovery-vessel/src/index.ts), so a vesselCapability lookup
+  // for `vesselRegistry` finds no owner and the proxy answers `unknown shape`. The one
+  // vessel every joiner must reach is the one vessel that cannot be found by the mechanism
+  // used to find vessels.
+  //
+  // Short-circuit rather than "fix" discovery to self-register: self-registration would put
+  // discovery in its own TTL/heartbeat cycle and make the registry's liveness depend on the
+  // registry, which is the circularity this whole subsystem keeps tripping over. Answering
+  // these four shapes directly is the smaller, non-circular change, and it lives in
+  // scripts/ rather than a gated vessel.
+  //
+  // substrateBootstrap is deliberately UNAUTHENTICATED, matching discovery's own
+  // PUBLIC_PATHS treatment of GET /bootstrap: a joiner has not yet been told the identity
+  // authority, so requiring a credential to learn where the identity authority lives is a
+  // chicken-and-egg. It returns routing anchors only — never registry contents.
+  const DISCOVERY_SHAPES = new Set(['vesselRegistry', 'vesselCapability', 'vesselEndpoint', 'vesselHealth'])
+  if (t === 'substrateBootstrap') {
+    try {
+      const r = await fetch(DISCOVERY + '/bootstrap', { signal: AbortSignal.timeout(5000) })
+      const b = await r.json()
+      return { shape: 'substrateBootstrap', produced_by: VESSEL_ID, ...(b as Record<string, unknown>) }
+    } catch (e) {
+      return { error: 'substrateBootstrap unavailable: ' + String((e as Error)?.message ?? e) }
+    }
+  }
+  if (DISCOVERY_SHAPES.has(t)) {
+    // Credentialed: registry contents are not public. The caller's Authorization is
+    // threaded by the ingress where available; falling back to this transport's own key
+    // preserves today's behaviour rather than silently widening access.
+    try {
+      const rows = await localDiscoveryResolve(pointer)
+      return { shape: t, produced_by: VESSEL_ID, vessels: rows, found: rows.length > 0 }
+    } catch (e) {
+      return { error: 'discovery short-circuit failed: ' + String((e as Error)?.message ?? e) }
+    }
+  }
   const forwardLibp2p = async (v: any) => {
     console.log('[fed-transport] ingress→libp2p forward ' + t + ' to ' + String(v.libp2p_multiaddr[0]).slice(-20))
     const res = await resolveOverLibp2p(String(v.libp2p_multiaddr[0]), { ...pointer, _fedHop: hop + 1 })
@@ -680,7 +726,7 @@ async function register() {
       body: JSON.stringify({
         vesselId: VESSEL_ID, vesselName: VESSEL_ID, version: '0.1.0',
         endpoint: `http://127.0.0.1:${HEALTH_PORT}`,           // HTTP surface (health + self-recovery probe)
-        shapes: ['federation_probe', 'federation_echo', 'federation_verification_report', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])],
+        shapes: ['federation_probe', 'federation_echo', 'federation_verification_report', 'substrateBootstrap', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])],
         resolve_endpoint: '/v2/impulses/resolve', resolve_request_format: 'pointer', auth_scheme: 'none',
         protocol: 'libp2p',                          // signals libp2p-overlay reachability
         libp2p_peer_id: vl.peerId,                   // proper discovery-contract fields (not metadata —
