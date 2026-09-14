@@ -606,7 +606,21 @@ Bun.serve({
       // The redial/egress-failure counters make the storm class OBSERVABLE as data a
       // health consumer can rate-check (signature: redial rate >1/min sustained), instead
       // of living only in journald where no shaped impulse can reach it.
-      const transport = { ...(vl.health() as unknown as Record<string, unknown>), redialCount, egressNoReservationCount, lastRedialReason }
+      // Both numbers, deliberately. activeReservations counts LISTEN ADDRESSES and is
+      // what every existing consumer reads; reservationsHeld is what the relay actually
+      // granted. Reporting only the new one would silently change a field others depend
+      // on; reporting only the old one is what let a phantom look healthy. A disagreement
+      // between the two IS the phantom, now visible in the payload instead of discoverable
+      // only by an external dial.
+      const rt = reservationTruth()
+      const transport = {
+        ...(vl.health() as unknown as Record<string, unknown>),
+        redialCount, egressNoReservationCount, lastRedialReason,
+        reservationsHeld: rt.held,
+        reservationRelays: rt.relays,
+        reservationExpiresInMs: rt.expiresInMs,
+        phantomSuspected: rt.held === 0 && !!currentCircuit(),
+      }
       return Response.json({ status: 'ok', service: VESSEL_ID, transport, libp2p_peer_id: vl.peerId, libp2p_multiaddr: currentCircuit() })
     }
     // ── IDENTITY OVER THE OVERLAY ────────────────────────────────────────────────
@@ -1019,6 +1033,53 @@ async function registerAtHub() {
 }
 
 
+
+// ── THE AUTHORITATIVE RESERVATION STATE ──────────────────────────────────────────────
+//
+// `activeReservations` in the transport-health snapshot counts /p2p-circuit LISTEN
+// ADDRESSES. A listen address is managed by the relay LISTENER and survives the relay
+// dropping the reservation behind it — so a transport reports a reservation it does not
+// hold and keeps advertising a circuit nobody can dial.
+//
+// Measured unattended by the federation oracle: peer-fixture-1 self-reported
+// `activeReservations: 1` with a circuit multiaddr, while a dial from an independent peer
+// got `NO_RESERVATION` from the relay, and seven of its rows were still served as fresh by
+// the hub. The health field was not stale — it was answering a different question than the
+// one being asked of it.
+//
+// The circuit-relay-v2 transport keeps the real thing: a ReservationStore whose
+// `reservations` Map holds one entry per relay that actually granted us one, each carrying
+// the reservation's `expire`, and the Map is emptied on `relay:removed`. So ask it.
+//
+// Access path verified empirically, not assumed:
+//   node.components.transportManager.getTransports() -> the entry carrying .reservationStore
+// The sibling node.transportManager is undefined; only the components path resolves.
+function reservationTruth(): { held: number; relays: string[]; expiresInMs: number | null } {
+  try {
+    const ts = (vl.node as any)?.components?.transportManager?.getTransports?.() ?? []
+    for (const t of ts) {
+      const map = (t as any)?.reservationStore?.reservations
+      if (!map || typeof map.size !== 'number') continue
+      const relays: string[] = []
+      let soonest: number | null = null
+      for (const [k, v] of map) {
+        relays.push(String(k))
+        // `expire` is a protobuf uint64 and arrives as a BigInt. Number() it before any
+        // arithmetic or serialisation: JSON.stringify THROWS on BigInt, which would take
+        // the whole /health response down — turning an observability improvement into an
+        // outage of the thing being observed.
+        const exp = (v as any)?.reservation?.expire
+        if (exp != null) {
+          const ms = Number(exp) * 1000 - Date.now()
+          if (soonest == null || ms < soonest) soonest = ms
+        }
+      }
+      return { held: map.size, relays, expiresInMs: soonest }
+    }
+  } catch { /* introspection is best-effort and must never break health */ }
+  return { held: -1, relays: [], expiresInMs: null }  // -1 = unreadable, distinct from 0 = none held
+}
+
 // ── GRACEFUL DEPARTURE ───────────────────────────────────────────────────────────────
 // A whole substrate leaving used to take its hub rows with it only via the 5-minute TTL.
 // registerAtHub's de-advertise covers a VESSEL that stops while the transport keeps
@@ -1153,6 +1214,17 @@ setInterval(() => {
   const circuitUp = !!currentCircuit()
   const relayUp = relayConnections().length > 0
   if (!circuitUp || !relayUp) { phantomStrikes = 0; void redialRelay(!circuitUp ? 'circuit empty' : 'relay connection gone'); return }
+  // A LISTEN ADDRESS WITH NO HELD RESERVATION IS A PHANTOM, AND IT IS KNOWABLE NOW —
+  // no strikes needed. This is not an inference from quiet traffic; it is the relay client's
+  // own bookkeeping saying it holds nothing. The strike-based branch below still covers the
+  // cases this cannot decide: the store being unreadable (held === -1), or a genuinely held
+  // reservation whose circuits stay quiet.
+  const truth = reservationTruth()
+  if (truth.held === 0) {
+    phantomStrikes = 0
+    void redialRelay('PHANTOM CONFIRMED: a /p2p-circuit listen address is advertised while the reservation store holds 0 reservations')
+    return
+  }
   const circuitConns = vl.node.getConnections().filter((c) => c.remoteAddr?.toString().includes('p2p-circuit'))
   if (circuitConns.length === 0) {
     phantomStrikes++
