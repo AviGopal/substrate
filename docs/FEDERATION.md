@@ -311,6 +311,50 @@ The sidecar reserves on the relay, serves resolves over libp2p (proxying to the 
 vessel), and registers `protocol:"libp2p"` with the hub discovery. The hub
 then resolves those shapes over the relay — the vessel never learns libp2p is involved.
 
+## Joining by multiaddr
+
+A substrate can join knowing only a peer multiaddr and a key — no discovery URL.
+The distinction is the point: **a multiaddr names a peer identity, a URL names a
+host**, so an anchor that survives a re-IP has to be the former.
+
+```bash
+docker run -e METABOB_API_KEY=<key> -e PEER_MULTIADDR=/dns4/<peer>/tcp/4001/p2p/<peerId> ...
+```
+
+The transport dials that peer over libp2p and asks it for `substrateBootstrap`,
+which the peer answers from its own discovery. The relay anchor, identity endpoint
+and discovery endpoint come back over the overlay, and the joiner never needs an
+HTTP endpoint for the peer.
+
+This inverts the URL path deliberately. A URL join derives the relay *from* a
+discovery endpoint; a multiaddr join learns it *through* a peer already reachable,
+because the multiaddr is itself the reachability. When both are supplied the peer
+anchor is tried first — an operator who gave a multiaddr chose a peer, not a host.
+
+Anchors learned this way are held in memory and served at `:8401/anchors`. They are
+deliberately **not** written to `/etc/substrate/env`: `gen-env` truncates that file
+on every boot, which is exactly why the documented hand-carry of `RELAY_MULTIADDR`
+never survived a restart. Freezing a value that changes is the bug, not the storage.
+
+**Discovery itself is reachable over the overlay**, which is what makes this
+possible. It needs a special case, because `discovery-vessel` does not register
+itself into its own registry — so a `vesselCapability` lookup for `vesselRegistry`
+finds no owner, and the one vessel every joiner must reach is the one vessel that
+cannot be found by the mechanism used to find vessels. The transport ingress
+answers `vesselRegistry`, `vesselCapability`, `vesselEndpoint`, `vesselHealth` and
+`substrateBootstrap` directly rather than through shape-owner lookup.
+
+`substrateBootstrap` is unauthenticated over the overlay, matching discovery's own
+public treatment of `GET /bootstrap`: a joiner has not yet been told the identity
+authority, so requiring a credential to learn where that authority lives is a
+chicken-and-egg. It returns routing anchors only — never registry contents. The
+four registry shapes remain credentialed.
+
+**Not yet complete.** The identity namespace still reaches the hub over HTTP via
+`IDENTITY_VESSEL_URL`, so a multiaddr-only join currently federates at the overlay
+layer without inheriting the hub's `org_id`. The identity shim and caller-credential
+threading are the remaining pieces of the three-input contract.
+
 ## Known limitations
 
 Read these before concluding a deployment is federated.
