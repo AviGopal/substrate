@@ -131,7 +131,8 @@ for _n in ANTHROPIC_API_KEY OPENAI_API_KEY OPENAI_BASE_URL GOOGLE_API_KEY GROQ_A
           VLLM_BASE_URL VLLM_MODELS VLLM_API_KEY VLLM_ENDPOINTS \
           METABOB_API_KEY API_KEY_SECRET SURREAL_PASS JWT_SECRET SUBSTRATE_GIT_PAT \
           DISCOVERY_ENDPOINT HUB_DISCOVERY_URL ACTIVITY_API_ENDPOINT IDENTITY_VESSEL_URL \
-          FED_SUBSTRATE_ID RELAY_MULTIADDR PEER_DISCOVERY_ENDPOINTS PUBLIC_IP \
+          FED_SUBSTRATE_ID RELAY_MULTIADDR PEER_MULTIADDR PEER_DISCOVERY_ENDPOINTS PUBLIC_IP \
+          FED_EXTRA_SHAPE \
           ENABLED_ROLES ENABLED_VESSELS DISABLED_VESSELS ENABLED_EXTRA_VESSELS PROFILE \
           LLM_ARMS LLM_DEFAULT_MODEL MITOSIS_DIRECT_PUSH \
           ROUTE_EDIT_INTENT_TO_COMPOSE API_KEY_SECRET_PREVIOUS \
@@ -767,6 +768,15 @@ HUB_DISCOVERY_URL="${HUB_DISCOVERY_URL}"
 FED_SUBSTRATE_ID="${FED_SUBSTRATE_ID}"
 FED_VESSEL_ID="${FED_VESSEL_ID}"
 RELAY_MULTIADDR="${RELAY_MULTIADDR}"
+# PEER_MULTIADDR is the multiaddr-only join anchor: a peer IDENTITY rather than a host.
+# It is emitted rather than merely accepted because units inherit nothing from the
+# container environment — 53 units carry EnvironmentFile=/etc/substrate/env and none
+# carries PassEnvironment, so an operator input that gen-env does not write can never
+# reach the vessel it configures. Measured: FED_EXTRA_SHAPE was passed via `docker run -e`,
+# accepted by docker, and never seen by the transport, because it was missing from this
+# list. Both are now emitted.
+PEER_MULTIADDR="${PEER_MULTIADDR:-}"
+FED_EXTRA_SHAPE="${FED_EXTRA_SHAPE:-}"
 PEER_DISCOVERY_ENDPOINTS="${PEER_DISCOVERY_ENDPOINTS}"
 PEER_FANOUT_MODE="${PEER_FANOUT_MODE}"
 

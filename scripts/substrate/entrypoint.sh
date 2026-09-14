@@ -59,8 +59,12 @@ fi
 # so no RELAY_MULTIADDR / FED_* need be supplied. Spoke-only: a plain root never starts
 # it (no crash loop), and a failed transport unit never blocks the rest of the boot.
 set -a; . /etc/substrate/env 2>/dev/null || true; set +a
-if [ -n "${HUB_DISCOVERY_URL:-}" ] && [ -x /usr/local/bin/vessel-ctl ]; then
-  echo "[substrate] spoke federation: enabling federation-transport-vessel (hub=${HUB_DISCOVERY_URL})"
+# PEER_MULTIADDR is the multiaddr-only join: a substrate handed nothing but a peer
+# multiaddr has no HUB_DISCOVERY_URL to gate on, but it needs the transport MORE than a
+# URL-joined spoke does — the transport is the only thing that can reach that peer at all,
+# because the anchor names a peer identity rather than a host with an HTTP endpoint.
+if { [ -n "${HUB_DISCOVERY_URL:-}" ] || [ -n "${PEER_MULTIADDR:-}" ]; } && [ -x /usr/local/bin/vessel-ctl ]; then
+  echo "[substrate] spoke federation: enabling federation-transport-vessel (hub=${HUB_DISCOVERY_URL:-none} peer_multiaddr=${PEER_MULTIADDR:-none})"
   /usr/local/bin/vessel-ctl install federation-transport-vessel >/dev/null 2>&1 || true
   # vessel-ctl's `systemctl enable --now` no-ops pre-systemd; make boot-start deterministic
   # with an offline wants-symlink (the unit is WantedBy=multi-user.target).

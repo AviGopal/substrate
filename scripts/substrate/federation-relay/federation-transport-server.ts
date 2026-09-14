@@ -77,8 +77,44 @@ async function fetchAnchor(url: string): Promise<string> {
 // Prefer the pointed-at (hub) discovery; fall back to LOCAL discovery. The comment above
 // has claimed this fallback since the file was written — the code never had it, so a dead
 // hub pointer skipped the healthy local /bootstrap answering in 0.7ms in the same container.
+//
+// MULTIADDR-ONLY JOIN. A substrate handed only PEER_MULTIADDR has no HTTP endpoint to
+// fetch /bootstrap from — that is the entire point of the form: a multiaddr names a peer
+// IDENTITY, a URL names a host. So dial the peer over libp2p and ask it for
+// substrateBootstrap, which its ingress answers from its own discovery (see the DISCOVERY
+// OVER THE OVERLAY short-circuit in proxyToLocalOwner).
+//
+// This inverts the HTTP order deliberately. The URL path derives a relay FROM a discovery
+// endpoint; here the relay is learned THROUGH a peer that is already reachable, because
+// the multiaddr IS the reachability. Anchors learned this way are held in memory and
+// served at :8401/anchors — never written to /etc/substrate/env, which gen-env truncates
+// on every boot and which would freeze a value that changes.
+//
+// Tried FIRST when present, because an operator who supplied a multiaddr chose a peer,
+// not a host, and silently preferring an HTTP guess would discard that choice.
+const PEER_MULTIADDR = process.env.PEER_MULTIADDR || ''
+let LEARNED_ANCHORS: Record<string, unknown> | null = null
+async function anchorFromPeer(): Promise<string> {
+  if (!PEER_MULTIADDR) return ''
+  let boot: any = null
+  try {
+    boot = await createVesselLibp2p({ vesselId: `${LIBP2P_IDENTITY}-boot`, enableHttp: true })
+    const res: any = await resolveViaHttp(boot, PEER_MULTIADDR, { type: 'substrateBootstrap' })
+    const c = (res && typeof res === 'object' && 'content' in res) ? (res as any).content : res
+    LEARNED_ANCHORS = (c && typeof c === 'object') ? c : null
+    const ma = String((c?.relay_multiaddrs ?? [])[0] ?? '')
+    if (ma) console.log(`[fed-transport] relay learned from peer over libp2p: ${ma}`)
+    else console.log('[fed-transport] peer answered substrateBootstrap with no relay anchor — continuing direct-only')
+    return ma
+  } catch (e) {
+    console.error(`[fed-transport] multiaddr bootstrap failed (continuing): ${String((e as Error)?.message ?? e)}`)
+    return ''
+  } finally { if (boot) await boot.stop().catch(() => {}) }
+}
 async function resolveAnchor(): Promise<string> {
-  return (await fetchAnchor(BOOTSTRAP_URL)) || (BOOTSTRAP_URL === LOCAL_BOOTSTRAP_URL ? '' : await fetchAnchor(LOCAL_BOOTSTRAP_URL))
+  return (await anchorFromPeer())
+    || (await fetchAnchor(BOOTSTRAP_URL))
+    || (BOOTSTRAP_URL === LOCAL_BOOTSTRAP_URL ? '' : await fetchAnchor(LOCAL_BOOTSTRAP_URL))
 }
 if (!RELAY) RELAY = await resolveAnchor()
 
@@ -567,6 +603,17 @@ Bun.serve({
       // of living only in journald where no shaped impulse can reach it.
       const transport = { ...(vl.health() as unknown as Record<string, unknown>), redialCount, egressNoReservationCount, lastRedialReason }
       return Response.json({ status: 'ok', service: VESSEL_ID, transport, libp2p_peer_id: vl.peerId, libp2p_multiaddr: currentCircuit() })
+    }
+    if (u.pathname === '/anchors' && req.method === 'GET') {
+      // What this substrate learned about where it joined, readable at use time. A
+      // URL-joined spoke freezes its anchors in env; a multiaddr-joined one holds them
+      // here, so nothing depends on a file that gen-env rewrites every boot.
+      return Response.json({
+        peer_multiaddr: PEER_MULTIADDR || null,
+        learned: LEARNED_ANCHORS,
+        relay: RELAY || null,
+        source: LEARNED_ANCHORS ? 'peer:substrateBootstrap over libp2p' : (RELAY ? 'http:/bootstrap or env' : 'none'),
+      })
     }
     if (u.pathname === '/egress/resolve' && req.method === 'POST') {
       try {
