@@ -9,10 +9,23 @@
 #   LLM_DEFAULT_MODEL   — override default model (optional; defaults to claude-sonnet-4-6)
 #
 probe_url() { # probe_url <URL> <DESCRIPTION>
-  local _url="$1"
+  # PROBE /health, NOT THE BARE ROOT.
+  #
+  # This guard was authored by the substrate itself to close the
+  # point-and-go-derives-unreachable-siblings gap, and its intent is right: refuse loudly
+  # rather than emit an unreachable anchor. The mechanism was wrong, and it inverted the
+  # defect instead of fixing it. `curl -f` against a vessel's bare root gets 404 — vessels
+  # serve /health, not / — and -f turns any 4xx into a non-zero exit. So a perfectly
+  # reachable identity-vessel was reported unreachable and the boot was refused.
+  #
+  # Measured against the live hub: `curl http://<hub>:8101` -> 404 (curl -f fails);
+  # `curl http://<hub>:8101/health` -> 200. The previous behaviour silently emitted a wrong
+  # value; this had been failing loudly on a RIGHT one, which is worse — it bricks every
+  # spoke boot, including correctly configured ones, and the operator has no way to proceed.
+  local _url="${1%/}"
   local _desc="$2"
-  if ! curl -f -s "$_url" >/dev/null 2>&1; then
-    echo "[gen-env] ERROR: derived $_desc ($_url) is unreachable." >&2
+  if ! curl -f -s --max-time 4 "${_url}/health" >/dev/null 2>&1; then
+    echo "[gen-env] ERROR: derived $_desc ($_url) is unreachable (no /health response)." >&2
     echo "[gen-env]   This configuration silently emits an unreachable IDENTITY_VESSEL_URL, which is not a reachable state." >&2
     echo "[gen-env]   Verify your DISCOVERY_ENDPOINT, or override IDENTITY_VESSEL_URL explicitly." >&2
     exit 1
@@ -418,16 +431,68 @@ case "$_disc_host" in
     # implement the same rule for different launch paths, and when they disagreed
     # (65535 here, 47534 there) a discovery port above 47534 derived different
     # siblings depending on whether you used `make up` or a raw `docker run`.
-    if [ "$_disc_port" -ge 18100 ] && [ "$_disc_port" -le 47534 ]; then
-      _port_off=$(( _disc_port - 18100 ))
-    else
-      _port_off=0
-    fi
     # Preserve the SCHEME too. Hardcoding http:// silently downgraded a
     # TLS-fronted hub — the port survived and the encryption did not, which is a
     # worse failure than refusing outright because it looks like it worked.
     _disc_scheme="$(printf '%s' "$DISCOVERY_ENDPOINT" | sed -nE 's#^([a-z]+)://.*#\1#p')"
     [ -n "$_disc_scheme" ] || _disc_scheme=http
+
+    # ★ DERIVE BY PROBING, NOT BY GUESSING.
+    #
+    # The rule below used to be: use the relative offset only when the discovery port
+    # sits in [18100,47534], otherwise fall back to offset 0 (the conventional 18xxx
+    # block). That fallback is deliberate and its reasoning is sound — a hub fronted by
+    # TLS on 443 must not derive activity-api on :423 — but it was SILENT, and silence is
+    # what made it a defect rather than a limitation.
+    #
+    # Measured: a spoke pointed at a hub's container-internal discovery
+    # (http://172.17.0.2:8100, which is how one container addresses another) fell through
+    # to offset 0 and derived IDENTITY_VESSEL_URL=http://172.17.0.2:18101 — the
+    # HOST-PUBLISHED port, which does not exist on that address. curl to it returned 000.
+    # A spoke masks its local identity-vessel by design, so with the hub identity
+    # unreachable there was no validator at all and discovery rejected every
+    # registration. The operator sees `401` from discovery, three layers downstream, and
+    # nothing anywhere names the derived port that does not exist.
+    #
+    # So: try the candidates and keep the one that ANSWERS. The relative offset honours
+    # the port the operator actually supplied; the conventional block is the documented
+    # deployment shape. Probing costs two short HTTP calls at boot and converts a silent
+    # wrong answer into a correct one — or, failing that, into a loud named refusal.
+    _probe_port() {  # host port -> 0 when /health answers
+      curl -sf --max-time 2 -o /dev/null "${_disc_scheme}://$1:$2/health" 2>/dev/null
+    }
+    _off_relative=$(( _disc_port - 18100 ))
+    _port_off=""
+    if [ -n "${IDENTITY_VESSEL_URL:-}" ] && [ -n "${ACTIVITY_API_ENDPOINT:-}" ]; then
+      # Both siblings supplied explicitly — the operator has overridden the derivation
+      # entirely, so probing would only add boot latency to a decision already made.
+      _port_off=$_off_relative
+      echo "[gen-env] sibling endpoints supplied explicitly; skipping derivation probe" >&2
+    else
+      if _probe_port "$_disc_host" "$(( 18101 + _off_relative ))"; then
+        _port_off=$_off_relative
+        echo "[gen-env] sibling derivation: port-relative offset ${_off_relative} (identity answered on $(( 18101 + _off_relative )))" >&2
+      elif _probe_port "$_disc_host" 18101; then
+        _port_off=0
+        echo "[gen-env] sibling derivation: conventional 18xxx block (identity answered on 18101)" >&2
+      fi
+    fi
+    if [ -z "$_port_off" ]; then
+      # Neither candidate answered. Distinguish a MISCONFIGURATION from a TRANSIENT, and
+      # only refuse for the former: bricking a boot because the hub happened to be
+      # restarting would trade a silent wrong value for an outage, which is not a trade.
+      if _probe_port "$_disc_host" "$_disc_port"; then
+        echo "[gen-env] FATAL: hub discovery at ${_disc_host}:${_disc_port} is reachable, but its identity-vessel is not," >&2
+        echo "[gen-env]        on either candidate port $(( 18101 + _off_relative )) or 18101." >&2
+        echo "[gen-env]        A spoke masks its local identity-vessel, so it would boot healthy and then 401 on every" >&2
+        echo "[gen-env]        registration with nothing naming the cause. Refusing instead." >&2
+        echo "[gen-env]        Fix: pass IDENTITY_VESSEL_URL and ACTIVITY_API_ENDPOINT explicitly for this hub." >&2
+        exit 1
+      fi
+      _port_off=$_off_relative
+      echo "[gen-env] WARN: hub discovery at ${_disc_host}:${_disc_port} did not answer; assuming port-relative offset ${_off_relative}." >&2
+      echo "[gen-env] WARN: if this spoke 401s on registration, the hub was not merely slow to start — re-check the endpoint." >&2
+    fi
     HUB_DISCOVERY_URL="${HUB_DISCOVERY_URL:-${_disc_scheme}://${_disc_host}:${_disc_port}}"
     ACTIVITY_API_ENDPOINT="${ACTIVITY_API_ENDPOINT:-${_disc_scheme}://${_disc_host}:$(( 18080 + _port_off ))}"
     IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL:-${_disc_scheme}://${_disc_host}:$(( 18101 + _port_off ))}"
