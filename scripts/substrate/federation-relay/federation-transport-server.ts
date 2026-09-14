@@ -609,6 +609,42 @@ Bun.serve({
       const transport = { ...(vl.health() as unknown as Record<string, unknown>), redialCount, egressNoReservationCount, lastRedialReason }
       return Response.json({ status: 'ok', service: VESSEL_ID, transport, libp2p_peer_id: vl.peerId, libp2p_multiaddr: currentCircuit() })
     }
+    // ── IDENTITY OVER THE OVERLAY ────────────────────────────────────────────────
+    //
+    // Namespace inheritance today is structural and worth preserving exactly: role `spoke`
+    // excludes `control`, so the local identity-vessel is masked, the seeder skips via
+    // ExecCondition, no local org is ever created, and every vessel presents its
+    // hub-issued key to IDENTITY_VESSEL_URL — which resolves it to the HUB's org_id. The
+    // spoke lands in the hub's namespace by construction rather than by configuration.
+    //
+    // A multiaddr-joined substrate has no HTTP identity URL to point at. Rather than make
+    // identity a shape — key validation is a synchronous check on the hot path of every
+    // request, and resolving a shape requires a validated key, so that is both a latency
+    // disaster and a circularity — give the spoke a LOCAL ADDRESS for a REMOTE resolver.
+    // Set IDENTITY_VESSEL_URL=http://127.0.0.1:8401/identity and this route carries the
+    // call to the identity endpoint learned from the peer. Every local vessel keeps
+    // believing IDENTITY_VESSEL_URL is an HTTP URL that validates keys, which it is.
+    //
+    // Law 11: the resolver stays where its data lives (the hub); the spoke gets an address
+    // for it, not a copy of it.
+    if (u.pathname.startsWith('/identity/')) {
+      const base = String((LEARNED_ANCHORS as any)?.identity_endpoint ?? process.env.IDENTITY_UPSTREAM_URL ?? '').replace(/\/$/, '')
+      if (!base) return Response.json({ error: 'no identity endpoint learned yet — this substrate has not completed a peer bootstrap' }, { status: 503 })
+      const target = base + u.pathname.replace(/^\/identity/, '') + u.search
+      try {
+        const r = await fetch(target, {
+          method: req.method,
+          headers: req.headers,
+          body: req.method === 'GET' || req.method === 'HEAD' ? undefined : await req.text(),
+          signal: AbortSignal.timeout(10_000),
+        })
+        return new Response(await r.text(), { status: r.status, headers: { 'Content-Type': r.headers.get('content-type') ?? 'application/json' } })
+      } catch (e) {
+        // Named, not swallowed: an identity proxy that fails silently makes every
+        // downstream 401 look like a bad key rather than an unreachable validator.
+        return Response.json({ error: 'identity proxy failed', upstream: target, detail: String((e as Error)?.message ?? e) }, { status: 502 })
+      }
+    }
     if (u.pathname === '/anchors' && req.method === 'GET') {
       // What this substrate learned about where it joined, readable at use time. A
       // URL-joined spoke freezes its anchors in env; a multiaddr-joined one holds them
