@@ -98,7 +98,12 @@ async function anchorFromPeer(): Promise<string> {
   if (!PEER_MULTIADDR) return ''
   let boot: any = null
   try {
-    boot = await createVesselLibp2p({ vesselId: `${LIBP2P_IDENTITY}-boot`, enableHttp: true })
+    // Derive the boot identity INLINE rather than referencing LIBP2P_IDENTITY: this runs
+    // during anchor resolution, which happens BEFORE that const is declared, and a
+    // temporal-dead-zone throw here was swallowed by the catch below and reported as
+    // "multiaddr bootstrap failed" — a real bug wearing the costume of an unreachable peer.
+    const bootId = `${VESSEL_ID}@${process.env.FED_SUBSTRATE_ID || hostname()}-boot`
+    boot = await createVesselLibp2p({ vesselId: bootId, enableHttp: true })
     const res: any = await resolveViaHttp(boot, PEER_MULTIADDR, { type: 'substrateBootstrap' })
     const c = (res && typeof res === 'object' && 'content' in res) ? (res as any).content : res
     LEARNED_ANCHORS = (c && typeof c === 'object') ? c : null
