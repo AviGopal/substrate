@@ -817,7 +817,22 @@ async function registerAtHub() {
     // The transport's own row anchors the substrate ingress (probe shape only — shape
     // traffic belongs to the per-vessel rows below).
     const registrations = [
-      ...(SELF_MIRROR ? [] : [{ vesselId: HUB_VESSEL_ID, shapes: ['federation_probe', 'federation_echo', 'federation_verification_report', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])] }]),
+      // federation_verification_report is DELIBERATELY NOT MIRRORED to the hub.
+      //
+      // It answers "what is THIS substrate's overlay state", so it is meaningful only from
+      // the substrate that measured it. Advertising it into the hub namespace made all
+      // three transports offer the same shape, and discovery has no reason to prefer the
+      // local one — every row is protocol:libp2p, so the prefer-direct rule cannot break
+      // the tie. Measured: the walk resolved it via EGRESS to a peer
+      // (`egress/resolve -> federation_verification_report via LM3t9…`), which returned
+      // that peer's view and spawned no sweep here. Cadence kept firing — alpha climbed
+      // 10.5 -> 19.5, roughly eighteen fires — while not one sweep landed, because every
+      // fire was answered by the wrong substrate.
+      //
+      // Kept in the LOCAL register() below, so a resolve on this substrate always reaches
+      // this substrate's own transport. A cross-substrate view is a separate question and
+      // would need a substrate-scoped pointer, not an ambiguous shared shape.
+      ...(SELF_MIRROR ? [] : [{ vesselId: HUB_VESSEL_ID, shapes: ['federation_probe', 'federation_echo', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])] }]),
       ...rows.map((r) => ({ vesselId: `${r.vesselId}@${SUBSTRATE_ID}`, shapes: r.shapes })),
     ]
     const results = await Promise.all(registrations.map(async (reg) => {
