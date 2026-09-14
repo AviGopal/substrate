@@ -391,10 +391,11 @@ const resolveHandler = async (pointer: any): Promise<any> => {
   // reachability would violate the rule this whole subsystem is built on — so the body is
   // passed through untouched and carries its own witness fields.
   if (t === 'federation_verification_report') {
+    const DEV_POOL_URL = (process.env.DEVELOPMENT_VESSEL_URL || 'http://127.0.0.1:8090') + '/v2/impulses/resolve'
     const FRESH_MS = Number(process.env.FED_REPORT_FRESH_MS || 3_600_000)
     let report: any = null
     try {
-      const r = await fetch((process.env.DEVELOPMENT_VESSEL_URL || 'http://127.0.0.1:8090') + '/v2/impulses/resolve', {
+      const r = await fetch(DEV_POOL_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY },
         body: JSON.stringify({ impulse: { pointer: { type: 'poolImpulse', shape: 'federationVerificationReport', limit: 200 } } }),
@@ -404,7 +405,14 @@ const resolveHandler = async (pointer: any): Promise<any> => {
       const rows = (j?.body?.impulses ?? []).filter((i: any) => i?.shape === 'federationVerificationReport')
       rows.sort((a: any, b: any) => String(a?.body?.sweep_id ?? '').localeCompare(String(b?.body?.sweep_id ?? '')))
       report = rows.length ? rows[rows.length - 1].body : null
-    } catch { /* fall through to "no report" */ }
+      if (!report) console.error(`[fed-transport] federation_verification_report: pool returned ${(j?.body?.impulses ?? []).length} impulse(s), 0 of shape federationVerificationReport`)
+    } catch (e) {
+      // NOT SILENT. A swallowed read here is indistinguishable from "no sweep has ever
+      // run", so the shape would answer `report: null` forever and the only symptom would
+      // be an absence — the same failure class this subsystem keeps producing. Say which
+      // call failed and why.
+      console.error(`[fed-transport] federation_verification_report: pool read FAILED (${DEV_POOL_URL}): ${String((e as Error)?.message ?? e)}`)
+    }
 
     const ts = report?.ts ?? (report?.sweep_id ? Date.parse(String(report.sweep_id).replace('sweep-', '')) : 0)
     const ageMs = ts ? Date.now() - ts : Number.MAX_SAFE_INTEGER
