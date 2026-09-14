@@ -1274,6 +1274,7 @@ async function main() {
   // closable set only if it fails again, which re-files it and clears this record.
   const alreadyClosed = new Set(prev.closed ?? [])
   const closedGaps: string[] = []
+  const notOpen: string[] = []   // clear, but nothing on the books to close — not an error
   for (const cls of closeEligible) {
     if (alreadyClosed.has(cls)) continue
     // A CLOSE MUST CLOSE SOMETHING. substrateGap_write CREATES on write, so closing a class
@@ -1288,7 +1289,7 @@ async function main() {
       const rows = cur?.body?.body?.gaps ?? cur?.body?.gaps ?? []
       isOpen = Array.isArray(rows) && rows.some((g: any) => g?.id === `fed:${cls}` && g?.status !== 'closed')
     } catch { isOpen = false }
-    if (!isOpen) continue
+    if (!isOpen) { notOpen.push(cls); continue }
     const proof = real.filter((r) => r.clears === cls)
     const note =
       `CLOSED BY MEASUREMENT, not by assertion. The closure predicate for this class was evaluated by ` +
@@ -1315,6 +1316,7 @@ async function main() {
   }
   ;(report as Record<string, unknown>).gaps_closed = closedGaps
   ;(report as Record<string, unknown>).close_eligible_classes = closeEligible
+  ;(report as Record<string, unknown>).close_skipped_no_open_gap = notOpen
   ;(report as Record<string, unknown>).clearing_streak = clearing
 
   // ── Emit over loopback. The channel and its subject share no medium, which is what
@@ -1362,7 +1364,9 @@ async function main() {
     console.log(`  negative_controls: ${JSON.stringify(nc)}`)
     console.log(`  sweep_validity: ${report.sweep_validity}`)
     if (closedGaps.length) console.log(`  ✅ gaps CLOSED this sweep: ${closedGaps.join(', ')}`)
-    if (closeEligible.length && !closedGaps.length) console.log(`  close_eligible (write failed?): ${closeEligible.join(', ')}`)
+    const writeFailed = closeEligible.filter((c) => !closedGaps.includes(c) && !notOpen.includes(c))
+    if (notOpen.length) console.log(`  close_eligible but no open gap to close (expected — nothing was wrong): ${notOpen.length} class(es)`)
+    if (writeFailed.length) console.log(`  ⚠ close WRITE FAILED for: ${writeFailed.join(', ')}`)
     if (noLongerReported.length) console.log(`  ⚠ classes_no_longer_reported (was failing, emitted no verdict this sweep): ${noLongerReported.join(', ')}`)
     console.log(`  gap_eligible (>=2 consecutive quiescent sweeps): ${gapEligible.length ? gapEligible.join(', ') : 'none yet'}\n`)
   }
