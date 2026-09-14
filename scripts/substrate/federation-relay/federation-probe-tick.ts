@@ -1276,6 +1276,19 @@ async function main() {
   const closedGaps: string[] = []
   for (const cls of closeEligible) {
     if (alreadyClosed.has(cls)) continue
+    // A CLOSE MUST CLOSE SOMETHING. substrateGap_write CREATES on write, so closing a class
+    // that was never filed conjures a `closed` row for a problem that never existed — and
+    // law 7 measures close RATE, so that silently inflates the very number this path exists
+    // to make honest. Observed: fed:stale_foreign_rows_advertised appeared closed having
+    // never been open, because a class induced once during a polarity test then cleared
+    // twice. Only ever transition a gap that is actually on the books and open.
+    let isOpen = false
+    try {
+      const cur = await post(`${DEV_VESSEL}/v2/impulses/resolve`, { impulse: { pointer: { type: 'substrateGap', id: `fed:${cls}` } } }, 6000)
+      const rows = cur?.body?.body?.gaps ?? cur?.body?.gaps ?? []
+      isOpen = Array.isArray(rows) && rows.some((g: any) => g?.id === `fed:${cls}` && g?.status !== 'closed')
+    } catch { isOpen = false }
+    if (!isOpen) continue
     const proof = real.filter((r) => r.clears === cls)
     const note =
       `CLOSED BY MEASUREMENT, not by assertion. The closure predicate for this class was evaluated by ` +
