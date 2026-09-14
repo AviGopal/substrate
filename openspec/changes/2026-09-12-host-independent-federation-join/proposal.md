@@ -273,3 +273,43 @@ under active edit; cite symbols, treat numbers as a snapshot. As of this writing
 ## Non-goals
 
 Consensus across registries (last-writer-wins upsert with TTL suffices for findability). New inventory machinery: profiles, role selection, and transport auto-enable already cover "arbitrary vessel inventories" — the `apply-inventory` ungoverned-units caveat is a separate, known issue. The objective's word is *routability*, and routability is steps 1–4.
+
+---
+
+## Outcome
+
+Every step below was graded by `federation-probe-tick`, the independent oracle, rather
+than by assertion. The oracle files and closes its own gaps, so the ledger is a
+measurement rather than a record of intent.
+
+**Landed and verified**
+
+| Step | Evidence |
+|---|---|
+| Transport ungate | Relay-less transport is healthy; verified adopting an anchor live (peer id and MainPID stable, direct listen port changed, proving a real node rebuild) |
+| Anchor precedence | Six units reordered; anchors no longer persisted; `.substrate-secrets` can no longer outrank `/etc/substrate/env` |
+| Frozen address removal | Checked-in droplet IP deleted from the shipped drop-in, and from `bootstrap-remote-google-arm.sh` where it lived in *executable* code and survived the first audit |
+| Cross-boundary de-advertise | Per-vessel on the mirror tick; whole-substrate on SIGTERM — 7 hub rows to 0 in 8s against a 300s TTL |
+| Sibling derivation | `gen-env` probes candidates instead of guessing; a two-input join against a container-internal hub now registers 201 with zero 401s |
+| Discovery over the overlay | A foreign peer fetched `substrateBootstrap` and `vesselCapability` over libp2p with no HTTP endpoint |
+| Multiaddr-only anchor | A substrate dialed a peer by multiaddr, learned the relay over libp2p, and obtained its own circuit |
+
+**Not landed, and why**
+
+`/bootstrap` still returns a loopback `identity_endpoint`. Three dispatches, two
+formulations, identical refusal: `grounding window (0 BYTES) contains none of the target
+file(s)`. The refusal is *correct* — compose confirms the file exists, sees it absent from
+an empty window, and declines a blind edit. The defect is upstream, in the grounding
+builder, and is filed as `fed:compose-grounding-window-empty-for-discovery-index`. The
+change was not hand-landed: doing so would have converted a measurable lane defect into an
+invisible one.
+
+Off-host reachability is proven for peers outside the docker bridge but not for a
+non-RFC1918 address, which needs a host with a public IP — deployment, not design.
+
+Identity over a pure multiaddr join still reaches the hub by HTTP; the shim gives a local
+address for the remote validator, but caller-credential threading needs a gated change.
+
+**The confused deputy is still open.** The libp2p ingress performs no authorization and
+authenticates remote-originated resolves with the transport's own key. Making discovery
+reachable over the overlay raised the stakes on this without changing it.
