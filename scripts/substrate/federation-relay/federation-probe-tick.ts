@@ -34,6 +34,7 @@
 // if the family stops reaching, the non-reach is the gap, not a reason to keep this quietly.
 
 import { createVesselLibp2p, resolveViaLibp2p, resolveViaHttp, type VesselLibp2p } from '@avigopal/libp2p-federation-transport'
+import { ping } from '@libp2p/ping'
 import { createHash, randomBytes } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -945,6 +946,20 @@ async function main() {
       vesselId: PROBE_ID,
       ...(relays.length ? { relayMultiaddr: relays[0] } : {}),
       enableHttp: true,
+      // A PING RESPONDER, SO THIS PEER CAN BE REAPED.
+      //
+      // The relay's keep-alive only closes a dead reserved peer that has PONGED AT LEAST
+      // ONCE — deliberately, so a peer with no responder is not reaped merely for being
+      // unable to answer (relay.ts:105). The consequence for an instrument that mints a
+      // NEW NONCE IDENTITY EVERY SWEEP is that each sweep leaves behind a reservation the
+      // relay can never verify or reclaim. Measured on the live relay: 12 distinct
+      // never-ponged peers in six hours against 1 that ponged — nearly all of them mine.
+      //
+      // At maxReservations 128 with a 1h TTL that is not currently exhausting anything,
+      // so this is not the cause of the phantom. It is the oracle littering the system it
+      // measures, which is its own kind of measurement error: an instrument that changes
+      // the state of the subject in a direction nobody is accounting for.
+      extraServices: { ping: ping() },
     })
   } catch (e) {
     record('I2_join_overlay', 'fail', { witness: 'probe', cls: 'probe_node_construction_failed', evidence: { error: String((e as Error)?.message ?? e) } })
