@@ -65,6 +65,7 @@ interface ProbeVerdict {
   witness: Witness
   class?: string
   clears?: string
+  clearsAlso?: string
   evidence: Record<string, unknown>
   undecidable_reason: string | null
   ts: number
@@ -81,7 +82,7 @@ function record(
   // fed:overlay_unjoinable: a class vanished because an unrelated HTTP endpoint started
   // answering, and absence read as success. A check may only close a gap by NAMING the
   // class it just proved clear.
-  opts: { witness: Witness; cls?: string; clears?: string; evidence?: Record<string, unknown>; reason?: string; config?: Record<string, string> },
+  opts: { witness: Witness; cls?: string; clears?: string; clearsAlso?: string; evidence?: Record<string, unknown>; reason?: string; config?: Record<string, string> },
 ): ProbeVerdict {
   // I10 enforced HERE, at the single choke point, so no leg can route around it: a
   // reachability claim whose only witness is the transport is downgraded. Static
@@ -107,6 +108,7 @@ function record(
     // self-witness, or any undecidable), the claim is dropped rather than carried — a
     // downgraded row must never close anything.
     ...(opts.clears && v === 'pass' ? { clears: opts.clears } : {}),
+    ...(opts.clearsAlso && v === 'pass' ? { clearsAlso: opts.clearsAlso } : {}),
     evidence: opts.evidence ?? {},
     undecidable_reason: reason,
     ts: Date.now(),
@@ -673,7 +675,14 @@ async function checkOverlay(probe: VesselLibp2p, relays: string[], circuitBearin
       const dialledPeer = target.split('/p2p/').pop() ?? targetPeer
       const pt = pathTaken(probe, dialledPeer)
       if (pt.relayed === true) {
-        record('I4_forced_relay', 'pass', { witness: 'probe', clears: 'relay_address_not_honoured', config: { path: 'forced-relay' }, evidence: { dial_target: target, path_taken: 'relay', relayed: true, connection_limited: pt.limited, relay_caps_circuits: pt.limited, addr: pt.addr } })
+        // Clears BOTH of this invariant's failure classes, because a successful relayed
+        // dial disproves both: the address WAS honoured, and the dial did NOT fail.
+        // Previously only relay_address_not_honoured was cleared, so relay_dial_failed —
+        // filed by the catch branch below — could be raised and never retired. That is the
+        // same stranding that left fed:overlay_unjoinable open with no path to close, and
+        // it is a defect in the ledger rather than in the system being measured: a class
+        // that can only ever accumulate makes the open count meaningless.
+        record('I4_forced_relay', 'pass', { witness: 'probe', clears: 'relay_address_not_honoured', clearsAlso: 'relay_dial_failed', config: { path: 'forced-relay' }, evidence: { dial_target: target, path_taken: 'relay', relayed: true, connection_limited: pt.limited, relay_caps_circuits: pt.limited, addr: pt.addr } })
         await runPayloadMatrix(probe, target, 'forced-relay', 'lpStream')
         await runPayloadMatrix(probe, target, 'forced-relay', 'http')
       } else {
@@ -942,6 +951,16 @@ async function main() {
   }
 
   if (probe) {
+    // The instrument's own precondition, asserted rather than assumed. Without this the
+    // probe_node_construction_failed class could be FILED (below) and never retired: a
+    // sweep that cannot build its node emits the failure, and a sweep that can says
+    // nothing — so the class only ever accumulates. Found by auditing every cls: against
+    // every clears:, which is the kind of check that should not depend on someone
+    // remembering to look.
+    record('I0_probe_instrument_usable', 'pass', {
+      witness: 'probe', clears: 'probe_node_construction_failed',
+      evidence: { peer_id: probe.peerId, note: 'the oracle built its own libp2p node; every probe-witnessed verdict in this sweep rests on this' },
+    })
     await checkOverlay(probe, relays, circuitBearing)
     await checkJoinLeave(probe)
   } else {
@@ -1149,7 +1168,7 @@ async function main() {
   // This does not guess whether the disappearance is a fix or a regression in the
   // instrument — it names it so a reader can ask. A class here with its gap still open is
   // the signature of the instrument having stopped looking.
-  const cleared = new Set(real.filter((r) => r.verdict === 'pass' && r.clears).map((r) => r.clears!))
+  const cleared = new Set(real.filter((r) => r.verdict === 'pass').flatMap((r) => [r.clears, (r as any).clearsAlso].filter(Boolean) as string[]))
   const reportedClasses = new Set(real.filter((r) => r.class).map((r) => r.class!))
   // A class explicitly CLEARED this sweep is not a class that went missing — it was
   // positively proven and is excluded below, so the warning keeps naming only the genuine
