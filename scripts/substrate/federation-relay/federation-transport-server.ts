@@ -828,7 +828,23 @@ async function register() {
       body: JSON.stringify({
         vesselId: VESSEL_ID, vesselName: VESSEL_ID, version: '0.1.0',
         endpoint: `http://127.0.0.1:${HEALTH_PORT}`,           // HTTP surface (health + self-recovery probe)
-        shapes: ['federation_probe', 'federation_echo', 'federation_verification_report', 'substrateBootstrap', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])],
+        // federation_echo is NOT advertised. It is a test instrument for the probe's
+        // payload matrix, which dials this transport DIRECTLY by multiaddr and gets it
+        // answered inline by resolveHandler — discovery was never on its path.
+        //
+        // Advertising it was actively harmful. The probe exercises federation_echo eight
+        // times per sweep (one per payload class), so its posterior climbed fast, and the
+        // walk began selecting `satisfier:federation_echo` for goals targeting
+        // federation_verification_report — both shapes live on this vessel and the echo arm
+        // simply looked better. Called with no payload it returns empty, grades HOLLOW
+        // ("the report was not successfully retrieved"), gets suppressed, and the walk drops
+        // to the ReAct floor where it improvises curl against a placeholder host. No sweep
+        // ever spawns, because nothing reaches this transport.
+        //
+        // The measuring instrument had earned enough credit to be mistaken for the thing it
+        // measures. Keeping it undiscoverable is the fix: it stays fully usable by direct
+        // dial, and stops competing for selection it should never have been eligible for.
+        shapes: ['federation_probe', 'federation_verification_report', 'substrateBootstrap', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])],
         resolve_endpoint: '/v2/impulses/resolve', resolve_request_format: 'pointer', auth_scheme: 'none',
         protocol: 'libp2p',                          // signals libp2p-overlay reachability
         libp2p_peer_id: vl.peerId,                   // proper discovery-contract fields (not metadata —
@@ -988,7 +1004,7 @@ async function registerAtHub() {
       // Kept in the LOCAL register() below, so a resolve on this substrate always reaches
       // this substrate's own transport. A cross-substrate view is a separate question and
       // would need a substrate-scoped pointer, not an ambiguous shared shape.
-      ...(SELF_MIRROR ? [] : [{ vesselId: HUB_VESSEL_ID, shapes: ['federation_probe', 'federation_echo', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])] }]),
+      ...(SELF_MIRROR ? [] : [{ vesselId: HUB_VESSEL_ID, shapes: ['federation_probe', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])] }]),
       ...rows.map((r) => ({ vesselId: `${r.vesselId}@${SUBSTRATE_ID}`, shapes: r.shapes })),
     ]
     const results = await Promise.all(registrations.map(async (reg) => {
