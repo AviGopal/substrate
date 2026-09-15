@@ -826,7 +826,13 @@ async function checkJoinLeave(probe: VesselLibp2p) {
 // NEGATIVE CONTROLS — an oracle that cannot fail is not an oracle.
 // A sweep whose controls did not fire is reported `invalid`, NOT `pass`.
 // ════════════════════════════════════════════════════════════════════════════════════
-async function negativeControls(probe: VesselLibp2p | null): Promise<Record<string, string>> {
+async function negativeControls(
+  probe: VesselLibp2p | null,
+  // Whether ANY peer in the registry advertises a /p2p-circuit address this sweep. NC4
+  // needs it to tell "the discriminator went blind" from "there was nothing relayed to
+  // look at" — see the NC4 body.
+  relayedTargetsExist: boolean,
+): Promise<Record<string, string>> {
   const nc: Record<string, string> = {}
 
   // NC1 — an impossible peer must fail to resolve.
@@ -869,8 +875,25 @@ async function negativeControls(probe: VesselLibp2p | null): Promise<Record<stri
     const flags = probe.node.getConnections().map((c: any) => String(c.remoteAddr).includes('/p2p-circuit'))
     const sawRelayed = flags.some((f) => f)
     const sawDirect = flags.some((f) => !f)
+    // APPLICABILITY, not just outcome. Every spoke sweep reported
+    // partial_one_polarity_only(direct) and was therefore downgraded to `degraded` —
+    // permanently, on every sweep, forever. A verdict that is always degraded teaches
+    // readers to skip past it, which is the same defect as a silent skip: it stops
+    // carrying information. But the two causes are genuinely different and must not
+    // share a verdict:
+    //
+    //   - a relayed peer WAS advertised and the probe still saw only one polarity
+    //     → the discriminator may have gone blind. Inert. Degrade the sweep.
+    //   - no peer advertised a /p2p-circuit address at all
+    //     → there was nothing relayed in existence to observe. The control is
+    //       NOT APPLICABLE on this topology this sweep. Not inert, not a degrade.
+    //
+    // Reporting the second as `partial` claims we looked and came up short, when in
+    // fact there was nothing to look at — the same conflation `unstamped` vs `none`
+    // exists to prevent in the falsifier census.
     nc.NC4 = flags.length === 0 ? 'skipped_no_connection'
       : sawRelayed && sawDirect ? 'fired'
+      : !sawRelayed && !relayedTargetsExist ? 'not_applicable_no_relayed_peer'
       : `partial_one_polarity_only(${sawRelayed ? 'relayed' : 'direct'})`
   }
 
@@ -1059,7 +1082,9 @@ async function main() {
     }
   }
 
-  const nc = await negativeControls(probe)
+  const relayedTargetsExist = circuitBearing.some((v: any) =>
+    ((v.libp2p_multiaddr ?? []) as string[]).some((m) => String(m).includes('/p2p-circuit')))
+  const nc = await negativeControls(probe, relayedTargetsExist)
   if (probe) await probe.stop().catch(() => {})
 
   // Roster snapshot #2 — quiescence by MainPID/NRestarts movement, the same discipline
@@ -1153,7 +1178,13 @@ async function main() {
   // its path-discriminator control inert. Not-fired is now visible in the verdict:
   // `invalid` when a control actively failed, `degraded` when one could not run.
   const ncFailed = Object.entries(nc).filter(([, v]) => v.startsWith('DID_NOT_FIRE')).map(([k]) => k)
-  const ncInert = Object.entries(nc).filter(([, v]) => v.startsWith('skipped') || v.startsWith('partial')).map(([k]) => k)
+  // `not_applicable_*` is deliberately NOT inert. A control that could not apply to this
+  // topology is a statement about the topology, not a hole in the verification — folding
+  // it in would make every spoke permanently `degraded` and drain the word of meaning.
+  // `skipped_*` and `partial_*` still count: those mean the control COULD have run here.
+  const ncInert = Object.entries(nc)
+    .filter(([, v]) => v.startsWith('skipped') || v.startsWith('partial'))
+    .map(([k]) => k)
 
   const blocking = relays.length === 0 ? 'no_relay_anchor'
     : !probe ? 'no_probe_node'
