@@ -539,6 +539,25 @@ ACTIVITY_API_ENDPOINT="${ACTIVITY_API_ENDPOINT:-http://127.0.0.1:8080}"
 ACTIVITY_API_URL="${ACTIVITY_API_URL:-$ACTIVITY_API_ENDPOINT}"
 PRODUCER_DISCOVERY_ENDPOINT="${PRODUCER_DISCOVERY_ENDPOINT:-$ACTIVITY_API_ENDPOINT}"
 METABOB_ENDPOINT="${METABOB_ENDPOINT:-$ACTIVITY_API_ENDPOINT}"
+# A multiaddr-only joiner has NO local identity-vessel: role spoke masks it, correctly,
+# because identity belongs on the hub. Defaulting it to loopback:8101 therefore points
+# every local vessel at a port nothing is listening on. MEASURED 2026-09-15: a spoke
+# booted with PEER_MULTIADDR + PROFILE=surface_node answered 000 on :8101, discovery
+# returned INVALID_API_KEY reason=identity_unreachable, the transport logged
+# "register -> 401", nothing registered, and there were no rows to mirror to the peer.
+# The substrate joined the overlay and then could not announce itself.
+#
+# The transport already serves /identity as a reverse proxy to the identity endpoint it
+# learned from the peer. Point at that instead: a LOCAL ADDRESS for a REMOTE resolver.
+# Every local vessel keeps believing IDENTITY_VESSEL_URL is an HTTP URL that validates
+# keys, which it is. Law 11 — the resolver stays where its data lives; the spoke gets an
+# address for it, not a copy of it.
+#
+# Only when the operator set neither this nor a discovery URL: an explicit value always
+# wins, and the URL-join path keeps its derived hub address (see the offset block above).
+if [ -n "${PEER_MULTIADDR:-}" ] && [ -z "${IDENTITY_VESSEL_URL:-}" ] && [ -z "${HUB_DISCOVERY_URL:-}" ]; then
+  IDENTITY_VESSEL_URL="http://127.0.0.1:8401/identity"
+fi
 IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL:-http://127.0.0.1:8101}"
 IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT:-$IDENTITY_VESSEL_URL}"
 # Federated-spoke identity (docs/FEDERATION.md): the hub discovery this
