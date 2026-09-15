@@ -275,9 +275,30 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
     }
   }
   if (DISCOVERY_SHAPES.has(t)) {
-    // Credentialed: registry contents are not public. The caller's Authorization is
-    // threaded by the ingress where available; falling back to this transport's own key
-    // preserves today's behaviour rather than silently widening access.
+    // REGISTRY CONTENTS ARE NOT PUBLIC, AND THIS PATH IS THE NEWEST WAY TO REACH THEM.
+    //
+    // The libp2p ingress performs no authorization of its own and resolves remote requests
+    // with THIS transport's key, so anyone who can dial gets whatever the transport can
+    // reach. That is a pre-existing hole (peer ids are sha256 of a guessable vesselId, and
+    // Noise gives confidentiality, not authorization) — but exposing the registry over the
+    // overlay is something I added, and widening an exposure while leaving it unguarded is
+    // not acceptable just because the underlying hole predates me.
+    //
+    // The ingress cannot see request headers without a change to the gated transport
+    // package, so the credential travels in the POINTER envelope, which serveResolveHttp
+    // already forwards intact. A caller proves it belongs to this fleet by echoing the
+    // shared key as pointer._auth.
+    //
+    // FED_DISCOVERY_OVERLAY_AUTH=0 restores the previous behaviour. It exists because this
+    // is a fail-CLOSED change on a live fleet and a rollback must not require a redeploy —
+    // not as an invitation to leave it off.
+    if ((process.env.FED_DISCOVERY_OVERLAY_AUTH ?? '1') !== '0') {
+      const presented = String((pointer as any)?._auth ?? '')
+      if (!API_KEY || presented !== API_KEY) {
+        console.log(`[fed-transport] refused uncredentialed overlay ${t} (registry contents are not public)`)
+        return { error: 'unauthorized', shape: t, note: 'registry shapes over the overlay require pointer._auth; substrateBootstrap is the public anchor-only alternative' }
+      }
+    }
     try {
       const rows = await localDiscoveryResolve(pointer)
       return { shape: t, produced_by: VESSEL_ID, vessels: rows, found: rows.length > 0 }
